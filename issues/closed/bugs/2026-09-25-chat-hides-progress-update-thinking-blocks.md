@@ -48,7 +48,7 @@ reasoning under the collapsed row.
   (`writesProgressUpdates` in `beebox/src/shared/model-ids.ts`).
 - A `no-response` ack does not hide a turn that has an update.
 - The chat prompt tells the agent to put its answer in the final reply text.
-- Test: `beebox/test/frontend/progress-updates.doctest.md`.
+- Test: `beebox/test/frontend/progress-updates.doctest.md` (moved to `beebox/src/frontend/test/machines/chatMachine.progress-updates.doctest.md`).
 
 The full answer cannot be recovered after the fact. The API returns only
 the update's summary.

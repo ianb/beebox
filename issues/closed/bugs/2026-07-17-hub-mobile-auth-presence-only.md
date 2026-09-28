@@ -19,7 +19,7 @@ proof — a bogus credential on a real slug answers identically to an unknown sl
 — in `test/hub/hub-server-auth.doctest.md`.
 
 
-`hasMobileAuthAttempt` in `beebox/src/hub/hub-server.ts` decides whether to let a request past
+`hasMobileAuthAttempt` in `beebox/src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`) decides whether to let a request past
 the hub's pre-upgrade auth wall by checking only that an `Authorization: Bearer …` header OR a
 `?mobileToken=` query param is *present* — it never validates the token against the box's device
 store. This gate is used both on the HTTP catch-all and on the WebSocket upgrade path to bypass the

@@ -40,7 +40,7 @@ removed.
   auth-off to children only when `!authRequired()`. The "open" identity
   source and the hub header mechanics STAY (the test seam drives them); only
   the env-var trigger goes.
-- `src/services/tailscale-exposure.ts` `assertPortNotExposedInOpenMode` +
+- `src/services/tailscale-exposure.ts` (moved to `beebox/src/services/tailscale-setup/exposure.ts`) `assertPortNotExposedInOpenMode` +
   its `enforceOpenModeAtListen` call — deleted (guards a now-impossible
   state); the intent store itself stays (serve-lifecycle bookkeeping for
   `bbx tailscale stop`/`status` drift).

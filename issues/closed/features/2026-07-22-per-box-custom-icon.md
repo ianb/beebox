@@ -12,7 +12,7 @@ resolution: implemented
 > workstream's first round; 2734eef66..55313f2cf this second round). The favicon,
 > PWA manifest icons, apple-touch-icon, notification icon, and box-selector tiles
 > all now show the box's own mark, rendered server-side from the root landmark
-> card's `symbol` (`beebox/src/core/box/box-icon.ts`,
+> card's `symbol` (`beebox/src/core/box/box-icon.ts` (moved to `beebox/src/core/box/icon.ts`),
 > `beebox/src/webapp/routes/box-identity-assets.ts`) rather than a new
 > `config/box.json` field as this issue originally proposed — the design
 > question resolved by reusing the *existing* per-directory `symbol` on the

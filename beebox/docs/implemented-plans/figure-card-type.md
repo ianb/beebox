@@ -85,7 +85,7 @@ added, figures (and views) would need gating then — captured under NOT in scop
 - **`beebox/frontend.md`** — UI primitives + `className`-only-for-outer-
   layout (`restrict-component-classes`).
 - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
-- **Densest precedents:** the `views/` system (`src/webapp/views/compiler.ts`,
+- **Densest precedents:** the `views/` system (`src/webapp/views/compiler.ts` (moved to `beebox/src/webapp/views/compiler/compile.ts`),
   `src/frontend/src/components/ViewRenderer.tsx`, `src/frontend/src/hooks/useViewFileHelpers.ts`)
   and existing card renderers (`src/frontend/src/renderers/recipe.tsx`,
   `webpage.tsx` — `registerCardRenderer` at priority 100).
@@ -93,7 +93,7 @@ added, figures (and views) would need gating then — captured under NOT in scop
 ## What already exists
 
 - **The esbuild view compiler — reused as the figure compiler.**
-  `src/webapp/views/compiler.ts:116`: `compileView(viewPath, opts?)` `fs.stat`s
+  `src/webapp/views/compiler.ts:116` (moved to `beebox/src/webapp/views/compiler/compile.ts`): `compileView(viewPath, opts?)` `fs.stat`s
   and reads **an arbitrary absolute path** (verified: no `views/` restriction),
   esbuilds it (`bundle:true, format:"esm", target:"es2020", jsx:"automatic"`),
   caches by `target:path`+mtime. A codex probe confirmed a zero-import default

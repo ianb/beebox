@@ -62,14 +62,14 @@ two are untouched).
 - `webapp/scan-auth.ts:58` and `webapp/trpc/trpc.ts:26-54`
   (`authedProcedure` / `ownerProcedure` / `authenticatedOwnerProcedure`) —
   gates that read the context; only the context changes.
-- `user-stories/journeys/prepare.ts:375-401` — the capture-blind warning and
+- `user-stories/journeys/prepare.ts:375-401` (moved to `beebox/test/user-stories/journeys/prepare/core.ts`) — the capture-blind warning and
   the `bin/browse auth save …` advice; **replaced** (Track 3).
 - `.claude/skills/browse/SKILL.md:181-205` "The key is not the box owner" —
   rewritten (Track 3).
 - `deploy/prod-curl` — mints an owner `bbx_session`; the precedent considered and
   not taken (see *Could this be simpler?*).
 - Tests: `test/core/browse-key.doctest.md` (the credential);
-  `test/webapp/trpc-procedures.doctest.md` (the gates, but no browse-key case);
+  `test/webapp/trpc-procedures.doctest.md` (moved to `beebox/test/webapp/trpc/procedures.doctest.md`) (the gates, but no browse-key case);
   nothing covers `resolveCaptureRequestOwner`.
 
 ## Prior art (external)
@@ -171,7 +171,7 @@ false on an opted-in box; `authed` only on a box that did not opt in).
 ### Track 3 — replace the ad hoc workarounds
 
 **What.**
-- `user-stories/journeys/prepare.ts`: delete the `bin/browse auth list` probe,
+- `user-stories/journeys/prepare.ts` (moved to `beebox/test/user-stories/journeys/prepare/core.ts`): delete the `bin/browse auth list` probe,
   the `captureBlind` flag and its `before.json` field; instead, when the
   journey's box is built, **write `agentBrowsing: "owner"` into its
   `config/box.json`** (a journey box is by definition built for this), and
@@ -182,7 +182,7 @@ false on an opted-in box; `authed` only on a box that did not opt in).
   is the owner only on a box that says so": what the field is, that clones of
   test1 carry it, and that `bin/browse auth save/login` remains the route for
   a box that must not be marked.
-- `user-stories/README.md:257-259` lesson → resolved, pointing here.
+- `user-stories/README.md:257-259` (moved to `beebox/docs/user-stories/README.md`) lesson → resolved, pointing here.
 - `docs/security-report.md:127` browse-key row: scope now "full app access;
   the owner on boxes with `agentBrowsing: owner`".
 - `core/browse-key.ts` header: one paragraph on the box-side opt-in.
@@ -276,7 +276,7 @@ Skip: box agents never see this field; it is read by the web server only.
 
 - `resolveBoxIdentity` — filesystem-tier doctest (`makeTmpBox` writes
   `config/box.json`; headers are a plain object): the seven rows above.
-- tRPC context — `test/webapp/trpc-procedures.doctest.md` gains the browse
+- tRPC context — `test/webapp/trpc-procedures.doctest.md` (moved to `beebox/test/webapp/trpc/procedures.doctest.md`) gains the browse
   cases.
 - Capture — a route doctest (`makeTestServer({openAccess:false})`, key in env,
   opted-in box): `GET /api/capture/sessions/resumable` → 200 with the key,

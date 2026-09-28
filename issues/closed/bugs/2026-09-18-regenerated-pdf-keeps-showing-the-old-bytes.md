@@ -27,7 +27,7 @@ not trust what was on screen.
 
 The server side looks correct. `/api/files/*` serves a weak ETag built from
 mtime and size (`beebox/src/webapp/file-etag.ts`) with
-`Cache-Control: no-cache` (`beebox/src/webapp/routes/api-files.ts:171,198`),
+`Cache-Control: no-cache` (`beebox/src/webapp/routes/api-files.ts:171 (moved to `beebox/src/webapp/routes/api/register/files.ts`),198`),
 so a changed file should revalidate and a 304 should only happen when the
 bytes really are unchanged.
 

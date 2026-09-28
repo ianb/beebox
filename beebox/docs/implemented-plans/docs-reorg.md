@@ -54,7 +54,7 @@ plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
   and `user-story-audit-followups.md` (mostly done).
 - **Worst drift case: `triage-design.md`** — still opens with "early notes,
   design in progress" while the triage pipeline is fully built
-  (`src/core/triage/index.ts` etc.) and ~13 other docs cite this file as the
+  (`src/core/triage/index.ts` (moved to `beebox/src/core/triage/run/core.ts`) etc.) and ~13 other docs cite this file as the
   reference architecture. An agent landing there cold would badly misjudge
   whether the pipeline exists.
 - Root causes are known and self-documented: `plans/README.md`'s "Wiring
@@ -395,7 +395,7 @@ belongs in the maintenance cadence (it is listed in docs/development/maintenance
   templates, rules) — that's the bbx-context/bbx-prompt-review surface;
   this plan only touched it where dev docs were wrong about it.
 - The 277-unused-exports knip backlog (recorded in ideas.md).
-- Splitting `test/helpers/fake-agent.ts` to clear its pre-existing
+- Splitting `test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`) to clear its pre-existing
   single-export lint errors (noted during the reactor fix).
 - Automating design-doc freshness (e.g. doctest-enforced doc claims)
   beyond box-layout.md's existing doctest guard.

@@ -40,7 +40,7 @@ to a host-supplied view-host context rather than hardcoding a navigation target.
 
 ## What already exists
 
-- **The view compiler** — `src/webapp/views/compiler.ts`. esbuild bundles each
+- **The view compiler** — `src/webapp/views/compiler.ts` (moved to `beebox/src/webapp/views/compiler/compile.ts`). esbuild bundles each
   view; React is externalized two ways by target: browser uses a
   `react-shim` plugin emitting `const React = window.__cbReact` (compiler.ts:44-70),
   node externalizes bare `react` specifiers (compiler.ts:146-149). **Reuse:**
@@ -95,7 +95,7 @@ to a host-supplied view-host context rather than hardcoding a navigation target.
 - **`beebox/cards` exposure** — `package.json:8-11` exports `./cards` →
   `dist/cards/index.js`; Node box-schema loading uses a `registerHooks` resolve
   hook gated on `parentURL.includes("/config/schemas/")`
-  (`src/schemas/registry.ts:131-156`) with a virtual package-root parent
+  (`src/schemas/registry.ts:131-156` (moved to `beebox/src/schemas.ts`)) with a virtual package-root parent
   (registry.ts:118); `dist/cards/index.js` is a separate esbuild bundle
   (`scripts/build-cli.mjs`, second `build()` call). **Reuse the pattern,
   rebuild for views:** a `./view-widgets` export needs its own dist bundle and a
@@ -106,15 +106,15 @@ to a host-supplied view-host context rather than hardcoding a navigation target.
     body-refs.ts:14-19 explicitly anticipates *"future schemas with a different
     body format would write their own extractor and merge results"* — the
     extension seam for JSX views.
-  - `bbx validate` broken-ref walk: `src/core/card-lint.ts:144-157` runs both
+  - `bbx validate` broken-ref walk: `src/core/card-lint.ts:144-157` (moved to `beebox/src/core/card-lint/core.ts`) runs both
     extractors, checks existence via `resolveRefExists`
     (`src/core/ref-exists.ts:45`); ref convention defined in
     `resolveRefToPath` (ref-exists.ts:30) — leading `/` = box-root, `attach/` =
     attach scope, else relative to referrer dir. Broken = warning.
-  - `bbx mv` rewrite: `src/core/rewrite-card-refs.ts` (`ref="…"` regex already
+  - `bbx mv` rewrite: `src/core/rewrite-card-refs.ts` (moved to `beebox/src/core/rewrite-card-refs/core.ts`) (`ref="…"` regex already
     matches widget attributes, gated by a `remap` closure so over-matching is
     safe — header :38-40). Referrer set in
-    `src/core/commands/move-operations.ts:197-200` is
+    `src/core/commands/move-operations.ts:197-200` (moved to `beebox/src/core/commands/move/operations.ts`) is
     `listBoxCardFiles + listBoxMarkdownFiles` (`src/core/list-cards.ts:12,35`).
     **Gap to close:** `views/*.tsx` is in **neither** the validate scan nor the
     mv referrer set.

@@ -66,9 +66,9 @@ agent runs without a browser — validated in
   (`FigureView.tsx:122`, `FigureMount.tsx:98-99`), teardown-failure logging
   (`FigureMount.tsx:106-112`). REUSED unchanged.
 - **canvas-loop side** — browser runtime + declaration-generated controls
-  already exist (`canvas-loop/browser/runtime.ts`, `controls.ts`,
+  already exist (`canvas-loop/browser/runtime.ts` (moved to `canvas-loop/src/browser/runtime/engine.ts`), `controls.ts`,
   `controls-model.ts`), consumed today by the playground and
-  `<SketchFigure>` (`canvas-loop/src/react/SketchFigure.tsx`). EXTENDED: a
+  `<SketchFigure>` (`canvas-loop/src/react/SketchFigure.tsx` (moved to `canvas-loop/src/react/SketchFigure/figure/view.tsx`)). EXTENDED: a
   `./browser` subpath packaging these as an imperative
   `mountSketch(mount, opts) => teardown` with no React dependency;
   `<SketchFigure>` becomes a wrapper over it (one implementation).
@@ -114,7 +114,7 @@ onParamsChange?, onEvent? }` — an imperative wrapper over the existing
 browser runtime + generated controls (shared `controls-model.ts`). Notes
 from review:
 - `wireInput` currently lives on the React side
-  (`canvas-loop/src/react/figure-internals.ts`); it moves into `browser/`
+  (`canvas-loop/src/react/figure-internals.ts` (moved to `canvas-loop/src/react/SketchFigure/figure-internals.ts`)); it moves into `browser/`
   so the non-React path shares it.
 - **`initialParams` validation is net-new behavior, not existing**:
   `mountSketch` validates keys AND types against the module's declaration —
@@ -201,7 +201,7 @@ API name.
 | Entry lacks the default factory (pure TEA file dropped in) | chunk-2/3 test | existing guard `FigureView.tsx:117-119` ("no default-exported sketch") | Clear |
 | Module passed to mountSketch isn't a TEA module (no `update`) | chunk-1 unit test | mountSketch validates and throws → harness onError `FigureMount.tsx:98-99` | Clear |
 | Sketch throws in init/update/draw | canvas-loop runtime tests + harness onError | yes | Clear — error state replaces figure |
-| Embed query param name doesn't match a module-declared param | chunk-1 test | **net-new in mountSketch** (today's runtime silently drops unknowns, `canvas-loop/browser/runtime.ts:43-51`): validate keys+types vs the module declaration, console.warn + ignore | Clear-ish — warn, not silent (#4) |
+| Embed query param name doesn't match a module-declared param | chunk-1 test | **net-new in mountSketch** (today's runtime silently drops unknowns, `canvas-loop/browser/runtime.ts:43-51` (moved to `canvas-loop/src/browser/runtime/engine.ts`)): validate keys+types vs the module declaration, console.warn + ignore | Clear-ish — warn, not silent (#4) |
 | initialParams value type mismatches the declared param type (e.g. card `number` feeding a module `select`) | chunk-1 test | same net-new validation as above | Clear — warn + fall back to declared default |
 | Prod CSP blocks runtime-injected `<style>` → controls render unstyled | chunk-1 (CSS ships as imported stylesheet, no runtime injection) + chunk-4 live verify vs `lib/csp.ts` policy | yes, by construction | Clear |
 | Card `width`/`height` set on a canvas-loop figure | — | documented non-applicability (`module.canvas` authoritative), stated in instructions | Clear by documentation; silent-no-op risk accepted and named |

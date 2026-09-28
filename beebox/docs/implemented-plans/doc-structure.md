@@ -82,13 +82,13 @@ testing parent. The others are untouched here.
 ## What already exists
 
 - `beebox/docs/README.md`: layout by kind, naming rules. Reuse; extend.
-- `pnpm --dir beebox doc-check` (`beebox/src/dev/doc-check.ts:103-135`):
+- `pnpm --dir beebox doc-check` (`beebox/src/dev/doc-check.ts:103-135` (moved to `beebox/src/dev/doc-check/check.ts`)):
   broken refs and live-area orphans. Orphan checking covers everything under
   `docs/` except `ORPHAN_EXEMPT_PREFIXES` (`doc-check.ts:53`: plans,
   implemented-plans, unimplemented-plans, reports, user-story catalogs), so a
   new `docs/testing/` directory is checked automatically. `README.md` files
   are exempt (`doc-check.ts:127`). Reuse as is.
-- `pnpm --dir beebox doc-check --fix` (`src/dev/doc-link-repair.ts`): rewrites
+- `pnpm --dir beebox doc-check --fix` (`src/dev/doc-link-repair.ts` (moved to `beebox/src/dev/doc-check/link-repair.ts`)): rewrites
   inbound links after a move when the basename is unique repo-wide. Reuse for
   every move.
 - `pnpm doc-graph`: regenerated index. Reuse.

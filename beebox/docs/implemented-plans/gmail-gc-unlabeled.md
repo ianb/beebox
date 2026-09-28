@@ -25,7 +25,7 @@ removing a card the user (or an agent) has already acted on.
 
 ## What I verified first (anchors)
 
-- **Connector**: `src/connectors/gmail.ts` (`sync()`), `gmail-pull.ts`
+- **Connector**: `src/connectors/gmail.ts` (moved to `beebox/src/connectors/gmail/connector.ts`) (`sync()`), `gmail-pull.ts`
   (`listCandidates` — history-incremental with full-list fallback),
   `gmail-threads.ts` (`writeThreadCards` — writes thread dirs under
   `box/inbox/email/`).

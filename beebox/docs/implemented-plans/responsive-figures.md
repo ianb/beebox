@@ -12,7 +12,7 @@ issues: []
 > only a lint warning (`src/cards/schema.ts`), so the removal is silent, not
 > validated; harmless here because the only setter was hand-migrated. (2) The
 > "consumed nowhere" claim missed a real consumer: the `figure-examples` box
-> skill (`src/core/box/skills-content.ts`) taught sketches reading
+> skill (`src/core/box/skills-content.ts` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`)) taught sketches reading
 > `figure.meta.width` — both examples rewritten to the responsive pattern in
 > the same change. (3) The three-runtime starter's ResizeObserver guard now
 > tracks the logical width in a variable instead of comparing
@@ -81,8 +81,8 @@ starters, and template so newly authored figures fit their container natively.
 - **Instructions propagate automatically.** Schema `instructions` compile into
   each box's `docs/generated/card-figure.md` via `generateCardDoc`
   (`src/core/docs-gen/content.ts:38`), regenerated "by `bbx init` and at the
-  start of `bbx reactor`" (`src/core/docs-gen/index.ts:8`); the agent guide
-  points agents at that doc (`src/core/agent-guide/cards.ts:156`).
+  start of `bbx reactor`" (`src/core/docs-gen/index.ts:8` (moved to `beebox/src/core/docs-gen/generate/core.ts`)); the agent guide
+  points agents at that doc (`src/core/agent-guide/cards.ts:156` (moved to `beebox/src/core/agent-guide/guide/cards.ts`)).
 - **Template registry:** `templates-builtins.ts:233–237` calls
   `createFigureTemplate` + `figureStarterSketch` — the only consumers, so the
   rewrite is contained in `figure.ts`.
@@ -398,7 +398,7 @@ verification doubles as the baseline for B's patterns.
   (overflow, cropped SVG, misaligned drag, observer loops) are all
   render-and-interact properties invisible to doctests. Existing doctests
   (`test/frontend/lib/figure-params.doctest.md`,
-  `test/webapp/routes/routes-figure.doctest.md`) keep passing; any snapshot of
+  `test/webapp/routes/routes-figure.doctest.md` (moved to `beebox/test/webapp/routes/figure.doctest.md`)) keep passing; any snapshot of
   template output updates with Chunk B. No new doctest: the changed code is
   instruction strings + a React component, neither of which this repo's
   doctest tiers exercise (`docs/testing.md` posture: don't test for coverage's

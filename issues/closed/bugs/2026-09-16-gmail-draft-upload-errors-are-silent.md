@@ -16,7 +16,7 @@ resolution: implemented
 An `email-outbound` card never received a `gmail-draft-id`.
 `bbx finalize -c gmail` printed `No outbound items` and nothing else.
 
-`uploadDrafts()` in `beebox/src/connectors/gmail.ts` checks only
+`uploadDrafts()` in `beebox/src/connectors/gmail.ts` (moved to `beebox/src/connectors/gmail/connector.ts`) checks only
 `drafts.updated.length`. It does not read or log `drafts.errors` from
 `uploadPendingDrafts` (`gmail-drafts.ts`). If `uploadOneDraft` throws (bad
 MIME, missing OAuth scope for `drafts.create`, and similar), nothing reaches

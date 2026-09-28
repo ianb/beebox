@@ -76,7 +76,7 @@ exploration.
   the box deploy. No change needed; the box deploy remains separate from the
   site's Cloudflare Pages Git integration. `.github/workflows/pages.yml` runs
   checks only.
-- **doc-check**: `beebox/src/dev/doc-check.ts` sweeps markdown for
+- **doc-check**: `beebox/src/dev/doc-check.ts` (moved to `beebox/src/dev/doc-check/check.ts`) sweeps markdown for
   broken references and duplicate issue basenames — but its external-scan
   root list is a fixed set that does **not** include a top-level `site/`
   (`doc-graph-data.ts:60-84`; Codex review correction — the plan originally
@@ -91,7 +91,7 @@ exploration.
   ledger adapts the pattern (hash of the source span at extraction time).
 - **TS execution convention**: `tsx` everywhere
   (root scripts use `node --import tsx bin/*.ts`;
-  `beebox/package.json:63` `"doc-check": "tsx src/dev/doc-check.ts"`).
+  `beebox/package.json:63` `"doc-check": "tsx src/dev/doc-check.ts (moved to `beebox/src/dev/doc-check/check.ts`)"`).
   The generator follows suit.
 - **Tours** (`beebox/test/tours/`, artifacts gitignored per
   `docs/tours.md:39-50`) — the future automated-screenshot pipeline if

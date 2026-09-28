@@ -9,7 +9,7 @@ issues: []
 This plan introduces a Content-Security-Policy (CSP) on the beebox
 webapp. Today the app ships **no** document CSP — the only CSP in the codebase
 is `FROZEN_CSP`, scoped to captured-snapshot HTML at
-`src/webapp/routes/api-files.ts:40`. The immediate motivation is the new
+`src/webapp/routes/api-files.ts:40` (moved to `beebox/src/webapp/routes/api/register/files.ts`). The immediate motivation is the new
 markdown YouTube embed (an `<iframe>` to `youtube-nocookie.com`), which is a
 good moment to add a real policy that both allowlists that frame origin and
 hardens the whole app against injected scripts/frames/exfiltration. The plan's
@@ -42,7 +42,7 @@ real violation data); flipping to enforcing is a gated follow-up.
 
 ## What already exists
 
-- **The only existing CSP — `FROZEN_CSP`.** `src/webapp/routes/api-files.ts:40`:
+- **The only existing CSP — `FROZEN_CSP`.** `src/webapp/routes/api-files.ts:40` (moved to `beebox/src/webapp/routes/api/register/files.ts`):
   `const FROZEN_CSP = `sandbox allow-scripts; script-src '${FROZEN_SCRIPT_HASH}'`;`
   applied per-response at `api-files.ts:188` (`.header("Content-Security-Policy",
   FROZEN_CSP)`) only when the served file is `.frozen`. This is a deliberately
@@ -50,7 +50,7 @@ real violation data); flipping to enforcing is a gated follow-up.
   clobber it.** Frozen pages are opened as top-level navigations
   (`WebpageView.tsx:62` `window.open(...)`), never iframed inside the app, so
   this CSP governs an isolated document. **Reused, untouched.**
-- **The one global response hook.** `src/webapp/server-root.ts:25`
+- **The one global response hook.** `src/webapp/server-root.ts:25` (moved to `beebox/src/webapp/server-root/root-routes.ts`)
   `server.addHook("onSend", ...)` (registered via `registerChromeExtensionCors`
   at `server.ts:56`) currently only reflects CORS headers for
   `chrome-extension://` origins. This is the natural place to attach the app
@@ -157,7 +157,7 @@ directive set, not an afterthought.
   (a) markdown image hot-linking — `Markdown.tsx:149` →
   `view-url.ts:165` (external URLs returned as-is, rendered by `Image.tsx:126`);
   (b) **authenticated user avatars** — Google OAuth stores `payload.picture`
-  (`src/webapp/routes/auth.ts:82`), `/auth/me` returns it (`auth.ts:145`), and
+  (`src/webapp/routes/auth.ts:82` (moved to `beebox/src/webapp/routes/auth/register.ts`)), `/auth/me` returns it (`auth.ts:145`), and
   `Avatar.tsx:49` renders `<img src={picture}>` against
   `lh3.googleusercontent.com`. `data:` for pasted-image previews
   (`image-paste.ts:87`); `blob:` for pasted/processed images

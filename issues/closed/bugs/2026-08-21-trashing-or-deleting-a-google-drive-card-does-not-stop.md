@@ -10,7 +10,7 @@ resolution: implemented
 
 > **Resolved by `878a393c` in `connector-sync-isolation`.** Drive sync and status now share one live-card scan. Cards in semantic trash do not sync, while their Drive IDs suppress folder rediscovery. Restoring the card resumes sync; hard deletion leaves the configured folder authoritative and performs a fresh materialization. Focused filesystem doctests, a knowledge audit, and an independent source recheck passed; no live authenticated Google account was available.
 
-**What is wrong.** The Drive connector's untracking story is 'the card's existence IS the config' (header comment, `beebox/src/connectors/google-drive.ts:1-11`; also `src/connectors/drive-config.ts:7`), and the Gmail connector implements exactly that. Drive has one direct violation plus one folder-mount ambiguity.
+**What is wrong.** The Drive connector's untracking story is 'the card's existence IS the config' (header comment, `beebox/src/connectors/google-drive.ts:1-11` (moved to `beebox/src/connectors/google-drive/connector.ts`); also `src/connectors/drive-config.ts:7`), and the Gmail connector implements exactly that. Drive has one direct violation plus one folder-mount ambiguity.
 
 **Planning correction.** The first mechanism below is the connector bug. The
 second is a contract conflict, not the same bug: a configured folder mount is
@@ -26,7 +26,7 @@ store merely to make raw hard deletion override a folder mount.
 
 **User-visible consequence.** A box owner who trashes a Drive card expects the file to stop syncing; instead the box keeps writing Drive updates into `store/trash/` and committing them, and local edits made before the trash can still be pushed up to the live Google document. A box owner who hard-deletes a folder-mounted card sees it reappear on the next `bbx wakeup`; that behavior follows the still-configured folder mount, but the current documentation/catalog does not explain the distinction or name `bbx rm` as the durable per-child gesture.
 
-**Files involved.** `beebox/src/connectors/google-drive.ts` (glob at 139-145; `syncFolder` at 274-323), `beebox/src/connectors/gmail-tracking.ts` (the ignore list that gets it right), `beebox/src/core/commands/trash.ts:140` and `beebox/src/lib/box-layout-spec.ts:158-159` (where trash lives), `beebox/src/connectors/drive-config.ts` (folder mounts).
+**Files involved.** `beebox/src/connectors/google-drive.ts` (moved to `beebox/src/connectors/google-drive/connector.ts`) (glob at 139-145; `syncFolder` at 274-323), `beebox/src/connectors/gmail-tracking.ts` (moved to `beebox/src/connectors/gmail/tracking.ts`) (the ignore list that gets it right), `beebox/src/core/commands/trash.ts:140` (moved to `beebox/src/core/commands/trash/command.ts`) and `beebox/src/lib/box-layout-spec.ts:158-159` (moved to `beebox/src/lib/paths/box-layout-spec.ts`) (where trash lives), `beebox/src/connectors/drive-config.ts` (moved to `beebox/src/connectors/google-drive/config.ts`) (folder mounts).
 
 **How this was established.** Read both connectors' working-set construction and compared them; traced `bbx trash`'s destination to `store/trash` under the box root and confirmed the Drive glob has no `ignore` option, so that path is in scope; read `syncFolder`'s `existingDriveIds` skip condition and its `fs.access` existence check, both of which pass for a deleted card and lead to re-creation. Note the Drive glob also lacks the `node_modules/**` and `.git/**` guards Gmail has.
 

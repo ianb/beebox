@@ -97,9 +97,9 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   is a rule or a run (a schedule card, a procedure card, a procedure run card,
   the briefing) and puts each intent and delivery in a gitignored
   append-only log, `.beebox/notifications.jsonl`, shown in the app. The
-  event bus (`src/core/event-bus.ts`) carries the live signal to an open
+  event bus (`src/core/event-bus.ts` (moved to `beebox/src/core/event-bus/core.ts`)) carries the live signal to an open
   app and nothing more: the server prunes it at 24 hours
-  (`src/webapp/server.ts:244`), so it is not a record.
+  (`src/webapp/server.ts:244` (moved to `beebox/src/webapp/server/app.ts`)), so it is not a record.
 - **Minimize invented concepts** (boxholder preference). Loudness is one word
   with three values. The reminder is a scheduled-script card with a
   `notify:` field, not a command and not a card type. The judge is a
@@ -134,7 +134,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   (`src/core/notify-boxholder.ts:107-109`). This plan logs every intent
   and every delivery outcome and raises a health check when nothing could
   send. Health checks are computed on request by `runHealthChecks`
-  (`src/webapp/trpc/routers/health.ts:153`); the new checks read the log,
+  (`src/webapp/trpc/routers/health.ts:153` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)); the new checks read the log,
   the Jev budget, and the schedule state. There is no entry store.
 - **Scope anchored to the incident** (boxholder preference). Unread state on
   chat replies and quiet hours are deferred by the boxholder's ruling
@@ -158,25 +158,25 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   emits the live bus event, and calls each chosen channel once (Track A).
 - **Callers, all system code:** `src/core/question-alert.ts:104`
   (`severity: "alert"`), `src/core/question-aging.ts:214` (`severity:
-  "info"`), `src/core/schedule/health-alert.ts:84`,
-  `src/core/schedule/connector-activity-alert.ts:61`,
-  `src/core/schedule/google-auth-alert.ts:86`,
+  "info"`), `src/core/schedule/health-alert.ts:84` (moved to `beebox/src/core/schedule/scheduler/health-alert.ts`),
+  `src/core/schedule/connector-activity-alert.ts:61` (moved to `beebox/src/core/schedule/scheduler/connector-activity-alert.ts`),
+  `src/core/schedule/google-auth-alert.ts:86` (moved to `beebox/src/core/schedule/scheduler/google-auth-alert.ts`),
   `src/core/agent/engine-unavailability-apply.ts:38`. **Reuse:** Track E
   changes what each does.
-- **Event bus.** `src/core/event-bus.ts`: SQLite at `.beebox/events.db`,
+- **Event bus.** `src/core/event-bus.ts` (moved to `beebox/src/core/event-bus/core.ts`): SQLite at `.beebox/events.db`,
   `emit` persists and dispatches, `subscribe({ afterId })` replays
   (`:174-196`), cross-process with `pollInterval` (`:212-219`). Events are
-  typed by `src/core/event-bus-schemas.ts:84`. `chat-complete` (`:173`)
+  typed by `src/core/event-bus-schemas.ts:84` (moved to `beebox/src/core/event-bus/schemas.ts`). `chat-complete` (`:173`)
   carries `sessionId`. `card-created` (`:126`) is emitted only by the UI
   action routes (`src/webapp/trpc/routers/actions.ts:111`,
   `src/webapp/routes/actions.ts:76`), not by connectors or agents.
-  The server prunes events older than 24 hours (`src/webapp/server.ts:244`).
+  The server prunes events older than 24 hours (`src/webapp/server.ts:244` (moved to `beebox/src/webapp/server/app.ts`)).
   **Reuse:** the bus carries the live `notification` event to open apps;
   it is not the record. The turn-end hook where `<schedule>` tags are
-  parsed (`src/webapp/routes/chat.ts:125-138`) is where callouts are
+  parsed (`src/webapp/routes/chat.ts:125-138` (moved to `beebox/src/webapp/routes/chat/register.ts`)) is where callouts are
   parsed. "What changed" cannot be read from the bus and is read from git
   (Track D).
-- **Output-card delivery helper.** `src/connectors/output-cards.ts:57`
+- **Output-card delivery helper.** `src/connectors/output-cards.ts:57` (moved to `beebox/src/connectors/telegram/delivery-loop.ts`)
   `deliverPendingOutputCards`: `null` deletes the card (`:91-92`), a
   message stamps `failed` (`:95-103`). **Keep for Telegram replies; not used
   for notifications** after this plan.
@@ -190,13 +190,13 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   `issues/code-quality/2026-07-04-web-push-followup-testing.md`). The
   service worker payload `{ title, body, url, tag }` stays.
 - **Telegram.** `src/schemas/telegram-message.ts:23-29` card and
-  `src/connectors/telegram-output-cards.ts:28` stay for chat replies.
+  `src/connectors/telegram-output-cards.ts:28` (moved to `beebox/src/connectors/telegram/output-cards.ts`) stay for chat replies.
   `TelegramService` (`src/services/telegram.ts`) is called directly by the
   `telegram` channel worker with `disable_notification` for `quiet`.
-- **Scheduled scripts.** `src/schemas/scheduled-script.tsx` fields `cron, at,
+- **Scheduled scripts.** `src/schemas/scheduled-script.tsx` (moved to `beebox/src/schemas/scheduled-script/schema.tsx`) fields `cron, at,
   rrule, until, once, runs, requires, create-after-success`; `runs` is
   required (`:61`). `bbx tick` runs it with `execWithTimeout(parsed.runs, {
-  cwd: boxRoot, env })` (`src/cli/commands/tick-helpers.ts:275-282`),
+  cwd: boxRoot, env })` (`src/cli/commands/tick-helpers.ts:275-282` (moved to `beebox/src/cli/tick-helpers.ts`)),
   records `success` (`:285`), deletes a `once` card after success
   (`:184-201`), and skips a card whose `requires.connectors` are missing
   with a log line only (`:142-144`). Schedule state records `lastResult:
@@ -207,7 +207,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   was neither deferred nor skipped.
 - **Chat timers.** `<schedule in="20m" ...>` (`src/core/chat/session/prompts.ts:166`)
   arms a `setTimeout` in the server process, persisted in
-  `.beebox/chat-schedules.json` (`src/core/chat/schedules.ts:11`), and fires a
+  `.beebox/chat-schedules.json` (`src/core/chat/schedules.ts:11` (moved to `beebox/src/core/chat/schedules/core.ts`)), and fires a
   `<schedule-fired>` message into the chat session
   (`src/core/chat/session/pool.ts:287`). It runs an agent at fire time, lands
   only in the chat, and breaks past about 25 days
@@ -235,7 +235,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
 - **Procedures.** `src/schemas/procedure.ts:54` a step has `precheck`, `run`,
   `validate`; each phase has `shells`, `agents`, `instructions`, `whys`
   (`:30-33`); `precheck` adds `pass-output` (`:36-40`). The runner's
-  `runPrecheck` (`src/core/procedure/engine-step.ts:133`) executes the
+  `runPrecheck` (`src/core/procedure/engine-step.ts:133` (moved to `beebox/src/core/procedure/engine/step.ts`)) executes the
   shells and treats exit 75 (`CHECK_SKIP_CODE`, `src/core/procedure/shell.ts:12`)
   as skip. The run card records `status: pass | fail | skip`
   (`src/schemas/procedure-run.ts:15-19`). **Reuse unchanged:** a `shells`
@@ -264,7 +264,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   tripwire `bin/mobile-contract-check.ts` (`:1385`). Track B adds a route and
   updates the contract and fixtures in the same commit.
 - **Health page.** `src/frontend/src/pages/DashboardPage.tsx:26` reads
-  `trpc.health.check` (`src/webapp/trpc/routers/health.ts:342`), which runs
+  `trpc.health.check` (`src/webapp/trpc/routers/health.ts:342` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)), which runs
   `runHealthChecks` (`:153`) and `loadScheduleHealth`
   (`src/core/schedule/health-box.ts`); `HealthWarnings.tsx:40` renders
   failing checks. No toast or banner component exists in the frontend
@@ -279,19 +279,19 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
 - **Box config.** `healthAlerts.telegramChat` (`src/core/box/config.ts:75-79`)
   is read from an unvalidated cast (`:359-362`). **Keep** the field; no new
   config keys are added.
-- **Triage moves cards.** `src/core/triage/routing.ts:74` renames inbox
+- **Triage moves cards.** `src/core/triage/routing.ts:74` (moved to `beebox/src/core/triage/run/routing.ts`) renames inbox
   cards into `inbox/triaged/<category>/` during the reactor's jobs phase;
-  finalize runs after that (`src/core/reactor/engine.ts:2-14`). A path
+  finalize runs after that (`src/core/reactor/engine.ts:2-14` (moved to `beebox/src/core/reactor/engine/core.ts`)). A path
   target can go stale when a later cycle moves the card. Accepted for v1.
-- **Connector health.** `src/core/schedule/connector-activity-alert.ts:40`
+- **Connector health.** `src/core/schedule/connector-activity-alert.ts:40` (moved to `beebox/src/core/schedule/scheduler/connector-activity-alert.ts`)
   already tracks a failing or quiet connector per episode. **Reuse:** the
   promotion rule reads it for a `requested-by` schedule with `requires`.
 - **Script environment.** The tick builds each script's env
-  (`src/cli/commands/tick-helpers.ts:275`), and procedure shells rebuild
+  (`src/cli/commands/tick-helpers.ts:275` (moved to `beebox/src/cli/tick-helpers.ts`)), and procedure shells rebuild
   theirs through `buildScriptEnv` (`src/core/procedure/shell.ts:51`),
   which inherits only allowlisted variables
-  (`src/core/script-env-allowlist.ts:59`). `getHead` exists
-  (`src/lib/git.ts:557`); `getDiff` (`:455`) wraps only the working-tree
+  (`src/core/script-env-allowlist.ts:59` (moved to `beebox/src/core/script-env/allowlist.ts`)). `getHead` exists
+  (`src/lib/git.ts:557` (moved to `beebox/src/lib/git/core.ts`)); `getDiff` (`:455`) wraps only the working-tree
   diff, not a commit range. **Extend:** the new variables are added to the
   allowlist, and a `getRangeDiff` helper is new (Track D).
 - **Skip sites.** `evaluateSkip` in the tick returns a reason and the loop
@@ -389,12 +389,12 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
 - **Presence.** The number of web sessions for the box in which a person
   interacted within the last two minutes, reported by a client heartbeat.
   NOT the count of open subscriptions. Per box, not per target.
-- **Reminder.** A scheduled-script card (`src/schemas/scheduled-script.tsx`)
+- **Reminder.** A scheduled-script card (`src/schemas/scheduled-script.tsx` (moved to `beebox/src/schemas/scheduled-script/schema.tsx`))
   with `at`, `once: true`, `requested-by: boxholder`, and a `notify:` field
   in place of `runs`. NOT a new card type and NOT a command. In git, as the
   rule.
 - **Chat timer.** The existing `<schedule>` tag entry
-  (`src/core/chat/schedules.ts:26`). NOT a reminder: it re-enters a chat and
+  (`src/core/chat/schedules.ts:26` (moved to `beebox/src/core/chat/schedules/core.ts`)). NOT a reminder: it re-enters a chat and
   runs an agent.
 - **Judgment card.** An authored Jev prompt: named questions of the three
   types in frontmatter, instructions in the body, no state. New card type
@@ -422,7 +422,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   (`src/core/chat/session/prompts.ts:155`). Gains an optional `loudness`
   attribute (Track E).
 - **Health entry.** A failing check in `getHealthSnapshot`
-  (`src/webapp/trpc/routers/health.ts:342`). Exists. Demoted alerts are
+  (`src/webapp/trpc/routers/health.ts:342` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)). Exists. Demoted alerts are
   health entries; they never notify on their own (Track E).
 
 ## Tracks / scope
@@ -444,7 +444,7 @@ per delivery are git history that is all plumbing (boxholder decision).
 - `src/core/notification/intent.ts`: `NotificationIntent { id, title, body,
   target, loudness, tag?, source }`, `Loudness`, the Zod schemas for the
   log lines, and one new bus event `notification` (the intent plus `url`)
-  in `src/core/event-bus-schemas.ts:84` for open apps.
+  in `src/core/event-bus-schemas.ts:84` (moved to `beebox/src/core/event-bus/schemas.ts`) for open apps.
 - `src/core/notification/log.ts`: `appendIntent`, `appendDelivery`,
   `readRecent(boxRoot, { days })`, `getIntent(boxRoot, id)`. The write
   protocol, since three processes append (server, scheduler daemon, `bbx`):
@@ -464,7 +464,7 @@ per delivery are git history that is all plumbing (boxholder decision).
   sends, the way `<schedule-fired>` carries context
   (`src/core/chat/session/pool.ts:287`). No agent runs on tap. A `card:` or
   `question:` target is a path; triage may move the card later
-  (`src/core/triage/routing.ts:74`) and the tap then lands on the
+  (`src/core/triage/routing.ts:74` (moved to `beebox/src/core/triage/run/routing.ts`)) and the tap then lands on the
   missing-card page. Accepted for v1.
 - `src/core/notification/presence.ts`: `livePresence(boxRoot): { activeWeb:
   number }`. The frontend sends a heartbeat every 30 seconds while a person
@@ -489,12 +489,12 @@ per delivery are git history that is all plumbing (boxholder decision).
   server (callouts), and `bbx` (agents); all three already build services
   the same way the health alert does with `deliver: true` today.
 - `src/core/notification/health.ts`: three checks added to `runHealthChecks`
-  (`src/webapp/trpc/routers/health.ts:153`): "notifications that could not
+  (`src/webapp/trpc/routers/health.ts:153` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)): "notifications that could not
   be delivered in the last 24 hours" and "notifications with no channel",
   both read from the log with the titles, and "notification log not
   writable", which probes by opening the file for append, so an unwritable
   log is reported by a check that does not depend on the log.
-- `src/cli/commands/notify.ts`: `bbx notify <title> [--body <text> |
+- `src/cli/commands/notify.ts` (moved to `beebox/src/cli/commands/notify/command.ts`): `bbx notify <title> [--body <text> |
   --body-file <path>] --target <t> [--loudness dot|quiet|loud]
   [--tag] [--channel <name>] [--check] [--targets-from-stdin]`.
   `--body-file` and stdin (`--body -` or `--body-file -`, never implicit:
@@ -550,7 +550,7 @@ pruning.
 - `src/services/apns.ts`: `ApnsService.send({ token, environment, payload })
   -> { ok } | { gone } | throws`. Real wraps `@parse/node-apn` with one
   provider per environment; fake records calls. Payload builder in
-  `src/core/notification/apns-payload.ts`, a pure function: `dot` gives
+  `src/core/notification/apns-payload.ts` (moved to `beebox/src/core/notification/apns-channel/payload.ts`), a pure function: `dot` gives
   `{ aps: { badge: 1 }, target }`; `quiet` gives `{ aps: { alert: { title,
   body }, "interruption-level": "passive", badge: 1 }, target, loudness }`;
   `loud` adds `sound: "default"` and level `active`. `apns-collapse-id` is
@@ -665,7 +665,7 @@ then a `judge` precheck field; both are replaced by commands.
 
 **Direction.**
 
-- **`notify:` on scheduled scripts.** `src/schemas/scheduled-script.tsx`:
+- **`notify:` on scheduled scripts.** `src/schemas/scheduled-script.tsx` (moved to `beebox/src/schemas/scheduled-script/schema.tsx`):
   `runs` becomes optional and `notify: { title, body?, loudness?, target?,
   context? }` is added; exactly one of the two, enforced by a refinement
   whose message says so. `requested-by: "boxholder"` is added as an optional
@@ -693,15 +693,15 @@ then a `judge` precheck field; both are replaced by commands.
   added.
 - **Schedule memory.** Schedule state (`src/core/schedule/state.ts:45`)
   gains `lastCommit: string | null` (the box HEAD from `getHead`,
-  `src/lib/git.ts:557`, recorded at the end of every run that was not
+  `src/lib/git.ts:557` (moved to `beebox/src/lib/git/core.ts`), recorded at the end of every run that was not
   deferred for budget) and `carry: string | null` (at most 4 KB; the last
   value the script wrote, replaced each run, never appended). `lastRun`
   exists. The tick exposes them to the script's environment
-  (`src/cli/commands/tick-helpers.ts:275`, beside the existing env) as
+  (`src/cli/commands/tick-helpers.ts:275` (moved to `beebox/src/cli/tick-helpers.ts`), beside the existing env) as
   `BBX_SINCE_COMMIT`, `BBX_SINCE_TIME`, `BBX_CARRY_IN`, and a writable file
   path `BBX_CARRY_OUT`, plus `BBX_DEFER_FILE` (below); after the run the
   tick reads the carry file into `carry`. The five names are added to the
-  script env allowlist (`src/core/script-env-allowlist.ts:59`), which is
+  script env allowlist (`src/core/script-env-allowlist.ts:59` (moved to `beebox/src/core/script-env/allowlist.ts`)), which is
   the only way they reach a procedure's shells
   (`src/core/procedure/shell.ts:51` rebuilds the env through it). Before a
   schedule's first run the tick sets `lastCommit` to the current HEAD and
@@ -712,10 +712,10 @@ then a `judge` precheck field; both are replaced by commands.
   added|modified|any] [--log] [--or-skip]` prints one box-relative card
   path per line changed under the matching globs between `--since`
   (default `$BBX_SINCE_COMMIT`) and HEAD, from a commit-range tree diff
-  (a new `getRangeDiff(boxRoot, { from, to, filter })` in `src/lib/git.ts`;
+  (a new `getRangeDiff(boxRoot, { from, to, filter })` in `src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`);
   the existing `getDiff` at `:455` covers only the working tree), so a
   card triage moved during the window appears once at its final path
-  (`src/core/triage/routing.ts:74`). `--cat` prints each listed card in
+  (`src/core/triage/routing.ts:74` (moved to `beebox/src/core/triage/run/routing.ts`)). `--cat` prints each listed card in
   full after a `=== <path>` header line instead of the bare path, so a
   judge and an agent downstream keep the path with the text; `--cat --all`
   prints every card matching the globs, not only the changed ones, for a
@@ -726,7 +726,7 @@ then a `judge` precheck field; both are replaced by commands.
   result. With no `--since` and no env (ad hoc use outside a schedule) it
   exits 2 with "no since: pass --since or run from a schedule", never a
   guess. Flags only; no JSON argument, the surface is small.
-- **The judgment card.** `src/schemas/judgment.ts`: `cardSchema("judgment",
+- **The judgment card.** `src/schemas/judgment.ts` (moved to `beebox/src/schemas/judgment/schema.ts`): `cardSchema("judgment",
   { fields: { questions: record(name, { type: enum(noul, choice, score),
   criteria }), situation?: ref, model? }, body })`, where `criteria` takes
   the wire shape for its type: `{ true, false }` for `noul`, a map of option
@@ -921,7 +921,7 @@ passes records `success` and is deleted).
 a source.
 
 **Why this needs to change.** Every current caller passes `severity: "alert"`
-(`src/core/schedule/health-alert.ts:84` and the others under *What already
+(`src/core/schedule/health-alert.ts:84` (moved to `beebox/src/core/schedule/scheduler/health-alert.ts`) and the others under *What already
 exists*). The boxholder's ruling: health stays in the app unless it blocks
 something asked for; questions are a dot unless time-bound; agent outcomes
 reach the person only when the agent marks them.
@@ -930,7 +930,7 @@ reach the person only when the agent marks them.
 
 - Callouts: `<callout loudness="quiet">` attribute, default none. At turn
   end, where `<schedule>` tags are parsed today
-  (`src/webapp/routes/chat.ts:125-138`), the server parses callouts with a
+  (`src/webapp/routes/chat.ts:125-138` (moved to `beebox/src/webapp/routes/chat/register.ts`)), the server parses callouts with a
   sibling `parseCalloutTags`. One intent per turn: body is the first
   callout, loudness the highest any callout asked for, else `dot`, target
   `chat:<sessionId>`, tag the session id so a later turn replaces rather
@@ -963,7 +963,7 @@ reach the person only when the agent marks them.
   episode (`connector-activity-alert.ts:40`) even though the script itself
   could run, and a judge that cannot run because the Jev key is missing.
 - Capture failure: the capture pipeline's terminal failure (the
-  `capture-status` event, `src/core/event-bus-schemas.ts:206`) sends
+  `capture-status` event, `src/core/event-bus-schemas.ts:206` (moved to `beebox/src/core/event-bus/schemas.ts`)) sends
   `quiet` with target `chat:<sessionId>` when presence is zero. Success
   sends nothing.
 
@@ -1118,7 +1118,7 @@ is fixed by Apple's API and the contract rule.
 | Process dies between send and log append | none: window is one write | the person got the notification; the log lacks the line; Admin shows the intent without a delivery | Silent, accepted: no user-visible harm |
 | Log unwritable | Track A doctest | `notifyBoxholder` still sends and logs an error; the append-probe health check reports it without reading the log | Clear |
 | Rotation races an appender | Track A doctest | rename is atomic; a line written through the old descriptor lands in the rotated file, which readers also read | Clear |
-| Bus DB unreadable | existing bus `unknown` sentinel (`src/core/event-bus.ts:24-31`) | the live event is skipped; delivery unaffected | Clear |
+| Bus DB unreadable | existing bus `unknown` sentinel (`src/core/event-bus.ts:24-31` (moved to `beebox/src/core/event-bus/core.ts`)) | the live event is skipped; delivery unaffected | Clear |
 | Agent promises a reminder with no channel | Track F audit; `--check` route doctest | `bbx notify --check` exits 1; the guide says check first | Clear |
 | Card target moved by triage after the send | none | tap lands on the missing-card page | Silent, accepted for v1: no stable card id exists |
 | Presence heartbeat counts an idle open tab | Track A doctest of the heartbeat rule | heartbeat only while interacted within two minutes | Clear |

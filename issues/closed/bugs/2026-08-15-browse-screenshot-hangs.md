@@ -57,4 +57,4 @@ login or app state set up in one session is not visible in another.
 Verified against `about:blank`, a real app page, and an own-origin page with
 the marker removed, headed and headless, after a daemon restart, and with two
 named sessions live at once. Covered by
-`beebox/test/dev/browse-session-profile.doctest.md`.
+`beebox/test/dev/browse-session-profile.doctest.md` (moved to `browse/test/worktree.doctest.md`).

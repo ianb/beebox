@@ -13,7 +13,7 @@ Closed after live verification on 2026-08-06. Every selectable HQ transcription 
 `SpeechDictation` (`ios-app/BeeBox/`) writes the dictation WAV using the microphone's native
 input format (`inputNode.outputFormat`), which is typically 32-bit float PCM, and uploads it to
 `POST /api/chat/transcribe-audio` with `Content-Type: audio/wav` unchanged. The server
-(`beebox/src/webapp/routes/chat-audio-routes.ts`) forwards the buffer as-is to the configured HQ
+(`beebox/src/webapp/routes/chat-audio-routes.ts` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`)) forwards the buffer as-is to the configured HQ
 transcription provider (`transcribeAudioHq`, dispatching to OpenAI or Voxtral). The separate general
 transcription path also supports Deepgram.
 

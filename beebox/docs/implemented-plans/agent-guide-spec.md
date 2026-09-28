@@ -93,7 +93,7 @@ leaving the guide half-specified (see Could this be simpler).
 
 ## What already exists
 
-- **Section functions and handles**: `src/core/agent-guide/index.ts:74-109`
+- **Section functions and handles**: `src/core/agent-guide/index.ts:74-109` (moved to `beebox/src/core/agent-guide/guide/core.ts`)
   assembles 21 sections into the array and `:111-114` appends the optional
   personality section; `sections.ts:19` defines the `SECTION` constants
   (THE_LAWS, the three law names, ABOUT_CARDS, CARD_TYPES, QUESTIONS, TODOS,
@@ -119,8 +119,8 @@ leaving the guide half-specified (see Could this be simpler).
 - **YAML-with-schema precedent**: `src/dev/lib/test-suite-schema.ts` parses
   `knowledge-audits.yaml` with zod. Reuse the pattern for the ledger schema.
 - **Package docs** as the destination for indirect rows
-  (`docs/box/*.md`, `src/core/docs-gen/package-docs.ts`), card rules
-  (`src/core/init-rules.ts`), skills (`src/core/box/skills-content.ts`).
+  (`docs/box/*.md`, `src/core/docs-gen/package-docs.ts` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`)), card rules
+  (`src/core/init-rules.ts`), skills (`src/core/box/skills-content.ts` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`)).
 
 Searched and found nothing: no doc states why any guide paragraph is in the
 guide. `docs/prompts/review.md` describes how to review the assembled stack,
@@ -274,7 +274,7 @@ becomes a placeholder whose filler stays in TypeScript, and the placeholder
 line carries its own annotation (`<!-- rules: card-types.list -->`), so
 per-box variation inside it is covered without per-box rows and counts as
 cited text. The renderer strips only `<!-- rules: ... -->` and the header
-comment, and runs before `withDocId` (`src/core/docs-gen/index.ts:400-403`
+comment, and runs before `withDocId` (`src/core/docs-gen/index.ts:400-403` (moved to `beebox/src/core/docs-gen/generate/core.ts`)
 wraps the render), so the DOCID marker is untouched. Uncited words are
 counted per section on the rendered text with the placeholders filled from
 the bare fixture.
@@ -290,7 +290,7 @@ the linter grows with the rewrite rather than failing wholesale on day one.
 **What.** A row for each of the guide's roughly 180 blocks, binned by the
 ordered test, with the reason. Then the moves: `indirect` rows go to their
 surface (a package doc, a card rule, a skill) with the section-hash check
-confirming a verbatim move, and `test/core/box-docs-pointers.doctest.md`
+confirming a verbatim move, and `test/core/box-docs-pointers.doctest.md` (moved to `beebox/test/core/docs-gen/package-docs.pointers.doctest.md`)
 extended to the ledger's `mechanics:` field; `delete` rows go, each naming
 in its reason what the agent looks at instead. Package-doc, rule, and skill
 edits are in scope here: a moved block changes what an agent reads on
@@ -428,7 +428,7 @@ subplan: it can start only after this plan has fixed the row form.
   ADDRESSED by the per-row audits and the revert rule; the reason field
   records the judgment for the next reader.
 - **Stale pointer** (a pointer names a doc that moves): ADDRESSED by
-  `test/core/box-docs-pointers.doctest.md` from phase two, extended to the
+  `test/core/box-docs-pointers.doctest.md` (moved to `beebox/test/core/docs-gen/package-docs.pointers.doctest.md`) from phase two, extended to the
   ledger's `mechanics:` field.
 - **Two writers** (a feature branch adds a guide paragraph while this plan
   rewrites the section): GAP during the plan's life; the uncited-words
@@ -488,10 +488,10 @@ budget if we follow the rules. So go to work"):
   after the model cutoff; a fact inside the box the prompt tempts the agent
   to assume), each asserting the tool call, `bash_contains: ["bbx search"]`
   or a web search observation. Today the Claude runner records Read, Grep,
-  Glob, and Bash only (`src/dev/lib/test-runner.ts:280-298`;
+  Glob, and Bash only (`src/dev/lib/test-runner.ts:280-298` (moved to `beebox/src/dev/lib/test-runner/runner.ts`);
   `src/shared/known-tools.ts:13-23` lists no web tool), while the Codex
   runner already records provider searches
-  (`src/dev/lib/codex-audit-behavior.ts:14-31`); and the audit schema has no
+  (`src/dev/lib/codex-audit-behavior.ts:14-31` (moved to `beebox/src/dev/lib/test-runner/codex-audit.ts`)); and the audit schema has no
   search assertion (`src/dev/lib/test-suite-schema.ts:20-43`). Track 4
   first adds WebSearch and WebFetch to the Claude capture and a
   `should_search` field checked in `audit-checks.ts`.

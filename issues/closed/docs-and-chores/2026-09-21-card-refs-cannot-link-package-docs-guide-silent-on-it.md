@@ -25,7 +25,7 @@ system, and is not what the guide says.
 
 ## Mechanism
 
-`beebox/src/shared/ref-path.ts` documents the design deliberately: refs must
+`beebox/src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`) documents the design deliberately: refs must
 resolve inside one of the box's underscore areas (`_content`, `_config`,
 `_bookkeeping`, `_publish`, `_tmp`); "anything else — `src/`,
 `node_modules/`, `.git/`, `CLAUDE.md`, `package.json`, any unlisted root

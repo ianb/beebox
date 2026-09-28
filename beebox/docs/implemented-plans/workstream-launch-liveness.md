@@ -61,9 +61,9 @@ session registry and adds `launching` to the shared liveness state set.
 - `bin/lib/workstream-routing.sh:39-50` projects `live`, `dormant`, `removed`,
   and `uncertain` states. This plan projects an active lease as `launching` and
   an expired lease as `uncertain`, so failure does not look dormant.
-- `beebox/test/dev/launch-session.doctest.md` already builds both agent
-  scripts without opening a real Terminal. `beebox/test/dev/session-registry.doctest.md`
-  exercises atomic and concurrent registry updates. `beebox/test/dev/workstream-cull.doctest.md`
+- `beebox/test/dev/launch-session.doctest.md` (moved to `bin/test/lib/launch-session.doctest.md`) already builds both agent
+  scripts without opening a real Terminal. `beebox/test/dev/session-registry.doctest.md` (moved to `bin/test/lib/session-registry.doctest.md`)
+  exercises atomic and concurrent registry updates. `beebox/test/dev/workstream-cull.doctest.md` (moved to `bin/test/lib/workstream-cull.doctest.md`)
   exercises the shared liveness guard. The plan extends these three tests.
 
 ## Prior art (external)

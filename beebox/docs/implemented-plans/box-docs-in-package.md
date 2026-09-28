@@ -8,7 +8,7 @@ issues:
 # Engine docs move out of the box and into the package
 
 **Status:** implemented 2026-09-05. The engine's reference docs live in the
-installed package at `box-docs/` (`src/core/docs-gen/package-docs.ts`,
+installed package at `box-docs/` (`src/core/docs-gen/package-docs.ts` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`),
 `ensurePackageDocs`), and the box keeps only what is compiled from the box's
 own content. Both open questions below were decided by the implementation as
 written: the directory is named `box-docs/`, and box-compiled docs stayed at
@@ -18,7 +18,7 @@ built-in-only generator inputs, an override policy, and visible failure paths.
 
 ## Problem
 
-`generateDocs` (`src/core/docs-gen/index.ts`) writes ~68 markdown files into
+`generateDocs` (`src/core/docs-gen/index.ts` (moved to `beebox/src/core/docs-gen/generate/core.ts`)) writes ~68 markdown files into
 `_content/docs/generated/` on `bbx init`, wakeup, chat start, `bbx migrate`, and
 `bbx docs refresh`. Sorted by what they depend on:
 
@@ -54,7 +54,7 @@ today) computes the engine docs in-process, compares a content hash against
 they differ. That covers the dev checkout (any edit to a schema's
 `instructions` propagates on the next `bbx` activity, no build step involved)
 and the deploy checkout (writable). The release tarball gets the directory from
-`scripts/build-box-docs.ts`, which `scripts/release.ts` runs before `pnpm pack`;
+`scripts/build-box-docs.ts` (moved to `beebox/src/scripts/build-box-docs.ts`), which `scripts/release.ts` (moved to `beebox/src/scripts/release.ts`) runs before `pnpm pack`;
 `box-docs` is added to `package.json` `files`. The Docker image installs the
 box from that tarball, so `node_modules/beebox/box-docs/` is present there too.
 
@@ -70,9 +70,9 @@ edit.
 **When the directory cannot be written** (a read-only install with a pack that
 dropped it): `generateDocs` logs a `console.error` naming the path and the fix,
 and the box health check `package-docs` (in `runHealthChecks`,
-`src/webapp/trpc/routers/health.ts`) reports it on the dashboard, so the agent
+`src/webapp/trpc/routers/health.ts` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)) reports it on the dashboard, so the agent
 guide's pointers are never silently dangling. `pnpm smoke`
-(`scripts/smoke-external-box.ts`) asserts the directory and its index exist in
+(`scripts/smoke-external-box.ts` (moved to `beebox/src/scripts/smoke-external-box.ts`)) asserts the directory and its index exist in
 the scaffolded box, so a bad `files` allowlist fails the release check.
 
 From a box, the path is `node_modules/beebox/box-docs/<file>`. Every current
@@ -87,7 +87,7 @@ Built-in inputs only, never ambient registry state:
 - `card-<type>.md` for every schema in `cardSchemas` (the built-in array) with
   `instructions`, with the `contains:` appendix for searchable types.
 - `bbx-commands.md` lists templates registered by the engine (owner
-  `builtin` in `src/schemas/templates-registry.ts`; a `getBuiltinTemplates()`
+  `builtin` in `src/schemas/templates-registry.ts` (moved to `beebox/src/templates-registry.ts`); a `getBuiltinTemplates()`
   is added beside `getAllTemplates()`), not whatever boxes have registered in
   the process.
 - `README.md`: an index, one line per doc: filename and a one-line "read this
@@ -128,7 +128,7 @@ if present, so an upgraded box does not carry a stale copy beside the live one.
   so it can also say where the engine source is when it is present
   (`PACKAGE_ROOT/src` exists in a checkout; a packed install ships `dist`
   only). The packaged README never makes that claim.
-- The card type list (`src/core/agent-guide/cards.ts`) points each built-in
+- The card type list (`src/core/agent-guide/cards.ts` (moved to `beebox/src/core/agent-guide/guide/cards.ts`)) points each built-in
   type at the package path and each box-local (or shadowing) type at the box
   path.
 
@@ -136,12 +136,12 @@ if present, so an upgraded box does not carry a stale copy beside the live one.
 
 - **Generated per run** (change takes effect on the next `generateDocs`):
   `src/core/agent-guide/*.ts`, `src/core/chat/session/prompts.ts`,
-  `src/schemas/personality-compile.ts`, `src/schemas/intake-job.tsx`,
+  `src/schemas/personality-compile.ts` (moved to `beebox/src/schemas/personality/compile.ts`), `src/schemas/intake-job.tsx`,
   `src/core/claude-md-lint.ts` (a lint message), `src/cli/commands/init.ts`
   (its summary line), the doc generators themselves
   (`views/doc.ts`, `narration-mode-doc.ts`, `python-tools-doc.ts`,
   `reducing-claude-md-doc.ts`, `chat/voice-doc.ts`, `docs-gen/bbx-commands*.ts`).
-- **Managed skills** (`src/core/box/skills-content.ts`): overwritten by
+- **Managed skills** (`src/core/box/skills-content.ts` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`)): overwritten by
   `generateSkills` on every run past the cache, no stock hash.
 - **Stock templates with tracker hashes** (`src/core/box/templates.ts`:
   the schemas guide and views guide): editing their text requires
@@ -156,16 +156,16 @@ if present, so an upgraded box does not carry a stale copy beside the live one.
   `templates/procedures/process-retrospective.procedure.card`,
   `src/dev/knowledge-audits.yaml` (`should_read_any` paths).
 - **Tests**: `test/core/{docs-refresh,agent-guide-card-types}.doctest.md`,
-  `test/core/search/search-index.doctest.md`, `test/cli/lib/box-layout-spec.doctest.md`,
-  `test/cli/commands/validate-markdown.doctest.md`, `test/dev/lib/{audit-checks,codex-audit-behavior}.doctest.md`.
+  `test/core/search/search-index.doctest.md` (moved to `beebox/test/core/search/refresh.index.doctest.md`), `test/cli/lib/box-layout-spec.doctest.md` (moved to `beebox/test/lib/paths/box-layout-spec.doctest.md`),
+  `test/cli/commands/validate-markdown.doctest.md` (moved to `beebox/test/cli/validate-markdown.doctest.md`), `test/dev/lib/{audit-checks,codex-audit-behavior}.doctest.md`.
 
 ## Work
 
-1. **Generator.** `src/core/docs-gen/package-docs.ts`: `engineDocs()` returns
+1. **Generator.** `src/core/docs-gen/package-docs.ts` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`): `engineDocs()` returns
    `{filename, content}[]` (nine static docs, built-in card docs, README
    index) and `ensurePackageDocs()` writes them to `PACKAGE_ROOT/box-docs/`
    when the content hash differs, atomically; returns `current | written |
-   unwritable`. `scripts/build-box-docs.ts` calls the same writer for
+   unwritable`. `scripts/build-box-docs.ts` (moved to `beebox/src/scripts/build-box-docs.ts`) calls the same writer for
    `release.ts`. `.gitignore` and `files` updated. `getBuiltinTemplates()`.
 2. **generateDocs.** Calls `ensurePackageDocs()` (logs on `unwritable`);
    `writeStaticDocs` writes only the agent guide and box-local card docs;

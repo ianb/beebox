@@ -40,7 +40,7 @@ failure on stdout before exiting 1:
 ```
 
 `CodexSdkSession.run` already captures those events
-(`src/services/codex-sdk-session.ts:199-203`: `else if (event.type ===
+(`src/services/codex-sdk-session.ts:199-203` (moved to `beebox/src/services/codex-sdk-session/core.ts`): `else if (event.type ===
 "turn.failed") { error = event.error.message; }`). The loss point is the catch
 at `codex-sdk-session.ts:212-217`: the SDK's generator *also* throws a
 process-exit error after the stream ends (`@openai/codex-sdk/dist/index.js:294`:
@@ -54,7 +54,7 @@ Correction to the issue text: `refresh-maps` does **not** retry its validation
 — its validate step is `severity: warn`
 (`templates/procedures/refresh-maps.procedure.card:140-171`), which reports
 without gating. The retry-after-failed-validation loop is the generic
-`severity: review` mechanism (`src/core/procedure/engine-run-phase.ts:257-291`)
+`severity: review` mechanism (`src/core/procedure/engine-run-phase.ts:257-291` (moved to `beebox/src/core/procedure/engine/run-phase.ts`))
 and that is the code path this plan must gate.
 
 ## Stated preferences this plan trades against
@@ -81,11 +81,11 @@ and that is the code path this plan must gate.
 | Thing | Where | Reuse or rebuild |
 |---|---|---|
 | `AgentResult` discriminated union both engines return | `src/core/agent/types.ts:74-76` | Reuse — add an optional typed field to the failure arm |
-| Codex event capture (`turn.failed`, `error`) | `src/services/codex-sdk-session.ts:199-203` | Reuse — fix the rethrow that discards it |
-| Claude-path failure translation | `src/core/agent/run.ts:111-151` (`buildAgentResult`) | Reuse — add recognition there |
+| Codex event capture (`turn.failed`, `error`) | `src/services/codex-sdk-session.ts:199-203` (moved to `beebox/src/services/codex-sdk-session/core.ts`) | Reuse — fix the rethrow that discards it |
+| Claude-path failure translation | `src/core/agent/run.ts:111-151` (moved to `beebox/src/core/agent/invoke/run.ts`) (`buildAgentResult`) | Reuse — add recognition there |
 | Single outcome-recording choke point for schedules | `src/core/schedule/state.ts:203` (`recordOutcome`) | Reuse — add a `"deferred"` result |
-| Pre-run skip gates | `src/cli/commands/tick-helpers.ts:112` (`evaluateSkip`) | Reuse — add an unavailability gate |
-| Once-per-episode notification latch for an account-level condition | `src/core/schedule/google-auth-alert.ts` | Model to copy (latch lives in the new store, not per-task state) |
+| Pre-run skip gates | `src/cli/commands/tick-helpers.ts:112` (moved to `beebox/src/cli/tick-helpers.ts`) (`evaluateSkip`) | Reuse — add an unavailability gate |
+| Once-per-episode notification latch for an account-level condition | `src/core/schedule/google-auth-alert.ts` (moved to `beebox/src/core/schedule/scheduler/google-auth-alert.ts`) | Model to copy (latch lives in the new store, not per-task state) |
 | Operator notification fan-out | `src/core/notify-boxholder.ts:68` (`notifyBoxholder`) | Reuse |
 | Machine-level state locations | `~/.config/beebox/` (`boxes-config.ts:33`), `~/.local/share/beebox` (`push-subscriptions.ts:72`) | Follow — store goes in `~/.local/share/beebox/` |
 | Narrow provider-failure regex classification | `src/services/scan-vision-claude.ts:218-220` | Pattern precedent (that classifier stays subsystem-local; it classifies *transient*, a different kind) |

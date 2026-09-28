@@ -14,7 +14,7 @@ is now a symlink to the main checkout's `beebox/` package, the same shape the
 worktree clones and `scaffoldPackageRoot` produce, so the engine's `box-docs/`
 is the box's. The stale copy was moved aside, not deleted.
 
-`ensurePackageDocs` (`beebox/src/core/docs-gen/package-docs.ts`, around line
+`ensurePackageDocs` (`beebox/src/core/docs-gen/package-docs.ts` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`), around line
 219) writes the package docs to `PACKAGE_ROOT/box-docs/`, where
 `PACKAGE_ROOT` (`beebox/src/lib/package-root.ts`) is resolved from the running
 module's location. On a production box `node_modules/beebox` is a symlink to

@@ -20,7 +20,7 @@ filesystem paths, readable in the browser. Observed on a `FORBIDDEN`
 ("Owner access required") from `pairing.devices` on the settings page.
 
 The router is created with no error formatter
-(`beebox/src/webapp/trpc/trpc.ts:4`), so tRPC's default applies: it puts
+(`beebox/src/webapp/trpc/trpc.ts:4` (moved to `beebox/src/webapp/trpc/procedures.ts`)), so tRPC's default applies: it puts
 `stack` in `error.data` whenever `process.env.NODE_ENV !== "production"`.
 
 The part that needs checking is what that env var is on a deployed box. Nothing
@@ -33,16 +33,16 @@ is unset in production:
 - tRPC error stacks, above.
 - `GET /api/external`, which reads allowlisted files OUTSIDE the box root, is
   registered when `NODE_ENV !== "production"`
-  (`beebox/src/webapp/routes/api.ts:73`). `docs/security-report.md:107`
+  (`beebox/src/webapp/routes/api.ts:73` (moved to `beebox/src/webapp/routes/api/register/core.ts`)). `docs/security-report.md:107`
   records this endpoint as "never mounted on a deployed server" on the strength
   of that guard.
-- The CSP header mode (`beebox/src/webapp/server.ts:158`).
+- The CSP header mode (`beebox/src/webapp/server.ts:158` (moved to `beebox/src/webapp/server/app.ts`)).
 
 The live server uses the manually configured `beebox-hub` unit, not the
 obsolete `beebox-serve` unit that `setup-server.sh` still generates
 (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
 `NODE_ENV` into every box child only when the hub received it
-(`beebox/src/hub/child-env.ts:42-50`, `:103-119`).
+(`beebox/src/hub/child-env.ts:42-50` (moved to `beebox/src/hub/supervisor/child-env.ts`), `:103-119`).
 
 ## Production confirmation (2026-08-23)
 
@@ -69,7 +69,7 @@ accidentally mounted commentary helper.
 
 The initial issue also missed a fourth branch. `POST /api/chat/tts` accepts
 browser-test mock fields when `NODE_ENV !== "production"`
-(`beebox/src/webapp/routes/chat-audio-routes.ts:115-123`). An authenticated
+(`beebox/src/webapp/routes/chat-audio-routes.ts:115-123` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`)). An authenticated
 caller can therefore select fixture audio, delays, chunk sizes, or a
 deterministic mock failure on the deployed server.
 

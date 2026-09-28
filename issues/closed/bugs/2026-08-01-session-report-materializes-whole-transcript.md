@@ -14,7 +14,7 @@ abbreviations now end with the exact `bbx session <id> --raw` command that
 reveals the complete transcript.
 
 `generateSessionReport` / `collectRawEntries`
-(`beebox/src/dev/lib/session-report.ts`) accumulates a `RawEntry` for
+(`beebox/src/dev/lib/session-report.ts` (moved to `beebox/src/dev/lib/session-report/report.ts`)) accumulates a `RawEntry` for
 every user/assistant line with ALL blocks — including `tool_use.input` AND
 `tool_result.content`, which the bounded `parseSessionLog` path deliberately
 summarizes or skips — then builds a second Map over all of them and joins the
@@ -24,7 +24,7 @@ transcript file. A transcript big enough to have OOM'd `bbx serve`
 
 Reachable from `bbx session <id> --tool-report` and `bbx session --since …
 --tool-report` (which runs it per session in the window,
-`beebox/src/cli/commands/session-modes.ts`). CLI-only, so no server blast
+`beebox/src/cli/commands/session-modes.ts` (moved to `beebox/src/cli/commands/session/modes.ts`)). CLI-only, so no server blast
 radius — but it is the last reader that can still materialize a whole
 transcript.
 

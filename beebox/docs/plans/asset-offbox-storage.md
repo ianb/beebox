@@ -119,7 +119,7 @@ verification rather than treating a successful PUT as done.
   (`publish-remote-store.ts:12`).
 - **`config/connectors/*.secret.json`** — the established
   per-box secret location, gitignored by the box `.gitignore`
-  (`src/core/box/index.ts:154` writes `config/connectors/*.secret.*`).
+  (`src/core/box/index.ts:154` (moved to `beebox/src/core/box/structure/core.ts`) writes `config/connectors/*.secret.*`).
   **Reused** for the bucket credentials.
 - **`src/core/housekeeping.ts`** — deterministic non-agent cleanup that
   runs during sync (`:2`: *"Housekeeping tasks that run during sync"*).
@@ -302,7 +302,7 @@ way, which is the point of having it.
 
 **Credentials.** `config/connectors/r2-assets.secret.json` in the box,
 matching the established convention
-(`src/connectors/telegram-helpers.ts:51`) and already covered by the
+(`src/connectors/telegram-helpers.ts:51` (moved to `beebox/src/connectors/telegram/helpers.ts`)) and already covered by the
 box `.gitignore`'s `config/connectors/*.secret.*`. Absent credentials
 mean "asset backup not configured" — push no-ops with a *logged*
 notice, never a silent skip (#4).

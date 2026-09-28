@@ -9,7 +9,7 @@ labels: [router, tests]
 resolution: implemented
 ---
 
-`workstreams-app/test/router/router-site.test.ts` has two failing cases on
+`workstreams-app/test/router/router-site.test.ts` (moved to `workstreams-app/test/router/server/site.test.ts`) has two failing cases on
 current `main` (as merged into this worktree on 2026-09-10):
 
 - *serveSite: a changed source (same set) triggers a rebuild* — expected one

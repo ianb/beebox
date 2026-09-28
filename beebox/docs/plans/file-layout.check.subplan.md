@@ -58,9 +58,9 @@ script's first report.
   the frontend's `@backend/ @core/ @schemas/` from
   `src/frontend/tsconfig.json:42-45`).
 - `agent-doctest` `generateTestSource(markdown, filePath)`
-  (`agent-doctest/src/doctest-hooks.ts:33`) turns a doctest into TypeScript;
+  (`agent-doctest/src/doctest-hooks.ts:33` (moved to `agent-doctest/src/doctest-hooks/hooks.ts`)) turns a doctest into TypeScript;
   the check parses that for a test's imports.
-- `src/dev/doc-check.ts` is the shape of a dev script run by pre-commit
+- `src/dev/doc-check.ts` (moved to `beebox/src/dev/doc-check/check.ts`) is the shape of a dev script run by pre-commit
   (`.husky/pre-commit:93`): prints nothing on success, exits 1 on findings.
 - `bin/lint-changed.ts` reads the staged file list. Not reused: the check
   has no changed-files mode (see *Failure modes*), so it needs no staged
@@ -97,7 +97,7 @@ small part of the same pass.
    package root (skip `node_modules`, `dist`), parse each `.ts`/`.tsx`/
    `.mjs` and each `.doctest.md`/`.test.ts`, resolve relative and aliased
    specifiers to repo paths, record type-only. `registries.ts`: extract
-   `RegistryDecl`s and the public-surface table from `scripts/build-cli.ts`
+   `RegistryDecl`s and the public-surface table from `scripts/build-cli.ts` (moved to `beebox/src/scripts/build-cli/build/bundle.ts`)
    entry points plus `package.json` `exports`.
 3. `src/dev/layout/check/rules/sets.ts` (rules 1, 2, 4), `units.ts` (3, 5,
    and the name-repeats-directory check), `names.ts` (6), `tests.ts` (8),

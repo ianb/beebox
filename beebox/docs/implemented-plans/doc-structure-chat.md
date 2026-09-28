@@ -50,7 +50,7 @@ None needed; no decision depends on an external premise.
 Members of the chat subject, in the code's own names: **session** (`ChatSession`,
 `ChatThreadSession`, `src/core/chat/session/`), **history** (the transcript
 and the acceptance record; session media), **schedules** (`<schedule>` timers,
-`src/core/chat/schedules.ts`), **review** (the nightly pass,
+`src/core/chat/schedules.ts` (moved to `beebox/src/core/chat/schedules/core.ts`)), **review** (the nightly pass,
 `src/core/chat/review/`), **quick chat** (routing, `src/core/chat/routing/`),
 **composer** (`composerMachine`, the rendered states), **scroll** (the
 `useChatScroll` controller and its verification). No new nouns.

@@ -39,7 +39,7 @@ falsified several claims; the findings are folded in above and throughout:
 
 - **Box-local XML is live** (`test/box-schemas.doctest.md` proves a `gadget`
   XML card loads; `loadBoxSchemas` segregates `elementSchemas`,
-  `src/schemas/registry.ts:257`). → New load-bearing decision (drop it) above;
+  `src/schemas/registry.ts:257` (moved to `beebox/src/schemas.ts`)). → New load-bearing decision (drop it) above;
   Track A now *removes* that path rather than treating it as already-dead.
 - **`tsc` is not a complete safety net** (`beebox/tsconfig.json` covers
   only `src/**/*`, so `scripts/`, `test/`, box `config/schemas/*.ts` runtime
@@ -68,7 +68,7 @@ carried my blind spots) found more:
 
 - **Box-local frontmatter schemas need a public import contract.** Box
   `config/schemas/*.ts` import bare `"cardworks"` via a custom tsx resolver
-  (`SCHEMA_DEPS = {"cardworks","zod"}`, `src/schemas/registry.ts:97`), and
+  (`SCHEMA_DEPS = {"cardworks","zod"}`, `src/schemas/registry.ts:97` (moved to `beebox/src/schemas.ts`)), and
   package.json has **no `exports` map** (`package.json:6`). After cardworks is
   deleted, a migrated box schema (e.g. frontmatter `bill.ts`) has nothing to
   import `cardSchema` from. → **New Track B requirement:** expose the primitives
@@ -112,7 +112,7 @@ carried my blind spots) found more:
   FrontmatterLoadedCard | XmlLoadedCard"*; `card-io.ts:350` falls through to
   `loadXmlCard` (`card-io.ts:370`). Built-in `schemas[]` is empty, but
   `loadBoxSchemas` populates `elementSchemas` from `config/schemas/*.ts`
-  (`src/schemas/registry.ts:240`/`:257`) and `box-schemas.doctest.md` proves a
+  (`src/schemas/registry.ts:240` (moved to `beebox/src/schemas.ts`)/`:257`) and `box-schemas.doctest.md` proves a
   box `gadget` XML card loads — so the branch is **reachable** today. **Rebuild
   (after the box-local-XML decision):** migrate existing box-local XML schemas
   to frontmatter, remove the box-local `element()` path (the `elementSchemas`
@@ -285,7 +285,7 @@ can be deleted.
   `cardworks/src/parser/parse.ts` (used by `search/refresh-file.ts:15`), with
   the same `startLine`/`startColumn` `Location` (`parse.ts:31`).
 
-Then a barrel `src/cards/index.ts` re-exports them, and a codemod-style
+Then a barrel `src/cards/index.ts` (moved to `beebox/src/exports/cards.ts`) re-exports them, and a codemod-style
 find/replace switches `from "cardworks"` → `from "../cards/index.js"` (path
 adjusted per file) for the keep-set symbols.
 
@@ -463,7 +463,7 @@ the existing "cards are frontmatter" understanding is unchanged.
 2. **Track A, chunk 2 — drop box-local XML support (GATED on the box-schema
    audit; breaks any box still on `element()`).** Remove the `elementSchemas`
    half of `loadBoxSchemas` + `isElementSchema`, `createSchemaRegistry`/the XML
-   side of `getAllSchemas`/`getSearchableTypes` (`src/schemas/registry.ts`),
+   side of `getAllSchemas`/`getSearchableTypes` (`src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`)),
    `load-context.ts`'s `elementSchemas`, the XML branch of `agent-guide/cards.ts`
    and `generate-docs.ts:420`, the `element()` scaffolding in `box-templates.ts`,
    and the `box-schemas.doctest.md` gadget case; collapse `LoadedCard` to

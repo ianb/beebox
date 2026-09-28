@@ -205,7 +205,7 @@ and that specifier must resolve **both** under plain tsx (dev) **and** under the
 esbuild bundle that `bin/bbx` ships (`dist/cli.mjs`).
 
 **Why this needs to change.** The known failure: the bundle follows JS package
-imports but not the TS-source `.js` re-exports in `src/cards/index.ts`
+imports but not the TS-source `.js` re-exports in `src/cards/index.ts` (moved to `beebox/src/exports/cards.ts`)
 (`export { … } from "./schema.js"` resolving to `schema.ts`) — it throws
 `Cannot find module schema.js`. So `package.json` `exports: { "./cards":
 "./src/cards/index.ts" }` works in dev but not in the shipped bundle. This is
@@ -222,8 +222,8 @@ actually runs:
   re-exports then resolve normally — no TS-source `.js`-rewrite hazard.
 - **Wire it into the real build path.** `bbx` runs the esbuild bundle
   `dist/cli.mjs` (`bin/bbx:25`), built by `scripts/build-cli.mjs` (single entry
-  `src/cli/index.ts`, `:24`); the server self-heals through **tsx** running
-  `src/cli/index.ts` directly. Box `config/schemas/*.ts` are loaded at runtime
+  `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`), `:24`); the server self-heals through **tsx** running
+  `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`) directly. Box `config/schemas/*.ts` are loaded at runtime
   (not bundled) via the tsx `registerHooks` resolver, so `beebox/cards`
   must resolve in **both** worlds: the bundled-host dev path and the tsx server
   path. Building `dist/cards` and pointing `exports` at it covers the bundle;

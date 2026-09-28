@@ -4,7 +4,7 @@ Review basis: an earlier draft, reviewed before concurrent cleanup. Findings bel
 
 ## What already exists
 
-The current publication model uses `PubId`, a local manifest, and a bundle (`beebox/src/publish/manifest.ts:75-91,146-154`). The edge projection deliberately omits box identifiers and source refs (`beebox/src/publish/manifest-edge.ts:14-20`). Worker routes share one origin and select tier by `/p/`, `/s/`, and `/a/` (`beebox/pub-worker/src/index.ts:5-10,85-120`). The current bundle is mutable at `pubs/<id>/bundle/`; `manifest.files` records file metadata but serving does not enforce it as an allowlist (`beebox/src/publish/lifecycle.ts:58-65`; `beebox/pub-worker/src/index.ts:168-189`).
+The current publication model uses `PubId`, a local manifest, and a bundle (`beebox/src/publish/manifest.ts:75-91,146-154`). The edge projection deliberately omits box identifiers and source refs (`beebox/src/publish/manifest-edge.ts:14-20`). Worker routes share one origin and select tier by `/p/`, `/s/`, and `/a/` (`beebox/pub-worker/src/index.ts:5-10 (moved to `beebox/pub-worker/src/worker.ts`),85-120`). The current bundle is mutable at `pubs/<id>/bundle/`; `manifest.files` records file metadata but serving does not enforce it as an allowlist (`beebox/src/publish/lifecycle.ts:58-65`; `beebox/pub-worker/src/index.ts:168-189` (moved to `beebox/pub-worker/src/worker.ts`)).
 
 ## Ontology (verified against the code's own names)
 
@@ -20,7 +20,7 @@ Per-publication Workers buy separate browser origins for authored JavaScript, at
 
 ## Could this be simpler? (verified)
 
-The smallest core is a finished static folder, a strictly copied bundle, a disabled-by-default publication, and human enable/disable. Keep JSON export and React helpers optional follow-on conveniences; “optional” means consumers may use them, not that Bee Box must never provide them. Remove the MIME-map alignment work: the Worker chooses served `Content-Type` by extension (`beebox/pub-worker/src/index.ts:187-189`; `beebox/pub-worker/src/content-type.ts:7-16`), while upload metadata is not the serving authority. A static-folder build needs path validation and a safe copy, not a per-site package manager or general build system.
+The smallest core is a finished static folder, a strictly copied bundle, a disabled-by-default publication, and human enable/disable. Keep JSON export and React helpers optional follow-on conveniences; “optional” means consumers may use them, not that Bee Box must never provide them. Remove the MIME-map alignment work: the Worker chooses served `Content-Type` by extension (`beebox/pub-worker/src/index.ts:187-189` (moved to `beebox/pub-worker/src/worker.ts`); `beebox/pub-worker/src/content-type.ts:7-16`), while upload metadata is not the serving authority. A static-folder build needs path validation and a safe copy, not a per-site package manager or general build system.
 
 ## Failure modes
 
@@ -36,7 +36,7 @@ Any signed-in member of the box may enable or disable after the Cloudflare conne
 
 **Location in plan:** Cloudflare credential custody; failure modes.
 
-**Citation:** The prior credential model says “the headless connector holds only an ingestion-bucket-scoped R2 token” (`beebox/src/services/cloudflare-provisioning.ts:20-25`; `beebox/pub-worker/wrangler.jsonc:10-19`).
+**Citation:** The prior credential model says “the headless connector holds only an ingestion-bucket-scoped R2 token” (`beebox/src/services/cloudflare-provisioning.ts:20-25` (moved to `beebox/src/services/cloudflare-provisioning/core.ts`); `beebox/pub-worker/wrangler.jsonc:10-19`).
 
 **Issue:** The new admin grant allows the server to write live content and deploy Workers. Per-box secret custody controls which box resolves it; it does not isolate agent code running as the same OS user.
 

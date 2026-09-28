@@ -170,7 +170,7 @@ established.
 ## Track 3 — the stale main hub
 
 The box-child half is already solved: `bin/bbx` stamps
-`BBX_DEV_BUNDLE_PATH`/`BBX_DEV_BUNDLE_ID` at spawn and `src/webapp/server.ts` polls
+`BBX_DEV_BUNDLE_PATH`/`BBX_DEV_BUNDLE_ID` at spawn and `src/webapp/server.ts` (moved to `beebox/src/webapp/server/app.ts`) polls
 for a replacement, draining before it re-execs. The gap is that the **hub itself**
 is spawned by the router (`bin/router-core.ts:417-420`) as
 `node --import=./tsx-preload.mjs --import tsx ./src/cli/index.ts hub`, never

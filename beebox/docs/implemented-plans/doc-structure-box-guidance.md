@@ -49,11 +49,11 @@ tree is box-compiled, not a copy, and is out of scope here).
 **Smallest fix.** Add the two init-only installers to the sync path and widen
 the rule pruner. About 30 source lines and one doctest:
 
-- `syncTemplatesFromSource` (`src/core/docs-gen/index.ts:264-288`) runs
+- `syncTemplatesFromSource` (`src/core/docs-gen/index.ts:264-288` (moved to `beebox/src/core/docs-gen/generate/core.ts`)) runs
   `installSchemasGuide`, `installViewsGuide`, `installFeedbackGuide`,
   `generateRules`, `generateSkills`. It does not run
   `installPublicationsGuidance` or `installTricksFiles`, which run only from
-  `initBox` (`src/core/box/index.ts:207,214`). Test box `test1` has no
+  `initBox` (`src/core/box/index.ts:207 (moved to `beebox/src/core/box/structure/core.ts`),214`). Test box `test1` has no
   `src/publications/CLAUDE.md` today because it was initialized before that
   template existed.
 - `generateRules` prunes only `card-*` and `connector-*`
@@ -126,15 +126,15 @@ Reuse, cited:
 - **Rule generator** `src/core/init-rules.ts:71-140`: rewrites `card-<type>.md`
   from schema `instructions` and connector rules on every sync. Reuse; add
   manifest pruning.
-- **Skill generator** `src/core/box/skills.ts:73-90`: "Idempotent overwrite"
+- **Skill generator** `src/core/box/skills.ts:73-90` (moved to `beebox/src/core/box/guidance-sync/skills.ts`): "Idempotent overwrite"
   of ten managed skills; never prunes. Reuse; add manifest pruning.
-- **Package docs** `src/core/docs-gen/package-docs.ts:57-175`: `STATIC_DOCS`
+- **Package docs** `src/core/docs-gen/package-docs.ts:57-175` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`): `STATIC_DOCS`
   (ten generated docs with `readWhen`), `proseDocs` (seven `docs/box/*.md`
   with `read-when:` frontmatter), `builtinCardDocs` (62 `card-<type>.md`), and
   the README index with one read-when line per doc. This is already the
   on-demand tier's "names are the search path". Reuse as the home for engine
   facts that are not always needed.
-- **"Where the docs are"** `src/core/agent-guide/where-docs.ts:14-20`: the
+- **"Where the docs are"** `src/core/agent-guide/where-docs.ts:14-20` (moved to `beebox/src/core/agent-guide/guide/where-docs.ts`): the
   guide's one pointer to the package docs. Reuse as the model for every
   pointer this plan writes.
 - **Codex mirrors** `src/core/agent-context-mirrors.ts:67-110,145-161`:
@@ -144,9 +144,9 @@ Reuse, cited:
   generated marker and manifest pruning), and `.codex/hooks.json` (`:106`).
   The rule renders are the one generator that already prunes by manifest;
   Track 1 generalizes that pattern to the other three.
-- **`CLAUDE.md` include management** `src/core/docs-gen/claude-md.ts:14-88`:
+- **`CLAUDE.md` include management** `src/core/docs-gen/claude-md.ts:14-88` (moved to `beebox/src/core/docs-gen/generate/claude-md.ts`):
   owns only the `@`-include lines; the body is the box's.
-- **MAP shims** `src/core/maps/finalize.ts:91`: one-line MAP-include
+- **MAP shims** `src/core/maps/finalize.ts:91` (moved to `beebox/src/core/maps/finalize/core.ts`): one-line MAP-include
   `CLAUDE.md` files in content directories. Generated; already consistent.
 - **Measurement**: `pnpm agent-context chat --box <box>` (`src/dev/agent-context.ts`)
   renders each layer's word count (test1 today: always-loaded 16,029 words;
@@ -160,7 +160,7 @@ Reuse, cited:
 
 Rebuild with reason:
 
-- The `installX` helpers in `src/core/box/defaults.ts` and `templates.ts` each
+- The `installX` helpers in `src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`) and `templates.ts` each
   hard-code one path and one call site. They become rows in the registry; the
   helper bodies collapse into one `installTracked(row)`. Reason: the bug this
   plan fixes is that the list of surfaces exists only as scattered call sites.
@@ -417,7 +417,7 @@ run on test1.
 
 ### Track 3: the agent guide gets an axis and loses its on-demand sections
 
-**What.** `src/core/agent-guide/index.ts:74-100` assembles 22 sections in a
+**What.** `src/core/agent-guide/index.ts:74-100` (moved to `beebox/src/core/agent-guide/guide/core.ts`) assembles 22 sections in a
 list with no stated axis. Give the list an axis (the aspects of "working in
 this box"), group the section registry by it, and move sections whose facts
 are needed on some runs to package docs with a pointer left behind.
@@ -631,7 +631,7 @@ generated class) is small enough to live in Open design questions.
    The one file that breaks the rule is the agent guide: the root `CLAUDE.md`
    imports it, so a bare clone has a dangling import until the first
    `generateDocs`, which chat start and wakeup both run
-   (`src/core/chat/session/start-run.ts:117`, `src/core/reactor/cycle.ts:106`).
+   (`src/core/chat/session/start-run.ts:117` (moved to `beebox/src/core/chat/session/run/start-run.ts`), `src/core/reactor/cycle.ts:106` (moved to `beebox/src/core/reactor/engine/cycle.ts`)).
    That is today's behavior and stays. (c) is a migration across every box
    for a gain nobody asked for; (b) adds an 11k-word render to every sync
    commit.

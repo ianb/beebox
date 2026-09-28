@@ -52,7 +52,7 @@ independent implementations that agree on the rule and diverge at edges:
 
 - `src/core/ref-exists.ts:33-53` — `resolveRefToPath` + `resolveContainedRef`
   (validate path; rejects `..`-escapes via `containWithinBox`).
-- `src/core/rewrite-card-refs.ts:54-97` — `resolveRefToAbs` + `restyleRef`
+- `src/core/rewrite-card-refs.ts:54-97` (moved to `beebox/src/core/rewrite-card-refs/core.ts`) — `resolveRefToAbs` + `restyleRef`
   (`bbx mv`; style-preserving: absolute stays absolute, relative stays
   relative). Reused, not rebuilt — the rewriter's resolution-based design is
   exactly what makes opt-in normalization cheap.
@@ -84,12 +84,12 @@ its resolver with `bbx relink` (`src/core/link-repair.ts`).
   behavior.
 - Landmark (`src/schemas/landmark.ts:38,147`): `ref`/`src` documented as
   relative to the landmark's directory; render-layer `buildLink`
-  (`src/core/landmark/resolve.ts:230-242`) does a bare `path.resolve`, so a
+  (`src/core/landmark/resolve.ts:230-242` (moved to `beebox/src/core/landmark/resolve/core.ts`)) does a bare `path.resolve`, so a
   leading-`/` ref mis-resolves to an OS path at render time while
   validate/mv handle it fine. `symbol.src`
-  (`src/webapp/trpc/routers/landmarks.ts:54-63`) has its own one-off
+  (`src/webapp/trpc/routers/landmarks.ts:54-63` (moved to `beebox/src/webapp/trpc/routers/landmarks/router.ts`)) has its own one-off
   resolver and no validation. `expand[].template-ref` default `${path}`
-  emits landmark-dir-relative refs (`src/core/landmark/resolve.ts:149-165`).
+  emits landmark-dir-relative refs (`src/core/landmark/resolve.ts:149-165` (moved to `beebox/src/core/landmark/resolve/core.ts`)).
 - Nav (`src/core/nav.ts:93-106`): bare-only box-root-relative; a leading `/`
   is rejected as a validation problem; `nav.card` is pinned to the box root
   (`NAV_CARD_PATH`, `nav.ts:20`) so the bare form is unambiguous in practice.
@@ -103,10 +103,10 @@ its resolver with `bbx relink` (`src/core/link-repair.ts`).
 
 - `create-after-success[].path`: `handleCreateAfterSuccess` does
   `path.join(boxRoot, chain.path)` + `mkdir -p` + write with no containment
-  (`src/cli/commands/tick-utils.ts:154,184`) — a `../../…` path writes
+  (`src/cli/commands/tick-utils.ts:154 (moved to `beebox/src/cli/tick-utils.ts`),184`) — a `../../…` path writes
   outside the box.
 - `moveDir` rewrites refs in cards + views but not `.md` dossiers
-  (`src/core/commands/move-operations.ts:107` vs `moveOne`'s referrer list
+  (`src/core/commands/move-operations.ts:107` (moved to `beebox/src/core/commands/move/operations.ts`) vs `moveOne`'s referrer list
   at `:216-220` which includes `listBoxMarkdownFiles`).
 
 Existing containment helpers to reuse, not rebuild: `containWithinBox` /
@@ -138,7 +138,7 @@ machinery.
 
 Ordered by implementation dependency, then size.
 
-### Track A — one shared ref algebra (`src/shared/ref-path.ts`)
+### Track A — one shared ref algebra (`src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`))
 
 **What.** A Node-free module (like `attach-path.ts`) owning the full ref
 grammar: `parseRef(raw) → {path, query?, fragment?}` (scheme/`//`-detection
@@ -172,14 +172,14 @@ first commit.
 **Discoverability (boxholder emphasis: singular routines).** The module is
 THE home for ref/path algebra, and that must be findable without archaeology:
 `beebox/CLAUDE.md` gets a one-line behavioral note ("All box ref/path
-parsing and resolution goes through `src/shared/ref-path.ts` — never
+parsing and resolution goes through `src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`) — never
 hand-roll `path.resolve`/string-splitting on a ref"), `docs/module-map.md`
 gets the entry, and the module's own doc comment names the consumers so the
 next resolver-shaped temptation finds the existing one. Per
 `beebox/CLAUDE.md`: "new infrastructure isn't done until it's
 discoverable."
 
-**First implementation chunk.** `src/shared/ref-path.ts` + doctest
+**First implementation chunk.** `src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`) + doctest
 (`test/shared/ref-path.doctest.md`) covering the 3-form rule, fragment/query
 splitting, attach-scope forms, and escape rejection; migrate `ref-exists.ts`
 and `view-url.ts` onto it in the same chunk so the module has two real

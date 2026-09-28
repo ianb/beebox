@@ -19,7 +19,7 @@ union — minor separate debt, left as-is.)
 
 2026-07-04 · later task.
 
-`beebox/test/helpers/fake-agent.ts` carries 4 pre-existing
+`beebox/test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`) carries 4 pre-existing
 `single-export` ESLint errors (plus 7 warnings) — verified present at HEAD
 before the 2026-07 session-resume work touched the file. Clearing them
 means splitting the shared test helper into single-export modules, which

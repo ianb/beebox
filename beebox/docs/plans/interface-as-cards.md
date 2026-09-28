@@ -76,10 +76,10 @@ original boundaries, not claims that the removed adapters still exist.
 | `src/cards/schema.ts:121`: `export interface CardValidateInput`; `:122`: `fields: Record<string, unknown>` | Schema-local validation has no path. Put location/presence checks in host validation, not a pretend schema path check. |
 | `src/cards/schema.ts:135`: `export type CardCategory = "authored" \| "synced" \| "system"` | A catalogue category already exists; it is not a singleton or permission mechanism. |
 | `src/lib/staged-files.ts:45`: `diffFilter: "ACMR"` | Deletions are absent from the staged-card list. |
-| `src/core/card-lint.ts:117`: `content = await readFile(path, "utf8");` | Existing per-card lint reads disk; mandatory-presence checks need index reads for commits. |
-| `src/cli/commands/validate-pre-commit.ts:129`: `diffFilter: "DR"` | Existing removal scanning is a separate seam, not mandatory-card enforcement. |
-| `src/core/box/index.ts:149`: `const lines = MIGRATIONS` | Fresh initialization records all migrations; seed anchors before this completion state. |
-| `src/core/box/defaults.ts:259`: `export async function installTodoView` | Reuse the template install precedent and preserve customization. |
+| `src/core/card-lint.ts:117` (moved to `beebox/src/core/card-lint/core.ts`): `content = await readFile(path, "utf8");` | Existing per-card lint reads disk; mandatory-presence checks need index reads for commits. |
+| `src/cli/commands/validate-pre-commit.ts:129` (moved to `beebox/src/cli/commands/validate/pre-commit.ts`): `diffFilter: "DR"` | Existing removal scanning is a separate seam, not mandatory-card enforcement. |
+| `src/core/box/index.ts:149` (moved to `beebox/src/core/box/structure/core.ts`): `const lines = MIGRATIONS` | Fresh initialization records all migrations; seed anchors before this completion state. |
+| `src/core/box/defaults.ts:259` (moved to `beebox/src/core/box/structure/defaults.ts`): `export async function installTodoView` | Reuse the template install precedent and preserve customization. |
 | `src/cli/commands/migrate.ts:381`: `if (code !== 0 && code !== 2)` | Soft failure currently permits completion; the new migration must fail hard on an incomplete required set. |
 | `src/cli/commands/migrate.ts:78`: `await appendManifestEntry(args.boxRoot,` | Administrative mark-applied also needs the required-card postcondition. |
 | `src/core/migration-sweep.ts:121`: `await appendManifestEntry(boxRoot,` | Sweep records completion before its hooked commit; final-state checking must precede success. |
@@ -508,8 +508,8 @@ clone on September 9; the live test box was not reset.
 
 Use the existing tiers in [testing](../testing.md). Implemented test files include:
 `test/shared/system-card-paths.doctest.md`,
-`test/cli/commands/validate-system-cards.doctest.md`,
-`test/core/migrations/canonical-interface-cards.doctest.md`, and
+`test/cli/commands/validate-system-cards.doctest.md` (moved to `beebox/test/cli/commands/validate/pre-commit.system-cards.doctest.md`),
+`test/core/migrations/canonical-interface-cards.doctest.md` (moved to `beebox/test/core/migration-run.canonical-interface-cards.doctest.md`), and
 `test/frontend/browse-card-state.doctest.md`.
 
 Index tests must use a real temporary Git repository with deliberately different
@@ -611,7 +611,7 @@ wording is retained as acceptance criteria, not an unstarted implementation list
 | Requirement group | Status | Evidence |
 |---|---|---|
 | A: canonical identity, inferred type, notes, path rejection | MET | `src/shared/system-card-paths.ts:4`, `src/schemas/dashboard.ts:9`, `src/frontend/src/components/system-cards/SystemCardBoundary.tsx:11` and sibling schemas/renderers |
-| B: index/HEAD protection, old-box transition, missing-only bootstrap and completion guard | MET | `src/core/system-cards.ts:83`, `src/core/system-cards.ts:96`, `src/core/migration-run.ts:114`, `test/core/migrations/canonical-interface-cards.doctest.md` |
+| B: index/HEAD protection, old-box transition, missing-only bootstrap and completion guard | MET | `src/core/system-cards.ts:83`, `src/core/system-cards.ts:96`, `src/core/migration-run.ts:114`, `test/core/migrations/canonical-interface-cards.doctest.md` (moved to `beebox/test/core/migration-run.canonical-interface-cards.doctest.md`) |
 | C: ordinary Dashboard/Settings targets, compatibility entry, recipient and safe context | MET | `src/frontend/src/renderers/system-cards.tsx:12`, `src/frontend/src/router.tsx:106`, `src/frontend/src/lib/system-card-navigation.ts:26` |
 | D: one Browse target, nested state, history and visible attention | MET | `src/frontend/src/lib/browse-card-state.ts:47`, `src/frontend/src/renderers/browse.tsx:14`, `src/frontend/src/components/chat/workspace/WorkspaceProvider.tsx:128`, `src/frontend/src/components/chat/workspace/WorkspaceCanvas.tsx:50` |
 | E: guidance/audits and removal of replaced routed adapters | MET | `docs/box/interface-cards.md`, `src/dev/knowledge-audits.yaml:9`, `src/frontend/src/router.tsx:153`; BrowsePageWrapper removed from `src/frontend/src/app-shell.tsx` |

@@ -10,10 +10,10 @@ resolution: implemented
 ---
 
 Closed by commit 8828406ce: `registerBoxAdmission`
-(`beebox/src/webapp/box-admission.ts`) now registers the lease release before
+(`beebox/src/webapp/box-admission.ts` (moved to `beebox/src/webapp/server/box-admission.ts`)) now registers the lease release before
 acquisition, adds an `onRequestAbort` hook that releases when no handler is
 running, and releases a lease acquired after the abort. Reproducing doctest
-in `beebox/test/webapp/box-admission.doctest.md` failed before, passes after.
+in `beebox/test/webapp/box-admission.doctest.md` (moved to `beebox/test/webapp/server/box-admission.doctest.md`) failed before, passes after.
 The incident's actual holder could not be directly confirmed (the process was
 restarted before inspection); this is the only reachable path found that
 leaves a lease with no subprocess and no handler, and holder reporting (see

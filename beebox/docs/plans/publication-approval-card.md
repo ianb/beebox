@@ -20,7 +20,7 @@ The card schema adds a new vocabulary, so follow `beebox/docs/cards/schemas.md` 
 
 ## What already exists
 
-- `beebox/src/publish/publication-definition.ts:14-50` validates agent-owned build settings including `pubId`; reuse it without changing its JSON shape.
+- `beebox/src/publish/publication-definition.ts:14-50` (moved to `beebox/src/publish/prepare/definition.ts`) validates agent-owned build settings including `pubId`; reuse it without changing its JSON shape.
 - `beebox/src/publish/managed-publication-queries.ts:19-57` returns publication rows keyed by server binding `pubId`; use that result for renderer state.
 - `beebox/src/webapp/trpc/routers/publications.ts:35-41,78-99` enforces signed-in user-only approval, preview, enable, and disable. Preserve these procedures and their inputs.
 - `beebox/src/frontend/src/pages/PublicationsPage.tsx:27-75` already renders candidate review and controls from server results; extract/reuse this UI in the trusted renderer.
@@ -47,7 +47,7 @@ No external premise is needed; this uses existing Bee Box cards, tRPC, and routi
 
 **Why this needs to change.** `publication.json` is a build definition, while `/publications` is currently a standalone interface. Neither gives each publication an addressable card surface.
 
-**Direction.** Register the additive schema in `src/schemas/registry.ts`; validate `pubId` with the existing exported schema. Create and validate the ref immediately after resolving the validated definition, before binding reservation or any Cloudflare/R2 writes; if later publishing fails, the harmless address card can remain. Do not copy tier, audience, revision, hostname, connection, status, or permission into the card.
+**Direction.** Register the additive schema in `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`); validate `pubId` with the existing exported schema. Create and validate the ref immediately after resolving the validated definition, before binding reservation or any Cloudflare/R2 writes; if later publishing fails, the harmless address card can remain. Do not copy tier, audience, revision, hostname, connection, status, or permission into the card.
 
 **Vocabulary lock-ins.** Type `publication`, required field `pubId`, card path `_content/publications/<pubId>.publication.card`, output `cardPath` and `approvalUrl`.
 

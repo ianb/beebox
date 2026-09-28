@@ -21,7 +21,7 @@ Error: EXDEV: cross-device link not permitted, rename
 -> '…/node_modules/beebox/.box-docs-old-EfJ0G7'
 ```
 
-`swapIn` in `beebox/src/core/docs-gen/package-docs.ts` replaces the package's
+`swapIn` in `beebox/src/core/docs-gen/package-docs.ts` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`) replaces the package's
 `box-docs/` by renaming the old directory aside. On overlayfs, a directory
 that lives in a lower image layer cannot be renamed (the kernel returns EXDEV
 unless `redirect_dir` is on). The engine tarball installs `box-docs/` in an

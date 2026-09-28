@@ -88,7 +88,7 @@ Grep of the queue for `prominen`, `featured`, `entry point`, `landmark`,
   an overview of a whole area) and visible-but-not-entry-points. Phrasing
   these correctly and describing to the agent is super important."
 - Precedents: the `symbol` global field and its `landmark-symbol` migration
-  (`docs/implemented-plans/card-symbol.md`, `scripts/migrate/landmark-symbol.ts`)
+  (`docs/implemented-plans/card-symbol.md`, `scripts/migrate/landmark-symbol.ts` (moved to `beebox/src/scripts/migrate/landmark-symbol.ts`))
   for adding a global field and moving landmark data onto it; the landmark
   `group:` expand for a collapsed-with-count disclosure
   (`src/schemas/landmark.ts:68-72`).
@@ -117,14 +117,14 @@ Grep of the queue for `prominen`, `featured`, `entry point`, `landmark`,
   triage, and `installRootLandmark` read. **Change**: `prominence` is
   admitted the same way, in the same chunk that adds the global field, or a
   `background` landmark is invisible to every landmark reader.
-- **Landmark resolver.** `src/core/landmark/resolve.ts:87-110`
+- **Landmark resolver.** `src/core/landmark/resolve.ts:87-110` (moved to `beebox/src/core/landmark/resolve/core.ts`)
   `resolveLandmark` builds the flat list (hand-listed first, then unnamed
   expands, deduped by ref) and named groups; `:146-183` `resolveExpand` runs
   a glob relative to the landmark directory, filters to card files, sorts by
   `alphabetical | modified-desc | modified-asc` via `fs.stat`, and caps groups
   at `GROUP_CHILD_CAP = 50` (`:62`). **Reuse**: derived children are one more
   input to the same dedup and the same wire shape.
-- **`landmarks.forDir` and its callers.** `src/webapp/trpc/routers/landmarks.ts:262-281`
+- **`landmarks.forDir` and its callers.** `src/webapp/trpc/routers/landmarks.ts:262-281` (moved to `beebox/src/webapp/trpc/routers/landmarks/router.ts`)
   globs `<dir>/*.landmark.card` per call and fully resolves navigation
   (`links` refs and every `expand` glob, which for a `**/` query is already a
   recursive walk); called from `PlacePill.tsx:102`, `DocumentIcon.tsx:64`,
@@ -186,26 +186,26 @@ Grep of the queue for `prominen`, `featured`, `entry point`, `landmark`,
   (`status.ts:217-234`). A plain file has no frontmatter and no sidecar.
   **Reuse**: a non-card file stays ordinary; the owning card carries the
   level; derivation does not walk into an owned attach scope (Track B).
-- **Lint modules.** `src/core/lint-symbol.ts` is "one self-contained rule
+- **Lint modules.** `src/core/lint-symbol.ts` (moved to `beebox/src/core/card-lint/symbol.ts`) is "one self-contained rule
   over one field" split out because `card-lint.ts` is at its line budget.
   **Reuse as the pattern** for the prominence budget lint.
 - **Migration registry and precedent.** `src/core/migrations.ts:158`
-  `landmark-symbol` (`scripts/migrate/landmark-symbol.ts:1-26`): surgical text
+  `landmark-symbol` (`scripts/migrate/landmark-symbol.ts:1-26` (moved to `beebox/src/scripts/migrate/landmark-symbol.ts`)): surgical text
   edit rather than YAML re-stringify, idempotent by content. **Reuse as the
   pattern.**
-- **Agent guide.** `src/core/agent-guide/cards.ts:55-62` explains `contains:`
+- **Agent guide.** `src/core/agent-guide/cards.ts:55-62` (moved to `beebox/src/core/agent-guide/guide/cards.ts`) explains `contains:`
   to box agents; `src/core/agent-guide/landmarks.ts` explains landmarks;
   schema `instructions` flow into `box-docs/card-<type>.md`
-  (`src/core/docs-gen/package-docs.ts:1-20`). **Reuse**: the level guidance
+  (`src/core/docs-gen/package-docs.ts:1-20` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`)). **Reuse**: the level guidance
   goes beside `contains:` and into the landmark instructions.
 - **Knowledge audits.** `src/dev/knowledge-audits.yaml`, entries shaped
   `{ id, prompt, expected_level, watch_for, correct_contains, tags }`;
   `landmark-ref-box-root` (`:494-508`) is the nearest existing audit.
-- **Search ranking.** `src/core/search/query.ts` scores by BM25 and vectors;
+- **Search ranking.** `src/core/search/query.ts` (moved to `beebox/src/core/search/query/core.ts`) scores by BM25 and vectors;
   no rank, pin, or hide signal exists. Nothing to reuse; ranking by
   prominence is NOT in scope.
 - **Trash.** `bbx rm` moves cards to `_bookkeeping/trash/`
-  (`src/core/box/skills-content.ts:332`), outside `_content`, so the root
+  (`src/core/box/skills-content.ts:332` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`)), outside `_content`, so the root
   landmark's walk (`src/core/landmark/root-dir.ts:21,30-32`: logical `""`
   maps to `_content`) never reaches trashed primary cards. No stock
   housekeeping marker is needed for trash.
@@ -384,7 +384,7 @@ The Landmarks page therefore stays what it is, a list of places with their
 chats, minus background places. The pruned tree of what matters is each
 place's derived list (Track B), not a re-ranking of the places.
 
-**Budget lint** (`src/core/lint-prominence.ts`, box-level, run by `bbx validate`):
+**Budget lint** (`src/core/lint-prominence.ts` (moved to `beebox/src/core/lint-prominence/core.ts`), box-level, run by `bbx validate`):
 
 - more than `MAX_ENTRY_POINTS_PER_DIR = 2` entry points in one directory
   warning, "N entry points in one directory; an entry

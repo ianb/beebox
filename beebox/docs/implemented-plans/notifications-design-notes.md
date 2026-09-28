@@ -51,7 +51,7 @@ notification whose target is already on screen is not sent.
   the boxholder uses. No APNs code exists. Each phone already has a device
   record from pairing (`docs/mobile-contract.md`, `pairing.devices`), which
   is where an APNs token belongs.
-- Scheduled scripts (`src/schemas/scheduled-script.tsx`) already run any
+- Scheduled scripts (`src/schemas/scheduled-script.tsx` (moved to `beebox/src/schemas/scheduled-script/schema.tsx`)) already run any
   command at a `cron`, `at`, or `rrule` time, with `once` and `until`. A
   timed notification is a scheduled script whose command is a notify.
 - Jev (`src/services/jev.ts`) answers typed questions about supplied state
@@ -367,7 +367,7 @@ are marked **found** and are folded into the plan.
    a `bbx notify --check` must make it the first step, or the calendar-promise
    bug repeats with reminders.
 2. Thursday 08:30 the scheduler daemon runs the tick in process
-   (`src/core/schedule/scheduler.ts:250` calls `runTick`), finds the card
+   (`src/core/schedule/scheduler.ts:250` (moved to `beebox/src/core/schedule/scheduler/core.ts`) calls `runTick`), finds the card
    due, and calls `notifyBoxholder` in that process. `loud` tries every
    channel with an audience. APNs sends to the phone; web push to the
    desktop. The intent and both deliveries are appended to
@@ -375,7 +375,7 @@ are marked **found** and are folded into the plan.
    The tick records success, deletes the card, and commits. Second commit:
    the fire. Git has both ends of the reminder.
    **Found:** the plan had the bus as the record. The server prunes the bus
-   at 24 hours (`src/webapp/server.ts:244`), so it is a live signal only.
+   at 24 hours (`src/webapp/server.ts:244` (moved to `beebox/src/webapp/server/app.ts`)), so it is a live signal only.
    The record is the JSONL log.
 3. Phone: banner with the title. Tap opens
    `/<box>/chat?new=1&notification=<id>`. The chat page fetches the intent by
@@ -401,9 +401,9 @@ are marked **found** and are folded into the plan.
    with nothing wrong to report. With it, the promotion rule can say "your
    field-trip watch cannot see mail".
 2. Each wakeup: the reactor runs sync, then jobs, then finalize
-   (`src/core/reactor/engine.ts:2-14`). Gmail writes cards under
+   (`src/core/reactor/engine.ts:2-14` (moved to `beebox/src/core/reactor/engine/core.ts`)). Gmail writes cards under
    `_content/inbox/email/` and commits. Triage, in the jobs phase, renames
-   them into `inbox/triaged/<category>/` (`src/core/triage/routing.ts:74`).
+   them into `inbox/triaged/<category>/` (`src/core/triage/routing.ts:74` (moved to `beebox/src/core/triage/run/routing.ts`)).
    Finalize evaluates watches: lock, cursor commit to HEAD tree diff under
    `_content/inbox/` with filter A, one Jev call per new card with the card
    text as state.
@@ -425,7 +425,7 @@ line.
 ### W3. Something finished after you left
 
 1. The chat turn ends. The server already parses `<schedule>` tags from the
-   response at that point (`src/webapp/routes/chat.ts:125-138`); callouts
+   response at that point (`src/webapp/routes/chat.ts:125-138` (moved to `beebox/src/webapp/routes/chat/register.ts`)); callouts
    are parsed beside them. The in-memory presence count for the box is
    zero.
 2. One intent per turn: body is the first callout, `tag` is the session id
@@ -461,7 +461,7 @@ line. `bbx notify` takes `--body-file` or stdin.
 Cron 07:30 schedule card with `runs: bbx procedure run morning-summary`.
 The procedure's first step: precheck `shells` gather calendar and due
 todos, `judge` asks "Is there anything actionable today?". Below
-threshold: skip, the run dir is removed (`src/core/procedure/engine-orchestrate.ts:109`),
+threshold: skip, the run dir is removed (`src/core/procedure/engine-orchestrate.ts:109` (moved to `beebox/src/core/procedure/engine/orchestrate.ts`)),
 the schedule records `deferred`, nothing in git. Above: an `agents` step
 writes the summary card and runs `bbx notify --target card:<summary>
 --body-file`. The run card is committed as procedures do today.
@@ -473,7 +473,7 @@ nothing cost nothing and leave nothing.
 The dashboard shows the health entry. Nothing notifies. Thursday's reminder
 does not need Google; it fires. The field-trip watch declares `gmail`;
 the connector's activity record shows the failing episode
-(`src/core/schedule/connector-activity-alert.ts:40` already tracks it), so
+(`src/core/schedule/connector-activity-alert.ts:40` (moved to `beebox/src/core/schedule/scheduler/connector-activity-alert.ts`) already tracks it), so
 the promotion rule sends `loud` once: "Your field-trip watch cannot see
 mail: Google needs reconnecting", target `dashboard`. Reconnect clears the
 episode. Feels right: the person hears about health exactly when it costs

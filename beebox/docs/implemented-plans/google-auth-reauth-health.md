@@ -36,7 +36,7 @@ Context: [byo-google-oauth-self-host-story](../../../issues/decisions/2026-07-28
 - **One repair path.** A new refresh token only ever reaches disk through
   `saveGoogleTokens()`.
 - **An alert pattern to copy.** `checkHealthAndAlert`
-  (`src/core/schedule/health-alert.ts`) already runs per box per scheduler tick,
+  (`src/core/schedule/health-alert.ts` (moved to `beebox/src/core/schedule/scheduler/health-alert.ts`)) already runs per box per scheduler tick,
   checks `notifyChannels`, notifies via `notifyBoxholder`, and latches one alert
   per unhealthy episode.
 
@@ -104,22 +104,22 @@ failure mode — it fails in front of a human who is actively trying to log in.
 
 ## Work
 
-1. **`src/connectors/google-auth.ts`** — add the three status fields to
+1. **`src/connectors/google-auth.ts` (moved to `beebox/src/google/auth.ts`)** — add the three status fields to
    `GoogleTokens`; clear them in `saveGoogleTokens` on a token-bearing update;
    add the cross-process lock to that RMW.
-2. **`src/connectors/google-auth-status.ts`** (new) — `isInvalidGrantError()`,
+2. **`src/connectors/google-auth-status.ts` (moved to `beebox/src/google/auth-status.ts`)** (new) — `isInvalidGrantError()`,
    `markGoogleAuthDead()`, `readGoogleAuthStatus()`, `probeGoogleAuth()`. Kept
    out of `google-auth.ts` to avoid an import cycle with the clear path (which
    stays inline) and to respect the file line cap.
 3. **`src/services/google-auth.ts`** — `createGoogleAuthService(client, opts)`
    catches a refresh failure, classifies it, marks the credential dead on
    `invalid_grant`, and rethrows a typed `GoogleAuthExpiredError`.
-4. **`src/webapp/trpc/routers/health-google.ts`** (new) — the `google-auth`
+4. **`src/webapp/trpc/routers/health-google.ts` (moved to `beebox/src/webapp/trpc/routers/health/checks/google.ts`)** (new) — the `google-auth`
    health check, spread into `runHealthChecks` (`health.ts` is already at its
    line cap). Three states: skip when Google is unconfigured or unconnected;
    `warning` when dead, with the reconnect link and the duration; ok otherwise,
    noting when the answer was last verified.
-5. **`src/core/schedule/google-auth-alert.ts`** (new) — probe-if-stale, then
+5. **`src/core/schedule/google-auth-alert.ts` (moved to `beebox/src/core/schedule/scheduler/google-auth-alert.ts`)** (new) — probe-if-stale, then
    notify once per episode with the latch; called from the scheduler loop
    beside `checkHealthAndAlert`.
 6. **`src/cli/commands/health.ts`** — a box-health section printing

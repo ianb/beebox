@@ -35,7 +35,7 @@ was accurate, or this simulated exercise as a measured learning outcome.
 
 ## Existing grounding guidance
 
-`beebox/src/core/box/skills-content.ts:134–139` already instructs the
+`beebox/src/core/box/skills-content.ts:134 (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`)–139` already instructs the
 build-course skill to ground teaching in authoritative sources, bring those
 sources into the box, and cite at the strength they support. The run transcript
 records a `build-course` Skill call at 11:57:37.144Z, before this explanation.
@@ -53,4 +53,4 @@ choice; no enforcement subsystem is implied by this issue.
 
 ## Next-action check (2026-09-24)
 
-Checked 2026-09-24 for `invalid`: still holds. The grounding guidance it cites (`beebox/src/core/box/skills-content.ts:134-139`) is unchanged, and no commit references the issue. The issue is a case record for teaching-output evaluation, not a code-fix request, so "no fix landed" does not make it invalid.
+Checked 2026-09-24 for `invalid`: still holds. The grounding guidance it cites (`beebox/src/core/box/skills-content.ts:134-139` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`)) is unchanged, and no commit references the issue. The issue is a case record for teaching-output evaluation, not a code-fix request, so "no fix landed" does not make it invalid.

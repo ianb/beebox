@@ -141,7 +141,7 @@ extension.
   `defaultRef` (`:26-27`), optional `targets` (`:30`), markdown body with
   `{% source %}` anchors. *Reuse as-is.* The card we create is a normal
   commentary card.
-- **Commentary validation** — `src/core/card-lint.ts:168-192`
+- **Commentary validation** — `src/core/card-lint.ts:168-192` (moved to `beebox/src/core/card-lint/core.ts`)
   (`commentaryErrors`): enforces *"commentary card requires exactly one of
   defaultHref or defaultRef"* (`:177`) and that the body parses as Markdoc
   (`:192`). *Reuse.* Our generated card must satisfy both.

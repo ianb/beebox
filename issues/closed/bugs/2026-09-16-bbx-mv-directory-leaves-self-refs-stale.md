@@ -23,7 +23,7 @@ After a move of a legacy capture directory (flat layout, before the
 agent fixed them with `sed`. An earlier archived capture on the same box had
 the same damage.
 
-Code: `beebox/src/core/commands/move-operations.ts`,
-`beebox/src/core/commands/move.ts`.
+Code: `beebox/src/core/commands/move-operations.ts` (moved to `beebox/src/core/commands/move/operations.ts`),
+`beebox/src/core/commands/move.ts` (moved to `beebox/src/core/commands/move/command.ts`).
 
 Related: [flat-layout media refs fail to load](2026-09-16-flat-layout-media-cards-with-absolute-refs-fail-to-load.md).

@@ -9,7 +9,7 @@ resolution: implemented
 ---
 
 > Closed by `b2ae1028f` (re-key the template tracker onto v3 paths).
-> `beebox/scripts/migrate/rekey-template-versions.ts` fixes part 1 (the key
+> `beebox/scripts/migrate/rekey-template-versions.ts` (moved to `beebox/src/scripts/migrate/rekey-template-versions.ts`) fixes part 1 (the key
 > rename). Part 2 (an automated rewrite leaving the recorded hash stale) is
 > not fixed here — it is recorded as a requirement on
 > [parked template resolution](../../features/2026-08-24-parked-template-resolution-path.md),

@@ -16,7 +16,7 @@ issues: []
 Add a first-class `validate` hook to cardworks' `cardSchema()` so that
 validation a Zod schema can't express (cross-field rules, body parsing) lives
 **on the schema that defines the card type**, instead of in a central
-type-keyed `if`/ternary dispatch in `beebox/src/core/card-lint.ts`. The
+type-keyed `if`/ternary dispatch in `beebox/src/core/card-lint.ts` (moved to `beebox/src/core/card-lint/core.ts`). The
 hook is **self-contained**: it sees only the card's own parsed data, no box /
 loader / cross-card access. The generic ref-existence walk (which needs the
 loader) stays centralized in `card-lint.ts`.

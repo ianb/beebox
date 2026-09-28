@@ -9,14 +9,14 @@ resolution: implemented
 ---
 
 Resolved by bc11677e2: `resolveRefToAbs` no longer prints a line for a ref
-`resolveRefPath` refuses (`beebox/src/core/rewrite-card-refs.ts`); `bbx
+`resolveRefPath` refuses (`beebox/src/core/rewrite-card-refs.ts` (moved to `beebox/src/core/rewrite-card-refs/core.ts`)); `bbx
 validate` already reports such refs as broken, per the issue's own suggestion.
 
-`resolveRefToAbs` (`beebox/src/core/rewrite-card-refs.ts:77`) prints
+`resolveRefToAbs` (`beebox/src/core/rewrite-card-refs.ts:77` (moved to `beebox/src/core/rewrite-card-refs/core.ts`)) prints
 `ref "…" in <card> escapes the box; leaving unchanged` whenever
 `resolveRefPath` returns null. A legacy v2 ref such as `/store/archive/…`
 returns null because it is outside the namespace fence
-(`beebox/src/shared/ref-path.ts`, `fenced`), not because it climbs out of the
+(`beebox/src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`), `fenced`), not because it climbs out of the
 box. The message sends the reader looking for a `..` that is not there.
 
 It prints on every box-wide rewrite pass (`bbx mv`, the ref-rewriting

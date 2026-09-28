@@ -74,11 +74,11 @@ client-side with no server-side trace at all.
 Every row here is **reused**; this plan adds one server field and two uploader
 clients. Nothing in the bulk pipeline is rebuilt.
 
-- **The entire bulk-upload backend** — `src/webapp/routes/bulk-upload.ts:267`
+- **The entire bulk-upload backend** — `src/webapp/routes/bulk-upload.ts:267` (moved to `beebox/src/webapp/routes/bulk-upload/register.ts`)
   `registerBulkUploadRoutes`, five endpoints (create / register items / upload
   item / status / cancel / finalize), streaming writes via
   `src/core/capture/staging-stream.ts` `addFileStreamed`, prepare→deliver worker
-  in `src/core/bulk-upload/worker.ts:69`, reconciliation + sweep. **Merged to
+  in `src/core/bulk-upload/worker.ts:69` (moved to `beebox/src/core/bulk-upload/worker/core.ts`), reconciliation + sweep. **Merged to
   main.** Reused as-is except for the `note` field (Track 1).
 - **The documented cross-platform contract** —
   [`docs/mobile-contract.md`](../mobile-contract.md):479 §5.6, which already
@@ -180,7 +180,7 @@ working interaction into an interrogation. The text must ride with the batch.
 
 **Direction.**
 
-- `FinalizeBodySchema` (`src/webapp/routes/bulk-upload.ts`) gains
+- `FinalizeBodySchema` (`src/webapp/routes/bulk-upload.ts` (moved to `beebox/src/webapp/routes/bulk-upload/register.ts`)) gains
   `note: z.string().max(10_000).optional()`. Untrusted client prose validated at
   the boundary (principle #3); the cap is well under any body limit and far above
   any real composer message.
@@ -188,7 +188,7 @@ working interaction into an interrogation. The text must ride with the batch.
   composer produces byte-identical output to today.
 - `StagingSessionSchema` (`src/core/capture/staging-schema.ts:119`) gains
   `note: z.string().optional()`, and `sealStagingSession`
-  (`src/core/capture/staging-store.ts:360`) writes it **in the same CAS write as
+  (`src/core/capture/staging-store.ts:360` (moved to `beebox/src/core/capture/staging-store/core.ts`)) writes it **in the same CAS write as
   `failedItems`** — the existing comment at `:357` states the reason verbatim:
   *"`failedItems` (bulk only) is persisted IN the same CAS write, so the seal and
   [the report] …"*. A note recorded outside the seal could be lost by a resume
@@ -237,7 +237,7 @@ instead of inlining it.
 `const MAX_DIMENSION = 1920;` — the web composer downscales to the same
 dimension the iOS one does, so at JPEG q≈0.85 it produces the same ~400–700 KB
 per photo, and base64 adds a third. The server's `bodyLimit` is 50 MB
-(`src/webapp/server.ts:89`). The web composer has the identical cliff; a
+(`src/webapp/server.ts:89` (moved to `beebox/src/webapp/server/app.ts`)). The web composer has the identical cliff; a
 mobile-browser user hits it the same way. Fixing only iOS would leave two
 different rules on two surfaces, violating principle #8.
 

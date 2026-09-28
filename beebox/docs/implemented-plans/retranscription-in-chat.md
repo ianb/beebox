@@ -47,9 +47,9 @@ in-chat; the durable transcript is not rewritten.
 ## What already exists
 
 - **Loopback audio fetch with a text-only identity** —
-  `src/cli/commands/chat-audio.ts:90-142` (`fetchLastAudio`) long-polls
+  `src/cli/commands/chat-audio.ts:90-142` (moved to `beebox/src/cli/commands/chat/audio.ts`) (`fetchLastAudio`) long-polls
   `POST /api/chat/last-audio/request`
-  (`src/webapp/routes/chat-last-audio-routes.ts:58-87`), which broadcasts
+  (`src/webapp/routes/chat-last-audio-routes.ts:58-87` (moved to `beebox/src/webapp/routes/chat/last-audio-routes.ts`)), which broadcasts
   `chat-last-audio-request` box-wide; the fulfilling tab answers with
   audio + `recordedAt` + `text` only (`last-audio.ts:66-72`). **The
   emission id keying the tab's retention store
@@ -122,7 +122,7 @@ Searched 2026-08-15 (session research report):
   teaches it as the message's address — the value the audio commands'
   required `--message` flag takes (Track 4).
 - **Two transient bus events** (added to `EventMap` + `eventSchemas` in
-  `src/core/event-bus-schemas.ts` — `event-bus.ts` re-exports them):
+  `src/core/event-bus-schemas.ts` (moved to `beebox/src/core/event-bus/schemas.ts`) — `event-bus.ts` re-exports them):
   - `chat-retranscription` `{ sessionId, messageId, newText, service?,
     diarized, recordedAt? }` — a successful HQ pass over a message's audio.
     `service` is the **resolved** service name; the CLI today only knows the
@@ -323,7 +323,7 @@ Ordered by implementation dependency.
     `--message <id>`, read it off the message you mean; never fabricate
     the attribute; a successful retranscription is shown to the user
     automatically, so don't paste the corrected text back unless asked.
-  - `src/core/docs-gen/bbx-commands-scheduling.ts:140`: the generated
+  - `src/core/docs-gen/bbx-commands-scheduling.ts:140` (moved to `beebox/src/core/docs-gen/package-docs/bbx-commands-scheduling.ts`): the generated
     command guide's "most recent voice message" copy and syntax lines.
   - CLI help/descriptions in `chat-audio.ts:149,182,263`.
   - Knowledge audits: update `knowledge-audits.yaml` entries that accept

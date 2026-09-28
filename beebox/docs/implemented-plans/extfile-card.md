@@ -7,7 +7,7 @@ issues: []
 # `extfile` Card — an In-Box Pointer to a Live External File
 
 > **Implemented (2026-06).** Shipped as Tracks A–D: the `extfile` schema
-> (`src/schemas/extfile.tsx`) + lint (`src/core/card-lint.ts`), `bbx extfile sync`
+> (`src/schemas/extfile.tsx`) + lint (`src/core/card-lint.ts` (moved to `beebox/src/core/card-lint/core.ts`)), `bbx extfile sync`
 > (`src/cli/commands/extfile.ts`, `src/core/extfile-sync.ts`,
 > `src/core/external-roots.ts`), the `ExtfileView` renderer
 > (`src/frontend/src/components/ExtfileView.tsx` + shared `ExternalDocument` /
@@ -35,7 +35,7 @@ each `commentary` card via `defaultHref`.
   formats, XML structures, or API shapes."* Every claim below cites `file:line`.
 - `beebox/CLAUDE.md` (Cards) — *"The current format is YAML frontmatter +
   markdown body (Phase 2)."* `extfile` is a frontmatter `cardSchema()`,
-  registered in `cardSchemas[]` (`src/schemas/registry.ts:65`).
+  registered in `cardSchemas[]` (`src/schemas/registry.ts:65` (moved to `beebox/src/schemas.ts`)).
 - `beebox/CLAUDE.md` (Behavioral Notes) — *"don't add features beyond
   what the task requires."* The NOT-in-scope section is where this is bounded;
   the renderer reuses the existing external-fetch + registry-dispatch path
@@ -89,7 +89,7 @@ each `commentary` card via `defaultHref`.
   by `sync` — not over the wire (Track B).
 
 - **`GET /api/external` route — REUSE as-is.**
-  `src/webapp/routes/api-external.ts:81-113` returns `{ contentBase64,
+  `src/webapp/routes/api-external.ts:81-113` (moved to `beebox/src/webapp/routes/api/register/external.ts`) returns `{ contentBase64,
   contentType, markers }` for a `?href=` query. The extfile renderer fetches
   through this exact route. The renderer's drift check compares the stored
   `version` hash to the live `markers` hash — both already in the envelope, so
@@ -146,7 +146,7 @@ each `commentary` card via `defaultHref`.
   in-box files, not external ones.
 
 - **card-lint dispatch — EXTEND (and trim).**
-  `src/core/card-lint.ts:137-143` runs type-specific errors only for
+  `src/core/card-lint.ts:137-143` (moved to `beebox/src/core/card-lint/core.ts`) runs type-specific errors only for
   `commentary` today (`commentaryErrors`, lines 172-188). An `extfile` branch
   goes here (well-formed `file:` href, well-formed `sha256:` hash). Broken refs
   are already WARNINGS, not errors (`card-lint.ts:106-134`) — the extfile
@@ -165,7 +165,7 @@ each `commentary` card via `defaultHref`.
   `src/cli/commands/move.ts:11-` is a `commander` `Command("mv")` that calls
   into core. `bbx extfile sync` follows this: a `Command("extfile")` with a
   `sync` subcommand, exported from `src/cli/commands/index.ts` and registered in
-  `src/cli/index.ts:71-` via `program.addCommand`.
+  `src/cli/index.ts:71 (moved to `beebox/src/cli/entry/run.ts`)-` via `program.addCommand`.
 
 - **`{% source %}` version anchors — INTEROP.**
   `docs/plans/box-commentary-surface.md:288-299` defines the per-anchor
@@ -417,7 +417,7 @@ so no connector or capture flow breaks.
 **Unknown-key lint warning (landed in this branch — O7).** Removing the fields
 makes an unmigrated card *surface* its leftover keys, because this branch added an
 unknown-frontmatter-key check to card-lint as a **warning**
-(`src/core/card-lint.ts`, `unknownKeyWarnings`). Load stays lenient — unknown keys
+(`src/core/card-lint.ts` (moved to `beebox/src/core/card-lint/core.ts`), `unknownKeyWarnings`). Load stays lenient — unknown keys
 are stripped in memory (`card-io.ts:142`), so a drifted card still loads, renders,
 and indexes (it shouldn't vanish just because it's mid-migration). The leftover
 `defaultHref`/`defaultRef`/`targets` is reported by `bbx validate` and the
@@ -441,7 +441,7 @@ A missing *required* field or wrong type still errors at parse, as before.
   "Saved page" block (lines 300-319). What remains is the commentary-body render
   + the captured-page meta header — i.e. the `CommentaryRemarks`-shaped
   body-only view (which is also what the extfile/webpage hosts embed).
-- **Lint** (`src/core/card-lint.ts:172-188`): remove the
+- **Lint** (`src/core/card-lint.ts:172-188` (moved to `beebox/src/core/card-lint/core.ts`)): remove the
   `defaultHref`-xor-`defaultRef` error; `commentaryErrors` keeps only its
   Markdoc-body validation. No removed-field guard is needed — the generic
   unknown-key warning (above) already flags a leftover

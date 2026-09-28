@@ -11,9 +11,9 @@ resolution: implemented
 
 **Closed 2026-09-15:** resolved by `beebox/docs/implemented-plans/router-transient-failure-resilience.md`
 (commit 118dec404 and its predecessors on `worktree-router-resilience`). All
-three defects: Track 2 (`retryDecision`, `workstreams-app/src/router/router-lifecycle.ts:181`)
+three defects: Track 2 (`retryDecision`, `workstreams-app/src/router/router-lifecycle.ts:181` (moved to `workstreams-app/src/router/lifecycle.ts`))
 bounds `waitForHttp` retries with backoff before parking; Track 4
-(`BootstrapOutcome`, `workstreams-app/src/router/router-mobile-bootstrap.ts:64`)
+(`BootstrapOutcome`, `workstreams-app/src/router/router-mobile-bootstrap.ts:64` (moved to `workstreams-app/src/router/server/mobile-bootstrap.ts`))
 joins the mobile bootstrap to the proxy's existing retry loop instead of writing
 401 on a transient failure; Track 3 (`router-log-file.ts`, `router-deny-log.ts`)
 adds a durable `router.log` and logs auth denials on both HTTP and WebSocket
@@ -46,7 +46,7 @@ of them, plus the iOS app, which is how it was noticed. The machine was not out
 of file descriptors (15,352 open against a 122,880 limit); it was out of CPU,
 with a 15-minute load average still at 8.90 well afterwards.
 
-`ensureRunning` (`workstreams-app/src/router/router-core.ts:89`) does this on
+`ensureRunning` (`workstreams-app/src/router/router-core.ts:89` (moved to `workstreams-app/src/router/core/engine.ts`)) does this on
 purpose:
 
 ```ts

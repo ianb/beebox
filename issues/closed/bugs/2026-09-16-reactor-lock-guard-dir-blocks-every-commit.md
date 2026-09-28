@@ -25,7 +25,7 @@ The error is `Box root: .bbx-reactor.lock.guard: the box root is a closed vocabu
 
 - `beebox/src/lib/file-lock.ts` takes a lock by `mkdir` of `<path>.guard`.
   The guard directory exists for the full life of the lock.
-- `beebox/src/lib/box-root-vocabulary.ts:55` lists `.bbx-reactor.lock`
+- `beebox/src/lib/box-root-vocabulary.ts:55` (moved to `beebox/src/shared/box-root-vocabulary.ts`) lists `.bbx-reactor.lock`
   but not `.bbx-reactor.lock.guard`.
 - The box `.gitignore` pattern `.bbx-*.lock` does not match the guard
   directory either.

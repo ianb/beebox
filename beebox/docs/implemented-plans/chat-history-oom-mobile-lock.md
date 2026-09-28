@@ -32,7 +32,7 @@ Every history consumer funnels through `parseSessionLog`
 param on `chat.history`/`chat.bootstrap` bounds the *response*, never the
 *allocation*: all three `loadSessionHistory` variants
 (`src/core/chat/session/load-history.ts:26`, `src/core/chat/session/state.ts:35`,
-`src/webapp/trpc/routers/chat-session-procedures.ts:55`) call `parseSessionLog`
+`src/webapp/trpc/routers/chat-session-procedures.ts:55` (moved to `beebox/src/webapp/trpc/routers/chat/session-procedures.ts`)) call `parseSessionLog`
 with no limit, then apply `effectiveTailSize` to the already-fully-materialized
 array.
 

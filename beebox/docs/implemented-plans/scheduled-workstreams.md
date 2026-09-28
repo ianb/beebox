@@ -95,7 +95,7 @@ Reused:
   `SECTION_ORDER` and `:20-31` `workstreamStateFor`; row schema
   `workstreams-app/src/shared/workstreams.ts:47-71`. The app is fully
   downstream of `bin/workstreams list --json`
-  (`workstreams-app/src/server/workstreams-command.ts:72`), so a new row field
+  (`workstreams-app/src/server/workstreams-command.ts:72` (moved to `workstreams-app/src/server/main/workstreams-command.ts`)), so a new row field
   flows through one schema change.
 - **Headless session launch.** `bin/update-agent-sdk-scheduled.sh:113-128`:
   `claude -p --brief --name … --model opus --permission-mode
@@ -135,7 +135,7 @@ Rebuilt (and why):
   (`bin/manual-tests-scheduled.sh:14-27`). Moved to the store; the boxholder
   asked for logs outside git.
 
-Not reused: the box scheduler (`beebox/src/core/schedule/scheduler.ts`)
+Not reused: the box scheduler (`beebox/src/core/schedule/scheduler.ts` (moved to `beebox/src/core/schedule/scheduler/core.ts`))
 and its health alerts (`core/schedule/health-alert.ts`). That is a per-box,
 prod-facing mechanism for card-defined tasks. This plan is the dev-repo,
 laptop-local layer; the box scheduler is a *candidate schedule* (a `run`

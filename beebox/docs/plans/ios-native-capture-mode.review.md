@@ -21,22 +21,22 @@ in at the same time.
 The plan's inventory is accurate with the exceptions called out in Findings.
 Verified directly:
 
-- `src/webapp/routes/capture.ts:124-272` — create/upload/finalize/cancel exist
+- `src/webapp/routes/capture.ts:124-272` (moved to `beebox/src/webapp/routes/capture/register.ts`) — create/upload/finalize/cancel exist
   exactly as described; finalize's compare-and-swap seal is
   `staging-store.ts:356-375` ("*Compare-and-swap the session into `sealed` so
   exactly one concurrent finalize fires preparation*"), and an already-sealed
   session returns the same success shape without re-firing
   (`capture.ts:256-270`). Idempotent-finalize-retry (Track 5) is real.
-- `src/core/capture/staging-store.ts:33` — segments are
+- `src/core/capture/staging-store.ts:33` (moved to `beebox/src/core/capture/staging-store/core.ts`) — segments are
   `{ id, startedAt, chunks }` with no format field, and
-  `src/core/capture/write-cards.ts:105-106` hardcodes
+  `src/core/capture/write-cards.ts:105-106` (moved to `beebox/src/core/capture/prepare/write-cards.ts`) hardcodes
   `` `${audioBasename}.webm` `` — the plan's premise that relabeling AAC bytes
   would corrupt cards is correct.
 - `src/core/capture/pending.ts:85-106` — `selectResumableCaptures` filters
   `open`, non-empty, `createdBy === requestingUser`, matched by
   `targetSessionId` or `clientSessionId`. Matches the plan's description; see
   Finding 2 for the identity problem underneath it.
-- `src/core/capture/prepare.ts` — write → transcribe → assemble → validate →
+- `src/core/capture/prepare.ts` (moved to `beebox/src/core/capture/prepare/core.ts`) — write → transcribe → assemble → validate →
   commit → deliver, idempotent per step, exactly as cited
   (`prepare.ts:196-312`).
 - Web client behavior: all four frontend citations (`capture-api.ts`,
@@ -132,14 +132,14 @@ The plan's ADDRESSED claims hold with one exception:
 (`ios-native-capture-mode.md:53-57`); also Failure-modes row 1 and Rollout
 ("Photos/files work against the older route shape").
 **Citation:** Plan: *"The upload route accepts either multipart or a raw
-`Buffer` (`src/webapp/routes/capture.ts:112-118`). Native background
+`Buffer` (`src/webapp/routes/capture.ts:112-118` (moved to `beebox/src/webapp/routes/capture/register.ts`)). Native background
 `URLSessionUploadTask` can therefore upload a file URL directly."* Code:
 `capture.ts:113-119` does check `request.body instanceof Buffer` — but no
 binary content-type parser is registered anywhere.
-`src/webapp/server.ts:94-98` registers only `@fastify/multipart`; the sole
+`src/webapp/server.ts:94-98` (moved to `beebox/src/webapp/server/app.ts`) registers only `@fastify/multipart`; the sole
 `addContentTypeParser` in the codebase is scoped to CSP report types
 (`src/webapp/routes/api-csp-report.ts:87-99`). Every capture upload test sends
-multipart (`test/webapp/routes/capture-routes.doctest.md:32-34`).
+multipart (`test/webapp/routes/capture-routes.doctest.md:32-34` (moved to `beebox/test/webapp/routes/capture.doctest.md`)).
 **Issue:** Fastify rejects a POST whose content type has no registered parser
 with 415 before the handler runs. A native `URLSessionUploadTask` sending
 `Content-Type: image/jpeg` (or `application/octet-stream`) never reaches
@@ -298,7 +298,7 @@ the first implementation chunk.
 ### 6. Native photo naming must satisfy the writer's extension sniff — an unstated wire constraint
 
 **Location in plan:** Track 2 filenames (`ios-native-capture-mode.md:238-241`).
-**Citation:** `src/core/capture/write-cards.ts:133` — ``const ext =
+**Citation:** `src/core/capture/write-cards.ts:133` (moved to `beebox/src/core/capture/prepare/write-cards.ts`) — ``const ext =
 photo.filename.endsWith(".png") ? ".png" : ".jpg";`` — the card's media
 extension is derived solely from the staged *filename*; the optional
 `X-Capture-Mime-Type` is stored but unused for photos. The web client also
@@ -386,7 +386,7 @@ recording cleanly), which is worth stating as the rationale.
   still exercise it with the fake service keyed on an `.m4a` filename.)
 - **tRPC `resumableSessions` removal blast radius** — exactly two usages
   (`useCaptureResume.ts:39`, `trpc/routers/capture.ts:37`) plus one doctest
-  (`test/webapp/capture-resumable-sessions.doctest.md`); `pendingSessions` is
+  (`test/webapp/capture-resumable-sessions.doctest.md` (moved to `beebox/test/webapp/trpc/routers/capture.resumable-sessions.doctest.md`)); `pendingSessions` is
   a fully independent consumer chain (`useCaptureBubbles.ts`). The plan's
   remove-one-keep-the-other split is correct and cheap.
 - **Count-based filename collision premise** — real

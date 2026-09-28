@@ -21,7 +21,7 @@ function isDirectoryPath(path: string): boolean {
 }
 ```
 
-(`beebox/src/frontend/src/components/FileView.tsx:109`, with `pathExt` in
+(`beebox/src/frontend/src/components/FileView.tsx:109` (moved to `beebox/src/frontend/src/components/FileView/view.tsx`), with `pathExt` in
 `beebox/src/frontend/src/lib/binary-files.ts`.) An `.attach` directory has
 a non-empty extension, so it is classified as a file, and the shell fetches its
 body as text from `/api/files/<dir>` — which 404s.

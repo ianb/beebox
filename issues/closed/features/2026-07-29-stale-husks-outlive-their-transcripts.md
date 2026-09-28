@@ -73,7 +73,7 @@ A dead husk is not inert — it is actively misleading:
   creation — e.g. `"eh, delete this"`, `"Alright, so I'm going to be doing a
   longish review here of different chat"`. That is now the *entire* durable
   record of the conversation.
-- `loadAllSessions` (`beebox/src/webapp/trpc/routers/chat.ts`) silently
+- `loadAllSessions` (`beebox/src/webapp/trpc/routers/chat.ts` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`)) silently
   skips it, so it's invisible in the picker but present everywhere else — the
   worst of both.
 - [Chat review](../../../beebox/docs/chat/review.md) skips it too (correctly —

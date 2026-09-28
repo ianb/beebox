@@ -38,7 +38,7 @@ and the dead voice-memo path retire.
   error classes, `Promise.allSettled` default, logging levels.
 - Precedents (denser than docs): the `input-extraction` refactor
   (`docs/implemented-plans/input-extraction.md`) for how composer work
-  lands; `<self-note>` (`src/webapp/routes/chat-send-routes.ts:300-339`)
+  lands; `<self-note>` (`src/webapp/routes/chat-send-routes.ts:300-339` (moved to `beebox/src/webapp/routes/chat/send-routes.ts`))
   for server-injected messages; the `{% quote %}` knowledge-audit set
   for agent-facing-concept rollout.
 
@@ -74,7 +74,7 @@ Reused (cited) vs rebuilt, per sub-problem:
 - **Transcription** — `transcribeAudio` with
   `options: { wordTimestamps: true }` returning
   `DetailedTranscriptionResult { words: {word,start,end}[] }`
-  (`src/core/transcription/index.ts:66-106,207-220`); `.timing.json`
+  (`src/core/transcription/index.ts:66-106 (moved to `beebox/src/core/transcription/dispatch/core.ts`),207-220`); `.timing.json`
   sidecar shape `{words, duration, language}` written by
   `transcribe-captures.ts:144-154`. **Reuse as-is** (the CLI command
   retires; the service call moves into preparation).
@@ -119,7 +119,7 @@ Reused (cited) vs rebuilt, per sub-problem:
   is the visual precedent but the wrong lifecycle (it never survives a
   send).
 - **Completion notification** — event bus `EventMap`
-  (`src/core/event-bus.ts:44-76`, e.g. `card-created`,
+  (`src/core/event-bus.ts:44-76` (moved to `beebox/src/core/event-bus/core.ts`), e.g. `card-created`,
   `chat-user-message`) over `events.subscribe`
   (`src/frontend/src/hooks/useBusSubscription.ts:46`). **Reuse.**
 - **Chat placement** — `getDirectoryForSession`
@@ -128,9 +128,9 @@ Reused (cited) vs rebuilt, per sub-problem:
   `nearestLandmarkDir` (`src/core/landmark/nearest.ts:56-67`).
   **Reuse** to resolve where `tmp-capture/` lives.
 - **Schema instructions delivery** — schemas with `instructions` get
-  `docs/generated/card-<type>.md` (`src/core/docs-gen/index.ts:412-444`)
+  `docs/generated/card-<type>.md` (`src/core/docs-gen/index.ts:412-444` (moved to `beebox/src/core/docs-gen/generate/core.ts`))
   and the agent guide says "read it before working with a card of that
-  type" (`src/core/agent-guide/cards.ts:156`). **Reuse**; the
+  type" (`src/core/agent-guide/cards.ts:156` (moved to `beebox/src/core/agent-guide/guide/cards.ts`)). **Reuse**; the
   capture-session schema's `instructions`
   (`src/schemas/capture-session.tsx:53-67`) are rewritten.
 - **Awake-time discipline** — `startAwakeTimeout`
@@ -437,7 +437,7 @@ recorded profile + one streaming profile; two capture pipelines become
 one.
 
 **Direction — the deployed-box problem.** `installProcedures` never
-prunes (`src/core/box/defaults.ts:47-75` only adds/updates), so
+prunes (`src/core/box/defaults.ts:47-75` (moved to `beebox/src/core/box/structure/defaults.ts`) only adds/updates), so
 deleting the template leaves `config/procedures/
 process-captures.procedure.card` and any pending
 `config/schedules/process-captures.scheduled-script.card` trigger on

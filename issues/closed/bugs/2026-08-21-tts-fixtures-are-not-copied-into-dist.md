@@ -23,7 +23,7 @@ resolves them relative to its own emitted module:
 const FIXTURE_DIR = join(import.meta.dirname, "test-fixtures", "tts");
 ```
 
-(`beebox/src/webapp/tts-mock.ts:21`.) The box server runs the bundled build
+(`beebox/src/webapp/tts-mock.ts:21` (moved to `beebox/src/webapp/routes/chat/tts-mock.ts`).) The box server runs the bundled build
 (`beebox/dist/cli.mjs`), so that resolves to
 `beebox/dist/test-fixtures/tts`, and the build is `tsc`
 (`beebox/package.json`), which copies no `.mp3`. The directory never

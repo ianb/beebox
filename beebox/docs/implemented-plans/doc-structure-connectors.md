@@ -34,7 +34,7 @@ None needed.
 
 ## Ontology
 
-Members in the code's names: Google auth (`src/connectors/google-auth.ts`,
+Members in the code's names: Google auth (`src/connectors/google-auth.ts` (moved to `beebox/src/google/auth.ts`),
 `google-token-store.ts`), calendar (`google-calendar*.ts`), Gmail
 (`gmail*.ts`), Drive (`drive-*.ts`, `google-drive.ts`), Telegram
 (`telegram*.ts`). The framework (the `Connector` interface, `syncConnector`,

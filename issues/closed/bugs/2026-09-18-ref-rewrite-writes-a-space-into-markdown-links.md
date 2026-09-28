@@ -17,7 +17,7 @@ parenthesis (`beebox/src/core/body-refs.ts` `linkTarget`/
 in-box link's path (not its query/fragment) so a spaced path also renders
 (92399fcd8).
 
-`rewriteReferrerRefs` (`beebox/src/core/rewrite-card-refs.ts`) writes the new
+`rewriteReferrerRefs` (`beebox/src/core/rewrite-card-refs.ts` (moved to `beebox/src/core/rewrite-card-refs/core.ts`)) writes the new
 path into an inline markdown link as-is. When the new path contains a space,
 the link breaks: `![b](/_content/cap/photo-004.jpg)` became
 `![b](/_content/cap/photo-004-Beach walk.attach/photo-004.jpg)`. CommonMark

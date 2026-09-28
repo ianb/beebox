@@ -133,12 +133,12 @@ Those closed issues remain precedent. This plan does not reopen them.
   password and unknown email return the same `null`. The reset flow has no email
   request endpoint, but it preserves generic public failures after token lookup.
 - **Self-service password change.**
-  `src/webapp/routes/auth-password-change.ts:12-21` validates current, new, and
+  `src/webapp/routes/auth-password-change.ts:12-21` (moved to `beebox/src/webapp/routes/auth/password-change.ts`) validates current, new, and
   confirmation fields. Lines 33-66 require a cookie identity, verify the current
   password, call `setPassword`, reset the cache, and return a fresh cookie. Reset
   reuses the new-password bounds and mutation, but token possession replaces the
   current-password proof and reset does not mint a session.
-- **First-run setup.** `src/webapp/routes/auth-password-post.ts:302-335` accepts
+- **First-run setup.** `src/webapp/routes/auth-password-post.ts:302-335` (moved to `beebox/src/webapp/routes/auth/password-post.ts`) accepts
   a setup token only while there are zero users. Lines 370-386 take the global
   scrypt slot, create the owner, clear the setup token, and sign in. Password
   reset is not setup: it accepts no name or editable email and never creates an
@@ -151,16 +151,16 @@ Those closed issues remain precedent. This plan does not reopen them.
   store lock, removes the matching live record, and returns one consumed result.
   Reset gets a sibling consume operation. A wrong-kind token is
   `invalid-or-gone`, not an invite or reset.
-- **Invite route protections.** `src/webapp/routes/auth-invite.ts:25-39` bounds
+- **Invite route protections.** `src/webapp/routes/auth-invite.ts:25-39` (moved to `beebox/src/webapp/routes/auth/invite.ts`) bounds
   form fields, sets `no-store` and `no-referrer`, and derives a token-hash
   throttle key. Lines 124-170 apply the token bucket before inspection, return a
   generic dead-link page, and apply the email bucket only after the token
   establishes an email. Reset retains this order.
 - **Hash-before-consume ordering.**
-  `src/webapp/routes/auth-invite.ts:174-190` hashes the password, rechecks the
+  `src/webapp/routes/auth-invite.ts:174-190` (moved to `beebox/src/webapp/routes/auth/invite.ts`) hashes the password, rechecks the
   target, consumes the capability, and then writes the account. Reset follows
   this precedent to keep expensive or correctable failures before consumption.
-- **Scriptless public forms.** `src/webapp/routes/auth.ts:167-180` confines the
+- **Scriptless public forms.** `src/webapp/routes/auth.ts:167-180` (moved to `beebox/src/webapp/routes/auth/register.ts`) confines the
   URL-encoded parser to the root auth plugin and registers invite acceptance
   there. Reset registers in the same scope. It works without the gated SPA.
 - **Allowed Users is the member-management surface.**
@@ -171,7 +171,7 @@ Those closed issues remain precedent. This plan does not reopen them.
 - **Allowed-email/local-account distinction.**
   `src/frontend/src/components/admin/AllowedEmailsSection.tsx:64-83` queries
   `admin.localAccountStatus` before granting an existing account. The backend at
-  `src/webapp/trpc/routers/admin.ts:176-181` currently returns only `{ exists }`.
+  `src/webapp/trpc/routers/admin.ts:176-181` (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`) currently returns only `{ exists }`.
   The plan enriches the Admin data once, while the mutation revalidates at write
   time.
 - **Invite link copy UI.**
@@ -179,7 +179,7 @@ Those closed issues remain precedent. This plan does not reopen them.
   root-relative path with `window.location.origin` and `withBase`, then copies
   it. Lines 78-89 show URL, expiry, and copy feedback. Reset reuses this local
   presentation pattern inside Allowed Users. It never logs or stores the token.
-- **Owner-only minting.** `src/webapp/trpc/routers/admin-invites.ts:9-23`
+- **Owner-only minting.** `src/webapp/trpc/routers/admin-invites.ts:9-23` (moved to `beebox/src/webapp/trpc/routers/admin/invites.ts`)
   combines `ownerProcedure` with a concrete signed-in owner and matching local
   owner prerequisite. Reset minting reuses the same prerequisite and takes
   `boxRoot` only from context.
@@ -193,7 +193,7 @@ Those closed issues remain precedent. This plan does not reopen them.
   no password reset exists.
 - **Tests.** `test/webapp/auth-capabilities.doctest.md` verifies hash-at-rest,
   mode 0600, expiry metadata, and single use. Lines 112-164 verify corruption,
-  symlinks, capacity, and cross-process consume. `test/webapp/invite-accept.doctest.md:30-109`
+  symlinks, capacity, and cross-process consume. `test/webapp/invite-accept.doctest.md:30-109` (moved to `beebox/test/webapp/routes/auth.invite-accept.doctest.md`)
   verifies public headers, mismatch retry, success, and replay. These are the
   closest store and route precedents.
 
@@ -330,7 +330,7 @@ nonexistent account, or member outside the current box.
 `passwordResetEligibleEmails`; `resetPath`.
 
 **First implementation chunk.** Extend
-`test/webapp/trpc-admin-box-config.doctest.md` with failing cases for the
+`test/webapp/trpc-admin-box-config.doctest.md` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.doctest.md`) with failing cases for the
 eligibility intersection, owner and Google-only exclusion, stale local user,
 other-box-only member, concrete owner requirement, canonical email, capacity,
 store failure, and replacement of an older reset for the same account. Then
@@ -348,8 +348,8 @@ safely replace an existing member credential based on a reset bearer.
 
 **Direction.**
 
-- Add `src/webapp/routes/auth-password-reset.ts` and
-  `src/webapp/password-reset-page.ts`. Register GET and POST in the existing
+- Add `src/webapp/routes/auth-password-reset.ts` (moved to `beebox/src/webapp/routes/auth/password-reset.ts`) and
+  `src/webapp/password-reset-page.ts` (moved to `beebox/src/webapp/routes/auth/password-reset-page.ts`). Register GET and POST in the existing
   root URL-encoded auth scope. Do not register them in a box child.
 - GET `/auth/reset-password?token=...` inspects only a password-reset
   capability. It resolves the stored exact `boxRoot` against registered boxes,
@@ -411,7 +411,7 @@ safely replace an existing member credential based on a reset bearer.
 `passwordReset=1`; reset never creates a session.
 
 **First implementation chunk.** Add
-`test/webapp/password-reset.doctest.md` first. Cover public headers, pinned
+`test/webapp/password-reset.doctest.md` (moved to `beebox/test/webapp/routes/auth/password-reset.doctest.md`) first. Cover public headers, pinned
 identity, wrong content type, malformed and mismatched form retry, wrong-kind
 token, success, old-password rejection, new-password login, revocation of every
 old cookie, absence of a reset-created cookie, replay, multiple-link

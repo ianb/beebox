@@ -43,9 +43,9 @@ next run.
 
 ### 4. Promote worker lacked its precedent's durable state machine — High
 **Citation (verified):** bulk-upload's persisted states + startup resume
-(`src/core/bulk-upload/worker.ts`, `resume.ts`); unlocked read-modify-writes
-in `src/core/commands/upload-helpers.ts:167` and
-`src/connectors/intake-utils.ts:40,112`.
+(`src/core/bulk-upload/worker.ts` (moved to `beebox/src/core/bulk-upload/worker/core.ts`), `resume.ts`); unlocked read-modify-writes
+in `src/core/commands/upload-helpers.ts:167` (moved to `beebox/src/core/upload-helpers.ts`) and
+`src/connectors/intake-utils.ts:40 (moved to `beebox/src/job-cards/intake-utils.ts`),112`.
 **Resolution:** sidecar state machine (`pending → promoting → imported`,
 `rejected`), per-box `file-lock.ts` promotion lock, startup recovery of
 quarantine and staging, and locking added around the two racy helpers.
@@ -53,7 +53,7 @@ quarantine and staging, and locking added around the two racy helpers.
 ### 5. Wakeup lock and recovery claims were false — High
 **Citation (verified):** `src/cli/commands/doctor.ts:51` (wakeup otherwise
 unlocked; only the reactor takes `.bbx-reactor.lock`,
-`src/core/reactor/engine.ts:110`); `src/cli/commands/wakeup.ts:117`
+`src/core/reactor/engine.ts:110` (moved to `beebox/src/core/reactor/engine/core.ts`)); `src/cli/commands/wakeup.ts:117` (moved to `beebox/src/cli/commands/wakeup/command.ts`)
 (connector-scoped wakeups filter jobs by `source`), so `source: scan` jobs
 never drain on default schedules — a lost spawn was indefinite, not latency.
 **Resolution:** durable `wakeup-pending` marker + supervised, awaited, full

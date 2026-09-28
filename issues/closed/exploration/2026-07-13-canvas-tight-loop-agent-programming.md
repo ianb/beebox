@@ -128,7 +128,7 @@ zero heavy deps), `./headless` (`@napi-rs/canvas` runner + CLI), `./react`
 (`<SketchFigure>` embed component), `./eslint` (the `tea/*` plugin). The five
 experiments below became the `canvas-loop/gallery/` exercise corpus — six
 entries, since the particle task ran twice (Sonnet and Opus); schema in
-`canvas-loop/gallery/README.md`; `experiments/` retired. A `<SketchFigure>`
+`canvas-loop/gallery/README.md` (moved to `canvas-loop/src/gallery/README.md`); `experiments/` retired. A `<SketchFigure>`
 demo renders at `dev/canvas-loop.html`, and a Claude Code plugin
 (`canvas-loop/claude-plugin/`, skill `canvas-loop-sketch`, wired into
 `.claude/skills/`) packages the author→run→Read-transcript loop as agent

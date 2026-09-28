@@ -14,11 +14,11 @@ resolution: implemented
 > `04bc2ef96` (the `v2-refs-to-v3` migration, added at boxholder request)
 > covered review findings and residual v2-form refs. Per the boxholder's
 > 2026-09-18 direction, the migration is best-effort and exits 0 on ambiguous
-> cards; `beebox/src/core/card-lint.ts` now warns on any remaining
+> cards; `beebox/src/core/card-lint.ts` (moved to `beebox/src/core/card-lint/core.ts`) now warns on any remaining
 > non-`attach/` `filename.ref` so an agent can finish the tail. Not run on any
 > real/production box yet — it ships with the ordinary deploy migration sweep.
 
-`resolveImageCard` in `beebox/src/webapp/box-image.ts:43` accepts a
+`resolveImageCard` in `beebox/src/webapp/box-image.ts:43` (moved to `beebox/src/webapp/routes/api/register/box-image.ts`) accepts a
 `filename.ref` only when it starts with `attach/`. Any other ref resolves to
 null, and the card shows "Failed to load".
 

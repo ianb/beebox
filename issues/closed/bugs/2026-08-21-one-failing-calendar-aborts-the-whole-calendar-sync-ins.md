@@ -12,7 +12,7 @@ resolution: implemented
 
 **What is wrong**
 
-In `beebox/src/connectors/google-calendar.ts`, the per-calendar loop in `sync()` (lines ~174-189) treats any per-calendar error as fatal for the whole run:
+In `beebox/src/connectors/google-calendar.ts` (moved to `beebox/src/connectors/google-calendar/connector.ts`), the per-calendar loop in `sync()` (lines ~174-189) treats any per-calendar error as fatal for the whole run:
 
 ```ts
 const outcome = await this.runCalendarSync({ ... });
@@ -40,9 +40,9 @@ persisting raw exception text in a Git commit.
 
 **Files involved**
 
-- `beebox/src/connectors/google-calendar.ts` (the loop and `runCalendarSync`)
-- `beebox/src/connectors/google-calendar-state.ts` (state saved on the error path)
-- `beebox/src/connectors/google-calendar-sync.ts` (`syncCalendar`, the thrower)
+- `beebox/src/connectors/google-calendar.ts` (moved to `beebox/src/connectors/google-calendar/connector.ts`) (the loop and `runCalendarSync`)
+- `beebox/src/connectors/google-calendar-state.ts` (moved to `beebox/src/connectors/google-calendar/state.ts`) (state saved on the error path)
+- `beebox/src/connectors/google-calendar-sync.ts` (moved to `beebox/src/connectors/google-calendar/sync.ts`) (`syncCalendar`, the thrower)
 
 **How this was established**
 

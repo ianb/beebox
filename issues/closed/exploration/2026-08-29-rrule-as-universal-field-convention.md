@@ -20,7 +20,7 @@ candidate uses were examined and rejected:
 
 - Validation and prose rendering are per-schema needs. A schema that wants a
   recurrence field can import `RruleField`
-  (`beebox/src/schemas/scheduled-script-fields.ts`) and the `rrulestr().toText()`
+  (`beebox/src/schemas/scheduled-script-fields.ts` (moved to `beebox/src/scheduled-script-fields.ts`)) and the `rrulestr().toText()`
   path in `beebox/src/core/schedule/describe.ts`.
 - A box-wide "upcoming" query had no concrete user or meaning.
 - Calendar reconciliation, reminders, and ical export all depend on that query.

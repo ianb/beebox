@@ -16,7 +16,7 @@ count live code as dead, each fixed before anything was deleted:
 
 - **Doctests are markdown.** The suite imports ~3,000 symbols from `src/`
   through `.doctest.md` fences, which knip cannot parse. A compiler
-  (`beebox/scripts/knip-doctest-imports.ts`, itself doctested) lifts the
+  (`beebox/scripts/knip-doctest-imports.ts` (moved to `beebox/src/scripts/knip-doctest-imports.ts`), itself doctested) lifts the
   import statements out, static and `await import(...)` forms alike.
 - **`test/` and `scripts/` weren't in `project`**, so the suite's imports never
   counted as use.

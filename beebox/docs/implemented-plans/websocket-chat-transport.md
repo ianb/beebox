@@ -93,7 +93,7 @@ The plan keeps the robust half's mechanism and brings the fragile half up to
 its level.
 
 **Robust half — the global event bus (reused, ported).**
-- `src/core/event-bus.ts` — SQLite-backed bus. `emit()` persists with a
+- `src/core/event-bus.ts` (moved to `beebox/src/core/event-bus/core.ts`) — SQLite-backed bus. `emit()` persists with a
   monotonic autoincrement `id`; `subscribe({ afterId, listener })` *"Replay
   missed persisted events then stream live ones"* by reading
   `SELECT ... WHERE id > ?`. `emitTransient()` dispatches in-memory only with
@@ -115,7 +115,7 @@ its level.
   **Rebuilt / largely retired** (see Track 4).
 
 **Fragile half — per-turn streaming (rebuilt, hardened).**
-- `src/webapp/routes/chat-send-routes.ts` — `streamTurn()` pipes
+- `src/webapp/routes/chat-send-routes.ts` (moved to `beebox/src/webapp/routes/chat/send-routes.ts`) — `streamTurn()` pipes
   `chatSession.on("message", …)` straight to a hijacked socket until
   `done`/`error`/`close`. **No replay buffer, no sequence ids**: if the socket
   drops mid-turn, the streamed deltas are gone. Recovery is entirely external

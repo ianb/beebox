@@ -23,7 +23,7 @@ agents stop cargo-culting `bbx init` as a server-cache fix.
 
 - Box-local schemas are `config/schemas/*.ts` files that default-export a
   `cardSchema()` (optionally also a named `template`). Loaded by
-  `loadBoxSchemas(boxRoot)` in `src/schemas/registry.ts`, which dynamically
+  `loadBoxSchemas(boxRoot)` in `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`), which dynamically
   `import()`s the `.ts` directly. Module-resolution hooks (`ensureResolveHooks`,
   registry.ts ~136) rewrite known bare deps (`beebox/cards`, `zod`, `yaml`) to
   resolve from beebox's tree; tsx strips the TS types. **No compiled artifact,
@@ -103,7 +103,7 @@ bounds the leak to ~a day's edits.
 
 ## Implementation
 
-### 1. Cache-bust loader (`src/schemas/registry.ts`)
+### 1. Cache-bust loader (`src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`))
 
 - **State model (Codex #1 — the critical contract).** Two separate pieces of state:
   - the assembled `boxSchemaCache: Map<boxRoot, BoxSchemas>` (the snapshot consumers
@@ -293,10 +293,10 @@ Three *distinct* things, not two — conflating them was an error:
 
 ## Touch list
 
-- `src/schemas/registry.ts` — content-hash gated bust; persistent per-file
+- `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`) — content-hash gated bust; persistent per-file
   hash/url/last-good bookkeeping; `invalidateBoxSchemas` (drops assembled cache only);
   single-flight promise; keep-last-good for all per-file failure modes.
-- `src/schemas/templates-registry.ts` — owner-scoped registration (`(owner, name)` /
+- `src/schemas/templates-registry.ts` (moved to `beebox/src/templates-registry.ts`) — owner-scoped registration (`(owner, name)` /
   owner stack) + per-box replace-on-reload; not a flat `unregisterTemplate`.
 - `src/core/commands/create.ts` — load box schemas **before** template lookup (#3
   ordering bug).

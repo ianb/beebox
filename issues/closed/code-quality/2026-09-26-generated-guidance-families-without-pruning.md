@@ -20,7 +20,7 @@ carries the generated marker and is not in the run's manifest is removed
 (`beebox/docs/box-guidance.md`, "Generated files carry a marker"). Two
 generated families were left out:
 
-- `.claude/rules/guides-for-<type>.md` (`beebox/src/core/docs-gen/compile.ts`):
+- `.claude/rules/guides-for-<type>.md` (`beebox/src/core/docs-gen/compile.ts` (moved to `beebox/src/core/docs-gen/compile/core.ts`)):
   when a box loses the guide card for a job type, the rule that listed it stays.
 - `AGENTS.md` symlinks beside every `CLAUDE.md`
   (`beebox/src/core/agent-context-mirrors.ts`, `ensureAgentsMirror`): when a

@@ -9,7 +9,7 @@ discovered-by: agent
 discovered-in: worktree-sdk-update — the post-bump full-suite gate
 ---
 
-`beebox/test/frontend/lib/ui-scan/annotations.doctest.md:166` asserts that every
+`beebox/test/frontend/lib/ui-scan/annotations.doctest.md:166` (moved to `beebox/src/frontend/test/lib/ui-scan.annotations.doctest.md`) asserts that every
 id in the annotations table appears at least once in the source. Two do not:
 
 ```

@@ -30,7 +30,7 @@ is the pure resolution for an entry the caller already holds.
 longer re-reads and re-parses the whole history file once per iterated entry;
 `resolveSessionLogPath` resolves through the same helper. No cache was added —
 the per-lookup read remains, only the O(n) amplification is gone. Covered by
-`beebox/test/core/chat-session-history.doctest.md`.
+`beebox/test/core/chat-session-history.doctest.md` (moved to `beebox/test/core/chat/session/history.doctest.md`).
 
 Still open: the per-call `readHistoryFile` read (including on every
 `transcript-sync` poll), and pruning/rotation of the file itself.

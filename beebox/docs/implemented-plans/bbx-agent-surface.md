@@ -89,7 +89,7 @@ rename over an alias window. Recorded here rather than re-asked.
   five stub verbs, three deprecated aliases). Those are removed because the
   boxholder asked for them to be, verb by verb, not swept up on the plan's own
   authority. `scenario`'s removal is still open (see *Open design questions*).
-- **`beebox/code-style.md:112`**: files max 300 lines. `src/cli/index.ts` is 219
+- **`beebox/code-style.md:112`**: files max 300 lines. `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`) is 219
   lines and the table is ~220, so the table gets its own module rather than
   growing the entry point past the limit.
 - **Shipped precedent:** `docs/implemented-plans/agent-capability-delegation.md`
@@ -97,14 +97,14 @@ rename over an alias window. Recorded here rather than re-asked.
   agent-bearer tRPC client, and the rule that a credentialed verb runs
   in-process only under `tooling`. This plan classifies what that plan made
   dispatchable, and Track D's doctest is modelled on its
-  `test/cli/commands/drive-delegation.doctest.md`.
+  `test/cli/commands/drive-delegation.doctest.md` (moved to `beebox/test/cli/commands/drive/dispatch.doctest.md`).
 
 ## What already exists
 
-- `beebox/src/cli/index.ts:100-158` — 61 `program.addCommand(...)` calls in
+- `beebox/src/cli/index.ts:100-158` (moved to `beebox/src/cli/entry/run.ts`) — 61 `program.addCommand(...)` calls in
   registration order, with no classification of any kind. Rebuild: the calls
   become a loop over the table.
-- `beebox/src/cli/index.ts:161-218` — five commands defined inline that print
+- `beebox/src/cli/index.ts:161-218` (moved to `beebox/src/cli/entry/run.ts`) — five commands defined inline that print
   `"Not yet implemented"`: `show`, `log`, `diff`, `inject`, `step`. `show --raw`
   is documented as *"Show raw XML instead of pretty-printed"* (`:168`), the
   stale flag the audit issue opens with. Their only other mention in the repo is
@@ -121,7 +121,7 @@ rename over an alias window. Recorded here rather than re-asked.
   taxonomy ("Reach for these" / job lifecycle / "System-run — you don't invoke
   these"). Reuse as the consumer: its lists get derived from, or checked
   against, the table.
-- `beebox/src/core/docs-gen/bbx-commands.ts:18-45` and its two siblings — the
+- `beebox/src/core/docs-gen/bbx-commands.ts:18-45` (moved to `beebox/src/core/docs-gen/package-docs/bbx-commands.ts`) and its two siblings — the
   generated reference, assembled as hand-written prose string arrays, not
   derived from the registry. Reuse partially: rewriting the prose generator is
   out of scope, so Track E adds a consistency check (every verb the generated
@@ -160,14 +160,14 @@ decision here turns on how another tool did it.
 
 **What.** Two modules. `src/cli/surface-data.ts` holds the classification as
 pure data — no `Command` objects, no imports from `commands/` — so a test can
-import it without loading the CLI. `src/cli/surface-build.ts` reads it and
+import it without loading the CLI. `src/cli/surface-build.ts` (moved to `beebox/src/cli/entry/surface-build.ts`) reads it and
 assembles the program: agent verbs at top level, engine verbs under a `bbx
-engine` parent. `src/cli/index.ts` shrinks to env setup plus
+engine` parent. `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`) shrinks to env setup plus
 `buildProgram().parse()`.
 
 The `buildProgram()` extraction is required, not incidental: today `index.ts`
 runs `loadEnv`, `migrateUserState`, and `program.parse()` at module top level
-(`src/cli/index.ts:80-86,219`), so importing it from a test parses `process.argv`
+(`src/cli/index.ts:80-86 (moved to `beebox/src/cli/entry/run.ts`),219`), so importing it from a test parses `process.argv`
 and exits. Track D's totality check needs the assembled program as a value.
 
 **Why this needs to change.** There is no classification anywhere in the code
@@ -203,12 +203,12 @@ agent:
 
 | Verb | Why it is not agent-callable |
 |---|---|
-| `serve` | The hub spawns one per box (`src/hub/supervisor.ts:441`). |
-| `hub` | systemd `ExecStart` (`deploy/hetzner/setup-server.sh:254`) and the dev router (`workstreams-app/src/router/router-worktree-start.ts:172`). |
+| `serve` | The hub spawns one per box (`src/hub/supervisor.ts:441` (moved to `beebox/src/hub/supervisor/core.ts`)). |
+| `hub` | systemd `ExecStart` (`deploy/hetzner/setup-server.sh:254`) and the dev router (`workstreams-app/src/router/router-worktree-start.ts:172` (moved to `workstreams-app/src/router/core/worktree-start.ts`)). |
 | `boxes` | Machine-wide box manifest; an agent has no second box. |
 | `activity` | Reports across every box; the deploy's at-rest gate (`deploy/server-bin/bbx-wait-quiet:19`). |
-| `tick` | Drives every box's due scripts. The daemon calls `runTick` in-process (`src/core/schedule/scheduler.ts:11`); the CLI verb is reached only by the field-test harness. |
-| `scheduler start\|install\|uninstall` | Daemon lifecycle. `start` is a systemd and launchd `ExecStart`; `install` writes the launchd plist (`src/cli/commands/scheduler.ts:164-168`). |
+| `tick` | Drives every box's due scripts. The daemon calls `runTick` in-process (`src/core/schedule/scheduler.ts:11` (moved to `beebox/src/core/schedule/scheduler/core.ts`)); the CLI verb is reached only by the field-test harness. |
+| `scheduler start\|install\|uninstall` | Daemon lifecycle. `start` is a systemd and launchd `ExecStart`; `install` writes the launchd plist (`src/cli/commands/scheduler.ts:164-168` (moved to `beebox/src/cli/commands/scheduler/command.ts`)). |
 | `tailscale` | Machine networking, outside any box. |
 | `google-auth` | An interactive browser OAuth flow. |
 | `auth` | Local account management; every verb refuses an agent session without `--agent-confirmed`. |
@@ -247,7 +247,7 @@ question in it.
 `secrets describe` splits at the *option* level, below anything the table can
 express: `--add-use` is the agent's and `--remove-use`/`--clear-uses` refuse an
 agent session without `--agent-confirmed`
-(`src/cli/commands/secrets-describe.ts:82-91`). The table classifies the
+(`src/cli/commands/secrets-describe.ts:82-91` (moved to `beebox/src/cli/commands/secrets/describe.ts`)). The table classifies the
 subcommand as agent and leaves the option gate where it already is. This is the
 one place the classification is coarser than the code, and it is deliberate —
 splitting a command by flag would put the surface boundary somewhere no `--help`
@@ -267,9 +267,9 @@ data). `bbx scheduler --help` then lists `status` and
 `log`; `bbx engine scheduler --help` lists `start`, `install`, `uninstall`.
 
 `scheduler add|remove|list` are deleted, not sorted: they already print
-`[deprecated] Use bbx boxes add instead` (`src/cli/commands/scheduler.ts:63,78,93`)
+`[deprecated] Use bbx boxes add instead` (`src/cli/commands/scheduler.ts:63 (moved to `beebox/src/cli/commands/scheduler/command.ts`),78,93`)
 and are still listed in the generated box reference
-(`src/core/docs-gen/bbx-commands-scheduling.ts:86-88`).
+(`src/core/docs-gen/bbx-commands-scheduling.ts:86-88` (moved to `beebox/src/core/docs-gen/package-docs/bbx-commands-scheduling.ts`)).
 
 **Vocabulary lock-ins.** The same family name on both sides. `bbx scheduler` is
 the agent's half and `bbx engine scheduler` the operator's; neither gets a
@@ -311,10 +311,10 @@ exists.
    the synced tree at `deploy.sh:702`, so it renames atomically with the verb.
 6. `deploy.sh:743` — `bbx migrate --sweep`. Same tree, same commit.
 7. `docker/entrypoint.sh:124,130` — `bbx migrate --sweep`, `bbx serve`.
-8. `workstreams-app/src/router/router-worktree-start.ts:172` — the dev router's
+8. `workstreams-app/src/router/router-worktree-start.ts:172` (moved to `workstreams-app/src/router/core/worktree-start.ts`) — the dev router's
    `hub` spawn. Not deployed, but breaks every worktree if missed.
 9. `schedules/box-convergence/run.ts:93` — `bbx migrate --status` over ssh.
-10. `src/hub/supervisor.ts:441`, `src/cli/commands/migrate.ts:102`,
+10. `src/hub/supervisor.ts:441` (moved to `beebox/src/hub/supervisor/core.ts`), `src/cli/commands/migrate.ts:102`,
     `src/cli/commands/upgrade.ts:272,280`, `src/field-test/*`,
     `scripts/smoke-*.ts`, `docker/smoke-*.sh` — programmatic spawns.
 
@@ -355,7 +355,7 @@ filed about, and it is nearly free.
 *The smoke run* spawns real processes, and that is a new mechanism in this
 repo — stated plainly because the plan template warns that a new test tier
 becomes a norm for every future agent. The cited precedent does **not** do this:
-`test/cli/commands/drive-delegation.doctest.md:71-84` mutates `process.env` in
+`test/cli/commands/drive-delegation.doctest.md:71-84` (moved to `beebox/test/cli/commands/drive/dispatch.doctest.md`) mutates `process.env` in
 the test process and calls `dispatchDrive` directly; it never spawns `bbx`. What
 carries over from it is the harness (`makeTestServer`, the agent bearer, the
 auth wall on) and the shape of the assertion, not the execution model.
@@ -415,7 +415,7 @@ one sentence.
 `bbx --help` grows one line naming its audience and pointing at `bbx engine`.
 
 The consistency check: a test asserting every verb named in the generated
-reference (`src/core/docs-gen/bbx-commands*.ts`) is `audience: "agent"` in the
+reference (`src/core/docs-gen/bbx-commands (moved to `beebox/src/core/docs-gen/package-docs/bbx-commands.ts`)*.ts`) is `audience: "agent"` in the
 table. It checks one direction only — it catches an engine verb being described
 to agents, not an agent verb with no documentation, and it does not reach
 subcommand or option granularity, so `bbx scheduler install` inside a prose
@@ -684,7 +684,7 @@ Steps 3-6 do not touch deploy and can land in any order after step 2.
   top-level command is in the table; every table entry is registered; every
   `smoke: null` carries a reason) and the credential-gap smoke run under
   `BBX_SPAWN_PROFILE=agent` with an empty `HOME`. Models
-  `test/cli/commands/drive-delegation.doctest.md`.
+  `test/cli/commands/drive-delegation.doctest.md` (moved to `beebox/test/cli/commands/drive/dispatch.doctest.md`).
 - `test/core/docs-gen/bbx-commands-audience.doctest.md` — every verb named in
   the generated reference is `audience: "agent"`.
 - Existing CLI doctests are re-run for the three split families; any that invoke

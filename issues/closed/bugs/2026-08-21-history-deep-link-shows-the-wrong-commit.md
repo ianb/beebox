@@ -21,7 +21,7 @@ const match = firstPage?.commits.find((c) => c.hash.startsWith(initialHash));
 setSelectedCommit(match ?? firstCommit);
 ```
 
-(`beebox/src/frontend/src/components/history/HistoryBrowser.tsx:86-89`.)
+(`beebox/src/frontend/src/components/history/HistoryBrowser.tsx:86-89` (moved to `beebox/src/frontend/src/components/history/HistoryViewCard/HistoryBrowser.tsx`).)
 Later pages arrive through `fetchNextPage`, and the selection is never revisited.
 
 Reproduced with `/history/8d65fe14` (138 commits back), which rendered commit

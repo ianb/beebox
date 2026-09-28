@@ -24,13 +24,13 @@ Track 1 (commit `52b609299`, plan `beebox/docs/plans/todos-ui.md`) landed the
 plate headline "N on your plate · M later · K for the agent"
 (`beebox/src/frontend/src/components/TodoViewCard.tsx`) and an overdue dot on
 the nav badge, plus boxholder-vs-agent scope default
-(`beebox/src/core/todo/count.ts`, `beebox/src/core/collection/run.ts`). The
+(`beebox/src/core/todo/count.ts`, `beebox/src/core/collection/run.ts` (moved to `beebox/src/core/collection/run/core.ts`)). The
 headline repeats the badge's number with the split the boxholder asked for.
 This issue stays open until the rest of the plan (Tracks 2-7) ships.
 
 ## Recovery assessment (2026-09-21)
 
-Current `beebox/src/frontend/src/components/AppNav.tsx:222-234` still renders
+Current `beebox/src/frontend/src/components/AppNav.tsx:222-234` (moved to `beebox/src/frontend/src/components/AppNav/nav.tsx`) still renders
 the plate icon and a bare count; the explanatory words are in the tooltip and
 accessible label. `core/todo/count.ts:100` counts only escalated/on-plate todos.
 The count itself is not wrong. This inspection supports the presentation

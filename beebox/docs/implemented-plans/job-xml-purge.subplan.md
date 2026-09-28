@@ -55,7 +55,7 @@ subplan supersedes it.
   connector/intake path (rss/news/gmail/telegram jobs). **Frontmatter.**
 - `src/schemas/chat-job.ts:80` — `createChatJobTemplate` likewise; `thread:
   {ref}`. **Frontmatter.**
-- `src/cli/commands/wakeup-steps.ts:391` — the `contains-backfill` job is built as
+- `src/cli/commands/wakeup-steps.ts:391` (moved to `beebox/src/cli/commands/wakeup/steps.ts`) — the `contains-backfill` job is built as
   **XML**: `<contains-backfill-job created="..." source="..." priority="low">`
   with `<description>`, `<instructions>` (entity-escaped `&lt;`/`&gt;`), and
   `<item ref="..."/>` children via `escapeXmlAttr`. **The lone live XML
@@ -63,17 +63,17 @@ subplan supersedes it.
 
 **Consumer — still XML-first, wrong for the frontmatter jobs above:**
 
-- `src/core/reactor/batch-jobs.ts:75` — `buildJobDescription` wraps `job.content`
+- `src/core/reactor/batch-jobs.ts:75` (moved to `beebox/src/core/reactor/engine/batch-jobs.ts`) — `buildJobDescription` wraps `job.content`
   in a ` ```xml ` fence. `:103` `extractRefs` matches `<item ref="...">` /
   `<thread ref="...">` by regex — **won't match** a frontmatter job's
   `items:\n  - ref: ...`, so referenced item cards are **not inlined** into the
   reactor prompt. `:116` `extractRootTag` matches `<tag>` — won't find a
   frontmatter type, so `getSchemaInstructions(rootTag)` gets nothing and the
   job-type schema instructions are **not injected**.
-- `src/core/reactor/batch-jobs.ts:18` — `processBatchJobs` is the path all
+- `src/core/reactor/batch-jobs.ts:18` (moved to `beebox/src/core/reactor/engine/batch-jobs.ts`) — `processBatchJobs` is the path all
   non-chat jobs take (`:1` "groups non-chat jobs"); confirmed via
   `engine.ts:36`.
-- `src/core/reactor/chat-jobs.ts:99` — `extractThreadRef` matches `<thread ref>`;
+- `src/core/reactor/chat-jobs.ts:99` (moved to `beebox/src/core/reactor/engine/chat-jobs.ts`) — `extractThreadRef` matches `<thread ref>`;
   **dead** for current frontmatter chat jobs (their ref is `thread.ref` in YAML).
 - `src/core/finish-job.ts:36` — `content.match(/<description>(.*?)<\/description>/s)`
   reads a job's description as XML; won't find frontmatter `description:`.

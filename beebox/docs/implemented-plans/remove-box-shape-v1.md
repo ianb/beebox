@@ -133,7 +133,7 @@ Grounded in a full-footprint inventory (2026-07-11). Reused/removed, not rebuilt
   `validate.ts:110`, csp-digest/report, …) — these need a `BoxShape` object for
   `packageRoot`/`boxCodePaths`, which is NOT v1-specific. **They stay**; only the
   shape *value* they receive changes.
-- **The conversion script** `scripts/migrate/box-packageify.ts` (537 lines),
+- **The conversion script** `scripts/migrate/box-packageify.ts` (moved to `beebox/src/scripts/migrate/box-packageify.ts`) (537 lines),
   registered `src/core/migrations.ts:95-99`, tested by two doctests, documented
   `docs/cards/migrations.md:202-296`. This is the actual v1→v2 logic (upgrade.ts is
   NOT — it's an unrelated engine-version bumper with one incidental v1 guard).

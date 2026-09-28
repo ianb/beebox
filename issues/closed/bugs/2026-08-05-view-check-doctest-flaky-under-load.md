@@ -12,7 +12,7 @@ seconds while the doctest file retains its 300-second outer hang limit. The
 production command's timeout is unchanged. The focused test passed 7/7, and the
 six-job beebox suite passed 6,163/6,163.
 
-`beebox/test/cli/commands/view-check.doctest.md` failed during a full
+`beebox/test/cli/commands/view-check.doctest.md` (moved to `beebox/test/cli/commands/view/command.check.doctest.md`) failed during a full
 `pnpm test` run.
 The first scenario expected the `good.tsx` view result to have `ok: true`, but
 the result had `ok: false` instead:

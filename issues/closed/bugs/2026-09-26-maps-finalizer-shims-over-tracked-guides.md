@@ -14,7 +14,7 @@ directories whose `CLAUDE.md` is a tracked registry row and strips a leading
 include it finds there; the guidance sync strips the same before the tracker
 compares. Doctest in `test/core/box-guidance-sync.doctest.md`.
 
-`ensureClaudeMdInDir` (`beebox/src/core/maps/finalize.ts:95-118`) writes a
+`ensureClaudeMdInDir` (`beebox/src/core/maps/finalize.ts:95-118` (moved to `beebox/src/core/maps/finalize/core.ts`)) writes a
 one-line `CLAUDE.md` holding only the MAP include into every directory that gets a `MAP.md`, or
 inserts the include line at the top of an existing one. Some of those
 directories are homes of a tracked guide in `GUIDANCE_SURFACES`

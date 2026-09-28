@@ -10,7 +10,7 @@ Resolved in `worktree-box-maintenance-no-wedge`. The iOS companion does not
 inspect HTTP status itself: its `WKWebView` renders whatever body the chat URL
 returns (`ios-app/BeeBox/Views/ChatWebView.swift`, `authenticatedRequest`), and
 the "box returned 404" text came from the dev router's mobile bootstrap
-(`workstreams-app/src/router/router-mobile-bootstrap.ts`), not from Swift. Two
+(`workstreams-app/src/router/router-mobile-bootstrap.ts` (moved to `workstreams-app/src/router/server/mobile-bootstrap.ts`)), not from Swift. Two
 changes make the message reach the screen on both paths, with no iOS change:
 
 - The router's bootstrap quotes the box's own sentence (`message`, else
@@ -19,7 +19,7 @@ changes make the message reach the screen on both paths, with no iOS change:
   finishes or exits" (`test/router/router-mobile-bootstrap.test.ts`).
 - The hub answers a page navigation (`Accept: text/html`, which the web view
   sends) with that sentence and the retry interval as plain text instead of the
-  JSON body (`beebox/src/hub/box-unavailable.ts`, `test/hub/hub-router.doctest.md`).
+  JSON body (`beebox/src/hub/box-unavailable.ts` (moved to `beebox/src/hub/server/box-unavailable.ts`), `test/hub/hub-router.doctest.md`).
 
 Not exercised: a live simulator walk against a closed box. The rendering claim
 rests on `WKWebView` displaying a `text/plain` 503 body, which is its standard
@@ -35,7 +35,7 @@ slug and a known box that could not be served.
 
 The hub now answers a known-but-unavailable slug with `503
 {error:"box_closed"|"box_unavailable", message, ...}` and a `Retry-After`
-header (`beebox/src/hub/box-unavailable.ts`). Whether the iOS app surfaces that
+header (`beebox/src/hub/box-unavailable.ts` (moved to `beebox/src/hub/server/box-unavailable.ts`)). Whether the iOS app surfaces that
 message usefully, or still shows a generic failure, has not been exercised
 against a live 503 response.
 

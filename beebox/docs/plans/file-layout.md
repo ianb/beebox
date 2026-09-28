@@ -85,9 +85,9 @@ every 25-file prefix cluster in the tree started as a pair.
 
 - Three set registries with the same shape, an explicit typed list in the
   parent of the set directory:
-  `src/cli/surface-commands.ts:145` `VERB_COMMANDS`, keyed *"off each
+  `src/cli/surface-commands.ts:145` (moved to `beebox/src/cli/commands.ts`) `VERB_COMMANDS`, keyed *"off each
   command's own `name()` rather than by a hand-written name → export mapping"*
-  (line 4); `src/webapp/trpc/router.ts:43` `appRouter = router({...})` beside
+  (line 4); `src/webapp/trpc/router.ts:43` (moved to `beebox/src/webapp/trpc/routers.ts`) `appRouter = router({...})` beside
   `routers/`. Both list entry modules only; the helpers beside those entries
   are what rule 1 flags. Reuse this shape as the rule.
 - A registry by path: `src/core/migrations.ts:51` `MIGRATIONS` is a typed list
@@ -95,9 +95,9 @@ every 25-file prefix cluster in the tree started as a pair.
   run time. The set directory is `scripts/migrate/`, in a different package
   root; `src/core/migrations/` (one file) is unrelated to it. The completeness
   check in rule 4 applies to a path registry the same way.
-- One registry inside its set: `src/schemas/registry.ts:90` `cardSchemas`.
+- One registry inside its set: `src/schemas/registry.ts:90` (moved to `beebox/src/schemas.ts`) `cardSchemas`.
   Same idea, wrong place (rule 4).
-- Two side-effect registries. `src/connectors/index.ts:100`
+- Two side-effect registries. `src/connectors/index.ts:100` (moved to `beebox/src/connector.ts`)
   `registerConnector`, called at module scope in six connector files
   (`gmail.ts:323`, `google-drive.ts:260`, `google-calendar.ts:314`,
   `telegram.ts:391`, `push.ts:85`, `publish-submissions.ts:278`); a
@@ -109,9 +109,9 @@ every 25-file prefix cluster in the tree started as a pair.
   `services/index.ts` is a container type, not a registry. Rule 1 finds
   sets by their registry declaration, never by the name.
 - A two-way registry cross-check already in the tree:
-  `src/cli/surface-commands.ts:6-9`: *"`surface-build.ts` fails loudly when the
+  `src/cli/surface-commands.ts:6-9` (moved to `beebox/src/cli/commands.ts`): *"`surface-build.ts` fails loudly when the
   surface table names a verb that is absent here, and
-  `test/cli/surface.doctest.md` fails when a verb here is absent from the
+  `test/cli/surface.doctest.md` (moved to `beebox/test/cli/entry.surface.doctest.md`) fails when a verb here is absent from the
   table"*. The completeness check in rule 4 is this pattern applied to the
   directory instead of a table.
 - `pnpm lint:knip` reports a project file no entry reaches. An unregistered
@@ -157,7 +157,7 @@ what it costs, so the choice is explicit.
   them), load order is filesystem order, no type-level exhaustiveness, and a
   bundler-specific primitive in engine code. This repo already uses a
   directory scan where the members are unknown at build time:
-  `src/schemas/registry.ts:10` reads a box's own schema directory at runtime.
+  `src/schemas/registry.ts:10` (moved to `beebox/src/schemas.ts`) reads a box's own schema directory at runtime.
   That is the right use; engine members are known at build time.
 - **Side-effect self-registration.** A member calls `register(x)` when
   imported (jQuery plugins, Mocha globals, the repo's `registerFileType`).
@@ -174,7 +174,7 @@ what it costs, so the choice is explicit.
   of the registry, `satisfies Record<Union, Member>` makes a missing member a
   compile error (`code-style.md`, "Exhaustiveness"). In this tree the union is
   usually derived from the registry (`getCardTypes()`,
-  `src/schemas/registry.ts:399`), so the directory listing, not a union, is
+  `src/schemas/registry.ts:399` (moved to `beebox/src/schemas.ts`)), so the directory listing, not a union, is
   the independent source of what exists. Used where a union exists; not a
   substitute for the completeness check.
 - **Module-directory entry names.** Rust `mod.rs` (now discouraged in favour
@@ -209,7 +209,7 @@ issue, "Constraints for the check").
   source tree.
 - **Scope of the rules**: modules (files the import graph sees: `.ts`,
   `.tsx`, and the `.js`/`.mjs` loader shims `code-style.md` permits, such
-  as `scripts/build-pub-worker.mjs`) and test files. Data files (fixtures, `.card`, `.html`, `.svg`,
+  as `scripts/build-pub-worker.mjs` (moved to `beebox/src/scripts/build-cli/build/pub-worker.mjs`)) and test files. Data files (fixtures, `.card`, `.html`, `.svg`,
   worklets, assets) are opaque to the rules and take the shape their consumer
   requires; test data lives under `test/fixtures/`.
 - **Set directory**: a directory whose children are interchangeable
@@ -343,7 +343,7 @@ directory. The check finds sets by their `defineRegistry` declaration
 (rule 4), never by the directory's name.
 *Measure:* directory listing ⊆ registry imports, and registry imports ⊆
 directory listing. The contract itself is verified by the registry's type
-(`cardSchemas: CardSchema[]`, `src/schemas/registry.ts:90`): a listed module
+(`cardSchemas: CardSchema[]`, `src/schemas/registry.ts:90` (moved to `beebox/src/schemas.ts`)): a listed module
 that exports no value of the contract fails typecheck. A member may export
 supporting values and types beside the contract value. *Mechanical:* yes,
 given the declaration and the registry's location (rule 4).
@@ -473,7 +473,7 @@ How each property is verified:
 - *Nothing else constructs the list (static).* Exactly one `defineRegistry`
   call names a given directory; no module outside the registry reads the set
   directory's path as a string (the `readdir` scan for box-local schemas in
-  `src/schemas/registry.ts:10` builds a different list, the box's, and stays
+  `src/schemas/registry.ts:10` (moved to `beebox/src/schemas.ts`) builds a different list, the box's, and stays
   in the registry module); no side-effect registration API exists after the
   move (`registerConnector` and `registerFileType` are deleted, their callers
   replaced by list entries).
@@ -532,12 +532,12 @@ cannot be named, the directory's axis is unclear and that is the finding.
 A public surface is the one place a re-export module belongs, because there
 its job is to define what is public rather than to blur it. Each package
 keeps its surfaces in its own `src/exports/`: the backend already holds
-`schema.ts` and `server.ts` there, `src/cards/index.ts` (`beebox/cards`)
+`schema.ts` and `server.ts` there, `src/cards/index.ts` (moved to `beebox/src/exports/cards.ts`) (`beebox/cards`)
 moves there, and the frontend package's surface
 `src/frontend/src/components/view-widgets/node-entry.tsx`
 (`beebox/view-widgets`) moves to `src/frontend/src/exports/view-widgets.tsx`.
 The registry of public surfaces is the build's entry table
-(`scripts/build-cli.ts:52-54` and `:112-118` bundle each specifier from one
+(`scripts/build-cli.ts:52-54` (moved to `beebox/src/scripts/build-cli/build/bundle.ts`) and `:112-118` bundle each specifier from one
 source entry to its `dist/` target), and `package.json` `exports` is the
 consumer-facing map over the same targets. The check verifies the three
 agree: every module specifier in `exports` has a build entry, every build
@@ -613,7 +613,7 @@ Full paths under the rule:
 | the `session/` directory as a whole | `beebox/test/core/chat/session.lifecycle.doctest.md` |
 | the schemas registry `beebox/src/schemas.ts` | `beebox/test/schemas.doctest.md` |
 | whole-app tour | `beebox/test/tours/<name>.tour.ts` (scenario group) |
-| `beebox/src/frontend/src/lib/docling.ts` | `beebox/src/frontend/test/lib/docling.doctest.md` |
+| `beebox/src/frontend/src/lib/docling.ts` (moved to `beebox/src/frontend/src/lib/docling/parse.ts`) | `beebox/src/frontend/test/lib/docling.doctest.md` |
 | `bin/lib/schedules/store.ts` | `bin/test/lib/schedules/store.test.ts` |
 | helper used by `core/agent` tests only | `beebox/test/core/agent/fake-agent.ts` |
 | helper used across areas | `beebox/test/helpers/isolate-user-home.ts` |
@@ -628,11 +628,11 @@ not in its mirrored directory, or it sits in a group named after that
 package. An import-based package check was tried and removed (2026-09-27):
 frontend tests import `shared/` and backend modules for setup, which rule 8
 allows. *Mechanical:* both. *Judgment:* none. *Examples:*
-`test/core/chat-session-archive.doctest.md` →
+`test/core/chat-session-archive.doctest.md` (moved to `beebox/test/core/chat/session/archive.doctest.md`) →
 `test/core/chat/session/archive.doctest.md`. `test/webapp/trpc-health-*` →
-`test/webapp/trpc/routers/health/`. `test/cli/commands/tick-force.doctest.md`
+`test/webapp/trpc/routers/health/`. `test/cli/commands/tick-force.doctest.md` (moved to `beebox/test/cli/commands/tick.force.doctest.md`)
 → `tick.force.doctest.md`. The 21 loose files at `test/` root each name a
-module below the root (`test/env.doctest.md` → `test/lib/env.doctest.md`).
+module below the root (`test/env.doctest.md` (moved to `beebox/test/lib/env.doctest.md`) → `test/lib/env.doctest.md`).
 
 **Rule 9: the module map's layer rules apply below every new directory; the
 layer order flipped 2026-09-27.**
@@ -713,7 +713,7 @@ opens those steps; this document is their input.
   the boxholder accepted it.
 - **Explicit lists change connector load order.** Today a connector is
   registered when its module happens to be imported
-  (`src/connectors/index.ts:100`); an explicit list registers all six at one
+  (`src/connectors/index.ts:100` (moved to `beebox/src/connector.ts`)); an explicit list registers all six at one
   place. Anything that relied on a connector being absent because its module
   was never imported (a test with a partial import set) surfaces when rule 4
   is applied. Found by the tests; fixed in the move step, not here.

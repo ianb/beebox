@@ -10,7 +10,7 @@ resolution: implemented
 
 **Closed 2026-08-25.** `eventFiles` is keyed by `"<eventId> <calendarId>"` (`google-calendar-event-index.ts`: `eventKey`/`parseEventKey`); `reconciledEventKeys`/`seenEventKeys` use the same keys. State files migrate on load (`version: 2`), legacy plain-string entries sit under `(legacy)` until a pull adopts them. Colliding filenames across calendars get a calendar-hash suffix. Doctests: `test/connectors/google-calendar-event-index.doctest.md`.
 
-**What is wrong.** `eventFiles` in `beebox/src/connectors/google-calendar-state.ts`
+**What is wrong.** `eventFiles` in `beebox/src/connectors/google-calendar-state.ts` (moved to `beebox/src/connectors/google-calendar/state.ts`)
 is keyed by `event.id` alone. Every consumer — `reconcileEvent` in
 `google-calendar-sync.ts`, `pushAndCleanOrphans`/`processLocalDeletes` in
 `google-calendar-push.ts`, and the post-410 stale pass in

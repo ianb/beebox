@@ -10,7 +10,7 @@ discovered-by: Ian
 discovered-in: main session — "There were just a bunch of deferred issue reports?"
 ---
 
-`workstreams-app/src/server/issue-index.ts` imports
+`workstreams-app/src/server/issue-index.ts` (moved to `workstreams-app/src/server/main/issue-index.ts`) imports
 `beebox/src/services/openai-embeddings.js` directly across the package
 boundary. The pre-commit hook typechecks each subproject only when that
 subproject's files are staged (`.husky/pre-commit`, `run_pair beebox …`),

@@ -6,8 +6,8 @@ resolution: implemented
 ---
 
 Resolved by `01d934919` (`scan-import: a scanned PDF is a document, whether or
-not OCR was on`, `beebox/src/core/commands/scan-import.ts`,
-`beebox/src/core/commands/scan-import-pdf.ts`), diverging from this issue's own
+not OCR was on`, `beebox/src/core/commands/scan-import.ts` (moved to `beebox/src/core/commands/scan-import/command.ts`),
+`beebox/src/core/commands/scan-import-pdf.ts` (moved to `beebox/src/core/commands/scan-import/pdf.ts`)), diverging from this issue's own
 sketch of the fix: instead of routing textless PDFs through vision OCR into a
 document-shaped card, a single PDF now always goes to pdf mode and Docling
 itself force-OCRs when the text-layer probe finds nothing to read (leaving an

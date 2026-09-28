@@ -51,7 +51,7 @@ cross-review finding 1; this constraint shapes Tracks A–C.)
 - `beebox/code-style.md` — no default parameters, injected-deps
   testability (the `DoctorDeps` shape).
 - **Precedent: `bbx pub setup` / `bbx pub status`**
-  (`beebox/src/cli/commands/pub-setup.ts:49,110`) — an idempotent
+  (`beebox/src/cli/commands/pub-setup.ts:49 (moved to `beebox/src/cli/commands/pub/setup.ts`),110`) — an idempotent
   provisioning command paired with a drift-reporting status command for an
   external-service integration. This plan reuses the setup/status *pairing*;
   the guided wait-and-recheck loop is new (pub setup is one-shot).
@@ -97,7 +97,7 @@ cross-review finding 1; this constraint shapes Tracks A–C.)
   `bin/router.ts:187` (children get `host: "127.0.0.1"`),
   `beebox/src/cli/commands/hub.ts:54` (`config.host ?? "127.0.0.1"`),
   standalone `bbx serve` defaults `localhost`
-  (`beebox/src/webapp/server.ts:187`). **The dev router does not**:
+  (`beebox/src/webapp/server.ts:187` (moved to `beebox/src/webapp/server/app.ts`)). **The dev router does not**:
   `bin/router.ts:1052` calls `server.listen(ROUTER_PORT, ...)` with no host —
   all interfaces. Track A fixes this.
 - **Prod exposure stack.** Cloudflare (Flexible SSL) → nginx :80 → loopback
@@ -228,7 +228,7 @@ undefined-propagation.
 were considered and deferred; refusing without a target is the shipped
 behavior): the machine may be running a dev router, a standalone `bbx serve`
 (arbitrary host/port, `beebox/src/cli/commands/serve.ts:95`), a hub
-(`beebox/src/hub/hub-config.ts:57`), or a Docker mapping, and guessing
+(`beebox/src/hub/hub-config.ts:57` (moved to `beebox/src/hub/config.ts`)), or a Docker mapping, and guessing
 across those is how the wrong thing gets exposed. The router is never a
 valid target (Track A) — enforced structurally, not by port number: the
 target is probed for the router's `/__router/status` signature and refused
@@ -391,7 +391,7 @@ status exists); the proof runs are rollout, not chunks.
 Cloudflare/nginx public path. App auth gates both paths, with one stated
 asymmetry: **the private origin supports local-password login only.** Google
 OAuth builds its single callback URI from the canonical `BBX_PUBLIC_URL`
-(`beebox/src/webapp/routes/auth-google.ts:39`), so a login begun on
+(`beebox/src/webapp/routes/auth-google.ts:39` (moved to `beebox/src/webapp/routes/auth/google.ts`)), so a login begun on
 the `.ts.net` origin would redirect back to — and set its cookie on — the
 public origin. Rather than redesign the OAuth callback for multiple origins,
 the tailnet origin's login page shows the local-password form (already every

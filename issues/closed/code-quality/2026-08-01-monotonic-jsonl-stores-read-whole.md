@@ -12,7 +12,7 @@ resolution: implemented
 Two append-forever JSONL stores are read whole into memory and never rotated:
 
 - **Retro ledger** — `loadLedgerEntries`
-  (`beebox/src/core/retro/ledger.ts`) reads the whole file into a
+  (`beebox/src/core/retro/ledger.ts` (moved to `beebox/src/core/retro/scan/ledger.ts`)) reads the whole file into a
   string, splits, and retains every entry; `loadEvidenceHashes` amplifies it.
   Grows one line per observation per nightly run, forever. Batch path. The
   consumer (`retro/scan.ts`) only needs the `evidenceHash` Set — stream lines
@@ -32,12 +32,12 @@ touching either subsystem.
 
 Both stores are read line by line over a stream instead of whole-file + split.
 
-- `beebox/src/core/retro/ledger.ts` — `loadLedgerEntries` and
+- `beebox/src/core/retro/ledger.ts` (moved to `beebox/src/core/retro/scan/ledger.ts`) — `loadLedgerEntries` and
   `loadEvidenceHashes` share a `forEachLedgerEntry` streaming walk;
   `loadEvidenceHashes` adds to its Set as lines go past, so it never
   materializes the entries. `loadLedgerEntries` stays — `retro-scan.doctest.md`
   and the integrator still read full entries. Covered by
-  `beebox/test/core/retro/ledger.doctest.md`.
+  `beebox/test/core/retro/ledger.doctest.md` (moved to `beebox/test/core/retro/scan/ledger.doctest.md`).
 - `beebox/src/core/usage.ts` — `readManifest` became async and streams;
   its one caller (`syncUsage`) awaits it.
 
