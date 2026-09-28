@@ -105,7 +105,7 @@ A file count alone cannot state that.
 ## Status (2026-09-26)
 
 Steps 1 and 2 are written up in
-[the file-layout plan](../../beebox/docs/plans/file-layout.md): five
+[the file-layout plan](../../beebox/docs/implemented-plans/file-layout.md): five
 principles, ten rules, and for each rule what a check can verify. Decisions
 recorded there that supersede the observations above:
 

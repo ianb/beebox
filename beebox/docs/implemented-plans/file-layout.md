@@ -1,6 +1,6 @@
 ---
 title: "Source file layout: principles, rules, and what a check can verify"
-status: draft
+status: implemented
 workstream: file-layout
 issues:
   - ../../../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md

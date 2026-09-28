@@ -1,6 +1,6 @@
 ---
 title: "Layout check: the script that enforces the file-layout rules"
-status: active
+status: implemented
 workstream: file-layout
 issues:
   - ../../../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md
