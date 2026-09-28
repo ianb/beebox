@@ -19,11 +19,16 @@ import { join } from "node:path";
 import { isWithin } from "../graph.js";
 import { computeRenamesFromGit, type RejectedRename } from "./git-renames.js";
 import { gitGrepFilesAny, gitLines } from "./git-ops.js";
-import type { TokenKind } from "./mention-apply.js";
 import { matchTokenRanges } from "./mention-apply.js";
-import { surveyDirectoryRenames, type DirectoryRename } from "./mention-directories.js";
-import { directoryForms, fileForms } from "./mention-forms.js";
-import type { PlannedMove } from "./list.js";
+import {
+  allPackageDirs,
+  crossPackageTargets,
+  targetsForDirectory,
+  targetsForMove,
+  uniformDirectoryRenamesFromMapping,
+  type AnnotationTarget,
+} from "./mention-annotate-targets.js";
+import { owningRoot } from "./mentions.js";
 import { fencedRanges, isInsideRanges } from "./markdown-fence.js";
 
 export type AnnotateArea = "plans" | "implemented-plans" | "issues-closed" | "issues-open" | "research" | "other";
@@ -65,34 +70,6 @@ export function areaOf(path: string): AnnotateArea {
   return "other";
 }
 
-interface AnnotationTarget {
-  /** The literal old-path text a mention could spell (repo-relative, package-relative, or an extension variant). */
-  old: string;
-  /** The canonical new REPO-RELATIVE path to embed in the note — never a package-relative or extension-swapped spelling. */
-  newRepoRelative: string;
-  kind: TokenKind;
-  /** The package root a package-relative form is scoped to; `null` for a repo-relative form (any file). */
-  scopeRoot: string | null;
-}
-
-function targetsForMove(move: PlannedMove, roots: string[]): AnnotationTarget[] {
-  return fileForms({ move, roots }).map((form) => ({
-    old: form.old,
-    newRepoRelative: move.to,
-    kind: "file",
-    scopeRoot: form.scopeRoot,
-  }));
-}
-
-function targetsForDirectory(rename: DirectoryRename, roots: string[]): AnnotationTarget[] {
-  return directoryForms({ rename, roots }).map((form) => ({
-    old: form.old,
-    newRepoRelative: rename.to,
-    kind: "directory",
-    scopeRoot: form.scopeRoot,
-  }));
-}
-
 const LINE_SUFFIX = /^:\d+(?:-\d+)?/;
 
 /** A trailing `:line` or `:line-line` suffix belongs to the token — the note goes after it, not before. */
@@ -104,11 +81,16 @@ function extendForLineSuffix(text: string, end: number): number {
 /**
  * A mention closed by an inline-code backtick or a Markdown link's `)` keeps
  * the note outside that closing marker, per the boxholder's example
- * (`` `path:12` (moved to `...`) `` — not inside the code span).
+ * (`` `path:12` (moved to `...`) `` — not inside the code span). A directory
+ * token's own trailing `/` (`` `beebox/foo/` `` — the token match itself
+ * stops before the slash, per the boundary rule) sits between the match and
+ * that closing marker; skip over it too, but only when a marker actually
+ * follows, so an ordinary mid-prose `foo/bar/` isn't disturbed.
  */
 function extendPastClosingMarker(text: string, end: number): number {
-  const ch = text[end];
-  return ch === "`" || ch === ")" ? end + 1 : end;
+  const afterSlash = text[end] === "/" ? end + 1 : end;
+  const ch = text[afterSlash];
+  return ch === "`" || ch === ")" ? afterSlash + 1 : end;
 }
 
 const ALREADY_ANNOTATED = " (moved to";
@@ -126,11 +108,22 @@ interface Insertion {
   note: string;
 }
 
-function computeInsertions(params: { text: string; targets: AnnotationTarget[]; path: string }): Insertion[] {
+function isEligible(params: { target: AnnotationTarget; path: string; packageDirs: string[] }): boolean {
+  switch (params.target.matchScope) {
+    case "any":
+      return true;
+    case "package":
+      return params.target.scopeRoot !== null && isWithin(params.path, params.target.scopeRoot);
+    case "outside-package":
+      return owningRoot(params.path, params.packageDirs) === null;
+  }
+}
+
+function computeInsertions(params: { text: string; targets: AnnotationTarget[]; path: string; packageDirs: string[] }): Insertion[] {
   const fenced = fencedRanges(params.text);
   const byPosition = new Map<number, string>();
   for (const target of params.targets) {
-    if (target.scopeRoot !== null && !isWithin(params.path, target.scopeRoot)) continue;
+    if (!isEligible({ target, path: params.path, packageDirs: params.packageDirs })) continue;
     for (const range of matchTokenRanges({ text: params.text, literal: target.old, kind: target.kind })) {
       if (isInsideRanges(range.start, fenced)) continue;
       let end = extendForLineSuffix(params.text, range.end);
@@ -157,11 +150,13 @@ export interface MentionAnnotateComputation {
 
 export function computeMentionAnnotate(params: { repoRoot: string; base: string; roots: string[] }): MentionAnnotateComputation {
   const { moves, rejected } = computeRenamesFromGit({ repoRoot: params.repoRoot, base: params.base });
-  const { renames: directoryRenames } = surveyDirectoryRenames({ repoRoot: params.repoRoot, moves });
+  const directoryRenames = uniformDirectoryRenamesFromMapping({ repoRoot: params.repoRoot, moves });
+  const packageDirs = allPackageDirs(params.repoRoot);
 
   const targets: AnnotationTarget[] = [
     ...moves.flatMap((move) => targetsForMove(move, params.roots)),
     ...directoryRenames.flatMap((rename) => targetsForDirectory(rename, params.roots)),
+    ...crossPackageTargets({ repoRoot: params.repoRoot, moves, roots: params.roots, packageDirs }),
   ];
 
   const candidateFiles = new Set(annotateCandidateFiles(params.repoRoot));
@@ -174,7 +169,7 @@ export function computeMentionAnnotate(params: { repoRoot: string; base: string;
   let total = 0;
   for (const path of literalCandidates) {
     const original = readFileSync(join(params.repoRoot, path), "utf8");
-    const insertions = computeInsertions({ text: original, targets, path });
+    const insertions = computeInsertions({ text: original, targets, path, packageDirs });
     if (insertions.length === 0) continue;
     fileEdits.set(path, applyInsertions(original, insertions));
     total += insertions.length;

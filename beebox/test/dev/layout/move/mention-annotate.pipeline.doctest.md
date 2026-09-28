@@ -34,12 +34,21 @@ await git(["config", "user.name", "Test"]);
 
 await write("pkg/package.json", JSON.stringify({ name: "pkg" }));
 await write("pkg/src/a.ts", "export const a = 1;\n");
+await write("pkg/lib/util.ts", "export const util = 1;\n");
+// A second package whose own move shares the SAME package-relative token
+// ("src/a.ts") as pkg's — used below to prove a cross-package annotation is
+// skipped when the token is ambiguous between two packages' old paths.
+await write("pkg2/package.json", JSON.stringify({ name: "pkg2" }));
+await write("pkg2/src/a.ts", "export const a = 2;\n");
 await git(["add", "-A"]);
 await git(["commit", "-q", "-m", "base"]);
 const base = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoRoot })).stdout.trim();
 
 await mkdir(join(repoRoot, "pkg/src/sub"), { recursive: true });
 await git(["mv", "pkg/src/a.ts", "pkg/src/sub/a.ts"]);
+await mkdir(join(repoRoot, "pkg/lib/sub"), { recursive: true });
+await git(["mv", "pkg/lib/util.ts", "pkg/lib/sub/util.ts"]);
+await git(["mv", "pkg2/src/a.ts", "pkg2/src/moved.ts"]);
 await git(["commit", "-q", "-m", "move"]);
 
 const roots = scanRoots(repoRoot);
@@ -128,6 +137,92 @@ result.fileEdits.get("pkg/README.md")
 
 result.fileEdits.has("other-pkg/README.md")
 => false
+```
+
+## A package-relative mention outside any package is annotated when exactly one package's mapping produces it
+
+`issues/` isn't a package (no `package.json`), so `lib/util.ts` is only
+reachable through the annotation-only cross-package fallback — `pkg` is the
+only package whose move mapping produces that literal token, and no package
+currently has a real file at `<root>/lib/util.ts`.
+
+```ts continue
+await write("issues/bugs/example.md", "See lib/util.ts for the old helper.\n");
+await git(["add", "-A"]);
+({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
+result.fileEdits.get("issues/bugs/example.md")
+=> See lib/util.ts (moved to `pkg/lib/sub/util.ts`) for the old helper.
+```
+
+## A token shared by two packages' old paths is skipped as ambiguous
+
+`src/a.ts` is package-relative for BOTH `pkg` (moved to `pkg/src/sub/a.ts`)
+and `pkg2` (moved to `pkg2/src/moved.ts`) — from a file outside both
+packages there's no way to tell which one a bare `src/a.ts` mention means,
+so it's left alone rather than guessed. `other-pkg/README.md` above is the
+same case (it stays unannotated for this reason too, not just because it's
+outside `pkg`'s own scope).
+
+```ts continue
+await write("issues/bugs/ambiguous.md", "See src/a.ts for the old shared helper.\n");
+await git(["add", "-A"]);
+({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
+result.fileEdits.has("issues/bugs/ambiguous.md")
+=> false
+```
+
+## A real package with no `src/` dir (so it's not a `roots` entry) is still "a package" for the cross-package fallback
+
+A regression found applying this for real: `personal-vibe-check/` has a
+`package.json` but no `src/`, so `default-roots.ts` doesn't count it as a
+`roots` entry — but its own docs use generic example paths unrelated to any
+other package's moved file, and cross-package matching must not treat it as
+fair game just because it's outside `roots`.
+
+```ts continue
+await write("toolkit/package.json", JSON.stringify({ name: "toolkit" }));
+await write("toolkit/README.md", "Default entry: lib/util.ts\n");
+await git(["add", "-A"]);
+({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
+result.fileEdits.has("toolkit/README.md")
+=> false
+```
+
+## A uniform directory rename is derived from the mapping alone (no tracked file is left under the old directory to survey)
+
+```ts continue
+await mkdir(join(repoRoot, "pkg/src/legacy"), { recursive: true });
+await write("pkg/src/legacy/one.ts", "");
+await write("pkg/src/legacy/two.ts", "");
+await git(["add", "-A"]);
+await git(["commit", "-q", "-m", "add legacy dir"]);
+const dirBase = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoRoot })).stdout.trim();
+
+await mkdir(join(repoRoot, "pkg/src/modern"), { recursive: true });
+await git(["mv", "pkg/src/legacy/one.ts", "pkg/src/modern/one.ts"]);
+await git(["mv", "pkg/src/legacy/two.ts", "pkg/src/modern/two.ts"]);
+await git(["commit", "-q", "-m", "rename legacy to modern"]);
+
+await write("docs/dir-note.md", "See pkg/src/legacy for the old layout.\n");
+await git(["add", "-A"]);
+const dirResult = computeMentionAnnotate({ repoRoot, base: dirBase, roots }).result;
+dirResult.fileEdits.get("docs/dir-note.md")
+=> See pkg/src/legacy (moved to `pkg/src/modern`) for the old layout.
+```
+
+## A directory mention with its own trailing `/` inside a backtick span keeps the note outside the span, not wedged before the slash
+
+A regression found while adding the mapping-based directory survey above:
+the directory token match itself stops before the trailing `/` (the
+boundary rule), so naively inserting right there splits the closing
+backtick — corrupting the code span with a nested, unbalanced backtick.
+
+```ts continue
+await write("docs/dir-span.md", "See `pkg/src/legacy/` for the old layout.\n");
+await git(["add", "-A"]);
+const dirSpanResult = computeMentionAnnotate({ repoRoot, base: dirBase, roots }).result;
+dirSpanResult.fileEdits.get("docs/dir-span.md")
+=> See `pkg/src/legacy/` (moved to `pkg/src/modern`) for the old layout.
 ```
 
 ## `--dry-run` computes the same edits without writing to disk (`computeMentionAnnotate` never writes)
