@@ -1,0 +1,26 @@
+{
+  "id": "message0007",
+  "threadId": "thread0007",
+  "internalDate": "1790553600000",
+  "snippet": "Thank you for your patience. We appreciate your business.",
+  "payload": {
+    "mimeType": "text/plain",
+    "headers": [
+      {
+        "name": "Subject",
+        "value": "Following up"
+      },
+      {
+        "name": "From",
+        "value": "Noor Haddad <noor@example.invalid>"
+      },
+      {
+        "name": "To",
+        "value": "Priya Marlowe <priya@example.invalid>"
+      }
+    ],
+    "body": {
+      "data": "U1lOVEhFVElDLiBUaGFuayB5b3UgZm9yIHlvdXIgcGF0aWVuY2UuIFRoZSBib2lsZXIgYXQgdGhlIGhvdXNlIG93bmVkIGJ5IHRoZSBPZGV0dGUgTWFybG93ZSBob3VzZWhvbGQgaGFzIGZhaWxlZC4gUGxlYXNlIGFwcHJvdmUgaXRzIHJlcGFpciBmcm9tIGhvdXNlaG9sZCBmdW5kcy4"
+    }
+  }
+}

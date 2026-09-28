@@ -1,0 +1,303 @@
+{
+  "fake": false,
+  "labels": [
+    "money",
+    "taxes",
+    "residence",
+    "workshop",
+    "belongings",
+    "history",
+    "notes",
+    "legal"
+  ],
+  "results": [
+    {
+      "id": "case-01",
+      "variant": "body",
+      "elapsedMs": 282,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_8",
+          "confidence": 0.99,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0,
+            "option_8": 0.99,
+            "none": 0.01
+          }
+        }
+      }
+    },
+    {
+      "id": "case-02",
+      "variant": "body",
+      "elapsedMs": 270,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_1",
+          "confidence": 0.99,
+          "probabilities": {
+            "option_1": 1,
+            "option_2": 0,
+            "option_3": 0,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0,
+            "option_8": 0,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "case-03",
+      "variant": "body",
+      "elapsedMs": 176,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_2",
+          "confidence": 0.86,
+          "probabilities": {
+            "option_1": 0.01,
+            "option_2": 0.88,
+            "option_3": 0.11,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0,
+            "option_8": 0,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "case-04",
+      "variant": "body",
+      "elapsedMs": 188,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_3",
+          "confidence": 0.88,
+          "probabilities": {
+            "option_1": 0.11,
+            "option_2": 0,
+            "option_3": 0.89,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0,
+            "option_8": 0,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "case-05",
+      "variant": "body",
+      "elapsedMs": 179,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_4",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "option_4": 1,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0,
+            "option_8": 0,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "case-06",
+      "variant": "body",
+      "elapsedMs": 242,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_5",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "option_4": 0,
+            "option_5": 1,
+            "option_6": 0,
+            "option_7": 0,
+            "option_8": 0,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "case-07",
+      "variant": "body",
+      "elapsedMs": 156,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_6",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 1,
+            "option_7": 0,
+            "option_8": 0,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "case-08",
+      "variant": "body",
+      "elapsedMs": 171,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_7",
+          "confidence": 0.99,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0.99,
+            "option_8": 0,
+            "none": 0.01
+          }
+        }
+      }
+    },
+    {
+      "id": "case-09",
+      "variant": "body",
+      "elapsedMs": 251,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_8",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0,
+            "option_8": 1,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "case-10",
+      "variant": "body",
+      "elapsedMs": 212,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_3",
+          "confidence": 0.97,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0.98,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0,
+            "option_8": 0.02,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "case-11",
+      "variant": "body",
+      "elapsedMs": 189,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "option_1": 0.01,
+            "option_2": 0,
+            "option_3": 0,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0,
+            "option_8": 0,
+            "none": 0.99
+          }
+        }
+      }
+    },
+    {
+      "id": "case-12",
+      "variant": "body",
+      "elapsedMs": 259,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.5,
+          "probabilities": {
+            "option_1": 0.05,
+            "option_2": 0,
+            "option_3": 0,
+            "option_4": 0,
+            "option_5": 0,
+            "option_6": 0,
+            "option_7": 0.39,
+            "option_8": 0,
+            "none": 0.56
+          }
+        }
+      }
+    }
+  ]
+}
