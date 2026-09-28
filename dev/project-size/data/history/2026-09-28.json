@@ -1,11 +1,11 @@
 {
- "collectedAt": "2026-09-28T04:09:30.074Z",
- "commit": "54faff55c",
+ "collectedAt": "2026-09-28T04:26:43.914Z",
+ "commit": "8be3d1b4d",
  "values": {
-  "files": 6265,
-  "lines": 814596,
-  "code.lines": 372007,
-  "code.files": 2802,
+  "files": 6270,
+  "lines": 815816,
+  "code.lines": 372400,
+  "code.files": 2804,
   "tests.lines": 169158,
   "tests.files": 1348,
   "docs.lines": 228349,
@@ -13,7 +13,13 @@
   "doctest.files": 1009,
   "testts.files": 132,
   "testts.lines": 18151,
-  "doctest.percent": 84
+  "doctest.percent": 84,
+  "doctest.code.lines": 115684,
+  "doctest.prose.lines": 27177,
+  "doctest.prose.percent": 19,
+  "tests.codeOnly.lines": 141981,
+  "tests.codeOnly.percentOfCode": 38,
+  "beebox.percent": 69
  },
  "datasets": {
   "byCategory": {
@@ -31,14 +37,15 @@
     {
      "key": "lines",
      "label": "Non-blank lines",
-     "numeric": true
+     "numeric": true,
+     "round": 1000
     }
    ],
    "rows": [
     {
      "category": "code",
-     "files": 2802,
-     "lines": 372007
+     "files": 2804,
+     "lines": 372400
     },
     {
      "category": "tests",
@@ -62,8 +69,8 @@
     },
     {
      "category": "config & data",
-     "files": 273,
-     "lines": 30008
+     "files": 276,
+     "lines": 30835
     },
     {
      "category": "docs: research",
@@ -98,22 +105,26 @@
     {
      "key": "code",
      "label": "Code",
-     "numeric": true
+     "numeric": true,
+     "round": 1000
     },
     {
      "key": "tests",
      "label": "Tests",
-     "numeric": true
+     "numeric": true,
+     "round": 1000
     },
     {
      "key": "docs",
      "label": "Docs",
-     "numeric": true
+     "numeric": true,
+     "round": 1000
     },
     {
      "key": "total",
      "label": "Total",
-     "numeric": true
+     "numeric": true,
+     "round": 1000
     }
    ],
    "rows": [
@@ -133,10 +144,10 @@
     },
     {
      "package": "bin",
-     "code": 19611,
+     "code": 19901,
      "tests": 11019,
      "docs": 699,
-     "total": 31329
+     "total": 31619
     },
     {
      "package": "ios-app",
@@ -188,94 +199,17 @@
      "total": 6013
     },
     {
-     "package": "beebox-clerk",
-     "code": 3315,
-     "tests": 879,
-     "docs": 132,
-     "total": 4326
-    },
-    {
-     "package": ".claude",
-     "code": 406,
-     "tests": 0,
-     "docs": 3435,
-     "total": 3841
-    },
-    {
-     "package": "dev",
-     "code": 3535,
-     "tests": 0,
-     "docs": 105,
-     "total": 3640
-    },
-    {
-     "package": "docs",
-     "code": 0,
-     "tests": 0,
-     "docs": 2978,
-     "total": 2978
-    },
-    {
-     "package": "agent-doctest",
-     "code": 1303,
-     "tests": 996,
-     "docs": 657,
-     "total": 2956
-    },
-    {
-     "package": "personal-vibe-check",
-     "code": 1755,
-     "tests": 342,
-     "docs": 469,
-     "total": 2566
-    },
-    {
-     "package": "browse",
-     "code": 1502,
-     "tests": 204,
-     "docs": 38,
-     "total": 1744
-    },
-    {
-     "package": "feedback-review",
-     "code": 385,
-     "tests": 110,
-     "docs": 70,
-     "total": 565
-    },
-    {
-     "package": "(root)",
-     "code": 202,
-     "tests": 0,
-     "docs": 165,
-     "total": 367
-    },
-    {
-     "package": "notes",
-     "code": 0,
-     "tests": 0,
-     "docs": 187,
-     "total": 187
-    },
-    {
-     "package": "security",
-     "code": 52,
-     "tests": 0,
-     "docs": 51,
-     "total": 103
-    },
-    {
-     "package": "scratch",
-     "code": 0,
-     "tests": 0,
-     "docs": 25,
-     "total": 25
+     "package": "other (12 small)",
+     "code": 12558,
+     "tests": 2531,
+     "docs": 8312,
+     "total": 23401
     }
    ],
    "bar": "total"
   },
   "testsByKind": {
-   "title": "Tests by kind",
+   "title": "Tests by kind (doctests split into fenced code and prose)",
    "columns": [
     {
      "key": "kind",
@@ -289,14 +223,20 @@
     {
      "key": "lines",
      "label": "Non-blank lines",
-     "numeric": true
+     "numeric": true,
+     "round": 1000
     }
    ],
    "rows": [
     {
-     "kind": "doctest (markdown)",
+     "kind": "doctest code (inside fences)",
      "files": 1009,
-     "lines": 142861
+     "lines": 115684
+    },
+    {
+     "kind": "doctest prose",
+     "files": 0,
+     "lines": 27177
     },
     {
      "kind": "*.test.ts code",
@@ -359,16 +299,8 @@
      "files": 10
     },
     {
-     "package": "agent-doctest",
-     "files": 2
-    },
-    {
-     "package": "feedback-review",
-     "files": 1
-    },
-    {
-     "package": "personal-vibe-check",
-     "files": 1
+     "package": "other (3 small)",
+     "files": 4
     }
    ],
    "bar": "files"
@@ -388,14 +320,15 @@
     {
      "key": "lines",
      "label": "Non-blank lines",
-     "numeric": true
+     "numeric": true,
+     "round": 1000
     }
    ],
    "rows": [
     {
      "extension": ".ts",
-     "files": 2194,
-     "lines": 286408
+     "files": 2195,
+     "lines": 286698
     },
     {
      "extension": ".tsx",
@@ -414,8 +347,8 @@
     },
     {
      "extension": ".html",
-     "files": 19,
-     "lines": 4509
+     "files": 20,
+     "lines": 4612
     },
     {
      "extension": ".css",
@@ -423,14 +356,9 @@
      "lines": 2613
     },
     {
-     "extension": ".js",
-     "files": 8,
-     "lines": 316
-    },
-    {
-     "extension": ".mjs",
-     "files": 3,
-     "lines": 61
+     "extension": "other (2 small)",
+     "files": 11,
+     "lines": 377
     }
    ],
    "bar": "lines"

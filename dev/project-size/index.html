@@ -46,6 +46,15 @@
 </main>
 <script>
   const fmt = new Intl.NumberFormat("en-US");
+  // Zero reads as a dash; line counts round to the nearest 1,000 (a column's
+  // `round`, or any inline value whose name ends in "lines").
+  function show(value, round) {
+    const n = Number(value) || 0;
+    if (n === 0) return "–";
+    if (!round) return fmt.format(n);
+    const r = Math.round(n / round) * round;
+    return r === 0 ? `<${fmt.format(round)}` : fmt.format(r);
+  }
 
   function renderDataset(name, dataset) {
     if (!dataset) return `<p class="missing">No dataset named “${name}” in data/latest.json.</p>`;
@@ -55,7 +64,7 @@
     const body = dataset.rows.map((row) => {
       const cells = dataset.columns.map((c) => {
         const v = row[c.key];
-        return c.numeric ? `<td class="num">${fmt.format(Number(v) || 0)}</td>` : `<td>${String(v ?? "")}</td>`;
+        return c.numeric ? `<td class="num">${show(v, c.round)}</td>` : `<td>${String(v ?? "")}</td>`;
       }).join("");
       const bar = barKey ? `<td class="bar"><div class="bar-track"><div class="bar-fill" style="width:${(100 * (Number(row[barKey]) || 0)) / max}%"></div></div></td>` : "";
       return `<tr>${cells}${bar}</tr>`;
@@ -74,7 +83,7 @@
       return `<div data-dataset-slot="${blocks.length - 1}"></div>`;
     });
     const withValues = withBlocks.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, key) =>
-      key in data.values ? fmt.format(data.values[key]) : `<span class="missing">{{${key}}}</span>`);
+      key in data.values ? show(data.values[key], key.endsWith("lines") ? 1000 : 0) : `<span class="missing">{{${key}}}</span>`);
     const report = document.getElementById("report");
     report.innerHTML = marked.parse(withValues);
     report.querySelectorAll("[data-dataset-slot]").forEach((slot) => {

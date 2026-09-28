@@ -1,45 +1,67 @@
 # Project size
 
-How big the monorepo is, and where the lines are. Counts are non-blank lines
-in tracked files. Commentary here is written by hand; every number comes from
-`data/latest.json`, which `pnpm project-size` rewrites.
+About {{lines}} non-blank lines in {{files}} tracked files. Line counts are
+rounded to the nearest thousand; small packages and rare extensions are folded
+into an "other" row. The numbers refresh with `pnpm project-size`. The
+commentary is written by hand, so check it against the tables after a large
+change.
 
-The repository tracks {{files}} files and {{lines}} non-blank lines.
+## The short version
+
+- **The product is most of it.** `beebox` is about {{beebox.percent}}% of the
+  repository. Everything else — the iOS app, the dev tooling, the dashboard,
+  the Chrome extension, the site — is supporting cast.
+- **Documentation outweighs the tests.** {{docs.lines}} lines of docs
+  against {{tests.lines}} lines of tests. Plans and reports alone are the
+  biggest docs category. This is what agent-driven development looks like:
+  every change is planned, reviewed, and written down.
+- **Tests are doctests.** {{doctest.percent}}% of test lines are Markdown
+  doctests. Counting only the code inside their fences, tests are about
+  {{tests.codeOnly.percentOfCode}}% the size of the product code.
 
 ```dataset byCategory
 ```
 
-Code is {{code.lines}} lines. It includes comments, and this codebase
-comments heavily. Tests are {{tests.lines}} lines and do not overlap with
-code: a file that is a doctest, is named `*.test.*`, or is under a `test/`
-directory counts only as a test. Documentation is {{docs.lines}} lines, and
-plans and reports are the largest part of it.
+Code includes comments, and this codebase comments heavily — `tokei` puts
+roughly one line in four of TypeScript as comment. A file that is a doctest,
+is named `*.test.*`, or lives under a `test/` directory counts only as a test,
+never as code.
 
-## By package
+## Where the code lives
 
 ```dataset byPackage
 ```
 
-`beebox` is the product. The iOS app, the dev tooling in `bin/`, and the
-workstreams dashboard together add about a fifth to its code.
+`beebox` dwarfs everything: it holds the server, the web frontend, the card
+schemas, and the box tooling. The next largest code bases are the native iOS
+app and `bin/`, the tooling that runs worktrees, schedules, and landing. The
+`issues/` queue and `research/` notes are docs only, and together they are
+larger than any package except `beebox`.
 
 ## Tests
 
-{{doctest.percent}}% of test lines are Markdown doctests
-({{doctest.files}} files). The {{testts.files}} `*.test.ts` files hold
-{{testts.lines}} lines, and most of them are outside `beebox`. See
-`issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md`.
+Doctests mix prose with fenced code. About {{doctest.prose.percent}}% of their
+lines are prose — explanation between examples — and the rest is code and
+expected output: {{doctest.code.lines}} lines inside fences against
+{{doctest.prose.lines}} of prose.
 
 ```dataset testsByKind
 ```
 
+The {{testts.files}} `*.test.ts` files ({{testts.lines}} lines) are the
+exception, and almost all of them are outside `beebox`. Most should become
+doctests; see `issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md`.
+
 ```dataset testTsByPackage
 ```
 
-## Code by extension
+## Languages
 
 ```dataset codeByExtension
 ```
+
+TypeScript is nearly everything. Swift is the iOS app; shell is the thin
+launchers in `bin/` and the deploy scripts.
 
 ## Over time
 

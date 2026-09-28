@@ -41,6 +41,8 @@ interface Column {
   label: string;
   /** Numbers are right-aligned and grouped; the bar column draws a bar. */
   numeric?: boolean;
+  /** Round shown values to this unit (line counts use 1000). */
+  round?: number;
 }
 
 interface Dataset {
@@ -98,6 +100,43 @@ function countLines(file: string): number | null {
   return lines;
 }
 
+/** A doctest's non-blank lines, split into fenced code (fence markers included) and the prose around it. */
+function splitDoctest(file: string): { code: number; prose: number } {
+  let inFence = false;
+  let code = 0;
+  let prose = 0;
+  for (const line of fs.readFileSync(path.join(repoRoot, file), "utf8").split("\n")) {
+    if (line.trim() === "") continue;
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      code += 1;
+      continue;
+    }
+    if (inFence) code += 1;
+    else prose += 1;
+  }
+  return { code, prose };
+}
+
+/**
+ * Keep the rows whose `measure` is at least `min`; fold the rest into one
+ * "other" row, so small directories and rare extensions do not crowd the table
+ * while totals stay whole.
+ */
+function foldSmall(rows: Record<string, string | number>[], options: { label: string; measure: string; min: number }): Record<string, string | number>[] {
+  const { label, measure, min } = options;
+  const kept = rows.filter((row) => Number(row[measure]) >= min);
+  const small = rows.filter((row) => Number(row[measure]) < min);
+  if (small.length === 0) return kept;
+  const other: Record<string, string | number> = { [label]: `other (${String(small.length)} small)` };
+  for (const row of small) {
+    for (const [key, value] of Object.entries(row)) {
+      if (typeof value === "number") other[key] = Number(other[key] ?? 0) + value;
+    }
+  }
+  return [...kept, other];
+}
+
 function trackedFiles(): string[] {
   const out = execFileSync("git", ["ls-files", "-z"], { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 }).toString("utf8");
   return out.split("\0").filter((file) => file !== "" && fs.statSync(path.join(repoRoot, file), { throwIfNoEntry: false })?.isFile() === true);
@@ -128,6 +167,7 @@ function collect(): Snapshot {
   const byLanguage = new Map<string, { files: number; lines: number }>();
   const byPackage = new Map<string, Map<string, number>>();
   const testFilesByPackage = new Map<string, number>();
+  const doctestSplit = { code: 0, prose: 0 };
 
   for (const file of trackedFiles()) {
     const counted = countLines(file);
@@ -142,6 +182,11 @@ function collect(): Snapshot {
     if (category === "tests") {
       bump(byTestKind, { key: testKind(file), lines });
       if (path.basename(file).includes(".test.")) testFilesByPackage.set(pkg, (testFilesByPackage.get(pkg) ?? 0) + 1);
+      if (file.endsWith(".md")) {
+        const split = splitDoctest(file);
+        doctestSplit.code += split.code;
+        doctestSplit.prose += split.prose;
+      }
     }
     if (category === "code") bump(byLanguage, { key: path.extname(file), lines });
   }
@@ -164,11 +209,17 @@ function collect(): Snapshot {
     "testts.files": get(byTestKind, "*.test.ts code").files,
     "testts.lines": get(byTestKind, "*.test.ts code").lines,
     "doctest.percent": testLines === 0 ? 0 : Math.round((100 * get(byTestKind, "doctest (markdown)").lines) / testLines),
+    "doctest.code.lines": doctestSplit.code,
+    "doctest.prose.lines": doctestSplit.prose,
+    "doctest.prose.percent": doctestSplit.code + doctestSplit.prose === 0 ? 0 : Math.round((100 * doctestSplit.prose) / (doctestSplit.code + doctestSplit.prose)),
+    "tests.codeOnly.lines": testLines - doctestSplit.prose,
+    "tests.codeOnly.percentOfCode": get(byCategory, "code").lines === 0 ? 0 : Math.round((100 * (testLines - doctestSplit.prose)) / get(byCategory, "code").lines),
   };
 
   const countRows = <K extends string>(map: Map<K, { files: number; lines: number }>, label: string) =>
     [...map].toSorted(([, a], [, b]) => b.lines - a.lines).map(([key, entry]) => ({ [label]: key, files: entry.files, lines: entry.lines }));
-  const filesAndLines = (first: Column): Column[] => [first, { key: "files", label: "Files", numeric: true }, { key: "lines", label: "Non-blank lines", numeric: true }];
+  const lines = (key: string, label: string): Column => ({ key, label, numeric: true, round: 1000 });
+  const filesAndLines = (first: Column): Column[] => [first, { key: "files", label: "Files", numeric: true }, lines("lines", "Non-blank lines")];
 
   const packageRows = [...byPackage]
     .map(([pkg, counts]) => ({
@@ -181,6 +232,8 @@ function collect(): Snapshot {
     .filter((row) => row.total > 0)
     .toSorted((a, b) => b.total - a.total);
 
+  const beeboxTotal = packageRows.find((row) => row.package === "beebox")?.total ?? 0;
+  values["beebox.percent"] = total.lines === 0 ? 0 : Math.round((100 * beeboxTotal) / total.lines);
   const history = readHistory();
   const datasets: Record<string, Dataset> = {
     byCategory: {
@@ -193,40 +246,44 @@ function collect(): Snapshot {
       title: "Non-blank lines by package",
       columns: [
         { key: "package", label: "Package" },
-        { key: "code", label: "Code", numeric: true },
-        { key: "tests", label: "Tests", numeric: true },
-        { key: "docs", label: "Docs", numeric: true },
-        { key: "total", label: "Total", numeric: true },
+        lines("code", "Code"),
+        lines("tests", "Tests"),
+        lines("docs", "Docs"),
+        lines("total", "Total"),
       ],
-      rows: packageRows,
+      rows: foldSmall(packageRows, { label: "package", measure: "total", min: 5000 }),
       bar: "total",
     },
     testsByKind: {
-      title: "Tests by kind",
+      title: "Tests by kind (doctests split into fenced code and prose)",
       columns: filesAndLines({ key: "kind", label: "Kind" }),
-      rows: countRows(byTestKind, "kind"),
+      rows: [
+        { kind: "doctest code (inside fences)", files: get(byTestKind, "doctest (markdown)").files, lines: doctestSplit.code },
+        { kind: "doctest prose", files: 0, lines: doctestSplit.prose },
+        ...countRows(byTestKind, "kind").filter((row) => row.kind !== "doctest (markdown)"),
+      ],
       bar: "lines",
     },
     testTsByPackage: {
       title: "*.test.ts files by package",
       columns: [{ key: "package", label: "Package" }, { key: "files", label: "Files", numeric: true }],
-      rows: [...testFilesByPackage].toSorted(([, a], [, b]) => b - a).map(([pkg, files]) => ({ package: pkg, files })),
+      rows: foldSmall([...testFilesByPackage].toSorted(([, a], [, b]) => b - a).map(([pkg, files]) => ({ package: pkg, files })), { label: "package", measure: "files", min: 3 }),
       bar: "files",
     },
     codeByExtension: {
       title: "Code by file extension",
       columns: filesAndLines({ key: "extension", label: "Extension" }),
-      rows: countRows(byLanguage, "extension"),
+      rows: foldSmall(countRows(byLanguage, "extension"), { label: "extension", measure: "lines", min: 1000 }),
       bar: "lines",
     },
     history: {
       title: "Size over time (one snapshot per collection day)",
       columns: [
         { key: "date", label: "Date" },
-        { key: "code", label: "Code", numeric: true },
-        { key: "tests", label: "Tests", numeric: true },
-        { key: "docs", label: "Docs", numeric: true },
-        { key: "lines", label: "All lines", numeric: true },
+        lines("code", "Code"),
+        lines("tests", "Tests"),
+        lines("docs", "Docs"),
+        lines("lines", "All lines"),
       ],
       rows: history.map((snapshot) => ({
         date: snapshot.collectedAt.slice(0, 10),
