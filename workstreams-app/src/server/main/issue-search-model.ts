@@ -18,7 +18,7 @@ import path from "node:path";
 import { listIssues, type IssueRecord, type ResearchState, type Visibility } from "./issue-domain.js";
 
 /** Monorepo root, resolved from this file rather than the cwd (callers are location-independent). */
-export const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
+export const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..", "..");
 
 export interface IssueEntry {
   /** Repo-relative display path, e.g. `issues/bugs/2026-01-02-x.md`. Also the index id. */

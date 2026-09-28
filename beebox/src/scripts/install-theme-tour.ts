@@ -9,7 +9,7 @@ export interface InstallResult {
   conflicts: string[];
 }
 
-const SOURCE = path.resolve(import.meta.dirname, "../test/fixtures/theme-tour");
+const SOURCE = path.resolve(import.meta.dirname, "../../test/fixtures/theme-tour");
 
 async function filesUnder(root: string, relative?: string): Promise<string[]> {
   const current = relative ?? "";
