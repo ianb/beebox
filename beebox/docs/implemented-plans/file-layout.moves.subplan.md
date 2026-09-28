@@ -3,7 +3,7 @@ title: "Layout moves: bring the tree to zero layout-check findings"
 status: implemented
 workstream: file-layout
 issues:
-  - ../../../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md
+  - ../../../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md
 ---
 # Layout moves: bring the tree to zero layout-check findings
 

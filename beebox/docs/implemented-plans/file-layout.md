@@ -3,7 +3,7 @@ title: "Source file layout: principles, rules, and what a check can verify"
 status: implemented
 workstream: file-layout
 issues:
-  - ../../../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md
+  - ../../../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md
 ---
 # Source file layout: principles, rules, and what a check can verify
 
@@ -17,7 +17,7 @@ gives them their definitions. It does not produce a target tree or a move
 list.
 
 **Issues addressed:**
-[source file layout review and enforcement](../../../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md).
+[source file layout review and enforcement](../../../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md).
 Related, referenced not duplicated:
 [structured module docs and code search](../../../issues/features/2026-08-12-structured-module-docs-and-code-search.md)
 (may reuse the same module boundaries).

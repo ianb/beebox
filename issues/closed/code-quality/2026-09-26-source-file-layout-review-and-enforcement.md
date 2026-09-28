@@ -1,6 +1,7 @@
 ---
 title: "Review the source file layout, propose a layout with rules, enforce it with a check, and move the tree"
 workstream: file-layout
+resolution: implemented
 needs: [design]
 area: beebox
 labels: [file-layout]
@@ -8,6 +9,16 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-26
 ---
+
+Closed by commit `ae4e9c48b` (worktree-file-layout), landed 2026-09-28. All
+four requested steps shipped: `beebox/docs/implemented-plans/file-layout.md`
+(rules and principles), `beebox/src/dev/layout/check/` (the enforcement
+check, wired into `.husky/pre-commit`), and the move window that brought the
+tree to zero `pnpm layout-check` findings. One divergence from the proposal:
+data-file placement rules were explicitly left out of the move (the plan
+records that the boxholder is reviewing that in another workstream); see
+`issues/docs-and-chores/2026-09-27-codebase-ontology-files.md` for the
+downstream dependent.
 
 Many source directories are large and flat. Nothing stops them from growing.
 Agents add files next to their neighbours and do not create subdirectories.
@@ -105,7 +116,7 @@ A file count alone cannot state that.
 ## Status (2026-09-26)
 
 Steps 1 and 2 are written up in
-[the file-layout plan](../../beebox/docs/implemented-plans/file-layout.md): five
+[the file-layout plan](../../../beebox/docs/implemented-plans/file-layout.md): five
 principles, ten rules, and for each rule what a check can verify. Decisions
 recorded there that supersede the observations above:
 
@@ -156,7 +167,7 @@ get their own plan.
 
 ## Related
 
-- [Structured module docs and code search](../features/2026-08-12-structured-module-docs-and-code-search.md)
+- [Structured module docs and code search](../../features/2026-08-12-structured-module-docs-and-code-search.md)
   may use the same module boundaries.
 - `beebox/docs/module-map.md` states the current directory boundaries for
   shared code.
