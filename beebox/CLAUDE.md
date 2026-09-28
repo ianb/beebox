@@ -51,7 +51,7 @@ Boxes live outside this repository. A box is one package and operational root wi
 ## Behavioral Notes
 
 - Follow [code-style.md](code-style.md). Preserve typed contracts and validate untrusted boundaries; do not add silent fallbacks for broken invariants.
-- All box ref parsing and resolution goes through `parseRef` and `resolveRefPath` in `src/shared/ref-path.ts`. Never reproduce it with `path.resolve`, segment splitting, or manual fragment/query stripping. Resolution must fail closed when `..` escapes the box.
+- All box ref parsing and resolution goes through `parseRef` and `resolveRefPath` in `src/shared/ref-path/core.ts`. Never reproduce it with `path.resolve`, segment splitting, or manual fragment/query stripping. Resolution must fail closed when `..` escapes the box.
 - Use `getBoxTime`/`getBoxTimeISO` for timestamps so frozen scenario time works. Long-running timeouts use `startAwakeTimeout`; ordinary wall-clock timers expire across macOS sleep.
 - Cross-process locks go through `src/lib/file-lock.ts`; never call `proper-lockfile` directly or create ad hoc lock files. Follow the more specific Git and same-card locking contracts in [code-style.md](code-style.md).
 - For frontend or iOS failures, inspect the box's `.beebox/client-debug.log`; `[ios]` identifies native entries. See the [client debug log](docs/client-debug-log.md).

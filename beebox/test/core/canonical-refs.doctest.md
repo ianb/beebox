@@ -14,9 +14,9 @@ broken-ref signal. `--canonical` reports frontmatter refs too.
 
 ```ts setup
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../../src/cards/index.js";
+import { body, cardSchema, type CardSchema } from "../../src/exports/cards.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { lintCardsDispatch } from "../../src/core/card-lint.js";
+import { lintCardsDispatch } from "../../src/core/card-lint/core.js";
 import type { LoadCardContext } from "../../src/core/card-io.js";
 import {
   checkCanonicalRef,
@@ -30,7 +30,7 @@ import { loadValidationIgnore } from "../../src/core/validation-ignore.js";
 import {
   canonicalCounts,
   formatCanonicalReport,
-} from "../../src/cli/commands/validate-canonical.js";
+} from "../../src/cli/commands/validate/canonical.js";
 
 const docSchema: CardSchema = cardSchema("doc", {
   fields: {

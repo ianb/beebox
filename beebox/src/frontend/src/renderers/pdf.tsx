@@ -8,8 +8,7 @@ import { apiRawFileUrl, getApiBase } from "../api";
 import { PdfFrame } from "../components/PdfFrame";
 import { Text } from "../components/ui/Text";
 import { useVersionedFileUrl } from "../hooks/useVersionedFileUrl";
-import type { RendererProps } from "./index";
-import { registerFileType } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 const PDF_EXT = /\.pdf$/i;
 
@@ -22,7 +21,7 @@ function PdfRenderer({ data, mode, workspacePdf }: RendererProps) {
   return <PdfFrame src={src} title={basename} downloadName={basename} mode={mode ?? "page"} workspacePdf={workspacePdf} />;
 }
 
-registerFileType(
-  { match: (path) => PDF_EXT.test(path) },
-  { renderer: { name: "PDF", Component: PdfRenderer, priority: 30 } },
-);
+export const pdfRenderer: RendererEntry = {
+  selector: { match: (path) => PDF_EXT.test(path) },
+  renderer: { name: "PDF", Component: PdfRenderer, priority: 30 },
+};

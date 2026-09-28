@@ -6,7 +6,7 @@
  * other (a value cycle).
  */
 
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 /**
  * Parse one JSONL line, returning null for blank lines and unparseable lines

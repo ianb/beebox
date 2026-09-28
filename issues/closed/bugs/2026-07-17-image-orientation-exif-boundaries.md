@@ -15,7 +15,7 @@ backend+frontend), tested across all eight EXIF orientation values and both TIFF
 (`image-paste.ts` `decodeOriented` uses `createImageBitmap(..., { imageOrientation: "from-image" })`
 with an `<img>` fallback) instead of relying on the implicit CSS default. Added a server ingress
 guard `warnOnUnnormalizedImageOrientation` (chat send) that logs a contract violation when a JPEG
-arrives non-normalized (`test/webapp/routes/chat-image-orientation.doctest.md`). Full inventory +
+arrives non-normalized (`test/webapp/routes/chat-image-orientation.doctest.md` (moved to `beebox/test/webapp/routes/chat/helpers.image-orientation.doctest.md`)). Full inventory +
 what's normalized vs. left: `docs/media/image-orientation.md`.
 
 **Left (needs a boxholder decision / manual work):** the server has no image codec (`sharp`/`jimp`),

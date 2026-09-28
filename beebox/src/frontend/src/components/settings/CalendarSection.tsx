@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { trpc, type RouterOutput } from "../../lib/trpc";
-import { CheckboxField, NumberField } from "../ui/fields";
+import { trpc, type RouterOutput } from "../../lib/trpc/client";
+import { CheckboxField, NumberField } from "../ui/fields/field";
 import { Row } from "../ui/Row";
 import { GoogleConnectLink } from "./GoogleConnectLink";
 

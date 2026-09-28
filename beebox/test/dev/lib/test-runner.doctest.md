@@ -9,8 +9,8 @@ import { mkdir, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { MAX_SESSION_ENTRIES } from "../../../src/cli/lib/session.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
-import { assertFixturePathInBox, ensureAuditPackageDocs } from "../../../src/dev/lib/audit-fixtures.js";
-import { extractBehavior, loadTests } from "../../../src/dev/lib/test-runner.js";
+import { assertFixturePathInBox, ensureAuditPackageDocs } from "../../../src/dev/lib/test-runner/fixtures.js";
+import { extractBehavior, loadTests } from "../../../src/dev/lib/test-runner/runner.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 function raw(uuid: string) {

@@ -13,7 +13,7 @@ resolution: implemented
 > failure after 7 days of continuous retries (`gmail-draft-failing-since`).
 > See `beebox/docs/implemented-plans/connector-silence.md`.
 
-`uploadPendingDrafts` (`beebox/src/connectors/gmail-drafts.ts`) uploads every
+`uploadPendingDrafts` (`beebox/src/connectors/gmail-drafts.ts` (moved to `beebox/src/connectors/gmail/drafts/core.ts`)) uploads every
 `email-outbound` card in `draft` status with no `gmail-draft-id`. A card that
 fails is left unchanged, so the next sync tries it again, indefinitely.
 

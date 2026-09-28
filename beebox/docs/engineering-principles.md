@@ -25,7 +25,7 @@ a shape the compiler rejects is a shape the next session can't get wrong.
 Every dispatch over a closed set — a `switch`, an if-chain, a lookup object —
 must fail to compile when a member is added. The idioms are `assertNever(x)`
 in the `default`/final `else` of a backend `.ts` switch
-([`src/lib/invariant.ts`](../src/lib/invariant.ts)),
+([`src/shared/invariant.ts`](../src/shared/invariant.ts)),
 a `Record<Union, Handler>` with `satisfies`, and the
 `@typescript-eslint/switch-exhaustiveness-check` lint rule (live in the
 preset, configured so a bare `default:` does *not* count as exhaustive).
@@ -58,7 +58,7 @@ invariant checks are strict in dev and tests (except in a test that exercises
 the degradation path itself). See the logging-level policy and the
 resilient-not-silent rule in [`code-style.md`](../code-style.md), and the
 `invariant` / `checkInvariant` split in
-[`src/lib/invariant.ts`](../src/lib/invariant.ts) — `invariant` always throws,
+[`src/shared/invariant.ts`](../src/shared/invariant.ts) — `invariant` always throws,
 `checkInvariant` is the deliberate prod-degradation counterpart.
 
 ## 5. Failure paths visible in signatures where callers branch
@@ -69,7 +69,7 @@ throwing — the failure is part of the contract and belongs in the signature.
 When callers can't act on the failure, exceptions (typed error classes,
 `cause` chaining) are correct: a broken invariant throws, an infrastructure
 failure throws. One Result shape convention, not two —
-[`src/lib/result.ts`](../src/lib/result.ts) is it, and its module comment is
+[`src/shared/result.ts`](../src/shared/result.ts) is it, and its module comment is
 the authority on the Result-vs-throw boundary.
 
 ## 6. Right-sized defensiveness

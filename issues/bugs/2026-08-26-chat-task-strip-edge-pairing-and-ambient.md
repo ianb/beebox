@@ -14,7 +14,7 @@ Agent SDK's own guidance as of 0.3.247.
 
 **1. The live strip pairs edges, so a missed bookend leaves a task running
 forever.** `applyTaskEvent`
-(`beebox/src/frontend/src/components/chat/background-tasks.ts`) folds the
+(`beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/background-tasks.ts`) folds the
 `started` / `progress` / `updated` / `settled` edge stream into the in-flight
 list: `started` registers a task, a terminal status removes it. Nothing else
 removes it. If the `settled` bookend never arrives — a dropped stream, a parked

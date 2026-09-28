@@ -95,9 +95,9 @@ says the per-chat model is in-memory only and the box pointer is box-global. Per
 persistence shipped since:
 
 - `src/core/chat/session/state.ts:66`: *"export function chatModelFileForSession(sessionId: string): string {"* — each web chat already persists its own override under `.beebox/chat-models/<id>.json`.
-- `src/webapp/routes/chat.ts:102`: *"modelFile: sessionId === null ? DEFAULT_MODEL_FILE : chatModelFileForSession(sessionId),"* — the box-wide file is only the seed for a session with no id yet.
-- The `sessionId === null` branch is **not** dead, and the box-wide file is **not** vestigial. A modern web client coins its id, but `"new"` is still a live shape: `src/webapp/routes/chat-send-target.ts:19-22`: *"`\"new\"` is the legacy shape: a client that did not coin an id (an older build, the iOS app, a Codex box) asks the harness to name the chat."* Reservation refuses non-Claude boxes outright — `src/core/chat/session/reserve.ts:189`: *"if (engine !== \"claude\") return { kind: \"unsupported\" };"* — so on a **Codex box every chat takes that path**, and `.beebox/chat-model.json` is its live per-box model source.
-- Worse for the plan's purposes, a fresh session then **promotes** the inherited value into its own file: `src/core/chat/session/index.ts:247`: *"if (this.modelFile !== null && this.currentModel !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model: this.currentModel });"* — so today a Codex box's chats are born *explicitly* pinned to the box value and would never follow a later change. Track C has to stop that promotion for a chat that made no choice.
+- `src/webapp/routes/chat.ts:102` (moved to `beebox/src/webapp/routes/chat/register.ts`): *"modelFile: sessionId === null ? DEFAULT_MODEL_FILE : chatModelFileForSession(sessionId),"* — the box-wide file is only the seed for a session with no id yet.
+- The `sessionId === null` branch is **not** dead, and the box-wide file is **not** vestigial. A modern web client coins its id, but `"new"` is still a live shape: `src/webapp/routes/chat-send-target.ts:19-22` (moved to `beebox/src/webapp/routes/chat/send-target.ts`): *"`\"new\"` is the legacy shape: a client that did not coin an id (an older build, the iOS app, a Codex box) asks the harness to name the chat."* Reservation refuses non-Claude boxes outright — `src/core/chat/session/reserve.ts:189`: *"if (engine !== \"claude\") return { kind: \"unsupported\" };"* — so on a **Codex box every chat takes that path**, and `.beebox/chat-model.json` is its live per-box model source.
+- Worse for the plan's purposes, a fresh session then **promotes** the inherited value into its own file: `src/core/chat/session/index.ts:247` (moved to `beebox/src/core/chat/session/run/core.ts`): *"if (this.modelFile !== null && this.currentModel !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model: this.currentModel });"* — so today a Codex box's chats are born *explicitly* pinned to the box value and would never follow a later change. Track C has to stop that promotion for a chat that made no choice.
 
 So the "core new storage" the issue asks for is already built. What is missing is
 the box-level pointer, the follow semantics, and the surfaces. Reuse, do not
@@ -106,22 +106,22 @@ rebuild:
 | Thing | Where | Reuse / rebuild |
 |---|---|---|
 | Per-chat model persistence | `src/core/chat/session/state.ts:66` | Reuse unchanged; only the meaning of *absent* changes. |
-| Box config store, cache, owner-gated write, git commit | `src/core/box/config.ts:16`, `src/webapp/box-config-write.ts:86`, `src/webapp/trpc/routers/admin.ts:223` | Reuse — the model policy is a `box.json` field beside `agentEngine`. |
+| Box config store, cache, owner-gated write, git commit | `src/core/box/config.ts:16`, `src/webapp/box-config-write.ts:86`, `src/webapp/trpc/routers/admin.ts:223` (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`) | Reuse — the model policy is a `box.json` field beside `agentEngine`. |
 | Engine-relative model tiers | `src/shared/agent-models.ts:40` (`PROCEDURE_MODELS`), `:56` (`resolveProcedureModel`) | Reuse — gives cross-engine degradation *and* the smarter/dumber ranking. |
 | Engine-scoped model registry + validation | `src/shared/chat-models.ts` (`isChatModelAllowed`, `chatModelForEngine`) | Reuse for the pin's boundary validation. |
-| The spawn boundary where a chat's model is fixed | `src/core/chat/session/index.ts:180`: *"const compatibleModel = chatModelForEngine(preview.engine ?? \"claude\", this.currentModel);"* | Reuse — this is exactly the cold-start point where default resolution belongs. |
-| Model plumbing into agent runs | `src/core/agent/types.ts:24`: *"model?: string;"*, `src/core/agent/index.ts:109`: *"model: opts.model,"* | Reuse — the reactor's gap is that nothing *fills* it. |
+| The spawn boundary where a chat's model is fixed | `src/core/chat/session/index.ts:180` (moved to `beebox/src/core/chat/session/run/core.ts`): *"const compatibleModel = chatModelForEngine(preview.engine ?? \"claude\", this.currentModel);"* | Reuse — this is exactly the cold-start point where default resolution belongs. |
+| Model plumbing into agent runs | `src/core/agent/types.ts:24`: *"model?: string;"*, `src/core/agent/index.ts:109` (moved to `beebox/src/core/agent/invoke/core.ts`): *"model: opts.model,"* | Reuse — the reactor's gap is that nothing *fills* it. |
 | Box-config engine selection UI | `src/frontend/src/components/admin/AgentEngineSection.tsx` | Reuse the section; the model policy joins it. |
 | Model sub-panel | `src/frontend/src/components/chat/SessionChip-model-panel.tsx:29` | Extend with a pin control and a state marker. |
 | Model id table + retirement mapping | `src/shared/model-ids.ts` | Reuse unchanged. |
-| Existing model doctest | `test/core/chat-models.doctest.md` | Extend — the resolver's tests belong here. |
+| Existing model doctest | `test/core/chat-models.doctest.md` (moved to `beebox/test/core/model-policy.chat-models.doctest.md`) | Extend — the resolver's tests belong here. |
 
 Nothing here needs a new utility module. The one net-new file is the resolver
 (below), and it exists to keep principle 8 (one ladder) honest.
 
 ## Prior art (external)
 
-- **The Agent SDK can change a live session's model.** `node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts:2435`: *"setModel(model?: string): Promise<void>;"*, with a `'set_model'` control subtype at `:4117` (SDK 0.3.241). This contradicts the comment at `src/webapp/trpc/routers/chat-control-procedures.ts:152`: *"a live `set_model` control request isn't honored"*, which appears to predate the SDK feature. Anthropic's docs confirm the semantics: the current turn finishes on the old model, history is preserved, and only the next message changes model — with the caveat that prompt caches are model-scoped, so the switch re-processes the accumulated context at full input price. Relevant to the restart question in Track C, and recorded here so nobody re-derives it. https://code.claude.com/docs/en/model-config
+- **The Agent SDK can change a live session's model.** `node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts:2435`: *"setModel(model?: string): Promise<void>;"*, with a `'set_model'` control subtype at `:4117` (SDK 0.3.241). This contradicts the comment at `src/webapp/trpc/routers/chat-control-procedures.ts:152` (moved to `beebox/src/webapp/trpc/routers/chat/control-procedures.ts`): *"a live `set_model` control request isn't honored"*, which appears to predate the SDK feature. Anthropic's docs confirm the semantics: the current turn finishes on the old model, history is preserved, and only the next message changes model — with the caveat that prompt caches are model-scoped, so the switch re-processes the accumulated context at full input price. Relevant to the restart question in Track C, and recorded here so nobody re-derives it. https://code.claude.com/docs/en/model-config
 - **Programmatic model switching is a live upstream request.** anthropics/claude-code#17772 asks for exactly this in autonomous agents; the SDK method above is the answer. No workaround needed. https://github.com/anthropics/claude-code/issues/17772
 - **No prior art found** for the specific two-level shape this plan builds (a box-scoped default that per-session overrides *fall through to*, with the resolution pinned at subprocess spawn). Claude Code's own `/model` has a one-level user/project setting with no per-conversation inheritance, so there is nothing to copy. Recording the empty search rather than implying one exists.
 - **Codex side unchecked.** The Codex harness's own model-switching semantics were not searched, because this plan never switches a live Codex session's model — it resolves at spawn (`codex-run.ts:75` takes `model` per run). If Track C adopts live `setModel`, that search becomes a prerequisite for the Codex half.
@@ -137,7 +137,7 @@ can read it, and it has to be read before it can be shown.
 Add one resolver that answers "what model does a run on this box use", used by
 every reader.
 
-**Why this needs to change.** Today there is no answer. `src/core/box/config.ts:113` (`loadAgentEngine`) tells a box which harness it runs; nothing tells it which model. The reactor path proves the cost: `src/core/reactor/batch-jobs.ts:53` creates its agent and `:60` invokes it with `boxRoot`, `systemPrompt`, `prompt`, `maxTurns`, `maxBudgetUsd` — and no `model`, so `src/core/agent/run.ts` leaves it at the SDK default. A boxholder can answer "which model does my chat use" and cannot answer it about the agent that does most of the box's autonomous work.
+**Why this needs to change.** Today there is no answer. `src/core/box/config.ts:113` (`loadAgentEngine`) tells a box which harness it runs; nothing tells it which model. The reactor path proves the cost: `src/core/reactor/batch-jobs.ts:53` (moved to `beebox/src/core/reactor/engine/batch-jobs.ts`) creates its agent and `:60` invokes it with `boxRoot`, `systemPrompt`, `prompt`, `maxTurns`, `maxBudgetUsd` — and no `model`, so `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`) leaves it at the SDK default. A boxholder can answer "which model does my chat use" and cannot answer it about the agent that does most of the box's autonomous work.
 
 **Direction.**
 
@@ -182,7 +182,7 @@ The ladder, in one place:
 0. **Normalize first.** Every id entering the ladder — the per-chat choice and
    the box pin alike — passes through `normalizeModelId` (`src/shared/model-ids.ts:44`)
    *before* validation or tier lookup. This is load-bearing: normalization today
-   happens only at the Claude spawn boundary (`src/core/agent/run.ts:78`), well
+   happens only at the Claude spawn boundary (`src/core/agent/run.ts:78` (moved to `beebox/src/core/agent/invoke/run.ts`)), well
    after `isChatModelAllowed` would have rejected a retired id and dropped it to
    `null`. A pin of `claude-opus-4-8` must resolve, not vanish.
 1. `choice.kind === "explicit"` and `isChatModelAllowed(engine, choice.model)` → that model, `source: "explicit"`.
@@ -197,7 +197,7 @@ the box's engine no longer matches the pinned model's family — where `codex`'s
 is an acceptable, documented flattening rather than a silent one.
 
 An explicit per-chat model that belongs to the *other* engine already degrades
-today (`chatModelForEngine` at `src/core/chat/session/index.ts:180`); step 1
+today (`chatModelForEngine` at `src/core/chat/session/index.ts:180` (moved to `beebox/src/core/chat/session/run/core.ts`)); step 1
 keeps that, and such a chat then falls to the box pin instead of to nothing.
 
 **Vocabulary lock-ins.**
@@ -211,7 +211,7 @@ keeps that, and such a chat then falls to the box pin instead of to nothing.
 
 **First implementation chunk.** `agentModel` on `BoxConfig` + `boxConfigSchema`,
 `modelTier`/`TIER_RANK` in `agent-models.ts`, `src/core/model-policy.ts`, and the
-resolver's cases in `test/core/chat-models.doctest.md`. No reader yet, no UI.
+resolver's cases in `test/core/chat-models.doctest.md` (moved to `beebox/test/core/model-policy.chat-models.doctest.md`). No reader yet, no UI.
 
 ### Track B — the reactor and every other unpinned agent run
 
@@ -219,7 +219,7 @@ resolver's cases in `test/core/chat-models.doctest.md`. No reader yet, no UI.
 sites opt in; there is no blanket default inside `createAgent`.**
 
 **Why this needs to change.** See Track A. The plumbing exists and is simply
-never filled: `src/core/reactor/batch-jobs.ts:59-65` invokes with `boxRoot`,
+never filled: `src/core/reactor/batch-jobs.ts:59-65` (moved to `beebox/src/core/reactor/engine/batch-jobs.ts`) invokes with `boxRoot`,
 `systemPrompt`, `prompt`, `maxTurns`, `maxBudgetUsd` and no `model`.
 
 **Direction.** `batch-jobs.ts` and `chat-jobs.ts` resolve
@@ -231,13 +231,13 @@ run and pass it as `model` when it is non-null. Nothing else changes.
 seam, for two concrete reasons:
 
 - **It silently re-tiers procedure steps.** A step that omits `model:`
-  (`src/core/procedure/engine-run-execute.ts:100-102`) means "the harness
+  (`src/core/procedure/engine-run-execute.ts:100-102` (moved to `beebox/src/core/procedure/engine/run-execute.ts`)) means "the harness
   default" today. Under a blanket rule it would mean "whatever the box last
   pinned", changing a box's authored procedures with no edit to the procedure.
   A release note is not a substitute for a per-surface decision.
 - **It would move test-harness runs off their baseline.** The scenario validator
   (`src/scenario/runner.ts:111`) and the knowledge-audit runner
-  (`src/dev/lib/test-runner.ts`) also go through `createAgent`; making their
+  (`src/dev/lib/test-runner.ts` (moved to `beebox/src/dev/lib/test-runner/runner.ts`)) also go through `createAgent`; making their
   model depend on a box's config makes runs non-comparable across boxes.
 
 Triage, the chat reviewer, the retro observer, and procedure steps keep today's
@@ -245,7 +245,7 @@ behavior. Each is a one-line change if it is later wanted — the resolver stays
 the single ladder (principle 8); what is per-surface is *whether* to consult it.
 
 **Snapshot semantics.** `createAgent` resolves its engine delegate once and
-caches it (`src/core/agent/index.ts:162-166`: *"resolving ??= loadAgentEngine(boxRoot).then((engine) => {"*), so an Agent instance already snapshots box config at first invoke. The reactor resolves its model at the same altitude — once per run, before the agent is created — so a resumed per-thread chat job keeps one model for the whole run.
+caches it (`src/core/agent/index.ts:162-166` (moved to `beebox/src/core/agent/invoke/core.ts`): *"resolving ??= loadAgentEngine(boxRoot).then((engine) => {"*), so an Agent instance already snapshots box config at first invoke. The reactor resolves its model at the same altitude — once per run, before the agent is created — so a resumed per-thread chat job keeps one model for the whole run.
 
 **Announced behavior change.** A box that pins a model changes what runs on its
 nightly wakeup and inside its procedures. `issues/features/2026-08-08-reactor-agent-model-not-pinnable.md`
@@ -265,14 +265,14 @@ falling to the harness default. Resolution happens at subprocess spawn and is
 held for that subprocess's life.
 
 **Why this needs to change.** Absence currently means "harness default"
-(`src/core/chat/session/index.ts:112`: *"this.currentModel = this.modelFile === null ? null : loadCurrentModel(this.boxRoot, this.modelFile);"*), which leaves no state for "follow". Without it, pinning a default would do nothing for the chats that never chose.
+(`src/core/chat/session/index.ts:112` (moved to `beebox/src/core/chat/session/run/core.ts`): *"this.currentModel = this.modelFile === null ? null : loadCurrentModel(this.boxRoot, this.modelFile);"*), which leaves no state for "follow". Without it, pinning a default would do nothing for the chats that never chose.
 
 **Direction.**
 
 - Split the field. `ChatSession` keeps `private explicitModel: string | null`
   (the persisted choice; `null` = follow) and `private resolvedModel: string | null`
   (what the live subprocess is running). Only the second is handed to the run at
-  `src/core/chat/session/index.ts:195`: *"model: compatibleModel ?? undefined,"*.
+  `src/core/chat/session/index.ts:195` (moved to `beebox/src/core/chat/session/run/core.ts`): *"model: compatibleModel ?? undefined,"*.
 - Resolve at `startRun`, replacing the `chatModelForEngine` line at `index.ts:180`
   with `resolveEffectiveModel`. This is the cold-start boundary the issue asks
   for: a warm session's `resolvedModel` is never recomputed, so nothing swaps a
@@ -280,7 +280,7 @@ held for that subprocess's life.
 - `setModel(null)` keeps deleting the per-session file; it now means "follow the
   box default" rather than "use the harness default".
 - **A chat that made no choice never gets a file.** Today a fresh session
-  promotes its inherited model into its own file at `src/core/chat/session/index.ts:247`, which is what would make a `"new"`-shaped chat born explicitly pinned. Promotion now happens only when `explicitModel !== null` — a follower stays a follower across its whole life.
+  promotes its inherited model into its own file at `src/core/chat/session/index.ts:247` (moved to `beebox/src/core/chat/session/run/core.ts`), which is what would make a `"new"`-shaped chat born explicitly pinned. Promotion now happens only when `explicitModel !== null` — a follower stays a follower across its whole life.
 - **Retire `DEFAULT_MODEL_FILE`, carefully.** It is a live path for `"new"`
   sends — every chat on a Codex box (What already exists). Retiring it is
   therefore a behavior-preserving *substitution*, not a dead-branch cleanup: the
@@ -288,8 +288,8 @@ held for that subprocess's life.
   and the migration (Rollout) copies the file's value into `agentModel` first, so
   a Codex box's chats keep starting on the same model. After the substitution
   those chats *follow* rather than freeze, which is the intended change and the
-  one to state in the release note. `src/webapp/routes/chat.ts:102`'s seed and
-  `src/core/chat/session/state.ts:63` go away; `src/field-test/run-seed.ts:79`
+  one to state in the release note. `src/webapp/routes/chat.ts:102` (moved to `beebox/src/webapp/routes/chat/register.ts`)'s seed and
+  `src/core/chat/session/state.ts:63` go away; `src/field-test/run-seed.ts:79` (moved to `beebox/src/field-test/run/seed.ts`)
   writes `agentModel` in `box.json` instead.
 - **Selecting still restarts; pinning never does.** `setModel` keeps its current
   behavior (`chat-control-procedures.ts:165-176`), including the deferred restart
@@ -549,7 +549,7 @@ separate mechanism rather than a sub-question of this one.
   an id). Validation lives in **one** place, the resolver — not in the config
   loader, which deliberately does no schema validation at all
   (`src/core/box/config.ts:155`: *"const config: BoxConfig = JSON.parse(raw);"*),
-  and not as an enum in `boxConfigSchema` (`src/webapp/trpc/routers/admin.ts:37`),
+  and not as an enum in `boxConfigSchema` (`src/webapp/trpc/routers/admin.ts:37` (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`)),
   which is a `parse` — a strict enum there would make one bad character throw the
   whole admin page (`admin.ts:186-192` already turns an unreadable config into a
   `PRECONDITION_FAILED`). So: `agentModel` is `z.string().optional()` in the
@@ -696,21 +696,21 @@ Remaining, in dependency order:
 **Test posture.** Each substantial codepath gets its doctest named here, as part
 of the design:
 
-- `test/core/chat-models.doctest.md` (extend) — the resolver's full ladder:
+- `test/core/chat-models.doctest.md` (moved to `beebox/test/core/model-policy.chat-models.doctest.md`) (extend) — the resolver's full ladder:
   explicit-wins, follow-falls-to-policy, cross-engine tier translation, unknown
   id → `none`, and `TIER_RANK` ordering. This is the plan's done-when for Track A.
-- `test/core/chat-session-model.doctest.md` (new) — a session with no per-session
+- `test/core/chat-session-model.doctest.md` (moved to `beebox/test/core/chat/session/model.doctest.md`) (new) — a session with no per-session
   file resolves the box pin at `startRun`; a warm session's resolved model does
   not change when the pin changes; `pendingModel` reports the difference;
   `setModel(null)` returns the chat to following; and a `"new"`-shaped session
   (no coined id — the Codex-box path) does **not** write a per-session file when
   its id arrives, so it keeps following.
-- `test/core/reactor-model-policy.doctest.md` (new) — a reactor run passes the
+- `test/core/reactor-model-policy.doctest.md` (moved to `beebox/test/core/reactor/engine/batch-jobs.model-policy.doctest.md`) (new) — a reactor run passes the
   policy model, resolves it once per run, and leaves a caller-supplied model
-  alone (via `test/helpers/fake-agent.ts`). Its companion assertion is the
+  alone (via `test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`)). Its companion assertion is the
   negative one: an agent created outside the reactor still gets no model, so the
   narrowed seam stays narrow.
-- `test/webapp/trpc-model-policy.doctest.md` (new) — `setDefaultModel` rejects a
+- `test/webapp/trpc-model-policy.doctest.md` (moved to `beebox/test/webapp/trpc/routers/chat.model-policy.doctest.md`) (new) — `setDefaultModel` rejects a
   model outside the engine's registry, rejects a non-owner, and does not restart
   a running session.
 - Migration doctest (in C2's file) — legacy file folded, idempotent, retired id

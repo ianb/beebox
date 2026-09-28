@@ -9,7 +9,7 @@ discovered-in: main — production box feedback triage (bbx feedback)
 
 `bbx session` explicitly rejects combining `--since` with a session ID (or
 `--latest`): "`--since cannot be combined with a session ID or --latest. Use
-one or the other.`" (`beebox/src/cli/commands/session.ts:136-139`). `--since`
+one or the other.`" (`beebox/src/cli/commands/session/command.ts:136-139`). `--since`
 without a session ID instead does a "windowed multi-session view"
 (`session.ts:206`).
 

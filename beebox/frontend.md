@@ -192,7 +192,7 @@ The generic theme gallery is installed explicitly into a development box from
 `test/fixtures/theme-tour`. From the monorepo root:
 
 ```sh
-node --import tsx beebox/scripts/install-theme-tour.ts <box-root>
+node --import tsx beebox/src/scripts/install-theme-tour.ts <box-root>
 bin/tour card-themes
 bin/tour card-theme-previews
 bin/tour card-theme-interface

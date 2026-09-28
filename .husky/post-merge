@@ -30,9 +30,9 @@ fi
 # bundle. After post-merge-install.sh, which may have changed the dep graph the
 # bundle externalizes.
 if [ "${1:-0}" = "1" ]; then
-  "$REPO_DIR/beebox/scripts/auto-build-cli.sh" HEAD WORKTREE || true
+  "$REPO_DIR/beebox/src/scripts/auto-build-cli.sh" HEAD WORKTREE || true
 else
-  "$REPO_DIR/beebox/scripts/auto-build-cli.sh" ORIG_HEAD HEAD || true
+  "$REPO_DIR/beebox/src/scripts/auto-build-cli.sh" ORIG_HEAD HEAD || true
 fi
 
 if [ "$BRANCH" = "main" ]; then

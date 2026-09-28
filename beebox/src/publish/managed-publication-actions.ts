@@ -2,10 +2,10 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { sharedMarkerMatchesScope, sharedRouteMarkerKey, siteEdgeManifestSchema, type SharedRouteMarker, type SiteEdgeManifest } from "./manifest-edge.js";
-import { defaultManagedPublicationRuntime, type ManagedPublicationRuntime } from "../services/managed-publication-runtime.js";
+import { defaultManagedPublicationRuntime, type ManagedPublicationRuntime } from "../services/managed-publication-runtime/core.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { slugKey } from "./lifecycle.js";
-import { publicationError, readCandidate, readSharedRouteMarker, readSiteManifest, sharedPublicPath, stable, storeFor } from "./managed-publications.js";
+import { publicationError, readCandidate, readSharedRouteMarker, readSiteManifest, sharedPublicPath, stable, storeFor } from "./managed-publications/core.js";
 
 async function manifestForApproval(input: { args: { pubId: string; expectedRevision?: string }; binding: NonNullable<Awaited<ReturnType<ManagedPublicationRuntime["getBinding"]>>>; store: Awaited<ReturnType<typeof storeFor>>["store"]; runtime: ManagedPublicationRuntime; boxSlug: string }): Promise<{ manifest: SiteEdgeManifest; sharedHost?: { hostname: string; hostHandle: string; path: string } }> {
   const { args, binding, store, runtime, boxSlug } = input;

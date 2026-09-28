@@ -2,7 +2,7 @@
 
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 const INCLUDE_PATTERN = /^@(.+\.md)\s*$/gm;
 

@@ -2,7 +2,7 @@
  * System info — compact footer with box metadata.
  */
 
-import type { RouterOutput } from "../../lib/trpc";
+import type { RouterOutput } from "../../lib/trpc/client";
 
 type StatusResponse = RouterOutput["status"]["status"];
 type VersionInfo = RouterOutput["health"]["check"]["version"];

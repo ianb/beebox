@@ -21,8 +21,8 @@
  */
 
 import { boxSlug } from "../../lib/box-slug.js";
-import { invariant } from "../../lib/invariant.js";
-import { err, ok, type Result } from "../../lib/result.js";
+import { invariant } from "../../shared/invariant.js";
+import { err, ok, type Result } from "../../shared/result.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { appendSecretAccessEvent, stampSecretUse } from "./access-log.js";
 import {

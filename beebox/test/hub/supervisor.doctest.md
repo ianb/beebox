@@ -1,6 +1,6 @@
 # Supervisor: child env allowlist, and the readiness-timeout/exit restart race (Track D, chunk D1)
 
-Two `src/hub/supervisor.ts` behaviors, both found by cross-model review:
+Two `src/hub/supervisor/core.ts` behaviors, both found by cross-model review:
 
 1. `buildChildEnv` must ALLOWLIST what a hub-spawned box child inherits from
    the hub's own env, not spread `process.env` wholesale -- `BBX_SESSION_SECRET`
@@ -19,7 +19,7 @@ Two `src/hub/supervisor.ts` behaviors, both found by cross-model review:
    restarted) twice, and two children end up running for one box slot.
 
 ```ts setup
-import { buildChildEnv, Supervisor } from "../../src/hub/supervisor.js";
+import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -338,7 +338,7 @@ await stopReloadFixture.cleanup();
 ## Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to "stopped"
 
 Boxholder directive (2026-07-04): a `lazy: true` hub gives each box the same
-lazy/idle semantics `workstreams-app/src/router/router.ts` already has for whole worktrees. No real
+lazy/idle semantics `workstreams-app/src/router/server/listener.ts` already has for whole worktrees. No real
 process is spawned here either -- `spawnChild`/`checkReady` are faked the
 same way as above, and the idle timer is driven by a tiny `idleMs` so the
 doctest doesn't wait out a real 5-minute default.

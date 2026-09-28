@@ -116,7 +116,7 @@ place; agent todos out of the boxholder's way.
 
 ## What already exists
 
-- **`{% todo %}` tag.** `src/shared/markdoc-config.ts:348-379`; transform:
+- **`{% todo %}` tag.** `src/shared/markdoc-config.ts:348-379` (moved to `beebox/src/shared/markdoc-config/core.ts`); transform:
   *`return new Tag(node.inline ? "TodoInline" : "TodoBlock", attributes, children);`*.
   Rendered by `makeTodoComponents()` (`src/frontend/src/components/Todo.tsx:78-108`),
   wired at `Markdown.tsx:170`, *`const { TodoInline, TodoBlock } = makeTodoComponents();`*,
@@ -129,7 +129,7 @@ place; agent todos out of the boxholder's way.
   Body `line` is a 1-based file line (`extract.ts:107` adds
   `lineOffset`). Not stable across edits (`extract-body.ts:230-234`).
   **Reuse** as the address for a write, with a text check (Track 3).
-- **Collection runner.** `src/core/collection/run.ts:81-91` reads and parses
+- **Collection runner.** `src/core/collection/run.ts:81-91` (moved to `beebox/src/core/collection/run/core.ts`) reads and parses
   every card in scope; `mayHaveItem` (`src/core/collection/types.ts:69-70`,
   *"Cheap proof a card's text cannot hold an item"*) is applied only in the
   reference pass (`run.ts:192`). **Reuse** in the scope pass (Track 1).
@@ -144,7 +144,7 @@ place; agent todos out of the boxholder's way.
 - **Badge count.** `src/core/todo/count.ts:97`,
   *`isBoxholderTodo(t) && (t.plateState === "escalated" || t.plateState === "on-plate")`*,
   with the text prefilter (`count.ts:90`). The plate's stock card sets no
-  `assigned` filter (`src/core/box/defaults.ts:263`, *`{ glob: "**", title: "The Plate" }`*),
+  `assigned` filter (`src/core/box/defaults.ts:263` (moved to `beebox/src/core/box/structure/defaults.ts`), *`{ glob: "**", title: "The Plate" }`*),
   although `TodoViewSchema` has one (`src/schemas/todo-view.ts:26`).
 - **Frontmatter rendering.** `src/frontend/src/components/FrontmatterFields.tsx:91-106`
   renders every key generically; the one name-based special case is
@@ -156,7 +156,7 @@ place; agent todos out of the boxholder's way.
   `stageAndCommitPaths` with trailers `{ "Source": "webapp", "Endpoint": "card.setTheme" }`
   (lines 252-256), then `emitTransient("file-change", ...)` (lines 261-265).
   **Reuse the shape.** Text-surgical attribute edits in a body:
-  `src/core/rewrite-card-refs.ts:220` (regex over `ref=` in the tag's
+  `src/core/rewrite-card-refs.ts:220` (moved to `beebox/src/core/rewrite-card-refs/core.ts`) (regex over `ref=` in the tag's
   source). **Reuse the approach.**
 - **Refresh after a write.** `TodoViewCard.tsx:193-203` invalidates
   `collections.query` on any `.card` `file-change`; `file-view-data.ts:115-147`
@@ -173,7 +173,7 @@ place; agent todos out of the boxholder's way.
   `oppositePane` (`workspace-state-model.ts:32-34`); an explicit
   `destinationPane` wins (`workspace-state-model.ts:193`). Precedent:
   `renderers/browse.tsx:82,94`. **Reuse.**
-- **Box view imports.** Browser shim `src/webapp/views/compiler.ts:112-126`
+- **Box view imports.** Browser shim `src/webapp/views/compiler.ts:112-126` (moved to `beebox/src/webapp/views/compiler/compile.ts`)
   exports only `CardLink`, `CardRef`; node entry
   `view-widgets/node-entry.tsx:26`; types in `src/exports/view-widgets.d.ts`
   and `src/types/view-widgets.d.ts` (kept in sync by their headers); no
@@ -182,16 +182,16 @@ place; agent todos out of the boxholder's way.
   `lintViewRefs` (`src/core/views/refs.ts:62-83`, regex over source) run from
   `validate-hook.ts:156-162` and `sdk-hooks.ts:57-63`. **Precedent** for a
   static source check.
-- **The view guide teaches raw body text.** `src/core/views/doc.ts:146`,
+- **The view guide teaches raw body text.** `src/core/views/doc.ts:146` (moved to `beebox/src/core/views/doc/core.ts`),
   *"its prose from `body`"*, and `doc-examples.ts:24`, *`<p>{card.body}</p>`*.
 - **Built-in Markdown.** `Markdown.tsx:261-275` props `children`,
   `onNavigate` (required), `basePath`; it calls `useParams` from
   `@tanstack/react-router` (line 286), so it cannot run outside the app
   router as-is.
 - **todo-review.** Runs inside `bbx wakeup` housekeeping
-  (`src/cli/commands/wakeup-housekeeping.ts:55-68`). `bbx wakeup` runs
+  (`src/cli/commands/wakeup-housekeeping.ts:55-68` (moved to `beebox/src/cli/commands/wakeup/housekeeping.ts`)). `bbx wakeup` runs
   automatically only from the three connector schedules, all seeded
-  `enabled: false` (`src/core/box/defaults.ts:294,305,316`). On a box with no
+  `enabled: false` (`src/core/box/defaults.ts:294 (moved to `beebox/src/core/box/structure/defaults.ts`),305,316`). On a box with no
   connectors it runs only on `bbx force-wakeup`. The reactor that runs its
   job is also a wakeup step (`wakeup.ts:79-80`).
 - **Scheduled agent runs.** `process-retrospective`
@@ -337,11 +337,11 @@ hide completed agent todos).
 - `makeTodoComponents({ cardPath })` receives the card path, as
   `makeSeeAlsoComponent` does.
 - A rendered todo knows its locator from the collector's own algorithm, not
-  a second one. `assignLocators` (`src/core/todo/extract-body.ts:289-299`)
+  a second one. `assignLocators` (`src/core/todo/extract-body.ts:289-299` (moved to `beebox/src/core/todo/extract/body.ts`))
   moves to `src/shared/todo-locators.ts`, unchanged; the collector imports it
   from there. `Markdown.tsx` runs it on the parsed AST before `transform` and
   passes the resulting `Map<Node, TodoLocator>` in the transform config. The
-  `todo` schema's own `transform` (`src/shared/markdoc-config.ts:374-378`)
+  `todo` schema's own `transform` (`src/shared/markdoc-config.ts:374-378` (moved to `beebox/src/shared/markdoc-config/core.ts`))
   looks its node up in that map and adds `locator` to the `Tag` it builds.
   Markdoc filters only declared attributes that come from source
   (`transformer.ts`), and a transform-built `Tag` is not filtered, so the
@@ -405,7 +405,7 @@ that puts the todo into chat as a selection.
 **Direction.**
 
 - Mutation `todos.setStatus` in a new `src/webapp/trpc/routers/todos.ts`,
-  mounted as `todos` in `appRouter` (`src/webapp/trpc/router.ts:42-82`),
+  mounted as `todos` in `appRouter` (`src/webapp/trpc/router.ts:42-82` (moved to `beebox/src/webapp/trpc/routers.ts`)),
   `ownerProcedure`. Input:
   `{ path, locator: TodoLocator, text: string, expectedStatus: "open" | "done", status: "open" | "done" }`.
   Under `withCardLock`: read the card, extract its todos
@@ -610,7 +610,7 @@ this (`doc-examples.ts:24`).
   `card.path` resolves relative refs and gives todos their card path.
   Navigation comes from the view host (`host.openCard`, as `CardLink` uses),
   not a prop. Files: `src/frontend/src/components/view-widgets/index.tsx`,
-  the shim in `src/webapp/views/compiler.ts:119-124`,
+  the shim in `src/webapp/views/compiler.ts:119-124` (moved to `beebox/src/webapp/views/compiler/compile.ts`),
   `src/frontend/src/components/view-widgets/node-entry.tsx`,
   `src/exports/view-widgets.d.ts`, `src/types/view-widgets.d.ts`.
 - `Markdown.tsx` stops calling `useParams` directly: the box slug comes from
@@ -622,16 +622,16 @@ this (`doc-examples.ts:24`).
   `frontmatter`, `body`), so it gains `bodyLineOffset`, in both the live
   path and `bbx view test`. `Markdown` takes the offset with the card:
   `card: { path: string; bodyLineOffset: number }`.
-- New `src/core/views/markdown-check.ts` beside `refs.ts`, a TypeScript AST
+- New `src/core/views/markdown-check.ts` (moved to `beebox/src/core/views/markdown-check/core.ts`) beside `refs.ts`, a TypeScript AST
   check (the compiler API, not regexes), reporting an **error** when a view:
   imports `marked`, `remark`, `markdown-it`, `showdown`, `micromark`, or
   `react-markdown`; contains the Markdoc delimiter `{%` in a string or regex
   literal; or reads a card's `body` anywhere except as the children of
   `<Markdown>` or a truthiness test. The last rule catches the guide's own
-  `<p>{card.body}</p>` (`src/core/views/doc-examples.ts:24`) and the
+  `<p>{card.body}</p>` (`src/core/views/doc-examples.ts:24` (moved to `beebox/src/core/views/doc/examples.ts`)) and the
   split-and-render pattern. A view that needs part of a body (for example,
   up to a heading) asks for a `Markdown` option. Wired in
-  `src/cli/commands/validate-hook.ts:156-162` and `src/core/sdk-hooks.ts:57-63`
+  `src/cli/commands/validate-hook.ts:156-162` (moved to `beebox/src/cli/validate-hook/command.ts`) and `src/core/sdk-hooks.ts:57-63`
   next to `lintViewFile`. The
   message: "Render card text with `Markdown` from `beebox/view-widgets`. If
   it lacks something this view needs, say so in `_config/feedback/`."
@@ -771,7 +771,7 @@ every run after 45 days.
   and text — an edit resets the count, which is right: an edit means someone
   is tending it), the verify step sets `recheck="never"` instead. A new box
   health check, `todos-unreviewed` (severity `warning`, in
-  `runHealthChecks`, `src/webapp/trpc/routers/health.ts:152`), reports "N
+  `runHealthChecks`, `src/webapp/trpc/routers/health.ts:152` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)), reports "N
   open todos are no longer reviewed" with the oldest few named. Removing
   `recheck`, or any edit to the todo, puts it back in review.
 - The list shows `recheck` as a quiet chip ("agent checks again Oct 15";
@@ -863,8 +863,8 @@ None. The agent-todos procedure, split out, gets its own plan.
   The review found two defects in the in-plan sketch: the guard and the
   attempt bookkeeping did not compose with procedure failure semantics (a
   failing shell short-circuits later steps,
-  `src/core/procedure/engine-run-phase.ts:97-128`), and `budget: "1/1d"` is
-  not a valid budget (`src/schemas/scheduled-script-duration.ts:64-73`, both
+  `src/core/procedure/engine-run-phase.ts:97-128` (moved to `beebox/src/core/procedure/engine/run-phase.ts`)), and `budget: "1/1d"` is
+  not a valid budget (`src/schemas/scheduled-script-duration.ts:64-73` (moved to `beebox/src/scheduled-script-duration.ts`), both
   sides are durations). Filed as
   [agent-assigned todos have no pickup](../../../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md)
   with the sketch.
@@ -881,7 +881,7 @@ None. The agent-todos procedure, split out, gets its own plan.
 - **Migrating existing box views on field boxes.** Real-box work; the
   boxholder decides per box. Offered separately.
 - **Published pages.** They use a separate zero-JavaScript renderer
-  (`src/publish/render-docs.ts:1-26`); box views do not render there. The
+  (`src/publish/render-docs.ts:1-26` (moved to `beebox/src/publish/draft/render-docs.ts`)); box views do not render there. The
   boxholder called this "a hard one"; not decided here.
 - **Removing `bbx todos`.** Separate issue; waits on field boxes.
 - **Line-anchored deep links** into core-rendered bodies beyond "scroll to

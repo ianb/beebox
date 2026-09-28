@@ -29,7 +29,7 @@ with three regions:
 
 The machine is a coordination overlay. It does not own microphone or playback
 device lifecycles. `realtimeTranscriptionMachine` owns microphone states and
-`speechPlaybackMachine` owns playback. `InteractiveChat-voice.ts` mirrors
+`speechPlaybackMachine` owns playback. `InteractiveChat/voice.ts` mirrors
 device facts into the composer and executes the device commands it emits.
 
 ### Voice coordination
@@ -61,7 +61,7 @@ first `START_HQ` enters `inFlight`; later requests append to `pendingHq`.
 and `HQ_DONE` removes one row. The region returns to `idle` after the last
 pending request completes.
 
-HQ request work stays in `InteractiveChat-voice.ts`; the machine owns visible
+HQ request work stays in `InteractiveChat/voice.ts`; the machine owns visible
 coordination state and emitted commands.
 
 ### Mobile keyboard coordination
@@ -84,11 +84,11 @@ view has not yet been wired to read it.
 
 ### Tests
 
-`test/frontend/composer-machine.doctest.md` covers voice, HQ, and keyboard
-transitions. The React wiring lives in
-`src/frontend/src/components/chat/InteractiveChat-voice.ts`, and the remaining
-component-owned keyboard state lives in `InteractiveChat.tsx` and
-`InteractiveChat-layout.tsx`.
+`src/frontend/test/machines/composerMachine.composer-machine.doctest.md` covers
+voice, HQ, and keyboard transitions. The React wiring lives in
+`src/frontend/src/components/chat/everywhere/InteractiveChat/voice.ts`, and the
+remaining component-owned keyboard state lives in `InteractiveChat/shell.tsx`
+and `InteractiveChat-layout/view.tsx`.
 
 ## States
 

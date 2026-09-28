@@ -98,7 +98,7 @@ their environment are listed under Admin → Notifications → Phones.
 ## Service-user logins (Claude Code and Codex)
 
 Claude auth is **not** an env var here: `ANTHROPIC_API_KEY` is deliberately
-stripped (`src/cli/bootstrap.ts`, `src/core/script-env.ts`) so a stray key
+stripped (`src/cli/entry/bootstrap.ts`, `src/core/script-env/core.ts`) so a stray key
 can't silently take over billing. The server authenticates via subscription
 login instead, with credentials transferred from a local login as described
 under "Transferring the Claude login" below; `claude auth login` cannot

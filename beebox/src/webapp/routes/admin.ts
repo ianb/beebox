@@ -8,14 +8,14 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { getBoxGoogleClientCreds, createOAuth2Client } from "../../connectors/google-auth.js";
-import { saveGoogleTokens, type GoogleTokens } from "../../connectors/google-token-store.js";
-import { parseOAuthState, consumeGoogleOAuthState } from "../../connectors/google-oauth-state.js";
+import { getBoxGoogleClientCreds, createOAuth2Client } from "../../google/auth.js";
+import { saveGoogleTokens, type GoogleTokens } from "../../google/token-store.js";
+import { parseOAuthState, consumeGoogleOAuthState } from "../../google/oauth-state.js";
 import { resolveRequestIdentity } from "../auth.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { baseServerUrl } from "../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../lib/public-url.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /**
  * Extract the base server URL from a box's publicUrl by stripping the

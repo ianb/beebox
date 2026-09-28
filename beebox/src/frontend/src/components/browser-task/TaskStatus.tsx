@@ -12,11 +12,11 @@ import { ErrorText } from "../ui/ErrorText";
 import { Toggle } from "../ui/Toggle";
 import { InlineAction } from "../ui/InlineAction";
 import { FriendlyDate } from "../ui/FriendlyDate";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { browserTaskState, describeBrowserTaskState } from "@shared/browser-task-state";
-import type { RendererProps } from "../../renderers";
-import type { BatchSummary } from "./browser-task-data";
+import type { RendererProps } from "../../file-type-registry";
+import type { BatchSummary } from "./data";
 
 export interface TaskStatusProps {
   cardPath: string;

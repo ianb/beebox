@@ -22,7 +22,7 @@ import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { fileExists } from "../lib/file-exists.js";
 import { boxSlug } from "../lib/box-slug.js";
-import { getStatus, stageAll, commit } from "../lib/git.js";
+import { getStatus, stageAll, commit } from "../lib/git/core.js";
 import { requireBoxRoot } from "../lib/box-shape.js";
 
 /**
@@ -67,7 +67,7 @@ class FieldBoxExistsError extends Error {
 }
 
 /** Absolute path to the `bbx` this checkout ships — the same binary
- *  `src/hub/child-spawn.ts` falls back to for a box with no installed engine. */
+ *  `src/hub/supervisor/child-spawn.ts` falls back to for a box with no installed engine. */
 /** Absolute path to the `bbx` this checkout ships. */
 export function bbxBinary(): string {
   return path.join(PACKAGE_ROOT, "bin", "bbx");

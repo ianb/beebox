@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useRef } from "react";
 
-import type { ChatSchedule } from "@core/chat/schedules.js";
+import type { ChatSchedule } from "@core/chat/schedules/core.js";
 import type { SidecarTab } from "./sidecar-tabs";
 
 /**

@@ -7,7 +7,7 @@ import { simpleGit } from "simple-git";
 
 import { resolveBoxNamespacePathOnDisk } from "../lib/box-namespace-resolve.js";
 import { childProcessEnv } from "../lib/env.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import type { MovedCardRecovery } from "./moved-card-recovery.js";
 
 export type { MovedCardRecovery } from "./moved-card-recovery.js";

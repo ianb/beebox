@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { href } from "../lib/routing";
 import { serializeViewUrl } from "../lib/view-url";
 import { Badge } from "../components/ui/Badge";

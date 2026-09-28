@@ -8,7 +8,7 @@
  * one in `frontend/lib/structured-output-parsing` are intentionally distinct —
  * their callers depend on those shapes — and are not folded in here.
  */
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "./invariant.js";
 
 export function parseAttrs(s: string): Record<string, string> {
   if (!s || !s.trim()) return {};

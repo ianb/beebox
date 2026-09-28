@@ -9,7 +9,7 @@
 import { isBinaryPath } from "../lib/binary-files";
 import { Pre } from "../components/ui/Pre";
 import { StatusMessage } from "../components/ui/StatusMessage";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 function PlaintextRenderer({ data }: RendererProps) {
   if (data.content === undefined) {
@@ -22,8 +22,8 @@ function PlaintextRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileType(
-  {
+export const plaintextRenderer: RendererEntry = {
+  selector: {
     match: (path) => {
       // Skip directories (no extension), card files, and known binary types.
       const base = path.split("/").pop();
@@ -35,5 +35,5 @@ registerFileType(
       return !isBinaryPath(path);
     },
   },
-  { renderer: { name: "Plaintext", Component: PlaintextRenderer, priority: 1 } },
-);
+  renderer: { name: "Plaintext", Component: PlaintextRenderer, priority: 1 },
+};

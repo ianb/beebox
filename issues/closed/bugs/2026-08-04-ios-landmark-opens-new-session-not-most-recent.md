@@ -26,7 +26,7 @@ resumes correctly.
 resume-or-start:
 
 - fetch `chat.lastSessionForDirectory({ contextDir: dir })`
-  (`src/webapp/trpc/routers/chat.ts:87`, backed by `getLastSessionForDirectory`,
+  (`src/webapp/trpc/routers/chat.ts:87` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`), backed by `getLastSessionForDirectory`,
   `src/core/chat/session/history.ts:253`);
 - if it returns a `sessionId`, navigate to `…/chat?session=<sessionId>` (RESUME);
 - if it returns null, navigate to `…/chat?session=new&contextDir=<dir>` (NEW).

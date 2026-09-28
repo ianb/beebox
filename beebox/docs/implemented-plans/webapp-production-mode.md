@@ -42,9 +42,9 @@ both `NODE_ENV` and `BBX_DEV_SURFACES` unset.
 
 ## What already exists
 
-- **Raw-route error sanitization — REUSE.** `src/webapp/server.ts:114-128`
+- **Raw-route error sanitization — REUSE.** `src/webapp/server.ts:114-128` (moved to `beebox/src/webapp/server/app.ts`)
   already returns generic 5xx bodies while logging server-side details.
-- **tRPC construction seam — MODIFY.** `src/webapp/trpc/trpc.ts:4` creates the
+- **tRPC construction seam — MODIFY.** `src/webapp/trpc/trpc.ts:4` (moved to `beebox/src/webapp/trpc/procedures.ts`) creates the
   root router without overriding tRPC's `NODE_ENV`-derived `isDev` default.
 - **Internal server options — EXTEND.** `src/webapp/server-types.ts:40-68`
   already separates test-only construction options from public
@@ -60,13 +60,13 @@ both `NODE_ENV` and `BBX_DEV_SURFACES` unset.
 - **Development router seam — EXTEND.** `../bin/router-core.ts:416-423` is the
   other launcher that knows both its direct-server and hub paths are local
   development processes.
-- **Hub child environment seam — EXTEND.** `src/hub/child-env.ts:42-50` and
+- **Hub child environment seam — EXTEND.** `src/hub/child-env.ts:42-50` (moved to `beebox/src/hub/supervisor/child-env.ts`) and
   `:103-119` copy a small allowlist into each box's own pinned engine. An env
   flag is backwards compatible: old engines ignore it instead of rejecting an
   unknown CLI argument.
-- **The ambient branches — REMOVE.** `src/webapp/routes/api.ts:71-75` gates
-  `/api/external`; `src/webapp/routes/chat-audio-routes.ts:115-123` gates mock
-  TTS; `src/webapp/server.ts:151-160` selects CSP mode; and tRPC 11.17 derives
+- **The ambient branches — REMOVE.** `src/webapp/routes/api.ts:71-75` (moved to `beebox/src/webapp/routes/api/register/core.ts`) gates
+  `/api/external`; `src/webapp/routes/chat-audio-routes.ts:115-123` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`) gates mock
+  TTS; `src/webapp/server.ts:151-160` (moved to `beebox/src/webapp/server/app.ts`) selects CSP mode; and tRPC 11.17 derives
   whether to include stacks from `NODE_ENV`.
 - **CSP has a separate development owner — REUSE.** Fastify serves built HTML,
   so it can always use the production policy. Vite already installs the

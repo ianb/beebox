@@ -5,9 +5,10 @@
  * sit next to the rendering logic.
  */
 
-import { FigureView } from "../components/FigureView";
-import { registerFileType } from "./index";
+import { FigureView } from "../components/FigureView/view";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "figure" }, {
+export const figureRenderer: RendererEntry = {
+  selector: { type: "figure" },
   renderer: { name: "Figure", Component: FigureView, priority: 100 },
-});
+};

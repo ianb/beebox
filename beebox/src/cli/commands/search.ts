@@ -7,13 +7,13 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import {
   runCommand,
   createCliContext,
   createCollectorContext,
-} from "../../core/commands/index.js";
-import { errorMessage } from "../../lib/error-guards.js";
+} from "../../core/command-runner.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 interface SearchCliOptions {
   kind?: string[];

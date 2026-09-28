@@ -33,7 +33,7 @@ The text content inside the tag is context passed back to the agent when the sch
 1. `chatSession.on("turn-text")` fires after each agent response
 2. `parseScheduleTags()` / `parseCancelScheduleTags()` extract tags from the response text
 3. `ChatScheduleManager` stores schedules in `.beebox/chat-schedules.json` and sets `setTimeout` timers. Each entry records the **originating session id** (`sessionId`) so the fire can land back in the conversation that created it.
-4. When a timer fires, `fireChatSchedule` (`src/webapp/routes/chat-schedule-fire.ts`):
+4. When a timer fires, `fireChatSchedule` (`src/webapp/routes/chat/schedule-fire.ts`):
    - Broadcasts `schedule-fired` SSE event (alarm/announce data for the frontend), before any session work
    - Resumes the **originating session** (`schedule.sessionId`) and sends it a `<schedule-fired>` message, so the reply lands in the right thread rather than whatever chat was last active
    - Broadcasts updated history via SSE once the fired turn completes
@@ -46,13 +46,13 @@ The text content inside the tag is context passed back to the agent when the sch
 
 ### Frontend display
 
-- `SchedulePill` components (in `InteractiveChat-layout.tsx`/`InteractiveChat-controls.tsx`) show active schedules with live countdown
+- `SchedulePill` components (in `InteractiveChat-layout/view.tsx`/`InteractiveChat-controls.tsx`) show active schedules with live countdown
 - Schedules are fetched via the `chat.schedules` tRPC query on mount and after each turn
 - User can cancel schedules via the × button on each pill, which calls the `chat.cancelSchedule` tRPC mutation
 
 ### Frontend receives the agent's response
 
-The agent's schedule-fired response reaches the UI over the shared WebSocket: the server broadcasts `schedule-fired` (triggers alarm/TTS) and `chat-history` on the box's event-bus stream, and `InteractiveChat-ws.ts` subscribes to that stream via tRPC's `events.subscribe`.
+The agent's schedule-fired response reaches the UI over the shared WebSocket: the server broadcasts `schedule-fired` (triggers alarm/TTS) and `chat-history` on the box's event-bus stream, and `InteractiveChat/ws.ts` subscribes to that stream via tRPC's `events.subscribe`.
 
 ### Hidden system messages
 
@@ -75,15 +75,15 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 
 | File | Role |
 |------|------|
-| `src/core/chat/schedules.ts` | `ChatScheduleManager`, `parseScheduleTags()`, `parseCancelScheduleTags()`, schedule persistence |
-| `src/core/chat/session/index.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
+| `src/core/chat/schedules/core.ts` | `ChatScheduleManager`, `parseScheduleTags()`, `parseCancelScheduleTags()`, schedule persistence |
+| `src/core/chat/session/run/core.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
 | `src/core/chat/session/pool.ts` | Per-thread schedule managers for Telegram, `deliverResponse` callbacks |
 | `src/core/chat/session/thread.ts` | `turn-text` event, `fullTurnText` accumulator, `SCHEDULING` prompt section |
-| `src/webapp/routes/chat.ts` | Server-side: schedule creation on turn-text (stamps the originating `sessionId`), wires the schedule manager into `webapp/chat-runtime.ts` |
-| `src/webapp/routes/chat-schedule-fire.ts` | `fireChatSchedule` — resolves the target session (originating / most-active / fresh fallback) and injects the fired reminder |
-| `src/webapp/trpc/routers/chat-control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
-| `src/frontend/src/components/chat/InteractiveChat-layout.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
-| `src/frontend/src/components/chat/InteractiveChat-ws.ts` | Subscribes to the box event stream (`schedule-fired`, `chat-history`) over the shared WebSocket |
+| `src/webapp/routes/chat/register.ts` | Server-side: schedule creation on turn-text (stamps the originating `sessionId`), wires the schedule manager into `webapp/chat-runtime.ts` |
+| `src/webapp/routes/chat/schedule-fire.ts` | `fireChatSchedule` — resolves the target session (originating / most-active / fresh fallback) and injects the fired reminder |
+| `src/webapp/trpc/routers/chat/control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
+| `src/frontend/src/components/chat/InteractiveChat-layout/view.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
+| `src/frontend/src/components/chat/everywhere/InteractiveChat/ws.ts` | Subscribes to the box event stream (`schedule-fired`, `chat-history`) over the shared WebSocket |
 | `src/frontend/src/components/chat/message-parsing.ts` | `stripUserDisplayTags()`, hidden schedule-fired messages |
 
 ## API
@@ -93,7 +93,7 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 
 ## Restart and lazy-hub behavior
 
-Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfired entries fire immediately). Because the timers live in that process, a lazy `bbx hub` (`lazy: true`, which idle-stops boxes) must not stop or fail to start a schedule-holding box: it keeps any box whose `chat-schedules.json` holds an entry running instead of idle-stopping it, and pre-starts such boxes at hub boot (independent of `keepRecent`), so a schedule fires on time even after a hub restart. See `src/hub/CLAUDE.md` (Lazy mode) and `src/hub/pending-schedules.ts`.
+Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfired entries fire immediately). Because the timers live in that process, a lazy `bbx hub` (`lazy: true`, which idle-stops boxes) must not stop or fail to start a schedule-holding box: it keeps any box whose `chat-schedules.json` holds an entry running instead of idle-stopping it, and pre-starts such boxes at hub boot (independent of `keepRecent`), so a schedule fires on time even after a hub restart. See `src/hub/CLAUDE.md` (Lazy mode) and `src/hub/supervisor/pending-schedules.ts`.
 
 ## Known issues
 

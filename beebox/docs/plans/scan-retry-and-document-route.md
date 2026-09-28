@@ -47,7 +47,7 @@ retries. Not a duplicate; noted so the two don't grow into each other.
 
 ## What already exists
 
-- **The loop itself.** `src/webapp/routes/scan-promote-lifecycle.ts:38`:
+- **The loop itself.** `src/webapp/routes/scan-promote-lifecycle.ts:38` (moved to `beebox/src/webapp/routes/scan-upload/promote-lifecycle.ts`):
   `const incomplete = result.skipped === "locked" || result.failed > 0 ||
   result.wakeup === "failed";` and `:42`: `if (incomplete)
   debouncers.get(boxRoot)?.notify();`. No attempt counter, no backoff. The
@@ -55,17 +55,17 @@ retries. Not a duplicate; noted so the two don't grow into each other.
   ways … All three are retryable, and none of them re-trigger on their own"* —
   which is right; the missing piece is a bound. **Rebuild the re-arm, keep the
   debouncer.**
-- **The retry's memory.** `src/core/scan/promote-wakeup.ts:63-79`
+- **The retry's memory.** `src/core/scan/promote-wakeup.ts:63-79` (moved to `beebox/src/core/scan/promote/wakeup.ts`)
   `runPendingWakeup`; on failure `:72`: *"Left deliberately: the marker IS the
   retry, and the next promote pass (debounced or at startup) picks it up."*
   The marker is durable and correct; what's absent is any record of how many
   times it has been tried. **Reuse, extend with attempt state.**
-- **The coarse signal.** `src/core/scan/promote-wakeup.ts:54-57`
+- **The coarse signal.** `src/core/scan/promote-wakeup.ts:54-57` (moved to `beebox/src/core/scan/promote/wakeup.ts`)
   `spawnBbxWakeup` reduces the whole wakeup to `{ ok, detail }` from a process
   exit code. That exit code is set by
-  `src/cli/commands/wakeup.ts:285-286` from
+  `src/cli/commands/wakeup.ts:285-286` (moved to `beebox/src/cli/commands/wakeup/command.ts`) from
   `wakeupExitCodeForConnectorErrors(connectorErrorCount)`
-  (`src/cli/commands/wakeup-connectors.ts:134-136`: `return errorCount > 0 ? 1
+  (`src/cli/commands/wakeup-connectors.ts:134-136` (moved to `beebox/src/cli/commands/wakeup/connectors.ts`): `return errorCount > 0 ? 1
   : undefined;`). So **any** connector error on the box — an expired Gmail
   token, in the observed incident — makes every wakeup exit 1 forever.
   **Rebuild the signal; the exit code cannot distinguish "the intake I asked
@@ -75,25 +75,25 @@ retries. Not a duplicate; noted so the two don't grow into each other.
   * 1000;`. Two minutes per iteration is why the observed loop was expensive
   rather than merely noisy — each iteration is a full `bbx wakeup`. **Reuse.**
 - **The dispatch that sends documents to the photo flow.**
-  `src/core/commands/scan-import.ts:99-111`. The comment states the assumption
+  `src/core/commands/scan-import.ts:99-111` (moved to `beebox/src/core/commands/scan-import/command.ts`). The comment states the assumption
   outright: *"a PDF without one is a photo batch that happens to be wrapped in
   a PDF, and belongs in the photo flow where front/back pairing lives."*
   **Rebuild.**
-- **The unanswerable question.** `src/core/commands/scan-import-cards.ts:213`:
+- **The unanswerable question.** `src/core/commands/scan-import-cards.ts:213` (moved to `beebox/src/core/commands/scan-import/cards.ts`):
   `prompt: \`What is ${filename}? (photo, back-of-photo, or trash)\`` and
   `:214` `directive:` ending *"Otherwise delete …"*. **Rebuild for non-photo
   material.**
 - **Docling OCR is already wired and reachable.**
-  `src/services/docling.ts:131-133`: `// \`--force-ocr\` is deprecated in
+  `src/services/docling.ts:131-133` (moved to `beebox/src/services/docling/core.ts`): `// \`--force-ocr\` is deprecated in
   2.117; \`--ocr-mode full_page\` is the … args.push("--ocr", "--ocr-mode",
   "full_page");`, with `args.push("--no-ocr")` at `:138` otherwise. It is
   driven by `DoclingExtractOptions.forceOcr`, already plumbed through
   `pdf-extract.ts:65,117` and exposed as `bbx pdf reanalyze --force-ocr`
   (`pdf-reanalyze.ts:128`). **Reuse — this is the largest single finding in
   this plan: the document-with-OCR route is not new machinery, it is a boolean
-  that scan-import never sets.** `src/core/commands/scan-import-pdf.ts:82`
+  that scan-import never sets.** `src/core/commands/scan-import-pdf.ts:82` (moved to `beebox/src/core/commands/scan-import/pdf.ts`)
   hardcodes `forceOcr: false`.
-- **The probe that decides.** `src/core/commands/pdf-probe.ts:132`:
+- **The probe that decides.** `src/core/commands/pdf-probe.ts:132` (moved to `beebox/src/core/pdf/probe.ts`):
   `return { hasTextLayer: characters >= TEXT_LAYER_MIN_CHARS, textLayerSource:
   "probed" };` with `TEXT_LAYER_MIN_CHARS = 64` (`:39`). Note `:129`: when
   poppler is missing it returns `hasTextLayer: true, textLayerSource:
@@ -381,7 +381,7 @@ gets a `knows_directly` entry before it ships.
   part is the policy, not the I/O. Keep the policy a pure function over
   (attempt count, last outcome) so a doctest reaches it directly, the same
   shape used for the uploader's settle-retry policy in
-  `scan-uploader/test/settle-retry.doctest.md`. No new tier, no mock.
+  `scan-uploader/test/settle-retry.doctest.md` (moved to `scan-uploader/test/cli/settle.retry.doctest.md`). No new tier, no mock.
 - **Track 2** is covered by the existing route doctests plus a new case
   asserting that a wakeup reporting connector errors, with intake drained, is
   *not* retried.

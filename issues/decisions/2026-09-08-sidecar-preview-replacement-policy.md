@@ -38,7 +38,7 @@ as detail. The person expected a direct document link and instead returned to
 a browsing context. The earlier Browse reappearance when opening The Plate
 (action 11) has not been traced to the same mechanism.
 
-Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 6-13 and 52-54, plus closing remarks. No navigation behavior changed.
 
 ## Re-encounter, 2026-09-21 - journey F
@@ -51,4 +51,4 @@ of every pane transition in the walk. This is another observation of spatial
 orientation cost, not proof that replacement is the right policy or that
 restoration itself is a defect.
 
-Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

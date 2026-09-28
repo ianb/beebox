@@ -15,7 +15,7 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { apiRawFileUrl, getApiBase } from "../api";
 import { RequestError } from "../lib/errors";
-import { gunzipToText, parseDoclingJson, type DoclingDocumentSummary } from "../lib/docling";
+import { gunzipToText, parseDoclingJson, type DoclingDocumentSummary } from "../lib/docling/parse";
 
 /** A loaded docling document, plus the raw JSON text the "Raw" view prints. */
 export interface LoadedDocling {

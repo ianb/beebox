@@ -21,7 +21,7 @@ import { execFileSync } from "node:child_process";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { splitCardContent } from "../../../src/cards/index.js";
+import { splitCardContent } from "../../../src/exports/cards.js";
 import {
   createStagingSession,
   addFile,
@@ -29,7 +29,7 @@ import {
   readStagingSession,
   writeStagingSession,
   stagingSessionDir,
-} from "../../../src/core/capture/staging-store.js";
+} from "../../../src/core/capture/staging-store/core.js";
 import { selectPendingCaptures, selectResumableCaptures } from "../../../src/core/capture/pending.js";
 import { prepareBulkBatch } from "../../../src/core/bulk-upload/prepare.js";
 

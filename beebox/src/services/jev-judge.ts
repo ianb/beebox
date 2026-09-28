@@ -11,7 +11,7 @@
  * a `JevError`, never a partial answer.
  */
 
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 import { JEV_MODEL, JEV_PROVIDER, probability, responseError } from "./jev-wire.js";
 
 export type JudgeInstructions = string | string[];

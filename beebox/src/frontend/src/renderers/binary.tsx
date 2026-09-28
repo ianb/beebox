@@ -12,7 +12,7 @@ import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { RequestError } from "../lib/errors";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 function BinaryRenderer({ data }: RendererProps) {
   const apiBase = getApiBase();
@@ -66,7 +66,7 @@ function BinaryRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileType(
-  { match: (path) => isBinaryPath(path) },
-  { renderer: { name: "Download", Component: BinaryRenderer, priority: 2 } },
-);
+export const binaryRenderer: RendererEntry = {
+  selector: { match: (path) => isBinaryPath(path) },
+  renderer: { name: "Download", Component: BinaryRenderer, priority: 2 },
+};

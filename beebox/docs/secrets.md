@@ -81,7 +81,7 @@ one in this table; see "Google client credentials" below.
 **One deliberate reuse outside this table.** The dev repo's document-comment
 surface transcribes spoken comments with `BBX_OPENAI_API_KEY` — the
 `openai` (embeddings) variable above — rather than minting a third name
-(`workstreams-app/src/server/transcribe-openai.ts`). That is a **boxholder
+(`workstreams-app/src/server/main/transcribe-openai.ts`). That is a **boxholder
 decision, 2026-08-22**, on the grounds that a dev-surface key on the developer's
 own machine did not earn its own name.
 
@@ -346,7 +346,7 @@ network path; an injected `fetch` still runs.
 ## The admin page
 
 The owner-only **Secrets** section on any box's admin page is the boxholder's
-surface (`src/frontend/src/components/admin/SecretsSection*.tsx`):
+surface (`src/frontend/src/components/admin/SecretsSection/*.tsx`):
 
 - **This box** — every granted name as one collapsed row (name, access level,
   verification badge); open a row for its note, **what it is used for**

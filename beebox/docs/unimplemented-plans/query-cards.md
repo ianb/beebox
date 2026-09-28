@@ -45,7 +45,7 @@ Questions surface become configuration instead of code.
   arrangement; card renderers do interaction."* Every vocabulary addition
   below must justify itself against these two.
 - Shipped precedents (denser than docs): landmark `expand`
-  (`src/schemas/landmark.ts`, `src/core/landmark/resolve.ts`) for
+  (`src/schemas/landmark.ts`, `src/core/landmark/resolve.ts` (moved to `beebox/src/core/landmark/resolve/core.ts`)) for
   server-side query resolution; `view: history` params
   (`src/shared/named-views.ts`) for per-view param schemas, URL overrides,
   and provenance; `nav.card` for enumerated-error validation and
@@ -54,7 +54,7 @@ Questions surface become configuration instead of code.
 ## What already exists
 
 - **Server-side glob resolution with ordering and caps** —
-  `src/core/landmark/resolve.ts:80` (`resolveLandmark`), glob execution at
+  `src/core/landmark/resolve.ts:80` (moved to `beebox/src/core/landmark/resolve/core.ts`) (`resolveLandmark`), glob execution at
   `resolve.ts:196` (`await glob(query, { cwd, nodir: true })`), order
   comparators at `resolve.ts:206-219` (alphabetical / mtime), group child
   cap (`GROUP_CHILD_CAP`, `resolve.ts:34-42`). **Reused**: the glob + order
@@ -358,7 +358,7 @@ Both run (`pnpm knowledge-audit run --box <absolute-path-to-test-box>
 - **Test posture**: doctests named per chunk above — the resolver
   doctest is the design tool for chunk 2 (selection semantics, anchoring,
   caps, group-by buckets, self-exclusion each get an example);
-  schema-validation doctests extend `test/schemas/view-card.doctest.md`;
+  schema-validation doctests extend `test/schemas/view-card.doctest.md` (moved to `beebox/test/schemas.view-card.doctest.md`);
   the question-renderer doctest covers pending/answered. Done-when: all
   new doctests green, landmark doctests untouched and green, full suite
   green.

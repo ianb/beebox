@@ -1,5 +1,5 @@
 import t from "tap";
-import { parseFrontmatterObject } from "../../src/cards/index.js";
+import { parseFrontmatterObject } from "../../src/exports/cards.js";
 import {
   arrangementIssues,
   createTabArrangementCard,

@@ -17,7 +17,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "./error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import {
   ATTACH_SUFFIX,
   cardBasename,

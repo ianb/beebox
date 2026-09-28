@@ -13,7 +13,7 @@
  * dialog would otherwise have to thread it through correctly.
  */
 
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
 
 export function ArchiveChatSection({ sessionId, huskPath, busy, onArchived }: {

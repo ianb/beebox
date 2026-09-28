@@ -25,11 +25,11 @@
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { writeFileAtomic } from "../lib/atomic-write.js";
-import { errorMessage, errnoCode } from "../lib/error-guards.js";
+import { errorMessage, errnoCode } from "../shared/error-guards.js";
 import {
   createFakeGoogleGmail,
   type FakeGoogleGmailService,
-} from "../services/google-gmail-fake.js";
+} from "../services/google-gmail-fake/core.js";
 import type {
   GmailAttachmentData,
   GmailHistoryRecord,

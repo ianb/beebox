@@ -92,7 +92,7 @@ private struct InputMatch {
 ///
 /// Keep this vocabulary, matching order, tag names, and phrase normalization in
 /// sync with the TypeScript implementation and
-/// `beebox/test/frontend/lib/speech-keywords.doctest.md`. The Swift app
+/// `beebox/src/frontend/test/lib/audio/speech-keywords.doctest.md`. The Swift app
 /// owns native dictation, but the persisted chat text is still read by the same
 /// box-side prompt/display code as web voice input, so drift here is user-visible.
 ///

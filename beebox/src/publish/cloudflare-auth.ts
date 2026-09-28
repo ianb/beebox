@@ -13,7 +13,7 @@
 
 import { type BearerProvider, staticBearer, wranglerBearer } from "../services/cloudflare-bearer.js";
 import type { WranglerService } from "../services/wrangler.js";
-import { LOGIN_INSTRUCTIONS } from "./setup.js";
+import { LOGIN_INSTRUCTIONS } from "./setup/core.js";
 
 /** A resolved Cloudflare identity: who to act as, and how to authenticate. */
 export interface ResolvedCloudflareAuth {

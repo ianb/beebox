@@ -15,7 +15,7 @@ field value. A `ref` that sits in an object beside other keys renders as plain
 text, so the link is not followable.
 
 `isRef` requires an object with exactly one key
-(`beebox/src/frontend/src/components/MarkdownCardView.tsx:48-53`):
+(`beebox/src/frontend/src/components/MarkdownCardView.tsx:48-53` (moved to `beebox/src/frontend/src/components/MarkdownCardView/view.tsx`)):
 
 ```ts
 if (Object.keys(value).length !== 1 || !("ref" in value)) return false;

@@ -18,8 +18,8 @@ import { InlineAction } from "../ui/InlineAction";
 import { Accordion } from "../ui/Accordion";
 import { JsonView } from "../ui/JsonView";
 import { isRecord } from "@shared/is-record";
-import type { RendererProps } from "../../renderers";
-import type { BatchSummary } from "./browser-task-data";
+import type { RendererProps } from "../../file-type-registry";
+import type { BatchSummary } from "./data";
 
 const MAX_COLUMNS = 5;
 /** Property names that read as long text and belong in the expanded row, not a column. */

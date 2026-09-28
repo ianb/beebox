@@ -1,6 +1,7 @@
 import { TabArrangementView } from "../components/TabArrangementView";
-import { registerFileType } from "./index";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "tab-arrangement" }, {
+export const tabArrangementRenderer: RendererEntry = {
+  selector: { type: "tab-arrangement" },
   renderer: { name: "Organizer", Component: TabArrangementView, priority: 100 },
-});
+};

@@ -46,5 +46,5 @@ context question, not a canonical-form one. The fix is probably to give a view a
 and authors are told to write box-absolute refs (`views/refs.ts` header already
 says so). That would also make `--canonical` cover views on real boxes.
 
-Test coverage today hides it: `test/core/view-refs.doctest.md` lints a view
+Test coverage today hides it: `test/core/view-refs.doctest.md` (moved to `beebox/test/core/views/refs.doctest.md`) lints a view
 written at `<boxRoot>/views/v.tsx` (the legacy position), which resolves fine.

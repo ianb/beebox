@@ -26,13 +26,13 @@ tracks iOS-vs-Android feature parity.
 
 ## Concrete contact surfaces (web/backend ↔ iOS)
 
-- **Chat upload/transcribe** — `beebox/src/webapp/routes/chat-uploads.ts`
-  (`POST /api/chat/upload-file`), `chat-audio-routes.ts`
-  (`POST /api/chat/transcribe-audio`), and `chat.ts`
+- **Chat upload/transcribe** — `beebox/src/webapp/routes/chat/uploads.ts`
+  (`POST /api/chat/upload-file`), `chat/audio-routes.ts`
+  (`POST /api/chat/transcribe-audio`), and `chat/register.ts`
   (`GET .../chat/default`) ↔ `ios-app/BeeBox/Services/ChatAPI.swift`.
-- **Capture sessions** — `beebox/src/webapp/routes/capture.ts`
+- **Capture sessions** — `beebox/src/webapp/routes/capture/register.ts`
   (`/api/capture/sessions/...`) ↔ `ios-app/BeeBox/Services/CaptureAPI.swift`.
-- **Bulk photo upload** — `beebox/src/webapp/routes/bulk-upload.ts`
+- **Bulk photo upload** — `beebox/src/webapp/routes/bulk-upload/register.ts`
   (`/api/bulk/sessions/...`) ↔ `ios-app/BeeBox/Services/BulkUploadAPI.swift`
   (explicitly documented in that file's header as reusing the same server
   contract as the web overlay, `src/frontend/src/lib/bulk-upload-api.ts`).

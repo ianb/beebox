@@ -11,7 +11,7 @@ A proposal, for feedback on the shape before anything is built.
 
 ## What the capability catalog cannot see
 
-[The 2026-08-21 catalog](../../user-stories/catalog/2026-08-21.md) is an inventory: 649 statements
+[The 2026-08-21 catalog](../user-stories/catalog/2026-08-21.md) is an inventory: 649 statements
 of the form "the product can do X". It has no notion of a person with a motive. Every entry begins
 from the product's side and asks whether the code backs it. Nothing in it starts from someone who
 wants to stop losing track of what they lent out and has never heard the word "card".

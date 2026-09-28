@@ -93,12 +93,12 @@ and an nginx file that reaches the live server at all.
 - **Client handling of gateway statuses:**
   `src/frontend/src/lib/trpc/transient.ts:29`
   `const GATEWAY_STATUSES = new Set([502, 503, 504]);` — a 503 during a deploy
-  is retried like today's 502. The hub's own 503s (`src/hub/box-unavailable.ts:35`)
+  is retried like today's 502. The hub's own 503s (`src/hub/box-unavailable.ts:35` (moved to `beebox/src/hub/server/box-unavailable.ts`))
   are responses from the upstream, which nginx does not intercept (spike below).
 - **Exit trap:** `deploy_exit` (`deploy.sh:66-98`) with the misread at `:80`
   `if [ "$rc" -ge 128 ]; then`.
-- **Build scripts:** `scripts/build-cli.ts` (esbuild) and
-  `scripts/build-box-docs.ts` run from the build checkout (`deploy.sh:385-399`);
+- **Build scripts:** `scripts/build-cli.ts` (moved to `beebox/src/scripts/build-cli/build/bundle.ts`) (esbuild) and
+  `scripts/build-box-docs.ts` (moved to `beebox/src/scripts/build-box-docs.ts`) run from the build checkout (`deploy.sh:385-399`);
   `dist/` is rsynced. The page template joins them.
 
 ## Prior art (external)
@@ -162,7 +162,7 @@ and an nginx file that reaches the live server at all.
     about 4 minutes." Over 60 minutes — "An update started at 9:41 PM and has
     not finished. Updates normally take about 4 minutes, so something has
     probably gone wrong." Unknown typical → "a few minutes".
-  - `scripts/build-deploy-page.ts` bundles the entry with esbuild (IIFE) and
+  - `scripts/build-deploy-page.ts` (moved to `beebox/src/scripts/build-deploy-page.ts`) bundles the entry with esbuild (IIFE) and
     writes `dist/deploy-page.html` with placeholders `__BBX_STARTED_MS__`,
     `__BBX_STARTED_UTC__`, `__BBX_TYPICAL_SECONDS__`. The server-rendered
     no-JS text states the UTC start time.
@@ -292,11 +292,11 @@ Skip: purely operational infrastructure; no box agent sees any of it.
 
 ## What will hold this after it ships
 
-- `test/deploy/deploy-page.doctest.md` — wording thresholds, and the built
+- `test/deploy/deploy-page.doctest.md` (moved to `beebox/test/deploy/page.doctest.md`) — wording thresholds, and the built
   page executed in `node:vm` with a stub document.
 - `test/deploy/nginx-deploy-page.doctest.md` — starts a real nginx on the repo
   conf (paths and ports substituted), asserts the four spike behaviours.
-- `test/deploy/deploy-window.doctest.md` — runs `bbx-deploy-window` against a
+- `test/deploy/deploy-window.doctest.md` (moved to `beebox/test/deploy/window.doctest.md`) — runs `bbx-deploy-window` against a
   temp dir: open/down/close, median, stale overwrite, malformed history.
 - `test/deploy/deploy-exit.doctest.md` — outcome classification.
 - The first live proof is the deploy that lands this; it is reasoned, not run,

@@ -11,7 +11,7 @@ resolution: implemented
 
 **Closed 2026-08-17** — superseded by the secret-custody store
 (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
-proposed. Telegram's writer (`src/webapp/trpc/routers/admin.ts`) now writes
+proposed. Telegram's writer (`src/webapp/trpc/routers/admin.ts` (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`)) now writes
 into the machine store, which enforces `mode: 0o600` centrally
 (`src/core/secrets/store.ts`), rather than getting its own targeted fix. The
 remaining per-box `*.secret.json` files (mistral, deepgram, openai, …) are
@@ -23,7 +23,7 @@ Every bespoke credential store in the codebase writes with an explicit
 `mode: 0o600` (`~/.beebox-auth.json`, token stores, google tokens,
 `publish.secret.json`, …). Two exceptions found:
 
-1. **Telegram**: `src/webapp/trpc/routers/admin.ts:96-101` writes
+1. **Telegram**: `src/webapp/trpc/routers/admin.ts:96-101` (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`) writes
    `config/connectors/telegram.secret.json` (live bot token + webhook
    secret) via `fs.writeFile` with no `mode` argument — umask-default
    permissions. `deploy/add-box.sh`'s `chmod 600` backstop only covers

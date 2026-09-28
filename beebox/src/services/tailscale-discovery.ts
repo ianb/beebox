@@ -17,12 +17,12 @@
 
 import * as os from "node:os";
 
-import { DEFAULT_HUB_HOST, DEFAULT_HUB_PORT, loadHubConfig } from "../hub/hub-config.js";
+import { DEFAULT_HUB_HOST, DEFAULT_HUB_PORT, loadHubConfig } from "../hub/config.js";
 import { resolveTarget, type TargetResolution } from "./tailscale.js";
 
 /** The default hub-config path — re-exported so the CLI can pass it as the
  *  discovery source without importing `hub-config` itself. */
-export { defaultHubConfigPath } from "../hub/hub-config.js";
+export { defaultHubConfigPath } from "../hub/config.js";
 
 /** A per-line logger so the discovery announcement threads through the CLI's
  *  own `console.log` (and is capturable in doctests) rather than being emitted

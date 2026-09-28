@@ -46,7 +46,7 @@ never checks that a doc **says** something true. Today:
 
 - `beebox/docs/security-overview.md:66` states "On fresh boxes, scheduled
   agent runs are off by default."
-- `src/core/box/defaults.ts` ships **three** seeded schedules `enabled: true` —
+- `src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`) ships **three** seeded schedules `enabled: true` —
   `refresh-maps`, `gc-procedure-runs`, `process-retrospective`.
 
 A false claim, in the security document whose stated premise is leading "with

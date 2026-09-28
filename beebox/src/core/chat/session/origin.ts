@@ -22,7 +22,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { BBX_STATE_DIR } from "../../../lib/state-dir.js";
 
 export interface LocalOrigin {

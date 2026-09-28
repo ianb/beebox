@@ -16,7 +16,7 @@ resolution: implemented
 `beebox/src/frontend/package.json` declares `vite: ^5.4.0`, and
 `beebox/src/frontend/node_modules/vite` is 5.4.21. The dev router starts
 `<worktree>/node_modules/.bin/vite`
-(`workstreams-app/src/router/router-generation.ts`, the `viteBin` line). With
+(`workstreams-app/src/router/router-generation.ts` (moved to `workstreams-app/src/router/core/generation.ts`), the `viteBin` line). With
 the hoisted linker, that binary is Vite 8.0.16. Another workspace package
 (vitest 4 / `@cloudflare/vitest-pool-workers`) pulls Vite 8 in. The worktree
 log confirms it: `VITE v8.0.16 ready`.
@@ -38,7 +38,7 @@ purpose.
 ## Resolution (2026-09-25, worktree-admin-structure)
 
 The router now starts the frontend package's own Vite: `resolveWorktree`
-(`workstreams-app/src/router/router-real-effects.ts`) resolves
+(`workstreams-app/src/router/router-real-effects.ts` (moved to `workstreams-app/src/router/server/real-effects.ts`)) resolves
 `<checkout>/beebox/src/frontend/node_modules/.bin/vite`, checks it exists
 (a missing binary is a `FrontendViteMissingError` naming the path and the
 `pnpm install` fix), and carries it on `ResolvedWorktree.viteBin`, which
@@ -48,7 +48,7 @@ that per-package `node_modules/.bin` is not populated under the hoisted
 linker was out of date: it carries each package's direct dependencies.
 
 Verified: the router harness pins the spawned command to the resolved
-binary (`test/router/router-core.test.ts`), all 177 router tests pass, and
+binary (`test/router/router-core.test.ts` (moved to `workstreams-app/test/router/core.test.ts`)), all 177 router tests pass, and
 the frontend's Vite 5.4.21 started directly against the current config
 with no deprecation warnings. `bin/process-cleanup` still recognizes the
 process, since its matcher accepts any `node_modules/.bin/vite` path under

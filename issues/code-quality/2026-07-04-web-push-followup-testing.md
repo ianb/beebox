@@ -55,7 +55,7 @@ start until the keys exist.
 - **The keys never reach a hub-spawned box server. Fixed.** (Found
   2026-09-26 in the notifications worktree.) Prod runs `bbx engine hub`,
   which spawns each box's `bbx serve` with the fail-closed allowlist in
-  `beebox/src/hub/child-env.ts`; `BBX_VAPID_*` is now on it, alongside the
+  `beebox/src/hub/supervisor/child-env.ts`; `BBX_VAPID_*` is now on it, alongside the
   already-allowlisted `BBX_APNS_KEY_PATH`. The boxholder can reverse this by
   removing the three names.
 
@@ -83,7 +83,7 @@ start until the keys exist.
 
 - **A connector `git add`s a card it just deleted.** Both the new push connector
   (`beebox/src/connectors/push.ts`) and the existing telegram output-card
-  connector (`beebox/src/connectors/telegram-output-cards.ts`) stage a card
+  connector (`beebox/src/connectors/telegram/output-cards.ts`) stage a card
   immediately after deleting it on delivery; for an *uncommitted* card that errors
   (`pathspec did not match`). The real flow always commits the card first
   (`notify-boxholder.ts` does), so it doesn't bite in practice — only a

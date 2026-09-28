@@ -12,7 +12,7 @@
  * still-`open` session (capture mode is live, nothing finalized) is not pending.
  */
 
-import { stagingSessionIsEmpty, isCaptureSession, type StagingSession, type StagingSessionState } from "./staging-store.js";
+import { stagingSessionIsEmpty, isCaptureSession, type StagingSession, type StagingSessionState } from "./staging-store/core.js";
 
 /** Media tallies shown in the pending bubble's caption line. */
 export interface PendingCaptureCounts {

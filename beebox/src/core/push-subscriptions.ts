@@ -21,7 +21,7 @@ import { writeFileAtomic } from "../lib/atomic-write.js";
 import { BBX_STATE_DIR } from "../lib/state-dir.js";
 import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 import type { StoredPushSubscription, PushSubscriptionKeys } from "../services/push.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 interface SubscriptionRecord {
   keys: PushSubscriptionKeys;

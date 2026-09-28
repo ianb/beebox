@@ -25,7 +25,7 @@ from a Git commit. The target appears in the first course commit `b93bf20`.
 The final reference is correct; the authoring sequence exposed an incomplete
 set of linked files to a person who was already navigating it.
 
-Evidence: [journey D report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+Evidence: [journey D report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 notes 8 and 10. The retained run is `D-chemistry-2026-09-21`; transcript tool
 IDs `toolu_01YERQrSM3fdKZi4TcWPgi6g` and `toolu_018zfcL6WQ5m7ETD7s1KyqYK`
 identify the writes. No product change was made.

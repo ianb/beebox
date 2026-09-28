@@ -10,7 +10,7 @@ resolution: implemented
 
 Closed 2026-08-14. Fixed in the test; production behavior is unchanged.
 
-`test/hub/hub-e2e.doctest.md` wrote a hub config with no `port` field, so the
+`test/hub/hub-e2e.doctest.md` (moved to `beebox/test/hub.e2e.doctest.md`) wrote a hub config with no `port` field, so the
 spawned hub fell back to `DEFAULT_HUB_PORT` (4310). Several worktree sessions
 run `pnpm test` concurrently on one machine as a matter of course, so two runs
 fought over one port and the loser hung for the full 120-second startup timeout.

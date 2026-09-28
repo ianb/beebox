@@ -15,7 +15,7 @@ appended below the page's own content *"for every tier, custom pages included"*,
 and that a manifest with an ask always gets a control — *"the container's control
 is what guarantees there is always some way to reply."*
 
-That is not true of the `index.html` tier. `workstreams-app/src/server/exhibits/app.ts:143-147`
+That is not true of the `index.html` tier. `workstreams-app/src/server/exhibits/app.ts:143-147` (moved to `workstreams-app/src/server/exhibits/app/handler.ts`)
 returns early:
 
 ```ts

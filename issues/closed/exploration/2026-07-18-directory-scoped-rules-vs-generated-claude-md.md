@@ -24,12 +24,12 @@ investigate (boxholder: "I'm not sure if that works").
 
 ## Where we generate / @-include today
 
-- `src/core/docs-gen/claude-md.ts` — `ensureClaudeMdIncludes(boxRoot, briefingPaths)`
+- `src/core/docs-gen/claude-md.ts` (moved to `beebox/src/core/docs-gen/generate/claude-md.ts`) — `ensureClaudeMdIncludes(boxRoot, briefingPaths)`
   manages the box CLAUDE.md: adds `@<briefing>` includes for the agent guide + compiled
   briefings, and prunes stale ones. This is the "@-include everything into root" pattern.
-- `src/core/docs-gen/compile.ts` — compiles briefings/personalities into markdown / rule
+- `src/core/docs-gen/compile.ts` (moved to `beebox/src/core/docs-gen/compile/core.ts`) — compiles briefings/personalities into markdown / rule
   files that the above @-includes.
-- `src/core/docs-gen/triage.ts` — triage-location doc generation (the boxholder's
+- `src/core/docs-gen/triage.ts` (moved to `beebox/src/core/docs-gen/package-docs/triage.ts`) — triage-location doc generation (the boxholder's
   motivating case — triage spots have location-specific handling).
 - `src/core/box/package.ts:249` — writes `ROOT_CLAUDE_MD` into a new box package.
 - Engine side: `beebox/CLAUDE.md:174` uses `@code-style.md` (an @-include of a

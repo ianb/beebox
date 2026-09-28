@@ -1,17 +1,17 @@
 import { z } from "zod";
 import ky, { HTTPError } from "ky";
-import { router, ownerProcedure, publicProcedure } from "../trpc.js";
+import { router, ownerProcedure, publicProcedure } from "../procedures.js";
 import { TRPCError } from "@trpc/server";
 import {
   loadTranscriptionConfig,
   updateTranscriptionConfig,
-} from "../../../core/transcription/index.js";
+} from "../../../core/transcription/dispatch/core.js";
 import { HQ_TRANSCRIPTION_SERVICES, TRANSCRIPTION_SERVICES } from "../../../shared/transcription-services.js";
 import { serviceCapabilities, unusableWarning } from "../../../core/model-capabilities.js";
 import { DEEPGRAM_SECRET_NAME, getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { getOpenAiThinkingKey, OPENAI_THINKING_SECRET_NAME } from "../../../core/openai-thinking-key.js";
 import { recordSecretMint } from "../../../core/secrets/access-log.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 const TEMP_KEY_TTL_SECONDS = 20 * 60; // 20 minutes
 

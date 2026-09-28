@@ -1,11 +1,11 @@
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
-import { legacyHistoryState } from "../history/history-card-state";
+import { legacyHistoryState } from "../history/card-state";
 
 export function MissingCardState({ path, onClose }: { path: string; onClose?: (() => void) | undefined }) {
   const openView = useViewNavigate();

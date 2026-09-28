@@ -57,16 +57,16 @@ content into a box; the box does the thinking.
 - `clerk.ts:151-161` — `GET /api/clerk/actions` + dismiss: **placeholders**
   (empty array / no-op). Client-side actions polling is therefore deferred,
   not rewired (see NOT in scope).
-- `beebox/src/webapp/server-root.ts:23-46` —
+- `beebox/src/webapp/server-root.ts:23-46` (moved to `beebox/src/webapp/server-root/root-routes.ts`) —
   `registerChromeExtensionCors()` reflects `chrome-extension://` origins with
   `Access-Control-Allow-Credentials: true`; preflight handled for
   `/api/boxes`.
-- `beebox/src/webapp/server-root.ts:104-113` — `GET /api/boxes` returns
+- `beebox/src/webapp/server-root.ts:104-113` (moved to `beebox/src/webapp/server-root/root-routes.ts`) — `GET /api/boxes` returns
   the boxes the authenticated user may see (owner sees all; others filtered by
   `allowedEmails`). **Not used by the association flow** — in-situ enabling
   (Track B) supersedes it; it stays available for a later "other boxes on this
   server" discovery feature (see NOT in scope).
-- `beebox/src/frontend/src/app-shell.tsx:44-55` — the SPA validates the
+- `beebox/src/frontend/src/app-shell.tsx:44-55` (moved to `beebox/src/frontend/src/main/app-shell.tsx`) — the SPA validates the
   URL's box slug against the known-boxes list. This is the spot that will emit
   the box-identity meta tag (Track B); the page currently carries no
   machine-readable box identity.

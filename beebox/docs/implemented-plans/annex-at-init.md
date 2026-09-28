@@ -28,7 +28,7 @@ issues:
 >   invariant) gets a hard failure, not a fallback"*), not a polite message
 >   naming `bbx attachments to-annex`. Cheaper than four hand-written refusals
 >   and more honest.
-> - The dual-scheme branch in `writeBoxGitignore` (`src/core/box/index.ts:245-283`)
+> - The dual-scheme branch in `writeBoxGitignore` (`src/core/box/index.ts:245-283` (moved to `beebox/src/core/box/structure/core.ts`))
 >   and the `annexed` probe that feeds it (`:136`). One block, unconditional.
 > - *NOT in scope*'s first two entries. Deleting the manifest scheme and
 >   converting existing boxes are now **in** scope — this plan absorbs
@@ -55,7 +55,7 @@ issues:
 >
 > 1. **The init reordering in Track 1 step 2 does not work as written.** It
 >    proposes moving `initRepo` above `writeBoxGitignore` inside `initBox`
->    (`src/core/box/index.ts:216-221`). That branch never runs for `bbx init`:
+>    (`src/core/box/index.ts:216-221` (moved to `beebox/src/core/box/structure/core.ts`)). That branch never runs for `bbx init`:
 >    `scaffoldBoxRoot` calls `initBox` with `skipGit: true`
 >    (`src/core/box/package.ts:284`) and git init happens afterwards in
 >    `announceAndInitGit` (`src/cli/commands/init.ts:32-47`). The reorder would
@@ -115,7 +115,7 @@ related set.
 
 **Smallest fix (~25 lines source, ~40 test).** Option C alone: gate
 `runPhotoMode`/`scan-import` and `pdf-extract` on `isAnnexBox` before they write
-anything, mirroring `src/core/scan/promote.ts:238-247` verbatim. That converts a
+anything, mirroring `src/core/scan/promote.ts:238-247` (moved to `beebox/src/core/scan/promote/core.ts`) verbatim. That converts a
 `git add` error plus stranded images into a stated refusal naming
 `bbx attachments to-annex`. It does not make a fresh box able to scan — the
 refusal is what every fresh box would hit — so it fixes the *shape* of the
@@ -203,10 +203,10 @@ to scan.
 **Reuse — the annex-shape probe.** `isAnnexBox` (`src/core/annex/is-annex-box.ts:127-131`)
 reads two independent facts: `.git/annex/` at the repo root
 (`isAnnexInitialized`, `:104-118`) and a box `.gitignore` that no longer hides
-assets (`gitignoreIgnoresAssets`, `src/core/commands/attachments-gitignore.ts`).
+assets (`gitignoreIgnoresAssets`, `src/core/commands/attachments-gitignore.ts` (moved to `beebox/src/core/attachments-gitignore.ts`)).
 This is the correct probe and the plan adds no new one.
 
-**Reuse — the refusal pattern.** `src/core/scan/promote.ts:230-247` is the
+**Reuse — the refusal pattern.** `src/core/scan/promote.ts:230-247` (moved to `beebox/src/core/scan/promote/core.ts`) is the
 gate Track 2 mirrors, including its reasoning for re-probing every pass rather
 than caching. Verbatim at `:238-241`:
 
@@ -218,12 +218,12 @@ than caching. Verbatim at `:238-241`:
 ```
 
 The routes refuse the same condition with a retryable 503
-(`src/webapp/routes/scan-upload.ts:249-263`, documented at
+(`src/webapp/routes/scan-upload.ts:249-263` (moved to `beebox/src/webapp/routes/scan-upload/register.ts`), documented at
 `docs/scan-upload-contract.md:71-78`). Track 2 is making the CLI agree with two
 layers that already refuse — not inventing a policy.
 
 **Reuse — the gitignore writer's branch.** `writeBoxGitignore`
-(`src/core/box/index.ts:245-283`) already selects `UNIGNORE_BLOCK` or
+(`src/core/box/index.ts:245-283` (moved to `beebox/src/core/box/structure/core.ts`)) already selects `UNIGNORE_BLOCK` or
 `GITIGNORE_BLOCK` from an `{ annexed }` flag, and `scaffoldBoxRoot` already
 probes for it (`:136`). Track 1 does not add a branch; it changes what the probe
 finds on a fresh init.
@@ -237,7 +237,7 @@ clean-tree requirement and a disk preflight onto a directory that has neither
 assets nor a commit yet. This is the one rebuild, and that is its reason.
 
 **Rebuild — the binary preflight.** `runAnnexDoctor`'s check 1
-(`src/core/annex/doctor.ts:268-280`) returns `failed` when the binary is absent,
+(`src/core/annex/doctor.ts:268-280` (moved to `beebox/src/core/annex/doctor/core.ts`)) returns `failed` when the binary is absent,
 and `bbx init` currently only `console.warn`s that and continues
 (`src/cli/commands/init.ts:202-209`). Track 1 needs a *refusal before any
 scaffolding*, which is a different call site and a different severity, not a
@@ -245,7 +245,7 @@ reuse of the doctor's report-only contract.
 
 **Searched and found nothing:** no function anywhere takes an asset path and
 stages it the way the box tracks assets. `SessionBuilder.writeChildCard`
-(`src/core/capture/write-cards.ts:58-82`) is the closest — it writes bytes,
+(`src/core/capture/write-cards.ts:58-82` (moved to `beebox/src/core/capture/prepare/write-cards.ts`)) is the closest — it writes bytes,
 writes a manifest, and stages manifest-and-card-but-never-bytes — but it is
 hardcoded to the manifest scheme and capture-shaped. That absence is why four
 writers each got this wrong independently, and it is the finding that makes
@@ -284,10 +284,10 @@ if the git-annex binary is absent.
 
 **Why this needs to change.** `runInit` never annexes
 (`src/cli/commands/init.ts:79-88`), and the doctor is explicitly forbidden from
-doing it (`src/core/annex/doctor.ts:290-300`: *"that is a perfectly correct
+doing it (`src/core/annex/doctor.ts:290-300` (moved to `beebox/src/core/annex/doctor/core.ts`): *"that is a perfectly correct
 state — not a defect to repair"*). So every box starts on a scheme that four
 writers cannot write to. Note also the ordering that makes this invisible:
-`scaffoldBoxRoot` probes for annex at `src/core/box/index.ts:136` but does not
+`scaffoldBoxRoot` probes for annex at `src/core/box/index.ts:136` (moved to `beebox/src/core/box/structure/core.ts`) but does not
 `initRepo` until `:216-221` — on a fresh init there is no `.git` yet when the
 probe runs, so `annexed` is necessarily `false` and the manifest block is the
 only outcome a fresh box can get.
@@ -320,7 +320,7 @@ only outcome a fresh box can get.
    `bbx attachments to-annex`"* to say this is a pre-2026-09 box, so the text
    does not read as advice for a box that should never have been in that state.
    Its stale LFS reasoning (*"Every unmigrated box uses LFS"*) is wrong today —
-   LFS is retired per `src/core/box/index.ts:186-196` — and gets corrected.
+   LFS is retired per `src/core/box/index.ts:186-196` (moved to `beebox/src/core/box/structure/core.ts`) — and gets corrected.
 
 **Vocabulary lock-ins.** None new. "Annex-shaped" and "manifest scheme" are the
 existing terms (`is-annex-box.ts`, `docs/media/assets.md`) and this plan does not add
@@ -338,19 +338,19 @@ named above.
 
 **Why this needs to change.** Track 1 fixes new boxes; it does nothing for a box
 created before it ships. The determining factor in how each writer fails today
-is pathspec shape, documented at `src/lib/git.ts:249-253`: naming an ignored
+is pathspec shape, documented at `src/lib/git.ts:249-253` (moved to `beebox/src/lib/git/core.ts`): naming an ignored
 *file* makes `git add` exit non-zero, naming a *directory* silently skips its
 ignored contents.
 
 | Writer | Today |
 |---|---|
-| scan-import photo flow (`src/core/commands/scan-import-cards.ts:101,107,176,206` → `scan-import.ts:313`) | throws at `git add`, images already on disk and ignored |
-| scan-import PDF (`src/core/commands/scan-import-pdf.ts:120-156`) | same |
-| Gmail attachments (`src/connectors/gmail-threads.ts:135-142` → `connectors/gmail.ts:175-186`) | same |
+| scan-import photo flow (`src/core/commands/scan-import-cards.ts:101 (moved to `beebox/src/core/commands/scan-import/cards.ts`),107,176,206` → `scan-import.ts:313`) | throws at `git add`, images already on disk and ignored |
+| scan-import PDF (`src/core/commands/scan-import-pdf.ts:120-156` (moved to `beebox/src/core/commands/scan-import/pdf.ts`)) | same |
+| Gmail attachments (`src/connectors/gmail-threads.ts:135-142` (moved to `beebox/src/connectors/gmail/threads.ts`) → `connectors/gmail.ts:175-186`) | same |
 | card submissions (`src/core/cards/accept-submission.ts:195-199`, which stages `[cardRel, batchDirRel]` — the batch *directory*) | **silent** — directory pathspec, bytes lost, exit 0 |
 
 **Direction.** A gate per entry point, each placed before any bytes are written.
-For scan-import that means before `src/core/commands/scan-import.ts:210-218`
+For scan-import that means before `src/core/commands/scan-import.ts:210-218` (moved to `beebox/src/core/commands/scan-import/command.ts`)
 creates `.scan-archive` and copies the originals in — today the working copy is
 created and then removed before staging, so a gate placed later would still
 leave the user's images half-processed. The message follows `promote.ts`'s:
@@ -411,7 +411,7 @@ existing probe and gitignore writer, and Track 2 mirrors a shipped gate.
 |---|---|---|---|
 | git-annex absent when `bbx init` runs | no — Track 1 chunk 1 adds it | no — plan adds `requireGitAnnex` | clear (refuses, names install) |
 | git-annex absent *after* a box is annexed (uninstalled later, or a second machine clones the box) | no | yes — `install-validation-hooks.ts:226-235` exits 1 with the install line | clear, but at *every commit*, not just asset commits |
-| `git annex init` fails midway on a fresh init (disk, permissions) | no — Track 1 adds one | partial — `scaffoldBoxRoot`'s marker cleanup at `src/core/box/index.ts:120-124` is fresh-init-retry-safe, but does not un-annex | unclear: box exists, `.git/annex/` may exist, gitignore state depends on where it threw |
+| `git annex init` fails midway on a fresh init (disk, permissions) | no — Track 1 adds one | partial — `scaffoldBoxRoot`'s marker cleanup at `src/core/box/index.ts:120-124` (moved to `beebox/src/core/box/structure/core.ts`) is fresh-init-retry-safe, but does not un-annex | unclear: box exists, `.git/annex/` may exist, gitignore state depends on where it threw |
 | a re-init on a converted box de-annexes it | yes — the regression the probe comment records (`index.ts:126-135`) | yes — the repo-level probe at `:136` | clear (this plan keeps the probe) |
 | asset write on a pre-existing manifest box after Track 2 | no — Track 2 adds them | no — plan adds gates | clear (refusal names `to-annex`) |
 | the ignore block is spelled a way `isAssetIgnoreRule` does not match | yes — added by `c47fd2be1` | yes, since `c47fd2be1` | **silent when it fails** — three checks over this seam all failed open at once |
@@ -519,13 +519,13 @@ box-agent knowledge to act on.
 Track 2 adds is reachable from the doctest tier with a `makeTmpBox` fixture —
 no heavier tier, and no new tier.
 
-- **`test/core/commands/scan-import-photo-flow.doctest.md`** — the manifest-path
+- **`test/core/commands/scan-import-photo-flow.doctest.md` (moved to `beebox/test/core/commands/scan-import/command.photo-flow.doctest.md`)** — the manifest-path
   regression test the filed issue lacks. It is the only doctest driving
   `runPhotoMode` end to end and already owns every helper it needs
   (`seedPages`/`importPhotos` at `:25-40`, `sessionDir`/`sessionFiles` at
   `:42-50`). The fixture line is `makeTmpBox({ git: true })` — omitting `annex`
   *is* the manifest scheme. Asserts the refusal and that no bytes were written.
-- **`test/core/commands/pdf-extract.doctest.md`** — same for the PDF path.
+- **`test/core/commands/pdf-extract.doctest.md` (moved to `beebox/test/core/pdf/extract.doctest.md`)** — same for the PDF path.
 - **`test/core/cards/accept-submission`** — the silent case. This one must
   assert on the filesystem (bytes neither committed nor manifest-listed), not on
   a return value, because the bug is that the return value is success.
@@ -581,10 +581,10 @@ would be asserting something untrue.
    as the remedy for a manifest-scheme box, and each stops being true the
    moment the command is gone:
 
-   - `src/core/annex/doctor.ts:300` — *"Migrate with `bbx attachments
+   - `src/core/annex/doctor.ts:300` (moved to `beebox/src/core/annex/doctor/core.ts`) — *"Migrate with `bbx attachments
      to-annex`."*
-   - `src/core/scan/promote.ts:241` — the quarantine-skip message.
-   - `src/webapp/routes/scan-upload.ts:258` — a retryable `503` whose meaning
+   - `src/core/scan/promote.ts:241` (moved to `beebox/src/core/scan/promote/core.ts`) — the quarantine-skip message.
+   - `src/webapp/routes/scan-upload.ts:258` (moved to `beebox/src/webapp/routes/scan-upload/register.ts`) — a retryable `503` whose meaning
      is written into `docs/scan-upload-contract.md:69-76`, a **wire contract
      shared with the standalone scan-uploader** and versioned by
      `SCAN_CONTRACT_VERSION` (currently 1).

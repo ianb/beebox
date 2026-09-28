@@ -24,9 +24,11 @@ const noDirectCreateNew = {
     "Don't call registry.createNew() directly — resolve a ChatTargetSpec through resolveChatTarget() (core/chat/session/target.ts) so one place decides who creates the chat.",
 };
 // A card type's LIST COMPONENT lives beside its schema:
-// `src/schemas/<type>.list-entry.tsx` (boxholder decision, 2026-09-20 — "I
-// want each component to live alongside the rest of the schema"). It is
-// frontend code in a backend tree, so it gets fenced three ways here:
+// `src/schemas/<type>/list-entry.tsx` (boxholder decision, 2026-09-20 — "I
+// want each component to live alongside the rest of the schema"; a directory
+// member, like the rest of a card type's files, not a flat
+// `<type>.list-entry.tsx`). It is frontend code in a backend tree, so it gets
+// fenced three ways here:
 //
 //  1. It is linted with the REACT profile, not the backend one (the block
 //     below re-runs the preset with `react: true`, scoped to this glob).
@@ -39,8 +41,8 @@ const noDirectCreateNew = {
 // `src/frontend/vite.config.ts` aliases `@schemas/*.list-entry` — and only
 // that spelling — so `file-types/builtins.tsx` can import it by the type-only
 // alias without opening the alias for anything else.
-const LIST_ENTRY_GLOB = "src/schemas/**/*.list-entry.tsx";
-const LIST_ENTRY_IMPORT_PATTERNS = ["**/*.list-entry", "**/*.list-entry.js", "**/*.list-entry.tsx"];
+const LIST_ENTRY_GLOB = "src/schemas/*/list-entry.tsx";
+const LIST_ENTRY_IMPORT_PATTERNS = ["**/list-entry", "**/list-entry.js", "**/list-entry.tsx"];
 
 export default [
   // `roots` extends the reviewed ruleset to first-party tooling under scripts/
@@ -53,7 +55,7 @@ export default [
   // harsher unreviewed base, whose extra bans (`??`, inline unions,
   // process.env["X"], fs-filename) are NOT house style and made per-edit hook
   // reports on test files misleading. `pnpm lint` and lint-staged enforce it.
-  ...vibeCheck({ react: false, roots: ["src", "scripts", "test", "user-stories"], ignores: ["src/frontend/**", "**/*.mjs"] }),
+  ...vibeCheck({ react: false, roots: ["src", "test"], ignores: ["src/frontend/**", "**/*.mjs"] }),
   // The React profile, scoped to list components (see LIST_ENTRY_GLOB above).
   // Every entry is re-scoped to the glob so nothing else in this package picks
   // up React rules.
@@ -113,7 +115,41 @@ export default [
     // that keeps growing still has to answer for it. Every other rule applies in
     // full — the six generic-Error throws these files used to carry were fixed, not
     // exempted (boxholder decision, 2026-08-24).
-    files: ["user-stories/pipeline/*.workflow.ts"],
+    //
+    // `@typescript-eslint/no-misused-promises` used to crash ESLint outright on
+    // these files (`Non-null Assertion Failed: Expected node to have a parent`,
+    // in its `checkReturnStatement`) instead of reporting a normal finding. Every
+    // workflow ends in a literal top-level `return` (see workflow-globals.d.ts —
+    // the runtime wraps the body in an async function, so TS's grammar error
+    // TS1108 is silenced with `@ts-expect-error` on that one line); that return
+    // has no enclosing function in the AST, and the rule dereferenced one
+    // unconditionally.
+    //
+    // This was NOT a long-standing crash the fold merely surfaced: before the
+    // fold, personal-vibe-check's type-aware block is hard-scoped to
+    // `src/**/*.{ts,tsx}` (see preset.ts), and these files lived under
+    // `user-stories/`, outside that glob — `tsconfig.user-stories.json` fed
+    // `typecheck:user-stories`'s plain `tsc`, never ESLint. So the rule never
+    // ran with type information against them at all (confirmed: `git show
+    // 14d93deb0:beebox/src/scripts/user-stories/discover.workflow.ts` lints clean
+    // under that commit's config, and typescript-eslint's own debug log shows
+    // it parsing "without type information"). The fold moved the files under
+    // `src/`, which put them in the type-aware program for the first time and
+    // exposed the crash.
+    //
+    // The crash itself is an upstream bug, fixed in
+    // https://github.com/typescript-eslint/typescript-eslint/pull/12912
+    // (issue #12911), merged 2026-09-22 but not yet in a stable release as of
+    // 2026-09-27 (latest is 8.70.1; the fix only exists in canary prereleases,
+    // which the workspace's 7-day `minimumReleaseAge` gate rightly refuses to
+    // install). Rather than adopt an unvetted prerelease or carve out the
+    // rule, `patches/@typescript-eslint+eslint-plugin+8.59.4.patch` applies
+    // that exact upstream diff to the installed package via patch-package
+    // (already wired into the root `postinstall`), so the rule stays fully
+    // enabled — including type information — for these files. Drop that patch
+    // once a released `@typescript-eslint/eslint-plugin` version already
+    // contains the fix.
+    files: ["src/scripts/user-stories/*.workflow.ts"],
     rules: {
       "max-lines": ["error", { max: 400, skipBlankLines: true, skipComments: true }],
     },
@@ -157,7 +193,7 @@ export default [
   {
     // Nothing but the frontend registry imports a list component, and it does
     // so through the `@schemas/*.list-entry` Vite alias.
-    files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "test/**/*.ts"],
+    files: ["src/**/*.{ts,tsx}", "test/**/*.ts"],
     ignores: [LIST_ENTRY_GLOB],
     rules: {
       "no-restricted-imports": "off",

@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { encodeProjectDir } from '../../src/core/chat/session/transcript-paths.ts';
-import { assertPreviousRunsReported, allocateRun } from '../../user-stories/journeys/provisioning.ts';
+import { assertPreviousRunsReported, allocateRun } from './journeys/provisioning.ts';
 ```
 
 ```ts

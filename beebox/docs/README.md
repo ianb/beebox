@@ -35,7 +35,7 @@ current truth.
   frozen under `reports/`.)
 - **`docs/box/`** — prose docs written for box agents, shipped into every
   installed package's `box-docs/` beside the generated reference docs
-  (`src/core/docs-gen/package-docs.ts`). Each has a `read-when:` frontmatter
+  (`src/core/docs-gen/package-docs/core.ts`). Each has a `read-when:` frontmatter
   line that becomes its row in the `box-docs/README.md` index. Currently
   [what you could do with your box](box/what-you-could-do.md) and
   [interface cards](box/interface-cards.md).
@@ -74,7 +74,7 @@ rename/delete) or 2+ matches is reported for manual handling, not rewritten.
 Links inside code spans / fenced blocks (syntax illustrations) and generated
 emitter outputs are left untouched. It also prints a non-fatal report of
 repo-wide duplicate basenames — the gap toward making basenames globally
-unique. Mechanism: `src/dev/doc-link-repair.ts`.
+unique. Mechanism: `src/dev/doc-check/link-repair.ts`.
 
 ## Organizing principles
 

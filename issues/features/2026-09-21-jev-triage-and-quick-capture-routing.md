@@ -20,7 +20,7 @@ option and a confidence.
 The triage stage already has the exact shape Jev serves. It compiles a
 destination doc from landmarks' `destinations:` frontmatter, runs a subagent
 over a batch of intake-complete items, and applies decisions
-(`beebox/src/core/triage/index.ts`, `instructions.ts`, `routing.ts`).
+(`beebox/src/core/triage/run/core.ts`, `instructions.ts`, `routing.ts`).
 
 The important part is what the decision carries: a **self-reported confidence
 word** — `confident` | `probable` | `guess` (`routing.ts:33`) — and behavior
@@ -95,7 +95,7 @@ Partly addressed, not closed. The notifications work built the general Jev
 plumbing this issue's two applications would sit on top of:
 `jev.judge` (`src/core/judgment/service.ts`) returning a probability per
 option plus a confidence (`noul`/choice/score per
-`src/schemas/judgment-instructions.ts`), and the `.judgment.card` schema
-(`src/schemas/judgment.ts`) plus `bbx judge` as its runner. Neither triage
+`src/schemas/judgment-instructions.ts` (moved to `beebox/src/schemas/judgment/instructions.ts`)), and the `.judgment.card` schema
+(`src/schemas/judgment.ts` (moved to `beebox/src/schemas/judgment/schema.ts`)) plus `bbx judge` as its runner. Neither triage
 routing nor the quick-capture entry point was rewired to use it — both
 halves of this issue are still open work.

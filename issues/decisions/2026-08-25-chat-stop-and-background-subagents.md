@@ -15,7 +15,7 @@ aborts only the current turn and leaves background agents and workflows
 running; without it (and for one-shot string prompts) they stop too.
 
 beebox calls `interrupt()` on the chat stop path
-(`beebox/src/core/chat/session/index.ts:374`, reached from
+(`beebox/src/core/chat/session/run/core.ts:374`, reached from
 `webapp/trpc/routers/chat-control-procedures.ts:212`) and again in
 `services/claude-chat.ts:273` and the field-test operator turns. Today every one
 of those inherits the "stop everything" semantics, so a boxholder pressing stop

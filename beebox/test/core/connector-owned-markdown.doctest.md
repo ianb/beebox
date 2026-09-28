@@ -11,7 +11,7 @@ import {
   isConnectorOwnedMarkdown,
   connectorOwnedEditWarning,
 } from "../../src/core/connector-owned-markdown.js";
-import { lintMarkdownFiles } from "../../src/cli/commands/validate-markdown.js";
+import { lintMarkdownFiles } from "../../src/cli/validate-markdown.js";
 import { join } from "node:path";
 ```
 

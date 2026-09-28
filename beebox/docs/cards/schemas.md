@@ -25,7 +25,7 @@ Adding a frontmatter schema touches 4 files, plus creates 1 new one.
 `src/schemas/<name>.ts` (use `.tsx` only if you need JSX somewhere; templates emit YAML strings now, not JSX).
 
 ```ts
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type CardSchema } from "../exports/cards.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
@@ -76,7 +76,7 @@ export function createMyThingTemplate(options: { title: string }): string {
 
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
-- Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
+- Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query/core.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
 - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-in theme IDs and stocks; see [`docs/box/card-themes.md`](../box/card-themes.md) before adding a type preference with `cardSchema`'s `theme` option. Theme is a presentation override, not a new view or a replacement for the card's type fields.
 - `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
 - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is tolerated on read and must match the filename; templates may still emit it, and the serializer never writes it back.
@@ -89,11 +89,11 @@ Key patterns:
 When a card type needs a rule Zod field types can't express — a cross-field
 constraint, a format refinement on a string, or validation of the body's parsed
 structure — put it in a **`validate` hook on the schema**, *not* in a branch of
-`src/core/card-lint.ts`. The hook co-locates the rule with the schema that
+`src/core/card-lint/core.ts`. The hook co-locates the rule with the schema that
 defines the type, and card-lint dispatches it generically.
 
 ```ts
-import { cardSchema, type CardSchema, type LintIssue } from "../cards/index.js";
+import { cardSchema, type CardSchema, type LintIssue } from "../exports/cards.js";
 
 function myThingErrors(fields: Record<string, unknown>): LintIssue[] {
   const errors: LintIssue[] = [];
@@ -214,7 +214,7 @@ edits or freeze old stock. Naming which keys are *state* lets the tracker keep
 making that call correctly. (Implementation: `boxOwnedFields` on
 `installTemplateFile`, `src/core/install-template-file.ts`.)
 
-### 2. Register in `src/schemas/registry.ts`
+### 2. Register in `src/schemas.ts`
 
 ```ts
 import { MyThingSchema } from "./my-thing.js";
@@ -268,7 +268,7 @@ generate: (args) => {
 
 ### 5. (Optional) Add a Storage Directory
 
-If the card type has its own storage location, add it to `BOX_DIRS` in `src/lib/paths.ts`:
+If the card type has its own storage location, add it to `BOX_DIRS` in `src/lib/paths/core.ts`:
 
 ```ts
 export const BOX_DIRS = {
@@ -312,7 +312,7 @@ registerFileType({ type: "my-thing" }, {
 When code needs to update a frontmatter card on disk (e.g. setting `status: answered` on a question), use `splitCardContent` + `yaml`:
 
 ```ts
-import { splitCardContent } from "../cards/index.js";
+import { splitCardContent } from "../exports/cards.js";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 const content = await fs.readFile(absPath, "utf-8");

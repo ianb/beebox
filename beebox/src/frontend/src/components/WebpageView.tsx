@@ -10,11 +10,11 @@
  */
 
 import { useCallback, useRef } from "react";
-import { Markdown } from "./Markdown";
+import { Markdown } from "./Markdown/body";
 import { Text } from "./ui/Text";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { apiRawFileUrl, getApiBase } from "../api";
-import { type RendererProps } from "../renderers";
+import { type RendererProps } from "../file-type-registry";
 import { resolveRelativePath } from "../lib/view-url";
 import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/selection/quote-anchor";
 import { AttachedCommentary, type JumpToQuote } from "./AttachedCommentary";

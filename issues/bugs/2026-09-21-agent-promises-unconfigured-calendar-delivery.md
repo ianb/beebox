@@ -14,7 +14,7 @@ The person had already seen that Calendar was disabled and Google OAuth was
 unconfigured, so they challenged the promise. The assistant then checked and
 explicitly withdrew it. No event or reminder was created.
 
-Screenshots 20 and 21 in the [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
+Screenshots 20 and 21 in the [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
 show the promise and correction. The fresh fixture's `_config/box.json` has
 only `agentBrowsing: owner`; no Google services are enabled. Missing services
 default to disabled in `beebox/src/core/box/config.ts`. The Settings and Admin
@@ -37,7 +37,7 @@ Partly addressed, not closed. The notifications work added `bbx notify
 --check` and an agent-guide rule — *"Before you promise a reminder or a
 watch, run `bbx notify --check`. If nothing can reach the person, say so
 instead of promising."*
-(`beebox/src/core/agent-guide/reaching.ts`) — that covers the
+(`beebox/src/core/agent-guide/guide/reaching.ts`) — that covers the
 notify/remind promise class generically. It does not check Calendar/Google
 OAuth availability specifically, so the calendar-delivery promise this issue
 reports is not directly covered; that needs its own check at the point an

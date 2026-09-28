@@ -1,4 +1,4 @@
-import { KeywordPattern, type InputMatch } from "../patmatch/index";
+import { KeywordPattern, type InputMatch } from "../patmatch/keyword-pattern";
 
 const sendPattern = KeywordPattern.compile(`
   (send | sent | same | deliver | finished | finish | said) (a | the | an)? message

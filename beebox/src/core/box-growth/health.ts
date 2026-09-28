@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { requestScopedLock, withFileLock } from "../../lib/file-lock.js";
 import {
   acknowledgedGrowthState,

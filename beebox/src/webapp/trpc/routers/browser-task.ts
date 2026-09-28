@@ -10,16 +10,16 @@ import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { Document, isMap, parseDocument } from "yaml";
-import { router, ownerProcedure, publicProcedure } from "../trpc.js";
+import { router, ownerProcedure, publicProcedure } from "../procedures.js";
 import { listBrowserTasks } from "../../../core/browser-task/list.js";
 import { getBoxTime } from "../../../lib/time.js";
-import { splitCardContent } from "../../../cards/index.js";
+import { splitCardContent } from "../../../exports/cards.js";
 import { typeFromFilename } from "../../../core/card-io.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { BrowserTaskStatus } from "../../../schemas/browser-task.js";
 
 export const browserTaskRouter = router({

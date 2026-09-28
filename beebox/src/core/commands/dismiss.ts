@@ -8,16 +8,16 @@
  */
 
 import * as path from "node:path";
-import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
+import { withQuestionTransition, resolveContainedQuestionPath } from "../question-transition.js";
 
 const DismissArgsSchema = z.object({
   question: z.string().optional(),
@@ -73,7 +73,7 @@ async function executeDismiss(
   return { success: true, data: { path: relativePath } };
 }
 
-registerCommand({
+export const dismissCommand: CommandDefinition = {
   name: "dismiss",
   description: "Dismiss a pending question",
   args: [
@@ -85,6 +85,6 @@ registerCommand({
     },
   ],
   execute: executeDismiss,
-});
+};
 
 export { executeDismiss };

@@ -18,14 +18,14 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getSystemState } from "./state.js";
 import { cardFields, parseCardText } from "./card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
+import { createCardSchemaMap } from "../schemas.js";
 import {
   QuestionSchema,
   parseIso8601DurationMs,
   type QuestionFields,
 } from "../schemas/question.js";
-import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
-import { withQuestionTransition, resolveContainedQuestionPath } from "./commands/question-transition.js";
+import { renderFrontmatterBlock, splitCardContent } from "../exports/cards.js";
+import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
 import { loadQuestionLatch, saveQuestionLatch } from "./question-alert.js";
 import { notifyBoxholder } from "./notify-boxholder.js";
 import { parseTarget } from "./notification/target.js";
@@ -33,7 +33,7 @@ import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import type { CommandContext } from "./command-runner.js";
 import type { TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
-import { createEventBus } from "./event-bus.js";
+import { createEventBus } from "./event-bus/core.js";
 
 /**
  * Default pending-question expiry window, when a card carries no

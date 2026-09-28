@@ -55,7 +55,7 @@ all.
    - **RUNTIME** — beebox's current imports and use of
      `@anthropic-ai/claude-agent-sdk`, especially `beebox/src/core/sdk-hooks.ts`,
      `beebox/src/core/agent/`, `beebox/src/core/chat/session/`,
-     `beebox/src/services/claude-chat.ts`, and
+     `beebox/src/services/claude-chat/core.ts`, and
      `beebox/src/services/scan-vision-claude.ts`. Search for other
      imports too.
    - **HARNESS** — what a Claude Code change does to the workflow this repo is
@@ -67,7 +67,7 @@ all.
      assess it on its own terms rather than dismissing it as not-SDK.
    - **CODEX** — for every Codex version in the briefing, read the release
      from `openai/codex` on GitHub (releases page or CHANGELOG). beebox's use:
-     `beebox/src/services/codex-sdk-session.ts` (the `@openai/codex-sdk`
+     `beebox/src/services/codex-sdk-session/core.ts` (the `@openai/codex-sdk`
      thread that runs a box's Codex chat) and `beebox/src/services/codex-binary.ts`;
      the same pinned binary is `/usr/local/bin/codex` on the production
      server, so a new model, a renamed flag, a changed transcript or event
@@ -102,7 +102,7 @@ all.
    window, run `pnpm update-agent-sdk` — it bumps whichever family is behind.
    Never install a prerelease.
 9. **After a bump**, run `pnpm -C beebox test`; for an SDK bump also
-   `node --import tsx beebox/scripts/sdk-steering-probe.ts`; for a Codex bump
+   `node --import tsx beebox/src/scripts/sdk-steering-probe.ts`; for a Codex bump
    also the deploy gate, on the workspace's pinned binary and never a bare
    `codex` from `PATH`: `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin
    --help` from the repo root. Update the ledger's pin,

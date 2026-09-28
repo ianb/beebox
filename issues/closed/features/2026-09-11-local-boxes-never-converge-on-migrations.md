@@ -40,7 +40,7 @@ first interface-card cohort but not the second.
 
 `beebox/.env` carries a `BOXES=` line naming exactly the local boxes (four, at
 filing time), and `readBoxes` in
-`workstreams-app/src/router/router-real-effects.ts:63-72` already parses it —
+`workstreams-app/src/router/router-real-effects.ts:63-72` (moved to `workstreams-app/src/router/server/real-effects.ts`) already parses it —
 it is how the dev router knows what to serve. A local convergence step should
 read the same list rather than introduce a second source of truth about where
 boxes live.

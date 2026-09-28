@@ -18,7 +18,7 @@
  */
 
 import type { Node } from "@markdoc/markdoc";
-import { isExternalRef, parseRef, resolveRefPath } from "./ref-path.js";
+import { isExternalRef, parseRef, resolveRefPath } from "./ref-path/core.js";
 
 /** A `{% see-also %}` reference, from either capture form. */
 export interface TodoSeeAlso {

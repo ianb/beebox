@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { saveLocation } from "../../../core/location-store.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 

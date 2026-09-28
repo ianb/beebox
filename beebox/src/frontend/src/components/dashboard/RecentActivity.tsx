@@ -6,7 +6,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import { toSearch } from "../../lib/routing";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
-import type { RouterOutput } from "../../lib/trpc";
+import type { RouterOutput } from "../../lib/trpc/client";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
 import { tickHadActivity } from "./ScheduleTicks";

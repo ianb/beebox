@@ -16,7 +16,7 @@
 import type { ChatImageAttachment } from "../../api-chat";
 import { applySelections, escapeAttr, escapeText } from "../../lib/selection/serialize";
 import type { Emission } from "../emission";
-import { markUnsureWords } from "../unsure-words";
+import { markUnsureWords } from "../unsure-words/mark";
 import { composerToken, composerTokenIn } from "@shared/composer-tokens";
 
 /**

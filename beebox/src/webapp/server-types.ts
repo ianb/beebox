@@ -6,8 +6,8 @@
 
 import type { ChatBackend } from "../services/claude-chat-types.js";
 import type { FastifyInstance } from "fastify";
-import type { Services } from "../services/index.js";
-import type { EventBus } from "../core/event-bus.js";
+import type { Services } from "../services/container.js";
+import type { EventBus } from "../core/event-bus/core.js";
 
 export interface BoxSpec {
   slug: string;

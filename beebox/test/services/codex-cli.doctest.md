@@ -11,7 +11,7 @@ import {
   classifyCodexAuthStatus,
   createCodexCliService,
   createFakeCodexCli,
-} from "../../src/services/codex-cli.js";
+} from "../../src/services/codex-cli/core.js";
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

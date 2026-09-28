@@ -7,7 +7,7 @@ negation and `host /tmp`, while still rejecting an answer that recommends it.
 ```ts setup
 import { runChecks } from "../../../src/dev/lib/audit-checks.js";
 import { auditTestSchema } from "../../../src/dev/lib/test-suite-schema.js";
-import type { AgentBehavior, AuditTest } from "../../../src/dev/lib/test-runner.js";
+import type { AgentBehavior, AuditTest } from "../../../src/dev/lib/test-runner/runner.js";
 
 const auditTest: AuditTest = {
   id: "temp",

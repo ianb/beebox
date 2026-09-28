@@ -1,5 +1,5 @@
 ---
-title: "Full-suite red: test/cli/commands/validate-box-checks.doctest.md, test/core/landmark/landmark-schema.doctest.md, test/core/loader-registry.doctest.md, test/webapp/trpc-presentation.doctest.md"
+title: "Full-suite red: test/cli/commands/validate-box-checks.doctest.md (moved to `beebox/test/cli/commands/validate/box-checks.doctest.md`), test/core/landmark/landmark-schema.doctest.md (moved to `beebox/test/core/landmark/resolve.schema.doctest.md`), test/core/loader-registry.doctest.md, test/webapp/trpc-presentation.doctest.md (moved to `beebox/test/webapp/trpc/routers/presentation.doctest.md`)"
 workstream: unattached
 area: beebox
 priority: important
@@ -14,7 +14,7 @@ commit (`a3331aef`) over first-parent `main` blames one landing:
 
 - **Landing:** `f859fbd7` — fix(themes): theme names and stocks are an open set, not a catalog allowlist
 - **Workstream:** none (a direct commit to main)
-- **Failing files:** `test/cli/commands/validate-box-checks.doctest.md`, `test/core/landmark/landmark-schema.doctest.md`, `test/core/loader-registry.doctest.md`, `test/webapp/trpc-presentation.doctest.md`
+- **Failing files:** `test/cli/commands/validate-box-checks.doctest.md` (moved to `beebox/test/cli/commands/validate/box-checks.doctest.md`), `test/core/landmark/landmark-schema.doctest.md` (moved to `beebox/test/core/landmark/resolve.schema.doctest.md`), `test/core/loader-registry.doctest.md`, `test/webapp/trpc-presentation.doctest.md` (moved to `beebox/test/webapp/trpc/routers/presentation.doctest.md`)
 
 Each file failed in the batched run and failed again on an isolated re-run, so
 it is not a flake by the ledger's definition. Nothing has been fixed; this is a
@@ -198,7 +198,7 @@ The blame was right and the production change was right: `f859fbd7` made theme
 names and stocks an **open set**, so three of these four files were asserting
 the old catalog-allowlist behaviour.
 
-- `test/core/landmark/landmark-schema.doctest.md` — `system-theme: {name: paper,
+- `test/core/landmark/landmark-schema.doctest.md` (moved to `beebox/test/core/landmark/resolve.schema.doctest.md`) — `system-theme: {name: paper,
   stock: purple}` was expected to be dropped as malformed. An unknown stock is
   not malformed any more; only the wrong SHAPE is. Split the section so it says
   which is which.
@@ -206,11 +206,11 @@ the old catalog-allowlist behaviour.
   expected to resolve to plain. It now carries through as authored, which is the
   point: dropping it would let a box or schema default silently beat something
   the author wrote.
-- `test/cli/commands/validate-box-checks.doctest.md` — the box-config validator
+- `test/cli/commands/validate-box-checks.doctest.md` (moved to `beebox/test/cli/commands/validate/box-checks.doctest.md`) — the box-config validator
   no longer emits an "unknown stock" error, so only the path-pattern error
   remains. The prose claimed the validator checks catalog membership; it does
   not.
-- `test/webapp/trpc-presentation.doctest.md` — green on re-run before any of
+- `test/webapp/trpc-presentation.doctest.md` (moved to `beebox/test/webapp/trpc/routers/presentation.doctest.md`) — green on re-run before any of
   these edits, so it was fixed between the report and now.
 
 Full suite re-run green afterwards.

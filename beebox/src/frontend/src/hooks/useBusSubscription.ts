@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useRef, useCallback } from "react";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { unwrapBusEvent, type WireBusEvent } from "../lib/bus-events";
 
 /** A real-time event delivered to subscribers. */

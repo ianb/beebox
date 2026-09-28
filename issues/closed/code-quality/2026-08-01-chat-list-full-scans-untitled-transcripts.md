@@ -9,7 +9,7 @@ resolution: implemented
 
 **Closed 2026-08-25** — resolved by commits f7d24973 / b093062b (workstream chat-history-scale). See the "Fixed (2026-08-25)" section below for what shipped.
 
-`loadAllSessions` (`beebox/src/core/chat/session/list.ts`) runs
+`loadAllSessions` (`beebox/src/core/chat/session/list.ts` (moved to `beebox/src/core/chat/session/list/core.ts`)) runs
 `getSessionMetadata` — a full streaming scan of the transcript — for every
 session that has no stored title, on the chat-list request path. Memory-safe
 (the fold retains only scalars) but IO/latency scales with the total bytes of
@@ -22,7 +22,7 @@ scan runs once per transcript change instead of once per request.
 
 ## Fixed (2026-08-25)
 
-`loadAllSessions` (`beebox/src/core/chat/session/list.ts`) now resolves
+`loadAllSessions` (`beebox/src/core/chat/session/list.ts` (moved to `beebox/src/core/chat/session/list/core.ts`)) now resolves
 labels through `labelFor`, which memoizes the transcript-derived label in an
 in-process Map keyed by (transcript path, transcript mtime). A re-listing
 rescans only the transcripts that changed since the last one. The Map is bounded

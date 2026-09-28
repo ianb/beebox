@@ -68,12 +68,12 @@ Paths below are relative to `beebox/`; line anchors refer to the planning checko
 | `src/frontend/src/lib/view-bindings.ts:58-61`: `trpcClient.views.list.query()` and `if (!map.has(type)) map.set(type, ...)` | View bindings derive from authored-view metadata. Keep this mechanism independent; a theme is not another preferred renderer. |
 | `src/frontend/src/file-type-registry.ts:113-117`: "Register a renderer and/or list UI"; "Multiple ... registrations ... stay live" | Follow the explicit registration precedent, but create a theme registry with its own resolution rules. |
 | `src/frontend/tailwind.config.js:76`: `content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"]`; `src/frontend/package.json:59`: `"tailwindcss": "^3.4.0"` | Engine theme classes compile in the existing Tailwind 3 build. Box source files are outside this content list. |
-| `src/webapp/views/compiler.ts:201`: `loader: "tsx"`; `:217`: `const outputFile = result.outputFiles[0]` | The authored-view compiler is not a theme/CSS delivery system. Do not promise arbitrary box Tailwind classes work today. |
+| `src/webapp/views/compiler.ts:201` (moved to `beebox/src/webapp/views/compiler/compile.ts`): `loader: "tsx"`; `:217`: `const outputFile = result.outputFiles[0]` | The authored-view compiler is not a theme/CSS delivery system. Do not promise arbitrary box Tailwind classes work today. |
 | `src/frontend/src/components/FileView.tsx:254-259`: "Frameless: just the renderer output" and `return captured`; `:264`: `border rounded-lg overflow-hidden bg-white`; `:278-285`: companion wrapper and body | Theme ownership must account for page, chat card, companion, and frameless embed modes. Avoid extra nested shells and preserve focus/selection capture. |
 | `src/frontend/src/pages/card/CardViewPage.tsx:63-64`: `<Card padding="none" shadow>` around `<FileView` | Consolidate physical card framing; changing only the renderer would leave a second outer card. Audit BrowseDetailPanel and ViewPage wrappers in the same change. |
 | `src/frontend/src/components/FileView.tsx:281`: `<RendererToggle ... compact path={data.path} />` | Move card alternate-view controls into Properties while preserving explicit view URLs and selection handlers. Non-card file controls remain available. |
 | `src/frontend/src/components/MarkdownCardView.tsx:95-106`: `data-card-section="frontmatter"`, `<FrontmatterFields ... />`, then `<Markdown prose="block" ...>` | The default markdown renderer currently leads with all frontmatter. Properties work must distinguish metadata from actual structured card content. Keep the real Markdown renderer. |
-| `src/shared/markdoc-config.ts:147-154`: `from: { type: String }`, then `node.inline ? "QuoteInline" : "QuoteBlock"` | Extend the existing quote tag with a treatment attribute. Keep inline/block semantics. |
+| `src/shared/markdoc-config.ts:147-154` (moved to `beebox/src/shared/markdoc-config/core.ts`): `from: { type: String }`, then `node.inline ? "QuoteInline" : "QuoteBlock"` | Extend the existing quote tag with a treatment attribute. Keep inline/block semantics. |
 | `src/frontend/src/components/Quote.tsx:4`: "Distinct from a plain Markdown blockquote: a `quote` carries provenance"; `:82-86`: attribution in `figcaption` | Share appearance hooks without erasing the distinction between verbatim quotations and ordinary blockquotes. |
 | `src/core/body-markdoc-lint.ts:4-11`: every markdown body is validated; findings "surface as warnings, not errors" | Extend existing validation and name its actual severity. Do not claim all malformed quote attributes block commits. |
 | `src/frontend/src/components/view-widgets/CardLink.tsx:39-40`: "A real href ... middle-click / open-in-new-tab work"; `:68`: hardcoded underline classes | Replace appearance through a shared link role; preserve destination, modifier-click, missing-ref, and host behavior. |
@@ -650,7 +650,7 @@ Verification on this branch:
   the companion review. This branch has not been merged or deployed.
 
 Recreate the gallery from the monorepo root with
-`node --import tsx beebox/scripts/install-theme-tour.ts <box-root>`; it refuses
+`node --import tsx beebox/scripts/install-theme-tour.ts (moved to `beebox/src/scripts/install-theme-tour.ts`) <box-root>`; it refuses
 to overwrite changed files. Run `bin/tour card-themes` for the browser walk.
 The entry card is `_content/theme-tour/Theme_Tour.memo.card`.
 

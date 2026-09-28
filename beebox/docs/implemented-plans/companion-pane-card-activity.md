@@ -100,7 +100,7 @@ A cross-model (Codex) review of an earlier draft is folded in — see
   helpers, no new git code" for ranged diff/log is **false** (review #1,
   verified). Track D adds two small ranged helpers; `getStatus`/`pathsHaveChanges`
   still reuse.
-- **`bbx chat` subcommand precedent** — `src/cli/commands/chat.ts:47`
+- **`bbx chat` subcommand precedent** — `src/cli/commands/chat.ts:47` (moved to `beebox/src/cli/commands/chat/command.ts`)
   (`selfNoteCommand`, loopback `BBX_SERVER_URL`/`BBX_BOX_NAME`), `:96`
   (`chatCommand`). **Reuse** the shape.
 - **`serializeViewUrl`/`parseViewUrl`** — `src/frontend/src/lib/view-url.ts`.

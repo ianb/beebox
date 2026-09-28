@@ -40,8 +40,8 @@ import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { renderFrontmatterBlock, splitCardContent } from "../exports/cards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { isRecord } from "./card-io.js";
 import { GUIDANCE_SURFACES, guidancePathPattern } from "./box/guidance-surfaces.js";
 

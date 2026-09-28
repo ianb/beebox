@@ -13,15 +13,15 @@ Every `bbx` process pays the full import cost of every command's dependencies:
 a bare `bbx --help` peaks at ~245MB RSS (~218MB without `--enable-source-maps`),
 with ~103MB of JS heap allocated purely at import time. The bundle
 (`scripts/build-cli.mjs`) externalizes `node_modules`, so this is the eager
-top-level import graph of `src/cli/index.ts`, not the bundle itself (2MB).
+top-level import graph of `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`), not the bundle itself (2MB).
 
 Measured import-time heap of the worst offenders (Node baseline ~40MB RSS):
 
 | dep | heapUsed | used by |
 |---|---|---|
-| `typescript` | +31MB | only `bbx view typecheck` (`src/cli/commands/view-typecheck.ts:14`) |
+| `typescript` | +31MB | only `bbx view typecheck` (`src/cli/commands/view-typecheck.ts:14` (moved to `beebox/src/cli/commands/view/typecheck.ts`)) |
 | `@anthropic-ai/claude-agent-sdk` | +15MB | chat/agent paths |
-| `cheerio` | +11MB | only `bbx view` (`src/cli/commands/view.ts`) |
+| `cheerio` | +11MB | only `bbx view` (`src/cli/commands/view.ts` (moved to `beebox/src/cli/commands/view/command.ts`)) |
 | `markdownlint` | +11MB | validate paths |
 | `@google/genai` | +10MB | audio-question, scan-import, dev image gen |
 | grammy / fastify / execa / react-dom / zod | +7–8MB each | various |

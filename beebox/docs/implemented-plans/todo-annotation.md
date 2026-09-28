@@ -59,7 +59,7 @@ justified by these, not the other way around.
 - `beebox/code-style.md` — exhaustiveness (`assertNever` over status),
   no silent catches, one shape not two (single frontmatter entry shape).
 - **Shipped precedents (densest source):** `{% quote %}` / `{% source %}` in
-  `src/shared/markdoc-config.ts:126-186` (inline/block split via
+  `src/shared/markdoc-config.ts:126-186` (moved to `beebox/src/shared/markdoc-config/core.ts`) (inline/block split via
   `node.inline`; typed attributes; `validate()` for ref-xor-href; the
   `ref` → `sourceRef` React rename), and the questions subsystem
   (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
@@ -74,7 +74,7 @@ justified by these, not the other way around.
 
 ## What already exists
 
-- **The shared Markdoc vocabulary** — `src/shared/markdoc-config.ts` (one
+- **The shared Markdoc vocabulary** — `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`) (one
   config for the frontend renderer, `bbx validate`, and dev docs; header
   comment: "Add new tags here"). **Reused**: `todo` and `see-also` are added
   here, making them universal by construction.
@@ -95,7 +95,7 @@ justified by these, not the other way around.
 - **Ref integrity, for free** — `src/core/body-refs.ts:60-66` walks *every*
   body tag for an attribute literally named `ref` ("walks every tag node for
   an attribute literally named `ref`"), feeding card lint
-  (`src/core/card-lint.ts:147`); `src/core/rewrite-card-refs.ts:21,286`
+  (`src/core/card-lint.ts:147` (moved to `beebox/src/core/card-lint/core.ts`)); `src/core/rewrite-card-refs.ts:21 (moved to `beebox/src/core/rewrite-card-refs/core.ts`),286`
   rewrites body `ref="…"` attributes on `bbx mv`. **Reused**: a nested
   `{% see-also ref="…" %}` gets lint + move-rewrite with zero walker changes.
 - **Ref-xor-href validation** — `markdoc-config.ts:159-174`
@@ -122,7 +122,7 @@ justified by these, not the other way around.
   "collect → tRPC → page + badge." **Reused as the pattern** for the todos
   page.
 - **Per-directory ambient context** — the maps system
-  (`src/core/maps/finalize.ts:5`: "Ensure each mapped directory has a
+  (`src/core/maps/finalize.ts:5` (moved to `beebox/src/core/maps/finalize/core.ts`): "Ensure each mapped directory has a
   CLAUDE.md that @-imports MAP.md"). **Reused** as the channel for
   subtree-scoped todo summaries.
 - **Agent-guide sections** — `src/core/agent-guide/` (e.g. the questions
@@ -172,7 +172,7 @@ Ordered by implementation dependency, then surface size.
 ### Track 1 — the `{% todo %}` and `{% see-also %}` tags + rendering
 
 **What.** Add `todo` (wrapper, inline or block) and `see-also` (wrapper,
-ref-carrying, rendered footnote-style) to `src/shared/markdoc-config.ts`, with
+ref-carrying, rendered footnote-style) to `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`), with
 React components in `Markdown.tsx`.
 
 **Why.** No deliberate, machine-legible capture form exists today — checkboxes
@@ -361,7 +361,7 @@ Two mechanism details pinned by the narrow cross-review pass:
   (`config/template-versions.json`) like other stock cards.
 
 **Why this shape.** It fits the "views attach to cards" model —
-`src/core/views/doc.ts:12`: *"A view is always attached to a card type …
+`src/core/views/doc.ts:12` (moved to `beebox/src/core/views/doc/core.ts`): *"A view is always attached to a card type …
 There is no card-less 'standalone' view"* — and it recovers what standalone
 wildcard views were for without un-deprecating them: **the wildcard lives in
 the card, not in a view or a link.** Because the surface has a card path,

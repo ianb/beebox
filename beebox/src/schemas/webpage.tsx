@@ -15,7 +15,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 
 export const WebpageSchema = cardSchema("webpage", {
   brief: "A captured web page",

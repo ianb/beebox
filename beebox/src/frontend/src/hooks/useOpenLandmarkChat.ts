@@ -12,11 +12,11 @@
  * (docs/plans/top-nav-ia.md Track C1).
  */
 
-import { useBoxConversation } from "../components/chat/everywhere/conversation-context";
+import { useBoxConversation } from "../components/chat/everywhere/conversation-context/context";
 import { useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { href, toSearch } from "../lib/routing";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 
 /**
  * Returns a stable `(dir) => Promise<void>` that opens the landmark's chat.

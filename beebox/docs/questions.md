@@ -176,7 +176,7 @@ same `bbx finalize` call site as the pending-question notification sweep
 
 Answering, dismissing, and expiring all go through the same guarded
 transition helper: `withQuestionTransition` in
-`src/core/commands/question-transition.ts`.
+`src/core/question-transition.ts`.
 
 **Why a guard, not just `withCardLock`.** `withCardLock`
 (`src/lib/card-lock.ts`) only serializes read-modify-write within one Node
@@ -236,7 +236,7 @@ order:
    dropping it. For sink `briefing`, only the **root** briefing compiles
    into any agent's context (`compileBriefings` only compiles the root —
    directory briefings are an explicit TODO,
-   `src/core/docs-gen/compile.ts:74-101`), so `learning.ref` must resolve to
+   `src/core/docs-gen/compile/core.ts:74-101`), so `learning.ref` must resolve to
    the root briefing even if it names something else; the job instructions
    say to resolve and note the substitution.
 3. **If `learning:` is absent, still ask whether the answer generalizes** —

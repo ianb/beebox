@@ -3,16 +3,16 @@ import { SettingsPage } from "../pages/SettingsPage";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
 import { QuestionsList } from "../components/questions/QuestionsList";
 import { LandmarksList } from "../components/landmarks/LandmarksList";
-import { HistoryViewCard } from "../components/history/HistoryViewCard";
+import { HistoryViewCard } from "../components/history/HistoryViewCard/view";
 import { InventoryCardBody } from "../pages/inventory/InventoryPage";
 import { AdminCardBody } from "../pages/AdminPage";
 import { adminArrivalReceipt, adminTabViewState, clearAdminArrivalState, parseAdminCardState } from "../lib/admin-card-state";
 import { Text } from "../components/ui/Text";
-import type { AdminTab } from "../components/admin/admin-sections";
+import type { AdminTab } from "../components/admin/sections";
 import { useRouterState } from "@tanstack/react-router";
-import { legacyHistoryState } from "../components/history/history-card-state";
+import { legacyHistoryState } from "../components/history/card-state";
 import { HISTORY_QUERY_CODEC, resolveViewParams } from "@shared/named-views";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 function DashboardCard({ data }: RendererProps) {
   return <SystemCardBoundary type="dashboard" path={data.path}><DashboardPage /></SystemCardBoundary>;
@@ -46,10 +46,10 @@ function AdminCard(props: RendererProps) {
   const changeTab = (tab: AdminTab) => props.onViewStateChange?.(adminTabViewState(props.viewState, tab), "replace");
   return <SystemCardBoundary type="admin" path={props.data.path}><AdminCardBody arrival={parsed.arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={consumeArrival} tab={parsed.tab} section={parsed.section} onTabChange={changeTab} /></SystemCardBoundary>;
 }
-registerFileType({ type: "dashboard" }, { renderer: { name: "Dashboard", Component: DashboardCard, priority: 100 } });
-registerFileType({ type: "settings" }, { renderer: { name: "Settings", Component: SettingsCard, priority: 100 } });
-registerFileType({ type: "questions" }, { renderer: { name: "Questions", Component: QuestionsCard, priority: 100 } });
-registerFileType({ type: "landmarks" }, { renderer: { name: "Landmarks", Component: LandmarksCard, priority: 100 } });
-registerFileType({ type: "history" }, { renderer: { name: "History", Component: HistoryCard, priority: 100 } });
-registerFileType({ type: "inventory" }, { renderer: { name: "Inventory", Component: InventoryCard, priority: 100 } });
-registerFileType({ type: "admin" }, { renderer: { name: "Admin", Component: AdminCard, priority: 100 } });
+export const dashboardRenderer: RendererEntry = { selector: { type: "dashboard" }, renderer: { name: "Dashboard", Component: DashboardCard, priority: 100 } };
+export const settingsRenderer: RendererEntry = { selector: { type: "settings" }, renderer: { name: "Settings", Component: SettingsCard, priority: 100 } };
+export const questionsRenderer: RendererEntry = { selector: { type: "questions" }, renderer: { name: "Questions", Component: QuestionsCard, priority: 100 } };
+export const landmarksRenderer: RendererEntry = { selector: { type: "landmarks" }, renderer: { name: "Landmarks", Component: LandmarksCard, priority: 100 } };
+export const historyCardRenderer: RendererEntry = { selector: { type: "history" }, renderer: { name: "History", Component: HistoryCard, priority: 100 } };
+export const inventoryRenderer: RendererEntry = { selector: { type: "inventory" }, renderer: { name: "Inventory", Component: InventoryCard, priority: 100 } };
+export const adminRenderer: RendererEntry = { selector: { type: "admin" }, renderer: { name: "Admin", Component: AdminCard, priority: 100 } };

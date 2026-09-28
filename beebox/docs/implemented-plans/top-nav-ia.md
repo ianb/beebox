@@ -168,11 +168,11 @@ context exists (Browse inside a landmarked dir), else hides.
   `pages/capture/CapturePage.tsx:13`). **Constrains Track A**: the box
   root must redirect to `/chat`, not be the chat route.
 - **Chat landing on an empty box.** `chat.bootstrap` returns
-  `sessionId: null` (`src/webapp/trpc/routers/chat-bootstrap-procedure.ts:46-49`);
+  `sessionId: null` (`src/webapp/trpc/routers/chat-bootstrap-procedure.ts:46-49` (moved to `beebox/src/webapp/trpc/routers/chat/bootstrap-procedure.ts`));
   `ChatPage.tsx:162` maps null → `"new"` — fresh composer, session
   created on first send. **Reused unchanged.**
 - **Landmark data for the switch menu.** `chat.byLandmark`
-  (`src/webapp/trpc/routers/chat.ts:100-150`) — per-landmark fresh
+  (`src/webapp/trpc/routers/chat.ts:100-150` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`)) — per-landmark fresh
   sessions + `olderSessions` + `freshCount`; buckets sessions by
   `contextDir` but emits only buckets that have a landmark card
   (`loadLandmarkSummaries`, `src/core/landmark/summaries.ts:92-131`, no

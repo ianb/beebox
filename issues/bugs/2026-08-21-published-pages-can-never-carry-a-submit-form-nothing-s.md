@@ -12,18 +12,18 @@ The publish "drop box" (Track F of `beebox/docs/plans/publish-pages.md`) is comp
 **What is wrong**
 
 - `pub-worker/src/submit.ts` `handleSubmit` refuses with 403 unless the fetched manifest has a non-null `submit` block (lines 100-105).
-- Nothing ever writes that block. `draftPublication` (`beebox/src/publish/draft.ts`, the rawManifest at ~lines 202-217) has no `submit` key, and `bbx pub draft` (`beebox/src/cli/commands/pub.ts`) exposes no flag or card field for one. Grepping `submit:` across `src` and `pub-worker/src` finds it only as a zod field in `src/publish/manifest.ts` / `manifest-edge.ts` (and `toEdgeManifest`'s pass-through at manifest.ts:176-189).
-- No form is rendered either: `src/publish/render-docs.ts` emits Markdoc HTML with no `<form>`, and `grep -rn '<form' src/publish pub-worker/src` returns nothing. The plan specifies plain HTML form POSTs (`form-action 'self'` is already in the Worker CSP, `pub-worker/src/headers.ts:28`).
+- Nothing ever writes that block. `draftPublication` (`beebox/src/publish/draft/core.ts`, the rawManifest at ~lines 202-217) has no `submit` key, and `bbx pub draft` (`beebox/src/cli/commands/pub/command.ts`) exposes no flag or card field for one. Grepping `submit:` across `src` and `pub-worker/src` finds it only as a zod field in `src/publish/manifest.ts` / `manifest-edge.ts` (and `toEdgeManifest`'s pass-through at manifest.ts:176-189).
+- No form is rendered either: `src/publish/render-docs.ts` (moved to `beebox/src/publish/draft/render-docs.ts`) emits Markdoc HTML with no `<form>`, and `grep -rn '<form' src/publish pub-worker/src` returns nothing. The plan specifies plain HTML form POSTs (`form-action 'self'` is already in the Worker CSP, `pub-worker/src/headers.ts:28`).
 
 **User-visible consequence**
 
-A boxholder cannot publish a page that collects replies, and a reader has no form to post. Everything downstream of the endpoint is dead in practice: `validateSubmissionFields` (`src/publish/submission.ts`), the `submissions/<pubId>/<id>.json` objects, the pull connector `src/connectors/publish-submissions.ts` (registered live at `src/cli/commands/wakeup-connectors.ts:41`), and the `pub-submission` inbox card schema. The Worker also carries submit-specific rate limiting, size caps and Access-tier submitter resolution that can never be exercised outside tests.
+A boxholder cannot publish a page that collects replies, and a reader has no form to post. Everything downstream of the endpoint is dead in practice: `validateSubmissionFields` (`src/publish/submission.ts`), the `submissions/<pubId>/<id>.json` objects, the pull connector `src/connectors/publish-submissions.ts` (registered live at `src/cli/commands/wakeup-connectors.ts:41` (moved to `beebox/src/cli/commands/wakeup/connectors.ts`)), and the `pub-submission` inbox card schema. The Worker also carries submit-specific rate limiting, size caps and Access-tier submitter resolution that can never be exercised outside tests.
 
 **Files involved**
 
-- `beebox/src/publish/draft.ts` (manifest assembly — no `submit`)
-- `beebox/src/cli/commands/pub.ts` (`bbx pub draft` — no flag)
-- `beebox/src/publish/render-docs.ts` (renderer — no form)
+- `beebox/src/publish/draft/core.ts` (manifest assembly — no `submit`)
+- `beebox/src/cli/commands/pub/command.ts` (`bbx pub draft` — no flag)
+- `beebox/src/publish/draft/render-docs.ts` (renderer — no form)
 - `beebox/pub-worker/src/submit.ts`, `beebox/src/publish/submission.ts`, `beebox/src/connectors/publish-submissions.ts` (the built, unreachable half)
 
 **How this was established**
@@ -36,8 +36,8 @@ Read the manifest assembly path end to end, grepped for every `submit:` assignme
 
 ## Updating the user-story catalog
 
-This issue is why [`publish/collect-replies-from-a-published-page`](../../beebox/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
-flagged ❌ in [the user-story catalog](../../beebox/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
+This issue is why [`publish/collect-replies-from-a-published-page`](../../beebox/docs/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../beebox/docs/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
 actually do, where every claim is checked against the source.
 
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a
@@ -50,12 +50,12 @@ Workflow({scriptPath: "beebox/dist/workflows/recheck.workflow.mjs",
           args: {root: "<repo root>", date: "2026-08-21",
                  ids: ["publish/collect-replies-from-a-published-page"]}})
 
-pnpm exec tsx beebox/user-stories/pipeline/apply-recheck.ts 2026-08-21
-pnpm exec tsx beebox/user-stories/pipeline/render.ts \
-  > beebox/user-stories/catalog/2026-08-21.md
+pnpm exec tsx beebox/src/scripts/user-stories/apply-recheck.ts 2026-08-21
+pnpm exec tsx beebox/src/scripts/user-stories/render/core.ts \
+  > beebox/docs/user-stories/catalog/2026-08-21.md
 ```
 
 The recheck is adversarial by design: it will not mark the story accurate just because
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
-[the pipeline README](../../beebox/user-stories/README.md).
+[the pipeline README](../../beebox/docs/user-stories/README.md).

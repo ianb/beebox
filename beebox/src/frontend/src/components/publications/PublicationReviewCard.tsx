@@ -1,7 +1,7 @@
 /** Shared authoritative publication state and member review controls. */
 
 import { useState } from "react";
-import { trpc, type RouterOutput } from "../../lib/trpc";
+import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";

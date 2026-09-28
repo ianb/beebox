@@ -12,7 +12,7 @@ resolution: implemented
 > workstream's first round; 2734eef66..55313f2cf this second round). The favicon,
 > PWA manifest icons, apple-touch-icon, notification icon, and box-selector tiles
 > all now show the box's own mark, rendered server-side from the root landmark
-> card's `symbol` (`beebox/src/core/box/box-icon.ts`,
+> card's `symbol` (`beebox/src/core/box/box-icon.ts` (moved to `beebox/src/core/box/icon.ts`),
 > `beebox/src/webapp/routes/box-identity-assets.ts`) rather than a new
 > `config/box.json` field as this issue originally proposed — the design
 > question resolved by reusing the *existing* per-directory `symbol` on the
@@ -26,7 +26,7 @@ resolution: implemented
 >   into bytes an unauthenticated caller can fetch. An image symbol still
 >   renders correctly in-app (tab title's `mark` slot, selector tiles), just
 >   not on those external surfaces.
-> - The hub's own landing page (`src/hub/box-picker.ts`) still serves an
+> - The hub's own landing page (`src/hub/box-picker.ts` (moved to `beebox/src/hub/server/box-picker.ts`)) still serves an
 >   unstamped document — no per-box icon there since it's fleet-wide, not
 >   scoped to one box.
 

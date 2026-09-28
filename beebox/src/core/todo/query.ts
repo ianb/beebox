@@ -11,7 +11,7 @@
 
 import { getBoxTime } from "../../lib/time.js";
 import { loadBoxTimezone } from "../box/config.js";
-import { runCollection } from "../collection/run.js";
+import { runCollection } from "../collection/run/core.js";
 import { todoCollection, type DerivedTodo, type TodoParams, type TodoReduction } from "./collection.js";
 import type { CollectionQuery, CollectionResult, DeriveContext } from "../collection/types.js";
 

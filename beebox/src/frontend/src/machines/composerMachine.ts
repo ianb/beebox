@@ -30,7 +30,7 @@
  */
 
 import { setup, assign, emit } from "xstate";
-import type { SpeechSegment } from "../lib/audio/speech-parsing";
+import type { SpeechSegment } from "../lib/audio/speech-parsing/parse";
 
 /**
  * Device command emitted by the machine for the wiring layer to execute

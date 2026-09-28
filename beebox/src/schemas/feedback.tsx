@@ -13,7 +13,7 @@
  */
 
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 
 const FeedbackType = z.enum(["query-response", "comment", "brief"]);
 export type FeedbackTypeValue = z.infer<typeof FeedbackType>;

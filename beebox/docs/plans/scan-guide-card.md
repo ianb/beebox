@@ -32,40 +32,40 @@ This is a subplan of `docs/implemented-plans/scanner-ingest.md` (Track 6 reshape
   params, custom error classes, "Never silently ignore errors".
 - Precedent: the guide system itself — `config/intake.guide.card` /
   `config/calendar.guide.card`, `DOMAIN_SEEDS`
-  (`src/schemas/guide-templates.tsx:23`), and the triage guess-path
-  `learning:` hook (`src/core/triage/routing.ts:117-127`).
+  (`src/schemas/guide-templates.tsx:23` (moved to `beebox/src/schemas/guide/templates.tsx`)), and the triage guess-path
+  `learning:` hook (`src/core/triage/routing.ts:117-127` (moved to `beebox/src/core/triage/run/routing.ts`)).
 
 ## What already exists
 
 All of this is reused; nothing is rebuilt.
 
-- **Guide schema + parse + compile.** `src/schemas/guide-elements.tsx:103-113`
+- **Guide schema + parse + compile.** `src/schemas/guide-elements.tsx:103-113` (moved to `beebox/src/schemas/guide/schema.tsx`)
   (`guideFields`: `version`, `job-types`, `applies-to`, `triage-rules`,
   `default-action`, `actions`, `experiments`, `reactions`, `context-notes`).
   Per-rule evidence model at `guide-elements.tsx:58-64`: *"confidence:
   ConfidenceLevel.default('low'), source: BeliefSource.default('inferred')"*.
-  `parseGuideCard(content)` (`src/schemas/guide-parse.tsx:71-83`) and
-  `compileGuide(parsed, guideName)` (`src/schemas/guide-compile.tsx:15-95`)
+  `parseGuideCard(content)` (`src/schemas/guide-parse.tsx:71-83` (moved to `beebox/src/schemas/guide/parse.tsx`)) and
+  `compileGuide(parsed, guideName)` (`src/schemas/guide-compile.tsx:15-95` (moved to `beebox/src/schemas/guide/compile.tsx`))
   turn a card into action-only markdown (strips evidence metadata,
   hypothesis-confidence rules, concluded experiments, past context). Reused
   as-is — no compile changes.
 - **Guide discovery + derived docs.** `compileConfigGuides`
-  (`src/core/docs-gen/compile.ts:145-156`) flat-readdirs `config/` for
+  (`src/core/docs-gen/compile.ts:145-156` (moved to `beebox/src/core/docs-gen/compile/core.ts`)) flat-readdirs `config/` for
   `*.guide.card` and writes `_content/docs/generated/<name>-guide.md`; a new
   `config/scan.guide.card` is picked up with zero code change, appears in the
-  always-loaded guides index (`src/core/agent-guide/extensibility.ts:29-42`),
+  always-loaded guides index (`src/core/agent-guide/extensibility.ts:29-42` (moved to `beebox/src/core/agent-guide/guide/extensibility.ts`)),
   and recompiles on edit via `refreshDerivedRules`
   (`src/core/refresh-derived-rules.ts:15-25`). Reused untouched.
-- **Guide seeds.** `DOMAIN_SEEDS` (`src/schemas/guide-templates.tsx:23-179`)
+- **Guide seeds.** `DOMAIN_SEEDS` (`src/schemas/guide-templates.tsx:23-179` (moved to `beebox/src/schemas/guide/templates.tsx`))
   has `intake`, `calendar`, `drive`, `chat`; `createInitialGuideTemplate`
   falls back to a generic template for unknown names
   (`guide-templates.tsx:188-207`). Extended: this plan adds a `scan` seed.
 - **The current mechanism being replaced.** `readScanContextFile`
-  (`src/core/commands/scan-import-session.ts:131-143`) reads box-root
+  (`src/core/commands/scan-import-session.ts:131-143` (moved to `beebox/src/core/commands/scan-import/session.ts`)) reads box-root
   `CLAUDE_SCANS.md` / `claude_scans.md`; `resolveBoxholderContext`
   (`scan-import-session.ts:149-164`) joins it with `--context` using
   `"\n\n---\n\n"`; `buildScanPrompt`
-  (`src/core/commands/scan-import-gemini.ts:145-166`) prepends it as a
+  (`src/core/commands/scan-import-gemini.ts:145-166` (moved to `beebox/src/core/describe-images/gemini.ts`)) prepends it as a
   `# Context from the boxholder` section with a "DO NOT invent
   identifications" guardrail. The photo flow is the only consumer
   (`scan-import.ts:220`); document mode never uses it. The guardrail,
@@ -76,8 +76,8 @@ All of this is reused; nothing is rebuilt.
   ref?, proposal }`); `bbx answer` spawns a `question-followup-job` whose
   instructions record the outcome as a `source: user-stated` belief in the
   named sink (`src/schemas/question-followup-job.ts:26-68`). Precedent user:
-  the triage guess path (`src/core/triage/routing.ts:117-127`). Reused: the
-  three scan question emitters in `src/core/commands/scan-import-cards.ts`
+  the triage guess path (`src/core/triage/routing.ts:117-127` (moved to `beebox/src/core/triage/run/routing.ts`)). Reused: the
+  three scan question emitters in `src/core/commands/scan-import-cards.ts` (moved to `beebox/src/core/commands/scan-import/cards.ts`)
   (`emitPhotoBundle`:77-143, `emitOrphanBackQuestion`:156-185,
   `emitUnsureQuestion`:187-214) gain a `learning:` field.
 - **Retro loop.** `bbx retro scan`/integrate already targets any
@@ -139,14 +139,14 @@ accrete as beliefs.
      This answers "what do applies-to/job-types mean for a pipeline-consumed
      guide": job-types = auto-load routing for job agents (unused here);
      applies-to = the human/agent-legible description in the guides index.
-2. **`scan` seed in `DOMAIN_SEEDS`** (`src/schemas/guide-templates.tsx`):
+2. **`scan` seed in `DOMAIN_SEEDS`** (`src/schemas/guide-templates.tsx` (moved to `beebox/src/schemas/guide/templates.tsx`)):
    `jobTypes: ""`; `appliesTo` describing scan-import photo extraction; one
    `source: "default"` triage rule restating the disambiguation-only rule;
    one `Ask User` action (create a question card in `box/questions/`);
    `defaultAction: Ask User`; initial experiment (priors reduce misread
    names/dates; record answered scan questions as rules). Created on demand
    via `bbx create guide --name scan` — NOT added to `GUIDE_DOMAINS`
-   auto-install (`src/core/box/defaults.ts:79`); an empty scan guide on every
+   auto-install (`src/core/box/defaults.ts:79` (moved to `beebox/src/core/box/structure/defaults.ts`)); an empty scan guide on every
    box is noise, and boxes without a scanner never need one.
 3. **Extraction-side swap** (`scan-import-session.ts`): a new
    `resolveScanGuideContext(boxRoot)` returning
@@ -165,7 +165,7 @@ accrete as beliefs.
      `bbx validate config/scan.guide.card`. Hard error, not fallback — the
      alternative (scan without priors) commits misread names *silently*, the
      exact failure priors exist to prevent; and reachability is near nil
-     because `GuideSchema` is registered (`src/schemas/registry.ts:36`) so
+     because `GuideSchema` is registered (`src/schemas/registry.ts:36` (moved to `beebox/src/schemas.ts`)) so
      the per-box pre-commit `bbx validate --staged` blocks invalid guide
      commits (resilient-not-silent; codex finding 3 dispositioned in the
      review file). Note `compileConfigGuides` itself warns-and-skips

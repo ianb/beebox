@@ -33,7 +33,7 @@
 // can use named imports; the backend can't. Pull `parse` off the default.
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
-import { isExternalRef } from "../shared/ref-path.js";
+import { isExternalRef } from "../shared/ref-path/core.js";
 import { detectDisplayFormPath } from "../shared/display-path.js";
 
 // eslint-disable-next-line import-x/no-named-as-default-member

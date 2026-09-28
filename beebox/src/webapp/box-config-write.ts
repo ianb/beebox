@@ -4,11 +4,11 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { withCardLock } from "../lib/card-lock.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
-import { stageAndCommitPaths } from "../lib/git.js";
-import { isRecord } from "../lib/is-record.js";
-import { BOX_DIRS } from "../lib/paths.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
+import { isRecord } from "../shared/is-record.js";
+import { BOX_DIRS } from "../lib/paths/core.js";
 import { clearBoxConfigCache } from "../core/box/config.js";
 import { canonicalizeEmail } from "./local-users.js";
 

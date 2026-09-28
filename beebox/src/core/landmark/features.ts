@@ -15,7 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../schemas/landmark.js";
 import { isKnownFeature, isValidValue } from "../chat/features.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { loadHqDictationDefault } from "../box/config.js";
 import { mergeSeedFeatures } from "../chat/features.js";
 import { landmarkScanRelDir } from "./root-dir.js";

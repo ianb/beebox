@@ -1,5 +1,5 @@
 ---
-title: "Full-suite red: test/box-inventory.doctest.md, test/cli/lib/init.doctest.md"
+title: "Full-suite red: test/box-inventory.doctest.md (moved to `beebox/test/core/box-inventory.doctest.md`), test/cli/lib/init.doctest.md (moved to `beebox/test/core/box/structure.init.doctest.md`)"
 workstream: secret-endpoint-derivation
 area: beebox
 priority: important
@@ -14,7 +14,7 @@ commit (`28c2ed93`) over first-parent `main` blames one landing:
 
 - **Landing:** `b301ecf6` — Merge branch 'worktree-secret-endpoint-derivation'
 - **Workstream:** secret-endpoint-derivation
-- **Failing files:** `test/box-inventory.doctest.md`, `test/cli/lib/init.doctest.md`
+- **Failing files:** `test/box-inventory.doctest.md` (moved to `beebox/test/core/box-inventory.doctest.md`), `test/cli/lib/init.doctest.md` (moved to `beebox/test/core/box/structure.init.doctest.md`)
 
 Each file failed in the batched run and failed again on an isolated re-run, so
 it is not a flake by the ledger's definition. Nothing has been fixed; this is a

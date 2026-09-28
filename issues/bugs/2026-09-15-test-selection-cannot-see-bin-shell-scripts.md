@@ -18,7 +18,7 @@ of those edges is invisible.
 extensionless and outside `src/`, so it matches nothing:
 
 ```
-spawnedSourceRefs(read("beebox/test/dev/workstream-list.doctest.md")) === []
+spawnedSourceRefs(read("bin/test/workstreams.list.doctest.md")) === []
 ```
 
 Two consequences, both observed on 2026-09-14:
@@ -34,7 +34,7 @@ Two consequences, both observed on 2026-09-14:
 `92af4b79b` dropped the per-workstream emoji from `bin/lib/session-registry.sh`,
 `bin/lib/launch-session.sh` and `bin/workstreams`. The same commit updated the
 four `workstreams-app/` tests that assert the record shape — those are in the TS
-graph — and missed `beebox/test/dev/workstream-list.doctest.md`, which asserts
+graph — and missed `bin/test/workstreams.list.doctest.md`, which asserts
 the exact JSON of a `bin/workstreams list --json` row including `"emoji":"🧵"`.
 
 It was red across five full-suite runs over about two and a half hours, alerting

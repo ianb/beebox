@@ -26,7 +26,7 @@ sign of it — the dictation simply stayed at realtime quality, with nothing to
 suggest the configured service was unreachable.
 
 The server does its part correctly. `dispatchHqTranscription`
-(`beebox/src/core/transcription/index.ts`) throws `MissingOpenRouterKeyError`,
+(`beebox/src/core/transcription/index.ts` (moved to `beebox/src/core/transcription/dispatch/core.ts`)) throws `MissingOpenRouterKeyError`,
 which is `permanent: true`, carries `code: "missing_openrouter_key"`, and says
 in plain words that MAI-Transcribe-2 is reachable no other way and the
 `openrouter` secret must be granted. `POST /api/chat/transcribe-audio` returns

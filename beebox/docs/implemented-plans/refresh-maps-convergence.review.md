@@ -53,7 +53,7 @@ accurate section in the document. Verified item by item:
   *"while (validateResult.status === \"fail\" && attempt < MAX_REVIEW_RETRIES) {"*,
   and `engine-run-phase.ts:31`: *"export const MAX_REVIEW_RETRIES: number = 1;"*.
   Verified.
-- **`gitBoxPrefix`** — `src/lib/git.ts:116-117`:
+- **`gitBoxPrefix`** — `src/lib/git.ts:116-117` (moved to `beebox/src/lib/git/core.ts`):
   *"export async function gitBoxPrefix(boxRoot: string): Promise<string> {"* /
   *"return (await simpleGit(boxRoot).revparse([\"--show-prefix\"])).trim();"*, used at
   `precheck-listing.ts:103`: *"const prefix = await gitBoxPrefix(boxRoot);"*. Verified.
@@ -145,7 +145,7 @@ wrong or missing:
   running after the agent; a throw from `runRunAgents` at
   `engine-run-phase.ts:224` skips line 225 entirely. Verified there is no
   `try`/`catch` around it. In fairness to the plan, the *specific* case it names
-  — max-turns — does not throw: `src/core/agent/run.ts:121`:
+  — max-turns — does not throw: `src/core/agent/run.ts:121` (moved to `beebox/src/core/agent/invoke/run.ts`):
   *"const isError = resultMessage.is_error || resultMessage.subtype !== \"success\";"*
   and `:143`: *"return { ...base, success: false, error };"*. So max-turns
   returns `success: false` and is absorbed as the plan claims. The unhandled-throw
@@ -333,7 +333,7 @@ Explicitly covered and found no problem with:
   at `head`. The plan's diagnosis is correct and the docstring at
   `finalize.ts:119-122` does over-promise. The *fix* is where the problems are, not
   the diagnosis.
-- **Max-turns does not throw** — `src/core/agent/run.ts:121` and `:143` show a
+- **Max-turns does not throw** — `src/core/agent/run.ts:121` (moved to `beebox/src/core/agent/invoke/run.ts`) and `:143` show a
   non-success SDK subtype becomes `success: false`, and
   `engine-run-phase.ts:143-145` absorbs it without rethrowing. Track 4's core
   safety claim holds for the specific case it names.
@@ -344,7 +344,7 @@ Explicitly covered and found no problem with:
   of stderr matching is well founded.
 - **Doctest writability** — `makeTmpBox({ git: true })` (`doctest-helpers.ts:39, 56-62`)
   gives a real git repo with `write`/`read`/`commitAll`, and
-  `test/helpers/fake-agent.ts` supports scripting a failing invocation via its
+  `test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`) supports scripting a failing invocation via its
   `act` outcome (`FakeActOutcome.success?: boolean`). Every doctest the plan names
   is writable with existing helpers, with the exception of the Track 4
   agent-failure test, which is blocked by Finding 1 rather than by tooling.

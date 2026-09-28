@@ -21,13 +21,13 @@ import {
   createCodexCliService,
   redactCodexCliDetail,
   type CodexCliService,
-} from "../../services/codex-cli.js";
-import { providerEnvAdditions } from "../provider-env.js";
+} from "../../services/codex-cli/core.js";
+import { providerEnvAdditions } from "../provider-env/core.js";
 import { isThirdPartyModel } from "../../shared/agent-models.js";
 import { ProviderSetupError } from "../provider-setup-error.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
-export { redactCodexCliDetail as redactCodexAuthDetail } from "../../services/codex-cli.js";
+export { redactCodexCliDetail as redactCodexAuthDetail } from "../../services/codex-cli/core.js";
 
 /** The single actionable message shown when Claude Code has no active login. */
 export const CLAUDE_NOT_LOGGED_IN_MESSAGE =

@@ -27,8 +27,8 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import type { EventBus } from "../event-bus.js";
-import { BOX_DIRS } from "../../lib/paths.js";
+import type { EventBus } from "../event-bus/core.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
 import { clearWatchLimit, recordWatchLimit } from "./watch-limit.js";
 
 const watchers = new Map<string, BoxWatcher>();

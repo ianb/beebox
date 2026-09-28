@@ -19,7 +19,7 @@
  * unbounded retention.
  */
 
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { isRealUserMessage } from "./session-real-user.js";
 import type { SessionEntry } from "./session-entry.js";
 

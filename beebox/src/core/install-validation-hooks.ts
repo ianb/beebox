@@ -41,7 +41,7 @@ import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:c
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { withDocId } from "./docs-gen/shared.js";
 
 /**

@@ -17,12 +17,12 @@ Agent SDK `0.3.265` / Claude Code `2.1.265`:
 > `cd` now persists across turns."*
 
 Every beebox agent and chat thread is a multi-turn SDK session started with
-`cwd: boxRoot` (`src/core/agent/run.ts`). Until now, each new user message put
+`cwd: boxRoot` (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`)). Until now, each new user message put
 the agent's shell back at the box root; from `0.3.265` on, a `cd` the agent made
 in turn 1 is still in effect in turn 5.
 
 **Where that lands here is the commit-nudge retry.**
-`ensureAgentCommitted` (`src/core/agent/commit.ts`) checks the tree with
+`ensureAgentCommitted` (`src/core/agent/commit.ts` (moved to `beebox/src/core/agent/invoke/commit.ts`)) checks the tree with
 `getStatus(boxRoot)` — a child process given the box root explicitly — and then,
 if work is uncommitted, **resumes the agent session** with `COMMIT_NUDGE_PROMPT`
 so the agent commits through its own Bash shell. Those two halves no longer

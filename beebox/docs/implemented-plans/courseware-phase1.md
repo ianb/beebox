@@ -145,7 +145,7 @@ the primary entry point and must be reliably invokable — **confirmed: box-leve
 - **`instructions` → box rule** — `generateRules(boxRoot)` writes path-globbed
   `.claude/rules/card-<type>.md`, idempotent (`init-rules.ts:65-114`). **Reuse** for all four
   types.
-- **Schema registration** — `cardSchemas[]` in **`src/schemas/registry.ts:54`**; template
+- **Schema registration** — `cardSchemas[]` in **`src/schemas/registry.ts:54` (moved to `beebox/src/schemas.ts`)**; template
   registry (`templates-builtins.ts:28`); `BOX_DIRS` (`paths.ts:24`). Hyphenated type names work.
   **Reuse.**
 - **Box-aware lint** — `card-lint.ts` already does the box-aware ref-existence walk

@@ -8,7 +8,7 @@ The caller owns cleanup and passes only the publication name over the RPC.
 ```ts setup
 import { mkdir, readFile, symlink, truncate, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { preparePublication, PUBLICATION_FILE_LIMITS } from "../../src/publish/prepare.js";
+import { preparePublication, PUBLICATION_FILE_LIMITS } from "../../src/publish/prepare/core.js";
 import { releaseIdForFiles } from "../../src/publish/manifest-edge.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 

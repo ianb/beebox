@@ -4,7 +4,7 @@ import { QueryClientProvider, useIsFetching, useIsMutating } from "@tanstack/rea
 // client instance restarts tRPC's per-client op numbering and collides
 // with the first on the shared WebSocket ("Duplicate id N"). See the
 // comment on trpcClient in trpc.ts before "simplifying" this.
-import { trpc, trpcClient } from "./index.js";
+import { trpc, trpcClient } from "./client.js";
 import { queryClient } from "./query-client";
 
 // Page-readiness signal for headless browser automation (bin/browse / agents).

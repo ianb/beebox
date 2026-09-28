@@ -9,8 +9,8 @@ priority: normal
 ---
 
 Today only Claude subscription auth works: the ambient `ANTHROPIC_API_KEY`
-is deliberately force-stripped (`src/cli/bootstrap.ts`,
-`src/core/script-env.ts` — bill-safety, keep this) and there is no way to
+is deliberately force-stripped (`src/cli/bootstrap.ts` (moved to `beebox/src/cli/entry/bootstrap.ts`),
+`src/core/script-env.ts` (moved to `beebox/src/core/script-env/core.ts`) — bill-safety, keep this) and there is no way to
 supply a key at all. For the soft launch that's acceptable — the audience
 is assumed to have a subscription
 ([soft-launch posture](../decisions/2026-07-20-soft-launch-posture.md)) —

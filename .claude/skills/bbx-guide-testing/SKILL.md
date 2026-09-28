@@ -31,7 +31,7 @@ line (`docs/testing.md` opens with this).
   deliberately no checkpoint-resume.
 - **Service fakes** (`src/services/`) — every external dependency has a
   typed fake with observable state; tests never hit real services.
-  `test/helpers/fake-agent.ts` enforces real SDK session semantics.
+  `test/core/fake-agent.ts` enforces real SDK session semantics.
 - **Traditional TAP tests** (`test/*.test.ts`) — reserved for things
   that would be circular as doctests, e.g. testing the doctest
   infrastructure itself. Not the default; prefer a doctest.

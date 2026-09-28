@@ -135,7 +135,7 @@ not, because the core box ontology covers it.
 
 ## Dependencies
 
-The [source file layout review](../code-quality/2026-09-26-source-file-layout-review-and-enforcement.md)
+The [source file layout review](../closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md)
 is setting the directory boundaries now. The ontology files should follow
 the same boundaries, so the placement design should wait for that result or
 be done together with it.

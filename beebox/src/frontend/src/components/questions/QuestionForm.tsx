@@ -14,9 +14,9 @@
  */
 
 import { useState } from "react";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { bbxSource } from "../../lib/source-tag";
-import { RadioGroup, TextareaField } from "../ui/fields";
+import { RadioGroup, TextareaField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
@@ -24,7 +24,7 @@ import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Heading } from "../ui/Heading";
-import type { RouterOutput } from "../../lib/trpc";
+import type { RouterOutput } from "../../lib/trpc/client";
 
 export type QuestionInfo = RouterOutput["status"]["questions"]["items"][number];
 

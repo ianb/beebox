@@ -2,7 +2,7 @@ import { constants } from "node:fs";
 import { mkdir, lstat, open, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { parseCardText } from "../core/card-io.js";
 import { PublicationSchema, createPublicationCardTemplate } from "../schemas/publication.js";

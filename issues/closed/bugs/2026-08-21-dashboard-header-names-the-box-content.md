@@ -25,4 +25,4 @@ full `boxRoot` path as a subtitle.
 Consequence: the largest text on the dashboard names no box, and the machine's
 directory layout is on screen instead. The nav's place chip is the only thing
 that says `test1`. The box's real name is available — `AppNav` resolves it from
-the boxes list (`beebox/src/frontend/src/components/AppNav.tsx:127`).
+the boxes list (`beebox/src/frontend/src/components/AppNav.tsx:127` (moved to `beebox/src/frontend/src/components/AppNav/nav.tsx`)).

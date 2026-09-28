@@ -50,7 +50,7 @@ turned up no other open item.
   already one door for path-scoped commits (`stageAndCommitPaths`) and one
   cross-process lock primitive (`file-lock.ts`). This plan adds no third
   mechanism; it composes those two and deletes the one bespoke commit
-  serializer that predates them (`src/core/capture/prepare.ts:136`).
+  serializer that predates them (`src/core/capture/prepare.ts:136` (moved to `beebox/src/core/capture/prepare/core.ts`)).
 - `docs/engineering-principles.md` **§10 Testability is architectural.** A
   single-process test cannot demonstrate cross-process exclusion. The lock's
   proof is a multi-process doctest, following `test/lib/file-lock.doctest.md`.
@@ -66,27 +66,27 @@ turned up no other open item.
 | Cross-process lock on `proper-lockfile`, with mtime-freshness stale recovery, `LockHeldError`, and a bounded-wait wrapper `withFileLock({lockPath, metadata, waitMs}, fn)` | `src/lib/file-lock.ts:437` | **Reuse** — unchanged. |
 | Stale profiles: `default` 5 min, `request` 15 s | `src/lib/file-lock.ts:171-174` | **Reuse `default`.** Our critical section runs a `git` subprocess, which is exactly the case the module comment says stays on `default`: *"a lock whose critical section runs a subprocess or arbitrary caller work stays on `default`."* The 5-min stale window vs. the 60 s wait budget is a real tension — see Track A.4. |
 | Reentrancy detection by `AsyncLocalStorage` of held keys | `src/lib/card-lock.ts:103-121`; the error class at `src/lib/card-lock.ts:82-92` | **Reuse the mechanism, invert the decision** — see "Reentrant pass-through vs. throwing". |
-| The single path-scoped stage+commit door | `src/lib/git.ts:309` `stageAndCommitPaths` | **Reuse** — gains a lock around its span. |
-| One-shot index-lock retry | `src/lib/git.ts:146` `withIndexLockRetry` | **Keep** — it is the only defence against a non-cooperating writer (a box agent's raw `git`, a git-lfs hook). It stops being the primary mechanism and becomes the honest reporter of external contention (Track D). |
-| Index-lock error detection by message match | `src/lib/git-internal.ts:43-45`: `return message.includes("index.lock");` | **Reuse, and follow its precedent** for the cross-process marker in Track D. |
-| Bespoke in-process commit chain for capture | `src/core/capture/prepare.ts:102,136,152` | **Delete** — subsumed by the new lock's in-process layer. |
-| Deferral of tick's housekeeping commit while a chat is active | `src/cli/commands/tick-helpers.ts:189-201` | **Reuse, unchanged** — see "NOT in scope". |
+| The single path-scoped stage+commit door | `src/lib/git.ts:309` (moved to `beebox/src/lib/git/core.ts`) `stageAndCommitPaths` | **Reuse** — gains a lock around its span. |
+| One-shot index-lock retry | `src/lib/git.ts:146` (moved to `beebox/src/lib/git/core.ts`) `withIndexLockRetry` | **Keep** — it is the only defence against a non-cooperating writer (a box agent's raw `git`, a git-lfs hook). It stops being the primary mechanism and becomes the honest reporter of external contention (Track D). |
+| Index-lock error detection by message match | `src/lib/git-internal.ts:43-45` (moved to `beebox/src/lib/git/internal.ts`): `return message.includes("index.lock");` | **Reuse, and follow its precedent** for the cross-process marker in Track D. |
+| Bespoke in-process commit chain for capture | `src/core/capture/prepare.ts:102 (moved to `beebox/src/core/capture/prepare/core.ts`),136,152` | **Delete** — subsumed by the new lock's in-process layer. |
+| Deferral of tick's housekeeping commit while a chat is active | `src/cli/commands/tick-helpers.ts:189-201` (moved to `beebox/src/cli/tick-helpers.ts`) | **Reuse, unchanged** — see "NOT in scope". |
 | Multi-process doctest harness (spawn a real child, SIGKILL it mid-hold) | `test/lib/file-lock.doctest.md:40-56`, `test/helpers/file-lock-child.ts` | **Reuse** — the new tests copy this shape. |
 
 Multi-operation git spans that are today unserialized *as spans* (each gets an
 explicit lock in Track C):
 
-- `src/core/procedure/engine.ts:157-158` — `stageAll` + `commit`. This is the
+- `src/core/procedure/engine.ts:157-158` (moved to `beebox/src/core/procedure/engine/core.ts`) — `stageAll` + `commit`. This is the
   span the reported failure hit: a scheduled procedure's start commit, ~6 s in.
-- `src/core/procedure/engine-step.ts:147,177,254` — three more `stageAll` + `commit`.
-- `src/core/procedure/engine-orchestrate.ts:100-101` — `stageAll` + `commit`.
-- `src/core/procedure/engine-phase.ts:171-192` — `getStatus` → `stageAll` → `commit`.
-- `src/core/agent/commit.ts:83-87` — `stageAll` + `commit`. **Only these lines.**
+- `src/core/procedure/engine-step.ts:147 (moved to `beebox/src/core/procedure/engine/step.ts`),177,254` — three more `stageAll` + `commit`.
+- `src/core/procedure/engine-orchestrate.ts:100-101` (moved to `beebox/src/core/procedure/engine/orchestrate.ts`) — `stageAll` + `commit`.
+- `src/core/procedure/engine-phase.ts:171-192` (moved to `beebox/src/core/procedure/engine/phase.ts`) — `getStatus` → `stageAll` → `commit`.
+- `src/core/agent/commit.ts:83-87` (moved to `beebox/src/core/agent/invoke/commit.ts`) — `stageAll` + `commit`. **Only these lines.**
   The surrounding function (`commit.ts:60-87`) also calls `agent.invoke` at
   `commit.ts:69`; wrapping the whole function would hold the git lock across a
   full agent run, which Track A.5 forbids.
-- `src/cli/commands/tick-helpers.ts:195-211` — `getStatus` → `stageAll` → `commit`.
-- `src/core/docs-gen/index.ts:345-346` — `stageFiles` + `commitPaths`, run at the
+- `src/cli/commands/tick-helpers.ts:195-211` (moved to `beebox/src/cli/tick-helpers.ts`) — `getStatus` → `stageAll` → `commit`.
+- `src/core/docs-gen/index.ts:345-346` (moved to `beebox/src/core/docs-gen/generate/core.ts`) — `stageFiles` + `commitPaths`, run at the
   **package root**, not `boxRoot`.
 - `src/cli/commands/feedback.ts:178-180` — `stageFiles` + `commitPaths`.
 
@@ -142,7 +142,7 @@ export async function withBoxGitLock<T>(dir: string, fn: () => Promise<T>): Prom
 subdirectory — they all resolve to the same lock).
 
 **Why this needs to change.** Nothing today serializes our writers against each
-other. `withIndexLockRetry` (`src/lib/git.ts:146`) sleeps 2 s once and then
+other. `withIndexLockRetry` (`src/lib/git.ts:146` (moved to `beebox/src/lib/git/core.ts`)) sleeps 2 s once and then
 throws; the reported failure exhausted it.
 
 **Direction.**
@@ -178,7 +178,7 @@ promise chain runs same-process contenders one at a time with no polling; only
 the chain head contends for `withFileLock`. Without this, two concurrent tasks
 in one `bbx serve` poll at `LOCK_RETRY_MS` = 100 ms
 (`src/lib/file-lock.ts:423`) — a latency the capture path measures and already
-avoids with its own chain (`src/core/capture/prepare.ts:136`). Reentrant calls
+avoids with its own chain (`src/core/capture/prepare.ts:136` (moved to `beebox/src/core/capture/prepare/core.ts`)). Reentrant calls
 (A.2) are checked **before** the queue: a nested call that enqueued would wait
 behind its own ancestor, which is an unbounded deadlock, not a bounded one.
 
@@ -244,14 +244,14 @@ our control holds it, and in that case waiting longer does not help.
    `withCardLock` → box git lock (`card-lock.ts:33-38` already tells callers to
    wrap the git commit inside the card lock), and `question-transition.ts`'s
    file lock → box git lock. Nothing goes the other way, so there is no cycle;
-   the rule keeps it that way. `src/core/agent/commit.ts:69` is the concrete
+   the rule keeps it that way. `src/core/agent/commit.ts:69` (moved to `beebox/src/core/agent/invoke/commit.ts`) is the concrete
    trap this rule exists to prevent (see Track C).
 2. *Nothing invoked from a git hook may take the box git lock.* Verified true
    today: the installed pre-commit hook runs `git annex pre-commit .`,
    `bbx validate --staged`, `bbx validate --links`, and
    `bbx attachments check-unlisted` (`src/core/install-validation-hooks.ts:248-285`);
    of these only `validate` touches git at all, and only to read
-   (`src/cli/commands/validate.ts:28` imports `getStatus` and nothing else). If
+   (`src/cli/commands/validate.ts:28` (moved to `beebox/src/cli/commands/validate/command.ts`) imports `getStatus` and nothing else). If
    the invariant is ever broken, A.4's fail-open makes the consequence a 60 s
    stall and a loud log, not a deadlock.
 
@@ -259,14 +259,14 @@ our control holds it, and in that case waiting longer does not help.
 `test/lib/git-lock.doctest.md`, with no `git.ts` changes yet. No open questions
 inside it.
 
-### Track B — take the lock in `src/lib/git.ts`
+### Track B — take the lock in `src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`)
 
 **What.** Every index-mutating export wraps itself in `withBoxGitLock`;
 `stageAndCommitPaths` wraps its whole span.
 
 **Why this needs to change.** A lock nobody takes is not a lock. And
 `stageAndCommitPaths` is check-then-act (`pathsHaveChanges` → `stageFiles` →
-`stagedPaths` → `commitPaths`, `src/lib/git.ts:309-336`); only a span lock makes
+`stagedPaths` → `commitPaths`, `src/lib/git.ts:309-336` (moved to `beebox/src/lib/git/core.ts`)); only a span lock makes
 it atomic.
 
 **Direction.**
@@ -275,7 +275,7 @@ it atomic.
   `unstageFiles`, `stageAll`, `commit`, `commitPaths`, `stageAndCommitPaths`,
   `resetHard`, `clean`, `revertToSnapshot`, `createBranch`, `checkoutBranch`.
   The last two are included because `git checkout` rewrites the index and the
-  working tree (`src/lib/git.ts:468,475`) and so contends with every commit.
+  working tree (`src/lib/git.ts:468 (moved to `beebox/src/lib/git/core.ts`),475`) and so contends with every commit.
 - **Not wrapped, deliberately:** `initRepo` (no repo yet); `createTag` /
   `deleteTag` (`git.ts:482,489` — these write refs, not the index);
   `pushToRemote` (no index); and every reader — `getStatus`, `getLog`,
@@ -295,7 +295,7 @@ nested call does not deadlock and acquires the file lock exactly once.
 ### Track C — give multi-operation spans one lock
 
 **What.** The nine call sites listed in "What already exists" wrap their span in
-`withBoxGitLock`, and `src/core/capture/prepare.ts`'s bespoke `commitChain` /
+`withBoxGitLock`, and `src/core/capture/prepare.ts` (moved to `beebox/src/core/capture/prepare/core.ts`)'s bespoke `commitChain` /
 `withCommitLock` / `commitPathsSerialized` are deleted in favour of it.
 
 **Why this needs to change.** `stageAll` then `commit` under two separate lock
@@ -320,7 +320,7 @@ The inner calls pass through reentrantly. `docs-gen` passes `packageRoot`,
 which resolves to the same lock as `boxRoot` — that equivalence gets a doctest
 assertion, since it is the one place the git-dir keying is load-bearing.
 
-**`src/core/agent/commit.ts` is the exception and must not follow the shape
+**`src/core/agent/commit.ts` (moved to `beebox/src/core/agent/invoke/commit.ts`) is the exception and must not follow the shape
 above.** `ensureAgentCommitted` (`commit.ts:60-87`) runs `getStatus` →
 `agent.invoke` → `getStatus` → `stageAll` → `commit`. Only lines 83-87 go inside
 the lock. The two `getStatus` calls stay outside it: they are advisory
@@ -348,9 +348,9 @@ silent, and never ambiguous about which failure happened.
 
 **Direction.**
 
-- `withIndexLockRetry` (`src/lib/git.ts:146`) throws a new `GitIndexLockError`
+- `withIndexLockRetry` (`src/lib/git.ts:146` (moved to `beebox/src/lib/git/core.ts`)) throws a new `GitIndexLockError`
   (subclass of `GitCommandError`, defined beside `isIndexLockError` in
-  `src/lib/git-internal.ts`) when the retried operation fails on
+  `src/lib/git-internal.ts` (moved to `beebox/src/lib/git/internal.ts`)) when the retried operation fails on
   `isIndexLockError` again — i.e. an external holder we could not wait out.
   After Track A this is the *only* contended failure type: a lock we cannot
   acquire no longer produces an error at all (A.4 proceeds unlocked), so
@@ -361,13 +361,13 @@ silent, and never ambiguous about which failure happened.
 - **Crossing the process boundary.** A scheduled task is a child process:
   `execWithTimeout` turns a non-zero exit into `Command failed with exit code N`
   plus an output tail (`src/lib/exec-with-timeout.ts:136-142`), `tick` stores
-  `errorMessage(err)` (`src/cli/commands/tick-helpers.ts:264`), and health
+  `errorMessage(err)` (`src/cli/commands/tick-helpers.ts:264` (moved to `beebox/src/cli/tick-helpers.ts`)), and health
   renders the stored string (`src/core/schedule/health.ts`). A JS error subclass
   does not survive that, so the token does the work: it reaches the parent in
   the captured stderr tail, and `tick-helpers`'s failure recording calls
   `isContendedFailure` on the message it is about to store.
   This is message-matching, chosen deliberately over restructuring the CLI's
-  exit-code semantics (`src/cli/index.ts` ends in a bare `program.parse()`, so
+  exit-code semantics (`src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`) ends in a bare `program.parse()`, so
   there is no central error handler to give a distinct exit code without
   changing every command's failure path). It follows the in-house precedent:
   `git-internal.ts:45` already detects this exact condition by
@@ -544,11 +544,11 @@ question.
   assumed away.
 - **Deferring scheduled work on the `active-chats` signal** (the issue's part
   3). Two reasons. First, it is **already built** for the case it fits:
-  `findBusyBlockers` (`src/cli/commands/tick-helpers.ts:76-91`) blocks a whole
+  `findBusyBlockers` (`src/cli/commands/tick-helpers.ts:76-91` (moved to `beebox/src/cli/tick-helpers.ts`)) blocks a whole
   tick on an active chat, and `handlePostSuccess` (`tick-helpers.ts:189-201`)
   re-checks immediately before the housekeeping commit. Second, it **would not
   have prevented the reported failure**: that procedure died ~6.5 s into its own
-  run, at `src/core/procedure/engine.ts:157`, from contention that arose
+  run, at `src/core/procedure/engine.ts:157` (moved to `beebox/src/core/procedure/engine/core.ts`), from contention that arose
   *during* the run. A pre-run deferral gate cannot see that. The lock can.
   Deferral and locking answer different questions and the issue conflates them.
 - **Batching or dropping `bbx feedback`'s commit.** See Open questions — a
@@ -600,7 +600,7 @@ cross-reference from `src/lib/file-lock.ts`'s lock table, and a line in
 
 1. **Track A** — `src/lib/git-lock.ts` + `test/lib/git-lock.doctest.md`.
    Standalone; nothing depends on it yet.
-2. **Track B** — `src/lib/git.ts` takes the lock. Depends on A.
+2. **Track B** — `src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`) takes the lock. Depends on A.
 3. **Track F (first half)** — the two-process race doctest. Depends on B. This
    is the gate: until it passes, nothing else is worth building.
 4. **Track C** — the nine explicit spans; delete capture's `commitChain`.
@@ -624,7 +624,7 @@ cross-reference from `src/lib/file-lock.ts`'s lock table, and a line in
   itself throws `LockHeldError`; and the fail-open path — with a foreign holder
   in place and a shortened budget, assert `fn` still runs, exactly once, and
   that the loud `console.error` fired.
-- `test/lib/git-concurrent-commit.doctest.md` — **the test that matters.**
+- `test/lib/git-concurrent-commit.doctest.md` (moved to `beebox/test/lib/git.concurrent-commit.doctest.md`) — **the test that matters.**
   Spawn N real child processes (following `test/helpers/file-lock-child.ts`'s
   shape) that each `stageAndCommitPaths` a distinct file into one box at the
   same moment. Assert: N commits exist; each names only its own file; each
@@ -632,7 +632,7 @@ cross-reference from `src/lib/file-lock.ts`'s lock table, and a line in
   writer errored. A single-process test cannot demonstrate this, per §10.
   Then the negative control: hold `.git/index.lock` directly past the budget and
   assert a bounded, typed `GitIndexLockError` carrying the token — not a hang.
-- `test/lib/git-lock-recovery.doctest.md` — SIGKILL a holder mid-span and assert
+- `test/lib/git-lock-recovery.doctest.md` (moved to `beebox/test/lib/git.lock-recovery.doctest.md`) — SIGKILL a holder mid-span and assert
   the next writer proceeds (via fail-open) rather than failing, and that it
   proceeds *before* the 5-minute stale window elapses. This is the regression
   test for the failure mode this design was corrected to avoid.

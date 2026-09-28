@@ -10,7 +10,7 @@ resolution: implemented
 
 **RESOLVED (implemented).** Both gaps fixed with the strict option.
 
-**(a)** `src/hub/hub-server.ts` — the Google callback now runs `decideHubAuth`
+**(a)** `src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`) — the Google callback now runs `decideHubAuth`
 FIRST, before any `resolveEndpoint`. An unauthenticated request redirects to
 login regardless of slug (no `resolveEndpoint`, so no lazy cold-start and no
 configured-slug oracle). The access check uses the wake-free `boxRootBySlug`
@@ -26,9 +26,9 @@ completed by that same identity; a nonce minted in standalone open mode
 (`createdBy: null`) falls through, since possession of the 256-bit nonce is the
 secret there.
 
-Tests: `test/hub/hub-router.doctest.md` (unauthenticated known vs unknown slug
+Tests: `test/hub/hub-router.doctest.md` (moved to `beebox/test/hub/server.router.doctest.md`) (unauthenticated known vs unknown slug
 both 302→login with `ensureCalls === 0`) and
-`test/webapp/routes/routes-google-oauth-callback.doctest.md` (owner-bound nonce:
+`test/webapp/routes/routes-google-oauth-callback.doctest.md` (moved to `beebox/test/webapp/routes/auth/google.oauth-callback.doctest.md`) (owner-bound nonce:
 anon→403, stranger→403, initiating owner→302; no tokens written on rejection).
 
 DECISIONS TAKEN (were `needs: [decision]`): (a) resolve-first was a deliberate
@@ -48,7 +48,7 @@ hole the gate closed (nonce required before token persist) is genuinely
 closed; these are the next layer.
 
 **(a) Box-wake + slug enumeration before auth (hub path).** In
-`src/hub/hub-server.ts`, the Google callback pulls an attacker-controlled slug
+`src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`), the Google callback pulls an attacker-controlled slug
 from `state` and calls `resolveEndpoint(boxSlug, ...)` at `:388` — which
 cold-starts a lazy box — *before* the auth check at `:397`. So an
 unauthenticated `GET /auth/google-services/callback?state=<guessed-slug>:x`
@@ -56,12 +56,12 @@ wakes a real box; a nonexistent slug returns `400 unknown_box` without the
 wake. That difference is a configured-slug oracle plus an unauthenticated
 box-wake (DoS-ish). The generic mobile wall is ordered correctly (invalid
 bearer on real vs nonexistent slug both 401 before resolution); this specific
-callback resolves first. (`src/hub/hub-server.ts:381-400` even carries a
+callback resolves first. (`src/hub/hub-server.ts:381-400` (moved to `beebox/src/hub/server/core.ts`) even carries a
 comment explaining the resolve-first ordering as a deliberate lazy-box
 convenience — that's the tension to resolve.)
 
 **(b) Nonce is not owner-bound.** The callback stores `createdBy`
-(`src/connectors/google-oauth-state.ts:131,171`) but never checks it: the box
+(`src/connectors/google-oauth-state.ts:131 (moved to `beebox/src/google/oauth-state.ts`),171`) but never checks it: the box
 callback at `src/webapp/routes/admin.ts:48` consumes the nonce without
 comparing `consumed.createdBy` to the completing session's identity. In hub
 mode only `canAccessBox` is checked, not that the session is the initiator. So

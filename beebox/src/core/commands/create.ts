@@ -8,23 +8,23 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
-import { parseCardName, isCardFile } from "../../lib/paths.js";
+} from "../command-types.js";
+import { parseCardName, isCardFile } from "../../lib/paths/core.js";
 import { resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import {
   getTemplate,
   getDefaultTemplate,
   getTemplateNames,
-} from "../../schemas/index.js";
+} from "../../templates-registry.js";
 import { loadCardFromText } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 async function validateGeneratedCard(input: {
   boxRoot: string;
@@ -227,7 +227,7 @@ async function executeCreate(
 }
 
 // Register the command
-registerCommand({
+export const createCommand: CommandDefinition = {
   name: "create",
   description: "Create a new card from template",
   args: [
@@ -270,5 +270,5 @@ registerCommand({
     },
   ],
   execute: executeCreate,
-});
+};
 

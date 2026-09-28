@@ -1,6 +1,6 @@
 # Chat Review: a run end to end
 
-`src/core/chat/review/run.ts` walks the husks whose transcripts have grown,
+`src/core/chat/review/run/core.ts` walks the husks whose transcripts have grown,
 asks a reviewer for a title / `contains` / account, writes them to the husk, and
 advances the journal.
 
@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
-import { runChatReview } from "../../../../src/core/chat/review/run.js";
+import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { loadReviewState, saveReviewState } from "../../../../src/core/chat/review/state.js";
 import { MAX_SESSION_ENTRIES, getSessionMetadata } from "../../../../src/cli/lib/session.js";
 

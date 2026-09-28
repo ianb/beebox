@@ -20,7 +20,7 @@
  * public types and orchestrates the detection.
  */
 
-import { getHead } from "../../lib/git.js";
+import { getHead } from "../../lib/git/core.js";
 import { loadMapIgnorePatterns, unworkableReason, type SkipReason } from "./gate.js";
 import { loadMapState } from "./state.js";
 import {
@@ -30,8 +30,8 @@ import {
   type BoxTree,
   type ListingUnavailable,
 } from "./precheck-listing.js";
-import { invariant } from "../../lib/invariant.js";
-import type { Result } from "../../lib/result.js";
+import { invariant } from "../../shared/invariant.js";
+import type { Result } from "../../shared/result.js";
 
 export interface MapTask {
   /** Path of the MAP.md to write, relative to box root. */

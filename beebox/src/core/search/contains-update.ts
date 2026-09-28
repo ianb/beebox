@@ -8,9 +8,9 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { parse as parseYaml } from "yaml";
-import { getSearchableTypes } from "../../schemas/registry.js";
+import { getSearchableTypes } from "../../schemas.js";
 import { buildLoadContext } from "../load-context.js";
 import { cardTypeFromPath } from "./walk.js";
 import { isRecord } from "../card-io.js";
@@ -20,7 +20,7 @@ import {
   saveContainsState,
   rebaseContains,
 } from "./contains-state.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /** Base class so callers can catch every contains-update failure at once. */
 export class ContainsUpdateError extends Error {

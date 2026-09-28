@@ -6,8 +6,9 @@
  */
 
 import { CommentaryView } from "../components/CommentaryView";
-import { registerFileType } from "./index";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "commentary" }, {
+export const commentaryRenderer: RendererEntry = {
+  selector: { type: "commentary" },
   renderer: { name: "Commentary", Component: CommentaryView, priority: 100 },
-});
+};

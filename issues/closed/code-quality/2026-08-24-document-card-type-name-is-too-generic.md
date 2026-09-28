@@ -12,7 +12,7 @@ resolution: implemented
 
 > **Closed 2026-08-24** (branch `worktree-document-card-view`): decision made
 > and executed — see the Decision section below. Renamed to `pdf.card` via
-> `scripts/migrate/document-to-pdf.ts`, registered as `document-to-pdf` in
+> `scripts/migrate/document-to-pdf.ts` (moved to `beebox/src/scripts/migrate/document-to-pdf.ts`), registered as `document-to-pdf` in
 > `src/core/migrations.ts` with a collision guard.
 
 Two card types, near-synonymous names, unrelated purposes:
@@ -96,7 +96,7 @@ sketched above ("rename the extracted type"). Reasoning:
 nothing), even though the no-future-rename rationale that originally motivated
 the generic name is what this decision walks back.
 
-Implemented via `scripts/migrate/document-to-pdf.ts` (registered as
+Implemented via `scripts/migrate/document-to-pdf.ts` (moved to `beebox/src/scripts/migrate/document-to-pdf.ts`) (registered as
 `document-to-pdf` in `src/core/migrations.ts`); see
 `issues/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md` for
 the migration follow-up.

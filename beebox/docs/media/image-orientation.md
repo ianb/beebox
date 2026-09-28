@@ -34,7 +34,7 @@ orders) and hostile inputs in
 | Browser camera | `camera.ts` draws a live `getUserMedia` video frame to a canvas — upright by construction, no EXIF | Normalized |
 | Screenshot capture / relay | Canvas / PNG capture — no EXIF | Normalized |
 | Native camera & photo library (iOS) | `NativeComposerView.swift` redraws the `UIImage` upright via `UIGraphicsImageRenderer` before JPEG/PNG compression | Normalized (Swift) |
-| Chat send (server ingress) | No codec server-side; `warnOnUnnormalizedImageOrientation` (`chat-helpers.ts`) reads the EXIF tag and **logs** a contract violation so a non-conforming client is visible | Guarded (detect, not fix) |
+| Chat send (server ingress) | No codec server-side; `warnOnUnnormalizedImageOrientation` (`chat/helpers.ts`) reads the EXIF tag and **logs** a contract violation so a non-conforming client is visible | Guarded (detect, not fix) |
 | Stored image files → `<img>` render | The `Image` primitive renders through `<img>`, whose default `image-orientation: from-image` displays them correctly | Honored at render |
 
 ## What is deliberately left (see the closed issue)

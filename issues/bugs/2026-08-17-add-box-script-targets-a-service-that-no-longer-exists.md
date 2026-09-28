@@ -102,7 +102,7 @@ slugs in fixtures and examples.
 ## What was built (2026-08-17)
 
 `deploy/add-box.sh` is now the whole process. New `bbx hub add-box <slug>
-<path>` (`beebox/src/hub/hub-config-edit.ts`) writes the `hub.json`
+<path>` (`beebox/src/hub/config-edit.ts`) writes the `hub.json`
 entry: it plans the edit, validates the candidate through the hub's own loader
 (`parseHubConfig`, extracted from `loadHubConfig`), and only then writes it
 atomically. The script validates every argument locally, `--dry-run`s the hub
@@ -129,7 +129,7 @@ only after the canary.
 ## Verification
 
 Done: the config-edit module is a doctest against fixture configs with invented
-slugs (`test/hub/hub-config-edit.doctest.md`, 25 assertions — add, idempotence,
+slugs (`test/hub/hub-config-edit.doctest.md` (moved to `beebox/test/hub/config-edit.doctest.md`), 25 assertions — add, idempotence,
 package-root-vs-`content/`, reserved slug, malformed slug, duplicate box,
 slug-repoint, missing config, unparseable config, concurrent-edit refusal); the
 CLI was exercised end to end against a scratch hub config; the full suite passes

@@ -7,7 +7,7 @@ import {
   revokeMobileDevice,
   type DeviceViewer,
 } from "../../../core/mobile/pairing.js";
-import { router, authedProcedure } from "../trpc.js";
+import { router, authedProcedure } from "../procedures.js";
 import type { TrpcContext } from "../context.js";
 
 function viewer(ctx: TrpcContext): DeviceViewer {

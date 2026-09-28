@@ -15,9 +15,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getHead } from "../../lib/git.js";
-import { invariant } from "../../lib/invariant.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { getHead } from "../../lib/git/core.js";
+import { invariant } from "../../shared/invariant.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { CLAUDE_MD, AGENTS_MD } from "../agent-instruction-files.js";
 import { listMappableDirs, readBoxTree } from "./precheck-listing.js";
 import { loadMapIgnorePatterns, unworkableReason, type SkipReason } from "./gate.js";

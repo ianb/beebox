@@ -10,7 +10,7 @@
 import * as path from "node:path";
 import { z } from "zod";
 import { boxTmpDir } from "../../lib/box-tmp.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { HQ_TRANSCRIPTION_SERVICES } from "../../shared/transcription-services.js";
 import { CaptureAudioFormatSchema } from "./audio-format.js";
 

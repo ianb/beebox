@@ -17,7 +17,7 @@ todo-review job's "Your own items" section
 escalated, newly started, or stale items. An undated agent todo is "stale"
 after 45 days (`src/core/todo/review-sweep.ts:60`). The sweep also runs
 only inside `bbx wakeup`, which runs automatically only from connector
-schedules seeded disabled (`src/core/box/defaults.ts:294,305,316`).
+schedules seeded disabled (`src/core/box/defaults.ts:294 (moved to `beebox/src/core/box/structure/defaults.ts`),305,316`).
 
 The boxholder (2026-09-24): "We have to be super careful about
 out-of-control agent activity on agent-assigned tasks. Super careful."
@@ -41,14 +41,14 @@ disabled. Limits enforced in code, not only in the prompt:
 ## Defects a cross-model review found in the sketch
 
 - A guard shell that restores and exits non-zero short-circuits later
-  shells and steps (`src/core/procedure/engine-run-phase.ts:97-128`), so a
+  shells and steps (`src/core/procedure/engine-run-phase.ts:97-128` (moved to `beebox/src/core/procedure/engine/run-phase.ts`)), so a
   separate "record attempts" step would not run on exactly the failed runs.
   The guard, restore, and attempt record need one finalizer contract.
 - The procedure engine does not undo a failed step
   (`docs/procedure-implementation.md:176`); restoring is the procedure's
   own job.
 - `budget: "1/1d"` is invalid: a budget is runtime per window, both sides
-  durations (`src/schemas/scheduled-script-duration.ts:64-73`). There is no
+  durations (`src/schemas/scheduled-script-duration.ts:64-73` (moved to `beebox/src/scheduled-script-duration.ts`)). There is no
   run-count limit today.
 - Attempt identity: todos rarely have an `id`, and path + text resets when
   the text changes.

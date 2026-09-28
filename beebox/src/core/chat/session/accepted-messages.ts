@@ -25,8 +25,8 @@
  * rather than a second implementation here that could disagree with it.
  */
 
-import type { EventBus } from "../../event-bus.js";
-import { isRecord } from "../../../lib/is-record.js";
+import type { EventBus } from "../../event-bus/core.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { attachmentsBlockStart } from "../../../shared/composer-tokens.js";
 import type { SessionEntry } from "../../../cli/lib/session-entry.js";
 import { userIdentity } from "../../../cli/lib/session-entry.js";

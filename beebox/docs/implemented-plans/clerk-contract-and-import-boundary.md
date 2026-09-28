@@ -22,7 +22,7 @@ Zero live drift today. The enforcement gap: the pre-commit dispatcher runs
 checks per-subtree, so a beebox-only change never exercises clerk.
 
 1. **Leaf contract-schema module** (codex 1): the zod schemas move to a new
-   `beebox/src/webapp/trpc/routers/clerk-contract.ts` that is
+   `beebox/src/webapp/trpc/routers/clerk-contract.ts` (moved to `beebox/src/webapp/trpc/clerk-contract.ts`) that is
    SELF-CONTAINED — imports zod and nothing else (no fs/git/landmark
    graph). It exports `commentaryInput`, `commentaryOutput`,
    `commentaryDestinationsOutput` (new — `{ destinations: { dir: string;

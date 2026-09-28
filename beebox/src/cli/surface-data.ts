@@ -18,7 +18,7 @@
  *
  * No `Command` objects here. `surface-build.ts` is the only module that maps a
  * name to a registration, so a test can import this table without loading the
- * CLI (`test/cli/surface.doctest.md`).
+ * CLI (`test/cli/entry.surface.doctest.md`).
  */
 
 /** Who can invoke a verb: the box agent, or only a person or a unit file. */
@@ -96,7 +96,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "changes", audience: "agent", smoke: { run: ["changes", "--since", "HEAD"] } },
   // Asks Jev about stdin through an authored judgment card; `judge --dry-run`
   // sends nothing but still needs a card to read, which a smoke box lacks.
-  { name: "judge", audience: "agent", smoke: { skip: "needs a judgment card fixture; test/cli/commands/judge.doctest.md runs --dry-run" } },
+  { name: "judge", audience: "agent", smoke: { skip: "needs a judgment card fixture; test/cli/commands/judge/command.doctest.md runs --dry-run" } },
   { name: "session", audience: "agent", smoke: { run: ["session", "--list"] } },
   { name: "usage", audience: "agent", smoke: { run: ["usage", "--schema"] } },
   { name: "docs", audience: "agent", smoke: { skip: "`refresh` rewrites generated docs and commits" } },
@@ -163,7 +163,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
 
   // ---- Engine: no agent-reachable form ----------------------------------
   { name: "maintenance", audience: "engine", reason: "deploy holds box ownership across activation; runs as root and spans the fleet" },
-  { name: "serve", audience: "engine", reason: "the hub spawns one per box (src/hub/supervisor.ts:441)" },
+  { name: "serve", audience: "engine", reason: "the hub spawns one per box (src/hub/supervisor/core.ts:441)" },
   { name: "hub", audience: "engine", reason: "a systemd ExecStart, and the dev router's backend spawn" },
   { name: "boxes", audience: "engine", reason: "the machine-wide box manifest; an agent has no second box" },
   { name: "activity", audience: "engine", reason: "reports across every box; the deploy's at-rest gate" },

@@ -90,7 +90,7 @@ A placeholder alone on its line takes any number of lines; an empty result
 removes the line, and a list filler returns nothing when its list is empty,
 which omits the whole section. `render.ts` fills placeholders and strips the
 header comment and every citation in one pass; `generateDocs`
-(`src/core/docs-gen/index.ts`) then writes the result through `withDocId`,
+(`src/core/docs-gen/generate/core.ts`) then writes the result through `withDocId`,
 which adds the DOCID marker line.
 
 ### Citations
@@ -183,9 +183,9 @@ allowance with the first line of the largest uncited passage, the row that is
 missing or unknown, or the leaked line. Coverage is switched on per section,
 as each section is binned; until then the section's text is unchecked.
 
-`test/core/agent-guide-lint.doctest.md` runs the linter on a bare box (budget
+`test/core/agent-guide/lint.doctest.md` runs the linter on a bare box (budget
 asserted) and on a box with a box-local schema, a guide card, a procedure,
-and an edited personality card (budget reported). `test/core/agent-guide-ledger.doctest.md`
+and an edited personality card (budget reported). `test/core/agent-guide/ledger-schema.doctest.md`
 fails when the ledger does not parse, when a row names an audit that does not
 exist, when the registry, the rendered headings, and `section()` disagree, or
 when a listed referrer no longer names its handle.

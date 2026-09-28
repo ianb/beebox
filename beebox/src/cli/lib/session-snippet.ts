@@ -10,7 +10,7 @@
  * 2026-08-08 on a ~10k-file box: 65 chats, ~500ms of it this read).
  */
 
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { readTranscriptLines } from "./session-lines.js";
 import { contentBlocks, parseJsonlLine } from "./session-jsonl.js";
 import {

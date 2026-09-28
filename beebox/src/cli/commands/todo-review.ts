@@ -14,9 +14,9 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
-import { checkTodoReview } from "../../core/todo/review-check.js";
+import { checkTodoReview } from "../../core/todo/review-check/core.js";
 import { verifyTodoReview } from "../../core/todo/review-verify.js";
 import { formatTodoLocation } from "../../core/todo/collect-types.js";
 

@@ -1,6 +1,6 @@
 /** Box access list and operator-issued password resets for existing members. */
 
-import { type RouterOutput } from "../../lib/trpc";
+import { type RouterOutput } from "../../lib/trpc/client";
 import { useAllowedEmails, type ResetLink } from "../../hooks/useAllowedEmails";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -11,7 +11,7 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
-import { TextField } from "../ui/fields";
+import { TextField } from "../ui/fields/field";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION = "Email addresses that can access this box. Leave empty to keep the box owner-only.";

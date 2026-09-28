@@ -51,7 +51,7 @@ way to reach the person, the box can only respond; it cannot follow up.
 - **The iOS app has no native notifications.** No code in `ios-app/` uses the
   notification APIs, and the iPhone app is the boxholder's main mobile surface.
 - **Admin has a Notifications section**
-  (`beebox/src/frontend/src/components/admin/NotificationsSection.tsx`), for
+  (`beebox/src/frontend/src/components/admin/NotificationsSection/view.tsx`), for
   the web push setup.
 - **In-app signals exist:** the plate badge, question cards, and chat
   messages. They work only while the person is looking at the app.

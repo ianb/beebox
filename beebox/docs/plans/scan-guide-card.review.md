@@ -36,7 +36,7 @@ misread names into cards *silently*, the exact failure priors exist to
 prevent; the loud abort is recoverable (fix the card, re-run). Reachability
 is also near nil: guide cards are schema-validated at commit by the per-box
 pre-commit hook (verified: `GuideSchema` is in the registry,
-`src/schemas/registry.ts:36`, so `bbx validate --staged` covers it), so an
+`src/schemas/registry.ts:36` (moved to `beebox/src/schemas.ts`), so `bbx validate --staged` covers it), so an
 invalid card at scan time means validation was bypassed — a broken invariant,
 which per code-style gets a hard failure.
 
@@ -52,7 +52,7 @@ calling `parseGuideCard`.
 ### 5. "'Validation catches it' unverified; compileConfigGuides warns-and-skips"
 **Disposition: accepted as verify-and-cite.** Codex's fenced read-list did
 not include the registry; the claim is real — `GuideSchema` is registered
-(`src/schemas/registry.ts:36`) and every registered schema validates through
+(`src/schemas/registry.ts:36` (moved to `beebox/src/schemas.ts`)) and every registered schema validates through
 `bbx validate` / the per-box pre-commit hook. The plan now cites the registry
 line. Codex is right that `compileConfigGuides` itself only warns-and-skips
 unparseable guides (`compile.ts:169`) — which is exactly why the scan

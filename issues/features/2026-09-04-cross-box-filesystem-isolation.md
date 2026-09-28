@@ -36,7 +36,7 @@ What "fixed" means is the design question. Candidates, not exclusive:
   and expressible only in what Claude Code's settings can enforce.
 
 Whatever lands: the two-box fixture and
-`test/webapp/cross-box-probe.doctest.md` are the regression anchor for the
+`test/webapp/cross-box-probe.doctest.md` (moved to `beebox/test/scenarios/cross-box-probe.doctest.md`) are the regression anchor for the
 network channel; this needs its own probe for the filesystem channel (a
 box-A process attempting a read of box B on disk, asserted to fail), and the
 `schedules/cross-box-leak-scan` host audit should then assert the

@@ -27,20 +27,21 @@ test("frontend source goes to the frontend config, everything else to the root o
   const split = splitBeeBoxTargets([
     "beebox/src/core/box.ts",
     "beebox/src/frontend/src/pages/ChatPage.tsx",
+    "beebox/src/frontend/test/pages/ChatPage.test.ts",
     "beebox/test/core/box.doctest.md",
-    "beebox/scripts/build-cli.ts",
-    "beebox/user-stories/pipeline/run.ts",
+    "beebox/src/scripts/build-cli/build/entry.ts",
+    "beebox/test/core/fake-agent.ts",
   ]);
   assert.deepEqual(split.backend, [
-    "scripts/build-cli.ts",
     "src/core/box.ts",
-    "user-stories/pipeline/run.ts",
+    "src/scripts/build-cli/build/entry.ts",
+    "test/core/fake-agent.ts",
   ]);
-  assert.deepEqual(split.frontend, ["src/pages/ChatPage.tsx"]);
+  assert.deepEqual(split.frontend, ["src/pages/ChatPage.tsx", "test/pages/ChatPage.test.ts"]);
 });
 
 test("paths no lint script covers are dropped rather than handed to eslint", () => {
-  // deploy/ and docs/ are outside `eslint src/ scripts/ test/ user-stories/`;
+  // deploy/ and docs/ are outside `eslint src/ test/`;
   // `.mjs` is in the config's own ignores; another package is not ours at all.
   const split = splitBeeBoxTargets([
     "beebox/deploy/deploy.ts",
@@ -85,7 +86,7 @@ test("the frontend package is never its own lint run — beebox covers it", () =
   );
   // A genuinely nested package still wins by longest prefix.
   assert.equal(packageOf("beebox/pub-worker/src/w.ts", PACKAGE_DIRS), "beebox/pub-worker");
-  assert.equal(packageOf("workstreams-app/src/router/router.ts", PACKAGE_DIRS), "workstreams-app");
+  assert.equal(packageOf("workstreams-app/src/router/server/listener.ts", PACKAGE_DIRS), "workstreams-app");
 });
 
 test("the root fan-out reduces to the packages the change touched", () => {
@@ -94,7 +95,7 @@ test("the root fan-out reduces to the packages the change touched", () => {
       "beebox/src/core/box.ts",
       "site/src/index.ts",
       "schedules/nightly/run.ts",
-      "workstreams-app/src/router/router.ts",
+      "workstreams-app/src/router/server/listener.ts",
     ],
     packageDirs: PACKAGE_DIRS,
     hasScript: (dir, script) => (dir === "beebox" ? true : script === "lint"),

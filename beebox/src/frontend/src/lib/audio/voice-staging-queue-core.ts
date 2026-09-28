@@ -3,7 +3,7 @@
  * (`docs/plans/resilient-voice-recording.md`, Track 2). No I/O: it decides
  * what the drainer should do next given the current ops and the outcome of
  * whatever it last tried, and every branch is reached by
- * `test/frontend/lib/audio/voice-staging-queue-core.doctest.md`. The impure
+ * `src/frontend/test/lib/audio/voice-staging-queue-core.doctest.md`. The impure
  * shell (storage, HTTP) lives in `voice-staging-storage.ts` and
  * `voice-staging-queue.ts`.
  */

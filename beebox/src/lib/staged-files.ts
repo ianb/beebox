@@ -11,7 +11,7 @@
 import { execFile } from "node:child_process";
 import * as path from "node:path";
 import { promisify } from "node:util";
-import { isTrashedCard } from "./paths.js";
+import { isTrashedCard } from "./paths/core.js";
 
 const execFileP = promisify(execFile);
 

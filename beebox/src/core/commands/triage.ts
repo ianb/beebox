@@ -5,10 +5,10 @@
  * the triage subagent, and applies its decisions. See `src/core/triage.ts`.
  */
 
-import { registerCommand } from "../command-runner.js";
-import { runTriage } from "../triage/index.js";
+import type { CommandDefinition } from "../command-types.js";
+import { runTriage } from "../triage/run/core.js";
 
-registerCommand({
+export const triageCommand: CommandDefinition = {
   name: "triage",
   description:
     "Run one triage pass: classify intake-complete items into categories and route them.",
@@ -49,4 +49,4 @@ registerCommand({
     }
     return { success: true, data: result };
   },
-});
+};

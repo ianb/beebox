@@ -1,5 +1,5 @@
 /**
- * Small process-supervision primitives shared by `src/hub/supervisor.ts`,
+ * Small process-supervision primitives shared by `src/hub/supervisor/core.ts`,
  * adapted from the monorepo dev router (`../../../workstreams-app/src/router/router.ts`'s
  * `waitForHttp`/`killGroup`/`sleep`) — see that file's module doc for the
  * original rationale. Kept here as plain functions (no router-specific
@@ -7,7 +7,7 @@
  */
 
 import http from "node:http";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 
 /**

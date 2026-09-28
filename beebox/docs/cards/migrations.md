@@ -11,7 +11,7 @@ A migration is a one-shot transformation of card data on disk — schema renames
 
 **Box configuration counts too.** `annex-config-2026-08` re-applies `annex.largefiles` and `.git/info/attributes` from the current renderings; it transforms no cards and leaves the working tree untouched. Config written once at `bbx init` goes stale whenever the code's idea of it changes, and a migration is the one mechanism that records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
 
-`gitignore-2026-09` is the second configuration migration: it rewrites the box's `.gitignore` from the current rendering (`writeBoxGitignore`, the function `bbx init` uses) and untracks the state directory, box-root locks, and pid file that the pre-rename ignore file had let autocommit sweep in. It leaves `.beebox/box.json` tracked. See `scripts/migrate/box-gitignore.ts` for why the untrack list is an explicit allowlist rather than "everything now ignored".
+`gitignore-2026-09` is the second configuration migration: it rewrites the box's `.gitignore` from the current rendering (`writeBoxGitignore`, the function `bbx init` uses) and untracks the state directory, box-root locks, and pid file that the pre-rename ignore file had let autocommit sweep in. It leaves `.beebox/box.json` tracked. See `src/scripts/migrate/box-gitignore.ts` for why the untrack list is an explicit allowlist rather than "everything now ignored".
 
 `hooks-2026-09` reinstalls the managed git hooks and the package-root Claude settings through `installValidationHooks`, the same call `bbx init` makes: the hooks bake in the CLI path and name, and boxes that predate the rename were still looking for the former CLI at a checkout that no longer exists.
 
@@ -190,7 +190,7 @@ convergence does not overwrite them merely to make a ledger look current.
 
 ## Writing a new migration
 
-1. **Write the script** at `scripts/migrate/<name>.ts`. New migrators should use the shared harness (`scripts/migrate/_harness.ts`), which handles arg parsing, the file walk, dry-run/apply, per-file error collection, and the final warning dump:
+1. **Write the script** at `scripts/migrate/<name>.ts`. New migrators should use the shared harness (`src/scripts/migrate/_harness.ts`), which handles arg parsing, the file walk, dry-run/apply, per-file error collection, and the final warning dump:
 
    ```ts
    #!/usr/bin/env tsx
@@ -212,14 +212,14 @@ convergence does not overwrite them merely to make a ledger look current.
    });
    ```
 
-   Existing migrators in this directory predate the harness and still carry their own scaffolding; mirror one (e.g. `scripts/migrate/image.ts`) only if you can't fit the harness's shape.
+   Existing migrators in this directory predate the harness and still carry their own scaffolding; mirror one (e.g. `src/scripts/migrate/image.ts`) only if you can't fit the harness's shape.
 
 2. **Be idempotent.** Detect the post-migration shape and skip cards already in it — second runs should report "already migrated N" rather than re-doing work or erroring. Two patterns we use:
    - Filename-based: skip cards whose name already has the new extension.
    - Content-based: skip cards whose frontmatter already has the target shape (e.g., a specific key present, or matching a regex marker).
    `bbx migrate` re-runs partially-applied migrations on retry, and admins occasionally run individual scripts manually for debugging — idempotency makes both safe.
 
-3. **Be noisy about data loss.** Every migrator must use the `scripts/migrate/_warnings.ts` helper to declare what attrs/children it knows how to map, and warn about anything outside that allow-list. The harness above already plumbs the `WarningCollector` through; what you write per-migration is just the spec + per-element check:
+3. **Be noisy about data loss.** Every migrator must use the `src/scripts/migrate/_warnings.ts` helper to declare what attrs/children it knows how to map, and warn about anything outside that allow-list. The harness above already plumbs the `WarningCollector` through; what you write per-migration is just the spec + per-element check:
 
    ```ts
    const SPEC: ElementSpec = {
@@ -388,7 +388,7 @@ secret names, change grants, or write values. The procedure's machine gate runs
 code review covered every trick. New tricks should follow the same contract
 when authored, rather than waiting for this migration.
 
-`question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle.ts`) is the Track A cleanup for `docs/implemented-plans/questions-end-to-end.md`: strips the retired `answered-by:` field, backfills `asked-at:` on pending questions from the card's earliest `git add` date, relocates question cards living outside `box/questions/` (scan-import's attach-scope questions) into `box/questions/` with a `context:` ref back to their original scope, rewrites directives that reference the retired briefing `<agent-needs-to-know>` element to the current `{% correction %}` vocabulary, and reports (never silently fixes) any `select` question with fewer than two options.
+`question-lifecycle` (`src/scripts/migrate/question-lifecycle-run/run.ts`, pure transform in `src/scripts/migrate/question-lifecycle-run/lifecycle.ts`) is the Track A cleanup for `docs/implemented-plans/questions-end-to-end.md`: strips the retired `answered-by:` field, backfills `asked-at:` on pending questions from the card's earliest `git add` date, relocates question cards living outside `box/questions/` (scan-import's attach-scope questions) into `box/questions/` with a `context:` ref back to their original scope, rewrites directives that reference the retired briefing `<agent-needs-to-know>` element to the current `{% correction %}` vocabulary, and reports (never silently fixes) any `select` question with fewer than two options.
 
 Retired migrators (`box-packageify`, `retire-process-captures`) keep their
 names registered as idempotent no-ops, because the manifest is append-only;
@@ -411,8 +411,8 @@ text inside the wrapper so nothing is silently dropped), card-level
 that referenced the old path via the same resolution-based machinery `bbx mv`
 uses (`rewrite-card-refs.ts`). Superseded by the universal `{% todo %}`
 annotation (`docs/implemented-plans/todo-annotation.md`); see
-`scripts/migrate/todo-list-to-doc.ts` (pure transform) and
-`scripts/migrate/todo-list-to-doc-run.ts` (CLI driver) for the full mapping.
+`src/scripts/migrate/todo-list-to-doc-run/convert.ts` (pure transform) and
+`src/scripts/migrate/todo-list-to-doc-run/run.ts` (CLI driver) for the full mapping.
 Idempotent: a box with no `*.todo-list.card` files is a clean no-op.
 
 #### `document-to-pdf` (rename — `document` → `pdf`)
@@ -427,7 +427,7 @@ so the generic name (chosen to avoid a future rename — see
 `gsheet-rename.ts`: no XML variant exists to guard against (the type
 post-dates the XML→frontmatter migration), so it's a pure rename + ref
 rewrite, same shape as `gsheet-rename`. See
-`scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
+`src/scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
 `*.document.card` is a clean no-op.
 
 #### `v2-refs-to-v3` (repair — v2-layout refs to v3 paths)
@@ -440,7 +440,7 @@ were moved with) and rewrites the ref only when the mapped target exists and
 lies inside the box namespace. The query and fragment are kept; fenced code
 examples are left alone. Refs whose target is gone stay as they are, and
 `bbx validate` keeps reporting them as broken. See
-`scripts/migrate/v2-refs-to-v3.ts`. Idempotent: a rewritten ref resolves.
+`src/scripts/migrate/v2-refs-to-v3.ts`. Idempotent: a rewritten ref resolves.
 
 #### `filename-attach-scope` (repair — flat media files into attach scopes)
 
@@ -460,7 +460,7 @@ not a card, no other media card claims it, and the destination is free or
 holds the same bytes. Every other card is printed with a reason and left
 unchanged, and the exit code stays 0. `bbx validate` warns on each remaining
 card, so an agent can finish them. See
-`scripts/migrate/filename-attach-scope.ts`. Idempotent: repaired cards hold
+`src/scripts/migrate/filename-attach-scope.ts`. Idempotent: repaired cards hold
 `attach/` refs and are skipped.
 
 #### `one-root` (shape migration — v2 two-root → v3 one-root layout)
@@ -506,14 +506,14 @@ The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.
 
 ## Maintenance tools
 
-- `scripts/clean-broken-refs.ts` — not a migration; a one-off data-hygiene tool. Deletes orphan image cards (whose `filename.ref` target is gone), prunes dead refs from capture-sessions / records / jobs, and rewrites `../../../people/Foo.person.card` style relative refs to absolute form when the target exists. Idempotent; safe to re-run.
+- `src/scripts/clean-broken-refs.ts` — not a migration; a one-off data-hygiene tool. Deletes orphan image cards (whose `filename.ref` target is gone), prunes dead refs from capture-sessions / records / jobs, and rewrites `../../../people/Foo.person.card` style relative refs to absolute form when the target exists. Idempotent; safe to re-run.
 
 ## See also
 
 - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) for the design rationale.
 - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
 - [Maintenance](../development/maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic tools.
-- `scripts/migrate/_warnings.ts`, the noisy-mode helper every migrator uses; `scripts/migrate/_harness.ts`, the shared scaffold.
+- `src/scripts/migrate/_warnings.ts`, the noisy-mode helper every migrator uses; `src/scripts/migrate/_harness.ts`, the shared scaffold.
 
 ## Recovery and reversal
 

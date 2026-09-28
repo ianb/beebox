@@ -7,8 +7,8 @@
  * never a raw URL. See docs/implemented-plans/notifications.md ("Ontology", Track A).
  */
 
-import { resolveRefPath } from "../../shared/ref-path.js";
-import { assertNever } from "../../lib/invariant.js";
+import { resolveRefPath } from "../../shared/ref-path/core.js";
+import { assertNever } from "../../shared/invariant.js";
 import { SYSTEM_CARD_PATHS } from "../../shared/system-card-paths.js";
 
 export type Target =

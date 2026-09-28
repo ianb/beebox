@@ -18,15 +18,15 @@ import * as path from "node:path";
 import { randomBytes } from "node:crypto";
 import { fileTypeFromFile } from "file-type";
 import { withCardLock } from "../../lib/card-lock.js";
-import { errnoCode } from "../../lib/error-guards.js";
-import { isRecord } from "../../lib/is-record.js";
-import { stageAndCommitPaths, unstageFiles } from "../../lib/git.js";
-import type { EventBus } from "../event-bus.js";
+import { errnoCode } from "../../shared/error-guards.js";
+import { isRecord } from "../../shared/is-record.js";
+import { stageAndCommitPaths, unstageFiles } from "../../lib/git/core.js";
+import type { EventBus } from "../event-bus/core.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { parseCardText } from "../card-io.js";
-import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent, type SubmissionIssue } from "../../cards/index.js";
+import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent, type SubmissionIssue } from "../../exports/cards.js";
 import { assertAnnexBox } from "../annex/assert-annex-box.js";
 
 export interface AcceptSubmissionInput {

@@ -16,7 +16,7 @@
  * document order), so it unit-tests in plain Node.
  */
 
-import type { DoclingDocumentSummary } from "./docling";
+import type { DoclingDocumentSummary } from "./docling/parse";
 
 /**
  * How far ahead of the last match the matcher will look for the next one. Big

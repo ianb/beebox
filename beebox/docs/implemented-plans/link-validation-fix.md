@@ -57,7 +57,7 @@ repaired through `bbx mv` adoption rather than a one-time scripted rewrite.
   resolving against `fileDir` unchanged.
 - `beebox/src/core/markdown-lint-rules.ts:17-37` — `noViewLabelLinks`
   (CB001), also `tags: ["links"]`, needs no boxRoot. **Reuse**; just enable it.
-- `beebox/src/cli/commands/validate.ts:78-86` — `MARKDOWN_CONFIG`
+- `beebox/src/cli/commands/validate.ts:78-86` (moved to `beebox/src/cli/commands/validate/command.ts`) — `MARKDOWN_CONFIG`
   (`{ default: false, MD009, MD037, MD038, MD047 }`) and
   `CUSTOM_RULES = [noViewLabelLinks, noBrokenInternalLinks]`. **Reuse + edit**:
   enable CB001/CB002 by name; pass boxRoot.
@@ -65,26 +65,26 @@ repaired through `bbx mv` adoption rather than a one-time scripted rewrite.
   `MARKDOWN_CONFIG` + `CUSTOM_RULES`. **Reuse + edit** the same way. The box root
   is available here as `post.cwd` (already used as `boxRoot` for card lint at
   `sdk-hooks.ts:123`).
-- `beebox/src/cli/commands/validate.ts:40-50` — `listStagedCards(boxRoot)`:
+- `beebox/src/cli/commands/validate.ts:40-50` (moved to `beebox/src/cli/commands/validate/command.ts`) — `listStagedCards(boxRoot)`:
   `git diff --cached --name-only --diff-filter=ACMR`, filters `.card`, skips
   trash, maps to absolute paths. **Mirror** for markdown (Track C).
-- `beebox/src/cli/commands/validate.ts:88-103` — `findMarkdownFiles`: skips
+- `beebox/src/cli/commands/validate.ts:88-103` (moved to `beebox/src/cli/commands/validate/command.ts`) — `findMarkdownFiles`: skips
   `SKIP_DIRS` (`node_modules`, `.git`, `.pnpm`, `.claude`) and `SKIP_FILES`
   (`CLAUDE.md`). **Reuse the exclusion set** for both staged-markdown collection
   (Track C) and the box-wide commit scan (Track D), so all three paths agree on
   what counts as a lintable md file.
-- `beebox/src/cli/commands/validate.ts:236-245` — `collectStagedResults`:
+- `beebox/src/cli/commands/validate.ts:236-245` (moved to `beebox/src/cli/commands/validate/command.ts`) — `collectStagedResults`:
   hardcodes `mdSummary: null`. **Edit** to also collect+lint staged markdown
   (Track C).
-- `beebox/src/cli/commands/validate.ts:247-256` — `collectAllResults`:
+- `beebox/src/cli/commands/validate.ts:247-256` (moved to `beebox/src/cli/commands/validate/command.ts`) — `collectAllResults`:
   already lints every box markdown file via `lintMarkdownFiles`. **Reuse** as the
   basis for the box-wide commit scan (Track D) — the scan is "the markdown-link
   portion of `--all`, run non-fatally."
 - `beebox/src/core/install-validation-hooks.ts:44-72` — `preCommitBody`:
   gates `bbx validate --staged` on `grep '\.card$'`. **Edit** to also lint staged
   `.md` and to add the box-wide link warning step (Track D).
-- `beebox/src/core/commands/move-operations.ts:178-216` +
-  `beebox/src/core/rewrite-card-refs.ts` (note: `src/core/`, not
+- `beebox/src/core/commands/move-operations.ts:178-216` (moved to `beebox/src/core/commands/move/operations.ts`) +
+  `beebox/src/core/rewrite-card-refs.ts` (moved to `beebox/src/core/rewrite-card-refs/core.ts`) (note: `src/core/`, not
   `src/core/commands/`) — `bbx mv`'s resolution-based ref rewrite. **Today it
   iterates cards only** (`rewriteOtherCards`, `cardAbsPath`-keyed): refs in plain
   `.md` dossiers are never rewritten. Inline-markdown-link coverage is documented

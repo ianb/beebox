@@ -14,9 +14,9 @@
 import { useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import type { FileSummary } from "@core/file-summary";
-import { resolveFileTypeUI } from "../../file-types/registry";
+import { resolveFileTypeUI } from "../../file-type-registry";
 import { cn } from "../../lib/cn";
-import { FileView } from "../FileView";
+import { FileView } from "../FileView/view";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { CardMark } from "./CardMark";
 

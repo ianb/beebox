@@ -11,7 +11,7 @@ issues: []
 > `worktree-commetary` branch; the text below is forward-tense ("this plan
 > adds…") but the work is done. Where the code lives:
 >
-> - **Heading anchors** (Track 1) — `src/shared/markdoc-config.ts`
+> - **Heading anchors** (Track 1) — `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`)
 >   (`makeHeadingNode`), test `test/markdoc-headings.doctest.md`.
 > - **Selection capture / position** (Track 2) —
 >   `src/frontend/src/lib/selection-position.ts`,
@@ -183,14 +183,14 @@ unless noted.
   `src/frontend/src/components/Markdown.tsx:270–298` → Markdoc
   parse/transform/`renderers.react`. Headings currently use Markdoc's
   default `heading` node — **no `id`, no source-line data attributes**
-  (verified: `src/shared/markdoc-config.ts:258–276` registers `tags` and
+  (verified: `src/shared/markdoc-config.ts:258 (moved to `beebox/src/shared/markdoc-config/core.ts`)–276` registers `tags` and
   only an `item` node override; no `heading` override). Adding heading ids
   is *net-new* (Track 2).
 - **Tag + `ref` + escaping conventions.**
   kebab-case tags/attributes throughout (`<self-note>`, `<schedule-fired>`);
   `ref` = box-relative path, used by `<ack>` (`chat-session.ts:357–358`) and
   `<self-note>` (`chat.ts:514–518`); `escapeXmlAttr`
-  (`src/webapp/routes/chat.ts:90–96`). The new tag follows all three.
+  (`src/webapp/routes/chat.ts:90 (moved to `beebox/src/webapp/routes/chat/register.ts`)–96`). The new tag follows all three.
   *Reuse conventions.*
 - **Source-position precedent.**
   `src/core/body-refs.ts:46–68` walks the Markdoc AST and records
@@ -242,7 +242,7 @@ Ordered by implementation dependency, then surface size.
 
 ### Track 1 — Heading anchors in rendered Markdown (prerequisite, smallest)
 
-**What.** Add a `heading` node `transform` to `src/shared/markdoc-config.ts`
+**What.** Add a `heading` node `transform` to `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`)
 that slugifies heading text into a stable `id` (collision-suffixed) and
 carries the source line from `node.lines` onto the rendered element as a
 `data-line` attribute.

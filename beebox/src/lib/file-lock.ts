@@ -88,7 +88,7 @@
  *
  *   - **Sleep tolerance.** proper-lockfile's refresh runs on a `setTimeout`,
  *     which on macOS is paused during system sleep (see the awake-timeout
- *     discipline in `src/lib/awake-timeout.ts`). A generous 5-min `stale`
+ *     discipline in `src/shared/awake-timeout.ts`). A generous 5-min `stale`
  *     means a normal brief sleep (lid closed for a few minutes mid-hold) does
  *     NOT make a live holder's lock look stale to a contender on wake. A sleep
  *     LONGER than `stale` still can: a live-but-sleeping holder's guard is
@@ -154,11 +154,11 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as lockfile from "proper-lockfile";
-import { errnoCode } from "./error-guards.js";
-import { isRecord } from "./is-record.js";
+import { errnoCode } from "../shared/error-guards.js";
+import { isRecord } from "../shared/is-record.js";
 // The guard path deliberately does NOT end in the caller's `.lock` suffix, so
 // `scanLocks`'s suffix match enumerates only sidecar files, never guards.
-import { lockGuardPath } from "./lock-guard.js";
+import { lockGuardPath } from "../shared/lock-guard.js";
 
 /**
  * Diagnostic identity of a lock holder. Written to the sidecar file at the

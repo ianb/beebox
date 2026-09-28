@@ -20,8 +20,8 @@ import { Command } from "commander";
 import type { inferRouterOutputs } from "@trpc/server";
 import { boxClient } from "../lib/box-client.js";
 import { reportRefusal, refusalFor, type VerbRefusal } from "../lib/credentialed-verb.js";
-import type { AppRouter } from "../../webapp/trpc/router.js";
-import type { WakeupConnectorOutcome } from "./wakeup-outcome.js";
+import type { AppRouter } from "../../webapp/trpc/routers.js";
+import type { WakeupConnectorOutcome } from "../wakeup-outcome.js";
 
 type ForceResult = inferRouterOutputs<AppRouter>["wakeup"]["force"];
 

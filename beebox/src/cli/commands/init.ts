@@ -8,19 +8,19 @@
  */
 
 import { Command } from "commander";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/structure/core.js";
 import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
-import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
-import { generateDocs } from "../../core/docs-gen/index.js";
+import { stageAll, commit, initRepo, isRepo } from "../../lib/git/core.js";
+import { generateDocs } from "../../core/docs-gen/generate/core.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
-import { runAnnexDoctor } from "../../core/annex/doctor.js";
+import { runAnnexDoctor } from "../../core/annex/doctor/core.js";
 import { requireGitAnnex } from "../../core/annex/require-git-annex.js";
-import { annexNewBox } from "../../core/annex/annex-new-box.js";
+import { annexNewBox } from "../../core/annex/new-box.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { boxSlugFromShape } from "../../lib/box-slug.js";
 import { createGitAnnexService, type GitAnnexService } from "../../services/git-annex.js";
-import { openSearchIndex } from "../../core/search/refresh.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { openSearchIndex } from "../../core/search/refresh/core.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /**
  * Print the fresh-init banner and initialize git at the box root. Split out of
@@ -47,7 +47,7 @@ async function announceAndInitGit(
   console.log("Git repository initialized with initial commit.");
 
   // Annex HERE, not in `initBox`. `initBox` writes the box `.gitignore` from
-  // an annex probe (`src/core/box/index.ts`), but `scaffoldBoxRoot` calls it
+  // an annex probe (`src/core/box/structure/core.ts`), but `scaffoldBoxRoot` calls it
   // before there is a `.git` — so on a fresh init the probe can only ever read
   // false and the box would be written manifest-scheme no matter what. The
   // repository has to exist first, so this step re-writes the `.gitignore` the

@@ -16,7 +16,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../card-io.js";
 
 const SESSIONS_FILE = ".beebox/chat-sessions.json";

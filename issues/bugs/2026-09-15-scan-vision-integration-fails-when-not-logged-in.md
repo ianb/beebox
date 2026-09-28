@@ -42,7 +42,7 @@ Fix candidates (not implemented):
   test's whole point) would now skip instead of failing.
 
 
-`test/services/scan-vision-claude-integration.doctest.md` shells out to a real
+`test/services/scan-vision-claude-integration.doctest.md` (moved to `beebox/test/services/scan-vision-claude.integration.doctest.md`) shells out to a real
 Claude Code subprocess. When the invoking environment has no Claude login, the
 call rejects with `ClaudeScanSubprocessError: Not logged in · Please run
 /login` and the doctest reports a failure rather than a skip. The skip-reason

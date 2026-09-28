@@ -1,6 +1,6 @@
 import { isRecord } from "@shared/is-record";
 import type { ViewState } from "@shared/view-state";
-import { adminTabForSection, isAdminSectionId, isAdminTab, type AdminSectionId, type AdminTab } from "../components/admin/admin-sections";
+import { adminTabForSection, isAdminSectionId, isAdminTab, type AdminSectionId, type AdminTab } from "../components/admin/sections";
 
 export interface AdminArrivalState {
   google?: "connected" | "error";

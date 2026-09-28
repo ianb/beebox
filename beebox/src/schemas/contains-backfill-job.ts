@@ -7,7 +7,7 @@
  * `bbx contains list --missing` is empty. Processed by the reactor agent.
  */
 
-import { cardSchema, cardRef, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { cardSchema, cardRef, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { z } from "zod";
 
 export const ContainsBackfillJobSchema: CardSchema = cardSchema("contains-backfill-job", {

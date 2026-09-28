@@ -6,10 +6,10 @@ import path from "node:path";
 import { secretsLogDir } from "../core/secrets/store.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { staticBearer } from "../services/cloudflare-bearer.js";
-import type { CloudflareZone, WorkerDomain } from "../services/cloudflare-provisioning.js";
-import type { DeployedBinding } from "../services/cloudflare-provisioning.js";
-import { defaultManagedPublicationRuntime, type ManagedPublicationRuntime } from "../services/managed-publication-runtime.js";
-import { publicationError } from "./managed-publications.js";
+import type { CloudflareZone, WorkerDomain } from "../services/cloudflare-provisioning/core.js";
+import type { DeployedBinding } from "../services/cloudflare-provisioning/core.js";
+import { defaultManagedPublicationRuntime, type ManagedPublicationRuntime } from "../services/managed-publication-runtime/core.js";
+import { publicationError } from "./managed-publications/core.js";
 
 const hostnamePattern = /^(?=.{1,253}$)(?:[\da-z](?:[\da-z-]{0,61}[\da-z])?\.)+[a-z](?:[\da-z-]{0,61}[\da-z])?$/;
 

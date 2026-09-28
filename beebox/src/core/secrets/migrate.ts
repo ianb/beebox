@@ -32,7 +32,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { getBoxShapeIfPresent, resolveBoxRoot } from "../../lib/box-shape.js";
 import { boxSlug } from "../../lib/box-slug.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { loadBoxesConfig } from "../box/boxes-config.js";
 import { SecretStoreAccessError } from "./errors.js";

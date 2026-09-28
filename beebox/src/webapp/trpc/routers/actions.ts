@@ -3,8 +3,8 @@ import { answerWithAdmission } from "../../../core/commands/answer.js";
 import * as path from "node:path";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc.js";
-import { runCommand, type CommandContext } from "../../../core/commands/index.js";
+import { router, publicProcedure } from "../procedures.js";
+import { runCommand, type CommandContext } from "../../../core/command-runner.js";
 
 // The web boundary is box-relative only: an absolute path from an untrusted
 // client would (if it resolved inside the box) reach an arbitrary card, and

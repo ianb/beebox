@@ -19,7 +19,7 @@ which calendar is selected, or which operator must configure the host.
 - `beebox/src/frontend/src/components/settings/CalendarSection.tsx:73-83`
   renders the query error and a link to Admin; lines 98-106 describe `.ics`
   pulls during `bbx wakeup`.
-- `beebox/src/frontend/src/components/admin/GoogleServicesSection.tsx:79-81`
+- `beebox/src/frontend/src/components/admin/GoogleServicesSection/view.tsx:79-81`
   renders the literal host-configuration error.
 - `beebox/src/core/box/config.ts:56-61,130-137` confirms that missing
   `googleServices` disables the service and that `calendar: true` is the box
@@ -31,4 +31,4 @@ which calendar is selected, or which operator must configure the host.
 This report does not claim that scheduled work cannot run while the page is
 closed. It records the setup and explanation gap only.
 
-Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

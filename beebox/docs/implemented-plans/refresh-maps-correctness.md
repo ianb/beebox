@@ -79,7 +79,7 @@ repair. See *Could this be simpler?*.
   role: an unresolvable `asOf` is still an anomaly.
 - `beebox/src/core/maps/precheck-ignore.ts:167` `isIgnored` — unchanged; the
   tree reader filters with it exactly as the listings do today.
-- `beebox/src/core/maps/finalize.ts:74` `mapWasRewritten` — kept. Stamping
+- `beebox/src/core/maps/finalize.ts:74` (moved to `beebox/src/core/maps/finalize/core.ts`) `mapWasRewritten` — kept. Stamping
   becomes `rewritten || verified`.
 - `beebox/src/cli/commands/refresh-maps.ts:146`: `await saveBrief(boxRoot,
   brief);` runs before `if (options.brief)`, so `--brief` overwrites the
@@ -89,7 +89,7 @@ repair. See *Could this be simpler?*.
   hazard: *"a quoted name silently matches nothing downstream"*. The maps
   listing has the same hazard; checked 2026-09-18: `git ls-tree HEAD:d` on a
   file `café.md` prints `"caf\303\251.md"`. The new reader uses `-z`.
-- `beebox/src/core/box/defaults.ts:88` `installProcedures` — rolls the
+- `beebox/src/core/box/defaults.ts:88` (moved to `beebox/src/core/box/structure/defaults.ts`) `installProcedures` — rolls the
   template change out through `installTemplateFile`. No new rollout code.
 
 Searched `beebox/src/core/procedure/` for any second consumer of "the policy
@@ -173,7 +173,7 @@ two ways:
    change. An agent that correctly changes nothing leaves the task
    unstamped, and the task returns in every run.
 
-**Direction.** New `beebox/src/core/maps/verify.ts`:
+**Direction.** New `beebox/src/core/maps/verify.ts` (moved to `beebox/src/core/maps/finalize/verify.ts`):
 
 ```ts
 export type MapCoverage = { ok: true } | { ok: false; problems: string[] };
@@ -341,13 +341,13 @@ end-to-end procedure run in *Rollout shape* exercises it.
 
 ## What will hold this after it ships
 
-- `test/core/maps/maps-precheck.doctest.md`: the reproduction (gitignored
+- `test/core/maps/maps-precheck.doctest.md` (moved to `beebox/test/core/maps/precheck.doctest.md`): the reproduction (gitignored
   directory is absent in both create and update paths and does not dirty its
   parent), the non-ASCII name, and the existing cases migrated to the
   tree-based functions.
-- `test/core/maps/maps-verify.doctest.md` (new): `verifyMapCoverage` pass and
+- `test/core/maps/maps-verify.doctest.md` (moved to `beebox/test/core/maps/finalize/verify.doctest.md`) (new): `verifyMapCoverage` pass and
   fail fixtures. The decision is a pure function, so a doctest reaches it.
-- `test/core/maps/maps-finalize.doctest.md`: an unchanged but correct map is
+- `test/core/maps/maps-finalize.doctest.md` (moved to `beebox/test/core/maps/finalize.doctest.md`): an unchanged but correct map is
   stamped as `verified`; an unchanged map with a stale header is not; a
   rewritten failing map is stamped with a warning.
 - A `--brief` test: it prints but does not save.

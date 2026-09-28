@@ -25,7 +25,7 @@
 import { loadHistoryEntries } from "./history.js";
 import { transcriptExistsForContext } from "./transcript-paths.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
-import { sdkSessionIdSchema } from "./session-id.js";
+import { sdkSessionIdSchema } from "./id.js";
 
 /** How long an unused reservation stays addressable. */
 const RESERVATION_TTL_MS = 6 * 60 * 60 * 1000;

@@ -71,7 +71,7 @@ loader but without schema validation. Migration restores them to first-class.
   question, chat-thread, doc-to-gdoc, strip-type-field, repair-refs,
   asset-marker, webpage-card, landmark, recipe, procedure-run, procedure, guide,
   capture-session. **Reuse** — these run per box and cover the bulk of the
-  ~9k cards. The shared harness (`scripts/migrate/_harness.ts`) handles arg
+  ~9k cards. The shared harness (`scripts/migrate/_harness.ts` (moved to `beebox/src/scripts/migrate/_harness.ts`)) handles arg
   parsing, file walk, dry-run/apply, per-file warning collection.
 - **`bbx validate`** — the correctness gate; runs the absorbed `formatLintResults`
   + each schema's `validate` hook. **Reuse** as the per-box acceptance check.
@@ -108,7 +108,7 @@ and `box/inbox/news/` dirs. Tracked in the manifest so it's recorded per box and
 idempotent. **Open question:** delete vs. archive-then-delete — lean delete
 (git history is the archive; these are dead).
 
-**First chunk.** `scripts/migrate/delete-deprecated-cards.ts` + manifest entry +
+**First chunk.** `scripts/migrate/delete-deprecated-cards.ts` (moved to `beebox/src/scripts/migrate/delete-deprecated-cards.ts`) + manifest entry +
 a doctest on a tmp box proving the three globs are removed and other cards
 survive.
 

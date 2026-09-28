@@ -28,7 +28,7 @@ issue is already closed and is not reopened; this plan takes the lever.
 ## Smallest fix and budget
 
 The smallest change that fixes the observed failure is one number: raise
-`waitForHttp`'s `timeoutMs` in `workstreams-app/src/router/router-worktree-start.ts:276` from 30000. That
+`waitForHttp`'s `timeoutMs` in `workstreams-app/src/router/router-worktree-start.ts:276` (moved to `workstreams-app/src/router/core/worktree-start.ts`) from 30000. That
 is rejected as the whole fix, and the issue says why — *"The timeout is the
 secondary lever"*. A bigger fixed number still loses to a bigger load spike, and
 it makes every genuine breakage (bad config, syntax error) take that much longer
@@ -99,7 +99,7 @@ Reuse, not rebuild, in every case below.
   `execa`/`setTimeout`/`Date.now`/`fs` call and know it's a bug"*. Every track-1
   and track-2 behaviour is therefore testable with no real router and no real
   clock.
-- **The deterministic harness.** `workstreams-app/test/router/router-core-harness.ts`
+- **The deterministic harness.** `workstreams-app/test/router/router-core-harness.ts` (moved to `workstreams-app/test/router/core-harness.ts`)
   provides `FakeClock` (owning every `TimerHandle` the core arms), a
   controllable spawner with capturable exit callbacks, and manual readiness
   probes. `FakeProbeTimeoutError` (`:41`) already models the exact failure this
@@ -523,7 +523,7 @@ pair against themselves):
 with at least five solo and three concurrent samples. 88 full-mode files inflate
 past 3x; `test/core/docs-refresh.doctest.md` goes 17.2s to 85.9s. Read the
 median and p90, not the max: selected mode's 10.58x is a single file
-(`test/core/commands/pdf-extract-integration.doctest.md`) against a p90 of
+(`test/core/commands/pdf-extract-integration.doctest.md` (moved to `beebox/test/core/pdf/extract.integration.doctest.md`)) against a p90 of
 1.69x. The harm is concentrated in full-run overlap, which is exactly the
 2026-09-15 shape.
 
@@ -766,7 +766,7 @@ plan depends on its answer.
   the router, and it does not let anything survive the router's own death. Filed
   as `issues/decisions/2026-09-15-dev-router-is-load-bearing-and-cannot-survive-its-own-restart.md`,
   because the obvious version would make outages worse rather than better:
-  `sweepStaleChildren` (`workstreams-app/src/router/router-real-effects.ts:179-193`)
+  `sweepStaleChildren` (`workstreams-app/src/router/router-real-effects.ts:179-193` (moved to `workstreams-app/src/router/server/real-effects.ts`))
   **kills** every pidfile-tracked child on boot, so a supervised restart would
   tear down every worktree and then cold-start them all at once — the exact
   failure tracks 1 and 2 exist to prevent. Adoption on boot is the prerequisite,
@@ -839,7 +839,7 @@ and is not audit surface.
 The decisions worth protecting are extracted as pure functions so the cheap
 tiers reach them, rather than tested in place through a heavier tier:
 
-- **`workstreams-app/test/router/router-core.test.ts`** (node:test, existing
+- **`workstreams-app/test/router/router-core.test.ts` (moved to `workstreams-app/test/router/core.test.ts`)** (node:test, existing
   tier) covers tracks 1 and 2 through the existing harness. This is the tier
   that already reproduces the documented races, and it needs one new control —
   `killChild(which)` on the fake spawner — to reach every new path. No new mock
@@ -851,7 +851,7 @@ tiers reach them, rather than tested in place through a heavier tier:
   directly. `ensureRunning` then only executes the decision.
 - **Track 3's rotation boundary** is likewise pure (`shouldRotate({ bytes,
   max })`), so nothing writes 16MB in a test.
-- **Track 4** extends `workstreams-app/test/router/router-mobile-bootstrap.test.ts`,
+- **Track 4** extends `workstreams-app/test/router/router-mobile-bootstrap.test.ts` (moved to `workstreams-app/test/router/server/mobile-bootstrap.test.ts`),
   which already exists; the classification of a box response into a
   `BootstrapOutcome` is a pure function over a status code.
 - **Track 5** extends `bin/test-tiers.ts`'s existing test file with `capJobs`

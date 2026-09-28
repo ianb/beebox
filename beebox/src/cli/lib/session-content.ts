@@ -9,7 +9,7 @@ import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { IMAGE_NOT_DISPLAYED } from "../../shared/chat-content-blocks.js";
 import { encodeSessionMediaRef } from "../../shared/session-media.js";
 import { STRIPPED_MEDIA_MARKER } from "./session-oversize.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 /**
  * Content block from a session log entry.

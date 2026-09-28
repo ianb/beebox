@@ -14,7 +14,7 @@ import { parseLandmarkFields } from "../../schemas/landmark.js";
 import { readLandmarkCard } from "./card-cache.js";
 import { readLandmarkSymbol } from "./symbol.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { landmarkScanDir, normalizeLandmarkDir } from "./root-dir.js";
 import type { CardSymbolData } from "../../shared/card-symbol.js";
 import type { ProminenceLevel } from "../../shared/prominence.js";

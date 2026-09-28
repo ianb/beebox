@@ -6,7 +6,7 @@
  * asserts a shape the runtime never confirmed (an array is also
  * `typeof === "object"`), whereas this is a real guard that excludes `null` and
  * arrays and then narrows, so a caller can index by string key with no further
- * cast. Mirrors beebox's `src/lib/is-record.ts` (clerk is a separate
+ * cast. Mirrors beebox's `src/shared/is-record.ts` (clerk is a separate
  * package and can't import engine internals).
  */
 export function isRecord(value: unknown): value is Record<string, unknown> {

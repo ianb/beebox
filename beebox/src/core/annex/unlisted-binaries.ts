@@ -29,7 +29,7 @@ import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { isAssetExtension } from "../../lib/asset-extensions.js";
 import { findAttachScopes } from "../../lib/attach-scopes.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 /**
  * Size above which an unlisted file in an attach scope is an error.

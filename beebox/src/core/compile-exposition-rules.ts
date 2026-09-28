@@ -11,11 +11,11 @@
 
 import { mkdir, writeFile, readdir, unlink, readFile } from "node:fs/promises";
 import { join, dirname, relative } from "node:path";
-import { splitCardContent } from "../cards/index.js";
+import { splitCardContent } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { listBoxCardFiles } from "./list-cards.js";
 import { getBoxShape } from "../lib/box-shape.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { isRecord } from "./card-io.js";
 import { withDocId } from "./docs-gen/shared.js";
 

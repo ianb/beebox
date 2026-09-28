@@ -27,7 +27,7 @@ import {
   type StoredPushSubscription,
 } from "../services/push.js";
 import { endpointsForBox, removeEndpoint } from "./push-subscriptions.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { boxSlug as resolveBoxSlug } from "../lib/box-slug.js";
 import { notifyFakeMode } from "./notification/fake-mode.js";
 

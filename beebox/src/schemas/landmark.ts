@@ -26,12 +26,12 @@
  * See docs/landmarks.md and docs/triage.md.
  */
 
-import { splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { CardSymbol } from "../shared/card-symbol.js";
 import { Prominence } from "../shared/prominence.js";
-import { SystemThemeChoiceSchema } from "../shared/card-theme.js";
+import { SystemThemeChoiceSchema } from "../shared/card-theme/core.js";
 
 /** Sort order for `expand` fan-out results. */
 export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);

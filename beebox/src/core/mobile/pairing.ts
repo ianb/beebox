@@ -1,7 +1,7 @@
 import * as crypto from "node:crypto";
 import { z } from "zod";
 import { TokenStore, hashToken, nowIso, randomToken } from "../token-store.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { APNS_ENVIRONMENTS, type ApnsEnvironment } from "../../services/apns.js";
 
 const MOBILE_DEVICES_RELATIVE_PATH = ".beebox/mobile-devices.secret.json";

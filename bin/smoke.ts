@@ -31,7 +31,7 @@
  *
  * It restarts the checkout's dev-server generation first, on purpose: the
  * router runs TypeScript straight off disk and nothing reloads it
- * (workstreams-app/src/router/router-lifecycle.ts), so without a restart this would test whatever
+ * (workstreams-app/src/router/lifecycle.ts), so without a restart this would test whatever
  * source was on disk whenever the generation happened to start. That restart is
  * also the floor the tier exists for — a server that cannot boot fails here.
  *
@@ -41,7 +41,7 @@
 
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
-import { invariant } from "../beebox/src/lib/invariant.js";
+import { invariant } from "../beebox/src/shared/invariant.js";
 import { findCardRow } from "./smoke-card-open.js";
 import {
   BrowseListEmptyError,

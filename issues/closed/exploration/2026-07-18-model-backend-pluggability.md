@@ -27,7 +27,7 @@ landed on one concrete, low-effort lever worth verifying, plus a clear "don't" l
 Anthropic-model-only by design — *except* it speaks the Messages API, so pointing
 `ANTHROPIC_BASE_URL` + auth token at an **Anthropic-compatible endpoint** (GLM's
 `api.z.ai/api/anthropic`, Kimi-coding) could swap the model with near-zero code. We
-already set `ANTHROPIC_BASE_URL` in the run path (`src/core/agent/run.ts:192`, for the
+already set `ANTHROPIC_BASE_URL` in the run path (`src/core/agent/run.ts:192` (moved to `beebox/src/core/agent/invoke/run.ts`), for the
 prompt-logger), so the wiring exists.
 
 **The one thing that decides whether this is trivial or not:** does the SDK's *full

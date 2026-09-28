@@ -27,7 +27,7 @@ When someone is navigating inside a rich box-authored view, they want a source-c
 - Overlay state already owns a `ViewTarget` outside the route and renders it into `FileView` ([`src/frontend/src/components/ViewOverlay.tsx:27-35`](../../src/frontend/src/components/ViewOverlay.tsx), [`ViewOverlay.tsx:50-70`](../../src/frontend/src/components/ViewOverlay.tsx), [`ViewOverlay.tsx:128-135`](../../src/frontend/src/components/ViewOverlay.tsx)). It can replace its current target locally, but it does not own browser-history entries.
 - The browser view host is the existing capability boundary for separately compiled authored code. Its comment says widgets consume host capabilities instead of importing Router or `FileView` ([`src/frontend/src/lib/view-host.tsx:2-16`](../../src/frontend/src/lib/view-host.tsx)). `makeOpenCard()` already turns a surface callback into a view-facing capability ([`view-host.tsx:108-135`](../../src/frontend/src/lib/view-host.tsx)). Put history beside that capability.
 - Authored components currently receive flat `params` only ([`src/core/views/types.ts:53-62`](../../src/core/views/types.ts)); the live renderer holds the imported module outside the authored component ([`src/frontend/src/components/AgentViewRenderer.tsx:215-229`](../../src/frontend/src/components/AgentViewRenderer.tsx)) and replaces `mod.default` on source updates ([`AgentViewRenderer.tsx:233-245`](../../src/frontend/src/components/AgentViewRenderer.tsx)). State held by the stable host survives that replacement; hook state inside `mod.default` does not.
-- Generated agent documentation has one authoritative component-props table ([`src/core/views/doc.ts:93-110`](../../src/core/views/doc.ts)), and the short `views` skill points agents there ([`src/core/box/skills-content.ts:453-466`](../../src/core/box/skills-content.ts)). Update both the generated reference source and its templates; do not hand-edit generated box files.
+- Generated agent documentation has one authoritative component-props table ([`src/core/views/doc.ts:93-110` (moved to `beebox/src/core/views/doc/core.ts`)](../../src/core/views/doc.ts)), and the short `views` skill points agents there ([`src/core/box/skills-content.ts:453-466` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`)](../../src/core/box/skills-content.ts)). Update both the generated reference source and its templates; do not hand-edit generated box files.
 
 ## Prior art (external)
 
@@ -107,7 +107,7 @@ Both methods validate and serialize before updating their owner. Invalid state l
 
 **Direction.** Every mount passes an explicit surface capability. Node rendering supplies inert methods with `canPush: false`; because server rendering does not run event handlers, the methods only make the browser and Node prop shapes agree. Widen `ViewHost.renderInline` from a bare path to a complete `ViewTarget`: the current implementation discards viewer and query data before mounting the nested file ([`src/frontend/src/lib/view-host.tsx:54-60`](../../src/frontend/src/lib/view-host.tsx), [`src/frontend/src/components/AgentViewRenderer.tsx:153-161`](../../src/frontend/src/components/AgentViewRenderer.tsx)). Each `CardRef` target then receives its own viewer, params, and state rather than inheriting the parent's.
 
-Update `src/core/views/doc.ts`, `src/core/box/templates.ts`, and the generated-doc fixtures with one site-like example:
+Update `src/core/views/doc.ts` (moved to `beebox/src/core/views/doc/core.ts`), `src/core/box/templates.ts`, and the generated-doc fixtures with one site-like example:
 
 ```tsx
 export default function Catalog({ viewHistory }) {
@@ -182,7 +182,7 @@ None blocking. The chosen contract uses a JSON object in `viewState`, browser-li
 
 ## Knowledge audits
 
-Add one `knows_about` audit with `should_read: docs/generated/views.md`: ask a box agent how to preserve a rich authored view's current section across source reload and Back/Forward. A passing answer must choose `viewHistory.state` plus `pushState`/`replaceState`, explain `canPush`, distinguish it from renderer `params` and React `useState`, and avoid direct `window.history` access. This follows the existing view-authoring audit policy: the lightweight `views` skill directs the agent to the generated reference rather than putting the full API in always-loaded context ([`src/core/box/skills-content.ts:462-466`](../../src/core/box/skills-content.ts)). Run the audit against the test box and record its status comment before landing.
+Add one `knows_about` audit with `should_read: docs/generated/views.md`: ask a box agent how to preserve a rich authored view's current section across source reload and Back/Forward. A passing answer must choose `viewHistory.state` plus `pushState`/`replaceState`, explain `canPush`, distinguish it from renderer `params` and React `useState`, and avoid direct `window.history` access. This follows the existing view-authoring audit policy: the lightweight `views` skill directs the agent to the generated reference rather than putting the full API in always-loaded context ([`src/core/box/skills-content.ts:462-466` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`)](../../src/core/box/skills-content.ts)). Run the audit against the test box and record its status comment before landing.
 
 ## What will hold this after it ships
 

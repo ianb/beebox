@@ -18,10 +18,10 @@ import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { MODEL_ID } from "../shared/model-ids.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
-import { buildScriptEnv } from "../core/script-env.js";
+import { buildScriptEnv } from "../core/script-env/core.js";
 import { dropUndefined } from "../lib/drop-undefined.js";
-import { errorMessage } from "../lib/error-guards.js";
-import { isRecord } from "../lib/is-record.js";
+import { errorMessage } from "../shared/error-guards.js";
+import { isRecord } from "../shared/is-record.js";
 import {
   assertBatchAlignment,
   buildScanPrompt,
@@ -29,7 +29,7 @@ import {
   ScanBatchMisalignedError,
   type BatchUsage,
   type RawScanAnalysis,
-} from "../core/commands/scan-import-gemini.js";
+} from "../core/describe-images/gemini.js";
 import {
   ScanVisionBatchError,
   type ScanVisionResult,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 
 export interface RoutingRule {
   when: string;

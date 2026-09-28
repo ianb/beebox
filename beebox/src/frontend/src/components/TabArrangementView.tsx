@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { RendererProps } from "../renderers";
+import type { RendererProps } from "../file-type-registry";
 import { bbxSource } from "../lib/source-tag";
 import { requestTabArrangement, type ArrangementRelayResult } from "../lib/tab-arrangement-relay";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
-import { CheckboxField } from "./ui/fields";
+import { CheckboxField } from "./ui/fields/field";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
 import { ErrorText } from "./ui/ErrorText";

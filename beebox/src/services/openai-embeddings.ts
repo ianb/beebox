@@ -21,8 +21,8 @@
  */
 
 import ky from "ky";
-import { errorMessage } from "../lib/error-guards.js";
-import { isRecord } from "../lib/is-record.js";
+import { errorMessage } from "../shared/error-guards.js";
+import { isRecord } from "../shared/is-record.js";
 import { OPENROUTER_BASE_URL, openRouterProvider, type ModelRoute } from "../core/openrouter.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────

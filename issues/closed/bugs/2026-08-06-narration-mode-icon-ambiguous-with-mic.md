@@ -16,7 +16,7 @@ mic can't make.
 
 The current attempts to overload the mic don't resolve it:
 
-- `VoiceChip` (`beebox/src/frontend/src/components/chat/VoiceChip.tsx:53`,
+- `VoiceChip` (`beebox/src/frontend/src/components/chat/VoiceChip.tsx:53` (moved to `beebox/src/frontend/src/components/chat/VoiceChip/view.tsx`),
   `MicIcon`) draws a plain mic and only **dims it** (`opacity-40`) when narration
   is off vs. full opacity when on — a brightness difference, not a different
   symbol.
@@ -25,7 +25,7 @@ The current attempts to overload the mic don't resolve it:
   already tries to disambiguate by adding a **chat bubble** beside the mic body —
   but the mic is still the dominant shape, so it still reads as "voice."
 - The voice button
-  (`beebox/src/frontend/src/components/chat/InteractiveChat-voice-button.tsx:47`)
+  (`beebox/src/frontend/src/components/chat/InteractiveChat-voice-button.tsx:47` (moved to `beebox/src/frontend/src/components/chat/InteractiveChat-composer/InteractiveChat-voice-button.tsx`))
   leans on the **tooltip text** ("Voice input (narration mode)" vs. "Voice input")
   to carry the mode — i.e. the glyph alone doesn't communicate it.
 
@@ -47,7 +47,7 @@ and a separate, unmistakable indicator for "narration mode engaged."
 
 ## Related
 
-- `beebox/src/frontend/src/components/chat/VoiceChip.tsx` — the split-pill
+- `beebox/src/frontend/src/components/chat/VoiceChip.tsx` (moved to `beebox/src/frontend/src/components/chat/VoiceChip/view.tsx`) — the split-pill
   chip face; `VoiceChipFace` doctest exercises it standalone, so an icon change is
   testable there.
 - [chat output vocabulary ia pass](../../docs-and-chores/2026-06-02-chat-output-vocabulary-ia-pass.md)

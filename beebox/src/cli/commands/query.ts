@@ -13,11 +13,11 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { TodoParamsSchema } from "../../core/todo/collection.js";
 import { runTodoQuery, type TodoQueryResult } from "../../core/todo/query.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { formatTodoRows, formatIssues } from "./query-format.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { formatTodoRows, formatIssues } from "../query-format.js";
 
 /** Every collection `bbx query` knows. One today; the error message lists whatever is here. */
 const COLLECTIONS: readonly string[] = ["todos"];

@@ -12,7 +12,7 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema, type LintIssue } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema, type LintIssue } from "../exports/cards.js";
 import { z } from "zod";
 
 /** Knowledge-component type — a strong hint to *how* a node is taught. */

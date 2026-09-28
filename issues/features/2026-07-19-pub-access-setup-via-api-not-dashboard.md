@@ -49,7 +49,7 @@ instructions are already wrong. The boxholder lost real time to it.
 
 ## What it prints today
 
-From `accessSetupInstructions` (`beebox/src/publish/setup.ts`):
+From `accessSetupInstructions` (`beebox/src/publish/setup/core.ts`):
 
 ```
 1. Zero Trust dashboard → Settings → Authentication → add Google as a login method.
@@ -98,7 +98,7 @@ application itself and reads back the `aud` rather than asking a human to copy i
 - The team domain is readable from the account (it's shown in the dashboard's
   Account details; there is a corresponding Access organization endpoint).
 - This composes with the existing design: extend
-  `CloudflareProvisioningClient` (`src/services/cloudflare-provisioning.ts`) with
+  `CloudflareProvisioningClient` (`src/services/cloudflare-provisioning.ts` (moved to `beebox/src/services/cloudflare-provisioning/core.ts`)) with
   the Access endpoints, fake for tests, same as the R2/Worker calls.
 
 ## Design questions
@@ -127,13 +127,13 @@ application itself and reads back the `aud` rather than asking a human to copy i
 
 Publishing's credentials are a **machine-level dotfile the user must remember to
 source** (`set -a; . ~/.beebox-publish.env; set +a`) before running anything;
-`src/publish/setup.ts:59` and `src/services/publish-remote-store.ts:114` just
+`src/publish/setup.ts:59` (moved to `beebox/src/publish/setup/core.ts`) and `src/services/publish-remote-store.ts:114` just
 read `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` out of the environment.
 
 That's a third pattern, matching neither of the two we already have:
 
 - Per-box connector secrets live in **`config/connectors/*.secret.json`**
-  (gitignored via the box scaffold, `src/core/box/index.ts:154`).
+  (gitignored via the box scaffold, `src/core/box/index.ts:154` (moved to `beebox/src/core/box/structure/core.ts`)).
 - The open decision [per-box secret management](../closed/decisions/2026-03-15-per-box-secret-management.md)
   is already about how boxes get provisioned with API keys — publishing quietly
   added a fourth answer instead of joining that conversation.

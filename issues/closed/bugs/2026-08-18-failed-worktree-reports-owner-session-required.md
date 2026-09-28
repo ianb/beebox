@@ -12,7 +12,7 @@ resolution: implemented
 
 **Closed 2026-09-15:** resolved by Track 6 of
 `beebox/docs/implemented-plans/router-transient-failure-resilience.md`
-(`workstreams-app/src/router/router-failed-page.ts:160`
+(`workstreams-app/src/router/router-failed-page.ts:160` (moved to `workstreams-app/src/router/server/failed-page.ts`)
 `writeWorktreeUnavailable`, wired at `router-dispatch.ts:296`). A parked
 worktree now answers 503 `worktree-unavailable` instead of the 401
 `owner-session-required` this issue described. Not yet exercised against the

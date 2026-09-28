@@ -78,7 +78,7 @@ distinct integration paths, in increasing cost:
 
 - **(P1) Anthropic-compatible endpoint** — set `ANTHROPIC_BASE_URL` + auth token; the SDK
   speaks the Messages API to a compatible server. **Trivial** — and we *already* set
-  `ANTHROPIC_BASE_URL` in the run path (for the prompt-logger, `src/core/agent/run.ts:192`),
+  `ANTHROPIC_BASE_URL` in the run path (for the prompt-logger, `src/core/agent/run.ts:192` (moved to `beebox/src/core/agent/invoke/run.ts`)),
   so the wiring exists. **But only Anthropic-shaped vendors qualify: GLM (`api.z.ai/api/anthropic`)
   and Kimi-coding (`api.kimi.com/coding/`).** Caveat: it's *compatible*, not Anthropic's own —
   verify tool-use formatting, streaming, thinking blocks, and prompt-caching against our SDK

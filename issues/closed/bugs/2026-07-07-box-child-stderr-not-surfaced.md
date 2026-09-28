@@ -8,14 +8,14 @@ resolution: implemented
 ---
 
 **Closed 2026-07-11:** fixed same-day by commit e6b00ab0 — `forwardChildOutput`
-(`src/hub/child-output-log.ts`, called from `src/hub/supervisor.ts:397`)
+(`src/hub/child-output-log.ts` (moved to `beebox/src/hub/supervisor/child-output-log.ts`), called from `src/hub/supervisor.ts:397` (moved to `beebox/src/hub/supervisor/core.ts`))
 line-buffers child stdout/stderr into a rolling `.beebox/hub-child.log`
 per box. The secondary ask (surfacing truncated agent-error text in the chat UI
 instead of "no detail") is still open — refiled as
 [surface-agent-error-detail-in-chat-ui](../../features/2026-07-11-surface-agent-error-detail-in-chat-ui.md).
 
 The hub spawns each box's `bbx serve` child with `stdio: ["ignore", "pipe",
-"pipe"]` (`src/hub/supervisor.ts:55`) — stdout/stderr are piped to the hub but
+"pipe"]` (`src/hub/supervisor.ts:55` (moved to `beebox/src/hub/supervisor/core.ts`)) — stdout/stderr are piped to the hub but
 **never forwarded to journald or a per-box log file** (execa buffers them; they
 surface only if the child exits). A long-running box child's diagnostics
 therefore vanish.

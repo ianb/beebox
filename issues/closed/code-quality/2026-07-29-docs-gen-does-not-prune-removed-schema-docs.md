@@ -8,11 +8,11 @@ resolution: implemented
 ---
 
 Fixed in commit `ebbe0190` (worktree `docs-gen-prune`): `writeCardDocs`
-(`src/core/docs-gen/index.ts`) now `readdir`s `docs/generated/` after writing
+(`src/core/docs-gen/index.ts` (moved to `beebox/src/core/docs-gen/generate/core.ts`)) now `readdir`s `docs/generated/` after writing
 the current set of `card-<type>.md` files and `unlink`s any `card-*.md` whose
 type isn't in `allCardSchemas`, mirroring `init-rules.ts`'s existing cleanup.
 
-`src/core/docs-gen/index.ts`'s `writeCardDocs` only *writes* a
+`src/core/docs-gen/index.ts` (moved to `beebox/src/core/docs-gen/generate/core.ts`)'s `writeCardDocs` only *writes* a
 `docs/generated/card-<type>.md` for each currently-registered schema with
 `instructions` — it never deletes one for a type that used to exist but no
 longer does. Compare `src/core/init-rules.ts`, which regenerates
@@ -32,6 +32,6 @@ directory listing or search). Deleted by hand on test1 as part of that
 migration's cleanup.
 
 Fix would be a small addition to `writeCardDocs` (or a sibling prune step) in
-`src/core/docs-gen/index.ts`: after writing the current set of
+`src/core/docs-gen/index.ts` (moved to `beebox/src/core/docs-gen/generate/core.ts`): after writing the current set of
 `card-<type>.md` files, `readdir(DOCS_DIR)` and remove any `card-*.md` whose
 type isn't in `allCardSchemas`, mirroring `init-rules.ts`'s existing pattern.

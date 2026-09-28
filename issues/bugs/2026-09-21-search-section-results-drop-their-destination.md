@@ -25,6 +25,6 @@ this is not a claim that the document failed to open. It opened successfully
 without using the section destination. Wire the existing section identity
 through navigation and verify both search entry points.
 
-Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 37–40, screenshots 20–22. Related history:
 [box search](../closed/features/2026-05-11-box-search.md).

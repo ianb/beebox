@@ -14,8 +14,8 @@ issues: []
 > design are live. Current model: [`../assets.md`](../media/assets.md).
 
 **Lifecycle:** partial historical plan. Current behavior is owned by
-`src/schemas/pdf.ts`, `src/core/commands/scan-import-pdf.ts`,
-`src/core/commands/pdf-extract.ts`, and
+`src/schemas/pdf.ts`, `src/core/commands/scan-import-pdf.ts` (moved to `beebox/src/core/commands/scan-import/pdf.ts`),
+`src/core/commands/pdf-extract.ts` (moved to `beebox/src/core/pdf/extract.ts`), and
 `src/core/commands/pdf-reanalyze.ts`. `bbx scan-import` accepts one PDF per
 session; a PDF with a usable text layer becomes a `pdf` card, and
 `bbx pdf reanalyze <card>` refreshes extraction. Read those sources and the

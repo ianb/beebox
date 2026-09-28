@@ -28,7 +28,7 @@ the CLI guess.
 
 The endpoint must remain derived from the current box, not inherited: the
 allowlist explicitly excludes `BBX_SERVER_URL` and `BBX_BOX_NAME` because a
-parent could point a child at the wrong box (`src/core/script-env-allowlist.ts:50`).
+parent could point a child at the wrong box (`src/core/script-env-allowlist.ts:50` (moved to `beebox/src/core/script-env/allowlist.ts`)).
 The descriptor therefore adds a machine-owned runtime artifact rather than
 weakening that boundary. It also preserves the existing direct-read path and
 does not add a default port, because `box-client.ts:42–44` rejects guessing at
@@ -37,13 +37,13 @@ does not add a default port, because `box-client.ts:42–44` rejects guessing at
 ## What already exists
 
 - `startServer` knows the actual bound host and port and registers the live URL
-  only after `server.listen` (`src/webapp/server.ts:371–383`). Reuse this bind
+  only after `server.listen` (`src/webapp/server.ts:371 (moved to `beebox/src/webapp/server/app.ts`)–383`). Reuse this bind
   point as the write owner.
 - `.bbx-serve.pid` is already a per-box machine runtime marker
   (`docs/box-layout.md:133–140`). Place the endpoint descriptor in the same
   runtime-artifact family and keep it out of committed box content.
 - `buildScriptEnv` already has one priority cascade and `parsePublicUrl`
-  (`src/core/script-env.ts:112–148`). Add the disk source to that cascade
+  (`src/core/script-env.ts:112 (moved to `beebox/src/core/script-env/core.ts`)–148`). Add the disk source to that cascade
   without changing the allowlist.
 - `dispatchCredentialed` already attributes missing client state to the
   machine (`src/cli/lib/credentialed-verb.ts:108–116`). Extend the transport
@@ -64,7 +64,7 @@ bind; graceful shutdown removes it with the PID file. `buildScriptEnv` reads it
 when the in-process ambient map is unavailable, before configured/env URLs.
 
 **Why:** The ambient map is process-local, while hub children receive a new
-port on every restart (`src/hub/child-spawn.ts:77–90`). A file refreshed by the
+port on every restart (`src/hub/child-spawn.ts:77 (moved to `beebox/src/hub/supervisor/child-spawn.ts`)–90`). A file refreshed by the
 process that actually binds survives both boundaries.
 
 **Direction:** Use a hidden runtime file under `.beebox/`, containing

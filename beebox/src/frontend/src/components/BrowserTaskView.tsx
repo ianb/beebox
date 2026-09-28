@@ -10,8 +10,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import type { RendererProps } from "../renderers";
-import { Markdown } from "./Markdown";
+import type { RendererProps } from "../file-type-registry";
+import { Markdown } from "./Markdown/body";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Pre } from "./ui/Pre";
@@ -33,7 +33,7 @@ import { SubmissionForm, type SubmissionValidation } from "./browser-task/Submis
 import { TaskStatus } from "./browser-task/TaskStatus";
 import { BatchList } from "./browser-task/BatchList";
 import { RunsTable } from "./browser-task/RunsTable";
-import { INBOX_DIR, PROCESSED_DIR, fetchBoxText, loadBatches, schemaPath, type BatchSummary } from "./browser-task/browser-task-data";
+import { INBOX_DIR, PROCESSED_DIR, fetchBoxText, loadBatches, schemaPath, type BatchSummary } from "./browser-task/data";
 
 interface AttachState {
   schemaText: string | null;

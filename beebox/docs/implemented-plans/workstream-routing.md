@@ -105,7 +105,7 @@ resume-with-context path, and an explicit manual fallback.
   The CLI and app can therefore disagree about what is revivable.
 - The list scans every directory under the worktree root
   (`bin/workstreams:543-550`). The app validates the complete returned array at
-  once (`workstreams-app/src/server/workstreams-command.ts:107-125`), so one
+  once (`workstreams-app/src/server/workstreams-command.ts:107-125` (moved to `workstreams-app/src/server/main/workstreams-command.ts`)), so one
   non-worktree directory can invalidate every page.
 - Git supplies stable machine-readable worktree enumeration and explicit lock
   state. The current tool partly ignores this source by iterating directories.
@@ -150,7 +150,7 @@ failure still fails the request because no trustworthy rows exist.
 
 Tests first:
 
-- Extend `workstreams-app/test/server-boundary.doctest.md`: one invalid row
+- Extend `workstreams-app/test/server-boundary.doctest.md` (moved to `workstreams-app/test/server/main/app.boundary.doctest.md`): one invalid row
   returns the other rows and a warning; invalid JSON and command failure remain
   hard errors.
 - Add a shell-facing workstream inventory test around a temporary Git repo:

@@ -13,7 +13,7 @@ content-type parser (413s anything larger — the server-wide 50 MB JSON limit n
 longer applies), per-field truncation (2 KB) so one report can't write a giant
 line, a per-request report cap (20) on the Reporting-API array, and
 newline-aware rotation that drops a partial line with no newline rather than
-retaining a giant fragment. Proof: `test/webapp/routes/api-csp-report-bounds.doctest.md`.
+retaining a giant fragment. Proof: `test/webapp/routes/api-csp-report-bounds.doctest.md` (moved to `beebox/test/webapp/routes/api-csp-report.bounds.doctest.md`).
 
 Surfaced by a cross-model (Codex) security review of the local-password-auth
 branch; **pre-existing**, filed rather than fixed on that branch.

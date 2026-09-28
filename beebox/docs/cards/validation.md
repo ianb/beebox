@@ -17,7 +17,7 @@ Engine-spawned agent runs (wakeup, procedures, chat) get an in-process SDK
 callback instead of the settings-file hook: `cardValidatorHook`
 (`src/core/sdk-hooks.ts`) matches `PostToolUse` of `Write`/`Edit`/`MultiEdit`
 and, by file type, compiles a view file, rejects a trick script outside
-`tricks/scripts/<name>/`, lints a `.card` (`src/core/card-lint.ts`), warns on
+`tricks/scripts/<name>/`, lints a `.card` (`src/core/card-lint/core.ts`), warns on
 a connector-owned markdown file, or runs markdownlint on built-in markdown.
 Every result is injected as `additionalContext`; none blocks the edit.
 
@@ -54,7 +54,7 @@ Three hooks are installed per box:
 
 Refs should be written from the box root (`/_content/notes/Plan.doc.card`); the one
 exception is a card's own `attach/…` scope. A document-relative ref still
-resolves — liberal resolution is permanent (`src/shared/ref-path.ts`) — but it
+resolves — liberal resolution is permanent (`src/shared/ref-path/core.ts`) — but it
 means something different depending on where the document lives.
 
 `bbx validate --canonical` reports every ref written in the relative form, naming
@@ -91,5 +91,5 @@ bury the broken-ref signal that actually needs acting on. It is a whole-box chec
 `docs/implemented-plans/box-root-paths.md` (Track F).
 
 Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rfc.md`.
-Per-schema migrators: `scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts`
+Per-schema migrators: `scripts/migrate/*.ts` + `src/scripts/migrate/_warnings.ts`
 (noisy-mode field-loss detection).

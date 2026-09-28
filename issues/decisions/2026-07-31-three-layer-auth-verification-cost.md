@@ -21,7 +21,7 @@ and it is now the main cost of touching auth.
    or cold-starting anything. Per-box credentials resolve in
    `resolveMobileForBox` (`router-auth-deps.ts:128`); worktree Vite assets have
    their own separate rung, `resolveWorktreeAsset`.
-2. **`bbx hub`** (`beebox/src/hub/hub-server.ts`). Gates the HTTP
+2. **`bbx hub`** (`beebox/src/hub/server/core.ts`). Gates the HTTP
    catch-all (`:478`) and the WebSocket upgrade (`:535`) through
    `hasMobileAuth` (`:148`) plus `decideHubAuth` (`:246`), then injects the
    identity headers the box trusts. `/api/boxes` (`:190`) reaches auth

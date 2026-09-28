@@ -33,7 +33,7 @@ assumption from the readable `bbx session` path and from `bbx feedback`.
   `SessionEntry`. This plan reuses it for readable diagnostics.
 - `src/core/chat/session/history.ts` stores the engine that owns each web-chat session.
   This plan uses that record when an explicit session belongs to web chat.
-- `src/cli/commands/session-render.ts` renders provider-neutral `SessionEntry` values.
+- `src/cli/commands/session-render.ts` (moved to `beebox/src/cli/commands/session/render.ts`) renders provider-neutral `SessionEntry` values.
   This plan reuses it without a second renderer.
 - Codex exports `CODEX_THREAD_ID` to commands that it runs. Claude exports
   `CLAUDE_CODE_SESSION_ID`. This plan treats these as the native current-session

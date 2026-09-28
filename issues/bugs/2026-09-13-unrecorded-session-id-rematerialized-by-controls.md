@@ -16,19 +16,19 @@ predate that fix; neither was introduced by it.
 
 ## The controls door
 
-`setModel` (`src/webapp/trpc/routers/chat-control-procedures.ts:208`) and
+`setModel` (`src/webapp/trpc/routers/chat-control-procedures.ts:208` (moved to `beebox/src/webapp/trpc/routers/chat/control-procedures.ts`)) and
 `setFeature` (`:276`) resolve the engine with `resolveChatEngine` — the box
 default for an unrecorded id — and then call `registry.getOrCreate(input.session)`.
-`getOrCreate` (`src/core/chat/session/registry.ts:229`) puts the id in
+`getOrCreate` (`src/core/chat/session/registry.ts:229` (moved to `beebox/src/core/chat/session/registry/core.ts`)) puts the id in
 `this.entries`. After that, `deletion.hasAssignedSession`
-(`src/core/chat/session/registry-deletion.ts:22`) finds it, and
+(`src/core/chat/session/registry-deletion.ts:22` (moved to `beebox/src/core/chat/session/registry/deletion.ts`)) finds it, and
 `resolveSessionAvailability` (`src/core/chat/session/availability.ts:78`)
 returns `{kind: "resumable"}` BEFORE it reaches the recorded-engine check below.
 
 So the sequence is: a stale tab toggles a model or a feature on an id the box has
 no record of, the toggle registers the id, availability then calls it resumable,
-and the send path admits it (`src/webapp/routes/chat-send-target.ts:77` →
-`src/core/chat/session/target.ts:65` → `src/core/chat/session/index.ts:190`) and
+and the send path admits it (`src/webapp/routes/chat-send-target.ts:77` (moved to `beebox/src/webapp/routes/chat/send-target.ts`) →
+`src/core/chat/session/target.ts:65` → `src/core/chat/session/index.ts:190` (moved to `beebox/src/core/chat/session/run/core.ts`)) and
 resumes the box-default engine for a session that engine never had. Feature
 persistence can also write a history row stamped with the guessed engine
 (`src/core/chat/session/history.ts:375`), which makes the guess durable.
@@ -74,10 +74,10 @@ needs a product decision. `injectUnfiledSelfNote` and `injectStrandedSelfNote`
 take persisted session ids from stale upload cards and staging records
 (`src/core/bulk-upload/sweep.ts:122`, `:302`) and call
 `runtime.registry.getOrCreate(targetId)` directly
-(`src/webapp/routes/bulk-upload-lifecycle.ts:43`, `:90`), with no availability
+(`src/webapp/routes/bulk-upload-lifecycle.ts:43` (moved to `beebox/src/webapp/routes/bulk-upload/lifecycle.ts`), `:90`), with no availability
 check. If a box's chat records were rewound, this recreates the ghost entry, and
 the next send resolves the unrecorded session through `resolveStartEngine`'s
-default fallback (`src/core/chat/session/start.ts:123`).
+default fallback (`src/core/chat/session/start.ts:123` (moved to `beebox/src/core/chat/session/run/start.ts`)).
 
 The gate tightening means such an entry no longer makes availability lie about
 it, so the reachable harm is narrower than it was. What is undecided is what

@@ -3,10 +3,10 @@ import { z } from "zod";
 
 import { pubIdSchema } from "../../../publish/manifest.js";
 import { getOwnerEmail } from "../../auth.js";
-import { defaultManagedPublicationRuntime } from "../../../services/managed-publication-runtime.js";
+import { defaultManagedPublicationRuntime } from "../../../services/managed-publication-runtime/core.js";
 import {
   prepareManagedPublication,
-} from "../../../publish/managed-publications.js";
+} from "../../../publish/managed-publications/core.js";
 import {
   approveManagedPublication,
   disableManagedPublication,
@@ -17,10 +17,10 @@ import { listManagedPublications, previewManagedPublicationFile } from "../../..
 import { configureManagedPublicationSharedHost } from "../../../publish/managed-publication-shared-host.js";
 import { ensurePublicationReferenceCard } from "../../../publish/publication-reference-card.js";
 import { publicationCardUrl } from "../../../shared/publication-card.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
-import { authenticatedOwnerProcedure, authedProcedure, router } from "../trpc.js";
+import { authenticatedOwnerProcedure, authedProcedure, router } from "../procedures.js";
 
 const pubIdInput = pubIdSchema;
 

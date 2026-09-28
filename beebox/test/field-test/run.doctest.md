@@ -15,13 +15,13 @@ import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execa } from "execa";
-import { createFakeChatBackend, type FakeChatBackend, type ChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend, type FakeChatBackend, type ChatBackend } from "../../src/services/claude-chat/core.js";
 import { MODEL_ID } from "../../src/shared/model-ids.js";
 import { loadBoxModel } from "../../src/core/box/config.js";
-import { runFieldScenario } from "../../src/field-test/run.js";
+import { runFieldScenario } from "../../src/field-test/run/core.js";
 import { createFieldBox } from "../../src/field-test/run-box.js";
 import { loadFieldScenario } from "../../src/field-test/scenario.js";
-import { seedFieldBox, scenarioNeedsGmail } from "../../src/field-test/run-seed.js";
+import { seedFieldBox, scenarioNeedsGmail } from "../../src/field-test/run/seed.js";
 import { waitForQuiescence, type QuiescenceProbe } from "../../src/field-test/quiescence.js";
 import { fileExists } from "../../src/lib/file-exists.js";
 

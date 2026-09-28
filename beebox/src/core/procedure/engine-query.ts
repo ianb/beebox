@@ -7,12 +7,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { fmt } from "../../lib/format.js";
-import { ok, okVoid, err, type Result } from "../../lib/result.js";
-import { invariant } from "../../lib/invariant.js";
+import { ok, okVoid, err, type Result } from "../../shared/result.js";
+import { invariant } from "../../shared/invariant.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ProcedureError } from "./engine-types.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 
 /**
  * Resolve a run-dir argument to an absolute path. A bare name or relative

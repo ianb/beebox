@@ -5,7 +5,7 @@ import { Hint } from "../ui/Hint";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Badge } from "../ui/Badge";
-import { ADMIN_SCOPE_LABELS, ADMIN_SECTIONS, adminSectionElementId, adminSectionHeadingId, type AdminSectionId } from "./admin-sections";
+import { ADMIN_SCOPE_LABELS, ADMIN_SECTIONS, adminSectionElementId, adminSectionHeadingId, type AdminSectionId } from "./sections";
 
 /**
  * The landmark every admin section renders: a `section` named by its heading,

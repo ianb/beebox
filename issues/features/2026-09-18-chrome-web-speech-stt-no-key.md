@@ -9,7 +9,7 @@ discovered-in: main — boxholder wants a no-key dictation path on the web
 ---
 
 Every dictation path today needs a provider key. `loadTranscriptionConfig`
-(`beebox/src/core/transcription/index.ts:175`) defaults to `voxtral` for
+(`beebox/src/core/transcription/dispatch/core.ts:175`) defaults to `voxtral` for
 streaming and `whisper` for the HQ pass, and each resolves a key from the
 machine secret store or the environment
 (`transcription/whisper.ts:94`). A box with no key configured has no dictation

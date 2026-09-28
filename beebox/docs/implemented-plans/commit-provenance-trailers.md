@@ -56,11 +56,11 @@ This plan is the implementation.
   create branch `worktree-<name>` (root `CLAUDE.md`: *"creates a managed
   worktree at `~/src/beebox-worktrees/<name>/` on branch
   `worktree-<name>`"*). The hook strips the prefix; nothing else needed.
-- **Plan frontmatter.** `beebox/src/dev/doc-frontmatter.ts:22`
+- **Plan frontmatter.** `beebox/src/dev/doc-frontmatter.ts:22` (moved to `beebox/src/dev/doc-check/frontmatter.ts`)
   `splitFrontmatter` and `:82` the `workstream` validation
   (*"frontmatter workstream must be a bare name, unattached, or unknown"*).
   Reuse `splitFrontmatter` to find the plan(s) claiming a stream. Plan dirs
-  are enumerated at `beebox/src/dev/doc-check.ts:53-57` (`docs/plans/`,
+  are enumerated at `beebox/src/dev/doc-check.ts:53-57` (moved to `beebox/src/dev/doc-check/check.ts`) (`docs/plans/`,
   `docs/implemented-plans/`, `docs/unimplemented-plans/`). The hook reads
   **`docs/plans/` only**: `doc-frontmatter.ts:56-57` requires
   `unimplemented-plans` to be `superseded` or `parked`, and implemented plans

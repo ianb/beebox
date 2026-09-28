@@ -9,10 +9,10 @@ a real backoff or reach a real HQ service.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { createEventBus } from "../../../src/core/event-bus.js";
-import { createStagingSession, addAudioChunk, readStagingSession } from "../../../src/core/capture/staging-store.js";
-import { sealVoiceSession, applyVoiceEvent } from "../../../src/core/voice-recording/voice-staging.js";
-import { runHqJob } from "../../../src/core/voice-recording/hq-job.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
+import { createStagingSession, addAudioChunk, readStagingSession } from "../../../src/core/capture/staging-store/core.js";
+import { sealVoiceSession, applyVoiceEvent } from "../../../src/core/voice-recording/voice-staging/core.js";
+import { runHqJob } from "../../../src/core/voice-recording/hq-job/core.js";
 
 const GITIGNORE = ["_tmp/", ".beebox/"].join("\n") + "\n";
 

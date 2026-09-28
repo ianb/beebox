@@ -603,7 +603,7 @@ case "$cmd" in
     ;;
 
   serve)
-    exec "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/workstreams-app/src/router/router.ts" "$@"
+    exec "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/workstreams-app/src/router/server/listener.ts" "$@"
     ;;
 
   list)
@@ -803,7 +803,7 @@ case "$cmd" in
            (if .git.dirty == null then " dirty=?" elif .git.dirty > 0 then " dirty=\(.git.dirty)" else "" end)),
           # A ready generation whose backend source has changed on disk since it
           # started is still serving the old code — visible here because nothing
-          # replaces it automatically (workstreams-app/src/router/router-core.ts checkSourceFreshness).
+          # replaces it automatically (workstreams-app/src/router/core/engine.ts checkSourceFreshness).
           (.runtime.state + (if .runtime.staleSince then " (stale)" else "" end)),
           (.session.description // "")
         ] | @tsv)' | column -t -s "$(printf '\t')"

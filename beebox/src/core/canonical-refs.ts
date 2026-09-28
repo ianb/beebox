@@ -6,7 +6,7 @@
  * (`/store/notes/Plan.doc.card`), or is the one sanctioned exception: a card's
  * own `attach/…` scope. A document-relative ref (`../people/Dana.person.card`,
  * `Plan.doc.card`) still resolves — liberal resolution is permanent, see
- * `src/shared/ref-path.ts` — but it is non-canonical: it means something
+ * `src/shared/ref-path/core.ts` — but it is non-canonical: it means something
  * different depending on where the document lives, which is exactly what breaks
  * when an agent copies a ref between documents.
  *
@@ -20,7 +20,7 @@
  * on. `--canonical` is full opt-in reporting (frontmatter included) and
  * `--canonical --fix` (`canonicalize-refs.ts`) is the one-command migration.
  *
- * All ref algebra comes from `src/shared/ref-path.ts`; this module only decides
+ * All ref algebra comes from `src/shared/ref-path/core.ts`; this module only decides
  * which form a ref is written in and how to phrase the finding.
  */
 
@@ -33,12 +33,12 @@ import {
   parseRef,
   resolveRefPath,
   type RefKind,
-} from "../shared/ref-path.js";
+} from "../shared/ref-path/core.js";
 import { extractInlineLinks, resolveInternalLink } from "./markdown-lint-rules.js";
 import { resolveRefExists } from "./ref-exists.js";
 import { extractViewRefs } from "./views/refs.js";
 import { fileExists } from "../lib/file-exists.js";
-import { assertNever } from "../lib/invariant.js";
+import { assertNever } from "../shared/invariant.js";
 
 /**
  * The verdict on one ref:

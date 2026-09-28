@@ -16,10 +16,10 @@ bubble in the transcript and the agent replied to it in ordinary prose. No
 context was compacted and no "Context compacted" marker was rendered.
 
 The menu item sends the literal text as a user message
-(`beebox/src/frontend/src/components/chat/InteractiveChat-actions.ts:137-142`),
+(`beebox/src/frontend/src/components/chat/InteractiveChat-actions.ts:137-142` (moved to `beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/actions.ts`)),
 and the send route special-cases a leading slash only to skip its own injections
 so the command stays at the start of the text
-(`beebox/src/webapp/routes/chat-send-routes.ts:92-96`). Whether the text is
+(`beebox/src/webapp/routes/chat-send-routes.ts:92-96` (moved to `beebox/src/webapp/routes/chat/send-routes.ts`)). Whether the text is
 then interpreted as a command is up to the engine behind the session; on the
 engine this box was running, it was not.
 

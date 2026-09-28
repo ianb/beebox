@@ -7,7 +7,7 @@ mark`); the `validate` hook flags a half-set coordinate.
 ```ts setup
 import { PlaceSchema, createPlaceTemplate } from "../../src/schemas/place.js";
 import { parseCardText } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
 
 const schemas = await createCardSchemaMap();
 const v = PlaceSchema.validate;

@@ -15,8 +15,8 @@ import { SecretLifecycleError } from "../../core/secrets/errors.js";
 import { loadSecretStore, secretsFilePath } from "../../core/secrets/store.js";
 import { detectAgentContext } from "../../lib/agent-context.js";
 import { boxSlug } from "../../lib/box-slug.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { findBoxRoot } from "../../lib/paths.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { findBoxRoot } from "../../lib/paths/core.js";
 
 /** Refuse a store mutation from an agent session unless a human sanctioned it. */
 export function refuseIfUnconfirmedAgent(opts: { action: string; agentConfirmed: boolean | undefined }): void {

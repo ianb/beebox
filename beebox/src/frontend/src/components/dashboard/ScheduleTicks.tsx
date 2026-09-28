@@ -9,7 +9,7 @@
  * unjudged run gets filed under "all skipped" and disappears.
  */
 
-import type { RouterOutput } from "../../lib/trpc";
+import type { RouterOutput } from "../../lib/trpc/client";
 
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
 type TickResultData = NonNullable<SchedulerLogEntry["result"]>;

@@ -12,7 +12,7 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile, readdir, readFile, unlink } from "node:fs/promises";
-import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
+import { cardSchemas, loadBoxSchemas } from "../schemas.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { guidanceSurfaceFor } from "./box/guidance-surfaces.js";
 import { readDocId, withDocId } from "./docs-gen/shared.js";
@@ -86,7 +86,7 @@ export async function generateRules(boxRoot: string): Promise<string[]> {
   // `.<type>.card` file.
   const boxSchemas = await loadBoxSchemas(boxRoot);
   const cardRuleSources: Array<{ name: string; instructions: string | undefined }> = [
-    ...cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
+    ...cardSchemas.list.map((s) => ({ name: s.type, instructions: s.instructions })),
     ...boxSchemas.cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
   ];
 

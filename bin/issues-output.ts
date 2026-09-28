@@ -4,8 +4,8 @@
  * column widths and wording are unchanged.
  */
 
-import type { IssueEntry } from "../workstreams-app/src/server/issue-search-model.js";
-import type { IndexHit, SearchMode } from "../workstreams-app/src/server/issue-index-query.js";
+import type { IssueEntry } from "../workstreams-app/src/server/main/issue-search-model.js";
+import type { IndexHit, SearchMode } from "../workstreams-app/src/server/main/issue-index-query.js";
 import type { ParsedValues } from "./issues-args.js";
 
 function truncate(text: string, width: number): string {

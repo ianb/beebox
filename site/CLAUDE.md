@@ -79,7 +79,7 @@ writes the input manifest last (so a partial build never masks staleness).
   never deletes, commits, pushes, or deploys.
 - `render.ts` — the local Markdoc pipeline + strict (zod) frontmatter parse +
   markdown rendering. `workspace.ts` supplies the card shell and
-  `navigation-script.ts` its optional browser navigation. Deliberately does NOT import `workstreams-app/src/router/router-docs.ts`, whose
+  `navigation-script.ts` its optional browser navigation. Deliberately does NOT import `workstreams-app/src/router/server/docs.ts`, whose
   router/runtime dependencies do not belong in the static-site build; this
   package declares `@markdoc/markdoc` itself. Every body goes through Markdoc's
   `validate` before transform: a malformed tag is otherwise dropped *silently*,
@@ -98,7 +98,7 @@ writes the input manifest last (so a partial build never masks staleness).
 - `links.ts` — base-path handling and internal-link resolution.
 - `sources.ts` — the single definition of the input source set + content-hash
   manifest, shared by `build.ts` (writes `dist/.inputs.json`) and
-  `workstreams-app/src/router/router-site.ts` (compares it to decide whether to auto-rebuild). One
+  `workstreams-app/src/router/server/site.ts` (compares it to decide whether to auto-rebuild). One
   enumeration, so the two sides can't drift.
 - `cards/` — the page and aside sources. `<slug>.site-page.card` builds
   `<slug>.html` (fields: `title`, `summary`, optional `unlisted` to keep a page
@@ -212,7 +212,7 @@ repo file — the loader hard-codes both the admissible source prefixes (plus
 three individually admitted files: `beebox/CLAUDE.md`, `beebox/code-style.md`,
 `beebox/frontend.md`) and the admissible publish directories (including
 `dev/`), so a manifest entry outside either fails the build regardless);
-generated (`beebox/scripts/export-box-docs.ts`, run via `pnpm --dir beebox
+generated (`beebox/src/scripts/export-box-docs.ts`, run via `pnpm --dir beebox
 exec tsx` on every build — no filesystem side effect, ~1s — producing
 `reference/` and `reference/cards/`).
 

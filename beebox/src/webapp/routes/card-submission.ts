@@ -20,13 +20,13 @@ import * as fs from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { Readable } from "node:stream";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import { acceptSubmission } from "../../core/cards/accept-submission.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { hashStreamToFile, StreamByteLimitError } from "../../lib/hash-stream-to-file.js";
 import { MAX_STAGED_BYTES } from "../../core/capture/staging-limits.js";
 import { getBoxTime } from "../../lib/time.js";
-import type { SubmissionIssue } from "../../cards/index.js";
+import type { SubmissionIssue } from "../../exports/cards.js";
 
 /** Hard ceiling on the number of file parts one submission may carry. */
 const MAX_SUBMISSION_FILES = 200;

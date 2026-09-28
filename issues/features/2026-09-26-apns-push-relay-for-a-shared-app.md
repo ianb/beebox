@@ -31,7 +31,7 @@ decrypts before display. The relay then learns only the token and the timing.
 
 - The `apns` channel is behind a service interface
   (`beebox/src/services/apns.ts`) with a pure payload builder
-  (`beebox/src/core/notification/apns-payload.ts`). A relay is a second
+  (`beebox/src/core/notification/apns-channel/payload.ts`). A relay is a second
   service implementation pointed at a URL, selected by configuration, not a
   new channel.
 - Device registration is per box (`beebox/src/core/mobile/pairing.ts`) and

@@ -5,9 +5,9 @@
  * supply a stub JWKS with no network, and assert fixed access-log / submission
  * object keys. Production wires the real ones via {@link defaultDeps}.
  *
- * Lives in its own module (not `index.ts`) so `access-auth.ts` and `submit.ts`
- * can depend on the type without importing `index.ts` (which imports them —
- * a value-import cycle otherwise). `index.ts` re-exports `WorkerDeps` for tests.
+ * Lives in its own module (not `worker.ts`) so `access-auth.ts` and `submit.ts`
+ * can depend on the type without importing `worker.ts` (which imports them —
+ * a value-import cycle otherwise). `worker.ts` re-exports `WorkerDeps` for tests.
  */
 
 import { jwksFetcherFor, type GetJwks } from "./access";

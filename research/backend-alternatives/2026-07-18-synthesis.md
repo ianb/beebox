@@ -24,7 +24,7 @@ subscription auth — with the Agent SDK as the driving handle
 
 - **Shape A is categorically cheaper.** Swapping the model server under Claude Code
   (`ANTHROPIC_BASE_URL` + token + model ids) keeps every layer we depend on. There is
-  precedent for base-URL injection (`src/core/agent/run.ts:192`, the prompt-logger
+  precedent for base-URL injection (`src/core/agent/run.ts:192` (moved to `beebox/src/core/agent/invoke/run.ts`), the prompt-logger
   proxy), though that is debug plumbing; real integration work remains in the
   auth preflight, `buildScriptEnv`'s deliberate `ANTHROPIC_API_KEY` stripping, and
   cost attribution (inventory in the coupling audit's closing section). Cheap
@@ -139,8 +139,8 @@ tool-use gap ~95% vs ~87.5%). Recheck in 6–12 months.
 **ADOPT (gated on the spike) — provider-endpoint configuration under the existing
 harness (Shape A).** A per-box/install-time provider setting (base URL, auth token,
 model-id map via `src/shared/model-ids.ts` — the boxholder's "choose your provider up
-front" model exactly) wired through `src/core/agent/run.ts` and
-`src/services/claude-chat.ts`, defaulting to Anthropic subscription auth. Concretely
+front" model exactly) wired through `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`) and
+`src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`), defaulting to Anthropic subscription auth. Concretely
 unlocks: Anthropic API billing (policy hedge against the credit-pool change),
 OpenRouter (model + billing diversity, vision-capable non-China models), Kimi/GLM APIs
 for users who accept their data posture, and self-hosted vLLM later. Honest scope: a

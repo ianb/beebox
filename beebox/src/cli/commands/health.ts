@@ -17,9 +17,9 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxTime } from "../../lib/time.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import {
   loadScheduleHealth,
   formatDurationShort,
@@ -28,7 +28,7 @@ import {
 } from "../../core/schedule/health-box.js";
 import { conciseScheduleError, type TaskHealth } from "../../core/schedule/health.js";
 import { loadRunningScripts, type ScriptLock } from "../../core/schedule/state.js";
-import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/health.js";
+import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/health/router.js";
 
 const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   ok: "✓",

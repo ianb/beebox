@@ -46,7 +46,7 @@ remaining work here.
   ~200 sites fixed the same way. 3 sites kept a justified single-line
   `eslint-disable-next-line` where the condition is genuinely defensive
   against something the type system can't see (a non-spec V8 API in
-  `agent-doctest/src/check.ts`, and two frontend sites — `useSSRMachine.ts`,
+  `agent-doctest/src/check.ts` (moved to `agent-doctest/src/tap-check/check.ts`), and two frontend sites — `useSSRMachine.ts`,
   `router.tsx` — where a library's conditional type collapses to `undefined`
   for an unresolved generic even though every concrete call site carries a
   real value). Now `"error"` in the preset's type-aware block, zero

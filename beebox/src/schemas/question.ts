@@ -7,9 +7,12 @@
  * vocabulary mirrors the retrospective's, see `src/core/retro/observations.ts`).
  */
 
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { IsoDuration } from "../shared/iso-duration.js";
 import { z } from "zod";
+import { QuestionLearning, type QuestionLearningFields } from "../question-fields.js";
+
+export { QuestionLearning, type QuestionLearningFields, type QuestionLearningSinkValue } from "../question-fields.js";
 
 export const QuestionStatus = z.enum(["pending", "answered", "dismissed", "expired"]);
 export type QuestionStatusType = z.infer<typeof QuestionStatus>;
@@ -80,21 +83,6 @@ const QuestionAnswer = z.object({
   text: z.string().optional(),
   selected: z.string().optional(),
 });
-
-/**
- * Where the answer's durable knowledge lands. Mirrors the retrospective's
- * sink vocabulary (`ObservationSink`) minus `question` itself — a question
- * card can't declare itself as its own destination.
- */
-const QuestionLearningSink = z.enum(["guide", "briefing", "personality"]);
-export type QuestionLearningSinkValue = z.infer<typeof QuestionLearningSink>;
-
-export const QuestionLearning = z.object({
-  sink: QuestionLearningSink,
-  ref: z.string().optional(),
-  proposal: z.string(),
-});
-export type QuestionLearningFields = z.infer<typeof QuestionLearning>;
 
 // The duration grammar and parser live in `shared/iso-duration.ts` (the
 // browser needs them too); re-exported here for the existing importers.

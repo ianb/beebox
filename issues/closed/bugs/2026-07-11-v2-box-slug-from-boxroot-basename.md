@@ -40,11 +40,11 @@ untouched and filed here.
 - `src/core/question-aging.ts:216` — `/${basename(boxRoot)}/browse/...` user-facing URL.
 - `src/core/question-alert.ts:93` — `boxName = basename(boxRoot)`.
 - `src/core/notify-boxholder.ts:39,75` — `endpointsForBox(basename(boxRoot))`.
-- `src/core/schedule/health-alert.ts:68` — `boxName = basename(boxRoot)`.
+- `src/core/schedule/health-alert.ts:68` (moved to `beebox/src/core/schedule/scheduler/health-alert.ts`) — `boxName = basename(boxRoot)`.
 - `src/core/chat/session/pool.ts:25` — returns `basename(boxRoot)`.
-- `src/webapp/server-lifecycle.ts:20` and `src/webapp/server-main.ts:35` — `slug: basename(boxRoot)` (bare-dir fallback; `resolveBoxes`/`--slug` close this for the real serve path, but the fallback remains).
-- `src/cli/commands/view.ts:170` — `boxSlug: basename(boxRoot)` passed to view props.
-- `src/connectors/telegram.ts:304` — `boxSlug = basename(this.boxRoot)`.
+- `src/webapp/server-lifecycle.ts:20` (moved to `beebox/src/webapp/server/lifecycle.ts`) and `src/webapp/server-main.ts:35` — `slug: basename(boxRoot)` (bare-dir fallback; `resolveBoxes`/`--slug` close this for the real serve path, but the fallback remains).
+- `src/cli/commands/view.ts:170` (moved to `beebox/src/cli/commands/view/command.ts`) — `boxSlug: basename(boxRoot)` passed to view props.
+- `src/connectors/telegram.ts:304` (moved to `beebox/src/connectors/telegram/connector.ts`) — `boxSlug = basename(this.boxRoot)`.
 
 (Not every hit is a bug — some may run where boxRoot is intentionally the package
 dir, or where an explicit slug is threaded. Audit each.)

@@ -26,10 +26,10 @@ import { TRPCClientError } from "@trpc/client";
 import type { TRPCClient } from "@trpc/client";
 import { boxClient } from "./box-client.js";
 import { spawnProfile } from "../../lib/spawn-profile.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { isRecord } from "../../lib/is-record.js";
-import { err, ok, type Result } from "../../lib/result.js";
-import type { AppRouter } from "../../webapp/trpc/router.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { isRecord } from "../../shared/is-record.js";
+import { err, ok, type Result } from "../../shared/result.js";
+import type { AppRouter } from "../../webapp/trpc/routers.js";
 
 /**
  * The `--json` flag, read off the command rather than off an action parameter.

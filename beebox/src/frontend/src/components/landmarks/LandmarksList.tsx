@@ -17,8 +17,8 @@
  */
 
 import { useParams } from "@tanstack/react-router";
-import { trpc } from "../../lib/trpc";
-import type { RouterOutput } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
+import type { RouterOutput } from "../../lib/trpc/client";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";

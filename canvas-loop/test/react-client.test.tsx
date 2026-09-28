@@ -7,7 +7,7 @@ import { test } from "node:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { parseHTML } from "linkedom";
-import { SketchFigure } from "../src/react/SketchFigure.js";
+import { SketchFigure } from "../src/react/SketchFigure/figure/view.js";
 
 // ── DOM + rAF harness ─────────────────────────────────────────────────
 

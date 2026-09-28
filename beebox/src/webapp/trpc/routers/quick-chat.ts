@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, authedProcedure } from "../trpc.js";
+import { router, authedProcedure } from "../procedures.js";
 import type { TrpcContext } from "../context.js";
 import { loadRoutingCandidates, boundRoutingContexts, RoutingCatalogError } from "../../../core/chat/routing/catalog.js";
 import { routingCandidateSchema, selectRoutingDestination } from "../../../core/chat/routing/policy.js";
@@ -11,7 +11,7 @@ import { createJevService, serializeJevRequest } from "../../../services/jev.js"
 import { JevError } from "../../../services/jev-wire.js";
 import { getOpenRouterKey } from "../../../core/openrouter.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
-import { errnoCode, toError } from "../../../lib/error-guards.js";
+import { errnoCode, toError } from "../../../shared/error-guards.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withFileLock } from "../../../lib/file-lock.js";
 import { getChatRuntime } from "../../chat-runtime.js";

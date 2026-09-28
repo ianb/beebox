@@ -43,7 +43,7 @@ syntax/JSX/import errors surface the moment a view `.tsx` is written.
 
 ## What already exists
 
-- **`compileView()`** — `beebox/src/webapp/views/compiler.ts:102`. esbuild
+- **`compileView()`** — `beebox/src/webapp/views/compiler.ts:102` (moved to `beebox/src/webapp/views/compiler/compile.ts`). esbuild
   bundles a view `.tsx`, `loader: "tsx"`, `jsx: "automatic"`, `format: "esm"`,
   `write: false`, with `reactExternalPlugin` rewriting every `import "react"` to
   a `window.__cbReact` shim (`compiler.ts:32-58`). **Reuse the esbuild
@@ -86,7 +86,7 @@ syntax/JSX/import errors surface the moment a view `.tsx` is written.
   *doesn't* copy. See Track A rationale.
 - **TWO validation-hook paths, not one.** This is the correction that reshapes
   Track B:
-  - **Shell hook** — `runHookMode()`, `src/cli/commands/validate.ts:163-199`:
+  - **Shell hook** — `runHookMode()`, `src/cli/commands/validate.ts:163-199` (moved to `beebox/src/cli/commands/validate/command.ts`):
     reads the touched path from a PostToolUse payload on stdin, branches
     `isClaudeMdFile` → `isCardFile` → else exit 0. This is what the installed
     `.claude/settings.json` PostToolUse hook calls
@@ -94,7 +94,7 @@ syntax/JSX/import errors surface the moment a view `.tsx` is written.
   - **In-process SDK hook** — `cardValidatorHook()`, `src/core/sdk-hooks.ts:42-86`:
     matcher `"Write|Edit"`, handles `tricks/`, `.card`, `.md`, else `return {}`.
     This is what **agent chat sessions and agent runs actually use**
-    (`src/services/claude-chat.ts:148`, `src/core/agent-run.ts:75`) — the primary
+    (`src/services/claude-chat.ts:148` (moved to `beebox/src/services/claude-chat/core.ts`), `src/core/agent-run.ts:75`) — the primary
     case where a box agent authors a view.
 
   View `.tsx` files fall through **both** paths silently today (`validate.ts:179`
@@ -108,7 +108,7 @@ syntax/JSX/import errors surface the moment a view `.tsx` is written.
   (`src/cli/lib/paths.ts:193,197`), `isClaudeMdFile`
   (`src/core/claude-md-lint.ts:45`), `requireBoxRoot`
   (`src/cli/lib/paths.ts:110`). A new `isViewFile` predicate joins these.
-- **CLI registration** — `src/cli/index.ts:72+` `program.addCommand(...)`, with
+- **CLI registration** — `src/cli/index.ts:72 (moved to `beebox/src/cli/entry/run.ts`)+` `program.addCommand(...)`, with
   command exports barreled through `src/cli/commands/index.js`. The new command
   registers here.
 - **Views guide generator** — `src/core/views-doc.ts` produces

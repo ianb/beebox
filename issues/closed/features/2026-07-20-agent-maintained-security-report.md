@@ -138,7 +138,7 @@ do not re-file):**
 - Residual accept-forever: setup-token window, no MFA/reset, open-invite email
   ownership, cross-process lock lease-steal (closed issue) — documented tradeoffs.
 - Agent blast radius (`permissionMode: "bypassPermissions"`, no tool allowlist —
-  `src/core/agent/run.ts`) → tracked in
+  `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`)) → tracked in
   [agent-containment-allowed-directories](../../features/2026-07-20-agent-containment-allowed-directories.md).
 - Mobile token at rest →
   [ios-token-plaintext-not-keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md),

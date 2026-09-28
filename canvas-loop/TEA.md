@@ -11,12 +11,12 @@ Same CLI, same transcript. The runtime picks the tier by detecting an `update`
 export:
 
 ```sh
-pnpm --dir canvas-loop run cli run examples/orbit-tea.ts \
-  --events examples/orbit-tea-events.json --out out
+pnpm --dir canvas-loop run cli run src/examples/orbit-tea.ts \
+  --events src/examples/orbit-tea-events.json --out out
 ```
 
 Name TEA sketches `*-tea.ts` — the TEA lint discipline is scoped to that suffix
-so the two tiers can share `examples/`.
+so the two tiers can share `src/examples/`.
 
 ## Contract
 
@@ -52,7 +52,7 @@ primitives — `polygon`, `path` (data-encoded commands), `arc`, `clip`, and
 `linearGradient`/`radialGradient` handles that `fill`/`stroke`/`background`
 accept as a `Paint`. `v.ctx` remains the escape hatch, but these should now
 cover curves/gradients/clipping so a `draw` stays serializable-in-principle.
-[`examples/fjord-tea.ts`](./examples/fjord-tea.ts) is a worked port that draws a
+[`src/examples/fjord-tea.ts`](./src/examples/fjord-tea.ts) is a worked port that draws a
 full tidal-fjord scene through them with zero `ctx`.
 
 The lint preset caps functions at 2 parameters; the `update`/`draw` contract
@@ -195,7 +195,7 @@ module declares params), `transport?` (play/pause/restart; default off —
 embeds are frameless), `initialParams?` (validated against the declaration;
 unknown names or mismatched types warn and fall back to defaults),
 `onParamsChange?`, `onEvent?`. It injects no styles — hosts import
-`@ianbicking/canvas-loop/browser/figure.css` (CSP-clean by construction).
+`@ianbicking/canvas-loop/src/browser/figure.css` (CSP-clean by construction).
 
 ## The discipline (one list)
 
@@ -216,8 +216,8 @@ Lint enforces all of it on `*-tea.ts` (`tea/no-module-state`,
 
 ## Worked example
 
-[`examples/orbit-tea.ts`](./examples/orbit-tea.ts) +
-[`examples/orbit-tea-events.json`](./examples/orbit-tea-events.json) — a sun with
+[`src/examples/orbit-tea.ts`](./src/examples/orbit-tea.ts) +
+[`src/examples/orbit-tea-events.json`](./src/examples/orbit-tea-events.json) — a sun with
 three orbiting planets. It exercises every param type (`speed-scale` number,
 `show-orbits` boolean, `focus` select, `reset` trigger), a mode union
 (`{ type: "idle" } | { type: "selected"; index }`), and direct pointer

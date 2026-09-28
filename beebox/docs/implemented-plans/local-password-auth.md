@@ -59,14 +59,14 @@ Reused (cited); nothing here is rebuilt:
   `src/webapp/server-box-scope.ts:136` (`if (isAuthEnabled() || isHubMode())
   addBoxAuthHook`), `server-box-scope.ts:186` (`openAccess = isHubMode() ?
   identity.source === "open" : !isAuthEnabled()`),
-  `src/webapp/server-root.ts:238,281`, `src/webapp/capture-request-owner.ts:32,38`,
-  `src/hub/hub-server.ts` `decideHubAuth` (`if (!isAuthEnabled()) …
-  [HUB_AUTH_OFF_HEADER]: "off"`), `src/hub/box-picker.ts:76-77`,
-  `src/webapp/routes/auth.ts:63` (registers a stub `/auth/me` → `null` when
+  `src/webapp/server-root.ts:238 (moved to `beebox/src/webapp/server-root/root-routes.ts`),281`, `src/webapp/capture-request-owner.ts:32 (moved to `beebox/src/webapp/routes/capture-request-owner.ts`),38`,
+  `src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`) `decideHubAuth` (`if (!isAuthEnabled()) …
+  [HUB_AUTH_OFF_HEADER]: "off"`), `src/hub/box-picker.ts:76-77` (moved to `beebox/src/hub/server/box-picker.ts`),
+  `src/webapp/routes/auth.ts:63` (moved to `beebox/src/webapp/routes/auth/register.ts`) (registers a stub `/auth/me` → `null` when
   disabled).
 - **Shared login surface, hub-compatible** — `routes/auth.ts:62`
   `registerAuthSurface`, called by both the standalone server
-  (`src/webapp/server.ts:123`) and the hub (`src/hub/hub-server.ts:258`).
+  (`src/webapp/server.ts:123` (moved to `beebox/src/webapp/server/app.ts`)) and the hub (`src/hub/hub-server.ts:258` (moved to `beebox/src/hub/server/core.ts`)).
   Password routes register here and inherit the correct hub/box split: only
   the process holding the session secret ever verifies credentials.
 - **Hub boundary (unchanged)** — `auth.ts:115` `isHubMode()`, `auth.ts:126`
@@ -106,8 +106,8 @@ Reused (cited); nothing here is rebuilt:
   `crypto.timingSafeEqual`). scrypt verification compares two fixed 32-byte
   derived keys, so the length-leak subtlety (see Prior art #7) doesn't arise.
 - **CLI command pattern** — flat commander dispatch in
-  `src/cli/index.ts:85-112` (`program.addCommand(serveCommand)` …); the
-  subcommand-group precedent is `src/cli/commands/scheduler.ts` (one
+  `src/cli/index.ts:85-112` (moved to `beebox/src/cli/entry/run.ts`) (`program.addCommand(serveCommand)` …); the
+  subcommand-group precedent is `src/cli/commands/scheduler.ts` (moved to `beebox/src/cli/commands/scheduler/command.ts`) (one
   `Command("scheduler")` with chained `.command(...)`s). `bbx auth` follows it.
 - **Test server helper** — `test/helpers/test-server.ts:128-131` calls
   `createServer({...})` in one place; ~20 route-test files pass today because
@@ -254,7 +254,7 @@ unset, making the env var an override rather than a requirement.
 **What.** Delete `isAuthEnabled()`. New in `auth.ts`:
 `authRequired(): boolean` — `true` unless `process.env.BBX_ALLOW_UNAUTHENTICATED === "1"`.
 Google availability becomes a private concern of `routes/auth.ts` (it already
-has `getGoogleClientCreds()`, `src/connectors/google-auth.ts:151-159`).
+has `getGoogleClientCreds()`, `src/connectors/google-auth.ts:151-159` (moved to `beebox/src/google/auth.ts`)).
 
 **Why.** "Is Google configured" must stop meaning "is this box protected" —
 that conflation is the whole disease (issue, problems 1–2).
@@ -308,7 +308,7 @@ that conflation is the whole disease (issue, problems 1–2).
   (around `test-server.ts:128-131`) — honest: test servers *are*
   deliberately open. Tests exercising auth itself unset it locally, exactly
   as they toggle `GOOGLE_OAUTH_CLIENT_ID` today
-  (e.g. `test/hub/hub-server-auth.doctest.md:25`).
+  (e.g. `test/hub/hub-server-auth.doctest.md:25` (moved to `beebox/test/hub/server.auth.doctest.md`)).
 
 **Vocabulary lock-ins.** `authRequired()`, `BBX_ALLOW_UNAUTHENTICATED`
 (value `"1"` = loopback-only open mode, `"network"` = open on any bind;
@@ -366,7 +366,7 @@ carve-out for "OAuth redirects" extends to the login surface):
   owner, which *is* the authority.
   With Google configured and zero users (prod's migration state), nothing
   redirects to setup; Google login keeps working throughout.
-- **Throttle** — `src/webapp/login-throttle.ts`: pure core with injected
+- **Throttle** — `src/webapp/login-throttle.ts` (moved to `beebox/src/webapp/routes/auth/login-throttle.ts`): pure core with injected
   clock (principle #10), applied to `POST /auth/login` and
   `POST /auth/setup`. Three independent limits, because an attacker
   controls both key dimensions:
@@ -389,8 +389,8 @@ carve-out for "OAuth redirects" extends to the login surface):
 `login-throttle.ts`.
 
 **First implementation chunk.** `POST /auth/login` + throttle + their
-doctests (`test/webapp/password-login.doctest.md`,
-`test/webapp/login-throttle.doctest.md`), against a tmp `BBX_AUTH_FILE`.
+doctests (`test/webapp/password-login.doctest.md` (moved to `beebox/test/webapp/routes/auth.password-login.doctest.md`),
+`test/webapp/login-throttle.doctest.md` (moved to `beebox/test/webapp/routes/auth/login-throttle.doctest.md`)), against a tmp `BBX_AUTH_FILE`.
 
 ### Track D — session revocation: the `gen` claim
 
@@ -440,8 +440,8 @@ auth-file reader; children keep trusting headers.
 
 **First implementation chunk.** The whole track — `signSession`/`verifySession`
 passthrough, resolver check, mtime cache — plus extending
-`test/webapp/auth-hub-identity.doctest.md` and a
-`test/webapp/session-gen.doctest.md` (login → change password → old cookie
+`test/webapp/auth-hub-identity.doctest.md` (moved to `beebox/test/webapp/auth.hub-identity.doctest.md`) and a
+`test/webapp/session-gen.doctest.md` (moved to `beebox/test/webapp/auth.session-gen.doctest.md`) (login → change password → old cookie
 dead).
 
 ### Track E — local tooling access (browse/tours) via the agent token
@@ -489,7 +489,7 @@ worktree serve rather than a new beebox doctest (the change is in
 
 ### Track F — `bbx auth` CLI
 
-**What.** `src/cli/commands/auth.ts`, registered in `src/cli/index.ts`
+**What.** `src/cli/commands/auth.ts`, registered in `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`)
 (pattern: `scheduler.ts` subcommand group): `bbx auth create-user` (first
 user; interactive password prompt or `--password-file`; refuses when users
 exist), `add-user`, `set-password` (bumps `gen`), `list`, `remove-user`
@@ -501,7 +501,7 @@ file ownership.
 surface (no user-management UI — see NOT in scope).
 
 **First implementation chunk.** The command group + doctest
-(`test/cli/auth-command.doctest.md`, tmp `BBX_AUTH_FILE`).
+(`test/cli/auth-command.doctest.md` (moved to `beebox/test/cli/commands/auth.doctest.md`), tmp `BBX_AUTH_FILE`).
 
 ### Track G — frontend: login page, setup page, open-mode banner
 

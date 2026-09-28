@@ -19,7 +19,7 @@ import { createHash } from "node:crypto";
 import Sharp from "sharp";
 import { makeTestServer } from "../../helpers/doctest-server.js";
 import { textlessPdf } from "../../helpers/pdf-fixtures.js";
-import { resetScanRateLimits, SCAN_RATE_LIMIT } from "../../../src/webapp/routes/scan-rate-limit.js";
+import { resetScanRateLimits, SCAN_RATE_LIMIT } from "../../../src/webapp/routes/scan-upload/rate-limit.js";
 import { qpdfAvailable } from "../../../src/core/scan/validate.js";
 import { createScanToken } from "../../../src/core/scan/tokens.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";

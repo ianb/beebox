@@ -36,7 +36,7 @@ None needed.
 
 Members in the code's names: format (`src/cards/`, `src/core/card-io.ts`),
 schemas (`src/schemas/`, `cardSchema()`), validation (`bbx validate`,
-`src/core/card-lint.ts`, the hooks), migrations (`src/core/migrations.ts`,
+`src/core/card-lint.ts` (moved to `beebox/src/core/card-lint/core.ts`), the hooks), migrations (`src/core/migrations.ts`,
 `scripts/migrate/`).
 
 ## Tracks / scope

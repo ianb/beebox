@@ -11,10 +11,10 @@ discovered-in: worktree-path-handling-model — tracing which agent types receiv
 
 While verifying that the box-root link rule reaches every agent surface, the
 prompt-flow trace found that the *small* structured-output passes — triage
-(`src/core/triage/index.ts`), chat review (`src/core/chat/review/reviewer.ts`),
+(`src/core/triage/index.ts` (moved to `beebox/src/core/triage/run/core.ts`)), chat review (`src/core/chat/review/reviewer.ts`),
 retro observer (`src/core/retro/observer.ts`), procedure judge
 (`src/core/procedure/engine-validate-model.ts`) — all run through the shared
-SDK invoke path (`src/core/agent/stream.ts`) with `cwd = boxRoot` and no
+SDK invoke path (`src/core/agent/stream.ts` (moved to `beebox/src/core/agent/invoke/stream.ts`)) with `cwd = boxRoot` and no
 `settingSources` override. The SDK default loads project settings, so each of
 these passes silently pulls the full box CLAUDE.md → `agent-guide.md` → rules
 into context on every invocation.

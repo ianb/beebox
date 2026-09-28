@@ -7,7 +7,7 @@ priority: backlog
 `src/cli/commands/hub.ts` does `await supervisor.startAll()` *before*
 `createHubServer(...)` + `listen`. On a lazy hub `startAll` runs `prestartLazy`
 (and awaits each pre-started box's readiness); a failing box launch blocks up to
-`READY_TIMEOUT_MS` (30s, `src/hub/child-spawn.ts`) before giving up. So the hub
+`READY_TIMEOUT_MS` (30s, `src/hub/child-spawn.ts` (moved to `beebox/src/hub/supervisor/child-spawn.ts`)) before giving up. So the hub
 does not answer `/healthz` at all for ~30s+ *precisely when a box is failing* —
 which is what raced the deploy's old 30s healthcheck during the 2026-07-16 ABI
 incident.

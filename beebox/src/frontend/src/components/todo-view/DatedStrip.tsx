@@ -19,7 +19,7 @@ import { TextLink } from "../ui/TextLink";
 import { FriendlyDate } from "../ui/FriendlyDate";
 import { InlineAction } from "../ui/InlineAction";
 import { href } from "../../lib/routing";
-import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside";
+import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hook";
 import type { DatedTodo } from "../todo-view-card-logic";
 
 function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | undefined }) {

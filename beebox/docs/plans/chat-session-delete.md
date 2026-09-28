@@ -93,7 +93,7 @@ partial-completion result and the UI leaves an honest, retryable cleanup path.
   uses that API instead of manually unlinking the normal case.
 - beebox does not configure an SDK `sessionStore`. `buildQueryOptions`
   passes `cwd`, resume id, model, hooks, and other runtime options but no
-  external store (`src/services/claude-chat.ts:84-120`). Therefore the SDK's
+  external store (`src/services/claude-chat.ts:84-120` (moved to `beebox/src/services/claude-chat/core.ts`)). Therefore the SDK's
   local deletion branch is the current production contract.
 - `getSessionLogPath()` derives the transcript path from the SDK cwd, and
   `BBX_CLAUDE_PROJECTS_DIR` provides an isolated test override
@@ -117,15 +117,15 @@ partial-completion result and the UI leaves an honest, retryable cleanup path.
   prevents an arbitrary session id from becoming authority to delete an
   unrelated SDK transcript.
 - `loadAllSessions()` treats husks as the sole chat enumeration and skips a husk
-  whose transcript is absent (`src/core/chat/session/list.ts:1-13,32-68`). This
+  whose transcript is absent (`src/core/chat/session/list.ts:1-13 (moved to `beebox/src/core/chat/session/list/core.ts`),32-68`). This
   already keeps dead sessions out of pickers.
 - `reconcileChatHusks()` runs after backfill on every boot and recreates a
   missing husk for a history entry with a transcript
-  (`src/core/chat/husk.ts:200-238`; `src/webapp/routes/chat.ts:74-86`). A delete
+  (`src/core/chat/husk.ts:200-238`; `src/webapp/routes/chat.ts:74-86` (moved to `beebox/src/webapp/routes/chat/register.ts`)). A delete
   that trashes only the card is therefore unstable.
 - The existing `trash` command moves a card and its attachment scope to
   `store/trash/`, handles name collisions, and can commit the move
-  (`src/core/commands/trash.ts:58-149,233-250`). `runCommand()` is the shared
+  (`src/core/commands/trash.ts:58-149 (moved to `beebox/src/core/commands/trash/command.ts`),233-250`). `runCommand()` is the shared
   invocation seam (`src/core/command-runner.ts:138-166`).
 
 ### beebox pointers and journals
@@ -143,7 +143,7 @@ partial-completion result and the UI leaves an honest, retryable cleanup path.
   (`src/core/chat/review/state.ts:1-20,69-90,104-135`). No removal operation
   exists.
 - The review pass owns `.beebox/chat-review/run.lock` for the whole
-  read-review-write operation (`src/core/chat/review/run.ts:277-322`). Delete
+  read-review-write operation (`src/core/chat/review/run.ts:277-322` (moved to `beebox/src/core/chat/review/run/core.ts`)). Delete
   must share that lock or a finishing review can recreate the removed journal
   entry.
 - These JSON files currently use direct writes. The repository already has
@@ -153,32 +153,32 @@ partial-completion result and the UI leaves an honest, retryable cleanup path.
 ### Live sessions and scheduled resumes
 
 - `ChatSessionRegistry.getOrCreate(id)` creates a resumable session on demand
-  (`src/core/chat/session/registry.ts:196-238`). A delete reservation must make
+  (`src/core/chat/session/registry.ts:196-238` (moved to `beebox/src/core/chat/session/registry/core.ts`)). A delete reservation must make
   this operation reject that id while deletion is in progress.
 - `ChatSession.stop()` clears its queue and starts an asynchronous close, but
   returns before the close handler has released the run lock
-  (`src/core/chat/session/index.ts:423-436`; `session/consume.ts:91-103`). Delete
+  (`src/core/chat/session/index.ts:423-436` (moved to `beebox/src/core/chat/session/run/core.ts`); `session/consume.ts:91-103`). Delete
   needs an awaited stop/remove operation, not a call followed immediately by
   filesystem mutation.
 - Schedules persist outside git and re-arm after restart
-  (`src/core/chat/schedules.ts:1-10`). Each current schedule can carry its
+  (`src/core/chat/schedules.ts:1-10` (moved to `beebox/src/core/chat/schedules/core.ts`)). Each current schedule can carry its
   originating `sessionId` (`:24-38`), and firing calls
-  `registry.getOrCreate(targetId)` (`src/webapp/routes/chat-schedule-fire.ts:126-141`).
+  `registry.getOrCreate(targetId)` (`src/webapp/routes/chat-schedule-fire.ts:126-141` (moved to `beebox/src/webapp/routes/chat/schedule-fire.ts`)).
   This is a fourth persisted resume path omitted from the issue's original
   three-layer model. Deletion must cancel these schedules and suppress a
   fire already racing with deletion; otherwise it can resume a deleted id or
   create a fresh fallback conversation.
 - Chat startup currently launches backfill/reconcile in the background and
   then exposes `{ registry, scheduleManager, wireSession }` as the tRPC runtime
-  (`src/webapp/routes/chat.ts:74-95,160-185`;
+  (`src/webapp/routes/chat.ts:74-95 (moved to `beebox/src/webapp/routes/chat/register.ts`),160-185`;
   `src/webapp/chat-runtime.ts:17-22`). The delete runtime must also expose the
   startup-maintenance promise so delete cannot race a late backfill write.
 
 ### API and UI surfaces
 
 - Chat controls are tRPC procedures backed by the live runtime
-  (`src/webapp/trpc/routers/chat-control-procedures.ts:15-21,36-117`) and merged
-  into the chat router (`src/webapp/trpc/routers/chat.ts:78-81`). Delete belongs
+  (`src/webapp/trpc/routers/chat-control-procedures.ts:15-21 (moved to `beebox/src/webapp/trpc/routers/chat/control-procedures.ts`),36-117`) and merged
+  into the chat router (`src/webapp/trpc/routers/chat.ts:78-81` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`)). Delete belongs
   here rather than in a new raw Fastify route.
 - `SessionRow` is shared by both landmark chat pickers and currently contains
   only the chat link and husk link
@@ -193,7 +193,7 @@ partial-completion result and the UI leaves an honest, retryable cleanup path.
   the unsafe dead-husk path.
 - `chat.bootstrap` currently always returns a concrete session's history,
   label, and status, even when the transcript load degrades to an empty result
-  (`src/webapp/trpc/routers/chat-bootstrap-procedure.ts:27-68`). The frontend
+  (`src/webapp/trpc/routers/chat-bootstrap-procedure.ts:27-68` (moved to `beebox/src/webapp/trpc/routers/chat/bootstrap-procedure.ts`)). The frontend
   then mounts the interactive chat machine (`src/frontend/src/pages/ChatPage.tsx:165-187,265-280`).
   Availability needs to be explicit before that mount.
 
@@ -231,7 +231,7 @@ partial-completion result and the UI leaves an honest, retryable cleanup path.
 
 **What:** Add a per-session deletion reservation and an awaited stop/remove
 operation to `ChatSessionRegistry`; add the ordered orchestrator at
-`src/core/chat/session/delete.ts`.
+`src/core/chat/session/delete.ts` (moved to `beebox/src/core/chat/session/delete/apply/core.ts`).
 
 **Why:** `stop()` is fire-and-forget and `getOrCreate()` can race a delete. A
 filesystem-only helper cannot make the required “nothing can resume this id”

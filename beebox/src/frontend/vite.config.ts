@@ -2,8 +2,8 @@ import { resolve as resolvePath } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
-import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin";
-import { perBoxIdentityAssetPattern } from "./vite-proxy";
+import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin/plugin";
+import { perBoxIdentityAssetPattern } from "./src/dev/vite-proxy";
 
 const FRONTEND_PORT = Number(process.env.FRONTEND_PORT) || 3210;
 const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
@@ -26,7 +26,7 @@ const VITE_BASE = process.env.VITE_BASE || "/";
 const BASE_PREFIX = VITE_BASE.replace(/\/$/, ""); // "" when base is "/", "/main" otherwise
 
 // Repeatable production bundle composition analysis, run via
-// `pnpm analyze:bundle` (src/dev/analyze-bundle.ts), which sets this env var
+// `pnpm analyze:bundle` (src/dev/analyze-bundle/analyze.ts), which sets this env var
 // before shelling out to `vite build`. Absent/unset on every ordinary build
 // (dev server and plain `pnpm build`), so the plugin never runs by default.
 const ANALYZE_BUNDLE = process.env.BBX_ANALYZE_BUNDLE === "1";
@@ -84,10 +84,14 @@ export default defineConfig({
     // see the tsconfig paths comment.)
     // Array form: the regex entry aliases ONE spelling through @schemas —
     // `@schemas/<name>.list-entry`, a card type's list component, which is
-    // frontend code living beside its schema. Everything else under @schemas
-    // stays unaliased, so a value import through it still fails this build.
+    // frontend code living beside its schema at `schemas/<name>/list-entry.tsx`.
+    // Everything else under @schemas stays unaliased, so a value import
+    // through it still fails this build.
     alias: [
-      { find: /^@schemas\/([\w.-]+\.list-entry)$/, replacement: resolvePath(__dirname, "../schemas/$1") },
+      {
+        find: /^@schemas\/([\w-]+)\.list-entry$/,
+        replacement: `${resolvePath(__dirname, "../schemas")}/$1/list-entry`,
+      },
       { find: "@shared", replacement: resolvePath(__dirname, "../shared") },
     ],
   },

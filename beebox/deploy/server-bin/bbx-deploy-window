@@ -6,7 +6,7 @@
 #   bbx-deploy-window close <exit code>      from the activation script's EXIT trap
 #
 # `open` fills the page template (dist/deploy-page.html, built by
-# scripts/build-deploy-page.ts) and writes it where nginx serves it during a
+# src/scripts/build-deploy-page.ts) and writes it where nginx serves it during a
 # 502 (deploy/nginx/beebox.conf). The page's presence is the only signal that a
 # deploy is running, so `close` always removes it. `close` also appends the
 # window to a history file whose recent successful windows give the next page

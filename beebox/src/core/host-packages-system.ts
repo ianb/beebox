@@ -9,7 +9,7 @@
  */
 
 import { promises as fs, constants as fsConstants } from "node:fs";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { runCollectedChild } from "../lib/run-child.js";
 
 export const HOST_APT_WRAPPER = "/usr/local/sbin/bbx-host-apt";

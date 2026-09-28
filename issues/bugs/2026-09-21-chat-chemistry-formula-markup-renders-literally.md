@@ -20,7 +20,7 @@ broken during an exercise about coefficients and subscripts.
 The journey screenshots 20 and 21 show the literal output in the chat. The
 shared frontend renderer uses Markdoc and configures ordinary document,
 heading, paragraph, link, image, blockquote, and custom-tag rendering; it has
-no formula-specific transform. `beebox/src/frontend/src/components/Markdown.tsx:136-162,287-304`
+no formula-specific transform. `beebox/src/frontend/src/components/Markdown/body.tsx:136-162,287-304`
 and `beebox/src/frontend/src/components/chat/markdown-rendering.tsx:236-239`.
 
 The resolution needs to decide how authored formula notation should become a
@@ -30,7 +30,7 @@ output and the renderer without assuming a particular math library.
 Evidence: `beebox/user-stories/work/journeys/D-chemistry-2026-09-21/shots/20-balancing-question.png`
 and `21-water-exercise.png`.
 
-Evidence and limits: [journey D report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
+Evidence and limits: [journey D report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
 
 The smallest option to evaluate is authoring guidance to emit readable plain
 Unicode formulas (for example `H₂ + Cl₂ → 2 HCl`) in this chat renderer.

@@ -6,7 +6,7 @@ and, optionally, durable knowledge the answer teaches (`learning:` — see
 `docs/implemented-plans/questions-end-to-end.md`). This covers the `input` cross-field
 refinement, the status/learning/expiry vocabulary, and the three template
 builders. Round-trip answer behavior lives in
-`test/core/commands/answer-command.doctest.md`.
+`test/core/commands/answer.doctest.md`.
 
 ```ts setup
 import {
@@ -338,8 +338,7 @@ through to the builders. Validation is strict: a bad `expires-after` or a
 `learning` missing its `proposal` is rejected at the args boundary.
 
 ```ts setup
-import { getTemplate } from "../../src/schemas/templates-registry.js";
-import "../../src/schemas/templates-builtins.js";
+import { getTemplate } from "../../src/templates-registry.js";
 
 // Parse raw args through the template's own schema, then generate — exercising
 // both the argsSchema (accepts the contract fields) and the passthrough.

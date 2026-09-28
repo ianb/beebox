@@ -13,7 +13,7 @@
 import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
-import { errnoCode } from "./error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 /** A directory whose name ends in `.attach`. */
 export interface AttachScope {

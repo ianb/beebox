@@ -5,7 +5,7 @@
 import { useParams } from "@tanstack/react-router";
 import { CalendarSection } from "../components/settings/CalendarSection";
 import { CompanionPairingSection } from "../components/settings/CompanionPairingSection";
-import { DriveSection } from "../components/settings/DriveSection";
+import { DriveSection } from "../components/settings/DriveSection/view";
 import { ScanUploaderSection } from "../components/settings/ScanUploaderSection";
 import { Stack } from "../components/ui/Stack";
 import { AdminHangProbe, ProbeSection } from "../components/admin/AdminHangProbe";

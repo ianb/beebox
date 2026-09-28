@@ -2,7 +2,7 @@ import { env } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
 import { releaseIdForFiles, siteEdgeManifestSchema, type SiteEdgeManifest } from "../../src/publish/manifest-edge";
 import type { Env } from "../src/env";
-import { handle, type WorkerDeps } from "../src/index";
+import { handle, type WorkerDeps } from "../src/worker";
 
 const SITE_ID = "h".repeat(26);
 const HOST_HANDLE = "site-random-handle";

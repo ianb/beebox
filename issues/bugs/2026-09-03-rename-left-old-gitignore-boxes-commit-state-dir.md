@@ -24,7 +24,7 @@ trigger; the defect is that the state directory was ever tracked.
 The 2026-08-30 rename moved the state directory to `.beebox/`
 (`src/lib/state-migration.ts`, run automatically) and the lock and pid files
 to the `.bbx-*` prefix; the former names are in `docs/name-history.md`. The
-stock ignore file that `bbx init` writes (`src/core/box/index.ts`, "Always
+stock ignore file that `bbx init` writes (`src/core/box/index.ts` (moved to `beebox/src/core/box/structure/core.ts`), "Always
 write .gitignore") knows the new names. Nothing re-ran `bbx init` on existing
 boxes, and the state migration does not touch `.gitignore`, so every migrated
 box still carries the pre-rename file: its header names the former product,
@@ -94,10 +94,10 @@ Related: `issues/decisions/2026-08-30-rethink-box-autocommit.md` (autocommit
 sweeping in whatever is unignored is the mechanism that made this bite).
 
 > 2026-09-03 progress (main session): two migrations landed, `gitignore-2026-09`
-> (`scripts/migrate/box-gitignore.ts`; regenerates `.gitignore` via the now
+> (`scripts/migrate/box-gitignore.ts` (moved to `beebox/src/scripts/migrate/box-gitignore.ts`); regenerates `.gitignore` via the now
 > exported `writeBoxGitignore`, untracks the state dir, box-root locks, and
 > pid from an allowlist, keeps `.beebox/box.json`) and `hooks-2026-09`
-> (`scripts/migrate/box-hooks.ts`; reinstalls the managed git hooks, which
+> (`scripts/migrate/box-hooks.ts` (moved to `beebox/src/scripts/migrate/box-hooks.ts`); reinstalls the managed git hooks, which
 > still pointed at the former CLI). The state migration now removes an EMPTY
 > canonical directory instead of refusing (two local boxes and one worktree
 > launch were stuck on that). All six local boxes converged and committed;
@@ -112,7 +112,7 @@ The `box-layout-criteria` workstream that this was deferred to no longer exists,
 so it is settled here. Two findings decided it.
 
 **No local box tracks the marker any more.** All six of `~/src/boxes/*` have
-`.beebox/box.json` untracked. `scripts/migrate/box-gitignore.ts` keeps it in
+`.beebox/box.json` untracked. `scripts/migrate/box-gitignore.ts` (moved to `beebox/src/scripts/migrate/box-gitignore.ts`) keeps it in
 `KEEP_TRACKED` and justifies that with "it is tracked on every production box
 today", which is no longer true locally for any box — and `.gitignore` ignores
 `.beebox/` as a directory, so nothing re-tracks it (a `!.beebox/box.json`
@@ -212,7 +212,7 @@ which `hasAssignedSession` makes availability answer `resumable` before the
 recorded-engine check runs; and `ChatThreadSession` preflights a guessed engine
 with no availability check at all. Both predate this fix.
 
-`test/webapp/chat-reservation-restart.doctest.md` asserted the broken behavior:
+`test/webapp/chat-reservation-restart.doctest.md` (moved to `beebox/test/webapp/chat-runtime.reservation-restart.doctest.md`) asserted the broken behavior:
 its prose narrated this exact mechanism and expected the throw. Worth noting
 that the hazard was written down as expected output rather than filed.
 

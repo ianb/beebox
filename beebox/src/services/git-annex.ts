@@ -17,8 +17,8 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../lib/error-guards.js";
-import { isRecord } from "../lib/is-record.js";
+import { errnoCode } from "../shared/error-guards.js";
+import { isRecord } from "../shared/is-record.js";
 
 const execFileAsync = promisify(execFile);
 

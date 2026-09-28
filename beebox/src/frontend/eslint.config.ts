@@ -3,6 +3,8 @@
 // deliberate choice. Silently disabling a rule to dodge violations is how this
 // config drifted out of sync with our own style. If a rule is genuinely wrong,
 // raise it — don't quietly switch it off. Burn down debt rule-by-rule instead.
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 
 // --- Frontend import-boundary contract (project-local; see
@@ -15,7 +17,9 @@ import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 // import-x/no-restricted-paths, which silently skips imports its resolver
 // can't resolve; with this repo's broken frontend ts-resolver an alias import
 // would pass by accident, not design. The raw spellings are banned; the alias
-// spellings are legal, which is honest about intent.
+// spellings are legal, which is honest about intent. (The `lib` ban below is
+// the one exception, by resolved path — see its own comment for why the
+// broken-resolver concern doesn't apply there.)
 // Backend source directories that DO NOT exist as frontend subdirs, so any raw
 // relative path with the segment (at any climb-out depth) is an escape. The
 // alias `@core/…` etc. is a distinct segment (`@core` ≠ `core`) and stays legal.
@@ -32,19 +36,6 @@ const BOUNDARY_PATTERNS = [
       "**/scenario/**",
     ],
     message: BOUNDARY_BAN_MESSAGE,
-  },
-  {
-    // The frontend has its OWN src/lib/ (reached at ≤3 climb-outs — verified).
-    // The backend src/lib/ is only reachable at 4+ climb-outs, so these exact
-    // depths cannot false-positive on an intra-frontend `../lib/…` import.
-    // (A deliberately de-normalized spelling like `../../../../x/../lib/y` would
-    // slip past this exact-depth list — accepted: the gate stops accidental
-    // escapes at real depths, not adversarial path obfuscation. The core/webapp/
-    // … bans above use `**/<dir>/**`, which any prefix matches, so only `lib`
-    // — constrained by the frontend's own shallower lib/ — is depth-specific.)
-    group: ["../../../../lib/**", "../../../../../lib/**", "../../../../../../lib/**"],
-    message:
-      "Don't import the backend src/lib/ from the frontend. Move the helper into src/shared/ and import via @shared (the frontend's own src/lib/ is shallower, so this depth is always the backend lib).",
   },
   {
     // The @core/@schemas/@backend aliases are TYPE-ONLY (deliberately unaliased
@@ -82,6 +73,25 @@ const BOUNDARY_PATTERNS = [
 // Those files — proven by the 2026-07-12 probe — must import shared by raw
 // relative path and are exempted from THIS pattern below (they still carry the
 // core/webapp/… ban).
+// --- Backend src/lib/ ban, by RESOLVED PATH (not by counting `../`). The
+// frontend has its own src/lib/ (beebox/src/frontend/src/lib/), a distinct
+// directory from the backend's beebox/src/lib/ — a spelling-based
+// `../../../lib/**` group can't tell them apart except by climb-out depth,
+// which breaks every time a component moves a directory level (as happened
+// 2026-09-27: see git history on this file). import-x/no-restricted-paths
+// resolves each import specifier to an absolute file path and compares that to
+// the zone's `from` directory, so it's exact at any depth and any relative
+// spelling (`../../lib/x`, `../../../x/../lib/y`, etc. all resolve the same).
+// This sidesteps the broken-resolver concern in the file-level comment above:
+// that concern is about the TS-path-alias resolver failing to resolve
+// `@core/…`-style specifiers; a plain relative `../lib/x` resolves through the
+// plain node resolver (configured below), which has no alias step to break.
+const FRONTEND_ROOT = path.dirname(fileURLToPath(import.meta.url));
+const FRONTEND_SRC_DIR = path.join(FRONTEND_ROOT, "src");
+const BACKEND_LIB_DIR = path.join(FRONTEND_ROOT, "..", "lib");
+const BACKEND_LIB_BAN_MESSAGE =
+  "Don't import the backend src/lib/ from the frontend. Move the helper into src/shared/ and import via @shared (the frontend's own src/lib/ is a different directory and is never matched by this resolved-path ban).";
+
 const SHARED_ALIAS_PATTERN = {
   group: ["**/shared/**"],
   message:
@@ -90,14 +100,14 @@ const SHARED_ALIAS_PATTERN = {
 // Modules exercised outside the Vite bundler that legitimately import src/shared/
 // by raw relative path (@shared unresolvable there — see SHARED_ALIAS_PATTERN).
 const OUTSIDE_VITE_SHARED_RAW = [
-  "src/components/chat/conversation/controller-pool.ts",
-  "src/components/chat/conversation/start-records.ts",
+  "src/components/chat/conversation/controller-pool/pool.ts",
+  "src/components/chat/conversation/controller-pool/start-records.ts",
   "src/lib/view-url.ts",
-  "src/lib/parseTags.ts",
+  "src/lib/audio/speech-parsing/parseTags.ts",
   "src/lib/structured-output-parsing.ts",
-  "src/lib/audio/speech-parsing.ts",
-  "src/machines/chat-shared.ts",
-  "src/components/view-widgets/node-entry.tsx",
+  "src/lib/audio/speech-parsing/parse.ts",
+  "src/machines/chatMachine/chat-shared.ts",
+  "src/exports/view-widgets.tsx",
   // Transitively loaded by the tap/tsx doctest runner via input/emission +
   // input/voice-intent (root tsconfig, no @shared resolution).
   "src/components/chat/InteractiveChat-helpers.ts",
@@ -107,14 +117,14 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/dictation-draft.ts",
   "src/lib/figure-params.ts",
   "src/lib/location-share.ts",
-  "src/components/chat/native-emission.ts",
-  "src/machines/chat-actors.ts",
+  "src/components/chat/everywhere/InteractiveChat/native-emission.ts",
+  "src/machines/chatMachine/chat-actors.ts",
   // Loaded outside Vite by its own doctest (root tsconfig, no @shared
   // resolution): imports @shared/todo-model by raw relative path.
   "src/components/todo-view-card-logic.ts",
   // Loaded outside Vite by its own doctest (root tsconfig, no @shared
   // resolution): imports @shared/invariant by raw relative path.
-  "src/components/history/CommitDetail-diff.ts",
+  "src/components/history/HistoryViewCard/CommitDetail-diff.ts",
   // Loaded outside Vite by its own doctest (root tsconfig, no @shared
   // resolution): imports @shared/result by raw relative path.
   "src/lib/ui-scan/resolve.ts",
@@ -146,6 +156,34 @@ export default [
     rules: {
       "no-restricted-imports": "off",
       "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS] }],
+    },
+  },
+  // Backend src/lib/ ban by resolved path — see BACKEND_LIB_DIR comment above.
+  // Applies to every frontend file (including OUTSIDE_VITE_SHARED_RAW, which
+  // is a subset of this glob), independent of the spelling-based patterns
+  // above. The node resolver is configured with TS extensions so `../lib/x`
+  // (no extension, .ts on disk) actually resolves instead of being silently
+  // skipped as unresolvable.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    settings: {
+      "import-x/resolver": {
+        node: { extensions: [".ts", ".tsx", ".js", ".jsx", ".json"] },
+      },
+    },
+    rules: {
+      "import-x/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            {
+              target: FRONTEND_SRC_DIR,
+              from: BACKEND_LIB_DIR,
+              message: BACKEND_LIB_BAN_MESSAGE,
+            },
+          ],
+        },
+      ],
     },
   },
   {

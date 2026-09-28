@@ -6,13 +6,13 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
-import { isRecord } from "../../lib/is-record.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { errnoCode } from "../../shared/error-guards.js";
+import { isRecord } from "../../shared/is-record.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 import { ADDED_MODEL_LABEL_MAX, isOpenRouterModelId, type AddedModel } from "../../shared/chat-models.js";
-import type { PresentationConfig } from "../../shared/card-theme.js";
+import type { PresentationConfig } from "../../shared/card-theme/core.js";
 
 export type { AgentEngine } from "../../shared/agent-models.js";
 

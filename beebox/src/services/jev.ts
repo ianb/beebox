@@ -1,5 +1,5 @@
 /** Typed routing judgments through OpenRouter's Decisions API. */
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 import { JevError, JEV_MODEL, JEV_PROVIDER, postDecisions, probability } from "./jev-wire.js";
 import {
   answerToWire,

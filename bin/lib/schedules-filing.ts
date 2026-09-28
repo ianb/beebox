@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execa } from "execa";
 
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 import type { Alert } from "./schedules.js";
 import { readAllAlerts, writeAlert } from "./schedules-store.js";
 import { FILE_AFTER_MS, FILING_RETRY_MS } from "./schedules-alert-lifecycle.js";

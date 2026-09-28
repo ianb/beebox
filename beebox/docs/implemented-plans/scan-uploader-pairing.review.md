@@ -46,7 +46,7 @@ overbuilds the first release and leaves two protocol blockers unresolved."
    rationale.
 
 6. **High — claimed config save/validation reuse does not exist.**
-   `scan-uploader/src/config.ts` is a strict reader only (ENOENT is an
+   `scan-uploader/src/config.ts` (moved to `scan-uploader/src/cli/config.ts`) is a strict reader only (ENOENT is an
    error, unknown keys pass, no writer/serializer/atomic write); a naive
    re-serialize would drop unknown keys; the reader could not reject a
    `"FILL-ME-IN"` placeholder. **Disposition: ADOPTED** — the revised
@@ -73,7 +73,7 @@ overbuilds the first release and leaves two protocol blockers unresolved."
 ## Citation corrections it caught
 
 - The prompt's `routes/scan-auth.ts` guess: the real file is
-  `src/webapp/scan-auth.ts`.
+  `src/webapp/scan-auth.ts` (moved to `beebox/src/webapp/routes/scan-upload/scan-auth.ts`).
 - The draft's claim that `scan-upload.ts:226-298` establishes sibling
   mounting: the sibling-scope registration actually lives at
   `server-box-scope.ts:291`.

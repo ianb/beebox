@@ -17,7 +17,7 @@ resolution: wontfix
 > applied. No box exists that could still hit the collision this issue
 > describes, so the fix is moot; not implementing it.
 
-`scripts/migrate/gsheet-rename.ts` renames `*.sheet.card` → `*.gsheet.card`
+`scripts/migrate/gsheet-rename.ts` (moved to `beebox/src/scripts/migrate/gsheet-rename.ts`) renames `*.sheet.card` → `*.gsheet.card`
 without checking whether the destination exists; POSIX rename silently
 replaces it, so a box holding both `Foo.sheet.card` and `Foo.gsheet.card`
 would lose the latter. `document-to-pdf.ts` now does a pre-pass collision

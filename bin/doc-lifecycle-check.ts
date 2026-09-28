@@ -1,7 +1,7 @@
 #!/usr/bin/env node --import tsx
 
 import { execFileSync } from "node:child_process";
-import { planLifecycleProblems } from "../beebox/src/dev/doc-frontmatter.ts";
+import { planLifecycleProblems } from "../beebox/src/dev/doc-check/frontmatter.ts";
 
 interface Options {
   repo: string;

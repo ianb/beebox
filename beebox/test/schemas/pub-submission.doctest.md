@@ -8,7 +8,7 @@ terms, and the connector (`connectors/publish-submissions.ts`) lands these cards
 ```ts setup
 import { PubSubmissionSchema, createPubSubmissionCard } from "../../src/schemas/pub-submission.js";
 import { parseCardText } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
 
 const schemas = await createCardSchemaMap();
 ```

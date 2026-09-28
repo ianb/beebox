@@ -34,13 +34,13 @@ src/                                  CLI entry, worktree detection, screenshot 
 packages/agent-browser-typed/         Typed TS interface to the upstream CLI surface
   src/commands/                       One typed function per upstream subcommand
   help/                               Checked-in `agent-browser <cmd> --help` snapshots
-  scripts/verify-help.ts              Diffs captured vs current; reports drift
+  src/scripts/verify-help.ts          Diffs captured vs current; reports drift
 ```
 
 ## Adding a typed command
 
 1. Add `packages/agent-browser-typed/src/commands/<cmd>.ts` with a single exported function.
-2. Re-export from `packages/agent-browser-typed/src/index.ts`.
+2. Re-export from `packages/agent-browser-typed/src/exports/agent-browser-typed.ts`.
 3. Capture the help snapshot: `node_modules/agent-browser/bin/agent-browser-darwin-arm64 <cmd> --help > packages/agent-browser-typed/help/<cmd>.txt`.
 4. `pnpm verify-help` to confirm it matches.
 

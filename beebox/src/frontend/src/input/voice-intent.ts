@@ -23,7 +23,7 @@ import type { FinalWord } from "../machines/transcription-events";
 import { joinTranscript, spokenTextStart } from "../components/chat/InteractiveChat-helpers";
 import { appendSendKeywordTag, detectKeyword } from "../lib/audio/speech-keywords";
 import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
-import { resolveEmissionWords } from "./unsure-words";
+import { resolveEmissionWords } from "./unsure-words/mark";
 
 export type VoiceIntent =
   | {
@@ -67,7 +67,7 @@ export type VoiceIntent =
  * clears it before the HQ round-trip starts, so it lands in the NEXT
  * emission instead. This is the one piece of `runKeywordSend`'s submit
  * logic that's pure enough to doctest headlessly (see
- * `test/frontend/voice-intent.doctest.md`).
+ * `src/frontend/test/input/voice-intent.doctest.md`).
  */
 export function buildVoiceSubmitEmission(opts: {
   priorInput: string;

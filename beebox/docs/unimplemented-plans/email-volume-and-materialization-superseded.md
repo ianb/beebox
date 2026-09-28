@@ -39,21 +39,21 @@ This plan keeps bulk mail in Gmail and materializes only selected threads as box
 - At proposal time, the now-retired Gmail pull module baselined only the bare
   inbox default while treating explicit selector intent as its resource bound.
   The incident showed that intent was not a resource bound. The replacement
-  lives in `beebox/src/connectors/gmail-rules.ts` and baselines every new
+  lives in `beebox/src/connectors/gmail-rules.ts` (moved to `beebox/src/connectors/gmail/rules.ts`) and baselines every new
   rule without importing its backlog.
 - Steady-state Gmail sync already used the History API, but its old pull helper
   could paginate and accumulate without a bound. The replacement
-  `beebox/src/connectors/gmail-discovery.ts` persists a resumable bounded
+  `beebox/src/connectors/gmail-discovery.ts` (moved to `beebox/src/connectors/gmail/discovery.ts`) persists a resumable bounded
   cursor rather than retaining that all-or-nothing shape.
-- Gmail IDs are checked before body fetch. `beebox/src/connectors/gmail.ts:175-180`: *"Refs whose Gmail id is already seen are skipped without an API call"*. Reuse this dedup for a persisted deferred queue.
-- Failed pulls already preserve the old checkpoint. `beebox/src/connectors/gmail.ts:349-352`: *"do NOT advance the history checkpoint: the failed window replays next sync"*. Preserve this behavior for failures. A successful capped sync is different: it must advance the checkpoint and persist the omitted IDs atomically.
-- `SyncResult` has no non-error degradation field. `beebox/src/connectors/index.ts:36-44` contains only `success`, `created`, `updated`, `pushed`, `jobs`, and `error`. Add structured notices.
-- Wakeup has a private result reporter. `beebox/src/cli/commands/wakeup-connectors.ts:93-95`: *"function reportSyncResult"*. Extract a shared reporter instead of claiming the current seam is reusable as-is.
+- Gmail IDs are checked before body fetch. `beebox/src/connectors/gmail.ts:175-180` (moved to `beebox/src/connectors/gmail/connector.ts`): *"Refs whose Gmail id is already seen are skipped without an API call"*. Reuse this dedup for a persisted deferred queue.
+- Failed pulls already preserve the old checkpoint. `beebox/src/connectors/gmail.ts:349-352` (moved to `beebox/src/connectors/gmail/connector.ts`): *"do NOT advance the history checkpoint: the failed window replays next sync"*. Preserve this behavior for failures. A successful capped sync is different: it must advance the checkpoint and persist the omitted IDs atomically.
+- `SyncResult` has no non-error degradation field. `beebox/src/connectors/index.ts:36-44` (moved to `beebox/src/connector.ts`) contains only `success`, `created`, `updated`, `pushed`, `jobs`, and `error`. Add structured notices.
+- Wakeup has a private result reporter. `beebox/src/cli/commands/wakeup-connectors.ts:93-95` (moved to `beebox/src/cli/commands/wakeup/connectors.ts`): *"function reportSyncResult"*. Extract a shared reporter instead of claiming the current seam is reusable as-is.
 - Finalize is documented as outbound-only, but it calls full connector sync. `beebox/src/cli/commands/finalize.ts:2-7`: *"Post-processing phase for outbound connectors"*; `:86`: *"const result = await connector.sync();"*. Gmail must expose a push-only finalization path so the per-sync pull cap is not multiplied by finalize invocations.
-- Gmail config has an owner-only admin surface, but its update overwrites the file from only `query` and `labels`. `beebox/src/webapp/trpc/routers/admin.ts:189-198` constructs `next` and writes the whole file. Track 1 must replace this with one shared validated read-modify-write path that preserves GC and safety fields.
-- The Gmail service is typed and injectable. `beebox/src/services/google-gmail.ts:41`: *"export interface GoogleGmailService"*. Add search/thread operations there and to its fake.
+- Gmail config has an owner-only admin surface, but its update overwrites the file from only `query` and `labels`. `beebox/src/webapp/trpc/routers/admin.ts:189-198` (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`) constructs `next` and writes the whole file. Track 1 must replace this with one shared validated read-modify-write path that preserves GC and safety fields.
+- The Gmail service is typed and injectable. `beebox/src/services/google-gmail.ts:41` (moved to `beebox/src/services/google-gmail/core.ts`): *"export interface GoogleGmailService"*. Add search/thread operations there and to its fake.
 - The fake does not currently exercise API pagination. Its list implementations must gain `maxResults` and `pageToken` behavior before limiter tests can be meaningful.
-- Local agent guidance overstates reach. `beebox/src/core/box/skills-content.ts:359`: *"If the user only wants to know about an email they received, that's `bbx search --kind email-message`"*. Replace this with an explicit local-first, remote-when-needed rule.
+- Local agent guidance overstates reach. `beebox/src/core/box/skills-content.ts:359` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`): *"If the user only wants to know about an email they received, that's `bbx search --kind email-message`"*. Replace this with an explicit local-first, remote-when-needed rule.
 - Reply drafts require a materialized message card. `beebox/src/schemas/email-outbound.tsx:71-77`: *"`in-reply-to.ref:` — for replies, points at the source `email-message` card"* and the connector reads its message and thread IDs. The first promotion implementation must preserve this RFC822 Message-ID contract.
 - The repository has a materialization precedent. `beebox/docs/plans/interface-as-cards.md:248-253`: *"Addressing is free and virtual; assertions require materialization."* Remote discovery is virtual; durable assertions materialize one local thread.
 

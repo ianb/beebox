@@ -13,7 +13,7 @@ resolution: implemented
 > `2380b35ad`, `997ddb225`). Implementation matches the "Decision and
 > implementation" section below: five pill tabs with Overview default, live
 > per-section status, one section registry
-> (`beebox/src/frontend/src/components/admin/admin-sections.ts`) driving scope
+> (`beebox/src/frontend/src/components/admin/admin-sections.ts` (moved to `beebox/src/frontend/src/components/admin/sections.ts`)) driving scope
 > badges, `bbx-admin-<section>` region landmarks, and `?tab=<tab>` deep links.
 > The related Secrets internal-disclosure gap
 > (`../bugs/2026-09-21-granting-an-existing-key-to-a-box-is-hidden-and-unguided.md`)

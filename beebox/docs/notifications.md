@@ -12,7 +12,7 @@ Everything that tells the person something goes through one function,
 `bbx notify`. When and how loud is policy, and the policy lives in the box: the
 root briefing's "Reaching me" section, which a new box's briefing template
 carries (`REACHING_ME_DEFAULT`, `src/schemas/briefing.tsx`). The agent guide's
-`REACHING_THE_BOXHOLDER` section (`src/core/agent-guide/reaching.ts`) teaches
+`REACHING_THE_BOXHOLDER` section (`src/core/agent-guide/guide/reaching.ts`) teaches
 the mechanics and quotes the default for boxes whose briefing has no such
 section.
 
@@ -58,7 +58,7 @@ then `skipped: present` on every channel, and a `dot` still badges.
 
 ### Sources
 
-- **`bbx notify`** (`src/cli/commands/notify.ts`): an agent's call. From a
+- **`bbx notify`** (`src/cli/commands/notify/command.ts`): an agent's call. From a
   box-spawned shell it goes through the box server; otherwise it runs in
   process. `--check` sends nothing and exits 1 when no channel can reach the
   person; agents run it before promising a reminder or a watch. The body comes
@@ -84,7 +84,7 @@ then `skipped: present` on every channel, and a `dot` still badges.
 ### Reminders: `notify:` schedule cards
 
 A scheduled-script card with `notify:` in place of `runs:` is a reminder
-(`src/schemas/scheduled-script.tsx`; the card instructions have the example).
+(`src/schemas/scheduled-script/schema.tsx`; the card instructions have the example).
 `bbx tick` calls `notifyBoxholder` in process: no agent and no shell. With
 `at` and `once: true`, the card deletes itself after it fires. The chat's
 `<schedule>` tag is a different thing: it comes back to one conversation
@@ -113,7 +113,7 @@ within hours ([chat timers](chat/schedules.md)).
   decision (`--min`, `--choice`, `--decide`); `--echo` passes stdin on to an
   agent, `--select` prints the inputs that passed. A daily cap of 500 calls
   per box lives in `.beebox/jev-budget.json`. The card instructions
-  (`src/schemas/judgment-instructions.ts`) are the guide to writing one.
+  (`src/schemas/judgment/instructions.ts`) are the guide to writing one.
 - **Composition.** When the notification text is fixed, `runs:` is one
   pipeline ending in `bbx notify`. When an agent must write it, `runs:` is
   `bbx procedure run <name>`, the procedure's precheck is the `changes | judge`
@@ -178,7 +178,7 @@ never promotes.
 
 The VAPID keypair and the APNs key are server-wide `.env` entries; the steps
 are in [server configuration](server/configuration.md#web-push-vapid-keys). The
-hub passes both sets of variables to every box server (`src/hub/child-env.ts`).
+hub passes both sets of variables to every box server (`src/hub/supervisor/child-env.ts`).
 The iOS app target needs the Push Notifications capability in Xcode; a Debug
 build registers for the APNs sandbox and a Release build for production
 ([mobile contract §5.9](mobile-contract.md)).
@@ -196,9 +196,9 @@ Run on a real device after the server setup, on a box whose briefing has a
 3. Write a schedule card with `at` two minutes out, `once: true`, and
    `notify:`; it arrives on time and the card is gone.
 4. Set up the field-trip watch: the schedule and procedure cards from the
-   agent guide's example (`src/core/agent-guide/reaching.ts`), and this
+   agent guide's example (`src/core/agent-guide/guide/reaching.ts`), and this
    judgment card, from the judgment card instructions
-   (`src/schemas/judgment-instructions.ts`):
+   (`src/schemas/judgment/instructions.ts`):
 
    ```yaml
    # _config/judgments/field-trip.judgment.card

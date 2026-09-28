@@ -32,7 +32,7 @@ repository, no matching branch, containing nothing.
    git field `null`.
 2. `workstreams-app/src/shared/workstreams.ts:48` declares
    `branch: z.string().min(1)`, so that row fails validation.
-3. `workstreams-app/src/server/workstreams-command.ts:118` runs `safeParse` on
+3. `workstreams-app/src/server/workstreams-command.ts:118` (moved to `workstreams-app/src/server/main/workstreams-command.ts`) runs `safeParse` on
    the **whole array** and throws `InvalidWorkstreamsShapeError` on any failure.
 
 So one meaningless row took down every workstream, issue, plan, and

@@ -93,7 +93,7 @@ function bodyLine(node: Node): number {
  * produce a symbol-keyed property, which is what keeps an author-written
  * `locator=` attribute from ever standing in for one (it is also undeclared,
  * so Markdoc drops it from the transformed attributes). The doctest
- * `test/shared/todo-locators-render.doctest.md` pins the clone behaviour, so a
+ * `src/frontend/test/components/Markdown/Todo.locators-render.doctest.md` pins the clone behaviour, so a
  * Markdoc upgrade that changes it fails there rather than silently dropping
  * every rendered todo's locator.
  */

@@ -17,6 +17,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["eslint.config.ts", "src/**/*", "examples/**/*", "gallery/**/*", "test/**/*"],
-  "exclude": ["node_modules", "out", "gallery/out", "src/react", "**/*.tsx", "test/mount.test.ts", "test/figure-hardening.test.ts", "test/mount-failure-paths.test.ts", "test/fake-dom.ts"]
+  "include": ["eslint.config.ts", "src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "out", "src/gallery/out", "src/react", "src/exports", "src/browser", "src/dev-demo", "**/*.tsx", "test/browser/mount.test.ts", "test/react/SketchFigure.hardening.test.ts", "test/browser/mount.failure-paths.test.ts", "test/browser/fake-dom.ts"]
 }

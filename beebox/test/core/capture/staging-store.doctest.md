@@ -17,7 +17,7 @@ import {
   setStagingState,
   sealStagingSession,
   stagingSessionIsEmpty,
-} from "../../../src/core/capture/staging-store.js";
+} from "../../../src/core/capture/staging-store/core.js";
 import { cleanupStagingSession } from "../../../src/core/capture/staging-teardown.js";
 import { addFileStreamed } from "../../../src/core/capture/staging-stream.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";

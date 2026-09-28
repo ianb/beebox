@@ -101,7 +101,7 @@ test("an unchanged issue file is refused", async (t) => {
 test("a path outside the open issue categories never parses as a TRIAGE line", async (t) => {
   const fixture = await makeFixture();
   t.after(() => fs.rm(path.dirname(fixture.worktree), { recursive: true, force: true }));
-  const result = await runCheck(fixture, "TRIAGE: beebox/src/webapp/server.ts\n");
+  const result = await runCheck(fixture, "TRIAGE: beebox/src/webapp/server/app.ts\n");
   assert.equal(result.exitCode, 1);
   assert.match(result.stderr, /never printed a TRIAGE line/u);
 });

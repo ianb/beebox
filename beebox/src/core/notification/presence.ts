@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { getBoxTime } from "../../lib/time.js";
 
 const PRESENCE_FILE = "presence.json";

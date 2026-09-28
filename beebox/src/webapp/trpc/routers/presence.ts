@@ -8,8 +8,8 @@
  */
 
 import { z } from "zod";
-import { router, authedProcedure } from "../trpc.js";
-import { createPresenceRegistry } from "../../../core/notification/presence-registry.js";
+import { router, authedProcedure } from "../procedures.js";
+import { createPresenceRegistry } from "../../../core/notification/presence-registry/core.js";
 import { getBoxTime } from "../../../lib/time.js";
 
 /** Often enough to write a drop to zero soon after the last tab's session expires. */

@@ -1,5 +1,5 @@
-import type { EventBus } from "../../core/event-bus.js";
-import type { Services } from "../../services/index.js";
+import type { EventBus } from "../../core/event-bus/core.js";
+import type { Services } from "../../services/container.js";
 
 /**
  * Authenticated user identity in the tRPC context. Structurally matches

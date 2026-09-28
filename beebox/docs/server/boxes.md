@@ -18,7 +18,7 @@ deployment (`box.example.com`) rather than something every hub needs.
   scaffolds a new one from scratch.
 - **`hub.json`** is the routing table a `bbx hub` process reads: a map of URL
   slug → box path, plus optional `port`/`host`/`lazy`/`idleMs`/`keepRecent`.
-  See `src/hub/hub-config.ts` for the schema. The hub does **not** hot-reload
+  See `src/hub/config.ts` for the schema. The hub does **not** hot-reload
   this file — adding or removing a box entry needs a hub restart (SIGHUP
   only reloads the crash-loop latch, not the box list). With `lazy: true`,
   every configured box starts "stopped" instead of spawning at hub startup —

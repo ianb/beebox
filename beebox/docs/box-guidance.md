@@ -28,7 +28,7 @@ The class says who writes the bytes:
 To classify a new surface, ask who writes the bytes after the first install.
 
 `GUIDANCE_SURFACES` in `src/core/box/guidance-surfaces.ts` is the list. This
-table restates it, and `test/core/box-guidance-sync.doctest.md` fails when the
+table restates it, and `test/core/box/guidance-sync.doctest.md` fails when the
 two differ. `<name>` stands for one path segment, and `**/` for any directory.
 
 | Surface | Tier | Class | Installed by | In box git |
@@ -64,7 +64,7 @@ two differ. `<name>` stands for one path segment, and `**/` for any directory.
 
 ## How it works
 
-`syncBoxGuidance` (`src/core/box/guidance-sync.ts`) walks the registry. Both
+`syncBoxGuidance` (`src/core/box/guidance-sync/core.ts`) walks the registry. Both
 `initBox` and the `generateDocs` template sync call it, so a surface installs
 the same way on a new box and on every existing one. `initBox` skips the
 generators, since the rule generator loads the box's own schemas, and `bbx
@@ -105,7 +105,7 @@ The families `compileGuides` writes (`guides-for-<type>.md`,
 
 ## Maps and tracked guides
 
-The maps finalizer (`src/core/maps/finalize.ts`) gives every map-bearing
+The maps finalizer (`src/core/maps/finalize/core.ts`) gives every map-bearing
 directory a `CLAUDE.md` holding the map include line. A directory whose
 `CLAUDE.md` is a tracked guide is skipped: the include would make the guide
 differ from stock, and the tracker would park every later rewrite. That
@@ -124,7 +124,7 @@ Engine facts about a subject go in that subject's package doc under
 `docs/box/` (for example [tricks](box/tricks.md) or
 [schemas](box/schemas.md)). A tracked nested `CLAUDE.md` holds a pointer to it
 plus the box's own conventions, and a managed skill holds its trigger, its
-first commands, and a pointer. `test/core/box-docs-pointers.doctest.md` fails
+first commands, and a pointer. `test/core/docs-gen/package-docs.pointers.doctest.md` fails
 when a pointer names a doc the package does not ship.
 
 The agent guide follows the same rule; its ledger, bins, and handles are in

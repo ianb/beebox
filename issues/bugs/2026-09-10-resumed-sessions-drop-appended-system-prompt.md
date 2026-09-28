@@ -15,13 +15,13 @@ session** and pass nothing on resume:
 - `ChatThreadSession` (`src/core/chat/session/thread.ts:145`) —
   `if (!this.sessionId) { systemPrompt = buildThreadSystemPrompt(...) + tzContext }`,
   so a resumed thread sends `append: ""`.
-- `runAgent` (`src/core/agent/run.ts:264`) —
+- `runAgent` (`src/core/agent/run.ts:264` (moved to `beebox/src/core/agent/invoke/run.ts`)) —
   `const appendedSystem = isResume ? "" : systemPrompt + tzContext;`, matching
   `AgentInvokeOptions.systemPrompt`'s doc comment, "provided on first invoke,
   omitted on resume". Every `Agent` resumed this way inherits it: reactor
   sessions (`src/core/chat/reactor-sessions.ts:94`, `resume: true` within the
   message and age caps), procedure review retries (`retryRunAgent` in
-  `src/core/procedure/engine-run-execute.ts`), and the commit-nudge retry in
+  `src/core/procedure/engine-run-execute.ts` (moved to `beebox/src/core/procedure/engine/run-execute.ts`)), and the commit-nudge retry in
   `ensureAgentCommitted`.
 
 Both assume the SDK keeps the first run's append for the life of the session.
@@ -50,7 +50,7 @@ So on every resumed turn:
   supplied, and without the timezone context.
 
 **Not affected:** the main web chat. `buildBackendStartOptions`
-(`src/core/chat/session/start.ts`) resolves and passes the full
+(`src/core/chat/session/start.ts` (moved to `beebox/src/core/chat/session/run/start.ts`)) resolves and passes the full
 `CHAT_SYSTEM_PROMPT + tzContext + NARRATION_OVERLAY` on every start, resumes
 included.
 

@@ -5,10 +5,10 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
-import { runCommand, createCliContext } from "../../core/commands/index.js";
-import { invariant } from "../../lib/invariant.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
+import { runCommand, createCliContext } from "../../core/command-runner.js";
+import { invariant } from "../../shared/invariant.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const moveCommand = new Command("mv")
   .description("Move/rename one or more cards and update all references")

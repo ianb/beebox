@@ -80,7 +80,7 @@ depending on the broken build.
 - `/__router/status` exposes router-owned live process state. Add a narrow
   internal endpoint for the data the app cannot derive from the CLI. Do not let
   the app import router-core objects.
-- `beebox/src/frontend/src/router.tsx:1-69` uses code-based TanStack Router
+- `beebox/src/frontend/src/router.tsx:1-69` (moved to `beebox/src/frontend/src/main/router.tsx`) uses code-based TanStack Router
   routes and Zod search validation. Reuse this pattern, not the issue's stale
   reference to React Router.
 - `beebox/src/frontend/vite.config.ts:10-60` documents prefix-aware Vite
@@ -329,7 +329,7 @@ router behavior still require boxholder acceptance; automated tests use fakes.
 - The main checkout is dirty for unrelated reasons. Issue Save uses the shipped
   path-scoped commit behavior and blocks only when a selected issue file has
   conflicting staged or unstaged edits
-  (`workstreams-app/src/server/issues-mutation-service.ts`).
+  (`workstreams-app/src/server/issues-mutation-service.ts` (moved to `workstreams-app/src/server/main/issues-mutation-service.ts`)).
 - A private issue appears in a worktree overlay. The API preserves visibility
   and never includes private content in logs or public search results.
 - A hidden quota panel remains closed for days. It does not poll. Opening it

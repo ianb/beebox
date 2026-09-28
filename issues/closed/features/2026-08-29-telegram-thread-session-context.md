@@ -12,7 +12,7 @@ discovered-in: worktree-chores-burn-down — closing the completed web session-c
 
 Web chat messages receive the derived `<chat-app>` snapshot from
 `src/core/session-context.ts`. Telegram-backed chat jobs in
-`src/core/reactor/chat-jobs.ts` build their own prompt from the job description
+`src/core/reactor/chat-jobs.ts` (moved to `beebox/src/core/reactor/engine/chat-jobs.ts`) build their own prompt from the job description
 and todo ambient line, so they do not receive local time, thread activity, or
 channel context. The current shared snapshot has no calendar attribute; this
 issue does not reintroduce the older calendar-context experiment.

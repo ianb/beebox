@@ -49,7 +49,7 @@ outbound model** ("write an output card → a connector delivers it").
   { navigator.serviceWorker.register(withBase('/sw.js')); }"*. **Reuse** the
   manifest groundwork; **rebuild** `public/sw.js` — it is a 2-line no-op stub
   (`src/frontend/public/sw.js:1-2`) with zero push capability.
-- **The outbound contract.** `src/connectors/telegram-output-cards.ts:32`
+- **The outbound contract.** `src/connectors/telegram-output-cards.ts:32` (moved to `beebox/src/connectors/telegram/output-cards.ts`)
   `sendOutputCards()` flushes `*.telegram-message.card` files from `box/output/`,
   deletes on success, stamps `failed` on error. **Reuse** as the telegram sink;
   this plan adds web-push as a second sink, not a replacement.
@@ -60,12 +60,12 @@ outbound model** ("write an output card → a connector delivers it").
   caller migrated to the new dispatcher.
 - **Outbound card lifecycle precedent.** `src/schemas/telegram-message.ts:31-44`
   (status `pending`/`failed`, committed, deleted on success) +
-  `src/connectors/telegram-output-cards.ts:32-92`. **Reuse the shape** for the new
+  `src/connectors/telegram-output-cards.ts:32-92` (moved to `beebox/src/connectors/telegram/output-cards.ts`). **Reuse the shape** for the new
   `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
   `box/output/` as holding "push notifications... Flushed by `bbx finalize`".
 - **`bbx finalize` connector dispatch.** `src/cli/commands/finalize.ts:18-32`
   initializes connectors and runs `getAllConnectors()`; telegram flushes its cards
-  here (`src/connectors/telegram.ts:124`). **Reuse** — the push connector registers
+  here (`src/connectors/telegram.ts:124` (moved to `beebox/src/connectors/telegram/connector.ts`)). **Reuse** — the push connector registers
   the same way and flushes `web-push` cards at finalize.
 - **Server-level state precedent.** `src/core/scheduler.ts:30` (`~/.local/share/beebox`
   log dir) and `src/core/boxes-config.ts:26` (`~/.config/beebox`). **Reuse the level** —
@@ -129,7 +129,7 @@ reflects two boxholder decisions (2026-06-29) made after a codex review
 subscriptions are **server-level, keyed by endpoint** (a `PushSubscription` is
 bound to the one SW registration, not to a box — `src/frontend/src/main.tsx:23-24`
 registers a single SW and the same frontend is served at root and every box prefix,
-`src/webapp/server.ts:100-106`); **(2)** push delivery goes **through a durable
+`src/webapp/server.ts:100-106` (moved to `beebox/src/webapp/server/app.ts`)); **(2)** push delivery goes **through a durable
 `box/output` card flushed by `bbx finalize`**, exactly like telegram — not a direct
 send. `docs/box-layout.md:57` already anticipates this: *"Outbound cards staged for
 delivery (push notifications, replies). Flushed by `bbx finalize`."*
@@ -243,7 +243,7 @@ so latching an alert episode never silently drops it.
 
 **Direction.**
 - New schema `src/schemas/web-push.ts` via `cardSchema("web-push", { fields })`,
-  registered in `src/schemas/registry.ts`. Fields: `title`, `body`, `url`,
+  registered in `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`). Fields: `title`, `body`, `url`,
   `severity: "info" | "alert"`, `tag?`, `status: "pending" | "failed"`, `error?`.
   No `chat-id` analog — the audience is "this box's subscribed endpoints", resolved
   at send time via `endpointsForBox(boxSlug)`. Filename

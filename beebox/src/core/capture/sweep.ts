@@ -39,7 +39,7 @@ import {
   sealStagingSession,
   stagingSessionIsEmpty,
   isCaptureSession,
-} from "./staging-store.js";
+} from "./staging-store/core.js";
 import { discardStagingSessionIfCancellable } from "./staging-teardown.js";
 import { StagingSessionGoneError } from "./staging-errors.js";
 import { ABANDONMENT_WINDOW_MS } from "../../shared/capture-staleness.js";

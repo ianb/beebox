@@ -45,7 +45,7 @@ The plan reuses far more than it builds.
   scoping below.
 - **Raw cookie-header parsing for non-Fastify contexts** — `lib/cookies.ts` `parseCookieHeader` (hoisted out of `auth.ts` by this plan),
   written for exactly one caller: `auth.ts:201`: *"the hub's raw WebSocket-upgrade path
-  (`src/hub/hub-server.ts`), which sees a bare `http.IncomingMessage`, not a
+  (`src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`)), which sees a bare `http.IncomingMessage`, not a
   `FastifyRequest`."* **Reused directly** — this is the piece that makes cookie-on-WS-upgrade
   work at the hub without new plumbing. It is currently module-private; this plan exports it.
 - **The hub already gates the WS upgrade on cookies** — `hub-server.ts:442`: *"WS upgrades
@@ -57,7 +57,7 @@ The plan reuses far more than it builds.
   passes `getMobileAuthToken()` as `createWSClient`'s `connectionParams`. **Reused
   unchanged.** This is load-bearing for Track 4: the query param authenticates *only* the
   pre-upgrade gate, so deleting it costs nothing once the cookie covers that gate.
-- **The `Secure`-flag precedent** — `src/webapp/routes/auth.ts:161`:
+- **The `Secure`-flag precedent** — `src/webapp/routes/auth.ts:161` (moved to `beebox/src/webapp/routes/auth/register.ts`):
   *"secure: publicUrl.startsWith(\"https\")"*. **Reused** — the new cookie decides its
   `Secure` flag the same way rather than inventing a second rule.
 - **Device-token verification** — `src/core/mobile/pairing.ts:161` `verifyMobileToken` and
@@ -109,7 +109,7 @@ can use it, and both clients must stop sending the query param before the parser
 
 ### Track 1 — `bbx_mobile`: per-box signed cookie primitive
 
-**What.** A new module `src/core/mobile/mobile-session.ts` with `signMobileSession` /
+**What.** A new module `src/core/mobile/mobile-session.ts` (moved to `beebox/src/core/mobile/session.ts`) with `signMobileSession` /
 `verifyMobileSession`, plus a per-box secret.
 
 **Why this needs to change.** There is no credential today that a box can verify cheaply,
@@ -145,7 +145,7 @@ export const MOBILE_COOKIE_NAME = "bbx_mobile";
 `MobileBearerIdentity.deviceId`, `pairing.ts:143`).
 
 **First implementation chunk.** The module plus a pure-function doctest
-(`test/core/mobile/mobile-session.doctest.md`): sign→verify round-trip, expired cookie
+(`test/core/mobile/mobile-session.doctest.md` (moved to `beebox/test/core/mobile/session.doctest.md`)): sign→verify round-trip, expired cookie
 rejected, tampered signature rejected, wrong-box secret rejected, garbage input rejected.
 No open questions inside it.
 
@@ -466,7 +466,7 @@ part a future reader most needs.
 
 **Test posture.** Encoded as the done-when:
 
-- `test/core/mobile/mobile-session.doctest.md` (pure) — sign/verify round-trip, expiry,
+- `test/core/mobile/mobile-session.doctest.md` (moved to `beebox/test/core/mobile/session.doctest.md`) (pure) — sign/verify round-trip, expiry,
   tamper, cross-box rejection, garbage input.
 - `test/webapp/mobile-cookie.doctest.md` (route, `makeTestServer()`) — cookie issued on a
   bearer-authed response; cookie accepted on a subsequent bare request; `Secure` present on
@@ -477,10 +477,10 @@ part a future reader most needs.
   mobile-token WS-upgrade case at all); and the S1 regression: a request carrying a
   syntactically valid but cryptographically bogus credential is **rejected**, not proxied.
 - **Existing doctests that must change**, not merely keep passing:
-  - `test/webapp/mobile-spa-fallback.doctest.md` — its third case asserts
+  - `test/webapp/mobile-spa-fallback.doctest.md` (moved to `beebox/test/webapp/server-root.spa-fallback.doctest.md`) — its third case asserts
     `?mobileToken=<deviceToken>` → `200 text/html`. That case inverts to a 401 in step 5 and
     is replaced by a `bbx_mobile` case. Its Bearer case stays green throughout.
-  - `test/hub/hub-server-auth.doctest.md` — the mobile-Bearer case at `:88-100` asserts the
+  - `test/hub/hub-server-auth.doctest.md` (moved to `beebox/test/hub/server.auth.doctest.md`) — the mobile-Bearer case at `:88-100` asserts the
     hub proxies with `email:null, secret:null`. Still true; but the S1 fix means an
     *invalid* Bearer must now 401 at the hub, which is a new case in a file that currently
     has none.

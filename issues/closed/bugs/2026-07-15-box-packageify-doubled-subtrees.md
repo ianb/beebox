@@ -38,7 +38,7 @@ open until the two are repaired or rebuilt; the repair caveat below (diverged
 copies, human-in-loop) still applies. If those two local boxes are disposable,
 `bbx init`-rebuilding them is cheaper than de-doubling.
 
-The v1→v2 `box-packageify` migration (`scripts/migrate/box-packageify.ts`,
+The v1→v2 `box-packageify` migration (`scripts/migrate/box-packageify.ts` (moved to `beebox/src/scripts/migrate/box-packageify.ts`),
 registered in `src/core/migrations.ts`; ran ~2026-07-04) **duplicated some
 subtrees into themselves** on at least two local boxes. On disk you get a path
 where a mid-tree segment repeats — schematically `store/<X>/store/<X>/…` — a real,

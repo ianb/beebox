@@ -12,7 +12,7 @@ priority: normal
 ## Recovery assessment (2026-09-21)
 
 The concern remains plausible, not freshly reproduced. Current
-`beebox/src/frontend/src/components/chat/workspace/WorkspaceCanvas.tsx:24-60`
+`beebox/src/frontend/src/components/chat/workspace/WorkspaceCanvas/view.tsx:24-60`
 renders tabs and FileView without agent-turn/mutation state. Initial loading is
 not an in-progress edit indicator; existing text remains available during a
 refresh. Related [card edit highlighting](../features/2026-08-01-card-diff-view-edit-highlighting.md)

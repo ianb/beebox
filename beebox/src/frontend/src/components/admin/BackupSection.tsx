@@ -12,7 +12,7 @@
  * what it reports.
  */
 
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION =

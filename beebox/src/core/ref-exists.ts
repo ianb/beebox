@@ -7,7 +7,7 @@
  * dispatcher already extracts the refs itself (`extractRefs` over frontmatter,
  * `extractBodyRefs` over the Markdoc body); this only answers "does it exist".
  *
- * Ref semantics (the 3-form rule) live in `src/shared/ref-path.ts` — this
+ * Ref semantics (the 3-form rule) live in `src/shared/ref-path/core.ts` — this
  * module only turns its box-relative answer into an absolute path and asks the
  * filesystem. A ref's `?query`/`#fragment` is split off BEFORE the existence
  * check: `feedback.target.ref` is documented as `path#fragment`
@@ -17,10 +17,10 @@
 
 import { access } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
-import { parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
-import { errnoCode } from "../lib/error-guards.js";
-import { BOX_ROOT_VOCABULARY } from "../lib/box-root-vocabulary.js";
+import { errnoCode } from "../shared/error-guards.js";
+import { BOX_ROOT_VOCABULARY } from "../shared/box-root-vocabulary.js";
 
 interface RefExistsInput {
   /** The raw ref string as written in the card. */
@@ -36,7 +36,7 @@ interface RefExistsInput {
  * names no in-box file — it escapes the box root, or its path part is empty
  * (a fragment-/query-only ref like `#risks` or `?view=x`, which used to resolve
  * to the containing directory and pass the existence check). The shared algebra
- * fails closed on both — see `src/shared/ref-path.ts`. Any `?query`/`#fragment`
+ * fails closed on both — see `src/shared/ref-path/core.ts`. Any `?query`/`#fragment`
  * is dropped: it addresses a location *within* the target, not a different file.
  */
 function resolveRefToPath(input: RefExistsInput): string | null {

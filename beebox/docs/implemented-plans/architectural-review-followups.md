@@ -44,7 +44,7 @@ composition question.
 
 Eight read→mutate→write spans on `config/connectors/<name>.state.json` run
 unlocked; overlapping spans silently lose writes. All route through
-`src/connectors/transient-state.ts` (`loadTransientState`/`saveTransientState`).
+`src/connectors/transient-state.ts` (moved to `beebox/src/transient-state.ts`) (`loadTransientState`/`saveTransientState`).
 
 **Design:** add an RMW helper to `transient-state.ts`:
 
@@ -115,7 +115,7 @@ attribution. 33 sites enumerated; ~31 are mechanical.
 **Design:**
 1. **Promote the model helper.** `webapp/trpc/routers/clerk.ts`'s `gitCommit`
    (fast-path `pathsHaveChanges` skip → `stageFiles` → `commitPaths` →
-   swallow `isNothingToCommitError`) moves into `src/lib/git.ts` as
+   swallow `isNothingToCommitError`) moves into `src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`) as
    `stageAndCommitPaths` (consolidate — clerk.ts converts to the promoted
    version; one definition).
 2. **Sweep** of the ~31 drop-in sites — "drop-in" means the path list is
@@ -172,7 +172,7 @@ bridge reconnects. Therefore:
    reconnecting across a deploy hit the existing resync path instead of
    replaying stale-shaped rows. This makes "everything persisted is valid
    against current schemas" an invariant instead of a hope.
-2. **Per-event zod schemas** in a new `src/core/event-bus-schemas.ts`:
+2. **Per-event zod schemas** in a new `src/core/event-bus-schemas.ts` (moved to `beebox/src/core/event-bus/schemas.ts`):
    13 events, `EventMap` derived via `z.infer` (schema = single source of
    truth). Three events currently hide real types behind `unknown` — type
    them properly: `chat-task.task` (`TaskEvent` from

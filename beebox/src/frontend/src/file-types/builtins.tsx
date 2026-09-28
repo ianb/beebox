@@ -7,7 +7,7 @@
 // is the one value-legal spelling through that alias (see vite.config.ts).
 import { ImageCardListEntry } from "@schemas/image.list-entry";
 import { EXTRACTED_CARD_TYPE } from "../lib/pdf-card";
-import { registerFileType } from "./registry";
+import { registerFileType } from "../file-type-registry";
 import {
   DocumentIcon,
   CardIcon,

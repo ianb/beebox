@@ -16,7 +16,7 @@
 import { appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 const CSP_REPORT_LOG = "csp-reports.log";
 const MAX_LOG_FILE_BYTES = 200_000;
@@ -39,7 +39,7 @@ const MAX_REPORTS_PER_REQUEST = 20;
 
 /**
  * Absolute path of the CSP report log under a box. The sink writes here and the
- * digest tool (`src/dev/csp-digest.ts`) reads from the same place — keep both
+ * digest tool (`src/dev/csp-report/digest.ts`) reads from the same place — keep both
  * going through this helper so they never drift.
  */
 export function cspReportLogPath(boxRoot: string): string {

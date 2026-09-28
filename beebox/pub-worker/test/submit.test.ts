@@ -14,7 +14,7 @@
  */
 import { env } from "cloudflare:test";
 import { assert, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { handle, type WorkerDeps } from "../src/index";
+import { handle, type WorkerDeps } from "../src/worker";
 import { submissionSchema } from "../../src/publish/submission";
 import type { Env, RateLimiter } from "../src/env";
 import type { Jwk } from "../src/access";

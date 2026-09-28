@@ -14,7 +14,7 @@ The criterion the issue asked for is the boxholder's: only what an agent can
 call (chat, scheduled script, procedure) stays in `bbx`; the rest moved under
 `bbx engine`, which is also the list the `bbx serve` extraction needs.
 `src/cli/surface-data.ts` holds the classification with a reason per eviction,
-and `test/cli/surface.doctest.md` fails when a new verb is registered without
+and `test/cli/surface.doctest.md` (moved to `beebox/test/cli/entry.surface.doctest.md`) fails when a new verb is registered without
 being classified — the drift this issue was filed about. The docs half landed
 as the per-audience statement in `beebox/CLAUDE.md`. Dead surface removed:
 `scenario` and its runner, the five never-implemented stubs (`show`, `log`,
@@ -33,7 +33,7 @@ use, and the surface is the agent's mental model of what a box *is*.
 ## Evidence it hasn't been reviewed
 
 `bbx show --raw` is documented as *"Show raw XML instead of pretty-printed"*
-(`src/cli/index.ts:155`). The XML card format, its loader, and the `cardworks`
+(`src/cli/index.ts:155` (moved to `beebox/src/cli/entry/run.ts`)). The XML card format, its loader, and the `cardworks`
 package were all removed — cards are frontmatter + markdown, full stop. A flag
 survives advertising a format that no longer exists.
 

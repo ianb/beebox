@@ -14,8 +14,8 @@
  */
 
 import { TRPCError } from "@trpc/server";
-import type { GoogleAccessProblem } from "../../connectors/google-access.js";
-import type { Result } from "../../lib/result.js";
+import type { GoogleAccessProblem } from "../../google/access.js";
+import type { Result } from "../../shared/result.js";
 
 /** The refusal a gap becomes on the wire. */
 export function googleAccessError(problem: GoogleAccessProblem): TRPCError {

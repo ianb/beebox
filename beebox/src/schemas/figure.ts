@@ -13,7 +13,7 @@
  * docs/implemented-plans/canvas-loop-figure.md for the full design.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 
 export const FigureRuntime = z.enum(["p5js", "three", "d3", "canvas-loop"]);

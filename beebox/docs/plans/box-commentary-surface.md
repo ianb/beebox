@@ -138,13 +138,13 @@ sources:
   with `"; "`, all optional. **Reuse** this whole stack; Track A renames the
   emitted attribute to `pos` and lets `{% source %}` carry the same values.
 
-- **The `source` Markdoc tag — EXTEND.** `src/shared/markdoc-config.ts:133-149`
+- **The `source` Markdoc tag — EXTEND.** `src/shared/markdoc-config.ts:133-149` (moved to `beebox/src/shared/markdoc-config/core.ts`)
   defines `source` with exactly two attributes: *"ref: { type: String,
   required: true }, as: { type: String }"* — **no** `pos`, `version`, or hash
   attribute today. Track A adds them.
 
 - **Box file-serving + sandbox guard — EXTEND (do not weaken).**
-  `src/webapp/routes/api-files.ts:67-69` confines reads to the box root:
+  `src/webapp/routes/api-files.ts:67-69` (moved to `beebox/src/webapp/routes/api/register/files.ts`) confines reads to the box root:
   *"if (!resolved.startsWith(path.resolve(boxRoot))) { return
   reply.status(403).send({ error: "Access denied" }); }"*. The live wrapper
   needs to read **outside** boxRoot — so it is a **new, separately-gated
@@ -157,7 +157,7 @@ sources:
   are not needed), since an absolute path already identifies the worktree.
 
 - **Card schema registration + path-scoped instruction rules — REUSE.**
-  Frontmatter schemas register in `src/schemas/registry.ts:63-89`
+  Frontmatter schemas register in `src/schemas/registry.ts:63-89` (moved to `beebox/src/schemas.ts`)
   (`cardSchemas[]`). A schema's `instructions` becomes a path-scoped agent
   rule at `bbx init`: `src/core/init-rules.ts:102-117` writes
   `**/*.<type>.card` rule files. The `commentary` card's synthesis guidance

@@ -7,9 +7,10 @@
   "description": "Worktree-aware browser CLI for this monorepo. Wraps agent-browser with URL translation, screenshot metadata, and a typed sub-package for the upstream CLI surface. Access point: bin/browse at the monorepo root.",
   "scripts": {
     "cli": "tsx src/cli.ts",
-    "verify-help": "tsx packages/agent-browser-typed/scripts/verify-help.ts",
+    "verify-help": "tsx packages/agent-browser-typed/src/scripts/verify-help.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "tap"
   },
   "dependencies": {
     "agent-browser-typed": "workspace:*"
@@ -17,8 +18,10 @@
   "devDependencies": {
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^24.0.0",
+    "agent-doctest": "workspace:*",
     "eslint": "^9.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
+    "tap": "^21.0.0",
     "tsx": "^4.23.1",
     "typescript": "^5.7.0"
   }

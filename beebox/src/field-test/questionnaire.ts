@@ -16,7 +16,7 @@
 
 import * as path from "node:path";
 import { readdir } from "node:fs/promises";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 /** The one constrained answer, plus the sentinel for an unparseable one. */
 export type ActivityOutcome = "smooth" | "friction" | "blocked";

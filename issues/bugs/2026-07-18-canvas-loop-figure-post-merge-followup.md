@@ -21,9 +21,9 @@ phone width (~390px)"* and p5/three/d3 starters were reworked to size from
 `mount.clientWidth` via a `ResizeObserver`. **canvas-loop was not reconciled to
 this** — it renders at a fixed `module.canvas` size:
 
-- `canvas-loop/browser/mount.ts:162` sets `canvas.width = size.width` (fixed,
+- `canvas-loop/src/browser/mount.ts:162` sets `canvas.width = size.width` (fixed,
   `module.canvas ?? DEFAULT_CANVAS`); no `ResizeObserver`, no container query.
-- `canvas-loop/browser/figure.css` `.cl-canvas` has **no `max-width: 100%`** —
+- `canvas-loop/src/browser/figure.css` `.cl-canvas` has **no `max-width: 100%`** —
   `display: block` at intrinsic resolution. A 500×400 sketch overflows a
   ~390px phone viewport.
 

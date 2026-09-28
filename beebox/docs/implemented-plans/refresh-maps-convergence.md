@@ -114,7 +114,7 @@ exception. `warn` is a legal enum value (`src/schemas/procedure.ts:47`).
   the prefix would produce `content/content/...` and match nothing.
 - **`listChildrenAtCommit`** — `precheck-listing.ts:94-129`, the error-hiding
   site at `:113`. **Rebuilt** in Track C.
-- **Doctests** — `test/core/maps/maps-precheck.doctest.md`,
+- **Doctests** — `test/core/maps/maps-precheck.doctest.md` (moved to `beebox/test/core/maps/precheck.doctest.md`),
   `maps-finalize.doctest.md`, `makeTmpBox({ git: true })`. **Reused.**
 
 ## Prior art (external)

@@ -11,7 +11,7 @@ resolution: implemented
 
 The Codex section of the admin page on the local `test1` box renders a
 "Status unknown" warning badge with the detail `codex login status timed out`.
-The text comes from `beebox/src/services/codex-cli.ts`, which spawns
+The text comes from `beebox/src/services/codex-cli.ts` (moved to `beebox/src/services/codex-cli/core.ts`), which spawns
 `codex login status`, waits ten seconds, then kills it and reports
 `inconclusive`.
 

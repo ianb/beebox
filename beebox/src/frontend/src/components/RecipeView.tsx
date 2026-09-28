@@ -16,9 +16,9 @@
  */
 
 import { useState } from "react";
-import { Markdown } from "./Markdown";
+import { Markdown } from "./Markdown/body";
 import { RecipeScaleContext } from "./RecipeTags";
-import type { RendererProps } from "../renderers";
+import type { RendererProps } from "../file-type-registry";
 
 const SCALE_OPTIONS = [0.5, 1, 1.5, 2, 3];
 

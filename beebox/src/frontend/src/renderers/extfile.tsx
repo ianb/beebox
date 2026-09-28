@@ -5,9 +5,10 @@
  * rendering logic (same split as webpage/commentary).
  */
 
-import { ExtfileView } from "../components/ExtfileView";
-import { registerFileType } from "./index";
+import { ExtfileView } from "../components/ExtfileView/view";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "extfile" }, {
+export const extfileRenderer: RendererEntry = {
+  selector: { type: "extfile" },
   renderer: { name: "Extfile", Component: ExtfileView, priority: 100 },
-});
+};

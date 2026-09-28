@@ -27,7 +27,7 @@
 
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
-import { assertNever } from "../lib/invariant.js";
+import { assertNever } from "../shared/invariant.js";
 import {
   type EdgeManifest,
   edgeManifestSchema,

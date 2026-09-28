@@ -31,7 +31,7 @@ been costing render-testing since at least mid-July.
 
 ## The code states the invariant it breaks
 
-`src/cli/commands/view.ts:154-159` spells out the requirement:
+`src/cli/commands/view.ts:154-159` (moved to `beebox/src/cli/commands/view/command.ts`) spells out the requirement:
 
 > the compiled module imports `react`/`react/jsx-runtime` as bare specifiers and
 > must resolve them to the **SAME instance** the host `react-dom/server` uses

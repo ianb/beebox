@@ -46,17 +46,17 @@ These statements are the authority for the plan's user-facing model. The technic
 
 The original planning pass found mailbox-mirroring behavior in the old Gmail
 connector. That code has now been replaced. The durable implementation points
-are `src/connectors/gmail-tracking.ts` for the live-card registry,
-`src/connectors/gmail-discovery.ts` for bounded history traversal,
-`src/connectors/gmail-state.ts` for validated machine-local state,
-`src/connectors/gmail-threads.ts` for the existing card representation, and
-`src/connectors/gmail.ts` for tracked-only synchronization.
+are `src/connectors/gmail-tracking.ts` (moved to `beebox/src/connectors/gmail/tracking.ts`) for the live-card registry,
+`src/connectors/gmail-discovery.ts` (moved to `beebox/src/connectors/gmail/discovery.ts`) for bounded history traversal,
+`src/connectors/gmail-state.ts` (moved to `beebox/src/connectors/gmail/state.ts`) for validated machine-local state,
+`src/connectors/gmail-threads.ts` (moved to `beebox/src/connectors/gmail/threads.ts`) for the existing card representation, and
+`src/connectors/gmail.ts` (moved to `beebox/src/connectors/gmail/connector.ts`) for tracked-only synchronization.
 
 - `src/schemas/email-thread.tsx` remains the card identity boundary and requires
   the Gmail `thread-id` field. No pointer-card type was added.
-- `src/connectors/transient-state.ts` remains the atomic, gitignored state
+- `src/connectors/transient-state.ts` (moved to `beebox/src/transient-state.ts`) remains the atomic, gitignored state
   mechanism; Gmail extends it rather than introducing another store.
-- `src/services/google-gmail.ts` remains the typed automatic-sync boundary and
+- `src/services/google-gmail.ts` (moved to `beebox/src/services/google-gmail/core.ts`) remains the typed automatic-sync boundary and
   now includes thread retrieval and bounded thread listing.
 - `src/core/commands/connector-procedure-triggers.ts` runs typed procedure
   requests only after connector writes complete.
@@ -428,13 +428,13 @@ Implementation completed the tracks below with these deliberate boundaries:
 ## Rollout shape
 
 - **Test posture:** tests come first for each substantial boundary.
-  - `test/connectors/gmail-tracking.doctest.md` covers live-card discovery,
+  - `test/connectors/gmail-tracking.doctest.md` (moved to `beebox/test/connectors/gmail/tracking.doctest.md`) covers live-card discovery,
     explicit and concurrent tracking, deletion, tracked-only refresh, history
     expiry, resumable bounds, config validation, rolling budgets, pending
     summaries, and the read-only `gws` gate.
   - `test/core/commands/connector-sync.doctest.md` covers post-sync procedure
     execution and failure reporting.
-  - `test/services/service-google-gmail.doctest.md` covers full-thread retrieval
+  - `test/services/service-google-gmail.doctest.md` (moved to `beebox/test/services/google-gmail-fake.doctest.md`) covers full-thread retrieval
     and bounded thread/history list behavior.
 - **Done-when assertions:**
   - A new Gmail message with no matching rule creates no Git changes.

@@ -19,7 +19,7 @@ because it blocked an unrelated commit.
 
 The `<upload>` chat message that is supposed to announce a finished batch
 failed to deliver (`state ?? "failed:prepare"` in
-`beebox/src/core/bulk-upload/worker.ts:56`) in all three instances. Nothing in
+`beebox/src/core/bulk-upload/worker/core.ts:56`) in all three instances. Nothing in
 the reports suggests the person who uploaded ever saw an error — they had
 every reason to believe the upload worked. The only way any of the three
 failures surfaced was an agent noticing a self-note, or — the third time —
@@ -39,8 +39,8 @@ location as "inside the chat's context dir," but this box's chats are flat
 cards under `_content/chat/web/` with no per-chat context dir, so every batch
 falls through to the box-root case.
 
-The box-root vocabulary (`beebox/src/lib/box-root-vocabulary.ts`, enforced via
-`beebox/src/lib/box-namespace.ts` and `box-reserved-segments.ts`) is a closed
+The box-root vocabulary (`beebox/src/shared/box-root-vocabulary.ts`, enforced via
+`beebox/src/shared/ref-path/box-namespace.ts` and `box-reserved-segments.ts`) is a closed
 list of names allowed directly under the box root, and `tmp-upload` is not one
 of them. So the pre-commit hook refuses every commit that touches the
 batch, with the message "Box root: tmp-upload: the box root is a closed

@@ -31,14 +31,14 @@ issue while unexamined.
 
 The mechanism guessed above is right. Both halves confirmed:
 
-**Slugging.** `safeDirectoryName` (`beebox/src/connectors/gmail-mime.ts:36`)
+**Slugging.** `safeDirectoryName` (`beebox/src/connectors/gmail/mime.ts:36`)
 builds a thread's filename with `.replace(/[^\d\sA-Za-z-]/g, "")`, which drops
 the apostrophe, then `.slice(0, 40)`, which is the mid-word "14 Augu"
 truncation in the same citation. Both are reasonable for a *filename* and are
 not worth changing: the card keeps the real text in its `subject:` field.
 
 **Derivation.** The citation chip is `{% source %}`
-(`beebox/src/frontend/src/components/Source.tsx:67`), whose label comes from
+(`beebox/src/frontend/src/components/Markdown/Source.tsx:67`), whose label comes from
 `refLabel` (`beebox/src/frontend/src/lib/ref-label.ts`). It is handed a ref
 STRING and nothing else, so it derives the label from the basename —
 `_`/`-` to spaces, drop `.<type>.card`. It has no access to the target card, so

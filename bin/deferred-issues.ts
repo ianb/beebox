@@ -6,13 +6,13 @@ import { execa } from "execa";
 
 import {
   ISSUE_CATEGORIES, parseFrontmatter, type IssueCategory,
-} from "../workstreams-app/src/server/issue-domain.js";
+} from "../workstreams-app/src/server/main/issue-domain.js";
 import {
   buildBasenameLookup,
   repairFrontmatterPaths,
   repairLinks,
-} from "../beebox/src/dev/doc-link-repair.js";
-import { errnoCode } from "../beebox/src/lib/error-guards.js";
+} from "../beebox/src/dev/doc-check/link-repair.js";
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
 
 const DATE_RE = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/u;
 

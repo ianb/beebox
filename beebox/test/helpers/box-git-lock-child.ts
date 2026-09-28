@@ -7,7 +7,7 @@
  * Prints `held` on stdout once the lock is held; never exits on its own.
  */
 import { withBoxGitLock } from "../../src/lib/git-lock.js";
-import { invariant } from "../../src/lib/invariant.js";
+import { invariant } from "../../src/shared/invariant.js";
 
 const boxRoot = process.argv[2];
 invariant(boxRoot !== undefined, "box-git-lock-child requires a box root argument");

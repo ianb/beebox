@@ -8,9 +8,9 @@
  */
 
 import { useCallback } from "react";
-import { Markdown } from "../Markdown";
+import { Markdown } from "../Markdown/body";
 import type { CalloutData } from "../../lib/structured-output-parsing";
-import type { OnZoomView } from "./ChatMessages";
+import type { OnZoomView } from "./ChatMessages/view";
 import type { ViewTarget } from "../../lib/view-url";
 import { cn } from "../../lib/cn";
 

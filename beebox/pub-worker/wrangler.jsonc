@@ -5,7 +5,7 @@
   // vitest-pool-workers suite runs against (miniflare supplies a local R2).
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pub-worker",
-  "main": "src/index.ts",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-07-06",
   // Publication CONTENT is data in R2, never bundled into the Worker (locked
   // decision 3 + the "old Worker versions stay reachable" leak finding). Split

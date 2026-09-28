@@ -40,15 +40,15 @@ Three candidate adversaries, from the umbrella issue:
    ([connector-secret-file-modes](../../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md)).
 3. **A compromised or prompt-injected box agent.** The recommended primary
    driver. The agent runs with `permissionMode: "bypassPermissions"`
-   (`src/core/agent/run.ts:73`) as the same OS user as the hub, with `cwd`
-   set to the box root (`src/core/agent/run.ts:71`) — the directory that
+   (`src/core/agent/run.ts:73` (moved to `beebox/src/core/agent/invoke/run.ts`)) as the same OS user as the hub, with `cwd`
+   set to the box root (`src/core/agent/run.ts:71` (moved to `beebox/src/core/agent/invoke/run.ts`)) — the directory that
    contains `config/connectors/*.secret.json`.
 
 **Recommendation: design for (3) as the driver, take (1) and incidental
 leakage as secondary, and explicitly decline root/hub compromise — and,
 stated because it is easy to miss: box *server* processes are inside the
 trust boundary.** A `bbx serve` child is a custody principal by design: it
-holds `BBX_HUB_SECRET` (`src/hub/supervisor.ts:428`), resolves
+holds `BBX_HUB_SECRET` (`src/hub/supervisor.ts:428` (moved to `beebox/src/hub/supervisor/core.ts`)), resolves
 `server`-access secrets in-process, and its admin surface can reach the
 store — so a compromised box server process defeats this design the same
 way a compromised hub does, and the design does not claim otherwise. The
@@ -85,14 +85,14 @@ a **broker** (performs the operation, never discloses). The codebase mapping
 shows the fork mostly does not apply here, because of who asks:
 
 - Every secret-using call site already runs in a **server process**, not in
-  the agent: Mistral transcription (`src/core/transcription/voxtral.ts:53`,
-  `src/webapp/routes/chat-audio-routes.ts:159`), Deepgram
-  (`src/core/transcription/deepgram.ts:115`), Telegram webhook + sync
-  (`src/webapp/routes/telegram.ts`, `src/connectors/telegram.ts`), Google
-  connectors (`src/connectors/google-auth.ts:65-111`). No agent-invoked code
+  the agent: Mistral transcription (`src/core/transcription/voxtral.ts:53` (moved to `beebox/src/core/transcription/voxtral/core.ts`),
+  `src/webapp/routes/chat-audio-routes.ts:159` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`)), Deepgram
+  (`src/core/transcription/deepgram.ts:115` (moved to `beebox/src/core/transcription/dispatch/deepgram.ts`)), Telegram webhook + sync
+  (`src/webapp/routes/telegram.ts`, `src/connectors/telegram.ts` (moved to `beebox/src/connectors/telegram/connector.ts`)), Google
+  connectors (`src/connectors/google-auth.ts:65-111` (moved to `beebox/src/google/auth.ts`)). No agent-invoked code
   path reads a connector secret today.
 - Agents already have a no-disclosure channel for operations: the loopback
-  API with `BBX_AGENT_TOKEN` (`src/core/script-env.ts:141-145`) — an agent
+  API with `BBX_AGENT_TOKEN` (`src/core/script-env.ts:141-145` (moved to `beebox/src/core/script-env/core.ts`)) — an agent
   that needs a transcription asks its own box's HTTP API; the server process
   resolves the key.
 
@@ -168,14 +168,14 @@ Reused:
 
 - **`writeFileAtomic` with `mode: 0o600`** (`src/lib/atomic-write.ts`) — the
   store's write primitive; already the pattern in
-  `src/connectors/google-token-store.ts:203-206`.
+  `src/connectors/google-token-store.ts:203-206` (moved to `beebox/src/google/token-store.ts`).
 - **`src/lib/file-lock.ts`** — cross-process lock for store mutations
   (hub, scheduler, and CLI can all touch it).
 - **`TokenStore`** (`src/core/token-store.ts`) — the 0600 + atomic-replace +
   hashed-values pattern; the access-token side of this plan follows it. The
   secret store itself cannot hash (it must return plaintext to connectors),
   but the file discipline transfers.
-- **The env allowlist pattern** (`src/hub/child-env.ts:42-93`,
+- **The env allowlist pattern** (`src/hub/child-env.ts:42-93` (moved to `beebox/src/hub/supervisor/child-env.ts`),
   `CHILD_ENV_ALLOWLIST`) — the hub already refuses to spread its env into box
   children; this plan extends the same posture to `buildScriptEnv`.
 - **The `--agent-confirmed` gate** (`src/lib/agent-context.ts`) — mutating
@@ -191,7 +191,7 @@ Rebuilt/replaced:
 
 - **Per-connector secret-file readers** (`src/core/mistral-key.ts:14-28`,
   `src/core/deepgram-key.ts`, the legacy branch of
-  `src/connectors/google-token-store.ts:86-142`, telegram's loader): each
+  `src/connectors/google-token-store.ts:86-142` (moved to `beebox/src/google/token-store.ts`), telegram's loader): each
   currently opens `config/connectors/<name>.secret.json` under the box root
   itself. These become calls into one resolver, keeping their per-box file
   read only as a deprecated fallback during transition. Justification for
@@ -253,7 +253,7 @@ Full trails in the agent transcripts; the load-bearing findings:
 
 ### Track 1 — stop the env spread (smallest, do first)
 
-**What.** `buildScriptEnv` (`src/core/script-env.ts:92-158`) starts from a
+**What.** `buildScriptEnv` (`src/core/script-env.ts:92-158` (moved to `beebox/src/core/script-env/core.ts`)) starts from a
 full `{ ...process.env }` spread and strips four names. Convert it to an
 allowlist in the `CHILD_ENV_ALLOWLIST` style — and the allowlist for *agent*
 subprocesses excludes every connector credential
@@ -574,7 +574,7 @@ Where the full never-discloses broker pays, per provider:
 - **Telegram** — no scoping primitive exists, so the server must keep
   terminating the webhook and sync paths, and the token must never leave the
   store. That is *not* the current state: `telegramStatus` returns the raw
-  `botToken` to the admin frontend (`src/webapp/trpc/routers/admin.ts:65,71`),
+  `botToken` to the admin frontend (`src/webapp/trpc/routers/admin.ts:65 (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`),71`),
   and `telegramSetup` writes the secret file with no `mode: 0o600`
   (`admin.ts:92-98`). Track 3's telegram chunk redacts the status response
   (a deliberate admin-UI behavior change — show configured/username only),
@@ -781,7 +781,7 @@ the operational acts, which are deliberately not code:
   env-configured, `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`, is not
   a residual of this migration: it's real configuration for the fleet login
   surface, which runs before any box exists (`getLoginGoogleClientCreds`,
-  `src/connectors/google-auth.ts`) — a box's own connectors resolve the same
+  `src/connectors/google-auth.ts` (moved to `beebox/src/google/auth.ts`)) — a box's own connectors resolve the same
   pair from the store instead (`getBoxGoogleClientCreds`).
 
 - **Tests first as design tool**: doctests named per chunk above — env

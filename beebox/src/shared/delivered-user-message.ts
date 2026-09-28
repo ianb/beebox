@@ -7,8 +7,8 @@
  * new supported kind fail typechecking until it has a parser.
  */
 
-import { assertNever, invariant } from "../lib/invariant.js";
-import { humanBytes } from "../lib/human-bytes.js";
+import { assertNever, invariant } from "./invariant.js";
+import { humanBytes } from "./human-bytes.js";
 import { stripChatAppTags } from "./chat-tags.js";
 
 export interface CaptureUserMessage {

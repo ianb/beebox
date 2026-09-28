@@ -49,12 +49,12 @@ Schedule merges with no walk (6):
   and elsewhere). The only logged walk on this branch is from 2026-09-10, and
   it is red.
 - `a038b16e4` 2026-09-19 `worktree-supplemental-lint` (`beebox/src/core/box/file-watcher.ts`,
-  `beebox/src/schemas/registry.ts`)
+  `beebox/src/schemas.ts`)
 
 Direct commits on `main` with no walk (9). Three change only doctests and are
 arguably exempt:
 
-- `3db19d271` `beebox/src/frontend/src/components/admin/SecretsSection-forms.tsx`
+- `3db19d271` `beebox/src/frontend/src/components/admin/SecretsSection/forms.tsx`
 - `b0bd513c8` `beebox/src/frontend/src/components/admin/CodexSection.tsx`
 - `7da5cdd67` `beebox/src/core/todo/count.ts`, `beebox/src/core/agent-guide/todos.ts`
 - `ea8e67884` `beebox/src/core/migration-sweep.ts`

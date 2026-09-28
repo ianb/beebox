@@ -7,9 +7,9 @@ procedure detection, and job description building.
 import {
   buildReactorSystemPrompt,
   buildReactorUserPrompt,
-} from "../../src/core/reactor/index.js";
+} from "../../src/core/reactor/prompts.js";
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
-import { buildJobDescription } from "../../src/core/reactor/batch-jobs.js";
+import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { createChatJobTemplate } from "../../src/schemas/chat-job.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";

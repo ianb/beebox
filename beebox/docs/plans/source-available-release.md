@@ -174,9 +174,9 @@ history decision. **No history surgery needed.** The repeatable gate is
 - **What.** Replace real personal identifiers in tracked files with the
   boxholder/`example-names` convention.
 - **Why.** `beebox/CLAUDE.md:103` requires generic shared text; these
-  violate it: `test/schemas/personality-boxholder.doctest.md:20` (real name as
+  violate it: `test/schemas/personality-boxholder.doctest.md:20` (moved to `beebox/test/schemas.personality-boxholder.doctest.md`) (real name as
   test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the real
-  name), `user-stories/catalog/2026-06-26.md` (real email).
+  name), `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) (real email).
 - **Direction.** Swap to a roster name from `docs/example-names.md`. The
   `agent-doctest/LICENSE` + `agent-doctest/README.md` real-name uses are
   *authorship attribution*, not boxholder data — leave them (author's call).
@@ -197,7 +197,7 @@ history decision. **No history surgery needed.** The repeatable gate is
   `deploy/setup-server.sh:5,40,56`, `deploy/add-box.sh:26-27`,
   `deploy/hetzner/create-server.sh`; real IP in
   `docs/implemented-plans/box-migration.subplan.md:162`; domain in source comments
-  `src/connectors/telegram.ts:269`, `src/frontend/src/lib/audio/mic-tab-lock.ts:10`,
+  `src/connectors/telegram.ts:269` (moved to `beebox/src/connectors/telegram/connector.ts`), `src/frontend/src/lib/audio/mic-tab-lock.ts:10`,
   `src/webapp/routes/admin.ts:31`.
 - **Direction.** Move domain/host/user into deploy config (env or a
   gitignored `deploy/*.local` values file with a committed `.example`). Source
@@ -248,26 +248,26 @@ history decision. **No history surgery needed.** The repeatable gate is
 - **Why this needs to change.** Today the credential surface is
   under-exercised and hand-edited:
   - **Claude auth is subscription/OAuth-only by deliberate design.**
-    `ANTHROPIC_API_KEY` is force-deleted at `src/cli/bootstrap.ts:27` (*"Force
+    `ANTHROPIC_API_KEY` is force-deleted at `src/cli/bootstrap.ts:27` (moved to `beebox/src/cli/entry/bootstrap.ts`) (*"Force
     Claude … to use subscription auth, never an API key"*) and again at
-    `src/core/script-env.ts:103`; the Agent SDK reads the ambient `~/.claude/`
-    login (`src/hub/child-env.ts`). A self-hoster who has an Anthropic **API
+    `src/core/script-env.ts:103` (moved to `beebox/src/core/script-env/core.ts`); the Agent SDK reads the ambient `~/.claude/`
+    login (`src/hub/child-env.ts` (moved to `beebox/src/hub/supervisor/child-env.ts`)). A self-hoster who has an Anthropic **API
     key but no Claude subscription cannot run a box** — and nothing says so.
   - **No failure guidance in the run path.** A missing/expired `~/.claude/`
     session surfaces as an opaque `success:false` from the SDK stream
-    (`src/core/agent/run.ts:100-146`) — no "run `claude auth login`" hint. The
+    (`src/core/agent/run.ts:100-146` (moved to `beebox/src/core/agent/invoke/run.ts`)) — no "run `claude auth login`" hint. The
     only proactive check is a health probe that is **skipped on macOS**
-    (`src/webapp/trpc/routers/health.ts`), so local dev gets no signal at all.
+    (`src/webapp/trpc/routers/health.ts` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)), so local dev gets no signal at all.
     Real auth is never exercised in tests — everything runs on
     `createFakeClaudeCli` / `createFakeChatBackend`.
   - **STT/TTS/OpenAI keys are inconsistent and template-less.** OpenAI is
     env-only (`THINKING_OPENAI_API_KEY`, read at
-    `src/webapp/routes/chat-audio-routes.ts:129`, `src/core/transcription/index.ts:254`);
+    `src/webapp/routes/chat-audio-routes.ts:129` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`), `src/core/transcription/index.ts:254` (moved to `beebox/src/core/transcription/dispatch/core.ts`));
     Deepgram/Mistral are secret-file-or-env (`src/core/deepgram-key.ts:22`,
     `src/core/mistral-key.ts:11`). There is **no `.env.example`, no
     `*.secret.json.example`**, no admin UI for any of them, and validation only
     fires as a runtime 502 at point-of-use — unlike Telegram, which validates a
-    token and writes its secret file at `src/webapp/trpc/routers/admin.ts:60-78`.
+    token and writes its secret file at `src/webapp/trpc/routers/admin.ts:60-78` (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`).
 - **Direction.** Three pieces, each independently shippable:
   1. **Fix the Claude-auth surface.** Two parts, both decided:
      - *Document + preflight.* State the auth model loudly and add a preflight
@@ -433,7 +433,7 @@ introduces none, so they don't apply. The two that do:
   on purpose). Fixes applied:
   - **Reports kept, paths relativized.** Stripped the
     `/Users/<user>/src/beebox-worktrees/<wt>/beebox/` prefix in
-    `user-stories/catalog/2026-06-26.md` and `research/…/deep-bbx-search.md` →
+    `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) and `research/…/deep-bbx-search.md` →
     monorepo-relative `beebox/...`.
   - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
     report (fixed by relativizing the report + regen). But `doc-graph.html` had a

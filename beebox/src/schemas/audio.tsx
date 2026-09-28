@@ -3,7 +3,7 @@
  *
  * Created by the capture preparation worker, which also fills in
  * transcript + summary and sets duration on the filename during its
- * deterministic transcription pass (`src/core/capture/prepare.ts`). A clip
+ * deterministic transcription pass (`src/core/capture/prepare/core.ts`). A clip
  * whose transcription failed at prepare time stays `status: new` with no
  * `transcript:` — see `transcription-error:` below.
  *
@@ -14,7 +14,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../exports/cards.js";
 
 const AudioStatusSchema = z.enum(["new", "transcribed"]);
 export type AudioStatus = z.infer<typeof AudioStatusSchema>;

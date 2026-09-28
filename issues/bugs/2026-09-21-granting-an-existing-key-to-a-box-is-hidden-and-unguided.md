@@ -20,7 +20,7 @@ Three complaints about one flow, from the boxholder:
 
 `GrantExistingForm` sits inside `<details id="bbx-admin-secrets-advanced">`
 labelled "Use a key another box already has"
-(`beebox/src/frontend/src/components/admin/SecretsSection.tsx:90-93`). The
+(`beebox/src/frontend/src/components/admin/SecretsSection/view.tsx:90-93`). The
 disclosure is closed by default and appears only when `grantable.length > 0`.
 
 That placement was deliberate: the section's own comment says "granting is the

@@ -265,7 +265,7 @@ bin/scan-uploader --version
 
 Two separate facts, answering two questions.
 
-**The wire-contract version** (`src/contract-version.ts`) is compared every
+**The wire-contract version** (`src/cli/contract-version.ts`) is compared every
 sweep: the uploader sends it, the box returns its own, and a mismatch prints
 which side is behind. A contract change that breaks *parsing* already fails
 loudly on its own — what this catches is the quieter case, a bundle whose
@@ -301,7 +301,7 @@ retries); zero otherwise. One line per file action is printed to stdout
 
 Under the launchd agent all of that output goes to
 `~/Library/Logs/scan-uploader.log`, which nobody reads — so a sweep that
-did something also posts a macOS notification (`src/notify.ts`):
+did something also posts a macOS notification (`src/cli/notify.ts`):
 
 - **Scan uploaded** — files this sweep uploaded, and the boxes they went to.
 - **Scan refused** — files the server rejected on *this* sweep's upload,
@@ -364,12 +364,12 @@ Configure one ScanSnap profile per box:
 
 ```bash
 pnpm install   # from the monorepo root
-pnpm build     # bundles src/cli.ts -> dist/scan-uploader.mjs
+pnpm build     # bundles src/cli/main.ts -> dist/scan-uploader.mjs
 pnpm typecheck
 pnpm lint
 pnpm test      # doctests (agent-doctest) against a fake HTTP server + tmp fixtures
 ```
 
 Tests use a fake HTTP implementation of the two scan routes
-(`test/fake-scan-server.ts`) and package-local temp directories
+(`test/cli/fake-scan-server.ts`) and package-local temp directories
 (`test/tmp/`, gitignored) — never the real network or `/tmp`.

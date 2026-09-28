@@ -8,7 +8,7 @@ discovered-by: agent
 discovered-in: worktree-sdk-update — verifying the 0.3.258 bump
 ---
 
-`beebox/scripts/sdk-steering-probe.ts` is the gate the `sdk-update` monitor runs
+`beebox/src/scripts/sdk-steering-probe.ts` is the gate the `sdk-update` monitor runs
 after every pin bump. On 2026-09-03 it failed on the first scenario:
 
     steer (mid-tool push → same-turn injection) ... FAIL — timed out before the steer answer arrived

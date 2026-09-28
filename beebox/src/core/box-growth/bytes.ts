@@ -13,7 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execa } from "execa";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import type { GrowthBytes } from "./model.js";
 
 const NOT_CONTENT = new Set([".git", ".beebox", "node_modules"]);

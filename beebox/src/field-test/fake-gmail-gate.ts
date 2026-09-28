@@ -21,9 +21,9 @@
  */
 
 import * as path from "node:path";
-import { ConnectorFatalError } from "../connectors/index.js";
+import { ConnectorFatalError } from "../connector.js";
 import { fileExists } from "../lib/file-exists.js";
-import type { GoogleGmailService } from "../services/google-gmail.js";
+import type { GoogleGmailService } from "../services/google-gmail/core.js";
 import { createFakeGmailFromState, loadFakeGmailState } from "./fake-gmail-state.js";
 import { TEST_BOX_MARKER } from "./run-box.js";
 

@@ -15,8 +15,7 @@ import { ExternalLink } from "../components/ui/ExternalLink";
 import { SheetTable, type CellValue } from "../components/SheetTable";
 import { AttachedComments } from "../components/AttachedComments";
 import { resolveRelativePath } from "../lib/view-url";
-import type { RendererProps } from "./index";
-import { registerFileType } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 // ─── Parsing ────────────────────────────────────────────────────────────────
 
@@ -146,6 +145,7 @@ function SheetView({ data }: RendererProps) {
 
 // ─── Registration ───────────────────────────────────────────────────────────
 
-registerFileType({ type: "gsheet" }, {
+export const gsheetRenderer: RendererEntry = {
+  selector: { type: "gsheet" },
   renderer: { name: "Spreadsheet", Component: SheetView, priority: 100 },
-});
+};

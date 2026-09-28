@@ -11,7 +11,7 @@ resolution: implemented
 ---
 
 Closed by the notifications workstream: `<callout loudness=...>` (turn-end,
-graded) plus `bbx notify --target card:<path>` (`src/cli/commands/notify.ts`)
+graded) plus `bbx notify --target card:<path>` (`src/cli/commands/notify.ts` (moved to `beebox/src/cli/commands/notify/command.ts`))
 give an agent a way to point at a specific card/file and say "look at this"
 without building an exhibit. See
 [docs/implemented-plans/notifications.md](../../../beebox/docs/implemented-plans/notifications.md).

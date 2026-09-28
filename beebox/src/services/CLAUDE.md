@@ -45,7 +45,7 @@ export interface FakeFooService extends FooService {
 
 ## Services container
 
-`src/services/index.ts` defines `Services` — a bag of optional service references passed through the server to routes and connectors:
+`src/services/container.ts` defines `Services` — a bag of optional service references passed through the server to routes and connectors:
 
 ```typescript
 export interface Services {
@@ -112,13 +112,13 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `telegram.ts` | `TelegramService` | `createTelegramService(token)` | `createFakeTelegram({ username })` |
 | `claude-cli.ts` | `ClaudeCliService` | `createClaudeCliService()` | `createFakeClaudeCli({ loggedIn? })` |
 | `google-auth.ts` | `GoogleAuthService` | `createGoogleAuthService(client, { boxRoot? })` | `createFakeGoogleAuth({ accessToken? })` |
-| `google-calendar.ts` | `GoogleCalendarService` | `createGoogleCalendarService(auth)` | `createFakeGoogleCalendar({ calendars?, events? })` |
-| `google-gmail.ts` (fake in `google-gmail-fake.ts`) | `GoogleGmailService` | `createGoogleGmailService(auth)` | `createFakeGoogleGmail({ messages?, labels?, attachments?, historyId?, oldestValidHistoryId?, historyRecords? })` |
+| `google-calendar/core.ts` | `GoogleCalendarService` | `createGoogleCalendarService(auth)` | `createFakeGoogleCalendar({ calendars?, events? })` |
+| `google-gmail/core.ts` (fake in `google-gmail-fake/core.ts`) | `GoogleGmailService` | `createGoogleGmailService(auth)` | `createFakeGoogleGmail({ messages?, labels?, attachments?, historyId?, oldestValidHistoryId?, historyRecords? })` |
 | `tts.ts` | `TtsService` | `createTtsService({ backend, route })` | `createFakeTts({ backend?, stylable?, emptyResponse? })` |
 | `openai-embeddings.ts` | `EmbeddingsService` | `createEmbeddingsService(route)` | `createFakeEmbeddings({ failTimes? })` |
-| `google-drive.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
-| `claude-chat.ts` | `ChatBackend` | `createChatBackend()` | `createFakeChatBackend()` |
+| `google-drive/core.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
+| `claude-chat/core.ts` | `ChatBackend` | `createChatBackend()` | `createFakeChatBackend()` |
 | `call-log.ts` | — | — | `withCallLog(service)`, `printCalls(log)` |
-| `index.ts` | `Services` container | — | — (the container only; import each factory from its own file) |
+| `container.ts` | `Services` container | — | — (the container only; import each factory from its own file) |
 
-`claude-chat.ts` is not part of the `Services` container — chat session code imports the backend directly. It wraps `@anthropic-ai/claude-agent-sdk`'s `query()` so the chat session can push user content and iterate SDK message events; the fake gives tests a scriptable handle (no SDK call, no subprocess). Still follows the interface/real/fake pattern.
+`claude-chat/core.ts` is not part of the `Services` container — chat session code imports the backend directly. It wraps `@anthropic-ai/claude-agent-sdk`'s `query()` so the chat session can push user content and iterate SDK message events; the fake gives tests a scriptable handle (no SDK call, no subprocess). Still follows the interface/real/fake pattern.

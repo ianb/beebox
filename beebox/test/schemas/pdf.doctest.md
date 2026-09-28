@@ -12,7 +12,7 @@ The type is `pdf` because that is the only format the pipeline reads today;
 import { PdfSchema, createPdfTemplate } from "../../src/schemas/pdf.js";
 import { FileSchema } from "../../src/schemas/file.js";
 import { parseCardText } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
 
 const schemas = await createCardSchemaMap();
 const source = "_content/inbox/scan.attach/source.pdf.card";

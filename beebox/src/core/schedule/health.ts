@@ -18,13 +18,13 @@
 import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
 import {
-  isWithinBudget,
   parseDuration,
   type ParsedScheduledScript,
-} from "../../schemas/scheduled-script.js";
+} from "../../schemas/scheduled-script/schema.js";
+import { isWithinBudget } from "../../schemas/scheduled-script/due.js";
 import type { ScriptState } from "./state.js";
 import { DEFER_REASON_TEXT, type DeferReason } from "./defer-reason.js";
-import { isContendedFailure, isStaleLockFailure } from "../../lib/git.js";
+import { isContendedFailure, isStaleLockFailure } from "../../lib/git/core.js";
 
 export { conciseScheduleError } from "../../shared/schedule-error.js";
 

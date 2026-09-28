@@ -9,7 +9,7 @@
  * break it.
  */
 
-import { compileGuides } from "./docs-gen/compile.js";
+import { compileGuides } from "./docs-gen/compile/core.js";
 import { compileExpositionRules } from "./compile-exposition-rules.js";
 
 export async function refreshDerivedRules(boxRoot: string, fp: string): Promise<void> {

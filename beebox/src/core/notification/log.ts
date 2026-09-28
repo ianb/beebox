@@ -15,7 +15,7 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { getBoxTime } from "../../lib/time.js";
 import { formatTarget } from "./target.js";
 import {

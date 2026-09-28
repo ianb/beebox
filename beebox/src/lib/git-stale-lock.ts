@@ -65,7 +65,7 @@ import * as path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { resolveGitDir, withBoxGitLock } from "./git-lock.js";
-import { isRecord } from "./is-record.js";
+import { isRecord } from "../shared/is-record.js";
 
 const execFileAsync = promisify(execFile);
 

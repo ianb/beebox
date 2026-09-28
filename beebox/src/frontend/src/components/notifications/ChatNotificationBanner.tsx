@@ -10,7 +10,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { href, toSearch } from "../../lib/routing";
 import { ErrorText } from "../ui/ErrorText";
 import { NotificationNotice } from "./NotificationNotice";

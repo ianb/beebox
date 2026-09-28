@@ -17,7 +17,7 @@ import {
   deriveTailscaleBaseUrl,
 } from "../../src/services/tailscale.js";
 import { createFakeTailscaleDeps } from "../../src/services/tailscale-fake.js";
-import { runTailscaleStatus, reportToJson } from "../../src/services/tailscale-status.js";
+import { runTailscaleStatus, reportToJson } from "../../src/services/tailscale-status/core.js";
 import { classifyTargetPosture, describeRefusal } from "../../src/services/tailscale-target.js";
 import { formatReportHuman } from "../../src/cli/commands/tailscale.js";
 

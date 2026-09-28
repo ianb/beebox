@@ -11,7 +11,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { IssueEntry } from "../workstreams-app/src/server/issue-search-model.js";
+import type { IssueEntry } from "../workstreams-app/src/server/main/issue-search-model.js";
 
 export interface Fixture {
   category: string;

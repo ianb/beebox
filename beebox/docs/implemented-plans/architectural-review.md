@@ -804,9 +804,9 @@ clock sweep), which unblocks item 5's registry tests.
 confirmed.
 
 **Why/Direction.**
-1. **Fix `knip.json` entries** — commit d22359c9 removed `src/cli/index.ts`
+1. **Fix `knip.json` entries** — commit d22359c9 removed `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`)
    as an entry on the false belief knip discovers it via the npm script; add
-   it and `src/hub/hub-server.ts` (and `src/dev/**`) back. Verified: with
+   it and `src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`) (and `src/dev/**`) back. Verified: with
    corrected entries, the 144 false "unused files" collapse to 3 real ones.
    Wire `lint:knip` into a check path (nothing runs it today).
 2. **Confirmed deletions:** deps `turndown`, `xml2js`, `@types/*` twins

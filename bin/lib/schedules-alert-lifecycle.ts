@@ -9,7 +9,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 import { alertSchema, type Alert, type ClosedBy } from "./schedules.js";
 import { readAlerts, writeAlert } from "./schedules-store.js";
 

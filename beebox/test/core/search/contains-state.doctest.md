@@ -6,7 +6,7 @@ The index refresh maintains it; cards stay byte-clean. Stale = the content
 moved while `contains` didn't.
 
 ```ts setup
-import { openSearchIndex } from "../../../src/core/search/refresh.js";
+import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
 import {
   loadContainsState,
   listStale,
@@ -16,7 +16,7 @@ import {
   rebaseContains,
   saveContainsState,
 } from "../../../src/core/search/contains-state.js";
-import { createCardSchemaMap } from "../../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../../src/schemas.js";
 import type { LoadCardContext } from "../../../src/core/card-io.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 

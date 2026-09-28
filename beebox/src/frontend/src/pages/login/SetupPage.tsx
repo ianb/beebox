@@ -19,7 +19,7 @@ import { Stack } from "../../components/ui/Stack";
 import { Text } from "../../components/ui/Text";
 import { ErrorText } from "../../components/ui/ErrorText";
 import { Button } from "../../components/ui/Button";
-import { TextField } from "../../components/ui/fields";
+import { TextField } from "../../components/ui/fields/field";
 import { withBase } from "../../api";
 
 function currentToken(): string | null {

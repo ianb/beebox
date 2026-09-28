@@ -22,4 +22,4 @@ fi
 # the caller's cwd (and any relative paths on the command line, e.g. a
 # config path) is preserved exactly, whether this wrapper is run from the
 # repo root or anywhere else.
-exec "$TSX" "$ROOT/scan-uploader/src/cli.ts" "$@"
+exec "$TSX" "$ROOT/scan-uploader/src/cli/main.ts" "$@"

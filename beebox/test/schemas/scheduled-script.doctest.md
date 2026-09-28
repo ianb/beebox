@@ -7,12 +7,10 @@ import {
   parseDuration,
   parseBudget,
   parseScheduledScript,
-  isDue,
-  isDueForWakeup,
-  isWithinBudget,
   createScheduledScriptTemplate,
   ScheduledScriptSchema,
-} from "../../src/schemas/scheduled-script.js";
+} from "../../src/schemas/scheduled-script/schema.js";
+import { isDue, isDueForWakeup, isWithinBudget } from "../../src/schemas/scheduled-script/due.js";
 
 function baseCardFields(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

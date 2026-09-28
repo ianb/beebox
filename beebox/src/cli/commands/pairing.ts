@@ -10,10 +10,10 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { devicePushRegistrations, pairFakePushDevice } from "../../core/mobile/pairing.js";
-import { apnsConfigFromEnv } from "../../core/notification/apns-channel.js";
+import { apnsConfigFromEnv } from "../../core/notification/apns-channel/core.js";
 import { notifyFakeMode } from "../../core/notification/fake-mode.js";
 
 /** Why this box must not get a fake device, or null when it may. */

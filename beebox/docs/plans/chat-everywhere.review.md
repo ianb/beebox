@@ -136,7 +136,7 @@ The reviewer claimed history was tail-only, citing a frontend caller.
 **Suggested action:** use recent history and a persistent session-level attention notice; make older content reachable in the conversation.
 **Traces to preference:** principles 6 and 8; no notification-center expansion.
 **Disposition:** accepted scope correction; rejected factual claim.
-`src/webapp/trpc/routers/chat-session-procedures.ts:37-55` has both tail and page
+`src/webapp/trpc/routers/chat-session-procedures.ts:37-55` (moved to `beebox/src/webapp/trpc/routers/chat/session-procedures.ts`) has both tail and page
 arms. D deliberately does not add a paging consumer. A changed preview cannot
 clear attention, and a truncated group does not get a fabricated stable ID.
 
@@ -155,7 +155,7 @@ hint with `isNativeShell()`.
 ### 7. Wait for committed startup before releasing follow-ups
 
 **Location in plan:** B and its failure-mode tests.
-**Citation:** `src/core/chat/session/registry.ts:351-378` awaits
+**Citation:** `src/core/chat/session/registry.ts:351-378` (moved to `beebox/src/core/chat/session/registry/core.ts`) awaits
 `recordSessionStart` before `this.entries.set(sessionId, candidate)` and the
 `session-assigned` event. The turn stream can expose the ID earlier.
 **Issue:** treating the init frame as readiness can produce an exact-target 404

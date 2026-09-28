@@ -20,7 +20,7 @@
  */
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 
 /**
  * Result of splitting a card's text into frontmatter prefix and body.

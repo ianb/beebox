@@ -444,13 +444,13 @@ agent-facing secrets surface (`bbx secrets declare/describe`, the
   what stops the two drifting; it lives in the same doctest.
 - `setValue` with `grant` → the existing `secrets.ts` route doctest tier
   (`makeTestServer` + a tmp store via `BBX_SECRETS_FILE`, the pattern
-  `test/core/secrets-key-readers.doctest.md` uses).
+  `test/core/secrets-key-readers.doctest.md` (moved to `beebox/test/core/secrets/lifecycle.keys.doctest.md`) uses).
 - `available` maps → filesystem doctest with `makeTmpBox` + `grantSecret`.
 - The form itself has no unit tier (no frontend component tests); it is
   verified by driving it on test1. **The browse key cannot do this**: the
   Secrets panel is `authenticatedOwnerProcedure`, which deliberately excludes
   `source: "browse"` even on a box that opts agent browsing in as owner
-  (`server-box-scope.ts:263-269`; `test/webapp/auth-required.doctest.md:150-178`
+  (`server-box-scope.ts:263-269`; `test/webapp/auth-required.doctest.md:150-178` (moved to `beebox/test/webapp/auth.required.doctest.md`)
   proves the 403). The driven walkthrough therefore needs a real owner login
   (`bin/browse auth save owner …` with a credential the boxholder supplies —
   never one an agent invents or resets), or the boxholder drives it. Review

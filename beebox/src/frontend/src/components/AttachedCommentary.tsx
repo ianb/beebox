@@ -7,8 +7,8 @@
  */
 
 import { attachDirFor } from "@shared/attach-path";
-import { trpc } from "../lib/trpc";
-import { Markdown } from "./Markdown";
+import { trpc } from "../lib/trpc/client";
+import { Markdown } from "./Markdown/body";
 import { Text } from "./ui/Text";
 import { ErrorText } from "./ui/ErrorText";
 import { type NavigateHint, type ViewTarget } from "../lib/view-url";

@@ -17,7 +17,7 @@ import { notifyBoxholder, notifyChannels } from "../../src/core/notify-boxholder
 import { addSubscription } from "../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../src/services/push.js";
 import { createFakeTelegram } from "../../src/services/telegram.js";
-import { createEventBus } from "../../src/core/event-bus.js";
+import { createEventBus } from "../../src/core/event-bus/core.js";
 import { readRecent, notificationLogPath } from "../../src/core/notification/log.js";
 import { writePresence } from "../../src/core/notification/presence.js";
 import { notificationHealthChecks } from "../../src/core/notification/health.js";

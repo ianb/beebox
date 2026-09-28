@@ -18,10 +18,10 @@ says nothing about what is already tracked. There is no supported way to ask
 
 `bbx connector gmail` offers `track <thread-id>`, `pending [rule]` and `gws`.
 Nothing enumerates the tracked set, and nothing evaluates it against the current
-rules. `findTrackedGmailThreads` (`src/connectors/gmail-tracking.ts`) already
+rules. `findTrackedGmailThreads` (`src/connectors/gmail-tracking.ts` (moved to `beebox/src/connectors/gmail/tracking.ts`)) already
 builds exactly the registry such a command needs — every live
 `*.email-thread.card` indexed by thread id — and `matchesRule`
-(`src/connectors/gmail-rules.ts`) already answers match/no-match/unevaluated for
+(`src/connectors/gmail-rules.ts` (moved to `beebox/src/connectors/gmail/rules.ts`)) already answers match/no-match/unevaluated for
 a thread against a rule. The pieces exist; nothing joins them in that direction.
 
 Concretely: a box narrowed its rules from an effective whole-inbox import to

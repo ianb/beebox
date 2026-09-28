@@ -12,7 +12,7 @@ resolution: implemented
 Closed 2026-09-26 by commit a3b7aa701 (worktree-doc-structure): `compileGuides`
 prunes marked `guides-for-*` and `guide-for-chat-*` rules it did not write, and
 the mirror step removes a dangling `AGENTS.md` symlink. Doctests in
-`test/core/box-guidance-sync.doctest.md`.
+`test/core/box-guidance-sync.doctest.md` (moved to `beebox/test/core/box/guidance-sync.doctest.md`).
 
 The box-guidance registry (`beebox/src/core/box/guidance-surfaces.ts`) gave
 the rule, skill, and Codex-mirror generators manifest pruning: a file that
@@ -20,7 +20,7 @@ carries the generated marker and is not in the run's manifest is removed
 (`beebox/docs/box-guidance.md`, "Generated files carry a marker"). Two
 generated families were left out:
 
-- `.claude/rules/guides-for-<type>.md` (`beebox/src/core/docs-gen/compile.ts`):
+- `.claude/rules/guides-for-<type>.md` (`beebox/src/core/docs-gen/compile.ts` (moved to `beebox/src/core/docs-gen/compile/core.ts`)):
   when a box loses the guide card for a job type, the rule that listed it stays.
 - `AGENTS.md` symlinks beside every `CLAUDE.md`
   (`beebox/src/core/agent-context-mirrors.ts`, `ensureAgentsMirror`): when a
@@ -30,4 +30,4 @@ generated families were left out:
 Neither is reachable by ordinary use today, which is why the track shipped
 without them. Give both the same treatment: prune by marker and manifest for
 the rules, prune dangling links for the mirrors, with a case each in
-`test/core/box-guidance-sync.doctest.md`.
+`test/core/box-guidance-sync.doctest.md` (moved to `beebox/test/core/box/guidance-sync.doctest.md`).

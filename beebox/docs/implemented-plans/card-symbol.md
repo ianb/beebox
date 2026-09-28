@@ -65,7 +65,7 @@ prominence and must not become a way to spell it).
 - `beebox/src/core/card-io.ts:126-133` — frontmatter validation via
   `schema.frontmatterSchema.safeParse`. A missing required field or a wrong type
   is a hard `CardIOError`.
-- `beebox/src/core/card-lint.ts:319-346` — `unknownKeyWarnings()`: an
+- `beebox/src/core/card-lint.ts:319-346` (moved to `beebox/src/core/card-lint/core.ts`) — `unknownKeyWarnings()`: an
   undeclared frontmatter key is stripped in memory and reported as a lint
   warning, never an error. **Reuse** — this is the channel a bad colour uses.
 - `beebox/src/schemas/landmark.ts:38` — `LandmarkSymbol` is
@@ -75,7 +75,7 @@ prominence and must not become a way to spell it).
   that union into `{ text, src }` and resolves `src` through `resolveRefPath`,
   refusing a path that escapes the box. **Reuse the resolution, retire the
   union-reading.**
-- `beebox/src/webapp/trpc/routers/landmarks.ts:32-52,78-119` — `LandmarkPayload`
+- `beebox/src/webapp/trpc/routers/landmarks.ts:32-52 (moved to `beebox/src/webapp/trpc/routers/landmarks/router.ts`),78-119` — `LandmarkPayload`
   carries `symbol: string` and `symbolSrc: string | null` on the wire. **Reuse
   the wire shape**; the plan makes the card's own fields its source.
 - Four near-duplicate renderers, all `symbolSrc ? <img> : <span>{symbol || "📍"}</span>`
@@ -102,12 +102,12 @@ prominence and must not become a way to spell it).
   `SidecarTab` shape, and the compact pinned tab that prompted this. **Reuse.**
 - Validation precedents for a syntactically-constrained string:
   `src/schemas/procedure.ts:19` (Zod `.regex()` with a plain-English message),
-  `src/schemas/scheduled-script-fields.ts:19-45` (`.refine()` running a real
+  `src/schemas/scheduled-script-fields.ts:19-45` (moved to `beebox/src/scheduled-script-fields.ts`) (`.refine()` running a real
   parser), `src/schemas/question.ts:112`. **Follow the regex form.**
 - Searched for an existing CSS-colour validator anywhere in `src/` and **found
   nothing**; searched for any card field holding a colour and **found nothing**.
   This plan introduces the first one.
-- `src/webapp/trpc/routers/files.ts` — **`files.summarize`**: a batch endpoint
+- `src/webapp/trpc/routers/files.ts` (moved to `beebox/src/webapp/trpc/routers/files/router.ts`) — **`files.summarize`**: a batch endpoint
   taking up to 200 paths and returning `FileSummary` records
   (`src/core/file-summary.ts:13` — `{ path, type, title, contains, attrs }`,
   with `title` already computed by the per-type loader and falling back to the
@@ -126,7 +126,7 @@ prominence and must not become a way to spell it).
   (`docs/implemented-plans/todo-annotation.md:292`,
   `docs/implemented-plans/chat-review.md:432`); this plan will not be the third
   to rediscover it.
-- `src/core/lint-path-fields.ts:67` — the inventory of frontmatter fields that
+- `src/core/lint-path-fields.ts:67` (moved to `beebox/src/core/card-lint/path-fields.ts`) — the inventory of frontmatter fields that
   hold box paths, which today knows `navigation.symbol.src` and `entry`. The
   universal `symbol.src` has to be added here or it silently escapes the
   path-rewriting and lint that every other ref gets. (The grouped shape helps:
@@ -244,7 +244,7 @@ file row, initials for a tab), because the four current copies disagreeing about
 declaration (`GLOBAL_CARD_FIELDS`), the hand-written type list in
 `InferCardFields` (`schema.ts:286-296`) or every typed reader silently cannot
 see the fields, the enumerations in `docs/cards/schemas.md:72` and the
-`bbx-guide-schemas` skill, and `test/core/search/contains-evidence.doctest.md:31`,
+`bbx-guide-schemas` skill, and `test/core/search/contains-evidence.doctest.md:31` (moved to `beebox/test/core/search/contains-update.evidence.doctest.md`),
 which asserts today's global-key set.
 
 Colour handling, stated honestly:
@@ -379,7 +379,7 @@ through the card loader in the paths that matter: `landmarkFields` /
 `LandmarkObject` (`src/schemas/landmark.ts:121-131`) is a standalone object
 schema whose own doc comment says unknown keys — "global card fields" among them
 — are **stripped**, and `loadLandmarkPayload`
-(`src/webapp/trpc/routers/landmarks.ts:104`) reads `fields.navigation` alone.
+(`src/webapp/trpc/routers/landmarks.ts:104` (moved to `beebox/src/webapp/trpc/routers/landmarks/router.ts`)) reads `fields.navigation` alone.
 `core/landmark/summaries.ts` and `core/landmark/box-identity.ts` follow the same
 pattern. A migrated landmark carrying a top-level `symbol:` would therefore
 render as *no symbol at all* until each of those readers learns the card's own
@@ -524,7 +524,7 @@ None. Four tracks, each one surface, with a settled shape.
 
 The migration does not carry YAML comments or anchors attached to the
 `navigation.symbol` node itself: it reads the value and writes a fresh node
-(`scripts/migrate/landmark-symbol.ts`). Every *other* key keeps its formatting,
+(`scripts/migrate/landmark-symbol.ts` (moved to `beebox/src/scripts/migrate/landmark-symbol.ts`)). Every *other* key keeps its formatting,
 which is the property that matters for a hand-authored card, and a comment
 attached to a symbol line is both rare and cheap to lose visibly. Preserving it
 would mean moving YAML nodes between maps rather than reading values, which is
@@ -554,12 +554,12 @@ directions.
 - **`test/frontend/tab-identity.doctest.md`** — `abbreviateTitle` and
   `markAmbiguity`. Cheap, pure, and the place the ambiguity rule is written down
   executably.
-- **`test/cards/card-symbol.doctest.md`** — the universal fields parse,
+- **`test/cards/card-symbol.doctest.md` (moved to `beebox/test/shared/card-symbol.doctest.md`)** — the universal fields parse,
   reserialize in schema order, and survive a card that declares none of them;
   `isCssColour` accepts `hsl(210 40% 50%)`, `hsla(210, 40%, 50%, .5)`, `#3a7`,
   `#33aa77`, `rgb(1 2 3)`, `rgba(1, 2, 3, .5)` and rejects `rebeccapurple`,
   `color-mix(…)`, `javascript:…`, `#3a7f`, and an empty string.
-- **`test/cards/card-lint-symbol.doctest.md`** — the three warnings: a
+- **`test/cards/card-lint-symbol.doctest.md` (moved to `beebox/test/core/card-lint/symbol.doctest.md`)** — the three warnings: a
   multi-grapheme symbol, a bad colour, a path-shaped symbol.
 - **`test/webapp/routes/cards-identity.doctest.md`** — the batch read, including
   a missing path and a card with no title.

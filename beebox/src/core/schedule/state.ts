@@ -14,8 +14,8 @@ import {
   scanLocks,
   LockHeldError,
 } from "../../lib/file-lock.js";
-import { errnoCode } from "../../lib/error-guards.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { errnoCode } from "../../shared/error-guards.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 import { DEFER_REASONS, type DeferReason } from "./defer-reason.js";
 import { ALERTED_FOR, latchSurvivesRun, TICK_SKIP_REASONS, type AlertedFor, type SkippedEpisode } from "./skip.js";
 

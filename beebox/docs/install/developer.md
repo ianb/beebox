@@ -74,7 +74,7 @@ server), the Docker path is simpler: see
 
   Authentication is **subscription login only** — `ANTHROPIC_API_KEY` is
   deliberately ignored even if it's set in your environment (stripped in
-  `src/cli/bootstrap.ts` and `src/core/script-env.ts`, so an API key
+  `src/cli/entry/bootstrap.ts` and `src/core/script-env/core.ts`, so an API key
   lingering in your shell can't silently take over billing). Loading a
   page works without being logged in; running an agent (chat, reactor)
   needs `claude auth login` completed first.

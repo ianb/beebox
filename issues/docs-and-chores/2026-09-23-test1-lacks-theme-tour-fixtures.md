@@ -43,7 +43,7 @@ in the stock box content.
 
 ## Possible resolution
 
-Run `node --import tsx beebox/scripts/install-theme-tour.ts <test1-root>` and
+Run `node --import tsx beebox/src/scripts/install-theme-tour.ts <test1-root>` and
 land the new files on stock `test1` content. Or make `bin/tour` (or the tour
 worktree setup) install the theme-tour fixtures before a run, so the fixture
 set and the tours cannot drift apart again.

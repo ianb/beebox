@@ -12,10 +12,10 @@
 
 import { useCallback } from "react";
 import { apiRawFileUrl, getApiBase } from "../api";
-import { Markdown } from "./Markdown";
+import { Markdown } from "./Markdown/body";
 import { Text } from "./ui/Text";
 import { FriendlyDate } from "./ui/FriendlyDate";
-import { type RendererProps } from "../renderers";
+import { type RendererProps } from "../file-type-registry";
 import { resolveRelativePath } from "../lib/view-url";
 
 export function CommentaryView({ data, onNavigate }: RendererProps) {

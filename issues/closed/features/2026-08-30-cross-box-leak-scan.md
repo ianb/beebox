@@ -66,7 +66,7 @@ and at minimum shares the fixture.
 
 ## Built 2026-09-03 (workstream `cross-box-leak-scan`)
 
-- **Dynamic probe**: `beebox/test/webapp/cross-box-probe.doctest.md` on the
+- **Dynamic probe**: `beebox/test/webapp/cross-box-probe.doctest.md` (moved to `beebox/test/scenarios/cross-box-probe.doctest.md`) on the
   new two-box fixture (`createTwoBoxTestServer`, `test/helpers/test-server.ts`)
   — box A's agent bearer against every read surface of box B. Runs with the
   suite, so the hourly full-suite schedule is its cadence.

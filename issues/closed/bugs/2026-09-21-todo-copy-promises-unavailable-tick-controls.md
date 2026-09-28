@@ -23,7 +23,7 @@ design choice.
 
 ## Research (2026-09-21)
 
-- `beebox/src/frontend/src/components/Todo.tsx:5-8` documents “read-only
+- `beebox/src/frontend/src/components/Todo.tsx:5-8` (moved to `beebox/src/frontend/src/components/Markdown/Todo.tsx`) documents “read-only
   rendering in v1 — no click-to-toggle”.
 - `beebox/src/frontend/src/components/TodoViewCard.tsx:5-9` documents the Plate
   as read-only with “no click-to-done in v1”.
@@ -35,4 +35,4 @@ The fix could change the authored guidance to match the current interaction or
 make the controls real. Do not clear the broader todo rendering manual-test
 gate based on this report.
 
-Evidence: [journey F report](../../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

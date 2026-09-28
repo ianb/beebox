@@ -15,10 +15,10 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { boxSlug } from "../../lib/box-slug.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { toError } from "../../lib/error-guards.js";
+import { toError } from "../../shared/error-guards.js";
 import {
   HOST_PACKAGES_PATH,
   HostPackagesParseError,

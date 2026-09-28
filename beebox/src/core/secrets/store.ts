@@ -25,9 +25,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { withFileLock } from "../../lib/file-lock.js";
-import { err, ok, type Result } from "../../lib/result.js";
+import { err, ok, type Result } from "../../shared/result.js";
 import { SecretStoreAccessError } from "./errors.js";
 
 /** How long a mutation waits for a contending writer before giving up. */

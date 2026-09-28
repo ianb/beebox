@@ -15,13 +15,13 @@ import {
 } from "@shared/named-views";
 import { isRecord } from "@shared/is-record";
 import { LandmarksList } from "../components/landmarks/LandmarksList";
-import { ChatsPicker } from "../components/session-pickers/ChatsPicker";
+import { ChatsPicker } from "../components/session-pickers/ChatsPicker/view";
 import { QuestionsList } from "../components/questions/QuestionsList";
-import { HistoryViewCard } from "../components/history/HistoryViewCard";
+import { HistoryViewCard } from "../components/history/HistoryViewCard/view";
 import { Card } from "../components/ui/Card";
 import { Text } from "../components/ui/Text";
 import { Hint } from "../components/ui/Hint";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 /**
  * Params arrive pre-merged with provenance: card frontmatter (validated by
@@ -69,6 +69,7 @@ function ViewCard(props: RendererProps) {
   return <Component {...rendererProps} params={resolved} legacyParams={params} />;
 }
 
-registerFileType({ type: "view" }, {
+export const viewRenderer: RendererEntry = {
+  selector: { type: "view" },
   renderer: { name: "View", Component: ViewCard, priority: 100 },
-});
+};

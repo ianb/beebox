@@ -15,5 +15,5 @@
   // server.ts is absent: its graph pulls the tRPC routers and hits TS2742
   // (verified 2026-07-03) — /server ships untyped until those routers get
   // explicit type annotations.
-  "files": ["src/cards/index.ts", "src/exports/schema.ts"]
+  "files": ["src/exports/cards.ts", "src/exports/schema.ts"]
 }

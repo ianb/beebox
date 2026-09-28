@@ -25,11 +25,11 @@ annotations should be hidden, collapsed, or separated from user content.
 
 - F's `_content/spanish/Ser_vs_Estar.doc.card:35-37` persists the completed
   `assigned="agent"` todo.
-- `beebox/src/frontend/src/components/Todo.tsx:45-57` renders `assigned` as a
+- `beebox/src/frontend/src/components/Todo.tsx:45-57` (moved to `beebox/src/frontend/src/components/Markdown/Todo.tsx`) renders `assigned` as a
   visible badge, and lines 25-29/93-105 render `done` as struck-through content.
 - Screenshot 16 shows the completed `todo` + `agent` row above “Still shaky”.
 - This differs from the closed chat-narration issue
   ([chat bookkeeping](../docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md)):
   the current problem is card-view visibility, not prose about the edit in chat.
 
-Evidence: [journey F report](../../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

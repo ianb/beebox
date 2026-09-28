@@ -8,7 +8,7 @@ system sleep, so a plain `setTimeout` would fire the instant the machine wakes
 and kill a run that barely got to execute.
 
 ```ts setup
-import { startAwakeTimeout } from "../../src/lib/awake-timeout.js";
+import { startAwakeTimeout } from "../../src/shared/awake-timeout.js";
 import {
   execWithTimeout,
   CommandError,

@@ -12,9 +12,9 @@ resolution: implemented
 Closed 2026-09-26 by commit a3b7aa701 (worktree-doc-structure): the finalizer skips
 directories whose `CLAUDE.md` is a tracked registry row and strips a leading
 include it finds there; the guidance sync strips the same before the tracker
-compares. Doctest in `test/core/box-guidance-sync.doctest.md`.
+compares. Doctest in `test/core/box-guidance-sync.doctest.md` (moved to `beebox/test/core/box/guidance-sync.doctest.md`).
 
-`ensureClaudeMdInDir` (`beebox/src/core/maps/finalize.ts:95-118`) writes a
+`ensureClaudeMdInDir` (`beebox/src/core/maps/finalize.ts:95-118` (moved to `beebox/src/core/maps/finalize/core.ts`)) writes a
 one-line `CLAUDE.md` holding only the MAP include into every directory that gets a `MAP.md`, or
 inserts the include line at the top of an existing one. Some of those
 directories are homes of a tracked guide in `GUIDANCE_SURFACES`
@@ -50,6 +50,6 @@ Pick one, in `finalize.ts`:
   tracker.
 
 The first is simpler and matches the one-class-per-surface rule in
-`beebox/docs/box-guidance.md`. Either way, `test/core/box-guidance-sync.doctest.md`
+`beebox/docs/box-guidance.md`. Either way, `test/core/box-guidance-sync.doctest.md` (moved to `beebox/test/core/box/guidance-sync.doctest.md`)
 should gain a case that runs the finalizer over a box with a tracked guide and
 asserts the guide still matches stock afterwards.

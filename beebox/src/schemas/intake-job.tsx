@@ -8,7 +8,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, cardRef, type InferCardFields } from "../cards/index.js";
+import { cardSchema, cardRef, type InferCardFields } from "../exports/cards.js";
 
 export const IntakeJobSchema = cardSchema("intake-job", {
   brief: "A job to triage arrivals",

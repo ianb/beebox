@@ -58,7 +58,7 @@ and every site that has to *recognize either name* imports from there. Sites
 that mean the authored file alone keep their literal; the asymmetry is real and
 the code should show it.
 
-**Verification.** A doctest in `test/core/maps/maps-precheck.doctest.md` pins
+**Verification.** A doctest in `test/core/maps/maps-precheck.doctest.md` (moved to `beebox/test/core/maps/precheck.doctest.md`) pins
 both listing paths against a real symlink — `listChildrenOnDisk` and
 `listChildrenAtCommit` classify it differently, and the git-side half is set up
 so the mirror appears *between* the recorded state and HEAD, since anything else

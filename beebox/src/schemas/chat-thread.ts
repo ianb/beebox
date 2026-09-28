@@ -8,7 +8,7 @@
  * message (its reply) or seen-marker (acknowledge without replying).
  */
 
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 
 const ParticipantEntry = z.object({

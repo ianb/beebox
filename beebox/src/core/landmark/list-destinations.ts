@@ -13,7 +13,7 @@ import { type LandmarkFields } from "../../schemas/landmark.js";
 import { readLandmarkSymbol } from "./symbol.js";
 import { readLandmarkCard } from "./card-cache.js";
 import { findDestination, type DestinationKind } from "./destination.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { normalizeLandmarkDir } from "./root-dir.js";
 

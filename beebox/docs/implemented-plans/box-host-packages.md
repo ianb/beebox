@@ -116,16 +116,16 @@ Authored docs (agent guide line, security report rows, knowledge audit entry,
   and then be installed as root.
 - **Server helper precedent.** `deploy/server-bin/bbx-wait-quiet` is the one
   existing server-side helper script. **Reuse** the directory.
-- **Health checks.** `src/webapp/trpc/routers/health.ts:45` `HealthCheck`
+- **Health checks.** `src/webapp/trpc/routers/health.ts:45` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`) `HealthCheck`
   (*`severity: "error" | "warning"`*). Separate check modules already exist
   (`health-templates.ts`, `health-package-docs.ts`, imported at `:42-43`).
   **Reuse:** add `health-host-packages.ts` in the same shape. `bbx health`
   (`src/cli/commands/health.ts`) prints it with no change.
-- **CLI registration.** `src/cli/surface-commands.ts:46,110` registers
+- **CLI registration.** `src/cli/surface-commands.ts:46 (moved to `beebox/src/cli/commands.ts`),110` registers
   top-level commands. **Reuse:** add `hostCommand`.
 - **Box config files.** `_config/` holds per-box JSON (`_config/box.json`,
   read by `src/core/box/config.ts:254`; `_config/transcription.json`, read at
-  `src/core/box/index.ts:172`). **Reuse** the location for
+  `src/core/box/index.ts:172` (moved to `beebox/src/core/box/structure/core.ts`)). **Reuse** the location for
   `_config/host-packages.json`.
 - **Agent tool promise.** `src/core/agent-guide/chat.ts:15`: *"Always available
   on the box host, reach for them directly: `pandoc` …"*. **Extend** with one

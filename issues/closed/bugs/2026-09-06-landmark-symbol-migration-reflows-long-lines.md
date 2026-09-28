@@ -12,7 +12,7 @@ resolution: implemented
 
 > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/docs/implemented-plans/card-prominence.md`.
 
-`scripts/migrate/landmark-symbol.ts`'s `rewriteLandmarkSymbol` edits the
+`scripts/migrate/landmark-symbol.ts` (moved to `beebox/src/scripts/migrate/landmark-symbol.ts`)'s `rewriteLandmarkSymbol` edits the
 frontmatter YAML document in place (`parseDocument` + `.set()`/`.delete()`)
 and reserializes with a bare `doc.toString()`. `yaml`'s default `toString()`
 wraps scalars at ~80 columns — for a landmark with only short `label`/`symbol`
@@ -33,7 +33,7 @@ changing meaning).
 
 Fix: add `{ lineWidth: 0 }` to `landmark-symbol.ts`'s
 `` `---\n${doc.toString().trimEnd()}\n---${rest}` `` call, and re-run its
-doctest (`test/scripts/migrate/migrate-landmark-symbol.doctest.md`) to
+doctest (`test/scripts/migrate/migrate-landmark-symbol.doctest.md` (moved to `beebox/test/scripts/migrate/landmark-symbol.doctest.md`)) to
 confirm the short-line fixtures are unaffected. No test1 landmark actually
 has a long enough scalar to trigger this today (confirmed while running
 Track D against test1: `landmark-symbol` is one of the box's pending

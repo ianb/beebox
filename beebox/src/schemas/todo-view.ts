@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { TODO_STATUSES } from "../shared/todo-model.js";
 
 export const TodoViewSchema = cardSchema("todo-view", {
@@ -80,7 +80,7 @@ export type TodoViewFields = InferCardFields<typeof TodoViewSchema>;
 /**
  * Generate a `todo-view` card's frontmatter. `glob` is optional — omit it
  * for a subtree-scoped project plate; the box-wide stock instance
- * (`installTodoView`, `src/core/box/defaults.ts`) passes `"**"` explicitly.
+ * (`installTodoView`, `src/core/box/structure/defaults.ts`) passes `"**"` explicitly.
  */
 export function createTodoViewTemplate(options?: {
   glob?: string;

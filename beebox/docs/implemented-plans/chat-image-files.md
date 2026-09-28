@@ -80,7 +80,7 @@ doc edit. Not a BIG CHANGE.
 
 Reused, all of it. Nothing new is invented except the `[image#N]:` line.
 
-- **Upload route** `src/webapp/routes/chat-uploads.ts:50-90`: writes
+- **Upload route** `src/webapp/routes/chat-uploads.ts:50-90` (moved to `beebox/src/webapp/routes/chat/uploads.ts`): writes
   `<boxRoot>/_tmp/<iso>_<sanitizedName>` and returns `{ path, originalName,
   size, mimetype }`. Unchanged. The client helper is `uploadChatFile` in
   `src/frontend/src/lib/file-upload.ts`.
@@ -108,7 +108,7 @@ Reused, all of it. Nothing new is invented except the `[image#N]:` line.
   (`processImageBlob`, `MAX_DIMENSION = 1920`). Unchanged; it stays the inline
   representation.
 - **Audio precedent, rejected:** `bbx chat get-last-audio` fetches from a
-  connected tab (`src/webapp/routes/chat-last-audio-routes.ts:1-30`) and
+  connected tab (`src/webapp/routes/chat-last-audio-routes.ts:1-30` (moved to `beebox/src/webapp/routes/chat/last-audio-routes.ts`)) and
   web recordings are additionally staged on the box
   (`src/core/voice-recording/staged-audio.ts:1-6`). A tab-fetch design for
   images was considered and rejected: the browser holds no original after
@@ -135,8 +135,8 @@ Reused, all of it. Nothing new is invented except the `[image#N]:` line.
 ### Track 0. The upload route returns a path that exists
 
 **What.** `POST /api/chat/upload-file` writes to `<boxRoot>/_tmp/`
-(`src/webapp/routes/chat-uploads.ts:57` via `ensureBoxTmpDir`;
-`src/lib/box-layout-spec.ts:246-252` maps the `tmp` key to `_tmp`) but
+(`src/webapp/routes/chat-uploads.ts:57` (moved to `beebox/src/webapp/routes/chat/uploads.ts`) via `ensureBoxTmpDir`;
+`src/lib/box-layout-spec.ts:246-252` (moved to `beebox/src/lib/paths/box-layout-spec.ts`) maps the `tmp` key to `_tmp`) but
 returns `path: \`tmp/${filename}\`` (`chat-uploads.ts:77`). No `tmp/` alias
 exists in a box (checked the test box: only `_tmp/`). The prompt tells the
 agent the file is under `_tmp/` (`prompts.ts:68-72`) and the contract doc
@@ -198,7 +198,7 @@ tokens. Both callers of `buildChatContentBlocks` (server
 
 **First chunk.** The helper, the expander change, the strip change, and a
 doctest in `test/shared/composer-tokens.doctest.md` plus a case in the
-content-blocks coverage of `test/core/chat-session.doctest.md`: a message
+content-blocks coverage of `test/core/chat-session.doctest.md` (moved to `beebox/test/core/chat/session/run.doctest.md`): a message
 with `[image#1]` in the body and `[image#1]: _tmp/a.png` in the block yields
 one image block and the block text intact; the bus copy strips only the body
 token.
@@ -435,7 +435,7 @@ row.
   or a text block beside the image block). Considered; the line in the
   attachments block reaches the agent without a wire change, and the
   reconciliation compare (`machines/chat-shared.ts:52-56`) stays untouched.
-- **Codex adapter using the file** (`src/services/codex-sdk-session.ts:170-196`
+- **Codex adapter using the file** (`src/services/codex-sdk-session.ts:170-196` (moved to `beebox/src/services/codex-sdk-session/core.ts`)
   writes its own temp copy). It could point `local_image` at `_tmp/`, but it
   only has the downscaled bytes in the block anyway. Separate change;
   relates to `issues/bugs/2026-09-05-codex-image-viewing-tool-unsupported.md`.
@@ -473,7 +473,7 @@ reduced copy. Run with `pnpm knowledge-audit run --box <abs test box>
 ## What will hold this after it ships
 
 - Track 1: pure functions, doctest tier (`test/shared/composer-tokens.doctest.md`,
-  `test/core/chat-session.doctest.md`).
+  `test/core/chat-session.doctest.md` (moved to `beebox/test/core/chat/session/run.doctest.md`)).
 - Track 2: the store, hook, assembly and persistence are framework-free or
   hook-only and already have doctest files; the tile is visual, checked by
   a browse screenshot in the exhibit.

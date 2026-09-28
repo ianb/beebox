@@ -14,7 +14,7 @@ Opening `/<prefix>/test1/browse/projects/porch-rebuild/Plan.doc.card` (no
 
 The error is thrown from `legacyBrowseTarget`
 (`beebox/src/frontend/src/lib/browse-card-state.ts:77-90`) in the router's
-`beforeLoad` (`src/router.tsx:162`) and reaches the generic route error
+`beforeLoad` (`src/router.tsx:162` (moved to `beebox/src/frontend/src/main/router.tsx`)) and reaches the generic route error
 boundary. A path that does not name a box location is an ordinary user
 input (an old link, a hand-typed URL), so it should get a not-found state
 with a way back, not the crash page.

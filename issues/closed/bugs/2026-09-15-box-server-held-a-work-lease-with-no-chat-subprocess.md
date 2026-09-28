@@ -10,10 +10,10 @@ resolution: implemented
 ---
 
 Closed by commit 8828406ce: `registerBoxAdmission`
-(`beebox/src/webapp/box-admission.ts`) now registers the lease release before
+(`beebox/src/webapp/box-admission.ts` (moved to `beebox/src/webapp/server/box-admission.ts`)) now registers the lease release before
 acquisition, adds an `onRequestAbort` hook that releases when no handler is
 running, and releases a lease acquired after the abort. Reproducing doctest
-in `beebox/test/webapp/box-admission.doctest.md` failed before, passes after.
+in `beebox/test/webapp/box-admission.doctest.md` (moved to `beebox/test/webapp/server/box-admission.doctest.md`) failed before, passes after.
 The incident's actual holder could not be directly confirmed (the process was
 restarted before inspection); this is the only reachable path found that
 leaves a lease with no subprocess and no handler, and holder reporting (see
@@ -34,7 +34,7 @@ could attach.
 - A process lease is held while any in-process admission is outstanding
   (`src/lib/box-maintenance.ts`, count on 0→1 / 1→0), so one leaked release
   anywhere in the server keeps the box undrainable until restart.
-- The server's maintenance poll (`src/webapp/server.ts`, `quiesceForMaintenance`)
+- The server's maintenance poll (`src/webapp/server.ts` (moved to `beebox/src/webapp/server/app.ts`), `quiesceForMaintenance`)
   closes idle chat runs within a second of a phase appearing. It did not free
   this lease, so either a session read as busy the whole time or the lease was
   not a chat run's at all.
@@ -43,10 +43,10 @@ could attach.
 ## Candidates, unverified
 
 - A chat run whose SDK subprocess exited without the message pump completing
-  (`src/services/claude-chat.ts`, the `for await (const msg of q)` loop): the
+  (`src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`), the `for await (const msg of q)` loop): the
   run lease is released in `consumeMessages(...).finally`, which never runs if
   the iterator never ends.
-- An HTTP request lease (`src/webapp/box-admission.ts`) whose release did not
+- An HTTP request lease (`src/webapp/box-admission.ts` (moved to `beebox/src/webapp/server/box-admission.ts`)) whose release did not
   fire on an unusual reply path.
 
 ## What changed since
@@ -77,7 +77,7 @@ Two candidates were tested; one is ruled out and one is a reproduced leak.
   or in `onResponse`. A client that drops the connection before any reply —
   a phone losing its link mid-upload, a tab closed during a slow POST — fires
   none of those, and the lease stayed held until the server restarted. The
-  doctest `test/webapp/box-admission.doctest.md` ("A request the client
+  doctest `test/webapp/box-admission.doctest.md` (moved to `beebox/test/webapp/server/box-admission.doctest.md`) ("A request the client
   abandons releases its lease") failed against the old code and passes now:
   `releases` is registered before acquisition, an `onRequestAbort` hook
   releases when no handler is running, and a lease acquired after the abort

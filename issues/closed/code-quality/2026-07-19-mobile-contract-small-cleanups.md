@@ -26,7 +26,7 @@ duplicated-parser half was resolved. Independent of each other; none urgent.
   intends. Low risk — the endpoint is token-gated and effectively read-only, and it is a
   deliberate unauthenticated bypass in both `server-box-scope.ts` and `hub-server.ts`, which is
   exactly why the matcher should be precise. Anchor it to `^/[^/]+/api/pairing/redeem$` plus
-  the bare form. Note `test/webapp/pairing-routes.test.ts` currently asserts the loose
+  the bare form. Note `test/webapp/pairing-routes.test.ts` (moved to `beebox/test/webapp/routes/pairing.test.ts`) currently asserts the loose
   behavior ("accepts box-prefixed routes"), so that test moves with the fix.
 
 - **`embed=1` and `nativeComposer=1` both reach the same gate.** The web frontend

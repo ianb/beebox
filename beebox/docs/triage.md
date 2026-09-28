@@ -81,8 +81,8 @@ The command reports its worst bucket outcome:
 
 ## Implementation owners
 
-- `src/core/intake.ts` — intake paths and advancement
-- `src/core/triage/index.ts` and `src/core/triage/routing.ts` — category
+- `src/core/commands/intake/run.ts` — intake paths and advancement
+- `src/core/triage/run/core.ts` and `src/core/triage/run/routing.ts` — category
   discovery, classification, routing, markers, and guess questions
 - `src/core/handle.ts` — handler invocation and exit semantics
-- `src/core/docs-gen/triage.ts` — the corresponding guide shipped to box agents
+- `src/core/docs-gen/package-docs/triage.ts` — the corresponding guide shipped to box agents

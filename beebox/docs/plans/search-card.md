@@ -62,19 +62,19 @@ not add a `/search` route, because the issue explicitly prohibits one
 
 ## What already exists
 
-- `beebox/src/core/search/query.ts:22-44` fixes the searchable fields and the
+- `beebox/src/core/search/query.ts:22-44` (moved to `beebox/src/core/search/query/core.ts`) fixes the searchable fields and the
   calibrated `contains`/`title` boost. Reuse these product defaults; do not
   expose Orama's low-level BM25, threshold, similarity, or hybrid-weight
   parameters in card frontmatter.
-- `beebox/src/core/search/query.ts:58-115` already defines the structured hit
+- `beebox/src/core/search/query.ts:58-115` (moved to `beebox/src/core/search/query/core.ts`) already defines the structured hit
   and result envelope, plus `kinds`, one `pathPrefix`, `limit`, and automatic
   text/hybrid ranking. Extend this contract rather than creating frontend
   result types by hand.
-- `beebox/src/core/search/query.ts:118-221` validates kinds before refreshing,
+- `beebox/src/core/search/query.ts:118-221` (moved to `beebox/src/core/search/query/core.ts`) validates kinds before refreshing,
   opens the lazy index, applies Orama kind filtering, applies the current path
   filter, and returns warnings/staleness. Preserve these ordering and
   fail-visible properties.
-- `beebox/src/core/search/refresh.ts:1-13` documents that query-time refresh
+- `beebox/src/core/search/refresh.ts:1-13` (moved to `beebox/src/core/search/refresh/core.ts`) documents that query-time refresh
   is correct for uncommitted filesystem changes and that the index is a cache.
   The tRPC procedure may use this existing refresh behavior; it must not write
   card content.
@@ -90,16 +90,16 @@ not add a `/search` route, because the issue explicitly prohibits one
   cohort cards. It must validate the canonical Search path while ignoring
   noncanonical `search.card` copies, and must route Search through a new
   migration cohort for already-enrolled boxes.
-- `beebox/src/core/card-lint.ts:126-128` also applies canonical system-card
+- `beebox/src/core/card-lint.ts:126-128` (moved to `beebox/src/core/card-lint/core.ts`) also applies canonical system-card
   location checks during card validation. The Search/type split must cover this
   path as well as staged validation and pre-commit checks.
-- `beebox/src/webapp/trpc/router.ts:1-77` is the central tRPC registration
+- `beebox/src/webapp/trpc/router.ts:1-77` (moved to `beebox/src/webapp/trpc/routers.ts`) is the central tRPC registration
   point. `beebox/docs/adding-api-endpoints.md` specifies tRPC for normal read
   endpoints and `useQuery()` on the frontend.
 - `beebox/src/frontend/src/renderers/browse.tsx:36-127` is the renderer model:
   it reads live state, calls tRPC, opens targets through the workspace, and
   updates state with push/replace semantics.
-- `beebox/src/frontend/src/components/chat/workspace/WorkspaceProvider.tsx:171-189`
+- `beebox/src/frontend/src/components/chat/workspace/WorkspaceProvider.tsx:171-189` (moved to `beebox/src/frontend/src/components/chat/workspace/WorkspaceProvider/provider.tsx`)
   owns `workspace.open()` and `updateTarget()`. Search results should use
   these callbacks instead of inventing navigation.
 - `beebox/src/frontend/src/hooks/useRecentFiles.ts:103-145` provides a
@@ -127,7 +127,7 @@ Orama typings are the authoritative dependency surface for this plan. They
 expose `limit`, `offset`, `exact`, `tolerance`, `threshold`, `sortBy`,
 `facets`, `distinctOn`, `groupBy`, `where`, and `hybridWeights`, but the
 current wrapper deliberately fixes the ranking fields and hybrid calibration
-(`beebox/src/core/search/query.ts:22-44`). The plan uses only the stable
+(`beebox/src/core/search/query.ts:22-44` (moved to `beebox/src/core/search/query/core.ts`)). The plan uses only the stable
 product-level subset: type filtering, bounded default path filters, and limit.
 
 ## Tracks / scope
@@ -143,7 +143,7 @@ CLI-compatible single-prefix adapter.
   for one or more landmark or project paths. Orama's `where` supports equality
   and enum membership, but a string path prefix is not a native filter. The
   current implementation fetches up to `PATH_FILTER_FETCH` and filters one
-  prefix after search (`beebox/src/core/search/query.ts:39-41,164-193`). A
+  prefix after search (`beebox/src/core/search/query.ts:39-41 (moved to `beebox/src/core/search/query/core.ts`),164-193`). A
   bounded prefix matcher is needed to represent the card's defaults without
   silently dropping all but the first configured path.
 
@@ -382,7 +382,7 @@ settled in the track directions; they do not need separate research phases.
   in v1, with a dedicated card-granularity navigation test.
 - **Two agents touching the same card — ADDRESSED.** Search is read-only; the
   index remains the disposable query-time cache described by
-  `beebox/src/core/search/refresh.ts:1-17`.
+  `beebox/src/core/search/refresh.ts:1-17` (moved to `beebox/src/core/search/refresh/core.ts`).
 - **Hand-edit drift — ADDRESSED.** Zod validates fields, path normalization
   fails closed, and malformed defaults produce visible card/API errors.
 - **Fabricated free-form value — ADDRESSED.** Types are checked against the

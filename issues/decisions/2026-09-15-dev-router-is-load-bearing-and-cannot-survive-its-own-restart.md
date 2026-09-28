@@ -23,7 +23,7 @@ boxholder asked directly whether it would. It does not, in three distinct ways.
 The obvious hardening is a supervisor (launchd) so the process comes back. As
 the boot path stands, that would convert one failure into a worse one.
 
-`sweepStaleChildren` (`workstreams-app/src/router/router-real-effects.ts:179-193`)
+`sweepStaleChildren` (`workstreams-app/src/router/server/real-effects.ts:179-193`)
 walks the pidfile directory and **kills** every tracked child it finds alive:
 
 ```
@@ -38,7 +38,7 @@ cold starts under load is precisely the failure the plan above is written to
 prevent. Supervision is only an improvement after the sweep learns to adopt.
 
 Adoption looks feasible rather than speculative: `PidRecord`
-(`workstreams-app/src/router/router-pidfile.ts:19-30`) already carries `name`,
+(`workstreams-app/src/router/pidfile.ts:19-30`) already carries `name`,
 both child pids, all three ports, `socketDir`, and `profileDir` — nearly the
 whole of `ReadyLifecycle`, with `browseEnv`, `logFile`, and `sourceToken`
 derivable from configuration. A liveness probe against the recorded ports would
@@ -63,7 +63,7 @@ So a phone paired to a dev box depends on the dev router, while a phone paired
 to a deployed box does not. The router carries first-class mobile plumbing to
 support this — bearer-to-session exchange and `bbx_mobile` cookie-path rewriting
 for `/<worktree>/<slug>/`
-(`workstreams-app/src/router/router-mobile-bootstrap.ts`,
+(`workstreams-app/src/router/server/mobile-bootstrap.ts`,
 `router-cookie.ts`) — so it is a supported path, not an accident of
 configuration.
 

@@ -103,7 +103,7 @@ degradation is not."* This is the whole case for the plan, and it is also the
 test the design has to pass rather than merely invoke. A stale bundle that still
 *parses* the current contract is the failure that matters: the client throws
 `ProtocolError` on an unknown `state` or an unexpected status
-(`scan-uploader/src/wire-client.ts:118-121,141-145`), so a contract change that
+(`scan-uploader/src/wire-client.ts:118-121 (moved to `scan-uploader/src/cli/wire-client.ts`),141-145`), so a contract change that
 breaks parsing already fails loudly and accurately. What does not announce
 itself is a bundle whose parsing is fine but whose *client obligations* are old
 — the settle gate and the restat-before-disposition rules that decide whether a
@@ -138,12 +138,12 @@ Settings-row display.
 ## What already exists
 
 **Reuse — the additive seam, verified on both sides.** The check response is
-literally `return { states };` (`src/webapp/routes/scan-upload.ts:126`), and the
+literally `return { states };` (`src/webapp/routes/scan-upload.ts:126` (moved to `beebox/src/webapp/routes/scan-upload/register.ts`)), and the
 client requires only `isRecord(body) && isRecord(body.states)`
-(`scan-uploader/src/wire-client.ts:54`) before iterating `body.states`. A
+(`scan-uploader/src/wire-client.ts:54` (moved to `scan-uploader/src/cli/wire-client.ts`)) before iterating `body.states`. A
 sibling top-level key is ignored by every existing bundle. In the other
 direction `CheckBodySchema` is a plain `z.object` with no `.strict()`
-(`src/webapp/routes/scan-upload-validation.ts:31-33`), so zod strips unknown
+(`src/webapp/routes/scan-upload-validation.ts:31-33` (moved to `beebox/src/webapp/routes/scan-upload/upload-validation.ts`)), so zod strips unknown
 request keys, and headers are read individually by name
 (`scan-upload-validation.ts:37-40`). **So both halves can be added with no flag
 day**: a new box tolerates old bundles and an old bundle tolerates a new box.
@@ -152,7 +152,7 @@ transition state.
 
 **Reuse — the optional-header precedent, including its warning.**
 `X-Scan-Profile` is exactly this shape: an optional one-way client header, read
-and capped by the server (`src/webapp/routes/scan-upload.ts:198`,
+and capped by the server (`src/webapp/routes/scan-upload.ts:198` (moved to `beebox/src/webapp/routes/scan-upload/register.ts`),
 `scan-upload-validation.ts:25`) and documented in the contract table
 (`docs/scan-upload-contract.md:84`). Grepping `scan-uploader/src` for it returns
 nothing — **the client has never sent it**. That is a shipped precedent for the
@@ -162,14 +162,14 @@ the version is *compared and reported*, not merely recorded, which is the
 difference between the two.
 
 **Reuse — the notification channel, shipped 2026-09-14** (`19a5c4187`,
-`scan-uploader/src/notify.ts`). A drift warning has somewhere to go that a
+`scan-uploader/src/notify.ts` (moved to `scan-uploader/src/cli/notify.ts`)). A drift warning has somewhere to go that a
 person actually sees. Without it this plan could only write to
 `~/Library/Logs/scan-uploader.log`, which the notifier's own header calls out as
 the thing nobody reads — and a drift report in an unread log is the failure mode
 this plan exists to fix.
 
 **Reuse — the hub's header rule, as a constraint.** `stripHubHeaders`
-(`src/hub/hub-server.ts:225-235`) deletes every client header starting with
+(`src/hub/hub-server.ts:225-235` (moved to `beebox/src/hub/server/core.ts`)) deletes every client header starting with
 `x-bbx-`: *"The spoof wall: no client-supplied `x-bbx-*` header ever reaches a
 box."* So the request header must not use that prefix. `x-scan-contract` mirrors
 `x-scan-profile` and survives the proxy.
@@ -180,7 +180,7 @@ box."* So the request header must not use that prefix. `x-scan-contract` mirrors
 the shebang, so **the bundle embeds no identity at all** — a copied bundle
 cannot even in principle report what it is. On the server side a real build
 stamp does exist (`deploy-info.json`, written at `deploy/deploy.sh:656`, read by
-`readVersionInfo()` at `src/webapp/trpc/routers/health.ts:69-101`) but it is a
+`readVersionInfo()` at `src/webapp/trpc/routers/health.ts:69-101` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)) but it is a
 git SHA with no ordering a client can reason about, and it is exposed only
 through the authenticated tRPC `health.check` — not on the scan routes. It is
 the wrong value for this job, which is why the plan introduces a contract
@@ -196,7 +196,7 @@ comparison. That is a finding in both directions: nothing to reuse, and nothing
 this plan contradicts.
 
 **Searched: there is no update path to point a warning at.**
-`scan-uploader/src/schedule.ts:155-158` (`detectRunMode`) splits source mode (a
+`scan-uploader/src/schedule.ts:155-158` (moved to `scan-uploader/src/cli/schedule.ts`) (`detectRunMode`) splits source mode (a
 checkout, which `git pull` updates and which therefore **cannot drift**) from
 bundle mode (`node /path/to/scan-uploader.mjs`). `scan-uploader/README.md:73-75`
 is the entire distribution story: build once, copy the file. Nothing fetches and
@@ -245,7 +245,7 @@ the Trash live only in the client.
 
 **Direction.**
 
-Server, `src/webapp/routes/scan-upload.ts`:
+Server, `src/webapp/routes/scan-upload.ts` (moved to `beebox/src/webapp/routes/scan-upload/register.ts`):
 
 ```ts
 // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
@@ -259,7 +259,7 @@ and `handleCheck`'s return at `:126` becomes
 `return { states, contractVersion: SCAN_CONTRACT_VERSION };` — a sibling key,
 which §*What already exists* establishes every existing bundle ignores.
 
-Client, `scan-uploader/src/wire-client.ts`: its own copy of the constant, sent
+Client, `scan-uploader/src/wire-client.ts` (moved to `scan-uploader/src/cli/wire-client.ts`): its own copy of the constant, sent
 as `x-scan-contract` on both requests (never `x-bbx-*`), and `checkHashes`
 widens from `Map<string, CheckResult>` to carry the server's integer alongside
 the states. It is the only consumer besides `run-target.ts` and
@@ -331,7 +331,7 @@ no `define`, so a copied bundle could not report what it was even in principle.
   stamp the identity on the locked write `lastUsedAt` already performs — no
   second lock. Values are capped, not validated: untrusted client strings whose
   only use is being shown to a person must be harmless, not fatal.
-- `src/webapp/trpc/routers/health-scan-uploaders.ts` — the `scan-uploaders`
+- `src/webapp/trpc/routers/health-scan-uploaders.ts` (moved to `beebox/src/webapp/trpc/routers/health/checks/scan-uploaders.ts`) — the `scan-uploaders`
   check. Compares the uploader's build time against `readVersionInfo()`'s
   `deployedAt`: two timestamps from the same monorepo, which is ordered in a way
   comparing git revisions could not be. `warning`, never `error` — an old
@@ -409,7 +409,7 @@ design step, and it sits outside the first chunk.
 |---|---|---|---|
 | box predates the plan, sends no `contractVersion` | no — chunk 1 adds it | no — plan adds the `unknown` verdict | clear: reports nothing, which is correct |
 | bundle predates the plan, sends no header | no — plan adds a server-side doctest | yes — headers are read by name (`scan-upload-validation.ts:37-40`), absent is `undefined` | silent, and correctly so: the box cannot warn a client that cannot hear it |
-| hub strips the header | no — plan adds one asserting the name survives | yes — `stripHubHeaders` only matches `x-bbx-` (`src/hub/hub-server.ts:225`) | **silent if the header is ever renamed into that prefix** — the verdict would read `unknown` forever |
+| hub strips the header | no — plan adds one asserting the name survives | yes — `stripHubHeaders` only matches `x-bbx-` (`src/hub/hub-server.ts:225` (moved to `beebox/src/hub/server/core.ts`)) | **silent if the header is ever renamed into that prefix** — the verdict would read `unknown` forever |
 | drift verdict sticky, notified every sweep | no — plan adds it | no — plan adds the changed-verdict state file | would be clear but intolerable (nags every 15 min) |
 | verdict state file unwritable (read-only home, full disk) | no — plan adds it | no — plan must decide | must degrade to notify-every-sweep or notify-never; see *Open design questions* |
 | constant not bumped on a contract change | **impossible to test** | no | **silent false negative** — the critical gap above |
@@ -463,7 +463,7 @@ design step, and it sits outside the first chunk.
   (`src/core/install-template-file.ts:328-414`).
 - **Exposing the box's build SHA on the scan routes.** `deploy-info.json` is
   server-local and reaches only authenticated tRPC
-  (`src/webapp/trpc/routers/health.ts:69-101`); putting a deploy identity on a
+  (`src/webapp/trpc/routers/health.ts:69-101` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)); putting a deploy identity on a
   scan-token-authenticated route widens what that credential can learn. The
   contract integer carries no deployment information.
 - **Versioning the other stand-alone clients.** `beebox-clerk/` and `ios-app/`
@@ -520,14 +520,14 @@ verdict — no I/O, no process globals — so every branch including `unknown` i
 doctest assertion. This follows the guidance that when a decision is the risky
 part, extract it rather than reaching for a heavier tier.
 
-- **`scan-uploader/test/contract-version.doctest.md`** (new) — the four
+- **`scan-uploader/test/contract-version.doctest.md` (moved to `scan-uploader/test/cli/contract-version.doctest.md`)** (new) — the four
   verdicts, the `unknown` case for a pre-version box, and a non-integer header
   value.
-- **`scan-uploader/test/wire-client.doctest.md`** — that the client sends the
+- **`scan-uploader/test/wire-client.doctest.md` (moved to `scan-uploader/test/cli/wire-client.doctest.md`)** — that the client sends the
   header and reads the response integer. `test/fake-scan-server.ts:165-171` is
   where a version-bearing check response gets faked; the fake gains one optional
   field.
-- **`scan-uploader/test/notify.doctest.md`** — the sticky-verdict rule: a drift
+- **`scan-uploader/test/notify.doctest.md` (moved to `scan-uploader/test/cli/notify.doctest.md`)** — the sticky-verdict rule: a drift
   notification on the sweep the verdict changes, and silence on the sweeps after
   it. This is the same rule the file already asserts for `rejectedOnUpload`, so
   the pattern is in place.

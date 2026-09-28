@@ -7,14 +7,14 @@
  * silent months into one loud `bbx validate`.
  *
  * Wired into `bbx validate` (errors) and `bbx status` (a warnings section) —
- * see `src/cli/commands/validate.ts` / `status.ts` — and into
+ * see `src/cli/commands/validate/command.ts` / `status.ts` — and into
  * `bbx validate --hook` for an edit at the box root or under the npm
- * namespace (`src/cli/commands/validate-hook.ts`).
+ * namespace (`src/cli/validate-hook/command.ts`).
  */
 
 import * as fs from "node:fs/promises";
-import { isBoxRootVocabularyName } from "./box-root-vocabulary.js";
-import { errnoCode } from "./error-guards.js";
+import { isBoxRootVocabularyName } from "../shared/box-root-vocabulary.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 /** OS/editor junk that is never a real stray — ignored outright, not reported. */
 const IGNORED_JUNK = new Set([".DS_Store", "Thumbs.db", "desktop.ini", ".localized"]);

@@ -7,7 +7,7 @@
 
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { invariant } from "../../../src/lib/invariant.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { escapeForRegex, snapshotRegex } from "./snapshot-regex.js";
 
 const __dirname = import.meta.dirname;

@@ -17,7 +17,7 @@ import { notifyBoxholder, notifyChannels } from "./notify-boxholder.js";
 import { parseTarget, type Target } from "./notification/target.js";
 import type { TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { z } from "zod";
 
 const LATCH_PATH = ".beebox/notified-questions.json";

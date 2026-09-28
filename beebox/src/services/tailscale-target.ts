@@ -21,7 +21,7 @@
  *     body) — refuse rather than assume it is protected.
  */
 
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 import type { ProbeResult, TailscaleDeps } from "./tailscale.js";
 
 /** The running target's effective auth posture, from a loopback `/auth/me` probe. */
@@ -29,7 +29,7 @@ export type AuthPosture = "enforced" | "open" | "unreachable" | "ambiguous";
 
 /**
  * Classify a loopback `/auth/me` probe against the EXACT shapes beebox's
- * `/auth/me` produces (`src/webapp/routes/auth.ts`):
+ * `/auth/me` produces (`src/webapp/routes/auth/register.ts`):
  *   - open mode → `200 {"open":true}` ⇒ `open` (must NOT be exposed);
  *   - authenticated → `200` with `{email:<string>, isOwner:<bool>, boxes:<array>}`
  *     ⇒ `enforced`;
@@ -79,7 +79,7 @@ function isAuthenticatedMeBody(body: Record<string, unknown>): boolean {
 
 /**
  * The benign marker the Track-B dev router sets on its OWN anonymous 401 for a
- * `/__router/*` control route (`workstreams-app/src/router/router.ts`). It identifies "a guarded
+ * `/__router/*` control route (`workstreams-app/src/router/server/listener.ts`). It identifies "a guarded
  * callback dev router" and leaks nothing (a bare curl already learns the server
  * type). An UNGATED old router has no such header — it answers `/__router/status`
  * 200 with its status JSON. This lets the tailscale tooling distinguish a guarded

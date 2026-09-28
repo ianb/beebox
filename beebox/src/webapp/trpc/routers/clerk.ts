@@ -10,25 +10,25 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure, authedProcedure } from "../trpc.js";
+import { router, publicProcedure, authedProcedure } from "../procedures.js";
 import {
   commentaryInput,
   commentaryOutput,
   commentaryDestinationsOutput,
   tabArrangementPayload,
   tabArrangementOutput,
-} from "./clerk-contract.js";
+} from "../clerk-contract.js";
 import { createWebpageTemplate } from "../../../schemas/webpage.js";
 import { createCommentaryTemplate } from "../../../schemas/commentary.js";
 import { attachmentPath } from "../../../shared/attach-path.js";
 import { listDestinations } from "../../../core/landmark/list-destinations.js";
-import { safeFilename } from "../../../connectors/chat-utils.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
+import { safeFilename } from "../../../job-cards/chat-utils.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { createTabArrangementCard } from "../../../schemas/tab-arrangement.js";
-import { parseFrontmatterObject } from "../../../cards/index.js";
+import { parseFrontmatterObject } from "../../../exports/cards.js";
 import { withCardLock } from "../../../lib/card-lock.js";
-import { errnoCode } from "../../../lib/error-guards.js";
-import { BOX_DIRS } from "../../../lib/paths.js";
+import { errnoCode } from "../../../shared/error-guards.js";
+import { BOX_DIRS } from "../../../lib/paths/core.js";
 
 /** Default filing spot when no commentary destination is chosen. */
 const DEFAULT_COMMENTARY_DIR = BOX_DIRS.inbox;

@@ -138,7 +138,7 @@ the target behavior.
   (`repairBoxLinks`)** — an established box-content link-rewrite command with
   dry-run + report. **Reuse as the migration vehicle** (or its close sibling):
   the `view:`→plain rewrite is a mechanical link transform of the same shape.
-- **`scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts`** — per-schema
+- **`scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts` (moved to `beebox/src/scripts/migrate/_warnings.ts`)** — per-schema
   migrators with field-loss detection; `normalize-ref-keys.ts` is a direct
   precedent for a content-normalizing pass. **Reuse the harness** if the
   rewrite is run as a migration rather than through `bbx relink`.
@@ -399,7 +399,7 @@ generated docs and the test-box clone.
 
 **Direction.** `test/frontend/lib/view-url.doctest.md` (currently asserts
 `view:` parsing/classification, e.g. `:76-77`) is rewritten to the plain-path
-contract. `test/core/external-url-fetch.doctest.md:21` (`[card](view:store/a.card)`
+contract. `test/core/external-url-fetch.doctest.md:21` (moved to `beebox/test/core/external/url-check/fetch.doctest.md`) (`[card](view:store/a.card)`
 "ignored") updates to the plain form. `docs/generated/views.md`,
 `docs/generated/card-figure.md`, and the `~/src/boxes/test1` `.claude/rules/` +
 `docs/generated/` clones regenerate from the Track-4 sources — no hand edits.

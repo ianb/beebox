@@ -16,7 +16,7 @@
  */
 
 import { useParams } from "@tanstack/react-router";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { ExternalLink } from "../components/ui/ExternalLink";
@@ -28,8 +28,8 @@ import { ErrorText } from "../components/ui/ErrorText";
 import { Hint } from "../components/ui/Hint";
 import { Heading } from "../components/ui/Heading";
 import { DRIVE_CHILD_BADGES, driveChildState } from "../lib/drive-card-display";
-import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "./directory";
-import { registerFileType, type RendererProps } from "./index";
+import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "../directory-listing";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 /** The frontmatter field, when it is a non-empty string. */
 function field(fm: Record<string, unknown>, key: string): string | null {
@@ -197,6 +197,7 @@ function GfolderView({ data, onNavigate }: RendererProps) {
   );
 }
 
-registerFileType({ type: "gfolder" }, {
+export const gfolderRenderer: RendererEntry = {
+  selector: { type: "gfolder" },
   renderer: { name: "Drive folder", Component: GfolderView, priority: 100 },
-});
+};

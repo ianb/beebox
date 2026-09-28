@@ -9,20 +9,20 @@
 import { withBoxWork } from "../../lib/box-maintenance.js";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
-import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
-import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { withQuestionTransition, resolveContainedQuestionPath } from "../question-transition.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 
 const AnswerVia = z.enum(["web", "cli"]);
 type AnswerViaValue = z.infer<typeof AnswerVia>;
@@ -317,7 +317,7 @@ export function answerWithAdmission(opts: { ctx: CommandContext; args: Record<st
   });
 }
 
-registerCommand({
+export const answerCommand: CommandDefinition = {
   name: "answer",
   description: "Answer a pending question",
   args: [
@@ -348,6 +348,6 @@ registerCommand({
     },
   ],
   execute: executeAnswer,
-});
+};
 
 export { executeAnswer };

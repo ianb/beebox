@@ -19,7 +19,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { sanitizeFilename, dedupeName, summarizeBatch } from "./batch-format.js";
 import { createUploadBatchTemplate, parseUploadBatch, type UploadBatchReceived } from "../../schemas/upload-batch.js";
 import {
@@ -27,7 +27,7 @@ import {
   stagingSessionDir,
   isBulkSession,
   type StagingSession,
-} from "../capture/staging-store.js";
+} from "../capture/staging-store/core.js";
 
 /** The staging session named for bulk preparation is not a `kind: "bulk"` session. */
 class NotABulkSessionError extends Error {

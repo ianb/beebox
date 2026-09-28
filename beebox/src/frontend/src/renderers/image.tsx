@@ -5,9 +5,9 @@
 
 import { useState } from "react";
 import { isRecord } from "@shared/is-record";
-import { Markdown } from "../components/Markdown";
+import { Markdown } from "../components/Markdown/body";
 import { Image } from "../components/ui/Image";
-import { CheckboxField } from "../components/ui/fields";
+import { CheckboxField } from "../components/ui/fields/field";
 import { Text } from "../components/ui/Text";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
@@ -16,8 +16,7 @@ import { BboxOverlay } from "../components/ui/BboxOverlay";
 import { apiRawFileUrl, apiRawImageUrl, apiTransformedImageUrl, getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
 import { isTransformablePhotoPath } from "../lib/image-transform-url";
-import type { RendererProps } from "./index";
-import { registerFileType } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 function strOf(v: unknown): string | null {
   return typeof v === "string" ? v : null;
@@ -197,9 +196,10 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
   );
 }
 
-registerFileType({ type: "image" }, {
+export const imageCardRenderer: RendererEntry = {
+  selector: { type: "image" },
   renderer: { name: "Image", Component: ImageCardRenderer, priority: 50 },
-});
+};
 
 function RawImageRenderer({ data }: RendererProps) {
   const basename = data.path.split("/").pop() || data.path;
@@ -230,7 +230,7 @@ function RawImageRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileType(
-  { match: (path) => RAW_IMAGE_EXT.test(path) },
-  { renderer: { name: "Image", Component: RawImageRenderer, priority: 30 } },
-);
+export const rawImageRenderer: RendererEntry = {
+  selector: { match: (path) => RAW_IMAGE_EXT.test(path) },
+  renderer: { name: "Image", Component: RawImageRenderer, priority: 30 },
+};

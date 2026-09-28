@@ -29,7 +29,7 @@ The whole suite took 1,782,731ms (~29.7 minutes) versus a normal ~207,000ms
 `test/dev/auto-sweep-detach.doctest.md:64` polls with a hardcoded timeout
 (`await sleep(100)` loop) waiting for a log condition; under 8-9x slowdown the
 poll budget is exceeded even though the underlying operation eventually
-succeeds. `test/field-test/lifecycle.doctest.md` and
+succeeds. `test/field-test/lifecycle.doctest.md` (moved to `beebox/test/field-test/run.lifecycle.doctest.md`) and
 `test/field-test/run.doctest.md` are long-running box-lifecycle doctests that
 hit tap's own suite-level timeout the same way.
 

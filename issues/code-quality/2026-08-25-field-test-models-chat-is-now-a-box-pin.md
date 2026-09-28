@@ -31,7 +31,7 @@ docs, or make both ids.
 The weekly manual suite failed on the stale half of this same migration.
 `test/manual/field-test-inject-email.doctest.md:88-91` still asserts
 `.beebox/chat-model.json` exists after `seedFieldBox`. It never does: as this
-issue's body already says, `seedFieldBox` (`src/field-test/run-seed.ts:87-94`)
+issue's body already says, `seedFieldBox` (`src/field-test/run-seed.ts:87-94` (moved to `beebox/src/field-test/run/seed.ts`))
 writes `agentModel` into `config/box.json` instead. The assertion just never
 followed the code.
 
@@ -60,7 +60,7 @@ The assertion was repointed at `agentModel` since last week (it now reads
 string dropped the leading underscore. The box's config directory is
 `_config`, not `config` — `getBoxDir(boxRoot, "config")` resolves to `_config`
 per `boxDirsKey: "config"` / `path: "_config"` in
-`src/lib/box-layout-spec.ts:257-258`, and `run-seed.ts:90` writes the file to
+`src/lib/box-layout-spec.ts:257-258` (moved to `beebox/src/lib/paths/box-layout-spec.ts`), and `run-seed.ts:90` writes the file to
 that same `_config/box.json`. Reading the un-prefixed `config/box.json` now
 throws `ENOENT` instead of returning a stale-but-parseable value, so the test
 hard-fails on `readFile` rather than failing the equality check:

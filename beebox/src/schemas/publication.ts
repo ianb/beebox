@@ -1,6 +1,6 @@
 /** A stable box card reference to a server-managed publication. */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema, type InferCardFields } from "../exports/cards.js";
 import { BOX_PACKAGE_DOCS } from "../core/docs-gen/shared.js";
 import { pubIdSchema } from "../publish/manifest.js";
 import { z } from "zod";

@@ -10,7 +10,7 @@ repo-spec bumps, automated locally. `pnpm update-agent-sdk`
 (`bin/update-agent-sdk.ts`) does the bump/install/typecheck;
 `bin/update-agent-sdk-scheduled.sh --install` registers the weekday launchd
 job that runs the check and spawns a headless update session when behind;
-`beebox/scripts/sdk-steering-probe.ts` guards the undocumented steering
+`beebox/scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) guards the undocumented steering
 semantics. Documented in `beebox/docs/development/maintenance.md`.
 
 The agent SDK (`@anthropic-ai/claude-agent-sdk`) bundles its own Claude Code binary as an optional npm dependency and ignores anything system-installed (no `$PATH` lookup, no `~/.local/bin/claude`). That binary is frozen at npm-install time, so a long-running server stays on whatever version of Claude Code was current when we last `npm install`-ed.
@@ -42,7 +42,7 @@ Tooling now exists (same worktree): `pnpm update-agent-sdk` at the monorepo
 root (`bin/update-agent-sdk.ts`) bumps to the newest release clearing the pnpm
 `minimumReleaseAge` guard, installs, typechecks; `--check` just reports
 staleness (exit 1 when behind). Pair with
-`beebox/scripts/sdk-steering-probe.ts`, which re-verifies the
+`beebox/scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`), which re-verifies the
 undocumented mid-turn input semantics the chat session depends on. Documented
 in `beebox/docs/development/maintenance.md` with a weekly cadence.
 

@@ -1,6 +1,6 @@
 import { Badge } from "../ui/Badge";
 import { Text } from "../ui/Text";
-import type { RouterOutput } from "../../lib/trpc";
+import type { RouterOutput } from "../../lib/trpc/client";
 import { toDisplayPath } from "@shared/display-path";
 
 function Highlight({ text, query }: { text: string; query?: string }) {

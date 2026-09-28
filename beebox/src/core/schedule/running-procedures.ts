@@ -5,8 +5,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { errnoCode } from "../../shared/error-guards.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 
 /**
  * A run card whose mtime is older than this is treated as orphaned —

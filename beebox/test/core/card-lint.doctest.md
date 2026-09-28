@@ -11,9 +11,9 @@ import {
   cardSchema,
   formatLintResults,
   type CardSchema,
-} from "../../src/cards/index.js";
+} from "../../src/exports/cards.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { lintCardsDispatch } from "../../src/core/card-lint.js";
+import { lintCardsDispatch } from "../../src/core/card-lint/core.js";
 import type { LoadCardContext } from "../../src/core/card-io.js";
 import { CommentarySchema } from "../../src/schemas/commentary.js";
 import { ExtfileSchema } from "../../src/schemas/extfile.js";
@@ -23,7 +23,7 @@ import { ConceptMapSchema } from "../../src/schemas/concept-map.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
 import { FigureSchema } from "../../src/schemas/figure.js";
 import { ChatSchema } from "../../src/schemas/chat.js";
-import { ImageSchema } from "../../src/schemas/image.js";
+import { ImageSchema } from "../../src/schemas/image/schema.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {

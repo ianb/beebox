@@ -55,14 +55,14 @@ and assistant text.
   Its callers do not need a new API.
 - `src/services/claude-chat-types.ts:91` defines the provider-neutral `ChatBackend`
   lifecycle. Codex already implements this seam.
-- `src/services/codex-chat.ts:243` constructs `CodexAppServer` directly and
-  `src/core/agent/codex-run.ts:227` does the same for batch work.
+- `src/services/codex-chat.ts:243` (moved to `beebox/src/services/claude-chat/codex-chat.ts`) constructs `CodexAppServer` directly and
+  `src/core/agent/codex-run.ts:227` (moved to `beebox/src/core/agent/codex-run/core.ts`) does the same for batch work.
 - `src/services/codex-app-server.ts:101` spawns `codex app-server`, and lines 145-249
   implement request correlation, timeouts, notification dispatch, approval replies,
   and unsupported-method replies. This is the transport ownership to remove.
 - `src/services/codex-tool-activity.ts:72` is the product-level tool normalization point
   used by live chat and transcript history. Batch runs separately parse and render
-  activity through `src/core/agent/codex-run-activity.ts`; the migration should converge
+  activity through `src/core/agent/codex-run-activity.ts` (moved to `beebox/src/core/agent/codex-run/activity.ts`); the migration should converge
   both live paths on SDK `ThreadItem` inputs while the history adapter retains its legacy
   app-server input mapper.
 - `src/core/codex-usage.ts:30` stores one completed Codex turn in Bee Box's usage
@@ -72,7 +72,7 @@ and assistant text.
 - `src/core/chat/session/codex-transcript.ts:98` uses app-server `thread/read`; lines
   219-250 and 262-266 use `thread/list` and `thread/delete`. Those operations are not in
   the SDK's current public TypeScript surface.
-- `src/services/codex-chat.ts:237-248` installs the Codex plugin, expands box includes,
+- `src/services/codex-chat.ts:237-248` (moved to `beebox/src/services/claude-chat/codex-chat.ts`) installs the Codex plugin, expands box includes,
   and passes the complete value as app-server `developerInstructions`. Preserving that
   role is a migration gate.
 - The implemented engine plan deliberately chose app-server because it supplied a

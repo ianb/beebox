@@ -8,7 +8,7 @@ issues: []
 
 > **Status: implemented** (2026-06-24). The schema lives in
 > `src/schemas/lesson-plan.ts`, the generalized node-id + deferral lint in
-> `src/core/lint-node-refs.ts`, the skill flow in `src/core/box-skills-content.ts`,
+> `src/core/lint-node-refs.ts` (moved to `beebox/src/core/card-lint/node-refs.ts`), the skill flow in `src/core/box-skills-content.ts`,
 > and the audits in `src/dev/knowledge-audits.yaml`. This doc is the frozen design
 > record; the present-tense reference is the card-rules those schemas generate.
 
@@ -36,7 +36,7 @@ the material convention (proper presentational cards, not a stray `README.md`).
 ## What already exists
 
 - **The card-type primitive + courseware family.** `cardSchema(type, { fields, instructions, validate? })`
-  is the pattern; register in `src/schemas/registry.ts` (the `cardSchemas[]` array — courseware
+  is the pattern; register in `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`) (the `cardSchemas[]` array — courseware
   entries at `registry.ts:76-78`: `CourseSchema, ExpositionPlanSchema, ProgressSchema`), and add a
   template in `src/schemas/templates-courseware.ts` (`registerTemplate` with the shared `titleArgs`,
   `templates-courseware.ts:15-22`). **Reuse** — `lesson-plan` is one more entry in each.

@@ -272,7 +272,7 @@ test("describeFirstRun: an empty first report is a quiet fyi, not a handoff", ()
 });
 
 test("describeFirstRun: a non-empty first report is a full handoff (not baselined without adjudication)", () => {
-  const current = ["static  beebox/src/webapp/routes/api.ts:1  const x = request.query.file;"];
+  const current = ["static  beebox/src/webapp/routes/api/register.ts:1  const x = request.query.file;"];
   const outcome = describeFirstRun(current);
   assert.equal(outcome.kind, "handoff");
   if (outcome.kind !== "handoff") return;

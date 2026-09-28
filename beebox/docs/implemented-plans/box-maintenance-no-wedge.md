@@ -83,15 +83,15 @@ that property, because each new maintenance caller adds a new path.
 - **Gate readers that look only at the phase file.** `acquireBoxWork`
   (`box-maintenance.ts:152`, `:186`, `:188`), `closeBoxMaintenance`
   (`:292-295`), `acquireBoxStartup` (`:344`), and the server's one-second poll
-  that pauses chat (`src/webapp/server.ts:415`). None asks whether the owner is
+  that pauses chat (`src/webapp/server.ts:415` (moved to `beebox/src/webapp/server/app.ts`)). None asks whether the owner is
   alive. Change each to the new rule.
-- **Supervisor recognises the refusal.** `src/hub/supervisor.ts:467-471` sets
+- **Supervisor recognises the refusal.** `src/hub/supervisor.ts:467-471` (moved to `beebox/src/hub/supervisor/core.ts`) sets
   `box.lastError` and returns with the comment *"Admission closure is not a
   crashing generation."* The hub then answers
-  `404 … "No running box for …"` (`src/hub/hub-server.ts:520`). The WebSocket
+  `404 … "No running box for …"` (`src/hub/hub-server.ts:520` (moved to `beebox/src/hub/server/core.ts`)). The WebSocket
   path already answers a known, not-running slug with 503
   (`hub-server.ts:561-565`). Reuse that distinction for HTTP.
-- **Health check.** `src/webapp/trpc/routers/health-migrations.ts:29-35` reports
+- **Health check.** `src/webapp/trpc/routers/health-migrations.ts:29-35` (moved to `beebox/src/webapp/trpc/routers/health/checks/migrations.ts`) reports
   *"Admission closed: …"*. It runs in the box child, which could not start on a
   closed box. Under the new rule it becomes reachable; reword it.
 - **Fenced answer path.** `src/core/migration-answer.ts:22-26` lets a boxholder
@@ -110,7 +110,7 @@ Closure paths verified in source, all removed by Track 1:
 | Sweep throws or hits the execution timeout after `beginChanges()` | same block; `finally` releases without `complete()` |
 | Deploy with a pending procedure migration | `deploy/deploy.sh:730` runs `--sweep --within-maintenance` with no procedure runner; `:731` *"box stays closed"*; `src/cli/commands/maintenance.ts:95-101` reopens only a `ready` box |
 | Deploy command fails | `maintenance.ts:100` *"Box remains closed for recovery"* |
-| Dev reload replacement not ready | `src/hub/supervised-reload.ts:63` `await maintenance?.beginChanges()` then release |
+| Dev reload replacement not ready | `src/hub/supervised-reload.ts:63` (moved to `beebox/src/hub/supervisor/supervised-reload.ts`) `await maintenance?.beginChanges()` then release |
 | Owner process killed | phase file remains; `closeBoxMaintenance` refuses without `recover` (`box-maintenance.ts:292-295`) |
 
 ## Prior art (external)
@@ -159,8 +159,8 @@ the phase file remains. The file alone is what refuses work today.
   current verb, `bbx engine migrate --sweep --repair`.
 - Remove `answerFencedMigrationQuestion`, the catch branch in
   `src/core/commands/answer.ts:314-322`, and both `actions.answer` admission
-  exemptions (`src/webapp/box-admission.ts:19` and
-  `src/webapp/trpc/trpc.ts:28`); `answerWithAdmission` becomes `withBoxWork`.
+  exemptions (`src/webapp/box-admission.ts:19` (moved to `beebox/src/webapp/server/box-admission.ts`) and
+  `src/webapp/trpc/trpc.ts:28` (moved to `beebox/src/webapp/trpc/procedures.ts`)); `answerWithAdmission` becomes `withBoxWork`.
   The path exists to answer while the box is closed. Under the new rule a box
   without a live owner is open, so the ordinary answer path serves; with a live
   owner, the fenced path's own `acquireBoxMaintenance` is refused by the owner
@@ -267,7 +267,7 @@ None.
 | Deploy fails midway; boxes reopen on a half-activated engine | Existing supervisor crash-loop doctests | Supervisor marks the box unhealthy; Track 2 reports `box_unavailable` with `lastError` | Clear |
 | A delegated `join` child writes a phase after its parent died | Existing: `join` validates the parent permit against the live lock (`box-maintenance.ts:246-249`) | Throws `expired` | Clear |
 | Old engine reads a record with `since` | Schema is `z.object` without `.strict()`; unknown keys are dropped | n/a | n/a |
-| Hub 503 body leaks a pid to an unauthenticated client | `test/hub/hub-router.doctest.md` (pairing redeem) | Pairing redemption passes the wall unauthenticated; it gets the generic `box_unavailable` body | n/a |
+| Hub 503 body leaks a pid to an unauthenticated client | `test/hub/hub-router.doctest.md` (moved to `beebox/test/hub/server.router.doctest.md`) (pairing redeem) | Pairing redemption passes the wall unauthenticated; it gets the generic `box_unavailable` body | n/a |
 | A handle whose lock was reclaimed publishes over, or clears, the replacing owner's closure | `test/lib/box-maintenance.doctest.md` (stolen lock) | Root phase writes, `complete()`, and the release-time record removal require the owner lock's id to match | Refused with `expired` |
 
 ## Agent-flow / user-flow edge cases

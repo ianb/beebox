@@ -24,10 +24,10 @@
  */
 
 import { useRef } from "react";
-import { ChatInputArea, type TranscriptionHandle } from "../../../components/chat/InteractiveChat-composer";
+import { ChatInputArea, type TranscriptionHandle } from "../../../components/chat/InteractiveChat-composer/view";
 import { MobileTextareaRow } from "../../../components/chat/InteractiveChat-mobile-row";
-import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout";
-import { VoiceChipFace } from "../../../components/chat/VoiceChip";
+import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout/view";
+import { VoiceChipFace } from "../../../components/chat/VoiceChip/view";
 import { TargetStrip } from "../../../components/chat/TargetStrip";
 import { chatTargetStatus } from "../../../input/targets/chat-target";
 import { InputStoreProvider, type InputStore } from "../../../components/chat/input-store";

@@ -4,5 +4,5 @@
  * until `startServer()`/`createServer()` is called (the side-effectful boot
  * lives in src/webapp/server-main.ts, which is deliberately not exported).
  */
-export { createServer, startServer, DEFAULT_PORT } from "../webapp/server.js";
+export { createServer, startServer, DEFAULT_PORT } from "../webapp/server/app.js";
 export type { BoxSpec, ServerOptions, ServerContext } from "../webapp/server-types.js";
