@@ -65,7 +65,7 @@ import { refreshMapsCommand } from "./commands/refresh-maps.js";
 import { retroCommand } from "./commands/retro.js";
 import { boxesCommand } from "./commands/boxes.js";
 import { intakeCommand } from "./commands/intake.js";
-import { triageCommand } from "./commands/triage.js";
+import { triageCommand } from "./commands/triage/command.js";
 import { handleCommand } from "./commands/handle.js";
 import { extfileCommand } from "./commands/extfile.js";
 import { locationCommand } from "./commands/location.js";

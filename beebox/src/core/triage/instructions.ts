@@ -48,7 +48,7 @@ export interface CompiledTriageInstructions {
 
 const SAFE_NAME_RE = /^[\w.-]+$/;
 
-function deriveCategoryName(dir: string): string {
+export function deriveCategoryName(dir: string): string {
   if (dir === "" || dir === ".") return "root";
   const last = path.basename(dir);
   if (!SAFE_NAME_RE.test(last)) {
@@ -107,6 +107,13 @@ export async function compileTriageInstructions(
     return a.dir.localeCompare(b.dir);
   });
 
+  disambiguateCategoryNames(categories);
+
+  return { doc: renderDoc(categories), categories };
+}
+
+/** Keep holding directory names identical across the legacy and Jev engines. */
+export function disambiguateCategoryNames(categories: TriageCategory[]): void {
   // Detect name collisions: two landmarks both deriving to the same
   // category name. Disambiguate by appending the parent directory.
   const seen = new Map<string, number>();
@@ -120,7 +127,6 @@ export async function compileTriageInstructions(
     }
   }
 
-  return { doc: renderDoc(categories), categories };
 }
 
 function renderDoc(categories: TriageCategory[]): string {

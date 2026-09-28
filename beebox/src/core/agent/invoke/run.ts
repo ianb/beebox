@@ -27,6 +27,8 @@ import { applyEngineUnavailability } from "../engine-unavailability-apply.js";
 export interface RunAgentOptions {
   signal?: AbortSignal | undefined;
   boxRoot: string;
+  /** Per-invocation subprocess additions, without changing the parent environment. */
+  env?: Record<string, string> | undefined;
   systemPrompt: string;
   prompt: string;
   onOutput?: ((text: string) => void) | undefined;
@@ -225,6 +227,7 @@ async function setupRunEnv(
   // Build env. CLAUDECODE is unset so the SDK can run nested inside Claude Code.
   // ANTHROPIC_API_KEY is already stripped by buildScriptEnv to force subscription auth.
   const env = await buildScriptEnv(boxRoot, {
+    ...options.env,
     CLAUDECODE: undefined,
     ...(logger ? { ANTHROPIC_BASE_URL: `http://localhost:${logger.port}/` } : {}),
   });

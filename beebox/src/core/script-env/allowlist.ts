@@ -76,6 +76,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "LC_MESSAGES",
 
   // --- Claude Agent SDK / codex config knobs (not credentials) ---
+  "CODEX_HOME", // Keep explicit agent env aligned with auth preflight and plugin installation.
   "CLAUDE_CONFIG_DIR", // relocates the ~/.claude/ credentials dir the SDK reads.
   "BBX_CLAUDE_PROJECTS_DIR", // src/core/chat/session/transcript-paths.ts, delete-storage.ts -- transcript-dir override doctests rely on.
   "BBX_ORIGIN_ID_FILE", // src/core/chat/session/origin.ts -- machine-id file override doctests rely on.
@@ -116,6 +117,8 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "BBX_STRICT_FETCH", // src/cli/entry/bootstrap.ts -- scenario harness: fail on unstubbed fetch.
   "BBX_AUTH_SCRYPT_N", // src/webapp/local-users-scrypt.ts -- test-only work-factor override.
   "BBX_NOTIFY_FAKE", // src/core/notification/fake-mode.ts -- every notification channel through its fake.
+  "BBX_TRIAGE_RUN_ID", // Triage research CLI calls share the parent run allowance.
+  "BBX_TRIAGE_RESEARCH", // Inherited research calls also debit the 12-call sub-limit.
   "BBX_JEV_FAKE", // src/core/judgment/service.ts -- `bbx judge` answers through a fixed fake (1 yes, 0 no).
   "BBX_PUSH_FAKE", // src/core/notification/fake-mode.ts -- the old name of BBX_NOTIFY_FAKE, read for one release.
   "BBX_PUSH_STORE_DIR", // src/core/push-subscriptions.ts -- push-store path override for tests.

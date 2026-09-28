@@ -141,3 +141,40 @@ no channel as unknown provenance, never user-confirmed. Corrected the scan-impor
 path and a leftover config-path reference. Git-lock timeout/fail-open behavior
 is now explicit. No further fresh-review round is requested; these changes
 were checked against the cited helpers and question schema.
+
+## Finished-change review — September 28
+
+Claude Opus traced normal-use behavior in the implementation. Accepted fixes:
+
+- A plain card may have no attachment directory. Applying or correcting it must
+  not attempt to move a nonexistent empty scope.
+- A first classifier application checks the whole instruction snapshot. An
+  already-recorded incomplete move can finish after rules change; a sourced
+  correction verifies its selected destination still exists instead of requiring
+  every old rule byte to remain unchanged.
+- Deterministic per-item preparation/application failures are reported while
+  later items continue. Service failures stay operational errors, and quota
+  exhaustion defers the remaining staged items.
+- Explicit Codex subprocess additions retain CODEX_HOME and the credential
+  allowlist. Ordinary Codex calls keep their previous environment behavior.
+- A research note accompanies the classifier summary rather than replacing it
+  with prose that might support a different outcome.
+- Repreparation can recover committed applied bytes after later handling moves;
+  unavailable models/evidence are per-case coverage failures, not whole-batch
+  aborts or passing cases.
+
+Integration also exercises ordinary annex pointers across directory-depth moves
+and real bundled CLI JSON/parent-option behavior. These are correctness fixes
+within the approved attachment and CLI contracts, not new subsystems.
+
+Round 2 verified the first five findings and the annex-move/CLI integration.
+It found a remaining repreparation defect after handling and confirmation: the
+latest decision trailer could identify a confirmation commit, and historical
+annex blobs could contain pointers rather than content. Application recovery now
+tries matching classifier commits and accepts only digest-matching bytes. The
+verification-only review identified the normal unlocked-pointer representation;
+the fix reuses the existing annex parser and local content lookup, alongside
+locked-link support. Regression cases cover confirmation after handling, locally
+present annex content, and genuinely missing objects. No network fetch is added.
+The final focused provenance run passed 47 assertions; typecheck and changed-file
+lint passed after the historical recovery fix.

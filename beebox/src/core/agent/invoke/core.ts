@@ -108,6 +108,7 @@ export function createClaudeAgent(options: {
     const model = modelCarrier.resolve(opts.model);
     return {
       boxRoot: opts.boxRoot,
+      env: opts.env,
       signal: opts.signal,
       systemPrompt: opts.systemPrompt ?? "",
       prompt: opts.prompt,

@@ -26,6 +26,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Dirent } from "node:fs";
 import { getBoxDir, isCardFile } from "../../../lib/paths/core.js";
+import { attachDirFor } from "../../../shared/attach-path.js";
+import { movePhase2CardFiles } from "../../card-files/move-phase2.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 
 /**
@@ -67,6 +69,17 @@ const INBOX_RESERVED_SUBDIRS = new Set([
   "feedback",
 ]);
 
+/** Collision-check both paths before the existing paired move mechanics. */
+async function moveIntakeItem(source: string, target: string): Promise<boolean> {
+  const targets = isCardFile(source) ? [target, attachDirFor(target)] : [target];
+  for (const candidate of targets) {
+    try { await fs.lstat(candidate); return false; }
+    catch (error) { if (errnoCode(error) !== "ENOENT") throw error; }
+  }
+  await movePhase2CardFiles(source, target);
+  return true;
+}
+
 const SAFE_NAME_RE = /^[\w.-]+$/;
 
 function normalizeFilename(name: string): string {
@@ -84,14 +97,8 @@ const filenameNormalizationStep: IntakeStep = {
     const newName = normalizeFilename(file);
     if (newName === "" || newName === file) return { changed: false };
 
-    const newPath = path.join(intakeDir, newName);
-    try {
-      await fs.access(newPath);
-      return { changed: false, note: `skipped: ${newName} already exists` };
-    } catch (_e) {
-      // Target doesn't exist — safe to rename.
-    }
-    await fs.rename(path.join(intakeDir, file), newPath);
+    const moved = await moveIntakeItem(path.join(intakeDir, file), path.join(intakeDir, newName));
+    if (!moved) return { changed: false, note: `skipped: ${newName} or attachment scope already exists` };
     return { changed: true, newName };
   },
 };
@@ -146,13 +153,7 @@ async function routeArrivals(opts: { boxRoot: string }): Promise<string[]> {
     if (!isCardFile(entry.name)) continue;
     const src = path.join(inboxDir, entry.name);
     const dst = path.join(intakeDir, entry.name);
-    try {
-      await fs.access(dst);
-      continue; // Don't clobber.
-    } catch (_e) {
-      // Target free.
-    }
-    await fs.rename(src, dst);
+    if (!await moveIntakeItem(src, dst)) continue;
     moved.push(entry.name);
   }
   return moved;
@@ -173,13 +174,7 @@ async function advanceToStaged(opts: { boxRoot: string }): Promise<string[]> {
   const completed: string[] = [];
   for (const file of files) {
     const dst = path.join(stagedDir, file);
-    try {
-      await fs.access(dst);
-      continue;
-    } catch (_e) {
-      // Target free.
-    }
-    await fs.rename(path.join(intakeDir, file), dst);
+    if (!await moveIntakeItem(path.join(intakeDir, file), dst)) continue;
     completed.push(file);
   }
   return completed;

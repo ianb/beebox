@@ -619,6 +619,13 @@ rows:
     reason: Matters only when working the inbox pipeline or the reactor; moved verbatim to triage.md, whose read-when now names the distinction.
     audits: [triage-vs-reactor-flow, triage-pipeline-stages]
     mechanics: box-docs/triage.md
+  - id: intake.triage-replay
+    rule: Triage replay is read-only; guide policy and landmark boundaries are distinct; missing evidence and confirmation need honest provenance.
+    handle: INTAKE
+    bin: indirect
+    reason: Needed when triaging or correcting a filing decision; keep the repair procedure in an on-demand document.
+    audits: [triage-cli-replay, triage-rule-repair, triage-source-policy, triage-evidence-honesty]
+    mechanics: box-docs/triage-instructions.md
   - id: intake.capture-detail
     rule: The capture pipeline (preparation worker, timeline, the `<capture>` message, `bbx scan-import` batches landing in the inbox).
     handle: INTAKE

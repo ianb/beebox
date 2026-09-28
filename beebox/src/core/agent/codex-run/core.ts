@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { fmt } from "../../../lib/format.js";
+import { buildScriptEnv } from "../../script-env/core.js";
 import { buildTimezoneContext } from "../../box/config.js";
 import type { AgentResult } from "../types.js";
 import { ensureCodexPluginInstalled } from "../ensure-codex-plugin.js";
@@ -26,6 +27,8 @@ export type { CodexObservedActivity } from "./activity.js";
 export interface CodexRunOptions {
   signal?: AbortSignal | undefined;
   boxRoot: string;
+  /** Per-invocation subprocess additions, without changing the parent environment. */
+  env?: Record<string, string> | undefined;
   task?: string | undefined;
   systemPrompt: string;
   prompt: string;
@@ -45,6 +48,10 @@ export interface CodexRunOptions {
 function invocationSignal(signal: AbortSignal | undefined, limit: AbortSignal): AbortSignal {
   signal?.throwIfAborted();
   return signal ? AbortSignal.any([signal, limit]) : limit;
+}
+
+async function invocationEnv(options: CodexRunOptions): Promise<NodeJS.ProcessEnv | undefined> {
+  return options.env === undefined ? undefined : buildScriptEnv(options.boxRoot, options.env);
 }
 
 /** Run one fresh or resumed Codex turn and map it to the existing Agent result. */
@@ -79,6 +86,7 @@ export async function runCodexAgent(
     }
     const session = (createSession ?? createCodexSdkSession)({
       cwd: options.cwd ?? options.boxRoot,
+      env: await invocationEnv(options),
       systemPrompt: [options.systemPrompt + tzContext, includedContext].filter(Boolean).join("\n\n"),
       model: options.model,
       resumeSessionId: options.resumeSessionId,

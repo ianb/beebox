@@ -1,6 +1,6 @@
 ---
 title: "Replayable document triage with Jev"
-status: draft
+status: active
 workstream: jev-triage
 issues:
   - ../../../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md
@@ -26,7 +26,7 @@ reads, missing attachment evidence, and no reproducible correction mechanism.
 The chosen complete unit adds the CLI preparation/judgment/replay/apply loop,
 Git-backed decision receipts, and bounded agent research for admitted items.
 
-**BIG CHANGE — implementation approval required before production coding.**
+**BIG CHANGE — approved by the boxholder on September 28: “Yep, implement!”**
 Estimate additions plus deletions: 2,000–2,600 production lines (CLI/core,
 preparation adapters, receipts/apply and fallback), 800–1,100 test lines, and
 250–400 agent-guide/reference/audit lines. The completed experiment and planning
@@ -34,8 +34,8 @@ artifacts are separately about 1,950 authored lines plus generated observations
 and PDFs/images. Total authored workstream scope is about 5,000–6,050 lines.
 No new database, service, frontend or evaluation framework is proposed. The
 size comes from replay provenance and safe application, not the Jev call.
-The current request authorizes corpus reruns and this plan pass; it does not
-by itself approve implementation at that estimated scale.
+The boxholder approved this implementation scope, including retained replay
+evidence. Work stays in the worktree until a separate request to land it.
 
 ## Stated preferences this plan trades against
 
@@ -95,7 +95,7 @@ Paths below are monorepo-relative and describe current code, not this proposal.
 - `beebox/src/core/triage/run/routing.ts:41` describes reason text as
   **`surfaced on probable review and in question prompts`**; line 125 also uses
   it in a guide-learning **`proposal:`**. Preserve honest semantic explanations.
-- `beebox/src/core/commands/move/phase2.ts:40`: **`movePhase2CardFiles`** moves
+- `beebox/src/core/card-files/move-phase2.ts:40`: **`movePhase2CardFiles`** moves
   card and attachment scope with two renames at 46 and 54. Reuse mechanics,
   but do not assume the pair is atomic despite its comment.
 - `beebox/src/lib/git/core.ts:327`: **`Commit only the given paths, ignoring unrelated staged changes.`**
@@ -377,8 +377,11 @@ production receipt directory. No fallback agent, question, routing or rule edits
 are triggered by replay, including on unclear or extraction failure.
 
 Ordinary research fallback is for admitted items only. Use full box context with
-explicit evidence/snapshot refs, `maxTurns:12` and `maxBudgetUsd:1` initially;
-exhaustion leaves unclear. At most one research invocation and one post-research
+explicit evidence/snapshot refs, `maxTurns:12` and `maxBudgetUsd:1` initially.
+Implementation verification found that the existing Codex runner cannot enforce
+a USD ceiling: it warns and enforces its tool-turn limit; Claude enforces the
+USD ceiling. Preserve the box engine rather than silently switching families.
+The shared Jev allowance applies to both. Exhaustion leaves unclear. At most one research invocation and one post-research
 rejudge per automatic item; no recursive fallback. Service failures remain
 operational errors rather than speculative research. Research can inspect sources,
 use extraction services, and return grounded reason/supporting refs. It may create
@@ -437,7 +440,8 @@ source refetch/retry before any claim that irrelevant email stays off disk.
 | Correction overfits or labels itself confirmed | Paired synthetic probe only | Assertions and positive/negative replay guidance | Coverage/provenance visible; agent audit required |
 
 No known silent critical gap remains in the proposed document contract. Tests
-marked absent are implementation gates, not claims of existing handling.
+marked absent in the original design are covered by the implementation validation
+record below.
 
 ## Agent-flow / user-flow edge cases
 
@@ -467,7 +471,7 @@ marked absent are implementation gates, not claims of existing handling.
 ## Open design questions
 
 No unresolved interface decision blocks the first document implementation chunk.
-Approval is still required for the BIG CHANGE scope above. Exact evidence byte
+The BIG CHANGE scope above is approved. Exact evidence byte
 budgets and extraction defaults will use existing service limits, exposed as
 preparation omissions; they do not change semantics silently. Gmail questions
 remain outside this unit. Existing broad rule conflicts cannot all be validated
@@ -481,17 +485,18 @@ replay has no application side effects), `triage-rule-repair` (knows_about: read
 triage-instructions.md, tests boundary neighbors), `triage-source-policy`
 (knows_directly: guide versus landmark, best effort allowed), and
 `triage-evidence-honesty` (knows_directly: missing versus no-match; no invented
-confirmation or reason). Record pass/fail status. These are future audit gates;
-this plan/corpus alone changes no loaded box-agent guidance.
+confirmation or reason). Record pass/fail status.
+All four implementation audits passed on the isolated test box; the rule-repair
+audit read the installed on-demand guide. Status is recorded in knowledge-audits.yaml.
 
 ## What will hold this after it ships
 
-Use existing doctest tiers/fakes, not a new harness. Proposed filesystem/pure tests:
-`test/core/triage-evidence.doctest.md` (intake/normalization/attachment moves,
+The implementation uses existing doctest tiers/fakes. Filesystem/pure tests:
+`test/core/triage/evidence.doctest.md` (intake/normalization/attachment moves,
 scan artifact reuse, formats/omissions/cleanup),
-`triage-instructions.doctest.md` (source hierarchy/overlay/IDs),
-`triage-replay.doctest.md` (fixed evidence, repreparation, unavailable cases,
-no fallback or mutations), `triage-provenance.doctest.md` (move/attachment/commit
+`test/core/triage/snapshot.doctest.md` (source hierarchy/overlay/IDs),
+`test/core/triage/decisions.provenance.doctest.md` (fixed evidence, repreparation, unavailable cases,
+no fallback or mutations, move/attachment/commit
 failure recovery, answered-question correction (including missing channel), cross-process apply
 and scoped trailers). Extend existing `triage.doctest.md` for
 Jev routing/held questions/reasons and CLI-contract tests for JSON/errors/budgets.
@@ -503,7 +508,7 @@ observations, never CI golden probabilities. No full suite in this worktree.
 
 1. Completed: household corpus regeneration, preparation, live baselines and
    instruction probe; this full plan pass and cross-model adjudication.
-2. After size/scope approval: intake attachment continuity, evidence/instruction
+2. Approved and implemented: intake attachment continuity, evidence/instruction
    schemas and adapters with tests.
 3. Judge/preview CLI and budgets; preserve legacy default and explicit Jev opt-in.
 4. Receipts/apply/provenance and interruption tests; then discovery/replay commands.
@@ -513,11 +518,36 @@ observations, never CI golden probabilities. No full suite in this worktree.
 
 ## Rollout shape
 
-The experiments are complete; production code is unchanged. Tests are authored
-before the corresponding implementation chunks and all named paths must pass
-before enabling Jev for an approved box. Existing agent triage remains default;
+The experiments and document implementation are complete in this worktree;
+validation and cross-model review are recorded below. All required checks must
+pass before landing or enabling Jev for an approved box. Existing agent triage remains default;
 `--engine jev --dry-run` is the first real-box trial only when separately authorized.
 Then explicit Jev application exercises receipts and recovery. The legacy path
 remains available for rollback without erasing receipts. No existing card shape is
 reinterpreted; new receipt JSON is versioned and validated, so no historical data
 migration is proposed. The issue stays open for quick capture and Gmail admission.
+
+## Implementation validation record
+
+- Source: `core/triage/{evidence,snapshot,judge,allowance}.ts`, `auto/`, and
+  `decisions/`; the CLI lives under `cli/commands/triage/`. Intake and ordinary
+  move share `core/card-files/move-phase2.ts`.
+- Four real Claude knowledge audits passed, including installed-document
+  discovery; the unchanged guide/context word budgets pass.
+- The change-selected run passed 493 files and 6,777 assertions. Focused
+  regressions accompany subsequent review fixes rather than repeating unrelated
+  tests. The final focused run passed 138 assertions across nine files. Backend
+  typecheck, changed-file lint, layout and documentation checks passed. The
+  bundled CLI lifecycle passed preparation, judgment, apply, replay and listing.
+  The final historical-annex replay follow-up passed 47 provenance assertions,
+  backend typecheck and changed-file lint.
+- Two live calls through production preparation and judgment matched the
+  synthetic legal/money examples. No real box content went to providers.
+- Explicit limitations: raw MIME `.eml` is unavailable until decoded by research;
+  already-materialized email cards and HTML are supported. Legacy scan artifacts
+  lack byte-hash provenance and are re-extracted. Vision reports its backend but
+  the current service does not expose an exact model version. Codex USD limits
+  remain unsupported as described above.
+- The security-report amendment is a separate review draft; the security-report
+  skill requires human review before committing those artifacts. No new provider,
+  credential, authentication route or unadmitted-content pipeline was added.

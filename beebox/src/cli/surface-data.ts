@@ -75,7 +75,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "dismiss", audience: "agent", smoke: MUTATES },
   { name: "finish", audience: "agent", smoke: { skip: "deletes the job card it is given" } },
   { name: "intake", audience: "agent", smoke: MUTATES },
-  { name: "triage", audience: "agent", smoke: MUTATES },
+  { name: "triage", audience: "agent", smoke: { run: ["triage", "decisions", "--json"] } },
   { name: "handle", audience: "agent", smoke: MUTATES },
   { name: "reactor", audience: "agent", smoke: MUTATES },
   { name: "finalize", audience: "agent", smoke: MUTATES },

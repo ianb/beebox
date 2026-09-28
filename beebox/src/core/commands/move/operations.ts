@@ -24,7 +24,7 @@ import {
   rewriteViewRefs,
   type Remap,
 } from "../../rewrite-card-refs/core.js";
-import { movePhase2CardFiles } from "./phase2.js";
+import { movePhase2CardFiles } from "../../card-files/move-phase2.js";
 
 export interface MoveOneResult {
   from: string;

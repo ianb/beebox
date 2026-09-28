@@ -182,3 +182,34 @@ JSON.stringify(result)
 ```ts cleanup
 await box.cleanup();
 ```
+
+## Attachments follow all three transitions
+
+Arrival, filename normalization, and advancement move the owned scope. A target
+scope collision leaves the arrival and both scopes intact.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/inbox/House Notice.doc.card", "Household notice");
+await box.write("_content/inbox/House Notice.attach/nested/notice.txt", "Attachment evidence");
+const moved = await runIntake({ boxRoot: box.root });
+JSON.stringify(moved.staged)
+=> ["House_Notice.doc.card"]
+
+(await box.list("_content/inbox/staged")).includes("_content/inbox/staged/House_Notice.attach/nested/notice.txt")
+=> true
+
+await box.write("_content/inbox/Blocked.doc.card", "Do not move");
+await box.write("_content/inbox/Blocked.attach/original.txt", "Original");
+await box.write("_content/inbox/intake/Blocked.attach/other.txt", "Existing target");
+const blocked = await runIntake({ boxRoot: box.root });
+blocked.routed
+=> []
+
+(await box.list("_content/inbox")).includes("_content/inbox/Blocked.doc.card")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```

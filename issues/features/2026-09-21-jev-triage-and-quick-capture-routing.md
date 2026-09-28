@@ -136,3 +136,21 @@ no-match, while concrete best-effort rules controlled ambiguous filing. The
 records the instruction experiment. The complete admitted-document implementation
 plan requires size/scope approval before coding; Gmail admission and quick capture
 remain outside that implementation unit and keep this issue open.
+
+## 2026-09-28 — admitted-document implementation
+
+The boxholder approved the full scope. The worktree adds opt-in `triage --engine
+jev`, preparation/instruction/judgment CLI operations, fixed-evidence and
+prepare-again replay, confirmed-outcome discovery, correction, bounded research,
+and scoped receipt-backed application. Attachment scopes travel with intake
+cards. The default classifier remains the existing agent until explicitly opted in.
+
+The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
+instruction repair and regression replay. All four new knowledge audits passed.
+Receipts intentionally retain prepared evidence until explicit deletion; deleting
+an original alone does not remove snapshots or Git history. Native Codex research
+cannot enforce a USD ceiling, though tool turns and Jev calls remain bounded.
+
+This issue stays open: Gmail pre-materialization admission and quick capture are
+not implemented here. No real box was used for model probes; worktree commits do
+not deploy. Final implementation checks are recorded in the linked plan/review.

@@ -37,6 +37,7 @@ export function createCodexAgent(options: CreateCodexAgentOptions): Agent {
     invocationCount += 1;
     return {
       boxRoot: invoke.boxRoot,
+      env: invoke.env,
       signal: invoke.signal,
       task: options.name,
       systemPrompt: invoke.systemPrompt ?? "",

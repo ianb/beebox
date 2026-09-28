@@ -1,4 +1,65 @@
 tests:
+  # === Replayable document triage ===
+  # Status (2026-09-28, Claude): 4/4 passed on the isolated test1 clone.
+  # Direct audits: 0 reads/searches, 37-38k context. Rule repair read the installed
+  # triage-instructions.md reference (1 read/search, 38k initial / 43k peak).
+  # Temporary physical package docs replaced the checkout symlink for the audit,
+  # then the original package link and package/lock files were restored.
+  - id: triage-cli-replay
+    prompt: >
+      An agent wants to compare new triage instructions with an old decision.
+      Does replay apply the result or trigger a research agent? Explain only;
+      do not read files, use tools, or change anything.
+    expected_level: knows_directly
+    watch_for: "Knows replay is an experiment without application or research"
+    correct_matches:
+      - '(?:never|not|no|doesn.t|without)[\s\S]{0,140}(?:appl|mov|rout)'
+      - '(?:never|not|no|doesn.t|without)[\s\S]{0,140}(?:research|agent)'
+    tags: [jev-triage]
+
+  - id: triage-rule-repair
+    prompt: >
+      A filing decision was wrong. Explain the supported scientific workflow
+      to repair its instructions and test for regressions. Consult the engine
+      reference before answering. Explain only; do not change any files or
+      invoke a model classification.
+    expected_level: knows_about
+    watch_for: "Reads the triage reference, tests a hypothesis against failed and confirmed neighboring cases, and reports weak coverage honestly"
+    should_read_any: [node_modules/beebox/box-docs/triage-instructions.md]
+    correct_contains: ["--compare original", "--max-calls"]
+    correct_matches:
+      - 'hypothes|candidate'
+      - 'confirm[\s\S]{0,220}(?:case|decision)|(?:case|decision)[\s\S]{0,220}confirm'
+      - 'regress|negative|neighbor|boundary'
+      - '(?:weak|lack|no|missing)[\s\S]{0,200}(?:coverage|confirm|history)|(?:coverage|history)[\s\S]{0,160}(?:weak|limit|honest)'
+    tags: [jev-triage]
+
+  - id: triage-source-policy
+    prompt: >
+      Where do the overarching document filing policy and the individual
+      destination boundaries belong? Is best-effort placement forbidden?
+      Explain briefly without reading files, using tools, or changing anything.
+    expected_level: knows_directly
+    watch_for: "Distinguishes intake policy from landmark destination rules and permits explicitly authorized best effort"
+    correct_matches:
+      - 'intake[\s\S]{0,40}guide|guide[\s\S]{0,80}(?:policy|decision)'
+      - 'landmark[\s\S]{0,120}(?:destination|boundar)|(?:destination|boundar)[\s\S]{0,120}landmark'
+      - '(?:best.effort|do.your.best)[\s\S]{0,160}(?:permit|allow|policy|instruction)|(?:permit|allow|policy|instruction)[\s\S]{0,160}(?:best.effort|do.your.best)'
+    tags: [jev-triage]
+
+  - id: triage-evidence-honesty
+    prompt: >
+      A document's attachment could not be extracted, so the classifier has
+      no necessary content. Should this mean no category fits? Separately,
+      an item has not been corrected by the user: is that a confirmed example?
+      Explain only, without reading files or using tools.
+    expected_level: knows_directly
+    watch_for: "Calls missing necessary evidence unclear and refuses to infer confirmation from silence"
+    correct_contains: [unclear]
+    correct_matches:
+      - '(?:not|no|never|isn.t|doesn.t)[\s\S]{0,160}(?:confirm|correct|verified)|(?:silence|uncorrected)[\s\S]{0,160}(?:not|isn.t|doesn.t)'
+    tags: [jev-triage]
+
   # === Quick chat routing ===
   # Status (2026-09-21, Claude): 1/1 passed, 0 reads/searches, 23k context,
   # against a disposable standalone clone with installed package-doc files.

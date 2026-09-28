@@ -144,3 +144,12 @@ agent-led instruction correction and per-item commit provenance. Mandatory
 upfront calibration is not required. The full plan describes those contracts; the production evidence,
 admission, pending-state migration, and Jev-routing integration remain work
 to implement. Quick-capture routing is outside this workstream.
+
+## Implementation smoke
+
+After implementing the production preparation/snapshot/judgment functions, two
+fresh live calls used the first two household fixtures through those functions
+in a disposable synthetic box. Both matched their authored targets (legal and
+money), returning `typesafe/jev-1.13-20260917`. This checks the production request
+shape against the real provider; it is not a new accuracy study. No real box
+content was sent. Deterministic tests cover routing, replay and recovery.

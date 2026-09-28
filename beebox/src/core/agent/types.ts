@@ -18,6 +18,8 @@ export interface AgentInvokeOptions {
   /** Cancellation of this invocation, including its harness subprocess. */
   signal?: AbortSignal | undefined;
   boxRoot: string;
+  /** Per-invocation subprocess additions, without changing the parent environment. */
+  env?: Record<string, string> | undefined;
   /** System prompt — provided on first invoke, omitted on resume. */
   systemPrompt?: string;
   /** User prompt for this invocation. */
