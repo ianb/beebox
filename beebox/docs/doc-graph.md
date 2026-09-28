@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-28T03:11:40Z
-Total documents: 456
+Generated: 2026-09-28T18:59:41Z
+Total documents: 457
 
 ## Issues
 
@@ -306,6 +306,7 @@ Referenced by:
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:23 (mention) — Related: the noisy-output policy in the root CLAUDE.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:8 (mention) — it spawns an agent with a box cwd and box CLAUDE.md context and checks
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/CLAUDE.md`.
+- ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:11 (mention) — Doctests are this repository's default test form (`beebox/CLAUDE.md`), and
 - ../issues/decisions/2026-08-25-issue-relationship-fields.md:41 (mention) — context, which lives in CLAUDE.md/docs here. Not needed.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:8 (mention) — Still-open items from the 2026-04-28 CLAUDE.md self-audit
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:22 (mention) — CLAUDE.mds) and spot-check their concrete claims against code —
@@ -314,6 +315,7 @@ Referenced by:
 - ../issues/docs-and-chores/2026-09-16-remove-claude-isms-from-repo-docs.md:43 (mention) — 1. **Sweep.** Rewrite hits in present-tense reference docs, CLAUDE.md files,
 - ../issues/docs-and-chores/2026-09-18-move-to-agents-md-only.md:20 (mention) — after install. The documented workaround for those is to keep a `CLAUDE.md`
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:35 (mention) — - **Always referenced, from the same directory.** The `CLAUDE.md` in the
+- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:22 (mention) — repeats the routing in the root `CLAUDE.md`. Move any line it has that
 - ../issues/exploration/2026-03-04-claude-code-memory-concerns.md:11 (mention) — - Custom subagents don't inherit CLAUDE.md or `.claude/rules/` (only built-in subagents do)
 - ../issues/exploration/2026-05-19-subagent-strategy.md:28 (mention) — Connected concern: subagents in beebox don't inherit CLAUDE.md or rules (per [Claude Code Memory Concerns](2026-03-04-cl
 - ../issues/exploration/2026-05-28-before-you-build-this.md:12 (mention) — Convention to make it stick: a short rule in `CLAUDE.md` ("before writing a new component / helper / schema, run `bbx re
@@ -516,6 +518,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:18 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
 - ../issues/closed/code-quality/2026-08-26-bin-typescript-is-not-linted.md:25 (mention) — budget, per `code-style.md`, so expect justified exceptions there).
+- ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:84 (mention) — `beebox/code-style.md` already says a file drops the redundant prefix when
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:103 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
 - ../issues/closed/decisions/2026-07-15-single-export-should-ignore-types.md:16 (mention) — convention (`code-style.md`) plus review covers the residual concern. The custom
 - ../issues/closed/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:35 (at-include) — - Engine side: `beebox/CLAUDE.md:174` uses `@code-style.md` (an @-include of a
@@ -523,8 +526,8 @@ Referenced by:
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/code-quality/2026-09-14-principles-to-rules-loop.md:29 (mention) — mechanical rules — its own words, *"`code-style.md` says how to write a line,
 - ../issues/code-quality/2026-09-14-what-can-we-remove-sweep.md:39 (mention) — - **`code-style.md`'s defensiveness rules** and principle 6 already say what
-- ../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:73 (mention) — `beebox/code-style.md` already says a file drops the redundant prefix when
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
+- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:35 (mention) — - **Guidance:** `beebox/code-style.md` (links the audit twice, in the lint
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:27 (mention) — >   line in `code-style.md`, or both; not whether to adopt the idea.
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
@@ -671,7 +674,7 @@ Referenced by:
 - docs/security-report.md:307 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
-- ../CLAUDE.md:59 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
+- ../CLAUDE.md:61 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:38 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
@@ -1017,6 +1020,7 @@ Referenced by:
 - src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/development/
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts` (move
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:105 (mention) — `doc-graph.md` is now. The developer does not expect agents editing the
+- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:38 (mention) — - **Docs:** `beebox/docs/doc-graph.md` (regenerate it),
 
 #### docs/engineering-principles.md
 
@@ -1485,8 +1489,8 @@ Referenced by:
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/file-layout.md:57 (mention) — - `docs/module-map.md`: the four shared-code directories and their dependency
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:23 (mention) — added to `OUTSIDE_VITE_SHARED_RAW`. Pattern documented in `docs/module-map.md`.
+- ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:165 (mention) — - The layout rules become the current owner in `beebox/docs/module-map.md`,
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:141 (mention) — is a future boxholder question; `docs/module-map.md` now documents the
-- ../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:154 (mention) — - The layout rules become the current owner in `beebox/docs/module-map.md`,
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:57 (mention) — encapsulating low-level mechanics** — `docs/module-map.md` and the
 - ../issues/features/2026-08-12-structured-module-docs-and-code-search.md:44 (mention) — - **`beebox/docs/module-map.md`** — a discoverability contract for where
 
@@ -1608,9 +1612,10 @@ Referenced by:
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
-- ../CLAUDE.md:55 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
+- ../CLAUDE.md:57 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
 - ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:16 (mention) — > as the search path) now live in `beebox/docs/README.md` "Organizing
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:38 (mention) — addressed (`docs/README.md` says so), so an invitee browsing `docs/`
+- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:21 (mention) — - **`docs/README.md` is deleted.** It is a documentation map that mostly
 - ../issues/exploration/2026-09-25-diataxis-for-agent-facing-docs.md:38 (mention) — in `beebox/docs/README.md` (flat reference, `design/` for why, `plans/`,
 
 References:
@@ -1701,6 +1706,7 @@ Referenced by:
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
 - docs/testing/doctests.md:135 (mention) — Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake,
+- docs/testing/real-models.md:31 (link) — the secret ([secrets](../secrets.md)). Grants are keyed by box slug, so a
 - ../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md:21 (mention) — > `setHqService`/`setBackend`). See `beebox/docs/secrets.md#picking-a-service-the-box-cannot-reach-yet`.
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
 
@@ -1822,7 +1828,7 @@ References:
 
 #### docs/testing.md
 
-Title: "Testing" | 57 lines | current reference
+Title: "Testing" | 58 lines | current reference
 
 Referenced by:
 - CLAUDE.md:17 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
@@ -1901,6 +1907,7 @@ References:
 - → docs/development/workflow.md (link)
 - → docs/testing/doctests.md (link)
 - → docs/testing/tap-tests.md (link)
+- → docs/testing/real-models.md (link)
 - → docs/testing/knowledge-audits.md (link)
 - → docs/testing/session-critiques.md (link)
 - → docs/testing/dev-stubs.md (link)
@@ -2344,7 +2351,7 @@ Referenced by:
 - docs/cards/format.md:144 (link) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/implemented-plans/doc-structure-cards.md:60 (mention) — | `card-validation.md` | `cards/validation.md` |
 - docs/implemented-plans/docs-reorg.md:318 (mention) — `docs/cards/validation.md`); findability quick wins (Guides rows,
-- docs/testing.md:42 (link) — | [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during ag
+- docs/testing.md:43 (link) — | [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during ag
 - ../issues/closed/bugs/2026-09-21-validate-hook-warning-vs-error-exit-code.md:19 (mention) — the agent harness's PostToolUse hook (`beebox/docs/cards/validation.md:13`):
 
 References:
@@ -4057,6 +4064,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:357 (mention) — - Unanswered from the gap analysis (docs-reorg.gap-analysis.md B6–B9):
 - docs/implemented-plans/remove-bbx-render.md:351 (mention) — - `docs/plans/docs-reorg.gap-analysis.md:57-59` — cites the SSR `window`-guard
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
+- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:39 (mention) — `beebox/docs/implemented-plans/docs-reorg.gap-analysis.md`,
 
 References:
 - → docs/implemented-plans/docs-reorg.md (link)
@@ -4247,7 +4255,7 @@ References:
 Title: "Layout check: the script that enforces the file-layout rules" | 181 lines | shipped history | implemented
 
 References:
-- → ../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
 - → docs/implemented-plans/file-layout.md (link)
 - → CLAUDE.md (mention)
 
@@ -4259,11 +4267,12 @@ Referenced by:
 - code-style.md:111 (link) — - **File naming: PascalCase for a single-React-component file, kebab-case otherwise.** A file whose primary export is on
 - docs/implemented-plans/file-layout.check.subplan.md:10 (link) — Step 3 of [the file-layout plan](file-layout.md): a repo script that reads
 - docs/implemented-plans/file-layout.moves.subplan.md:10 (link) — Step 4 of [the file-layout plan](file-layout.md): move and rename files,
-- ../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:108 (link) — [the file-layout plan](../../beebox/docs/implemented-plans/file-layout.md): five
+- ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:14 (mention) — four requested steps shipped: `beebox/docs/implemented-plans/file-layout.md`
+- ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:119 (link) — [the file-layout plan](../../../beebox/docs/implemented-plans/file-layout.md): five
 
 References:
-- → ../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
-- → ../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (link)
+- → ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (link)
 - → ../issues/features/2026-08-12-structured-module-docs-and-code-search.md (link)
 - → code-style.md (mention)
 - → docs/engineering-principles.md (mention)
@@ -4284,7 +4293,7 @@ References:
 Title: "Layout moves: bring the tree to zero layout-check findings" | 149 lines | shipped history | implemented
 
 References:
-- → ../issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
 - → docs/implemented-plans/file-layout.md (link)
 
 #### docs/implemented-plans/first-run-openers.md
@@ -4881,6 +4890,7 @@ Title: "Calibrate skill discovery and the root agent instructions" | 279 lines |
 
 Referenced by:
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:9 (link) — Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. T
+- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:40 (mention) — `beebox/docs/implemented-plans/prompt-calibration.md`.
 
 References:
 - → ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md (frontmatter)
@@ -7789,7 +7799,7 @@ Title: "Dev stubs" | 64 lines | current reference
 Referenced by:
 - docs/chat/scroll.md:9 (link) — exercise ([dev stubs](../testing/dev-stubs.md)). Two instruments cover it, and a change to
 - docs/implemented-plans/doc-structure.md:303 (mention) — dev-stubs.md           does the streaming UI behave, checked by hand?
-- docs/testing.md:38 (link) — | [Dev stubs](testing/dev-stubs.md) | Does the streaming UI behave, and is every state of a component reachable? Checked
+- docs/testing.md:39 (link) — | [Dev stubs](testing/dev-stubs.md) | Does the streaming UI behave, and is every state of a component reachable? Checked
 - docs/testing/tours.md:58 (link) — the dev-harness pattern in [dev stubs](dev-stubs.md). The line:
 
 References:
@@ -7818,7 +7828,7 @@ Title: "Field tests" | 55 lines | current reference
 Referenced by:
 - docs/implemented-plans/agent-field-tests.md:9 (link) — **Current operation:** see the [field-testing runbook](../testing/field-testing.md).
 - docs/implemented-plans/doc-structure.md:307 (mention) — field-testing.md       is it discoverable end to end through the real UI?
-- docs/testing.md:41 (link) — | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expens
+- docs/testing.md:42 (link) — | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expens
 
 References:
 - → docs/implemented-plans/agent-field-tests.md (link)
@@ -7838,7 +7848,7 @@ Referenced by:
 - docs/plans/general-browser.md:590 (mention) — what it recalls (`beebox/docs/knowledge-audits.md`). This browser is dev-repo
 - docs/plans/public-site-story-extraction.subplan.md:183 (mention) — `beebox/docs/knowledge-audits.md` (distinctive-practice doc),
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:6 (link) — [knowledge audits](../testing/knowledge-audits.md). What remains here is the
-- docs/testing.md:36 (link) — | [Knowledge audits](testing/knowledge-audits.md) | Does the box agent know X, from what it is given? | no | model turns
+- docs/testing.md:37 (link) — | [Knowledge audits](testing/knowledge-audits.md) | Does the box agent know X, from what it is given? | no | model turns
 - docs/user-stories/catalog/2026-06-26.md:5681 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/testing/knowledge-audits.md` |
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't
@@ -7862,6 +7872,17 @@ References:
 - → README.md (mention)
 - → MAP.md (at-include) **[BROKEN]**
 
+#### docs/testing/real-models.md
+
+Title: "Real model calls" | 57 lines | current reference
+
+Referenced by:
+- docs/testing.md:36 (link) — | [Real model calls](testing/real-models.md) | How does the real model or API behave, beyond what a fake shows? Experime
+- ../CLAUDE.md:35 (link) — Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys
+
+References:
+- → docs/secrets.md (link)
+
 #### docs/testing/session-critiques.md
 
 Title: "Session critiques" | 59 lines | current reference
@@ -7869,7 +7890,7 @@ Title: "Session critiques" | 59 lines | current reference
 Referenced by:
 - docs/development/maintenance.md:49 (mention) — | Session critiques | `@session-critique <id>` | After a session that seemed slow or worked around the CLI; periodically
 - docs/implemented-plans/doc-structure.md:302 (mention) — session-critiques.md   did the tools serve the agent in a real session?
-- docs/testing.md:37 (link) — | [Session critiques](testing/session-critiques.md) | Did the CLI tools help or hinder the agent in a real session? | no
+- docs/testing.md:38 (link) — | [Session critiques](testing/session-critiques.md) | Did the CLI tools help or hinder the agent in a real session? | no
 
 #### docs/testing/smoke.md
 
@@ -7877,7 +7898,7 @@ Title: "Smoke" | 101 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:305 (mention) — smoke.md               does the app boot and walk at all? (the merge gate)
-- docs/testing.md:39 (link) — | [Smoke](testing/smoke.md) | Does the app boot and walk at all? | merge, for deployed paths | about 30 s |
+- docs/testing.md:40 (link) — | [Smoke](testing/smoke.md) | Does the app boot and walk at all? | merge, for deployed paths | about 30 s |
 - docs/testing/tours.md:27 (link) — [smoke review](smoke.md), which files and never edits, is by design.
 
 #### docs/testing/tap-tests.md
@@ -7899,7 +7920,7 @@ Referenced by:
 - docs/plans/agent-docs.md:383 (mention) — - held back (dev process or internal record): `testing.md`, `tours.md`,
 - docs/plans/agent-points-at-ui.md:133 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
-- docs/testing.md:40 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
+- docs/testing.md:41 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
 - ../.claude/skills/bbx-plan/TEMPLATE.md:158 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:46 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
 - ../issues/closed/code-quality/2026-08-26-repair-tours-and-check-them-weekly.md:27 (mention) — (`beebox/docs/tours.md` keeps them out of pre-commit and the suite on
@@ -8072,7 +8093,7 @@ References:
 Title: "User stories" | 278 lines | current reference
 
 Referenced by:
-- docs/testing.md:43 (link) — | [User-stories catalog](user-stories/README.md) | What can the software actually do? Claims read from the source by age
+- docs/testing.md:44 (link) — | [User-stories catalog](user-stories/README.md) | What can the software actually do? Claims read from the source by age
 - docs/user-stories/README.md:23 (mention) — README.md                this file
 - docs/user-stories/catalog/2026-08-21.md:7 (link) — method are in [the pipeline README](../README.md). The underlying
 - ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:61 (link) — [the pipeline README](../../beebox/docs/user-stories/README.md).

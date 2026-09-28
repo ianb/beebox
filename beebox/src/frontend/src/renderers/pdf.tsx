@@ -7,6 +7,7 @@
 import { apiRawFileUrl, getApiBase } from "../api";
 import { PdfFrame } from "../components/PdfFrame";
 import { Text } from "../components/ui/Text";
+import { toDisplayPath } from "@shared/display-path";
 import { useVersionedFileUrl } from "../hooks/useVersionedFileUrl";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 
@@ -17,8 +18,9 @@ function PdfRenderer({ data, mode, workspacePdf }: RendererProps) {
   const apiBase = getApiBase();
   const rawUrl = apiRawFileUrl(apiBase, data.path);
   const src = useVersionedFileUrl(rawUrl, { path: data.path });
-  if (src === null) return <Text as="div" tone="subtle" className="p-4">Loading PDF…</Text>;
-  return <PdfFrame src={src} title={basename} downloadName={basename} mode={mode ?? "page"} workspacePdf={workspacePdf} />;
+  if (src.state === "loading") return <Text as="div" tone="subtle" className="p-4">Loading PDF…</Text>;
+  if (src.state === "missing") return <Text as="div" tone="subtle" className="p-4">File not found: {toDisplayPath(data.path)}</Text>;
+  return <PdfFrame src={src.url} title={basename} downloadName={basename} mode={mode ?? "page"} workspacePdf={workspacePdf} />;
 }
 
 export const pdfRenderer: RendererEntry = {

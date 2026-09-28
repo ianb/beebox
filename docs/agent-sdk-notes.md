@@ -32,20 +32,21 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.282`, Codex `0.156.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.283`, Codex `0.157.1` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.283` (SDK), `2.1.283` (Claude Code), `0.157.1` (Codex)
+- **Latest reviewed upstream version:** `0.3.284` (SDK), `2.1.284` (Claude Code), `0.158.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.282` this turn. The
-  `0.3.283` re-read owed from the last turn is done (its entry is now a review,
-  not a bound); it settles 2026-09-27T18:49Z. Codex `0.157.0` settles
-  2026-09-27T02:35Z, `0.157.1` a day later. `verbatimPrompts` remains available
-  in the pin and unset; see the `0.3.280` entry.
+- **Current recommendation:** Both families moved this turn — Agent SDK to
+  `0.3.283`, Codex to `0.157.1` (taking `0.157.0` with it). Next: `0.3.284`
+  (settles 2026-09-30T17:15Z) and Codex `0.158.0` (2026-09-30T05:12Z). Open:
+  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`. With
+  `0.3.280`+ pinned, `verbatimPrompts` is available and still unset; see the
+  `0.3.280` entry.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -72,7 +73,49 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.283 / Claude Code 2.1.283 — pending (published 2026-09-25T18:49Z); reviewed 2026-09-26 after its changelog appeared
+### Codex 0.158.0 — pending (published 2026-09-28T05:12Z, ~16h at this turn)
+
+- **Checked and clear:** *"Terminal input approval is enabled by default for
+  commands running with elevated permissions."* A new approval default could put
+  a prompt in front of beebox's unattended Codex chat, so checked:
+  `src/services/codex-sdk-session/core.ts` runs with `approvalPolicy: "never"`
+  and the box sandbox (`CODEX_BOX_SANDBOX`), so nothing waits on an approval.
+- Also: MCP servers needing pre-registered OAuth client secrets
+  (`codex mcp add --oauth-client-secret`), bearer tokens on direct exec-server
+  WebSocket connections, approval reviews retrying when new user input arrives,
+  command-completion events now carrying early output and reporting launch
+  failures, and sandbox fixes on Windows, Linux and macOS. No removals.
+- **Action:** Settled path; takeable 2026-09-30 with the deploy gate.
+- **Sources:** [Codex rust-v0.158.0](https://github.com/openai/codex/releases/tag/rust-v0.158.0)
+
+### 0.3.284 / Claude Code 2.1.284 — pending (published 2026-09-28T17:15Z, ~4h at this turn)
+
+- **2.1.284 — Sonnet 5.5.** *"Added Claude Sonnet 5.5 (`claude-sonnet-5-5`), now
+  the default Sonnet model on the Anthropic API."* beebox resolves `sonnet` to
+  `claude-sonnet-5` in `beebox/src/shared/model-ids.ts`, the same staleness as
+  the Opus alias a week ago. Probed on the current pin (`0.3.283`, CLI 2.1.283):
+  `model: "claude-sonnet-5-5"` starts and answers, so the table can move without
+  waiting for this release. Filed:
+  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **SDK, relevant:** *"Fixed `query()` closing stdin before a follow-up turn
+  woken by a finished background agent, which failed that turn's hooks,
+  `canUseTool` and SDK MCP calls with 'Stream closed'."* beebox registers
+  `PreToolUse` and `PostToolUse` callbacks (`src/core/sdk-hooks.ts`) — the Write/
+  Edit validator and the `git mv` nudge — so on a turn woken by a background agent
+  those would have failed. Also: `getSessionMessages()` / `forkSession()` fixes
+  (beebox calls neither), and Elicitation hook `{ decision: 'block' }` now
+  honored.
+- **2.1.284, relevant:** Agent SDK sessions no longer crash when a user message
+  contains an image with a malformed `source`, nor fail every later turn after a
+  malformed document block — beebox chat sends user images, and this is the
+  twelfth permanent-wedge fix this ledger has tracked. "Prompt is too long" after
+  compacting now compacts once more instead of persisting. An overloaded error
+  right after a thinking block is now retried. Auto-memory loading neutralizes
+  invisible characters and markup-imitating tags in `MEMORY.md`.
+- **Action:** Settled path; takeable 2026-09-30.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03284), [Claude Code 2.1.284](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21284)
+
+### 0.3.283 / Claude Code 2.1.283 — APPLIED 2026-09-28 (published 2026-09-25T18:49Z); reviewed 2026-09-26 after its changelog appeared
 
 First recorded 2026-09-25 as a bound, when neither changelog had a section for
 it and there was no `v2.1.283` tag. **Re-read 2026-09-26** once both appeared;
@@ -112,18 +155,22 @@ all additive or clarifying — nothing removed or renamed. Bundled CLI is 2.1.28
   `claude-opus-5-5`.
 - `max_thinking_tokens` omitted now leaves the budget unchanged (null resets
   it), and the startup-failure reason list gains a managed-model case.
-- **Action:** Settled path; takeable 2026-09-27. Re-read done.
+- **Action:** Applied 2026-09-28 on the settled path (~75h old). `pnpm -C beebox test`: **12,041 pass, 2 skipped, 0 fail**. `sdk-steering-probe`
+  (now at `beebox/src/scripts/sdk-steering-probe.ts` after the layout move in
+  `079410e97`): all four steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03283), [Claude Code 2.1.283](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21283)
 
-### Codex 0.157.1 — pending, nothing to assess (published 2026-09-26T01:06Z, ~20h at this turn)
+### Codex 0.157.1 — APPLIED 2026-09-28 with 0.157.0, nothing to assess (published 2026-09-26T01:06Z)
 
 The release notes say only that highlights "could not be determined: the supplied
 PR index is empty, and the GitHub tag comparison returned 404" — their notes
 generator failed, so the release is opaque. Nothing to assess on beebox's path.
-- **Action:** Settled path; takeable 2026-09-28 with the deploy gate.
+- **Action:** Applied 2026-09-28 on the settled path, with `0.157.0`, both pins together. Deploy gate on the workspace binary:
+  `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin --help` exits 0 on
+  `codex-cli 0.157.1`.
 - **Sources:** [Codex rust-v0.157.1](https://github.com/openai/codex/releases/tag/rust-v0.157.1)
 
-### Codex 0.157.0 — pending (published 2026-09-25T02:35Z, ~18h at this turn)
+### Codex 0.157.0 — APPLIED 2026-09-28 with 0.157.1 (published 2026-09-25T02:35Z)
 
 GPT-6 Sol and Luna with Bedrock support and migration prompts for older models
 (beebox already resolves `sol`/`luna` to `gpt-6-*`); fullscreen transcripts and

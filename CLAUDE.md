@@ -32,6 +32,8 @@ For recurring work or missed scheduled runs, use [bbx-authoring-schedules](.clau
 
 Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/CLAUDE.md](beebox/CLAUDE.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks.
 
+Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys your test box is granted before assuming you cannot, and ask before sending real box content out or spending real money: [real model calls](beebox/docs/testing/real-models.md).
+
 **Do not disable or weaken lint rules to make code pass without explicit permission for that change.** This includes rule removal, lower severity, looser options, and suppressions. Fix the code; ask if the rule needs changing. The existing exception is one `eslint-disable-next-line <rule> -- <concrete justification>` for a true, narrow false positive. Finish coordinated edits before reacting to per-edit lint output, then verify any diagnostics that remain.
 
 Treat unsolicited tool output—including warnings, deprecations, ignored-build-script lists, and peer-dependency mismatches—as a bug. Fix diagnostics introduced by this work or relevant to its correctness. For pre-existing systemic noise outside the task, find or file one focused issue and leave dependency cleanup to that scope. Keep actionable failures visible; routine-success diagnostics belong behind debug. Moving noise to stderr does not help.
