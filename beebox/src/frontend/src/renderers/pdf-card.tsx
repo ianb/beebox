@@ -11,6 +11,7 @@
 import { useParams } from "@tanstack/react-router";
 import { PdfCardView } from "../components/PdfCardView/view";
 import { PdfFrame } from "../components/PdfFrame";
+import { toDisplayPath } from "@shared/display-path";
 import { useVersionedFileUrl } from "../hooks/useVersionedFileUrl";
 import { Text } from "../components/ui/Text";
 import { apiFileUrl, resolveRelativePath } from "../lib/view-url";
@@ -37,10 +38,11 @@ function OriginalDocumentView({ data, mode }: RendererProps) {
     );
   }
   const name = originalPath.split("/").pop() ?? originalPath;
-  if (src === null) return <Text as="div" tone="subtle" className="p-4">Loading PDF…</Text>;
+  if (src.state === "loading") return <Text as="div" tone="subtle" className="p-4">Loading PDF…</Text>;
+  if (src.state === "missing") return <Text as="div" tone="subtle" className="p-4">Original file not found: {toDisplayPath(originalPath)}</Text>;
   return (
     <PdfFrame
-      src={src}
+      src={src.url}
       title={name}
       downloadName={name}
       mode={mode ?? "page"}
