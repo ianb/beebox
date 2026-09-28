@@ -13,6 +13,7 @@ import type { WorktreeHandle } from "../lifecycle.js";
 import type { SpawnedChild } from "../effects.js";
 import { onChildExit, type CoreState } from "./worktree-teardown.js";
 import type { StartPlan, StartProgress } from "./worktree-start.js";
+import { resolveBackendEntryPath } from "./backend-entry.js";
 
 /**
  * How long a generation may take to answer HTTP.
@@ -88,11 +89,18 @@ export async function spawnGeneration(
   // content dir (see box-entry.ts) — resolve to {contentDir, slug} before
   // handing off to the backend, which no longer guesses the slug itself.
   const resolvedBoxes = await effects.resolveBoxEntries(wt.boxes);
+  // Resolved once per generation spawn (not inside the readiness-poll loop
+  // below), so a fallback to a pre-rename path warns exactly once per spawn
+  // attempt. See core/backend-entry.ts.
+  const warnStalePath = (msg: string): void => console.warn(msg);
+  const resolveEntry = (key: "hubEntry" | "noHubEntry" | "tsxPreload"): Promise<string> =>
+    resolveBackendEntryPath({ pathExists: effects.pathExists, warn: warnStalePath, checkoutBackendCwd: wt.backendCwd, key });
   const backendArgs = config.devNoHub
-    ? ["./src/webapp/server-main.ts", ...resolvedBoxes.map(boxEntryToArg)]
-    : ["./src/cli/entry/run.ts", "engine", "hub", "--config", await effects.writeHubConfig({ name, backendPort, resolvedBoxes })];
+    ? [await resolveEntry("noHubEntry"), ...resolvedBoxes.map(boxEntryToArg)]
+    : [await resolveEntry("hubEntry"), "engine", "hub", "--config", await effects.writeHubConfig({ name, backendPort, resolvedBoxes })];
+  const tsxPreload = await resolveEntry("tsxPreload");
   const fastify = effects.spawn("node", {
-    args: ["--import=./tsx-preload.mjs", "--import", "tsx", ...backendArgs],
+    args: [`--import=${tsxPreload}`, "--import", "tsx", ...backendArgs],
     options: {
       cwd: wt.backendCwd,
       env: childEnv,

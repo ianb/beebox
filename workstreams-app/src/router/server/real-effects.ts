@@ -56,6 +56,17 @@ async function frontendViteBin(frontendCwd: string): Promise<string> {
   return viteBin;
 }
 
+/** Backs `resolveBackendEntryPath`'s current-path/pre-rename-path fallback
+ *  (core/backend-entry.ts). */
+export async function pathExists(absolutePath: string): Promise<boolean> {
+  try {
+    await fs.access(absolutePath);
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
+
 export async function resolveWorktree(name: string): Promise<ResolvedWorktree | null> {
   if (name === "main") {
     const frontendCwd = path.join(MAIN_ROOT, "beebox", "src", "frontend");
@@ -388,6 +399,7 @@ export function createRealEffects(): RouterEffects {
     getPort: () => getPorts(),
     resolveWorktree,
     resolveBoxEntries,
+    pathExists,
     sourceToken: backendSourceToken,
   };
 }

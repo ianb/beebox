@@ -98,6 +98,9 @@ export interface RouterEffects {
   getPort(): Promise<number>;
   resolveWorktree(name: string): Promise<ResolvedWorktree | null>;
   resolveBoxEntries(entries: string[]): Promise<ResolvedBoxEntry[]>;
+  /** Whether a path exists on disk. Backs `resolveBackendEntryPath`'s
+   *  current-path/pre-rename-path fallback (core/backend-entry.ts). */
+  pathExists(absolutePath: string): Promise<boolean>;
   /** A token identifying the backend source in a checkout, for detecting that a
    *  running generation is executing code that has since changed on disk.
    *  Returns `null` when it cannot be computed — which disables the comparison

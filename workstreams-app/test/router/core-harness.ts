@@ -296,6 +296,10 @@ export async function makeHarness(options?: { devNoHub?: boolean }): Promise<Har
       return { name, root: tmp, backendCwd: tmp, frontendCwd: tmp, viteBin: path.join(tmp, "frontend-vite"), boxes: [] };
     },
     resolveBoxEntries: async () => [],
+    // Current-layout candidates always "exist" so tests exercise the same
+    // spawn args as production's normal (non-fallback) path; backend-entry
+    // resolution itself is unit-tested in backend-entry.test.ts.
+    pathExists: () => Promise.resolve(true),
     sourceToken: () => Promise.resolve(sourceToken.value),
   };
 
