@@ -67,6 +67,7 @@ export async function judgeItem(boxRoot: string, options: JudgeItemOptions): Pro
   const input = buildTriageRequest(options);
   const serialized = serializeJudgeRequest(input);
   const requestedModel = options.model ?? JEV_MODEL;
+  // TODO(env-migration): Lazy Jev-key resolution is a feature-specific env read.
   const service = options.jev === undefined ? await resolveJudgeService(boxRoot, options.env ?? process.env) : { kind: "ready" as const, jev: options.jev, fake: true };
   if (service.kind !== "ready") throw new TriageJudgmentError({ reason: service.kind === "unconfigured" ? "unconfigured" : "fake" });
   if (!options.budgetReserved) {

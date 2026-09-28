@@ -22,6 +22,7 @@ function allowancePath(boxRoot: string, id: string): string {
 export async function reserveRunCalls(boxRoot: string, count: number): Promise<void> {
   if (!Number.isInteger(count) || count < 1) throw new TriageAllowanceError({ detail: "invalid call count" });
   const inherited = context.getStore();
+  // TODO(env-migration): These inherited allowance markers are harness-only feature flags.
   const id = inherited?.id ?? process.env.BBX_TRIAGE_RUN_ID;
   if (!id) return;
   const file = allowancePath(boxRoot, id);
@@ -40,6 +41,7 @@ export async function reserveRunCalls(boxRoot: string, count: number): Promise<v
 
 /** One automatic run, shared by core calls and the agent's CLI subprocesses. */
 export async function withTriageAllowance<T>(boxRoot: string, run: (env: Record<string, string>) => Promise<T>): Promise<T> {
+  // TODO(env-migration): The inherited run marker is a harness-only feature flag.
   if (context.getStore() || process.env.BBX_TRIAGE_RUN_ID) throw new TriageAllowanceError({ detail: "recursive automatic triage is not allowed; use replay/judge" });
   const id = randomUUID();
   const file = allowancePath(boxRoot, id);
