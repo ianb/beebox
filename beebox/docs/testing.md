@@ -33,6 +33,7 @@ landing that broke it.
 |---|---|---|---|
 | [Doctests](testing/doctests.md) | Does this function, route, or box operation behave? Includes service fakes for every external dependency. | pre-commit (selected) | seconds |
 | [TAP tests](testing/tap-tests.md) | Does the test infrastructure itself work? What a doctest cannot test without circularity. | pre-commit (selected) | seconds |
+| [Real model calls](testing/real-models.md) | How does the real model or API behave, beyond what a fake shows? Experiments and calibration, not committed tests. | no | usually cents |
 | [Knowledge audits](testing/knowledge-audits.md) | Does the box agent know X, from what it is given? | no | model turns |
 | [Session critiques](testing/session-critiques.md) | Did the CLI tools help or hinder the agent in a real session? | no | model turns |
 | [Dev stubs](testing/dev-stubs.md) | Does the streaming UI behave, and is every state of a component reachable? Checked by hand in a browser. | no | minutes |
