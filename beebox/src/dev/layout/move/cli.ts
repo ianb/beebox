@@ -15,6 +15,11 @@
  * this tool existed. Computes the old->new mapping from git's rename
  * detection between `<base>` and `HEAD` (`git-renames.ts`) and runs only the
  * mention rewrite over it — no `git mv`, no import-specifier rewrite.
+ *
+ * `pnpm layout-move --annotate-from-git <base> [--dry-run]`: for old-path
+ * mentions `--mentions-from-git` deliberately left alone (history documents,
+ * ambiguous hits), appends a `(moved to \`<new path>\`)` note instead of
+ * rewriting the text — see `mention-annotate.ts`.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -22,14 +27,18 @@ import { applyRewrites, moveFiles } from "./apply.js";
 import { collectRewrites, collectSources } from "./edges.js";
 import { computeRenamesFromGit } from "./git-renames.js";
 import { parseMoveList } from "./list.js";
+import { ANNOTATE_AREAS, computeMentionAnnotate } from "./mention-annotate.js";
 import { computeMentionRewrite, type MentionRewriteResult } from "./mention-rewrite.js";
 import { reportMentions } from "./mentions.js";
 import { scanRoots } from "./roots.js";
 import { validateMoveList } from "./validate.js";
 
+const USAGE =
+  "usage: layout-move <moves.json> [--dry-run] [--no-rewrite-mentions] | layout-move --mentions-from-git <base> [--dry-run] | layout-move --annotate-from-git <base> [--dry-run]";
+
 export class MissingMoveListArgumentError extends Error {
   constructor() {
-    super("usage: layout-move <moves.json> [--dry-run] [--no-rewrite-mentions] | layout-move --mentions-from-git <base> [--dry-run]");
+    super(USAGE);
     this.name = "MissingMoveListArgumentError";
   }
 }
@@ -41,10 +50,17 @@ export class MissingMentionsFromGitBaseError extends Error {
   }
 }
 
+export class MissingAnnotateFromGitBaseError extends Error {
+  constructor() {
+    super("--annotate-from-git requires a <base> ref argument");
+    this.name = "MissingAnnotateFromGitBaseError";
+  }
+}
+
 export class UnknownArgumentError extends Error {
   readonly argument: string;
   constructor(argument: string) {
-    super("unknown argument; expected a move list path and optional --dry-run/--no-rewrite-mentions, or --mentions-from-git <base>");
+    super(`unknown argument; ${USAGE}`);
     this.name = "UnknownArgumentError";
     this.argument = argument;
   }
@@ -63,13 +79,20 @@ interface MentionsFromGitArgs {
   dryRun: boolean;
 }
 
-type Args = MoveListArgs | MentionsFromGitArgs;
+interface AnnotateFromGitArgs {
+  mode: "annotate-from-git";
+  base: string;
+  dryRun: boolean;
+}
+
+type Args = MoveListArgs | MentionsFromGitArgs | AnnotateFromGitArgs;
 
 export function parseArgs(argv: string[]): Args {
   let moveListPath: string | null = null;
   let dryRun = false;
   let rewriteMentions = true;
-  let base: string | null = null;
+  let mentionsFromGitBase: string | null = null;
+  let annotateFromGitBase: string | null = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === undefined) continue;
@@ -79,12 +102,18 @@ export function parseArgs(argv: string[]): Args {
     else if (arg === "--mentions-from-git") {
       const value = argv[i + 1];
       if (value === undefined) throw new MissingMentionsFromGitBaseError();
-      base = value;
+      mentionsFromGitBase = value;
       i += 1;
-    } else if (moveListPath === null && base === null) moveListPath = arg;
+    } else if (arg === "--annotate-from-git") {
+      const value = argv[i + 1];
+      if (value === undefined) throw new MissingAnnotateFromGitBaseError();
+      annotateFromGitBase = value;
+      i += 1;
+    } else if (moveListPath === null && mentionsFromGitBase === null && annotateFromGitBase === null) moveListPath = arg;
     else throw new UnknownArgumentError(arg);
   }
-  if (base !== null) return { mode: "mentions-from-git", base, dryRun };
+  if (annotateFromGitBase !== null) return { mode: "annotate-from-git", base: annotateFromGitBase, dryRun };
+  if (mentionsFromGitBase !== null) return { mode: "mentions-from-git", base: mentionsFromGitBase, dryRun };
   if (moveListPath === null) throw new MissingMoveListArgumentError();
   return { mode: "move-list", moveListPath, dryRun, rewriteMentions };
 }
@@ -120,8 +149,39 @@ function runMentionsFromGit(args: MentionsFromGitArgs): void {
   printMentionRewriteSummary(result, { dryRun: args.dryRun });
 }
 
+const AREA_LABELS: Record<(typeof ANNOTATE_AREAS)[number], string> = {
+  plans: "plans",
+  "implemented-plans": "implemented-plans",
+  "issues-closed": "issues/closed",
+  "issues-open": "issues (open)",
+  research: "research",
+  other: "other",
+};
+
+function runAnnotateFromGit(args: AnnotateFromGitArgs): void {
+  const roots = scanRoots(REPO_ROOT);
+  const { result, rejected } = computeMentionAnnotate({ repoRoot: REPO_ROOT, base: args.base, roots });
+  console.log(`layout-move: annotate-from-git (base ${args.base})`);
+  if (rejected.length > 0) {
+    console.log(`layout-move: ${rejected.length} rejected rename(s)`);
+    for (const r of rejected) console.log(`  ${r.from} -> ${r.to}: ${r.reason}`);
+  }
+  if (!args.dryRun) {
+    for (const [path, text] of result.fileEdits) writeFileSync(resolve(REPO_ROOT, path), text, "utf8");
+  }
+  const verb = args.dryRun ? "would annotate" : "annotated";
+  console.log(`layout-move: mention annotations (${verb})`);
+  for (const area of ANNOTATE_AREAS) console.log(`  ${AREA_LABELS[area]}: ${result.countsByArea.get(area) ?? 0}`);
+  console.log(`  total: ${result.total}`);
+  console.log(`  ${result.fileEdits.size} file(s) touched`);
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  if (args.mode === "annotate-from-git") {
+    runAnnotateFromGit(args);
+    return;
+  }
   if (args.mode === "mentions-from-git") {
     runMentionsFromGit(args);
     return;

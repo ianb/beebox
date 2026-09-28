@@ -39,6 +39,24 @@ export function containsToken(params: { text: string; literal: string; kind?: To
 }
 
 /**
+ * Every path-token match of `literal` in `text`, as character ranges —
+ * `annotate-from-git`'s counterpart to `replaceToken`, which needs match
+ * positions to insert a trailing note rather than substitute text.
+ */
+export function matchTokenRanges(params: { text: string; literal: string; kind?: TokenKind }): Array<{ start: number; end: number }> {
+  const kind = params.kind ?? "file";
+  if (!params.text.includes(params.literal)) return [];
+  const regex = tokenRegex({ literal: params.literal, kind });
+  const ranges: Array<{ start: number; end: number }> = [];
+  let match = regex.exec(params.text);
+  while (match !== null) {
+    ranges.push({ start: match.index, end: match.index + match[0].length });
+    match = regex.exec(params.text);
+  }
+  return ranges;
+}
+
+/**
  * Replaces every path-token match of `oldToken` with `newToken` in `text`.
  * Returns the replaced text and how many occurrences were rewritten.
  */
