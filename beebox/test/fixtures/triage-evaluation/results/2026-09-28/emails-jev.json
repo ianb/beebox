@@ -1,0 +1,610 @@
+{
+  "fake": false,
+  "labels": [
+    "legal",
+    "financial",
+    "property"
+  ],
+  "results": [
+    {
+      "id": "plain-court",
+      "variant": "snippet",
+      "elapsedMs": 286,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_1",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 1,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0,
+            "insufficient": 0
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "relevant",
+          "confidence": 0.98,
+          "probabilities": {
+            "relevant": 0.99,
+            "irrelevant": 0,
+            "insufficient": 0.01
+          }
+        }
+      }
+    },
+    {
+      "id": "plain-court",
+      "variant": "prepared",
+      "elapsedMs": 256,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_1",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 1,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0,
+            "insufficient": 0
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "relevant",
+          "confidence": 0.97,
+          "probabilities": {
+            "relevant": 0.98,
+            "irrelevant": 0,
+            "insufficient": 0.02
+          }
+        }
+      }
+    },
+    {
+      "id": "html-bank",
+      "variant": "snippet",
+      "elapsedMs": 174,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_2",
+          "confidence": 0.97,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0.98,
+            "option_3": 0,
+            "none": 0,
+            "insufficient": 0.02
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "relevant",
+          "confidence": 0.28,
+          "probabilities": {
+            "relevant": 0.52,
+            "irrelevant": 0,
+            "insufficient": 0.48
+          }
+        }
+      }
+    },
+    {
+      "id": "html-bank",
+      "variant": "prepared",
+      "elapsedMs": 282,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_2",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 1,
+            "option_3": 0,
+            "none": 0,
+            "insufficient": 0
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "relevant",
+          "confidence": 0.97,
+          "probabilities": {
+            "relevant": 0.98,
+            "irrelevant": 0,
+            "insufficient": 0.02
+          }
+        }
+      }
+    },
+    {
+      "id": "unrelated-bank",
+      "variant": "snippet",
+      "elapsedMs": 190,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_2",
+          "confidence": 0.68,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0.75,
+            "option_3": 0,
+            "none": 0.05,
+            "insufficient": 0.2
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.81,
+          "probabilities": {
+            "relevant": 0.09,
+            "irrelevant": 0.03,
+            "insufficient": 0.88
+          }
+        }
+      }
+    },
+    {
+      "id": "unrelated-bank",
+      "variant": "prepared",
+      "elapsedMs": 166,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.92,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0.05,
+            "option_3": 0,
+            "none": 0.94,
+            "insufficient": 0.01
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "irrelevant",
+          "confidence": 0.93,
+          "probabilities": {
+            "relevant": 0,
+            "irrelevant": 0.96,
+            "insufficient": 0.04
+          }
+        }
+      }
+    },
+    {
+      "id": "marketing-keywords",
+      "variant": "snippet",
+      "elapsedMs": 158,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.25,
+          "probabilities": {
+            "option_1": 0.15,
+            "option_2": 0.18,
+            "option_3": 0,
+            "none": 0.4,
+            "insufficient": 0.27
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.3,
+          "probabilities": {
+            "relevant": 0.21,
+            "irrelevant": 0.26,
+            "insufficient": 0.53
+          }
+        }
+      }
+    },
+    {
+      "id": "marketing-keywords",
+      "variant": "prepared",
+      "elapsedMs": 183,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 1,
+            "insufficient": 0
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "irrelevant",
+          "confidence": 0.97,
+          "probabilities": {
+            "relevant": 0,
+            "irrelevant": 0.98,
+            "insufficient": 0.02
+          }
+        }
+      }
+    },
+    {
+      "id": "misleading-snippet",
+      "variant": "snippet",
+      "elapsedMs": 181,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.61,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0.69,
+            "insufficient": 0.31
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.79,
+          "probabilities": {
+            "relevant": 0,
+            "irrelevant": 0.14,
+            "insufficient": 0.86
+          }
+        }
+      }
+    },
+    {
+      "id": "misleading-snippet",
+      "variant": "prepared",
+      "elapsedMs": 167,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_3",
+          "confidence": 0.99,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 1,
+            "none": 0,
+            "insufficient": 0
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "relevant",
+          "confidence": 0.91,
+          "probabilities": {
+            "relevant": 0.94,
+            "irrelevant": 0,
+            "insufficient": 0.06
+          }
+        }
+      }
+    },
+    {
+      "id": "relevant-no-destination",
+      "variant": "snippet",
+      "elapsedMs": 188,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.74,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0.79,
+            "insufficient": 0.21
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.35,
+          "probabilities": {
+            "relevant": 0.26,
+            "irrelevant": 0.18,
+            "insufficient": 0.5599999999999999
+          }
+        }
+      }
+    },
+    {
+      "id": "relevant-no-destination",
+      "variant": "prepared",
+      "elapsedMs": 229,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.92,
+          "probabilities": {
+            "option_1": 0.01,
+            "option_2": 0,
+            "option_3": 0.01,
+            "none": 0.93,
+            "insufficient": 0.04
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "relevant",
+          "confidence": 0.77,
+          "probabilities": {
+            "relevant": 0.85,
+            "irrelevant": 0.1,
+            "insufficient": 0.05
+          }
+        }
+      }
+    },
+    {
+      "id": "attachment-only",
+      "variant": "snippet",
+      "elapsedMs": 207,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.92,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0.06,
+            "insufficient": 0.9400000000000001
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.98,
+          "probabilities": {
+            "relevant": 0.01,
+            "irrelevant": 0.01,
+            "insufficient": 0.98
+          }
+        }
+      }
+    },
+    {
+      "id": "attachment-only",
+      "variant": "prepared",
+      "elapsedMs": 186,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.89,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0.07,
+            "option_3": 0,
+            "none": 0.01,
+            "insufficient": 0.92
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.98,
+          "probabilities": {
+            "relevant": 0.01,
+            "irrelevant": 0,
+            "insufficient": 0.99
+          }
+        }
+      }
+    },
+    {
+      "id": "late-relevance",
+      "variant": "snippet",
+      "elapsedMs": 184,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.86,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0.89,
+            "insufficient": 0.11
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "irrelevant",
+          "confidence": 0.56,
+          "probabilities": {
+            "relevant": 0,
+            "irrelevant": 0.71,
+            "insufficient": 0.29
+          }
+        }
+      }
+    },
+    {
+      "id": "late-relevance",
+      "variant": "prepared",
+      "elapsedMs": 273,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_1",
+          "confidence": 0.97,
+          "probabilities": {
+            "option_1": 0.98,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0.02,
+            "insufficient": 0
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "relevant",
+          "confidence": 0.92,
+          "probabilities": {
+            "relevant": 0.95,
+            "irrelevant": 0.03,
+            "insufficient": 0.02
+          }
+        }
+      }
+    },
+    {
+      "id": "conflicting-alternative",
+      "variant": "snippet",
+      "elapsedMs": 231,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.75,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0.2,
+            "insufficient": 0.8
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.98,
+          "probabilities": {
+            "relevant": 0,
+            "irrelevant": 0.02,
+            "insufficient": 0.98
+          }
+        }
+      }
+    },
+    {
+      "id": "conflicting-alternative",
+      "variant": "prepared",
+      "elapsedMs": 264,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.44,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0.45,
+            "insufficient": 0.55
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "insufficient",
+          "confidence": 0.78,
+          "probabilities": {
+            "relevant": 0,
+            "irrelevant": 0.14,
+            "insufficient": 0.86
+          }
+        }
+      }
+    },
+    {
+      "id": "injection",
+      "variant": "snippet",
+      "elapsedMs": 244,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 1,
+            "insufficient": 0
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "irrelevant",
+          "confidence": 0.91,
+          "probabilities": {
+            "relevant": 0,
+            "irrelevant": 0.94,
+            "insufficient": 0.06
+          }
+        }
+      }
+    },
+    {
+      "id": "injection",
+      "variant": "prepared",
+      "elapsedMs": 187,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 1,
+            "insufficient": 0
+          }
+        },
+        "admission": {
+          "type": "choice",
+          "choice": "irrelevant",
+          "confidence": 0.95,
+          "probabilities": {
+            "relevant": 0,
+            "irrelevant": 0.97,
+            "insufficient": 0.03
+          }
+        }
+      }
+    }
+  ]
+}

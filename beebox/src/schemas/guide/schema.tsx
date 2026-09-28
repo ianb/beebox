@@ -114,6 +114,8 @@ A guide is a living document — the theory of the user. Treat it as a model to 
 
 **Confidence ladder:** hypothesis → low → medium → high → confirmed. Only upgrade when there's evidence. Only downgrade when evidence contradicts. Never jump from hypothesis to confirmed in one step.
 
+For document triage, \`_config/intake.guide.card\` governs decisions while landmark destinations define filing boundaries. Before changing either, read \`node_modules/beebox/box-docs/triage-instructions.md\` and test a candidate against prior decisions.
+
 **Source hierarchy:** user-stated > feedback > inferred > default. A user-stated belief overrides anything inferred.
 
 **Retrospective-inferred beliefs.** When enabled, the weekly \`process-retrospective\` mines past

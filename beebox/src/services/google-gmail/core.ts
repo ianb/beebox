@@ -37,6 +37,8 @@ import { listGmailThreads } from "./threads.js";
 // Raw-response types live in google-gmail-types.ts; re-export so existing
 // `./google-gmail.js` type imports keep resolving.
 export type * from "../google-gmail-types.js";
+// Offline replay validates captured responses through the service boundary.
+export { gmailMessageSchema };
 
 // ─── Service interface ───────────────────────────────────────────────────────
 

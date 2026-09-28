@@ -86,3 +86,10 @@ The command reports its worst bucket outcome:
   discovery, classification, routing, markers, and guess questions
 - `src/core/handle.ts` — handler invocation and exit semantics
 - `src/core/docs-gen/package-docs/triage.ts` — the corresponding guide shipped to box agents
+
+## Jev and decision replay
+
+`bbx triage --engine jev` opts into prepared evidence, policy-driven judgment,
+bounded research and Git-backed receipts. The default remains the agent engine.
+Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
+rule repair, correction provenance and retained evidence.

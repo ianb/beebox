@@ -6581,6 +6581,38 @@ test1:
       peak: 39953
       added: 3455
       turns: 4
+  triage-cli-replay:
+    - date: 2026-09-28T20:53:14.689Z
+      boxCommit: ffc5555a33d650ca90ca7bbae481435698b3c2a4
+      repoCommit: 297b25e224f30dd7a1078838b7c3d712be6d31ec
+      initial: 37389
+      peak: 37389
+      added: 0
+      turns: 2
+  triage-rule-repair:
+    - date: 2026-09-28T20:53:14.689Z
+      boxCommit: ffc5555a33d650ca90ca7bbae481435698b3c2a4
+      repoCommit: 297b25e224f30dd7a1078838b7c3d712be6d31ec
+      initial: 37503
+      peak: 42738
+      added: 5235
+      turns: 4
+  triage-source-policy:
+    - date: 2026-09-28T20:53:14.689Z
+      boxCommit: ffc5555a33d650ca90ca7bbae481435698b3c2a4
+      repoCommit: 297b25e224f30dd7a1078838b7c3d712be6d31ec
+      initial: 37495
+      peak: 37495
+      added: 0
+      turns: 2
+  triage-evidence-honesty:
+    - date: 2026-09-28T20:53:14.689Z
+      boxCommit: ffc5555a33d650ca90ca7bbae481435698b3c2a4
+      repoCommit: 297b25e224f30dd7a1078838b7c3d712be6d31ec
+      initial: 37510
+      peak: 37510
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

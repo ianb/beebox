@@ -1,0 +1,38 @@
+[
+  {
+    "requestedModel": "typesafe/jev-1.13",
+    "result": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "financial",
+          "confidence": 1,
+          "probabilities": {
+            "financial": 1,
+            "property": 0,
+            "none": 0
+          }
+        }
+      }
+    }
+  },
+  {
+    "requestedModel": "typesafe/jev-1.13-20260917",
+    "result": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "financial",
+          "confidence": 1,
+          "probabilities": {
+            "financial": 1,
+            "property": 0,
+            "none": 0
+          }
+        }
+      }
+    }
+  }
+]

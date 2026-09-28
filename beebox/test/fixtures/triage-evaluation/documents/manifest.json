@@ -1,0 +1,47 @@
+[
+  {
+    "id": "digital-property",
+    "raw": "raw/digital-property.pdf",
+    "expected_category": "property",
+    "preparation_expectation": "usable native PDF text; no OCR needed",
+    "synthetic": true,
+    "expected_domain": "Odette Marlowe household",
+    "expected_text": "expected-text/digital-property.txt"
+  },
+  {
+    "id": "scan-financial",
+    "raw": "raw/scan-financial.pdf",
+    "expected_category": "financial",
+    "preparation_expectation": "native text empty; rasterize and OCR",
+    "synthetic": true,
+    "expected_domain": "Odette Marlowe household",
+    "expected_text": "expected-text/scan-financial.txt"
+  },
+  {
+    "id": "junk-layer-legal",
+    "raw": "raw/junk-layer-legal.pdf",
+    "expected_category": "legal",
+    "preparation_expectation": "reject nonempty single-character junk layer; rasterize and OCR",
+    "synthetic": true,
+    "expected_domain": "Odette Marlowe household",
+    "expected_text": "expected-text/junk-layer-legal.txt"
+  },
+  {
+    "id": "photo-property",
+    "raw": "raw/photo-property.png",
+    "expected_category": "property",
+    "preparation_expectation": "orientation correction and OCR; retain uncertainty if automatic orientation fails",
+    "synthetic": true,
+    "expected_domain": "Odette Marlowe household",
+    "expected_text": "expected-text/photo-property.txt"
+  },
+  {
+    "id": "corrupt-unreadable",
+    "raw": "raw/corrupt-unreadable.pdf",
+    "expected_category": null,
+    "preparation_expectation": "parse failure; manual preparation review, not semantic no-match",
+    "synthetic": true,
+    "expected_domain": null,
+    "expected_text": null
+  }
+]

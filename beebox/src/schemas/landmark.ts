@@ -204,6 +204,8 @@ Add \`group: <title>\` to an \`expand\` to keep its matches grouped as a **colla
 
 ## \`destinations\` (agent-facing filing targets)
 
+For triage, destination rules explain scope and boundaries; \`_config/intake.guide.card\` governs decision policy. To repair a rule and test regressions, read \`node_modules/beebox/box-docs/triage-instructions.md\`.
+
 \`\`\`yaml
 destinations:
   - for: [triage]           # kinds: triage, commentary, and/or share
