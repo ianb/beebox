@@ -48,7 +48,7 @@ No output means every worktree branch has the current layout: safe to
 retire. Any branch it prints still predates the rename — merge `main` into
 it (or retire the branch) first.
 
-`workstreams-app/test/router/backend-entry.test.ts` has a standing test,
+`workstreams-app/test/router/core/backend-entry.test.ts` has a standing test,
 using the real clock, that starts failing on or after **2026-11-15** as long
 as `BACKEND_ENTRY_CANDIDATES` still has an old-path entry. Its failure
 message repeats the check above. Delete that test too once the fallback is

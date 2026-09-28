@@ -16,7 +16,7 @@
 // below, once no `worktree-*` branch predates it — see
 // issues/deferred/2026-09-27-retire-router-pre-rename-backend-paths.md for
 // the exact check and an expiry date backed by a test in
-// workstreams-app/test/router/backend-entry.test.ts.
+// workstreams-app/test/router/core/backend-entry.test.ts.
 import path from "node:path";
 
 export const BACKEND_ENTRY_CANDIDATES = {
