@@ -34,8 +34,8 @@ const serverEnvSchema = z.object({
   BBX_EXHIBITS_ROOT: z.string().min(1).optional(),
 });
 
-const packageRoot = path.resolve(import.meta.dirname, "../..");
-const repoRoot = path.resolve(import.meta.dirname, "../../..");
+const packageRoot = path.resolve(import.meta.dirname, "../../..");
+const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 
 function exhibitsRoots(env: z.infer<typeof serverEnvSchema>): { storeRoot: string; appsRoot: string } {
   return {
