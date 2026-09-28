@@ -37,6 +37,10 @@ URLs remain compatible, while account-restricted managed sites stay blocked.
 Cloudflare hostname permission requirements and live HTTPS readiness remain
 unverified.
 
+**Scoped amendment (2026-09-28), reviewed by Ian:** Adds opt-in admitted-document
+triage and replay against `5844a1024`. Unrelated security surfaces and the
+private tier were not re-audited; the full-inventory anchor remains unchanged.
+
 beebox is a personal assistant that a Claude Code agent operates on
 your behalf: it reads your email, listens to your voice memos, edits your
 files, and runs shell commands. A system like that deserves a blunt
@@ -155,7 +159,12 @@ The summary:
   that key grant to avoid this egress; ordinary direct chat remains available.
   Quick chat sends to the selected conversation before showing the result.
   Destination links stage the original text in another chat; they cannot undo
-  agent actions.
+  agent actions. Opt-in document triage and replay also send prepared admitted
+  document and attachment text plus filing rules; replay makes a fresh paid
+  call. Preparation can use existing OCR/vision services, and unclear cases can
+  involve the full box agent. Applied triage receipts retain prepared text and
+  effective rules until deleted; deleting the source alone does not erase them.
+  Gmail filtering before import is not part of this pipeline.
 - **Google** — if you connect it: Gmail (read + **drafts only** — the
   code requests no send scope, so autonomous email sending is
   impossible today), Calendar (two-way), Drive/Sheets/Docs (two-way,
