@@ -1,6 +1,6 @@
 ---
 title: "Replayable document triage with Jev"
-status: active
+status: implemented
 workstream: jev-triage
 issues:
   - ../../../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md
@@ -548,6 +548,7 @@ migration is proposed. The issue stays open for quick capture and Gmail admissio
   lack byte-hash provenance and are re-extracted. Vision reports its backend but
   the current service does not expose an exact model version. Codex USD limits
   remain unsupported as described above.
-- The security-report amendment is a separate review draft; the security-report
-  skill requires human review before committing those artifacts. No new provider,
-  credential, authentication route or unadmitted-content pipeline was added.
+- The boxholder approved the scoped security-report amendment; it is recorded in
+  `security-report.md` and `security-overview.md`. It does not re-audit unrelated
+  security changes or the private tier. No new provider, credential,
+  authentication route or unadmitted-content pipeline was added.

@@ -411,7 +411,7 @@ or a captured page holds is in its type's doc (`card-capture-session.md`,
 `card-webpage.md`).
 
 <!-- rules: intake.triage-replay -->
-Triage repair: [instructions and replay](node_modules/beebox/box-docs/triage-instructions.md).
+Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
 Replay never applies or researches. Intake policy permits explicit best effort;
 landmarks define destinations. Missing evidence means unclear; silence is not confirmation.
 

@@ -103,7 +103,7 @@ halves of this issue are still open work.
 ## 2026-09-28 — document-triage experiment
 
 The [synthetic experiment report](../../beebox/docs/reports/jev-document-triage-experiment-2026-09-28.md)
-and [implementation plan](../../beebox/docs/plans/jev-document-triage.md) cover only
+and [implementation plan](../../beebox/docs/implemented-plans/jev-document-triage.md) cover only
 half 1. Production routing has not changed. Current triage already uses
 smallModel, so those proposed comparison arms are now the same baseline.
 
