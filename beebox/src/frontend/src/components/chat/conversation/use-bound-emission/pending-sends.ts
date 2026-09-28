@@ -35,7 +35,10 @@ export interface PendingSendsStore {
   rejected(id: string, reason: string): void;
   /** Remove only after the explicit restore callback succeeded. */
   restored(id: string): void;
-  /** The user dismissed an `awaitingHq` row; its recording stays on the box. */
+  /**
+   * The user dismissed or discarded the row. For an `awaitingHq` row its
+   * recording stays on the box; a failed send's text is gone.
+   */
   dismissed(id: string): void;
 }
 export type PendingSendsStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
