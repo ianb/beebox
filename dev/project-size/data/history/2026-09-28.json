@@ -1,10 +1,10 @@
 {
- "collectedAt": "2026-09-28T04:26:43.914Z",
- "commit": "8be3d1b4d",
+ "collectedAt": "2026-09-28T04:54:34.969Z",
+ "commit": "98f9ed158",
  "values": {
   "files": 6270,
-  "lines": 815816,
-  "code.lines": 372400,
+  "lines": 817211,
+  "code.lines": 372492,
   "code.files": 2804,
   "tests.lines": 169158,
   "tests.files": 1348,
@@ -45,7 +45,7 @@
     {
      "category": "code",
      "files": 2804,
-     "lines": 372400
+     "lines": 372492
     },
     {
      "category": "tests",
@@ -70,7 +70,7 @@
     {
      "category": "config & data",
      "files": 276,
-     "lines": 30835
+     "lines": 32138
     },
     {
      "category": "docs: research",
@@ -144,10 +144,10 @@
     },
     {
      "package": "bin",
-     "code": 19901,
+     "code": 19921,
      "tests": 11019,
      "docs": 699,
-     "total": 31619
+     "total": 31639
     },
     {
      "package": "ios-app",
@@ -200,10 +200,10 @@
     },
     {
      "package": "other (12 small)",
-     "code": 12558,
+     "code": 12630,
      "tests": 2531,
      "docs": 8312,
-     "total": 23401
+     "total": 23473
     }
    ],
    "bar": "total"
@@ -328,7 +328,7 @@
     {
      "extension": ".ts",
      "files": 2195,
-     "lines": 286698
+     "lines": 286718
     },
     {
      "extension": ".tsx",
@@ -348,7 +348,7 @@
     {
      "extension": ".html",
      "files": 20,
-     "lines": 4612
+     "lines": 4684
     },
     {
      "extension": ".css",
@@ -363,5 +363,6 @@
    ],
    "bar": "lines"
   }
- }
+ },
+ "trees": {}
 }

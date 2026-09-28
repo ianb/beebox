@@ -29,6 +29,12 @@ never as code.
 
 ## Where the code lives
 
+Each box is a directory, sized by its lines. Inside it, blue is code, orange
+is tests, and aqua is docs. Hover a box for its path and size.
+
+```treemap repo
+```
+
 ```dataset byPackage
 ```
 
@@ -37,6 +43,20 @@ schemas, and the box tooling. The next largest code bases are the native iOS
 app and `bin/`, the tooling that runs worktrees, schedules, and landing. The
 `issues/` queue and `research/` notes are docs only, and together they are
 larger than any package except `beebox`.
+
+## Inside beebox
+
+Three directory levels of `beebox/`. The source splits into the web frontend
+and the server core, with the HTTP layer, the CLI, and dev tooling well behind.
+Its `docs/` is mostly implemented plans: the design record of every shipped
+change. `test/` mirrors `src/`, so the test boxes line up with the code they
+cover. `src/core` is spread across many small subdirectories, so its
+"other" box is one of its largest; the file layout review
+(`issues/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md`)
+is the place to judge whether that is right.
+
+```treemap beebox
+```
 
 ## Tests
 

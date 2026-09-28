@@ -17,6 +17,7 @@
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { addToBranch, newBranch, toTreeNode, type Tree, type TreeCategory } from "./lib/project-size-tree.js";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const outDir = path.join(repoRoot, "dev", "project-size", "data");
@@ -58,6 +59,7 @@ interface Snapshot {
   commit: string;
   values: Record<string, number>;
   datasets: Record<string, Dataset>;
+  trees: Record<string, Tree>;
 }
 
 const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".swift", ".css", ".sh", ".html", ".py"]);
@@ -137,6 +139,11 @@ function foldSmall(rows: Record<string, string | number>[], options: { label: st
   return [...kept, other];
 }
 
+function treeCategory(category: Category): TreeCategory | null {
+  if (category === "code" || category === "tests") return category;
+  return category.startsWith("docs") ? "docs" : null;
+}
+
 function trackedFiles(): string[] {
   const out = execFileSync("git", ["ls-files", "-z"], { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 }).toString("utf8");
   return out.split("\0").filter((file) => file !== "" && fs.statSync(path.join(repoRoot, file), { throwIfNoEntry: false })?.isFile() === true);
@@ -168,6 +175,8 @@ function collect(): Snapshot {
   const byPackage = new Map<string, Map<string, number>>();
   const testFilesByPackage = new Map<string, number>();
   const doctestSplit = { code: 0, prose: 0 };
+  const repoTree = newBranch();
+  const beeboxTree = newBranch();
 
   for (const file of trackedFiles()) {
     const counted = countLines(file);
@@ -189,6 +198,14 @@ function collect(): Snapshot {
       }
     }
     if (category === "code") bump(byLanguage, { key: path.extname(file), lines });
+    const treeCat = treeCategory(category);
+    if (treeCat !== null && lines > 0) {
+      const dirs = path.dirname(file).split("/").filter((segment) => segment !== ".");
+      addToBranch(repoTree, { segments: dirs.slice(0, 2), category: treeCat, lines });
+      // A nested `src/` (beebox/src/frontend/src) would spend a level on nothing.
+      const inner = dirs.slice(1).filter((segment, i) => i === 0 || segment !== "src");
+      if (dirs[0] === "beebox") addToBranch(beeboxTree, { segments: inner.slice(0, 3), category: treeCat, lines });
+    }
   }
 
   const total = [...byCategory.values()].reduce((sum, entry) => ({ files: sum.files + entry.files, lines: sum.lines + entry.lines }), { files: 0, lines: 0 });
@@ -297,7 +314,11 @@ function collect(): Snapshot {
   };
 
   const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: repoRoot }).toString("utf8").trim();
-  return { collectedAt: new Date().toISOString(), commit, values, datasets };
+  const trees: Record<string, Tree> = {
+    repo: { title: "The monorepo: packages and their top-level directories", root: toTreeNode("monorepo", { branch: repoTree, min: 4000 }) },
+    beebox: { title: "Inside beebox/: three directory levels", root: toTreeNode("beebox", { branch: beeboxTree, min: 1500 }) },
+  };
+  return { collectedAt: new Date().toISOString(), commit, values, datasets, trees };
 }
 
 function main(): void {
@@ -307,7 +328,7 @@ function main(): void {
   // and collect again: today's row then appears in its own report.
   const day = first.collectedAt.slice(0, 10);
   const { history: _history, ...withoutHistory } = first.datasets;
-  fs.writeFileSync(path.join(historyDir, `${day}.json`), `${JSON.stringify({ ...first, datasets: withoutHistory }, null, 1)}\n`);
+  fs.writeFileSync(path.join(historyDir, `${day}.json`), `${JSON.stringify({ ...first, datasets: withoutHistory, trees: {} }, null, 1)}\n`);
   const snapshot = collect();
   fs.writeFileSync(path.join(outDir, "latest.json"), `${JSON.stringify(snapshot, null, 1)}\n`);
   console.log(`project-size: ${String(snapshot.values["files"])} files, ${String(snapshot.values["lines"])} non-blank lines (${snapshot.commit}) → dev/project-size/data/latest.json`);
