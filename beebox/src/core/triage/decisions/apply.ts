@@ -15,6 +15,7 @@ import { movePathPreservingAnnexSymlink } from "../../card-files/move-phase2.js"
 import { decisionReceiptSchema, assertContained, receiptRef, receiptFingerprint, containedPath, readDecisionReceipt, saveDecisionReceipt, withDecisionReceiptLock, TriageReceiptError, type DecisionReceipt } from "./storage.js";
 
 async function exists(file: string): Promise<boolean> {
+  // Keep lstat semantics instead of lib/file-exists: broken links count as present and EACCES must propagate.
   try { await fs.lstat(file); return true; } catch (error) {
     if (errnoCode(error) !== "ENOENT") throw error;
     return false; // Missing old paths are expected after a successful rename.

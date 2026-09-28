@@ -48,6 +48,7 @@ function resolve(boxRoot: string, ref: string): string {
   return path.join(boxRoot, relative);
 }
 async function exists(file: string): Promise<boolean> {
+  // Keep lstat semantics instead of lib/file-exists: broken links count as present and EACCES must propagate.
   try { await fs.lstat(file); return true; }
   catch (error) { if (errnoCode(error) === "ENOENT") return false; throw error; }
 }
