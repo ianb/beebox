@@ -34,7 +34,7 @@ const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
  * than imported: this script lives in the monorepo root's TypeScript project,
  * which deliberately excludes `beebox/`.
  */
-const VERSION_FILE = path.join(REPO_ROOT, "beebox", "src", "services", "docling-version.ts");
+const VERSION_FILE = path.join(REPO_ROOT, "beebox", "src", "services", "docling", "version.ts");
 
 /** How old a release must be before we suggest it. */
 const SETTLING_DAYS = 14;
