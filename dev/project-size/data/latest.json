@@ -1,0 +1,478 @@
+{
+ "collectedAt": "2026-09-28T04:09:30.300Z",
+ "commit": "54faff55c",
+ "values": {
+  "files": 6265,
+  "lines": 814596,
+  "code.lines": 372007,
+  "code.files": 2802,
+  "tests.lines": 169158,
+  "tests.files": 1348,
+  "docs.lines": 228349,
+  "doctest.lines": 142861,
+  "doctest.files": 1009,
+  "testts.files": 132,
+  "testts.lines": 18151,
+  "doctest.percent": 84
+ },
+ "datasets": {
+  "byCategory": {
+   "title": "Tracked files by category",
+   "columns": [
+    {
+     "key": "category",
+     "label": "Category"
+    },
+    {
+     "key": "files",
+     "label": "Files",
+     "numeric": true
+    },
+    {
+     "key": "lines",
+     "label": "Non-blank lines",
+     "numeric": true
+    }
+   ],
+   "rows": [
+    {
+     "category": "code",
+     "files": 2802,
+     "lines": 372007
+    },
+    {
+     "category": "tests",
+     "files": 1348,
+     "lines": 169158
+    },
+    {
+     "category": "docs: plans & reports",
+     "files": 305,
+     "lines": 109279
+    },
+    {
+     "category": "docs: issues",
+     "files": 1036,
+     "lines": 57912
+    },
+    {
+     "category": "docs: guides & other",
+     "files": 261,
+     "lines": 41149
+    },
+    {
+     "category": "config & data",
+     "files": 273,
+     "lines": 30008
+    },
+    {
+     "category": "docs: research",
+     "files": 92,
+     "lines": 15124
+    },
+    {
+     "category": "lockfiles",
+     "files": 1,
+     "lines": 15074
+    },
+    {
+     "category": "docs: agent instructions",
+     "files": 63,
+     "lines": 4885
+    },
+    {
+     "category": "binary",
+     "files": 84,
+     "lines": 0
+    }
+   ],
+   "bar": "lines"
+  },
+  "byPackage": {
+   "title": "Non-blank lines by package",
+   "columns": [
+    {
+     "key": "package",
+     "label": "Package"
+    },
+    {
+     "key": "code",
+     "label": "Code",
+     "numeric": true
+    },
+    {
+     "key": "tests",
+     "label": "Tests",
+     "numeric": true
+    },
+    {
+     "key": "docs",
+     "label": "Docs",
+     "numeric": true
+    },
+    {
+     "key": "total",
+     "label": "Total",
+     "numeric": true
+    }
+   ],
+   "rows": [
+    {
+     "package": "beebox",
+     "code": 279327,
+     "tests": 140685,
+     "docs": 140339,
+     "total": 560351
+    },
+    {
+     "package": "issues",
+     "code": 0,
+     "tests": 0,
+     "docs": 57912,
+     "total": 57912
+    },
+    {
+     "package": "bin",
+     "code": 19611,
+     "tests": 11019,
+     "docs": 699,
+     "total": 31329
+    },
+    {
+     "package": "ios-app",
+     "code": 24608,
+     "tests": 0,
+     "docs": 259,
+     "total": 24867
+    },
+    {
+     "package": "workstreams-app",
+     "code": 16834,
+     "tests": 7096,
+     "docs": 170,
+     "total": 24100
+    },
+    {
+     "package": "research",
+     "code": 0,
+     "tests": 0,
+     "docs": 15124,
+     "total": 15124
+    },
+    {
+     "package": "site",
+     "code": 5009,
+     "tests": 1849,
+     "docs": 3542,
+     "total": 10400
+    },
+    {
+     "package": "canvas-loop",
+     "code": 6808,
+     "tests": 1780,
+     "docs": 994,
+     "total": 9582
+    },
+    {
+     "package": "schedules",
+     "code": 4551,
+     "tests": 1376,
+     "docs": 611,
+     "total": 6538
+    },
+    {
+     "package": "scan-uploader",
+     "code": 2804,
+     "tests": 2822,
+     "docs": 387,
+     "total": 6013
+    },
+    {
+     "package": "beebox-clerk",
+     "code": 3315,
+     "tests": 879,
+     "docs": 132,
+     "total": 4326
+    },
+    {
+     "package": ".claude",
+     "code": 406,
+     "tests": 0,
+     "docs": 3435,
+     "total": 3841
+    },
+    {
+     "package": "dev",
+     "code": 3535,
+     "tests": 0,
+     "docs": 105,
+     "total": 3640
+    },
+    {
+     "package": "docs",
+     "code": 0,
+     "tests": 0,
+     "docs": 2978,
+     "total": 2978
+    },
+    {
+     "package": "agent-doctest",
+     "code": 1303,
+     "tests": 996,
+     "docs": 657,
+     "total": 2956
+    },
+    {
+     "package": "personal-vibe-check",
+     "code": 1755,
+     "tests": 342,
+     "docs": 469,
+     "total": 2566
+    },
+    {
+     "package": "browse",
+     "code": 1502,
+     "tests": 204,
+     "docs": 38,
+     "total": 1744
+    },
+    {
+     "package": "feedback-review",
+     "code": 385,
+     "tests": 110,
+     "docs": 70,
+     "total": 565
+    },
+    {
+     "package": "(root)",
+     "code": 202,
+     "tests": 0,
+     "docs": 165,
+     "total": 367
+    },
+    {
+     "package": "notes",
+     "code": 0,
+     "tests": 0,
+     "docs": 187,
+     "total": 187
+    },
+    {
+     "package": "security",
+     "code": 52,
+     "tests": 0,
+     "docs": 51,
+     "total": 103
+    },
+    {
+     "package": "scratch",
+     "code": 0,
+     "tests": 0,
+     "docs": 25,
+     "total": 25
+    }
+   ],
+   "bar": "total"
+  },
+  "testsByKind": {
+   "title": "Tests by kind",
+   "columns": [
+    {
+     "key": "kind",
+     "label": "Kind"
+    },
+    {
+     "key": "files",
+     "label": "Files",
+     "numeric": true
+    },
+    {
+     "key": "lines",
+     "label": "Non-blank lines",
+     "numeric": true
+    }
+   ],
+   "rows": [
+    {
+     "kind": "doctest (markdown)",
+     "files": 1009,
+     "lines": 142861
+    },
+    {
+     "kind": "*.test.ts code",
+     "files": 132,
+     "lines": 18151
+    },
+    {
+     "kind": "test helper code",
+     "files": 54,
+     "lines": 4426
+    },
+    {
+     "kind": "test fixtures & data",
+     "files": 153,
+     "lines": 3720
+    }
+   ],
+   "bar": "lines"
+  },
+  "testTsByPackage": {
+   "title": "*.test.ts files by package",
+   "columns": [
+    {
+     "key": "package",
+     "label": "Package"
+    },
+    {
+     "key": "files",
+     "label": "Files",
+     "numeric": true
+    }
+   ],
+   "rows": [
+    {
+     "package": "bin",
+     "files": 38
+    },
+    {
+     "package": "workstreams-app",
+     "files": 21
+    },
+    {
+     "package": "site",
+     "files": 20
+    },
+    {
+     "package": "canvas-loop",
+     "files": 17
+    },
+    {
+     "package": "beebox-clerk",
+     "files": 12
+    },
+    {
+     "package": "beebox",
+     "files": 10
+    },
+    {
+     "package": "schedules",
+     "files": 10
+    },
+    {
+     "package": "agent-doctest",
+     "files": 2
+    },
+    {
+     "package": "feedback-review",
+     "files": 1
+    },
+    {
+     "package": "personal-vibe-check",
+     "files": 1
+    }
+   ],
+   "bar": "files"
+  },
+  "codeByExtension": {
+   "title": "Code by file extension",
+   "columns": [
+    {
+     "key": "extension",
+     "label": "Extension"
+    },
+    {
+     "key": "files",
+     "label": "Files",
+     "numeric": true
+    },
+    {
+     "key": "lines",
+     "label": "Non-blank lines",
+     "numeric": true
+    }
+   ],
+   "rows": [
+    {
+     "extension": ".ts",
+     "files": 2194,
+     "lines": 286408
+    },
+    {
+     "extension": ".tsx",
+     "files": 436,
+     "lines": 46272
+    },
+    {
+     "extension": ".swift",
+     "files": 74,
+     "lines": 24608
+    },
+    {
+     "extension": ".sh",
+     "files": 49,
+     "lines": 7220
+    },
+    {
+     "extension": ".html",
+     "files": 19,
+     "lines": 4509
+    },
+    {
+     "extension": ".css",
+     "files": 19,
+     "lines": 2613
+    },
+    {
+     "extension": ".js",
+     "files": 8,
+     "lines": 316
+    },
+    {
+     "extension": ".mjs",
+     "files": 3,
+     "lines": 61
+    }
+   ],
+   "bar": "lines"
+  },
+  "history": {
+   "title": "Size over time (one snapshot per collection day)",
+   "columns": [
+    {
+     "key": "date",
+     "label": "Date"
+    },
+    {
+     "key": "code",
+     "label": "Code",
+     "numeric": true
+    },
+    {
+     "key": "tests",
+     "label": "Tests",
+     "numeric": true
+    },
+    {
+     "key": "docs",
+     "label": "Docs",
+     "numeric": true
+    },
+    {
+     "key": "lines",
+     "label": "All lines",
+     "numeric": true
+    }
+   ],
+   "rows": [
+    {
+     "date": "2026-09-28",
+     "code": 372007,
+     "tests": 169158,
+     "docs": 228349,
+     "lines": 814596
+    }
+   ],
+   "bar": "lines"
+  }
+ }
+}
