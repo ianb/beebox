@@ -17,7 +17,7 @@ discovered-in: main session — persistent chat and scheduled-task failures on a
 > attempts; `consecutiveFailures` freezes; `bbx health` shows `waiting`; the
 > boxholder is notified once per episode. The loss point was refined during
 > design: the semantic event was already captured in
-> `src/services/codex-sdk-session.ts` — the rethrow discarded it. Verified
+> `src/services/codex-sdk-session.ts` (moved to `beebox/src/services/codex-sdk-session/core.ts`) — the rethrow discarded it. Verified
 > live against the real exhausted account (Claude-side recognizer ships
 > provisional, unverifiable until a live Claude exhaustion).
 
@@ -58,7 +58,7 @@ Two places, and the second is ours.
    stdout. The exec-level message is therefore the least informative thing
    available.
 
-2. **`src/core/agent/codex-run.ts:85` drops every event that isn't a completed
+2. **`src/core/agent/codex-run.ts:85` (moved to `beebox/src/core/agent/codex-run/core.ts`) drops every event that isn't a completed
    item:**
 
    ```ts

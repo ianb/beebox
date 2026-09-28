@@ -10,7 +10,7 @@ priority: backlog
 ---
 
 The full beebox suite intermittently failed the cancellation case in
-`test/webapp/routes/bulk-upload-routes.doctest.md`:
+`test/webapp/routes/bulk-upload-routes.doctest.md` (moved to `beebox/test/webapp/routes/bulk-upload.doctest.md`):
 
 ```text
 bulk-upload-routes.doctest.md:468

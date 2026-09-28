@@ -26,7 +26,7 @@ resolution: implemented
 >   into bytes an unauthenticated caller can fetch. An image symbol still
 >   renders correctly in-app (tab title's `mark` slot, selector tiles), just
 >   not on those external surfaces.
-> - The hub's own landing page (`src/hub/box-picker.ts`) still serves an
+> - The hub's own landing page (`src/hub/box-picker.ts` (moved to `beebox/src/hub/server/box-picker.ts`)) still serves an
 >   unstamped document — no per-box icon there since it's fleet-wide, not
 >   scoped to one box.
 

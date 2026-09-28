@@ -19,7 +19,7 @@ same time):
   and `run.doctest.md:369` both timed out waiting on child-process readiness;
   the suite-level per-file timeout then expired the whole file
   (`not ok 619 - timeout! expired: test/field-test/run.doctest.md`).
-- `test/hub/hub-e2e.doctest.md` — `execFileP("node", ["scripts/build-cli.mjs"])`
+- `test/hub/hub-e2e.doctest.md` (moved to `beebox/test/hub.e2e.doctest.md`) — `execFileP("node", ["scripts/build-cli.mjs"])`
   took 184s (vs ~12.7s solo) and the subsequent `waitFor` timed out after
   120000ms waiting for the fixture box to report `status=running` via
   `/healthz`.

@@ -47,7 +47,7 @@ and yet the run started on codex. The three prior fixes, for the record:
 `5fed638d` (resolveStartEngine honours requested), `2fd3b175` (registry passes
 reservation.engine into session options), `fcbc67dc` (module-level coined-id →
 engine map consulted by both resolvers). The registry-level doctest
-(`test/core/chat-session-registry.doctest.md`, "a coined reservation's engine
+(`test/core/chat-session-registry.doctest.md` (moved to `beebox/test/core/chat/session/registry.doctest.md`), "a coined reservation's engine
 reaches the run it starts") passes — so the failing path is one the doctest does
 not model.
 

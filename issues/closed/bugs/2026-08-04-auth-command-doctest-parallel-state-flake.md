@@ -11,7 +11,7 @@ Resolved by `8d3feaf9`. The doctest now sets `process.stdin.isTTY = false`
 explicitly, so its agent-safety assertions do not depend on the test runner's
 terminal.
 
-`test/cli/auth-command.doctest.md` failed during a full parallel `pnpm test` run.
+`test/cli/auth-command.doctest.md` (moved to `beebox/test/cli/commands/auth.doctest.md`) failed during a full parallel `pnpm test` run.
 The test passed 17/17 when rerun by itself.
 
 The full-suite run failed checks 13, 14, and 16 in the subtest that starts at

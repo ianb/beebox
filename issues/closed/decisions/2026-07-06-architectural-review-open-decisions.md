@@ -114,7 +114,7 @@ buried. None blocks the merge.
    where a real AST node's `.type` disagrees with the declared union (a
    vendor-boundary value TS can't runtime-verify). Behavior is unchanged for
    every currently-used node type; new doctest coverage
-   (`test/core/markdoc/emit-nodes.doctest.md`) exercises the table and
+   (`test/core/markdoc/emit-nodes.doctest.md` (moved to `beebox/test/core/markdoc/emit/core.doctest.md`)) exercises the table and
    parse-error degradation paths explicitly. **This pattern (enumerate the
    vendor union via `satisfies Record` + `tolerateNever` default) is now the
    house answer for vendor-union walkers** — reach for it before a partial

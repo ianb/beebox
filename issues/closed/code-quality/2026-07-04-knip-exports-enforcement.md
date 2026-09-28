@@ -31,7 +31,7 @@ count live code as dead, each fixed before anything was deleted:
 
 Fixing those took the count from 651 to 421 before a line was deleted. The
 burn-down itself: ~250 exports un-exported in place, ~40 deleted, and several
-barrels removed (`src/services/index.ts`, `src/frontend/src/file-types/index.ts`)
+barrels removed (`src/services/index.ts` (moved to `beebox/src/services/container.ts`), `src/frontend/src/file-types/index.ts`)
 per the no-barrels decision. `code-style.md` now states that a missing `export`
 is never a decision to respect — just the current call count.
 

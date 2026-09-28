@@ -16,10 +16,10 @@ changes make the message reach the screen on both paths, with no iOS change:
 - The router's bootstrap quotes the box's own sentence (`message`, else
   `error`) after the status: "Mobile session bootstrap failed: box returned
   503: Box test1 is closed for migration (pid …); it reopens when that process
-  finishes or exits" (`test/router/router-mobile-bootstrap.test.ts`).
+  finishes or exits" (`test/router/router-mobile-bootstrap.test.ts` (moved to `workstreams-app/test/router/server/mobile-bootstrap.test.ts`)).
 - The hub answers a page navigation (`Accept: text/html`, which the web view
   sends) with that sentence and the retry interval as plain text instead of the
-  JSON body (`beebox/src/hub/box-unavailable.ts` (moved to `beebox/src/hub/server/box-unavailable.ts`), `test/hub/hub-router.doctest.md`).
+  JSON body (`beebox/src/hub/box-unavailable.ts` (moved to `beebox/src/hub/server/box-unavailable.ts`), `test/hub/hub-router.doctest.md` (moved to `beebox/test/hub/server.router.doctest.md`)).
 
 Not exercised: a live simulator walk against a closed box. The rendering claim
 rests on `WKWebView` displaying a `text/plain` 503 body, which is its standard

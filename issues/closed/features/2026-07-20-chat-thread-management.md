@@ -16,7 +16,7 @@ ordered lifecycle, confirmation disclosures, and missing-transcript guards.
 This umbrella issue remains open for rename and archive.
 
 No thread-lifecycle operation exists at all — audited 2026-07-20: the chat
-tRPC routers (`src/webapp/trpc/routers/chat.ts`,
+tRPC routers (`src/webapp/trpc/routers/chat.ts` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`),
 `chat-session-procedures.ts`, `chat-control-procedures.ts`) expose
 navigation, model/feature toggles, `interrupt`, and `restart`, but no
 delete, rename, or archive procedure; the session pickers

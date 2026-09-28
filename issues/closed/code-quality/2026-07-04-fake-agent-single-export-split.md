@@ -10,7 +10,7 @@ plus the fixture's own types (`FakeAgent`, `FakeAgentOptions`,
 `FakeAgentInvocation`) and the error it throws. Splitting into ~5 single-export
 files would fragment a single fixture across the tree, which is worse than the
 debt. With the boxholder's explicit sign-off, `single-export` is scoped **off for
-`test/helpers/fake-agent.ts`** in `beebox/eslint.config.mjs` (a file-scoped
+`test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`)** in `beebox/eslint.config.mjs` (a file-scoped
 config carve-out with justification, alongside the existing `return-await` one —
 not a global weakening, per the CLAUDE.md lint policy). The blast radius was 6
 importers, not "every doctest" as this note originally overstated. (The file

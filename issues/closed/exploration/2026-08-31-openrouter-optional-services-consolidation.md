@@ -76,14 +76,14 @@ provider and to ZDR endpoints in code.
 | # | Workload | Today | OpenRouter equivalent | Adoption cost |
 |---|---|---|---|---|
 | 1 | Semantic/hybrid search embeddings | `POST api.openai.com/v1/embeddings`, `text-embedding-3-small` @512 dims, secret `openai`, automatic on index refresh (`src/services/openai-embeddings.ts:125`) | `POST /embeddings`, model `openai/text-embedding-3-small`, `dimensions` supported, $0.02/M — the same list price | base URL + model prefix + a provider pin |
-| 2 | View/dashboard API adapter proxy | `ANY /api/adapters/:adapter/*` → replicate/mistral/anthropic/openai (`src/webapp/routes/api-adapters.ts:39`) | `/chat/completions`, `/messages`, `/responses` all exist | one `ADAPTERS` entry |
-| 3 | Scan-import photo analysis, Gemini backend | `@google/genai` `generateContent`, `gemini-2.5-flash`, image input + JSON-schema output, opt-in via `BBX_SCAN_VISION=gemini` (`src/core/commands/scan-import-gemini.ts:225`) | `google/gemini-2.5-flash` on `/chat/completions`, image input and `structured_outputs` both supported | SDK → HTTP rewrite |
+| 2 | View/dashboard API adapter proxy | `ANY /api/adapters/:adapter/*` → replicate/mistral/anthropic/openai (`src/webapp/routes/api-adapters.ts:39` (moved to `beebox/src/webapp/routes/api/register/adapters.ts`)) | `/chat/completions`, `/messages`, `/responses` all exist | one `ADAPTERS` entry |
+| 3 | Scan-import photo analysis, Gemini backend | `@google/genai` `generateContent`, `gemini-2.5-flash`, image input + JSON-schema output, opt-in via `BBX_SCAN_VISION=gemini` (`src/core/commands/scan-import-gemini.ts:225` (moved to `beebox/src/core/describe-images/gemini.ts`)) | `google/gemini-2.5-flash` on `/chat/completions`, image input and `structured_outputs` both supported | SDK → HTTP rewrite |
 | 4 | `bbx chat ask-about-audio` | `@google/genai`, `gemini-3.7-flash`, base64 `inlineData` audio, manual CLI (`src/core/audio-question.ts:13,69`) | `google/gemini-3.7-flash` accepts audio input on `/chat/completions` | SDK → HTTP rewrite |
-| 5 | HQ batch transcription — Whisper family | multipart `api.openai.com/v1/audio/transcriptions`, `whisper-1` / `gpt-4o-transcribe` / `gpt-4o-mini-transcribe`, secret `openai-thinking` (`src/core/transcription/index.ts:63,288`) | all three model ids present; `verbose_json`, `timestamp_granularities` supported | adapter, with losses (below) |
-| 6 | Batch transcription — Voxtral | multipart `api.mistral.ai/v1/audio/transcriptions`, diarization flag, secret `mistral` (`src/core/transcription/voxtral.ts:37`) | `mistralai/voxtral-mini-transcribe`, `mistralai/voxtral-small-24b-2507-stt`; diarization surfaces as `speaker` on words/segments | adapter, with losses |
-| 7 | Batch transcription — Deepgram | `POST api.deepgram.com/v1/listen`, `nova-3`, per-word confidence (`src/core/transcription/deepgram.ts:22`) | `deepgram/nova-3` present | adapter, **loses per-word confidence** |
+| 5 | HQ batch transcription — Whisper family | multipart `api.openai.com/v1/audio/transcriptions`, `whisper-1` / `gpt-4o-transcribe` / `gpt-4o-mini-transcribe`, secret `openai-thinking` (`src/core/transcription/index.ts:63 (moved to `beebox/src/core/transcription/dispatch/core.ts`),288`) | all three model ids present; `verbose_json`, `timestamp_granularities` supported | adapter, with losses (below) |
+| 6 | Batch transcription — Voxtral | multipart `api.mistral.ai/v1/audio/transcriptions`, diarization flag, secret `mistral` (`src/core/transcription/voxtral.ts:37` (moved to `beebox/src/core/transcription/voxtral/core.ts`)) | `mistralai/voxtral-mini-transcribe`, `mistralai/voxtral-small-24b-2507-stt`; diarization surfaces as `speaker` on words/segments | adapter, with losses |
+| 7 | Batch transcription — Deepgram | `POST api.deepgram.com/v1/listen`, `nova-3`, per-word confidence (`src/core/transcription/deepgram.ts:22` (moved to `beebox/src/core/transcription/dispatch/deepgram.ts`)) | `deepgram/nova-3` present | adapter, **loses per-word confidence** |
 | 8 | Chat text-to-speech | `POST api.openai.com/v1/audio/speech`, `gpt-4o-mini-tts-2025-03-20`, 13-voice vocabulary (`src/services/openai-audio.ts:41`, `src/shared/voice-models.ts`) | **no OpenAI TTS model on OpenRouter at all** — the speech catalog is Deepgram/Fish/MiniMax/Qwen/Gemini/Voxtral/Kokoro | no path |
-| 9 | Realtime dictation — Voxtral WS | server proxies `wss://api.mistral.ai/v1/audio/transcriptions/realtime` (`src/webapp/routes/chat-audio-routes.ts:182`) | none | no path |
+| 9 | Realtime dictation — Voxtral WS | server proxies `wss://api.mistral.ai/v1/audio/transcriptions/realtime` (`src/webapp/routes/chat-audio-routes.ts:182` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`)) | none | no path |
 | 10 | Realtime dictation — Deepgram | server mints a 20-min scoped key, browser opens `wss://api.deepgram.com/v1/listen` (`src/webapp/trpc/routers/transcription.ts:69`) | none | no path |
 | 11 | Realtime dictation — OpenAI | server mints `/v1/realtime/client_secrets`, browser opens `wss://api.openai.com/v1/realtime`, `gpt-realtime-whisper` (`transcription.ts:131,138`) | none | no path |
 
@@ -94,7 +94,7 @@ auth, so it is out of scope with the main agent model.
 
 - **Embedding vector identity.** `EMBEDDER_ID` is
   `openai:text-embedding-3-small@512` and is hashed into every card's embed
-  record (`src/core/search/embed-pass.ts:42`); a change re-embeds every card in
+  record (`src/core/search/embed-pass.ts:42` (moved to `beebox/src/core/search/refresh/embed-pass.ts`)); a change re-embeds every card in
   every box. Routing must therefore produce byte-comparable vectors and leave
   the id alone. `openai/text-embedding-3-small` on OpenRouter routes to **OpenAI
   or Azure**, so the request has to pin `provider: { only: ["openai"] }`. One
@@ -107,7 +107,7 @@ auth, so it is out of scope with the main agent model.
   and `bbx chat retranscribe`, and neither sets one. The only call site that
   does is the batch transcribe preaction, which passes existing card content
   (`src/core/preactions/transcribe.ts:96`) into either Whisper's `prompt` or
-  Voxtral's `context_bias` (`src/core/transcription/voxtral-request.ts:101`).
+  Voxtral's `context_bias` (`src/core/transcription/voxtral-request.ts:101` (moved to `beebox/src/core/transcription/voxtral/request.ts`)).
   The HQ pass can therefore move to OpenRouter with no feature loss; the batch
   path is the one that would lose something.
 - **Per-word confidence is dropped.** OpenRouter's normalized `STTWord` is

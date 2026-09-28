@@ -40,7 +40,7 @@ Why it's genuinely entangled (the fork a design must resolve):
   newly-visible types (`user`/`stream_event`/`task`) are consumed by nothing on
   the thread path (the pool listens only to `chat-response`/`session`/`turn-text`/
   `close`/`done`), and none leak into `<chat-response>` extraction or turn text.
-  Covered by `test/core/chat-thread-session-messages.doctest.md`.
+  Covered by `test/core/chat-thread-session-messages.doctest.md` (moved to `beebox/test/core/chat/session/thread.session-messages.doctest.md`).
 
 So the remaining extraction is now a **single** design question: whether the
 genuinely one-sided queue/durability/`stopping` cluster (the first two bullets,

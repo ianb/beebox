@@ -12,7 +12,7 @@ resolution: implemented
 Closed 2026-09-26 by commit a3b7aa701 (worktree-doc-structure): `compileGuides`
 prunes marked `guides-for-*` and `guide-for-chat-*` rules it did not write, and
 the mirror step removes a dangling `AGENTS.md` symlink. Doctests in
-`test/core/box-guidance-sync.doctest.md`.
+`test/core/box-guidance-sync.doctest.md` (moved to `beebox/test/core/box/guidance-sync.doctest.md`).
 
 The box-guidance registry (`beebox/src/core/box/guidance-surfaces.ts`) gave
 the rule, skill, and Codex-mirror generators manifest pruning: a file that
@@ -30,4 +30,4 @@ generated families were left out:
 Neither is reachable by ordinary use today, which is why the track shipped
 without them. Give both the same treatment: prune by marker and manifest for
 the rules, prune dangling links for the mirrors, with a case each in
-`test/core/box-guidance-sync.doctest.md`.
+`test/core/box-guidance-sync.doctest.md` (moved to `beebox/test/core/box/guidance-sync.doctest.md`).

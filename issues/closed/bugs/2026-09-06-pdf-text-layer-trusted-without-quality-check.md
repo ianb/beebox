@@ -14,7 +14,7 @@ leave better text on the table.
 ## 1. A junk text layer is trusted over OCR that would do far better
 
 `scan-import` treats "has a text layer" as "the text layer is the whole point"
-and skips OCR (`src/core/commands/scan-import-pdf.ts`, `forceOcr:
+and skips OCR (`src/core/commands/scan-import-pdf.ts` (moved to `beebox/src/core/commands/scan-import/pdf.ts`), `forceOcr:
 !probe.hasTextLayer`). `pdf-probe.ts` only counts characters —
 `TEXT_LAYER_MIN_CHARS = 64` — so it cannot tell a good layer from a useless
 one.
@@ -41,7 +41,7 @@ reanalyze.
 
 ## 2. `--ocr-mode full_page` loses words that `layout_regions` keeps
 
-`doclingArgs` passes `--ocr --ocr-mode full_page` (`src/services/docling.ts`).
+`doclingArgs` passes `--ocr --ocr-mode full_page` (`src/services/docling.ts` (moved to `beebox/src/services/docling/core.ts`)).
 Docling 2.117 also accepts `layout_regions`, `pdf_aware_layout_regions`, and
 `default`. Measured across four scanned documents, counting run-together words
 (≥16 letters with no space) as the artifact:

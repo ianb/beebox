@@ -28,7 +28,7 @@ _config/procedures/view-card-shape.procedure.card         sha256 9623752f…  (r
 
 A lookup under the v3 path finds no entry, so the installer treats the box as
 untracked. With no `priorStockHashes` for that file (only `refresh-maps` has
-any, `src/core/box/defaults.ts`), every changed template parks under
+any, `src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`)), every changed template parks under
 `_config/_template-updates/`.
 
 Renaming the keys alone would not unpark `test1`: its live
@@ -39,7 +39,7 @@ migrations or the rename edited the file without updating the tracker. The
 installer then reads it as a boxholder edit.
 
 Two parts. The first is fixed by
-`scripts/migrate/rekey-template-versions.ts`: a key whose file exists is kept
+`scripts/migrate/rekey-template-versions.ts` (moved to `beebox/src/scripts/migrate/rekey-template-versions.ts`): a key whose file exists is kept
 (this protects `src/…` keys, which `mapV2Path` would wrongly send under
 `_content/`), a key whose file is missing is re-keyed when its v3 path exists
 (later `installed-at` wins a collision), and anything else is dropped,

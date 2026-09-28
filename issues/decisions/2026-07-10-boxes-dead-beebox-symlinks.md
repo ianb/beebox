@@ -30,7 +30,7 @@ Cause, fully traced:
    this symlink with an actual dependency."* For these local boxes that
    real install never happened, so the bootstrap became load-bearing.
 2. On 2026-07-04, 08:19–11:56, the box-packageify migration
-   (`scripts/migrate/box-packageify.ts:449`, which "reuses
+   (`scripts/migrate/box-packageify.ts:449` (moved to `beebox/src/scripts/migrate/box-packageify.ts`), which "reuses
    scaffoldPackageRoot wholesale") ran per-box, baking in each box's
    then-current engine path: twelve boxes → `~/src/callback-mono/…`,
    and `test1` → the `bbx-as-library` worktree it was migrated from.
@@ -43,7 +43,7 @@ Cause, fully traced:
 check owns this, not `bbx validate`; and the symlink model stays — one
 shared engine link per box means updating the main checkout updates
 every local box at once). Two new checks in the health router
-(`src/webapp/trpc/routers/health-engine.ts`, doctested):
+(`src/webapp/trpc/routers/health-engine.ts` (moved to `beebox/src/webapp/trpc/routers/health/checks/engine.ts`), doctested):
 
 - `engine-link` (v2 boxes) — error when `node_modules/beebox`
   doesn't resolve to a readable engine (message carries the dead target

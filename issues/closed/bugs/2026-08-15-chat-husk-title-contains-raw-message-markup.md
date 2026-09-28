@@ -10,7 +10,7 @@ priority: normal
 resolution: implemented
 ---
 
-**Closed 2026-08-26.** `7faa58b2` routed `readSnippetTitle` through `extractSnippet`/`stripSpeechWrappers`, which strips the `<speech>`/`<typed>` shell, voice markers and `<unsure>`; `ef82c2d61` added the missing `<user-selection>` rule (dropped whole — its body is a document quote, not the user's words). Pinned by `test/cli/lib/session-text-snippet.doctest.md`. Workstream chat-session-identity.
+**Closed 2026-08-26.** `7faa58b2` routed `readSnippetTitle` through `extractSnippet`/`stripSpeechWrappers`, which strips the `<speech>`/`<typed>` shell, voice markers and `<unsure>`; `ef82c2d61` added the missing `<user-selection>` rule (dropped whole — its body is a document quote, not the user's words). Pinned by `test/cli/lib/session-text-snippet.doctest.md` (moved to `beebox/test/cli/lib/session-text.snippet.doctest.md`). Workstream chat-session-identity.
 `readSnippetTitle` (`beebox/src/core/chat/husk.ts:60-77`) builds a chat
 husk's starter `title` from the transcript's first user message by joining the
 raw text blocks and slicing to `TITLE_MAX_LEN`. The raw text still contains

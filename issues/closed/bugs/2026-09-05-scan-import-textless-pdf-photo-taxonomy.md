@@ -19,7 +19,7 @@ back | trash` vocabulary no longer applies to document pages because they
 never reach it.
 
 `scan-import` dispatches a single PDF on one bit — whether it carries an
-embedded text layer (`src/core/commands/scan-import.ts:99-111`):
+embedded text layer (`src/core/commands/scan-import.ts:99-111` (moved to `beebox/src/core/commands/scan-import/command.ts`)):
 
 - text layer present → pdf mode (Docling extraction, `source.pdf.card`)
 - no text layer → the photo flow, pages rendered with `pdftoppm`

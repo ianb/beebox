@@ -13,7 +13,7 @@ parallel suite. This deliberately preserves occasional coverage rather than
 making the fixture deterministic: its 500 ms deadline is too expensive for
 every normal test run, and serial execution removes the parallel-load flake.
 
-`test/core/box-growth-health.doctest.md` can fail its partial-scan case under
+`test/core/box-growth-health.doctest.md` (moved to `beebox/test/core/box-growth/health.doctest.md`) can fail its partial-scan case under
 parallel full-suite load. The fake `find` process emits two directory records
 and then sleeps past the scan deadline. In the failed run, the scanner timed out
 before it consumed those records. The test expected `false:2:1` and

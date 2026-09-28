@@ -22,7 +22,7 @@ design; the one-TTL revocation window it leaves is now stated precisely in
 rather than moving the read inside the lock, to keep the per-request renewal path
 free of a cross-process lock — matches the module's deliberate "read-only
 accessors don't take the lock" design). Tests added in
-`test/core/mobile/pairing-store-concurrency.doctest.md`: unreadable store →
+`test/core/mobile/pairing-store-concurrency.doctest.md` (moved to `beebox/test/core/mobile/pairing.store-concurrency.doctest.md`): unreadable store →
 redemption throws and the file is left intact; `isMobileDeviceActive` → `false`
 on corrupt store; 200-device store round-trips with no temp litter.
 

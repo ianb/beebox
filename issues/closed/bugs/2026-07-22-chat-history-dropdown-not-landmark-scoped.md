@@ -27,7 +27,7 @@ and root): each landmark's chats lead under its own heading, the rest stay
 reachable under "Other chats" tagged with where they live, the current
 session keeps its highlight, and clicking a row from another landmark
 navigates into it. Covered by `test/frontend/session-list-grouping.doctest.md`
-and `test/webapp/chat-sessions-label.doctest.md`.
+and `test/webapp/chat-sessions-label.doctest.md` (moved to `beebox/test/webapp/trpc/routers/chat.sessions-label.doctest.md`).
 
 The chat history dropdown (the clock-icon `SessionListButton`) shows every web
 chat session in the box, ignoring the current landmark/directory scope. When
@@ -37,9 +37,9 @@ not all of them.
 ## Cause
 
 Chat sessions **are** landmark-scoped — a session binds to a `contextDir`
-(`src/core/chat/session/registry.ts:245`, the SDK is spawned with `cwd` at that
+(`src/core/chat/session/registry.ts:245` (moved to `beebox/src/core/chat/session/registry/core.ts`), the SDK is spawned with `cwd` at that
 directory). And a scoped listing already exists: `chat.byLandmark`
-(`src/webapp/trpc/routers/chat.ts`) returns "sessions … same landmark" for the
+(`src/webapp/trpc/routers/chat.ts` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`)) returns "sessions … same landmark" for the
 chat-landing picker.
 
 But the **history dropdown** uses a different, unscoped endpoint. `SessionListButton`

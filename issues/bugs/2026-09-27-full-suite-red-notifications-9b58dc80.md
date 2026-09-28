@@ -1,5 +1,5 @@
 ---
-title: "Full-suite red: test/webapp/trpc-hq-preferences.doctest.md"
+title: "Full-suite red: test/webapp/trpc-hq-preferences.doctest.md (moved to `beebox/test/webapp/trpc/routers/chat.hq-preferences.doctest.md`)"
 workstream: notifications
 area: beebox
 priority: important
@@ -14,7 +14,7 @@ commit (`dc231150`) over first-parent `main` blames one landing:
 
 - **Landing:** `9b58dc80` — Merge branch 'worktree-notifications'
 - **Workstream:** notifications
-- **Failing file:** `test/webapp/trpc-hq-preferences.doctest.md`
+- **Failing file:** `test/webapp/trpc-hq-preferences.doctest.md` (moved to `beebox/test/webapp/trpc/routers/chat.hq-preferences.doctest.md`)
 
 Each file failed in the batched run and failed again on an isolated re-run, so
 it is not a flake by the ledger's definition. Nothing has been fixed; this is a

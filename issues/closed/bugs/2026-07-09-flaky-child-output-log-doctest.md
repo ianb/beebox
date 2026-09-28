@@ -16,7 +16,7 @@ complete out of order, an in-process async race rather than a POSIX pipe
 ordering issue. Fix: `rolling-log.ts` now keeps a module-level
 `Map<string, Promise<void>>` chaining each call for a given file path off the
 previous in-flight promise for that path, clearing the entry once its chain
-drains. Verified 30/30 on `pnpm exec tap run test/hub/child-output-log.doctest.md`
+drains. Verified 30/30 on `pnpm exec tap run test/hub/child-output-log.doctest.md` (moved to `beebox/test/hub/supervisor/child-output-log.doctest.md`)
 in a loop (previously ~15-20% failure in isolation per the prior investigator).
 
 `beebox/test/hub/child-output-log.doctest.md` (moved to `beebox/test/hub/supervisor/child-output-log.doctest.md`) fails intermittently on

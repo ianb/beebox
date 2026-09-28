@@ -11,7 +11,7 @@ resolution: implemented
 **Resolved 2026-07-29** (worktree-todo-annotation): the decision was made —
 the type dies, and the suggested way to make a todo list is a simple
 `.doc.card` with embedded `{% todo %}` items. Implemented as a script
-migration (`scripts/migrate/todo-list-to-doc.ts` /
+migration (`scripts/migrate/todo-list-to-doc.ts` (moved to `beebox/src/scripts/migrate/todo-list-to-doc-run/convert.ts`) /
 `todo-list-to-doc-run.ts`, registered as `todo-list-to-doc` in
 `src/core/migrations.ts`) that converts every `*.todo-list.card` into a
 sibling `*.doc.card`, plus removal of the schema, its template, the frontend

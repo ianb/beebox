@@ -37,7 +37,7 @@ resolution: implemented
 > historical Track 4 body is "left as written for the historical record," so
 > no further trim.
 
-The `document` → `pdf` card-type rename (`scripts/migrate/document-to-pdf.ts`,
+The `document` → `pdf` card-type rename (`scripts/migrate/document-to-pdf.ts` (moved to `beebox/src/scripts/migrate/document-to-pdf.ts`),
 registered as `document-to-pdf` in `src/core/migrations.ts`) left **no legacy
 tolerance code** — there is no fallback branch, lenient parse, or "both
 spellings accepted" reader anywhere in the sweep. The schema, CLI command,

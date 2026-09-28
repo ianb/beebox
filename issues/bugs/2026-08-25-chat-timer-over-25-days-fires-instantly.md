@@ -30,7 +30,7 @@ never, is worse than none, because I have already stopped carrying it.
 Two failure modes, one surface:
 
 **1. Long delays overflow and fire immediately.** `armTimer`
-(`src/core/chat/schedules.ts:294-310`) passes the delay to `setTimeout`
+(`src/core/chat/schedules.ts:294-310` (moved to `beebox/src/core/chat/schedules/core.ts`)) passes the delay to `setTimeout`
 unclamped. Node clamps any delay over 2^31−1 ms (≈24.85 days) to **1 ms** with a
 `TimeoutOverflowWarning`. Every chat timer longer than ~25 days fires at once.
 
@@ -45,7 +45,7 @@ Timeout duration was set to 1.
 [ChatSchedules] Firing schedule "tape measure decision"
 ```
 
-Compounding it: `parseDuration` (`src/schemas/scheduled-script-duration.ts:34-59`)
+Compounding it: `parseDuration` (`src/schemas/scheduled-script-duration.ts:34-59` (moved to `beebox/src/scheduled-script-duration.ts`))
 has units `s/m/h/d/w` and no month, so "about a month" must be written `30d`/`4w`
 — exactly the range that overflows. The natural phrasing of the request selects
 the broken path. (`0m` also parses to 0 → the fire-now branch; theoretical.)
@@ -56,7 +56,7 @@ given the repo's sleep-time discipline, note that `startAwakeTimeout`
 `setTimeout` would misbehave across sleep anyway.
 
 **2. A malformed tag silently never fires.** On parse failure the `<schedule>`
-tag is dropped with only a `console.log` (`src/core/chat/schedule-tags.ts:23-33`
+tag is dropped with only a `console.log` (`src/core/chat/schedule-tags.ts:23-33` (moved to `beebox/src/core/chat/schedules/tags.ts`)
 — missing `in`, or a `parseDuration` throw). The agent's prose has usually
 already told the user the reminder is set. Same user-visible outcome as the
 overflow — no reminder — by the opposite mechanism.

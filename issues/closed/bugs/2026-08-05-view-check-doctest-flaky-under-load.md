@@ -26,7 +26,7 @@ each view. The full suite ran many doctests concurrently, so resource contention
 may have caused the valid view to exceed its timeout.
 
 The exact file passed 7/7 immediately afterward in isolation with
-`pnpm test test/cli/commands/view-check.doctest.md`. The session-report branch
+`pnpm test test/cli/commands/view-check.doctest.md` (moved to `beebox/test/cli/commands/view/command.check.doctest.md`). The session-report branch
 did not change this test or the view rendering path.
 
 Make this test robust under full-suite load. Preserve coverage that distinguishes

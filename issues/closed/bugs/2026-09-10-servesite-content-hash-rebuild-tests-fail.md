@@ -28,7 +28,7 @@ edit before the comparison runs.
 Not touched by the workstream that noticed it — its `workstreams-app/` diff is
 `router-worktree-start.ts`, `router-worktree-teardown.ts`, and
 `router-core.test.ts` only. Reproduce with
-`cd workstreams-app && node --import tsx --test test/router/router-site.test.ts`.
+`cd workstreams-app && node --import tsx --test test/router/router-site.test.ts` (moved to `workstreams-app/test/router/server/site.test.ts`).
 
 ## Closed 2026-09-13 — an optional input was listed unconditionally
 

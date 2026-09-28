@@ -129,7 +129,7 @@ only after the canary.
 ## Verification
 
 Done: the config-edit module is a doctest against fixture configs with invented
-slugs (`test/hub/hub-config-edit.doctest.md`, 25 assertions — add, idempotence,
+slugs (`test/hub/hub-config-edit.doctest.md` (moved to `beebox/test/hub/config-edit.doctest.md`), 25 assertions — add, idempotence,
 package-root-vs-`content/`, reserved slug, malformed slug, duplicate box,
 slug-repoint, missing config, unparseable config, concurrent-edit refusal); the
 CLI was exercised end to end against a scratch hub config; the full suite passes

@@ -38,7 +38,7 @@ the chat, is enough.
 ## The plumbing already exists
 
 The browser is *already* a participant in retranscription. Per
-`src/webapp/routes/chat-last-audio-routes.ts`, a box agent fetching the original
+`src/webapp/routes/chat-last-audio-routes.ts` (moved to `beebox/src/webapp/routes/chat/last-audio-routes.ts`), a box agent fetching the original
 recording works by broadcasting a transient `chat-last-audio-request` bus event;
 every connected chat tab answers with its cached recording (or "none"), and the
 first audio answer streams back to the waiting CLI call — carrying the

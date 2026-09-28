@@ -22,11 +22,11 @@ implemented). All four open questions are resolved:
   surface-correct.
 - **Ref tracking (Q3)**: `cardRef="…"` attributes in box-authored `.tsx` views are
   tracked/rewritten by `bbx validate`/`bbx mv` — `rewriteViewRefs` /
-  `rewriteMovedCardRefs` in `src/core/rewrite-card-refs.ts` (feat `079e04ad`).
+  `rewriteMovedCardRefs` in `src/core/rewrite-card-refs.ts` (moved to `beebox/src/core/rewrite-card-refs/core.ts`) (feat `079e04ad`).
 - **Consistency (Q4)**: navigation/expand go through the shared view host
   (`useViewHost`/`openCard`), not a parallel mechanism.
 
-Boxes can write their own views (compiled JSX via `src/webapp/views/compiler.ts`),
+Boxes can write their own views (compiled JSX via `src/webapp/views/compiler.ts` (moved to `beebox/src/webapp/views/compiler/compile.ts`)),
 but there's no reusable, card-aware widget set for the most common thing a view
 does: *point at another card*. Today an author hand-rolls an `<a>` and has to know
 the URL scheme / `view:` ref convention, and there's no off-the-shelf way to embed

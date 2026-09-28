@@ -24,12 +24,12 @@ priority: important
 > after a similar campaign, but at ~140 runs against this one's ~40. What would
 > settle it: seeing it fail once more, or a comparable volume of stress runs.
 
-`test/webapp/login-redirect.doctest.md` failed (jobId 3, exit 1) in a full
+`test/webapp/login-redirect.doctest.md` (moved to `beebox/test/webapp/base-prefix.login-redirect.doctest.md`) failed (jobId 3, exit 1) in a full
 `pnpm test` run — three assertions inside the `makeTestServer({ openAccess:
 false })` subtest got `actual: "undefined"` where a redirect Location header
 (e.g. `/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card`) was expected — but
 passed cleanly (11/11) run in isolation (`npx tap
-test/webapp/login-redirect.doctest.md`). Same shape as the tracked
+test/webapp/login-redirect.doctest.md` (moved to `beebox/test/webapp/base-prefix.login-redirect.doctest.md`)). Same shape as the tracked
 [flaky-mobile-spa-fallback-doctest](2026-07-10-flaky-mobile-spa-fallback-doctest.md)
 flake: a request that should redirect instead comes back with no `location`
 header, only reproducible under the full suite's parallel load (`.taprc`

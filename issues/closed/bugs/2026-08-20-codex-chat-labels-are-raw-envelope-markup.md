@@ -13,7 +13,7 @@ resolution: implemented
 person typed, not the envelope"). Both engines now share `resolveSessionLabel`,
 which owns the order and the wrapper-stripping; an engine supplies only a
 `SessionLabelSource` — a transcript scan or the app-server `preview`.
-Regression coverage: `test/core/chat/session-label.doctest.md`.
+Regression coverage: `test/core/chat/session-label.doctest.md` (moved to `beebox/test/core/chat/session/list/label.doctest.md`).
 
 Two things the fix decided differently from the direction sketched below:
 

@@ -10,7 +10,7 @@ resolution: implemented
 ---
 
 > **Closed `implemented` 2026-09-15.** Both recorded decisions are live in
-> `src/core/box/defaults.ts`, verified by reading the seeded values:
+> `src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`), verified by reading the seeded values:
 > `check-email`, `check-calendar`, `check-drive` and `chat-review` seed
 > `enabled: false`; `refresh-maps`, `gc-procedure-runs` and
 > `process-retrospective` seed `enabled: true`. `check-drive` post-dates the
@@ -26,7 +26,7 @@ resolution: implemented
 
 At filing, a fresh `bbx init` box shipped five scheduled scripts with three **enabled**
 (`refresh-maps`, `gc-procedure-runs`, `process-retrospective` —
-`src/core/box/defaults.ts:208-273`). Boxholder decision (2026-07-20):
+`src/core/box/defaults.ts:208-273` (moved to `beebox/src/core/box/structure/defaults.ts`)). Boxholder decision (2026-07-20):
 **keep schedules down or nil until activated by the user** — including
 activation via the agent ("turn on the retrospective" in chat is fine;
 silent default-on is not).
@@ -79,6 +79,6 @@ have an equivalent human-activity gate. Existing boxes keep their box-owned
 `enabled` value; this reaches new boxes only.
 
 > 2026-09-03 survey (bbx-pick-issues): both recorded decisions are implemented
-> in `src/core/box/defaults.ts` (refresh-maps, gc-procedure-runs,
+> in `src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`) (refresh-maps, gc-procedure-runs,
 > process-retrospective enabled; check-email, check-calendar, chat-review
 > disabled). Nothing left but closing it.

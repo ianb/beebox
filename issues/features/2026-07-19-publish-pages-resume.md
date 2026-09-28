@@ -23,7 +23,7 @@ best finished in a fresh session. Full design + security review:
   zod unions (illegal states like public+submit unrepresentable), `PubId` (128-bit
   base32), `toEdgeManifest` projection. The edge module is node-free (imported by the
   Worker).
-- **Track B** — `src/publish/render-docs.ts`: self-contained docs renderer (Markdoc,
+- **Track B** — `src/publish/render-docs.ts` (moved to `beebox/src/publish/draft/render-docs.ts`): self-contained docs renderer (Markdoc,
   inline CSS, zero JS, images inlined/content-addressed). **Views renderer is NOT
   done** — it's a subplan (below).
 - **Track C** — `pub-worker/`: the Cloudflare Worker serving core. Path/tier parsing,
@@ -50,8 +50,8 @@ best finished in a fresh session. Full design + security review:
    `0597b59f` (`feat(publish): bbx pub setup + bbx pub status behind an
    injectable Cloudflare client (Track E)`, via `worktree-agent-ab7a0f30e32308676`).
    Implemented behind an
-   injectable `CloudflareProvisioningClient` (`src/services/cloudflare-provisioning.ts`,
-   fake for tests) + an injectable wrangler-deploy runner (`src/publish/setup.ts`);
+   injectable `CloudflareProvisioningClient` (`src/services/cloudflare-provisioning.ts` (moved to `beebox/src/services/cloudflare-provisioning/core.ts`),
+   fake for tests) + an injectable wrangler-deploy runner (`src/publish/setup.ts` (moved to `beebox/src/publish/setup/core.ts`));
    status logic in `src/publish/status.ts` with a `/__version` drift probe (the Worker
    now serves `GET /__version` from a deploy-stamped `PUB_WORKER_VERSION` var — the
    hash of the committed Worker source, `src/publish/pub-worker-meta.ts`). Setup

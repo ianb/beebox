@@ -25,7 +25,7 @@ verification happened.
 - Add a `{% see-also %}` reference and confirm the `SeeAlso` component
   resolves and links correctly.
 - Check the stock plate card (`store/plate.todo-view.card`, provisioned by
-  `src/core/box/defaults.ts`) renders as the on-plate todo surface in the app
+  `src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`)) renders as the on-plate todo surface in the app
   — the `TodoViewCard` component pulling from `todos.list`.
 - Check the `AppNav` plate badge (todo count indicator) updates as todos are
   added/completed/parked.

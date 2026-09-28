@@ -12,7 +12,7 @@ resolution: implemented
 
 > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/docs/implemented-plans/card-prominence.md`.
 
-`src/core/lint-prominence.ts`'s `attachScopeWarning` fires "prominence inside
+`src/core/lint-prominence.ts` (moved to `beebox/src/core/lint-prominence/core.ts`)'s `attachScopeWarning` fires "prominence inside
 an attach scope has no effect; mark the owner card, or list it in the
 landmark's `links:`" for ANY `primary`/`entry-point` card living inside an
 owned `<basename>.attach/` directory (`isInsideAttachScope` +

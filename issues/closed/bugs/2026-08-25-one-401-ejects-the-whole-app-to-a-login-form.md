@@ -41,7 +41,7 @@ The original filing said an owner-gated procedure answered 401. It cannot have,
 and the correction narrows this issue considerably.
 
 - `ownerProcedure` throws **FORBIDDEN**, not UNAUTHORIZED
-  (`src/webapp/trpc/trpc.ts:34-40`).
+  (`src/webapp/trpc/trpc.ts:34-40` (moved to `beebox/src/webapp/trpc/procedures.ts`)).
 - More decisively, **a tRPC procedure error never sets the HTTP status here.**
   Every HTTP link in the frontend is `httpBatchStreamLink`
   (`src/frontend/src/lib/trpc/index.ts:125-127`), so the server takes the jsonl

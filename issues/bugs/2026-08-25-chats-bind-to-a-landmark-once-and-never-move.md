@@ -36,7 +36,7 @@ conversation sat under the generic **Box** landmark.
 > place, or whether it matters."
 
 **Mechanism, verified:** membership is exact-string equality between the chat's
-`contextDir` and the landmark's dir (`src/webapp/trpc/routers/chat.ts:227-242`)
+`contextDir` and the landmark's dir (`src/webapp/trpc/routers/chat.ts:227-242` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`))
 — no prefix, no roll-up. `contextDir` is chosen at creation from where the chat
 was started (box root → `""`) and written once; `appendHistory` only fills it
 when undefined, `""` is a real binding, and no rebind path exists. Structurally

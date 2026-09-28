@@ -8,7 +8,7 @@ discovered-in: main — production box feedback triage (bbx feedback)
 resolution: implemented
 ---
 
-> **Closed** — `d8233fd4c` took the derived option: `src/lib/lock-guard.ts`
+> **Closed** — `d8233fd4c` took the derived option: `src/lib/lock-guard.ts` (moved to `beebox/src/shared/lock-guard.ts`)
 > exports `lockGuardPath`/`LOCK_GUARD_SUFFIX`, and
 > `box-root-vocabulary.ts`'s `isBoxRootVocabularyName` accepts
 > `<listed .lock name>.guard` for every tooling entry, covering future locks

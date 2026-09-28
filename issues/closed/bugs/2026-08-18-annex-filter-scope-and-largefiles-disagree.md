@@ -12,8 +12,8 @@ discovered-in: worktree-annex-bypass-check — cross-model review of the photo-b
 `assetLargefilesExpression()` now renders every extension through the same
 any-case glob the attributes file uses, and `assetAnnexAttributes()` carries
 `BULK_BATCH_ATTACH_PATTERN` so a batch scope reaches the filter at all. Two new
-real-git-annex doctests cover it — `test/core/annex/largefiles-matching.doctest.md`
-and `test/core/bulk-upload/prepare-annex.doctest.md` — and both were confirmed
+real-git-annex doctests cover it — `test/core/annex/largefiles-matching.doctest.md` (moved to `beebox/test/lib/asset-extensions.largefiles.doctest.md`)
+and `test/core/bulk-upload/prepare-annex.doctest.md` (moved to `beebox/test/core/bulk-upload/prepare.annex.doctest.md`) — and both were confirmed
 to fail against the unfixed source. Existing boxes pick the change up on
 `bbx doctor annex`; that rollout is the separate
 [stale `annex.largefiles`](2026-08-18-stale-annex-largefiles-never-reapplies.md)

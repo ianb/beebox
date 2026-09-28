@@ -13,10 +13,10 @@ Closed 2026-08-29 by this commit (`fix(web): copy TTS fixtures into the backend 
 
 Every segment on the `/dev/speech` harness goes to state `failed` with
 `TTS API error 500 {"error":"mock TTS fixture missing — run: pnpm tsx
-scripts/gen-tts-fixtures.ts"}`.
+scripts/gen-tts-fixtures.ts (moved to `beebox/src/scripts/gen-tts-fixtures.ts`)"}`.
 
 Running that script does not help. The fixtures are committed at
-`beebox/src/webapp/test-fixtures/tts/{seg0,seg1,seg2}.mp3`. The mock
+`beebox/src/webapp/test-fixtures/tts (moved to `beebox/src/webapp/routes/chat/test-fixtures/tts`)/{seg0,seg1,seg2}.mp3`. The mock
 resolves them relative to its own emitted module:
 
 ```ts

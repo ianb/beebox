@@ -16,8 +16,8 @@ A box can pin the model its **chat** agent uses (`.beebox/chat-model.json`,
 read by `loadCurrentModel` against `DEFAULT_MODEL_FILE`,
 `src/core/chat/session/state.ts`). Nothing
 pins the model its **reactor** agent uses. The reactor invokes agents through
-`createAgent` (`src/core/reactor/batch-jobs.ts:53`, `chat-jobs.ts`) and never
-passes a `model`, and `runAgent` (`src/core/agent/run.ts:30`) leaves it at the
+`createAgent` (`src/core/reactor/batch-jobs.ts:53` (moved to `beebox/src/core/reactor/engine/batch-jobs.ts`), `chat-jobs.ts`) and never
+passes a `model`, and `runAgent` (`src/core/agent/run.ts:30` (moved to `beebox/src/core/agent/invoke/run.ts`)) leaves it at the
 SDK default. So intake, job processing, and the email→task step run on whatever
 the SDK defaults to that week, even on a box whose owner deliberately chose a
 model.

@@ -48,7 +48,7 @@ that per-package `node_modules/.bin` is not populated under the hoisted
 linker was out of date: it carries each package's direct dependencies.
 
 Verified: the router harness pins the spawned command to the resolved
-binary (`test/router/router-core.test.ts`), all 177 router tests pass, and
+binary (`test/router/router-core.test.ts` (moved to `workstreams-app/test/router/core.test.ts`)), all 177 router tests pass, and
 the frontend's Vite 5.4.21 started directly against the current config
 with no deprecation warnings. `bin/process-cleanup` still recognizes the
 process, since its matcher accepts any `node_modules/.bin/vite` path under

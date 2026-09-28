@@ -7,7 +7,7 @@ resolution: implemented
 
 **Closed:** Done: model-judged instruction validation, `severity: review` auto-retry, and resumable runs (`bbx procedure resume`) all landed. See `docs/procedure-implementation.md`.
 
-All three landed. `src/core/procedure/engine-phase.ts` does **model-judged
+All three landed. `src/core/procedure/engine-phase.ts` (moved to `beebox/src/core/procedure/engine/phase.ts`) does **model-judged
 instruction validation** against the step's git diff (no longer a pass-by-default
 stub), and `engine-step.ts` / `engine-run-phase.ts` implement **`severity: review`
 auto-retry** — a bounded self-heal that re-invokes the agent with the failure

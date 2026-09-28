@@ -22,13 +22,13 @@ manual CLI call the ritual never mentions.
 
 **beebox** ships identity as a default and evolves it. `bbx init` seeds
 `config/main.personality.card` with a named starter identity ("Egg",
-`src/schemas/personality-template.ts`, installed via
-`src/core/box/defaults.ts:121`) whose every tone/trait entry carries
+`src/schemas/personality-template.ts` (moved to `beebox/src/schemas/personality/template.ts`), installed via
+`src/core/box/defaults.ts:121` (moved to `beebox/src/core/box/structure/defaults.ts`)) whose every tone/trait entry carries
 `confidence: low, source: default` plus explicit `unresolved` questions. The
 retro observer sinks observations back into the card (`personality` is a
 first-class sink — `beebox/src/core/retro/observations.ts:19`), and
 `compilePersonality` (`beebox/src/schemas/personality/schema.tsx`, invoked from
-`src/core/docs-gen/compile.ts:371`) compiles the card into the agent guide
+`src/core/docs-gen/compile.ts:371` (moved to `beebox/src/core/docs-gen/compile/core.ts`)) compiles the card into the agent guide
 every agent receives. There is no identity moment, no agent-chosen element, and
 no visual/signature identity at all: `goes-by` reaches only prompt text ("You
 are **Egg**"), the UI `Avatar` component is for human users, and the card's one

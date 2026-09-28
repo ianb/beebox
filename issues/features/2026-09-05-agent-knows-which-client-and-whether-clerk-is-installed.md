@@ -27,7 +27,7 @@ What exists today:
   `composeChatAppSnapshot`; vocabulary in `src/shared/chat-channel.ts`:
   `web-desktop`, `web-mobile`, `ios-native`, plus `telegram` server-side).
   The value is declared by the client or classified from the User-Agent
-  (`src/webapp/routes/chat-helpers.ts` `resolveChannel`). So "am I talking to
+  (`src/webapp/routes/chat-helpers.ts` (moved to `beebox/src/webapp/routes/chat/helpers.ts`) `resolveChannel`). So "am I talking to
   someone on iOS right now" is answerable in chat; whether the agent guide
   tells the agent to use it for this purpose is a separate question. Outside
   chat (a wakeup, a procedure) there is no current client.

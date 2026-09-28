@@ -8,7 +8,7 @@ resolution: implemented
 ---
 
 The full `pnpm test` suite intermittently fails
-`test/webapp/chat-default-route.doctest.md` under parallel load:
+`test/webapp/chat-default-route.doctest.md` (moved to `beebox/test/webapp/routes/chat.default-route.doctest.md`) under parallel load:
 
 ```text
 not ok 1 - chat-default-route.doctest.md:35 — await getDefaultSession() # time=58.598ms
@@ -26,7 +26,7 @@ backfill's own rename — see
 
 The branch that surfaced this
 (`worktree-member-password-reset`) did not touch this test or
-`src/webapp/routes/chat.js`/chat-session-history backfill code. The file passed
+`src/webapp/routes/chat.js` (moved to `beebox/src/webapp/routes/chat/register.ts`)/chat-session-history backfill code. The file passed
 2/2 immediately afterward in isolation with:
 
 ```sh
