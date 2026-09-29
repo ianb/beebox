@@ -301,6 +301,56 @@ JSON.stringify(pointerCards.map((value) => Object.keys(value)))
 => [["0"],["0"],["0"],["href"],["href"],["windows"],["0"]]
 ```
 
+## Email cards: the copied Gmail data moves under `email:`
+
+email-message's headers, `snippet` and `date` (Gmail's arrival time, now
+`received`) move under `email:`, where the first of them was; the
+`body-file` and `attachments` pointers stay. email-thread moves its
+`thread-id`, `subject`, `participants`, `date-range` and `labels`, and keeps
+`messages`. Inside `email:` the keys take the order the connector writes, and
+a key the card does not have (`cc`) is not added:
+
+```ts
+migrateText("email-message", [
+  "message-id: <m1@example.com>",
+  "thread-id: 18c2f0a1",
+  "from: alice@example.com",
+  "to: bob@example.com",
+  "date: 2026-05-14T19:00:00.000Z",
+  "subject: Weekend plans",
+  "snippet: Hey, are you free Saturday...",
+  "body-file:",
+  "  ref: attach/msg-001.body.txt",
+  "contains: Alice asks about Saturday.",
+  "",
+].join("\n"))
+=>
+email:
+  message-id: <m1@example.com>
+  thread-id: 18c2f0a1
+  from: alice@example.com
+  to: bob@example.com
+  received: 2026-05-14T19:00:00.000Z
+  subject: Weekend plans
+  snippet: Hey, are you free Saturday...
+body-file:
+  ref: attach/msg-001.body.txt
+contains: Alice asks about Saturday.
+
+run("email-thread", { "thread-id": "18c2f0a1", subject: "Weekend plans", participants: ["alice@example.com"], "date-range": { start: "2026-05-14T19:00:00Z", end: "2026-05-14T19:00:00Z" }, messages: [{ ref: "attach/msg-001.email-message.card" }], labels: ["inbox"] })
+=> {"changed":true,"warnings":[],"fm":{"email":{"thread-id":"18c2f0a1","subject":"Weekend plans","participants":["alice@example.com"],"date-range":{"start":"2026-05-14T19:00:00Z","end":"2026-05-14T19:00:00Z"},"labels":["inbox"]},"messages":[{"ref":"attach/msg-001.email-message.card"}]}}
+```
+
+Both load under the current schemas, and a card is listed under its subject:
+
+```ts continue
+const emailSchemas = await createCardSchemaMap();
+const thread = parseCardText(`---\n${migrateText("email-thread", "thread-id: t1\nsubject: Hi\nparticipants: []\ndate-range:\n  start: 2026-05-14T19:00:00Z\n  end: 2026-05-14T19:00:00Z\nmessages: []\n")}---\n`, { source: "x.email-thread.card", schemas: emailSchemas });
+const message = parseCardText(`---\n${migrateText("email-message", "message-id: m1\nthread-id: t1\nfrom: a@x\ndate: 2026-05-14T19:00:00Z\nsubject: Hi\nbody-file:\n  ref: attach/b.txt\n")}---\n`, { source: "x.email-message.card", schemas: emailSchemas });
+JSON.stringify([thread.fields["email"]["thread-id"], message.fields["email"]["received"]])
+=> ["t1","2026-05-14T19:00:00Z"]
+```
+
 ## A migrated card is unchanged
 
 ```ts
@@ -321,6 +371,9 @@ run("webpage", { title: "A page", sources: [{ href: "https://example.com/a", ret
 
 run("browser-task", { title: "Guild", start: { href: "https://example.com/feed" } })
 => {"changed":false,"warnings":[],"fm":{"title":"Guild","start":{"href":"https://example.com/feed"}}}
+
+run("email-thread", { email: { "thread-id": "t1", subject: "Hi" }, messages: [] })
+=> {"changed":false,"warnings":[],"fm":{"email":{"thread-id":"t1","subject":"Hi"},"messages":[]}}
 ```
 
 ## A card the migration cannot convert safely is refused
@@ -367,4 +420,7 @@ refusal("browser-task", { source: "https://example.com/a", start: { href: "https
 
 refusal("record", { sources: [{ ref: "/x.card", time: "at 1:23", pos: "at 1:24" }] })
 => UnmappedFieldError: record sources.0.time has both the old and the new keys; migrate this card by hand
+
+refusal("email-message", { email: { "message-id": "m1" }, date: "2026-05-14T19:00:00Z" })
+=> UnmappedFieldError: email-message date has both the old and the new keys; migrate this card by hand
 ```

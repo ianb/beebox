@@ -214,6 +214,38 @@ function planRecipe(fm: Record<string, unknown>): FieldEditPlan {
 }
 
 /**
+ * A planner that moves top-level keys under one source-metadata key named
+ * for the external system (`email`, `drive`). `moves` lists
+ * `[oldKey, newKey]` pairs in the order the connector writes them; the
+ * object lands where the card's first old key was. A card that already has
+ * `key` alongside an old key is refused.
+ */
+function sourceMetadataPlanner({ type, key, moves }: {
+  type: string;
+  key: string;
+  moves: ReadonlyArray<readonly [string, string]>;
+}): Planner {
+  return (fm) => {
+    const present = moves.filter(([from]) => from in fm);
+    const first = Object.keys(fm).find((name) => present.some(([from]) => from === name));
+    if (first === undefined) return { edits: [], warnings: [] };
+    if (key in fm) throw new UnmappedFieldError({ type, field: first, problem: "old-and-new" });
+    const value: Record<string, unknown> = {};
+    for (const [from, to] of present) value[to] = fm[from];
+    const edits: FieldEdit[] = [
+      { op: "set", path: [key], value, after: first },
+      ...present.map(([from]): FieldEdit => ({ op: "delete", path: [from] })),
+    ];
+    return { edits, warnings: [] };
+  };
+}
+
+/** The keys a key moves under unchanged. */
+function same(...keys: string[]): Array<readonly [string, string]> {
+  return keys.map((name) => [name, name] as const);
+}
+
+/**
  * Per card type: the edits that retire its old keys.
  *
  * - image, file, pdf: `filename.captured` becomes `filename.via.at` and
@@ -235,6 +267,11 @@ function planRecipe(fm: Record<string, unknown>): FieldEditPlan {
  * - commentary: `source` (the annotated page's URL) becomes `about: { href }`.
  * - browser-task: `source` (the start URL) becomes `start: { href }`.
  * - tab-arrangement: `source` (the captured tabs) becomes `captured-tabs`.
+ * - email-message: the headers the Gmail connector copied (`message-id`,
+ *   `thread-id`, `from`, `to`, `cc`, `subject`, `snippet`) move under
+ *   `email:`, and `date` (Gmail's arrival time) becomes `email.received`.
+ * - email-thread: `thread-id`, `subject`, `participants`, `date-range` and
+ *   `labels` move under `email:`.
  */
 const PLANNERS: Readonly<Record<string, Planner>> = {
   image: allOf(
@@ -263,6 +300,16 @@ const PLANNERS: Readonly<Record<string, Planner>> = {
   commentary: wrapTopLevelPlanner({ type: "commentary", from: "source", to: "about", wrap: (href) => ({ href }) }),
   "browser-task": wrapTopLevelPlanner({ type: "browser-task", from: "source", to: "start", wrap: (href) => ({ href }) }),
   "tab-arrangement": renameTopLevelPlanner({ type: "tab-arrangement", from: "source", to: "captured-tabs" }),
+  "email-message": sourceMetadataPlanner({
+    type: "email-message",
+    key: "email",
+    moves: [...same("message-id", "thread-id", "from", "to", "cc"), ["date", "received"], ...same("subject", "snippet")],
+  }),
+  "email-thread": sourceMetadataPlanner({
+    type: "email-thread",
+    key: "email",
+    moves: same("thread-id", "subject", "participants", "date-range", "labels"),
+  }),
 };
 
 /** The edits this migration makes to one card of `type`; none for a type it doesn't handle. */

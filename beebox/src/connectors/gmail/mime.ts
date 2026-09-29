@@ -18,7 +18,8 @@ export interface FetchedMessage {
   from: string;
   to: string;
   cc: string | undefined;
-  date: string;
+  /** Gmail's `internalDate`: when the message arrived in the mailbox. */
+  received: string;
   subject: string;
   textBody: string;
   labels: string[];
@@ -223,7 +224,7 @@ export async function parseGmailMessage(
   const to = getHeader(raw.payload, "To") || "";
   const cc = getHeader(raw.payload, "Cc");
   const subject = getHeader(raw.payload, "Subject") || "(no subject)";
-  const date = isoDateFromInternal(raw.internalDate);
+  const received = isoDateFromInternal(raw.internalDate);
   const textBody = extractTextBody(raw.payload);
 
   const labels = (raw.labelIds || []).map((id) => labelMap.get(id) || id);
@@ -246,7 +247,7 @@ export async function parseGmailMessage(
     from,
     to,
     cc: cc || undefined,
-    date,
+    received,
     subject,
     textBody,
     labels,

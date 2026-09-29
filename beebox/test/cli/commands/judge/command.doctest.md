@@ -112,7 +112,7 @@ prints it, so the judge sees the body and not only the subject.
 
 ```ts continue
 const thread = "_content/inbox/email/Trip.email-thread.attach";
-await box.write(`${thread}/msg-001.email-message.card`, "---\ntype: email-message\nsubject: Spring outing\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n");
+await box.write(`${thread}/msg-001.email-message.card`, "---\ntype: email-message\nemail:\n  subject: Spring outing\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n");
 await box.write(`${thread}/msg-001.attach/msg-001.body.txt`, `The field trip is on May 3. ${"Please read on. ".repeat(20)}\n`);
 await judge(box, "_config/judgments/field-trip.judgment.card", { perLine: true, cards: true }, { stdin: `${thread}/msg-001.email-message.card\n` })
 => {"input":"_content/inbox/email/Trip.email-thread.attach/msg-001.email-message.card","answers":{"trip":{"type":"noul","probability":0.92}}}

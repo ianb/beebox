@@ -9,6 +9,7 @@ import { attachDirFor } from "../../shared/attach-path.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { getBoxDir } from "../../lib/paths/core.js";
 import { invariant } from "../../shared/invariant.js";
+import { isRecord } from "../../shared/is-record.js";
 import { safeDirectoryName, makeSnippet, type FetchedMessage } from "./mime.js";
 import { preserveAgentFields } from "../../preserve-agent-fields.js";
 import { findTrackedGmailThreads, type TrackedGmailThread } from "./tracking.js";
@@ -33,7 +34,7 @@ class InvalidTrackedGmailMessageCardError extends Error {
   readonly cardPath: string;
 
   constructor(cardPath: string) {
-    super(`Tracked Gmail message card has no valid message-id: ${cardPath}`);
+    super(`Tracked Gmail message card has no valid email.message-id: ${cardPath}`);
     this.name = "InvalidTrackedGmailMessageCardError";
     this.cardPath = cardPath;
   }
@@ -64,7 +65,8 @@ async function readExistingMessages(attachDir: string): Promise<ExistingMessages
   for (const ref of refs) {
     const cardPath = path.join(attachDir, ref);
     const fields = parseFrontmatterObject(await fs.readFile(cardPath, "utf-8"));
-    const messageId = fields?.["message-id"];
+    const email = fields?.["email"];
+    const messageId = isRecord(email) ? email["message-id"] : undefined;
     if (typeof messageId !== "string" || messageId === "") {
       throw new InvalidTrackedGmailMessageCardError(cardPath);
     }
@@ -97,7 +99,7 @@ function messageTemplateOptions(
     from: message.from,
     to: message.to,
     ...(message.cc === undefined ? {} : { cc: message.cc }),
-    date: message.date,
+    received: message.received,
     subject: message.subject,
     snippet: makeSnippet(message.textBody),
     bodyFile: bodyFilename,
@@ -179,8 +181,8 @@ async function writeThreadCard(opts: {
     threadId: opts.threadId,
     subject: first.subject,
     participants: collectParticipants(opts.messages),
-    dateStart: first.date,
-    dateEnd: last.date,
+    dateStart: first.received,
+    dateEnd: last.received,
     messageRefs: opts.refs.toSorted(),
     ...(labels.size === 0 ? {} : { labels: [...labels] }),
   });
@@ -203,7 +205,7 @@ async function writeOneThread(opts: {
   tracked: TrackedGmailThread | undefined;
   result: WriteThreadsResult;
 }): Promise<void> {
-  opts.messages.sort((left, right) => Date.parse(left.date) - Date.parse(right.date));
+  opts.messages.sort((left, right) => Date.parse(left.received) - Date.parse(right.received));
   const first = opts.messages[0];
   invariant(first !== undefined, "a grouped Gmail thread has at least one message");
   const location = cardLocation({

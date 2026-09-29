@@ -254,8 +254,10 @@ async function readSourceMessage(
       source: path.basename(absPath),
       schemas: await createCardSchemaMap(),
     });
-    const messageId = parsed.fields["message-id"];
-    const threadId = parsed.fields["thread-id"];
+    const email = parsed.fields["email"];
+    if (!isRecord(email)) return null;
+    const messageId = email["message-id"];
+    const threadId = email["thread-id"];
     if (typeof messageId !== "string" || typeof threadId !== "string") return null;
     return { messageId, threadId };
   } catch (e) {

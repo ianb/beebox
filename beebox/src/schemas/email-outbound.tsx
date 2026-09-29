@@ -70,7 +70,7 @@ The card's body is the email body. Markdown subset only:
   \`email-message\` card. Use a path **relative to the draft's
   directory** (typically just \`msg-NNN.email-message.card\` since the
   draft sits in the same thread directory). The connector reads the
-  source card's \`message-id\` and \`thread-id\` to set Gmail threading
+  source card's \`email.message-id\` and \`email.thread-id\` to set Gmail threading
   headers — if the ref doesn't resolve, the upload fails rather than
   silently lose threading.
 

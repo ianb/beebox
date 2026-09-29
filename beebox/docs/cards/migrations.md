@@ -593,11 +593,22 @@ Part 3 of `docs/plans/standard-card-fields.md`. Per type:
 - tab-arrangement: `source` (the captured tabs) becomes `captured-tabs`.
 - image `text[]`: each entry's `source` (the surface the text is on) becomes
   `surface`.
+- email-message: what the Gmail connector copied (`message-id`, `thread-id`,
+  `from`, `to`, `cc`, `subject`, `snippet`) moves under `email:`, and `date`
+  (Gmail's arrival time) becomes `email.received`. `body-file` and
+  `attachments` stay top-level.
+- email-thread: `thread-id`, `subject`, `participants`, `date-range` and
+  `labels` move under `email:`; `messages` stays top-level.
+
+A source-metadata key (`email:`) lands where the card's first moved key was,
+with its keys in the order the connector writes them, so a migrated thread card
+is byte-identical to what the next sync writes and is not rewritten.
 
 Renamed keys keep their place. A card is failed, unchanged, when its
 `filename` is not a map, when it has both an old key and its new name (at any
 of the places above), when a media reference has only one of the two old
-keys, when a webpage has `captured` but no `source`, or when a recipe's
+keys, when a webpage has `captured` but no `source`, when an email card has
+`email:` beside a key that moves into it, or when a recipe's
 `source` is not a map or has both `href` and `ref`. A card keeps its line wrapping (see `applyFieldEdits`), so an unedited
 stock guide, personality or schedule becomes exactly the current template.
 Idempotent. See

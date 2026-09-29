@@ -231,16 +231,20 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
   switch (kind) {
     case "email-thread":
       return {
-        extra: compact([str(fields["subject"]), ...strArray(fields["participants"]), ...strArray(fields["labels"])]),
+        extra: compact([
+          str(path2(fields["email"], "subject")),
+          ...strArray(path2(fields["email"], "participants")),
+          ...strArray(path2(fields["email"], "labels")),
+        ]),
       };
     case "email-message":
       // The body file is deliberately excluded — see module doc.
       return {
         extra: compact([
-          str(fields["subject"]),
-          str(fields["from"]),
-          str(fields["to"]),
-          str(fields["snippet"]),
+          str(path2(fields["email"], "subject")),
+          str(path2(fields["email"], "from")),
+          str(path2(fields["email"], "to")),
+          str(path2(fields["email"], "snippet")),
         ]),
       };
     case "person":

@@ -57,7 +57,7 @@ docs[0].content
 ```ts
 const docs = await docsFor(
   "_content/inbox/email/t.attach/msg-001.email-message.card",
-  "---\nmessage-id: \"<m1@example.com>\"\nthread-id: t1\nfrom: alice@example.com\nto: bob@example.com\ndate: 2026-05-14T19:00:00Z\nsubject: Weekend plans\nsnippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
+  "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: alice@example.com\n  to: bob@example.com\n  received: 2026-05-14T19:00:00Z\n  subject: Weekend plans\n  snippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
 );
 docs[0].title
 => Weekend plans
@@ -68,7 +68,7 @@ alice@example.com
 bob@example.com
 Hey, are you free Saturday...
 
-JSON.stringify(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.email-message.card", card: await loadCardFromText({ content: "---\nmessage-id: \"<m1@example.com>\"\nthread-id: t1\nfrom: a@x.com\ndate: 2026-05-14T19:00:00Z\nsubject: s\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n", source: "_content/inbox/email/t.attach/msg-001.email-message.card", ctx }) }))
+JSON.stringify(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.email-message.card", card: await loadCardFromText({ content: "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: a@x.com\n  received: 2026-05-14T19:00:00Z\n  subject: s\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n", source: "_content/inbox/email/t.attach/msg-001.email-message.card", ctx }) }))
 => []
 ```
 
@@ -77,7 +77,7 @@ JSON.stringify(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.
 ```ts
 const docs = await docsFor(
   "_content/inbox/email/thread-x.email-thread.card",
-  "---\nthread-id: t1\nsubject: Usage-based pricing demo\nparticipants:\n  - hello@metricly.example\ndate-range:\n  start: 2026-05-14T19:00:00Z\n  end: 2026-05-14T19:00:00Z\nlabels:\n  - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
+  "---\nemail:\n  thread-id: t1\n  subject: Usage-based pricing demo\n  participants:\n    - hello@metricly.example\n  date-range:\n    start: 2026-05-14T19:00:00Z\n    end: 2026-05-14T19:00:00Z\n  labels:\n    - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
 );
 docs[0].title
 => Usage-based pricing demo

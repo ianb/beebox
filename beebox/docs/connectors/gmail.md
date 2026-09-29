@@ -165,7 +165,12 @@ _content/inbox/email/Subject.attach/
 ```
 
 Messages are individual child cards because they are addressable records, but
-the Gmail thread is the tracked and synchronized unit. Bodies remain separate
+the Gmail thread is the tracked and synchronized unit. What the connector copies
+from Gmail sits under one `email:` key on each card: the thread's `thread-id`,
+`subject`, `participants`, `date-range` and `labels`; a message's headers,
+`received` (Gmail's arrival time) and `snippet`. The `messages`, `body-file` and
+`attachments` pointers stay top-level. The connector rewrites a thread card on
+each sync and keeps an agent's `contains`; it writes a message card once. Bodies remain separate
 untrusted text files and are not automatically loaded as card instructions.
 
 ## Sync state and old installations

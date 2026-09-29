@@ -21,7 +21,6 @@ import { cardTitle } from "../../src/core/loader-registry.js";
  * entry is no longer present, so each removal also deletes its line here.
  */
 const PENDING_REMOVAL = new Set([
-  "email-message.date",
   "gdoc.modified",
   "gsheet.modified", "memo.created",
   "memo.source", "memo.status",
