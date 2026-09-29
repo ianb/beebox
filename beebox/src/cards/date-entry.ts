@@ -30,6 +30,10 @@ export const IsoDateValueSchema = z
  * - `kind` — which date this is, when a card has several (`due`, `filed`,
  *   `starts`). A short name, not prose.
  * - `note` — anything else about the date, in prose.
+ *
+ * A date entry is a normalized fact about the subject. Text transcribed from
+ * a document (an image's `document.dates`, kept exactly as printed) is
+ * evidence, not a date entry.
  */
 export const DateEntrySchema = z.object({
   value: IsoDateValueSchema,

@@ -64,6 +64,11 @@ const SubjectBbox = z.object({
   x2: z.string(),
 });
 
+/**
+ * A date as printed on the photographed document, kept verbatim: evidence
+ * for a later normalized date entry (`beebox/cards` `DateEntrySchema`), not
+ * one itself.
+ */
 const DocumentDate = z.object({
   label: z.string(),
   value: z.string(),
@@ -144,8 +149,8 @@ Frontmatter fields:
   (bill, letter, form, receipt, statement, …). \`kind\` is a short
   free-text category ("utility bill", "lab results"), \`from\` is the
   issuer/sender, \`dates\` is an array of \`{label, value}\` entries.
-  Date values are kept as they appear in the document; normalization
-  happens downstream.
+  Date values are kept as they appear in the document (evidence, not
+  ISO dates); a card that records a normalized date uses a date entry.
 - \`has-text\` — true if the image contains readable text, false
   otherwise. Always true when a \`document:\` field is present.
 - \`rotation\` — degrees clockwise the image needs to be rotated to
