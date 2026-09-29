@@ -25,6 +25,7 @@ import {
   type SpeechPlaybackState,
 } from "./message-items";
 import { MAX_RETAINED_MESSAGES } from "../../../../machines/chat-types";
+import { useRevealAnchor } from "./reveal-anchor";
 import { TranscriptSelection } from "./TranscriptSelection";
 import type { CaptureBubbleModel, CaptureVerbs } from "../../capture-bubble";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
@@ -59,6 +60,32 @@ function nextLiveTargetUuid(opts: { prev: LiveTurnState; data: DataItem[]; liveT
     return null;
   }
   return prev.uuid;
+}
+
+/**
+ * Which group carries the live-turn key, tracked via set-state-during-render
+ * (see nextLiveTargetUuid). `liveKey` is `live-<turnId>` while a turn is live,
+ * so the streamed and finalized forms of that group share one React key.
+ */
+function useLiveTurnKey(opts: { data: DataItem[]; liveTurnId: string | null; streamingShown: boolean }): {
+  liveKey: string | null;
+  liveTargetUuid: string | null;
+} {
+  const [liveState, setLiveState] = useState<LiveTurnState>({ turnId: null, uuid: null });
+  const liveTargetUuid = nextLiveTargetUuid({ prev: liveState, ...opts });
+  if (liveState.turnId !== opts.liveTurnId || liveState.uuid !== liveTargetUuid) {
+    setLiveState({ turnId: opts.liveTurnId, uuid: liveTargetUuid });
+  }
+  const liveKey = opts.liveTurnId ? `live-${opts.liveTurnId}` : null;
+  return { liveKey, liveTargetUuid };
+}
+
+/** Index of the newest assistant group, for the now-playing speech highlight. */
+function lastAssistantGroupIndexIn(data: DataItem[]): number {
+  for (const d of data.toReversed()) {
+    if (d.kind === "group" && d.group.type === "assistant") return d.groupIndex;
+  }
+  return -1;
 }
 
 function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
@@ -217,6 +244,11 @@ function MessageListInner({
     onLoadOlder();
   }, [captureForPrepend, onLoadOlder]);
 
+  // A chat-search deep link (`?m=<entry uuid>`) lands the open at the matched
+  // message — via the controller's anchorToTop, paging older history when the
+  // anchor precedes the loaded window (see reveal-anchor.ts).
+  useRevealAnchor({ loading, messageCount: messages.length, hasOlder, loadingOlder, onLoadOlder, anchorToTop, contentElRef });
+
   // Lightbox needs the full image list (across all messages). Embed it as JSON
   // so the provider can dedup against any currently-rendered images.
   const chatImagesJson = useMemo(
@@ -226,24 +258,11 @@ function MessageListInner({
 
   // Which group carries the live-turn key (bound to a specific group across
   // renders — see nextLiveTargetUuid). The streamed and finalized form of that
-  // group share `live-${liveTurnId}` so React reconciles them in place. Tracked
-  // via set-state-during-render (same pattern the prepend anchor used) so the
-  // value is correct in this render with no one-frame lag.
-  const [liveState, setLiveState] = useState<LiveTurnState>({ turnId: null, uuid: null });
-  const liveTargetUuid = nextLiveTargetUuid({ prev: liveState, data, liveTurnId, streamingShown });
-  if (liveState.turnId !== liveTurnId || liveState.uuid !== liveTargetUuid) {
-    setLiveState({ turnId: liveTurnId, uuid: liveTargetUuid });
-  }
-  const liveKey = liveTurnId ? `live-${liveTurnId}` : null;
+  // group share `live-${liveTurnId}` so React reconciles them in place.
+  const { liveKey, liveTargetUuid } = useLiveTurnKey({ data, liveTurnId, streamingShown });
 
   // Newest assistant group's index, for the now-playing speech-highlight match.
-  let lastAssistantGroupIndex = -1;
-  for (const d of data.toReversed()) {
-    if (d.kind === "group" && d.group.type === "assistant") {
-      lastAssistantGroupIndex = d.groupIndex;
-      break;
-    }
-  }
+  const lastAssistantGroupIndex = lastAssistantGroupIndexIn(data);
 
   const renderCtx = useMemo<RenderItemContext>(() => ({
     streamText,
@@ -310,7 +329,12 @@ function MessageListInner({
               // whole reply.
               const spacer = showSendSpacer && index === data.length - 1 ? "100cqh" : undefined;
               return (
-                <div key={key} data-role={item.kind === "group" ? item.group.type : item.kind} style={{ minHeight: spacer }}>
+                <div
+                  key={key}
+                  data-role={item.kind === "group" ? item.group.type : item.kind}
+                  data-entry-uuids={item.kind === "group" ? item.group.entries.map((e) => e.uuid).join(" ") : undefined}
+                  style={{ minHeight: spacer }}
+                >
                   <div ref={spacer === undefined ? undefined : liveContentRef} data-chat-live-turn-content={spacer === undefined ? undefined : ""}>
                     {renderDataItem(item, renderCtx)}
                   </div>
