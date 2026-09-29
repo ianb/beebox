@@ -1,7 +1,8 @@
 ---
 title: "Search recent chats by what was said in them, with the same kind of semantic search cards get"
-workstream: unattached
+workstream: chat-search
 needs: [design]
+design: ../../beebox/docs/plans/chat-search.md
 area: beebox
 labels: [chat, search]
 filed-by: agent
@@ -58,4 +59,8 @@ the chat logs themselves.
   matching message.
 
 Related: [chat backend port hygiene](../code-quality/2026-07-18-chat-backend-port-hygiene.md)
-(owning our transcripts would make them easier to index).
+(owning our transcripts would make them easier to index),
+[chats in global search](2026-09-28-chats-in-global-search.md) and
+[private-session search gating](2026-09-28-private-chat-sessions-search-gating.md)
+(follow-ups deferred from the 2026-09-28 design: text-only ranking chosen, so
+no embeddings consent question remains).
