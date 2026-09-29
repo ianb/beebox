@@ -9,7 +9,7 @@ priority: backlog
 Current scope: connector-wide archival image optimization remains undecided.
 Client photo capture already prefers WebP with JPEG fallback, while PNG pastes
 remain PNG. PDF extraction produces generated page and figure derivatives;
-the [WebP follow-up](../../beebox/docs/plans/pdf-render-webp.md) changes new
+the [WebP follow-up](../../beebox/docs/implemented-plans/pdf-render-webp.md) changes new
 derivatives to WebP and keeps existing AVIF readable. Originals remain intact.
 This follow-up does not implement bulk connector conversion.
 

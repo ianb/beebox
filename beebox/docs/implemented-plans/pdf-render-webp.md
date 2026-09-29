@@ -1,6 +1,6 @@
 ---
 title: "WebP PDF assets and compatible image inputs"
-status: draft
+status: implemented
 workstream: jev-triage
 issues:
   - ../../../issues/features/2026-06-18-avif-webp-for-stored-images.md
