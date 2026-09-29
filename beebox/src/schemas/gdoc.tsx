@@ -6,6 +6,10 @@
  * Lossy upstream features (comments, footnotes, etc.) are enumerated in
  * `lossy:` so agents know what won't survive a push.
  *
+ * `drive:` holds what the connector copied from Drive (the file's `id`,
+ * `link`, `owner`, `modified` time, and `revision`). `title` is the Doc's
+ * title; `conflict` is connector state, not Drive's.
+ *
  * Example file layout:
  *   _content/drive/Project_Notes.gdoc.card
  *   _content/drive/Project_Notes.attach/Project_Notes.md
@@ -41,11 +45,14 @@ export const GdocSchema = cardSchema("gdoc", {
   category: "synced",
   fields: {
     title: z.string(),
-    "drive-id": z.string(),
-    modified: z.string(),
-    revision: z.string().optional(),
-    link: z.string(),
-    owner: z.string(),
+    drive: z.object({
+      id: z.string(),
+      link: z.string(),
+      owner: z.string(),
+      // Drive's `modifiedTime`: when the file last changed on Drive.
+      modified: z.string(),
+      revision: z.string().optional(),
+    }),
     content: z.object({ ref: z.string() }),
     comments: z.object({ ref: z.string() }).optional(),
     lossy: z.array(LossyItem).optional(),
@@ -69,7 +76,9 @@ document type with no upstream sync.
 Edit the \`.md\` file and commit. On the next sync the change pushes
 back to Google Drive (markdown is converted to Doc format on the
 server). Do not modify the card frontmatter — it is managed by the
-connector — with one exception: \`contains:\` is agent-owned and
+connector. \`drive:\` is what Drive reports about the file: its \`id\`,
+\`link\`, \`owner\`, \`modified\` (when it last changed on Drive) and
+\`revision\`. One exception: \`contains:\` is agent-owned and
 survives sync; set it freely (\`bbx contains update\`).
 
 Edit it only to change what the document says. The \`.md\` is Google's
@@ -117,7 +126,7 @@ permission to edit or reformat.
 
 ## Moving docs
 Moving the card moves its attach scope (and the \`.md\` inside)
-atomically — the \`drive-id\` field maintains the link to Google Drive.`,
+atomically — the \`drive.id\` field maintains the link to Google Drive.`,
 });
 
 export type GdocFields = InferCardFields<typeof GdocSchema>;
@@ -135,19 +144,22 @@ export function createGdocTemplate(options: {
   /** An unresolved `.remote.md` sits beside the local copy. */
   conflict?: boolean;
 }): string {
-  const fields: Record<string, unknown> = {
-    "drive-id": options.driveId,
-    title: options.title,
-    modified: options.modified,
+  const drive: Record<string, unknown> = {
+    id: options.driveId,
     link: options.link,
     owner: options.owner,
+    modified: options.modified,
+  };
+  if (options.revision !== undefined && options.revision !== "") {
+    drive["revision"] = options.revision;
+  }
+  const fields: Record<string, unknown> = {
+    drive,
+    title: options.title,
     content: { ref: `attach/${options.contentFile}` },
   };
   if (options.commentsFile !== undefined) {
     fields["comments"] = { ref: `attach/${options.commentsFile}` };
-  }
-  if (options.revision !== undefined && options.revision !== "") {
-    fields["revision"] = options.revision;
   }
   if (options.lossy !== undefined && options.lossy.length > 0) {
     fields["lossy"] = options.lossy;

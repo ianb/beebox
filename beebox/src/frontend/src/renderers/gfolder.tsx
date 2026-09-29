@@ -16,6 +16,7 @@
  */
 
 import { useParams } from "@tanstack/react-router";
+import { isRecord } from "@shared/is-record";
 import { trpc } from "../lib/trpc/client";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -70,11 +71,12 @@ function ChildState({ card }: { card: BrowseCardEntry }) {
 
 /** Name, Drive link, and the outcome of the last mirror pass. */
 function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<string, unknown> }) {
-  const name = field(frontmatter, "name");
-  const link = field(frontmatter, "link");
+  const drive = isRecord(frontmatter["drive"]) ? frontmatter["drive"] : {};
+  const name = field(frontmatter, "title");
+  const link = field(drive, "link");
   const lastSync = field(frontmatter, "last-sync");
   const error = field(frontmatter, "error");
-  const driveId = field(frontmatter, "drive-id");
+  const driveId = field(drive, "id");
 
   return (
     <Stack gap="xs">

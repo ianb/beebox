@@ -599,16 +599,28 @@ Part 3 of `docs/plans/standard-card-fields.md`. Per type:
   `attachments` stay top-level.
 - email-thread: `thread-id`, `subject`, `participants`, `date-range` and
   `labels` move under `email:`; `messages` stays top-level.
+- gdoc, gsheet: `drive-id` (as `id`), `link`, `owner`, `modified` (Drive's
+  `modifiedTime`) and gdoc's `revision` move under `drive:`. `title`, the
+  content and comments pointers, `lossy` and `conflict` stay top-level.
+- gfolder: `drive-id` (as `id`) and `link` move under `drive:`; `name` (the
+  folder's Drive name) becomes `title`. `last-sync`, `error` and the problem
+  counts are connector state and stay.
+- glink: `drive-id` (as `id`), `link` and `mime` move under `drive:`; `name`
+  becomes `title`. `origin` stays.
 
-A source-metadata key (`email:`) lands where the card's first moved key was,
-with its keys in the order the connector writes them, so a migrated thread card
-is byte-identical to what the next sync writes and is not rewritten.
+A source-metadata key (`email:`, `drive:`) lands where the card's first moved
+key was, with its keys in the order the connector writes them, so a migrated
+thread, gdoc or gsheet card is byte-identical to what the next sync writes and
+is not rewritten. Drive cards in `_bookkeeping/trash/` migrate too: their
+`drive.id` is the tombstone that stops a folder mirror from re-creating them,
+and an unreadable id stops folder discovery.
 
 Renamed keys keep their place. A card is failed, unchanged, when its
 `filename` is not a map, when it has both an old key and its new name (at any
 of the places above), when a media reference has only one of the two old
-keys, when a webpage has `captured` but no `source`, when an email card has
-`email:` beside a key that moves into it, or when a recipe's
+keys, when a webpage has `captured` but no `source`, when an email or Drive card has
+`email:`/`drive:` beside a key that moves into it, when a gfolder or glink has
+both `name` and `title`, or when a recipe's
 `source` is not a map or has both `href` and `ref`. A card keeps its line wrapping (see `applyFieldEdits`), so an unedited
 stock guide, personality or schedule becomes exactly the current template.
 Idempotent. See

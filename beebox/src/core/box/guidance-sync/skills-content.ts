@@ -312,8 +312,8 @@ description: Work with Google Drive content in the box — mirror a folder, sync
 
 ## Three kinds of Drive card
 
-- **Pointer** (\`.glink.card\`) — "this Drive item exists, here is where, here is what it's for." Nothing is copied. \`name\`/\`link\`/\`mime\` are connector-stamped; the body is yours for purpose notes.
-- **Synced file** (\`.gdoc.card\`, \`.gsheet.card\`) — content mirrored **two-way**, kept in the card's attach scope (\`<basename>.attach/\`). \`bbx mv\` moves the card and everything with it; the \`drive-id\` keeps the upstream link. Don't move the pieces by hand.
+- **Pointer** (\`.glink.card\`) — "this Drive item exists, here is where, here is what it's for." Nothing is copied. \`title\` and \`drive:\` (\`id\`, \`link\`, \`mime\`) are connector-stamped; the body is yours for purpose notes.
+- **Synced file** (\`.gdoc.card\`, \`.gsheet.card\`) — content mirrored **two-way**, kept in the card's attach scope (\`<basename>.attach/\`). \`bbx mv\` moves the card and everything with it; the \`drive.id\` keeps the upstream link. Don't move the pieces by hand.
 - **Mirrored folder** (\`.gfolder.card\`) — the directory the card sits in mirrors the Drive folder. Docs and Sheets become synced files, subfolders become subdirectories with their own folder card, and **every other child becomes a pointer** — a PDF, a Slides deck, an image is never copied.
 
 ## Setting one up: the boxholder pastes a Drive link in chat

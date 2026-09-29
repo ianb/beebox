@@ -12,6 +12,10 @@ import { planSourceFields } from "../../../src/scripts/migrate/source-fields.js"
 import { applyFieldEdits } from "../../../src/scripts/migrate/_field-edits.js";
 import { parseCardText } from "../../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
+import { createGdocTemplate } from "../../../src/schemas/gdoc.js";
+import { createGsheetTemplate } from "../../../src/schemas/gsheet.js";
+import { createGfolderTemplate } from "../../../src/schemas/gfolder.js";
+import { createGlinkTemplate } from "../../../src/schemas/glink.js";
 
 // Plan the edits for a card, apply them to its YAML, and report the result.
 function run(type: string, fm: Record<string, unknown>): string {
@@ -351,6 +355,55 @@ JSON.stringify([thread.fields["email"]["thread-id"], message.fields["email"]["re
 => ["t1","2026-05-14T19:00:00Z"]
 ```
 
+## Drive cards: the copied Drive metadata moves under `drive:`
+
+gdoc and gsheet move `drive-id` (as `id`), `link`, `owner`, `modified` and
+gdoc's `revision` under `drive:`; `title`, the content pointers, `lossy` and
+`conflict` stay. gfolder and glink move `drive-id`, `link` and glink's `mime`,
+and their `name` (the Drive name) becomes `title` in place:
+
+```ts
+run("gfolder", { "drive-id": "folder-1", name: "Recipes", link: "https://drive.google.com/drive/folders/folder-1", "last-sync": "2026-09-01T10:00:00Z", "not-in-folder": 2, contains: "Recipes shared with the family." })
+=> {"changed":true,"warnings":[],"fm":{"drive":{"id":"folder-1","link":"https://drive.google.com/drive/folders/folder-1"},"title":"Recipes","last-sync":"2026-09-01T10:00:00Z","not-in-folder":2,"contains":"Recipes shared with the family."}}
+
+run("gfolder", { "drive-id": "folder-1" })
+=> {"changed":true,"warnings":[],"fm":{"drive":{"id":"folder-1"}}}
+```
+
+A card the connector wrote in the old shape migrates to exactly what the
+connector writes now, so the next sync does not rewrite it. The old layouts
+below are the old templates' key order:
+
+```ts continue
+const old = (fields: Record<string, unknown>) => stringify(fields);
+const now = (card: string) => card.replace(/^---\n/, "").replace(/---\n$/, "");
+const link = "https://docs.google.com/document/d/doc-1/edit";
+JSON.stringify([
+  migrateText("gdoc", old({ "drive-id": "doc-1", title: "Trip Notes", modified: "2026-09-01T10:00:00.000Z", link, owner: "o@example.com", content: { ref: "attach/Trip_Notes.md" }, comments: { ref: "attach/Trip_Notes.comments.json" }, revision: "rev-9", lossy: [{ type: "images", count: 2 }], conflict: true }))
+    === now(createGdocTemplate({ driveId: "doc-1", title: "Trip Notes", modified: "2026-09-01T10:00:00.000Z", revision: "rev-9", link, owner: "o@example.com", contentFile: "Trip_Notes.md", commentsFile: "Trip_Notes.comments.json", lossy: [{ type: "images", count: 2 }], conflict: true })),
+  migrateText("gsheet", old({ "drive-id": "sheet-1", title: "Budget", modified: "2026-09-01T10:00:00.000Z", link, owner: "o@example.com", sheets: [{ ref: "attach/Sheet1.json", title: "Sheet1", gid: "0" }] }))
+    === now(createGsheetTemplate({ driveId: "sheet-1", title: "Budget", modified: "2026-09-01T10:00:00.000Z", link, owner: "o@example.com", sheets: [{ ref: "attach/Sheet1.json", title: "Sheet1", gid: "0" }] })),
+  migrateText("gfolder", old({ "drive-id": "folder-1", name: "Recipes", link }))
+    === now(createGfolderTemplate({ driveId: "folder-1", name: "Recipes", link })),
+  migrateText("glink", old({ "drive-id": "pdf-1", link, name: "Lease.pdf", mime: "application/pdf", origin: "mirror" }))
+    === now(createGlinkTemplate({ driveId: "pdf-1", link, name: "Lease.pdf", mime: "application/pdf", origin: "mirror", notes: "" })),
+])
+=> [true,true,true,true]
+```
+
+Each loads under the current schemas:
+
+```ts continue
+const driveSchemas = await createCardSchemaMap();
+JSON.stringify([
+  ["gdoc", "drive-id: d1\ntitle: Notes\nmodified: 2026-09-01\nlink: https://x\nowner: o@x\ncontent:\n  ref: attach/Notes.md\n"],
+  ["gsheet", "drive-id: s1\ntitle: Budget\nmodified: 2026-09-01\nlink: https://x\nowner: o@x\nsheets: []\n"],
+  ["gfolder", "drive-id: f1\nname: Recipes\n"],
+  ["glink", "drive-id: p1\nlink: https://x\nname: Lease.pdf\nmime: application/pdf\norigin: manual\n"],
+].map(([type, yaml]) => parseCardText(`---\n${migrateText(type, yaml)}---\n`, { source: `x.${type}.card`, schemas: driveSchemas }).fields["drive"]["id"]))
+=> ["d1","s1","f1","p1"]
+```
+
 ## A migrated card is unchanged
 
 ```ts
@@ -374,6 +427,9 @@ run("browser-task", { title: "Guild", start: { href: "https://example.com/feed" 
 
 run("email-thread", { email: { "thread-id": "t1", subject: "Hi" }, messages: [] })
 => {"changed":false,"warnings":[],"fm":{"email":{"thread-id":"t1","subject":"Hi"},"messages":[]}}
+
+run("glink", { drive: { id: "p1", link: "https://x", mime: "application/pdf" }, title: "Lease.pdf", origin: "manual" })
+=> {"changed":false,"warnings":[],"fm":{"drive":{"id":"p1","link":"https://x","mime":"application/pdf"},"title":"Lease.pdf","origin":"manual"}}
 ```
 
 ## A card the migration cannot convert safely is refused
@@ -423,4 +479,10 @@ refusal("record", { sources: [{ ref: "/x.card", time: "at 1:23", pos: "at 1:24" 
 
 refusal("email-message", { email: { "message-id": "m1" }, date: "2026-05-14T19:00:00Z" })
 => UnmappedFieldError: email-message date has both the old and the new keys; migrate this card by hand
+
+refusal("gdoc", { "drive-id": "d1", drive: { id: "d1" } })
+=> UnmappedFieldError: gdoc drive-id has both the old and the new keys; migrate this card by hand
+
+refusal("glink", { drive: { id: "p1" }, name: "Lease.pdf", title: "Lease" })
+=> UnmappedFieldError: glink name has both the old and the new keys; migrate this card by hand
 ```

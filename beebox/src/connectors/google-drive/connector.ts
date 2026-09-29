@@ -1,7 +1,7 @@
 /**
  * Google Drive connector — syncs Drive with the box filesystem.
  *
- * Everything is card-based: a card's `drive-id` IS the configuration, and its
+ * Everything is card-based: a card's `drive.id` IS the configuration, and its
  * card type says what the box promises about the Drive item. Three kinds,
  * dispatched on in `sync()`:
  *
@@ -141,7 +141,7 @@ class GoogleDriveConnector implements Connector {
     // stale copy on disk, ready to push again.
     for (const duplicate of tracking.duplicates) {
       failures.push(
-        `Duplicate drive-id ${duplicate.driveId} claimed by ${duplicate.relPaths.join(", ")} — both skipped`,
+        `Duplicate drive.id ${duplicate.driveId} claimed by ${duplicate.relPaths.join(", ")} — both skipped`,
       );
     }
 

@@ -127,7 +127,7 @@ The mount card records the outcome, and the pointer says where it came from.
 ```ts continue
 const card = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 JSON.stringify({
-  driveId: /drive-id: (\S+)/.exec(card)?.[1],
+  driveId: /\n  id: (\S+)/.exec(card)?.[1],
   failed: /^error:/m.test(card),
   hasLastSync: card.includes("last-sync:"),
 })
@@ -231,7 +231,7 @@ mirror emitted, and the body starts empty because the notes are not ours.
 const card = await box.read("_content/drive/Lease.glink.card");
 JSON.stringify({
   origin: /origin: (\S+)/.exec(card)?.[1],
-  driveId: /drive-id: (\S+)/.exec(card)?.[1],
+  driveId: /\n  id: (\S+)/.exec(card)?.[1],
   body: card.split("---\n")[2],
 })
 => {"origin":"manual","driveId":"pdf-1","body":""}
@@ -429,8 +429,8 @@ JSON.stringify(config)
 
 const card = await box.read("_content/drive/recipes/recipes.gfolder.card");
 JSON.stringify({
-  driveId: /drive-id: (\S+)/.exec(card)?.[1],
-  name: /name: (.*)/.exec(card)?.[1],
+  driveId: /\n  id: (\S+)/.exec(card)?.[1],
+  name: /\ntitle: (.*)/.exec(card)?.[1],
   failed: /^error:/m.test(card),
 })
 => {"driveId":"folder-1","name":"Recipes","failed":false}

@@ -21,6 +21,7 @@ import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 interface ParsedSheet {
   title: string;
+  /** When the file last changed on Drive. */
   modified: string;
   link: string;
   owner: string;
@@ -41,12 +42,13 @@ function parseSheetFrontmatter(fm: Record<string, unknown>): ParsedSheet {
       )
     : [];
 
+  const drive = isRecord(fm.drive) ? fm.drive : {};
   return {
     title: strOf(fm.title),
-    modified: strOf(fm.modified),
-    link: strOf(fm.link),
-    owner: strOf(fm.owner),
-    driveId: strOf(fm["drive-id"]),
+    modified: strOf(drive.modified),
+    link: strOf(drive.link),
+    owner: strOf(drive.owner),
+    driveId: strOf(drive.id),
     tabs,
   };
 }
@@ -114,7 +116,7 @@ function SheetView({ data }: RendererProps) {
           <Heading level={2}>{sheet.title}</Heading>
           {sheet.modified ? (
             <Text as="p" size="xs" tone="muted">
-              Last synced: {new Date(sheet.modified).toLocaleString()}
+              Modified on Drive: {new Date(sheet.modified).toLocaleString()}
             </Text>
           ) : null}
         </div>

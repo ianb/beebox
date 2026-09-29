@@ -148,7 +148,7 @@ The card file contains the spreadsheet metadata:
 
 ```ts continue
 const card = await box.read("_content/drive/Budget.gsheet.card");
-card.includes("drive-id: sheet-abc123")
+card.includes("drive:\n  id: sheet-abc123")
 => true
 
 card.includes("title: Test Budget")
@@ -551,8 +551,9 @@ JSON.stringify({
 ```
 
 The health fields come from the current YAML form, not just the legacy XML
-form: title, last-synced time, a conflict, sheet tabs, and the lossy summary
-all print.
+form: title, Drive's last-modified time, a conflict, sheet tabs, and the lossy
+summary all print. A synced file's `drive.modified` is when it last changed on
+Drive, not when the box synced it.
 
 ```ts continue
 const conflicted = createGdocTemplate({
@@ -570,7 +571,8 @@ await box.seed("_content/drive/Contended.gdoc.card", conflicted);
 const health = await captureLogs(() => runDriveStatus(box.root));
 JSON.stringify({
   yamlTitle: health.includes("Title: YAML Card"),
-  yamlSynced: health.includes("Last synced: 2026-03-29T10:00:00Z"),
+  yamlModified: health.includes("Modified on Drive: 2026-03-29T10:00:00Z"),
+  notLastSynced: !health.includes("Last synced: 2026-03-29T10:00:00Z"),
   yamlTabs: health.includes("Tabs: Sheet1"),
   yamlConflictHidden: (health.match(/Conflict:/g) ?? []).length === 1,
   docTitle: health.includes("Title: Contended Doc"),
@@ -578,7 +580,7 @@ JSON.stringify({
   docLossy: health.includes("Lossy: images=2, footnotes=1"),
   legacyTabs: health.includes("Tabs: Old Tab"),
 })
-=> {"yamlTitle":true,"yamlSynced":true,"yamlTabs":true,"yamlConflictHidden":true,"docTitle":true,"docConflict":true,"docLossy":true,"legacyTabs":true}
+=> {"yamlTitle":true,"yamlModified":true,"notLastSynced":true,"yamlTabs":true,"yamlConflictHidden":true,"docTitle":true,"docConflict":true,"docLossy":true,"legacyTabs":true}
 ```
 
 Cards with an ambiguous identity are listed too — they are not synced, so a
@@ -590,10 +592,10 @@ await box.seed("_content/drive/Broken.gsheet.card", "---\ntitle: No identity\n--
 
 const ambiguous = await captureLogs(() => runDriveStatus(box.root));
 JSON.stringify({
-  duplicate: ambiguous.includes("Duplicate drive-id yaml-id"),
+  duplicate: ambiguous.includes("Duplicate drive.id yaml-id"),
   bothPaths: ambiguous.includes("_content/drive/Yaml.gsheet.card")
     && ambiguous.includes("_content/drive/Yaml-Copy.gsheet.card"),
-  unreadable: ambiguous.includes("No readable drive-id: _content/drive/Broken.gsheet.card"),
+  unreadable: ambiguous.includes("No readable drive.id: _content/drive/Broken.gsheet.card"),
   mounted: ambiguous.includes("2 Drive card(s)"),
 })
 => {"duplicate":true,"bothPaths":true,"unreadable":true,"mounted":true}
@@ -605,16 +607,16 @@ await box.cleanup();
 
 ## Drive IDs come from parsed YAML, not a line match
 
-A quoted or commented `drive-id` is ordinary YAML. Reading it with a regex
+A quoted or commented `drive.id` is ordinary YAML. Reading it with a regex
 yields a *wrong* ID — worse than none, because a wrong tombstone ID lets folder
 discovery recreate a deleted card. Unparseable frontmatter reads as no ID.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("_content/drive/Quoted.gsheet.card", "---\ndrive-id: 'sheet-quoted'\ntitle: Quoted\n---\n");
-await box.seed("_content/drive/Commented.gsheet.card", "---\ndrive-id: sheet-commented # mounted by hand\ntitle: Commented\n---\n");
-await box.seed("_content/drive/Broken.gsheet.card", "---\ndrive-id: [unclosed\n---\n");
+await box.seed("_content/drive/Quoted.gsheet.card", "---\ndrive:\n  id: 'sheet-quoted'\ntitle: Quoted\n---\n");
+await box.seed("_content/drive/Commented.gsheet.card", "---\ndrive:\n  id: sheet-commented # mounted by hand\ntitle: Commented\n---\n");
+await box.seed("_content/drive/Broken.gsheet.card", "---\ndrive:\n  id: [unclosed\n---\n");
 await box.seed("_content/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title></gsheet>\n');
 
 const tracking = await findDriveCardTracking(box.root);
@@ -629,7 +631,7 @@ JSON.stringify({
 await box.cleanup();
 ```
 
-## Duplicate drive-id — neither working copy is pushed
+## Duplicate drive.id — neither working copy is pushed
 
 Two live cards for one Drive file share a single transient-hash entry while
 their attachments are per-card. Syncing either one would push its own copy over
@@ -655,7 +657,7 @@ JSON.stringify({
 => {"success":true,"attach":true}
 ```
 
-A second card claiming the same `drive-id` appears (a copy, a restore, a
+A second card claiming the same `drive.id` appears (a copy, a restore, a
 rename gone wrong). Alpha's attachment is edited locally — the exact case that
 used to push Beta's stale copy back over it.
 
@@ -673,7 +675,7 @@ JSON.stringify({
   pushed: ambiguous.pushed ?? [],
   updates: drive.updateLog.length,
 })
-=> {"success":false,"error":"Duplicate drive-id sheet-dup claimed by _content/drive/Alpha.gsheet.card, _content/drive/Beta.gsheet.card — both skipped","pushed":[],"updates":0}
+=> {"success":false,"error":"Duplicate drive.id sheet-dup claimed by _content/drive/Alpha.gsheet.card, _content/drive/Beta.gsheet.card — both skipped","pushed":[],"updates":0}
 ```
 
 Nothing reached Google — the remote spreadsheet still holds its original rows.
@@ -743,7 +745,7 @@ const connector = createGoogleDriveConnector(box.root, drive);
 const result = await connector.sync();
 const cards = (await box.list()).split("\n").filter((p) => p.endsWith(".gsheet.card"));
 JSON.stringify({ success: result.success, error: result.error, cards })
-=> {"success":false,"error":"Drive file sheet-newcomer (\"Shared Name\") maps to _content/drive/folder/Shared_Name.gsheet.card, already claimed by drive-id sheet-occupant","cards":["_content/drive/folder/Shared_Name.gsheet.card"]}
+=> {"success":false,"error":"Drive file sheet-newcomer (\"Shared Name\") maps to _content/drive/folder/Shared_Name.gsheet.card, already claimed by drive.id sheet-occupant","cards":["_content/drive/folder/Shared_Name.gsheet.card"]}
 ```
 
 The same Drive ID at that path is a benign re-mount, not a collision. That is
@@ -769,7 +771,7 @@ JSON.stringify({
   error: third.error,
   cards: (await box.list()).split("\n").filter((p) => p.endsWith(".gsheet.card")),
 })
-=> {"error":"Drive file sheet-newcomer (\"Shared Name\") maps to _content/drive/folder/Shared_Name.gsheet.card, already claimed by drive-id sheet-occupant","cards":["_content/drive/folder/Raced_Child.gsheet.card","_content/drive/folder/Shared_Name.gsheet.card"]}
+=> {"error":"Drive file sheet-newcomer (\"Shared Name\") maps to _content/drive/folder/Shared_Name.gsheet.card, already claimed by drive.id sheet-occupant","cards":["_content/drive/folder/Raced_Child.gsheet.card","_content/drive/folder/Shared_Name.gsheet.card"]}
 ```
 
 ```ts cleanup
@@ -778,7 +780,7 @@ await box.cleanup();
 
 ## Folder discovery — an unreadable card blocks rediscovery
 
-A trash tombstone whose `drive-id` cannot be read is exactly the card that
+A trash tombstone whose `drive.id` cannot be read is exactly the card that
 suppresses a folder child. Discovery cannot tell it apart from an unrelated
 broken card, so the folder pass does not run at all while one exists — no
 Drive request, no recreated card, and the failure names the path.

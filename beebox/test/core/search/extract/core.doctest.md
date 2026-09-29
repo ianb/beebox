@@ -91,7 +91,7 @@ promotions
 ## Gdocs declare their content snapshot and index it as the body
 
 ```ts
-const cardText = "---\ndrive-id: d1\ntitle: Project Notes\nmodified: 2026-05-01\nlink: https://docs.google.com/document/d/d1/edit\nowner: owner@example.com\ncontent:\n  ref: attach/Project_Notes.md\n---\n";
+const cardText = "---\ndrive:\n  id: d1\n  link: https://docs.google.com/document/d/d1/edit\n  owner: owner@example.com\n  modified: 2026-05-01\ntitle: Project Notes\ncontent:\n  ref: attach/Project_Notes.md\n---\n";
 const path = "_content/drive/Project_Notes.gdoc.card";
 const card = await loadCardFromText({ content: cardText, source: path, ctx });
 JSON.stringify(declareInputFiles({ path, card }))
@@ -165,7 +165,7 @@ docs.length
 ```ts
 const docs = await docsFor(
   "_content/drive/Budget.gsheet.card",
-  "---\ndrive-id: d2\ntitle: Family Budget\nmodified: 2026-05-01\nlink: https://docs.google.com/spreadsheets/d/d2/edit\nowner: o@example.com\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"
+  "---\ndrive:\n  id: d2\n  link: https://docs.google.com/spreadsheets/d/d2/edit\n  owner: o@example.com\n  modified: 2026-05-01\ntitle: Family Budget\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"
 );
 docs[0].content
 => Monthly Spending

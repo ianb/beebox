@@ -391,10 +391,11 @@ the purpose notes are the boxholder's to write. (The card name comes from
 ```ts continue
 await box.read("_content/drive/recipes/Scan_2024pdf.glink.card")
 => ---
-drive-id: pdf-1
-link: https://drive.google.com/file/d/pdf-1/view
-name: Scan 2024.pdf
-mime: application/pdf
+drive:
+  id: pdf-1
+  link: https://drive.google.com/file/d/pdf-1/view
+  mime: application/pdf
+title: Scan 2024.pdf
 origin: mirror
 ---
 ```
@@ -405,9 +406,10 @@ The folder card is re-stamped with the Drive name, link, and the last outcome.
 const folderCard = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 folderCard.replace(/last-sync: .*/, "last-sync: «stamped»")
 => ---
-drive-id: folder-1
-name: Recipes
-link: https://drive.google.com/file/d/folder-1/view
+drive:
+  id: folder-1
+  link: https://drive.google.com/file/d/folder-1/view
+title: Recipes
 last-sync: «stamped»
 ---
 ```
@@ -457,8 +459,8 @@ The subfolder's own card is a mount in its own right — it can be moved,
 unmounted, or given a status of its own.
 
 ```ts continue
-(await box.read("_content/drive/recipes/Desserts/Desserts.gfolder.card")).split("\n")[1]
-=> drive-id: folder-2
+(await box.read("_content/drive/recipes/Desserts/Desserts.gfolder.card")).startsWith("---\ndrive:\n  id: folder-2\n")
+=> true
 ```
 
 ```ts cleanup
@@ -467,7 +469,7 @@ await box.cleanup();
 
 ## End to end — a shortcut is followed to its target
 
-The listing returns the shortcut, never the target, so the card's `drive-id`
+The listing returns the shortcut, never the target, so the card's `drive.id`
 is the target's while its name is the one shown in the folder.
 
 ```ts
@@ -499,7 +501,7 @@ const result = await connector.sync();
 const card = await box.read("_content/drive/recipes/Shared_Bake_Times.gsheet.card");
 JSON.stringify({
   success: result.success,
-  driveId: /drive-id: (\S+)/.exec(card)?.[1],
+  driveId: /\n  id: (\S+)/.exec(card)?.[1],
 })
 => {"success":true,"driveId":"sheet-1"}
 ```
@@ -660,7 +662,7 @@ JSON.stringify({
   error: result.error,
   cards: cardsIn(await box.list(), "_content/drive/recipes/"),
 })
-=> {"success":false,"error":"Drive file pdf-2 (\"Report.pdf\") maps to _content/drive/recipes/Reportpdf.glink.card, already claimed by drive-id pdf-1","cards":["_content/drive/recipes/Recipes.gfolder.card","_content/drive/recipes/Reportpdf.glink.card"]}
+=> {"success":false,"error":"Drive file pdf-2 (\"Report.pdf\") maps to _content/drive/recipes/Reportpdf.glink.card, already claimed by drive.id pdf-1","cards":["_content/drive/recipes/Recipes.gfolder.card","_content/drive/recipes/Reportpdf.glink.card"]}
 ```
 
 The folder card still has no `error`: the *mount* is healthy — it listed fine and

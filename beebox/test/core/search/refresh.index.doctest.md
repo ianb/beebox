@@ -175,7 +175,7 @@ docHit.hits[0].document.kind
 ```ts continue
 await box.write(
   "_content/drive/Notes.gdoc.card",
-  "---\ndrive-id: d1\ntitle: Project Notes\nmodified: 2026-05-01\nlink: https://docs.google.com/document/d/d1/edit\nowner: o@example.com\ncontent:\n  ref: attach/Notes.md\n---\n"
+  "---\ndrive:\n  id: d1\n  link: https://docs.google.com/document/d/d1/edit\n  owner: o@example.com\n  modified: 2026-05-01\ntitle: Project Notes\ncontent:\n  ref: attach/Notes.md\n---\n"
 );
 await box.write("_content/drive/Notes.attach/Notes.md", "Planning the lighthouse migration.");
 const withGdoc = await openSearchIndex(box.root);

@@ -21,9 +21,7 @@ import { cardTitle } from "../../src/core/loader-registry.js";
  * entry is no longer present, so each removal also deletes its line here.
  */
 const PENDING_REMOVAL = new Set([
-  "gdoc.modified",
-  "gsheet.modified", "memo.created",
-  "memo.source", "memo.status",
+  "memo.created", "memo.source", "memo.status",
 ]);
 
 function loads(text: string, schemas: Map<string, ReturnType<typeof cardSchema>>): string {

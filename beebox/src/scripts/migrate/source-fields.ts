@@ -272,6 +272,13 @@ function same(...keys: string[]): Array<readonly [string, string]> {
  *   `email:`, and `date` (Gmail's arrival time) becomes `email.received`.
  * - email-thread: `thread-id`, `subject`, `participants`, `date-range` and
  *   `labels` move under `email:`.
+ * - gdoc, gsheet: what the Drive connector copied moves under `drive:`
+ *   (`drive-id` becomes `drive.id`; `link`, `owner`, `modified` and gdoc's
+ *   `revision` keep their names).
+ * - gfolder: `drive-id` and `link` move under `drive:`; `name` (the Drive
+ *   name) becomes `title`, in place.
+ * - glink: `drive-id`, `link` and `mime` move under `drive:`; `name` becomes
+ *   `title`, in place.
  */
 const PLANNERS: Readonly<Record<string, Planner>> = {
   image: allOf(
@@ -310,6 +317,24 @@ const PLANNERS: Readonly<Record<string, Planner>> = {
     key: "email",
     moves: same("thread-id", "subject", "participants", "date-range", "labels"),
   }),
+  gdoc: sourceMetadataPlanner({
+    type: "gdoc",
+    key: "drive",
+    moves: [["drive-id", "id"], ...same("link", "owner", "modified", "revision")],
+  }),
+  gsheet: sourceMetadataPlanner({
+    type: "gsheet",
+    key: "drive",
+    moves: [["drive-id", "id"], ...same("link", "owner", "modified")],
+  }),
+  gfolder: allOf(
+    sourceMetadataPlanner({ type: "gfolder", key: "drive", moves: [["drive-id", "id"], ...same("link")] }),
+    renameTopLevelPlanner({ type: "gfolder", from: "name", to: "title" }),
+  ),
+  glink: allOf(
+    sourceMetadataPlanner({ type: "glink", key: "drive", moves: [["drive-id", "id"], ...same("link", "mime")] }),
+    renameTopLevelPlanner({ type: "glink", from: "name", to: "title" }),
+  ),
 };
 
 /** The edits this migration makes to one card of `type`; none for a type it doesn't handle. */

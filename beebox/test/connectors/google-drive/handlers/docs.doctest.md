@@ -15,6 +15,11 @@ import {
 import { createGoogleDriveConnector } from "../../../../src/connectors/google-drive/connector.js";
 import { docsHandler } from "../../../../src/connectors/google-drive/handlers/docs/handler.js";
 import { createGdocTemplate } from "../../../../src/schemas/gdoc.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../../../../src/exports/cards.js";
+import { planSourceFields } from "../../../../src/scripts/migrate/source-fields.js";
+import { applyFieldEdits } from "../../../../src/scripts/migrate/_field-edits.js";
+import { findDriveCardTracking } from "../../../../src/connectors/google-drive/tracking.js";
 
 // Several assertions exercise conflict/error paths that log to console.
 // Silence so they don't pollute test output.
@@ -103,7 +108,7 @@ The card now records the upstream revision, and no conflict:
 
 ```ts continue
 const card = await box.read("_content/drive/Project_Notes.gdoc.card");
-card.includes("drive-id: doc-1")
+card.includes("drive:\n  id: doc-1")
 => true
 
 card.includes("conflict")
@@ -120,7 +125,7 @@ changes nothing else doesn't rewrite the card:
 ```ts continue
 await box.write(
   "_content/drive/Project_Notes.gdoc.card",
-  card.replace("drive-id: doc-1", "contains: Planning notes for the project kickoff.\ndrive-id: doc-1")
+  card.replace("drive:\n  id: doc-1", "contains: Planning notes for the project kickoff.\ndrive:\n  id: doc-1")
 );
 box.commitAll("agent adds contains");
 const resync = await connector.sync();
@@ -130,6 +135,31 @@ resync.success
 const resynced = await box.read("_content/drive/Project_Notes.gdoc.card");
 resynced.includes("contains: Planning notes for the project kickoff.")
 => true
+```
+
+A card in the flat shape the connector wrote before `drive:` (with the agent's
+`contains`) migrates, through the `source-fields-2026-09` migration, to exactly
+what the connector now writes. The next sync leaves it alone, and the card is
+still found by its Drive id:
+
+```ts continue
+const { drive: meta, ...rest } = parseYaml(splitCardContent(resynced).frontmatterText);
+const flat = { "drive-id": meta.id, title: rest.title, modified: meta.modified, link: meta.link, owner: meta.owner, content: rest.content, revision: meta.revision, contains: rest.contains };
+const cardFile = join(box.root, "_content/drive/Project_Notes.gdoc.card");
+const oldText = renderFrontmatterBlock(flat);
+const oldSplit = splitCardContent(oldText);
+const migratedCard = `---\n${applyFieldEdits(oldSplit.frontmatterText, planSourceFields("gdoc", parseYaml(oldSplit.frontmatterText)).edits)}---\n`;
+migratedCard === resynced
+=> true
+
+await writeFile(cardFile, migratedCard);
+box.commitAll("migrate the card");
+(await findDriveCardTracking(box.root)).liveCards.map((c) => `${c.driveId} ${c.relPath}`).join()
+=> doc-1 _content/drive/Project_Notes.gdoc.card
+
+const afterMigration = await connector.sync();
+JSON.stringify({ success: afterMigration.success, unchanged: (await box.read("_content/drive/Project_Notes.gdoc.card")) === migratedCard, clean: execSync("git status --porcelain", { cwd: box.root }).toString() })
+=> {"success":true,"unchanged":true,"clean":""}
 ```
 
 ## Pull — lossy content surfaces in the card

@@ -62,7 +62,7 @@ _content/drive/Budget.attach/
 
 ### The Card is the Config
 
-The `.gsheet.card` file's frontmatter carries a `drive-id` field that links to Google Drive, plus a `sheets:` list of `{ref, title, gid}` objects pointing at each tab file in `Budget.attach/` via the `attach/` virtual prefix. Moving the card (and its `.attach/` scope) to a new location with `bbx mv` is safe -- the link is maintained. No separate config file is needed for individual files.
+The `.gsheet.card` file's frontmatter carries a `drive:` map holding what Drive reports about the file -- its `id` (the link to Google Drive), `link`, `owner`, and `modified` (when it last changed on Drive) -- plus a `sheets:` list of `{ref, title, gid}` objects pointing at each tab file in `Budget.attach/` via the `attach/` virtual prefix. Moving the card (and its `.attach/` scope) to a new location with `bbx mv` is safe -- the link is maintained. No separate config file is needed for individual files.
 
 ### Stop or resume syncing one file
 
@@ -88,16 +88,16 @@ One Drive file has one card. When local identity is ambiguous, the connector
 declines to sync rather than guessing — the run reports a failure (which
 `bbx wakeup` counts as a connector error) and names the paths involved:
 
-- **Two live cards with the same `drive-id`.** Transient content hashes are
+- **Two live cards with the same `drive.id`.** Transient content hashes are
   keyed by Drive ID while attachments live per card, so syncing either copy can
   push its stale attachments over the other's edit. Neither is synced; delete
   or re-point one card to resolve it. `bbx drive add` refuses a Drive file that
   a live card already claims.
 - **A remote file whose derived card name is already taken by a different
-  `drive-id`.** Folder discovery reports the collision instead of skipping the
+  `drive.id`.** Folder discovery reports the collision instead of skipping the
   child silently. Rename the local card (or the Drive file) to give the child a
   free name.
-- **A Drive card whose `drive-id` cannot be read.** It may be the trash
+- **A Drive card whose `drive.id` cannot be read.** It may be the trash
   tombstone that suppresses a folder child, so folder discovery is skipped
   entirely for that run; per-card sync still runs. Fix or remove the card.
 
@@ -110,11 +110,11 @@ On `bbx wakeup` or `bbx drive sync`:
 1. The connector finds live Drive cards outside infrastructure and
    `_bookkeeping/trash/`, while retaining trash Drive IDs as folder-discovery
    tombstones
-2. For each live card, reads the `drive-id` field
+2. For each live card, reads the `drive.id` field
 3. Compares local JSON content hashes with stored hashes:
    - **Local file unchanged** -- pull remote changes (overwrite JSON)
    - **Local file edited** -- push changes to Google Sheets via API
-4. Updates the card metadata (title, modified time)
+4. Updates the card metadata (`title`, and `drive:` with Drive's modified time)
 5. Stages and commits changes
 
 ### Data Format
@@ -197,10 +197,13 @@ the mirror to the card's new directory.
 **What the mirror promises.** Membership follows Drive one-way, on every sync:
 Docs and Sheets become synced cards, subfolders become subdirectories with their
 own `.gfolder.card`, shortcuts resolve to their target, and everything else --
-PDFs, Slides, images -- becomes a `.glink.card` **pointer**: name, mime type,
-and link, with nothing copied and a body for whoever wants to write down what it
+PDFs, Slides, images -- becomes a `.glink.card` **pointer**: its Drive name as `title`, and
+`drive:` with its id, link and mime type, with nothing copied and a body for whoever wants to write down what it
 is for. Recursion is bounded (8 levels, 500 folders per pass) and the folder
-card carries `last-sync` from the last pass, plus `error` when that pass failed.
+card carries its Drive name as `title`, `drive:` with the folder's id and link,
+`last-sync` from the last pass, plus `error` when that pass failed. `bbx drive
+status` prints a synced file's `drive.modified` as "Modified on Drive" and a
+folder's `last-sync` as "Last synced".
 
 **Pointers on their own.** `bbx drive link <url> <path>` writes a pointer to any
 Drive item -- folders included -- with `origin: manual` (a mirror's pointers
