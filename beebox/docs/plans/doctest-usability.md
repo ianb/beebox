@@ -150,6 +150,126 @@ clocks, fake child processes, event-order checks), process and lock concurrency
 tests, tests that must run in another runtime (the Cloudflare worker suite on
 vitest), ESLint `RuleTester` suites, and the doctest framework's own tests.
 
+## Prototype and experiments (2026-09-28 to 09-29)
+
+The boxholder approved prototyping these parts on the worktree branch:
+
+- make the common parse failures work;
+- fix line numbers;
+- `ts teardown`;
+- `eventually()`;
+- hang notices;
+- setup-failure reporting;
+- wildcard suggestions;
+- the diff.
+
+All of them are built, on commits `46a02a09f` through `7f66b9692`. None is on
+`main`.
+
+**What the prototype does.**
+
+- These now work instead of failing:
+  - a missing blank line between examples;
+  - `=>value` with no space;
+  - `import` in an example or cleanup block, rewritten in place to
+    `await import()`;
+  - `try`/`catch`/`for` before the checked value, split by asking esbuild,
+    and only when the old split fails to compile;
+  - a setup variable named `t` or `print`;
+  - `json` and `bash` fences in prose;
+  - object results written as JS literals or compact JSON, in any key order.
+- A file that cannot load reports a failing TAP test,
+  `DoctestSyntaxError file.md:LINE: …`. It shows the line, the first lines of
+  the block, and hints for prose in a fence, a blank line in output, a
+  redeclared name, a declaration before `=>`, and `=>` inside braces.
+- A throwing setup block is reported as `setup block at file.md:L threw …`.
+- Stack traces and tap locations name `.doctest.md` lines, through a line
+  map composed into esbuild's source map.
+- Failures print a conventional diff (`- expected`/`+ actual`, LCS,
+  wildcard-aware) and `suggested:`, the actual value with the varying parts as
+  wildcards and blank lines as `«blankline»`, ready to paste.
+- `=> ?` is the convention for "show me the value".
+- `ts teardown` runs once per file.
+- `eventually(fn, { label, timeoutMs })` is in scope everywhere.
+- A `still running after 60s: file.md:L …` TAP comment names a hanging
+  example. Use `ts timeout=…` to change the limit.
+- A ReferenceError for a name another block declares says where it is and
+  how to share it.
+- Unknown directives and indented fences are errors.
+- **Compatibility.** All 1,004 tracked doctests compile. Every example parses
+  as before. No file declares `t`, `print` or `eventually` at top level, so
+  bindings are unchanged. A full beebox run found one regression: an `import`
+  inside a template literal was rewritten. It is fixed. The run also found a
+  pre-existing test-caused flake (filed).
+- **Cost.** Loading all 1,004 files through the new loader takes about 1.9 s
+  in total (about 1.9 ms per file), including the source-map rewrite.
+
+**Subject runs.** The same briefings were used every round. Round 1 used
+today's tool. Round 2 used the prototype with the old docs. Round 3 used the
+prototype and the rewritten `syntax.md` and skill, on the four tasks where
+values vary.
+
+| Measure | Round 1 | Round 2 | Round 3 |
+|---|---|---|---|
+| `JSON.stringify` wrapping results (T1 Haiku, cookies) | 19 of 19 examples | 0 of 24 (literals) | n/a |
+| Object literals in the conversion task (both models) | 0 | 63 and 58 | n/a |
+| Wildcards in the lock task (T7) | 0, 0 | 0, 0 | Sonnet 3 (via `=> ?`); Haiku 3, copied from Sonnet's file |
+| Subjects that read `syntax.md` or loaded the skill | 3 of 14 | 4 of 16 | Sonnet 4 of 4, Haiku 2 of 4 |
+| `=> ?` used | n/a | n/a | Sonnet 2 of 4, Haiku 0 of 4 |
+
+What moved and what did not:
+
+- **The comparison change removed the largest format failure.** In round 1,
+  T1 Haiku failed 16 of 19 examples because it wrote objects as literals. In
+  round 2 it wrote the same literals and they passed.
+- **The remaining Haiku failures in round 2 were environmental.**
+  - Haiku ran tap from the monorepo root. The root `.taprc` now tells it
+    where to run.
+  - Haiku ran `pnpm test <path>`, which ran the whole suite (filed).
+  - Haiku imported from the wrong relative path.
+- **Guidance reaches Sonnet and not Haiku.** Haiku copies neighbouring
+  files, including another subject's file when one is visible. Good examples
+  in the tree matter more for the lighter models than any document.
+- **Scope was the most common conceptual miss.** In 4 Sonnet runs across
+  rounds, the author expected variables to carry between blocks, as notebook
+  cells do.
+- **Booleans persisted** in tasks that never printed a varying value: 10 of 15
+  results in T3 Haiku in round 3. `=> ?` only helps an author who asks to see
+  the value.
+
+**An environment incident, and a runner-caused flake.** Round 2 was stopped
+partway.
+
+- Haiku subjects ran tap from the monorepo root. That rebuilt tap's shared
+  runtime with the default plugins and broke every concurrent run.
+- Subjects then ran `pnpm install --force` and `rm -rf node_modules`, and one
+  also deleted `pnpm-lock.yaml`.
+- This worktree's install was restored from the lockfile. `git status` was
+  clean throughout.
+- The cause is the same one behind the closed 2026-08-05 tsx-resolution flake:
+  any tap run whose plugin set differs from the shared build rebuilds it.
+  `beebox-clerk` also used a different set.
+- Fixed on the branch:
+  - a root `.taprc` with the shared plugin list;
+  - `beebox-clerk` on the same list (160 of 160 tests pass);
+  - a root preload that reports `run this test from its package: cd beebox &&
+    pnpm exec tap …`.
+
+**Experiment caveats.**
+
+- There is one run per task, model and round, so small differences are noise.
+- Concurrent subjects could read each other's scratch files. One did.
+- Runs that fail on purpose with `=> ?` make failure counts misleading from
+  round 3 on.
+
+**Filed from this work.**
+
+- [partial-file race in hashStreamToFile](../../../issues/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md),
+  reproduced in 41 of 200 attempts;
+- [the namespace-fence-traversal flake](../../../issues/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md);
+- [bin/test doctests run by no suite](../../../issues/bugs/2026-09-29-bin-test-doctests-not-run.md);
+- [`pnpm test <path>` running the full suite](../../../issues/bugs/2026-09-29-pnpm-test-unrecognized-path-runs-full-suite.md).
+
 ## Smallest fix and budget
 
 The smallest fix for the observed failures is the parser and comparison work
@@ -603,6 +723,27 @@ replaces it and never touches an example whose split compiles today.
   example per case; the evidence does not call for a new block kind.
 
 ## Open design questions
+
+- **Should blocks share scope by default?** Four Sonnet runs expected
+  notebook-style scope. The options are:
+  - keep blocks separate, with the new ReferenceError hint;
+  - make consecutive blocks one test unless a heading or a `new` directive
+    starts another.
+
+  The second changes cleanup attachment and test granularity for 1,004
+  files. Lean: keep blocks separate, and measure the hint first.
+- **"Show, don't assert."** Five tracked doctests use `=> «*»`. One does it on
+  purpose: it prints an outcome line without asserting it. Refusing a bare
+  `«*»` broke those files, so the check was removed. An explicit form for
+  "record this value in the output" may be worth adding. Lean: decide after
+  the guidance has been in use for a while.
+- **Reaching the lighter models.** Haiku ignored the skill and `=> ?`, and
+  copied neighbouring files. The options are:
+  - refresh a few high-traffic doctests as exemplars;
+  - put the three key rules in the path rule, which loads with any
+    `.doctest.md`.
+
+  The path rule now mentions `=> ?`; Haiku still did not use it.
 
 - **File-level cleanup.** `cleanup` tears down only the test it follows
   (`agent-doctest/docs/syntax.md`), so resources shared by several sections
