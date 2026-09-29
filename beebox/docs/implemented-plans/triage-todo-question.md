@@ -1,6 +1,6 @@
 ---
 title: "Destination questions create triage follow-up todos"
-status: active
+status: implemented
 workstream: jev-triage
 issues:
   - ../../../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md
@@ -219,9 +219,9 @@ the focused knowledge audit and cross-model review. Work stays in the worktree.
 
 ## Implementation evidence
 
-Implemented in the worktree; landing remains a separate human request. Actual
-change size is about 1,350 lines including tests, plan/review and follow-up issues,
-within the original total budget.
+Implemented in this workstream and being landed through the finish procedure.
+Actual change size is about 1,350 lines including tests, plan/review and
+follow-up issues, within the original total budget.
 
 - Change-selected run: 494 test files, 6,807 assertions passed.
 - Focused annotation regression after the frontmatter-preservation review fix:

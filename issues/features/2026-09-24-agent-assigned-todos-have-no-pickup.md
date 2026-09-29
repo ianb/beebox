@@ -59,7 +59,7 @@ exists), [completion requires an answer](../exploration/2026-09-24-todo-completi
 
 ## Research (2026-09-29)
 
-The [triage todo question plan](../../beebox/docs/plans/triage-todo-question.md)
+The [triage todo question plan](../../beebox/docs/implemented-plans/triage-todo-question.md)
 addresses pickup through the existing bounded todo-review procedure. The human
 requested destination-specific yes/no questions whose positive items enter the
 normal todo sweep. That procedure now has its own scheduled precheck; the

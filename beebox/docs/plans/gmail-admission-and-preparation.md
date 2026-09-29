@@ -10,24 +10,25 @@ issues:
 
 Keep unrelated incoming mail out of box content while preparing enough evidence
 to judge messages with HTML, PDFs, and images. The admitted-document triage
-harness and common evidence preparation already exist in
-[`triage.md`](../triage.md); this plan covers future test isolation, raw MIME
-preparation, Gmail admission, and post-triage todo annotation. No Gmail admission
-gate is implemented or enabled by this work.
+harness, common evidence preparation, and destination-question todo annotation
+already exist in [`triage.md`](../triage.md) and the
+[implemented todo plan](../implemented-plans/triage-todo-question.md). This plan
+covers remaining test isolation, raw MIME preparation, and Gmail admission. No
+Gmail admission gate is implemented or enabled by this work.
 
 **Issues addressed:** The combined Jev issue's Gmail follow-up and the warm-up
 warning above. Related, not resolved here: Gmail tracked-set reconciliation
 (`issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md`) and the
 Cloudflare email inbox proposal (`issues/features/2026-09-25-cloudflare-email-inbox-connector.md`).
-Quick chat already exists in the separate chat-routing work; reconcile the older
-combined issue's stale quick-capture description during implementation.
+Quick chat exists in the separate chat-routing work and is documented in
+[`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
+read with that implementation in mind.
 
 ## Smallest fix and budget
 
-The original three responsibilities are test isolation, raw MIME preparation,
-and Gmail admission. The boxholder has now accepted a fourth: post-triage agent
-todo annotation. Keep that as a separate final track with an explicit design
-before implementation.
+The remaining responsibilities are test isolation, raw MIME preparation, and
+Gmail admission. Post-triage agent todo annotation was accepted and implemented
+as a separate track; see the linked implemented plan.
 Admission is once per conversation: one relevant message admits its history and
 future replies. This preserves the existing whole-thread materialization model.
 Do not turn them into a general connector framework.
@@ -52,7 +53,7 @@ operations. The boxholder now says a real box is already using triage and asks t
 look at Gmail, preparation, and test cleanup. Connector todo preservation is
 deferred until Gmail enters staged triage. The accepted destination-question
 todo track is specified separately in
-[triage-todo-question.md](triage-todo-question.md); this Gmail plan does not
+[triage-todo-question.md](../implemented-plans/triage-todo-question.md); this Gmail plan does not
 implement or imply connector preservation.
 
 Keep the single overarching intake guide and landmark destination explanations.
@@ -195,29 +196,13 @@ through logs or normal research prompts. Preserve all pending IDs when paginatio
 advances; do not inherit the current 50-summary truncation as an admission queue.
 Budget exhaustion leaves resumable work; no busy retry loop on every wakeup.
 
-### 4. Post-triage agent todos — accepted direction, detailed design next
+### 4. Post-triage agent todos — implemented separately
 
-Use existing frontmatter `todos` with `assigned: agent`, `by: agent`, and the
-actual `created` date. Rules may ask for a concrete follow-up; Jev does not invent
-prose. Prefer authored action text with source links; use grounded agent text
-when item-specific reasoning is required. Filing success and follow-up completion
-remain separate outcomes. No new todo type or independent execution daemon.
-
-The existing sweep must explicitly select newly actionable agent todos on its
-next scheduled pass, respecting genuine future start dates and recheck state.
-Do not invent due/start dates merely to enter its current date-based categories.
-Retain the existing bounded review procedure and its authority rules.
-
-Before implementation, settle idempotent annotation identity, preservation across
-Gmail thread regeneration, and the boundary with receipt byte verification.
-Adding frontmatter changes the source digest: it must not invalidate apply retry
-or pretend changed bytes are the original replay input. A regression must cover
-triage -> annotation -> refresh -> repeat apply -> fixed-evidence/reprepare replay.
-Use a stable short todo ID, preserve completion on retries, and prevent an old
-triage decision from recreating a completed todo.
-
-First chunk is design/tests for those interactions, not a speculative annotation
-write. This accepted track is not yet implementation-ready.
+The [implemented todo plan](../implemented-plans/triage-todo-question.md)
+records the destination-specific yes/no question, shared Jev and legacy-agent
+behavior, replay-safe annotation, and next-sweep eligibility. Connector metadata
+preservation remains deferred until Gmail enters staged triage; this plan does
+not claim it is handled by the todo implementation.
 
 ## Could this be simpler?
 
@@ -260,9 +245,9 @@ Gmail path is already protected.
 - ADDRESSED in direction: malformed policy is a visible configuration error.
 - DEFERRED: an ordinary research agent cannot inspect unadmitted body text while
   meeting the no-persistent-transcript requirement.
-- ACCEPTED DIRECTION, DESIGN PENDING: todo annotation needs preservation, stable
-  identity/deduplication and next-sweep selection. Current review is not an
-  immediate task runner; reuse its scheduled procedure.
+- IMPLEMENTED SEPARATELY: destination todo annotation and next-sweep selection
+  are recorded in the linked implemented plan. Connector refresh preservation
+  remains deferred until Gmail enters staged triage.
 
 ## NOT in scope
 
@@ -277,17 +262,14 @@ Gmail path is already protected.
 
 Thread policy is settled: whole-conversation admission, including future replies.
 
-Todo direction is accepted: annotate with an agent-assigned todo, preserve it,
-and surface actionable work on the next sweep. Detailed choices still required:
-annotation identity and mutation ordering relative to receipts/replay; authored
-follow-up templates versus grounded item-specific text. These belong to the
-fourth track's design, before its first code change.
+Todo annotation design choices are settled and implemented in the linked plan.
+The open work here is the separate Gmail admission and preparation scope.
 
 ## Knowledge audits
 
-Implementation needs real audits for admission-versus-filing, ID-only pending
-review, and missing extraction evidence. Todo annotation needs audits for next-sweep
-eligibility, evidence-grounded action text and retry preservation. Raw MIME mechanics and test fake
+Gmail implementation needs real audits for admission-versus-filing, ID-only
+pending review, and missing extraction evidence. The todo annotation guidance
+audit passed for the implemented todo track. Raw MIME mechanics and test fake
 injection alone are infrastructure and need no new always-loaded guidance.
 Use a lean existing guide pointer and on-demand Gmail/triage docs.
 
@@ -308,12 +290,11 @@ malformed structure and limits. No new testing tier or live provider golden labe
 2. Isolate the metadata reservation tests and verify the named test exits cleanly.
 3. Add the MIME decoder, then common temporary extraction and provenance tests.
 4. Integrate opt-in Gmail admission and ID-only state/review/retry operations.
-5. Implement destination-question annotation and next-sweep selection under
-   [triage-todo-question.md](triage-todo-question.md), with replay/retry
-   regressions. Connector preservation stays deferred until Gmail enters
-   staged triage.
-6. Run audits, selected tests, cross-model finished-change review, and commit.
-   Land only on a new explicit finish request.
+5. Destination-question annotation and next-sweep selection are complete under
+   [the implemented todo plan](../implemented-plans/triage-todo-question.md).
+   Connector preservation stays deferred until Gmail enters staged triage.
+6. Finish the remaining Gmail work with audits, selected tests, cross-model
+   finished-change review, and commit. Land only on a new explicit finish request.
 
 ## Rollout shape
 

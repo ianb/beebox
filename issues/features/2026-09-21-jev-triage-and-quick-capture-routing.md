@@ -96,9 +96,12 @@ plumbing this issue's two applications would sit on top of:
 `jev.judge` (`src/core/judgment/service.ts`) returning a probability per
 option plus a confidence (`noul`/choice/score per
 `src/schemas/judgment-instructions.ts` (moved to `beebox/src/schemas/judgment/instructions.ts`)), and the `.judgment.card` schema
-(`src/schemas/judgment.ts` (moved to `beebox/src/schemas/judgment/schema.ts`)) plus `bbx judge` as its runner. Neither triage
-routing nor the quick-capture entry point was rewired to use it — both
-halves of this issue are still open work.
+(`src/schemas/judgment.ts` (moved to `beebox/src/schemas/judgment/schema.ts`)) plus `bbx judge` as its runner. At that time neither triage
+routing nor quick capture used it. Document triage has since been rewired in
+the admitted-document implementation. Quick Chat was implemented separately
+and is documented at [`beebox/docs/chat/quick-chat.md`](../../beebox/docs/chat/quick-chat.md);
+check that work against the broader candidate-universe questions above before
+calling this half fully resolved.
 
 ## 2026-09-28 — document-triage experiment
 
@@ -134,8 +137,10 @@ all four prepared documents. Explicit unclear separated missing evidence from
 no-match, while concrete best-effort rules controlled ambiguous filing. The
 [paired report](../../beebox/docs/reports/jev-instruction-experiment-2026-09-28.md)
 records the instruction experiment. The complete admitted-document implementation
-plan requires size/scope approval before coding; Gmail admission and quick capture
-remain outside that implementation unit and keep this issue open.
+plan requires size/scope approval before coding. Gmail admission remains outside
+that implementation unit and keeps this issue open. Quick Chat now exists in
+separate chat-routing work; the older quick-capture description is historical
+context, not a current claim that no quick-chat surface exists.
 
 ## 2026-09-28 — admitted-document implementation
 
@@ -151,6 +156,7 @@ Receipts intentionally retain prepared evidence until explicit deletion; deletin
 an original alone does not remove snapshots or Git history. Native Codex research
 cannot enforce a USD ceiling, though tool turns and Jev calls remain bounded.
 
-This issue stays open: Gmail pre-materialization admission and quick capture are
-not implemented here. No real box was used for model probes; worktree commits do
+This issue stays open for Gmail pre-materialization admission and any remaining
+gap between the original generic capture-routing proposal and the separate Quick
+Chat implementation. No real box was used for model probes; worktree commits do
 not deploy. Final implementation checks are recorded in the linked plan/review.
