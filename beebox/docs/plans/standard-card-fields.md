@@ -35,7 +35,7 @@ These were settled in discussion and are the plan's premises.
   presence of the thing itself (a transcript) or an error field.
 - **`created` is banned.** A creation time is valid only for media that
   existed before the card, and that time already lives on the media
-  reference (`filename.captured`). Git records when a card was written.
+  reference (today `filename.captured`; `filename.via.at` after Track D). Git records when a card was written.
 - **`source` keeps the `{% source %}` meaning only**: what this content was
   derived from. Every other `source` field gets a name for what it holds.
 - **Data copied verbatim from an external system** (email headers, Drive
@@ -50,6 +50,10 @@ These were settled in discussion and are the plan's premises.
 - **`title` stays optional.** The boxholder does not want to require it.
 - **Schema shadowing is rejected in code**, where it can be detected; the rest
   goes in instructions.
+- **Every pointer is `{ ref }` or `{ href }`.** A field that names a card, a
+  file, or a URL never holds a bare string.
+- **Box-local schemas get fixed as a follow-up**, and that migration is an
+  experiment in agent-applied migrations.
 
 ## Smallest fix and budget
 
@@ -77,7 +81,7 @@ from adding a `status`.
 Docs (schemas.md, bbx-guide-schemas, box-docs, agent guide) are about 400
 more lines, not counted above. Generated box-docs change with them.
 
-> **BIG CHANGE.** About 5,200 changed lines. The size comes from the number of
+> **BIG CHANGE**, approved by the boxholder on 2026-09-28. About 5,200 changed lines. The size comes from the number of
 > types (about 25 schemas lose `status`) and from each one needing a reader
 > change, a migration, and test updates. It needs the boxholder's approval at
 > this size. See *Open design questions* for splitting it into three plans that
@@ -144,7 +148,7 @@ already holds camera metadata under the name of its origin.
 
 - **Global field** — a frontmatter field every card type accepts, declared once
   in `GLOBAL_CARD_FIELDS`. Kept: `title`, `contains`, `todos`, `symbol`,
-  `prominence`, `theme`. Not a global: `contains-evidence` (moves to chat).
+  `prominence`, `theme`. `contains-evidence` also stays global (see Track E).
 - **Reserved name** — a field name no schema may declare: every global field
   name, plus the banned names `status`, `created`, `summary`, `date`,
   `modified`. `source` is reserved too; the derived-from field is `sources`.
@@ -152,10 +156,19 @@ already holds camera metadata under the name of its origin.
   `{ ref } | { href }` entries, with optional `label`, `note`, `time`. Same
   meaning as the `{% source %}` tag, frontmatter form. Not a producer, a
   channel, or a basis.
+- **Pointer** — `{ ref }` for a box path, `{ href }` for a URL. Every field
+  that points somewhere uses one of these two shapes, never a bare string.
 - **Media reference** — the `filename:` object that points at a card's
-  attached media: `{ ref, captured, via }`. `captured` is the time the media
-  was acquired. It replaces `created` everywhere a creation time is valid.
-  `via` is the capture channel (was `source`).
+  attached media: `{ ref, via }`.
+- **`via`** — how the media came to be in the box. An object:
+  `{ channel, at, original?, note? }`. `channel` is the capture channel (was
+  `filename.source`: `microphone`, `camera-user`, `gallery`, `scan-import`, …).
+  `at` is the time the media was acquired (was `filename.captured`, and
+  `filename.recorded` on audio). `original` is the date of the original, when
+  it is known and differs from `at` (a scanned 1970s photo). `note` says how or
+  why, in prose. `via.at` replaces `created` everywhere a creation time is
+  valid: a transcript or an analysis points at its media and inherits the
+  time, it does not copy it.
 - **Source-metadata key** — one object field named for the external system,
   holding data copied verbatim from it: `email:` (headers), `drive:` (Drive
   file metadata), `exif:` (camera). It is not box-authored and not edited by
@@ -286,12 +299,13 @@ of them under one label.
 | webpage | original page URL (required string) | `sources: [{ href }]`, required, one entry |
 | recipe | `{label, href, ref}` | `sources: [...]` |
 | record | already `sources` | unchanged |
-| commentary | the annotated page URL | see *Open design questions* |
-| job cards | which code created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | `producer` |
-| media references (image, file, pdf, audio) | capture channel | `filename.via` |
-| feedback | `text` \| `voice` | `via` |
+| commentary | the annotated page URL | `about: { href }`; the commentary annotates the page, it is not derived from it |
+| contains-backfill-job, question-followup-job, todo-review-job | a constant: each type has exactly one producer | removed; the job type says it |
+| chat-job, intake-job | which connector or step created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | `producer: { ref }` to the file that defines the producer (see *Open design questions*) |
+| media references (image, file, pdf, audio) | capture channel | `filename.via.channel` |
+| feedback | `text` \| `voice` | `via: { channel }` |
 | guide, personality | belief basis (`user-stated`, `inferred`, …) | `basis` |
-| browser-task | URL where scanning starts | `start-url` |
+| browser-task | URL where scanning starts | `start: { href }` |
 | capture-session | the uploader token name | `uploader` |
 | scheduled-script | why the schedule exists | `reason` |
 | tab-arrangement | the captured tabs before rearranging | `captured-tabs` |
@@ -302,16 +316,16 @@ of them under one label.
 `WebpageView.tsx:27` (`source` → `sources`), `RecipeView.tsx:31`,
 `BrowserTaskView.tsx:172` (reads `status` and `source`),
 `TabArrangementView.tsx:257`, `PdfCardView` via `src/frontend/src/lib/pdf-card.ts:142`
-(`filename.source` → `filename.via`), and `src/core/triage/snapshot.ts:75`
+(`filename.source` → `filename.via.channel`), and `src/core/triage/snapshot.ts:75`
 (guide `source` → `basis` in the compiled policy text). Each reads both names
 during the settling period.
 
-**Vocabulary lock-ins.** `sources`, `producer`, `via`, `basis`, `start-url`,
-`uploader`, `reason`, `captured-tabs`, `surface`.
+**Vocabulary lock-ins.** `sources`, `producer`, `via`, `basis`, `start`,
+`about`, `uploader`, `reason`, `captured-tabs`, `surface`.
 
-**First chunk.** Job `source` → `producer`, including `findJobCards`'
-`sourceFilter` parameter and the job filename. It is the widest reader set
-and has no open questions.
+**First chunk.** Remove `source` from the three single-producer job types, and
+convert webpage, recipe and browser-task to pointer objects. The `producer`
+target question is settled before the chat-job and intake-job chunk.
 
 ### Track D — Timestamps and source-metadata keys
 
@@ -326,8 +340,9 @@ metadata moves under a key named for its system.
 - `pub-submission.created` removed; `submitted-at` already holds the external
   event time.
 - Guide/personality observation `date` removed (free text, no reader).
-- `audio.filename.recorded` → `filename.captured`, so every media reference
-  uses one name.
+- Media references take the `via` object: `filename.captured` and
+  `filename.source` (and audio's `filename.recorded`) fold into
+  `filename.via.at` and `filename.via.channel`.
 - **`email:`** on email-message holds the header data: `message-id`,
   `thread-id`, `from`, `to`, `cc`, `subject`, `received` (was `date`, which is
   Gmail's `internalDate`, the arrival time — `src/connectors/gmail/mime.ts:206-226`).
@@ -340,11 +355,11 @@ metadata moves under a key named for its system.
   column.
 - memo's `created` goes with the memo retirement.
 
-**Vocabulary lock-ins.** `email`, `drive` keys; `filename.captured`
+**Vocabulary lock-ins.** `email`, `drive` keys; `filename.via`
 everywhere; `email.received`.
 
 **First chunk.** The deletions: `pub-submission.created`, observation `date`,
-search `created`, `CardFacts` created/source, audio `recorded` → `captured`.
+search `created`, `CardFacts` created/source, the media-reference `via` object.
 
 ### Track E — `summary` and `description`
 
@@ -430,8 +445,8 @@ own plan, not a subplan.
   one (`status: new` forever). ADDRESSED.
 - **Two agents on one card:** unchanged by this plan.
 - **Partial migration:** ADDRESSED by dual reads (Failure modes).
-- **Box-local schemas:** DEFERRED to each box's agent, prompted by the lint
-  warning. See *Open design questions*.
+- **Box-local schemas:** DEFERRED to the follow-up below. Until it runs, the
+  lint warning names the problem on each box.
 - **Validation message UX:** each banned name's message says what to write
   instead (Track A).
 
@@ -449,26 +464,62 @@ own plan, not a subplan.
   Worth an issue; not a field-design question.
 - **Per-type `name` fields** (person, record, procedure, place). They work as
   data; Track F derives titles from them instead of renaming.
-- **Migrating box-local schemas.** Box content; each box's agent does it.
+- **Migrating box-local schemas.** A follow-up; see *Follow-up: box-local
+  schemas* below.
 - **The `description` → `contains` search fallback.** Kept as is.
+- **The `created` attribute on `{% todo %}` and frontmatter `todos` entries**
+  (`src/core/todo/extract/body.ts:234`). It is per-todo, not a card field, and
+  records when an intention was noted, which git cannot give per todo. Worth
+  its own look; not covered by the card-field check.
 
 ## Open design questions
 
-1. **Split into three plans?** Lean: yes. (1) Tracks A, E, F and the dead half
-   of B: small and safe. (2) The rest of B: `status` replacements. (3) Tracks C
-   and D: `source` and source-metadata keys, which touch the Gmail and Drive
-   connectors. Each ships separately; the guard's banned-name list grows as
-   each lands.
+1. **Split into three plans?** The boxholder approved the size (2026-09-28).
+   Lean: still ship in three parts, for review size, not scope. (1) Tracks A,
+   E, F and the dead half of B. (2) The rest of B. (3) Tracks C and D, which
+   touch the Gmail and Drive connectors. The banned-name list grows as each
+   lands.
 2. **Experiments** (`proposed`, `active`, `successful`, `unsuccessful`,
    `mixed`, `inconclusive`). This mixes a stage with a result. Lean: `active:
    true` while running, `outcome:` once concluded, absent both = proposed.
-3. **commentary's URL.** The commentary annotates a page; it is not derived
-   from it. Lean: `about: { href }`, not `sources`.
-4. **Box-local schemas.** Lean: a lint warning plus a line in the box agent's
-   guide; no engine-driven migration. The alternative is an agent-applied
-   migration procedure.
-5. **Name choices.** `producer`, `via`, `basis`, `outcome`, `email`, `drive`
-   are proposals.
+3. **What `producer` points at.** A job's producer is a connector (whose
+   configuration is a file under `_config/connectors/`) or a wakeup step
+   (which has no file in the box). Lean: `{ ref }` to the connector's config
+   file or to the schedule card that ran the step; a producer with no box file
+   gets no `producer` field, and routing for it uses the job type. Settle this
+   by reading `intake-utils.ts` and `wakeup/steps.ts` before the chunk.
+
+## Follow-up: box-local schemas
+
+A separate plan, written after this one lands. It is also an experiment in
+agent-applied migrations (`.claude/skills/bbx-migration/SKILL.md`: *"only when
+the transform needs judgment on arbitrary box-authored code/prose"*).
+
+**What is on the boxes** (structural scan of prod, 2026-09-28; no content):
+- Four boxes have box-local schemas with reserved names: about 10 declare
+  `status`, several declare `date`, two declare `source`, one declares both
+  `source` and `sources`.
+- On box-local types, `status` usually holds real domain data that the box's
+  own views read: whether a collection item is owned or wanted, whether a bill
+  is paid, whether an event is scheduled or a call is open. About 35 read
+  sites in box views.
+- Box-local `date` is usually a domain date (an announcement's date, a docket
+  entry's date), read by views. The rule makes it a named date, not a removal.
+- One box has a view that reads `created`, `source` and `status` from any card.
+
+**Why agent-applied.** Each rename needs a name chosen from the meaning (the
+owned/wanted state of a book is not the paid state of a bill), and the box's
+views, schema and cards change together. A script cannot pick the names.
+
+**Shape of the experiment.** Split per the skill's 80/20 rule. The agent reads
+the lint warnings, the schema, and the views, and writes a rename map per
+schema (old field → new field, value mapping). A script applies the map to
+the cards. The agent edits the schema and the views. The gate is `bbx
+validate` clean, every view renders, and the card count per type is
+unchanged. Run it first on copies of the local backups, then on each prod box
+with the boxholder reviewing the rename maps before the script applies them.
+What the experiment measures: how often the agent's rename map needs a
+boxholder correction, and whether the view edits hold.
 
 ## Knowledge audits
 
@@ -526,9 +577,13 @@ For `docs/cards/schemas.md` and the bbx-guide-schemas skill:
 3. **State is the fact itself.** Record the result (`transcript`), the failure
    (`transcription-error`), or a specific boolean (`archived: true`), not a
    lifecycle enum.
-4. **Times belong to media or external data.** A capture time goes on the
-   media reference (`filename.captured`). Data copied from an external system
-   goes under a key named for that system (`email:`, `drive:`, `exif:`).
+4. **Times belong to media, external data, or the domain.** A capture time
+   goes on the media reference (`filename.via.at`). Data copied from an
+   external system goes under a key named for that system (`email:`,
+   `drive:`, `exif:`). A date that is part of the subject (when an event
+   happens, when a bill is due) is named for what it is (`due`, `starts`),
+   never a bare `date`. When the card was written is git's job.
+7. **Pointers are `{ ref }` or `{ href }`.** Never a bare path or URL string.
 5. **Don't do a global field's job.** No per-type title or summary field.
 6. **`description` means what the subject is or does.** Narrow it for a type
    only when necessary.
