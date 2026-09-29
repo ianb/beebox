@@ -116,25 +116,35 @@ String(bare.doclingRef)
 
 Page images aren't referenced from the body — only the extractor's naming
 convention says which files they are. The derivation filters a `status.browse`
-listing to `page-NNN.avif` and sorts numerically, so page 10 lands after page 2
-rather than between 1 and 2.
+listing to `page-NNN.webp` or archived `page-NNN.avif` and sorts numerically,
+so page 10 lands after page 2 rather than between 1 and 2.
 
 ```ts
 const listing = {
   files: [
     { name: "source.pdf", relativePath: "inbox/Handbook.attach/source.pdf" },
+    { name: "page-1000.webp", relativePath: "inbox/Handbook.attach/page-1000.webp" },
     { name: "page-010.avif", relativePath: "inbox/Handbook.attach/page-010.avif" },
     { name: "figure-001.avif", relativePath: "inbox/Handbook.attach/figure-001.avif" },
-    { name: "page-002.avif", relativePath: "inbox/Handbook.attach/page-002.avif" },
+    { name: "page-002.webp", relativePath: "inbox/Handbook.attach/page-002.webp" },
     { name: "page-001.avif", relativePath: "inbox/Handbook.attach/page-001.avif" },
   ],
 };
 const pages = pageRendersFrom(listing.files, (p) => `/test/api/image/${p}`);
 pages.map((p) => p.page).join(",")
-=> 1,2,10
+=> 1,2,10,1000
 
 pages[0].src
 => /test/api/image/inbox/Handbook.attach/page-001.avif
+
+pages[1].src
+=> /test/api/image/inbox/Handbook.attach/page-002.webp
+
+pageRendersFrom([
+  { name: "page-01.webp", relativePath: "page-01.webp" },
+  { name: "page-003.png", relativePath: "page-003.png" },
+], (p) => p).length
+=> 0
 ```
 
 A card whose extraction never produced page renders yields an empty list, and

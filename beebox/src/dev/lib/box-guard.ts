@@ -45,10 +45,25 @@ class AuditBoxInsideRepoError extends UnsafeAuditBoxError {
   }
 }
 
+/** A standalone audit box has pre-existing tracked or untracked changes. */
+class AuditBoxDirtyError extends UnsafeAuditBoxError {
+  readonly boxRoot: string;
+  readonly changes: string;
+  constructor(boxRoot: string, changes: string) {
+    super("Audit box has pre-existing working-tree changes");
+    this.name = "AuditBoxDirtyError";
+    this.boxRoot = boxRoot;
+    this.changes = changes;
+  }
+}
+
 /** Human-facing remediation text for an unsafe-box error. */
 export function formatUnsafeAuditBox(err: UnsafeAuditBoxError): string {
   if (err instanceof AuditBoxInsideRepoError) {
     return `Refusing to audit ${err.boxRoot}: it lives inside the git repo at ${err.enclosingRepo}, not its own repo. The post-test "git reset --hard" / "git clean -fd" would operate on that repo (e.g. the monorepo — discarding uncommitted work), and the box would inherit the parent's CLAUDE.md. Use a standalone box outside the repo, e.g. ~/src/boxes/test1.`;
+  }
+  if (err instanceof AuditBoxDirtyError) {
+    return `Refusing to audit ${err.boxRoot}: its Git working tree has pre-existing changes. The knowledge-audit runner resets and cleans the box between tests. Commit or move those changes, or use a clean disposable box, then retry. Changed paths:\n${err.changes}`;
   }
   if (err instanceof AuditBoxNotGitRepoError) {
     return `Audit box at ${err.boxRoot} is missing or not a git repository. Audits reset box git state between tests, so the box must be an initialized git repo. Pass --box as an absolute path to a real box, e.g. ~/src/boxes/test1.`;
@@ -66,7 +81,11 @@ export async function assertStandaloneBox(boxRoot: string): Promise<void> {
   const resolved = path.resolve(boxRoot);
   let toplevel: string;
   try {
-    toplevel = execSync("git rev-parse --show-toplevel", { cwd: resolved, encoding: "utf-8" }).trim();
+    toplevel = execSync("git rev-parse --show-toplevel", {
+      cwd: resolved,
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch (_e) {
     throw new AuditBoxNotGitRepoError(resolved);
   }
@@ -78,5 +97,23 @@ export async function assertStandaloneBox(boxRoot: string): Promise<void> {
   const expectedRoot = realpathSync(lookup.found ? lookup.shape.boxRoot : lookup.boxRoot);
   if (path.resolve(toplevel) !== expectedRoot) {
     throw new AuditBoxInsideRepoError(realpathSync(resolved), path.resolve(toplevel));
+  }
+}
+
+/** Snapshot status for the CLI's own generated setup before its first test. */
+export function auditBoxStatus(boxRoot: string): string {
+  return execSync("git status --porcelain --untracked-files=all", {
+    cwd: path.resolve(boxRoot),
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trimEnd();
+}
+
+/** Refuse audit setup when it could erase changes that predate the audit. */
+export function assertCleanAuditBox(boxRoot: string, expectedSetupStatus?: string): void {
+  const resolved = path.resolve(boxRoot);
+  const changes = auditBoxStatus(resolved);
+  if (changes && changes !== expectedSetupStatus) {
+    throw new AuditBoxDirtyError(resolved, changes);
   }
 }

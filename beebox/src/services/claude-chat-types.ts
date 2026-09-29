@@ -21,6 +21,11 @@ export interface NativeChatBackendMessage {
 
 export type ChatBackendMessage = SDKMessage | NativeChatBackendMessage;
 
+/** Per-message options for `ChatBackendRun.send()`. */
+export interface ChatBackendSendOptions {
+  clientComposed?: boolean | undefined;
+}
+
 /** Content blocks accepted by `ChatBackendRun.send()`. */
 export type ChatContentBlock =
   | { type: "text"; text: string }
@@ -88,8 +93,11 @@ export interface ChatBackendStartOptions {
 }
 
 export interface ChatBackendRun {
-  /** Push a user message into the running query. */
-  send(content: ChatContentBlock[]): void;
+  /**
+   * Push a user message into the running query. `clientComposed` marks a turn
+   * built from text the user did not type (see `ChatSendInput.clientComposed`).
+   */
+  send(content: ChatContentBlock[], options?: ChatBackendSendOptions): void;
   /** Async iterable of SDK message events. Iterate exactly once per run. */
   messages: AsyncIterable<ChatBackendMessage>;
   /** Interrupt the in-progress turn, if any. */

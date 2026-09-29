@@ -87,6 +87,8 @@ export interface TestServerOptions {
    * server builds the real one — which no route doctest should provoke.
    */
   chatBackend?: ChatBackend | undefined;
+  /** Replace scan promotion work while route tests exercise HTTP validation. */
+  scanPromoteRun?: ((boxRoot: string) => Promise<void>) | undefined;
 }
 
 // Filter chat-history backfill noise: every makeTestServer() boots a fresh
@@ -216,6 +218,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
     devSurfaces: opts?.devSurfaces === true,
     frontendPath: TEST_FRONTEND_PATH,
     ...(opts?.chatBackend !== undefined ? { chatBackend: opts.chatBackend } : {}),
+    ...(opts?.scanPromoteRun !== undefined ? { scanPromoteRun: opts.scanPromoteRun } : {}),
   });
 
   return {

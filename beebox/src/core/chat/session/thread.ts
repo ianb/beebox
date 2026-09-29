@@ -386,7 +386,9 @@ export class ChatThreadSession extends EventEmitter {
     }
 
     log("send", `Sending message (${message.length} chars) to ${this.threadRef}`);
-    run.send([{ type: "text", text: fullMessage }]);
+    // Thread sessions serve external chat (Telegram): every turn carries
+    // other participants' text, so none may expand `@path` mentions.
+    run.send([{ type: "text", text: fullMessage }], { clientComposed: true });
 
     return new Promise<void>((resolve) => {
       this.turnResolve = resolve;

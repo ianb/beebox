@@ -93,7 +93,11 @@ Headers:
 
 Server behavior: streams to quarantine while metering bytes (over-limit →
 `413`, partial file deleted), re-hashes, then validates (magic-byte sniff vs
-extension allowlist; `qpdf --check` for PDFs, image decode for images).
+extension allowlist; `qpdf --check` for PDFs, image decode for images). Image
+uploads may be JPEG, PNG, TIFF, WebP, or AVIF. For `.avif`, the sniffer may
+identify the generic HEIF container (`image/heif`); both recognized AVIF/HEIF
+container labels still require a complete image decode. Other MIME/extension
+mismatches are rejected.
 
 Responses (JSON, `status` field is the vocabulary):
 

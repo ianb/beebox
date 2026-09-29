@@ -2,7 +2,7 @@
 
 `bbx scan-import`'s pdf flow runs a text-layer PDF through Docling and
 files a `pdf.card` in the session's attach scope: the rendered markdown as
-the body, the gzipped `DoclingDocument` JSON, page renders and figures as AVIF.
+the body, the gzipped `DoclingDocument` JSON, page renders and figures as WebP.
 
 The property that matters most is the failure one: **extraction failure never
 blocks intake.** When Docling cannot run, the card is still written — with
@@ -16,7 +16,7 @@ exercised by `pdf-extract-integration.doctest.md`.
 import { runPdfMode } from "../../../src/core/commands/scan-import/pdf.js";
 import { runPdfReanalyze } from "../../../src/core/commands/pdf-reanalyze.js";
 import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling/core.js";
-import { extractPdf } from "../../../src/core/pdf/extract.js";
+import { extractPdf, clearExtractionAssets } from "../../../src/core/pdf/extract.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { parseCardText } from "../../../src/core/card-io.js";
@@ -95,23 +95,23 @@ docling fake (succeeds), 1 call(s)
   source.pdf ocr=off languages=-
 ```
 
-The attach scope holds the original, the canonical JSON, one AVIF per page, and
-one per figure. Every image is a real AVIF — the fake emits real PNG bytes and
+The attach scope holds the original, the canonical JSON, one WebP per page, and
+one per figure. Every image is a real WebP — the fake emits real PNG bytes and
 `sharp` re-encodes them for real:
 
 ```ts continue
 await attachContents(box)
 =>
 docling.json.gz
-figure-001.avif
-page-001.avif
-page-002.avif
+figure-001.webp
+page-001.webp
+page-002.webp
 source.pdf
 
 const dir = await sessionDir(box);
-const avif = await readFile(join(box.root, "_content/inbox", dir, "source.attach/page-001.avif"));
-avif.subarray(4, 12).toString("latin1")
-=> ftypavif
+const webp = await readFile(join(box.root, "_content/inbox", dir, "source.attach/page-001.webp"));
+webp.subarray(8, 12).toString("latin1")
+=> WEBP
 
 const json = gunzipSync(await readFile(join(box.root, "_content/inbox", dir, "source.attach/docling.json.gz")));
 JSON.parse(json.toString()).schema_name
@@ -139,7 +139,7 @@ card.rawBody.trim()
 =>
 ## Invoice 2026-04
 «blankline»
-![Image](attach/figure-001.avif)
+![Image](attach/figure-001.webp)
 ```
 
 `metadata.pages` comes from the PDF itself (poppler), falling back to the
@@ -163,6 +163,56 @@ result.data.intakeJobPath.startsWith("_bookkeeping/jobs/")
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## A tall Docling render stays readable within the WebP dimension limit
+
+WebP permits at most 16,383 pixels on each axis. The producer scales an
+oversized render proportionally before encoding rather than failing extraction.
+
+```ts
+const scratch = await mkdtemp(join(tmpdir(), "bbx-tall-render-"));
+const attachAbsDir = join(scratch, "attach");
+const workDir = join(scratch, "work");
+await mkdir(attachAbsDir, { recursive: true });
+await mkdir(workDir, { recursive: true });
+const sourcePath = join(scratch, "source.pdf");
+await writeFile(sourcePath, textPdf());
+const originalBytes = await readFile(sourcePath);
+const { default: Sharp } = await import("sharp");
+const baseDocling = createFakeDocling({ pageCount: 1 });
+const originalExtract = baseDocling.extract.bind(baseDocling);
+baseDocling.extract = async (path, options) => {
+  const extraction = await originalExtract(path, options);
+  if (extraction.ok) {
+    const pagePath = extraction.value.pageImages[0].filePath;
+    await Sharp({ create: { width: 2, height: 17000, channels: 3, background: { r: 20, g: 80, b: 120 } } })
+      .png().toFile(pagePath);
+  }
+  return extraction;
+};
+const result = await extractPdf({
+  docling: baseDocling,
+  sourcePath,
+  attachAbsDir,
+  workDir,
+  ocr: "off",
+  languages: null,
+});
+const encoded = await readFile(join(attachAbsDir, "page-001.webp"));
+const metadata = await Sharp(encoded).metadata();
+JSON.stringify([
+  result.ok,
+  metadata.format,
+  metadata.width,
+  metadata.height,
+  (await readFile(sourcePath)).equals(originalBytes),
+])
+=> [true,"webp",2,16383,true]
+```
+
+```ts cleanup
+await rm(scratch, { recursive: true, force: true });
 ```
 
 ## The raw text layer is kept verbatim as `text-layer.txt`
@@ -331,7 +381,7 @@ JSON.stringify([card.fields.status, card.rawBody.trim(), card.fields.error])
 await attachContents(box)
 =>
 docling.json.gz
-page-001.avif
+page-001.webp
 source.pdf
 ```
 
@@ -387,12 +437,33 @@ sitting beside the new one:
 await attachContents(box)
 =>
 docling.json.gz
-page-001.avif
+page-001.webp
 source.pdf
 ```
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## Reanalysis cleanup recognizes old AVIF and new WebP page renders
+
+Both generated extensions are disposable, including page numbers wider than
+three digits; unrelated short names and the original survive.
+
+```ts
+const scratch = await mkdtemp(join(tmpdir(), "bbx-render-cleanup-"));
+await writeFile(join(scratch, "source.pdf"), "original");
+await writeFile(join(scratch, "page-001.avif"), "old render");
+await writeFile(join(scratch, "page-1000.avif"), "old wide render");
+await writeFile(join(scratch, "figure-004.webp"), "new render");
+await writeFile(join(scratch, "page-01.avif"), "unmatched");
+const removed = await clearExtractionAssets(scratch, { keep: "source.pdf" });
+JSON.stringify({ removed: removed.toSorted(), remaining: (await readdir(scratch)).sort() })
+=> {"removed":["figure-004.webp","page-001.avif","page-1000.avif"],"remaining":["page-01.avif","source.pdf"]}
+```
+
+```ts cleanup
+await rm(scratch, { recursive: true, force: true });
 ```
 
 ## Reanalyze refuses clearly on a card it cannot work with
@@ -441,7 +512,7 @@ await box.cleanup();
 ## Extraction output is bounded before anything re-encodes it
 
 Docling decides how many artifacts it writes; the caps (D16) sit between
-extraction and the AVIF re-encode, so a pathological run is an extraction
+extraction and the WebP re-encode, so a pathological run is an extraction
 failure rather than unbounded work. Over the cap behaves like every other
 extraction failure — which is the property that matters: intake never blocks.
 

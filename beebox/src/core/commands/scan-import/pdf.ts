@@ -1,7 +1,7 @@
 /**
  * Pdf flow for the scan-import command: a single PDF that already has an
  * embedded text layer is run through Docling and filed as a `pdf.card`
- * (+ the original PDF, the gzipped extraction JSON, and page/figure AVIFs)
+ * (+ the original PDF, the gzipped extraction JSON, and page/figure images)
  * inside the session's attach scope. No Gemini analysis — the text is already
  * there; Docling contributes layout, reading order, and tables.
  *
@@ -131,7 +131,7 @@ async function importPdfSession(
     template.doclingFilename = extraction.value.doclingFilename;
     template.doclingVersion = extraction.value.doclingVersion;
     for (const name of extraction.value.assetNames) assetRelPaths.push(`${attachRelDir}/${name}`);
-    const imageAssets = extraction.value.assetNames.filter((name) => name.endsWith(".avif")).length;
+    const imageAssets = extraction.value.assetNames.filter((name) => name.endsWith(".avif") || name.endsWith(".webp")).length;
     ctx.writeLine(`Extracted ${String(extraction.value.pageCount)} page(s), ${String(imageAssets)} image asset(s)`);
   } else {
     template.error = extraction.error;

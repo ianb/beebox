@@ -9,7 +9,7 @@ import { getBoxTimeISO } from "../../../lib/time.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
 import { errorMessage, errnoCode } from "../../../shared/error-guards.js";
 import { createSelectQuestionTemplate } from "../../../schemas/question.js";
-import { verifyEvidence, type Evidence } from "../evidence.js";
+import { verifyEvidence, type Evidence } from "../evidence/core.js";
 import { compileInstructionSnapshot } from "../snapshot.js";
 import { movePathPreservingAnnexSymlink } from "../../card-files/move-phase2.js";
 import { decisionReceiptSchema, assertContained, receiptRef, receiptFingerprint, containedPath, readDecisionReceipt, saveDecisionReceipt, withDecisionReceiptLock, TriageReceiptError, type DecisionReceipt } from "./storage.js";

@@ -231,8 +231,10 @@ async function handlePut(opts: {
 export async function registerScanUploadRoutes(options: {
   server: FastifyInstance;
   boxRoot: string;
+  /** Replaces promotion work in tests; production leaves this unset. */
+  promoteRun?: ((boxRoot: string) => Promise<void>) | undefined;
 }): Promise<void> {
-  const { server, boxRoot } = options;
+  const { server, boxRoot, promoteRun } = options;
 
   // Probe qpdf at registration rather than on the first PDF, so a host missing
   // it says so at boot instead of mid-upload.
@@ -265,7 +267,7 @@ export async function registerScanUploadRoutes(options: {
   // `bbx wakeup` are all recovered. Skipped on an unshaped box: the pass would
   // decline anyway (it re-probes), and arming a debounce timer that can never
   // do anything is worse than not arming it.
-  if (annexShaped) startScanPromoteLifecycle({ server, boxRoot });
+  if (annexShaped) startScanPromoteLifecycle({ server, boxRoot, ...(promoteRun ? { run: promoteRun } : {}) });
 
   await server.register(async (instance) => {
     // Pass the raw body through untouched so the PUT can stream it to disk —

@@ -39,14 +39,13 @@ Codex entries here are labeled as such; they carry their own pin.
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.284` (SDK), `2.1.284` (Claude Code), `0.158.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.285` (SDK), `2.1.285` (Claude Code), `0.159.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved this turn — Agent SDK to
-  `0.3.283`, Codex to `0.157.1` (taking `0.157.0` with it). Next: `0.3.284`
-  (settles 2026-09-30T17:15Z) and Codex `0.158.0` (2026-09-30T05:12Z). Open:
-  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`. With
-  `0.3.280`+ pinned, `verbatimPrompts` is available and still unset; see the
-  `0.3.280` entry.
+- **Current recommendation:** **No bump was due on either channel** — `0.3.284`
+  settles 2026-09-30T17:15Z and Codex `0.158.0` 2026-09-30T05:12Z. The
+  `verbatimPrompts` item from the `0.3.280` entry is **done and verified** (see
+  that entry). Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+  Watch `0.3.285`'s change to background Bash timeouts when it reaches the pin.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -72,6 +71,47 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### Codex 0.159.0 / 0.159.1 — pending (published 2026-09-29T08:10Z and 20:36Z, ~13h and ~1h at this turn)
+
+- **Removals, checked clear:** `0.159.0` removes automatic follow-up prompt
+  suggestions with the `tui.prompt_suggestions` setting, and the bundled
+  `plugin-creator` skill. Nothing in `beebox/src`, `beebox/plugins`, `bin/` or
+  `.claude/` references either.
+- **`0.159.0`, relevant:** `.aws` directories are protected by default under
+  writable roots, and approved commands keep explicit filesystem denials; an
+  opt-in `instant_interrupt` lets new input steer mid-response; app-server clients
+  can paginate thread history from an item.
+- **`0.159.1`** makes GPT-6.1 Sol the default in the bundled and Bedrock
+  catalogs. beebox's `sol` alias names `gpt-6-sol`, one step behind again — noted
+  on `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **Action:** Settled path; `0.159.1` takeable 2026-10-01 with the deploy gate.
+- **Sources:** [rust-v0.159.0](https://github.com/openai/codex/releases/tag/rust-v0.159.0), [rust-v0.159.1](https://github.com/openai/codex/releases/tag/rust-v0.159.1)
+
+### 0.3.285 / Claude Code 2.1.285 — pending (published 2026-09-29T17:35Z, ~4h at this turn)
+
+- **Behavior change to watch:** *"Changed Bash/PowerShell `timeout` to bound a
+  `run_in_background` command (was ignored; default 30 min, max 2 h); the
+  `stopped` task notification for a stop at that limit says why."* Background
+  commands a box agent starts were previously unbounded; from this release they
+  stop at 30 minutes unless the call sets a longer `timeout`, capped at 2 hours.
+  Long conversions or transcriptions started in the background are the shape that
+  would notice. The stop arrives as a `stopped` task notification, which the chat
+  task strip already renders. Not filed; worth checking if long background work
+  starts ending early once this is pinned.
+- **SDK, relevant:** switching models mid-session with `setModel` no longer
+  leaves the new model on the built-in output-token limit and auto-compact
+  window; `toggleMcpServer(name, false)` now closes a not-yet-connected server;
+  `rewind_conversation` stops a backgrounded MCP call its message started;
+  `getSubagentMessages()` now includes messages a subagent read while running.
+- **2.1.285, relevant:** synchronous hooks no longer hang while a background
+  process the hook started keeps its output open — this repo's hooks do start
+  background work; fork subagents now keep the parent's plan or `dontAsk` mode,
+  which the `manual-tests` schedule uses; a rare auth failure when two sessions
+  recover a crashed process's refresh lock at once is fixed — the concurrency
+  family again.
+- **Action:** Settled path; takeable 2026-10-01.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03285), [Claude Code 2.1.285](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21285)
 
 ### Codex 0.158.0 — pending (published 2026-09-28T05:12Z, ~16h at this turn)
 
@@ -283,7 +323,12 @@ bump time.
   pin before writing this: the expansion does apply to beebox's prompt shapes.
   Security-relevant; the details are tracked outside this public file. The
   recommendation is to set `verbatimPrompts: true` on every SDK `query()` beebox
-  makes once `0.3.280` is in the pin. Slash-command dispatch is already
+  makes once `0.3.280` is in the pin. **Done, and verified 2026-09-29:** agent runs
+  (`core/agent/invoke/run.ts`) and scan vision set `verbatimPrompts: true`, and
+  chat turns carrying text the boxholder did not type go out with the SDK's
+  per-message `client_composed: true` (`services/claude-chat/core.ts`), landed in
+  `aedbbdbb4` and `2952eb805`. Re-probed on the pinned `0.3.283`: the same
+  chat-shaped prompt is expanded without the flag and not expanded with it. Slash-command dispatch is already
   unreachable from chat, because every chat prompt starts with a wrapper tag
   (`<typed>`, `<speech>` or `<chat-message …>`), never a leading `/`.
 - **SDK, other:** `fireReason` on task-notification origins,

@@ -8,7 +8,7 @@
  * downloading it and gunzipping it by hand.
  *
  * Container: it fetches and parses (`hooks/useDoclingDocument`), lists the
- * sibling attach scope to find the `page-NNN.avif` / `figure-NNN.avif` renders,
+ * sibling attach scope to find the `page-NNN` / `figure-NNN` renders,
  * and owns the loading/empty/error states. `DoclingPageSection` draws each page.
  */
 
@@ -29,8 +29,8 @@ import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 
-/** `figure-001.avif`, `figure-002.avif`, … — the renders of `pictures[]`, in order. */
-const FIGURE_RENDER_RE = /^figure-(\d{3})\.avif$/;
+/** `figure-NNN.webp` renders new pictures; existing `.avif` renders stay readable. */
+const FIGURE_RENDER_RE = /^figure-(\d{3,})\.(?:avif|webp)$/;
 
 /** The directory a box path lives in (`""` at the box root). */
 function dirOf(path: string): string {
