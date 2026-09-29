@@ -1,6 +1,6 @@
 ---
 title: "Standard card fields: ban status and created, reserve source, group source metadata"
-status: draft
+status: active
 workstream: card-fields-review
 issues:
   - ../../../issues/code-quality/2026-09-27-review-standard-card-fields.md
@@ -105,8 +105,10 @@ keeps teaching it.
   error), not a new enum.
 - **Short compatibility horizon** (`.claude/skills/bbx-migration/SKILL.md`:
   *"Keep back-compat reads or dual-format loaders only for a short, explicit
-  settling period"*): old field names are read for one settling period, then
-  removed through a deferred issue.
+  settling period"*). As built, there are no dual reads at all: deploy runs
+  the migrations while each box is closed, before the new code serves
+  (`docs/cards/migrations.md`, "Automatic convergence"), and a card the
+  migration refuses keeps its old key for a person to fix.
 - **Box-local schemas are box content.** The engine cannot rewrite them by
   script without judgment, so the guard must not break a box's load.
 
@@ -323,8 +325,7 @@ of them under one label.
 `BrowserTaskView.tsx:172` (reads `status` and `source`),
 `TabArrangementView.tsx:257`, `PdfCardView` via `src/frontend/src/lib/pdf-card.ts:142`
 (`filename.source` → `filename.via.channel`), and `src/core/triage/snapshot.ts:75`
-(guide `source` → `basis` in the compiled policy text). Each reads both names
-during the settling period.
+(guide `source` → `basis` in the compiled policy text).
 
 **Job routing.** Today a job's `source` string is also its routing key: a
 connector-scoped wakeup drains only jobs whose `source` is that connector
@@ -371,8 +372,7 @@ metadata moves under a key named for its system.
   `pdf.ts:111-143`), and scan promote (`src/core/scan/promote/core.ts:98`).
   Readers: the capture timeline orders media by `filename.recorded` and
   `filename.captured` (`src/core/capture/prepare/timeline.ts:99-120,140-150`)
-  and session time (`write-cards.ts:203`); both read old and new names during
-  the settling period.
+  and session time (`write-cards.ts:203`).
 - **`email:`** on email-message holds the header data: `message-id`,
   `thread-id`, `from`, `to`, `cc`, `subject`, `received` (was `date`, which is
   Gmail's `internalDate`, the arrival time — `src/connectors/gmail/mime.ts:206-226`).
@@ -470,19 +470,17 @@ own plan, not a subplan.
 |---|---|---|---|
 | A box-local schema declares `status`; if the check threw, the schema would be skipped at import | no | Track A: the check never throws; box-local problems are lint warnings | clear (warning) |
 | A migration misses a card type that has the old field; the card loads with the old key stripped in memory and its meaning lost | no | unknown-key lint warning (`card-lint/core.ts:395`) | clear, but only if someone reads lint |
-| The capture sweep reads `delivered: true` but an un-migrated session has `status: delivered`, so the sweep re-delivers it | no | settling-period read of the old field | silent without the dual read |
-| Job discovery filters by the new routing field while an un-migrated job card has `source`; the job is never picked up | no | settling-period read | silent without the dual read |
+| The capture sweep reads `delivered: true` but an un-migrated session has `status: delivered`, so the sweep re-delivers it | migration doctests | the migration runs before new code serves | silent only for a card the migration refused (reported) |
+| Job discovery filters by `connector` while an un-migrated job card has `source`; the job is never picked up | migration doctests | the migration runs before new code serves | as above |
 | The share router's retry finds an existing webpage card by `share-id` and compares its exact text with a freshly generated card (`src/webapp/trpc/routers/share/router.ts:60-66,103-117`); a card written in the old `source:` shape no longer matches, so a retry reports a conflict | no | no | clear (conflict), but wrong; the migration must run before the new writer ships, or the comparison normalizes the shape |
 | The Gmail connector rewrites an email card in the old flat shape because a code path still builds it | no | connector doctests | clear if the doctest checks shape |
 | An agent writes `status:` by habit on a built-in type after migration | lint warns on the unknown key | yes | clear |
 | Search title for email changes from subject to summary title; if `summarize` is missing, the title becomes the file name | no | Track F adds `summarize` to those types | silent |
 | A stock template or seeded card changes shape (a procedure, a schedule default, a seeded person); boxes whose copy has no tracker entry park the update in `config/_template-updates/` instead of taking it (`src/core/install-template-file.ts:139,381`) | yes (tracker tests) | parking is the handling | silent to the boxholder unless someone checks parked updates |
 
-> **Critical gap:** settling-period reads. The sweep and job-discovery cases
-> are silent if a card is not migrated. Handling: every reader that switches
-> field reads both the old and new name until the deferred cleanup issue
-> removes the old read, and the migration runs before the new code ships to
-> prod (per `docs/cards/migrations.md`).
+> **Accepted risk:** no dual reads. A card is read in its old shape only if
+> the migration refused it (an unmappable value), and a refusal is reported as
+> a migration question. Deploy migrates before the new code serves.
 
 ## Agent-flow / user-flow edge cases
 
@@ -494,7 +492,8 @@ own plan, not a subplan.
 - **Fabricated free-form value:** removing `status` removes the most common
   one (`status: new` forever). ADDRESSED.
 - **Two agents on one card:** unchanged by this plan.
-- **Partial migration:** ADDRESSED by dual reads (Failure modes).
+- **Partial migration:** ADDRESSED by migrating before serving; refusals are
+  reported (Failure modes).
 - **Box-local schemas:** DEFERRED to the follow-up below. Until it runs, the
   lint warning names the problem on each box.
 - **Validation message UX:** each banned name's message says what to write
@@ -566,10 +565,12 @@ boxholder correction, and whether the view edits hold.
 
 ## Knowledge audits
 
-New agent-facing facts: "no card has `status`; record the specific fact" and
-"derived-from goes in `sources`". Add `knows_directly` entries to
-`beebox/src/dev/knowledge-audits.yaml` for both, run against test1 after
-Track B and Track C land.
+Two `knows_about` audits in `beebox/src/dev/knowledge-audits.yaml`, run on a
+migrated copy of the worktree's test1 clone on 2026-09-29, both passing:
+`schema-specific-fields` (a box-local schema author avoids reserved names and
+names the specific fact) and `record-sources-provenance` (a record's origin
+goes in `sources: [{ ref }]`). `knows_about` because box agents rarely author
+schemas; they read the box schema doc when they do.
 
 ## What will hold this after it ships
 
@@ -586,14 +587,13 @@ Track B and Track C land.
 1. Track A (reserved-name check, required-title rule).
 2. Track E, Track F.
 3. Track B dead and constant cases, with the strip migration.
-4. Track B live cases, one commit per type group, each with its migration and
-   dual reads.
+4. Track B live cases, one commit per type group, each with its migration.
 5. Track D deletions, then `email:` and `drive:` keys with connector changes.
 6. Track C: pointer conversions first, then `connector` on job cards.
 7. Add each banned name to the guard as its last use is removed.
 8. Docs: `docs/cards/schemas.md` rule, bbx-guide-schemas skill, box-docs and
    agent guide.
-9. Deferred issue for removing the dual reads.
+9. (No deferred cleanup: there are no dual reads.)
 
 ## Rollout shape
 
