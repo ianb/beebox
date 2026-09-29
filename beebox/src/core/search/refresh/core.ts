@@ -230,7 +230,8 @@ async function healContainsState(state: RefreshState): Promise<void> {
   }
 }
 
-async function lockWithRetry(
+/** Acquire a search-index lock with bounded retry; false = still held. */
+export async function lockWithRetry(
   lockPath: string,
   { retries, retryMs }: { retries: number; retryMs: number }
 ): Promise<boolean> {
