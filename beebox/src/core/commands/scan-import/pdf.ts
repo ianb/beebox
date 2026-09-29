@@ -25,7 +25,8 @@ import { createDoclingService, type DoclingService } from "../../../services/doc
 import { extractPdf } from "../../pdf/extract.js";
 import { probePdf, type PdfProbe } from "../../pdf/probe.js";
 import type { DoclingOcr } from "../../../services/docling/core.js";
-import { createSessionLayout } from "./session.js";
+import { createSessionLayout, type SessionLayout } from "./session.js";
+import { importSessionOrDiscard } from "./session-discard.js";
 import { assertAnnexBox } from "../../annex/assert-annex-box.js";
 
 /** The OCR intent a probed PDF calls for. Pure, so the mapping is testable. */
@@ -54,6 +55,13 @@ export async function runPdfMode(
 ): Promise<CommandResult> {
   await assertAnnexBox(ctx.boxRoot, "PDF extract");
   const layout = await createSessionLayout(ctx);
+  return importSessionOrDiscard(ctx.boxRoot, { layout, run: () => importPdfSession(ctx, { args, layout }) });
+}
+
+async function importPdfSession(
+  ctx: CommandContext,
+  { args, layout }: { args: RunPdfModeArgs; layout: SessionLayout }
+): Promise<CommandResult> {
   const {
     sessionAttachAbsDir,
     sessionAttachRelDir,

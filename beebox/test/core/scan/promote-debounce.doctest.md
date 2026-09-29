@@ -13,6 +13,8 @@ import { createPromoteDebouncer, SCAN_SETTLE_MS } from "../../../src/core/scan/p
 import Fastify from "fastify";
 import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-upload/promote-lifecycle.js";
 import { setTimeout as sleep } from "node:timers/promises";
+import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { acquireBoxWork, boxWorkEnvironment } from "../../../src/lib/box-maintenance.js";
 
 function counting(opts) {
   const state = { runs: 0 };
@@ -89,6 +91,7 @@ The startup pass is fire-and-forget so a box can serve immediately. Closing the
 server must still wait for that pass before its temporary box is removed.
 
 ```ts
+const box = await makeTmpBox({ git: true });
 const app = Fastify();
 let release!: () => void;
 let started!: () => void;
@@ -96,7 +99,7 @@ const passStarted = new Promise(resolve => { started = resolve; });
 const passMayFinish = new Promise(resolve => { release = resolve; });
 startScanPromoteLifecycle({
   server: app,
-  boxRoot: "test-box",
+  boxRoot: box.root,
   run: async () => { started(); await passMayFinish; },
 });
 await app.ready();
@@ -113,4 +116,46 @@ release();
 await closing;
 closingSettled
 => true
+
+await box.cleanup();
+```
+
+## A pass takes its own work permit, not the one that armed it
+
+An upload request arms the pass while it holds the request's work permit, and
+timers carry async context. A pass that ran under that inherited permit would
+outlive it: once the request released, every write in the pass, and every
+child it spawned, failed with "Work permission has expired" on every retry.
+
+Here the request arms a timer, as the upload route arms the settle window. The
+timer starts the lifecycle after the request has released, and the pass hands
+its permit to a child, as `bbx wakeup` or the commit hook would receive it.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const app = Fastify();
+const request = await acquireBoxWork(box.root, { reason: "PUT /scan-upload" });
+let childSaw!: (outcome: string) => void;
+const outcome = new Promise(resolve => { childSaw = resolve; });
+const armed = new Promise(resolve => request.run(() => setTimeout(() => {
+  startScanPromoteLifecycle({
+    server: app,
+    boxRoot: box.root,
+    run: async () => {
+      const inherited = boxWorkEnvironment().BBX_BOX_WORK;
+      childSaw(await acquireBoxWork(box.root, { reason: "bbx wakeup", inherited }).then(
+        async (work) => { await work.release(); return "admitted"; },
+        (error) => error.message,
+      ));
+    },
+  });
+  resolve(undefined);
+}, 50)));
+await request.release();
+await armed;
+await Promise.race([outcome, sleep(5000).then(() => "the pass never ran")])
+=> admitted
+
+await app.close();
+await box.cleanup();
 ```
