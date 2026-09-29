@@ -42,7 +42,6 @@ export const GdocSchema = cardSchema("gdoc", {
   fields: {
     title: z.string(),
     "drive-id": z.string(),
-    status: z.enum(["synced", "error", "new", "conflict"]).optional(),
     modified: z.string(),
     revision: z.string().optional(),
     link: z.string(),
@@ -50,6 +49,9 @@ export const GdocSchema = cardSchema("gdoc", {
     content: z.object({ ref: z.string() }),
     comments: z.object({ ref: z.string() }).optional(),
     lossy: z.array(LossyItem).optional(),
+    // Present (true) while an unresolved `.remote.md` sits beside the local
+    // copy; recomputed on every pull.
+    conflict: z.boolean().optional(),
   },
   instructions: `# Gdoc Cards
 
@@ -82,11 +84,11 @@ otherwise keeps is refused — the connector parks the upstream copy as
 
 ## Conflicts
 If the upstream Doc was edited in Drive between your last pull and
-your push, the card \`status\` becomes \`conflict\` and the upstream
+your push, the card gets \`conflict: true\` and the upstream
 version is written next to the local \`.md\` as \`{basename}.remote.md\`
 (inside the attach scope). Resolve by merging the two files, deleting
 the \`.remote.md\`, and committing — the next sync will push the
-resolved version.
+resolved version. The next pull then drops \`conflict\`.
 
 ## Comments
 Collaborative feedback from the upstream Doc is captured as a sidecar
@@ -130,11 +132,11 @@ export function createGdocTemplate(options: {
   contentFile: string;
   commentsFile?: string | undefined;
   lossy?: Array<{ type: GdocLossyType; count: number }>;
-  status?: "synced" | "error" | "new" | "conflict";
+  /** An unresolved `.remote.md` sits beside the local copy. */
+  conflict?: boolean;
 }): string {
   const fields: Record<string, unknown> = {
     "drive-id": options.driveId,
-    status: options.status === undefined ? "synced" : options.status,
     title: options.title,
     modified: options.modified,
     link: options.link,
@@ -150,5 +152,6 @@ export function createGdocTemplate(options: {
   if (options.lossy !== undefined && options.lossy.length > 0) {
     fields["lossy"] = options.lossy;
   }
+  if (options.conflict === true) fields["conflict"] = true;
   return `---\n${stringifyYaml(fields)}---\n`;
 }

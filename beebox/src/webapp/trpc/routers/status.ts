@@ -63,8 +63,9 @@ export interface BrowseCard {
   relativePath: string;
   name: string;
   type: string;
-  status?: string | undefined;
   title?: string | undefined;
+  /** The card's `conflict` field is true: a synced Drive file awaits a merge. */
+  conflict?: true;
   /** True if this card has a `<basename>.attach/` directory (i.e. attachments). */
   hasAttachments?: boolean;
   /** The card's effective level: its own declared `prominence`, else its type's default. */
@@ -150,8 +151,8 @@ async function buildBrowseCard(
     relativePath,
     name: parsed.name,
     type: parsed.type,
-    ...(str("status") !== undefined && { status: str("status") }),
     ...(str("title") !== undefined && { title: str("title") }),
+    ...(fm["conflict"] === true && { conflict: true }),
     hasAttachments,
     prominence,
   };

@@ -6,7 +6,7 @@
  * read. Each mount reports what the boxholder needs to judge it: where it
  * mirrors to, what Drive said last time, and how many children the directory
  * actually holds — the count is the honest answer to "did this work", since a
- * mount whose listing failed shows a status but no children.
+ * mount whose listing failed shows an error but no children.
  */
 
 import * as path from "node:path";
@@ -31,9 +31,9 @@ export interface FolderMountSummary {
   name: string | null;
   /** `webViewLink` for the Drive folder, absent until the first sync. */
   link: string | null;
-  status: "ok" | "error" | null;
+  /** When the last sync ran; null until the first one. */
   lastSync: string | null;
-  /** Present only alongside `status: "error"`. */
+  /** Why the last sync failed; null when it succeeded (or never ran). */
   error: string | null;
   children: FolderMountChildCounts;
   /** Children the last pass could not account for; zero when all is well. */
@@ -73,12 +73,6 @@ function count(fields: Record<string, unknown> | null, key: string): number {
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
 }
 
-function statusOf(fields: Record<string, unknown> | null): "ok" | "error" | null {
-  const status = field(fields, "status");
-  if (status === "ok" || status === "error") return status;
-  return null;
-}
-
 /**
  * Every folder mount on the box, sorted by card path.
  *
@@ -116,7 +110,6 @@ export async function listFolderMounts(boxRoot: string): Promise<FolderMountSumm
       driveId: card.driveId,
       name: field(fields, "name"),
       link: field(fields, "link"),
-      status: statusOf(fields),
       lastSync: field(fields, "last-sync"),
       error: field(fields, "error"),
       children: countsByDir.get(dir) ?? { files: 0, links: 0 },

@@ -153,8 +153,9 @@ Edit the JSON file directly and commit. For plain cells, change the value. For f
 | `bbx drive list [folder-url]` | Browse spreadsheets (or files in a folder) |
 
 `bbx drive status` names each card's kind -- `file` (synced two-way), `folder`
-(mirrored), or `link` (a pointer, nothing copied) -- and for a folder mount also
-prints its last sync outcome and time.
+(mirrored), or `link` (a pointer, nothing copied) -- and prints a synced file's
+conflict, and a folder mount's last sync time and its error when that sync
+failed.
 
 The `<url-or-id>` argument accepts:
 - Full Google Sheets URL: `https://docs.google.com/spreadsheets/d/FILE_ID/edit`
@@ -175,7 +176,7 @@ bbx drive mount https://drive.google.com/drive/folders/FOLDER_ID _content/drive/
 
 The box's settings page runs the same operation over tRPC
 (`webapp/trpc/routers/drive.ts`, `components/settings/DriveSection.tsx`): it
-lists every mount with its status and child counts, and its "Mirror a folder" /
+lists every mount with its last sync, any error, and child counts, and its "Mirror a folder" /
 "Add a pointer" forms are `mount` and `link` — so the page and the CLI cannot
 hold different ideas of what a mount is.
 
@@ -199,7 +200,7 @@ own `.gfolder.card`, shortcuts resolve to their target, and everything else --
 PDFs, Slides, images -- becomes a `.glink.card` **pointer**: name, mime type,
 and link, with nothing copied and a body for whoever wants to write down what it
 is for. Recursion is bounded (8 levels, 500 folders per pass) and the folder
-card carries `status` / `last-sync` / `error` from the last pass.
+card carries `last-sync` from the last pass, plus `error` when that pass failed.
 
 **Pointers on their own.** `bbx drive link <url> <path>` writes a pointer to any
 Drive item -- folders included -- with `origin: manual` (a mirror's pointers

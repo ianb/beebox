@@ -43,9 +43,10 @@ export async function runDriveStatus(boxRoot: string): Promise<void> {
     if (summary.title !== null) console.log(`    Title: ${summary.title}`);
     console.log(`    Drive ID: ${card.driveId}`);
     if (summary.modified !== null) console.log(`    Last synced: ${summary.modified}`);
-    if (summary.status !== null && summary.status !== "synced") {
-      console.log(`    Status: ${summary.status}`);
+    if (summary.conflict) {
+      console.log("    Conflict: merge the .remote.md beside the local copy, then delete it");
     }
+    if (summary.error !== null) console.log(`    Error: ${summary.error}`);
     if (card.kind === "folder") {
       const problems = folderProblemCounts(card.content);
       if (problems.notInFolder > 0) {
@@ -92,7 +93,8 @@ async function driveStatusValue(boxRoot: string): Promise<unknown> {
         driveId: card.driveId,
         title: summary.title,
         modified: summary.modified,
-        status: summary.status,
+        conflict: summary.conflict,
+        error: summary.error,
         tabs: summary.tabs,
         lossy: summary.lossy,
         problems: card.kind === "folder" ? folderProblemCounts(card.content) : null,

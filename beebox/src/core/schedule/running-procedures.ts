@@ -11,8 +11,8 @@ import { getBoxDir } from "../../lib/paths/core.js";
 /**
  * A run card whose mtime is older than this is treated as orphaned —
  * the engine has no signal handler, so when a procedure process is
- * killed (script-timeout, OOM, crash) the run card stays at its
- * last-written status forever. Anything actively running updates the
+ * killed (script-timeout, OOM, crash) the run card never gets an
+ * outcome. Anything actively running updates the
  * card on every step boundary, and `bbx tick` kills scripts after 10
  * minutes regardless. One hour leaves headroom for unusually long
  * agent steps without letting a months-old corpse block housekeeping.
@@ -20,13 +20,13 @@ import { getBoxDir } from "../../lib/paths/core.js";
 const STALE_RUN_CARD_AGE_MS = 60 * 60 * 1000;
 
 /**
- * Return the names of any procedure runs whose root status is non-terminal
- * (pending or running) AND whose run card has been touched recently. Used
+ * Return the names of any procedure runs that have no outcome yet (they
+ * have not finished) AND whose run card has been touched recently. Used
  * to gate housekeeping/tick activity so the system can be "fully at rest"
  * before scheduled work fires.
  *
  * Reads `_bookkeeping/procedure/runs/<runDir>/run.procedure-run.card` and
- * matches the top-level `status:` frontmatter field via regex — full parsing
+ * looks for the top-level `outcome:` frontmatter field via regex — full parsing
  * is overkill here and would couple this helper to the schemas package. Stale
  * cards (older than STALE_RUN_CARD_AGE_MS) are skipped so an orphaned card
  * from a long-dead procedure doesn't permanently block the at-rest gate.
@@ -69,10 +69,10 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
       }
       continue;
     }
-    // Top-level `status:` line (step statuses are indented, so the
-    // start-of-line anchor skips them). Tolerate optional quotes around
-    // the value (`status: running` or `status: "running"`).
-    if (/^status:\s*["']?(?:pending|running)\b/m.test(content)) {
+    // A run card (top-level `procedure:`) with no top-level `outcome:` has
+    // not finished. Step fields are indented, so the start-of-line anchor
+    // skips them.
+    if (/^procedure:/m.test(content) && !/^outcome:/m.test(content)) {
       running.push(entry);
     }
   }

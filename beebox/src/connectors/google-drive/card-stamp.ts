@@ -54,14 +54,15 @@ export async function stampGfolderCard(cardPath: string, stamp: FolderStamp): Pr
   const parts = await readCardParts(cardPath);
   if (stamp.name !== null) parts.fields["name"] = stamp.name;
   if (stamp.link !== null) parts.fields["link"] = stamp.link;
-  parts.fields["status"] = stamp.error === null ? "ok" : "error";
   parts.fields["last-sync"] = stamp.lastSync;
   if (stamp.problems !== null) {
     stampCount(parts.fields, { key: "not-in-folder", count: stamp.problems.notInFolder });
     stampCount(parts.fields, { key: "unknown", count: stamp.problems.unknown });
   }
+  // `error` present is how the card says the sync failed, so a failure with
+  // no message still writes one.
   if (stamp.error === null) delete parts.fields["error"];
-  else parts.fields["error"] = stamp.error;
+  else parts.fields["error"] = stamp.error === "" ? "Sync failed without a message" : stamp.error;
   await writeCardParts(cardPath, parts);
 }
 

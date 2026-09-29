@@ -13,8 +13,8 @@ import type { InconclusiveReason } from "../../shared/inconclusive.js";
 
 // Status/severity vocabularies, derived from the card schemas' z.enums so the
 // engine's in-memory shapes can't drift from what validates on disk (Track B).
-/** The run's overall lifecycle status. */
-export type RunStatus = ProcedureRunFields["status"];
+/** How a finished run ended (absent on the card while it has not). */
+export type RunOutcome = NonNullable<ProcedureRunFields["outcome"]>;
 /** A step's lifecycle status (pending → running → completed/skipped/failed). */
 export type StepStatus = RunStepResult["status"];
 /** A precheck phase's outcome (pass/fail/skip). */
@@ -42,41 +42,36 @@ export interface ProcedureError {
 }
 
 /**
- * Legal run-status transitions, encoding the lifecycle the run-card schema
- * documents (`pending → running → completed/failed`) plus the two moves the
- * engine actually makes that the prose glosses over:
+ * Which outcomes a resume may re-open. A run card's `outcome` is written once
+ * per attempt, when the run finishes (`finishRunCard` refuses a card that
+ * already has one); resuming re-opens the run by removing it
+ * (`reopenRunCard`), which only these outcomes allow:
  *
- * - `running → running` — resuming a run interrupted mid-execution (its
- *   on-disk status is still `running`); re-stamping it is idempotent.
- * - `failed → running` — resuming a failed run re-opens it (engine.ts:253).
- *   A `completed` run is never re-opened: `resumeProcedure` returns early
- *   before writing, so `completed` is terminal here.
+ * - `failed` — resuming a failed run re-opens it.
+ * - `completed` — never re-opened: `resumeProcedure` returns early before
+ *   writing.
+ * - `inconclusive` — every step's work finished and resume does not re-judge
+ *   (no re-review path exists), so `resumeProcedure` reports the standing
+ *   non-verdict instead.
  *
- * Keyed by `RunStatus`, so adding a status to the schema enum fails to compile
- * until its transitions are declared — the table can't silently drift from the
- * vocabulary. `isLegalRunStatusTransition` is the pure predicate the write
- * boundary (`updateRunCardStatus`) asserts against.
+ * A run with no outcome (interrupted mid-execution) may always be re-opened;
+ * re-stamping it is idempotent. Keyed by `RunOutcome`, so adding an outcome to
+ * the schema enum fails to compile until it says whether it re-opens.
  */
-const RUN_STATUS_TRANSITIONS: Record<RunStatus, readonly RunStatus[]> = {
-  pending: ["running"],
-  running: ["running", "completed", "failed", "inconclusive"],
-  completed: [],
-  // An inconclusive run's work is done and its steps are all complete: there
-  // is nothing left to execute, and resume does not re-judge (no re-review
-  // path exists). So `inconclusive` is terminal here — `resumeProcedure`
-  // reports the standing non-verdict instead of re-opening the run.
-  inconclusive: [],
-  failed: ["running"],
+const REOPENABLE: Record<RunOutcome, boolean> = {
+  completed: false,
+  inconclusive: false,
+  failed: true,
 };
 
-/** Whether `s` is a known run status (a key of the transition table). */
-export function isRunStatus(s: string): s is RunStatus {
-  return Object.prototype.hasOwnProperty.call(RUN_STATUS_TRANSITIONS, s);
+/** Whether `s` is a known run outcome. */
+export function isRunOutcome(s: unknown): s is RunOutcome {
+  return typeof s === "string" && Object.prototype.hasOwnProperty.call(REOPENABLE, s);
 }
 
-/** Whether the run may move from `from` to `to` per {@link RUN_STATUS_TRANSITIONS}. */
-export function isLegalRunStatusTransition(from: RunStatus, to: RunStatus): boolean {
-  return RUN_STATUS_TRANSITIONS[from].includes(to);
+/** Whether a run whose card has `outcome` (undefined: none yet) may be resumed. */
+export function canReopenRun(outcome: RunOutcome | undefined): boolean {
+  return outcome === undefined || REOPENABLE[outcome];
 }
 
 /** Agent factory type — matches createAgent() signature */

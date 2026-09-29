@@ -193,7 +193,10 @@ export async function findDriveCardTracking(boxRoot: string): Promise<DriveCardT
 export interface DriveCardSummary {
   title: string | null;
   modified: string | null;
-  status: string | null;
+  /** A synced file's last push was refused; its `.remote.md` awaits a merge. */
+  conflict: boolean;
+  /** Why a folder mount's last sync failed; null when it did not. */
+  error: string | null;
   tabs: string[];
   lossy: Array<{ type: string; count: number }>;
 }
@@ -201,6 +204,7 @@ export interface DriveCardSummary {
 function xmlSummary(content: string): DriveCardSummary {
   const titleMatch = /<title>([^<]+)<\/title>/.exec(content);
   const modifiedMatch = /<modified>([^<]+)<\/modified>/.exec(content);
+  // The legacy element form kept a conflict as a `status` attribute.
   const statusMatch = /\bstatus="([^"]+)"/.exec(content);
   const tabs = [...content.matchAll(/<sheet-tab[^>]*\btitle="([^"]+)"/g)]
     .map((match) => match[1])
@@ -215,7 +219,8 @@ function xmlSummary(content: string): DriveCardSummary {
   return {
     title: titleMatch?.[1] ?? null,
     modified: modifiedMatch?.[1] ?? null,
-    status: statusMatch?.[1] ?? null,
+    conflict: statusMatch?.[1] === "conflict",
+    error: null,
     tabs,
     lossy,
   };
@@ -262,10 +267,11 @@ export function driveCardSummary(content: string): DriveCardSummary {
     // A synced file carries `title`/`modified`; a folder mount and a pointer
     // carry the Drive `name` and the mount's `last-sync` instead. Same two
     // questions — what is it, when did the box last hear from Drive — so
-    // status reads them from whichever field the card type uses.
+    // `bbx drive status` reads them from whichever field the card type uses.
     title: optionalString(fields["title"]) ?? optionalString(fields["name"]),
     modified: optionalString(fields["modified"]) ?? optionalString(fields["last-sync"]),
-    status: optionalString(fields["status"]),
+    conflict: fields["conflict"] === true,
+    error: optionalString(fields["error"]),
     tabs,
     lossy,
   };

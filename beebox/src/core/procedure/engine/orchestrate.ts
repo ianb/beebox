@@ -17,7 +17,7 @@ import {
   type ProcedureInconclusive,
   type ProcedureOutcome,
 } from "../engine-types.js";
-import { updateRunCardStatus } from "./run-card.js";
+import { finishRunCard } from "./run-card.js";
 import { computeRunExpires } from "../run-expiry.js";
 import { executeStep } from "./step.js";
 
@@ -112,18 +112,18 @@ export async function finalizeRun(args: {
   }
 
   const completedAt = getBoxTimeISO(boxRoot);
-  // Three terminal states, not two: a run whose work all succeeded but whose
-  // review never decided is neither `completed` nor `failed`.
-  const status = allSucceeded
+  // Three outcomes, not two: a run whose work all succeeded but whose review
+  // never decided is neither `completed` nor `failed`.
+  const outcome = allSucceeded
     ? inconclusive.length > 0
       ? "inconclusive"
       : "completed"
     : "failed";
-  await updateRunCardStatus({
+  await finishRunCard({
     runCardPath,
-    status,
+    outcome,
     completedAt,
-    expires: computeRunExpires({ status, completedAt, procedure }),
+    expires: computeRunExpires({ outcome, completedAt, procedure }),
   });
   await withBoxGitLock(boxRoot, async () => {
     await stageAll(boxRoot);
@@ -134,7 +134,7 @@ export async function finalizeRun(args: {
   });
 
   if (allSucceeded) {
-    if (status === "inconclusive") {
+    if (outcome === "inconclusive") {
       ctx.writeLine(
         fmt.warn(
           `Procedure completed, review inconclusive: ${procedureName} (${inconclusive

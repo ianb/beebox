@@ -10,7 +10,7 @@
  */
 
 import { bbxSource } from "../../../../lib/source-tag";
-import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { Badge } from "../../../../components/ui/Badge";
 import { Accordion } from "../../../../components/ui/Accordion";
 import { Text } from "../../../../components/ui/Text";
 import type { RouterOutput } from "../../../../lib/trpc/client";
@@ -103,7 +103,7 @@ function CardRow({
           "data-image-src": `${getApiBase()}/image/${encodePathForUrl(card.relativePath)}`,
           "data-image-alt": card.name,
         } : {})}
-        aria-label={card.name === card.type ? `${card.name} card${card.status ? `, ${card.status}` : ""}` : `${card.name}, ${card.type} card${card.status ? `, ${card.status}` : ""}`}
+        aria-label={`${card.name === card.type ? card.name : `${card.name}, ${card.type}`} card${card.conflict === true ? ", conflict" : ""}`}
         className="min-w-0 flex-1 text-left px-4 py-2.5 hover:bg-warm-50 transition-colors"
       >
         <div className="flex items-start justify-between gap-2">
@@ -112,7 +112,7 @@ function CardRow({
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
             <span className="text-xs text-warm-500">{card.type}</span>
-            {card.status ? <StatusBadge status={card.status} size="sm" /> : null}
+            {card.conflict === true ? <Badge tone="danger" size="sm">conflict</Badge> : null}
           </div>
         </div>
       </button>

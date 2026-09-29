@@ -544,6 +544,15 @@ Part 2 of `docs/plans/standard-card-fields.md`. Per type:
   `active: true`, and `successful`/`unsuccessful`/`mixed`/`inconclusive`
   become `outcome: <value>`. A migrated stock guide is byte-identical to the
   current template, so the template tracker updates it in place.
+- gdoc: `conflict` becomes `conflict: true`; `synced`, `new` and `error` are
+  dropped. The connector recomputes the card on every pull.
+- gfolder: `status` is dropped; `error` present means the last sync failed. A
+  failed mount with no `error` text gets a fixed message saying the reason was
+  never recorded. An `ok` mount that carries an `error` is refused.
+- procedure-run: `completed`, `failed` and `inconclusive` become
+  `outcome: <value>`; `pending` and `running` are dropped (no outcome means the
+  run has not finished, and `bbx procedure resume` still continues an
+  interrupted one). A card that already has an `outcome` is refused.
 
 Any other value fails the card, unchanged. Idempotent. See
 `src/scripts/migrate/status-fields.ts`.

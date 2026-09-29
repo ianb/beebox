@@ -408,7 +408,6 @@ folderCard.replace(/last-sync: .*/, "last-sync: «stamped»")
 drive-id: folder-1
 name: Recipes
 link: https://drive.google.com/file/d/folder-1/view
-status: ok
 last-sync: «stamped»
 ---
 ```
@@ -523,9 +522,9 @@ const warnings = await captureWarnings(async () => {
 JSON.stringify({
   success: cycled?.success,
   cycleNoted: warnings.some((line) => line.includes("cycle, not descended")),
-  status: /status: (\S+)/.exec(await box.read("_content/drive/recipes/Recipes.gfolder.card"))?.[1],
+  failed: /^error:/m.test(await box.read("_content/drive/recipes/Recipes.gfolder.card")),
 })
-=> {"success":true,"cycleNoted":true,"status":"ok"}
+=> {"success":true,"cycleNoted":true,"failed":false}
 ```
 
 ```ts cleanup
@@ -593,9 +592,9 @@ const stamped = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 JSON.stringify({
   notInFolder: /not-in-folder: (\d+)/.exec(stamped)?.[1],
   unknown: /^unknown: (\d+)/m.exec(stamped)?.[1],
-  status: /status: (\S+)/.exec(stamped)?.[1],
+  failed: /^error:/m.test(stamped),
 })
-=> {"notInFolder":"1","status":"ok"}
+=> {"notInFolder":"1","failed":false}
 ```
 
 A child whose `getFile` fails is left exactly where it is — an error is not
@@ -664,13 +663,13 @@ JSON.stringify({
 => {"success":false,"error":"Drive file pdf-2 (\"Report.pdf\") maps to _content/drive/recipes/Reportpdf.glink.card, already claimed by drive-id pdf-1","cards":["_content/drive/recipes/Recipes.gfolder.card","_content/drive/recipes/Reportpdf.glink.card"]}
 ```
 
-The folder card still reads `ok`: the *mount* is healthy — it listed fine and
+The folder card still has no `error`: the *mount* is healthy — it listed fine and
 mirrored everything it could. The collision is a sync-report failure about one
 child, not a broken mount, and `success: false` is what carries it.
 
 ```ts continue
-/status: (\S+)/.exec(await box.read("_content/drive/recipes/Recipes.gfolder.card"))?.[1]
-=> ok
+/^error:/m.test(await box.read("_content/drive/recipes/Recipes.gfolder.card"))
+=> false
 ```
 
 ```ts cleanup
@@ -818,10 +817,9 @@ an empty folder that mirrored fine.
 ```ts continue
 const card = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 JSON.stringify({
-  status: /status: (\S+)/.exec(card)?.[1],
   error: /error: (.*)/.exec(card)?.[1],
 })
-=> {"status":"error","error":"folder is in Drive trash"}
+=> {"error":"folder is in Drive trash"}
 ```
 
 Untrashed on Drive, the very next pass is ordinary again.
@@ -829,8 +827,8 @@ Untrashed on Drive, the very next pass is ordinary again.
 ```ts continue
 if (folder) folder.trashed = false;
 await connector.sync();
-/status: (\S+)/.exec(await box.read("_content/drive/recipes/Recipes.gfolder.card"))?.[1]
-=> ok
+/^error:/m.test(await box.read("_content/drive/recipes/Recipes.gfolder.card"))
+=> false
 ```
 
 ```ts cleanup

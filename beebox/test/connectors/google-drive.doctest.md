@@ -551,8 +551,8 @@ JSON.stringify({
 ```
 
 The health fields come from the current YAML form, not just the legacy XML
-form: title, last-synced time, a non-`synced` status, sheet tabs, and the
-lossy summary all print.
+form: title, last-synced time, a conflict, sheet tabs, and the lossy summary
+all print.
 
 ```ts continue
 const conflicted = createGdocTemplate({
@@ -562,7 +562,7 @@ const conflicted = createGdocTemplate({
   link: "https://docs.google.com/document/d/doc-id/edit",
   owner: "test@example.com",
   contentFile: "Contended.md",
-  status: "conflict",
+  conflict: true,
   lossy: [{ type: "images", count: 2 }, { type: "footnotes", count: 1 }],
 });
 await box.seed("_content/drive/Contended.gdoc.card", conflicted);
@@ -572,13 +572,13 @@ JSON.stringify({
   yamlTitle: health.includes("Title: YAML Card"),
   yamlSynced: health.includes("Last synced: 2026-03-29T10:00:00Z"),
   yamlTabs: health.includes("Tabs: Sheet1"),
-  yamlStatusHidden: !health.includes("Status: synced"),
+  yamlConflictHidden: (health.match(/Conflict:/g) ?? []).length === 1,
   docTitle: health.includes("Title: Contended Doc"),
-  docStatus: health.includes("Status: conflict"),
+  docConflict: health.includes("Conflict: merge the .remote.md beside the local copy, then delete it"),
   docLossy: health.includes("Lossy: images=2, footnotes=1"),
   legacyTabs: health.includes("Tabs: Old Tab"),
 })
-=> {"yamlTitle":true,"yamlSynced":true,"yamlTabs":true,"yamlStatusHidden":true,"docTitle":true,"docStatus":true,"docLossy":true,"legacyTabs":true}
+=> {"yamlTitle":true,"yamlSynced":true,"yamlTabs":true,"yamlConflictHidden":true,"docTitle":true,"docConflict":true,"docLossy":true,"legacyTabs":true}
 ```
 
 Cards with an ambiguous identity are listed too — they are not synced, so a
@@ -612,7 +612,7 @@ discovery recreate a deleted card. Unparseable frontmatter reads as no ID.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("_content/drive/Quoted.gsheet.card", "---\ndrive-id: 'sheet-quoted'\nstatus: synced\ntitle: Quoted\n---\n");
+await box.seed("_content/drive/Quoted.gsheet.card", "---\ndrive-id: 'sheet-quoted'\ntitle: Quoted\n---\n");
 await box.seed("_content/drive/Commented.gsheet.card", "---\ndrive-id: sheet-commented # mounted by hand\ntitle: Commented\n---\n");
 await box.seed("_content/drive/Broken.gsheet.card", "---\ndrive-id: [unclosed\n---\n");
 await box.seed("_content/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title></gsheet>\n');

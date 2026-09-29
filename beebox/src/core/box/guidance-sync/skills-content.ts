@@ -337,7 +337,7 @@ There is no config file — the folder card's own location is the configuration.
 - **Doc body:** markdown at \`attach/<basename>.md\`. Edit it and commit, and the next sync converts and pushes it.
 - **Comments:** a \`<basename>.comments.json\` sidecar in the attach scope holds the full threads (author, timestamps, resolved status, anchored text, replies), read-only. Editing and pushing a Doc's \`.md\` does NOT write comments back upstream — a push may even orphan the upstream anchors.
 - **Lossy content:** a Doc card's \`lossy:\` frontmatter lists upstream features that don't survive markdown export (footnotes, embedded images, equations, suggestions, complex tables). When it's non-empty, pushing local edits will destroy them — surface the loss before encouraging a push.
-- **Conflicts:** when both sides changed, the card status flips to \`conflict\` and the upstream content is written to \`attach/<basename>.remote.md\`. Merge the two, delete \`.remote.md\`, commit.
+- **Conflicts:** when both sides changed, the card gets \`conflict: true\` and the upstream content is written to \`attach/<basename>.remote.md\`. Merge the two, delete \`.remote.md\`, commit.
 
 Also: \`bbx drive inspect <url>\` (preview one item), \`bbx drive sync\` (all Drive cards), \`bbx drive status\` (what this box has mounted).
 `;

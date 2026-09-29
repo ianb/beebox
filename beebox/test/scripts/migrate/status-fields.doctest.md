@@ -215,6 +215,64 @@ JSON.stringify(migratedStock)
 => [true,true,true,true,true,true]
 ```
 
+## gdoc: `conflict: true`, and the rest goes
+
+The connector recomputes the card on every pull, and only ever wrote
+`synced` or `conflict`.
+
+```ts
+run("gdoc", { "drive-id": "d1", status: "synced", title: "Notes" })
+=> {"changed":true,"warnings":[],"fm":{"drive-id":"d1","title":"Notes"}}
+
+run("gdoc", { "drive-id": "d1", status: "new", title: "Notes" })
+=> {"changed":true,"warnings":[],"fm":{"drive-id":"d1","title":"Notes"}}
+
+run("gdoc", { "drive-id": "d1", status: "error", title: "Notes" })
+=> {"changed":true,"warnings":[],"fm":{"drive-id":"d1","title":"Notes"}}
+
+run("gdoc", { "drive-id": "d1", status: "conflict", title: "Notes" })
+=> {"changed":true,"warnings":[],"fm":{"drive-id":"d1","title":"Notes","conflict":true}}
+```
+
+## gfolder: `error` alone says the last sync failed
+
+A failed mount keeps its `error`; one with no `error` text gets a fixed
+message.
+
+```ts
+run("gfolder", { "drive-id": "f1", status: "ok", "last-sync": "2026-09-01T00:00:00Z" })
+=> {"changed":true,"warnings":[],"fm":{"drive-id":"f1","last-sync":"2026-09-01T00:00:00Z"}}
+
+run("gfolder", { "drive-id": "f1", status: "error", "last-sync": "2026-09-01T00:00:00Z", error: "folder is in Drive trash" })
+=> {"changed":true,"warnings":[],"fm":{"drive-id":"f1","last-sync":"2026-09-01T00:00:00Z","error":"folder is in Drive trash"}}
+
+run("gfolder", { "drive-id": "f1", status: "error", "last-sync": "2026-09-01T00:00:00Z" })
+=> {"changed":true,"warnings":[],"fm":{"drive-id":"f1","last-sync":"2026-09-01T00:00:00Z","error":"The last sync failed before this card recorded why (the failure predates the error field)"}}
+```
+
+## procedure-run: a finished run's result becomes its `outcome`
+
+A run with no outcome has not finished. A `running` card may be a live run or
+an interrupted one; either way it has no outcome, and `bbx procedure resume`
+still continues it.
+
+```ts
+run("procedure-run", { procedure: "p.procedure.card", status: "running", "started-at": "2026-09-01T00:00:00Z", steps: [{ id: "s", status: "running" }] })
+=> {"changed":true,"warnings":[],"fm":{"procedure":"p.procedure.card","started-at":"2026-09-01T00:00:00Z","steps":[{"id":"s","status":"running"}]}}
+
+run("procedure-run", { procedure: "p.procedure.card", status: "pending", "started-at": "2026-09-01T00:00:00Z", steps: [] })
+=> {"changed":true,"warnings":[],"fm":{"procedure":"p.procedure.card","started-at":"2026-09-01T00:00:00Z","steps":[]}}
+
+run("procedure-run", { procedure: "p.procedure.card", status: "failed", "started-at": "2026-09-01T00:00:00Z", steps: [{ id: "s", status: "failed" }] })
+=> {"changed":true,"warnings":[],"fm":{"procedure":"p.procedure.card","started-at":"2026-09-01T00:00:00Z","steps":[{"id":"s","status":"failed"}],"outcome":"failed"}}
+
+run("procedure-run", { procedure: "p.procedure.card", status: "completed", "started-at": "2026-09-01T00:00:00Z", steps: [] })
+=> {"changed":true,"warnings":[],"fm":{"procedure":"p.procedure.card","started-at":"2026-09-01T00:00:00Z","steps":[],"outcome":"completed"}}
+
+run("procedure-run", { procedure: "p.procedure.card", status: "inconclusive", "started-at": "2026-09-01T00:00:00Z", steps: [{ id: "s", status: "completed", validate: { status: "inconclusive" } }] })
+=> {"changed":true,"warnings":[],"fm":{"procedure":"p.procedure.card","started-at":"2026-09-01T00:00:00Z","steps":[{"id":"s","status":"completed","validate":{"status":"inconclusive"}}],"outcome":"inconclusive"}}
+```
+
 ## A migrated card is unchanged
 
 ```ts
@@ -235,6 +293,15 @@ run("guide", { experiments: [{ id: "b", active: true }, { id: "c", outcome: "mix
 
 run("progress", { entries: [{ node: "acids", level: "partial" }] })
 => {"changed":false,"warnings":[],"fm":{"entries":[{"node":"acids","level":"partial"}]}}
+
+run("gdoc", { "drive-id": "d1", conflict: true })
+=> {"changed":false,"warnings":[],"fm":{"drive-id":"d1","conflict":true}}
+
+run("gfolder", { "drive-id": "f1", error: "timeout" })
+=> {"changed":false,"warnings":[],"fm":{"drive-id":"f1","error":"timeout"}}
+
+run("procedure-run", { procedure: "p", outcome: "failed", steps: [{ id: "s", status: "failed" }] })
+=> {"changed":false,"warnings":[],"fm":{"procedure":"p","outcome":"failed","steps":[{"id":"s","status":"failed"}]}}
 ```
 
 ## A value outside the old enum is refused
@@ -272,4 +339,25 @@ refusal("telegram-message", { status: "queued", "chat-id": "7", text: "hi" })
 
 refusal("progress", { entries: [{ node: "n", status: "solid", level: "partial" }] })
 => UnmappedStatusError: progress entries[0] (already has level) status "solid" has no safe mapping; migrate this card by hand
+```
+
+An `ok` folder mount that still carries an `error` is refused: the new shape
+would read it as failed. So is a run card that already has an `outcome`, and
+any value outside each type's old enum.
+
+```ts
+refusal("gfolder", { "drive-id": "f1", status: "ok", error: "stale" })
+=> UnmappedStatusError: gfolder status "ok" has no safe mapping; migrate this card by hand
+
+refusal("gfolder", { "drive-id": "f1", status: "paused" })
+=> UnmappedStatusError: gfolder status "paused" has no safe mapping; migrate this card by hand
+
+refusal("gdoc", { "drive-id": "d1", status: "stale" })
+=> UnmappedStatusError: gdoc status "stale" has no safe mapping; migrate this card by hand
+
+refusal("procedure-run", { procedure: "p", status: "completed", outcome: "failed", steps: [] })
+=> UnmappedStatusError: procedure-run (already has outcome) status "completed" has no safe mapping; migrate this card by hand
+
+refusal("procedure-run", { procedure: "p", status: "cancelled", steps: [] })
+=> UnmappedStatusError: procedure-run status "cancelled" has no safe mapping; migrate this card by hand
 ```

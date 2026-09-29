@@ -72,7 +72,6 @@ function ChildState({ card }: { card: BrowseCardEntry }) {
 function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<string, unknown> }) {
   const name = field(frontmatter, "name");
   const link = field(frontmatter, "link");
-  const status = field(frontmatter, "status");
   const lastSync = field(frontmatter, "last-sync");
   const error = field(frontmatter, "error");
   const driveId = field(frontmatter, "drive-id");
@@ -81,9 +80,9 @@ function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<
     <Stack gap="xs">
       <Row gap="sm" align="center" wrap>
         <Heading level={2}>{name ?? "Drive folder"}</Heading>
-        {status === "error" ? <Badge tone="danger">error</Badge> : null}
-        {status === "ok" ? <Badge tone="success">mirrored</Badge> : null}
-        {status === null ? <Badge tone="neutral">never synced</Badge> : null}
+        {error !== null ? <Badge tone="danger">error</Badge> : null}
+        {error === null && lastSync !== null ? <Badge tone="success">mirrored</Badge> : null}
+        {error === null && lastSync === null ? <Badge tone="neutral">never synced</Badge> : null}
         {link === null ? null : (
           <ExternalLink href={link} id="bbx-gfolder-open-in-drive">Open in Drive</ExternalLink>
         )}

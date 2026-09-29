@@ -27,8 +27,8 @@ export const GfolderSchema = cardSchema("gfolder", {
     // carry only `drive-id` until then.
     name: z.string().optional(),
     link: z.string().optional(),
-    status: z.enum(["ok", "error"]).optional(),
     "last-sync": z.string().optional(),
+    // Present only while the last sync failed: what went wrong.
     error: z.string().optional(),
     // Children the last pass could not account for. Omitted when zero, so a
     // healthy mount carries neither.
@@ -82,8 +82,9 @@ Membership follows Drive one-way, on each sync:
 ## Frontmatter
 
 Connector-managed — do not hand-edit. \`name\` and \`link\` are re-stamped from
-Drive on every sync, and \`status\` / \`last-sync\` / \`error\` record the last
-outcome (\`error\` is present only when \`status: error\`). \`not-in-folder\` and
+Drive on every sync. \`last-sync\` is when the last sync ran, and \`error\` is
+present only when that sync failed, saying why; no \`last-sync\` means the
+folder has never synced. \`not-in-folder\` and
 \`unknown\` count children still on disk that the last pass could not account
 for — the two cases described above — and are absent when there are none. The one field worth
 setting yourself is \`drive-id\`, when you are creating a mount by hand;
@@ -101,14 +102,12 @@ export function createGfolderTemplate(options: {
   driveId: string;
   name?: string | undefined;
   link?: string | undefined;
-  status?: "ok" | "error" | undefined;
   lastSync?: string | undefined;
   error?: string | undefined;
 }): string {
   const fields: Record<string, unknown> = { "drive-id": options.driveId };
   if (options.name !== undefined) fields["name"] = options.name;
   if (options.link !== undefined) fields["link"] = options.link;
-  if (options.status !== undefined) fields["status"] = options.status;
   if (options.lastSync !== undefined) fields["last-sync"] = options.lastSync;
   if (options.error !== undefined) fields["error"] = options.error;
   return `---\n${stringifyYaml(fields)}---\n`;

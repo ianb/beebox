@@ -52,8 +52,8 @@ export default function EstateOverview({ cards, navigate, boxSlug, params, viewH
       <ul>
         {records.map(card => (
           <li key={card.path}>
-            <strong>{card.frontmatter?.title || card.path}</strong>
-            {card.frontmatter?.status && <span> — {String(card.frontmatter.status)}</span>}
+            <strong>{String(card.frontmatter?.name ?? card.path)}</strong>
+            {card.frontmatter?.reviewed === true && <span> — reviewed</span>}
           </li>
         ))}
       </ul>
@@ -143,10 +143,10 @@ Cards are YAML frontmatter + a markdown body. Each card in the \`cards\` array h
 }
 \`\`\`
 
-Read a card's fields from \`frontmatter\` (e.g. \`card.frontmatter?.title\`, the
-status from \`card.frontmatter?.status\`); show its prose with \`Markdown\`. \`type\` is
+Read a card's fields from \`frontmatter\` (e.g. \`card.frontmatter?.title\`, or a
+record's \`card.frontmatter?.archived\`); show its prose with \`Markdown\`. \`type\` is
 the card type — filter a mixed \`cards\` array with
-\`cards.filter(c => c.type === "memo")\`. \`frontmatter\` values are whatever the
+\`cards.filter(c => c.type === "record")\`. \`frontmatter\` values are whatever the
 card's schema declares (strings, numbers, arrays, nested objects), so they are
 typed \`unknown\` — narrow before use.
 

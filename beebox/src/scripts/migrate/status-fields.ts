@@ -146,6 +146,53 @@ function planTodoView(fm: Record<string, unknown>): FieldEditPlan {
   return { edits: renameStatusEdits({ where: "todo-view", base: [], entry: fm, to: "todo-status" }), warnings: [] };
 }
 
+/** Used when a failed folder mount carries no `error` to say why. */
+export const GFOLDER_UNRECORDED_FAILURE =
+  "The last sync failed before this card recorded why (the failure predates the error field)";
+
+/**
+ * gfolder: `error` present now means the last sync failed, so `status` goes.
+ * A failed mount with no `error` text gets a fixed message; an `ok` mount
+ * that still carries an `error` is refused, since the new shape would read it
+ * as failed.
+ */
+function planGfolder(fm: Record<string, unknown>): FieldEditPlan {
+  if (!("status" in fm)) return { edits: [], warnings: [] };
+  const status = fm["status"];
+  const error = fm["error"];
+  const edits: FieldEdit[] = [{ op: "delete", path: ["status"] }];
+  if (status === "error") {
+    if (typeof error !== "string" || error === "") edits.push({ op: "set", path: ["error"], value: GFOLDER_UNRECORDED_FAILURE });
+    return { edits, warnings: [] };
+  }
+  if (status === "ok" && error === undefined) return { edits, warnings: [] };
+  throw new UnmappedStatusError({ type: "gfolder", status });
+}
+
+/**
+ * procedure-run: a finished run's `completed` / `failed` / `inconclusive`
+ * becomes its `outcome`. The engine never wrote `pending`; `running` (live, or
+ * a run that was interrupted) is the absence of an outcome. A card that
+ * already has an `outcome` is refused.
+ */
+function planProcedureRun(fm: Record<string, unknown>): FieldEditPlan {
+  if (!("status" in fm)) return { edits: [], warnings: [] };
+  if ("outcome" in fm) throw new UnmappedStatusError({ type: "procedure-run (already has outcome)", status: fm["status"] });
+  const edits = mappedStatusEdits({
+    where: "procedure-run",
+    base: [],
+    entry: fm,
+    mapping: {
+      pending: {},
+      running: {},
+      completed: { outcome: "completed" },
+      failed: { outcome: "failed" },
+      inconclusive: { outcome: "inconclusive" },
+    },
+  });
+  return { edits, warnings: [] };
+}
+
 /**
  * Per card type: the edits that replace its `status`.
  *
@@ -168,6 +215,11 @@ function planTodoView(fm: Record<string, unknown>): FieldEditPlan {
  * - progress entries: `status` (a mastery level) is renamed `level`.
  * - guide and personality experiments: `proposed` goes, `active` becomes
  *   `active: true`, and a result becomes `outcome: <result>`.
+ * - gdoc: `conflict` becomes `conflict: true`; `synced`, `new` and `error`
+ *   are dropped (the connector never wrote `new` or `error`, and recomputes
+ *   `conflict` on every pull).
+ * - gfolder: see {@link planGfolder}. procedure-run: see
+ *   {@link planProcedureRun}.
  */
 const PLANNERS: Readonly<Record<string, Planner>> = {
   audio: planAudioStatus,
@@ -197,6 +249,9 @@ const PLANNERS: Readonly<Record<string, Planner>> = {
   progress: nestedPlanner({ type: "progress", field: "entries", edit: (args) => renameStatusEdits({ ...args, to: "level" }) }),
   guide: planExperiments("guide"),
   personality: planExperiments("personality"),
+  gdoc: booleanPlanner("gdoc", { synced: [], new: [], error: [], conflict: ["conflict"] }),
+  gfolder: planGfolder,
+  "procedure-run": planProcedureRun,
 };
 
 /** The edits this migration makes to one card of `type`; none for a type it doesn't handle. */

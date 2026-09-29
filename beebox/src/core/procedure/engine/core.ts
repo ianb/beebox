@@ -24,7 +24,7 @@ import {
 } from "../engine-types.js";
 import { parseInconclusiveValidateError } from "../../../shared/inconclusive.js";
 import { loadProcedureDefinition } from "./parse.js";
-import { buildInitialRunCard, updateRunCardStatus } from "./run-card.js";
+import { buildInitialRunCard, reopenRunCard } from "./run-card.js";
 import { runSteps, finalizeRun } from "./orchestrate.js";
 import { resolveRunDir } from "../engine-query.js";
 import { errorMessage } from "../../../shared/error-guards.js";
@@ -275,7 +275,7 @@ export async function resumeProcedure(params: {
   }
 
   const relRunDir = path.relative(boxRoot, runDir);
-  if (run.status === "completed") {
+  if (run.outcome === "completed") {
     ctx.writeLine(fmt.ok(`Run already completed: ${relRunDir} — nothing to resume`));
     return ok({ status: "completed", procedure: run.procedure, inconclusive: [] });
   }
@@ -283,7 +283,7 @@ export async function resumeProcedure(params: {
   // but it is not "completed" either, and saying so is what this whole path
   // exists to stop. Report the standing non-verdict, in the same words and
   // with the same exit code as the original run.
-  if (run.status === "inconclusive") {
+  if (run.outcome === "inconclusive") {
     return reportStandingInconclusive({ ctx, run, relRunDir });
   }
 
@@ -319,8 +319,8 @@ export async function resumeProcedure(params: {
     });
   }
 
-  // Re-open the run: it's active again (the on-disk "running" signal).
-  await updateRunCardStatus({ runCardPath, status: "running" });
+  // Re-open the run: no outcome is the on-disk "not finished" signal.
+  await reopenRunCard(runCardPath);
 
   ctx.writeLine(fmt.header(`Resuming procedure: ${procedure.name}`));
   ctx.writeLine(fmt.dim(`Run: ${relRunDir}`));
