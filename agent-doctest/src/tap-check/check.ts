@@ -10,8 +10,11 @@
  * for structural equality.
  */
 
-import { serialize } from "./serialize.js";
-import { matchWithWildcards, emptyExtractions, type Extractions } from "./match.js";
+import { buildDiff } from "./diff.js";
+import { normalizeLiteral } from "./literal.js";
+import { matchExtractions, emptyExtractions, type Extractions } from "./match.js";
+import { serialize, serializeWithSource } from "./serialize.js";
+import { mismatchHint, suggestExpected } from "./suggest.js";
 
 // Re-export public API from submodules
 export { serialize, registerSerializer } from "./serialize.js";
@@ -108,7 +111,7 @@ function throwIfFailed(actual: unknown, opts: { expected: string | CheckOptions;
   const result = compare(actual, opts.expected);
   if (result.pass) return result.extractions;
 
-  const err = new CheckError(result.message, { diff: result.diff, found: result.actual, wanted: result.expected });
+  const err = new CheckError(result.message, result);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- @types/node declares captureStackTrace as always present, but it's a non-spec V8 extension genuinely absent on other engines
   if (Error.captureStackTrace) {
     Error.captureStackTrace(err, opts.caller);
@@ -129,13 +132,26 @@ interface CheckResultBase {
   extractions: Extractions;
 }
 
+interface CheckFailure {
+  pass: false;
+  diff: string;
+  /**
+   * A paste-ready expected value: the actual text with volatile parts as
+   * wildcards and blank lines as `«blankline»`, or the raw actual text when
+   * that rewrite would not match.
+   */
+  suggested: string;
+  /** Advice for a recognized mismatch shape (quoted string, boolean), or null */
+  hint: string | null;
+}
+
 /**
  * Result of comparing actual vs expected, without throwing. A discriminated
- * union on `pass` — `diff` is only present (and only meaningful) on failure.
+ * union on `pass` — `diff`, `suggested`, and `hint` are only meaningful on failure.
  */
 export type CheckResult =
-  | (CheckResultBase & { pass: true; diff: null })
-  | (CheckResultBase & { pass: false; diff: string });
+  | (CheckResultBase & { pass: true; diff: null; suggested: null; hint: null })
+  | (CheckResultBase & CheckFailure);
 
 /**
  * Same as check() but returns a result instead of throwing.
@@ -174,27 +190,31 @@ export function inspect(actual: unknown, expected: string | CheckOptions): Check
 // ── Core comparison ──────────────────────────────────────────────────────────
 
 function compare(actual: unknown, expected: string | CheckOptions): CheckResult {
-  let opts: CheckOptions | undefined;
-  let expectedStr: string;
-
-  if (typeof expected === "object") {
-    opts = expected;
-    expectedStr = expected.expected;
-  } else {
-    expectedStr = expected;
-  }
-
-  let actualStr = serialize(actual);
+  const opts = typeof expected === "object" ? expected : undefined;
+  let expectedStr = typeof expected === "object" ? expected.expected : expected;
+  const serialized = serializeWithSource(actual);
+  let actualStr = serialized.text;
 
   if (opts?.normalizeWhitespace) {
     actualStr = normalizeWS(actualStr);
     expectedStr = normalizeWS(expectedStr);
   }
 
-  const result = matchWithWildcards(actualStr, expectedStr);
+  let extractions = matchExtractions(actualStr, expectedStr);
 
-  if (result.matched) {
-    return { pass: true, actual: actualStr, expected: expectedStr, diff: null, message: "", extractions: result.extractions };
+  // B1: an expected JS/JSON literal is re-serialized like the default
+  // serializer would, then text-matched again. Never for strings or
+  // custom-serialized values.
+  if (extractions === null && typeof actual !== "string" && !serialized.custom && !opts?.normalizeWhitespace) {
+    const normalized = normalizeLiteral(expectedStr);
+    if (normalized !== null && normalized !== expectedStr) {
+      expectedStr = normalized;
+      extractions = matchExtractions(actualStr, expectedStr);
+    }
+  }
+
+  if (extractions !== null) {
+    return { pass: true, actual: actualStr, expected: expectedStr, diff: null, suggested: null, hint: null, message: "", extractions };
   }
 
   const label = opts?.label ? ` (${opts.label})` : "";
@@ -202,7 +222,9 @@ function compare(actual: unknown, expected: string | CheckOptions): CheckResult 
     pass: false,
     actual: actualStr,
     expected: expectedStr,
-    diff: result.diff,
+    diff: buildDiff(actualStr, expectedStr),
+    suggested: suggestExpected(actualStr, expectedStr) ?? actualStr,
+    hint: mismatchHint(actualStr, typeof expected === "object" ? expected.expected : expected),
     message: `check failed${label}`,
     extractions: emptyExtractions(),
   };
@@ -220,12 +242,16 @@ export class CheckError extends Error {
   diff: string;
   found: string;
   wanted: string;
+  suggested: string;
+  hint: string | null;
 
-  constructor(message: string, result: { diff: string; found: string; wanted: string }) {
+  constructor(message: string, result: { diff: string; actual: string; expected: string; suggested: string; hint: string | null }) {
     super(message);
     this.name = "CheckError";
     this.diff = result.diff;
-    this.found = result.found;
-    this.wanted = result.wanted;
+    this.found = result.actual;
+    this.wanted = result.expected;
+    this.suggested = result.suggested;
+    this.hint = result.hint;
   }
 }

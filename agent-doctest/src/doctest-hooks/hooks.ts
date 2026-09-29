@@ -12,7 +12,6 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { transformSync } from "esbuild";
 // This file is Node's actual module-customization hook: `register()` in
 // doctest-loader.ts loads it directly via Node's native ESM loader thread,
 // which does NOT go through tsx's `.js`→`.ts` extension-probing (unlike the
@@ -21,7 +20,7 @@ import { transformSync } from "esbuild";
 // find them — which is why this package's tsconfig sets
 // `allowImportingTsExtensions`.
 import { tsxOnlyFallback } from "./resolve-rules.ts";
-import { generateTestSource } from "./doctest-generate.ts";
+import { loadDoctestBody, doctestEntrySource, BODY_QUERY } from "./doctest-load.ts";
 
 export {
   type CodeBlock,
@@ -31,6 +30,7 @@ export {
   parseExamples,
   parseExample,
   generateTestSource,
+  generateTestModule,
 } from "./doctest-generate.ts";
 
 // ── Loader hooks ────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ export async function resolve(
   context: ResolveContext,
   nextResolve: NextResolve,
 ): Promise<ResolveResult> {
-  if (specifier.endsWith(".doctest.md")) {
+  if (specifier.endsWith(".doctest.md") || specifier.endsWith(`.doctest.md${BODY_QUERY}`)) {
     const url = new URL(specifier, context.parentURL || "file:///").href;
     return { url, shortCircuit: true };
   }
@@ -102,15 +102,14 @@ export async function load(
   nextLoad: NextLoad,
 ): Promise<LoadResult> {
   if (url.endsWith(".doctest.md")) {
-    const filePath = fileURLToPath(url);
+    // The entry module imports the body and turns a load failure — a parse
+    // error, or a setup block that throws — into a failing TAP test.
+    return { format: "module", source: doctestEntrySource(url), shortCircuit: true };
+  }
+  if (url.endsWith(`.doctest.md${BODY_QUERY}`)) {
+    const filePath = fileURLToPath(url.slice(0, -BODY_QUERY.length));
     const markdown = readFileSync(filePath, "utf-8");
-    const tsSource = generateTestSource(markdown, filePath);
-    const { code } = transformSync(tsSource, {
-      loader: "ts",
-      format: "esm",
-      sourcefile: filePath,
-    });
-    return { format: "module", source: code, shortCircuit: true };
+    return { format: "module", source: loadDoctestBody(markdown, filePath), shortCircuit: true };
   }
   return nextLoad(url, context);
 }
