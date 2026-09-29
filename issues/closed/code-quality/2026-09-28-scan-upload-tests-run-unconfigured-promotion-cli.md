@@ -1,11 +1,16 @@
 ---
 title: "Passing scan-upload tests invoke an unconfigured promotion CLI"
-workstream: unattached
+workstream: jev-triage
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-jev-triage — validating WebP and AVIF scan inputs
 ---
+
+> Resolved in commit `cf575dae4`: the scan-upload HTTP fixture now injects an
+> inert promotion pass while retaining separate orchestration coverage. Its
+> previously noisy PNG case passes without invoking an unconfigured CLI.
 
 The existing PNG full-walk block in
 `beebox/test/webapp/routes/scan-upload.doctest.md` passes its assertions but
@@ -25,7 +30,7 @@ separate test for real promotion orchestration. Expected failures should be
 asserted locally, not emitted as unexplained background errors in a green run.
 
 This differs from the resolved
-[scan startup shape-error issue](../closed/code-quality/2026-09-21-scan-startup-diagnostics-in-passing-route-tests.md):
+[scan startup shape-error issue](2026-09-21-scan-startup-diagnostics-in-passing-route-tests.md):
 that fix waits for in-flight passes before teardown. Here an existing upload
 fixture starts a pass whose subprocess configuration is not valid.
 

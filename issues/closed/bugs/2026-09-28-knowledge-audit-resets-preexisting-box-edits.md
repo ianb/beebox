@@ -1,11 +1,16 @@
 ---
 title: "Knowledge audit cleanup discards pre-existing box edits"
-workstream: unattached
+workstream: jev-triage
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-jev-triage — validating PDF image guidance
 ---
+
+> Resolved in commit `cf575dae4`: the audit CLI and runner now refuse dirty
+> boxes before destructive setup, and preserve the CLI's generated setup state
+> for the first run. Direct callers and later tests retain the clean-tree guard.
 
 The knowledge-audit runner checks that its target is a standalone Git box, but
 it does not require a clean working tree before saving HEAD. Its cleanup runs

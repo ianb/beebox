@@ -13,7 +13,7 @@ part of the saved commit can therefore disappear before the second test.
 Later tests can audit different guidance from the first test.
 
 This is separate from
-[discarding pre-existing box edits](2026-09-28-knowledge-audit-resets-preexisting-box-edits.md).
+[discarding pre-existing box edits](../closed/bugs/2026-09-28-knowledge-audit-resets-preexisting-box-edits.md).
 The clean-tree admission check fixes that data-loss bug; it does not preserve
 generated setup across the audit suite.
 
