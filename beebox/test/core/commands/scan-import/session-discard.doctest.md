@@ -119,3 +119,37 @@ await runPhotoMode(ctx, { vision, imagePaths, sourcePdfPath: null, extraContext:
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A session another writer already committed stays
+
+A wakeup sweep commits the whole tree, and it can land while an import is still
+extracting. The session's early files are then the box's. Deleting them would
+stage a deletion of committed content, so a partly committed session is left
+in place.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const pdfPath = join(box.root, "incoming.pdf");
+await writeFile(pdfPath, textPdf());
+const docling = createFakeDocling({ markdown: "# Scan\n", pageCount: 1, figureCount: 0 });
+const sweepThenFail = {
+  ...docling,
+  async extract() {
+    await execa("git", ["add", "-A", "_content"], { cwd: box.root });
+    await execa("git", ["commit", "-q", "-m", "sweep"], { cwd: box.root });
+    throw new Error("extraction crashed");
+  },
+};
+const { ctx } = createCollectorContext(box.root);
+await runPdfMode(ctx, { pdfPath, docling: sweepThenFail }).then(() => "imported", (e) => e.message)
+=> extraction crashed
+
+const tracked = (await execa("git", ["ls-files", "_content/inbox"], { cwd: box.root })).stdout;
+const status = (await execa("git", ["status", "--porcelain", "_content/inbox"], { cwd: box.root })).stdout;
+`${tracked.includes("/source.attach/source.pdf")} status=[${status}]`
+=> true status=[]
+```
+
+```ts cleanup
+await box.cleanup();
+```

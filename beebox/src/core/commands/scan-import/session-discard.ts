@@ -5,8 +5,8 @@
  * failed import that leaves its session behind is imported again, in full, by
  * every retry. On 2026-09-28 a commit that failed on every promote pass turned
  * 24 PDFs into 159 staged-but-uncommitted sessions. Discarding the uncommitted
- * session makes a retry start from nothing. Once the session card is in HEAD
- * the import belongs to the box, and a later failure leaves it alone.
+ * session makes a retry start from nothing. Once any of the session is in HEAD
+ * it belongs to the box, and a later failure leaves it alone.
  */
 
 import * as fs from "node:fs/promises";
@@ -51,17 +51,27 @@ async function discardUncommittedSession(
   boxRoot: string,
   { layout, written }: { layout: SessionLayout; written: string[] },
 ): Promise<void> {
-  if (await pathInHead(boxRoot, layout.sessionCardRelPath)) return;
   const inSession = (p: string): boolean => p.startsWith(`${layout.sessionAttachRelDir}/`);
   const paths = [layout.sessionCardRelPath, layout.sessionAttachRelDir, ...written.filter((p) => !inSession(p))];
+  // A whole-tree commit (a wakeup sweep) can land part of a session while the
+  // import is still running. Committed content is the box's; deleting it
+  // would stage a deletion, so a partly committed session stays as it is.
+  const committed = await committedPaths(boxRoot, paths);
+  if (committed.length > 0) {
+    if (!committed.includes(layout.sessionCardRelPath)) {
+      console.warn(`[scan-import] Failed session ${layout.sessionCardRelPath} was partly committed by another writer; leaving it in place.`);
+    }
+    return;
+  }
   // Unstage before deleting: a staged entry whose file is gone would still be
   // swept into the box's next commit.
   if (await hasCommits(boxRoot)) await unstageFiles(boxRoot, paths);
   for (const p of paths) await fs.rm(path.join(boxRoot, p), { recursive: true, force: true });
 }
 
-async function pathInHead(boxRoot: string, relPath: string): Promise<boolean> {
-  if (!(await hasCommits(boxRoot))) return false;
-  const listed = await simpleGit(boxRoot).raw(["ls-tree", "--name-only", "HEAD", "--", relPath]);
-  return listed.trim() !== "";
+/** The files under `relPaths` that HEAD tracks; empty before the first commit. */
+async function committedPaths(boxRoot: string, relPaths: string[]): Promise<string[]> {
+  if (!(await hasCommits(boxRoot))) return [];
+  const listed = await simpleGit(boxRoot).raw(["ls-tree", "-r", "--name-only", "HEAD", "--", ...relPaths]);
+  return listed.split("\n").filter((line) => line !== "");
 }
