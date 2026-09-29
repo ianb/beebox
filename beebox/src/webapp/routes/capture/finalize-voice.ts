@@ -31,6 +31,7 @@ import { getBoxTimeISO } from "../../../lib/time.js";
 import type { StagingSession } from "../../../core/capture/staging-store/core.js";
 import { sealVoiceSession, VoiceTransitionRefusedError } from "../../../core/voice-recording/voice-staging/core.js";
 import { runHqJob } from "../../../core/voice-recording/hq-job/core.js";
+import { withoutBoxWork } from "../../../lib/box-maintenance.js";
 
 /** Exported so a contract test can parse the client's real request-body builder with it. */
 export const VoiceFinalizeBodySchema = z.object({
@@ -106,7 +107,8 @@ export async function handleVoiceFinalize(opts: {
   }
 
   if (seal.sealed && hqRequest !== null) {
-    void runHqJob({ boxRoot, id: session.id, eventBus }).catch((error: unknown) => {
+    // Detached from this request, which releases its admission before the job ends.
+    void withoutBoxWork(() => runHqJob({ boxRoot, id: session.id, eventBus })).catch((error: unknown) => {
       console.error(`[voice-recording] HQ job for ${session.id} failed:`, error);
     });
   }
