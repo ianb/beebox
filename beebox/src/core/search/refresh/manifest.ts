@@ -6,7 +6,7 @@
 
 import { promises as fs } from "node:fs";
 import { z } from "zod";
-import { SEARCH_SCHEMA_VERSION, searchManifestPath, writeJsonAtomic, type IndexPersisted } from "../store.js";
+import { SEARCH_SCHEMA_VERSION, searchManifestPath, writeJsonAtomic, type IndexPersisted } from "../store/core.js";
 import { invariant } from "../../../shared/invariant.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 

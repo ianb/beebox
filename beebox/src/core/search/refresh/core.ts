@@ -26,7 +26,7 @@ import {
   indexUnchanged,
   searchLockPath,
   type SearchIndex,
-} from "../store.js";
+} from "../store/core.js";
 import {
   loadContainsState,
   saveContainsState,
