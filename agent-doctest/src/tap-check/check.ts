@@ -206,8 +206,11 @@ function compare(actual: unknown, expected: string | CheckOptions): CheckResult 
   // serializer would, then text-matched again. Never for strings or
   // custom-serialized values.
   if (extractions === null && typeof actual !== "string" && !serialized.custom && !opts?.normalizeWhitespace) {
-    const normalized = normalizeLiteral(expectedStr);
-    if (normalized !== null && normalized !== expectedStr) {
+    // Pretty JSON the author wrote is compared as written, key order and all;
+    // only a literal in another form has its key order taken from the actual.
+    const plain = normalizeLiteral(expectedStr);
+    const normalized = plain !== null && plain !== expectedStr ? normalizeLiteral(expectedStr, { orderLike: actual }) : null;
+    if (normalized !== null) {
       expectedStr = normalized;
       extractions = matchExtractions(actualStr, expectedStr);
     }

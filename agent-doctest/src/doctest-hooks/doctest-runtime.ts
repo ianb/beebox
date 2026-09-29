@@ -36,6 +36,16 @@ function topLevelLines(code: string): string[] {
   return out;
 }
 
+/** Names a block declares at its own top level (`const x`, `function f`, …). */
+export function blockDeclarations(code: string): string[] {
+  const names: string[] = [];
+  for (const line of topLevelLines(code)) {
+    const m = /^\s*(?:const|let|var|function|class|async\s+function)\s+([$A-Z_a-z][\w$]*)/.exec(line);
+    if (m?.[1]) names.push(m[1]);
+  }
+  return names;
+}
+
 /**
  * Whether setup code declares a name at module scope. A textual check over
  * top-level lines only; a declaration inside a helper function does not
@@ -53,6 +63,23 @@ export function declaresName(setupText: string, name: string): boolean {
   const lines = topLevelLines(setupText);
   return lines.some((line) => patterns.some((re) => re.test(line)));
 }
+
+// A ReferenceError for a name another block declares is the scope rule
+// catching an author who expected blocks to share variables, as notebook
+// cells do. The message says where the name lives and what to write.
+const REF_HINTS = [
+  "async function __doctest_refHints(declared, fn) {",
+  "  try { return await fn(); } catch (e) {",
+  "    const name = e instanceof ReferenceError ? /^(\\S+) is not defined/.exec(e.message)?.[1] : undefined;",
+  "    const line = name === undefined ? undefined : declared[name];",
+  "    if (line !== undefined) {",
+  "      e.message += ` — ${name} is declared in the block at line ${line}. Each block is a separate test; ` +",
+  "        'to share variables, make this block a ```ts continue block, or declare the value in ```ts setup.';",
+  "    }",
+  "    throw e;",
+  "  }",
+  "}",
+];
 
 const EVENTUALLY = [
   "async function __doctest_eventually(fn, opts = {}) {",
@@ -108,6 +135,7 @@ export function moduleHeader(opts: { declares: (name: string) => boolean }): Gen
     "  }",
     "  return lines.join('\\n');",
     "}",
+    ...REF_HINTS,
     ...EVENTUALLY,
     ...WATCH,
   ];
@@ -115,9 +143,15 @@ export function moduleHeader(opts: { declares: (name: string) => boolean }): Gen
   return lines.map(gen);
 }
 
-export function testHeader(opts: { name: string; fence: number; declares: (name: string) => boolean }): GenLine[] {
+export function testHeader(opts: {
+  name: string;
+  fence: number;
+  declares: (name: string) => boolean;
+  /** Names declared in other blocks of the file, and the block's line. */
+  elsewhere: Record<string, number>;
+}): GenLine[] {
   const lines = [
-    `__doctest_test(${JSON.stringify(opts.name)}, async (__doctest_t) => {`,
+    `__doctest_test(${JSON.stringify(opts.name)}, (__doctest_t) => __doctest_refHints(${JSON.stringify(opts.elsewhere)}, async () => {`,
     "  const __doctest_prints = [];",
     "  const __doctest_watch = __doctest_makeWatch(__doctest_t);",
     "  __doctest_t.teardown(() => __doctest_watch.done());",

@@ -570,15 +570,14 @@ test("literal: wildcards in value position, bare or quoted", async (t) => {
   t.check([1, 2, 3], "[1, «*»]");
 });
 
-test("literal: key order still matters; the diff shows the normalized form", async (t) => {
-  const r = failed(inspect({ a: 1, b: 2 }, "{ b: 2, a: 1 }"));
+test("literal: a mismatch shows the normalized form, in the actual's key order", async (t) => {
+  const r = failed(inspect({ a: 1, b: 2 }, "{ b: 3, a: 1 }"));
   t.check(r.diff, `- expected
 + actual
 
   {
--   "b": 2,
--   "a": 1
-+   "a": 1,
+    "a": 1,
+-   "b": 3
 +   "b": 2
   }`);
 });
@@ -629,4 +628,13 @@ test("t.check() names the test point with the label, pass or fail", async (t) =>
   t.same(calls.map(([kind, msg]) => [kind, msg]), [["pass", "line 3: x"], ["fail", "line 7: y"], ["fail", "check failed"]]);
   const extra = calls[1]?.[2] ?? {};
   t.same(Object.keys(extra).sort(), ["diff", "suggested"], "no found/wanted next to the diff");
+});
+
+test("B1: a literal's key order follows the actual value; pretty JSON keeps its own", async (t) => {
+  const actual = { kind: "box", targetBox: "test1", targetWorktree: "main" };
+  t.ok(inspect(actual, '{ kind: "box", targetWorktree: "main", targetBox: "test1" }').pass, "literal in another order");
+  t.ok(inspect(actual, '{"kind":"box","targetWorktree":"main","targetBox":"test1"}').pass, "compact JSON in another order");
+  const pretty = '{\n  "kind": "box",\n  "targetWorktree": "main",\n  "targetBox": "test1"\n}';
+  t.notOk(inspect(actual, pretty).pass, "pretty JSON in another order still fails: it is compared as written");
+  t.notOk(inspect(actual, '{ kind: "box", targetWorktree: "other", targetBox: "test1" }').pass, "a different value still fails");
 });

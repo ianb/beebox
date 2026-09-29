@@ -13,7 +13,8 @@ import { parseFenceInfo, FenceInfoError, type FenceInfo } from "./doctest-info.t
 import { type GenLine, type LineMap, buildLineMap } from "./line-map.ts";
 import { DoctestSyntaxError, formatSyntaxError, type BlockSpan } from "./doctest-errors.ts";
 import { emitExamples, gen, verbatim, type ExampleSpan } from "./doctest-emit.ts";
-import { moduleHeader, testHeader, teardownRegistration, declaresName } from "./doctest-runtime.ts";
+import { rewriteImports } from "./doctest-split.ts";
+import { moduleHeader, testHeader, teardownRegistration, declaresName, blockDeclarations } from "./doctest-runtime.ts";
 
 export {
   type CodeBlock,
@@ -100,7 +101,15 @@ export function generateTestModule(markdown: string, options: GenerateOptions): 
     out.push(...verbatim(block.content, { md: block.line, indent: "" }));
   }
   for (const { block } of classified.filter((c) => c.info.kind === "teardown")) {
-    out.push(...teardownRegistration(verbatim(block.content, { md: block.line, indent: "    " })));
+    out.push(...teardownRegistration(verbatim(rewriteImports(block.content), { md: block.line, indent: "    " })));
+  }
+
+  // Every name an example block declares, and that block's first line, for
+  // the hint on a ReferenceError in another test (runtime REF_HINTS).
+  const declaredAt: Record<string, number> = {};
+  for (const { block, info } of classified) {
+    if (info.kind !== "example" && info.kind !== "continue") continue;
+    for (const name of blockDeclarations(block.content)) declaredAt[name] ??= block.line;
   }
 
   const examples: ExampleSpan[] = [];
@@ -113,13 +122,13 @@ export function generateTestModule(markdown: string, options: GenerateOptions): 
     if (!open) return;
     out.push(...open.header);
     for (const lines of open.teardowns) out.push(...teardownRegistration(lines, "__doctest_t"));
-    out.push(...open.body, gen("  __doctest_watch.done();"), gen("});"));
+    out.push(...open.body, gen("  __doctest_watch.done();"), gen("}));"));
     open = null;
   };
 
   for (const { block, info, span } of classified) {
     if (info.kind === "setup" || info.kind === "teardown" || info.kind === "prose") continue;
-    const content = verbatim(block.content, { md: block.line, indent: "    " });
+    const content = verbatim(rewriteImports(block.content), { md: block.line, indent: "    " });
     if (info.kind === "cleanup" || info.kind === "continue-cleanup") {
       if (open) open.teardowns.push(content);
       else pendingCleanup.push(content);
@@ -143,7 +152,12 @@ export function generateTestModule(markdown: string, options: GenerateOptions): 
     const labelled = parsed.find((ex) => ex.expected !== null) ?? parsed[0];
     const label = (labelled?.expression.split("\n")[0] ?? "").trim();
     open = {
-      header: testHeader({ name: `${fileName}:${block.line} — ${label}`, fence: span.fence, declares: (name) => declaresName(setupText, name) }),
+      header: testHeader({
+        name: `${fileName}:${block.line} — ${label}`,
+        fence: span.fence,
+        declares: (name) => declaresName(setupText, name),
+        elsewhere: Object.fromEntries(Object.entries(declaredAt).filter(([, line]) => line !== block.line)),
+      }),
       body: emitExamples(parsed, ctx),
       teardowns: pendingCleanup,
     };

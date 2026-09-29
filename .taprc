@@ -10,3 +10,8 @@
 # beebox/.taprc and the others.
 plugin:
   - "!@tapjs/typescript"
+# A test started here would run without its package's loaders and helpers;
+# this preload reports the package and the command to use instead.
+node-arg:
+  - --import=tsx
+  - --import=./bin/tap-root-guard.ts

@@ -101,6 +101,12 @@ export function parseErrorHints(opts: { problem: string; text: string; prevExpec
       `a declaration has no value for => to check. Put ${declaration[1] ?? "the name"} on its own line after it.`,
     );
   }
+  if (/^Unexpected "=>"/.test(opts.problem) && opts.text.trim().startsWith("=>")) {
+    hints.push(
+      "an => inside a { } block (try, if, a loop) cannot be checked. Assign the value to a variable " +
+        "inside the block, then check the variable on its own line after the block closes.",
+    );
+  }
   if (/has already been declared/.test(opts.problem)) {
     hints.push(
       "a ```ts continue block shares one scope with the block it continues, and setup " +

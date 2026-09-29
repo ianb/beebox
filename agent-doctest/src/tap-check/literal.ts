@@ -29,17 +29,42 @@ const STRING_TYPES = new Set(["date", "uuid"]);
  * Parse `expected` as a literal and serialize it as `JSON.stringify(v, null, 2)`,
  * with wildcards restored. Null when the text is not a literal.
  */
-export function normalizeLiteral(expected: string): string | null {
+export function normalizeLiteral(expected: string, opts: { orderLike?: unknown } = {}): string | null {
   const parser = new LiteralParser(expected);
   const value = parser.parseDocument();
   if (value === FAIL) return null;
-  const json = JSON.stringify(value, null, 2);
+  const json = JSON.stringify("orderLike" in opts ? reorderLike(value, opts.orderLike) : value, null, 2);
   return json.replace(new RegExp(`"([${VALUE_MARK}${KEY_MARK}]\\d+)${END_MARK}"`, "g"), (_m, ref: string) => {
     const token = parser.wildcards[Number(ref.slice(1))] ?? "«*»";
     if (ref.startsWith(KEY_MARK)) return `"${token}"`;
     const { type } = parseWildcardToken(token.slice(1, -1));
     return STRING_TYPES.has(type) ? `"${token}"` : token;
   });
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Put an expected literal's object keys in the actual value's key order.
+ * Someone writing `{ kind: "box", targetWorktree: "main", targetBox: null }`
+ * means the fields, not the order the code happens to assign them in; only
+ * a literal (never the author's pretty JSON, which is compared as written)
+ * is reordered. Keys the actual lacks keep their place at the end, so the
+ * diff still shows them as missing.
+ */
+function reorderLike(value: unknown, like: unknown): unknown {
+  if (Array.isArray(value) && Array.isArray(like)) return value.map((v, i) => reorderLike(v, like[i]));
+  if (!isPlainObject(value) || !isPlainObject(like)) return value;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(like)) {
+    if (key in value) out[key] = reorderLike(value[key], like[key]);
+  }
+  for (const [key, v] of Object.entries(value)) {
+    if (!(key in out)) out[key] = v;
+  }
+  return out;
 }
 
 const FAIL = Symbol("fail");

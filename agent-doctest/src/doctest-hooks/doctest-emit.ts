@@ -97,7 +97,7 @@ export function emitExamples(examples: Array<Example | ThrowsExample>, ctx: Emit
         suffix: `), { expected: ${JSON.stringify(ex.expected)}, mode: ${JSON.stringify(mode)}, diagnostic: ${diagnostic} });`,
       }));
     } else {
-      const exprFirst = (split.expr.split("\n")[0] ?? "").trim();
+      const exprFirst = (split.expr.split("\n").find((l) => l.trim() && !l.trim().startsWith("//")) ?? "").trim();
       const check = JSON.stringify({ expected: ex.expected, label: `line ${exprMd}: ${exprFirst}` });
       out.push(...wrapped(split.expr, {
         md: exprMd,

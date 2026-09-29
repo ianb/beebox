@@ -214,3 +214,46 @@ await new Promise((resolve) => setTimeout(resolve, 300));
   t.equal(r.status, 0, "fixture passes", r.status === 0 ? {} : { stdout: r.stdout });
   t.match(r.stdout, /# still running after 0\.1s: fixture\.doctest\.md:2 await new Promise/);
 });
+
+test("a name from another block fails with a hint naming that block", async (t) => {
+  const r = await run(t, `~~~ts
+const dir = "/tmp/x";
+dir.length
+=> 6
+~~~
+
+~~~ts
+dir
+=> /tmp/x
+~~~
+`);
+  t.not(r.status, 0);
+  t.match(r.stdout, /dir is not defined — dir is declared in the block at line 2\. Each block is a separate test/);
+});
+
+test("an import in a cleanup block works", async (t) => {
+  const r = await run(t, `~~~ts
+1
+=> 1
+~~~
+
+~~~ts cleanup
+import { tmpdir } from "node:os";
+tmpdir();
+~~~
+`);
+  t.equal(r.status, 0, "fixture passes", r.status === 0 ? {} : { stdout: r.stdout });
+});
+
+test("an => inside a catch block gets a hint to check a variable after the block", async (t) => {
+  const r = await run(t, `~~~ts
+try {
+  JSON.parse("{");
+} catch (e) {
+  e instanceof SyntaxError
+  => true
+}
+~~~
+`);
+  t.match(r.stdout, /hint: an => inside a \{ \} block/);
+});
