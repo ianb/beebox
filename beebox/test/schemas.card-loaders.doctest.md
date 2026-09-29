@@ -97,7 +97,6 @@ s.title.endsWith("…")
 ```ts
 const fields1 = {
   type: "image",
-  status: "analyzed",
   "has-text": true,
   filename: { ref: "attach/photo.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
   description: "Whiteboard with project timeline",
@@ -111,7 +110,6 @@ summaryOf("photo.image.card", fields1).title
 ```ts
 const fields2 = {
   type: "image",
-  status: "new",
   filename: { ref: "photo-001.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
 };
 summaryOf("_content/inbox/session.image.card", fields2).title
@@ -123,7 +121,6 @@ summaryOf("_content/inbox/session.image.card", fields2).title
 ```ts
 const fields3 = {
   type: "image",
-  status: "analyzed",
   "has-text": true,
   rotation: "90",
   filename: { ref: "attach/p.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
@@ -131,7 +128,7 @@ const fields3 = {
 };
 const s = summaryOf("p.image.card", fields3);
 JSON.stringify(s.attrs)
-=> {"status":"analyzed","has-text":true,"rotation":"90","filename":"attach/p.jpg"}
+=> {"has-text":true,"rotation":"90","filename":"attach/p.jpg"}
 ```
 
 ## An unparsed card of either type keeps the filename

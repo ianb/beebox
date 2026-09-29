@@ -513,6 +513,25 @@ draft) or a record status outside the old enum. A non-empty audio `summary`
 is dropped with a warning; the transcript stays. Idempotent. See
 `src/scripts/migrate/standard-fields.ts`.
 
+#### `status-fields-2026-09` (replace — `status` becomes the specific fact)
+
+Part 2 of `docs/plans/standard-card-fields.md`. Per type:
+
+- audio: `status` is dropped; `transcript` present means transcribed. A
+  `transcribed` clip with no transcript gets a warning, since it now reads as
+  untranscribed.
+- image, pdf: `new` and `analyzed` are dropped (the `description`, or a pdf's
+  `docling` and `error`, record the outcome); `invalid` becomes
+  `unusable: true`.
+- capture-session: `delivered` becomes `delivered: true`; `annotated` becomes
+  `delivered: true` and `annotated: true`. The retired pipeline's
+  `intake-complete` and `extracted` become `annotated: true`; its
+  `transcribing` and `transcribed` are dropped with `new`.
+- upload-batch: `delivered` becomes `delivered: true`; `new` is dropped.
+
+Any other value fails the card, unchanged. Idempotent. See
+`src/scripts/migrate/status-fields.ts`.
+
 ## Manual runs (for debugging)
 
 The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx migrate`. If you do this and want it to count, append the entry yourself or run `bbx migrate --apply` afterwards.

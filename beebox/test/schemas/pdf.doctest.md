@@ -28,11 +28,10 @@ schemas.get("pdf") === PdfSchema
 => true
 ```
 
-## An analyzed card round-trips
+## An extracted card round-trips
 
 ```ts
 const card = createPdfTemplate({
-  status: "analyzed",
   format: "pdf",
   capturedAt: "2026-04-02T10:23:00Z",
   source: "scan-import",
@@ -46,8 +45,8 @@ const card = createPdfTemplate({
   body: "## Statement\n\nAmount due 128.40\n",
 });
 const parsed = parseCardText(card, { source, schemas });
-JSON.stringify([parsed.fields.status, parsed.fields.format, parsed.fields.metadata.pages, parsed.fields.docling.version])
-=> ["analyzed","pdf",14,"2.117.0"]
+JSON.stringify([parsed.fields.format, parsed.fields.metadata.pages, parsed.fields.docling.version, parsed.fields.error ?? null])
+=> ["pdf",14,"2.117.0",null]
 ```
 
 The provenance entry is the same shape `file.card` uses, so anything that reads
@@ -57,15 +56,14 @@ a file card's `filename:` reads a pdf card's too:
 JSON.stringify(parsed.fields.filename)
 => {"ref":"attach/source.pdf","captured":"2026-04-02T10:23:00Z","source":"scan-import","original-name":"utility-bill.pdf","mime-type":"application/pdf","size":248392}
 
-FileSchema.frontmatterSchema.safeParse({ type: "file", status: "new", filename: parsed.fields.filename }).success
+FileSchema.frontmatterSchema.safeParse({ type: "file", filename: parsed.fields.filename }).success
 => true
 ```
 
-## A failed extraction: `status: new`, an `error:`, no `docling:`
+## A failed extraction: an `error:`, no `docling:`
 
 ```ts
 const card = createPdfTemplate({
-  status: "new",
   format: "pdf",
   capturedAt: "2026-04-02T10:23:00Z",
   source: "scan-import",
@@ -74,47 +72,39 @@ const card = createPdfTemplate({
   body: "",
 });
 const parsed = parseCardText(card, { source, schemas });
-JSON.stringify([parsed.fields.status, parsed.fields.error, parsed.fields.docling ?? null, parsed.rawBody])
-=> ["new","Docling exited 1: model weights unavailable",null,""]
+JSON.stringify([parsed.fields.error, parsed.fields.docling ?? null, parsed.rawBody])
+=> ["Docling exited 1: model weights unavailable",null,""]
 ```
 
-## `status` is the three-value lifecycle, and `format` is required
+## An agent's judgement is `unusable: true`, and `format` is required
 
 ```ts
 const base = { type: "pdf", format: "pdf", filename: { ref: "attach/x.pdf", captured: "2026-04-02T10:23:00Z", source: "scan-import" } };
 
-PdfSchema.frontmatterSchema.safeParse({ ...base, status: "invalid" }).success
+PdfSchema.frontmatterSchema.parse({ ...base, unusable: true }).unusable
 => true
 
-PdfSchema.frontmatterSchema.safeParse({ ...base, status: "processed" }).success
+PdfSchema.frontmatterSchema.safeParse({ ...base, unusable: "yes" }).success
 => false
-```
-
-`status` defaults to `new` — an unstated status is the unextracted one, never a
-claim that extraction succeeded:
-
-```ts continue
-PdfSchema.frontmatterSchema.parse(base).status
-=> new
 ```
 
 A card with no `format:` is rejected rather than silently assumed to be a PDF:
 
 ```ts continue
-PdfSchema.frontmatterSchema.safeParse({ type: "pdf", status: "new", filename: base.filename }).success
+PdfSchema.frontmatterSchema.safeParse({ type: "pdf", filename: base.filename }).success
 => false
 ```
 
 ## The instructions say the three things an agent needs
 
 They are also the knowledge-audit target (`scanner-ingest-document-card`): what
-the card is, where the original bytes live, and what `new` + `error:` means.
+the card is, where the original bytes live, and what an `error:` means.
 
 ```ts
 const text = PdfSchema.instructions ?? "";
 JSON.stringify([
   text.includes("attach/source.pdf"),
-  text.includes("`error:` field"),
+  text.includes("`error` — present when extraction failed"),
   text.includes("bbx pdf reanalyze"),
 ])
 => [true,true,true]

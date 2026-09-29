@@ -137,13 +137,13 @@ async function collectAudioTiming(
   return { words, untranscribed };
 }
 
-/** Collect timed images across all (non-invalid) image cards in the session. */
+/** Collect timed images across the session's image cards, skipping unusable ones. */
 async function collectTimedImages(sessionAttachDir: string, imageCards: string[]): Promise<TimedImage[]> {
   const allImages: TimedImage[] = [];
   for (const ic of imageCards) {
     const icFields = await readImageCard(path.join(sessionAttachDir, ic));
     if (!icFields) continue;
-    if (icFields.status === "invalid") continue;
+    if (icFields.unusable === true) continue;
     allImages.push({
       ref: `attach/${ic}`,
       absoluteTime: new Date(icFields.filename.captured).getTime(),

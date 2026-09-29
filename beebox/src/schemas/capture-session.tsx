@@ -19,29 +19,6 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { splitCardContent, body, cardSchema, type CardSchema } from "../exports/cards.js";
 
-/**
- * Current lifecycle: `new` (just written by preparation, not yet delivered
- * or delivery not yet confirmed) → `delivered` (the `<capture>` chat message
- * was sent) → `annotated` (the agent has done its OCR/description pass and
- * committed it). The remaining values (`transcribing`, `transcribed`,
- * `intake-complete`, `extracted`) are legacy — written by the retired
- * `process-captures` pipeline and still present on cards from before this
- * lifecycle shipped. They validate but nothing writes them anymore; treat a
- * card in one of those states as a leftover from the old pipeline (its
- * content is still usable, just triage it like any other card in `new`).
- */
-const CaptureSessionStatusSchema = z.enum([
-  "new",
-  "delivered",
-  "annotated",
-  // Legacy (pre-2026-07 pipeline); still validate, nothing writes them now.
-  "transcribing",
-  "transcribed",
-  "intake-complete",
-  "extracted",
-]);
-export type CaptureSessionStatus = z.infer<typeof CaptureSessionStatusSchema>;
-
 const SessionTime = z.object({
   start: z.string().datetime({ offset: true }),
   end: z.string().datetime({ offset: true }).optional(),
@@ -49,7 +26,10 @@ const SessionTime = z.object({
 });
 
 const captureSessionFields = {
-  status: CaptureSessionStatusSchema.default("new"),
+  /** The `<capture>` chat message was sent; the unfiled-capture sweep reads it. */
+  delivered: z.boolean().optional(),
+  /** The agent has done its OCR/description pass and committed it. */
+  annotated: z.boolean().optional(),
   "session-id": z.string(),
   time: SessionTime.optional(),
   /** Manifest of child image cards (refs into the session's attach scope). */
@@ -80,7 +60,8 @@ export const CaptureSessionSchema: CardSchema = cardSchema("capture-session", {
 A capture is a user-recorded batch of photos and/or voice, delivered to chat as a \`<capture doc="...">\` message (or, for \`bbx scan-import\` batches, dropped straight into \`_content/inbox/\` with no chat message at all — these instructions apply wherever the card is found). The session card groups the images, audio clips, and uploaded files from one recording session; its child cards live inside the session's attach scope (\`{basename}.attach/\`), refs using the \`attach/\` virtual prefix.
 
 Frontmatter:
-- \`status\` — \`new\` (just written, not yet annotated) → \`delivered\` (the chat message went out) → \`annotated\` (you've done your annotation pass and committed it). Older cards may carry \`transcribing\`/\`transcribed\`/\`intake-complete\`/\`extracted\` — legacy values from a retired pipeline; treat those cards as leftover \`new\` work.
+- \`delivered: true\` — the chat message went out. Absent on a card that never touched chat (\`bbx scan-import\`).
+- \`annotated: true\` — you've done your annotation pass and committed it. Absent means that work is still to do.
 - \`session-id\` — links back to the capture session.
 - \`time\` — \`{ start, end?, duration? }\`.
 - \`images\` / \`audio-clips\` / \`files\` — manifests of the child card refs.
@@ -95,14 +76,15 @@ Body — the assembled transcript, a timeline of transcribed speech interleaved 
 This body is generated, not hand-written — don't edit it directly; if something needs correcting, fix the source (a child card's transcript/description) and re-derive, or note the correction in your own annotation instead.
 
 **Your duties on a capture card, in order:**
-1. **Annotate by default.** OCR any images with text and add descriptions for the rest, via subagents reading the actual image files (don't invent content from the transcript alone) — write the results onto the child image cards, commit, and set this card's \`status\` to \`annotated\`.
+1. **Annotate by default.** OCR any images with text and add descriptions for the rest, via subagents reading the actual image files (don't invent content from the transcript alone) — write the results onto the child image cards, commit, and set \`annotated: true\` on this card.
 2. **Then file it.** Either \`bbx mv\` the card (and its attach scope) out of \`tmp-capture/\` to wherever it belongs — a project, a person, a memo, a record — or, if you can fully process the capture on the spot (e.g. it's just a quick note that becomes a todo), complete that work and **delete the card** instead of filing it.
 3. **\`tmp-capture/\` must not accumulate.** It's a landing zone, not storage — a capture left there is unfinished work. If you can't finish filing it in one turn, say so and come back to it; don't leave it silently.`,
 });
 
 /** Frontmatter-only object schema (the body field lives outside Zod). */
 const CaptureSessionObject = z.object({
-  status: CaptureSessionStatusSchema.default("new"),
+  delivered: z.boolean().optional(),
+  annotated: z.boolean().optional(),
   "session-id": z.string(),
   time: SessionTime.optional(),
   images: z.array(z.string()).optional(),
@@ -171,7 +153,6 @@ export function createCaptureSessionTemplate(options: {
   if (duration !== undefined) time.duration = duration;
 
   const fields: Record<string, unknown> = {
-    status: "new",
     "session-id": options.sessionId,
     time,
     images: options.imageRefs.map((ref) => `attach/${ref}`),

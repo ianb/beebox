@@ -69,7 +69,7 @@ export function pageRendersFrom(
 
 /**
  * True when a page-render notice belongs on the card: the card says pages
- * were extracted (`status: analyzed`, `metadata.pages > 0`), the attach-scope
+ * were extracted (`docling` present, `metadata.pages > 0`), the attach-scope
  * listing finished without error, and it came back with none. Distinct from
  * a still-loading or errored listing (those get their own state) and from a
  * card that never claimed to have pages (`metadata.pages` absent or 0) —
@@ -81,13 +81,13 @@ export function missingPageRenders({
   pagesLoading,
   pagesErrored,
 }: {
-  fields: Pick<ExtractedDocumentFields, "status" | "pages">;
+  fields: Pick<ExtractedDocumentFields, "doclingRef" | "pages">;
   pages: DocumentPage[];
   pagesLoading: boolean;
   pagesErrored: boolean;
 }): boolean {
   return (
-    fields.status === "analyzed" &&
+    fields.doclingRef !== null &&
     fields.pages !== null &&
     fields.pages > 0 &&
     !pagesLoading &&
@@ -97,13 +97,11 @@ export function missingPageRenders({
 }
 
 export interface ExtractedDocumentFields {
-  /** `new` | `analyzed` | `invalid` as written; any other value passes through. */
-  status: string | null;
   /** Source document type, e.g. `pdf`. */
   format: string | null;
   /** Ref to the original bytes, normally `attach/source.pdf`. */
   originalRef: string | null;
-  /** Ref to the gzipped DoclingDocument, normally `attach/docling.json.gz`. */
+  /** Ref to the gzipped DoclingDocument, normally `attach/docling.json.gz`; present once extraction succeeded. */
   doclingRef: string | null;
   /** The file's name before capture, when the pipeline recorded one. */
   originalName: string | null;
@@ -112,8 +110,10 @@ export interface ExtractedDocumentFields {
   title: string | null;
   author: string | null;
   pages: number | null;
-  /** Extraction failure message — set together with `status: new`. */
+  /** Extraction failure message; null when extraction succeeded. */
   error: string | null;
+  /** An agent judged the document unusable. */
+  unusable: boolean;
   description: string | null;
 }
 
@@ -133,7 +133,6 @@ export function readExtractedFields(
   const metadata = isRecord(fm["metadata"]) ? fm["metadata"] : {};
   const docling = isRecord(fm["docling"]) ? fm["docling"] : {};
   return {
-    status: str(fm["status"]),
     format: str(fm["format"]),
     originalRef: str(filename["ref"]),
     doclingRef: str(docling["ref"]),
@@ -144,6 +143,7 @@ export function readExtractedFields(
     author: str(metadata["author"]),
     pages: num(metadata["pages"]),
     error: str(fm["error"]),
+    unusable: fm["unusable"] === true,
     description: str(fm["description"]),
   };
 }

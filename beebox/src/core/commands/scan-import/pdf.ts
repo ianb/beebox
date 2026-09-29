@@ -5,8 +5,8 @@
  * inside the session's attach scope. No Gemini analysis — the text is already
  * there; Docling contributes layout, reading order, and tables.
  *
- * When extraction fails for any reason, the card is still written — with
- * `status: new`, an `error:` field, and the original PDF as its only asset.
+ * When extraction fails for any reason, the card is still written — with an
+ * `error:` field and the original PDF as its only asset.
  * That is exactly what this flow did before Docling existed, so a Docling
  * problem degrades to the old behavior instead of blocking intake
  * (`docs/plans/scanner-ingest.md`, Track 4).
@@ -109,7 +109,6 @@ async function importPdfSession(
   }
 
   const template: PdfTemplateOptions = {
-    status: extraction.ok ? "analyzed" : "new",
     format: "pdf",
     capturedAt: startedAt,
     source: args.source ?? "scan-import",
@@ -137,7 +136,7 @@ async function importPdfSession(
     template.error = extraction.error;
     // Non-silent by construction: the reason is on the card, not only here.
     console.warn(`[scan-import] Docling extraction failed for ${path.basename(args.pdfPath)}: ${extraction.error}`);
-    ctx.writeLine(`Extraction failed (filed as status: new) — ${extraction.error}`);
+    ctx.writeLine(`Extraction failed (filed with an error) — ${extraction.error}`);
   }
 
   await fs.writeFile(path.join(sessionAttachAbsDir, cardFilename), createPdfTemplate(template));
@@ -178,7 +177,7 @@ async function importPdfSession(
       sessionRelDir: sessionAttachRelDir,
       sessionCardPath: sessionCardRelPath,
       pdfCardPath: `${sessionAttachRelDir}/${cardFilename}`,
-      status: template.status,
+      extracted: extraction.ok,
       intakeJobPath,
     },
   };

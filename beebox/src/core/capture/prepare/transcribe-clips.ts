@@ -1,16 +1,16 @@
 /**
  * Transcription step of the capture preparation worker.
  *
- * For each audio card in the capture's attach scope with `status: new`, run the
- * configured transcription service with word timestamps, write the transcript +
- * duration back onto the card (status → transcribed), and drop a
+ * For each audio card in the capture's attach scope without a `transcript`, run
+ * the configured transcription service with word timestamps, write the
+ * transcript + duration back onto the card, and drop a
  * `<basename>.timing.json` sidecar in the clip's attach scope (the timeline
  * assembler reads it). Per-clip failures are collected, never aborting the
  * batch (pattern from the retired `bbx transcribe-captures`); the worker decides
  * what to do when every clip fails.
  *
- * Idempotent: a clip already `transcribed` (with its sidecar present) is
- * skipped, so a re-run after a crash resumes without re-billing the service.
+ * Idempotent: a clip that already has a transcript is skipped, so a re-run
+ * after a crash resumes without re-billing the service.
  */
 
 import * as fs from "node:fs/promises";
@@ -41,7 +41,7 @@ async function saveAudioCard(cardPath: string, fields: AudioFields): Promise<voi
 export interface TranscribeClipsResult {
   /** Number of audio cards in the capture. */
   total: number;
-  /** Clips now `transcribed` (this run plus any already done). */
+  /** Clips now transcribed (this run plus any already done). */
   transcribed: number;
   /** Per-clip failures this run (message per clip). */
   errors: string[];
@@ -78,7 +78,7 @@ export async function transcribeCaptureClips(opts: {
     }
 
     const durationOf = (f: AudioFields): number => parseDurationSeconds(f.filename.duration);
-    if (fields.status === "transcribed") {
+    if (fields.transcript !== undefined) {
       transcribed += 1;
       durationSeconds += durationOf(fields);
       // Summary comes from the first SUCCEEDED clip, not clip 0 — a partial
@@ -117,7 +117,6 @@ export async function transcribeCaptureClips(opts: {
 
       fields.transcript = result.text;
       fields.filename.duration = `${String(Math.round(result.duration))}s`;
-      fields.status = "transcribed";
       await saveAudioCard(cardPath, fields);
       if (firstTranscript === undefined) firstTranscript = result.text;
 

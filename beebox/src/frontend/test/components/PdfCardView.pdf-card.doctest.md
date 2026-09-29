@@ -1,4 +1,4 @@
-# Pdf card — reading its frontmatter, its pages, its status
+# Pdf card — reading its frontmatter, its pages, its extraction outcome
 
 The pdf card (`src/schemas/pdf.ts`) reaches the frontend as parsed
 frontmatter plus a markdown body. `PdfCardView` is the container that
@@ -37,7 +37,6 @@ function readCard(text) {
 }
 
 const ANALYZED = `---
-status: analyzed
 format: pdf
 filename:
   ref: attach/source.pdf
@@ -80,8 +79,8 @@ const fields = readCard(ANALYZED);
 [fields.originalRef, fields.originalName, fields.source].join(" | ")
 => attach/source.pdf | handbook-2026.pdf | scanner
 
-[String(fields.error), String(fields.status), fields.description].join(" | ")
-=> null | analyzed | The 2026 handbook, scanned.
+[String(fields.error), String(fields.unusable), fields.description].join(" | ")
+=> null | false | The 2026 handbook, scanned.
 ```
 
 The `docling:` ref is read too — it is what the view needs to label page
@@ -97,7 +96,6 @@ leaking into the markup:
 
 ```ts
 const bare = readCard(`---
-status: analyzed
 format: pdf
 filename:
   ref: attach/source.pdf
@@ -155,7 +153,7 @@ card that says pages were extracted, whose attach-scope listing finished
 without error, but came back with none.
 
 ```ts
-const analyzedWithPages = { status: "analyzed", pages: 12 };
+const analyzedWithPages = { doclingRef: "attach/docling.json.gz", pages: 12 };
 
 missingPageRenders({ fields: analyzedWithPages, pages: [], pagesLoading: false, pagesErrored: false })
 => true
@@ -185,16 +183,16 @@ missingPageRenders({
 ```
 
 A card that never claimed to have pages — `metadata.pages` absent, or a
-pre-extraction / non-analyzed card — stays silent even with zero renders:
+card with no `docling:` extraction — stays silent even with zero renders:
 
 ```ts
-missingPageRenders({ fields: { status: "analyzed", pages: null }, pages: [], pagesLoading: false, pagesErrored: false })
+missingPageRenders({ fields: { doclingRef: "attach/docling.json.gz", pages: null }, pages: [], pagesLoading: false, pagesErrored: false })
 => false
 
-missingPageRenders({ fields: { status: "new", pages: 12 }, pages: [], pagesLoading: false, pagesErrored: false })
+missingPageRenders({ fields: { doclingRef: null, pages: 12 }, pages: [], pagesLoading: false, pagesErrored: false })
 => false
 
-missingPageRenders({ fields: { status: "analyzed", pages: 0 }, pages: [], pagesLoading: false, pagesErrored: false })
+missingPageRenders({ fields: { doclingRef: "attach/docling.json.gz", pages: 0 }, pages: [], pagesLoading: false, pagesErrored: false })
 => false
 ```
 
@@ -225,13 +223,12 @@ html.includes('id="page-3" data-page="3" class="flex-shrink-0 flex flex-col item
 
 ## Status notices
 
-A failed extraction is the case the generic card renderer hid: `status: new`
-with an `error:`. The banner quotes the error and names the command that
+A failed extraction is the case the generic card renderer hid: an `error:`
+and no `docling:`. The banner quotes the error and names the command that
 re-runs extraction on this card.
 
 ```ts
 const failed = readCard(`---
-status: new
 format: pdf
 filename:
   ref: attach/source.pdf
@@ -241,8 +238,9 @@ error: docling exited 1 — no text layer found
 ---
 `);
 const html = renderToStaticMarkup(React.createElement(PdfStatusNotice, {
-  status: failed.status,
+  extracted: failed.doclingRef !== null,
   error: failed.error,
+  unusable: failed.unusable,
   hasBody: false,
   cardPath: CARD_PATH,
 }));
@@ -257,21 +255,25 @@ html.includes(`bbx pdf reanalyze ${CARD_PATH}`)
 => true
 ```
 
-`invalid` is a judgement someone made, and an `analyzed` card with an empty body
-is a real answer ("no readable text"), not a failure — each gets a muted notice
-instead of the warning banner. A normal analyzed card with text gets no notice.
+`unusable: true` is a judgement someone made, and it outranks a failed
+extraction's banner. An extracted card with an empty body is a real answer
+("no readable text"), not a failure — each gets a muted notice instead of the
+warning banner. A normal extracted card with text gets no notice.
 
 ```ts
 function notice(props) {
-  return renderToStaticMarkup(React.createElement(PdfStatusNotice, { error: null, cardPath: CARD_PATH, ...props }));
+  return renderToStaticMarkup(React.createElement(PdfStatusNotice, { error: null, unusable: false, cardPath: CARD_PATH, ...props }));
 }
 
-notice({ status: "invalid", hasBody: false }).includes("marked unusable")
+notice({ extracted: false, unusable: true, error: "docling exited 1", hasBody: false }).includes("marked unusable")
 => true
 
-notice({ status: "analyzed", hasBody: false }).includes("No readable text")
+notice({ extracted: false, unusable: true, error: "docling exited 1", hasBody: false }).includes("Text extraction failed")
+=> false
+
+notice({ extracted: true, hasBody: false }).includes("No readable text")
 => true
 
-notice({ status: "analyzed", hasBody: true })
+notice({ extracted: true, hasBody: true })
 =>
 ```

@@ -207,8 +207,9 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
         <DocumentHeader fields={fields} fallbackName={displayName(data.path)} />
 
         <PdfStatusNotice
-          status={fields.status}
+          extracted={fields.doclingRef !== null}
           error={fields.error}
+          unusable={fields.unusable}
           hasBody={hasBody}
           cardPath={data.path}
         />

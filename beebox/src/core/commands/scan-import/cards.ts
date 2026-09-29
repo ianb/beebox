@@ -240,7 +240,6 @@ async function applyBundleAnalysisToCard(
     : [];
   const allTextBlocks = [...photoTextBlocks, ...backTextBlocks];
 
-  fields["status"] = "analyzed";
   fields["has-text"] = allTextBlocks.length > 0;
   fields["description"] = photo.description;
   if (photo.rotation !== 0) fields["rotation"] = String(photo.rotation);

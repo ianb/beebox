@@ -27,15 +27,6 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 
-/**
- * `new` — the card exists but extraction did not succeed (see `error:`); the
- * original bytes are still attached. `analyzed` — extraction succeeded (an
- * empty body means "no readable content", which is a real answer, not a
- * failure). `invalid` — an agent judged the document unusable.
- */
-const PdfStatus = z.enum(["new", "analyzed", "invalid"]);
-export type PdfStatusType = z.infer<typeof PdfStatus>;
-
 /** Same shape as `file.card`'s `filename:` entry — a pdf card is a superset. */
 const FilenameEntry = z.object({
   ref: z.string(),
@@ -64,14 +55,19 @@ export const PdfSchema = cardSchema("pdf", {
   category: "synced",
   searchable: true,
   fields: {
-    status: PdfStatus.default("new"),
     /** Source document type, e.g. `pdf`. Records what the file was — the pipeline currently only reads PDFs. */
     format: z.string(),
     filename: FilenameEntry,
     docling: DoclingEntry.optional(),
     metadata: PdfMetadata.optional(),
-    /** Why extraction failed, when `status: new`. Absent on a clean extraction. */
+    /**
+     * Why extraction failed; the original bytes are still attached. Absent on
+     * a clean extraction, which instead has `docling` (an empty body then means
+     * "no readable content", a real answer, not a failure).
+     */
     error: z.string().optional(),
+    /** An agent judged the document unusable; the pdf view says so. */
+    unusable: z.boolean().optional(),
     description: z.string().optional(),
     body: body(z.string()),
   },
@@ -104,17 +100,16 @@ Everything is inside the card's own attach scope, so refs are \`attach/…\`:
 
 ## Frontmatter
 
-- \`status\` — \`new\` | \`analyzed\` | \`invalid\`.
-  - \`analyzed\`: extraction succeeded. An **empty body is a valid analyzed
-    result** — it means the document had no readable text, not that something
-    broke.
-  - \`new\` **with an \`error:\` field**: extraction failed. The original file is
-    still attached and is the only asset; there is no docling JSON, no page
-    renders, and the body is empty. Nothing is lost — re-run extraction with
-    \`bbx pdf reanalyze <card>\` (add \`--force-ocr\` when the text layer
-    itself is junk), or read the attached original directly, or set
-    \`status: invalid\` if the file is unusable.
-  - \`invalid\`: you judged the document unusable (corrupt, junk, empty scan).
+- \`error\` — present when extraction failed. The original file is still
+  attached and is the only asset; there is no docling JSON, no page renders,
+  and the body is empty. Nothing is lost — re-run extraction with
+  \`bbx pdf reanalyze <card>\` (add \`--force-ocr\` when the text layer
+  itself is junk), or read the attached original directly, or set
+  \`unusable: true\` if the file is unusable. A card with \`docling\` and no
+  \`error\` was extracted; an **empty body is then a valid result** — it
+  means the document had no readable text, not that something broke.
+- \`unusable: true\` — you judged the document unusable (corrupt, junk,
+  empty scan).
 - \`format\` — the source document type, e.g. \`pdf\`. \`format:\` records what
   the file was, distinct from the card type itself.
 - \`filename\` — provenance for the original: \`ref\` into the attach scope,
@@ -139,7 +134,6 @@ not enough.`,
 export type PdfFields = InferCardFields<typeof PdfSchema>;
 
 export interface PdfTemplateOptions {
-  status: PdfStatusType;
   format: string;
   capturedAt: string;
   source: string;
@@ -152,7 +146,7 @@ export interface PdfTemplateOptions {
   doclingFilename?: string;
   doclingVersion?: string;
   metadata?: { pages?: number; title?: string; author?: string };
-  /** Extraction failure message — set together with `status: new`. */
+  /** Extraction failure message; absent when extraction succeeded. */
   error?: string;
   /** Rendered markdown. Empty is meaningful (see the schema instructions). */
   body: string;
@@ -169,7 +163,6 @@ export function createPdfTemplate(options: PdfTemplateOptions): string {
   if (options.size !== undefined) filename["size"] = options.size;
 
   const fields: Record<string, unknown> = {
-    status: options.status,
     format: options.format,
     filename,
   };

@@ -21,16 +21,16 @@ import { cardTitle } from "../../src/core/loader-registry.js";
  * entry is no longer present, so each removal also deletes its line here.
  */
 const PENDING_REMOVAL = new Set([
-  "audio.status", "browser-task.source", "browser-task.status",
-  "capture-session.source", "capture-session.status", "chat-job.source",
+  "browser-task.source", "browser-task.status",
+  "capture-session.source", "chat-job.source",
   "commentary.source", "contains-backfill-job.source", "email-message.date",
   "feedback.source", "gdoc.modified", "gdoc.status", "gfolder.status",
-  "gsheet.modified", "image.status", "intake-job.source", "memo.created",
-  "memo.source", "memo.status", "pdf.status", "person.status", "place.status",
+  "gsheet.modified", "intake-job.source", "memo.created",
+  "memo.source", "memo.status", "person.status", "place.status",
   "procedure-run.status", "question-followup-job.source", "question.status",
   "recipe.source", "scheduled-script.source", "tab-arrangement.source",
   "tab-arrangement.status", "telegram-message.status",
-  "todo-review-job.source", "todo-view.status", "upload-batch.status",
+  "todo-review-job.source", "todo-view.status",
   "webpage.source",
 ]);
 

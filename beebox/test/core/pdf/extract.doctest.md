@@ -6,7 +6,7 @@ the body, the gzipped `DoclingDocument` JSON, page renders and figures as AVIF.
 
 The property that matters most is the failure one: **extraction failure never
 blocks intake.** When Docling cannot run, the card is still written — with
-`status: new`, an `error:` field, and the original PDF as its only asset, which
+an `error:` field and the original PDF as its only asset, which
 is exactly what this flow did before Docling existed.
 
 Docling itself is faked here (the services pattern); the real binary is
@@ -65,7 +65,7 @@ async function readPdfCard(box) {
 }
 ```
 
-## A successful extraction lands an `analyzed` pdf card
+## A successful extraction lands an extracted pdf card
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -81,8 +81,8 @@ result.success
 result.data.mode
 => pdf
 
-result.data.status
-=> analyzed
+result.data.extracted
+=> true
 ```
 
 The fake was asked for a no-OCR extraction — `do_ocr=False` is the default, not
@@ -126,8 +126,8 @@ scratch directory:
 ```ts continue
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
-JSON.stringify([card.fields.status, card.fields.format, card.fields.filename.ref, card.fields.filename["mime-type"]])
-=> ["analyzed","pdf","attach/source.pdf","application/pdf"]
+JSON.stringify([card.fields.format, card.fields.filename.ref, card.fields.filename["mime-type"]])
+=> ["pdf","attach/source.pdf","application/pdf"]
 
 card.fields.docling.ref
 => attach/docling.json.gz
@@ -270,7 +270,7 @@ await plain.cleanup();
 await box.cleanup();
 ```
 
-## An extraction failure still files the card — `status: new` plus `error:`
+## An extraction failure still files the card, with an `error:`
 
 Nothing is lost: the original PDF is the card's only asset, the reason is on the
 card rather than only in a log, and intake proceeds.
@@ -282,16 +282,16 @@ const result = await importPdf(box, docling);
 result.success
 => true
 
-result.data.status
-=> new
+result.data.extracted
+=> false
 
 await attachContents(box)
 => source.pdf
 
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
-JSON.stringify([card.fields.status, card.fields.error])
-=> ["new","Docling exited 1: killed by the OOM killer"]
+card.fields.error
+=> Docling exited 1: killed by the OOM killer
 
 card.fields.docling
 => undefined
@@ -311,22 +311,22 @@ result.data.intakeJobPath.startsWith("_bookkeeping/jobs/")
 await box.cleanup();
 ```
 
-## Empty markdown is `analyzed` with an empty body, not a failure
+## Empty markdown is an extraction with an empty body, not a failure
 
-A document with no readable text is a real answer. The card says `analyzed`
-(extraction worked) with nothing in the body, and the page renders are still
+A document with no readable text is a real answer. The card has `docling:`
+and no `error:` (extraction worked) with nothing in the body, and the page renders are still
 there to look at.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "", pageCount: 1 }));
-result.data.status
-=> analyzed
+result.data.extracted
+=> true
 
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
-JSON.stringify([card.fields.status, card.rawBody.trim(), card.fields.error])
-=> ["analyzed","",null]
+JSON.stringify([card.fields.docling.ref, card.rawBody.trim(), card.fields.error])
+=> ["attach/docling.json.gz","",null]
 
 await attachContents(box)
 =>
@@ -376,8 +376,8 @@ The body and page count are the new run's; the description is the old card's:
 
 ```ts continue
 const card = parseCardText(await box.read(cardRel), { source: cardRel, schemas });
-JSON.stringify([card.fields.status, card.fields.description, card.rawBody.trim(), card.fields.metadata.pages])
-=> ["analyzed","A utility bill","second pass",1]
+JSON.stringify([card.fields.description, card.rawBody.trim(), card.fields.metadata.pages])
+=> ["A utility bill","second pass",1]
 ```
 
 Three pages became one, and the two stale page assets are gone rather than

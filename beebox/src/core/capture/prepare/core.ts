@@ -354,8 +354,8 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
 }
 
 /**
- * Bookkeeping after a message lands: flip the committed capture card
- * `new` → `delivered` (durable secondary marker + user-visible truth), record
+ * Bookkeeping after a message lands: mark the committed capture card
+ * `delivered: true` (durable secondary marker + user-visible truth), record
  * the `delivered` staging state, emit completion, and discard the staging media.
  */
 async function finishDelivery(opts: {
@@ -387,8 +387,8 @@ async function finishDelivery(opts: {
 }
 
 /**
- * Flip the committed capture card's `status` `new` → `delivered` under the card
- * lock, then commit that one card. Idempotent: a card already past `new` is left
+ * Set `delivered: true` on the committed capture card under the card lock,
+ * then commit that one card. Idempotent: a card already delivered is left
  * untouched (the commit becomes a no-op).
  */
 async function markCaptureCardDelivered(opts: {
@@ -401,8 +401,8 @@ async function markCaptureCardDelivered(opts: {
   const changed = await withCardLock(sessionCardAbsPath, async () => {
     const content = await fs.readFile(sessionCardAbsPath, "utf-8");
     const parsed = parseCardText(content, { source: sessionCardAbsPath, schemas: await createCardSchemaMap() });
-    if (parsed.fields.status !== "new") return false; // Already delivered/annotated.
-    parsed.fields.status = "delivered";
+    if (parsed.fields["delivered"] === true) return false;
+    parsed.fields["delivered"] = true;
     await fs.writeFile(sessionCardAbsPath, serializeCardText({ schema: parsed.schema, fields: parsed.fields }));
     return true;
   });
