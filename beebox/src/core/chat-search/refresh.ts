@@ -195,14 +195,19 @@ async function refreshUnderLock(
     else if (effect === "manifest") dirtyManifest = true;
   }
 
-  if (dirtyIndex) {
-    const indexProof = await chatSearchStore.persist(db, boxRoot);
-    await saveChatManifest(boxRoot, { manifest: state.manifest, indexProof });
-  } else if (dirtyManifest) {
-    await saveChatManifest(boxRoot, {
-      manifest: state.manifest,
-      indexProof: indexPersistedFor(boxRoot),
-    });
+  // Persist failure is downgraded to a warning, card-index style: the
+  // in-memory index still answers this query; the next refresh retries.
+  if (dirtyIndex || dirtyManifest) {
+    try {
+      const indexProof = dirtyIndex
+        ? await chatSearchStore.persist(db, boxRoot)
+        : indexPersistedFor(boxRoot);
+      await saveChatManifest(boxRoot, { manifest: state.manifest, indexProof });
+    } catch (e) {
+      state.warnings.push(
+        `could not persist chat search index (${errorMessage(e)}); results served from memory`
+      );
+    }
   }
   return { db, warnings: state.warnings, stale: false };
 }
@@ -210,17 +215,35 @@ async function refreshUnderLock(
 type SessionEffect = "index" | "manifest" | "none";
 
 /**
- * Whether a codex session missing from the enumeration must be KEPT: the
- * enumeration omits codex chats entirely when the app-server is down, which
- * is not "the thread is gone". Confirms against Codex itself; a clean "no
- * such thread" returns false (drop), anything else keeps the docs with a
- * warning so a listing hiccup can't silently erase indexed history.
+ * Whether a codex session missing from the enumeration must be KEPT. The
+ * enumeration omits codex chats for two different reasons: the app-server is
+ * down (keep — that is not "the thread is gone"), or the husk was deleted
+ * (drop — deleting a husk is editorial removal, and the thread store
+ * outliving the husk must not keep a deleted chat searchable, nor pay a
+ * `thread/read` RPC per search forever).
+ *
+ * The husk check comes first and decides alone: a husk still on disk means
+ * the omission is a codex-side fact, so confirm against Codex itself — a
+ * clean "no such thread" drops, anything else keeps the docs with a warning
+ * so a listing hiccup can't silently erase indexed history. A renamed husk
+ * never reaches here (the session stays in the live enumeration under its
+ * new path).
  */
 async function codexRemains(
   state: RefreshState,
   { sessionId, record }: { sessionId: string; record: ChatManifestSession }
 ): Promise<boolean> {
   if (record.engine !== "codex") return false;
+  const huskGone = await fs
+    .stat(path.join(state.boxRoot, record.huskPath))
+    .then(() => false)
+    .catch((e: unknown) => {
+      if (errnoCode(e) !== "ENOENT") {
+        console.warn(`chat-search: could not stat husk ${record.huskPath}:`, e);
+      }
+      return true;
+    });
+  if (huskGone) return false;
   let exists: boolean;
   try {
     exists = await codexSessionExists(state.boxRoot, sessionId);
@@ -284,6 +307,17 @@ async function refreshOneSession(
     fromIndex,
   });
   for (const doc of docs) {
+    // Remove-before-insert, the same idempotency `refreshOneCard` engineers
+    // (`search/refresh/file.ts`): a crash that persisted the index before
+    // the manifest leaves the restored index holding docs the older manifest
+    // doesn't list, so a plain insert would throw "already exists" and wedge
+    // the session's cursor forever. Removing an absent doc is a no-op
+    // (Orama's remove throws on unknown ids; `await` absorbs its sync form).
+    try {
+      await remove(state.db, doc.id);
+    } catch (_e) {
+      // Absent already (crash-window duplicate or rebuild) — insert re-adds it.
+    }
     try {
       await insert(state.db, doc);
     } catch (e) {

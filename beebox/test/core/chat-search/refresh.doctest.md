@@ -14,7 +14,9 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { searchChats } from "../../../src/core/chat-search/query.js";
 import { loadChatManifest } from "../../../src/core/chat-search/manifest.js";
+import { saveChatManifest } from "../../../src/core/chat-search/manifest.js";
 import { chatSearchStore } from "../../../src/core/chat-search/store.js";
+import { indexPersistedFor } from "../../../src/core/search/store/index-store.js";
 
 const T0 = new Date("2026-09-28T12:00:00Z");
 
@@ -223,6 +225,49 @@ The index is a disposable cache beside the manifest:
 ```ts continue
 (await chatSearchStore.restore(box.root)) !== null
 => true
+```
+
+## A crash between index and manifest persist re-converges (remove-before-insert)
+
+Append a turn, index it, then simulate the crash window the persist ordering
+tolerates: rewrite the manifest to its pre-append state, as if the index had
+been persisted but the manifest write never landed. The next refresh
+recomputes the same chunk id and must re-insert it idempotently — a plain
+insert would throw "already exists" and wedge the session's cursor forever
+(the card index engineers the same convergence; `search/refresh/file.ts`).
+
+```ts continue
+await writeTranscript(
+  box,
+  "sess-roof",
+  [
+    userEntry("w1", "Fresh start: piano tuning.", "2026-09-28T12:00:00Z"),
+    userEntry("w2", "Also get a garage door estimate.", "2026-09-28T13:00:00Z"),
+  ],
+  new Date("2026-09-28T13:05:00Z")
+);
+await searchChats(box.root, { query: "garage door estimate" });
+
+const stale = await loadChatManifest(box.root);
+stale.sessions["sess-roof"] = {
+  engine: "claude",
+  huskPath: "_content/chat/web/2026-09-28_sess-roof.chat.card",
+  mtimeMs: 0,
+  entryCount: 1,
+  docIds: ["sess-roof#w1"],
+};
+await saveChatManifest(box.root, { manifest: stale, indexProof: indexPersistedFor(box.root) });
+
+const converged = await searchChats(box.root, { query: "garage door estimate" });
+
+converged.total
+=> 1
+
+converged.warnings.length
+=> 0
+
+(await loadChatManifest(box.root)).sessions["sess-roof"].entryCount
+=> 2
 ```
 
 ```ts cleanup
