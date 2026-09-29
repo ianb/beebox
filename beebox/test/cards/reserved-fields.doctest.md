@@ -26,7 +26,7 @@ const PENDING_REMOVAL = new Set([
   "feedback.source", "gdoc.modified",
   "gsheet.modified", "intake-job.source", "memo.created",
   "memo.source", "memo.status",
-  "question-followup-job.source", "question.status",
+  "question-followup-job.source",
   "recipe.source", "scheduled-script.source", "tab-arrangement.source",
   "todo-review-job.source",
   "webpage.source",

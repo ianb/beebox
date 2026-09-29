@@ -193,6 +193,34 @@ function planProcedureRun(fm: Record<string, unknown>): FieldEditPlan {
   return { edits, warnings: [] };
 }
 
+/** Per old question status: the lifecycle fields it required, and all it allowed. */
+const QUESTION_LIFECYCLE: Readonly<Record<string, { required: readonly string[]; allowed: readonly string[] }>> = {
+  pending: { required: [], allowed: [] },
+  answered: { required: ["answer", "answered-at"], allowed: ["answer", "answered-at", "answered-via"] },
+  dismissed: { required: ["dismissed-at"], allowed: ["dismissed-at"] },
+  expired: { required: ["expired-at"], allowed: ["expired-at"] },
+};
+const QUESTION_LIFECYCLE_FIELDS = ["answer", "answered-at", "answered-via", "dismissed-at", "expired-at"];
+
+/**
+ * question: the state is now read from the lifecycle timestamps
+ * (`questionState` in the schema), so `status` is dropped when the fields
+ * agree with it, by the rule the schema enforced until now. A card whose
+ * fields disagree with its status, or whose status is unknown, is refused:
+ * it could not load before this change either.
+ */
+function planQuestion(fm: Record<string, unknown>): FieldEditPlan {
+  if (!("status" in fm)) return { edits: [], warnings: [] };
+  const status = fm["status"];
+  const rule = typeof status === "string" && Object.hasOwn(QUESTION_LIFECYCLE, status) ? QUESTION_LIFECYCLE[status] : undefined;
+  if (rule === undefined) throw new UnmappedStatusError({ type: "question", status });
+  const coherent =
+    rule.required.every((field) => fm[field] !== undefined) &&
+    QUESTION_LIFECYCLE_FIELDS.every((field) => fm[field] === undefined || rule.allowed.includes(field));
+  if (!coherent) throw new UnmappedStatusError({ type: "question (lifecycle fields disagree)", status });
+  return { edits: [{ op: "delete", path: ["status"] }], warnings: [] };
+}
+
 /**
  * Per card type: the edits that replace its `status`.
  *
@@ -219,7 +247,7 @@ function planProcedureRun(fm: Record<string, unknown>): FieldEditPlan {
  *   are dropped (the connector never wrote `new` or `error`, and recomputes
  *   `conflict` on every pull).
  * - gfolder: see {@link planGfolder}. procedure-run: see
- *   {@link planProcedureRun}.
+ *   {@link planProcedureRun}. question: see {@link planQuestion}.
  */
 const PLANNERS: Readonly<Record<string, Planner>> = {
   audio: planAudioStatus,
@@ -252,6 +280,7 @@ const PLANNERS: Readonly<Record<string, Planner>> = {
   gdoc: booleanPlanner("gdoc", { synced: [], new: [], error: [], conflict: ["conflict"] }),
   gfolder: planGfolder,
   "procedure-run": planProcedureRun,
+  question: planQuestion,
 };
 
 /** The edits this migration makes to one card of `type`; none for a type it doesn't handle. */

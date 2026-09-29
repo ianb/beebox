@@ -34,7 +34,6 @@ async function attempt(fn) {
 }
 
 const SELECT = `---
-status: pending
 prompt: Pick one
 input:
   type: select
@@ -103,7 +102,7 @@ res.success
 res.message
 => Question dismissed
 
-(await box.read("_bookkeeping/questions/Color.question.card")).includes("status: dismissed")
+(await box.read("_bookkeeping/questions/Color.question.card")).includes("dismissed-at:")
 => true
 
 events.map((e) => e.event).join(",")
@@ -122,8 +121,8 @@ await box.write(
   "_bookkeeping/questions/Color.question.card",
   // A coherent answered card carries answer + answered-at (schema-required).
   SELECT.replace(
-    "status: pending",
-    "status: answered\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Red\n  selected: red",
+    "---\n",
+    "---\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Red\n  selected: red\n",
   ),
 );
 const { caller } = contextFor(box);
@@ -159,8 +158,8 @@ const dis = await attempt(() => caller.dismiss({ questionPath: absPath }));
 dis.startsWith("THREW:BAD_REQUEST:")
 => true
 
-(await box.read("_bookkeeping/questions/Color.question.card")).includes("status: pending")
-=> true
+(await box.read("_bookkeeping/questions/Color.question.card")).includes("-at:")
+=> false
 ```
 
 ```ts cleanup

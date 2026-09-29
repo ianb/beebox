@@ -26,7 +26,7 @@ const SUB = { endpoint: "https://push.example/d1", keys: { p256dh: "p", auth: "a
 
 function question(prompt, urgency) {
   const extra = urgency === undefined ? "" : `urgency: ${urgency}\n`;
-  return `---\nstatus: pending\nprompt: ${prompt}\ninput:\n  type: text\n${extra}---\n`;
+  return `---\nprompt: ${prompt}\ninput:\n  type: text\n${extra}---\n`;
 }
 
 // The newest logged intent: its loudness, target, and each delivery.

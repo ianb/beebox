@@ -37,7 +37,7 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
   const pendingQuestions: PendingQuestion[] = [];
 
   for (const q of state.questions) {
-    if (q.status !== "pending") continue;
+    if (q.state !== "pending") continue;
 
     try {
       const content = await fs.readFile(q.path, "utf-8");

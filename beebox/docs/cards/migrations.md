@@ -553,6 +553,11 @@ Part 2 of `docs/plans/standard-card-fields.md`. Per type:
   `outcome: <value>`; `pending` and `running` are dropped (no outcome means the
   run has not finished, and `bbx procedure resume` still continues an
   interrupted one). A card that already has an `outcome` is refused.
+- question: `status` is dropped; the state is read from the lifecycle
+  timestamps (`answered-at`, else `dismissed-at`, else `expired-at`, else
+  pending). A card whose lifecycle fields disagree with its status (by the
+  rule the schema enforced before), or whose status is unknown, is refused;
+  such a card could not load before either.
 
 Any other value fails the card, unchanged. Idempotent. See
 `src/scripts/migrate/status-fields.ts`.

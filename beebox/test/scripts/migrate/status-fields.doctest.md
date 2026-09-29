@@ -273,6 +273,43 @@ run("procedure-run", { procedure: "p.procedure.card", status: "inconclusive", "s
 => {"changed":true,"warnings":[],"fm":{"procedure":"p.procedure.card","started-at":"2026-09-01T00:00:00Z","steps":[{"id":"s","status":"completed","validate":{"status":"inconclusive"}}],"outcome":"inconclusive"}}
 ```
 
+## question: the lifecycle timestamps say the state, so `status` goes
+
+`status` is dropped when the lifecycle fields agree with it: none for
+`pending`, `answer` and `answered-at` for `answered`, `dismissed-at` or
+`expired-at` for the other two.
+
+```ts
+run("question", { status: "pending", prompt: "Where?", "asked-at": "2026-09-01T00:00:00Z" })
+=> {"changed":true,"warnings":[],"fm":{"prompt":"Where?","asked-at":"2026-09-01T00:00:00Z"}}
+
+run("question", { status: "answered", prompt: "Where?", answer: { text: "Here" }, "answered-at": "2026-09-02T00:00:00Z", "answered-via": "web" })
+=> {"changed":true,"warnings":[],"fm":{"prompt":"Where?","answer":{"text":"Here"},"answered-at":"2026-09-02T00:00:00Z","answered-via":"web"}}
+
+run("question", { status: "dismissed", prompt: "Where?", "dismissed-at": "2026-09-02T00:00:00Z" })
+=> {"changed":true,"warnings":[],"fm":{"prompt":"Where?","dismissed-at":"2026-09-02T00:00:00Z"}}
+
+run("question", { status: "expired", prompt: "Where?", "expired-at": "2026-10-01T00:00:00Z" })
+=> {"changed":true,"warnings":[],"fm":{"prompt":"Where?","expired-at":"2026-10-01T00:00:00Z"}}
+```
+
+A status the fields contradict is refused, as is an unknown value. Neither
+card could load before this change.
+
+```ts
+refusal("question", { status: "pending", prompt: "Where?", "dismissed-at": "2026-09-02T00:00:00Z" })
+=> UnmappedStatusError: question (lifecycle fields disagree) status "pending" has no safe mapping; migrate this card by hand
+
+refusal("question", { status: "answered", prompt: "Where?", "answered-at": "2026-09-02T00:00:00Z" })
+=> UnmappedStatusError: question (lifecycle fields disagree) status "answered" has no safe mapping; migrate this card by hand
+
+refusal("question", { status: "expired", prompt: "Where?", "expired-at": "2026-10-01T00:00:00Z", "dismissed-at": "2026-09-02T00:00:00Z" })
+=> UnmappedStatusError: question (lifecycle fields disagree) status "expired" has no safe mapping; migrate this card by hand
+
+refusal("question", { status: "closed", prompt: "Where?" })
+=> UnmappedStatusError: question status "closed" has no safe mapping; migrate this card by hand
+```
+
 ## A migrated card is unchanged
 
 ```ts
@@ -302,6 +339,9 @@ run("gfolder", { "drive-id": "f1", error: "timeout" })
 
 run("procedure-run", { procedure: "p", outcome: "failed", steps: [{ id: "s", status: "failed" }] })
 => {"changed":false,"warnings":[],"fm":{"procedure":"p","outcome":"failed","steps":[{"id":"s","status":"failed"}]}}
+
+run("question", { prompt: "Where?", "dismissed-at": "2026-09-02T00:00:00Z" })
+=> {"changed":false,"warnings":[],"fm":{"prompt":"Where?","dismissed-at":"2026-09-02T00:00:00Z"}}
 ```
 
 ## A value outside the old enum is refused

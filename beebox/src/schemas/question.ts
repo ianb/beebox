@@ -14,9 +14,6 @@ import { QuestionLearning, type QuestionLearningFields } from "../question-field
 
 export { QuestionLearning, type QuestionLearningFields, type QuestionLearningSinkValue } from "../question-fields.js";
 
-export const QuestionStatus = z.enum(["pending", "answered", "dismissed", "expired"]);
-export type QuestionStatusType = z.infer<typeof QuestionStatus>;
-
 const QuestionInputType = z.enum(["select", "text", "confirm"]);
 export type QuestionInputTypeValue = z.infer<typeof QuestionInputType>;
 
@@ -88,53 +85,47 @@ const QuestionAnswer = z.object({
 // browser needs them too); re-exported here for the existing importers.
 export { IsoDuration, parseIso8601DurationMs } from "../shared/iso-duration.js";
 
-/**
- * Every lifecycle timestamp/answer field, keyed to the ONE status that owns it.
- * A question's status is single: exactly the fields for its status may be
- * present, and the others must be absent. `answered-via` is grouped with
- * `answered` but is optional there (a legacy answered card may lack it), so it
- * is only forbidden on the other statuses, never required.
- */
-const REQUIRED_LIFECYCLE_FIELDS: Record<QuestionStatusType, readonly string[]> = {
-  pending: [],
-  answered: ["answer", "answered-at"],
-  dismissed: ["dismissed-at"],
-  expired: ["expired-at"],
-};
-const OWNED_LIFECYCLE_FIELDS: Record<QuestionStatusType, readonly string[]> = {
-  pending: [],
-  answered: ["answer", "answered-at", "answered-via"],
-  dismissed: ["dismissed-at"],
-  expired: ["expired-at"],
-};
-const ALL_LIFECYCLE_FIELDS = ["answer", "answered-at", "answered-via", "dismissed-at", "expired-at"] as const;
+/** Where a question stands, derived from its lifecycle fields by {@link questionState}. */
+export type QuestionState = "pending" | "answered" | "dismissed" | "expired";
 
 /**
- * Parse-time coherence check tying a question's `status` to its lifecycle
- * fields, so a card whose bookkeeping contradicts its status can't load (the
- * transition in `core/commands/question-transition.ts` clears stale fields when
- * re-answering an expired/dismissed question precisely to keep this holding).
+ * A question's state, read from which lifecycle timestamp it carries:
+ * `answered-at` means answered, else `dismissed-at` dismissed, else
+ * `expired-at` expired, else pending. The schema allows at most one of the
+ * three. Takes loose frontmatter too, so a count can skip the full load.
+ */
+export function questionState(fields: Readonly<Record<string, unknown>>): QuestionState {
+  if (fields["answered-at"] !== undefined) return "answered";
+  if (fields["dismissed-at"] !== undefined) return "dismissed";
+  if (fields["expired-at"] !== undefined) return "expired";
+  return "pending";
+}
+
+const STATE_TIMESTAMPS = ["answered-at", "dismissed-at", "expired-at"] as const;
+/** Fields that belong to an answer: present only with `answered-at`. */
+const ANSWER_FIELDS = ["answer", "answered-via"] as const;
+
+/**
+ * Parse-time coherence of the lifecycle fields: at most one of `answered-at`,
+ * `dismissed-at` and `expired-at`; `answered-at` requires `answer`; `answer`
+ * and `answered-via` appear only with `answered-at`. Answering a dismissed or
+ * expired question clears their timestamp to keep this holding (see
+ * `core/commands/answer.ts`).
  */
 function refineQuestionLifecycle(fields: Record<string, unknown>, ctx: z.core.$RefinementCtx): void {
-  const status = fields["status"];
-  // status is validated by the enum field; if it isn't a known status that
-  // failure is already reported, so this refinement has nothing coherent to say.
-  if (status !== "pending" && status !== "answered" && status !== "dismissed" && status !== "expired") {
-    return;
+  const present = STATE_TIMESTAMPS.filter((key) => fields[key] !== undefined);
+  for (const key of present.slice(1)) {
+    ctx.addIssue({ code: "custom", path: [key], message: `"${key}" must not appear with "${present[0] ?? ""}"` });
   }
-  const owned = new Set(OWNED_LIFECYCLE_FIELDS[status]);
-  for (const key of REQUIRED_LIFECYCLE_FIELDS[status]) {
-    if (fields[key] === undefined) {
-      ctx.addIssue({ code: "custom", path: [key], message: `status "${status}" requires "${key}"` });
-    }
+  const answered = fields["answered-at"] !== undefined;
+  if (answered && fields["answer"] === undefined) {
+    ctx.addIssue({ code: "custom", path: ["answer"], message: "\"answered-at\" requires \"answer\"" });
   }
-  for (const key of ALL_LIFECYCLE_FIELDS) {
-    if (!owned.has(key) && fields[key] !== undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: [key],
-        message: `status "${status}" must not carry "${key}"`,
-      });
+  if (!answered) {
+    for (const key of ANSWER_FIELDS) {
+      if (fields[key] !== undefined) {
+        ctx.addIssue({ code: "custom", path: [key], message: `"${key}" requires "answered-at"` });
+      }
     }
   }
 }
@@ -145,7 +136,6 @@ export const QuestionSchema = cardSchema("question", {
   description: "Asks the user something (select/text/confirm) and routes the answer back to an agent via its directive",
   category: "authored",
   fields: {
-    status: QuestionStatus.default("pending"),
     memo: z.string().optional(),
     prompt: z.string(),
     input: QuestionInputField,
@@ -167,12 +157,12 @@ A question card asks the user something and routes the answer back for processin
 
 ## Frontmatter
 
-- \`status:\` — \`pending\`, \`answered\`, \`dismissed\`, or \`expired\`. Default \`pending\`.
-  - \`pending\` — awaiting an answer.
-  - \`answered\` — the boxholder responded; terminal — an answered question does not accept a fresh answer.
-  - \`dismissed\` — the boxholder declined to answer. Still answerable later.
-  - \`expired\` — aged out of the active view by the aging sweep, without an answer. Still answerable later — expiry demotes visibility, it does not close the question.
-  Before asking something new, check \`_bookkeeping/questions/\` including answered/dismissed/expired cards: an existing answer is a \`user-stated\` fact, and a dismissal or expiry is a signal the boxholder didn't care to answer that.
+- A question's state is read from which lifecycle timestamp it carries:
+  - pending — none of \`answered-at\`, \`dismissed-at\`, \`expired-at\`: awaiting an answer.
+  - answered — has \`answered-at\` (and \`answer\`); terminal — an answered question does not accept a fresh answer.
+  - dismissed — has \`dismissed-at\`: the boxholder declined to answer. Still answerable later.
+  - expired — has \`expired-at\`: aged out of the active view by the aging sweep, without an answer. Still answerable later — expiry demotes visibility, it does not close the question.
+  A card carries at most one of the three timestamps; answering a dismissed or expired question removes its timestamp. Before asking something new, check \`_bookkeeping/questions/\` including answered/dismissed/expired cards: an existing answer is a \`user-stated\` fact, and a dismissal or expiry is a signal the boxholder didn't care to answer that.
 - \`memo:\` — context explaining WHY you're asking, so the user can answer without looking anything up.
 - \`prompt:\` — the actual question.
 - \`input:\` — \`{type: select|text|confirm, options?: [{id, label}]}\`. \`select\` requires at least two options. \`confirm\` and \`text\` must NOT carry options.
@@ -212,7 +202,6 @@ export function createSelectQuestionTemplate(
   params: CreateSelectQuestionTemplateParams
 ): string {
   const fields: Record<string, unknown> = {
-    status: "pending",
     memo: params.memo,
     prompt: params.prompt,
     input: { type: "select", options: params.options },
@@ -237,7 +226,6 @@ interface CreateQuestionTemplateParams {
 
 export function createTextQuestionTemplate(params: CreateQuestionTemplateParams): string {
   const fields: Record<string, unknown> = {
-    status: "pending",
     memo: params.memo,
     prompt: params.prompt,
     input: { type: "text" },
@@ -252,7 +240,6 @@ export function createTextQuestionTemplate(params: CreateQuestionTemplateParams)
 
 export function createConfirmQuestionTemplate(params: CreateQuestionTemplateParams): string {
   const fields: Record<string, unknown> = {
-    status: "pending",
     memo: params.memo,
     prompt: params.prompt,
     input: { type: "confirm" },

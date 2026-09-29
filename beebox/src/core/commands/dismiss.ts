@@ -1,10 +1,10 @@
 /**
  * Dismiss command - Dismiss a pending question.
  *
- * Flips a pending question to `dismissed` (the boxholder declined to answer it)
+ * Sets `dismissed-at` on a pending question (the boxholder declined to answer it)
  * under the same guarded, atomic transition as `answer` — but with NO follow-up
  * job. Dismissed questions stay answerable later (an un-dismissal is the
- * boxholder's prerogative; see the answer command's allowed statuses).
+ * boxholder's prerogative; see the answer command's allowed states).
  */
 
 import * as path from "node:path";
@@ -45,11 +45,10 @@ async function executeDismiss(
     ctx,
     fullPath,
     questionRef: question,
-    allowedStatuses: ["pending"],
-    disallowedMessage: (status) =>
-      `Question is not pending (status: ${status}); only a pending question can be dismissed`,
+    allowedStates: ["pending"],
+    disallowedMessage: (state) =>
+      `Question is ${state}, not pending; only a pending question can be dismissed`,
     plan: async ({ fields, content }) => {
-      fields.status = "dismissed";
       fields["dismissed-at"] = getBoxTimeISO(ctx.boxRoot);
 
       const split = splitCardContent(content);

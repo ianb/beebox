@@ -34,10 +34,10 @@ function caller(box) {
   return statusRouter.createCaller(ctx);
 }
 
-function question(status) {
+// A question card; `lifecycle` is its lifecycle fields (none: pending).
+function question(lifecycle) {
   return `---
-status: ${status}
-prompt: Pick one
+${lifecycle}prompt: Pick one
 input:
   type: text
 directive: Use the answer
@@ -68,24 +68,24 @@ Questions filed in a subdirectory still count — the nav badge is box-wide.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_bookkeeping/questions/One.question.card", question("pending"));
-await box.write("_bookkeeping/questions/Two.question.card", question("answered"));
-await box.write("_bookkeeping/questions/Three.question.card", question("dismissed"));
-await box.write("_bookkeeping/questions/inbox-review/Four.question.card", question("pending"));
+await box.write("_bookkeeping/questions/One.question.card", question(""));
+await box.write("_bookkeeping/questions/Two.question.card", question("answer:\n  text: Blue\nanswered-at: 2026-01-02T00:00:00Z\n"));
+await box.write("_bookkeeping/questions/Three.question.card", question("dismissed-at: 2026-01-02T00:00:00Z\n"));
+await box.write("_bookkeeping/questions/inbox-review/Four.question.card", question(""));
 
 const counts = (await caller(box).navStatus()).counts;
 counts.pendingQuestions
 => 2
 ```
 
-A question card that says `status: pending` counts even if the rest of its
-frontmatter is invalid — a broken card the boxholder has to fix is exactly the
+A question card with no lifecycle timestamp counts as pending even if the
+rest of its frontmatter is invalid — a broken card the boxholder has to fix is exactly the
 one that shouldn't quietly disappear from the badge. `status.status` reports
 the same number (it shares this count rather than deriving its own), so the
 nav and the dashboard can't disagree.
 
 ```ts continue
-await box.write("_bookkeeping/questions/Broken.question.card", "---\nstatus: pending\ninput: not-a-mapping\n---\n");
+await box.write("_bookkeeping/questions/Broken.question.card", "---\ninput: not-a-mapping\n---\n");
 // `status.status` reads box metadata, so give the marker its full contents.
 await box.write(".beebox/box.json", JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" }));
 

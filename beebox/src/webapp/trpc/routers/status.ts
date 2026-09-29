@@ -20,7 +20,7 @@ import { createCardSchemaMap } from "../../../schemas.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
 import { getNavCounts } from "../../../core/nav-counts.js";
 import { naturalCompare } from "../../../shared/natural-sort.js";
-import type { CardInfo } from "../../../core/state.js";
+import type { QuestionCardInfo } from "../../../core/state.js";
 import type { DirectorySummary, ProminenceWalkContext } from "../../../core/landmark/prominence-index.js";
 import {
   cardEffectiveProminence,
@@ -31,8 +31,8 @@ import {
 import type { EffectiveLevel } from "../../../shared/prominence.js";
 import type { CardSchema } from "../../../cards/schema.js";
 
-/** A question card's answerable/archive-relevant fields, layered onto its `CardInfo`. */
-export interface QuestionInfo extends CardInfo {
+/** A question card's answerable/archive-relevant fields, layered onto its listing entry. */
+export interface QuestionInfo extends QuestionCardInfo {
   prompt?: string | undefined;
   memo?: string | undefined;
   inputType?: QuestionFields["input"]["type"] | undefined;
@@ -42,7 +42,7 @@ export interface QuestionInfo extends CardInfo {
   /**
    * Set when the card failed to parse against `QuestionSchema` (bad
    * frontmatter, a superRefine violation, …). An invalid card carries only
-   * its `CardInfo` fields — `status` is whatever `getSystemState` found (or
+   * its listing fields — `state` is whatever `getSystemState` found (or
    * undefined) — so callers must still surface it rather than dropping it:
    * a card the boxholder needs to fix by hand is exactly the one that must
    * not silently vanish from the list.

@@ -311,7 +311,7 @@ JSON.stringify({ questions: first.questions, ref: entry.questionRef })
 => {"questions":1,"ref":"_bookkeeping/questions/scan-rejected-aaaaaaaaaaaa.question.card"}
 
 const card = await box.read(entry.questionRef);
-JSON.stringify([card.includes("Contract.pdf"), card.includes("magic bytes say text/html"), card.includes("status: pending")])
+JSON.stringify([card.includes("Contract.pdf"), card.includes("magic bytes say text/html"), !card.includes("answered-at")])
 => [true,true,true]
 ```
 
@@ -357,7 +357,7 @@ Answering the question is what releases the bytes:
 
 ```ts continue
 const ref = (await readQuarantineEntry(box.root, HASH_A)).questionRef;
-await box.write(ref, (await box.read(ref)).replace("status: pending", "status: answered"));
+await box.write(ref, (await box.read(ref)).replace("---\n", "---\nanswer:\n  text: Keep it out\nanswered-at: 2026-09-17T00:00:00.000Z\n"));
 
 const collected = await runScanPromotePass({ boxRoot: box.root, deps });
 const tombstone = await readQuarantineEntry(box.root, HASH_A);

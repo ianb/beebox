@@ -147,7 +147,6 @@ createSelectQuestionTemplate({
 })
 =>
 ---
-status: pending
 memo: Context here
 prompt: What do you want?
 input:
@@ -176,7 +175,6 @@ createSelectQuestionTemplate({
 })
 =>
 ---
-status: pending
 memo: Context with <special> & chars
 prompt: What's "this"?
 input:
