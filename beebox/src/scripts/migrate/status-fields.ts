@@ -13,6 +13,7 @@
  */
 
 import { UnmappedStatusError, runFieldEditMigration, type FieldEdit, type FieldEditPlan } from "./_field-edits.js";
+import { isRecord } from "../../shared/is-record.js";
 
 type Planner = (fm: Record<string, unknown>) => FieldEditPlan;
 
@@ -24,15 +25,10 @@ type StatusMapping = Readonly<Record<string, readonly string[]>>;
  * names for its value. A value `mapping` does not list is refused.
  */
 function booleanPlanner(type: string, mapping: StatusMapping): Planner {
-  return (fm) => {
-    if (!("status" in fm)) return { edits: [], warnings: [] };
-    const status = fm["status"];
-    const fields = typeof status === "string" && Object.hasOwn(mapping, status) ? mapping[status] : undefined;
-    if (fields === undefined) throw new UnmappedStatusError({ type, status });
-    const edits: FieldEdit[] = [{ op: "delete", path: ["status"] }];
-    for (const field of fields) edits.push({ op: "set", path: [field], value: true });
-    return { edits, warnings: [] };
-  };
+  const values: ValueMapping = Object.fromEntries(
+    Object.entries(mapping).map(([status, fields]) => [status, Object.fromEntries(fields.map((field) => [field, true]))]),
+  );
+  return (fm) => ({ edits: mappedStatusEdits({ where: type, base: [], entry: fm, mapping: values }), warnings: [] });
 }
 
 const planAudio = booleanPlanner("audio", { new: [], transcribed: [] });
@@ -49,6 +45,107 @@ function planAudioStatus(fm: Record<string, unknown>): FieldEditPlan {
   return plan;
 }
 
+/** What one old value becomes: fields to set (with their values). Empty: just dropped. */
+type ValueMapping = Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+
+/**
+ * The edits that replace `status` in the map at `base` (the frontmatter, or
+ * one entry of a nested list) per `mapping`. No `status`: no edits. A value
+ * `mapping` does not list is refused, naming `where`.
+ */
+function mappedStatusEdits({ where, base, entry, mapping }: {
+  where: string;
+  base: ReadonlyArray<string | number>;
+  entry: Record<string, unknown>;
+  mapping: ValueMapping;
+}): FieldEdit[] {
+  if (!("status" in entry)) return [];
+  const status = entry["status"];
+  const sets = typeof status === "string" && Object.hasOwn(mapping, status) ? mapping[status] : undefined;
+  if (sets === undefined) throw new UnmappedStatusError({ type: where, status });
+  const edits: FieldEdit[] = [{ op: "delete", path: [...base, "status"] }];
+  for (const [field, value] of Object.entries(sets)) edits.push({ op: "set", path: [...base, field], value });
+  return edits;
+}
+
+/**
+ * The edits that rename `status` to `to` in the map at `base`, keeping the
+ * value. A map that already has `to` is refused: the two would collide.
+ */
+function renameStatusEdits({ where, base, entry, to }: {
+  where: string;
+  base: ReadonlyArray<string | number>;
+  entry: Record<string, unknown>;
+  to: string;
+}): FieldEdit[] {
+  if (!("status" in entry)) return [];
+  if (to in entry) throw new UnmappedStatusError({ type: `${where} (already has ${to})`, status: entry["status"] });
+  return [
+    { op: "delete", path: [...base, "status"] },
+    { op: "set", path: [...base, to], value: entry["status"] },
+  ];
+}
+
+/** A planner that applies `edit` to each map entry of the list at `field`. */
+function nestedPlanner({ type, field, edit }: {
+  type: string;
+  field: string;
+  edit: (args: { where: string; base: ReadonlyArray<string | number>; entry: Record<string, unknown> }) => FieldEdit[];
+}): Planner {
+  return (fm) => {
+    const list = fm[field];
+    if (!Array.isArray(list)) return { edits: [], warnings: [] };
+    const edits: FieldEdit[] = [];
+    for (const [i, entry] of list.entries()) {
+      if (isRecord(entry)) edits.push(...edit({ where: `${type} ${field}[${String(i)}]`, base: [field, i], entry }));
+    }
+    return { edits, warnings: [] };
+  };
+}
+
+/** Old experiment stages: `active` runs, a result becomes the `outcome`. */
+const EXPERIMENT_MAPPING: ValueMapping = {
+  proposed: {},
+  active: { active: true },
+  successful: { outcome: "successful" },
+  unsuccessful: { outcome: "unsuccessful" },
+  mixed: { outcome: "mixed" },
+  inconclusive: { outcome: "inconclusive" },
+};
+
+const planExperiments = (type: string): Planner =>
+  nestedPlanner({ type, field: "experiments", edit: (args) => mappedStatusEdits({ ...args, mapping: EXPERIMENT_MAPPING }) });
+
+/** Used when a failed telegram message carries no `error` to move over. */
+export const TELEGRAM_UNRECORDED_FAILURE =
+  "Delivery failed before this card recorded why (the failure predates delivery-error)";
+
+/**
+ * telegram-message: `pending` and `sent` are dropped; `failed` becomes
+ * `delivery-error`, carrying the old `error` text. A pending or sent card
+ * with an `error` is refused: it is not clear whether to retry it.
+ */
+function planTelegramMessage(fm: Record<string, unknown>): FieldEditPlan {
+  if (!("status" in fm)) return { edits: [], warnings: [] };
+  const status = fm["status"];
+  const error = fm["error"];
+  const edits: FieldEdit[] = [{ op: "delete", path: ["status"] }];
+  if (status === "failed") {
+    edits.push(
+      { op: "delete", path: ["error"] },
+      { op: "set", path: ["delivery-error"], value: typeof error === "string" && error !== "" ? error : TELEGRAM_UNRECORDED_FAILURE },
+    );
+    return { edits, warnings: [] };
+  }
+  if ((status === "pending" || status === "sent") && error === undefined) return { edits, warnings: [] };
+  throw new UnmappedStatusError({ type: "telegram-message", status });
+}
+
+/** todo-view: `status` is its todo-status filter, renamed. */
+function planTodoView(fm: Record<string, unknown>): FieldEditPlan {
+  return { edits: renameStatusEdits({ where: "todo-view", base: [], entry: fm, to: "todo-status" }), warnings: [] };
+}
+
 /**
  * Per card type: the edits that replace its `status`.
  *
@@ -62,6 +159,15 @@ function planAudioStatus(fm: Record<string, unknown>): FieldEditPlan {
  *   out after that) were never delivered to chat and become `annotated`;
  *   its `transcribing` / `transcribed` stopped before annotation and are
  *   dropped.
+ * - telegram-message: see {@link planTelegramMessage}.
+ * - browser-task `closed`, tab-arrangement `ready`, person and place
+ *   `archived` become booleans; `inactive` people and places are archived.
+ * - todo-view: `status` (a filter of todo statuses) is renamed `todo-status`.
+ * - lesson-plan segments: `planned` becomes `planned: true`; `ready` goes
+ *   (the `material` ref says the card exists).
+ * - progress entries: `status` (a mastery level) is renamed `level`.
+ * - guide and personality experiments: `proposed` goes, `active` becomes
+ *   `active: true`, and a result becomes `outcome: <result>`.
  */
 const PLANNERS: Readonly<Record<string, Planner>> = {
   audio: planAudioStatus,
@@ -77,6 +183,20 @@ const PLANNERS: Readonly<Record<string, Planner>> = {
     extracted: ["annotated"],
   }),
   "upload-batch": booleanPlanner("upload-batch", { new: [], delivered: ["delivered"] }),
+  "telegram-message": planTelegramMessage,
+  "browser-task": booleanPlanner("browser-task", { open: [], closed: ["closed"] }),
+  "tab-arrangement": booleanPlanner("tab-arrangement", { draft: [], ready: ["ready"] }),
+  person: booleanPlanner("person", { active: [], inactive: ["archived"], archived: ["archived"] }),
+  place: booleanPlanner("place", { active: [], inactive: ["archived"], archived: ["archived"] }),
+  "todo-view": planTodoView,
+  "lesson-plan": nestedPlanner({
+    type: "lesson-plan",
+    field: "segments",
+    edit: (args) => mappedStatusEdits({ ...args, mapping: { planned: { planned: true }, ready: {} } }),
+  }),
+  progress: nestedPlanner({ type: "progress", field: "entries", edit: (args) => renameStatusEdits({ ...args, to: "level" }) }),
+  guide: planExperiments("guide"),
+  personality: planExperiments("personality"),
 };
 
 /** The edits this migration makes to one card of `type`; none for a type it doesn't handle. */

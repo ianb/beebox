@@ -42,7 +42,8 @@ export function parseGuide(fields: GuideFields): ParsedGuide {
     })),
     experiments: (fields.experiments ?? []).map((e) => ({
       id: e.id,
-      status: e.status,
+      active: e.active === true,
+      outcome: e.outcome,
       hypothesis: e.hypothesis,
       approach: e.approach,
       observations: (e.observations ?? []).map((o) => ({

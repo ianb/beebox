@@ -3,9 +3,9 @@
  *
  * Globs every `*.place.card` (with the standard box ignores) and loads each
  * through `parseCardText`, so the place schema's constraints (coordinate ranges,
- * status enum) apply — a card with a typo'd `lat: 999` or bad status is skipped,
- * not matched. Returns the active ones carrying a full coordinate; a
- * coordless/half-set draft, an archived/inactive place, or a single
+ * field types) apply — a card with a typo'd `lat: 999` is skipped, not
+ * matched. Returns the unarchived ones carrying a full coordinate; a
+ * coordless/half-set draft, an archived place, or a single
  * invalid/unparseable card is logged and skipped so it can't break a read.
  */
 
@@ -34,8 +34,7 @@ export async function loadPlaces(boxRoot: string): Promise<PlaceCircle[]> {
       const text = await readFile(path.join(boxRoot, rel), "utf-8");
       const { fields } = parseCardText(text, { source: rel, schemas });
 
-      const status = typeof fields["status"] === "string" ? fields["status"] : "active";
-      if (status === "archived" || status === "inactive") continue;
+      if (fields["archived"] === true) continue;
 
       const lat = num(fields["lat"]);
       const lng = num(fields["lng"]);

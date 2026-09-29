@@ -1,10 +1,9 @@
 /**
  * _bookkeeping/output/ telegram-message card delivery — the documented contract
  * in src/schemas/telegram-message.ts: agents (and the scheduler's
- * health alerter) drop a card with `status: pending`; the telegram
- * connector sends it during sync, deletes it on success, and stamps it
- * `failed` (with the error) on failure. Failed cards are left in place
- * for inspection and are not retried.
+ * health alerter) drop a card; the telegram connector sends it during sync,
+ * deletes it on success, and stamps `delivery-error` on failure. Failed
+ * cards are left in place for inspection and are not retried.
  */
 
 import { TelegramMessageSchema, type TelegramMessageFields } from "../../schemas/telegram-message.js";

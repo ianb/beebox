@@ -49,7 +49,7 @@ interface AttachState {
 
 export function BrowserTaskView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
-  const { status, source, watermark, lastUpload, rescanAfter, subjectRef, limit } = readTaskFields(frontmatter);
+  const { closed, source, watermark, lastUpload, rescanAfter, subjectRef, limit } = readTaskFields(frontmatter);
   const body = data.body ?? "";
   const [attach, setAttach] = useState<AttachState | null>(null);
 
@@ -92,7 +92,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
   const copyBlock = buildCopyBlock({ body, source, watermark, limit, schemaText: attach?.schemaText ?? null, cardPath: data.path });
 
   const disabledReason =
-    status === "closed" ? "This task is closed and does not accept submissions."
+    closed ? "This task is closed and does not accept submissions."
     : attach === null ? "Loading the record schema…"
     : attach.schemaProblem;
 
@@ -101,7 +101,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
       <Stack gap="md">
         <TaskStatus
           cardPath={data.path}
-          status={status}
+          closed={closed}
           lastUpload={lastUpload}
           rescanAfter={rescanAfter}
           subjectRef={subjectRef}
@@ -159,7 +159,7 @@ function SchemaCard({ attach }: { attach: AttachState | null }) {
 }
 
 interface TaskFields {
-  status: "open" | "closed";
+  closed: boolean;
   source: string | null;
   watermark: string | null;
   lastUpload: string | null;
@@ -173,7 +173,7 @@ function readTaskFields(fm: Record<string, unknown>): TaskFields {
   const str = (key: string): string | null => (typeof fm[key] === "string" ? fm[key] : null);
   const subject = fm["subject"];
   return {
-    status: fm["status"] === "closed" ? "closed" : "open",
+    closed: fm["closed"] === true,
     source: str("source"),
     watermark: str("watermark"),
     lastUpload: str("last-upload"),

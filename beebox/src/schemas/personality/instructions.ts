@@ -38,7 +38,10 @@ working on?"
 - \`traits:\` — array of \`{text, confidence?, source?, ref?}\` —
   personality traits.
 - \`unresolved:\` — array of free-form notes about open questions.
-- \`experiments:\` and \`context-notes:\` — same shape as guide cards.
+- \`experiments:\` and \`context-notes:\` — same shape as guide cards. An
+  experiment is proposed until you set \`active: true\`; when it concludes,
+  remove \`active\` and set \`outcome:\` (\`successful\`, \`unsuccessful\`,
+  \`mixed\`, or \`inconclusive\`). Never set both.
 
 ## Body (markdown)
 

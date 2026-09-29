@@ -1692,7 +1692,7 @@ tests:
       Critical that the agent knows NOT to fill in sent or id — the connector
       handles delivery. Two valid mechanisms both respect that: appending a
       kind: message, sender: agent entry to the chat-thread card, or creating a
-      *.telegram-message.card output card (status: pending). The failure mode is
+      *.telegram-message.card output card. The failure mode is
       marking the message sent/delivered itself.
 
   # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 1 reads, 1 searches, 41k ctx.

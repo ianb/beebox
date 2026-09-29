@@ -15,8 +15,9 @@ import {
   type ConfidenceLevel,
   BeliefSourceSchema,
   type BeliefSource,
-  ExperimentStatusSchema,
-  type ExperimentStatus,
+  type ExperimentOutcome,
+  experimentStageFields,
+  experimentStateIssues,
 } from "../../guide-fields.js";
 
 export {
@@ -24,8 +25,8 @@ export {
   type ConfidenceLevel,
   BeliefSourceSchema,
   type BeliefSource,
-  ExperimentStatusSchema,
-  type ExperimentStatus,
+  ExperimentOutcomeSchema,
+  type ExperimentOutcome,
 } from "../../guide-fields.js";
 
 // ============================================
@@ -71,7 +72,7 @@ const ObservationField = z.object({
 
 const ExperimentField = z.object({
   id: z.string(),
-  status: ExperimentStatusSchema.default("proposed"),
+  ...experimentStageFields,
   hypothesis: z.string().optional(),
   approach: z.string().optional(),
   observations: z.array(ObservationField).optional(),
@@ -106,6 +107,7 @@ export const GuideSchema: CardSchema = cardSchema("guide", {
   description: "A living theory of the user for a job type — triage rules, actions, experiments, and reactions with confidence tracking",
   category: "authored",
   searchable: false,
+  validate: ({ fields }) => experimentStateIssues(fields["experiments"]),
   fields: guideFields,
   instructions: `# Handling Guides
 
@@ -126,6 +128,8 @@ confidence-ladder detail lives with the retrospective procedure; run reports are
 in \`_content/reviews/retro/\`.
 
 **ALWAYS have active experiments.** If all experiments are resolved, propose new ones. Experiments are how the system learns — without them it stagnates. Aim for 1-3 active experiments at any time.
+
+**\`experiments\`** is a list of \`{ id, hypothesis?, approach?, observations?, conclusion? }\` plus its stage: a new entry is proposed; set \`active: true\` when you start running it; when it concludes, remove \`active\` and set \`outcome:\` to \`successful\`, \`unsuccessful\`, \`mixed\`, or \`inconclusive\` (with a \`conclusion\`). Never set both \`active\` and \`outcome\`. Concluded experiments stay in the card as history but are left out of agent context.
 
 **\`triage-rules\`** is a list of \`{ text, confidence, source, ref?, action? }\`. A rule's \`action\` names an entry in \`actions\`. \`default-action\` says what happens when no rule matches.
 
@@ -168,7 +172,8 @@ export interface ParsedGuide {
   }>;
   experiments: Array<{
     id: string;
-    status: ExperimentStatus;
+    active: boolean;
+    outcome: ExperimentOutcome | undefined;
     hypothesis: string | undefined;
     approach: string | undefined;
     observations: Array<{

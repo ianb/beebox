@@ -816,7 +816,7 @@ await box.write(
 );
 await box.write(
   "_content/store/Learner.progress.card",
-  "---\ncourse: { ref: Acids.course.card }\nentries:\n  - node: acids\n    status: partial\n    basis: observed\n    evidence: [heard them explain it]\n  - node: ghost\n    status: solid\n    basis: observed\n    evidence: [refers to a node the map lacks]\n---\nProgress.\n",
+  "---\ncourse: { ref: Acids.course.card }\nentries:\n  - node: acids\n    level: partial\n    basis: observed\n    evidence: [heard them explain it]\n  - node: ghost\n    level: solid\n    basis: observed\n    evidence: [refers to a node the map lacks]\n---\nProgress.\n",
 );
 const result = await lintCardsDispatch(
   [box.path("_content/store/Learner.progress.card")],
@@ -863,7 +863,7 @@ result.results[0]!.warnings[0]!.message.includes("ghost")
 => true
 ```
 
-A `material` segment that has neither a `material` ref nor `status: planned` is a
+A `material` segment that has neither a `material` ref nor `planned: true` is a
 **deferral warning** — "incomplete material" is stated, never silent:
 
 ```ts
@@ -888,7 +888,7 @@ result.results[0]!.warnings[0]!.message.includes("no material card")
 ```
 
 A valid plan — every `concepts` id real, every material segment either `ready`
-with a resolvable ref or explicitly `planned` — is silent:
+with a resolvable ref or explicitly `planned: true` — is silent:
 
 ```ts
 const box = await makeTmpBox();
@@ -899,7 +899,7 @@ await box.write(
 await box.write("_content/store/Acids.attach/Recap.doc.card", "---\ntitle: Recap\n---\nRecap.\n");
 await box.write(
   "_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card",
-  "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Read the recap\n    mode: material\n    status: ready\n    concepts: [bases]\n    material: { ref: Recap.doc.card }\n  - do: A future figure, not built yet\n    mode: material\n    status: planned\n---\nFlow.\n",
+  "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Read the recap\n    mode: material\n    concepts: [bases]\n    material: { ref: Recap.doc.card }\n  - do: A future figure, not built yet\n    mode: material\n    planned: true\n---\nFlow.\n",
 );
 const result = await lintCardsDispatch(
   [box.path("_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card")],

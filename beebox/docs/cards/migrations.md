@@ -528,6 +528,22 @@ Part 2 of `docs/plans/standard-card-fields.md`. Per type:
   `intake-complete` and `extracted` become `annotated: true`; its
   `transcribing` and `transcribed` are dropped with `new`.
 - upload-batch: `delivered` becomes `delivered: true`; `new` is dropped.
+- telegram-message: `pending` and `sent` are dropped; `failed` becomes
+  `delivery-error`, carrying the old `error` text or, with none, a fixed
+  message saying the reason was never recorded. A pending or sent card with
+  an `error` is refused.
+- browser-task: `closed` becomes `closed: true`. tab-arrangement: `ready`
+  becomes `ready: true`. person, place: `inactive` and `archived` become
+  `archived: true`. Each type's other value (`open`, `draft`, `active`) is
+  dropped.
+- todo-view: `status` (its todo filter) is renamed `todo-status`. progress
+  entries: `status` (a mastery level) is renamed `level`. A rename whose
+  target already exists is refused.
+- lesson-plan segments: `planned` becomes `planned: true`; `ready` is dropped.
+- guide and personality experiments: `proposed` is dropped, `active` becomes
+  `active: true`, and `successful`/`unsuccessful`/`mixed`/`inconclusive`
+  become `outcome: <value>`. A migrated stock guide is byte-identical to the
+  current template, so the template tracker updates it in place.
 
 Any other value fails the card, unchanged. Idempotent. See
 `src/scripts/migrate/status-fields.ts`.

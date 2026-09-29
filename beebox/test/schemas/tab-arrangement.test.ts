@@ -42,7 +42,7 @@ t.test("tab arrangement proposal keeps deleted tabs in their window positions", 
   st.end();
 });
 
-t.test("createTabArrangementCard writes the immutable transfer fields and draft status", (st) => {
+t.test("createTabArrangementCard writes the immutable transfer fields as a draft", (st) => {
   const card = createTabArrangementCard({
     transferId: "00000000-0000-4000-8000-000000000000",
     scope: "current-window",
@@ -52,7 +52,7 @@ t.test("createTabArrangementCard writes the immutable transfer fields and draft 
   });
   const fields = parseFrontmatterObject(card);
   st.equal(fields?.["transfer-id"], "00000000-0000-4000-8000-000000000000");
-  st.equal(fields?.["status"], "draft");
+  st.equal(fields?.["ready"], undefined);
   st.same(fields?.["source"], source);
   st.end();
 });

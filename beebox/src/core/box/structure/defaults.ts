@@ -125,6 +125,20 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
 const GUIDE_DOMAINS = ["intake", "calendar"];
 
 /**
+ * Stock guide hashes from before experiments lost `status` (2026-09), keyed by
+ * filename. A tracked box needs none of these: its recorded hash already
+ * marks an old stock copy as ours, and the `status-fields-2026-09` migration
+ * turns an old stock copy into exactly the current template. They cover an
+ * untracked box whose install runs before that migration, so its unedited
+ * copy updates instead of parking. Applied only to a box with no recorded
+ * version, for the reason given at {@link PRIOR_STOCK_PROCEDURE_HASHES}.
+ */
+const PRIOR_STOCK_GUIDE_HASHES: Readonly<Record<string, string[]>> = {
+  "intake.guide.card": ["02e0c866f365c6898d4983851492fa1573c9bbd9a91503c3d31078cca541e30a"],
+  "calendar.guide.card": ["cba0c1ae68ff656611b5b9b6b3be9ca65233b1bf1c913b3ce62d395bf234da99"],
+};
+
+/**
  * Install default guide cards into a box.
  *
  * On fresh install: writes default guide cards to config/.
@@ -141,10 +155,15 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
   for (const domain of GUIDE_DOMAINS) {
     const fileName = `${domain}.guide.card`;
     const templateContent = createInitialGuideTemplate({ name: domain });
+    const relPath = path.join(BOX_DIRS.config, fileName);
+    const priorStock = PRIOR_STOCK_GUIDE_HASHES[fileName];
+    const usePriorStock =
+      priorStock !== undefined && !(await hasRecordedTemplateVersion(boxRoot, relPath));
     const result = await installTemplateFile({
       boxRoot,
-      relPath: path.join(BOX_DIRS.config, fileName),
+      relPath,
       templateContent,
+      ...(usePriorStock ? { priorStockHashes: priorStock } : {}),
     });
     const entry = describeInstall(result, fileName);
     if (entry !== null) installed.push(entry);

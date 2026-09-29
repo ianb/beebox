@@ -136,14 +136,14 @@ export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
     argsSchema: z.object({
       title: z.string().optional().describe("Display title for the view"),
       glob: z.string().optional().describe("Glob scoping which cards to scan (default: this card's own directory subtree)"),
-      status: z.array(z.enum(TODO_STATUSES)).optional().describe("Restrict to specific statuses (default: all)"),
+      "todo-status": z.array(z.enum(TODO_STATUSES)).optional().describe("Restrict to todos with these statuses (default: open and parked)"),
       assigned: z.string().optional().describe("Restrict to todos with this exact `assigned` value"),
     }),
     generate: (args) => {
       const opts: Parameters<typeof createTodoViewTemplate>[0] = {};
       if (args.title) opts.title = args.title;
       if (args.glob) opts.glob = args.glob;
-      if (args.status) opts.status = args.status;
+      if (args["todo-status"]) opts["todo-status"] = args["todo-status"];
       if (args.assigned) opts.assigned = args.assigned;
       return createTodoViewTemplate(opts);
     },

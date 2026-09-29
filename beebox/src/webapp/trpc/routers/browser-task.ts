@@ -20,7 +20,6 @@ import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { errnoCode } from "../../../shared/error-guards.js";
-import { BrowserTaskStatus } from "../../../schemas/browser-task.js";
 
 export const browserTaskRouter = router({
   /** Every browser-task card with its derived state; the dashboard's "due" list reads this. */
@@ -28,15 +27,15 @@ export const browserTaskRouter = router({
     return { items: await listBrowserTasks(ctx.boxRoot, getBoxTime().getTime()) };
   }),
 
-  setStatus: ownerProcedure
-    .input(z.object({ path: z.string().min(1), status: BrowserTaskStatus }))
+  setClosed: ownerProcedure
+    .input(z.object({ path: z.string().min(1), closed: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       const ns = await resolveBoxNamespacePathOnDisk({ boxRoot: ctx.boxRoot, rawPath: input.path, mode: "write" });
       if (!ns.ok) {
         throw new TRPCError({ code: ns.reason === "display-form" ? "BAD_REQUEST" : "FORBIDDEN", message: ns.reason === "display-form" ? ns.message : "Access denied" });
       }
       if (typeFromFilename(ns.relativePath) !== "browser-task") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Only a browser-task card has a task status" });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only a browser-task card can be closed" });
       }
       return withCardLock(ns.resolved, async () => {
         let raw: string;
@@ -52,18 +51,20 @@ export const browserTaskRouter = router({
         if (document.errors.length > 0 || !isMap(document.contents)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Card frontmatter is not a valid YAML mapping" });
         }
-        document.set("status", input.status);
+        // Absent means open, so reopening removes the field.
+        if (input.closed) document.set("closed", true);
+        else document.delete("closed");
         const yaml = String(document);
         await writeFileAtomic(ns.resolved, { content: `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${split.body}` });
         try {
           const commit = await stageAndCommitPaths(ctx.boxRoot, {
             paths: [ns.relativePath],
-            message: `${input.status === "closed" ? "Close" : "Reopen"} browser task: ${ns.relativePath}`,
-            trailers: { "Source": "webapp", "Endpoint": "browserTask.setStatus" },
+            message: `${input.closed ? "Close" : "Reopen"} browser task: ${ns.relativePath}`,
+            trailers: { "Source": "webapp", "Endpoint": "browserTask.setClosed" },
           });
-          return { status: input.status, commit, commitWarning: null };
+          return { closed: input.closed, commit, commitWarning: null };
         } catch (_error) {
-          return { status: input.status, commit: null, commitWarning: "Saved, but the Git commit failed." };
+          return { closed: input.closed, commit: null, commitWarning: "Saved, but the Git commit failed." };
         }
       });
     }),

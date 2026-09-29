@@ -4,9 +4,6 @@ import { body, cardSchema, type CardSubmissionInput, type CardSubmissionResult, 
 import { validateBatch, COVERAGE_REASONS } from "../shared/browser-task-batch.js";
 import { IsoDuration } from "../shared/iso-duration.js";
 
-export const BrowserTaskStatus = z.enum(["open", "closed"]);
-export type BrowserTaskStatusType = z.infer<typeof BrowserTaskStatus>;
-
 /** One drained batch, as the drain records it on the card. The card's scan history. */
 export const BrowserTaskRun = z.object({
   batch: z.string(),
@@ -84,7 +81,8 @@ export const BrowserTaskSchema = cardSchema("browser-task", {
   category: "authored",
   validate: ({ fields }) => promptReferencesBox(fields),
   fields: {
-    status: BrowserTaskStatus.default("open"),
+    // Set by the boxholder to stop submissions; absent means open.
+    closed: z.boolean().optional(),
     // Where the executor starts: the feed, listing, or page to scan.
     source: z.string().url(),
     // "Already recorded up to here" — a permalink or date the executor stops at.
@@ -110,7 +108,7 @@ export const BrowserTaskSchema = cardSchema("browser-task", {
   },
   submissions: {
     dir: BROWSER_TASK_INBOX_DIR,
-    refusal: (fields) => (fields["status"] === "closed" ? "this task is closed and no longer accepts submissions" : null),
+    refusal: (fields) => (fields["closed"] === true ? "this task is closed and no longer accepts submissions" : null),
     validate: validateBrowserTaskSubmission,
   },
   instructions: `# Browser Task Cards
@@ -126,9 +124,9 @@ runs it. You never scan the source yourself; the box has no browser session.
 
 ## Frontmatter
 
-- \`status:\` — \`open\` (accepting batches) or \`closed\`. Only the boxholder
-  closes a task, usually in chat. Never close one because a scan came back
-  empty.
+- \`closed: true\` — the task no longer accepts batches. Absent means open.
+  Only the boxholder closes a task, usually in chat. Never close one because
+  a scan came back empty.
 - \`source:\` — the URL the executor starts at. One task, one source.
 - \`watermark:\` — where "already recorded" ends: the newest permalink or
   date the last drain filed. The executor stops when it reaches it. Set it
@@ -237,7 +235,7 @@ interruption skips indices already in \`filed.json\`.`,
 
 export interface BrowserTaskFields {
   type: "browser-task";
-  status: BrowserTaskStatusType;
+  closed?: boolean;
   source: string;
   watermark?: string;
   "last-upload"?: string;
@@ -277,7 +275,6 @@ export function createBrowserTaskTemplate(options: { title: string; source: stri
   const fields: Record<string, unknown> = {
     type: "browser-task",
     title: options.title,
-    status: "open",
     source: options.source,
   };
   const bodyText = options.prompt ?? BROWSER_TASK_BODY_SCAFFOLD;

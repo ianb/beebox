@@ -18,7 +18,7 @@ export interface BrowserTaskListItem {
   path: string;
   title: string;
   source: string;
-  status: "open" | "closed";
+  closed: boolean;
   state: BrowserTaskState;
   inboxCount: number;
   runCount: number;
@@ -76,8 +76,8 @@ export async function listBrowserTasks(boxRoot: string, nowMs: number): Promise<
       path: cardRel,
       title: typeof fields["title"] === "string" ? fields["title"] : path.basename(cardRel, SUFFIX),
       source: fields.source,
-      status: fields.status,
-      state: browserTaskState({ status: fields.status, lastUpload: fields["last-upload"], rescanAfter: fields["rescan-after"] }, nowMs),
+      closed: fields.closed === true,
+      state: browserTaskState({ closed: fields.closed, lastUpload: fields["last-upload"], rescanAfter: fields["rescan-after"] }, nowMs),
       inboxCount,
       runCount: fields.runs?.length ?? 0,
     });

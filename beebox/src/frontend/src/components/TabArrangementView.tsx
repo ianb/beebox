@@ -19,7 +19,8 @@ interface CapturedTab {
 
 interface ArrangementData {
   transferId: string;
-  status: "draft" | "ready";
+  /** The boxholder agreed the proposal; only then can it be applied. */
+  ready: boolean;
   source: { windows: Array<{ id: string; tabs: CapturedTab[] }> };
   proposal: { windows: Array<{ id: string; tabs: string[] }>; close: string[] };
 }
@@ -73,7 +74,7 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
   const tabs = new Map(arrangement.source.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab]));
   const deleted = new Set(proposal.close);
   const remainingCount = tabs.size - deleted.size;
-  const canApply = arrangement.status === "ready" && relay?.ok === true && relay.state === "ready";
+  const canApply = arrangement.ready && relay?.ok === true && relay.state === "ready";
 
   return (
     <div className="mx-auto max-w-4xl p-4" {...bbxSource("card", path)}>
@@ -81,7 +82,7 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
         <header>
           <div className="flex flex-wrap items-center gap-2">
             <Text as="h1" size="lg" weight="semibold">Tab arrangement</Text>
-            <Badge tone={arrangement.status === "ready" ? "success" : "warning"}>{arrangement.status}</Badge>
+            <Badge tone={arrangement.ready ? "success" : "warning"}>{arrangement.ready ? "ready" : "draft"}</Badge>
           </div>
           <Text as="p" size="sm" tone="subtle" className="mt-1">
             Check or uncheck tabs to mark them for deletion. Deleted tabs stay in place here for review; Clerk validates the live tabs again before changing anything.
@@ -112,7 +113,7 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
 
         <ArrangementActions
           relay={relay}
-          status={arrangement.status}
+          ready={arrangement.ready}
           canApply={canApply}
           onApply={apply}
           onUndo={undo}
@@ -124,12 +125,12 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
 
 function ArrangementActions(props: {
   relay: ArrangementRelayResult | null;
-  status: "draft" | "ready";
+  ready: boolean;
   canApply: boolean;
   onApply: () => Promise<void>;
   onUndo: () => Promise<void>;
 }) {
-  const { relay, status, canApply, onApply, onUndo } = props;
+  const { relay, ready, canApply, onApply, onUndo } = props;
   return (
     <Card background="info" border="subtle">
       <Stack gap="sm">
@@ -138,8 +139,8 @@ function ArrangementActions(props: {
         ) : (
           <Text as="p" size="sm" tone={relay.ok ? "default" : "danger"}>{relay.message}</Text>
         )}
-        {status !== "ready" ? (
-          <Text as="p" size="sm" tone="subtle">Set the card’s status to ready when the proposal is agreed.</Text>
+        {!ready ? (
+          <Text as="p" size="sm" tone="subtle">Set ready: true on the card when the proposal is agreed.</Text>
         ) : null}
         <div className="flex flex-wrap gap-2">
           <Button intent="primary" disabled={!canApply} onClick={onApply} loadingLabel="Applying…">Apply in Chrome</Button>
@@ -257,11 +258,11 @@ function insertNearNeighbors(options: { tabs: string[]; id: string; sourceIds: s
 function parseArrangement(frontmatter: Record<string, unknown> | undefined): ArrangementData | null {
   if (frontmatter === undefined) return null;
   const transferId = frontmatter["transfer-id"];
-  const status = frontmatter["status"];
+  const ready = frontmatter["ready"] ?? false;
   const source = parseSource(frontmatter["source"]);
   const proposal = parseProposal(frontmatter["proposal"]);
-  if (typeof transferId !== "string" || (status !== "draft" && status !== "ready") || source === null || proposal === null) return null;
-  return { transferId, status, source, proposal };
+  if (typeof transferId !== "string" || typeof ready !== "boolean" || source === null || proposal === null) return null;
+  return { transferId, ready, source, proposal };
 }
 
 function parseSource(value: unknown): ArrangementData["source"] | null {

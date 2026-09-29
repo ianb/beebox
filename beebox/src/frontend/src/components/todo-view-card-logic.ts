@@ -29,8 +29,8 @@ export type TodoRow = TodoResult["groups"][number]["rows"][number];
 export type TodoRowItem = TodoRow["items"][number];
 
 /**
- * The `status` filter a `todo-view` card's frontmatter resolves to. An
- * explicit `status:` list wins; an omitted one defaults to `["open",
+ * The status filter a `todo-view` card's frontmatter resolves to. An
+ * explicit `todo-status:` list wins; an omitted one defaults to `["open",
  * "parked"]` — every plate-state group an `open` todo can land in
  * (escalated/on-plate/quiet) PLUS `parked`, so the parked group is actually
  * reachable on the stock plate without the card author having to list
@@ -40,7 +40,7 @@ export type TodoRowItem = TodoRow["items"][number];
  * unless a card explicitly lists them.
  */
 export function resolveTodoViewStatusFilter(fm: Record<string, unknown>): TodoStatus[] {
-  const value = fm["status"];
+  const value = fm["todo-status"];
   if (Array.isArray(value)) {
     const statuses = value.filter((v): v is TodoStatus => typeof v === "string" && isTodoStatus(v));
     if (statuses.length > 0) return statuses;

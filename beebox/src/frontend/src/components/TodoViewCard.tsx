@@ -3,7 +3,7 @@
  * (`docs/plans/todo-collection.md`, Track 4).
  *
  * A `todo-view` card is a live query, not authored content: its own directory
- * is the query's `here`, its frontmatter supplies `glob`/`status`/`assigned`,
+ * is the query's `here`, its frontmatter supplies `glob`/`todo-status`/`assigned`,
  * and this component renders whatever `collections.query` returns. The list
  * never edits itself: ticking a line (`todo/TodoItem.tsx`, through the
  * `TodoActionsContext` its `FileView` provides) edits the card that todo was

@@ -1,7 +1,8 @@
 /**
  * Shared outbound-delivery loop for `_bookkeeping/output/*.card` cards: scan for
- * pending cards of one type, hand each to a caller-supplied `send` step, and
- * delete (on success) or stamp `failed` and leave in place (on failure) —
+ * pending cards of one type (no `delivery-error`), hand each to a
+ * caller-supplied `send` step, and delete (on success) or stamp
+ * `delivery-error` and leave in place (on failure) —
  * the lifecycle documented on telegram-message.ts. One
  * card's failure never stops the rest.
  *
@@ -23,8 +24,7 @@ const OUTPUT_DIR = BOX_DIRS.output;
 
 /** The minimal shape `deliverPendingOutputCards` needs to read and stamp a card. */
 export interface DeliverableCardFields {
-  status: string;
-  error?: string | undefined;
+  "delivery-error"?: string | undefined;
 }
 
 export interface DeliverPendingOutputCardsOptions<TFields extends DeliverableCardFields> {
@@ -37,7 +37,7 @@ export interface DeliverPendingOutputCardsOptions<TFields extends DeliverableCar
   /**
    * Attempt delivery for one pending card's fields. Return `null` on success
    * (the card is deleted), or a failure message on failure (the card is
-   * stamped `status: failed` with that message as `error` and left in place).
+   * stamped with that message as `delivery-error` and left in place).
    */
   send: (fields: TFields) => Promise<string | null>;
   /** Verb used in the per-failure log line: `Failed to ${failureVerb} ${path}: ...`. */
@@ -85,17 +85,16 @@ export async function deliverPendingOutputCards<TFields extends DeliverableCardF
       // validated `card.fields` against `schema` at runtime).
       // eslint-disable-next-line no-restricted-syntax -- generic seam: cardFields validated card.fields against `schema` at runtime, but the loop can only promise the caller-declared TFields, not the schema's own inferred type
       const fields = cardFields(card, schema) as unknown as TFields;
-      if (fields.status !== "pending") continue;
+      if (fields["delivery-error"] !== undefined) continue;
 
       const failure = await send(fields);
       if (failure === null) {
         await fs.unlink(absPath);
         sent.push(relPath);
       } else {
-        fields.status = "failed";
-        fields.error = failure;
+        fields["delivery-error"] = failure;
         // `fields` is the same object as `card.fields` (cardFields retypes it in
-        // place), so the mutations above are already reflected here — serialize
+        // place), so the mutation above is already reflected here — serialize
         // the untyped bag directly, no cast.
         await fs.writeFile(
           absPath,

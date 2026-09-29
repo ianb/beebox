@@ -563,7 +563,7 @@ LessonPlanSchema.frontmatterSchema.safeParse({
   type: "lesson-plan",
   segments: [
     { do: "Elicit their model of what's moving in a reaction", mode: "interactive", concepts: ["proton-transfer"] },
-    { do: "Walk the proton-transfer figure", mode: "material", status: "ready", material: { ref: "material/Proton_Transfer.figure.card" } },
+    { do: "Walk the proton-transfer figure", mode: "material", material: { ref: "material/Proton_Transfer.figure.card" } },
   ],
 }).success
 => true
@@ -596,7 +596,7 @@ card-lint checks it resolves:
 const parsed = LessonPlanSchema.frontmatterSchema.parse({
   type: "lesson-plan",
   segments: [
-    { do: "Read the recap", mode: "material", status: "ready", material: { ref: "material/Recap.doc.card" } },
+    { do: "Read the recap", mode: "material", material: { ref: "material/Recap.doc.card" } },
   ],
 });
 extractRefs(parsed).map((r) => r.ref)
@@ -679,31 +679,31 @@ ProgressSchema.frontmatterSchema.safeParse({
   type: "progress",
   course: { ref: "../Acids.course.card" },
   entries: [
-    { node: "electron-transfer", status: "partial", basis: "observed", evidence: ["Said acids 'give away' something but couldn't say what"] },
+    { node: "electron-transfer", level: "partial", basis: "observed", evidence: ["Said acids 'give away' something but couldn't say what"] },
   ],
 }).success
 => true
 ```
 
-The evidence contract is enforced — a status with no `evidence`, an empty
+The evidence contract is enforced — a level with no `evidence`, an empty
 `evidence` array, or no `basis` all fail to parse (no anonymous rating):
 
 ```ts
 ProgressSchema.frontmatterSchema.safeParse({
   type: "progress",
-  entries: [{ node: "n", status: "solid", basis: "observed" }],
+  entries: [{ node: "n", level: "solid", basis: "observed" }],
 }).success
 => false
 
 ProgressSchema.frontmatterSchema.safeParse({
   type: "progress",
-  entries: [{ node: "n", status: "solid", basis: "observed", evidence: [] }],
+  entries: [{ node: "n", level: "solid", basis: "observed", evidence: [] }],
 }).success
 => false
 
 ProgressSchema.frontmatterSchema.safeParse({
   type: "progress",
-  entries: [{ node: "n", status: "solid", evidence: ["heard them explain it"] }],
+  entries: [{ node: "n", level: "solid", evidence: ["heard them explain it"] }],
 }).success
 => false
 ```

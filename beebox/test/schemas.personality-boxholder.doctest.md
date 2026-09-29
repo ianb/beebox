@@ -55,9 +55,9 @@ JSON.stringify([md.includes("Your boxholder"), md.includes("Prefers terse replie
 
 ```ts
 const box = await makeTmpBox();
-await box.write("people/Priya_Marlowe.person.card", "---\nstatus: active\nname: Priya Marlowe\naliases:\n  - Priya\nboxholder: true\n---\n");
-await box.write("people/Jo_Smith.person.card", "---\nstatus: archived\nname: Jo Smith\nboxholder: true\n---\n");
-await box.write("people/Pat_Lee.person.card", "---\nstatus: active\nname: Pat Lee\n---\n");
+await box.write("people/Priya_Marlowe.person.card", "---\nname: Priya Marlowe\naliases:\n  - Priya\nboxholder: true\n---\n");
+await box.write("people/Jo_Smith.person.card", "---\nname: Jo Smith\nboxholder: true\narchived: true\n---\n");
+await box.write("people/Pat_Lee.person.card", "---\nname: Pat Lee\n---\n");
 JSON.stringify(await loadBoxholders(box.root))
 => [{"name":"Priya Marlowe","called":"Priya"}]
 ```

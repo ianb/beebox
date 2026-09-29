@@ -94,7 +94,7 @@ todos elsewhere that link into it); it's designed for agent consumption, not
 human browsing directly. Mutating a todo is an ordinary card edit — there is
 no write subcommand. A `todo-view` card (see `src/schemas/todo-view.ts`) is
 the human-facing display surface: it's the same query (a `glob` plus optional
-`status`/`assigned` filters), and — per "views attach to cards" — dropping one
+`todo-status`/`assigned` filters), and — per "views attach to cards" — dropping one
 in a directory gives that subtree its own plate.
 `_content/plate.todo-view.card` is the box-wide instance. Design record:
 `docs/implemented-plans/todo-annotation.md` and

@@ -20,7 +20,7 @@ import type { BatchSummary } from "./data";
 
 export interface TaskStatusProps {
   cardPath: string;
-  status: "open" | "closed";
+  closed: boolean;
   lastUpload: string | null;
   rescanAfter: string | null;
   subjectRef: string | null;
@@ -33,17 +33,17 @@ export interface TaskStatusProps {
 }
 
 export function TaskStatus(props: TaskStatusProps) {
-  const { cardPath, status, lastUpload, rescanAfter, subjectRef, inbox, processedCount, loadedAt, error, onNavigate } = props;
-  const state = loadedAt === null ? null : browserTaskState({ status, lastUpload, rescanAfter }, loadedAt);
+  const { cardPath, closed, lastUpload, rescanAfter, subjectRef, inbox, processedCount, loadedAt, error, onNavigate } = props;
+  const state = loadedAt === null ? null : browserTaskState({ closed, lastUpload, rescanAfter }, loadedAt);
   const draining = inbox.filter((b) => b.filed.length > 0 && b.records !== null && b.filed.length < b.records).length;
   return (
     <Stack gap="xs">
       <Row gap="sm" align="center" wrap>
-        <Badge tone={status === "open" ? "success" : "neutral"}>{status}</Badge>
+        <Badge tone={closed ? "neutral" : "success"}>{closed ? "closed" : "open"}</Badge>
         {state !== null && state.kind !== "closed" ? (
           <Badge tone={state.kind === "due" ? "warning" : state.kind === "never-scanned" ? "info" : "neutral"}>{describeBrowserTaskState(state)}</Badge>
         ) : null}
-        <StatusToggle status={status} cardPath={cardPath} />
+        <ClosedToggle closed={closed} cardPath={cardPath} />
       </Row>
       <Row gap="sm" align="center" wrap>
         {loadedAt !== null ? (
@@ -67,10 +67,10 @@ export function TaskStatus(props: TaskStatusProps) {
 }
 
 /** The boxholder's open/closed control. Owner only; an executor never sees it. */
-function StatusToggle({ status, cardPath }: { status: "open" | "closed"; cardPath: string }) {
+function ClosedToggle({ closed, cardPath }: { closed: boolean; cardPath: string }) {
   const user = useCurrentUser();
   const utils = trpc.useUtils();
-  const mutation = trpc.browserTask.setStatus.useMutation({
+  const mutation = trpc.browserTask.setClosed.useMutation({
     onSuccess: async () => {
       await utils.card.get.invalidate({ path: cardPath });
       await utils.browserTask.list.invalidate();
@@ -79,10 +79,10 @@ function StatusToggle({ status, cardPath }: { status: "open" | "closed"; cardPat
   if (user === null || !user.isOwner) return null;
   return (
     <Toggle
-      checked={status === "open"}
+      checked={!closed}
       disabled={mutation.isPending}
-      label={status === "open" ? "Accepting batches" : "Closed"}
-      onChange={(open) => mutation.mutate({ path: cardPath, status: open ? "open" : "closed" })}
+      label={closed ? "Closed" : "Accepting batches"}
+      onChange={(open) => mutation.mutate({ path: cardPath, closed: !open })}
     />
   );
 }

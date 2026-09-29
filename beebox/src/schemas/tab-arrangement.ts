@@ -96,7 +96,8 @@ export const TabArrangementSchema = cardSchema("tab-arrangement", {
     "captured-at": z.string().datetime(),
     source: capturedTabSet,
     proposal: tabArrangementProposal,
-    status: z.enum(["draft", "ready"]).default("draft"),
+    // The boxholder agreed the proposal; absent means it is still a draft.
+    ready: z.boolean().optional(),
     body: body(z.string()),
   },
   instructions: `# Tab Arrangement Cards
@@ -111,7 +112,7 @@ URL. Existing source window UUIDs preserve those windows; a new UUID creates a
 new window. Keep pinned tabs before unpinned tabs in each window, and leave at
 least one tab open.
 
-Set \`status: ready\` only when the boxholder agrees the proposal is ready to
+Set \`ready: true\` only when the boxholder agrees the proposal is ready to
 apply. Applying is always a separate, explicit action in the card viewer. Clerk
 will refuse the whole change before mutation if the live tabs no longer exactly
 match the captured snapshot. Do not edit \`transfer-id\`, \`scope\`,
@@ -132,7 +133,6 @@ export function createTabArrangementCard(input: {
     "captured-at": input.capturedAt,
     source: input.source,
     proposal: input.proposal,
-    status: "draft",
   });
   return `---\n${frontmatter}---\n\nCaptured by Bee Box Clerk. Revise the proposal with the boxholder before applying.\n`;
 }

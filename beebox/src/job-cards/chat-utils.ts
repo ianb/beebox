@@ -276,7 +276,7 @@ export interface UpdatePersonResult {
  * Telegram correspondent triggers a broken-reference at validate time.
  *
  * With `force: true`, an existing person card has its connector-derived
- * identity (`name`) refreshed in place — agent-owned fields (status, email,
+ * identity (`name`) refreshed in place — agent-owned fields (archived, email,
  * phone, address, role, aliases, contains, body, …) are preserved untouched. Username and
  * numeric ids have no field in the person-card schema; they live in the
  * sibling `<connector>.json` metadata, which is always kept current.
@@ -313,7 +313,7 @@ export async function updatePersonEntry(options: {
     cardExists = false;
   }
   if (!cardExists) {
-    const cardYaml = `status: active\nname: ${displayName}\n`;
+    const cardYaml = `name: ${displayName}\n`;
     await fs.writeFile(personCardPath, `---\n${cardYaml}---\n`);
     cardChanged = true;
   } else if (force) {

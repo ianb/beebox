@@ -64,13 +64,13 @@ parseCardText("---\ntype: browser-task\nsource: https://x.test\nrescan-after: fo
 => throws CardIOError
 ```
 
-The template emits an open task with the prompt as the body:
+The template emits an open task (no `closed`) with the prompt as the body:
 
 ```ts
 const text = createBrowserTaskTemplate({ title: "Pottery shows", source: "https://example.test/feed", prompt: "Find show announcements." });
 const parsed = parseCardText(text, { source: "Pottery.browser-task.card", schemas });
-JSON.stringify([parsed.fields["status"], parsed.fields["source"], String(parsed.fields["body"]).trim()])
-=> ["open","https://example.test/feed","Find show announcements."]
+JSON.stringify(["closed" in parsed.fields, parsed.fields["source"], String(parsed.fields["body"]).trim()])
+=> [false,"https://example.test/feed","Find show announcements."]
 ```
 
 `source` must be a URL and `last-upload` an instant:
@@ -86,7 +86,7 @@ The reader has a browser and no box. A link to a card, a box path, the
 briefing, or a `bbx` command is a warning at validate time, one per kind:
 
 ```ts
-const warn = (bodyText: string) => (BrowserTaskSchema.validate ? BrowserTaskSchema.validate({ fields: { status: "open", source: "https://x.test", body: bodyText } }) : []).map((i) => `${i.severity}: ${i.message}`);
+const warn = (bodyText: string) => (BrowserTaskSchema.validate ? BrowserTaskSchema.validate({ fields: { source: "https://x.test", body: bodyText } }) : []).map((i) => `${i.severity}: ${i.message}`);
 JSON.stringify(warn("Scan the page and record each show. See https://example.test/about for context."))
 => []
 
@@ -100,26 +100,26 @@ The card refuses when closed and accepts when open:
 
 ```ts
 const sub = BrowserTaskSchema.submissions!;
-JSON.stringify([sub.dir, sub.refusal({ status: "open" }), sub.refusal({ status: "closed" })])
+JSON.stringify([sub.dir, sub.refusal({}), sub.refusal({ closed: true })])
 => ["inbox",null,"this task is closed and no longer accepts submissions"]
 ```
 
 Validation reads `schema.json` from the attach scope through the injected reader:
 
 ```ts continue
-const good = await sub.validate({ fields: { status: "open" }, manifest: { coverage, records: [{ permalink: "p", poster: "a.jpg" }] }, fileNames: ["a.jpg"], readAttachment: attachments({ "schema.json": recordSchema }) });
+const good = await sub.validate({ fields: {}, manifest: { coverage, records: [{ permalink: "p", poster: "a.jpg" }] }, fileNames: ["a.jpg"], readAttachment: attachments({ "schema.json": recordSchema }) });
 JSON.stringify(good)
 => {"ok":true,"count":1,"manifest":{"coverage":{"scanned":3,"stoppedAt":"x","reason":"end-of-feed"},"records":[{"permalink":"p","poster":"a.jpg"}]}}
 
-const noSchema = await sub.validate({ fields: { status: "open" }, manifest: { coverage, records: [] }, fileNames: [], readAttachment: attachments({}) });
+const noSchema = await sub.validate({ fields: {}, manifest: { coverage, records: [] }, fileNames: [], readAttachment: attachments({}) });
 JSON.stringify(noSchema)
 => {"ok":false,"issues":[{"path":"schema","message":"attach/schema.json is missing; the task has no record schema yet"}]}
 
-const badJson = await sub.validate({ fields: { status: "open" }, manifest: { coverage, records: [] }, fileNames: [], readAttachment: attachments({ "schema.json": "{oops" }) });
+const badJson = await sub.validate({ fields: {}, manifest: { coverage, records: [] }, fileNames: [], readAttachment: attachments({ "schema.json": "{oops" }) });
 JSON.stringify(badJson.ok ? [] : badJson.issues.map((i) => i.path))
 => ["schema"]
 
-const missing = await sub.validate({ fields: { status: "open" }, manifest: { coverage, records: [{ permalink: "p", poster: "a.jpg" }] }, fileNames: [], readAttachment: attachments({ "schema.json": recordSchema }) });
+const missing = await sub.validate({ fields: {}, manifest: { coverage, records: [{ permalink: "p", poster: "a.jpg" }] }, fileNames: [], readAttachment: attachments({ "schema.json": recordSchema }) });
 JSON.stringify(missing.ok ? [] : missing.issues)
 => [{"path":"records[0].poster","message":"references \"a.jpg\", which was not uploaded"}]
 ```

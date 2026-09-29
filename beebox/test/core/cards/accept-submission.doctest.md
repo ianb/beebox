@@ -180,7 +180,7 @@ JSON.stringify({ ok: stray.ok, status: !stray.ok ? stray.status : null, kinds: !
 ```ts continue
 await box.write(
   "_content/tasks/Closed.browser-task.card",
-  "---\ntype: browser-task\ntitle: Closed Task\nstatus: closed\nsource: https://example.com/closed\n---\nDone scanning.\n"
+  "---\ntype: browser-task\ntitle: Closed Task\nclosed: true\nsource: https://example.com/closed\n---\nDone scanning.\n"
 );
 box.commitAll("seed closed task");
 
