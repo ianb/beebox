@@ -39,6 +39,7 @@ import { createCodexChatBackend } from "./codex-chat.js";
 import type {
   ChatBackend,
   ChatBackendRun,
+  ChatBackendSendOptions,
   ChatBackendStartOptions,
   ChatContentBlock,
 } from "../claude-chat-types.js";
@@ -52,6 +53,7 @@ const BBX_CHAT_SESSION_ID_FILE_ENV = "BBX_CHAT_SESSION_ID_FILE";
 export type {
   ChatBackend,
   ChatBackendRun,
+  ChatBackendSendOptions,
   ChatBackendStartOptions,
   ChatContentBlock,
 } from "../claude-chat-types.js";
@@ -270,7 +272,7 @@ function createClaudeChatBackend(): ChatBackend {
     const run: ChatBackendRun = {
       closed: false,
       messages: messageQueue.iterable,
-      send(content: ChatContentBlock[]): void {
+      send(content: ChatContentBlock[], options?: ChatBackendSendOptions): void {
         if (run.closed) return;
         // Narrow our loose ChatContentBlock into the SDK's strict
         // ContentBlockParam, throwing on a malformed image rather than casting
@@ -281,6 +283,9 @@ function createClaudeChatBackend(): ChatBackend {
           message: { role: "user", content: toSdkUserContent(content) },
           session_id: opts.resumeSessionId ?? "",
           parent_tool_use_id: null,
+          // Text the user did not type: the CLI must not expand `@path`
+          // mentions in it into file attachments.
+          ...(options?.clientComposed === true ? { client_composed: true as const } : {}),
         });
       },
       async interrupt(): Promise<void> {

@@ -352,6 +352,8 @@ async function runScanQuery({
         env,
         tools: [],
         settingSources: [],
+        // Composed by beebox; the CLI must not expand `@path` mentions in it.
+        verbatimPrompts: true,
         systemPrompt: { type: "preset", preset: "claude_code" },
         outputFormat: { type: "json_schema", schema: claudeScanWireSchema() },
         ...(binaryPath === null ? {} : { pathToClaudeCodeExecutable: binaryPath }),

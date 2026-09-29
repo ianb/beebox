@@ -90,6 +90,14 @@ JSON.stringify(sent.length > 0)
 => true
 ```
 
+The reminder is composed by beebox, not typed, so it goes out marked
+client-composed.
+
+```ts continue
+JSON.stringify(backend.runs[0]?.sentClientComposed)
+=> [true]
+```
+
 ```ts cleanup
 registry.shutdown();
 eventBus.close();
