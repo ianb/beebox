@@ -53,7 +53,6 @@ import {
 import { createCardSchemaMap } from "../../../schemas.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { createCaptureSessionTemplate } from "../../../schemas/capture-session.js";
-import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
 import { resolveScanPages, bundleResolvedPages } from "./helpers.js";
 import { type ScanVisionService } from "../../../services/scan-vision.js";
 import {
@@ -65,7 +64,7 @@ import {
   analyzeScanPages,
   type SessionLayout,
 } from "./session.js";
-import { importSessionOrDiscard } from "./session-discard.js";
+import { importSessionOrDiscard, queueCommittedSessionIntake } from "./session-discard.js";
 import { runPdfMode } from "./pdf.js";
 import { ensureBoxTmpDir } from "../../../lib/box-tmp.js";
 import { PdfRenderError, probePdf, renderPdfPages } from "../../pdf/probe.js";
@@ -333,13 +332,8 @@ async function importPhotoSession(
 
   const intakeItems = [sessionCardRelPath, ...questionPaths];
   const intakeDescription = `Scan from ${sourceLabel}: ${bundles.length} photo${bundles.length === 1 ? "" : "s"}${questionPaths.length > 0 ? `, ${questionPaths.length} review question${questionPaths.length === 1 ? "" : "s"}` : ""}`;
-  const intakeJobPath = await createOrAppendIntakeJob({
-    boxRoot: ctx.boxRoot,
-    source: "scan",
-    items: intakeItems,
-    description: intakeDescription,
-  });
-  ctx.writeLine(`\nIntake job: ${intakeJobPath}`);
+  const intakeJobPath = await queueCommittedSessionIntake(ctx.boxRoot, { items: intakeItems, description: intakeDescription });
+  ctx.writeLine(`\nIntake job: ${intakeJobPath ?? "not created; the next wakeup queues it"}`);
   ctx.writeLine(`Session: ${sessionCardRelPath}`);
 
   return {

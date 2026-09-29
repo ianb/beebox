@@ -153,3 +153,25 @@ const status = (await execa("git", ["status", "--porcelain", "_content/inbox"], 
 ```ts cleanup
 await box.cleanup();
 ```
+
+## After the commit, a triage-queue failure does not fail the import
+
+The ledger records the hash only for an import that succeeded, so failing
+here would bring a second copy on retry. The session is already committed, and
+wakeup queues any inbox card that no job references. Here the intake job's
+lock directory cannot be created.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await rm(join(box.root, ".beebox/intake-job-locks"), { recursive: true, force: true });
+await writeFile(join(box.root, ".beebox/intake-job-locks"), "not a directory");
+await importPdf(box)
+=> imported true
+
+`${await sessions(box)} entries, ${await staged(box)}`
+=> 2 entries, nothing staged
+```
+
+```ts cleanup
+await box.cleanup();
+```

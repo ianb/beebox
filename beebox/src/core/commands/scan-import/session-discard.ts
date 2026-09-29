@@ -1,12 +1,13 @@
 /**
- * Undo for a scan-import session whose commit never landed.
+ * Failure handling on either side of a scan-import session's commit.
  *
  * The upload ledger records a file's hash only after its import succeeds, so a
  * failed import that leaves its session behind is imported again, in full, by
  * every retry. On 2026-09-28 a commit that failed on every promote pass turned
  * 24 PDFs into 159 staged-but-uncommitted sessions. Discarding the uncommitted
  * session makes a retry start from nothing. Once any of the session is in HEAD
- * it belongs to the box, and a later failure leaves it alone.
+ * it belongs to the box: a later failure leaves it alone, and a failure to
+ * queue it for triage does not fail the import.
  */
 
 import * as fs from "node:fs/promises";
@@ -14,6 +15,7 @@ import * as path from "node:path";
 import { simpleGit } from "simple-git";
 import { hasCommits, unstageFiles } from "../../../lib/git/core.js";
 import type { CommandResult } from "../../command-types.js";
+import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
 import type { SessionLayout } from "./session.js";
 
 /**
@@ -74,4 +76,22 @@ async function committedPaths(boxRoot: string, relPaths: string[]): Promise<stri
   if (!(await hasCommits(boxRoot))) return [];
   const listed = await simpleGit(boxRoot).raw(["ls-tree", "-r", "--name-only", "HEAD", "--", ...relPaths]);
   return listed.split("\n").filter((line) => line !== "");
+}
+
+/**
+ * Queue a committed session for triage. The import has already landed, so a
+ * failure here must not fail it: the ledger would never record the hash, and a
+ * retry would import a second copy. Wakeup jobs any inbox card that no job
+ * references, so the session is still triaged. Returns null when queuing failed.
+ */
+export async function queueCommittedSessionIntake(
+  boxRoot: string,
+  { items, description }: { items: string[]; description: string },
+): Promise<string | null> {
+  try {
+    return await createOrAppendIntakeJob({ boxRoot, source: "scan", items, description });
+  } catch (error) {
+    console.warn(`[scan-import] Intake job for ${items[0] ?? "a scan session"} was not created; the next wakeup queues it:`, error);
+    return null;
+  }
 }

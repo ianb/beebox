@@ -19,14 +19,13 @@ import { type CommandContext, type CommandResult } from "../../command-types.js"
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { createCaptureSessionTemplate } from "../../../schemas/capture-session.js";
 import { createPdfTemplate, type PdfTemplateOptions } from "../../../schemas/pdf.js";
-import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
 import { ensureBoxTmpDir } from "../../../lib/box-tmp.js";
 import { createDoclingService, type DoclingService } from "../../../services/docling/core.js";
 import { extractPdf } from "../../pdf/extract.js";
 import { probePdf, type PdfProbe } from "../../pdf/probe.js";
 import type { DoclingOcr } from "../../../services/docling/core.js";
 import { createSessionLayout, type SessionLayout } from "./session.js";
-import { importSessionOrDiscard } from "./session-discard.js";
+import { importSessionOrDiscard, queueCommittedSessionIntake } from "./session-discard.js";
 import { assertAnnexBox } from "../../annex/assert-annex-box.js";
 
 /** The OCR intent a probed PDF calls for. Pure, so the mapping is testable. */
@@ -165,13 +164,11 @@ async function importPdfSession(
     trailers: { "Created-By": "scan-import" },
   });
 
-  const intakeJobPath = await createOrAppendIntakeJob({
-    boxRoot: ctx.boxRoot,
-    source: "scan",
+  const intakeJobPath = await queueCommittedSessionIntake(ctx.boxRoot, {
     items: [sessionCardRelPath],
     description: `Pdf: ${path.basename(args.pdfPath)}`,
   });
-  ctx.writeLine(`\nIntake job: ${intakeJobPath}`);
+  ctx.writeLine(`\nIntake job: ${intakeJobPath ?? "not created; the next wakeup queues it"}`);
   ctx.writeLine(`Session: ${sessionCardRelPath}`);
 
   return {
