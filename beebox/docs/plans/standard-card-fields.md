@@ -1,0 +1,534 @@
+---
+title: "Standard card fields: ban status and created, reserve source, group source metadata"
+status: draft
+workstream: card-fields-review
+issues:
+  - ../../../issues/code-quality/2026-09-27-review-standard-card-fields.md
+---
+# Standard card fields
+
+Card schemas share a small set of field names. Some are declared globally
+(`GLOBAL_CARD_FIELDS`), and others (`status`, `created`, `source`, `date`,
+`summary`) are repeated per type with different meanings. Agents fill these
+fields in because they look standard. Readers expect them to mean something,
+and often nothing reads them. This plan decides the standard set, removes or
+renames the rest, and makes the schema API reject the names that attract bad
+fields.
+
+**Issues addressed:**
+[review the standard card fields](../../../issues/code-quality/2026-09-27-review-standard-card-fields.md).
+Related, not resolved here:
+[retire memo](../../../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md)
+(owns memo's `status`, `created`, `source`, and its body-derived title),
+[codebase ontology files](../../../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md)
+(a name with two meanings is a collision; this plan removes several),
+[card Properties design session](../../../issues/features/2026-09-27-card-properties-design-session.md)
+(owns what the Properties panel shows; this plan only removes `created` and
+`source` from it).
+
+## Decisions from the review (boxholder, 2026-09-28)
+
+These were settled in discussion and are the plan's premises.
+
+- **`status` is banned.** It is a name that invites bad fields. Each current
+  use is removed or replaced by a specific key. Usually the replacement is the
+  presence of the thing itself (a transcript) or an error field.
+- **`created` is banned.** A creation time is valid only for media that
+  existed before the card, and that time already lives on the media
+  reference (`filename.captured`). Git records when a card was written.
+- **`source` keeps the `{% source %}` meaning only**: what this content was
+  derived from. Every other `source` field gets a name for what it holds.
+- **Data copied verbatim from an external system** (email headers, Drive
+  metadata, EXIF) lives under one key that names the external system, so it
+  reads as source metadata and not as a box-level fact.
+- **`date` and `modified` go**, except as source metadata under that key.
+- **`contains` is not overloaded further.** It keeps its one meaning: one
+  sentence stating what can be found inside the card. No field is folded into
+  it.
+- **`summary` goes.** `description` stays, with one defined meaning. A type
+  may specialize that meaning, but this is discouraged.
+- **`title` stays optional.** The boxholder does not want to require it.
+- **Schema shadowing is rejected in code**, where it can be detected; the rest
+  goes in instructions.
+
+## Smallest fix and budget
+
+**Smallest fix:** delete the dead fields (memo/file/pub-submission/job
+`status`, `pub-submission.created`, `audio.summary`, observation `date`),
+remove `created` and `source` from the Properties panel, and add the
+reserved-name rule to `docs/cards/schemas.md`. That stops the worst filler
+and costs perhaps 400 lines. It leaves `status` on about 15 types where code
+reads it, `source` with six meanings, and nothing stopping the next schema
+from adding a `status`.
+
+**Chosen design:** six tracks (below).
+
+| Track | Source + test lines (est.) |
+|---|---|
+| A. Reserved names and the shadowing guard | 250 |
+| B. `status` removal, per type | 1,800 |
+| C. `source` split and `sources` shape | 700 |
+| D. Timestamps and source-metadata keys | 900 |
+| E. `summary`, `description` | 150 |
+| F. One title resolver | 300 |
+| Migrations (scripts + doctests) | 1,200 |
+| **Total** | **~5,200** |
+
+Docs (schemas.md, bbx-guide-schemas, box-docs, agent guide) are about 400
+more lines, not counted above. Generated box-docs change with them.
+
+> **BIG CHANGE.** About 5,200 changed lines. The size comes from the number of
+> types (about 25 schemas lose `status`) and from each one needing a reader
+> change, a migration, and test updates. It needs the boxholder's approval at
+> this size. See *Open design questions* for splitting it into three plans that
+> ship separately.
+
+What the full design buys over the smallest fix: the check in Track A is
+what stops the pattern from returning. Without it, a schema written next
+month adds `status: new` again. Box-local schemas on prod copy the built-in
+ones (see *What already exists*), so leaving `status` on any built-in type
+keeps teaching it.
+
+## Stated preferences this plan trades against
+
+- **Strict by default** (memory: bias toward strict): a built-in schema with a
+  reserved name fails the registry test; the plan does not settle for a lint
+  warning there.
+- **Consolidate over blast-radius fear**: one migration per concern across
+  all types, instead of preserving drift for compatibility.
+- **Minimize invented concepts; prefer primitives**: the replacement for most
+  `status` values is the presence of an existing field (a transcript, an
+  error), not a new enum.
+- **Short compatibility horizon** (`.claude/skills/bbx-migration/SKILL.md`:
+  *"Keep back-compat reads or dual-format loaders only for a short, explicit
+  settling period"*): old field names are read for one settling period, then
+  removed through a deferred issue.
+- **Box-local schemas are box content.** The engine cannot rewrite them by
+  script without judgment, so the guard must not break a box's load.
+
+## What already exists
+
+- **Global fields:** `beebox/src/cards/schema.ts:100-108`, injected by
+  `cardSchema()` at `:531-536` with *"schema-wins: author declaration takes
+  precedence"*. This precedence is what Track A removes.
+- **Shadowing today:** `title` is redeclared by doc, gdoc, gsheet, recipe
+  (required) and memo, pdf, webpage, commentary (optional, same as the global).
+- **Lint for unknown keys:** `src/core/card-lint/core.ts:395` builds the
+  allowed-key set from `schema.globalFieldNames` and the schema's fields. Reuse
+  it for the settling-period warnings.
+- **Migration harness:** `src/scripts/migrate/_harness.ts`, runbook
+  `docs/cards/migrations.md`. Reuse.
+- **Media references already carry capture time and channel:**
+  `filename: {ref, captured, source}` on image (`src/schemas/image/schema.tsx:41-42`),
+  file (`file.tsx:24`), pdf (`pdf.ts:43`); audio uses `recorded`
+  (`audio.tsx:25`). Track D builds on this; it does not add a new place.
+- **`{% source %}` shape:** `record.sources` is an array of
+  `{ref|href, time?, note?}`, and `record.tsx:20-24` says it deliberately
+  mirrors the tag. Track C adopts this shape.
+- **Properties panel:** `CardFacts` (`src/frontend/src/components/themes/ThemedFileCard/CardProperties.tsx:12-23`)
+  shows `fm.created` and `fm.source` for any card type. This is the only
+  generic reader of either name.
+- **Search `created`:** stored per document (`src/core/search/extract/core.ts:132`,
+  `store.ts:52`), never filtered, sorted, or shown.
+- **Box-local schemas on prod copy the built-in patterns.** A structural scan
+  on 2026-09-28 found box-local `status` on 10 schemas across four boxes, and
+  `name`/`description` on most box-local schemas.
+
+## Prior art (external)
+
+No design decision depends on an external premise. The source-metadata key
+follows the existing `exif` field on image (`image/schema.tsx:51`), which
+already holds camera metadata under the name of its origin.
+
+## Ontology
+
+- **Global field** — a frontmatter field every card type accepts, declared once
+  in `GLOBAL_CARD_FIELDS`. Kept: `title`, `contains`, `todos`, `symbol`,
+  `prominence`, `theme`. Not a global: `contains-evidence` (moves to chat).
+- **Reserved name** — a field name no schema may declare: every global field
+  name, plus the banned names `status`, `created`, `summary`, `date`,
+  `modified`. `source` is reserved too; the derived-from field is `sources`.
+- **`sources`** — what this card's content was derived from. An array of
+  `{ ref } | { href }` entries, with optional `label`, `note`, `time`. Same
+  meaning as the `{% source %}` tag, frontmatter form. Not a producer, a
+  channel, or a basis.
+- **Media reference** — the `filename:` object that points at a card's
+  attached media: `{ ref, captured, via }`. `captured` is the time the media
+  was acquired. It replaces `created` everywhere a creation time is valid.
+  `via` is the capture channel (was `source`).
+- **Source-metadata key** — one object field named for the external system,
+  holding data copied verbatim from it: `email:` (headers), `drive:` (Drive
+  file metadata), `exif:` (camera). It is not box-authored and not edited by
+  agents.
+- **`description`** — what the card's subject is or does, in prose, for
+  someone who has not opened it. Not a summary of the card's contents; that
+  is `contains`.
+- **`contains`** — unchanged: one sentence stating what can be found inside
+  the card, the retrieval field.
+
+## Tracks / scope
+
+### Track A — Reserved names and the shadowing guard
+
+**What.** `cardSchema()` rejects any declared field whose name is reserved.
+Making `title` required becomes a config option.
+
+**Why.** Today a schema can redeclare a global and win silently
+(`schema.ts:533`), and any schema can add `status` or `created`. Instructions
+alone have not stopped this: box-local schemas repeat it.
+
+**Direction.**
+- `RESERVED_FIELD_NAMES` in `src/cards/schema.ts`: the global names plus
+  `status`, `created`, `summary`, `date`, `modified`, `source`. Each banned
+  name carries a one-line message saying what to use instead, e.g.
+  `status: "name the specific fact: a presence field, an error field, or a
+  boolean such as archived"`.
+- `CardSchemaConfig.requireTitle?: boolean`. When true, `title` is injected as
+  `z.string()` instead of optional. doc, gdoc, gsheet, recipe use it. memo,
+  pdf, webpage, commentary drop their redundant declaration.
+- The check is a pure function, `reservedFieldProblems(schema)`, in
+  `src/cards/schema.ts`. `cardSchema()` does not throw on it: box-local
+  schemas call the same `cardSchema()` and are dynamically imported
+  (`src/schemas.ts:357`), where a throw becomes an import failure and the
+  schema is skipped. A box whose schema is skipped is worse than a bad name.
+- **Built-in schemas:** a unit test runs the check over the whole built-in
+  registry and fails on any problem. The registry is fixed at build time, so
+  a test is as strict as a throw.
+- **Box-local schemas:** the box schema loader runs the check after import
+  and reports each problem as a lint warning with the message. The schema
+  still loads. The box's own agent migrates its schemas.
+- `requireTitle` keeps today's behaviour: the same four types require a title
+  as now. It replaces the redeclaration, not the policy.
+- The check covers top-level fields only. Nested keys (procedure-run step
+  `status`) are covered by Track B case by case, not by the guard.
+
+**Vocabulary lock-ins.** `RESERVED_FIELD_NAMES`, `requireTitle`.
+
+**First chunk.** Add the reserved list, `reservedFieldProblems`, and
+`requireTitle`; convert the eight title redeclarations; the registry test
+checks only global-name shadowing at first. Banned
+names join the list as Tracks B–D remove each use.
+
+### Track B — Remove `status`
+
+**What.** Every card-level `status` is removed or replaced by a specific field.
+
+**Why.** Of about 25 types, the review found `status` dead on four (memo,
+file, pub-submission, progress entries used for a different meaning),
+constant on six (all job cards, gsheet), and reset by the connector on
+email-thread. Where it works, it is a generic name for a specific fact.
+
+**Direction** (per type; evidence from the 2026-09-28 audit):
+
+| Type | Today | Replacement |
+|---|---|---|
+| memo | never leaves `new`, no reader | removed (memo retirement issue owns the type) |
+| file | never leaves `new`, no reader | removed |
+| pub-submission | never leaves `new`, no reader | removed |
+| record | `draft`/`reviewed`/`archived`; template writes `draft`; no code reader (on one real box, 571 of 578 are `draft`) | removed; `reviewed: true` and `archived: true` where set |
+| email-thread | template writes `new`; re-fetch resets it; no reader | removed |
+| chat-job, intake-job, contains-backfill-job, question-followup-job, todo-review-job | only `pending` is written; a finished job is deleted (`src/core/finish-job.ts`) | removed; readers treat an existing job card as pending |
+| gsheet | always `synced` | removed |
+| email-outbound | `sent` never written; drafts code uploads `draft` cards without a draft id (`src/connectors/gmail/drafts/core.ts:146`) | removed; presence of `gmail-draft-id` is the gate |
+| audio | `transcribed` set by `transcribe-clips.ts:121` | removed; presence of `transcript` means done, `transcription-error` means failed |
+| pdf | `new`/`analyzed`/`invalid`, moved by scan import and reanalyze | removed; presence of the extraction means analyzed; `analysis-error` for failure |
+| image | `analyzed` set by scan import; `invalid` never written by code but skipped by the timeline (`src/core/capture/prepare/timeline.ts:146`) | removed; `analysis-error` for failure |
+| telegram-message | `pending`/`failed`; the card is deleted on success | removed; `delivery-error` means failed, absence means pending |
+| capture-session, upload-batch | `new` → `delivered` by intake; sweeps read `delivered` | `delivered: true`; the agent's `annotated` becomes `annotated: true` |
+| browser-task | `open`/`closed`, toggled by the user | `closed: true` |
+| tab-arrangement | `draft`/`ready`, agent sets `ready`, gates Apply | `ready: true` |
+| person, place | `active`/`inactive`/`archived`; readers skip non-active | `archived: true` (inactive merges into archived) |
+| gdoc | `synced`/`conflict`, recomputed on every pull (`src/connectors/google-drive/handlers/docs/handler.ts:300-307`); `conflict` is an unresolved state the frontend shows (`src/frontend/src/lib/drive-card-display.ts:43`) | `conflict: true`; absent means in sync. This is connector state, so it stays out of the `drive:` source-metadata key |
+| gfolder | `ok`/`error`, stamped with `last-sync` (`src/connectors/google-drive/card-stamp.ts:52-57`) | `sync-error` holds the error; absent means the last sync succeeded |
+| question | `pending`/`answered`/`dismissed`/`expired`, real transitions | `outcome: answered \| dismissed \| expired`; absent means pending |
+| procedure-run | a checked state machine (`run-card.ts:111-149`) | `outcome: completed \| failed \| inconclusive`; `started-at` present and no `outcome` means running; neither means pending |
+| guide/personality experiments | agent-moved; compile keeps `active`/`proposed` | see *Open design questions* |
+| lesson-plan segment | `planned`/`ready`; lint skips `planned` | `planned: true` |
+| progress entries | learner mastery (`partial`, `solid`), not a lifecycle | renamed `level` |
+
+`todo-view.status` is a filter over todo statuses, read by the view
+(`src/frontend/src/components/todo-view-card-logic.ts:43`), not card state.
+It is renamed `todo-status` so the reserved-name check can cover it.
+
+**Generic `status` readers go too.** The Browse listing loads `status` from
+every card (`src/webapp/routes/api/register/browse.ts:134`) and puts it in
+the sidebar entry's label (`BrowseSidebarList.tsx:106`) and the directory
+accordion (`src/frontend/src/directory-listing.tsx:47`). This is a generic UI
+reader that rewards any type for having `status`; it is removed. The view
+authoring doc's example that filters on `frontmatter.status`
+(`src/core/views/doc/core.ts:146`) is rewritten to use a specific field.
+
+Nested step statuses inside procedure-run (`steps[].status`, precheck and
+validate results) are result values of a run record, read by the engine. They
+are not card state and are left alone.
+
+**Vocabulary lock-ins.** `outcome` (question, procedure-run); `delivered`,
+`annotated`, `closed`, `ready`, `archived`, `planned` booleans;
+`transcription-error`, `analysis-error`, `delivery-error`; `level`.
+
+**First chunk.** The dead and constant cases (memo excepted): file,
+pub-submission, email-thread, job cards, gsheet, email-outbound. Schema
+removal, reader changes, one migration that strips the field, tests. No open
+questions.
+
+### Track C — Split `source`
+
+**What.** `source` keeps only the derived-from meaning, as `sources`. Every
+other `source` gets its own name.
+
+**Why.** `source` has six meanings today, and the Properties panel shows all
+of them under one label.
+
+**Direction.**
+
+| Type | Meaning today | New field |
+|---|---|---|
+| webpage | original page URL (required string) | `sources: [{ href }]`, required, one entry |
+| recipe | `{label, href, ref}` | `sources: [...]` |
+| record | already `sources` | unchanged |
+| commentary | the annotated page URL | see *Open design questions* |
+| job cards | which code created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | `producer` |
+| media references (image, file, pdf, audio) | capture channel | `filename.via` |
+| feedback | `text` \| `voice` | `via` |
+| guide, personality | belief basis (`user-stated`, `inferred`, …) | `basis` |
+| browser-task | URL where scanning starts | `start-url` |
+| capture-session | the uploader token name | `uploader` |
+| scheduled-script | why the schedule exists | `reason` |
+| tab-arrangement | the captured tabs before rearranging | `captured-tabs` |
+| image `text[].source` | the surface the text is printed on | `surface` |
+| memo | capture channel | removed with memo |
+
+`CardFacts` stops showing `source`. Frontend readers that change with it:
+`WebpageView.tsx:27` (`source` → `sources`), `RecipeView.tsx:31`,
+`BrowserTaskView.tsx:172` (reads `status` and `source`),
+`TabArrangementView.tsx:257`, `PdfCardView` via `src/frontend/src/lib/pdf-card.ts:142`
+(`filename.source` → `filename.via`), and `src/core/triage/snapshot.ts:75`
+(guide `source` → `basis` in the compiled policy text). Each reads both names
+during the settling period.
+
+**Vocabulary lock-ins.** `sources`, `producer`, `via`, `basis`, `start-url`,
+`uploader`, `reason`, `captured-tabs`, `surface`.
+
+**First chunk.** Job `source` → `producer`, including `findJobCards`'
+`sourceFilter` parameter and the job filename. It is the widest reader set
+and has no open questions.
+
+### Track D — Timestamps and source-metadata keys
+
+**What.** Remove `created`, `date`, `modified` as card fields. External
+metadata moves under a key named for its system.
+
+**Why.** `created` is written from the clock at card creation
+(`memo.ts:111`, `pub-submission` via `getBoxTime`), which git already records.
+`date` and `modified` read as box facts but are copied from external systems.
+
+**Direction.**
+- `pub-submission.created` removed; `submitted-at` already holds the external
+  event time.
+- Guide/personality observation `date` removed (free text, no reader).
+- `audio.filename.recorded` → `filename.captured`, so every media reference
+  uses one name.
+- **`email:`** on email-message holds the header data: `message-id`,
+  `thread-id`, `from`, `to`, `cc`, `subject`, `received` (was `date`, which is
+  Gmail's `internalDate`, the arrival time — `src/connectors/gmail/mime.ts:206-226`).
+  email-thread's `subject`, `participants`, `date-range`, `labels` move under
+  `email:` the same way.
+- **`drive:`** on gdoc, gsheet, gfolder holds `id` (was `drive-id`), `link`,
+  `owner`, `modified` (Drive's `modifiedTime`), and `sync`. `bbx drive status`
+  stops labelling `modified` as "Last synced".
+- `CardFacts` stops showing `created`. The search index drops its `created`
+  column.
+- memo's `created` goes with the memo retirement.
+
+**Vocabulary lock-ins.** `email`, `drive` keys; `filename.captured`
+everywhere; `email.received`.
+
+**First chunk.** The deletions: `pub-submission.created`, observation `date`,
+search `created`, `CardFacts` created/source, audio `recorded` → `captured`.
+
+### Track E — `summary` and `description`
+
+**Direction.**
+- `audio.summary` removed; the transcriber (`transcribe-clips.ts:119`) stops
+  writing it. Nothing reads it.
+- `description` gets one written definition in `docs/cards/schemas.md` and the
+  bbx-guide-schemas skill: *what the card's subject is or does, for someone who
+  has not opened it.* Existing uses fit: an image's depiction, a procedure's,
+  schedule's or job's purpose, a record's object, a recipe's blurb, a file's
+  or PDF's subject. A type may narrow this in its own field doc.
+- `contains-evidence` stays global. In practice only chat cards carry it, but
+  `setDerivedContains` (`src/core/search/contains-update.ts:87-143`) writes it
+  for any card through `bbx contains update`, and connector rewrites preserve
+  it generically (`src/preserve-agent-fields.ts:15`).
+- `contains` is unchanged. The existing search fallback from `description` to
+  `contains` for image and file (`extract/core.ts:72-75`) is kept; changing it
+  is out of scope.
+
+### Track F — One title resolver
+
+**What.** Search and listings resolve a card's title the same way.
+
+**Why.** Listings use `title:`, else the type's `summarize`, else the file
+name (`src/core/loader-registry.ts:31-46,97`). Search has its own per-type
+fallbacks (`extract/core.ts:236-290`): email uses `subject`, person and record
+use `name`. So an email thread lists under its file name but is found under
+its subject. Separately, memo and image `summarize` replace an explicit
+`title:` with body or description text.
+
+**Direction.**
+- Search takes its title from the card summary, not from its own fold.
+- email-message, email-thread, person, record declare `summarize` to derive
+  their title from `email.subject` or `name`.
+- An explicit `title:` always wins in `summarize` (fix memo and image).
+- `title` stays optional. No type becomes title-required beyond the four that
+  already are.
+
+## Could this be simpler?
+
+The simplest version is the *Smallest fix* above: delete dead fields and write
+the rule down. It fails on the case that started this review: the next schema
+adds `status` or `created`, and the prod box-local schemas show that this
+happens without a guard. Track A is what the rest depends on. Tracks B–D could
+each be smaller by renaming `status` to type-specific names without
+simplifying to presence fields; that keeps the same number of fields and the
+same filler (`delivered: false`, `transcribed: false`) under new names. The
+presence approach removes fields instead (principle: minimize invented
+concepts).
+
+## Subplans
+
+None. If the plan is split (see *Open design questions*), each part becomes its
+own plan, not a subplan.
+
+## Failure modes
+
+| What can fail | Test exists? | Handling exists? | Clear-or-silent? |
+|---|---|---|---|
+| A box-local schema declares `status`; if the check threw, the schema would be skipped at import | no | Track A: the check never throws; box-local problems are lint warnings | clear (warning) |
+| A migration misses a card type that has the old field; the card loads with the old key stripped in memory and its meaning lost | no | unknown-key lint warning (`card-lint/core.ts:395`) | clear, but only if someone reads lint |
+| The capture sweep reads `delivered: true` but an un-migrated session has `status: delivered`, so the sweep re-delivers it | no | settling-period read of the old field | silent without the dual read |
+| Job discovery filters by `producer` while an un-migrated job card has `source`; the job is never picked up | no | settling-period read | silent without the dual read |
+| The Gmail connector rewrites an email card in the old flat shape because a code path still builds it | no | connector doctests | clear if the doctest checks shape |
+| An agent writes `status:` by habit on a built-in type after migration | lint warns on the unknown key | yes | clear |
+| Search title for email changes from subject to summary title; if `summarize` is missing, the title becomes the file name | no | Track F adds `summarize` to those types | silent |
+| A stock template or seeded card changes shape (a procedure, a schedule default, a seeded person); boxes whose copy has no tracker entry park the update in `config/_template-updates/` instead of taking it (`src/core/install-template-file.ts:139,381`) | yes (tracker tests) | parking is the handling | silent to the boxholder unless someone checks parked updates |
+
+> **Critical gap:** settling-period reads. The sweep and job-discovery cases
+> are silent if a card is not migrated. Handling: every reader that switches
+> field reads both the old and new name until the deferred cleanup issue
+> removes the old read, and the migration runs before the new code ships to
+> prod (per `docs/cards/migrations.md`).
+
+## Agent-flow / user-flow edge cases
+
+- **Wrong field:** an agent writes `status: done` on a doc. ADDRESSED: lint
+  warns on the unknown key; the agent guide never mentions `status` after
+  Track B.
+- **Hand-edit drift:** the boxholder writes `source: https://…` on a recipe.
+  ADDRESSED by lint (unknown key); the recipe doc shows `sources`.
+- **Fabricated free-form value:** removing `status` removes the most common
+  one (`status: new` forever). ADDRESSED.
+- **Two agents on one card:** unchanged by this plan.
+- **Partial migration:** ADDRESSED by dual reads (Failure modes).
+- **Box-local schemas:** DEFERRED to each box's agent, prompted by the lint
+  warning. See *Open design questions*.
+- **Validation message UX:** each banned name's message says what to write
+  instead (Track A).
+
+## NOT in scope
+
+- **Retiring memo.** Its own issue; this plan leaves memo's fields until then,
+  except that memo stops being an exception to the guard only when it goes.
+- **What Properties shows.** Its own design session; this plan only removes
+  `created` and `source`.
+- **Making `title` required.** The boxholder declined. The four types that
+  already require it (doc, gdoc, gsheet, recipe) are left as they are; whether
+  to relax them is a separate question.
+- **`contains` adoption on bulk-ingested cards.** One real box has `contains`
+  on 2% of 578 records and 0 of 271 PDFs; backfill queues 25 per wakeup.
+  Worth an issue; not a field-design question.
+- **Per-type `name` fields** (person, record, procedure, place). They work as
+  data; Track F derives titles from them instead of renaming.
+- **Migrating box-local schemas.** Box content; each box's agent does it.
+- **The `description` → `contains` search fallback.** Kept as is.
+
+## Open design questions
+
+1. **Split into three plans?** Lean: yes. (1) Tracks A, E, F and the dead half
+   of B: small and safe. (2) The rest of B: `status` replacements. (3) Tracks C
+   and D: `source` and source-metadata keys, which touch the Gmail and Drive
+   connectors. Each ships separately; the guard's banned-name list grows as
+   each lands.
+2. **Experiments** (`proposed`, `active`, `successful`, `unsuccessful`,
+   `mixed`, `inconclusive`). This mixes a stage with a result. Lean: `active:
+   true` while running, `outcome:` once concluded, absent both = proposed.
+3. **commentary's URL.** The commentary annotates a page; it is not derived
+   from it. Lean: `about: { href }`, not `sources`.
+4. **Box-local schemas.** Lean: a lint warning plus a line in the box agent's
+   guide; no engine-driven migration. The alternative is an agent-applied
+   migration procedure.
+5. **Name choices.** `producer`, `via`, `basis`, `outcome`, `email`, `drive`
+   are proposals.
+
+## Knowledge audits
+
+New agent-facing facts: "no card has `status`; record the specific fact" and
+"derived-from goes in `sources`". Add `knows_directly` entries to
+`beebox/src/dev/knowledge-audits.yaml` for both, run against test1 after
+Track B and Track C land.
+
+## What will hold this after it ships
+
+- A unit test running `reservedFieldProblems` over the built-in registry, and
+  one per banned name on a fixture schema.
+- Per-type doctests already cover the readers that change (capture sweep,
+  question transitions, procedure engine, Gmail and Drive connectors); each
+  is updated in the track that changes its reader.
+- Each migration gets the harness's dry-run test with a fixture per old shape.
+- `bbx validate` on test1 after migration: zero unknown-key warnings.
+
+## Implementation order
+
+1. Track A first chunk (guard for global names, `requireTitle`).
+2. Track E, Track F.
+3. Track B dead and constant cases, with the strip migration.
+4. Track B live cases, one commit per type group, each with its migration and
+   dual reads.
+5. Track D deletions, then `email:` and `drive:` keys with connector changes.
+6. Track C, job `producer` first.
+7. Add each banned name to the guard as its last use is removed.
+8. Docs: `docs/cards/schemas.md` rule, bbx-guide-schemas skill, box-docs and
+   agent guide.
+9. Deferred issue for removing the dual reads.
+
+## Rollout shape
+
+Stock templates whose fields change need their old stock hashes added to
+`priorStockHashes`, so unmodified copies update in place instead of parking.
+After prod rollout, check `config/_template-updates/` on each box.
+
+Script migrations throughout (deterministic renames and strips), registered
+append-only, run on dev boxes and then prod before the code that stops reading
+old names. Done when: the registry test rejects every reserved name on built-in
+schemas; `bbx validate` on test1 and each prod box reports no built-in card
+with `status`, `created`, `date`, `modified`, `summary`, or `source`; the
+changed doctests pass; the two knowledge audits pass.
+
+## The rule for adding a field
+
+For `docs/cards/schemas.md` and the bbx-guide-schemas skill:
+
+1. **Name the consumer.** A new field names, in the same change, the query, UI
+   surface, or code that reads it. A field nothing reads is not added.
+2. **Reserved names are rejected.** Global field names, `status`, `created`,
+   `summary`, `date`, `modified`, `source`. A test rejects them on built-in schemas;
+   lint warns on box-local ones.
+3. **State is the fact itself.** Record the result (`transcript`), the failure
+   (`transcription-error`), or a specific boolean (`archived: true`), not a
+   lifecycle enum.
+4. **Times belong to media or external data.** A capture time goes on the
+   media reference (`filename.captured`). Data copied from an external system
+   goes under a key named for that system (`email:`, `drive:`, `exif:`).
+5. **Don't do a global field's job.** No per-type title or summary field.
+6. **`description` means what the subject is or does.** Narrow it for a type
+   only when necessary.

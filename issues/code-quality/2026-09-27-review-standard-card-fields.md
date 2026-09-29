@@ -1,6 +1,6 @@
 ---
 title: "Review the standard card fields: remove the ones that slipped in, and decide whether every card needs a title"
-workstream: unattached
+workstream: card-fields-review
 needs: [design]
 area: beebox
 labels: [cards, schema]
