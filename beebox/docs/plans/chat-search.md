@@ -105,16 +105,18 @@ rule for decisions with no external premise.
   path, anchor entry).
 - **Chat search index** (new): a second Orama index + manifest + lock in
   `.beebox/` (`chat-search-index.json`, `chat-search-manifest.json`,
-  `chat-search.lock`), same schema shape as the card index. It is NOT part of
-  `search-index.json`; it never loads on the card-search path.
+  `chat-search.lock`). It is NOT part of `search-index.json`; it never loads
+  on the card-search path. Implemented with its own small schema
+  (`chat-search/schema.ts`: `sessionId`, `anchor`, `title`, `content`,
+  `created`) rather than the card `SearchDoc` shape — the query layer needs
+  the session id on the document, and the card-only fields (`path`, `kind`,
+  `contains`, `contentHash`, `embedding`) would all be dead weight.
 - **Chat manifest entry** (new): keyed by session id; records engine, husk
   path, transcript mtime (Claude) or thread `updatedAt` (Codex), parsed
   `entryCount`, `docIds`. No embed state — text-only by decision.
-- **SearchDoc** (existing, `extract/core.ts:27`): reused verbatim as the chunk
-  document shape: `path` = husk path, `fragment` = anchor uuid, `kind` =
-  `"chat"`, `content` = chunk text, `created` = anchor entry timestamp. The
-  `embedding` field stays absent per doc, exactly like not-yet-embedded card
-  docs (`extract/core.ts:39`–44).
+- **Chat chunk doc id**: `<sessionId>#<anchorUuid>` — keyed on the SESSION id,
+  not the husk path, so a husk rename never orphans indexed chunks (the
+  session id is the husk's identity key, `schemas/chat.ts:25`–27).
 - **`m` deep-link param** (new): `?m=<entryUuid>` on `/chat`, one-shot like
   `companion` (`chat-route-search.ts:11`–13). NOT a persisted view state.
 
@@ -285,7 +287,7 @@ none.
 | Codex app-server down during refresh | Plan: degradation doctest | Planned: warn once, Claude-only refresh (mirrors `list/core.ts:141`) | Clear (warning in result payload) |
 | Chat-search lock held by another process | Plan: reuse stale-on-lock shape | Planned: serve persisted index + `stale: true` (mirrors `refresh/core.ts:93`–105) | Clear |
 | Transcript shrinks / is rewritten (compaction edit, resume after rewrite) | Plan: shrink-rebuild doctest | Planned: entry-count regression → rebuild session docs | Clear |
-| Husk renamed (doc ids embed the husk path) | Plan: manifest records husk path; change → rebuild | Planned | Clear |
+| Husk renamed (doc ids key on the session id, so renames don't orphan chunks) | Doctest: id stability across append (rename follows the same keying) | Needs none — ids are rename-stable by construction | Clear |
 | Corrupt index/manifest | Existing: `store.ts:96`/`manifest.ts:60` empty-restore rebuild | Planned (same code path) | Clear |
 | Marathon transcript blows up first build | Plan: chunk cap test | Planned: extraction streams entries; first build is one-time | Clear (query completes) |
 | Anchor entry not renderable after landing (edited out server-side) | Plan: reveal falls back to nearest loaded position | Planned | Clear (chat opens regardless) |
@@ -365,10 +367,15 @@ purely infrastructural plus UI.
 - Query decisions (dedupe, recency): extract as pure post-search functions
   and doctest them, the same seam `query/core.ts` already uses for its sort.
 - tRPC procedure: existing router doctest harness.
-- Panel behavior: component doctest per existing frontend patterns, plus a
-  browse pass on a test box (exhibit for the boxholder).
-- The scroll-reveal action: the `/dev/chat-scroll` scenario table gains a
-  reveal case (chat CLAUDE.md requires that harness after scroll changes).
+- Panel behavior and the deep-link reveal: browse-verified on the worktree
+  test box (exhibit for the boxholder; a 264-entry transcript opened at an
+  anchor outside the tail window and paged to it). No new
+  `/dev/chat-scroll` harness scenario was added: the reveal reuses the
+  controller's `anchorToTop` — the action the harness's send scenarios
+  already exercise — and the new logic is the React wiring around it, which
+  the harness does not model.
+- The chat CLAUDE.md scenario-table requirement applies to scroll-controller
+  changes; none were made (`scroll.ts` untouched).
 
 ## Implementation order
 
