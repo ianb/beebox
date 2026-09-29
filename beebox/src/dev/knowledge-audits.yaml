@@ -376,7 +376,7 @@ tests:
     expected_level: knows_directly
     watch_for: >
       Recognizes the box has no browser session and cannot read a private
-      Facebook group itself; sets up a browser-task card (prompt, source,
+      Facebook group itself; sets up a browser-task card (prompt, `start` URL,
       schema at attach/schema.json, a watermark) for someone with a logged-in
       browser to run, and names the drain procedure for filing. Does NOT
       propose fetching Facebook from the box or asking for credentials.

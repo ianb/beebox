@@ -239,15 +239,16 @@ readable rendering inline as the body.
 ```ts
 createWebpageTemplate({
   title: "Example Page",
-  source: "https://example.com/article",
+  url: "https://example.com/article",
   capturedAt: "2026-06-15T12:00:00Z",
   content: "The readable page body.",
 })
 =>
 ---
 title: Example Page
-source: https://example.com/article
-captured: 2026-06-15T12:00:00Z
+sources:
+  - href: https://example.com/article
+    retrieved: 2026-06-15T12:00:00Z
 ---
 The readable page body.
 ```
@@ -258,7 +259,7 @@ set:
 ```ts
 createWebpageTemplate({
   title: "Example Page",
-  source: "https://example.com/article",
+  url: "https://example.com/article",
   capturedAt: "2026-06-15T12:00:00Z",
   content: "Body.",
   siteName: "Example",
@@ -267,8 +268,9 @@ createWebpageTemplate({
 =>
 ---
 title: Example Page
-source: https://example.com/article
-captured: 2026-06-15T12:00:00Z
+sources:
+  - href: https://example.com/article
+    retrieved: 2026-06-15T12:00:00Z
 siteName: Example
 frozen:
   ref: attach/page.frozen

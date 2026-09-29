@@ -31,10 +31,19 @@ const messageFor = (fm: string): string => {
 ## An in-box source and a web source each validate
 
 ```ts
-const inBox = parse("status: draft\nname: Thing\nsources:\n  - ref: /_content/inbox/scan.pdf.card\n    note: the scan\n");
-const web = parse("status: draft\nname: Thing\nsources:\n  - href: https://example.com/notice\n    time: 2026-02-19T17:06:25Z\n");
+const inBox = parse("status: draft\nname: Thing\nsources:\n  - ref: /_content/inbox/talk.capture-session.card\n    pos: at 1:23\n    note: named here\n");
+const web = parse("status: draft\nname: Thing\nsources:\n  - href: https://example.com/notice\n    retrieved: 2026-02-19\n");
 JSON.stringify([inBox.fields["sources"], web.fields["sources"]])
-=> [[{"ref":"/_content/inbox/scan.pdf.card","note":"the scan"}],[{"href":"https://example.com/notice","time":"2026-02-19T17:06:25Z"}]]
+=> [[{"ref":"/_content/inbox/talk.capture-session.card","pos":"at 1:23","note":"named here"}],[{"href":"https://example.com/notice","retrieved":"2026-02-19"}]]
+```
+
+`pos` (where in the source) and `retrieved` (when a web page was read) are the
+`{% source %}` tag's names. As on the tag, `retrieved` goes with an `href`:
+
+```ts continue
+messageFor("status: draft\nname: Thing\nsources:\n  - ref: /_content/inbox/scan.pdf.card\n    retrieved: 2026-02-19\n")
+  .includes("a `sources` entry's `retrieved` is only valid with an external `href`")
+=> true
 ```
 
 ## An entry with neither, or both, is a schema error

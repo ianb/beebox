@@ -41,42 +41,42 @@ JSON.stringify(getTemplate("browser-task")?.defaultForTypes)
 Without a prompt the template emits the four-heading scaffold, and `limit` is data:
 
 ```ts
-const scaffolded = parseCardText(createBrowserTaskTemplate({ title: "Scan", source: "https://example.test/feed" }), { source: "Scan.browser-task.card", schemas });
+const scaffolded = parseCardText(createBrowserTaskTemplate({ title: "Scan", start: "https://example.test/feed" }), { source: "Scan.browser-task.card", schemas });
 JSON.stringify([...String(scaffolded.fields["body"]).matchAll(/^## (.+)$/gm)].map((m) => m[1]))
 => ["What to look for","What does not count","How far to go","What each record must contain"]
 
-const bounded = parseCardText("---\ntype: browser-task\nsource: https://x.test\nlimit:\n  posts: 40\n  since: 2025-01-01\n---\nx\n", { source: "B.browser-task.card", schemas });
+const bounded = parseCardText("---\ntype: browser-task\nstart:\n  href: https://x.test\nlimit:\n  posts: 40\n  since: 2025-01-01\n---\nx\n", { source: "B.browser-task.card", schemas });
 JSON.stringify(bounded.fields["limit"])
 => {"posts":40,"since":"2025-01-01"}
 
-parseCardText("---\ntype: browser-task\nsource: https://x.test\nlimit:\n  since: soon\n---\nx\n", { source: "B.browser-task.card", schemas })
+parseCardText("---\ntype: browser-task\nstart:\n  href: https://x.test\nlimit:\n  since: soon\n---\nx\n", { source: "B.browser-task.card", schemas })
 => throws CardIOError
 ```
 
 Cadence, subject, and scan history are fields too:
 
 ```ts
-const standing = parseCardText("---\ntype: browser-task\nsource: https://x.test\nrescan-after: P2W\nsubject:\n  ref: _content/people/Potter.person.card\nruns:\n  - batch: 20260912-213306-649a\n    at: 2026-09-12T21:40:00Z\n    scanned: 14\n    kept: 1\n    filed: 1\n    skipped: 0\n    reason: reached-watermark\n    stoppedAt: https://example.test/p/100\n---\nx\n", { source: "S.browser-task.card", schemas });
+const standing = parseCardText("---\ntype: browser-task\nstart:\n  href: https://x.test\nrescan-after: P2W\nsubject:\n  ref: _content/people/Potter.person.card\nruns:\n  - batch: 20260912-213306-649a\n    at: 2026-09-12T21:40:00Z\n    scanned: 14\n    kept: 1\n    filed: 1\n    skipped: 0\n    reason: reached-watermark\n    stoppedAt: https://example.test/p/100\n---\nx\n", { source: "S.browser-task.card", schemas });
 JSON.stringify([standing.fields["rescan-after"], standing.fields["subject"], (standing.fields["runs"] as unknown[]).length])
 => ["P2W",{"ref":"_content/people/Potter.person.card"},1]
 
-parseCardText("---\ntype: browser-task\nsource: https://x.test\nrescan-after: fortnightly\n---\nx\n", { source: "S.browser-task.card", schemas })
+parseCardText("---\ntype: browser-task\nstart:\n  href: https://x.test\nrescan-after: fortnightly\n---\nx\n", { source: "S.browser-task.card", schemas })
 => throws CardIOError
 ```
 
 The template emits an open task (no `closed`) with the prompt as the body:
 
 ```ts
-const text = createBrowserTaskTemplate({ title: "Pottery shows", source: "https://example.test/feed", prompt: "Find show announcements." });
+const text = createBrowserTaskTemplate({ title: "Pottery shows", start: "https://example.test/feed", prompt: "Find show announcements." });
 const parsed = parseCardText(text, { source: "Pottery.browser-task.card", schemas });
-JSON.stringify(["closed" in parsed.fields, parsed.fields["source"], String(parsed.fields["body"]).trim()])
-=> [false,"https://example.test/feed","Find show announcements."]
+JSON.stringify(["closed" in parsed.fields, parsed.fields["start"], String(parsed.fields["body"]).trim()])
+=> [false,{"href":"https://example.test/feed"},"Find show announcements."]
 ```
 
-`source` must be a URL and `last-upload` an instant:
+`start.href` must be a URL and `last-upload` an instant:
 
 ```ts
-parseCardText("---\ntype: browser-task\nsource: not a url\n---\nx\n", { source: "T.browser-task.card", schemas })
+parseCardText("---\ntype: browser-task\nstart:\n  href: not a url\n---\nx\n", { source: "T.browser-task.card", schemas })
 => throws CardIOError
 ```
 
@@ -86,7 +86,7 @@ The reader has a browser and no box. A link to a card, a box path, the
 briefing, or a `bbx` command is a warning at validate time, one per kind:
 
 ```ts
-const warn = (bodyText: string) => (BrowserTaskSchema.validate ? BrowserTaskSchema.validate({ fields: { source: "https://x.test", body: bodyText } }) : []).map((i) => `${i.severity}: ${i.message}`);
+const warn = (bodyText: string) => (BrowserTaskSchema.validate ? BrowserTaskSchema.validate({ fields: { start: { href: "https://x.test" }, body: bodyText } }) : []).map((i) => `${i.severity}: ${i.message}`);
 JSON.stringify(warn("Scan the page and record each show. See https://example.test/about for context."))
 => []
 

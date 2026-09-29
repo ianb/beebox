@@ -44,7 +44,8 @@ const FilenameEntry = z.object({
 });
 
 const TextBlock = z.object({
-  source: z.string().optional(),
+  // The surface the text is on: "whiteboard", "photo", "back".
+  surface: z.string().optional(),
   content: z.string(),
 });
 
@@ -129,8 +130,8 @@ Frontmatter fields:
 - \`creation:\` — optional free-text notes on how the image came to
   be. Only include when there's something worth recording. For
   AI-generated images (\`filename.via.channel: generated\`), use \`model: {modelId}\\nprompt: {prompt text}\`.
-- \`text:\` — array of \`{source?, content}\` entries with transcribed
-  text content from the image, if any. \`source\` describes what the
+- \`text:\` — array of \`{surface?, content}\` entries with transcribed
+  text content from the image, if any. \`surface\` describes what the
   text is on ("whiteboard", "business card", "printed page",
   "screen").
 - \`exif:\` — EXIF metadata extracted from the image file. Put the

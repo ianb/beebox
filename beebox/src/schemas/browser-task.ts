@@ -84,7 +84,7 @@ export const BrowserTaskSchema = cardSchema("browser-task", {
     // Set by the boxholder to stop submissions; absent means open.
     closed: z.boolean().optional(),
     // Where the executor starts: the feed, listing, or page to scan.
-    source: z.string().url(),
+    start: z.object({ href: z.string().url() }),
     // "Already recorded up to here" — a permalink or date the executor stops at.
     watermark: z.string().optional(),
     // The scan bound as data, so the drain can check coverage against it.
@@ -127,7 +127,8 @@ runs it. You never scan the source yourself; the box has no browser session.
 - \`closed: true\` — the task no longer accepts batches. Absent means open.
   Only the boxholder closes a task, usually in chat. Never close one because
   a scan came back empty.
-- \`source:\` — the URL the executor starts at. One task, one source.
+- \`start: { href }\` — the URL the executor starts at. One task, one
+  starting page.
 - \`watermark:\` — where "already recorded" ends: the newest permalink or
   date the last drain filed. The executor stops when it reaches it. Set it
   after each drain from the batch's \`coverage.stoppedAt\`, never from
@@ -236,7 +237,7 @@ interruption skips indices already in \`filed.json\`.`,
 export interface BrowserTaskFields {
   type: "browser-task";
   closed?: boolean;
-  source: string;
+  start: { href: string };
   watermark?: string;
   "last-upload"?: string;
   body: string;
@@ -271,11 +272,11 @@ or a date floor; and the watermark to stop at>
 does not supply it; which source wins when dates conflict; the group label>
 `;
 
-export function createBrowserTaskTemplate(options: { title: string; source: string; prompt?: string }): string {
+export function createBrowserTaskTemplate(options: { title: string; start: string; prompt?: string }): string {
   const fields: Record<string, unknown> = {
     type: "browser-task",
     title: options.title,
-    source: options.source,
+    start: { href: options.start },
   };
   const bodyText = options.prompt ?? BROWSER_TASK_BODY_SCAFFOLD;
   return `---\n${stringifyYaml(fields)}---\n${bodyText.endsWith("\n") ? bodyText : `${bodyText}\n`}`;

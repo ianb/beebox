@@ -17,7 +17,8 @@ export interface BrowserTaskListItem {
   /** Box-relative card path. */
   path: string;
   title: string;
-  source: string;
+  /** The URL the executor starts at. */
+  start: string;
   closed: boolean;
   state: BrowserTaskState;
   inboxCount: number;
@@ -75,7 +76,7 @@ export async function listBrowserTasks(boxRoot: string, nowMs: number): Promise<
     items.push({
       path: cardRel,
       title: typeof fields["title"] === "string" ? fields["title"] : path.basename(cardRel, SUFFIX),
-      source: fields.source,
+      start: fields.start.href,
       closed: fields.closed === true,
       state: browserTaskState({ closed: fields.closed, lastUpload: fields["last-upload"], rescanAfter: fields["rescan-after"] }, nowMs),
       inboxCount,

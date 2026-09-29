@@ -73,11 +73,12 @@ export const CommentarySchema: CardSchema = cardSchema("commentary", {
     return commentaryErrors(typeof bodyText === "string" ? bodyText : "");
   },
   fields: {
-    // Captured-web-page metadata (set by the clerk capture flow): the original
-    // page URL, the capture date (YYYY-MM-DD), and an in-box ref to the frozen
-    // snapshot. Rendered as a header; all optional. `frozen` is a card ref —
-    // stored under a `ref` key like every other card reference.
-    source: z.string().optional(),
+    // Captured-web-page metadata: the page the commentary annotates (`about`,
+    // an external pointer — the commentary is about it, not derived from it),
+    // the capture date (YYYY-MM-DD), and an in-box ref to the frozen snapshot.
+    // Rendered as a header; all optional. The clerk capture flow puts these on
+    // the host webpage card instead, so current commentary cards omit them.
+    about: z.object({ href: z.string().url() }).optional(),
     captured: z.string().optional(),
     frozen: z.object({ ref: z.string() }).optional(),
     body: body(z.string()),

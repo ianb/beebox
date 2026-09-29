@@ -238,11 +238,11 @@ export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
     defaultForTypes: ["browser-task"],
     argsSchema: z.object({
       title: z.string().describe("Display title"),
-      source: z.string().url().describe("The URL the executor starts at"),
+      start: z.string().url().describe("The URL the executor starts at"),
       prompt: z.string().optional().describe("The prompt body; omit to get the four-heading scaffold to fill in"),
     }),
     generate: (args) => {
-      const opts: Parameters<typeof createBrowserTaskTemplate>[0] = { title: args.title, source: args.source };
+      const opts: Parameters<typeof createBrowserTaskTemplate>[0] = { title: args.title, start: args.start };
       if (args.prompt !== undefined) opts.prompt = args.prompt;
       return createBrowserTaskTemplate(opts);
     },

@@ -38,7 +38,7 @@ function refusal(type: string, fm: Record<string, unknown>): string {
 ## A type the migration doesn't handle is unchanged
 
 ```ts
-run("webpage", { title: "A page", source: "https://example.com/a" })
+run("doc", { title: "A page", source: "https://example.com/a" })
 => {"changed":false,"warnings":[],"fm":{"title":"A page","source":"https://example.com/a"}}
 ```
 
@@ -210,6 +210,97 @@ JSON.stringify(loaded)
 => ["gmail","telegram",[{"text":"A rule","confidence":"low","basis":"user-stated"}],"Why","scan-upload/desk"]
 ```
 
+## Pointers: webpage, recipe and record `sources`
+
+A webpage's page URL and capture instant become its one `sources` entry, in
+the place `source` held. The capture instant keeps its full precision; the
+view formats it:
+
+```ts
+migrateText("webpage", [
+  "title: A page",
+  "source: https://example.com/a",
+  "captured: 2026-07-09T14:00:15.000Z",
+  "siteName: Example",
+  "frozen:",
+  "  ref: attach/page.frozen",
+  "",
+].join("\n"))
+=>
+title: A page
+sources:
+  - href: https://example.com/a
+    retrieved: 2026-07-09T14:00:15.000Z
+siteName: Example
+frozen:
+  ref: attach/page.frozen
+
+run("webpage", { title: "Imported", source: "https://example.com/b" })
+=> {"changed":true,"warnings":[],"fm":{"title":"Imported","sources":[{"href":"https://example.com/b"}]}}
+```
+
+A recipe's `source` object becomes the one entry of `sources`; a label with
+nothing to point at stays a label:
+
+```ts
+run("recipe", { title: "Soup", source: { label: "Serious Eats", href: "https://example.com/soup" }, tags: ["soup"] })
+=> {"changed":true,"warnings":[],"fm":{"title":"Soup","sources":[{"label":"Serious Eats","href":"https://example.com/soup"}],"tags":["soup"]}}
+
+run("recipe", { title: "Pie", source: { label: "Grandma" } })
+=> {"changed":true,"warnings":[],"fm":{"title":"Pie","sources":[{"label":"Grandma"}]}}
+```
+
+A record `sources` entry's `time` is a moment in a transcript, which the
+`{% source %}` tag calls `pos`:
+
+```ts
+run("record", { name: "Couch", sources: [{ ref: "/_content/s.capture-session.card", time: "at 1:23", note: "Named here" }, { href: "https://example.com" }] })
+=> {"changed":true,"warnings":[],"fm":{"name":"Couch","sources":[{"ref":"/_content/s.capture-session.card","pos":"at 1:23","note":"Named here"},{"href":"https://example.com"}]}}
+```
+
+## Named fields: commentary, browser-task, tab-arrangement, image text
+
+```ts
+run("commentary", { title: "Notes", source: "https://example.com/a" })
+=> {"changed":true,"warnings":[],"fm":{"title":"Notes","about":{"href":"https://example.com/a"}}}
+
+run("browser-task", { title: "Guild", source: "https://example.com/feed", watermark: "2026-09-01" })
+=> {"changed":true,"warnings":[],"fm":{"title":"Guild","start":{"href":"https://example.com/feed"},"watermark":"2026-09-01"}}
+
+run("tab-arrangement", { "captured-at": "2026-08-01T00:00:00Z", source: { windows: [] }, proposal: { windows: [], close: [] } })
+=> {"changed":true,"warnings":[],"fm":{"captured-at":"2026-08-01T00:00:00Z","captured-tabs":{"windows":[]},"proposal":{"windows":[],"close":[]}}}
+```
+
+An image's text blocks rename `source` to `surface`, alongside its media
+reference's `via`:
+
+```ts
+run("image", { filename: { ref: "attach/p.jpg", captured: "2026-07-09T14:00:15Z", source: "scan-import" }, text: [{ source: "back", content: "May 72" }, { content: "EXIT" }] })
+=> {"changed":true,"warnings":[],"fm":{"filename":{"ref":"attach/p.jpg","via":{"channel":"scan-import","at":"2026-07-09T14:00:15Z"}},"text":[{"surface":"back","content":"May 72"},{"content":"EXIT"}]}}
+```
+
+Each migrated card loads under the current schemas:
+
+```ts
+const pointerSchemas = await createCardSchemaMap();
+const tabs = { windows: [{ id: "8f0e7c4e-8d3c-4b8e-9b1a-1c2d3e4f5a6b", tabs: [{ id: "0b9e1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d", title: "A", url: "https://example.com/a", pinned: false }] }] };
+const pointerCards = [
+  ["x.webpage.card", "title: A page\nsource: https://example.com/a\ncaptured: 2026-07-09T14:00:15.000Z\n", "sources"],
+  ["x.recipe.card", "title: Pie\nsource:\n  label: Grandma\n", "sources"],
+  ["x.record.card", "name: Couch\nsources:\n  - ref: /x.capture-session.card\n    time: at 1:23\n", "sources"],
+  ["x.commentary.card", "source: https://example.com/a\n", "about"],
+  ["x.browser-task.card", "title: Guild\nsource: https://example.com/feed\n", "start"],
+  ["x.tab-arrangement.card", stringify({ "transfer-id": "5f3c2b1a-0e9d-4c8b-a7f6-e5d4c3b2a190", scope: "current-window", "captured-at": "2026-08-01T00:00:00Z", source: tabs, proposal: { windows: [{ id: tabs.windows[0].id, tabs: [tabs.windows[0].tabs[0].id] }], close: [] } }), "captured-tabs"],
+  ["x.image.card", "filename:\n  ref: attach/p.jpg\n  captured: 2026-07-09T14:00:15Z\n  source: scan\ntext:\n  - source: back\n    content: May 72\n", "text"],
+].map(([file, yaml, key]) => {
+  const type = file.replace(/^x\./, "").replace(/\.card$/, "");
+  const parsed = parseCardText(`---\n${migrateText(type, yaml)}---\n`, { source: file, schemas: pointerSchemas });
+  return parsed.fields[key];
+});
+JSON.stringify(pointerCards.map((value) => Object.keys(value)))
+=> [["0"],["0"],["0"],["href"],["href"],["windows"],["0"]]
+```
+
 ## A migrated card is unchanged
 
 ```ts
@@ -224,6 +315,12 @@ run("intake-job", { connector: "gmail", priority: "normal", description: "Triage
 
 run("personality", { tone: [{ text: "Warm", basis: "default" }] })
 => {"changed":false,"warnings":[],"fm":{"tone":[{"text":"Warm","basis":"default"}]}}
+
+run("webpage", { title: "A page", sources: [{ href: "https://example.com/a", retrieved: "2026-07-09T14:00:15.000Z" }] })
+=> {"changed":false,"warnings":[],"fm":{"title":"A page","sources":[{"href":"https://example.com/a","retrieved":"2026-07-09T14:00:15.000Z"}]}}
+
+run("browser-task", { title: "Guild", start: { href: "https://example.com/feed" } })
+=> {"changed":false,"warnings":[],"fm":{"title":"Guild","start":{"href":"https://example.com/feed"}}}
 ```
 
 ## A card the migration cannot convert safely is refused
@@ -249,4 +346,25 @@ refusal("intake-job", { source: "gmail", connector: "gmail" })
 
 refusal("guide", { "triage-rules": [{ text: "A rule", source: "inferred", basis: "user-stated" }] })
 => UnmappedFieldError: guide triage-rules.0.source has both the old and the new keys; migrate this card by hand
+
+refusal("webpage", { source: "https://example.com/a", sources: [{ href: "https://example.com/a" }] })
+=> UnmappedFieldError: webpage source has both the old and the new keys; migrate this card by hand
+
+refusal("webpage", { captured: "2026-07-09T14:00:15Z", sources: [{ href: "https://example.com/a" }] })
+=> UnmappedFieldError: webpage captured has both the old and the new keys; migrate this card by hand
+
+refusal("webpage", { title: "A page", captured: "2026-07-09T14:00:15Z" })
+=> UnmappedFieldError: webpage captured is missing a key the new shape requires; migrate this card by hand
+
+refusal("recipe", { title: "Soup", source: { href: "https://example.com/soup", ref: "attach/soup.webpage.card" } })
+=> UnmappedFieldError: recipe source has both `ref` and `href`, and the new shape takes one; migrate this card by hand
+
+refusal("recipe", { title: "Soup", source: "Grandma" })
+=> UnmappedFieldError: recipe source is not a map; migrate this card by hand
+
+refusal("browser-task", { source: "https://example.com/a", start: { href: "https://example.com/b" } })
+=> UnmappedFieldError: browser-task source has both the old and the new keys; migrate this card by hand
+
+refusal("record", { sources: [{ ref: "/x.card", time: "at 1:23", pos: "at 1:24" }] })
+=> UnmappedFieldError: record sources.0.time has both the old and the new keys; migrate this card by hand
 ```

@@ -43,12 +43,13 @@ export class UnmappedStatusError extends Error {
 }
 
 /** What is wrong with a card's fields, for {@link UnmappedFieldError}. */
-type FieldProblem = "old-and-new" | "not-a-map" | "incomplete";
+type FieldProblem = "old-and-new" | "not-a-map" | "incomplete" | "two-pointers";
 
 const FIELD_PROBLEM_TEXT: Readonly<Record<FieldProblem, string>> = {
   "old-and-new": "has both the old and the new keys",
   "not-a-map": "is not a map",
   incomplete: "is missing a key the new shape requires",
+  "two-pointers": "has both `ref` and `href`, and the new shape takes one",
 };
 
 /**

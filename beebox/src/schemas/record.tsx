@@ -12,30 +12,7 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
-
-/**
- * Where a record's claim came from. A source is either an in-box card
- * (`ref:`) or a page on the web (`href:`) — the same exclusive pair the
- * `{% source %}` tag takes, so the two vocabularies agree. Before `href`
- * existed, a web source was written as a URL in `ref:`, which the ref walk
- * then reported as a missing file.
- */
-const SourceEntry = z
-  .object({
-    ref: z.string().optional(),
-    href: z.string().optional(),
-    time: z.string().optional(),
-    note: z.string().optional(),
-  })
-  .superRefine((entry, ctx) => {
-    const hasRef = entry.ref !== undefined && entry.ref !== "";
-    const hasHref = entry.href !== undefined && entry.href !== "";
-    if (hasRef && hasHref) {
-      ctx.addIssue({ code: "custom", message: "a `sources` entry takes exactly one of `ref` or `href`, not both" });
-    } else if (!hasRef && !hasHref) {
-      ctx.addIssue({ code: "custom", message: "a `sources` entry requires exactly one of `ref` or `href`" });
-    }
-  });
+import { SourcesEntrySchema } from "../cards/sources-entry.js";
 
 const DateEntry = z.object({
   value: z.string(),
@@ -69,7 +46,7 @@ export const RecordSchema = cardSchema("record", {
     reviewed: z.boolean().optional(),
     archived: z.boolean().optional(),
     description: z.string().optional(),
-    sources: z.array(SourceEntry).optional(),
+    sources: z.array(SourcesEntrySchema).optional(),
     dates: z.array(DateEntry).optional(),
     persons: z.array(PersonEntry).optional(),
     location: LocationEntry.optional(),
@@ -95,11 +72,13 @@ identifiable thing.
 - \`description:\` — About the thing — context, what it is, its
   condition, why it matters. This describes the record; it doesn't
   contain the content itself.
-- \`sources:\` — Array of \`{ref | href, time?, note?}\` pointing at where this
-  record was extracted from — usually a capture-session card elsewhere
-  in the box, so a box-root-absolute \`ref\` (leading \`/\`) reads clearest
-  here. The optional \`time\` pinpoints a moment in a transcript; the
-  \`note\` explains why this source is relevant.
+- \`sources:\` — Array of \`{ref | href, pos?, retrieved?, note?}\` pointing
+  at where this record was extracted from — usually a capture-session card
+  elsewhere in the box, so a box-root-absolute \`ref\` (leading \`/\`) reads
+  clearest here; a web page is an \`href\`. The optional \`pos\` pinpoints
+  where in the source (a moment in a transcript, a page); \`retrieved\` is
+  the date a web page was read; the \`note\` explains why this source is
+  relevant. Same attributes as the \`{% source %}\` tag.
 - \`dates:\` — Array of \`{value, note?}\`. Parseable date strings
   with context ("Year purchased", "Date of letter").
 - \`persons:\` — Array of \`{name, ref?, role?, notes?, note?}\`.

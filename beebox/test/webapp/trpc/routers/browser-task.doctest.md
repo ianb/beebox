@@ -24,7 +24,7 @@ function caller(boxRoot: string, options?: { isOwner?: boolean }) {
 
 const box = await makeTmpBox({ git: true });
 const cardPath = "_content/tasks/Task.browser-task.card";
-await box.write(cardPath, createBrowserTaskTemplate({ title: "Scan", source: "https://example.test/feed", prompt: "Find shows.\n" }));
+await box.write(cardPath, createBrowserTaskTemplate({ title: "Scan", start: "https://example.test/feed", prompt: "Find shows.\n" }));
 await box.write("_content/notes/Note.memo.card", "---\ntype: memo\nstatus: new\ncreated: 2026-09-12T00:00:00Z\n---\nA memo.\n");
 box.commitAll("seed");
 ```
@@ -51,7 +51,7 @@ The body and the other fields survive the round trip:
 
 ```ts continue
 const after = await box.read(cardPath);
-JSON.stringify([after.includes("source: https://example.test/feed"), after.trim().endsWith("Find shows.")])
+JSON.stringify([after.includes("start:\n  href: https://example.test/feed\n"), after.trim().endsWith("Find shows.")])
 => [true,true]
 ```
 
@@ -61,7 +61,7 @@ JSON.stringify([after.includes("source: https://example.test/feed"), after.trim(
 lifecycle state; the dashboard shows the due and never-scanned ones.
 
 ```ts continue
-await box.write("_content/tasks/Weekly.browser-task.card", "---\ntype: browser-task\ntitle: Weekly feed\nsource: https://example.test/w\nrescan-after: P7D\nlast-upload: 2020-01-01T00:00:00Z\n---\nScan it.\n");
+await box.write("_content/tasks/Weekly.browser-task.card", "---\ntype: browser-task\ntitle: Weekly feed\nstart:\n  href: https://example.test/w\nrescan-after: P7D\nlast-upload: 2020-01-01T00:00:00Z\n---\nScan it.\n");
 box.commitAll("seed weekly");
 const listed = await caller(box.root).browserTask.list();
 JSON.stringify(listed.items.map((t) => [t.path, t.title, t.closed, t.state.kind, t.inboxCount, t.runCount]))

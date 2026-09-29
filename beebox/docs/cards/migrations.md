@@ -582,11 +582,23 @@ Part 3 of `docs/plans/standard-card-fields.md`. Per type:
   and `traits[]`: each entry's `source` becomes `basis`.
 - scheduled-script: `source` becomes `reason`.
 - capture-session: `source` becomes `uploader`.
+- record `sources[]`: `time` (a moment in a transcript) becomes `pos`, the
+  `{% source %}` tag's locator.
+- webpage: `source` (the page URL) and `captured` (the capture instant)
+  become `sources: [{ href, retrieved }]` (no `retrieved` when there was no
+  `captured`).
+- recipe: the `source` object becomes the one entry of `sources`.
+- commentary: `source` (the annotated page) becomes `about: { href }`.
+- browser-task: `source` (the start URL) becomes `start: { href }`.
+- tab-arrangement: `source` (the captured tabs) becomes `captured-tabs`.
+- image `text[]`: each entry's `source` (the surface the text is on) becomes
+  `surface`.
 
 Renamed keys keep their place. A card is failed, unchanged, when its
 `filename` is not a map, when it has both an old key and its new name (at any
-of the places above), or when a media reference has only one of the two old
-keys. A card keeps its line wrapping (see `applyFieldEdits`), so an unedited
+of the places above), when a media reference has only one of the two old
+keys, when a webpage has `captured` but no `source`, or when a recipe's
+`source` is not a map or has both `href` and `ref`. A card keeps its line wrapping (see `applyFieldEdits`), so an unedited
 stock guide, personality or schedule becomes exactly the current template.
 Idempotent. See
 `src/scripts/migrate/source-fields.ts`.

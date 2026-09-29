@@ -112,7 +112,7 @@ export const clerkRouter = router({
             fields?.["transfer-id"] === input.transferId &&
             fields["scope"] === input.scope &&
             fields["captured-at"] === input.capturedAt &&
-            JSON.stringify(fields["source"]) === JSON.stringify(input.source);
+            JSON.stringify(fields["captured-tabs"]) === JSON.stringify(input.source);
           if (!sameImmutablePayload) {
             throw new TRPCError({ code: "CONFLICT", message: "Tab transfer ID already belongs to different content" });
           }
@@ -176,7 +176,7 @@ async function writeWebpageCard(opts: {
   const hasFrozen = typeof frozen === "string" && frozen !== "";
   const card = createWebpageTemplate({
     title: opts.title,
-    source: opts.url,
+    url: opts.url,
     capturedAt: opts.capturedAt,
     content: opts.markdown,
     siteName: opts.siteName,

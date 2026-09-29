@@ -1,7 +1,8 @@
 #!/usr/bin/env tsx
 /**
- * Give each non-derived-from `source` its own name, and move acquisition
- * times onto the media reference (part 3 of docs/plans/standard-card-fields.md).
+ * Give each non-derived-from `source` its own name, move acquisition times
+ * onto the media reference, and put derived-from pointers in `sources` (part 3
+ * of docs/plans/standard-card-fields.md).
  * Each card type's planner below says what its old keys become; a card the
  * planner cannot convert safely fails, unchanged ({@link UnmappedFieldError}).
  *
@@ -80,11 +81,16 @@ function renameTopLevelPlanner({ type, from, to }: { type: string; from: string;
 }
 
 /**
- * A planner that renames `source` to `basis` on every entry of the belief
- * lists at `listPaths` (each a key path to an array of maps). A list or entry
- * of another shape is left alone; the schema reports it.
+ * A planner that renames `from` to `to` on every entry of the lists at
+ * `listPaths` (each a key path to an array of maps). A list or entry of
+ * another shape is left alone; the schema reports it.
  */
-function beliefBasisPlanner({ type, listPaths }: { type: string; listPaths: ReadonlyArray<readonly string[]> }): Planner {
+function listEntryRenamePlanner({ type, listPaths, from, to }: {
+  type: string;
+  listPaths: ReadonlyArray<readonly string[]>;
+  from: string;
+  to: string;
+}): Planner {
   return (fm) => {
     const edits: FieldEdit[] = [];
     for (const listPath of listPaths) {
@@ -92,11 +98,16 @@ function beliefBasisPlanner({ type, listPaths }: { type: string; listPaths: Read
       if (!Array.isArray(list)) continue;
       for (const [i, entry] of list.entries()) {
         if (!isRecord(entry)) continue;
-        edits.push(...renameKey({ type, map: entry, path: [...listPath, i], from: "source", to: "basis" }));
+        edits.push(...renameKey({ type, map: entry, path: [...listPath, i], from, to }));
       }
     }
     return { edits, warnings: [] };
   };
+}
+
+/** Guide and personality belief lists: each entry's `source` becomes `basis`. */
+function beliefBasisPlanner({ type, listPaths }: { type: string; listPaths: ReadonlyArray<readonly string[]> }): Planner {
+  return listEntryRenamePlanner({ type, listPaths, from: "source", to: "basis" });
 }
 
 function valueAt(fm: Record<string, unknown>, keys: readonly string[]): unknown {
@@ -138,11 +149,76 @@ function planIntakeJob(fm: Record<string, unknown>): FieldEditPlan {
   return { edits: renameKey({ type: "intake-job", map: fm, path: [], from: "source", to: "connector" }), warnings: [] };
 }
 
+/** A planner that runs each of `planners` and joins their edits and warnings. */
+function allOf(...planners: Planner[]): Planner {
+  return (fm) => {
+    const plans = planners.map((planner) => planner(fm));
+    return { edits: plans.flatMap((p) => p.edits), warnings: plans.flatMap((p) => p.warnings) };
+  };
+}
+
+/**
+ * A planner that replaces top-level `from` with `to: wrap(value)`, where
+ * `from` was. A card with both keys is refused.
+ */
+function wrapTopLevelPlanner({ type, from, to, wrap }: {
+  type: string;
+  from: string;
+  to: string;
+  wrap: (value: unknown) => unknown;
+}): Planner {
+  return (fm) => {
+    if (!(from in fm)) return { edits: [], warnings: [] };
+    if (to in fm) throw new UnmappedFieldError({ type, field: from, problem: "old-and-new" });
+    const edits: FieldEdit[] = [
+      { op: "set", path: [to], value: wrap(fm[from]), after: from },
+      { op: "delete", path: [from] },
+    ];
+    return { edits, warnings: [] };
+  };
+}
+
+/**
+ * webpage: `source` (the page URL) and `captured` (the capture instant)
+ * become the one entry `sources: [{ href, retrieved }]`, where `source` was.
+ * A card with `sources` alongside either old key, or with `captured` but no
+ * `source`, is refused.
+ */
+function planWebpage(fm: Record<string, unknown>): FieldEditPlan {
+  const hasSource = "source" in fm;
+  const hasCaptured = "captured" in fm;
+  if (!hasSource && !hasCaptured) return { edits: [], warnings: [] };
+  if ("sources" in fm) throw new UnmappedFieldError({ type: "webpage", field: hasSource ? "source" : "captured", problem: "old-and-new" });
+  if (!hasSource) throw new UnmappedFieldError({ type: "webpage", field: "captured", problem: "incomplete" });
+  const entry: Record<string, unknown> = { href: fm["source"] };
+  if (hasCaptured) entry["retrieved"] = fm["captured"];
+  const edits: FieldEdit[] = [
+    { op: "set", path: ["sources"], value: [entry], after: "source" },
+    { op: "delete", path: ["source"] },
+    { op: "delete", path: ["captured"] },
+  ];
+  return { edits, warnings: [] };
+}
+
+/**
+ * recipe: the `source` object (`{ label?, href?, ref? }`) becomes the one
+ * entry of `sources`, where `source` was. A `source` that is not a map, or
+ * that has both `href` and `ref`, is refused.
+ */
+function planRecipe(fm: Record<string, unknown>): FieldEditPlan {
+  if (!("source" in fm)) return { edits: [], warnings: [] };
+  const source = fm["source"];
+  if (!isRecord(source)) throw new UnmappedFieldError({ type: "recipe", field: "source", problem: "not-a-map" });
+  if ("href" in source && "ref" in source) throw new UnmappedFieldError({ type: "recipe", field: "source", problem: "two-pointers" });
+  return wrapTopLevelPlanner({ type: "recipe", from: "source", to: "sources", wrap: (value) => [value] })(fm);
+}
+
 /**
  * Per card type: the edits that retire its old keys.
  *
  * - image, file, pdf: `filename.captured` becomes `filename.via.at` and
- *   `filename.source` becomes `filename.via.channel`.
+ *   `filename.source` becomes `filename.via.channel`. An image's `text[]`
+ *   entries rename `source` (the surface the text is on) to `surface`.
  * - audio: the same, from `filename.recorded`.
  * - feedback: `source` becomes `via.channel`.
  * - contains-backfill-job, question-followup-job, todo-review-job: the
@@ -153,9 +229,18 @@ function planIntakeJob(fm: Record<string, unknown>): FieldEditPlan {
  *   and `traits[]`: `source` becomes `basis`.
  * - scheduled-script: `source` becomes `reason`.
  * - capture-session: `source` becomes `uploader`.
+ * - record `sources[]`: `time` (a moment in a transcript) becomes `pos`.
+ * - webpage: see {@link planWebpage}.
+ * - recipe: see {@link planRecipe}.
+ * - commentary: `source` (the annotated page's URL) becomes `about: { href }`.
+ * - browser-task: `source` (the start URL) becomes `start: { href }`.
+ * - tab-arrangement: `source` (the captured tabs) becomes `captured-tabs`.
  */
 const PLANNERS: Readonly<Record<string, Planner>> = {
-  image: mediaViaPlanner({ type: "image", timeKey: "captured" }),
+  image: allOf(
+    mediaViaPlanner({ type: "image", timeKey: "captured" }),
+    listEntryRenamePlanner({ type: "image", listPaths: [["text"]], from: "source", to: "surface" }),
+  ),
   file: mediaViaPlanner({ type: "file", timeKey: "captured" }),
   pdf: mediaViaPlanner({ type: "pdf", timeKey: "captured" }),
   audio: mediaViaPlanner({ type: "audio", timeKey: "recorded" }),
@@ -172,6 +257,12 @@ const PLANNERS: Readonly<Record<string, Planner>> = {
   }),
   "scheduled-script": renameTopLevelPlanner({ type: "scheduled-script", from: "source", to: "reason" }),
   "capture-session": renameTopLevelPlanner({ type: "capture-session", from: "source", to: "uploader" }),
+  record: listEntryRenamePlanner({ type: "record", listPaths: [["sources"]], from: "time", to: "pos" }),
+  webpage: planWebpage,
+  recipe: planRecipe,
+  commentary: wrapTopLevelPlanner({ type: "commentary", from: "source", to: "about", wrap: (href) => ({ href }) }),
+  "browser-task": wrapTopLevelPlanner({ type: "browser-task", from: "source", to: "start", wrap: (href) => ({ href }) }),
+  "tab-arrangement": renameTopLevelPlanner({ type: "tab-arrangement", from: "source", to: "captured-tabs" }),
 };
 
 /** The edits this migration makes to one card of `type`; none for a type it doesn't handle. */

@@ -21,7 +21,7 @@ interface ArrangementData {
   transferId: string;
   /** The boxholder agreed the proposal; only then can it be applied. */
   ready: boolean;
-  source: { windows: Array<{ id: string; tabs: CapturedTab[] }> };
+  capturedTabs: { windows: Array<{ id: string; tabs: CapturedTab[] }> };
   proposal: { windows: Array<{ id: string; tabs: string[] }>; close: string[] };
 }
 
@@ -71,7 +71,7 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
     });
   }, []);
 
-  const tabs = new Map(arrangement.source.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab]));
+  const tabs = new Map(arrangement.capturedTabs.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab]));
   const deleted = new Set(proposal.close);
   const remainingCount = tabs.size - deleted.size;
   const canApply = arrangement.ready && relay?.ok === true && relay.state === "ready";
@@ -188,13 +188,13 @@ function TabRow(props: {
 
 function normalizeProposal(arrangement: ArrangementData): ArrangementData["proposal"] {
   const arranged = new Set(arrangement.proposal.windows.flatMap((window) => window.tabs));
-  const sourceIds = arrangement.source.windows.flatMap((window) => window.tabs.map((tab) => tab.id));
+  const sourceIds = arrangement.capturedTabs.windows.flatMap((window) => window.tabs.map((tab) => tab.id));
   if (sourceIds.every((id) => arranged.has(id))) return arrangement.proposal;
 
   const windows = arrangement.proposal.windows.map((window) => ({ ...window, tabs: [...window.tabs] }));
   const survivorIds = new Set(windows.flatMap((window) => window.tabs));
   const deleted = new Set(arrangement.proposal.close);
-  for (const sourceWindow of arrangement.source.windows) {
+  for (const sourceWindow of arrangement.capturedTabs.windows) {
     const ids = sourceWindow.tabs.map((tab) => tab.id);
     for (const id of ids) {
       if (!deleted.has(id) || windows.some((window) => window.tabs.includes(id))) continue;
@@ -202,7 +202,7 @@ function normalizeProposal(arrangement: ArrangementData): ArrangementData["propo
       insertNearNeighbors({ tabs: target.tabs, id, sourceIds: ids });
     }
   }
-  const pinned = new Map(arrangement.source.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab.pinned]));
+  const pinned = new Map(arrangement.capturedTabs.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab.pinned]));
   for (const window of windows) {
     window.tabs = [
       ...window.tabs.filter((id) => pinned.get(id) === true),
@@ -259,15 +259,15 @@ function parseArrangement(frontmatter: Record<string, unknown> | undefined): Arr
   if (frontmatter === undefined) return null;
   const transferId = frontmatter["transfer-id"];
   const ready = frontmatter["ready"] ?? false;
-  const source = parseSource(frontmatter["source"]);
+  const capturedTabs = parseCapturedTabs(frontmatter["captured-tabs"]);
   const proposal = parseProposal(frontmatter["proposal"]);
-  if (typeof transferId !== "string" || typeof ready !== "boolean" || source === null || proposal === null) return null;
-  return { transferId, ready, source, proposal };
+  if (typeof transferId !== "string" || typeof ready !== "boolean" || capturedTabs === null || proposal === null) return null;
+  return { transferId, ready, capturedTabs, proposal };
 }
 
-function parseSource(value: unknown): ArrangementData["source"] | null {
+function parseCapturedTabs(value: unknown): ArrangementData["capturedTabs"] | null {
   if (!isObject(value) || !Array.isArray(value.windows)) return null;
-  const windows: ArrangementData["source"]["windows"] = [];
+  const windows: ArrangementData["capturedTabs"]["windows"] = [];
   for (const rawWindow of value.windows) {
     if (!isObject(rawWindow) || typeof rawWindow.id !== "string" || !Array.isArray(rawWindow.tabs)) return null;
     const tabs: CapturedTab[] = [];

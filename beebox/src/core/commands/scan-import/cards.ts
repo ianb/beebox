@@ -232,10 +232,11 @@ async function applyBundleAnalysisToCard(
   const photo = bundle.photo;
   const back = bundle.back;
 
-  // The image schema's `text` field is an array of { source, content }.
-  const photoTextBlocks = photo.text_blocks.map((b) => ({ source: b.source || "photo", content: b.text }));
+  // The image schema's `text` field is an array of { surface, content }; the
+  // analyzer calls the surface `source`.
+  const photoTextBlocks = photo.text_blocks.map((b) => ({ surface: b.source || "photo", content: b.text }));
   const backTextBlocks = back
-    ? back.text_blocks.map((b) => ({ source: b.source || "back", content: b.text }))
+    ? back.text_blocks.map((b) => ({ surface: b.source || "back", content: b.text }))
     : [];
   const allTextBlocks = [...photoTextBlocks, ...backTextBlocks];
 

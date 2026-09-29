@@ -157,8 +157,9 @@ already holds camera metadata under the name of its origin.
   (`src/shared/markdoc-config/core.ts:163-190`). Where an entry attribute
   means what a tag attribute means, it uses the tag's name: `retrieved`,
   `usage`. Two attributes exist only in frontmatter: `label` (display text,
-  from recipe) and `note`. record's `time` becomes `retrieved`. Not a producer, a
-  channel, or a basis.
+  from recipe) and `note`. record's `time` becomes `pos`: its values are
+  moments in a transcript ("at 1:23"), the tag's locator, not a retrieval date.
+  Not a producer, a channel, or a basis.
 - **Pointer** — `{ ref }` for a box path, `{ href }` for a URL. Every field
   that points somewhere uses one of these two shapes, never a bare string.
 - **Media reference** — the `filename:` object that points at a card's
@@ -301,20 +302,20 @@ of them under one label.
 
 | Type | Meaning today | New field |
 |---|---|---|
-| webpage | original page URL (required string); written by the clerk (`src/webapp/trpc/routers/clerk.ts:177-185`) and the share router (`share/router.ts:50-57`) | `sources: [{ href }]`, required, one entry |
-| recipe | `{label, href, ref}` | `sources: [...]` |
-| record | already `sources` | unchanged |
-| commentary | the annotated page URL | `about: { href }`; the commentary annotates the page, it is not derived from it |
+| webpage | original page URL (required string); written by the clerk (`src/webapp/trpc/routers/clerk.ts:177-185`) and the share router (`share/router.ts:50-57`) | `sources: [{ href, retrieved }]`, required, one entry; `retrieved` is the capture instant, which replaces `captured` (built) |
+| recipe | `{label, href, ref}` | `sources: [...]`; an entry may be a `label` alone (a cookbook, a person) (built) |
+| record | already `sources` | entry `time` becomes `pos` (built) |
+| commentary | the annotated page URL | `about: { href }`; the commentary annotates the page, it is not derived from it (built) |
 | contains-backfill-job, question-followup-job, todo-review-job | a constant: each type has exactly one producer; backfill uses it to avoid queuing a second job (`src/cli/commands/wakeup/steps.ts:384,436`) | removed; that check looks up pending jobs by type instead (built) |
 | chat-job, intake-job | which connector or step created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | `connector: <name>` when a connector-scoped run made the job; absent otherwise (see *Job routing* below) (built) |
 | media references (image, file, pdf, audio) | capture channel | `filename.via.channel` |
 | feedback | `text` \| `voice` | `via: { channel }` |
 | guide, personality | belief basis (`user-stated`, `inferred`, …) | `basis` (built) |
-| browser-task | URL where scanning starts | `start: { href }` |
+| browser-task | URL where scanning starts | `start: { href }` (built) |
 | capture-session | the uploader token name | `uploader` (built) |
 | scheduled-script | why the schedule exists | `reason` (built) |
-| tab-arrangement | the captured tabs before rearranging | `captured-tabs` |
-| image `text[].source` | the surface the text is printed on | `surface` |
+| tab-arrangement | the captured tabs before rearranging | `captured-tabs` (built) |
+| image `text[].source` | the surface the text is printed on | `surface` (built) |
 | memo | capture channel | removed with memo |
 
 `CardFacts` stops showing `source`. Frontend readers that change with it:
