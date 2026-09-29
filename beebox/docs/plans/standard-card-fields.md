@@ -153,8 +153,11 @@ already holds camera metadata under the name of its origin.
   name, plus the banned names `status`, `created`, `summary`, `date`,
   `modified`. `source` is reserved too; the derived-from field is `sources`.
 - **`sources`** — what this card's content was derived from. An array of
-  `{ ref } | { href }` entries, with optional `label`, `note`, `time`. Same
-  meaning as the `{% source %}` tag, frontmatter form. Not a producer, a
+  `{ ref } | { href }` entries. Same meaning as the `{% source %}` tag
+  (`src/shared/markdoc-config/core.ts:163-190`). Where an entry attribute
+  means what a tag attribute means, it uses the tag's name: `retrieved`,
+  `usage`. Two attributes exist only in frontmatter: `label` (display text,
+  from recipe) and `note`. record's `time` becomes `retrieved`. Not a producer, a
   channel, or a basis.
 - **Pointer** — `{ ref }` for a box path, `{ href }` for a URL. Every field
   that points somewhere uses one of these two shapes, never a bare string.
@@ -255,7 +258,7 @@ email-thread. Where it works, it is a generic name for a specific fact.
 | gfolder | `ok`/`error`, stamped with `last-sync` (`src/connectors/google-drive/card-stamp.ts:52-57`) | `sync-error` holds the error; absent means the last sync succeeded |
 | question | `pending`/`answered`/`dismissed`/`expired`, real transitions | `outcome: answered \| dismissed \| expired`; absent means pending |
 | procedure-run | a checked state machine (`run-card.ts:111-149`) | `outcome: completed \| failed \| inconclusive`; `started-at` present and no `outcome` means running; neither means pending |
-| guide/personality experiments | agent-moved; compile keeps `active`/`proposed` | see *Open design questions* |
+| guide/personality experiments | `proposed`/`active`/`successful`/`unsuccessful`/`mixed`/`inconclusive`: a stage and a result in one field; agent-moved; compile keeps `active`/`proposed` (`guide/compile.tsx:64`, `personality/compile.ts:90`) | `active: true` while running; `outcome: successful \| unsuccessful \| mixed \| inconclusive` once concluded; neither means proposed |
 | lesson-plan segment | `planned`/`ready`; lint skips `planned` | `planned: true` |
 | progress entries | learner mastery (`partial`, `solid`), not a lifecycle | renamed `level` |
 
@@ -296,12 +299,12 @@ of them under one label.
 
 | Type | Meaning today | New field |
 |---|---|---|
-| webpage | original page URL (required string) | `sources: [{ href }]`, required, one entry |
+| webpage | original page URL (required string); written by the clerk (`src/webapp/trpc/routers/clerk.ts:177-185`) and the share router (`share/router.ts:50-57`) | `sources: [{ href }]`, required, one entry |
 | recipe | `{label, href, ref}` | `sources: [...]` |
 | record | already `sources` | unchanged |
 | commentary | the annotated page URL | `about: { href }`; the commentary annotates the page, it is not derived from it |
-| contains-backfill-job, question-followup-job, todo-review-job | a constant: each type has exactly one producer | removed; the job type says it |
-| chat-job, intake-job | which connector or step created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | `producer: { ref }` to the file that defines the producer (see *Open design questions*) |
+| contains-backfill-job, question-followup-job, todo-review-job | a constant: each type has exactly one producer; backfill uses it to avoid queuing a second job (`src/cli/commands/wakeup/steps.ts:384,436`) | removed; that check looks up pending jobs by type instead |
+| chat-job, intake-job | which connector or step created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | to be decided: `producer: { ref }` or `connector: <name>` (see *Open design questions*) |
 | media references (image, file, pdf, audio) | capture channel | `filename.via.channel` |
 | feedback | `text` \| `voice` | `via: { channel }` |
 | guide, personality | belief basis (`user-stated`, `inferred`, …) | `basis` |
@@ -320,7 +323,7 @@ of them under one label.
 (guide `source` → `basis` in the compiled policy text). Each reads both names
 during the settling period.
 
-**Vocabulary lock-ins.** `sources`, `producer`, `via`, `basis`, `start`,
+**Vocabulary lock-ins.** `sources`, `via`, `basis`, `start`,
 `about`, `uploader`, `reason`, `captured-tabs`, `surface`.
 
 **First chunk.** Remove `source` from the three single-producer job types, and
@@ -342,14 +345,22 @@ metadata moves under a key named for its system.
 - Guide/personality observation `date` removed (free text, no reader).
 - Media references take the `via` object: `filename.captured` and
   `filename.source` (and audio's `filename.recorded`) fold into
-  `filename.via.at` and `filename.via.channel`.
+  `filename.via.at` and `filename.via.channel`. Writers: capture
+  (`src/core/capture/prepare/write-cards.ts:105-109,142-146`), scan import
+  (`src/core/commands/scan-import/cards.ts:110-114`, `session.ts:75-84`,
+  `pdf.ts:111-143`), and scan promote (`src/core/scan/promote/core.ts:98`).
+  Readers: the capture timeline orders media by `filename.recorded` and
+  `filename.captured` (`src/core/capture/prepare/timeline.ts:99-120,140-150`)
+  and session time (`write-cards.ts:203`); both read old and new names during
+  the settling period.
 - **`email:`** on email-message holds the header data: `message-id`,
   `thread-id`, `from`, `to`, `cc`, `subject`, `received` (was `date`, which is
   Gmail's `internalDate`, the arrival time — `src/connectors/gmail/mime.ts:206-226`).
   email-thread's `subject`, `participants`, `date-range`, `labels` move under
   `email:` the same way.
 - **`drive:`** on gdoc, gsheet, gfolder holds `id` (was `drive-id`), `link`,
-  `owner`, `modified` (Drive's `modifiedTime`), and `sync`. `bbx drive status`
+  `owner`, and `modified` (Drive's `modifiedTime`). Sync state is not here;
+  it is connector state (Track B: `conflict`, `sync-error`). `bbx drive status`
   stops labelling `modified` as "Last synced".
 - `CardFacts` stops showing `created`. The search index drops its `created`
   column.
@@ -422,7 +433,8 @@ own plan, not a subplan.
 | A box-local schema declares `status`; if the check threw, the schema would be skipped at import | no | Track A: the check never throws; box-local problems are lint warnings | clear (warning) |
 | A migration misses a card type that has the old field; the card loads with the old key stripped in memory and its meaning lost | no | unknown-key lint warning (`card-lint/core.ts:395`) | clear, but only if someone reads lint |
 | The capture sweep reads `delivered: true` but an un-migrated session has `status: delivered`, so the sweep re-delivers it | no | settling-period read of the old field | silent without the dual read |
-| Job discovery filters by `producer` while an un-migrated job card has `source`; the job is never picked up | no | settling-period read | silent without the dual read |
+| Job discovery filters by the new routing field while an un-migrated job card has `source`; the job is never picked up | no | settling-period read | silent without the dual read |
+| The share router's retry finds an existing webpage card by `share-id` and compares its exact text with a freshly generated card (`src/webapp/trpc/routers/share/router.ts:60-66,103-117`); a card written in the old `source:` shape no longer matches, so a retry reports a conflict | no | no | clear (conflict), but wrong; the migration must run before the new writer ships, or the comparison normalizes the shape |
 | The Gmail connector rewrites an email card in the old flat shape because a code path still builds it | no | connector doctests | clear if the doctest checks shape |
 | An agent writes `status:` by habit on a built-in type after migration | lint warns on the unknown key | yes | clear |
 | Search title for email changes from subject to summary title; if `summarize` is missing, the title becomes the file name | no | Track F adds `summarize` to those types | silent |
@@ -479,15 +491,19 @@ own plan, not a subplan.
    E, F and the dead half of B. (2) The rest of B. (3) Tracks C and D, which
    touch the Gmail and Drive connectors. The banned-name list grows as each
    lands.
-2. **Experiments** (`proposed`, `active`, `successful`, `unsuccessful`,
-   `mixed`, `inconclusive`). This mixes a stage with a result. Lean: `active:
-   true` while running, `outcome:` once concluded, absent both = proposed.
-3. **What `producer` points at.** A job's producer is a connector (whose
-   configuration is a file under `_config/connectors/`) or a wakeup step
-   (which has no file in the box). Lean: `{ ref }` to the connector's config
-   file or to the schedule card that ran the step; a producer with no box file
-   gets no `producer` field, and routing for it uses the job type. Settle this
-   by reading `intake-utils.ts` and `wakeup/steps.ts` before the chunk.
+2. **What `producer` points at, and what routes jobs.** Today a job's
+   `source` string is also its routing key: a connector-scoped wakeup drains
+   only jobs whose `source` is that connector (`src/core/reactor/job-discovery.ts:86-99`,
+   `src/core/reactor/engine/core.ts:50-56`), and intake appends to a pending
+   job with the same `source` (`src/job-cards/intake-utils.ts:114-123`;
+   names chosen at `src/cli/commands/wakeup/steps.ts:227-249`). A connector
+   has no single box file to point at: its configuration is split across
+   `_config/connectors/<name>.json`, `-state.json` and `.secret.json`, or
+   lives in `box.json`. Options: (a) `producer: { ref }` to the schedule card
+   that runs the connector's check, with routing comparing that ref; (b) a
+   plain `connector: <name>` identifier, which is a name and not a pointer,
+   so the pointer rule does not apply; (c) job types per producer. Lean: (b).
+   The boxholder decides before part 3.
 
 ## Follow-up: box-local schemas
 
@@ -546,7 +562,8 @@ Track B and Track C land.
 4. Track B live cases, one commit per type group, each with its migration and
    dual reads.
 5. Track D deletions, then `email:` and `drive:` keys with connector changes.
-6. Track C, job `producer` first.
+6. Track C: pointer conversions first, the job routing field last (after the
+   boxholder's decision).
 7. Add each banned name to the guard as its last use is removed.
 8. Docs: `docs/cards/schemas.md` rule, bbx-guide-schemas skill, box-docs and
    agent guide.
