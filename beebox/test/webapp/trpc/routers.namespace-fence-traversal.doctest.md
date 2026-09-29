@@ -56,7 +56,12 @@ async function cardGetThrows(ctx: TestCtx, cardPath: string): Promise<boolean> {
 }
 
 const server = await makeTestServer();
-await writeFile(join(server.boxRoot, "package.json"), '{"name":"secret-marker"}');
+async function writePackageMarker(boxRoot: string, marker: string): Promise<void> {
+  const packagePath = join(boxRoot, "package.json");
+  const packageJson = await readFile(packagePath, "utf-8");
+  await writeFile(packagePath, packageJson.replace(/"name": "[^"]+"/, `"name": "${marker}"`));
+}
+await writePackageMarker(server.boxRoot, "secret-marker");
 ```
 
 ## `/api/files/*` (GET, PUT, POST, DELETE)
@@ -259,7 +264,7 @@ not just the resolved-path check. Every verb — read, write, browse, and
 
 ```ts
 const symServer = await makeTestServer();
-await writeFile(join(symServer.boxRoot, "package.json"), '{"name":"secret-marker-2"}');
+await writePackageMarker(symServer.boxRoot, "secret-marker-2");
 await symlink("..", join(symServer.boxRoot, "_content/pkg"));
 
 const symGetRes = await symServer.request({ method: "GET", url: "/api/files/_content/pkg/package.json" });

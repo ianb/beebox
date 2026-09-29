@@ -18,6 +18,8 @@ const original = await Sharp(Buffer.from('<svg width="321" height="123" xmlns="h
 await writeFile(inputPath, original);
 let capturedMessage;
 let calls = 0;
+// The SDK query type models its complete production stream; this fake supplies
+// only the user/result messages consumed by runScanQuery.
 const query = ((params) => ({
   async *[Symbol.asyncIterator]() {
     calls += 1;
@@ -61,6 +63,8 @@ An unreadable AVIF is rejected locally and never sent to the provider.
 const invalidPath = join(dir, "figure-001.avif");
 await writeFile(invalidPath, "not an image");
 let invalidCalls = 0;
+// This case checks that image validation precedes provider iteration, so the fake
+// intentionally supplies no SDK messages and must never be consumed.
 const invalidQuery = (() => { invalidCalls += 1; return { async *[Symbol.asyncIterator]() {} }; }) as unknown as ClaudeQueryFunction;
 await createClaudeScanVision({ boxRoot: dir, query: invalidQuery }).analyzeBatch({ imagePaths: [invalidPath], boxholderContext: null }).then(() => "sent", () => "rejected");
 `${invalidCalls} provider calls`

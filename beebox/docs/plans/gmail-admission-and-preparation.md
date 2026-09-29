@@ -1,6 +1,6 @@
 ---
 title: "Gmail admission and email preparation"
-status: draft
+status: partial
 workstream: jev-triage
 issues:
   - ../../../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md
@@ -9,8 +9,11 @@ issues:
 # Gmail admission and email preparation
 
 Keep unrelated incoming mail out of box content while preparing enough evidence
-to judge messages with HTML, PDFs, and images. This is a design draft following
-admitted-document triage, not authorization to enable admission on a live box.
+to judge messages with HTML, PDFs, and images. The admitted-document triage
+harness and common evidence preparation already exist in
+[`triage.md`](../triage.md); this plan covers future test isolation, raw MIME
+preparation, Gmail admission, and post-triage todo annotation. No Gmail admission
+gate is implemented or enabled by this work.
 
 **Issues addressed:** The combined Jev issue's Gmail follow-up and the warm-up
 warning above. Related, not resolved here: Gmail tracked-set reconciliation
