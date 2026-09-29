@@ -51,8 +51,8 @@ Key patterns:
   body-less card (then any non-empty body errors on load).
 - `type` is the discriminator; don't list it under `fields`, and the on-disk YAML needn't carry
   it — the filename `Foo.<type>.card` supplies it.
-- `title` and `contains` are available on every card type automatically. Set
-  `requireTitle: true` to require a title; don't redeclare it.
+- `title` and `contains` are available on every card type automatically.
+  Don't redeclare them, except `title: z.string()` to require a title.
 - Give every field a reader (a view, a query, or instructions that act on it).
   Some names are reserved: `status`, `created`, `summary`, `date`, `modified`,
   `source`, and the global fields. The box health check flags a schema that
@@ -146,7 +146,7 @@ export const template = {
     priority: z.enum(["low", "medium", "high"]).optional().describe("Priority level"),
   }),
   generate: (args: { title: string; priority?: string }) => {
-    const fields: Record<string, unknown> = { status: "todo", title: args.title };
+    const fields: Record<string, unknown> = { title: args.title };
     if (args.priority !== undefined) fields.priority = args.priority;
     return "---\n" + stringifyYaml(fields) + "---\n";
   },

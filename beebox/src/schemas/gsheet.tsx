@@ -25,8 +25,8 @@ export const GsheetSchema = cardSchema("gsheet", {
   brief: "A synced Google Sheet",
   description: "A Google Sheets spreadsheet synced by the drive connector — tab data as attached JSON files, pushed back on sync",
   category: "synced",
-  requireTitle: true,
   fields: {
+    title: z.string(),
     "drive-id": z.string(),
     modified: z.string(),
     link: z.string(),

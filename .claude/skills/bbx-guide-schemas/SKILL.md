@@ -34,8 +34,8 @@ Things the schema system does that you'd otherwise miss:
   sets it per type, and `category: "system"` implies `background`).
   `theme: { name, stock? }` selects presentation independently of the view;
   `cardSchema`'s own `theme` option sets the type preference.
-  Don't redeclare any of these; set `requireTitle: true` to require
-  `title`.
+  Don't redeclare any of these, except `title: z.string()` to require
+  a title.
 - **Every new field needs a named reader** (a query, a UI surface, or code),
   and some names are banned: `status`, `created`, `summary`, `date`,
   `modified`, `source`, plus the global names. A registry test rejects them

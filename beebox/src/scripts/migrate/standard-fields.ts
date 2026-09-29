@@ -28,7 +28,7 @@
  */
 
 import { readFile, writeFile } from "node:fs/promises";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { parse as parseYaml, parseDocument } from "yaml";
 import { runMigration } from "./_harness.js";
 import { splitCardContent } from "../../cards/frontmatter.js";
 import { typeFromFilename } from "../../core/card-io.js";
@@ -66,71 +66,81 @@ class UnmappedStatusError extends Error {
   }
 }
 
-export interface StandardFieldsResult {
-  changed: boolean;
+/** One change to a card's frontmatter, addressed by key path. */
+export type FieldEdit =
+  | { op: "delete"; path: ReadonlyArray<string | number> }
+  | { op: "set"; path: ReadonlyArray<string | number>; value: unknown };
+
+export interface StandardFieldsPlan {
+  edits: FieldEdit[];
   /** Data dropped that someone may want to know about. */
   warnings: string[];
 }
 
-function dropObservationDates(fm: Record<string, unknown>): boolean {
+function observationDateEdits(fm: Record<string, unknown>): FieldEdit[] {
   const experiments = fm["experiments"];
-  if (!Array.isArray(experiments)) return false;
-  let changed = false;
-  for (const experiment of experiments) {
+  if (!Array.isArray(experiments)) return [];
+  const edits: FieldEdit[] = [];
+  for (const [i, experiment] of experiments.entries()) {
     if (!isRecord(experiment)) continue;
     const observations = experiment["observations"];
     if (!Array.isArray(observations)) continue;
-    for (const observation of observations) {
+    for (const [j, observation] of observations.entries()) {
       if (isRecord(observation) && "date" in observation) {
-        delete observation["date"];
-        changed = true;
+        edits.push({ op: "delete", path: ["experiments", i, "observations", j, "date"] });
       }
     }
   }
-  return changed;
+  return edits;
 }
 
-function migrateRecordStatus(fm: Record<string, unknown>): void {
-  const status = fm["status"];
-  delete fm["status"];
-  if (status === "reviewed") fm["reviewed"] = true;
-  else if (status === "archived") fm["archived"] = true;
+function recordStatusEdits(status: unknown): FieldEdit[] {
+  const edits: FieldEdit[] = [{ op: "delete", path: ["status"] }];
+  if (status === "reviewed") edits.push({ op: "set", path: ["reviewed"], value: true });
+  else if (status === "archived") edits.push({ op: "set", path: ["archived"], value: true });
   else if (status !== "draft") throw new UnmappedStatusError({ type: "record", status });
+  return edits;
 }
 
 /**
- * Apply this migration to one card's parsed frontmatter, in place. Throws
- * {@link UnmappedStatusError} for a card it must not change.
+ * The edits this migration makes to one card's parsed frontmatter. Throws
+ * {@link UnmappedStatusError} for a card it must not change. An empty edit
+ * list means the card is already migrated.
  */
-export function migrateStandardFields(type: string, fm: Record<string, unknown>): StandardFieldsResult {
+export function planStandardFields(type: string, fm: Record<string, unknown>): StandardFieldsPlan {
   const warnings: string[] = [];
-  let changed = false;
-  if (DROP_STATUS.has(type) && "status" in fm) {
-    delete fm["status"];
-    changed = true;
-  }
+  const edits: FieldEdit[] = [];
+  if (DROP_STATUS.has(type) && "status" in fm) edits.push({ op: "delete", path: ["status"] });
   if (type === "email-outbound" && "status" in fm) {
     // Any other value would, once dropped, make the card upload as a draft.
     if (fm["status"] !== "draft") throw new UnmappedStatusError({ type: "email-outbound", status: fm["status"] });
-    delete fm["status"];
-    changed = true;
+    edits.push({ op: "delete", path: ["status"] });
   }
-  if (type === "record" && "status" in fm) {
-    migrateRecordStatus(fm);
-    changed = true;
-  }
-  if ((type === "pub-submission" || JOB_TYPES.has(type)) && "created" in fm) {
-    delete fm["created"];
-    changed = true;
-  }
+  if (type === "record" && "status" in fm) edits.push(...recordStatusEdits(fm["status"]));
+  if ((type === "pub-submission" || JOB_TYPES.has(type)) && "created" in fm) edits.push({ op: "delete", path: ["created"] });
   if (type === "audio" && "summary" in fm) {
     const summary = fm["summary"];
     if (typeof summary === "string" && summary.trim() !== "") warnings.push("dropped a non-empty audio summary (the transcript stays)");
-    delete fm["summary"];
-    changed = true;
+    edits.push({ op: "delete", path: ["summary"] });
   }
-  if ((type === "guide" || type === "personality") && dropObservationDates(fm)) changed = true;
-  return { changed, warnings };
+  if (type === "guide" || type === "personality") edits.push(...observationDateEdits(fm));
+  return { edits, warnings };
+}
+
+/**
+ * Apply edits to the frontmatter's YAML text through the `yaml` document
+ * model, so every untouched key keeps its exact formatting (line wrapping,
+ * quoting, comments).
+ */
+export function applyFieldEdits(frontmatterText: string, edits: readonly FieldEdit[]): string {
+  const doc = parseDocument(frontmatterText);
+  // Every edit addresses a map key, never an array element, so applying one
+  // cannot shift another's path.
+  for (const edit of edits) {
+    if (edit.op === "delete") doc.deleteIn(edit.path);
+    else doc.setIn(edit.path, edit.value);
+  }
+  return doc.toString();
 }
 
 // CLI entry — only when run directly (e.g. spawned by `bbx migrate`), not when
@@ -148,10 +158,10 @@ if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[
       if (type === undefined || !split.hasFrontmatter) return "already";
       const parsed: unknown = parseYaml(split.frontmatterText);
       if (!isRecord(parsed)) return "already";
-      const result = migrateStandardFields(type, parsed);
-      for (const warning of result.warnings) warnings.push(file, warning);
-      if (!result.changed) return "already";
-      if (apply) await writeFile(file, `---\n${stringifyYaml(parsed)}---\n${split.body}`);
+      const plan = planStandardFields(type, parsed);
+      for (const warning of plan.warnings) warnings.push(file, warning);
+      if (plan.edits.length === 0) return "already";
+      if (apply) await writeFile(file, `---\n${applyFieldEdits(split.frontmatterText, plan.edits)}---\n${split.body}`);
       return "converted";
     },
   });

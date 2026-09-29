@@ -3,20 +3,24 @@
 `src/scripts/migrate/standard-fields.ts` removes the `status`, `created`,
 `summary` and observation `date` fields that part 1 of
 `docs/plans/standard-card-fields.md` took out of the schemas.
-`migrateStandardFields(type, fm)` changes the parsed frontmatter in place and
-reports whether anything changed, plus warnings for dropped content.
+`planStandardFields(type, fm)` lists the edits for one card, plus warnings for
+dropped content; `applyFieldEdits` applies them to the frontmatter text
+through the `yaml` document model, so untouched keys keep their formatting.
 
 ```ts setup
-import { migrateStandardFields } from "../../../src/scripts/migrate/standard-fields.js";
+import { parse, stringify } from "yaml";
+import { planStandardFields, applyFieldEdits } from "../../../src/scripts/migrate/standard-fields.js";
 
+// Plan the edits for a card, apply them to its YAML, and report the result.
 function run(type: string, fm: Record<string, unknown>): string {
-  const result = migrateStandardFields(type, fm);
-  return JSON.stringify({ ...result, fm });
+  const plan = planStandardFields(type, fm);
+  const migrated: unknown = parse(applyFieldEdits(stringify(fm), plan.edits));
+  return JSON.stringify({ changed: plan.edits.length > 0, warnings: plan.warnings, fm: migrated });
 }
 
 function refusal(type: string, fm: Record<string, unknown>): string {
   try {
-    migrateStandardFields(type, fm);
+    planStandardFields(type, fm);
     return "no error";
   } catch (e) {
     return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
@@ -93,4 +97,16 @@ run("record", { name: "Oak dresser", reviewed: true })
 
 run("question", { status: "pending", prompt: "Which one?" })
 => {"changed":false,"warnings":[],"fm":{"status":"pending","prompt":"Which one?"}}
+```
+
+## Untouched keys keep their exact text
+
+Only the removed key's lines change; a long value folded at the `yaml`
+library's default width (how cards on disk were written), quoting, and a
+comment stay as they were.
+
+```ts
+const text = "status: draft\nname: Oak dresser\n# checked 2026-09\ndescription: A long description that was folded by an earlier writer at eighty\n  columns and should stay folded.\nnotes: \"quoted\"\n";
+JSON.stringify(applyFieldEdits(text, planStandardFields("record", parse(text)).edits))
+=> "name: Oak dresser\n# checked 2026-09\ndescription: A long description that was folded by an earlier writer at eighty\n  columns and should stay folded.\nnotes: \"quoted\"\n"
 ```

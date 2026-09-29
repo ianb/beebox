@@ -197,44 +197,35 @@ already holds camera metadata under the name of its origin.
 
 ### Track A — Reserved names and the shadowing guard
 
-**What.** `cardSchema()` rejects any declared field whose name is reserved.
-Making `title` required becomes a config option.
+**What.** Built-in schemas may not declare a reserved field name; box-local
+schemas are warned. The one allowed redeclaration makes `title` required.
 
 **Why.** Today a schema can redeclare a global and win silently
 (`schema.ts:533`), and any schema can add `status` or `created`. Instructions
 alone have not stopped this: box-local schemas repeat it.
 
-**Direction.**
-- `RESERVED_FIELD_NAMES` in `src/cards/schema.ts`: the global names plus
-  `status`, `created`, `summary`, `date`, `modified`, `source`. Each banned
-  name carries a one-line message saying what to use instead, e.g.
-  `status: "name the specific fact: a presence field, an error field, or a
-  boolean such as archived"`.
-- `CardSchemaConfig.requireTitle?: boolean`. When true, `title` is injected as
-  `z.string()` instead of optional. doc, gdoc, gsheet, recipe use it. memo,
-  pdf, webpage, commentary drop their redundant declaration.
-- The check is a pure function, `reservedFieldProblems(schema)`, in
-  `src/cards/schema.ts`. `cardSchema()` does not throw on it: box-local
-  schemas call the same `cardSchema()` and are dynamically imported
-  (`src/schemas.ts:357`), where a throw becomes an import failure and the
-  schema is skipped. A box whose schema is skipped is worse than a bad name.
-- **Built-in schemas:** a unit test runs the check over the whole built-in
-  registry and fails on any problem. The registry is fixed at build time, so
-  a test is as strict as a throw.
-- **Box-local schemas:** the box schema loader runs the check after import
-  and reports each problem as a lint warning with the message. The schema
-  still loads. The box's own agent migrates its schemas.
-- `requireTitle` keeps today's behaviour: the same four types require a title
-  as now. It replaces the redeclaration, not the policy.
-- The check covers top-level fields only. Nested keys (procedure-run step
-  `status`) are covered by Track B case by case, not by the guard.
+**Direction** (as built in part 1).
+- `reservedFieldProblems(schema)` in `src/cards/reserved-fields.ts` reports
+  each top-level field that is a global name or a banned name (`status`,
+  `created`, `summary`, `date`, `modified`, `source`), with a message saying
+  what to write instead. Nested keys are covered by Track B case by case.
+- `cardSchema()` does not throw on it: box-local schemas call the same
+  `cardSchema()` and are dynamically imported (`src/schemas.ts:357`), where a
+  throw becomes an import failure and the schema is skipped.
+- **Built-in schemas:** `test/cards/reserved-fields.doctest.md` runs the check
+  over the registry. Uses that parts 2 and 3 still remove are listed there;
+  the list only shrinks (the test fails on an entry that no longer exists).
+- **Box-local schemas:** the `box-schema-fields` health check reports each
+  problem as a warning. The schema still loads.
+- **Required title:** a schema may declare `title: z.string()` (required). An
+  optional redeclaration is reported. doc, gdoc, gsheet, recipe keep their
+  required title; webpage and commentary drop their redundant optional one.
+  A config flag was tried and dropped: it lost the required type in
+  `InferCardFields`.
+- `title` leads every card's frontmatter (parse order is serialization
+  order), declared or not.
 
-**Vocabulary lock-ins.** `RESERVED_FIELD_NAMES`, `requireTitle`.
-
-**First chunk.** Add the reserved list, `reservedFieldProblems`, and
-`requireTitle`; convert the eight title redeclarations; the registry test
-checks only global-name shadowing at first. Banned
-names join the list as Tracks B–D remove each use.
+**Vocabulary lock-ins.** `reservedFieldProblems`, `box-schema-fields`.
 
 ### Track B — Remove `status`
 
@@ -578,7 +569,7 @@ Track B and Track C land.
 
 ## Implementation order
 
-1. Track A first chunk (guard for global names, `requireTitle`).
+1. Track A (reserved-name check, required-title rule).
 2. Track E, Track F.
 3. Track B dead and constant cases, with the strip migration.
 4. Track B live cases, one commit per type group, each with its migration and

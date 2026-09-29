@@ -29,19 +29,20 @@ import { body, cardSchema, type CardSchema } from "../exports/cards.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
-export const MyThingStatus = z.enum(["draft", "final"]);
-export type MyThingStatusType = z.infer<typeof MyThingStatus>;
+export const MyThingPriority = z.enum(["low", "medium", "high"]);
+export type MyThingPriorityType = z.infer<typeof MyThingPriority>;
 
 const NoteEntry = z.object({
   text: z.string(),
-  added: z.string().datetime({ offset: true }).optional(),
+  ref: z.string().optional(),
 });
 
 export const MyThingSchema: CardSchema = cardSchema("my-thing", {
   brief: "A my-thing card",  // five words or fewer: the agent guide's card-type list
   description: "One line on what a my-thing card holds and is for",  // the docs index row
   fields: {
-    status: MyThingStatus.default("draft"),
+    priority: MyThingPriority.optional(),
+    archived: z.boolean().optional(),
     notes: z.array(NoteEntry).optional(),
     body: body(z.string()),  // omit this line if the card has no prose body
   },
@@ -59,15 +60,14 @@ Include:
 
 export interface MyThingFields {
   type: "my-thing";
-  status: MyThingStatusType;
-  notes?: Array<{ text: string; added?: string }>;
+  priority?: MyThingPriorityType;
+  archived?: boolean;
+  notes?: Array<{ text: string; ref?: string }>;
   body: string;  // omit if no body
 }
 
 export function createMyThingTemplate(options: { title: string }): string {
   const fields: Record<string, unknown> = {
-    type: "my-thing",
-    status: "draft",
     title: options.title,
   };
   return `---\n${stringifyYaml(fields)}---\n`;
@@ -76,7 +76,7 @@ export function createMyThingTemplate(options: { title: string }): string {
 
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
-- Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface (see [Adding a field](#adding-a-field); `requireTitle: true` makes `title` required, and `title` always leads the frontmatter). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query/core.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
+- Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface (see [Adding a field](#adding-a-field); the one exception is `title: z.string()` to make `title` required, and `title` always leads the frontmatter). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query/core.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
 - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-in theme IDs and stocks; see [`docs/box/card-themes.md`](../box/card-themes.md) before adding a type preference with `cardSchema`'s `theme` option. Theme is a presentation override, not a new view or a replacement for the card's type fields.
 - `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
 - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is tolerated on read and must match the filename; templates may still emit it, and the serializer never writes it back.
@@ -233,7 +233,7 @@ export { MyThingSchema } from "./my-thing.js";
 
 ```ts
 // Type
-export type { MyThingFields, MyThingStatusType } from "./my-thing.js";
+export type { MyThingFields, MyThingPriorityType } from "./my-thing.js";
 
 // Template
 export { createMyThingTemplate } from "./my-thing.js";
@@ -319,8 +319,8 @@ there, and readers expect it to mean something. Before adding one:
    `source` are rejected: `reservedFieldProblems` (`src/cards/reserved-fields.ts`)
    fails the built-in registry test (`test/cards/reserved-fields.doctest.md`)
    and gives box-local schemas a `box-schema-fields` health warning. Each
-   message says what to write instead. To require a title, set
-   `requireTitle: true`; don't redeclare `title`.
+   message says what to write instead. The one allowed redeclaration is
+   `title: z.string()`, which makes the title required.
 3. **Record the fact itself, not a lifecycle.** The result (`transcript`), the
    failure (`transcription-error`), or a named boolean (`archived: true`),
    not an enum a writer has to remember to move.
@@ -341,7 +341,7 @@ there, and readers expect it to mean something. Before adding one:
 
 ## Mutating an Existing Frontmatter Card
 
-When code needs to update a frontmatter card on disk (e.g. setting `status: answered` on a question), use `splitCardContent` + `yaml`:
+When code needs to update a frontmatter card on disk (e.g. setting `archived: true`), use `splitCardContent` + `yaml`:
 
 ```ts
 import { splitCardContent } from "../exports/cards.js";
@@ -350,7 +350,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 const content = await fs.readFile(absPath, "utf-8");
 const split = splitCardContent(content);
 const fields = parseYaml(split.frontmatterText) as MyThingFields;
-fields.status = "final";
+fields.archived = true;
 await fs.writeFile(absPath, `---\n${stringifyYaml(fields)}---\n${split.body}`);
 ```
 

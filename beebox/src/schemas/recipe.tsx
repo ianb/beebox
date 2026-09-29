@@ -50,8 +50,8 @@ export const RecipeSchema = cardSchema("recipe", {
   brief: "A scalable recipe",
   description: "A recipe with scaling-aware ingredients, steps, and substitutions via the recipe Markdoc tags",
   category: "authored",
-  requireTitle: true,
   fields: {
+    title: z.string(),
     description: z.string().optional(),
     source: RecipeSource.optional(),
     tags: z.array(z.string()).optional(),

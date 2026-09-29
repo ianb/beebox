@@ -1,4 +1,4 @@
-import { GLOBAL_CARD_FIELDS, type CardSchema } from "./schema.js";
+import { GLOBAL_CARD_FIELDS, isBodyField, type CardSchema, type FieldDecl } from "./schema.js";
 
 /**
  * Field names no card schema may declare, each with what to write instead.
@@ -32,9 +32,14 @@ export interface ReservedFieldProblem {
 
 function globalFieldMessage(field: string): string {
   if (field === "title") {
-    return "`title` is a global field every card already has; set `requireTitle: true` on the schema to require it";
+    return "`title` is a global field every card already has; redeclare it only to require it (`title: z.string()`)";
   }
   return `\`${field}\` is a global field every card already has; don't redeclare it`;
+}
+
+/** A declaration that rejects a missing value: the one allowed redeclaration of `title`. */
+function isRequiredField(decl: FieldDecl): boolean {
+  return !isBodyField(decl) && !decl.isOptional();
 }
 
 /**
@@ -43,12 +48,13 @@ function globalFieldMessage(field: string): string {
  * one) and the banned names above. Nested keys are not checked.
  *
  * Built-in schemas must have none (a registry test enforces it). Box-local
- * schemas still load with problems; the loader records them so health
- * checks can show them.
+ * schemas still load with problems; the `box-schema-fields` health check
+ * reports them.
  */
 export function reservedFieldProblems(schema: CardSchema): ReservedFieldProblem[] {
   const problems: ReservedFieldProblem[] = [];
-  for (const field of Object.keys(schema.fields)) {
+  for (const [field, decl] of Object.entries(schema.fields)) {
+    if (field === "title" && isRequiredField(decl)) continue;
     if (field in GLOBAL_CARD_FIELDS) {
       problems.push({ field, message: globalFieldMessage(field) });
       continue;

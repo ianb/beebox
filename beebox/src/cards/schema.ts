@@ -68,8 +68,8 @@ export type FieldDecl = ZodType | BodyField;
 /**
  * Optional frontmatter fields available on every card type, injected into
  * the frontmatter schema by cardSchema(). A schema must not redeclare one
- * (`reservedFieldProblems` in `./reserved-fields.ts`); a type that requires a
- * title sets {@link CardSchemaConfig.requireTitle} instead.
+ * (`reservedFieldProblems` in `./reserved-fields.ts`), except to make `title`
+ * required (`title: z.string()`).
  *
  * - `title` — human-readable display title.
  * - `contains` — one sentence stating what can be found inside this card;
@@ -213,11 +213,6 @@ export interface CardSchemaConfig<
   brief?: string;
   /** Who creates cards of this type (see {@link CardCategory}). Defaults to "authored". */
   category?: CardCategory;
-  /**
-   * Require the global `title` field on this type instead of leaving it
-   * optional. Most types leave it optional.
-   */
-  requireTitle?: boolean;
   /**
    * This type's default `prominence` level, applied when a card of this type
    * leaves the field absent. Omit for the ordinary default; `category:
@@ -543,10 +538,10 @@ export function cardSchema<
     type: z.literal(type),
   };
   // The title leads the frontmatter, ahead of the type's own fields: parse
-  // order is serialization order.
-  if (!("title" in config.fields)) {
-    frontmatterShape["title"] = config.requireTitle === true ? z.string() : TITLE_FIELD;
-  }
+  // order is serialization order. A type may declare it (to require it); the
+  // declaration then lands in this first position.
+  const declaredTitle = config.fields["title"];
+  frontmatterShape["title"] = declaredTitle !== undefined && !isBodyField(declaredTitle) ? declaredTitle : TITLE_FIELD;
   const { bodyFieldName, bodyField } = addDeclaredFields(type, { fields: config.fields, shape: frontmatterShape });
   if (bodyField === null && Object.keys(config.fields).length === 0) {
     throw new CardSchemaDeclarationError(type, "must declare at least one field");

@@ -63,7 +63,7 @@ The message says what to write instead.
 ```ts
 const widget = cardSchema("widget", {
   fields: {
-    title: z.string(),
+    title: z.string().optional(),
     status: z.enum(["new", "done"]),
     created: z.string(),
     weight: z.number(),
@@ -73,23 +73,25 @@ reservedFieldProblems(widget).map((p) => p.field).join(", ")
 => title, status, created
 
 reservedFieldProblems(widget)[0]?.message
-=> `title` is a global field every card already has; set `requireTitle: true` on the schema to require it
+=> `title` is a global field every card already has; redeclare it only to require it (`title: z.string()`)
 
 reservedFieldProblems(widget)[1]?.message.startsWith("`status` is a reserved field name: record the specific fact instead")
 => true
 ```
 
-## `requireTitle` requires the global title, and the title leads the frontmatter
+## Declaring `title` as required is allowed, and the title leads the frontmatter
 
-A card of a `requireTitle` type fails to load without a title. Parse order is
-serialization order, so `title` comes first even though the type declares its
-own fields.
+The one allowed redeclaration makes the global title required. A card of that
+type fails to load without a title. Parse order is serialization order, so
+`title` comes first wherever the type declares it.
 
 ```ts
 const note = cardSchema("note-fixture", {
-  requireTitle: true,
-  fields: { mood: z.string().optional(), body: body(z.string()) },
+  fields: { mood: z.string().optional(), title: z.string(), body: body(z.string()) },
 });
+reservedFieldProblems(note)
+=> []
+
 const schemas = new Map([["note-fixture", note]]);
 
 loads("---\nmood: calm\n---\nBody.\n", schemas)

@@ -39,8 +39,8 @@ export const GdocSchema = cardSchema("gdoc", {
   brief: "A synced Google Doc",
   description: "A Google Doc synced by the drive connector — connector-managed metadata plus the document as an attached .md (unlike the in-box doc type)",
   category: "synced",
-  requireTitle: true,
   fields: {
+    title: z.string(),
     "drive-id": z.string(),
     status: z.enum(["synced", "error", "new", "conflict"]).optional(),
     modified: z.string(),
