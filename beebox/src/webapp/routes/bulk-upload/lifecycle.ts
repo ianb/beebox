@@ -43,12 +43,12 @@ async function injectUnfiledSelfNote(opts: {
   const session = runtime.registry.getOrCreate(targetId);
   runtime.wireSession(session);
   if (session.isBusy()) {
-    session.enqueue({ text: wrapped });
+    session.enqueue({ text: wrapped, clientComposed: true });
     return;
   }
   runtime.registry.enforceLiveCap(targetId);
   runtime.registry.touch(targetId, { subprocessUse: true });
-  const sent = await session.send({ text: wrapped });
+  const sent = await session.send({ text: wrapped, clientComposed: true });
   if (!sent) console.error(`[bulk] Self-note send failed for unfiled batch ${batch.cardRelPath}`);
 }
 
@@ -90,12 +90,12 @@ async function injectStrandedSelfNote(opts: {
   const session = runtime.registry.getOrCreate(targetId);
   runtime.wireSession(session);
   if (session.isBusy()) {
-    session.enqueue({ text: wrapped });
+    session.enqueue({ text: wrapped, clientComposed: true });
     return;
   }
   runtime.registry.enforceLiveCap(targetId);
   runtime.registry.touch(targetId, { subprocessUse: true });
-  const sent = await session.send({ text: wrapped });
+  const sent = await session.send({ text: wrapped, clientComposed: true });
   if (!sent) console.error(`[bulk] Self-note send failed for stranded batch ${batch.sessionId}`);
 }
 
