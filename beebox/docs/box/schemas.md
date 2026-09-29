@@ -51,11 +51,12 @@ Key patterns:
   body-less card (then any non-empty body errors on load).
 - `type` is the discriminator; don't list it under `fields`, and the on-disk YAML needn't carry
   it — the filename `Foo.<type>.card` supplies it.
-- `title` and `contains` are available on every card type automatically.
+- The global fields are available on every card type automatically: `title`,
+  `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme`.
   Don't redeclare them, except `title: z.string()` to require a title.
 - Give every field a reader (a view, a query, or instructions that act on it).
   Some names are reserved: `status`, `created`, `summary`, `date`, `modified`,
-  `source`, and the global fields. The box health check flags a schema that
+  `source`, and the global fields above. The box health check flags a schema that
   declares one. Record the specific fact instead: a named boolean
   (`archived: true`), a date named for what it is (`due`, see
   [Dates](#dates)), or `sources: [{ ref }]` for what the card was derived from.

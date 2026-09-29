@@ -75,12 +75,13 @@ identifiable thing.
 - \`description:\` — About the thing — context, what it is, its
   condition, why it matters. This describes the record; it doesn't
   contain the content itself.
-- \`sources:\` — Array of \`{ref | href, pos?, retrieved?, note?}\` pointing
+- \`sources:\` — Array of \`{ref | href, pos?, retrieved?, usage?, note?}\` pointing
   at where this record was extracted from — usually a capture-session card
   elsewhere in the box, so a box-root-absolute \`ref\` (leading \`/\`) reads
   clearest here; a web page is an \`href\`. The optional \`pos\` pinpoints
   where in the source (a moment in a transcript, a page); \`retrieved\` is
-  the date a web page was read; the \`note\` explains why this source is
+  the date a web page was read; \`usage\` says how the material was used
+  (\`verbatim\`, \`summary\`); the \`note\` explains why this source is
   relevant. Same attributes as the \`{% source %}\` tag.
 - \`dates:\` — Array of \`{value, kind?, end?, note?}\`. \`value\` is
   ISO 8601 at the precision known: \`1974\`, \`1974-06\`,

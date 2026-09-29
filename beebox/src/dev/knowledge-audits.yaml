@@ -977,6 +977,45 @@ tests:
     correct_contains: ["summarize"]
     tags: [schemas, extension]
 
+  # Standard card fields (docs/plans/standard-card-fields.md): no card type
+  # has `status`, `created`, `summary`, bare `date`/`modified`, or
+  # non-derived-from `source`; a box-local schema declaring one gets a
+  # `box-schema-fields` health warning. The agent should record specific
+  # facts instead: a named boolean and a date entry named for what it is.
+  # Status (2026-09-29, Claude): 1/2 then 1/1 on a migrated copy of the
+  # card-fields-review test1 clone. Both answers were right (named field for
+  # owned/wanted, `bought: DateEntrySchema`, `status`/`date` reserved). Round 1
+  # missed should_read_any (read via `cd box-docs && cat schemas.md`) and
+  # grepped the bundle for the undefined "global fields"; schemas.md now lists
+  # them. Round 2: 1 read, 1 search, 39k ctx; chose `ownership:
+  # z.enum(["owned","wanted"])` and named `owned: true` as the alternative.
+  - id: schema-specific-fields
+    prompt: >
+      You're adding a box-local card type for the boxholder's books: whether
+      each book is owned or wanted, and when it was bought. What frontmatter
+      fields would you declare, and which field names should a box-local
+      schema avoid?
+    expected_level: knows_about
+    watch_for: >
+      Reads the schema-authoring doc; declares a specific field for
+      owned/wanted (a named boolean such as `owned`/`wanted`, or a specifically
+      named field) and a date entry named for the event (`bought:
+      DateEntrySchema`); names `status` and `date` among the reserved names a
+      box-local schema avoids. FAILS if it declares `status:` itself.
+    # The full path makes the harness install package docs; the bare name
+    # also catches `cd node_modules/beebox/box-docs && cat schemas.md`.
+    should_read_any:
+      - "node_modules/beebox/box-docs/schemas.md"
+      - "schemas.md"
+    correct_matches:
+      - '(?:reserv|avoid)[\s\S]{0,400}\bstatus\b|\bstatus\b[\s\S]{0,200}(?:reserv|avoid)'
+      - '(?:reserv|avoid)[\s\S]{0,400}`date`|`date`[\s\S]{0,200}(?:reserv|avoid)'
+      - '\b(?:owned|wanted|own|want|wishlist)\w*[`"\x27]?\s*:\s*(?:z\.boolean|true|false)|z\.enum\(\s*\[\s*["\x27](?:owned|wanted)'
+      - '(?:bought|purchase|acquired)\w*[`"\x27]?\s*:[\s\S]{0,60}DateEntry'
+    response_not_matches:
+      - '\bstatus\s*:\s*(?:z\.|["\x27]?(?:owned|wanted)\b)'
+    tags: [schemas, card-fields]
+
   # === CLI Commands ===
   #
   # Status (2026-07-03): 8/9 pass. bbx-chat-self-note-env now passes after
@@ -4363,6 +4402,37 @@ tests:
       description or body prose; does not reach for the old `measures` name.
     correct_contains: ["quantity"]
     tags: [cards, vocabulary]
+
+  # Standard card fields (docs/plans/standard-card-fields.md): what a card
+  # was derived from goes in `sources: [{ ref | href, pos?, note? }]`, never a
+  # bare `source:` string.
+  # Status (2026-09-29, Claude): 3 runs on a migrated copy of the
+  # card-fields-review test1 clone, all correct (`sources:` list with `ref:`,
+  # optional `pos`/`note`, never a bare string); 1 read, 1 search, 39k ctx.
+  # Run 1 missed should_read_any (read via `cd box-docs; cat card-record.md`).
+  # Run 2 passed and noted card-record.md omitted `usage`, which provenance.md
+  # shows; record instructions now list it. Run 3 passed using it.
+  - id: record-sources-provenance
+    prompt: >
+      You're writing a record card for an item extracted from a
+      capture-session card. Where in the record's frontmatter do you say which
+      card it came from, and in what shape?
+    expected_level: knows_about
+    watch_for: >
+      Reads the record card doc and answers `sources:` as a list of objects
+      with `ref:` pointing at the capture-session card (optionally `pos` for
+      where in it, `note` for why). FAILS on a bare `source: <path>` string.
+    # The bare name also catches `cd node_modules/beebox/box-docs; cat card-record.md`.
+    should_read_any:
+      - "node_modules/beebox/box-docs/card-record.md"
+      - "card-record.md"
+      - "beebox-rule-card-record/SKILL.md"
+    correct_contains: ["sources", "ref"]
+    correct_matches:
+      - 'sources[`"\x27]?\s*:\s*(?:\n\s*-\s*|\[\s*\{\s*)["\x27]?ref\b'
+    response_not_matches:
+      - '(?:^|\n)[ \t]*source[ \t]*:[ \t]*["\x27]?[\w./-]'
+    tags: [records, card-fields]
 
   # --- Behavior audit (not knowledge) ---
   #
