@@ -57,11 +57,52 @@ Key patterns:
   Some names are reserved: `status`, `created`, `summary`, `date`, `modified`,
   `source`, and the global fields. The box health check flags a schema that
   declares one. Record the specific fact instead: a named boolean
-  (`archived: true`), a date named for what it is (`due`), or
-  `sources: [{ ref }]` for what the card was derived from.
+  (`archived: true`), a date named for what it is (`due`, see
+  [Dates](#dates)), or `sources: [{ ref }]` for what the card was derived from.
 - `brief` (five words or fewer) is the type's entry in the agent guide's card-type list, read on
   every turn; `description` (one line) is its row in the docs index. Without a `brief` the guide
   lists the `description`.
+
+## Dates
+
+A date that belongs to the card's subject (when a bill is due, when a letter
+was written) is a **date entry**: `DateEntrySchema` from `beebox/cards`,
+`{ value, kind?, end?, note? }`. `value` is ISO 8601 at the precision known:
+`"1974"`, `1974-06`, `1974-06-02`, or a date and time with an offset
+(`2026-09-28T09:30:00-05:00`). Quote a bare year: unquoted, YAML reads it as a
+number. `end`, in the same format, makes the entry a range. `kind` says which
+date it is when a card has several; `note` is prose. When the card was written
+is not a date entry: git records that.
+
+One such date is a field named for it; several are a `dates` list with a
+`kind` each:
+
+```typescript
+import { cardSchema, DateEntrySchema } from "beebox/cards";
+import { z } from "beebox/schema";
+
+export default cardSchema("bill", {
+  fields: {
+    payee: z.string(),
+    due: DateEntrySchema,
+    dates: z.array(DateEntrySchema).optional(),
+  },
+});
+```
+
+```
+---
+payee: Water utility
+due:
+  value: 2026-10-15
+dates:
+  - value: 2026-09-20
+    kind: issued
+  - value: 2026-08-01
+    end: 2026-08-31
+    kind: billing-period
+---
+```
 
 ## Validation beyond Zod — the `validate` hook
 
@@ -124,6 +165,7 @@ From `beebox/cards` (`validate` and `summarize` are config hooks on `cardSchema`
 - `cardSchema(type, config)` — define a frontmatter card schema
 - `body(zodSchema)` — declare the single markdown body field
 - `type LintIssue` — the issue type a `validate` hook returns (see above)
+- `DateEntrySchema` — a date that belongs to the card's subject (see [Dates](#dates))
 
 From `beebox/schema`:
 - `z` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)

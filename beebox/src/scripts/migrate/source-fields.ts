@@ -214,6 +214,37 @@ function planRecipe(fm: Record<string, unknown>): FieldEditPlan {
 }
 
 /**
+ * commentary: `source` (the annotated page's URL) becomes `about: { href }`,
+ * where `source` was, and `captured` (the date the page was captured) becomes
+ * `about.retrieved`. A card with `about` alongside `source`, or with
+ * `captured` but no page to attach it to, is refused.
+ */
+function planCommentary(fm: Record<string, unknown>): FieldEditPlan {
+  const hasSource = "source" in fm;
+  const hasCaptured = "captured" in fm;
+  if (!hasSource && !hasCaptured) return { edits: [], warnings: [] };
+  const about = fm["about"];
+  if (hasSource) {
+    if (about !== undefined) throw new UnmappedFieldError({ type: "commentary", field: "source", problem: "old-and-new" });
+    const value: Record<string, unknown> = { href: fm["source"] };
+    if (hasCaptured) value["retrieved"] = fm["captured"];
+    const edits: FieldEdit[] = [
+      { op: "set", path: ["about"], value, after: "source" },
+      { op: "delete", path: ["source"] },
+      { op: "delete", path: ["captured"] },
+    ];
+    return { edits, warnings: [] };
+  }
+  if (!isRecord(about)) throw new UnmappedFieldError({ type: "commentary", field: "captured", problem: "incomplete" });
+  if ("retrieved" in about) throw new UnmappedFieldError({ type: "commentary", field: "captured", problem: "old-and-new" });
+  const edits: FieldEdit[] = [
+    { op: "set", path: ["about", "retrieved"], value: fm["captured"] },
+    { op: "delete", path: ["captured"] },
+  ];
+  return { edits, warnings: [] };
+}
+
+/**
  * A planner that moves top-level keys under one source-metadata key named
  * for the external system (`email`, `drive`). `moves` lists
  * `[oldKey, newKey]` pairs in the order the connector writes them; the
@@ -264,7 +295,7 @@ function same(...keys: string[]): Array<readonly [string, string]> {
  * - record `sources[]`: `time` (a moment in a transcript) becomes `pos`.
  * - webpage: see {@link planWebpage}.
  * - recipe: see {@link planRecipe}.
- * - commentary: `source` (the annotated page's URL) becomes `about: { href }`.
+ * - commentary: see {@link planCommentary}.
  * - browser-task: `source` (the start URL) becomes `start: { href }`.
  * - tab-arrangement: `source` (the captured tabs) becomes `captured-tabs`.
  * - email-message: the headers the Gmail connector copied (`message-id`,
@@ -304,7 +335,7 @@ const PLANNERS: Readonly<Record<string, Planner>> = {
   record: listEntryRenamePlanner({ type: "record", listPaths: [["sources"]], from: "time", to: "pos" }),
   webpage: planWebpage,
   recipe: planRecipe,
-  commentary: wrapTopLevelPlanner({ type: "commentary", from: "source", to: "about", wrap: (href) => ({ href }) }),
+  commentary: planCommentary,
   "browser-task": wrapTopLevelPlanner({ type: "browser-task", from: "source", to: "start", wrap: (href) => ({ href }) }),
   "tab-arrangement": renameTopLevelPlanner({ type: "tab-arrangement", from: "source", to: "captured-tabs" }),
   "email-message": sourceMetadataPlanner({

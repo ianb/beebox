@@ -268,6 +268,13 @@ run("record", { name: "Couch", sources: [{ ref: "/_content/s.capture-session.car
 run("commentary", { title: "Notes", source: "https://example.com/a" })
 => {"changed":true,"warnings":[],"fm":{"title":"Notes","about":{"href":"https://example.com/a"}}}
 
+// The page's capture date goes with the page, as the `sources` entry names it.
+run("commentary", { source: "https://example.com/a", captured: "2026-07-09", frozen: { ref: "attach/a.html" } })
+=> {"changed":true,"warnings":[],"fm":{"about":{"href":"https://example.com/a","retrieved":"2026-07-09"},"frozen":{"ref":"attach/a.html"}}}
+
+run("commentary", { about: { href: "https://example.com/a" }, captured: "2026-07-09" })
+=> {"changed":true,"warnings":[],"fm":{"about":{"href":"https://example.com/a","retrieved":"2026-07-09"}}}
+
 run("browser-task", { title: "Guild", source: "https://example.com/feed", watermark: "2026-09-01" })
 => {"changed":true,"warnings":[],"fm":{"title":"Guild","start":{"href":"https://example.com/feed"},"watermark":"2026-09-01"}}
 
@@ -292,7 +299,7 @@ const pointerCards = [
   ["x.webpage.card", "title: A page\nsource: https://example.com/a\ncaptured: 2026-07-09T14:00:15.000Z\n", "sources"],
   ["x.recipe.card", "title: Pie\nsource:\n  label: Grandma\n", "sources"],
   ["x.record.card", "name: Couch\nsources:\n  - ref: /x.capture-session.card\n    time: at 1:23\n", "sources"],
-  ["x.commentary.card", "source: https://example.com/a\n", "about"],
+  ["x.commentary.card", "source: https://example.com/a\ncaptured: 2026-07-09\n", "about"],
   ["x.browser-task.card", "title: Guild\nsource: https://example.com/feed\n", "start"],
   ["x.tab-arrangement.card", stringify({ "transfer-id": "5f3c2b1a-0e9d-4c8b-a7f6-e5d4c3b2a190", scope: "current-window", "captured-at": "2026-08-01T00:00:00Z", source: tabs, proposal: { windows: [{ id: tabs.windows[0].id, tabs: [tabs.windows[0].tabs[0].id] }], close: [] } }), "captured-tabs"],
   ["x.image.card", "filename:\n  ref: attach/p.jpg\n  captured: 2026-07-09T14:00:15Z\n  source: scan\ntext:\n  - source: back\n    content: May 72\n", "text"],
@@ -302,7 +309,7 @@ const pointerCards = [
   return parsed.fields[key];
 });
 JSON.stringify(pointerCards.map((value) => Object.keys(value)))
-=> [["0"],["0"],["0"],["href"],["href"],["windows"],["0"]]
+=> [["0"],["0"],["0"],["href","retrieved"],["href"],["windows"],["0"]]
 ```
 
 ## Email cards: the copied Gmail data moves under `email:`
@@ -476,6 +483,12 @@ refusal("browser-task", { source: "https://example.com/a", start: { href: "https
 
 refusal("record", { sources: [{ ref: "/x.card", time: "at 1:23", pos: "at 1:24" }] })
 => UnmappedFieldError: record sources.0.time has both the old and the new keys; migrate this card by hand
+
+refusal("commentary", { title: "Notes", captured: "2026-07-09" })
+=> UnmappedFieldError: commentary captured is missing a key the new shape requires; migrate this card by hand
+
+refusal("commentary", { about: { href: "https://example.com/a", retrieved: "2026-07-01" }, captured: "2026-07-09" })
+=> UnmappedFieldError: commentary captured has both the old and the new keys; migrate this card by hand
 
 refusal("email-message", { email: { "message-id": "m1" }, date: "2026-05-14T19:00:00Z" })
 => UnmappedFieldError: email-message date has both the old and the new keys; migrate this card by hand

@@ -25,9 +25,10 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
   const body = data.body;
 
   // Captured-page metadata: the annotated page's URL (`about.href`), the
-  // capture date, and an in-box frozen snapshot. Rendered as a header.
+  // capture date (`about.retrieved`), and an in-box frozen snapshot.
+  // Rendered as a header.
   const about = frontmatter["about"];
-  const captured = frontmatter["captured"];
+  const captured = isRecord(about) ? about["retrieved"] : undefined;
   const frozen = frontmatter["frozen"];
   const sourceUrl = isRecord(about) && typeof about["href"] === "string" && about["href"] !== "" ? about["href"] : null;
   // `frozen` is a card ref stored as `{ ref: <path> }`; pull the path off it.

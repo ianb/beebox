@@ -588,7 +588,8 @@ Part 3 of `docs/plans/standard-card-fields.md`. Per type:
   become `sources: [{ href, retrieved }]` (no `retrieved` when there was no
   `captured`).
 - recipe: the `source` object becomes the one entry of `sources`.
-- commentary: `source` (the annotated page) becomes `about: { href }`.
+- commentary: `source` (the annotated page) becomes `about: { href }`, and
+  `captured` (the date the page was captured) becomes `about.retrieved`.
 - browser-task: `source` (the start URL) becomes `start: { href }`.
 - tab-arrangement: `source` (the captured tabs) becomes `captured-tabs`.
 - image `text[]`: each entry's `source` (the surface the text is on) becomes
@@ -618,7 +619,8 @@ and an unreadable id stops folder discovery.
 Renamed keys keep their place. A card is failed, unchanged, when its
 `filename` is not a map, when it has both an old key and its new name (at any
 of the places above), when a media reference has only one of the two old
-keys, when a webpage has `captured` but no `source`, when an email or Drive card has
+keys, when a webpage or commentary has `captured` but no page to attach it to,
+when an email or Drive card has
 `email:`/`drive:` beside a key that moves into it, when a gfolder or glink has
 both `name` and `title`, or when a recipe's
 `source` is not a map or has both `href` and `ref`. A card keeps its line wrapping (see `applyFieldEdits`), so an unedited

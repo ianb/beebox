@@ -327,8 +327,15 @@ there, and readers expect it to mean something. Before adding one:
 4. **Times belong to media, external data, or the subject.** When a card was
    written is git's job. A capture time goes on the media reference. Data
    copied from an external system goes under a key named for that system
-   (`exif:`). A date that is part of the subject (when a bill is due) is
-   named for what it is (`due`), or listed in `dates:` with a `kind` each.
+   (`email:`, `drive:`, `exif:`). A date that is part of the subject (when a
+   bill is due) is a date entry, `DateEntrySchema` from `beebox/cards`
+   (`src/cards/date-entry.ts`): `{ value, kind?, end?, note? }`, with `value`
+   and `end` in ISO 8601 at the precision known (`1974`, `1974-06`,
+   `1974-06-02`, or a datetime with an offset). One such date is a field
+   named for what it is (`due: DateEntrySchema`); several go in
+   `dates: z.array(DateEntrySchema)` with a `kind` each (`due`, `filed`,
+   `starts`). record's `dates` uses it with `value` left free text, for
+   transcribed dates ISO 8601 cannot state (`1970s`).
 5. **Don't do a global field's job.** No per-type title or summary field. To
    derive a title from a data field (an email's subject, a person's name),
    return it from `summarize`; a card's own `title:` still wins.

@@ -74,12 +74,12 @@ export const CommentarySchema: CardSchema = cardSchema("commentary", {
   },
   fields: {
     // Captured-web-page metadata: the page the commentary annotates (`about`,
-    // an external pointer — the commentary is about it, not derived from it),
-    // the capture date (YYYY-MM-DD), and an in-box ref to the frozen snapshot.
+    // an external pointer — the commentary is about it, not derived from it)
+    // with the date it was captured (`retrieved`, YYYY-MM-DD, the `sources`
+    // entry's name for it), and an in-box ref to the frozen snapshot.
     // Rendered as a header; all optional. The clerk capture flow puts these on
     // the host webpage card instead, so current commentary cards omit them.
-    about: z.object({ href: z.string().url() }).optional(),
-    captured: z.string().optional(),
+    about: z.object({ href: z.string().url(), retrieved: z.string().optional() }).optional(),
     frozen: z.object({ ref: z.string() }).optional(),
     body: body(z.string()),
   },

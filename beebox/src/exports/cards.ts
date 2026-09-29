@@ -53,3 +53,9 @@ export {
 } from "../cards/lint-format.js";
 
 export { ParseError } from "../cards/errors.js";
+
+export {
+  DateEntrySchema,
+  IsoDateValueSchema,
+  type DateEntry,
+} from "../cards/date-entry.js";

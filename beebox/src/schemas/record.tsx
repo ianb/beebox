@@ -13,11 +13,14 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 import { SourcesEntrySchema } from "../cards/sources-entry.js";
+import { DateEntrySchema } from "../cards/date-entry.js";
 
-const DateEntry = z.object({
-  value: z.string(),
-  note: z.string().optional(),
-});
+/**
+ * The shared date entry, except that `value` stays free text: records hold
+ * dates transcribed from old documents, and some are not dates ISO 8601 can
+ * state (`1970s`). The instructions ask for ISO 8601 wherever it can.
+ */
+const RecordDateEntry = DateEntrySchema.extend({ value: z.string() });
 
 const PersonEntry = z.object({
   name: z.string(),
@@ -47,7 +50,7 @@ export const RecordSchema = cardSchema("record", {
     archived: z.boolean().optional(),
     description: z.string().optional(),
     sources: z.array(SourcesEntrySchema).optional(),
-    dates: z.array(DateEntry).optional(),
+    dates: z.array(RecordDateEntry).optional(),
     persons: z.array(PersonEntry).optional(),
     location: LocationEntry.optional(),
     quantity: MeasureEntry.optional(),
@@ -79,8 +82,12 @@ identifiable thing.
   where in the source (a moment in a transcript, a page); \`retrieved\` is
   the date a web page was read; the \`note\` explains why this source is
   relevant. Same attributes as the \`{% source %}\` tag.
-- \`dates:\` — Array of \`{value, note?}\`. Parseable date strings
-  with context ("Year purchased", "Date of letter").
+- \`dates:\` — Array of \`{value, kind?, end?, note?}\`. \`value\` is
+  ISO 8601 at the precision known: \`1974\`, \`1974-06\`,
+  \`1974-06-02\`. Only a date ISO 8601 cannot state (\`1970s\`) is
+  written as text. \`end\` (ISO 8601) makes a range; \`kind\` names
+  which date it is (\`purchased\`, \`written\`); \`note\` gives context
+  ("Year purchased", "Postmark only").
 - \`persons:\` — Array of \`{name, ref?, role?, notes?, note?}\`.
   People relevant to this record. \`role\` is the person's role in
   this record (e.g. "Sender", "Recipient", "Manager"); \`notes\` or

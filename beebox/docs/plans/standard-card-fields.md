@@ -376,19 +376,32 @@ metadata moves under a key named for its system.
 - **`email:`** on email-message holds the header data: `message-id`,
   `thread-id`, `from`, `to`, `cc`, `subject`, `received` (was `date`, which is
   Gmail's `internalDate`, the arrival time — `src/connectors/gmail/mime.ts:206-226`).
-  email-thread's `subject`, `participants`, `date-range`, `labels` move under
-  `email:` the same way.
-- **`drive:`** on gdoc, gsheet, gfolder holds `id` (was `drive-id`), `link`,
-  `owner`, and `modified` (Drive's `modifiedTime`). Sync state is not here;
-  it is connector state (Track B: `conflict`, `sync-error`). `bbx drive status`
-  stops labelling `modified` as "Last synced".
+  email-thread's `thread-id`, `subject`, `participants`, `date-range`, `labels`
+  move under `email:` the same way; `messages`, `body-file` and `attachments`
+  stay top-level, and email-outbound stays flat (its headers are composed, not
+  copied). A thread card the connector rewrites after migration is
+  byte-identical to the migrated one, so it is not rewritten (built).
+- **`drive:`** on gdoc, gsheet, gfolder, glink holds `id` (was `drive-id`),
+  `link`, and per type `owner`, `modified` (Drive's `modifiedTime`), gdoc's
+  `revision` and glink's `mime`. gfolder's and glink's `name` becomes the
+  global `title` (glink declares it required, as `name` was). Sync state is
+  not here: `title`, `conflict`, `error`, `last-sync` and the problem counts
+  stay top-level. `bbx drive status` prints `drive.modified` as "Modified on
+  Drive" and `last-sync` as "Last synced" (built).
+- commentary's `captured` (the annotated page's capture date) becomes
+  `about.retrieved`, the `sources` entry's name (built).
 - `CardFacts` stops showing `created`. The search index drops its `created`
   column.
 - memo's `created` goes with the memo retirement.
 
 The date entry type (Ontology) ships in this track, exported from
-`beebox/cards`. record's `dates` adopts it; no built-in type other than record
-has a domain date today, so its main users are box-local schemas (follow-up).
+`beebox/cards` (`DateEntrySchema`, `src/cards/date-entry.ts`); `value` and
+`end` are checked as ISO 8601 at any precision, a datetime needing an offset.
+record's `dates` adopts it but keeps `value` free text: of 206 `value`s across
+test1 and the local backups, 4 are not ISO 8601 (`1970s` and other text), and
+a transcribed date may not be one ISO 8601 can state. No built-in type other
+than record has a domain date today, so its main users are box-local schemas
+(follow-up) (built).
 
 **Vocabulary lock-ins.** date entry `{ value, kind, end, note }`; `email`,
 `drive` keys; `filename.via`
