@@ -28,3 +28,21 @@ This differs from the resolved
 [scan startup shape-error issue](../closed/code-quality/2026-09-21-scan-startup-diagnostics-in-passing-route-tests.md):
 that fix waits for in-flight passes before teardown. Here an existing upload
 fixture starts a pass whose subprocess configuration is not valid.
+
+Resolution evidence (2026-09-28): the test server now has an opt-in
+`scanPromoteRun` seam that replaces only the lifecycle pass body; production
+servers leave it unset. The scan-upload HTTP doctest uses an inert pass for its
+annex-shaped fixture, so the quarantine sidecar and repeated check remain
+`pending` while the test validates route behavior. The worker's upload, retry,
+and wakeup orchestration remain covered separately by
+`test/core/scan/promote.doctest.md` and `test/core/scan/promote-debounce.doctest.md`.
+
+Before the change, `pnpm exec tap test/webapp/routes/scan-upload.doctest.md`
+passed 36 assertions while the original PNG walk emitted the failed upload,
+Claude authentication, missing `which bbx`, doctest-path EACCES wakeup, and
+retry diagnostics described above. After the change, the same command passed
+all 37 assertions with no promotion diagnostics, including a deterministic
+check that the injected startup pass ran for the test box root. Both promotion
+doctests passed their 34 assertions; their intentional failure cases still emit
+their local failure diagnostics. ESLint passed on the modified server and
+test-helper files, and `git diff --check` passed.
