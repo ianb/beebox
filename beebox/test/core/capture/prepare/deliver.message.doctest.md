@@ -49,6 +49,13 @@ sentText(backend.lastRun()).includes(W)
 => true
 ```
 
+The wrapper is composed by beebox, so the turn goes out marked client-composed.
+
+```ts continue
+JSON.stringify(backend.lastRun().sentClientComposed)
+=> [true]
+```
+
 ```ts cleanup
 registry.shutdown();
 eventBus.close();

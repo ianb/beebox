@@ -109,6 +109,13 @@ export interface ChatSendInput {
    * snapshot child elements.
    */
   cardState?: CardStateDetails;
+  /**
+   * The turn carries text the person at the composer did not type (a script's
+   * self-note, a fired schedule). Delivered as the SDK's `client_composed`, so
+   * the CLI does not expand `@path` mentions or dispatch slash commands in it.
+   * Sticky across queued sends: one composed input marks the combined turn.
+   */
+  clientComposed?: true;
 }
 
 /**
