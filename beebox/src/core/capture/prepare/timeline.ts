@@ -96,7 +96,7 @@ async function loadClipTiming(sessionAttachDir: string, ac: string): Promise<Cli
   const audioCardPath = path.join(sessionAttachDir, ac);
   const acFields = await readAudioCard(audioCardPath);
   if (!acFields) return { kind: "unavailable" };
-  const recordedMs = new Date(acFields.filename.recorded).getTime();
+  const recordedMs = new Date(acFields.filename.via.at).getTime();
 
   const audioBasename = ac.replace(/\.audio\.card$/, "");
   const timingPath = path.join(attachDirFor(audioCardPath), `${audioBasename}.timing.json`);
@@ -146,7 +146,7 @@ async function collectTimedImages(sessionAttachDir: string, imageCards: string[]
     if (icFields.unusable === true) continue;
     allImages.push({
       ref: `attach/${ic}`,
-      absoluteTime: new Date(icFields.filename.captured).getTime(),
+      absoluteTime: new Date(icFields.filename.via.at).getTime(),
     });
   }
   return allImages;

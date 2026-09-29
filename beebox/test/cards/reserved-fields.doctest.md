@@ -23,7 +23,7 @@ import { cardTitle } from "../../src/core/loader-registry.js";
 const PENDING_REMOVAL = new Set([
   "browser-task.source", "capture-session.source", "chat-job.source",
   "commentary.source", "contains-backfill-job.source", "email-message.date",
-  "feedback.source", "gdoc.modified",
+  "gdoc.modified",
   "gsheet.modified", "intake-job.source", "memo.created",
   "memo.source", "memo.status",
   "question-followup-job.source",

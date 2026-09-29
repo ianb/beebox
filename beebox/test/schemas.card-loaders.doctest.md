@@ -98,7 +98,7 @@ s.title.endsWith("…")
 const fields1 = {
   type: "image",
   "has-text": true,
-  filename: { ref: "attach/photo.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
+  filename: { ref: "attach/photo.jpg", via: { channel: "camera-environment", at: "2024-01-15T00:00:00Z" } },
   description: "Whiteboard with project timeline",
 };
 summaryOf("photo.image.card", fields1).title
@@ -110,7 +110,7 @@ summaryOf("photo.image.card", fields1).title
 ```ts
 const fields2 = {
   type: "image",
-  filename: { ref: "photo-001.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
+  filename: { ref: "photo-001.jpg", via: { channel: "camera-environment", at: "2024-01-15T00:00:00Z" } },
 };
 summaryOf("_content/inbox/session.image.card", fields2).title
 => photo 001
@@ -123,7 +123,7 @@ const fields3 = {
   type: "image",
   "has-text": true,
   rotation: "90",
-  filename: { ref: "attach/p.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
+  filename: { ref: "attach/p.jpg", via: { channel: "camera-environment", at: "2024-01-15T00:00:00Z" } },
   description: "Note",
 };
 const s = summaryOf("p.image.card", fields3);

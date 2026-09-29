@@ -1178,7 +1178,7 @@ const box = await makeTmpBox();
 await box.write("_content/cap/photo-004.jpg", "JPG");
 await box.write(
   "_content/cap/photo-004-Beach.image.card",
-  "---\nfilename:\n  ref: /_content/cap/photo-004.jpg\n  captured: 2026-01-02T03:04:05Z\n  source: scan\n---\n",
+  "---\nfilename:\n  ref: /_content/cap/photo-004.jpg\n  via:\n    channel: scan\n    at: 2026-01-02T03:04:05Z\n---\n",
 );
 const media = await lintCardsDispatch([box.path("_content/cap/photo-004-Beach.image.card")], { boxRoot: box.root, ctx });
 media.results[0]!.warnings.map((w) => w.message)

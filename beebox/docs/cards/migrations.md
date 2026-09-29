@@ -562,6 +562,21 @@ Part 2 of `docs/plans/standard-card-fields.md`. Per type:
 Any other value fails the card, unchanged. Idempotent. See
 `src/scripts/migrate/status-fields.ts`.
 
+#### `source-fields-2026-09` (rename — `source` gets its specific names)
+
+Part 3 of `docs/plans/standard-card-fields.md`. Per type:
+
+- image, file, pdf: `filename.captured` becomes `filename.via.at` and
+  `filename.source` becomes `filename.via.channel`. `via` is inserted right
+  after `filename.ref`; the other `filename` keys keep their place.
+- audio: the same, from `filename.recorded`.
+- feedback: `source` (`text` or `voice`) becomes `via: { channel }`, in the
+  place `source` held.
+
+A card is failed, unchanged, when its `filename` is not a map, when it has
+both an old key and `via`, or when a media reference has only one of the two
+old keys. Idempotent. See `src/scripts/migrate/source-fields.ts`.
+
 ## Manual runs (for debugging)
 
 The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx migrate`. If you do this and want it to count, append the entry yourself or run `bbx migrate --apply` afterwards.

@@ -40,8 +40,9 @@ const ANALYZED = `---
 format: pdf
 filename:
   ref: attach/source.pdf
-  captured: 2026-08-20T14:00:00Z
-  source: scanner
+  via:
+    channel: scanner
+    at: 2026-08-20T14:00:00Z
   original-name: handbook-2026.pdf
   mime-type: application/pdf
 docling:
@@ -76,8 +77,8 @@ const fields = readCard(ANALYZED);
 [fields.title, fields.author, String(fields.pages), fields.format].join(" | ")
 => Employee Handbook | Wren Aldana | 12 | pdf
 
-[fields.originalRef, fields.originalName, fields.source].join(" | ")
-=> attach/source.pdf | handbook-2026.pdf | scanner
+[fields.originalRef, fields.originalName, fields.channel, fields.acquired].join(" | ")
+=> attach/source.pdf | handbook-2026.pdf | scanner | 2026-08-20T14:00:00Z
 
 [String(fields.error), String(fields.unusable), fields.description].join(" | ")
 => null | false | The 2026 handbook, scanned.
@@ -99,8 +100,9 @@ const bare = readCard(`---
 format: pdf
 filename:
   ref: attach/source.pdf
-  captured: 2026-08-20T14:00:00Z
-  source: scanner
+  via:
+    channel: scanner
+    at: 2026-08-20T14:00:00Z
 ---
 `);
 [String(bare.title), String(bare.author), String(bare.pages), String(bare.description)].join(" ")
@@ -232,8 +234,9 @@ const failed = readCard(`---
 format: pdf
 filename:
   ref: attach/source.pdf
-  captured: 2026-08-20T14:00:00Z
-  source: scanner
+  via:
+    channel: scanner
+    at: 2026-08-20T14:00:00Z
 error: docling exited 1 — no text layer found
 ---
 `);

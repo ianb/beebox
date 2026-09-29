@@ -1195,18 +1195,22 @@ tests:
   # generated path-scoped image rule skill and answers correctly. Claude may
   # instead read the equivalent generated card doc, so either canonical
   # generated surface satisfies the navigation check.
+  # Status (2026-09-29, filename.via): 1/2 then 1/1 with Claude after the
+  # move to `filename.via`. Both answers were right; the first missed the old
+  # "<kind> time" regex by paraphrasing ("the camera shutter time"), so the
+  # regex now looks for the acquisition wording near `filename.via.at`.
   - id: image-exif-date
-    prompt: "Consult the box's generated image-card guidance. What does filename.captured represent, and where should the photo's original EXIF capture time go?"
+    prompt: "Consult the box's generated image-card guidance. What does filename.via.at represent, where should the photo's original EXIF capture time go, and where would you record the year a scanned 1970s print was originally taken?"
     expected_level: knows_about
-    watch_for: "Distinguishes the capture/upload/import timestamp in filename.captured from the photo's original timestamp in exif.date"
+    watch_for: "Distinguishes the capture/upload/import timestamp in filename.via.at from the photo's original timestamp in exif.date, and puts a scanned print's own date in filename.via.original"
     should_read_any:
       - "node_modules/beebox/box-docs/card-image.md"
       - "beebox-rule-card-image/SKILL.md"
-    correct_contains: ["filename.captured", "exif.date"]
+    correct_contains: ["filename.via.at", "exif.date", "via.original"]
     correct_matches:
-      - "filename\\.captured[\\s\\S]{0,120}\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b|\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b[\\s\\S]{0,120}filename\\.captured"
+      - "filename\\.via\\.at[\\s\\S]{0,160}\\b(?:acquisition|acquired|arrived|upload|ingestion|import|browser|selection|shutter)"
     response_not_matches:
-      - "filename\\.captured.{0,80}(?:set|comes|taken|derived).{0,30}(?:from|by).{0,30}EXIF"
+      - "filename\\.via\\.at.{0,80}(?:set|comes|taken|derived).{0,30}(?:from|by).{0,30}EXIF"
     tags: [images]
 
   # === Procedures ===

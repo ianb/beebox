@@ -121,7 +121,7 @@ stale (the retrieval field moved with the content).
 
 ```ts continue
 const IMG = (desc: string) =>
-  "---\nfilename:\n  ref: attach/boiler.jpg\n  captured: 2026-05-01T10:00:00Z\n  source: camera-user\ndescription: " + desc + "\n---\n";
+  "---\nfilename:\n  ref: attach/boiler.jpg\n  via:\n    channel: camera-user\n    at: 2026-05-01T10:00:00Z\ndescription: " + desc + "\n---\n";
 await box.write("_bookkeeping/archive/boiler.image.card", IMG("The boiler's serial-number plate (K-44210)"));
 await openSearchIndex(box.root);
 JSON.stringify(listMissing(await loadContainsState(box.root)).filter((p) => p.includes("image")))

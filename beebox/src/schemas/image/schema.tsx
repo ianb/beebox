@@ -18,8 +18,10 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { cardSchema, type InferCardFields, type SummaryAttrs } from "../../exports/cards.js";
 import { titleFromFilename, truncateTitle } from "../../core/file-summary.js";
+import { mediaVia } from "../../cards/media-via.js";
 
-export const ImageSourceSchema = z.enum([
+/** How an image came into the box: `filename.via.channel`. */
+const ImageChannelSchema = z.enum([
   "camera-user",
   "camera-environment",
   "gallery",
@@ -28,15 +30,17 @@ export const ImageSourceSchema = z.enum([
   "scan",
   "generated",
 ]);
-export type ImageSource = z.infer<typeof ImageSourceSchema>;
+export type ImageChannel = z.infer<typeof ImageChannelSchema>;
+
+const ImageViaSchema = mediaVia(ImageChannelSchema);
+export type ImageVia = z.infer<typeof ImageViaSchema>;
 
 const ImageRotationSchema = z.enum(["0", "90", "180", "270"]);
 export type ImageRotation = z.infer<typeof ImageRotationSchema>;
 
 const FilenameEntry = z.object({
   ref: z.string(),
-  captured: z.string().datetime({ offset: true }),
-  source: ImageSourceSchema,
+  via: ImageViaSchema,
 });
 
 const TextBlock = z.object({
@@ -104,11 +108,18 @@ The image file itself lives in the card's attach scope, pointed to by
 \`filename.ref:\` (attach scope: see ABOUT_CARDS).
 
 Frontmatter fields:
-- \`filename:\` — \`{ref, captured, source}\` for the attached image
-  file. \`captured\` is the acquisition timestamp supplied by the
-  capture/upload/import flow (for example, camera shutter time,
-  gallery selection time, or import-session start). It is not
-  derived from EXIF.
+- \`filename:\` — \`{ref, via}\` for the attached image file.
+  \`via\` says how the image came into the box:
+  - \`channel\` — \`camera-user\`, \`camera-environment\`, \`gallery\`,
+    \`screenshot\`, \`download\`, \`scan\`, or \`generated\`.
+  - \`at\` — the acquisition timestamp supplied by the
+    capture/upload/import flow (for example, camera shutter time,
+    gallery selection time, or import-session start). It is not
+    derived from EXIF.
+  - \`original\` (optional) — the date of the original, when it is
+    known and differs from \`at\`: a scanned 1970s photo gets
+    \`original: "1974"\` (\`YYYY\`, \`YYYY-MM\`, or \`YYYY-MM-DD\`).
+  - \`note\` (optional) — how or why it was acquired, in prose.
 - \`description:\` — one sentence describing what the image *looks
   like* (filled during analysis) — the visual field, used as alt text.
 - \`contains:\` — one sentence stating what someone could *learn* from
@@ -117,14 +128,14 @@ Frontmatter fields:
   it's concise ("Boiler serial number K-44210"), don't point at it.
 - \`creation:\` — optional free-text notes on how the image came to
   be. Only include when there's something worth recording. For
-  AI-generated images (\`source: generated\`), use \`model: {modelId}\\nprompt: {prompt text}\`.
+  AI-generated images (\`filename.via.channel: generated\`), use \`model: {modelId}\\nprompt: {prompt text}\`.
 - \`text:\` — array of \`{source?, content}\` entries with transcribed
   text content from the image, if any. \`source\` describes what the
   text is on ("whiteboard", "business card", "printed page",
   "screen").
 - \`exif:\` — EXIF metadata extracted from the image file. Put the
   camera's original photographic timestamp in \`exif.date\` when
-  available; it may differ from \`filename.captured\`.
+  available; it may differ from \`filename.via.at\`.
 - \`subject-bbox:\` — bounding box of the main subject on a 0-1000
   scale (\`{y1, x1, y2, x2}\`). Present when the subject doesn't fill
   the entire frame.
@@ -182,15 +193,13 @@ export type ImageSummaryAttrs = SummaryAttrs<typeof ImageSchema>;
  * annotating the parent capture card.
  */
 export function createImageTemplate(options: {
-  capturedAt: string;
-  source: ImageSource;
+  via: ImageVia;
   filename: string;
 }): string {
   const fields = {
     filename: {
       ref: `attach/${options.filename}`,
-      captured: options.capturedAt,
-      source: options.source,
+      via: options.via,
     },
   };
   return `---\n${stringifyYaml(fields)}---\n`;

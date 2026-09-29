@@ -33,8 +33,7 @@ schemas.get("pdf") === PdfSchema
 ```ts
 const card = createPdfTemplate({
   format: "pdf",
-  capturedAt: "2026-04-02T10:23:00Z",
-  source: "scan-import",
+  via: { channel: "scan-import", at: "2026-04-02T10:23:00Z" },
   filename: "source.pdf",
   originalName: "utility-bill.pdf",
   mimeType: "application/pdf",
@@ -54,10 +53,23 @@ a file card's `filename:` reads a pdf card's too:
 
 ```ts continue
 JSON.stringify(parsed.fields.filename)
-=> {"ref":"attach/source.pdf","captured":"2026-04-02T10:23:00Z","source":"scan-import","original-name":"utility-bill.pdf","mime-type":"application/pdf","size":248392}
+=> {"ref":"attach/source.pdf","via":{"channel":"scan-import","at":"2026-04-02T10:23:00Z"},"original-name":"utility-bill.pdf","mime-type":"application/pdf","size":248392}
 
 FileSchema.frontmatterSchema.safeParse({ type: "file", filename: parsed.fields.filename }).success
 => true
+```
+
+`via.original` is the date of the original document, at whatever precision is
+known; anything that is not an ISO date is rejected:
+
+```ts continue
+const withOriginal = (original: string): boolean =>
+  FileSchema.frontmatterSchema.safeParse({
+    type: "file",
+    filename: { ...parsed.fields.filename, via: { ...parsed.fields.filename.via, original, note: "Found in the attic" } },
+  }).success;
+JSON.stringify(["1974", "1974-06", "1974-06-02", "June 1974"].map(withOriginal))
+=> [true,true,true,false]
 ```
 
 ## A failed extraction: an `error:`, no `docling:`
@@ -65,8 +77,7 @@ FileSchema.frontmatterSchema.safeParse({ type: "file", filename: parsed.fields.f
 ```ts
 const card = createPdfTemplate({
   format: "pdf",
-  capturedAt: "2026-04-02T10:23:00Z",
-  source: "scan-import",
+  via: { channel: "scan-import", at: "2026-04-02T10:23:00Z" },
   filename: "source.pdf",
   error: "Docling exited 1: model weights unavailable",
   body: "",
@@ -79,7 +90,7 @@ JSON.stringify([parsed.fields.error, parsed.fields.docling ?? null, parsed.rawBo
 ## An agent's judgement is `unusable: true`, and `format` is required
 
 ```ts
-const base = { type: "pdf", format: "pdf", filename: { ref: "attach/x.pdf", captured: "2026-04-02T10:23:00Z", source: "scan-import" } };
+const base = { type: "pdf", format: "pdf", filename: { ref: "attach/x.pdf", via: { channel: "scan-import", at: "2026-04-02T10:23:00Z" } } };
 
 PdfSchema.frontmatterSchema.parse({ ...base, unusable: true }).unusable
 => true

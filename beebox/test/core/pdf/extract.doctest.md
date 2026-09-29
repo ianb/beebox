@@ -232,7 +232,7 @@ await rm(scratch, { recursive: true, force: true });
 
 A scan that arrived through the upload route carries the credential that sent
 it. The promote worker passes `scan-upload/<token-name>` down through
-`bbx upload --source`, and it ends up on the pdf card's `source` (replacing
+`bbx upload --source`, and it ends up on the pdf card's `filename.via.channel` (replacing
 the generic `scan-import`) and on the session card — so a batch that looks wrong
 identifies the device that produced it.
 
@@ -241,7 +241,7 @@ const box = await makeTmpBox({ git: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "billed", pageCount: 1 }), "scan-upload/laptop-scansnap");
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
-card.fields.filename.source
+card.fields.filename.via.channel
 => scan-upload/laptop-scansnap
 
 const sessionCard = await box.read(result.data.sessionCardPath);
@@ -258,7 +258,7 @@ const plain = await makeTmpBox({ git: true });
 const plainResult = await importPdf(plain, createFakeDocling({ markdown: "billed", pageCount: 1 }));
 const plainDoc = await readPdfCard(plain);
 JSON.stringify([
-  parseCardText(plainDoc.content, { source: plainDoc.rel, schemas }).fields.filename.source,
+  parseCardText(plainDoc.content, { source: plainDoc.rel, schemas }).fields.filename.via.channel,
   (await plain.read(plainResult.data.sessionCardPath)).includes("source:"),
 ])
 => ["scan-import",false]

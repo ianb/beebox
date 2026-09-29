@@ -15,11 +15,11 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../exports/cards.js";
+import { MediaViaSchema, type MediaVia } from "../cards/media-via.js";
 
 const FilenameEntry = z.object({
   ref: z.string(),
-  recorded: z.string().datetime({ offset: true }),
-  source: z.string(),
+  via: MediaViaSchema,
   duration: z.string().optional(),
 });
 
@@ -46,8 +46,10 @@ session. The audio file itself lives in the card's attach scope,
 pointed to by \`filename.ref:\` (attach scope: see ABOUT_CARDS).
 
 Frontmatter:
-- \`filename:\` — \`{ref, recorded, source, duration?}\` for the audio
-  file. \`duration\` is set after transcription.
+- \`filename:\` — \`{ref, via, duration?}\` for the audio file.
+  \`via.channel\` is how it was recorded (\`microphone\`), \`via.at\` when
+  recording started; \`via.note\` may say how or why, in prose.
+  \`duration\` is set after transcription.
 - \`transcript:\` — full text transcription. Present means the clip
   is transcribed.
 - \`transcription-error:\` — set if transcription failed.
@@ -66,15 +68,13 @@ annotation instead of fabricating a transcript.`,
 export type AudioFields = InferCardFields<typeof AudioSchema>;
 
 export function createAudioTemplate(options: {
-  recordedAt: string;
-  source: string;
+  via: MediaVia;
   filename: string;
 }): string {
   const fields = {
     filename: {
       ref: `attach/${options.filename}`,
-      recorded: options.recordedAt,
-      source: options.source,
+      via: options.via,
     },
   };
   return `---\n${stringifyYaml(fields)}---\n`;

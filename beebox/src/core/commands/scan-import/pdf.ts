@@ -110,8 +110,7 @@ async function importPdfSession(
 
   const template: PdfTemplateOptions = {
     format: "pdf",
-    capturedAt: startedAt,
-    source: args.source ?? "scan-import",
+    via: { channel: args.source ?? "scan-import", at: startedAt },
     filename: SOURCE_PDF_FILENAME,
     originalName: path.basename(args.pdfPath),
     mimeType: "application/pdf",

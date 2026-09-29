@@ -108,8 +108,7 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
   }
 
   const cardContent = createImageTemplate({
-    capturedAt: startedAt,
-    source: "gallery",
+    via: { channel: "gallery", at: startedAt },
     filename: photoFilename,
   });
   const cardPath = path.join(sessionAttachAbsDir, cardFilename);

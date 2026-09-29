@@ -199,6 +199,9 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Replace every remaining `status` with the specific fact it recorded
   // (presence fields, named booleans, `outcome`). See the script's planners.
   { name: "status-fields-2026-09", script: "src/scripts/migrate/status-fields.ts" },
+  // Give each `source` that is not a derived-from pointer its own name, and
+  // move media acquisition times into `filename.via`. See the script's planners.
+  { name: "source-fields-2026-09", script: "src/scripts/migrate/source-fields.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

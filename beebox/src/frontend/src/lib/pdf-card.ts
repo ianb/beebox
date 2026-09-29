@@ -105,8 +105,10 @@ export interface ExtractedDocumentFields {
   doclingRef: string | null;
   /** The file's name before capture, when the pipeline recorded one. */
   originalName: string | null;
-  captured: string | null;
-  source: string | null;
+  /** When the file was acquired (`filename.via.at`). */
+  acquired: string | null;
+  /** How it came into the box (`filename.via.channel`). */
+  channel: string | null;
   title: string | null;
   author: string | null;
   pages: number | null;
@@ -130,6 +132,7 @@ export function readExtractedFields(
 ): ExtractedDocumentFields {
   const fm = frontmatter ?? {};
   const filename = isRecord(fm["filename"]) ? fm["filename"] : {};
+  const via = isRecord(filename["via"]) ? filename["via"] : {};
   const metadata = isRecord(fm["metadata"]) ? fm["metadata"] : {};
   const docling = isRecord(fm["docling"]) ? fm["docling"] : {};
   return {
@@ -137,8 +140,8 @@ export function readExtractedFields(
     originalRef: str(filename["ref"]),
     doclingRef: str(docling["ref"]),
     originalName: str(filename["original-name"]),
-    captured: str(filename["captured"]),
-    source: str(filename["source"]),
+    acquired: str(via["at"]),
+    channel: str(via["channel"]),
     title: str(metadata["title"]),
     author: str(metadata["author"]),
     pages: num(metadata["pages"]),

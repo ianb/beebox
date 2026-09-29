@@ -5,7 +5,7 @@
  * Written by `bbx scan-import`'s pdf mode (a scanned PDF that already carries
  * a text layer) and refreshed by `bbx pdf reanalyze`. The card is a
  * **superset of `file.card`**: it carries the same `filename:` provenance
- * entry (ref/captured/source/original-name/mime-type/size) plus the
+ * entry (ref/via/original-name/mime-type/size) plus the
  * extraction-derived parts — the rendered markdown as the card body, a
  * `docling.ref:` pointing at the gzipped canonical `DoclingDocument` JSON, and
  * `metadata:` (pages/title/author).
@@ -26,12 +26,12 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
+import { MediaViaSchema, type MediaVia } from "../cards/media-via.js";
 
 /** Same shape as `file.card`'s `filename:` entry — a pdf card is a superset. */
 const FilenameEntry = z.object({
   ref: z.string(),
-  captured: z.string().datetime({ offset: true }),
-  source: z.string(),
+  via: MediaViaSchema,
   "original-name": z.string().optional(),
   "mime-type": z.string().optional(),
   size: z.coerce.number().optional(),
@@ -113,7 +113,10 @@ Everything is inside the card's own attach scope, so refs are \`attach/…\`:
 - \`format\` — the source document type, e.g. \`pdf\`. \`format:\` records what
   the file was, distinct from the card type itself.
 - \`filename\` — provenance for the original: \`ref\` into the attach scope,
-  plus \`captured\`, \`source\`, and optionally \`original-name\`, \`mime-type\`,
+  \`via\` (\`channel\` such as \`scan-import\` or \`scan-upload/<token>\`,
+  \`at\` the import time, and optionally \`original\` — the document's own
+  date when known, \`YYYY\`, \`YYYY-MM\`, or \`YYYY-MM-DD\` — and \`note\`,
+  how or why in prose), and optionally \`original-name\`, \`mime-type\`,
   \`size\`.
 - \`docling\` — \`ref\` to the gzipped extraction JSON, plus the \`version\` of
   the extractor that produced it.
@@ -135,8 +138,7 @@ export type PdfFields = InferCardFields<typeof PdfSchema>;
 
 export interface PdfTemplateOptions {
   format: string;
-  capturedAt: string;
-  source: string;
+  via: MediaVia;
   /** Name of the original inside the card's attach scope. */
   filename: string;
   originalName?: string;
@@ -155,8 +157,7 @@ export interface PdfTemplateOptions {
 export function createPdfTemplate(options: PdfTemplateOptions): string {
   const filename: Record<string, unknown> = {
     ref: `attach/${options.filename}`,
-    captured: options.capturedAt,
-    source: options.source,
+    via: options.via,
   };
   if (options.originalName !== undefined) filename["original-name"] = options.originalName;
   if (options.mimeType !== undefined) filename["mime-type"] = options.mimeType;
