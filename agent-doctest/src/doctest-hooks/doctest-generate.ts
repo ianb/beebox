@@ -143,7 +143,7 @@ export function generateTestModule(markdown: string, options: GenerateOptions): 
     const labelled = parsed.find((ex) => ex.expected !== null) ?? parsed[0];
     const label = (labelled?.expression.split("\n")[0] ?? "").trim();
     open = {
-      header: testHeader({ name: `${fileName}:${block.line} — ${label}`, declares: (name) => declaresName(setupText, name) }),
+      header: testHeader({ name: `${fileName}:${block.line} — ${label}`, fence: span.fence, declares: (name) => declaresName(setupText, name) }),
       body: emitExamples(parsed, ctx),
       teardowns: pendingCleanup,
     };

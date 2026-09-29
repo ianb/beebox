@@ -115,7 +115,7 @@ export function moduleHeader(opts: { declares: (name: string) => boolean }): Gen
   return lines.map(gen);
 }
 
-export function testHeader(opts: { name: string; declares: (name: string) => boolean }): GenLine[] {
+export function testHeader(opts: { name: string; fence: number; declares: (name: string) => boolean }): GenLine[] {
   const lines = [
     `__doctest_test(${JSON.stringify(opts.name)}, async (__doctest_t) => {`,
     "  const __doctest_prints = [];",
@@ -124,7 +124,9 @@ export function testHeader(opts: { name: string; declares: (name: string) => boo
   ];
   if (!opts.declares("t")) lines.push("  const t = __doctest_t;");
   if (!opts.declares("print")) lines.push("  const print = (s) => void __doctest_prints.push(String(s));");
-  return lines.map(gen);
+  // The registration line maps to the block's fence, so tap's location for
+  // the test as a whole names the block rather than a nearby line.
+  return lines.map((text, i) => (i === 0 ? { text, md: opts.fence, col: 0 } : gen(text)));
 }
 
 /**
