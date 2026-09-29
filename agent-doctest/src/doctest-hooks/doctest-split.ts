@@ -118,8 +118,16 @@ function rewriteClause(clause: string, source: string): string {
 export function rewriteImports(expression: string): string {
   if (!/^\s*import[\s"'*{]/m.test(expression)) return expression;
   const lines = expression.split("\n");
+  // Lines that begin inside a multi-line template literal are string content
+  // (a view or script the example writes to disk), never an import to rewrite.
+  const startsInTemplate: boolean[] = [];
+  let inTemplate = false;
+  for (const line of lines) {
+    startsInTemplate.push(inTemplate);
+    inTemplate = nextTemplateState(inTemplate, line);
+  }
   for (let i = 0; i < lines.length; i++) {
-    if (!/^\s*import[\s"'*{]/.test(lines[i] ?? "")) continue;
+    if (startsInTemplate[i] || !/^\s*import[\s"'*{]/.test(lines[i] ?? "")) continue;
     let end = i;
     while (end < lines.length - 1 && !/(["'])[^"']+\1\s*;?\s*$/.test(lines[end] ?? "")) end++;
     const statement = lines.slice(i, end + 1).join("\n");
