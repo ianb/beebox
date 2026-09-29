@@ -77,7 +77,7 @@ async function seedBox() {
 }
 
 async function pendingJobs(root: string): Promise<number> {
-  return (await findJobCards(path.join(root, "_bookkeeping/jobs"), { sourceFilter: "todo-review" })).length;
+  return (await findJobCards(path.join(root, "_bookkeeping/jobs"), { typeFilter: "todo-review" })).length;
 }
 
 /** An edit to the card, committed: the review agent's, or the boxholder's. */

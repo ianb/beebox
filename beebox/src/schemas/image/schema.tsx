@@ -2,12 +2,12 @@
  * Image card schema — photos from capture sessions.
  *
  * Created by the capture preparation worker (or `bbx scan-import` for
- * standalone photo/PDF batches). A capture-session image starts at
- * `status: new`; the chat agent working the parent capture card fills in
+ * standalone photo/PDF batches). A capture-session image starts with no
+ * analysis; the chat agent working the parent capture card fills in
  * description/OCR/rotation/document metadata itself (via subagents reading
  * the image file) as part of annotating that capture. `bbx scan-import` runs
  * its own Gemini analysis at import time instead, so its image cards can
- * arrive already `analyzed`.
+ * arrive with a `description` already.
  *
  * Layout: `photo-001.image.card` next to `photo-001.attach/photo-001.jpg`.
  * `filename.ref:` points into the attach scope via the `attach/` virtual
@@ -18,11 +18,10 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { cardSchema, type InferCardFields, type SummaryAttrs } from "../../exports/cards.js";
 import { titleFromFilename, truncateTitle } from "../../core/file-summary.js";
+import { mediaVia } from "../../cards/media-via.js";
 
-const ImageStatusSchema = z.enum(["new", "analyzed", "invalid"]);
-export type ImageStatus = z.infer<typeof ImageStatusSchema>;
-
-export const ImageSourceSchema = z.enum([
+/** How an image came into the box: `filename.via.channel`. */
+const ImageChannelSchema = z.enum([
   "camera-user",
   "camera-environment",
   "gallery",
@@ -31,19 +30,22 @@ export const ImageSourceSchema = z.enum([
   "scan",
   "generated",
 ]);
-export type ImageSource = z.infer<typeof ImageSourceSchema>;
+export type ImageChannel = z.infer<typeof ImageChannelSchema>;
+
+const ImageViaSchema = mediaVia(ImageChannelSchema);
+export type ImageVia = z.infer<typeof ImageViaSchema>;
 
 const ImageRotationSchema = z.enum(["0", "90", "180", "270"]);
 export type ImageRotation = z.infer<typeof ImageRotationSchema>;
 
 const FilenameEntry = z.object({
   ref: z.string(),
-  captured: z.string().datetime({ offset: true }),
-  source: ImageSourceSchema,
+  via: ImageViaSchema,
 });
 
 const TextBlock = z.object({
-  source: z.string().optional(),
+  // The surface the text is on: "whiteboard", "photo", "back".
+  surface: z.string().optional(),
   content: z.string(),
 });
 
@@ -62,6 +64,11 @@ const SubjectBbox = z.object({
   x2: z.string(),
 });
 
+/**
+ * A date as printed on the photographed document, kept verbatim: evidence
+ * for a later normalized date entry (`beebox/cards` `DateEntrySchema`), not
+ * one itself.
+ */
 const DocumentDate = z.object({
   label: z.string(),
   value: z.string(),
@@ -69,10 +76,9 @@ const DocumentDate = z.object({
 
 /**
  * What an image row carries beyond its title: enough for the list component
- * to draw a thumbnail and say what state the image is in.
+ * to draw a thumbnail.
  */
 interface ImageAttrs {
-  status: ImageStatus;
   "has-text"?: boolean;
   rotation?: ImageRotation;
   filename?: string;
@@ -89,7 +95,6 @@ export const ImageSchema = cardSchema("image", {
   description: "A photo (typically from a capture session) — the image file lives in the attach scope; analysis fills description/OCR/EXIF",
   category: "synced",
   fields: {
-    status: ImageStatusSchema.default("new"),
     "has-text": z.boolean().optional(),
     rotation: ImageRotationSchema.optional(),
     filename: FilenameEntry,
@@ -99,6 +104,8 @@ export const ImageSchema = cardSchema("image", {
     exif: ExifMeta.optional(),
     "subject-bbox": SubjectBbox.optional(),
     document: DocumentMeta.optional(),
+    /** An agent judged the image not useful; the capture timeline skips it. */
+    unusable: z.boolean().optional(),
   },
   instructions: `# Image Cards
 
@@ -107,11 +114,18 @@ The image file itself lives in the card's attach scope, pointed to by
 \`filename.ref:\` (attach scope: see ABOUT_CARDS).
 
 Frontmatter fields:
-- \`filename:\` — \`{ref, captured, source}\` for the attached image
-  file. \`captured\` is the acquisition timestamp supplied by the
-  capture/upload/import flow (for example, camera shutter time,
-  gallery selection time, or import-session start). It is not
-  derived from EXIF.
+- \`filename:\` — \`{ref, via}\` for the attached image file.
+  \`via\` says how the image came into the box:
+  - \`channel\` — \`camera-user\`, \`camera-environment\`, \`gallery\`,
+    \`screenshot\`, \`download\`, \`scan\`, or \`generated\`.
+  - \`at\` — the acquisition timestamp supplied by the
+    capture/upload/import flow (for example, camera shutter time,
+    gallery selection time, or import-session start). It is not
+    derived from EXIF.
+  - \`original\` (optional) — the date of the original, when it is
+    known and differs from \`at\`: a scanned 1970s photo gets
+    \`original: "1974"\` (\`YYYY\`, \`YYYY-MM\`, or \`YYYY-MM-DD\`).
+  - \`note\` (optional) — how or why it was acquired, in prose.
 - \`description:\` — one sentence describing what the image *looks
   like* (filled during analysis) — the visual field, used as alt text.
 - \`contains:\` — one sentence stating what someone could *learn* from
@@ -120,14 +134,14 @@ Frontmatter fields:
   it's concise ("Boiler serial number K-44210"), don't point at it.
 - \`creation:\` — optional free-text notes on how the image came to
   be. Only include when there's something worth recording. For
-  AI-generated images (\`source: generated\`), use \`model: {modelId}\\nprompt: {prompt text}\`.
-- \`text:\` — array of \`{source?, content}\` entries with transcribed
-  text content from the image, if any. \`source\` describes what the
+  AI-generated images (\`filename.via.channel: generated\`), use \`model: {modelId}\\nprompt: {prompt text}\`.
+- \`text:\` — array of \`{surface?, content}\` entries with transcribed
+  text content from the image, if any. \`surface\` describes what the
   text is on ("whiteboard", "business card", "printed page",
   "screen").
 - \`exif:\` — EXIF metadata extracted from the image file. Put the
   camera's original photographic timestamp in \`exif.date\` when
-  available; it may differ from \`filename.captured\`.
+  available; it may differ from \`filename.via.at\`.
 - \`subject-bbox:\` — bounding box of the main subject on a 0-1000
   scale (\`{y1, x1, y2, x2}\`). Present when the subject doesn't fill
   the entire frame.
@@ -135,25 +149,25 @@ Frontmatter fields:
   (bill, letter, form, receipt, statement, …). \`kind\` is a short
   free-text category ("utility bill", "lab results"), \`from\` is the
   issuer/sender, \`dates\` is an array of \`{label, value}\` entries.
-  Date values are kept as they appear in the document; normalization
-  happens downstream.
+  Date values are kept as they appear in the document (evidence, not
+  ISO dates); a card that records a normalized date uses a date entry.
 - \`has-text\` — true if the image contains readable text, false
   otherwise. Always true when a \`document:\` field is present.
 - \`rotation\` — degrees clockwise the image needs to be rotated to
   appear upright: \`"0"\`, \`"90"\`, \`"180"\`, or \`"270"\`.
+- \`unusable: true\` — set when the image is not useful (accidental
+  capture, too blurry). The capture's timeline leaves it out.
 
 For an image that arrived as part of a capture, analysis is your
 job: OCR any text and write a description via a subagent that reads
 the actual image file (don't infer content from the transcript
-alone), then fill in the fields above and set \`status: analyzed\`.
+alone), then fill in the fields above.
 For an image dropped by \`bbx scan-import\`, analysis already ran
 (Gemini) at import time — treat those fields as authoritative unless
-something looks wrong.
-
-Status: new (unanalyzed) → analyzed (description filled in) → invalid
-(accidental capture, too blurry, not useful).`,
-  // What the image LOOKS like is its title; the attached file and its state
-  // travel as attrs so the list component can draw a thumbnail.
+something looks wrong. An image with no \`description:\` has not
+been analyzed yet.`,
+  // What the image LOOKS like is its title; the attached file travels as
+  // attrs so the list component can draw a thumbnail.
   summarize: (card, base) => {
     const ref = card.filename.ref;
     let title = "";
@@ -162,7 +176,7 @@ Status: new (unanalyzed) → analyzed (description filled in) → invalid
     } else if (ref !== "") {
       title = titleFromFilename(ref);
     }
-    const attrs: ImageAttrs = { status: card.status };
+    const attrs: ImageAttrs = {};
     if (card["has-text"] !== undefined) attrs["has-text"] = card["has-text"];
     if (card.rotation !== undefined) attrs.rotation = card.rotation;
     if (ref !== "") attrs.filename = ref;
@@ -185,16 +199,13 @@ export type ImageSummaryAttrs = SummaryAttrs<typeof ImageSchema>;
  * annotating the parent capture card.
  */
 export function createImageTemplate(options: {
-  capturedAt: string;
-  source: ImageSource;
+  via: ImageVia;
   filename: string;
 }): string {
   const fields = {
-    status: "new",
     filename: {
       ref: `attach/${options.filename}`,
-      captured: options.capturedAt,
-      source: options.source,
+      via: options.via,
     },
   };
   return `---\n${stringifyYaml(fields)}---\n`;

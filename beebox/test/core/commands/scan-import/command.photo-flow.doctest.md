@@ -88,14 +88,14 @@ photo-002.attach/photo-002.jpg
 photo-002.image.card
 ```
 
-The image card carries the analysis: description, back text, `analyzed` status.
+The image card carries the analysis: description and back text.
 
 ```ts continue
 const dir = await sessionDir(box);
 const cardText = await box.read(`_content/inbox/${dir}/photo-001.image.card`);
 const card = parseCardText(cardText, { source: "photo-001.image.card", schemas, type: "image" });
-`${card.fields["status"]} | ${card.fields["description"]} | ${card.fields["text"]?.[0]?.content}`
-=> analyzed | Fake photo 0 | Fake back caption 1
+`${card.fields["description"]} | ${card.fields["text"]?.[0]?.content}`
+=> Fake photo 0 | Fake back caption 1
 ```
 
 The seam page's two analyses disagreed on pairing (the fake generates

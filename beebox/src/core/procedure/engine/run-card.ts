@@ -1,6 +1,6 @@
 /**
  * Run-card serialization and mutation — building the initial run card and
- * applying status/step updates as the procedure executes.
+ * applying outcome/step updates as the procedure executes.
  *
  * Run cards are Phase-2 frontmatter (YAML, no body). The engine owns the
  * read-mutate-write cycle; strict Zod validation happens when the card is
@@ -13,11 +13,11 @@ import { renderFrontmatterBlock, splitCardContent } from "../../../exports/cards
 import { parse as parseYaml } from "yaml";
 import { invariant } from "../../../shared/invariant.js";
 import {
-  isRunStatus,
-  isLegalRunStatusTransition,
+  canReopenRun,
+  isRunOutcome,
   type ParsedProcedure,
   type StepUpdate,
-  type RunStatus,
+  type RunOutcome,
 } from "../engine-types.js";
 import type { InconclusiveReason } from "../../../shared/inconclusive.js";
 
@@ -58,7 +58,7 @@ interface MutableStep {
 }
 interface MutableRunCard {
   procedure: string;
-  status: string;
+  outcome?: string;
   "started-at": string;
   "completed-at"?: string;
   directive?: string;
@@ -67,7 +67,10 @@ interface MutableRunCard {
 }
 
 function serializeRunCard(card: MutableRunCard): string {
-  return renderFrontmatterBlock(card);
+  // `outcome` goes right after `procedure`, where a reader looks first, not
+  // after the step list.
+  const { procedure, outcome, ...rest } = card;
+  return renderFrontmatterBlock({ procedure, ...(outcome !== undefined && { outcome }), ...rest });
 }
 
 async function readRunCard(runCardPath: string): Promise<MutableRunCard> {
@@ -102,7 +105,7 @@ export interface BuildInitialRunCardParams {
 }
 
 /**
- * Build the initial run card (all steps pending).
+ * Build the initial run card (all steps pending, no outcome yet).
  */
 export function buildInitialRunCard(params: BuildInitialRunCardParams): string {
   const { procedure, procedurePath, startedAt, directive } = params;
@@ -112,7 +115,6 @@ export function buildInitialRunCard(params: BuildInitialRunCardParams): string {
   }));
   const card: MutableRunCard = {
     procedure: procedurePath,
-    status: "running",
     "started-at": startedAt,
     ...(directive !== undefined && directive !== "" ? { directive } : {}),
     steps,
@@ -120,35 +122,52 @@ export function buildInitialRunCard(params: BuildInitialRunCardParams): string {
   return serializeRunCard(card);
 }
 
-/**
- * Parameters for updateRunCardStatus
- */
-export interface UpdateRunCardStatusParams {
-  runCardPath: string;
-  status: RunStatus;
-  completedAt?: string;
-  /** Expiry stamp ("never" or ISO datetime) — see run-expiry.ts */
-  expires?: string;
+/** The card's recorded outcome, which must be a known one when present. */
+function recordedOutcome(card: MutableRunCard, runCardPath: string): RunOutcome | undefined {
+  const { outcome } = card;
+  if (outcome === undefined) return undefined;
+  invariant(isRunOutcome(outcome), `Run card has unknown outcome "${outcome}": ${runCardPath}`);
+  return outcome;
 }
 
 /**
- * Update the run card's overall status.
+ * Parameters for finishRunCard
  */
-export async function updateRunCardStatus(params: UpdateRunCardStatusParams): Promise<void> {
-  const { runCardPath, status, completedAt, expires } = params;
+export interface FinishRunCardParams {
+  runCardPath: string;
+  outcome: RunOutcome;
+  completedAt: string;
+  /** Expiry stamp ("never" or ISO datetime) — see run-expiry.ts */
+  expires: string;
+}
+
+/**
+ * Record how the run finished. The run card is engine-written internal state,
+ * not user input: a card that already has an outcome means a caller bug (a
+ * finished run finished again without being re-opened), so fail loudly rather
+ * than overwrite it.
+ */
+export async function finishRunCard(params: FinishRunCardParams): Promise<void> {
+  const { runCardPath, outcome, completedAt, expires } = params;
   const card = await readRunCard(runCardPath);
-  // The run card is engine-written internal state, not user input: an illegal
-  // status transition means a caller bug, so fail loudly rather than persist a
-  // corrupt lifecycle (e.g. a terminal completed run flipped back to running).
-  const from = card.status;
-  invariant(isRunStatus(from), `Run card has unknown status "${from}": ${runCardPath}`);
-  invariant(
-    isLegalRunStatusTransition(from, status),
-    `Illegal procedure run status transition ${from} → ${status}: ${runCardPath}`
-  );
-  card.status = status;
-  if (completedAt !== undefined) card["completed-at"] = completedAt;
-  if (expires !== undefined) card.expires = expires;
+  const prior = recordedOutcome(card, runCardPath);
+  invariant(prior === undefined, `Run already finished (${String(prior)}), cannot record ${outcome}: ${runCardPath}`);
+  card.outcome = outcome;
+  card["completed-at"] = completedAt;
+  card.expires = expires;
+  await fs.writeFile(runCardPath, serializeRunCard(card));
+}
+
+/**
+ * Re-open a run for resume: remove its outcome, if it has one that may be
+ * re-opened (see `canReopenRun`). Rewrites the card either way, so its mtime
+ * says the run is live again.
+ */
+export async function reopenRunCard(runCardPath: string): Promise<void> {
+  const card = await readRunCard(runCardPath);
+  const prior = recordedOutcome(card, runCardPath);
+  invariant(canReopenRun(prior), `A ${String(prior)} run cannot be re-opened: ${runCardPath}`);
+  delete card.outcome;
   await fs.writeFile(runCardPath, serializeRunCard(card));
 }
 

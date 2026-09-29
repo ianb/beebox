@@ -147,7 +147,6 @@ createSelectQuestionTemplate({
 })
 =>
 ---
-status: pending
 memo: Context here
 prompt: What do you want?
 input:
@@ -176,7 +175,6 @@ createSelectQuestionTemplate({
 })
 =>
 ---
-status: pending
 memo: Context with <special> & chars
 prompt: What's "this"?
 input:
@@ -194,11 +192,10 @@ asked-at: 2026-07-10T09:00:00-07:00
 
 ## Intake Job
 
-An intake job groups items for triage. It has a `status`, `priority`, and a list of item references:
+An intake job groups items for triage. It has a `priority`, a list of item references, and — when a connector-scoped wakeup made it — the `connector` (every job card on disk is pending; finishing a job deletes it):
 
 ```ts
 createIntakeJobTemplate({
-  source: "capture-connector",
   description: "Triage 2 new capture sessions",
   items: [
     "_content/inbox/capture-1/session.capture-session.card",
@@ -207,8 +204,6 @@ createIntakeJobTemplate({
 })
 =>
 ---
-status: pending
-source: capture-connector
 priority: normal
 description: Triage 2 new capture sessions
 items:
@@ -217,19 +212,18 @@ items:
 ---
 ```
 
-Supports `priority: "low"`:
+Supports `priority: "low"` and a `connector`:
 
 ```ts
 createIntakeJobTemplate({
-  source: "capture-connector",
+  connector: "raindrop",
   description: "Triage bookmarks",
   items: ["_content/inbox/bookmark.bookmark.card"],
   priority: "low",
 })
 =>
 ---
-status: pending
-source: capture-connector
+connector: raindrop
 priority: low
 description: Triage bookmarks
 items:
@@ -245,15 +239,16 @@ readable rendering inline as the body.
 ```ts
 createWebpageTemplate({
   title: "Example Page",
-  source: "https://example.com/article",
+  url: "https://example.com/article",
   capturedAt: "2026-06-15T12:00:00Z",
   content: "The readable page body.",
 })
 =>
 ---
 title: Example Page
-source: https://example.com/article
-captured: 2026-06-15T12:00:00Z
+sources:
+  - href: https://example.com/article
+    retrieved: 2026-06-15T12:00:00Z
 ---
 The readable page body.
 ```
@@ -264,7 +259,7 @@ set:
 ```ts
 createWebpageTemplate({
   title: "Example Page",
-  source: "https://example.com/article",
+  url: "https://example.com/article",
   capturedAt: "2026-06-15T12:00:00Z",
   content: "Body.",
   siteName: "Example",
@@ -273,8 +268,9 @@ createWebpageTemplate({
 =>
 ---
 title: Example Page
-source: https://example.com/article
-captured: 2026-06-15T12:00:00Z
+sources:
+  - href: https://example.com/article
+    retrieved: 2026-06-15T12:00:00Z
 siteName: Example
 frozen:
   ref: attach/page.frozen
@@ -565,7 +561,7 @@ LessonPlanSchema.frontmatterSchema.safeParse({
   type: "lesson-plan",
   segments: [
     { do: "Elicit their model of what's moving in a reaction", mode: "interactive", concepts: ["proton-transfer"] },
-    { do: "Walk the proton-transfer figure", mode: "material", status: "ready", material: { ref: "material/Proton_Transfer.figure.card" } },
+    { do: "Walk the proton-transfer figure", mode: "material", material: { ref: "material/Proton_Transfer.figure.card" } },
   ],
 }).success
 => true
@@ -598,7 +594,7 @@ card-lint checks it resolves:
 const parsed = LessonPlanSchema.frontmatterSchema.parse({
   type: "lesson-plan",
   segments: [
-    { do: "Read the recap", mode: "material", status: "ready", material: { ref: "material/Recap.doc.card" } },
+    { do: "Read the recap", mode: "material", material: { ref: "material/Recap.doc.card" } },
   ],
 });
 extractRefs(parsed).map((r) => r.ref)
@@ -681,31 +677,31 @@ ProgressSchema.frontmatterSchema.safeParse({
   type: "progress",
   course: { ref: "../Acids.course.card" },
   entries: [
-    { node: "electron-transfer", status: "partial", basis: "observed", evidence: ["Said acids 'give away' something but couldn't say what"] },
+    { node: "electron-transfer", level: "partial", basis: "observed", evidence: ["Said acids 'give away' something but couldn't say what"] },
   ],
 }).success
 => true
 ```
 
-The evidence contract is enforced — a status with no `evidence`, an empty
+The evidence contract is enforced — a level with no `evidence`, an empty
 `evidence` array, or no `basis` all fail to parse (no anonymous rating):
 
 ```ts
 ProgressSchema.frontmatterSchema.safeParse({
   type: "progress",
-  entries: [{ node: "n", status: "solid", basis: "observed" }],
+  entries: [{ node: "n", level: "solid", basis: "observed" }],
 }).success
 => false
 
 ProgressSchema.frontmatterSchema.safeParse({
   type: "progress",
-  entries: [{ node: "n", status: "solid", basis: "observed", evidence: [] }],
+  entries: [{ node: "n", level: "solid", basis: "observed", evidence: [] }],
 }).success
 => false
 
 ProgressSchema.frontmatterSchema.safeParse({
   type: "progress",
-  entries: [{ node: "n", status: "solid", evidence: ["heard them explain it"] }],
+  entries: [{ node: "n", level: "solid", evidence: ["heard them explain it"] }],
 }).success
 => false
 ```

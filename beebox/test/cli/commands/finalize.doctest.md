@@ -21,7 +21,7 @@ process.env.BBX_PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-finalize-${process.
 
 const NOW = new Date("2026-06-29T12:00:00Z");
 const question = (prompt, askedAt) =>
-  `---\nstatus: pending\nprompt: ${prompt}\ninput:\n  type: text\nasked-at: ${askedAt.toISOString()}\n---\n`;
+  `---\nprompt: ${prompt}\ninput:\n  type: text\nasked-at: ${askedAt.toISOString()}\n---\n`;
 ```
 
 ## One expired-age question and one fresh: only the fresh one is announced
@@ -45,7 +45,7 @@ lines.join("\n")
   Question aging: 0 nudged, 1 expired
   Question alert: 1 new question(s)
 
-(await box.read("_bookkeeping/questions/Old.question.card")).includes("status: expired")
+(await box.read("_bookkeeping/questions/Old.question.card")).includes("expired-at:")
 => true
 
 const sent = (await readRecent(box.root, { days: 1, now: NOW })).filter((n) => n.intent.source === "question-alert");

@@ -20,7 +20,7 @@ export interface Connector {
   /**
    * Subdirectories under _content/inbox/ that this connector owns. Used by
    * `bbx wakeup --connector <name>` to scope inbox scanning and to tag
-   * any intake jobs it creates with `source="<name>"`. Empty if the
+   * any intake jobs it creates with `connector: <name>`. Empty if the
    * connector creates job cards directly without staging inbox items.
    */
   inboxPaths: string[];

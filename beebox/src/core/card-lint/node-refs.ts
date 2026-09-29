@@ -22,7 +22,7 @@
  * id the resolved map doesn't define. If the map doesn't resolve, both stay
  * silent (the generic broken-ref walk already reports the missing link). The
  * lesson-plan adapter additionally emits the self-contained deferral warning (a
- * `material` segment with neither a card nor `status: planned`).
+ * `material` segment with neither a card nor `planned: true`).
  *
  * Cards' frontmatter YAML is read directly (not via the schema modules) to keep
  * the lint layer decoupled from specific card types.
@@ -70,7 +70,7 @@ export async function lintProgressNodeRefs(input: NodeRefLintInput): Promise<Lin
 /**
  * Warn for a lesson-plan's node and deferral issues: each `segments[].concepts[]`
  * id absent from the sibling concept-map, plus each `material` segment that has
- * neither a `material` ref nor `status: planned` (deferral made visible). The
+ * neither a `material` ref nor `planned: true` (deferral made visible). The
  * deferral check is self-contained; the node check resolves the sibling map and
  * stays silent if it's missing.
  */
@@ -186,18 +186,18 @@ function lessonPlanNodeRefs(segments: unknown[]): NodeRef[] {
   return refs;
 }
 
-/** A `material` segment with no `material` ref and not `status: planned` → deferral warning. */
+/** A `material` segment with no `material` ref and not `planned: true` → deferral warning. */
 function lessonPlanDeferralWarnings(segments: unknown[]): LintIssue[] {
   const issues: LintIssue[] = [];
   for (const [i, segment] of segments.entries()) {
     if (!isRecord(segment)) continue;
     if (segment["mode"] !== "material") continue;
     if (refValue(segment["material"]) !== null) continue;
-    if (segment["status"] === "planned") continue;
+    if (segment["planned"] === true) continue;
     issues.push({
       type: "reference",
       severity: "warning",
-      message: `segments[${i}]: material segment with no material card — ref a card or mark it 'status: planned'`,
+      message: `segments[${i}]: material segment with no material card — ref a card or mark it 'planned: true'`,
     });
   }
   return issues;

@@ -24,7 +24,7 @@ import { syncConnector } from "../../../connector-activity/core.js";
  *
  * Returns the connector that was scoped to via `--connector X` (or
  * `undefined` for a full wakeup) so later steps can scope their inbox
- * scan and the reactor's `sourceFilter`.
+ * scan and the reactor's `connectorFilter`.
  *
  * `activeConnector` is ALSO `undefined` when `--connector X` names a
  * connector that doesn't exist (`toRun` is empty, so `toRun[0]` is

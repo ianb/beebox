@@ -6257,12 +6257,6 @@ test1:
       peak: 54530
       added: 3503
       turns: 5
-    - date: 2026-09-26T23:33:57.459Z
-      boxCommit: a1cae94bf3608dd303df597151c7ae7b5b5f4290
-      repoCommit: 63ab2f15373ef7b9a252c8eb6ad565bc8b6e2680
-      initial: 50867
-      peak: 54675
-      added: 3808
   search-finds-engine-doc:
     - date: 2026-09-26T19:02:05.121Z
       boxCommit: ccfb113de903fa2a869348047c030013fb03dc58
@@ -6613,6 +6607,43 @@ test1:
       peak: 37510
       added: 0
       turns: 2
+  schema-specific-fields:
+    - date: 2026-09-29T11:15:19.301Z
+      boxCommit: d1c69414a9ea0c76116d629c487d55db510d5af1
+      repoCommit: 4cea619bf59fb06772092d096f3dca6d2bc82c1b
+      initial: 38918
+      peak: 52306
+      added: 13388
+      turns: 14
+    - date: 2026-09-29T11:16:17.765Z
+      boxCommit: 4b21e704c4f7448395e77fde5b26c31901456cc5
+      repoCommit: 4cea619bf59fb06772092d096f3dca6d2bc82c1b
+      initial: 38918
+      peak: 45404
+      added: 6486
+      turns: 4
+  record-sources-provenance:
+    - date: 2026-09-29T11:16:42.797Z
+      boxCommit: 4b21e704c4f7448395e77fde5b26c31901456cc5
+      repoCommit: 4cea619bf59fb06772092d096f3dca6d2bc82c1b
+      initial: 38899
+      peak: 45308
+      added: 6409
+      turns: 4
+    - date: 2026-09-29T11:17:02.035Z
+      boxCommit: 4b21e704c4f7448395e77fde5b26c31901456cc5
+      repoCommit: 4cea619bf59fb06772092d096f3dca6d2bc82c1b
+      initial: 38899
+      peak: 44959
+      added: 6060
+      turns: 4
+    - date: 2026-09-29T11:17:46.711Z
+      boxCommit: 4b21e704c4f7448395e77fde5b26c31901456cc5
+      repoCommit: 4cea619bf59fb06772092d096f3dca6d2bc82c1b
+      initial: 38896
+      peak: 44985
+      added: 6089
+      turns: 4
   pdf-image-formats:
     - date: 2026-09-29T02:24:29.322Z
       boxCommit: 1c6978a37fb0f4ada3858ae1844c090031093710

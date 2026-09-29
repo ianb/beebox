@@ -330,7 +330,6 @@ function hitDoc(hit: { document: TypedDocument<SearchIndex> }): SearchDoc {
     title: doc.title,
     contains: doc.contains,
     content: doc.content,
-    created: doc.created,
     contentHash: doc.contentHash,
     embedding: doc.embedding,
   };

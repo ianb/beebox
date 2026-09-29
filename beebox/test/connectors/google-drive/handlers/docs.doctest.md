@@ -15,6 +15,11 @@ import {
 import { createGoogleDriveConnector } from "../../../../src/connectors/google-drive/connector.js";
 import { docsHandler } from "../../../../src/connectors/google-drive/handlers/docs/handler.js";
 import { createGdocTemplate } from "../../../../src/schemas/gdoc.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../../../../src/exports/cards.js";
+import { planSourceFields } from "../../../../src/scripts/migrate/source-fields.js";
+import { applyFieldEdits } from "../../../../src/scripts/migrate/_field-edits.js";
+import { findDriveCardTracking } from "../../../../src/connectors/google-drive/tracking.js";
 
 // Several assertions exercise conflict/error paths that log to console.
 // Silence so they don't pollute test output.
@@ -87,7 +92,6 @@ await box.seed("_content/drive/Project_Notes.gdoc.card", createGdocTemplate({
   link: "https://docs.google.com/document/d/doc-1/edit",
   owner: "test@example.com",
   contentFile: "Project_Notes.md",
-  status: "new",
 }));
 box.commitAll("add doc card");
 
@@ -100,15 +104,15 @@ JSON.stringify(await box.read("_content/drive/Project_Notes.attach/Project_Notes
 => "# Notes\n\nFirst paragraph.\n"
 ```
 
-The card now has status synced and the upstream revision recorded:
+The card now records the upstream revision, and no conflict:
 
 ```ts continue
 const card = await box.read("_content/drive/Project_Notes.gdoc.card");
-card.includes("drive-id: doc-1")
+card.includes("drive:\n  id: doc-1")
 => true
 
-card.includes("status: synced")
-=> true
+card.includes("conflict")
+=> false
 
 card.includes("revision: rev-1")
 => true
@@ -121,7 +125,7 @@ changes nothing else doesn't rewrite the card:
 ```ts continue
 await box.write(
   "_content/drive/Project_Notes.gdoc.card",
-  card.replace("drive-id: doc-1", "contains: Planning notes for the project kickoff.\ndrive-id: doc-1")
+  card.replace("drive:\n  id: doc-1", "contains: Planning notes for the project kickoff.\ndrive:\n  id: doc-1")
 );
 box.commitAll("agent adds contains");
 const resync = await connector.sync();
@@ -131,6 +135,31 @@ resync.success
 const resynced = await box.read("_content/drive/Project_Notes.gdoc.card");
 resynced.includes("contains: Planning notes for the project kickoff.")
 => true
+```
+
+A card in the flat shape the connector wrote before `drive:` (with the agent's
+`contains`) migrates, through the `source-fields-2026-09` migration, to exactly
+what the connector now writes. The next sync leaves it alone, and the card is
+still found by its Drive id:
+
+```ts continue
+const { drive: meta, ...rest } = parseYaml(splitCardContent(resynced).frontmatterText);
+const flat = { "drive-id": meta.id, title: rest.title, modified: meta.modified, link: meta.link, owner: meta.owner, content: rest.content, revision: meta.revision, contains: rest.contains };
+const cardFile = join(box.root, "_content/drive/Project_Notes.gdoc.card");
+const oldText = renderFrontmatterBlock(flat);
+const oldSplit = splitCardContent(oldText);
+const migratedCard = `---\n${applyFieldEdits(oldSplit.frontmatterText, planSourceFields("gdoc", parseYaml(oldSplit.frontmatterText)).edits)}---\n`;
+migratedCard === resynced
+=> true
+
+await writeFile(cardFile, migratedCard);
+box.commitAll("migrate the card");
+(await findDriveCardTracking(box.root)).liveCards.map((c) => `${c.driveId} ${c.relPath}`).join()
+=> doc-1 _content/drive/Project_Notes.gdoc.card
+
+const afterMigration = await connector.sync();
+JSON.stringify({ success: afterMigration.success, unchanged: (await box.read("_content/drive/Project_Notes.gdoc.card")) === migratedCard, clean: execSync("git status --porcelain", { cwd: box.root }).toString() })
+=> {"success":true,"unchanged":true,"clean":""}
 ```
 
 ## Pull — lossy content surfaces in the card
@@ -171,7 +200,6 @@ await box2.seed("_content/drive/Reviewed_Doc.gdoc.card", createGdocTemplate({
   link: "https://docs.google.com/document/d/doc-2/edit",
   owner: "test@example.com",
   contentFile: "Reviewed_Doc.md",
-  status: "new",
 }));
 box2.commitAll("add reviewed doc");
 
@@ -236,7 +264,6 @@ await box3.seed("_content/drive/Editable.gdoc.card", createGdocTemplate({
   link: "https://docs.google.com/document/d/doc-3/edit",
   owner: "test@example.com",
   contentFile: "Editable.md",
-  status: "new",
 }));
 box3.commitAll("add editable");
 
@@ -261,7 +288,7 @@ drive3.contentUpdateLog[0]?.content
 
 ## Conflict — remote changed since last pull
 
-When both local and remote have changed, push refuses to overwrite. The upstream content is written to a `.remote.md` inside the attach scope and the card status flips to `conflict`.
+When both local and remote have changed, push refuses to overwrite. The upstream content is written to a `.remote.md` inside the attach scope and the card gets `conflict: true`.
 
 ```ts
 const box4 = await makeTmpBox({ git: true });
@@ -294,7 +321,6 @@ await box4.seed("_content/drive/Contended.gdoc.card", createGdocTemplate({
   link: "https://docs.google.com/document/d/doc-4/edit",
   owner: "test@example.com",
   contentFile: "Contended.md",
-  status: "new",
 }));
 box4.commitAll("add contended");
 
@@ -326,9 +352,9 @@ await box4.read("_content/drive/Contended.attach/Contended.remote.md")
 drive4.contentUpdateLog.length
 => 0
 
-// Card flipped to conflict status.
+// Card marked in conflict.
 const card4 = await box4.read("_content/drive/Contended.gdoc.card");
-card4.includes("status: conflict")
+card4.includes("conflict: true")
 => true
 ```
 
@@ -354,6 +380,10 @@ drive4.contentUpdateLog.length
 
 drive4.contentUpdateLog[0]?.content
 => Merged.
+
+// With the `.remote.md` gone, the card no longer says conflict.
+(await box4.read("_content/drive/Contended.gdoc.card")).includes("conflict")
+=> false
 ```
 
 ## Graceful degradation when Docs API is unavailable
@@ -397,7 +427,6 @@ await box5.seed("_content/drive/Degraded.gdoc.card", createGdocTemplate({
   link: "https://docs.google.com/document/d/doc-5/edit",
   owner: "test@example.com",
   contentFile: "Degraded.md",
-  status: "new",
 }));
 box5.commitAll("add degraded");
 
@@ -487,7 +516,6 @@ await box6.seed("_content/drive/Feedback.gdoc.card", createGdocTemplate({
   link: "https://docs.google.com/document/d/doc-6/edit",
   owner: "test@example.com",
   contentFile: "Feedback.md",
-  status: "new",
 }));
 box6.commitAll("add feedback doc");
 
@@ -607,7 +635,6 @@ await boxW.seed("_content/drive/Checklist.gdoc.card", createGdocTemplate({
   link: "https://docs.google.com/document/d/doc-w/edit",
   owner: "test@example.com",
   contentFile: "Checklist.md",
-  status: "new",
 }));
 boxW.commitAll("add checklist");
 
@@ -627,7 +654,7 @@ driveW.contentUpdateLog.length
 => 0
 ```
 
-The upstream copy is parked for resolution and the card flips to `conflict`:
+The upstream copy is parked for resolution and the card gets `conflict: true`:
 
 ```ts continue
 JSON.stringify(await boxW.read("_content/drive/Checklist.attach/Checklist.remote.md"))
@@ -635,7 +662,7 @@ JSON.stringify(await boxW.read("_content/drive/Checklist.attach/Checklist.remote
 ```
 
 ```ts continue
-(await boxW.read("_content/drive/Checklist.gdoc.card")).includes("status: conflict")
+(await boxW.read("_content/drive/Checklist.gdoc.card")).includes("conflict: true")
 => true
 ```
 

@@ -78,6 +78,6 @@ remove it.
 
 ## Related
 
-- [Review the standard card fields](2026-09-27-review-standard-card-fields.md):
+- [Review the standard card fields](../closed/code-quality/2026-09-27-review-standard-card-fields.md):
   `created` and `status` are examples of fields that slip in.
 - [A card field for when a card stops mattering](../features/2026-09-27-universal-moot-after-card-field.md).

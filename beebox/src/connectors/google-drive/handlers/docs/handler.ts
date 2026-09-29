@@ -7,7 +7,7 @@
  *
  * Conflict detection: stores `headRevisionId` and `modifiedTime` after each
  * successful pull. Before pushing, re-reads remote state — if either has
- * changed, refuses to push, sets card status="conflict", and writes the
+ * changed, refuses to push, marks the card `conflict: true`, and writes the
  * upstream version to `<basename>.remote.md` inside the attach scope for
  * manual merge.
  *
@@ -279,8 +279,8 @@ const docsHandler: DriveTypeHandler = {
       delete state.extra["headRevisionId"];
     }
 
-    // Determine card status: keep `conflict` if push set it on a previous
-    // sync and there's still a `.remote.md` file. Otherwise `synced`.
+    // The card is in conflict while a `.remote.md` from a refused push is
+    // still beside the local copy; deleting that file resolves it.
     const remoteMdPath = path.join(localDir, `${cardBasename}.remote.md`);
     let hasRemoteFile = false;
     try {
@@ -304,7 +304,7 @@ const docsHandler: DriveTypeHandler = {
       contentFile: mdRelPath,
       commentsFile: sidecar.commentsFile,
       lossy: lossyToTemplateItems(lossy),
-      status: hasRemoteFile ? "conflict" : "synced",
+      conflict: hasRemoteFile,
     });
 
     let existingCard = "";
@@ -376,8 +376,8 @@ const docsHandler: DriveTypeHandler = {
     // Conflict check: re-read remote state, ensure it matches what we
     // recorded on the last pull. If anything diverged → don't push, write
     // the upstream content alongside as `.remote.md`. The pull that runs
-    // immediately after this push will see the file and set the card's
-    // status to `conflict`.
+    // immediately after this push will see the file and mark the card
+    // `conflict: true`.
     //
     // Both signals are best-effort: revisionId only kicks in when both the
     // stored and current values are available (Docs API scope present at
@@ -390,8 +390,8 @@ const docsHandler: DriveTypeHandler = {
       (storedRevision !== undefined && doc !== null && doc.revisionId !== storedRevision);
 
     // Both the divergence conflict and the whitespace refusal below park the
-    // upstream copy next to the local file and let the following pull set
-    // status=conflict. Deleting the `.remote.md` is how either one is resolved.
+    // upstream copy next to the local file and let the following pull mark
+    // the card `conflict: true`. Deleting the `.remote.md` is how either one is resolved.
     const parkUpstream = async (remoteMarkdown: string, why: string): Promise<PushResult> => {
       await fs.writeFile(remoteMdPath, remoteMarkdown);
       pushed.push(path.relative(boxRoot, remoteMdPath));

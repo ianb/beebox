@@ -115,3 +115,24 @@ bgListing.cards.find((c) => c.name === "Notable")?.prominence
 ```ts cleanup
 await server3.cleanup();
 ```
+
+## A Drive conflict is the one card fact the entry carries
+
+A synced Doc marked `conflict: true` says so, for the Drive state column and
+the sidebar badge. Other frontmatter, such as a memo's `status`, is not
+copied into the entry.
+
+```ts
+const server4 = await makeTestServer();
+await server4.seed("_content/Drive/Contended.gdoc.card", "---\ntitle: Contended\nconflict: true\n---\n");
+await server4.seed("_content/Drive/Settled.gdoc.card", "---\ntitle: Settled\n---\n");
+await server4.seed("_content/Drive/Note.memo.card", "---\nstatus: new\n---\n");
+
+const driveListing = await statusRouter.createCaller(ctxFor(server4.boxRoot)).browse({ path: "_content/Drive" });
+JSON.stringify(driveListing.cards.map((c) => ({ name: c.name, conflict: c.conflict, status: "status" in c })))
+=> [{"name":"Contended","conflict":true,"status":false},{"name":"Note","status":false},{"name":"Settled","status":false}]
+```
+
+```ts cleanup
+await server4.cleanup();
+```

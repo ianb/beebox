@@ -142,7 +142,7 @@ await movePathPreservingAnnexSymlink(annexBox.path("_content/inbox/triaged/_unsu
 await simpleGit(annexBox.root).add(".");
 await simpleGit(annexBox.root).commit("Handler filed paper after triage");
 const selectedAnnexDestination = annexInstructions.destinations[0];
-await annexBox.write("_bookkeeping/questions/AnnexConfirm.question.card", `---\nstatus: answered\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: web\nanswer:\n  text: Home\n  selected: ${selectedAnnexDestination?.optionId}\n---\n`);
+await annexBox.write("_bookkeeping/questions/AnnexConfirm.question.card", `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: web\nanswer:\n  text: Home\n  selected: ${selectedAnnexDestination?.optionId}\n---\n`);
 await confirmDecision({ boxRoot: annexBox.root, id: annexReceipt.id, sourceRef: "/_bookkeeping/questions/AnnexConfirm.question.card", label: selectedAnnexDestination?.ref ?? "" });
 const annexHistoricalReplay = await replayDecisions({ boxRoot: annexBox.root, ids: [annexReceipt.id], instructions: annexInstructions, maxCalls: 1, prepareAgain: true, env: { BBX_JEV_FAKE: "1" } });
 annexHistoricalReplay.results[0]?.status
@@ -189,7 +189,7 @@ await fs.rename(freshBox.path("_content/inbox/triaged/home/New.doc.card"), fresh
 await simpleGit(freshBox.root).add(".");
 await simpleGit(freshBox.root).commit("Handler filed new paper");
 const freshDestination = freshInstructions.destinations.find((item) => item.ref === freshJudgment.destinationRef);
-await freshBox.write("_bookkeeping/questions/FreshConfirm.question.card", `---\nstatus: answered\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: web\nanswer:\n  text: Home\n  selected: ${freshDestination?.optionId}\n---\n`);
+await freshBox.write("_bookkeeping/questions/FreshConfirm.question.card", `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: web\nanswer:\n  text: Home\n  selected: ${freshDestination?.optionId}\n---\n`);
 await confirmDecision({ boxRoot: freshBox.root, id: freshReceipt.id, sourceRef: "/_bookkeeping/questions/FreshConfirm.question.card", label: freshDestination?.ref ?? "" });
 const recoveredReplay = await replayDecisions({ boxRoot: freshBox.root, ids: [freshReceipt.id], instructions: freshInstructions, maxCalls: 1, prepareAgain: true, env: { BBX_JEV_FAKE: "1" } });
 recoveredReplay.results[0]?.status
@@ -228,7 +228,7 @@ const held = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, 
 await applyDecision({ boxRoot: box.root, decision: held });
 const questionRef = held.application.questionRef;
 const destination = instructions.destinations[0];
-await box.write(questionRef.slice(1), `---\nstatus: answered\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: cli\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);
+await box.write(questionRef.slice(1), `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: cli\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);
 const corrected = await correctDecision({ boxRoot: box.root, id: held.id, questionRef });
 corrected.outcomes[0].actor
 => agent
@@ -245,13 +245,13 @@ corrected.resolution.destinationRef === destination.ref
 (await listDecisionReceipts(box.root, { outcome: "user-confirmed" })).length
 => 0
 
-await box.write("_bookkeeping/questions/Legacy.question.card", `---\nstatus: answered\nanswered-at: '2026-09-28T12:00:00Z'\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);
+await box.write("_bookkeeping/questions/Legacy.question.card", `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);
 const legacy = await confirmDecision({ boxRoot: box.root, id: corrected.id, sourceRef: "/_bookkeeping/questions/Legacy.question.card", label: destination.ref });
 legacy.outcomes.at(-1).actor
 => unknown
 
-await box.write("_bookkeeping/questions/Web.question.card", `---\nstatus: answered\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: web\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);
-await box.write("_bookkeeping/questions/Mismatch.question.card", `---\nstatus: answered\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: web\nanswer:\n  text: Not home\n  selected: some-other-option\n---\n`);
+await box.write("_bookkeeping/questions/Web.question.card", `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: web\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);
+await box.write("_bookkeeping/questions/Mismatch.question.card", `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: web\nanswer:\n  text: Not home\n  selected: some-other-option\n---\n`);
 await confirmDecision({ boxRoot: box.root, id: corrected.id, sourceRef: "/_bookkeeping/questions/Mismatch.question.card", label: destination.ref })
 => throws TriageReceiptError
 await confirmDecision({ boxRoot: box.root, id: corrected.id, sourceRef: "/_bookkeeping/questions/Web.question.card", label: destination.ref });
@@ -302,7 +302,7 @@ const held = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, 
 => applied
 
 const selected = instructions.destinations[0];
-await box.write(held.application.questionRef?.slice(1) ?? "", `---\nstatus: answered\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: cli\nanswer:\n  text: Home\n  selected: ${selected?.optionId}\n---\n`);
+await box.write(held.application.questionRef?.slice(1) ?? "", `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: cli\nanswer:\n  text: Home\n  selected: ${selected?.optionId}\n---\n`);
 (await correctDecision({ boxRoot: box.root, id: held.id, questionRef: held.application.questionRef ?? "" })).application.state
 => applied
 

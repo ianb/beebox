@@ -35,7 +35,7 @@ function CardAccordion({
   cardPath,
   name,
   type,
-  status,
+  conflict,
   hasAttachments,
   boxSlug,
   onNavigate,
@@ -44,14 +44,14 @@ function CardAccordion({
   cardPath: string;
   name: string;
   type: string;
-  status?: string;
+  conflict?: boolean;
   hasAttachments?: boolean;
   boxSlug: string | undefined;
   onNavigate: RendererProps["onNavigate"];
   /**
-   * Replaces the card's own status badge — the Drive state column, today. A
-   * column that says "conflict" beside a status badge saying "conflict" is one
-   * badge too many, and the column is the more specific of the two.
+   * Replaces the card's own conflict badge — the Drive state column, today. A
+   * column that says "conflict" beside a badge saying "conflict" is one badge
+   * too many, and the column is the more specific of the two.
    */
   annotation?: ReactNode;
 }) {
@@ -63,7 +63,7 @@ function CardAccordion({
     <Row gap="sm">
       <Text size="sm" weight="medium" tone="emphasis">{name}</Text>
       <Text size="xs" tone="muted">.{type}.card</Text>
-      {annotation ?? (status ? <Badge size="sm">{status}</Badge> : null)}
+      {annotation ?? (conflict === true ? <Badge size="sm" tone="danger">conflict</Badge> : null)}
       {attachPath && boxSlug ? (
         <TextLink to={href(`/${boxSlug}/browse/${attachPath}`)}>
           <Text size="xs" tone="muted">contents →</Text>
@@ -115,8 +115,8 @@ export interface DirectoryListingProps {
   boxSlug: string | undefined;
   onNavigate: RendererProps["onNavigate"];
   /**
-   * Per card row, a badge shown INSTEAD of the card's own status — the
-   * `gfolder` view's Drive state column.
+   * Per card row, a badge shown INSTEAD of the card's own conflict badge —
+   * the `gfolder` view's Drive state column.
    */
   annotate?: (card: BrowseCardEntry) => ReactNode;
   /**
@@ -164,7 +164,7 @@ export function DirectoryListing(props: DirectoryListingProps) {
               cardPath={card.relativePath}
               name={card.name}
               type={card.type}
-              status={card.status}
+              conflict={card.conflict}
               hasAttachments={card.hasAttachments}
               boxSlug={boxSlug}
               onNavigate={onNavigate}

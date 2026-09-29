@@ -8,7 +8,7 @@ import { z } from "zod";
 import { captureMigrationSnapshot, changedMigrationPaths } from "./migration-recovery.js";
 import { createAgent } from "./agent/invoke/core.js";
 import { cardFields, parseCardText } from "./card-io.js";
-import { QuestionSchema, createTextQuestionTemplate } from "../schemas/question.js";
+import { QuestionSchema, createTextQuestionTemplate, questionState } from "../schemas/question.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
@@ -37,7 +37,8 @@ export async function migrationQuestions(boxRoot: string): Promise<string[]> {
   const pending: string[] = [];
   for (const name of names.filter((entry) => entry.startsWith("Migration_") && entry.endsWith(".question.card"))) {
     const file = `${directory}/${name}`;
-    if ((await question(boxRoot, file))?.fields.status !== "answered") pending.push(file);
+    const existing = await question(boxRoot, file);
+    if (existing === null || questionState(existing.fields) !== "answered") pending.push(file);
   }
   return pending;
 }
@@ -74,7 +75,7 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
     file = `${directory}/Migration_${opts.name}-${String(attempt)}.question.card`;
     const existing = await question(opts.boxRoot, file);
     if (!existing) break;
-    if (existing.fields.status !== "answered") return { code: opts.code, question: file };
+    if (questionState(existing.fields) !== "answered") return { code: opts.code, question: file };
     answer = `Previous answered question (${file}):\n${existing.content}`;
     attempt += 1;
   }

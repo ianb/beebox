@@ -61,7 +61,6 @@ one, so the same shape covers both "queued before the fields existed" and
 const older = parse([
   "---",
   "status: pending",
-  "source: todo-review",
   "priority: normal",
   "description: 'Todo review sweep: 1 escalated.'",
   "escalated:",

@@ -49,7 +49,7 @@ interface AttachState {
 
 export function BrowserTaskView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
-  const { status, source, watermark, lastUpload, rescanAfter, subjectRef, limit } = readTaskFields(frontmatter);
+  const { closed, start, watermark, lastUpload, rescanAfter, subjectRef, limit } = readTaskFields(frontmatter);
   const body = data.body ?? "";
   const [attach, setAttach] = useState<AttachState | null>(null);
 
@@ -89,10 +89,10 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
     [attach?.schemaJson],
   );
 
-  const copyBlock = buildCopyBlock({ body, source, watermark, limit, schemaText: attach?.schemaText ?? null, cardPath: data.path });
+  const copyBlock = buildCopyBlock({ body, start, watermark, limit, schemaText: attach?.schemaText ?? null, cardPath: data.path });
 
   const disabledReason =
-    status === "closed" ? "This task is closed and does not accept submissions."
+    closed ? "This task is closed and does not accept submissions."
     : attach === null ? "Loading the record schema…"
     : attach.schemaProblem;
 
@@ -101,7 +101,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
       <Stack gap="md">
         <TaskStatus
           cardPath={data.path}
-          status={status}
+          closed={closed}
           lastUpload={lastUpload}
           rescanAfter={rescanAfter}
           subjectRef={subjectRef}
@@ -123,7 +123,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 
         <Accordion title={<Heading level={2}>Prompt</Heading>} defaultOpen={false}>
           <Stack gap="sm">
-            {source !== null ? <Text as="p" size="sm">Start at <ExternalLink href={source}>{source}</ExternalLink></Text> : null}
+            {start !== null ? <Text as="p" size="sm">Start at <ExternalLink href={start}>{start}</ExternalLink></Text> : null}
             {limit !== null ? <Text as="p" size="sm">Bound: {limit}</Text> : null}
             {watermark !== null ? <Text as="p" size="sm">Watermark: <Text as="span" mono>{watermark}</Text></Text> : null}
             <Markdown onNavigate={onNavigate} basePath={data.path}>{body}</Markdown>
@@ -159,8 +159,8 @@ function SchemaCard({ attach }: { attach: AttachState | null }) {
 }
 
 interface TaskFields {
-  status: "open" | "closed";
-  source: string | null;
+  closed: boolean;
+  start: string | null;
   watermark: string | null;
   lastUpload: string | null;
   rescanAfter: string | null;
@@ -172,9 +172,10 @@ interface TaskFields {
 function readTaskFields(fm: Record<string, unknown>): TaskFields {
   const str = (key: string): string | null => (typeof fm[key] === "string" ? fm[key] : null);
   const subject = fm["subject"];
+  const start = fm["start"];
   return {
-    status: fm["status"] === "closed" ? "closed" : "open",
-    source: str("source"),
+    closed: fm["closed"] === true,
+    start: isRecord(start) && typeof start["href"] === "string" ? start["href"] : null,
     watermark: str("watermark"),
     lastUpload: str("last-upload"),
     rescanAfter: str("rescan-after"),
@@ -184,9 +185,9 @@ function readTaskFields(fm: Record<string, unknown>): TaskFields {
 }
 
 /** Everything the executor needs, as one block to paste into its own session. */
-function buildCopyBlock(opts: { body: string; source: string | null; watermark: string | null; limit: string | null; schemaText: string | null; cardPath: string }): string {
+function buildCopyBlock(opts: { body: string; start: string | null; watermark: string | null; limit: string | null; schemaText: string | null; cardPath: string }): string {
   const parts = [opts.body.trim()];
-  if (opts.source !== null) parts.push(`Start at: ${opts.source}`);
+  if (opts.start !== null) parts.push(`Start at: ${opts.start}`);
   if (opts.limit !== null) parts.push(`Bound: ${opts.limit}`);
   if (opts.watermark !== null) parts.push(`Stop at the watermark: ${opts.watermark}`);
   if (opts.schemaText !== null) parts.push("Each record must match this JSON Schema:\n```json\n" + opts.schemaText.trim() + "\n```");

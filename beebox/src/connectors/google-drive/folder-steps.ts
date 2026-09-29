@@ -130,8 +130,8 @@ export async function claimPath(
     write: false,
     failure:
       occupantId === null
-        ? `Drive file ${target.driveId} ("${target.name}") maps to ${relCardPath}, which holds a card with no readable drive-id`
-        : `Drive file ${target.driveId} ("${target.name}") maps to ${relCardPath}, already claimed by drive-id ${occupantId}`,
+        ? `Drive file ${target.driveId} ("${target.name}") maps to ${relCardPath}, which holds a card with no readable drive.id`
+        : `Drive file ${target.driveId} ("${target.name}") maps to ${relCardPath}, already claimed by drive.id ${occupantId}`,
   };
 }
 

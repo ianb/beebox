@@ -69,8 +69,8 @@ export const statusCommand = new Command("status")
       }
 
       // Questions
-      const pending = state.questions.filter(q => q.status === "pending");
-      const answered = state.questions.filter(q => q.status === "answered");
+      const pending = state.questions.filter(q => q.state === "pending");
+      const answered = state.questions.filter(q => q.state === "answered");
       console.log(`Questions: ${pending.length} pending, ${answered.length} answered`);
       if (pending.length > 0 && options.verbose) {
         printCards(pending);
@@ -147,7 +147,6 @@ async function printRootStrays(boxRoot: string): Promise<void> {
 
 function printCards(cards: CardInfo[]): void {
   for (const card of cards) {
-    const status = card.status ? ` [${card.status}]` : "";
-    console.log(`  - ${card.relativePath}${status}`);
+    console.log(`  - ${card.relativePath}`);
   }
 }

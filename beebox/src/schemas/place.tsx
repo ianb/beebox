@@ -17,9 +17,6 @@ import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 import { namedEntityFields } from "../named-entity-fields.js";
 
-const PlaceStatus = z.enum(["active", "inactive", "archived"]);
-export type PlaceStatusType = z.infer<typeof PlaceStatus>;
-
 export const PlaceSchema = cardSchema("place", {
   brief: "A named location",
   description: "A named location (Home, Office) with optional coordinates so location-aware context can recognize where the boxholder is",
@@ -42,8 +39,9 @@ export const PlaceSchema = cardSchema("place", {
     return [];
   },
   fields: {
-    status: PlaceStatus.default("active"),
     ...namedEntityFields,
+    // No longer current; absent means current.
+    archived: z.boolean().optional(),
     address: z.string().optional(),
     lat: z.number().min(-90).max(90).optional(),
     lng: z.number().min(-180).max(180).optional(),
@@ -67,7 +65,8 @@ with underscores.
   \`bbx location mark <path>\` to stamp the boxholder's current device location
   into the card. Both must be set together.
 - \`radius:\` — Match radius in meters (written by \`bbx location mark\`).
-- \`status:\` — \`active\` (default), \`inactive\`, or \`archived\`.
+- \`archived: true\` — the place no longer matters (a former home or
+  office). Omit it otherwise. Location matching skips archived places.
 
 **Body (markdown):** describe the place and **why it matters in the box** —
 e.g. "Home — where the boxholder usually works; default for after-hours context."
@@ -84,6 +83,8 @@ within its radius.
 
 **Filename convention:** \`places/<Name>.place.card\` — use the place's name,
 not a slug.`,
+  // A place is listed and found under its name.
+  summarize: (card, base) => ({ ...base, title: card.name }),
 });
 
 export type PlaceFields = InferCardFields<typeof PlaceSchema>;
@@ -94,7 +95,6 @@ export function createPlaceTemplate(options: {
   address?: string;
 }): string {
   const fields: Record<string, unknown> = {
-    status: "active",
     name: options.name,
   };
   if (options.aliases !== undefined && options.aliases !== "") {

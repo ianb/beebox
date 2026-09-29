@@ -191,6 +191,17 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Agent observations now live as ordinary doc cards in _config/feedback.
   // Convert command-written Markdown in both active and resolved directories.
   { name: "feedback-to-doc-cards", script: "src/scripts/migrate/feedback-to-doc-cards.ts" },
+  // Strip standard-looking fields that had no job: dead `status` on jobs and
+  // five other types (record's becomes `reviewed`/`archived` booleans),
+  // pub-submission `created`, audio `summary`, experiment observation `date`.
+  // See docs/implemented-plans/standard-card-fields.md.
+  { name: "standard-fields-2026-09", script: "src/scripts/migrate/standard-fields.ts" },
+  // Replace every remaining `status` with the specific fact it recorded
+  // (presence fields, named booleans, `outcome`). See the script's planners.
+  { name: "status-fields-2026-09", script: "src/scripts/migrate/status-fields.ts" },
+  // Give each `source` that is not a derived-from pointer its own name, and
+  // move media acquisition times into `filename.via`. See the script's planners.
+  { name: "source-fields-2026-09", script: "src/scripts/migrate/source-fields.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

@@ -15,7 +15,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const FIX = { lat: 45.5231, lng: -122.6765, accuracy: 18 };
 const stored = (fix, capturedAt) => ({ ...fix, capturedAt, source: "web" });
-const CARD = "---\nstatus: active\nname: Home\nfavorite: true\n---\nMy home — important because it's the default context.\n";
+const CARD = "---\nname: Home\nfavorite: true\n---\nMy home — important because it's the default context.\n";
 ```
 
 ## applyMark stamps coords while preserving body + unknown keys
@@ -35,7 +35,7 @@ out.text.includes("lat: 45.5231") && out.text.includes("lng: -122.6765") && /rad
 ## A frontmatter comment on an untouched key survives the mutate
 
 ```ts
-const commented = "---\nname: Home  # the main house\nstatus: active\n---\nbody\n";
+const commented = "---\nname: Home  # the main house\naddress: 1 Main St\n---\nbody\n";
 applyMark(commented, { fix: FIX, expand: false }).text.includes("# the main house")
 => true
 ```

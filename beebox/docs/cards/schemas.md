@@ -29,19 +29,20 @@ import { body, cardSchema, type CardSchema } from "../exports/cards.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
-export const MyThingStatus = z.enum(["draft", "final"]);
-export type MyThingStatusType = z.infer<typeof MyThingStatus>;
+export const MyThingPriority = z.enum(["low", "medium", "high"]);
+export type MyThingPriorityType = z.infer<typeof MyThingPriority>;
 
 const NoteEntry = z.object({
   text: z.string(),
-  added: z.string().datetime({ offset: true }).optional(),
+  ref: z.string().optional(),
 });
 
 export const MyThingSchema: CardSchema = cardSchema("my-thing", {
   brief: "A my-thing card",  // five words or fewer: the agent guide's card-type list
   description: "One line on what a my-thing card holds and is for",  // the docs index row
   fields: {
-    status: MyThingStatus.default("draft"),
+    priority: MyThingPriority.optional(),
+    archived: z.boolean().optional(),
     notes: z.array(NoteEntry).optional(),
     body: body(z.string()),  // omit this line if the card has no prose body
   },
@@ -59,15 +60,14 @@ Include:
 
 export interface MyThingFields {
   type: "my-thing";
-  status: MyThingStatusType;
-  notes?: Array<{ text: string; added?: string }>;
+  priority?: MyThingPriorityType;
+  archived?: boolean;
+  notes?: Array<{ text: string; ref?: string }>;
   body: string;  // omit if no body
 }
 
 export function createMyThingTemplate(options: { title: string }): string {
   const fields: Record<string, unknown> = {
-    type: "my-thing",
-    status: "draft",
     title: options.title,
   };
   return `---\n${stringifyYaml(fields)}---\n`;
@@ -76,7 +76,7 @@ export function createMyThingTemplate(options: { title: string }): string {
 
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
-- Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query/core.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
+- Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface (see [Adding a field](#adding-a-field); the one exception is `title: z.string()` to make `title` required, and `title` always leads the frontmatter). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query/core.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
 - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-in theme IDs and stocks; see [`docs/box/card-themes.md`](../box/card-themes.md) before adding a type preference with `cardSchema`'s `theme` option. Theme is a presentation override, not a new view or a replacement for the card's type fields.
 - `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
 - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is tolerated on read and must match the filename; templates may still emit it, and the serializer never writes it back.
@@ -233,7 +233,7 @@ export { MyThingSchema } from "./my-thing.js";
 
 ```ts
 // Type
-export type { MyThingFields, MyThingStatusType } from "./my-thing.js";
+export type { MyThingFields, MyThingPriorityType } from "./my-thing.js";
 
 // Template
 export { createMyThingTemplate } from "./my-thing.js";
@@ -307,9 +307,48 @@ registerFileType({ type: "my-thing" }, {
 });
 ```
 
+## Adding a field
+
+Every field a schema adds costs something: agents fill it in because it is
+there, and readers expect it to mean something. Before adding one:
+
+1. **Name the consumer.** The same change adds the query, UI surface, or code
+   that reads the field. A field nothing reads is not added.
+2. **Don't use a reserved name.** Global field names (`title`, `contains`, …)
+   and the banned names `status`, `created`, `summary`, `date`, `modified` and
+   `source` are rejected: `reservedFieldProblems` (`src/cards/reserved-fields.ts`)
+   fails the built-in registry test (`test/cards/reserved-fields.doctest.md`)
+   and gives box-local schemas a `box-schema-fields` health warning. Each
+   message says what to write instead. The one allowed redeclaration is
+   `title: z.string()`, which makes the title required.
+3. **Record the fact itself, not a lifecycle.** The result (`transcript`), the
+   failure (`transcription-error`), or a named boolean (`archived: true`),
+   not an enum a writer has to remember to move.
+4. **Times belong to media, external data, or the subject.** When a card was
+   written is git's job. A capture time goes on the media reference. Data
+   copied from an external system goes under a key named for that system
+   (`email:`, `drive:`, `exif:`). A date that is part of the subject (when a
+   bill is due) is a date entry, `DateEntrySchema` from `beebox/cards`
+   (`src/cards/date-entry.ts`): `{ value, kind?, end?, note? }`, with `value`
+   and `end` in ISO 8601 at the precision known (`1974`, `1974-06`,
+   `1974-06-02`, or a datetime with an offset). One such date is a field
+   named for what it is (`due: DateEntrySchema`); several go in
+   `dates: z.array(DateEntrySchema)` with a `kind` each (`due`, `filed`,
+   `starts`). record's `dates` uses it with `value` left free text, for
+   transcribed dates ISO 8601 cannot state (`1970s`).
+5. **Don't do a global field's job.** No per-type title or summary field. To
+   derive a title from a data field (an email's subject, a person's name),
+   return it from `summarize`; a card's own `title:` still wins.
+6. **`description` means what the card's subject is or does**, for someone
+   who has not opened it: what an image shows, what a procedure does, what a
+   record's object is. `contains` is different: what the card holds. Narrow
+   `description` for a type only when necessary.
+7. **Pointers are `{ ref }` or `{ href }`.** A field that names a card, a file,
+   or a URL never holds a bare string.
+
 ## Mutating an Existing Frontmatter Card
 
-When code needs to update a frontmatter card on disk (e.g. setting `status: answered` on a question), use `splitCardContent` + `yaml`:
+When code needs to update a frontmatter card on disk (e.g. setting `archived: true`), use `splitCardContent` + `yaml`:
 
 ```ts
 import { splitCardContent } from "../exports/cards.js";
@@ -318,7 +357,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 const content = await fs.readFile(absPath, "utf-8");
 const split = splitCardContent(content);
 const fields = parseYaml(split.frontmatterText) as MyThingFields;
-fields.status = "final";
+fields.archived = true;
 await fs.writeFile(absPath, `---\n${stringifyYaml(fields)}---\n${split.body}`);
 ```
 

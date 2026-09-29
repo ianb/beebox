@@ -36,7 +36,7 @@ initial.policy.includes("No intake guide exists")
 await box.write("_config/intake.guide.card", `---
 triage-rules:
   - text: Always prefer user boundaries.
-    source: user-stated
+    basis: user-stated
     confidence: high
   - text: Trial financial priority.
     confidence: hypothesis
@@ -51,7 +51,7 @@ actions:
 ---
 `);
 const normal = await compileInstructionSnapshot(box.root);
-normal.policy.includes("source: user-stated") && normal.policy.includes("Shared household")
+normal.policy.includes("basis: user-stated") && normal.policy.includes("Shared household")
 => true
 
 normal.policy.includes("Trial financial") || normal.policy.includes("Old irrelevant") || normal.policy.includes("Never classify")

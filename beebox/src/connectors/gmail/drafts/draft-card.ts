@@ -44,7 +44,7 @@ export class MissingFieldError extends Error {
 export class UnresolvedInReplyToRefError extends Error {
   constructor(readonly ref: string, readonly sourcePath: string) {
     super(
-      `in-reply-to ref "${ref}" did not resolve to a readable email-message card with message-id and thread-id (looked at ${sourcePath})`,
+      `in-reply-to ref "${ref}" did not resolve to a readable email-message card with email.message-id and email.thread-id (looked at ${sourcePath})`,
     );
     this.name = "UnresolvedInReplyToRefError";
   }

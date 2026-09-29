@@ -59,17 +59,15 @@ export function compileGuide(parsed: ParsedGuide, guideName: string): string {
     }
   }
 
-  // Active experiments only (proposed or active)
-  const activeExperiments = parsed.experiments.filter(
-    (e) => e.status === "active" || e.status === "proposed"
-  );
+  // Unconcluded experiments only (proposed or active)
+  const activeExperiments = parsed.experiments.filter((e) => e.outcome === undefined);
   if (activeExperiments.length > 0) {
     lines.push("## Active Experiments");
     lines.push("");
     for (const exp of activeExperiments) {
-      const status = exp.status === "proposed" ? " (proposed)" : "";
+      const stage = exp.active ? "" : " (proposed)";
       const hypothesis = exp.hypothesis ? `: ${exp.hypothesis}` : "";
-      lines.push(`- **${exp.id}**${status}${hypothesis}`);
+      lines.push(`- **${exp.id}**${stage}${hypothesis}`);
       if (exp.approach) {
         lines.push(`  Approach: ${exp.approach}`);
       }

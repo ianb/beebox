@@ -23,7 +23,6 @@ function contextFor(box) {
 const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
 
 const VALID = `---
-status: pending
 prompt: Where does this receipt go?
 input:
   type: text
@@ -32,10 +31,9 @@ directive: File the receipt
 `;
 
 // Missing the required \`prompt\` field — parses as frontmatter fine (the
-// state scan only reads a card's status/type), but fails QuestionSchema
+// state scan only reads a card's lifecycle fields/type), but fails QuestionSchema
 // validation when status.questions loads and re-parses it.
 const MALFORMED = `---
-status: pending
 input:
   type: text
 ---
@@ -60,6 +58,9 @@ good.invalid
 
 good.prompt
 => Where does this receipt go?
+
+good.state
+=> pending
 
 const broken = items.find((i) => i.name === "Broken");
 broken.invalid

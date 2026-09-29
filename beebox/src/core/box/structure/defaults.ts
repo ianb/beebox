@@ -43,6 +43,19 @@ function describeInstall(result: InstallResult, displayName: string): string | n
 }
 
 /**
+ * The `priorStockHashes` option for one install: `hashes` only when the box has
+ * no recorded version of `relPath` (the bootstrap case), for the reason given
+ * at {@link PRIOR_STOCK_PROCEDURE_HASHES}.
+ */
+async function priorStockOption(
+  boxRoot: string,
+  { relPath, hashes }: { relPath: string; hashes: string[] | undefined },
+): Promise<{ priorStockHashes?: string[] }> {
+  if (hashes === undefined || (await hasRecordedTemplateVersion(boxRoot, relPath))) return {};
+  return { priorStockHashes: hashes };
+}
+
+/**
  * Install procedure templates into a box.
  *
  * On fresh install: copies template procedure cards to _config/procedures/.
@@ -84,6 +97,11 @@ const PRIOR_STOCK_PROCEDURE_HASHES: Readonly<Record<string, string[]>> = {
     "22359ef58fe4fecda2bb8e7ce12fcbd511df4edaf4e30d5befbf6ae9f3474a47",
     "3fcb0dd508a76194ff1cd6af2d222a953a651d58f9846304e42ae3c5bb1e8a99",
   ],
+  // The shipped template from before its belief `source` became `basis`
+  // (2026-09): our own output, so an untracked copy of it is unedited stock.
+  "process-retrospective.procedure.card": [
+    "4c11a4c3e1ef14da3154ebc7c218f270cda69ca195360cc2a60af1e949b9def1",
+  ],
 };
 
 export async function installProcedures(boxRoot: string): Promise<string[]> {
@@ -106,14 +124,11 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
   for (const file of templateFiles) {
     const templateContent = await fs.readFile(path.join(templatesDir, file), "utf-8");
     const relPath = path.join(BOX_DIRS.procedures, file);
-    const priorStock = PRIOR_STOCK_PROCEDURE_HASHES[file];
-    const usePriorStock =
-      priorStock !== undefined && !(await hasRecordedTemplateVersion(boxRoot, relPath));
     const result = await installTemplateFile({
       boxRoot,
       relPath,
       templateContent,
-      ...(usePriorStock ? { priorStockHashes: priorStock } : {}),
+      ...(await priorStockOption(boxRoot, { relPath, hashes: PRIOR_STOCK_PROCEDURE_HASHES[file] })),
     });
     const entry = describeInstall(result, file);
     if (entry !== null) installed.push(entry);
@@ -123,6 +138,25 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
 
 /** Known guide domains that get default templates */
 const GUIDE_DOMAINS = ["intake", "calendar"];
+
+/**
+ * Earlier stock guide hashes, keyed by filename: from before experiments lost
+ * `status`, and (intake, the one with triage rules) from before a rule's
+ * `source` became `basis` (both 2026-09). A tracked box needs none of these:
+ * its recorded hash already marks an old stock copy as ours, and the
+ * `status-fields-2026-09` and `source-fields-2026-09` migrations turn an old
+ * stock copy into exactly the current template. They cover an untracked box
+ * whose install runs before those migrations, so its unedited copy updates
+ * instead of parking. Applied only to a box with no recorded version, for the
+ * reason given at {@link PRIOR_STOCK_PROCEDURE_HASHES}.
+ */
+const PRIOR_STOCK_GUIDE_HASHES: Readonly<Record<string, string[]>> = {
+  "intake.guide.card": [
+    "02e0c866f365c6898d4983851492fa1573c9bbd9a91503c3d31078cca541e30a",
+    "1e172c1d28b95e21c2a3fd721b87f5fe51f459fb2125356540064f1c09a3cb42",
+  ],
+  "calendar.guide.card": ["cba0c1ae68ff656611b5b9b6b3be9ca65233b1bf1c913b3ce62d395bf234da99"],
+};
 
 /**
  * Install default guide cards into a box.
@@ -141,10 +175,12 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
   for (const domain of GUIDE_DOMAINS) {
     const fileName = `${domain}.guide.card`;
     const templateContent = createInitialGuideTemplate({ name: domain });
+    const relPath = path.join(BOX_DIRS.config, fileName);
     const result = await installTemplateFile({
       boxRoot,
-      relPath: path.join(BOX_DIRS.config, fileName),
+      relPath,
       templateContent,
+      ...(await priorStockOption(boxRoot, { relPath, hashes: PRIOR_STOCK_GUIDE_HASHES[fileName] })),
     });
     const entry = describeInstall(result, fileName);
     if (entry !== null) installed.push(entry);
@@ -277,7 +313,7 @@ interface DefaultSchedule {
   notBefore?: string;
   onWakeup?: boolean;
   runs: string;
-  source: string;
+  reason: string;
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   lockGroup?: string;
   timeout?: string;
@@ -295,7 +331,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     onWakeup: true,
     enabled: false,
     runs: "bbx engine wakeup --connector gmail",
-    source: "Check email frequently during active hours",
+    reason: "Check email frequently during active hours",
     requires: ["gmail"],
   },
   {
@@ -306,7 +342,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     onWakeup: true,
     enabled: false,
     runs: "bbx engine wakeup --connector google-calendar",
-    source: "Sync calendar changes hourly",
+    reason: "Sync calendar changes hourly",
     requires: ["google"],
   },
   {
@@ -320,7 +356,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     // and `--connector` matches the registered name exactly; `drive` would
     // report "Connector not found" every hour.
     runs: "bbx engine wakeup --connector google-drive",
-    source: "Sync Drive mounts hourly",
+    reason: "Sync Drive mounts hourly",
     // `drive`, not `google` — the latter is the legacy alias for calendar
     // (`connectors/requirements.ts`).
     requires: ["drive"],
@@ -333,7 +369,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     onWakeup: false,
     enabled: true,
     runs: "bbx procedure run refresh-maps",
-    source: "Daily check; precheck no-ops when nothing changed",
+    reason: "Daily check; precheck no-ops when nothing changed",
   },
   {
     name: "gc-procedure-runs",
@@ -344,7 +380,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     onWakeup: false,
     enabled: true,
     runs: "bbx procedure gc",
-    source: "Daily sweep; each run card carries its own expires stamp",
+    reason: "Daily sweep; each run card carries its own expires stamp",
   },
   {
     name: "process-retrospective",
@@ -365,7 +401,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     enabled: true,
     lockGroup: "retro",
     runs: "bbx procedure run process-retrospective",
-    source: "Weekly Monday-morning sweep over any chat sessions that went quiet",
+    reason: "Weekly Monday-morning sweep over any chat sessions that went quiet",
   },
   {
     name: "todo-review",
@@ -382,7 +418,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     // 10m default would cut a retry short.
     timeout: "30m",
     runs: "bbx procedure run todo-review",
-    source: "Daily early-morning sweep; precheck no-ops when no todo needs review",
+    reason: "Daily early-morning sweep; precheck no-ops when no todo needs review",
   },
   {
     name: "chat-review",
@@ -398,9 +434,28 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     // there is no reason to have them do it concurrently.
     lockGroup: "retro",
     runs: "bbx chat review run",
-    source: "Nightly sweep; opt in per box",
+    reason: "Nightly sweep; opt in per box",
   },
 ];
+
+/**
+ * Stock schedule hashes from before `source` became `reason` (2026-09), keyed
+ * by filename. Canonical hashes: `enabled` is box-owned and stripped. Same
+ * role as {@link PRIOR_STOCK_GUIDE_HASHES}: the `source-fields-2026-09`
+ * migration turns an old stock copy into exactly the current template, and
+ * these let an untracked box whose install runs first update instead of
+ * parking.
+ */
+const PRIOR_STOCK_SCHEDULE_HASHES: Readonly<Record<string, string[]>> = {
+  "check-email.scheduled-script.card": ["5c5db53b3ea8b53aa65d0f3c20b9a84d89d78f0dfc55b545308f5b7d7a7ea736"],
+  "check-calendar.scheduled-script.card": ["3be5c5339dfc63b1b77556d16447ec8a3ea721ab52aaeb123cdfe5d4be0f6073"],
+  "check-drive.scheduled-script.card": ["7ea0ebc1b3837229d1adda17e1949686868e944d31dfcc8d39b56c21eabd1354"],
+  "refresh-maps.scheduled-script.card": ["b9aa76676eb7b9bcc506f0b135a70025c4dfa615fd53d5787abacec86c8ed220"],
+  "gc-procedure-runs.scheduled-script.card": ["4272c1b1da2a6e7a9c3acf94aca3f644d75a79c69274b21db4dd8ed68f967ea6"],
+  "process-retrospective.scheduled-script.card": ["e311bd5da27e50bdf7793d62cc88123695f696cc0fafe744a5fef813533493c8"],
+  "todo-review.scheduled-script.card": ["dad98103bd3cc7d7fd8d4755a9335a929c69e0000d82f951b8e519bb7106547e"],
+  "chat-review.scheduled-script.card": ["2ff5b6972353807b8af43602da82e8f75862c5ebcacec232726da77f71be1a2b"],
+};
 
 /**
  * Install default scheduled-script cards into a box.
@@ -424,15 +479,17 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       ...(sched.requires && sched.requires.length > 0 && { requires: sched.requires }),
       runs: sched.runs,
       description: sched.description,
-      source: sched.source,
+      reason: sched.reason,
     });
+    const relPath = path.join(BOX_DIRS.schedules, fileName);
     const result = await installTemplateFile({
       boxRoot,
-      relPath: path.join(BOX_DIRS.schedules, fileName),
+      relPath,
       templateContent,
       ...(ScheduledScriptSchema.templateMerge && {
         boxOwnedFields: ScheduledScriptSchema.templateMerge.boxOwnedFields,
       }),
+      ...(await priorStockOption(boxRoot, { relPath, hashes: PRIOR_STOCK_SCHEDULE_HASHES[fileName] })),
     });
     const entry = describeInstall(result, fileName);
     if (entry !== null) installed.push(entry);

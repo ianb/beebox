@@ -176,8 +176,9 @@ async function promoteBatch(opts: {
   // Before any import, not after: a crash between marking an entry `imported`
   // and writing the marker would otherwise lose the wakeup for good — recovery
   // would find nothing promotable and the intake job would sit undrained
-  // (connector-scoped scheduled wakeups never touch a `source: scan` job). An
-  // unnecessary wakeup after a failed batch is the cheap side of that trade.
+  // (connector-scoped scheduled wakeups never touch a scan intake job, which
+  // has no `connector`). An unnecessary wakeup after a failed batch is the
+  // cheap side of that trade.
   // `pending` means never attempted. A batch of only `promoting` entries is a
   // retry of work already counted, and must not refresh the retry budget.
   const newWork = batch.some((e) => e.state === "pending");

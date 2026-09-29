@@ -113,8 +113,6 @@ export const TodoReviewJobSchema = cardSchema("todo-review-job", {
   category: "system",
   searchable: false,
   fields: {
-    status: z.string().default("pending"),
-    source: z.string().default("todo-review"),
     // `normal`, not `low`: `bbx wakeup` always runs the reactor with
     // `skipLowPriority: true` (src/cli/commands/wakeup/command.ts), which skips a
     // cycle when every pending job is low-priority and none has passed the
@@ -165,8 +163,6 @@ export function createTodoReviewJobTemplate(options: {
   if (stale.length > 0) parts.push(`${String(stale.length)} stale`);
 
   const fields: Record<string, unknown> = {
-    status: "pending",
-    source: "todo-review",
     priority: "normal",
     description: `Todo review sweep: ${parts.join(", ")}.`,
     escalated,

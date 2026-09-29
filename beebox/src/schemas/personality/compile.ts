@@ -86,9 +86,8 @@ export function appendSpeakingVoice(lines: string[], fields: PersonalityFields):
 }
 
 export function appendExperiments(lines: string[], fields: PersonalityFields): void {
-  const activeExperiments = (fields.experiments ?? []).filter(
-    (e) => (e.status ?? "proposed") === "active" || (e.status ?? "proposed") === "proposed",
-  );
+  // Proposed or running; a concluded experiment has an outcome.
+  const activeExperiments = (fields.experiments ?? []).filter((e) => e.outcome === undefined);
   if (activeExperiments.length > 0) {
     lines.push("**Active Experiments:**");
     for (const exp of activeExperiments) {

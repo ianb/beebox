@@ -2,7 +2,7 @@
 
 `ageQuestions` (`src/core/question-aging.ts`) ages every pending question by
 its durable `asked-at`, never latch state: a re-notification ("nudge") fires
-once past the nudge threshold, and the question flips to `expired` (via the
+once past the nudge threshold, and the question gets `expired-at` (via the
 shared guarded transition, same as `answer`/`dismiss`) past the expiry
 window. Both windows default to 30 days expire / 7 days nudge, or derive from
 a card's `expires-after` override (nudge at half). Expiry never depends on a
@@ -51,7 +51,7 @@ function setTime(date) {
 
 function question(opts) {
   const { prompt, askedAt, expiresAfter } = opts;
-  const lines = ["---", "status: pending", `prompt: ${prompt}`, "input:", "  type: text"];
+  const lines = ["---", `prompt: ${prompt}`, "input:", "  type: text"];
   if (askedAt !== undefined) lines.push(`asked-at: ${askedAt}`);
   if (expiresAfter !== undefined) lines.push(`expires-after: ${expiresAfter}`);
   lines.push("---", "");
@@ -110,12 +110,12 @@ JSON.stringify(await ageQuestions(box.root))
 => {"nudged":[],"expired":[]}
 ```
 
-The question is still pending — nudging never touches status:
+The question is still pending — nudging never sets `expired-at`:
 
 ```ts continue
 const card = await box.read("_bookkeeping/questions/Color.question.card");
-card.includes("status: pending")
-=> true
+card.includes("expired-at")
+=> false
 ```
 
 ```ts cleanup
@@ -140,9 +140,6 @@ JSON.stringify(result)
 => {"nudged":[],"expired":["_bookkeeping/questions/Stale.question.card"]}
 
 const card = await box.read("_bookkeeping/questions/Stale.question.card");
-card.includes("status: expired")
-=> true
-
 card.includes("expired-at:")
 => true
 ```
@@ -158,7 +155,7 @@ Expired questions drop out of the pending count and pending-questions list:
 
 ```ts continue
 const state = await getSystemState(box.root);
-state.questions.filter((q) => q.status === "pending").length
+state.questions.filter((q) => q.state === "pending").length
 => 0
 
 const { pendingQuestions } = await generateContext(box.root);
@@ -243,7 +240,7 @@ const box = await makeTmpBox({ git: true });
 await seedBox(box);
 await box.write(
   "_bookkeeping/questions/NoAskedAt.question.card",
-  "---\nstatus: pending\nprompt: When was this asked?\ninput:\n  type: text\n---\n"
+  "---\nprompt: When was this asked?\ninput:\n  type: text\n---\n"
 );
 box.commitAll("seed question");
 
@@ -252,8 +249,8 @@ JSON.stringify(await ageQuestions(box.root))
 => {"nudged":[],"expired":[]}
 
 const card = await box.read("_bookkeeping/questions/NoAskedAt.question.card");
-card.includes("status: pending")
-=> true
+card.includes("expired-at")
+=> false
 ```
 
 ```ts cleanup
@@ -264,7 +261,7 @@ delete process.env.BBX_TIME;
 ## Race-loser: already-answered questions are simply not pending
 
 The shared `withQuestionTransition` primitive (`question-transition.ts`)
-re-checks status after acquiring both locks and skips silently when it's no
+re-checks state after acquiring both locks and skips silently when it's no
 longer in the allowed set — that's exercised directly by the `answer`/
 `dismiss` doctests' "already answered" cases. A true cross-process race
 between the sweep and a simultaneous answer can't be manufactured in a
@@ -279,7 +276,7 @@ await seedBox(box);
 await box.write(
   "_bookkeeping/questions/AlreadyAnswered.question.card",
   question({ prompt: "Still open?", askedAt: ASKED_AT.toISOString() })
-    .replace("status: pending", "status: answered\nanswered-at: 2026-01-02T00:00:00Z\nanswer:\n  text: Yes"),
+    .replace("---\n", "---\nanswered-at: 2026-01-02T00:00:00Z\nanswer:\n  text: Yes\n"),
 );
 box.commitAll("seed question");
 
@@ -288,8 +285,8 @@ JSON.stringify(await ageQuestions(box.root))
 => {"nudged":[],"expired":[]}
 
 const card = await box.read("_bookkeeping/questions/AlreadyAnswered.question.card");
-card.includes("status: answered")
-=> true
+card.includes("expired-at")
+=> false
 ```
 
 ```ts cleanup

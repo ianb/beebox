@@ -15,7 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createAudioTemplate } from "../../../schemas/audio.js";
-import { createImageTemplate, type ImageSource } from "../../../schemas/image/schema.js";
+import { createImageTemplate, type ImageChannel } from "../../../schemas/image/schema.js";
 import { createFileTemplate } from "../../../schemas/file.js";
 import { createCaptureSessionTemplate } from "../../../schemas/capture-session.js";
 import { concatSegmentChunks } from "./audio-concat.js";
@@ -82,7 +82,7 @@ export class SessionBuilder {
  * Write one audio card per recording segment. Chunks are concatenated *within*
  * a segment only (`concatSegments` — only the first chunk of a recording has
  * the WebM/EBML header). Cards are numbered `audio-001`, `audio-002`, … and
- * each card's `filename.recorded` is its segment's `startedAt`.
+ * each card's `filename.via.at` is its segment's `startedAt`.
  */
 export async function writeAudioCards(opts: {
   builder: SessionBuilder;
@@ -103,8 +103,7 @@ export async function writeAudioCards(opts: {
     const extension = segment.format === "m4a-aac" ? "m4a" : "webm";
     const mediaFilename = `${audioBasename}.${extension}`;
     const cardContent = createAudioTemplate({
-      recordedAt: segment.startedAt,
-      source: "microphone",
+      via: { channel: "microphone", at: segment.startedAt },
       filename: mediaFilename,
     });
     await builder.writeChildCard({
@@ -131,7 +130,7 @@ async function writeImageCards(opts: {
     const ext = photo.filename.endsWith(".png") ? ".png" : ".jpg";
     const mediaFilename = `${photoBasename}${ext}`;
 
-    const imageSource: ImageSource =
+    const channel: ImageChannel =
       photo.source === "camera-environment"
         ? "camera-environment"
         : photo.source === "gallery"
@@ -140,8 +139,7 @@ async function writeImageCards(opts: {
 
     const mediaContent = await fs.readFile(path.join(sessionDir, photo.filename));
     const cardContent = createImageTemplate({
-      capturedAt: photo.capturedAt,
-      source: imageSource,
+      via: { channel, at: photo.capturedAt },
       filename: mediaFilename,
     });
 
@@ -169,8 +167,7 @@ async function writeFileCards(opts: {
     const mediaContent = await fs.readFile(path.join(sessionDir, file.filename));
 
     const cardContent = createFileTemplate({
-      capturedAt: file.uploadedAt,
-      source: "disk",
+      via: { channel: "disk", at: file.uploadedAt },
       filename: mediaFilename,
       originalName: file.originalName,
       mimeType: file.mimeType,

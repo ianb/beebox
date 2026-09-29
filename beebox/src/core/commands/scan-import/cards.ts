@@ -108,8 +108,7 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
   }
 
   const cardContent = createImageTemplate({
-    capturedAt: startedAt,
-    source: "gallery",
+    via: { channel: "gallery", at: startedAt },
     filename: photoFilename,
   });
   const cardPath = path.join(sessionAttachAbsDir, cardFilename);
@@ -233,14 +232,14 @@ async function applyBundleAnalysisToCard(
   const photo = bundle.photo;
   const back = bundle.back;
 
-  // The image schema's `text` field is an array of { source, content }.
-  const photoTextBlocks = photo.text_blocks.map((b) => ({ source: b.source || "photo", content: b.text }));
+  // The image schema's `text` field is an array of { surface, content }; the
+  // analyzer calls the surface `source`.
+  const photoTextBlocks = photo.text_blocks.map((b) => ({ surface: b.source || "photo", content: b.text }));
   const backTextBlocks = back
-    ? back.text_blocks.map((b) => ({ source: b.source || "back", content: b.text }))
+    ? back.text_blocks.map((b) => ({ surface: b.source || "back", content: b.text }))
     : [];
   const allTextBlocks = [...photoTextBlocks, ...backTextBlocks];
 
-  fields["status"] = "analyzed";
   fields["has-text"] = allTextBlocks.length > 0;
   fields["description"] = photo.description;
   if (photo.rotation !== 0) fields["rotation"] = String(photo.rotation);

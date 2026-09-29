@@ -10,8 +10,8 @@
  *
  * Globs every `*.person.card` and loads each through `parseCardText`, so the
  * person schema's constraints apply — an invalid/unparseable card is logged
- * and skipped rather than breaking the compile. Archived/inactive boxholders
- * are excluded. `called` is the person's first alias, if any.
+ * and skipped rather than breaking the compile. Archived boxholders are
+ * excluded. `called` is the person's first alias, if any.
  */
 
 import * as path from "node:path";
@@ -36,8 +36,7 @@ export async function loadBoxholders(boxRoot: string): Promise<Boxholder[]> {
       const { fields } = parseCardText(text, { source: rel, schemas });
 
       if (fields["boxholder"] !== true) continue;
-      const status = typeof fields["status"] === "string" ? fields["status"] : "active";
-      if (status === "archived" || status === "inactive") continue;
+      if (fields["archived"] === true) continue;
 
       const name = typeof fields["name"] === "string" && fields["name"] !== ""
         ? fields["name"]

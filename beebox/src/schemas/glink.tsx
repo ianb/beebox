@@ -24,10 +24,13 @@ export const GlinkSchema = cardSchema("glink", {
   description: "A pointer to a Google Drive item that is not copied into the box — Drive metadata plus the boxholder's purpose notes",
   category: "synced",
   fields: {
-    "drive-id": z.string(),
-    link: z.string(),
-    name: z.string(),
-    mime: z.string(),
+    drive: z.object({
+      id: z.string(),
+      link: z.string(),
+      mime: z.string(),
+    }),
+    // The item's Drive name.
+    title: z.string(),
     origin: GlinkOrigin,
     body: body(z.string()),
   },
@@ -35,7 +38,7 @@ export const GlinkSchema = cardSchema("glink", {
 
 A \`.glink.card\` says **"this Drive item exists, here is where it lives, here
 is what it is for."** Nothing is copied into the box — no attach scope, no
-export. To read the item, open \`link:\` or run \`bbx drive inspect <drive-id>\`.
+export. To read the item, open \`drive.link\` or run \`bbx drive inspect <drive.id>\`.
 
 Two ways one shows up:
 
@@ -47,8 +50,9 @@ Two ways one shows up:
 
 ## Frontmatter is the connector's; the body is yours
 
-\`drive-id\`, \`link\`, \`name\`, and \`mime\` are stamped from Drive on every
-sync — hand-edit them and the next sync writes them back. Do not.
+\`drive:\` (the item's \`id\`, \`link\`, and \`mime\` type) and \`title\` (its
+Drive name) are stamped from Drive on every sync — hand-edit them and the next
+sync writes them back. Do not.
 
 The **body is purpose notes**, written by the boxholder or by an agent on their
 behalf, and the connector never touches it: what the item is for, what is in
@@ -80,10 +84,8 @@ export function createGlinkTemplate(options: {
   notes: string;
 }): string {
   const fields: Record<string, unknown> = {
-    "drive-id": options.driveId,
-    link: options.link,
-    name: options.name,
-    mime: options.mime,
+    drive: { id: options.driveId, link: options.link, mime: options.mime },
+    title: options.name,
     origin: options.origin,
   };
   return `---\n${stringifyYaml(fields)}---\n${options.notes}`;

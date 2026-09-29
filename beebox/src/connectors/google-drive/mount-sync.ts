@@ -130,6 +130,6 @@ async function syncMountUnderLock(opts: {
 
 /** The Drive name stamped on a mount card, when it has been synced before. */
 function folderName(content: string): string | null {
-  const name = parseFrontmatterObject(content)?.["name"];
+  const name = parseFrontmatterObject(content)?.["title"];
   return typeof name === "string" && name !== "" ? name : null;
 }

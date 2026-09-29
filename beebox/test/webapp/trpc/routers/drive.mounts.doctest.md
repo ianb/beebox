@@ -115,7 +115,7 @@ await box.cleanup();
 `mount` writes the `.gfolder.card` and runs one mirror pass, so by the time the
 page refetches, the directory holds the folder's children: the Sheet synced,
 the PDF a pointer. The counts are the honest answer to "did this work" — a
-mount whose listing failed still has a status but no children.
+mount whose listing failed still has an error but no children.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -137,12 +137,11 @@ JSON.stringify(listed.mounts.map((m) => ({
   dir: m.dir,
   driveId: m.driveId,
   name: m.name,
-  status: m.status,
   children: m.children,
   problems: m.problems,
   error: m.error,
 })))
-=> [{"cardPath":"_content/drive/recipes/Recipes.gfolder.card","dir":"_content/drive/recipes","driveId":"folder-1","name":"Recipes","status":"ok","children":{"files":1,"links":1},"problems":{"notInFolder":0,"unknown":0},"error":null}]
+=> [{"cardPath":"_content/drive/recipes/Recipes.gfolder.card","dir":"_content/drive/recipes","driveId":"folder-1","name":"Recipes","children":{"files":1,"links":1},"problems":{"notInFolder":0,"unknown":0},"error":null}]
 ```
 
 An injected service is a connected one: the page shows the mount manager, not

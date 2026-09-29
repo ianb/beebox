@@ -50,7 +50,7 @@ export const shareRouter = router({
       const cardText = input.kind === "url"
         ? createWebpageTemplate({
             title,
-            source: input.url,
+            url: input.url,
             capturedAt: input.capturedAt,
             content: `[${title}](${input.url})`,
             shareId: input.shareId,

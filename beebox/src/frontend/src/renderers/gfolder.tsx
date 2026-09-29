@@ -16,6 +16,7 @@
  */
 
 import { useParams } from "@tanstack/react-router";
+import { isRecord } from "@shared/is-record";
 import { trpc } from "../lib/trpc/client";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -70,20 +71,20 @@ function ChildState({ card }: { card: BrowseCardEntry }) {
 
 /** Name, Drive link, and the outcome of the last mirror pass. */
 function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<string, unknown> }) {
-  const name = field(frontmatter, "name");
-  const link = field(frontmatter, "link");
-  const status = field(frontmatter, "status");
+  const drive = isRecord(frontmatter["drive"]) ? frontmatter["drive"] : {};
+  const name = field(frontmatter, "title");
+  const link = field(drive, "link");
   const lastSync = field(frontmatter, "last-sync");
   const error = field(frontmatter, "error");
-  const driveId = field(frontmatter, "drive-id");
+  const driveId = field(drive, "id");
 
   return (
     <Stack gap="xs">
       <Row gap="sm" align="center" wrap>
         <Heading level={2}>{name ?? "Drive folder"}</Heading>
-        {status === "error" ? <Badge tone="danger">error</Badge> : null}
-        {status === "ok" ? <Badge tone="success">mirrored</Badge> : null}
-        {status === null ? <Badge tone="neutral">never synced</Badge> : null}
+        {error !== null ? <Badge tone="danger">error</Badge> : null}
+        {error === null && lastSync !== null ? <Badge tone="success">mirrored</Badge> : null}
+        {error === null && lastSync === null ? <Badge tone="neutral">never synced</Badge> : null}
         {link === null ? null : (
           <ExternalLink href={link} id="bbx-gfolder-open-in-drive">Open in Drive</ExternalLink>
         )}

@@ -12,38 +12,15 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
-
-const RecordStatusSchema = z.enum(["draft", "reviewed", "archived"]);
-export type RecordStatus = z.infer<typeof RecordStatusSchema>;
+import { SourcesEntrySchema } from "../cards/sources-entry.js";
+import { DateEntrySchema } from "../cards/date-entry.js";
 
 /**
- * Where a record's claim came from. A source is either an in-box card
- * (`ref:`) or a page on the web (`href:`) — the same exclusive pair the
- * `{% source %}` tag takes, so the two vocabularies agree. Before `href`
- * existed, a web source was written as a URL in `ref:`, which the ref walk
- * then reported as a missing file.
+ * The shared date entry, except that `value` stays free text: records hold
+ * dates transcribed from old documents, and some are not dates ISO 8601 can
+ * state (`1970s`). The instructions ask for ISO 8601 wherever it can.
  */
-const SourceEntry = z
-  .object({
-    ref: z.string().optional(),
-    href: z.string().optional(),
-    time: z.string().optional(),
-    note: z.string().optional(),
-  })
-  .superRefine((entry, ctx) => {
-    const hasRef = entry.ref !== undefined && entry.ref !== "";
-    const hasHref = entry.href !== undefined && entry.href !== "";
-    if (hasRef && hasHref) {
-      ctx.addIssue({ code: "custom", message: "a `sources` entry takes exactly one of `ref` or `href`, not both" });
-    } else if (!hasRef && !hasHref) {
-      ctx.addIssue({ code: "custom", message: "a `sources` entry requires exactly one of `ref` or `href`" });
-    }
-  });
-
-const DateEntry = z.object({
-  value: z.string(),
-  note: z.string().optional(),
-});
+const RecordDateEntry = DateEntrySchema.extend({ value: z.string() });
 
 const PersonEntry = z.object({
   name: z.string(),
@@ -68,11 +45,12 @@ export const RecordSchema = cardSchema("record", {
   description: "A discrete extracted unit (inventory item, archived document, contact) pulled from a capture session or other source",
   category: "authored",
   fields: {
-    status: RecordStatusSchema.default("draft"),
     name: z.string(),
+    reviewed: z.boolean().optional(),
+    archived: z.boolean().optional(),
     description: z.string().optional(),
-    sources: z.array(SourceEntry).optional(),
-    dates: z.array(DateEntry).optional(),
+    sources: z.array(SourcesEntrySchema).optional(),
+    dates: z.array(RecordDateEntry).optional(),
     persons: z.array(PersonEntry).optional(),
     location: LocationEntry.optional(),
     quantity: MeasureEntry.optional(),
@@ -97,13 +75,20 @@ identifiable thing.
 - \`description:\` — About the thing — context, what it is, its
   condition, why it matters. This describes the record; it doesn't
   contain the content itself.
-- \`sources:\` — Array of \`{ref | href, time?, note?}\` pointing at where this
-  record was extracted from — usually a capture-session card elsewhere
-  in the box, so a box-root-absolute \`ref\` (leading \`/\`) reads clearest
-  here. The optional \`time\` pinpoints a moment in a transcript; the
-  \`note\` explains why this source is relevant.
-- \`dates:\` — Array of \`{value, note?}\`. Parseable date strings
-  with context ("Year purchased", "Date of letter").
+- \`sources:\` — Array of \`{ref | href, pos?, retrieved?, usage?, note?}\` pointing
+  at where this record was extracted from — usually a capture-session card
+  elsewhere in the box, so a box-root-absolute \`ref\` (leading \`/\`) reads
+  clearest here; a web page is an \`href\`. The optional \`pos\` pinpoints
+  where in the source (a moment in a transcript, a page); \`retrieved\` is
+  the date a web page was read; \`usage\` says how the material was used
+  (\`verbatim\`, \`summary\`); the \`note\` explains why this source is
+  relevant. Same attributes as the \`{% source %}\` tag.
+- \`dates:\` — Array of \`{value, kind?, end?, note?}\`. \`value\` is
+  ISO 8601 at the precision known: \`1974\`, \`1974-06\`,
+  \`1974-06-02\`. Only a date ISO 8601 cannot state (\`1970s\`) is
+  written as text. \`end\` (ISO 8601) makes a range; \`kind\` names
+  which date it is (\`purchased\`, \`written\`); \`note\` gives context
+  ("Year purchased", "Postmark only").
 - \`persons:\` — Array of \`{name, ref?, role?, notes?, note?}\`.
   People relevant to this record. \`role\` is the person's role in
   this record (e.g. "Sender", "Recipient", "Manager"); \`notes\` or
@@ -140,10 +125,11 @@ item needs \`location\` and \`quantity\` but probably no body. A
 document archive entry needs a body and \`dates\` but maybe no
 \`measurements\`.
 
-Status lifecycle:
-- \`draft\` — Freshly extracted, may need human review.
-- \`reviewed\` — Human has verified the record is accurate.
-- \`archived\` — Record is finalized and stored long-term.`,
+A new record is unreviewed. Set \`reviewed: true\` only when the boxholder
+has verified it is accurate, and \`archived: true\` when the boxholder has
+finalized it for long-term storage. Leave both absent otherwise.`,
+  // A record is listed and found under its name.
+  summarize: (card, base) => ({ ...base, title: card.name }),
 });
 
 export type RecordFields = InferCardFields<typeof RecordSchema>;
@@ -155,7 +141,6 @@ export function createRecordTemplate(options: {
   sources?: Array<{ ref: string; text?: string | undefined }> | undefined;
 }): string {
   const fields: Record<string, unknown> = {
-    status: "draft",
     name: options.name,
   };
   if (options.description !== undefined && options.description !== "") {

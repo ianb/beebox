@@ -10,7 +10,7 @@ Replace the bespoke `CLAUDE_SCANS.md` scanner-priors file with a
 `config/scan.guide.card` guide card. The scan-import photo flow consumes the
 COMPILED guide text in its per-page vision prompt; `CLAUDE_SCANS.md` becomes a
 deprecated, warning-logged fallback. Scanner priors join the established
-"theory of user" mechanism: beliefs carry confidence/source tags, and answered
+"theory of user" mechanism: beliefs carry confidence/basis tags, and answered
 scan questions accrete into the guide through the existing question
 `learning:` contract.
 
@@ -43,7 +43,7 @@ All of this is reused; nothing is rebuilt.
   (`guideFields`: `version`, `job-types`, `applies-to`, `triage-rules`,
   `default-action`, `actions`, `experiments`, `reactions`, `context-notes`).
   Per-rule evidence model at `guide-elements.tsx:58-64`: *"confidence:
-  ConfidenceLevel.default('low'), source: BeliefSource.default('inferred')"*.
+  ConfidenceLevel.default('low'), basis: BeliefBasis.default('inferred')"*.
   `parseGuideCard(content)` (`src/schemas/guide-parse.tsx:71-83` (moved to `beebox/src/schemas/guide/parse.tsx`)) and
   `compileGuide(parsed, guideName)` (`src/schemas/guide-compile.tsx:15-95` (moved to `beebox/src/schemas/guide/compile.tsx`))
   turn a card into action-only markdown (strips evidence metadata,
@@ -74,7 +74,7 @@ All of this is reused; nothing is rebuilt.
 - **Question `learning:` contract.** `QuestionLearning`
   (`src/schemas/question.ts:88-96`: `{ sink: "guide"|"briefing"|"personality",
   ref?, proposal }`); `bbx answer` spawns a `question-followup-job` whose
-  instructions record the outcome as a `source: user-stated` belief in the
+  instructions record the outcome as a `basis: user-stated` belief in the
   named sink (`src/schemas/question-followup-job.ts:26-68`). Precedent user:
   the triage guess path (`src/core/triage/routing.ts:117-127` (moved to `beebox/src/core/triage/run/routing.ts`)). Reused: the
   three scan question emitters in `src/core/commands/scan-import-cards.ts` (moved to `beebox/src/core/commands/scan-import/cards.ts`)
@@ -112,7 +112,7 @@ today.
 **Why this needs to change:** `CLAUDE_SCANS.md` is a bespoke well-known
 filename with no validation, no evidence model, and no learning loop.
 Instructions everywhere else in the box live in cards; guide cards already
-carry confidence/source-tagged beliefs and a revision loop. Answered scan
+carry confidence/basis-tagged beliefs and a revision loop. Answered scan
 questions ("that's Kris, not Chris") currently evaporate — with a guide they
 accrete as beliefs.
 
@@ -121,12 +121,12 @@ accrete as beliefs.
 1. **Content conventions for a scan guide** (no schema change):
    - Disambiguation priors (people, vendors, places, handwriting facts) are
      `triage-rules` entries — they are the beliefs the learning loop must be
-     able to upgrade/downgrade, so they need per-entry `confidence`/`source`
+     able to upgrade/downgrade, so they need per-entry `confidence`/`basis`
      (`guide-elements.tsx:58-64`). `action` is omitted (compile renders them
      as `- **Note**: <text>`, `guide-compile.tsx:34`). The evidence tags
      never reach the vision prompt — `compileGuide` strips them *by design*
      ("strips evidence metadata", `guide-compile.tsx:2-4`); the compiled doc
-     is action-only, and confidence/source serve the revision loop, whose
+     is action-only, and confidence/basis serve the revision loop, whose
      reader is the raw card. Do not "fix" this during implementation
      (codex review finding 2).
    - Narrative era/background context ("Duluth roughly 1979–1982") is
@@ -141,7 +141,7 @@ accrete as beliefs.
      applies-to = the human/agent-legible description in the guides index.
 2. **`scan` seed in `DOMAIN_SEEDS`** (`src/schemas/guide-templates.tsx` (moved to `beebox/src/schemas/guide/templates.tsx`)):
    `jobTypes: ""`; `appliesTo` describing scan-import photo extraction; one
-   `source: "default"` triage rule restating the disambiguation-only rule;
+   `basis: "default"` triage rule restating the disambiguation-only rule;
    one `Ask User` action (create a question card in `box/questions/`);
    `defaultAction: Ask User`; initial experiment (priors reduce misread
    names/dates; record answered scan questions as rules). Created on demand
@@ -209,7 +209,7 @@ accrete as beliefs.
    reserialization). Only the top-of-file provenance block becomes a YAML
    `#` comment — review-time only, and the README already instructs
    stripping it at install time. Evidence model in the drafts: all entries
-   are agent-drafted from box records, so they carry `source: inferred`
+   are agent-drafted from box records, so they carry `basis: inferred`
    capped at `confidence: medium` (the inferred ceiling); the boxholder
    flips confirmed entries to `user-stated` at review. `[VERIFY]`-marked
    entries get `confidence: low` (still compiled — only `hypothesis` is
@@ -221,10 +221,10 @@ accrete as beliefs.
    showed a model deferring to the flat priors file's unconfirmed
    "Kris Lobent" transcription over its own better reading — a flat priors
    file that records unconfirmed machine output as fact actively corrupts
-   later disambiguation; the guide's confidence/source tagging is what
+   later disambiguation; the guide's confidence/basis tagging is what
    prevents it. The boxholder has since adjudicated that name as
    "Kris Lobert", which the estate draft now records as
-   `source: user-stated` / `confidence: confirmed` (noting the prior wrong
+   `basis: user-stated` / `confidence: confirmed` (noting the prior wrong
    machine guesses "Lobent"/"Robert") — the first belief to graduate
    through exactly the ladder the guide exists for. README install table updated (target `config/scan.guide.card` in
    each box). Drafts are NOT installed into real boxes.
@@ -366,7 +366,7 @@ Chunks 2–4 are independent of each other; all depend on chunk 1's vocabulary.
   1. `bbx create guide --name scan` (creates `config/scan.guide.card` from the
      seed).
   2. Move each priors bullet into `triage-rules` (people/vendors/places →
-     one rule each, `source: user-stated`, `confidence: high` for
+     one rule each, `basis: user-stated`, `confidence: high` for
      boxholder-confirmed facts) and era narrative into `context-notes`.
   3. Delete `CLAUDE_SCANS.md` and, in test1's case, remove the scans-file
      `@`-import line from `content/CLAUDE.md:3` (general agent

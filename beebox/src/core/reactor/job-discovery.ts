@@ -2,11 +2,11 @@
  * Job card discovery — scans _bookkeeping/jobs/ for pending job cards.
  *
  * Job cards have the suffix `.job.card` (optionally `.TYPE.job.card`
- * for typed jobs like chat). Priority and source are read from the card's
- * YAML frontmatter (`priority:`, `source:`). When a sourceFilter is
- * provided, jobs whose source does not match are dropped — used by
- * `bbx wakeup --connector X` to scope the reactor to just the jobs that the
- * same partial run produced.
+ * for typed jobs like chat). Priority and connector are read from the card's
+ * YAML frontmatter (`priority:`, `connector:`). When a connectorFilter is
+ * provided, jobs whose connector does not match (including jobs no connector
+ * made) are dropped — used by `bbx wakeup --connector X` to scope the reactor
+ * to just the jobs that the same partial run produced.
  */
 
 import * as path from "node:path";
@@ -57,10 +57,10 @@ async function readCreatedAt(jobPath: string, file: string): Promise<Date | null
 
 export async function findJobCards(
   jobsDir: string,
-  options?: { typeFilter?: string | undefined; sourceFilter?: string | undefined }
+  options?: { typeFilter?: string | undefined; connectorFilter?: string | undefined }
 ): Promise<JobCardInfo[]> {
   options = options ?? {};
-  const { typeFilter, sourceFilter } = options;
+  const { typeFilter, connectorFilter } = options;
   let entries: string[];
   try {
     entries = await fs.readdir(jobsDir, { recursive: true });
@@ -83,20 +83,20 @@ export async function findJobCards(
   for (const file of jobFiles) {
     const jobPath = path.join(jobsDir, file);
     let priority: "normal" | "low" = "normal";
-    let source: string | undefined;
+    let connector: string | undefined;
     try {
       const content = await fs.readFile(jobPath, "utf-8");
       const fm = readCardFrontmatter(content);
       if (fm) {
         if (fm["priority"] === "low") priority = "low";
-        if (typeof fm["source"] === "string") source = fm["source"];
+        if (typeof fm["connector"] === "string") connector = fm["connector"];
       }
     } catch (e) {
-      // Can't read this card — default to normal priority, no source. The job
+      // Can't read this card — default to normal priority, no connector. The job
       // is still surfaced; whatever processes it will hit the same read error.
       console.debug(`findJobCards: cannot read ${file}, using defaults:`, e);
     }
-    if (sourceFilter !== undefined && source !== sourceFilter) continue;
+    if (connectorFilter !== undefined && connector !== connectorFilter) continue;
     results.push({ file, priority, createdAt: await readCreatedAt(jobPath, file) });
   }
 

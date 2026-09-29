@@ -2,7 +2,7 @@
  * Recipe card schema — Phase-2 frontmatter + Markdoc-annotated body.
  *
  * Was previously an XML schema with `<ing>`, `<step>`, `<section>`, etc.
- * Now: identity in frontmatter (title, description, source, tags, hero
+ * Now: identity in frontmatter (title, description, sources, tags, hero
  * image), structure in the body via the recipe Markdoc vocabulary
  * (`{% ingredient %}`, `{% step %}`, `{% yield %}`,
  * `{% substitution %}`, `{% subrecipe %}`, `{% recipe-section %}`). See
@@ -16,22 +16,7 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
-
-/**
- * Where a recipe came from — at least one of: `label` (a freeform name, e.g.
- * "The Kitchen" or "Grandma"), `href` (an external URL), or `ref` (a card, e.g.
- * a frozen `*.webpage.card`). Typed rather than freeform so a source can be a
- * clickable link or a tracked ref while still allowing a plain name.
- */
-const RecipeSource = z
-  .object({
-    label: z.string().optional(),
-    href: z.string().optional(),
-    ref: z.string().optional(),
-  })
-  .refine((s) => s.label !== undefined || s.href !== undefined || s.ref !== undefined, {
-    message: "source needs at least one of label / href / ref",
-  });
+import { LabeledSourcesEntrySchema } from "../cards/sources-entry.js";
 
 /**
  * A representative image — exactly one of `ref` (into the recipe's attach scope,
@@ -53,7 +38,8 @@ export const RecipeSchema = cardSchema("recipe", {
   fields: {
     title: z.string(),
     description: z.string().optional(),
-    source: RecipeSource.optional(),
+    // Where the recipe came from: a page, a card, or a named cookbook or person.
+    sources: z.array(LabeledSourcesEntrySchema).optional(),
     tags: z.array(z.string()).optional(),
     "hero-image": RecipeHeroImage.optional(),
     body: body(z.string()),
@@ -67,11 +53,12 @@ the user wants that — don't impose a taxonomy.
 
 - \`title:\` — required. Recipe name.
 - \`description:\` — optional prose.
-- \`source:\` — optional. Where the recipe came from, as an object with at
-  least one of: \`label\` (a freeform name — a cookbook, a person),
-  \`href\` (an external URL), or \`ref\` (a card, e.g. a frozen
-  \`*.webpage.card\`). E.g. \`source: {label: "The Kitchen"}\` or
-  \`source: {href: "<the recipe's URL>"}\`.
+- \`sources:\` — optional. Where the recipe came from, as a list of entries.
+  Each entry has one of \`href\` (an external URL) or \`ref\` (a card, e.g. a
+  frozen \`*.webpage.card\`), and optional \`label\` display text. A source
+  with nothing to point at (a cookbook, a person) is a \`label\` alone. E.g.
+  \`sources: [{label: "The Kitchen"}]\` or
+  \`sources: [{href: "<the recipe's URL>", label: "Serious Eats"}]\`.
 - \`tags:\` — optional array of strings.
 - \`hero-image:\` — optional representative image, as an object with
   exactly one of \`ref\` (into this card's attach scope, e.g.

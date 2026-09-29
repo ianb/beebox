@@ -31,7 +31,9 @@ export function timestampedJobFilename(
 /**
  * Scan a jobs directory for the first card whose filename ends with `suffix`
  * and whose parsed frontmatter satisfies `match`. Returns the absolute path,
- * or `null` when none matches (including a missing jobs directory).
+ * or `null` when none matches (including a missing jobs directory). Every
+ * job card on disk is pending: finishing a job deletes its card
+ * (`core/finish-job.ts`).
  *
  * A missing directory is silent (no jobs yet); any other readdir/read error is
  * logged and the entry skipped, so one hand-mangled card can't hide the rest.

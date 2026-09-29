@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-29T22:57:23Z
-Total documents: 470
+Generated: 2026-09-29T23:20:35Z
+Total documents: 472
 
 ## Issues
 
@@ -128,7 +128,7 @@ Referenced by:
 - docs/box-layout.md:9 (mention) — A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working t
 - docs/box/publishing.md:21 (mention) — ├── CLAUDE.md
 - docs/cards/migrations.md:482 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
-- docs/cards/schemas.md:333 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
+- docs/cards/schemas.md:372 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
 - docs/cards/validation.md:32 (mention) — A box `CLAUDE.md` size warning appears once per file and size tier in each
 - docs/design/extensibility.md:25 (mention) — prompts), don't build it. Small additions — a `CLAUDE.md` file with custom
 - docs/design/identity.md:5 (mention) — and operating system built on Claude Code" (CLAUDE.md) is the identity;
@@ -220,6 +220,7 @@ Referenced by:
 - docs/plans/change-based-test-selection.md:958 (mention) — `--base`, CLAUDE.md guidance. The point at which behavior changes for agents,
 - docs/plans/chat-photo-batch-upload.md:51 (link) — - [`beebox/CLAUDE.md`](../../CLAUDE.md):101 — *"Read before writing. Don't
 - docs/plans/chat-scroll-model.md:213 (mention) — harness, all scenarios green, `decideScroll` deleted, nested CLAUDE.md and
+- docs/plans/chat-search.md:251 (mention) — scroll" invariant, `frontend chat CLAUDE.md`). One-shot like `companion`;
 - docs/plans/codex-session-startup-auth.md:21 (mention) — - `CLAUDE.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
 - docs/plans/container-first.md:79 (mention) — - `CLAUDE.md`, Time discipline: *"Long-running timeouts must count only awake
 - docs/plans/container-first.review.md:711 (mention) — **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
@@ -240,7 +241,7 @@ Referenced by:
 - docs/plans/worktree-control-surface.md:635 (mention) — box CLAUDE.md, the generated agent guide, and schema instructions. Everything in
 - docs/prompts/logging.md:7 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
 - docs/prompts/review.md:23 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
-- docs/questions.md:63 (mention) — # the box CLAUDE.md — see below)
+- docs/questions.md:62 (mention) — # the box CLAUDE.md — see below)
 - docs/reports/activities-design-2026-04-19.md:50 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
 - docs/reports/activities-retrospective-2026-05-14.md:25 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
 - docs/reports/chat-scroll-investigation-2026-09-04.md:7 (mention) — `CLAUDE.md` and `docs/plans/chat-scroll-model.md`. Do not update in place.
@@ -719,6 +720,7 @@ Referenced by:
 - docs/guides.md:31 (link) — | Adding an API endpoint (tRPC by default) | [adding-api-endpoints](adding-api-endpoints.md) |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:163 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/implemented-plans/docs-reorg.md:148 (mention) — - **Skill-promotion candidates**: `adding-api-endpoints.md` (tRPC-vs-REST
+- docs/plans/chat-search.md:216 (mention) — (`docs/adding-api-endpoints.md`); chat search is chat-domain, not
 - docs/plans/ios-native-capture-mode.md:30 (mention) — - `docs/adding-api-endpoints.md`: capture uploads remain raw Fastify because
 - docs/plans/search-card.md:97 (mention) — point. `beebox/docs/adding-api-endpoints.md` specifies tRPC for normal read
 - ../.claude/skills/bbx-guide-api/SKILL.md:9 (mention) — checklist lives in `beebox/docs/adding-api-endpoints.md` — follow
@@ -738,7 +740,7 @@ Referenced by:
 - docs/box-guidance.md:37 (mention) — | `.beebox/agent-guide.md` | always | generated | `generateDocs` | no |
 - docs/box-guidance.md:131 (link) — [agent guide](agent-guide.md). A section whose facts only some runs
 - docs/box-layout.md:3 (mention) — The on-disk shape of a beebox. This is the canonical reference for beebox developers; agents working *inside* a box see
-- docs/cards/schemas.md:332 (mention) — 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
+- docs/cards/schemas.md:371 (mention) — 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
 - docs/guides.md:34 (link) — | Agent guide: the always-loaded guide, its ledger of rules, and the bin test | [agent-guide](agent-guide.md) |
 - docs/implemented-plans/agent-guide-spec.md:11 (mention) — The always-loaded agent guide (`.beebox/agent-guide.md`, rendered from
 - docs/implemented-plans/box-docs-in-package.md:31 (mention) — | `.beebox/agent-guide.md` | engine text plus the box's procedures, personality, shape | partly |
@@ -1427,6 +1429,7 @@ Referenced by:
 - ../issues/features/2026-09-11-bias-apple-speech-with-box-vocabulary.md:53 (mention) — (`beebox/docs/mobile-contract.md`) is where that would live.
 - ../issues/features/2026-09-12-most-recent-conversation-should-be-per-person.md:26 (mention) — the owner (see `docs/mobile-contract.md` §2.3). Shared boxes with distinct
 - ../issues/features/2026-09-26-apns-push-relay-for-a-shared-app.md:46 (mention) — the mobile contract (`beebox/docs/mobile-contract.md` §5.10) and adds a
+- ../issues/features/2026-09-28-private-chat-sessions-search-gating.md:20 (mention) — (`docs/mobile-contract.md` §2.3), so shared boxes with distinct identities
 - ../research/opencode/inspiration.md:78 (mention) — | One server, many clients; ACP; desktop sidecar | web + iOS over one server; `docs/mobile-contract.md` | already done,
 
 References:
@@ -1529,7 +1532,7 @@ References:
 
 #### docs/procedure-implementation.md
 
-Title: "Procedures" | 262 lines | current reference
+Title: "Procedures" | 263 lines | current reference
 
 Referenced by:
 - CLAUDE.md:49 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
@@ -2169,7 +2172,7 @@ Referenced by:
 
 #### docs/box/schemas.md
 
-Title: "Writing Box-Local Schemas" | 184 lines | current reference
+Title: "Writing Box-Local Schemas" | 234 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:125 (link) — [schemas](box/schemas.md)). A tracked nested `CLAUDE.md` holds a pointer to it
@@ -2204,7 +2207,7 @@ Title: "Tricks" | 122 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:124 (link) — `docs/box/` (for example [tricks](box/tricks.md) or
-- docs/box/schemas.md:114 (mention) — **Imports.** Schema and view code (a trick keeps its own packages; see `tricks.md`) may only import from the beebox libr
+- docs/box/schemas.md:163 (mention) — **Imports.** Schema and view code (a trick keeps its own packages; see `tricks.md`) may only import from the beebox libr
 - docs/implemented-plans/agent-guide-spec.md:618 (mention) — | trick auto-commit and trailer | 6 | `tricks.md` | 5 |
 - docs/implemented-plans/doc-structure-box-guidance.md:392 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
 - src/core/agent-guide/guide.md:537 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
@@ -2234,7 +2237,7 @@ Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:95 (link) — - [`docs/cards/format.md`](docs/cards/format.md) — the card format
 - docs/cards.md:10 (link) — | [Format](cards/format.md) | The file format: naming, frontmatter and body, the shared Markdoc tags, attachments, refs,
-- docs/cards/migrations.md:513 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:641 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/schemas.md:82 (link) — - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is
 - docs/cards/validation.md:93 (link) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
@@ -2264,7 +2267,7 @@ References:
 
 #### docs/cards/migrations.md
 
-Title: "Card migrations" | 557 lines | current reference
+Title: "Card migrations" | 685 lines | current reference
 
 Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -2291,6 +2294,7 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.review.md:47 (mention) — entries." `migrations.md:80-84`: "Never reorder, rename, or remove."
 - docs/implemented-plans/remove-cardworks-deletion.md:462 (mention) — `docs/cards/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:330 (mention) — it now means "from `src/cards/`"); retire `docs/cards/migrations.md` references to
+- docs/implemented-plans/standard-card-fields.md:110 (mention) — (`docs/cards/migrations.md`, "Automatic convergence"), and a card the
 - docs/implemented-plans/vocab-glossary-sweep.md:59 (mention) — - `scripts/migrate/_harness.ts` (moved to `beebox/src/scripts/migrate/_harness.ts`) + `docs/cards/migrations.md` — migra
 - docs/install/docker.md:91 (link) — [`migrations.md`](../cards/migrations.md).
 - docs/plans/agent-docs.md:381 (mention) — `migrations.md`, `scheduler.md` (after its example loses the real box
@@ -2321,6 +2325,7 @@ References:
 - → docs/implemented-plans/scanner-ingest.md (mention)
 - → docs/implemented-plans/one-root-box-layout.md (mention)
 - → CLAUDE.md (mention)
+- → docs/implemented-plans/standard-card-fields.md (mention)
 - → docs/cards/format.md (link)
 - → docs/implemented-plans/cards-as-markdown-rfc.md (link)
 - → docs/cards/schemas.md (link)
@@ -2328,14 +2333,14 @@ References:
 
 #### docs/cards/schemas.md
 
-Title: "Card schemas" | 347 lines | current reference
+Title: "Card schemas" | 386 lines | current reference
 
 Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:96 (link) — - [`docs/cards/schemas.md`](docs/cards/schemas.md) — adding a new card type
 - docs/cards.md:11 (link) — | [Schemas](cards/schemas.md) | Adding a card type: the schema file, its hooks, registration, templates, the generated i
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:514 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
+- docs/cards/migrations.md:642 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/implemented-plans/box-schema-reload.md:250 (mention) — - Mirror in `docs/cards/schemas.md` if it implies `bbx init` re-registers.
 - docs/implemented-plans/box-search.md:51 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
@@ -2347,12 +2352,13 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-deletion.md:461 (mention) — `CLAUDE.md:87`/`docs/cards/schemas.md` (the cardworks bullet → `src/cards/`),
 - docs/implemented-plans/remove-cardworks-package.md:329 (mention) — `CLAUDE.md:39`/`docs/cards/schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:10 (mention) — > convention lives in `docs/cards/schemas.md`, the box-local schema guide
+- docs/implemented-plans/standard-card-fields.md:63 (mention) — reserved-name rule to `docs/cards/schemas.md`. That stops the worst filler
 - docs/implemented-plans/todo-collection.md:680 (mention) — `docs/cards/schemas.md`, the box's own schema-authoring guide
 - docs/user-stories/catalog/2026-06-26.md:775 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/cards/schemas.md`
 - docs/user-stories/catalog/2026-08-21.md:9050 (mention) — - **Agent-added card fields survive a connector rewrite** — The mechanism is real, unconditional on the rewrite paths, a
 - ../.claude/skills/bbx-guide-schemas/SKILL.md:9 (mention) — and file-by-file checklist live in `beebox/docs/cards/schemas.md`.
 - ../.claude/skills/bbx-migration/SKILL.md:22 (mention) — **no migration.** Old cards load unchanged. See `docs/cards/schemas.md`.
-- ../issues/code-quality/2026-09-27-review-standard-card-fields.md:51 (mention) — (`beebox/docs/cards/schemas.md` and the bbx-guide-schemas skill).
+- ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md:13 (mention) — Closed: implemented by [the standard card fields plan](../../../beebox/docs/implemented-plans/standard-card-fields.md) (
 - ../issues/decisions/2026-08-09-standardize-card-provenance-field.md:70 (mention) — - `docs/cards/schemas.md` — where a shared field would need documenting.
 
 References:
@@ -2523,7 +2529,7 @@ References:
 
 #### docs/connectors/drive.md
 
-Title: "Drive" | 267 lines | current reference
+Title: "Drive" | 271 lines | current reference
 
 Referenced by:
 - docs/connectors.md:38 (link) — | Google Drive | `google-drive.ts` | `gsheet`, `gdoc`, `gfolder`, `glink` | Two-way | [Drive](connectors/drive.md) |
@@ -2537,7 +2543,7 @@ References:
 
 #### docs/connectors/gmail.md
 
-Title: "Gmail" | 185 lines | current reference
+Title: "Gmail" | 190 lines | current reference
 
 Referenced by:
 - docs/connectors.md:37 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | [Gmail](conne
@@ -2572,7 +2578,7 @@ References:
 
 #### docs/connectors/telegram.md
 
-Title: "Telegram" | 122 lines | current reference
+Title: "Telegram" | 121 lines | current reference
 
 Referenced by:
 - docs/connectors.md:35 (link) — | Telegram | `telegram.ts` | `chat-thread` | Two-way | [Telegram](connectors/telegram.md) |
@@ -2777,7 +2783,7 @@ Title: "Code Maintenance" | 86 lines | current reference
 Referenced by:
 - code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/development/maintenance.md)
 - docs/README.md:120 (link) — ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
-- docs/cards/migrations.md:515 (link) — - [Maintenance](../development/maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic to
+- docs/cards/migrations.md:643 (link) — - [Maintenance](../development/maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic to
 - docs/development.md:41 (link) — | [Maintenance](development/maintenance.md) | Periodic tasks: what runs on its own, what is not yet enrolled, what to ru
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
 - docs/implemented-plans/doc-structure-development.md:53 (mention) — | Enrolled schedules | maintenance.md "four enrolled today"; development-workflow.md lists eleven | contradiction; the n
@@ -3219,6 +3225,7 @@ Title: "Box search (`bbx search`) and the global `contains` field" | 573 lines |
 
 Referenced by:
 - docs/implemented-plans/semantic-search.md:15 (mention) — (`docs/implemented-plans/box-search.md` § NOT in scope), which pre-committed
+- docs/plans/chat-search.md:89 (mention) — `docs/implemented-plans/box-search.md` (shipped card search; the text-mode
 - ../issues/closed/features/2026-05-11-box-search.md:10 (mention) — `docs/implemented-plans/box-search.md`), as the body already records.
 
 References:
@@ -3454,7 +3461,7 @@ Title: "RFC: Cards as Markdown + YAML Frontmatter" | 2560 lines | shipped histor
 
 Referenced by:
 - docs/cards/format.md:9 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:513 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:641 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/validation.md:93 (mention) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/implemented-plans/remove-cardworks-and-xml.md:123 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
 - docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `beebox/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
@@ -5529,6 +5536,7 @@ Title: "Semantic search (box-search phase 3): hybrid BM25 + vector retrieval" | 
 
 Referenced by:
 - docs/implemented-plans/chat-review.md:837 (mention) — the validation in `docs/plans/semantic-search.md` § Rollout rather than appending
+- docs/plans/chat-search.md:88 (mention) — - Prior art in-tree: `docs/implemented-plans/semantic-search.md` and
 
 References:
 - → docs/implemented-plans/box-search.md (mention)
@@ -5607,6 +5615,23 @@ References:
 - → ../issues/closed/code-quality/2026-09-18-stack-and-the-presentational-ui-layer.md (frontmatter)
 - → ../issues/closed/bugs/2026-09-02-admin-available-engines-label-runs-into-description.md (frontmatter)
 - → frontend.md (mention)
+
+#### docs/implemented-plans/standard-card-fields.md
+
+Title: "Standard card fields" | 635 lines | shipped history | implemented
+
+Referenced by:
+- docs/cards/migrations.md:505 (mention) — Part 1 of `docs/implemented-plans/standard-card-fields.md`. Drops `status` from job cards
+- ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md:13 (link) — Closed: implemented by [the standard card fields plan](../../../beebox/docs/implemented-plans/standard-card-fields.md) (
+
+References:
+- → ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md (link)
+- → ../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
+- → ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md (link)
+- → ../issues/features/2026-09-27-card-properties-design-session.md (link)
+- → docs/cards/schemas.md (mention)
+- → docs/cards/migrations.md (mention)
 
 #### docs/implemented-plans/state-management-comparison.md
 
@@ -6436,6 +6461,21 @@ References:
 - → CLAUDE.md (mention)
 - → docs/chat/scroll.md (link)
 - → ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md (link)
+
+#### docs/plans/chat-search.md
+
+Title: "Search recent chats by what was said in them" | 421 lines | proposal | partial
+
+Referenced by:
+- ../issues/closed/features/2026-09-28-search-recent-chats.md:5 (frontmatter) — design: ../../../beebox/docs/plans/chat-search.md
+- ../issues/features/2026-09-28-chats-in-global-search.md:33 (mention) — design (restore-cost isolation, see `beebox/docs/plans/chat-search.md`).
+
+References:
+- → ../issues/closed/features/2026-09-28-search-recent-chats.md (frontmatter)
+- → docs/implemented-plans/semantic-search.md (mention)
+- → docs/implemented-plans/box-search.md (mention)
+- → docs/adding-api-endpoints.md (mention)
+- → CLAUDE.md (mention)
 
 #### docs/plans/chat-session-delete.md
 
@@ -7541,7 +7581,7 @@ Referenced by:
 - docs/prompts/lenses.md:7 (link) — Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each
 - src/dev/CLAUDE.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
 - ../.claude/skills/bbx-context/SKILL.md:20 (mention) — `beebox/docs/prompts/review.md`; this skill routes a single
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:54 (mention) — `docs/prompts/review.md` before writing more than a couple of
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:59 (mention) — `docs/prompts/review.md` before writing more than a couple of
 - ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:59 (mention) — - `beebox/docs/prompts/review.md` — the workflow for reasoning about
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:25 (link) — [prompt-surface-review.md](../../beebox/docs/prompts/review.md)
 - ../research/openclaw-hermes/README.md:74 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
@@ -7982,7 +8022,7 @@ Referenced by:
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/testing/knowledge-audits.md` |
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't
 - ../.claude/skills/bbx-context/SKILL.md:141 (mention) — `docs/testing/knowledge-audits.md`).
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:69 (mention) — (`docs/testing/knowledge-audits.md`).
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:74 (mention) — (`docs/testing/knowledge-audits.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:10 (mention) — `beebox/docs/testing/knowledge-audits.md`.
 - ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:19 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:102 (mention) — harness (`docs/knowledge-audits.md`) is the tool for catching that.
@@ -8393,14 +8433,14 @@ Title: "Reactor" | 23 lines
 
 Referenced by:
 - docs/implemented-plans/file-layout.md:132 (mention) — `src/core/reactor/CLAUDE.md`, `src/frontend/src/components/chat/CLAUDE.md`,
-- src/core/reactor/DESIGN.md:90 (mention) — - **System prompt** tells the agent what context it already has (job card content, referenced files, schema instructions
+- src/core/reactor/DESIGN.md:88 (mention) — - **System prompt** tells the agent what context it already has (job card content, referenced files, schema instructions
 
 References:
 - → src/core/reactor/DESIGN.md (link)
 
 #### src/core/reactor/DESIGN.md
 
-Title: "Reactor Design" | 135 lines
+Title: "Reactor Design" | 133 lines
 
 Referenced by:
 - CLAUDE.md:37 (link) — - Backend domain and orchestration: `src/core/`; reactor details: [reactor design](src/core/reactor/DESIGN.md).

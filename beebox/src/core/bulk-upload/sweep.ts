@@ -293,7 +293,7 @@ async function findStaleTmpUploadCards(opts: { boxRoot: string; now: number }): 
   for (const dir of await findTmpUploadDirs(boxRoot, boxRoot)) {
     for (const card of await batchCardsIn(dir)) {
       const parsed = parseUploadBatch(await fs.readFile(card, "utf-8").catch(() => ""));
-      if (parsed === null || parsed.frontmatter.status !== "delivered") continue;
+      if (parsed === null || parsed.frontmatter.delivered !== true) continue;
       if (parsed.frontmatter["sweep-notified"] !== undefined) continue; // Already surfaced once.
       const startedAt = parsed.frontmatter.time?.start;
       if (startedAt === undefined) continue;

@@ -16,7 +16,7 @@
  *     `unknown` — a re-upload then re-validates, which is the correct
  *     behavior that far out.
  *
- * "Resolved" is any question status other than `pending` — and a card that is
+ * "Resolved" is any question state (`questionState`) other than pending — and a card that is
  * gone counts as resolved, because deleting the question is how a boxholder
  * (or the aging sweep) finishes with it.
  */
@@ -26,6 +26,7 @@ import * as path from "node:path";
 import { parseFrontmatterObject } from "../../../exports/cards.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { getBoxTime, getBoxTimeISO } from "../../../lib/time.js";
+import { questionState } from "../../../schemas/question.js";
 import {
   deleteQuarantineEntry,
   deleteQuarantineFile,
@@ -64,7 +65,7 @@ async function isQuestionResolved(boxRoot: string, questionRef: string): Promise
     console.warn(`[scan] Rejection question ${questionRef} has no readable frontmatter; keeping the quarantined file`);
     return false;
   }
-  return fields["status"] !== "pending";
+  return questionState(fields) !== "pending";
 }
 
 /** Collect one quarantine directory's finished entries. */

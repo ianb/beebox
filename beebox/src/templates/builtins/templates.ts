@@ -108,7 +108,7 @@ export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
       notBefore: z.string().optional().describe("Minimum interval since last run (e.g., '5m', '1h')"),
       onWakeup: z.coerce.boolean().optional().describe("Also run during bbx wakeup"),
       once: z.coerce.boolean().optional().describe("Delete after successful execution"),
-      source: z.string().optional().describe("Why this schedule exists"),
+      reason: z.string().optional().describe("Why this schedule exists"),
       "lock-group": z.string().optional().describe("Named concurrency group"),
     }),
     generate: (args) => {
@@ -122,7 +122,7 @@ export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
       if (args.notBefore) opts.notBefore = args.notBefore;
       if (args.onWakeup) opts.onWakeup = args.onWakeup;
       if (args.once) opts.once = args.once;
-      if (args.source) opts.source = args.source;
+      if (args.reason) opts.reason = args.reason;
       if (args["lock-group"]) opts.lockGroup = args["lock-group"];
       return createScheduledScriptTemplate(opts);
     },
@@ -136,14 +136,14 @@ export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
     argsSchema: z.object({
       title: z.string().optional().describe("Display title for the view"),
       glob: z.string().optional().describe("Glob scoping which cards to scan (default: this card's own directory subtree)"),
-      status: z.array(z.enum(TODO_STATUSES)).optional().describe("Restrict to specific statuses (default: all)"),
+      "todo-status": z.array(z.enum(TODO_STATUSES)).optional().describe("Restrict to todos with these statuses (default: open and parked)"),
       assigned: z.string().optional().describe("Restrict to todos with this exact `assigned` value"),
     }),
     generate: (args) => {
       const opts: Parameters<typeof createTodoViewTemplate>[0] = {};
       if (args.title) opts.title = args.title;
       if (args.glob) opts.glob = args.glob;
-      if (args.status) opts.status = args.status;
+      if (args["todo-status"]) opts["todo-status"] = args["todo-status"];
       if (args.assigned) opts.assigned = args.assigned;
       return createTodoViewTemplate(opts);
     },
@@ -238,11 +238,11 @@ export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
     defaultForTypes: ["browser-task"],
     argsSchema: z.object({
       title: z.string().describe("Display title"),
-      source: z.string().url().describe("The URL the executor starts at"),
+      start: z.string().url().describe("The URL the executor starts at"),
       prompt: z.string().optional().describe("The prompt body; omit to get the four-heading scaffold to fill in"),
     }),
     generate: (args) => {
-      const opts: Parameters<typeof createBrowserTaskTemplate>[0] = { title: args.title, source: args.source };
+      const opts: Parameters<typeof createBrowserTaskTemplate>[0] = { title: args.title, start: args.start };
       if (args.prompt !== undefined) opts.prompt = args.prompt;
       return createBrowserTaskTemplate(opts);
     },

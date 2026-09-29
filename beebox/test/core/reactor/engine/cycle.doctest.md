@@ -18,7 +18,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 const intakeJob = (description, opts) =>
-  createIntakeJobTemplate({ source: "test", description, items: [], ...(opts ?? {}) });
+  createIntakeJobTemplate({ description, items: [], ...(opts ?? {}) });
 
 // Base cycle params: fast fakes for the subprocess/doc stages (same rationale
 // as reactor-integration.doctest.md), no filters, sync off.
@@ -29,7 +29,7 @@ function cycleParams(boxRoot, agentFactory) {
     sync: false,
     skipLowPriority: false,
     typeFilter: undefined,
-    sourceFilter: undefined,
+    connectorFilter: undefined,
     onLog: undefined,
     agentFactory,
     runSync: async () => true,

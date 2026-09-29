@@ -42,8 +42,9 @@ export type { IndexPersisted } from "./index-store.js";
  * v2: image OCR text: blocks fold into content.
  * v3: standalone .md files index as kind "markdown".
  * v4: embedding vector field.
+ * v5: no `created` field; titles come from the card summary (`cardTitle`).
  */
-export const SEARCH_SCHEMA_VERSION = 4;
+export const SEARCH_SCHEMA_VERSION = 5;
 
 export const searchOramaSchema = {
   path: "string",
@@ -52,7 +53,6 @@ export const searchOramaSchema = {
   title: "string",
   contains: "string",
   content: "string",
-  created: "string",
   contentHash: "string",
   // Literal string tied to EMBEDDING_DIMENSIONS (openai-embeddings.ts) — Orama's
   // schema typing needs `vector[${number}]` as a literal type, which a template

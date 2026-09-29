@@ -18,6 +18,7 @@ import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { Hint } from "../components/ui/Hint";
 import { Heading } from "../components/ui/Heading";
+import { isRecord } from "@shared/is-record";
 import { driveMimeLabel } from "../lib/drive-card-display";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 
@@ -40,9 +41,10 @@ function OriginBadge({ origin }: { origin: string | null }) {
 
 function GlinkView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
-  const name = field(frontmatter, "name");
-  const link = field(frontmatter, "link");
-  const mime = field(frontmatter, "mime");
+  const drive = isRecord(frontmatter["drive"]) ? frontmatter["drive"] : {};
+  const name = field(frontmatter, "title");
+  const link = field(drive, "link");
+  const mime = field(drive, "mime");
   const origin = field(frontmatter, "origin");
   const notes = (data.body ?? "").trim();
 

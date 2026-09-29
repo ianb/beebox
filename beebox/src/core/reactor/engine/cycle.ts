@@ -28,7 +28,7 @@ export interface RunCycleParams {
   sync: boolean;
   skipLowPriority: boolean;
   typeFilter: string | undefined;
-  sourceFilter: string | undefined;
+  connectorFilter: string | undefined;
   onLog: ((text: string) => void) | undefined;
   agentFactory: typeof realCreateAgent;
   runSync: typeof realRunSync;
@@ -60,7 +60,7 @@ interface ProcessOutcome {
 
 /** Run sync + agent-doc refresh, then discover and process one batch of jobs. */
 export async function runOneCycle(params: RunCycleParams): Promise<ReactorResult> {
-  const { boxRoot, typeFilter, sourceFilter, onLog } = params;
+  const { boxRoot, typeFilter, connectorFilter, onLog } = params;
 
   await syncStage(params);
   await refreshDocsStage(params);
@@ -68,7 +68,7 @@ export async function runOneCycle(params: RunCycleParams): Promise<ReactorResult
   const jobsDir = getBoxDir(boxRoot, "jobs");
   await fs.mkdir(jobsDir, { recursive: true });
 
-  const discovered = await discoverStage({ jobsDir, typeFilter, sourceFilter, params });
+  const discovered = await discoverStage({ jobsDir, typeFilter, connectorFilter, params });
   switch (discovered.kind) {
     case "none":
       return { success: true, jobsProcessed: 0, jobsRemaining: 0 };
@@ -131,13 +131,13 @@ const OVERDUE_LOW_PRIORITY_PER_CYCLE = 5;
 async function discoverStage(opts: {
   jobsDir: string;
   typeFilter: string | undefined;
-  sourceFilter: string | undefined;
+  connectorFilter: string | undefined;
   params: RunCycleParams;
 }): Promise<DiscoverResult> {
-  const { jobsDir, typeFilter, sourceFilter, params } = opts;
+  const { jobsDir, typeFilter, connectorFilter, params } = opts;
   const { boxRoot, skipLowPriority, onLog } = params;
 
-  const jobCards = await findJobCards(jobsDir, { typeFilter, sourceFilter });
+  const jobCards = await findJobCards(jobsDir, { typeFilter, connectorFilter });
   if (jobCards.length === 0) {
     onLog?.("No pending jobs.\n");
     return { kind: "none" };
@@ -193,7 +193,7 @@ async function processStage(opts: {
   params: RunCycleParams;
 }): Promise<ProcessOutcome> {
   const { jobCards, jobsDir, params } = opts;
-  const { boxRoot, dryRun, typeFilter, sourceFilter } = params;
+  const { boxRoot, dryRun, typeFilter, connectorFilter } = params;
 
   const agentJobs = await readJobsWithContent({ jobCards, boxRoot });
   if (dryRun && agentJobs.length === 0) {
@@ -202,7 +202,7 @@ async function processStage(opts: {
 
   const success = await processAgentJobs({ agentJobs, params });
 
-  const remaining = await findJobCards(jobsDir, { typeFilter, sourceFilter });
+  const remaining = await findJobCards(jobsDir, { typeFilter, connectorFilter });
   const remainingFiles = new Set(remaining.map((c) => c.file));
   const jobsProcessed = jobCards.filter((c) => !remainingFiles.has(c.file)).length;
 

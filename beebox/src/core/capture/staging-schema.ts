@@ -36,7 +36,7 @@ export type StagingSegment = z.infer<typeof StagingSegmentSchema>;
 /**
  * A captured photo. `source` (camera-user/-environment/gallery) is retained
  * beyond the plan's listed shape because finalize needs it to set the image
- * card's `source`.
+ * card's `filename.via.channel`.
  */
 const StagingPhotoSchema = z.object({
   filename: z.string(), capturedAt: z.string(), source: z.string(),

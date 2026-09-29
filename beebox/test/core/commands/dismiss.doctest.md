@@ -1,7 +1,6 @@
 # `bbx dismiss` — decline a pending question
 
-Dismissing flips a pending question to `dismissed` with a `dismissed-at`
-timestamp, under the same guarded atomic commit as `answer` — but it writes NO
+Dismissing sets `dismissed-at` on a pending question, under the same guarded atomic commit as `answer` — but it writes NO
 follow-up job. Only a pending question can be dismissed.
 
 ```ts setup
@@ -15,7 +14,6 @@ async function dismiss(box, args) {
 }
 
 const PENDING = `---
-status: pending
 prompt: Where does this receipt go?
 input:
   type: text
@@ -34,9 +32,6 @@ res.success
 => true
 
 const card = await box.read("_bookkeeping/questions/Receipt.question.card");
-card.includes("status: dismissed")
-=> true
-
 card.includes("dismissed-at:")
 => true
 ```
@@ -60,8 +55,8 @@ await box.write(
   "_bookkeeping/questions/Done.question.card",
   // A coherent answered card carries its answer + answered-at (schema-required).
   PENDING.replace(
-    "status: pending",
-    "status: answered\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Done",
+    "---\n",
+    "---\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Done\n",
   ),
 );
 
@@ -70,7 +65,7 @@ res.success
 => false
 
 res.error
-=> Question is not pending (status: answered); only a pending question can be dismissed
+=> Question is answered, not pending; only a pending question can be dismissed
 ```
 
 ```ts cleanup

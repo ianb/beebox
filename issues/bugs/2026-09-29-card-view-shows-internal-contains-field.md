@@ -16,4 +16,4 @@ discovered-in: main — boxholder report, 2026-09-29
 
 **Fix direction.** Decide which fields are for reading and which are for Properties, and filter by that list rather than by adding names to the one at `view.tsx:85`. Check that Properties still shows the hidden fields, and that the `Browse` list's `contains` line is unaffected.
 
-Related: [review the standard card fields](../code-quality/2026-09-27-review-standard-card-fields.md) (the `card-fields-review` workstream is reviewing the global fields) and [card Properties design session](../features/2026-09-27-card-properties-design-session.md).
+Related: [review the standard card fields](../closed/code-quality/2026-09-27-review-standard-card-fields.md) (the `card-fields-review` workstream is reviewing the global fields) and [card Properties design session](../features/2026-09-27-card-properties-design-session.md).

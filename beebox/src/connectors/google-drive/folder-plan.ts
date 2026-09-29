@@ -28,7 +28,7 @@ export const DRIVE_SHORTCUT_MIME = "application/vnd.google-apps.shortcut";
  * Recursion bounds for one sync pass, shared by every mount in it. A Drive
  * tree can be arbitrarily deep and wide; a daily wakeup that walks all of it
  * would spend the box's whole quota on one folder. Hitting either bound is
- * reported on the folder card as `status: error`, never absorbed.
+ * reported on the folder card as an `error`, never absorbed.
  */
 export const MAX_FOLDER_DEPTH = 8;
 export const MAX_FOLDERS_PER_PASS = 500;
@@ -110,7 +110,7 @@ export interface AbsentEntry {
  * Why a subfolder was not descended into. A `cycle` is ordinary Drive shape
  * (a shortcut pointing back at an ancestor) and only worth logging; a cap
  * means part of the tree is genuinely unmirrored, which the folder card
- * reports as `status: error`.
+ * reports as an `error`.
  */
 export interface FolderRefusal {
   reason: "cycle" | "depth-cap" | "folder-cap";

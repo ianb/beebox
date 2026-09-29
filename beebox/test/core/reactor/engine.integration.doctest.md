@@ -21,15 +21,13 @@ import * as os from "node:os";
 const intakeJob = (description, opts) =>
   createIntakeJobTemplate({
     created: "2026-07-01T00:00:00Z",
-    source: "test",
     description,
     items: [],
     ...(opts ?? {}),
   });
 const chatJob = (description, threadRef) =>
   createChatJobTemplate({
-    created: "2026-07-01T00:00:00Z",
-    source: "telegram",
+    connector: "telegram",
     description,
     threadRef,
   });

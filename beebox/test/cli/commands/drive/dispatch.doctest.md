@@ -153,7 +153,7 @@ The card is a real card in the box, written by the server, indistinguishable
 from one the settings page made.
 
 ```ts continue
-(await ctx.read("_content/drive/recipes/Recipes.gfolder.card")).includes("drive-id: folder-1")
+(await ctx.read("_content/drive/recipes/Recipes.gfolder.card")).includes("drive:\n  id: folder-1")
 => true
 ```
 

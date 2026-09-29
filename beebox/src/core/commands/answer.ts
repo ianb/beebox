@@ -1,7 +1,7 @@
 /**
  * Answer command - Answer a pending question.
  *
- * This is the core logic shared by both CLI and web API. The status change,
+ * This is the core logic shared by both CLI and web API. The state change,
  * the answered-card write, and the follow-up-job write all land in ONE guarded,
  * atomic commit (see `question-transition.ts`).
  */
@@ -222,11 +222,10 @@ async function executeAnswer(
     ctx,
     fullPath,
     questionRef: question,
-    // Answering is allowed from every non-terminal status: expired and
+    // Answering is allowed from every non-terminal state: expired and
     // dismissed questions stay answerable; only `answered` is terminal.
-    allowedStatuses: ["pending", "expired", "dismissed"],
-    disallowedMessage: (status) =>
-      `Question is already answered (status: ${status}); an answered question is terminal`,
+    allowedStates: ["pending", "expired", "dismissed"],
+    disallowedMessage: () => "Question is already answered; an answered question is terminal",
     plan: async ({ fields, content }) => {
       const r = resolveAnswer(fields, {
         answer: answerArgs.answer,
@@ -235,16 +234,15 @@ async function executeAnswer(
       if (!r.ok) return { ok: false, result: r.result };
       resolved = r;
 
-      fields.status = "answered";
       fields.answer = {
         text: r.answerText,
         ...(r.selectedId !== undefined && { selected: r.selectedId }),
       };
       fields["answered-at"] = getBoxTimeISO(ctx.boxRoot);
       fields["answered-via"] = via;
-      // Clear stale lifecycle bookkeeping from a prior expired/dismissed state:
-      // status is single, so an `answered` card must not carry `dismissed-at`
-      // or `expired-at` (the schema's coherence refinement enforces this).
+      // Clear the timestamp of a prior expired/dismissed state: a card carries
+      // at most one of `answered-at`, `dismissed-at`, `expired-at` (the
+      // schema's coherence refinement enforces this).
       delete fields["dismissed-at"];
       delete fields["expired-at"];
 
@@ -265,7 +263,7 @@ async function executeAnswer(
       return {
         ok: true,
         plan: {
-          // Job FIRST, then the card: the card's status flip is the commit
+          // Job FIRST, then the card: the card's `answered-at` is the commit
           // point, so the follow-up job must already exist on disk before it
           // (see applyAndCommit's write-order invariant). A crash between the
           // two writes leaves job+pending-question (recoverable), never an

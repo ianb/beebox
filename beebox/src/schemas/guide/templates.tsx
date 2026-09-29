@@ -225,9 +225,11 @@ export function createInitialGuideTemplate(options: { name: string }): string {
     fields.experiments = [
       {
         id: "exp-initial",
-        status: "active",
         hypothesis: "Initial rules need calibration through feedback",
         approach: "Start conservative, learn from user responses",
+        // Last, where the status-fields migration puts it, so a migrated stock
+        // guide is byte-identical to this template and updates in place.
+        active: true,
       },
     ];
     return `---\n${stringifyYaml(fields)}---\n`;
@@ -240,7 +242,7 @@ export function createInitialGuideTemplate(options: { name: string }): string {
     fields["triage-rules"] = seed.triageRules.map((text) => ({
       text,
       confidence: "low",
-      source: "default",
+      basis: "default",
     }));
   }
   fields["default-action"] = { action: seed.defaultAction.action, text: seed.defaultAction.text };
@@ -248,9 +250,10 @@ export function createInitialGuideTemplate(options: { name: string }): string {
   fields.experiments = [
     {
       id: seed.experiment.id,
-      status: "active",
       hypothesis: seed.experiment.hypothesis,
       approach: seed.experiment.approach,
+      // Last, as above: a migrated stock guide matches this output exactly.
+      active: true,
     },
   ];
   if (seed.reactions.length > 0) {

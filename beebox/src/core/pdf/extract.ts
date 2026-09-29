@@ -8,7 +8,7 @@
  * card afterwards.
  *
  * Failure is a return value, not an exception: the caller falls back to filing
- * the original bytes verbatim with `status: new` + `error:`, so a Docling
+ * the original bytes verbatim with an `error:`, so a Docling
  * crash never blocks intake (`docs/plans/scanner-ingest.md`, Track 4).
  */
 
@@ -133,7 +133,7 @@ export async function extractPdf(options: ExtractPdfOptions): Promise<Result<Pdf
   // Bound the output BEFORE anything reads it: the gzip and the WebP re-encode
   // below are per-artifact work on whatever Docling decided to produce (D16).
   // Over the cap is an extraction failure, which the caller already handles by
-  // filing the original bytes with `status: new` — intake never blocks.
+  // filing the original bytes with an `error:` — intake never blocks.
   const bounded = await checkExtractionBounds(extraction.value);
   if (!bounded.ok) return err(bounded.error);
   const { markdown, jsonPath, pageImages, figures, pageCount, version } = extraction.value;

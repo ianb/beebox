@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { trpc } from "../../../lib/trpc/client";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
 import { Button } from "../../ui/Button";
-import { FriendlyDate } from "../../ui/FriendlyDate";
 import type { FileData } from "../../../file-type-registry";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
 import { withBase } from "../../../api";
@@ -11,13 +10,9 @@ import { serializeViewUrl } from "../../../lib/view-url";
 
 export function CardFacts({ data }: { data: FileData }) {
   const fm = data.frontmatter;
-  const created = typeof fm?.created === "string" ? fm.created : null;
-  const source = typeof fm?.source === "string" ? fm.source : null;
   return <dl className="mt-4">
     <dt>Filed at</dt><dd>{data.path}</dd>
     <dt>Card type</dt><dd>{data.type}</dd>
-    {created ? <><dt>Created</dt><dd><FriendlyDate iso={created} mode="date" /></dd></> : null}
-    {source ? <><dt>Source</dt><dd>{source}</dd></> : null}
     {typeof fm?.prominence === "string" ? <><dt>Prominence</dt><dd>{fm.prominence}</dd></> : null}
   </dl>;
 }

@@ -48,9 +48,6 @@ docs[0].title
 docs[0].contains
 => Dentist moved to June 17; confirmation in this email.
 
-docs[0].created
-=> 2026-05-22T10:00:00Z
-
 docs[0].content
 => The dentist called — appointment moved to June 17.
 ```
@@ -60,7 +57,7 @@ docs[0].content
 ```ts
 const docs = await docsFor(
   "_content/inbox/email/t.attach/msg-001.email-message.card",
-  "---\nmessage-id: \"<m1@example.com>\"\nthread-id: t1\nfrom: alice@example.com\nto: bob@example.com\ndate: 2026-05-14T19:00:00Z\nsubject: Weekend plans\nsnippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
+  "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: alice@example.com\n  to: bob@example.com\n  received: 2026-05-14T19:00:00Z\n  subject: Weekend plans\n  snippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
 );
 docs[0].title
 => Weekend plans
@@ -71,7 +68,7 @@ alice@example.com
 bob@example.com
 Hey, are you free Saturday...
 
-JSON.stringify(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.email-message.card", card: await loadCardFromText({ content: "---\nmessage-id: \"<m1@example.com>\"\nthread-id: t1\nfrom: a@x.com\ndate: 2026-05-14T19:00:00Z\nsubject: s\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n", source: "_content/inbox/email/t.attach/msg-001.email-message.card", ctx }) }))
+JSON.stringify(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.email-message.card", card: await loadCardFromText({ content: "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: a@x.com\n  received: 2026-05-14T19:00:00Z\n  subject: s\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n", source: "_content/inbox/email/t.attach/msg-001.email-message.card", ctx }) }))
 => []
 ```
 
@@ -80,13 +77,10 @@ JSON.stringify(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.
 ```ts
 const docs = await docsFor(
   "_content/inbox/email/thread-x.email-thread.card",
-  "---\nthread-id: t1\nsubject: Usage-based pricing demo\nparticipants:\n  - hello@metricly.example\ndate-range:\n  start: 2026-05-14T19:00:00Z\n  end: 2026-05-14T19:00:00Z\nlabels:\n  - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
+  "---\nemail:\n  thread-id: t1\n  subject: Usage-based pricing demo\n  participants:\n    - hello@metricly.example\n  date-range:\n    start: 2026-05-14T19:00:00Z\n    end: 2026-05-14T19:00:00Z\n  labels:\n    - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
 );
 docs[0].title
 => Usage-based pricing demo
-
-docs[0].created
-=> 2026-05-14T19:00:00Z
 
 docs[0].content
 => Usage-based pricing demo
@@ -97,7 +91,7 @@ promotions
 ## Gdocs declare their content snapshot and index it as the body
 
 ```ts
-const cardText = "---\ndrive-id: d1\ntitle: Project Notes\nmodified: 2026-05-01\nlink: https://docs.google.com/document/d/d1/edit\nowner: owner@example.com\ncontent:\n  ref: attach/Project_Notes.md\n---\n";
+const cardText = "---\ndrive:\n  id: d1\n  link: https://docs.google.com/document/d/d1/edit\n  owner: owner@example.com\n  modified: 2026-05-01\ntitle: Project Notes\ncontent:\n  ref: attach/Project_Notes.md\n---\n";
 const path = "_content/drive/Project_Notes.gdoc.card";
 const card = await loadCardFromText({ content: cardText, source: path, ctx });
 JSON.stringify(declareInputFiles({ path, card }))
@@ -117,7 +111,7 @@ docs[0].content
 ```ts
 const docs = await docsFor(
   "_bookkeeping/archive/photo.image.card",
-  "---\nstatus: analyzed\nfilename:\n  ref: attach/boiler.jpg\n  captured: 2026-05-01T10:00:00Z\n  source: camera-user\ndescription: The boiler's serial-number plate (K-44210)\ntext:\n  - source: plate\n    content: Serial K-44210 Model HX-200 240V\n---\n"
+  "---\nfilename:\n  ref: attach/boiler.jpg\n  via:\n    channel: camera-user\n    at: 2026-05-01T10:00:00Z\ndescription: The boiler's serial-number plate (K-44210)\ntext:\n  - source: plate\n    content: Serial K-44210 Model HX-200 240V\n---\n"
 );
 docs[0].contains
 => The boiler's serial-number plate (K-44210)
@@ -171,7 +165,7 @@ docs.length
 ```ts
 const docs = await docsFor(
   "_content/drive/Budget.gsheet.card",
-  "---\ndrive-id: d2\ntitle: Family Budget\nmodified: 2026-05-01\nlink: https://docs.google.com/spreadsheets/d/d2/edit\nowner: o@example.com\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"
+  "---\ndrive:\n  id: d2\n  link: https://docs.google.com/spreadsheets/d/d2/edit\n  owner: o@example.com\n  modified: 2026-05-01\ntitle: Family Budget\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"
 );
 docs[0].content
 => Monthly Spending

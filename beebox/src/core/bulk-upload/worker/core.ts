@@ -190,8 +190,8 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
 }
 
 /**
- * Bookkeeping after an `<upload>` message lands: flip the committed batch card
- * `new` → `delivered`, then discard the staging media. Idempotent.
+ * Bookkeeping after an `<upload>` message lands: mark the committed batch card
+ * `delivered: true`, then discard the staging media. Idempotent.
  */
 async function finishBulkDelivery(opts: {
   boxRoot: string;
@@ -215,8 +215,8 @@ async function fileExists(absPath: string): Promise<boolean> {
   }
 }
 
-/** Flip the committed batch card `new` → `delivered` under the card lock, then
- *  commit that one card. Idempotent: a card already past `new` is left alone. */
+/** Set `delivered: true` on the committed batch card under the card lock, then
+ *  commit that one card. Idempotent: a card already delivered is left alone. */
 async function markUploadBatchDelivered(opts: {
   boxRoot: string;
   cardRelPath: string;
@@ -227,8 +227,8 @@ async function markUploadBatchDelivered(opts: {
   const changed = await withCardLock(cardAbsPath, async () => {
     const content = await fs.readFile(cardAbsPath, "utf-8");
     const parsed = parseCardText(content, { source: cardAbsPath, schemas: await createCardSchemaMap() });
-    if (parsed.fields.status !== "new") return false;
-    parsed.fields.status = "delivered";
+    if (parsed.fields["delivered"] === true) return false;
+    parsed.fields["delivered"] = true;
     await fs.writeFile(cardAbsPath, serializeCardText({ schema: parsed.schema, fields: parsed.fields }));
     return true;
   });
