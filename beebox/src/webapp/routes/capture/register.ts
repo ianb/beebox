@@ -34,6 +34,7 @@ import {
 import { resumeStagingSessions } from "../../../core/capture/resume.js";
 import { sweepAbandonedCaptures } from "../../../core/capture/sweep.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
+import { withoutBoxWork } from "../../../lib/box-maintenance.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
 import { handleCaptureUpload } from "./upload.js";
 import { handleCreateCaptureSession } from "./create.js";
@@ -237,13 +238,15 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
       // session returns the same success response without re-firing.
       const seal = await sealStagingSession({ boxRoot, id: session.id });
       if (seal.sealed) {
-        void prepareCaptureSession({
+        // Detached from this request: the worker outlives its admission, and
+        // an inherited permit would expire under it. See `admittedPass`.
+        void withoutBoxWork(() => prepareCaptureSession({
           boxRoot,
           id: session.id,
           eventBus,
           registry: runtime.registry,
           wireSession: runtime.wireSession,
-        }).catch(async (err: unknown) => {
+        })).catch(async (err: unknown) => {
           console.error(`[capture] Preparation of ${session.id} failed:`, err);
           await markCapturePreparationFailed({ boxRoot, id: session.id, eventBus, reason: capturePreparationReason(err) });
         });

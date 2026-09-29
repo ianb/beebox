@@ -53,7 +53,6 @@ import {
 import { createCardSchemaMap } from "../../../schemas.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { createCaptureSessionTemplate } from "../../../schemas/capture-session.js";
-import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
 import { resolveScanPages, bundleResolvedPages } from "./helpers.js";
 import { type ScanVisionService } from "../../../services/scan-vision.js";
 import {
@@ -63,7 +62,9 @@ import {
   resolveScanInputs,
   resolveScanVision,
   analyzeScanPages,
+  type SessionLayout,
 } from "./session.js";
+import { importSessionOrDiscard, queueCommittedSessionIntake } from "./session-discard.js";
 import { runPdfMode } from "./pdf.js";
 import { ensureBoxTmpDir } from "../../../lib/box-tmp.js";
 import { PdfRenderError, probePdf, renderPdfPages } from "../../pdf/probe.js";
@@ -189,12 +190,22 @@ async function runPhotoMode(
   ctx: CommandContext,
   args: RunPhotoModeArgs
 ): Promise<CommandResult> {
-  const { vision, imagePaths, sourcePdfPath, extraContext, source } = args;
   // Before the session layout exists: this path copies the user's originals
   // into a `.scan-archive` inside the session, so a later check would leave
   // them half-processed.
   await assertAnnexBox(ctx.boxRoot, "scan import");
   const layout = await createSessionLayout(ctx);
+  return importSessionOrDiscard(ctx.boxRoot, {
+    layout,
+    run: (written) => importPhotoSession(ctx, { args, layout, filesToStage: written }),
+  });
+}
+
+async function importPhotoSession(
+  ctx: CommandContext,
+  { args, layout, filesToStage }: { args: RunPhotoModeArgs; layout: SessionLayout; filesToStage: string[] }
+): Promise<CommandResult> {
+  const { vision, imagePaths, sourcePdfPath, extraContext, source } = args;
   const {
     sessionAttachRelDir,
     sessionAttachAbsDir,
@@ -205,8 +216,6 @@ async function runPhotoMode(
   } = layout;
   ctx.writeLine(`Photo intake → ${sessionCardRelPath}`);
   ctx.writeLine(`Source: ${imagePaths.length} image file(s)`);
-
-  const filesToStage: string[] = [];
 
   // Copy each input into a scratch dir so the originals stay untouched and
   // the archive copy lives inside the session for safety. The shared batch
@@ -323,13 +332,8 @@ async function runPhotoMode(
 
   const intakeItems = [sessionCardRelPath, ...questionPaths];
   const intakeDescription = `Scan from ${sourceLabel}: ${bundles.length} photo${bundles.length === 1 ? "" : "s"}${questionPaths.length > 0 ? `, ${questionPaths.length} review question${questionPaths.length === 1 ? "" : "s"}` : ""}`;
-  const intakeJobPath = await createOrAppendIntakeJob({
-    boxRoot: ctx.boxRoot,
-    source: "scan",
-    items: intakeItems,
-    description: intakeDescription,
-  });
-  ctx.writeLine(`\nIntake job: ${intakeJobPath}`);
+  const intakeJobPath = await queueCommittedSessionIntake(ctx.boxRoot, { items: intakeItems, description: intakeDescription });
+  ctx.writeLine(`\nIntake job: ${intakeJobPath ?? "not created; the next wakeup queues it"}`);
   ctx.writeLine(`Session: ${sessionCardRelPath}`);
 
   return {

@@ -16,6 +16,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { runScanPromotePass } from "../../../core/scan/promote/core.js";
+import { withBoxWork, withoutBoxWork } from "../../../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
 import { createPromoteDebouncer, SCAN_SETTLE_MS, type PromoteDebouncer } from "../../../core/scan/promote-debounce.js";
 
@@ -83,6 +85,13 @@ async function runPass(boxRoot: string): Promise<void> {
     return;
   }
 
+  // The wakeup's own backoff decides its delay; the other reasons use the
+  // settle window, which is the pace new work arrives at anyway.
+  rearmIncomplete(boxRoot, result.wakeup.kind === "failed" ? result.wakeup.retryDelayMs : undefined);
+}
+
+/** Count an incomplete pass against the budget and re-arm, at `delayMs` or the settle window. */
+function rearmIncomplete(boxRoot: string, delayMs: number | undefined): void {
   const passes = (incompletePasses.get(boxRoot) ?? 0) + 1;
   incompletePasses.set(boxRoot, passes);
   if (passes >= MAX_CONSECUTIVE_INCOMPLETE_PASSES) {
@@ -92,12 +101,35 @@ async function runPass(boxRoot: string): Promise<void> {
     );
     return;
   }
-
-  // The wakeup's own backoff decides its delay; the other reasons use the
-  // settle window, which is the pace new work arrives at anyway.
   const debouncer = debouncers.get(boxRoot);
-  if (result.wakeup.kind === "failed") debouncer?.notifyAfter(result.wakeup.retryDelayMs);
-  else debouncer?.notify();
+  if (delayMs === undefined) debouncer?.notify();
+  else debouncer?.notifyAfter(delayMs);
+}
+
+/**
+ * Run a pass as its own admitted box work.
+ *
+ * A pass is detached from whatever armed its timer, and that is usually an
+ * upload request. Timers inherit async context, so without `withoutBoxWork`
+ * the pass would carry the request's work permit after the request released
+ * it. Every write under that permit, and every child it spawns (`bbx wakeup`,
+ * the commit hook's `bbx validate`), then fails with "Work permission has
+ * expired", on every retry, until the server restarts (2026-09-28). Taking a
+ * fresh admission per pass also lets maintenance drain it like any other work.
+ *
+ * A closed box is an incomplete pass: it re-arms for when the box expects to
+ * reopen and counts against the same budget.
+ */
+function admittedPass(boxRoot: string, pass: (boxRoot: string) => Promise<void>): Promise<void> {
+  return withoutBoxWork(async () => {
+    try {
+      await withBoxWork({ boxRoot, reason: "scan promote" }, () => pass(boxRoot));
+    } catch (error) {
+      if (!(error instanceof BoxMaintenanceError && error.reason === "closed")) throw error;
+      console.warn(`[scan] Promote pass for box=${boxRoot} deferred: ${error.message}`);
+      rearmIncomplete(boxRoot, Math.max(SCAN_SETTLE_MS, error.retryAfterMs ?? 0));
+    }
+  });
 }
 
 /**
@@ -123,7 +155,7 @@ function scheduleScanSweep(boxRoot: string): () => void {
     timer = startAwakeTimeout({
       timeoutMs: SCAN_SWEEP_INTERVAL_MS,
       onTimeout: () => {
-        void runPass(boxRoot)
+        void admittedPass(boxRoot, runPass)
           .catch((e: unknown) => console.error(`[scan] Promote sweep failed for box=${boxRoot}:`, e))
           .finally(() => arm());
       },
@@ -143,10 +175,12 @@ function scheduleScanSweep(boxRoot: string): () => void {
 export function startScanPromoteLifecycle(opts: {
   server: FastifyInstance;
   boxRoot: string;
-  run?: () => Promise<void>;
+  /** Replaces the promote pass body in tests; admission still wraps it. */
+  run?: (boxRoot: string) => Promise<void>;
 }): void {
   const { server, boxRoot } = opts;
-  const executePass = opts.run ?? (() => runPass(boxRoot));
+  const promote = opts.run ?? runPass;
+  const executePass = (): Promise<void> => admittedPass(boxRoot, promote);
   let closing = false;
   const activePasses = new Set<Promise<void>>();
   const runTrackedPass = (): Promise<void> => {
