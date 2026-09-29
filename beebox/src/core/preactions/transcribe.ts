@@ -29,7 +29,7 @@ interface TranscriptionFields {
   text: string;
 }
 
-interface TranscriptionErrorFields {
+export interface TranscriptionErrorFields {
   permanent: boolean;
   code?: string;
   "attempted-at": string;
@@ -50,6 +50,22 @@ interface TranscriptionErrorLike {
  */
 function isTranscriptionErrorShape(error: unknown): error is TranscriptionError {
   return error instanceof Error && isRecord(error) && typeof error.permanent === "boolean";
+}
+
+/**
+ * The `transcription-error:` entry for a failed attempt. A `TranscriptionError`
+ * carries whether retrying can help; any other error is treated as retryable.
+ */
+export function transcriptionErrorFields(error: unknown, attemptedAt: string): TranscriptionErrorFields {
+  const transcriptionError: TranscriptionErrorLike = isTranscriptionErrorShape(error)
+    ? error
+    : { permanent: false, message: errorMessage(error) };
+  return {
+    permanent: transcriptionError.permanent,
+    ...(transcriptionError.code !== undefined && { code: transcriptionError.code }),
+    "attempted-at": attemptedAt,
+    message: transcriptionError.message,
+  };
 }
 
 export const transcribePreAction: PreAction = {
@@ -113,17 +129,9 @@ export const transcribePreAction: PreAction = {
       // throws TranscriptionError) — fs.readFile/applyFrontmatterTranscription
       // could throw a plain Error too, so fall back to a non-permanent generic
       // entry rather than assuming the shape.
-      const transcriptionError: TranscriptionErrorLike = isTranscriptionErrorShape(error)
-        ? error
-        : { permanent: false, message: errorMessage(error) };
-      const attemptedAt = getBoxTimeISO(ctx.boxRoot);
-      applyFrontmatterError(ctx.frontmatter.fields, {
-        permanent: transcriptionError.permanent,
-        ...(transcriptionError.code !== undefined && { code: transcriptionError.code }),
-        "attempted-at": attemptedAt,
-        message: transcriptionError.message,
-      });
-      return { modified: true, error: transcriptionError.message };
+      const entry = transcriptionErrorFields(error, getBoxTimeISO(ctx.boxRoot));
+      applyFrontmatterError(ctx.frontmatter.fields, entry);
+      return { modified: true, error: entry.message };
     }
   },
 };

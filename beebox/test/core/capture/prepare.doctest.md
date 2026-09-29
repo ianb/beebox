@@ -8,7 +8,8 @@ deterministically with no API key or Claude subprocess.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
-import { mkdir, writeFile, appendFile, readFile, rm, access } from "node:fs/promises";
+import { mkdir, writeFile, appendFile, readFile, readdir, rm, access } from "node:fs/promises";
+import { parse as parseYaml } from "yaml";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
@@ -294,12 +295,23 @@ partialBody.includes("[audio clip 2 not transcribed]")
 ```
 
 The card itself records the failure in frontmatter, so an agent annotating it
-later — possibly with no `<capture>` message in view — sees why the audio card
-is still `new`:
+later — possibly with no `<capture>` message in view — sees why an audio card
+has no transcript:
 
 ```ts continue
 (await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("transcription-failed: true")
 => true
+```
+
+The failed clip's own card says why, in `transcription-error:`; the clip that
+transcribed carries a transcript and no error:
+
+```ts continue
+const attachDir = `tmp-capture/${basename}.attach`;
+const clipCards = (await readdir(box.path(attachDir))).filter((f) => f.endsWith(".audio.card")).toSorted();
+const clips = await Promise.all(clipCards.map(async (f) => parseYaml(splitCardContent(await box.read(`${attachDir}/${f}`)).frontmatterText)));
+clips.map((c) => `${c.transcript === undefined ? "none" : "transcript"}/${c["transcription-error"] === undefined ? "ok" : "error"}`).join(" ")
+=> transcript/ok none/error
 ```
 
 The delivered wrapper carries `transcription-failed`, with the summary taken

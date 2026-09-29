@@ -22,6 +22,8 @@ import { cardFields, parseCardText, serializeCardText } from "../../card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { type AudioFields, AudioSchema } from "../../../schemas/audio.js";
 import { transcribeAudio } from "../../transcription/dispatch/core.js";
+import { transcriptionErrorFields } from "../../preactions/transcribe.js";
+import { getBoxTimeISO } from "../../../lib/time.js";
 import { attachDirFor, resolveAttachRef } from "../../../shared/attach-path.js";
 
 async function loadAudioCard(cardPath: string): Promise<AudioFields> {
@@ -99,7 +101,9 @@ export async function transcribeCaptureClips(opts: {
         // 101 bytes of pointer text is not audio. Without this the clip goes
         // to the transcription service and comes back as garbage or an opaque
         // API error, with nothing pointing at the real cause.
-        errors.push(`${cardFile}: ${describeAbsentContent(audio.error.pointer, path.basename(audioPath))}`);
+        const absent = describeAbsentContent(audio.error.pointer, path.basename(audioPath));
+        errors.push(`${cardFile}: ${absent}`);
+        await recordClipFailure({ cardPath, fields, error: absent, boxRoot });
         continue;
       }
       const audioBuffer = Buffer.from(audio.value);
@@ -117,6 +121,7 @@ export async function transcribeCaptureClips(opts: {
 
       fields.transcript = result.text;
       fields.filename.duration = `${String(Math.round(result.duration))}s`;
+      delete fields["transcription-error"];
       await saveAudioCard(cardPath, fields);
       if (firstTranscript === undefined) firstTranscript = result.text;
 
@@ -131,10 +136,25 @@ export async function transcribeCaptureClips(opts: {
       durationSeconds += result.duration;
     } catch (e) {
       errors.push(`${cardFile}: ${e instanceof Error ? e.message : String(e)}`);
+      await recordClipFailure({ cardPath, fields, error: e, boxRoot });
     }
   }
 
   return { total: audioCards.length, transcribed, errors, durationSeconds, firstTranscript };
+}
+
+/**
+ * Record a failed attempt on the clip's own card, so the clip says why it has
+ * no transcript. The batch's error list already carries the failure; a card
+ * that can't be written is logged, not raised.
+ */
+async function recordClipFailure(opts: { cardPath: string; fields: AudioFields; error: unknown; boxRoot: string }): Promise<void> {
+  const { cardPath, fields, error, boxRoot } = opts;
+  try {
+    await saveAudioCard(cardPath, { ...fields, "transcription-error": transcriptionErrorFields(error, getBoxTimeISO(boxRoot)) });
+  } catch (e) {
+    console.warn(`transcribe-clips: could not record the failure on ${cardPath}:`, e);
+  }
 }
 
 /** Parse an audio card's `filename.duration` ("42s") back to seconds. */
