@@ -22,8 +22,8 @@ export const EXTRACTED_REANALYZE_COMMAND = "bbx pdf reanalyze";
 /** Name of the renderer that shows the original file rather than the text. */
 export const ORIGINAL_RENDERER_NAME = "Original";
 
-/** Page renders written by the extractor: `page-001.avif`, `page-002.avif`, … */
-const PAGE_RENDER_RE = /^page-(\d{3})\.avif$/;
+/** Page renders: newly extracted `page-001.webp` and existing `page-001.avif`. */
+const PAGE_RENDER_RE = /^page-(\d{3,})\.(?:avif|webp)$/;
 
 /** The page number a page-render filename encodes, or `null` if it isn't one. */
 export function pageRenderNumber(name: string): number | null {
@@ -43,7 +43,7 @@ export function requestedPage(params: Record<string, string> | undefined): numbe
 
 /** One page render, ready for the strip. */
 export interface DocumentPage {
-  /** 1-based page number, from the `page-NNN.avif` filename. */
+  /** 1-based page number, from the `page-NNN` filename. */
   page: number;
   /** Resolved image URL for the render. */
   src: string;

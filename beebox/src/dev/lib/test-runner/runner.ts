@@ -7,7 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
-import { assertStandaloneBox } from "../box-guard.js";
+import { assertStandaloneBox, assertCleanAuditBox } from "../box-guard.js";
 import { testSuiteSchema, type AuditTest, type SearchWhere, type TestSuite } from "../test-suite-schema.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { createClaudeAgent } from "../../../core/agent/invoke/core.js";
@@ -102,12 +102,17 @@ export interface RunTestOptions {
   boxRoot: string;
   engine?: AgentEngine;
   onOutput?: (text: string) => void;
+  /** Exact status produced by CLI docs setup; accepted only for its first test. */
+  cliSetupStatus?: string;
 }
 
 export async function runTest(options: RunTestOptions): Promise<TestResult> {
-  const { test, boxRoot, onOutput } = options;
+  const { test, boxRoot, onOutput, cliSetupStatus } = options;
   // Guard before any destructive git op — boxRoot must be its own repo.
   await assertStandaloneBox(boxRoot);
+  // Direct runTest callers need the same protection as the CLI. Check before
+  // docs, memory cleanup, or fixtures can mutate a pre-existing dirty box.
+  assertCleanAuditBox(boxRoot, cliSetupStatus);
   const prompt = test.style
     ? `${test.style}. ${test.prompt}`
     : test.prompt;

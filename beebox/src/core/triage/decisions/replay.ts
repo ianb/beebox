@@ -10,7 +10,7 @@ import { errorMessage, errnoCode } from "../../../shared/error-guards.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
 import { reserveJevCalls } from "../../judgment/budget.js";
 import { reserveRunCalls } from "../allowance.js";
-import { prepareItem, verifyEvidence, type Evidence } from "../evidence.js";
+import { prepareItem, verifyEvidence, type Evidence } from "../evidence/core.js";
 import { judgeItem, type TriageJudgment } from "../judge.js";
 import type { InstructionSnapshot } from "../snapshot.js";
 import type { JevService } from "../../../services/jev.js";
@@ -61,7 +61,7 @@ async function prepareAgain(boxRoot: string, receipt: DecisionReceipt): Promise<
   const mapped: Evidence = { ...receipt.evidence, source: { ...receipt.evidence.source, ref: currentSource, attachmentRef: receipt.evidence.source.attachmentRef ? attachDirFor(currentSource) : null }, parts: receipt.evidence.parts.map((part) => ({ ...part, ref: part.ref === oldSource ? currentSource : receipt.evidence.source.attachmentRef ? part.ref.replace(`${receipt.evidence.source.attachmentRef}/`, `${attachDirFor(currentSource)}/`) : part.ref })) };
   try {
     await verifyEvidence(boxRoot, mapped);
-    return await prepareItem({ boxRoot, sourceRef: currentSource, maxTextChars: receipt.evidence.recipe.maxTextChars });
+    return await prepareItem({ boxRoot, sourceRef: currentSource, maxTextChars: receipt.evidence.recipe.maxTextChars, ...(receipt.evidence.recipe.maxRequestChars === undefined ? {} : { maxRequestChars: receipt.evidence.recipe.maxRequestChars }), instructions: receipt.instructions });
   } catch (_error) {
     // A moved/changed source can be reproduced from its preparation or application commit.
   }
@@ -99,7 +99,7 @@ async function prepareAgain(boxRoot: string, receipt: DecisionReceipt): Promise<
       await fs.writeFile(output, bytes);
     }
     await verifyEvidence(scratch, receipt.evidence);
-    return await prepareItem({ boxRoot: scratch, sourceRef: oldSource, maxTextChars: receipt.evidence.recipe.maxTextChars });
+    return await prepareItem({ boxRoot: scratch, sourceRef: oldSource, maxTextChars: receipt.evidence.recipe.maxTextChars, ...(receipt.evidence.recipe.maxRequestChars === undefined ? {} : { maxRequestChars: receipt.evidence.recipe.maxRequestChars }), instructions: receipt.instructions });
   } finally { await fs.rm(scratch, { recursive: true, force: true }); }
 }
 function samePreparedParts(left: Evidence["parts"], right: Evidence["parts"]): boolean {

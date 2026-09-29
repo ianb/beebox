@@ -6644,6 +6644,42 @@ test1:
       peak: 44985
       added: 6089
       turns: 4
+  pdf-image-formats:
+    - date: 2026-09-29T02:24:29.322Z
+      boxCommit: 1c6978a37fb0f4ada3858ae1844c090031093710
+      repoCommit: b96aa2b16a18e290606b23640ba588e54a5f19bb
+      initial: 22489
+      peak: 29319
+      added: 6830
+      turns: 7
+    - date: 2026-09-29T02:26:26.800Z
+      boxCommit: 6499bae4605eebe806a40f5c5c7f9e9b0bcfc999
+      repoCommit: b96aa2b16a18e290606b23640ba588e54a5f19bb
+      initial: 22294
+      peak: 26771
+      added: 4477
+      turns: 4
+    - date: 2026-09-29T02:28:08.646Z
+      boxCommit: 6fb2e61130a7ac0a985c2863c1bd9a3c11753519
+      repoCommit: b96aa2b16a18e290606b23640ba588e54a5f19bb
+      initial: 22477
+      peak: 22477
+      added: 0
+      turns: 2
+    - date: 2026-09-29T02:30:50.139Z
+      boxCommit: 6fb2e61130a7ac0a985c2863c1bd9a3c11753519
+      repoCommit: b96aa2b16a18e290606b23640ba588e54a5f19bb
+      initial: 37514
+      peak: 41808
+      added: 4294
+      turns: 3
+    - date: 2026-09-29T02:32:12.955Z
+      boxCommit: d312a3c675f81e030e56c0fa119b13c22e01fc87
+      repoCommit: b96aa2b16a18e290606b23640ba588e54a5f19bb
+      initial: 37532
+      peak: 42418
+      added: 4886
+      turns: 3
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

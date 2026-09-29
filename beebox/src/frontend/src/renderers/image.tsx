@@ -22,7 +22,7 @@ function strOf(v: unknown): string | null {
   return typeof v === "string" ? v : null;
 }
 
-const RAW_IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg|ico)$/i;
+const RAW_IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|bmp|svg|ico)$/i;
 
 type Rotation = 0 | 90 | 180 | 270;
 

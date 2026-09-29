@@ -7,12 +7,12 @@ temporary box; they make no model calls and use only synthetic content.
 ```ts setup
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import { prepareItem } from "../../../../src/core/triage/evidence.js";
+import { prepareItem } from "../../../../src/core/triage/evidence/core.js";
 import { runJevTriage } from "../../../../src/core/triage/auto/core.js";
 import { TriageBudgetError } from "../../../../src/core/triage/judge.js";
 import { InvariantError } from "../../../../src/shared/invariant.js";
 import type { TriageJudgment } from "../../../../src/core/triage/judge.js";
-import type { Evidence } from "../../../../src/core/triage/evidence.js";
+import type { Evidence } from "../../../../src/core/triage/evidence/core.js";
 import type { InstructionSnapshot } from "../../../../src/core/triage/snapshot.js";
 
 const LANDMARK = `---\nnavigation:\n  label: Records\n  symbol: 📁\ndestinations:\n  - for: [triage]\n    rules: Original filing boundary.\n---\n`;

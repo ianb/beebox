@@ -144,12 +144,14 @@ prefix so a single upload invocation produces one session per scanner run.
 const groups = groupScanFiles([
   "/in/Scan2026-04-29_153807_000.jpg",
   "/in/Scan2026-04-29_153807_001.jpg",
+  "/in/Scan2026-04-29_153807_002.webp",
+  "/in/Scan2026-04-29_153807_003.avif",
   "/in/Scan2026-04-29_154704_000.jpg",
   "/in/Scan2026-04-29_154704_001.jpg",
   "/in/Scan2026-04-29_154704_002.jpg",
 ]);
 groups.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
-=> image-batch:Scan2026-04-29_153807=2 | image-batch:Scan2026-04-29_154704=3
+=> image-batch:Scan2026-04-29_153807=4 | image-batch:Scan2026-04-29_154704=3
 ```
 
 ## groupScanFiles: each PDF is its own group

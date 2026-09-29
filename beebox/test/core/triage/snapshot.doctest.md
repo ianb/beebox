@@ -9,6 +9,8 @@ import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
 import { judgeItem } from "../../../src/core/triage/judge.js";
+import { serializeTriageRequest } from "../../../src/core/triage/request.js";
+import { JEV_MAX_REQUEST_CHARS } from "../../../src/services/jev-wire.js";
 import { createFakeJev } from "../../../src/services/jev.js";
 import { fixedAnswer } from "../../../src/core/judgment/service.js";
 ```
@@ -121,6 +123,21 @@ decisive.judgeCalls.length
 
 const budget = JSON.parse(await fs.readFile(path.join(box.root, ".beebox/jev-budget.json"), "utf8"));
 budget.calls
+=> 3
+
+// Size uses the exact serialized request, including escaped policy and rules,
+// and rejects before the fake provider or daily budget reservation.
+const escapedPolicy = { ...normal, policy: '"'.repeat(40_000) };
+serializeTriageRequest({ evidence, instructions: escapedPolicy }).length > JEV_MAX_REQUEST_CHARS
+=> true
+
+await (async () => { const fake = createFakeJev(); let error = ""; try { await judgeItem(box.root, { evidence, instructions: escapedPolicy, jev: fake }); } catch (caught) { error = String(caught); } return error.includes("Serialized Jev request exceeds the supported request size") && fake.judgeCalls.length === 0; })()
+=> true
+
+await (async () => { const fake = createFakeJev(); const oversizedRules = { ...normal, destinations: normal.destinations.map((destination, index) => index === 0 ? { ...destination, rules: "R".repeat(JEV_MAX_REQUEST_CHARS + 1) } : destination) }; let error = ""; try { await judgeItem(box.root, { evidence, instructions: oversizedRules, jev: fake }); } catch (caught) { error = String(caught); } return error.includes("Serialized Jev request exceeds the supported request size") && fake.judgeCalls.length === 0; })()
+=> true
+
+JSON.parse(await fs.readFile(path.join(box.root, ".beebox/jev-budget.json"), "utf8")).calls
 => 3
 ```
 

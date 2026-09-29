@@ -19,8 +19,9 @@
  *   inbox/scan-XX.attach/source.attach/source.pdf      (the original)
  *   inbox/scan-XX.attach/source.attach/docling.json.gz (canonical extraction)
  *   inbox/scan-XX.attach/source.attach/text-layer.txt  (raw text layer)
- *   inbox/scan-XX.attach/source.attach/page-001.avif   (rendered page)
- *   inbox/scan-XX.attach/source.attach/figure-001.avif (extracted figure)
+ *   inbox/scan-XX.attach/source.attach/page-001.webp   (new rendered page)
+ *   inbox/scan-XX.attach/source.attach/figure-001.webp (new extracted figure)
+ * Existing cards may still have `.avif` page and figure images.
  */
 
 import { stringify as stringifyYaml } from "yaml";
@@ -93,10 +94,20 @@ Everything is inside the card's own attach scope, so refs are \`attach/…\`:
   the file itself carries it (no layout analysis, no rewriting). Read it when
   you need the exact characters rather than the rendered body. Absent when the
   document carries no extractable text.
-- \`attach/page-001.avif\`, \`page-002.avif\`, … — one rendered image per page,
-  in page order. Use these when you want to *look* at a page.
-- \`attach/figure-001.avif\`, … — figures/images pulled out of the document.
-  The body references them inline.
+- \`attach/page-001.webp\`, \`page-002.webp\`, … — newly rendered pages, in
+  page order. Existing cards may use \`.avif\` instead; both formats remain
+  readable. Use these when you want to *look* at a page.
+- \`attach/figure-001.webp\`, … — newly extracted figures/images. Existing
+  cards may use \`.avif\`; the body references figures inline.
+
+The attached source file is preserved byte-for-byte when pages and figures are
+generated again. Reanalysis may replace generated AVIF files with WebP files,
+and existing AVIF attachments do not need conversion just to use WebP for new
+output. A direct link to a generated image filename can become stale. For a
+durable page link, link to the PDF card with \`?page=N\` (one-based page
+number), not directly to a generated page image. Read the attached original
+when you need its exact bytes or appearance; do not assume every vision
+provider accepts every attached image format directly.
 
 ## Frontmatter
 

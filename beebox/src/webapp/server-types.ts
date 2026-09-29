@@ -65,6 +65,8 @@ export interface InternalServerOptions extends ServerOptions {
    * Claude subprocess.
    */
   chatBackend?: ChatBackend | undefined;
+  /** Replace scan promotion work in route tests while retaining lifecycle wiring. */
+  scanPromoteRun?: ((boxRoot: string) => Promise<void>) | undefined;
   /**
    * Directory holding the built frontend (`index.html` and friends). Defaults
    * to `<package root>/src/frontend/dist`, which is what every production

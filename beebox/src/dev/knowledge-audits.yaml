@@ -6416,6 +6416,33 @@ tests:
     correct_contains_any: ["attach/source.pdf", "attach scope", "original"]
     tags: [cards, intake, scanner-ingest]
 
+  # Status (2026-09-29, Claude): 1/1 passed on the isolated test1 clone;
+  # read the generated `.claude/rules/card-pdf.md` (1 file, 0 searches, 38k
+  # initial / 42k peak context). A direct-recall probe confirmed these details
+  # are lazy PDF-card guidance, so the audit correctly uses `knows_about`.
+  - id: pdf-image-formats
+    prompt: >
+      I need to link someone to a page in a PDF card, and I am checking what
+      happens to its images when the card is analyzed again. What image formats
+      should I expect, what happens to the attached source file, and which page
+      link will keep working? Open the generated PDF card guidance at
+      `.claude/rules/card-pdf.md` and explain briefly; do not change files.
+    expected_level: knows_about
+    watch_for: >
+      Identifies WebP for newly generated pages and figures, continued support
+      for older AVIF assets, byte-for-byte preservation of the attached source,
+      and a card `?page=N` link as stable when reanalysis can replace generated
+      image filenames.
+    should_read_any: [.claude/rules/card-pdf.md]
+    correct_matches:
+      - '(?:WebP|\.webp)[\s\S]{0,220}(?:page|figure)|(?:page|figure)[\s\S]{0,220}(?:WebP|\.webp)'
+      - '(?:older|existing|old)[\s\S]{0,120}(?:AVIF|\.avif)|(?:AVIF|\.avif)[\s\S]{0,120}(?:older|existing|read|support)'
+      - '(?:no|without|does not|doesn.t|don.t)[\s\S]{0,120}(?:convert|transcod)|(?:convert|transcod)[\s\S]{0,120}(?:not needed|unnecessary|no need)'
+      - '(?:original|source)[\s\S]{0,180}(?:unchanged|preserv|byte.for.byte)|(?:unchanged|preserv|byte.for.byte)[\s\S]{0,180}(?:original|source)'
+      - '(?:\?page=N|page=N)[\s\S]{0,180}(?:stable|durable|keep|work)|(?:stable|durable|keep|work)[\s\S]{0,180}(?:\?page=N|page=N)'
+      - '(?:reanaly|analyz(?:e|ed) again)[\s\S]{0,220}(?:replace|change|break|stale)|(?:replace|change|break|stale)[\s\S]{0,220}(?:reanaly|analyz(?:e|ed) again)'
+    tags: [cards, pdf]
+
   # === Scan provenance (`uploader: scan-upload/<token-name>`) ===
   #
   # The plan's second audit entry (docs/plans/scanner-ingest.md, "Knowledge

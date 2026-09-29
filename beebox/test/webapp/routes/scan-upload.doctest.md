@@ -18,6 +18,7 @@ on both.
 import { createHash } from "node:crypto";
 import Sharp from "sharp";
 import { makeTestServer } from "../../helpers/doctest-server.js";
+import type { TestServerOptions } from "../../helpers/test-server.js";
 import { textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { resetScanRateLimits, SCAN_RATE_LIMIT } from "../../../src/webapp/routes/scan-upload/rate-limit.js";
 import { qpdfAvailable } from "../../../src/core/scan/validate.js";
@@ -31,11 +32,39 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+/** Route tests pin upload validation; promotion orchestration has its own tests. */
+async function makeScanTestServer(options: TestServerOptions = {}) {
+  const promotionRoots: string[] = [];
+  let resolveStartupPass: () => void = () => {};
+  const startupPass = new Promise<void>((resolve) => {
+    resolveStartupPass = resolve;
+  });
+  const ctx = await makeTestServer({
+    ...options,
+    scanPromoteRun: async (boxRoot) => {
+      promotionRoots.push(boxRoot);
+      resolveStartupPass();
+    },
+  });
+  return { ...ctx, promotionRoots, startupPass };
+}
+
 /** A real 4x4 PNG, encoded by sharp — so the decode check has something to decode. */
 function pngBytes() {
   return Sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 10, g: 20, b: 30 } } })
     .png()
     .toBuffer();
+}
+
+/** Real encoded fixtures exercise extension, magic, and complete decoder checks. */
+function webpBytes() {
+  return Sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 10, g: 20, b: 30 } } })
+    .webp().toBuffer();
+}
+
+function avifBytes() {
+  return Sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 10, g: 20, b: 30 } } })
+    .avif().toBuffer();
 }
 
 async function put(ctx, opts) {
@@ -81,7 +110,8 @@ dispose of its local copy, so `unknown` has to be the honest default.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
+await ctx.startupPass;
 const png = await pngBytes();
 const hash = sha256(png);
 
@@ -140,6 +170,14 @@ JSON.stringify({
 => {"state":"pending","duplicate":[200,"duplicate"]}
 ```
 
+The lifecycle invoked the injected startup pass for this exact annex-shaped
+box before the route assertions ran:
+
+```ts continue
+ctx.promotionRoots[0] === ctx.boxRoot
+=> true
+```
+
 `X-Scan-Profile` rides along as free-text provenance when the scanner sends one:
 
 ```ts continue
@@ -157,6 +195,48 @@ JSON.stringify({ status: withProfile.statusCode, profile: profiled.profile })
 await ctx.cleanup();
 ```
 
+## WebP and AVIF uploads require matching bytes and a complete pixel decode
+
+The extension allowlist is intentionally relaxed for these formats, but every
+pair still has to match. file-type reports a valid AVIF with the generic HEIF
+major brand as `image/heif`; `.avif` accepts that container label and still
+requires Sharp to fully decode pixels, without requiring AVIF encoding support.
+
+```ts
+resetScanRateLimits();
+const ctx = await makeScanTestServer();
+const webp = await webpBytes();
+const avif = await avifBytes();
+const wrongWebp = await Sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 200, g: 10, b: 30 } } })
+  .webp().toBuffer();
+const validWebp = await put(ctx, { bytes: webp, filename: "Receipts_001.webp" });
+const validAvif = await put(ctx, { bytes: avif, filename: "Receipts_002.avif" });
+const wrongExtension = await put(ctx, { bytes: wrongWebp, filename: "Receipts_003.avif" });
+const truncated = await put(ctx, { bytes: avif.subarray(0, avif.length - 12), filename: "Receipts_004.avif" });
+JSON.stringify([
+  [validWebp.statusCode, validWebp.body.status],
+  [validAvif.statusCode, validAvif.body.status],
+  [wrongExtension.statusCode, wrongExtension.body.reason],
+  [truncated.statusCode, truncated.body.status, truncated.body.reason.startsWith("the image could not be decoded")],
+])
+=> [[200,"accepted"],[200,"accepted"],[422,"magic bytes say image/webp but the extension is .avif"],[422,"rejected",true]]
+```
+
+Changing a valid AVIF's major brand to `mif1` makes file-type report HEIF. The
+same valid AV1 image remains accepted through full pixel decode.
+
+```ts continue
+const mif1 = Buffer.from(avif);
+mif1.write("mif1", 8);
+const branded = await put(ctx, { bytes: mif1, filename: "Receipts_005.avif" });
+JSON.stringify([branded.statusCode, branded.body.status, branded.body.reason])
+=> [200,"accepted",null]
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
 ## A hash that already imported answers `imported`, and a PUT of it is a duplicate
 
 `imported` comes from the box's upload ledger, not from quarantine — that is how
@@ -164,7 +244,7 @@ a file promoted and swept out of quarantine still answers as confirmed.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 const hash = sha256(png);
 await ctx.seed(".beebox/uploads.json", JSON.stringify({
@@ -195,7 +275,7 @@ could honestly file the received bytes under — so the client simply retries.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 const wrongHash = sha256(Buffer.from("something else entirely"));
 
@@ -224,7 +304,7 @@ so it names both what the bytes are and what the name claimed.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 const hash = sha256(png);
 
@@ -250,7 +330,7 @@ An extension outside the accepted set never gets as far as a sniff:
 const otherBytes = Buffer.concat([png, Buffer.from("tail")]);
 const zip = await put(ctx, { bytes: otherBytes, filename: "Scans.zip" });
 JSON.stringify({ status: zip.statusCode, reason: zip.body.reason })
-=> {"status":422,"reason":"extension .zip is not accepted (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff)"}
+=> {"status":422,"reason":"extension .zip is not accepted (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)"}
 ```
 
 A rejected hash is *kept* — the file stays in quarantine for the question card,
@@ -284,7 +364,7 @@ await ctx.cleanup();
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const hasQpdf = await qpdfAvailable();
 const pdf = textlessPdf();
 
@@ -328,7 +408,7 @@ A `Content-Length` over the 50 MB cap is refused before a byte is transferred:
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 
 const declared = await put(ctx, {
@@ -388,7 +468,7 @@ malformed one is a 400, not a best-effort guess. Uppercase hex is malformed too
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 
 const malformedHashes = ["not-a-hash", sha256(png).toUpperCase(), sha256(png) + "00"];
@@ -413,7 +493,7 @@ JSON.stringify({
   blank: blank.statusCode,
   traversal: [traversal.statusCode, traversal.body.reason],
 })
-=> {"missing":[400,"X-Upload-Filename header required"],"blank":400,"traversal":[422,"the file has no extension (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff)"]}
+=> {"missing":[400,"X-Upload-Filename header required"],"blank":400,"traversal":[422,"the file has no extension (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)"]}
 ```
 
 `check` validates its batch the same way — a malformed hash or an over-cap batch
@@ -446,7 +526,7 @@ scanner cadence.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 
 let last = null;
 for (let i = 0; i < SCAN_RATE_LIMIT + 1; i++) last = await check(ctx, []);
@@ -486,7 +566,7 @@ on a real auth-on server.
 ```ts
 resetScanRateLimits();
 delete process.env.BBX_HUB_SECRET;
-const ctx = await makeTestServer({ openAccess: false, annexBox: true });
+const ctx = await makeScanTestServer({ openAccess: false });
 const png = await pngBytes();
 const token = await createScanToken(ctx.boxRoot, { name: "laptop-scansnap", createdBy: "owner@example.com" });
 

@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
 import { loadTests, getTestsPath, runTest } from "./lib/test-runner/runner.js";
-import { assertStandaloneBox, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
+import { assertStandaloneBox, assertCleanAuditBox, auditBoxStatus, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
 import { resolveAuditBox } from "./lib/audit-box.js";
 import { generateReport } from "./lib/report.js";
 import { automatedChecksPassed } from "./lib/audit-checks.js";
@@ -50,9 +50,15 @@ function auditRunOptions(options: {
   test: AuditTest;
   boxRoot: string;
   engine: AgentEngine | undefined;
+  cliSetupStatus?: string;
 }) {
-  const { test, boxRoot, engine } = options;
-  return engine === undefined ? { test, boxRoot } : { test, boxRoot, engine };
+  const { test, boxRoot, engine, cliSetupStatus } = options;
+  return {
+    test,
+    boxRoot,
+    ...(engine !== undefined && { engine }),
+    ...(cliSetupStatus !== undefined && { cliSetupStatus }),
+  };
 }
 
 function reportEngine(results: Array<{ engine: AgentEngine }>, override: AgentEngine | undefined): string {
@@ -117,6 +123,7 @@ program
     // uncommitted work. Fail with guidance instead.
     try {
       await assertStandaloneBox(resolvedBox);
+      assertCleanAuditBox(resolvedBox);
     } catch (e) {
       if (e instanceof UnsafeAuditBoxError) {
         console.error(formatUnsafeAuditBox(e));
@@ -154,6 +161,10 @@ program
     // doesn't match current source. Force is cheap; staleness is expensive.
     console.log(`Regenerating docs in ${resolvedBox}...`);
     await generateDocs(resolvedBox, { force: true });
+    // generateDocs may leave generated guidance as untracked output. Only the
+    // first runTest may accept this exact setup status; later tests must see
+    // the clean state restored by the runner's finalizer.
+    const cliSetupStatus = auditBoxStatus(resolvedBox);
 
     console.log(`Running ${tests.length} knowledge audits against ${describeRunTarget(resolvedBox, engine)}\n`);
 
@@ -164,7 +175,12 @@ program
       console.log(`Prompt: "${test.prompt}"`);
       console.log("=".repeat(60));
 
-      const result = await runTest(auditRunOptions({ test, boxRoot: resolvedBox, engine }));
+      const result = await runTest(auditRunOptions({
+        test,
+        boxRoot: resolvedBox,
+        engine,
+        ...(results.length === 0 && cliSetupStatus && { cliSetupStatus }),
+      }));
       results.push(result);
 
       // Print quick summary

@@ -236,3 +236,38 @@ render set. They are limits on pathology, not on size.
 manual, or a figure-dense technical PDF — raise the number rather than removing
 the cap, and reconsider whether page renders should be produced at all for a
 document that long (D14's page-list question is adjacent).
+
+## D17. WebP derivatives; AVIF remains readable (2026-09-28)
+
+Supersedes D10 for newly extracted page and figure images. Use WebP quality 80,
+effort 4 through the existing Sharp encoder. Existing AVIF attachments remain
+readable; archived original PDFs and image inputs are unchanged. This avoids an
+extra conversion for consumers that accept WebP but not AVIF, including vision
+providers. The existing vision transport still converts old AVIF when required.
+
+A bounded synthetic probe compared the checked-in `photo-property.png` and the
+first page of `scan-financial.pdf`, rendered at a 2,000-pixel long edge. Inputs
+live under `test/fixtures/triage-evaluation/documents/raw/`; all encoders used
+effort 4. This is a small legibility check, not a representative scan benchmark.
+
+| Synthetic document | AVIF quality 60 | WebP quality 80 | WebP quality 90 |
+|---|---:|---:|---:|
+| Rotated property note (2058 × 1632) | 33,721 bytes | 48,626 bytes | 62,834 bytes |
+| Raster financial letter (1546 × 2000) | 23,752 bytes | 34,532 bytes | 43,840 bytes |
+
+Visual inspection found the WebP quality-80 text readable. It saved about 22%
+against quality 90 on these inputs, while costing about 45% more than AVIF60.
+Choose that tradeoff for direct compatibility. Exact layout and source fidelity
+remain available in the original PDF; dense or faint real scans may justify
+future quality tuning.
+
+Reanalysis clears generated assets in both formats, then creates WebP assets.
+A direct link to an old generated filename can therefore become stale after
+reanalysis. Prefer links to the PDF card with `?page=N` for page addressing.
+This does not rename attachments in untouched cards or run a bulk conversion.
+Provisioning checks WebP encoding/decoding and existing AVIF decoding.
+
+WebP has a [16,383-pixel side limit](https://developers.google.com/speed/webp/faq).
+Bound generated images proportionally to that limit without enlarging smaller
+images. This keeps unusually tall PDF pages extractable while retaining the
+original document and Docling coordinates.
