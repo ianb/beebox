@@ -105,5 +105,11 @@ Scan preparation prioritizes structured PDF cards, retains each attachment's
 digest even when its text is redundant, and treats referenced internal Docling
 sidecars as provenance rather than unreadable document parts. Vision transport
 converts stored AVIF bytes to a supported image format without changing the
-original files. Full-page and figure images remain separate visual evidence;
-large scans can still be partial when those descriptions do not fit the request.
+original files. When an analyzed PDF card has readable structured text retained
+in the request, its generated full-page renders use that representation without
+additional vision calls. Their refs and digests remain in the evidence. If the
+structured text is empty, unavailable, or excluded by the budget, preparation
+reads those pages through vision instead. Figure images remain separate visual
+evidence. Large scans can still be partial when required descriptions do not fit.
+This policy favors the structured text over page-only details such as stamps or
+signatures that extraction did not preserve.

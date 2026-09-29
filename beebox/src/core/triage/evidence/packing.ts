@@ -1,4 +1,5 @@
 /** Select whole representations while budgeting the actual serialized request. */
+import * as path from "node:path";
 import { parseFrontmatterObject, splitCardContent } from "../../../exports/cards.js";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import { invariant } from "../../../shared/invariant.js";
@@ -11,6 +12,7 @@ type Part = Evidence["parts"][number];
 interface Representations {
   owners: Map<string, string>;
   textLayers: Map<string, string>;
+  pages: Map<string, string>;
   sidecars: Set<string>;
 }
 function fieldRef(value: unknown): string | undefined {
@@ -24,8 +26,9 @@ function attachmentRef(card: string, ref: string): string {
 }
 
 /** Only the PDF card's declared local source and generated derivatives qualify. */
-export function scanRepresentations(parts: Part[]): Representations {
-  const result: Representations = { owners: new Map(), textLayers: new Map(), sidecars: new Set() };
+export function scanRepresentations(parts: Part[], manifestRefs?: string[]): Representations {
+  const result: Representations = { owners: new Map(), textLayers: new Map(), pages: new Map(), sidecars: new Set() };
+  const refs = manifestRefs ?? parts.map((part) => part.ref);
   for (const part of parts) {
     if (!part.ref.endsWith(".pdf.card")) continue;
     const fields = parseFrontmatterObject(part.text);
@@ -38,6 +41,12 @@ export function scanRepresentations(parts: Part[]): Representations {
     if (fields.status === "analyzed" && splitCardContent(part.text).body.trim()) {
       result.owners.set(source, part.ref);
       result.owners.set(layer, part.ref);
+      for (const ref of refs) {
+        const name = path.posix.basename(ref);
+        if (/^page-\d{3,}\.avif$/u.test(name) && attachmentRef(part.ref, `attach/${name}`) === ref) {
+          result.pages.set(ref, part.ref);
+        }
+      }
     }
     if (fieldRef(fields.docling) === "attach/docling.json.gz") result.sidecars.add(attachmentRef(part.ref, "attach/docling.json.gz"));
   }
@@ -72,6 +81,8 @@ function renderSelection(evidence: Evidence, selection: Selection): Evidence {
     if (body.trim()) bodies.set(body, part.ref);
   }
   const parts = evidence.parts.map((part): Part => {
+    const pageOwner = representations.pages.get(part.ref);
+    if (pageOwner !== undefined && selected.has(pageOwner)) return representedPart(part, pageOwner);
     const owner = representations.owners.get(part.ref);
     if (owner !== undefined && selected.has(owner)) return representedPart(part, owner);
     const layer = representations.textLayers.get(part.ref);

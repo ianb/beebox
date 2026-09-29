@@ -171,6 +171,21 @@ async function preparePart(input: { file: string; bytes: Buffer }, options: Prep
   return part;
 }
 
+function deferredMethod({
+  file,
+  ref,
+  representations,
+}: {
+  file: string;
+  ref: string;
+  representations: ReturnType<typeof scanRepresentations>;
+}): "provenance-only" | "page-deferred" | "pdf-deferred" | undefined {
+  if (representations.sidecars.has(ref)) return "provenance-only";
+  if (representations.pages.has(ref)) return "page-deferred";
+  if (representations.owners.has(ref) && file.endsWith(".pdf")) return "pdf-deferred";
+  return undefined;
+}
+
 async function noteMissingAttachments(part: Part, boxRoot: string): Promise<void> {
   if (!isCardFile(part.ref)) return;
   const refs = new Set(part.text.match(/\battach\/[^\s"'<>()[\]{}]+/gu));
@@ -202,6 +217,7 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
     return rank(a) - rank(b) || a.localeCompare(b);
   });
   const sourceBytes = await checkedRead({ boxRoot: options.boxRoot, file: sourcePath });
+  const manifestRefs = files.map((file) => `/${path.relative(options.boxRoot, file)}`);
   const parts: Part[] = [];
   const maxTextChars = options.maxTextChars ?? 100_000;
   const maxRequestChars = options.maxRequestChars ?? JEV_MAX_REQUEST_CHARS;
@@ -211,10 +227,10 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
   for (const file of files) {
     const bytes = file === sourcePath ? sourceBytes : await checkedRead({ boxRoot: options.boxRoot, file });
     const ref = `/${path.relative(options.boxRoot, file)}`;
-    const representations = scanRepresentations(parts);
-    const method = representations.sidecars.has(ref) ? "provenance-only" : representations.owners.has(ref) && file.endsWith(".pdf") ? "pdf-deferred" : undefined;
+    const representations = scanRepresentations(parts, manifestRefs);
+    const method = deferredMethod({ file, ref, representations });
     const part: Part = method === undefined ? await preparePart({ file, bytes }, options)
-      : { ref, digest: sha256(bytes), mediaType: method === "provenance-only" ? "application/gzip" : "application/pdf", method, toolVersion: "1", status: method === "provenance-only" ? "ready" : "unavailable", text: "", omissions: [] };
+      : { ref, digest: sha256(bytes), mediaType: method === "provenance-only" ? "application/gzip" : method === "pdf-deferred" ? "application/pdf" : "image/avif", method, toolVersion: "1", status: method === "provenance-only" ? "ready" : "unavailable", text: "", omissions: [] };
     await noteMissingAttachments(part, options.boxRoot);
     parts.push(part);
   }
@@ -230,11 +246,11 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
     parts, recipe: { adapterVersion: 2, steps: parts.map((part) => `${part.ref}: ${part.method}`), maxTextChars, maxRequestChars },
   };
   let packed = packEvidence(evidence, instructions);
-  // Prefer the existing analyzed card without re-running extraction. If that
-  // representation was excluded, prepare its deferred PDF and repack. Each
-  // PDF can enter this fallback at most once; other adapters are not repeated.
+  // Prefer existing analyzed text without re-reading its PDF pages. If the
+  // owner representation was excluded, prepare deferred PDFs/pages and repack.
+  // Each deferred image/PDF enters this fallback at most once.
   for (;;) {
-    const deferred = packed.parts.filter((part) => part.method === "pdf-deferred");
+    const deferred = packed.parts.filter((part) => part.method === "pdf-deferred" || part.method === "page-deferred");
     if (deferred.length === 0) break;
     for (const part of deferred) {
       const file = resolve(options.boxRoot, part.ref);

@@ -50,6 +50,77 @@ await verifyEvidence(box.root, prepared)
 await box.cleanup();
 ```
 
+An analyzed PDF card owns its generated direct page renders. When its body is
+retained, all twelve page digests remain in evidence while vision reads the
+figure and the serialized request stays under the wire cap.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/inbox/staged/Rendered.doc.card", "Capture session");
+await box.write("_content/inbox/staged/Rendered.attach/source.pdf.card", "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n" + "S".repeat(48_000));
+const innerAttach = path.join(box.root, "_content/inbox/staged/Rendered.attach/source.attach");
+await fs.mkdir(innerAttach, { recursive: true });
+await fs.copyFile(path.join(fixture, "digital-property.pdf"), path.join(innerAttach, "source.pdf"));
+const pageNames = Array.from({ length: 12 }, (_, index) => `page-${String(index + 1).padStart(3, "0")}.avif`);
+for (const name of pageNames) await fs.writeFile(path.join(innerAttach, name), `page bytes ${name}`);
+await fs.writeFile(path.join(innerAttach, "figure-001.avif"), "figure bytes");
+const pageVision = createFakeScanVision();
+const pageInstructions = await compileInstructionSnapshot(box.root);
+const pageEvidence = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Rendered.doc.card", vision: pageVision, instructions: pageInstructions });
+const pageParts = pageEvidence.parts.filter((part) => /\/page-\d{3,}\.avif$/u.test(part.ref));
+const figurePart = pageEvidence.parts.find((part) => part.ref.endsWith("/figure-001.avif"));
+const submittedImages = pageVision.calls.flatMap((call) => call.imagePaths.map((file) => path.basename(file))).toSorted();
+JSON.stringify([pageEvidence.status, pageParts.length, pageParts.every((part) => part.method === "representation-selected" && part.duplicateOf === "/_content/inbox/staged/Rendered.attach/source.pdf.card"), figurePart?.method, submittedImages, serializeTriageRequest({ evidence: pageEvidence, instructions: pageInstructions }).length <= JEV_MAX_REQUEST_CHARS])
+=> ["ready",12,true,"scan-vision",["figure-001.avif"],true]
+
+await fs.writeFile(path.join(innerAttach, "page-012.avif"), "changed page bytes");
+let stalePage = "";
+await (async () => { try { await verifyEvidence(box.root, pageEvidence); } catch (error) { stalePage = String(error); } })();
+stalePage.includes("stale-decision: changed evidence /_content/inbox/staged/Rendered.attach/source.attach/page-012.avif; prepare again")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+Missing usable structured text or a body excluded by the text budget sends its
+page render through vision. Unrelated page renders and figures always do so.
+
+```ts
+const box = await makeTmpBox();
+const attach = path.join(box.root, "_content/inbox/staged");
+await box.write("_content/inbox/staged/Empty.pdf.card", "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n");
+await fs.mkdir(path.join(attach, "Empty.attach"), { recursive: true });
+await fs.copyFile(path.join(fixture, "digital-property.pdf"), path.join(attach, "Empty.attach/source.pdf"));
+await fs.writeFile(path.join(attach, "Empty.attach/page-001.avif"), "empty-owner page");
+const emptyVision = createFakeScanVision();
+const emptyOwner = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Empty.pdf.card", vision: emptyVision });
+JSON.stringify([emptyOwner.parts.find((part) => part.ref.endsWith("Empty.attach/page-001.avif"))?.method, emptyVision.calls.length, path.basename(emptyVision.calls[0]?.imagePaths[0] ?? "")])
+=> ["scan-vision",1,"page-001.avif"]
+
+await box.write("_content/inbox/staged/Oversized.pdf.card", "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n" + "O".repeat(1_000));
+await fs.mkdir(path.join(attach, "Oversized.attach"), { recursive: true });
+await fs.copyFile(path.join(fixture, "digital-property.pdf"), path.join(attach, "Oversized.attach/source.pdf"));
+await fs.writeFile(path.join(attach, "Oversized.attach/page-001.avif"), "excluded-owner page");
+const oversizedVision = createFakeScanVision();
+const oversizedOwner = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Oversized.pdf.card", maxTextChars: 100, vision: oversizedVision });
+JSON.stringify([oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.pdf.card"))?.status, oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.attach/page-001.avif"))?.method, oversizedVision.calls.length])
+=> ["unavailable","scan-vision",1]
+
+await box.write("_content/inbox/staged/Unrelated.doc.card", "Ordinary document");
+await box.write("_content/inbox/staged/Unrelated.attach/page-001.avif", "unowned page");
+await box.write("_content/inbox/staged/Unrelated.attach/figure-001.avif", "unowned figure");
+const unrelatedVision = createFakeScanVision();
+const unrelated = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Unrelated.doc.card", vision: unrelatedVision });
+JSON.stringify(unrelatedVision.calls.flatMap((call) => call.imagePaths.map((file) => path.basename(file))).toSorted())
+=> ["figure-001.avif","page-001.avif"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 Native text is read directly; junk and absent layers go through different OCR
 modes. All extraction workspaces are deleted on success and failure.
 
@@ -130,7 +201,7 @@ JSON.stringify([bounded.status, bounded.parts[0].text, bounded.parts[0].omission
 => ["unavailable","",true]
 
 // Capture-session scan scope: admit the structured PDF card before its raw
-// derivatives, retain every digest, and keep rendered pages as visual evidence.
+// derivatives, retain every digest; non-generated page images stay visual evidence.
 await box.write("_content/inbox/staged/capture-session.card", "Capture bundle");
 await box.write("_content/inbox/staged/capture-session.attach/source.pdf.card", "---\ntitle: Source\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\ndocling:\n  ref: attach/docling.json.gz\n---\n" + "S".repeat(48_000));
 const sourcePdfPath = path.join(box.root, "_content/inbox/staged/capture-session.attach/source.attach/source.pdf");

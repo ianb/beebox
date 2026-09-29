@@ -187,11 +187,13 @@ Its compatibility finding was accepted: Gemini retains its existing HEIC/HEIF
 passthrough, while AVIF uses the supported image conversion. Mocked provider
 requests verify both paths without sending source content to a provider.
 
-Full-page and figure images remain separate visual evidence. The reviewer
-suggested skipping full-page reads when structured text is usable, but that can
-omit signatures or stamps; this is a pending product choice rather than part of
-this repair. Large scans can still be partial when necessary visual descriptions
-do not fit. A different, longer model ID can also cause judge to reject a request
+The reviewer suggested skipping full-page reads when structured text is usable.
+The boxholder subsequently approved that policy, accepting that page-only details
+such as signatures or stamps might be omitted. Generated full-page renders now
+use the retained analyzed PDF card representation; figure images remain separate
+visual evidence, and page vision is the fallback when structured text cannot be
+retained. Large scans can still be partial when necessary figure descriptions do
+not fit. A different, longer model ID can also cause judge to reject a request
 that was packed tightly for the default model; the rejection happens before a
 provider call.
 
@@ -199,3 +201,11 @@ Validation: the selected suite passed 146 files and 1,951 checks; focused
 regressions also cover fallback extraction and final metadata sizing. Typecheck,
 changed-file lint, layout, and documentation checks passed. Production content
 was not sent to providers for this repair.
+
+The approved page-skipping follow-up passed a focused 43-check regression suite.
+Claude verified retained, empty, and budget-excluded owners, figure/unrelated
+image handling, and digest preservation, finding no material defects. A stale
+test comment was corrected to distinguish non-generated page images from the
+owned AVIF renders covered by this policy.
+Final selected validation passed 147 files and 1,958 checks; typecheck, lint,
+layout, and documentation checks also passed.
