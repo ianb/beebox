@@ -249,17 +249,17 @@ email-thread. Where it works, it is a generic name for a specific fact.
 | gsheet | always `synced` | removed |
 | email-outbound | `sent` never written; drafts code uploads `draft` cards without a draft id (`src/connectors/gmail/drafts/core.ts:146`) | removed; presence of `gmail-draft-id` is the gate |
 | audio | `transcribed` set by `transcribe-clips.ts:121` | removed; presence of `transcript` means done, `transcription-error` means failed |
-| pdf | `new`/`analyzed`/`invalid`, moved by scan import and reanalyze | removed; presence of the extraction means analyzed; `analysis-error` for failure |
-| image | `analyzed` set by scan import; `invalid` never written by code but skipped by the timeline (`src/core/capture/prepare/timeline.ts:146`) | removed; `analysis-error` for failure |
+| pdf | `new`/`analyzed`/`invalid`, moved by scan import and reanalyze | removed; `docling` present means extracted; the existing `error` field records failure; an agent's `invalid` becomes `unusable: true` (built) |
+| image | `analyzed` set by scan import; `invalid` never written by code but skipped by the timeline (`src/core/capture/prepare/timeline.ts:146`) | removed; `description` present means analyzed; an agent's `invalid` becomes `unusable: true`, which the timeline skips (built) |
 | telegram-message | `pending`/`failed`; the card is deleted on success | removed; `delivery-error` means failed, absence means pending |
 | capture-session, upload-batch | `new` → `delivered` by intake; sweeps read `delivered` | `delivered: true`; the agent's `annotated` becomes `annotated: true` |
 | browser-task | `open`/`closed`, toggled by the user | `closed: true` |
 | tab-arrangement | `draft`/`ready`, agent sets `ready`, gates Apply | `ready: true` |
 | person, place | `active`/`inactive`/`archived`; readers skip non-active | `archived: true` (inactive merges into archived) |
 | gdoc | `synced`/`conflict`, recomputed on every pull (`src/connectors/google-drive/handlers/docs/handler.ts:300-307`); `conflict` is an unresolved state the frontend shows (`src/frontend/src/lib/drive-card-display.ts:43`) | `conflict: true`; absent means in sync. This is connector state, so it stays out of the `drive:` source-metadata key |
-| gfolder | `ok`/`error`, stamped with `last-sync` (`src/connectors/google-drive/card-stamp.ts:52-57`) | `sync-error` holds the error; absent means the last sync succeeded |
-| question | `pending`/`answered`/`dismissed`/`expired`, real transitions | `outcome: answered \| dismissed \| expired`; absent means pending |
-| procedure-run | a checked state machine (`run-card.ts:111-149`) | `outcome: completed \| failed \| inconclusive`; `started-at` present and no `outcome` means running; neither means pending |
+| gfolder | `ok`/`error`, stamped with `last-sync` (`src/connectors/google-drive/card-stamp.ts:52-57`) | removed; the existing `error` field means the last sync failed (built) |
+| question | `pending`/`answered`/`dismissed`/`expired`, real transitions | removed; state is derived by `questionState()` from which of `answered-at` / `dismissed-at` / `expired-at` is present (built) |
+| procedure-run | a checked state machine (`run-card.ts:111-149`) | `outcome: completed \| failed \| inconclusive`; no `outcome` means running or interrupted (the engine never wrote `pending`) (built) |
 | guide/personality experiments | `proposed`/`active`/`successful`/`unsuccessful`/`mixed`/`inconclusive`: a stage and a result in one field; agent-moved; compile keeps `active`/`proposed` (`guide/compile.tsx:64`, `personality/compile.ts:90`) | `active: true` while running; `outcome: successful \| unsuccessful \| mixed \| inconclusive` once concluded; neither means proposed |
 | lesson-plan segment | `planned`/`ready`; lint skips `planned` | `planned: true` |
 | progress entries | learner mastery (`partial`, `solid`), not a lifecycle | renamed `level` |
