@@ -172,6 +172,17 @@ already holds camera metadata under the name of its origin.
   why, in prose. `via.at` replaces `created` everywhere a creation time is
   valid: a transcript or an analysis points at its media and inherits the
   time, it does not copy it.
+- **Date entry** — a structured date, exported from `beebox/cards` as a shared
+  Zod type so built-in and box-local schemas use one shape:
+  `{ value, kind?, end?, note? }`. `value` is ISO 8601 at whatever precision is
+  known (`1974`, `2026-09`, `2026-09-28`, or a datetime with offset). `end`
+  makes it a range. `kind` says which date it is when a card has several
+  (`due`, `filed`, `starts`). `note` is prose. A card with one date names the
+  field for it (`due: { value }`); a card with several uses `dates: [...]` with
+  `kind`. record's existing `dates: [{ value, note? }]`
+  (`src/schemas/record.tsx:43-46`) is already this shape without `kind` and
+  `end`. The date entry is for dates that belong to the subject; it is never
+  when the card was written.
 - **Source-metadata key** — one object field named for the external system,
   holding data copied verbatim from it: `email:` (headers), `drive:` (Drive
   file metadata), `exif:` (camera). It is not box-authored and not edited by
@@ -304,7 +315,7 @@ of them under one label.
 | record | already `sources` | unchanged |
 | commentary | the annotated page URL | `about: { href }`; the commentary annotates the page, it is not derived from it |
 | contains-backfill-job, question-followup-job, todo-review-job | a constant: each type has exactly one producer; backfill uses it to avoid queuing a second job (`src/cli/commands/wakeup/steps.ts:384,436`) | removed; that check looks up pending jobs by type instead |
-| chat-job, intake-job | which connector or step created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | to be decided: `producer: { ref }` or `connector: <name>` (see *Open design questions*) |
+| chat-job, intake-job | which connector or step created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | `connector: <name>` when a connector-scoped run made the job; absent otherwise (see *Job routing* below) |
 | media references (image, file, pdf, audio) | capture channel | `filename.via.channel` |
 | feedback | `text` \| `voice` | `via: { channel }` |
 | guide, personality | belief basis (`user-stated`, `inferred`, …) | `basis` |
@@ -323,7 +334,24 @@ of them under one label.
 (guide `source` → `basis` in the compiled policy text). Each reads both names
 during the settling period.
 
-**Vocabulary lock-ins.** `sources`, `via`, `basis`, `start`,
+**Job routing.** Today a job's `source` string is also its routing key: a
+connector-scoped wakeup drains only jobs whose `source` is that connector
+(`src/core/reactor/job-discovery.ts:86-99`, `src/core/reactor/engine/core.ts:50-56`),
+and intake appends to a pending job with the same `source`
+(`src/job-cards/intake-utils.ts:114-123`). The values are the connector name
+on scoped runs, and `wakeup` / `wakeup-captures` on full runs, where the pair
+only repeats the job's `priority` (`src/cli/commands/wakeup/steps.ts:227-249`);
+scan intake uses `scan` (`src/core/commands/scan-import/session-discard.ts:92`).
+The replacement is `connector: <name>`, a name and not a pointer: a connector
+has no single box file to point at (its configuration is split across
+`_config/connectors/` files or lives in `box.json`). The routing filter
+compares `connector`; the intake batching key becomes `(connector, priority)`.
+A scan intake job has no connector and joins the unscoped normal-priority
+job; intake already rewrites the description when it appends
+(`intake-utils.ts:154`). chat-job's `telegram` becomes `connector: telegram`.
+Decided by the boxholder's delegation, 2026-09-28.
+
+**Vocabulary lock-ins.** `sources`, `via`, `connector`, `basis`, `start`,
 `about`, `uploader`, `reason`, `captured-tabs`, `surface`.
 
 **First chunk.** Remove `source` from the three single-producer job types, and
@@ -366,7 +394,12 @@ metadata moves under a key named for its system.
   column.
 - memo's `created` goes with the memo retirement.
 
-**Vocabulary lock-ins.** `email`, `drive` keys; `filename.via`
+The date entry type (Ontology) ships in this track, exported from
+`beebox/cards`. record's `dates` adopts it; no built-in type other than record
+has a domain date today, so its main users are box-local schemas (follow-up).
+
+**Vocabulary lock-ins.** date entry `{ value, kind, end, note }`; `email`,
+`drive` keys; `filename.via`
 everywhere; `email.received`.
 
 **First chunk.** The deletions: `pub-submission.created`, observation `date`,
@@ -491,19 +524,7 @@ own plan, not a subplan.
    E, F and the dead half of B. (2) The rest of B. (3) Tracks C and D, which
    touch the Gmail and Drive connectors. The banned-name list grows as each
    lands.
-2. **What `producer` points at, and what routes jobs.** Today a job's
-   `source` string is also its routing key: a connector-scoped wakeup drains
-   only jobs whose `source` is that connector (`src/core/reactor/job-discovery.ts:86-99`,
-   `src/core/reactor/engine/core.ts:50-56`), and intake appends to a pending
-   job with the same `source` (`src/job-cards/intake-utils.ts:114-123`;
-   names chosen at `src/cli/commands/wakeup/steps.ts:227-249`). A connector
-   has no single box file to point at: its configuration is split across
-   `_config/connectors/<name>.json`, `-state.json` and `.secret.json`, or
-   lives in `box.json`. Options: (a) `producer: { ref }` to the schedule card
-   that runs the connector's check, with routing comparing that ref; (b) a
-   plain `connector: <name>` identifier, which is a name and not a pointer,
-   so the pointer rule does not apply; (c) job types per producer. Lean: (b).
-   The boxholder decides before part 3.
+
 
 ## Follow-up: box-local schemas
 
@@ -520,7 +541,8 @@ the transform needs judgment on arbitrary box-authored code/prose"*).
   is paid, whether an event is scheduled or a call is open. About 35 read
   sites in box views.
 - Box-local `date` is usually a domain date (an announcement's date, a docket
-  entry's date), read by views. The rule makes it a named date, not a removal.
+  entry's date), read by views. The migration turns each into a date entry in
+  a named field, not a removal.
 - One box has a view that reads `created`, `source` and `status` from any card.
 
 **Why agent-applied.** Each rename needs a name chosen from the meaning (the
@@ -562,8 +584,7 @@ Track B and Track C land.
 4. Track B live cases, one commit per type group, each with its migration and
    dual reads.
 5. Track D deletions, then `email:` and `drive:` keys with connector changes.
-6. Track C: pointer conversions first, the job routing field last (after the
-   boxholder's decision).
+6. Track C: pointer conversions first, then `connector` on job cards.
 7. Add each banned name to the guard as its last use is removed.
 8. Docs: `docs/cards/schemas.md` rule, bbx-guide-schemas skill, box-docs and
    agent guide.
@@ -598,8 +619,10 @@ For `docs/cards/schemas.md` and the bbx-guide-schemas skill:
    goes on the media reference (`filename.via.at`). Data copied from an
    external system goes under a key named for that system (`email:`,
    `drive:`, `exif:`). A date that is part of the subject (when an event
-   happens, when a bill is due) is named for what it is (`due`, `starts`),
-   never a bare `date`. When the card was written is git's job.
+   happens, when a bill is due) is a date entry, `{ value, kind?, end?, note? }`,
+   in a field named for it (`due`, `starts`) or in `dates: [...]` with `kind`
+   when there are several. Never a bare `date` string. When the card was
+   written is git's job.
 7. **Pointers are `{ ref }` or `{ href }`.** Never a bare path or URL string.
 5. **Don't do a global field's job.** No per-type title or summary field.
 6. **`description` means what the subject is or does.** Narrow it for a type
