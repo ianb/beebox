@@ -37,9 +37,13 @@ function globalFieldMessage(field: string): string {
   return `\`${field}\` is a global field every card already has; don't redeclare it`;
 }
 
-/** A declaration that rejects a missing value: the one allowed redeclaration of `title`. */
-function isRequiredField(decl: FieldDecl): boolean {
-  return !isBodyField(decl) && !decl.isOptional();
+/**
+ * The one allowed redeclaration of `title`: a required string. Checked by
+ * the Zod definition's kind rather than `instanceof`, since a box-local
+ * schema's Zod may be a different module instance.
+ */
+function isRequiredStringTitle(decl: FieldDecl): boolean {
+  return !isBodyField(decl) && decl.def.type === "string" && !decl.isOptional();
 }
 
 /**
@@ -54,7 +58,7 @@ function isRequiredField(decl: FieldDecl): boolean {
 export function reservedFieldProblems(schema: CardSchema): ReservedFieldProblem[] {
   const problems: ReservedFieldProblem[] = [];
   for (const [field, decl] of Object.entries(schema.fields)) {
-    if (field === "title" && isRequiredField(decl)) continue;
+    if (field === "title" && isRequiredStringTitle(decl)) continue;
     if (field in GLOBAL_CARD_FIELDS) {
       problems.push({ field, message: globalFieldMessage(field) });
       continue;

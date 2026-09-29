@@ -92,6 +92,11 @@ const note = cardSchema("note-fixture", {
 reservedFieldProblems(note)
 => []
 
+// Anything other than a required string is still shadowing.
+const titleAs = (decl: z.ZodType) => reservedFieldProblems(cardSchema("t", { fields: { title: decl } })).length;
+[z.string(), z.string().optional(), z.string().default("Untitled"), z.string().nullable(), z.number()].map(titleAs).join(",")
+=> 0,1,1,1,1
+
 const schemas = new Map([["note-fixture", note]]);
 
 loads("---\nmood: calm\n---\nBody.\n", schemas)
