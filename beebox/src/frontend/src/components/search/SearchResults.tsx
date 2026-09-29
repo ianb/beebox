@@ -3,7 +3,8 @@ import { Text } from "../ui/Text";
 import type { RouterOutput } from "../../lib/trpc/client";
 import { toDisplayPath } from "@shared/display-path";
 
-function Highlight({ text, query }: { text: string; query?: string }) {
+/** Highlight the first occurrence of `query` in `text` (shared with the chat list's search rows). */
+export function Highlight({ text, query }: { text: string; query?: string }) {
   const needle = query?.trim();
   if (!needle) return text;
   const start = text.toLowerCase().indexOf(needle.toLowerCase());
