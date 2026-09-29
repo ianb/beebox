@@ -196,6 +196,9 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // pub-submission `created`, audio `summary`, experiment observation `date`.
   // See docs/plans/standard-card-fields.md.
   { name: "standard-fields-2026-09", script: "src/scripts/migrate/standard-fields.ts" },
+  // Replace every remaining `status` with the specific fact it recorded
+  // (presence fields, named booleans, `outcome`). See the script's planners.
+  { name: "status-fields-2026-09", script: "src/scripts/migrate/status-fields.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

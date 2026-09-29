@@ -27,12 +27,8 @@
  *   pnpm exec tsx src/scripts/migrate/standard-fields.ts <boxRoot> --apply
  */
 
-import { readFile, writeFile } from "node:fs/promises";
-import { parse as parseYaml, parseDocument } from "yaml";
-import { runMigration } from "./_harness.js";
-import { splitCardContent } from "../../cards/frontmatter.js";
-import { typeFromFilename } from "../../core/card-io.js";
 import { isRecord } from "../../shared/is-record.js";
+import { UnmappedStatusError, runFieldEditMigration, type FieldEdit, type FieldEditPlan } from "./_field-edits.js";
 
 const JOB_TYPES = new Set(["chat-job", "intake-job", "contains-backfill-job", "question-followup-job", "todo-review-job"]);
 
@@ -51,31 +47,6 @@ const DROP_STATUS = new Set([
 
 const HANDLED_TYPES = new Set([...DROP_STATUS, "email-outbound", "record", "audio", "guide", "personality"]);
 
-/**
- * A `status` value this migration has no safe mapping for; the card is left
- * unchanged for a person to decide.
- */
-class UnmappedStatusError extends Error {
-  readonly type: string;
-  readonly status: unknown;
-  constructor({ type, status }: { type: string; status: unknown }) {
-    super(`${type} status ${JSON.stringify(status)} has no safe mapping; migrate this card by hand`);
-    this.name = "UnmappedStatusError";
-    this.type = type;
-    this.status = status;
-  }
-}
-
-/** One change to a card's frontmatter, addressed by key path. */
-export type FieldEdit =
-  | { op: "delete"; path: ReadonlyArray<string | number> }
-  | { op: "set"; path: ReadonlyArray<string | number>; value: unknown };
-
-export interface StandardFieldsPlan {
-  edits: FieldEdit[];
-  /** Data dropped that someone may want to know about. */
-  warnings: string[];
-}
 
 function observationDateEdits(fm: Record<string, unknown>): FieldEdit[] {
   const experiments = fm["experiments"];
@@ -107,7 +78,7 @@ function recordStatusEdits(status: unknown): FieldEdit[] {
  * {@link UnmappedStatusError} for a card it must not change. An empty edit
  * list means the card is already migrated.
  */
-export function planStandardFields(type: string, fm: Record<string, unknown>): StandardFieldsPlan {
+export function planStandardFields(type: string, fm: Record<string, unknown>): FieldEditPlan {
   const warnings: string[] = [];
   const edits: FieldEdit[] = [];
   if (DROP_STATUS.has(type) && "status" in fm) edits.push({ op: "delete", path: ["status"] });
@@ -127,42 +98,12 @@ export function planStandardFields(type: string, fm: Record<string, unknown>): S
   return { edits, warnings };
 }
 
-/**
- * Apply edits to the frontmatter's YAML text through the `yaml` document
- * model, so every untouched key keeps its exact formatting (line wrapping,
- * quoting, comments).
- */
-export function applyFieldEdits(frontmatterText: string, edits: readonly FieldEdit[]): string {
-  const doc = parseDocument(frontmatterText);
-  // Every edit addresses a map key, never an array element, so applying one
-  // cannot shift another's path.
-  for (const edit of edits) {
-    if (edit.op === "delete") doc.deleteIn(edit.path);
-    else doc.setIn(edit.path, edit.value);
-  }
-  return doc.toString();
-}
-
 // CLI entry — only when run directly (e.g. spawned by `bbx migrate`), not when
 // imported by a test.
 if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`) {
-  await runMigration({
+  await runFieldEditMigration({
     description: "Strip dead standard fields: status, created, summary, observation date (see the module comment).",
-    match: (name) => {
-      const type = typeFromFilename(name);
-      return type !== undefined && HANDLED_TYPES.has(type);
-    },
-    convert: async (file, { apply, warnings }) => {
-      const type = typeFromFilename(file);
-      const split = splitCardContent(await readFile(file, "utf8"));
-      if (type === undefined || !split.hasFrontmatter) return "already";
-      const parsed: unknown = parseYaml(split.frontmatterText);
-      if (!isRecord(parsed)) return "already";
-      const plan = planStandardFields(type, parsed);
-      for (const warning of plan.warnings) warnings.push(file, warning);
-      if (plan.edits.length === 0) return "already";
-      if (apply) await writeFile(file, `---\n${applyFieldEdits(split.frontmatterText, plan.edits)}---\n${split.body}`);
-      return "converted";
-    },
+    types: HANDLED_TYPES,
+    plan: planStandardFields,
   });
 }
