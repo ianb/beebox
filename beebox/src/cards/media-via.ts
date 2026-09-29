@@ -2,7 +2,7 @@
  * The `via` object: how media came to be in the box. A media reference
  * (`filename: { ref, via, … }` on image, file, pdf and audio cards) carries
  * one, and feedback carries one at the top level. See the Ontology in
- * `docs/plans/standard-card-fields.md`. Shared by the built-in schemas in
+ * `docs/implemented-plans/standard-card-fields.md`. Shared by the built-in schemas in
  * `src/schemas/`.
  */
 

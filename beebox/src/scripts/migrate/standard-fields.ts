@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Remove the standard-looking fields that had no job (part 1 of
- * docs/plans/standard-card-fields.md).
+ * docs/implemented-plans/standard-card-fields.md).
  *
  * - `status` on job cards (always `pending`; a finished job is deleted), file,
  *   pub-submission, email-thread, gsheet, and email-outbound. None of these

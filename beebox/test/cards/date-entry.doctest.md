@@ -3,7 +3,7 @@
 `DateEntrySchema` (`src/cards/date-entry.ts`, exported from `beebox/cards`) is
 one date that belongs to a card's subject: `{ value, kind?, end?, note? }`.
 `value` and `end` are ISO 8601 at whatever precision is known. See the
-Ontology in `docs/plans/standard-card-fields.md`.
+Ontology in `docs/implemented-plans/standard-card-fields.md`.
 
 ```ts setup
 import { z } from "zod";

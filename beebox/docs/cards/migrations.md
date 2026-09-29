@@ -502,7 +502,7 @@ removal once the fleet has converged — see
 
 #### `standard-fields-2026-09` (strip — standard fields with no job)
 
-Part 1 of `docs/plans/standard-card-fields.md`. Drops `status` from job cards
+Part 1 of `docs/implemented-plans/standard-card-fields.md`. Drops `status` from job cards
 (always `pending`; a finished job is deleted), file, pub-submission,
 email-thread, gsheet and email-outbound; drops pub-submission `created` (and a leftover `created` on job cards), audio
 `summary`, and guide/personality observation `date`. A record's `status`
@@ -515,7 +515,7 @@ is dropped with a warning; the transcript stays. Idempotent. See
 
 #### `status-fields-2026-09` (replace — `status` becomes the specific fact)
 
-Part 2 of `docs/plans/standard-card-fields.md`. Per type:
+Part 2 of `docs/implemented-plans/standard-card-fields.md`. Per type:
 
 - audio: `status` is dropped; `transcript` present means transcribed. A
   `transcribed` clip with no transcript gets a warning, since it now reads as
@@ -564,7 +564,7 @@ Any other value fails the card, unchanged. Idempotent. See
 
 #### `source-fields-2026-09` (rename — `source` gets its specific names)
 
-Part 3 of `docs/plans/standard-card-fields.md`. Per type:
+Part 3 of `docs/implemented-plans/standard-card-fields.md`. Per type:
 
 - image, file, pdf: `filename.captured` becomes `filename.via.at` and
   `filename.source` becomes `filename.via.channel`. `via` is inserted right

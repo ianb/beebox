@@ -1,6 +1,7 @@
 ---
 title: "Review the standard card fields: remove the ones that slipped in, and decide whether every card needs a title"
 workstream: card-fields-review
+resolution: implemented
 needs: [design]
 area: beebox
 labels: [cards, schema]
@@ -9,11 +10,13 @@ discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
 ---
 
+Closed: implemented by [the standard card fields plan](../../../beebox/docs/implemented-plans/standard-card-fields.md) (per-field verdicts, the reserved-name rule in `docs/cards/schemas.md`, three migrations). Memo's fields stay with the retire-memo issue; box-local schemas are a follow-up described in the plan.
+
 Fields such as `created` and `status` slip into card schemas without a
 clear job. Agents then fill them in, readers expect them to mean something,
 and nothing reads them. The memo type shows both problems: its `status`
 never leaves `new`, and its `created` is misused
-([retire memo](2026-09-27-retire-memo-card-type-into-doc.md)). The
+([retire memo](../../code-quality/2026-09-27-retire-memo-card-type-into-doc.md)). The
 developer wants a review of the standard fields across all card types.
 
 ## Scope
@@ -30,7 +33,7 @@ developer wants a review of the standard fields across all card types.
   For each one, the question is whether code reads it, whether its values
   change over time, and whether it means the same thing everywhere. A name
   with different meanings in different schemas is the kind of collision the
-  [codebase ontology](../docs-and-chores/2026-09-27-codebase-ontology-files.md)
+  [codebase ontology](../../docs-and-chores/2026-09-27-codebase-ontology-files.md)
   treats as a bug.
 - **Timestamps.** The developer's position: a creation time is valid only
   when something is made later from an earlier piece of media, for example a

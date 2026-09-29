@@ -1,9 +1,9 @@
 ---
 title: "Standard card fields: ban status and created, reserve source, group source metadata"
-status: active
+status: implemented
 workstream: card-fields-review
 issues:
-  - ../../../issues/code-quality/2026-09-27-review-standard-card-fields.md
+  - ../../../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md
 ---
 # Standard card fields
 
@@ -16,7 +16,7 @@ renames the rest, and makes the schema API reject the names that attract bad
 fields.
 
 **Issues addressed:**
-[review the standard card fields](../../../issues/code-quality/2026-09-27-review-standard-card-fields.md).
+[review the standard card fields](../../../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md).
 Related, not resolved here:
 [retire memo](../../../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md)
 (owns memo's `status`, `created`, `source`, and its body-derived title),

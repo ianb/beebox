@@ -2,7 +2,7 @@
 
 `src/scripts/migrate/status-fields.ts` replaces each card type's `status`
 with the specific fact it recorded (part 2 of
-`docs/plans/standard-card-fields.md`). `planStatusFields(type, fm)` lists the
+`docs/implemented-plans/standard-card-fields.md`). `planStatusFields(type, fm)` lists the
 edits for one card; `applyFieldEdits` applies them to the YAML text.
 
 ```ts setup

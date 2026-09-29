@@ -5,7 +5,7 @@ banned name (`status`, `created`, `summary`, `date`, `modified`, `source`).
 `reservedFieldProblems` (`src/cards/reserved-fields.ts`) reports them with
 what to write instead. Built-in schemas are held to it here; box-local
 schemas still load and get a health warning (`box-schema-fields`). See
-`docs/plans/standard-card-fields.md`.
+`docs/implemented-plans/standard-card-fields.md`.
 
 ```ts setup
 import { z } from "zod";

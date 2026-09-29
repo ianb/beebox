@@ -194,7 +194,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Strip standard-looking fields that had no job: dead `status` on jobs and
   // five other types (record's becomes `reviewed`/`archived` booleans),
   // pub-submission `created`, audio `summary`, experiment observation `date`.
-  // See docs/plans/standard-card-fields.md.
+  // See docs/implemented-plans/standard-card-fields.md.
   { name: "standard-fields-2026-09", script: "src/scripts/migrate/standard-fields.ts" },
   // Replace every remaining `status` with the specific fact it recorded
   // (presence fields, named booleans, `outcome`). See the script's planners.

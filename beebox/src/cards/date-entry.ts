@@ -2,7 +2,7 @@
  * The date entry: one structured date that belongs to a card's subject (when
  * a bill is due, when a letter was written), never when the card was
  * written. Exported from `beebox/cards` so built-in and box-local schemas use
- * one shape. See the Ontology in `docs/plans/standard-card-fields.md`.
+ * one shape. See the Ontology in `docs/implemented-plans/standard-card-fields.md`.
  *
  * A card with one such date names the field for it (`due: DateEntrySchema`);
  * a card with several lists them (`dates: z.array(DateEntrySchema)`) and says

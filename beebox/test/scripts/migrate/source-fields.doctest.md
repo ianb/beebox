@@ -2,7 +2,7 @@
 
 `src/scripts/migrate/source-fields.ts` renames each `source` that is not a
 derived-from pointer, and moves media acquisition times into the media
-reference's `via` object (part 3 of `docs/plans/standard-card-fields.md`).
+reference's `via` object (part 3 of `docs/implemented-plans/standard-card-fields.md`).
 `planSourceFields(type, fm)` lists the edits for one card; `applyFieldEdits`
 applies them to the YAML text.
 

@@ -2,7 +2,7 @@
 /**
  * Give each non-derived-from `source` its own name, move acquisition times
  * onto the media reference, and put derived-from pointers in `sources` (part 3
- * of docs/plans/standard-card-fields.md).
+ * of docs/implemented-plans/standard-card-fields.md).
  * Each card type's planner below says what its old keys become; a card the
  * planner cannot convert safely fails, unchanged ({@link UnmappedFieldError}).
  *

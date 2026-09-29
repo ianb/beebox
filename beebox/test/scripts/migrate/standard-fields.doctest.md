@@ -2,7 +2,7 @@
 
 `src/scripts/migrate/standard-fields.ts` removes the `status`, `created`,
 `summary` and observation `date` fields that part 1 of
-`docs/plans/standard-card-fields.md` took out of the schemas.
+`docs/implemented-plans/standard-card-fields.md` took out of the schemas.
 `planStandardFields(type, fm)` lists the edits for one card, plus warnings for
 dropped content; `applyFieldEdits` applies them to the frontmatter text
 through the `yaml` document model, so untouched keys keep their formatting.

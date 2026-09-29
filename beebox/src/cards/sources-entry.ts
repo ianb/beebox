@@ -3,7 +3,7 @@
  * from. Same meaning as the `{% source %}` Markdoc tag
  * (`src/shared/markdoc-config/core.ts`), and an attribute that means what a
  * tag attribute means has the tag's name. See the Ontology in
- * `docs/plans/standard-card-fields.md`. Shared by the built-in schemas in
+ * `docs/implemented-plans/standard-card-fields.md`. Shared by the built-in schemas in
  * `src/schemas/`.
  */
 

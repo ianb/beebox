@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Replace every remaining `status` field with the specific fact it recorded
- * (part 2 of docs/plans/standard-card-fields.md). Each card type's planner
+ * (part 2 of docs/implemented-plans/standard-card-fields.md). Each card type's planner
  * below says what its old values become; a value with no safe mapping fails
  * that card, unchanged ({@link UnmappedStatusError}).
  *

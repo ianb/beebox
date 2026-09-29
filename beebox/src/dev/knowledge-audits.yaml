@@ -977,7 +977,7 @@ tests:
     correct_contains: ["summarize"]
     tags: [schemas, extension]
 
-  # Standard card fields (docs/plans/standard-card-fields.md): no card type
+  # Standard card fields (docs/implemented-plans/standard-card-fields.md): no card type
   # has `status`, `created`, `summary`, bare `date`/`modified`, or
   # non-derived-from `source`; a box-local schema declaring one gets a
   # `box-schema-fields` health warning. The agent should record specific
@@ -4403,7 +4403,7 @@ tests:
     correct_contains: ["quantity"]
     tags: [cards, vocabulary]
 
-  # Standard card fields (docs/plans/standard-card-fields.md): what a card
+  # Standard card fields (docs/implemented-plans/standard-card-fields.md): what a card
   # was derived from goes in `sources: [{ ref | href, pos?, note? }]`, never a
   # bare `source:` string.
   # Status (2026-09-29, Claude): 3 runs on a migrated copy of the
