@@ -263,12 +263,12 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     const wrapped = `<self-note${attrStr}>\n${body.trim()}\n</self-note>`;
 
     if (target.isBusy()) {
-      target.enqueue({ text: wrapped });
+      target.enqueue({ text: wrapped, clientComposed: true });
     } else {
       registry.enforceLiveCap(targetId);
       registry.touch(targetId, { subprocessUse: true });
       const work = await acquireBoxWork(boxRoot, { reason: "self-note" });
-      work.run(() => target.send({ text: wrapped })).finally(work.release).catch((e: unknown) => {
+      work.run(() => target.send({ text: wrapped, clientComposed: true })).finally(work.release).catch((e: unknown) => {
         const msg = e instanceof Error ? e.message : String(e);
         console.error("[self-note] send failed:", msg);
       });

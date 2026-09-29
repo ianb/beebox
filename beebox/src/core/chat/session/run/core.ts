@@ -349,7 +349,7 @@ export class ChatSession extends EventEmitter {
     this.transition({ phase: "streaming", run });
     this.turnText = "";
     try {
-      run.send(content);
+      run.send(content, { clientComposed: rawInput.clientComposed === true });
     } catch (e) {
       // The dispatch itself failed. Step back to `ready` before rethrowing:
       // left in `streaming` the session reads as busy forever, with no result

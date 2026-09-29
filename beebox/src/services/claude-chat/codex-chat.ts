@@ -121,6 +121,8 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
   const run: ChatBackendRun = {
     closed: false,
     messages: queue.iterable,
+    // Ignores `clientComposed`: Codex does not expand `@path` mentions in
+    // prompt text, so there is nothing to suppress.
     send(content): void {
       if (run.closed) return;
       chain = chain.then(async () => {

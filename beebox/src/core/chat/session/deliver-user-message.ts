@@ -184,8 +184,11 @@ export async function deliverUserMessage(opts: {
     });
   };
 
+  // Capture and upload wrappers are composed by beebox around names and
+  // transcripts, not typed at the composer.
+  const input = { text: message, clientComposed: true as const };
   if (session.isBusy()) {
-    session.enqueue({ text: message });
+    session.enqueue(input);
     recordUserMessage();
     return { sessionId: id, queued: true };
   }
@@ -203,7 +206,7 @@ export async function deliverUserMessage(opts: {
   // dispatched, while a throw is ambiguous — it may have gone out before the
   // failure — and treating the two alike would let a retry double-deliver. The
   // callers' crash-recovery paths depend on that distinction.
-  const sent = await session.send({ text: message });
+  const sent = await session.send(input);
   if (!sent) throw new UserMessageDeliveryError();
   recordUserMessage();
   return { sessionId: session.getSessionId(), queued: false };
