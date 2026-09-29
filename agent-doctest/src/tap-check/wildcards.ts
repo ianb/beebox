@@ -14,6 +14,9 @@ export const WILDCARD_TYPES: Record<string, string> = {
   string: "(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')",
   codeblock: "```",
   blankline: "",
+  // `«show»` alone is handled before matching (check.ts): the check passes
+  // and the value is printed. Inside a larger pattern it matches anything.
+  show: "[\\s\\S]*",
 };
 
 /** Parsed wildcard token metadata. */

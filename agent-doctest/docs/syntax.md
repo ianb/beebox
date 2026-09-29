@@ -123,8 +123,11 @@ Better still, control the inputs (a fixed time, a fixed id) so nothing varies.
 | `«date»` | an ISO date or date-time |
 | `«uuid»` | a lowercase UUID |
 | `«name=*»`, `«name=int»` | the same, captured under `name` |
+| `«show»` (alone) | nothing is checked; the value is printed in the run as `# line N: … => value` |
 
-A value that is only `«*»` checks nothing.
+A value that is only `«*»` is refused: it checks nothing. Use `=> ?` to get
+the value, or `=> «show»` to record a value (a version, a timing) without
+asserting it.
 
 ## Scope: blocks are separate tests
 

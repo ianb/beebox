@@ -201,7 +201,7 @@ events.find((e) => e.event === "chat-user-message").data.message === expectedWra
 
 const delivered = events.find((e) => e.event === "capture-status" && e.data.status === "delivered");
 delivered.data.docPath
-=> «*»
+=> tmp-capture/capture-20260709T1400-«*».capture-session.card
 ```
 
 The staging session's media was cleaned up once delivered:

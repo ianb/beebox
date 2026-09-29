@@ -257,3 +257,12 @@ try {
 `);
   t.match(r.stdout, /hint: an => inside a \{ \} block/);
 });
+
+test("=> «show» passes and prints the value as a TAP comment; a bare «*» is refused", async (t) => {
+  const shown = await run(t, "~~~ts\n[1, 2].length * 21\n=> «show»\n~~~\n");
+  t.equal(shown.status, 0, "fixture passes", shown.status === 0 ? {} : { stdout: shown.stdout });
+  t.match(shown.stdout, /# line 2: \[1, 2\]\.length \* 21 => 42/);
+  const bare = await run(t, "~~~ts\nMath.random()\n=> «*»\n~~~\n");
+  t.match(bare.stdout, /DoctestSyntaxError fixture\.doctest\.md:3: the expected value «\*» matches anything/);
+  t.match(bare.stdout, /write => «show»/);
+});

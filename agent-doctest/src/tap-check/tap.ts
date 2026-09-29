@@ -94,6 +94,12 @@ function report(
   // A label names the test point, pass or fail ("line 42: s.toUpperCase()").
   if (result.pass) {
     t.pass(label ?? "");
+    // `=> «show»`: the value is the point, so it goes into the TAP stream.
+    if (result.shown !== undefined) {
+      const [first = "", ...rest] = result.shown.split("\n");
+      t.comment(`${label ?? "shown"} => ${first}`);
+      for (const line of rest) t.comment(`  ${line}`);
+    }
     return result.extractions;
   }
 

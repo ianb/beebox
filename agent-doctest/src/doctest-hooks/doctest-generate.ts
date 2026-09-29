@@ -86,6 +86,11 @@ function classify(markdown: string, fileName: string): Classified[] {
   });
 }
 
+/** An expected value that is only an untyped wildcard (`«*»`, `«name=*»`). */
+function isVacuousWildcard(expected: string): boolean {
+  return /^«(?:\*|[^=»]*=\*)»$/.test(expected.trim());
+}
+
 /** The module source plus the maps the loader needs to report errors. */
 export function generateTestModule(markdown: string, options: GenerateOptions): GeneratedModule {
   const { filePath } = options;
@@ -136,6 +141,17 @@ export function generateTestModule(markdown: string, options: GenerateOptions): 
     }
     const parsed = parseExamples(block.content);
     if (parsed.length === 0) continue;
+    for (const ex of parsed) {
+      if (ex.expected !== null && isVacuousWildcard(ex.expected)) {
+        const line = block.line + ex.lineOffset + ex.source.split("\n").findIndex((l) => l.startsWith("=>"));
+        throw new DoctestSyntaxError(formatSyntaxError({
+          fileName, markdown, line, blocks,
+          problem: `the expected value ${ex.expected.trim()} matches anything, so this example checks nothing. ` +
+            "Write => ? and run: the failure shows the value, with wildcards for the parts that vary, ready to paste. " +
+            "To record a value in the output without checking it, write => «show».",
+        }));
+      }
+    }
     const ctx = { filePath, blockLine: block.line, oracle, timeoutMs: info.timeoutMs ?? DEFAULT_TIMEOUT_MS, spans: examples };
     if (info.kind === "continue") {
       if (!open) {

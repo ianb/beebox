@@ -130,6 +130,12 @@ interface CheckResultBase {
   message: string;
   /** Captured wildcard values (positional + named) */
   extractions: Extractions;
+  /**
+   * Set when the expected value was `«show»`: the check passes and the runner
+   * prints the actual value as a TAP comment. For values that vary and are
+   * worth seeing in the run's output without asserting them.
+   */
+  shown?: string;
 }
 
 interface CheckFailure {
@@ -198,6 +204,10 @@ function compare(actual: unknown, expected: string | CheckOptions): CheckResult 
   if (opts?.normalizeWhitespace) {
     actualStr = normalizeWS(actualStr);
     expectedStr = normalizeWS(expectedStr);
+  }
+
+  if (expectedStr.trim() === "«show»") {
+    return { pass: true, actual: actualStr, expected: expectedStr, diff: null, suggested: null, hint: null, message: "", extractions: emptyExtractions(), shown: actualStr };
   }
 
   let extractions = matchExtractions(actualStr, expectedStr);
