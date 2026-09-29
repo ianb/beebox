@@ -7,8 +7,8 @@ boundaries rather than assuming only automatic initial import writes mail.
 
 ## Ontology (verified against the code's own names)
 Admission is distinct from destination selection; an explicit track is an actor's
-admission rather than a Jev prediction. A tracked thread is not inherently a
-proof that every future message is relevant. That policy question remains open.
+admission rather than a Jev prediction. The later human decision admits the whole conversation once relevant, including
+future replies. Tracked refresh therefore remains unchanged after admission.
 
 ## Prior art (external) — verified
 The draft links the upstream PostalMime and MailParser documentation. Raw MIME
@@ -24,8 +24,8 @@ Keep Gmail's existing full-tree API and fix its body-alternative handling; do no
 add raw fetch and replace attachment transport solely to share a MIME parser.
 
 ## Failure modes
-Thread metadata is content too. A rejected message must leave the admitted thread
-card unchanged. A procedure must not receive pending bodies before admission.
+Thread metadata is content too. An unadmitted conversation must produce no
+thread summary or message cards; after admission its full snapshot is permitted. A procedure must not receive pending bodies before admission.
 
 ## Agent-flow / user-flow edge cases
 Explicit track is deliberate caller admission and must not be overruled by Jev.
@@ -41,8 +41,10 @@ metadata from the fetched message collection.
 **Issue:** Filtering only body and attachment writes still retains rejected
 subjects, snippets and participants.
 **Why it matters:** Violates the admission boundary through normal refresh.
-**Suggested action:** Accepted: filter the collection before materialization and
-test an unchanged thread card after a rejected reply.
+**Suggested action:** Accepted boundary, revised by the later human decision:
+gate whole-thread materialization before all writes. Test that an unadmitted
+thread writes nothing and an admitted thread refreshes without reclassification.
+Per-message filtering is no longer required.
 
 ### Settle existing procedure and explicit-access behavior
 **Location in plan:** Gmail track.
@@ -70,5 +72,16 @@ Todo execution, broad shutdown refactoring, live rollout, and agent sandboxing.
 
 ## Things I checked and found clean
 Claude verified the metadata-test live-backend path and the todo findings.
-The draft explicitly gates Gmail implementation on thread policy and a final
-size estimate. No production implementation has begun.
+The human settled thread policy after this review: "Admit the whole conversation
+once relevant." The plan now preserves whole-thread history and future refresh,
+removes per-message filtering, and updates the estimate. Final scope/size review
+remains before a BIG CHANGE. No production implementation has begun.
+
+## Later accepted scope: agent todo annotation
+
+After this review the boxholder accepted todo annotation. The plan now includes
+a final design track using existing agent todos, preserving them through Gmail
+refresh and making new actionable items eligible for the next sweep. This was
+not part of the reviewed implementation direction. Its receipt/replay mutation
+contract and concrete scope need review before code; the combined estimate now
+reaches BIG CHANGE size. No implementation has begun.

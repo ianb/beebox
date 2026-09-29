@@ -21,25 +21,34 @@ combined issue's stale quick-capture description during implementation.
 
 ## Smallest fix and budget
 
-Three independent responsibilities: fix an accidentally live reservation test;
-prepare raw MIME using a real parser; add opt-in Gmail admission before writes.
-The first two can be designed and implemented without settling thread admission.
+The original three responsibilities are test isolation, raw MIME preparation,
+and Gmail admission. The boxholder has now accepted a fourth: post-triage agent
+todo annotation. Keep that as a separate final track with an explicit design
+before implementation.
+Admission is once per conversation: one relevant message admits its history and
+future replies. This preserves the existing whole-thread materialization model.
 Do not turn them into a general connector framework.
 
-Provisional estimate: 700–1,000 changed source lines, 600–900 test lines, and
-150–250 authored documentation lines; no generated output expected. The upper
-range is a **BIG CHANGE**. Final Gmail policy and a narrower implementation
-estimate must be settled before implementation at that scale. The immediate
-fake-backend correction should be under 30 changed lines. This draft does not
-claim the larger change has size approval.
+Revised estimate after whole-conversation admission: 600–850 changed source
+lines, 500–750 test lines, and 350–450 authored documentation lines (including
+this plan and review); no generated output expected. Total: 1,450–2,050 lines.
+The upper range remains a **BIG CHANGE**; implementation at that scale needs
+explicit size approval. Whole-conversation admission removes per-message
+filtering and reconstruction of partially admitted thread cards. The immediate
+fake-backend correction should be under 30 changed lines. Todo annotation adds
+an estimated 150–300 source lines, 150–250 test lines, and 50–100 documentation
+lines: revised combined range 1,800–2,700 lines, a **BIG CHANGE**. This draft does
+not claim approval for implementation at that size; the added track needs its
+concrete mutation/replay contract settled before a final scope review.
 
 ## Stated preferences this plan trades against
 
 The boxholder required "no unadmitted box content", accepted temporary extraction
 with cleanup and ID-only pending records, and asked for understandable CLI
 operations. The boxholder now says a real box is already using triage and asks to
-look at Gmail, preparation, and test cleanup. Todo annotation is a possible later
-addition, not part of this implementation.
+look at Gmail, preparation, and test cleanup. The boxholder subsequently accepted todo annotation. Include it as a separate
+final design track: existing agent-assigned todos, preservation across connector
+refresh, and next-sweep pickup without fabricated deadlines.
 
 Keep the single overarching intake guide and landmark destination explanations.
 Admission answers relevance; destination selection answers placement. A relevant
@@ -50,15 +59,15 @@ filing returned no-match. Preserve this distinction in instructions and output.
 
 - `beebox/src/connectors/gmail/connector.ts:232`: `refreshThreadSnapshots` is the
   materialization seam after discovery/rule evaluation. Lines 229–235 also feed
-  changed, already-tracked threads into that seam. Both paths need admission.
+  changed, already-tracked threads into that seam. Initial tracking needs admission; already-tracked threads remain admitted.
 - `beebox/src/connectors/gmail/config.ts:40`: `StageActionInputSchema` has
   `type: z.literal("stage")`; it is an existing action, not a new admission policy.
   `rules.ts:106` builds `pendingSummary`, and line 111 spreads
   `summarizeGmailMessage`: current pending state retains snippets and metadata.
 - `beebox/src/connectors/gmail/threads.ts:134`: `fs.writeFile(bodyPath,
-  opts.message.textBody)` and line 141 writes attachments. Filter the fetched-message collection before `writeThreadCards`, not just the
-  individual writes. Thread subject, participants, labels and dates must derive
-  only from admitted messages; a rejected reply must not alter the thread card.
+  opts.message.textBody)` and line 141 writes attachments. Gate the entire thread before `writeThreadCards`, not just individual writes.
+  An unadmitted thread must create no message card, body, attachment, or thread
+  summary. Once admitted, all its messages contribute normally to the snapshot.
 - `beebox/src/core/triage/judge.ts:56`: "Classify one admitted document"; lines 80/99
   call `appendJevDebug`. `core/judgment/service.ts:75` writes to
   `.beebox/jev-debug.log`. This admitted-content wrapper is not safe to reuse
@@ -94,8 +103,8 @@ bounded buffering proves inadequate. Do not write a MIME parser ourselves.
 - Prepared evidence: decoded text and extraction results with explicit omissions;
   unadmitted evidence exists only during the operation.
 - Pending admission: IDs plus machine status/rule revision, not a subject/snippet or receipt.
-- Tracked thread: existing connector identity. Whether it admits future messages
-  automatically is the product decision still awaiting an answer.
+- Tracked thread: existing connector identity and admitted conversation. Admission
+  covers its history and future replies; no per-reply classifier gate is added.
 - Destination decision: the already-implemented admitted-document judgment/receipt.
 - Agent todo: existing todo metadata; no new task type proposed.
 
@@ -137,12 +146,12 @@ Exact vision model reporting is deferred rather than guessed.
 
 ### 3. Gmail admission
 
-Proposed connector-level opt-in admission policy covers rule-driven tracking and
-new messages during tracked refresh. Existing explicit `track` is a deliberate
+Proposed connector-level opt-in admission policy covers initial rule-driven
+tracking of an unadmitted conversation. Already-tracked conversations, including
+those present when the gate is enabled, remain admitted and refresh normally. Existing explicit `track` is a deliberate
 admission by its caller; record that actor as explicit-command, never infer
-human confirmation. Jev must not overrule that deliberate admission. The pending
-thread-policy decision also determines whether explicit thread tracking admits
-future replies or only its current snapshot.
+human confirmation. Jev must not overrule that deliberate admission. Explicit
+tracking admits the full conversation and future replies on the same terms.
 
 With admission enabled, `procedure` rules fire only after admission, with admitted
 card refs. Stage rules retain IDs only. The existing `gws` command remains an
@@ -155,10 +164,15 @@ The overarching intake guide states box relevance separately from filing policy.
 An enabled gate without that policy fails visibly instead of inferring irrelevance
 from the destination catalog.
 
-The provisional direction is per-message admission, with existing admitted history
-preserved. Thread-level admission is awaiting the boxholder's decision. The first
-Gmail implementation chunk is blocked on that decision; do not disguise it as a
-routine implementation choice. No already-imported content is automatically deleted.
+The boxholder chose "Admit the whole conversation once relevant." A relevant
+message admits the entire conversation, including historical messages and future
+replies. Classify candidate messages only until the conversation is admitted; do
+not charge for or rejudge later replies. A new message on a rejected or pending
+conversation is new evidence and can trigger another admission attempt. Deduplicate
+admission by Gmail thread ID. No already-imported content is automatically deleted.
+
+First Gmail chunk: deterministic gate tests for initial admission, ID-only pending,
+and a tracked refresh that imports a later reply without invoking the classifier.
 
 Call the typed Jev service with prepared candidate evidence and explicit admission
 criteria. Reuse call budgets, but keep all request/response/error logs content-free;
@@ -174,6 +188,30 @@ and rule-change retry commands must operate without exposing unadmitted bodies
 through logs or normal research prompts. Preserve all pending IDs when pagination
 advances; do not inherit the current 50-summary truncation as an admission queue.
 Budget exhaustion leaves resumable work; no busy retry loop on every wakeup.
+
+### 4. Post-triage agent todos — accepted direction, detailed design next
+
+Use existing frontmatter `todos` with `assigned: agent`, `by: agent`, and the
+actual `created` date. Rules may ask for a concrete follow-up; Jev does not invent
+prose. Prefer authored action text with source links; use grounded agent text
+when item-specific reasoning is required. Filing success and follow-up completion
+remain separate outcomes. No new todo type or independent execution daemon.
+
+The existing sweep must explicitly select newly actionable agent todos on its
+next scheduled pass, respecting genuine future start dates and recheck state.
+Do not invent due/start dates merely to enter its current date-based categories.
+Retain the existing bounded review procedure and its authority rules.
+
+Before implementation, settle idempotent annotation identity, preservation across
+Gmail thread regeneration, and the boundary with receipt byte verification.
+Adding frontmatter changes the source digest: it must not invalidate apply retry
+or pretend changed bytes are the original replay input. A regression must cover
+triage -> annotation -> refresh -> repeat apply -> fixed-evidence/reprepare replay.
+Use a stable short todo ID, preserve completion on retries, and prevent an old
+triage decision from recreating a completed todo.
+
+First chunk is design/tests for those interactions, not a speculative annotation
+write. This accepted track is not yet implementation-ready.
 
 ## Could this be simpler?
 
@@ -195,7 +233,8 @@ needs a separate design rather than an implicit expansion of this one.
 | Placeholder plain body hides relevant HTML | Synthetic experiment only | Decoder must retain both | Explicit partial/complete evidence |
 | MIME attachment extraction fails | Existing PDF adapter tests | Mark omission; admission unclear | Explicit pending |
 | Debug log retains rejected content | Not for Gmail admission | Use content-free admission wrapper | New mandatory regression |
-| Tracked refresh leaks a rejected reply into thread metadata | Existing refresh bypasses gate | Filter collection before all card writes; admitted-only thread summary | New byte-identical-card regression |
+| Unadmitted thread leaks subject/snippet through early card rendering | Existing writer assumes admission | Gate before every thread write | New no-card/no-body/no-attachment regression |
+| Admitted thread is reclassified or loses later replies | Existing refresh already works | Preserve refresh; classifier only for unadmitted thread IDs | New no-rejudge/full-refresh regression |
 | Cursor advances past pending IDs | Current summaries cap at 50 | Durable ID-only continuation before advance | New mandatory regression |
 | Temporary extraction survives failure | Existing Docling cleanup tests | Caller finally owns whole workspace | Extend to MIME/admission |
 | Reservation test starts SDK during teardown | No deterministic warning reproduction | Inject fake in metadata-only test | Named test must exit cleanly |
@@ -209,17 +248,19 @@ Gmail path is already protected.
 - ADDRESSED in direction: a missing attachment means pending, not reject.
 - ADDRESSED in direction: manual track is explicit admission, recorded as an
   actor choice rather than a classifier or human-confirmed outcome.
-- DEFERRED to the explicit decision below: future messages in an admitted thread.
+- ADDRESSED by the explicit human decision: future replies are admitted with the
+  conversation and sync without another relevance judgment.
 - ADDRESSED in direction: existing content stays; no retrospective deletion.
 - ADDRESSED in direction: malformed policy is a visible configuration error.
 - DEFERRED: an ordinary research agent cannot inspect unadmitted body text while
   meeting the no-persistent-transcript requirement.
-- DEFERRED: todo annotation needs preservation, stable identity/deduplication,
-  and a deliberate execution schedule; current review is not an immediate runner.
+- ACCEPTED DIRECTION, DESIGN PENDING: todo annotation needs preservation, stable
+  identity/deduplication and next-sweep selection. Current review is not an
+  immediate task runner; reuse its scheduled procedure.
 
 ## NOT in scope
 
-- Post-triage todo creation or a new task runner: the user described this as later work.
+- A new task runner: accepted todo annotation reuses the existing sweep/procedure.
 - A production chat warm-up lifecycle rewrite without a deterministic failing test.
 - Automatic deletion/reconciliation of mail already in a box.
 - A general connector framework or isolated ephemeral agent runtime.
@@ -228,18 +269,19 @@ Gmail path is already protected.
 
 ## Open design questions
 
-1. Does a relevant message admit its whole thread and future replies, or is each
-   message checked? Asked explicitly; current lean is per-message to honor the
-   earlier wording. The Gmail integration remains a draft until answered.
-2. For the later todo feature, should new agent todos run on the next sweep or
-   only under existing due/start/stale review semantics? Do not invent dates to
-   force scheduling. Also decide whether text comes from instruction templates
-   or a grounded agent; Jev does not write prose.
+Thread policy is settled: whole-conversation admission, including future replies.
+
+Todo direction is accepted: annotate with an agent-assigned todo, preserve it,
+and surface actionable work on the next sweep. Detailed choices still required:
+annotation identity and mutation ordering relative to receipts/replay; authored
+follow-up templates versus grounded item-specific text. These belong to the
+fourth track's design, before its first code change.
 
 ## Knowledge audits
 
 Implementation needs real audits for admission-versus-filing, ID-only pending
-review, and missing extraction evidence. Raw MIME mechanics and test fake
+review, and missing extraction evidence. Todo annotation needs audits for next-sweep
+eligibility, evidence-grounded action text and retry preservation. Raw MIME mechanics and test fake
 injection alone are infrastructure and need no new always-loaded guidance.
 Use a lean existing guide pointer and on-demand Gmail/triage docs.
 
@@ -255,11 +297,14 @@ malformed structure and limits. No new testing tier or live provider golden labe
 
 ## Implementation order
 
-1. Resolve thread admission; narrow the estimate and review the full scope.
+1. Whole-conversation admission is settled. Confirm the final scope/size before
+   implementation if the estimate exceeds 2,000 changed lines.
 2. Isolate the metadata reservation tests and verify the named test exits cleanly.
 3. Add the MIME decoder, then common temporary extraction and provenance tests.
 4. Integrate opt-in Gmail admission and ID-only state/review/retry operations.
-5. Run audits, selected tests, cross-model finished-change review, and commit.
+5. Complete the accepted todo track design, then implement annotation, connector
+   preservation and next-sweep selection with replay/retry regressions.
+6. Run audits, selected tests, cross-model finished-change review, and commit.
    Land only on a new explicit finish request.
 
 ## Rollout shape
