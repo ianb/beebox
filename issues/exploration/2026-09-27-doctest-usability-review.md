@@ -1,6 +1,6 @@
 ---
 title: "Usability review of doctest: look back at its design now that agents write and run it constantly"
-workstream: unattached
+workstream: doctest-usability
 needs: [design]
 area: beebox
 labels: [testing, doctest, agents]
