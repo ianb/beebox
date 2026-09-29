@@ -93,3 +93,17 @@ The command reports its worst bucket outcome:
 bounded research and Git-backed receipts. The default remains the agent engine.
 Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
 rule repair, correction provenance and retained evidence.
+
+Preparation sizes the complete serialized Jev request against the current
+instruction snapshot, including rules, evidence metadata and JSON escaping. For
+a trial snapshot, use `triage prepare <source-ref> --instructions <snapshot.json>`
+and pass the same snapshot to `triage judge`. Larger replacement instructions
+can require preparation again; judge refuses an oversized request before making
+a call. Whole-part exclusions remain explicit in evidence.
+
+Scan preparation prioritizes structured PDF cards, retains each attachment's
+digest even when its text is redundant, and treats referenced internal Docling
+sidecars as provenance rather than unreadable document parts. Vision transport
+converts stored AVIF bytes to a supported image format without changing the
+original files. Full-page and figure images remain separate visual evidence;
+large scans can still be partial when those descriptions do not fit the request.

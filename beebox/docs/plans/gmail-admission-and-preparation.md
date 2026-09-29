@@ -72,7 +72,7 @@ filing returned no-match. Preserve this distinction in instructions and output.
   call `appendJevDebug`. `core/judgment/service.ts:75` writes to
   `.beebox/jev-debug.log`. This admitted-content wrapper is not safe to reuse
   unchanged for unadmitted mail. Reuse the typed service and budget primitives.
-- `beebox/src/core/triage/evidence.ts:151` starts format preparation; the `.eml`
+- `beebox/src/core/triage/evidence/core.ts` starts format preparation; the `.eml`
   branch records `mime-unparsed`. Gmail `mime.ts:154` extracts from an API MIME
   tree, not raw RFC822. No raw MIME parser dependency was found in the workspace.
 - `beebox/test/webapp/trpc/routers/chat.model-policy.doctest.md:93` constructs

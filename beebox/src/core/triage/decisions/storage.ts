@@ -3,7 +3,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID, createHash } from "node:crypto";
 import { z } from "zod";
-import { evidenceSchema, type Evidence } from "../evidence.js";
+import { evidenceSchema, type Evidence } from "../evidence/core.js";
 import { instructionSnapshotSchema, type InstructionSnapshot } from "../snapshot.js";
 import { type TriageJudgment, triageJudgmentSchema } from "../judge.js";
 import { getBoxTimeISO } from "../../../lib/time.js";

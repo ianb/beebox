@@ -5,27 +5,30 @@ import * as os from "node:os";
 import { createHash } from "node:crypto";
 import { execa } from "execa";
 import { z } from "zod";
-import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
-import { attachDirFor } from "../../shared/attach-path.js";
-import { errorMessage, errnoCode } from "../../shared/error-guards.js";
-import { invariant } from "../../shared/invariant.js";
-import { isCardFile, getBoxDir } from "../../lib/paths/core.js";
-import { createDoclingService, checkExtractionBounds, type DoclingService } from "../../services/docling/core.js";
-import type { ScanVisionService } from "../../services/scan-vision.js";
-import { resolveScanVision } from "../commands/scan-import/session.js";
-import { probePdf, extractPdfText } from "../pdf/probe.js";
+import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
+import { attachDirFor } from "../../../shared/attach-path.js";
+import { errorMessage, errnoCode } from "../../../shared/error-guards.js";
+import { invariant } from "../../../shared/invariant.js";
+import { isCardFile, getBoxDir } from "../../../lib/paths/core.js";
+import { createDoclingService, checkExtractionBounds, type DoclingService } from "../../../services/docling/core.js";
+import { JEV_MAX_REQUEST_CHARS } from "../../../services/jev-wire.js";
+import type { ScanVisionService } from "../../../services/scan-vision.js";
+import { resolveScanVision } from "../../commands/scan-import/session.js";
+import { probePdf, extractPdfText } from "../../pdf/probe.js";
+import { compileInstructionSnapshot, type InstructionSnapshot } from "../snapshot.js";
+import { packEvidence, scanRepresentations } from "./packing.js";
 
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u);
 const statusSchema = z.enum(["ready", "partial", "unavailable"]);
 const partSchema = z.object({
-  ref: z.string(), digest: digestSchema, mediaType: z.string(), method: z.string(),
+  ref: z.string(), digest: digestSchema, mediaType: z.string(), method: z.string(), duplicateOf: z.string().optional(),
   toolVersion: z.string(), status: statusSchema, text: z.string(), omissions: z.array(z.string()),
 });
 export const evidenceSchema = z.object({
   version: z.literal(1),
   source: z.object({ ref: z.string(), digest: digestSchema, gitRevision: z.string().nullable(), attachmentRef: z.string().nullable() }),
   status: statusSchema, parts: z.array(partSchema).min(1),
-  recipe: z.object({ adapterVersion: z.literal(1), steps: z.array(z.string()), maxTextChars: z.number().int().positive() }),
+  recipe: z.object({ adapterVersion: z.union([z.literal(1), z.literal(2)]), steps: z.array(z.string()), maxTextChars: z.number().int().positive(), maxRequestChars: z.number().int().positive().optional() }),
 });
 export type Evidence = z.infer<typeof evidenceSchema>;
 type Part = Evidence["parts"][number];
@@ -35,6 +38,8 @@ export interface PrepareItemOptions {
   docling?: DoclingService;
   vision?: ScanVisionService;
   maxTextChars?: number;
+  maxRequestChars?: number;
+  instructions?: InstructionSnapshot;
   /** Reuse only adapter-compatible parts whose original bytes still match. */
   previousEvidence?: Evidence;
 }
@@ -111,8 +116,8 @@ async function prepareImage({ file, part }: { file: string; part: Part }, option
  }
 
 function cachedPart(input: { ref: string; bytes: Buffer }, evidence: Evidence | undefined): Part | undefined {
-  if (evidence?.recipe.adapterVersion !== 1) return undefined;
-  return evidence.parts.find((part) => part.ref === input.ref && part.digest === sha256(input.bytes) && part.status === "ready");
+  if (evidence?.recipe.adapterVersion !== 2) return undefined;
+  return evidence.parts.find((part) => part.ref === input.ref && part.digest === sha256(input.bytes) && part.status === "ready" && part.text !== "" && !["duplicate-text", "provenance-only"].includes(part.method));
 }
 
 async function preparePart(input: { file: string; bytes: Buffer }, options: PrepareItemOptions): Promise<Part> {
@@ -179,7 +184,7 @@ async function noteMissingAttachments(part: Part, boxRoot: string): Promise<void
 }
 
 export async function prepareItem(options: PrepareItemOptions): Promise<Evidence> {
-  if (options.previousEvidence) evidenceSchema.parse(options.previousEvidence);
+  evidenceSchema.optional().parse(options.previousEvidence);
   const sourcePath = resolve(options.boxRoot, options.sourceRef);
   const sourceRef = `/${path.relative(options.boxRoot, sourcePath)}`;
   const attachmentPath = isCardFile(sourcePath) ? attachDirFor(sourcePath) : null;
@@ -190,30 +195,55 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
     }
   }
   const files = [sourcePath, ...attachmentPath === null ? [] : await listScope(attachmentPath)];
+  // Prepared structured scan cards carry the usable reading order. Admit their
+  // bodies before raw derivatives, but keep every underlying file in provenance.
+  files.sort((a, b) => {
+    const rank = (file: string): number => file === sourcePath ? 0 : file.endsWith(".pdf.card") ? 1 : path.basename(file) === "text-layer.txt" ? 2 : 3;
+    return rank(a) - rank(b) || a.localeCompare(b);
+  });
+  const sourceBytes = await checkedRead({ boxRoot: options.boxRoot, file: sourcePath });
   const parts: Part[] = [];
   const maxTextChars = options.maxTextChars ?? 100_000;
+  const maxRequestChars = options.maxRequestChars ?? JEV_MAX_REQUEST_CHARS;
+  const instructions = options.instructions ?? await compileInstructionSnapshot(options.boxRoot);
   invariant(Number.isSafeInteger(maxTextChars) && maxTextChars > 0, "maxTextChars must be a positive integer");
-  let remaining = maxTextChars;
+  invariant(Number.isSafeInteger(maxRequestChars) && maxRequestChars > 0 && maxRequestChars <= JEV_MAX_REQUEST_CHARS, `maxRequestChars must be a positive integer no greater than ${String(JEV_MAX_REQUEST_CHARS)}`);
   for (const file of files) {
-    const part = await preparePart({ file, bytes: await checkedRead({ boxRoot: options.boxRoot, file }) }, options);
-    if (part.text.length > remaining) {
-      // Exclude complete parts; silently clipped prose can reverse a late qualification.
-      part.omissions.push(`Text budget excluded all ${String(part.text.length)} characters of this part`);
-      part.text = ""; part.status = "unavailable";
-    }
+    const bytes = file === sourcePath ? sourceBytes : await checkedRead({ boxRoot: options.boxRoot, file });
+    const ref = `/${path.relative(options.boxRoot, file)}`;
+    const representations = scanRepresentations(parts);
+    const method = representations.sidecars.has(ref) ? "provenance-only" : representations.owners.has(ref) && file.endsWith(".pdf") ? "pdf-deferred" : undefined;
+    const part: Part = method === undefined ? await preparePart({ file, bytes }, options)
+      : { ref, digest: sha256(bytes), mediaType: method === "provenance-only" ? "application/gzip" : "application/pdf", method, toolVersion: "1", status: method === "provenance-only" ? "ready" : "unavailable", text: "", omissions: [] };
     await noteMissingAttachments(part, options.boxRoot);
-    remaining -= part.text.length;
     parts.push(part);
   }
+  // Keep each original part and digest while admitting readable content in
+  // authority order. A duplicate points only to a copy already retained.
   const source = parts[0];
   invariant(source !== undefined, "Preparation must include source");
   const revision = await execa("git", ["rev-parse", "HEAD"], { cwd: options.boxRoot, reject: false });
   const evidence: Evidence = {
     version: 1,
     source: { ref: sourceRef, digest: source.digest, gitRevision: revision.exitCode === 0 ? revision.stdout.trim() : null, attachmentRef: attachmentPath === null ? null : `/${path.relative(options.boxRoot, attachmentPath)}` },
-    status: parts.every((part) => part.status === "unavailable") ? "unavailable" : parts.every((part) => part.status === "ready") ? "ready" : "partial",
-    parts, recipe: { adapterVersion: 1, steps: parts.map((part) => `${part.ref}: ${part.method}`), maxTextChars },
+    status: "unavailable",
+    parts, recipe: { adapterVersion: 2, steps: parts.map((part) => `${part.ref}: ${part.method}`), maxTextChars, maxRequestChars },
   };
-  await verifyEvidence(options.boxRoot, evidence);
-  return evidenceSchema.parse(evidence);
+  let packed = packEvidence(evidence, instructions);
+  // Prefer the existing analyzed card without re-running extraction. If that
+  // representation was excluded, prepare its deferred PDF and repack. Each
+  // PDF can enter this fallback at most once; other adapters are not repeated.
+  for (;;) {
+    const deferred = packed.parts.filter((part) => part.method === "pdf-deferred");
+    if (deferred.length === 0) break;
+    for (const part of deferred) {
+      const file = resolve(options.boxRoot, part.ref);
+      const bytes = await checkedRead({ boxRoot: options.boxRoot, file });
+      const index = parts.findIndex((candidate) => candidate.ref === part.ref);
+      parts[index] = await preparePart({ file, bytes }, options);
+    }
+    packed = packEvidence(evidence, instructions);
+  }
+  await verifyEvidence(options.boxRoot, packed);
+  return evidenceSchema.parse(packed);
 }

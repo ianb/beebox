@@ -178,3 +178,24 @@ locked-link support. Regression cases cover confirmation after handling, locally
 present annex content, and genuinely missing objects. No network fetch is added.
 The final focused provenance run passed 47 assertions; typecheck and changed-file
 lint passed after the historical recovery fix.
+
+## Scan preparation repair review — September 28
+
+Claude Opus traced the AVIF transport, nested scan representations, complete
+request budget, sidecars, and old receipt/replay paths. The requested fixes hold.
+Its compatibility finding was accepted: Gemini retains its existing HEIC/HEIF
+passthrough, while AVIF uses the supported image conversion. Mocked provider
+requests verify both paths without sending source content to a provider.
+
+Full-page and figure images remain separate visual evidence. The reviewer
+suggested skipping full-page reads when structured text is usable, but that can
+omit signatures or stamps; this is a pending product choice rather than part of
+this repair. Large scans can still be partial when necessary visual descriptions
+do not fit. A different, longer model ID can also cause judge to reject a request
+that was packed tightly for the default model; the rejection happens before a
+provider call.
+
+Validation: the selected suite passed 146 files and 1,951 checks; focused
+regressions also cover fallback extraction and final metadata sizing. Typecheck,
+changed-file lint, layout, and documentation checks passed. Production content
+was not sent to providers for this repair.

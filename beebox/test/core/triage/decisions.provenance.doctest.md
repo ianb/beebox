@@ -10,7 +10,7 @@ import { execa } from "execa";
 import { pathToFileURL } from "node:url";
 import { simpleGit } from "simple-git";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { prepareItem } from "../../../src/core/triage/evidence.js";
+import { prepareItem } from "../../../src/core/triage/evidence/core.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
 import { judgeItem } from "../../../src/core/triage/judge.js";
 import { createDecisionReceipt, readDecisionReceipt, saveDecisionReceipt, listDecisionReceipts } from "../../../src/core/triage/decisions/storage.js";

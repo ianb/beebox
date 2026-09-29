@@ -6,8 +6,10 @@
  */
 
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { z } from "zod";
 import { getMimeType, GeminiEmptyResponseError, parseGeminiJsonArray } from "./helpers.js";
+import { readScanVisionImage } from "./image-input.js";
 
 /**
  * Per-page output from the scan-mode analyzer, and the single source of
@@ -194,6 +196,16 @@ ${boxholderContext.trim()}
   return contextSection + SCAN_PROMPT;
 }
 
+async function readGeminiScanImage(imagePath: string): Promise<{ data: Buffer; mediaType: string }> {
+  // Historically HEIC/HEIF bytes were passed through with their extension
+  // MIME type. Sharp may lack an HEVC decoder, so preserve that wire path.
+  const extension = path.extname(imagePath).toLowerCase();
+  if (extension === ".heic" || extension === ".heif") {
+    return { data: await fs.readFile(imagePath), mediaType: getMimeType(imagePath) };
+  }
+  return readScanVisionImage(imagePath);
+}
+
 /**
  * Analyze a batch of consecutive scanned pages with Gemini Flash. Returns
  * analyses with batch-relative indices (0..N-1); the caller translates to
@@ -212,11 +224,11 @@ export async function analyzeScanBatchWithGemini(
 
   const imageParts = [];
   for (const imgPath of imagePaths) {
-    const imgData = await fs.readFile(imgPath);
+    const imgData = await readGeminiScanImage(imgPath);
     imageParts.push({
       inlineData: {
-        mimeType: getMimeType(imgPath),
-        data: imgData.toString("base64"),
+        mimeType: imgData.mediaType,
+        data: imgData.data.toString("base64"),
       },
     });
   }
