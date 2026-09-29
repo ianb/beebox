@@ -18,6 +18,7 @@ on both.
 import { createHash } from "node:crypto";
 import Sharp from "sharp";
 import { makeTestServer } from "../../helpers/doctest-server.js";
+import type { TestServerOptions } from "../../helpers/test-server.js";
 import { textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { resetScanRateLimits, SCAN_RATE_LIMIT } from "../../../src/webapp/routes/scan-upload/rate-limit.js";
 import { qpdfAvailable } from "../../../src/core/scan/validate.js";
@@ -29,6 +30,23 @@ const ORIGINAL_OWNER_EMAIL = process.env.BBX_OWNER_EMAIL;
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+/** Route tests pin upload validation; promotion orchestration has its own tests. */
+async function makeScanTestServer(options: TestServerOptions = {}) {
+  const promotionRoots: string[] = [];
+  let resolveStartupPass: () => void = () => {};
+  const startupPass = new Promise<void>((resolve) => {
+    resolveStartupPass = resolve;
+  });
+  const ctx = await makeTestServer({
+    ...options,
+    scanPromoteRun: async (boxRoot) => {
+      promotionRoots.push(boxRoot);
+      resolveStartupPass();
+    },
+  });
+  return { ...ctx, promotionRoots, startupPass };
 }
 
 /** A real 4x4 PNG, encoded by sharp — so the decode check has something to decode. */
@@ -92,7 +110,8 @@ dispose of its local copy, so `unknown` has to be the honest default.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
+await ctx.startupPass;
 const png = await pngBytes();
 const hash = sha256(png);
 
@@ -151,6 +170,14 @@ JSON.stringify({
 => {"state":"pending","duplicate":[200,"duplicate"]}
 ```
 
+The lifecycle invoked the injected startup pass for this exact annex-shaped
+box before the route assertions ran:
+
+```ts continue
+ctx.promotionRoots[0] === ctx.boxRoot
+=> true
+```
+
 `X-Scan-Profile` rides along as free-text provenance when the scanner sends one:
 
 ```ts continue
@@ -177,7 +204,7 @@ requires Sharp to fully decode pixels, without requiring AVIF encoding support.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const webp = await webpBytes();
 const avif = await avifBytes();
 const wrongWebp = await Sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 200, g: 10, b: 30 } } })
@@ -217,7 +244,7 @@ a file promoted and swept out of quarantine still answers as confirmed.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 const hash = sha256(png);
 await ctx.seed(".beebox/uploads.json", JSON.stringify({
@@ -248,7 +275,7 @@ could honestly file the received bytes under — so the client simply retries.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 const wrongHash = sha256(Buffer.from("something else entirely"));
 
@@ -277,7 +304,7 @@ so it names both what the bytes are and what the name claimed.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 const hash = sha256(png);
 
@@ -337,7 +364,7 @@ await ctx.cleanup();
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const hasQpdf = await qpdfAvailable();
 const pdf = textlessPdf();
 
@@ -381,7 +408,7 @@ A `Content-Length` over the 50 MB cap is refused before a byte is transferred:
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 
 const declared = await put(ctx, {
@@ -441,7 +468,7 @@ malformed one is a 400, not a best-effort guess. Uppercase hex is malformed too
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 const png = await pngBytes();
 
 const malformedHashes = ["not-a-hash", sha256(png).toUpperCase(), sha256(png) + "00"];
@@ -499,7 +526,7 @@ scanner cadence.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer({ annexBox: true });
+const ctx = await makeScanTestServer();
 
 let last = null;
 for (let i = 0; i < SCAN_RATE_LIMIT + 1; i++) last = await check(ctx, []);
@@ -539,7 +566,7 @@ on a real auth-on server.
 ```ts
 resetScanRateLimits();
 delete process.env.BBX_HUB_SECRET;
-const ctx = await makeTestServer({ openAccess: false, annexBox: true });
+const ctx = await makeScanTestServer({ openAccess: false });
 const png = await pngBytes();
 const token = await createScanToken(ctx.boxRoot, { name: "laptop-scansnap", createdBy: "owner@example.com" });
 

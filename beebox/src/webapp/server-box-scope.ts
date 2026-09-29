@@ -365,7 +365,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
  * webhook scope under `/webhook/<slug>` (outside the auth wall).
  */
 export async function registerBox(server: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
-  const { box, eventBus } = deps;
+  const { box, eventBus, options } = deps;
 
   await server.register(async (instance) => {
     await registerBoxRoutes(instance, deps);
@@ -379,7 +379,7 @@ export async function registerBox(server: FastifyInstance, deps: BoxScopeDeps): 
   // scan-token store — which is what confines that credential to these two
   // routes. Do not fold this back into registerBoxRoutes.
   await server.register(async (instance) => {
-    await registerScanUploadRoutes({ server: instance, boxRoot: box.boxRoot });
+    await registerScanUploadRoutes({ server: instance, boxRoot: box.boxRoot, promoteRun: options.scanPromoteRun });
   }, { prefix: `/${box.slug}` });
 
   // Register webhooks at /webhook/<slug>/ — outside auth so external
