@@ -5,7 +5,7 @@
  * `review-check.ts`) on its own daily schedule, not inside `bbx wakeup`.
  *
  * Runs the todo collection box-wide (`core/todo/query.ts`, the same runner
- * `bbx query todos` and the web list use) and computes three sets of *open*
+ * `bbx query todos` and the web list use) and computes four sets of *open*
  * todos, leaving out any todo whose `recheck` is `never` or still ahead:
  * - **escalated** — past `due`.
  * - **stirring** — crossed `start` since the last sweep. The baseline is the
@@ -13,6 +13,8 @@
  *   runner as the query's `since`; the collection derives `stirring` from
  *   it. Only this set needs a baseline: escalated and stale are recomputed
  *   fresh every pass.
+ * - **actionable** — open, assigned to the agent, and on-plate. Fresh todos
+ *   enter this set on the next precheck without needing an invented date.
  * - **stale** — open, has `created`, is more than 45 days old, and has
  *   neither `start` nor `due` (so it never even entered the escalated/
  *   stirring math).
@@ -30,7 +32,7 @@ import { runTodoQuery } from "./query.js";
 import { summaryText } from "../file-summary.js";
 import { formatTodoLocation } from "./collect-types.js";
 import type { DerivedTodo } from "./collection.js";
-import { parseIsoDate, boxLocalDateEpoch, recheckDefers, RECHECK_NEVER } from "../../shared/todo-model.js";
+import { parseIsoDate, boxLocalDateEpoch, recheckDefers, RECHECK_NEVER, resolveStartEpoch, TODO_AGENT } from "../../shared/todo-model.js";
 import type { TodoReviewJobItem } from "../../schemas/todo-review-job.js";
 
 const STALE_DAYS = 45;
@@ -58,6 +60,7 @@ interface ComputeInput {
 export interface TodoReviewSets {
   escalated: SweptTodo[];
   stirring: SweptTodo[];
+  actionable: SweptTodo[];
   stale: SweptTodo[];
 }
 
@@ -80,10 +83,10 @@ function ageInDays(created: string, todayEpoch: number): number | null {
 }
 
 /**
- * Split a box's open todos into escalated / stirring / stale, per the module
+ * Split a box's open todos into escalated / stirring / actionable / stale, per the module
  * doc's definitions. `stirring` is already decided — the collection derived
- * it from the `since` baseline this sweep handed the runner — so the only
- * date arithmetic left here is the stale rule, which is the sweep's own.
+ * it from the `since` baseline this sweep handed the runner — so the sweep
+ * only needs date arithmetic for its actionable-start and stale rules.
  */
 function computeSets(all: SweptTodo[], input: ComputeInput): TodoReviewSets {
   const { todayEpoch, neverDefers } = input;
@@ -96,28 +99,38 @@ function computeSets(all: SweptTodo[], input: ComputeInput): TodoReviewSets {
 
   const stirring = todos.filter((t) => t.stirring);
 
+  const actionable = todos.filter((t) => {
+    if (t.assigned !== TODO_AGENT || (t.plateState !== "on-plate" && t.plateState !== "escalated")) return false;
+    // A malformed/unresolvable start does not make a future start actionable.
+    if (t.start === undefined) return true;
+    const startEpoch = resolveStartEpoch(t.start, t.due);
+    return startEpoch !== null && startEpoch <= todayEpoch;
+  });
+
   const stale = todos.filter((t) => {
     if (t.start !== undefined || t.due !== undefined || t.created === undefined) return false;
     const age = ageInDays(t.created, todayEpoch);
     return age !== null && age > STALE_DAYS;
   });
 
-  return { escalated, stirring, stale };
+  return { escalated, stirring, actionable, stale };
 }
 
 /** One item's `detail` line — whichever date drove it into its set, human-readable. */
-function detailFor(todo: SweptTodo, kind: "escalated" | "stirring" | "stale"): string {
+function detailFor(todo: SweptTodo, kind: "escalated" | "stirring" | "actionable" | "stale"): string {
   switch (kind) {
     case "escalated":
       return `due ${todo.due ?? "?"}`;
     case "stirring":
       return `started ${todo.start ?? "?"}`;
+    case "actionable":
+      return "agent follow-up";
     case "stale":
       return `created ${todo.created ?? "?"}`;
   }
 }
 
-export function toBriefItem(todo: SweptTodo, kind: "escalated" | "stirring" | "stale"): TodoReviewJobItem {
+export function toBriefItem(todo: SweptTodo, kind: "escalated" | "stirring" | "actionable" | "stale"): TodoReviewJobItem {
   const item: TodoReviewJobItem = {
     locator: formatTodoLocation(todo),
     text: todo.text,
@@ -156,7 +169,7 @@ async function sweptTodos(boxRoot: string, lastSweepEpoch: number): Promise<Swep
 }
 
 /**
- * The three sets for today. Pure over the box's files and the caller's
+ * The four sets for today. Pure over the box's files and the caller's
  * baseline: no lock, no state write. The caller (`review-check.ts`) holds the
  * sweep lock and decides when the baseline moves.
  */

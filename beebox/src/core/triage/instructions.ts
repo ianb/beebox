@@ -31,6 +31,9 @@ export interface TriageCategory {
   dir: string;
   /** `rules` text, trimmed; empty string if none. */
   rules: string;
+  /** Optional per-item agent follow-up question and its source landmark. */
+  todoQuestion?: string;
+  landmarkRef?: string;
   /**
    * The destination's handler procedure ref, or null if none. The triage
    * stage only needs to know the destination — the handle stage runs the
@@ -96,6 +99,7 @@ export async function compileTriageInstructions(
       name: deriveCategoryName(normalizedDir),
       dir: normalizedDir,
       rules: triageDest.rules?.trim() ?? "",
+      ...(triageDest["todo-question"] ? { todoQuestion: triageDest["todo-question"], landmarkRef: `/${relPath.split(path.sep).join("/")}` } : {}),
       procedureRef: triageDest.procedure?.ref ?? null,
     });
   }
@@ -113,7 +117,7 @@ export async function compileTriageInstructions(
 }
 
 /** Keep holding directory names identical across the legacy and Jev engines. */
-export function disambiguateCategoryNames(categories: TriageCategory[]): void {
+export function disambiguateCategoryNames(categories: Array<Pick<TriageCategory, "name" | "dir">>): void {
   // Detect name collisions: two landmarks both deriving to the same
   // category name. Disambiguate by appending the parent directory.
   const seen = new Map<string, number>();
@@ -145,6 +149,7 @@ function renderDoc(categories: TriageCategory[]): string {
     lines.push(`## \`${cat.name}\``);
     lines.push("");
     lines.push(`Directory: \`${cat.dir || "(box root)"}\``);
+    if (cat.todoQuestion) lines.push(`Todo question (answer yes/no for each item placed here): ${cat.todoQuestion}`);
     lines.push("");
     if (cat.rules) {
       lines.push("Rules:");

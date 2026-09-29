@@ -49,9 +49,11 @@ concrete mutation/replay contract settled before a final scope review.
 The boxholder required "no unadmitted box content", accepted temporary extraction
 with cleanup and ID-only pending records, and asked for understandable CLI
 operations. The boxholder now says a real box is already using triage and asks to
-look at Gmail, preparation, and test cleanup. The boxholder subsequently accepted todo annotation. Include it as a separate
-final design track: existing agent-assigned todos, preservation across connector
-refresh, and next-sweep pickup without fabricated deadlines.
+look at Gmail, preparation, and test cleanup. Connector todo preservation is
+deferred until Gmail enters staged triage. The accepted destination-question
+todo track is specified separately in
+[triage-todo-question.md](triage-todo-question.md); this Gmail plan does not
+implement or imply connector preservation.
 
 Keep the single overarching intake guide and landmark destination explanations.
 Admission answers relevance; destination selection answers placement. A relevant
@@ -109,7 +111,8 @@ bounded buffering proves inadequate. Do not write a MIME parser ourselves.
 - Tracked thread: existing connector identity and admitted conversation. Admission
   covers its history and future replies; no per-reply classifier gate is added.
 - Destination decision: the already-implemented admitted-document judgment/receipt.
-- Agent todo: existing todo metadata; no new task type proposed.
+- Agent todo: existing todo metadata; no new task type proposed. Connector
+  metadata preservation remains deferred until Gmail enters staged triage.
 
 ## Tracks / scope
 
@@ -305,8 +308,10 @@ malformed structure and limits. No new testing tier or live provider golden labe
 2. Isolate the metadata reservation tests and verify the named test exits cleanly.
 3. Add the MIME decoder, then common temporary extraction and provenance tests.
 4. Integrate opt-in Gmail admission and ID-only state/review/retry operations.
-5. Complete the accepted todo track design, then implement annotation, connector
-   preservation and next-sweep selection with replay/retry regressions.
+5. Implement destination-question annotation and next-sweep selection under
+   [triage-todo-question.md](triage-todo-question.md), with replay/retry
+   regressions. Connector preservation stays deferred until Gmail enters
+   staged triage.
 6. Run audits, selected tests, cross-model finished-change review, and commit.
    Land only on a new explicit finish request.
 

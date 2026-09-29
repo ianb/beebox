@@ -4,6 +4,8 @@ import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { simpleGit } from "simple-git";
 import { withFileLock } from "../../../lib/file-lock.js";
+import { withCardLock } from "../../../lib/card-lock.js";
+import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withBoxGitLock, stageAndCommitPaths } from "../../../lib/git/core.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
@@ -12,6 +14,7 @@ import { createSelectQuestionTemplate } from "../../../schemas/question.js";
 import { verifyEvidence, type Evidence } from "../evidence/core.js";
 import { compileInstructionSnapshot } from "../snapshot.js";
 import { movePathPreservingAnnexSymlink } from "../../card-files/move-phase2.js";
+import { getTriageTodoDate, planTriageTodoAnnotation } from "../todo.js";
 import { decisionReceiptSchema, assertContained, receiptRef, receiptFingerprint, containedPath, readDecisionReceipt, saveDecisionReceipt, withDecisionReceiptLock, TriageReceiptError, type DecisionReceipt } from "./storage.js";
 
 async function exists(file: string): Promise<boolean> {
@@ -29,6 +32,12 @@ function movedRef(ref: string, receipt: DecisionReceipt): string {
   if (ref === from) return to;
   return ref;
 }
+function matchesRecordedDigest(input: { partRef: string; digest: string; receipt: DecisionReceipt; actualDigest: string }): boolean {
+  const { partRef, digest, receipt, actualDigest } = input;
+  if (actualDigest === digest) return true;
+  const annotation = receipt.application.todoAnnotation;
+  return annotation?.state === "pending" && partRef === receipt.evidence.source.ref && (actualDigest === annotation.beforeDigest || actualDigest === annotation.afterDigest);
+}
 async function validateBytes(boxRoot: string, receipt: DecisionReceipt): Promise<void> {
   const verifiedParts: Evidence["parts"] = [];
   const refs = [{ ref: receipt.evidence.source.ref, digest: receipt.evidence.source.digest }, ...receipt.evidence.parts];
@@ -43,7 +52,8 @@ async function validateBytes(boxRoot: string, receipt: DecisionReceipt): Promise
     if (oldPath !== newPath && oldExists && newExists) throw new TriageReceiptError({ detail: `Collision: both ${oldRef} and ${newRef} exist` });
     if (!oldExists && !newExists) throw new TriageReceiptError({ detail: `stale-decision: missing ${oldRef}; replay or repair the source` });
     const bytes = await fs.readFile(oldExists ? oldPath : newPath);
-    if (createHash("sha256").update(bytes).digest("hex") !== part.digest) throw new TriageReceiptError({ detail: `stale-decision: changed ${part.ref}; replay before applying` });
+    const actualDigest = hash(bytes);
+    if (!matchesRecordedDigest({ partRef: part.ref, digest: part.digest, receipt, actualDigest })) throw new TriageReceiptError({ detail: `stale-decision: changed ${part.ref}; replay before applying` });
   }
   for (const part of receipt.evidence.parts) {
     const target = movedRef(part.ref, receipt);
@@ -54,7 +64,14 @@ async function validateBytes(boxRoot: string, receipt: DecisionReceipt): Promise
   }
   const sourceRef = await exists(containedPath(boxRoot, receipt.application.to)) ? receipt.application.to : receipt.application.from;
   const attachmentRef = receipt.evidence.source.attachmentRef === null ? null : await exists(containedPath(boxRoot, attachDirFor(receipt.application.to))) ? attachDirFor(receipt.application.to) : attachDirFor(receipt.application.from);
-  await verifyEvidence(boxRoot, { ...receipt.evidence, source: { ...receipt.evidence.source, ref: sourceRef, attachmentRef }, parts: verifiedParts });
+  const evidence = { ...receipt.evidence, source: { ...receipt.evidence.source, ref: sourceRef, attachmentRef }, parts: verifiedParts };
+  if (receipt.application.todoAnnotation?.state === "pending") {
+    const sourcePart = verifiedParts.find((part) => part.ref === sourceRef);
+    const sourceDigest = hash(await fs.readFile(containedPath(boxRoot, sourceRef)));
+    if (sourcePart) sourcePart.digest = sourceDigest;
+    evidence.source.digest = sourceDigest;
+  }
+  await verifyEvidence(boxRoot, evidence);
 }
 async function repairMovedAnnexPaths(opts: { boxRoot: string; receipt: DecisionReceipt; storedReceipt: boolean }): Promise<void> {
   const { boxRoot, receipt, storedReceipt } = opts;
@@ -68,6 +85,18 @@ async function repairMovedAnnexPaths(opts: { boxRoot: string; receipt: DecisionR
   const newAttach = containedPath(boxRoot, attachDirFor(to));
   if (!await exists(oldAttach) && await exists(newAttach)) await movePathPreservingAnnexSymlink(oldAttach, newAttach);
 }
+function todoTrailers(receipt: DecisionReceipt): Record<string, string> {
+  const destinationRef = receipt.resolution?.destinationRef ?? receipt.judgment.destinationRef;
+  const todoDestination = receipt.instructions.destinations.find((destination) => destination.ref === destinationRef);
+  const todoAnswer = todoDestination?.todoQuestion ? receipt.judgment.todoAnswers?.[todoDestination.optionId] : undefined;
+  return {
+    "Triage-Todo": todoDestination?.todoQuestion ? todoAnswer === undefined ? "unavailable" : todoAnswer > 0.5 ? "yes" : "no" : "unasked",
+    "Triage-Todo-Question": todoDestination?.todoQuestion?.replace(/\s+/g, " ").trim() ?? "unasked",
+    "Triage-Todo-Probability": todoAnswer === undefined ? "unavailable" : String(todoAnswer),
+    "Triage-Todo-Source": todoDestination?.todoQuestion ? todoDestination.ref : "unasked",
+    "Triage-Todo-Annotation": receipt.application.todoAnnotation?.todoId ?? "none",
+  };
+}
 function trailers(receipt: DecisionReceipt): Record<string, string> {
   return {
     "Triage-Decision": receipt.id,
@@ -76,6 +105,7 @@ function trailers(receipt: DecisionReceipt): Record<string, string> {
     "Triage-Outcome": receipt.resolution?.destinationRef ?? receipt.judgment.destinationRef ?? receipt.judgment.outcome,
     "Triage-Probabilities": JSON.stringify(receipt.judgment.answer?.probabilities ?? null),
     "Triage-Confidence": String(receipt.judgment.answer?.confidence ?? "unavailable"),
+    ...todoTrailers(receipt),
     ...(receipt.originalDecisionId ? { "Triage-Corrects": receipt.originalDecisionId } : {}),
   };
 }
@@ -120,11 +150,62 @@ async function commitReceipt(boxRoot: string, receipt: DecisionReceipt): Promise
 function validateApplicationTarget(receipt: DecisionReceipt): void {
   const destinationRef = receipt.resolution?.destinationRef ?? receipt.judgment.destinationRef;
   const category = receipt.instructions.destinations.find((destination) => destination.ref === destinationRef)?.name ?? "_unsure";
-  const expectedTo = `/_content/inbox/triaged/${category}/${path.basename(receipt.evidence.source.ref)}`;
+    const expectedTo = `/_content/inbox/triaged/${category}/${path.basename(receipt.evidence.source.ref)}`;
   if (!/^[\w.-]+$/.test(category) || category === "." || category === "..") throw new TriageReceiptError({ detail: "Unsafe destination category" });
   const expectedQuestion = category === "_unsure" ? `/_bookkeeping/questions/Triage_${receipt.id}.question.card` : undefined;
   if (receipt.application.questionRef !== expectedQuestion) throw new TriageReceiptError({ detail: "Question ref does not match decision identity" });
   if (receipt.application.to !== expectedTo) throw new TriageReceiptError({ detail: "Receipt application target does not match destination" });
+}
+function selectedTodo(receipt: DecisionReceipt): { destinationRef: string; question: string; positive: boolean } | undefined {
+  const destinationRef = receipt.resolution?.destinationRef ?? receipt.judgment.destinationRef;
+  if (!destinationRef) return undefined;
+  const destination = receipt.instructions.destinations.find((candidate) => candidate.ref === destinationRef);
+  if (!destination?.todoQuestion) return undefined;
+  const answer = receipt.judgment.todoAnswers?.[destination.optionId];
+  if (answer === undefined) throw new TriageReceiptError({ detail: `Missing recorded todo answer for configured destination ${destinationRef}; make the evidence readable, then prepare and judge a new decision for the held item. Retrying this correction cannot supply the missing answer` });
+  return { destinationRef: destination.ref, question: destination.todoQuestion, positive: answer > 0.5 };
+}
+function hash(content: Buffer | string): string { return createHash("sha256").update(content).digest("hex"); }
+async function applyTodoAnnotation(boxRoot: string, receipt: DecisionReceipt): Promise<void> {
+  const selected = selectedTodo(receipt);
+  if (!selected?.positive) return;
+  const target = containedPath(boxRoot, receipt.application.to);
+  let annotation = receipt.application.todoAnnotation;
+  if (annotation?.state === "applied") return;
+  const current = await fs.readFile(target);
+  const currentDigest = hash(current);
+  if (annotation?.state === "pending" && currentDigest === annotation.afterDigest) {
+    annotation.state = "applied";
+    await saveDecisionReceipt(boxRoot, receipt);
+    return;
+  }
+  const created = annotation?.created ?? await getTriageTodoDate(boxRoot);
+  const plan = await planTriageTodoAnnotation({ file: target, boxRoot, destinationRef: selected.destinationRef, question: selected.question, created });
+  if (!annotation) {
+    annotation = { state: "pending", todoId: plan.todoId, beforeDigest: plan.beforeDigest, afterDigest: plan.afterDigest, created };
+    receipt.application.todoAnnotation = annotation;
+    await saveDecisionReceipt(boxRoot, receipt);
+  }
+  if (plan.todoId !== annotation.todoId || plan.beforeDigest !== annotation.beforeDigest || plan.afterDigest !== annotation.afterDigest || currentDigest !== annotation.beforeDigest) {
+    throw new TriageReceiptError({ detail: "Todo annotation target changed outside its recorded before/after bytes" });
+  }
+  await writeFileAtomic(target, { content: plan.after });
+  annotation.state = "applied";
+  await saveDecisionReceipt(boxRoot, receipt);
+}
+async function hasCommittedTodoAnnotation(boxRoot: string, receipt: DecisionReceipt): Promise<boolean> {
+  const annotation = receipt.application.todoAnnotation;
+  if (!annotation) return false;
+  const git = simpleGit(boxRoot);
+  const found = (await git.raw(["log", "--all-match", "--format=%H", "--fixed-strings", "--grep", `Triage-Decision: ${receipt.id}`, "--grep", `Triage-Todo-Annotation: ${annotation.todoId}`])).trim();
+  const relative = path.relative(boxRoot, containedPath(boxRoot, receipt.application.to));
+  for (const revision of found ? found.split("\n") : []) {
+    try {
+      const bytes = await git.binaryCatFile(["blob", `${revision}:${relative}`]);
+      if (hash(bytes) === annotation.afterDigest) return true;
+    } catch (_error) { /* Older application commits may not contain the routed target yet. */ }
+  }
+  return false;
 }
 async function validateInstructionState(opts: { boxRoot: string; receipt: DecisionReceipt; storedReceipt: boolean }): Promise<void> {
   const { boxRoot, receipt, storedReceipt } = opts;
@@ -153,7 +234,11 @@ export async function applyDecision(opts: { boxRoot: string; decision: DecisionR
   const lockDir = path.join(boxRoot, ".beebox/locks");
   await fs.mkdir(lockDir, { recursive: true });
   const key = createHash("sha256").update(JSON.stringify([preview.evidence.source.ref, preview.evidence.source.digest, preview.evidence.parts.map((p) => [p.ref, p.digest])])).digest("hex");
-  return withFileLock({ lockPath: path.join(lockDir, `triage-${key}`), metadata: { decision: preview.id }, waitMs: 10_000 }, () => withDecisionReceiptLock({ boxRoot, id: preview.id, fn: () => withBoxGitLock(boxRoot, async () => {
+  const target = containedPath(boxRoot, preview.application.to);
+  return withFileLock({ lockPath: path.join(lockDir, `triage-${key}`), metadata: { decision: preview.id }, waitMs: 10_000 }, async () => {
+    return withCardLock(target, async () => {
+      return withDecisionReceiptLock({ boxRoot, id: preview.id, fn: async () => {
+        return withBoxGitLock(boxRoot, async () => {
     let receipt = preview;
     let storedReceipt = false;
     try {
@@ -162,6 +247,13 @@ export async function applyDecision(opts: { boxRoot: string; decision: DecisionR
       receipt = stored;
       storedReceipt = true;
     } catch (error) { if (errnoCode(error) !== "ENOENT") throw error; /* First application has no stored receipt. */ }
+    if (storedReceipt && receipt.application.state === "applied" && receipt.application.todoAnnotation?.state === "applied") {
+      if (await hasCommittedTodoAnnotation(boxRoot, receipt)) return receipt;
+      const current = await fs.readFile(containedPath(boxRoot, receipt.application.to));
+      if (hash(current) !== receipt.application.todoAnnotation.afterDigest) throw new TriageReceiptError({ detail: "Todo annotation is recorded applied but its provenance commit is missing and the card has since changed" });
+      await commitReceipt(boxRoot, receipt);
+      return receipt;
+    }
     await validateApplication(boxRoot, { receipt, storedReceipt });
     await repairMovedAnnexPaths({ boxRoot, receipt, storedReceipt });
     await validateBytes(boxRoot, receipt);
@@ -170,7 +262,12 @@ export async function applyDecision(opts: { boxRoot: string; decision: DecisionR
     if (receipt.evidence.source.attachmentRef && from !== to && await exists(attachDirFor(from)) && await exists(attachDirFor(to))) throw new TriageReceiptError({ detail: "Attachment destination collision" });
     await saveDecisionReceipt(boxRoot, receipt);
     try {
-      await movePathPreservingAnnexSymlink(from, to);
+      const todo = selectedTodo(receipt);
+      if (todo?.positive && !receipt.application.todoAnnotation) {
+        const preflightFile = await exists(from) ? from : to;
+        await planTriageTodoAnnotation({ file: preflightFile, boxRoot, destinationRef: todo.destinationRef, question: todo.question, created: await getTriageTodoDate(boxRoot) });
+      }
+      if (await exists(from)) await movePathPreservingAnnexSymlink(from, to);
       if (receipt.evidence.source.attachmentRef && (await exists(attachDirFor(from)) || await exists(attachDirFor(to)))) await movePathPreservingAnnexSymlink(attachDirFor(from), attachDirFor(to));
       await writeQuestion(boxRoot, receipt);
       await fs.rm(`${from}.probable.txt`, { force: true });
@@ -178,12 +275,19 @@ export async function applyDecision(opts: { boxRoot: string; decision: DecisionR
       delete receipt.application.error;
       await saveDecisionReceipt(boxRoot, receipt);
       await commitReceipt(boxRoot, receipt);
+      if (todo?.positive) {
+        await applyTodoAnnotation(boxRoot, receipt);
+        await commitReceipt(boxRoot, receipt);
+      }
       return receipt;
     } catch (error) {
       receipt.application.state = "incomplete";
       receipt.application.error = errorMessage(error);
       await saveDecisionReceipt(boxRoot, receipt);
-      throw new TriageReceiptError({ detail: `Incomplete decision ${receipt.id}; retry apply: ${errorMessage(error)}` });
+      throw new TriageReceiptError({ detail: `Incomplete decision ${receipt.id}: ${errorMessage(error)}` });
     }
-  }) }));
+        });
+      } });
+    });
+  });
 }

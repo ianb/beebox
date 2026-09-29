@@ -77,6 +77,7 @@ const DecisionSchema = z.object({
   category: z.string().nullable(),
   confidence: z.enum(["confident", "probable", "guess"]),
   reason: z.string(),
+  todo: z.boolean().optional(),
 });
 
 const TriageResponseSchema = z.object({
@@ -95,6 +96,7 @@ export function buildTriageSystemPrompt(instructions: CompiledTriageInstructions
     "- `confident` — the rules clearly say this item belongs in the chosen category. No further review needed.",
     "- `probable` — the rules likely fit, but it's a judgment call worth flagging for review.",
     "- `guess` — you don't have enough signal to commit. Set `category` to null. The boxholder will be asked.",
+    "For a chosen category with a todo question, answer its question for this item and include `todo: true` or `todo: false` in that decision. Omit `todo` when the chosen category has no todo question.",
     "",
     "Return ONE decision per item, in the same order as the input list. Do not invent categories — only the names listed below are valid.",
     "",
@@ -115,7 +117,7 @@ function userPrompt(items: StagedItem[]): string {
     lines.push("");
   }
   lines.push(
-    "Return a JSON object `{ decisions: [...] }` with one decision per item, in input order.",
+    "Return a JSON object `{ decisions: [...] }` with one decision per item, in input order. A decision is `{file, category, confidence, reason, todo?}`.",
   );
   return lines.join("\n");
 }
@@ -193,7 +195,7 @@ export async function runTriage(options: RunTriageOptions): Promise<TriageResult
         reason: "Triage agent did not return a decision for this item.",
       };
     }
-    return d;
+    return { file: d.file, category: d.category, confidence: d.confidence, reason: d.reason, ...(d.todo === undefined ? {} : { todo: d.todo }) };
   });
 
   if (options.dryRun) {

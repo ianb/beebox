@@ -118,6 +118,7 @@ export type LandmarkNavigationData = z.infer<typeof LandmarkNavigation>;
 export const LandmarkDestination = z.object({
   for: z.array(z.string()),
   rules: z.string().optional(),
+  "todo-question": z.string().trim().min(1).optional(),
   procedure: z.object({ ref: z.string() }).optional(),
 });
 export type LandmarkDestinationData = z.infer<typeof LandmarkDestination>;
@@ -203,6 +204,8 @@ Add \`group: <title>\` to an \`expand\` to keep its matches grouped as a **colla
 **Don't add a description or purpose field.** A bookmark seen many times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs prose, write a doc card and link to it.
 
 ## \`destinations\` (agent-facing filing targets)
+
+An optional \`todo-question\` asks a yes/no question about each routed item. A yes adds an ordinary agent-assigned todo for the scheduled todo review; omit it for filing only. This does not authorize extra actions or run an agent immediately.
 
 For triage, destination rules explain scope and boundaries; \`_config/intake.guide.card\` governs decision policy. To repair a rule and test regressions, read \`node_modules/beebox/box-docs/triage-instructions.md\`.
 

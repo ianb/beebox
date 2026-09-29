@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { JEV_MAX_REQUEST_CHARS, JEV_MODEL } from "../../services/jev-wire.js";
-import { serializeJudgeRequest } from "../../services/jev-judge.js";
+import { serializeJudgeRequest, type JudgeResult } from "../../services/jev-judge.js";
 import type { JevService } from "../../services/jev.js";
 import { getBoxTime } from "../../lib/time.js";
 import { errorMessage } from "../../shared/error-guards.js";
@@ -14,6 +14,7 @@ import type { InstructionSnapshot } from "./snapshot.js";
 import { buildTriageRequest } from "./request.js";
 
 export const triageJudgmentSchema = z.object({
+  todoAnswers: z.record(z.string(), z.number().min(0).max(1)).optional(),
   outcome: z.enum(["destination", "no-match", "unclear"]), destinationRef: z.string().nullable(),
   requestHash: z.string().regex(/^[\da-f]{64}$/).nullable(), requestedModel: z.string().nullable(), returnedModel: z.string().nullable(),
   answer: z.object({ type: z.literal("choice"), choice: z.string(), confidence: z.number().min(0).max(1), probabilities: z.record(z.string(), z.number().min(0).max(1)) }).nullable(),
@@ -28,6 +29,7 @@ export type TriageJudgment = z.infer<typeof triageJudgmentSchema>;
 const failureMessages = {
   unavailable: "Evidence unavailable: prepare or research the source before judging",
   missing: "Jev returned no destination choice",
+  todo: "Jev returned a missing or invalid destination todo answer",
   distribution: "Jev returned an invalid destination distribution",
   sum: "Jev destination probabilities do not sum to one",
   unconfigured: "Jev is unconfigured",
@@ -59,6 +61,18 @@ function checkedRequest(options: JudgeItemOptions): ReturnType<typeof buildTriag
   return input;
 }
 
+/** Keep optional follow-up answers coupled to exactly the evaluated destinations. */
+function readTodoAnswers(instructions: InstructionSnapshot, result: JudgeResult): Record<string, number> | undefined {
+  const answers: Record<string, number> = {};
+  for (const destination of instructions.destinations) {
+    if (!destination.todoQuestion) continue;
+    const todo = result.answers[`todo_${destination.optionId}`];
+    if (todo?.type !== "noul" || !Number.isFinite(todo.probability) || todo.probability < 0 || todo.probability > 1) throw new TriageJudgmentError({ reason: "todo" });
+    answers[destination.optionId] = todo.probability;
+  }
+  return Object.keys(answers).length === 0 ? undefined : answers;
+}
+
 export async function judgeItem(boxRoot: string, options: JudgeItemOptions): Promise<TriageJudgment> {
   const input = checkedRequest(options);
   const serialized = serializeJudgeRequest(input);
@@ -74,6 +88,7 @@ export async function judgeItem(boxRoot: string, options: JudgeItemOptions): Pro
   try {
     const result = await service.jev.judge(input);
     await appendJevDebug(boxRoot, { ...log, model: result.model, answers: result.answers });
+    const todoAnswers = readTodoAnswers(options.instructions, result);
     const answer = result.answers["destination"];
     if (answer?.type !== "choice") throw new TriageJudgmentError({ reason: "missing" });
     const keys = [...options.instructions.destinations.map((destination) => destination.optionId), "no-match", "unclear"];
@@ -88,7 +103,7 @@ export async function judgeItem(boxRoot: string, options: JudgeItemOptions): Pro
     const destination = options.instructions.destinations.find((candidate) => candidate.optionId === winner);
     const outcome = destination === undefined ? winner === "no-match" ? "no-match" : "unclear" : "destination";
     const refs = options.instructions.sources.map((source) => source.ref).join(", ");
-    return triageJudgmentSchema.parse({ outcome, destinationRef: destination?.ref ?? null, requestHash: createHash("sha256").update(serialized).digest("hex"), requestedModel, returnedModel: result.model, answer,
+    return triageJudgmentSchema.parse({ outcome, destinationRef: destination?.ref ?? null, requestHash: createHash("sha256").update(serialized).digest("hex"), requestedModel, returnedModel: result.model, answer, todoAnswers,
       reason: { kind: "summary", text: `Classifier summary: ${destination?.ref ?? outcome}${winners.length > 1 ? " (tied leading options)" : ""}; leading probability ${highest.toFixed(3)}, confidence ${answer.confidence.toFixed(3)}; instructions: ${refs}.`, evidenceRefs: options.evidence.parts.map((part) => part.ref) },
     });
   } catch (error) {
