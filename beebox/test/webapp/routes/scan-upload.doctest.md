@@ -38,6 +38,17 @@ function pngBytes() {
     .toBuffer();
 }
 
+/** Real encoded fixtures exercise extension, magic, and complete decoder checks. */
+function webpBytes() {
+  return Sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 10, g: 20, b: 30 } } })
+    .webp().toBuffer();
+}
+
+function avifBytes() {
+  return Sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 10, g: 20, b: 30 } } })
+    .avif().toBuffer();
+}
+
 async function put(ctx, opts) {
   return ctx.request({
     method: "PUT",
@@ -157,6 +168,48 @@ JSON.stringify({ status: withProfile.statusCode, profile: profiled.profile })
 await ctx.cleanup();
 ```
 
+## WebP and AVIF uploads require matching bytes and a complete pixel decode
+
+The extension allowlist is intentionally relaxed for these formats, but every
+pair still has to match. file-type reports a valid AVIF with the generic HEIF
+major brand as `image/heif`; `.avif` accepts that container label and still
+requires Sharp to fully decode pixels, without requiring AVIF encoding support.
+
+```ts
+resetScanRateLimits();
+const ctx = await makeTestServer({ annexBox: true });
+const webp = await webpBytes();
+const avif = await avifBytes();
+const wrongWebp = await Sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 200, g: 10, b: 30 } } })
+  .webp().toBuffer();
+const validWebp = await put(ctx, { bytes: webp, filename: "Receipts_001.webp" });
+const validAvif = await put(ctx, { bytes: avif, filename: "Receipts_002.avif" });
+const wrongExtension = await put(ctx, { bytes: wrongWebp, filename: "Receipts_003.avif" });
+const truncated = await put(ctx, { bytes: avif.subarray(0, avif.length - 12), filename: "Receipts_004.avif" });
+JSON.stringify([
+  [validWebp.statusCode, validWebp.body.status],
+  [validAvif.statusCode, validAvif.body.status],
+  [wrongExtension.statusCode, wrongExtension.body.reason],
+  [truncated.statusCode, truncated.body.status, truncated.body.reason.startsWith("the image could not be decoded")],
+])
+=> [[200,"accepted"],[200,"accepted"],[422,"magic bytes say image/webp but the extension is .avif"],[422,"rejected",true]]
+```
+
+Changing a valid AVIF's major brand to `mif1` makes file-type report HEIF. The
+same valid AV1 image remains accepted through full pixel decode.
+
+```ts continue
+const mif1 = Buffer.from(avif);
+mif1.write("mif1", 8);
+const branded = await put(ctx, { bytes: mif1, filename: "Receipts_005.avif" });
+JSON.stringify([branded.statusCode, branded.body.status, branded.body.reason])
+=> [200,"accepted",null]
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
 ## A hash that already imported answers `imported`, and a PUT of it is a duplicate
 
 `imported` comes from the box's upload ledger, not from quarantine — that is how
@@ -250,7 +303,7 @@ An extension outside the accepted set never gets as far as a sniff:
 const otherBytes = Buffer.concat([png, Buffer.from("tail")]);
 const zip = await put(ctx, { bytes: otherBytes, filename: "Scans.zip" });
 JSON.stringify({ status: zip.statusCode, reason: zip.body.reason })
-=> {"status":422,"reason":"extension .zip is not accepted (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff)"}
+=> {"status":422,"reason":"extension .zip is not accepted (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)"}
 ```
 
 A rejected hash is *kept* — the file stays in quarantine for the question card,
@@ -413,7 +466,7 @@ JSON.stringify({
   blank: blank.statusCode,
   traversal: [traversal.statusCode, traversal.body.reason],
 })
-=> {"missing":[400,"X-Upload-Filename header required"],"blank":400,"traversal":[422,"the file has no extension (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff)"]}
+=> {"missing":[400,"X-Upload-Filename header required"],"blank":400,"traversal":[422,"the file has no extension (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)"]}
 ```
 
 `check` validates its batch the same way — a malformed hash or an over-cap batch

@@ -19,9 +19,9 @@ import { Heading } from "../ui/Heading";
 
 /** Sibling renders this page section can link to, resolved by the container. */
 export interface PageSectionAssets {
-  /** Image URL of `page-NNN.avif` for this page, or null when absent. */
+  /** Image URL of a `page-NNN.webp` or existing `.avif` render, or null when absent. */
   pageRender: string | null;
-  /** Image URL of `figure-NNN.avif` by 0-based picture index, for the ones present. */
+  /** Image URL of a `figure-NNN.webp` or existing `.avif` by 0-based picture index. */
   figures: Map<number, string>;
 }
 

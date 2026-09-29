@@ -14,7 +14,7 @@
  */
 
 import type { SDKUserMessage, SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
-import * as fs from "node:fs/promises";
+import type { query as ClaudeQuery } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { MODEL_ID } from "../shared/model-ids.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
@@ -22,6 +22,7 @@ import { buildScriptEnv } from "../core/script-env/core.js";
 import { dropUndefined } from "../lib/drop-undefined.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { isRecord } from "../shared/is-record.js";
+import { readScanVisionImage, type ScanVisionImageInput } from "../core/describe-images/image-input.js";
 import {
   assertBatchAlignment,
   buildScanPrompt,
@@ -37,6 +38,8 @@ import {
 } from "./scan-vision.js";
 
 const MAX_TURNS = 8;
+
+export type ClaudeQueryFunction = typeof ClaudeQuery;
 
 const slotSchema = z.object({
   slot: z.int(),
@@ -219,7 +222,14 @@ function isTransientClaudeFailure(text: string): boolean {
   return /rate.?limit|overloaded|529|429/iu.test(text);
 }
 
-export function createClaudeScanVision({ boxRoot }: { boxRoot: string }): ScanVisionService {
+export function createClaudeScanVision({
+  boxRoot,
+  query: queryOverride,
+}: {
+  boxRoot: string;
+  /** Injectable at the provider boundary so wire payloads can be tested without a live call. */
+  query?: ClaudeQueryFunction | undefined;
+}): ScanVisionService {
   return {
     backend: "claude",
     // Measured at 3 (scratch/model-comparison/run-batch3.ts): completeness
@@ -227,13 +237,14 @@ export function createClaudeScanVision({ boxRoot }: { boxRoot: string }): ScanVi
     // preamble amortizes over 3 pages.
     batchSize: 3,
     async analyzeBatch(args): Promise<ScanVisionResult> {
-      const images = [];
+      const images: Array<{ data: string; mediaType: ScanVisionImageInput["mediaType"] }> = [];
       for (const imagePath of args.imagePaths) {
-        images.push((await fs.readFile(imagePath)).toString("base64"));
+        const image = await readScanVisionImage(imagePath);
+        images.push({ data: image.data.toString("base64"), mediaType: image.mediaType });
       }
       const text = buildScanPrompt(args.boxholderContext) + "\n" + CLAUDE_SCAN_NOTE;
 
-      const result = await runScanQuery({ boxRoot, text, images });
+      const result = await runScanQuery({ boxRoot, text, images, query: queryOverride });
       const usage = toBatchUsage(result);
       const costUsd = result.total_cost_usd;
 
@@ -296,10 +307,12 @@ async function runScanQuery({
   boxRoot,
   text,
   images,
+  query: queryOverride,
 }: {
   boxRoot: string;
   text: string;
-  images: string[];
+  images: Array<{ data: string; mediaType: ScanVisionImageInput["mediaType"] }>;
+  query?: ClaudeQueryFunction | undefined;
 }): Promise<SDKResultMessage> {
   // CLAUDECODE is unset so the SDK can run nested inside Claude Code;
   // buildScriptEnv strips ANTHROPIC_API_KEY to force subscription auth
@@ -314,8 +327,8 @@ async function runScanQuery({
       content: [
         { type: "text", text },
         ...images.map(
-          (data) =>
-            ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data } }) as const
+          ({ data, mediaType }) =>
+            ({ type: "image", source: { type: "base64", media_type: mediaType, data } }) as const
         ),
       ],
     },
@@ -329,7 +342,7 @@ async function runScanQuery({
   try {
     // Dynamic — see `core/agent/stream.ts`: keeps the Agent SDK out of the
     // startup graph of every `bbx` invocation that never asks for vision.
-    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+    const query = queryOverride ?? (await import("@anthropic-ai/claude-agent-sdk")).query;
     const q = query({
       prompt: prompt(),
       options: {

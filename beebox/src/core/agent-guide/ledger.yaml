@@ -1050,6 +1050,13 @@ rows:
     reason: The pointer at the moment of the decision; `_config/schemas/` was the old home and is still the guess, and a schema left there is silently ignored.
     audits: [create-new-card-type, box-packageify-schemas-location]
     mechanics: box-docs/schemas.md
+  - id: card-types.pdf-image-formats
+    rule: New PDF page and figure images are WebP; older AVIF images remain readable without conversion, and the attached original is preserved. Use the PDF card's `?page=N` link for a durable page reference because reanalysis can replace generated image filenames.
+    handle: CARD_TYPES
+    bin: indirect
+    reason: Applies only when working with a PDF card; its schema instructions carry the formats, original-preservation rule, and durable page-link guidance when that card type is in play.
+    audits: [pdf-image-formats]
+    mechanics: src/schemas/pdf.ts
 
   # --- PROVENANCE ---
   - id: provenance.two-tags

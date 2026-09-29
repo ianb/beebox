@@ -21,12 +21,12 @@
  * fail instead of silently misattaching every later page.
  */
 
-import { promises as fs } from "node:fs";
 import ky from "ky";
 import { z } from "zod";
 import { isRecord } from "../../shared/is-record.js";
 import { OPENROUTER_BASE_URL, openRouterProvider } from "../openrouter.js";
-import { getMimeType, GeminiEmptyResponseError, parseGeminiJsonArray } from "./helpers.js";
+import { GeminiEmptyResponseError, parseGeminiJsonArray } from "./helpers.js";
+import { readScanVisionImage } from "./image-input.js";
 import {
   assertBatchAlignment,
   buildScanPrompt,
@@ -51,12 +51,12 @@ export async function analyzeScanBatchWithOpenRouter(
 ): Promise<{ analyses: RawScanAnalysis[]; usage: BatchUsage | null }> {
   const imageParts = [];
   for (const imgPath of imagePaths) {
-    const imgData = await fs.readFile(imgPath);
+    const imgData = await readScanVisionImage(imgPath);
     // OpenAI's image part takes a data URI, where Gemini takes the MIME type
     // and the base64 as separate fields.
     imageParts.push({
       type: "image_url" as const,
-      image_url: { url: `data:${getMimeType(imgPath)};base64,${imgData.toString("base64")}` },
+      image_url: { url: `data:${imgData.mediaType};base64,${imgData.data.toString("base64")}` },
     });
   }
 

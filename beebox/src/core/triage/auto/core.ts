@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { getBoxDir } from "../../../lib/paths/core.js";
 import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { InvariantError } from "../../../shared/invariant.js";
-import { prepareItem } from "../evidence.js";
+import { prepareItem } from "../evidence/core.js";
 import { compileInstructionSnapshot } from "../snapshot.js";
 import { judgeItem, TriageBudgetError, type TriageJudgment } from "../judge.js";
 import { withTriageAllowance, TriageAllowanceError } from "../allowance.js";
@@ -28,14 +28,14 @@ async function processItem(options: RunJevOptions, context: { sourceRef: string;
   const { boxRoot } = options;
   const prepare = options.prepare ?? prepareItem;
   const judge = options.judge ?? judgeItem;
-  let evidence = await prepare({ boxRoot, sourceRef: context.sourceRef });
   let instructions = await compileInstructionSnapshot(boxRoot);
+  let evidence = await prepare({ boxRoot, sourceRef: context.sourceRef, instructions });
   let judgment = evidence.status === "unavailable" ? unreadableJudgment() : await judge(boxRoot, { evidence, instructions });
   if (!options.dryRun && judgment.outcome !== "destination") {
     const researched = await (options.research ?? researchItem)({ boxRoot, evidence, instructions, env: context.env });
     // An agent can improve evidence or rules even when its bounded run ends unresolved.
-    evidence = await prepare({ boxRoot, sourceRef: context.sourceRef });
     instructions = await compileInstructionSnapshot(boxRoot);
+    evidence = await prepare({ boxRoot, sourceRef: context.sourceRef, instructions });
     judgment = evidence.status === "unavailable" ? unreadableJudgment() : await judge(boxRoot, { evidence, instructions });
     if (researched) judgment = { ...judgment, reason: {
       kind: judgment.reason.kind,

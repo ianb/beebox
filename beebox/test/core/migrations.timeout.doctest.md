@@ -23,9 +23,21 @@ async function preparedBox() {
   return box;
 }
 const waitForAbort = (signal) => signal.aborted ? Promise.resolve() : new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
-function alive(pid) {
-  try { process.kill(pid, 0); return true; }
-  catch (error) { if (error.code === "ESRCH") return false; throw error; }
+async function stopped(pid) {
+  const deadline = Date.now() + 2000;
+  while (true) {
+    try { process.kill(pid, 0); }
+    catch (error) { if (error.code === "ESRCH") return true; throw error; }
+    const state = execFileSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" }).trim();
+    // A zombie has exited and cannot continue executing; init may reap it
+    // shortly after the process-group SIGKILL reaches it.
+    if (!state || state.startsWith("Z")) return true;
+    if (Date.now() >= deadline) {
+      console.error(`Migration test child ${String(pid)} remained in process state ${state} after SIGKILL`);
+      return false;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
 }
 function refs(box, prefix) {
   return execFileSync("git", ["for-each-ref", "--format=%(refname)", prefix], { cwd: box.root, encoding: "utf8" }).trim();
@@ -44,7 +56,7 @@ await sweepMigrations({ boxRoot: box.root, executionMs: 2000, runScript })
 => throws MigrationExecutionTimeoutError
 
 const pid = Number(await readFile(pidFile, "utf8"));
-JSON.stringify({ childAlive: alive(pid), phase: (await boxMaintenanceStatus(box.root)).phase, recorded: (await box.read(MANIFEST_PATH)).includes(PROBE), snapshot: refs(box, `refs/bbx/migrations/${PROBE}/snapshots/`).length > 0 })
+JSON.stringify({ childAlive: !(await stopped(pid)), phase: (await boxMaintenanceStatus(box.root)).phase, recorded: (await box.read(MANIFEST_PATH)).includes(PROBE), snapshot: refs(box, `refs/bbx/migrations/${PROBE}/snapshots/`).length > 0 })
 => {"childAlive":false,"phase":"exclusive","recorded":false,"snapshot":true}
 ```
 
