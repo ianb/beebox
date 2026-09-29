@@ -192,11 +192,10 @@ asked-at: 2026-07-10T09:00:00-07:00
 
 ## Intake Job
 
-An intake job groups items for triage. It has a `source`, a `priority`, and a list of item references (every job card on disk is pending; finishing a job deletes it):
+An intake job groups items for triage. It has a `priority`, a list of item references, and — when a connector-scoped wakeup made it — the `connector` (every job card on disk is pending; finishing a job deletes it):
 
 ```ts
 createIntakeJobTemplate({
-  source: "capture-connector",
   description: "Triage 2 new capture sessions",
   items: [
     "_content/inbox/capture-1/session.capture-session.card",
@@ -205,7 +204,6 @@ createIntakeJobTemplate({
 })
 =>
 ---
-source: capture-connector
 priority: normal
 description: Triage 2 new capture sessions
 items:
@@ -214,18 +212,18 @@ items:
 ---
 ```
 
-Supports `priority: "low"`:
+Supports `priority: "low"` and a `connector`:
 
 ```ts
 createIntakeJobTemplate({
-  source: "capture-connector",
+  connector: "raindrop",
   description: "Triage bookmarks",
   items: ["_content/inbox/bookmark.bookmark.card"],
   priority: "low",
 })
 =>
 ---
-source: capture-connector
+connector: raindrop
 priority: low
 description: Triage bookmarks
 items:

@@ -68,7 +68,6 @@ createQuestionFollowupJobTemplate({
 })
 =>
 ---
-source: question-answer
 description: "Follow up on answered question: What color?"
 question-ref:
   ref: _bookkeeping/questions/X.question.card
@@ -90,7 +89,6 @@ createQuestionFollowupJobTemplate({
 })
 =>
 ---
-source: question-answer
 description: "Follow up on answered question: What color?"
 question-ref:
   ref: _bookkeeping/questions/X.question.card

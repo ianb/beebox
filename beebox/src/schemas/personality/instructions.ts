@@ -25,17 +25,17 @@ working on?"
   aide"). About what the agent *does*, not what the box contains.
 - \`boxholder:\` — \`{relationships?}\`. Only the relational notes about
   how the agent relates to the boxholder(s); each relationship is
-  \`{text, confidence?, source?, ref?}\`. **Who** the boxholder is is NOT
+  \`{text, confidence?, basis?, ref?}\`. **Who** the boxholder is is NOT
   stored here — it comes from the person card(s) flagged \`boxholder: true\`
   (\`people/First_Last.person.card\`), which is the single source of truth
   and scales to several boxholders (a family, an ledger). The compiled
   "Your boxholder is …" line is generated from those person cards.
 - \`speaking-voice:\` — \`{model?, instructions?}\` for TTS in the chat
   frontend (see below).
-- \`tone:\` — array of \`{text, confidence?, source?, ref?}\` —
+- \`tone:\` — array of \`{text, confidence?, basis?, ref?}\` —
   instructions about how the agent writes (phrasing, formality,
   interaction style).
-- \`traits:\` — array of \`{text, confidence?, source?, ref?}\` —
+- \`traits:\` — array of \`{text, confidence?, basis?, ref?}\` —
   personality traits.
 - \`unresolved:\` — array of free-form notes about open questions.
 - \`experiments:\` and \`context-notes:\` — same shape as guide cards. An
@@ -80,7 +80,7 @@ lilt; pause briefly before names") rather than abstract ("be friendly").
 ## Evidence model
 
 Same as guides (\`card-guide.md\`, which also caps what the retrospective
-infers) — confidence (hypothesis → confirmed), source
+infers) — confidence (hypothesis → confirmed), basis
 (user-stated > feedback > inferred > default). Applies to traits, tone
 instructions, and boxholder relationship notes.
 

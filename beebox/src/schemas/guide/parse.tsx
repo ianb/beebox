@@ -27,7 +27,7 @@ export function parseGuide(fields: GuideFields): ParsedGuide {
     triageRules: (fields["triage-rules"] ?? []).map((r) => ({
       text: r.text,
       confidence: r.confidence,
-      source: r.source,
+      basis: r.basis,
       ref: r.ref,
       action: r.action,
     })),

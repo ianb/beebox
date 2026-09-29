@@ -316,7 +316,7 @@ async function importPhotoSession(
     imageRefs,
     audioRefs: [],
     fileRefs,
-    source,
+    uploader: source,
   });
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
   filesToStage.push(sessionCardRelPath);

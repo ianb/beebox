@@ -29,7 +29,7 @@ Every answer therefore has up to two products:
 - **Directive effect** (`directive:`) — the concrete action the answer
   unblocks (move a file, pick a category, resolve an ambiguity).
 - **Durable learning** (`learning:`) — the belief the answer confirms or
-  denies, recorded in a knowledge sink as a `source: user-stated` fact. This
+  denies, recorded in a knowledge sink as a `basis: user-stated` fact. This
   reuses the evidence/confidence vocabulary from
   `docs/implemented-plans/box-retrospectives.md`: inferred beliefs cap at
   `medium` confidence; a question card answered by the boxholder *is* the
@@ -230,7 +230,7 @@ order:
 
 1. Execute `directive:` using `answer:`.
 2. **If `learning:` is present, record it** in `learning.sink` as a
-   `source: user-stated` belief — quote the answer, ref the question card
+   `basis: user-stated` belief — quote the answer, ref the question card
    (same evidence discipline as the retrospective's integrate step). A "no"
    is also learning: record the decline against the proposal rather than
    dropping it. For sink `briefing`, only the **root** briefing compiles
@@ -244,7 +244,7 @@ order:
    destination. Record it if it does; skip if it's genuinely a one-off (the
    common, correct outcome — not a failure).
 
-This is where `learning.sink`/`source: user-stated` actually lands: the
+This is where `learning.sink`/`basis: user-stated` actually lands: the
 follow-up job is the only writer of the belief, and it always writes with
 that source tag, never a higher-confidence one — a question answer is a
 boxholder statement, which is exactly what `user-stated` means in the retro

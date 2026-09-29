@@ -422,7 +422,7 @@ cron: 0 8 * * 1              # Mondays at 8am
 not-before: 3d              # skip if it already ran within 3 days
 runs: bbx procedure run weekly-digest
 description: Monday digest of the week's still-open threads
-source: Boxholder wanted a summary to start the week
+reason: Boxholder wanted a summary to start the week
 ---
 \`\`\`
 

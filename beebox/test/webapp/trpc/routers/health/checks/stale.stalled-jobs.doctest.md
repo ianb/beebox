@@ -15,7 +15,7 @@ import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
 import { createIntakeJobTemplate } from "../../../../../../src/schemas/intake-job.js";
 
 const job = (description: string) =>
-  createIntakeJobTemplate({ source: "test", description, items: [] });
+  createIntakeJobTemplate({ description, items: [] });
 
 // Matches the `YYYY-MM-DDTHH-MM-SS` stamp every job-card writer uses, built
 // relative to "now" so the doctest never goes stale as the calendar moves.

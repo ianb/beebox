@@ -1,20 +1,21 @@
 /**
  * Utilities for creating and appending to intake job cards.
  *
- * Connectors call createOrAppendIntakeJob() after creating inbox items.
- * If a pending intake job from the same source already exists, items
- * are appended to it rather than creating a new job.
+ * `bbx wakeup` and scan import call createOrAppendIntakeJob() for new inbox
+ * items. Items join the pending intake job with the same batching key,
+ * `(connector, priority)`, rather than starting a new job.
  *
- * The `source` value here doubles as the reactor's source filter key —
- * use the connector's canonical name (e.g. "gmail", "telegram"), not a
- * decorated form like "gmail-connector", or `bbx wakeup --connector X`
- * won't pick up the job it just created.
+ * `connector` is set only by a connector-scoped wakeup, and is the reactor's
+ * connector filter key: use the connector's canonical name (e.g. "gmail"), or
+ * `bbx wakeup --connector X` won't pick up the job it just created. Scan
+ * import has no connector; its items join the unscoped normal-priority job.
  *
- * The whole find/read/append/write span is serialized per source, because it is
- * a read-modify-write of one job card that two *processes* genuinely race: the
- * scan promote worker inside `bbx serve` appends a `scan` job while a wakeup's
- * connector sync appends its own — and an unlocked append re-reads, re-renders
- * and rewrites the card wholesale, so the loser's items vanish. Cross-process
+ * The whole find/read/append/write span is serialized per batching key,
+ * because it is a read-modify-write of one job card that two *processes*
+ * genuinely race: the scan promote worker inside `bbx serve` appends to the
+ * unscoped job while a full wakeup appends its own inbox items — and an
+ * unlocked append re-reads, re-renders and rewrites the card wholesale, so the
+ * loser's items vanish. Cross-process
  * → `file-lock.ts`; `withCardLock` on top for the in-process racers a PID-blind
  * file lock cannot see (both layers, same reasoning as question-transition.ts).
  */
@@ -38,31 +39,51 @@ class IntakeJobReadError extends Error {
 
 export interface IntakeJobOptions {
   boxRoot: string;
-  source: string;
+  /** The connector whose scoped wakeup found these items; unset otherwise. */
+  connector?: string | undefined;
   items: string[];
   priority?: "normal" | "low";
   description: string;
 }
 
 /**
- * Create a new intake job or append items to an existing pending one
- * from the same source. Returns the relative path to the job card.
+ * The filename stem for a new intake job: the connector's name, or `inbox`
+ * for an unscoped job, with `-low` for a low-priority one. Distinct per
+ * batching key, so two jobs created in the same second never share a name.
+ */
+function intakeJobStem(connector: string | undefined, priority: "normal" | "low"): string {
+  const base = connector === undefined ? "inbox" : safeStem(connector);
+  return priority === "low" ? `${base}-low` : base;
+}
+
+function safeStem(name: string): string {
+  return name.replace(/[^\dA-Za-z-]/g, "-");
+}
+
+/**
+ * Create a new intake job or append items to the existing pending one with
+ * the same `(connector, priority)`. Returns the relative path to the job card.
  */
 export async function createOrAppendIntakeJob(
   opts: IntakeJobOptions
 ): Promise<string> {
-  const safeSource = opts.source.replace(/[^\dA-Za-z-]/g, "-");
-  // Per-source: two sources never contend (each finds its own pending job), and
-  // narrowing the lock keeps a slow connector from blocking an unrelated one.
-  const lockPath = path.join(opts.boxRoot, ".beebox", "intake-job-locks", `${safeSource}.lock`);
+  const priority = opts.priority ?? "normal";
+  // Per batching key: two keys never contend (each finds its own pending job),
+  // and narrowing the lock keeps a slow connector from blocking an unrelated
+  // one. The `connector-` prefix keeps a connector named like the unscoped
+  // lock from sharing it.
+  const lockName = opts.connector === undefined
+    ? `unscoped-${priority}`
+    : `connector-${safeStem(opts.connector)}-${priority}`;
+  const lockPath = path.join(opts.boxRoot, ".beebox", "intake-job-locks", `${lockName}.lock`);
   await fs.mkdir(path.dirname(lockPath), { recursive: true });
   // The file lock is keyed on a path, not a card, so it doubles as the
   // in-process key: `withCardLock(lockPath, …)` serializes same-process racers
   // (which the PID-blind file lock cannot see) on exactly the same granularity.
   return withCardLock(lockPath, () =>
     withFileLock(
-      { lockPath, metadata: { purpose: "intake-job", source: opts.source } , waitMs: INTAKE_LOCK_WAIT_MS },
-      () => createOrAppendIntakeJobLocked(opts, safeSource),
+      { lockPath, metadata: { purpose: "intake-job", key: lockName }, waitMs: INTAKE_LOCK_WAIT_MS },
+      () => createOrAppendIntakeJobLocked(opts, priority),
     ),
   );
 }
@@ -73,13 +94,12 @@ const INTAKE_LOCK_WAIT_MS = 10_000;
 /** The find/read/append/write span itself; runs with both locks held. */
 async function createOrAppendIntakeJobLocked(
   opts: IntakeJobOptions,
-  safeSource: string,
+  priority: "normal" | "low",
 ): Promise<string> {
   const jobsDir = getBoxDir(opts.boxRoot, "jobs");
   await fs.mkdir(jobsDir, { recursive: true });
 
-  // Look for an existing pending intake job from the same source
-  const existing = await findExistingIntakeJob(jobsDir, opts.source);
+  const existing = await findExistingIntakeJob(jobsDir, { connector: opts.connector, priority });
 
   if (existing) {
     await appendToIntakeJob(existing.path, {
@@ -91,34 +111,35 @@ async function createOrAppendIntakeJobLocked(
 
   // Create a new job card
   const jobFilename = timestampedJobFilename(opts.boxRoot, {
-    stem: safeSource,
+    stem: intakeJobStem(opts.connector, priority),
     extension: "intake.job.card",
   });
   const jobPath = path.join(jobsDir, jobFilename);
 
-  const templateOpts: Parameters<typeof createIntakeJobTemplate>[0] = {
-    source: opts.source,
+  const content = createIntakeJobTemplate({
+    connector: opts.connector,
+    priority,
     description: opts.description,
     items: opts.items,
-  };
-  if (opts.priority) templateOpts.priority = opts.priority;
-  const content = createIntakeJobTemplate(templateOpts);
+  });
   await fs.writeFile(jobPath, content);
   return path.relative(opts.boxRoot, jobPath);
 }
 
 /**
- * Find an existing pending intake job card with a matching source. Returns the
- * absolute path wrapped in an object, or null when none exists.
+ * Find an existing pending intake job card with the same connector (or none)
+ * and priority. Returns the absolute path wrapped in an object, or null when
+ * none exists.
  */
 async function findExistingIntakeJob(
   jobsDir: string,
-  source: string
+  key: { connector: string | undefined; priority: "normal" | "low" }
 ): Promise<{ path: string } | null> {
   const found = await findPendingJobCard({
     jobsDir,
     suffix: ".intake.job.card",
-    match: (fields) => fields["source"] === source,
+    match: (fields) =>
+      fields["connector"] === key.connector && (fields["priority"] === "low" ? "low" : "normal") === key.priority,
   });
   return found === null ? null : { path: found };
 }

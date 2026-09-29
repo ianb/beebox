@@ -305,14 +305,14 @@ of them under one label.
 | recipe | `{label, href, ref}` | `sources: [...]` |
 | record | already `sources` | unchanged |
 | commentary | the annotated page URL | `about: { href }`; the commentary annotates the page, it is not derived from it |
-| contains-backfill-job, question-followup-job, todo-review-job | a constant: each type has exactly one producer; backfill uses it to avoid queuing a second job (`src/cli/commands/wakeup/steps.ts:384,436`) | removed; that check looks up pending jobs by type instead |
-| chat-job, intake-job | which connector or step created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | `connector: <name>` when a connector-scoped run made the job; absent otherwise (see *Job routing* below) |
+| contains-backfill-job, question-followup-job, todo-review-job | a constant: each type has exactly one producer; backfill uses it to avoid queuing a second job (`src/cli/commands/wakeup/steps.ts:384,436`) | removed; that check looks up pending jobs by type instead (built) |
+| chat-job, intake-job | which connector or step created the job; also a routing and dedup key (`src/core/reactor/job-discovery.ts:99`, `src/job-cards/intake-utils.ts:121`) | `connector: <name>` when a connector-scoped run made the job; absent otherwise (see *Job routing* below) (built) |
 | media references (image, file, pdf, audio) | capture channel | `filename.via.channel` |
 | feedback | `text` \| `voice` | `via: { channel }` |
-| guide, personality | belief basis (`user-stated`, `inferred`, …) | `basis` |
+| guide, personality | belief basis (`user-stated`, `inferred`, …) | `basis` (built) |
 | browser-task | URL where scanning starts | `start: { href }` |
-| capture-session | the uploader token name | `uploader` |
-| scheduled-script | why the schedule exists | `reason` |
+| capture-session | the uploader token name | `uploader` (built) |
+| scheduled-script | why the schedule exists | `reason` (built) |
 | tab-arrangement | the captured tabs before rearranging | `captured-tabs` |
 | image `text[].source` | the surface the text is printed on | `surface` |
 | memo | capture channel | removed with memo |

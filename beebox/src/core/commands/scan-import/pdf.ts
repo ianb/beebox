@@ -147,7 +147,7 @@ async function importPdfSession(
     imageRefs: [],
     audioRefs: [],
     fileRefs: [cardFilename],
-    source: args.source,
+    uploader: args.source,
   });
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
 

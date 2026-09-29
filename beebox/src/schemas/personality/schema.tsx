@@ -14,7 +14,7 @@ import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../../exports/cards.js";
 import {
   ConfidenceLevelSchema,
-  BeliefSourceSchema,
+  BeliefBasisSchema,
   experimentStageFields,
   experimentStateIssues,
 } from "../../guide-fields.js";
@@ -36,7 +36,7 @@ export { VOICE_MODELS, type VoiceModel, type PersonalityFields, type Boxholder }
 const RelationshipEntry = z.object({
   text: z.string(),
   confidence: ConfidenceLevelSchema.default("confirmed"),
-  source: BeliefSourceSchema.default("user-stated"),
+  basis: BeliefBasisSchema.default("user-stated"),
   ref: z.string().optional(),
 });
 
@@ -57,14 +57,14 @@ export const CompiledSpeakingVoiceSchema = z.object({
 const ToneInstruction = z.object({
   text: z.string(),
   confidence: ConfidenceLevelSchema.default("medium"),
-  source: BeliefSourceSchema.default("inferred"),
+  basis: BeliefBasisSchema.default("inferred"),
   ref: z.string().optional(),
 });
 
 const TraitEntry = z.object({
   text: z.string(),
   confidence: ConfidenceLevelSchema.default("medium"),
-  source: BeliefSourceSchema.default("inferred"),
+  basis: BeliefBasisSchema.default("inferred"),
   ref: z.string().optional(),
 });
 

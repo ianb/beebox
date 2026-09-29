@@ -225,9 +225,9 @@ export async function createChatJob(options: {
   boxRoot: string;
   threadRef: string;
   description: string;
-  source: string;
+  connector: string;
 }): Promise<string> {
-  const { boxRoot, threadRef, description, source } = options;
+  const { boxRoot, threadRef, description, connector } = options;
 
   const existing = await findExistingChatJob(boxRoot, threadRef);
   if (existing) return existing;
@@ -247,7 +247,7 @@ export async function createChatJob(options: {
   const content = createChatJobTemplate({
     description,
     threadRef,
-    source,
+    connector,
   });
   await fs.writeFile(jobPath, content);
   return path.relative(boxRoot, jobPath);

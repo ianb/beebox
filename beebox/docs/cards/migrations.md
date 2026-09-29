@@ -572,10 +572,24 @@ Part 3 of `docs/plans/standard-card-fields.md`. Per type:
 - audio: the same, from `filename.recorded`.
 - feedback: `source` (`text` or `voice`) becomes `via: { channel }`, in the
   place `source` held.
+- contains-backfill-job, question-followup-job, todo-review-job: the constant
+  `source` is dropped (a value other than the type's constant is dropped with
+  a warning).
+- chat-job: `source` becomes `connector`.
+- intake-job: `wakeup`, `wakeup-captures` and `scan` are dropped (the job
+  becomes unscoped); any other value becomes `connector`.
+- guide `triage-rules[]`, personality `boxholder.relationships[]`, `tone[]`
+  and `traits[]`: each entry's `source` becomes `basis`.
+- scheduled-script: `source` becomes `reason`.
+- capture-session: `source` becomes `uploader`.
 
-A card is failed, unchanged, when its `filename` is not a map, when it has
-both an old key and `via`, or when a media reference has only one of the two
-old keys. Idempotent. See `src/scripts/migrate/source-fields.ts`.
+Renamed keys keep their place. A card is failed, unchanged, when its
+`filename` is not a map, when it has both an old key and its new name (at any
+of the places above), or when a media reference has only one of the two old
+keys. A card keeps its line wrapping (see `applyFieldEdits`), so an unedited
+stock guide, personality or schedule becomes exactly the current template.
+Idempotent. See
+`src/scripts/migrate/source-fields.ts`.
 
 ## Manual runs (for debugging)
 

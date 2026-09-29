@@ -245,13 +245,13 @@ card.fields.filename.via.channel
 => scan-upload/laptop-scansnap
 
 const sessionCard = await box.read(result.data.sessionCardPath);
-sessionCard.includes("source: scan-upload/laptop-scansnap")
+sessionCard.includes("uploader: scan-upload/laptop-scansnap")
 => true
 ```
 
 Without it the pdf card keeps saying `scan-import` and the session card
-carries no `source` at all — the field means "came from somewhere identifiable",
-so an absent one is the honest answer:
+carries no `uploader` at all — no uploader sent the file, so an absent one is
+the honest answer:
 
 ```ts continue
 const plain = await makeTmpBox({ git: true });
@@ -259,7 +259,7 @@ const plainResult = await importPdf(plain, createFakeDocling({ markdown: "billed
 const plainDoc = await readPdfCard(plain);
 JSON.stringify([
   parseCardText(plainDoc.content, { source: plainDoc.rel, schemas }).fields.filename.via.channel,
-  (await plain.read(plainResult.data.sessionCardPath)).includes("source:"),
+  (await plain.read(plainResult.data.sessionCardPath)).includes("uploader:"),
 ])
 => ["scan-import",false]
 

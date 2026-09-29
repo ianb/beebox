@@ -5,7 +5,7 @@
  * capturing triage rules, named actions, experiments, reactions, and
  * context notes. Everything is structured metadata (the parser flattens it
  * into `ParsedGuide`), so it lives in YAML frontmatter; per-rule
- * confidence/source are just fields on each rule object.
+ * confidence/basis are just fields on each rule object.
  */
 
 import { z } from "zod";
@@ -13,8 +13,8 @@ import { cardSchema, type CardSchema } from "../../exports/cards.js";
 import {
   ConfidenceLevelSchema,
   type ConfidenceLevel,
-  BeliefSourceSchema,
-  type BeliefSource,
+  BeliefBasisSchema,
+  type BeliefBasis,
   type ExperimentOutcome,
   experimentStageFields,
   experimentStateIssues,
@@ -23,8 +23,8 @@ import {
 export {
   ConfidenceLevelSchema,
   type ConfidenceLevel,
-  BeliefSourceSchema,
-  type BeliefSource,
+  BeliefBasisSchema,
+  type BeliefBasis,
   ExperimentOutcomeSchema,
   type ExperimentOutcome,
 } from "../../guide-fields.js";
@@ -49,7 +49,7 @@ const ContextDuration = z.enum(["ongoing", "temporary", "past"]);
 const TriageRuleField = z.object({
   text: z.string(),
   confidence: ConfidenceLevelSchema.default("low"),
-  source: BeliefSourceSchema.default("inferred"),
+  basis: BeliefBasisSchema.default("inferred"),
   ref: z.string().optional(),
   action: z.string().optional(),
 });
@@ -117,11 +117,11 @@ A guide is a living document — the theory of the user. Treat it as a model to 
 
 For document triage, \`_config/intake.guide.card\` governs decisions while landmark destinations define filing boundaries. Before changing either, read \`node_modules/beebox/box-docs/triage-instructions.md\` and test a candidate against prior decisions.
 
-**Source hierarchy:** user-stated > feedback > inferred > default. A user-stated belief overrides anything inferred.
+**Basis hierarchy:** a belief's \`basis\` is what it rests on: user-stated > feedback > inferred > default. A user-stated belief overrides anything inferred.
 
 **Retrospective-inferred beliefs.** When enabled, the weekly \`process-retrospective\` mines past
 chat sessions and writes what it learned into personality/guide cards as
-\`source: inferred\` entries — treat those as the agent's own working hypotheses:
+\`basis: inferred\` entries — treat those as the agent's own working hypotheses:
 don't promote them past \`medium\`, and don't use them to contradict a
 \`user-stated\` belief (that takes the boxholder's say-so). The full
 confidence-ladder detail lives with the retrospective procedure; run reports are
@@ -131,7 +131,7 @@ in \`_content/reviews/retro/\`.
 
 **\`experiments\`** is a list of \`{ id, hypothesis?, approach?, observations?, conclusion? }\` plus its stage: a new entry is proposed; set \`active: true\` when you start running it; when it concludes, remove \`active\` and set \`outcome:\` to \`successful\`, \`unsuccessful\`, \`mixed\`, or \`inconclusive\` (with a \`conclusion\`). Never set both \`active\` and \`outcome\`. Concluded experiments stay in the card as history but are left out of agent context.
 
-**\`triage-rules\`** is a list of \`{ text, confidence, source, ref?, action? }\`. A rule's \`action\` names an entry in \`actions\`. \`default-action\` says what happens when no rule matches.
+**\`triage-rules\`** is a list of \`{ text, confidence, basis, ref?, action? }\`. A rule's \`action\` names an entry in \`actions\`. \`default-action\` says what happens when no rule matches.
 
 **\`actions\`** are named things the agent can do (proper nouns like "Write Brief", "Archive"). Each is \`{ name, when?, instructions? }\`.
 
@@ -157,7 +157,7 @@ export interface ParsedGuide {
   triageRules: Array<{
     text: string;
     confidence: ConfidenceLevel;
-    source: BeliefSource;
+    basis: BeliefBasis;
     ref: string | undefined;
     action: string | undefined;
   }>;

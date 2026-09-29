@@ -242,7 +242,7 @@ export function createInitialGuideTemplate(options: { name: string }): string {
     fields["triage-rules"] = seed.triageRules.map((text) => ({
       text,
       confidence: "low",
-      source: "default",
+      basis: "default",
     }));
   }
   fields["default-action"] = { action: seed.defaultAction.action, text: seed.defaultAction.text };

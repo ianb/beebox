@@ -203,7 +203,7 @@ const registryCtx: LoadCardContext = {
 };
 const content = createIntakeJobTemplate({
   created: "2026-06-09T00:00:00Z",
-  source: "gmail",
+  connector: "gmail",
   description: "Triage 1 inbox item",
   items: ["_content/inbox/a.memo.card"],
 });

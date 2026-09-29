@@ -72,7 +72,7 @@ export async function compileInstructionSnapshot(boxRoot: string, options?: Snap
     const trial = Boolean(options?.guideOverlay);
     const rules = parsed.triageRules.filter((rule) => trial || rule.confidence !== "hypothesis");
     const usedActions = new Set([...rules.map((rule) => rule.action), parsed.defaultAction?.action]);
-    policy = compileGuide({ ...parsed, triageRules: rules.map((rule) => ({ ...rule, confidence: rule.confidence === "hypothesis" ? "low" : rule.confidence, text: `[source: ${rule.source}${rule.confidence === "hypothesis" ? "; trial hypothesis" : ""}] ${rule.text}` })), actions: parsed.actions.filter((action) => usedActions.has(action.name)), experiments: [], reactions: [] }, "intake");
+    policy = compileGuide({ ...parsed, triageRules: rules.map((rule) => ({ ...rule, confidence: rule.confidence === "hypothesis" ? "low" : rule.confidence, text: `[basis: ${rule.basis}${rule.confidence === "hypothesis" ? "; trial hypothesis" : ""}] ${rule.text}` })), actions: parsed.actions.filter((action) => usedActions.has(action.name)), experiments: [], reactions: [] }, "intake");
   }
   policy += "\nSource precedence: user-stated > feedback > inferred > default. Never weaken user-stated policy to satisfy an inferred rule. Unresolved conflicting instructions mean unclear. Landmark rules describe destination boundaries; the intake guide governs how to decide. Best effort is permitted when the policy explicitly allows it.";
   const overlays = new Map(Object.entries(options?.landmarkOverlays ?? {}).map(([ref, file]) => [canonicalRef(ref), file]));

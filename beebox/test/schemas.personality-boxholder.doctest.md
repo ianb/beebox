@@ -44,7 +44,7 @@ md.includes("Your boxholders are **Priya** (A), **Juniper**, and **Odette**.")
 
 ```ts
 const md = compilePersonality(
-  { ...base, boxholder: { relationships: [{ text: "Prefers terse replies", confidence: "confirmed", source: "user-stated" }] } },
+  { ...base, boxholder: { relationships: [{ text: "Prefers terse replies", confidence: "confirmed", basis: "user-stated" }] } },
   { boxholders: [] },
 );
 JSON.stringify([md.includes("Your boxholder"), md.includes("Prefers terse replies")])

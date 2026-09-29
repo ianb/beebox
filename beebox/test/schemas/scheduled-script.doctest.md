@@ -31,7 +31,7 @@ function makeScript(overrides) {
     once: false,
     enabled: true,
     runs: "echo test",
-    source: undefined,
+    reason: undefined,
     budget: undefined,
     ...overrides,
   };
@@ -371,7 +371,7 @@ createScheduledScriptTemplate({
   notBefore: "4h",
   onWakeup: true,
   runs: "bbx wakeup --connector rss",
-  source: "Check RSS feeds",
+  reason: "Check RSS feeds",
 })
 =>
 ---
@@ -379,7 +379,7 @@ cron: 0 6 * * *
 not-before: 4h
 on-wakeup: true
 runs: bbx wakeup --connector rss
-source: Check RSS feeds
+reason: Check RSS feeds
 ---
 
 ```

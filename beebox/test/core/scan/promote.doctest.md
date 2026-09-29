@@ -253,7 +253,8 @@ await box.cleanup();
 
 ## A failed wakeup keeps its marker, and the next pass clears it
 
-Connector-scoped scheduled wakeups never drain a `source: scan` job, so a lost
+Connector-scoped scheduled wakeups never drain a scan intake job (it has no
+`connector`), so a lost
 wakeup is indefinite rather than late. The marker is written before the run and
 survives a restart; every later pass retries it — but only a bounded number of
 times, and the outcome carries how long the caller should wait before the next

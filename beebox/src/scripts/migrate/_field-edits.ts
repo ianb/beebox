@@ -88,7 +88,12 @@ function insertAfter(doc: Document, edit: { path: ReadonlyArray<string | number>
 /**
  * Apply edits to the frontmatter's YAML text through the `yaml` document
  * model, so every untouched key keeps its exact formatting (line wrapping,
- * quoting, comments).
+ * quoting, comments). yaml does not keep a long plain value's original line
+ * breaks; it re-folds at its default width. That reproduces a card written
+ * by a default `stringify` (folded at 80 columns), but would fold every long
+ * value of a card written unwrapped (`renderFrontmatterBlock`, agents). So a
+ * frontmatter that yaml's defaults do not reproduce unchanged is written back
+ * unwrapped (`lineWidth: 0`).
  */
 export function applyFieldEdits(frontmatterText: string, edits: readonly FieldEdit[]): string {
   const doc = parseDocument(frontmatterText);
@@ -100,7 +105,8 @@ export function applyFieldEdits(frontmatterText: string, edits: readonly FieldEd
       doc.setIn(edit.path, edit.value);
     }
   }
-  return doc.toString();
+  const foldedByDefault = parseDocument(frontmatterText).toString().trimEnd() === frontmatterText.trimEnd();
+  return doc.toString(foldedByDefault ? {} : { lineWidth: 0 });
 }
 
 /**

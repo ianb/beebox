@@ -48,12 +48,12 @@ export interface ReactorOptions {
   /** Only process jobs of this type (e.g. "chat" matches *.chat.job.card) */
   type?: string | undefined;
   /**
-   * Only process jobs whose frontmatter `source:` matches this value. Used
+   * Only process jobs whose frontmatter `connector:` matches this value. Used
    * by `bbx wakeup --connector X` to drain just the jobs that the same
-   * partial run produced. Cross-cutting jobs (different source) are
-   * left for the next run that does match them.
+   * partial run produced. Other jobs (another connector's, or ones no
+   * connector made) are left for a run that does match them.
    */
-  sourceFilter?: string | undefined;
+  connectorFilter?: string | undefined;
   /** Reset all persisted chat sessions before processing */
   resetSessions?: boolean | undefined;
   onLog?: ((text: string) => void) | undefined;
@@ -103,7 +103,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     pollInterval,
     skipLowPriority,
     typeFilter,
-    sourceFilter,
+    connectorFilter,
     shouldResetSessions,
     onLog,
     agentFactory,
@@ -138,7 +138,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     sync,
     skipLowPriority,
     typeFilter,
-    sourceFilter,
+    connectorFilter,
     onLog,
     agentFactory,
     runSync,
@@ -213,7 +213,7 @@ interface NormalizedReactorOptions {
   pollInterval: number;
   skipLowPriority: boolean;
   typeFilter: string | undefined;
-  sourceFilter: string | undefined;
+  connectorFilter: string | undefined;
   shouldResetSessions: boolean;
   onLog: ((text: string) => void) | undefined;
   agentFactory: typeof realCreateAgent;
@@ -232,7 +232,7 @@ function normalizeReactorOptions(options: ReactorOptions): NormalizedReactorOpti
     pollInterval: options.pollInterval ?? 0,
     skipLowPriority: options.skipLowPriority ?? false,
     typeFilter: options.type,
-    sourceFilter: options.sourceFilter,
+    connectorFilter: options.connectorFilter,
     shouldResetSessions: options.resetSessions ?? false,
     onLog: options.onLog,
     agentFactory: options.createAgent ?? realCreateAgent,

@@ -153,14 +153,14 @@ steps:
               card, or question.
 
             STEP 3 - APPLY THE EVIDENCE MODEL (these are hard limits):
-            - New beliefs enter as source: inferred. Confidence by recurrence
+            - New beliefs enter as basis: inferred. Confidence by recurrence
               across DISTINCT sessions: 1 = hypothesis, 2-3 = low, 4+ = medium.
             - medium is the CEILING for inferred beliefs. Never exceed it;
               promotion beyond needs the boxholder (create a question card).
             - Strengthen an existing matching belief by AT MOST one notch when new
               distinct-session recurrence warrants it (respecting the ceiling) —
               never add a near-duplicate of a belief already in the cards.
-            - NEVER edit or remove a belief whose source is user-stated. If
+            - NEVER edit or remove a belief whose basis is user-stated. If
               evidence conflicts with one, create a question card with
               learning: {sink: guide or personality — wherever the belief
               lives, ref: that card, proposal: the conflicting claim}.

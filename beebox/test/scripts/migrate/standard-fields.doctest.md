@@ -103,11 +103,20 @@ run("question", { status: "pending", prompt: "Which one?" })
 ## Untouched keys keep their exact text
 
 Only the removed key's lines change; a long value folded at the `yaml`
-library's default width (how cards on disk were written), quoting, and a
-comment stay as they were.
+library's default width (how a default `stringify` wrote cards), quoting, and
+a comment stay as they were.
 
 ```ts
 const text = "status: draft\nname: Oak dresser\n# checked 2026-09\ndescription: A long description that was folded by an earlier writer at eighty\n  columns and should stay folded.\nnotes: \"quoted\"\n";
 JSON.stringify(applyFieldEdits(text, planStandardFields("record", parse(text)).edits))
 => "name: Oak dresser\n# checked 2026-09\ndescription: A long description that was folded by an earlier writer at eighty\n  columns and should stay folded.\nnotes: \"quoted\"\n"
+```
+
+A card written unwrapped (`renderFrontmatterBlock`, or an agent) stays
+unwrapped rather than being folded at 80 columns:
+
+```ts
+const unwrapped = "status: draft\nname: Oak dresser\ndescription: A long description written on one line by renderFrontmatterBlock, which never folds\n";
+JSON.stringify(applyFieldEdits(unwrapped, planStandardFields("record", parse(unwrapped)).edits))
+=> "name: Oak dresser\ndescription: A long description written on one line by renderFrontmatterBlock, which never folds\n"
 ```

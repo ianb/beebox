@@ -8,7 +8,7 @@
 import type { z } from "zod";
 import type {
   ConfidenceLevelSchema,
-  BeliefSourceSchema,
+  BeliefBasisSchema,
   ExperimentOutcomeSchema,
 } from "./guide-fields.js";
 
@@ -21,7 +21,7 @@ import { VOICE_MODELS, type VoiceModel } from "./shared/voice-models.js";
 export { VOICE_MODELS, type VoiceModel };
 
 type ConfidenceLevelType = z.infer<typeof ConfidenceLevelSchema>;
-type BeliefSourceType = z.infer<typeof BeliefSourceSchema>;
+type BeliefBasisType = z.infer<typeof BeliefBasisSchema>;
 type ExperimentOutcomeType = z.infer<typeof ExperimentOutcomeSchema>;
 
 /**
@@ -44,7 +44,7 @@ export interface PersonalityFields {
     relationships?: Array<{
       text: string;
       confidence?: ConfidenceLevelType;
-      source?: BeliefSourceType;
+      basis?: BeliefBasisType;
       ref?: string;
     }>;
   };
@@ -55,13 +55,13 @@ export interface PersonalityFields {
   tone?: Array<{
     text: string;
     confidence?: ConfidenceLevelType;
-    source?: BeliefSourceType;
+    basis?: BeliefBasisType;
     ref?: string;
   }>;
   traits?: Array<{
     text: string;
     confidence?: ConfidenceLevelType;
-    source?: BeliefSourceType;
+    basis?: BeliefBasisType;
     ref?: string;
   }>;
   unresolved?: string[];

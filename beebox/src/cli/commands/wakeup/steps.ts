@@ -185,11 +185,10 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
  * intake jobs for them. Returns the number of items covered.
  *
  * Under a full wakeup, scans all of `_content/inbox/` (skipping subdirs that
- * have their own pipelines) and tags intake jobs with `source="wakeup"`
- * / `source="wakeup-captures"`. Under a connector-scoped wakeup, scans
- * only `connector.inboxPaths` and tags jobs with the connector's name
- * as `source`, so the reactor's source filter routes them back to the
- * same partial run.
+ * have their own pipelines) and creates unscoped intake jobs (no
+ * `connector`). Under a connector-scoped wakeup, scans only
+ * `connector.inboxPaths` and tags jobs `connector: <name>`, so the
+ * reactor's connector filter routes them back to the same partial run.
  */
 export async function createIntakeJobsForUnjobbed(
   boxRoot: string,
@@ -217,18 +216,16 @@ export async function createIntakeJobsForUnjobbed(
     (p) => !lowPriority.includes(p)
   );
 
-  // Source naming: scoped wakeups use the connector name (so the reactor's
-  // source filter picks them up in the same run); full wakeups keep the
-  // historical "wakeup" / "wakeup-captures" pair.
-  const normalSource = connector ? connector.name : "wakeup";
-  const lowSource = connector ? connector.name : "wakeup-captures";
+  // Scoped wakeups tag jobs with the connector name, so the reactor's
+  // connector filter picks them up in the same run.
+  const connectorName = connector?.name;
 
   const jobPaths: string[] = [];
 
   if (normalPriority.length > 0) {
     await createBatchedIntakeJobs(boxRoot, {
       items: normalPriority,
-      source: normalSource,
+      connector: connectorName,
       priority: "normal",
       label: "inbox item",
       jobPaths,
@@ -238,7 +235,7 @@ export async function createIntakeJobsForUnjobbed(
   if (lowPriority.length > 0) {
     await createBatchedIntakeJobs(boxRoot, {
       items: lowPriority,
-      source: lowSource,
+      connector: connectorName,
       priority: "low",
       label: "capture item",
       jobPaths,
@@ -354,7 +351,7 @@ async function findUnjobbedInboxItems(
  */
 async function createBatchedIntakeJobs(
   boxRoot: string,
-  opts: { items: string[]; source: string; priority: "normal" | "low"; label: string; jobPaths: string[] }
+  opts: { items: string[]; connector: string | undefined; priority: "normal" | "low"; label: string; jobPaths: string[] }
 ): Promise<void> {
   const { items } = opts;
   const INTAKE_BATCH_SIZE = 10;
@@ -362,7 +359,7 @@ async function createBatchedIntakeJobs(
     const batch = items.slice(i, i + INTAKE_BATCH_SIZE);
     const jobPath = await createOrAppendIntakeJob({
       boxRoot,
-      source: opts.source,
+      connector: opts.connector,
       items: batch,
       priority: opts.priority,
       description: `Triage ${batch.length} ${opts.label}${batch.length === 1 ? "" : "s"}`,
@@ -373,8 +370,6 @@ async function createBatchedIntakeJobs(
 
 /** Cards per contains-backfill job; the next wakeup queues the next batch. */
 const CONTAINS_BACKFILL_BATCH = 25;
-
-const CONTAINS_BACKFILL_SOURCE = "contains-backfill";
 
 /**
  * Reconcile the box's search index with the card tree.
@@ -426,7 +421,7 @@ export async function refreshSearchIndex(boxRoot: string): Promise<boolean> {
  */
 export async function createContainsBackfillJob(boxRoot: string): Promise<number> {
   const jobsDir = getBoxDir(boxRoot, "jobs");
-  const pending = await findJobCards(jobsDir, { sourceFilter: CONTAINS_BACKFILL_SOURCE });
+  const pending = await findJobCards(jobsDir, { typeFilter: "contains-backfill" });
   if (pending.length > 0) return 0;
 
   const missing = listMissing(await loadContainsState(boxRoot));

@@ -80,7 +80,7 @@ export async function processWebhookUpdate(opts: {
       boxRoot,
       threadRef: result.threadRelPath,
       description: `New messages in ${slug}`,
-      source: "telegram",
+      connector: "telegram",
     });
     // SECOND commit site of the one logical webhook flow (see the thread commit
     // above and the chat-response commit in webapp/routes/telegram.ts).

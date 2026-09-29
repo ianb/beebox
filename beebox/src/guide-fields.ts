@@ -1,5 +1,5 @@
 /**
- * Shared guide vocabulary — confidence, belief source, and experiment outcome.
+ * Shared guide vocabulary — confidence, belief basis, and experiment outcome.
  * An experiment is proposed until it is `active: true`, and concluded once it
  * has an `outcome`; {@link experimentStateIssues} flags one that says both.
  * Extracted from `schemas/guide/schema.tsx` because `schemas/personality/`
@@ -20,13 +20,14 @@ export const ConfidenceLevelSchema = z.enum([
 ]);
 export type ConfidenceLevel = z.infer<typeof ConfidenceLevelSchema>;
 
-export const BeliefSourceSchema = z.enum([
+/** What a belief rests on, strongest first: the boxholder said it, feedback showed it, the agent inferred it, or it shipped as a default. */
+export const BeliefBasisSchema = z.enum([
   "user-stated",
   "feedback",
   "inferred",
   "default",
 ]);
-export type BeliefSource = z.infer<typeof BeliefSourceSchema>;
+export type BeliefBasis = z.infer<typeof BeliefBasisSchema>;
 
 /** How a concluded experiment turned out. */
 export const ExperimentOutcomeSchema = z.enum([
