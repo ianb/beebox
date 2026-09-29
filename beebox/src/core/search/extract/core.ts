@@ -341,7 +341,10 @@ function joinContent(parts: string[]): string {
  * 64+ char token (they're OCR mash like "ReturnOMB No.1545-00742025Dept..."),
  * and Orama's radix tree nests per character — runs past ~100 chars blow
  * msgpack's depth limit when the index persists.
+ *
+ * Exported for the chat-transcript extractor, whose chunk contents face the
+ * same radix-tree constraint.
  */
-function normalizeContent(text: string): string {
+export function normalizeContent(text: string): string {
   return text.trim().replace(/\S{64}/g, "$& ");
 }

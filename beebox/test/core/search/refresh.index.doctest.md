@@ -9,7 +9,7 @@ rebuilds silently.
 import { search } from "@orama/orama";
 import { rename, writeFile, readFile } from "node:fs/promises";
 import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
-import { searchIndexPath, searchLockPath, type SearchIndex } from "../../../src/core/search/store.js";
+import { searchIndexPath, searchLockPath, type SearchIndex } from "../../../src/core/search/store/core.js";
 import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 

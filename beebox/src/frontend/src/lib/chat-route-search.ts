@@ -21,4 +21,8 @@ export const chatSearchSchema = z.object({
   nativeComposer: z.union([z.literal("1"), z.literal(1)]).optional(),
   // Open capture mode on load — the `/capture` deep link redirects here.
   capture: z.union([z.literal("1"), z.literal(1)]).optional(),
+  // Land on a specific transcript entry (a chat-search result's anchor
+  // uuid). One-shot on load, like `companion` — never re-scrolled on
+  // refreshes. Ignored when the entry isn't in the transcript.
+  m: z.string().optional(),
 });

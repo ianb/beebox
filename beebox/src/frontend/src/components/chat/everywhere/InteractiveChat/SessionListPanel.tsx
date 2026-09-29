@@ -14,6 +14,12 @@
  * disambiguation. Clicking a row navigates to `/chat?session=<id>` so
  * ChatPage can route into it.
  *
+ * A search field across the top searches WHAT WAS SAID — the transcripts,
+ * not the labels (`chat.search`, docs/plans/chat-search.md). A result row
+ * opens the chat at the matching message (`&m=<entry uuid>`). While a query
+ * is active it replaces the grouped list; Escape (or clearing the field)
+ * restores it. The field and result rows live in `session-search.tsx`.
+ *
  * The list is landmark-aware but never landmark-*filtered*: the chats bound to
  * the landmark you're chatting in come first under its name, and everything
  * else follows under "Other chats", tagged with where it lives. Every chat in
@@ -32,21 +38,9 @@ import { getChatSessions, type ChatSessionInfo, type DeadChatInfo } from "../../
 import { groupByTranscriptState } from "../../../../lib/transcript-state";
 import { bbxSource } from "../../../../lib/source-tag";
 import { useDropdownClose } from "../../../ui/Dropdown";
+import { TextField } from "../../../ui/fields/field";
 import { layoutSessionList } from "./session-list-grouping";
-
-/**
- * Format a date string as relative time (e.g., "2h ago", "3d ago").
- */
-function relativeTime(dateStr: string): string {
-  const ms = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(ms / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+import { relativeTime, useChatSearch, ChatSearchRows } from "./session-search";
 
 type LoadState =
   | { kind: "loading" }
@@ -59,6 +53,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
   const search = useSearch({ strict: false }) as { session?: string };
   const currentSessionId = search.session ?? null;
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const chatSearch = useChatSearch();
 
   const load = useCallback(() => {
     setState({ kind: "loading" });
@@ -74,6 +69,54 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
     load();
   }, [load]);
 
+  return (
+    <>
+      <div className="border-b border-warm-100 p-2">
+        <TextField
+          label="Search chats"
+          hideLabel
+          type="search"
+          value={chatSearch.query}
+          onChange={(value) => chatSearch.setQuery(value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.stopPropagation();
+              chatSearch.setQuery("");
+            }
+          }}
+          placeholder="Search what was said…"
+        />
+      </div>
+      {chatSearch.active ? (
+        <ChatSearchRows
+          query={chatSearch.query}
+          state={chatSearch.state}
+          sessions={state.kind === "loaded" ? state.sessions : []}
+          boxSlug={boxSlug ?? ""}
+          currentSessionId={currentSessionId}
+          onRetry={() => chatSearch.retry()}
+        />
+      ) : (
+        <SessionListBody
+          state={state}
+          load={load}
+          contextDir={contextDir}
+          currentSessionId={currentSessionId}
+          boxSlug={boxSlug ?? ""}
+        />
+      )}
+    </>
+  );
+}
+
+/** The grouped session list plus its loading/error/empty states. */
+function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug }: {
+  state: LoadState;
+  load: () => void;
+  contextDir: string | null;
+  currentSessionId: string | null;
+  boxSlug: string;
+}) {
   if (state.kind === "loading") {
     return <div className="px-3 py-2 text-sm text-warm-500">Loading...</div>;
   }
@@ -81,7 +124,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
     return (
       <div className="px-3 py-2 text-sm text-danger-dark">
         Couldn&rsquo;t load chats.{" "}
-        <button id="bbx-session-list-retry" type="button" onClick={load} className="underline hover:no-underline">
+        <button id="bbx-session-list-retry" type="button" onClick={() => load()} className="underline hover:no-underline">
           Retry
         </button>
       </div>
@@ -103,7 +146,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
     sessions,
     contextDir: activeRow?.contextDir ?? contextDir,
   });
-  const rowProps = { boxSlug: boxSlug ?? "", currentSessionId };
+  const rowProps = { boxSlug, currentSessionId };
 
   return (
     <>
@@ -119,7 +162,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
           </SessionGroup>
         </>
       )}
-      <DeadSessionGroups dead={dead} boxSlug={boxSlug ?? ""} />
+      <DeadSessionGroups dead={dead} boxSlug={boxSlug} />
     </>
   );
 }

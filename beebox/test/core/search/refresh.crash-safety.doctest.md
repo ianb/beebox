@@ -18,7 +18,7 @@ import {
   indexUnchanged,
   createSearchIndex,
   type SearchIndex,
-} from "../../../src/core/search/store.js";
+} from "../../../src/core/search/store/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 async function find(db: SearchIndex, term: string): Promise<string> {
