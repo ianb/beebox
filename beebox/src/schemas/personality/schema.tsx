@@ -70,7 +70,6 @@ const TraitEntry = z.object({
 const ObservationEntry = z.object({
   text: z.string(),
   ref: z.string().optional(),
-  date: z.string().optional(),
 });
 
 const ExperimentEntry = z.object({

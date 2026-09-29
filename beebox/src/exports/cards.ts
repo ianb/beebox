@@ -10,7 +10,6 @@
 export {
   cardSchema,
   body,
-  extractRefs,
   isBodyField,
   GLOBAL_CARD_FIELDS,
   type BodyField,
@@ -29,6 +28,7 @@ export {
   type CardSubmissionResult,
   type SubmissionIssue,
 } from "../cards/schema.js";
+export { extractRefs } from "../cards/extract-refs.js";
 
 export {
   cardRef,

@@ -26,7 +26,6 @@ QuestionFollowupJobSchema.type
 ```ts
 QuestionFollowupJobSchema.frontmatterSchema.safeParse({
   type: "question-followup-job",
-  status: "pending",
   source: "question-answer",
   description: "Follow up",
   "question-ref": { ref: "_bookkeeping/questions/X.question.card" },
@@ -37,7 +36,6 @@ QuestionFollowupJobSchema.frontmatterSchema.safeParse({
 
 QuestionFollowupJobSchema.frontmatterSchema.safeParse({
   type: "question-followup-job",
-  status: "pending",
   source: "question-answer",
   description: "Follow up",
   "question-ref": { ref: "_bookkeeping/questions/X.question.card" },
@@ -49,7 +47,6 @@ QuestionFollowupJobSchema.frontmatterSchema.safeParse({
 
 QuestionFollowupJobSchema.frontmatterSchema.safeParse({
   type: "question-followup-job",
-  status: "pending",
   source: "question-answer",
   description: "Follow up",
   "question-ref": { ref: "_bookkeeping/questions/X.question.card" },
@@ -71,7 +68,6 @@ createQuestionFollowupJobTemplate({
 })
 =>
 ---
-status: pending
 source: question-answer
 description: "Follow up on answered question: What color?"
 question-ref:
@@ -94,7 +90,6 @@ createQuestionFollowupJobTemplate({
 })
 =>
 ---
-status: pending
 source: question-answer
 description: "Follow up on answered question: What color?"
 question-ref:

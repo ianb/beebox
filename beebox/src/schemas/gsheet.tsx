@@ -25,10 +25,9 @@ export const GsheetSchema = cardSchema("gsheet", {
   brief: "A synced Google Sheet",
   description: "A Google Sheets spreadsheet synced by the drive connector — tab data as attached JSON files, pushed back on sync",
   category: "synced",
+  requireTitle: true,
   fields: {
     "drive-id": z.string(),
-    status: z.enum(["synced", "error", "new"]).optional(),
-    title: z.string(),
     modified: z.string(),
     link: z.string(),
     owner: z.string(),
@@ -88,11 +87,9 @@ export function createGsheetTemplate(options: {
   owner: string;
   sheets: Array<{ ref: string; title: string; gid: string }>;
   commentsFile?: string | undefined;
-  status?: "synced" | "error" | "new";
 }): string {
   const fields: Record<string, unknown> = {
     "drive-id": options.driveId,
-    status: options.status === undefined ? "synced" : options.status,
     title: options.title,
     modified: options.modified,
     link: options.link,

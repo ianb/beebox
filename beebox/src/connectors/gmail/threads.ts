@@ -183,7 +183,6 @@ async function writeThreadCard(opts: {
     dateEnd: last.date,
     messageRefs: opts.refs.toSorted(),
     ...(labels.size === 0 ? {} : { labels: [...labels] }),
-    ...(opts.isNew ? { status: "new" } : {}),
   });
   const content = await preserveAgentFields(template, { existingPath: opts.cardPath });
   let existing: string | null = null;

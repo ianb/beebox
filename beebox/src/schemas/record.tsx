@@ -13,9 +13,6 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 
-const RecordStatusSchema = z.enum(["draft", "reviewed", "archived"]);
-export type RecordStatus = z.infer<typeof RecordStatusSchema>;
-
 /**
  * Where a record's claim came from. A source is either an in-box card
  * (`ref:`) or a page on the web (`href:`) — the same exclusive pair the
@@ -68,8 +65,9 @@ export const RecordSchema = cardSchema("record", {
   description: "A discrete extracted unit (inventory item, archived document, contact) pulled from a capture session or other source",
   category: "authored",
   fields: {
-    status: RecordStatusSchema.default("draft"),
     name: z.string(),
+    reviewed: z.boolean().optional(),
+    archived: z.boolean().optional(),
     description: z.string().optional(),
     sources: z.array(SourceEntry).optional(),
     dates: z.array(DateEntry).optional(),
@@ -140,10 +138,11 @@ item needs \`location\` and \`quantity\` but probably no body. A
 document archive entry needs a body and \`dates\` but maybe no
 \`measurements\`.
 
-Status lifecycle:
-- \`draft\` — Freshly extracted, may need human review.
-- \`reviewed\` — Human has verified the record is accurate.
-- \`archived\` — Record is finalized and stored long-term.`,
+A new record is unreviewed. Set \`reviewed: true\` only when the boxholder
+has verified it is accurate, and \`archived: true\` when the boxholder has
+finalized it for long-term storage. Leave both absent otherwise.`,
+  // A record is listed and found under its name.
+  summarize: (card, base) => ({ ...base, title: card.name }),
 });
 
 export type RecordFields = InferCardFields<typeof RecordSchema>;
@@ -155,7 +154,6 @@ export function createRecordTemplate(options: {
   sources?: Array<{ ref: string; text?: string | undefined }> | undefined;
 }): string {
   const fields: Record<string, unknown> = {
-    status: "draft",
     name: options.name,
   };
   if (options.description !== undefined && options.description !== "") {

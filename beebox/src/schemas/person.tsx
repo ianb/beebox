@@ -61,6 +61,8 @@ home for contact details that don't fit the three fields above.
   the person card if it doesn't exist.
 - When a person keeps coming up and you need a place to consolidate
   info about them.`,
+  // A person is listed and found under their name.
+  summarize: (card, base) => ({ ...base, title: card.name }),
 });
 
 export type PersonFields = InferCardFields<typeof PersonSchema>;

@@ -84,6 +84,8 @@ within its radius.
 
 **Filename convention:** \`places/<Name>.place.card\` — use the place's name,
 not a slug.`,
+  // A place is listed and found under its name.
+  summarize: (card, base) => ({ ...base, title: card.name }),
 });
 
 export type PlaceFields = InferCardFields<typeof PlaceSchema>;

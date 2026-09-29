@@ -73,7 +73,6 @@ export const CommentarySchema: CardSchema = cardSchema("commentary", {
     return commentaryErrors(typeof bodyText === "string" ? bodyText : "");
   },
   fields: {
-    title: z.string().optional(),
     // Captured-web-page metadata (set by the clerk capture flow): the original
     // page URL, the capture date (YYYY-MM-DD), and an in-box ref to the frozen
     // snapshot. Rendered as a header; all optional. `frozen` is a card ref —

@@ -16,7 +16,6 @@ export const ChatJobSchema = cardSchema("chat-job", {
   category: "system",
   searchable: false,
   fields: {
-    status: z.string().default("pending"),
     source: z.string(),
     description: z.string(),
     thread: cardRef(),
@@ -64,7 +63,6 @@ export function createChatJobTemplate(options: {
   source: string;
 }): string {
   const fields: Record<string, unknown> = {
-    status: "pending",
     source: options.source,
     description: options.description,
     thread: { ref: options.threadRef },

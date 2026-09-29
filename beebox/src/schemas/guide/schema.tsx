@@ -67,7 +67,6 @@ const ActionField = z.object({
 const ObservationField = z.object({
   text: z.string(),
   ref: z.string().optional(),
-  date: z.string().optional(),
 });
 
 const ExperimentField = z.object({
@@ -175,7 +174,6 @@ export interface ParsedGuide {
     observations: Array<{
       text: string;
       ref: string | undefined;
-      date: string | undefined;
     }>;
     conclusion: string | undefined;
   }>;

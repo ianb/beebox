@@ -76,7 +76,7 @@ export function createMyThingTemplate(options: { title: string }): string {
 
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
-- Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query/core.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
+- Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface (see [Adding a field](#adding-a-field); `requireTitle: true` makes `title` required, and `title` always leads the frontmatter). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query/core.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
 - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-in theme IDs and stocks; see [`docs/box/card-themes.md`](../box/card-themes.md) before adding a type preference with `cardSchema`'s `theme` option. Theme is a presentation override, not a new view or a replacement for the card's type fields.
 - `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
 - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is tolerated on read and must match the filename; templates may still emit it, and the serializer never writes it back.
@@ -306,6 +306,38 @@ registerFileType({ type: "my-thing" }, {
   listUI: { icon: CardIcon, ListComponent: MyThingListEntry },
 });
 ```
+
+## Adding a field
+
+Every field a schema adds costs something: agents fill it in because it is
+there, and readers expect it to mean something. Before adding one:
+
+1. **Name the consumer.** The same change adds the query, UI surface, or code
+   that reads the field. A field nothing reads is not added.
+2. **Don't use a reserved name.** Global field names (`title`, `contains`, …)
+   and the banned names `status`, `created`, `summary`, `date`, `modified` and
+   `source` are rejected: `reservedFieldProblems` (`src/cards/reserved-fields.ts`)
+   fails the built-in registry test (`test/cards/reserved-fields.doctest.md`)
+   and gives box-local schemas a `box-schema-fields` health warning. Each
+   message says what to write instead. To require a title, set
+   `requireTitle: true`; don't redeclare `title`.
+3. **Record the fact itself, not a lifecycle.** The result (`transcript`), the
+   failure (`transcription-error`), or a named boolean (`archived: true`),
+   not an enum a writer has to remember to move.
+4. **Times belong to media, external data, or the subject.** When a card was
+   written is git's job. A capture time goes on the media reference. Data
+   copied from an external system goes under a key named for that system
+   (`exif:`). A date that is part of the subject (when a bill is due) is
+   named for what it is (`due`), or listed in `dates:` with a `kind` each.
+5. **Don't do a global field's job.** No per-type title or summary field. To
+   derive a title from a data field (an email's subject, a person's name),
+   return it from `summarize`; a card's own `title:` still wins.
+6. **`description` means what the card's subject is or does**, for someone
+   who has not opened it: what an image shows, what a procedure does, what a
+   record's object is. `contains` is different: what the card holds. Narrow
+   `description` for a type only when necessary.
+7. **Pointers are `{ ref }` or `{ href }`.** A field that names a card, a file,
+   or a URL never holds a bare string.
 
 ## Mutating an Existing Frontmatter Card
 

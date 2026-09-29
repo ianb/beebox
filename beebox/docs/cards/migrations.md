@@ -500,6 +500,19 @@ attempt. The bootstrap path (everything v2-shape-aware) is scheduled for
 removal once the fleet has converged — see
 `issues/deferred/2026-09-04-remove-one-root-v2-bootstrap.md`.
 
+#### `standard-fields-2026-09` (strip — standard fields with no job)
+
+Part 1 of `docs/plans/standard-card-fields.md`. Drops `status` from job cards
+(always `pending`; a finished job is deleted), file, pub-submission,
+email-thread, gsheet and email-outbound; drops pub-submission `created` (and a leftover `created` on job cards), audio
+`summary`, and guide/personality observation `date`. A record's `status`
+becomes `reviewed: true` or `archived: true`, or is dropped when `draft`. The
+migrator fails a card, unchanged, when its value has no safe mapping: an
+email-outbound whose `status` is not `draft` (it would otherwise upload as a
+draft) or a record status outside the old enum. A non-empty audio `summary`
+is dropped with a warning; the transcript stays. Idempotent. See
+`src/scripts/migrate/standard-fields.ts`.
+
 ## Manual runs (for debugging)
 
 The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx migrate`. If you do this and want it to count, append the entry yourself or run `bbx migrate --apply` afterwards.

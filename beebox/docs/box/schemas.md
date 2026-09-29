@@ -20,8 +20,8 @@ import { z } from "beebox/schema";
 
 export default cardSchema("my-type", {
   fields: {
-    status: z.enum(["draft", "final"]).default("draft"),
     priority: z.enum(["low", "medium", "high"]).optional(),
+    archived: z.boolean().optional(),
     body: body(z.string()),  // omit this line if the card has no prose body
   },
   instructions: \`# My Type Cards
@@ -38,7 +38,7 @@ On disk, a card of this type is YAML frontmatter + markdown body:
 
 ```
 ---
-status: draft
+title: Replace the gutter
 priority: high
 ---
 The markdown body (present only when the schema declares a `body` field).
@@ -51,7 +51,14 @@ Key patterns:
   body-less card (then any non-empty body errors on load).
 - `type` is the discriminator; don't list it under `fields`, and the on-disk YAML needn't carry
   it — the filename `Foo.<type>.card` supplies it.
-- `title` and `contains` are available on every card type automatically.
+- `title` and `contains` are available on every card type automatically. Set
+  `requireTitle: true` to require a title; don't redeclare it.
+- Give every field a reader (a view, a query, or instructions that act on it).
+  Some names are reserved: `status`, `created`, `summary`, `date`, `modified`,
+  `source`, and the global fields. The box health check flags a schema that
+  declares one. Record the specific fact instead: a named boolean
+  (`archived: true`), a date named for what it is (`due`), or
+  `sources: [{ ref }]` for what the card was derived from.
 - `brief` (five words or fewer) is the type's entry in the agent guide's card-type list, read on
   every turn; `description` (one line) is its row in the docs index. Without a `brief` the guide
   lists the `description`.

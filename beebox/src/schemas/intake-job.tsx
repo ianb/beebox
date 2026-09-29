@@ -16,7 +16,6 @@ export const IntakeJobSchema = cardSchema("intake-job", {
   category: "system",
   searchable: false,
   fields: {
-    status: z.string().default("pending"),
     source: z.string(),
     priority: z.enum(["normal", "low"]).default("normal"),
     description: z.string(),
@@ -60,7 +59,6 @@ export function createIntakeJobTemplate(options: {
   priority?: "normal" | "low";
 }): string {
   const fields: Record<string, unknown> = {
-    status: "pending",
     source: options.source,
     priority: options.priority ?? "normal",
     description: options.description,

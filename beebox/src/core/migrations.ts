@@ -191,6 +191,11 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Agent observations now live as ordinary doc cards in _config/feedback.
   // Convert command-written Markdown in both active and resolved directories.
   { name: "feedback-to-doc-cards", script: "src/scripts/migrate/feedback-to-doc-cards.ts" },
+  // Strip standard-looking fields that had no job: dead `status` on jobs and
+  // five other types (record's becomes `reviewed`/`archived` booleans),
+  // pub-submission `created`, audio `summary`, experiment observation `date`.
+  // See docs/plans/standard-card-fields.md.
+  { name: "standard-fields-2026-09", script: "src/scripts/migrate/standard-fields.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

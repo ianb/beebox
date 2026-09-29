@@ -15,8 +15,6 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../exports/cards.js";
 
-const FileStatusSchema = z.enum(["new", "processed", "invalid"]);
-export type FileStatus = z.infer<typeof FileStatusSchema>;
 
 const FilenameEntry = z.object({
   ref: z.string(),
@@ -32,7 +30,6 @@ export const FileSchema = cardSchema("file", {
   description: "Metadata for an arbitrary uploaded file (PDF, archive, …) — the binary lives in the attach scope, awaiting agent handling",
   category: "synced",
   fields: {
-    status: FileStatusSchema.default("new"),
     filename: FilenameEntry,
     description: z.string().optional(),
   },
@@ -54,9 +51,9 @@ Frontmatter:
 
 Unlike image/audio cards, no built-in pipeline processes files yet —
 they land in the capture session and are available for agent handling
-(extraction into records, archival, etc.). Processors should set
-\`status: processed\` when done, or \`status: invalid\` if the file
-cannot be used.`,
+(extraction into records, archival, etc.). There is no processed marker:
+what a processor extracts (records, a \`description:\`) is the record of its
+work.`,
 });
 
 export type FileFields = InferCardFields<typeof FileSchema>;
@@ -78,7 +75,6 @@ export function createFileTemplate(options: {
   if (options.mimeType !== undefined) filename["mime-type"] = options.mimeType;
   if (options.size !== undefined) filename["size"] = options.size;
   const fields: Record<string, unknown> = {
-    status: "new",
     filename,
   };
   return `---\n${stringifyYaml(fields)}---\n`;

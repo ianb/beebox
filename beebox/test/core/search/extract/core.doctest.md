@@ -48,9 +48,6 @@ docs[0].title
 docs[0].contains
 => Dentist moved to June 17; confirmation in this email.
 
-docs[0].created
-=> 2026-05-22T10:00:00Z
-
 docs[0].content
 => The dentist called — appointment moved to June 17.
 ```
@@ -84,9 +81,6 @@ const docs = await docsFor(
 );
 docs[0].title
 => Usage-based pricing demo
-
-docs[0].created
-=> 2026-05-14T19:00:00Z
 
 docs[0].content
 => Usage-based pricing demo

@@ -16,7 +16,6 @@ export const QuestionFollowupJobSchema = cardSchema("question-followup-job", {
   category: "system",
   searchable: false,
   fields: {
-    status: z.string().default("pending"),
     source: z.string().default("question-answer"),
     description: z.string(),
     "question-ref": cardRef(),
@@ -79,7 +78,6 @@ export function createQuestionFollowupJobTemplate(options: {
   learning?: QuestionLearningFields;
 }): string {
   const fields: Record<string, unknown> = {
-    status: "pending",
     source: "question-answer",
     description: options.description,
     "question-ref": { ref: options.questionRef },

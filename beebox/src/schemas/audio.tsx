@@ -2,7 +2,7 @@
  * Audio card schema — audio clips from capture sessions.
  *
  * Created by the capture preparation worker, which also fills in
- * transcript + summary and sets duration on the filename during its
+ * the transcript and sets duration on the filename during its
  * deterministic transcription pass (`src/core/capture/prepare/core.ts`). A clip
  * whose transcription failed at prepare time stays `status: new` with no
  * `transcript:` — see `transcription-error:` below.
@@ -35,12 +35,11 @@ const TranscriptionError = z.object({
 
 export const AudioSchema = cardSchema("audio", {
   brief: "A recorded speech clip",
-  description: "A recorded speech clip from a capture session — audio file in the attach scope, transcript and summary filled on transcription",
+  description: "A recorded speech clip from a capture session — audio file in the attach scope, transcript filled on transcription",
   category: "synced",
   fields: {
     status: AudioStatusSchema.default("new"),
     filename: FilenameEntry,
-    summary: z.string().optional(),
     transcript: z.string().optional(),
     "transcription-error": TranscriptionError.optional(),
   },
@@ -53,13 +52,11 @@ pointed to by \`filename.ref:\` (attach scope: see ABOUT_CARDS).
 Frontmatter:
 - \`filename:\` — \`{ref, recorded, source, duration?}\` for the audio
   file. \`duration\` is set after transcription.
-- \`summary:\` — brief summary of what was said (filled during
-  transcription).
 - \`transcript:\` — full text transcription (added during
   transcription, absent when new).
 - \`transcription-error:\` — set if transcription failed.
 
-Status: new (not yet transcribed, no \`transcript\`/\`summary\`) →
+Status: new (not yet transcribed, no \`transcript\`) →
 transcribed (transcription complete).
 
 If status is "new" with no \`transcript:\`, the audio hasn't been
@@ -68,8 +65,7 @@ the transcription provider was unavailable when the capture was
 prepared (see the parent capture-session card's
 \`transcription-failed:\` flag). You can retry it yourself: run
 \`bbx chat retranscribe --file <path-to-the-attached-audio-file>\`,
-copy the printed transcript into \`transcript:\` (and a short
-\`summary:\`), and set \`status: transcribed\`. If the retry also
+copy the printed transcript into \`transcript:\`, and set \`status: transcribed\`. If the retry also
 fails, record it in \`transcription-error:\` and note it in your
 annotation instead of fabricating a transcript.`,
 });

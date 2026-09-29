@@ -116,7 +116,6 @@ export async function transcribeCaptureClips(opts: {
       const words = "words" in result ? result.words : undefined;
 
       fields.transcript = result.text;
-      if (fields.summary === undefined) fields.summary = "";
       fields.filename.duration = `${String(Math.round(result.duration))}s`;
       fields.status = "transcribed";
       await saveAudioCard(cardPath, fields);

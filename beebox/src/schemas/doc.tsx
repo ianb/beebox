@@ -18,8 +18,8 @@ export const DocSchema = cardSchema("doc", {
   brief: "The default card for prose",
   description: "A generic typed document (title + markdown body) — the default for agent-authored prose instead of a plain .md",
   category: "authored",
+  requireTitle: true,
   fields: {
-    title: z.string(),
     /** Stable id supplied by an external share operation for retry deduplication. */
     "share-id": z.string().uuid().optional(),
     body: body(z.string()),

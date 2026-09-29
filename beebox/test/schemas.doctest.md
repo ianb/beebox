@@ -194,7 +194,7 @@ asked-at: 2026-07-10T09:00:00-07:00
 
 ## Intake Job
 
-An intake job groups items for triage. It has a `status`, `priority`, and a list of item references:
+An intake job groups items for triage. It has a `source`, a `priority`, and a list of item references (every job card on disk is pending; finishing a job deletes it):
 
 ```ts
 createIntakeJobTemplate({
@@ -207,7 +207,6 @@ createIntakeJobTemplate({
 })
 =>
 ---
-status: pending
 source: capture-connector
 priority: normal
 description: Triage 2 new capture sessions
@@ -228,7 +227,6 @@ createIntakeJobTemplate({
 })
 =>
 ---
-status: pending
 source: capture-connector
 priority: low
 description: Triage bookmarks

@@ -118,7 +118,7 @@ async function findExistingIntakeJob(
   const found = await findPendingJobCard({
     jobsDir,
     suffix: ".intake.job.card",
-    match: (fields) => fields["status"] === "pending" && fields["source"] === source,
+    match: (fields) => fields["source"] === source,
   });
   return found === null ? null : { path: found };
 }

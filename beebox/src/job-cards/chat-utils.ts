@@ -210,7 +210,6 @@ async function findExistingChatJob(
     jobsDir,
     suffix: ".chat.job.card",
     match: (fields) => {
-      if (fields["status"] !== "pending") return false;
       const thread = fields["thread"];
       const ref = isRecord(thread) ? thread["ref"] : undefined;
       return ref === threadRef;

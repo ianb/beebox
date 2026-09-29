@@ -22,7 +22,6 @@ export const WebpageSchema = cardSchema("webpage", {
   description: "A captured external web page — readable markdown body plus a frozen HTML snapshot in the attach scope",
   category: "synced",
   fields: {
-    title: z.string().optional(),
     // The original page URL the capture came from.
     source: z.string(),
     // Full ISO instant of capture; the renderer formats it in the viewer's

@@ -48,7 +48,6 @@ export function parseGuide(fields: GuideFields): ParsedGuide {
       observations: (e.observations ?? []).map((o) => ({
         text: o.text,
         ref: o.ref,
-        date: o.date,
       })),
       conclusion: e.conclusion,
     })),

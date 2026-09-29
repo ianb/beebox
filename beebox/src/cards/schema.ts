@@ -1,6 +1,5 @@
 import { z, type ZodType } from "zod";
 import type { LintIssue } from "./lint-format.js";
-import { isRecord } from "../shared/is-record.js";
 import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
 import { CardSymbol, type CardSymbolData } from "../shared/card-symbol.js";
 import { Prominence, type ProminenceLevel, type EffectiveLevel } from "../shared/prominence.js";
@@ -68,9 +67,9 @@ export type FieldDecl = ZodType | BodyField;
 
 /**
  * Optional frontmatter fields available on every card type, injected into
- * the frontmatter schema by cardSchema() unless the schema declares its own
- * field of the same name (the schema's declaration wins — e.g. a card type
- * may require `title` rather than leave it optional).
+ * the frontmatter schema by cardSchema(). A schema must not redeclare one
+ * (`reservedFieldProblems` in `./reserved-fields.ts`); a type that requires a
+ * title sets {@link CardSchemaConfig.requireTitle} instead.
  *
  * - `title` — human-readable display title.
  * - `contains` — one sentence stating what can be found inside this card;
@@ -97,8 +96,10 @@ export type FieldDecl = ZodType | BodyField;
  * Adding/removing a field here? Update the enumerations in
  * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`.
  */
+const TITLE_FIELD = z.string().optional();
+
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
-  title: z.string().optional(),
+  title: TITLE_FIELD,
   contains: z.string().optional(),
   "contains-evidence": z.string().optional(),
   todos: TodosFieldSchema,
@@ -212,6 +213,11 @@ export interface CardSchemaConfig<
   brief?: string;
   /** Who creates cards of this type (see {@link CardCategory}). Defaults to "authored". */
   category?: CardCategory;
+  /**
+   * Require the global `title` field on this type instead of leaving it
+   * optional. Most types leave it optional.
+   */
+  requireTitle?: boolean;
   /**
    * This type's default `prominence` level, applied when a card of this type
    * leaves the field absent. Omit for the ordinary default; `category:
@@ -481,6 +487,37 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
   : never;
 
 /**
+ * Add a schema's declared frontmatter fields to `shape`, and return its body
+ * field (at most one, always named `body`).
+ */
+function addDeclaredFields(
+  type: string,
+  { fields, shape }: { fields: Record<string, FieldDecl>; shape: Record<string, ZodType> },
+): { bodyFieldName: string | null; bodyField: BodyField | null } {
+  let bodyFieldName: string | null = null;
+  let bodyField: BodyField | null = null;
+  for (const [name, decl] of Object.entries(fields)) {
+    if (!isBodyField(decl)) {
+      shape[name] = decl;
+      continue;
+    }
+    if (name !== "body") {
+      // One vocabulary across every card type: the file-body field is
+      // always `body`. (On disk the body has no field name at all, so
+      // this constrains code, not card files. It also makes multiple
+      // body fields impossible — object keys are unique.)
+      throw new CardSchemaDeclarationError(
+        type,
+        `the body field must be named "body" (got "${name}")`
+      );
+    }
+    bodyFieldName = name;
+    bodyField = decl;
+  }
+  return { bodyFieldName, bodyField };
+}
+
+/**
  * Declare a card schema. The result tells the loader/serializer which
  * fields are frontmatter and which is the body.
  *
@@ -502,36 +539,24 @@ export function cardSchema<
       throw new CardSchemaDeclarationError(type, checkedTheme.problem.message);
     }
   }
-  let bodyFieldName: string | null = null;
-  let bodyField: BodyField | null = null;
   const frontmatterShape: Record<string, ZodType> = {
     type: z.literal(type),
   };
-  for (const [name, decl] of Object.entries(config.fields)) {
-    if (isBodyField(decl)) {
-      if (name !== "body") {
-        // One vocabulary across every card type: the file-body field is
-        // always `body`. (On disk the body has no field name at all, so
-        // this constrains code, not card files. It also makes multiple
-        // body fields impossible — object keys are unique.)
-        throw new CardSchemaDeclarationError(
-          type,
-          `the body field must be named "body" (got "${name}")`
-        );
-      }
-      bodyFieldName = name;
-      bodyField = decl;
-    } else {
-      frontmatterShape[name] = decl;
-    }
+  // The title leads the frontmatter, ahead of the type's own fields: parse
+  // order is serialization order.
+  if (!("title" in config.fields)) {
+    frontmatterShape["title"] = config.requireTitle === true ? z.string() : TITLE_FIELD;
   }
+  const { bodyFieldName, bodyField } = addDeclaredFields(type, { fields: config.fields, shape: frontmatterShape });
   if (bodyField === null && Object.keys(config.fields).length === 0) {
     throw new CardSchemaDeclarationError(type, "must declare at least one field");
   }
   const globalFieldNames: string[] = [];
   for (const [name, validator] of Object.entries(GLOBAL_CARD_FIELDS)) {
-    if (name in config.fields) continue; // schema-wins: author declaration takes precedence
-    frontmatterShape[name] = validator;
+    // A box-local schema that redeclares a global still loads with its own
+    // declaration; reservedFieldProblems reports it.
+    if (name in config.fields) continue;
+    if (name !== "title") frontmatterShape[name] = validator;
     globalFieldNames.push(name);
   }
   // Lenient (not `.strict()`): an unknown frontmatter key is stripped in
@@ -598,55 +623,4 @@ export function cardSchema<
     resolved = { ...resolved, summarize: config.summarize };
   }
   return resolved;
-}
-
-/**
- * Walk a parsed fields object and pull out every reference.
- *
- * Refs are identified by convention, not by schema declaration:
- *   - any key literally named `ref` whose value is a string
- *   - any key literally named `refs` whose value is an array of strings
- *
- * Refs can appear at any depth — inside nested objects, inside array
- * elements, etc. Each result carries a JSON path (with indices filled
- * in) so callers can attach lint errors to a specific position.
- */
-export function extractRefs(
-  fields: Record<string, unknown>
-): Array<{ path: string; ref: string }> {
-  const out: Array<{ path: string; ref: string }> = [];
-  walkForRefs(fields, { currentPath: "", out });
-  return out;
-}
-
-interface WalkForRefsOptions {
-  currentPath: string;
-  out: Array<{ path: string; ref: string }>;
-}
-
-function walkForRefs(value: unknown, { currentPath, out }: WalkForRefsOptions): void {
-  if (Array.isArray(value)) {
-    for (const [i, item] of value.entries()) {
-      walkForRefs(item, { currentPath: `${currentPath}[${String(i)}]`, out });
-    }
-    return;
-  }
-  if (!isRecord(value)) return;
-  for (const [key, child] of Object.entries(value)) {
-    const childPath = currentPath === "" ? key : `${currentPath}.${key}`;
-    if (key === "ref" && typeof child === "string") {
-      out.push({ path: childPath, ref: child });
-      continue;
-    }
-    if (key === "refs" && Array.isArray(child)) {
-      const items: unknown[] = child;
-      for (const [i, item] of items.entries()) {
-        if (typeof item === "string") {
-          out.push({ path: `${childPath}[${String(i)}]`, ref: item });
-        }
-      }
-      continue;
-    }
-    walkForRefs(child, { currentPath: childPath, out });
-  }
 }

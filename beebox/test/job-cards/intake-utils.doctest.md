@@ -27,7 +27,6 @@ path.startsWith("_bookkeeping/jobs/") && path.endsWith(".intake.job.card")
 await box.read(path)
 =>
 ---
-status: pending
 source: test-connector
 priority: normal
 description: Triage 1 item
@@ -68,7 +67,6 @@ The updated file contains both items with the new description:
 await box.read(path2)
 =>
 ---
-status: pending
 source: test-connector
 priority: normal
 description: Triage 2 items

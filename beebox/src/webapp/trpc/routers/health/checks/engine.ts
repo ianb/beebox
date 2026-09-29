@@ -17,6 +17,8 @@ import { getBoxShape } from "../../../../../lib/box-shape.js";
 import { getInstalledEngineVersion } from "../../../../../core/engine-version.js";
 import { loadBoxSchemas } from "../../../../../schemas.js";
 import { listSchemaLoadFailures } from "../../../../../schema-load-status.js";
+import { reservedFieldProblems } from "../../../../../cards/reserved-fields.js";
+import type { CardSchema } from "../../../../../cards/schema.js";
 import type { HealthCheck } from "../router.js";
 
 const MAX_FAILURES_SHOWN = 3;
@@ -26,6 +28,8 @@ const MAX_FAILURES_SHOWN = 3;
  * engine, and — for a box that isn't itself a worktree clone — shouldn't
  * point into a transient worktree checkout.
  * `box-schemas` (all boxes): every declared box-local schema file loaded.
+ * `box-schema-fields` (all boxes): no box-local schema declares a reserved
+ * field name (see {@link boxSchemaFieldsCheck}).
  */
 export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
   const checks: HealthCheck[] = [];
@@ -75,7 +79,7 @@ export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]
   // file never blanks a working card type, which also makes the failure
   // invisible without this check. loadBoxSchemas populates the per-process
   // failure map, so load before reading — same as `bbx status`.
-  await loadBoxSchemas(boxRoot);
+  const { cardSchemas } = await loadBoxSchemas(boxRoot);
   const failures = listSchemaLoadFailures(boxRoot);
   const shown = failures.slice(0, MAX_FAILURES_SHOWN).map((f) => `${f.file}: ${f.message}`);
   const more = failures.length - shown.length;
@@ -88,6 +92,30 @@ export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]
         : `${String(failures.length)} box-local schema file(s) failed to load — their card types are missing or stale: ${shown.join("; ")}${more > 0 ? ` (+${String(more)} more)` : ""}`,
     severity: "error",
   });
+  checks.push(boxSchemaFieldsCheck(cardSchemas));
 
   return checks;
+}
+
+/**
+ * `box-schema-fields`: box-local schemas that declare a reserved field name
+ * (`status`, `created`, a redeclared global, …). They still load; this
+ * warning is how the box finds out. Built-in schemas are held to the same
+ * rule by a registry test instead.
+ */
+export function boxSchemaFieldsCheck(schemas: readonly CardSchema[]): HealthCheck {
+  const found = schemas.flatMap((schema) =>
+    reservedFieldProblems(schema).map((p) => `${schema.type}.${p.field}: ${p.message}`),
+  );
+  const shown = found.slice(0, MAX_FAILURES_SHOWN);
+  const more = found.length - shown.length;
+  return {
+    name: "box-schema-fields",
+    ok: found.length === 0,
+    message:
+      found.length === 0
+        ? "box-local schemas use no reserved field names"
+        : `${String(found.length)} reserved field name(s) in box-local schemas: ${shown.join("; ")}${more > 0 ? ` (+${String(more)} more)` : ""}`,
+    severity: "warning",
+  };
 }
