@@ -1,4 +1,3 @@
-#!/usr/bin/env tsx
 /**
  * Give each non-derived-from `source` its own name, move acquisition times
  * onto the media reference, and put derived-from pointers in `sources` (part 3
@@ -8,13 +7,12 @@
  *
  * Idempotent: a card without the old keys is "already".
  *
- * Registered in src/core/migrations.ts. Also runnable directly:
- *   pnpm exec tsx src/scripts/migrate/source-fields.ts <boxRoot>           # dry-run
- *   pnpm exec tsx src/scripts/migrate/source-fields.ts <boxRoot> --apply
+ * Applied by `src/scripts/migrate/card-fields/run.ts`, which runs this planner
+ * together with the other card-field planners in one pass (see that file).
  */
 
-import { UnmappedFieldError, runFieldEditMigration, type FieldEdit, type FieldEditPlan } from "./_field-edits.js";
-import { isRecord } from "../../shared/is-record.js";
+import { UnmappedFieldError, type FieldEdit, type FieldEditPlan } from "./field-edits.js";
+import { isRecord } from "../../../shared/is-record.js";
 
 type Planner = (fm: Record<string, unknown>) => FieldEditPlan;
 
@@ -369,17 +367,10 @@ const PLANNERS: Readonly<Record<string, Planner>> = {
 };
 
 /** The edits this migration makes to one card of `type`; none for a type it doesn't handle. */
+/** The card types with a planner. */
+export const SOURCE_FIELD_TYPES: ReadonlySet<string> = new Set(Object.keys(PLANNERS));
+
 export function planSourceFields(type: string, fm: Record<string, unknown>): FieldEditPlan {
   const planner = PLANNERS[type];
   return planner === undefined ? { edits: [], warnings: [] } : planner(fm);
-}
-
-// CLI entry — only when run directly (e.g. spawned by `bbx migrate`), not when
-// imported by a test.
-if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`) {
-  await runFieldEditMigration({
-    description: "Give non-derived-from source fields their own names (see the module comment).",
-    types: new Set(Object.keys(PLANNERS)),
-    plan: planSourceFields,
-  });
 }

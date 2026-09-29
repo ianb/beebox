@@ -1,6 +1,6 @@
 # Migration: give `source` fields their specific names
 
-`src/scripts/migrate/source-fields.ts` renames each `source` that is not a
+`src/scripts/migrate/card-fields/source.ts` renames each `source` that is not a
 derived-from pointer, and moves media acquisition times into the media
 reference's `via` object (part 3 of `docs/implemented-plans/standard-card-fields.md`).
 `planSourceFields(type, fm)` lists the edits for one card; `applyFieldEdits`
@@ -8,14 +8,14 @@ applies them to the YAML text.
 
 ```ts setup
 import { parse, stringify } from "yaml";
-import { planSourceFields } from "../../../src/scripts/migrate/source-fields.js";
-import { applyFieldEdits } from "../../../src/scripts/migrate/_field-edits.js";
-import { parseCardText } from "../../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../../src/schemas.js";
-import { createGdocTemplate } from "../../../src/schemas/gdoc.js";
-import { createGsheetTemplate } from "../../../src/schemas/gsheet.js";
-import { createGfolderTemplate } from "../../../src/schemas/gfolder.js";
-import { createGlinkTemplate } from "../../../src/schemas/glink.js";
+import { planSourceFields } from "../../../../src/scripts/migrate/card-fields/source.js";
+import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
+import { parseCardText } from "../../../../src/core/card-io.js";
+import { createCardSchemaMap } from "../../../../src/schemas.js";
+import { createGdocTemplate } from "../../../../src/schemas/gdoc.js";
+import { createGsheetTemplate } from "../../../../src/schemas/gsheet.js";
+import { createGfolderTemplate } from "../../../../src/schemas/gfolder.js";
+import { createGlinkTemplate } from "../../../../src/schemas/glink.js";
 
 // Plan the edits for a card, apply them to its YAML, and report the result.
 function run(type: string, fm: Record<string, unknown>): string {

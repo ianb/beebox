@@ -1,6 +1,6 @@
 # Migration: strip standard fields that had no job
 
-`src/scripts/migrate/standard-fields.ts` removes the `status`, `created`,
+`src/scripts/migrate/card-fields/standard.ts` removes the `status`, `created`,
 `summary` and observation `date` fields that part 1 of
 `docs/implemented-plans/standard-card-fields.md` took out of the schemas.
 `planStandardFields(type, fm)` lists the edits for one card, plus warnings for
@@ -9,8 +9,8 @@ through the `yaml` document model, so untouched keys keep their formatting.
 
 ```ts setup
 import { parse, stringify } from "yaml";
-import { planStandardFields } from "../../../src/scripts/migrate/standard-fields.js";
-import { applyFieldEdits } from "../../../src/scripts/migrate/_field-edits.js";
+import { planStandardFields } from "../../../../src/scripts/migrate/card-fields/standard.js";
+import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
 
 // Plan the edits for a card, apply them to its YAML, and report the result.
 function run(type: string, fm: Record<string, unknown>): string {

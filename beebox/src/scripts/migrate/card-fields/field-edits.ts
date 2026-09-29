@@ -7,10 +7,10 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { isMap, isScalar, parse as parseYaml, parseDocument, type Document } from "yaml";
-import { runMigration } from "./_harness.js";
-import { splitCardContent } from "../../cards/frontmatter.js";
-import { typeFromFilename } from "../../core/card-io.js";
-import { isRecord } from "../../shared/is-record.js";
+import { runMigration } from "../_harness.js";
+import { splitCardContent } from "../../../cards/frontmatter.js";
+import { typeFromFilename } from "../../../core/card-io.js";
+import { isRecord } from "../../../shared/is-record.js";
 
 /**
  * One change to a card's frontmatter, addressed by key path. A `set` of a new

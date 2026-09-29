@@ -1,4 +1,3 @@
-#!/usr/bin/env tsx
 /**
  * Replace every remaining `status` field with the specific fact it recorded
  * (part 2 of docs/implemented-plans/standard-card-fields.md). Each card type's planner
@@ -7,13 +6,12 @@
  *
  * Idempotent: a card without the old field is "already".
  *
- * Registered in src/core/migrations.ts. Also runnable directly:
- *   pnpm exec tsx src/scripts/migrate/status-fields.ts <boxRoot>           # dry-run
- *   pnpm exec tsx src/scripts/migrate/status-fields.ts <boxRoot> --apply
+ * Applied by `src/scripts/migrate/card-fields/run.ts`, which runs this planner
+ * together with the other card-field planners in one pass (see that file).
  */
 
-import { UnmappedStatusError, runFieldEditMigration, type FieldEdit, type FieldEditPlan } from "./_field-edits.js";
-import { isRecord } from "../../shared/is-record.js";
+import { UnmappedStatusError, type FieldEdit, type FieldEditPlan } from "./field-edits.js";
+import { isRecord } from "../../../shared/is-record.js";
 
 type Planner = (fm: Record<string, unknown>) => FieldEditPlan;
 
@@ -284,17 +282,10 @@ const PLANNERS: Readonly<Record<string, Planner>> = {
 };
 
 /** The edits this migration makes to one card of `type`; none for a type it doesn't handle. */
+/** The card types with a planner. */
+export const STATUS_FIELD_TYPES: ReadonlySet<string> = new Set(Object.keys(PLANNERS));
+
 export function planStatusFields(type: string, fm: Record<string, unknown>): FieldEditPlan {
   const planner = PLANNERS[type];
   return planner === undefined ? { edits: [], warnings: [] } : planner(fm);
-}
-
-// CLI entry — only when run directly (e.g. spawned by `bbx migrate`), not when
-// imported by a test.
-if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`) {
-  await runFieldEditMigration({
-    description: "Replace remaining status fields with specific facts (see the module comment).",
-    types: new Set(Object.keys(PLANNERS)),
-    plan: planStatusFields,
-  });
 }

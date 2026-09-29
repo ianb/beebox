@@ -1,4 +1,3 @@
-#!/usr/bin/env tsx
 /**
  * Remove the standard-looking fields that had no job (part 1 of
  * docs/implemented-plans/standard-card-fields.md).
@@ -22,13 +21,12 @@
  *
  * Idempotent: a card with none of the fields is "already".
  *
- * Registered in src/core/migrations.ts. Also runnable directly:
- *   pnpm exec tsx src/scripts/migrate/standard-fields.ts <boxRoot>           # dry-run
- *   pnpm exec tsx src/scripts/migrate/standard-fields.ts <boxRoot> --apply
+ * Applied by `src/scripts/migrate/card-fields/run.ts`, which runs this planner
+ * together with the other card-field planners in one pass (see that file).
  */
 
-import { isRecord } from "../../shared/is-record.js";
-import { UnmappedStatusError, runFieldEditMigration, type FieldEdit, type FieldEditPlan } from "./_field-edits.js";
+import { isRecord } from "../../../shared/is-record.js";
+import { UnmappedStatusError, type FieldEdit, type FieldEditPlan } from "./field-edits.js";
 
 const JOB_TYPES = new Set(["chat-job", "intake-job", "contains-backfill-job", "question-followup-job", "todo-review-job"]);
 
@@ -45,7 +43,7 @@ const DROP_STATUS = new Set([
   "gsheet",
 ]);
 
-const HANDLED_TYPES = new Set([...DROP_STATUS, "email-outbound", "record", "audio", "guide", "personality"]);
+export const STANDARD_FIELD_TYPES: ReadonlySet<string> = new Set([...DROP_STATUS, "email-outbound", "record", "audio", "guide", "personality"]);
 
 
 function observationDateEdits(fm: Record<string, unknown>): FieldEdit[] {
@@ -96,14 +94,4 @@ export function planStandardFields(type: string, fm: Record<string, unknown>): F
   }
   if (type === "guide" || type === "personality") edits.push(...observationDateEdits(fm));
   return { edits, warnings };
-}
-
-// CLI entry — only when run directly (e.g. spawned by `bbx migrate`), not when
-// imported by a test.
-if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`) {
-  await runFieldEditMigration({
-    description: "Strip dead standard fields: status, created, summary, observation date (see the module comment).",
-    types: HANDLED_TYPES,
-    plan: planStandardFields,
-  });
 }

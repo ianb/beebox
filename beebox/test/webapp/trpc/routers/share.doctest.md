@@ -12,8 +12,8 @@ import * as path from "node:path";
 import { shareDestinationsOutput } from "../../../../src/webapp/trpc/routers/share/contract.js";
 import { parse, stringify } from "yaml";
 import { splitCardContent } from "../../../../src/cards/frontmatter.js";
-import { planSourceFields } from "../../../../src/scripts/migrate/source-fields.js";
-import { applyFieldEdits } from "../../../../src/scripts/migrate/_field-edits.js";
+import { planSourceFields } from "../../../../src/scripts/migrate/card-fields/source.js";
+import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
 
 function caller(boxRoot) {
   return appRouter.createCaller({
