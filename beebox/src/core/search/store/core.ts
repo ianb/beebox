@@ -1,5 +1,8 @@
 /**
- * Orama index storage: schema, file locations, restore, atomic persist.
+ * Orama index storage for the CARD search index: schema, file locations,
+ * restore, atomic persist. The generic machinery lives in `index-store.ts`
+ * (shared with the chat-transcript index); this file owns the card index's
+ * schema and filenames.
  *
  * Persistence format is JSON, and a 2026-07 attempt to switch to "binary"
  * (msgpack) is worth remembering before anyone retries it:
@@ -17,7 +20,7 @@
  *   disk saving doesn't buy back the hot path.
  * The seconds-scale restore cost of a vector-bearing index is structural
  * (vectors persist in both the doc store and the vector index; the whole
- * index restores as one blob) — an upstream Orama gap, not a format choice.
+ *   index restores as one blob) — an upstream Orama gap, not a format choice.
  *
  * The index and its manifest are disposable per-checkout caches in
  * `.beebox/`. The persist order (index first, manifest last) makes a
@@ -25,13 +28,13 @@
  * affected files on the next refresh.
  */
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { create, type Orama } from "@orama/orama";
-import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
-import { EMBEDDING_DIMENSIONS } from "../../services/openai-embeddings.js";
-import { invariant } from "../../shared/invariant.js";
-import { errorMessage } from "../../shared/error-guards.js";
+import type { Orama } from "@orama/orama";
+import { EMBEDDING_DIMENSIONS } from "../../../services/openai-embeddings.js";
+import { invariant } from "../../../shared/invariant.js";
+import { createIndexStore, indexPersistedFor, type IndexPersisted } from "./index-store.js";
+
+export { writeJsonAtomic } from "./index-store.js";
+export type { IndexPersisted } from "./index-store.js";
 
 /**
  * Bump when the document schema or extraction shape changes; a mismatch
@@ -67,26 +70,30 @@ invariant(
 
 export type SearchIndex = Orama<typeof searchOramaSchema>;
 
-const INDEX_FILENAME = "search-index.json";
-/** Left behind by the short-lived binary-format experiment (2026-07). */
-const LEGACY_INDEX_FILENAME = "search-index.msp";
-const MANIFEST_FILENAME = "search-index-manifest.json";
-const LOCK_FILENAME = "search-index.lock";
+const store = createIndexStore(
+  {
+    indexFilename: "search-index.json",
+    manifestFilename: "search-index-manifest.json",
+    lockFilename: "search-index.lock",
+    label: "search",
+  },
+  searchOramaSchema,
+);
 
 export function searchIndexPath(boxRoot: string): string {
-  return path.join(boxRoot, ".beebox", INDEX_FILENAME);
+  return store.indexPath(boxRoot);
 }
 
 export function searchManifestPath(boxRoot: string): string {
-  return path.join(boxRoot, ".beebox", MANIFEST_FILENAME);
+  return store.manifestPath(boxRoot);
 }
 
 export function searchLockPath(boxRoot: string): string {
-  return path.join(boxRoot, ".beebox", LOCK_FILENAME);
+  return store.lockPath(boxRoot);
 }
 
 export async function createSearchIndex(): Promise<SearchIndex> {
-  return create({ schema: searchOramaSchema });
+  return store.create();
 }
 
 /**
@@ -94,50 +101,12 @@ export async function createSearchIndex(): Promise<SearchIndex> {
  * (caller rebuilds — the index is a cache, never a source of truth).
  */
 export async function restoreSearchIndex(boxRoot: string): Promise<SearchIndex | null> {
-  const indexPath = searchIndexPath(boxRoot);
-  try {
-    await fs.access(indexPath);
-  } catch (_e) {
-    return null;
-  }
-  try {
-    return await restoreFromFile<SearchIndex>("json", indexPath);
-  } catch (e) {
-    console.warn(`search: could not restore index (${errorMessage(e)}); rebuilding`);
-    return null;
-  }
-}
-
-/**
- * Proof that the on-disk search index at `boxRoot` is current — i.e. it already
- * reflects the doc ids the manifest is about to record. `saveManifest` requires
- * one, so the manifest can never be written ahead of the index (the crash-safety
- * ordering documented at the top of this file becomes a compile-time guarantee,
- * not a convention). Only {@link persistSearchIndex} (a fresh write) and
- * {@link indexUnchanged} (a no-doc-change refresh) mint one — the brand key is
- * module-private, so no other code can forge a receipt.
- */
-const indexPersistedBrand = Symbol("IndexPersisted");
-export interface IndexPersisted {
-  readonly [indexPersistedBrand]: true;
-  readonly boxRoot: string;
-}
-
-function indexPersistedFor(boxRoot: string): IndexPersisted {
-  return { [indexPersistedBrand]: true, boxRoot };
+  return store.restore(boxRoot);
 }
 
 /** Persist the index atomically (write temp, rename); returns the ordering receipt. */
 export async function persistSearchIndex(db: SearchIndex, boxRoot: string): Promise<IndexPersisted> {
-  const indexPath = searchIndexPath(boxRoot);
-  await fs.mkdir(path.dirname(indexPath), { recursive: true });
-  const tmp = `${indexPath}.tmp`;
-  await persistToFile(db, "json", tmp);
-  await fs.rename(tmp, indexPath);
-  // Sweep the binary-experiment leftover so the cache dir doesn't carry a
-  // dead 20MB file forever.
-  await fs.rm(path.join(path.dirname(indexPath), LEGACY_INDEX_FILENAME), { force: true });
-  return indexPersistedFor(boxRoot);
+  return store.persist(db, boxRoot);
 }
 
 /**
@@ -151,12 +120,4 @@ export async function persistSearchIndex(db: SearchIndex, boxRoot: string): Prom
  */
 export function indexUnchanged(boxRoot: string): IndexPersisted {
   return indexPersistedFor(boxRoot);
-}
-
-/** Write a JSON file atomically (write temp, rename). */
-export async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const tmp = `${filePath}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(value, null, 2) + "\n");
-  await fs.rename(tmp, filePath);
 }

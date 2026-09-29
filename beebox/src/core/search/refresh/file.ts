@@ -19,7 +19,7 @@ import {
 } from "../extract/core.js";
 import type { CardStat } from "../walk.js";
 import type { SearchManifest, ManifestFileEntry, InputFileEntry } from "./manifest.js";
-import { type SearchIndex } from "../store.js";
+import { type SearchIndex } from "../store/core.js";
 import { contentHash as computeContentHash } from "../../../lib/content-hash.js";
 import {
   computeContainsBasis,
