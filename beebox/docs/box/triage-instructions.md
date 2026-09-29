@@ -21,6 +21,21 @@ catalog. User-stated rules outrank feedback, inferred rules and defaults, in tha
 order. A missing guide uses a visible conservative policy. An invalid guide is
 an error. Unresolved conflicts require research.
 
+A destination may also have an optional `todo-question`, such as
+`todo-question: "Does this require follow-up?"`. Jev evaluates each configured
+question in the same classification call; a yes probability above 0.5 creates
+an ordinary todo on the filed item with `assigned="agent"`, `by="agent"`, and
+the actual creation date, while a tie is no. The legacy agent triage path uses
+the same yes/no meaning. Destinations without a question are not evaluated and
+create no todo. These todos enter the existing bounded daily review; the
+question adds no immediate run, deadline, or action authority.
+Todo identity includes the destination and question, so changing the question
+creates a distinct todo and leaves completed entries intact. Replay remains
+read-only and reports the resulting todo outcome; a configured question with a
+missing answer is an explicit failure. This applies to items that reach staged
+triage: connector cards currently bypass it, so connector metadata preservation
+is deferred to Gmail admission.
+
 Good rules state the facts the classifier needs: whose records count, the scope
 of this box, what distinguishes overlapping categories, and concrete exceptions.
 For example, specify whether a plumbing invoice belongs with property work or

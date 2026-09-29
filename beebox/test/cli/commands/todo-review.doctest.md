@@ -115,13 +115,14 @@ async function quietly(fn: () => Promise<void>): Promise<void> {
   }
 }
 
-/** 26 escalated todos (written newest due first), one stirring, one stale. */
+/** 26 escalated todos (written newest due first), one stirring, one actionable, one stale. */
 function manyTodosCard(): string {
   const lines = Array.from({ length: 26 }, (_, i) => {
     const nn = String(26 - i).padStart(2, "0");
     return `{% todo due="2026-08-${nn}" %}Task ${nn}{% /todo %}`;
   });
   lines.push('{% todo start="2026-09-24" due="2026-10-30" %}Book the painter{% /todo %}');
+  lines.push('{% todo assigned="agent" %}Review the delivery note{% /todo %}');
   lines.push('{% todo created="2026-06-01" %}Sort the shed{% /todo %}');
   return memo(`${lines.join("\n\n")}\n`);
 }
@@ -198,6 +199,21 @@ escalated:
 
 await pendingJobs(box.root)
 => 0
+```
+
+## A fresh undated agent todo is on the next precheck
+
+```ts continue
+const fresh = await seedBox();
+setTime("2026-09-25T12:00:00.000Z");
+await fresh.write(CARD, memo('{% todo assigned="agent" %}Review the delivery note{% /todo %}\n'));
+fresh.commitAll("agent follow-up");
+
+const freshBrief = (await run(fresh.root, ["check"])).out.join("\n");
+freshBrief.includes("actionable:") && freshBrief.includes("Review the delivery note")
+=> true
+
+await fresh.cleanup();
 ```
 
 ## `verify` fails an item left open without a recheck, and passes it once rechecked
@@ -332,9 +348,9 @@ await stir.cleanup();
 
 ## The brief carries at most 25 todos, and the cut ones come back
 
-Escalated first (oldest `due` first), then stirring, then stale. The brief
+Escalated first (oldest `due` first), then stirring, actionable, then stale. The brief
 says how many were cut. Here 26 escalated todos fill the cap, so the last
-escalated one, the stirring one, and the stale one wait for a later run.
+escalated one, the stirring one, the actionable one, and the stale one wait for a later run.
 
 ```ts
 const many = await seedBox();
@@ -343,7 +359,7 @@ many.commitAll("many");
 setTime("2026-09-25T12:00:00.000Z");
 
 const capped = (await run(many.root, ["check"])).out.join("\n");
-capped.includes("25 of 28 shown; the rest come in later runs.")
+capped.includes("25 of 29 shown; the rest come in later runs.")
 => true
 
 const saved = JSON.parse(await fs.readFile(path.join(many.root, ".beebox/todo-review-sweep.json"), "utf-8")).review.items.map((i) => i.text);
@@ -353,7 +369,7 @@ const saved = JSON.parse(await fs.readFile(path.join(many.root, ".beebox/todo-re
 
 The agent rechecks all 25 and the review passes. Because a stirring todo
 was cut, the stirring baseline does not move: the next run still lists the
-painter as stirring, with the other two cut todos.
+painter as stirring, with the other three cut todos.
 
 ```ts continue
 await recheckAllShown(many.root, "2026-10-20");
@@ -377,8 +393,14 @@ stirring:
     text: Book the painter
     detail: started 2026-09-24
 «*»
-stale:
+actionable:
   - locator: store/Porch.memo.card:59
+    text: Review the delivery note
+    detail: agent follow-up
+    assigned: agent
+«*»
+stale:
+  - locator: store/Porch.memo.card:61
     text: Sort the shed
     detail: created 2026-06-01
 «*»

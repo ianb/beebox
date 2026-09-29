@@ -1,5 +1,28 @@
 tests:
   # === Replayable document triage ===
+  # Status (2026-09-29, Codex): pass on a disposable standalone synthetic box;
+  # knows_about, 6 files read, 6 searches. Read generated triage-instructions
+  # and landmark docs; generated into a physical node_modules/beebox directory.
+  # Configured Claude could not open its expected transcript JSONL; Codex passed.
+  - id: triage-destination-todo-question
+    prompt: >
+      You are reviewing a prior triage decision after a destination's
+      `todo-question` changed. Use the triage correction and replay instructions
+      to explain how this question affects yes, no, and omitted-question cases,
+      and whether it starts follow-up immediately.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/triage-instructions.md"]
+    watch_for: >
+      Says yes creates an ordinary agent-assigned todo for the filed item,
+      which enters the existing bounded daily review; no creates none, and a
+      destination without a question is not evaluated. Does not claim immediate
+      execution, a deadline, extra action authority, or connector preservation.
+    correct_contains: ["todo"]
+    correct_matches:
+      - "yes.{0,120}todo|todo.{0,120}yes"
+      - "no.{0,120}(todo|question)|without.{0,80}question.{0,80}(no|evaluat)"
+    tags: [triage, todos]
+
   # Status (2026-09-28, Claude): 4/4 passed on the isolated test1 clone.
   # Direct audits: 0 reads/searches, 37-38k context. Rule repair read the installed
   # triage-instructions.md reference (1 read/search, 38k initial / 43k peak).

@@ -17,11 +17,12 @@ export class TriageReceiptError extends Error {
   constructor({ detail }: { detail: string }) { super(`Triage receipt: ${detail}`); this.name = "TriageReceiptError"; }
 }
 export const outcomeAssertionSchema = z.object({ label: z.string(), actor: z.enum(["user", "agent", "unknown"]), sourceRef: z.string(), at: z.string() });
+const todoAnnotationSchema = z.object({ state: z.enum(["pending", "applied"]), todoId: z.string(), beforeDigest: z.string().regex(/^[\da-f]{64}$/), afterDigest: z.string().regex(/^[\da-f]{64}$/), created: z.string() });
 export const decisionReceiptSchema = z.object({
   version: z.literal(1), id: z.string().uuid(), at: z.string(),
   evidence: evidenceSchema, instructions: instructionSnapshotSchema, judgment: triageJudgmentSchema,
   originalDecisionId: z.string().uuid().optional(),
-  application: z.object({ state: z.enum(["pending", "applied", "incomplete"]), from: z.string(), to: z.string(), questionRef: z.string().optional(), error: z.string().optional() }),
+  application: z.object({ state: z.enum(["pending", "applied", "incomplete"]), from: z.string(), to: z.string(), questionRef: z.string().optional(), error: z.string().optional(), todoAnnotation: todoAnnotationSchema.optional() }),
   outcomes: z.array(outcomeAssertionSchema),
   resolution: z.object({ destinationRef: z.string(), sourceRef: z.string(), actor: z.enum(["user", "agent", "unknown"]) }).optional(),
   provenanceRepair: z.object({ observedCommit: z.string(), at: z.string() }).optional(),

@@ -18,7 +18,7 @@ import { readDecisionReceipt, containedPath, TriageReceiptError, type DecisionRe
 
 interface ReplayResult {
   id: string; repetition: number; historical: TriageJudgment; model: string; modelDrift: boolean;
-  assertions: DecisionReceipt["outcomes"]; preparationChanged?: boolean; outcomeChanged?: boolean; probabilityDeltas?: Record<string, number>;
+  assertions: DecisionReceipt["outcomes"]; preparationChanged?: boolean; outcomeChanged?: boolean; todoOutcomeChanged?: boolean; probabilityDeltas?: Record<string, number>;
   status: "evaluated" | "unavailable"; original?: TriageJudgment; candidate?: TriageJudgment; error?: string;
 }
 function isWithin(directory: string, file: string): boolean {
@@ -105,10 +105,18 @@ async function prepareAgain(boxRoot: string, receipt: DecisionReceipt): Promise<
 function samePreparedParts(left: Evidence["parts"], right: Evidence["parts"]): boolean {
   return JSON.stringify(left.map(({ ref: _ref, ...part }) => part)) === JSON.stringify(right.map(({ ref: _ref, ...part }) => part));
 }
-function describeComparison(result: ReplayResult, candidate: TriageJudgment): void {
-        const baseline = result.original ?? result.historical;
-        result.outcomeChanged = baseline.outcome !== candidate.outcome || baseline.destinationRef !== candidate.destinationRef;
-        result.probabilityDeltas = Object.fromEntries(Object.entries(candidate.answer?.probabilities ?? {}).map(([key, value]) => [key, value - (baseline.answer?.probabilities[key] ?? 0)]));
+function todoOutcome(judgment: TriageJudgment, instructions: InstructionSnapshot): { destination: string; question: string; answer: "unavailable" | "yes" | "no" } | null {
+  const destination = instructions.destinations.find((entry) => entry.ref === judgment.destinationRef);
+  if (!destination?.todoQuestion) return null;
+  const probability = judgment.todoAnswers?.[destination.optionId];
+  return { destination: destination.ref, question: destination.todoQuestion, answer: probability === undefined ? "unavailable" : probability > 0.5 ? "yes" : "no" };
+}
+function describeComparison(result: ReplayResult, comparison: { candidate: TriageJudgment; instructions: { original: InstructionSnapshot; candidate: InstructionSnapshot } }): void {
+  const { candidate, instructions } = comparison;
+  const baseline = result.original ?? result.historical;
+  result.outcomeChanged = baseline.outcome !== candidate.outcome || baseline.destinationRef !== candidate.destinationRef;
+  result.todoOutcomeChanged = JSON.stringify(todoOutcome(baseline, instructions.original)) !== JSON.stringify(todoOutcome(candidate, instructions.candidate));
+  result.probabilityDeltas = Object.fromEntries(Object.entries(candidate.answer?.probabilities ?? {}).map(([key, value]) => [key, value - (baseline.answer?.probabilities[key] ?? 0)]));
 }
 export async function replayDecisions(opts: { boxRoot: string; ids: string[]; instructions: InstructionSnapshot; compareOriginal?: boolean; maxCalls: number; repeat?: number; prepareAgain?: boolean; model?: string; jev?: JevService; env?: NodeJS.ProcessEnv }): Promise<{ plannedCalls: number; results: ReplayResult[] }> {
   const repeat = opts.repeat ?? 1;
@@ -135,7 +143,7 @@ export async function replayDecisions(opts: { boxRoot: string; ids: string[]; in
         if (opts.compareOriginal) result.original = await judgeItem(opts.boxRoot, { ...shared, instructions: receipt.instructions });
         result.candidate = await judgeItem(opts.boxRoot, { ...shared, instructions: opts.instructions });
         if (result.candidate.returnedModel !== model || (result.original && result.original.returnedModel !== model)) throw new TriageReceiptError({ detail: `Pinned model ${model} was substituted by the provider` });
-        describeComparison(result, result.candidate);
+        describeComparison(result, { candidate: result.candidate, instructions: { original: receipt.instructions, candidate: opts.instructions } });
         result.status = "evaluated";
       } catch (error) { result.error = errorMessage(error); /* Per-case operational failure is explicit in the replay result. */ }
       results.push(result);

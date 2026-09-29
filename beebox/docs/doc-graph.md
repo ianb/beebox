@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-29T23:04:35Z
-Total documents: 469
+Generated: 2026-09-29T23:20:35Z
+Total documents: 472
 
 ## Issues
 
@@ -57,13 +57,13 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (379 lines) · shipped history · implemented
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
+- **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (159 lines) · proposal · partial
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/gmail-admission-and-preparation.md** — "Gmail admission and email preparation" (320 lines) · proposal · partial
 - **docs/plans/gmail-admission-and-preparation.review.md** — "Plan Engineering Review — Gmail admission and preparation" (88 lines) · plan review
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
@@ -220,6 +220,7 @@ Referenced by:
 - docs/plans/change-based-test-selection.md:958 (mention) — `--base`, CLAUDE.md guidance. The point at which behavior changes for agents,
 - docs/plans/chat-photo-batch-upload.md:51 (link) — - [`beebox/CLAUDE.md`](../../CLAUDE.md):101 — *"Read before writing. Don't
 - docs/plans/chat-scroll-model.md:213 (mention) — harness, all scenarios green, `decideScroll` deleted, nested CLAUDE.md and
+- docs/plans/chat-search.md:251 (mention) — scroll" invariant, `frontend chat CLAUDE.md`). One-shot like `companion`;
 - docs/plans/codex-session-startup-auth.md:21 (mention) — - `CLAUDE.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
 - docs/plans/container-first.md:79 (mention) — - `CLAUDE.md`, Time discipline: *"Long-running timeouts must count only awake
 - docs/plans/container-first.review.md:711 (mention) — **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
@@ -719,6 +720,7 @@ Referenced by:
 - docs/guides.md:31 (link) — | Adding an API endpoint (tRPC by default) | [adding-api-endpoints](adding-api-endpoints.md) |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:163 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/implemented-plans/docs-reorg.md:148 (mention) — - **Skill-promotion candidates**: `adding-api-endpoints.md` (tRPC-vs-REST
+- docs/plans/chat-search.md:216 (mention) — (`docs/adding-api-endpoints.md`); chat search is chat-domain, not
 - docs/plans/ios-native-capture-mode.md:30 (mention) — - `docs/adding-api-endpoints.md`: capture uploads remain raw Fastify because
 - docs/plans/search-card.md:97 (mention) — point. `beebox/docs/adding-api-endpoints.md` specifies tRPC for normal read
 - ../.claude/skills/bbx-guide-api/SKILL.md:9 (mention) — checklist lives in `beebox/docs/adding-api-endpoints.md` — follow
@@ -1427,6 +1429,7 @@ Referenced by:
 - ../issues/features/2026-09-11-bias-apple-speech-with-box-vocabulary.md:53 (mention) — (`beebox/docs/mobile-contract.md`) is where that would live.
 - ../issues/features/2026-09-12-most-recent-conversation-should-be-per-person.md:26 (mention) — the owner (see `docs/mobile-contract.md` §2.3). Shared boxes with distinct
 - ../issues/features/2026-09-26-apns-push-relay-for-a-shared-app.md:46 (mention) — the mobile contract (`beebox/docs/mobile-contract.md` §5.10) and adds a
+- ../issues/features/2026-09-28-private-chat-sessions-search-gating.md:20 (mention) — (`docs/mobile-contract.md` §2.3), so shared boxes with distinct identities
 - ../research/opencode/inspiration.md:78 (mention) — | One server, many clients; ACP; desktop sidecar | web + iOS over one server; `docs/mobile-contract.md` | already done,
 
 References:
@@ -1976,7 +1979,7 @@ Referenced by:
 - docs/landmarks.md:34 (mention) — A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fie
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/cli-restructure.md:95 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `bbx intake`, but the bare `bbx intake` is now
-- docs/plans/gmail-admission-and-preparation.md:14 (link) — [`triage.md`](../triage.md); this plan covers future test isolation, raw MIME
+- docs/plans/gmail-admission-and-preparation.md:14 (link) — already exist in [`triage.md`](../triage.md) and the
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:36 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:181 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
 - docs/reports/plan-directory-migration-history-2026-09-13.md:23 (mention) — operation is in `docs/triage.md` and the mixed design record is in
@@ -2185,18 +2188,18 @@ Title: "Todos" | 88 lines | current reference
 Referenced by:
 - docs/box-guidance.md:135 (link) — [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
 - docs/implemented-plans/doc-structure-box-guidance.md:441 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
-- docs/plans/gmail-admission-and-preparation.md:85 (mention) — - `beebox/docs/box/todos.md:39`: `by="agent" assigned="agent"` already represents
+- docs/plans/gmail-admission-and-preparation.md:88 (mention) — - `beebox/docs/box/todos.md:39`: `by="agent" assigned="agent"` already represents
 - src/core/agent-guide/guide.md:336 (mention) — Mechanics: `node_modules/beebox/box-docs/todos.md`, before adding attributes,
 
 #### docs/box/triage-instructions.md
 
-Title: "Triage instructions and replay" | 118 lines | current reference
+Title: "Triage instructions and replay" | 133 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/jev-document-triage.md:405 (mention) — is on-demand `docs/box/triage-instructions.md`, with short discoverability pointers
 - docs/triage.md:94 (link) — Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
 - src/core/agent-guide/guide.md:414 (link) — Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
-- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:148 (link) — The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
+- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:153 (link) — The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
 
 #### docs/box/tricks.md
 
@@ -2417,6 +2420,8 @@ Title: "Quick chat" | 121 lines | current reference
 
 Referenced by:
 - docs/chat.md:14 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
+- docs/plans/gmail-admission-and-preparation.md:24 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
+- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:102 (link) — and is documented at [`beebox/docs/chat/quick-chat.md`](../../beebox/docs/chat/quick-chat.md);
 
 References:
 - → docs/box/quick-chat.md (link)
@@ -3220,6 +3225,7 @@ Title: "Box search (`bbx search`) and the global `contains` field" | 573 lines |
 
 Referenced by:
 - docs/implemented-plans/semantic-search.md:15 (mention) — (`docs/implemented-plans/box-search.md` § NOT in scope), which pre-committed
+- docs/plans/chat-search.md:89 (mention) — `docs/implemented-plans/box-search.md` (shipped card search; the text-mode
 - ../issues/closed/features/2026-05-11-box-search.md:10 (mention) — `docs/implemented-plans/box-search.md`), as the body already records.
 
 References:
@@ -4499,7 +4505,7 @@ Title: "Replayable document triage with Jev" | 555 lines | shipped history | imp
 
 Referenced by:
 - docs/reports/jev-document-triage-experiment-2026-09-28.md:11 (link) — [plan](../plans/jev-document-triage.md) records the accepted admission boundary
-- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:106 (link) — and [implementation plan](../../beebox/docs/implemented-plans/jev-document-triage.md) cover only
+- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:109 (link) — and [implementation plan](../../beebox/docs/implemented-plans/jev-document-triage.md) cover only
 
 References:
 - → ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md (frontmatter)
@@ -5530,6 +5536,7 @@ Title: "Semantic search (box-search phase 3): hybrid BM25 + vector retrieval" | 
 
 Referenced by:
 - docs/implemented-plans/chat-review.md:837 (mention) — the validation in `docs/plans/semantic-search.md` § Rollout rather than appending
+- docs/plans/chat-search.md:88 (mention) — - Prior art in-tree: `docs/implemented-plans/semantic-search.md` and
 
 References:
 - → docs/implemented-plans/box-search.md (mention)
@@ -5791,6 +5798,26 @@ References:
 - → ../issues/features/2026-08-12-show-retranscription-in-chat.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
+
+#### docs/implemented-plans/triage-todo-question.md
+
+Title: "Destination questions create triage follow-up todos" | 240 lines | shipped history | implemented
+
+Referenced by:
+- docs/plans/gmail-admission-and-preparation.md:15 (link) — [implemented todo plan](../implemented-plans/triage-todo-question.md). This plan
+- ../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md:62 (link) — The [triage todo question plan](../../beebox/docs/implemented-plans/triage-todo-question.md)
+
+References:
+- → ../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md (frontmatter)
+- → ../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md (link)
+- → docs/plans/gmail-admission-and-preparation.md (mention)
+- → ../issues/decisions/2026-09-29-triage-todo-raw-file-policy.md (link)
+
+#### docs/implemented-plans/triage-todo-question.review.md **[ORPHAN]**
+
+Title: "Plan Engineering Review — triage todo question" | 109 lines | implementation review
+
+No references in or out.
 
 #### docs/implemented-plans/user-location.md
 
@@ -6435,6 +6462,21 @@ References:
 - → docs/chat/scroll.md (link)
 - → ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md (link)
 
+#### docs/plans/chat-search.md
+
+Title: "Search recent chats by what was said in them" | 421 lines | proposal | partial
+
+Referenced by:
+- ../issues/closed/features/2026-09-28-search-recent-chats.md:5 (frontmatter) — design: ../../../beebox/docs/plans/chat-search.md
+- ../issues/features/2026-09-28-chats-in-global-search.md:33 (mention) — design (restore-cost isolation, see `beebox/docs/plans/chat-search.md`).
+
+References:
+- → ../issues/closed/features/2026-09-28-search-recent-chats.md (frontmatter)
+- → docs/implemented-plans/semantic-search.md (mention)
+- → docs/implemented-plans/box-search.md (mention)
+- → docs/adding-api-endpoints.md (mention)
+- → CLAUDE.md (mention)
+
 #### docs/plans/chat-session-delete.md
 
 Title: "Chat Session Delete — Plan" | 772 lines | proposal | partial
@@ -6650,14 +6692,19 @@ References:
 - → docs/plans/workstream-exhibits.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
 
-#### docs/plans/gmail-admission-and-preparation.md **[ORPHAN]**
+#### docs/plans/gmail-admission-and-preparation.md
 
-Title: "Gmail admission and email preparation" | 320 lines | proposal | partial
+Title: "Gmail admission and email preparation" | 306 lines | proposal | partial
+
+Referenced by:
+- docs/implemented-plans/triage-todo-question.md:32 (mention) — `gmail-admission-and-preparation.md:203` says the sweep must select newly
 
 References:
 - → ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md (frontmatter)
 - → ../issues/code-quality/2026-09-28-passing-tests-start-chat-warmup-after-tempdir-removal.md (frontmatter)
 - → docs/triage.md (link)
+- → docs/implemented-plans/triage-todo-question.md (link)
+- → docs/chat/quick-chat.md (link)
 - → docs/box/todos.md (mention)
 
 #### docs/plans/gmail-admission-and-preparation.review.md **[ORPHAN]**
@@ -7622,7 +7669,7 @@ Title: "Document triage experiment — 2026-09-28" | 156 lines | dated report
 Referenced by:
 - docs/implemented-plans/jev-document-triage.md:146 (link) — The [format experiment](../reports/jev-document-triage-experiment-2026-09-28.md)
 - test/fixtures/triage-evaluation/README.md:20 (link) — golden model-output assertions. The [report](../../../docs/reports/jev-document-triage-experiment-2026-09-28.md)
-- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:105 (link) — The [synthetic experiment report](../../beebox/docs/reports/jev-document-triage-experiment-2026-09-28.md)
+- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:108 (link) — The [synthetic experiment report](../../beebox/docs/reports/jev-document-triage-experiment-2026-09-28.md)
 
 References:
 - → test/fixtures/triage-evaluation/README.md (link)
@@ -7634,7 +7681,7 @@ Title: "Jev instruction experiment — 2026-09-28" | 114 lines | dated report
 
 Referenced by:
 - docs/implemented-plans/jev-document-triage.md:151 (link) — [instruction experiment](../reports/jev-instruction-experiment-2026-09-28.md)
-- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:135 (link) — [paired report](../../beebox/docs/reports/jev-instruction-experiment-2026-09-28.md)
+- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:138 (link) — [paired report](../../beebox/docs/reports/jev-instruction-experiment-2026-09-28.md)
 
 References:
 - → test/fixtures/triage-evaluation/instructions/README.md (link)
