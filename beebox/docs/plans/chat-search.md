@@ -1,9 +1,9 @@
 ---
 title: "Search recent chats by what was said in them"
-status: active
+status: partial
 workstream: chat-search
 issues:
-  - ../../../issues/features/2026-09-28-search-recent-chats.md
+  - ../../../issues/closed/features/2026-09-28-search-recent-chats.md
 ---
 # Search recent chats by what was said in them
 
@@ -12,7 +12,8 @@ chat, they want to search the conversations themselves and land in the right
 one — finding a chat by what was said, not just its title.
 
 **Issues addressed:**
-`issues/features/2026-09-28-search-recent-chats.md` (the anchor).
+`issues/closed/features/2026-09-28-search-recent-chats.md` (the anchor,
+closed as implemented by this plan).
 Related, not resolved here: `issues/code-quality/2026-07-18-chat-backend-port-hygiene.md`
 (owning our transcripts would simplify indexing; that work stays separate).
 
@@ -399,11 +400,21 @@ Done-when, as tests:
   append → only new chunk docs; shrink → rebuild; delete → drop; codex
   metadata failure → Claude-only + warning.
 - `chat-search query` doctest: fixture index → match ordering, per-chat
-  dedupe, recency tiebreak, snippet generation.
+  dedupe, recency tiebreak, snippet generation. **Delivered inside
+  `test/core/chat-search/refresh.doctest.md`** (same fixture box, assertions
+  on `searchChats` results), not as a separate file.
 - `chat.search` router doctest: input validation, result shape, stale flag.
+  **Still future** — the result shape and stale flag are covered at the
+  `searchChats` layer (refresh doctest); the zod input validation on the
+  tRPC procedure has no dedicated router doctest.
 - Panel component test + browse exhibit on a test box (real transcripts are
   private box content — test boxes only, per repo privacy rules).
-- `/dev/chat-scroll` harness: reveal scenario PASS.
+  **Delivered as browse verification only** — exhibit
+  `chat-search/chat-transcript-search-panel-field-and-result`; no component
+  doctest was authored for `session-search.tsx` / `reveal-anchor.ts`.
+- `/dev/chat-scroll` harness: reveal scenario PASS. **Not added, by the
+  recorded as-built deviation** — the reveal reuses `anchorToTop` and
+  `scroll.ts` is untouched (see *What will hold this after it ships*).
 
 No on-disk box data changes: both files live in `.beebox/` and are
 disposable caches. No migration.

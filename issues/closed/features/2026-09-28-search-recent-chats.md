@@ -2,13 +2,27 @@
 title: "Search recent chats by what was said in them, with the same kind of semantic search cards get"
 workstream: chat-search
 needs: [design]
-design: ../../beebox/docs/plans/chat-search.md
+design: ../../../beebox/docs/plans/chat-search.md
 area: beebox
 labels: [chat, search]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-28
+resolution: implemented
 ---
+
+> Closed 2026-09-29 as `implemented` by the `chat-search` workstream (branch
+> `worktree-chat-search`, commits `711244238`–`9850b94eb`; plan:
+> `beebox/docs/plans/chat-search.md`). A separate text-only Orama index over
+> chat transcript chunks (`beebox/src/core/chat-search/`), a `chat.search`
+> tRPC procedure, a search field on the Recent chats panel, and an
+> `?m=<entry uuid>` deep link that opens the chat at the matching message.
+> Divergence from the issue's framing: the issue hoped for embedding-style
+> semantic search; the boxholder chose text-only ranking on 2026-09-28 so
+> transcripts never reach the embeddings provider. Cmd+K integration and
+> per-user privacy gating stay open as
+> [chats in global search](../../features/2026-09-28-chats-in-global-search.md) and
+> [private-session search gating](../../features/2026-09-28-private-chat-sessions-search-gating.md).
 
 **Job to be done.** The boxholder remembers talking about something in a
 recent chat and wants to find that chat. Today the only way is to scroll the
@@ -58,9 +72,9 @@ the chat logs themselves.
   the existing search. Results show a snippet and open the chat at the
   matching message.
 
-Related: [chat backend port hygiene](../code-quality/2026-07-18-chat-backend-port-hygiene.md)
+Related: [chat backend port hygiene](../../code-quality/2026-07-18-chat-backend-port-hygiene.md)
 (owning our transcripts would make them easier to index),
-[chats in global search](2026-09-28-chats-in-global-search.md) and
-[private-session search gating](2026-09-28-private-chat-sessions-search-gating.md)
+[chats in global search](../../features/2026-09-28-chats-in-global-search.md) and
+[private-session search gating](../../features/2026-09-28-private-chat-sessions-search-gating.md)
 (follow-ups deferred from the 2026-09-28 design: text-only ranking chosen, so
 no embeddings consent question remains).

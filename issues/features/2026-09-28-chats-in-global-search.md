@@ -10,7 +10,7 @@ discovered-in: worktree-chat-search — chat-search design discussion, 2026-09-2
 ---
 
 Once chat transcript search exists (see
-[2026-09-28-search-recent-chats.md](2026-09-28-search-recent-chats.md)), the
+[2026-09-28-search-recent-chats.md](../closed/features/2026-09-28-search-recent-chats.md)), the
 boxholder wants chat results in the global search surfaces too — Cmd+K quick
 search and the search page — not only the search field on the chat list.
 
