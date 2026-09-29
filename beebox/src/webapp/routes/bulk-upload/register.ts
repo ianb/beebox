@@ -52,6 +52,7 @@ import {
   resolveCaptureRequestOwner,
 } from "../capture-request-owner.js";
 import { getDirectoryForSession } from "../../../core/chat/session/history.js";
+import { withoutBoxWork } from "../../../lib/box-maintenance.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 import { startBulkUploadLifecycle } from "./lifecycle.js";
 import { beginStream, endStream } from "./stream-gate.js";
@@ -339,13 +340,15 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
           note: trimmedNote !== undefined && trimmedNote !== "" ? trimmedNote : undefined,
         });
         if (seal.sealed) {
-          void prepareAndDeliverBulkBatch({
+          // Detached from this request: the worker outlives its admission, and
+          // an inherited permit would expire under it. See `admittedPass`.
+          void withoutBoxWork(() => prepareAndDeliverBulkBatch({
             boxRoot,
             id: session.id,
             eventBus,
             registry: runtime.registry,
             wireSession: runtime.wireSession,
-          }).catch(async (err: unknown) => {
+          })).catch(async (err: unknown) => {
             console.error(`[bulk] Preparation of ${session.id} failed:`, err);
             await markBulkPreparationFailed({ boxRoot, id: session.id });
           });
