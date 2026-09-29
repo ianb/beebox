@@ -2,7 +2,7 @@
  * The reading view of a pdf card (`src/schemas/pdf.ts`).
  *
  * What the card holds: provenance for an original file kept in its attach
- * scope, the extracted markdown as the body, page renders (`page-001.avif`, …)
+ * scope, the extracted markdown as the body, page renders (`page-001.webp`; existing `.avif` files remain readable)
  * and figures beside it. Before this view existed the card fell through to the
  * generic frontmatter renderer, which showed a `filename:` table and a wall of
  * text with no way to see the pages or the original.

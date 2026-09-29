@@ -103,9 +103,10 @@ a call. Whole-part exclusions remain explicit in evidence.
 
 Scan preparation prioritizes structured PDF cards, retains each attachment's
 digest even when its text is redundant, and treats referenced internal Docling
-sidecars as provenance rather than unreadable document parts. Vision transport
-converts stored AVIF bytes to a supported image format without changing the
-original files. When an analyzed PDF card has readable structured text retained
+sidecars as provenance rather than unreadable document parts. New PDF page and
+figure assets use WebP; existing AVIF assets remain supported. Vision transport
+passes WebP through and converts AVIF to a supported image format without changing
+the original files. When an analyzed PDF card has readable structured text retained
 in the request, its generated full-page renders use that representation without
 additional vision calls. Their refs and digests remain in the evidence. If the
 structured text is empty, unavailable, or excluded by the budget, preparation

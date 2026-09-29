@@ -14,7 +14,7 @@ import { errnoCode } from "../shared/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { withCardLock } from "../lib/card-lock.js";
 
-export const SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff"];
+export const SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".avif"];
 export const PDF_EXTENSION = ".pdf";
 
 class UnsupportedFileTypeError extends Error {
@@ -48,7 +48,7 @@ export interface ScanGroup {
   label: string;
 }
 
-const SCANNER_PREFIX_RE = /^(.+)[_-]\d+\.(jpg|jpeg|png|tif|tiff)$/i;
+const SCANNER_PREFIX_RE = /^(.+)[_-]\d+\.(jpg|jpeg|png|tif|tiff|webp|avif)$/i;
 
 function isImage(file: string): boolean {
   return SUPPORTED_IMAGE_EXTENSIONS.includes(path.extname(file).toLowerCase());

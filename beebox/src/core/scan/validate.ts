@@ -34,6 +34,10 @@ const ACCEPTED_TYPES: Record<string, string[]> = {
   ".png": ["image/png"],
   ".tif": ["image/tiff"],
   ".tiff": ["image/tiff"],
+  ".webp": ["image/webp"],
+  // file-type calls AVIF files whose major brand is `mif1` HEIF; both container
+  // labels are accepted for .avif, then Sharp must fully decode the image.
+  ".avif": ["image/avif", "image/heif"],
 };
 
 const ACCEPTED_EXTENSIONS = [PDF_EXTENSION, ...SUPPORTED_IMAGE_EXTENSIONS];
@@ -115,7 +119,8 @@ async function checkImage(filePath: string): Promise<ScanValidation> {
     // modules in the graph; only the image paths need it, and every `bbx`
     // invocation was paying for it (docs/plans/commit-performance.md, 1b).
     const { default: Sharp } = await import("sharp");
-    await Sharp(filePath, { failOn: "error" }).resize({ width: 32, height: 32, fit: "inside" }).toBuffer();
+    const image = Sharp(filePath, { failOn: "error" });
+    await image.resize({ width: 32, height: 32, fit: "inside" }).raw().toBuffer();
     return { status: "valid" };
   } catch (e) {
     return { status: "rejected", reason: `the image could not be decoded: ${condense(errorMessage(e))}` };

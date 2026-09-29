@@ -28,7 +28,7 @@
  *
  * Pdf flow output:
  *   <sessionAttach>/source.pdf.card
- *     + source.attach/{source.pdf, docling.json.gz, page-NNN.avif, figure-NNN.avif}
+ *     + source.attach/{source.pdf, docling.json.gz, page-NNN.webp, figure-NNN.webp}
  *   _content/inbox/<name>.capture-session.card  (no image refs)
  *
  * Internal implementation is split across siblings: `scan-import-session.ts`

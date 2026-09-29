@@ -230,7 +230,7 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
     const representations = scanRepresentations(parts, manifestRefs);
     const method = deferredMethod({ file, ref, representations });
     const part: Part = method === undefined ? await preparePart({ file, bytes }, options)
-      : { ref, digest: sha256(bytes), mediaType: method === "provenance-only" ? "application/gzip" : method === "pdf-deferred" ? "application/pdf" : "image/avif", method, toolVersion: "1", status: method === "provenance-only" ? "ready" : "unavailable", text: "", omissions: [] };
+      : { ref, digest: sha256(bytes), mediaType: method === "provenance-only" ? "application/gzip" : method === "pdf-deferred" ? "application/pdf" : `image/${path.extname(file).slice(1)}`, method, toolVersion: "1", status: method === "provenance-only" ? "ready" : "unavailable", text: "", omissions: [] };
     await noteMissingAttachments(part, options.boxRoot);
     parts.push(part);
   }

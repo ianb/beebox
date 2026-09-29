@@ -51,7 +51,7 @@ await box.cleanup();
 ```
 
 An analyzed PDF card owns its generated direct page renders. When its body is
-retained, all twelve page digests remain in evidence while vision reads the
+retained, all twelve page digests (old AVIF and new WebP) remain in evidence while vision reads the
 figure and the serialized request stays under the wire cap.
 
 ```ts
@@ -61,22 +61,25 @@ await box.write("_content/inbox/staged/Rendered.attach/source.pdf.card", "---\ns
 const innerAttach = path.join(box.root, "_content/inbox/staged/Rendered.attach/source.attach");
 await fs.mkdir(innerAttach, { recursive: true });
 await fs.copyFile(path.join(fixture, "digital-property.pdf"), path.join(innerAttach, "source.pdf"));
-const pageNames = Array.from({ length: 12 }, (_, index) => `page-${String(index + 1).padStart(3, "0")}.avif`);
+const pageNames = Array.from({ length: 12 }, (_, index) => `page-${String(index + 1).padStart(3, "0")}.${index < 6 ? "avif" : "webp"}`);
 for (const name of pageNames) await fs.writeFile(path.join(innerAttach, name), `page bytes ${name}`);
 await fs.writeFile(path.join(innerAttach, "figure-001.avif"), "figure bytes");
 const pageVision = createFakeScanVision();
 const pageInstructions = await compileInstructionSnapshot(box.root);
 const pageEvidence = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Rendered.doc.card", vision: pageVision, instructions: pageInstructions });
-const pageParts = pageEvidence.parts.filter((part) => /\/page-\d{3,}\.avif$/u.test(part.ref));
+const pageParts = pageEvidence.parts.filter((part) => /\/page-\d{3,}\.(?:avif|webp)$/u.test(part.ref));
 const figurePart = pageEvidence.parts.find((part) => part.ref.endsWith("/figure-001.avif"));
 const submittedImages = pageVision.calls.flatMap((call) => call.imagePaths.map((file) => path.basename(file))).toSorted();
 JSON.stringify([pageEvidence.status, pageParts.length, pageParts.every((part) => part.method === "representation-selected" && part.duplicateOf === "/_content/inbox/staged/Rendered.attach/source.pdf.card"), figurePart?.method, submittedImages, serializeTriageRequest({ evidence: pageEvidence, instructions: pageInstructions }).length <= JEV_MAX_REQUEST_CHARS])
 => ["ready",12,true,"scan-vision",["figure-001.avif"],true]
 
-await fs.writeFile(path.join(innerAttach, "page-012.avif"), "changed page bytes");
+JSON.stringify([...new Set(pageParts.map((part) => part.mediaType))].sort())
+=> ["image/avif","image/webp"]
+
+await fs.writeFile(path.join(innerAttach, "page-012.webp"), "changed page bytes");
 let stalePage = "";
 await (async () => { try { await verifyEvidence(box.root, pageEvidence); } catch (error) { stalePage = String(error); } })();
-stalePage.includes("stale-decision: changed evidence /_content/inbox/staged/Rendered.attach/source.attach/page-012.avif; prepare again")
+stalePage.includes("stale-decision: changed evidence /_content/inbox/staged/Rendered.attach/source.attach/page-012.webp; prepare again")
 => true
 ```
 
@@ -102,19 +105,20 @@ JSON.stringify([emptyOwner.parts.find((part) => part.ref.endsWith("Empty.attach/
 await box.write("_content/inbox/staged/Oversized.pdf.card", "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n" + "O".repeat(1_000));
 await fs.mkdir(path.join(attach, "Oversized.attach"), { recursive: true });
 await fs.copyFile(path.join(fixture, "digital-property.pdf"), path.join(attach, "Oversized.attach/source.pdf"));
-await fs.writeFile(path.join(attach, "Oversized.attach/page-001.avif"), "excluded-owner page");
+await fs.writeFile(path.join(attach, "Oversized.attach/page-001.webp"), "excluded-owner page");
 const oversizedVision = createFakeScanVision();
 const oversizedOwner = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Oversized.pdf.card", maxTextChars: 100, vision: oversizedVision });
-JSON.stringify([oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.pdf.card"))?.status, oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.attach/page-001.avif"))?.method, oversizedVision.calls.length])
+JSON.stringify([oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.pdf.card"))?.status, oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.attach/page-001.webp"))?.method, oversizedVision.calls.length])
 => ["unavailable","scan-vision",1]
 
 await box.write("_content/inbox/staged/Unrelated.doc.card", "Ordinary document");
 await box.write("_content/inbox/staged/Unrelated.attach/page-001.avif", "unowned page");
+await box.write("_content/inbox/staged/Unrelated.attach/page-002.webp", "unowned WebP page");
 await box.write("_content/inbox/staged/Unrelated.attach/figure-001.avif", "unowned figure");
 const unrelatedVision = createFakeScanVision();
 const unrelated = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Unrelated.doc.card", vision: unrelatedVision });
 JSON.stringify(unrelatedVision.calls.flatMap((call) => call.imagePaths.map((file) => path.basename(file))).toSorted())
-=> ["figure-001.avif","page-001.avif"]
+=> ["figure-001.avif","page-001.avif","page-002.webp"]
 ```
 
 ```ts cleanup

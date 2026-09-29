@@ -56,7 +56,7 @@ function back(index: number, paired: number | null = null, text = "", opts: Part
 
 ## Every backend receives the same bounded JPEG
 
-The archive may contain a TIFF or a very large phone original. The shared
+The archive may contain a TIFF, WebP, AVIF, or a very large phone original. The shared
 runner applies the former Claude recipe once—EXIF rotation, 2000px long edge,
 JPEG quality 88—before either backend sees a path. Thus Gemini never inlines
 the raw TIFF, while Claude receives the same bytes it did before the hoist.
@@ -105,6 +105,43 @@ JSON.stringify({
 
 ```ts cleanup
 await normalizeBox.cleanup();
+```
+
+## New WebP and retained AVIF inputs still reach providers as JPEG scratch files
+
+The archive remains byte-for-byte intact; provider compatibility applies only
+to temporary scan-analysis files.
+
+```ts
+const formatBox = await makeTmpBox();
+const formatInputs = [];
+for (const format of ["webp", "avif"] as const) {
+  const path = join(formatBox.root, `source.${format}`);
+  const pipeline = Sharp({ create: { width: 12, height: 8, channels: 3, background: { r: 20, g: 90, b: 140 } } });
+  await (format === "webp" ? pipeline.webp() : pipeline.avif()).toFile(path);
+  formatInputs.push({ path, original: await readFile(path) });
+}
+const formatsSeen = [];
+await runScanBatches({
+  vision: {
+    backend: "claude",
+    batchSize: 8,
+    async analyzeBatch({ imagePaths }) {
+      for (const imagePath of imagePaths) formatsSeen.push({ extension: extname(imagePath), format: (await Sharp(imagePath).metadata()).format });
+      return { analyses: imagePaths.map((_path, index) => photo(index)), usage: null, costUsd: null };
+    },
+  },
+  imagePaths: formatInputs.map((item) => item.path),
+});
+JSON.stringify({
+  formats: formatsSeen,
+  originalsUnchanged: await Promise.all(formatInputs.map(async (item) => (await readFile(item.path)).equals(item.original))),
+})
+=> {"formats":[{"extension":".jpg","format":"jpeg"},{"extension":".jpg","format":"jpeg"}],"originalsUnchanged":[true,true]}
+```
+
+```ts cleanup
+await formatBox.cleanup();
 ```
 
 ## Sliding-overlap batch planning

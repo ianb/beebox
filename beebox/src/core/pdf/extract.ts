@@ -40,13 +40,14 @@ const DOCLING_JSON_FILENAME = "docling.json.gz";
 const TEXT_LAYER_FILENAME = "text-layer.txt";
 
 /**
- * AVIF encode settings for page renders and figures (D10). Quality 60 keeps
- * scanned text legible at a fraction of the PNG Docling emits; effort 4 is
- * libvips' balance point — higher costs seconds per page for single-digit
- * percentage gains on a scan.
+ * WebP settings chosen from the synthetic document probe recorded in D17 of
+ * scanner-ingest-docling-decisions.md. Originals remain available for detail
+ * that these lossy generated derivatives cannot preserve.
  */
-const AVIF_QUALITY = 60;
-const AVIF_EFFORT = 4;
+const WEBP_QUALITY = 80;
+const WEBP_EFFORT = 4;
+// WebP stores width/height in 14 bits, so neither axis may exceed 16,383 px.
+const WEBP_MAX_DIMENSION = 16_383;
 
 export interface PdfExtraction {
   /** Rendered markdown, with figure references rewritten into the attach scope. */
@@ -71,13 +72,13 @@ export interface ExtractPdfOptions {
   languages: string[] | null;
 }
 
-/** `page-001.avif`, `figure-012.avif`, … */
+/** `page-001.webp`, `figure-012.webp`, … */
 function assetName(prefix: string, index: number): string {
-  return `${prefix}-${String(index + 1).padStart(3, "0")}.avif`;
+  return `${prefix}-${String(index + 1).padStart(3, "0")}.webp`;
 }
 
 /**
- * Re-encode Docling's PNGs to AVIF in the attach scope, returning both the new
+ * Re-encode Docling's PNGs to WebP in the attach scope, returning both the new
  * names (in order) and the basename→ref mapping the markdown rewrite needs.
  */
 async function encodeImages(
@@ -92,7 +93,13 @@ async function encodeImages(
   for (const [index, image] of images.entries()) {
     const name = assetName(options.prefix, index);
     await Sharp(image.filePath)
-      .avif({ quality: AVIF_QUALITY, effort: AVIF_EFFORT })
+      .resize({
+        width: WEBP_MAX_DIMENSION,
+        height: WEBP_MAX_DIMENSION,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: WEBP_QUALITY, effort: WEBP_EFFORT })
       .toFile(path.join(options.attachAbsDir, name));
     names.push(name);
     refs.set(image.referencedAs, `attach/${name}`);
@@ -101,7 +108,7 @@ async function encodeImages(
 }
 
 /**
- * Point the markdown's image links at the AVIF copies.
+ * Point the markdown's image links at the WebP copies.
  *
  * Matched by basename, not by the path Docling wrote: those paths are relative
  * to an output root that does not match where the files actually landed (see
@@ -123,7 +130,7 @@ export async function extractPdf(options: ExtractPdfOptions): Promise<Result<Pdf
     languages: options.languages,
   });
   if (!extraction.ok) return err(extraction.error);
-  // Bound the output BEFORE anything reads it: the gzip and the AVIF re-encode
+  // Bound the output BEFORE anything reads it: the gzip and the WebP re-encode
   // below are per-artifact work on whatever Docling decided to produce (D16).
   // Over the cap is an extraction failure, which the caller already handles by
   // filing the original bytes with `status: new` — intake never blocks.
@@ -185,7 +192,7 @@ export async function clearExtractionAssets(
       name !== options.keep
       && (name === DOCLING_JSON_FILENAME
         || name === TEXT_LAYER_FILENAME
-        || /^(?:page|figure)-\d{3}\.avif$/u.test(name))
+        || /^(?:page|figure)-\d{3,}\.(?:avif|webp)$/u.test(name))
   );
   for (const name of stale) await fs.rm(path.join(attachAbsDir, name), { force: true });
   return stale;

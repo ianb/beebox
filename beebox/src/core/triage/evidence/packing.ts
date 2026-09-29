@@ -43,7 +43,7 @@ export function scanRepresentations(parts: Part[], manifestRefs?: string[]): Rep
       result.owners.set(layer, part.ref);
       for (const ref of refs) {
         const name = path.posix.basename(ref);
-        if (/^page-\d{3,}\.avif$/u.test(name) && attachmentRef(part.ref, `attach/${name}`) === ref) {
+        if (/^page-\d{3,}\.(?:avif|webp)$/u.test(name) && attachmentRef(part.ref, `attach/${name}`) === ref) {
           result.pages.set(ref, part.ref);
         }
       }
