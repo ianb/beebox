@@ -14,6 +14,7 @@ it asks what an app would add on top of it.
 | [packaging-options.md](packaging-options.md) | Native macOS app, Electron/Tauri, app-over-a-VM, Homebrew, NAS/appliance targets; signing, update, data location | NAS targets: adopt after image publish. VM app: later. Native bundle, Docker wrapper, Electron: reject |
 | [tailscale.md](tailscale.md) | Embedded tsnet helper vs the user's Tailscale; onboarding, Funnel, certificates, iOS, security | Box-owned node + interactive onboarding: adopt. Funnel, TailscaleKit in iOS: reject for now |
 | [comparables.md](comparables.md) | How Home Assistant, Umbrel, Ollama, Open WebUI, Obsidian, OpenClaw, and others package and reach their servers | Per-row dispositions inside |
+| [phase0-apple-container.md](phase0-apple-container.md) | Hands-on: the image under Apple's `container` 1.5.0 with a Finder-visible box folder | Feasible; memory sizing, prebuilt image, and the image gaps are the conditions |
 
 ## Findings
 

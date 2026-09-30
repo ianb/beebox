@@ -1,5 +1,5 @@
 ---
-title: "The Docker image lacks qpdf and uv/Docling, so PDF scan uploads get a 503 in the container"
+title: "The Docker image lacks qpdf, uv/Docling, and a codex on PATH, so scan uploads 503 and Codex login cannot run"
 workstream: unattached
 area: beebox
 labels: [install]
@@ -23,7 +23,19 @@ Consequences in the container, the primary install path
   (`beebox/src/core/scan/validate.ts:67-99`).
 - `uvx docling` is missing, so scan-import document mode cannot run
   (`beebox/src/services/docling/core.ts:295`).
-- `smoke-docker.sh` does not exercise either path, so the harness passes.
+- `codex` is installed only as a transitive dependency
+  (`/app/node_modules/.pnpm/node_modules/.bin/codex`) and is not on PATH.
+  The server links it into `/usr/local/bin`
+  (`beebox/deploy/hetzner/setup-server.sh:136`); the image does not. The
+  in-container `codex login --device-auth` that the container-first item
+  requires cannot run.
+- `smoke-docker.sh` does not exercise any of these paths, so the harness
+  passes.
+
+Observed again 2026-09-29 running the image under Apple's `container`: the
+server logs `qpdf is not installed; PDF scan uploads will be refused with
+503` at startup, and `codex` is not found
+([phase 0 note](../../research/installable-app/phase0-apple-container.md)).
 
 ## Why the fix is not only "add two packages"
 
