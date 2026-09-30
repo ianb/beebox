@@ -1,15 +1,15 @@
 # Migration: replace remaining `status` fields
 
-`src/scripts/migrate/status-fields.ts` replaces each card type's `status`
+`src/scripts/migrate/card-fields/status.ts` replaces each card type's `status`
 with the specific fact it recorded (part 2 of
 `docs/implemented-plans/standard-card-fields.md`). `planStatusFields(type, fm)` lists the
 edits for one card; `applyFieldEdits` applies them to the YAML text.
 
 ```ts setup
 import { parse, stringify } from "yaml";
-import { planStatusFields } from "../../../src/scripts/migrate/status-fields.js";
-import { applyFieldEdits } from "../../../src/scripts/migrate/_field-edits.js";
-import { createInitialGuideTemplate } from "../../../src/schemas/guide/templates.js";
+import { planStatusFields } from "../../../../src/scripts/migrate/card-fields/status.js";
+import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
+import { createInitialGuideTemplate } from "../../../../src/schemas/guide/templates.js";
 
 // Plan the edits for a card, apply them to its YAML, and report the result.
 function run(type: string, fm: Record<string, unknown>): string {

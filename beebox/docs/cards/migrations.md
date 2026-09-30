@@ -511,7 +511,7 @@ migrator fails a card, unchanged, when its value has no safe mapping: an
 email-outbound whose `status` is not `draft` (it would otherwise upload as a
 draft) or a record status outside the old enum. A non-empty audio `summary`
 is dropped with a warning; the transcript stays. Idempotent. See
-`src/scripts/migrate/standard-fields.ts`.
+`src/scripts/migrate/card-fields/standard.ts`.
 
 #### `status-fields-2026-09` (replace — `status` becomes the specific fact)
 
@@ -560,7 +560,7 @@ Part 2 of `docs/implemented-plans/standard-card-fields.md`. Per type:
   such a card could not load before either.
 
 Any other value fails the card, unchanged. Idempotent. See
-`src/scripts/migrate/status-fields.ts`.
+`src/scripts/migrate/card-fields/status.ts`.
 
 #### `source-fields-2026-09` (rename — `source` gets its specific names)
 
@@ -626,7 +626,7 @@ both `name` and `title`, or when a recipe's
 `source` is not a map or has both `href` and `ref`. A card keeps its line wrapping (see `applyFieldEdits`), so an unedited
 stock guide, personality or schedule becomes exactly the current template.
 Idempotent. See
-`src/scripts/migrate/source-fields.ts`.
+`src/scripts/migrate/card-fields/source.ts`.
 
 ## Manual runs (for debugging)
 

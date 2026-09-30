@@ -17,8 +17,8 @@ import { docsHandler } from "../../../../src/connectors/google-drive/handlers/do
 import { createGdocTemplate } from "../../../../src/schemas/gdoc.js";
 import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../../../../src/exports/cards.js";
-import { planSourceFields } from "../../../../src/scripts/migrate/source-fields.js";
-import { applyFieldEdits } from "../../../../src/scripts/migrate/_field-edits.js";
+import { planSourceFields } from "../../../../src/scripts/migrate/card-fields/source.js";
+import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
 import { findDriveCardTracking } from "../../../../src/connectors/google-drive/tracking.js";
 
 // Several assertions exercise conflict/error paths that log to console.
