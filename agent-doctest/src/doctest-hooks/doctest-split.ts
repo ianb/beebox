@@ -77,13 +77,54 @@ export function oracleSplit(expression: string): SplitExpression | null {
     if (!expr) continue;
     if (compiles(`${setup.join("\n")}\n;(${expr}\n);`)) return { setup, expr, exprIndex: k };
   }
+  for (let k = 0; k < lines.length; k++) {
+    if (!/^\s*(?:try|if|switch)\b/.test(lines[k] ?? "")) continue;
+    const expr = blockValue(lines.slice(k));
+    if (expr !== null && compiles(`${lines.slice(0, k).join("\n")}\n;(${expr}\n);`)) {
+      return { setup: lines.slice(0, k), expr, exprIndex: k };
+    }
+  }
   return null;
+}
+
+/**
+ * The value of a `try`/`if`/`switch` statement whose blocks end in a bare
+ * expression — what authors from expression-oriented languages write:
+ *
+ *   try { await risky(); } catch (e) { e.message }
+ *   => boom
+ *
+ * A statement has no value in JavaScript, so the blocks are wrapped in an
+ * async arrow and each block's final expression becomes its `return`. The
+ * result must compile (the caller checks), so a wrong guess costs nothing.
+ */
+function blockValue(lines: string[]): string | null {
+  const out = [...lines];
+  let returns = 0;
+  for (let i = 0; i < out.length - 1; i++) {
+    const line = out[i] ?? "";
+    const next = (out[i + 1] ?? "").trim();
+    const t = line.trim();
+    if (!next.startsWith("}") || t === "" || /[(,;{}]$/.test(t) || /^(?:\/\/|return\b|throw\b|case\b|default\b|else\b|try\b|if\b|for\b|while\b)/.test(t)) continue;
+    out[i] = line.replace(t, `return ${t.replace(/;$/, "")};`);
+    returns++;
+  }
+  if (returns === 0) return null;
+  return `await (async () => {\n${out.join("\n")}\n})()`;
 }
 
 // ── Imports in example blocks ────────────────────────────────────────────────
 
-const IMPORT_RE = /^(\s*)import\s+(type\s+)?([\S\s]*?)\s*from\s*(["'][^"']+["'])\s*;?\s*$/;
-const BARE_IMPORT_RE = /^(\s*)import\s*(["'][^"']+["'])\s*;?\s*$/;
+// A trailing `with { type: "json" }` (or the older `assert { … }`) is carried
+// into the dynamic import's options.
+const ATTRS = String.raw`(?:\s*(?:with|assert)\s*({[^}]*}))?`;
+const IMPORT_RE = new RegExp(String.raw`^(\s*)import\s+(type\s+)?([\S\s]*?)\s*from\s*(["'][^"']+["'])${ATTRS}\s*;?\s*$`);
+const BARE_IMPORT_RE = new RegExp(String.raw`^(\s*)import\s*(["'][^"']+["'])${ATTRS}\s*;?\s*$`);
+
+/** The second argument of `import()`, when the static form carried attributes. */
+function importOptions(attrs: string | undefined): string {
+  return attrs ? `, { with: ${attrs} }` : "";
+}
 
 /** `{ a, b as c, type D }` → `{ a, b: c }` */
 function bindingsToPattern(named: string): string {
@@ -108,6 +149,11 @@ function rewriteClause(clause: string, source: string): string {
   return `const { ${bindingsToPattern(spec)} } = await import(${source});`;
 }
 
+/** Whether an import statement that started on this line ends here. */
+function importEnds(line: string): boolean {
+  return /(["'])[^"']+\1\s*;?\s*$/.test(line) || /(?:with|assert)\s*{[^}]*}\s*;?\s*$/.test(line);
+}
+
 /**
  * Rewrite static `import` statements in an example to `await import()`, in
  * place, so they run in the order they are written. (Hoisting them to module
@@ -129,14 +175,14 @@ export function rewriteImports(expression: string): string {
   for (let i = 0; i < lines.length; i++) {
     if (startsInTemplate[i] || !/^\s*import[\s"'*{]/.test(lines[i] ?? "")) continue;
     let end = i;
-    while (end < lines.length - 1 && !/(["'])[^"']+\1\s*;?\s*$/.test(lines[end] ?? "")) end++;
+    while (end < lines.length - 1 && !importEnds(lines[end] ?? "")) end++;
     const statement = lines.slice(i, end + 1).join("\n");
     const bare = BARE_IMPORT_RE.exec(statement);
     const full = IMPORT_RE.exec(statement);
     let replacement: string | null = null;
-    if (bare) replacement = `${bare[1] ?? ""}await import(${bare[2] ?? ""});`;
+    if (bare) replacement = `${bare[1] ?? ""}await import(${bare[2] ?? ""}${importOptions(bare[3])});`;
     else if (full?.[2]) replacement = "";
-    else if (full) replacement = `${full[1] ?? ""}${rewriteClause(full[3] ?? "", full[4] ?? "")}`;
+    else if (full) replacement = `${full[1] ?? ""}${rewriteClause(full[3] ?? "", `${full[4] ?? ""}${importOptions(full[5])}`)}`;
     if (replacement === null) continue;
     lines.splice(i, end - i + 1, replacement, ...Array.from({ length: end - i }, () => ""));
     i = end;

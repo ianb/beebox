@@ -593,3 +593,12 @@ print("second");
   const printDecls = (source.match(/const __doctest_prints = \[\]/g) || []).length;
   t.equal(printDecls, 2, "each test should have its own __prints");
 });
+
+test("declaresName and blockDeclarations: destructuring and imports count, type-only imports do not", async (t) => {
+  const { declaresName, blockDeclarations } = await import("../src/doctest-hooks/doctest-runtime.ts");
+  t.notOk(declaresName('import type { t } from "./types.js";', "t"), "a type-only import does not bind t");
+  t.notOk(declaresName('import { type t, u } from "./x.js";', "t"), "a type specifier does not bind t");
+  t.ok(declaresName('import { u as t } from "./x.js";', "t"));
+  t.same(blockDeclarations('const { box, items: [first] } = make();\nconst [a, , b = 2, ...rest] = list;\nimport d, { e as f } from "./m.js";'),
+    ["box", "first", "a", "b", "rest", "d", "f"]);
+});

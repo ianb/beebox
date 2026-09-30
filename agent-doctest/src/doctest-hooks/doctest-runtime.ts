@@ -36,14 +36,59 @@ function topLevelLines(code: string): string[] {
   return out;
 }
 
-/** Names a block declares at its own top level (`const x`, `function f`, …). */
-export function blockDeclarations(code: string): string[] {
-  const names: string[] = [];
-  for (const line of topLevelLines(code)) {
-    const m = /^\s*(?:const|let|var|function|class|async\s+function)\s+([$A-Z_a-z][\w$]*)/.exec(line);
-    if (m?.[1]) names.push(m[1]);
+/**
+ * The names bound by a destructuring pattern or an import clause: every
+ * identifier that is not a key (`key:`), an `as` source, a `type` specifier,
+ * or a default value.
+ */
+function boundNames(pattern: string): string[] {
+  const cleaned = pattern
+    .replace(/\btype\s+[$A-Z_a-z][\w$]*(\s+as\s+[$A-Z_a-z][\w$]*)?/g, "")
+    .replace(/[$A-Z_a-z][\w$]*\s+as\s+/g, "")
+    .replace(/=\s*[^,\]}]+/g, "");
+  return [...cleaned.matchAll(/([$A-Z_a-z][\w$]*)(?!\s*:)\b/g)].map((m) => m[1] ?? "").filter((n) => n.length > 0);
+}
+
+/** `const { … } = x` or `const [ … ] = x`: the pattern up to the `=` at depth 0. */
+function destructuringPattern(line: string): string | null {
+  const m = /^\s*(?:const|let|var)\s*([[{])/.exec(line);
+  if (!m) return null;
+  const start = line.indexOf(m[1] ?? "{", m[0].length - 1);
+  let depth = 0;
+  for (let i = start; i < line.length; i++) {
+    const c = line[i];
+    if (c === "{" || c === "[") depth++;
+    else if (c === "}" || c === "]") depth--;
+    else if (c === "=" && depth === 0) return line.slice(start, i);
   }
-  return names;
+  return null;
+}
+
+/** The names one top-level line declares: `const x`, `const { a, b: c } =`, `import d, { e } from`. */
+function declarationsOn(line: string): string[] {
+  const simple = /^\s*(?:export\s+)?(?:const|let|var|function|class|async\s+function)\s+([$A-Z_a-z][\w$]*)/.exec(line);
+  if (simple?.[1]) return [simple[1]];
+  const destructured = destructuringPattern(line);
+  if (destructured !== null) return boundNames(destructured);
+  if (/^\s*import\s+type\b/.test(line)) return [];
+  const imported = /^\s*import\s+([\S\s]*?)\s+from\b/.exec(line);
+  if (imported?.[1]) {
+    const clause = imported[1].trim();
+    const ns = /^\*\s+as\s+([$A-Z_a-z][\w$]*)$/.exec(clause);
+    if (ns?.[1]) return [ns[1]];
+    const names: string[] = [];
+    const def = /^([$A-Z_a-z][\w$]*)/.exec(clause);
+    if (def?.[1]) names.push(def[1]);
+    const brace = /{[\S\s]*}/.exec(clause);
+    if (brace) names.push(...boundNames(brace[0]));
+    return names;
+  }
+  return [];
+}
+
+/** Names a block declares at its own top level (`const x`, `function f`, `const { a } =`, imports). */
+export function blockDeclarations(code: string): string[] {
+  return topLevelLines(code).flatMap(declarationsOn);
 }
 
 /**
@@ -53,15 +98,7 @@ export function blockDeclarations(code: string): string[] {
  * author's).
  */
 export function declaresName(setupText: string, name: string): boolean {
-  const n = name.replace(/\$/g, "\\$");
-  const patterns = [
-    new RegExp(`^\\s*(?:export\\s+)?(?:const|let|var|function|class|async\\s+function)\\s+${n}\\b`),
-    new RegExp(`^\\s*import\\s+${n}\\b`),
-    new RegExp(`^\\s*import\\s[^;]*(?:[\\s{,]${n}\\s*[,}]|\\bas\\s+${n}\\b)`),
-    new RegExp(`^\\s*(?:const|let|var)\\s*[{[][^=]*?(?:[\\s{,[]${n}\\s*[,}\\]]|:\\s*${n}\\s*[,}])`),
-  ];
-  const lines = topLevelLines(setupText);
-  return lines.some((line) => patterns.some((re) => re.test(line)));
+  return blockDeclarations(setupText).includes(name);
 }
 
 // A ReferenceError for a name another block declares is the scope rule

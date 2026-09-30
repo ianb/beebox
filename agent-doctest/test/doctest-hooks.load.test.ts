@@ -266,3 +266,34 @@ test("=> «show» passes and prints the value as a TAP comment; a bare «*» is 
   t.match(bare.stdout, /DoctestSyntaxError fixture\.doctest\.md:3: the expected value «\*» matches anything/);
   t.match(bare.stdout, /write => «show»/);
 });
+
+test("a try/catch whose blocks end in a bare expression is the checked value", async (t) => {
+  const r = await run(t, `~~~ts
+try {
+  JSON.parse("{");
+  "parsed"
+} catch (e) {
+  e.name
+}
+=> SyntaxError
+~~~
+`);
+  t.equal(r.status, 0, "fixture passes", r.status === 0 ? {} : { stdout: r.stdout });
+});
+
+test("an import with attributes in an example block is rewritten", async (t) => {
+  const dir = await mkdtemp(join(process.cwd(), ".doctest-load-json-"));
+  t.teardown(() => rm(dir, { recursive: true, force: true }));
+  await writeFile(join(dir, "data.json"), JSON.stringify({ n: 7 }));
+  const fixture = join(dir, "fixture.doctest.md");
+  await writeFile(fixture, `~~~ts
+import data from "./data.json" with { type: "json" };
+data.n
+=> 7
+~~~
+`.replaceAll("~~~", FENCE));
+  const tapCheck = fileURLToPath(new URL("../src/tap-check/tap.ts", import.meta.url));
+  const loader = fileURLToPath(new URL("../src/doctest-loader.ts", import.meta.url));
+  const result = spawnSync(process.execPath, ["--import=tsx", `--import=${tapCheck}`, `--import=${loader}`, fixture], { encoding: "utf8" });
+  t.equal(result.status, 0, "fixture passes", result.status === 0 ? {} : { stdout: result.stdout, stderr: result.stderr });
+});
