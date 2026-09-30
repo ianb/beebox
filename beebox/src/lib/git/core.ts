@@ -262,8 +262,10 @@ async function stagedPaths(boxRoot: string, paths: string[]): Promise<string[]> 
   // Disable rename pairing: a path-scoped commit needs both the deleted source
   // and added destination. With rename detection, `--name-only` reports only
   // the destination and leaves the source deletion staged after the commit.
-  const output = await simpleGit(boxRoot).raw(["diff", "--cached", "--name-only", "--no-renames", "--relative", "--", ...paths]);
-  return output.split("\n").filter((line) => line !== "");
+  // `-z`: without it git quotes a non-ASCII path ("photo-caf\303\251.jpg"),
+  // and the quoted string then fails as a commit pathspec.
+  const output = await simpleGit(boxRoot).raw(["diff", "--cached", "--name-only", "--no-renames", "--relative", "-z", "--", ...paths]);
+  return output.split("\0").filter((line) => line !== "");
 }
 
 /**

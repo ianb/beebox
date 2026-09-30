@@ -21,6 +21,17 @@ const ALLOWED_ABSOLUTE_PATH_NAMES = new Set(["me", "you", "user", "x"]);
 const HOME_PATH = /\/(?:Users|home)\/([\dA-Za-z][\w.-]*)\//g;
 
 /**
+ * Whether the match at `index` sits inside a URL with a scheme: the run of
+ * non-space characters ending there contains `://`. A web page's own paths
+ * (`https://college.example/home/<section>/`) and a captured tab's `file://` URL
+ * are content the card records, not a developer's path leaking into it.
+ */
+function insideUrl(text: string, index: number): boolean {
+  const start = Math.max(text.lastIndexOf(" ", index), text.lastIndexOf("\n", index), text.lastIndexOf("\t", index)) + 1;
+  return text.slice(start, index).includes("://");
+}
+
+/**
  * Every real (non-allowlisted) absolute machine path found in `text`, as the
  * matched `/Users/<name>/` (or `/home/<name>/`) prefix. Empty when the text
  * carries none.
@@ -30,6 +41,7 @@ export function findAbsoluteMachinePaths(text: string): string[] {
   for (const match of text.matchAll(HOME_PATH)) {
     const name = match[1];
     if (name === undefined || ALLOWED_ABSOLUTE_PATH_NAMES.has(name)) continue;
+    if (insideUrl(text, match.index)) continue;
     found.push(match[0]);
   }
   return found;

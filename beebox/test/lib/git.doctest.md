@@ -462,6 +462,20 @@ JSON.stringify(await stageAndCommitPaths(box.root, { paths: [], message: "empty"
 => null
 ```
 
+A non-ASCII path commits by its real name. Git quotes such a path in
+`--name-only` output unless `-z` is used, and the quoted form fails as a commit
+pathspec (this stopped a box's migration on a `photo-…-pharmacín-….image.card`).
+
+```ts continue
+await box.write("café-menu.card", "carte");
+const unicodeHash = await stageAndCommitPaths(box.root, { paths: ["café-menu.card"], message: "Add café" });
+print(`committed: ${unicodeHash !== null}`);
+print(`in commit: ${(await getCommitDiff(box.root, await getHead(box.root))).includes("caf")}`);
+=>
+committed: true
+in commit: true
+```
+
 A rename commits both halves. Rename detection must not collapse the staged
 path list to only the destination and leave the source deletion behind.
 
