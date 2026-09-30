@@ -44,7 +44,7 @@ md.includes("Your boxholders are **Priya** (A), **Juniper**, and **Odette**.")
 
 ```ts
 const md = compilePersonality(
-  { ...base, boxholder: { relationships: [{ text: "Prefers terse replies", confidence: "confirmed", source: "user-stated" }] } },
+  { ...base, boxholder: { relationships: [{ text: "Prefers terse replies", confidence: "confirmed", basis: "user-stated" }] } },
   { boxholders: [] },
 );
 JSON.stringify([md.includes("Your boxholder"), md.includes("Prefers terse replies")])
@@ -55,9 +55,9 @@ JSON.stringify([md.includes("Your boxholder"), md.includes("Prefers terse replie
 
 ```ts
 const box = await makeTmpBox();
-await box.write("people/Priya_Marlowe.person.card", "---\nstatus: active\nname: Priya Marlowe\naliases:\n  - Priya\nboxholder: true\n---\n");
-await box.write("people/Jo_Smith.person.card", "---\nstatus: archived\nname: Jo Smith\nboxholder: true\n---\n");
-await box.write("people/Pat_Lee.person.card", "---\nstatus: active\nname: Pat Lee\n---\n");
+await box.write("people/Priya_Marlowe.person.card", "---\nname: Priya Marlowe\naliases:\n  - Priya\nboxholder: true\n---\n");
+await box.write("people/Jo_Smith.person.card", "---\nname: Jo Smith\nboxholder: true\narchived: true\n---\n");
+await box.write("people/Pat_Lee.person.card", "---\nname: Pat Lee\n---\n");
 JSON.stringify(await loadBoxholders(box.root))
 => [{"name":"Priya Marlowe","called":"Priya"}]
 ```

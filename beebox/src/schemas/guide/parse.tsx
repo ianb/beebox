@@ -27,7 +27,7 @@ export function parseGuide(fields: GuideFields): ParsedGuide {
     triageRules: (fields["triage-rules"] ?? []).map((r) => ({
       text: r.text,
       confidence: r.confidence,
-      source: r.source,
+      basis: r.basis,
       ref: r.ref,
       action: r.action,
     })),
@@ -42,13 +42,13 @@ export function parseGuide(fields: GuideFields): ParsedGuide {
     })),
     experiments: (fields.experiments ?? []).map((e) => ({
       id: e.id,
-      status: e.status,
+      active: e.active === true,
+      outcome: e.outcome,
       hypothesis: e.hypothesis,
       approach: e.approach,
       observations: (e.observations ?? []).map((o) => ({
         text: o.text,
         ref: o.ref,
-        date: o.date,
       })),
       conclusion: e.conclusion,
     })),

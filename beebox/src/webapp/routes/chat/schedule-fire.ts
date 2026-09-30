@@ -105,7 +105,7 @@ function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMe
     session.once("done", onDone);
     session.once("close", onFail);
     session.once("error", onFail);
-    void session.send(firedMessage).then((sent) => {
+    void session.send({ text: firedMessage, clientComposed: true }).then((sent) => {
       if (!sent) finish("failed");
     }).catch((error: unknown) => {
       if (error instanceof BoxMaintenanceError) reject(error);

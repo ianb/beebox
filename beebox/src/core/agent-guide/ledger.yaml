@@ -620,11 +620,11 @@ rows:
     audits: [triage-vs-reactor-flow, triage-pipeline-stages]
     mechanics: box-docs/triage.md
   - id: intake.triage-replay
-    rule: Triage replay is read-only; guide policy and landmark boundaries are distinct; missing evidence and confirmation need honest provenance.
+    rule: Triage replay is read-only; guide policy and landmark boundaries are distinct; destination follow-up questions create ordinary agent todos; missing evidence and confirmation need honest provenance.
     handle: INTAKE
     bin: indirect
     reason: Needed when triaging or correcting a filing decision; keep the repair procedure in an on-demand document.
-    audits: [triage-cli-replay, triage-rule-repair, triage-source-policy, triage-evidence-honesty]
+    audits: [triage-cli-replay, triage-rule-repair, triage-source-policy, triage-evidence-honesty, triage-destination-todo-question]
     mechanics: box-docs/triage-instructions.md
   - id: intake.capture-detail
     rule: The capture pipeline (preparation worker, timeline, the `<capture>` message, `bbx scan-import` batches landing in the inbox).
@@ -813,7 +813,7 @@ rows:
     reason: Read from the code (`src/core/question-aging.ts`); an agent that believes a question waits forever either re-asks or never sets `expires-after:` on a time-sensitive one.
     audits: [question-alert-and-aging, question-dismissed-expired-meaning]
   - id: questions.directive-learning
-    rule: "`directive:` (what the follow-up job does with the answer) and `learning:` (`{sink, ref?, proposal}`, the belief and where it lands, recorded as `source: user-stated`; sink `briefing` targets the root briefing) are set as the question card's doc describes."
+    rule: "`directive:` (what the follow-up job does with the answer) and `learning:` (`{sink, ref?, proposal}`, the belief and where it lands, recorded as `basis: user-stated`; sink `briefing` targets the root briefing) are set as the question card's doc describes."
     handle: QUESTIONS
     bin: indirect
     reason: Needed only when writing a question card, and the card's doc (the question schema's instructions) states both fields; the guide's sink mechanics moved there, with the one sentence it lacked (the follow-up job records the belief as the strongest evidence tier). The guide keeps the field names so an agent knows to look.
@@ -1011,10 +1011,10 @@ rows:
     reason: Processing one item focuses the agent on that item, and the audits show the buried deadline is the thing that gets lost; the sub-heading and the "when in doubt, ask" line folded into two sentences.
     audits: [intake-unexpected-legal, intake-unexpected-person, chat-unexpected-ledger-info]
   - id: recording.retro-beliefs
-    rule: "A `source: inferred` entry from the retrospective is a working hypothesis; never promote it past `medium` or use it against a `user-stated` belief."
+    rule: "A `basis: inferred` entry from the retrospective is a working hypothesis; never promote it past `medium` or use it against a `user-stated` belief."
     handle: RECORDING
     bin: indirect
-    reason: Applies only when editing a personality or guide card's beliefs. Moved verbatim to the guide card's instructions (card-guide.md) beside the confidence ladder and source hierarchy it qualifies; the personality card's "Same as guides" evidence model now names that doc. The guide keeps one pointer sentence.
+    reason: Applies only when editing a personality or guide card's beliefs. Moved verbatim to the guide card's instructions (card-guide.md) beside the confidence ladder and basis hierarchy it qualifies; the personality card's "Same as guides" evidence model now names that doc. The guide keeps one pointer sentence.
     audits: [retro-inferred-belief-policy, retro-report-location]
     mechanics: box-docs/card-guide.md
 
@@ -1050,6 +1050,13 @@ rows:
     reason: The pointer at the moment of the decision; `_config/schemas/` was the old home and is still the guess, and a schema left there is silently ignored.
     audits: [create-new-card-type, box-packageify-schemas-location]
     mechanics: box-docs/schemas.md
+  - id: card-types.pdf-image-formats
+    rule: New PDF page and figure images are WebP; older AVIF images remain readable without conversion, and the attached original is preserved. Use the PDF card's `?page=N` link for a durable page reference because reanalysis can replace generated image filenames.
+    handle: CARD_TYPES
+    bin: indirect
+    reason: Applies only when working with a PDF card; its schema instructions carry the formats, original-preservation rule, and durable page-link guidance when that card type is in play.
+    audits: [pdf-image-formats]
+    mechanics: src/schemas/pdf.ts
 
   # --- PROVENANCE ---
   - id: provenance.two-tags

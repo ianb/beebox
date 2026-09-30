@@ -16,8 +16,7 @@ export const ChatJobSchema = cardSchema("chat-job", {
   category: "system",
   searchable: false,
   fields: {
-    status: z.string().default("pending"),
-    source: z.string(),
+    connector: z.string(),
     description: z.string(),
     thread: cardRef(),
   },
@@ -26,7 +25,7 @@ export const ChatJobSchema = cardSchema("chat-job", {
 A chat job means there are new messages (or a scheduled callback) in
 a chat thread.
 
-The \`source\` field names the connector that owns the thread, so
+The \`connector\` field names the connector that owns the thread, so
 \`bbx wakeup --connector telegram\` can drain telegram-originated chat
 jobs without picking up unrelated work.
 
@@ -61,11 +60,10 @@ export type ChatJobFields = InferCardFields<typeof ChatJobSchema>;
 export function createChatJobTemplate(options: {
   description: string;
   threadRef: string;
-  source: string;
+  connector: string;
 }): string {
   const fields: Record<string, unknown> = {
-    status: "pending",
-    source: options.source,
+    connector: options.connector,
     description: options.description,
     thread: { ref: options.threadRef },
   };

@@ -28,6 +28,7 @@ export type { ImageTransformUrlOptions } from "./api-core";
 
 export type {
   ChatImageAttachment,
+  ChatSearchHitInfo,
   ChatSessionInfo,
   DeadChatInfo,
   PendingSessionEntry,
@@ -39,6 +40,7 @@ export {
   getChatFeatures,
   getChatHistory,
   getChatSessions,
+  searchChatTranscripts,
   getChatStatus,
   getNewChatFeatures,
   setDefaultChatModel,

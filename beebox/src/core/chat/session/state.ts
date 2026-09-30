@@ -253,6 +253,7 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     ...(openCard !== undefined ? { openCard } : {}),
     ...(cardActivity.length > 0 ? { cardActivity } : {}),
     ...(Object.keys(cardState).length > 0 ? { cardState } : {}),
+    ...(queued.some((q) => q.clientComposed === true) ? { clientComposed: true as const } : {}),
   };
 }
 

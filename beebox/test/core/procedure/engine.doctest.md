@@ -42,17 +42,17 @@ print(`success: ${result.ok}`);
 const greeting = await box.read("_bookkeeping/output/greeting.txt");
 print(`greeting: ${greeting.trim()}`);
 
-// Run card exists and shows completed
+// Run card exists and records the completed outcome
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("greet_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
 const run = parseProcedureRun(runCard);
-print(`procedure status: ${run.status}`);
+print(`procedure outcome: ${run.outcome}`);
 print(`step status: ${run.steps[0].status}`);
 =>
 success: true
 greeting: Hello from procedure
-procedure status: completed
+procedure outcome: completed
 step status: completed
 ```
 
@@ -384,7 +384,7 @@ const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("runfail_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
-print(`procedure status: ${run.status}`);
+print(`procedure outcome: ${run.outcome}`);
 print(`records exit code: ${run.steps[0].run.stdout.includes("exit 3")}`);
 print(`records stderr: ${run.steps[0].run.stdout.includes("boom")}`);
 =>
@@ -392,7 +392,7 @@ success: false
 error: Procedure runfail failed at step: work
 nope.txt: false
 step status: failed
-procedure status: failed
+procedure outcome: failed
 records exit code: true
 records stderr: true
 ```
@@ -713,10 +713,10 @@ print(`completed run expires after: ${Math.round(okDays)}d`);
 const badDir = runs.find(f => f.includes("doomed_"));
 const badRun = parseProcedureRun(await box.read(badDir + "/run.procedure-run.card"));
 const badDays = (Date.parse(badRun.expires) - Date.parse(badRun["completed-at"])) / dayMs;
-print(`failed run status: ${badRun.status}, expires after: ${Math.round(badDays)}d`);
+print(`failed run outcome: ${badRun.outcome}, expires after: ${Math.round(badDays)}d`);
 =>
 completed run expires after: 30d
-failed run status: failed, expires after: 90d
+failed run outcome: failed, expires after: 90d
 ```
 
 ```ts cleanup
@@ -828,7 +828,7 @@ const resumed = await resumeProcedure({ ctx, runDir });
 print(`resume success: ${resumed.ok}`);
 
 run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`run status: ${run.status}`);
+print(`run outcome: ${run.outcome}`);
 print(`after resume: ${run.steps.map(s => `${s.id}=${s.status}`).join(", ")}`);
 files = await box.list("_bookkeeping/output");
 print(`b.txt: ${files.includes("b.txt")}, c.txt: ${files.includes("c.txt")}`);
@@ -839,7 +839,7 @@ after first: alpha=completed, beta=failed, gamma=pending
 b.txt: false, c.txt: false
 alpha ran once: true
 resume success: true
-run status: completed
+run outcome: completed
 after resume: alpha=completed, beta=completed, gamma=completed
 b.txt: true, c.txt: true
 alpha not re-run: true
@@ -878,10 +878,10 @@ const runDir = runs.split("\n").find(f => f.includes("done_"));
 const result = await resumeProcedure({ ctx, runDir });
 print(`success: ${result.ok}`);
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`status: ${run.status}`);
+print(`outcome: ${run.outcome}`);
 =>
 success: true
-status: completed
+outcome: completed
 ```
 
 ```ts cleanup
@@ -901,7 +901,7 @@ printed.
 const box = await makeTmpBox({ git: true });
 await box.write("_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card", `---
 procedure: _config/procedures/refresh-maps.procedure.card
-status: inconclusive
+outcome: inconclusive
 started-at: 2026-08-24T05:00:00Z
 completed-at: 2026-08-24T05:04:00Z
 steps:
@@ -927,11 +927,11 @@ status: inconclusive
 [{"stepId":"maps","reason":"max-turns","detail":"reached max turns (16)"}]
 ```
 
-The run card is left alone: `inconclusive` is terminal, so resume does not
-re-open it as `running`.
+The run card is left alone: an `inconclusive` run is never re-opened, so
+resume does not remove its outcome.
 
 ```ts continue
-print(parseProcedureRun(await box.read("_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card")).status);
+print(parseProcedureRun(await box.read("_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card")).outcome);
 => inconclusive
 ```
 

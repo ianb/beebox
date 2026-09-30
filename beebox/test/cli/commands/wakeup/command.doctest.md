@@ -71,7 +71,7 @@ await box.seed("_content/inbox/already-handled.memo.card", "<memo>Old</memo>");
 // Create a job that already references it
 await box.seed(
   "_bookkeeping/jobs/existing.intake.job.card",
-  "---\nstatus: pending\ncreated: 2026-01-01T00:00:00Z\nsource: test\ndescription: Existing\nitems:\n  - ref: _content/inbox/already-handled.memo.card\n---\n",
+  "---\nstatus: pending\ncreated: 2026-01-01T00:00:00Z\ndescription: Existing\nitems:\n  - ref: _content/inbox/already-handled.memo.card\n---\n",
 );
 box.commitAll("setup");
 
@@ -176,8 +176,8 @@ count
 
 Under `bbx wakeup --connector X`, only items in the connector's
 declared `inboxPaths` are picked up, and the resulting intake job
-is tagged `source="X"` so the same wakeup's reactor (with the
-matching `sourceFilter`) processes it.
+is tagged `connector: X` so the same wakeup's reactor (with the
+matching `connectorFilter`) processes it.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -199,7 +199,7 @@ count
 const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
 const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
 const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0]), "utf-8");
-content.includes("source: gmail")
+content.includes("connector: gmail")
 => true
 
 content.includes("pages-saved")
@@ -218,7 +218,7 @@ frontmatter job — the format all live jobs use.)
 const box = await makeTmpBox({ git: true });
 await box.write(
   "_bookkeeping/jobs/dead.intake.job.card",
-  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: _content/inbox/gone.memo.card\n---\n",
+  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nconnector: gmail\ndescription: Triage\nitems:\n  - ref: _content/inbox/gone.memo.card\n---\n",
 );
 box.commitAll("queue stale job");
 
@@ -237,7 +237,7 @@ const box = await makeTmpBox({ git: true });
 await box.write("_content/inbox/live.memo.card", "---\nstatus: new\n---\nstill here");
 await box.write(
   "_bookkeeping/jobs/live.intake.job.card",
-  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: _content/inbox/live.memo.card\n---\n",
+  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nconnector: gmail\ndescription: Triage\nitems:\n  - ref: _content/inbox/live.memo.card\n---\n",
 );
 box.commitAll("queue live job");
 
@@ -255,7 +255,7 @@ doesn't apply defaults, so cleanup must.
 const box = await makeTmpBox({ git: true });
 await box.write(
   "_bookkeeping/jobs/nostatus.intake.job.card",
-  "---\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: _content/inbox/gone.memo.card\n---\n",
+  "---\ncreated: 2026-07-01T00:00:00Z\nconnector: gmail\ndescription: Triage\nitems:\n  - ref: _content/inbox/gone.memo.card\n---\n",
 );
 box.commitAll("queue statusless job");
 

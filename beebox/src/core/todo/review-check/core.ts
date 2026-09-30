@@ -5,7 +5,7 @@
  * Computes the sweep's sets (`review-sweep.ts`), saves the items in the sweep
  * state (`review-state.ts`) for the validate step (`review-verify.ts`), and
  * returns the brief the procedure's agent works from: the review instructions
- * (`TODO_REVIEW_INSTRUCTIONS`, shared with the legacy job card) and the three
+ * (`TODO_REVIEW_INSTRUCTIONS`, shared with the legacy job card) and the four
  * lists. The brief reaches the agent as the precheck's output
  * (`pass-output`), at most 25 items per run; no job card is written, so the wakeup reactor has nothing
  * to pick up and two agents never work one review. A legacy `todo-review`
@@ -31,7 +31,7 @@ import { boxTodayEpoch, computeTodoReviewSets, toBriefItem, type SweptTodo, type
 
 export type TodoReviewCheckResult = { kind: "nothing" } | { kind: "review"; brief: string; items: ReviewItem[] };
 
-const KINDS = ["escalated", "stirring", "stale"] as const;
+const KINDS = ["escalated", "stirring", "actionable", "stale"] as const;
 
 function reviewItem(todo: SweptTodo): ReviewItem {
   return {
@@ -72,13 +72,14 @@ function byDate(attr: "due" | "start" | "created"): (a: SweptTodo, b: SweptTodo)
 const ORDER: Record<Kind, (a: SweptTodo, b: SweptTodo) => number> = {
   escalated: byDate("due"),
   stirring: byDate("start"),
+  actionable: byDate("created"),
   stale: byDate("created"),
 };
 
 /**
  * One entry per todo (a todo in two lists keeps its first), in priority
- * order — escalated by oldest `due`, then stirring, then stale by oldest
- * `created` — capped at {@link MAX_ITEMS}. A cut todo gets no new `recheck`,
+ * order — escalated by oldest `due`, then stirring, actionable, then stale
+ * by oldest `created` — capped at {@link MAX_ITEMS}. A cut todo gets no new `recheck`,
  * so the next run lists it again.
  */
 function selectItems(sets: TodoReviewSets): Selection {

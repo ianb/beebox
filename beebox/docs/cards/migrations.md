@@ -500,6 +500,134 @@ attempt. The bootstrap path (everything v2-shape-aware) is scheduled for
 removal once the fleet has converged — see
 `issues/deferred/2026-09-04-remove-one-root-v2-bootstrap.md`.
 
+#### `standard-fields-2026-09` (strip — standard fields with no job)
+
+Part 1 of `docs/implemented-plans/standard-card-fields.md`. Drops `status` from job cards
+(always `pending`; a finished job is deleted), file, pub-submission,
+email-thread, gsheet and email-outbound; drops pub-submission `created` (and a leftover `created` on job cards), audio
+`summary`, and guide/personality observation `date`. A record's `status`
+becomes `reviewed: true` or `archived: true`, or is dropped when `draft`. The
+migrator fails a card, unchanged, when its value has no safe mapping: an
+email-outbound whose `status` is not `draft` (it would otherwise upload as a
+draft) or a record status outside the old enum. A non-empty audio `summary`
+is dropped with a warning; the transcript stays. Idempotent. See
+`src/scripts/migrate/card-fields/standard.ts`.
+
+#### `status-fields-2026-09` (replace — `status` becomes the specific fact)
+
+Part 2 of `docs/implemented-plans/standard-card-fields.md`. Per type:
+
+- audio: `status` is dropped; `transcript` present means transcribed. A
+  `transcribed` clip with no transcript gets a warning, since it now reads as
+  untranscribed.
+- image, pdf: `new` and `analyzed` are dropped (the `description`, or a pdf's
+  `docling` and `error`, record the outcome); `invalid` becomes
+  `unusable: true`.
+- capture-session: `delivered` becomes `delivered: true`; `annotated` becomes
+  `delivered: true` and `annotated: true`. The retired pipeline's
+  `intake-complete` and `extracted` become `annotated: true`; its
+  `transcribing` and `transcribed` are dropped with `new`.
+- upload-batch: `delivered` becomes `delivered: true`; `new` is dropped.
+- telegram-message: `pending` and `sent` are dropped; `failed` becomes
+  `delivery-error`, carrying the old `error` text or, with none, a fixed
+  message saying the reason was never recorded. A pending or sent card with
+  an `error` is refused.
+- browser-task: `closed` becomes `closed: true`. tab-arrangement: `ready`
+  becomes `ready: true`. person, place: `inactive` and `archived` become
+  `archived: true`. Each type's other value (`open`, `draft`, `active`) is
+  dropped.
+- todo-view: `status` (its todo filter) is renamed `todo-status`. progress
+  entries: `status` (a mastery level) is renamed `level`. A rename whose
+  target already exists is refused.
+- lesson-plan segments: `planned` becomes `planned: true`; `ready` is dropped.
+- guide and personality experiments: `proposed` is dropped, `active` becomes
+  `active: true`, and `successful`/`unsuccessful`/`mixed`/`inconclusive`
+  become `outcome: <value>`. A migrated stock guide is byte-identical to the
+  current template, so the template tracker updates it in place.
+- gdoc: `conflict` becomes `conflict: true`; `synced`, `new` and `error` are
+  dropped. The connector recomputes the card on every pull.
+- gfolder: `status` is dropped; `error` present means the last sync failed. A
+  failed mount with no `error` text gets a fixed message saying the reason was
+  never recorded. An `ok` mount that carries an `error` is refused.
+- procedure-run: `completed`, `failed` and `inconclusive` become
+  `outcome: <value>`; `pending` and `running` are dropped (no outcome means the
+  run has not finished, and `bbx procedure resume` still continues an
+  interrupted one). A card that already has an `outcome` is refused.
+- question: `status` is dropped; the state is read from the lifecycle
+  timestamps (`answered-at`, else `dismissed-at`, else `expired-at`, else
+  pending). A card whose lifecycle fields disagree with its status (by the
+  rule the schema enforced before), or whose status is unknown, is refused;
+  such a card could not load before either.
+
+Any other value fails the card, unchanged. Idempotent. See
+`src/scripts/migrate/card-fields/status.ts`.
+
+#### `source-fields-2026-09` (rename — `source` gets its specific names)
+
+Part 3 of `docs/implemented-plans/standard-card-fields.md`. Per type:
+
+- image, file, pdf: `filename.captured` becomes `filename.via.at` and
+  `filename.source` becomes `filename.via.channel`. `via` is inserted right
+  after `filename.ref`; the other `filename` keys keep their place.
+- audio: the same, from `filename.recorded`.
+- feedback: `source` (`text` or `voice`) becomes `via: { channel }`, in the
+  place `source` held.
+- contains-backfill-job, question-followup-job, todo-review-job: the constant
+  `source` is dropped (a value other than the type's constant is dropped with
+  a warning).
+- chat-job: `source` becomes `connector`.
+- intake-job: `wakeup`, `wakeup-captures` and `scan` are dropped (the job
+  becomes unscoped); any other value becomes `connector`.
+- guide `triage-rules[]`, personality `boxholder.relationships[]`, `tone[]`
+  and `traits[]`: each entry's `source` becomes `basis`.
+- scheduled-script: `source` becomes `reason`.
+- capture-session: `source` becomes `uploader`.
+- record `sources[]`: `time` (a moment in a transcript) becomes `pos`, the
+  `{% source %}` tag's locator.
+- webpage: `source` (the page URL) and `captured` (the capture instant)
+  become `sources: [{ href, retrieved }]` (no `retrieved` when there was no
+  `captured`).
+- recipe: the `source` object becomes the one entry of `sources`.
+- commentary: `source` (the annotated page) becomes `about: { href }`, and
+  `captured` (the date the page was captured) becomes `about.retrieved`.
+- browser-task: `source` (the start URL) becomes `start: { href }`.
+- tab-arrangement: `source` (the captured tabs) becomes `captured-tabs`.
+- image `text[]`: each entry's `source` (the surface the text is on) becomes
+  `surface`.
+- email-message: what the Gmail connector copied (`message-id`, `thread-id`,
+  `from`, `to`, `cc`, `subject`, `snippet`) moves under `email:`, and `date`
+  (Gmail's arrival time) becomes `email.received`. `body-file` and
+  `attachments` stay top-level.
+- email-thread: `thread-id`, `subject`, `participants`, `date-range` and
+  `labels` move under `email:`; `messages` stays top-level.
+- gdoc, gsheet: `drive-id` (as `id`), `link`, `owner`, `modified` (Drive's
+  `modifiedTime`) and gdoc's `revision` move under `drive:`. `title`, the
+  content and comments pointers, `lossy` and `conflict` stay top-level.
+- gfolder: `drive-id` (as `id`) and `link` move under `drive:`; `name` (the
+  folder's Drive name) becomes `title`. `last-sync`, `error` and the problem
+  counts are connector state and stay.
+- glink: `drive-id` (as `id`), `link` and `mime` move under `drive:`; `name`
+  becomes `title`. `origin` stays.
+
+A source-metadata key (`email:`, `drive:`) lands where the card's first moved
+key was, with its keys in the order the connector writes them, so a migrated
+thread, gdoc or gsheet card is byte-identical to what the next sync writes and
+is not rewritten. Drive cards in `_bookkeeping/trash/` migrate too: their
+`drive.id` is the tombstone that stops a folder mirror from re-creating them,
+and an unreadable id stops folder discovery.
+
+Renamed keys keep their place. A card is failed, unchanged, when its
+`filename` is not a map, when it has both an old key and its new name (at any
+of the places above), when a media reference has only one of the two old
+keys, when a webpage or commentary has `captured` but no page to attach it to,
+when an email or Drive card has
+`email:`/`drive:` beside a key that moves into it, when a gfolder or glink has
+both `name` and `title`, or when a recipe's
+`source` is not a map or has both `href` and `ref`. A card keeps its line wrapping (see `applyFieldEdits`), so an unedited
+stock guide, personality or schedule becomes exactly the current template.
+Idempotent. See
+`src/scripts/migrate/card-fields/source.ts`.
+
 ## Manual runs (for debugging)
 
 The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx migrate`. If you do this and want it to count, append the entry yourself or run `bbx migrate --apply` afterwards.

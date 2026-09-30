@@ -9,8 +9,8 @@
  *
  * The card's authored content survives: `description`, `title`, `contains`,
  * and every other field are read and written back untouched. Only the
- * extraction-derived parts — the body, `docling`, `metadata.pages`, `status`,
- * and `error` — are replaced, along with the page/figure assets in the attach
+ * extraction-derived parts — the body, `docling`, `metadata.pages`, and
+ * `error` — are replaced, along with the page/figure assets in the attach
  * scope (stale ones from the previous run are removed first, so a re-run that
  * yields fewer pages leaves no orphans).
  */
@@ -151,7 +151,6 @@ export async function runPdfReanalyze(
   const paths: string[] = [cardRelPath, ...removed.map((name) => `${attachRelDir}/${name}`)];
   let body: string;
   if (extraction.ok) {
-    fields["status"] = "analyzed";
     fields["docling"] = {
       ref: `attach/${extraction.value.doclingFilename}`,
       version: extraction.value.doclingVersion,
@@ -166,12 +165,11 @@ export async function runPdfReanalyze(
   } else {
     // Same fallback as intake: the card goes back to unextracted-but-visible
     // rather than keeping a stale body that no longer matches its assets.
-    fields["status"] = "new";
     fields["error"] = extraction.error;
     delete fields["docling"];
     body = "";
     console.warn(`[pdf] reanalyze failed for ${cardRelPath}: ${extraction.error}`);
-    ctx.writeLine(`Extraction failed (status: new) — ${extraction.error}`);
+    ctx.writeLine(`Extraction failed — ${extraction.error}`);
   }
 
   await fs.writeFile(cardAbsPath, `---\n${stringifyYaml(fields)}---\n${body}`);
@@ -185,7 +183,7 @@ export async function runPdfReanalyze(
     success: true,
     data: {
       card: cardRelPath,
-      status: fields["status"],
+      extracted: extraction.ok,
       ocr: forceOcr ? "replace" : "off",
       pages: extraction.ok ? extraction.value.pageCount : 0,
     },

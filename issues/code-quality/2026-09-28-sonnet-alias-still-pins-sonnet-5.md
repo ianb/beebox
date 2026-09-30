@@ -32,3 +32,9 @@ first, the table can move now.
 **The change:** point `MODEL_ID.sonnet` at `claude-sonnet-5-5` and add
 `claude-sonnet-5` to the legacy-id map so stored selections normalize to it, as
 the Opus change did.
+
+## Codex side (2026-09-29)
+
+Codex `0.159.1` makes GPT-6.1 Sol the default in its bundled catalog, while the
+same table resolves `sol` to `gpt-6-sol`. Worth settling in the same change;
+the Codex pin reaches `0.159.1` no earlier than 2026-10-01.

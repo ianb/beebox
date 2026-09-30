@@ -2,11 +2,11 @@
 
 `bbx scan-import`'s pdf flow runs a text-layer PDF through Docling and
 files a `pdf.card` in the session's attach scope: the rendered markdown as
-the body, the gzipped `DoclingDocument` JSON, page renders and figures as AVIF.
+the body, the gzipped `DoclingDocument` JSON, page renders and figures as WebP.
 
 The property that matters most is the failure one: **extraction failure never
 blocks intake.** When Docling cannot run, the card is still written — with
-`status: new`, an `error:` field, and the original PDF as its only asset, which
+an `error:` field and the original PDF as its only asset, which
 is exactly what this flow did before Docling existed.
 
 Docling itself is faked here (the services pattern); the real binary is
@@ -16,7 +16,7 @@ exercised by `pdf-extract-integration.doctest.md`.
 import { runPdfMode } from "../../../src/core/commands/scan-import/pdf.js";
 import { runPdfReanalyze } from "../../../src/core/commands/pdf-reanalyze.js";
 import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling/core.js";
-import { extractPdf } from "../../../src/core/pdf/extract.js";
+import { extractPdf, clearExtractionAssets } from "../../../src/core/pdf/extract.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { parseCardText } from "../../../src/core/card-io.js";
@@ -65,7 +65,7 @@ async function readPdfCard(box) {
 }
 ```
 
-## A successful extraction lands an `analyzed` pdf card
+## A successful extraction lands an extracted pdf card
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -81,8 +81,8 @@ result.success
 result.data.mode
 => pdf
 
-result.data.status
-=> analyzed
+result.data.extracted
+=> true
 ```
 
 The fake was asked for a no-OCR extraction — `do_ocr=False` is the default, not
@@ -95,23 +95,23 @@ docling fake (succeeds), 1 call(s)
   source.pdf ocr=off languages=-
 ```
 
-The attach scope holds the original, the canonical JSON, one AVIF per page, and
-one per figure. Every image is a real AVIF — the fake emits real PNG bytes and
+The attach scope holds the original, the canonical JSON, one WebP per page, and
+one per figure. Every image is a real WebP — the fake emits real PNG bytes and
 `sharp` re-encodes them for real:
 
 ```ts continue
 await attachContents(box)
 =>
 docling.json.gz
-figure-001.avif
-page-001.avif
-page-002.avif
+figure-001.webp
+page-001.webp
+page-002.webp
 source.pdf
 
 const dir = await sessionDir(box);
-const avif = await readFile(join(box.root, "_content/inbox", dir, "source.attach/page-001.avif"));
-avif.subarray(4, 12).toString("latin1")
-=> ftypavif
+const webp = await readFile(join(box.root, "_content/inbox", dir, "source.attach/page-001.webp"));
+webp.subarray(8, 12).toString("latin1")
+=> WEBP
 
 const json = gunzipSync(await readFile(join(box.root, "_content/inbox", dir, "source.attach/docling.json.gz")));
 JSON.parse(json.toString()).schema_name
@@ -126,8 +126,8 @@ scratch directory:
 ```ts continue
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
-JSON.stringify([card.fields.status, card.fields.format, card.fields.filename.ref, card.fields.filename["mime-type"]])
-=> ["analyzed","pdf","attach/source.pdf","application/pdf"]
+JSON.stringify([card.fields.format, card.fields.filename.ref, card.fields.filename["mime-type"]])
+=> ["pdf","attach/source.pdf","application/pdf"]
 
 card.fields.docling.ref
 => attach/docling.json.gz
@@ -139,7 +139,7 @@ card.rawBody.trim()
 =>
 ## Invoice 2026-04
 «blankline»
-![Image](attach/figure-001.avif)
+![Image](attach/figure-001.webp)
 ```
 
 `metadata.pages` comes from the PDF itself (poppler), falling back to the
@@ -163,6 +163,56 @@ result.data.intakeJobPath.startsWith("_bookkeeping/jobs/")
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## A tall Docling render stays readable within the WebP dimension limit
+
+WebP permits at most 16,383 pixels on each axis. The producer scales an
+oversized render proportionally before encoding rather than failing extraction.
+
+```ts
+const scratch = await mkdtemp(join(tmpdir(), "bbx-tall-render-"));
+const attachAbsDir = join(scratch, "attach");
+const workDir = join(scratch, "work");
+await mkdir(attachAbsDir, { recursive: true });
+await mkdir(workDir, { recursive: true });
+const sourcePath = join(scratch, "source.pdf");
+await writeFile(sourcePath, textPdf());
+const originalBytes = await readFile(sourcePath);
+const { default: Sharp } = await import("sharp");
+const baseDocling = createFakeDocling({ pageCount: 1 });
+const originalExtract = baseDocling.extract.bind(baseDocling);
+baseDocling.extract = async (path, options) => {
+  const extraction = await originalExtract(path, options);
+  if (extraction.ok) {
+    const pagePath = extraction.value.pageImages[0].filePath;
+    await Sharp({ create: { width: 2, height: 17000, channels: 3, background: { r: 20, g: 80, b: 120 } } })
+      .png().toFile(pagePath);
+  }
+  return extraction;
+};
+const result = await extractPdf({
+  docling: baseDocling,
+  sourcePath,
+  attachAbsDir,
+  workDir,
+  ocr: "off",
+  languages: null,
+});
+const encoded = await readFile(join(attachAbsDir, "page-001.webp"));
+const metadata = await Sharp(encoded).metadata();
+JSON.stringify([
+  result.ok,
+  metadata.format,
+  metadata.width,
+  metadata.height,
+  (await readFile(sourcePath)).equals(originalBytes),
+])
+=> [true,"webp",2,16383,true]
+```
+
+```ts cleanup
+await rm(scratch, { recursive: true, force: true });
 ```
 
 ## The raw text layer is kept verbatim as `text-layer.txt`
@@ -232,7 +282,7 @@ await rm(scratch, { recursive: true, force: true });
 
 A scan that arrived through the upload route carries the credential that sent
 it. The promote worker passes `scan-upload/<token-name>` down through
-`bbx upload --source`, and it ends up on the pdf card's `source` (replacing
+`bbx upload --source`, and it ends up on the pdf card's `filename.via.channel` (replacing
 the generic `scan-import`) and on the session card — so a batch that looks wrong
 identifies the device that produced it.
 
@@ -241,25 +291,25 @@ const box = await makeTmpBox({ git: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "billed", pageCount: 1 }), "scan-upload/laptop-scansnap");
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
-card.fields.filename.source
+card.fields.filename.via.channel
 => scan-upload/laptop-scansnap
 
 const sessionCard = await box.read(result.data.sessionCardPath);
-sessionCard.includes("source: scan-upload/laptop-scansnap")
+sessionCard.includes("uploader: scan-upload/laptop-scansnap")
 => true
 ```
 
 Without it the pdf card keeps saying `scan-import` and the session card
-carries no `source` at all — the field means "came from somewhere identifiable",
-so an absent one is the honest answer:
+carries no `uploader` at all — no uploader sent the file, so an absent one is
+the honest answer:
 
 ```ts continue
 const plain = await makeTmpBox({ git: true });
 const plainResult = await importPdf(plain, createFakeDocling({ markdown: "billed", pageCount: 1 }));
 const plainDoc = await readPdfCard(plain);
 JSON.stringify([
-  parseCardText(plainDoc.content, { source: plainDoc.rel, schemas }).fields.filename.source,
-  (await plain.read(plainResult.data.sessionCardPath)).includes("source:"),
+  parseCardText(plainDoc.content, { source: plainDoc.rel, schemas }).fields.filename.via.channel,
+  (await plain.read(plainResult.data.sessionCardPath)).includes("uploader:"),
 ])
 => ["scan-import",false]
 
@@ -270,7 +320,7 @@ await plain.cleanup();
 await box.cleanup();
 ```
 
-## An extraction failure still files the card — `status: new` plus `error:`
+## An extraction failure still files the card, with an `error:`
 
 Nothing is lost: the original PDF is the card's only asset, the reason is on the
 card rather than only in a log, and intake proceeds.
@@ -282,16 +332,16 @@ const result = await importPdf(box, docling);
 result.success
 => true
 
-result.data.status
-=> new
+result.data.extracted
+=> false
 
 await attachContents(box)
 => source.pdf
 
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
-JSON.stringify([card.fields.status, card.fields.error])
-=> ["new","Docling exited 1: killed by the OOM killer"]
+card.fields.error
+=> Docling exited 1: killed by the OOM killer
 
 card.fields.docling
 => undefined
@@ -311,27 +361,27 @@ result.data.intakeJobPath.startsWith("_bookkeeping/jobs/")
 await box.cleanup();
 ```
 
-## Empty markdown is `analyzed` with an empty body, not a failure
+## Empty markdown is an extraction with an empty body, not a failure
 
-A document with no readable text is a real answer. The card says `analyzed`
-(extraction worked) with nothing in the body, and the page renders are still
+A document with no readable text is a real answer. The card has `docling:`
+and no `error:` (extraction worked) with nothing in the body, and the page renders are still
 there to look at.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "", pageCount: 1 }));
-result.data.status
-=> analyzed
+result.data.extracted
+=> true
 
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
-JSON.stringify([card.fields.status, card.rawBody.trim(), card.fields.error])
-=> ["analyzed","",null]
+JSON.stringify([card.fields.docling.ref, card.rawBody.trim(), card.fields.error])
+=> ["attach/docling.json.gz","",null]
 
 await attachContents(box)
 =>
 docling.json.gz
-page-001.avif
+page-001.webp
 source.pdf
 ```
 
@@ -376,8 +426,8 @@ The body and page count are the new run's; the description is the old card's:
 
 ```ts continue
 const card = parseCardText(await box.read(cardRel), { source: cardRel, schemas });
-JSON.stringify([card.fields.status, card.fields.description, card.rawBody.trim(), card.fields.metadata.pages])
-=> ["analyzed","A utility bill","second pass",1]
+JSON.stringify([card.fields.description, card.rawBody.trim(), card.fields.metadata.pages])
+=> ["A utility bill","second pass",1]
 ```
 
 Three pages became one, and the two stale page assets are gone rather than
@@ -387,12 +437,33 @@ sitting beside the new one:
 await attachContents(box)
 =>
 docling.json.gz
-page-001.avif
+page-001.webp
 source.pdf
 ```
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## Reanalysis cleanup recognizes old AVIF and new WebP page renders
+
+Both generated extensions are disposable, including page numbers wider than
+three digits; unrelated short names and the original survive.
+
+```ts
+const scratch = await mkdtemp(join(tmpdir(), "bbx-render-cleanup-"));
+await writeFile(join(scratch, "source.pdf"), "original");
+await writeFile(join(scratch, "page-001.avif"), "old render");
+await writeFile(join(scratch, "page-1000.avif"), "old wide render");
+await writeFile(join(scratch, "figure-004.webp"), "new render");
+await writeFile(join(scratch, "page-01.avif"), "unmatched");
+const removed = await clearExtractionAssets(scratch, { keep: "source.pdf" });
+JSON.stringify({ removed: removed.toSorted(), remaining: (await readdir(scratch)).sort() })
+=> {"removed":["figure-004.webp","page-001.avif","page-1000.avif"],"remaining":["page-01.avif","source.pdf"]}
+```
+
+```ts cleanup
+await rm(scratch, { recursive: true, force: true });
 ```
 
 ## Reanalyze refuses clearly on a card it cannot work with
@@ -441,7 +512,7 @@ await box.cleanup();
 ## Extraction output is bounded before anything re-encodes it
 
 Docling decides how many artifacts it writes; the caps (D16) sit between
-extraction and the AVIF re-encode, so a pathological run is an extraction
+extraction and the WebP re-encode, so a pathological run is an extraction
 failure rather than unbounded work. Over the cap behaves like every other
 extraction failure — which is the property that matters: intake never blocks.
 

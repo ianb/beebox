@@ -67,7 +67,7 @@ export async function findTrackedGmailThreads(
       type: "email-thread",
     });
     const fields = cardFields(parsed, EmailThreadSchema);
-    const threadId = fields["thread-id"];
+    const threadId = fields.email["thread-id"];
     const existing = tracked.get(threadId);
     if (existing !== undefined) {
       throw new DuplicateTrackedGmailThreadError(threadId, [existing.relPath, relPath]);

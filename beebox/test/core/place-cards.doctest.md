@@ -1,7 +1,7 @@
 # Place resolution: loadPlaces + matching
 
-`loadPlaces` reads the box's `*.place.card` cards as match circles — active,
-with both coordinates — skipping coordless/half-set drafts, archived/inactive
+`loadPlaces` reads the box's `*.place.card` cards as match circles — unarchived,
+with both coordinates — skipping coordless/half-set drafts, archived
 places, and unparseable cards. `bbx location get` then names the matched place.
 
 ```ts setup
@@ -9,17 +9,17 @@ import { loadPlaces } from "../../src/core/place-cards.js";
 import { matchPlace } from "../../src/core/geo.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-const place = (name, extra) => `---\nstatus: active\nname: ${name}\n${extra}---\nbody\n`;
+const place = (name, extra) => `---\nname: ${name}\n${extra}---\nbody\n`;
 ```
 
-## Loads active, fully-coordinated places; skips drafts/archived/half-set
+## Loads unarchived, fully-coordinated places; skips drafts/archived/half-set
 
 ```ts
 const box = await makeTmpBox();
 await box.write("places/Home.place.card", place("Home", "lat: 45.5231\nlng: -122.6765\nradius: 150\n"));
 await box.write("places/Draft.place.card", place("Draft", "address: somewhere\n"));        // coordless
 await box.write("places/Half.place.card", place("Half", "lat: 45.0\n"));                    // lat without lng
-await box.write("places/Old.place.card", "---\nstatus: archived\nname: Old\nlat: 45.5\nlng: -122.6\n---\nb\n");
+await box.write("places/Old.place.card", "---\nname: Old\narchived: true\nlat: 45.5\nlng: -122.6\n---\nb\n");
 const places = await loadPlaces(box.root);
 JSON.stringify(places.map((p) => p.name).sort())
 => ["Home"]

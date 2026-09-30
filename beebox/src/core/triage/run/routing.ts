@@ -17,6 +17,8 @@ import { getBoxTimeISO } from "../../../lib/time.js";
 import { createSelectQuestionTemplate } from "../../../schemas/question.js";
 import type { TriageCategory } from "../instructions.js";
 import { errnoCode } from "../../../shared/error-guards.js";
+import { withCardLock } from "../../../lib/card-lock.js";
+import { annotateTriageCard, getTriageTodoDate } from "../todo.js";
 
 class TriageDestinationConflictError extends Error {
   readonly file: string;
@@ -24,6 +26,13 @@ class TriageDestinationConflictError extends Error {
     super(`triage destination already has a file named ${file}`);
     this.name = "TriageDestinationConflictError";
     this.file = file;
+  }
+}
+
+class TriageLegacyTodoError extends Error {
+  constructor({ detail }: { detail: string }) {
+    super(`Legacy triage todo: ${detail}`);
+    this.name = "TriageLegacyTodoError";
   }
 }
 
@@ -40,6 +49,8 @@ export interface TriageDecision {
   confidence: Confidence;
   /** One-line agent explanation; surfaced on `probable` review and in question prompts. */
   reason: string;
+  /** Answer to the selected category's optional per-item todo question. */
+  todo?: boolean | undefined;
 }
 
 export interface TriageApplication {
@@ -145,6 +156,16 @@ export async function applyTriage(opts: ApplyOptions): Promise<TriageApplication
   const applications: TriageApplication[] = [];
 
   for (const decision of opts.decisions) {
+    const category = opts.categories.find((candidate) => candidate.name === decision.category);
+    if (category?.todoQuestion && decision.confidence !== "guess" && decision.todo === undefined) {
+      throw new TriageLegacyTodoError({ detail: `missing answer for configured destination ${category.name}` });
+    }
+    if (category?.todoQuestion && decision.confidence !== "guess" && decision.todo === true && !decision.file.endsWith(".card")) {
+      throw new TriageLegacyTodoError({ detail: `positive answer requires a card with frontmatter: ${decision.file}` });
+    }
+  }
+
+  for (const decision of opts.decisions) {
     if (decision.confidence === "guess" || decision.category === null) {
       await moveItem(decision.file, { srcDir: stagedDir, dstDir: unsureDir });
       const heldPath = path.relative(opts.boxRoot, path.join(unsureDir, decision.file));
@@ -187,7 +208,18 @@ export async function applyTriage(opts: ApplyOptions): Promise<TriageApplication
     }
 
     const dstDir = path.join(triagedDir, decision.category);
-    await moveItem(decision.file, { srcDir: stagedDir, dstDir });
+    const category = opts.categories.find((candidate) => candidate.name === decision.category);
+    const source = path.join(stagedDir, decision.file);
+    if (category?.todoQuestion && decision.todo === true) {
+      const { todoQuestion, landmarkRef } = category;
+      if (!landmarkRef) throw new TriageLegacyTodoError({ detail: `configured destination ${category.name} has no landmark ref` });
+      await withCardLock(source, async () => {
+        await annotateTriageCard({ file: source, boxRoot: opts.boxRoot, destinationRef: landmarkRef, question: todoQuestion, created: await getTriageTodoDate(opts.boxRoot) });
+        await moveItem(decision.file, { srcDir: stagedDir, dstDir });
+      });
+    } else {
+      await moveItem(decision.file, { srcDir: stagedDir, dstDir });
+    }
     if (decision.confidence === "probable") {
       await writeProbableMarker(decision.file, { dstDir, reason: decision.reason });
     }

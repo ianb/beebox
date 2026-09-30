@@ -1,5 +1,28 @@
 tests:
   # === Replayable document triage ===
+  # Status (2026-09-29, Codex): pass on a disposable standalone synthetic box;
+  # knows_about, 6 files read, 6 searches. Read generated triage-instructions
+  # and landmark docs; generated into a physical node_modules/beebox directory.
+  # Configured Claude could not open its expected transcript JSONL; Codex passed.
+  - id: triage-destination-todo-question
+    prompt: >
+      You are reviewing a prior triage decision after a destination's
+      `todo-question` changed. Use the triage correction and replay instructions
+      to explain how this question affects yes, no, and omitted-question cases,
+      and whether it starts follow-up immediately.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/triage-instructions.md"]
+    watch_for: >
+      Says yes creates an ordinary agent-assigned todo for the filed item,
+      which enters the existing bounded daily review; no creates none, and a
+      destination without a question is not evaluated. Does not claim immediate
+      execution, a deadline, extra action authority, or connector preservation.
+    correct_contains: ["todo"]
+    correct_matches:
+      - "yes.{0,120}todo|todo.{0,120}yes"
+      - "no.{0,120}(todo|question)|without.{0,80}question.{0,80}(no|evaluat)"
+    tags: [triage, todos]
+
   # Status (2026-09-28, Claude): 4/4 passed on the isolated test1 clone.
   # Direct audits: 0 reads/searches, 37-38k context. Rule repair read the installed
   # triage-instructions.md reference (1 read/search, 38k initial / 43k peak).
@@ -376,7 +399,7 @@ tests:
     expected_level: knows_directly
     watch_for: >
       Recognizes the box has no browser session and cannot read a private
-      Facebook group itself; sets up a browser-task card (prompt, source,
+      Facebook group itself; sets up a browser-task card (prompt, `start` URL,
       schema at attach/schema.json, a watermark) for someone with a logged-in
       browser to run, and names the drain procedure for filing. Does NOT
       propose fetching Facebook from the box or asking for credentials.
@@ -848,7 +871,7 @@ tests:
     watch_for: >
       Names learning.sink (guide/briefing/personality) as the destination,
       written by the follow-up job created when the question is answered,
-      tagged source: user-stated (the strongest evidence tier).
+      tagged basis: user-stated (the strongest evidence tier).
     correct_contains: ["user-stated"]
     should_read_any: ["card-question.md", "card-question-followup-job.md", "src/schemas/question"]
     tags: [questions, learning]
@@ -976,6 +999,45 @@ tests:
       per-card frontmatter field.
     correct_contains: ["summarize"]
     tags: [schemas, extension]
+
+  # Standard card fields (docs/implemented-plans/standard-card-fields.md): no card type
+  # has `status`, `created`, `summary`, bare `date`/`modified`, or
+  # non-derived-from `source`; a box-local schema declaring one gets a
+  # `box-schema-fields` health warning. The agent should record specific
+  # facts instead: a named boolean and a date entry named for what it is.
+  # Status (2026-09-29, Claude): 1/2 then 1/1 on a migrated copy of the
+  # card-fields-review test1 clone. Both answers were right (named field for
+  # owned/wanted, `bought: DateEntrySchema`, `status`/`date` reserved). Round 1
+  # missed should_read_any (read via `cd box-docs && cat schemas.md`) and
+  # grepped the bundle for the undefined "global fields"; schemas.md now lists
+  # them. Round 2: 1 read, 1 search, 39k ctx; chose `ownership:
+  # z.enum(["owned","wanted"])` and named `owned: true` as the alternative.
+  - id: schema-specific-fields
+    prompt: >
+      You're adding a box-local card type for the boxholder's books: whether
+      each book is owned or wanted, and when it was bought. What frontmatter
+      fields would you declare, and which field names should a box-local
+      schema avoid?
+    expected_level: knows_about
+    watch_for: >
+      Reads the schema-authoring doc; declares a specific field for
+      owned/wanted (a named boolean such as `owned`/`wanted`, or a specifically
+      named field) and a date entry named for the event (`bought:
+      DateEntrySchema`); names `status` and `date` among the reserved names a
+      box-local schema avoids. FAILS if it declares `status:` itself.
+    # The full path makes the harness install package docs; the bare name
+    # also catches `cd node_modules/beebox/box-docs && cat schemas.md`.
+    should_read_any:
+      - "node_modules/beebox/box-docs/schemas.md"
+      - "schemas.md"
+    correct_matches:
+      - '(?:reserv|avoid)[\s\S]{0,400}\bstatus\b|\bstatus\b[\s\S]{0,200}(?:reserv|avoid)'
+      - '(?:reserv|avoid)[\s\S]{0,400}`date`|`date`[\s\S]{0,200}(?:reserv|avoid)'
+      - '\b(?:owned|wanted|own|want|wishlist)\w*[`"\x27]?\s*:\s*(?:z\.boolean|true|false)|z\.enum\(\s*\[\s*["\x27](?:owned|wanted)'
+      - '(?:bought|purchase|acquired)\w*[`"\x27]?\s*:[\s\S]{0,60}DateEntry'
+    response_not_matches:
+      - '\bstatus\s*:\s*(?:z\.|["\x27]?(?:owned|wanted)\b)'
+    tags: [schemas, card-fields]
 
   # === CLI Commands ===
   #
@@ -1195,18 +1257,22 @@ tests:
   # generated path-scoped image rule skill and answers correctly. Claude may
   # instead read the equivalent generated card doc, so either canonical
   # generated surface satisfies the navigation check.
+  # Status (2026-09-29, filename.via): 1/2 then 1/1 with Claude after the
+  # move to `filename.via`. Both answers were right; the first missed the old
+  # "<kind> time" regex by paraphrasing ("the camera shutter time"), so the
+  # regex now looks for the acquisition wording near `filename.via.at`.
   - id: image-exif-date
-    prompt: "Consult the box's generated image-card guidance. What does filename.captured represent, and where should the photo's original EXIF capture time go?"
+    prompt: "Consult the box's generated image-card guidance. What does filename.via.at represent, where should the photo's original EXIF capture time go, and where would you record the year a scanned 1970s print was originally taken?"
     expected_level: knows_about
-    watch_for: "Distinguishes the capture/upload/import timestamp in filename.captured from the photo's original timestamp in exif.date"
+    watch_for: "Distinguishes the capture/upload/import timestamp in filename.via.at from the photo's original timestamp in exif.date, and puts a scanned print's own date in filename.via.original"
     should_read_any:
       - "node_modules/beebox/box-docs/card-image.md"
       - "beebox-rule-card-image/SKILL.md"
-    correct_contains: ["filename.captured", "exif.date"]
+    correct_contains: ["filename.via.at", "exif.date", "via.original"]
     correct_matches:
-      - "filename\\.captured[\\s\\S]{0,120}\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b|\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b[\\s\\S]{0,120}filename\\.captured"
+      - "filename\\.via\\.at[\\s\\S]{0,160}\\b(?:acquisition|acquired|arrived|upload|ingestion|import|browser|selection|shutter)"
     response_not_matches:
-      - "filename\\.captured.{0,80}(?:set|comes|taken|derived).{0,30}(?:from|by).{0,30}EXIF"
+      - "filename\\.via\\.at.{0,80}(?:set|comes|taken|derived).{0,30}(?:from|by).{0,30}EXIF"
     tags: [images]
 
   # === Procedures ===
@@ -1692,7 +1758,7 @@ tests:
       Critical that the agent knows NOT to fill in sent or id — the connector
       handles delivery. Two valid mechanisms both respect that: appending a
       kind: message, sender: agent entry to the chat-thread card, or creating a
-      *.telegram-message.card output card (status: pending). The failure mode is
+      *.telegram-message.card output card. The failure mode is
       marking the message sent/delivered itself.
 
   # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 1 reads, 1 searches, 41k ctx.
@@ -4360,6 +4426,37 @@ tests:
     correct_contains: ["quantity"]
     tags: [cards, vocabulary]
 
+  # Standard card fields (docs/implemented-plans/standard-card-fields.md): what a card
+  # was derived from goes in `sources: [{ ref | href, pos?, note? }]`, never a
+  # bare `source:` string.
+  # Status (2026-09-29, Claude): 3 runs on a migrated copy of the
+  # card-fields-review test1 clone, all correct (`sources:` list with `ref:`,
+  # optional `pos`/`note`, never a bare string); 1 read, 1 search, 39k ctx.
+  # Run 1 missed should_read_any (read via `cd box-docs; cat card-record.md`).
+  # Run 2 passed and noted card-record.md omitted `usage`, which provenance.md
+  # shows; record instructions now list it. Run 3 passed using it.
+  - id: record-sources-provenance
+    prompt: >
+      You're writing a record card for an item extracted from a
+      capture-session card. Where in the record's frontmatter do you say which
+      card it came from, and in what shape?
+    expected_level: knows_about
+    watch_for: >
+      Reads the record card doc and answers `sources:` as a list of objects
+      with `ref:` pointing at the capture-session card (optionally `pos` for
+      where in it, `note` for why). FAILS on a bare `source: <path>` string.
+    # The bare name also catches `cd node_modules/beebox/box-docs; cat card-record.md`.
+    should_read_any:
+      - "node_modules/beebox/box-docs/card-record.md"
+      - "card-record.md"
+      - "beebox-rule-card-record/SKILL.md"
+    correct_contains: ["sources", "ref"]
+    correct_matches:
+      - 'sources[`"\x27]?\s*:\s*(?:\n\s*-\s*|\[\s*\{\s*)["\x27]?ref\b'
+    response_not_matches:
+      - '(?:^|\n)[ \t]*source[ \t]*:[ \t]*["\x27]?[\w./-]'
+    tags: [records, card-fields]
+
   # --- Behavior audit (not knowledge) ---
   #
   # The four audits above test what the agent *knows* about `{% quote %}`
@@ -5060,7 +5157,7 @@ tests:
   # clone at knows_about, 1 reads, 1 searches, 38k ctx.
   - id: retro-inferred-belief-policy
     prompt: >
-      A personality trait reads `confidence: medium, source: inferred`.
+      A personality trait reads `confidence: medium, basis: inferred`.
       New chat evidence supports it even more strongly. Should you raise
       it to high?
     expected_level: knows_about
@@ -5992,7 +6089,7 @@ tests:
     watch_for: >
       (1) Annotate by default — OCR/describe the images (via subagents
       reading the actual image files, not invented from the transcript) and
-      commit, setting status to annotated. (2) Then file the card out of
+      commit, setting annotated: true. (2) Then file the card out of
       tmp-capture/ with `bbx mv` to wherever it belongs, OR complete the
       capture on the spot and delete the card instead. (3) tmp-capture/
       must not accumulate — this isn't storage. Should NOT invent other
@@ -6304,12 +6401,12 @@ tests:
   #
   # Track 4 of docs/plans/scanner-ingest.md. One entry, per the plan's
   # "Knowledge audits" section: the agent should be able to say what a
-  # `pdf.card` is, where its original bytes live, and what `status: new`
-  # + `error:` means — from the schema instructions in its always-on surface,
+  # `pdf.card` is, where its original bytes live, and what an `error:`
+  # means — from the schema instructions in its always-on surface,
   # without re-reading source.
   #
   # The failure this guards against is the expensive one: an agent seeing a
-  # `status: new` pdf card with an `error:` and concluding the document
+  # pdf card with an `error:` and concluding the document
   # was lost (or re-uploading it), when the original PDF is sitting right there
   # in the attach scope and `bbx pdf reanalyze` re-runs extraction.
   #
@@ -6328,27 +6425,54 @@ tests:
   - id: pdf-card-failed-extraction
     prompt: >
       I found a card at `_content/inbox/scan-20260402T1015-ab12cd34.attach/source.pdf.card`
-      with `status: new` and an `error:` field saying Docling exited 1. Is the
+      with an `error:` field saying Docling exited 1 and an empty body. Is the
       scanned document lost? What are my options?
     expected_level: knows_directly
     watch_for: >
       Says nothing is lost — the original file is still in the card's attach
       scope (`attach/source.pdf`, per `filename.ref`) and can be read directly;
       names `bbx pdf reanalyze` as the retry (and `--force-ocr` for a junk
-      text layer), or marking the card `invalid` if the file really is unusable.
-      Should NOT say the document needs re-scanning or re-uploading, and should
-      NOT treat `status: new` as "not yet arrived".
+      text layer), or marking the card `unusable: true` if the file really is
+      unusable. Should NOT say the document needs re-scanning or re-uploading,
+      and should NOT treat the empty body as "not yet arrived".
     correct_contains: ["reanalyze"]
     correct_contains_any: ["attach/source.pdf", "attach scope", "original"]
     tags: [cards, intake, scanner-ingest]
 
-  # === Scan provenance (`source: scan-upload/<token-name>`) ===
+  # Status (2026-09-29, Claude): 1/1 passed on the isolated test1 clone;
+  # read the generated `.claude/rules/card-pdf.md` (1 file, 0 searches, 38k
+  # initial / 42k peak context). A direct-recall probe confirmed these details
+  # are lazy PDF-card guidance, so the audit correctly uses `knows_about`.
+  - id: pdf-image-formats
+    prompt: >
+      I need to link someone to a page in a PDF card, and I am checking what
+      happens to its images when the card is analyzed again. What image formats
+      should I expect, what happens to the attached source file, and which page
+      link will keep working? Open the generated PDF card guidance at
+      `.claude/rules/card-pdf.md` and explain briefly; do not change files.
+    expected_level: knows_about
+    watch_for: >
+      Identifies WebP for newly generated pages and figures, continued support
+      for older AVIF assets, byte-for-byte preservation of the attached source,
+      and a card `?page=N` link as stable when reanalysis can replace generated
+      image filenames.
+    should_read_any: [.claude/rules/card-pdf.md]
+    correct_matches:
+      - '(?:WebP|\.webp)[\s\S]{0,220}(?:page|figure)|(?:page|figure)[\s\S]{0,220}(?:WebP|\.webp)'
+      - '(?:older|existing|old)[\s\S]{0,120}(?:AVIF|\.avif)|(?:AVIF|\.avif)[\s\S]{0,120}(?:older|existing|read|support)'
+      - '(?:no|without|does not|doesn.t|don.t)[\s\S]{0,120}(?:convert|transcod)|(?:convert|transcod)[\s\S]{0,120}(?:not needed|unnecessary|no need)'
+      - '(?:original|source)[\s\S]{0,180}(?:unchanged|preserv|byte.for.byte)|(?:unchanged|preserv|byte.for.byte)[\s\S]{0,180}(?:original|source)'
+      - '(?:\?page=N|page=N)[\s\S]{0,180}(?:stable|durable|keep|work)|(?:stable|durable|keep|work)[\s\S]{0,180}(?:\?page=N|page=N)'
+      - '(?:reanaly|analyz(?:e|ed) again)[\s\S]{0,220}(?:replace|change|break|stale)|(?:replace|change|break|stale)[\s\S]{0,220}(?:reanaly|analyz(?:e|ed) again)'
+    tags: [cards, pdf]
+
+  # === Scan provenance (`uploader: scan-upload/<token-name>`) ===
   #
   # The plan's second audit entry (docs/plans/scanner-ingest.md, "Knowledge
   # audits"): an agent triaging a scan intake job should be able to say where
   # the session came from, straight from the capture-session schema
   # instructions, without going source-diving. The failure it guards against is
-  # an agent treating an unfamiliar `source:` value as noise (or as a ref it
+  # an agent treating an unfamiliar `uploader:` value as noise (or as a ref it
   # should resolve) instead of as the named upload credential — which is the
   # only handle the boxholder has for "which scanner/profile produced this
   # batch" when a whole batch comes out wrong.
@@ -6357,7 +6481,7 @@ tests:
   # `landmark-parent-claude-md-loads` above, so this entry does not re-ask it.
   #
   # Status (2026-08-01): 1/1 pass, 0 file reads, 0 searches, 6 turns, 43k
-  # initial context. The agent read the `source` paragraph out of the generated
+  # initial context. The agent read the `source` (now `uploader`) paragraph out of the generated
   # capture-session card doc and gave the right reading — desktop uploader, not
   # chat; token name identifies the device/profile; useful when a batch looks
   # wrong — and volunteered the CLAUDE_SCANS.md tie-in unprompted. The
@@ -6366,7 +6490,7 @@ tests:
   - id: scan-session-provenance
     prompt: >
       I'm triaging an intake job and one of its items is a capture-session card
-      whose frontmatter says `source: scan-upload/study-scansnap`. What does
+      whose frontmatter says `uploader: scan-upload/study-scansnap`. What does
       that tell me about where this session came from?
     expected_level: knows_directly
     watch_for: >

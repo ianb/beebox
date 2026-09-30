@@ -70,7 +70,7 @@ decoded.includes("Hi there.")
 ## A reply outbound inherits threading from the source message
 
 When an outbound has `<in-reply-to ref="..." />`, the connector reads the
-source `email-message` card's `message-id`/`thread-id` to set
+source `email-message` card's `email.message-id`/`email.thread-id` to set
 `In-Reply-To`/`References` headers and threads the upload onto the existing
 Gmail thread.
 
@@ -83,7 +83,7 @@ box.commitAll("init box");
 await mkdir(join(box.root, "_content/inbox/email/thread-Test-abc12345"), { recursive: true });
 await box.seed(
   "_content/inbox/email/thread-Test-abc12345/msg-001.email-message.card",
-  "---\ntype: email-message\nmessage-id: orig-msg-id-123\nthread-id: thread-abc12345\nfrom: alice@example.com\nto: me@example.com\ndate: 2026-02-15T10:00:00Z\nsubject: Test\nbody-file:\n  ref: msg-001.body.txt\n---\n",
+  "---\ntype: email-message\nemail:\n  message-id: orig-msg-id-123\n  thread-id: thread-abc12345\n  from: alice@example.com\n  to: me@example.com\n  received: 2026-02-15T10:00:00Z\n  subject: Test\nbody-file:\n  ref: msg-001.body.txt\n---\n",
 );
 await box.seed(
   "_content/inbox/email/thread-Test-abc12345/draft-001.email-outbound.card",
@@ -129,7 +129,7 @@ box.commitAll("init box");
 await mkdir(join(box.root, "_content/inbox/email/thread-Test-zzz99999"), { recursive: true });
 await box.seed(
   "_content/inbox/email/thread-Test-zzz99999/msg-001.email-message.card",
-  "---\ntype: email-message\nmessage-id: abs-msg-id\nthread-id: thread-zzz99999\nfrom: a@b.com\nto: me@x.com\ndate: 2026-02-15T10:00:00Z\nsubject: X\nbody-file:\n  ref: msg-001.body.txt\n---\n",
+  "---\ntype: email-message\nemail:\n  message-id: abs-msg-id\n  thread-id: thread-zzz99999\n  from: a@b.com\n  to: me@x.com\n  received: 2026-02-15T10:00:00Z\n  subject: X\nbody-file:\n  ref: msg-001.body.txt\n---\n",
 );
 // Box-anchored absolute path (leading slash, relative to box root)
 await box.seed(
@@ -323,7 +323,7 @@ box.commitAll("init box");
 await mkdir(join(box.root, "_content/inbox/email/thread-Hello-xyz12345"), { recursive: true });
 await box.seed(
   "_content/inbox/email/thread-Hello-xyz12345/msg-001.email-message.card",
-  "---\ntype: email-message\nmessage-id: m1-at-example.com\nthread-id: thread-xyz12345\nfrom: alice@example.com\nto: me@example.com\ndate: 2026-02-15T10:00:00Z\nsubject: Hello\nbody-file:\n  ref: msg-001.body.txt\n---\n",
+  "---\ntype: email-message\nemail:\n  message-id: m1-at-example.com\n  thread-id: thread-xyz12345\n  from: alice@example.com\n  to: me@example.com\n  received: 2026-02-15T10:00:00Z\n  subject: Hello\nbody-file:\n  ref: msg-001.body.txt\n---\n",
 );
 box.commitAll("setup");
 

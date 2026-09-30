@@ -7,7 +7,7 @@ import { createAgent } from "../../agent/invoke/core.js";
 import { fenceForPrompt } from "../../../lib/prompt-fence.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { resolveRefPath } from "../../../shared/ref-path/core.js";
-import type { Evidence } from "../evidence.js";
+import type { Evidence } from "../evidence/core.js";
 import type { InstructionSnapshot } from "../snapshot.js";
 
 const researchSchema = z.object({ reason: z.string().min(1), evidenceRefs: z.array(z.string()).min(1) });

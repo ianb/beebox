@@ -189,7 +189,6 @@ class PublishSubmissionsConnector implements Connector {
         const cardText = createPubSubmissionCard({
           pubId: submission.pubId,
           submittedAt: submission.ts,
-          created: this.now().toISOString(),
           viewer: submission.viewer,
           country: submission.country,
           fields: submission.fields,

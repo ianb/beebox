@@ -69,7 +69,6 @@ To send a message to the Telegram chat, create a card in `_bookkeeping/output/`:
 
 ```yaml
 ---
-status: pending
 chat-id: "-1001234567890"
 text: Hello from the box!
 ---
@@ -81,7 +80,7 @@ Save it with a `.telegram-message.card` extension, stage and commit, then run:
 bbx wakeup --connector telegram
 ```
 
-The connector sends the message and deletes the card. (There's no reply-to-message-id field currently — only a flat chat message.)
+The connector sends the message and deletes the card. If sending fails, it adds `delivery-error` with the failure text and leaves the card; it does not retry it. (There's no reply-to-message-id field currently — only a flat chat message.)
 
 ## What gets created
 

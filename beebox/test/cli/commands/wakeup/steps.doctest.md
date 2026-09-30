@@ -18,7 +18,7 @@ import { createContainsBackfillJob, refreshSearchIndex } from "../../../../src/c
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { searchBox } from "../../../../src/core/search/query/core.js";
 import { acquireLock, releaseLock } from "../../../../src/lib/file-lock.js";
-import { searchLockPath } from "../../../../src/core/search/store.js";
+import { searchLockPath } from "../../../../src/core/search/store/core.js";
 
 const MEMO = (text: string) =>
   "---\ncreated: 2026-05-22T10:00:00Z\n---\n" + text + "\n";
@@ -41,8 +41,8 @@ listing.includes("contains-backfill.job.card")
 => true
 ```
 
-The job card is frontmatter carrying the source, a description, and the item
-refs:
+The job card is frontmatter carrying its priority, a description, and the
+item refs:
 
 ```ts continue
 const jobs = (await box.list("_bookkeeping/jobs")).split("\n").filter((f) => f.includes("contains-backfill.job.card"));
@@ -50,7 +50,7 @@ const job = await box.read(jobs[0]!);
 job.startsWith("---\n")
 => true
 
-job.includes("source: contains-backfill")
+job.includes("priority: low")
 => true
 
 job.includes("Write the contains: field for 2 cards missing it.")

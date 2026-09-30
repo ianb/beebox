@@ -13,6 +13,7 @@ import type {
   ChatBackend,
   ChatBackendRun,
   ChatBackendStartOptions,
+  ChatBackendSendOptions,
   ChatContentBlock,
 } from "../claude-chat-types.js";
 
@@ -37,6 +38,8 @@ export interface FakeChatBackendRun extends ChatBackendRun {
   startOptions: ChatBackendStartOptions;
   /** Each `send()` call appended in order, captured as content arrays. */
   sent: ChatContentBlock[][];
+  /** Whether each `send()` (same index as `sent`) was marked client-composed. */
+  sentClientComposed: boolean[];
   /** Push a raw SDK message onto the messages stream. */
   emitMessage(msg: SDKMessage): void;
   /** Push a `system/init` message with a session_id. */
@@ -143,16 +146,19 @@ export function createFakeChatBackend(): FakeChatBackend {
       }
       const messageQueue = createAsyncIterableQueue<SDKMessage>();
       const sent: ChatContentBlock[][] = [];
+      const sentClientComposed: boolean[] = [];
 
       const run: FakeChatBackendRun = {
         startOptions: opts,
         sent,
+        sentClientComposed,
         interrupted: false,
         closed: false,
         messages: messageQueue.iterable,
-        send(content: ChatContentBlock[]): void {
+        send(content: ChatContentBlock[], options?: ChatBackendSendOptions): void {
           if (run.closed) return;
           sent.push(content);
+          sentClientComposed.push(options?.clientComposed === true);
         },
         async interrupt(): Promise<void> {
           run.interrupted = true;

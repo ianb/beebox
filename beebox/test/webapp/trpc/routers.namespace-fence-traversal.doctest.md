@@ -56,7 +56,12 @@ async function cardGetThrows(ctx: TestCtx, cardPath: string): Promise<boolean> {
 }
 
 const server = await makeTestServer();
-await writeFile(join(server.boxRoot, "package.json"), '{"name":"secret-marker"}');
+async function writePackageMarker(boxRoot: string, marker: string): Promise<void> {
+  const packagePath = join(boxRoot, "package.json");
+  const packageJson = await readFile(packagePath, "utf-8");
+  await writeFile(packagePath, packageJson.replace(/"name": "[^"]+"/, `"name": "${marker}"`));
+}
+await writePackageMarker(server.boxRoot, "secret-marker");
 ```
 
 ## `/api/files/*` (GET, PUT, POST, DELETE)
@@ -259,7 +264,7 @@ not just the resolved-path check. Every verb — read, write, browse, and
 
 ```ts
 const symServer = await makeTestServer();
-await writeFile(join(symServer.boxRoot, "package.json"), '{"name":"secret-marker-2"}');
+await writePackageMarker(symServer.boxRoot, "secret-marker-2");
 await symlink("..", join(symServer.boxRoot, "_content/pkg"));
 
 const symGetRes = await symServer.request({ method: "GET", url: "/api/files/_content/pkg/package.json" });
@@ -392,17 +397,17 @@ const escServer = await makeTestServer();
 await mkdir(join(escServer.boxRoot, "src"), { recursive: true });
 await writeFile(
   join(escServer.boxRoot, "src", "private.memo.card"),
-  '---\nstatus: secret\ncreated: "2026-01-01T00:00:00.000Z"\n---\nPrivate.\n',
+  '---\nconflict: true\ncreated: "2026-01-01T00:00:00.000Z"\n---\nPrivate.\n',
 );
-await escServer.seed("_content/Normal.memo.card", '---\nstatus: new\ncreated: "2026-01-01T00:00:00.000Z"\n---\nNormal.\n');
+await escServer.seed("_content/Normal.memo.card", '---\ncreated: "2026-01-01T00:00:00.000Z"\n---\nNormal.\n');
 await symlink(join("..", "src", "private.memo.card"), join(escServer.boxRoot, "_content", "alias.memo.card"));
 
 const escBrowseRes = await escServer.request({ method: "GET", url: "/api/browse/_content" });
 JSON.stringify({
   names: escBrowseRes.body.cards.map((c) => c.name).sort(),
-  statuses: escBrowseRes.body.cards.map((c) => c.status),
+  conflicts: escBrowseRes.body.cards.map((c) => c.conflict === true),
 })
-=> {"names":["Normal"],"statuses":["new"]}
+=> {"names":["Normal"],"conflicts":[false]}
 ```
 
 ```ts cleanup

@@ -30,8 +30,8 @@ export type DriveChildState = "synced" | "conflict" | "pointer" | "subfolder" | 
 /** The fields `status.browse` reports per card — all this mapping needs. */
 export interface DriveChildCard {
   type: string;
-  /** The card's `status` frontmatter field, when it has one. */
-  status?: string | undefined;
+  /** The card's `conflict` frontmatter field is true. */
+  conflict?: boolean | undefined;
 }
 
 /** Card types whose content the Drive connector mirrors two-way. */
@@ -40,15 +40,15 @@ const SYNCED_CARD_TYPES = new Set(["gdoc", "gsheet"]);
 /**
  * The Drive state of one child card, from the card alone.
  *
- * `conflict` is read off the child's own `status`, never inferred from the
- * folder's: a mount can report `status: ok` for a listing that succeeded while
- * one child's content sync failed, and the column has to show that.
+ * `conflict` is read off the child's own card, never inferred from the
+ * folder's: a mount can have no `error` for a listing that succeeded while one
+ * child's content sync failed, and the column has to show that.
  */
 export function driveChildState(card: DriveChildCard): DriveChildState {
   if (card.type === "glink") return "pointer";
   if (card.type === "gfolder") return "subfolder";
   if (!SYNCED_CARD_TYPES.has(card.type)) return "not-drive";
-  return card.status === "conflict" ? "conflict" : "synced";
+  return card.conflict === true ? "conflict" : "synced";
 }
 
 export interface DriveChildBadge {

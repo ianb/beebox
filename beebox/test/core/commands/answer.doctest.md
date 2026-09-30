@@ -34,7 +34,6 @@ async function readJob(box) {
 }
 
 const SELECT = `---
-status: pending
 prompt: Where does this receipt go?
 input:
   type: select
@@ -49,7 +48,6 @@ learning:
 `;
 
 const CONFIRM = `---
-status: pending
 prompt: Archive this thread?
 input:
   type: confirm
@@ -58,7 +56,6 @@ directive: Archive if yes
 `;
 
 const TEXT = `---
-status: pending
 prompt: What should I name the project?
 input:
   type: text
@@ -66,7 +63,6 @@ input:
 `;
 
 const LETTER_LABELS = `---
-status: pending
 prompt: Pick one
 input:
   type: select
@@ -92,7 +88,7 @@ res.success
 => true
 
 const card = await box.read("_bookkeeping/questions/Receipt.question.card");
-card.includes("status: answered")
+card.includes("answered-at:")
 => true
 
 card.includes("selected: finance")
@@ -271,8 +267,8 @@ bad.error
 The card stays pending after a rejected answer:
 
 ```ts continue
-(await box.read("_bookkeeping/questions/Archive.question.card")).includes("status: pending")
-=> true
+(await box.read("_bookkeeping/questions/Archive.question.card")).includes("answered-at")
+=> false
 ```
 
 ```ts cleanup
@@ -305,8 +301,8 @@ expired card) is cleared on re-answer, so the resulting card is coherent:
 
 ```ts
 const EXPIRED = TEXT.replace(
-  "status: pending",
-  "status: expired\nexpired-at: 2026-01-01T00:00:00-07:00",
+  "---\n",
+  "---\nexpired-at: 2026-01-01T00:00:00-07:00\n",
 );
 const box = await makeTmpBox({ git: true });
 await box.write("_bookkeeping/questions/Old.question.card", EXPIRED);
@@ -316,7 +312,7 @@ res.success
 => true
 
 const card = await box.read("_bookkeeping/questions/Old.question.card");
-card.includes("status: answered")
+card.includes("answered-at:")
 => true
 
 card.includes("expired-at")
@@ -332,8 +328,8 @@ So does a dismissed one (an un-dismissal is the boxholder's prerogative); its
 
 ```ts
 const DISMISSED = TEXT.replace(
-  "status: pending",
-  "status: dismissed\ndismissed-at: 2026-01-01T00:00:00-07:00",
+  "---\n",
+  "---\ndismissed-at: 2026-01-01T00:00:00-07:00\n",
 );
 const box = await makeTmpBox({ git: true });
 await box.write("_bookkeeping/questions/Skipped.question.card", DISMISSED);
@@ -355,8 +351,8 @@ An already-answered question is rejected (a coherent answered card carries its
 
 ```ts
 const ANSWERED = TEXT.replace(
-  "status: pending",
-  "status: answered\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Done",
+  "---\n",
+  "---\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Done\n",
 );
 const box = await makeTmpBox({ git: true });
 await box.write("_bookkeeping/questions/Done.question.card", ANSWERED);
@@ -366,7 +362,7 @@ res.success
 => false
 
 res.error
-=> Question is already answered (status: answered); an answered question is terminal
+=> Question is already answered; an answered question is terminal
 ```
 
 ```ts cleanup
@@ -454,8 +450,8 @@ res.error.startsWith("Failed to commit transition:")
 The card is untouched (still pending) and no job file was left behind:
 
 ```ts continue
-(await box.read("_bookkeeping/questions/Receipt.question.card")).includes("status: pending")
-=> true
+(await box.read("_bookkeeping/questions/Receipt.question.card")).includes("answered-at")
+=> false
 
 (await box.list("_bookkeeping/jobs")).includes(".card")
 => false

@@ -286,7 +286,7 @@ print(`after.txt (second step) exists: ${files.includes("after.txt")}`);
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("unjudged_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`card run status: ${run.status}`);
+print(`card run outcome: ${run.outcome}`);
 print(`checked step: ${run.steps[0].status}`);
 print(`validate status: ${run.steps[0].validate.status}`);
 print(`validate error: ${run.steps[0].validate.error}`);
@@ -307,7 +307,7 @@ reason: max-turns
 detail: reached max turns (16)
 work agent invocations: 1
 after.txt (second step) exists: true
-card run status: inconclusive
+card run outcome: inconclusive
 checked step: completed
 validate status: inconclusive
 validate error: Review reached max turns (16) — the work was not judged.

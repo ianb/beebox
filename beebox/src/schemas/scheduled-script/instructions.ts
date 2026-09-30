@@ -29,7 +29,7 @@ Scheduled scripts define a command to run, or a notification to send, on a sched
 - **requested-by**: \`boxholder\` when the boxholder asked for this schedule (a reminder asked for in chat). Leave it out for schedules the box set up itself.
 - **Schedule memory** (\`runs\` only): each run's environment has \`BBX_SINCE_COMMIT\` (the box HEAD at this schedule's previous run; the first run sees no changes), \`BBX_SINCE_TIME\` (the previous run's time, empty on the first run), \`BBX_CARRY_IN\` (the value the previous run left), and \`BBX_CARRY_OUT\` (a file path: write up to 4 KB there to pass to the next run; leave it empty to keep the previous value). \`bbx changes\` lists the cards changed since \`BBX_SINCE_COMMIT\`.
 - **description**: Human-readable summary of what this schedule does.
-- **source**: Why this schedule exists. Either a plain string, or \`{text?, ref?}\` to link to a related card.
+- **reason**: Why this schedule exists. Either a plain string, or \`{text?, ref?}\` to link to a related card.
 - **create-after-success**: Optional array of \`{path, args?}\` entries. Create a card at \`path\` after successful execution; \`args\` are template arguments. Skipped if the target file already exists.
 - **requires**: Optional \`{connectors: [name, ...]}\`. The schedule won't run if any required connector isn't configured for this box.
 
@@ -47,7 +47,7 @@ A reminder is a scheduled-script card with \`at\`, \`once: true\`, and \`notify:
 at: 2026-10-02T08:30
 once: true
 requested-by: boxholder
-description: Reminder asked for in chat on 2026-09-26
+reason: Asked for in chat on 2026-09-26
 notify:
   title: Call the vet about Pepper's shots
   loudness: loud

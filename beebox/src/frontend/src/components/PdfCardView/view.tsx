@@ -2,7 +2,7 @@
  * The reading view of a pdf card (`src/schemas/pdf.ts`).
  *
  * What the card holds: provenance for an original file kept in its attach
- * scope, the extracted markdown as the body, page renders (`page-001.avif`, …)
+ * scope, the extracted markdown as the body, page renders (`page-001.webp`; existing `.avif` files remain readable)
  * and figures beside it. Before this view existed the card fell through to the
  * generic frontmatter renderer, which showed a `filename:` table and a wall of
  * text with no way to see the pages or the original.
@@ -61,7 +61,7 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 }
 
 function DocumentHeader({ fields, fallbackName }: { fields: ExtractedDocumentFields; fallbackName: string }) {
-  const { title, author, pages, format, captured, source, description, originalName } = fields;
+  const { title, author, pages, format, acquired, channel, description, originalName } = fields;
   return (
     <Stack gap="sm">
       <Heading level={2}>{title ?? fallbackName}</Heading>
@@ -69,10 +69,10 @@ function DocumentHeader({ fields, fallbackName }: { fields: ExtractedDocumentFie
         {author !== null ? <MetaItem label="Author">{author}</MetaItem> : null}
         {pages !== null ? <MetaItem label="Pages">{pages}</MetaItem> : null}
         {format !== null ? <MetaItem label="Format">{format}</MetaItem> : null}
-        {captured !== null ? (
-          <MetaItem label="Captured"><FriendlyDate iso={captured} /></MetaItem>
+        {acquired !== null ? (
+          <MetaItem label="Captured"><FriendlyDate iso={acquired} /></MetaItem>
         ) : null}
-        {source !== null ? <MetaItem label="Source">{source}</MetaItem> : null}
+        {channel !== null ? <MetaItem label="Via">{channel}</MetaItem> : null}
         {originalName !== null ? <MetaItem label="File">{originalName}</MetaItem> : null}
       </Row>
       {description !== null ? (
@@ -207,8 +207,9 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
         <DocumentHeader fields={fields} fallbackName={displayName(data.path)} />
 
         <PdfStatusNotice
-          status={fields.status}
+          extracted={fields.doclingRef !== null}
           error={fields.error}
+          unusable={fields.unusable}
           hasBody={hasBody}
           cardPath={data.path}
         />

@@ -37,8 +37,8 @@ function resolveBbxPath(): string {
  * `connector` scopes the child to one connector (`--connector <name>`), which
  * is what `bbx force-wakeup --connector X` asks for. Leave it unset for the
  * full cycle: the scan promote worker MUST, because a connector-scoped wakeup
- * never drains a `source: scan` job (`cli/commands/wakeup.ts` filters jobs by
- * source), and so must the UI Sync button, which means "run the cycle".
+ * never drains a scan intake job, which has no `connector`
+ * (`cli/commands/wakeup/command.ts` filters jobs by connector), and so must the UI Sync button, which means "run the cycle".
  *
  * Forcing and letting it happen are therefore the same code: this is the same
  * child the schedule runs, with the same flag the schedule would pass.

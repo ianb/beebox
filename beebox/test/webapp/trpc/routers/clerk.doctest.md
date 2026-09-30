@@ -107,12 +107,12 @@ const saved = await readFile(path.join(box.root, first.card), "utf-8");
 print(`same card: ${first.card === retry.card}`);
 print(`in inbox: ${first.card.startsWith("_content/inbox/")}`);
 print(`opens organizer: ${first.open.includes("companion=")}`);
-print(`draft: ${saved.includes("status: draft")}`);
+print(`draft (not ready): ${!saved.includes("ready:")}`);
 =>
 same card: true
 in inbox: true
 opens organizer: true
-draft: true
+draft (not ready): true
 ```
 
 ## a transfer ID cannot be retried with a different source snapshot

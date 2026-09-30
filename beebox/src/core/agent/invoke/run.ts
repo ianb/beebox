@@ -80,6 +80,10 @@ export function buildQueryOptions(
     cwd: options.cwd ?? options.boxRoot,
     env,
     permissionMode: "bypassPermissions",
+    // A run's one prompt is composed by beebox and often embeds card content
+    // from outside (inbox items, chat threads), so the CLI must not expand
+    // `@path` mentions in it or treat a leading `/` as a command.
+    verbatimPrompts: true,
     maxTurns,
     ...(binaryPath !== null && { pathToClaudeCodeExecutable: binaryPath }),
     ...(options.maxBudgetUsd !== undefined && { maxBudgetUsd: options.maxBudgetUsd }),

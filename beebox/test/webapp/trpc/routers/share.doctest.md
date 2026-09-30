@@ -10,6 +10,10 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import { shareDestinationsOutput } from "../../../../src/webapp/trpc/routers/share/contract.js";
+import { parse, stringify } from "yaml";
+import { splitCardContent } from "../../../../src/cards/frontmatter.js";
+import { planSourceFields } from "../../../../src/scripts/migrate/card-fields/source.js";
+import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
 
 function caller(boxRoot) {
   return appRouter.createCaller({
@@ -75,7 +79,7 @@ const request = {
 };
 const first = await caller(box.root).share.saveTextual(request);
 const saved = await readFile(path.join(box.root, first.created[0]), "utf-8");
-print(saved.includes("source: https://example.com/article"));
+print(saved.includes("sources:\n  - href: https://example.com/article\n    retrieved: 2026-08-07T12:00:00.000Z\n"));
 print(saved.includes("share-id: 00000000-0000-4000-8000-000000000001"));
 print(saved.includes("[An Example](https://example.com/article)"));
 first.created[0].endsWith(".webpage.card")
@@ -93,6 +97,30 @@ await rename(path.join(box.root, first.created[0]), path.join(box.root, moved));
 const replay = await caller(box.root).share.saveTextual(request);
 replay.created[0]
 => _content/inbox/An_Example_00000000-0000-4000-8000-000000000001.webpage.card
+```
+
+## A retry against a card saved before the `sources` change is idempotent
+
+A card the share router wrote with the old `source` and `captured` keys is
+rewritten by the `source-fields-2026-09` migration before the new code serves.
+The migrated card is byte-identical to the one the router now generates, so a
+retry of that share still finds it instead of reporting a conflict:
+
+```ts continue
+const oldRequest = { ...request, shareId: "00000000-0000-4000-8000-000000000003", title: "Before" };
+const oldCard = `---\n${stringify({
+  title: "Before",
+  source: oldRequest.url,
+  captured: oldRequest.capturedAt,
+  "share-id": oldRequest.shareId,
+})}---\n[Before](${oldRequest.url})\n`;
+const split = splitCardContent(oldCard);
+const migrated = `---\n${applyFieldEdits(split.frontmatterText, planSourceFields("webpage", parse(split.frontmatterText)).edits)}---\n${split.body}`;
+const oldRel = "_content/inbox/Before_00000000-0000-4000-8000-000000000003.webpage.card";
+await writeFile(path.join(box.root, oldRel), migrated, "utf-8");
+const retried = await caller(box.root).share.saveTextual(oldRequest);
+retried.created[0] === oldRel
+=> true
 ```
 
 ## A reused share id with different immutable content conflicts

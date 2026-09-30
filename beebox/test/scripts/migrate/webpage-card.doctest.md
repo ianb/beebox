@@ -12,6 +12,19 @@ import { scaffoldBoxRoot } from "../../../src/core/box/package.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";
 import { loadCardFromText } from "../../../src/core/card-io.js";
 import { convertFile } from "../../../src/scripts/migrate/webpage-card.js";
+import { parse } from "yaml";
+import { splitCardContent } from "../../../src/cards/frontmatter.js";
+import { planSourceFields } from "../../../src/scripts/migrate/card-fields/source.js";
+import { applyFieldEdits } from "../../../src/scripts/migrate/card-fields/field-edits.js";
+
+// This migration writes the webpage shape of its time (`source`, `captured`);
+// the later `source-fields-2026-09` migration moves those into `sources`.
+// Loading under the current schemas runs that step first, as a box does.
+function throughSourceFields(type: string, text: string): string {
+  const split = splitCardContent(text);
+  const edits = planSourceFields(type, parse(split.frontmatterText)).edits;
+  return `---\n${applyFieldEdits(split.frontmatterText, edits)}---\n${split.body}`;
+}
 
 // Returns the box root of a fresh v3 box; cards go under it exactly as before.
 async function makeTmpBox() {
@@ -67,13 +80,13 @@ const cmText = await fs.readFile(path.join(box, "store/reading/Foo.attach/Foo.co
 => true,false
 ```
 
-Both migrated cards load and validate:
+Both migrated cards load and validate, after the later `source-fields` step:
 
 ```ts continue
 const ctx = await buildLoadContext(box);
-const wp = await loadCardFromText({ content: wpText, source: "store/reading/Foo.webpage.card", ctx });
-[wp.kind, wp.schema.type, wp.fields.source].join("|")
-=> frontmatter|webpage|https://example.com/foo
+const wp = await loadCardFromText({ content: throughSourceFields("webpage", wpText), source: "store/reading/Foo.webpage.card", ctx });
+[wp.kind, wp.schema.type, wp.fields.sources[0].href, wp.fields.sources[0].retrieved].join("|")
+=> frontmatter|webpage|https://example.com/foo|2026-06-14
 
 const cm = await loadCardFromText({ content: cmText, source: "store/reading/Foo.attach/Foo.commentary.card", ctx });
 [cm.kind, cm.schema.type].join("|")
@@ -141,13 +154,13 @@ attach.includes("page.frozen")
 ```
 
 The webpage card takes the record's name as title, the http source as
-`source`, and the description as `excerpt`:
+`source` (then `sources[0].href`), and the description as `excerpt`:
 
 ```ts continue
 const wpText = await fs.readFile(path.join(box, "box/inbox/pages-saved/Bar.webpage.card"), "utf8");
 const ctx = await buildLoadContext(box);
-const wp = await loadCardFromText({ content: wpText, source: "box/inbox/pages-saved/Bar.webpage.card", ctx });
-[wp.schema.type, wp.fields.title, wp.fields.source, wp.fields.excerpt].join("|")
+const wp = await loadCardFromText({ content: throughSourceFields("webpage", wpText), source: "box/inbox/pages-saved/Bar.webpage.card", ctx });
+[wp.schema.type, wp.fields.title, wp.fields.sources[0].href, wp.fields.excerpt].join("|")
 => webpage|A Saved Page|https://example.com/saved|Short summary.
 ```
 

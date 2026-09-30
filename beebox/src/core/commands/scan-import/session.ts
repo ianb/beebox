@@ -75,8 +75,7 @@ export async function fileSessionSourcePdf(args: {
   await fs.writeFile(
     path.join(args.sessionAttachAbsDir, "source.file.card"),
     createFileTemplate({
-      capturedAt: args.startedAt,
-      source: "scan-import",
+      via: { channel: "scan-import", at: args.startedAt },
       filename: "source.pdf",
       originalName: path.basename(args.sourcePdfPath),
       mimeType: "application/pdf",

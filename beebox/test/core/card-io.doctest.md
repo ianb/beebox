@@ -108,7 +108,7 @@ const fields = {
 const text = serializeCardText({ schema: docSchema, fields });
 const parsed = parseCardText(text, { source: "rt.doc.card", schemas });
 JSON.stringify(parsed.fields)
-=> {"type":"doc","drive-id":"drv-42","title":"Round-trip","body":"Hello, world.\n"}
+=> {"type":"doc","title":"Round-trip","drive-id":"drv-42","body":"Hello, world.\n"}
 ```
 
 ## A long scalar never folds across lines
@@ -162,7 +162,7 @@ lint *warning* — see `card-lint.doctest.md` — so it gets cleaned off disk.)
 ```ts
 const drifted = parseCardText("---\ntype: doc\ndrive-id: d1\ntitle: T\nbogus-field: oops\n---\n", { source: "typo.doc.card", schemas });
 JSON.stringify(drifted.fields)
-=> {"type":"doc","drive-id":"d1","title":"T","body":""}
+=> {"type":"doc","title":"T","drive-id":"d1","body":""}
 ```
 
 ## Loader dispatch parses recognized frontmatter cards
@@ -203,7 +203,7 @@ const registryCtx: LoadCardContext = {
 };
 const content = createIntakeJobTemplate({
   created: "2026-06-09T00:00:00Z",
-  source: "gmail",
+  connector: "gmail",
   description: "Triage 1 inbox item",
   items: ["_content/inbox/a.memo.card"],
 });

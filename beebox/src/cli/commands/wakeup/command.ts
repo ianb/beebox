@@ -13,12 +13,12 @@
  *
  * Under `--connector X`, the wakeup is scoped: step 4 runs only that
  * connector, step 4b scans only its `inboxPaths` and tags new intake
- * jobs `source="X"`, and step 5 passes `sourceFilter: "X"` to the
+ * jobs `connector: X`, and step 5 passes `connectorFilter: "X"` to the
  * reactor so it processes just the jobs that this run produced.
  *
  * If `X` doesn't match any configured connector, steps 4b and 5 are
  * scoped to NOTHING (not to a full unscoped run) — 4b is skipped
- * outright, and step 5's `sourceFilter` is set to the unmatched name so
+ * outright, and step 5's `connectorFilter` is set to the unmatched name so
  * it matches zero jobs. Step 4a (stale-job cleanup) and step 6 (push)
  * still run, and the process exits nonzero.
  */
@@ -69,8 +69,8 @@ async function processPendingJobs(
   boxRoot: string,
   activeConnectorName: string | undefined
 ): Promise<{ reactorOk: boolean; reactorSkipped: boolean; jobsProcessed: number; jobsRemaining: number }> {
-  // Step 5: Process pending jobs. Under --connector X, the source
-  // filter restricts processing to jobs tagged source="X" so a
+  // Step 5: Process pending jobs. Under --connector X, the connector
+  // filter restricts processing to jobs tagged `connector: X` so a
   // gmail-scoped tick doesn't drain other connectors' work.
   console.log("[Processing pending jobs]");
   const reactorOptions: Parameters<typeof runReactor>[0] = {
@@ -79,7 +79,7 @@ async function processPendingJobs(
     skipLowPriority: true,
     onLog: (text) => process.stdout.write(text),
   };
-  if (activeConnectorName) reactorOptions.sourceFilter = activeConnectorName;
+  if (activeConnectorName) reactorOptions.connectorFilter = activeConnectorName;
   const result = await runReactor(reactorOptions);
   if (result.jobsProcessed > 0) {
     console.log(`  Processed ${result.jobsProcessed} job(s)`);
@@ -220,7 +220,7 @@ async function runWakeupCycle(boxRoot: string, options: WakeupOptions): Promise<
 
   // Step 5: Process pending jobs. Pass `activeConnectorName` (the raw
   // requested name), not `activeConnector?.name` — a named-but-unmatched
-  // connector must scope the reactor's sourceFilter to that (unmatched)
+  // connector must scope the reactor's connectorFilter to that (unmatched)
   // name, not to "everything" (which is what `activeConnector` collapses
   // to when the name didn't match).
   const jobs = await processPendingJobs(boxRoot, activeConnectorName);

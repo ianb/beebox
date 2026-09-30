@@ -30,6 +30,15 @@ async function readCardParts(cardPath: string): Promise<CardParts> {
   return { fields: isRecord(parsed) ? { ...parsed } : {}, body: split.body };
 }
 
+/**
+ * The card's `drive:` map, as a fresh copy the caller can edit and put back
+ * (`parts.fields["drive"] = drive`); empty when the card has none.
+ */
+function driveMap(parts: CardParts): Record<string, unknown> {
+  const drive = parts.fields["drive"];
+  return isRecord(drive) ? { ...drive } : {};
+}
+
 async function writeCardParts(cardPath: string, parts: CardParts): Promise<void> {
   await fs.writeFile(cardPath, `---\n${stringifyYaml(parts.fields)}---\n${parts.body}`);
 }
@@ -52,16 +61,17 @@ export interface FolderStamp {
 /** Re-stamp a folder card's Drive metadata and last-sync outcome. */
 export async function stampGfolderCard(cardPath: string, stamp: FolderStamp): Promise<void> {
   const parts = await readCardParts(cardPath);
-  if (stamp.name !== null) parts.fields["name"] = stamp.name;
-  if (stamp.link !== null) parts.fields["link"] = stamp.link;
-  parts.fields["status"] = stamp.error === null ? "ok" : "error";
+  if (stamp.link !== null) parts.fields["drive"] = { ...driveMap(parts), link: stamp.link };
+  if (stamp.name !== null) parts.fields["title"] = stamp.name;
   parts.fields["last-sync"] = stamp.lastSync;
   if (stamp.problems !== null) {
     stampCount(parts.fields, { key: "not-in-folder", count: stamp.problems.notInFolder });
     stampCount(parts.fields, { key: "unknown", count: stamp.problems.unknown });
   }
+  // `error` present is how the card says the sync failed, so a failure with
+  // no message still writes one.
   if (stamp.error === null) delete parts.fields["error"];
-  else parts.fields["error"] = stamp.error;
+  else parts.fields["error"] = stamp.error === "" ? "Sync failed without a message" : stamp.error;
   await writeCardParts(cardPath, parts);
 }
 
@@ -79,9 +89,11 @@ function stampCount(fields: Record<string, unknown>, entry: { key: string; count
 export async function stampGlinkCard(cardPath: string, file: DriveFile): Promise<boolean> {
   const parts = await readCardParts(cardPath);
   const before = JSON.stringify(parts.fields);
-  parts.fields["name"] = file.name;
-  parts.fields["mime"] = file.mimeType;
-  if (file.webViewLink !== undefined) parts.fields["link"] = file.webViewLink;
+  const drive = driveMap(parts);
+  if (file.webViewLink !== undefined) drive["link"] = file.webViewLink;
+  drive["mime"] = file.mimeType;
+  parts.fields["drive"] = drive;
+  parts.fields["title"] = file.name;
   if (JSON.stringify(parts.fields) === before) return false;
   await writeCardParts(cardPath, parts);
   return true;

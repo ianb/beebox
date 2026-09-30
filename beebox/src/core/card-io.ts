@@ -5,7 +5,6 @@
  *
  *   ---
  *   type: doc
- *   drive-id: 1abc...
  *   title: Project Notes
  *   ...
  *   ---

@@ -6,11 +6,12 @@
  * read. Each mount reports what the boxholder needs to judge it: where it
  * mirrors to, what Drive said last time, and how many children the directory
  * actually holds — the count is the honest answer to "did this work", since a
- * mount whose listing failed shows a status but no children.
+ * mount whose listing failed shows an error but no children.
  */
 
 import * as path from "node:path";
 import { parseFrontmatterObject } from "../../cards/frontmatter.js";
+import { isRecord } from "../../shared/is-record.js";
 import { findDriveCardTracking, type DriveCardKind } from "./tracking.js";
 import type { FolderProblemCounts } from "./folder-types.js";
 
@@ -31,9 +32,9 @@ export interface FolderMountSummary {
   name: string | null;
   /** `webViewLink` for the Drive folder, absent until the first sync. */
   link: string | null;
-  status: "ok" | "error" | null;
+  /** When the last sync ran; null until the first one. */
   lastSync: string | null;
-  /** Present only alongside `status: "error"`. */
+  /** Why the last sync failed; null when it succeeded (or never ran). */
   error: string | null;
   children: FolderMountChildCounts;
   /** Children the last pass could not account for; zero when all is well. */
@@ -73,20 +74,12 @@ function count(fields: Record<string, unknown> | null, key: string): number {
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
 }
 
-function statusOf(fields: Record<string, unknown> | null): "ok" | "error" | null {
-  const status = field(fields, "status");
-  if (status === "ok" || status === "error") return status;
-  return null;
-}
-
 /**
  * Every folder mount on the box, sorted by card path.
  *
  * The fields come off the card's frontmatter rather than `driveCardSummary`:
- * that helper answers `bbx drive status`'s two questions (what is it, when did
- * we last hear from Drive) by aliasing across card types, and a mount list
- * wants the mount card's own field names — including `link` and `error`, which
- * the summary does not carry.
+ * a mount list wants the mount card's own fields, including `drive.link`,
+ * which the summary does not carry.
  */
 export async function listFolderMounts(boxRoot: string): Promise<FolderMountSummary[]> {
   const tracking = await findDriveCardTracking(boxRoot);
@@ -107,6 +100,7 @@ export async function listFolderMounts(boxRoot: string): Promise<FolderMountSumm
   for (const card of tracking.liveCards) {
     if (card.kind !== "folder") continue;
     const fields = parseFrontmatterObject(card.content);
+    const drive = fields?.["drive"];
     // `dirname` says "." for a card at the box root; box-relative spelling for
     // the root is the empty string, and every consumer displays it.
     const dir = dirOf(card.relPath);
@@ -114,9 +108,8 @@ export async function listFolderMounts(boxRoot: string): Promise<FolderMountSumm
       cardPath: card.relPath,
       dir,
       driveId: card.driveId,
-      name: field(fields, "name"),
-      link: field(fields, "link"),
-      status: statusOf(fields),
+      name: field(fields, "title"),
+      link: field(isRecord(drive) ? drive : null, "link"),
       lastSync: field(fields, "last-sync"),
       error: field(fields, "error"),
       children: countsByDir.get(dir) ?? { files: 0, links: 0 },

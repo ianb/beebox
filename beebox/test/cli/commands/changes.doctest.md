@@ -203,7 +203,7 @@ note.
 ```ts
 const mail = await makeTmpBox({ git: true });
 const thread = "_content/inbox/email/Field-trip.email-thread.attach";
-const message = (n) => `---\ntype: email-message\nsubject: Trip ${n}\nbody-file:\n  ref: attach/msg-00${n}.body.txt\n---\n`;
+const message = (n) => `---\ntype: email-message\nemail:\n  subject: Trip ${n}\nbody-file:\n  ref: attach/msg-00${n}.body.txt\n---\n`;
 const start = execSync("git rev-parse HEAD", { cwd: mail.root }).toString().trim();
 await mail.write(`${thread}/msg-001.email-message.card`, message(1));
 await mail.write(`${thread}/msg-001.attach/msg-001.body.txt`, "Sign the permission form by Friday.\n");
@@ -216,7 +216,8 @@ mail.commitAll("Intake: field trip thread");
 => === _content/inbox/email/Field-trip.email-thread.attach/msg-001.email-message.card
 ---
 type: email-message
-subject: Trip 1
+email:
+  subject: Trip 1
 body-file:
   ref: attach/msg-001.body.txt
 ---
@@ -225,7 +226,8 @@ Sign the permission form by Friday.
 === _content/inbox/email/Field-trip.email-thread.attach/msg-002.email-message.card
 ---
 type: email-message
-subject: Trip 2
+email:
+  subject: Trip 2
 body-file:
   ref: attach/msg-002.body.txt
 ---
@@ -235,7 +237,8 @@ x…x
 === _content/inbox/email/Field-trip.email-thread.attach/msg-003.email-message.card
 ---
 type: email-message
-subject: Trip 3
+email:
+  subject: Trip 3
 body-file:
   ref: attach/msg-003.body.txt
 ---

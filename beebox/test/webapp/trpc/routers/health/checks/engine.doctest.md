@@ -9,7 +9,9 @@ that failed to load (keep-last-good otherwise hides them).
 
 ```ts setup
 import { mkdir, symlink, rm, unlink, writeFile } from "node:fs/promises";
-import { engineHealthChecks } from "../../../../../../src/webapp/trpc/routers/health/checks/engine.js";
+import { z } from "zod";
+import { engineHealthChecks, boxSchemaFieldsCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/engine.js";
+import { cardSchema } from "../../../../../../src/exports/cards.js";
 import { invalidateBoxSchemas } from "../../../../../../src/schemas.js";
 import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
 
@@ -129,6 +131,32 @@ schemas?.severity
 => error
 
 schemas?.message.includes("widget.ts")
+=> true
+```
+
+## Box-local schema with a reserved field name: box-schema-fields warns
+
+A box-local schema that declares `status` or redeclares a global still loads;
+this warning is how the box finds out. It names the type, the field, and what
+to write instead.
+
+```ts continue
+const book = cardSchema("book", {
+  fields: { name: z.string(), status: z.enum(["owned", "wanted"]) },
+});
+const shelf = cardSchema("shelf", { fields: { name: z.string() } });
+
+const fieldCheck = boxSchemaFieldsCheck([book, shelf]);
+fieldCheck.ok
+=> false
+
+fieldCheck.severity
+=> warning
+
+fieldCheck.message.startsWith("1 reserved field name(s) in box-local schemas: book.status: `status` is a reserved field name")
+=> true
+
+boxSchemaFieldsCheck([shelf]).ok
 => true
 ```
 

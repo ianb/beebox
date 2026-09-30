@@ -1,8 +1,8 @@
 # The todo-review sweep (`core/todo/review-sweep.ts`)
 
 Filesystem-tier doctests for `docs/implemented-plans/todo-annotation.md` Track 5b:
-`computeTodoReviewSets` computes three sets of open todos (escalated /
-stirring / stale). Only `stirring` needs a baseline (the day of the last
+`computeTodoReviewSets` computes four sets of open todos (escalated /
+stirring / actionable / stale). Only `stirring` needs a baseline (the day of the last
 review); escalated and stale are recomputed fresh every pass. Since
 `docs/plans/todos-ui.md` Track 7 the sweep writes nothing: `bbx engine
 todo-review check` owns the baseline and the brief
@@ -38,6 +38,7 @@ async function sweep(root: string, since: string | null) {
   return JSON.stringify({
     escalated: sets.escalated.map((t) => t.id),
     stirring: sets.stirring.map((t) => t.id),
+    actionable: sets.actionable.map((t) => t.id),
     stale: sets.stale.map((t) => t.id),
   });
 }
@@ -50,15 +51,14 @@ const box = await seedBox();
 setTime("2026-07-28T12:00:00.000Z");
 await box.write("store/a.memo.card", memo("Just a plain memo, no todos.\n"));
 await sweep(box.root, null)
-=> {"escalated":[],"stirring":[],"stale":[]}
+=> {"escalated":[],"stirring":[],"actionable":[],"stale":[]}
 ```
 
-## Escalated, stirring, stale, and the ones that don't qualify
+## Escalated, stirring, actionable, stale, and the ones that don't qualify
 
-Six todos on one card: past-due (escalated), already-started (stirring), a
-future-dated one (quiet — not on the plate, excluded from every set), an
-old undated one (stale), a recent undated one (not old enough — excluded),
-and a `done` one with a past `due` (excluded — sets are open-todos only).
+The fixture includes past-due and started todos, a quiet future todo, an old
+undated todo, and fresh agent follow-ups. Only the fresh open agent todo is
+actionable: the future-start, deferred, done, and boxholder todos stay out.
 
 ```ts continue
 await box.write(
@@ -69,11 +69,16 @@ await box.write(
     '{% todo id="fix-quiet" start="2026-08-05" due="2026-08-10" %}Quiet item{% /todo %}\n\n' +
     '{% todo id="fix-stale" created="2026-06-01" %}Stale item{% /todo %}\n\n' +
     '{% todo id="fix-fresh" created="2026-07-20" %}Fresh undated item{% /todo %}\n\n' +
-    '{% todo id="fix-done" status="done" due="2026-07-01" %}Done item{% /todo %}\n'
+    '{% todo id="fix-done" status="done" due="2026-07-01" %}Done item{% /todo %}\n\n' +
+    '{% todo id="agent-fresh" assigned="agent" %}Fresh follow-up{% /todo %}\n\n' +
+    '{% todo id="agent-future" assigned="agent" start="2026-08-05" %}Future follow-up{% /todo %}\n\n' +
+    '{% todo id="agent-recheck" assigned="agent" recheck="2026-08-01" %}Deferred follow-up{% /todo %}\n\n' +
+    '{% todo id="agent-done" assigned="agent" status="done" %}Completed follow-up{% /todo %}\n\n' +
+    '{% todo id="human-fresh" %}Boxholder follow-up{% /todo %}\n'
   )
 );
 await sweep(box.root, null)
-=> {"escalated":["fix-escalated"],"stirring":["fix-stirring"],"stale":["fix-stale"]}
+=> {"escalated":["fix-escalated"],"stirring":["fix-stirring"],"actionable":["agent-fresh"],"stale":["fix-stale"]}
 ```
 
 ## Stirring is relative to the baseline; escalated and stale are not
@@ -84,10 +89,10 @@ after the baseline is stirring again.
 
 ```ts continue
 await sweep(box.root, "2026-07-25")
-=> {"escalated":["fix-escalated"],"stirring":[],"stale":["fix-stale"]}
+=> {"escalated":["fix-escalated"],"stirring":[],"actionable":["agent-fresh"],"stale":["fix-stale"]}
 
 await sweep(box.root, "2026-07-19")
-=> {"escalated":["fix-escalated"],"stirring":["fix-stirring"],"stale":["fix-stale"]}
+=> {"escalated":["fix-escalated"],"stirring":["fix-stirring"],"actionable":["agent-fresh"],"stale":["fix-stale"]}
 ```
 
 ## Each brief item says where it was written
@@ -129,7 +134,7 @@ await boxTz.write(
   memo('{% todo id="just-turned-stale" created="2026-06-13" %}Undated, aging{% /todo %}\n')
 );
 await sweep(boxTz.root, null)
-=> {"escalated":[],"stirring":[],"stale":["just-turned-stale"]}
+=> {"escalated":[],"stirring":[],"actionable":[],"stale":["just-turned-stale"]}
 ```
 
 ```ts cleanup
@@ -156,7 +161,7 @@ await boxR.write(
   )
 );
 await sweep(boxR.root, null)
-=> {"escalated":["today"],"stirring":[],"stale":[]}
+=> {"escalated":["today"],"stirring":[],"actionable":[],"stale":[]}
 ```
 
 ```ts cleanup

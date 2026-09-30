@@ -42,10 +42,12 @@ export async function runDriveStatus(boxRoot: string): Promise<void> {
     console.log(`    Kind: ${DRIVE_KIND_LABEL[card.kind]}`);
     if (summary.title !== null) console.log(`    Title: ${summary.title}`);
     console.log(`    Drive ID: ${card.driveId}`);
-    if (summary.modified !== null) console.log(`    Last synced: ${summary.modified}`);
-    if (summary.status !== null && summary.status !== "synced") {
-      console.log(`    Status: ${summary.status}`);
+    if (summary.driveModified !== null) console.log(`    Modified on Drive: ${summary.driveModified}`);
+    if (summary.lastSync !== null) console.log(`    Last synced: ${summary.lastSync}`);
+    if (summary.conflict) {
+      console.log("    Conflict: merge the .remote.md beside the local copy, then delete it");
     }
+    if (summary.error !== null) console.log(`    Error: ${summary.error}`);
     if (card.kind === "folder") {
       const problems = folderProblemCounts(card.content);
       if (problems.notInFolder > 0) {
@@ -70,12 +72,12 @@ export async function runDriveStatus(boxRoot: string): Promise<void> {
   // Ambiguous local identity is not synced at all, so it must be visible here
   // rather than looking like an absent mount.
   for (const duplicate of duplicates) {
-    console.log(`  ! Duplicate drive-id ${duplicate.driveId} (not synced):`);
+    console.log(`  ! Duplicate drive.id ${duplicate.driveId} (not synced):`);
     for (const relPath of duplicate.relPaths) console.log(`      ${relPath}`);
     console.log("");
   }
   for (const relPath of unreadable) {
-    console.log(`  ! No readable drive-id: ${relPath}`);
+    console.log(`  ! No readable drive.id: ${relPath}`);
   }
   if (unreadable.length > 0) console.log("");
 }
@@ -91,8 +93,10 @@ async function driveStatusValue(boxRoot: string): Promise<unknown> {
         kind: card.kind,
         driveId: card.driveId,
         title: summary.title,
-        modified: summary.modified,
-        status: summary.status,
+        driveModified: summary.driveModified,
+        lastSync: summary.lastSync,
+        conflict: summary.conflict,
+        error: summary.error,
         tabs: summary.tabs,
         lossy: summary.lossy,
         problems: card.kind === "folder" ? folderProblemCounts(card.content) : null,

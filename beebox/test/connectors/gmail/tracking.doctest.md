@@ -5,7 +5,11 @@ the card within live box content keeps it tracked. Moving it to trash or
 deleting it stops tracking without changing Gmail.
 
 ```ts setup
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../../../src/exports/cards.js";
+import { planSourceFields } from "../../../src/scripts/migrate/card-fields/source.js";
+import { applyFieldEdits } from "../../../src/scripts/migrate/card-fields/field-edits.js";
 import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
@@ -125,7 +129,7 @@ await box.cleanup();
 const box = await makeTmpBox();
 await box.seed(
   "_content/inbox/email/Broken.email-thread.card",
-  "---\nsubject: Missing identity\nparticipants: []\ndate-range:\n  start: 2026-08-01T10:00:00.000Z\n  end: 2026-08-01T10:00:00.000Z\nmessages: []\n---\n",
+  "---\nemail:\n  subject: Missing identity\n  participants: []\n  date-range:\n    start: 2026-08-01T10:00:00.000Z\n    end: 2026-08-01T10:00:00.000Z\nmessages: []\n---\n",
 );
 let broken = "";
 await findTrackedGmailThreads(box.root).catch((error: Error) => { broken = error.message; });
@@ -358,6 +362,59 @@ JSON.stringify({ created: refreshed.created.length, updated: refreshed.updated.l
 
 gmail.drafts.length
 => 0
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A card migrated to `email:` is not rewritten
+
+The `source-fields-2026-09` migration moves the copied Gmail data under
+`email:`. A thread card in the old flat shape, with an agent's `contains`,
+migrates to exactly the text the connector now writes, so the next sync finds
+nothing to change and keeps `contains`. The migrated message card still
+identifies its message, so the sync does not write it again.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("initialize box");
+const gmail = createFakeGoogleGmail({
+  labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
+  messages: [gmailMessage({ id: "m1", threadId: "thread-old", subject: "Old shape", body: "First" })],
+});
+const tracked = await trackGmailThread({ boxRoot: box.root, service: gmail, threadId: "thread-old", trackedBy: "explicit-command" });
+const createdCard = (suffix: string) => join(box.root, tracked.created.find((rel) => rel.endsWith(suffix)) ?? suffix);
+const threadPath = createdCard(".email-thread.card");
+const messagePath = createdCard(".email-message.card");
+
+// Put both cards back in the flat shape the connector wrote before `email:`.
+const frontmatter = async (file: string) => parseYaml(splitCardContent(await readFile(file, "utf8")).frontmatterText);
+const thread = await frontmatter(threadPath);
+await writeFile(threadPath, renderFrontmatterBlock({ ...thread.email, messages: thread.messages, contains: "A thread about the old shape." }));
+const message = await frontmatter(messagePath);
+const { received, ...headers } = message.email;
+const flatHeaders = Object.fromEntries(Object.entries(headers).flatMap(([key, value]) => key === "subject" ? [["date", received], [key, value]] : [[key, value]]));
+await writeFile(messagePath, renderFrontmatterBlock({ ...flatHeaders, "body-file": message["body-file"] }));
+Object.keys(await frontmatter(messagePath)).join(",")
+=> message-id,thread-id,from,to,date,subject,snippet,body-file
+
+// Migrate them the way `bbx migrate` does.
+for (const [file, type] of [[threadPath, "email-thread"], [messagePath, "email-message"]]) {
+  const split = splitCardContent(await readFile(file, "utf8"));
+  const plan = planSourceFields(type, parseYaml(split.frontmatterText));
+  await writeFile(file, `---\n${applyFieldEdits(split.frontmatterText, plan.edits)}---\n${split.body}`);
+}
+const migrated = await readFile(threadPath, "utf8");
+
+const synced = await trackGmailThread({ boxRoot: box.root, service: gmail, threadId: "thread-old", trackedBy: "explicit-command" });
+JSON.stringify({ created: synced.created.length, updated: synced.updated.length, unchanged: (await readFile(threadPath, "utf8")) === migrated })
+=> {"created":0,"updated":0,"unchanged":true}
+
+const after = await frontmatter(threadPath);
+JSON.stringify([Object.keys(after), after.email.subject, after.contains])
+=> [["email","messages","contains"],"Old shape","A thread about the old shape."]
 ```
 
 ```ts cleanup

@@ -202,6 +202,35 @@ export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[]; 
   return trpcClient.chat.sessions.query();
 }
 
+/** One search result row: a chat, its best-matching chunk, and the anchor to open it at. */
+export interface ChatSearchHitInfo {
+  sessionId: string;
+  /** Entry uuid of the matched chunk — `/chat?session=<id>&m=<anchor>` lands there. */
+  anchor: string;
+  title: string;
+  snippet: string;
+  /** ISO timestamp of the matched chunk. */
+  created: string;
+  score: number;
+}
+
+/**
+ * Full-text search over this box's chat transcripts (`chat.search`). The
+ * server indexes dialogue text only; nothing here embeds or leaves the box.
+ */
+export async function searchChatTranscripts(params: { query: string; limit?: number }): Promise<{
+  results: ChatSearchHitInfo[];
+  total: number;
+  truncated: boolean;
+  warnings: string[];
+  stale: boolean;
+}> {
+  return trpcClient.chat.search.query({
+    query: params.query,
+    ...(params.limit === undefined ? {} : { limit: params.limit }),
+  });
+}
+
 export async function interruptChat(params: { sessionId: string }): Promise<{ ok: boolean }> {
   return trpcClient.chat.interrupt.mutate({ session: params.sessionId });
 }

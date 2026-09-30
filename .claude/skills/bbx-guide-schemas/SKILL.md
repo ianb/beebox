@@ -34,8 +34,13 @@ Things the schema system does that you'd otherwise miss:
   sets it per type, and `category: "system"` implies `background`).
   `theme: { name, stock? }` selects presentation independently of the view;
   `cardSchema`'s own `theme` option sets the type preference.
-  Don't redeclare any of these — a schema's own declaration silently
-  wins.
+  Don't redeclare any of these, except `title: z.string()` to require
+  a title.
+- **Every new field needs a named reader** (a query, a UI surface, or code),
+  and some names are banned: `status`, `created`, `summary`, `date`,
+  `modified`, `source`, plus the global names. A registry test rejects them
+  on built-in schemas; box-local ones get a health warning. The rules and
+  the alternatives are in `docs/cards/schemas.md` ("Adding a field").
 - Cards also accept an optional catalog-validated `theme: {name, stock?}`
   presentation choice. It is independent of the preferred view; read
   `node_modules/beebox/box-docs/card-themes.md` before setting a schema theme

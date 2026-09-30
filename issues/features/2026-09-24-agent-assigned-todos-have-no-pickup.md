@@ -1,6 +1,6 @@
 ---
 title: "Agent-assigned todos have no reliable pickup; a bounded scheduled run needs its own design"
-workstream: unattached
+workstream: jev-triage
 area: beebox
 needs: [design]
 labels: [todos]
@@ -56,3 +56,17 @@ disabled. Limits enforced in code, not only in the prompt:
 Related: [todos in the UI plan](../../beebox/docs/implemented-plans/todos-ui.md) (hides
 agent todos from boxholder surfaces; keeps the todo-review pickup until this
 exists), [completion requires an answer](../exploration/2026-09-24-todo-completion-requires-an-answer.md).
+
+## Research (2026-09-29)
+
+The [triage todo question plan](../../beebox/docs/implemented-plans/triage-todo-question.md)
+addresses pickup through the existing bounded todo-review procedure. The human
+requested destination-specific yes/no questions whose positive items enter the
+normal todo sweep. That procedure now has its own scheduled precheck; the
+original wakeup-only description above is historical.
+
+The plan adds eligibility for fresh on-plate agent-assigned todos while
+preserving the existing 25-item cap, recheck rules, procedure turn budget and
+authority. It does not implement the unapproved separate executor sketch or its
+attempt/containment policy. Keep those questions distinct when reconciling this
+issue; do not claim the sketch was implemented.

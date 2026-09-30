@@ -17,18 +17,20 @@ import { Text } from "./ui/Text";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { type RendererProps } from "../file-type-registry";
 import { resolveRelativePath } from "../lib/view-url";
+import { isRecord } from "@shared/is-record";
 
 export function CommentaryView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
   const title = frontmatter["title"];
   const body = data.body;
 
-  // Captured-page metadata (set by the clerk capture flow): the original URL,
-  // the capture date, and an in-box frozen snapshot. Rendered as a header.
-  const source = frontmatter["source"];
-  const captured = frontmatter["captured"];
+  // Captured-page metadata: the annotated page's URL (`about.href`), the
+  // capture date (`about.retrieved`), and an in-box frozen snapshot.
+  // Rendered as a header.
+  const about = frontmatter["about"];
+  const captured = isRecord(about) ? about["retrieved"] : undefined;
   const frozen = frontmatter["frozen"];
-  const sourceUrl = typeof source === "string" && source !== "" ? source : null;
+  const sourceUrl = isRecord(about) && typeof about["href"] === "string" && about["href"] !== "" ? about["href"] : null;
   // `frozen` is a card ref stored as `{ ref: <path> }`; pull the path off it.
   const frozenPath =
     typeof frozen === "object" && frozen !== null && "ref" in frozen && typeof frozen.ref === "string"

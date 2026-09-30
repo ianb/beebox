@@ -8,8 +8,8 @@
 import type { z } from "zod";
 import type {
   ConfidenceLevelSchema,
-  BeliefSourceSchema,
-  ExperimentStatusSchema,
+  BeliefBasisSchema,
+  ExperimentOutcomeSchema,
 } from "./guide-fields.js";
 
 // `VOICE_MODELS`/`VoiceModel` live in `shared/voice-models.ts` (extracted so
@@ -21,8 +21,8 @@ import { VOICE_MODELS, type VoiceModel } from "./shared/voice-models.js";
 export { VOICE_MODELS, type VoiceModel };
 
 type ConfidenceLevelType = z.infer<typeof ConfidenceLevelSchema>;
-type BeliefSourceType = z.infer<typeof BeliefSourceSchema>;
-type ExperimentStatusType = z.infer<typeof ExperimentStatusSchema>;
+type BeliefBasisType = z.infer<typeof BeliefBasisSchema>;
+type ExperimentOutcomeType = z.infer<typeof ExperimentOutcomeSchema>;
 
 /**
  * A boxholder, resolved from a `people/*.person.card` with `boxholder: true`.
@@ -44,7 +44,7 @@ export interface PersonalityFields {
     relationships?: Array<{
       text: string;
       confidence?: ConfidenceLevelType;
-      source?: BeliefSourceType;
+      basis?: BeliefBasisType;
       ref?: string;
     }>;
   };
@@ -55,19 +55,20 @@ export interface PersonalityFields {
   tone?: Array<{
     text: string;
     confidence?: ConfidenceLevelType;
-    source?: BeliefSourceType;
+    basis?: BeliefBasisType;
     ref?: string;
   }>;
   traits?: Array<{
     text: string;
     confidence?: ConfidenceLevelType;
-    source?: BeliefSourceType;
+    basis?: BeliefBasisType;
     ref?: string;
   }>;
   unresolved?: string[];
   experiments?: Array<{
     id: string;
-    status?: ExperimentStatusType;
+    active?: boolean;
+    outcome?: ExperimentOutcomeType;
     hypothesis?: string;
     approach?: string;
     observations?: Array<{ text: string; ref?: string; date?: string }>;

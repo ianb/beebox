@@ -210,7 +210,6 @@ async function findExistingChatJob(
     jobsDir,
     suffix: ".chat.job.card",
     match: (fields) => {
-      if (fields["status"] !== "pending") return false;
       const thread = fields["thread"];
       const ref = isRecord(thread) ? thread["ref"] : undefined;
       return ref === threadRef;
@@ -226,9 +225,9 @@ export async function createChatJob(options: {
   boxRoot: string;
   threadRef: string;
   description: string;
-  source: string;
+  connector: string;
 }): Promise<string> {
-  const { boxRoot, threadRef, description, source } = options;
+  const { boxRoot, threadRef, description, connector } = options;
 
   const existing = await findExistingChatJob(boxRoot, threadRef);
   if (existing) return existing;
@@ -248,7 +247,7 @@ export async function createChatJob(options: {
   const content = createChatJobTemplate({
     description,
     threadRef,
-    source,
+    connector,
   });
   await fs.writeFile(jobPath, content);
   return path.relative(boxRoot, jobPath);
@@ -277,7 +276,7 @@ export interface UpdatePersonResult {
  * Telegram correspondent triggers a broken-reference at validate time.
  *
  * With `force: true`, an existing person card has its connector-derived
- * identity (`name`) refreshed in place — agent-owned fields (status, email,
+ * identity (`name`) refreshed in place — agent-owned fields (archived, email,
  * phone, address, role, aliases, contains, body, …) are preserved untouched. Username and
  * numeric ids have no field in the person-card schema; they live in the
  * sibling `<connector>.json` metadata, which is always kept current.
@@ -314,7 +313,7 @@ export async function updatePersonEntry(options: {
     cardExists = false;
   }
   if (!cardExists) {
-    const cardYaml = `status: active\nname: ${displayName}\n`;
+    const cardYaml = `name: ${displayName}\n`;
     await fs.writeFile(personCardPath, `---\n${cardYaml}---\n`);
     cardChanged = true;
   } else if (force) {

@@ -165,7 +165,7 @@ const record = await boxMaintenanceStatus(box.root);
 JSON.stringify({ status: second.status, runs, question: second.question, record: record.phase, owner: record.owner })
 => {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-0.question.card","record":"exclusive","owner":null}
 
-await box.write(first.question, questionText.replace("status: pending", "status: answered\nanswer:\n  text: Retry it\nanswered-at: 2026-09-17T00:00:00.000Z"));
+await box.write(first.question, questionText.replace("---\n", "---\nanswer:\n  text: Retry it\nanswered-at: 2026-09-17T00:00:00.000Z\n"));
 await box.commitAll("answer");
 exit = 0;
 const third = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });

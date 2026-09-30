@@ -84,9 +84,9 @@ Don't author all the material up front, and don't do it in one pass — work the
 
 1. **Draft** the lesson-plan: the whole segment sequence, each tagged interactive or material.
 2. **Author** only the material a segment actually leans on *and* that earns being made now (the one figure you'll reuse, a recap worth re-reading) — as **\`doc\`/\`figure\` cards under \`material/\`**, *never* a \`material/README.md\`. Follow the exposition-plan's rules and rated approaches. Keep answer keys beside the material, grounded in cited sources (see *Teaching well*). When a segment calls for a \`figure\`, make it **teach through interaction** — tie what the learner *does* to the concept's target Bloom level (*understand* → step through the mechanism; *apply* → manipulate and predict; *analyze* → compare or explore cases); a passive animation rarely teaches above *remember*. For making it usable and verifying it renders, follow the figure card-rule; for worked patterns in TypeScript, see \`figure-examples.md\` in this skill folder.
-3. **Revise** the lesson-plan: mark each segment whose card now exists \`status: ready\` and ref it; mark the rest \`status: planned\`.
+3. **Revise** the lesson-plan: ref the card on each segment whose card now exists; mark the rest \`planned: true\`.
 
-A \`material\` segment must end up either \`ready\` (its card exists) or \`planned\` (outlined, built later during teaching) — the lint warns otherwise, so deferral is honest, not hidden. **A mostly-interactive, mostly-\`planned\` course is a *complete* plan**; you are not expected to pre-build everything. The reasoning stays in the exposition-plan and the cards' bodies, so when you adapt later (step 8) the *why* travels with the work.
+A \`material\` segment must end up either with its card ref'd or \`planned: true\` (outlined, built later during teaching) — the lint warns otherwise, so deferral is honest, not hidden. **A mostly-interactive, mostly-\`planned\` course is a *complete* plan**; you are not expected to pre-build everything. The reasoning stays in the exposition-plan and the cards' bodies, so when you adapt later (step 8) the *why* travels with the work.
 
 (If there's a real learner, their progress informs which segments to make concrete first; for a \`generic\` course there's no progress yet, and that's fine — draft for the model learner.)
 
@@ -109,7 +109,7 @@ side, where the course already exists.)
 - Follow the **\`*.lesson-plan.card\`** here, in order: each segment is \`interactive\`
   (conduct it live, in chat) or \`material\` (open the card it refs under \`material/\`).
 - Read the **\`*.progress.card\`** before starting, and **update it with evidence** as
-  you go — every status needs what the learner actually said or did (no anonymous
+  you go — every level needs what the learner actually said or did (no anonymous
   ratings).
 - The **exposition rules** auto-load (a path rule scoped to this directory) — they're
   *how* to present. Follow them.
@@ -243,7 +243,7 @@ export default function (p5, { mount, figure }) {
 \`\`\`
 
 This is *practice*, not assessment — it feeds the learner's understanding in the
-moment; it does **not** write a \`progress\` status (that comes from real dialog).
+moment; it does **not** write a \`progress\` level (that comes from real dialog).
 
 ## Other runtimes
 
@@ -312,8 +312,8 @@ description: Work with Google Drive content in the box — mirror a folder, sync
 
 ## Three kinds of Drive card
 
-- **Pointer** (\`.glink.card\`) — "this Drive item exists, here is where, here is what it's for." Nothing is copied. \`name\`/\`link\`/\`mime\` are connector-stamped; the body is yours for purpose notes.
-- **Synced file** (\`.gdoc.card\`, \`.gsheet.card\`) — content mirrored **two-way**, kept in the card's attach scope (\`<basename>.attach/\`). \`bbx mv\` moves the card and everything with it; the \`drive-id\` keeps the upstream link. Don't move the pieces by hand.
+- **Pointer** (\`.glink.card\`) — "this Drive item exists, here is where, here is what it's for." Nothing is copied. \`title\` and \`drive:\` (\`id\`, \`link\`, \`mime\`) are connector-stamped; the body is yours for purpose notes.
+- **Synced file** (\`.gdoc.card\`, \`.gsheet.card\`) — content mirrored **two-way**, kept in the card's attach scope (\`<basename>.attach/\`). \`bbx mv\` moves the card and everything with it; the \`drive.id\` keeps the upstream link. Don't move the pieces by hand.
 - **Mirrored folder** (\`.gfolder.card\`) — the directory the card sits in mirrors the Drive folder. Docs and Sheets become synced files, subfolders become subdirectories with their own folder card, and **every other child becomes a pointer** — a PDF, a Slides deck, an image is never copied.
 
 ## Setting one up: the boxholder pastes a Drive link in chat
@@ -337,7 +337,7 @@ There is no config file — the folder card's own location is the configuration.
 - **Doc body:** markdown at \`attach/<basename>.md\`. Edit it and commit, and the next sync converts and pushes it.
 - **Comments:** a \`<basename>.comments.json\` sidecar in the attach scope holds the full threads (author, timestamps, resolved status, anchored text, replies), read-only. Editing and pushing a Doc's \`.md\` does NOT write comments back upstream — a push may even orphan the upstream anchors.
 - **Lossy content:** a Doc card's \`lossy:\` frontmatter lists upstream features that don't survive markdown export (footnotes, embedded images, equations, suggestions, complex tables). When it's non-empty, pushing local edits will destroy them — surface the loss before encouraging a push.
-- **Conflicts:** when both sides changed, the card status flips to \`conflict\` and the upstream content is written to \`attach/<basename>.remote.md\`. Merge the two, delete \`.remote.md\`, commit.
+- **Conflicts:** when both sides changed, the card gets \`conflict: true\` and the upstream content is written to \`attach/<basename>.remote.md\`. Merge the two, delete \`.remote.md\`, commit.
 
 Also: \`bbx drive inspect <url>\` (preview one item), \`bbx drive sync\` (all Drive cards), \`bbx drive status\` (what this box has mounted).
 `;
@@ -422,7 +422,7 @@ cron: 0 8 * * 1              # Mondays at 8am
 not-before: 3d              # skip if it already ran within 3 days
 runs: bbx procedure run weekly-digest
 description: Monday digest of the week's still-open threads
-source: Boxholder wanted a summary to start the week
+reason: Boxholder wanted a summary to start the week
 ---
 \`\`\`
 

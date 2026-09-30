@@ -14,8 +14,9 @@ import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../../exports/cards.js";
 import {
   ConfidenceLevelSchema,
-  BeliefSourceSchema,
-  ExperimentStatusSchema,
+  BeliefBasisSchema,
+  experimentStageFields,
+  experimentStateIssues,
 } from "../../guide-fields.js";
 import {
   appendBoxholder,
@@ -35,7 +36,7 @@ export { VOICE_MODELS, type VoiceModel, type PersonalityFields, type Boxholder }
 const RelationshipEntry = z.object({
   text: z.string(),
   confidence: ConfidenceLevelSchema.default("confirmed"),
-  source: BeliefSourceSchema.default("user-stated"),
+  basis: BeliefBasisSchema.default("user-stated"),
   ref: z.string().optional(),
 });
 
@@ -56,26 +57,25 @@ export const CompiledSpeakingVoiceSchema = z.object({
 const ToneInstruction = z.object({
   text: z.string(),
   confidence: ConfidenceLevelSchema.default("medium"),
-  source: BeliefSourceSchema.default("inferred"),
+  basis: BeliefBasisSchema.default("inferred"),
   ref: z.string().optional(),
 });
 
 const TraitEntry = z.object({
   text: z.string(),
   confidence: ConfidenceLevelSchema.default("medium"),
-  source: BeliefSourceSchema.default("inferred"),
+  basis: BeliefBasisSchema.default("inferred"),
   ref: z.string().optional(),
 });
 
 const ObservationEntry = z.object({
   text: z.string(),
   ref: z.string().optional(),
-  date: z.string().optional(),
 });
 
 const ExperimentEntry = z.object({
   id: z.string(),
-  status: ExperimentStatusSchema.default("proposed"),
+  ...experimentStageFields,
   hypothesis: z.string().optional(),
   approach: z.string().optional(),
   observations: z.array(ObservationEntry).optional(),
@@ -91,6 +91,7 @@ export const PersonalitySchema: CardSchema = cardSchema("personality", {
   brief: "The assistant's voice and style",
   description: "The assistant's voice and communication style — tone, traits, and boxholder relationship; compiled into every agent's context",
   category: "authored",
+  validate: ({ fields }) => experimentStateIssues(fields["experiments"]),
   fields: {
     version: z.string().default("1.0.0"),
     "goes-by": z.string().optional(),

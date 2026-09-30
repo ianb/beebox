@@ -102,7 +102,7 @@ export interface DoclingPictureItem {
   caption: string | null;
   /**
    * 0-based position in `pictures[]`. `bbx pdf extract` writes figures as
-   * `figure-001.avif`, `figure-002.avif`, … in exactly that order (it sorts
+   * `figure-001.webp` (or existing `.avif` files) in exactly that order (it sorts
    * Docling's `image_NNNNNN_*.png` artifacts by their embedded index), so
    * `figure-{index+1}` names this picture's render. That is a convention, not
    * a recorded link — callers must only use it when the file actually exists.

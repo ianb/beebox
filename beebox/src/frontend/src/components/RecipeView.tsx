@@ -5,7 +5,7 @@
  * frontmatter + Markdoc body (`{% ingredient %}`, `{% step %}`, …) in
  * `markdoc-tags-plan.md` Track 1. This view:
  *
- * - reads `title` / `description` / `source` / `tags` / `hero-image`
+ * - reads `title` / `description` / `sources` / `tags` / `hero-image`
  *   from the frontmatter;
  * - provides the scale-multiplier control and pipes it into the body
  *   via `RecipeScaleContext` (each `{% ingredient %}` reads it);
@@ -19,6 +19,7 @@ import { useState } from "react";
 import { Markdown } from "./Markdown/body";
 import { RecipeScaleContext } from "./RecipeTags";
 import type { RendererProps } from "../file-type-registry";
+import { isRecord } from "@shared/is-record";
 
 const SCALE_OPTIONS = [0.5, 1, 1.5, 2, 3];
 
@@ -28,7 +29,7 @@ export function RecipeView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
   const title = typeof frontmatter["title"] === "string" ? frontmatter["title"] : "Untitled";
   const description = typeof frontmatter["description"] === "string" ? frontmatter["description"] : undefined;
-  const source = typeof frontmatter["source"] === "string" ? frontmatter["source"] : undefined;
+  const sources = recipeSources(frontmatter["sources"]);
   const tags = Array.isArray(frontmatter["tags"])
     ? frontmatter["tags"].filter((tag): tag is string => typeof tag === "string")
     : [];
@@ -42,8 +43,18 @@ export function RecipeView({ data, onNavigate }: RendererProps) {
         <p className="text-warm-700 mb-4">{description}</p>
       ) : null}
 
-      {source !== undefined ? (
-        <p className="text-sm text-warm-500 mb-4">Source: {source}</p>
+      {sources.length > 0 ? (
+        <p className="text-sm text-warm-500 mb-4">
+          Source:{" "}
+          {sources.map((source, i) => (
+            <span key={i}>
+              {i > 0 ? ", " : null}
+              {source.href !== null ? (
+                <a href={source.href} target="_blank" rel="noreferrer" className="underline">{source.text}</a>
+              ) : source.text}
+            </span>
+          ))}
+        </p>
       ) : null}
 
       {tags.length > 0 ? (
@@ -83,4 +94,16 @@ export function RecipeView({ data, onNavigate }: RendererProps) {
       </RecipeScaleContext.Provider>
     </div>
   );
+}
+
+/** Each `sources` entry as display text (its label, else its target) and an external link when it has one. */
+function recipeSources(value: unknown): Array<{ text: string; href: string | null }> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry: unknown) => {
+    if (!isRecord(entry)) return [];
+    const str = (key: string): string | null => (typeof entry[key] === "string" && entry[key] !== "" ? entry[key] : null);
+    const href = str("href");
+    const text = str("label") ?? href ?? str("ref");
+    return text === null ? [] : [{ text, href }];
+  });
 }

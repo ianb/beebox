@@ -114,7 +114,7 @@ skipReason ? DOCLING_VERSION : result.value.version
 => «show»
 ```
 
-Page renders are PNGs Docling wrote — the AVIF re-encode happens a layer up, in
+Page renders are PNGs Docling wrote — the WebP re-encode happens a layer up, in
 `pdf-extract.ts`:
 
 ```ts continue

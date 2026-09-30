@@ -81,7 +81,7 @@ function nudgeThresholdMs(fields: QuestionFields): number {
 }
 
 /**
- * Flip a pending question to `expired` under the shared guarded transition.
+ * Expire a pending question (`expired-at`) under the shared guarded transition.
  * Returns true if this call performed the expiry, false if it lost a race
  * with a simultaneous answer/dismiss (the question re-read as non-pending) —
  * the loser skips silently, per the plan's failure-modes table.
@@ -101,11 +101,10 @@ async function expireQuestion(
     ctx,
     fullPath,
     questionRef: relativePath,
-    allowedStatuses: ["pending"],
-    disallowedMessage: (status) =>
-      `Question is no longer pending (status: ${status}); skipping expiry`,
+    allowedStates: ["pending"],
+    disallowedMessage: (state) =>
+      `Question is no longer pending (it is ${state}); skipping expiry`,
     plan: ({ fields, content }) => {
-      fields.status = "expired";
       fields["expired-at"] = getBoxTimeISO(ctx.boxRoot);
 
       const split = splitCardContent(content);
@@ -161,7 +160,7 @@ export async function ageQuestions(
   const now = getBoxTime(boxRoot);
 
   const state = await getSystemState(boxRoot);
-  const pending = state.questions.filter((q) => q.status === "pending");
+  const pending = state.questions.filter((q) => q.state === "pending");
   const schemas = await createCardSchemaMap(boxRoot);
 
   const latch = await loadQuestionLatch(boxRoot);

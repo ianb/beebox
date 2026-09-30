@@ -55,7 +55,7 @@ function shape(nodes) {
 
 ## Status filter: what the card asks for, and what the control widens it to
 
-An explicit `status:` list wins; an omitted one defaults to `["open",
+An explicit `todo-status:` list wins; an omitted one defaults to `["open",
 "parked"]` — every plate-state group an `open` todo can land in
 (escalated/on-plate/quiet) PLUS `parked`. A default of `["open"]` alone made
 the `parked` group permanently unreachable on the stock plate: `parked` is a
@@ -65,7 +65,7 @@ STATUS, not a plate-state, so it was never included by that default.
 JSON.stringify(resolveTodoViewStatusFilter({}))
 => ["open","parked"]
 
-JSON.stringify(resolveTodoViewStatusFilter({ status: ["done"] }))
+JSON.stringify(resolveTodoViewStatusFilter({ "todo-status": ["done"] }))
 => ["done"]
 ```
 
@@ -74,9 +74,9 @@ for nothing.
 
 ```ts continue
 JSON.stringify([
-  resolveTodoViewStatusFilter({ status: "not-an-array" }),
-  resolveTodoViewStatusFilter({ status: ["not-a-status"] }),
-  resolveTodoViewStatusFilter({ status: [] }),
+  resolveTodoViewStatusFilter({ "todo-status": "not-an-array" }),
+  resolveTodoViewStatusFilter({ "todo-status": ["not-a-status"] }),
+  resolveTodoViewStatusFilter({ "todo-status": [] }),
 ])
 => [["open","parked"],["open","parked"],["open","parked"]]
 ```

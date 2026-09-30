@@ -22,7 +22,7 @@ function strOf(v: unknown): string | null {
   return typeof v === "string" ? v : null;
 }
 
-const RAW_IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg|ico)$/i;
+const RAW_IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|bmp|svg|ico)$/i;
 
 type Rotation = 0 | 90 | 180 | 270;
 
@@ -31,7 +31,7 @@ interface ParsedImageCard {
   description: string | null;
   rotation: Rotation;
   subjectBbox: { y1: number; x1: number; y2: number; x2: number } | null;
-  textBlocks: Array<{ source: string; text: string }>;
+  textBlocks: Array<{ surface: string; text: string }>;
   exif: Record<string, string>;
 }
 
@@ -49,7 +49,7 @@ function parseImageCard(fm: Record<string, unknown>): ParsedImageCard {
   const textBlocks = Array.isArray(fm.text)
     ? fm.text.flatMap((b) =>
         isRecord(b) && typeof b.content === "string"
-          ? [{ source: strOf(b.source) ?? "unknown", text: b.content }]
+          ? [{ surface: strOf(b.surface) ?? "unknown", text: b.content }]
           : [],
       )
     : [];
@@ -186,7 +186,7 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
         <Stack gap="sm">
           {card.textBlocks.map((block, i) => (
             <Card key={i} padding="sm" border="subtle">
-              <Text size="xs" tone="muted" as="div" className="mb-1">{block.source}</Text>
+              <Text size="xs" tone="muted" as="div" className="mb-1">{block.surface}</Text>
               <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{block.text}</Markdown>
             </Card>
           ))}

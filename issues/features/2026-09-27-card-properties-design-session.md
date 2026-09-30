@@ -34,5 +34,5 @@ Questions for the session:
   shows.
 
 Related: [card chrome controls have no bbx ids](2026-08-23-card-chrome-controls-have-no-bbx-ids.md),
-and the [standard card fields review](../code-quality/2026-09-27-review-standard-card-fields.md),
+and the [standard card fields review](../closed/code-quality/2026-09-27-review-standard-card-fields.md),
 which decides some of what there is to show.

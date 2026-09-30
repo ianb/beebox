@@ -254,7 +254,7 @@ class TelegramConnector implements Connector {
           boxRoot: this.boxRoot,
           threadRef,
           description: `New messages in ${slug}`,
-          source: "telegram",
+          connector: "telegram",
         });
         jobs.push(jobPath);
       }
@@ -339,7 +339,7 @@ class TelegramConnector implements Connector {
           boxRoot: this.boxRoot,
           threadRef,
           description: `Callback timer for ${slug}`,
-          source: "telegram",
+          connector: "telegram",
         });
         jobs.push(jobPath);
         fired.push({ threadRef, at: timer.at });

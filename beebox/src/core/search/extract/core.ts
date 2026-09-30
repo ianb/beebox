@@ -20,6 +20,7 @@ import type { LoadedCard, FrontmatterLoadedCard } from "../../card-io.js";
 import { isRecord } from "../../card-io.js";
 import { resolveAttachRef } from "../../../shared/attach-path.js";
 import { titleFromFilename, truncateTitle } from "../../file-summary.js";
+import { cardTitle } from "../../loader-registry.js";
 import { splitMarkdownSections } from "./markdown-sections.js";
 import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
 
@@ -33,7 +34,6 @@ export interface SearchDoc {
   title: string;
   contains: string;
   content: string;
-  created: string;
   contentHash: string;
   /**
    * The embedding vector, when this doc has one. Omitted (never `null`) for
@@ -122,17 +122,16 @@ export function extractCardDocs(input: ExtractInput): SearchDoc[] {
   const fields = card.fields;
   const kind = card.schema.type;
   const fold = foldFields(kind, fields);
+  // The same title the card lists under (its `title:`, else its type's
+  // derived title, else the filename).
   const title = truncateTitle(
-    firstNonEmpty([str(fields["title"]), fold.title, titleFromFilename(path)])
-      .replace(/\s+/g, " ")
-      .trim(),
+    cardTitle({ path, type: kind, fields }, card.schema).replace(/\s+/g, " ").trim(),
     TITLE_MAX
   );
   const contains = effectiveContains(kind, fields);
-  const created = firstNonEmpty([str(fields["created"]), fold.created]);
 
   const bodyText = bodyTextFor(card, input);
-  const base = { path, kind, title, contains, created, contentHash };
+  const base = { path, kind, title, contains, contentHash };
 
   if (bodyText.length <= SECTION_SPLIT_THRESHOLD) {
     const content = joinContent([...fold.extra, bodyText]);
@@ -177,7 +176,7 @@ function dedupeDocIds(docs: SearchDoc[]): SearchDoc[] {
 /**
  * Extract documents for a standalone markdown file (kind "markdown", or
  * "engine-doc" under the package docs directory): title from the first heading, same section-splitting rules as card
- * bodies, no contains/created.
+ * bodies, no contains.
  */
 export function extractMarkdownFileDocs(input: {
   path: string;
@@ -191,7 +190,7 @@ export function extractMarkdownFileDocs(input: {
     TITLE_MAX
   );
   const kind = isEngineDocPath(path) ? ENGINE_DOC_KIND : MARKDOWN_KIND;
-  const base = { path, kind, title, contains: "", created: "", contentHash };
+  const base = { path, kind, title, contains: "", contentHash };
 
   if (content.length <= SECTION_SPLIT_THRESHOLD) {
     return [{ ...base, id: docId(path, ""), fragment: "", content: normalizeContent(content) }];
@@ -223,8 +222,6 @@ function bodyTextFor(card: FrontmatterLoadedCard, input: ExtractInput): string {
 }
 
 interface FoldResult {
-  title?: string | undefined;
-  created?: string | undefined;
   /** Frontmatter text folded into the card document's content. */
   extra: string[];
 }
@@ -234,25 +231,24 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
   switch (kind) {
     case "email-thread":
       return {
-        title: str(fields["subject"]),
-        created: str(path2(fields["date-range"], "start")),
-        extra: compact([str(fields["subject"]), ...strArray(fields["participants"]), ...strArray(fields["labels"])]),
+        extra: compact([
+          str(path2(fields["email"], "subject")),
+          ...strArray(path2(fields["email"], "participants")),
+          ...strArray(path2(fields["email"], "labels")),
+        ]),
       };
     case "email-message":
       // The body file is deliberately excluded — see module doc.
       return {
-        title: str(fields["subject"]),
-        created: str(fields["date"]),
         extra: compact([
-          str(fields["subject"]),
-          str(fields["from"]),
-          str(fields["to"]),
-          str(fields["snippet"]),
+          str(path2(fields["email"], "subject")),
+          str(path2(fields["email"], "from")),
+          str(path2(fields["email"], "to")),
+          str(path2(fields["email"], "snippet")),
         ]),
       };
     case "person":
       return {
-        title: str(fields["name"]),
         extra: compact([
           str(fields["name"]),
           str(fields["role"]),
@@ -263,14 +259,12 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
       };
     case "record":
       return {
-        title: str(fields["name"]),
         extra: compact([str(fields["name"]), str(fields["description"]), str(fields["notes"])]),
       };
     case "image":
       // text: carries the OCR'd content the analysis step keeps (amounts,
       // account numbers, names) — the needles people search for.
       return {
-        title: str(fields["description"]),
         extra: compact([str(fields["description"]), ...textBlockContents(fields["text"])]),
       };
     case "file":
@@ -279,12 +273,6 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
       return { extra: tabTitles(fields["sheets"]) };
     case "telegram-message":
       return { extra: compact([str(fields["text"])]) };
-    case "memo":
-      // Mirrors memoLoader: a memo's display title is its (truncated) text.
-      return {
-        title: firstNonEmpty([str(fields["body"]), str(path2(fields["transcription"], "text"))]),
-        extra: [],
-      };
     default:
       return { extra: [] };
   }
@@ -353,7 +341,10 @@ function joinContent(parts: string[]): string {
  * 64+ char token (they're OCR mash like "ReturnOMB No.1545-00742025Dept..."),
  * and Orama's radix tree nests per character — runs past ~100 chars blow
  * msgpack's depth limit when the index persists.
+ *
+ * Exported for the chat-transcript extractor, whose chunk contents face the
+ * same radix-tree constraint.
  */
-function normalizeContent(text: string): string {
+export function normalizeContent(text: string): string {
   return text.trim().replace(/\S{64}/g, "$& ");
 }

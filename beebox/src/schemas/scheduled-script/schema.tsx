@@ -19,7 +19,8 @@ export { parseDuration, parseBudget } from "../../scheduled-script-duration.js";
 
 // --- Schema ---
 
-const SourceField = z.union([
+/** Why a schedule exists: prose, or `{text?, ref?}` to link a related card. */
+const ReasonField = z.union([
   z.string(),
   z.object({
     text: z.string().optional(),
@@ -57,7 +58,7 @@ export const ScheduledScriptSchema = cardSchema("scheduled-script", {
     runs: z.string().optional(),
     notify: NotifyField.optional(),
     "requested-by": z.literal("boxholder").optional(),
-    source: SourceField.optional(),
+    reason: ReasonField.optional(),
     "create-after-success": z.array(CreateAfterSuccessEntry).optional(),
     requires: RequiresField.optional(),
   },
@@ -121,7 +122,7 @@ export interface ParsedScheduledScript {
   /** `boxholder` when the boxholder asked for this schedule. */
   requestedBy: "boxholder" | undefined;
   description: string | undefined;
-  source: { ref?: string; text?: string } | undefined;
+  reason: { ref?: string; text?: string } | undefined;
   createAfterSuccess: Array<{ path: string; args: Record<string, string> }>;
   budget: { limitMs: number; windowMs: number } | undefined;
   lockGroup: string | undefined;
@@ -129,12 +130,12 @@ export interface ParsedScheduledScript {
   requires: ScheduleRequirements | undefined;
 }
 
-function normalizeSource(src: ScheduledScriptFields["source"]): { ref?: string; text?: string } | undefined {
-  if (src === undefined) return undefined;
-  if (typeof src === "string") return { text: src };
+function normalizeReason(reason: ScheduledScriptFields["reason"]): { ref?: string; text?: string } | undefined {
+  if (reason === undefined) return undefined;
+  if (typeof reason === "string") return { text: reason };
   const out: { ref?: string; text?: string } = {};
-  if (src.ref !== undefined) out.ref = src.ref;
-  if (src.text !== undefined) out.text = src.text;
+  if (reason.ref !== undefined) out.ref = reason.ref;
+  if (reason.text !== undefined) out.text = reason.text;
   return out;
 }
 
@@ -172,7 +173,7 @@ export function parseScheduledScript(fields: ScheduledScriptFields): ParsedSched
     action: scheduleAction(fields),
     requestedBy: fields["requested-by"],
     description: fields.description,
-    source: normalizeSource(fields.source),
+    reason: normalizeReason(fields.reason),
     createAfterSuccess: (fields["create-after-success"] ?? []).map((e) => ({
       path: e.path,
       args: e.args ?? {},
@@ -200,8 +201,10 @@ export interface ScheduledScriptTemplateOptions {
   enabled?: boolean;
   runs: string;
   description?: string;
-  source?: string;
-  sourceRef?: string;
+  /** Why the schedule exists. */
+  reason?: string;
+  /** A card the reason links to; with it, `reason` becomes `{text?, ref}`. */
+  reasonRef?: string;
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   budget?: string;
   lockGroup?: string;
@@ -237,15 +240,13 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   if (options.timeout !== undefined) fields["timeout"] = options.timeout;
   if (options.description !== undefined) fields["description"] = options.description;
   fields["runs"] = options.runs;
-  if (options.source !== undefined || options.sourceRef !== undefined) {
-    if (options.sourceRef !== undefined) {
-      const src: Record<string, string> = {};
-      if (options.source !== undefined) src["text"] = options.source;
-      src["ref"] = options.sourceRef;
-      fields["source"] = src;
-    } else {
-      fields["source"] = options.source;
-    }
+  if (options.reasonRef !== undefined) {
+    fields["reason"] = {
+      ...(options.reason !== undefined && { text: options.reason }),
+      ref: options.reasonRef,
+    };
+  } else if (options.reason !== undefined) {
+    fields["reason"] = options.reason;
   }
   if (options.createAfterSuccess !== undefined && options.createAfterSuccess.length > 0) {
     fields["create-after-success"] = options.createAfterSuccess.map((e) => ({

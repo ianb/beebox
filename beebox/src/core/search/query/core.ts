@@ -15,7 +15,7 @@ import {
   type EmbeddingsService,
 } from "../../../services/openai-embeddings.js";
 import { openSearchIndex, type OpenSearchIndexOptions } from "../refresh/core.js";
-import type { SearchIndex } from "../store.js";
+import type { SearchIndex } from "../store/core.js";
 import { generateExcerpt } from "./excerpt.js";
 import { ENGINE_DOC_KIND, MARKDOWN_KIND, type SearchDoc } from "../extract/core.js";
 
@@ -330,7 +330,6 @@ function hitDoc(hit: { document: TypedDocument<SearchIndex> }): SearchDoc {
     title: doc.title,
     contains: doc.contains,
     content: doc.content,
-    created: doc.created,
     contentHash: doc.contentHash,
     embedding: doc.embedding,
   };

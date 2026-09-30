@@ -3,7 +3,7 @@ import { Command } from "commander";
 import { z } from "zod";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { runCommand, createCliContext } from "../../../core/command-runner.js";
-import { prepareItem, evidenceSchema } from "../../../core/triage/evidence.js";
+import { prepareItem, evidenceSchema } from "../../../core/triage/evidence/core.js";
 import { compileInstructionSnapshot, instructionSnapshotSchema } from "../../../core/triage/snapshot.js";
 import { judgeItem } from "../../../core/triage/judge.js";
 import { createDecisionReceipt } from "../../../core/triage/decisions/storage.js";
@@ -45,9 +45,12 @@ export function createTriageCommand(): Command {
       else if (options.json) console.log(JSON.stringify(result.data, null, 2));
     }));
 
-  reporting(triageCommand.command("prepare <source-ref>").description("Prepare complete admitted evidence without modifying sources"))
-    .action((sourceRef: string, options: OutputOptions) => cliAction(async () => {
-    const evidence = await prepareItem({ boxRoot: await requireBoxRoot(), sourceRef });
+  reporting(triageCommand.command("prepare <source-ref>").description("Prepare complete admitted evidence without modifying sources")
+    .option("--instructions <file>", "Instruction snapshot JSON; defaults to current canonical policy"))
+    .action((sourceRef: string, options: OutputOptions & {instructions?: string}) => cliAction(async () => {
+    const boxRoot = await requireBoxRoot();
+    const instructions = options.instructions === undefined ? await compileInstructionSnapshot(boxRoot) : await readJson(options.instructions, instructionSnapshotSchema);
+    const evidence = await prepareItem({ boxRoot, sourceRef, instructions });
     await output(evidence, { ...withInheritedJson(triageCommand, options), summary: `Evidence ${evidence.status}: ${evidence.parts.length} part(s), ${evidence.parts.reduce((n, p) => n + p.omissions.length, 0)} omission(s).` });
     }));
 

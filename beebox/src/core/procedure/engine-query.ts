@@ -98,7 +98,7 @@ export async function procedureStatus(
     }
 
     ctx.writeLine(fmt.header(`Procedure Run: ${run.procedure}`));
-    ctx.writeLine(fmt.kv("Status", fmt.status(run.status)));
+    ctx.writeLine(fmt.kv("Outcome", fmt.status(run.outcome ?? "not finished")));
     ctx.writeLine(fmt.kv("Started", run["started-at"]));
     if (run["completed-at"] !== undefined) {
       ctx.writeLine(fmt.kv("Completed", run["completed-at"]));

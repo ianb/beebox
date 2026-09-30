@@ -36,8 +36,8 @@ function procedureNameOf(dirName: string): string {
 
 /**
  * When a run dir may be deleted, as epoch ms — or "never"/"invalid" to keep
- * it. Legacy cards without `expires` get the status-based default from
- * their completion time; crashed runs (non-terminal status) and unreadable
+ * it. Legacy cards without `expires` get the outcome-based default from
+ * their completion time; crashed runs (no outcome) and unreadable
  * cards are failure-like and get the failed default from the best available
  * timestamp.
  */
@@ -65,7 +65,7 @@ async function resolveExpiry(runDir: string): Promise<number | "never" | "invali
   }
 
   const defaultExpiry =
-    run.status === "completed" ? COMPLETED_RUN_EXPIRY : FAILED_RUN_EXPIRY;
+    run.outcome === "completed" ? COMPLETED_RUN_EXPIRY : FAILED_RUN_EXPIRY;
   const baseline =
     Date.parse(run["completed-at"] ?? "") ||
     Date.parse(run["started-at"]) ||

@@ -87,7 +87,7 @@ const SUBMIT_ROW_CLASSES = "sticky bottom-0 bg-white py-2 -mb-2";
 
 function DismissButton({ question, onAnswered }: { question: QuestionInfo; onAnswered: () => void }) {
   const dismissMutation = trpc.actions.dismiss.useMutation({ onSuccess: () => onAnswered() });
-  if (question.status !== "pending") return null;
+  if (question.state !== "pending") return null;
   return (
     <Button
       type="button"

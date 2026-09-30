@@ -17,6 +17,7 @@ import { chatSessionProcedures } from "./session-procedures.js";
 import { chatControlProcedures } from "./control-procedures.js";
 import { chatBootstrapProcedure } from "./bootstrap-procedure.js";
 import { chatPlaceMenuProcedure } from "./place-menu-procedure.js";
+import { chatSearchProcedures } from "./search.js";
 import {
   getDirectoryForSession,
   getLastSessionForDirectory,
@@ -149,6 +150,7 @@ export const chatRouter = router({
   ...chatControlProcedures,
   ...chatBootstrapProcedure,
   ...chatPlaceMenuProcedure,
+  ...chatSearchProcedures,
   /**
    * Most-recently-created session associated with a directory, or null
    * if no chat has been started for that directory.

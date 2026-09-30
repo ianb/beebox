@@ -27,7 +27,7 @@ import {
   type LoadCardContext,
 } from "../card-io.js";
 import { declareInputFiles, effectiveContains } from "./extract/core.js";
-import { writeJsonAtomic } from "./store.js";
+import { writeJsonAtomic } from "./store/core.js";
 import { contentHash } from "../../lib/content-hash.js";
 import { errorMessage } from "../../shared/error-guards.js";
 

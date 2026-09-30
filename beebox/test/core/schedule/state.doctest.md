@@ -301,8 +301,9 @@ await box.cleanup();
 
 ## loadRunningProcedures
 
-Reads `_bookkeeping/procedure/runs/*/run.procedure-run.card` and reports runs whose
-root status is pending or running.
+Reads `_bookkeeping/procedure/runs/*/run.procedure-run.card` and reports runs with
+no `outcome` yet — they have not finished. A finished run is not reported, even
+if a step inside it still says `running`.
 
 ### Reports recent running runs
 
@@ -311,7 +312,11 @@ const box = await makeTmpBox();
 const runDir = box.root + "/_bookkeeping/procedure/runs/test-run_2026-05-16T1200";
 await fs.mkdir(runDir, { recursive: true });
 await fs.writeFile(runDir + "/run.procedure-run.card",
-  `---\nprocedure: test\nstatus: running\nstarted-at: 2026-05-16T12:00:00Z\nsteps: []\n---\n`);
+  `---\nprocedure: test\nstarted-at: 2026-05-16T12:00:00Z\nsteps: []\n---\n`);
+const doneDir = box.root + "/_bookkeeping/procedure/runs/done-run_2026-05-16T1100";
+await fs.mkdir(doneDir, { recursive: true });
+await fs.writeFile(doneDir + "/run.procedure-run.card",
+  `---\nprocedure: test\noutcome: failed\nstarted-at: 2026-05-16T11:00:00Z\nsteps:\n  - id: s\n    status: running\n---\n`);
 
 await loadRunningProcedures(box.root)
 => [
@@ -325,7 +330,7 @@ await box.cleanup();
 
 ### Ignores stale run cards (mtime > 1 hour)
 
-A procedure that crashed mid-step leaves its run card at status="running"
+A procedure that crashed mid-step leaves its run card without an outcome
 forever. To avoid blocking housekeeping on orphan corpses, cards whose
 mtime is older than one hour are treated as dead.
 
@@ -335,7 +340,7 @@ const runDir = box.root + "/_bookkeeping/procedure/runs/orphan_2026-03-16T2056";
 await fs.mkdir(runDir, { recursive: true });
 const cardPath = runDir + "/run.procedure-run.card";
 await fs.writeFile(cardPath,
-  `---\nprocedure: test\nstatus: running\nstarted-at: 2026-03-16T20:56:00Z\nsteps: []\n---\n`);
+  `---\nprocedure: test\nstarted-at: 2026-03-16T20:56:00Z\nsteps: []\n---\n`);
 
 // Backdate the run card to two hours ago.
 const twoHoursAgo = (Date.now() - 2 * 60 * 60 * 1000) / 1000;
@@ -349,15 +354,15 @@ await loadRunningProcedures(box.root)
 await box.cleanup();
 ```
 
-### Ignores terminal statuses
+### Ignores finished runs
 
 ```ts
 const box = await makeTmpBox();
-for (const [name, status] of [["completed_run", "completed"], ["failed_run", "failed"]]) {
+for (const [name, outcome] of [["completed_run", "completed"], ["failed_run", "failed"], ["unjudged_run", "inconclusive"]]) {
   const runDir = box.root + "/_bookkeeping/procedure/runs/" + name;
   await fs.mkdir(runDir, { recursive: true });
   await fs.writeFile(runDir + "/run.procedure-run.card",
-    `---\nprocedure: test\nstatus: ${status}\nstarted-at: 2026-05-16T12:00:00Z\nsteps: []\n---\n`);
+    `---\nprocedure: test\noutcome: ${outcome}\nstarted-at: 2026-05-16T12:00:00Z\nsteps: []\n---\n`);
 }
 
 await loadRunningProcedures(box.root)

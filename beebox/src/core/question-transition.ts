@@ -1,7 +1,7 @@
 /**
- * Guarded status transitions for question cards.
+ * Guarded state transitions for question cards.
  *
- * A question's status change (answer, dismiss, and later the aging sweep's
+ * A question's state change (answer, dismiss, and the aging sweep's
  * expiry) is a read-modify-write on the card that must be atomic across BOTH
  * separate processes and concurrent in-process tasks, and whose card + any
  * companion writes (the follow-up job) must land in a SINGLE commit — with
@@ -14,8 +14,8 @@
  *     or the aging sweep (different PIDs), which `withCardLock` cannot see
  *     because both racers there would be the same PID;
  *   - `withCardLock` serializes overlapping RMW within one server process.
- * The status is re-checked AFTER both locks are held, so a loser reads the
- * winner's committed status and is rejected rather than clobbering it.
+ * The state is re-checked AFTER both locks are held, so a loser reads the
+ * winner's committed state and is rejected rather than clobbering it.
  */
 
 import * as path from "node:path";
@@ -30,7 +30,8 @@ import { createCardSchemaMap } from "../schemas.js";
 import {
   QuestionSchema,
   type QuestionFields,
-  type QuestionStatusType,
+  questionState,
+  type QuestionState,
 } from "../schemas/question.js";
 import type { CommandContext, CommandResult } from "./command-runner.js";
 
@@ -70,7 +71,7 @@ export interface TransitionPlan {
 }
 
 /**
- * Produces the concrete writes/commit for a loaded, status-checked question, or
+ * Produces the concrete writes/commit for a loaded, state-checked question, or
  * short-circuits with a failure result (e.g. an unresolvable answer). Runs
  * INSIDE both locks with the freshly re-read card.
  */
@@ -84,10 +85,10 @@ export interface WithQuestionTransitionParams {
   fullPath: string;
   /** The caller-facing reference (for error messages). */
   questionRef: string;
-  /** Statuses from which this transition is permitted. */
-  allowedStatuses: readonly QuestionStatusType[];
-  /** Message when the re-read status is outside `allowedStatuses`. */
-  disallowedMessage: (status: QuestionStatusType) => string;
+  /** States ({@link questionState}) from which this transition is permitted. */
+  allowedStates: readonly QuestionState[];
+  /** Message when the re-read state is outside `allowedStates`. */
+  disallowedMessage: (state: QuestionState) => string;
   plan: PlanFn;
 }
 
@@ -129,21 +130,21 @@ function questionLockPath(boxRoot: string, fullPath: string): string {
 }
 
 /**
- * Load, parse, and schema-validate the question card, then re-check its status
- * against `allowedStatuses`. Runs inside the locks so the check reflects the
+ * Load, parse, and schema-validate the question card, then re-check its state
+ * against `allowedStates`. Runs inside the locks so the check reflects the
  * latest committed state.
  */
 async function loadForTransition(
   params: {
     fullPath: string;
     questionRef: string;
-    allowedStatuses: readonly QuestionStatusType[];
-    disallowedMessage: (status: QuestionStatusType) => string;
+    allowedStates: readonly QuestionState[];
+    disallowedMessage: (state: QuestionState) => string;
   }
 ): Promise<
   { ok: true; fields: QuestionFields; content: string } | { ok: false; result: CommandResult }
 > {
-  const { fullPath, questionRef, allowedStatuses, disallowedMessage } = params;
+  const { fullPath, questionRef, allowedStates, disallowedMessage } = params;
 
   let content: string;
   try {
@@ -170,8 +171,9 @@ async function loadForTransition(
     };
   }
 
-  if (!allowedStatuses.includes(fields.status)) {
-    return { ok: false, result: { success: false, error: disallowedMessage(fields.status) } };
+  const state = questionState(fields);
+  if (!allowedStates.includes(state)) {
+    return { ok: false, result: { success: false, error: disallowedMessage(state) } };
   }
 
   return { ok: true, fields, content };
@@ -185,7 +187,7 @@ async function loadForTransition(
  *
  * WRITE ORDER IS LOAD-BEARING: `plan.writes` are applied in array order, so a
  * caller MUST list any companion file (e.g. the answer's follow-up job) BEFORE
- * the status-flipped question card. The card's `status` flip is the commit
+ * the question card. The card's new lifecycle timestamp is the commit
  * point; the companion must already exist on disk when it lands. A crash
  * between writes then leaves companion+pending-question (harmless, recoverable —
  * answering again just creates a second job) instead of the unrecoverable
@@ -256,7 +258,7 @@ async function applyAndCommit(
   if (commitHash === null) {
     // stageAndCommitPaths returns null when the paths showed no changes (a
     // concurrent sweep already committed them). Unexpected for a guarded
-    // transition that just wrote a status flip — surface it rather than
+    // transition that just wrote a state change — surface it rather than
     // silently reporting success on a commit that didn't happen here.
     console.warn(
       `Question transition committed nothing (paths already committed by another process?) — box=${ctx.boxRoot}, card=${questionRef}`
@@ -267,15 +269,15 @@ async function applyAndCommit(
 }
 
 /**
- * Run a guarded question status transition: acquire the cross-process lock
+ * Run a guarded question state transition: acquire the cross-process lock
  * (bounded retry while another process holds it), then the in-process card
- * lock, re-check status, apply the plan's writes, and commit them atomically
+ * lock, re-check state, apply the plan's writes, and commit them atomically
  * with rollback on failure.
  */
 export async function withQuestionTransition(
   params: WithQuestionTransitionParams
 ): Promise<TransitionResult> {
-  const { ctx, fullPath, questionRef, allowedStatuses, disallowedMessage, plan } = params;
+  const { ctx, fullPath, questionRef, allowedStates, disallowedMessage, plan } = params;
   const lockPath = questionLockPath(ctx.boxRoot, fullPath);
   // DEFAULT profile, deliberately — not `requestScopedLock`. Unlike the sibling
   // request-scoped stores (a read, a mutation, a temp-file write), this critical
@@ -303,7 +305,7 @@ export async function withQuestionTransition(
         const loaded = await loadForTransition({
           fullPath,
           questionRef,
-          allowedStatuses,
+          allowedStates,
           disallowedMessage,
         });
         if (!loaded.ok) return loaded;

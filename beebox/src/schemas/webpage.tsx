@@ -4,7 +4,8 @@
  * The card *is* the page: its markdown body is the readable rendering (Defuddle
  * extraction), and a frozen, self-contained HTML snapshot rides alongside in
  * the card's `.attach/` scope. Frontmatter carries capture provenance — the
- * original URL, when it was captured, and a ref to the frozen snapshot.
+ * original URL and when it was retrieved (the card's one `sources` entry), and
+ * a ref to the frozen snapshot.
  *
  * Produced by the clerk browser extension ("Comment on this page" and "Save
  * page") and rendered by `WebpageView`. Commentary *about* a captured page is
@@ -16,18 +17,30 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
+import { SourcesEntrySchema } from "../cards/sources-entry.js";
+
+/**
+ * The captured page: exactly one `sources` entry, an external `href`.
+ * `retrieved` is the full ISO instant of capture (the renderer formats it in
+ * the viewer's local zone), absent for a page imported without capture
+ * metadata.
+ */
+const WebpageSources = z
+  .array(SourcesEntrySchema)
+  .length(1, "a webpage card has exactly one `sources` entry: the page it captured")
+  .superRefine((entries, ctx) => {
+    if (entries.some((entry) => entry.href === undefined || entry.href === "")) {
+      ctx.addIssue({ code: "custom", message: "a webpage's `sources` entry is the captured page's URL, an `href`" });
+    }
+  });
 
 export const WebpageSchema = cardSchema("webpage", {
   brief: "A captured web page",
   description: "A captured external web page — readable markdown body plus a frozen HTML snapshot in the attach scope",
   category: "synced",
   fields: {
-    title: z.string().optional(),
-    // The original page URL the capture came from.
-    source: z.string(),
-    // Full ISO instant of capture; the renderer formats it in the viewer's
-    // local zone. Optional — a page imported without capture metadata omits it.
-    captured: z.string().optional(),
+    // The original page URL and when it was captured.
+    sources: WebpageSources,
     siteName: z.string().optional(),
     byline: z.string().optional(),
     excerpt: z.string().optional(),
@@ -49,9 +62,9 @@ said, and edit it only to fix capture artifacts, not to rewrite the page.
 
 ## Frontmatter
 
-- \`source:\` — required. The original page URL.
-- \`captured:\` — optional. Full ISO instant of capture; rendered in the
-  viewer's local timezone.
+- \`sources:\` — required, exactly one entry: \`[{ href, retrieved? }]\`.
+  \`href\` is the original page URL; \`retrieved\` is the full ISO instant
+  of capture, rendered in the viewer's local timezone.
 - \`siteName:\` / \`byline:\` / \`excerpt:\` — optional capture metadata.
 - \`frozen:\` — optional in-box ref (\`attach/page.frozen\`) to the frozen
   snapshot of the page, served sandboxed.
@@ -90,7 +103,7 @@ export type WebpageFields = InferCardFields<typeof WebpageSchema>;
 
 export function createWebpageTemplate(options: {
   title: string;
-  source: string;
+  url: string;
   capturedAt?: string | undefined;
   content: string;
   siteName?: string | undefined;
@@ -101,11 +114,12 @@ export function createWebpageTemplate(options: {
 }): string {
   const fields: Record<string, unknown> = {
     title: options.title,
-    source: options.source,
+    sources: [
+      options.capturedAt !== undefined && options.capturedAt !== ""
+        ? { href: options.url, retrieved: options.capturedAt }
+        : { href: options.url },
+    ],
   };
-  if (options.capturedAt !== undefined && options.capturedAt !== "") {
-    fields["captured"] = options.capturedAt;
-  }
   if (options.siteName !== undefined && options.siteName !== "") {
     fields["siteName"] = options.siteName;
   }

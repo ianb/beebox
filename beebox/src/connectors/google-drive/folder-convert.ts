@@ -3,8 +3,8 @@
  * `.gfolder.card` mounts.
  *
  * Runs at the top of every sync, before the card scan, so a converted mount is
- * mirrored on the same pass that converted it. Writes only `drive-id` — the
- * mirror stamps `name`, `link`, `status`, and `last-sync` moments later.
+ * mirrored on the same pass that converted it. Writes only `drive.id` — the
+ * mirror stamps `title`, `drive.link`, `last-sync`, and any `error` moments later.
  *
  * Idempotent by construction: an entry whose target directory already holds a
  * `.gfolder.card` for the same folder is dropped from the config without a

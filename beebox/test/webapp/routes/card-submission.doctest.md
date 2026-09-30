@@ -61,7 +61,7 @@ await server.seed(
   "_content/tasks/Task.browser-task.card",
   createBrowserTaskTemplate({
     title: "Pottery Scan",
-    source: "https://example.com/feed",
+    start: "https://example.com/feed",
     prompt: "Scan the feed for show announcements.",
   })
 );

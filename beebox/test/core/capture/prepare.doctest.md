@@ -8,7 +8,8 @@ deterministically with no API key or Claude subprocess.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
-import { mkdir, writeFile, appendFile, readFile, rm, access } from "node:fs/promises";
+import { mkdir, writeFile, appendFile, readFile, readdir, rm, access } from "node:fs/promises";
+import { parse as parseYaml } from "yaml";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
@@ -143,10 +144,10 @@ nothing left untranscribed, the card carries no `transcription-failed` flag:
 (await box.read(docRel)).includes("transcription-failed")
 => false
 
-(await box.read(`${attach}/audio-001.audio.card`)).includes("status: transcribed")
+(await box.read(`${attach}/audio-001.audio.card`)).includes("transcript:")
 => true
 
-(await box.read(`${attach}/audio-002.audio.card`)).includes("status: transcribed")
+(await box.read(`${attach}/audio-002.audio.card`)).includes("transcript:")
 => true
 ```
 
@@ -186,7 +187,7 @@ subjects.filter((s) => s.startsWith("Capture delivered: ")).length
 execFileSync("git", ["log", "--format=%(trailers:key=Created-By,valueonly)"], { cwd: box.root }).toString().includes("capture")
 => true
 
-(await box.read(docRel)).includes("status: delivered")
+(await box.read(docRel)).includes("delivered: true")
 => true
 ```
 
@@ -294,12 +295,23 @@ partialBody.includes("[audio clip 2 not transcribed]")
 ```
 
 The card itself records the failure in frontmatter, so an agent annotating it
-later — possibly with no `<capture>` message in view — sees why the audio card
-is still `new`:
+later — possibly with no `<capture>` message in view — sees why an audio card
+has no transcript:
 
 ```ts continue
 (await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("transcription-failed: true")
 => true
+```
+
+The failed clip's own card says why, in `transcription-error:`; the clip that
+transcribed carries a transcript and no error:
+
+```ts continue
+const attachDir = `tmp-capture/${basename}.attach`;
+const clipCards = (await readdir(box.path(attachDir))).filter((f) => f.endsWith(".audio.card")).toSorted();
+const clips = await Promise.all(clipCards.map(async (f) => parseYaml(splitCardContent(await box.read(`${attachDir}/${f}`)).frontmatterText)));
+clips.map((c) => `${c.transcript === undefined ? "none" : "transcript"}/${c["transcription-error"] === undefined ? "ok" : "error"}`).join(" ")
+=> transcript/ok none/error
 ```
 
 The delivered wrapper carries `transcription-failed`, with the summary taken
@@ -528,7 +540,7 @@ await readStagingSession({ boxRoot: box.root, id })
 => null
 
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-(await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("status: delivered")
+(await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("delivered: true")
 => true
 ```
 
@@ -551,10 +563,10 @@ const id = await stageSealedSession(box.root);
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
 const cardRel = `tmp-capture/${basename}.capture-session.card`;
 const attachRel = `tmp-capture/${basename}.attach`;
-// Seed an invalid card (bogus status enum, no session-id) + an empty attach dir,
+// Seed an invalid card (bogus `delivered`, no session-id) + an empty attach dir,
 // so prepare skips the write step and validates the pre-seeded card.
 await mkdir(`${box.root}/${attachRel}`, { recursive: true });
-await writeFile(`${box.root}/${cardRel}`, "---\nstatus: not-a-real-status\n---\n");
+await writeFile(`${box.root}/${cardRel}`, "---\ndelivered: not-a-boolean\n---\n");
 
 const registry = {
   getOrCreate: () => ({ isBusy: () => false, enqueue: () => {}, send: async () => true, getSessionId: () => "x" }),
@@ -634,7 +646,7 @@ flipped to `delivered` — while the attach files exist on disk untracked:
 await readStagingSession({ boxRoot: box.root, id })
 => null
 
-(await box.read(docRel)).includes("status: delivered")
+(await box.read(docRel)).includes("delivered: true")
 => true
 
 await pathExists(`${box.root}/${attachRel}/audio-001.audio.card`)

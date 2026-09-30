@@ -156,9 +156,9 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
     >
       <Row gap="sm" align="center" wrap>
         <Text weight="semibold">{mount.name ?? mount.cardPath}</Text>
-        {mount.status === "error" ? <Badge tone="danger">error</Badge> : null}
-        {mount.status === "ok" ? <Badge tone="success">synced</Badge> : null}
-        {mount.status === null ? <Badge tone="neutral">never synced</Badge> : null}
+        {mount.error !== null ? <Badge tone="danger">error</Badge> : null}
+        {mount.error === null && mount.lastSync !== null ? <Badge tone="success">synced</Badge> : null}
+        {mount.error === null && mount.lastSync === null ? <Badge tone="neutral">never synced</Badge> : null}
       </Row>
 
       <Hint>

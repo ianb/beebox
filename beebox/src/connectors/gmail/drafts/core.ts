@@ -102,8 +102,8 @@ interface OutboundDraft {
 }
 
 /**
- * Walk _content/inbox/email/ for email-outbound cards in draft status without
- * a gmail-draft-id stamp.
+ * Walk _content/inbox/email/ for email-outbound cards without a
+ * gmail-draft-id stamp (not yet uploaded).
  */
 async function findOutboundDrafts(boxRoot: string): Promise<OutboundDraft[]> {
   const emailDir = path.join(getBoxDir(boxRoot, "inbox"), "email");
@@ -143,9 +143,8 @@ async function findOutboundDrafts(boxRoot: string): Promise<OutboundDraft[]> {
         const content = await fs.readFile(cardPath, "utf-8");
         const fm = parseFrontmatterObject(content);
         if (fm === null) continue;
-        const status = typeof fm["status"] === "string" ? fm["status"] : "draft";
         const stamped = typeof fm["gmail-draft-id"] === "string";
-        if (status === "draft" && !stamped) {
+        if (!stamped) {
           const error = fm[DRAFT_ERROR_FIELD];
           const failingSince = fm[DRAFT_FAILING_SINCE_FIELD];
           drafts.push({
@@ -255,8 +254,10 @@ async function readSourceMessage(
       source: path.basename(absPath),
       schemas: await createCardSchemaMap(),
     });
-    const messageId = parsed.fields["message-id"];
-    const threadId = parsed.fields["thread-id"];
+    const email = parsed.fields["email"];
+    if (!isRecord(email)) return null;
+    const messageId = email["message-id"];
+    const threadId = email["thread-id"];
     if (typeof messageId !== "string" || typeof threadId !== "string") return null;
     return { messageId, threadId };
   } catch (e) {

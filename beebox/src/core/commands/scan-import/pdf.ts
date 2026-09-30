@@ -1,12 +1,12 @@
 /**
  * Pdf flow for the scan-import command: a single PDF that already has an
  * embedded text layer is run through Docling and filed as a `pdf.card`
- * (+ the original PDF, the gzipped extraction JSON, and page/figure AVIFs)
+ * (+ the original PDF, the gzipped extraction JSON, and page/figure images)
  * inside the session's attach scope. No Gemini analysis — the text is already
  * there; Docling contributes layout, reading order, and tables.
  *
- * When extraction fails for any reason, the card is still written — with
- * `status: new`, an `error:` field, and the original PDF as its only asset.
+ * When extraction fails for any reason, the card is still written — with an
+ * `error:` field and the original PDF as its only asset.
  * That is exactly what this flow did before Docling existed, so a Docling
  * problem degrades to the old behavior instead of blocking intake
  * (`docs/plans/scanner-ingest.md`, Track 4).
@@ -109,10 +109,8 @@ async function importPdfSession(
   }
 
   const template: PdfTemplateOptions = {
-    status: extraction.ok ? "analyzed" : "new",
     format: "pdf",
-    capturedAt: startedAt,
-    source: args.source ?? "scan-import",
+    via: { channel: args.source ?? "scan-import", at: startedAt },
     filename: SOURCE_PDF_FILENAME,
     originalName: path.basename(args.pdfPath),
     mimeType: "application/pdf",
@@ -131,13 +129,13 @@ async function importPdfSession(
     template.doclingFilename = extraction.value.doclingFilename;
     template.doclingVersion = extraction.value.doclingVersion;
     for (const name of extraction.value.assetNames) assetRelPaths.push(`${attachRelDir}/${name}`);
-    const imageAssets = extraction.value.assetNames.filter((name) => name.endsWith(".avif")).length;
+    const imageAssets = extraction.value.assetNames.filter((name) => name.endsWith(".avif") || name.endsWith(".webp")).length;
     ctx.writeLine(`Extracted ${String(extraction.value.pageCount)} page(s), ${String(imageAssets)} image asset(s)`);
   } else {
     template.error = extraction.error;
     // Non-silent by construction: the reason is on the card, not only here.
     console.warn(`[scan-import] Docling extraction failed for ${path.basename(args.pdfPath)}: ${extraction.error}`);
-    ctx.writeLine(`Extraction failed (filed as status: new) — ${extraction.error}`);
+    ctx.writeLine(`Extraction failed (filed with an error) — ${extraction.error}`);
   }
 
   await fs.writeFile(path.join(sessionAttachAbsDir, cardFilename), createPdfTemplate(template));
@@ -149,7 +147,7 @@ async function importPdfSession(
     imageRefs: [],
     audioRefs: [],
     fileRefs: [cardFilename],
-    source: args.source,
+    uploader: args.source,
   });
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
 
@@ -178,7 +176,7 @@ async function importPdfSession(
       sessionRelDir: sessionAttachRelDir,
       sessionCardPath: sessionCardRelPath,
       pdfCardPath: `${sessionAttachRelDir}/${cardFilename}`,
-      status: template.status,
+      extracted: extraction.ok,
       intakeJobPath,
     },
   };

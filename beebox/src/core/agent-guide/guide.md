@@ -609,7 +609,7 @@ confident; otherwise raise a question card (**QUESTIONS**) and move the source
 item to `_content/inbox/unhandled/`.
 
 <!-- rules: recording.retro-beliefs -->
-A `source: inferred` entry on a personality or guide card came from the
+A `basis: inferred` entry on a personality or guide card came from the
 weekly retrospective; how far to trust it is in
 `node_modules/beebox/box-docs/card-guide.md`.
 

@@ -2,8 +2,8 @@
 
 `sendOutputCards` implements the lifecycle documented in the
 telegram-message schema: pending cards in `_bookkeeping/output/` are sent and
-deleted; cards that fail to send are stamped `failed` with the error
-and left in place (not retried).
+deleted; cards that fail to send are stamped with `delivery-error` and
+left in place (not retried).
 
 ```ts setup
 import * as fs from "node:fs/promises";
@@ -25,7 +25,7 @@ await box.seed(
 );
 await box.seed(
   "_bookkeeping/output/already-failed.telegram-message.card",
-  `---\nstatus: failed\nchat-id: "777"\ntext: old news\nerror: kaboom\n---\n`,
+  `---\nchat-id: "777"\ntext: old news\ndelivery-error: kaboom\n---\n`,
 );
 box.commitAll("seed outbox");
 
@@ -75,10 +75,9 @@ JSON.stringify(sent)
 
 await fs.readFile(path.join(box.root, "_bookkeeping/output/alert.telegram-message.card"), "utf-8")
 => ---
-status: failed
 chat-id: "777"
 text: hello
-error: "403: bot was blocked by the user"
+delivery-error: "403: bot was blocked by the user"
 ---
 ```
 

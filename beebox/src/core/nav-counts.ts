@@ -7,7 +7,7 @@
  * questions directory's frontmatter directly instead of going through
  * `getSystemState`, which additionally runs `git status`, a `git log`, a full
  * inbox scan, and a full card *load* (schema validation, body parse) of every
- * question — all of it discarded for a count of one field.
+ * question — all of it discarded for a count of pending questions.
  */
 
 import * as fs from "node:fs/promises";
@@ -17,9 +17,10 @@ import { errnoCode } from "../shared/error-guards.js";
 import { mapInBatches } from "../lib/map-batched.js";
 import { loadCardFrontmatter } from "./frontmatter-field.js";
 import { countPlateTodos } from "./todo/count.js";
+import { questionState } from "../schemas/question.js";
 
 export interface NavCounts {
-  /** Question cards still awaiting an answer (`status: pending`). */
+  /** Question cards still awaiting an answer (pending per `questionState`). */
   pendingQuestions: number;
   /** Open todos on the plate now — `escalated` (past due) plus `on-plate`. */
   onPlateTodos: number;
@@ -31,12 +32,12 @@ export interface NavCounts {
 const READ_CONCURRENCY = 64;
 
 /**
- * Counts a question as pending on its raw `status` field, without a full
- * schema-validating load. That means a question card whose frontmatter is
- * otherwise invalid still counts if it says `status: pending` — which is the
- * behavior we want (a broken card the boxholder must fix is exactly the one
- * that shouldn't silently vanish from the badge, the same rule
- * `status.questions` follows for its `invalid` rows). `status.status` shares
+ * Counts a question as pending from its raw frontmatter (`questionState`),
+ * without a full schema-validating load. That means a question card whose
+ * frontmatter is otherwise invalid still counts if it has no lifecycle
+ * timestamp — which is the behavior we want (a broken card the boxholder
+ * must fix is exactly the one that shouldn't silently vanish from the badge,
+ * the same rule `status.questions` follows for its `invalid` rows). `status.status` shares
  * this count rather than deriving its own, so the two can't disagree.
  */
 async function countPendingQuestions(boxRoot: string): Promise<number> {
@@ -57,7 +58,7 @@ async function countPendingQuestions(boxRoot: string): Promise<number> {
   );
   // A question whose frontmatter won't parse at all can't claim to be pending;
   // it surfaces as an invalid card through `status.questions` / `bbx validate`.
-  return frontmatters.filter((fm) => fm !== null && fm["status"] === "pending").length;
+  return frontmatters.filter((fm) => fm !== null && questionState(fm) === "pending").length;
 }
 
 /** Both nav badge counts, computed concurrently. */

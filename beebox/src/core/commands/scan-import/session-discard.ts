@@ -89,7 +89,7 @@ export async function queueCommittedSessionIntake(
   { items, description }: { items: string[]; description: string },
 ): Promise<string | null> {
   try {
-    return await createOrAppendIntakeJob({ boxRoot, source: "scan", items, description });
+    return await createOrAppendIntakeJob({ boxRoot, items, description });
   } catch (error) {
     console.warn(`[scan-import] Intake job for ${items[0] ?? "a scan session"} was not created; the next wakeup queues it:`, error);
     return null;

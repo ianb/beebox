@@ -127,11 +127,11 @@ The mount card records the outcome, and the pointer says where it came from.
 ```ts continue
 const card = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 JSON.stringify({
-  driveId: /drive-id: (\S+)/.exec(card)?.[1],
-  status: /status: (\S+)/.exec(card)?.[1],
+  driveId: /\n  id: (\S+)/.exec(card)?.[1],
+  failed: /^error:/m.test(card),
   hasLastSync: card.includes("last-sync:"),
 })
-=> {"driveId":"folder-1","status":"ok","hasLastSync":true}
+=> {"driveId":"folder-1","failed":false,"hasLastSync":true}
 
 /origin: (\S+)/.exec(await box.read("_content/drive/recipes/Scanpdf.glink.card"))?.[1]
 => mirror
@@ -231,7 +231,7 @@ mirror emitted, and the body starts empty because the notes are not ours.
 const card = await box.read("_content/drive/Lease.glink.card");
 JSON.stringify({
   origin: /origin: (\S+)/.exec(card)?.[1],
-  driveId: /drive-id: (\S+)/.exec(card)?.[1],
+  driveId: /\n  id: (\S+)/.exec(card)?.[1],
   body: card.split("---\n")[2],
 })
 => {"origin":"manual","driveId":"pdf-1","body":""}
@@ -342,7 +342,7 @@ await box.cleanup();
 ## status names the kind of every Drive card
 
 A folder mount is not a file, and a pointer is not synced. Status says which,
-and shows a folder's own status and last sync.
+and shows a folder's last sync, and its error only when that sync failed.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -362,10 +362,10 @@ JSON.stringify({
   file: output.includes("Kind: file (synced two-way)"),
   link: output.includes("Kind: link (pointer, nothing copied)"),
   folderName: output.includes("Title: Recipes"),
-  folderStatus: output.includes("Status: ok"),
+  noError: !output.includes("Error:"),
   folderSynced: /Last synced: 20\d\d-/.test(output),
 })
-=> {"count":true,"folder":true,"file":true,"link":true,"folderName":true,"folderStatus":true,"folderSynced":true}
+=> {"count":true,"folder":true,"file":true,"link":true,"folderName":true,"noError":true,"folderSynced":true}
 ```
 
 A healthy mount says nothing about children it could not account for. Move the
@@ -429,11 +429,11 @@ JSON.stringify(config)
 
 const card = await box.read("_content/drive/recipes/recipes.gfolder.card");
 JSON.stringify({
-  driveId: /drive-id: (\S+)/.exec(card)?.[1],
-  name: /name: (.*)/.exec(card)?.[1],
-  status: /status: (\S+)/.exec(card)?.[1],
+  driveId: /\n  id: (\S+)/.exec(card)?.[1],
+  name: /\ntitle: (.*)/.exec(card)?.[1],
+  failed: /^error:/m.test(card),
 })
-=> {"driveId":"folder-1","name":"Recipes","status":"ok"}
+=> {"driveId":"folder-1","name":"Recipes","failed":false}
 ```
 
 A second sync converts nothing, writes no second card, and says nothing about

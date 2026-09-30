@@ -7,7 +7,7 @@
  * file in the box and rewrites any ref matching a relocated question card's
  * old path to its new `box/questions/...` path.
  *
- * Ref convention (see `extractRefs` in `src/cards/schema.ts`): a key
+ * Ref convention (see `extractRefs` in `src/cards/extract-refs.ts`): a key
  * literally named `ref` holds a single path string; a key literally named
  * `refs` holds an array of path strings. Refs may be written with or
  * without a leading `/` — both forms are rewritten, preserving the leading

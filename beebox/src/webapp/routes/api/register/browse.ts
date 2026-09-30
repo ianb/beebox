@@ -3,7 +3,7 @@
  *
  * Split out of `api.ts`. Owns `GET /api/browse/*` — a one-level listing of a
  * box directory that folds `<basename>.attach/` directories into their owning
- * cards and loads each card so the frontend can render its status.
+ * cards and loads each card so the frontend can flag a Drive conflict.
  */
 
 import type { FastifyInstance } from "fastify";
@@ -25,7 +25,8 @@ interface BrowseCard {
   relativePath: string;
   name: string;
   type: string;
-  status?: string | undefined;
+  /** The card's `conflict` field is true: a synced Drive file awaits a merge. */
+  conflict?: true;
   hasAttachments?: boolean;
 }
 
@@ -132,12 +133,11 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
         );
 
         const fm = await loadCardFrontmatter(fullPath);
-        const status = fm !== null && typeof fm["status"] === "string" ? fm["status"] : undefined;
         cards.push({
           relativePath,
           name: parsed.name,
           type: parsed.type,
-          ...(status !== undefined && { status }),
+          ...(fm?.["conflict"] === true && { conflict: true }),
           hasAttachments,
         });
       }

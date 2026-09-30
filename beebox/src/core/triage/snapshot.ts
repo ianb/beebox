@@ -24,7 +24,7 @@ const sourceSchema = z.object({ ref: refSchema, digest: z.string().regex(/^[\da-
 export const instructionSnapshotSchema = z.object({
   version: z.literal(1), compilerVersion: z.literal(1), policy: z.string(), trial: z.boolean(),
   sources: z.array(sourceSchema),
-  destinations: z.array(z.object({ ref: refSchema, optionId: z.string(), name: z.string(), dir: z.string(), rules: z.string(), procedureRef: z.string().nullable() })),
+  destinations: z.array(z.object({ ref: refSchema, optionId: z.string(), name: z.string(), dir: z.string(), rules: z.string(), todoQuestion: z.string().trim().min(1).optional(), procedureRef: z.string().nullable() })),
 }).superRefine((value, ctx) => {
   const keys = value.destinations.map((d) => d.optionId);
   if (new Set(keys).size !== keys.length || keys.some((key) => !/^destination_[\da-f]{64}$/.test(key))) {
@@ -72,7 +72,7 @@ export async function compileInstructionSnapshot(boxRoot: string, options?: Snap
     const trial = Boolean(options?.guideOverlay);
     const rules = parsed.triageRules.filter((rule) => trial || rule.confidence !== "hypothesis");
     const usedActions = new Set([...rules.map((rule) => rule.action), parsed.defaultAction?.action]);
-    policy = compileGuide({ ...parsed, triageRules: rules.map((rule) => ({ ...rule, confidence: rule.confidence === "hypothesis" ? "low" : rule.confidence, text: `[source: ${rule.source}${rule.confidence === "hypothesis" ? "; trial hypothesis" : ""}] ${rule.text}` })), actions: parsed.actions.filter((action) => usedActions.has(action.name)), experiments: [], reactions: [] }, "intake");
+    policy = compileGuide({ ...parsed, triageRules: rules.map((rule) => ({ ...rule, confidence: rule.confidence === "hypothesis" ? "low" : rule.confidence, text: `[basis: ${rule.basis}${rule.confidence === "hypothesis" ? "; trial hypothesis" : ""}] ${rule.text}` })), actions: parsed.actions.filter((action) => usedActions.has(action.name)), experiments: [], reactions: [] }, "intake");
   }
   policy += "\nSource precedence: user-stated > feedback > inferred > default. Never weaken user-stated policy to satisfy an inferred rule. Unresolved conflicting instructions mean unclear. Landmark rules describe destination boundaries; the intake guide governs how to decide. Best effort is permitted when the policy explicitly allows it.";
   const overlays = new Map(Object.entries(options?.landmarkOverlays ?? {}).map(([ref, file]) => [canonicalRef(ref), file]));
@@ -89,7 +89,7 @@ export async function compileInstructionSnapshot(boxRoot: string, options?: Snap
     sources.push({ ref, digest: digest(content), ...overlayField(overlay) });
     if (destination === null) continue;
     const dir = normalizeLandmarkDir(path.posix.dirname(ref.slice(1)));
-    destinations.push({ ref, optionId: `destination_${digest(ref)}`, name: deriveCategoryName(dir), dir, rules: destination.rules?.trim() ?? "", procedureRef: destination.procedure?.ref ?? null });
+    destinations.push({ ref, optionId: `destination_${digest(ref)}`, name: deriveCategoryName(dir), dir, rules: destination.rules?.trim() ?? "", todoQuestion: destination["todo-question"], procedureRef: destination.procedure?.ref ?? null });
   }
   destinations.sort((a, b) => a.dir.localeCompare(b.dir));
   disambiguateCategoryNames(destinations);

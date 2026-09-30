@@ -9,6 +9,8 @@ import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
 import { judgeItem } from "../../../src/core/triage/judge.js";
+import { serializeTriageRequest } from "../../../src/core/triage/request.js";
+import { JEV_MAX_REQUEST_CHARS } from "../../../src/services/jev-wire.js";
 import { createFakeJev } from "../../../src/services/jev.js";
 import { fixedAnswer } from "../../../src/core/judgment/service.js";
 ```
@@ -34,7 +36,7 @@ initial.policy.includes("No intake guide exists")
 await box.write("_config/intake.guide.card", `---
 triage-rules:
   - text: Always prefer user boundaries.
-    source: user-stated
+    basis: user-stated
     confidence: high
   - text: Trial financial priority.
     confidence: hypothesis
@@ -49,7 +51,7 @@ actions:
 ---
 `);
 const normal = await compileInstructionSnapshot(box.root);
-normal.policy.includes("source: user-stated") && normal.policy.includes("Shared household")
+normal.policy.includes("basis: user-stated") && normal.policy.includes("Shared household")
 => true
 
 normal.policy.includes("Trial financial") || normal.policy.includes("Old irrelevant") || normal.policy.includes("Never classify")
@@ -121,6 +123,21 @@ decisive.judgeCalls.length
 
 const budget = JSON.parse(await fs.readFile(path.join(box.root, ".beebox/jev-budget.json"), "utf8"));
 budget.calls
+=> 3
+
+// Size uses the exact serialized request, including escaped policy and rules,
+// and rejects before the fake provider or daily budget reservation.
+const escapedPolicy = { ...normal, policy: '"'.repeat(40_000) };
+serializeTriageRequest({ evidence, instructions: escapedPolicy }).length > JEV_MAX_REQUEST_CHARS
+=> true
+
+await (async () => { const fake = createFakeJev(); let error = ""; try { await judgeItem(box.root, { evidence, instructions: escapedPolicy, jev: fake }); } catch (caught) { error = String(caught); } return error.includes("Serialized Jev request exceeds the supported request size") && fake.judgeCalls.length === 0; })()
+=> true
+
+await (async () => { const fake = createFakeJev(); const oversizedRules = { ...normal, destinations: normal.destinations.map((destination, index) => index === 0 ? { ...destination, rules: "R".repeat(JEV_MAX_REQUEST_CHARS + 1) } : destination) }; let error = ""; try { await judgeItem(box.root, { evidence, instructions: oversizedRules, jev: fake }); } catch (caught) { error = String(caught); } return error.includes("Serialized Jev request exceeds the supported request size") && fake.judgeCalls.length === 0; })()
+=> true
+
+JSON.parse(await fs.readFile(path.join(box.root, ".beebox/jev-budget.json"), "utf8")).calls
 => 3
 ```
 

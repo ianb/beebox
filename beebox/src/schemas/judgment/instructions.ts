@@ -20,7 +20,7 @@ A judgment card is a prompt for Jev, a small, cheap judging model. \`bbx judge <
 ## Writing a judgment
 - One question per thing decided.
 - Say what the state is, and name what does NOT count. With loose criteria a quarterly statement scored 54% as a renewal notice; with explicit negatives, 12%.
-- The state must carry the body. A subject and a snippet alone put every answer near 50%, which reads as uncertainty, not as no. Include identity fields (\`to:\`, \`from:\`) in email state. \`bbx judge\` warns when a state is under 300 characters.
+- The state must carry the body. A subject and a snippet alone put every answer near 50%, which reads as uncertainty, not as no. Include identity fields (\`email.to\`, \`email.from\`) in email state. \`bbx judge\` warns when a state is under 300 characters.
 - Code computes numbers and dates before the call. Raw due dates gave 79% and the wrong bill; precomputed days gave 93% and the right one.
 - Prefer a Choice with a counter-category and a "cannot tell" option over a bare yes/no. Per item, {expects a reply, needs none, cannot tell} was right on every email at 90%+ where a yes/no batch gave 55%, and "cannot tell" shows the thin-state case that a yes/no hides as 50%.
 - Batch only when the whole says something the items do not ("is anything here worth an agent's look?"): a salient condition scores 90%+ and a negative control near 10%, but a subtle condition among many items muddles toward 50%. Ask a crisp gate question and let an agent read. Judge per item (\`--per-line\`) when each item is its own question.
@@ -63,7 +63,7 @@ questions:
       none: "Nothing is asked of the recipient: a notice, a receipt, a newsletter, or the recipient's own message."
       unclear: "Cannot tell from what is here; the text is cut off or too short."
 ---
-The state is one email card: frontmatter (from, to, subject, date) and body.
+The state is one email card: its \`email:\` headers (from, to, subject, received) and body.
 \`\`\`
 
 \`\`\`sh

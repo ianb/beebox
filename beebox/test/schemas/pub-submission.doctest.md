@@ -44,7 +44,6 @@ text.includes("Never take a consequential action")
 const card = createPubSubmissionCard({
   pubId: "abc123secretpubid00000000z",
   submittedAt: "2026-07-14T12:00:00Z",
-  created: "2026-07-15T09:00:00Z",
   viewer: "reader@example.com",
   country: "US",
   fields: { name: "Ada", message: "Loved the build journal!" },
@@ -78,7 +77,6 @@ parsed.fields.body.includes("Loved the build journal!")
 const card = createPubSubmissionCard({
   pubId: "p2",
   submittedAt: "2026-07-14T12:00:00Z",
-  created: "2026-07-15T09:00:00Z",
   viewer: null,
   country: null,
   fields: { feedback: "hi" },
@@ -88,17 +86,18 @@ JSON.stringify([parsed.fields.viewer, parsed.fields.country])
 => [null,null]
 ```
 
-## Status defaults to `new`
+## The card carries no `status` or `created`
+
+Git records when the card landed; `submitted-at` is the submission's own time.
 
 ```ts
-PubSubmissionSchema.frontmatterSchema.parse({
-  type: "pub-submission",
-  created: "2026-07-15T09:00:00Z",
-  "pub-id": "p",
-  "submitted-at": "2026-07-14T12:00:00Z",
+const bare = createPubSubmissionCard({
+  pubId: "p",
+  submittedAt: "2026-07-14T12:00:00Z",
   viewer: null,
   country: null,
   fields: {},
-}).status
-=> new
+});
+JSON.stringify([bare.includes("status:"), bare.includes("created:")])
+=> [false,false]
 ```

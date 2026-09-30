@@ -88,18 +88,18 @@ JSON.stringify(batch.counts)
 => {"registered":2,"received":2,"missing":0,"failed":0}
 ```
 
-The card carries the batch summary: status `new`, the counts, total bytes, and
+The card carries the batch summary: not yet `delivered`, the counts, total bytes, and
 a received list with server-computed sizes and client-claimed mimetypes:
 
 ```ts continue
 const card = await box.read(batch.cardRelPath);
 JSON.stringify({
-  status: card.includes("status: new"),
+  delivered: card.includes("delivered"),
   batchId: card.includes(`batch-id: ${batch.batchSlug}`),
   totalBytes: batch.totalBytes,
   body: splitCardContent(card).body.trim(),
 })
-=> {"status":true,"batchId":true,"totalBytes":11,"body":"2 files uploaded (11 B)."}
+=> {"delivered":false,"batchId":true,"totalBytes":11,"body":"2 files uploaded (11 B)."}
 ```
 
 The card's `received` list inventories both blobs with a size each, and no

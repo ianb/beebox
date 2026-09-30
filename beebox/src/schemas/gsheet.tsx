@@ -5,6 +5,9 @@
  * scope; each entry in `sheets:` is a `{ref, title, gid}` object pointing
  * at one tab file.
  *
+ * `drive:` holds what the connector copied from Drive (the file's `id`,
+ * `link`, `owner`, and `modified` time). `title` is the spreadsheet's title.
+ *
  * Example file layout:
  *   _content/drive/Budget.gsheet.card
  *   _content/drive/Budget.attach/Summary.json
@@ -26,12 +29,14 @@ export const GsheetSchema = cardSchema("gsheet", {
   description: "A Google Sheets spreadsheet synced by the drive connector — tab data as attached JSON files, pushed back on sync",
   category: "synced",
   fields: {
-    "drive-id": z.string(),
-    status: z.enum(["synced", "error", "new"]).optional(),
     title: z.string(),
-    modified: z.string(),
-    link: z.string(),
-    owner: z.string(),
+    drive: z.object({
+      id: z.string(),
+      link: z.string(),
+      owner: z.string(),
+      // Drive's `modifiedTime`: when the file last changed on Drive.
+      modified: z.string(),
+    }),
     sheets: z.array(SheetTab),
     comments: z.object({ ref: z.string() }).optional(),
   },
@@ -60,7 +65,9 @@ Edit the JSON file directly and commit. For plain cells, just change
 the value. For formula cells, edit the \`f\` field (the \`v\` field will
 be updated on next sync). On next sync (\`bbx wakeup\` or
 \`bbx drive sync\`), local changes are pushed to Google Sheets. Do NOT
-modify the card frontmatter — it is managed by the connector — with one
+modify the card frontmatter — it is managed by the connector.
+\`drive:\` is what Drive reports about the file: its \`id\`, \`link\`,
+\`owner\`, and \`modified\` (when it last changed on Drive). One
 exception: \`contains:\` is agent-owned and survives sync; set it freely
 (\`bbx contains update\`).
 
@@ -75,7 +82,7 @@ understand reviewer feedback; don't expect changes to round-trip.
 
 ## Moving spreadsheets
 Moving the card moves its attach scope (with the tab data inside)
-atomically — the \`drive-id\` field maintains the link to Google Drive.`,
+atomically — the \`drive.id\` field maintains the link to Google Drive.`,
 });
 
 export type GsheetFields = InferCardFields<typeof GsheetSchema>;
@@ -88,15 +95,10 @@ export function createGsheetTemplate(options: {
   owner: string;
   sheets: Array<{ ref: string; title: string; gid: string }>;
   commentsFile?: string | undefined;
-  status?: "synced" | "error" | "new";
 }): string {
   const fields: Record<string, unknown> = {
-    "drive-id": options.driveId,
-    status: options.status === undefined ? "synced" : options.status,
+    drive: { id: options.driveId, link: options.link, owner: options.owner, modified: options.modified },
     title: options.title,
-    modified: options.modified,
-    link: options.link,
-    owner: options.owner,
     sheets: options.sheets,
   };
   if (options.commentsFile !== undefined) {
