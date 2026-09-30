@@ -19,6 +19,11 @@ enum Paths {
     /// Claude Code's config and credentials (CLAUDE_CONFIG_DIR in the image).
     static let claudeConfig = state.appending(path: "claude-config", directoryHint: .isDirectory)
 
+    /// Machine-level beebox state the image keeps in the container's home
+    /// (accounts, secrets). The container's home does not survive a restart,
+    /// so the app mounts this folder and points the env overrides at it.
+    static let machine = state.appending(path: "machine", directoryHint: .isDirectory)
+
     static let kernel = state.appending(path: "vmlinux")
     static let initfs = state.appending(path: "initfs.ext4")
     static let log = state.appending(path: "box.log")

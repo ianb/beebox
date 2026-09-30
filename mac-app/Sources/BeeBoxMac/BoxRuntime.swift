@@ -135,7 +135,7 @@ final class BoxRuntime: ObservableObject {
     }
 
     private func prepareDirectories() throws {
-        for dir in [Paths.state, Paths.box, Paths.claudeConfig] {
+        for dir in [Paths.state, Paths.box, Paths.claudeConfig, Paths.machine] {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
     }
@@ -205,6 +205,13 @@ final class BoxRuntime: ObservableObject {
             config.hostname = "beebox"
             config.mounts.append(.share(source: Paths.box.path, destination: "/data/box"))
             config.mounts.append(.share(source: Paths.claudeConfig.path, destination: "/app/claude-config"))
+            config.mounts.append(.share(source: Paths.machine.path, destination: "/app/machine"))
+            config.process.environmentVariables += [
+                "BBX_AUTH_FILE=/app/machine/bbx-auth.json",
+                "BBX_SECRETS_FILE=/app/machine/secrets.json",
+                // Claude writes transcripts under CLAUDE_CONFIG_DIR, not ~/.claude.
+                "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
+            ]
             config.process.stdout = log
             config.process.stderr = log
             if let arguments {
