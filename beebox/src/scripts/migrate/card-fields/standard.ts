@@ -26,7 +26,7 @@
  */
 
 import { isRecord } from "../../../shared/is-record.js";
-import { UnmappedStatusError, type FieldEdit, type FieldEditPlan } from "./field-edits.js";
+import { UnmappedStatusError, type FieldEdit, type FieldEditPlan } from "../../../core/card-fields/field-edits.js";
 
 const JOB_TYPES = new Set(["chat-job", "intake-job", "contains-backfill-job", "question-followup-job", "todo-review-job"]);
 

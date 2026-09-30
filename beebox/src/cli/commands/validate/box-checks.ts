@@ -13,6 +13,8 @@ import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../.
 import { BOX_ROOT_VOCABULARY } from "../../../shared/box-root-vocabulary.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { loadPresentationConfig } from "../../../core/box/presentation.js";
+import { loadBoxSchemas } from "../../../schemas.js";
+import { reservedFieldProblems } from "../../../cards/reserved-fields.js";
 
 /**
  * Check for schemas left in the legacy `_config/schemas/` location.
@@ -81,4 +83,10 @@ export async function checkReservedSegmentErrors(boxRoot: string): Promise<strin
     }
   }
   return errors;
+}
+
+/** One line per reserved field name a box-local schema declares (`<type>.<field>: <what to do>`). */
+export async function boxSchemaFieldWarnings(boxRoot: string): Promise<string[]> {
+  const { cardSchemas } = await loadBoxSchemas(boxRoot);
+  return cardSchemas.flatMap((schema) => reservedFieldProblems(schema).map((p) => `${schema.type}.${p.field}: ${p.message}`));
 }

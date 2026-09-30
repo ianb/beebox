@@ -15,7 +15,7 @@ import { convertFile } from "../../../src/scripts/migrate/webpage-card.js";
 import { parse } from "yaml";
 import { splitCardContent } from "../../../src/cards/frontmatter.js";
 import { planSourceFields } from "../../../src/scripts/migrate/card-fields/source.js";
-import { applyFieldEdits } from "../../../src/scripts/migrate/card-fields/field-edits.js";
+import { applyFieldEdits } from "../../../src/core/card-fields/field-edits.js";
 
 // This migration writes the webpage shape of its time (`source`, `captured`);
 // the later `source-fields-2026-09` migration moves those into `sources`.

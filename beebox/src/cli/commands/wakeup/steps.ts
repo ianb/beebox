@@ -16,6 +16,7 @@ import { getSystemState } from "../../../core/state.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../../lib/git/core.js";
 import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
+import { collectExistingJobRefs, releaseTakenItems } from "./job-refs.js";
 import { createContainsBackfillJobTemplate } from "../../../schemas/contains-backfill-job.js";
 import { readCardFrontmatter, collectRefs } from "../../../core/card-io.js";
 import { resolveBoxRelativeRef, realpathContained } from "../../../lib/box-containment.js";
@@ -188,7 +189,10 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
  * have their own pipelines) and creates unscoped intake jobs (no
  * `connector`). Under a connector-scoped wakeup, scans only
  * `connector.inboxPaths` and tags jobs `connector: <name>`, so the
- * reactor's connector filter routes them back to the same partial run.
+ * reactor's connector filter routes them back to the same partial run. A
+ * scoped run also takes items held only by intake jobs its reactor would skip
+ * (another connector's, or unscoped): the item joins the scoped job and leaves
+ * the other one, which is deleted when that empties it.
  */
 export async function createIntakeJobsForUnjobbed(
   boxRoot: string,
@@ -200,10 +204,10 @@ export async function createIntakeJobsForUnjobbed(
   // Subdirectories with their own pipelines — skip these on a full scan.
   const EXCLUDED_SUBDIRS = ["feedback"];
 
-  const existingRefs = await collectExistingJobRefs(boxRoot);
+  const { held, takeable } = await collectExistingJobRefs(boxRoot, connector?.name);
   const unjobbedItems = await findUnjobbedInboxItems(boxRoot, {
     connector,
-    existingRefs,
+    existingRefs: held,
     excludedSubdirs: EXCLUDED_SUBDIRS,
   });
   if (unjobbedItems.length === 0) return 0;
@@ -242,6 +246,10 @@ export async function createIntakeJobsForUnjobbed(
     });
   }
 
+  // After the scoped job holds the items, so an interrupted run leaves an item
+  // held twice rather than by nothing.
+  jobPaths.push(...(await releaseTakenItems(boxRoot, { items: unjobbedItems, takeable })));
+
   if (jobPaths.length > 0) {
     await stageAndCommitPaths(boxRoot, {
       paths: jobPaths,
@@ -254,32 +262,6 @@ export async function createIntakeJobsForUnjobbed(
   }
 
   return unjobbedItems.length;
-}
-
-/**
- * Collect every item ref from existing job cards, so the inbox scan can
- * skip items that are already tracked. Refs are read from the job's YAML
- * frontmatter (`items: [{ref}]`, `thread: {ref}`, …).
- */
-async function collectExistingJobRefs(boxRoot: string): Promise<Set<string>> {
-  const jobsDir = getBoxDir(boxRoot, "jobs");
-  const existingRefs = new Set<string>();
-  try {
-    const jobFiles = await fs.readdir(jobsDir);
-    for (const file of jobFiles) {
-      // Matches current `-job.card` types (intake-job, chat-job, ...) and
-      // legacy dotted names like `.intake.job.card`.
-      if (!file.endsWith("job.card")) continue;
-      const content = await fs.readFile(path.join(jobsDir, file), "utf-8");
-      const fm = readCardFrontmatter(content);
-      if (fm) {
-        for (const ref of collectRefs(fm)) existingRefs.add(ref);
-      }
-    }
-  } catch (_e) {
-    // No jobs dir yet (ENOENT) — treat as no existing refs.
-  }
-  return existingRefs;
 }
 
 /**

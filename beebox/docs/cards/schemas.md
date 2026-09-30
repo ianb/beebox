@@ -321,6 +321,9 @@ there, and readers expect it to mean something. Before adding one:
    and gives box-local schemas a `box-schema-fields` health warning. Each
    message says what to write instead. The one allowed redeclaration is
    `title: z.string()`, which makes the title required.
+   A box moves its cards off a reserved name with a field map and
+   `bbx migrate-fields` (`src/core/card-fields/map.ts`; the box schema doc
+   shows the map format).
 3. **Record the fact itself, not a lifecycle.** The result (`transcript`), the
    failure (`transcription-error`), or a named boolean (`archived: true`),
    not an enum a writer has to remember to move.

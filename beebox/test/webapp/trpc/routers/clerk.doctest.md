@@ -88,6 +88,82 @@ print(err2);
 BAD_REQUEST
 ```
 
+## a retried capture replays the first result instead of writing again
+
+The extension sends one `captureId` per capture and resends it when it retries
+a lost response. The retry returns the same paths, and the box holds one
+webpage card and one commit. Two concurrent attempts with one id also write
+once. A capture without an id (an older extension) still writes normally.
+
+```ts continue
+const { execFileSync } = await import("node:child_process");
+const commits = () => execFileSync("git", ["rev-list", "--count", "HEAD"], { cwd: box.root, encoding: "utf-8" }).trim();
+const webpages = async () => (await readdir(path.join(box.root, "_content/inbox"))).filter((n) => n.endsWith(".webpage.card")).length;
+const capture = {
+  url: "https://example.com/retry",
+  title: "Retry Me",
+  readableMarkdown: "Retry body.",
+  frozenHtml: "<html>frozen</html>",
+  captureId: "30000000-0000-4000-8000-000000000000",
+};
+const before = { commits: commits(), webpages: await webpages() };
+const firstCapture = await caller(box.root).clerk.commentary(capture);
+const [retryA, retryB] = await Promise.all([
+  caller(box.root).clerk.commentary(capture),
+  caller(box.root).clerk.commentary(capture),
+]);
+const card = await readFile(path.join(box.root, firstCapture.created[0]), "utf-8");
+print(`paths: ${firstCapture.created.map((p) => path.basename(p).replace(/_[\d-]+T[\dT-]+/u, "_<ts>")).join(", ")}`);
+print(`replayed: ${JSON.stringify(retryA) === JSON.stringify(firstCapture) && JSON.stringify(retryB) === JSON.stringify(firstCapture)}`);
+print(`stores capture-id: ${card.includes(`capture-id: ${capture.captureId}`)}`);
+print(`new webpage cards: ${(await webpages()) - before.webpages}`);
+print(`new commits: ${Number(commits()) - Number(before.commits)}`);
+=>
+paths: Retry_Me_<ts>.webpage.card, page.frozen, Retry_Me_<ts>.commentary.card
+replayed: true
+stores capture-id: true
+new webpage cards: 1
+new commits: 1
+```
+
+## a retry after a crash between the write and its commit commits the capture
+
+The first attempt wrote its cards but died before committing. The retry finds
+them by `capture-id`, commits them, and acknowledges the capture; git is the
+state, so a replied capture is a committed one.
+
+```ts continue
+const crashed = {
+  url: "https://example.com/crashed",
+  title: "Crashed Once",
+  readableMarkdown: "Crashed body.",
+  captureId: "40000000-0000-4000-8000-000000000000",
+};
+await writeFile(
+  path.join(box.root, "_content/inbox/Crashed_Once_2026-09-30T00-00-00.webpage.card"),
+  `---\ntitle: Crashed Once\nsources:\n  - href: https://example.com/crashed\n    retrieved: 2026-09-30T00:00:00.000Z\ncapture-id: ${crashed.captureId}\n---\nCrashed body.\n`,
+);
+const uncommittedBefore = commits();
+const recovered = await caller(box.root).clerk.commentary(crashed);
+print(`acknowledged: ${recovered.created.length > 0}`);
+print(`new commits: ${Number(commits()) - Number(uncommittedBefore)}`);
+print(`webpage cards for it: ${(await readdir(path.join(box.root, "_content/inbox"))).filter((n) => n.startsWith("Crashed_Once")).length}`);
+=>
+acknowledged: true
+new commits: 1
+webpage cards for it: 1
+```
+
+## a capture ID reused for a different page is a conflict
+
+```ts continue
+const reused = await caller(box.root).clerk.commentary({ ...capture, url: "https://example.com/other" })
+  .then(() => "no-error", (e) => e.code);
+print(reused);
+=>
+CONFLICT
+```
+
 ## tab arrangements are created once and retries are idempotent
 
 ```ts continue

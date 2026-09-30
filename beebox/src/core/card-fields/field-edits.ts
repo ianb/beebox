@@ -1,16 +1,15 @@
 /**
- * Shared pieces for migrations that edit a few frontmatter keys by path
- * (`standard-fields.ts`, `status-fields.ts`, `source-fields.ts`): the edit
- * type, a document-model applier that leaves untouched keys byte-for-byte, the
- * refusal errors, and a CLI runner over a per-type planner.
+ * Editing a few frontmatter keys by path, for the shipped card-field
+ * migrations (`src/scripts/migrate/card-fields/`) and `bbx migrate-fields`:
+ * the edit type, a document-model applier that leaves untouched keys
+ * byte-for-byte, the refusal errors, and the per-card conversion.
  */
 
 import { readFile, writeFile } from "node:fs/promises";
 import { isMap, isScalar, parse as parseYaml, parseDocument, type Document } from "yaml";
-import { runMigration } from "../_harness.js";
-import { splitCardContent } from "../../../cards/frontmatter.js";
-import { typeFromFilename } from "../../../core/card-io.js";
-import { isRecord } from "../../../shared/is-record.js";
+import { splitCardContent } from "../../cards/frontmatter.js";
+import { typeFromFilename } from "../card-io.js";
+import { isRecord } from "../../shared/is-record.js";
 
 /**
  * One change to a card's frontmatter, addressed by key path. A `set` of a new
@@ -43,11 +42,12 @@ export class UnmappedStatusError extends Error {
 }
 
 /** What is wrong with a card's fields, for {@link UnmappedFieldError}. */
-type FieldProblem = "old-and-new" | "not-a-map" | "incomplete" | "two-pointers";
+type FieldProblem = "old-and-new" | "not-a-map" | "not-a-list" | "incomplete" | "two-pointers";
 
 const FIELD_PROBLEM_TEXT: Readonly<Record<FieldProblem, string>> = {
   "old-and-new": "has both the old and the new keys",
   "not-a-map": "is not a map",
+  "not-a-list": "is not a list",
   incomplete: "is missing a key the new shape requires",
   "two-pointers": "has both `ref` and `href`, and the new shape takes one",
 };
@@ -110,33 +110,24 @@ export function applyFieldEdits(frontmatterText: string, edits: readonly FieldEd
   return doc.toString(foldedByDefault ? {} : { lineWidth: 0 });
 }
 
+/** A per-type planner: the edits for one card's parsed frontmatter. */
+export type FieldPlanner = (type: string, fm: Record<string, unknown>) => FieldEditPlan;
+
+export type ConvertOutcome = "converted" | "already";
+
 /**
- * Run a field-edit migration from the command line: every card whose type
- * `plan` handles is planned, and changed cards are rewritten through
- * {@link applyFieldEdits}. A planner that throws fails that card only.
+ * Plan and (with `apply`) rewrite one card file. "already" when the card has
+ * no frontmatter, no type, or nothing to change. A planner that throws
+ * propagates: the caller decides how to report a refused card.
  */
-export async function runFieldEditMigration({ description, types, plan }: {
-  description: string;
-  types: ReadonlySet<string>;
-  plan: (type: string, fm: Record<string, unknown>) => FieldEditPlan;
-}): Promise<void> {
-  await runMigration({
-    description,
-    match: (name) => {
-      const type = typeFromFilename(name);
-      return type !== undefined && types.has(type);
-    },
-    convert: async (file, { apply, warnings }) => {
-      const type = typeFromFilename(file);
-      const split = splitCardContent(await readFile(file, "utf8"));
-      if (type === undefined || !split.hasFrontmatter) return "already";
-      const parsed: unknown = parseYaml(split.frontmatterText);
-      if (!isRecord(parsed)) return "already";
-      const planned = plan(type, parsed);
-      for (const warning of planned.warnings) warnings.push(file, warning);
-      if (planned.edits.length === 0) return "already";
-      if (apply) await writeFile(file, `---\n${applyFieldEdits(split.frontmatterText, planned.edits)}---\n${split.body}`);
-      return "converted";
-    },
-  });
+export async function convertCardFile(file: string, { plan, apply }: { plan: FieldPlanner; apply: boolean }): Promise<{ outcome: ConvertOutcome; warnings: string[] }> {
+  const type = typeFromFilename(file);
+  const split = splitCardContent(await readFile(file, "utf8"));
+  if (type === undefined || !split.hasFrontmatter) return { outcome: "already", warnings: [] };
+  const parsed: unknown = parseYaml(split.frontmatterText);
+  if (!isRecord(parsed)) return { outcome: "already", warnings: [] };
+  const planned = plan(type, parsed);
+  if (planned.edits.length === 0) return { outcome: "already", warnings: planned.warnings };
+  if (apply) await writeFile(file, `---\n${applyFieldEdits(split.frontmatterText, planned.edits)}---\n${split.body}`);
+  return { outcome: "converted", warnings: planned.warnings };
 }

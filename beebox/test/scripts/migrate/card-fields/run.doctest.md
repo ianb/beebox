@@ -10,7 +10,7 @@ together, and whichever registry entry runs first converts everything.
 ```ts setup
 import { parse, stringify } from "yaml";
 import { planCardFields, CARD_FIELD_TYPES } from "../../../../src/scripts/migrate/card-fields/run.js";
-import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
+import { applyFieldEdits } from "../../../../src/core/card-fields/field-edits.js";
 
 function run(type: string, fm: Record<string, unknown>): string {
   const plan = planCardFields(type, fm);

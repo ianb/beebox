@@ -5,6 +5,7 @@
  * generated `CommentaryPayload`) requires non-empty title and readableMarkdown;
  * optional fields must be omitted, not null. When extraction yields no readable
  * content we fall back to a markdown link — never silently drop the capture.
+ * The `captureId` is the box's retry-dedupe key (stored as `capture-id`).
  */
 
 import type { CommentaryPayload } from "../contract/clerk-contract.generated.js";
@@ -34,12 +35,20 @@ export function buildCommentaryPayload(params: {
   frozenHtml: string | null;
   destinationDir: string | null;
   timestamp: string;
-}): CommentaryPayload {
-  const { page, frozenHtml, destinationDir, timestamp } = params;
+  /** One id per user-started capture; retries of that capture resend it. */
+  captureId: string;
+}): CommentaryPayload & { captureId: string } {
+  const { page, frozenHtml, destinationDir, timestamp, captureId } = params;
   const title = page.title !== "" ? page.title : page.url;
   const readableMarkdown =
     page.markdown !== "" ? page.markdown : linkMarkdown(title, page.url);
-  const payload: CommentaryPayload = { url: page.url, title, readableMarkdown, timestamp };
+  const payload: CommentaryPayload & { captureId: string } = {
+    url: page.url,
+    title,
+    readableMarkdown,
+    timestamp,
+    captureId,
+  };
   if (page.siteName !== null && page.siteName !== "") payload.siteName = page.siteName;
   if (page.byline !== null && page.byline !== "") payload.byline = page.byline;
   if (page.excerpt !== null && page.excerpt !== "") payload.excerpt = page.excerpt;

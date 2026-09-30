@@ -450,17 +450,17 @@ wt_create_locked() {
 EOF
 
   # 5. Refresh box hooks: the cloned box's .git/hooks/pre-commit and
-  # .claude/settings.json have the source box's bbx path baked in (often the
-  # pre-migration path). Re-run bbx engine init against the cloned box from the
-  # WORKTREE's bbx so its hooks point at the worktree's bbx.
-  # Idempotent (bbx engine init is "initialize or update").
+  # .claude/settings.json have the source box's bbx path baked in. Re-run
+  # bbx init against the cloned box from the WORKTREE's bbx so its hooks point
+  # at the worktree's bbx. Idempotent (bbx init is "initialize or update").
   if [ -d "$BOX_DEST" ]; then
     echo "[worktree-create] refreshing box hooks (worktree's bbx -> $BOX_DEST)..." >&2
-    # BBX_HOOK_BIN: without it, resolveBbxBin() detects it's running from a linked
-    # worktree and rebases the hook's embedded bbx path back onto the MAIN
-    # checkout, defeating this refresh (a stale main bbx then rejects cards using
-    # in-flight schema changes; see
-    # issues/closed/bugs/2026-07-10-box-hook-stale-cross-checkout-bbx.md).
+    # BBX_HOOK_BIN is belt-and-braces: resolveBbxBin() already stamps the bbx of
+    # the engine the box links (node_modules/beebox -> this worktree's beebox/),
+    # and every later reinstall (docs refresh, migrations, the convergence
+    # sweep) resolves the same way. Without that link it would rebase onto the
+    # MAIN checkout, whose stale bbx rejects cards using in-flight schema changes
+    # (issues/closed/bugs/2026-07-10-box-hook-stale-cross-checkout-bbx.md).
     (exec 198>&-; BBX_HOOK_BIN="$worktree_path/beebox/bin/bbx" \
       "$worktree_path/beebox/bin/bbx" init "$BOX_DEST" >/dev/null)
   fi
