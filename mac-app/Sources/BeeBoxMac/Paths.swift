@@ -6,7 +6,13 @@ enum Paths {
     static let home = FileManager.default.homeDirectoryForCurrentUser
 
     /// Runtime state: image store, container roots, kernel, initfs, logs.
-    static let state = home.appending(path: "Library/Application Support/BeeBoxSpike", directoryHint: .isDirectory)
+    /// `BEEBOX_STATE_DIR` overrides it, for a second, throwaway instance.
+    static let state: URL = {
+        if let override = ProcessInfo.processInfo.environment["BEEBOX_STATE_DIR"] {
+            return URL(filePath: override, directoryHint: .isDirectory)
+        }
+        return home.appending(path: "Library/Application Support/BeeBoxSpike", directoryHint: .isDirectory)
+    }()
 
     /// The box itself: a folder the user can see in Finder. Overridable for the spike.
     static let box: URL = {

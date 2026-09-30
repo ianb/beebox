@@ -163,17 +163,29 @@ final class BoxRuntime: ObservableObject {
         }
     }
 
+    /// Loads the image from the spike's OCI layout, replacing the stored one
+    /// when the layout holds a different digest (a rebuilt image).
     private func loadImage(_ store: ImageStore) async throws -> Image {
+        let layout = Paths.spikeInputs.appending(path: "oci/layout")
+        let wanted = try layoutDigest(layout)
         if let image = try? await store.get(reference: Self.imageReference) {
-            return image
+            if image.digest == wanted { return image }
+            NSLog("beebox: image changed (\(image.digest) → \(wanted)); reloading")
+            try await store.delete(reference: Self.imageReference, performCleanup: true)
         }
         phase = .working("Loading the beebox image…")
-        let layout = Paths.spikeInputs.appending(path: "oci/layout")
         let images = try await store.load(from: layout)
         guard let image = images.first else {
             throw RuntimeError("no image in \(layout.path)")
         }
         return image
+    }
+
+    private func layoutDigest(_ layout: URL) throws -> String {
+        struct Index: Decodable { struct Manifest: Decodable { let digest: String }; let manifests: [Manifest] }
+        let index = try JSONDecoder().decode(Index.self, from: Data(contentsOf: layout.appending(path: "index.json")))
+        guard let digest = index.manifests.first?.digest else { throw RuntimeError("no manifest in \(layout.path)") }
+        return digest
     }
 
     private func boxIsInitialized() -> Bool {
