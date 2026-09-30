@@ -13,8 +13,22 @@ final class BoxRuntime: ObservableObject {
         case failed(String)
     }
 
+    /// A start or stop in progress, for the menu's elapsed/expected line.
+    struct Progress: Equatable {
+        var operation: TimedOperation
+        let startedAt: Date
+    }
+
     @Published private(set) var phase: Phase = .stopped
     @Published private(set) var memorySummary = ""
+    @Published private(set) var progress: Progress?
+    /// The last completed start or stop and how long it took.
+    @Published private(set) var lastCompleted: (operation: TimedOperation, seconds: TimeInterval)?
+    /// Ticks once a second while an operation is in progress, so the menu's
+    /// elapsed time moves.
+    @Published private(set) var now = Date()
+    private(set) var timings = Timings.load()
+    private var ticker: Timer?
 
     static let containerID = "box"
     static let imageReference = "beebox:phase0"
@@ -50,6 +64,8 @@ final class BoxRuntime: ObservableObject {
         forwarder = nil
         let stopping = Date()
         defer { NSLog("beebox: stopped in \(String(format: "%.1f", Date().timeIntervalSince(stopping)))s") }
+        let hadContainer = container != nil
+        if hadContainer { begin(.stop) }
         if let container {
             // Clear first so the exit watcher does not report this as a crash.
             self.container = nil
@@ -82,6 +98,28 @@ final class BoxRuntime: ObservableObject {
         }
         phase = .stopped
         memorySummary = ""
+        if hadContainer { finish(succeeded: true) }
+    }
+
+    private func begin(_ operation: TimedOperation) {
+        progress = Progress(operation: operation, startedAt: Date())
+        now = Date()
+        ticker?.invalidate()
+        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.now = Date() }
+        }
+    }
+
+    /// Ends the operation; a successful one is recorded for future estimates.
+    private func finish(succeeded: Bool) {
+        ticker?.invalidate()
+        ticker = nil
+        guard let progress else { return }
+        self.progress = nil
+        guard succeeded else { return }
+        let seconds = Date().timeIntervalSince(progress.startedAt)
+        timings.record(progress.operation, seconds: seconds)
+        lastCompleted = (progress.operation, seconds)
     }
 
     private var isFailed: Bool {
@@ -92,6 +130,7 @@ final class BoxRuntime: ObservableObject {
     private func run() async {
         do {
             let started = Date()
+            begin(.start)
             phase = .working("Preparing runtime…")
             try prepareDirectories()
             try prepareKernelAndInitfs()
@@ -102,6 +141,7 @@ final class BoxRuntime: ObservableObject {
                 network: try VmnetNetwork()
             )
             let image = try await loadImage(manager.imageStore)
+            if !boxIsInitialized() { progress?.operation = .firstStart }
             let log = try LogWriter(url: Paths.log)
             self.log = log
 
@@ -130,9 +170,11 @@ final class BoxRuntime: ObservableObject {
             let base = URL(string: "http://localhost:\(Self.localPort)/")!
             NSLog("beebox: ready in \(String(format: "%.1f", Date().timeIntervalSince(started)))s at \(base) (VM \(vmBase))")
             phase = .running(base.appending(path: "box/"))
+            finish(succeeded: true)
             watch(container)
         } catch {
             NSLog("beebox: start failed: \(error)")
+            finish(succeeded: false)
             phase = .failed(String(describing: error))
         }
     }
@@ -174,6 +216,7 @@ final class BoxRuntime: ObservableObject {
             try await store.delete(reference: Self.imageReference, performCleanup: true)
         }
         phase = .working("Loading the beebox image…")
+        progress?.operation = .firstStart
         let images = try await store.load(from: layout)
         guard let image = images.first else {
             throw RuntimeError("no image in \(layout.path)")

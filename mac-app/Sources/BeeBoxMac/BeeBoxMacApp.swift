@@ -67,6 +67,7 @@ struct BoxMenu: View {
 
     var body: some View {
         Text(runtime.statusText)
+        ForEach(runtime.timingLines, id: \.self) { Text($0) }
         if !runtime.memorySummary.isEmpty {
             Text(runtime.memorySummary)
         }
@@ -101,6 +102,41 @@ extension BoxRuntime {
     var isFailedPhase: Bool {
         if case .failed = phase { return true }
         return false
+    }
+
+    /// Elapsed time and what to expect while starting or stopping; the last
+    /// duration otherwise.
+    var timingLines: [String] {
+        if let progress {
+            let elapsed = now.timeIntervalSince(progress.startedAt)
+            let (estimate, measured) = timings.estimate(progress.operation)
+            var lines = ["\(formatDuration(elapsed)) so far"]
+            let range = timings.range(progress.operation)
+            let wide = range.map { $0.upperBound > max($0.lowerBound * 3, $0.lowerBound + 5) } ?? false
+            if let range, elapsed > range.upperBound * 1.5 {
+                lines[0] += " — longer than recent runs (up to \(formatDuration(range.upperBound)))"
+            } else if let range, wide {
+                lines[0] += " · recently between \(formatDuration(range.lowerBound)) and \(formatDuration(range.upperBound))"
+            } else if measured {
+                lines[0] += " · usually about \(formatDuration(estimate))"
+            } else {
+                lines[0] += " · allow up to about \(formatDuration(estimate)) the first time"
+            }
+            if !measured, elapsed > estimate * 1.5 {
+                lines[0] += " — longer than expected"
+            }
+            if phase == .working("Waiting for the server…"), elapsed > 60 {
+                lines.append("The box may be waiting on a lock from an earlier forced stop; that clears within 5 minutes.")
+            }
+            return lines
+        }
+        guard let last = lastCompleted else { return [] }
+        let verb = switch last.operation {
+        case .firstStart: "First start took"
+        case .start: "Started in"
+        case .stop: "Stopped in"
+        }
+        return ["\(verb) \(formatDuration(last.seconds))"]
     }
 
     var isRunning: Bool {

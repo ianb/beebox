@@ -33,6 +33,7 @@ enum Paths {
     static let kernel = state.appending(path: "vmlinux")
     static let initfs = state.appending(path: "initfs.ext4")
     static let log = state.appending(path: "box.log")
+    static let timings = state.appending(path: "timings.json")
 
     /// Spike-only inputs, prepared outside the app: an OCI layout of the image,
     /// and the kernel + initfs the `container` CLI already downloaded. A real

@@ -1,5 +1,5 @@
 ---
-title: "`bbx engine serve` takes ~33 s to exit on SIGTERM when a browser has a chat open; a supervisor that kills sooner leaks a box-work lease"
+title: "`bbx engine serve` takes ~30 s to exit on SIGTERM while a browser is attached; a supervisor that kills sooner leaks a box-work lease"
 workstream: unattached
 area: beebox
 labels: [install]
@@ -34,6 +34,22 @@ every restart with a browser open.
 A similar symptom in the hub was fixed earlier:
 [hub-shutdown-hits-the-sigterm-timeout](../closed/bugs/2026-09-09-hub-shutdown-hits-the-sigterm-timeout.md).
 Check whether the box server has the same cause.
+
+## Controlled test (2026-09-30)
+
+Same box, same image, SIGTERM sent after the server was ready:
+
+- No browser attached: server exited 0.0 s after SIGTERM.
+- A signed-in browser on the box (no chat turn, no pending work): exited
+  30.0 s after SIGTERM.
+
+So the slow stop follows an attached client, not pending work. Lead, not
+yet verified: the tRPC WebSocket keepalive pings every 30 s
+(`beebox/src/webapp/server-box-scope.ts:232`, `pingMs: 30_000`), and
+`closeAllConnections()` closes HTTP connections but not upgraded
+WebSockets, so `server.close()` may wait until the next keepalive cycle
+drops the socket. Closing open WebSocket clients explicitly at shutdown
+would test it.
 
 ## To reproduce
 
