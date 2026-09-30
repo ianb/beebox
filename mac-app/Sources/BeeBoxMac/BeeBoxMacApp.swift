@@ -89,7 +89,7 @@ extension BoxRuntime {
         switch phase {
         case .stopped: "Stopped"
         case .working(let step): step
-        case .running(let url): "Running at \(url.host() ?? "")"
+        case .running(let url): "Running at \(url.host() ?? ""):\(url.port.map(String.init) ?? "")"
         case .failed(let reason): "Failed: \(reason)"
         }
     }

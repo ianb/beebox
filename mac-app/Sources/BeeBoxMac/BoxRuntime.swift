@@ -18,12 +18,20 @@ final class BoxRuntime: ObservableObject {
 
     static let containerID = "box"
     static let imageReference = "beebox:phase0"
-    static let serverPort = 3210
+    static let serverPort: UInt16 = 3210
+    /// Stable local port for the browser. `BEEBOX_PORT` overrides it.
+    static let localPort: UInt16 = {
+        if let override = ProcessInfo.processInfo.environment["BEEBOX_PORT"], let port = UInt16(override) {
+            return port
+        }
+        return 3280
+    }()
 
     private var manager: ContainerManager?
     private var container: LinuxContainer?
     private var log: LogWriter?
     private var statsTask: Task<Void, Never>?
+    private var forwarder: PortForwarder?
 
     var firstRunSetupURL: URL? {
         guard case .running(let boxURL) = phase, let path = log?.firstRunSetupPath else { return nil }
@@ -38,6 +46,8 @@ final class BoxRuntime: ObservableObject {
     func stop() async {
         statsTask?.cancel()
         statsTask = nil
+        forwarder?.stop()
+        forwarder = nil
         let stopping = Date()
         defer { NSLog("beebox: stopped in \(String(format: "%.1f", Date().timeIntervalSince(stopping)))s") }
         if let container {
@@ -108,10 +118,14 @@ final class BoxRuntime: ObservableObject {
             guard let ip = container.interfaces.first?.ipv4Address.address else {
                 throw RuntimeError("the VM has no network interface")
             }
-            let base = URL(string: "http://\(ip):\(Self.serverPort)/")!
+            let vmBase = URL(string: "http://\(ip):\(Self.serverPort)/")!
             phase = .working("Waiting for the server…")
-            try await waitForServer(base)
-            NSLog("beebox: ready in \(String(format: "%.1f", Date().timeIntervalSince(started)))s at \(base)")
+            try await waitForServer(vmBase)
+            let forwarder = try PortForwarder(localPort: Self.localPort, targetHost: "\(ip)", targetPort: Self.serverPort)
+            try await forwarder.start()
+            self.forwarder = forwarder
+            let base = URL(string: "http://localhost:\(Self.localPort)/")!
+            NSLog("beebox: ready in \(String(format: "%.1f", Date().timeIntervalSince(started)))s at \(base) (VM \(vmBase))")
             phase = .running(base.appending(path: "box/"))
             watch(container)
         } catch {

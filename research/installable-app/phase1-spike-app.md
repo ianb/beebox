@@ -69,9 +69,14 @@ high-water mark. Levers, cheapest first:
 
 ## Gaps before this is an app for other people
 
-- **Stable address.** The VM gets a new IP on every launch (192.168.64.3,
-  65.2, 66.2 across three launches). Bookmarks and the iOS pairing link need
-  a fixed `localhost` port forwarded to the VM.
+- **Stable address — fixed in the spike, and required.** The VM gets a new
+  IP on every launch (192.168.64.3, 65.2, 66.2 across three launches). The
+  VM address is also not a browser secure context, so `crypto.randomUUID` is
+  undefined and the web UI hangs on "Loading Bee Box…" right after sign-in
+  (`beebox/src/frontend/src/components/chat/conversation/use-conversation-machine.ts:40`).
+  The app now forwards `127.0.0.1:3280` to the VM (`PortForwarder.swift`,
+  raw TCP so WebSockets pass). The boxholder signed in and sent a chat
+  message through it.
 - **Image delivery.** The spike loads a locally exported OCI layout and
   borrows the kernel and initfs the `container` CLI downloaded. An app pulls
   a published image and bundles a kernel and initfs.
