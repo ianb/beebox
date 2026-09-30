@@ -50,14 +50,11 @@ async function makeTmpDir() {
 // the installers → git init + commit at the box root (fresh only).
 //
 // The commit deliberately bypasses hooks (`--no-verify`), unlike production
-// `bbx init`: `installValidationHooks` embeds whichever `bbx` `resolveBbxBin()`
-// resolves to, which — inside a linked git worktree — is the STABLE MAIN
-// CHECKOUT's `bbx` (by design, so a hook never points at an ephemeral
-// worktree; see `install-validation-hooks.ts`'s module doc). That main
-// checkout may not have this branch's fix yet, so letting the real
-// pre-commit hook fire here would make the doctest's pass/fail depend on
-// unrelated, unmerged state rather than the code under test. The hook's
-// CONTENT is verified statically instead of executing it.
+// `bbx init`: the hook would run a full `bbx` process (the box's own engine,
+// via the `node_modules/beebox` link `scaffoldBoxRoot` creates — see
+// `resolveBbxBin` in `install-validation-hooks.ts`), which is the hook's
+// behaviour, not this doctest's subject. The hook's CONTENT is verified
+// statically instead of executing it.
 async function fullInit(targetPath) {
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";

@@ -37,64 +37,39 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
 import { z } from "zod";
-import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { resolveBoxEngineBbx, resolveStableCheckoutBbx } from "../lib/box-engine-bin.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { withDocId } from "./docs-gen/shared.js";
 
 /**
  * Resolve `bin/bbx` to embed in a box's git hooks. Embedding an absolute path
- * means the hooks don't depend on the user's PATH.
+ * means the hooks don't depend on the user's PATH. First match wins:
  *
- * The catch: boxes live OUTSIDE the monorepo, so the embedded path is their only
- * link back to a `bbx`, and whichever checkout last ran `bbx` on the box stamps it.
- * A git *worktree*'s checkout (`~/src/beebox-worktrees/<name>/beebox`) is
- * ephemeral — deleted on session exit — so stamping it leaves the hook pointing
- * at a vanished `bbx` that then silently skips validation. So when we're running
- * inside a worktree, resolve to the stable **main checkout**'s `bbx` (via the
- * shared git dir) instead of the worktree's. Degrades to the local path when git
- * isn't available (e.g. the server's rsynced, `.git`-less deploy tree).
- *
- * `BBX_HOOK_BIN` overrides all of the above with an explicit absolute path.
- * For doctests/smoke scripts driving a full `bbx engine init` end-to-end (installing
- * AND immediately exercising a real, executable hook) against a worktree
- * checkout: the worktree-routing logic above would otherwise stamp the
- * MAIN checkout's `bbx`, which can lag behind whatever the worktree is
- * actively developing (e.g. box-package-layout support genuinely absent
- * from `main` mid-plan) — pinning the override to the worktree's own
- * freshly-built `bin/bbx` avoids exercising a stale, incompatible binary.
+ *  1. `BBX_HOOK_BIN` — an explicit absolute path. Field-test boxes and
+ *     doctests that run a real hook right after install pin their own
+ *     checkout's `bbx` with it.
+ *  2. The engine the box depends on (`resolveBoxEngineBbx`: the real path of
+ *     `<box>/node_modules/beebox`, plus `bin/bbx`). Commit-time validation
+ *     then runs the same schemas the box's engine serves: a managed
+ *     worktree's box clone links the worktree's checkout, a dev box links the
+ *     main checkout, a server box has the installed package. Every hook
+ *     reinstall (`bbx init`, docs refresh, migrations, the convergence sweep)
+ *     reaches this answer whichever checkout runs it.
+ *  3. This checkout, rebased onto the main checkout when it is a linked git
+ *     worktree. A box with no installed engine is stamped by whichever
+ *     checkout last ran on it, and a worktree is deleted on session exit, so
+ *     its path would leave a hook that silently skips validation.
+ *  4. This checkout's own path, when git isn't available (e.g. the server's
+ *     rsynced, `.git`-less deploy tree).
  */
-function resolveBbxBin(): string {
+async function resolveBbxBin(boxRoot: string): Promise<string> {
   const override = process.env["BBX_HOOK_BIN"];
   if (override) return override;
-  const local = path.join(PACKAGE_ROOT, "bin", "bbx");
-  try {
-    // stdio: pipe the failure-case stderr instead of letting execFileSync's
-    // default inherit it straight to our own stderr — a released package
-    // (no shipped `.git`) hits this catch on every `bbx engine init`/hook install,
-    // and "not a git repository" leaking out unprompted for something we
-    // already handle gracefully is exactly the noise the monorepo's "quiet
-    // on success" rule bans.
-    const opts = {
-      cwd: PACKAGE_ROOT,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    } satisfies ExecFileSyncOptionsWithStringEncoding;
-    const top = execFileSync("git", ["rev-parse", "--show-toplevel"], opts).trim();
-    const commonDir = execFileSync(
-      "git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], opts,
-    ).trim();
-    const mainTop = path.dirname(commonDir); // main worktree root (== `top` unless we're in a linked worktree)
-    if (top !== "" && mainTop !== "" && mainTop !== top) {
-      // In a linked worktree — rebase PACKAGE_ROOT's repo-relative path onto the main checkout.
-      return path.join(mainTop, path.relative(top, PACKAGE_ROOT), "bin", "bbx");
-    }
-  } catch (_e) {
-    // Not a git repo / git missing — the local checkout path is the best we have.
-  }
-  return local;
+  const boxEngine = await resolveBoxEngineBbx(boxRoot);
+  if (boxEngine !== null) return boxEngine;
+  return resolveStableCheckoutBbx();
 }
 
 const SETTINGS_PATH = ".claude/settings.json";
@@ -404,7 +379,7 @@ async function installIgnoreScaffold(boxRoot: string): Promise<string[]> {
  */
 export async function installValidationHooks(boxRoot: string): Promise<string[]> {
   const changed: string[] = [...(await installIgnoreScaffold(boxRoot))];
-  const bbxBin = resolveBbxBin();
+  const bbxBin = await resolveBbxBin(boxRoot);
   const writeCommand = postToolUseCommand(bbxBin);
   const hookBody = preCommitBody(bbxBin);
 

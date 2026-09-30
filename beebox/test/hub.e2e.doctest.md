@@ -3,9 +3,9 @@
 The seam tests (`hub-router.doctest.md`, `hub-config.doctest.md`) carry the
 real coverage — this one is deliberately lean: build one real fixture box
 (the same symlink trick `scaffoldPackageRoot` uses to make a fixture box
-loadable without a real `pnpm install`, plus a `node_modules/.bin/bbx`
-symlink so the supervisor's own "spawn the box's own installed `bbx`" path
-has something to spawn), start the hub against it for real, wait for
+loadable without a real `pnpm install`; the supervisor's "spawn the box's own
+engine's `bbx`" path resolves through that same `node_modules/beebox` link),
+start the hub against it for real, wait for
 `/healthz` to report the box running, fetch through the hub, then SIGTERM
 the hub and assert the child actually died (no orphans — this repo cares
 about that specifically, see `workstreams-app/src/router/server/listener.ts`'s orphan-resistance
@@ -103,10 +103,10 @@ async function pickFreePort() {
   });
 }
 
-/** Trimmed to what a served box actually needs (skips validation hooks), plus
- *  the `node_modules/.bin/bbx` symlink the supervisor looks for (a real `pnpm install` would populate
- *  this; scaffoldPackageRoot only symlinks `node_modules/beebox`
- *  itself, matching the plan's F1 "no real install yet" note).
+/** Trimmed to what a served box actually needs (skips validation hooks). The
+ *  supervisor spawns `<real path of node_modules/beebox>/bin/bbx`, and
+ *  scaffoldPackageRoot's `node_modules/beebox` symlink is enough for that
+ *  (the plan's F1 "no real install yet" note).
  *
  *  The box IS a Git repository, and that is not incidental: the hub's child
  *  spawn admits the box through `acquireBoxStartup`, whose gate lives in the
@@ -123,17 +123,13 @@ async function makeFixtureBox() {
   await installSchedules(boxRoot);
   await installPersonality(boxRoot);
 
-  const binDir = path.join(boxRoot, "node_modules", ".bin");
-  await fs.mkdir(binDir, { recursive: true });
-  await fs.symlink(path.join(PACKAGE_ROOT, "bin", "bbx"), path.join(binDir, "bbx"));
-
   return { target, boxRoot };
 }
 ```
 
 Rebuild the CLI bundle once, up front, outside the timed readiness wait
-below — the fixture's `node_modules/.bin/bbx` resolves (through the
-`node_modules/beebox` symlink) to THIS checkout's real `bin/bbx`,
+below — the fixture's `node_modules/beebox` symlink resolves to THIS
+checkout, so the supervisor spawns this checkout's real `bin/bbx`,
 which self-heals a stale bundle by rebuilding before running; without a
 fresh bundle here, that rebuild would eat into the supervisor's own
 readiness timeout instead of happening once, up front, on our terms.
