@@ -255,6 +255,39 @@ partway.
   - a root preload that reports `run this test from its package: cd beebox &&
     pnpm exec tap …`.
 
+**Round 4: the fuller path rule, isolated directories.** The four varying-value
+tasks again, each subject in its own randomly named directory. The path rule
+(`beebox/.claude/rules/doctest.md`) now carries six short rules, narration
+first; it loads with any `.doctest.md`, which round 3 confirmed reaches Haiku
+where the skill and syntax reference do not.
+
+| Measure | Round 3 | Round 4 |
+|---|---|---|
+| `=> ?` used | Sonnet 2 of 4, Haiku 0 of 4 | Sonnet 1 of 4, Haiku 1 of 4 (rolling log) |
+| Wildcards in the lock task | Sonnet 3, Haiku 3 (copied) | Sonnet 2, Haiku 0 (booleans via `print`) |
+| Files with a bare `=> true`/`false` share above half | 2 of 8 | 1 of 8 |
+| Subjects reading another subject's file | 1 | 0 |
+
+The first Haiku use of `=> ?` came in this round, with no skill or syntax
+read: the rule is what reached it. Two subjects (one per model) wrote a
+`try { … } catch (e) { e.message }` and expected the block's last expression
+to be the checked value; the split now makes that work. One Sonnet subject,
+finding that `cleanup` runs per test, used `process.on("exit")` instead of
+`ts teardown`: the teardown form needs more prominence in the reference.
+
+**Cross-model review of the code** (Codex, gpt-5.5, 2026-09-29) found four
+defects, all fixed on commit `dfd924ef9`:
+
+- knip's doctest import reader skipped untagged fences, which the runner has
+  always executed;
+- `import … with { type: "json" }` was not rewritten in example blocks;
+- `import type { t }` counted as declaring `t`, which would have dropped the
+  runner's `t` binding;
+- the cross-block hint missed destructured and imported names.
+
+It found no contradiction with the decisions above and did not block landing
+after a full-suite run.
+
 **Experiment caveats.**
 
 - There is one run per task, model and round, so small differences are noise.
@@ -724,26 +757,14 @@ replaces it and never touches an example whose split compiles today.
 
 ## Open design questions
 
-- **Should blocks share scope by default?** Four Sonnet runs expected
-  notebook-style scope. The options are:
-  - keep blocks separate, with the new ReferenceError hint;
-  - make consecutive blocks one test unless a heading or a `new` directive
-    starts another.
-
-  The second changes cleanup attachment and test granularity for 1,004
-  files. Lean: keep blocks separate, and measure the hint first.
-- **"Show, don't assert."** Five tracked doctests use `=> «*»`. One does it on
-  purpose: it prints an outcome line without asserting it. Refusing a bare
-  `«*»` broke those files, so the check was removed. An explicit form for
-  "record this value in the output" may be worth adding. Lean: decide after
-  the guidance has been in use for a while.
-- **Reaching the lighter models.** Haiku ignored the skill and `=> ?`, and
-  copied neighbouring files. The options are:
-  - refresh a few high-traffic doctests as exemplars;
-  - put the three key rules in the path rule, which loads with any
-    `.doctest.md`.
-
-  The path rule now mentions `=> ?`; Haiku still did not use it.
+- **Block scope.** Decided 2026-09-29: blocks stay separate tests; the
+  ReferenceError hint names the declaring block.
+- **"Show, don't assert."** Decided 2026-09-29: a bare `=> «*»` is refused,
+  and `=> «show»` records the value as a TAP comment. The five tracked uses
+  were converted (three to `«show»`, two to real values).
+- **Reaching the lighter models.** Decided 2026-09-29: the path rule carries
+  the key rules (round 4 showed it is the channel that reaches Haiku).
+  Refreshing a few high-traffic doctests as exemplars is still open.
 
 - **File-level cleanup.** `cleanup` tears down only the test it follows
   (`agent-doctest/docs/syntax.md`), so resources shared by several sections
