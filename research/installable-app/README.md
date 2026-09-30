@@ -15,6 +15,7 @@ it asks what an app would add on top of it.
 | [tailscale.md](tailscale.md) | Embedded tsnet helper vs the user's Tailscale; onboarding, Funnel, certificates, iOS, security | Box-owned node + interactive onboarding: adopt. Funnel, TailscaleKit in iOS: reject for now |
 | [comparables.md](comparables.md) | How Home Assistant, Umbrel, Ollama, Open WebUI, Obsidian, OpenClaw, and others package and reach their servers | Per-row dispositions inside |
 | [phase0-apple-container.md](phase0-apple-container.md) | Hands-on: the image under Apple's `container` 1.5.0 with a Finder-visible box folder | Feasible; memory sizing, prebuilt image, and the image gaps are the conditions |
+| [phase1-spike-app.md](phase1-spike-app.md) | Hands-on: a menu-bar app embedding Containerization boots the image and serves a box | Works; memory, stable address, and image delivery are the open items |
 
 ## Findings
 
