@@ -1,9 +1,9 @@
 ---
 title: "Doctest usability: errors that teach, comparisons that show values, a runner that names what hung"
-status: draft
+status: partial
 workstream: doctest-usability
 issues:
-  - ../../../issues/exploration/2026-09-27-doctest-usability-review.md
+  - ../../../issues/closed/exploration/2026-09-27-doctest-usability-review.md
 ---
 # Doctest usability
 
@@ -14,7 +14,7 @@ the comparison and diff, the runner, and the guidance. Nothing here is
 implemented; each track needs the boxholder's approval first.
 
 **Issues addressed:**
-[doctest usability review](../../../issues/exploration/2026-09-27-doctest-usability-review.md).
+[doctest usability review](../../../issues/closed/exploration/2026-09-27-doctest-usability-review.md).
 Related, not closed by this plan:
 [convert `*.test.ts` to doctests](../../../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md)
 (this plan supplies its fit guidance, see Track F), and
