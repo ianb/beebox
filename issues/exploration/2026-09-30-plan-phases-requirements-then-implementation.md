@@ -42,5 +42,11 @@ boxholder wants to consider two phases instead:
 - **Review.** The plan-review format in the bbx-plan skill and cross-model
   review would need a requirements-only mode.
 
+## Leaning (not decided)
+
+The boxholder's current leaning: keep one skill (bbx-plan), but have it produce
+two documents in two phases. The boxholder has not decided whether to do this
+at all.
+
 Related: [ontology-first planning](../closed/exploration/2026-09-17-ontology-first-planning.md),
 which also proposed an earlier phase before architecture.
