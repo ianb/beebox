@@ -28,11 +28,22 @@ export function registerSerializer(fn: Serializer): void {
  *  - everything else gets String()
  */
 export function serialize(value: unknown): string {
+  return serializeWithSource(value).text;
+}
+
+/**
+ * serialize(), plus whether a registered (custom) serializer produced the
+ * text. check() only normalizes an expected literal against default output.
+ */
+export function serializeWithSource(value: unknown): { text: string; custom: boolean } {
   for (const s of serializers) {
     const result = s(value);
-    if (result !== null) return result;
+    if (result !== null) return { text: result, custom: true };
   }
+  return { text: defaultSerialize(value), custom: false };
+}
 
+function defaultSerialize(value: unknown): string {
   if (typeof value === "string") return value;
   if (value === undefined) return "undefined";
   if (value === null) return "null";

@@ -1,13 +1,16 @@
 ---
 title: "Usability review of doctest: look back at its design now that agents write and run it constantly"
-workstream: unattached
+workstream: doctest-usability
 needs: [design]
 area: beebox
 labels: [testing, doctest, agents]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
+resolution: implemented
 ---
+
+Closed: the review is done and its runner, guidance and test-runner changes land with the branch merge of `worktree-doctest-usability` (plan `beebox/docs/plans/doctest-usability.md`). Divergence: plan Track F (fit guidance for the conversion issue) is not done and stays in the plan.
 
 Doctest (`agent-doctest/`) is the default test form in this repository.
 About 1,000 `.doctest.md` files hold about 143,000 non-blank lines, and
@@ -48,7 +51,7 @@ transcripts, commit history, and memory notes.
   volume.
 - **Fit.** Which kinds of test doctest serves badly. This decides which
   `*.test.ts` files should stay code in the
-  [conversion to doctests](../code-quality/2026-09-27-convert-test-ts-files-to-doctests.md).
+  [conversion to doctests](../../code-quality/2026-09-27-convert-test-ts-files-to-doctests.md).
 
 A usability test here means giving agents defined test-writing tasks and
 recording where they go wrong, not only reading the code.
