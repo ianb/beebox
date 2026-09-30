@@ -40,6 +40,6 @@ written, read, and run one way.
 - **Order.** Convert one package at a time, and keep its test count and
   coverage the same across the conversion.
 
-Do the [doctest usability review](../exploration/2026-09-27-doctest-usability-review.md)
+Do the [doctest usability review](../closed/exploration/2026-09-27-doctest-usability-review.md)
 first or alongside. Its findings may change how the converted tests should
 be written.

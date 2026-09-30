@@ -40,7 +40,7 @@
   },
   "tap": {
     "plugin": [
-      "!@tapjs/node-serialize"
+      "!@tapjs/typescript"
     ],
     "node-arg": [
       "--import=tsx"

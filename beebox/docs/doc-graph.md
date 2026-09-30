@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-29T23:20:35Z
-Total documents: 472
+Generated: 2026-09-30T02:24:31Z
+Total documents: 473
 
 ## Issues
 
@@ -224,6 +224,7 @@ Referenced by:
 - docs/plans/codex-session-startup-auth.md:21 (mention) — - `CLAUDE.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
 - docs/plans/container-first.md:79 (mention) — - `CLAUDE.md`, Time discipline: *"Long-running timeouts must count only awake
 - docs/plans/container-first.review.md:711 (mention) — **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
+- docs/plans/doctest-usability.md:355 (mention) — - **Noisy output is a bug** (root `CLAUDE.md`, "Treat unsolicited tool
 - docs/plans/document-comments.md:73 (mention) — - `CLAUDE.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
 - docs/plans/general-browser.md:78 (mention) — - `CLAUDE.md` (monorepo root) — the dev-page casualness carve-out applies to
 - docs/plans/ios-companion-app.md:29 (mention) — - `beebox/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file upload/
@@ -265,7 +266,7 @@ Referenced by:
 - ../.claude/skills/bbx-plan/TEMPLATE.md:34 (mention) — - beebox/CLAUDE.md — conventions, validation contract, "no features
 - ../.claude/skills/browse/references/authentication.md:54 (mention) — live sessions (`beebox/CLAUDE.md`). If you cannot get one, say which findings
 - ../.claude/skills/cross-model/references/claude-runner.md:93 (mention) — recursion: the reviewer loads a CLAUDE.md that tells it to get a cross-model
-- ../.claude/skills/doctest/SKILL.md:18 (mention) — test, per `beebox/CLAUDE.md`). Write prose, then fenced examples.
+- ../.claude/skills/doctest/SKILL.md:14 (mention) — Create `test/<name>.doctest.md`, mirroring the `src/` path (`beebox/CLAUDE.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Test what a real box agent learned from box-loaded guidance such as a box CLAUDE.md, generated agent guide,
 - ../.claude/skills/launch-worktree-session/SKILL.md:161 (mention) — `CLAUDE.md` and `/skill` names. Use the vocabulary the receiving agent will
 - ../CLAUDE.md:7 (link) — - **Main system:** [beebox/CLAUDE.md](beebox/CLAUDE.md).
@@ -6632,6 +6633,25 @@ Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
 
+#### docs/plans/doctest-usability.md
+
+Title: "Doctest usability" | 848 lines | proposal | partial
+
+Referenced by:
+- ../issues/closed/exploration/2026-09-27-doctest-usability-review.md:13 (mention) — Closed: the review is done and its runner, guidance and test-runner changes land with the branch merge of `worktree-doct
+
+References:
+- → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (frontmatter)
+- → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (link)
+- → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
+- → ../issues/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
+- → ../issues/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md (link)
+- → ../issues/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md (link)
+- → ../issues/bugs/2026-09-29-bin-test-doctests-not-run.md (link)
+- → ../issues/bugs/2026-09-29-pnpm-test-unrecognized-path-runs-full-suite.md (link)
+- → CLAUDE.md (mention)
+- → docs/plans/README.md (mention)
+
 #### docs/plans/document-comments.md
 
 Title: "Document comments" | 945 lines | proposal | active
@@ -7267,6 +7287,7 @@ Referenced by:
 - docs/plans/agent-docs.md:52 (mention) — (55 types), the prose docs from `docs/box/`, and a `README.md` index whose
 - docs/plans/asset-annex.md:1080 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/container-first.md:322 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
+- docs/plans/doctest-usability.md:540 (mention) — `README.md` "Custom serializers"). Run today's `matchWithWildcards` on that
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The

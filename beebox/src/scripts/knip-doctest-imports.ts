@@ -19,8 +19,12 @@
  * bindings rather than an opaque module reference.
  */
 
-/** Fences whose bodies are TS/JS. A `bash` fence has no imports worth reading. */
-const CODE_FENCE = /^```(?:ts|tsx|typescript|js|jsx|javascript)\b[^\n]*\n([\S\s]*?)^```/gm;
+/**
+ * Fences the doctest runner executes: TS/JS, or no language at all (the runner
+ * treats an untagged fence as TypeScript). A `bash` fence has no imports worth
+ * reading.
+ */
+const CODE_FENCE = /^```(?:(?:ts|tsx|typescript|js|jsx|javascript)\b[^\n]*)?\n([\S\s]*?)^```/gm;
 
 /** `import ... from "spec"`, including the multi-line named form. */
 const STATIC_IMPORT = /^[\t ]*import\s[\S\s]*?\sfrom\s*(["'])([^"']+)\1;?/gm;

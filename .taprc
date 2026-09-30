@@ -1,0 +1,17 @@
+# Not a test root: the packages with tap suites have their own .taprc.
+#
+# This file exists for its plugin list alone. Every tap in a checkout shares
+# one built runtime (node_modules/@tapjs/test/test-built), and tap rebuilds it
+# whenever the configured plugin set changes. Running tap from the monorepo
+# root used to pick up tap's default set, rebuild the runtime, and break every
+# tap run in progress in that checkout with "Cannot find module
+# .../test-built/dist/esm/index.js" until the next rebuild. Every tap config in
+# the monorepo therefore declares this same plugin list; keep it in sync with
+# beebox/.taprc and the others.
+plugin:
+  - "!@tapjs/typescript"
+# A test started here would run without its package's loaders and helpers;
+# this preload reports the package and the command to use instead.
+node-arg:
+  - --import=tsx
+  - --import=./bin/tap-root-guard.ts

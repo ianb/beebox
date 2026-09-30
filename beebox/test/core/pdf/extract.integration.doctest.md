@@ -88,7 +88,7 @@ const result = skipReason
 
 // One line, whichever path ran — so a skip is visible rather than a silent pass.
 skipReason ? "SKIPPED" : (result.ok ? "EXTRACTED" : `FAILED: ${result.error}`)
-=> «*»
+=> «show»
 
 skipReason ? "ok" : (result.ok ? "ok" : `FAILED: ${result.error}`)
 => ok
@@ -111,7 +111,7 @@ skipReason ? "DoclingDocument" : JSON.parse(await readFile(result.value.jsonPath
 => DoclingDocument
 
 skipReason ? DOCLING_VERSION : result.value.version
-=> «*»
+=> «show»
 ```
 
 Page renders are PNGs Docling wrote — the WebP re-encode happens a layer up, in
