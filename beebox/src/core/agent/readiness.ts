@@ -13,7 +13,7 @@
  * switching (the default is never moved on a guess).
  */
 
-import { AUTH_PROBE_INCONCLUSIVE, type ClaudeCliService } from "../../services/claude-cli.js";
+import { AUTH_PROBE_INCONCLUSIVE, CLI_MISSING, type ClaudeCliService } from "../../services/claude-cli.js";
 import type { CodexAuthStatus, CodexCliService } from "../../services/codex-cli/core.js";
 import { isThirdPartyModel, providerOf } from "../../shared/agent-models.js";
 import { loadAddedModels, loadAgentEngine, loadBoxModel } from "../box/config.js";
@@ -40,6 +40,7 @@ export interface ReadinessServices {
 const usable = (state: ProviderState): boolean => state !== "not-ready";
 
 function claudeState(status: Record<string, unknown>): ProviderState {
+  if (status[CLI_MISSING] === true) return "not-ready";
   if (AUTH_PROBE_INCONCLUSIVE in status) return "unknown";
   return status["loggedIn"] === true ? "ready" : "not-ready";
 }
@@ -75,6 +76,9 @@ export async function checkAgentReadiness(boxRoot: string, services: ReadinessSe
     openrouterState(boxRoot),
   ]);
   const states = { claude, codex, openrouter };
-  const anyReady = usable(claude) || usable(codex) || openrouter === "ready";
-  return { ...states, anyReady, defaultReady: usable(await defaultState(boxRoot, states)) };
+  const defaultReady = usable(await defaultState(boxRoot, states));
+  // A runnable default counts even when it is none of the three (a GLM
+  // model with its key).
+  const anyReady = usable(claude) || usable(codex) || openrouter === "ready" || defaultReady;
+  return { ...states, anyReady, defaultReady };
 }

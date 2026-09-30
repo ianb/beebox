@@ -151,6 +151,33 @@ JSON.stringify([unsure.claude, unsure.defaultReady])
 => false
 ```
 
+## A missing Claude CLI is not a flaky probe
+
+When `claude` cannot be spawned at all, the probe says so. That is "no Claude
+Code here", not a transient non-answer, so it does not keep chat unblocked.
+
+```ts continue
+await patchConfig(box.root, { openrouterModels: [] });
+claudeCli.authStatus = async () => ({ probeInconclusive: true, error: "spawn claude ENOENT", cliMissing: true });
+const missing = await owner.readiness();
+JSON.stringify([missing.claude, missing.anyReady])
+=> ["not-ready",false]
+```
+
+## A runnable default counts even when it is none of the three
+
+A GLM model with its key rides the claude engine without a Claude login. When
+it is the default, chat can run, so the box is not blocked.
+
+```ts continue
+await setSecret({ name: "glm", value: "placeholder-glm-key" });
+await grantSecret({ slug: await boxSlug(box.root), name: "glm", access: "server" });
+await patchConfig(box.root, { agentModel: "glm-5.3" });
+const glm = await owner.readiness();
+JSON.stringify([glm.defaultReady, glm.anyReady])
+=> [true,true]
+```
+
 ## Only the owner can move the default
 
 ```ts continue

@@ -7,8 +7,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
-import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
-import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { useAgentReadiness, useReconcileDefaultAgent } from "../../hooks/useAgentReadiness";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { href, toSearch } from "../../lib/routing";
@@ -58,14 +57,14 @@ export function AgentGate({ children }: { children: ReactNode }) {
 
 /**
  * Box-level effects, mounted once per box open: an owner whose box has no
- * usable agent is taken to Admin → Agents, and a broken default is moved to
- * a provider that works.
+ * usable agent is taken to Admin → Agents (from any page, the admin card's
+ * other tabs included), and a broken default is moved to a provider that
+ * works.
  */
 export function AgentReadinessGuard() {
   const readiness = useAgentReadiness();
   const user = useCurrentUser();
   const isOwner = user?.isOwner === true;
-  const location = useLocation();
   const openAdminAgents = useOpenAdminAgents();
   useReconcileDefaultAgent(isOwner);
   const decided = useRef(false);
@@ -73,8 +72,7 @@ export function AgentReadinessGuard() {
   useEffect(() => {
     if (decided.current || anyReady === undefined || user === null) return;
     decided.current = true;
-    const onAdmin = location.pathname.endsWith(`/views/${SYSTEM_CARD_PATHS.admin}`);
-    if (isOwner && !anyReady && !onAdmin) openAdminAgents({ replace: true });
-  }, [anyReady, user, isOwner, location.pathname, openAdminAgents]);
+    if (isOwner && !anyReady) openAdminAgents({ replace: true });
+  }, [anyReady, user, isOwner, openAdminAgents]);
   return null;
 }
