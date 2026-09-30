@@ -22,8 +22,7 @@ The app does not yet pull an image or carry its own kernel. It reads, from
 ## Build and run
 
 ```sh
-swift build -c release
-codesign --force --sign - --entitlements BeeBoxMac.entitlements .build/release/BeeBoxMac
+./build.sh                  # builds and signs; an unsigned build cannot start a VM
 .build/release/BeeBoxMac
 ```
 
