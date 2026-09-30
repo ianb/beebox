@@ -4,7 +4,9 @@ The `bbx wakeup` command orchestrates several phases. These tests cover the
 individual helper functions that do the filesystem work.
 
 ```ts setup
+import { execSync } from "node:child_process";
 import { join } from "node:path";
+import { execSync } from "node:child_process";
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { initBox } from "../../../../src/core/box/structure/core.js";
@@ -204,6 +206,102 @@ content.includes("connector: gmail")
 
 content.includes("pages-saved")
 => false
+```
+
+### A scoped scan takes items from jobs its reactor would skip
+
+A full wakeup's intake job has no `connector`, and the scoped reactor processes
+only jobs whose `connector` matches. So a scoped scan treats an item held only
+by such a job as unjobbed: the item joins the scoped job and leaves the other
+one. A full scan leaves the item where it is.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+await box.seed("_content/inbox/email/x.email-thread.card", "<email-thread>Hi</email-thread>");
+await box.seed("_content/inbox/email/y.email-thread.card", "<email-thread>Yo</email-thread>");
+await box.seed("_content/inbox/note.memo.card", "<memo>Kept</memo>");
+box.commitAll("add items");
+
+await createIntakeJobsForUnjobbed(box.root);
+const jobsDir = join(box.root, "_bookkeeping/jobs");
+const intakeJobs = async () => (await readdir(jobsDir)).filter((f) => f.endsWith(".intake.job.card")).sort();
+const [unscoped] = await intakeJobs();
+unscoped.endsWith("-inbox.intake.job.card")
+=> true
+
+// A second full scan changes nothing.
+await createIntakeJobsForUnjobbed(box.root)
+=> 0
+```
+
+The gmail-scoped scan takes both email items. The unscoped job keeps the memo,
+and its description counts what remains:
+
+```ts continue
+const fakeGmail = { name: "gmail", inboxPaths: ["_content/inbox/email"] };
+await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail })
+=> 2
+
+const gmailJob = (await intakeJobs()).find((f) => f.endsWith("-gmail.intake.job.card"));
+const gmailContent = await readFile(join(jobsDir, gmailJob), "utf-8");
+[
+  gmailContent.includes("connector: gmail"),
+  gmailContent.includes("ref: _content/inbox/email/x.email-thread.card"),
+  gmailContent.includes("ref: _content/inbox/email/y.email-thread.card"),
+].join(" ")
+=> true true true
+
+const unscopedContent = await readFile(join(jobsDir, unscoped), "utf-8");
+[
+  unscopedContent.includes("email-thread"),
+  unscopedContent.includes("ref: _content/inbox/note.memo.card"),
+  unscopedContent.includes("description: Triage 1 inbox item\n"),
+].join(" ")
+=> false true true
+```
+
+The move is committed with the new job:
+
+```ts continue
+execSync("git status --porcelain", { cwd: box.root }).toString().trim() === ""
+=> true
+```
+
+A job that the move empties is deleted. Here the unscoped job holds only an
+email item:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+await box.seed("_content/inbox/email/x.email-thread.card", "<email-thread>Hi</email-thread>");
+await box.seed(
+  "_bookkeeping/jobs/full.intake.job.card",
+  "---\nstatus: pending\ncreated: 2026-01-01T00:00:00Z\ndescription: Triage 1 inbox item\nitems:\n  - ref: _content/inbox/email/x.email-thread.card\n---\n",
+);
+box.commitAll("setup");
+
+const fakeGmail = { name: "gmail", inboxPaths: ["_content/inbox/email"] };
+await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail })
+=> 1
+
+const jobs = (await readdir(join(box.root, "_bookkeeping/jobs"))).filter((f) => f.endsWith(".intake.job.card"));
+[jobs.includes("full.intake.job.card"), jobs.some((f) => f.endsWith("-gmail.intake.job.card"))].join(" ")
+=> false true
+
+execSync("git status --porcelain", { cwd: box.root }).toString().trim() === ""
+=> true
+```
+
+A scoped scan does not take an item from a job it will process — a second gmail
+scan is a no-op:
+
+```ts continue
+await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail })
+=> 0
 ```
 
 ## cleanupStaleJobs

@@ -68,14 +68,25 @@ export async function createOrAppendIntakeJob(
   opts: IntakeJobOptions
 ): Promise<string> {
   const priority = opts.priority ?? "normal";
-  // Per batching key: two keys never contend (each finds its own pending job),
-  // and narrowing the lock keeps a slow connector from blocking an unrelated
-  // one. The `connector-` prefix keeps a connector named like the unscoped
-  // lock from sharing it.
-  const lockName = opts.connector === undefined
+  return withIntakeKeyLock(opts.boxRoot, {
+    connector: opts.connector, priority, run: () => createOrAppendIntakeJobLocked(opts, priority),
+  });
+}
+
+/**
+ * Run `fn` holding the batching key's locks. Per key: two keys never contend
+ * (each finds its own pending job), and narrowing the lock keeps a slow
+ * connector from blocking an unrelated one. The `connector-` prefix keeps a
+ * connector named like the unscoped lock from sharing it.
+ */
+async function withIntakeKeyLock<T>(
+  boxRoot: string,
+  { connector, priority, run }: { connector: string | undefined; priority: "normal" | "low"; run: () => Promise<T> },
+): Promise<T> {
+  const lockName = connector === undefined
     ? `unscoped-${priority}`
-    : `connector-${safeStem(opts.connector)}-${priority}`;
-  const lockPath = path.join(opts.boxRoot, ".beebox", "intake-job-locks", `${lockName}.lock`);
+    : `connector-${safeStem(connector)}-${priority}`;
+  const lockPath = path.join(boxRoot, ".beebox", "intake-job-locks", `${lockName}.lock`);
   await fs.mkdir(path.dirname(lockPath), { recursive: true });
   // The file lock is keyed on a path, not a card, so it doubles as the
   // in-process key: `withCardLock(lockPath, …)` serializes same-process racers
@@ -83,9 +94,46 @@ export async function createOrAppendIntakeJob(
   return withCardLock(lockPath, () =>
     withFileLock(
       { lockPath, metadata: { purpose: "intake-job", key: lockName }, waitMs: INTAKE_LOCK_WAIT_MS },
-      () => createOrAppendIntakeJobLocked(opts, priority),
+      run,
     ),
   );
+}
+
+/**
+ * Remove `refs` from an intake job's `items`, under the job's batching-key
+ * lock, rewriting its description to the remaining count. Deletes the card
+ * when no items remain — the same unlink `finishJob` does, left for the
+ * caller to commit with its own change. A connector-scoped wakeup uses this
+ * to take items from a job its reactor will not process. Returns false when
+ * the card is gone or held none of the refs.
+ */
+export async function removeItemsFromIntakeJob(opts: {
+  boxRoot: string;
+  jobRelPath: string;
+  refs: string[];
+}): Promise<boolean> {
+  const jobPath = path.join(opts.boxRoot, opts.jobRelPath);
+  const key = await readIntakeJobFields(jobPath);
+  if (key === null) return false;
+  // The loose read skips schema defaults, so an omitted priority is "normal".
+  const priority = key.priority === "low" ? "low" : "normal";
+  return withIntakeKeyLock(opts.boxRoot, { connector: key.connector, priority, run: async () => {
+    // Re-read under the lock: an append may have landed since the key read.
+    const fields = await readIntakeJobFields(jobPath);
+    if (fields === null) return false;
+    const drop = new Set(opts.refs);
+    const kept = fields.items.filter((item) => !drop.has(item.ref));
+    if (kept.length === fields.items.length) return false;
+    if (kept.length === 0) {
+      await fs.unlink(jobPath);
+      return true;
+    }
+    const label = priority === "low" ? "capture item" : "inbox item";
+    fields.description = `Triage ${kept.length} ${label}${kept.length === 1 ? "" : "s"}`;
+    fields.items = kept;
+    await fs.writeFile(jobPath, renderFrontmatterBlock(fields));
+    return true;
+  } });
 }
 
 /** How long an intake-job writer waits for a contending one before failing. */
