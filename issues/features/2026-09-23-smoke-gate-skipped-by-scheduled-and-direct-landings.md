@@ -82,3 +82,24 @@ step. Options for the session that takes this:
 Direct commits on `main` are a process question (the main session is for small
 tasks) more than a tier question. Record them here so a later review can see
 whether they keep appearing.
+
+## Evidence, second window (2026-09-30 review)
+
+Window 2026-09-23T19:38Z to 2026-09-30T19:44Z, same method as above.
+
+- 138 landings; 78 code landings; 57 walked; 21 not walked. The ratio is the
+  same as the first window (38 of 53).
+- Schedule merges with no walk: `worktree-sdk-update` 3 times (`7729ad98a`,
+  `c0696536a`, `34f4e021f`, each `beebox/package.json` + `pnpm-lock.yaml`),
+  and `worktree-supplemental-lint` once (`05a1f8bff`, which touches
+  `beebox/src/frontend/src/router.tsx`).
+- Direct commits on `main` with no walk: 14. Eight of them change frontend
+  source, for example `dc231150e` (tRPC batch routing and retry),
+  `f1bae4d9f` (unsent-message Discard), `342a2f6e9` (PDF view) and
+  `097fdad30` (JSON file view). `8e1f945c1` is an Agent SDK bump made
+  directly on `main`.
+- The other two unwalked landings are a plan-doc-only merge (`b8a43d371`) and
+  a tours-only merge (`c630f8075`). Both are exempt in practice.
+
+No bug filed in this window is traced to an unwalked landing. The hourly
+full-suite run caught no regressions on `main`.
