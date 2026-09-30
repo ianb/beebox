@@ -67,6 +67,30 @@ high-water mark. Levers, cheapest first:
   SIGTERM, waits up to 20 s for the server to exit, then stops the VM.
   Without this the server cannot finish in-flight git work.
 
+## Found during the boxholder's hands-on test (2026-09-30)
+
+- **Accounts lost on restart.** Accounts, secrets, and the session key live
+  in the container user's home, which the app recreated on each start
+  ([container-loses-machine-state-on-recreate](../../issues/bugs/2026-09-30-container-loses-machine-state-on-recreate.md);
+  the Docker install has the same gap). The app now mounts a `machine`
+  folder and sets `BBX_AUTH_FILE` / `BBX_SECRETS_FILE`; the session key has
+  no override, so a restart still signs everyone out.
+- **Claude sign-in through Admin → Agents works inside the VM.** The first
+  chat before that showed CLI-only advice
+  ([agent-login-onboarding-in-web](../../issues/features/2026-09-30-agent-login-onboarding-in-web.md)).
+- **Quit took two clicks** (`terminateLater` left the app running after the
+  box stopped). Quit and SIGTERM now stop the box and exit directly.
+- **A restart waited 5 minutes.** Quitting right after a chat turn: the
+  server printed "Received SIGTERM" but not "Server closed." within the
+  app's 20 s shutdown timeout, was SIGKILLed, and left a box-work lease in
+  `.git/bbx-maintenance/work/`. The next start's maintenance step waited for
+  the lease to go stale (`LOCK_STALE_MS.default`, 5 min) before serving,
+  with no output. An idle box stops in 0.3 s with no leftovers. The timeout is now
+  60 s and the exit time is logged; which close hook is slow after a chat
+  turn is not yet known.
+- **Menu icon** now distinguishes stopped (outline box), starting/stopping
+  (hourglass), serving (filled box), and failed (warning).
+
 ## Gaps before this is an app for other people
 
 - **Stable address — fixed in the spike, and required.** The VM gets a new

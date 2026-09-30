@@ -7,7 +7,7 @@ struct BeeBoxMacApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            BoxMenu(runtime: delegate.runtime)
+            BoxMenu(runtime: delegate.runtime, quit: delegate.stopAndExit)
         } label: {
             BoxIcon(runtime: delegate.runtime)
         }
@@ -28,24 +28,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // same queue.
         signal(SIGTERM, SIG_IGN)
         let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
-        source.setEventHandler { [runtime] in
-            Task { @MainActor in
-                await runtime.stop()
-                exit(0)
-            }
-        }
+        source.setEventHandler { [weak self] in self?.stopAndExit() }
         source.resume()
         termSource = source
         runtime.start()
     }
 
-    /// Stop the VM cleanly before quitting so the box's git state is settled.
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    /// Stop the box, then exit. Quit and SIGTERM both come here; neither goes
+    /// through NSApp.terminate's terminateLater, which left the app running
+    /// after the box stopped (a second Quit was needed).
+    func stopAndExit() {
         Task { @MainActor in
             await runtime.stop()
-            NSApp.reply(toApplicationShouldTerminate: true)
+            exit(0)
         }
-        return .terminateLater
+    }
+
+    /// Anything else that asks the app to terminate (logout, restart) also
+    /// stops the box first.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        stopAndExit()
+        return .terminateCancel
     }
 }
 
@@ -60,6 +63,7 @@ struct BoxIcon: View {
 
 struct BoxMenu: View {
     @ObservedObject var runtime: BoxRuntime
+    let quit: () -> Void
 
     var body: some View {
         Text(runtime.statusText)
@@ -80,7 +84,7 @@ struct BoxMenu: View {
         Button("Show Box Folder") { NSWorkspace.shared.open(Paths.box) }
         Button("Show Log") { NSWorkspace.shared.open(Paths.log) }
         Divider()
-        Button("Quit Bee Box") { NSApp.terminate(nil) }
+        Button(runtime.isRunning ? "Stop Box and Quit" : "Quit Bee Box") { quit() }
     }
 }
 
@@ -99,11 +103,19 @@ extension BoxRuntime {
         return false
     }
 
+    var isRunning: Bool {
+        if case .running = phase { return true }
+        return false
+    }
+
+    /// Filled box: serving. Hourglass: starting or stopping. Outline box:
+    /// stopped. Warning: failed.
     var menuIcon: String {
         switch phase {
         case .running: "shippingbox.fill"
-        case .failed: "exclamationmark.triangle"
-        case .stopped, .working: "shippingbox"
+        case .working: "hourglass"
+        case .failed: "exclamationmark.triangle.fill"
+        case .stopped: "shippingbox"
         }
     }
 }

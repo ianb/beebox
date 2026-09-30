@@ -58,10 +58,13 @@ final class BoxRuntime: ObservableObject {
             // first so it can finish in-flight git work.
             do {
                 try await container.kill(.term)
-                let status = try await container.wait(timeoutInSeconds: 20)
-                NSLog("beebox: server exited \(status.exitCode) after SIGTERM")
+                let signalled = Date()
+                let status = try await container.wait(timeoutInSeconds: 60)
+                NSLog("beebox: server exited \(status.exitCode) \(String(format: "%.1f", Date().timeIntervalSince(signalled)))s after SIGTERM")
             } catch {
-                NSLog("beebox: graceful exit failed, forcing: \(error)")
+                // A forced stop leaves the server's lock files behind; the next
+                // start waits for them to go stale (5 minutes).
+                NSLog("beebox: server did not exit within 60s of SIGTERM, forcing: \(error)")
             }
             do {
                 try await container.stop()
