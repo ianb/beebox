@@ -43,12 +43,14 @@ completed request.
 
 ## Open questions
 
-- **Phrase.** "Checkpoint" is the working name. It is rare in ordinary speech,
-  so false positives are unlikely. Check how the transcriber hears it before
-  committing. See the "set a closed" mishearing in
+- **Phrase.** Not chosen yet. It must be a two-word (or longer) phrase.
+  A single word gives too many false positives: the boxholder may want to talk
+  *about* checkpoints, for example. "Checkpoint" is only the working name for
+  the feature. Test how the transcriber hears the candidate before committing.
+  See the "set a closed" mishearing in
   [the sign-off vocabulary issue](2026-08-16-voice-keyword-vocabulary-close-and-signoff.md),
-  which is the same design space. Alternatives: "more to come", "keep going",
-  "to be continued".
+  which is the same design space. Candidates to test: "more to come",
+  "to be continued", "hold that thought", "checkpoint message".
 - **Agent behavior.** Should the agent reply at all? Options: a one-line
   acknowledgement, silence (no spoken reply in narration mode), or starting
   work quietly. A reply that is spoken aloud interrupts the user who is still
