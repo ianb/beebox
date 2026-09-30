@@ -92,6 +92,9 @@ JSON.stringify(parse(applyFieldEdits(stringify({ units: { intro: { status: "done
 
 refusal("lesson", { segments: { do: "Read", status: "planned" } })
 => lesson segments is not a list; migrate this card by hand
+
+refusal("lesson", { segments: ["Read", { do: "Try", status: "ready" }] })
+=> lesson segments[0] status is not a map; migrate this card by hand
 ```
 
 ## A value the card already carries, unchanged, is not a collision

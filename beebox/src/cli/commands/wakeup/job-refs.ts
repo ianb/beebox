@@ -40,7 +40,11 @@ export async function collectExistingJobRefs(
     // legacy dotted names like `.intake.job.card`.
     if (!file.endsWith("job.card")) continue;
     const fm = readCardFrontmatter(await fs.readFile(path.join(jobsDir, file), "utf-8"));
-    if (!fm) continue;
+    if (!fm) {
+      // Its refs are unknown, so its items may get a second job; say so.
+      console.warn(`wakeup: job card ${file} has unreadable frontmatter; its items are not counted as jobbed`);
+      continue;
+    }
     const skipped = connectorName !== undefined && fm["connector"] !== connectorName && file.endsWith(".intake.job.card");
     for (const ref of collectRefs(fm)) {
       if (!skipped) held.add(ref);

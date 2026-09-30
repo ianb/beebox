@@ -126,6 +126,34 @@ new webpage cards: 1
 new commits: 1
 ```
 
+## a retry after a crash between the write and its commit commits the capture
+
+The first attempt wrote its cards but died before committing. The retry finds
+them by `capture-id`, commits them, and acknowledges the capture; git is the
+state, so a replied capture is a committed one.
+
+```ts continue
+const crashed = {
+  url: "https://example.com/crashed",
+  title: "Crashed Once",
+  readableMarkdown: "Crashed body.",
+  captureId: "40000000-0000-4000-8000-000000000000",
+};
+await writeFile(
+  path.join(box.root, "_content/inbox/Crashed_Once_2026-09-30T00-00-00.webpage.card"),
+  `---\ntitle: Crashed Once\nsources:\n  - href: https://example.com/crashed\n    retrieved: 2026-09-30T00:00:00.000Z\ncapture-id: ${crashed.captureId}\n---\nCrashed body.\n`,
+);
+const uncommittedBefore = commits();
+const recovered = await caller(box.root).clerk.commentary(crashed);
+print(`acknowledged: ${recovered.created.length > 0}`);
+print(`new commits: ${Number(commits()) - Number(uncommittedBefore)}`);
+print(`webpage cards for it: ${(await readdir(path.join(box.root, "_content/inbox"))).filter((n) => n.startsWith("Crashed_Once")).length}`);
+=>
+acknowledged: true
+new commits: 1
+webpage cards for it: 1
+```
+
 ## a capture ID reused for a different page is a conflict
 
 ```ts continue

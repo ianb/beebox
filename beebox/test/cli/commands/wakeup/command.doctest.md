@@ -6,7 +6,6 @@ individual helper functions that do the filesystem work.
 ```ts setup
 import { execSync } from "node:child_process";
 import { join } from "node:path";
-import { execSync } from "node:child_process";
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { initBox } from "../../../../src/core/box/structure/core.js";

@@ -71,7 +71,16 @@ export const clerkRouter = router({
         if (existing.url !== input.url) {
           throw new TRPCError({ code: "CONFLICT", message: "Capture ID already belongs to a different page" });
         }
-        return commentaryResult(destDir, await existingCapturePaths(boxRoot, existing.relPath));
+        // A retry after a lost response, or after a crash between the write
+        // and its commit: commit whatever of the capture is still uncommitted
+        // (a no-op when the first attempt committed) before acknowledging it.
+        const paths = await existingCapturePaths(boxRoot, existing.relPath);
+        await stageAndCommitPaths(boxRoot, {
+          paths,
+          message: `Add commentary from Clerk: "${input.title}"`,
+          trailers: { "Created-By": "clerk-api" },
+        });
+        return commentaryResult(destDir, paths);
       }
       return writeCommentaryCapture({ boxRoot, destDir, capturedAt, input });
     });

@@ -138,8 +138,8 @@ export function fieldMapPlanner(map: FieldMap): FieldPlanner {
         ? [...held.entries()]
         : isRecord(held) ? Object.entries(held) : [];
       for (const [k, entry] of members) {
-        if (!isRecord(entry)) continue;
         const where = `${type} ${container}${Array.isArray(held) ? `[${String(k)}]` : `.${String(k)}`}`;
+        if (!isRecord(entry)) throw new UnmappedFieldError({ type: where, field, problem: "not-a-map" });
         edits.push(...ruleEdits({ where, base: [container, k], entry, field, rule }));
       }
     }
