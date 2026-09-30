@@ -11,7 +11,7 @@
  * together with the other card-field planners in one pass (see that file).
  */
 
-import { UnmappedFieldError, type FieldEdit, type FieldEditPlan } from "./field-edits.js";
+import { UnmappedFieldError, type FieldEdit, type FieldEditPlan } from "../../../core/card-fields/field-edits.js";
 import { isRecord } from "../../../shared/is-record.js";
 
 type Planner = (fm: Record<string, unknown>) => FieldEditPlan;

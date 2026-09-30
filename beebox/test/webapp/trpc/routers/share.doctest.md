@@ -13,7 +13,7 @@ import { shareDestinationsOutput } from "../../../../src/webapp/trpc/routers/sha
 import { parse, stringify } from "yaml";
 import { splitCardContent } from "../../../../src/cards/frontmatter.js";
 import { planSourceFields } from "../../../../src/scripts/migrate/card-fields/source.js";
-import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
+import { applyFieldEdits } from "../../../../src/core/card-fields/field-edits.js";
 
 function caller(boxRoot) {
   return appRouter.createCaller({

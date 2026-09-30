@@ -18,7 +18,9 @@
  *   pnpm exec tsx src/scripts/migrate/card-fields/run.ts <boxRoot> --apply
  */
 
-import { runFieldEditMigration, type FieldEditPlan } from "./field-edits.js";
+import { runMigration } from "../_harness.js";
+import { convertCardFile, type FieldEditPlan } from "../../../core/card-fields/field-edits.js";
+import { typeFromFilename } from "../../../core/card-io.js";
 import { STANDARD_FIELD_TYPES, planStandardFields } from "./standard.js";
 import { STATUS_FIELD_TYPES, planStatusFields } from "./status.js";
 import { SOURCE_FIELD_TYPES, planSourceFields } from "./source.js";
@@ -39,9 +41,16 @@ export const CARD_FIELD_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`) {
-  await runFieldEditMigration({
+  await runMigration({
     description: "Standard card fields: strip dead fields, replace status, rename source (all planners in one pass).",
-    types: CARD_FIELD_TYPES,
-    plan: planCardFields,
+    match: (name) => {
+      const type = typeFromFilename(name);
+      return type !== undefined && CARD_FIELD_TYPES.has(type);
+    },
+    convert: async (file, { apply, warnings }) => {
+      const result = await convertCardFile(file, { plan: planCardFields, apply });
+      for (const warning of result.warnings) warnings.push(file, warning);
+      return result.outcome;
+    },
   });
 }

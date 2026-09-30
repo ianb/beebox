@@ -8,7 +8,7 @@ edits for one card; `applyFieldEdits` applies them to the YAML text.
 ```ts setup
 import { parse, stringify } from "yaml";
 import { planStatusFields } from "../../../../src/scripts/migrate/card-fields/status.js";
-import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
+import { applyFieldEdits } from "../../../../src/core/card-fields/field-edits.js";
 import { createInitialGuideTemplate } from "../../../../src/schemas/guide/templates.js";
 
 // Plan the edits for a card, apply them to its YAML, and report the result.

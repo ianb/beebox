@@ -31,6 +31,7 @@ import { trashCommand } from "./commands/trash.js";
 import { moveCommand } from "./commands/move.js";
 import { relinkCommand } from "./commands/relink.js";
 import { migrateViewLinksCommand } from "./commands/migrate-view-links.js";
+import { migrateFieldsCommand } from "./commands/migrate-fields.js";
 import { procedureCommand } from "./commands/procedure.js";
 import { authCommand } from "./commands/auth.js";
 import { secretsCommand } from "./commands/secrets/command.js";
@@ -100,6 +101,7 @@ const ALL: readonly Command[] = [
   moveCommand,
   relinkCommand,
   migrateViewLinksCommand,
+  migrateFieldsCommand,
   procedureCommand,
   authCommand,
   secretsCommand,

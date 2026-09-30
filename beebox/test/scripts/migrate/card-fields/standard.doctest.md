@@ -10,7 +10,7 @@ through the `yaml` document model, so untouched keys keep their formatting.
 ```ts setup
 import { parse, stringify } from "yaml";
 import { planStandardFields } from "../../../../src/scripts/migrate/card-fields/standard.js";
-import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
+import { applyFieldEdits } from "../../../../src/core/card-fields/field-edits.js";
 
 // Plan the edits for a card, apply them to its YAML, and report the result.
 function run(type: string, fm: Record<string, unknown>): string {

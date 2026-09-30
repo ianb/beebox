@@ -9,7 +9,7 @@ applies them to the YAML text.
 ```ts setup
 import { parse, stringify } from "yaml";
 import { planSourceFields } from "../../../../src/scripts/migrate/card-fields/source.js";
-import { applyFieldEdits } from "../../../../src/scripts/migrate/card-fields/field-edits.js";
+import { applyFieldEdits } from "../../../../src/core/card-fields/field-edits.js";
 import { parseCardText } from "../../../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../../../src/schemas.js";
 import { createGdocTemplate } from "../../../../src/schemas/gdoc.js";

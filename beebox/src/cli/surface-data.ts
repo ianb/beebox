@@ -69,6 +69,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "pdf", audience: "agent", smoke: { skip: "needs an existing pdf card to re-extract" } },
   { name: "relink", audience: "agent", smoke: MUTATES },
   { name: "migrate-view-links", audience: "agent", smoke: MUTATES },
+  { name: "migrate-fields", audience: "agent", smoke: MUTATES },
 
   // ---- Questions and jobs ----------------------------------------------
   { name: "answer", audience: "agent", smoke: MUTATES },

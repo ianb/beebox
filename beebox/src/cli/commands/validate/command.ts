@@ -7,43 +7,35 @@ import { checkSystemCards, checkStagedSystemCards } from "../../../core/system-c
 
 
 import { Command } from "commander";
-import { formatLintResults, countBrokenRefs, type LintSummary } from "../../../exports/cards.js";
+import { countBrokenRefs, type LintSummary } from "../../../exports/cards.js";
 import {
   listStagedMarkdown,
   lintMarkdownFiles,
   boxWideLinkWarnings,
-  formatMarkdownResults,
   type MarkdownLintSummary,
 } from "../../validate-markdown.js";
 import { requireBoxRoot, isCardFile, isMarkdownFile, isTrashedCard, isViewFile } from "../../../lib/paths/core.js";
 import { listStagedCards } from "../../../lib/staged-files.js";
 import { runPreCommitChecks, rejectUnsupportedPreCommitScope } from "./pre-commit.js";
 import { collectDossierCanonicalWarnings, collectViewCanonicalWarnings } from "../../../core/canonical-refs.js";
-import { canonicalCounts, formatCanonicalReport, rejectUnsupportedCanonicalScope, runCanonicalFix, type CanonicalBuckets } from "./canonical.js";
+import { canonicalCounts, rejectUnsupportedCanonicalScope, runCanonicalFix } from "./canonical.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../../core/list-cards.js";
 import { collectViewRefWarnings } from "../../../core/views/refs.js";
-import { getStatus } from "../../../lib/git/core.js";
-import { lintAttachLayout, formatAttachLintErrors, type AttachLintError } from "../../../lib/attach-lint.js";
-import { lintProminenceBudget, formatProminenceLintWarnings, type ProminenceLintWarning } from "../../../core/lint-prominence/core.js";
+import { lintAttachLayout, type AttachLintError } from "../../../lib/attach-lint.js";
+import { lintProminenceBudget, type ProminenceLintWarning } from "../../../core/lint-prominence/core.js";
 import { lintCardsDispatch } from "../../../core/card-lint/core.js";
 import { lintAllClaudeMd } from "../../../core/claude-md-lint.js";
 import { buildLoadContext } from "../../../core/load-context.js";
 import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../../core/external/url-check/core.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../../core/card-io.js";
-import { checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors } from "./box-checks.js";
+import { checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors, boxSchemaFieldWarnings } from "./box-checks.js";
 import { resolveCliTargetPath } from "../../lib/cli-target-path.js";
+import { canonicalBuckets, checkCommitted, countTotalErrors, printTextResults, useColor } from "./report.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 
-/**
- * Whether to emit ANSI color. `bbx` run interactively by a human is the rare
- * case where color matters; the common case is output being piped or pasted,
- * where escape codes are noise. So: color only for a real terminal, and never
- * when NO_COLOR is set. No flag — the environment decides.
- */
-export const useColor = (): boolean => process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
 
-interface CollectedResults {
+export interface CollectedResults {
   cardSummary: LintSummary | null;
   mdSummary: MarkdownLintSummary | null;
   attachErrors: AttachLintError[];
@@ -60,9 +52,11 @@ interface CollectedResults {
   canonicalDossierWarnings: string[];
   /** `prominence` budget warnings (`core/lint-prominence.ts`) — box-wide only; absent for `--staged`/explicit-path scopes. */
   prominenceWarnings?: ProminenceLintWarning[];
+  /** Box-local schemas declaring a reserved field name (`cards/reserved-fields.ts`) — box-wide only. */
+  boxSchemaFields?: string[];
 }
 
-interface ValidationResults extends CollectedResults {
+export interface ValidationResults extends CollectedResults {
   /**
    * Stray `*.ts` files under the legacy `_config/schemas/` location —
    * blocking, since the loader and validate hook can't otherwise
@@ -89,13 +83,6 @@ interface ValidationResults extends CollectedResults {
 }
 
 /** The canonical findings in the shape `validate-canonical.ts` formats/counts. */
-function canonicalBuckets(results: ValidationResults): CanonicalBuckets {
-  return {
-    cardSummary: results.cardSummary,
-    viewWarnings: results.canonicalViewWarnings,
-    dossierWarnings: results.canonicalDossierWarnings,
-  };
-}
 
 /**
  * Pick the URL-check scope from the options. `--since <ref>` (used by the
@@ -194,11 +181,13 @@ async function collectAllResults({ boxRoot, ctx, ignore, canonical }: CollectArg
   const viewWarnings = await collectViewRefWarnings(viewPaths, boxRoot);
   const canonicalViewWarnings = canonical ? await collectViewCanonicalWarnings(viewPaths, boxRoot) : [];
   const canonicalDossierWarnings = canonical ? await collectDossierCanonicalWarnings(mdFiles, boxRoot) : [];
+  const boxSchemaFields = await boxSchemaFieldWarnings(boxRoot);
   return {
     cardSummary,
     mdSummary,
     attachErrors,
     prominenceWarnings,
+    boxSchemaFields,
     claudeMdWarnings,
     viewWarnings,
     canonicalViewWarnings,
@@ -227,78 +216,6 @@ async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): 
  * return the full `CollectedResults` shape.
  */
 const NO_CANONICAL = { canonicalViewWarnings: [], canonicalDossierWarnings: [] };
-
-/** Print human-readable card/markdown/attach/legacy-schema-path results to stdout. */
-function printTextResults(results: ValidationResults): void {
-  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors } = results;
-  const colors = useColor();
-  if (cardSummary !== null) {
-    const output = formatLintResults(cardSummary, { colors });
-    if (output) console.log(output);
-  }
-  if (mdSummary !== null) {
-    const output = formatMarkdownResults(mdSummary, { colors });
-    if (output) console.log(`\n${output}`);
-    if (mdSummary.totalErrors > 0) {
-      const fileWord = mdSummary.filesWithErrors === 1 ? "file" : "files";
-      console.log(
-        `\n${String(mdSummary.filesChecked)} markdown file${mdSummary.filesChecked === 1 ? "" : "s"} checked, ` +
-        `${String(mdSummary.totalErrors)} error${mdSummary.totalErrors === 1 ? "" : "s"} in ` +
-        `${String(mdSummary.filesWithErrors)} ${fileWord}`
-      );
-    }
-  }
-  if (attachErrors.length > 0) {
-    const output = formatAttachLintErrors(attachErrors, { colors });
-    console.log(`\n${output}`);
-    console.log(`\nAttach layout: ${attachErrors.length} issue(s)`);
-  }
-  if (results.prominenceWarnings !== undefined && results.prominenceWarnings.length > 0) {
-    console.log(`\n${formatProminenceLintWarnings(results.prominenceWarnings, { colors })}`);
-  }
-  if (claudeMdWarnings.length > 0) {
-    console.log(`\n${claudeMdWarnings.join("\n")}`);
-  }
-  if (viewWarnings.length > 0) {
-    console.log(`\n${viewWarnings.join("\n")}`);
-  }
-  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors, ...reservedSegmentErrors, ...presentationErrors, ...results.systemCardErrors];
-  if (boxWideErrors.length > 0) console.log(`\n${boxWideErrors.join("\n")}`);
-  if (results.canonical) {
-    console.log(`\n${formatCanonicalReport(canonicalBuckets(results), { colors })}`);
-  }
-}
-
-/**
- * Verify the git working tree is clean. Exits 1 (printing the dirty files) if
- * not. Prints a confirmation line in non-JSON mode when clean.
- */
-async function checkCommitted(boxRoot: string, { json }: { json: boolean }): Promise<void> {
-  const status = await getStatus(boxRoot);
-  if (!status.clean) {
-    const dirty = [...status.staged, ...status.modified, ...status.untracked];
-    console.error("\nGit working tree is not clean:");
-    for (const file of dirty) {
-      console.error(`  ${file}`);
-    }
-    process.exit(1);
-  }
-  if (!json) {
-    console.log("Git working tree is clean.");
-  }
-}
-
-function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, systemCardErrors }: ValidationResults): number {
-  return (
-    (cardSummary !== null ? cardSummary.totalErrors : 0) +
-    (mdSummary !== null ? mdSummary.totalErrors : 0) +
-    attachErrors.length +
-    legacySchemaErrors.length +
-    rootStrayErrors.length +
-    reservedSegmentErrors.length +
-    presentationErrors.length + systemCardErrors.length
-  );
-}
 
 export const validateCommand = new Command("validate")
   .description("Validate cards and markdown in the box")
@@ -376,6 +293,7 @@ export const validateCommand = new Command("validate")
             markdown: results.mdSummary,
             attach: results.attachErrors,
             prominence: results.prominenceWarnings ?? [],
+            boxSchemaFields: results.boxSchemaFields ?? [],
             claudeMd: results.claudeMdWarnings,
             views: results.viewWarnings,
             legacySchemaPath: results.legacySchemaErrors,
