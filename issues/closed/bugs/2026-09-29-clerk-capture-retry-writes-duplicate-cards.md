@@ -5,7 +5,14 @@ area: clerk
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-card-fields-review — cross-model review of the webpage `sources` change
+resolution: implemented
 ---
+
+Fixed on `worktree-card-fields-review`: `clerk.commentary` takes an optional
+client `captureId`, stores it as the webpage card's `capture-id`, and replays
+the existing result for a repeat id in the same destination. The extension
+generates one id per click and retries ambiguous failures (network, 502–504)
+with the same payload.
 
 The Clerk commentary capture has no stable capture id
 (`beebox/src/webapp/trpc/clerk-contract.ts`). The router names the card from

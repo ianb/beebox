@@ -109,8 +109,10 @@ async function commentOnPage(tabId: number, destinationDir: string | undefined):
       frozenHtml: capture.frozenHtml,
       destinationDir: destinationDir ?? null,
       timestamp: new Date().toISOString(),
+      // Fresh per click; postCommentary's retries resend this same payload.
+      captureId: crypto.randomUUID(),
     });
-    const { open } = await postCommentary(box, payload);
+    const { open } = await postCommentary(box, { payload });
     console.info(
       `[clerk] commentOnPage: capture ${Math.round(tCaptureEnd - tCaptureStart)}ms, ` +
         `post ${Math.round(performance.now() - tCaptureEnd)}ms` +
