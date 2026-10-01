@@ -90,11 +90,7 @@ projection.
 
 ## Where credit lives
 
-`beebox/docs/attribution.md` exists, but it covers assets we redistribute under
-a license that requires credit (Twemoji). There is no place for credit for
-adopted ideas. Options: an *Ideas and prior art* section in `attribution.md`,
-or a credit line in the doc or skill that adopts the idea. Decide when this
-lands.
+Tracked in [the attribution issue](../docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md).
 
 Related: [plan template has no developer-only section](2026-09-21-plan-template-no-developer-only-section.md),
 another case of notes meant for the author and not the reader.
