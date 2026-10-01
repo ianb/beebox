@@ -3,6 +3,7 @@ title: "Give parked template updates a resolution path (accept / diff / merge) i
 workstream: unattached
 area: beebox
 priority: normal
+next-action: discuss
 labels: [templates, boxes]
 filed-by: agent
 discovered-in: honest-diagnostics — split out of the parked-updates health issue
@@ -47,4 +48,6 @@ the box's own briefing), and the personality kept (the stock copy only dropped
 user-stated traits). The deploy that followed re-parked the briefing and
 personality within minutes, because nothing records that this stock version was
 resolved. The `template-updates` health check is back to failing on that box,
-and only a recorded resolution clears it.
+and only a recorded resolution clears it. The `normal` priority may be stale:
+every box with a customized briefing or personality shows a failing health
+check after each deploy until this exists.
