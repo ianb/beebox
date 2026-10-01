@@ -18,6 +18,9 @@ box. Capture is how content from your phone or browser gets into the box.
   it, and tells you plainly if a recording got cut off.
 - Groups everything from one recording session into a single timeline you
   can read back, with silences and photos in place.
+- Receives the box's notifications as iPhone push: a tap opens the chat, card,
+  or question the notification is about, on the box that sent it. See
+  [notifications.md](notifications.md).
 - Lets you see and revoke paired devices, and lock a paired box behind Face
   ID or your device passcode.
 
@@ -39,7 +42,13 @@ capability: [web-clipping.md](web-clipping.md).
 **Limits**
 
 Owner-gated surfaces like device pairing require signing in as the box owner;
-a shared or guest device cannot pair itself. The documentation does not
+a shared or guest device cannot pair itself. Push notifications to the app have
+been tested on a simulator but the documentation says the walk-through on a real
+iPhone has not been run, and they rely on an Apple key held by whoever builds
+and installs the app. The app's record button does not yet show narration mode
+or paused state the way the web button does. Importing from Apple Photos is a
+separate Mac-side path that needs system permissions, and the documentation
+says it has not been verified on a real Mac. The documentation does not
 describe an Android app.
 
 **Go deeper**

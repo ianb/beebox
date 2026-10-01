@@ -212,13 +212,17 @@ than the placement: a question answered becomes a rule it reads next time.
 **How it is expressed.** Question cards with structured answers routed back
 to an agent. A confidence vocabulary in triage that decides what a level
 permits. Corrections that become rules, guides, and beliefs.
+How loudly the box reaches you is itself a rule it reads: a question is a
+badge unless it is time-bound, and the "Reaching me" section of the root
+briefing says when to push (`capabilities/notifications.md`).
 
 **Where it is thin.** Rewriting a rule from a single low-confidence answer is
 future work. The nav bar badges the question count and the plate count; the
-plate count is a bare number beside an icon and reads as a wrong total.
+badge is a bare number beside an icon and can read as a wrong total, though
+the plate page's headline now states what it counts.
 
 **Pages.** `capabilities/questions.md`, `capabilities/triage.md`,
-`design/trust.md`, `design/teaching.md`.
+`capabilities/notifications.md`, `design/trust.md`, `design/teaching.md`.
 
 ## 10. Open, so it can be understood
 
