@@ -1,7 +1,6 @@
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../../procedures.js";
@@ -20,6 +19,7 @@ import { checkTriggerPreconditions, runScheduledScript } from "./run.js";
 import { withCardLock } from "../../../../lib/card-lock.js";
 import { isRecord } from "../../../../shared/is-record.js";
 import { BOX_DIRS } from "../../../../lib/paths/core.js";
+import { jsonlLines } from "../../../../lib/jsonl-lines.js";
 
 export type { ScheduleEntry };
 
@@ -79,12 +79,7 @@ export const schedulerRouter = router({
 
       let entries: SchedulerLogEntry[] = [];
 
-      const rl = readline.createInterface({
-        input: createReadStream(logPath),
-        crlfDelay: Infinity,
-      });
-
-      for await (const line of rl) {
+      for await (const line of jsonlLines(createReadStream(logPath))) {
         if (!line.trim()) continue;
         try {
           const parsedEntry = schedulerLogEntrySchema.safeParse(JSON.parse(line));

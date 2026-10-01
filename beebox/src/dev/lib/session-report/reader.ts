@@ -1,9 +1,9 @@
 /** Line-oriented parsing for the critique-friendly session report. */
 
 import * as fs from "node:fs";
-import * as readline from "node:readline";
 import { z } from "zod";
 import { type KnownToolName, isKnownTool } from "../../../shared/known-tools.js";
+import { jsonlLines } from "../../../lib/jsonl-lines.js";
 
 const rawBlockSchema = z.object({
   type: z.string(),
@@ -55,9 +55,7 @@ export interface ReportStats {
 /** Stream normalized entries while retaining only the current JSONL line. */
 async function* readRawEntries(logPath: string): AsyncGenerator<RawEntry> {
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-
-  for await (const line of rl) {
+  for await (const line of jsonlLines(fileStream)) {
     if (!line.trim()) continue;
     let parsedLine: unknown;
     try {
