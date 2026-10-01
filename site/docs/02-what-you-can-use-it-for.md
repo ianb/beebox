@@ -28,7 +28,7 @@ does, what it needs, and what is still rough.
 - [People and places](uses/people-and-places.md): tell it who the people in your life are and which places to recognize.
 - [Routines that run without you](uses/routines-that-run-without-you.md): put recurring work on a schedule or into a procedure, and read the result after.
 - [Learning a subject](uses/learning-a-subject.md): have it build a course and keep an evidence-backed record of what you understood.
-- [Publishing from your cards](uses/publishing-from-your-cards.md): put one page from your box on the public web, with an explicit go-live and takedown.
+- [Publishing from your cards](uses/publishing-from-your-cards.md): put a page or small site from your box on the public web, with your approval to go live and a one-step takedown.
 
 ## Walking backwards: the features and the uses behind them
 
@@ -45,7 +45,7 @@ lean on it.
 - **Typed cards with validated fields** ([cards](concepts/cards.md)): [paper into records](uses/paper-into-records.md), [a household in one chat](uses/a-household-in-one-chat.md), [reading and clipping](uses/reading-and-clipping.md), [recipes](uses/cooking-from-your-recipes.md), [people and places](uses/people-and-places.md), [learning](uses/learning-a-subject.md), [publishing](uses/publishing-from-your-cards.md).
 - **Views** ([views](capabilities/views.md)): [a project's working memory](uses/a-projects-working-memory.md), [recipes](uses/cooking-from-your-recipes.md), [learning](uses/learning-a-subject.md).
 - **The chat-thread card** ([chat](capabilities/chat.md)): [a household in one chat](uses/a-household-in-one-chat.md), [learning](uses/learning-a-subject.md).
-- **Publishing with an explicit go-live and takedown** ([publishing](capabilities/publishing.md)): [publishing](uses/publishing-from-your-cards.md).
+- **Publishing with an approval step and a takedown** ([publishing](capabilities/publishing.md)): [publishing](uses/publishing-from-your-cards.md).
 - **The history** ([durability and provenance](design/durability-and-provenance.md)): [teaching it](uses/teaching-it-your-preferences.md), [routines](uses/routines-that-run-without-you.md).
 - **Room for what does not fit yet** ([dump it in now, shape it later](capabilities/shape-it-later.md)): [paper into records](uses/paper-into-records.md), [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md).
 - **Enriched markdown, with quote, source, and todo as the baseline marks** ([enriched markdown](concepts/enriched-markdown.md)): [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md), [a project's working memory](uses/a-projects-working-memory.md), [teaching it](uses/teaching-it-your-preferences.md).

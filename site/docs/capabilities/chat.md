@@ -17,8 +17,14 @@ box. Chat is the everyday way you talk to it.
 - Scopes a chat to wherever you started it: a card you were reading, a
   directory ("place") in the box, or a page you just clipped from the web.
 - Lets you quote a passage out of any card into what you're typing.
-- Recovers a message that failed to send instead of losing it, and keeps an
+- Recovers a message that failed to send instead of losing it, offering to
+  retry it, put it back in the box as a draft, or discard it, and keeps an
   unfinished draft across reloads.
+- Searches what was said in your chats, not only their titles: a search field
+  on the Recent chats panel returns one row per chat with a highlighted snippet,
+  and opening a result lands on the matching message.
+- Shows the agent's short progress remarks between its tool steps, live and
+  later in the transcript, so a long turn does not look silent.
 - Keeps an image you paste or upload as a file the agent can use (crop it,
   read text from it, file it into a card), as well as showing it to the agent.
 - Lets you pick the model for one chat, from the engines the box has enabled
@@ -47,6 +53,11 @@ Quick chat, a separate page, sends a thought to whichever chat it fits; see
 A chat that cannot be resumed (for example, an old session format) says so
 rather than silently starting a new, disconnected one. The documentation
 does not describe a message-editing feature; a sent message stands as sent.
+Chat search matches the words as typed and does not understand meaning, by
+choice, so that your transcripts are not sent to an outside service to build
+it; it covers only chats on the machine the box runs on, and only the text you
+and the agent wrote, not tool output or attachments. Searching chats from the
+box-wide search is not built.
 
 **Go deeper**
 
