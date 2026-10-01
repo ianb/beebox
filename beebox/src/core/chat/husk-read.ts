@@ -71,6 +71,13 @@ export interface ChatHuskEntry {
   contextDir?: string;
   title?: string;
   /**
+   * The conversation's opening user message (`first-message`), snippet-cleaned
+   * and capped at creation or by the first review pass. The durable fallback
+   * label once the transcript is gone; a snippet, never a title — display
+   * quotes it.
+   */
+  firstMessage?: string;
+  /**
    * Which engine ran the chat — the durable copy of what the per-checkout
    * history file holds, and the first thing `resolveChatEngine` consults. A
    * husk carried to a machine that never ran the session has no history entry
@@ -195,6 +202,7 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
   }
   const contextDir = fm["context-dir"];
   const title = fm["title"];
+  const firstMessage = fm["first-message"];
   const engine = parseHuskEngine(fm["engine"], relPath);
   const origin = fm["origin"];
   const originName = fm["origin-name"];
@@ -203,6 +211,7 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
     session,
     ...(typeof contextDir === "string" ? { contextDir } : {}),
     ...(typeof title === "string" && title !== "" ? { title } : {}),
+    ...(typeof firstMessage === "string" && firstMessage !== "" ? { firstMessage } : {}),
     ...(engine !== undefined ? { engine } : {}),
     ...(typeof origin === "string" && origin !== "" ? { origin } : {}),
     ...(typeof originName === "string" && originName !== "" ? { originName } : {}),

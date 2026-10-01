@@ -16,7 +16,7 @@
 import * as fs from "node:fs/promises";
 import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../../husk-read.js";
 import { huskTranscriptPath } from "../../husk-transcript.js";
-import { resolveSessionLabel, type SessionLabelSource } from "./label.js";
+import { quoteSnippet, resolveSessionLabel, type SessionLabelSource } from "./label.js";
 import { assertNever } from "../../../../shared/invariant.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { mapInBatches, mapInBatchesSettled } from "../../../../lib/map-batched.js";
@@ -84,6 +84,12 @@ export interface DeadHuskEntry {
   contextDir: string | undefined;
   /** The husk's editorial `title`, when it has one. */
   title: string | undefined;
+  /**
+   * The husk's stored opening snippet (`first-message`), when it has one —
+   * for a dead husk the only surviving trace of what the conversation opened
+   * with, displayed quoted rather than as if it were a title.
+   */
+  firstMessage: string | undefined;
   /**
    * Why there is nothing to resume. Never `present` — that is what makes the
    * husk dead, and it is the enumeration's job to keep the two lists disjoint.
@@ -245,10 +251,14 @@ export async function loadChatLists(boxRoot: string): Promise<{ sessions: ChatSe
 
 /**
  * A dead chat's display name, in the same order a live one's resolves — minus
- * the transcript scan, because the transcript is exactly what is gone.
+ * the transcript scan, because the transcript is exactly what is gone. The
+ * stored opening snippet renders quoted (a snippet, not a title); the id
+ * prefix is the last resort.
  */
 export function deadHuskLabel(husk: DeadHuskEntry): string {
-  return husk.title === undefined || husk.title === "" ? husk.sessionId.slice(0, 8) : husk.title;
+  if (husk.title !== undefined && husk.title !== "") return husk.title;
+  if (husk.firstMessage !== undefined && husk.firstMessage !== "") return quoteSnippet(husk.firstMessage);
+  return husk.sessionId.slice(0, 8);
 }
 
 async function labelEntries(entries: ChatSessionEntry[]): Promise<ChatSessionRow[]> {
@@ -331,6 +341,7 @@ async function deadHusk(husk: ChatHuskEntry): Promise<HuskResolution> {
       huskPath: husk.path,
       contextDir: husk.contextDir,
       title: husk.title,
+      firstMessage: husk.firstMessage,
       transcript: await deriveTranscriptState({ husk, present: false }),
     },
   };

@@ -395,7 +395,8 @@ ask: a snippet must be visibly a snippet.
   over a handful of cards: on the affected box, an agent moves a
   transcript-less husk's snippet-shaped `title:` to `first-message:`. This
   plan ships the procedure (below, Rollout shape); the boxholder's agent
-  executes it on the personal box after landing. Nothing private crosses
+  executes it on every prod box they operate (decided 2026-10-01) after
+  landing. Nothing private crosses
   into the repo.
 - Self-healing for the rest: a *live* chat whose `title` is still a creation
   snippet classifies as `unmanaged` on its first title pass
@@ -412,12 +413,12 @@ transcript snippet; dead husk with `first-message` renders it quoted; a
 titled husk renders unquoted; `createChatHuskTemplate` carries
 `first-message` and no `title`).
 
-### Track D — A done marker (human decision required before any of it builds)
+### Track D — A done marker (decided 2026-10-01; builds after A–C)
 
 **What.** `status: done` on the husk, set by the boxholder from the session
-chip menu, shown in the chat lists. **Nothing in this track is implemented
-until the boxholder answers the Open design questions** — the direction below
-is the proposal to decide on, not settled scope; its estimate is conditional.
+chip menu, shown in the chat lists. Boxholder decisions on record: single
+value `done` (no separate `one-off`), display-affecting only — review
+behavior unchanged.
 
 **Why this needs to change.** The boxholder asked for "a way to mark a chat
 as done, or as a one-off" — conversations that are finished shouldn't sit in
@@ -441,13 +442,12 @@ the list indistinguishable from living ones.
   carrying a muted `done` tag on the row (the `DeadSessionGroups` precedent
   for visually demoting a class, `SessionListPanel.tsx:178-203`). They stay
   clickable — done is a state, not a deletion.
-- **Review behavior in v1: none.** The pass reads `status` for no purpose.
-  Rationale: with Track B, a closed chat that never grows again costs
-  nothing anyway (discovery gates on *new* span), and gating review on
+- **Review behavior: none, by decision.** The pass reads `status` for no
+  purpose. Rationale: with Track B, a closed chat that never grows again
+  costs nothing anyway (discovery gates on *new* span), and gating review on
   `done` creates a trap — a resumed "done" chat would silently stop being
-  titled or summarized until unmarked. If the boxholder wants done to also
-  suppress review, that is one early return in `qualifyHusk` — recorded as
-  an open question, not slipped in.
+  titled or summarized until unmarked. Confirmed display-only by the
+  boxholder, 2026-10-01.
 
 **Vocabulary lock-ins.** `status` / `done` (single enum value); "Mark done"
 menu label.
@@ -553,22 +553,15 @@ instead, answered by a decision, not a design document.
 
 ## Open design questions
 
-- **The done marker's exact shape** (Track D) — the boxholder asked for
-  "done, or a one-off" without a design. Proposed: single `status: done`,
-  user-set, display-affecting only. Decisions wanted: (a) is one value
-  enough, or is `one-off` a distinct label worth its own enum member?
-  (b) should `done` also suppress review (v1 says no — the resumed-chat
-  trap), and (c) should the boxholder's "Mark done" live in the session chip
-  menu or on the chat page itself? **Lean:** one value; review unaffected;
-  session chip menu.
-- **The June-husk repair scope** — proposed: the boxholder's agent moves
-  snippet-shaped `title:` values on transcript-less husks to
-  `first-message:` on the personal box, by judgment, after landing.
-  **Lean:** do exactly that, on that box only. The named residual: on any
-  other box, a dead husk whose creation snippet is stranded in `title:`
-  keeps displaying it unquoted until the same judgment repair runs there —
-  whether to run the procedure on the other prod boxes is the boxholder's
-  call, not silently scoped in.
+- ~~**The done marker's exact shape** (Track D)~~ **Settled (boxholder,
+  2026-10-01):** single `status: done`; display-affecting only — a done chat
+  is still reviewed like any other (a closed chat that stops growing costs
+  nothing under Track B, and gating review would trap a resumed chat).
+  Placement: the session chip menu, per the lean below.
+- ~~**The June-husk repair scope**~~ **Settled (boxholder, 2026-10-01): the
+  judgment repair runs on every prod box the boxholder operates**, not the
+  personal box alone. Procedure unchanged; per-box content never enters this
+  repo.
 - **`FRESHNESS_KEEP_PROBABILITY = 0.75`** — untuned prior, the same stance
   the 6,000 threshold ships with. **Lean:** start at 0.75, adjust from the
   `jev-debug.log` record if titles visibly lag drift.
@@ -624,8 +617,9 @@ migration, existing cards and journals parse unchanged (the
 `bbx-migration` checklist: on-disk shape changes are compatible-additive;
 `ensureChatHusk`'s behavior change affects only cards created after landing).
 
-The per-box June repair (procedure, executed by the boxholder's agent on the
-personal box after landing):
+The per-box June repair (procedure, executed by the boxholder's agent on
+**every prod box they operate** — boxholder decision, 2026-10-01 — after
+landing):
 
 1. List husks under `_content/chat/web/` whose transcript is absent on this
    machine (the dead-husk enumeration is the test).

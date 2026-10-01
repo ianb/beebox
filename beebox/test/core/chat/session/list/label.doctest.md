@@ -63,7 +63,7 @@ envelope and all — so it goes through the same stripping a transcript scan doe
 
 ```ts
 await codexLabel(firstMessage("Hey, welcome to my little story place!"))
-=> Hey, welcome to my little story place!
+=> “Hey, welcome to my little story place!”
 ```
 
 The machine prefix ahead of the person's first word — the snapshot plus the
@@ -87,7 +87,7 @@ await codexLabel(
   '<speech user="Priya Marlowe" local-time="23:14">how is my week looking' +
   '<send-message phrase="Send message." /></speech>',
 )
-=> how is my week looking
+=> “how is my week looking”
 ```
 
 ## The rest of the order is the same for both engines
@@ -145,7 +145,7 @@ await resolveSessionLabel({
   title: undefined,
   source: { kind: "transcript", logPath },
 })
-=> what's on my calendar tomorrow
+=> “what's on my calendar tomorrow”
 ```
 
 An unreadable transcript is a label problem, not a list problem: it warns and
