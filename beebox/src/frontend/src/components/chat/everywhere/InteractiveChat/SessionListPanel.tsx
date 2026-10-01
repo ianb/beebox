@@ -76,12 +76,12 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
           label="Search chats"
           hideLabel
           type="search"
-          value={chatSearch.query}
-          onChange={(value) => chatSearch.setQuery(value)}
+          value={chatSearch.field}
+          onChange={(value) => chatSearch.setField(value)}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.stopPropagation();
-              chatSearch.setQuery("");
+              chatSearch.clear();
             }
           }}
           placeholder="Search what was said…"

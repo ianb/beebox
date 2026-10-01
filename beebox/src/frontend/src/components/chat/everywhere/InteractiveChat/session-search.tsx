@@ -44,12 +44,26 @@ type SearchState =
   | { kind: "error" }
   | { kind: "done"; results: ChatSearchHitInfo[]; truncated: boolean; stale: boolean };
 
-/** Debounced transcript search: typing updates the field instantly, the index is asked at most every 300ms. */
+/**
+ * Debounced transcript search: typing updates the field instantly, the index is
+ * asked at most every 300ms.
+ *
+ * The input's `value` must bind to {@link field}, never to `query`: `query` is
+ * the debounced value, and a controlled input bound to it gets reset by React
+ * to the stale query after every keystroke — characters vanish and stagger
+ * back as the debounce settles, which is exactly the "typing is slow and
+ * painful" bug this hook's shape guards against.
+ */
 export function useChatSearch(): {
   active: boolean;
+  /** The raw input text — what the field's `value` binds to. */
+  field: string;
+  /** The settled query the search ran with. */
   query: string;
   state: SearchState;
-  setQuery: (value: string) => void;
+  setField: (value: string) => void;
+  /** Reset the field AND the settled query — Escape must not wait out the debounce. */
+  clear: () => void;
   retry: () => void;
 } {
   const [field, setField] = useState("");
@@ -83,9 +97,14 @@ export function useChatSearch(): {
 
   return {
     active: query.length >= MIN_QUERY,
+    field,
     query,
     state,
-    setQuery: setField,
+    setField,
+    clear: () => {
+      setField("");
+      setQuery("");
+    },
     retry: () => setNonce((n) => n + 1),
   };
 }
