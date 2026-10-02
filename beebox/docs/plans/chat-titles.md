@@ -251,7 +251,16 @@ export const TITLE_CHAR_THRESHOLD = 400;
   marker**: a title write *replaces*; a crash between husk write and journal
   save cannot double-extend anything (the reason `review-span` exists,
   `husk-write.ts:147-157`, is account corruption, which titles cannot suffer).
-  The lost journal entry costs one freshness check that will say "keep".
+  **[rev]** The first draft claimed the lost journal entry "costs one
+  freshness check that will say keep". Cross-model review of the
+  implementation falsified it: the replay has no stored hash, so
+  `resolveTitleOwner` reads our own title as a hand edit (`manual`) and never
+  retitles it. And because the run saved state once at the end, a process
+  killed mid-run lost that record for every session it had touched — a
+  pre-existing flaw the metadata pass shared. The run now saves state after
+  every session; the residual window (one husk write to the next atomic state
+  write) is accepted rather than adding a durable provenance marker to the
+  card.
 - Run orchestration (`run/core.ts`): a session qualifying for the metadata
   pass runs it exactly as today, and the metadata result advances **both**
   consumers' journals (the pass saw the material and refreshed the title
@@ -498,7 +507,7 @@ instead, answered by a decision, not a design document.
 |---|---|---|---|
 | Jev keeps a title that has drifted (p ≥ 0.75, wrong) | No — judgment, not testable | Bounded: re-checked on next 400-char growth; visible in the list; boxholder can edit (→ `manual`, forever safe) | Silent per check, visible in list — accepted residual, same class as the shipped title-discretion risk |
 | Jev unavailable on a night | Yes — doctest with erroring fake | Warn + run the title reviewer (correct, costlier path) | Clear (warn) |
-| Crash between title husk write and journal save | Yes — doctest replaying the span | No husk marker needed: next run's freshness check sees the new title against the same span → keeps → journal advances | Clear by construction |
+| Crash between title husk write and state save | Yes — doctest asserting state is on disk before the next session | Per-session state save shrinks the window to one atomic write; a crash inside it marks our title `manual` (never retitled) | **Silent** — accepted residual, see Track A [rev] |
 | Title reviewer returns "" when the husk has no title | Yes — doctest | Counts as failure (`attempts`), retried next night | Clear (run summary counts it) |
 | Metadata pass exhausts its attempts; title pass then also blocked | Yes — doctest | Separate `titleAttempts`/`titleFailedSpanId` counters | Clear (status counts both) |
 | Span ids collide across consumers at the same boundary | Yes — assertion in state doctest | Benign by design: `computeSpanId` stays unnamespaced (changing it strands every on-husk `review-span`); counters are per-consumer fields | Clear (documented here) |

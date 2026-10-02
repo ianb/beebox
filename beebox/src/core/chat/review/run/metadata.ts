@@ -217,8 +217,13 @@ function applyMetadataResult(
   // The title journal advances when this pass reconciled the title with the
   // span: it wrote one, or it deliberately kept the one already there. An
   // empty offer against a chat with NO title reconciled nothing — that is the
-  // no-empty-title-without-title rule, and it retries on the title pass.
-  const titleReconciled = args.titleWritten || (output.title === "" && args.huskTitle !== null);
+  // no-empty-title-without-title rule, and it retries on the title pass. A
+  // hand-owned title is reconciled by definition: the pass may not touch it,
+  // so leaving the title journal behind would only spend a later title-pass
+  // slot rediscovering that.
+  const titleReconciled = args.titleWritten
+    || args.titleOwner === "manual"
+    || (output.title === "" && args.huskTitle !== null);
   const metadataApplied = args.spanApplied ? spanEntry : null;
   const titleApplied = titleReconciled ? spanEntry : null;
   state.sessions[session.sessionId] = {

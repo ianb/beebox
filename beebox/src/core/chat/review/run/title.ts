@@ -10,8 +10,12 @@
  *
  * No husk span marker here, deliberately: a title write *replaces* rather than
  * extends, so the double-apply hazard that makes `review-span` necessary for
- * accounts cannot occur. A crash between the husk write and the journal save
- * costs one freshness check that will answer "keep" on the next run.
+ * accounts cannot occur. What a crash between the husk write and the state
+ * save CAN lose is the title's provenance: with no stored hash, the replay
+ * reads our own title as a hand edit and leaves it alone for good. The run
+ * saves state after every session (`run/core.ts`) so that window is one
+ * atomic write wide; the residual is accepted rather than adding a durable
+ * provenance marker to the card.
  */
 
 import { elideMiddle, MAX_RENDERED_CHARS, renderEntries } from "../../transcript-render.js";

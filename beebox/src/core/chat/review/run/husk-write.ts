@@ -261,9 +261,8 @@ export interface TitleWriteResult {
  *
  * Deliberately **no span marker**: a title write replaces rather than extends,
  * so the double-apply hazard that makes `review-span` necessary for accounts
- * cannot occur here. A crash between this write and the journal save costs one
- * freshness check that will answer "keep" — self-healing, not replayable
- * corruption.
+ * cannot occur here. A crash between this write and the state save can still
+ * lose the title's provenance; see the accepted residual in `run/title.ts`.
  *
  * Like {@link applyReviewToHusk}, the husk is re-read under the lock and title
  * ownership resolved from the live value, never from discovery's snapshot.

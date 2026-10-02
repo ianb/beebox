@@ -187,6 +187,14 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
           console.error(`chat-review: session ${session.sessionId} failed:`, e);
           summary.sessionErrors += 1;
         }
+        // Saved after every session, not once at the end. A run spans many
+        // model calls, so a process killed mid-run (a deploy restart) used to
+        // lose every journal advance AND every title-ownership record the run
+        // had earned — and on the replay a title this pass wrote, with no
+        // stored hash, classifies as a hand edit and is never retitled again.
+        // Per-session saving shrinks that window to the gap between the husk
+        // write and this one atomic write.
+        await saveReviewState(boxRoot, state);
       }
 
       state.lastRunAt = options.now.toISOString();

@@ -238,12 +238,16 @@ const after = await readFile(box.path(huskPath), "utf8");
 => true,false
 ```
 
-The ownership flag is recorded, so the decision survives a restart.
+The ownership flag is recorded, so the decision survives a restart. The
+title journal advances with the metadata journal even though the model
+offered a replacement: a hand-owned title is reconciled by definition, so the
+next short growth has nothing to ask about.
 
 ```ts continue
 const state = await loadReviewState(box.root);
-state.sessions[sid("sess5678")].titleOwner
-=> manual
+const entry = state.sessions[sid("sess5678")];
+({ owner: entry.titleOwner, title: entry.applied["title"]?.endUuid, metadata: entry.applied["metadata"]?.endUuid })
+=> { owner: "manual", title: "v4", metadata: "v4" }
 ```
 
 ```ts cleanup
@@ -900,6 +904,45 @@ state.sessions[sid("sesshand")].applied["title"].endUuid
 
 (await readFile(box.path(huskPath), "utf8")).includes("title: Notes on the roof leak")
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Each session's journal is saved before the next one starts
+
+A run spans many model calls, and a process killed mid-run (a deploy restart)
+used to lose every journal advance the run had earned, because state was
+saved once at the end. Worse, the replay read a title this pass had written,
+with no stored hash, as a hand edit, and left it alone for good. State is now
+saved after every session. Here the second session's reviewer looks at the
+state file on disk while the run is still going.
+
+```ts
+const box = await makeTmpBox();
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+// Oldest first: sessfirst is reviewed before sesssecond.
+await seed(box, { sessionId: "sessfirst", husk: "", entries: [smallTalk("p1"), smallTalk("p2")] });
+await utimes(getSessionLogPath(box.root, sid("sessfirst")), new Date(NOW.getTime() - 9 * HOUR), new Date(NOW.getTime() - 9 * HOUR));
+await seed(box, { sessionId: "sesssecond", husk: "", entries: [smallTalk("q1"), smallTalk("q2")] });
+
+let seenOnDisk = null;
+const reviewer = {
+  async review() { throw new Error("must not run"); },
+  async title(args) {
+    if (args.sessionId === sid("sesssecond")) {
+      const onDisk = JSON.parse(await readFile(box.path(".beebox/chat-review/state.json"), "utf8"));
+      const first = onDisk.sessions[sid("sessfirst")];
+      seenOnDisk = { owner: first?.titleOwner, title: first?.applied?.["title"]?.endUuid };
+    }
+    return { title: args.sessionId === sid("sessfirst") ? "Planning a small birthday dinner" : "Another small plan" };
+  },
+};
+await runChatReview(box.root, { reviewer, maxSessions: 10, now: NOW, ownerEmail: null });
+seenOnDisk
+=> { owner: "generated", title: "p2" }
 ```
 
 ```ts cleanup
