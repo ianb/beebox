@@ -178,12 +178,6 @@ const guides: Record<string, SecretGuide> = {
     obtainUrl: "https://t.me/BotFather",
     obtainSteps: ["Use the Telegram section above: it walks through @BotFather and stores the result under this name"],
   },
-  "publish/": {
-    title: "Publishing credentials",
-    what: "The R2 ingestion credentials for this box's published site. Not pasted here — `bbx pub setup` provisions them.",
-    obtainUrl: "https://dash.cloudflare.com/",
-    obtainSteps: ["Run `bbx pub setup`; it mints a scoped token and stores it under this name"],
-  },
 };
 
 /** The guide for one store name, or null when the engine has none for it. */

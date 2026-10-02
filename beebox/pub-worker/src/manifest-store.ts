@@ -1,19 +1,19 @@
 /**
- * Fetch + `safeParse` the edge manifest from R2. Shared by the serve path
- * (`worker.ts`) and the submit endpoint (`submit.ts`) so both treat the store as
- * the same untrusted boundary (principle #3 / the Val Town lesson): a
- * missing/corrupt/invalid manifest is `null`, and every caller fails closed.
+ * Fetch + `safeParse` the site manifest from R2. Shared by the pinned and
+ * shared-host serve paths so both treat the store as the same untrusted
+ * boundary (principle #3 / the Val Town lesson): a missing/corrupt/invalid
+ * manifest is `null`, and every caller fails closed.
  */
 
 import {
   releaseIdForFiles,
-  storedEdgeManifestSchema,
-  type StoredEdgeManifest,
+  siteEdgeManifestSchema,
+  type SiteEdgeManifest,
 } from "../../src/publish/manifest-edge";
 import type { Env } from "./env";
 
-/** Fetch + `safeParse` the edge manifest. Missing or invalid → null (+ a log). */
-export async function loadManifest(pubId: string, env: Env): Promise<StoredEdgeManifest | null> {
+/** Fetch + `safeParse` the site manifest. Missing or invalid → null (+ a log). */
+export async function loadManifest(pubId: string, env: Env): Promise<SiteEdgeManifest | null> {
   const object = await env.PUB_STORE.get(`pubs/${pubId}/manifest.json`);
   if (object === null) {
     console.warn(`pub-worker: no manifest for pub ${pubId}`);
@@ -27,23 +27,21 @@ export async function loadManifest(pubId: string, env: Env): Promise<StoredEdgeM
     console.warn(`pub-worker: manifest for pub ${pubId} is not valid JSON`);
     return null;
   }
-  const parsed = storedEdgeManifestSchema.safeParse(json);
+  const parsed = siteEdgeManifestSchema.safeParse(json);
   if (!parsed.success) {
     console.warn(`pub-worker: manifest for pub ${pubId} failed schema validation`);
     return null;
   }
-  if ("kind" in parsed.data) {
-    const activeId = await releaseIdForFiles(parsed.data.activeRelease.files);
-    if (activeId !== parsed.data.activeRelease.id) {
-      console.warn(`pub-worker: active release inventory for pub ${pubId} failed hash validation`);
+  const activeId = await releaseIdForFiles(parsed.data.activeRelease.files);
+  if (activeId !== parsed.data.activeRelease.id) {
+    console.warn(`pub-worker: active release inventory for pub ${pubId} failed hash validation`);
+    return null;
+  }
+  if (parsed.data.previousRelease !== undefined) {
+    const previousId = await releaseIdForFiles(parsed.data.previousRelease.files);
+    if (previousId !== parsed.data.previousRelease.id) {
+      console.warn(`pub-worker: previous release inventory for pub ${pubId} failed hash validation`);
       return null;
-    }
-    if (parsed.data.previousRelease !== undefined) {
-      const previousId = await releaseIdForFiles(parsed.data.previousRelease.files);
-      if (previousId !== parsed.data.previousRelease.id) {
-        console.warn(`pub-worker: previous release inventory for pub ${pubId} failed hash validation`);
-        return null;
-      }
     }
   }
   return parsed.data;

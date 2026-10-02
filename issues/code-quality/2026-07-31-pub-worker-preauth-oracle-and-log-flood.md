@@ -6,6 +6,14 @@ filed-by: agent
 discovered-in: worktree-pub-setup-wrangler — Codex cross-review of the pub-setup rework surfaced these as pre-existing Worker behavior, out of that item's scope
 ---
 
+> 2026-10-02: the legacy `/a/<pub-id>/` route, `submit.ts`, and `access-log.ts`
+> were removed with the legacy publication flow, so hazard 2 no longer exists.
+> Hazard 1 remains in the pinned-site path: `handleSite` in
+> `beebox/pub-worker/src/site.ts` loads the manifest and returns 404/410 for a
+> missing, disabled, revoked, or expired publication before `authorizeViewer`
+> checks Access for an `accounts`/`any-account` site. Managed account tiers are
+> not live yet (no Access vars are bound), so this applies once they are.
+>
 > `reconfirm?` checked 2026-09-05: both hazards are still in `pub-worker/src/index.ts` — manifest 404/410 checks run before `authenticateAccess`, and the `any-account` tier calls `logAccess` before `serveAsset` validates the path. No fix landed; the decision framed in the body is still open.
 
 Two hardening tensions in `beebox/pub-worker/`, found by an adversarial

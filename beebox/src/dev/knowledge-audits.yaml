@@ -7345,8 +7345,7 @@ tests:
       resolves its state and requires a signed-in member for permission changes. Uses managed
       status through the configured box agent; if server credentials are
       missing, reports the status error and asks the operator to restore the
-      box-server connection if it persists. Wrangler diagnostics require
-      explicit `--legacy`, not as a substitute for managed status.
+      box-server connection if it persists.
     correct_contains:
       - "bbx pub connections"
       - "bbx pub status"
@@ -7587,3 +7586,21 @@ tests:
       - 'done[\s\S]{0,240}(?:below|sort|finished|close|resum)'
     response_not_contains: ["archive it"]
     tags: [chat, husk]
+
+  # Status (2026-10-02, markdown-expressiveness): pass on the worktree test1 clone, 1 read (markdown.md), 0 searches, 38k ctx.
+  - id: markdown-dialect-line-break
+    prompt: >
+      In a person card's body I want the mailing address on two lines, street
+      on one line and city on the next, inside the same paragraph. Exactly what
+      do I type at the end of the street line? I also want a small table where
+      one header cell spans two columns. How do I write that?
+    expected_level: knows_about
+    should_read_any: ["markdown.md"]
+    watch_for: >
+      Line break: a trailing backslash or `<br>` (trailing two spaces alone is
+      weak, since editors strip them). Table: an HTML `<table>` with
+      `colspan="2"`, since pipe tables cannot merge cells. FAILS if it says
+      HTML is not supported, or offers only a blank line between the lines.
+    correct_contains_any: ["\\", "<br>"]
+    correct_contains: ["colspan"]
+    tags: [markdown, cards]

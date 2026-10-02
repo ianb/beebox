@@ -355,6 +355,13 @@ rows:
     reason: Bites only when linking an engine doc from a card, and the link-validation warning reports it.
     audits: [ref-package-doc-plain-text]
     mechanics: box-docs/provenance.md
+  - id: about-cards.markdown-dialect
+    rule: Body Markdown is GFM with box differences (backslash or `<br>` line breaks, an HTML allow-list, footnotes, Markdoc tags live even in fenced code); the reference is markdown.md.
+    handle: ABOUT_CARDS
+    bin: indirect
+    reason: Matters only when a body needs more than plain prose (a line break, a merged-cell table, a footnote, a literal `{%`); without the pointer an agent guesses from GitHub's rules, which differ.
+    audits: [markdown-dialect-line-break]
+    mechanics: box-docs/markdown.md
   - id: about-cards.link-with-title
     rule: When naming another card or file in a card body or a reply, link it with a human title rather than a bare filename.
     handle: ABOUT_CARDS

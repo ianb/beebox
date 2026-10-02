@@ -31,8 +31,9 @@
  */
 
 import Markdoc from "@markdoc/markdoc";
+import { parseMarkdown } from "../../../shared/markdoc-config/parse/core.js";
 import type { Node } from "@markdoc/markdoc";
-import { markdocConfig } from "../../../shared/markdoc-config/core.js";
+import { markdocConfig } from "../../../shared/markdoc-config/tags/core.js";
 import { collectTagSpans, tagNameFor } from "../../body-markdoc-lint.js";
 import { isTodoStatus } from "../../../shared/todo-model.js";
 import { assignLocators, isTodoTag } from "../../../shared/todo-locators.js";
@@ -45,7 +46,7 @@ import { flattenNodes, resolveTodoRefs, type FlattenResult } from "../../../shar
 // imports resolve to the CJS bundle — which only exposes a default export.
 // Same pattern as `body-refs.ts` / `body-markdoc-lint.ts`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { parse, validate } = Markdoc;
+const { validate } = Markdoc;
 
 export type BodyExtractResult =
   | { ok: true; items: TodoItem[] }
@@ -75,7 +76,7 @@ export function extractBodyTodos(input: {
 
   let ast: Node;
   try {
-    ast = parse(bodyText);
+    ast = parseMarkdown(bodyText);
   } catch (e) {
     return { ok: false, kind: "parse", message: `body failed to parse as Markdoc: ${errorMessage(e)}` };
   }

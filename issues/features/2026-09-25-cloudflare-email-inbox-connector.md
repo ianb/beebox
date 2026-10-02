@@ -34,10 +34,11 @@ and the Worker's `email()` handler can do several things with one message:
 
 ## How the box could receive it
 
-beebox already has the pattern. Publish-pages' submission path is a
-Cloudflare Worker that buffers incoming items in an R2 **ingestion bucket**,
-and a pull connector (`beebox/src/connectors/publish-submissions.ts`) lands
-them as cards on `bbx wakeup`, then deletes them from R2 (land-then-delete,
+beebox had this pattern in the legacy publish-pages submission path (removed
+2026-10-02 without having been used; see git history for
+`beebox/src/connectors/publish-submissions.ts`): a Cloudflare Worker buffered
+incoming items in an R2 **ingestion bucket**, and a pull connector landed them
+as cards on `bbx wakeup`, then deleted them from R2 (land-then-delete,
 idempotent, with an ingestion-scoped token). An email version would be:
 
 1. The Email Worker writes the raw `.eml` to an ingestion bucket (and forwards
@@ -54,12 +55,12 @@ takes it.
 
 ## To decide
 
-- Pull through R2 (reuse the publish-pages pattern and possibly its Worker
-  and setup) or push to the box.
+- Pull through R2 (rebuild the removed publish-pages ingestion pattern) or push
+  to the box.
 - Whether this shares infrastructure with publish-pages, which is being
   redesigned for operational simplicity in the `publish-pages` workstream. One
   Worker and one setup flow for both would cut the setup a boxholder does.
 - Sending replies: out of scope at first. Cloudflare Email Sending exists and
   would need its own decision.
-- Mail is untrusted input. Treat it like `pub-submission` cards: content an
-  agent reads, never instructions it follows.
+- Mail is untrusted input: content an agent reads, never instructions it
+  follows.

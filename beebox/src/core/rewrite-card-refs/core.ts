@@ -41,7 +41,7 @@
 import * as path from "node:path";
 import { isAttachRef } from "../../shared/attach-path.js";
 import { formatRefSuffix, isExternalRef, parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
-import { formatLinkDestination, inlineLinkPattern, linkTarget } from "../body-refs.js";
+import { formatLinkDestination, htmlLinkPattern, inlineLinkPattern, linkTarget } from "../body-refs.js";
 import { rewriteFrontmatter, type RefTransform } from "./frontmatter-refs.js";
 import { invariant } from "../../shared/invariant.js";
 
@@ -201,7 +201,7 @@ interface BodyScanOptions {
   skipFencedCode: boolean;
 }
 
-/** The scan for ref-bearing body syntax: `[…](path)` and `ref="…"`. */
+/** The scan for ref-bearing body syntax: `[…](path)`, `<a href>`/`<img src>`, and `ref="…"`. */
 function scanBodyText(line: string, wrap: RefTransform): string {
   // Inline markdown links and images: [text](path) / ![alt](path). The pattern
   // is shared with validate's `extractBodyLinks` so mv rewrites exactly the set
@@ -215,9 +215,21 @@ function scanBodyText(line: string, wrap: RefTransform): string {
     const { target, angled } = linkTarget(refPart);
     return prefix + formatLinkDestination(wrap(target), { angled });
   });
+  // HTML `<a href="…">` / `<img src="…">`, the same set validate checks.
+  const htmlLinked = linked.replace(htmlLinkPattern(), (_m: string, ...g: string[]) => {
+    const [prefix, quote, value] = g;
+    invariant(
+      prefix !== undefined && quote !== undefined && value !== undefined,
+      "HTML link regex has three mandatory capture groups",
+    );
+    const rewritten = wrap(value);
+    // An unquoted value that now needs quoting (a space, say) gets double quotes.
+    const q = quote === "" && /[\s"'<=>`]/.test(rewritten) ? '"' : quote;
+    return prefix + q + rewritten + q;
+  });
   // Body `ref="…"` attributes (Markdoc tags; XML attributes pass through
   // harmlessly since remap gates every change).
-  return linked.replace(/(\bref=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
+  return htmlLinked.replace(/(\bref=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
     const [attr, quote, value] = g;
     invariant(
       attr !== undefined && quote !== undefined && value !== undefined,

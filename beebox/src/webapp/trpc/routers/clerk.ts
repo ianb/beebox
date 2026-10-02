@@ -31,6 +31,7 @@ import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { BOX_DIRS } from "../../../lib/paths/core.js";
+import { neutralizeIngestedMarkdown } from "../../../shared/markdoc-config/ingest.js";
 
 /** Default filing spot when no commentary destination is chosen. */
 const DEFAULT_COMMENTARY_DIR = BOX_DIRS.inbox;
@@ -271,7 +272,8 @@ async function writeWebpageCard(opts: {
     title: opts.title,
     url: opts.url,
     capturedAt: opts.capturedAt,
-    content: opts.markdown,
+    // Clipped page text is third-party: escape its raw HTML and Markdoc tags.
+    content: neutralizeIngestedMarkdown(opts.markdown),
     siteName: opts.siteName,
     byline: opts.byline,
     excerpt: opts.excerpt,

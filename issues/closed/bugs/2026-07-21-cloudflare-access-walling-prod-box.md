@@ -52,7 +52,7 @@ requests. All one cause: Access in front of the box.
 
 The Access app was created during the 2026-07-19 `bbx pub setup` work, which was
 meant to protect **`pub-worker.<...>.workers.dev`** (path `a/*`) — see
-[pub Access setup via API](../../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
+[pub Access setup via API](../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
 The reorganized Cloudflare dashboard made that flow error-prone (documented
 there), and the application domain ended up scoped to the box hostname instead of
 the worker.

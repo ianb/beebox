@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 
 import { sharedPublicSlugSchema, type SiteEdgeManifest } from "./manifest-edge.js";
-import { bundleContentType } from "./lifecycle.js";
 import { staticBearer } from "../services/cloudflare-bearer.js";
 import type { ManagedPublicationRuntime } from "../services/managed-publication-runtime/core.js";
 import { defaultManagedPublicationRuntime } from "../services/managed-publication-runtime/core.js";
@@ -10,6 +9,12 @@ import type { PublicationCandidate } from "./managed-publications/core.js";
 import { publicationError, readCandidate, readSharedRouteMarker, readSiteManifest, storeFor } from "./managed-publications/core.js";
 import { hasPublicationReferenceCard } from "./publication-reference-card.js";
 import { publicationCardPath } from "../shared/publication-card.js";
+import { extensionToMimetype } from "../lib/mimetype.js";
+
+/** Content-type for a release object, by extension; unknown extensions fall back to a safe binary type. */
+function bundleContentType(relPath: string): string {
+  return extensionToMimetype(path.extname(relPath), { fallback: "application/octet-stream" });
+}
 
 const TEXT_ASSET_EXTENSIONS = new Set([".html", ".htm", ".css", ".js", ".mjs", ".json", ".svg", ".txt", ".md", ".xml", ".webmanifest"]);
 const PREVIEW_TEXT_LIMIT = 64 * 1024;

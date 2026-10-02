@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-02T17:31:00Z
+Generated: 2026-10-02T18:03:53Z
 Total documents: 474
 
 ## Issues
@@ -233,7 +233,6 @@ Referenced by:
 - docs/plans/public-site-box-authoring-export.md:71 (mention) — - **The box workbench spaces now exist.** The authoring box's `CLAUDE.md` defines
 - docs/plans/public-site-story-extraction.subplan.md:59 (mention) — per CLAUDE.md ("Sonnet 5 is good at subagent work"; extraction is
 - docs/plans/public-site.md:31 (mention) — - Root `CLAUDE.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
-- docs/plans/publish-pages.md:150 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
 - docs/plans/publish-sites-admin.md:109 (mention) — CLAUDE.md             # lazy pointer to installed box-docs/publishing.md
 - docs/plans/scan-vision-claude.md:494 (mention) — | Box CLAUDE.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` —
 - docs/plans/source-available-release.md:394 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
@@ -251,6 +250,7 @@ Referenced by:
 - docs/testing/knowledge-audits.md:17 (mention) — **When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:412 (mention) — The boxes are physically still at `~/src/boxes/<box>/` (outside the callback monorepo, so agents working inside a box do
 - docs/unimplemented-plans/design-vision-superseded.md:67 (mention) — - Small additions like a `CLAUDE.md` file with custom prompts are preferred to elaborate new structures
+- docs/unimplemented-plans/publish-pages-superseded.md:157 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
 - docs/user-stories/catalog/2026-06-26.md:1485 (mention) — > As a developer debugging an agent run, I want to capture full API traffic including system prompts, CLAUDE.md context,
 - docs/user-stories/catalog/2026-08-21.md:5947 (mention) — > As a box agent, I want Markdoc-tagged card bodies such as the briefing emitted as plain markdown, so that guidance I a
 - src/core/agent-guide/guide.md:364 (mention) — **Editable, hot-reloaded — no restart needed.** Edit files under those three directories freely; the schema loader, view
@@ -510,11 +510,11 @@ Referenced by:
 - docs/plans/ios-native-capture-mode.md:27 (mention) — - `code-style.md`: standard TypeScript validation, Result/error, exhaustiveness,
 - docs/plans/operator-member-password-reset.md:97 (mention) — - **Failure visibility.** `code-style.md:67-69` requires every non-rethrowing
 - docs/plans/prompt-surface-cleanup-evaluation.md:379 (mention) — - **`beebox/code-style.md`** — no default params, ≤2 positional params, no
-- docs/plans/publish-pages.md:25 (mention) — - `beebox/code-style.md` — mechanical rules for all box-side TS and the Worker package.
 - docs/plans/scan-guide-card.md:31 (mention) — - `beebox/code-style.md`: no default parameters, max 2 positional
 - docs/plans/scan-vision-claude.md:36 (mention) — - `beebox/code-style.md` — custom error classes; fail-closed
 - docs/plans/source-available-release.md:50 (mention) — - `beebox/code-style.md` — style rules for any code touched by deploy
 - docs/plans/workstreams-app.md:59 (mention) — - `beebox/CLAUDE.md` and `beebox/code-style.md` remain the coding,
+- docs/unimplemented-plans/publish-pages-superseded.md:32 (mention) — - `beebox/code-style.md` — mechanical rules for all box-side TS and the Worker package.
 - docs/unimplemented-plans/query-cards.md:40 (mention) — - `beebox/code-style.md` — strict types, no `any`, custom errors,
 - frontend.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers convention
 - ../.claude/skills/bbx-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
@@ -681,7 +681,7 @@ Referenced by:
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:760 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:318 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:332 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../CLAUDE.md:61 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -865,7 +865,6 @@ References:
 - → docs/implemented-plans/capture-mode.md (mention)
 - → docs/implemented-plans/bulk-file-upload.md (mention)
 - → docs/triage.md (mention)
-- → docs/plans/publish-pages.md (mention)
 - → docs/model-policy.md (mention)
 - → docs/secrets.md (mention)
 - → docs/plans/tts-backend-selection.md (mention)
@@ -976,9 +975,9 @@ Referenced by:
 - docs/implemented-plans/app-wide-csp.md:444 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/implemented-plans/webapp-production-mode.md:74 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
-- docs/plans/publish-pages.md:39 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:294 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:308 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:17 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
 
@@ -1147,7 +1146,6 @@ Referenced by:
 - docs/plans/public-site-box-authoring-export.md:37 (mention) — (`beebox/docs/engineering-principles.md:37-47`). The export command validates
 - docs/plans/public-site-story-extraction.subplan.md:39 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
-- docs/plans/publish-pages.md:15 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Validate at boundaries.** Manifests, candidate destinations, slug pointers, and hostname configuration remain strict
 - docs/plans/publish-sites-admin.md:36 (mention) — - **One way to do each thing.** Engineering principle 8 says “Competing idioms are drift generators” and “Consolidate ov
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
@@ -1159,6 +1157,7 @@ Referenced by:
 - docs/plans/workstreams-app.md:44 (mention) — (`docs/engineering-principles.md:37-47`): validate every app API input and
 - docs/plans/worktree-control-surface.md:111 (mention) — - `beebox/docs/engineering-principles.md` §7 *Hierarchy is a
 - docs/unimplemented-plans/publish-custom-domain-admin.md:30 (mention) — - **Validate at boundaries.** A hostname, zone list, Worker-domain list, and Cloudflare API response are untrusted input
+- docs/unimplemented-plans/publish-pages-superseded.md:22 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions →
 - ../.claude/skills/bbx-plan/TEMPLATE.md:33 (mention) — - beebox/docs/engineering-principles.md — the twelve principles, by number
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:110 (mention) — - **Written up as a principle.** `beebox/docs/engineering-principles.md`
@@ -1570,12 +1569,13 @@ Referenced by:
 
 #### docs/publishing.md
 
-Title: "Operating Cloudflare site publishing" | 306 lines | current reference
+Title: "Operating Cloudflare site publishing" | 301 lines | current reference
 
 Referenced by:
 - docs/guides.md:44 (link) — | Publishing: the managed static-site publisher, operator side | [publishing](publishing.md) |
-- docs/plans/publish-pages.md:264 (mention) — 9. **Docs + audits run** — reference doc (`docs/publishing.md`) distilled from this plan, box-agent guidance, knowledge
-- ../issues/features/2026-07-19-publish-pages-resume.md:72 (mention) — 4. **Docs + knowledge audits** (plan step 9): `docs/publishing.md`, box-agent guidance,
+- docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
+- docs/unimplemented-plans/publish-pages-superseded.md:10 (link) — > see [publishing](../publishing.md) and
+- ../issues/closed/features/2026-07-19-publish-pages-resume.md:10 (mention) — > Closed 2026-10-02 as `superseded`: the boxholder retired the legacy publication flow (`bbx pub draft`/`go`/`ls`/`revok
 
 References:
 - → docs/box/publishing.md (link)
@@ -1698,7 +1698,7 @@ References:
 
 #### docs/secrets.md
 
-Title: "Secrets: the machine-level store" | 553 lines | current reference
+Title: "Secrets: the machine-level store" | 548 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1717,7 +1717,7 @@ Referenced by:
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:51 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:215 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:230 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
@@ -1731,7 +1731,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 299 lines | current reference
+Title: "Security overview" | 302 lines | current reference
 
 Referenced by:
 - README.md:90 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -1741,7 +1741,7 @@ Referenced by:
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/plans/publish-sites-admin.md:39 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
-- docs/security-report.md:62 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
+- docs/security-report.md:75 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/server.md:26 (link) — - The security posture of the whole: [security overview](security-overview.md).
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:14 (mention) — - **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
@@ -1769,7 +1769,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 551 lines | current reference
+Title: "Security report — structured version" | 565 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:92 (link) — and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
@@ -1906,10 +1906,10 @@ Referenced by:
 - docs/plans/ios-companion-app.md:216 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
 - docs/plans/ios-input-plane-parity.md:38 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
 - docs/plans/ios-native-capture-mode.md:36 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
-- docs/plans/publish-pages.md:270 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
 - docs/plans/scan-retry-and-document-route.md:417 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
 - docs/plans/tts-backend-selection.md:517 (mention) — Tests named while designing, per `docs/testing.md`:
 - docs/plans/workspace-pane-controls.md:476 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
+- docs/unimplemented-plans/publish-pages-superseded.md:277 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
 - ../.claude/skills/bbx-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/bbx-guide-testing/SKILL.md:9 (mention) — the full tier catalog live in `beebox/docs/testing.md` — read the
 - ../.claude/skills/bbx-plan/TEMPLATE.md:169 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
@@ -2061,7 +2061,7 @@ Referenced by:
 - docs/architecture/CLAUDE.md:15 (mention) — - **`outline.md`** — Working outline for the architecture docs. Section structure, story ideas, open design questions.
 - docs/implemented-plans/design-reconciliation.md:24 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/implemented-plans/docs-reorg.md:78 (mention) — `architecture/outline.md` (75%-unwritten writing plan),
-- docs/plans/publish-pages.md:41 (mention) — - **The aspiration this plan implements.** `docs/architecture/outline.md:166` (James's build journal story): *"The box t
+- docs/unimplemented-plans/publish-pages-superseded.md:48 (mention) — - **The aspiration this plan implements.** `docs/architecture/outline.md:166` (James's build journal story): *"The box t
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:19 (mention) — (`architecture/outline.md`).
 
 References:
@@ -2161,7 +2161,7 @@ References:
 
 #### docs/box/publishing.md
 
-Title: "Publishing a site from this box" | 682 lines | current reference
+Title: "Publishing a site from this box" | 680 lines | current reference
 
 Referenced by:
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
@@ -2633,10 +2633,10 @@ Title: "Identity — what Bee Box is" | 47 lines | design rationale
 Referenced by:
 - docs/design/README.md:21 (link) — - [`identity.md`](identity.md) — what this is: OS as the ambition, shared boxes (one sharing granularity each), web UI a
 - docs/plans/agent-docs.md:104 (mention) — on me. Shared boxes are a design ruling (`design/identity.md`); what
-- docs/plans/publish-pages.md:42 (mention) — - **Identity ruling constraining the design.** `docs/design/identity.md:31-36`: *"A box has exactly **one granularity of
 - docs/plans/publish-shared-host-per-box.md:24 (mention) — - **Keep one box sharing granularity.** The identity design says a box has one granularity of sharing (`beebox/docs/desi
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../implemented-
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > `../design/identity.md` (ruling 3); landmarks — the shipped role-bearing-card
+- docs/unimplemented-plans/publish-pages-superseded.md:49 (mention) — - **Identity ruling constraining the design.** `docs/design/identity.md:31-36`: *"A box has exactly **one granularity of
 
 References:
 - → CLAUDE.md (mention)
@@ -3150,7 +3150,7 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- docs/security-report.md:316 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:330 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:131 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -3618,7 +3618,7 @@ Title: "Chat titles for every chat, kept fresh cheaply" | 658 lines | shipped hi
 
 Referenced by:
 - docs/chat/review.md:8 (link) — Two passes share the run ([docs/plans/chat-titles.md](../implemented-plans/chat-titles.md)):
-- docs/implemented-plans/chat-review.md:35 (link) — [docs/plans/chat-titles.md](chat-titles.md).
+- docs/implemented-plans/chat-review.md:35 (link) — [docs/implemented-plans/chat-titles.md](chat-titles.md).
 
 References:
 - → docs/chat/review.md (mention)
@@ -5038,12 +5038,11 @@ Title: "Plan: `bbx pub setup` via wrangler login + Access via the CF API" | 264 
 
 Referenced by:
 - ../issues/closed/decisions/2026-03-15-per-box-secret-management.md:39 (link) — ingestion bucket (design: [pub-setup-wrangler](../../../beebox/docs/implemented-plans/pub-setup-wrangler.md)).
-- ../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md:6 (frontmatter) — design: ../../beebox/docs/implemented-plans/pub-setup-wrangler.md
-- ../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md:14 (link) — + fake-tested per [pub-setup-wrangler](../../beebox/docs/implemented-plans/pub-setup-wrangler.md)
-- ../issues/features/2026-07-19-publish-pages-resume.md:87 (link) — [pub-setup-wrangler](../../beebox/docs/implemented-plans/pub-setup-wrangler.md). The
+- ../issues/closed/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/pub-setup-wrangler.md
+- ../issues/closed/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md:16 (link) — + fake-tested per [pub-setup-wrangler](../../../beebox/docs/implemented-plans/pub-setup-wrangler.md)
+- ../issues/closed/features/2026-07-19-publish-pages-resume.md:89 (link) — [pub-setup-wrangler](../../../beebox/docs/implemented-plans/pub-setup-wrangler.md). The
 
 References:
-- → docs/plans/publish-pages.md (mention)
 - → deploy/README.md (mention)
 
 #### docs/implemented-plans/questions-end-to-end.md
@@ -5134,7 +5133,7 @@ Title: "Remove `bbx render` and the SSR machinery" | 605 lines | shipped history
 
 Referenced by:
 - docs/implemented-plans/remove-bbx-render.review.md:8 (mention) — revised. All seven were real. The plan at `remove-bbx-render.md` has been updated
-- docs/plans/publish-pages.md:35 (mention) — - **SSR rendering — REMOVED 2026-08-01; this plan can no longer build on it.** `bbx render` and `src/frontend/src/ssr/`
+- docs/unimplemented-plans/publish-pages-superseded.md:42 (mention) — - **SSR rendering — REMOVED 2026-08-01; this plan can no longer build on it.** `bbx render` and `src/frontend/src/ssr/`
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:13 (link) — > [remove-bbx-render](../../../beebox/docs/implemented-plans/remove-bbx-render.md)
 
 References:
@@ -5144,7 +5143,6 @@ References:
 - → code-style.md (mention)
 - → ../issues/closed/bugs/2026-07-07-bbx-render-ssr-window-undefined.md (link)
 - → frontend.md (mention)
-- → docs/plans/publish-pages.md (mention)
 - → docs/plans/cli-restructure.md (mention)
 - → docs/implemented-plans/docs-reorg.gap-analysis.md (mention)
 - → docs/doc-graph.md (mention)
@@ -5159,7 +5157,6 @@ Title: "Plan Engineering Review — remove-bbx-render" | 53 lines | implementati
 
 References:
 - → docs/implemented-plans/remove-bbx-render.md (mention)
-- → docs/plans/publish-pages.md (mention)
 - → docs/implemented-plans/docs-reorg.gap-analysis.md (mention)
 - → docs/plans/cli-restructure.md (mention)
 - → docs/doc-graph.md (mention)
@@ -5480,13 +5477,13 @@ Referenced by:
 - docs/plans/box-glm-provider.md:81 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:193 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:231 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:245 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 - docs/user-stories/catalog/2026-08-21.md:9044 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
 - ../issues/closed/decisions/2026-03-15-per-box-secret-management.md:10 (mention) — (`docs/implemented-plans/secret-custody.md`): provisioning is now grants, not
+- ../issues/closed/decisions/2026-09-05-publish-connector-env-credential-bypasses-grants.md:17 (mention) — (`docs/implemented-plans/secret-custody.md`). One path is outside that model.
 - ../issues/closed/features/2026-08-17-secret-custody-broker.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/secret-custody.md
-- ../issues/decisions/2026-09-05-publish-connector-env-credential-bypasses-grants.md:14 (mention) — (`docs/implemented-plans/secret-custody.md`). One path is outside that model.
 - ../issues/features/2026-07-19-write-only-secret-capture-in-chat.md:82 (mention) — `beebox/docs/implemented-plans/secret-custody.md` ("Guided entry +
 
 References:
@@ -6925,7 +6922,7 @@ Referenced by:
 - docs/plans/android-companion-app.md:36 (mention) — - Shipped precedent: `docs/plans/ios-companion-app.md` (umbrella), the native
 - docs/plans/ios-companion-review-2026-07-09.md:21 (mention) — Cross-referencing the plan (`ios-companion-app.md`): this work is **Tracks A, C, D, G, H partially built ahead of their
 - docs/plans/ios-companion-review-2026-07-17.md:150 (mention) — - **The plan's hardest question is still unresolved.** `ios-companion-app.md` named **device-token/web-session convergen
-- docs/plans/publish-pages.md:26 (mention) — - **Precedents (denser than docs):** the Telegram webhook (`src/webapp/routes/telegram.ts`) as the "external service wit
+- docs/unimplemented-plans/publish-pages-superseded.md:33 (mention) — - **Precedents (denser than docs):** the Telegram webhook (`src/webapp/routes/telegram.ts`) as the "external service wit
 - ../issues/closed/bugs/2026-07-17-mobile-chat-unattributed.md:24 (mention) — The `ios-companion-app.md` plan already calls identity unification the hardest problem in its
 
 References:
@@ -7145,7 +7142,7 @@ References:
 Title: "Author public-site cards in a box and export them to the repository" | 394 lines | proposal | partial
 
 Referenced by:
-- docs/plans/publish-sites-admin.md:52 (mention) — - The older plan's view direction inlined card data in HTML (`beebox/docs/plans/publish-pages.md:107-114`); its proposed
+- docs/plans/publish-sites-admin.md:52 (mention) — - The older plan's view direction inlined card data in HTML (`beebox/docs/unimplemented-plans/publish-pages-superseded.m
 
 References:
 - → ../issues/exploration/2026-08-19-site-authored-in-a-box.md (frontmatter)
@@ -7231,42 +7228,12 @@ Title: "Plan Engineering Review — custom hostname assignment" | 91 lines | pla
 References:
 - → docs/unimplemented-plans/publish-custom-domain-admin.md (mention)
 
-#### docs/plans/publish-pages.md
-
-Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 281 lines | proposal | active
-
-Referenced by:
-- docs/box-layout.md:196 (mention) — | `_publish/` | Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each holding a
-- docs/implemented-plans/pub-setup-wrangler.md:160 (mention) — Status extension per above; update `docs/plans/publish-pages.md` pointers, the
-- docs/implemented-plans/remove-bbx-render.md:310 (mention) — emitter — `docs/plans/publish-pages.md` contemplates one) re-arms it. Comments
-- docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
-- docs/plans/publish-sites-admin.md:52 (mention) — - The older plan's view direction inlined card data in HTML (`beebox/docs/plans/publish-pages.md:107-114`); its proposed
-- docs/plans/publish-sites-admin.review.md:53 (mention) — **Citation:** Secret `PubId` is the capability token (`beebox/src/publish/manifest.ts:76-79`); the earlier plan says “se
-- docs/user-stories/catalog/2026-08-21.md:6201 (mention) — **Flag review** (real-gap) — The receiving half is fully built and live, and the producing half does not exist, so the c
-- ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:10 (mention) — The publish "drop box" (Track F of `beebox/docs/plans/publish-pages.md`) is complete on the receiving side but has no pr
-- ../issues/features/2026-07-19-publish-pages-resume.md:6 (frontmatter) — design: ../../beebox/docs/plans/publish-pages.md
-- ../issues/features/2026-07-19-publish-pages-resume.md:14 (link) — [publish-pages.md](../../beebox/docs/plans/publish-pages.md).
-- ../issues/features/2026-07-27-echo-show-display-dashboard-view.md:65 (mention) — `docs/plans/publish-pages.md`). The box **renders the dashboard and publishes a
-- ../research/opencode/inspiration.md:76 (mention) — | Live share to `opncd.ai` (public secret URL, `share: auto`) | `docs/plans/publish-pages.md`: snapshot-never-live, fail
-
-References:
-- → docs/engineering-principles.md (mention)
-- → code-style.md (mention)
-- → docs/plans/ios-companion-app.md (mention)
-- → docs/implemented-plans/remove-bbx-render.md (mention)
-- → docs/content-security-policy.md (mention)
-- → docs/architecture/outline.md (mention)
-- → docs/design/identity.md (mention)
-- → CLAUDE.md (mention)
-- → docs/publishing.md (mention)
-- → docs/testing.md (mention)
-
 #### docs/plans/publish-shared-host-per-box.md
 
 Title: "Serve box publications from one shared hostname" | 170 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:542 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:556 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
@@ -7284,16 +7251,18 @@ Title: "Static site publishing with admin setup and human approval" | 292 lines 
 
 Referenced by:
 - docs/plans/publish-shared-host-per-box.md:23 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:535 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/security-report.md:549 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
+- docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
 - ../issues/decisions/2026-10-02-publication-source-and-card-split.md:34 (mention) — `beebox/docs/plans/publish-sites-admin.md`. That plan fixed the source root so
 
 References:
-- → ../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md (frontmatter)
+- → ../issues/closed/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 - → docs/security-overview.md (mention)
 - → docs/secrets.md (mention)
-- → docs/plans/publish-pages.md (mention)
+- → docs/unimplemented-plans/publish-pages-superseded.md (mention)
 - → docs/plans/public-site-box-authoring-export.md (mention)
 - → CLAUDE.md (mention)
 - → frontend.md (mention)
@@ -7306,7 +7275,7 @@ References:
 Title: "Plan Engineering Review — publish-sites-admin" | 156 lines | plan review
 
 References:
-- → docs/plans/publish-pages.md (mention)
+- → docs/unimplemented-plans/publish-pages-superseded.md (mention)
 
 #### docs/plans/README.md
 
@@ -8255,6 +8224,33 @@ References:
 - → docs/plans/publish-sites-admin.md (mention)
 - → docs/engineering-principles.md (mention)
 
+#### docs/unimplemented-plans/publish-pages-superseded.md
+
+Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 288 lines | past proposal | superseded
+
+Referenced by:
+- docs/plans/publish-sites-admin.md:52 (mention) — - The older plan's view direction inlined card data in HTML (`beebox/docs/unimplemented-plans/publish-pages-superseded.m
+- docs/plans/publish-sites-admin.review.md:53 (mention) — **Citation:** Secret `PubId` is the capability token (`beebox/src/publish/manifest.ts:76-79`); the earlier plan says “se
+- docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
+- ../issues/closed/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:13 (mention) — The publish "drop box" (Track F of `beebox/docs/unimplemented-plans/publish-pages-superseded.md`) is complete on the rec
+- ../issues/closed/features/2026-07-19-publish-pages-resume.md:5 (frontmatter) — design: ../../../beebox/docs/unimplemented-plans/publish-pages-superseded.md
+- ../issues/closed/features/2026-07-19-publish-pages-resume.md:16 (link) — [publish-pages.md](../../../beebox/docs/unimplemented-plans/publish-pages-superseded.md).
+- ../issues/features/2026-07-27-echo-show-display-dashboard-view.md:65 (mention) — `docs/unimplemented-plans/publish-pages-superseded.md`). The box **renders the dashboard and publishes a
+- ../research/opencode/inspiration.md:76 (mention) — | Live share to `opncd.ai` (public secret URL, `share: auto`) | `docs/unimplemented-plans/publish-pages-superseded.md`:
+
+References:
+- → docs/publishing.md (link)
+- → docs/plans/publish-sites-admin.md (link)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/plans/ios-companion-app.md (mention)
+- → docs/implemented-plans/remove-bbx-render.md (mention)
+- → docs/content-security-policy.md (mention)
+- → docs/architecture/outline.md (mention)
+- → docs/design/identity.md (mention)
+- → CLAUDE.md (mention)
+- → docs/testing.md (mention)
+
 #### docs/unimplemented-plans/query-cards.md
 
 Title: "Query cards — the "select and arrange cards" vocabulary" | 369 lines | past proposal | parked
@@ -8274,7 +8270,7 @@ References:
 
 #### docs/unimplemented-plans/README.md
 
-Title: "Unimplemented plans" | 25 lines | current reference
+Title: "Unimplemented plans" | 26 lines | current reference
 
 Referenced by:
 - docs/unimplemented-plans/design-card-views-superseded.md:54 (mention) — README.md               → [Source]
@@ -8298,6 +8294,9 @@ References:
 - → docs/implemented-plans/dev-loop-lifecycle.md (mention)
 - → docs/unimplemented-plans/publish-custom-domain-admin.md (mention)
 - → docs/plans/publish-shared-host-per-box.md (mention)
+- → docs/unimplemented-plans/publish-pages-superseded.md (mention)
+- → docs/plans/publish-sites-admin.md (mention)
+- → docs/publishing.md (mention)
 
 #### docs/unimplemented-plans/session-end-sweep-detachment-superseded.md
 
@@ -8320,13 +8319,13 @@ Referenced by:
 - docs/testing.md:44 (link) — | [User-stories catalog](user-stories/README.md) | What can the software actually do? Claims read from the source by age
 - docs/user-stories/README.md:23 (mention) — README.md                this file
 - docs/user-stories/catalog/2026-08-21.md:7 (link) — method are in [the pipeline README](../README.md). The underlying
-- ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:61 (link) — [the pipeline README](../../beebox/docs/user-stories/README.md).
 - ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:73 (link) — [the pipeline README](../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:43 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:62 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:56 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:42 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:84 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
+- ../issues/closed/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:64 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/docs-and-chores/2026-05-26-dev-scripts-into-bin.md:43 (mention) — (`beebox/docs/user-stories/README.md`, `journeys/README.md` — 9 lines invoking
 
 References:
@@ -8378,7 +8377,6 @@ Referenced by:
 - docs/user-stories/README.md:5 (link) — The current catalog is [catalog/2026-08-21.md](catalog/2026-08-21.md). It is produced by reading
 - docs/user-stories/catalog/2026-06-26.md:4 (link) — > [2026-08-21.md](2026-08-21.md). This file describes the product as it
 - test/user-stories/journeys/README.md:4 (link) — there. The [capability catalog](../../../docs/user-stories/catalog/2026-08-21.md) next door answers "does the
-- ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:39 (link) — This issue is why [`publish/collect-replies-from-a-published-page`](../../beebox/docs/user-stories/catalog/2026-08-21.md
 - ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:51 (link) — This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../beebox/docs/user-stories/catalog/2026-08-21.md#fl
 - ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:23 (link) — This issue is why [`capture/a-capture-still-arrives-when-transcription-is-down`](../../../../beebox/user-stories/catalog
 - ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:42 (link) — This issue is why [`connectors/configure-which-gmail-calendar-and-drive-content`](../../../beebox/docs/user-stories/cata
@@ -8386,6 +8384,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:22 (link) — This issue is why [`cards/define-box-local-card-types-that-hot-reload`](../../../beebox/docs/user-stories/catalog/2026-0
 - ../issues/closed/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:62 (link) — This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../../beebox/docs/user-stories/catalog/202
 - ../issues/closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md:53 (link) — An independent adversarial source recheck marked [`connectors/calendar-sync-repairs-an-expired-sync-token-and`](../../..
+- ../issues/closed/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:42 (link) — This issue is why [`publish/collect-replies-from-a-published-page`](../../../beebox/docs/user-stories/catalog/2026-08-21
 - ../issues/closed/bugs/2026-08-21-trashing-or-deleting-a-google-drive-card-does-not-stop.md:35 (link) — The story was narrowed from raw deletion to the supported trash-and-restore lifecycle and re-keyed as [`connectors/stop-
 - ../issues/closed/docs-and-chores/2026-08-24-stories-frontmatter-field-undocumented.md:17 (mention) — pointing at slugs in `beebox/user-stories/catalog/2026-08-21.md` (moved to `beebox/docs/user-stories/catalog/2026-08-21.
 
@@ -8401,7 +8400,6 @@ References:
 - → docs/triage.md (mention)
 - → MAP.md (at-include) **[BROKEN]**
 - → path.md (at-include) **[BROKEN]**
-- → docs/plans/publish-pages.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/prompts.md (mention)
 - → docs/doc-graph.md (mention)

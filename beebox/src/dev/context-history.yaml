@@ -6680,6 +6680,14 @@ test1:
       peak: 42418
       added: 4886
       turns: 3
+  markdown-dialect-line-break:
+    - date: 2026-10-02T17:56:19.556Z
+      boxCommit: 8f0a594a5e06b8656c848cf475e16b305d4cc03b
+      repoCommit: d0c8487c9a05d9fc9f87f5d308265fe5b4282222
+      initial: 37777
+      peak: 42292
+      added: 4515
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

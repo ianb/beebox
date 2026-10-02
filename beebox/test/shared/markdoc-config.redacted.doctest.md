@@ -9,7 +9,7 @@ Tested headlessly through Markdoc's own `renderers.html` — no React, no DOM.
 
 ```ts setup
 import Markdoc from "@markdoc/markdoc";
-import { markdocConfig } from "../../src/shared/markdoc-config/core.js";
+import { markdocConfig } from "../../src/shared/markdoc-config/tags/core.js";
 
 const { parse, transform, renderers } = Markdoc;
 
