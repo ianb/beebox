@@ -356,23 +356,41 @@ await box.cleanup();
 ```
 
 Box Markdoc tags render to app components, which a static page cannot show.
-A task-list item becomes a plain disabled checkbox; any other box tag fails, so
-a `redacted` answer is never published as visible text.
+A task-list item becomes a plain disabled checkbox. `redacted` content is
+omitted entirely, inline or block. Any other box tag fails prepare.
 
 ```ts
 const box = await makeTmpBox();
 await writeDefinition(box);
-await box.write("src/publications/example/site/index.md", "# Home\n\n- [x] Tent\n- [ ] Stove\n");
+await box.write("src/publications/example/site/index.md", [
+  "# Quiz",
+  "",
+  "- [x] Tent",
+  "- [ ] Stove",
+  "",
+  "The answer is {% redacted %}forty-two{% /redacted %}.",
+  "",
+  "{% redacted %}",
+  "A whole hidden paragraph.",
+  "{% /redacted %}",
+  "",
+].join("\n"));
 const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
 const index = result.ok ? await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8") : result.message;
 index.includes('<input type="checkbox" disabled="" checked="">') && index.includes('<input type="checkbox" disabled="">') && !index.includes("<Task")
 => true
 
+index.includes("The answer is .")
+=> true
+
+/forty-two|hidden paragraph|redacted/i.test(index)
+=> false
+
 if (result.ok) await result.prepared.cleanup();
-await box.write("src/publications/example/site/index.md", "# Quiz\n\n{% redacted %}42{% /redacted %}\n");
-const redacted = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
-redacted.ok ? "ok" : `${redacted.reason}: ${redacted.message}`
-=> bundle-policy: Markdown file 'index.md' uses a box Markdoc tag (RedactedInline) that published pages do not support; remove it or write plain Markdown
+await box.write("src/publications/example/site/index.md", "# Quote\n\n{% quote %}Hello{% /quote %}\n");
+const quoted = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+quoted.ok ? "ok" : `${quoted.reason}: ${quoted.message}`
+=> bundle-policy: Markdown file 'index.md' uses a box Markdoc tag (QuoteInline) that published pages do not support; remove it or write plain Markdown
 
 await box.cleanup();
 ```

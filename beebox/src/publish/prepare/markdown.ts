@@ -41,7 +41,7 @@ const { Tag } = Markdoc;
  * The shared Markdoc config emits app components (capitalized tag names) for
  * box tags. A static page has no component renderer, so a GFM task becomes a
  * disabled checkbox and any other component fails prepare rather than ship
- * as an unknown element (a `redacted` tag would show its text).
+ * as an unknown element. The page renderer has already omitted `redacted`.
  */
 function lowerComponents(relative: string, tree: RenderableTreeNodes): RenderableTreeNodes {
   return Array.isArray(tree) ? tree.map((node) => lowerComponent(relative, node)) : lowerComponent(relative, tree);

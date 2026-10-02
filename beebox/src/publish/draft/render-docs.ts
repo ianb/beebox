@@ -33,7 +33,7 @@ import { parseAnnexPointer } from "../../lib/annex-pointer.js";
 
 import Markdoc from "@markdoc/markdoc";
 import { parse as parseYaml } from "yaml";
-import type { Config, Node, RenderableTreeNodes } from "@markdoc/markdoc";
+import type { Config, Node, RenderableTreeNode, RenderableTreeNodes } from "@markdoc/markdoc";
 
 import { markdocConfig, makeHeadingNode } from "../../shared/markdoc-config/core.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
@@ -43,7 +43,7 @@ import { extensionToMimetype } from "../../lib/mimetype.js";
 // destructure off the default import instead — same pattern and lint exception
 // as `markdoc/emit.ts` / `markdoc-config.ts`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { parse, transform, renderers, validate } = Markdoc;
+const { parse, transform, renderers, validate, Tag } = Markdoc;
 
 /**
  * Images at or below this many bytes are inlined as `data:` URIs directly in
@@ -232,9 +232,18 @@ export function markdownValidationErrors(source: string): { line: number | null;
     .map(({ error, lines }) => ({ line: lines[0] === undefined ? null : lines[0] + 1, message: error.message }));
 }
 
+const REDACTED_TAGS = new Set(["RedactedInline", "RedactedBlock"]);
+
+/** A published page omits `redacted` content entirely; it has no reveal control and its text must not ship. */
+function omitRedacted(node: RenderableTreeNode): RenderableTreeNode {
+  if (!Tag.isTag(node)) return node;
+  if (REDACTED_TAGS.has(node.name)) return null;
+  return new Tag(node.name, node.attributes, node.children.map(omitRedacted));
+}
+
 /**
  * Render a Markdown/Markdoc source to one complete HTML page: the box's Markdoc
- * config, inline CSS, no JavaScript. `rewriteTree` adjusts the transformed
+ * config, inline CSS, no JavaScript, and `redacted` content omitted. `rewriteTree` adjusts the transformed
  * Markdoc tree before HTML output; `rewriteHtml` post-processes the rendered
  * body (image localizing, link rewriting); `footerHtml` is appended verbatim.
  * Shared by the docs snapshot and static-site Markdown rendering.
@@ -249,7 +258,8 @@ export function renderMarkdownPage(
   },
 ): string {
   const ast = parse(source);
-  const tree = transform(ast, docRenderConfig());
+  const transformed = transform(ast, docRenderConfig());
+  const tree = Array.isArray(transformed) ? transformed.map(omitRedacted) : omitRedacted(transformed);
   const body = renderers.html(options.rewriteTree === undefined ? tree : options.rewriteTree(tree));
   const rewritten = options.rewriteHtml === undefined ? body : options.rewriteHtml(body);
   const title = escapeHtml(frontmatterTitle(ast.attributes["frontmatter"]) ?? extractTitle(ast) ?? options.fallbackTitle);
