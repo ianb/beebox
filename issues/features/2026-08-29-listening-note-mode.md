@@ -90,3 +90,20 @@ the boxholder listens. It is the mirror image of narration, and it belongs to th
 chip's OUTPUT segment (where mute already lives) rather than the input one. Worth
 its own issue once there is more than a name; recorded here so the distinction is
 not lost.
+
+## 2026-09-29 — notes from the Omi review
+
+The [Omi review](../../research/omi-review.md) (findings 3 and 4) bears on
+two of the design questions above.
+
+- **Speaker naming.** Omi identifies people across recordings with voice
+  embeddings, an enrolled owner profile, and retained audio. That needs a
+  retained-audio decision the box does not make today. Its cheap rule applies
+  now: treat a segment as the boxholder only when exactly one speaker cluster
+  matches, and otherwise refuse to attribute. Per-recording naming by the
+  boxholder stays the right first step.
+- **If capture ever becomes continuous** (for example from a wearable,
+  [pendant exploration](../exploration/2026-09-29-omi-pendant-as-a-capture-source.md)),
+  segment by speech gap first and merge by judgment after. Show a relevance
+  discard as a visible state with a reason. Omi's users read silent discards
+  as data loss or as someone else's private conversation.
