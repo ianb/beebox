@@ -62,8 +62,9 @@ export async function hashStreamToFile(opts: {
     }
   }
 
+  const out = createWriteStream(destPath);
   try {
-    await pipeline(source, meter, createWriteStream(destPath));
+    await pipeline(source, meter, out);
     // Push the bytes out of the page cache before we return. Callers treat a
     // successful return as "these bytes are on disk" — the scan route renames
     // this file into quarantine and then answers the client `accepted`, which
@@ -83,6 +84,11 @@ export async function hashStreamToFile(opts: {
       await handle.close();
     }
   } catch (e) {
+    // pipeline destroys `out` on failure, but an fs write stream that has not
+    // finished opening still creates its file afterwards. Removing it before
+    // `close` left an empty partial file behind in about one failure in five
+    // (2026-09-29), so the removal waits for the stream to let go of the path.
+    if (!out.closed) await new Promise<void>((resolve) => out.once("close", () => resolve()));
     await fs.rm(destPath, { force: true });
     throw e;
   }

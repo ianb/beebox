@@ -297,7 +297,7 @@ after a full-suite run.
 
 **Filed from this work.**
 
-- [partial-file race in hashStreamToFile](../../../issues/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md),
+- [partial-file race in hashStreamToFile](../../../issues/closed/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md),
   reproduced in 41 of 200 attempts;
 - [the namespace-fence-traversal flake](../../../issues/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md);
 - [bin/test doctests run by no suite](../../../issues/bugs/2026-09-29-bin-test-doctests-not-run.md);
