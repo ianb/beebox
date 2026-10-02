@@ -24,7 +24,7 @@ import { contentHash } from "../../../../lib/content-hash.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
 import { scanBundle, type LeakKind } from "../../../../publish/leak-scan.js";
 import { setDerivedContains } from "../../../search/contains-update.js";
-import type { ReviewOutput } from "../reviewer.js";
+import type { ReviewOutput, TitleOutput } from "../reviewer.js";
 import type { TitleOwner } from "../state.js";
 
 /**
@@ -63,6 +63,7 @@ export interface HuskFields {
   title: string | null;
   account: string | null;
   reviewSpan: string | null;
+  firstMessage: string | null;
 }
 
 export interface WriteResult {
@@ -81,9 +82,9 @@ export interface WriteResult {
 export async function readHuskFields(boxRoot: string, relPath: string): Promise<HuskFields> {
   const content = await fs.readFile(path.join(boxRoot, relPath), "utf8");
   const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return { title: null, account: null, reviewSpan: null };
+  if (!split.hasFrontmatter) return { title: null, account: null, reviewSpan: null, firstMessage: null };
   const parsed: unknown = parseYaml(split.frontmatterText) ?? {};
-  if (!isRecord(parsed)) return { title: null, account: null, reviewSpan: null };
+  if (!isRecord(parsed)) return { title: null, account: null, reviewSpan: null, firstMessage: null };
   const str = (key: string): string | null => {
     const value = parsed[key];
     return typeof value === "string" && value !== "" ? value : null;
@@ -92,6 +93,7 @@ export async function readHuskFields(boxRoot: string, relPath: string): Promise<
     title: str("title"),
     account: str("contains-evidence"),
     reviewSpan: str("review-span"),
+    firstMessage: str("first-message"),
   };
 }
 
@@ -210,6 +212,7 @@ export async function applyReviewToHusk(
       alsoSet: {
         ...(writeTitle ? { title: output.title } : {}),
         ...(spanApplied ? { "review-span": spanId } : {}),
+        ...firstMessageFill(live.firstMessage, args.snippetTitle),
       },
     });
 
@@ -220,5 +223,98 @@ export async function applyReviewToHusk(
       spanApplied,
       rejected,
     } satisfies WriteResult;
+  });
+}
+
+/**
+ * The `first-message` fill: written when the card lacks the field and the
+ * transcript's opening snippet is in hand. Idempotent by construction — the
+ * condition is absence, not staleness — and safe on every pass, because a
+ * coined-id chat's husk is created before its transcript exists and only a
+ * pass that reads the transcript can fill the field
+ * (`docs/plans/chat-titles.md` § Track C).
+ *
+ * The value is the person's own opening message (the same text a live list
+ * label shows quoted), not model output, so it bypasses the leak scan.
+ */
+function firstMessageFill(
+  current: string | null,
+  snippetTitle: string | null,
+): Record<string, string> {
+  if (current !== null || snippetTitle === null) return {};
+  return { "first-message": snippetTitle };
+}
+
+export interface TitleWriteResult {
+  titleWritten: boolean;
+  /** New owner after the write — `manual` when a hand-edit was detected. */
+  titleOwner: TitleOwner;
+  /** sha256 of the title now on the card, or null when it has none. */
+  titleHash: string | null;
+  /** Fields dropped by the leak scan, for the run report. */
+  rejected: string[];
+}
+
+/**
+ * Apply a title pass to a husk: the title, plus the `first-message` fill,
+ * in one card write.
+ *
+ * Deliberately **no span marker**: a title write replaces rather than extends,
+ * so the double-apply hazard that makes `review-span` necessary for accounts
+ * cannot occur here. A crash between this write and the journal save costs one
+ * freshness check that will answer "keep" — self-healing, not replayable
+ * corruption.
+ *
+ * Like {@link applyReviewToHusk}, the husk is re-read under the lock and title
+ * ownership resolved from the live value, never from discovery's snapshot.
+ */
+export async function applyTitleToHusk(
+  boxRoot: string,
+  args: {
+    relPath: string;
+    output: TitleOutput;
+    /** What `ensureChatHusk` would derive from the transcript; see resolveTitleOwner. */
+    snippetTitle: string | null;
+    storedOwner: TitleOwner;
+    storedHash: string | null;
+    ownerEmail: string | null;
+  },
+): Promise<TitleWriteResult> {
+  const { relPath, output, ownerEmail } = args;
+  const absPath = path.join(boxRoot, relPath);
+  const rejected: string[] = [];
+
+  const titleOffered = output.title !== "";
+  const titleClean =
+    titleOffered
+    && passesLeakScan("title", { text: output.title, ownerEmail });
+  if (titleOffered && !titleClean) rejected.push("title");
+
+  return withCardLock(absPath, async () => {
+    const live = await readHuskFields(boxRoot, relPath).catch((e: unknown) => {
+      throw new HuskUnreadableError(relPath, { detail: errorMessage(e) });
+    });
+    const owner = resolveTitleOwner({
+      currentTitle: live.title,
+      snippetTitle: args.snippetTitle,
+      storedOwner: args.storedOwner,
+      storedHash: args.storedHash,
+    });
+    const writeTitle = titleClean && owner !== "manual";
+
+    await setDerivedContains(boxRoot, {
+      relPath,
+      alsoSet: {
+        ...(writeTitle ? { title: output.title } : {}),
+        ...firstMessageFill(live.firstMessage, args.snippetTitle),
+      },
+    });
+
+    return {
+      titleWritten: writeTitle,
+      titleOwner: writeTitle ? "generated" : owner,
+      titleHash: writeTitle ? contentHash(output.title) : (owner === "manual" ? null : args.storedHash),
+      rejected,
+    } satisfies TitleWriteResult;
   });
 }

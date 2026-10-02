@@ -26,6 +26,14 @@ export const MAX_REVIEW_ATTEMPTS = 2;
 /** The journal consumer this plan ships. Others (fan-out sinks) would key alongside. */
 export const METADATA_CONSUMER = "metadata";
 
+/**
+ * The titling consumer. Separate from the metadata journal so a chat can be
+ * titled after a couple of exchanges without waiting for summary-sized
+ * growth, and re-titled when its drift is smaller than a full review span
+ * (`docs/plans/chat-titles.md` § Track A).
+ */
+export const TITLE_CONSUMER = "title";
+
 const AppliedSpanSchema = z.object({
   /** sha256(sessionId + endUuid + prefixHash) — the idempotency key. */
   spanId: z.string(),
@@ -65,6 +73,16 @@ const ReviewSessionStateSchema = z.object({
    * session permanently.
    */
   failedSpanId: z.string().optional(),
+  /**
+   * Title-pass failures, kept separate from the metadata counters so a failing
+   * summary cannot retire the title (and vice versa — span ids collide across
+   * consumers at a shared boundary, so one shared counter would conflate
+   * them). Optional so journals written before the title pass exists parse
+   * unchanged.
+   */
+  titleAttempts: z.number().int().optional(),
+  /** The span those title attempts failed on. */
+  titleFailedSpanId: z.string().optional(),
 });
 
 const ReviewStateSchema = z.object({

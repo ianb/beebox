@@ -21,15 +21,26 @@ const NOW = new Date("2026-07-28T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
 
 /** A reviewer that returns canned output and records what it was asked. */
-function fakeReviewer(outputs) {
+function fakeReviewer(outputs, titleOutputs) {
   const calls = [];
+  const titleCalls = [];
   let i = 0;
+  let j = 0;
   return {
     calls,
+    titleCalls,
     async review(args) {
       calls.push(args);
       const out = outputs[Math.min(i, outputs.length - 1)];
       i += 1;
+      if (out instanceof Error) throw out;
+      return out;
+    },
+    async title(args) {
+      titleCalls.push(args);
+      if (titleOutputs === undefined) throw new Error("unexpected title call");
+      const out = titleOutputs[Math.min(j, titleOutputs.length - 1)];
+      j += 1;
       if (out instanceof Error) throw out;
       return out;
     },
@@ -87,6 +98,11 @@ async function seed(box, opts: { sessionId: string; husk: string; entries: objec
 /** Enough rendered text to clear REVIEW_CHAR_THRESHOLD. */
 function bulk(uuid: string) {
   return userEntry(uuid, "a".repeat(4000));
+}
+
+/** Enough rendered text to clear the 400-char title gate, not the summary gate. */
+function smallTalk(uuid: string) {
+  return userEntry(uuid, "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4));
 }
 
 const OUTPUT = {
@@ -666,6 +682,224 @@ const again = await runChatReview(box.root, {
 const final = (await loadReviewState(box.root)).sessions[sid("sesscap")].applied["metadata"];
 JSON.stringify({ bootstrapped: again.bootstrapped, endUuid: final.endUuid, endIndex: final.endIndex })
 => {"bootstrapped":0,"endUuid":"cap-5011","endIndex":5011}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+\n
+## A short chat is titled by the title pass, not summarized
+
+Two exchanges clear the 400-char title gate but not the 6,000-char summary
+gate, so the run asks only for a title: `review` is never called, no
+`contains` or account is written, and the journal records the `title`
+consumer alone.
+
+```ts
+const box = await makeTmpBox();
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+const huskPath = await seed(box, {
+  sessionId: "sessshort",
+  husk: "",
+  entries: [smallTalk("h1"), smallTalk("h2")],
+});
+
+const reviewer = fakeReviewer(
+  [new Error("the metadata pass must not run")],
+  [{ title: "Planning a small birthday dinner" }],
+);
+const summary = await runChatReview(box.root, {
+  reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+JSON.stringify({
+  titled: summary.titled,
+  reviewed: summary.reviewed,
+  reviewCalls: reviewer.calls.length,
+  titleCalls: reviewer.titleCalls.length,
+})
+=> {"titled":1,"reviewed":0,"reviewCalls":0,"titleCalls":1}
+
+const card = await readFile(box.path(huskPath), "utf8");
+[card.includes("title: Planning a small birthday dinner"), card.includes("contains:"), card.includes("contains-evidence:"), card.includes("review-span:")].join(",")
+=> true,false,false,false
+
+const state = await loadReviewState(box.root);
+const entry = state.sessions[sid("sessshort")].applied;
+JSON.stringify({ consumers: Object.keys(entry).sort(), end: entry["title"].endUuid })
+=> {"consumers":["title"],"end":"h2"}
+```
+
+The same span asks nothing the second night — the title journal has advanced.
+
+```ts continue
+const second = fakeReviewer([], [{ title: "Should not be needed" }]);
+const again = await runChatReview(box.root, {
+  reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+JSON.stringify({ titled: again.titled, calls: second.titleCalls.length })
+=> {"titled":0,"calls":0}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A metadata pass advances both journals
+
+Summary-sized growth runs the full review, and its title decision covers the
+same span — the cheap gate should not re-ask about material the account pass
+just read.
+
+```ts
+const box = await makeTmpBox();
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+await seed(box, {
+  sessionId: "sessboth",
+  husk: "",
+  entries: [bulk("k1"), userEntry("k2", "and another thing"), bulk("k3")],
+});
+
+await runChatReview(box.root, {
+  reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
+});
+
+const state = await loadReviewState(box.root);
+const applied = state.sessions[sid("sessboth")].applied;
+JSON.stringify({
+  consumers: Object.keys(applied).sort(),
+  sameBoundary: applied["metadata"].endUuid === applied["title"].endUuid,
+})
+=> {"consumers":["metadata","title"],"sameBoundary":true}
+```
+
+Short growth afterwards goes to the TITLE pass only — the summary journal is
+ahead of it now.
+
+```ts continue
+const logPath = getSessionLogPath(box.root, sid("sessboth"));
+const grown = [bulk("k1"), userEntry("k2", "and another thing"), bulk("k3"), smallTalk("k4"), smallTalk("k5")];
+await writeFile(logPath, grown.map((e) => JSON.stringify(e)).join("\n") + "\n");
+const when = new Date(NOW.getTime() - 5 * HOUR);
+await utimes(logPath, when, when);
+
+const reviewer = fakeReviewer(
+  [new Error("the metadata pass must not run")],
+  [{ title: "" }],  // "keep": the billing title still fits the dinner addendum's absence
+);
+const summary = await runChatReview(box.root, {
+  reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+JSON.stringify({ reviewCalls: reviewer.calls.length, titleCalls: reviewer.titleCalls.length })
+=> {"reviewCalls":0,"titleCalls":1}
+
+const after = await loadReviewState(box.root);
+after.sessions[sid("sessboth")].applied["title"].endUuid
+=> k5
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## "Keep" with nothing to keep is a failure
+
+A title pass that answers empty against a chat with NO title reconciled
+nothing — counting it a no-op would mark the chat title-seen and leave it
+untitled forever. It is a failure instead: retried the next night.
+
+```ts
+const box = await makeTmpBox();
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+const huskPath = await seed(box, {
+  sessionId: "sessempty",
+  husk: "",
+  entries: [smallTalk("e1"), smallTalk("e2")],
+});
+
+const reviewer = fakeReviewer([], [{ title: "" }]);
+const summary = await runChatReview(box.root, {
+  reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+summary.reviewerFailures
+=> 1
+
+const state = await loadReviewState(box.root);
+JSON.stringify({
+  applied: Object.keys(state.sessions[sid("sessempty")].applied),
+  titleAttempts: state.sessions[sid("sessempty")].titleAttempts,
+})
+=> {"applied":[],"titleAttempts":1}
+
+// Nothing was written to the card.
+(await readFile(box.path(huskPath), "utf8")).includes("title:")
+=> false
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A pass fills a missing `first-message`
+
+A coined-id chat's husk is created before its transcript exists, so creation
+cannot write the opening snippet; every pass fills it when absent. It is the
+person's own opening message, not model output — no leak scan, and it renders
+quoted in lists.
+
+```ts
+const box = await makeTmpBox();
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+const huskPath = await seed(box, {
+  sessionId: "sessfill",
+  husk: "",
+  entries: [smallTalk("f1"), smallTalk("f2")],
+});
+
+await runChatReview(box.root, {
+  reviewer: fakeReviewer([], [{ title: "Planning a small birthday dinner" }]),
+  maxSessions: 10, now: NOW, ownerEmail: null,
+});
+
+(await readFile(box.path(huskPath), "utf8")).includes("first-message: please help me plan a small birthday dinner")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A hand-owned title costs nothing on the title pass
+
+`titleOwner: manual` is permanent hands-off. The hand that owns the title owns
+its freshness: no model call, no Jev call — only the journal advances.
+
+```ts
+const box = await makeTmpBox();
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+const huskPath = await seed(box, {
+  sessionId: "sesshand",
+  husk: "title: Notes on the roof leak\n",
+  entries: [smallTalk("m1"), smallTalk("m2")],
+});
+
+const reviewer = fakeReviewer([], [{ title: "Must not be written" }]);
+const summary = await runChatReview(box.root, {
+  reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+JSON.stringify({ titled: summary.titled, calls: reviewer.titleCalls.length })
+=> {"titled":0,"calls":0}
+
+const state = await loadReviewState(box.root);
+state.sessions[sid("sesshand")].applied["title"].endUuid
+=> m2
+
+(await readFile(box.path(huskPath), "utf8")).includes("title: Notes on the roof leak")
+=> true
 ```
 
 ```ts cleanup

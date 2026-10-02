@@ -27,6 +27,13 @@ consumer.
 Filed as [overnight session compaction](../../../issues/closed/features/2026-05-19-overnight-session-compaction.md);
 this plan resolves that issue's `needs: [design]`.
 
+**Revision note (2026-10-01).** Titling was decoupled from this plan's single
+6,000-char gate: a separate title pass with a 400-char gate and its own journal
+consumer, a Jev freshness check that keeps a still-fitting title for free, and
+`first-message` husk storage with quoted snippet labels replaced the
+creation-time snippet `title:`. Design and measurements:
+[docs/plans/chat-titles.md](../plans/chat-titles.md) (moves here when it ships).
+
 **Revision note (2026-07-28).** A first draft of this plan was reviewed by
 OpenAI's Codex against the real source. It falsified several load-bearing claims —
 the size gate could not work as specified, the cursor could not guarantee
