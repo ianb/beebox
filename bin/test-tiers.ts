@@ -22,6 +22,9 @@ export const PACKAGE_ROOT = join(REPO_ROOT, "beebox");
 const CAREFUL_LIST = "test/careful.txt";
 
 /** A tier list that cannot be trusted. Never silently narrows a run. */
+/** An argument shaped like a test file the package could include. */
+const TEST_FILE = /^[^-].*\.(?:doctest\.md|test\.tsx?)$/;
+
 export class TierListError extends Error {
   constructor(message: string) {
     super(message);
@@ -184,11 +187,20 @@ export function tierCommand(input: {
 
   // -j1 is what "carefully" means: the flakes in this tier are contention.
   const flags = input.tier === "careful" && !hasExplicitJobs(args) ? ["-j1"] : [];
-  const explicit = hasExplicitFiles({
-    args,
-    known: [...input.taprcFiles, ...input.careful],
-    isFile: input.isFile ?? packageFile(PACKAGE_ROOT),
-  });
+  const known = [...input.taprcFiles, ...input.careful];
+  const isFile = input.isFile ?? packageFile(PACKAGE_ROOT);
+  // An argument shaped like a test file that names no file is a mistake, most
+  // often a monorepo-relative path (`beebox/test/x.doctest.md`) given inside
+  // the package. Treated as "no files named", it would append the whole tier:
+  // three agents doing this at once ran three full suites (2026-09-29).
+  const missing = args.filter((arg) => TEST_FILE.test(arg) && !known.includes(arg) && !isFile(arg));
+  if (missing.length > 0) {
+    throw new TierListError(
+      `no such test file in this package: ${missing.join(", ")}. Paths are relative to the package ` +
+        "directory (test/…, not beebox/test/…). Refusing to run the whole suite instead.",
+    );
+  }
+  const explicit = hasExplicitFiles({ args, known, isFile });
   if (explicit) return [executable, ...flags, ...args];
 
   const careful = new Set(input.careful);
