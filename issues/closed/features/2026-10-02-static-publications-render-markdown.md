@@ -1,11 +1,14 @@
 ---
 title: "Static publications render Markdown automatically: a site folder of .md files publishes as HTML"
-workstream: unattached
+workstream: static-markdown-publish
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder asked for a lighter way to publish a Markdown file
 ---
+
+Closed: implemented on branch worktree-static-markdown-publish (commits db822652d, 407ea84bf, 058ab8a32). Open questions decided and documented in beebox/docs/box/publishing.md: md+html sibling is an error, source .md does not ship, per-page inline CSS.
 
 To publish one Markdown document, the agent must convert it to HTML by hand.
 Static mode publishes `src/publications/<name>/site/` verbatim and requires a
