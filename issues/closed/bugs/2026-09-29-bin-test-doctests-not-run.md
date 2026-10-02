@@ -1,12 +1,15 @@
 ---
 title: "Doctests under bin/test are run by no suite"
-workstream: unattached
+workstream: doctest-usability
 area: dev-tooling
 labels: [testing, doctest]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-doctest-usability — adding a test for a bin/ helper
+resolution: implemented
 ---
+
+Fixed: `beebox/.taprc` includes `../bin/test/**/*.doctest.md`, so the 29 files run in beebox's suite (and its home/secret isolation, which they were written under), the hourly full suite, and `test:changed` (the test graph now maps `bin/` sources to them; 977 entrypoints, 0 unresolved). Running them exposed two left broken by the move — `doc-lifecycle-check` and `smoke-browse` resolved paths one directory too high — both fixed; all 208 checks pass. `bin/CLAUDE.md` now says where these tests go.
 
 The layout moves on 2026-09-27 (commit `079410e97`) moved about 28 doctests
 from `beebox/test/dev/` to `bin/test/` and `bin/test/lib/`. No tap config
