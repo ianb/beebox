@@ -32,20 +32,20 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.285`, Codex `0.159.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.286`, Codex `0.159.2` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.287` (SDK), `2.1.287` (Claude Code), `0.160.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.288` (SDK), `2.1.288` (Claude Code), `0.160.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Both families moved this turn — Agent SDK to
-  `0.3.285` (which carries the background-Bash timeout change; see its entry),
-  Codex to `0.159.1`. Next: `0.3.286` (settles 2026-10-02T17:17Z), where the
-  steering probe is expected to decide the priority-`now` change, then `0.3.287`.
-  Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+  `0.3.286`, Codex to `0.159.2`. The steering probe passed on `0.3.286`, contrary
+  to this ledger's expectation (see its entry). Next: `0.3.287` (settles
+  2026-10-03T17:03Z), `0.3.288`; Codex `0.159.3` (2026-10-02T23:02Z) and
+  `0.160.0`. Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -71,6 +71,28 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.288 / Claude Code 2.1.288 — pending (published 2026-10-02T18:33Z, ~3h at this turn)
+
+- **Upstream:** SDK parity-only. 2.1.288 is large; what touches this repo:
+  - Mid-response API timeouts no longer fail the turn — non-interactive sessions
+    and subagents continue from the partial response, and thinking-only responses
+    are retried.
+  - *"Fixed headless (`-p` / SDK) sessions occasionally ignoring SIGTERM when a
+    supervisor such as `timeout` or systemd sends SIGCONT alongside it."* The
+    schedule runner kills a run at its `timeout`, and prod boxes run under
+    systemd.
+  - Resume robustness: `--resume` no longer drops files a compaction had just
+    restored, no longer misses saving a turn's last response, no longer loads a
+    transcript cut short by a concurrent rewrite, and no longer drops earlier
+    thinking from conversations started on 2.1.286 or earlier.
+  - "Prompt is too long" instead of auto-compacting when the last reply reported
+    zero token usage — the wedge family.
+  - Reporting a message to another session as delivered when that session held
+    it — corrected, with SDK sessions now able to learn of it mid-turn.
+- **Beebox applicability:** fixes only; nothing to adjust.
+- **Action:** Settled path; takeable 2026-10-04.
+- **Sources:** [Claude Code 2.1.288](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21288)
 
 ### Codex 0.159.3 / 0.160.0 — pending (published 2026-09-30T23:02Z and 2026-10-01T20:26Z, ~23h and ~1h at this turn)
 
@@ -112,15 +134,17 @@ models. No removals.
 - **Action:** Settled path; takeable 2026-10-03.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03287), [Claude Code 2.1.287](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21287)
 
-### Codex 0.159.2 — pending (published 2026-09-30T00:03Z, ~22h at this turn)
+### Codex 0.159.2 — APPLIED 2026-10-02 (published 2026-09-30T00:03Z)
 
 A single fix: console windows no longer flash on Windows when Codex launches
 background processes and sandboxed commands. Nothing for beebox.
-- **Action:** Settled path; takeable 2026-10-02 with the deploy gate, with
-  `0.159.0`/`0.159.1`.
+- **Action:** Applied 2026-10-02 on the settled path (~70h old), both pins.
+  Deploy gate on the workspace binary:
+  `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin --help` exits 0 on
+  `codex-cli 0.159.2`.
 - **Sources:** [Codex rust-v0.159.2](https://github.com/openai/codex/releases/tag/rust-v0.159.2)
 
-### 0.3.286 / Claude Code 2.1.286 — pending (published 2026-09-30T17:17Z, ~4h at this turn)
+### 0.3.286 / Claude Code 2.1.286 — APPLIED 2026-10-02 (published 2026-09-30T17:17Z); the steering probe passed
 
 - **The change the steering probe gates on:** *"Changed a person's priority
   `now` message to move running shell commands, agents and MCP calls to the
@@ -154,8 +178,23 @@ background processes and sandboxed commands. Nothing for beebox.
   objects, as the protocol expects); every turn failing when the API refuses the
   model an alias resolves to now retries once on the previous model of the same
   tier. Several more secret-redaction fixes in logs and transcripts.
-- **Action:** Settled path; takeable 2026-10-02 — expect the steering probe to
-  gate it.
+- **Action:** Applied 2026-10-02 on the settled path (~52h old).
+  **The expectation above was wrong.** The steering probe ran first, on an idle
+  machine, and all four behaviors held — including "priority now", whose
+  scenario pushes during a running `sleep 8` Bash call, which is exactly the case
+  the changelog describes. The message was still answered in its own turn after
+  the interrupt (two results), not joined into the running one. To rule out the
+  probe testing a stale CLI, checked the binary it resolves:
+  `resolveClaudeCodeBinary()` returns this install's
+  `@anthropic-ai/claude-agent-sdk-darwin-arm64/claude`, which reports 2.1.286 —
+  so the updater's "(binary: 2.1.226)" line is only the root copy, as already
+  filed. The changed behavior may be gated on something the SDK's priority field
+  does not carry; on what beebox sends, nothing changed.
+  `pnpm -C beebox test`: **12,720 pass, 4 fail, 2 skipped**. All four failures
+  are `test/core/pdf/extract.integration.doctest.md`, which runs the real
+  `uvx docling` subprocess and times out at 300s on this machine, alone as well
+  as in the suite. It touches neither the Agent SDK nor Codex, so it is not
+  this bump's.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03286), [Claude Code 2.1.286](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21286)
 
 ### Codex 0.159.0 / 0.159.1 — APPLIED 2026-10-01 (published 2026-09-29T08:10Z and 20:36Z)
