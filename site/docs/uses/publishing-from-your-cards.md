@@ -35,17 +35,11 @@ run against a real Cloudflare account, only against stand-ins, so expect first-u
 problems. Sites restricted to named accounts are blocked in it. All of one box's
 sites share a web address and so can reach each other's scripts and stored data;
 the scan looks for secrets, and cannot judge whether a page is fit to show.
-Reply forms are half a feature and you should not plan on them: the receiving
-half is built, with submissions validated, size- and rate-limited, and pulled into
-the box as pub-submission cards that are handled as untrusted outside text and
-can never authorize an action, but nothing in the software produces a page that
-carries a form.
+Published pages cannot collect replies.
 
 **What makes it possible**
 
 - **Publishing with an explicit approval and takedown** ([publishing](../capabilities/publishing.md)): a person enables a site in the app and disables it there, so nothing reaches the public web as a side effect of the agent editing.
-- **Typed cards with validated fields** ([cards](../concepts/cards.md)): a reply arrives as a pub-submission card, validated as it lands and handled as outside text that can become a note or a question but never authorize an action.
 
 **Read next.** [Your data and safety](../10-your-data-and-safety.md),
-[pub-submission](../reference/cards/pub-submission.md),
 [doc](../reference/cards/doc.md).

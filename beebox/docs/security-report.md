@@ -1,12 +1,25 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: 22945e70c764f1a8847a3ded24adc1f3000d1492
-date: 2026-09-26
-model: gpt-6-luna
+generated-at-rev: c8428cca5
+date: 2026-10-02
+model: claude-sonnet-5-5
 reviewed-by: DRAFT — unreviewed
 ---
 
 # Security report — structured version
+
+**Scoped amendment (2026-10-02; DRAFT — unreviewed):** Reflects the removal of
+the legacy publication flow (`bec8749e3`, `6b8968965`) and the static-Markdown
+render step. Gone: `bbx pub draft/go/ls/revoke/setup`, `_publish/<pub-id>/`
+drafts, the Wrangler/Access/token services, the `publish/<box>` R2 secret and
+ingestion bucket, submissions, tombstone revoke, the `/__version`, `/__submit`
+and `/p|s|a/<key>` legacy Worker routes, and the Worker access log. The Worker
+now serves only shared-host or pinned-site (managed) mode and answers 500 "not
+configured" with neither binding set. Static publications render `.md` to
+`.html` at prepare time; the leak scan covers the rendered output. Earlier
+amendments below that mention legacy Workers, `bbx pub go`, or submissions
+describe removed surface. Scoped to publishing; the private tier and unrelated
+changes were not re-audited, and the full-inventory anchor is unchanged.
 
 **Scoped amendment (2026-09-24; DRAFT — unreviewed):** Adds the managed
 static-site publishing credential, server/member procedure boundary, project
@@ -148,7 +161,6 @@ the member-tier gap below.
 | `POST /api/csp-report` (`api-csp-report.ts:147`) | Browsers POST CSP reports uncredentialed by spec; body carries no secrets; amplification-bounded (16KB body / 2048-char field / 20 reports) | ok | low | public |
 | `GET /api/build-info` (`server-root.ts:209`) | Pre-auth "what's running here" probe; build hash + open-mode flag only | ok | low | public |
 | Hub static bundle (`/assets/*`, `/icons/*`, `/earcons/*`, `manifest.webmanifest`, `sw.js`) | The SPA must load before the user can log in; no box data | ok | low | public |
-| pub-worker `GET /__version` | Content hash of code that is itself versioned in the repo | ok | low | public |
 
 ### Own-credential routes (outside the session wall)
 
@@ -186,7 +198,7 @@ Notable abilities, and the items that are more than routine:
 | tRPC `admin.*`, `pairing.*`, `scanTokens.*` | Connector setup, device pairing, credential minting | ok | — | owner | Uniformly `ownerProcedure` |
 | tRPC `cloudflarePublishConnections.*` | Save/verify/revoke host Cloudflare API credentials and grant/revoke a named connection for a box | mitigated | high | owner | Credentials are saved server-side; box agents never receive them. A grant scopes server-mediated publication operations, not arbitrary same-user code. |
 | tRPC `publications.list`, `publications.prepare`, `publications.ensureCard` | Read managed publication status; prepare/refresh a named site; explicitly create or reuse its reference card | mitigated | med | authed/member | `prepare` takes only the publication name. `ensureCard` requires a signed-in member and only creates/preserves the same-box reference card; card fields do not grant authority. The server derives the box, pubId, Worker, bucket, and connection grant. Same-approved-scope refresh may publish immediately; scope changes become candidates. |
-| tRPC `publications.configureSharedHost` (`routers/publications.ts`) | Configure one hostname and selected publishing connection for this box | mitigated | high | owner | Requires `authenticatedOwnerProcedure`; mapping is machine-owned and immutable. The server verifies the box grant, creates or reuses this box+connection bucket, deploys the shared Worker with `workers.dev` and previews disabled, attaches the hostname, and marks it attached only after exact provider read-back. A pending mapping blocks preparation and can be retried from Admin. An owner can repeat setup to redeploy a changed Worker bundle; an attached hostname is read back rather than reattached, and legacy workers are not touched. DNS/certificate changes begin during initial setup before any site is enabled; there is no automatic detach, move, or reassignment. HTTPS and minimum provider permissions remain unverified. |
+| tRPC `publications.configureSharedHost` (`routers/publications.ts`) | Configure one hostname and selected publishing connection for this box | mitigated | high | owner | Requires `authenticatedOwnerProcedure`; mapping is machine-owned and immutable. The server verifies the box grant, creates or reuses this box+connection bucket, deploys the shared Worker with `workers.dev` and previews disabled, attaches the hostname, and marks it attached only after exact provider read-back. A pending mapping blocks preparation and can be retried from Admin. An owner can repeat setup to redeploy a changed Worker bundle; an attached hostname is read back rather than reattached, and pinned-site Workers are not touched. DNS/certificate changes begin during initial setup before any site is enabled; there is no automatic detach, move, or reassignment. HTTPS and minimum provider permissions remain unverified. |
 | tRPC `publications.approve`, `previewFile`, `enable`, `disable`, `revoke` | Review candidate metadata/text and mutate publication serving authority | mitigated | high | member | Requires a signed-in member who can access this box; global Cloudflare administration is not required. Agent config and CLI cannot approve audience or destination. |
 | tRPC `scheduler.trigger`, `commands.executeSync`, `drive.updateConfig`, `calendar.updateConfig` | Run scheduled script cards / registered commands; rewrite sync config | gap | med | authed | Member-level code execution and config writes; moot single-operator (fail-closed owner-only), bites on multi-member boxes — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
 | tRPC `transcription.deepgramTempKey` / `openaiRealtimeKey` | Mint short-TTL (≤20 min) scoped third-party keys for browser-direct streaming | mitigated | low | authed | Long-lived provider keys never leave the server |
@@ -194,7 +206,10 @@ Notable abilities, and the items that are more than routine:
 | Hub catch-all proxy + WS proxy (`hub-server.ts`) | Routes `/<slug>/...` to children with injected identity | ok | — | public→authed | WS reconnects never cold-start an idle box (anti-resurrection-storm) |
 | WS-auth end-to-end test coverage | — | gap | low | — | The `gen`/identity resolver is unit-tested but no test drives a real socket-level subscription upgrade — [no-socket-level-ws-auth-test](../../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md) |
 
-pub-worker routes are in §6a.
+pub-worker (Cloudflare Worker, GET/HEAD only, no box credentials): the entry
+point picks shared-host or pinned-site mode from its bindings and otherwise
+returns 500 "not configured" without reading R2 (`pub-worker/src/worker.ts`,
+`route`). It has no writable routes and no public status endpoint. Details in §6a.
 
 ## 2. Credentials
 
@@ -217,7 +232,6 @@ pub-worker routes are in §6a.
 | VAPID keys — `BBX_VAPID_*` (`send-push.ts:46-60`) | Env only; redacted | Send push notifications as the box (no data access) | Server-wide | Operator-set | ok |
 | Provider keys — Mistral / Deepgram / OpenAI / Gemini / OpenRouter (`mistral-key.ts`, `deepgram-key.ts`, `embeddings-key.ts`, `openai-thinking-key.ts`, `gemini-key.ts`, `openrouter.ts`) | Machine secret store only, per-box grant (`docs/secrets.md`) — the box-file and env-var fallbacks (`BBX_MISTRAL_API_KEY`, `BBX_DEEPGRAM_API_KEY`/`_PROJECT`, `BBX_OPENAI_API_KEY`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`, `SKE_GEMINI_API_KEY`) have been removed, along with their entries in `SECRET_ENV_NAMES` and the hub/tooling allowlists | Spend/abuse the provider account | Per-box grant | Operator-set | ok — the file-mode gap this row used to carry is closed with the fallback that created it: [connector-secret-file-modes](../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md) |
 | Telegram — `telegram-bot/<box>` in the machine secret store (`routers/admin.ts`, `telegram-helpers.ts`) | Same store guarantees as every entry; no longer a box file | Bot token = full bot control; webhook secret = forge inbound updates | Per-box, `shareable: false` | Permanent until re-setup | ok — the missing-mode gap this row used to carry no longer applies now that the value isn't a box file |
-| Publish connector — `publish/<box>` in the machine secret store (`connector-secret.ts`) | Same store guarantees as every entry; strict-Zod, minted scoped, no longer a box file | R2 **ingestion bucket only** — cannot touch published content or `allowedEmails` | Per-box, per-bucket, `shareable: false` | Permanent; revoke via Cloudflare dashboard | ok |
 | `ANTHROPIC_API_KEY` | **Deliberately withheld** (absent from both the hub and script-env allowlists; also stripped in `cli/bootstrap.ts`) | — | — | — | ok — a leak-prevention control forcing subscription auth, not a stored credential |
 
 **Positive control — the hub child-env allowlist**
@@ -269,7 +283,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | **Telegram** (`connectors/telegram.ts`, `telegram-outbound.ts`) | Automatic once configured | Agent-authored reply text (no attachment path); registers the public webhook URL | Per-box bot token (`telegram-bot/<box>` in the secret store) | Presence of the granted secret | ok |
 | **Web Push** (`send-push.ts`, `services/push.ts`) | Automatic on finalize | Full notification payload (agent-authored title/body/URL), VAPID-encrypted, through the browser's push service (FCM/Mozilla/Apple) | Server VAPID keypair | Browser subscription | ok |
 | **Box git remote** (`lib/git.ts:416-460`, `wakeup.ts:149`) | Automatic at the end of every wakeup | **The entire incremental box history** — every card, email, chat | Host git credentials | Operator-chosen remote; no remote → skipped | ok (stated plainly; see [git-push-confirmation](../../issues/decisions/2026-07-20-git-push-confirmation.md)) |
-| **Cloudflare (managed static sites)** (`src/publish/managed-publications/core.ts`, `src/publish/managed-publication-shared-host.ts`, `src/services/managed-publication-runtime/core.ts`) | Authenticated owner configures one hostname and connection for a box before its first site; agent `bbx pub prepare <name>` uploads release files; a signed-in member approves first enable and scope changes; same-approved-scope refresh may update live content immediately | Static release files and serving manifest; one shared Worker and R2 bucket per box use the server-side API token | Machine secret-store Cloudflare token, never returned by box API; server validates connection grant and box-host mapping | Member can disable; removing token/grant blocks new mutations but does not itself disable already-live sites. Hostname attachment begins DNS/cert changes during Admin setup before a site is enabled. Legacy `bbx pub go` retains its TTY guard and cannot mutate managed sites | mitigated |
+| **Cloudflare (managed static sites)** (`src/publish/managed-publications/core.ts`, `src/publish/managed-publication-shared-host.ts`, `src/services/managed-publication-runtime/core.ts`) | Authenticated owner configures one hostname and connection for a box before its first site; agent `bbx pub prepare <name>` uploads release files; a signed-in member approves first enable and scope changes; same-approved-scope refresh may update live content immediately | Static release files and serving manifest; one shared Worker and R2 bucket per box use the server-side API token | Machine secret-store Cloudflare token, never returned by box API; server validates connection grant and box-host mapping | Member can disable; removing token/grant blocks new mutations but does not itself disable already-live sites. Hostname attachment begins DNS/cert changes during Admin setup before a site is enabled. | mitigated |
 | **Tailscale** (`tailscale-setup.ts`) | Manual CLI | Traffic to the tailnet via `tailscale serve` — **never `funnel`** (a discovered funnel grant is a hard failure); control-plane traffic belongs to the OS daemon | — | `bbx tailscale stop` / don't install | ok |
 | **Adapter proxy** (`api-adapters.ts:33-104`) | Box-local code calling `/api/adapters/:adapter/*` (never automatic) | The authed request body, forwarded to **Replicate**, Mistral, Anthropic, or OpenAI with the box's stored key injected server-side | Per-box stored keys | Only reachable behind the wall; inert without a stored key | ok |
 | **Outbound URL fetches** (`proxy-image.ts`, `url-fetch.ts`) | Image proxy per render; link check on validate | The URL itself (query strings can carry data) | None forwarded | — | mitigated — SSRF guards, §4 |
@@ -295,9 +309,9 @@ wakeup cycle or routine use without a per-action confirmation.
 | Cross-box browser isolation | — | accepted | Boxes share one origin; a script in one box can make same-origin requests to a sibling. Accepted single-operator; server-side forgery still blocked (session secret never reaches boxes). [boxes-share-one-origin](../../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md) |
 | SSRF guards | `proxy-image.ts:50-121`, `url-fetch.ts:122-190` | ok | http(s) only; DNS-resolved block of loopback/private/link-local (incl. cloud metadata)/CGNAT/multicast, v4+v6+mapped; every redirect hop re-validated (max 3); 25MB/10s caps; `image/*` only; no cookie/Referer forwarding |
 | Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §8 |
-| Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest.ts`) | ok | |
+| Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest-edge.ts`) | ok | |
 | Markdown body rendering (raw HTML) | `src/shared/markdoc-config/html-policy.ts`, `src/shared/markdoc-config/parse/` (`html-tokens.ts`, `html-inline.ts`), `tags/html-schema.ts` | mitigated | Medium severity; authed reachability (anyone or anything that writes a card body, connectors included). Card bodies, chat and published Markdown pages accept raw HTML only through an element/attribute allow-list. Each fragment is rebuilt as a Markdoc node at parse time, so raw HTML text never reaches `innerHTML` and renderers only see allowed element names. Raw HTML keeps no `style`/`class`/`id`/event-handler attributes (Markdoc's own `{% .cls %}`/`{% #id %}` annotations can still set `class`/`id`, as before); no `script`, `iframe`, `form`, `svg` or `object`. `<a href>`/`<img src>` become Markdown links/images and get markdown-it's URL check (no `javascript:`/`vbscript:`/`file:`; `data:` only for images). With the app CSP Report-Only, the allow-list is the only control against script in a body. Markdoc tags stay live in every body. |
-| Ingested-text escaping | `src/shared/markdoc-config/ingest.ts`; callers `webapp/trpc/routers/clerk.ts`, `webapp/trpc/routers/share/router.ts`, `core/commands/scan-import/pdf.ts`, `schemas/pub-submission.ts` | mitigated | Low severity. Web clips, PDF text, iOS shared text and share titles have raw HTML and Markdoc tag openers backslash-escaped at write time; form-submission names/values are escaped to plain text. Third-party text then renders literally instead of as allow-listed HTML, links or box tags. Agent-written cards built from outside text (e.g. `record`/`doc` cards from scraped posts) are not escaped and rely on the allow-list. |
+| Ingested-text escaping | `src/shared/markdoc-config/ingest.ts`; callers `webapp/trpc/routers/clerk.ts`, `webapp/trpc/routers/share/router.ts`, `core/commands/scan-import/pdf.ts` | mitigated | Low severity. Web clips, PDF text, iOS shared text and share titles have raw HTML and Markdoc tag openers backslash-escaped at write time. Third-party text then renders literally instead of as allow-listed HTML, links or box tags. Agent-written cards built from outside text (e.g. `record`/`doc` cards from scraped posts) are not escaped and rely on the allow-list. |
 | Published project preparation | `src/publish/prepare/project.ts`, `src/publish/prepare/files.ts` | accepted | Site-local `pnpm install --frozen-lockfile` and `pnpm run build` execute as trusted box code with existing same-OS filesystem privileges. A reduced child environment removes server credential variables, but this is not a sandbox. Registry/network access is possible during installation/build. Only validated `dist/` output is staged; failures before activation do not promote a partial release. |
 | Shared-host setup | `src/publish/managed-publication-shared-host.ts`, `src/webapp/trpc/routers/publications.ts`, `src/core/secrets/cloudflare-publish.ts` | mitigated | Authenticated global owner configures one immutable hostname/connection mapping per box before publication setup. Server checks the box grant, reserves pending state, verifies the shared Worker identity and exact provider attachment, then records attached state. It does not rewrite or delete old per-publication Workers/hostnames. DNS/certificate changes can start before a page is enabled; no detach/move/reassignment is available. HTTPS readiness and minimum provider permissions remain unverified. |
 | Published-site browser policy | `pub-worker/src/headers.ts`, `pub-worker/src/shared-site.ts`, `pub-worker/src/site.ts` | accepted | Enforced CSP, same-origin CORP, no permissive CORS, `nosniff`, and `no-referrer` apply. New publications for one box share a hostname and browser origin; their JavaScript can access shared web storage and make same-origin requests to other publication paths, including a known secret PubId path. The boxholder explicitly accepts mutual trust among pages in that box. CORS and iframe isolation are not provided. Different boxes use different hosts. |
@@ -324,10 +338,10 @@ wakeup cycle or routine use without a per-action confirmation.
 
 ### 6a. Publishing
 
-Two publishing systems coexist. Legacy rendered-document commands preserve
-their TTY-only `bbx pub go` confirmation (`src/publish/go.ts`); legacy
-account-tier and submission behavior is not evidence that managed sites are
-ready for those capabilities. Managed static sites use `bbx pub prepare
+Publishing has one flow. Static sites render `.md` to `.html` at prepare
+time (`src/publish/prepare/markdown.ts`); box Markdoc component tags are
+rejected, `redacted` content is omitted, and the leak scan runs over the rendered
+output (`src/publish/prepare/files.ts:218`). Sites use `bbx pub prepare
 <name>` through the authenticated box API. A signed-in box member approves
 first enablement and every audience/destination change. After that, a prepare
 inside the approved scope may immediately replace the live content. This is
@@ -340,17 +354,17 @@ an accepted host-trust tradeoff, not cryptographic agent isolation.
 |---|---|---|---|---|
 | Leak scan (`leak-scan.ts`) | Scans text entries for likely leaks, with blind spots including contextual prose and image content. A signed-in member reviews findings and file summary for first enablement/scope change; same-scope updates after approval do not receive a snapshot approval | mitigated | med | — |
 | Bundles are fully public regardless of tier | Tier gates *who can reach the page*, not what a viewer does after saving it; `public` and `secret` bundles are stored and scanned identically | accepted | — | — |
-| `secret` tier = capability URL | `/s/<pub-id>` has **zero authentication** — the ≥128-bit CSPRNG pub-id is the credential (`manifest.ts:77-94`, `index.ts:141-143`) | accepted | med | public | The name invites misreading as access-controlled; SECURITY.md states it plainly |
-| `accounts` / `any-account` tiers | Legacy Worker paths have Access JWT validation. Managed publication enablement remains blocked pending separate consent and security design | mitigated | — | unreachable | The current managed path fails closed and does not expose an unprotected account-restricted route |
-| Managed publication binding and URLs | Server binds each publication to its box, PubId, Worker host handle, account, and storage target. New sites use the per-box shared Worker and approved paths; legacy per-PubId Workers and URLs remain available. Secret PubIds are path capabilities | mitigated | high | public | A route marker enrolls the approved host/path but does not override manifest status, release, or audience. Same-box origin access is an accepted trust decision (§4, §8). |
+| `secret` tier = capability URL | `/s/<pub-id>` has **zero authentication** — the ≥128-bit CSPRNG pub-id is the credential (`manifest.ts:39-53`, `pub-worker/src/shared-site.ts:121-124`, `site.ts:164-166`) | accepted | med | public | The name invites misreading as access-controlled; SECURITY.md states it plainly |
+| `accounts` / `any-account` tiers | The pinned-site Worker path validates an Access JWT for these tiers (`pub-worker/src/site.ts:164-189`; the switch ends in `assertNever`, so a new tier cannot fall through to open). The shared-host path serves only `public` and `secret` manifests and 404s the rest (`shared-site.ts:97-104`). No Access bindings are provisioned for managed Workers, and enablement remains blocked pending separate consent and security design | mitigated | — | unreachable | The current managed path fails closed and does not expose an unprotected account-restricted route |
+| Managed publication binding and URLs | Server binds each publication to its box, PubId, Worker host handle, account, and storage target. New sites use the per-box shared Worker and approved paths; pinned per-PubId Workers (one publication each) remain a supported mode. Secret PubIds are path capabilities | mitigated | high | public | A route marker enrolls the approved host/path but does not override manifest status, release, or audience. Same-box origin access is an accepted trust decision (§4, §8). |
 | Per-box shared-host setup | `src/publish/managed-publication-shared-host.ts`, `src/core/secrets/cloudflare-publish.ts` | mitigated | high | owner | Authenticated owner selects one granted connection and hostname for the box before any site exists. The hostname is reserved as pending before remote writes, then marked attached after exact Worker-domain read-back. DNS/certificate changes may begin during setup. No automatic detach, move, or reassignment exists; HTTPS and provider permissions remain live-validation gaps. |
 | Machine credential / build trust | API token stays in server secret store and is never sent to agent API. Site install/build runs with reduced environment but same OS user and filesystem privileges | accepted | high | local | A hostile or compromised same-user process can read host secrets; managed publication does not claim that boundary |
-| Submissions (`submit.ts`) | Legacy form-urlencoded endpoint only, 1MiB cap, manifest re-validated, no-public-submit twice-enforced; per-day cap best-effort; per-IP limit optional. Submission pull-back is not part of the managed static-site flow | ok | low | public |
-| Legacy submission/content bucket split | `PUB_STORE` (legacy content — Worker read-only, laptop-written) vs `PUB_INGEST` (submissions — Worker-written, box-readable); the connector token cannot touch published content. Managed sites instead use server-held Cloudflare API credentials and per-box publication bindings | mitigated | — | — |
-| Rendered Markdown pages (`draft/render-docs.ts`) | `.md` sources render through the same parser and HTML allow-list as in-app cards, without bare-URL autolinking; images are localized into the bundle and the publication CSP (`default-src 'none'`) carries no script source | ok | low | public |
-| Edge manifest hygiene | Provenance/box identifiers stripped from everything edge-side (`manifest.ts:10-12`) | ok | — | — |
-| Revoke (`lifecycle.ts:253-298`) | Tombstone written first, synchronously (R2 strongly consistent — next request 410s); bundle deletion best-effort after; `Cache-Control: no-store` throughout so revoked URLs can't serve from cache; partial cleanup risks orphaned bytes, never re-exposure | ok | — | — |
-| Pre-auth oracle + log flood on `/a/` routes | Manifest status readable before Access verification; `any-account` access-log writes before asset validation | gap | low | public | [pub-worker-preauth-oracle-and-log-flood](../../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md) |
+| Rendered Markdown pages (`prepare/markdown-page.ts`) | `.md` sources in static-mode publications render through the same parser and HTML allow-list as in-app cards, without bare-URL autolinking. The publication CSP permits `script-src 'self' https:` for built sites, so the allow-list is what keeps script out of a rendered page | ok | low | public |
+| Edge manifest hygiene | Provenance/box identifiers stripped from everything edge-side (`manifest-edge.ts:10-12`) | ok | — | — |
+| Pre-auth status oracle (pinned-site mode) | `handleSite` returns 404/410 for missing, disabled, revoked or expired publications before `authorizeViewer` runs (`pub-worker/src/site.ts:50-64`), so an unauthenticated requester holding a PubId can tell states apart. Matters only once Access-gated tiers are live (no Access vars are bound today). The access-log flood half of the old finding left with the legacy `/a/` route | gap | low | public | [pub-worker-preauth-oracle-and-log-flood](../../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md) |
+| Unconfigured Worker fails closed | Neither binding set: every request gets a 500 naming the misconfiguration, with no R2 read (`pub-worker/src/worker.ts`, `route`) | ok | low | public | |
+| Revocation and serving state | The Worker re-reads the manifest per request and returns 410 for revoked, disabled, or expired publications (`site.ts:57-58`, `shared-site.ts:55-56`), and sends `Cache-Control: no-store` on every response (`pub-worker/src/headers.ts:41`), so revoked URLs do not serve from cache. The tombstone-first revoke and bundle deletion of the legacy flow are gone; serving state is the manifest status alone | ok | low | public | |
+| Legacy flow removed | No box-side write path to R2, no ingestion bucket, no submissions endpoint, no per-publication connector secret remain; the Worker has no write routes | ok | — | — | Removes the former submission-intake and connector-token surface |
 
 ### 6b. Account lifecycle
 
@@ -413,7 +427,7 @@ containment:
 - **Human-in-the-loop on the few gated actions** — the publish flip and
   credential-writing `bbx auth` refuse to proceed unattended.
 - **Ingest escaping is a display control, not an injection control** —
-  clipped pages, PDF text and form submissions are escaped so they cannot
+  clipped pages, PDF text and shared text are escaped so they cannot
   render as HTML or box tags (§4), but the agent still reads the same text.
 
 Honest read: a determined injection that reaches the agent has the

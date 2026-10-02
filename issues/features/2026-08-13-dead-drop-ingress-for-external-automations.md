@@ -66,7 +66,7 @@ surface, verified at every hop, stored apart from user auth.
   nothing else — no read, no listing, no other surface.
 - **Abuse and size.** An open-ish URL invites junk. Rate limiting, a size cap,
   and a per-token quota are the minimum, and the token stays the actual control.
-- **Discovery/setup UX.** `bbx pub setup` is the outbound analogue and worth
-  reading for shape — and for its warning: its instructions went stale and
-  dashboard-bound (filed separately). Prefer a flow that mints and prints the
-  URL over one that documents clicking through a console.
+- **Discovery/setup UX.** Prefer a flow that mints and prints the URL over one
+  that documents clicking through a console. (The removed `bbx pub setup` was
+  the cautionary example: its Access instructions went stale and
+  dashboard-bound. Publishing setup now lives in Admin.)

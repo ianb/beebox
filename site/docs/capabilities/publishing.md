@@ -61,14 +61,10 @@ the box.
 - A build script the agent writes runs as ordinary code on your machine, with
   a reduced environment that leaves out the server's credentials. It is not a
   sandbox. Limits are 2,000 files, 25 MiB per file, and 100 MiB per site.
-- An older flow remains, with its own commands to draft, go live, and revoke a
-  single page, including pages gated to named accounts and a receiving side
-  for reply forms. Nothing in the software produces a page that carries a
-  reply form, so do not plan on replies. Pages published the older way keep
-  working at their old addresses until they are re-prepared under the new flow.
+- Published pages cannot collect replies: there are no forms that send data
+  back to the box.
 
 **Go deeper**
 
-[../reference/cards/pub-submission.md](../reference/cards/pub-submission.md),
 [../reference/bbx-commands.md](../reference/bbx-commands.md),
 [../10-your-data-and-safety.md](../10-your-data-and-safety.md)

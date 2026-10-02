@@ -1,8 +1,8 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: 22945e70c764f1a8847a3ded24adc1f3000d1492
-date: 2026-09-26
-model: gpt-6-luna
+generated-at-rev: c8428cca5
+date: 2026-10-02
+model: claude-sonnet-5-5
 reviewed-by: DRAFT — unreviewed
 ---
 
@@ -209,7 +209,7 @@ probe (a hash and a flag), the login/static assets needed to reach the
 login page, and — for its 15-minute first-run window — the setup route,
 gated by a token printed only to the server console. Everything else
 that skips the session wall carries its own dedicated credential
-(Telegram webhook secret, diagnostic bearer key, Cloudflare Access JWT).
+(Telegram webhook secret, diagnostic bearer key).
 The full route-by-route table is
 [§1 of the structured report](security-report.md#1-endpoints-auth-abilities).
 
@@ -227,9 +227,12 @@ one box share browser origin, storage, and same-origin script access. CORS does
 not separate those pages; no iframe or per-publication origin isolation is
 provided. Treat publications in one box as mutually trusting. DNS/certificate
 effects begin when the owner configures the host, before any page is enabled.
-The legacy rendered-doc `bbx pub go` remains TTY-gated. Leak scanning is a backstop, not a guarantee
-that content is appropriate or free of secrets. Public and secret-link
-bundles are fully public to anyone with the URL; a secret URL is a bearer
+Static sites render Markdown to HTML at prepare time, reject box component
+tags, and omit `redacted` content; the leak scan runs over that rendered output.
+Leak scanning is a backstop, not a guarantee that content is appropriate or
+free of secrets. The older draft/`go` publication flow, its submission intake,
+and its separate R2 ingestion credential no longer exist; the Worker is
+read-only. Public and secret-link bundles are fully public to anyone with the URL; a secret URL is a bearer
 capability, not a login. Managed account-restricted publication is not ready
 pending a separate consent and security design.
 

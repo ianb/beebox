@@ -1,0 +1,4 @@
+description: "Disk hygiene: prune rebuildable caches weekly; alert when free disk stays low"
+cadence: 1d
+# No `workstream:`: pruning rebuildable caches needs no judgment, and a disk
+# that stays full after pruning needs a person choosing what to delete.

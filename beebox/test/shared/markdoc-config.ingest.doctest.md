@@ -1,7 +1,7 @@
 # Escaping outside text before it becomes a card body
 
 Connectors that write third-party text into a card body (a clipped web page,
-a PDF's extracted text, a form submission) escape it first, so it renders as
+a PDF's extracted text, text shared from another app) escape it first, so it renders as
 the literal text the source contained. Box Markdown renders allow-listed HTML
 and runs Markdoc tags; outside content should do neither.
 
@@ -66,11 +66,11 @@ neutralizeIngestedMarkdown(neutralizeIngestedMarkdown(clipped + "\n\n" + code)) 
 => true
 ```
 
-## Form values
+## Plain-text values
 
-A form submission's values are plain text, not Markdown. `escapeMarkdownText`
-escapes every ASCII punctuation character, so a submitter cannot add a link, an
-image, HTML or a tag. Line breaks become hard breaks indented to stay in the
+Some outside values are plain text, not Markdown: a shared page's title, for
+one. `escapeMarkdownText` escapes every ASCII punctuation character, so the
+value cannot add a link, an image, HTML or a tag. Line breaks become hard breaks indented to stay in the
 enclosing list item:
 
 ```ts

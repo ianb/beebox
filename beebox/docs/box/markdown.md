@@ -115,6 +115,6 @@ fence's first line:
 ## Text from outside the box
 
 Connectors escape the HTML and Markdoc tags in the outside text they write
-(clipped pages, PDF text, form submissions), so it shows as literal text.
+(clipped pages, PDF text, text shared from the phone), so it shows as literal text.
 When you copy outside text into a card yourself, keep it literal in the same
 way: escape `<` and `{%` with a backslash, or put the text in a code block.

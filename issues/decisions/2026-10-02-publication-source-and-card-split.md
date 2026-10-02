@@ -56,8 +56,8 @@ Questions to decide:
 
 ## Related
 
-- A third, older mechanism, `bbx pub draft` with `_publish/<pub-id>/`, is
-  being retired separately.
+- A third, older mechanism, `bbx pub draft` with `_publish/<pub-id>/`, was
+  retired 2026-10-02.
 - [Static publications render Markdown](../closed/features/2026-10-02-static-publications-render-markdown.md)
   made a site of `.md` documents simple to write, which makes a
   card-shaped publication more natural.

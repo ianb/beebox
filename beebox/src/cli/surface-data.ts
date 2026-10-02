@@ -139,15 +139,9 @@ export const SURFACE: readonly SurfaceEntry[] = [
   },
   {
     name: "pub",
-    subcommands: ["draft", "ls", "status", "prepare", "sites", "id", "connections"],
+    subcommands: ["status", "prepare", "sites", "id", "connections"],
     audience: "agent",
-    smoke: { run: ["pub", "ls"] },
-  },
-  {
-    name: "pub",
-    subcommands: ["setup", "go", "revoke"],
-    audience: "engine",
-    reason: "`setup` needs a wrangler login; `go` is the human-only flip and asks for interactive confirmation",
+    smoke: { run: ["pub", "id"] },
   },
   {
     name: "secrets",

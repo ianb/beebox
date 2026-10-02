@@ -16,7 +16,7 @@
 import * as fs from "node:fs/promises";
 import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../../husk-read.js";
 import { huskTranscriptPath } from "../../husk-transcript.js";
-import { resolveSessionLabel, type SessionLabelSource } from "./label.js";
+import { quoteSnippet, resolveSessionLabel, type SessionLabelSource } from "./label.js";
 import { assertNever } from "../../../../shared/invariant.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { mapInBatches, mapInBatchesSettled } from "../../../../lib/map-batched.js";
@@ -55,6 +55,8 @@ export interface ChatSessionEntry {
   logPath: string;
   /** The husk's editorial `title`, when it has one. Free — it rode the husk. */
   title: string | undefined;
+  /** The boxholder's close mark (`done: true`) — a done chat sorts below live ones. */
+  done: boolean;
   /**
    * The Codex thread's verbatim first user message, envelope and all, as
    * `thread/list` reports it. Free — one list call already carries it for every
@@ -84,6 +86,12 @@ export interface DeadHuskEntry {
   contextDir: string | undefined;
   /** The husk's editorial `title`, when it has one. */
   title: string | undefined;
+  /**
+   * The husk's stored opening snippet (`first-message`), when it has one —
+   * for a dead husk the only surviving trace of what the conversation opened
+   * with, displayed quoted rather than as if it were a title.
+   */
+  firstMessage: string | undefined;
   /**
    * Why there is nothing to resume. Never `present` — that is what makes the
    * husk dead, and it is the enumeration's job to keep the two lists disjoint.
@@ -245,10 +253,14 @@ export async function loadChatLists(boxRoot: string): Promise<{ sessions: ChatSe
 
 /**
  * A dead chat's display name, in the same order a live one's resolves — minus
- * the transcript scan, because the transcript is exactly what is gone.
+ * the transcript scan, because the transcript is exactly what is gone. The
+ * stored opening snippet renders quoted (a snippet, not a title); the id
+ * prefix is the last resort.
  */
 export function deadHuskLabel(husk: DeadHuskEntry): string {
-  return husk.title === undefined || husk.title === "" ? husk.sessionId.slice(0, 8) : husk.title;
+  if (husk.title !== undefined && husk.title !== "") return husk.title;
+  if (husk.firstMessage !== undefined && husk.firstMessage !== "") return quoteSnippet(husk.firstMessage);
+  return husk.sessionId.slice(0, 8);
 }
 
 async function labelEntries(entries: ChatSessionEntry[]): Promise<ChatSessionRow[]> {
@@ -331,6 +343,7 @@ async function deadHusk(husk: ChatHuskEntry): Promise<HuskResolution> {
       huskPath: husk.path,
       contextDir: husk.contextDir,
       title: husk.title,
+      firstMessage: husk.firstMessage,
       transcript: await deriveTranscriptState({ husk, present: false }),
     },
   };
@@ -380,6 +393,7 @@ async function resolveHusk(options: {
       huskPath: husk.path,
       logPath,
       title: husk.title,
+      done: husk.done === true,
       ...(codexMetadata === undefined ? {} : { nativePreview: codexMetadata.preview }),
     },
   };
@@ -395,6 +409,16 @@ async function resolveHusk(options: {
  * transcript, and an id with neither is named from its prefix (not an error —
  * `chat.bootstrap` already treats a transcript-less id as a normal state).
  */
+/**
+ * Whether the boxholder has marked this session done (`done: true` on its
+ * husk), or null when the session has no husk — a brand-new chat has no card
+ * to mark, so a caller offering the toggle must offer nothing.
+ */
+export async function sessionIsDone(boxRoot: string, sessionId: string): Promise<boolean | null> {
+  const husk = await findChatHuskEntry(boxRoot, sessionId);
+  return husk === null ? null : husk.done === true;
+}
+
 /**
  * The session's *editorial* title — the husk card's `title`, or null when
  * the session has none (yet). Deliberately no first-message/id fallback:

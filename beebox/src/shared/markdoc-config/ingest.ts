@@ -3,7 +3,7 @@
  *
  * Card bodies render raw HTML through an allow-list and run Markdoc tags.
  * Content a connector brings in from outside (a clipped web page, a PDF's
- * extracted text, a form submission) should do neither: it has no business
+ * extracted text, text shared from another app) should do neither: it has no business
  * producing box tags, and allow-listed HTML can still dress third-party text
  * up as box UI. These helpers escape that syntax at write time, so the stored
  * body renders as the literal text the source contained, and an agent reading

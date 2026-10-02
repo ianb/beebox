@@ -2,16 +2,18 @@
 title: "Publish-pages: resume the Cloudflare publishing feature"
 workstream: publish-pages
 area: beebox
-needs: [manual-testing]
-design: ../../beebox/docs/plans/publish-pages.md
+design: ../../../beebox/docs/unimplemented-plans/publish-pages-superseded.md
 priority: important
+resolution: superseded
 ---
+
+> Closed 2026-10-02 as `superseded`: the boxholder retired the legacy publication flow (`bbx pub draft`/`go`/`ls`/`revoke`/`setup`, `_publish/<pub-id>/` drafts, the per-box Wrangler Worker routes, and the submission drop box) without it having been used. Server-managed publishing (`beebox/docs/publishing.md`) replaced it.
 
 Handoff for the external-publishing feature (publish box docs/views to public(ish)
 Cloudflare-hosted URLs). Most of it is built and committed on branch
 `worktree-publish-pages`; the remaining work needs a live Cloudflare account and is
 best finished in a fresh session. Full design + security review:
-[publish-pages.md](../../beebox/docs/plans/publish-pages.md).
+[publish-pages.md](../../../beebox/docs/unimplemented-plans/publish-pages-superseded.md).
 
 ## What's done (committed on `worktree-publish-pages`, 11 commits, all tested)
 
@@ -84,7 +86,7 @@ best finished in a fresh session. Full design + security review:
   rides `wrangler login`, the connector reads
   `config/connectors/publish.secret.json` (ingestion-bucket-scoped token), and the
   ingestion data moved to a second R2 bucket. See
-  [pub-setup-wrangler](../../beebox/docs/implemented-plans/pub-setup-wrangler.md). The
+  [pub-setup-wrangler](../../../beebox/docs/implemented-plans/pub-setup-wrangler.md). The
   original text (for archaeology): lived in `~/.beebox-publish.env` (mode 600, outside the repo — machine-
   level like the Google OAuth creds). Holds `CLOUDFLARE_API_TOKEN` +
   `CLOUDFLARE_ACCOUNT_ID`. Still needs `CLOUDFLARE_R2_BUCKET` added once a bucket name

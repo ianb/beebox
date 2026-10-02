@@ -50,7 +50,7 @@ Any signed-in member of the box may enable or disable after the Cloudflare conne
 
 **Location in plan:** Publication host and secret-link identity.
 
-**Citation:** Secret `PubId` is the capability token (`beebox/src/publish/manifest.ts:76-79`); the earlier plan says “secrecy lives only in the path segment, never in the hostname” (`beebox/docs/plans/publish-pages.md:57`).
+**Citation:** Secret `PubId` is the capability token (`beebox/src/publish/manifest.ts:76-79`); the earlier plan says “secrecy lives only in the path segment, never in the hostname” (`beebox/docs/unimplemented-plans/publish-pages-superseded.md:57`).
 
 **Issue:** Deriving Worker name/hostname from `PubId` puts the secret capability in public host metadata.
 

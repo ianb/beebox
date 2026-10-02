@@ -258,7 +258,8 @@ await box.cleanup();
 ## Static mode renders Markdown pages and does not ship the sources
 
 Each `.md` file becomes a sibling `.html` page styled by the box's Markdown
-renderer. `index.md` satisfies the root-entry rule. Relative links to `.md`
+renderer. The page title comes from frontmatter `title:`, then the first H1,
+then the file name. `index.md` satisfies the root-entry rule. Relative links to `.md`
 pages point at the rendered `.html`; external and anchor links are unchanged.
 Images and other files pass through. The release id, file list, and leak scan
 all describe the rendered pages, so a reviewer sees what is served.
@@ -302,6 +303,10 @@ index.includes('href="https://example.com/a.md"') && index.includes('src="assets
 
 index.includes("<script")
 => false
+
+const packing = await readFile(path.join(result.prepared.stagedDir, "packing.html"), "utf-8");
+packing.includes("<title>Packing list</title>")
+=> true
 
 const dayOne = await readFile(path.join(result.prepared.stagedDir, "days/one.html"), "utf-8");
 dayOne.includes("<title>one</title>") && dayOne.includes('href="../index.html"')

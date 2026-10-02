@@ -1,4 +1,3 @@
-import type { FilePreview } from "../draft/core.js";
 import type { PublicationDefinition } from "./definition.js";
 import type { LeakScanResult } from "../leak-scan.js";
 
@@ -34,7 +33,7 @@ export interface PreparedPublication {
   contentHash: string;
   stagedDir: string;
   files: PreparedFile[];
-  preview: FilePreview[];
+  preview: PreparedFile[];
   scan: LeakScanResult;
   cleanup: () => Promise<void>;
 }

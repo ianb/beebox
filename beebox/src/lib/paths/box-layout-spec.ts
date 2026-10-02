@@ -231,12 +231,12 @@ export const BOX_LAYOUT = [
     path: "_publish",
     area: "publish",
     description:
-      "Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each " +
-      "holding a `manifest.json` and a rendered `bundle/`. Written by `bbx pub draft`; flipped live and " +
-      "uploaded by the human via `bbx pub go`. See `docs/plans/publish-pages.md`.",
+      "Staging area for content exported out of the box: the public-site exporter (`site/box-export.ts` " +
+      "in the monorepo) reads a staged card graph from `_publish/public-site/`. Server-managed publications " +
+      "do not use it; their sources live in `src/publications/<name>/`.",
     agentDescription:
-      "Publications staged for external hosting (one `<pub-id>/` each: manifest + bundle). Drafted by " +
-      "`bbx pub draft`; only the human makes one live with `bbx pub go`.",
+      "Staging area for exported content (`_publish/public-site/`). Publications you prepare live in " +
+      "`src/publications/<name>/`, not here.",
   },
 
   // _tmp/ — scratch.

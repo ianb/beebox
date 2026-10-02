@@ -14,13 +14,11 @@ const NOW = Date.parse("2026-09-24T12:00:00.000Z");
 const deps: WorkerDeps = {
   now: () => NOW,
   jwksFor: () => async () => null,
-  newId: () => "test-id",
 };
 
 function workerEnv(pubId = SITE_ID, hostHandle = HOST_HANDLE): Env {
   return {
     PUB_STORE: env.PUB_STORE,
-    PUB_INGEST: env.PUB_INGEST,
     ACCESS_TEAM_DOMAIN: undefined,
     ACCESS_AUD: undefined,
     PUB_WORKER_VERSION: undefined,

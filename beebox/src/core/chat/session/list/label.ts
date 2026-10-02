@@ -23,6 +23,16 @@ import { readFirstUserSnippet, snippetFromUserText } from "../../../../cli/lib/s
 const SNIPPET_MAX_LEN = 400;
 
 /**
+ * Mark a snippet label as a snippet: typographic quotes, so a first message
+ * in a list can't be mistaken for a title. The one place the marking is
+ * decided — both resolvers (live transcript snippets and the husk's stored
+ * `first-message`) go through it.
+ */
+export function quoteSnippet(text: string): string {
+  return `“${text}”`;
+}
+
+/**
  * Where a label's first-user-message text comes from — the *only* thing the
  * two engines are allowed to disagree about.
  *
@@ -59,7 +69,7 @@ export async function resolveSessionLabel(args: {
 
   try {
     const snippet = await firstUserSnippet(source);
-    if (snippet !== null) return snippet;
+    if (snippet !== null) return quoteSnippet(snippet);
   } catch (e) {
     console.warn(`chat: could not read metadata for session ${sessionId}, using id prefix:`, e);
   }
