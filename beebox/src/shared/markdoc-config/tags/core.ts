@@ -76,9 +76,10 @@ import Markdoc from "@markdoc/markdoc";
 import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc";
 import { QUOTE_TREATMENTS, validateQuoteTreatment } from "./quote-treatment.js";
 import { validateSourceAttributes } from "./source-model.js";
-import { TODO_STATUSES, validateTodoAttributes } from "../todo-model.js";
-import { stampedLocator } from "../todo-locators.js";
-import { flattenNodes } from "../todo-text.js";
+import { TODO_STATUSES, validateTodoAttributes } from "../../todo-model.js";
+import { stampedLocator } from "../../todo-locators.js";
+import { flattenNodes } from "../../todo-text.js";
+import { footnoteTags, imageNode, makeHtmlTag } from "./html-schema.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
 // module under Node's ESM loader (used by the doctest runner); the frontend
@@ -480,6 +481,8 @@ export const markdocConfig: Config = {
     silence,
     todo,
     "see-also": seeAlso,
+    html: makeHtmlTag({ paragraph: "p" }),
+    ...footnoteTags,
   },
-  nodes: { item },
+  nodes: { item, image: imageNode },
 };

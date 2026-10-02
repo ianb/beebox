@@ -8,7 +8,7 @@ it, so the two cannot disagree about which todo `line#2` means.
 ```ts setup
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
-import { markdocConfig } from "../../src/shared/markdoc-config/core.js";
+import { markdocConfig } from "../../src/shared/markdoc-config/tags/core.js";
 import { assignLocators, type TodoLocator } from "../../src/shared/todo-locators.js";
 
 const { parse } = Markdoc;

@@ -103,3 +103,29 @@ JSON.stringify(emitBodyAsMarkdown('{% source ref="_content/recipes/stew.recipe.c
 JSON.stringify(emitBodyAsMarkdown('{% source ref="_content/recipes/stew.recipe.card" %}Browning first is the whole trick.{% /source %}'))
 => "Browning first is the whole trick. [→ stew]\n\n"
 ```
+
+## Raw HTML and footnotes go back out as written
+
+A body's allow-listed HTML reaches CLAUDE.md as HTML (Claude reads it as
+written), comments disappear, and footnotes return to GFM `[^n]` syntax.
+
+```ts
+emitBodyAsMarkdown("H<sub>2</sub>O<br>next <!-- hidden -->\n\n<details open>\n<summary>More</summary>\n\nbody\n\n</details>")
+=>
+H<sub>2</sub>O<br>next 
+«blankline»
+<details open>
+<summary>
+More
+</summary>
+«blankline»
+body
+«blankline»
+</details>
+
+emitBodyAsMarkdown("Claim[^a].\n\n[^a]: The source.")
+=>
+Claim[^1].
+«blankline»
+[^1]: The source.
+```

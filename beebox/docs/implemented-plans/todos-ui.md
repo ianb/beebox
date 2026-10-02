@@ -116,7 +116,7 @@ place; agent todos out of the boxholder's way.
 
 ## What already exists
 
-- **`{% todo %}` tag.** `src/shared/markdoc-config.ts:348-379` (moved to `beebox/src/shared/markdoc-config/core.ts`); transform:
+- **`{% todo %}` tag.** `src/shared/markdoc-config.ts:348-379` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`); transform:
   *`return new Tag(node.inline ? "TodoInline" : "TodoBlock", attributes, children);`*.
   Rendered by `makeTodoComponents()` (`src/frontend/src/components/Todo.tsx:78-108`),
   wired at `Markdown.tsx:170`, *`const { TodoInline, TodoBlock } = makeTodoComponents();`*,
@@ -341,7 +341,7 @@ hide completed agent todos).
   moves to `src/shared/todo-locators.ts`, unchanged; the collector imports it
   from there. `Markdown.tsx` runs it on the parsed AST before `transform` and
   passes the resulting `Map<Node, TodoLocator>` in the transform config. The
-  `todo` schema's own `transform` (`src/shared/markdoc-config.ts:374-378` (moved to `beebox/src/shared/markdoc-config/core.ts`))
+  `todo` schema's own `transform` (`src/shared/markdoc-config.ts:374-378` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`))
   looks its node up in that map and adds `locator` to the `Tag` it builds.
   Markdoc filters only declared attributes that come from source
   (`transformer.ts`), and a transform-built `Tag` is not filtered, so the

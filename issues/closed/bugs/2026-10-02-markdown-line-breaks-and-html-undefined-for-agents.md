@@ -1,11 +1,14 @@
 ---
 title: "Markdown cards: `<br>` renders as literal text, hard breaks fail in the app, and agents have no description of our Markdown dialect"
-workstream: unattached
+workstream: markdown-expressiveness
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder report
 ---
+
+> Closed: implemented on branch worktree-markdown-expressiveness (merge commit in `git log`). Diverges from the proposal: instead of only `<br>`, body HTML renders through an element/attribute allow-list, plus GFM footnotes. Hard breaks (two trailing spaces, backslash) were verified working in the app render and the box commit hook; the reported failure was not reproducible and is most likely the writer stripping trailing spaces. The agent reference `beebox/docs/box/markdown.md` recommends backslash or `<br>`, and its knowledge audit passed.
 
 The boxholder cannot put a line break inside a paragraph of a Markdown card.
 
@@ -54,5 +57,5 @@ Today it is "no HTML at all" by Markdoc default, not by decision. Questions:
 - The published-site renderer (`beebox/src/publish/draft/render-docs.ts`) uses
   the same Markdoc config and must follow the same policy. The
   `static-markdown-publish` workstream
-  ([static-publications-render-markdown](../closed/features/2026-10-02-static-publications-render-markdown.md))
+  ([static-publications-render-markdown](../features/2026-10-02-static-publications-render-markdown.md))
   depends on this.

@@ -78,6 +78,22 @@ body {
   margin-bottom: 0;
 }
 
+/* Markdown footnotes (`[^1]`) and raw-HTML extras; the elements come from
+   src/shared/markdoc-config/html-schema.ts. */
+.footnotes {
+  font-size: 0.875em;
+}
+.footnote-ref a,
+.footnote-backref {
+  text-decoration: none;
+}
+.footnote-backref {
+  margin-left: 0.25em;
+}
+details > summary {
+  cursor: pointer;
+}
+
 /* ===== Elegant print styles for Markdown / prose in the browse view ===== */
 
 @media print {
