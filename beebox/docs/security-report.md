@@ -3,12 +3,12 @@ generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: c8428cca5
 date: 2026-10-02
 model: claude-sonnet-5-5
-reviewed-by: DRAFT — unreviewed
+reviewed-by: Ian Bicking
 ---
 
 # Security report — structured version
 
-**Scoped amendment (2026-10-02; DRAFT — unreviewed):** Reflects the removal of
+**Scoped amendment (2026-10-02; reviewed by Ian Bicking):** Reflects the removal of
 the legacy publication flow (`bec8749e3`, `6b8968965`) and the static-Markdown
 render step. Gone: `bbx pub draft/go/ls/revoke/setup`, `_publish/<pub-id>/`
 drafts, the Wrangler/Access/token services, the `publish/<box>` R2 secret and
