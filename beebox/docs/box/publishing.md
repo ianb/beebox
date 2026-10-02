@@ -109,7 +109,9 @@ site/
   heading, else the file name.
 - The `.md` source is not published. A `foo.md` and a `foo.html` in the same
   folder is a preparation error; keep one.
-- Markdoc tags must be valid; an unknown tag is a preparation error.
+- Write plain Markdown. Task lists render as checkboxes. Box Markdoc tags
+  such as `quote`, `source`, `todo`, and `redacted` are a preparation error,
+  because a static page cannot render them.
 - Use hand-written HTML and CSS only when the site needs its own layout. A
   site can mix both.
 

@@ -355,6 +355,28 @@ result.ok ? "ok" : `${result.reason}: ${result.message.includes("'index.md:3' ha
 await box.cleanup();
 ```
 
+Box Markdoc tags render to app components, which a static page cannot show.
+A task-list item becomes a plain disabled checkbox; any other box tag fails, so
+a `redacted` answer is never published as visible text.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.md", "# Home\n\n- [x] Tent\n- [ ] Stove\n");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+const index = result.ok ? await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8") : result.message;
+index.includes('<input type="checkbox" disabled="" checked="">') && index.includes('<input type="checkbox" disabled="">') && !index.includes("<Task")
+=> true
+
+if (result.ok) await result.prepared.cleanup();
+await box.write("src/publications/example/site/index.md", "# Quiz\n\n{% redacted %}42{% /redacted %}\n");
+const redacted = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+redacted.ok ? "ok" : `${redacted.reason}: ${redacted.message}`
+=> bundle-policy: Markdown file 'index.md' uses a box Markdoc tag (RedactedInline) that published pages do not support; remove it or write plain Markdown
+
+await box.cleanup();
+```
+
 ## Project mode publishes `dist/` Markdown as written
 
 Rendering belongs to static mode. A project build owns its output.

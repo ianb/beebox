@@ -2,6 +2,9 @@
 
 import path from "node:path";
 
+import Markdoc from "@markdoc/markdoc";
+import type { RenderableTreeNode, RenderableTreeNodes } from "@markdoc/markdoc";
+
 import { markdownValidationErrors, renderMarkdownPage } from "../draft/render-docs.js";
 import { bundlePolicyError } from "./errors.js";
 
@@ -28,6 +31,31 @@ function rewriteMarkdownHref(href: string): string {
 
 function rewriteMarkdownLinks(body: string): string {
   return body.replace(ANCHOR_TAG_RE, (tag) => tag.replace(HREF_RE, (_whole, href: string) => `href="${rewriteMarkdownHref(href)}"`));
+}
+
+// Same default-member access as `render-docs.ts`: the named import fails under Node ESM.
+// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
+const { Tag } = Markdoc;
+
+/**
+ * The shared Markdoc config emits app components (capitalized tag names) for
+ * box tags. A static page has no component renderer, so a GFM task becomes a
+ * disabled checkbox and any other component fails prepare rather than ship
+ * as an unknown element (a `redacted` tag would show its text).
+ */
+function lowerComponents(relative: string, tree: RenderableTreeNodes): RenderableTreeNodes {
+  return Array.isArray(tree) ? tree.map((node) => lowerComponent(relative, node)) : lowerComponent(relative, tree);
+}
+
+function lowerComponent(relative: string, node: RenderableTreeNode): RenderableTreeNode {
+  if (!Tag.isTag(node)) return node;
+  if (node.name === "Task") {
+    return new Tag("input", { type: "checkbox", disabled: "", ...(node.attributes["done"] === true ? { checked: "" } : {}) }, []);
+  }
+  if (/^[A-Z]/.test(node.name)) {
+    throw bundlePolicyError(`Markdown file '${relative}' uses a box Markdoc tag (${node.name}) that published pages do not support; remove it or write plain Markdown`);
+  }
+  return new Tag(node.name, node.attributes, node.children.map((child) => lowerComponent(relative, child)));
 }
 
 function decodeUtf8(relative: string, bytes: Buffer): string {
@@ -64,6 +92,7 @@ export function renderMarkdownSources(files: ReadonlyMap<string, Buffer>): Map<s
     }
     const html = renderMarkdownPage(source, {
       fallbackTitle: path.posix.basename(target, ".html"),
+      rewriteTree: (tree) => lowerComponents(relative, tree),
       rewriteHtml: rewriteMarkdownLinks,
     });
     renderedFrom.set(target, relative);

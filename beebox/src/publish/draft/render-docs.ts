@@ -33,7 +33,7 @@ import { parseAnnexPointer } from "../../lib/annex-pointer.js";
 
 import Markdoc from "@markdoc/markdoc";
 import { parse as parseYaml } from "yaml";
-import type { Config, Node } from "@markdoc/markdoc";
+import type { Config, Node, RenderableTreeNodes } from "@markdoc/markdoc";
 
 import { markdocConfig, makeHeadingNode } from "../../shared/markdoc-config/core.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
@@ -234,16 +234,23 @@ export function markdownValidationErrors(source: string): { line: number | null;
 
 /**
  * Render a Markdown/Markdoc source to one complete HTML page: the box's Markdoc
- * config, inline CSS, no JavaScript. `rewriteHtml` post-processes the rendered
+ * config, inline CSS, no JavaScript. `rewriteTree` adjusts the transformed
+ * Markdoc tree before HTML output; `rewriteHtml` post-processes the rendered
  * body (image localizing, link rewriting); `footerHtml` is appended verbatim.
  * Shared by the docs snapshot and static-site Markdown rendering.
  */
 export function renderMarkdownPage(
   source: string,
-  options: { fallbackTitle: string; rewriteHtml?: (body: string) => string; footerHtml?: string },
+  options: {
+    fallbackTitle: string;
+    rewriteTree?: (tree: RenderableTreeNodes) => RenderableTreeNodes;
+    rewriteHtml?: (body: string) => string;
+    footerHtml?: string;
+  },
 ): string {
   const ast = parse(source);
-  const body = renderers.html(transform(ast, docRenderConfig()));
+  const tree = transform(ast, docRenderConfig());
+  const body = renderers.html(options.rewriteTree === undefined ? tree : options.rewriteTree(tree));
   const rewritten = options.rewriteHtml === undefined ? body : options.rewriteHtml(body);
   const title = escapeHtml(frontmatterTitle(ast.attributes["frontmatter"]) ?? extractTitle(ast) ?? options.fallbackTitle);
   const footer = options.footerHtml === undefined ? "" : `\n${options.footerHtml}`;
