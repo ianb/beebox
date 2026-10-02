@@ -11,7 +11,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-const MONO_ROOT = resolve(import.meta.dirname, "../../..");
+const MONO_ROOT = resolve(import.meta.dirname, "../..");
 const CHECK = join(MONO_ROOT, "bin/doc-lifecycle-check.ts");
 const LAND = join(MONO_ROOT, "bin/land");
 
