@@ -7256,6 +7256,27 @@ tests:
       - '(?:never|do not|don.t)[\s\S]{0,120}(?:read|inspect|search|open)[\s\S]{0,120}(?:machine )?(?:secret|credential|server config)'
     tags: [publish-sites]
 
+  # Status (2026-10-02, static-markdown-publish): pass on a disposable clone of the worktree test1 box, 1 read, 0 searches, 23k ctx.
+  # The agent read publishing.md, planned site/index.md plus two .md pages with .md links, and named no HTML conversion or build step.
+  - id: publishing-markdown-documents
+    prompt: >
+      The boxholder has written a trip report and a packing list as Markdown
+      and wants both on a small secret website, with a front page linking to
+      them. List every file you would create under src/publications, with full
+      paths from the box root, and show the front page's contents. Do not
+      create or change files.
+    context_dir: src/publications
+    expected_level: knows_about
+    should_read: ["publishing.md"]
+    watch_for: >
+      Writes the documents as .md files in the static site folder with an
+      index.md front page that links to them by .md path; does not convert
+      them to HTML by hand or add a build step.
+    correct_matches:
+      - 'src/publications/[\w-]+/site/index\.md'
+      - '\]\([\w./-]+\.md\)'
+    tags: [publish-sites]
+
   - id: publishing-positive-data-export
     prompt: >
       A site should display two details from a person card. The quickest code
