@@ -8,7 +8,7 @@ filtered out — a chat in another landmark is always still reachable.
 ```ts setup
 import { layoutSessionList } from "../../../../../src/components/chat/everywhere/InteractiveChat/session-list-grouping.js";
 
-function session(sessionId: string, contextDir: string, landmarkLabel: string) {
+function session(sessionId: string, contextDir: string, landmarkLabel: string, done = false) {
   return {
     sessionId,
     source: "chat",
@@ -17,6 +17,7 @@ function session(sessionId: string, contextDir: string, landmarkLabel: string) {
     isActive: false,
     contextDir,
     landmarkLabel,
+    done,
   };
 }
 
@@ -29,12 +30,14 @@ const SESSIONS = [
 
 // Compact rendering of a layout, so the expectations read like the menu does.
 function show(layout) {
+  const done = layout.done.length === 0 ? [] : [`Done: ${layout.done.map((s) => s.sessionId).join(" ")}`];
   if (layout.kind === "flat") {
-    return `flat${layout.showLandmark ? " (tagged)" : ""}: ${layout.sessions.map((s) => s.sessionId).join(" ")}`;
+    return [`flat${layout.showLandmark ? " (tagged)" : ""}: ${layout.sessions.map((s) => s.sessionId).join(" ")}`, ...done].join("\n");
   }
   return [
     `${layout.hereLabel}: ${layout.here.map((s) => s.sessionId).join(" ")}`,
     `Other chats: ${layout.elsewhere.map((s) => s.sessionId).join(" ")}`,
+    ...done,
   ].join("\n");
 }
 ```
@@ -96,4 +99,40 @@ no headings and no "in Root" tag repeated down every row.
 const allRoot = [session("a", "", "Root"), session("b", "", "Root")];
 show(layoutSessionList({ sessions: allRoot, contextDir: "" }))
 => flat: a b
+```
+
+## Done chats trail the list, out of the prominence contest
+
+A chat the boxholder marked done no longer counts toward any group: it leaves
+"Recipes" and trails under "Done", still listed and still resumable. Here the
+only other Recipes chat is done, so the one live Recipes chat would sit under a
+heading of one — and the grouping rule still applies to the live chats alone.
+
+```ts
+const withDone = [
+  session("r1", "_content/recipes", "Recipes"),
+  session("r2", "_content/recipes", "Recipes", true),
+  session("n1", "_content/notes", "Notes"),
+  session("n2", "_content/notes", "Notes", true),
+];
+show(layoutSessionList({ sessions: withDone, contextDir: "_content/recipes" }))
+=>
+Recipes: r1
+Other chats: n1
+Done: r2 n2
+```
+
+When every chat in the landmark you're in is done, the landmark has no live
+chats to promote, so the live list stays flat and the done chats still trail.
+
+```ts
+const recipesAllDone = [
+  session("r1", "_content/recipes", "Recipes", true),
+  session("n1", "_content/notes", "Notes"),
+  session("root1", "", "Root"),
+];
+show(layoutSessionList({ sessions: recipesAllDone, contextDir: "_content/recipes" }))
+=>
+flat (tagged): n1 root1
+Done: r1
 ```

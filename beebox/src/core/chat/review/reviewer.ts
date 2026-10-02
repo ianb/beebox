@@ -52,6 +52,20 @@ export const ReviewOutputSchema = z.object({
 
 export type ReviewOutput = z.infer<typeof ReviewOutputSchema>;
 
+/**
+ * A title pass's whole output: the title, nothing else. Empty string means
+ * "the existing title still fits, keep it" — but is a *failure* when the
+ * conversation has no title at all (nothing to keep), enforced by the caller.
+ */
+export const TitleOutputSchema = z.object({
+  title: z
+    .string()
+    .max(TITLE_MAX)
+    .refine((t) => !t.includes("\n"), { message: "title must be a single line" }),
+});
+
+export type TitleOutput = z.infer<typeof TitleOutputSchema>;
+
 export interface ReviewArgs {
   sessionId: string;
   /** The title the husk currently carries, or null when it has none. */
@@ -67,17 +81,31 @@ export interface ReviewArgs {
 export interface ChatReviewer {
   /** Review one span. Throws on reviewer failure. */
   review(args: ReviewArgs): Promise<ReviewOutput>;
+  /**
+   * Title one span — the cheap pass that runs on short growth. Same title
+   * rules as {@link review} (the shared prompt section below), no account.
+   * Throws on reviewer failure.
+   */
+  title(args: TitleArgs): Promise<TitleOutput>;
+}
+
+export interface TitleArgs {
+  sessionId: string;
+  /** The title the husk currently carries, or null when it has none. */
+  currentTitle: string | null;
+  /** Rendered new span (already elided if oversized). */
+  span: string;
 }
 
 
 /** Hard per-session cost ceiling. */
 const MAX_BUDGET_USD = 0.25;
 
-const REVIEWER_SYSTEM_PROMPT = `You read one chat conversation between a person (the "boxholder") and their personal assistant, and you write down what it amounts to: a title, a one-sentence summary, and a short account of what came of it.
-
-You are usually shown only the NEW part of a conversation you have summarized before, together with the account you wrote last time. Extend that account: carry items forward, revise them when the new material changes them, drop them when they are resolved and no longer worth keeping, and add what is new. Do not re-derive the account from scratch — the earlier conversation is not in front of you, and your previous account is the only record of it.
-
-## The title — the one place to hold back
+/**
+ * The title rules, shared verbatim by the full review and the title-only pass
+ * so the two prompts can never drift on the one output both of them write.
+ */
+const TITLE_RULES = `## The title — the one place to hold back
 
 Everything else you write (contains, the account) should be as explicit and
 specific as it needs to be to be useful. They are the record of the conversation.
@@ -107,6 +135,14 @@ The title must also be:
 
 Return an EMPTY title string when the existing title still describes the conversation. Titles that churn every night make the list unstable to read, so change one only when it no longer fits.
 
+Do not use any tools. Work only from the text in this prompt.`;
+
+const REVIEWER_SYSTEM_PROMPT = `You read one chat conversation between a person (the "boxholder") and their personal assistant, and you write down what it amounts to: a title, a one-sentence summary, and a short account of what came of it.
+
+You are usually shown only the NEW part of a conversation you have summarized before, together with the account you wrote last time. Extend that account: carry items forward, revise them when the new material changes them, drop them when they are resolved and no longer worth keeping, and add what is new. Do not re-derive the account from scratch — the earlier conversation is not in front of you, and your previous account is the only record of it.
+
+${TITLE_RULES}
+
 ## contains
 
 One sentence stating what can be found in this conversation. Be specific and concrete — name the actual subject, the actual property, the actual question. This is a retrieval and recall aid, not a public label; the discretion rules above apply to the TITLE ONLY and must not be carried over here. A vague summary here is a useless one.
@@ -123,6 +159,10 @@ Rules:
 - Report only what the conversation actually shows. DO NOT INVENT. An empty list is the common and correct result for a routine conversation.
 - Be concrete. Names, amounts, dates, decisions, specifics — record what was actually said and settled. This is the durable record of a conversation whose transcript will eventually be deleted, so anything you leave out is lost. The title's discretion rules do NOT apply here.
 - Do not use any tools. Work only from the text in this prompt.`;
+
+const TITLE_SYSTEM_PROMPT = `You read one chat conversation between a person (the "boxholder") and their personal assistant, and you name it: a one-line title for the chat's list entry.
+
+${TITLE_RULES}`;
 
 class ReviewerRunError extends Error {
   constructor(sessionId: string, detail: string) {
@@ -153,12 +193,43 @@ function buildReviewPrompt(args: ReviewArgs): string {
   return parts.join("\n\n");
 }
 
+/** Assemble the title pass's user prompt. */
+function buildTitlePrompt(args: TitleArgs): string {
+  const parts: string[] = [];
+  parts.push(
+    args.currentTitle === null
+      ? "This conversation has no title yet."
+      : `Current title: ${args.currentTitle}`,
+  );
+  parts.push(args.span);
+  return parts.join("\n\n");
+}
+
 /** Real reviewer: a fresh single-purpose agent per session, structured output. */
 export function createSdkChatReviewer(options: {
   boxRoot: string;
   model?: string;
 }): ChatReviewer {
   return {
+    async title(args: TitleArgs): Promise<TitleOutput> {
+      // Same resolution and budget as the full review — one structured call,
+      // just a smaller output contract.
+      const model = options.model ?? await loadEffectiveSmallModel(options.boxRoot);
+      const agent = createAgent({ name: `chat-title:${args.sessionId}` });
+      const result = await agent.invokeStructured(TitleOutputSchema, {
+        boxRoot: options.boxRoot,
+        systemPrompt: TITLE_SYSTEM_PROMPT,
+        prompt: buildTitlePrompt(args),
+        model,
+        loadBoxContext: false,
+        maxTurns: 4,
+        maxBudgetUsd: MAX_BUDGET_USD,
+      });
+      if (!result.success) {
+        throw new ReviewerRunError(args.sessionId, result.error);
+      }
+      return result.data;
+    },
     async review(args: ReviewArgs): Promise<ReviewOutput> {
       // Resolved per run, not at construction: it is an engine-aware lookup,
       // and the box's small-model slot is the only thing that may name it.

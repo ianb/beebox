@@ -115,13 +115,13 @@ session: cccc1111-2222-3333-4444-555566667777
 engine: claude
 origin: «*»
 origin-name: «*»
-title: Please reply with just the word ok.
+first-message: Please reply with just the word ok.
 ---
 ```
 
 A web-composer message — the shape that actually reaches a backfilled husk —
 carries the `<typed>` shell with the sender's identity on it. None of that
-belongs in the chat's name:
+belongs in the stored snippet:
 
 ```ts continue
 const web = "dddd1111-2222-3333-4444-555566667777";
@@ -134,10 +134,11 @@ await writeFile(webLog, JSON.stringify({
 const webHusk = await ensureChatHusk(box.root, { sessionId: web, date: new Date("2026-08-23T12:00:00Z") });
 const card = await box.read(webHusk);
 JSON.stringify({
-  title: card.split("\n").find((l) => l.startsWith("title:")),
+  firstMessage: card.split("\n").find((l) => l.startsWith("first-message:")),
+  hasTitle: card.includes("title:"),
   leaksEmail: card.includes("ada@example.com"),
 })
-=> {"title":"title: where did I put the drawer key?","leaksEmail":false}
+=> {"firstMessage":"first-message: where did I put the drawer key?","hasTitle":false,"leaksEmail":false}
 ```
 
 ## reconcile husks every history entry, skipping ghosts

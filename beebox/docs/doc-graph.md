@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-02T17:55:59Z
-Total documents: 473
+Generated: 2026-10-02T18:03:53Z
+Total documents: 474
 
 ## Issues
 
@@ -431,7 +431,7 @@ Referenced by:
 - docs/implemented-plans/capture-mode.md:37 (mention) — - `beebox/code-style.md` — no `any`, named-params objects, custom
 - docs/implemented-plans/card-view-widgets.md:28 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional
 - docs/implemented-plans/chat-header-chips.md:72 (mention) — - `code-style.md:69` — "User-initiated actions never silently no-op"; governs
-- docs/implemented-plans/chat-review.md:59 (mention) — - **`beebox/code-style.md`** — max 2 positional params, no default
+- docs/implemented-plans/chat-review.md:66 (mention) — - **`beebox/code-style.md`** — max 2 positional params, no default
 - docs/implemented-plans/chat-scroll-redesign.md:52 (mention) — - `beebox/code-style.md:36-37` — no default parameters; max 2 positional
 - docs/implemented-plans/chat-stream-finalize-unify.md:54 (mention) — - `beebox/code-style.md:37` — max 2 positional params; new/changed
 - docs/implemented-plans/clerk-webpage-capture.md:126 (mention) — - **`beebox/code-style.md`** — no `any`; no default parameters; max 2
@@ -681,7 +681,7 @@ Referenced by:
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:760 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:318 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:332 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../CLAUDE.md:61 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -976,7 +976,7 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:74 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:294 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:308 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:17 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
@@ -1061,8 +1061,9 @@ Referenced by:
 - docs/implemented-plans/card-themes.md:55 (link) — Design decisions below follow [engineering principles](../engineering-principles.md)
 - docs/implemented-plans/chat-header-chips.md:63 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-image-files.md:54 (mention) — - **`beebox/docs/engineering-principles.md` #8 (one pipeline):** every image
-- docs/implemented-plans/chat-review.md:42 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
+- docs/implemented-plans/chat-review.md:49 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/chat-session-identity.md:32 (mention) — - `docs/engineering-principles.md` #1 types are structure (`:12`) — transcript
+- docs/implemented-plans/chat-titles.md:60 (mention) — - **`docs/engineering-principles.md` #8, one way to do each thing.** The
 - docs/implemented-plans/codex-sdk-backend.md:44 (mention) — (`docs/engineering-principles.md:12`).
 - docs/implemented-plans/coined-chat-ids.md:41 (mention) — - `docs/engineering-principles.md` #2 (exhaustiveness is enforced, not hoped
 - docs/implemented-plans/commit-provenance-trailers.md:23 (mention) — - `beebox/docs/engineering-principles.md` — #3 validate at boundaries
@@ -1675,7 +1676,7 @@ Referenced by:
 - docs/design/processing.md:21 (link) — ([`../scheduler.md`](../scheduler.md)) and agent-set timers
 - docs/glossary.md:52 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
 - docs/guides.md:37 (link) — | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
-- docs/implemented-plans/chat-review.md:707 (mention) — `docs/scheduler.md`'s example set.
+- docs/implemented-plans/chat-review.md:714 (mention) — `docs/scheduler.md`'s example set.
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
 - docs/implemented-plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
@@ -1716,7 +1717,7 @@ Referenced by:
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:51 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:215 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:230 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
@@ -1730,7 +1731,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 298 lines | current reference
+Title: "Security overview" | 302 lines | current reference
 
 Referenced by:
 - README.md:90 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -1740,7 +1741,7 @@ Referenced by:
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/plans/publish-sites-admin.md:39 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
-- docs/security-report.md:62 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
+- docs/security-report.md:75 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/server.md:26 (link) — - The security posture of the whole: [security overview](security-overview.md).
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:14 (mention) — - **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
@@ -1768,7 +1769,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 551 lines | current reference
+Title: "Security report — structured version" | 565 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:92 (link) — and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
@@ -2353,6 +2354,7 @@ Referenced by:
 - docs/implemented-plans/box-search.md:51 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
 - docs/implemented-plans/card-prominence.md:102 (mention) — `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`
 - docs/implemented-plans/card-symbol.md:246 (mention) — see the fields, the enumerations in `docs/cards/schemas.md:72` and the
+- docs/implemented-plans/chat-titles.md:484 (mention) — Codex-revision note); `docs/cards/schemas.md` and the
 - docs/implemented-plans/docs-reorg.gap-analysis.md:47 (mention) — prime retrieval field. `docs/cards/schemas.md` never mentions it and
 - docs/implemented-plans/mvp-implementation-guide.md:418 (link) — See [adding-schemas.md](../cards/schemas.md) for concrete card examples.
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards/format.md`, `docs/cards/schemas.md`.
@@ -2436,10 +2438,11 @@ References:
 
 #### docs/chat/review.md
 
-Title: "Chat review" | 172 lines | current reference
+Title: "Chat review" | 214 lines | current reference
 
 Referenced by:
 - docs/chat.md:13 (link) — | [Review](chat/review.md) | The nightly pass that writes a title, `contains`, and `contains-evidence` to each session's
+- docs/implemented-plans/chat-titles.md:54 (mention) — plan, amendments to `docs/chat/review.md` and
 - ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:82 (link) — [chat review](../../../beebox/docs/chat/review.md): its journal is keyed by
 - ../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md:12 (link) — [Chat review](../../../beebox/docs/chat/review.md) keeps two pieces of state
 - ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:41 (mention) — - Accept the cap and say so in `docs/chat/review.md`.
@@ -2447,6 +2450,7 @@ Referenced by:
 - ../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md:79 (link) — - [Chat review](../../../beebox/docs/chat/review.md) skips it too (correctly —
 
 References:
+- → docs/implemented-plans/chat-titles.md (link)
 - → docs/implemented-plans/chat-review.md (link)
 
 #### docs/chat/schedules.md
@@ -3146,7 +3150,7 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- docs/security-report.md:316 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:330 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:131 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -3188,7 +3192,7 @@ Title: "Box Retrospectives" | 439 lines | shipped history | implemented
 Referenced by:
 - docs/design/teaching.md:19 (mention) — cards (`../implemented-plans/box-retrospectives.md`).
 - docs/glossary.md:64 (mention) — **retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what t
-- docs/implemented-plans/chat-review.md:65 (mention) — (`docs/implemented-plans/box-retrospectives.md`, `src/core/retro/`). The same
+- docs/implemented-plans/chat-review.md:72 (mention) — (`docs/implemented-plans/box-retrospectives.md`, `src/core/retro/`). The same
 - docs/implemented-plans/questions-end-to-end.md:25 (mention) — belief (the evidence model of `docs/implemented-plans/box-retrospectives.md`:
 - docs/questions.md:34 (mention) — `docs/implemented-plans/box-retrospectives.md`: inferred beliefs cap at
 - ../issues/features/2026-07-09-memory-gardener-consolidation-loop.md:29 (mention) — - **Retro** (`src/core/retro/`, `docs/implemented-plans/box-retrospectives.md`) —
@@ -3528,11 +3532,12 @@ References:
 
 #### docs/implemented-plans/chat-review.md
 
-Title: "Chat review: size-gated overnight compaction and generated titles" | 854 lines | shipped history | implemented
+Title: "Chat review: size-gated overnight compaction and generated titles" | 861 lines | shipped history | implemented
 
 Referenced by:
-- docs/chat/review.md:9 (link) — [docs/implemented-plans/chat-review.md](../implemented-plans/chat-review.md).
+- docs/chat/review.md:15 (link) — [docs/implemented-plans/chat-review.md](../implemented-plans/chat-review.md).
 - docs/implemented-plans/card-symbol.md:127 (mention) — `docs/implemented-plans/chat-review.md:432`); this plan will not be the third
+- docs/implemented-plans/chat-titles.md:55 (mention) — `docs/implemented-plans/chat-review.md`) ~400 lines, reported separately.
 - docs/implemented-plans/doc-structure-chat.md:68 (mention) — | `chat-review.md` | `chat/review.md` | |
 - docs/implemented-plans/doc-structure.md:641 (mention) — Name failures reported by the navigators: `chat-review.md` chosen for
 - ../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:6 (mention) — discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
@@ -3541,6 +3546,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/features/2026-05-19-overnight-session-compaction.md (link)
+- → docs/implemented-plans/chat-titles.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/implemented-plans/box-retrospectives.md (mention)
@@ -3605,6 +3611,22 @@ References:
 - → CLAUDE.md (mention)
 - → src/frontend/src/components/chat/CLAUDE.md (mention)
 - → docs/chat/scroll.md (mention)
+
+#### docs/implemented-plans/chat-titles.md
+
+Title: "Chat titles for every chat, kept fresh cheaply" | 658 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat/review.md:8 (link) — Two passes share the run ([docs/plans/chat-titles.md](../implemented-plans/chat-titles.md)):
+- docs/implemented-plans/chat-review.md:35 (link) — [docs/implemented-plans/chat-titles.md](chat-titles.md).
+
+References:
+- → docs/chat/review.md (mention)
+- → docs/implemented-plans/chat-review.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/standard-card-fields.md (mention)
+- → docs/implemented-plans/notifications.md (mention)
+- → docs/cards/schemas.md (mention)
 
 #### docs/implemented-plans/clerk-contract-and-import-boundary.md
 
@@ -4824,6 +4846,7 @@ References:
 Title: "Notifications and proactive work: pieces an agent composes to reach the person" | 1347 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/chat-titles.md:159 (mention) — (`docs/implemented-plans/notifications.md`); the freshness question is a
 - docs/implemented-plans/notifications-design-notes.md:16 (link) — [notifications.md](notifications.md) differ on mechanism (output cards
 - docs/notifications.md:5 (link) — changes. Design history: [the plan](implemented-plans/notifications.md) and its
 - ../issues/closed/features/2026-08-09-agent-outcomes-need-a-voice.md:16 (link) — [docs/implemented-plans/notifications.md](../../../beebox/docs/implemented-plans/notifications.md).
@@ -5454,7 +5477,7 @@ Referenced by:
 - docs/plans/box-glm-provider.md:81 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:193 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:231 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:245 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 - docs/user-stories/catalog/2026-08-21.md:9044 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -5559,7 +5582,7 @@ References:
 Title: "Semantic search (box-search phase 3): hybrid BM25 + vector retrieval" | 536 lines | shipped history | implemented
 
 Referenced by:
-- docs/implemented-plans/chat-review.md:837 (mention) — the validation in `docs/plans/semantic-search.md` § Rollout rather than appending
+- docs/implemented-plans/chat-review.md:844 (mention) — the validation in `docs/plans/semantic-search.md` § Rollout rather than appending
 - docs/plans/chat-search.md:88 (mention) — - Prior art in-tree: `docs/implemented-plans/semantic-search.md` and
 
 References:
@@ -5646,6 +5669,7 @@ Title: "Standard card fields" | 635 lines | shipped history | implemented
 
 Referenced by:
 - docs/cards/migrations.md:505 (mention) — Part 1 of `docs/implemented-plans/standard-card-fields.md`. Drops `status` from job cards
+- docs/implemented-plans/chat-titles.md:80 (mention) — - **Standard card fields (`docs/implemented-plans/standard-card-fields.md`).**
 - ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md:13 (link) — Closed: implemented by [the standard card fields plan](../../../beebox/docs/implemented-plans/standard-card-fields.md) (
 
 References:
@@ -7209,7 +7233,7 @@ References:
 Title: "Serve box publications from one shared hostname" | 170 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:542 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:556 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
@@ -7227,7 +7251,7 @@ Title: "Static site publishing with admin setup and human approval" | 292 lines 
 
 Referenced by:
 - docs/plans/publish-shared-host-per-box.md:23 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:535 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/security-report.md:549 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 - docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
@@ -8418,7 +8442,7 @@ Title: "Connectors" | 27 lines
 Referenced by:
 - CLAUDE.md:41 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/conn
 - docs/glossary.md:56 (mention) — **connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Con
-- docs/implemented-plans/chat-review.md:207 (mention) — re-injected before a connector sync rebuilds a card. `src/connectors/CLAUDE.md:19`:
+- docs/implemented-plans/chat-review.md:214 (mention) — re-injected before a connector sync rebuilds a card. `src/connectors/CLAUDE.md:19`:
 - docs/implemented-plans/doc-structure-connectors.md:50 (mention) — | calendar.md "Auth" | "unlike Gmail, which accepts app passwords" | Gmail uses the shared Google OAuth API (`gmail-setu
 - docs/implemented-plans/docs-reorg.gap-analysis.md:23 (mention) — module's own comment — not in `src/connectors/CLAUDE.md` or
 - docs/implemented-plans/file-layout.md:130 (mention) — - Per-directory instruction files: `src/connectors/CLAUDE.md`,
