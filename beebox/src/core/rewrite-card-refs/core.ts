@@ -222,7 +222,10 @@ function scanBodyText(line: string, wrap: RefTransform): string {
       prefix !== undefined && quote !== undefined && value !== undefined,
       "HTML link regex has three mandatory capture groups",
     );
-    return prefix + quote + wrap(value) + quote;
+    const rewritten = wrap(value);
+    // An unquoted value that now needs quoting (a space, say) gets double quotes.
+    const q = quote === "" && /[\s"'<=>`]/.test(rewritten) ? '"' : quote;
+    return prefix + q + rewritten + q;
   });
   // Body `ref="…"` attributes (Markdoc tags; XML attributes pass through
   // harmlessly since remap gates every change).

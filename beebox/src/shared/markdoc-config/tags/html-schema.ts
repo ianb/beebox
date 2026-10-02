@@ -37,7 +37,9 @@ export function makeHtmlTag({ paragraph }: { paragraph: string }): Schema {
       const element = node.attributes["element"];
       const children = node.transformChildren(config);
       if (typeof element !== "string" || htmlElementRule(element) === undefined) return children;
-      return new Tag(element === "p" ? paragraph : element, node.transformAttributes(config), children);
+      // Markdoc admits `class` and `id` on every tag; the allow-list does not.
+      const { class: _class, id: _id, ...attributes }: Record<string, unknown> = node.transformAttributes(config);
+      return new Tag(element === "p" ? paragraph : element, attributes, children);
     },
   };
 }

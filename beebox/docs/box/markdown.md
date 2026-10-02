@@ -37,8 +37,8 @@ HTML works for the elements in this list. Other tags show as literal text, so
 | Block | `p`, `div`, `blockquote`, `hr`, `h1`–`h6`, `details`, `summary`, `ul`, `ol`, `li`, `dl`, `dt`, `dd`, `table`, `caption`, `thead`, `tbody`, `tfoot`, `tr`, `th`, `td` |
 | Links and images | `a` with `href`, `img` with `src`, `alt`, `title`, `width` |
 
-- Attributes: `title`, `lang` and `dir` on any element; `align` on blocks,
-  table parts and `img`; `colspan` and `rowspan` on cells; `open` on
+- Attributes: `title`, `lang` and `dir` on any element; `align` on blocks
+  and table parts; `colspan` and `rowspan` on cells; `open` on
   `details`; `start`, `reversed` and `type` on `ol`. Other attributes
   (`style`, `class`, `id`, `onclick`, …) are dropped, and `bbx validate`
   warns about them.

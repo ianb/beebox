@@ -163,6 +163,9 @@ to be on the allow-list; anything else renders only its children:
 ```ts
 render('{% html element="script" %}x{% /html %} {% html element="sub" %}ok{% /html %}')
 => <article><p>x <sub>ok</sub></p></article>
+
+render('{% html element="div" class="fixed inset-0" id="fn-1" title="t" %}x{% /html %}')
+=> <article><p><div title="t">x</div></p></article>
 ```
 
 ## Code stays literal

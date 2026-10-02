@@ -69,14 +69,14 @@ export function inlineLinkPattern(): RegExp {
 }
 
 /**
- * THE pattern for a link target written as HTML: the quoted `href` of an
- * `<a>` or `src` of an `<img>` (the raw-HTML allow-list turns both into
- * ordinary links and images). Groups: the run up to the quote, the quote, the
- * target. Shared with `rewrite-card-refs` like {@link inlineLinkPattern};
- * a factory for the same `/g` reason.
+ * THE pattern for a link target written as HTML: the `href` of an `<a>` or
+ * `src` of an `<img>` (the raw-HTML allow-list turns both into ordinary links
+ * and images), quoted or unquoted. Groups: the run up to the value, the quote
+ * (empty when unquoted), the target. Shared with `rewrite-card-refs` like
+ * {@link inlineLinkPattern}; a factory for the same `/g` reason.
  */
 export function htmlLinkPattern(): RegExp {
-  return /(<(?:a|img)\b[^<>]*?\s(?:href|src)\s*=\s*)(["'])([^"'<>]*)\2/gi;
+  return /(<(?:a|img)\b[^<>]*?\s(?:href|src)\s*=\s*)(["']?)((?<=["'])[^"'<>]*|[^\s"'<=>`]+)\2/gi;
 }
 
 /**

@@ -276,6 +276,13 @@ rewriteReferrerRefs({
 => { text: "See <a href=\"/_content/people/Ana_Lee.person.card\">Ana</a>,\n<img src=\"attach/plan.png\" width=\"200\"> and <a href=\"https://example.com\">x</a>.", count: 1 }
 ```
 
+Unquoted attribute values count too:
+
+```ts
+extractBodyLinks("<a href=/_content/x.doc.card>x</a> <img src=attach/p.png>")
+=> [{ path: "body:1:link", ref: "/_content/x.doc.card" }, { path: "body:1:link", ref: "attach/p.png" }]
+```
+
 ## Malformed bodies are swallowed
 
 A body that throws on parse is treated as "no refs" rather than crashing the
