@@ -162,3 +162,15 @@ treat a plugin as read-only code. A stub that the agent grows after install is
 closer to a template. It meets the template-update problem: an upstream change
 to a template that the box has edited must not overwrite the box's edits.
 Today a changed template parks for approval (`_config/template-versions.json`).
+
+## 2026-09-29 — evidence from Omi's app marketplace
+
+Omi's only payout data (a 2024 snapshot, `community-plugin-stats.json`)
+shows almost all of it went to prompt-only apps: a prompt run over each
+finished conversation, or a prompt added to chat. Notion and Zapier connectors
+were the only code apps with real payouts. The data is small and stale, but
+it points the same way as the TiddlyWiki finding: the extension people use is
+a prompt at a hook, and code is the escalation. The review
+([research/omi-review.md](../../research/omi-review.md), finding 6) lists the
+parts of Omi's model to avoid: uid-as-identity auth, unsandboxed webhooks that
+get the full conversation, and one consent dialog at enable time.

@@ -3,7 +3,7 @@ generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: c8428cca5
 date: 2026-10-02
 model: claude-sonnet-5-5
-reviewed-by: DRAFT — unreviewed
+reviewed-by: Ian Bicking
 ---
 
 # Security overview
