@@ -21,10 +21,10 @@ src/publications/
 ├── CLAUDE.md
 └── field-guide/
     ├── publication.json
-    └── site/                  # static mode: finished files, served as written
+    └── site/                  # static mode: finished files; .md renders to .html
         ├── index.html
         ├── styles.css
-    └── assets/
+        └── assets/
 ```
 
 For a new site, run `bbx pub id` to generate a fresh secure `pubId`; preserve
@@ -85,9 +85,35 @@ printed by the CLI. A signed-in box member reviews and approves it in the app.
 ### Static files
 
 Put a complete site in `src/publications/<name>/site/`. Include a root
-`index.html`; every linked file must be present in the same folder. Static mode
-does not need a `package.json`, lockfile, install, or build. The publisher
-copies the finished folder, scans it, and stages it for server-side upload.
+`index.html` or `index.md`; every linked file must be present in the same
+folder. Static mode does not need a `package.json`, lockfile, install, or
+build. The publisher copies the finished folder, renders Markdown, scans the
+result, and stages it for server-side upload.
+
+To publish documents, write them as Markdown; do not convert them to HTML.
+Each `.md` file renders to a page with the same name and an `.html` extension,
+with the box's Markdown styling and no JavaScript:
+
+```text
+site/
+├── index.md          # served as index.html; links to the other pages
+├── packing-list.md   # served as packing-list.html
+└── photos/
+    └── campsite.jpg
+```
+
+- Link between pages with relative `.md` paths. A Markdown link to
+  `packing-list.md` renders as a link to `packing-list.html`. Images and other files use paths relative to the `.md`
+  file and are published unchanged.
+- The page title is `title:` from YAML frontmatter, else the first `#`
+  heading, else the file name.
+- The `.md` source is not published. A `foo.md` and a `foo.html` in the same
+  folder is a preparation error; keep one.
+- Markdoc tags must be valid; an unknown tag is a preparation error.
+- Use hand-written HTML and CSS only when the site needs its own layout. A
+  site can mix both.
+
+Only static mode renders Markdown. A site project publishes `dist/` as built.
 
 Use ordinary relative paths such as `./styles.css`, `./assets/logo.svg`, and
 `./details/`. Each page and asset request resolves to the active release at

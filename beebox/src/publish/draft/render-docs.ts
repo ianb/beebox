@@ -32,7 +32,8 @@ import { createHash } from "node:crypto";
 import { parseAnnexPointer } from "../../lib/annex-pointer.js";
 
 import Markdoc from "@markdoc/markdoc";
-import type { Config } from "@markdoc/markdoc";
+import { parse as parseYaml } from "yaml";
+import type { Config, Node } from "@markdoc/markdoc";
 
 import { markdocConfig, makeHeadingNode } from "../../shared/markdoc-config/core.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
@@ -42,7 +43,7 @@ import { extensionToMimetype } from "../../lib/mimetype.js";
 // destructure off the default import instead — same pattern and lint exception
 // as `markdoc/emit.ts` / `markdoc-config.ts`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { parse, transform, renderers } = Markdoc;
+const { parse, transform, renderers, validate } = Markdoc;
 
 /**
  * Images at or below this many bytes are inlined as `data:` URIs directly in
@@ -159,10 +160,32 @@ function escapeHtml(s: string): string {
   return s.replace(/["&'<>]/g, (c) => map[c] ?? c);
 }
 
-/** First `# heading` becomes the document title; falls back to a generic label. */
-function extractTitle(source: string): string {
-  const match = /^#\s+(.+?)\s*$/m.exec(source);
-  return match?.[1] ?? "Document";
+/** The first level-1 heading's text becomes the document title. */
+function extractTitle(ast: Node): string | null {
+  for (const node of ast.walk()) {
+    if (node.type !== "heading" || node.attributes["level"] !== 1) continue;
+    const parts: string[] = [];
+    for (const child of node.walk()) {
+      if ((child.type === "text" || child.type === "code") && typeof child.attributes["content"] === "string") parts.push(child.attributes["content"]);
+    }
+    const text = parts.join("").trim();
+    if (text !== "") return text;
+  }
+  return null;
+}
+
+/** A string `title:` in YAML frontmatter wins over the first heading. */
+function frontmatterTitle(frontmatter: unknown): string | null {
+  if (typeof frontmatter !== "string" || frontmatter.trim() === "") return null;
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(frontmatter);
+  } catch (_error) {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null || !("title" in parsed)) return null;
+  const { title } = parsed;
+  return typeof title === "string" && title.trim() !== "" ? title.trim() : null;
 }
 
 // Self-contained inline stylesheet: no `url(...)`, no font imports, nothing that
@@ -202,21 +225,29 @@ function docRenderConfig(): Config {
   };
 }
 
+/** Error- and critical-level Markdoc problems (unknown tags, bad attributes) in a source; 1-based lines. */
+export function markdownValidationErrors(source: string): { line: number | null; message: string }[] {
+  return validate(parse(source), docRenderConfig())
+    .filter(({ error }) => error.level === "error" || error.level === "critical")
+    .map(({ error, lines }) => ({ line: lines[0] === undefined ? null : lines[0] + 1, message: error.message }));
+}
+
 /**
- * Render a markdown doc source into a self-contained static bundle.
- *
- * @returns a `files` map of relative bundle paths (`index.html`, `assets/…`) to
- *   content — no absolute paths, no external URLs, no JavaScript.
+ * Render a Markdown/Markdoc source to one complete HTML page: the box's Markdoc
+ * config, inline CSS, no JavaScript. `rewriteHtml` post-processes the rendered
+ * body (image localizing, link rewriting); `footerHtml` is appended verbatim.
+ * Shared by the docs snapshot and static-site Markdown rendering.
  */
-export function renderDocsPublication(source: string, { boxRoot, now }: RenderDocsOptions): DocsPublication {
-  const files = new Map<string, string | Uint8Array>();
-
-  const body = renderers.html(transform(parse(source), docRenderConfig()));
-  const localized = localizeImages(body, { boxRoot, files });
-
-  const title = escapeHtml(extractTitle(source));
-  const renderedAt = now.toISOString();
-  const indexHtml = `<!doctype html>
+export function renderMarkdownPage(
+  source: string,
+  options: { fallbackTitle: string; rewriteHtml?: (body: string) => string; footerHtml?: string },
+): string {
+  const ast = parse(source);
+  const body = renderers.html(transform(ast, docRenderConfig()));
+  const rewritten = options.rewriteHtml === undefined ? body : options.rewriteHtml(body);
+  const title = escapeHtml(frontmatterTitle(ast.attributes["frontmatter"]) ?? extractTitle(ast) ?? options.fallbackTitle);
+  const footer = options.footerHtml === undefined ? "" : `\n${options.footerHtml}`;
+  return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -228,12 +259,26 @@ ${DOC_CSS}
 </style>
 </head>
 <body>
-<main>${localized}</main>
-<footer class="pub-meta">Rendered <time datetime="${renderedAt}">${renderedAt}</time></footer>
+<main>${rewritten}</main>${footer}
 </body>
 </html>
 `;
+}
 
+/**
+ * Render a markdown doc source into a self-contained static bundle.
+ *
+ * @returns a `files` map of relative bundle paths (`index.html`, `assets/…`) to
+ *   content — no absolute paths, no external URLs, no JavaScript.
+ */
+export function renderDocsPublication(source: string, { boxRoot, now }: RenderDocsOptions): DocsPublication {
+  const files = new Map<string, string | Uint8Array>();
+  const renderedAt = now.toISOString();
+  const indexHtml = renderMarkdownPage(source, {
+    fallbackTitle: "Document",
+    rewriteHtml: (body) => localizeImages(body, { boxRoot, files }),
+    footerHtml: `<footer class="pub-meta">Rendered <time datetime="${renderedAt}">${renderedAt}</time></footer>`,
+  });
   files.set("index.html", indexHtml);
   return { files };
 }

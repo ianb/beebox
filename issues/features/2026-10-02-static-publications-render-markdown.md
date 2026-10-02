@@ -1,6 +1,6 @@
 ---
 title: "Static publications render Markdown automatically: a site folder of .md files publishes as HTML"
-workstream: unattached
+workstream: static-markdown-publish
 area: beebox
 filed-by: agent
 discovered-by: Ian
