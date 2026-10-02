@@ -5,6 +5,12 @@ and writes back to each session's husk card: a **title**, a one-sentence
 **`contains`**, and a running **account** of what the conversation amounted to
 (`contains-evidence`).
 
+Two passes share the run ([docs/plans/chat-titles.md](../implemented-plans/chat-titles.md)):
+the **summary pass** above, and a cheaper **title pass** that runs on much
+smaller growth, so short chats get real titles too. Before the title pass
+spends a model call, a **Jev freshness check** asks whether the current title
+still fits the recent messages — a confident yes keeps it for free.
+
 Design rationale and the measurements behind the thresholds:
 [docs/implemented-plans/chat-review.md](../implemented-plans/chat-review.md).
 
@@ -33,7 +39,16 @@ A session qualifies when it is:
 - claimed by this machine (see below),
 - quiet for 30 minutes (don't summarize a conversation still happening),
 - at least 2 real user turns, and
-- its **unread span** renders to at least 6,000 characters.
+- its **unread span** renders to at least 6,000 characters — the summary gate —
+  or at least 400 characters — the title gate, which qualifies the session for
+  the title pass alone.
+
+A session that clears the summary gate runs only the summary pass; its title
+decision covers the same span, and both journals advance. A session between
+the two gates runs the title pass: one structured call returning just a title
+(same title rules as the full review), written to the husk with no
+`contains`, no account, and no `review-span` marker — a title write replaces
+rather than extends, so there is nothing to double-apply.
 
 **A machine reviews only the sessions it originated.** The husk records the
 machine the chat ran on (`origin`, written at creation), and discovery skips
@@ -62,6 +77,33 @@ per-session review step, after the `--max-sessions` cap. Holding every qualified
 session's parsed transcript at once is the allocation pattern that OOM'd
 `bbx serve`. The quiet-for-30-minutes check is therefore re-run at review time
 too, against the file as it stands then.
+
+## The freshness check
+
+The title pass's first move is not a model call. When the chat already has a
+title, one **Jev** noul — *does the title still name what the recent messages
+are about?* over the title and the last ~2,000 characters of the new span —
+decides whether anything needs to happen. At or above 0.75 probability the
+title stands and the journal advances with **zero** model calls; below it, the
+title reviewer runs and may replace the title. Every check lands in
+`.beebox/jev-debug.log`.
+
+A Jev failure or an unconfigured box falls back to running the title
+reviewer, with a warning — the costlier path is the correct one. `BBX_JEV_FAKE=1`
+makes a dev box exercise the whole branch with a fixed confident answer.
+
+A hand-edited title is exempt from all of this: `titleOwner: manual` is
+permanent hands-off, and the hand that owns the title owns its freshness.
+
+## Titles and the first message
+
+A husk is no longer born with a fake title. The opening user message is stored
+as `first-message` — machine-written once the transcript exists, and the
+durable fallback label after the transcript expires — and lists render snippet
+labels **quoted** (`“…”`), so a first message is visibly a first message and
+never mistaken for a title. A live chat whose `title:` still holds a
+pre-change creation snippet classifies as unmanaged on its first pass and gets
+a real title.
 
 ## Incremental by necessity
 

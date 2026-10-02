@@ -16,10 +16,12 @@ import {
   discoverSessions,
   QUIESCENCE_MS,
   REVIEW_CHAR_THRESHOLD,
+  TITLE_CHAR_THRESHOLD,
   type DiscoveryResult,
 } from "../../../core/chat/review/discovery.js";
 import { loadReviewState } from "../../../core/chat/review/state.js";
 import { createSdkChatReviewer } from "../../../core/chat/review/reviewer.js";
+import { resolveFreshnessChecker } from "../../../core/chat/review/freshness.js";
 import { LockHeldError, runChatReview, type RunSummary } from "../../../core/chat/review/run/core.js";
 import { getOwnerEmail } from "../../../webapp/auth.js";
 
@@ -50,9 +52,14 @@ function describeSkips(result: DiscoveryResult): string[] {
   if (result.deferredActive.length > 0) {
     lines.push(`  deferred (active within 30m): ${String(result.deferredActive.length)}`);
   }
-  if (result.belowThreshold > 0) {
+  if (result.titleOnly > 0) {
     lines.push(
-      `  below the ${String(REVIEW_CHAR_THRESHOLD)}-char threshold: ${String(result.belowThreshold)}`,
+      `  title-only (below the ${String(REVIEW_CHAR_THRESHOLD)}-char summary gate): ${String(result.titleOnly)}`,
+    );
+  }
+  if (result.belowTitleThreshold > 0) {
+    lines.push(
+      `  below the ${String(TITLE_CHAR_THRESHOLD)}-char title threshold: ${String(result.belowTitleThreshold)}`,
     );
   }
   if (result.tooFewTurns > 0) lines.push(`  too few user turns: ${String(result.tooFewTurns)}`);
@@ -78,6 +85,56 @@ const statusCommand = new Command("status")
 
     if (options.check && count === 0) process.exit(1);
   });
+
+/** The run itself, split out of the command action for the complexity budget. */
+async function performRun(boxRoot: string, maxSessions: number): Promise<RunSummary> {
+  // Freshness needs Jev; an unconfigured box just pays the reviewer instead.
+  const freshness = await resolveFreshnessChecker(boxRoot, process.env);
+  if (freshness === null) {
+    console.warn("Jev is not configured; titles will be refreshed with the reviewer instead of the cheap freshness check");
+  }
+
+  try {
+    return await runChatReview(boxRoot, {
+      reviewer: createSdkChatReviewer({ boxRoot }),
+      maxSessions,
+      now: getBoxTime(boxRoot),
+      ownerEmail: getOwnerEmail(),
+      ...(freshness === null ? {} : { freshness: freshness.checker }),
+    });
+  } catch (e) {
+    if (e instanceof LockHeldError) {
+      console.error(`another chat review is already running — ${e.message}`);
+      process.exit(1);
+    }
+    throw e;
+  }
+}
+
+/** One line per count worth reporting — a quiet night still says what it looked at. */
+function describeSummary(summary: RunSummary): string {
+  const parts = [`reviewed ${String(summary.reviewed)} session(s)`];
+  if (summary.titled > 0) parts.push(`${String(summary.titled)} titled by the title pass`);
+  if (summary.titlesKept > 0) parts.push(`${String(summary.titlesKept)} title(s) kept by the freshness check`);
+  if (summary.deferredActive > 0) parts.push(`${String(summary.deferredActive)} still active`);
+  if (summary.belowThreshold > 0) parts.push(`${String(summary.belowThreshold)} below threshold`);
+  if (summary.missingTranscripts > 0) {
+    parts.push(`${String(summary.missingTranscripts)} husk(s) with no transcript`);
+  }
+  if (summary.foreignOrigin > 0) {
+    parts.push(originSkipLine(summary.foreignOrigin));
+  }
+  if (summary.exhausted > 0) parts.push(`${String(summary.exhausted)} given up on`);
+  if (summary.sessionErrors > 0) parts.push(`${String(summary.sessionErrors)} error(s)`);
+  if (summary.bootstrapped > 0) parts.push(`${String(summary.bootstrapped)} read from the top`);
+  if (summary.rewritten > 0) parts.push(`${String(summary.rewritten)} transcript(s) rewritten`);
+  if (summary.alreadyApplied > 0) {
+    parts.push(`${String(summary.alreadyApplied)} already applied`);
+  }
+  if (summary.reviewerFailures > 0) parts.push(`${String(summary.reviewerFailures)} failure(s)`);
+  if (summary.overflow > 0) parts.push(`${String(summary.overflow)} deferred to the next run`);
+  return parts.join(", ");
+}
 
 const runCommand = new Command("run")
   .description("Review sessions that have grown, writing title/contains/account to each husk")
@@ -109,43 +166,8 @@ const runCommand = new Command("run")
       return;
     }
 
-    let summary: RunSummary;
-    try {
-      summary = await runChatReview(boxRoot, {
-        reviewer: createSdkChatReviewer({ boxRoot }),
-        maxSessions,
-        now: getBoxTime(boxRoot),
-        ownerEmail: getOwnerEmail(),
-      });
-    } catch (e) {
-      if (e instanceof LockHeldError) {
-        console.error(`another chat review is already running — ${e.message}`);
-        process.exit(1);
-      }
-      throw e;
-    }
-
-    const parts = [`reviewed ${String(summary.reviewed)} session(s)`];
-    // A quiet night still reports what it looked at — "nothing happened" and
-    // "every transcript was missing" must not print the same thing.
-    if (summary.deferredActive > 0) parts.push(`${String(summary.deferredActive)} still active`);
-    if (summary.belowThreshold > 0) parts.push(`${String(summary.belowThreshold)} below threshold`);
-    if (summary.missingTranscripts > 0) {
-      parts.push(`${String(summary.missingTranscripts)} husk(s) with no transcript`);
-    }
-    if (summary.foreignOrigin > 0) {
-      parts.push(originSkipLine(summary.foreignOrigin));
-    }
-    if (summary.exhausted > 0) parts.push(`${String(summary.exhausted)} given up on`);
-    if (summary.sessionErrors > 0) parts.push(`${String(summary.sessionErrors)} error(s)`);
-    if (summary.bootstrapped > 0) parts.push(`${String(summary.bootstrapped)} read from the top`);
-    if (summary.rewritten > 0) parts.push(`${String(summary.rewritten)} transcript(s) rewritten`);
-    if (summary.alreadyApplied > 0) {
-      parts.push(`${String(summary.alreadyApplied)} already applied`);
-    }
-    if (summary.reviewerFailures > 0) parts.push(`${String(summary.reviewerFailures)} failure(s)`);
-    if (summary.overflow > 0) parts.push(`${String(summary.overflow)} deferred to the next run`);
-    console.log(parts.join(", "));
+    const summary = await performRun(boxRoot, maxSessions);
+    console.log(describeSummary(summary));
     for (const rejection of summary.rejected) {
       console.log(`  leak scan dropped ${rejection}`);
     }

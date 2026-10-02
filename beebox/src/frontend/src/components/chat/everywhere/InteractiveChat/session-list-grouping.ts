@@ -4,7 +4,8 @@
  * The rule is prominence, not scoping: chats bound to the landmark you're
  * chatting in come first under its name, everything else follows under "Other
  * chats". Nothing is ever filtered out — a chat in another landmark stays one
- * scroll away.
+ * scroll away. Chats the boxholder marked done leave the prominence contest
+ * and trail under "Done", still listed and still resumable.
  *
  * Pure so the affordance is testable without a router/DOM
  * (src/frontend/test/components/chat/everywhere/InteractiveChat/session-list-grouping.doctest.md).
@@ -12,7 +13,7 @@
 
 import type { ChatSessionInfo } from "../../../../api";
 
-export type SessionListLayout =
+export type SessionListLayout = (
   | {
       kind: "flat";
       sessions: ChatSessionInfo[];
@@ -26,7 +27,11 @@ export type SessionListLayout =
       here: ChatSessionInfo[];
       /** Every other chat in the box; rows are always landmark-tagged. */
       elsewhere: ChatSessionInfo[];
-    };
+    }
+) & {
+  /** Chats marked done, in list order — rendered last, muted, landmark-tagged. */
+  done: ChatSessionInfo[];
+};
 
 /** True when the rows come from more than one landmark. */
 function spansLandmarks(sessions: ChatSessionInfo[]): boolean {
@@ -46,11 +51,14 @@ export function layoutSessionList(args: {
   sessions: ChatSessionInfo[];
   contextDir: string | null;
 }): SessionListLayout {
-  const { sessions, contextDir } = args;
+  const done = args.sessions.filter((s) => s.done);
+  const sessions = args.sessions.filter((s) => !s.done);
+  const { contextDir } = args;
   const flat = (): SessionListLayout => ({
     kind: "flat",
     sessions,
     showLandmark: spansLandmarks(sessions),
+    done,
   });
 
   if (contextDir === null) return flat();
@@ -66,5 +74,6 @@ export function layoutSessionList(args: {
     hereLabel: here[0]?.landmarkLabel ?? "This landmark",
     here,
     elsewhere,
+    done,
   };
 }

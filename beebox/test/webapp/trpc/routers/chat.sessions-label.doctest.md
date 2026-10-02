@@ -60,7 +60,7 @@ const { sessions } = await caller(box.root).chat.sessions();
 sessions.map((s) => `${s.sessionId}: ${s.label}`).toSorted().join("\n")
 =>
 titled01: Chasing down a duplicate charge
-untitled1: what's on my calendar tomorrow
+untitled1: “what's on my calendar tomorrow”
 ```
 
 ## Husks are the enumeration, so the two lists can't drift
