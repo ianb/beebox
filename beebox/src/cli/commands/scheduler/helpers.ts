@@ -6,7 +6,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
 import {
   loadSchedulerConfig,
@@ -14,6 +13,7 @@ import {
   type LogEntry,
 } from "../../../core/schedule/scheduler/core.js";
 import { isRecord } from "../../../shared/is-record.js";
+import { jsonlLines } from "../../../lib/jsonl-lines.js";
 
 export interface LogFilters {
   errors?: boolean | undefined;
@@ -62,13 +62,8 @@ export async function readBoxEntries(boxPath: string, filters: LogFilters): Prom
     return [];
   }
 
-  const rl = readline.createInterface({
-    input: createReadStream(logPath),
-    crlfDelay: Infinity,
-  });
-
   const entries: LogEntry[] = [];
-  for await (const line of rl) {
+  for await (const line of jsonlLines(createReadStream(logPath))) {
     if (!line.trim()) continue;
     try {
       const entry: unknown = JSON.parse(line);

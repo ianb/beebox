@@ -35,14 +35,27 @@ holding spot), and handle (run the category's procedure to reach the item's
 final resting place). Each stage is a real step recorded in the box, so a
 partially triaged item is visible, not stuck invisibly partway through.
 Triage runs automatically during regular check-ins and other automated
-passes, not only when you ask.
+passes, not only when you ask. The coding agent does the sorting by default.
+A box can instead opt in to a small judging model (reached through OpenRouter)
+that is given the prepared text of the item and your filing rules, may do a
+bounded amount of research on unclear items, and leaves a record in the box of
+what it decided and why. Earlier decisions can be replayed against a proposed
+rule change before the change is kept. A filing destination can also carry a
+follow-up question ("does this need follow-up?"); a yes adds an ordinary todo
+for the agent, and authorizes nothing more.
 
 **Limits**
 
 The category rule set does not automatically rewrite itself from a low-
 confidence answer today; you edit the category's card by hand when a pattern
 emerges. An item the categorizer truly cannot place lands in an unhandled
-holding area rather than being forced into the nearest category.
+holding area rather than being forced into the nearest category. With the
+judging model, the item's text and your filing rules leave the machine, the
+documentation says it asks the provider not to retain them without being able
+to promise that, and the record it keeps in the box holds that prepared text
+until you delete it. The documentation also says a large scan can still be
+only partly read, and that the structured text is favored over details such as
+stamps or signatures that extraction did not keep.
 
 **Go deeper**
 

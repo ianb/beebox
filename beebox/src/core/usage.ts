@@ -13,11 +13,11 @@ import Database from "better-sqlite3";
 import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as readline from "node:readline";
 import { errnoCode } from "../shared/error-guards.js";
 import { listSessions } from "../cli/lib/session.js";
 import { CODEX_USAGE_REL_PATH, readCodexTurnUsage } from "./codex-usage.js";
 import { BOX_DIRS } from "../lib/paths/core.js";
+import { jsonlLines } from "../lib/jsonl-lines.js";
 
 const DB_REL_PATH = ".beebox/usage.db";
 const MANIFEST_REL_PATH = `${BOX_DIRS.usage}/session-manifest.jsonl`;
@@ -128,9 +128,8 @@ async function readManifest(boxRoot: string): Promise<Map<string, ManifestEntry>
   const manifestPath = path.join(boxRoot, MANIFEST_REL_PATH);
   const entries = new Map<string, ManifestEntry>();
   const stream = fs.createReadStream(manifestPath, { encoding: "utf-8" });
-  const lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
   try {
-    for await (const line of lines) {
+    for await (const line of jsonlLines(stream)) {
       if (!line.trim()) continue;
       try {
         const entry = manifestEntrySchema.parse(JSON.parse(line));
@@ -144,7 +143,6 @@ async function readManifest(boxRoot: string): Promise<Map<string, ManifestEntry>
     // other read failure degrades the same way, but visibly.
     if (errnoCode(e) !== "ENOENT") console.warn(`usage: could not read ${MANIFEST_REL_PATH}, treating as empty:`, e);
   } finally {
-    lines.close();
     stream.close();
   }
   return entries;
@@ -168,9 +166,7 @@ async function parseSessionUsage(
   const buckets = new Map<string, UsageBucket>();
 
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-
-  for await (const line of rl) {
+  for await (const line of jsonlLines(fileStream)) {
     if (!line.trim()) continue;
     let parsedLine: unknown;
     try {

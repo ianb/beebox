@@ -1,8 +1,9 @@
 /** Narrow JSONL client for Codex app-server's device authentication surface. */
 
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import * as readline from "node:readline";
 import { z } from "zod";
+import { jsonlLines } from "../../lib/jsonl-lines.js";
+import { toError } from "../../shared/error-guards.js";
 
 const rpcResponseSchema = z.looseObject({
   id: z.number(),
@@ -61,7 +62,7 @@ export class CodexAuthAppServer {
     });
     this.child.stderr.on("data", (chunk: Buffer) => { this.stderr += chunk.toString(); });
     this.child.stdin.on("error", (error) => { this.failPending(error); });
-    readline.createInterface({ input: this.child.stdout }).on("line", (line) => { this.handleLine(line); });
+    this.readStdout().catch((error: unknown) => { this.failPending(toError(error)); });
     this.child.on("error", (error) => { this.failPending(error); });
     this.child.on("exit", (code, signal) => {
       this.failPending(new CodexAuthServerExitError({ code, signal, stderr: this.stderr.trim() }));
@@ -107,6 +108,11 @@ export class CodexAuthAppServer {
       this.pending.set(id, { resolve, reject, timer });
       this.child.stdin.write(`${JSON.stringify({ id, method, params })}\n`);
     });
+  }
+
+  /** Feed each stdout line to {@link handleLine}; a read failure fails every pending request. */
+  private async readStdout(): Promise<void> {
+    for await (const line of jsonlLines(this.child.stdout)) this.handleLine(line);
   }
 
   private handleLine(line: string): void {

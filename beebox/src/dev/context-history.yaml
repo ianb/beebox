@@ -6962,6 +6962,28 @@ audit-test1:
       peak: 21717
       added: 0
       turns: 1
+  chat-husk-first-message-not-title:
+    - date: 2026-10-02T16:44:28.209Z
+      boxCommit: aed5d605982465d91514073a0cbaac6a5e39de03
+      repoCommit: b6fcc5057e3c7f93b65ba1f6f321ae42d1ffd4c1
+      initial: 38022
+      peak: 43126
+      added: 5104
+      turns: 6
+    - date: 2026-10-02T16:56:01.361Z
+      boxCommit: aed5d605982465d91514073a0cbaac6a5e39de03
+      repoCommit: b6fcc5057e3c7f93b65ba1f6f321ae42d1ffd4c1
+      initial: 37870
+      peak: 41946
+      added: 4076
+      turns: 4
+    - date: 2026-10-02T16:56:28.907Z
+      boxCommit: 869f5160a5e1be9424cbdce0b4e60eb454dbfc09
+      repoCommit: b6fcc5057e3c7f93b65ba1f6f321ae42d1ffd4c1
+      initial: 38046
+      peak: 41907
+      added: 3861
+      turns: 4
 quick-chat-audit:
   quick-chat-rubric-maintenance:
     - date: 2026-09-21T10:54:28.714Z
@@ -7251,3 +7273,12 @@ publishing-audit-RCBhzs:
       peak: 31540
       added: 9469
       turns: 3
+auditbox:
+  publishing-markdown-documents:
+    - date: 2026-10-02T16:45:16.004Z
+      boxCommit: 74b26dc59e9ce1e952e0f7df3b5ed31c761be028
+      repoCommit: db822652d250651f7ec81478ea7cdf92728aa9b5
+      initial: 22947
+      peak: 36618
+      added: 13671
+      turns: 4

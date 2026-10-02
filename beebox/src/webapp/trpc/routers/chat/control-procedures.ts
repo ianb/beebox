@@ -22,6 +22,7 @@ import type { AgentEngine } from "../../../../core/box/config.js";
 import { isChatModelAllowed, type AddedModel } from "../../../../shared/chat-models.js";
 import { openRouterKeyUsable } from "../../../../core/openrouter.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../../core/chat/session/delete/apply/core.js";
+import { setChatHuskStatus } from "../../../../core/chat/husk.js";
 import { sdkSessionIdSchema } from "../../../../core/chat/session/id.js";
 import { archiveChatSession } from "../../../../core/chat/session/archive.js";
 import { SessionDeletingError } from "../../../../core/chat/session/registry/core.js";
@@ -207,6 +208,25 @@ export const chatControlProcedures = {
       }
       console.error("chat-archive: mutation failed", { sessionId: input.sessionId, error });
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not archive the conversation" });
+    }
+  }),
+
+  /**
+   * Set or clear the boxholder's close mark on a chat (`done: true` on its
+   * husk). Beside `archive` as the lighter decision: nothing moves, the chat
+   * stays resumable — it only sorts below live ones in the lists.
+   */
+  markDone: ownerProcedure.input(z.object({ sessionId: sdkSessionIdSchema, done: z.boolean() })).mutation(async ({ input, ctx }) => {
+    try {
+      const huskPath = await setChatHuskStatus(ctx.boxRoot, { sessionId: input.sessionId, done: input.done });
+      if (huskPath === null) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "This chat has no card to mark" });
+      }
+      return { huskPath, done: input.done };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error("chat-mark-done: mutation failed", { sessionId: input.sessionId, error });
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not update the conversation" });
     }
   }),
 

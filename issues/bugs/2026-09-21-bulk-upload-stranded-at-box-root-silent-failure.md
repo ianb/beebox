@@ -76,3 +76,12 @@ retry left the card falsely reporting data loss.
 Three occurrences: 2026-09-12 (12 files), 2026-09-13 (6 files), 2026-09-19 (4
 files), all on channel `web-desktop` or `ios-native`, all recovered by
 `bbx mv`-ing the batch into `_content/` and committing by hand.
+
+## Re-encounter (2026-10-01)
+
+On a production box, a box agent found four more stranded iOS upload batches
+dated 2026-09-12 to 2026-09-20, recovered them to `_tmp/stranded-uploads/`
+unfiled, and sent the boxholder a `dot` notification on 2026-09-30. The
+landing path in `prepare.ts:313` is unchanged on main. Commit `326ed9c74`
+(2026-09-28, detaching bulk workers from the request's permit) may address the
+Part 1 delivery failure, but no upload after it has been checked.

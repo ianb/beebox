@@ -7256,6 +7256,27 @@ tests:
       - '(?:never|do not|don.t)[\s\S]{0,120}(?:read|inspect|search|open)[\s\S]{0,120}(?:machine )?(?:secret|credential|server config)'
     tags: [publish-sites]
 
+  # Status (2026-10-02, static-markdown-publish): pass on a disposable clone of the worktree test1 box, 1 read, 0 searches, 23k ctx.
+  # The agent read publishing.md, planned site/index.md plus two .md pages with .md links, and named no HTML conversion or build step.
+  - id: publishing-markdown-documents
+    prompt: >
+      The boxholder has written a trip report and a packing list as Markdown
+      and wants both on a small secret website, with a front page linking to
+      them. List every file you would create under src/publications, with full
+      paths from the box root, and show the front page's contents. Do not
+      create or change files.
+    context_dir: src/publications
+    expected_level: knows_about
+    should_read: ["publishing.md"]
+    watch_for: >
+      Writes the documents as .md files in the static site folder with an
+      index.md front page that links to them by .md path; does not convert
+      them to HTML by hand or add a build step.
+    correct_matches:
+      - 'src/publications/[\w-]+/site/index\.md'
+      - '\]\([\w./-]+\.md\)'
+    tags: [publish-sites]
+
   - id: publishing-positive-data-export
     prompt: >
       A site should display two details from a person card. The quickest code
@@ -7535,3 +7556,34 @@ tests:
     correct_matches: ["\\bno\\b|don.t|do not|not notify", "dashboard|health"]
     response_not_contains: ["bbx notify \""]
     tags: [notifications]
+
+  # === Chat husk titles and the done mark (docs/implemented-plans/chat-titles.md) ===
+  # Status (2026-10-02, Claude): pass on a disposable clone of the worktree's
+  # test1; knows_about, 1 read (box-docs/card-chat.md), 0 searches, 38k ctx.
+  # Set `title`, left `first-message` alone, hand title permanent, done =
+  # sort-below only. It hedged on whether review skips done chats, so the
+  # schema instructions now say outright that it does not.
+
+  - id: chat-husk-first-message-not-title
+    prompt: >
+      You find a chat card under _content/chat/web/ with a `first-message:`
+      field and no `title:`. The boxholder says "give that chat a proper
+      name". Which field do you set, what happens to `first-message`, and will
+      the nightly chat review overwrite your name? Also: what does
+      `done: true` on such a card mean? Explain only; do not change files.
+    expected_level: knows_about
+    watch_for: >
+      Sets `title:` and leaves `first-message:` alone (machine-written opening
+      snippet that lists show quoted; not a title, not to be edited or
+      mimicked). Says a hand-set title is permanent: the review detects the
+      edit and never rewrites it. Says `done: true` is the boxholder's close
+      mark: the chat sorts below live ones and is still resumable; it does not
+      delete, archive, or stop review. FAILS if it copies first-message into
+      title as "the name", deletes first-message, or treats done as archive.
+    correct_contains: ["title"]
+    correct_matches:
+      - 'first-message[\s\S]{0,240}(?:leave|alone|machine|snippet|quot)'
+      - '(?:never|won.t|will not|does not|doesn.t)[\s\S]{0,120}(?:overwrite|rewrite|touch|replace)'
+      - 'done[\s\S]{0,240}(?:below|sort|finished|close|resum)'
+    response_not_contains: ["archive it"]
+    tags: [chat, husk]
