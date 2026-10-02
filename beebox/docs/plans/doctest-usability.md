@@ -301,7 +301,7 @@ after a full-suite run.
   reproduced in 41 of 200 attempts;
 - [the namespace-fence-traversal flake](../../../issues/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md);
 - [bin/test doctests run by no suite](../../../issues/bugs/2026-09-29-bin-test-doctests-not-run.md);
-- [`pnpm test <path>` running the full suite](../../../issues/bugs/2026-09-29-pnpm-test-unrecognized-path-runs-full-suite.md).
+- [`pnpm test <path>` running the full suite](../../../issues/closed/bugs/2026-09-29-pnpm-test-unrecognized-path-runs-full-suite.md).
 
 ## Smallest fix and budget
 
