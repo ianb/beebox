@@ -256,7 +256,7 @@ Mechanics, in `node_modules/beebox/box-docs/`: `bbx-commands.md` for
 `bbx create` values and `bbx contains`; `prominence.md` before writing any
 `prominence:` value; `card-themes.md` for `theme:` and a symbol's colours;
 `provenance.md` for `ref`/`href` fields and what a ref can reach;
-`markdown.md` for line breaks, HTML, tables and footnotes in a body. Each type's
+`markdown.md` for body line breaks, HTML, footnotes. Each type's
 own fields are in its doc, listed in **CARD_TYPES**, next.
 
 ## CARD_TYPES
