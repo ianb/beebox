@@ -62,7 +62,7 @@ choice is **where the private data lives** and **whether the page is live**.
 
 Reuse the publish-pages pipeline (`src/publish/` — `bbx pub`, `manifest.ts`,
 `submission.ts`, `pub-worker-meta.ts`, `leak-scan.ts`, `setup.ts`;
-`docs/plans/publish-pages.md`). The box **renders the dashboard and publishes a
+`docs/unimplemented-plans/publish-pages-superseded.md`). The box **renders the dashboard and publishes a
 static artifact**; the Echo Show fetches that. The box's fail-closed auth is
 never touched.
 

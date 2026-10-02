@@ -2,16 +2,18 @@
 title: "bbx pub setup's Access instructions are stale and dashboard-bound — provision via the API instead"
 workstream: pub-setup-wrangler
 area: beebox
-needs: [manual-testing]
-design: ../../beebox/docs/implemented-plans/pub-setup-wrangler.md
+design: ../../../beebox/docs/implemented-plans/pub-setup-wrangler.md
 filed-by: agent
 discovered-in: main session — boxholder ran the first live `bbx pub setup` and got stuck on the manual Access step
 priority: important
+resolution: superseded
 ---
+
+> Closed 2026-10-02 as `superseded`: `bbx pub setup` and its Access instructions were removed with the legacy publication flow. Server-managed publishing configures Cloudflare through Admin with a stored connection token.
 
 **2026-07-31 — BUILT (worktree-pub-setup-wrangler), pending live verification.**
 The three forks were resolved with the boxholder and the rework is implemented
-+ fake-tested per [pub-setup-wrangler](../../beebox/docs/implemented-plans/pub-setup-wrangler.md)
++ fake-tested per [pub-setup-wrangler](../../../beebox/docs/implemented-plans/pub-setup-wrangler.md)
 (which also records the Codex security review that reshaped the credential
 model — notably the content/ingestion R2 bucket split):
 
@@ -134,7 +136,7 @@ That's a third pattern, matching neither of the two we already have:
 
 - Per-box connector secrets live in **`config/connectors/*.secret.json`**
   (gitignored via the box scaffold, `src/core/box/index.ts:154` (moved to `beebox/src/core/box/structure/core.ts`)).
-- The open decision [per-box secret management](../closed/decisions/2026-03-15-per-box-secret-management.md)
+- The open decision [per-box secret management](../decisions/2026-03-15-per-box-secret-management.md)
   is already about how boxes get provisioned with API keys — publishing quietly
   added a fourth answer instead of joining that conversation.
 
@@ -180,7 +182,7 @@ Two boundaries it does NOT cross:
 Net target: **`bbx pub setup` provisions via `wrangler login` (no token, no
 dotfile); account-tier Access via the CF API (no dashboard); the runtime
 submission connector draws its credential from the resolved
-[per-box secret-management](../closed/decisions/2026-03-15-per-box-secret-management.md)
+[per-box secret-management](../decisions/2026-03-15-per-box-secret-management.md)
 decision.** That collapses the chaotic dashboard to, at most, one browser approve
 for setup — and zero dashboard for `public`/`secret` tiers.
 

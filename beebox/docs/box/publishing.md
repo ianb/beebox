@@ -37,12 +37,9 @@ name in each new site's definition. Do not guess a name, inspect machine
 secrets, or search private server configuration. If there is no selected
 connection and hostname, ask for Admin setup. `bbx pub connections` lists
 active connections granted to this box; it never prints credentials.
-`bbx pub status` shows managed publication state and the box's connections;
-`bbx pub status --legacy` explicitly requests the old Wrangler diagnostic.
-Without configured box-server credentials, managed status returns an error;
-run it through the configured box agent. Wrangler credentials are used only
-when the agent explicitly requests the legacy diagnostic. Server query errors
-do not fall back.
+`bbx pub status` shows managed publication state and the box's connections.
+Without configured box-server credentials, it returns an error; run it through
+the configured box agent.
 
 The definition chooses a content mode and requested audience. The server
 derives the source root, owning box, shared Worker, storage location, and
@@ -673,8 +670,9 @@ page continues to load its own matching CSS, JavaScript, JSON, and images after
 a refresh.
 
 If the definition, build, leak scan, or upload fails, fix the reported cause
-and prepare again. Do not edit generated `_publish/` output by hand; the
-server-owned publication operation controls what becomes an active release.
+and prepare again. Change the site source, not prepared output: prepare stages
+each release in a temporary directory outside the box, and the server-owned
+publication operation controls what becomes an active release.
 
 The starter follows the documented [React from scratch with Vite](https://react.dev/learn/build-a-react-app-from-scratch),
 [Vite production build](https://vite.dev/guide/build), and

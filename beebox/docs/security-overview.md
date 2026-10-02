@@ -227,9 +227,8 @@ one box share browser origin, storage, and same-origin script access. CORS does
 not separate those pages; no iframe or per-publication origin isolation is
 provided. Treat publications in one box as mutually trusting. DNS/certificate
 effects begin when the owner configures the host, before any page is enabled.
-The legacy rendered-doc `bbx pub go` remains TTY-gated. Leak scanning is a backstop, not a guarantee
-that content is appropriate or free of secrets. Public and secret-link
-bundles are fully public to anyone with the URL; a secret URL is a bearer
+Leak scanning is a backstop, not a guarantee that content is appropriate or
+free of secrets. Public and secret-link bundles are fully public to anyone with the URL; a secret URL is a bearer
 capability, not a login. Managed account-restricted publication is not ready
 pending a separate consent and security design.
 
