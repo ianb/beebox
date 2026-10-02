@@ -184,14 +184,9 @@ with a direct link to that box's Publications page when `BBX_SERVER_URL` and
 Preserve the full
 secret URL path `/s/<pubId>/`; the id-bearing path is the capability, and a
 hostname-only URL will not work. `bbx pub status` reports managed publication
-state, granted connection names, and publication URLs. `bbx pub status
---legacy` explicitly requests the old Wrangler diagnostic. Without configured
-box-server credentials, managed status returns an error; run it through the
-configured box agent. Wrangler credentials are used only when the agent
-explicitly requests the legacy diagnostic. Actual server query errors do not
-fall back. `bbx pub sites` is also available
-for the managed site list. The legacy TTY-only `bbx pub go` flow does not
-enable or mutate server-managed publications.
+state, granted connection names, and publication URLs. Without configured
+box-server credentials, it returns an error; run it through the configured box
+agent. `bbx pub sites` is also available for the managed site list.
 
 For first enablement or a scope change, a signed-in member opens the direct
 Publications URL printed on the `approval:` line (or signs into this box and

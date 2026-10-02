@@ -1,10 +1,17 @@
 ---
 title: "Publish Pages — External Static Publishing via Cloudflare Workers"
-status: active
+status: superseded
 workstream: unknown
 issues: []
 ---
 # Publish Pages — External Static Publishing via Cloudflare Workers
+
+> **Superseded (2026-10-02).** Server-managed publishing replaced this plan:
+> see [publishing](../publishing.md) and
+> [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
+> `bbx pub` draft/go/revoke/setup flow, `_publish/<pub-id>/` drafts, per-box
+> Wrangler Worker routes, and the submission drop box described below were
+> removed. Kept for its reasoning.
 
 This plan adds publishing to beebox: a boxholder (or the box's agent, with the boxholder's explicit go-ahead) can take content the box already holds — markdown docs, agent-built views and visualizations — and put it at a public(ish) URL that other people can open. Publications are **static snapshots hosted externally on Cloudflare Workers**, a hard boundary: the box itself gains zero inbound public surface (boxes may sit behind Tailscale), and a published page can never call back into the box. The plan covers the bundle format, the snapshot renderers, the Cloudflare Worker that serves publications, per-publication access tiers (public / secret-URL / Google-account-gated), a "drop box" for inbound submissions that the box pulls on `bbx wakeup`, and the human-gated publish flow with a leak scan.
 

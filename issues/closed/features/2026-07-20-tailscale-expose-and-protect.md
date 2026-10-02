@@ -96,7 +96,7 @@ it open this box — and Tailscale answers only the first.
 - **Don't transcribe a vendor's dashboard.** `bbx pub setup` printed a manual
   Cloudflare console walkthrough; Cloudflare reorganized and it became a dead end
   that cost real time — see
-  [pub Access setup via API](../../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
+  [pub Access setup via API](2026-07-19-pub-access-setup-via-api-not-dashboard.md).
   Prefer Tailscale's CLI/API; where a human step is unavoidable, detect state and
   say what's next, and link the vendor's own doc rather than re-describing their
   UI.

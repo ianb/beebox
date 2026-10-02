@@ -323,10 +323,3 @@ export async function listCloudflarePublishBindings(boxSlug: string): Promise<Cl
     .map(([pubId, binding]) => ({ pubId, ...binding }))
     .toSorted((a, b) => a.pubId.localeCompare(b.pubId));
 }
-
-/** Used by legacy CLI paths to refuse mutation of server-managed publications. */
-export async function isServerManagedPublication(pubId: string): Promise<boolean> {
-  const loaded = await loadSecretStore();
-  if (!loaded.ok) throw connectionError(`The machine secret store could not be read: ${loaded.error}`);
-  return loaded.value.cloudflarePublishBindings?.[pubId] !== undefined;
-}

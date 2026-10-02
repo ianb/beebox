@@ -50,9 +50,6 @@ remove it.
 - Capture and intake create memos: the `memo` and `voice-memo` templates
   (`src/schemas/templates-builtins.ts:32-47`) and `buildMemoCard`
   (`src/schemas/memo.ts:103`).
-- The publish-submissions connector writes access-log digests as memo cards
-  (`src/connectors/publish-submissions.ts:230`). That is not captured input
-  either and needs its own home.
 - The doc schema's instructions send captured notes to memo
   (`src/schemas/doc.tsx:78`).
 - About 25 source files mention the type: views, search, file-type

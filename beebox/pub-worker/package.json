@@ -2,13 +2,12 @@
   "name": "pub-worker",
   "version": "0.1.0",
   "private": true,
-  "description": "Cloudflare Worker that serves beebox publications from R2 (Track C of docs/plans/publish-pages.md)",
+  "description": "Cloudflare Worker that serves box-managed beebox publications from R2",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/ test/",
     "test": "vitest run",
-    "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {

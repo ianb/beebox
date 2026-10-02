@@ -5,7 +5,7 @@ import path from "node:path";
 import Markdoc from "@markdoc/markdoc";
 import type { RenderableTreeNode, RenderableTreeNodes } from "@markdoc/markdoc";
 
-import { markdownValidationErrors, renderMarkdownPage } from "../draft/render-docs.js";
+import { markdownValidationErrors, renderMarkdownPage } from "./markdown-page.js";
 import { bundlePolicyError } from "./errors.js";
 
 const MARKDOWN_EXTENSION = ".md";

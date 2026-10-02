@@ -7,7 +7,10 @@ filed-by: agent
 discovered-by: cross-model review
 discovered-in: worktree-transition-cleanup — closing the secret-store transition window
 priority: important
+resolution: superseded
 ---
+
+> Closed 2026-10-02 as `superseded`: the publish-submissions connector, its `publish/<box>` store entry, and `r2ConfigFromEnv` were removed with the legacy publication flow, so the env-credential path no longer exists.
 
 Every connector credential now resolves from the machine secret store under a
 per-box grant, and `bbx secrets revoke` is final

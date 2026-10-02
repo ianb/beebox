@@ -94,7 +94,6 @@ const builtinUses: Record<string, string[]> = {
     "receiving this box's Telegram messages (the webhook secret authenticates Telegram's callbacks)",
     "sending notifications to the boxholder over Telegram",
   ],
-  "publish/": ["reading reader submissions from this box's published-site R2 ingestion bucket"],
 };
 
 /** The three sources, kept apart — see the module comment. */

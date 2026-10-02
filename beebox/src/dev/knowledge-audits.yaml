@@ -7345,8 +7345,7 @@ tests:
       resolves its state and requires a signed-in member for permission changes. Uses managed
       status through the configured box agent; if server credentials are
       missing, reports the status error and asks the operator to restore the
-      box-server connection if it persists. Wrangler diagnostics require
-      explicit `--legacy`, not as a substitute for managed status.
+      box-server connection if it persists.
     correct_contains:
       - "bbx pub connections"
       - "bbx pub status"
