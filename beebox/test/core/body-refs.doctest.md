@@ -7,7 +7,8 @@ live in body tags like `{% source ref="…" %}` — any body tag whose
 attribute is literally named `ref`.
 
 ```ts setup
-import { extractBodyRefs, extractReferenceDefinitions } from "../../src/core/body-refs.js";
+import { extractBodyLinks, extractBodyRefs, extractReferenceDefinitions } from "../../src/core/body-refs.js";
+import { rewriteReferrerRefs } from "../../src/core/rewrite-card-refs/core.js";
 ```
 
 ## A single `{% source %}` tag
@@ -254,6 +255,27 @@ JSON.stringify(extractReferenceDefinitions("> - [id]: /people/X.person.card").ma
 => ["/people/X.person.card"]
 ```
 
+## HTML links and images are links too
+
+A body may link with raw HTML: the allow-list renders `<a href>` and
+`<img src>` as ordinary links and images. Validate checks their in-box targets
+and `bbx mv` rewrites them, exactly like `[text](path)`. External URLs are
+skipped.
+
+```ts
+const html = 'See <a href="/_content/people/Ana.person.card">Ana</a>,\n<img src="attach/plan.png" width="200"> and <a href="https://example.com">x</a>.';
+extractBodyLinks(html)
+=> [{ path: "body:1:link", ref: "/_content/people/Ana.person.card" }, { path: "body:2:link", ref: "attach/plan.png" }]
+
+rewriteReferrerRefs({
+  boxRoot: "/box",
+  cardAbsPath: "/box/_content/notes/Plan.doc.card",
+  text: html,
+  remap: (abs) => (abs === "/box/_content/people/Ana.person.card" ? "/box/_content/people/Ana_Lee.person.card" : null),
+})
+=> { text: "See <a href=\"/_content/people/Ana_Lee.person.card\">Ana</a>,\n<img src=\"attach/plan.png\" width=\"200\"> and <a href=\"https://example.com\">x</a>.", count: 1 }
+```
+
 ## Malformed bodies are swallowed
 
 A body that throws on parse is treated as "no refs" rather than crashing the
@@ -262,4 +284,14 @@ caller (validation/move would rather miss a warning than fail the card).
 ```ts
 Array.isArray(extractBodyRefs("{% source ref=unclosed"))
 => true
+```
+
+## A footnote definition is not a reference definition
+
+`[^label]: text` defines a footnote. Its text is not a link destination, so it
+is not checked as a ref:
+
+```ts
+extractReferenceDefinitions("A claim.[^1]\n\n[^1]: The footnote text.\n[r]: /_content/x.card")
+=> [{ path: "body:4:ref-def", ref: "/_content/x.card" }]
 ```

@@ -15,6 +15,7 @@
 
 import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
+import { escapeMarkdownText } from "../shared/markdoc-config/ingest.js";
 
 
 export const PubSubmissionSchema = cardSchema("pub-submission", {
@@ -70,11 +71,17 @@ Frontmatter: \`pub-id\` (which publication), \`submitted-at\` (edge clock),
 
 export type PubSubmissionFields = InferCardFields<typeof PubSubmissionSchema>;
 
-/** Render the submitted fields as a readable markdown body (untrusted text). */
+/**
+ * Render the submitted fields as a readable markdown body. Names and values
+ * are untrusted, so both are escaped to plain text: a submitter cannot inject
+ * links, HTML or Markdoc tags.
+ */
 function renderSubmissionBody(fields: Record<string, string>): string {
   const entries = Object.entries(fields);
   if (entries.length === 0) return "_(no fields submitted)_\n";
-  const lines = entries.map(([name, value]) => `- **${name}:** ${value}`);
+  const lines = entries.map(
+    ([name, value]) => `- **${escapeMarkdownText(name, { indent: "  " })}:** ${escapeMarkdownText(value, { indent: "  " })}`,
+  );
   return `${lines.join("\n")}\n`;
 }
 

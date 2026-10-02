@@ -1,6 +1,6 @@
 /** Shared validation model for the Markdoc `{% source %}` tag. */
 
-import { parseIsoDate } from "../todo-model.js";
+import { parseIsoDate } from "../../todo-model.js";
 
 interface SourceValidationError {
   id: string;

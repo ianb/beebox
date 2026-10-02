@@ -25,7 +25,6 @@
  * reverse race fails loudly on the agent's side.
  */
 
-import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
 import { isMap, isSeq, parseDocument } from "yaml";
 import { splitCardContent } from "../../exports/cards.js";
@@ -33,10 +32,7 @@ import { assignLocators } from "../../shared/todo-locators.js";
 import { invariant } from "../../shared/invariant.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import type { TodoLocator } from "./collect-types.js";
-
-// Same CJS/ESM workaround as `extract-body.ts`.
-// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { parse } = Markdoc;
+import { parseMarkdown } from "../../shared/markdoc-config/parse/core.js";
 
 /** The two statuses a boxholder checkbox can set. `parked`/`dropped` stay chat or hand edits (plan, NOT in scope). */
 export type TodoWriteStatus = "open" | "done";
@@ -113,7 +109,7 @@ function setBodyAttribute(content: string, edit: AttributeEdit<{ kind: "body"; l
   const split = splitCardContent(content);
   let ast: Node;
   try {
-    ast = parse(split.body);
+    ast = parseMarkdown(split.body);
   } catch (e) {
     throw new TodoLocatorNotFoundError(locator, `body failed to parse as Markdoc: ${errorMessage(e)}`);
   }

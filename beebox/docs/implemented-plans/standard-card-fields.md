@@ -156,7 +156,7 @@ already holds camera metadata under the name of its origin.
   `modified`. `source` is reserved too; the derived-from field is `sources`.
 - **`sources`** — what this card's content was derived from. An array of
   `{ ref } | { href }` entries. Same meaning as the `{% source %}` tag
-  (`src/shared/markdoc-config/core.ts:163-190`). Where an entry attribute
+  (`src/shared/markdoc-config/tags/core.ts:163-190`). Where an entry attribute
   means what a tag attribute means, it uses the tag's name: `retrieved`,
   `usage`. Two attributes exist only in frontmatter: `label` (display text,
   from recipe) and `note`. record's `time` becomes `pos`: its values are

@@ -11,15 +11,14 @@
  * **Reused Markdoc pipeline.** Parsing/transform/HTML emission reuse the box's
  * existing Markdoc config so a published doc renders the same as it does
  * in-app: `markdocConfig` + `makeHeadingNode` from
- * `src/shared/markdoc-config/core.ts` (the same config the frontend React renderer
+ * `src/shared/markdoc-config/tags/core.ts` (the same config the frontend React renderer
  * wires up in `src/frontend/src/components/Markdown.tsx`'s `buildRenderConfig`).
  * The `parse → transform → renderers.html` shape mirrors the dev doc browser's
  * `renderMarkdownToHtml` in `workstreams-app/src/router/server/docs.ts:144` — which we can't import
  * (separate package), so the pipeline is reconstructed here on the shared
- * config. The autolinking tokenizer (`parseMarkdown`, frontend-only, excluded
- * from the backend tsconfig) is deliberately NOT reused: a bare-URL autolink
- * would emit an external `http(s)://` reference into an otherwise
- * self-contained bundle.
+ * config. Parsing goes through the shared `parseMarkdown` (raw-HTML allow-list,
+ * comments, footnotes) without bare-URL autolinking: an autolink would emit an
+ * external `http(s)://` reference into an otherwise self-contained bundle.
  *
  * Pure and deterministic given `(source, { boxRoot, now })`: no wall-clock
  * call (the caller injects `now`, e.g. `getBoxTime(boxRoot)`), no Cloudflare
@@ -35,7 +34,8 @@ import Markdoc from "@markdoc/markdoc";
 import { parse as parseYaml } from "yaml";
 import type { Config, Node, RenderableTreeNode, RenderableTreeNodes } from "@markdoc/markdoc";
 
-import { markdocConfig, makeHeadingNode } from "../../shared/markdoc-config/core.js";
+import { markdocConfig, makeHeadingNode } from "../../shared/markdoc-config/tags/core.js";
+import { parseMarkdown } from "../../shared/markdoc-config/parse/core.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 
 // Named value imports (`{ parse, transform, renderers }`) don't resolve from
@@ -43,7 +43,7 @@ import { extensionToMimetype } from "../../lib/mimetype.js";
 // destructure off the default import instead — same pattern and lint exception
 // as `markdoc/emit.ts` / `markdoc-config.ts`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { parse, transform, renderers, validate, Tag } = Markdoc;
+const { transform, renderers, validate, Tag } = Markdoc;
 
 /**
  * Images at or below this many bytes are inlined as `data:` URIs directly in
@@ -204,6 +204,11 @@ pre code { background: none; padding: 0; }
 blockquote { margin: 1em 0; padding: 0.2em 1em; border-left: 4px solid rgba(130,130,130,0.4); color: #555; }
 table { border-collapse: collapse; margin: 1em 0; }
 th, td { border: 1px solid rgba(130,130,130,0.4); padding: 0.4em 0.7em; text-align: left; }
+kbd { border: 1px solid rgba(130,130,130,0.5); border-bottom-width: 2px; border-radius: 3px; padding: 0 0.3em; font-size: 0.85em; }
+summary { cursor: pointer; }
+.footnotes { font-size: 0.875em; }
+.footnote-ref a, .footnote-backref { text-decoration: none; }
+.footnote-backref { margin-left: 0.25em; }
 .pub-meta { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid rgba(130,130,130,0.3); color: #777; font-size: 0.8rem; }
 @media (prefers-color-scheme: dark) {
   body { color: #e6e6e6; background: #16171a; }
@@ -227,7 +232,7 @@ function docRenderConfig(): Config {
 
 /** Error- and critical-level Markdoc problems (unknown tags, bad attributes) in a source; 1-based lines. */
 export function markdownValidationErrors(source: string): { line: number | null; message: string }[] {
-  return validate(parse(source), docRenderConfig())
+  return validate(parseMarkdown(source), docRenderConfig())
     .filter(({ error }) => error.level === "error" || error.level === "critical")
     .map(({ error, lines }) => ({ line: lines[0] === undefined ? null : lines[0] + 1, message: error.message }));
 }
@@ -257,7 +262,7 @@ export function renderMarkdownPage(
     footerHtml?: string;
   },
 ): string {
-  const ast = parse(source);
+  const ast = parseMarkdown(source);
   const transformed = transform(ast, docRenderConfig());
   const tree = Array.isArray(transformed) ? transformed.map(omitRedacted) : omitRedacted(transformed);
   const body = renderers.html(options.rewriteTree === undefined ? tree : options.rewriteTree(tree));

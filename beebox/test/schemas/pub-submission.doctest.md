@@ -46,7 +46,7 @@ const card = createPubSubmissionCard({
   submittedAt: "2026-07-14T12:00:00Z",
   viewer: "reader@example.com",
   country: "US",
-  fields: { name: "Ada", message: "Loved the build journal!" },
+  fields: { name: "Priya", message: "Loved the build journal!" },
 });
 const parsed = parseCardText(card, { source: "_content/inbox/Submission-x.pub-submission.card", schemas });
 parsed.fields["pub-id"]
@@ -61,14 +61,17 @@ parsed.fields.country
 
 ```ts continue
 JSON.stringify(parsed.fields.fields)
-=> {"name":"Ada","message":"Loved the build journal!"}
+=> {"name":"Priya","message":"Loved the build journal!"}
 ```
 
-The submitted text is rendered into the readable body too:
+The submitted text is rendered into the readable body too, escaped to plain
+text: a submitter's punctuation cannot become a link, HTML or a Markdoc tag.
 
 ```ts continue
-parsed.fields.body.includes("Loved the build journal!")
-=> true
+parsed.fields.body
+=>
+- **name:** Priya
+- **message:** Loved the build journal\!
 ```
 
 ## An anonymous (secret-tier) submission has `viewer: null`

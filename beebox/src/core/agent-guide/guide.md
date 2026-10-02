@@ -251,11 +251,12 @@ warning that says what to fix; it doesn't block the edit, but fix it
 promptly, since a commit that includes an invalid card is rejected. You
 rarely run `bbx validate` yourself; only to re-check one card while debugging.
 
-<!-- rules: about-cards.contains-commands, about-cards.create-json-two-step, about-cards.prominence-values, about-cards.theme, about-cards.symbol-colours, about-cards.ref-reach, about-cards.link-fields -->
+<!-- rules: about-cards.contains-commands, about-cards.create-json-two-step, about-cards.prominence-values, about-cards.theme, about-cards.symbol-colours, about-cards.ref-reach, about-cards.link-fields, about-cards.markdown-dialect -->
 Mechanics, in `node_modules/beebox/box-docs/`: `bbx-commands.md` for
 `bbx create` values and `bbx contains`; `prominence.md` before writing any
 `prominence:` value; `card-themes.md` for `theme:` and a symbol's colours;
-`provenance.md` for `ref`/`href` fields and what a ref can reach. Each type's
+`provenance.md` for `ref`/`href` fields and what a ref can reach;
+`markdown.md` for line breaks, HTML, tables and footnotes in a body. Each type's
 own fields are in its doc, listed in **CARD_TYPES**, next.
 
 ## CARD_TYPES

@@ -27,6 +27,7 @@ import type { DoclingOcr } from "../../../services/docling/core.js";
 import { createSessionLayout, type SessionLayout } from "./session.js";
 import { importSessionOrDiscard, queueCommittedSessionIntake } from "./session-discard.js";
 import { assertAnnexBox } from "../../annex/assert-annex-box.js";
+import { neutralizeIngestedMarkdown } from "../../../shared/markdoc-config/ingest.js";
 
 /** The OCR intent a probed PDF calls for. Pure, so the mapping is testable. */
 export function ocrIntentFor(probe: Pick<PdfProbe, "hasTextLayer" | "textLayerQuality">): DoclingOcr {
@@ -115,7 +116,8 @@ async function importPdfSession(
     originalName: path.basename(args.pdfPath),
     mimeType: "application/pdf",
     size: stat.size,
-    body: extraction.ok ? extraction.value.body : "",
+    // Extracted document text is third-party: escape its raw HTML and Markdoc tags.
+    body: extraction.ok ? neutralizeIngestedMarkdown(extraction.value.body) : "",
   };
   const metadata: { pages?: number; title?: string; author?: string } = {};
   if (probe.pages !== undefined) metadata.pages = probe.pages;
