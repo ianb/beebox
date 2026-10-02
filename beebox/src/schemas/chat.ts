@@ -55,6 +55,15 @@ const chatFields = {
    * display it quoted, so it can't masquerade as one.
    */
   "first-message": z.string().optional(),
+  /**
+   * The boxholder's close mark: this conversation is finished. A named
+   * boolean, not a `status` (a banned name — `cards/reserved-fields.ts`); absent
+   * means active. Set from the chat's session menu; lists sort done chats
+   * below live ones, muted. Editorial only — the nightly review reads it for
+   * no purpose (a closed chat that stops growing costs nothing, and gating
+   * review on it would trap a resumed chat).
+   */
+  done: z.boolean().optional(),
   body: body(z.string()),
 };
 
@@ -66,7 +75,7 @@ export const ChatSchema: CardSchema = cardSchema("chat", {
 
 A \`chat\` card is the durable face of a web chat session — created automatically when a session starts, under \`_content/chat/web/\`. The \`session\` field is the association (renaming the file is safe and encouraged once the topic is clear: \`bbx mv\` to a meaningful name).
 
-A nightly **chat review** pass maintains \`title\`, \`contains\` and \`contains-evidence\` (a running account of what the conversation amounted to) on sessions that have grown enough to be worth re-reading, and titles chats after a couple of exchanges. **A title you set by hand wins permanently** — the review detects the edit and never touches that field again. \`first-message\` is the machine-written opening snippet lists show *quoted* on untitled chats; leave it alone too. \`contains\`/\`contains-evidence\` are machine-owned; \`review-span\` is bookkeeping, leave it alone. \`engine\`, \`origin\` and \`origin-name\` are machine-owned provenance — which engine ran the chat and which machine holds its transcript — so leave those alone too.
+A \`done: true\` husk is one the boxholder marked finished — the chat lists sort it below live chats, and it stays resumable. Nothing else changes: the nightly review treats it like any other chat. A nightly **chat review** pass maintains \`title\`, \`contains\` and \`contains-evidence\` (a running account of what the conversation amounted to) on sessions that have grown enough to be worth re-reading, and titles chats after a couple of exchanges. **A title you set by hand wins permanently** — the review detects the edit and never touches that field again. \`first-message\` is the machine-written opening snippet lists show *quoted* on untitled chats; leave it alone too. \`contains\`/\`contains-evidence\` are machine-owned; \`review-span\` is bookkeeping, leave it alone. \`engine\`, \`origin\` and \`origin-name\` are machine-owned provenance — which engine ran the chat and which machine holds its transcript — so leave those alone too.
 
 The body is yours: add refs to cards the chat discussed ("decided in this chat: [ref]") and durable notes about the conversation. The review never touches it. Don't record activity timestamps or message counts — runtime state stays off the card.`,
 });

@@ -38,6 +38,7 @@ import { SessionListPanel } from "./SessionListPanel";
 import { chatModelLabel, type ChatAgentEngine } from "@shared/chat-models.js";
 import { useAddedModels } from "./model-availability-store";
 import { modelDrift, engineDrift } from "./model-drift";
+import { MarkDoneItem } from "./MarkDoneItem";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
@@ -98,6 +99,7 @@ function RootPanel({
   modelSelectionDisabled,
   onOpenModel,
   onOpenAdvanced,
+  sessionId,
 }: {
   onNewSession: () => void;
   onOpenSessions: () => void;
@@ -105,6 +107,7 @@ function RootPanel({
   modelSelectionDisabled: boolean;
   onOpenModel: () => void;
   onOpenAdvanced: () => void;
+  sessionId: string | null;
 }) {
   return (
     <>
@@ -115,6 +118,7 @@ function RootPanel({
           <span className="text-warm-500">›</span>
         </span>
       </MenuItem>
+      <MarkDoneItem sessionId={sessionId} />
       <MenuItem id="bbx-session-model" onClick={onOpenModel} keepOpen disabled={modelSelectionDisabled}>
         <span className="flex justify-between gap-2 w-full">
           <span>Model</span>
@@ -166,6 +170,8 @@ interface SessionChipBodyProps {
   onOpenAdvanced: () => void;
   onBackToRoot: () => void;
   advancedProps: Omit<Parameters<typeof AdvancedPanel>[0], "onBack">;
+  /** The current chat's id, for the done toggle; null before one exists. */
+  sessionId: string | null;
 }
 
 /**
@@ -175,10 +181,10 @@ interface SessionChipBodyProps {
  * `SessionChipPanel` member at compile time without one).
  */
 function SessionChipBody(props: SessionChipBodyProps): ReactNode {
-  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, modelSelectionDisabled, onOpenModel, selectedModel, boxDefault, canPin, canChooseEngine, enabledEngines, boxEngine, onChooseStart, onPinModel, agentEngine, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
+  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, modelSelectionDisabled, onOpenModel, selectedModel, boxDefault, canPin, canChooseEngine, enabledEngines, boxEngine, onChooseStart, onPinModel, agentEngine, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps, sessionId } = props;
   switch (panel) {
     case "root":
-      return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} currentModelLabel={currentModelLabel} modelSelectionDisabled={modelSelectionDisabled} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} />;
+      return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} currentModelLabel={currentModelLabel} modelSelectionDisabled={modelSelectionDisabled} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} sessionId={sessionId} />;
     case "sessions":
       return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
     case "model":
@@ -339,6 +345,7 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
           onSelectModel={onSelectModel}
           onOpenAdvanced={() => setPanel("advanced")}
           onBackToRoot={() => setPanel("root")}
+          sessionId={sessionId}
           advancedProps={{
             debugView,
             onToggleDebugView,

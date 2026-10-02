@@ -151,16 +151,21 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug }:
   return (
     <>
       {layout.kind === "flat" ? (
-        <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} {...rowProps} />
+        <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} muted={false} {...rowProps} />
       ) : (
         <>
           <SessionGroup label={layout.hereLabel}>
-            <SessionRows sessions={layout.here} showLandmark={false} {...rowProps} />
+            <SessionRows sessions={layout.here} showLandmark={false} muted={false} {...rowProps} />
           </SessionGroup>
           <SessionGroup label="Other chats">
-            <SessionRows sessions={layout.elsewhere} showLandmark {...rowProps} />
+            <SessionRows sessions={layout.elsewhere} showLandmark muted={false} {...rowProps} />
           </SessionGroup>
         </>
+      )}
+      {layout.done.length === 0 ? null : (
+        <SessionGroup label="Done">
+          <SessionRows sessions={layout.done} showLandmark muted {...rowProps} />
+        </SessionGroup>
       )}
       <DeadSessionGroups dead={dead} boxSlug={boxSlug} />
     </>
@@ -226,11 +231,14 @@ function SessionRows({
   boxSlug,
   currentSessionId,
   showLandmark,
+  muted,
 }: {
   sessions: ChatSessionInfo[];
   boxSlug: string;
   currentSessionId: string | null;
   showLandmark: boolean;
+  /** True for the done group: the whole row recedes behind its heading. */
+  muted: boolean;
 }) {
   const close = useDropdownClose();
   return (
@@ -249,7 +257,7 @@ function SessionRows({
             className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50" : ""}`}
           >
             <div className="flex items-baseline gap-2">
-              <span className={`flex-1 truncate ${isViewing ? "font-medium text-warm-900" : "text-warm-800"}`}>
+              <span className={`flex-1 truncate ${isViewing ? "font-medium" : ""} ${muted ? "text-warm-500" : isViewing ? "text-warm-900" : "text-warm-800"}`}>
                 {s.label}
               </span>
               <span className="text-xs text-warm-500 flex-shrink-0 font-mono">{idSuffix}</span>

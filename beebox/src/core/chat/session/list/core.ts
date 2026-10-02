@@ -55,6 +55,8 @@ export interface ChatSessionEntry {
   logPath: string;
   /** The husk's editorial `title`, when it has one. Free — it rode the husk. */
   title: string | undefined;
+  /** The boxholder's close mark (`done: true`) — a done chat sorts below live ones. */
+  done: boolean;
   /**
    * The Codex thread's verbatim first user message, envelope and all, as
    * `thread/list` reports it. Free — one list call already carries it for every
@@ -391,6 +393,7 @@ async function resolveHusk(options: {
       huskPath: husk.path,
       logPath,
       title: husk.title,
+      done: husk.done === true,
       ...(codexMetadata === undefined ? {} : { nativePreview: codexMetadata.preview }),
     },
   };
@@ -406,6 +409,16 @@ async function resolveHusk(options: {
  * transcript, and an id with neither is named from its prefix (not an error —
  * `chat.bootstrap` already treats a transcript-less id as a normal state).
  */
+/**
+ * Whether the boxholder has marked this session done (`done: true` on its
+ * husk), or null when the session has no husk — a brand-new chat has no card
+ * to mark, so a caller offering the toggle must offer nothing.
+ */
+export async function sessionIsDone(boxRoot: string, sessionId: string): Promise<boolean | null> {
+  const husk = await findChatHuskEntry(boxRoot, sessionId);
+  return husk === null ? null : husk.done === true;
+}
+
 /**
  * The session's *editorial* title — the husk card's `title`, or null when
  * the session has none (yet). Deliberately no first-message/id fallback:

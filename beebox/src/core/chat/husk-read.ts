@@ -93,6 +93,11 @@ export interface ChatHuskEntry {
    * fall back to the id when it is absent.
    */
   originName?: string;
+  /**
+   * The boxholder's close mark (`done: true`) — a finished conversation the
+   * lists sort below live ones. Absent means active.
+   */
+  done?: true;
 }
 
 /**
@@ -162,6 +167,21 @@ async function readHusks(boxRoot: string, relPaths: string[]): Promise<ChatHuskE
 }
 
 /**
+ * The card's `done`, validated the way the schema validates it — a
+ * hand-edited non-boolean (`done: yes` quoted, `done: "finished"`) reads as
+ * absent with a warning, rather than sorting on a value nothing defined.
+ * Never silent. `done: false` is the same as absent.
+ */
+function parseHuskDone(raw: unknown, relPath: string): true | undefined {
+  if (raw === undefined || raw === false) return undefined;
+  if (raw !== true) {
+    console.warn(`chat-husk: ${relPath} has a non-boolean done ${JSON.stringify(raw)}; ignoring it`);
+    return undefined;
+  }
+  return true;
+}
+
+/**
  * The card's `engine`, validated against the same enum the schema declares —
  * a hand-edited or hand-copied value that isn't an engine we run reads as
  * absent, so resolution falls through to the history entry instead of
@@ -206,6 +226,7 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
   const engine = parseHuskEngine(fm["engine"], relPath);
   const origin = fm["origin"];
   const originName = fm["origin-name"];
+  const done = parseHuskDone(fm["done"], relPath);
   return {
     path: relPath,
     session,
@@ -215,6 +236,7 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
     ...(engine !== undefined ? { engine } : {}),
     ...(typeof origin === "string" && origin !== "" ? { origin } : {}),
     ...(typeof originName === "string" && originName !== "" ? { originName } : {}),
+    ...(done !== undefined ? { done } : {}),
   };
 }
 

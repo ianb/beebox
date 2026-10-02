@@ -67,16 +67,23 @@ Under the 2,000-line BIG CHANGE bar.
   function over Jev's answer, behind the existing JevService fake
   (`beebox/src/core/judgment/service.ts:50-60`, `BBX_JEV_FAKE`), so the
   run pipeline stays doctestable without a real Decisions API call.
-- **#12, the maintainer is usually an agent.** `first-message` and `status`
+- **#12, the maintainer is usually an agent.** `first-message` and `done`
   get schema doc-comments and instructions text; the difference between
   "editorial title" and "machine snippet" is exactly the kind of distinction
   an agent will guess wrong without it.
 - **`beebox/CLAUDE.md` "work only on the requested problem".** Track D is
   scoped to a single marker with no automation; the reviewer never writes it.
-- **Minimize invented concepts (boxholder guidance).** The done marker reuses
-  the per-card-type `status` field pattern (todos, questions) rather than a
-  new field name; the snippet display quotes at the two existing label
-  resolvers rather than introducing a label-type union.
+- **Minimize invented concepts (boxholder guidance).** The done marker is a
+  named boolean `done: true`, the form the repository's reserved-field rule
+  prescribes; the snippet display quotes at the two existing label resolvers
+  rather than introducing a label-type union.
+- **Standard card fields (`docs/implemented-plans/standard-card-fields.md`).**
+  `status` is a banned field name: `src/cards/reserved-fields.ts` rejects it
+  with *"record the specific fact instead: a named boolean per state
+  (`archived: true`)…"*, and `test/cards/reserved-fields.doctest.md` holds
+  every built-in schema to it. **[rev]** The first draft proposed
+  `status: done` and claimed todos and questions use a per-type `status`; that
+  claim was not verified, and the doctest caught it during implementation.
 - **Shipped precedent:** the chat-review plan itself
   (`docs/implemented-plans/chat-review.md`) — this document amends it and
   follows its vocabulary lock-ins ("chat review", never "compaction").
@@ -132,7 +139,7 @@ Under the 2,000-line BIG CHANGE bar.
   full one (Track A).
 - `husk.ts` `ensureChatHusk` — writes `first-message`, stops writing `title`
   (Track C).
-- `schemas/chat.ts` — two new optional fields, `first-message` and `status`
+- `schemas/chat.ts` — two new optional fields, `first-message` and `done`
   (Tracks C/D), plus instructions text.
 - `state.ts` — optional per-consumer failure counters (Track A, additive).
 - `bbx chat review status` / `run --dry-run` (`beebox/src/cli/commands/chat/review.ts`)
@@ -174,7 +181,8 @@ external counterpart.
   live, from the transcript (`label.ts`, 400-char budget, quoted after this
   plan) or durable, from `first-message` (80 chars, quoted). Falls back to
   the id prefix.
-- **`status: done`** — new optional chat-husk field, one enum value. Means:
+- **`done: true`** — new optional chat-husk field, a named boolean (absent
+  or `false` = active). Means:
   the boxholder has closed this conversation. Set by the boxholder from the
   UI only. NOT a review gate in v1, NOT settable by the reviewer or Jev.
 
@@ -415,7 +423,7 @@ titled husk renders unquoted; `createChatHuskTemplate` carries
 
 ### Track D — A done marker (decided 2026-10-01; builds after A–C)
 
-**What.** `status: done` on the husk, set by the boxholder from the session
+**What.** `done: true` on the husk, set by the boxholder from the session
 chip menu, shown in the chat lists. Boxholder decisions on record: single
 value `done` (no separate `one-off`), display-affecting only — review
 behavior unchanged.
@@ -426,10 +434,9 @@ the list indistinguishable from living ones.
 
 **Direction (proposed).**
 
-- `schemas/chat.ts` gains `status: z.enum(["done"]).optional()`. The global
-  field set has no `status` (`cards/schema.ts:101-109`) — status is a
-  per-type field (todos, questions), and chat joins that pattern. One value,
-  not two: "one-off" and "done" both mean *closed*, and a second value would
+- `schemas/chat.ts` gains `done: z.boolean().optional()` — a named boolean,
+  because `status` is a banned field name (see Stated preferences, **[rev]**).
+  One state, not two: "one-off" and "done" both mean *closed*, and a second value would
   buy no different behavior in v1. (If the boxholder wants "one-off" as a
   distinct visible label, it is one enum member, not a redesign — Open
   design questions.)
@@ -442,14 +449,14 @@ the list indistinguishable from living ones.
   carrying a muted `done` tag on the row (the `DeadSessionGroups` precedent
   for visually demoting a class, `SessionListPanel.tsx:178-203`). They stay
   clickable — done is a state, not a deletion.
-- **Review behavior: none, by decision.** The pass reads `status` for no
+- **Review behavior: none, by decision.** The pass reads `done` for no
   purpose. Rationale: with Track B, a closed chat that never grows again
   costs nothing anyway (discovery gates on *new* span), and gating review on
   `done` creates a trap — a resumed "done" chat would silently stop being
   titled or summarized until unmarked. Confirmed display-only by the
   boxholder, 2026-10-01.
 
-**Vocabulary lock-ins.** `status` / `done` (single enum value); "Mark done"
+**Vocabulary lock-ins.** `done: true` (named boolean); "Mark done"
 menu label.
 
 **First implementation chunk.** Schema field + mutation + menu item + list
@@ -461,7 +468,7 @@ sorting/tag + a route doctest (mark, list reflects, unmark restores).
 freshness check, and the new fields; `docs/implemented-plans/chat-review.md`
 gets a dated revision note pointing here (the precedent: its own 2026-07-28
 Codex-revision note); `docs/cards/schemas.md` and the
-`bbx-guide-schemas` skill enumeration gain `first-message` and `status`
+`bbx-guide-schemas` skill enumeration gain `first-message` and `done`
 (the declared rule at `cards/schema.ts:96-97`). On ship, this plan moves to
 `implemented-plans/`.
 
@@ -499,7 +506,7 @@ instead, answered by a decision, not a design document.
 | An agent writes `first-message` by hand or treats it as a title | Yes — knowledge audit | Schema doc-comment + instructions text | Clear (audit) |
 | A hand-edited `title` meets the title pass | Yes — doctest (existing `resolveTitleOwner` suite extends) | `manual`, one-way, never written; journals still advance | Clear (the absence of a write) |
 | Snippet label itself contains quote characters | Yes — doctest fixture | Cosmetic only; snippet is truncated with an ellipsis before quoting | Clear |
-| `status` hand-set to a bogus value | Yes — zod doctest | Card validation fails with the enum's message naming the allowed value | Clear (validation error) |
+| `done` hand-set to a non-boolean | Yes — route doctest | Card validation fails; the lists read it as absent and warn | Clear (validation error + warning) |
 | Two machines: laptop-origin chat grows; prod's title journal doesn't see it | Existing — origin rule (`discovery.ts:141-143`) | Discovery skips foreign-origin sessions; counted in `status` | Clear (counted) |
 
 > **Critical gap:** none unresolved.
@@ -507,7 +514,7 @@ instead, answered by a decision, not a design document.
 ## Agent-flow / user-flow edge cases
 
 - **Wrong tag / wrong field** — ADDRESSED: `first-message` vs `title` vs
-  `status` each carry doc-comments and instructions text; a knowledge audit
+  `done` each carry doc-comments and instructions text; a knowledge audit
   (below) tests exactly the `first-message`-is-not-a-title confusion.
 - **Stale ref** — ADDRESSED: transcript vanishing between discovery and run
   is the existing `missingTranscripts` path (`run/core.ts:143-147`); a husk
@@ -519,9 +526,9 @@ instead, answered by a decision, not a design document.
   as the metadata pass already does.
 - **Hand-edit drift** — ADDRESSED: hand titles are permanent via
   `titleOwner: "manual"`; a hand-set `first-message` is overwritten never
-  (written once at creation); a hand-set bogus `status` is a validation
+  (written once at creation); a hand-set non-boolean `done` is a validation
   error, not silent normalization.
-- **Fabricated free-form value** — ADDRESSED: `status` is an enum;
+- **Fabricated free-form value** — ADDRESSED: `done` is a boolean;
   `first-message` is derived verbatim by `extractSnippet`; the title pass's
   leak-scan and owner checks are inherited unchanged.
 - **Validation error UX** — ADDRESSED: the enum message names `done` as the
@@ -539,7 +546,7 @@ instead, answered by a decision, not a design document.
   account design is shipped and measured; only titling moves.
 - **Retitling transcript-less husks from code** — impossible by design (the
   reviewer reads transcripts); the per-box repair is judgment work.
-- **The reviewer or Jev setting `status: done`** — automation of an
+- **The reviewer or Jev setting `done: true`** — automation of an
   editorial close; v1 is user-set only (per the arrange-context preference).
 - **A `one-off` enum value with distinct behavior** — recorded as an open
   question; one enum member if wanted, no separate mechanism.
@@ -554,7 +561,7 @@ instead, answered by a decision, not a design document.
 ## Open design questions
 
 - ~~**The done marker's exact shape** (Track D)~~ **Settled (boxholder,
-  2026-10-01):** single `status: done`; display-affecting only — a done chat
+  2026-10-01):** a single done state (shipped as `done: true`; see [rev]); display-affecting only — a done chat
   is still reviewed like any other (a closed chat that stops growing costs
   nothing under Track B, and gating review would trap a resumed chat).
   Placement: the session chip menu, per the lean below.
@@ -571,7 +578,7 @@ instead, answered by a decision, not a design document.
 One new audit in `beebox/src/dev/knowledge-audits.yaml`: a box agent handling
 a `chat` card knows that `title` is editorial-or-reviewer-owned, that
 `first-message` is a machine-written quoted-in-lists snippet (not a title to
-edit or mimic), and that `status: done` is the boxholder's close mark. Lands
+edit or mimic), and that `done: true` is the boxholder's close mark. Lands
 RUN (`pnpm knowledge-audit run --box <test-box> --filter <id>`), status
 comment recorded in the plan before ship.
 

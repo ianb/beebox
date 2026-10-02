@@ -120,6 +120,33 @@ export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string;
 }
 
 /**
+ * Set or clear the boxholder's close mark on a session's husk
+ * (`done: true`). Returns the box-relative husk path, or null when the
+ * session has no husk (a brand-new chat — the caller offers nothing).
+ *
+ * One field, under the card lock, body preserved: the same read-modify-write
+ * discipline `stampHuskProvenance` follows, so a concurrent review write on
+ * the same card cannot interleave.
+ */
+export async function setChatHuskStatus(boxRoot: string, opts: { sessionId: string; done: boolean }): Promise<string | null> {
+  const husk = await findChatHuskEntry(boxRoot, opts.sessionId);
+  if (husk === null) return null;
+  const absPath = path.join(boxRoot, husk.path);
+  await withCardLock(absPath, async () => {
+    const content = await fs.readFile(absPath, "utf-8");
+    const split = splitCardContent(content);
+    const fields = parseHuskFrontmatter(content);
+    // Unreadable frontmatter: the lists already warned about it; a rewrite
+    // would be guessing at what the file meant.
+    if (!split.hasFrontmatter || fields === null) return;
+    if (opts.done) fields["done"] = true;
+    else delete fields["done"];
+    await writeFileAtomic(absPath, { content: renderFrontmatterBlock(fields, split.body) });
+  });
+  return husk.path;
+}
+
+/**
  * When this machine's copy of a session's transcript was last written, or null
  * when it holds none. The one "is the transcript here?" check: reconcile skips
  * ghost history entries with it, and the provenance backfill uses the same
