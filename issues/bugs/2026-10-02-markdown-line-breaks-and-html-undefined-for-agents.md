@@ -1,6 +1,6 @@
 ---
 title: "Markdown cards: `<br>` renders as literal text, hard breaks fail in the app, and agents have no description of our Markdown dialect"
-workstream: unattached
+workstream: markdown-expressiveness
 area: beebox
 filed-by: agent
 discovered-by: Ian
