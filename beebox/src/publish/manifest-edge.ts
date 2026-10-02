@@ -157,6 +157,7 @@ const previousSiteReleaseSchema = z
 const siteCommonFields = {
   kind: z.literal("site"),
   hostHandle: z.string().regex(/^[\da-z](?:[\da-z-]{0,61}[\da-z])?$/),
+  customHostname: z.string().min(1).optional(),
   status: z.enum(["disabled", "live", "revoked"]),
   expiresAt: z.string().datetime({ offset: true }).nullable(),
   activeRelease: siteReleaseSchema,
@@ -192,3 +193,33 @@ export const storedEdgeManifestSchema = z.union([edgeManifestSchema, siteEdgeMan
 
 export type SiteEdgeManifest = z.infer<typeof siteEdgeManifestSchema>;
 export type StoredEdgeManifest = EdgeManifest | SiteEdgeManifest;
+
+const sharedReservedPaths = new Set(["s", "p", "a"]);
+/** Shared-host public slug segment, matching the Worker's root route grammar. */
+export const sharedPublicSlugSchema = z.string()
+  .regex(/^[\da-z](?:[\da-z-]{0,61}[\da-z])?$/)
+  .refine((slug) => !sharedReservedPaths.has(slug), "slug is reserved by shared-host routing");
+
+/** Shared-host enrollment; the current site manifest remains authoritative for serving state. */
+export const sharedRouteMarkerSchema = z.object({
+  schemaVersion: z.literal(1),
+  pubId: z.string().regex(/^[2-7a-z]{26}$/),
+  boxHostHandle: z.string().min(1),
+  hostname: z.string().min(1),
+  path: z.string().min(1),
+  manifestHostHandle: z.string().min(1),
+}).strict();
+export type SharedRouteMarker = z.infer<typeof sharedRouteMarkerSchema>;
+
+export function sharedMarkerMatchesScope(marker: SharedRouteMarker | null, expected: SharedRouteMarker): boolean {
+  return marker !== null
+    && marker.pubId === expected.pubId
+    && marker.boxHostHandle === expected.boxHostHandle
+    && marker.hostname === expected.hostname
+    && marker.path === expected.path
+    && marker.manifestHostHandle === expected.manifestHostHandle;
+}
+
+export function sharedRouteMarkerKey(pubId: string): string {
+  return `shared-routes/${pubId}/route.json`;
+}

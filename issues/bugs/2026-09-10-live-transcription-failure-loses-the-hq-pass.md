@@ -30,7 +30,7 @@ most annoying to be asked to repeat.
 ## What the code shows
 
 The HQ pass is reached only from inside the voice-submit flow
-(`beebox/src/frontend/src/components/chat/voice-keyword-send.ts`): when
+(`beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/voice-keyword-send.ts`): when
 `runHq && audioBlob`, it calls `prepareVoiceSubmitEmission({ …, transcribe:
 (blob) => postAudioForHqTranscription(blob, { sessionId }) })`. That promise's
 `.catch` releases the dispatch and shows "Voice message kept for recovery".

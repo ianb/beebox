@@ -57,31 +57,31 @@ store; that is not this plan.
 - `src/core/chat/husk.ts:246` `reconcileChatHusks` — runs every boot, keys on
   the `session` field (`:246-248`), reads each husk once. **Reuse as the
   backfill point for `origin`/`engine`.**
-- `src/core/chat/session/session-start-record.ts:76` — the one live caller of
+- `src/core/chat/session/session-start-record.ts:76` (moved to `beebox/src/core/chat/session/registry/start-record.ts`) — the one live caller of
   `ensureChatHusk`, already carrying `engine`. **Reuse: pass `engine` and
   `origin` through.**
 - `src/core/chat/session/availability.ts:13,32` — `reason:
   "missing-local-transcript"`, surfaced by
   `webapp/trpc/routers/chat-bootstrap-procedure.ts:70`.
   **Extend** with attribution.
-- `src/core/chat/session/list.ts:83-95` `loadAllSessions` — skips husks whose
+- `src/core/chat/session/list.ts:83-95` (moved to `beebox/src/core/chat/session/list/core.ts`) `loadAllSessions` — skips husks whose
   transcript is absent; callers treat every row as resumable
   (`recent-landmark.ts:52`). **Keep**; add a sibling `loadDeadHusks`.
 - `src/core/chat/review/discovery.ts:247` — husk-first corpus. **Extend** with
   the origin claim.
 - `src/core/chat/review/state.ts` — the span journal. **Keep machine-local**;
   it is legitimate once only the origin machine reviews a session.
-- `src/core/commands/move.ts:326` `executeMove` — the `bbx mv` primitive
+- `src/core/commands/move.ts:326` (moved to `beebox/src/core/commands/move/command.ts`) `executeMove` — the `bbx mv` primitive
   (card + attachment scope). **Reuse** for archive. `trash.ts:139` hardcodes
   the Trash destination, so it is the precedent for commit/compensation shape,
   not the move itself.
-- `src/core/card-lint.ts:76` `lintCardsDispatch` / `lintFrontmatterCard` —
+- `src/core/card-lint.ts:76` (moved to `beebox/src/core/card-lint/core.ts`) `lintCardsDispatch` / `lintFrontmatterCard` —
   per-file only; no cross-file rule exists. **Add** a per-run index for the
   `chat` type.
 - `src/core/chat/session/transcript-paths.ts:28` `encodeProjectDir` — verified
   correct against Claude Code 2.1.246 on 2026-08-25 (commit `2032961e8`); the
   divergent copy in `symlinkClaudeMemory` was the bug and is fixed.
-- `src/core/retro/discovery.ts:72-87` `countUserMessages` — page-0 read of
+- `src/core/retro/discovery.ts:72-87` (moved to `beebox/src/core/retro/discovery/core.ts`) `countUserMessages` — page-0 read of
   `MAX_SESSION_ENTRIES`, discards `total`. **Change** to surface truncation.
 - `src/core/chat/husk.ts:80` `readSnippetTitle` → `extractSnippet` — shipped
   `7faa58b2`. Closes the husk-title issue once inner elements are confirmed
@@ -228,7 +228,7 @@ and bootstrap; an archive action for dead husks.
   linking to the husk card, never to `/chat?session=`.
 - Archive: `chat.archive` tRPC procedure beside `chat.delete`; moves the husk
   with its attachment scope to `store/chat/archive/` via `executeMove`
-  (`src/core/commands/move.ts:326` — the `bbx mv` primitive; `trash.ts:139`
+  (`src/core/commands/move.ts:326` (moved to `beebox/src/core/commands/move/command.ts`) — the `bbx mv` primitive; `trash.ts:139`
   hardcodes the Trash destination and is not reusable here), commits like
   delete does. Offered in the same
   confirmation surface as delete, enabled for any state except `present`.

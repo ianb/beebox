@@ -16,7 +16,7 @@ priority: backlog
 > `0a9b0be5` (today) takes the box git lock in every index mutator, replacing
 > the old best-effort single 2s retry — which is exactly hypothesis (a), index
 > contention between a chat-turn commit and `stageAndCommitPaths`. It is gated
-> by a 5-writer race test (`test/lib/git-concurrent-commit.doctest.md`).
+> by a 5-writer race test (`test/lib/git-concurrent-commit.doctest.md` (moved to `beebox/test/lib/git.concurrent-commit.doctest.md`)).
 >
 > **That fix probably does not explain the freeze**, though it fixes a real
 > correctness bug (dropped commits). `src/lib/git-lock.ts` states its design
@@ -80,8 +80,8 @@ read routes). Consider `landmarks.list`, `navStatus`, `status.browse`,
 `status.activity`/`getLog`, and the wakeup `execSync` **exonerated**.
 
 Not exercised, still suspect: the bulk-upload create→register→upload→
-finalize→git-commit path (`src/webapp/routes/bulk-upload.ts`,
-`src/core/bulk-upload/worker.ts`) — needs a cookie-authenticated local user
+finalize→git-commit path (`src/webapp/routes/bulk-upload.ts` (moved to `beebox/src/webapp/routes/bulk-upload/register.ts`),
+`src/core/bulk-upload/worker.ts` (moved to `beebox/src/core/bulk-upload/worker/core.ts`)) — needs a cookie-authenticated local user
 the browse key doesn't grant, and minting one needs `--agent-confirmed`
 (correctly not done unilaterally). Nothing sync-CPU-heavy found by reading.
 
@@ -89,7 +89,7 @@ Reframed hypotheses, from the original transcript: every freeze coincided
 with a long-running chat turn, and a page reload always restored
 responsiveness with state intact. So either (a) git-index contention
 between the chat turn's commits and the upload worker's
-`stageAndCommitPaths` (`withIndexLockRetry` in `src/lib/git.ts` retries
+`stageAndCommitPaths` (`withIndexLockRetry` in `src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`) retries
 once after 2s — check whether real contention cascades), or (b) the
 "freeze" is partly a FRONTEND/tab hang, not the server at all — total
 non-response to snapshot/screenshot with reload-fixes-it fits a blocked
@@ -105,7 +105,7 @@ Candidate request-path stall sites collected while investigating the stuck
 chat status (flagged by code reading, none traced end-to-end or measured —
 that's the next step when this recurs):
 
-- `src/webapp/trpc/routers/landmarks.ts` — `landmarks.list` runs a full-box
+- `src/webapp/trpc/routers/landmarks.ts` (moved to `beebox/src/webapp/trpc/routers/landmarks/router.ts`) — `landmarks.list` runs a full-box
   `glob("**/*.landmark.card")` on every call, no caching; rapid navigation to
   the landmarks page re-walks the tree each time.
 - `src/core/nav-counts.ts` — `fs.readdir(dir, { recursive: true })` (async
@@ -114,7 +114,7 @@ that's the next step when this recurs):
 - `src/webapp/trpc/routers/status.ts` (`browse`) — per-directory recursive
   `readdir` for attachment counts; potentially O(dirs) recursive walks per
   single call.
-- `src/webapp/trpc/routers/status.ts` (`activity`) + `src/lib/git.ts`
+- `src/webapp/trpc/routers/status.ts` (`activity`) + `src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`)
   `getLog` — git-log on the request path; check whether it shells out
   synchronously.
 - `src/core/commands/wakeup.ts` — `execSync("which bbx", ...)`, a synchronous

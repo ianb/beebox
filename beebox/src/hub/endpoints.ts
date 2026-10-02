@@ -5,10 +5,10 @@
  * merely the first implementation").
  *
  * An endpoint is nothing more than "where do I send HTTP/WS traffic for this
- * slug right now." `src/hub/supervisor.ts` is the only thing that knows HOW
+ * slug right now." `src/hub/supervisor/core.ts` is the only thing that knows HOW
  * an endpoint comes to exist (today: spawn a child process and wait for it
  * to answer `/healthz`; tomorrow: a chroot'd process, a VM, a socket). This
- * module and `src/hub/hub-server.ts` must never import anything from
+ * module and `src/hub/server/core.ts` must never import anything from
  * `supervisor.ts` — only this file's types.
  */
 
@@ -34,7 +34,7 @@ export interface EndpointProvider {
   /**
    * Lazy-mode cold start (boxholder directive, 2026-07-04): for a provider
    * backing a lazy hub, spawn `slug`'s box if it's stopped and wait for it
-   * to become ready, then return its endpoint — mirrors `workstreams-app/src/router/router.ts`'s
+   * to become ready, then return its endpoint — mirrors `workstreams-app/src/router/server/listener.ts`'s
    * `ensureRunning` for worktrees. A non-lazy provider may implement this as
    * a synchronous-under-the-hood `get(slug)` (see `Supervisor.ensureRunning`),
    * or omit it entirely — HTTP routing in `hub-server.ts` falls back to

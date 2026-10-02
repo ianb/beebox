@@ -29,7 +29,7 @@ Every answer therefore has up to two products:
 - **Directive effect** (`directive:`) — the concrete action the answer
   unblocks (move a file, pick a category, resolve an ambiguity).
 - **Durable learning** (`learning:`) — the belief the answer confirms or
-  denies, recorded in a knowledge sink as a `source: user-stated` fact. This
+  denies, recorded in a knowledge sink as a `basis: user-stated` fact. This
   reuses the evidence/confidence vocabulary from
   `docs/implemented-plans/box-retrospectives.md`: inferred beliefs cap at
   `medium` confidence; a question card answered by the boxholder *is* the
@@ -47,7 +47,6 @@ Schema: `src/schemas/question.ts` (`QuestionSchema`, type `question`).
 
 ```yaml
 ---
-status: pending              # pending | answered | dismissed | expired
 memo: >                      # why you're asking — so the boxholder can
                               # answer without looking anything up
 prompt: "…"                  # the actual question
@@ -73,12 +72,13 @@ expires-after: P30D          # optional ISO-8601 duration override
 
 Filled in by the answer/dismiss/expire transitions, never by the asker:
 `answer: { text, selected? }`, `answered-at`, `answered-via` (`web | cli`),
-`dismissed-at`, `expired-at`. A question's status is single —
-exactly the fields owned by its current status may be present; a
-`superRefine` (`refineQuestionLifecycle` in `question.ts`) rejects a card
-whose bookkeeping contradicts its `status`. Re-answering a `dismissed`/
-`expired` question clears the stale `dismissed-at`/`expired-at` fields as
-part of the transition.
+`dismissed-at`, `expired-at`. The card has no status field: its state is
+derived by `questionState` (`question.ts`) — `answered-at` means answered,
+else `dismissed-at` dismissed, else `expired-at` expired, else pending. A
+`superRefine` (`refineQuestionLifecycle`) allows at most one of the three
+timestamps, requires `answer` with `answered-at`, and rejects `answer` or
+`answered-via` without it. Re-answering a dismissed or expired question
+clears its `dismissed-at`/`expired-at` as part of the transition.
 
 ### Input types and the option-id scheme
 
@@ -104,7 +104,7 @@ part of the transition.
 
 **All question cards live in `_bookkeeping/questions/`.** This is the only place the
 system looks for questions: `getSystemState` (`src/core/state.ts`) globs
-`_bookkeeping/questions/**/*.question.card` to build the pending-question list that
+`_bookkeeping/questions/**/*.question.card` to build the question list that
 feeds the header badge, the questions page, and the aging sweep. A question
 card written anywhere else (e.g. inside a capture session's `.attach/`
 scope, which scan-import used to do) is invisible to all of that — no page,
@@ -123,16 +123,16 @@ pending ──answer──> answered
    └──(30d)──> expired ──answer──────┘
 ```
 
-- **`pending`** — awaiting a response. The only status a question is created
-  with.
-- **`answered`** — terminal: the card no longer accepts a fresh answer
+- **`pending`** — awaiting a response; no lifecycle timestamp. Every question
+  is created pending.
+- **`answered`** (`answered-at`) — terminal: the card no longer accepts a fresh answer
   (`answer.ts` allows answering only from `pending`, `expired`, or
   `dismissed`). A new question is asked instead of reopening one.
-- **`dismissed`** — the boxholder declined to answer via the Dismiss
+- **`dismissed`** (`dismissed-at`) — the boxholder declined to answer via the Dismiss
   affordance (`bbx dismiss` / `actions.dismiss`). Only a `pending` question
   can be dismissed. Dismissed questions **remain answerable** — an
   un-dismissal is the boxholder's prerogative.
-- **`expired`** — aged out of the active view by the aging sweep without an
+- **`expired`** (`expired-at`) — aged out of the active view by the aging sweep without an
   answer. Expiry **demotes visibility, it does not close the question** —
   the card stays in `_bookkeeping/questions/` and remains answerable. Only a
   `pending` question can expire (this is the sweep's own transition).
@@ -153,7 +153,7 @@ same `bbx finalize` call site as the pending-question notification sweep
   notified-questions.json`, the `nudged` map) so it fires exactly once per
   question.
 - **Expire at 30 days pending** (default: `DEFAULT_EXPIRE_AFTER_MS`). Sets
-  `status: expired` + `expired-at`, commits with trailer `Expired-By:
+  `expired-at`, commits with trailer `Expired-By:
   question-aging`, drops the question from the active list/header
   count/notification set. Never synthesizes an answer.
 - **`expires-after:` on the card overrides both defaults** for that
@@ -176,7 +176,7 @@ same `bbx finalize` call site as the pending-question notification sweep
 
 Answering, dismissing, and expiring all go through the same guarded
 transition helper: `withQuestionTransition` in
-`src/core/commands/question-transition.ts`.
+`src/core/question-transition.ts`.
 
 **Why a guard, not just `withCardLock`.** `withCardLock`
 (`src/lib/card-lock.ts`) only serializes read-modify-write within one Node
@@ -188,9 +188,9 @@ different processes. `withQuestionTransition` composes two locks:
    processes.
 2. `withCardLock` serializes overlapping in-process callers on top.
 
-After both locks are held, the card is **re-read and its status re-checked**
-against the caller's `allowedStatuses` — so a transition that lost a race
-(another process already committed a different status) sees the winner's
+After both locks are held, the card is **re-read and its state re-checked**
+against the caller's `allowedStates` — so a transition that lost a race
+(another process already committed a different state) sees the winner's
 committed state and is rejected with a clear error, rather than clobbering
 it.
 
@@ -198,7 +198,7 @@ it.
 returns a list of writes plus a commit message/trailers.
 `applyAndCommit` writes every file, then commits them **all in one
 `stageAndCommitPaths` call**. For `answer`, the plan lists the follow-up job
-file **before** the answered card — the card's status flip is the commit
+file **before** the answered card — the card's new timestamp is the commit
 point, so the companion job must already exist on disk when it lands. A
 crash between the two writes leaves `job + still-pending-question`
 (harmless — answering again just creates a second job), never the
@@ -212,13 +212,13 @@ it, if it didn't exist before) — so a failed transition leaves the card
 exactly as it was on disk and stays retryable, instead of stranding an
 `answered`-on-disk card that rejects retries.
 
-**Status guards per transition:**
+**State guards per transition:**
 
 | Command | Allowed from | Sets | Follow-up job |
 |---|---|---|---|
-| `answer` (`src/core/commands/answer.ts`) | `pending`, `expired`, `dismissed` | `answered`, `answer`, `answered-at`, `answered-via` | Yes |
-| `dismiss` (`src/core/commands/dismiss.ts`) | `pending` | `dismissed`, `dismissed-at` | No |
-| aging sweep's expire (`src/core/question-aging.ts`) | `pending` | `expired`, `expired-at` | No |
+| `answer` (`src/core/commands/answer.ts`) | `pending`, `expired`, `dismissed` | `answer`, `answered-at`, `answered-via`; removes `dismissed-at`, `expired-at` | Yes |
+| `dismiss` (`src/core/commands/dismiss.ts`) | `pending` | `dismissed-at` | No |
+| aging sweep's expire (`src/core/question-aging.ts`) | `pending` | `expired-at` | No |
 
 ### Follow-up job: the two-product contract
 
@@ -230,13 +230,13 @@ order:
 
 1. Execute `directive:` using `answer:`.
 2. **If `learning:` is present, record it** in `learning.sink` as a
-   `source: user-stated` belief — quote the answer, ref the question card
+   `basis: user-stated` belief — quote the answer, ref the question card
    (same evidence discipline as the retrospective's integrate step). A "no"
    is also learning: record the decline against the proposal rather than
    dropping it. For sink `briefing`, only the **root** briefing compiles
    into any agent's context (`compileBriefings` only compiles the root —
    directory briefings are an explicit TODO,
-   `src/core/docs-gen/compile.ts:74-101`), so `learning.ref` must resolve to
+   `src/core/docs-gen/compile/core.ts:74-101`), so `learning.ref` must resolve to
    the root briefing even if it names something else; the job instructions
    say to resolve and note the substitution.
 3. **If `learning:` is absent, still ask whether the answer generalizes** —
@@ -244,7 +244,7 @@ order:
    destination. Record it if it does; skip if it's genuinely a one-off (the
    common, correct outcome — not a failure).
 
-This is where `learning.sink`/`source: user-stated` actually lands: the
+This is where `learning.sink`/`basis: user-stated` actually lands: the
 follow-up job is the only writer of the belief, and it always writes with
 that source tag, never a higher-confidence one — a question answer is a
 boxholder statement, which is exactly what `user-stated` means in the retro
@@ -262,7 +262,7 @@ evidence model.
   in-app "there is activity" signal.
 - **Questions page** (`QuestionsPage` / `QuestionsList.tsx`) — the full list:
   pending at the top, an archive of answered/dismissed/expired below
-  showing the recorded answer and status (not just a status word). Expired
+  showing the recorded answer and state (not just a state word). Expired
   questions render with the answer form still available — demoted, not
   closed.
 - **Browse renderer** — the `question` file-type renderer
@@ -291,7 +291,7 @@ evidence model.
 
 Where an agent is deciding whether to ask, and how, is the operative
 question — not a separate policy from the lifecycle above. Stated in
-`questionsSection` (`src/core/agent-guide/cards.ts`), which is always-on
+the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
 agent-guide context:
 
 - **In chat, just ask.** A synchronous conversation is not a question-card
@@ -332,7 +332,7 @@ agent-guide context:
   if it comes, belongs in the surfacing layer, not the card shape.
 - **Automated stop-asking aggregation** (detecting that a whole class of
   question never gets answered, and suppressing it). The durable
-  `expired`/`dismissed` statuses created here are the substrate a future
+  `expired-at`/`dismissed-at` timestamps created here are the substrate a future
   detector would read; the detector itself is undesigned.
 
 See `docs/implemented-plans/questions-end-to-end.md` for the full rationale, prior art,

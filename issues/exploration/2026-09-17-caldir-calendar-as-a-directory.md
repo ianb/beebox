@@ -18,7 +18,7 @@ advanced workflows using scripts and agents".
 This box already does that, and has since the calendar connector shipped:
 one `.ics` per event in `_content/calendar/`, RFC 5545, round-tripped through
 `ical.js`, bidirectional with Google
-(`beebox/docs/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
+(`beebox/docs/connectors/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
 So the comparison is not "should we do this" — it is convergent evidence that
 the choice was right, plus two things caldir does that we do not.
 
@@ -49,7 +49,7 @@ and were paid for in edge cases:
 caldir names a file `2026-06-25T0900__dentist.ics`. We name it
 `2026-06-25_a1b2c3d4.ics` — the date plus the last eight characters of an
 opaque Google event id (`eventFilename`,
-`beebox/src/connectors/google-calendar-ics.ts:323-330`).
+`beebox/src/connectors/google-calendar/ics.ts:323-330`).
 
 That undercuts the whole reason for the format. `ls _content/calendar/` should
 tell a person or an agent what is in there, and ours tells them nothing. A
@@ -84,7 +84,7 @@ reading if CalDAV ever gets built here.
 
 ## Also found: the calendar doc is wrong about our own filenames
 
-`beebox/docs/calendar.md` says under Storage that events live in
+`beebox/docs/connectors/calendar.md` says under Storage that events live in
 "individual `.ics` files ... with human-readable slugged filenames" and shows
 `Weekly_team_standup.ics` and `Dentist_Feb_20.ics`. The code has never
 produced that shape. The same document states the real convention correctly

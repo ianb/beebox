@@ -17,7 +17,7 @@ Most of these terms are for operating the system, not for showing to users.
 Each entry below carries a **User-facing:** line saying what a user-visible
 surface (UI label, agent reply) says instead: the same word, a different word,
 or *internal — never shown*. UI copy and the agent guide's "Speak the User's
-Language" section (`src/core/agent-guide/behavior.ts`) defer to these lines;
+Language" section (SPEAKING in `src/core/agent-guide/guide.md`) defer to these lines;
 to change a user-facing word, change it here first. Decisions recorded
 2026-09-02 (`docs/implemented-plans/vocab-glossary-sweep.md`).
 
@@ -31,7 +31,7 @@ to change a user-facing word, change it here first. Decisions recorded
 **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "users" of the system). See CLAUDE.md note on avoiding personal names.
 *User-facing:* internal — never shown. The agent addresses the boxholder as "you".
 
-**card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.card` (e.g. `Voice_Memo.memo.card`). Every card is YAML frontmatter + markdown body — the legacy XML card *file format* and its loader are gone (see the `cardworks` entry below). That doesn't mean XML-shaped markup is gone from card content: pseudo-XML elements like `<schedule>` (see `docs/chat-schedules.md`) still show up as a live pattern embedded *within* markdown bodies and chat text — a different thing from the on-disk file format. See `docs/adding-schemas.md` and `docs/cards-as-markdown.md`.
+**card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.card` (e.g. `Voice_Memo.memo.card`). Every card is YAML frontmatter + markdown body — the legacy XML card *file format* and its loader are gone (see the `cardworks` entry below). That doesn't mean XML-shaped markup is gone from card content: pseudo-XML elements like `<schedule>` (see `docs/chat/schedules.md`) still show up as a live pattern embedded *within* markdown bodies and chat text — a different thing from the on-disk file format. See `docs/cards/schemas.md` and `docs/cards/format.md`.
 *User-facing:* prefer the thing's own name — "your recipe", "the memo" — over "the card"; "card" is acceptable when nothing more specific exists. Filenames and paths go inside links, never as the noun of a sentence.
 
 **quantity / measurements** — The record schema's two number-carrying fields (`src/schemas/record.tsx`). `quantity` is a single `{value, note?}` answering "how much/many of it do I have" ("3 items", "10 ounces", "roughly 15–20"); `measurements` is a `{value, note?}` list of facts about the thing itself ("7 feet", "45 pounds", "1200 USD"). Values are natural language carrying number and unit together. (Renamed from `measures`, 2026-09; migration `record-measurements`.)
@@ -42,7 +42,7 @@ to change a user-facing word, change it here first. Decisions recorded
 **attachment** — Any file inside a `.attach/` scope, regardless of how it's stored in git. A markdown sidecar, a notes file, a photo — all attachments. Commits to git normally unless it's also an asset.
 *User-facing:* same — "attachments" is fine (email trained everyone); introduce it in context ("the photos and files saved with this recipe"). A machine-derived companion file (a transcript next to a voice memo, timing data next to a clip — informally a "sidecar") gets no umbrella noun with users: name the kind ("the transcript").
 
-**asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small pointer, git-annex holds the bytes keyed by SHA-256. See `docs/assets.md`.
+**asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small pointer, git-annex holds the bytes keyed by SHA-256. See `docs/media/assets.md`.
 *User-facing:* internal — say what the file is ("the photo", "the recording"). The dashboard's storage accounting is labeled "Storage", not "Inventory" (that word belongs to the user's own inventorying jobs).
 
 **asset manifest** — the *superseded* mechanism: a `manifest.json` in each `.attach/` directory recording every asset's size, mtime, and sha256, with the assets themselves gitignored. Still on disk in any box not yet migrated with `bbx attachments to-annex`. See `docs/implemented-plans/asset-manifests.md`.
@@ -61,7 +61,7 @@ to change a user-facing word, change it here first. Decisions recorded
 
 **cardworks** — A former standalone card library, now removed. Its frontmatter-card primitives (`cardSchema()`, parsing, serialization, Zod-based validation, the frontmatter splitter) were absorbed into `src/cards/` in this repo and are exposed to box-local schemas via the public `beebox/cards` specifier. Its XML-card support (`element()`) was not carried forward — the XML file format went away with the package, not into `src/cards/`. See `docs/implemented-plans/remove-cardworks-package.md`.
 
-**retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what the boxholder implicitly taught the agent and integrates it into personality/guide cards as `source: inferred` beliefs, confidence set by recurrence (1 session = hypothesis, 2–3 = low, 4+ = medium — the ceiling for inferred). Authoritative changes (briefing corrections, conflicts with `user-stated` beliefs) become question cards. Audit trail: run reports in `_content/reviews/retro/`, ledger in `.beebox/retro/`, commits trailered `Retro-Run: <runId>`. See `docs/implemented-plans/box-retrospectives.md`.
+**retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what the boxholder implicitly taught the agent and integrates it into personality/guide cards as `basis: inferred` beliefs, confidence set by recurrence (1 session = hypothesis, 2–3 = low, 4+ = medium — the ceiling for inferred). Authoritative changes (briefing corrections, conflicts with `user-stated` beliefs) become question cards. Audit trail: run reports in `_content/reviews/retro/`, ledger in `.beebox/retro/`, commits trailered `Retro-Run: <runId>`. See `docs/implemented-plans/box-retrospectives.md`.
 
 **inbox** — `_content/inbox/`. Where new cards land before processing.
 
@@ -69,7 +69,7 @@ to change a user-facing word, change it here first. Decisions recorded
 
 ## Chat and navigation
 
-**session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/chat/session/`). See `docs/chat-session-lifecycle.md`.
+**session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/chat/session/`). See `docs/chat/sessions.md`.
 *User-facing:* **"chat"** — "New chat", "Recent chats", "this chat". Bare "session" never appears in UI labels ("chat session" in running prose is fine).
 
 **agent** — The Claude Code (or Codex) process working inside a box: the thing the reactor invokes and the chat talks to.

@@ -41,7 +41,7 @@ Notes on the three partials and the one open, so the planner does not have to
 guess which half moved:
 
 - **Checkpoint / pre-commit.** `--no-verify` is the right instrument and it
-  exists (`src/lib/git.ts:76`, `:314`), and the step-1 failure path is now
+  exists (`src/lib/git.ts:76` (moved to `beebox/src/lib/git/core.ts`), `:314`), and the step-1 failure path is now
   defined (exit 2, record, nothing to revert). What is still unexamined is that
   the same hook also runs `git annex pre-commit .`; see the finding below.
 - **The 600 s bound.** It is back, and named. But `startAwakeTimeout` fires a
@@ -65,7 +65,7 @@ Re-verified only where the revision now leans on it.
   box's `package.json` and asserts the *name* `beebox` appears in
   `dependencies`/`devDependencies`. It never inspects `node_modules`. The farm
   is invisible to it, which is what the plan needs.
-- **`commit()` supports `--no-verify`.** `src/lib/git.ts:76` (`noVerify?:
+- **`commit()` supports `--no-verify`.** `src/lib/git.ts:76` (moved to `beebox/src/lib/git/core.ts`) (`noVerify?:
   boolean`) and `:314` (`if (options.noVerify) commitArgs.push("--no-verify")`).
   The doc comment at `:66-75` names `box-packageify` as the one deliberate
   exception today; `src/core/migrations/one-root-run.ts:403` is a second
@@ -80,16 +80,16 @@ Re-verified only where the revision now leans on it.
   identity.** `src/webapp/views/node-view-runtime.ts:86-91` symlinks the box's
   `node_modules` in as the outer resolution root, then *overrides* `react` in
   the inner directory with the engine's own realpath. `react-dom` is not in the
-  node-target external list (`src/webapp/views/compiler.ts:182-190`), so it is
+  node-target external list (`src/webapp/views/compiler.ts:182-190` (moved to `beebox/src/webapp/views/compiler/compile.ts`)), so it is
   bundled through the box's `node_modules` — the farm's `react-dom` link is the
   one that must be right or an esbuild resolve error is the symptom.
 - **Citations added in this revision, spot-checked and correct:**
   `migration-sweep.ts:96` (`skipped-dirty`), `:101` (`needs-procedure`), `:126`
-  (`Created-By: migration-sweep`); `src/core/box/index.ts:236` (`node_modules/`),
+  (`Created-By: migration-sweep`); `src/core/box/index.ts:236` (moved to `beebox/src/core/box/structure/core.ts`) (`node_modules/`),
   `:246` (`_config/connectors/*.secret.*`), `:255-256` (`.beebox/`,
   `_content/docs/generated/`); `docs-refresh.ts:7-9`; `status.ts:37-42`;
-  `docs/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
-  `package.ts:122-137` / `:198-214`; `scripts/release.ts:84`;
+  `docs/media/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
+  `package.ts:122-137` / `:198-214`; `scripts/release.ts:84` (moved to `beebox/src/scripts/release.ts`);
   `auth-preflight.ts:40-41`. The first pass's five imprecise references are
   corrected.
 
@@ -111,7 +111,7 @@ Immich, Nextcloud AIO, Ghost-CLI #699, `CODEX_HOME`.
 
 ## Stated preferences this plan trades against
 
-Unchanged in substance; the revision adds `docs/assets.md` (annex, not LFS) and
+Unchanged in substance; the revision adds `docs/media/assets.md` (annex, not LFS) and
 the `entrypoint.sh:100-103` / `:107-110` policies, both correctly quoted. One
 preference is newly *strained* rather than traded: the sweep's dirty-box rule
 (`migration-sweep.ts:16`) is now bypassed by a `--no-verify` commit, which is a
@@ -385,7 +385,7 @@ not a hook) but not what `git annex pre-commit` itself does, and not the
 missing-binary guard, and cites nothing for either.
 **Why it matters:** The checkpoint commit is the one commit in the plan that
 writes the user's unreviewed working tree into their history, and asset boxes
-are the norm (`docs/assets.md`: twelve boxes migrated to annex).
+are the norm (`docs/media/assets.md`: twelve boxes migrated to annex).
 **Suggested action:** Determine what `git annex pre-commit .` does to a
 checkpoint (`annex.thin=false`, unlocked files) and either run it explicitly
 before the `--no-verify` commit or cite why skipping it is safe. Track F

@@ -11,7 +11,7 @@
  */
 
 import type { CardSymbolData } from "../shared/card-symbol.js";
-import type { ThemeChoice } from "../shared/card-theme.js";
+import type { ThemeChoice } from "../shared/card-theme/core.js";
 
 export interface FileSummary<T = unknown> {
   /** Box-relative path to the file */

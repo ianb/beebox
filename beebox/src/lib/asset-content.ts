@@ -20,7 +20,7 @@
 
 import * as fs from "node:fs/promises";
 import { type AnnexPointer, parseAnnexPointer } from "./annex-pointer.js";
-import { type Result, ok, err } from "./result.js";
+import { type Result, ok, err } from "../shared/result.js";
 
 /**
  * Above this size a file cannot be a pointer, so no read happens at all.

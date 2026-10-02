@@ -89,7 +89,7 @@ type Result<Item> = { rows: Row<Item>[]; issues: Issue[] };
 **A standard summary per type** is a prerequisite: one method on the schema
 that gives a text form and a React form, with `title` plus `contains` as the
 default. Three hand-written partial versions exist today: `foldFields`
-(`src/core/search/extract.ts:219`), `buildBrowseCard`
+(`src/core/search/extract.ts:219` (moved to `beebox/src/core/search/extract/core.ts`)), `buildBrowseCard`
 (`src/webapp/trpc/routers/status.ts:130`), and the landmark link tile.
 
 **An agent-side preview** supports level 2: given a scope, report the matching

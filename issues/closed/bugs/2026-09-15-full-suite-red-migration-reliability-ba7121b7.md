@@ -1,5 +1,5 @@
 ---
-title: "Full-suite red: test/hub/hub-e2e.doctest.md"
+title: "Full-suite red: test/hub/hub-e2e.doctest.md (moved to `beebox/test/hub.e2e.doctest.md`)"
 workstream: migration-reliability
 area: beebox
 priority: important
@@ -26,7 +26,7 @@ commit (`0174ab03`) over first-parent `main` blames one landing:
 
 - **Landing:** `ba7121b7` — Merge branch 'worktree-migration-reliability'
 - **Workstream:** migration-reliability
-- **Failing file:** `test/hub/hub-e2e.doctest.md`
+- **Failing file:** `test/hub/hub-e2e.doctest.md` (moved to `beebox/test/hub.e2e.doctest.md`)
 
 Each file failed in the batched run and failed again on an isolated re-run, so
 it is not a flake by the ledger's definition. Nothing has been fixed; this is a
@@ -78,7 +78,7 @@ not ok 5 - test/hub/hub-e2e.doctest.md # time=153221.829ms
 
 `makeFixtureBox` built the box with `initBox(boxRoot, { skipGit: true })`, on
 the stated premise that Git is "irrelevant to HTTP serving". `ba7121b7` made
-that premise false: `src/hub/child-spawn.ts` now admits every box through
+that premise false: `src/hub/child-spawn.ts` (moved to `beebox/src/hub/supervisor/child-spawn.ts`) now admits every box through
 `acquireBoxStartup`, and `directoryFor` (`src/lib/box-maintenance.ts:33`) puts
 the gate inside the Git directory and asserts one exists.
 
@@ -118,9 +118,9 @@ is not claiming otherwise; it is diagnosing a box that is already broken.
 ## What was really missing: the reason never reached the operator
 
 The engine surfaces this correctly and always did. The invariant's message
-becomes `box.lastError` (`src/hub/supervisor.ts:466` via `describeError`), the
+becomes `box.lastError` (`src/hub/supervisor.ts:466` (moved to `beebox/src/hub/supervisor/core.ts`) via `describeError`), the
 box goes `unhealthy`, and `getStatuses` puts `lastError` in `/healthz`
-(`src/hub/supervisor.ts:425`).
+(`src/hub/supervisor.ts:425` (moved to `beebox/src/hub/supervisor/core.ts`)).
 
 The test threw it away. Its readiness wait polled for `status === "running"`
 and discarded the body, so a bare label was all that survived:

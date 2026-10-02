@@ -6,7 +6,7 @@
  */
 
 import { spawn, execFile } from "node:child_process";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "../shared/invariant.js";
 
 // ─── Service interface ───────────────────────────────────────────────────────
 

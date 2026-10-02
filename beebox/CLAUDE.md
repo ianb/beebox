@@ -20,13 +20,13 @@ The monorepo root instructions own worktrees, the shared dev router, browser evi
 
 When committing, use plain `git commit` so hooks run, fix relevant failures, and leave no half-finished task changes. Never use `--no-verify`.
 
-Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.ts`. Deployment topology and rollback are in [deploy/README.md](deploy/README.md).
+Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.ts`. Deployment topology and rollback are in [deploying](docs/server/deploying.md).
 
 ## Cards
 
-Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. Attachments use the sibling `Name.attach/` scope. Schemas live in `src/schemas/`, and boxes may add schemas through the public `beebox/cards` API. For format or attachment work, read the [card format](docs/cards-as-markdown.md); for schema changes, the [schema workflow](docs/adding-schemas.md); for changes to existing on-disk data, the [migration runbook](docs/migrations.md). The implemented RFC is design history, not the live manual.
+Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. Attachments use the sibling `Name.attach/` scope. Schemas live in `src/schemas/`, and boxes may add schemas through the public `beebox/cards` API. For format or attachment work, read the [card format](docs/cards/format.md); for schema changes, the [schema workflow](docs/cards/schemas.md); for changes to existing on-disk data, the [migration runbook](docs/cards/migrations.md). The implemented RFC is design history, not the live manual.
 
-Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schema field order and need not preserve the original frontmatter order. `bbx validate` and the hooks installed by `bbx init` provide broader validation; see [card validation](docs/card-validation.md). Do not infer a card shape from an example when its schema is available.
+Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schema field order and need not preserve the original frontmatter order. `bbx validate` and the hooks installed by `bbx init` provide broader validation; see [card validation](docs/cards/validation.md). Do not infer a card shape from an example when its schema is available.
 
 Box Git trailers such as `Created-By` are structured metadata. Box commits use plain `git commit` so the installed pre-commit hook can run staged validation, link warnings, and the unlisted-binary guard.
 
@@ -51,7 +51,7 @@ Boxes live outside this repository. A box is one package and operational root wi
 ## Behavioral Notes
 
 - Follow [code-style.md](code-style.md). Preserve typed contracts and validate untrusted boundaries; do not add silent fallbacks for broken invariants.
-- All box ref parsing and resolution goes through `parseRef` and `resolveRefPath` in `src/shared/ref-path.ts`. Never reproduce it with `path.resolve`, segment splitting, or manual fragment/query stripping. Resolution must fail closed when `..` escapes the box.
+- All box ref parsing and resolution goes through `parseRef` and `resolveRefPath` in `src/shared/ref-path/core.ts`. Never reproduce it with `path.resolve`, segment splitting, or manual fragment/query stripping. Resolution must fail closed when `..` escapes the box.
 - Use `getBoxTime`/`getBoxTimeISO` for timestamps so frozen scenario time works. Long-running timeouts use `startAwakeTimeout`; ordinary wall-clock timers expire across macOS sleep.
 - Cross-process locks go through `src/lib/file-lock.ts`; never call `proper-lockfile` directly or create ad hoc lock files. Follow the more specific Git and same-card locking contracts in [code-style.md](code-style.md).
 - For frontend or iOS failures, inspect the box's `.beebox/client-debug.log`; `[ios]` identifies native entries. See the [client debug log](docs/client-debug-log.md).
@@ -64,6 +64,6 @@ When a correction exposes missing durable guidance, put a short rule at the narr
 
 ## Guides
 
-Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organization and naming. Common entry points are [engineering principles](docs/engineering-principles.md), [testing](docs/testing.md), [cards](docs/cards-as-markdown.md), [API endpoints](docs/adding-api-endpoints.md), [box layout](docs/box-layout.md), [mobile contract](docs/mobile-contract.md), [secrets](docs/secrets.md), [server operations](docs/server-operations.md), and [deployment](deploy/README.md). Proposed work lives under `docs/plans/`; implemented plans and RFCs record history unless a current guide explicitly says otherwise.
+Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organization and naming. Common entry points are [engineering principles](docs/engineering-principles.md), [testing](docs/testing.md), [cards](docs/cards/format.md), [API endpoints](docs/adding-api-endpoints.md), [box layout](docs/box-layout.md), [mobile contract](docs/mobile-contract.md), [secrets](docs/secrets.md), [the production server](docs/server.md), and [deployment](docs/server/deploying.md). Proposed work lives under `docs/plans/`; implemented plans and RFCs record history unless a current guide explicitly says otherwise.
 
 @code-style.md

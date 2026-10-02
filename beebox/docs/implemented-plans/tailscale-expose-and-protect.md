@@ -51,7 +51,7 @@ cross-review finding 1; this constraint shapes Tracks A–C.)
 - `beebox/code-style.md` — no default parameters, injected-deps
   testability (the `DoctorDeps` shape).
 - **Precedent: `bbx pub setup` / `bbx pub status`**
-  (`beebox/src/cli/commands/pub-setup.ts:49,110`) — an idempotent
+  (`beebox/src/cli/commands/pub-setup.ts:49 (moved to `beebox/src/cli/commands/pub/setup.ts`),110`) — an idempotent
   provisioning command paired with a drift-reporting status command for an
   external-service integration. This plan reuses the setup/status *pairing*;
   the guided wait-and-recheck loop is new (pub setup is one-shot).
@@ -65,7 +65,7 @@ cross-review finding 1; this constraint shapes Tracks A–C.)
 
 ## What already exists
 
-- **The documented-but-untested path.** `beebox/docs/docker-install.md:119`
+- **The documented-but-untested path.** `beebox/docs/install/docker.md:119`
   ("### Tailscale-only (no open ports)") tells the user to rebind compose from
   loopback to the tailnet IP and skip Caddy, with TLS as a one-line aside
   (`docker-install.md:131`: "Add TLS via Tailscale Serve if you want
@@ -97,7 +97,7 @@ cross-review finding 1; this constraint shapes Tracks A–C.)
   `bin/router.ts:187` (children get `host: "127.0.0.1"`),
   `beebox/src/cli/commands/hub.ts:54` (`config.host ?? "127.0.0.1"`),
   standalone `bbx serve` defaults `localhost`
-  (`beebox/src/webapp/server.ts:187`). **The dev router does not**:
+  (`beebox/src/webapp/server.ts:187` (moved to `beebox/src/webapp/server/app.ts`)). **The dev router does not**:
   `bin/router.ts:1052` calls `server.listen(ROUTER_PORT, ...)` with no host —
   all interfaces. Track A fixes this.
 - **Prod exposure stack.** Cloudflare (Flexible SSL) → nginx :80 → loopback
@@ -228,7 +228,7 @@ undefined-propagation.
 were considered and deferred; refusing without a target is the shipped
 behavior): the machine may be running a dev router, a standalone `bbx serve`
 (arbitrary host/port, `beebox/src/cli/commands/serve.ts:95`), a hub
-(`beebox/src/hub/hub-config.ts:57`), or a Docker mapping, and guessing
+(`beebox/src/hub/hub-config.ts:57` (moved to `beebox/src/hub/config.ts`)), or a Docker mapping, and guessing
 across those is how the wrong thing gets exposed. The router is never a
 valid target (Track A) — enforced structurally, not by port number: the
 target is probed for the router's `/__router/status` signature and refused
@@ -391,7 +391,7 @@ status exists); the proof runs are rollout, not chunks.
 Cloudflare/nginx public path. App auth gates both paths, with one stated
 asymmetry: **the private origin supports local-password login only.** Google
 OAuth builds its single callback URI from the canonical `BBX_PUBLIC_URL`
-(`beebox/src/webapp/routes/auth-google.ts:39`), so a login begun on
+(`beebox/src/webapp/routes/auth-google.ts:39` (moved to `beebox/src/webapp/routes/auth/google.ts`)), so a login begun on
 the `.ts.net` origin would redirect back to — and set its cookie on — the
 public origin. Rather than redesign the OAuth callback for multiple origins,
 the tailnet origin's login page shows the local-password form (already every
@@ -405,7 +405,7 @@ member's every device joining the tailnet — a household decision, deferred
 (see NOT in scope).
 
 **Direction.** No new code beyond Track B; this track is running the tooling
-on the server plus a short runbook note in `docs/health-checks.md`'s style
+on the server plus a short runbook note in `docs/server/health-checks.md`'s style
 for the systemd context. `bbx tailscale status` on the server reports both
 paths' states.
 
@@ -542,7 +542,7 @@ not prevention.
 
 Skip, with rationale: this plan introduces no box-agent-facing concepts — no
 tags, card shapes, or conventions a box agent must recall. The agent-facing
-surface is `docs/agent-install.md`'s existing "widening exposure is a real
+surface is `docs/install/agent.md`'s existing "widening exposure is a real
 decision" guidance (`agent-install.md:59`), which Track C updates to point at
 `bbx tailscale status`; installing agents read that doc in-context rather than
 recalling it, so no `knows_directly` entry applies.

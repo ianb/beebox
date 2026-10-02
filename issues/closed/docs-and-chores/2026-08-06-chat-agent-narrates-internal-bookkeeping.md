@@ -56,5 +56,5 @@ bookkeeping." Watch the wording so it doesn't over-suppress genuinely useful
   — adjacent chat-prompt/output-shaping work, but that item is about the *tag
   vocabulary* (`<ack>`, `<callout>`, `{% quote %}`); this is about *what the agent
   chooses to say*, so it's a separate, smaller tweak.
-- `beebox/docs/prompt-surface-review.md` — the workflow for reasoning about
+- `beebox/docs/prompts/review.md` — the workflow for reasoning about
   prompt-content changes like this, if the fix wants more than a one-liner.

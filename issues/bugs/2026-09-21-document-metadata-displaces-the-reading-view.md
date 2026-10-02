@@ -20,7 +20,7 @@ this is a reading hierarchy problem, not missing data.
 
 ## Verified mechanism
 
-`beebox/src/frontend/src/components/MarkdownCardView.tsx:83` filters out `theme`
+`beebox/src/frontend/src/components/MarkdownCardView/view.tsx:83` filters out `theme`
 and the outer title, then renders the remaining frontmatter above the body
 through `FrontmatterFields` at line 98. This includes common card metadata.
 `components/themes/CardProperties.tsx:21` separately presents prominence.
@@ -31,7 +31,7 @@ Decide what belongs in the ordinary document reading surface and what belongs
 under Properties. Do not hide meaningful domain fields from all card types as
 an incidental fix for generic documents.
 
-Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 6, 19, 38, and closing remarks; screenshots 05, 09, 21, 29.
 Related: the earlier [vocabulary sweep](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
 fixed other surfaces; this is a distinct default-renderer mechanism.
@@ -44,7 +44,7 @@ Screenshots 09 and 16 independently show the same default-renderer mechanism.
 The walker could read the saved work but repeatedly called these labels
 bookkeeping. No document-rendering change was made.
 
-Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 
 ## Re-encounter, 2026-09-21 - journey D
 
@@ -62,5 +62,5 @@ courseware case: domain cards need a reader-facing study view while retaining
 the agent's durable plan and evidence. It is a broader information hierarchy
 question than merely hiding the Properties panel.
 
-Evidence: [D chemistry report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+Evidence: [D chemistry report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 screenshots 08, 10–13, and 22.

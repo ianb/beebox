@@ -19,7 +19,7 @@ current landmark or conversation. Existing box configuration remains compatible.
 
 ## What already exists
 
-`src/shared/card-theme.ts` declares `chrome: true` for Plain and Paper, and
+`src/shared/card-theme.ts` (moved to `beebox/src/shared/card-theme/core.ts`) declares `chrome: true` for Plain and Paper, and
 `chrome: false` for Sticky note. `PresentationConfigSchema` already accepts
 `chrome: ThemeChoiceSchema.optional()`. Keep that stored name for compatibility;
 use “System theme” in the interface and documentation.

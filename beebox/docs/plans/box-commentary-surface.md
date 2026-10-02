@@ -110,7 +110,7 @@ sources:
   — codex #9 caught that `gdoc` is body-less and points at an attach file
   (`gdoc.tsx:39`). `gdoc` is still the precedent for the *idea* of a card
   standing in for external content, just not for the schema shape (Track C).
-- **Convention — `ref` for in-box targets** (`docs/prompt-audits.md:184`:
+- **Convention — `ref` for in-box targets** (`docs/prompts/lenses.md:184`:
   *"links in card schemas always use `ref="..."` for the target, not
   href/path/url"*). `ref` is the box-relative, `bbx mv`-tracked form. External
   URLs are deliberately the *other* attribute, `href` — untracked by `bbx mv`,
@@ -138,13 +138,13 @@ sources:
   with `"; "`, all optional. **Reuse** this whole stack; Track A renames the
   emitted attribute to `pos` and lets `{% source %}` carry the same values.
 
-- **The `source` Markdoc tag — EXTEND.** `src/shared/markdoc-config.ts:133-149`
+- **The `source` Markdoc tag — EXTEND.** `src/shared/markdoc-config.ts:133-149` (moved to `beebox/src/shared/markdoc-config/core.ts`)
   defines `source` with exactly two attributes: *"ref: { type: String,
   required: true }, as: { type: String }"* — **no** `pos`, `version`, or hash
   attribute today. Track A adds them.
 
 - **Box file-serving + sandbox guard — EXTEND (do not weaken).**
-  `src/webapp/routes/api-files.ts:67-69` confines reads to the box root:
+  `src/webapp/routes/api-files.ts:67-69` (moved to `beebox/src/webapp/routes/api/register/files.ts`) confines reads to the box root:
   *"if (!resolved.startsWith(path.resolve(boxRoot))) { return
   reply.status(403).send({ error: "Access denied" }); }"*. The live wrapper
   needs to read **outside** boxRoot — so it is a **new, separately-gated
@@ -157,7 +157,7 @@ sources:
   are not needed), since an absolute path already identifies the worktree.
 
 - **Card schema registration + path-scoped instruction rules — REUSE.**
-  Frontmatter schemas register in `src/schemas/registry.ts:63-89`
+  Frontmatter schemas register in `src/schemas/registry.ts:63-89` (moved to `beebox/src/schemas.ts`)
   (`cardSchemas[]`). A schema's `instructions` becomes a path-scoped agent
   rule at `bbx init`: `src/core/init-rules.ts:102-117` writes
   `**/*.<type>.card` rule files. The `commentary` card's synthesis guidance
@@ -307,7 +307,7 @@ default is an authoring convenience the agent stamps, not a render-time lookup.
   An untracked/web resource carries only the hash. On view, the renderer
   compares the anchor's **content hash** to the target's current hash; mismatch
   ⇒ flag "may be stale" (the `data_through` freshness shape from
-  `docs/prompt-audits.md` §"Cache freshness"). Re-anchoring is **not** in this
+  `docs/prompts/lenses.md` §"Cache freshness"). Re-anchoring is **not** in this
   track.
 - `placement` — carried verbatim from `<user-selection>` when present
   (`selection-serialize.ts:71`); per-anchor (never inherited). On a durable

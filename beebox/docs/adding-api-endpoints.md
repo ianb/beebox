@@ -8,7 +8,7 @@ How to add new API endpoints to beebox using tRPC. Follow an existing router lik
 
 **Keep as REST** (raw Fastify routes in `src/webapp/routes/`) only for what doesn't fit the tRPC shape:
 - File uploads/downloads (`multipart/form-data`, streamed bodies)
-- Bounded, cacheable image representations ([image transforms](image-transforms.md))
+- Bounded, cacheable image representations ([image transforms](media/image-transforms.md))
 - OAuth redirect flows
 - Webhook receivers (external services POST to us)
 - The `/chat/send` POST (needs the request's user + the session registry)
@@ -24,11 +24,14 @@ Older raw routes are tech debt — migrate when you touch the area.
 
 ### 1. Create or Edit a Router
 
-Routers live in `src/webapp/trpc/routers/<name>.ts`. Each router groups related procedures.
+Routers live in `src/webapp/trpc/routers/`, one member per router: a flat
+`<name>.ts` file, or `<name>/router.ts` beside that unit's own helpers when a
+router needs more than one file (e.g. `chat/router.ts`, `health/router.ts`).
+Each router groups related procedures.
 
 ```typescript
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { TRPCError } from "@trpc/server";
 
 export const myRouter = router({
@@ -64,15 +67,18 @@ export const myRouter = router({
 
 ### 2. Register the Router
 
-Add it to `src/webapp/trpc/router.ts`:
+Add it to the `routerMembers` object in `src/webapp/trpc/routers.ts`, keyed
+by the router's camelCase name (the layout check verifies the key matches
+the file or directory name in identifier form). That one object is passed to
+both `defineRegistry` (completeness) and `router(...)` (the actual `appRouter`):
 
 ```typescript
 import { myRouter } from "./routers/my.js";
 
-export const appRouter = router({
+const routerMembers = {
   // ... existing routers
   my: myRouter,
-});
+};
 ```
 
 ### 3. Use It in the Frontend
@@ -127,7 +133,7 @@ Every procedure receives `ctx` with:
 |-------|------|-------------|
 | `ctx.boxRoot` | `string` | Absolute path to the box directory |
 | `ctx.boxSlug` | `string` | URL slug for the box (e.g., `"test1"`) |
-| `ctx.eventBus` | `EventBus` | SQLite-backed event bus feeding `events.subscribe` subscriptions (see `src/core/event-bus.ts`) |
+| `ctx.eventBus` | `EventBus` | SQLite-backed event bus feeding `events.subscribe` subscriptions (see `src/core/event-bus/core.ts`) |
 | `ctx.services` | `Services` | Injected services (calendar, telegram, dropbox, claude CLI) |
 | `ctx.chatSession` | `ChatSession` | Per-box chat session singleton |
 

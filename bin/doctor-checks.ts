@@ -9,7 +9,7 @@
  */
 
 import * as path from "node:path";
-import { isRecord } from "../beebox/src/lib/is-record.js";
+import { isRecord } from "../beebox/src/shared/is-record.js";
 import { diskHealthFromBytes } from "../beebox/src/hub/disk-health.js";
 import { schedulesStoreRoot, storeStateSchema } from "./lib/schedules.js";
 import { fail, pass, satisfiesRange, type CheckResult, type DoctorDeps } from "./doctor-lib.js";

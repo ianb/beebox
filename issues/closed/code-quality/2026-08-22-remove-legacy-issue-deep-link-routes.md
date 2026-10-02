@@ -11,7 +11,7 @@ labels: [workstreams-app, cleanup]
 
 **Closed:** This commit removes the four SPA routes and the shared-router rewrite. The router half takes effect after the boxholder restarts the shared router; this workstream did not restart it.
 
-`workstreams-app/src/frontend/router.tsx:18-37` carries four routes whose only
+`workstreams-app/src/frontend/router.tsx:18-37` (moved to `workstreams-app/src/frontend/main/router.tsx`) carries four routes whose only
 job is to redirect an old URL shape into the current one:
 
 ```

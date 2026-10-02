@@ -19,7 +19,7 @@
  */
 
 import * as fs from "node:fs";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { AuthFileCorruptError } from "./local-users-errors.js";
 import { authFilePath, findUser, loadAuthFile, type AuthFile, type LocalUser } from "./local-users.js";
 

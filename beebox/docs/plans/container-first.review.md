@@ -24,7 +24,7 @@ Confirmed as the plan describes, by reading the source:
 - `_config/migrations.jsonl` is tracked (`src/core/migrations.ts:161`, and the
   box `.gitignore` written by `writeBoxGitignore` ignores nothing under
   `_config/` except `connectors/*.secret.*` and `schedules/.state/`).
-- `.beebox/` is gitignored (`src/core/box/index.ts:255`), so
+- `.beebox/` is gitignored (`src/core/box/index.ts:255` (moved to `beebox/src/core/box/structure/core.ts`)), so
   `.beebox/converge-failure.json` survives the `revertToSnapshot` (`reset --hard`
   + `clean` without `-x`) as the plan assumes. Verified against
   `upgrade.ts:185-195`, whose comment states the `-x` reasoning explicitly.
@@ -52,9 +52,9 @@ against the repository and against what the cited documents say.
 - **`semver` is transitive only.** Redone: `grep '"semver"'` in
   `beebox/package.json` and the root `package.json` returns nothing;
   `pnpm-lock.yaml:8346` is `semver@7.8.1:` as cited. The claim holds.
-- **`git tag | wc -l` = 0** and `scripts/release.ts` never writes `version`.
+- **`git tag | wc -l` = 0** and `scripts/release.ts` (moved to `beebox/src/scripts/release.ts`) never writes `version`.
   Both confirmed.
-- **git-lfs prior art is aimed at the wrong mechanism.** `docs/assets.md:6-21`
+- **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
   says all twelve local boxes were converted to **git-annex** on 2026-07-31,
   "738 Git LFS files taken over", and `:193` says the shipped attributes file
   "carries no `filter=lfs` rules at all, so every box gets the same LFS-free
@@ -265,7 +265,7 @@ clean, as `revertUpgrade` does (`upgrade.ts:185-195`)"*, and the Ghost claim
 construction."*
 **Issue:** `bbx docs refresh` (step 4) writes to `_content/docs/generated/`
 (`src/core/docs-gen/shared.ts:14`, `DOCS_DIR = "_content/docs/generated"`),
-which the box `.gitignore` ignores (`src/core/box/index.ts:255-256`). The reset
+which the box `.gitignore` ignores (`src/core/box/index.ts:255-256` (moved to `beebox/src/core/box/structure/core.ts`)). The reset
 does not touch it, and `clean` without `-x` deliberately spares it
 (`upgrade.ts:189-194`). So after a step-5 typecheck failure the box is reverted
 in its *tracked* state but is left holding the new engine's generated agent
@@ -356,7 +356,7 @@ replaces the `file:` spec"*, and *"`bbx-setup` replaces the box's `beebox`
 dependency with the `link:` spec on its first run against such a box (the one
 deliberate rewrite of a user-owned file, committed as part of the converge)."*
 **Issue:** The box `.gitignore` written by `writeBoxGitignore`
-(`src/core/box/index.ts`) ignores `node_modules/` but **not** `pnpm-lock.yaml`.
+(`src/core/box/index.ts` (moved to `beebox/src/core/box/structure/core.ts`)) ignores `node_modules/` but **not** `pnpm-lock.yaml`.
 So the box's git history — the artifact the plan repeatedly calls "their data, a
 git repository only they own" — will carry an absolute path that exists only
 inside this image, in the lockfile and in `package.json`, in the converge
@@ -609,7 +609,7 @@ content left as pointers".
 pointers; `git lfs checkout` resolves them. The rollback text says so."* and the
 refusal text *"`git -C data/box reset --hard <snapshot> && git -C data/box lfs
 checkout`"*.
-**Issue:** `beebox/docs/assets.md:6-21` records that all twelve local boxes were
+**Issue:** `beebox/docs/media/assets.md:6-21` records that all twelve local boxes were
 migrated to **git-annex** on 2026-07-31 ("738 Git LFS files taken over"), and
 `:193` that the shipped attributes file "carries no `filter=lfs` rules at all,
 so every box gets the same LFS-free file." A box created by today's `bbx init`
@@ -663,7 +663,7 @@ resolve is not a citation.
   cache-gated on the engine version…"* — `:5-6` is the heading
   `## Why a deploy step at all`; the cache-gating sentence is `:7-9`. `:24-27`
   is correct for the dirty-skip.
-- *"`scripts/release.ts` builds the tarball (`:83`, `pnpm pack`)"* — `:83` is
+- *"`scripts/release.ts` (moved to `beebox/src/scripts/release.ts`) builds the tarball (`:83`, `pnpm pack`)"* — `:83` is
   `"pnpm",`; the `pack` arguments are `:84`. The substantive claim (never writes
   `version`) is correct.
 - *"`/usr/local/bin/codex` symlinked to the resolved
@@ -711,7 +711,7 @@ moved to `container/README.md` (doc-check clean)"*.
 **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
 the repository; a new top-level `container/` is not in that list and the plan
 does not say it will be added. `beebox/CLAUDE.md`'s Guides table row
-*"Docker install (local + VPS) | `docs/docker-install.md`"* points at the file
+*"Docker install (local + VPS) | `docs/install/docker.md`"* points at the file
 being moved out of the beebox docs tree. Also worth stating: moving the guide
 out of `beebox/docs/` removes it from the tree the docs browser and doc-check
 index, which is a deliberate trade (it becomes a project README) but is not
@@ -754,7 +754,7 @@ visible.
   and quoted text, including all four verbatim preference quotes
   (`upgrade.ts:8-9`, `migration-sweep.ts:16`, `installation-story.md:434`,
   `boxes-as-packages-v2.md:26`) and all six `entrypoint.sh` references.
-- **`.beebox/` is gitignored at `src/core/box/index.ts:255`** — exactly as
+- **`.beebox/` is gitignored at `src/core/box/index.ts:255` (moved to `beebox/src/core/box/structure/core.ts`)** — exactly as
   claimed, and the interaction the plan depends on (failure record survives
   `revertToSnapshot`) is sound: `upgrade.ts:189-194` documents that `clean`
   omits `-x` specifically to spare `.beebox` and `node_modules`.
@@ -777,7 +777,7 @@ visible.
   `package.json`; `pnpm-lock.yaml:8346` as cited. Writing a bespoke grammar
   module is justified.
 - **`package.json:3` is `0.1.0`, there are zero git tags, and
-  `scripts/release.ts` does not write `version`** — Track A's premise holds
+  `scripts/release.ts` (moved to `beebox/src/scripts/release.ts`) does not write `version`** — Track A's premise holds
   completely.
 - **`.dockerignore` exists at the monorepo root**, so the CI build context is
   not the whole worktree. I looked for this expecting a problem; there is none.

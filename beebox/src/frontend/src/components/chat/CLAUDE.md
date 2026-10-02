@@ -37,7 +37,7 @@ screen continues below the fold and the button lights up
    ordinary scrolling never looks like reflow. A send ease owns writes while
    active; reconciliation still measures geometry but cannot cancel it. The pure
    dispatcher is `decideReconcile` in `scroll-reconcile.ts`, unit-checked in
-   `test/frontend/chat-scroll-reconcile.doctest.md`.
+   `src/frontend/test/components/chat/chat-scroll/scroll-reconcile.chat-scroll-reconcile.doctest.md`.
 
 The live spacer uses `100cqh` inside the size-contained scroller. Do not mirror
 viewport height through React state: the delayed spacer update permits a
@@ -79,7 +79,7 @@ depends on:
 
 **After changing scroll code, run the scenario table at `/dev/chat-scroll`**
 (`window.__scrollHarness.runAll()` via `bin/browse eval` — every scenario must
-PASS) **and the browser procedure in `docs/chat-scroll-testing.md`**, and verify
+PASS) **and the browser procedure in `docs/chat/scroll.md`**, and verify
 on a real iOS device for keyboard/momentum/rubber-band, which headless Chromium
 can't emulate.
 
@@ -107,7 +107,7 @@ back to my message" bug, fixed 2026-07-29). The extra fetch bought nothing —
 `waitForTranscriptEntry` (`core/chat/session/transcript-sync.ts`) holds
 `result`/`done` until the turn is durable, so the in-flight read is already
 authoritative. Locked down in
-`test/frontend/chat-machine-finalize.doctest.md`.
+`src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.doctest.md`.
 
 **Invariant: don't render the streaming turn as a separate bubble/component and
 swap in the finalized one** — that remount is the "shudder" this design removed

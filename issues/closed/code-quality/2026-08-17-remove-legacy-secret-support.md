@@ -79,8 +79,8 @@ in normal operation.
   `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`/`SKE_GEMINI_API_KEY`,
   `GOOGLE_OAUTH_CLIENT_ID/SECRET`).
 - **Connector entries in the env allowlists** — the tooling profile in
-  `src/core/script-env-allowlist.ts` and the hub child allowlist in
-  `src/hub/child-env.ts` drop every connector-credential name/prefix. This
+  `src/core/script-env-allowlist.ts` (moved to `beebox/src/core/script-env/allowlist.ts`) and the hub child allowlist in
+  `src/hub/child-env.ts` (moved to `beebox/src/hub/supervisor/child-env.ts`) drop every connector-credential name/prefix. This
   also closes the documented scheduled-script residual (arbitrary `runs:`
   commands currently inherit transition-window connector env — recorded in
   the Track 1 commit and the implemented plan's rollout note).

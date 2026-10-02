@@ -128,7 +128,7 @@ boxholder's explicit request, and says so in the budget above.
   that wraps a list does contain its nested todos, and `walkChildren`
   (`:143-158`) would then merge their text. No doctest covers either nesting
   shape today.
-- **Ref parsing** — `src/shared/ref-path.ts:100` `parseRef` and `:176`
+- **Ref parsing** — `src/shared/ref-path.ts:100` (moved to `beebox/src/shared/ref-path/core.ts`) `parseRef` and `:176`
   `resolveRefPath`. **Reused** for item references; per `beebox/CLAUDE.md`, no
   other ref parsing is written. `src/core/body-refs.ts:110` `extractBodyLinks`
   scans whole-body Markdown source and cannot be aimed at one todo, so Track 2
@@ -150,7 +150,7 @@ boxholder's explicit request, and says so in the budget above.
   `FileTypeUI`). **Reused** as the card header. Track 1 moves the server half
   onto the schema.
 - **Two other partial summaries** — `foldFields`
-  (`src/core/search/extract.ts:219`) and `buildBrowseCard`
+  (`src/core/search/extract.ts:219` (moved to `beebox/src/core/search/extract/core.ts`)) and `buildBrowseCard`
   (`src/webapp/trpc/routers/status.ts:130`). **Left alone**; see NOT in scope.
 - **Consumers to port** — `todos.list` (`src/webapp/trpc/routers/todos.ts:35`,
   filters at `:69-76`, scope default at `:88-94`); `TodoViewCard.tsx`
@@ -208,7 +208,7 @@ interface CardSummaryParts<TAttrs> extends CardSummaryBase { detail?: string; at
   return type and carried on `CardSchema`. `SummaryAttrs<typeof XSchema>`
   extracts it. A list component declares `ListProps<SummaryAttrs<typeof
   ImageSchema>>` through a type-only import. This keeps the tie that
-  `FileLoader<ImageAttrs>` gives today (`src/schemas/image.tsx:152`): a
+  `FileLoader<ImageAttrs>` gives today (`src/schemas/image.tsx:152` (moved to `beebox/src/schemas/image/schema.tsx`)): a
   `summarize` that returns another shape is a compile error in the component.
 
 - `base` is the standard summary: `title` from the `title` field or the
@@ -227,7 +227,7 @@ interface CardSummaryParts<TAttrs> extends CardSummaryBase { detail?: string; at
   (`registerPathLoader`, `:53`) and resolves a card's summary from its schema.
   `summarize(input)` (`:101`) is schema-free today; it gains a `cardSchemas`
   argument. `files.summarize` has `boxRoot` and already builds a load context
-  before it reads a card (`src/webapp/trpc/routers/files.ts:47`), so box-local
+  before it reads a card (`src/webapp/trpc/routers/files.ts:47` (moved to `beebox/src/webapp/trpc/routers/files/router.ts`)), so box-local
   schemas are reachable there. `files.summarize` is the registry's only caller
   outside tests.
 - `memoLoader` and `imageLoader` become `summarize` on their schemas.
@@ -319,7 +319,7 @@ interface TodoItem {
   used, because it scans Markdown source, not a node range. Each href goes
   through `parseRef` and `resolveRefPath` with `kind: "card"`. `resolveRefPath` resolves a string
   and does not prove that the target exists or is a card
-  (`src/shared/ref-path.ts:176`), so `refs` are **box-relative paths**, files
+  (`src/shared/ref-path.ts:176` (moved to `beebox/src/shared/ref-path/core.ts`)), so `refs` are **box-relative paths**, files
   or directories, unchecked. External links and refs that escape the box are
   left out; link validation stays `bbx validate`'s job.
 - `plateState` leaves the item. `deriveTodo(item, plateCtx): DerivedTodo` adds
@@ -414,7 +414,7 @@ interface Row<Derived, Reduction> {
   and `derive`.
 
 - `runCollection(boxRoot, { def, query, deriveCtx })` in
-  `src/core/collection/run.ts` does the stages in order (a named-params object,
+  `src/core/collection/run.ts` (moved to `beebox/src/core/collection/run/core.ts`) does the stages in order (a named-params object,
   because the style rule caps positional parameters at two). Stage 1 reuses
   `listTodoCardPaths`, renamed `listScopedCardPaths` and moved to
   `src/core/collection/card-scope.ts` with its traversal guards, in Track 2.
@@ -473,7 +473,7 @@ interface Row<Derived, Reduction> {
 `reduction`; grouping names `place` and `plate`; the collection name `todos`.
 
 **First implementation chunk.** `types.ts`, `run.ts` without the reference
-scope, `src/core/todo/collection.ts`, and `test/core/collection-run.doctest.md`
+scope, `src/core/todo/collection.ts`, and `test/core/collection-run.doctest.md` (moved to `beebox/test/core/collection/run.doctest.md`)
 covering scope default, filter, both groupings, reductions that count hidden
 items, and the issues channel.
 
@@ -532,7 +532,7 @@ line read `runCollection`.
 
 `src/core/agent-guide/todos.ts` ("Querying", `:79`), the ambient-field text in
 `src/core/chat/session/prompts.ts:120`, the `todo-view` and `todo-review-job`
-schema instructions, `docs/cards-as-markdown.md:80-88`, and the two audits that
+schema instructions, `docs/cards/format.md:80-88`, and the two audits that
 name `bbx todos`. The guide gains three sentences: headings and nesting group
 todos, so write a todo under the heading it belongs to; a note after the
 closing tag travels with the todo; a link in a todo makes it appear on the
@@ -589,7 +589,7 @@ No critical gap: each row has planned handling and a test.
 | Box-wide extract with `includeReferring` is slow on a large box | planned (timing note in collection-run doctest on the fixture box) | same cost as today's unscoped `collectTodos`; no new handling | clear (slow, not wrong) |
 | A card fails to load inside the scope | existing (`todo-collect` doctest) | `issues` channel, shown in the list and the CLI | clear |
 | An old `todo-review-job` card lacks the new item fields | planned (schema doctest) | fields are optional | clear |
-| Agent runs `bbx todos` from habit | existing (`test/cli/todos.doctest.md`) | the verb still works, on the runner | clear |
+| Agent runs `bbx todos` from habit | existing (`test/cli/todos.doctest.md` (moved to `beebox/test/cli/commands/todos.doctest.md`)) | the verb still works, on the runner | clear |
 
 ## Agent-flow / user-flow edge cases
 
@@ -677,7 +677,7 @@ New agent-facing behaviour, so audits land run, in
   heading it sits under, and nesting).
 
 `summarize` is a schema-authoring concept; it goes in
-`docs/adding-schemas.md`, the box's own schema-authoring guide
+`docs/cards/schemas.md`, the box's own schema-authoring guide
 (`src/core/box/schemas-guide.ts` — the surface a box agent actually reads),
 and the schema-guide skill, with one audit:
 "How does a box-local card type control how it appears in lists?"
@@ -692,7 +692,7 @@ and the schema-guide skill, with one audit:
 - **Filesystem tier.** `runCollection` over a fixture box, in the existing
   style of `test/core/todo-collect.doctest.md`.
 - **Route and CLI tiers.** The moved `trpc` doctest and a rewritten
-  `test/cli/query.doctest.md`.
+  `test/cli/query.doctest.md` (moved to `beebox/test/cli/commands/query.doctest.md`).
 - **Frontend.** Tree building (sections, parents, the dated strip) lives in a
   logic module with a doctest, as `todo-view-card-logic.ts` does today. The
   component gets a browser check and one exhibit for the boxholder.
@@ -702,7 +702,7 @@ and the schema-guide skill, with one audit:
 
 1. **Track 1, chunk 1** — `summarize` on the schema, memo moved.
 2. Track 1 — image moved, `loader-registrations.ts` deleted, `detail` in
-   `FileEntry`, `summaryText`, public API and `docs/adding-schemas.md`.
+   `FileEntry`, `summaryText`, public API and `docs/cards/schemas.md`.
 3. **Track 2, chunk 1** — `extract.ts`: stack walk, nesting fix, `sectionPath`,
    `parent`.
 4. Track 2 — `annotation` and `refs`; derive split; `collectTodos` and

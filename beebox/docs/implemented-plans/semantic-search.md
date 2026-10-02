@@ -75,13 +75,13 @@ triggers the rebuild, vectors are computed by a service-pattern provider
   file `config/connectors/mistral.secret.json` (`{apiKey}`) first, env var
   `BBX_MISTRAL_API_KEY` fallback, `null` when neither. Copied for
   OpenAI. Note `THINKING_OPENAI_API_KEY`
-  (`src/core/transcription/index.ts:260`) is a different, env-only
+  (`src/core/transcription/index.ts:260` (moved to `beebox/src/core/transcription/dispatch/core.ts`)) is a different, env-only
   convention scoped to transcription/TTS; this plan deliberately does NOT
   fall back to it — a box that configured a key for voice notes must not
   silently start paying for embeddings (never-implicit-key).
 - **Service pattern** — `src/services/openai-audio.ts` is the closest
   analogue (OpenAI REST via `ky`, interface/real/fake in one file); copied
-  structurally. `src/services/index.ts` `Services` container gains an
+  structurally. `src/services/index.ts` (moved to `beebox/src/services/container.ts`) `Services` container gains an
   optional `embeddings` entry.
 - **Orama 3.1.18** (installed; `package.json` currently allows
   `^3.1.18` — this plan pins both `@orama/*` packages to the exact
@@ -95,7 +95,7 @@ triggers the rebuild, vectors are computed by a service-pattern provider
   (`dist/esm/index.d.ts:2`), which the embedding pass uses to fetch a
   just-inserted doc for vector re-insert.
 - **Backfill job creator** — `createContainsBackfillJob`
-  (`src/cli/commands/wakeup-steps.ts:375-402`) drains missing-`contains`
+  (`src/cli/commands/wakeup-steps.ts:375-402` (moved to `beebox/src/cli/commands/wakeup/steps.ts`)) drains missing-`contains`
   cards 25 at a time from wakeup. Reused *indirectly*: as agents backfill
   `contains`, the changed cards re-embed automatically at the next
   refresh. No embedding-specific job creator is built (see NOT in scope).
@@ -342,7 +342,7 @@ search module. Chunks are ordered under Implementation order.
   `EmbeddingsService` / `createOpenAIEmbeddingsService` /
   `createFakeEmbeddings`.
 - **First implementation chunk**: the service + key resolution +
-  `test/service-openai-embeddings.doctest.md` (fake determinism, call
+  `test/service-openai-embeddings.doctest.md` (moved to `beebox/test/services/openai-embeddings.doctest.md`) (fake determinism, call
   recording, chunking boundaries, response-shape validation). No open
   questions inside it.
 
@@ -474,7 +474,7 @@ agent guide plus an audit entry is a follow-up, not a gate.
 1. **Embeddings service + key resolution**:
    `src/services/openai-embeddings.ts`, `Services` container entry,
    `src/core/search/embeddings-key.ts`, and
-   `test/service-openai-embeddings.doctest.md`. Independent of everything
+   `test/service-openai-embeddings.doctest.md` (moved to `beebox/test/services/openai-embeddings.doctest.md`). Independent of everything
    else.
 2. **Schema v4**: `embedding: "vector[512]"` in `searchOramaSchema`,
    `SearchDoc.embedding?: number[]`, `embeddedHash` on

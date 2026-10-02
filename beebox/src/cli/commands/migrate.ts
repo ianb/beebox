@@ -13,14 +13,14 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runMigrationProcess } from "../../core/migration-process.js";
 import { Command, Option } from "commander";
-import { findBoxRoot, NotInBoxError, getBoxDir } from "../../lib/paths.js";
+import { findBoxRoot, NotInBoxError, getBoxDir } from "../../lib/paths/core.js";
 import {
   MIGRATIONS,
   MANIFEST_PATH,
   type Migration,
   type ManifestEntry,
 } from "../../core/migrations.js";
-import { installProcedures, installGuides } from "../../core/box/index.js";
+import { installProcedures, installGuides } from "../../core/box/structure/core.js";
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import {
@@ -31,7 +31,7 @@ import {
 } from "../../core/migration-run.js";
 import { migrationQuestions } from "../../core/migration-repair.js";
 import { sweepMigrations, type SweepResult, type SweptMigration } from "../../core/migration-sweep.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 
 const BEEBOX_ROOT = PACKAGE_ROOT;
 const BBX_BIN = path.join(BEEBOX_ROOT, "bin", "bbx");

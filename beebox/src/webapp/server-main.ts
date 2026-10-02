@@ -5,7 +5,7 @@
  *
  * Each `boxArg` is either a bare directory (slug defaults to its own
  * basename — the legacy behavior) or `<slug>=<dir>` to set the slug
- * explicitly. The dev router (`workstreams-app/src/router/router.ts`) always passes the explicit
+ * explicitly. The dev router (`workstreams-app/src/router/server/listener.ts`) always passes the explicit
  * form: a v2 box's content dir basename is always the literal string
  * "content", so the router resolves the meaningful slug itself (the box's
  * package root basename) before spawning this process — see Track G in
@@ -16,7 +16,7 @@
  * has no side effects — only running THIS file starts a server.
  */
 import path from "node:path";
-import { startServer, type BoxSpec } from "./server.js";
+import { startServer, type BoxSpec } from "./server/app.js";
 import { loadEnv, serverEnvSchema } from "../lib/env.js";
 import { boxSlug } from "../lib/box-slug.js";
 

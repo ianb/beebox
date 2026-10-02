@@ -18,7 +18,7 @@
  *   at whatever revision it was built from until someone copies a new one.
  *   `build.ts` bakes the revision and the build time in through esbuild
  *   `define`.
- * - **source** — `bin/scan-uploader` running `src/cli.ts` through tsx on a
+ * - **source** — `bin/scan-uploader` running `src/cli/main.ts` through tsx on a
  *   checkout. It *cannot* drift: every sweep runs current source, and `git pull`
  *   is the update. Reporting a build date here would be a lie (there is no
  *   build), so it reports the mode instead, which is the more useful fact.

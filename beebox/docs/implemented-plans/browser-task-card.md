@@ -114,7 +114,7 @@ Reuse:
 
 - Card schema factory and registry. `beebox/src/cards/schema.ts:349`
   *`export function cardSchema<`*; `instructions` at `:192`; `validate` hook at
-  `:200`. Registry category block `beebox/src/schemas/registry.ts:123`
+  `:200`. Registry category block `beebox/src/schemas/registry.ts:123` (moved to `beebox/src/schemas.ts`)
   *`// synced & captured`*.
 - Type-specific view registration. `beebox/src/frontend/src/file-type-registry.ts:125`
   *`export function registerFileType<T = unknown>(`*; precedent
@@ -129,7 +129,7 @@ Reuse:
   Precedent for a card writing into its attach scope:
   `beebox/src/webapp/trpc/routers/clerk.ts:190`
   *`const frozenRel = attachmentPath(opts.cardRel, "page.frozen");`*.
-- Multipart upload precedent. `beebox/src/webapp/routes/chat-uploads.ts:50`
+- Multipart upload precedent. `beebox/src/webapp/routes/chat-uploads.ts:50` (moved to `beebox/src/webapp/routes/chat/uploads.ts`)
   *`server.post("/api/chat/upload-file", async (request, reply) => {`*, which
   buffers the file (`:56` *`const buffer = await data.toBuffer();`*). The
   stream-to-disk-with-cap primitive is
@@ -151,9 +151,9 @@ Reuse:
   `inboundRefs`, `setTheme`, `trash`. This plan adds one locked helper for
   its own card and does not invent a general one.
 - Reads the view needs. `GET /api/files/*`
-  (`beebox/src/webapp/routes/api-files.ts:86`) serves any box file, so the
+  (`beebox/src/webapp/routes/api-files.ts:86` (moved to `beebox/src/webapp/routes/api/register/files.ts`)) serves any box file, so the
   view fetches `attach/schema.json` and a batch's `records.json` from there.
-  `GET /api/browse/*` (`beebox/src/webapp/routes/api-browse.ts:44`) is a
+  `GET /api/browse/*` (`beebox/src/webapp/routes/api-browse.ts:44` (moved to `beebox/src/webapp/routes/api/register/browse.ts`)) is a
   one-level directory listing, which gives `inbox/` and `processed/` counts.
   The card data hook (`file-view-data.ts:173`) provides frontmatter and body
   only; attachment data is the renderer's own fetch.
@@ -167,18 +167,18 @@ Reuse:
   *`status: z.enum(["pending", "running", "completed", "failed", "inconclusive"])`*.
   Stock definitions ship from `beebox/templates/procedures/`. Trigger:
   `bbx procedure run <name>` (`beebox/src/core/agent-guide/commands.ts:36`).
-- JSON Schema in zod. `beebox/src/core/agent/index.ts:12`
+- JSON Schema in zod. `beebox/src/core/agent/index.ts:12` (moved to `beebox/src/core/agent/invoke/core.ts`)
   *`import { toJSONSchema } from "zod";`* shows zod 4's JSON Schema surface
   is already in use server-side. `fromJSONSchema` is the inverse and is
   exported by the installed version.
 
 Not reused, with reason:
 
-- `PUT /api/files/*` (`beebox/src/webapp/routes/api-files-write.ts`). Text
+- `PUT /api/files/*` (`beebox/src/webapp/routes/api-files-write.ts` (moved to `beebox/src/webapp/routes/api/register/files-write.ts`)). Text
   bodies only (`:94` *`if (typeof body.content !== "string")`*), no
   validation hook, and it does not commit. Images need a binary path and
   the batch must be validated as a unit.
-- Bulk-upload sessions (`beebox/src/webapp/routes/bulk-upload.ts`). They
+- Bulk-upload sessions (`beebox/src/webapp/routes/bulk-upload.ts` (moved to `beebox/src/webapp/routes/bulk-upload/register.ts`)). They
   target a chat and produce an `upload-batch` card plus a chat message. The
   result here must land on the task card, not in a chat, so the drain
   procedure can find it without a chat session.
@@ -662,8 +662,8 @@ Both land RUN against the test box before the plan is called done.
 ## What will hold this after it ships
 
 - Doctests reach the validator (pure module) and the route (app boot, like
-  `beebox/test/webapp/login-redirect.doctest.md`). Schema `validate` follows
-  `beebox/test/schemas/schemas.doctest.md`.
+  `beebox/test/webapp/login-redirect.doctest.md` (moved to `beebox/test/webapp/base-prefix.login-redirect.doctest.md`)). Schema `validate` follows
+  `beebox/test/schemas/schemas.doctest.md` (moved to `beebox/test/schemas.doctest.md`).
 - The view has no automated tier beyond typecheck and lint. A `bin/browse`
   screenshot of the four states (open with inbox, open and stale, closed,
   bad schema) is the manual check, shown as one exhibit.

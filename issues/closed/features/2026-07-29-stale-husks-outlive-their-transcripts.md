@@ -73,10 +73,10 @@ A dead husk is not inert — it is actively misleading:
   creation — e.g. `"eh, delete this"`, `"Alright, so I'm going to be doing a
   longish review here of different chat"`. That is now the *entire* durable
   record of the conversation.
-- `loadAllSessions` (`beebox/src/webapp/trpc/routers/chat.ts`) silently
+- `loadAllSessions` (`beebox/src/webapp/trpc/routers/chat.ts` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`)) silently
   skips it, so it's invisible in the picker but present everywhere else — the
   worst of both.
-- [Chat review](../../../beebox/docs/chat-review.md) skips it too (correctly —
+- [Chat review](../../../beebox/docs/chat/review.md) skips it too (correctly —
   there is nothing to read), so it will never be titled or summarized. Its
   content is unrecoverable.
 - **Resuming it crashes the turn — it is not merely a dead link.** Confirmed
@@ -124,6 +124,6 @@ truncated-first-message title and no account.
 
 - [Renamed husks duplicate on backfill](../bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md)
   — the other husk-lifecycle gap found in the same pass.
-- `beebox/docs/chat-review.md` currently explains missing transcripts as
+- `beebox/docs/chat/review.md` currently explains missing transcripts as
   ordinary stale refs, which undersells this; it should name the retention window
   and the deadline it implies.

@@ -23,7 +23,7 @@ await box.write(
   "_bookkeeping/jobs/sweep.intake.job.card",
   createIntakeJobTemplate({
     created: "2026-07-01T00:00:00Z",
-    source: "gmail",
+    connector: "gmail",
     description: "Triage 3 inbox items",
     items: [],
   }),

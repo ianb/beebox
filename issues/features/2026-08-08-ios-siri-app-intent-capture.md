@@ -36,7 +36,7 @@ server endpoint**:
   App Group indirection). Budget is ~30s; a normal `URLSession` POST fits.
 - **Reuses the Share Extension's send path.** The Share Extension already calls
   `POST /api/chat/send` in **exact-session mode** as isolated native code (not the
-  webview) — `ShareExtensionAPI.send`, `src/webapp/routes/chat-send-target.ts`
+  webview) — `ShareExtensionAPI.send`, `src/webapp/routes/chat-send-target.ts` (moved to `beebox/src/webapp/routes/chat/send-target.ts`)
   `assertExactSessionTarget`, mobile-contract §5.8. An App Intent reuses the same
   pattern (same "isolated native caller, not the visible webview session" framing
   that keeps it compliant with the ios-app rule against the main app calling

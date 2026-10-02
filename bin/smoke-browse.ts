@@ -1,6 +1,6 @@
 /** Smoke adapters for Browse's canonical card and content-excluded controls. */
 import { isRecord } from "../beebox/src/shared/is-record.js";
-import { parseRef } from "../beebox/src/shared/ref-path.js";
+import { parseRef } from "../beebox/src/shared/ref-path/core.js";
 import { SYSTEM_CARD_PATHS } from "../beebox/src/shared/system-card-paths.js";
 import { refFor } from "./smoke-snapshot.js";
 

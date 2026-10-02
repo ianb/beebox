@@ -10,18 +10,18 @@
 
 import * as path from "node:path";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import {
   loadTelegramConfig,
   processWebhookUpdate,
   extractMessage,
   type TelegramUpdate,
-} from "../../connectors/telegram.js";
+} from "../../connectors/telegram/connector.js";
 import { telegramUpdateSchema } from "../../services/telegram-schemas.js";
 import { ChatSessionPool } from "../../core/chat/session/pool.js";
 import { sendTelegramMessage, startTypingIndicator } from "../../core/telegram-send.js";
-import { appendMessageToThread } from "../../connectors/chat-utils.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { appendMessageToThread } from "../../job-cards/chat-utils.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { acquireBoxWork } from "../../lib/box-maintenance.js";
 
 interface RegisterTelegramRoutesOptions {

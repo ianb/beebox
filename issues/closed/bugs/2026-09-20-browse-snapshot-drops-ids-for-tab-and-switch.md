@@ -39,7 +39,7 @@ to act by `bbx-` id — and for these controls there was no id to act by.
 
 ## Fix
 
-`beebox/src/shared/control-address.ts` now owns the grammar, its length cap, and
+`beebox/src/shared/control-address.ts` (moved to `beebox/src/shared/ui-scan/control-address.ts`) now owns the grammar, its length cap, and
 `controlAddress(prefix, value)`, which base32-encodes a value into it. The
 three components mint through it; `DriveMountRow`'s hand-rolled hex encoder,
 which solved the same problem for case-sensitive Drive ids, was folded into it.

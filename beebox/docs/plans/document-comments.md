@@ -112,18 +112,18 @@ viewer route the app was already missing.
 | Thing | Where | Reuse or rebuild |
 |---|---|---|
 | Markdown rendering to React | `workstreams-app/src/frontend/components/Markdown.tsx:28` — Markdoc `parse`/`transform`/`renderers`, with a link-safety wrapper | **Reuse as-is.** The viewer renders through it, so a comment anchors against the same output an issue body already produces. |
-| An in-app document reading surface | `workstreams-app/src/frontend/components/IssuesPane.tsx:97` — issue bodies render in-app today | **Reuse the pattern.** The document viewer is the same shape at a different route. |
+| An in-app document reading surface | `workstreams-app/src/frontend/components/IssuesPane.tsx:97` (moved to `workstreams-app/src/frontend/components/IssuesPane/panel.tsx`) — issue bodies render in-app today | **Reuse the pattern.** The document viewer is the same shape at a different route. |
 | The gap this fills | `workstreams-app/src/frontend/pages/PlansPage.tsx:9` — links to `/main/dev/docs/…` to read a plan, with the worktree hardcoded to `main` | **Replace that link** with the in-app viewer. |
-| Frontend routing | `workstreams-app/src/frontend/router.tsx` — TanStack Router, `basepath: "/workstreams"`, Zod-validated search params | **Reuse.** One new route. |
+| Frontend routing | `workstreams-app/src/frontend/router.tsx` (moved to `workstreams-app/src/frontend/main/router.tsx`) — TanStack Router, `basepath: "/workstreams"`, Zod-validated search params | **Reuse.** One new route. |
 | tRPC mutation transport, already CSRF-classified | `bin/router-auth.ts:228-239` — POST is `control` for `/workstreams/api/trpc[/*]`; everything else returns `{kind: "unknown"}` and is denied | **Reuse.** See the constraint note in Track 2. |
-| Path containment against traversal and symlink escape | `workstreams-app/src/server/issue-path.ts:13-39` — `assertContained` plus a post-`realpath` re-check | **Reuse the pattern**, not the source. `workstreams-app/src/server/exhibits/store.ts:9-12` states the house rule: *"This deliberately reimplements the shape of src/server/issue-path.ts rather than importing it… the resident-app precedent is to share patterns, not source."* |
-| Worktree root resolution | `workstreams-app/src/server/issues-mutation-service.ts:81` — `options.overlay.worktreeRoots.get(worktree)` | **Reuse.** The viewer resolves a document inside a named worktree the same way. |
+| Path containment against traversal and symlink escape | `workstreams-app/src/server/issue-path.ts:13-39` (moved to `workstreams-app/src/server/main/issue-path.ts`) — `assertContained` plus a post-`realpath` re-check | **Reuse the pattern**, not the source. `workstreams-app/src/server/exhibits/store.ts:9-12` states the house rule: *"This deliberately reimplements the shape of src/server/issue-path.ts rather than importing it… the resident-app precedent is to share patterns, not source."* |
+| Worktree root resolution | `workstreams-app/src/server/issues-mutation-service.ts:81` (moved to `workstreams-app/src/server/main/issues-mutation-service.ts`) — `options.overlay.worktreeRoots.get(worktree)` | **Reuse.** The viewer resolves a document inside a named worktree the same way. |
 | A store beside the main checkout, with a marker file | `workstreams-app/src/server/exhibits/store.ts:26,46-53` — `STORE_MARKER`, `defaultStoreRoot` derives from the main checkout's parent | **Reuse the shape** with a different root and marker. |
-| Atomic file replacement | `workstreams-app/src/server/issues-mutation-service.ts:206` — write to a temporary, then rename | **Reuse the pattern.** |
+| Atomic file replacement | `workstreams-app/src/server/issues-mutation-service.ts:206` (moved to `workstreams-app/src/server/main/issues-mutation-service.ts`) — write to a temporary, then rename | **Reuse the pattern.** |
 | Worktree symlink mount, self-healing on resume | `bin/lib/worktree-create.sh:135-140,149-151`; root derivation at `bin/lib/worktree-paths.sh:76` | **Reuse.** One more best-effort mount call beside the exhibits one. |
 | Text-fragment resolution and non-destructive highlighting | `beebox/src/frontend/src/lib/selection/quote-anchor.ts:19-33` — `findQuoteRange` via `processTextFragmentDirective`, `highlightRange` via the CSS Custom Highlight API | **Reuse the technique, not the module.** It lives in the box frontend's Vite graph; the app has its own. The technique matters: it mutates no DOM, so it cannot fight React's ownership of the rendered document. |
 | Text-fragment **generation** | `node_modules/text-fragments-polyfill/dist/fragment-generation-utils.js`, version 6.7.0 — `generateFragment(selection)` returns `{status, fragment}` with status `SUCCESS \| INVALID_SELECTION \| AMBIGUOUS \| TIMEOUT` (`src/fragment-generation-utils.js:43-68`) | **Reuse.** Already installed; we currently use only the resolving half. |
-| HQ transcription | `beebox/src/core/transcription/index.ts:253` — `transcribeAudioHq`; `TranscribeAudioParams.boxRoot` is optional (`:121-127`) | **Reuse the dispatcher, extend the params.** It runs box-less, but the Whisper path resolves its own key (`index.ts:298` → `openai-thinking-key.ts:45`) and there is no HQ `fake`, so Track 4 adds an optional `apiKey` and an injectable service seam. |
+| HQ transcription | `beebox/src/core/transcription/index.ts:253` (moved to `beebox/src/core/transcription/dispatch/core.ts`) — `transcribeAudioHq`; `TranscribeAudioParams.boxRoot` is optional (`:121-127`) | **Reuse the dispatcher, extend the params.** It runs box-less, but the Whisper path resolves its own key (`index.ts:298` → `openai-thinking-key.ts:45`) and there is no HQ `fake`, so Track 4 adds an optional `apiKey` and an injectable service seam. |
 | An OpenAI key readable without a box | `beebox/src/core/search/embeddings-key.ts:84` — `process.env["BBX_OPENAI_API_KEY"]` | **Reuse the name, by boxholder decision.** Nothing reads it for transcription today — Track 4 wires it. |
 | Services object with real and fake implementations | `workstreams-app/src/server/services.ts` | **Reuse.** Where the transcription seam lands. |
 | A read-back CLI whose output a later session consults | `bin/exhibits list`, contract in `workstreams-app/docs/exhibits.md` | **Reuse the shape** for `bin/comments`. |
@@ -310,7 +310,7 @@ into the doomed tree."*
 containment, the two namespaces, YAML read/write behind a Zod schema, in-process
 per-file locking, atomic replace) and `bin/comments` (`show` / `list` /
 `list --workstream` / `clear`), covered by
-`beebox/test/dev/comments-store.doctest.md`. No UI, no HTTP.
+`beebox/test/dev/comments-store.doctest.md` (moved to `bin/test/lib/comments-store.doctest.md`). No UI, no HTTP.
 
 ### Track 2 — The document viewer
 
@@ -423,7 +423,7 @@ separate design problems in the earlier draft.
 highlighting via the CSS Custom Highlight API so nothing fights React's
 ownership of the rendered markdown. Comments whose fragment does not resolve are
 listed with their quoted text and counted as "not anchored to a span" — never
-dropped. Covered by `workstreams-app/test/selection-anchor.doctest.md`.
+dropped. Covered by `workstreams-app/test/selection-anchor.doctest.md` (moved to `workstreams-app/test/frontend/lib/selection-anchor.doctest.md`).
 
 ### Track 4 — Spoken comments
 
@@ -455,7 +455,7 @@ text. That might result in better UI."* It is better on three counts:
   is text in a composer, in exactly the state a typed comment is in, with nothing
   left to lose.
 - **It matches existing precedent.** `POST /api/chat/transcribe-audio`
-  (`beebox/src/webapp/routes/chat-audio-routes.ts`) is already a stateless
+  (`beebox/src/webapp/routes/chat-audio-routes.ts` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`)) is already a stateless
   "upload audio, get text back" endpoint. This is the same shape, so it is not a
   new pattern to maintain.
 
@@ -520,7 +520,7 @@ store write, which the split makes unnecessary. See the gap note below.
 (input schema, byte cap, three failure classes), `transcribe-openai.ts` (the
 call and its fake), the `comments.transcribe` mutation, and `lib/recorder.ts`
 with the mic control that states its own availability. Covered by
-`workstreams-app/test/transcribe.doctest.md`.
+`workstreams-app/test/transcribe.doctest.md` (moved to `workstreams-app/test/server/main/transcribe-openai.doctest.md`).
 
 **One deviation from the plan, deliberate.** This does NOT call
 `transcribeAudioHq`, and so does not need the `apiKey` field the plan specified.
@@ -648,7 +648,7 @@ an open question because it adds a hook the boxholder may not want.
 `bin/lib/worktree-create.sh` (best-effort, so a failed mount never blocks a
 session), and the `.gitignore` entry `/comments` — no trailing slash, the
 symlink lesson recorded at `workstream-exhibits.md:250`. Covered by
-`beebox/test/dev/comments-mount.doctest.md`. The `CLAUDE.md` sentence and
+`beebox/test/dev/comments-mount.doctest.md` (moved to `bin/test/comments-mount.doctest.md`). The `CLAUDE.md` sentence and
 the reference doc are still Track 5 layer 3.
 
 ## Could this be simpler?
@@ -898,7 +898,7 @@ surfaces go in `workstreams-app/test/` beside the existing suites
 infrastructure use the repository's primary doctest format… Existing
 `bin/*.test.ts` files predate this rule and are not precedent."*
 
-- `beebox/test/dev/comments-store.doctest.md` — **written; 12 examples
+- `beebox/test/dev/comments-store.doctest.md` (moved to `bin/test/lib/comments-store.doctest.md`) — **written; 12 examples
   passing.** Root derivation and override, marker refusal, both namespaces,
   every path-escape shape, concurrent appends, malformed-file reporting, refusal
   to append over an unreadable file, listing, and clearing.

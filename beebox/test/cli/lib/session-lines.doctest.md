@@ -12,7 +12,7 @@ caller cannot forget it: it is handed a line already measured against the bound.
 import { readTranscriptLines } from "../../../src/cli/lib/session-lines.js";
 import { MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/session-oversize.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { errnoCode } from "../../../src/lib/error-guards.js";
+import { errnoCode } from "../../../src/shared/error-guards.js";
 
 function turn({ uuid, text, imageData }) {
   return JSON.stringify({
@@ -151,6 +151,28 @@ choice away from all three:
 ```ts continue
 await readErrno(box.path("never-written.jsonl"))
 => ENOENT
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A line separator inside a message does not split the turn
+
+JSON allows U+2028 and U+2029 raw inside a string, and pasted text can carry
+them. A reader that treated them as line breaks split such a turn into
+fragments that failed to parse, and the message disappeared from the chat's
+history (a production box, 2026-10-01). The turn reads as one line:
+
+```ts
+const box = await makeTmpBox();
+await box.write("separators.jsonl", [
+  turn({ uuid: "u-1", text: "8:00 arrival\u2028Load the kiln by 11:00\u2029Unload" }),
+  turn({ uuid: "u-2", text: "next" }),
+].join("\n"));
+
+await kinds(box.path("separators.jsonl"))
+=> 1:parseable 2:parseable
 ```
 
 ```ts cleanup

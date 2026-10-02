@@ -1,23 +1,23 @@
 /**
  * Dismiss command - Dismiss a pending question.
  *
- * Flips a pending question to `dismissed` (the boxholder declined to answer it)
+ * Sets `dismissed-at` on a pending question (the boxholder declined to answer it)
  * under the same guarded, atomic transition as `answer` — but with NO follow-up
  * job. Dismissed questions stay answerable later (an un-dismissal is the
- * boxholder's prerogative; see the answer command's allowed statuses).
+ * boxholder's prerogative; see the answer command's allowed states).
  */
 
 import * as path from "node:path";
-import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
+import { withQuestionTransition, resolveContainedQuestionPath } from "../question-transition.js";
 
 const DismissArgsSchema = z.object({
   question: z.string().optional(),
@@ -45,11 +45,10 @@ async function executeDismiss(
     ctx,
     fullPath,
     questionRef: question,
-    allowedStatuses: ["pending"],
-    disallowedMessage: (status) =>
-      `Question is not pending (status: ${status}); only a pending question can be dismissed`,
+    allowedStates: ["pending"],
+    disallowedMessage: (state) =>
+      `Question is ${state}, not pending; only a pending question can be dismissed`,
     plan: async ({ fields, content }) => {
-      fields.status = "dismissed";
       fields["dismissed-at"] = getBoxTimeISO(ctx.boxRoot);
 
       const split = splitCardContent(content);
@@ -73,7 +72,7 @@ async function executeDismiss(
   return { success: true, data: { path: relativePath } };
 }
 
-registerCommand({
+export const dismissCommand: CommandDefinition = {
   name: "dismiss",
   description: "Dismiss a pending question",
   args: [
@@ -85,6 +84,6 @@ registerCommand({
     },
   ],
   execute: executeDismiss,
-});
+};
 
 export { executeDismiss };

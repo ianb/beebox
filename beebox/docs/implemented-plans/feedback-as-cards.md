@@ -26,7 +26,7 @@ The boxholder chose doc cards and written context over automatic transcript capt
 - `src/schemas/feedback.tsx:39`: `cardSchema("feedback", …)` requires `target`, `source`, and `timestamp`. Keep its boxholder-response meaning.
 - `src/core/agent-guide/commands.ts:20`: the guide now directs agents to `_config/feedback/` doc cards; it previously named the command.
 - `feedback-review/collect.ts:32`: `isFeedbackFilename` recognizes doc cards and legacy timestamped Markdown.
-- `src/cli/commands/session.ts:145`: `bbx session` remains available for an agent to look up context when useful.
+- `src/cli/commands/session.ts:145` (moved to `beebox/src/cli/commands/session/command.ts`): `bbx session` remains available for an agent to look up context when useful.
 
 ## Prior art (external)
 
@@ -37,7 +37,7 @@ No external premise governs this change. The repository's existing card and migr
 - **Bee Box system observation:** prose by a box agent about friction in Bee Box software or agent guidance, including behavior encountered while handling a card. Observations about a card's contents or the boxholder's work stay in that work. Identity is its card path under `_config/feedback/`; the directory is its queue, and its Markdown body can link earlier cards. New storage is `.doc.card` (`src/schemas/doc.tsx:15`).
 - **Name boundary:** `_config/feedback/` keeps the previously approved on-disk location, despite its generic basename. The managed `beebox-system-feedback` skill and the directory guide name the system-specific meaning; `.feedback.card` continues to mean a boxholder response.
 - **Boxholder feedback:** a response to a surfaced question or card fragment. Identity is its `.feedback.card` path and `target.ref`; it remains a different noun (`src/schemas/feedback.tsx:39-47`).
-- **Session context:** selected evidence in an observation's body, authored by the agent. A session ID may point to a native transcript (`src/cli/commands/session.ts:145`). It is not an automatically selected transcript dump.
+- **Session context:** selected evidence in an observation's body, authored by the agent. A session ID may point to a native transcript (`src/cli/commands/session.ts:145` (moved to `beebox/src/cli/commands/session/command.ts`)). It is not an automatically selected transcript dump.
 - **Resolved observation:** the same file moved under `_config/feedback/resolved/`; the move and Git commit are the review action (`feedback-review/collect.ts:171-190`).
 - **Legacy observation:** timestamped `.md` produced by the old command. Migration converts both unresolved and resolved files; the reader accepts it during rollout.
 

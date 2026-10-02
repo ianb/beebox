@@ -1,0 +1,6 @@
+{
+  "variant": "error",
+  "status": 400,
+  "input": { "token": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "environment": "development" },
+  "expected": null
+}

@@ -50,7 +50,7 @@ backups, and archived boxes (`/home/beebox/archived-boxes/`,
 `~/src/boxes/backups/`). The activation date stands as a floor; before
 clearing, decide whether those out-of-fleet populations still deserve a
 conversion path or an explicit "restore the migrator from git history"
-pointer in `docs/migrations.md`.
+pointer in `docs/cards/migrations.md`.
 
 **Additional Track E hardening modules that go with the same cleanup**
 (added after this issue was filed, during the review waves):
@@ -70,7 +70,7 @@ and the trash/landmark/HTTP namespace fences.
 **What makes it safe to remove:** every box that matters records `one-root`
 in `_config/migrations.jsonl` — check the fleet (server boxes + any
 developer's local `~/src/boxes/*`/`~/src/box-worktrees/*/*` still in active
-use), not just a green local sweep; per `docs/migrations.md`, a box that was
+use), not just a green local sweep; per `docs/cards/migrations.md`, a box that was
 dirty at deploy time is skipped and retried, so `grep` for boxes still
 missing the entry before assuming the fleet converged. The fleet-rollout
 runbook this plan calls for (merge to main, then immediately run the fleet

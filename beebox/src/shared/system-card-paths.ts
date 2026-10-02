@@ -1,5 +1,5 @@
 /** Canonical interface instruments. These paths are identity, not authorization. */
-import { resolveRefPath } from "./ref-path.js";
+import { resolveRefPath } from "./ref-path/core.js";
 
 export const SYSTEM_CARD_PATHS = {
   dashboard: "_config/interface/dashboard.card",

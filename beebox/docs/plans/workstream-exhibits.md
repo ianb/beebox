@@ -59,7 +59,7 @@ satellite-storage patterns the repo already shipped.
 
 - **Exhibit** — one presented item: a directory in the store holding a
   manifest, content files, and captured interactions. Chosen over "asset"
-  (collides with box media assets, `docs/assets.md`) and "artifact" (collides
+  (collides with box media assets, `docs/media/assets.md`) and "artifact" (collides
   with Claude Artifacts). Rendered items carry short **labels** (`A1`, `B3`)
   for figures so feedback can address them.
 - **Ask** — the manifest field stating what the developer should do:
@@ -144,12 +144,12 @@ satellite-storage patterns the repo already shipped.
   changes, buildless fallback. The one addition: a second listener the
   router does **not** proxy (see Track B — second origin).
 - **Reading arbitrary checkouts from disk without waking them** —
-  `workstreams-app/src/server/issue-overlay.ts:143-168` enumerates worktrees
+  `workstreams-app/src/server/issue-overlay.ts:143-168` (moved to `workstreams-app/src/server/main/issue-overlay.ts`) enumerates worktrees
   and reads their files; `bin/router-docs.ts` serves `dev/` from disk. The
   exhibits app reads only the store, which is not inside any checkout, so the
   never-cold-starts-a-worktree invariant holds trivially.
 - **Path containment precedents** —
-  `workstreams-app/src/server/issue-path.ts:13-40` (schema-validate, lexical
+  `workstreams-app/src/server/issue-path.ts:13-40` (moved to `workstreams-app/src/server/main/issue-path.ts`) (schema-validate, lexical
   containment, realpath re-check, extension pin) and `bin/router-docs.ts`
   `serveDevArtifact` (`:765-798`). The store backend reimplements this shape
   inside `exhibits-app` (the no-shared-source rule below); it does not import
@@ -173,8 +173,8 @@ satellite-storage patterns the repo already shipped.
   watches out-of-repo files correctly is a spike acceptance criterion, and a
   v4 migration is NOT part of this plan.
 - **The existing app runtime shape** — one Fastify backend on loopback
-  (`workstreams-app/src/server/main.ts:50`) with router-capability header
-  auth (`workstreams-app/src/server/app.ts:41-47`), plus one Vite dev server
+  (`workstreams-app/src/server/main.ts:50` (moved to `workstreams-app/src/server/main/backend.ts`)) with router-capability header
+  auth (`workstreams-app/src/server/app.ts:41-47` (moved to `workstreams-app/src/server/main/app.ts`)), plus one Vite dev server
   rooted at `src/frontend` with base `/workstreams/`, HMR proxied through the
   router. The exhibits listener is a second, separate surface in the same
   process group; it reuses none of the `/workstreams/` Vite instance (see

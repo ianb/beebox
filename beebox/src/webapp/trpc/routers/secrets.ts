@@ -42,7 +42,7 @@ import { builtinSecretUses } from "../../../core/secrets/uses.js";
 import { describeSecretProbe, probeSecret, type SecretVerified } from "../../../core/secrets/probe-registry.js";
 import { loadSecretStore, secretAccessLevelSchema } from "../../../core/secrets/store.js";
 import { boxSlug } from "../../../lib/box-slug.js";
-import { authenticatedOwnerProcedure, router } from "../trpc.js";
+import { authenticatedOwnerProcedure, router } from "../procedures.js";
 
 /**
  * Store names are flat identifiers; `name/<box>` is the per-box form. Trimmed

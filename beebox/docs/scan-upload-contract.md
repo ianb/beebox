@@ -9,7 +9,7 @@ site that encodes part of this contract carries the breadcrumb comment:
 // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
 ```
 
-Breadcrumbed sites: the server routes (`src/webapp/routes/scan-upload*.ts`),
+Breadcrumbed sites: the server routes (`src/webapp/routes/scan-upload/*.ts`),
 the client's HTTP layer (`scan-uploader/src/`), and the server route doctests
 (`test/webapp/routes/scan-upload.doctest.md`) — the doctests exercise this
 contract exactly as the client sends it and are its executable form. Design
@@ -93,7 +93,11 @@ Headers:
 
 Server behavior: streams to quarantine while metering bytes (over-limit →
 `413`, partial file deleted), re-hashes, then validates (magic-byte sniff vs
-extension allowlist; `qpdf --check` for PDFs, image decode for images).
+extension allowlist; `qpdf --check` for PDFs, image decode for images). Image
+uploads may be JPEG, PNG, TIFF, WebP, or AVIF. For `.avif`, the sniffer may
+identify the generic HEIF container (`image/heif`); both recognized AVIF/HEIF
+container labels still require a complete image decode. Other MIME/extension
+mismatches are rejected.
 
 Responses (JSON, `status` field is the vocabulary):
 
@@ -114,7 +118,7 @@ idempotent throughout — retrying any response is safe.
 ## Server-side lifecycle (why `check` answers change on their own)
 
 Accepted files sit in the box's scan quarantine until the **promote worker**
-(`src/core/scan/promote.ts`) runs — debounced two minutes after the last PUT
+(`src/core/scan/promote/core.ts`) runs — debounced two minutes after the last PUT
 (accepted or rejected), once at box-serve startup, and on a slow GC sweep for
 boxes that stop scanning — under a per-box cross-process lock. A pass
 imports pending files through `bbx upload --as scan` (materialized under their
@@ -155,7 +159,7 @@ reports an uploader that has fallen behind.
 
 **`SCAN_CONTRACT_VERSION`** is one monotonic integer, spelled once on each side
 (`beebox/src/core/scan/contract-version.ts`,
-`scan-uploader/src/contract-version.ts`). The client sends it as
+`scan-uploader/src/cli/contract-version.ts`). The client sends it as
 `X-Scan-Contract`; the box returns its own as `contractVersion` on the check
 response; the client compares them every sweep and reports which side is
 behind.
@@ -187,7 +191,7 @@ Do **not** bump for:
 | Error-message or `reason` text | The client reports `reason` verbatim and never branches on it. |
 | Box-side surfaces — health checks, tRPC procedures, UI | Not on this wire. |
 | A fix that makes the server match what this document already said | The contract did not change; the implementation caught up. |
-| Relaxing a requirement, or dropping a response detail the client already copes with — making `X-Upload-Filename` optional, or omitting `Retry-After` on a `429` | The old client's behaviour is already correct. Check the client before deciding: `parseRetryAfter` (`scan-uploader/src/wire-client.ts`) already defaults when the header is absent, so that one is a non-event. |
+| Relaxing a requirement, or dropping a response detail the client already copes with — making `X-Upload-Filename` optional, or omitting `Retry-After` on a `429` | The old client's behaviour is already correct. Check the client before deciding: `parseRetryAfter` (`scan-uploader/src/cli/wire-client.ts`) already defaults when the header is absent, so that one is a non-event. |
 
 The row above is the one to read carefully, because it is where a plausible
 reading goes wrong: the question is never "does this touch a limit or a header

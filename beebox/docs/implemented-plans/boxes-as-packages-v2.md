@@ -60,20 +60,20 @@ existing pieces, and whether each is reused or replaced:
 | `PACKAGE_ROOT` walk-up ("find package.json named beebox") | `src/lib/package-root.ts:24-42` | **Reuse unchanged** — already resolves correctly when installed under `node_modules/beebox` |
 | Agent `cwd = boxRoot` (`cwd: options.cwd ?? options.boxRoot`) | `src/core/agent-run.ts:61` | **Reuse** — the operational root stays the agent's whole world |
 | `.bbx-box` marker + `findBoxRoot` upward search | `src/cli/lib/paths.ts:83-103` | **Reuse**, marker gains `shapeVersion` |
-| Schema resolve-hook: *"Virtual parent URL at beebox's package root (NOT inside node_modules). Rewriting a box schema's parentURL to this makes Node resolve bare deps (`zod`, `yaml`) from beebox's node_modules AND self-references (`beebox/cards`) via beebox's own `exports` map."* | `src/schemas/registry.ts:129-139` | **Replace** with native resolution (box has real `node_modules`); keep during the transition window, delete in the final chunk |
-| Keep-last-good schema loading (per-file failure falls back) | `src/schemas/registry.ts:347-353` | **Reuse** — survives the move to `src/schemas/` |
-| View compiler: esbuild + browser shims (`window.__cbReact`, `__cbViewWidgets`) | `src/webapp/views/compiler.ts:44-108` | **Reuse the browser shims** (runtime React sharing is not a monorepo hack); **replace** the node-target resolution with native imports |
-| View metadata: *"Extract metadata from view source via regex on export const declarations."* | `src/webapp/views/compiler.ts:115` | **Replace** — import the compiled module (node target) and read real exports |
-| `bbx migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/migrations.md` | **Reuse** — becomes one stage of `bbx upgrade`; the fleet conversion itself ships as a migration |
+| Schema resolve-hook: *"Virtual parent URL at beebox's package root (NOT inside node_modules). Rewriting a box schema's parentURL to this makes Node resolve bare deps (`zod`, `yaml`) from beebox's node_modules AND self-references (`beebox/cards`) via beebox's own `exports` map."* | `src/schemas/registry.ts:129-139` (moved to `beebox/src/schemas.ts`) | **Replace** with native resolution (box has real `node_modules`); keep during the transition window, delete in the final chunk |
+| Keep-last-good schema loading (per-file failure falls back) | `src/schemas/registry.ts:347-353` (moved to `beebox/src/schemas.ts`) | **Reuse** — survives the move to `src/schemas/` |
+| View compiler: esbuild + browser shims (`window.__cbReact`, `__cbViewWidgets`) | `src/webapp/views/compiler.ts:44-108` (moved to `beebox/src/webapp/views/compiler/compile.ts`) | **Reuse the browser shims** (runtime React sharing is not a monorepo hack); **replace** the node-target resolution with native imports |
+| View metadata: *"Extract metadata from view source via regex on export const declarations."* | `src/webapp/views/compiler.ts:115` (moved to `beebox/src/webapp/views/compiler/compile.ts`) | **Replace** — import the compiled module (node target) and read real exports |
+| `bbx migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/cards/migrations.md` | **Reuse** — becomes one stage of `bbx upgrade`; the fleet conversion itself ships as a migration |
 | Template sync: *"When a template changes upstream, we want to push the new version into boxes — but only if the local copy hasn't been customised."* park-on-divergence + `boxOwnedFields` | `src/core/install-template-file.ts:1-30` | **Reuse** — the second stage of `bbx upgrade` |
 | `bbx serve` box resolution: args → manifest (`~/.config/beebox/boxes.json`) → cwd | `src/cli/commands/serve.ts:60-75` | **Replace** — standalone `bbx serve` serves the current box; the manifest is retired in favor of hub config |
-| Multi-box Fastify (per-box scope, per-box EventBus, webhooks outside auth) | `src/webapp/server.ts:126-133`, `src/webapp/server-box-scope.ts:200-213` | **Reuse internals**; the multi-box loop survives only behind the legacy escape hatch during transition |
+| Multi-box Fastify (per-box scope, per-box EventBus, webhooks outside auth) | `src/webapp/server.ts:126-133` (moved to `beebox/src/webapp/server/app.ts`), `src/webapp/server-box-scope.ts:200-213` | **Reuse internals**; the multi-box loop survives only behind the legacy escape hatch during transition |
 | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80` (missing/empty `allowedEmails` = owner-only, fail-closed — note `deploy/README.md:171` stales this as "open to any authenticated user"; fix the README) | **Split**: login moves to the hub; the per-box ACL check stays in the box process. Identity is *also* recomputed in tRPC context creation (`server-box-scope.ts:149`) — header identity must thread through both paths, not just the preHandler |
 | Dev router: lazy spawn, prefix routing, idle shutdown, WebSocket passthrough | `bin/router.ts:384-596` | **Reuse the shape** — the hub is its productization; the dev router itself stays monorepo-only |
 | `bbx init` (idempotent scaffold: dirs, templates, rules, skills, hooks, docs, search index) | `src/cli/commands/init.ts:26-160` | **Reuse** — remains the idempotent step after package scaffolding |
-| Session/env plumbing: `buildScriptEnv` (`BBX_BOX_ROOT`, `PATH` prepend) | `src/core/script-env.ts` | **Reuse**, paths updated for the new layout |
+| Session/env plumbing: `buildScriptEnv` (`BBX_BOX_ROOT`, `PATH` prepend) | `src/core/script-env.ts` (moved to `beebox/src/core/script-env/core.ts`) | **Reuse**, paths updated for the new layout |
 | `resolveClaudeCodeBinary()` (resolves SDK binary via `require.resolve`, not `$PATH`) | `src/core/sdk-binary-path.ts:56-64` | **Reuse**; verify under per-box `node_modules` topology (isolated pnpm layout) |
-| Known drift: *"If you add, remove, or rename an entry here, also update: docs/box-layout.md … src/core/agent-guide/box-shape.ts … drift between them has caused confusion before."* | `src/cli/lib/paths.ts:16-22` | **Replace** — one exported box-shape spec generates all three |
+| Known drift: *"If you add, remove, or rename an entry here, also update: docs/box-layout.md … src/core/agent-guide/box-shape.ts (moved to `beebox/src/core/agent-guide/guide/box-shape.ts`) … drift between them has caused confusion before."* | `src/cli/lib/paths.ts:16-22` | **Replace** — one exported box-shape spec generates all three |
 
 ## Prior art (external)
 
@@ -399,7 +399,7 @@ that nothing internal leaks, document the surface.
 **Why:** The boundary must exist before anything can consume it; today box code compiles
 against the surface only via the resolve-hook/shim fakery.
 **Direction:** as in "The library surface" above. `./schema` re-exports `z` and `yaml`;
-`./server` exports the existing `createServer`/`startServer` (`src/webapp/server.ts:40`,
+`./server` exports the existing `createServer`/`startServer` (`src/webapp/server.ts:40` (moved to `beebox/src/webapp/server/app.ts`),
 already side-effect-free by design — `server-main.ts` exists precisely so importing the
 server has no side effects).
 **First chunk:** make the surface actually shippable — two latent defects block it today:
@@ -466,7 +466,7 @@ and two local tarball "versions".
 **What:** Release script: build → pack tarball (dist + frontend dist included) → host;
 box scaffold points at the channel; document the release ritual.
 **Why:** Decision 2; boxes need something to pin before the fleet can convert.
-**First chunk:** `scripts/release.ts` producing an installable tarball; a doctest-adjacent
+**First chunk:** `scripts/release.ts` (moved to `beebox/src/scripts/release.ts`) producing an installable tarball; a doctest-adjacent
 smoke script that scaffolds a fresh box against it in a temp dir and boots it.
 
 ### Track G — Dev loop
@@ -490,8 +490,8 @@ the old shared `beebox-serve`. H4 (deletions) is **mostly done** — the v1 shap
 resolve-hook machinery are now removed (`docs/implemented-plans/remove-box-shape-v1.md`); see the rewritten
 paragraph below for exactly what shipped and what's intentionally still here. H5 (knowledge
 audits + docs rewrite) is done: four `box-packageify` audits landed and pass against `test1`
-(a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
-rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
+(a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
+rewritten for the hub era; `docs/server/operations.md` and `docs/ideas.md` had stale pre-hub
 statements fixed. The deploy *provisioning scripts* (`setup-server.sh`, `add-box.sh`) still
 target the pre-hub shape — documented as a known gap in `deploy/README.md` rather than silently
 left wrong.
@@ -510,7 +510,7 @@ the top priority is the good end-state, not legacy accommodation.
 fleet, they don't all retire on the same schedule:
 
 - **Hardcoded `~/src/boxes` paths in engine source — DONE.** `src/scenario/loader.ts`,
-  `src/cli/commands/scenario.ts`, and `src/dev/csp-report.ts` no longer hardcode the path.
+  `src/cli/commands/scenario.ts`, and `src/dev/csp-report.ts` (moved to `beebox/src/dev/csp-report/report.ts`) no longer hardcode the path.
   `BBX_SCENARIOS_DIR` / `BBX_BOXES_DIR` (or `--boxes-dir`) override it; the historical
   `~/src/boxes` location remains the documented default when unset, so existing invocations
   (LaunchAgent, scenario runs) keep working unchanged.
@@ -711,7 +711,7 @@ H5 completes. No merge to main without the boxholder's explicit go.
 - **Migration:** scripted (`box-packageify` as a registry migration), per-box atomic (one
   commit per box), fleet-complete within the plan — a partially converted fleet is a
   transition state inside the plan, not an end state. Rollback per box: `git reset` to the
-  pre-migration SHA + remove the migrations.jsonl line (`docs/migrations.md` rollback
+  pre-migration SHA + remove the migrations.jsonl line (`docs/cards/migrations.md` rollback
   pattern), plus hub-route revert.
 - **What the boxholder sees at the end:** every box a package pinning an engine version;
   `bbx upgrade`/`bbx fleet upgrade` as the update ritual replacing rsync-on-commit;

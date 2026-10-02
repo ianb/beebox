@@ -8,7 +8,7 @@
  * interleaved), which is why flat YAML fits.
  */
 
-import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
+import { splitCardContent, cardSchema, type CardSchema } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { PROCEDURE_MODEL_NAMES } from "../shared/agent-models.js";
@@ -68,6 +68,7 @@ const procedureFields = {
 };
 
 export const ProcedureSchema: CardSchema = cardSchema("procedure", {
+  brief: "A multi-step workflow definition",
   description: "A declarative multi-step workflow definition (precheck/run/validate phases); execution state lives in procedure-run cards",
   category: "authored",
   searchable: false,

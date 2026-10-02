@@ -12,7 +12,7 @@ A card saved through the `share.saveTextual` tRPC route (used by the iOS
 share-sheet extension) never gets its real content. For a shared URL, the
 route writes the card body as a literal Markdown link and nothing else:
 
-`beebox/src/webapp/trpc/routers/share.ts:50-58`:
+`beebox/src/webapp/trpc/routers/share/router.ts:50-58`:
 
 ```ts
 const cardText = input.kind === "url"

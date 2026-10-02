@@ -10,8 +10,8 @@ priority: backlog
 
 > **Checked 2026-08-14 — still valid.** Tagged `invalid`; the premise holds, so
 > the tag is removed and the issue stays open. Both technical claims are
-> unchanged in code: `src/core/script-env.ts:103-106` still deletes
-> `env.ANTHROPIC_API_KEY` to force subscription auth, and `src/core/agent/run.ts:196`
+> unchanged in code: `src/core/script-env.ts:103-106` (moved to `beebox/src/core/script-env/core.ts`) still deletes
+> `env.ANTHROPIC_API_KEY` to force subscription auth, and `src/core/agent/run.ts:196` (moved to `beebox/src/core/agent/invoke/run.ts`)
 > still documents that. The spike it depends on,
 > [model backend pluggability](../closed/exploration/2026-07-18-model-backend-pluggability.md),
 > still carries an unfilled `## Research (incomplete)`.
@@ -34,8 +34,8 @@ priority: backlog
 The ADOPT recommendation from the backend deep pass
 ([synthesis](../../research/backend-alternatives/2026-07-18-synthesis.md)): a
 per-box or install-time provider setting — base URL, auth token, model-id map —
-threaded through the two SDK entry points (`src/core/agent/run.ts` builds env at
-`setupRunEnv`; `src/services/claude-chat.ts` takes `env` in
+threaded through the two SDK entry points (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`) builds env at
+`setupRunEnv`; `src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`) takes `env` in
 `ChatBackendStartOptions`), defaulting to today's Anthropic subscription auth.
 The boxholder's model is explicitly "choose your provider up front, then it runs
 on that" — no routing, no fallback logic.
@@ -49,7 +49,7 @@ the warnings), self-hosted vLLM via its native `/v1/messages` endpoint later.
 Design questions:
 - Where the config lives (box config vs install-level) and how auth tokens are
   stored; interaction with `buildScriptEnv`'s deliberate `ANTHROPIC_API_KEY`
-  stripping (`src/core/script-env.ts`) which currently forces subscription auth.
+  stripping (`src/core/script-env.ts` (moved to `beebox/src/core/script-env/core.ts`)) which currently forces subscription auth.
 - Model-id mapping (`src/shared/model-ids.ts`) per provider; what "haiku-tier"
   maps to on each.
 - A workload cost model (from `src/core/usage.ts` data: monthly tokens, image

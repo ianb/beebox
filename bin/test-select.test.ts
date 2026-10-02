@@ -86,7 +86,7 @@ test("a spawner is selected by a change to what it spawns, and by nothing else",
 });
 
 test("a dist/cli.mjs spawner follows the bundle's real inputs", () => {
-  // `scripts/build-cli.ts` bundles src/cli/index.ts TRANSITIVELY — 932 files
+  // `scripts/build-cli.ts` bundles src/cli/entry/run.ts TRANSITIVELY — 932 files
   // across nearly every src/ subtree, not src/cli/**. The caller computes the
   // set; a null one fails open on all of src/.
   const graph = graphOf({ tests: { [`${BOX}test/cli/cli.doctest.md`]: [] } });

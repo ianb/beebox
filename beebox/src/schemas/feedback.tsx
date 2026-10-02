@@ -6,20 +6,24 @@
  * - Comments on specific sections/expandos (text or voice)
  *
  * Voice feedback works like voice memos — the same transcribe
- * pre-action handles them via `source: voice` + audio attachment.
+ * pre-action handles them via `via.channel: voice` + audio attachment.
  * Transcribed text ends up in `transcription.text`; the markdown
  * body holds the user's text response when given typed (rather
  * than spoken).
  */
 
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
+import { mediaVia } from "../cards/media-via.js";
 
 const FeedbackType = z.enum(["query-response", "comment", "brief"]);
 export type FeedbackTypeValue = z.infer<typeof FeedbackType>;
 
-const FeedbackSource = z.enum(["text", "voice"]);
-export type FeedbackSourceValue = z.infer<typeof FeedbackSource>;
+/**
+ * How the feedback was given. `at` is optional: `timestamp` already records
+ * when it was submitted.
+ */
+const FeedbackVia = mediaVia(z.enum(["text", "voice"])).partial({ at: true });
 
 const TargetEntry = z.object({ ref: z.string() });
 
@@ -37,12 +41,13 @@ const TranscriptionError = z.object({
 });
 
 export const FeedbackSchema = cardSchema("feedback", {
+  brief: "The user's response to something",
   description: "The user's response to something the box surfaced — an answer to a question it asked, or a comment on a card fragment; typed or voice",
   category: "system",
   fields: {
     "type-of-feedback": FeedbackType.optional(),
     target: TargetEntry,
-    source: FeedbackSource,
+    via: FeedbackVia,
     timestamp: z.string().datetime({ offset: true }),
     transcription: TranscriptionEntry.optional(),
     "transcription-error": TranscriptionError.optional(),
@@ -57,7 +62,8 @@ Frontmatter:
 - \`target:\` — \`{ref}\` pointing at the target element. The ref uses
   the \`path#fragment\` form, e.g.
   \`/_content/briefings/2026-02-01.briefing.card#q1\`.
-- \`source:\` — \`text\` or \`voice\`.
+- \`via:\` — how the feedback was given: \`{channel}\`, where \`channel\` is
+  \`text\` or \`voice\`. Optional \`note\` says how or why, in prose.
 - \`timestamp:\` — when the feedback was submitted.
 - \`transcription:\` — populated by the transcribe pre-action for
   voice feedback. \`{text, language?, transcribed-at?}\`.

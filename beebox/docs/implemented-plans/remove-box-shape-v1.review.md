@@ -14,7 +14,7 @@ loading, and deleting the migration registry entry directly violates the
 documented append-only invariant.
 
 1. **Critical — `compiler.ts` cannot simply flip its synthetic shape from 1 to
-   2.** `defaultBoxShape()` (`src/webapp/views/compiler.ts:56-62`) returns shape 1
+   2.** `defaultBoxShape()` (`src/webapp/views/compiler.ts:56-62` (moved to `beebox/src/webapp/views/compiler/compile.ts`)) returns shape 1
    with `packageRoot = PACKAGE_ROOT` *deliberately*: it selects module-resolution
    behavior. `node-view-runtime.ts:56-64` builds two symlinks for that mode (the
    engine's shared `node_modules` plus an explicit inner `node_modules/beebox`

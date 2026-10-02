@@ -13,7 +13,7 @@
  * docs/implemented-plans/canvas-loop-figure.md for the full design.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 
 export const FigureRuntime = z.enum(["p5js", "three", "d3", "canvas-loop"]);
@@ -28,6 +28,7 @@ const FigureParam = z.object({
 });
 
 export const FigureSchema = cardSchema("figure", {
+  brief: "A small interactive graphic",
   description: "A small embeddable interactive graphic (p5.js/three.js/D3/canvas-loop) demonstrating one thing; source lives in the attach scope",
   category: "authored",
   fields: {

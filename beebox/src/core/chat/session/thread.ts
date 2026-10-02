@@ -1,7 +1,7 @@
 /**
  * ChatThreadSession — Persistent SDK chat run for a single chat thread.
  *
- * Adapted from ChatSession (src/core/chat/session/index.ts) but:
+ * Adapted from ChatSession (src/core/chat/session/run/core.ts) but:
  * - Targeted at a specific thread (not the whole box)
  * - Intercepts <chat-response> tags from agent output for immediate delivery
  * - Can be parked (run closed but session ID preserved) and resumed
@@ -11,14 +11,14 @@ import { EventEmitter } from "node:events";
 import { withBoxWork } from "../../../lib/box-maintenance.js";
 import { withChatRunAdmission } from "./run-lock.js";
 import { adaptBackendMessage, type ChatMessage } from "./messages.js";
-import { assertNever, invariant } from "../../../lib/invariant.js";
+import { assertNever, invariant } from "../../../shared/invariant.js";
 import { buildTimezoneContext } from "../../box/config.js";
-import { buildScriptEnv } from "../../script-env.js";
-import { createChatBackend, type ChatBackend, type ChatBackendRun } from "../../../services/claude-chat.js";
+import { buildScriptEnv } from "../../script-env/core.js";
+import { createChatBackend, type ChatBackend, type ChatBackendRun } from "../../../services/claude-chat/core.js";
 import { pumpChatRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { resolveSessionModel } from "./model.js";
-import { providerEnvAdditions } from "../../provider-env.js";
+import { providerEnvAdditions } from "../../provider-env/core.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "./engine.js";
 
@@ -386,7 +386,9 @@ export class ChatThreadSession extends EventEmitter {
     }
 
     log("send", `Sending message (${message.length} chars) to ${this.threadRef}`);
-    run.send([{ type: "text", text: fullMessage }]);
+    // Thread sessions serve external chat (Telegram): every turn carries
+    // other participants' text, so none may expand `@path` mentions.
+    run.send([{ type: "text", text: fullMessage }], { clientComposed: true });
 
     return new Promise<void>((resolve) => {
       this.turnResolve = resolve;

@@ -11,7 +11,7 @@
  * the promote the instant the machine woke, mid-burst.
  */
 
-import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js";
+import { startAwakeTimeout, type AwakeTimeout } from "../../shared/awake-timeout.js";
 
 /** Production settle window: no new PUT for two minutes ends the batch. */
 export const SCAN_SETTLE_MS = 2 * 60 * 1000;

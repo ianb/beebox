@@ -1,6 +1,6 @@
 /**
  * The Worker's response constructors — one place each status is built, so the
- * serve path (`index.ts`), the account-auth wrapper (`access-auth.ts`), and the
+ * serve path (`worker.ts`), the account-auth wrapper (`access-auth.ts`), and the
  * submit endpoint (`submit.ts`) all return byte-identical typed refusals. Every
  * response still leaves through `withSecurityHeaders` at the single `handle`
  * exit; these just set the status, a plain-text body, and (for 405) `Allow`.

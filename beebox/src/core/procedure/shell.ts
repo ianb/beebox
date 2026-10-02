@@ -6,7 +6,7 @@
  */
 
 import { execa, type ExecaError } from "execa";
-import { buildScriptEnv } from "../script-env.js";
+import { buildScriptEnv } from "../script-env/core.js";
 
 /** Exit code that signals "skip this step" */
 export const CHECK_SKIP_CODE = 75;

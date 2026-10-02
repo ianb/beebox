@@ -14,9 +14,9 @@ resolution: wontfix
 > Not seen since. Refile if it recurs (capture the file's own stdio from the
 > parallel run before rerunning).
 
-`test/webapp/mobile-spa-fallback.doctest.md` failed (exit 1, jobId 1) in a full
+`test/webapp/mobile-spa-fallback.doctest.md` (moved to `beebox/test/webapp/server-root.spa-fallback.doctest.md`) failed (exit 1, jobId 1) in a full
 `pnpm test` run but passes cleanly when run in isolation
-(`pnpm exec tap run test/webapp/mobile-spa-fallback.doctest.md` → 4/4). Likely
+(`pnpm exec tap run test/webapp/mobile-spa-fallback.doctest.md` (moved to `beebox/test/webapp/server-root.spa-fallback.doctest.md`) → 4/4). Likely
 parallel-run resource contention rather than a real defect — same family as
 [2026-07-09-flaky-child-output-log-doctest](2026-07-09-flaky-child-output-log-doctest.md).
 The failing full-run output didn't surface a per-assertion diff (the child

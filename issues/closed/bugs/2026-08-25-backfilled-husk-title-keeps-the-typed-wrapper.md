@@ -11,7 +11,7 @@ labels: [code-error]
 > **Fixed 2026-08-25.** `readSnippetTitle` now calls `extractSnippet` — the one
 > cleaning step between a raw user message and a display label — instead of
 > reimplementing half of it. Covered by a `<typed>`-wrapped case in
-> `test/core/chat-husk.doctest.md` that asserts the resulting card carries no
+> `test/core/chat-husk.doctest.md` (moved to `beebox/test/core/chat/husk.doctest.md`) that asserts the resulting card carries no
 > email address.
 >
 > **No repair needed for existing data.** A survey of every chat husk in the

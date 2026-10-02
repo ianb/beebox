@@ -29,7 +29,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { extensionToMimetype } from "../lib/mimetype.js";
-import { errorMessage, toError } from "../lib/error-guards.js";
+import { errorMessage, toError } from "../shared/error-guards.js";
 
 const SELF = import.meta.filename;
 

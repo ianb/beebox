@@ -48,11 +48,14 @@ classified.success === false && classified.unavailability?.reason
 const live = await liveEngineUnavailability({ provider: "codex", now: new Date() });
 live?.provider
 => codex
+```
 
-// The episode was announced (no channels are configured on a tmp box, so no
-// cards were written) and latched — recorded as notified.
-live?.notifiedAt !== null
-=> true
+The episode is not announced: it is the `engine-quota` health check, and
+nothing was written to the notification log.
+
+```ts continue
+await fs.access(path.join(box.root, ".beebox/notifications.jsonl")).then(() => "logged", () => "not logged")
+=> not logged
 ```
 
 ## Unrecognized failures and successes pass through untouched

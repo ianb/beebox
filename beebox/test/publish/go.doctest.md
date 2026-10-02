@@ -12,7 +12,7 @@ stdin is not a terminal (the never-auto-flip guarantee), which these tests also
 exercise by omitting the stub.
 
 ```ts setup
-import { draftPublication } from "../../src/publish/draft.js";
+import { draftPublication } from "../../src/publish/draft/core.js";
 import { goPublication } from "../../src/publish/go.js";
 import { createFakePublishStore } from "../../src/services/publish-remote-store.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";

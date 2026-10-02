@@ -43,7 +43,7 @@ The startup `WKUserScript` does `window.localStorage.setItem('beebox.mobileAuthT
 ## Major — server / box-side
 
 ### S1 — Hub auth downgraded from "verify token" to "a token is present"
-`beebox/src/hub/hub-server.ts:126-130` (`hasMobileAuthAttempt`), used at `:390` and `:442`
+`beebox/src/hub/hub-server.ts:126-130` (moved to `beebox/src/hub/server/core.ts`) (`hasMobileAuthAttempt`), used at `:390` and `:442`
 
 `hasMobileAuthAttempt` checks only that an `Authorization: Bearer …` header or `?mobileToken=…` param *exists* — it never validates it. When true, the request skips the hub auth wall and is proxied to the box, which then re-verifies. Commit `ae36e3c2` verified for real here (`verifyMobileBearer(...) || verifyMobileToken(...)`); the "fix mobile hub auth fallback" commit `b2db5a85` deliberately replaced that with presence detection. Verified against the current code.
 

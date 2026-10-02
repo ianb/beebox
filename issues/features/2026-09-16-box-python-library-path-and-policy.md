@@ -8,7 +8,7 @@ discovered-in: main — production box feedback triage (bbx feedback)
 ---
 
 `uv` and `uvx` are installed on the server. The Python tools guide
-(`beebox/src/core/python-tools-doc.ts`) covers CLIs through
+(`beebox/src/core/docs-gen/package-docs/python-tools-doc.ts`) covers CLIs through
 `uvx tool@version`. For library imports it says to use "a real project venv"
 and does not say where a box venv lives or how to make one. A box agent that
 wanted `import reportlab` found no pip and no venv, and concluded the library

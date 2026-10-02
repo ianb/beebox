@@ -110,7 +110,7 @@ future migration requiring committed incomplete states needs its own decision.
 
 **Location in plan:** Track B and failure-mode table.
 **Citation:** `beebox/src/cli/commands/migrate.ts:78`:
-`await appendManifestEntry(args.boxRoot,`; `beebox/src/core/box/index.ts:149`:
+`await appendManifestEntry(args.boxRoot,`; `beebox/src/core/box/index.ts:149` (moved to `beebox/src/core/box/structure/core.ts`):
 `const lines = MIGRATIONS`.
 **Issue:** Runner-only postconditions leave mark-applied and initialization able
 to claim installation without the anchors.

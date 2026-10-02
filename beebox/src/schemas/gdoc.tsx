@@ -6,6 +6,10 @@
  * Lossy upstream features (comments, footnotes, etc.) are enumerated in
  * `lossy:` so agents know what won't survive a push.
  *
+ * `drive:` holds what the connector copied from Drive (the file's `id`,
+ * `link`, `owner`, `modified` time, and `revision`). `title` is the Doc's
+ * title; `conflict` is connector state, not Drive's.
+ *
  * Example file layout:
  *   _content/drive/Project_Notes.gdoc.card
  *   _content/drive/Project_Notes.attach/Project_Notes.md
@@ -17,7 +21,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../exports/cards.js";
 
 const LossyType = z.enum([
   "comments",
@@ -36,19 +40,25 @@ const LossyItem = z.object({
 });
 
 export const GdocSchema = cardSchema("gdoc", {
+  brief: "A synced Google Doc",
   description: "A Google Doc synced by the drive connector — connector-managed metadata plus the document as an attached .md (unlike the in-box doc type)",
   category: "synced",
   fields: {
-    "drive-id": z.string(),
-    status: z.enum(["synced", "error", "new", "conflict"]).optional(),
     title: z.string(),
-    modified: z.string(),
-    revision: z.string().optional(),
-    link: z.string(),
-    owner: z.string(),
+    drive: z.object({
+      id: z.string(),
+      link: z.string(),
+      owner: z.string(),
+      // Drive's `modifiedTime`: when the file last changed on Drive.
+      modified: z.string(),
+      revision: z.string().optional(),
+    }),
     content: z.object({ ref: z.string() }),
     comments: z.object({ ref: z.string() }).optional(),
     lossy: z.array(LossyItem).optional(),
+    // Present (true) while an unresolved `.remote.md` sits beside the local
+    // copy; recomputed on every pull.
+    conflict: z.boolean().optional(),
   },
   instructions: `# Gdoc Cards
 
@@ -66,7 +76,9 @@ document type with no upstream sync.
 Edit the \`.md\` file and commit. On the next sync the change pushes
 back to Google Drive (markdown is converted to Doc format on the
 server). Do not modify the card frontmatter — it is managed by the
-connector — with one exception: \`contains:\` is agent-owned and
+connector. \`drive:\` is what Drive reports about the file: its \`id\`,
+\`link\`, \`owner\`, \`modified\` (when it last changed on Drive) and
+\`revision\`. One exception: \`contains:\` is agent-owned and
 survives sync; set it freely (\`bbx contains update\`).
 
 Edit it only to change what the document says. The \`.md\` is Google's
@@ -81,11 +93,11 @@ otherwise keeps is refused — the connector parks the upstream copy as
 
 ## Conflicts
 If the upstream Doc was edited in Drive between your last pull and
-your push, the card \`status\` becomes \`conflict\` and the upstream
+your push, the card gets \`conflict: true\` and the upstream
 version is written next to the local \`.md\` as \`{basename}.remote.md\`
 (inside the attach scope). Resolve by merging the two files, deleting
 the \`.remote.md\`, and committing — the next sync will push the
-resolved version.
+resolved version. The next pull then drops \`conflict\`.
 
 ## Comments
 Collaborative feedback from the upstream Doc is captured as a sidecar
@@ -114,7 +126,7 @@ permission to edit or reformat.
 
 ## Moving docs
 Moving the card moves its attach scope (and the \`.md\` inside)
-atomically — the \`drive-id\` field maintains the link to Google Drive.`,
+atomically — the \`drive.id\` field maintains the link to Google Drive.`,
 });
 
 export type GdocFields = InferCardFields<typeof GdocSchema>;
@@ -129,25 +141,29 @@ export function createGdocTemplate(options: {
   contentFile: string;
   commentsFile?: string | undefined;
   lossy?: Array<{ type: GdocLossyType; count: number }>;
-  status?: "synced" | "error" | "new" | "conflict";
+  /** An unresolved `.remote.md` sits beside the local copy. */
+  conflict?: boolean;
 }): string {
-  const fields: Record<string, unknown> = {
-    "drive-id": options.driveId,
-    status: options.status === undefined ? "synced" : options.status,
-    title: options.title,
-    modified: options.modified,
+  const drive: Record<string, unknown> = {
+    id: options.driveId,
     link: options.link,
     owner: options.owner,
+    modified: options.modified,
+  };
+  if (options.revision !== undefined && options.revision !== "") {
+    drive["revision"] = options.revision;
+  }
+  const fields: Record<string, unknown> = {
+    drive,
+    title: options.title,
     content: { ref: `attach/${options.contentFile}` },
   };
   if (options.commentsFile !== undefined) {
     fields["comments"] = { ref: `attach/${options.commentsFile}` };
   }
-  if (options.revision !== undefined && options.revision !== "") {
-    fields["revision"] = options.revision;
-  }
   if (options.lossy !== undefined && options.lossy.length > 0) {
     fields["lossy"] = options.lossy;
   }
+  if (options.conflict === true) fields["conflict"] = true;
   return `---\n${stringifyYaml(fields)}---\n`;
 }

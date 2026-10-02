@@ -85,7 +85,7 @@ The schedule is `cadence: 1h`, so this recurs every hour.
 ## Not broken, checked
 
 The work permit reaches the chat agent's environment — `warmCompatible`
-(`src/services/claude-chat.ts:155`) compares `env.BBX_BOX_WORK` and refuses to
+(`src/services/claude-chat.ts:155` (moved to `beebox/src/services/claude-chat/core.ts`)) compares `env.BBX_BOX_WORK` and refuses to
 reuse a warm slot across permits — so a running agent's own `bbx` calls are
 admitted under the parent's permit and do not deadlock against the closed gate.
 Nothing wedges permanently; `sweepMigrations` releases in a `finally`, and a

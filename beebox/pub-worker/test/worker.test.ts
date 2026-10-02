@@ -8,7 +8,7 @@
  */
 import { env, SELF } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
-import { handle, type WorkerDeps } from "../src/index";
+import { handle, type WorkerDeps } from "../src/worker";
 
 const SECRET_ID = "a".repeat(26);
 const PUBLIC_ID = "b".repeat(26);

@@ -2,8 +2,8 @@ import { resolve as resolvePath } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
-import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin";
-import { perBoxIdentityAssetPattern } from "./vite-proxy";
+import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin/plugin";
+import { perBoxIdentityAssetPattern } from "./src/dev/vite-proxy";
 
 const FRONTEND_PORT = Number(process.env.FRONTEND_PORT) || 3210;
 const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
@@ -26,7 +26,7 @@ const VITE_BASE = process.env.VITE_BASE || "/";
 const BASE_PREFIX = VITE_BASE.replace(/\/$/, ""); // "" when base is "/", "/main" otherwise
 
 // Repeatable production bundle composition analysis, run via
-// `pnpm analyze:bundle` (src/dev/analyze-bundle.ts), which sets this env var
+// `pnpm analyze:bundle` (src/dev/analyze-bundle/analyze.ts), which sets this env var
 // before shelling out to `vite build`. Absent/unset on every ordinary build
 // (dev server and plain `pnpm build`), so the plugin never runs by default.
 const ANALYZE_BUNDLE = process.env.BBX_ANALYZE_BUNDLE === "1";
@@ -84,10 +84,14 @@ export default defineConfig({
     // see the tsconfig paths comment.)
     // Array form: the regex entry aliases ONE spelling through @schemas —
     // `@schemas/<name>.list-entry`, a card type's list component, which is
-    // frontend code living beside its schema. Everything else under @schemas
-    // stays unaliased, so a value import through it still fails this build.
+    // frontend code living beside its schema at `schemas/<name>/list-entry.tsx`.
+    // Everything else under @schemas stays unaliased, so a value import
+    // through it still fails this build.
     alias: [
-      { find: /^@schemas\/([\w.-]+\.list-entry)$/, replacement: resolvePath(__dirname, "../schemas/$1") },
+      {
+        find: /^@schemas\/([\w-]+)\.list-entry$/,
+        replacement: `${resolvePath(__dirname, "../schemas")}/$1/list-entry`,
+      },
       { find: "@shared", replacement: resolvePath(__dirname, "../shared") },
     ],
   },
@@ -111,6 +115,16 @@ export default defineConfig({
     // reach us. Vite's default localhost-resolution sometimes lands on ::1
     // only, which the router doesn't follow.
     host: "127.0.0.1",
+    // On macOS, poll instead of using FSEvents. Vite serves a module from its
+    // cache until the watcher reports a change, and FSEvents delivery depends
+    // on the machine-wide fseventsd daemon. When fseventsd is overloaded,
+    // events arrive 1-15 s late or not at all. Vite then serves the old code
+    // with no error, and a restart does not help (measured 2026-09-25; see
+    // issues/bugs/2026-09-25-worktree-vite-serves-stale-modules-because-fsevents-lags.md).
+    // Polling calls stat() on each watched file, so it does not use fseventsd.
+    // At 1 s it adds about 1% of one core per running Vite (100 ms, chokidar's
+    // default, adds about 7%).
+    watch: process.platform === "darwin" ? { usePolling: true, interval: 1000, binaryInterval: 1000 } : undefined,
     // Report-Only CSP on every dev response (incl. the HTML document), so dev
     // exercises the policy and surfaces external-origin mistakes early.
     headers: DEV_CSP_HEADERS,

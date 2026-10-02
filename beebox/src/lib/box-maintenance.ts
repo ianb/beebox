@@ -7,8 +7,8 @@ import { z } from "zod";
 import { acquireLock, inspectLock, LockHeldError, releaseLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "./file-lock.js";
 import { resolveGitDir } from "./git-lock.js";
 import { writeFileAtomic } from "./atomic-write.js";
-import { errnoCode } from "./error-guards.js";
-import { invariant } from "./invariant.js";
+import { errnoCode } from "../shared/error-guards.js";
+import { invariant } from "../shared/invariant.js";
 import { BoxMaintenanceError, type WorkHolder } from "./box-maintenance-error.js";
 
 const permitSchema = z.object({ directory: z.string(), id: z.string().uuid(), maintenance: z.boolean() });

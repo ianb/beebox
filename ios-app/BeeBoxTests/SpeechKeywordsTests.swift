@@ -91,7 +91,7 @@ final class SpeechKeywordsTests: XCTestCase {
 
     /// The keyword vectors are shared golden fixtures under
     /// `beebox/test/mobile-contract/fixtures/speech-keywords/`, consumed
-    /// here and by the TS `test/mobile-contract/fixtures.doctest.md`. Editing a
+    /// here and by the TS `beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.doctest.md`. Editing a
     /// vector once fails both suites until they agree — see
     /// `beebox/docs/implemented-plans/mobile-parity-sync.md`.
     func testSpeechKeywordFixturesMatchSharedVectors() throws {

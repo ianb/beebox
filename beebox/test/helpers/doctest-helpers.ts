@@ -11,7 +11,7 @@ import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
-import { annexNewBox } from "../../src/core/annex/annex-new-box.js";
+import { annexNewBox } from "../../src/core/annex/new-box.js";
 import { createGitAnnexService } from "../../src/services/git-annex.js";
 
 export interface TmpBox {

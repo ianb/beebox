@@ -10,7 +10,7 @@
 import * as path from "node:path";
 import { z } from "zod";
 import { boxTmpDir } from "../../lib/box-tmp.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { HQ_TRANSCRIPTION_SERVICES } from "../../shared/transcription-services.js";
 import { CaptureAudioFormatSchema } from "./audio-format.js";
 
@@ -36,7 +36,7 @@ export type StagingSegment = z.infer<typeof StagingSegmentSchema>;
 /**
  * A captured photo. `source` (camera-user/-environment/gallery) is retained
  * beyond the plan's listed shape because finalize needs it to set the image
- * card's `source`.
+ * card's `filename.via.channel`.
  */
 const StagingPhotoSchema = z.object({
   filename: z.string(), capturedAt: z.string(), source: z.string(),

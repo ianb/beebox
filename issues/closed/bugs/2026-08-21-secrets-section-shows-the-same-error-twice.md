@@ -10,7 +10,7 @@ resolution: implemented
 
 The Secrets section runs two queries, `secrets.boxStatus` and
 `secrets.machineView`, and renders one alert per failure
-(`beebox/src/frontend/src/components/admin/SecretsSection.tsx:94-95`).
+(`beebox/src/frontend/src/components/admin/SecretsSection.tsx:94-95` (moved to `beebox/src/frontend/src/components/admin/SecretsSection/view.tsx`)).
 Both queries fail for the same reasons — no owner session, an unreadable store —
 and both report the same sentence, so the panel prints the identical alert
 twice.

@@ -8,6 +8,11 @@
  *   pnpm agent-context reactor --box ~/src/boxes/test1 --card-type recipe
  *   pnpm agent-context chat --box ~/src/boxes/test1 --skill calendar --output /tmp/ctx.md
  *   pnpm agent-context --list
+ *   pnpm agent-context guide --box ~/src/boxes/test1 [--annotated]
+ *
+ * `guide` prints the agent guide rendered from the box's current inputs
+ * (read-only); `--annotated` keeps `guide.md`'s header and rules comments,
+ * to read each passage beside the ledger rows it cites (docs/agent-guide.md).
  *
  * How to use this for prompt review: see the bbx-prompt-review skill
  * (monorepo .claude/skills/bbx-prompt-review/SKILL.md).
@@ -20,12 +25,17 @@ import {
   SITUATIONS,
   wordCount,
   type AssembledContext,
-} from "./lib/context-assembly.js";
-import { invariant } from "../lib/invariant.js";
+} from "./lib/context-assembly/assembly.js";
+import { invariant } from "../shared/invariant.js";
+import { collectGuideInputs } from "../core/agent-guide/box-inputs.js";
+import { renderAgentGuideLines } from "../core/agent-guide/guide/core.js";
+import { annotatedText, strippedText } from "../core/agent-guide/render.js";
+import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, withDocId } from "../core/docs-gen/shared.js";
 
 function usage(): never {
   console.error("Usage: pnpm agent-context <situation> --box <path> [--skill <name>] [--card-type <type>] [--landmark <dir>] [--output <file>]");
   console.error("       pnpm agent-context --list");
+  console.error("       pnpm agent-context guide --box <path> [--annotated]");
   process.exit(1);
 }
 
@@ -87,6 +97,7 @@ let skill: string | undefined;
 let cardType: string | undefined;
 let landmarkDir: string | undefined;
 let output: string | null = null;
+let annotated = false;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -96,12 +107,22 @@ for (let i = 0; i < args.length; i++) {
   else if (arg === "--card-type") { cardType = args[++i]; }
   else if (arg === "--landmark") { landmarkDir = args[++i]; }
   else if (arg === "--output") { output = args[++i] ?? null; }
+  else if (arg === "--annotated") { annotated = true; }
   else if (arg.startsWith("--")) { console.error(`Unknown flag: ${arg}`); usage(); }
   else if (situation === null) { situation = arg; }
   else { console.error(`Unexpected argument: ${arg}`); usage(); }
 }
 
 if (situation === null || boxRoot === null) usage();
+
+if (situation === "guide") {
+  const lines = renderAgentGuideLines(await collectGuideInputs(resolve(boxRoot)));
+  const guide = annotated ?
+    annotatedText(lines) :
+    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: strippedText(lines) });
+  console.log(guide);
+  process.exit(0);
+}
 
 const ctx = await assembleContext(situation, {
   boxRoot: resolve(boxRoot),

@@ -47,7 +47,7 @@ on disk the whole time.
 So the reader now emits the photo's coordinates instead of a placeholder —
 `<sessionId>/<entryUuid>/<index>` (`src/shared/session-media.ts`) — and
 `GET /api/session-media/<ref>` reads that one line back out and serves that one
-image (`src/webapp/routes/api-session-media.ts`). The history path still carries
+image (`src/webapp/routes/api-session-media.ts` (moved to `beebox/src/webapp/routes/api/register/session-media.ts`)). The history path still carries
 no image bytes, so the OOM this trade-off was protecting against stays fixed.
 
 Per the boxholder: the image loads **on demand**. The block renders as a lazy

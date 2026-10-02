@@ -19,7 +19,7 @@ handles self-corrections), custom vocabulary, 70% latency improvement over
 Chirp 3. Public preview; **no pricing disclosed yet**.
 
 Where it would slot in: both chat transcription paths in
-`src/webapp/routes/chat-audio-routes.ts` — the realtime WebSocket path
+`src/webapp/routes/chat-audio-routes.ts` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`) — the realtime WebSocket path
 (Mistral Voxtral Realtime, `core/transcription/voxtral.ts`) and the HQ
 checkpoint pass (`POST /api/chat/transcribe-audio`, the configured HQ
 transcriber). "Smart transcription" and custom vocabulary are interesting for

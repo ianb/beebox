@@ -19,7 +19,7 @@ because it blocked an unrelated commit.
 
 The `<upload>` chat message that is supposed to announce a finished batch
 failed to deliver (`state ?? "failed:prepare"` in
-`beebox/src/core/bulk-upload/worker.ts:56`) in all three instances. Nothing in
+`beebox/src/core/bulk-upload/worker/core.ts:56`) in all three instances. Nothing in
 the reports suggests the person who uploaded ever saw an error — they had
 every reason to believe the upload worked. The only way any of the three
 failures surfaced was an agent noticing a self-note, or — the third time —
@@ -39,8 +39,8 @@ location as "inside the chat's context dir," but this box's chats are flat
 cards under `_content/chat/web/` with no per-chat context dir, so every batch
 falls through to the box-root case.
 
-The box-root vocabulary (`beebox/src/lib/box-root-vocabulary.ts`, enforced via
-`beebox/src/lib/box-namespace.ts` and `box-reserved-segments.ts`) is a closed
+The box-root vocabulary (`beebox/src/shared/box-root-vocabulary.ts`, enforced via
+`beebox/src/shared/ref-path/box-namespace.ts` and `box-reserved-segments.ts`) is a closed
 list of names allowed directly under the box root, and `tmp-upload` is not one
 of them. So the pre-commit hook refuses every commit that touches the
 batch, with the message "Box root: tmp-upload: the box root is a closed
@@ -76,3 +76,12 @@ retry left the card falsely reporting data loss.
 Three occurrences: 2026-09-12 (12 files), 2026-09-13 (6 files), 2026-09-19 (4
 files), all on channel `web-desktop` or `ios-native`, all recovered by
 `bbx mv`-ing the batch into `_content/` and committing by hand.
+
+## Re-encounter (2026-10-01)
+
+On a production box, a box agent found four more stranded iOS upload batches
+dated 2026-09-12 to 2026-09-20, recovered them to `_tmp/stranded-uploads/`
+unfiled, and sent the boxholder a `dot` notification on 2026-09-30. The
+landing path in `prepare.ts:313` is unchanged on main. Commit `326ed9c74`
+(2026-09-28, detaching bulk workers from the request's permit) may address the
+Part 1 delivery failure, but no upload after it has been checked.

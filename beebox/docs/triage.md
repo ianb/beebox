@@ -81,8 +81,36 @@ The command reports its worst bucket outcome:
 
 ## Implementation owners
 
-- `src/core/intake.ts` — intake paths and advancement
-- `src/core/triage/index.ts` and `src/core/triage/routing.ts` — category
+- `src/core/commands/intake/run.ts` — intake paths and advancement
+- `src/core/triage/run/core.ts` and `src/core/triage/run/routing.ts` — category
   discovery, classification, routing, markers, and guess questions
 - `src/core/handle.ts` — handler invocation and exit semantics
-- `src/core/docs-gen/triage.ts` — the corresponding guide shipped to box agents
+- `src/core/docs-gen/package-docs/triage.ts` — the corresponding guide shipped to box agents
+
+## Jev and decision replay
+
+`bbx triage --engine jev` opts into prepared evidence, policy-driven judgment,
+bounded research and Git-backed receipts. The default remains the agent engine.
+Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
+rule repair, correction provenance and retained evidence.
+
+Preparation sizes the complete serialized Jev request against the current
+instruction snapshot, including rules, evidence metadata and JSON escaping. For
+a trial snapshot, use `triage prepare <source-ref> --instructions <snapshot.json>`
+and pass the same snapshot to `triage judge`. Larger replacement instructions
+can require preparation again; judge refuses an oversized request before making
+a call. Whole-part exclusions remain explicit in evidence.
+
+Scan preparation prioritizes structured PDF cards, retains each attachment's
+digest even when its text is redundant, and treats referenced internal Docling
+sidecars as provenance rather than unreadable document parts. New PDF page and
+figure assets use WebP; existing AVIF assets remain supported. Vision transport
+passes WebP through and converts AVIF to a supported image format without changing
+the original files. When an analyzed PDF card has readable structured text retained
+in the request, its generated full-page renders use that representation without
+additional vision calls. Their refs and digests remain in the evidence. If the
+structured text is empty, unavailable, or excluded by the budget, preparation
+reads those pages through vision instead. Figure images remain separate visual
+evidence. Large scans can still be partial when required descriptions do not fit.
+This policy favors the structured text over page-only details such as stamps or
+signatures that extraction did not preserve.

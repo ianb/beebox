@@ -48,7 +48,7 @@ Converged with the boxholder before this plan was written:
   (`src/cli/commands/feedback.ts`) for session-context capture from a CLI
   command; `process-guidance.procedure.card` for the
   signal→agent-integration→validate procedure shape; the evidence model in
-  `src/schemas/guide-elements.tsx` / `personality-instructions.ts`.
+  `src/schemas/guide-elements.tsx` (moved to `beebox/src/schemas/guide/schema.tsx`) / `personality-instructions.ts`.
 - "Treat noisy command output as a bug" (monorepo CLAUDE.md) — `bbx retro`
   output must stay quiet and structured; the report file carries the detail.
 
@@ -75,7 +75,7 @@ Reused (no rebuilds in this plan except one small refactor, noted):
 - **Compact transcript rendering** — `src/cli/commands/feedback.ts:34`
   (`formatEntry`: user/agent text + one-line tool summaries, *"tool_result
   skipped — adds noise without value"*) is the right register for the
-  observer's input. `src/dev/lib/session-report.ts:273`
+  observer's input. `src/dev/lib/session-report.ts:273` (moved to `beebox/src/dev/lib/session-report/report.ts`)
   (`generateSessionReport`) is the heavier dev-critique renderer — not
   reused (it inlines full Bash output, which is dev-tool signal, not
   boxholder signal).
@@ -83,11 +83,11 @@ Reused (no rebuilds in this plan except one small refactor, noted):
   (`invokeStructured(schema, opts)`) validates the SDK's structured output
   against a Zod schema; `src/core/agent-run.ts:36-40` (`outputSchema`,
   `maxBudgetUsd`, `maxTurns`, `model` options).
-- **Evidence model** — `src/schemas/guide-elements.tsx:18-43`
+- **Evidence model** — `src/schemas/guide-elements.tsx:18-43` (moved to `beebox/src/schemas/guide/schema.tsx`)
   (`ConfidenceLevel`: confirmed/high/medium/low/hypothesis; `BeliefSource`:
-  user-stated/feedback/inferred/default), `src/schemas/personality-fields.ts:44-78`
+  user-stated/feedback/inferred/default), `src/schemas/personality-fields.ts:44-78` (moved to `beebox/src/personality-fields.ts`)
   (tone/traits entries `{text, confidence?, source?, ref?}`, `unresolved`,
-  `experiments`), `src/schemas/personality-instructions.ts` (*"Same as
+  `experiments`), `src/schemas/personality-instructions.ts` (moved to `beebox/src/schemas/personality/instructions.ts`) (*"Same as
   guides — confidence (hypothesis → confirmed), source (user-stated >
   feedback > inferred > default)"*; *"When editing traits, **always rewrite
   the body**"*).
@@ -112,7 +112,7 @@ Reused (no rebuilds in this plan except one small refactor, noted):
 - **Validation guardrails** — PostToolUse `bbx validate --hook` and the
   per-box pre-commit hook (`src/core/install-validation-hooks.ts`) already
   police every card the integrator edits.
-- **Fake-agent testing precedent** — `src/services/claude-chat-fake.ts`;
+- **Fake-agent testing precedent** — `src/services/claude-chat-fake.ts` (moved to `beebox/src/services/claude-chat/fake.ts`);
   the observer call goes behind a small interface with a scripted fake so
   the pipeline is doctestable without API calls.
 
@@ -416,7 +416,7 @@ the procedure does — purely infrastructural).
    card escalation, body-rewrite rule, report "Actions" section), validate
    phase. Install into test1; first real runs.
 4. **Trigger + docs + audits** — scheduled-script template
-   (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
+   (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
    glossary entries, the two knowledge-audit entries, `src/dev/CLAUDE.md`
    untouched (this is runtime, not a dev script).
 

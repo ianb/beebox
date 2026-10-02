@@ -242,7 +242,7 @@ Simple sync actions (for connectors without push support):
 </scheduled>
 ```
 
-See `docs/scheduler.md` and `docs/chat-schedules.md` for scheduling examples.
+See `docs/scheduler.md` and `docs/chat/schedules.md` for scheduling examples.
 
 Schedules can also be embedded in other cards. The tailing phase finds all schedule entries, calculates the next wakeup time, and archives one-time tasks that have no remaining future occurrences.
 
@@ -415,7 +415,7 @@ Different command types require different authorization. For example:
 
 This structure lets agents document their reasoning, and lets humans (or validation rules) verify that commands are properly justified before execution.
 
-See [adding-schemas.md](../adding-schemas.md) for concrete card examples.
+See [adding-schemas.md](../cards/schemas.md) for concrete card examples.
 
 ### Dry run
 
@@ -512,7 +512,7 @@ Schemas define valid card structures using Zod (via cardworks).
 
 Schemas must be explicitly registered in `registry.ts`. A linter checks that all schemas are registered and that all card types have corresponding schemas.
 
-See [adding-schemas.md](../adding-schemas.md) for schema examples.
+See [adding-schemas.md](../cards/schemas.md) for schema examples.
 
 ### Validation and the agent loop
 
@@ -533,7 +533,7 @@ When an agent can't proceed, it creates a question card.
 
 ### Question card structure
 
-See [adding-schemas.md](../adding-schemas.md) for question card examples.
+See [adding-schemas.md](../cards/schemas.md) for question card examples.
 
 ### Input types
 

@@ -57,18 +57,18 @@ both speech-to-text and neither resolved here. No duplicate found.
   `src/services/openai-audio.ts:22-27` defines `OpenAIAudioService`, and
   `createOpenAIAudioService(apiKey)` at `:29` is **never called anywhere in
   `src/`** — only the fake is, in tests. The live path is an inline `ky.post`
-  in the route's fallback branch (`src/webapp/routes/chat-audio-routes.ts:150-166`),
+  in the route's fallback branch (`src/webapp/routes/chat-audio-routes.ts:150-166` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`)),
   reached because `ctx.openaiAudio` is always `undefined` in production. **Reuse
   by making it real**, not by adding a parallel path: the seam this plan needs
   is already declared, just unwired.
 - **Three copies of one default.** `"Fast and concise, but with a friendly
   lilting tone."` appears at `src/services/openai-audio.ts:44`,
-  `src/webapp/routes/chat-audio-routes.ts:165`, and
+  `src/webapp/routes/chat-audio-routes.ts:165` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`), and
   `src/frontend/src/lib/audio/tts-client.ts:28`. Two different default voices:
   `"alloy"` (`openai-audio.ts:43`) and `"marin"` (`chat-audio-routes.ts:143`,
   `tts-client.ts`). Consolidate per principle 8.
 - **The voice vocabulary and its schema.** `src/shared/voice-models.ts:10-14`
-  holds the 13 names; `src/schemas/personality.tsx:46-49` validates them:
+  holds the 13 names; `src/schemas/personality.tsx:46-49` (moved to `beebox/src/schemas/personality/schema.tsx`) validates them:
   `model: z.enum(VOICE_MODELS).optional()` inside `SpeakingVoiceEntry`,
   registered at `:98` as `"speaking-voice": SpeakingVoiceEntry.optional()`.
   `src/frontend/src/lib/audio/speech-parsing.ts:9-16` validates the `voice`
@@ -76,9 +76,9 @@ both speech-to-text and neither resolved here. No duplicate found.
 - **Instructions are assembled client-side, not server-side.** The personality
   card's `speaking-voice.instructions[]` is compiled to
   `_content/docs/generated/speaking-voice.json`
-  (`src/schemas/personality.tsx:145-151`, `src/core/docs-gen/compile.ts:382-386`),
+  (`src/schemas/personality.tsx:145-151` (moved to `beebox/src/schemas/personality/schema.tsx`), `src/core/docs-gen/compile.ts:382-386` (moved to `beebox/src/core/docs-gen/compile/core.ts`)),
   served by `GET /api/chat/voice-config`
-  (`src/webapp/routes/chat-audio-routes.ts:113-127`), joined and merged with any
+  (`src/webapp/routes/chat-audio-routes.ts:113-127` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`)), joined and merged with any
   per-segment `<instructions>` tag in
   `src/frontend/src/lib/audio/tts-client.ts:78-83`, and sent as one string.
   `override-instructions="1"` replaces the base instead of appending
@@ -91,7 +91,7 @@ both speech-to-text and neither resolved here. No duplicate found.
   `playAudioBlob`, which is already the non-MediaSource path
   (`tts-client.ts:205-248`).
 - **The config precedent.** `loadTranscriptionConfig` /
-  `updateTranscriptionConfig` (`src/core/transcription/index.ts:138-188`) —
+  `updateTranscriptionConfig` (`src/core/transcription/index.ts:138-188` (moved to `beebox/src/core/transcription/dispatch/core.ts`)) —
   `withCardLock` read-merge-write, `ENOENT` means defaults, parse errors bubble.
   `_config/box.json` is the other backend-choice file
   (`agentEngine`) but goes through a git-committing writer
@@ -160,7 +160,7 @@ imported by all three current copies.
 
 **First implementation chunk.** Wire the existing OpenAI implementation through
 `ctx.openaiAudio`, delete the inline branch, unify the two default constants.
-No new backend, no config, no behavior change — `test/webapp/routes/chat-tts.doctest.md`
+No new backend, no config, no behavior change — `test/webapp/routes/chat-tts.doctest.md` (moved to `beebox/test/webapp/routes/chat/tts-mock.doctest.md`)
 must pass unchanged.
 
 ### Track 2 — the backend vocabulary and its config
@@ -265,7 +265,7 @@ section, deriving its union from `shared/tts-backends.ts` — never a hand-writt
 copy, per the comment already at `:15-17`. Where the selected backend is not
 `stylable`, the menu item says so on its own line rather than leaving the
 boxholder to discover it. `modelRoutesCheck`
-(`src/webapp/trpc/routers/health-model-routes.ts`) gains a TTS line.
+(`src/webapp/trpc/routers/health-model-routes.ts` (moved to `beebox/src/webapp/trpc/routers/health/checks/model-routes.ts`)) gains a TTS line.
 
 **First implementation chunk.** The picker section and its tRPC wiring.
 
@@ -298,7 +298,7 @@ the per-backend voice vocabulary — and it was made unnecessary by the boxholde
 mapping the voices directly (see Progress). The original framing, kept because
 it explains why the question looked like a design step:
 `VOICE_MODELS` is a closed `z.enum` in a card schema
-(`src/schemas/personality.tsx:47`), Gemini's 30 voices share none of those
+(`src/schemas/personality.tsx:47` (moved to `beebox/src/schemas/personality/schema.tsx`)), Gemini's 30 voices share none of those
 names, and the questions are a decision table, not an implementation: does the
 enum become a union of per-backend sets, or a loose string validated at the
 seam; what does a card naming `alloy` do when the backend is Gemini (refuse,
@@ -435,7 +435,7 @@ written.
 - **The empty-body guard needs the byte floor to be a constant a doctest can
   assert against**, not an inline literal.
 - **Route behavior** goes in a route doctest via `makeTestServer()` and the
-  existing fake, extending `test/webapp/routes/chat-tts.doctest.md` rather than
+  existing fake, extending `test/webapp/routes/chat-tts.doctest.md` (moved to `beebox/test/webapp/routes/chat/tts-mock.doctest.md`) rather than
   starting a tier.
 - **No new test tier and no new mock.** The `TtsService` fake already exists
   (`openai-audio.ts:62-79`) and gains a `backend`/`stylable` field. Worth saying
@@ -516,14 +516,14 @@ Two things the build changed from the design:
 
 Tests named while designing, per `docs/testing.md`:
 
-- `test/core/tts-config.doctest.md` — defaults, ENOENT, unknown backend bubbles,
+- `test/core/tts-config.doctest.md` (moved to `beebox/test/core/tts/config.doctest.md`) — defaults, ENOENT, unknown backend bubbles,
   merge-on-update.
-- `test/core/tts-style-delivery.doctest.md` — `deliverStyle` across all three
+- `test/core/tts-style-delivery.doctest.md` (moved to `beebox/test/core/tts/style.doctest.md`) — `deliverStyle` across all three
   kinds, with and without instructions.
-- `test/core/tts-wav-wrapper.doctest.md` — header fields for a known PCM buffer.
-- `test/services/service-tts.doctest.md` — extends the existing fake test with
+- `test/core/tts-wav-wrapper.doctest.md` (moved to `beebox/test/core/tts/wav.doctest.md`) — header fields for a known PCM buffer.
+- `test/services/service-tts.doctest.md` (moved to `beebox/test/services/tts.doctest.md`) — extends the existing fake test with
   `backend`/`stylable`, and asserts the empty-body throw.
-- `test/webapp/routes/chat-tts.doctest.md` — extended: backend selection honored,
+- `test/webapp/routes/chat-tts.doctest.md` (moved to `beebox/test/webapp/routes/chat/tts-mock.doctest.md`) — extended: backend selection honored,
   content type follows the backend, missing-key error names the secret.
 
 **Done-when:** those five pass, `pnpm test:changed` is green, and a real Gemini

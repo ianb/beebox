@@ -1,0 +1,26 @@
+{
+  "id": "message0008",
+  "threadId": "thread0008",
+  "internalDate": "1790553600000",
+  "snippet": "The court has scheduled the property dispute hearing.",
+  "payload": {
+    "mimeType": "text/plain",
+    "headers": [
+      {
+        "name": "Subject",
+        "value": "property dispute hearing for Odette Marlowe household"
+      },
+      {
+        "name": "From",
+        "value": "Noor Haddad <noor@example.invalid>"
+      },
+      {
+        "name": "To",
+        "value": "Priya Marlowe <priya@example.invalid>"
+      }
+    ],
+    "body": {
+      "data": "U1lOVEhFVElDIE5PVElDRS4gVGhlIHByb3BlcnR5IGRpc3B1dGUgaGVhcmluZyBmb3IgdGhlIGhvdXNlaG9sZCBvZiBPZGV0dGUgTWFybG93ZSBpcyBzY2hlZHVsZWQgZm9yIE9jdG9iZXIgMTIuIFRoZSBob3VzZWhvbGQgcmVwcmVzZW50YXRpdmUgc2hvdWxkIGF0dGVuZC4"
+    }
+  }
+}

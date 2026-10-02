@@ -1,5 +1,5 @@
 ---
-description: "Put one page from your box on the public web from material you already keep, with an explicit go-live and an explicit takedown."
+description: "Put a page or small site from your box on the public web from material you already keep, with your approval to go live and a one-step takedown."
 ---
 # Publishing from your cards
 
@@ -10,35 +10,40 @@ maintain. A **box** is one directory of your data, a **card** is one markdown fi
 in it, and **the agent** is the coding agent that renders one of those cards into
 a page.
 
-**What you do.** Ask the box to draft a page from a document you already keep.
-Read the draft. Say to go live. Later, say to take it down. Choose whether the
-page is open to anyone or restricted to named accounts.
+**What you do.** Ask the box to build a page or a small site from material you
+already keep. The agent prepares it and gives you a link into the app. Open it,
+read what is about to go out (the address, who it is for, the list of files, and
+a scan for likely secrets), and enable it, or not. Later, disable it from the
+same screen. Choose whether it is a public page at a name you pick or a secret
+link you give only to the people meant to have it.
 
-**What the box does.** Drafting renders one box document into a single
-self-contained page and scans it for secrets and for references pointing outside
-the published bundle, refusing to commit a draft that fails the scan. Going live
-and revoking are separate explicit commands, so nothing reaches the public web as
-a side effect of editing. A page can be fully public or gated to accounts you
-name, with visitor logging on the gated kind. Taking a publication down is a
-supported operation.
+**What the box does.** The agent writes the site in a folder of the box and asks
+the box server to prepare it: build it if it needs building, scan it, and upload
+it. A new site stays off until a signed-in member of the box enables it. After
+that the agent can refresh the content on its own, but any change to who can see
+it, or to its address, waits for another approval. A failed build or scan leaves
+the live version as it was, and disabling a site makes its address answer that it
+is gone.
 
-**What it needs.** Publishing infrastructure provisioned once by whoever runs the
-box, through a single command against a Cloudflare account.
+**What it needs.** A Cloudflare account and one web address for the box, set up
+once by whoever runs the machine through the Admin page.
 [Publishing](../capabilities/publishing.md),
 [what it requires](../08-what-it-requires.md).
 
-**Where it is still rough.** Reply forms are half a feature and you should not
-plan on them. The receiving half is built and live: submissions are validated as they
-arrive, under size and rate limits, pulled into the box on its next wakeup as
-pub-submission cards, and handled as untrusted outside text that can become a note
-or a question but can never authorize an action. The producing half does not
-exist: no path in the software renders a page carrying a form, so a reader cannot
-currently encounter one. A form could not go on a fully public page in any case,
-to stop it being flooded.
+**Where it is still rough.** The documentation says this flow has not yet been
+run against a real Cloudflare account, only against stand-ins, so expect first-use
+problems. Sites restricted to named accounts are blocked in it. All of one box's
+sites share a web address and so can reach each other's scripts and stored data;
+the scan looks for secrets, and cannot judge whether a page is fit to show.
+Reply forms are half a feature and you should not plan on them: the receiving
+half is built, with submissions validated, size- and rate-limited, and pulled into
+the box as pub-submission cards that are handled as untrusted outside text and
+can never authorize an action, but nothing in the software produces a page that
+carries a form.
 
 **What makes it possible**
 
-- **Publishing with an explicit go-live and takedown** ([publishing](../capabilities/publishing.md)): going live and revoking are separate commands, so nothing reaches the public web as a side effect of editing a card.
+- **Publishing with an explicit approval and takedown** ([publishing](../capabilities/publishing.md)): a person enables a site in the app and disables it there, so nothing reaches the public web as a side effect of the agent editing.
 - **Typed cards with validated fields** ([cards](../concepts/cards.md)): a reply arrives as a pub-submission card, validated as it lands and handled as outside text that can become a note or a question but never authorize an action.
 
 **Read next.** [Your data and safety](../10-your-data-and-safety.md),

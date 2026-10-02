@@ -16,7 +16,8 @@
  */
 
 import { useParams } from "@tanstack/react-router";
-import { trpc } from "../lib/trpc";
+import { isRecord } from "@shared/is-record";
+import { trpc } from "../lib/trpc/client";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { ExternalLink } from "../components/ui/ExternalLink";
@@ -28,8 +29,8 @@ import { ErrorText } from "../components/ui/ErrorText";
 import { Hint } from "../components/ui/Hint";
 import { Heading } from "../components/ui/Heading";
 import { DRIVE_CHILD_BADGES, driveChildState } from "../lib/drive-card-display";
-import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "./directory";
-import { registerFileType, type RendererProps } from "./index";
+import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "../directory-listing";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 /** The frontmatter field, when it is a non-empty string. */
 function field(fm: Record<string, unknown>, key: string): string | null {
@@ -70,20 +71,20 @@ function ChildState({ card }: { card: BrowseCardEntry }) {
 
 /** Name, Drive link, and the outcome of the last mirror pass. */
 function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<string, unknown> }) {
-  const name = field(frontmatter, "name");
-  const link = field(frontmatter, "link");
-  const status = field(frontmatter, "status");
+  const drive = isRecord(frontmatter["drive"]) ? frontmatter["drive"] : {};
+  const name = field(frontmatter, "title");
+  const link = field(drive, "link");
   const lastSync = field(frontmatter, "last-sync");
   const error = field(frontmatter, "error");
-  const driveId = field(frontmatter, "drive-id");
+  const driveId = field(drive, "id");
 
   return (
     <Stack gap="xs">
       <Row gap="sm" align="center" wrap>
         <Heading level={2}>{name ?? "Drive folder"}</Heading>
-        {status === "error" ? <Badge tone="danger">error</Badge> : null}
-        {status === "ok" ? <Badge tone="success">mirrored</Badge> : null}
-        {status === null ? <Badge tone="neutral">never synced</Badge> : null}
+        {error !== null ? <Badge tone="danger">error</Badge> : null}
+        {error === null && lastSync !== null ? <Badge tone="success">mirrored</Badge> : null}
+        {error === null && lastSync === null ? <Badge tone="neutral">never synced</Badge> : null}
         {link === null ? null : (
           <ExternalLink href={link} id="bbx-gfolder-open-in-drive">Open in Drive</ExternalLink>
         )}
@@ -197,6 +198,7 @@ function GfolderView({ data, onNavigate }: RendererProps) {
   );
 }
 
-registerFileType({ type: "gfolder" }, {
+export const gfolderRenderer: RendererEntry = {
+  selector: { type: "gfolder" },
   renderer: { name: "Drive folder", Component: GfolderView, priority: 100 },
-});
+};

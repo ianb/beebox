@@ -1,7 +1,7 @@
 /**
  * Resolve a landmark's navigation `symbol` — the one implementation.
  *
- * This existed twice: once in `src/webapp/trpc/routers/landmarks.ts` (correct,
+ * This existed twice: once in `src/webapp/trpc/routers/landmarks/router.ts` (correct,
  * via the shared ref algebra) and once in `summaries.ts` (a hand-rolled
  * `path.resolve(landmarkDir, src)` + `path.relative(boxRoot, …)`). The two
  * disagreed on every ref form except document-relative, which is why the same

@@ -5,7 +5,7 @@
  * browser-guaranteed, with no selector escaping (hence kebab-case and not dots:
  * `querySelector("#a.b")` parses as id `a` plus class `b`).
  *
- * Fails closed, like `resolveRefPath` (`src/shared/ref-path.ts`): an id that is
+ * Fails closed, like `resolveRefPath` (`src/shared/ref-path/core.ts`): an id that is
  * not a well-formed `bbx-` address is rejected without touching the document, and
  * a well-formed one that matches nothing is a named failure the caller renders
  * as broken. A *duplicate* cannot be detected here — `getElementById` returns
@@ -21,12 +21,12 @@
 // Raw relative (not `@shared/…`): loaded outside Vite by its own doctest, which
 // runs under the root tsconfig where the alias does not resolve.
 import { err, ok, type Result } from "../../../../shared/result.js";
-import { isControlAddress } from "../../../../shared/control-address.js";
+import { isControlAddress } from "../../../../shared/ui-scan/control-address.js";
 
 // The grammar itself lives in `shared/control-address.ts`, with the encoder a
 // component uses to mint an address out of runtime data; re-exported here
 // because this module is where the app reads addresses back.
-export { controlAddress, isControlAddress } from "../../../../shared/control-address.js";
+export { controlAddress, isControlAddress } from "../../../../shared/ui-scan/control-address.js";
 
 /**
  * Why an address did not resolve. Callers branch on this to write the tooltip.

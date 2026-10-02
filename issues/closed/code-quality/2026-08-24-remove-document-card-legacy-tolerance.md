@@ -37,7 +37,7 @@ resolution: implemented
 > historical Track 4 body is "left as written for the historical record," so
 > no further trim.
 
-The `document` → `pdf` card-type rename (`scripts/migrate/document-to-pdf.ts`,
+The `document` → `pdf` card-type rename (`scripts/migrate/document-to-pdf.ts` (moved to `beebox/src/scripts/migrate/document-to-pdf.ts`),
 registered as `document-to-pdf` in `src/core/migrations.ts`) left **no legacy
 tolerance code** — there is no fallback branch, lenient parse, or "both
 spellings accepted" reader anywhere in the sweep. The schema, CLI command,
@@ -49,7 +49,7 @@ Nothing to extend or delete in source. The only follow-up is operational:
 
 - Once every deployed box has run `bbx migrate` past `document-to-pdf` (or been
   confirmed to have never held a `.document.card`), the migrator itself can
-  stay registered forever (append-only `MIGRATIONS`, per `docs/migrations.md`)
+  stay registered forever (append-only `MIGRATIONS`, per `docs/cards/migrations.md`)
   but the "why this exists" note can be trimmed from
   `docs/plans/scanner-ingest.md`'s Track 4 section and the dated note added at
   the top of that section (2026-08-24) — check that no live box still needs

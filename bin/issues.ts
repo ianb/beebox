@@ -10,7 +10,7 @@
  *
  * Stateless means every run re-reads every issue file. The only thing carried
  * between runs is the embedding cache under `.issues-index/` (gitignored). The
- * index itself lives in `workstreams-app/src/server/issue-index.ts`, next to
+ * index itself lives in `workstreams-app/src/server/main/issue-index.ts`, next to
  * `issue-domain.ts` — the dev issue browser's "Related" list is the same
  * ranking over the same cache, so there is one implementation and two callers.
  *
@@ -24,9 +24,9 @@ import { parseArgs } from "node:util";
 import {
   GROUP_KEYS, REPO_ROOT, filterIssues, groupIssues, loadIssueEntries,
   type GroupKey,
-} from "../workstreams-app/src/server/issue-search-model.js";
-import { DOCS_SUBDIR } from "../workstreams-app/src/server/issue-index-documents.js";
-import { runSearch } from "../workstreams-app/src/server/issue-index-query.js";
+} from "../workstreams-app/src/server/main/issue-search-model.js";
+import { DOCS_SUBDIR } from "../workstreams-app/src/server/main/issue-index-documents.js";
+import { runSearch } from "../workstreams-app/src/server/main/issue-index-query.js";
 import {
   SEARCH_MODES, buildFilters, oneOf, options, positiveInt, resultBudget,
   type ParsedValues,

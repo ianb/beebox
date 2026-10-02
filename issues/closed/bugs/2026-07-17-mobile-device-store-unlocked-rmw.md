@@ -15,7 +15,7 @@ per-box `bbx serve` child, which verifies it again and can revoke it — two pro
 primitive (`withDeviceStoreLock`, read-inside-lock) and `writeDeviceStore` lands via temp-file +
 fsync + atomic rename — mirroring the sibling credential store `webapp/local-users.ts`. Those
 functions (and their callers up through the box/hub/capture auth gates and the tRPC context) became
-`async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
+`async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md` (moved to `beebox/test/core/mobile/pairing.store-concurrency.doctest.md`); doc: `docs/mobile-contract.md`
 § S3.
 
 `verifyMobileToken` in `beebox/src/core/mobile/pairing.ts` does a plain read → mutate

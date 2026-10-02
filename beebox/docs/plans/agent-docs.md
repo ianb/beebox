@@ -44,15 +44,15 @@ Design constraints, from the boxholder's framing (2026-09-12):
 - **`site/agent-prompt.ts`** renders a titled, id-addressed, copyable
   agent-directed prompt block. The home card already carries
   `{% agent-prompt id="install-with-your-agent" %}` pointing at
-  `raw.githubusercontent.com/.../agent-install.md`.
+  `raw.githubusercontent.com/.../install/agent.md`.
 - **`beebox/box-docs/`** (gitignored, ~5,300 lines, 66 files) is a generated
   reference corpus that is a pure function of the engine source:
   `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
   `views.md`, one `card-<type>.md` per built-in schema with `instructions`
   (55 types), the prose docs from `docs/box/`, and a `README.md` index whose
   rows say *when to read* each doc. Writer: `ensurePackageDocs()` in
-  `src/core/docs-gen/package-docs.ts`; standalone entry:
-  `scripts/build-box-docs.ts`. No box content by construction. This is the
+  `src/core/docs-gen/package-docs.ts` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`); standalone entry:
+  `scripts/build-box-docs.ts` (moved to `beebox/src/scripts/build-box-docs.ts`). No box content by construction. This is the
   largest single piece of the corpus and it cannot drift.
 - **`beebox/docs/`** flat: 67 files, ~21k lines. Roughly 44 are reference
   ("how it works now"): card format, box layout, connectors and their setup,
@@ -220,11 +220,11 @@ would truncate in most fetchers and is the flat dump the framing rules out.
 
 | Kind | Source | How it gets in | Drift |
 |---|---|---|---|
-| Generated | engine doc set (`engineDocs()`) | site build runs `scripts/export-box-docs.ts`, writes the set | none: pure function of engine |
+| Generated | engine doc set (`engineDocs()`) | site build runs `scripts/export-box-docs.ts` (moved to `beebox/src/scripts/export-box-docs.ts`), writes the set | none: pure function of engine |
 | Promoted | allowlisted files under `beebox/docs/` | listed in `site/docs-manifest.yaml` | content-hash rebuild; scrub gate |
 | Authored | `site/cards/*.site-page.card` twins; a few new orientation pages | existing site pipeline | existing authorship rules |
 
-**Generated.** A new export-only script, `beebox/scripts/export-box-docs.ts`,
+**Generated.** A new export-only script, `beebox/scripts/export-box-docs.ts` (moved to `beebox/src/scripts/export-box-docs.ts`),
 prints the engine doc set (`engineDocs()` from `package-docs.ts`) as JSON on
 stdout with no filesystem side effect. The site build shells out to it
 (site/ stays free of beebox imports, as `site/CLAUDE.md` requires) and

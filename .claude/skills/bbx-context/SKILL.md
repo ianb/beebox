@@ -17,7 +17,7 @@ schema `instructions`, box docs). *Not* the beebox dev repo's own
 `CLAUDE.md` — that's ours, not a box's. Auditing the full assembled prompt
 stack (agent guide, system prompts, everything an agent reads end to end) is
 a known workflow, not a skill — the procedure lives in
-`beebox/docs/prompt-surface-review.md`; this skill routes a single
+`beebox/docs/prompts/review.md`; this skill routes a single
 durable instruction to its right tier.
 
 ## The attention budget, not the context window
@@ -48,7 +48,7 @@ by whatever surface is easiest to edit:
 The natural mapping: *"always true here"* → root CLAUDE.md; *"true when you're
 **here**"* → nested CLAUDE.md / path rule; *"true for **this kind of card**"* →
 schema instructions; *"true for **this kind of task**"* → a procedure. Box skills
-are a fixed managed set written by `src/core/box/skills.ts` from `skills-content.ts`
+are a fixed managed set written by `src/core/box/guidance-sync/skills.ts` from `skills-content.ts`
 (refreshed on init/wakeup/chat-start) — not boxholder-authored; the task-scoped-lazy
 tier a boxholder edits is procedures + the shipped agent-guide.
 
@@ -138,7 +138,7 @@ through the intended loading path.
   `knows_about` contract.
 - A never-run audit is unverified in both directions — the agent may fail it, or
   the audit may be broken. Running is part of authoring (see
-  `docs/knowledge-audits.md`).
+  `docs/testing/knowledge-audits.md`).
 
 This is the same test the rest of the box-context system trusts: a convention
 without an audit is a convention the agent may silently forget on the next

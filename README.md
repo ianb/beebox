@@ -37,11 +37,11 @@ Packages in this monorepo include:
 
 - **beebox/** — the main system. See its `CLAUDE.md`.
   Setting up from a fresh clone with no prior box?
-  [`beebox/docs/developer-install.md`](beebox/docs/developer-install.md)
+  [`beebox/docs/install/developer.md`](beebox/docs/install/developer.md)
   has the from-source install path,
-  [`beebox/docs/docker-install.md`](beebox/docs/docker-install.md)
+  [`beebox/docs/install/docker.md`](beebox/docs/install/docker.md)
   the container path, and
-  [`beebox/docs/agent-install.md`](beebox/docs/agent-install.md)
+  [`beebox/docs/install/agent.md`](beebox/docs/install/agent.md)
   is for the AI assistant doing the install on someone's behalf.
 - **beebox-clerk/** — Chrome extension that talks to a hosted box.
 - **agent-doctest/** — doctest framework, extracted for reuse.
@@ -57,7 +57,7 @@ pnpm install     # from the repo root; wires up git hooks
 pnpm dev         # one router serving every checkout at localhost:3210
 ```
 
-The router serves each checkout by path prefix: `http://localhost:3210/<main|worktree>/<box>/...`. Worktrees lazy-start on first request and idle-stop after 5 minutes. This router is personal dev infrastructure for this repo's maintainer(s) — if you're setting up your own box from a fresh clone, use `beebox/docs/developer-install.md` instead.
+The router serves each checkout by path prefix: `http://localhost:3210/<main|worktree>/<box>/...`. Worktrees lazy-start on first request and idle-stop after 5 minutes. This router is personal dev infrastructure for this repo's maintainer(s) — if you're setting up your own box from a fresh clone, use `beebox/docs/install/developer.md` instead.
 
 Per-project details are in each project's `CLAUDE.md`.
 

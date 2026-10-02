@@ -8,15 +8,15 @@
 
 import { execSync } from "node:child_process";
 import {
-  registerCommand,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
-import { buildToolingScriptEnv } from "../script-env.js";
+} from "../command-types.js";
+import { buildToolingScriptEnv } from "../script-env/core.js";
 import { runCollectedChild } from "../../lib/run-child.js";
-import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../cli/commands/wakeup-outcome.js";
-import type { WakeupRunResult } from "./wakeup-runner.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../cli/wakeup-outcome.js";
+import type { WakeupRunResult } from "../wakeup-runner.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /** Resolve the `bbx` binary path, matching the pattern in scheduler.ts */
 function resolveBbxPath(): string {
@@ -37,8 +37,8 @@ function resolveBbxPath(): string {
  * `connector` scopes the child to one connector (`--connector <name>`), which
  * is what `bbx force-wakeup --connector X` asks for. Leave it unset for the
  * full cycle: the scan promote worker MUST, because a connector-scoped wakeup
- * never drains a `source: scan` job (`cli/commands/wakeup.ts` filters jobs by
- * source), and so must the UI Sync button, which means "run the cycle".
+ * never drains a scan intake job, which has no `connector`
+ * (`cli/commands/wakeup/command.ts` filters jobs by connector), and so must the UI Sync button, which means "run the cycle".
  *
  * Forcing and letting it happen are therefore the same code: this is the same
  * child the schedule runs, with the same flag the schedule would pass.
@@ -89,9 +89,9 @@ async function executeWakeup(
   return { success: false, error: result.detail };
 }
 
-registerCommand({
+export const wakeupCommand: CommandDefinition = {
   name: "wakeup",
   description: "Run the full wakeup cycle (preprocess, triage, connectors, jobs, reactor)",
   args: [],
   execute: executeWakeup,
-});
+};

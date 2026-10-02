@@ -42,7 +42,7 @@ Three landed in a single work unit on 2026-08-17
    cross-model review, not by a test.
 2. The same script passed the package root to `bbx boxes add`, which checks for
    `.bbx-box` at the path it is given (`src/cli/commands/boxes.ts:30`, via
-   `isBox` at `src/core/schedule/scheduler.ts:56`). It failed on the first real
+   `isBox` at `src/core/schedule/scheduler.ts:56` (moved to `beebox/src/core/schedule/scheduler/core.ts`)). It failed on the first real
    run against the server.
 3. The two manifests take **different** roots, which is what produced (2):
    `hub.json` holds package roots, `boxes.json` holds `content/` dirs. Nothing
@@ -58,7 +58,7 @@ signal about what kind of fix works here.
 ## What makes it likely to recur
 
 - **The resolver that gets it right is in the wrong place.** `resolveBoxRoot`
-  (`src/hub/child-spawn.ts:74`) accepts either root and returns the box root.
+  (`src/hub/child-spawn.ts:74` (moved to `beebox/src/hub/supervisor/child-spawn.ts`)) accepts either root and returns the box root.
   It is the correct answer, but it lives in the hub package, so code outside
   the hub either imports across a layer boundary or reimplements the check.
   Two non-hub callers already reach in: `src/cli/commands/hub.ts:26` and

@@ -93,7 +93,7 @@ survive.
 Update at release boundaries that will be shown to people, when a surface-map
 `git diff --stat <generated-at-rev>..HEAD -- <paths>` signals drift, or on demand.
 Use the incremental procedure normally; full regeneration is for first creation
-or suspected drift. This is also tracked in `beebox/docs/maintenance.md`.
+or suspected drift. This is also tracked in `beebox/docs/development/maintenance.md`.
 
 Do not run the report writer unattended or make it a blocking commit gate.
 A scheduled read-only staleness reminder is permitted; scheduling does not
@@ -107,10 +107,10 @@ it current (step 4 above).
 | Category | Paths |
 |---|---|
 | Endpoints & auth | `beebox/src/webapp/`, `beebox/src/hub/`, `beebox/pub-worker/src/` |
-| Credentials | `beebox/src/webapp/auth*`, `beebox/src/webapp/local-users*`, `beebox/src/webapp/auth-capabilities.ts`, `beebox/src/webapp/setup-token.ts`, `beebox/src/core/token-store.ts`, `beebox/src/core/agent/token.ts`, `beebox/src/core/mobile/`, `beebox/src/core/scan/tokens.ts`, `beebox/src/core/*-key.ts`, `beebox/src/core/search/embeddings-key.ts`, `beebox/src/connectors/google-token-store.ts`, `beebox/src/connectors/google-auth.ts`, `beebox/src/webapp/trpc/routers/admin.ts`, `beebox/src/publish/connector-secret.ts`, `beebox/src/lib/env.ts`, `beebox/deploy/`, any `process.env` addition anywhere |
+| Credentials | `beebox/src/webapp/auth*`, `beebox/src/webapp/local-users*`, `beebox/src/webapp/auth-capabilities.ts`, `beebox/src/webapp/setup-token.ts`, `beebox/src/core/token-store.ts`, `beebox/src/core/agent/token.ts`, `beebox/src/core/mobile/`, `beebox/src/core/scan/tokens.ts`, `beebox/src/core/*-key.ts`, `beebox/src/core/search/embeddings-key.ts`, `beebox/src/google/token-store.ts`, `beebox/src/google/auth.ts`, `beebox/src/webapp/trpc/routers/admin/router.ts`, `beebox/src/publish/connector-secret.ts`, `beebox/src/lib/env.ts`, `beebox/deploy/`, any `process.env` addition anywhere |
 | Data egress | `beebox/src/connectors/`, `beebox/src/core/agent/`, `beebox/src/core/transcription/`, `beebox/src/services/`, `beebox/src/publish/`, `beebox/src/core/external/` |
-| Internal practices | `beebox/src/shared/ref-path.ts`, `beebox/src/lib/file-lock.ts`, `beebox/src/lib/card-lock.ts`, `beebox/src/webapp/` (CSP, throttles), `beebox/src/lib/atomic-write.ts` |
-| Operational | `beebox/deploy/`, `beebox/src/services/tailscale-exposure.ts`, `beebox/src/hub/` (child-env allowlist), systemd units |
+| Internal practices | `beebox/src/shared/ref-path/core.ts`, `beebox/src/lib/file-lock.ts`, `beebox/src/lib/card-lock.ts`, `beebox/src/webapp/` (CSP, throttles), `beebox/src/lib/atomic-write.ts` |
+| Operational | `beebox/deploy/`, `beebox/src/services/tailscale-setup/exposure.ts`, `beebox/src/hub/` (child-env allowlist), systemd units |
 | Publishing | `beebox/src/publish/`, `beebox/pub-worker/` |
 | Clients | `ios-app/` (token storage, pairing), `beebox-clerk/` (host permissions, what it sends) |
 

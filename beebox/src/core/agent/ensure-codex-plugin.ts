@@ -31,7 +31,7 @@ import { existsSync } from "node:fs";
 import { promisify } from "node:util";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { codexBinaryPath } from "../../services/codex-binary.js";
 
 const execFileAsync = promisify(execFile);

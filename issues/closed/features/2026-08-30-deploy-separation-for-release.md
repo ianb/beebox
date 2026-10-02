@@ -53,7 +53,7 @@ sequencing the separation before or with the rename avoids doing it twice).
 > false alarm telling a visitor to restore a file they never had. `deploy.sh`
 > references the server-ip/prod-ssh/notifier pieces 25 times. The rename has
 > landed, so the sequencing concern in the last paragraph is moot; the
-> generic core the issue asks for is what `docs/docker-install.md` already
+> generic core the issue asks for is what `docs/install/docker.md` already
 > describes.
 
 > 2026-09-04 built (worktree-deploy-separation). The separation is by

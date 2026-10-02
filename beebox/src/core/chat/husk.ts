@@ -13,14 +13,14 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath, type SessionHistoryEntry } from "./session/history.js";
 import { localOrigin, type LocalOrigin } from "./session/origin.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../box/config.js";
 import { extractSnippet } from "../../cli/lib/session-text.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { readCodexSessionUpdatedAt } from "./session/codex-transcript.js";
 import { loadSessionHistory } from "./session/load-history.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";

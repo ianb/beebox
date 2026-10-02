@@ -23,7 +23,7 @@ reported missing modules such as `src/schemas/feedback.ts`, `guide.ts`,
 files, and the failures ended as `1..0 # no tests found`. The same run still
 completed many sibling doctests normally.
 
-The affected changed test, `test/webapp/trpc-clerk.doctest.md`, passed 7/7 when
+The affected changed test, `test/webapp/trpc-clerk.doctest.md` (moved to `beebox/test/webapp/trpc/routers/clerk.doctest.md`), passed 7/7 when
 rerun alone with one job. This points to an intermittent interaction between
 the doctest ESM loader, the tsx loader, and parallel TAP child startup rather
 than a missing source module.
@@ -31,4 +31,4 @@ than a missing source module.
 Investigate why `.js` imports are sometimes resolved to a nonexistent `.ts`
 candidate without continuing to the existing `.tsx` module under parallel
 load. A reliable regression should start multiple doctest child processes that
-import `src/schemas/registry.ts`, not merely loop a single isolated doctest.
+import `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`), not merely loop a single isolated doctest.

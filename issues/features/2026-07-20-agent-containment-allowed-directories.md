@@ -22,7 +22,7 @@ priority: normal
 > in Claude Code's permission config refuses non-interactively and never
 > prompts, so "headless" and "contained" are compatible — only the undecided
 > middle prompts. **What actually blocks any such control plane is one line**,
-> `permissionMode: "bypassPermissions"` (`src/services/claude-chat.ts:103`),
+> `permissionMode: "bypassPermissions"` (`src/services/claude-chat.ts:103` (moved to `beebox/src/services/claude-chat/core.ts`)),
 > which skips the permission system including deny rules. The grant half is
 > already plumbed end to end: `additionalDirectories` runs through
 > `AgentInvocation` (`core/agent/types.ts:60`), the Claude path, the Codex

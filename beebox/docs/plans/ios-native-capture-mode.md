@@ -45,22 +45,22 @@ suspension or network loss cannot silently discard a capture.
 
 - **The complete box-side capture pipeline — reuse.** Raw routes create a
   staging session, eagerly accept media, seal it, and fire preparation
-  (`src/webapp/routes/capture.ts:1-14,124-221,236-270`). The preparation worker
+  (`src/webapp/routes/capture.ts:1-14 (moved to `beebox/src/webapp/routes/capture/register.ts`),124-221,236-270`). The preparation worker
   writes and validates a capture document, commits it, and delivers a
-  `<capture>` message (`src/core/capture/prepare.ts:226-312`). Native iOS must
+  `<capture>` message (`src/core/capture/prepare.ts:226-312` (moved to `beebox/src/core/capture/prepare/core.ts`)). Native iOS must
   call this path; it must not assemble cards or wrappers itself.
 - **Durable server staging and concurrency — reuse.** Sessions live under
   `tmp/capture-staging/` and are validated from `session.json`
-  (`src/core/capture/staging-store.ts:1-12,71-78,96-128`). Per-session mutation
+  (`src/core/capture/staging-store.ts:1-12 (moved to `beebox/src/core/capture/staging-store/core.ts`),71-78,96-128`). Per-session mutation
   is serialized (`staging-store.ts:167-180`), and limits are 1 GiB / 500 items
   (`src/core/capture/staging-limits.ts:1-14,37-51`).
 - **Raw-body upload branch — repair before reuse.** The upload handler can read
-  a raw `Buffer` (`src/webapp/routes/capture.ts:112-118`), but the server
-  registers multipart only (`src/webapp/server.ts:93-98`), so Fastify rejects
+  a raw `Buffer` (`src/webapp/routes/capture.ts:112-118` (moved to `beebox/src/webapp/routes/capture/register.ts`)), but the server
+  registers multipart only (`src/webapp/server.ts:93-98` (moved to `beebox/src/webapp/server/app.ts`)), so Fastify rejects
   an unregistered binary content type before that branch runs. Track 1 adds one
   exact `application/octet-stream` parser and a route doctest before native
   background uploads rely on this path. Fastify's 50 MiB body limit
-  (`src/webapp/server.ts:53-57`) is also the effective per-item native limit.
+  (`src/webapp/server.ts:53-57` (moved to `beebox/src/webapp/server/app.ts`)) is also the effective per-item native limit.
 - **Crash resume and pending UI — reuse after unifying request identity.** The
   pure selectors already scope resumable sessions by authenticated user and
   visible chat (`src/core/capture/pending.ts:63-105`). The web capture overlay
@@ -163,9 +163,9 @@ pairing user, and add a mobile-friendly resumable-session read to the same REST
 lifecycle.
 
 **Why this needs to change.** Staged segments currently store only chunk names
-(`src/core/capture/staging-store.ts:32-34`), and preparation unconditionally
+(`src/core/capture/staging-store.ts:32-34` (moved to `beebox/src/core/capture/staging-store/core.ts`)), and preparation unconditionally
 concatenates bytes and writes `.webm`
-(`src/core/capture/write-cards.ts:81-119`). Relabeling AAC bytes as WebM would
+(`src/core/capture/write-cards.ts:81-119` (moved to `beebox/src/core/capture/prepare/write-cards.ts`)). Relabeling AAC bytes as WebM would
 produce corrupt cards. The existing resume selector is exposed only through a
 tRPC React query (`src/frontend/src/components/capture/useCaptureResume.ts:37-54`),
 whose transport encoding should not become a Swift API contract. The apparent
@@ -434,15 +434,15 @@ produce terminal 404/409 responses or silent local loss.
   different capture.
 - Treat upload/finalize 404 as the same terminal recovery class because a
   delivered or cancelled session has already had staging removed
-  (`src/core/capture/prepare.ts:333-342`,
-  `src/webapp/routes/capture.ts:141-142,229-232,243-244`). The copy acknowledges
+  (`src/core/capture/prepare.ts:333-342` (moved to `beebox/src/core/capture/prepare/core.ts`),
+  `src/webapp/routes/capture.ts:141-142 (moved to `beebox/src/webapp/routes/capture/register.ts`),229-232,243-244`). The copy acknowledges
   the ambiguity: "This capture was already submitted or cancelled." Offer the
   same follow-up-or-discard actions for local items. A resumable response that
   still lists the ID wins over a stale 404 result; otherwise never retry a gone
   staging ID.
 - A lost finalize response is retried against the same ID; the server's
   compare-and-swap finalize remains authoritative and idempotent
-  (`src/webapp/routes/capture.ts:252-270`).
+  (`src/webapp/routes/capture.ts:252-270` (moved to `beebox/src/webapp/routes/capture/register.ts`)).
 - Switching boxes is unavailable while the full-screen capture is active. A
   stale auth token leaves local media intact and routes the user to Pair or
   Manage Boxes after dismissal.

@@ -22,7 +22,10 @@ export async function computeTodoAmbientLine(boxRoot: string): Promise<string | 
   // todo in the box — so the line is a read, not a second filter that could
   // drift from what `bbx query todos` reports.
   const { reduction } = await runTodoQuery(boxRoot, {
-    query: { here: "", params: { status: ["open"] } },
+    // `scope: "all"` — the module doc's promise that this line counts every
+    // open todo, agent-assigned included, must not silently narrow just
+    // because the default scope changed underneath it (Track 1).
+    query: { here: "", params: { status: ["open"], scope: "all" } },
     since: null,
   });
   if (reduction.onPlate === 0) return null;

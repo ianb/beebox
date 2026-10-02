@@ -28,7 +28,7 @@ lives in its own tracker:
 
 Auth today is **Google-OAuth-only, and off by default**. `isAuthEnabled()` is
 literally `!!process.env.GOOGLE_OAUTH_CLIENT_ID` (`src/webapp/auth.ts:51`); the
-login surface is Google OAuth (`src/webapp/routes/auth.ts` — `/auth/login` →
+login surface is Google OAuth (`src/webapp/routes/auth.ts` (moved to `beebox/src/webapp/routes/auth/register.ts`) — `/auth/login` →
 Google consent → `/auth/callback`). When `GOOGLE_OAUTH_CLIENT_ID` is unset (the
 local-dev default), `isAuthEnabled()` is false and the server registers a **stub
 `/auth/me` that always returns `null`** — i.e. the box is simply unauthenticated,
@@ -94,4 +94,4 @@ route through Google.
 
 Aligns with the fail-closed/strict-by-default posture and the local-first dev goal.
 Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
-the OAuth/session model in `src/webapp/auth.ts` + `src/webapp/routes/auth.ts`.
+the OAuth/session model in `src/webapp/auth.ts` + `src/webapp/routes/auth.ts` (moved to `beebox/src/webapp/routes/auth/register.ts`).

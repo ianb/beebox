@@ -8,17 +8,19 @@
  */
 
 import * as fs from "node:fs/promises";
-import { requireBoxRoot } from "../lib/paths.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { requireBoxRoot } from "../lib/paths/core.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { getSystemState } from "../core/state.js";
 import { cardFields, parseCardText } from "../core/card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
+import { createCardSchemaMap } from "../schemas.js";
 import { QuestionSchema } from "../schemas/question.js";
 
 export interface PendingQuestion {
   path: string;
   prompt: string;
   options?: string[] | undefined;
+  /** `time-bound` when the question blocks something with a date. */
+  urgency?: "time-bound" | undefined;
 }
 
 export interface ContextOutput {
@@ -35,7 +37,7 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
   const pendingQuestions: PendingQuestion[] = [];
 
   for (const q of state.questions) {
-    if (q.status !== "pending") continue;
+    if (q.state !== "pending") continue;
 
     try {
       const content = await fs.readFile(q.path, "utf-8");
@@ -46,6 +48,7 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
         path: q.relativePath,
         prompt: fields.prompt,
         options: options && options.length > 0 ? options : undefined,
+        ...(fields.urgency === undefined ? {} : { urgency: fields.urgency }),
       });
     } catch (e) {
       if (errnoCode(e) !== "ENOENT") {

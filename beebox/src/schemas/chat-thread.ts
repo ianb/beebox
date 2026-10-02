@@ -8,7 +8,7 @@
  * message (its reply) or seen-marker (acknowledge without replying).
  */
 
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 
 const ParticipantEntry = z.object({
@@ -35,6 +35,7 @@ const SeenEntry = z.object({
 const ThreadEntry = z.discriminatedUnion("kind", [MessageEntry, SeenEntry]);
 
 export const ChatThreadSchema = cardSchema("chat-thread", {
+  brief: "A conversation with one chat",
   description: "An accumulating conversation with one chat (e.g. a Telegram group) — the connector appends incoming messages, the agent appends one reply or seen-marker",
   category: "system",
   searchable: false,

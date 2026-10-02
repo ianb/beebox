@@ -36,13 +36,13 @@ The numbers cited below are from that report.
 - `beebox/code-style.md` — custom error classes; fail-closed
   ("bias toward strict"); no third hand-written schema (DRY on the wire
   shape, per the Track D.5 note in `scan-import-gemini.ts:14-22`).
-- Precedents: `src/services/docling.ts` (service + fake + gated
-  integration doctest), `src/core/agent/run.ts` (SDK invocation
+- Precedents: `src/services/docling.ts` (moved to `beebox/src/services/docling/core.ts`) (service + fake + gated
+  integration doctest), `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`) (SDK invocation
   conventions), `src/core/agent/auth-preflight.ts` (auth preflight).
 
 ## What already exists
 
-- `src/core/commands/scan-import-gemini.ts:23` — `rawScanAnalysisSchema`,
+- `src/core/commands/scan-import-gemini.ts:23` (moved to `beebox/src/core/describe-images/gemini.ts`) — `rawScanAnalysisSchema`,
   the single source of truth for the per-page shape. **Reused** as the base
   for both backends' wire schemas.
 - `scan-import-gemini.ts:50-68` — `ScanBatchMisalignedError` +
@@ -74,19 +74,19 @@ The numbers cited below are from that report.
   card with no `subject-bbox` field, which downstream already tolerates
   (the Gemini path already emits `null` for full-page photos, per the
   prompt at `scan-import-gemini.ts:100`).
-- `src/core/agent/run.ts:64-99` + `src/core/agent/auth-preflight.ts` —
+- `src/core/agent/run.ts:64-99` (moved to `beebox/src/core/agent/invoke/run.ts`) + `src/core/agent/auth-preflight.ts` —
   SDK invocation conventions (env via `buildScriptEnv` stripping
   `ANTHROPIC_API_KEY` to force subscription auth, `CLAUDECODE` unset,
   `pathToClaudeCodeExecutable` from `resolveClaudeCodeBinary()`), and
   `checkClaudeAuth()`/`ClaudeAuthError` with a 10-minute positive cache.
   **Reused**: the Claude backend follows the same env/binary conventions
   (via the same helpers), and scan-import calls `checkClaudeAuth()`
-  before any files are staged. `src/services/claude-chat.ts:28` already
+  before any files are staged. `src/services/claude-chat.ts:28` (moved to `beebox/src/services/claude-chat/core.ts`) already
   imports `core/sdk-binary-path.js` from services, so the import
   direction is established precedent.
 - `src/shared/model-ids.ts` — `MODEL_ID.sonnet = "claude-sonnet-5"`.
   **Reused** for the model id.
-- `src/services/docling.ts:305-383` + `scan-import-document.ts:37,70`
+- `src/services/docling.ts:305-383` (moved to `beebox/src/services/docling/core.ts`) + `scan-import-document.ts:37,70`
   (`docling?: DoclingService`, `args.docling ?? createDoclingService()`) —
   the injection precedent for a service consumed by a scan command.
   **Copied as the shape** for `vision` injection into the photo flow.
@@ -94,7 +94,7 @@ The numbers cited below are from that report.
   gated real-backend doctest pattern (probe → `skipReason` → ternary
   assertions with identical output on both paths). **Copied as the
   shape** for the gated real-Sonnet doctest.
-- `src/core/commands/scan-guide-context.ts` +
+- `src/core/commands/scan-guide-context.ts` (moved to `beebox/src/core/commands/scan-import/guide-context.ts`) +
   `scan-import-session.ts:138` `resolveBoxholderContext` — priors
   injection. **Unchanged**; the context string is a plain input to
   `buildScanPrompt` for both backends.
@@ -383,7 +383,7 @@ In `executeScanImport` (both photo entry points), replacing the two
   same altitude. A per-box override can be added later if a real
   deployment needs mixed backends.
 - The hub passthrough allowlist gains `BBX_SCAN_VISION`
-  (`src/hub/child-env.ts`), or per-box `bbx serve` children never see
+  (`src/hub/child-env.ts` (moved to `beebox/src/hub/supervisor/child-env.ts`)), or per-box `bbx serve` children never see
   the selection.
 
 ### Runner generalization

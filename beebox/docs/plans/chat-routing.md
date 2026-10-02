@@ -34,8 +34,8 @@ All source paths here are monorepo-relative.
 - `beebox/src/frontend/src/components/BoxSelectionTiles.tsx:75`: `search={toSearch({ capture: "1" })}`. Replace this shortcut with Quick chat; retain other capture functionality.
 - `ios-app/BeeBox/Models/PairedBox.swift:50`: `var items = [URLQueryItem(name: "nativeComposer", value: "1")]`. The paired box opens ordinary chat, optionally naming a session. Add explicit Quick chat navigation; do not infer a cold-start timeout here.
 - `beebox/src/core/chat/session/target.ts:22`: `export type ChatTargetSpec =`. Use only the existing/fresh arms for delivery, never `most-active-or-fresh`; landmark placement is a separate coordinate from session continuity.
-- `beebox/src/webapp/routes/chat-send-routes.ts:111`: `const claim = messageId ? claimMessageId({ messageId, processedMessageIds, inFlightSends }) : null;`. Reuse ordinary send with a stable message ID, including retry handling and identity attribution. Do not claim stronger delivery guarantees than this path provides.
-- `beebox/src/frontend/src/machines/chat-bound-turn.ts:8`: `return { session: target.sessionId, exactSession: true, viewContext: attention };`. Preserve explicit binding through confirmation and dispatch.
+- `beebox/src/webapp/routes/chat-send-routes.ts:111` (moved to `beebox/src/webapp/routes/chat/send-routes.ts`): `const claim = messageId ? claimMessageId({ messageId, processedMessageIds, inFlightSends }) : null;`. Reuse ordinary send with a stable message ID, including retry handling and identity attribution. Do not claim stronger delivery guarantees than this path provides.
+- `beebox/src/frontend/src/machines/chat-bound-turn.ts:8` (moved to `beebox/src/frontend/src/machines/chatMachine/chat-bound-turn.ts`): `return { session: target.sessionId, exactSession: true, viewContext: attention };`. Preserve explicit binding through confirmation and dispatch.
 - `beebox/src/core/chat/husk-read.ts:97`: `export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]>`. Use live catalog owners rather than a second permanent session registry. Compose `loadAllSessions` and `loadLandmarkSummaries`, as `recent-landmark.ts` does; do not reuse its capped one-chat-per-landmark result.
 - `beebox/src/core/chat/session/recent-landmark.ts:4`: `export const CHAT_FRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;`. Reuse the existing recent-chat window for candidate discovery, not for iOS launch behavior.
 - `beebox/src/schemas/landmark.ts:202`: “Don't add a description or purpose field.” Keep routing prose in its own rubric card. Existing `LandmarkDestination` has `rules`, but `beebox/src/schemas/landmark.ts:112` says “`rules`/`procedure` are only meaningful when `for`”; the following line restricts them to triage. Extending it is possible, but would still need another home for session-specific rules. One rubric is the proposed editing surface.
@@ -183,3 +183,41 @@ they retain the previous full-inventory anchor and explicitly do not claim a
 fresh audit of unrelated historical changes. Native sheet visual review,
 physical-device review, and live box evaluation remain open, so this plan is
 partial rather than an assertion of calibrated routing quality.
+
+## Recent-context refinement (2026-09-24)
+
+The boxholder observed two identically named candidates with nearly equal
+probabilities and approved richer evidence, emphasizing: “The latest messages
+obviously matter the most by far. But overall conversation length or something
+too.” Recent semantic context remains primary; history size and message dates
+are supporting evidence, not a preference for long conversations regardless of
+fit.
+
+The smallest change is to improve the existing bounded catalog excerpt and add
+optional metadata. `src/core/chat/routing/catalog.ts:158` currently uses
+`candidate.recentContext = text.slice(-2000);`, which can remove the user request
+and its role when an assistant reply is long. Preserve labeled message excerpts
+through both budget passes, and retain recent user context during tool-heavy
+turns. Reuse the history loader's `total` as a transcript-entry count; do not
+mislabel it as user turns. Expose the latest available message timestamp and
+entry count below result labels. Old routing records remain readable without
+these optional fields.
+
+Budget: approximately 150 source and 100 test changed lines, plus this amendment
+and the current routing guide. No new persistence, full-history summary pass,
+candidate eligibility change, probability threshold, native UI, or automatic
+aborted-chat classification. Tests cover a long reply hiding the latest user
+request, shared-budget shortening, metadata, and older records. Browser evidence
+will cover duplicate titles with different metadata. Live ranking quality
+remains an evaluation task; deterministic tests verify the evidence supplied,
+not whether Jev will assign a particular probability.
+
+Implementation evidence: the selected suite passed 1,301 assertions across 108
+files. A phone-width browser check rendered duplicate-title synthetic results
+with different entry counts and message dates; it did not send a chat or invoke
+Jev. Cross-model review identified app-context wrappers consuming the user-text
+budget and gaps caused by skipping oversized older messages. The refinement
+uses the existing human-message classification and wrapper cleanup, stops the
+older-message window at a gap, and derives the displayed date from conversation
+text. Focused regressions cover these cases. No live ranking calibration or
+comparison of the boxholder's private sessions is claimed.

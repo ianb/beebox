@@ -21,7 +21,7 @@ Shape: the owner mints a one-time invite URL (CLI and/or admin UI); the
 invitee opens it and sets **their own** password. No external service, works
 on loopback/Tailscale, and it's a thin extension of machinery that exists:
 first-run setup already does exactly token-URL → create-account
-(`src/webapp/routes/auth.ts`, 15-minute TTL, self-disabling route). An
+(`src/webapp/routes/auth.ts` (moved to `beebox/src/webapp/routes/auth/register.ts`), 15-minute TTL, self-disabling route). An
 invite token is the same pattern scoped to "create one member account."
 
 Alternatives considered and rejected (boxholder, 2026-07-20):

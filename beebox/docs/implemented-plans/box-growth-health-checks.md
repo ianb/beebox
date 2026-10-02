@@ -91,7 +91,7 @@ content.
   `withCardLock`. The scheduler and web server can update the same state, so the
   state updater composes both layers.
 - The `unfiled-captures` health check is the closest accumulation precedent.
-  `src/webapp/trpc/routers/health.ts:148-154` says the backlog is a warning and
+  `src/webapp/trpc/routers/health.ts:148-154` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`) says the backlog is a warning and
   reuses the capture sweep's traversal code and threshold. It still runs that
   walk inside `runHealthChecks`; box growth does not copy that hosting choice
   because `bbx health` and `/api/health` bypass the snapshot and a full box walk
@@ -100,26 +100,26 @@ content.
 ## What already exists
 
 - The dashboard and CLI already share `runHealthChecks`.
-  `src/webapp/trpc/routers/health.ts:230-236` says: *"Run all health checks for
+  `src/webapp/trpc/routers/health.ts:230-236` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`) says: *"Run all health checks for
   a box."* `src/cli/commands/health.ts:134-145` calls it and prints the result.
   The plan adds one warning to this existing result instead of adding a second
   health surface.
 - `HealthCheck` already distinguishes warning from error.
-  `src/webapp/trpc/routers/health.ts:29-34` defines `ok`, `message`, and
+  `src/webapp/trpc/routers/health.ts:29-34` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`) defines `ok`, `message`, and
   `severity: "error" | "warning"`. Box growth remains warning severity and does
   not fail deploy health.
 - `health.check` already uses a stale-while-revalidate process cache.
-  `src/webapp/trpc/routers/health-snapshot.ts:16-23` says fresh callers bypass
+  `src/webapp/trpc/routers/health-snapshot.ts:16-23` (moved to `beebox/src/webapp/trpc/routers/health/checks/snapshot.ts`) says fresh callers bypass
   the cache and a hub restart clears it. The growth health reader is cheap, but
   acknowledgement must invalidate this cache so the dismissed warning
   disappears on the next query.
 - The scheduler is a separate process that iterates every configured box.
-  `src/core/schedule/scheduler.ts:118-123` says it reloads the box list each
+  `src/core/schedule/scheduler.ts:118-123` (moved to `beebox/src/core/schedule/scheduler/core.ts`) says it reloads the box list each
   cycle, and `:166-196` validates each box and touches its heartbeat before
   calling `runTick`. The measurement runs after the heartbeat and before
   `runTick`, so a sick box cannot starve the check behind its own work.
 - Machine-local state belongs under `.beebox/`.
-  `src/core/box/index.ts:179-184` puts `.beebox/` and schedule state in the
+  `src/core/box/index.ts:179-184` (moved to `beebox/src/core/box/structure/core.ts`) puts `.beebox/` and schedule state in the
   generated box `.gitignore`. The plan stores
   `.beebox/box-growth-health.json` there.
 - `writeFileAtomic` is the crash-safe state writer.
@@ -144,7 +144,7 @@ content.
   checks and maps each to a message. It gains one explicit action for the new
   check instead of a general-purpose dismissal system.
 - Owner-only tRPC procedures already exist.
-  `src/webapp/trpc/trpc.ts:21-30` gates them with `ctx.isOwner`. A growth
+  `src/webapp/trpc/trpc.ts:21-30` (moved to `beebox/src/webapp/trpc/procedures.ts`) gates them with `ctx.isOwner`. A growth
   acknowledgement changes machine-local state, so it uses `ownerProcedure`;
   the diagnostic-key-readable `health.check` remains read-only.
 
@@ -395,7 +395,7 @@ on an active scheduler.
 
 The scheduler manifest contract is verified, not assumed:
 `src/core/box/boxes-config.ts:23-25` defines its entries as absolute box roots,
-and `src/core/schedule/scheduler.ts:169-171` rejects a path without the box's
+and `src/core/schedule/scheduler.ts:169-171` (moved to `beebox/src/core/schedule/scheduler/core.ts`) rejects a path without the box's
 `.bbx-box` marker. The scheduler and web server therefore address the same
 operational root. `getBoxShape(boxRoot).packageRoot` is used only for Git.
 
@@ -448,7 +448,7 @@ viewports.
 
 ### Track 4 — reference documentation and operational calibration
 
-**What.** Extend `docs/health-checks.md` and `docs/box-layout.md` with the scan
+**What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
 host, state file, thresholds, acknowledgement semantics, state-failure behavior,
 and a runbook for inspecting the named subtree. Record the production
 calibration above as design evidence, not a promise that the numbers never need
@@ -635,7 +635,7 @@ rule that a box agent must recall without reading `bbx health` and the runbook.
 ## Implementation order
 
 1. **Measurement policy and state.** Add the failing
-   `test/core/box-growth-health.doctest.md`, then implement
+   `test/core/box-growth-health.doctest.md` (moved to `beebox/test/core/box-growth/health.doctest.md`), then implement
    `src/core/box-growth/health.ts` with scanner, pure evaluation, lock, atomic
    state transition, and acknowledgement.
 2. **Scheduler and health reader.** Add scheduler/health doctest cases, then
@@ -654,7 +654,7 @@ rule that a box agent must recall without reading `bbx health` and the runbook.
 ## Rollout shape
 
 - Tests land before each substantial codepath. The primary new document is
-  `test/core/box-growth-health.doctest.md`. Existing scheduler and health-
+  `test/core/box-growth-health.doctest.md` (moved to `beebox/test/core/box-growth/health.doctest.md`). Existing scheduler and health-
   snapshot doctests gain integration cases; route behavior uses a tRPC route
   doctest.
 - The completed plan ships as one unit. On the first scheduler cycle, each box

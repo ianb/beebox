@@ -11,7 +11,7 @@ priority: normal
 The public deploy path is Cloudflare-proxied DNS with SSL mode
 "Flexible": HTTPS between the client and Cloudflare, but **plain HTTP
 between Cloudflare's edge and the origin** — nginx listens on port 80
-only and proxies to `127.0.0.1:3210` (`deploy/` + `docs/server-operations.md`).
+only and proxies to `127.0.0.1:3210` (`deploy/` + `docs/server/operations.md`).
 Session cookies, box content, and credentials transit the public
 internet unencrypted on that leg.
 

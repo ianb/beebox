@@ -11,7 +11,7 @@ issues: []
 > system": that scheme and its SHA-256 `manifest.json` tracking are deleted, and
 > `docs/asset-manifests.md` is historical rather than "the living doc". Attach
 > scopes now hold their bytes in git-annex. Current model:
-> [`assets.md`](../assets.md).
+> [`assets.md`](../media/assets.md).
 
 **Shipped differently than this draft describes.** The `.attach/` convention landed, but as part of the asset-manifest system rather than this XML/cardworks-era design (which predates the Markdown card format and the manifest's SHA-256 tracking). See `docs/asset-manifests.md` for the living doc.
 
@@ -86,7 +86,7 @@ Look at `src/core/CardLoader` (or wherever the file walker is) — needs scope-a
 Schemas don't need structural changes for phase 1 (refs are still strings, still validated as `z.string()`), but the content of refs changes — values pointing at attached files get the `attach/` prefix.
 
 Schemas to audit:
-- `src/schemas/image.tsx` — `<filename ref="attach/photo-001.jpg">` (was bare filename)
+- `src/schemas/image.tsx` (moved to `beebox/src/schemas/image/schema.tsx`) — `<filename ref="attach/photo-001.jpg">` (was bare filename)
 - `src/schemas/audio.tsx` — `<filename ref="attach/audio-001.webm">`
 - `src/schemas/file.tsx` — `<filename ref="attach/source.pdf">`
 - `src/schemas/doc.tsx` — `<content ref="attach/Project_Notes.md">`
@@ -104,10 +104,10 @@ The "filename" element-name is dumb terminology for what's really an attachment 
 Connectors create cards with attachments. Each needs to put the file in `<basename>.attach/` instead of as a sibling:
 
 - `src/connectors/capture.ts` (or wherever capture sessions land) — write `<photo-id>.image.attach/<photo-id>.jpg` instead of sibling `.jpg`
-- `src/connectors/gmail.ts` — write `<msg-id>.email-message.attach/<msg-id>.body.txt` + `attach/attachments/...`
-- `src/connectors/google-drive.ts` — already uses a subdirectory pattern for Sheets; rename `Budget/` → `Budget.attach/` (small change). For Docs, the sibling `.md` moves into `Foo.attach/<basename>.md`.
-- `src/connectors/google-calendar.ts` — `.ics` files; check if they're sibling to a card or standalone.
-- `src/connectors/telegram.ts` — outbound messages; no attachments today.
+- `src/connectors/gmail.ts` (moved to `beebox/src/connectors/gmail/connector.ts`) — write `<msg-id>.email-message.attach/<msg-id>.body.txt` + `attach/attachments/...`
+- `src/connectors/google-drive.ts` (moved to `beebox/src/connectors/google-drive/connector.ts`) — already uses a subdirectory pattern for Sheets; rename `Budget/` → `Budget.attach/` (small change). For Docs, the sibling `.md` moves into `Foo.attach/<basename>.md`.
+- `src/connectors/google-calendar.ts` (moved to `beebox/src/connectors/google-calendar/connector.ts`) — `.ics` files; check if they're sibling to a card or standalone.
+- `src/connectors/telegram.ts` (moved to `beebox/src/connectors/telegram/connector.ts`) — outbound messages; no attachments today.
 
 For each connector, the change is small: replace path-to-sibling with path-to-attach-dir, and ensure the `.attach/` directory exists before writing.
 
@@ -118,7 +118,7 @@ The webapp serves attached files for the frontend (image renderer, audio player,
 Files to audit:
 - `src/webapp/routes/*.ts` — anything serving a file by basename
 - `src/webapp/routes/files.ts` (if it exists) or equivalent
-- `src/webapp/routes/chat-uploads.ts` — chat attachment serving
+- `src/webapp/routes/chat-uploads.ts` (moved to `beebox/src/webapp/routes/chat/uploads.ts`) — chat attachment serving
 
 ### beebox: frontend renderers
 
@@ -183,7 +183,7 @@ New rules to add:
 2. **No literal `attach/` directory outside attach scopes.** A directory named `attach/` anywhere in the regular box tree (not inside a `Foo.attach/` scope) is an error.
 3. **Attachment ref resolves.** For each schema that has an attachment-path ref, validate the file exists in the card's `<basename>.attach/`. (Today's validators might already check sibling existence; the resolution target moves.)
 
-Files: `src/cli/commands/validate.ts`, `plugins/card-validator/` (the pre-commit hook).
+Files: `src/cli/commands/validate.ts` (moved to `beebox/src/cli/commands/validate/command.ts`), `plugins/card-validator/` (the pre-commit hook).
 
 ### beebox: doc-graph and source editor
 
@@ -204,7 +204,7 @@ Each test that creates a card with an attachment now creates the `.attach/` dire
 
 ## Migration tooling
 
-A migrator script (`scripts/migrate/attachments.ts` or similar) walks an existing box and does **two coordinated passes**:
+A migrator script (`scripts/migrate/attachments.ts` (moved to `beebox/src/scripts/migrate/attachments.ts`) or similar) walks an existing box and does **two coordinated passes**:
 
 1. **File move pass.** Move sibling files into `<basename>.attach/` directories.
 2. **Ref rewrite pass.** Walk every card and rewrite any ref that points at a path that was moved — including both refs to attached files within the same card (now `attach/<file>`) and cross-card refs that included the old absolute or relative path.

@@ -408,7 +408,7 @@ procedure card (`process-retrospective.procedure.card:146-207`):
   with no recurrence requirement and no procedure involved — retro's
   `source: inferred` pathway exists specifically to catch *implicit*
   signal this explicit pathway misses. Per
-  `src/schemas/personality-instructions.ts:77-81` and the parallel guide
+  `src/schemas/personality-instructions.ts:77-81` (moved to `beebox/src/schemas/personality/instructions.ts`) and the parallel guide
   schema, "Evidence model... source (user-stated > feedback > inferred >
   default)" is the shared vocabulary both pathways write into — retro never
   touches `user-stated` entries (§5/§6), only adds/strengthens `inferred`

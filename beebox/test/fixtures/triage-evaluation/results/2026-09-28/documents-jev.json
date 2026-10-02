@@ -1,0 +1,86 @@
+{
+  "fake": false,
+  "labels": [
+    "legal",
+    "financial",
+    "property"
+  ],
+  "results": [
+    {
+      "id": "digital-property",
+      "variant": "extracted",
+      "elapsedMs": 515,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_3",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 1,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "scan-financial",
+      "variant": "extracted",
+      "elapsedMs": 219,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_2",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 1,
+            "option_3": 0,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "junk-layer-legal",
+      "variant": "extracted",
+      "elapsedMs": 154,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_1",
+          "confidence": 0.99,
+          "probabilities": {
+            "option_1": 1,
+            "option_2": 0,
+            "option_3": 0,
+            "none": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "photo-property",
+      "variant": "extracted",
+      "elapsedMs": 162,
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "destination": {
+          "type": "choice",
+          "choice": "option_3",
+          "confidence": 1,
+          "probabilities": {
+            "option_1": 0,
+            "option_2": 0,
+            "option_3": 1,
+            "none": 0
+          }
+        }
+      }
+    }
+  ]
+}

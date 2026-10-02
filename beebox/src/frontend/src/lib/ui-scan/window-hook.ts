@@ -15,7 +15,7 @@
  * dump, which calls `scanLiveDocument` directly.
  */
 
-import { scanLiveDocument } from "./live-dom.js";
+import { scanLiveDocument } from "./live-dom/dom.js";
 import type { ScanResult } from "./types.js";
 
 declare global {

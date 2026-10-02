@@ -16,7 +16,7 @@
  * shared workspace owns the level-one heading.
  */
 
-import { tour } from "./tour-lib/index.js";
+import { tour } from "./tour-lib/registry.js";
 
 interface Page {
   path: string;

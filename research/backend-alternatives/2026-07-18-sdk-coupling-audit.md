@@ -44,10 +44,10 @@ session id, text out, `AgentResult` in. The SDK is touched in exactly three file
 - `render.ts` — pretty-prints `SDKMessage`s for logs (`render.ts`).
 
 All callers go through the interface: reactor batch/chat jobs
-(`src/core/reactor/batch-jobs.ts:51`, `chat-jobs.ts:58`), triage
-(`src/core/triage/index.ts:147`), retro observer (`src/core/retro/observer.ts:68`),
+(`src/core/reactor/batch-jobs.ts:51` (moved to `beebox/src/core/reactor/engine/batch-jobs.ts`), `chat-jobs.ts:58`), triage
+(`src/core/triage/index.ts:147` (moved to `beebox/src/core/triage/run/core.ts`)), retro observer (`src/core/retro/observer.ts:68`),
 scenario runner (`src/scenario/runner.ts:115`), knowledge audits
-(`src/dev/lib/test-runner.ts:122`), and the procedure engine takes an agent *factory*
+(`src/dev/lib/test-runner.ts:122` (moved to `beebox/src/dev/lib/test-runner/runner.ts`)), and the procedure engine takes an agent *factory*
 (`src/core/procedure/engine-types.ts:84`). Fakes already substitute for the whole
 surface in tests.
 

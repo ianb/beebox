@@ -11,7 +11,7 @@ issues: []
 > exist, and neither does the migration they implemented — every box is
 > annex-shaped from creation, so there is nothing left to migrate *from*. The
 > scan pipeline this plan describes is otherwise live. Current model:
-> [`assets.md`](../assets.md).
+> [`assets.md`](../media/assets.md).
 
 A pipeline from a ScanSnap desktop scanner to triage-ready cards in a hosted
 box. ScanSnap profiles save searchable PDFs and images into per-box folders on
@@ -46,8 +46,8 @@ the uploader config.
   failure shapes; no default parameters; custom error classes.
 - Precedents (denser than docs): the mobile pairing/device-token machinery
   (`src/core/mobile/pairing.ts`), the bulk-upload streaming route
-  (`src/webapp/routes/bulk-upload.ts`), the upload dedup ledger
-  (`src/core/commands/upload-helpers.ts`), and `docs/plans/pdf-intake-design.md`
+  (`src/webapp/routes/bulk-upload.ts` (moved to `beebox/src/webapp/routes/bulk-upload/register.ts`)), the upload dedup ledger
+  (`src/core/commands/upload-helpers.ts` (moved to `beebox/src/core/upload-helpers.ts`)), and `docs/plans/pdf-intake-design.md`
   (this plan amends it — see Track 4).
 
 ## What already exists
@@ -56,7 +56,7 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
 (Track 4), justified there.
 
 - **Scan entry point and dedup ledger** — `bbx upload --as scan` with SHA-256
-  content-hash dedup. `src/core/commands/upload-helpers.ts:1-4`: *"Helpers for
+  content-hash dedup. `src/core/commands/upload-helpers.ts:1-4` (moved to `beebox/src/core/upload-helpers.ts`): *"Helpers for
   the `upload` command — content-hash dedup ledger and streaming SHA-256 of
   files. The ledger lives at `.beebox/uploads.json` (per-box, untracked)
   and survives file renames/relocations because it keys on content."*
@@ -64,7 +64,7 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   const;` — the kind dispatcher was built as a plug point. **Reused** as the
   server-side entry after validation, and its ledger doubles as the remote
   side of the uploader's dedup negotiation (Track 2).
-- **scan-import** — `src/core/commands/scan-import.ts` dispatches two ways:
+- **scan-import** — `src/core/commands/scan-import.ts` (moved to `beebox/src/core/commands/scan-import/command.ts`) dispatches two ways:
   all-images → photo flow (vision analysis, front/back pairing, question
   cards); any single PDF → document mode
 
@@ -84,12 +84,12 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   existing behavior). Output is a `capture-session` card + attach scope in
   `_content/inbox/`,
   committed with `Created-By: scan-import`, then
-  `createOrAppendIntakeJob` (`src/connectors/intake-utils.ts:36-38`: *"Create
+  `createOrAppendIntakeJob` (`src/connectors/intake-utils.ts:36-38` (moved to `beebox/src/job-cards/intake-utils.ts`): *"Create
   a new intake job or append items to an existing pending one from the same
   source."*). **Reused**; Track 4 replaces only the document-mode internals.
 - **Per-box scan priors** — now `_config/scan.guide.card`, compiled in-memory
   into the per-page analysis prompt (`resolveScanGuideContext`,
-  `src/core/commands/scan-guide-context.ts`); `CLAUDE_SCANS.md` remains a
+  `src/core/commands/scan-guide-context.ts` (moved to `beebox/src/core/commands/scan-import/guide-context.ts`)); `CLAUDE_SCANS.md` remains a
   deprecated, warning-logged fallback. Reshaped by the `scan-guide-card.md`
   subplan (2026-08-01); Track 6 authors the guide-card drafts for the two
   boxes.
@@ -98,13 +98,13 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   `.beebox/mobile-devices.secret.json`, with hashed tokens, pairing
   tickets (10-min TTL, `pairing.ts:12`), revocation, and dual verification by
   hub and box child (`pairing.ts:14-16` comment; hub side
-  `src/hub/hub-server.ts:161`). **Pattern reused, store not**: Track 1
+  `src/hub/hub-server.ts:161` (moved to `beebox/src/hub/server/core.ts`)). **Pattern reused, store not**: Track 1
   extracts the store mechanics into a shared helper and keeps scan tokens
   in a separate file, because every mobile-auth gate reduces identity to a
   boolean and any device bearer can mint a session cookie
   (`src/webapp/routes/pairing.ts:55-60`) — a scope field on this store
   cannot be contained (established by cross-model review, finding 1).
-- **Streaming raw-body upload pattern** — `src/webapp/routes/bulk-upload.ts:80-85`:
+- **Streaming raw-body upload pattern** — `src/webapp/routes/bulk-upload.ts:80-85` (moved to `beebox/src/webapp/routes/bulk-upload/register.ts`):
   *"Shadow the parent box scope's buffering octet-stream parser with a
   non-draining one, so item uploads can stream `request.raw` straight to disk
   (never buffering a ~50 MB file in memory)."* and `:181-182`: filename via
@@ -115,12 +115,12 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   lives at `_tmp/scan-quarantine/`.
 - **Server packages already installed** — `deploy/setup-server.sh:19` installs
   `poppler-utils pandoc imagemagick …`; adding `qpdf` follows the pattern.
-- **Body size limit** — `src/webapp/server.ts:90`: `bodyLimit: 50 * 1024 *
+- **Body size limit** — `src/webapp/server.ts:90` (moved to `beebox/src/webapp/server/app.ts`): `bodyLimit: 50 * 1024 *
   1024` (and the multipart cap it matches). 50 MB comfortably covers scanner
   output; **reused**, not raised.
 - **Annex migration tooling** — `src/core/annex/to-annex.ts` (plus
   `doctor.ts`, `to-annex-errors.ts`). All 12 local boxes were migrated with it
-  on 2026-07-31 (`docs/assets.md:6`: *"Status: implemented; all local boxes
+  on 2026-07-31 (`docs/media/assets.md:6`: *"Status: implemented; all local boxes
   converted, production not yet."*). **Reused** for Track 0.
 - **Scheduler daemon on prod** — `docs/scheduler.md:21`: *"The daemon runs `bbx
   tick` every 60 seconds for each configured box."* Relevant background, but
@@ -188,23 +188,23 @@ Tracks 1–3 live on prod.
   annex. `src/core/commands/scan-import-document.ts:61-64` stages
   `…/source.attach/source.pdf` directly via `stageAndCommitPaths`; no
   scan-import or upload code writes a `manifest.json` (grep across
-  `src/core/commands/scan-import*.ts` and `upload*.ts` is empty). On a
+  `src/core/commands/scan-import (moved to `beebox/src/core/commands/scan-import/command.ts`)*.ts` and `upload*.ts` is empty). On a
   manifest-scheme box those paths are gitignored
-  (`src/core/commands/attachments-gitignore.ts:52-56`), so the commit either
-  errors or strands unmanifested bytes. `docs/assets.md:16`: *"No production
+  (`src/core/commands/attachments-gitignore.ts:52-56` (moved to `beebox/src/core/attachments-gitignore.ts`)), so the commit either
+  errors or strands unmanifested bytes. `docs/media/assets.md:16`: *"No production
   box has been converted."* There is no runtime annex-vs-manifest branch;
   the codebase assumes annex. Migrating prod is the direction the system
   already moved; teaching scan-import the manifest scheme would be new code
   for a scheme being retired (principle #8).
 - **Direction:** Run the existing migration per box on the server, with the
-  same verification the local migration used (`docs/assets.md:10-14`: fsck
+  same verification the local migration used (`docs/media/assets.md:10-14`: fsck
   clean, byte-for-byte spot check). The fresh local backups of both boxes are
   the rollback story. Coordinate with the boxholder on timing; the box is
   briefly wedged mid-migration.
 - **First implementation chunk:** a dry-run of `to-annex` against a clone of
   the prod estate box (restored from the local backup), verified with
   `annex/doctor.ts`, then the runbook for the real cutover written into
-  `docs/server-operations.md`.
+  `docs/server/operations.md`.
 
 ### Track 1 — Scan upload tokens (dedicated credential)
 
@@ -386,7 +386,7 @@ Tracks 1–3 live on prod.
   the intake job drains promptly.
 - **Why this needs to change:** scan-import ends at
   `createOrAppendIntakeJob`; jobs drain only when something runs `bbx wakeup`.
-  Prod default schedules are connector-specific (`src/core/box/defaults.ts`
+  Prod default schedules are connector-specific (`src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`)
   — check-email, check-calendar, etc.; no plain periodic wakeup), so without
   a trigger a scan session sits until an unrelated wakeup happens.
 - **Direction:** after a batch reaches `imported`, the worker records a
@@ -395,11 +395,11 @@ Tracks 1–3 live on prod.
   captured, not fire-and-forget — clearing the marker on success and
   retrying on the next worker pass otherwise. Two facts force this shape
   (review finding 5): wakeup is *not* globally locked (only the reactor
-  phase takes `.bbx-reactor.lock`, `src/core/reactor/engine.ts:110`;
+  phase takes `.bbx-reactor.lock`, `src/core/reactor/engine.ts:110` (moved to `beebox/src/core/reactor/engine/core.ts`);
   `src/cli/commands/doctor.ts:51` documents wakeup as otherwise unlocked),
   so "the lock handles overlap" was wrong — the promotion lock plus
   supervised await is our serialization; and connector-scoped wakeups
-  filter jobs by `source` (`src/cli/commands/wakeup.ts:117`), so a
+  filter jobs by `source` (`src/cli/commands/wakeup.ts:117` (moved to `beebox/src/cli/commands/wakeup/command.ts`)), so a
   `source: scan` job would *never* drain on the default connector-scoped
   schedules — a lost spawn is not "latency," it is indefinite, hence the
   durable marker + retry (principle #4: never silent). Direct invocation,
@@ -543,7 +543,7 @@ are now a guide card, not a bespoke file.)*
 - **What:** Scanner priors live in `_config/scan.guide.card` (the guide
   system's evidence model: confidence/source-tagged beliefs, compiled
   in-memory into the vision prompt by `resolveScanGuideContext`,
-  `src/core/commands/scan-guide-context.ts`); `CLAUDE_SCANS.md` is a
+  `src/core/commands/scan-guide-context.ts` (moved to `beebox/src/core/commands/scan-import/guide-context.ts`)); `CLAUDE_SCANS.md` is a
   deprecated, warning-logged fallback. Per-box content: `scan.guide.card`
   drafts for the family and estate boxes (`scratch/box-readiness/`); triage
   landmark destination cards in the estate box matching its existing
@@ -612,7 +612,7 @@ scan job) removes the need rather than deferring a design.
 - **Two agents touching the same card** — promote worker commits a session
   card while a wakeup-triggered reactor is running. **ADDRESSED**:
   scan-import commits before the supervised wakeup (Track 3 ordering); the
-  reactor phase holds `.bbx-reactor.lock` (`src/core/reactor/engine.ts:110`);
+  reactor phase holds `.bbx-reactor.lock` (`src/core/reactor/engine.ts:110` (moved to `beebox/src/core/reactor/engine/core.ts`));
   and Track 2 adds locking around the two genuinely racy helpers — the
   upload ledger's read-modify-write and `createOrAppendIntakeJob`'s
   find/read/append/write — which are unlocked today (review finding 4;
@@ -742,7 +742,7 @@ prod plus 0; 7 anytime; 8 needs everything.
   mismatch/smuggle/broken-PDF/oversize-stream/rate-limit/token-isolation
   including hub-path rejection),
   `test/core/scan-promote.doctest.md` (worker: batch settle, restart
-  resume, wakeup spawn failure), `test/core/commands/pdf-extract.doctest.md`
+  resume, wakeup spawn failure), `test/core/commands/pdf-extract.doctest.md` (moved to `beebox/test/core/pdf/extract.doctest.md`)
   (faked Docling: success shape, failure fallback, empty markdown), one gated
   integration doctest running real `uvx docling` on a fixture PDF (skipped
   where Docling absent), and `scan-uploader/test/uploader.doctest.md`

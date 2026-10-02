@@ -3,8 +3,8 @@
  *
  * Tracked SEPARATELY from a course's content (its own card; may live in another
  * tree), so one learner's progress can be kept apart from shared material. Each
- * entry is a qualitative status for one concept-map node, and — the load-bearing
- * rule — **every status must cite the evidence and the basis that produced it**.
+ * entry is a qualitative level for one concept-map node, and — the load-bearing
+ * rule — **every level must cite the evidence and the basis that produced it**.
  * That is the guard against an LLM sycophantically rating a learner "solid".
  *
  * It is a present-state snapshot, NOT a decay/forgetting model. The running
@@ -13,11 +13,11 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { z } from "zod";
 
-/** Qualitative status for a node — judged against the course's success-criteria. */
-const NodeStatus = z.enum(["unfamiliar", "partial", "working", "solid"]);
+/** Qualitative mastery level for a node — judged against the course's success-criteria. */
+const NodeLevel = z.enum(["unfamiliar", "partial", "working", "solid"]);
 
 /** How a rating was reached. */
 const EvidenceBasis = z.enum(["observed", "inferred", "self-report"]);
@@ -26,13 +26,13 @@ const EvidenceBasis = z.enum(["observed", "inferred", "self-report"]);
 const CourseRef = z.object({ ref: z.string() });
 
 /**
- * One node's state. `status`, `basis`, and at least one `evidence` item are all
- * REQUIRED: there is no anonymous rating — a status without the learner's actual
+ * One node's state. `level`, `basis`, and at least one `evidence` item are all
+ * REQUIRED: there is no anonymous rating — a level without the learner's actual
  * words/work and how it was judged won't parse.
  */
 const ProgressEntry = z.object({
   node: z.string(),
-  status: NodeStatus,
+  level: NodeLevel,
   basis: EvidenceBasis,
   evidence: z.array(z.string()).min(1),
   "last-assessed": z.string().optional(),
@@ -48,24 +48,25 @@ const progressFields = {
 };
 
 export const ProgressSchema: CardSchema = cardSchema("progress", {
+  brief: "A learner's evidence of understanding",
   description: "A per-learner, evidence-backed record of understanding against a course's concept-map nodes",
   category: "authored",
   fields: progressFields,
   instructions: `# Progress Cards
 
-A progress card is a per-learner, **evidence-backed** record of what a learner understands. It is tracked **separately** from a course's content — its own card, which may live in the course's attach scope or in its own tree (it points back at the course by \`ref\`). Each entry is a qualitative status for one **concept-map node** (named by the node's \`id\`).
+A progress card is a per-learner, **evidence-backed** record of what a learner understands. It is tracked **separately** from a course's content — its own card, which may live in the course's attach scope or in its own tree (it points back at the course by \`ref\`). Each entry is a qualitative mastery level for one **concept-map node** (named by the node's \`id\`).
 
 ## Keep it sparse — record only what you have signal on
 
 It is a **sparse overlay on the concept-map, not a mirror of it.** Add an entry only for a node you actually have signal on — something you observed, or a genuine inference worth keeping. **A node with no entry simply means "not assessed yet"** — that's the default, and it's fine. **Do not enumerate the whole map** or manufacture "not directly probed; inferred from…" entries; that's tedious noise, not knowledge. A handful of real entries beats a full sweep of filler.
 
-## No status without evidence
+## No level without evidence
 
 Every entry must cite the learner's actual words/work and how the rating was reached:
 
-- \`status\`: \`unfamiliar | partial | working | solid\` — qualitative, and **judged against the course's \`success-criteria\`**. Understanding the mechanism with fuzzy terminology can be \`working\`/\`solid\` when names aren't the goal.
+- \`level\`: \`unfamiliar | partial | working | solid\` — qualitative, and **judged against the course's \`success-criteria\`**. Understanding the mechanism with fuzzy terminology can be \`working\`/\`solid\` when names aren't the goal.
 - \`basis\`: \`observed | inferred | self-report\` — how you know.
-- \`evidence\`: at least one concrete item — what the learner said or did. **Rate the evidence, not the learner's confidence.** Don't upgrade a status just because they sound sure.
+- \`evidence\`: at least one concrete item — what the learner said or did. **Rate the evidence, not the learner's confidence.** Don't upgrade a level just because they sound sure.
 - \`next-probe\` (optional): what would test or change this rating.
 - \`misconception\` (optional): an active wrong model to address.
 
@@ -76,7 +77,7 @@ course: { ref: /_content/courses/Acids.course.card }
 learner: the-learner
 entries:
   - node: electron-transfer        # a concept-map node id
-    status: partial
+    level: partial
     basis: observed
     evidence:
       - "Said acids 'give away' something but couldn't say what; didn't mention protons"
@@ -99,9 +100,9 @@ export function createProgressTemplate(options: { title?: string | undefined }):
     entries: [
       {
         node: "some-concept-id",
-        status: "partial",
+        level: "partial",
         basis: "observed",
-        evidence: ["What the learner said or did that supports this status."],
+        evidence: ["What the learner said or did that supports this level."],
       },
     ],
   };

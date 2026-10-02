@@ -10,7 +10,7 @@ priority: backlog
 The tRPC WebSocket adapter (`useWSS`, the per-box plugin) hands `createContext`
 (`beebox/src/webapp/trpc/context.ts`) a raw `http.IncomingMessage`. The
 raw-`Cookie`-header identity fallback that `createContext` relies on is covered
-only at the **resolver** level by `test/webapp/ws-auth.doctest.md` — no test
+only at the **resolver** level by `test/webapp/ws-auth.doctest.md` (moved to `beebox/test/webapp/auth.ws.doctest.md`) — no test
 opens a real WebSocket, upgrades a tRPC subscription, and asserts the resolved
 identity end to end.
 

@@ -7,13 +7,14 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getBoxDir, parseCardName, requireBoxRoot } from "../lib/paths.js";
-import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../lib/git.js";
+import { getBoxDir, parseCardName, requireBoxRoot } from "../lib/paths/core.js";
+import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../lib/git/core.js";
 import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";
 import type { LoadCardContext } from "./card-io.js";
-import { getBoxMetadata } from "./box/index.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { getBoxMetadata } from "./box/structure/core.js";
+import { errnoCode } from "../shared/error-guards.js";
+import { questionState, type QuestionState } from "../schemas/question.js";
 
 class InvalidBoxError extends Error {
   constructor() {
@@ -27,9 +28,20 @@ export interface CardInfo {
   relativePath: string;
   name: string;
   type: string;
-  status?: string | undefined;
   /** Subdirectory within the parent dir (e.g., "email" for inbox/email/) */
   subdir?: string | undefined;
+}
+
+/** A question card's listing entry. */
+export interface QuestionCardInfo extends CardInfo {
+  /** Its {@link questionState}; absent when the card failed to load. */
+  state?: QuestionState | undefined;
+}
+
+/** One scanned card, with its fields when it loaded. */
+interface ScannedCard {
+  info: CardInfo;
+  fields?: Record<string, unknown> | undefined;
 }
 
 export interface SystemState {
@@ -38,7 +50,7 @@ export interface SystemState {
   created: string;
   git: GitStatus;
   inbox: CardInfo[];
-  questions: CardInfo[];
+  questions: QuestionCardInfo[];
   recentActivity: GitLogEntry[];
 }
 
@@ -63,9 +75,9 @@ interface ScanCardsParams {
  * @param params - Parameters object
  * @returns Array of card info
  */
-async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
+async function scanCards(params: ScanCardsParams): Promise<ScannedCard[]> {
   const { dir, boxRoot, subdir, ctx } = params;
-  const cards: CardInfo[] = [];
+  const cards: ScannedCard[] = [];
 
   let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
@@ -92,26 +104,19 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
     const parsed = parseCardName(name);
     if (!parsed) continue;
 
+    const info: CardInfo = {
+      path: fullPath,
+      relativePath: path.relative(boxRoot, fullPath),
+      name: parsed.name,
+      type: parsed.type,
+      subdir,
+    };
     try {
       const loaded = await loadCardFile(fullPath, ctx);
-      cards.push({
-        path: fullPath,
-        relativePath: path.relative(boxRoot, fullPath),
-        name: parsed.name,
-        type: parsed.type,
-        status: typeof loaded.fields["status"] === "string" ? loaded.fields["status"] : undefined,
-        subdir,
-      });
+      cards.push({ info, fields: loaded.fields });
     } catch (e) {
       console.warn(`Could not load card ${fullPath}, listing as unknown:`, e);
-      cards.push({
-        path: fullPath,
-        relativePath: path.relative(boxRoot, fullPath),
-        name: parsed.name,
-        type: parsed.type,
-        status: undefined,
-        subdir,
-      });
+      cards.push({ info });
     }
   }
 
@@ -145,8 +150,11 @@ export async function getSystemState(boxRoot?: string): Promise<SystemState> {
     boxVersion: metadata.version,
     created: metadata.created,
     git,
-    inbox,
-    questions,
+    inbox: inbox.map((card) => card.info),
+    questions: questions.map((card): QuestionCardInfo => ({
+      ...card.info,
+      state: card.fields === undefined ? undefined : questionState(card.fields),
+    })),
     recentActivity,
   };
 }

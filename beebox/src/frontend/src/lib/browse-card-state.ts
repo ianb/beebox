@@ -1,6 +1,6 @@
 /** Browse is one instrument; directory and selected detail belong to its state. */
 import { isRecord } from "@shared/is-record";
-import { parseRef, resolveRefPath } from "@shared/ref-path";
+import { parseRef, resolveRefPath } from "@shared/ref-path/core";
 import { validateViewState, type ViewState } from "@shared/view-state";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import type { ViewTarget } from "./view-url.js";

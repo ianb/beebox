@@ -10,7 +10,7 @@
 // Relative (not the `@shared` alias) so this lib resolves under the doctest
 // runner's Node resolution too — view-url is unit-doctested outside the bundler.
 import { boxRelativePath } from "../../../shared/box-path.js";
-import { resolveRefPath } from "../../../shared/ref-path.js";
+import { resolveRefPath } from "../../../shared/ref-path/core.js";
 import type { ControlAction } from "./ui-scan/types.js";
 import { assertViewState, validateViewState, type ViewState } from "@shared/view-state";
 
@@ -177,7 +177,7 @@ export function viewStateSearchValue(state: ViewState | null): ViewState | undef
  * against the base card's attach scope (`<basename>.attach/`) instead of the
  * base's directory.
  *
- * Thin wrapper over the shared ref algebra (`src/shared/ref-path.ts`) — the one
+ * Thin wrapper over the shared ref algebra (`src/shared/ref-path/core.ts`) — the one
  * home for these rules, backend and frontend alike. Returns `null` when the
  * path climbs out of the box root: fail-closed, never clamped to the root as
  * this function did until 2026-07-30 (clamping silently rendered a *different*
@@ -385,8 +385,9 @@ export function apiImageUrl(boxSlug: string, path: string): string {
 }
 
 // Read Vite's base URL. Wrapped so the bare `import.meta.env` access doesn't
-// crash in plain-Node test runners where `import.meta.env` is undefined.
-function viteBase(): string {
+// crash in plain Node (test runners, the `bbx view test` widget bundle) where
+// `import.meta.env` is undefined.
+export function viteBase(): string {
   try {
     // import.meta.env is Vite-typed (vite/client); the try/catch guards the
     // plain-Node case where the whole `env` object is undefined at runtime.

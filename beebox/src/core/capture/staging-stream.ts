@@ -31,7 +31,7 @@ import {
   readStagingSession,
   writeStagingSession,
   stagingSessionDir,
-} from "./staging-store.js";
+} from "./staging-store/core.js";
 import type { StagingFile } from "./staging-schema.js";
 
 export interface AddFileStreamedParams {

@@ -27,8 +27,8 @@ import { readFile, readdir } from "node:fs/promises";
 import { createInterface } from "node:readline/promises";
 import path from "node:path";
 
-import { getBoxDir } from "../lib/paths.js";
-import { type FilePreview, fileStats } from "./draft.js";
+import { getBoxDir } from "../lib/paths/core.js";
+import { type FilePreview, fileStats } from "./draft/core.js";
 import { scanBundle, type LeakFinding, type LeakScanResult } from "./leak-scan.js";
 import {
   type PublicationManifest,

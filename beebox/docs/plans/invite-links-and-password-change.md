@@ -28,7 +28,7 @@ Google OAuth remains an optional login method for the same email identity.
 - `issues/closed/features/2026-07-20-web-password-change.md`
 
 The stale empty-allowlist copy recorded in
-`user-stories/catalog/2026-06-26.md` is corrected because the
+`user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) is corrected because the
 same Admin component becomes the invite-minting surface.
 
 ## Stated preferences this plan trades against
@@ -255,7 +255,7 @@ to the box.
   ACL write succeed. Redirect using the existing validated worktree/box URL
   helper. The partial-failure page does not sign a session.
 
-**First implementation chunk.** Write `test/webapp/invite-accept.doctest.md`
+**First implementation chunk.** Write `test/webapp/invite-accept.doctest.md` (moved to `beebox/test/webapp/routes/auth.invite-accept.doctest.md`)
 first: headers/forms, fixed validation, throttle, all collisions, pinned/open,
 target resolution, single-use concurrency, account/ACL ordering, cross-process
 ACL contention, cache refresh, Git degradation, injected write failures, and
@@ -318,7 +318,7 @@ sessions, and sets a fresh cookie in the same response.
   recent-OAuth/recovery design.
 
 **First implementation chunk.** Write
-`test/webapp/password-change.doctest.md` first: success plus fresh cookie, old
+`test/webapp/password-change.doctest.md` (moved to `beebox/test/webapp/routes/auth/password-change.doctest.md`) first: success plus fresh cookie, old
 cookie revocation, wrong current password, no client-selected email, Google-only
 and machine/open rejection, throttle, scrypt cap, bounds, and store failure.
 

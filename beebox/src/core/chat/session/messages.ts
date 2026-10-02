@@ -11,9 +11,9 @@
 
 import { isThirdPartyModel } from "../../../shared/agent-models.js";
 import type { AttentionSnapshot } from "../../../shared/chat-composer-binding.js";
-import { assertNever } from "../../../lib/invariant.js";
+import { assertNever } from "../../../shared/invariant.js";
 import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
-import type { ChatContentBlock } from "../../../services/claude-chat.js";
+import type { ChatContentBlock } from "../../../services/claude-chat/core.js";
 import type { ChatBackendMessage } from "../../../services/claude-chat-types.js";
 import type { ActivityKind, CardStateDetails } from "../card-activity.js";
 import type { ChatChannel } from "../../../shared/chat-channel.js";
@@ -109,6 +109,13 @@ export interface ChatSendInput {
    * snapshot child elements.
    */
   cardState?: CardStateDetails;
+  /**
+   * The turn carries text the person at the composer did not type (a script's
+   * self-note, a fired schedule). Delivered as the SDK's `client_composed`, so
+   * the CLI does not expand `@path` mentions or dispatch slash commands in it.
+   * Sticky across queued sends: one composed input marks the combined turn.
+   */
+  clientComposed?: true;
 }
 
 /**
@@ -208,6 +215,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
           ...(msg.message.stop_reason !== null
             ? { stop_reason: msg.message.stop_reason }
             : {}),
+          model: msg.message.model,
         },
       };
       result.uuid = msg.uuid;

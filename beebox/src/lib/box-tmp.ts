@@ -16,7 +16,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getBoxDir } from "./paths.js";
+import { getBoxDir } from "./paths/core.js";
 
 /** Path of the box's swept temp dir (`<boxRoot>/_tmp`). Pure — touches no disk. */
 export function boxTmpDir(boxRoot: string): string {

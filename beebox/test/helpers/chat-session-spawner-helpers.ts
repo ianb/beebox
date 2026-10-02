@@ -1,13 +1,13 @@
 /**
- * Helpers for `test/core/chat-session-with-spawner.doctest.md`. Kept out of the
+ * Helpers for `test/core/chat/session/run.with-spawner.doctest.md`. Kept out of the
  * doctest itself because the doctest loader has trouble with top-level
  * function declarations that return inline object literals.
  */
 
 import { once } from "node:events";
-import type { ChatSession, ChatSessionOptions } from "../../src/core/chat/session/index.js";
-import { invariant } from "../../src/lib/invariant.js";
-import type { FakeChatBackend } from "../../src/services/claude-chat.js";
+import type { ChatSession, ChatSessionOptions } from "../../src/core/chat/session/run/core.js";
+import { invariant } from "../../src/shared/invariant.js";
+import type { FakeChatBackend } from "../../src/services/claude-chat/core.js";
 
 class WaitForRunsTimeoutError extends Error {
   constructor({ count, got, timeoutMs }: { count: number; got: number; timeoutMs: number }) {

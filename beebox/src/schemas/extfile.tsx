@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import { cardSchema, type InferCardFields, type LintIssue } from "../cards/index.js";
+import { cardSchema, type InferCardFields, type LintIssue } from "../exports/cards.js";
 
 /**
  * Cross-field validation for extfile cards that Zod can't express: `href` must
@@ -65,6 +65,7 @@ function hasSha256Marker(version: string): boolean {
 }
 
 export const ExtfileSchema = cardSchema("extfile", {
+  brief: "Pointer to an external file",
   description: "An in-box pointer to a live external file (file: URL, no snapshot) with drift-detection stamps; host for review commentary",
   category: "synced",
   validate: ({ fields }) => extfileErrors(fields),

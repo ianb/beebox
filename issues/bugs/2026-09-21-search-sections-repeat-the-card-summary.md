@@ -15,8 +15,8 @@ could not help the person choose.
 
 ## Verified mechanism
 
-`beebox/src/core/search/extract.ts:122,136` gives each section the card's title
-and `contains`. `beebox/src/core/search/query.ts:215` prefers nonempty `contains`
+`beebox/src/core/search/extract/core.ts:122,136` gives each section the card's title
+and `contains`. `beebox/src/core/search/query/core.ts:215` prefers nonempty `contains`
 over section content for the snippet. Matching title/contains/content at
 `query.ts:44` also lets a card-title query return all its sections.
 
@@ -26,6 +26,6 @@ summary. This is a preview/relevance problem independent of the section-target
 navigation defect. A summary result may legitimately show `contains`; a section
 result needs a preview that distinguishes its matching content.
 
-Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 37 and 44, screenshots 20 and 25. Related:
 [section navigation](2026-09-21-search-section-results-drop-their-destination.md).

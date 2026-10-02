@@ -26,7 +26,7 @@
  *
  * Secrets and networking vars are modeled here so they're validated at
  * startup and covered by redaction ({@link SECRET_ENV_NAMES}). The long-tail
- * feature-gate/harness vars (`BBX_STRICT_FETCH`, `BBX_PUSH_FAKE`,
+ * feature-gate/harness vars (`BBX_STRICT_FETCH`, `BBX_NOTIFY_FAKE`,
  * `BBX_SCAN_VISION`, scenario stubs, …) keep their direct reads for now, each marked with a
  * `// TODO(env-migration)` comment at the read site. A handful of secret
  * read sites (`webapp/auth.ts`'s session/hub/diag secrets, `core/send-push.ts`'s
@@ -142,6 +142,12 @@ export const serverEnvSchema = baseEnvSchema.extend({
   BBX_VAPID_PUBLIC_KEY: optionalString,
   BBX_VAPID_PRIVATE_KEY: optionalString,
   BBX_VAPID_SUBJECT: optionalString,
+  // APNs (core/notification/apns-channel.ts): a key PATH and identifiers, not
+  // key material, so none is in SECRET_ENV_NAMES.
+  BBX_APNS_KEY_PATH: optionalString,
+  BBX_APNS_KEY_ID: optionalString,
+  BBX_APNS_TEAM_ID: optionalString,
+  BBX_APNS_BUNDLE_ID: optionalString,
 });
 
 /**

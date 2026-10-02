@@ -11,7 +11,7 @@ issues: []
 > so the manifest-on-disk boundary, the corrupt-manifest handling, and the
 > `docs/asset-manifests.md` reference below all describe code that is gone. The
 > batch now stages its blobs and git-annex records their hashes. The rest of the
-> upload design is live. Current model: [`assets.md`](../assets.md).
+> upload design is live. Current model: [`assets.md`](../media/assets.md).
 
 Let a user dump many files (order of 100 MB / dozens of items — camera-roll
 batches, document folders) into a box at once. The upload surface only gets the
@@ -56,7 +56,7 @@ under Open design questions.
 Each item states what is genuinely reusable and what is NOT (first-draft
 overclaims corrected).
 
-- **Staging store + caps** — `src/core/capture/staging-store.ts` (per-session
+- **Staging store + caps** — `src/core/capture/staging-store.ts` (moved to `beebox/src/core/capture/staging-store/core.ts`) (per-session
   dir under `tmp/capture-staging/<session-id>/` with a `session.json`
   manifest); `src/core/capture/staging-limits.ts:13-14`:
   `MAX_STAGED_BYTES = 1024 * 1024 * 1024; MAX_STAGED_ITEMS = 500`, enforced
@@ -70,7 +70,7 @@ overclaims corrected).
   (`readStagingSession`/`writeStagingSession`), which now does exactly that —
   temp-file+rename writes, and a corrupt manifest gets a loud `console.error`
   plus quarantine to `session.json.corrupt` instead of a silent `null`.
-- **Upload route** — `src/webapp/routes/capture-upload.ts` already accepts
+- **Upload route** — `src/webapp/routes/capture-upload.ts` (moved to `beebox/src/webapp/routes/capture/upload.ts`) already accepts
   `X-Capture-Kind: file` items, one HTTP call per item, per-capture-session
   owner auth (`capture-request-owner.ts`), and replay/idempotency handling
   (`upload-replay.ts`). **Reused as the route shape**, but NOT free at this
@@ -106,7 +106,7 @@ overclaims corrected).
   needs >13 Mbps to beat it), and `fetch` gives no byte progress. Bulk adds a
   bounded queue and a size-scaled (or removed) timeout; per-item byte
   progress is cut from v1 (item states only).
-- **First-class message injection** — `src/core/capture/deliver.ts:191`
+- **First-class message injection** — `src/core/capture/deliver.ts:191` (moved to `beebox/src/core/capture/prepare/deliver.ts`)
   `deliverCaptureMessage(…)`; at-most-once probe `captureMessageAlreadyLanded`
   (`deliver.ts:155`). **Reused/generalized, with one known hole this plan
   closes for bulk**: when the target session is busy the message goes into an
@@ -131,7 +131,7 @@ overclaims corrected).
   don't land here — they deliver to chat; see below.)*" Bulk uploads follow
   the same exception; the agent MAY route individual files into `box/inbox/`
   while filing.
-- **`bbx mv` limitation** — `src/core/commands/move.ts:191-195` rejects
+- **`bbx mv` limitation** — `src/core/commands/move.ts:191-195` (moved to `beebox/src/core/commands/move/command.ts`) rejects
   sources that are neither `.card` files nor directories, so "file each file
   with `bbx mv`" (first draft) is wrong for loose files. Filing instructions
   are written against what the tooling actually supports (Direction §3), and
@@ -425,14 +425,14 @@ recorded here rather than silently left stale:
 - **No per-file multipart cap for bulk.** The plan's failure-mode table
   originally named a "single file > 50 MB multipart cap" inherited from
   capture's buffered upload route. Bulk's upload route
-  (`src/webapp/routes/bulk-upload.ts`) streams the raw request body straight to
+  (`src/webapp/routes/bulk-upload.ts` (moved to `beebox/src/webapp/routes/bulk-upload/register.ts`)) streams the raw request body straight to
   a temp file (`addFileStreamed`, `src/core/capture/staging-stream.ts`) instead
   of buffering a multipart body in memory, so that capture-specific 50 MB
   per-file cap (`capture-upload.ts`'s multipart limit) never applied to bulk in
   the first place. Only the shared `MAX_STAGED_BYTES` (1 GiB) batch cap from
   `staging-limits.ts` bounds a bulk item.
 - **`<upload>` wrapper byte formatting.** `buildUploadWrapper`
-  (`src/core/bulk-upload/deliver.ts`) renders `bytes` via `humanBytes()` —
+  (`src/core/bulk-upload/deliver.ts` (moved to `beebox/src/core/bulk-upload/worker/deliver.ts`)) renders `bytes` via `humanBytes()` —
   spaced, human units (`bytes="112 MB"`), not a raw byte count — and omits the
   `failed` attribute entirely when the batch has zero failures (a clean batch
   carries no `failed` marker at all, rather than `failed="0"`). Both are

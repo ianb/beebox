@@ -37,7 +37,7 @@ No related or duplicate issue was found.
 - `ios-app/BeeBox/Services/LogForwarder.swift` provides the persisted
   offline queue, two-second foreground debounce, launch/foreground flush,
   authenticated `debugLog.submit` request, queue caps, and token redaction.
-- `beebox/src/webapp/trpc/routers/debugLog.ts` writes the box-owned rolling
+- `beebox/src/webapp/trpc/routers/debugLog.ts` (moved to `beebox/src/webapp/trpc/routers/debug-log.ts`) writes the box-owned rolling
   `.beebox/client-debug.log` and accepts `info` as a wire level already.
 - `beebox/src/frontend/src/components/DebugLog.tsx` regularly forwards
   browser error/warn entries to the same box log.

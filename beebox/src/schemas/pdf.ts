@@ -5,7 +5,7 @@
  * Written by `bbx scan-import`'s pdf mode (a scanned PDF that already carries
  * a text layer) and refreshed by `bbx pdf reanalyze`. The card is a
  * **superset of `file.card`**: it carries the same `filename:` provenance
- * entry (ref/captured/source/original-name/mime-type/size) plus the
+ * entry (ref/via/original-name/mime-type/size) plus the
  * extraction-derived parts — the rendered markdown as the card body, a
  * `docling.ref:` pointing at the gzipped canonical `DoclingDocument` JSON, and
  * `metadata:` (pages/title/author).
@@ -19,28 +19,20 @@
  *   inbox/scan-XX.attach/source.attach/source.pdf      (the original)
  *   inbox/scan-XX.attach/source.attach/docling.json.gz (canonical extraction)
  *   inbox/scan-XX.attach/source.attach/text-layer.txt  (raw text layer)
- *   inbox/scan-XX.attach/source.attach/page-001.avif   (rendered page)
- *   inbox/scan-XX.attach/source.attach/figure-001.avif (extracted figure)
+ *   inbox/scan-XX.attach/source.attach/page-001.webp   (new rendered page)
+ *   inbox/scan-XX.attach/source.attach/figure-001.webp (new extracted figure)
+ * Existing cards may still have `.avif` page and figure images.
  */
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
-
-/**
- * `new` — the card exists but extraction did not succeed (see `error:`); the
- * original bytes are still attached. `analyzed` — extraction succeeded (an
- * empty body means "no readable content", which is a real answer, not a
- * failure). `invalid` — an agent judged the document unusable.
- */
-const PdfStatus = z.enum(["new", "analyzed", "invalid"]);
-export type PdfStatusType = z.infer<typeof PdfStatus>;
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
+import { MediaViaSchema, type MediaVia } from "../cards/media-via.js";
 
 /** Same shape as `file.card`'s `filename:` entry — a pdf card is a superset. */
 const FilenameEntry = z.object({
   ref: z.string(),
-  captured: z.string().datetime({ offset: true }),
-  source: z.string(),
+  via: MediaViaSchema,
   "original-name": z.string().optional(),
   "mime-type": z.string().optional(),
   size: z.coerce.number().optional(),
@@ -59,18 +51,24 @@ const PdfMetadata = z.object({
 });
 
 export const PdfSchema = cardSchema("pdf", {
+  brief: "An extracted PDF",
   description: "An extracted PDF — rendered text as the body, original bytes and page/figure renders in the attach scope",
   category: "synced",
   searchable: true,
   fields: {
-    status: PdfStatus.default("new"),
     /** Source document type, e.g. `pdf`. Records what the file was — the pipeline currently only reads PDFs. */
     format: z.string(),
     filename: FilenameEntry,
     docling: DoclingEntry.optional(),
     metadata: PdfMetadata.optional(),
-    /** Why extraction failed, when `status: new`. Absent on a clean extraction. */
+    /**
+     * Why extraction failed; the original bytes are still attached. Absent on
+     * a clean extraction, which instead has `docling` (an empty body then means
+     * "no readable content", a real answer, not a failure).
+     */
     error: z.string().optional(),
+    /** An agent judged the document unusable; the pdf view says so. */
+    unusable: z.boolean().optional(),
     description: z.string().optional(),
     body: body(z.string()),
   },
@@ -96,28 +94,40 @@ Everything is inside the card's own attach scope, so refs are \`attach/…\`:
   the file itself carries it (no layout analysis, no rewriting). Read it when
   you need the exact characters rather than the rendered body. Absent when the
   document carries no extractable text.
-- \`attach/page-001.avif\`, \`page-002.avif\`, … — one rendered image per page,
-  in page order. Use these when you want to *look* at a page.
-- \`attach/figure-001.avif\`, … — figures/images pulled out of the document.
-  The body references them inline.
+- \`attach/page-001.webp\`, \`page-002.webp\`, … — newly rendered pages, in
+  page order. Existing cards may use \`.avif\` instead; both formats remain
+  readable. Use these when you want to *look* at a page.
+- \`attach/figure-001.webp\`, … — newly extracted figures/images. Existing
+  cards may use \`.avif\`; the body references figures inline.
+
+The attached source file is preserved byte-for-byte when pages and figures are
+generated again. Reanalysis may replace generated AVIF files with WebP files,
+and existing AVIF attachments do not need conversion just to use WebP for new
+output. A direct link to a generated image filename can become stale. For a
+durable page link, link to the PDF card with \`?page=N\` (one-based page
+number), not directly to a generated page image. Read the attached original
+when you need its exact bytes or appearance; do not assume every vision
+provider accepts every attached image format directly.
 
 ## Frontmatter
 
-- \`status\` — \`new\` | \`analyzed\` | \`invalid\`.
-  - \`analyzed\`: extraction succeeded. An **empty body is a valid analyzed
-    result** — it means the document had no readable text, not that something
-    broke.
-  - \`new\` **with an \`error:\` field**: extraction failed. The original file is
-    still attached and is the only asset; there is no docling JSON, no page
-    renders, and the body is empty. Nothing is lost — re-run extraction with
-    \`bbx pdf reanalyze <card>\` (add \`--force-ocr\` when the text layer
-    itself is junk), or read the attached original directly, or set
-    \`status: invalid\` if the file is unusable.
-  - \`invalid\`: you judged the document unusable (corrupt, junk, empty scan).
+- \`error\` — present when extraction failed. The original file is still
+  attached and is the only asset; there is no docling JSON, no page renders,
+  and the body is empty. Nothing is lost — re-run extraction with
+  \`bbx pdf reanalyze <card>\` (add \`--force-ocr\` when the text layer
+  itself is junk), or read the attached original directly, or set
+  \`unusable: true\` if the file is unusable. A card with \`docling\` and no
+  \`error\` was extracted; an **empty body is then a valid result** — it
+  means the document had no readable text, not that something broke.
+- \`unusable: true\` — you judged the document unusable (corrupt, junk,
+  empty scan).
 - \`format\` — the source document type, e.g. \`pdf\`. \`format:\` records what
   the file was, distinct from the card type itself.
 - \`filename\` — provenance for the original: \`ref\` into the attach scope,
-  plus \`captured\`, \`source\`, and optionally \`original-name\`, \`mime-type\`,
+  \`via\` (\`channel\` such as \`scan-import\` or \`scan-upload/<token>\`,
+  \`at\` the import time, and optionally \`original\` — the document's own
+  date when known, \`YYYY\`, \`YYYY-MM\`, or \`YYYY-MM-DD\` — and \`note\`,
+  how or why in prose), and optionally \`original-name\`, \`mime-type\`,
   \`size\`.
 - \`docling\` — \`ref\` to the gzipped extraction JSON, plus the \`version\` of
   the extractor that produced it.
@@ -138,10 +148,8 @@ not enough.`,
 export type PdfFields = InferCardFields<typeof PdfSchema>;
 
 export interface PdfTemplateOptions {
-  status: PdfStatusType;
   format: string;
-  capturedAt: string;
-  source: string;
+  via: MediaVia;
   /** Name of the original inside the card's attach scope. */
   filename: string;
   originalName?: string;
@@ -151,7 +159,7 @@ export interface PdfTemplateOptions {
   doclingFilename?: string;
   doclingVersion?: string;
   metadata?: { pages?: number; title?: string; author?: string };
-  /** Extraction failure message — set together with `status: new`. */
+  /** Extraction failure message; absent when extraction succeeded. */
   error?: string;
   /** Rendered markdown. Empty is meaningful (see the schema instructions). */
   body: string;
@@ -160,15 +168,13 @@ export interface PdfTemplateOptions {
 export function createPdfTemplate(options: PdfTemplateOptions): string {
   const filename: Record<string, unknown> = {
     ref: `attach/${options.filename}`,
-    captured: options.capturedAt,
-    source: options.source,
+    via: options.via,
   };
   if (options.originalName !== undefined) filename["original-name"] = options.originalName;
   if (options.mimeType !== undefined) filename["mime-type"] = options.mimeType;
   if (options.size !== undefined) filename["size"] = options.size;
 
   const fields: Record<string, unknown> = {
-    status: options.status,
     format: options.format,
     filename,
   };

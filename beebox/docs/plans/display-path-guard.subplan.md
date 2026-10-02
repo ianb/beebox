@@ -16,7 +16,7 @@ silently.
 
 ## The silent failure that makes this urgent
 
-`isExternalRef` (`src/shared/ref-path.ts:149`) classifies any
+`isExternalRef` (`src/shared/ref-path.ts:149` (moved to `beebox/src/shared/ref-path/core.ts`)) classifies any
 `^[A-Za-z][\d+.A-Za-z-]*:` prefix as an external URL scheme. `Config:` and
 `Bookkeeping:` match. A display-form ref written into a card today is
 treated as an external link: never resolved, never linted as broken —

@@ -15,7 +15,7 @@
  * only when called, so importing the module in Node stays safe.
  */
 
-import { trpcClient } from "./trpc";
+import { trpcClient } from "./trpc/client";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
 import { isRecord } from "../../../shared/is-record.js";

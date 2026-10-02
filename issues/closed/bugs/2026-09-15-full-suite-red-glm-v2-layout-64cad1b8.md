@@ -1,5 +1,5 @@
 ---
-title: "Full-suite red: test/core/chat/session/reserve.doctest.md, test/core/command-streaming.doctest.md, test/core/commands/answer-command.doctest.md"
+title: "Full-suite red: test/core/chat/session/reserve.doctest.md, test/core/command-streaming.doctest.md (moved to `beebox/test/webapp/routes/commands.streaming.doctest.md`), test/core/commands/answer-command.doctest.md (moved to `beebox/test/core/commands/answer.doctest.md`)"
 workstream: glm-v2-layout
 area: beebox
 priority: important
@@ -33,7 +33,7 @@ commit (`089c4466`) over first-parent `main` blames one landing:
 
 - **Landing:** `64cad1b8` — Merge branch 'worktree-glm-v2-layout'
 - **Workstream:** glm-v2-layout
-- **Failing files:** `test/core/chat/session/reserve.doctest.md`, `test/core/command-streaming.doctest.md`, `test/core/commands/answer-command.doctest.md`
+- **Failing files:** `test/core/chat/session/reserve.doctest.md`, `test/core/command-streaming.doctest.md` (moved to `beebox/test/webapp/routes/commands.streaming.doctest.md`), `test/core/commands/answer-command.doctest.md` (moved to `beebox/test/core/commands/answer.doctest.md`)
 
 Each file failed in the batched run and failed again on an isolated re-run, so
 it is not a flake by the ledger's definition. Nothing has been fixed; this is a

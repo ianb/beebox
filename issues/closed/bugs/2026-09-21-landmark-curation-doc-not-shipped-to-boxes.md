@@ -20,7 +20,7 @@ The generated agent-guide landmarks section tells every box agent: "Read
 
 The file that referenced path expects does not exist in an initialized box.
 Tracing why: package prose docs are shipped only from `docs/box/`
-(`beebox/src/core/docs-gen/package-docs.ts:66-75`, `proseDocs()`, which reads
+(`beebox/src/core/docs-gen/package-docs.ts:66-75` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`), `proseDocs()`, which reads
 `join(packageRoot, "docs", "box")`), and `beebox/docs/box/` currently contains
 only 4 files (`card-themes.md`, `interface-cards.md`, `quick-chat.md`,
 `what-you-could-do.md`). `landmark-curation.md` lives at `beebox/docs/`

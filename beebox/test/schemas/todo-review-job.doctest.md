@@ -1,7 +1,9 @@
 # `todo-review-job` card schema
 
-The compact brief the wakeup sweep queues for the reactor
-(`core/todo/review-sweep.ts`). Each item is deliberately terse: a locator, the
+The compact brief the wakeup sweep used to queue for the reactor
+(`core/todo/review-sweep.ts`). Since `docs/plans/todos-ui.md` Track 7 nothing
+writes these cards (the todo-review procedure prints the brief instead), but
+the schema stays so a card still pending on a box validates and drains. Each item is deliberately terse: a locator, the
 todo's text, whichever date drove it into its set — and, since
 `docs/plans/todo-collection.md` Track 4, where it was written.
 
@@ -32,12 +34,21 @@ const card = createTodoReviewJobTemplate({
     section: "Build › Decking",
   }],
   stirring: [],
+  actionable: [{
+    locator: "_content/projects/Porch/Plan.doc.card:12",
+    text: "Review the delivery note",
+    assigned: "agent",
+    detail: "agent follow-up",
+  }],
   stale: [],
 });
 
 const parsed = parse(card);
 JSON.stringify(parsed.fields.escalated[0])
 => {"locator":"_content/projects/Porch/Plan.doc.card:8","text":"Order lumber","detail":"due 2026-07-01","card":"Porch rebuild","section":"Build › Decking"}
+
+JSON.stringify(parsed.fields.actionable[0])
+=> {"locator":"_content/projects/Porch/Plan.doc.card:12","text":"Review the delivery note","assigned":"agent","detail":"agent follow-up"}
 ```
 
 ## An older item without them still validates
@@ -50,7 +61,6 @@ one, so the same shape covers both "queued before the fields existed" and
 const older = parse([
   "---",
   "status: pending",
-  "source: todo-review",
   "priority: normal",
   "description: 'Todo review sweep: 1 escalated.'",
   "escalated:",
@@ -58,6 +68,7 @@ const older = parse([
   "    text: An older item",
   "    detail: due 2026-07-01",
   "stirring: []",
+  "actionable: []",
   "stale: []",
   "---",
   "",

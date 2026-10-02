@@ -5,14 +5,16 @@
  * the triage subagent, and applies its decisions. See `src/core/triage.ts`.
  */
 
-import { registerCommand } from "../command-runner.js";
-import { runTriage } from "../triage/index.js";
+import type { CommandDefinition } from "../command-types.js";
+import { runJevTriage } from "../triage/auto/core.js";
+import { runTriage } from "../triage/run/core.js";
 
-registerCommand({
+export const triageCommand: CommandDefinition = {
   name: "triage",
   description:
     "Run one triage pass: classify intake-complete items into categories and route them.",
   args: [
+    { name: "engine", description: "agent (default) or jev", type: "string", required: false, default: "agent" },
     {
       name: "dryRun",
       description: "Print agent decisions without moving files.",
@@ -23,6 +25,16 @@ registerCommand({
   ],
   execute: async (ctx, args) => {
     const dryRun = args["dryRun"] === true;
+    if (args["engine"] !== undefined && args["engine"] !== "agent" && args["engine"] !== "jev") {
+      return { success: false, error: "Triage engine must be agent or jev" };
+    }
+    if (args["engine"] === "jev") {
+      const result = await runJevTriage({ boxRoot: ctx.boxRoot, dryRun });
+      ctx.writeLine(`Triage: ${result.decisions.length} decision(s), ${result.deferred.length} deferred.`);
+      for (const receipt of result.decisions) ctx.writeLine(`${receipt.id} ${receipt.judgment.outcome} ${dryRun ? "preview" : receipt.application.state}`);
+      if (result.failed.length > 0) return { success: false, error: `${result.failed.length} triage item(s) failed`, data: result };
+      return { success: true, data: result };
+    }
     const result = await runTriage({ boxRoot: ctx.boxRoot, dryRun });
 
     if (result.empty) {
@@ -49,4 +61,4 @@ registerCommand({
     }
     return { success: true, data: result };
   },
-});
+};

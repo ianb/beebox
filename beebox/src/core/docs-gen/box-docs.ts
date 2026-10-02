@@ -7,11 +7,11 @@
 
 import { join } from "node:path";
 import { readdir, unlink, writeFile } from "node:fs/promises";
-import { errnoCode } from "../../lib/error-guards.js";
-import type { cardSchemas } from "../../schemas/registry.js";
-import { getBuiltinTemplates, type TemplateDefinition } from "../../schemas/templates.js";
+import { errnoCode } from "../../shared/error-guards.js";
+import type { CardSchema } from "../../exports/cards.js";
+import { getBuiltinTemplates, type TemplateDefinition } from "../../templates-registry.js";
 import { generateCardDoc } from "./content.js";
-import { cardDocFilename, cardDocInstructions, engineDocFilenames, ensurePackageDocs } from "./package-docs.js";
+import { cardDocFilename, cardDocInstructions, engineDocFilenames, ensurePackageDocs } from "./package-docs/core.js";
 import { DOCS_DIR, withDocId } from "./shared.js";
 
 /**
@@ -29,11 +29,10 @@ import { DOCS_DIR, withDocId } from "./shared.js";
  */
 export async function writeBoxCardDocs(params: {
   boxRoot: string;
-  debug: boolean;
-  boxCardSchemas: typeof cardSchemas;
+  boxCardSchemas: CardSchema[];
   boxTemplates: TemplateDefinition[];
 }): Promise<void> {
-  const { boxRoot, debug, boxCardSchemas, boxTemplates } = params;
+  const { boxRoot, boxCardSchemas, boxTemplates } = params;
   await pruneEngineDocs(boxRoot);
   const templates = [...getBuiltinTemplates(), ...boxTemplates];
   const currentCardDocs = boxCardSchemas
@@ -44,7 +43,7 @@ export async function writeBoxCardDocs(params: {
     const filename = cardDocFilename(s.name);
     const content = generateCardDoc({ name: s.name, instructions: s.instructions, templates: templates.filter((t) => t.cardTypes.includes(s.name)) });
     return writeFile(join(boxRoot, DOCS_DIR, filename),
-      withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content, debug }));
+      withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content }));
   }));
 
   // Prune card-<type>.md docs for schemas that no longer exist (or that were

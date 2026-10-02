@@ -45,6 +45,6 @@ Once the user agrees, the landmark itself is small editorial work:
 
 - **Label** — the bookmark name. A tab, not a sentence. Match how the user refers to the spot in conversation, not how the directory is named on disk.
 - **Symbol** — iconic, recognizable at a glance. Pick something the user would associate with the spot from their own life, not a generic placeholder.
-- **Curated links** — the *handful* of cards in that directory that the user actually reaches for, in the order they'd think about them. Many landmarks won't need any internal links at all — the bookmark itself, plus the directory it points at, is the value. Don't pad the list to make it feel substantive.
+- **Links** — most of a landmark's list is derived from the cards marked `entry-point` or `primary` under it, so a card in the directory surfaces by being marked, not listed. Many landmarks need no `links:` at all; when one does is in `node_modules/beebox/box-docs/card-landmark.md` ("Derived links, and `prominence`"). Don't pad the list to make it feel substantive.
 
 The schema details and the `expand` field for templated link lists are documented in `node_modules/beebox/box-docs/card-landmark.md`.

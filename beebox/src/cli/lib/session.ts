@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 import { buildEntry } from "./session-entry.js";
 import { oversizeEntry } from "./session-oversize.js";
@@ -23,7 +23,7 @@ import {
   resolveSessionLogPath,
 } from "../../core/chat/session/history.js";
 import { listSessionFilesInDir } from "../../core/chat/session/transcript-paths.js";
-import { ok, err, type Result } from "../../lib/result.js";
+import { ok, err, type Result } from "../../shared/result.js";
 import { extractSnippet } from "./session-text.js";
 import { contentBlocks, parseJsonlLine } from "./session-jsonl.js";
 import { userTurnText } from "./session-snippet.js";

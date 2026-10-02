@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { body, cardSchema } from "../cards/index.js";
+import { body, cardSchema } from "../exports/cards.js";
 import { SYSTEM_CARD_PATHS } from "../shared/system-card-paths.js";
 
 export const HistorySchema = cardSchema("history", {
+  brief: "The History interface card",
   description: "The canonical History interface card",
   category: "system",
   searchable: false,

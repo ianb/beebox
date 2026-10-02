@@ -10,6 +10,7 @@ import {
   loadSecretStore,
   mutateSecretStore,
   type CloudflarePublishBindingRecord,
+  type CloudflarePublishBoxHostRecord,
   type CloudflarePublishConnectionRecord,
 } from "./store.js";
 
@@ -54,6 +55,83 @@ function connectionMap(store: { cloudflarePublishConnections?: Record<string, Cl
 
 function bindingMap(store: { cloudflarePublishBindings?: Record<string, CloudflarePublishBindingRecord> | undefined }): Record<string, CloudflarePublishBindingRecord> {
   return store.cloudflarePublishBindings ?? (store.cloudflarePublishBindings = {});
+}
+
+function boxHostMap(store: { cloudflarePublishBoxHosts?: Record<string, CloudflarePublishBoxHostRecord> | undefined }): Record<string, CloudflarePublishBoxHostRecord> {
+  return store.cloudflarePublishBoxHosts ?? (store.cloudflarePublishBoxHosts = {});
+}
+
+function normalizeHostname(hostname: string): string {
+  return hostname.trim().toLowerCase().replace(/\.$/, "");
+}
+
+export interface CloudflarePublishBoxHost extends CloudflarePublishBoxHostRecord {
+  boxSlug: string;
+}
+
+export async function getCloudflarePublishBoxHost(boxSlug: string): Promise<CloudflarePublishBoxHost | null> {
+  const loaded = await loadSecretStore();
+  if (!loaded.ok) throw connectionError(`The machine secret store could not be read: ${loaded.error}`);
+  const mapping = loaded.value.cloudflarePublishBoxHosts?.[boxSlug];
+  return mapping === undefined ? null : { boxSlug, ...mapping };
+}
+
+/** Reserve an immutable per-box destination before creating or attaching its Worker. */
+export async function reserveCloudflarePublishBoxHost(opts: {
+  boxSlug: string;
+  connectionName: string;
+  hostname: string;
+  bucketName: string;
+  workerName: string;
+  hostHandle: string;
+  createdAt: string;
+}): Promise<CloudflarePublishBoxHost> {
+  const hostname = normalizeHostname(opts.hostname);
+  if (hostname.length === 0 || hostname.includes("/") || hostname.includes(":") || hostname.includes("@")) {
+    throw connectionError("Enter a hostname without a scheme, path, port, or credentials.");
+  }
+  return mutateSecretStore({ purpose: "cloudflare-publish-box-host-reserve" }, (store) => {
+    const mappings = boxHostMap(store);
+    const existing = mappings[opts.boxSlug];
+    if (existing !== undefined) {
+      if (existing.connectionName !== opts.connectionName || existing.hostname !== hostname) {
+        throw connectionError("This box already has a shared publishing hostname and connection. Bee Box cannot rename or move it.");
+      }
+      return { boxSlug: opts.boxSlug, ...existing };
+    }
+    const connection = store.cloudflarePublishConnections?.[opts.connectionName];
+    if (connection === undefined || connection.apiToken === undefined) throw connectionError(`Cloudflare publishing connection '${opts.connectionName}' is missing or revoked.`);
+    if (connection.grants[opts.boxSlug] !== "server") throw connectionError(`Cloudflare publishing connection '${opts.connectionName}' has no server grant for box '${opts.boxSlug}'.`);
+    const otherBox = Object.entries(mappings).find(([, mapping]) => mapping.hostname === hostname);
+    if (otherBox !== undefined) throw connectionError(`Hostname '${hostname}' is already assigned to box '${otherBox[0]}'.`);
+    const pubOwner = Object.entries(store.cloudflarePublishBindings ?? {}).find(([, binding]) => binding.customHostname !== undefined && normalizeHostname(binding.customHostname) === hostname);
+    if (pubOwner !== undefined) throw connectionError("This hostname is already assigned to a per-publication Worker. Bee Box will not move or detach that existing hostname.");
+    const mapping: CloudflarePublishBoxHostRecord = {
+      connectionName: opts.connectionName,
+      accountId: connection.accountId,
+      bucketName: opts.bucketName,
+      workerName: opts.workerName,
+      hostHandle: opts.hostHandle,
+      hostname,
+      status: "pending",
+      createdAt: opts.createdAt,
+    };
+    mappings[opts.boxSlug] = mapping;
+    return { boxSlug: opts.boxSlug, ...mapping };
+  });
+}
+
+/** Mark the one reserved hostname ready only after exact Worker-domain readback. */
+export async function attachCloudflarePublishBoxHost(opts: { boxSlug: string; connectionName: string; hostname: string }): Promise<CloudflarePublishBoxHost> {
+  const hostname = normalizeHostname(opts.hostname);
+  return mutateSecretStore({ purpose: "cloudflare-publish-box-host-attached" }, (store) => {
+    const mapping = store.cloudflarePublishBoxHosts?.[opts.boxSlug];
+    if (mapping === undefined || mapping.connectionName !== opts.connectionName || mapping.hostname !== hostname) {
+      throw connectionError("The shared hostname mapping changed before Cloudflare confirmed the Worker attachment.");
+    }
+    mapping.status = "attached";
+    return { boxSlug: opts.boxSlug, ...mapping };
+  });
 }
 
 function summary(name: string, record: CloudflarePublishConnectionRecord): CloudflarePublishConnectionSummary {

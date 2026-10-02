@@ -1,16 +1,16 @@
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { useEffect, useRef, useState } from "react";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
 import { BrowseBody } from "../pages/browse/BrowsePage";
 import { BrowseLocationError } from "../pages/browse/components/BrowseLocationError";
 import { legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { type ViewState, type ViewTarget } from "../lib/view-url";
 import { BrowseLoading } from "../pages/browse/components/BrowseLoading";
 import { useAppBarPlace } from "../components/app-bar-chrome";
-import { useCardVisible } from "../components/chat/everywhere/card-context";
-import { useWorkspace } from "../components/chat/workspace/WorkspaceProvider";
+import { useCardVisible } from "../components/chat/everywhere/card-context/context";
+import { useWorkspace } from "../components/chat/workspace/WorkspaceProvider/provider";
 
 function browseLocationValid({
   directoryKind,
@@ -124,4 +124,4 @@ function BrowseCardBody({ viewState, params, onViewStateChange }: RendererProps)
 function BrowseCard(props: RendererProps) {
   return <SystemCardBoundary path={props.data.path} type="browse"><BrowseCardBody {...props} /></SystemCardBoundary>;
 }
-registerFileType({ type: "browse" }, { renderer: { name: "Browse", Component: BrowseCard, priority: 100 } });
+export const browseRenderer: RendererEntry = { selector: { type: "browse" }, renderer: { name: "Browse", Component: BrowseCard, priority: 100 } };

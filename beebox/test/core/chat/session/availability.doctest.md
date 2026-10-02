@@ -12,11 +12,11 @@ rather than guessed at.
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { deriveTranscriptState, resolveSessionAvailability } from "../../../../src/core/chat/session/availability.js";
 import { localOrigin } from "../../../../src/core/chat/session/origin.js";
-import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../../../src/services/claude-chat.js";
+import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
+import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
-import { recordSessionStart } from "../../../../src/core/chat/session/session-start-record.js";
+import { recordSessionStart } from "../../../../src/core/chat/session/registry/start-record.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";

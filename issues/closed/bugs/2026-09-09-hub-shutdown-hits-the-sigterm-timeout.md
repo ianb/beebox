@@ -85,7 +85,7 @@ One thing learned while testing and recorded in the doctest:
 without sending a request — neither is "idle" by Node's reckoning. The forced
 close is what actually does the work, which is why the linger window is short.
 
-`test/hub/hub-shutdown.doctest.md` reproduces the original hang — a real
+`test/hub/hub-shutdown.doctest.md` (moved to `beebox/test/cli/commands/hub.shutdown.doctest.md`) reproduces the original hang — a real
 listening server with a client socket held open — and asserts the close is
 bounded and does not reach the deadline. The hub suite (e2e, router, config)
 stays green.

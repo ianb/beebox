@@ -28,7 +28,7 @@ report the same overwrite correctly as ` M`.
 
 **This was first filed as a production data-loss bug on the file-delete route.
 That was wrong, and the correction is the point of this rewrite.** The delete
-route's preservation step (`src/webapp/routes/api-files.ts:297-303`) gates on
+route's preservation step (`src/webapp/routes/api-files.ts:297-303` (moved to `beebox/src/webapp/routes/api/register/files.ts`)) gates on
 `pathsHaveChanges`, so on a box with this defect it would skip the "Saved
 before user delete" commit and lose an uncommitted edit. But no real box has
 the defect — only the test fixture does — so the route is not affected. What is
@@ -88,7 +88,7 @@ git noticed will pass whether or not the code under test is correct.
 
 Small. It bites only a test that writes an asset, rewrites it, and asserts that
 git noticed — there is exactly one of those today
-(`test/webapp/routes/routes-api.doctest.md`), and it is already worked around
+(`test/webapp/routes/routes-api.doctest.md` (moved to `beebox/test/webapp/routes/api.doctest.md`)), and it is already worked around
 by using different-length content. Nothing in production is affected.
 
 The reason to keep it open rather than close it: the workaround is invisible

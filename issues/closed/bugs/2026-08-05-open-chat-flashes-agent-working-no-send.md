@@ -143,7 +143,7 @@ The bar shows when `chatTargetStatus({ isStreaming, processBusy })` is busy.
 `processBusy` is set from the bootstrap load's `event.output.busy`
 (`src/frontend/src/machines/chatMachine.ts:139`; also the status poll at `:348`,
 driven by `useProcessingStatusPoll`), which comes from the backend
-`busy: target.isBusy()` (`src/webapp/trpc/routers/chat-control-procedures.ts:49`).
+`busy: target.isBusy()` (`src/webapp/trpc/routers/chat-control-procedures.ts:49` (moved to `beebox/src/webapp/trpc/routers/chat/control-procedures.ts`)).
 A `ChatSession` in its `starting` phase **reads as busy** (`start-run.ts:92` calls
 this out explicitly). However, opening a chat does **not** create or start a
 session: bootstrap uses `registry.get(sessionId)`, while `starting` is entered

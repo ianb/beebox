@@ -69,3 +69,19 @@ agent-learned content the parked template does not carry (box-*owned fields* are
 merged into the parked copy, but learned content is not).
 
 Related: [questions-end-to-end followups](2026-07-19-questions-end-to-end-followups.md).
+
+## 2026-09-26 check (doc-structure landing)
+
+Parks had reappeared on every production box: on each of six boxes,
+`_config/_template-updates/` held `calendar.guide.card`, `intake.guide.card`,
+`main.personality.card`, the three stock procedures, and `briefing.briefing.card`
+(the last two families on five boxes). All were re-parked by every sync, so
+their mtimes say nothing about when they first parked. The guide rewrites that
+landed the same day parked too, for two causes: the boxes carried older stock
+versions the ledger (`beebox/src/core/template-stock-hashes.ts`) never recorded
+(fixed by adding the field hashes), and the maps finalizer had prepended or
+planted MAP-include shims over four guides
+(`issues/bugs/2026-09-26-maps-finalizer-shims-over-tracked-guides.md`).
+The guide parks were accepted by hand; the content-bearing parks above were
+left alone, per the distinction in the previous section.
+

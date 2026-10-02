@@ -6,7 +6,7 @@ The index refresh maintains it; cards stay byte-clean. Stale = the content
 moved while `contains` didn't.
 
 ```ts setup
-import { openSearchIndex } from "../../../src/core/search/refresh.js";
+import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
 import {
   loadContainsState,
   listStale,
@@ -16,7 +16,7 @@ import {
   rebaseContains,
   saveContainsState,
 } from "../../../src/core/search/contains-state.js";
-import { createCardSchemaMap } from "../../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../../src/schemas.js";
 import type { LoadCardContext } from "../../../src/core/card-io.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
@@ -121,7 +121,7 @@ stale (the retrieval field moved with the content).
 
 ```ts continue
 const IMG = (desc: string) =>
-  "---\nstatus: analyzed\nfilename:\n  ref: attach/boiler.jpg\n  captured: 2026-05-01T10:00:00Z\n  source: camera-user\ndescription: " + desc + "\n---\n";
+  "---\nfilename:\n  ref: attach/boiler.jpg\n  via:\n    channel: camera-user\n    at: 2026-05-01T10:00:00Z\ndescription: " + desc + "\n---\n";
 await box.write("_bookkeeping/archive/boiler.image.card", IMG("The boiler's serial-number plate (K-44210)"));
 await openSearchIndex(box.root);
 JSON.stringify(listMissing(await loadContainsState(box.root)).filter((p) => p.includes("image")))

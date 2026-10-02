@@ -6,7 +6,7 @@ import { CliError } from "./errors.js";
 import { parseEvents } from "./events.js";
 import { checkGallery } from "./gallery.js";
 import type { GalleryCheckResult } from "./gallery.js";
-import type { RunResult } from "./recorder.js";
+import type { RunResult } from "./recorder/frame-recorder.js";
 import { run } from "./runtime.js";
 import { isTeaModule, toTeaModule } from "./tea-load.js";
 import { parseTeaEvents } from "./tea-events.js";

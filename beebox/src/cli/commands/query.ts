@@ -13,11 +13,11 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { TodoParamsSchema } from "../../core/todo/collection.js";
 import { runTodoQuery, type TodoQueryResult } from "../../core/todo/query.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { formatTodoRows, formatIssues } from "./query-format.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { formatTodoRows, formatIssues } from "../query-format.js";
 
 /** Every collection `bbx query` knows. One today; the error message lists whatever is here. */
 const COLLECTIONS: readonly string[] = ["todos"];
@@ -70,6 +70,10 @@ export async function runQueryForBox(
   }
 
   const params = TodoParamsSchema.safeParse({
+    // The agent's own surface: it must see every todo it always has,
+    // agent-assigned included, regardless of the boxholder-scope default
+    // (Track 1).
+    scope: "all",
     ...(options.status !== undefined && { status: options.status }),
     ...(options.assigned !== undefined && { assigned: options.assigned }),
     ...(options.onPlate === true && { onPlate: true }),

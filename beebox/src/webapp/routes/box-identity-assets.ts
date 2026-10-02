@@ -36,7 +36,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
-import { renderBoxIcon } from "../../core/box/box-icon.js";
+import { renderBoxIcon } from "../../core/box/icon.js";
 import { readBoxIdentity, type BoxIdentity } from "../../core/landmark/box-identity.js";
 
 /**

@@ -21,7 +21,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { boxTmpDir } from "../../lib/box-tmp.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { withCardLock } from "../../lib/card-lock.js";
 
 const QUARANTINE_DIR_NAME = "scan-quarantine";

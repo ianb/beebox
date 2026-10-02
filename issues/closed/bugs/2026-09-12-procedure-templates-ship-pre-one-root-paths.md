@@ -13,7 +13,7 @@ resolution: implemented
 > view-card-shape scans `src/views`). `process-retrospective` and
 > `view-card-shape` had their pre-one-root paths repathed;
 > `process-pages` was retired outright rather than repathed
-> (`beebox/scripts/migrate/retire-process-pages.ts`) since nothing has
+> (`beebox/scripts/migrate/retire-process-pages.ts` (moved to `beebox/src/scripts/migrate/retire-process-pages/run.ts`)) since nothing has
 > written to its inputs since the clerk's Save Page action was removed. The
 > `prompt: >-` folding concern raised in the last paragraph was checked
 > against the remaining templates and found to be a non-issue there. The

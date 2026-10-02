@@ -16,8 +16,7 @@
     "noEmit": true,
     // bin/ runs under tsx / native type stripping, where an explicit `.ts`
     // specifier is the thing that actually resolves (see bin/test-graph.ts
-    // importing agent-doctest's resolve-rules). Same reason as
-    // beebox/tsconfig.user-stories.json.
+    // importing agent-doctest's resolve-rules).
     "allowImportingTsExtensions": true,
     "lib": ["ES2023"],
     "types": ["node", "@fastify/cookie"]

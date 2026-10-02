@@ -1,6 +1,6 @@
 /**
  * The words on the page nginx serves while a production deploy has the hub
- * stopped (`deploy/nginx/beebox.conf`, `scripts/build-deploy-page.ts`).
+ * stopped (`deploy/nginx/beebox.conf`, `src/scripts/build-deploy-page.ts`).
  *
  * The page is unauthenticated, so it states only when the update started and
  * how long updates usually take — never a commit, ref, or anything else that
@@ -31,7 +31,7 @@ export function deployPageText({ startedMs, nowMs, typicalSeconds, startedLabel 
   const elapsedMs = Math.max(0, nowMs - startedMs);
   const typical = typicalSeconds === null
     ? "a few minutes"
-    : `about ${plural(Math.max(1, Math.round(typicalSeconds / 60)), "minute")}`;
+    : `about ${plural(Math.max(1, Math.ceil(typicalSeconds / 60)), "minute")}`;
   if (elapsedMs >= PROBABLY_FAILED_MS) {
     return {
       headline: "This site is down",
@@ -50,9 +50,18 @@ export function deployPageText({ startedMs, nowMs, typicalSeconds, startedLabel 
   };
 }
 
+/**
+ * Seconds while the update could still be running normally, so the page
+ * visibly counts; the browser re-renders every second. Past an hour the
+ * seconds are noise.
+ */
 function ago(ms: number): string {
-  const minutes = Math.floor(ms / 60_000);
-  if (minutes < 1) return "less than a minute ago";
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (totalSeconds < 1) return "just now";
+  if (minutes < 1) return `${plural(seconds, "second")} ago`;
+  if (minutes < 60) return seconds === 0 ? `${plural(minutes, "minute")} ago` : `${plural(minutes, "minute")} ${plural(seconds, "second")} ago`;
   if (minutes < 120) return `${plural(minutes, "minute")} ago`;
   return `${plural(Math.floor(minutes / 60), "hour")} ago`;
 }

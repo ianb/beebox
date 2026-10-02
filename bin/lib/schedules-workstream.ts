@@ -23,24 +23,13 @@ import { randomUUID } from "node:crypto";
 import { execa } from "execa";
 import { z } from "zod";
 
-import {
-  PRIORITY_GUIDE,
-  type Handoff,
-  type LoadedSchedule,
-  type Outcome,
-  type ScheduleState,
-  type ScheduleWorkstream,
-} from "./schedules.js";
+import { type Handoff, type LoadedSchedule, type Outcome, type ScheduleState, type ScheduleWorkstream } from "./schedules.js";
+import { briefingFor, LOG_TAIL_LINES } from "./schedules-briefing.js";
 import { logPath, readResult, tailLog, updateScheduleState } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 import { NewlineInToolPatternError, NoWorkstreamToStartError } from "./schedules-errors.js";
-
-
-
-/** How many log lines an alert carries as details. */
-const LOG_TAIL_LINES = 40;
 
 /** Fail-closed, the same three states `wt_other_agent_live` treats as live
  *  (`bin/lib/worktree-teardown.sh:94-96`): a scheduled run must never pull the
@@ -55,41 +44,6 @@ export interface WorkstreamOutcome {
 }
 
 const NOT_LAUNCHED = { sessionExit: null, checkExit: null, timedOut: false };
-
-// ─── The briefing ─────────────────────────────────────────────────────────
-
-/**
- * The run id is in the TEXT, not only the environment, so a session that lost
- * its environment — a later `resume` in a Terminal tab, an agent that shelled
- * out through something that scrubbed it — can still file its report.
- */
-function briefingFor(input: { name: string; runId: string; handoff: Handoff | null; logTail: string; outcome: Outcome }): string {
-  const parts: string[] = [];
-  if (input.handoff !== null) parts.push(`# ${input.handoff.title}\n\n${input.handoff.body}`);
-  if (input.outcome === "failed") {
-    parts.push(
-      `# The \`${input.name}\` run failed\n\nIts last ${String(LOG_TAIL_LINES)} log lines:\n\n\`\`\`\n${input.logTail}\n\`\`\``,
-    );
-  }
-  parts.push(
-    [
-      "---",
-      "",
-      `You are running as scheduled run \`${input.runId}\` of the \`${input.name}\` schedule.`,
-      "",
-      "Finish by filing your report — a run whose session ends without one is recorded as bailed:",
-      "",
-      `    bin/schedules alert --run ${input.runId} --title "<one line>" --message "<Markdown: the finding, then a list>" \\`,
-      `        [--details @<file>] [--priority important|normal|fyi]\n\n${PRIORITY_GUIDE}`,
-      "",
-      "or, when there is nothing worth saying:",
-      "",
-      `    bin/schedules done --run ${input.runId}`,
-      "",
-    ].join("\n"),
-  );
-  return `${parts.join("\n\n")}\n`;
-}
 
 // ─── The existing lifecycle, called out to ────────────────────────────────
 
@@ -353,14 +307,15 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
   }
 
   const logTail = await tailLog(logFile, LOG_TAIL_LINES);
-  let briefing = briefingFor({ name: schedule.name, runId, handoff: request.handoff, logTail, outcome: request.outcome });
+  const stateDir = path.join(deps.storeRoot, schedule.name);
+  let briefing = briefingFor({ name: schedule.name, runId, handoff: request.handoff, logTail, outcome: request.outcome, logFile, stateDir });
   if (workstream.agent === "codex") {
     // Codex has no --append-system-prompt-file: the schedule's prompt leads the
     // briefing instead, so the same prompt.md serves both agents.
     briefing = `${await fs.readFile(path.join(schedule.dir, "prompt.md"), "utf8")}\n\n${briefing}`;
   }
 
-  const env = scheduleEnv({ name: schedule.name, dir: schedule.dir, runId, stateDir: path.join(deps.storeRoot, schedule.name), dryRun: false });
+  const env = scheduleEnv({ name: schedule.name, dir: schedule.dir, runId, stateDir, dryRun: false });
   const [file, ...args] = command.argv;
   const session = await execChild({ file: file ?? "", args }, { cwd, env, timeoutMs: schedule.config.timeoutMs, logFile, input: briefing });
 

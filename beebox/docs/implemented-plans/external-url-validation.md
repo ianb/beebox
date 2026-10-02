@@ -69,7 +69,7 @@ Good URLs are stored nowhere — git's "was it present before" is the dedup.
 - `src/core/external-url-check.ts` — URL extraction, git base/current URL sets,
   the HEAD/GET checker + classifier, the gitignored verdict cache, orchestration
   (`checkExternalUrls(boxRoot, { mode })`).
-- `src/cli/commands/validate.ts` — wire the `--urls` flag (+ `--since`).
+- `src/cli/commands/validate.ts` (moved to `beebox/src/cli/commands/validate/command.ts`) — wire the `--urls` flag (+ `--since`).
 - `src/core/install-validation-hooks.ts` — add a marker-delimited post-commit
   managed block that coexists with the existing git-lfs post-commit hook.
 

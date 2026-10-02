@@ -10,7 +10,7 @@ resolution: implemented
 > **Closed 2026-08-06 — symptom fixed (boxholder call).** The stray popups stopped
 > after a fix on the notifier side (the boxholder's personal `~/.claude/hooks/notify.sh`
 > now suppresses tab-less/box invocations). NOTE the repo-side root is still latent:
-> box-agent spawns (`src/core/agent/run.ts:88`) set only PreToolUse/PostToolUse and
+> box-agent spawns (`src/core/agent/run.ts:88` (moved to `beebox/src/core/agent/invoke/run.ts`)) set only PreToolUse/PostToolUse and
 > don't neutralize the inherited `Notification` hook, so a dev/CI without that
 > notify.sh guard could still leak. The small repo-side fix (neutralize the
 > Notification hook in the inline `hooks` object) remains available if it ever
@@ -30,7 +30,7 @@ fires a macOS notification via `alerter`, formatted `⏳ <worktree> needs you`.
 ## Why box agents fire it at all
 
 Box agents are Claude Code subprocesses (Agent SDK `query()`), spawned by both
-the reactor (`src/core/agent/run.ts`) and chat (`src/services/claude-chat.ts`).
+the reactor (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`)) and chat (`src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`)).
 Neither sets `settingSources`, so it **defaults to `["user","project"]`** — the
 comment at `run.ts:88` even says so — which loads `~/.claude/settings.json`,
 **including the user's `Notification` hook**. The inline `hooks` both paths pass

@@ -33,7 +33,7 @@ The agent then said, in-channel:
 
 **Every part of that is wrong.** The chat-timer path contains no YAML anywhere:
 regex + quoted-attribute parsing into a JSON store
-(`src/core/chat/schedule-tags.ts`, `.beebox/chat-schedules.json`). A colon
+(`src/core/chat/schedule-tags.ts` (moved to `beebox/src/core/chat/schedules/tags.ts`), `.beebox/chat-schedules.json`). A colon
 is inert on that path. `runs:` is a field of the *scheduled-script card* — the
 fallback artifact the agent was creating, a different mechanism entirely — so it
 diagnosed a failure in system A by describing an edit it was making to system B.

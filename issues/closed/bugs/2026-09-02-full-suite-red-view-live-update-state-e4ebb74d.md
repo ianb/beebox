@@ -1,5 +1,5 @@
 ---
-title: "Full-suite red: test/cli/lib/git.doctest.md"
+title: "Full-suite red: test/cli/lib/git.doctest.md (moved to `beebox/test/lib/git.doctest.md`)"
 workstream: view-live-update-state
 area: beebox
 priority: important
@@ -15,7 +15,7 @@ commit (`97fdc22e`) over first-parent `main` blames one landing:
 
 - **Landing:** `e4ebb74d` — Merge branch 'worktree-view-live-update-state'
 - **Workstream:** view-live-update-state
-- **Failing file:** `test/cli/lib/git.doctest.md`
+- **Failing file:** `test/cli/lib/git.doctest.md` (moved to `beebox/test/lib/git.doctest.md`)
 
 Each file failed in the batched run and failed again on an isolated re-run, so
 it is not a flake by the ledger's definition. Nothing has been fixed; this is a

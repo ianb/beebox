@@ -5,7 +5,7 @@
 import { useState, useRef, useEffect } from "react";
 
 import { useBoxName } from "../../hooks/useBoxName";
-import type { RouterOutput } from "../../lib/trpc";
+import type { RouterOutput } from "../../lib/trpc/client";
 
 type StatusResponse = RouterOutput["status"]["status"];
 

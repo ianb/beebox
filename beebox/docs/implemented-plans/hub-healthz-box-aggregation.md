@@ -62,31 +62,31 @@ full rationale. The verdict, the auth fix, and an explicit canary remain.
 - `src/cli/commands/hub.ts:79` — `const getHealth = (): HubHealth => ({ status:
   "ok", boxes: supervisor.getStatuses() });`. The verdict is a constant.
   **Rebuilt** (it's one expression).
-- `src/hub/hub-server.ts:72-75` — `export interface HubHealth { status: "ok";
+- `src/hub/hub-server.ts:72-75` (moved to `beebox/src/hub/server/core.ts`) — `export interface HubHealth { status: "ok";
   boxes: BoxRuntimeStatus[]; }`. **Reused, widened.**
-- `src/hub/hub-server.ts:252` — `app.get("/healthz", async (_request, reply) =>
+- `src/hub/hub-server.ts:252` (moved to `beebox/src/hub/server/core.ts`) — `app.get("/healthz", async (_request, reply) =>
   reply.send(getHealth()));`. Unconditional 200, no auth. **Reused, gated, given
   a status code.**
-- `src/hub/supervisor.ts:49-57` — `BoxRuntimeStatus` carries `slug`, `status`,
+- `src/hub/supervisor.ts:49-57` (moved to `beebox/src/hub/supervisor/core.ts`) — `BoxRuntimeStatus` carries `slug`, `status`,
   `pid`, `port`, `restarts`, `lastError`. **Reused**, plus one new exported
   field: `consecutiveFailures`, already tracked internally at `:65`, incremented
   at `:456`/`:481` and reset to 0 on a successful launch (`:442`).
-- `src/hub/supervisor.ts:232` — `async ensureRunning(slug)` cold-starts a
+- `src/hub/supervisor.ts:232` (moved to `beebox/src/hub/supervisor/core.ts`) — `async ensureRunning(slug)` cold-starts a
   stopped box and waits for readiness, coalescing concurrent callers.
   **Reused verbatim** — it is exactly the canary's mechanism. On a non-lazy hub
   it degrades to `get()` (`:235`), so the canary works on both hub flavors.
 - `src/webapp/auth.ts:62-70` — `verifyDiagBearerKey(request)`, constant-time
   bearer check, false when `BBX_DIAG_API_KEY` is unset. **Reused** to gate both
   hub routes, mirroring the box server's own `/healthz`
-  (`src/webapp/server-root.ts:141-147`).
+  (`src/webapp/server-root.ts:141-147` (moved to `beebox/src/webapp/server-root/root-routes.ts`)).
 - `src/webapp/auth.ts:51-53` — `isAuthEnabled()`. Not needed by the routes
   (diag key is independent of OAuth), noted because the canary's
   can't-drive-a-box-through-the-hub constraint stems from `decideHubAuth`
-  (`src/hub/hub-server.ts:216`) honoring only session cookies — see Track B.
-- `test/hub/hub-router.doctest.md` — hub routes tested against a
+  (`src/hub/hub-server.ts:216` (moved to `beebox/src/hub/server/core.ts`)) honoring only session cookies — see Track B.
+- `test/hub/hub-router.doctest.md` (moved to `beebox/test/hub/server.router.doctest.md`) — hub routes tested against a
   `staticEndpointProvider` and a real `Supervisor`. **Reused** as the pattern
   for the verdict and canary tests.
-- `test/webapp/healthz-schema-failures.doctest.md:1-8` — the internal precedent
+- `test/webapp/healthz-schema-failures.doctest.md:1-8` (moved to `beebox/test/webapp/server-root.healthz-schema-failures.doctest.md`) — the internal precedent
   for rolling a per-box condition into `/healthz`, with its own regression
   trap. **Reused as the test-shape pattern.**
 - `deploy/deploy.sh:551-579` — the verification block. **Rebuilt.**
@@ -130,12 +130,12 @@ consumer (depends on both).
 give `/healthz` a status code that reflects it, and require the diag bearer key.
 
 **Why this needs to change.** Two defects. (1) The supervisor already knows a
-box is crash-looping or has latched `unhealthy` (`src/hub/supervisor.ts:480`)
-and nothing reads it. (2) The endpoint is public: `src/hub/hub-server.ts:252`
+box is crash-looping or has latched `unhealthy` (`src/hub/supervisor.ts:480` (moved to `beebox/src/hub/supervisor/core.ts`))
+and nothing reads it. (2) The endpoint is public: `src/hub/hub-server.ts:252` (moved to `beebox/src/hub/server/core.ts`)
 registers it with no key check, and nginx proxies `/` straight to the hub
 (`deploy/setup-server.sh:312-313`), so slugs, PIDs, ports, and `lastError`
 strings are internet-readable today. The box server's own `/healthz` already
-requires the key (`src/webapp/server-root.ts:141-147`); the hub's diverged.
+requires the key (`src/webapp/server-root.ts:141-147` (moved to `beebox/src/webapp/server-root/root-routes.ts`)); the hub's diverged.
 
 **Direction.**
 
@@ -148,9 +148,9 @@ export interface HubHealth {
 }
 ```
 
-`BoxRuntimeStatus` (`src/hub/supervisor.ts:49`) gains `consecutiveFailures:
+`BoxRuntimeStatus` (`src/hub/supervisor.ts:49` (moved to `beebox/src/hub/supervisor/core.ts`)) gains `consecutiveFailures:
 number`. The verdict, per box, dispatching exhaustively over `BoxRunStatus`
-(`src/hub/supervisor.ts:47`):
+(`src/hub/supervisor.ts:47` (moved to `beebox/src/hub/supervisor/core.ts`)):
 
 | `status` | condition | box is broken? |
 |---|---|---|
@@ -167,7 +167,7 @@ Gating mirrors the box server exactly: **503 `unconfigured`** when
 verdict. `getHealth` stays synchronous — no network, no side effects.
 
 `restarts` deliberately does **not** feed the verdict: it is a lifetime counter
-(`src/hub/supervisor.ts:503`, `box.restarts += 1`) that never resets, so keying
+(`src/hub/supervisor.ts:503` (moved to `beebox/src/hub/supervisor/core.ts`), `box.restarts += 1`) that never resets, so keying
 on it would pin the hub red forever after one old blip. `consecutiveFailures`
 is the live signal; `restarts` stays informational in the body.
 
@@ -198,7 +198,7 @@ startup break like the ABI mismatch is invisible to the passive verdict on any
 box that was never started. The first draft tried to close this by leaning on
 `prestartLazy` always starting the `keepRecent` box — but the review showed
 that guarantee is false: `prestartLazy` starts only *persisted* slugs
-(`src/hub/supervisor.ts:189-192`) and the first-boot / empty-state /
+(`src/hub/supervisor.ts:189-192` (moved to `beebox/src/hub/supervisor/core.ts`)) and the first-boot / empty-state /
 corrupt-state case starts **zero** boxes (proven by
 `test/hub/supervisor.doctest.md:403`, and `hub-state.json` load returns an empty
 map on any read failure). So the deploy needs to *actively* start a box, not
@@ -206,7 +206,7 @@ hope one was started.
 
 It cannot do so through a normal request: prod runs with auth on
 (`GOOGLE_OAUTH_CLIENT_ID` set), and `decideHubAuth`
-(`src/hub/hub-server.ts:216`) authorizes only via session cookie — a box path
+(`src/hub/hub-server.ts:216` (moved to `beebox/src/hub/server/core.ts`)) authorizes only via session cookie — a box path
 carrying just the diag bearer key is redirected to login (verified against the
 live server: `GET /box-family/healthz` with the diag key returns 302). Hence a
 dedicated diag-gated hub route that drives `ensureRunning` server-side.
@@ -244,7 +244,7 @@ body), so this doesn't false-fail on benign drift.
 **Route ordering / slug collision.** `GET /healthz/canary` is a more specific
 path than the catch-all `/*` and than `/healthz`; Fastify matches it before the
 proxy catch-all, so no box named `healthz` is involved (and `healthz` is
-already reserved — `src/hub/hub-config.ts:35-40`). No new reserved slug is
+already reserved — `src/hub/hub-config.ts:35-40` (moved to `beebox/src/hub/config.ts`)). No new reserved slug is
 needed: `canary` never appears as a top-level segment. This is the concrete
 defect the review caught in the first draft's `/livez` (which *would* have
 needed `livez` reserved); the sub-path shape sidesteps it.
@@ -271,7 +271,7 @@ lazy `Supervisor` + fake `spawnChild`/`checkReady`: a slug that comes ready →
 2. **The 30s poll raced the hub's boot** (`deploy.sh:563`, `for i in $(seq 1
    30)`). Not generic slowness: `src/cli/commands/hub.ts:58` does `await
    supervisor.startAll()` *before* creating the server, and a failing launch
-   blocks on `READY_TIMEOUT_MS` (`src/hub/child-spawn.ts:51`, 30s) before
+   blocks on `READY_TIMEOUT_MS` (`src/hub/child-spawn.ts:51` (moved to `beebox/src/hub/supervisor/child-spawn.ts`), 30s) before
    giving up — so the hub does not answer *precisely when a box is failing*.
    The incident's "healthz FAILED" was the crash timing out, misread as deploy
    flakiness.
@@ -405,7 +405,7 @@ convention from its context. This plan adds no agent-facing concept: the
 verdict, the canary route, and the deploy assertion are engine and deployment
 internals no box agent reads, writes, or recalls. The verdict/canary/auth
 conventions are maintainer-facing and belong in route doc comments,
-`deploy/README.md`, and `docs/health-checks.md`.
+`deploy/README.md`, and `docs/server/health-checks.md`.
 
 ## Implementation order
 
@@ -419,7 +419,7 @@ conventions are maintainer-facing and belong in route doc comments,
    200/401/503 cases and the canary ready/not-ready cases.
 4. **Track C** — `deploy.sh` rewrite. Depends on the final body shape.
 5. **Docs** — `deploy/README.md` on what verification now asserts and the new
-   401; `docs/health-checks.md` on the verdict semantics and the canary;
+   401; `docs/server/health-checks.md` on the verdict semantics and the canary;
    route doc comments carrying the liveness-vs-canary rationale.
 
 Chunks 1-4 are commit boundaries within the worktree, not ship boundaries. The

@@ -20,7 +20,7 @@
  *   API cannot set headers. Verifying it is pure HMAC, so it is the hot path.
  */
 
-import { verifyMobileSession, MOBILE_COOKIE_NAME } from "./mobile-session.js";
+import { verifyMobileSession, MOBILE_COOKIE_NAME } from "./session.js";
 import { resolveMobileBearerIdentity, type MobileBearerIdentity } from "./pairing.js";
 import { parseCookieHeaderAll } from "../../lib/cookies.js";
 

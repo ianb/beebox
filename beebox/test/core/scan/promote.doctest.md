@@ -14,9 +14,9 @@ answer truthfully.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { runScanPromotePass, promotionLockPath } from "../../../src/core/scan/promote.js";
-import { collectQuarantine } from "../../../src/core/scan/promote-gc.js";
-import { wakeupMarkerPath } from "../../../src/core/scan/promote-wakeup.js";
+import { runScanPromotePass, promotionLockPath } from "../../../src/core/scan/promote/core.js";
+import { collectQuarantine } from "../../../src/core/scan/promote/gc.js";
+import { wakeupMarkerPath } from "../../../src/core/scan/promote/wakeup.js";
 import {
   ensureQuarantineDir,
   quarantineFilePath,
@@ -24,9 +24,9 @@ import {
   readQuarantineEntry,
   recordQuarantineEntry,
 } from "../../../src/core/scan/quarantine.js";
-import { findEntry, loadLedger } from "../../../src/core/commands/upload-helpers.js";
+import { findEntry, loadLedger } from "../../../src/core/upload-helpers.js";
 import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
-import { runCommand, createCollectorContext } from "../../../src/core/commands/index.js";
+import { runCommand, createCollectorContext } from "../../../src/core/command-runner.js";
 import { hideAssetsAgain } from "../../helpers/legacy-ignore-block.js";
 
 const HASH_A = "a".repeat(64);
@@ -253,7 +253,8 @@ await box.cleanup();
 
 ## A failed wakeup keeps its marker, and the next pass clears it
 
-Connector-scoped scheduled wakeups never drain a `source: scan` job, so a lost
+Connector-scoped scheduled wakeups never drain a scan intake job (it has no
+`connector`), so a lost
 wakeup is indefinite rather than late. The marker is written before the run and
 survives a restart; every later pass retries it — but only a bounded number of
 times, and the outcome carries how long the caller should wait before the next
@@ -311,7 +312,7 @@ JSON.stringify({ questions: first.questions, ref: entry.questionRef })
 => {"questions":1,"ref":"_bookkeeping/questions/scan-rejected-aaaaaaaaaaaa.question.card"}
 
 const card = await box.read(entry.questionRef);
-JSON.stringify([card.includes("Contract.pdf"), card.includes("magic bytes say text/html"), card.includes("status: pending")])
+JSON.stringify([card.includes("Contract.pdf"), card.includes("magic bytes say text/html"), !card.includes("answered-at")])
 => [true,true,true]
 ```
 
@@ -357,7 +358,7 @@ Answering the question is what releases the bytes:
 
 ```ts continue
 const ref = (await readQuarantineEntry(box.root, HASH_A)).questionRef;
-await box.write(ref, (await box.read(ref)).replace("status: pending", "status: answered"));
+await box.write(ref, (await box.read(ref)).replace("---\n", "---\nanswer:\n  text: Keep it out\nanswered-at: 2026-09-17T00:00:00.000Z\n"));
 
 const collected = await runScanPromotePass({ boxRoot: box.root, deps });
 const tombstone = await readQuarantineEntry(box.root, HASH_A);

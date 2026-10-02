@@ -1,5 +1,5 @@
 /** A retained card can move, focus, and yield to chat without losing its view. */
-import { tour } from "./tour-lib/index.js";
+import { tour } from "./tour-lib/registry.js";
 
 tour({ name: "workspace-panes", description: "Pane controls, retained cards, and single-pane phone chat." }, async (t) => {
   await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2FTheme_Tour.memo.card");

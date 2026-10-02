@@ -11,7 +11,7 @@ design: ../../../beebox/docs/implemented-plans/box-root-paths.md
 ## Implemented (2026-07-30)
 
 Shipped in full by `beebox/docs/implemented-plans/box-root-paths.md` (branch
-`worktree-path-handling-model`, Tracks A–G): one `src/shared/ref-path.ts`
+`worktree-path-handling-model`, Tracks A–G): one `src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`)
 algebra behind every parse/resolve, chat re-based on the box root, nav and
 landmark accepting/teaching the leading-`/` form, the guidance stated once in
 `REF_PATH_RULE` with exemplars swept, `bbx validate --canonical [--fix]` as the

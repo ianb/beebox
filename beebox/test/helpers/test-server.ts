@@ -22,11 +22,11 @@ import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 import type { FastifyInstance } from "fastify";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
-import { createServer } from "../../src/webapp/server.js";
+import { createServer } from "../../src/webapp/server/app.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
-import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
-import type { Services } from "../../src/services/index.js";
-import { annexNewBox } from "../../src/core/annex/annex-new-box.js";
+import { createEventBus, type EventBus } from "../../src/core/event-bus/core.js";
+import type { Services } from "../../src/services/container.js";
+import { annexNewBox } from "../../src/core/annex/new-box.js";
 import { createGitAnnexService } from "../../src/services/git-annex.js";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { signSession, type SessionUser } from "../../src/webapp/auth.js";
@@ -87,6 +87,8 @@ export interface TestServerOptions {
    * server builds the real one — which no route doctest should provoke.
    */
   chatBackend?: ChatBackend | undefined;
+  /** Replace scan promotion work while route tests exercise HTTP validation. */
+  scanPromoteRun?: ((boxRoot: string) => Promise<void>) | undefined;
 }
 
 // Filter chat-history backfill noise: every makeTestServer() boots a fresh
@@ -216,6 +218,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
     devSurfaces: opts?.devSurfaces === true,
     frontendPath: TEST_FRONTEND_PATH,
     ...(opts?.chatBackend !== undefined ? { chatBackend: opts.chatBackend } : {}),
+    ...(opts?.scanPromoteRun !== undefined ? { scanPromoteRun: opts.scanPromoteRun } : {}),
   });
 
   return {

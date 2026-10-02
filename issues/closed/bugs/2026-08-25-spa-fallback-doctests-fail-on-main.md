@@ -9,8 +9,8 @@ discovered-by: agent
 discovered-in: tab-identity workstream — surfaced by test:changed while touching server-root.ts
 ---
 
-`test/webapp/login-redirect.doctest.md` and
-`test/webapp/mobile-spa-fallback.doctest.md` fail on `main` (verified at
+`test/webapp/login-redirect.doctest.md` (moved to `beebox/test/webapp/base-prefix.login-redirect.doctest.md`) and
+`test/webapp/mobile-spa-fallback.doctest.md` (moved to `beebox/test/webapp/server-root.spa-fallback.doctest.md`) fail on `main` (verified at
 `5bc18dfda` by checking out that commit in a worktree and running them alone,
 after they showed up in an unrelated change's `test:changed` selection). 7 of
 17 assertions across the two files.
@@ -61,5 +61,5 @@ these files are this.
 Fix: `InternalServerOptions.frontendPath`; `makeTestServer` passes the tracked
 `test/fixtures/frontend-dist/`, so every test server has the built shape.
 `test/webapp` is 1007/1007 with and without a real build. Remaining
-build-dependent test: `test/hub/hub-e2e.doctest.md` (drives a real `bbx hub`
+build-dependent test: `test/hub/hub-e2e.doctest.md` (moved to `beebox/test/hub.e2e.doctest.md`) (drives a real `bbx hub`
 subprocess and builds the frontend itself if absent).

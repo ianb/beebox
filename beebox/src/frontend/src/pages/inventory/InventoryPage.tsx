@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { errorMessage } from "@shared/error-guards";
-import { trpc, trpcClient } from "../../lib/trpc";
+import { trpc, trpcClient } from "../../lib/trpc/client";
 import { DEFAULT_INVENTORY_CARD_STATE, inventoryCardViewState, parseInventoryCardState, type InventoryCardState } from "../../lib/inventory-card-state";
 import type { ViewState } from "@shared/view-state";
 import { Stack } from "../../components/ui/Stack";
 import { ErrorText } from "../../components/ui/ErrorText";
 import { Button } from "../../components/ui/Button";
-import { InventoryContent } from "./components/InventoryContent";
+import { InventoryContent } from "./components/InventoryContent/view";
 import { InventoryError } from "./components/InventoryError";
 import { InventoryHeader } from "./components/InventoryHeader";
 import { InventoryLoading } from "./components/InventoryLoading";

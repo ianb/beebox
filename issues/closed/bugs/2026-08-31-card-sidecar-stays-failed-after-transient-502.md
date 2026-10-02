@@ -29,7 +29,7 @@ This combines two defects:
    A temporary server outage must not leave the panel failed indefinitely.
 
 The shared `FileView` loading path is a likely owner. `useFileData` in
-`beebox/src/frontend/src/components/FileView.tsx` returns `cardError` before it
+`beebox/src/frontend/src/components/FileView.tsx` (moved to `beebox/src/frontend/src/components/FileView/view.tsx`) returns `cardError` before it
 returns cached `card` data. It also relies on the event-stream reconnect callback
 to invalidate the card query. Investigate how tRPC/React Query represents a
 failed background refetch, whether reconnect always fires after a server update,

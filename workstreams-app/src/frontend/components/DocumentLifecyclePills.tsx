@@ -1,4 +1,4 @@
-import type { DocumentLifecycle } from "../../../../beebox/src/dev/document-lifecycle.js";
+import type { DocumentLifecycle } from "../../../../beebox/src/dev/doc-graph-data/document-lifecycle.js";
 import { Pill } from "./ui.js";
 
 export function DocumentLifecyclePills({ lifecycle }: { lifecycle: DocumentLifecycle | null }) {

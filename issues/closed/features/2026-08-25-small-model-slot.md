@@ -14,7 +14,7 @@ cheaper model, with no router or fallback logic — one declared slot, static ch
 That fits the boxholder's stated preferences: static provider choice (no routing), and
 operational simplicity over per-call cost — which argues *for* one config knob and
 *against* anything adaptive. Open question: per engine (`claude`/`codex` each get a
-small model) or one box-level value that `normalizeModelId` (`src/core/agent/run.ts`)
+small model) or one box-level value that `normalizeModelId` (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`))
 maps per engine.
 
 Source: [research/opencode/inspiration.md](../../../research/opencode/inspiration.md).

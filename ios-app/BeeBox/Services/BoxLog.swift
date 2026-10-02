@@ -12,6 +12,7 @@ enum BoxLogCategory: String, Codable, CaseIterable, Sendable {
     case webview
     case lifecycle
     case audio
+    case push
 }
 
 /// Native logging facade: unified logging always, plus forwarding to the paired

@@ -18,7 +18,7 @@ When you land on `/auth/login`, check these in order before suspecting credentia
 | `/workstreams/…` (POST — actions, tRPC mutations) | owner session + same-origin |
 
 The read-only dev grant is enforced by `dev-read` in
-`workstreams-app/src/router/router-auth.ts`; control routes intentionally remain
+`workstreams-app/src/router/server/auth.ts`; control routes intentionally remain
 owner-only.
 
 Note `/<wt>/dev/docs/…` is a 301 to `/workstreams/browse?file=…` — the doc browser retired into the general browser. Follow the redirect; both ends accept the key.

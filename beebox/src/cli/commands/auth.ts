@@ -13,7 +13,7 @@
  *
  * Each subcommand's body is exported as a plain async function
  * (`runCreateUser`, `runAddUser`, …) separate from the Commander wiring, so
- * `test/cli/auth-command.doctest.md` calls them directly — the `upgrade.ts`/
+ * `test/cli/commands/auth.doctest.md` calls them directly — the `upgrade.ts`/
  * `view.ts` precedent for testing CLI command logic without spawning a
  * subprocess.
  */
@@ -39,7 +39,7 @@ import {
   OwnerExistsError,
   UserExistsError,
 } from "../../webapp/local-users-errors.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { promptHidden } from "../lib/prompt-hidden.js";
 
 /** The known, clean-message errors `local-users.ts` throws — never a bare stack trace for these. */

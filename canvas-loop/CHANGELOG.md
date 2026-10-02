@@ -41,7 +41,7 @@ us more. Every change lands here — hand-written and terse.
     point per path: `attachSketch` for initial overrides (so `mountSketch` and
     `<SketchFigure>` validate identically), `Runtime.setParam` for every live
     change (widget edits, controlled host dispatch, scripted events).
-- **`./browser` subpath — React-free `mountSketch`.** New `browser/mount.ts`
+- **`./browser` subpath — React-free `mountSketch`.** New `browser/mount.ts` (moved to `canvas-loop/src/browser/mount.ts`)
   exports `mountSketch(mount, opts) => teardown`, an imperative wrapper over the
   browser TEA runtime + declaration-generated controls (shared
   `controls-model.ts`), with no React dependency. Opts: `module`, `seed?`,
@@ -73,7 +73,7 @@ First release as a workspace library (was `sandbox/canvas-loop`).
   `headless/` (the `@napi-rs/canvas` runner, both tier loops, event parsers,
   recorder, transcript, CLI). Exports:
   - `.` → `core` — importable in a bare Node process without resolving
-    `@napi-rs/canvas` (verified by `test/self-reference.test.ts`).
+    `@napi-rs/canvas` (verified by `test/self-reference.test.ts` (moved to `canvas-loop/test/exports/core.test.ts`)).
   - `./headless` → the headless runner.
   - `./eslint` → the TEA ESLint plugin.
 - **Sketches import the package name.** Examples and experiments switched from
@@ -103,7 +103,7 @@ First release as a workspace library (was `sandbox/canvas-loop`).
   (`useSyncExternalStore`); verified with `react-dom/server` in
   `test/react-ssr.test.tsx`. Persistence is host composition (documented with a
   `localStorage` example). The declaration→control mapping is now shared
-  (`browser/controls-model.ts`) between the DOM panel and the React panel rather
+  (`browser/controls-model.ts` (moved to `canvas-loop/src/browser/controls-model.ts`)) between the DOM panel and the React panel rather
   than duplicated. Demo: `dev-demo/` builds the tracked, self-contained
   `dev/canvas-loop.html` (two figures) via `pnpm run build:dev-demo`.
 - **Scripted snapshot event.** Events files (both tiers) accept
@@ -112,7 +112,7 @@ First release as a workspace library (was `sandbox/canvas-loop`).
   transcript frame heading. The scriptable twin of `snapshot(label?)`.
 - **Gallery corpus.** `experiments/` retired; its six sketches (orbit toy,
   particle fountain ×2 models, clock, pelican-on-a-bicycle, fjord-with-tides)
-  moved into `gallery/<slug>/` with the schema from `gallery/README.md`
+  moved into `gallery/<slug>/` with the schema from `gallery/README.md` (moved to `canvas-loop/src/gallery/README.md`)
   (`task.md`, `sketch.ts`/`sketch-tea.ts`, `events.json`, `meta.yaml`,
   `runs.jsonl`) and their real metadata (model, cycles, harness-commit, audit,
   self-report) recovered from the design issue's experiment records. New
@@ -126,7 +126,7 @@ First release as a workspace library (was `sandbox/canvas-loop`).
   interactive sketch work ("I need to see what this draws", build/test a figure,
   visualize, script input events, add a gallery exercise) and is reference-dense
   rather than self-contained: it points at `README.md`, `TEA.md`, and
-  `gallery/README.md` by path instead of duplicating them, and states the loop
+  `gallery/README.md` (moved to `canvas-loop/src/gallery/README.md`) by path instead of duplicating them, and states the loop
   (write → `cli run` → Read transcript + frames), events-as-tests (incl. the
   snapshot entry), the determinism levers, the gallery add/re-exercise flow, and
   the verify-by-frames / stranger-test audit norms. Wired into the repo's

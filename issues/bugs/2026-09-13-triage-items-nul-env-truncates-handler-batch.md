@@ -35,6 +35,6 @@ exercise the failing live boundary.
 Use a representation that survives process environment transport, or pass the
 batch through a different channel. Add coverage that reaches a spawned handler
 with at least two paths, including a path with spaces. Update
-`beebox/src/core/docs-gen/triage.ts`, which currently advertises the broken
+`beebox/src/core/docs-gen/package-docs/triage.ts`, which currently advertises the broken
 NUL-delimited shell recipe, together with the runtime contract. Keep
 `beebox/docs/triage.md` aligned with the corrected transport.

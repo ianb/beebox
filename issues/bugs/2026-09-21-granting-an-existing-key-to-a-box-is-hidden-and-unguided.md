@@ -20,7 +20,7 @@ Three complaints about one flow, from the boxholder:
 
 `GrantExistingForm` sits inside `<details id="bbx-admin-secrets-advanced">`
 labelled "Use a key another box already has"
-(`beebox/src/frontend/src/components/admin/SecretsSection.tsx:90-93`). The
+(`beebox/src/frontend/src/components/admin/SecretsSection/view.tsx:90-93`). The
 disclosure is closed by default and appears only when `grantable.length > 0`.
 
 That placement was deliberate: the section's own comment says "granting is the
@@ -76,3 +76,13 @@ tells them they are stuck; surfacing the grant without answering server-versus
 Related: [the add form hides the names that work](../closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md)
 solved the neighbouring problem (which names the system recognizes) in the
 same form; its approach is the obvious prior art.
+
+## Partly addressed (2026-09-25, worktree-admin-structure)
+
+Complaint 1 is addressed: the grant form is no longer behind a disclosure. The
+"This box" view lists the box's keys as collapsed rows, then "Add a key to
+this box" with the grant picker first (when the machine has something to
+grant) and the new-key service picker second.
+
+Complaints 2 (no warning when adding a name the machine already holds) and 3
+(no guidance on server versus agent access) are still open.

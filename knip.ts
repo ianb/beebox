@@ -1,5 +1,5 @@
 import type { KnipConfig } from "knip";
-import { doctestImports } from "./beebox/scripts/knip-doctest-imports.js";
+import { doctestImports } from "./beebox/src/scripts/knip-doctest-imports.js";
 
 /**
  * Knip runs from the MONOREPO ROOT, not from beebox.
@@ -27,12 +27,17 @@ const config: KnipConfig = {
     },
     "beebox": {
       entry: [
-        "src/webapp/server.ts",
+        "src/webapp/server/app.ts",
         "src/schemas/index.ts",
-        "src/connectors/index.ts",
-        "src/cli/index.ts",
+        "src/connectors.ts",
+        "src/cli/entry/run.ts",
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",
+        // Declarative-only `defineRegistry` completeness declaration
+        // (docs/plans/file-layout.md rule 1/4): `appRouter` is built from the
+        // same `routerMembers` object, but nothing imports the registry
+        // module for its own sake.
+        "src/webapp/trpc/routers.ts",
         // The box-facing specifiers (beebox/cards, ./schema, ./server)
         // need no entry: knip reads package.json "exports" and maps the dist
         // paths back through tsconfig. Same for the frontend's main.tsx, which
@@ -47,7 +52,7 @@ const config: KnipConfig = {
       project: [
         "src/**/*.{ts,tsx}",
         "!src/frontend/**",
-        "!src/schemas/**/*.list-entry.tsx",
+        "!src/schemas/*/list-entry.tsx",
         "test/**/*.ts",
         "test/**/*.doctest.md",
         "scripts/**/*.ts",
@@ -81,12 +86,16 @@ const config: KnipConfig = {
     },
     "beebox/src/frontend": {
       entry: [
-        "src/components/view-widgets/node-entry.tsx",
+        "src/exports/view-widgets.tsx",
         // Bundled on its own into the deploy page by
-        // beebox/scripts/build-deploy-page.ts, which names it by path.
-        "src/deploy-page/deploy-page.ts",
+        // beebox/src/scripts/build-deploy-page.ts, which names it by path.
+        "src/deploy-page/poll.ts",
+        // The suite is a consumer too: an export reached only from a test is
+        // used. Doctests are markdown — see the root `compilers` config.
+        "test/**/*.ts",
+        "test/**/*.doctest.md",
       ],
-      project: ["src/**/*.{ts,tsx}", "../schemas/**/*.list-entry.tsx"],
+      project: ["src/**/*.{ts,tsx}", "../schemas/*/list-entry.tsx", "test/**/*.{ts,tsx}"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and
         // the runtime it injects is never imported by hand (React 18 needs it;

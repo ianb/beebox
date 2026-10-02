@@ -22,7 +22,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { boxSlug } from "../../lib/box-slug.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import type { SecretRefusalKind } from "./errors.js";
 import { loadSecretStore, mutateSecretStore, secretsLogDir } from "./store.js";

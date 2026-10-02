@@ -14,9 +14,9 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stageAndCommitPaths } from "../../src/lib/git.js";
-import { errorMessage } from "../../src/lib/error-guards.js";
-import { invariant } from "../../src/lib/invariant.js";
+import { stageAndCommitPaths } from "../../src/lib/git/core.js";
+import { errorMessage } from "../../src/shared/error-guards.js";
+import { invariant } from "../../src/shared/invariant.js";
 
 const boxRoot = process.argv[2];
 const name = process.argv[3];

@@ -36,7 +36,7 @@ silently trusting a guessed word. Human display is derived from the same marks.
 ## Measurement basis (2026-08-15)
 
 Ran the production batch call (nova-3, params identical to
-`src/core/transcription/deepgram.ts:99-105`) over the 11 dictation recordings in
+`src/core/transcription/deepgram.ts:99-105` (moved to `beebox/src/core/transcription/dispatch/deepgram.ts`)) over the 11 dictation recordings in
 the test1 clone — 642 words, ~5 minutes of one speaker. Raw data preserved in
 the session scratchpad; summary:
 
@@ -82,7 +82,7 @@ first pass — see Open design questions.
 ## What already exists
 
 - **Batch Deepgram mapping drops confidence** —
-  `src/core/transcription/deepgram.ts:57-62` (`DeepgramWord` lacks
+  `src/core/transcription/deepgram.ts:57-62` (moved to `beebox/src/core/transcription/dispatch/deepgram.ts`) (`DeepgramWord` lacks
   `confidence`), `:127-131` (mapping). Reused: the plan adds the field to the
   existing interface and mapping; no new client.
 - **Realtime Deepgram messages already carry `words[]` with confidence into the
@@ -103,17 +103,17 @@ first pass — see Open design questions.
   tags are stripped generically is **unverified** (cross-model review finding
   8); Track 4 starts by reading the actual parser.
 - **Word-timestamp plumbing and sidecars** — `WordTimestamp` /
-  `DetailedTranscriptionResult` (`src/core/transcription/index.ts:86-92`);
+  `DetailedTranscriptionResult` (`src/core/transcription/index.ts:86-92` (moved to `beebox/src/core/transcription/dispatch/core.ts`));
   capture clips write `words` to `<basename>.timing.json`
-  (`src/core/capture/transcribe-clips.ts:138-143`); `bbx chat retranscribe
+  (`src/core/capture/transcribe-clips.ts:138-143` (moved to `beebox/src/core/capture/prepare/transcribe-clips.ts`)); `bbx chat retranscribe
   --timestamps` writes `<audioPath>.words.json`
-  (`src/cli/commands/chat-audio.ts:334-337`). Reused: adding `confidence?` to
+  (`src/cli/commands/chat-audio.ts:334-337` (moved to `beebox/src/cli/commands/chat/audio.ts`)). Reused: adding `confidence?` to
   `WordTimestamp` enriches both sidecars with no format change.
 - **Agent guidance surface** — `src/core/chat/session/prompts.ts` already tells
   the agent to use `bbx chat retranscribe` for homophones and dropped negatives.
   Reused: the new mark semantics slot into that same section and finally give
   the agent a trigger for *when*.
-- **Fake transcription service** — `src/core/transcription/fake.ts:81-86`
+- **Fake transcription service** — `src/core/transcription/fake.ts:81-86` (moved to `beebox/src/core/transcription/dispatch/fake.ts`)
   scripts `words`; doctests use it. Reused for tests (add `confidence` to
   scripted words).
 

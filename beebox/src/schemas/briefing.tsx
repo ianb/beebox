@@ -11,7 +11,7 @@
  *
  * `compileBriefing` emits the frontmatter records plus the body's Markdoc
  * as markdown for inclusion in CLAUDE.md (via `@`-include). The body
- * emitter lives at `src/core/markdoc/emit.ts`. The frontend renders the
+ * emitter lives at `src/core/markdoc/emit/core.ts`. The frontend renders the
  * records from frontmatter (default card viewer's field table) and the
  * body's `{% purpose %}`/`{% correction %}` tags as styled blocks via
  * `src/frontend/src/components/BriefingTags.tsx`.
@@ -21,8 +21,8 @@
  */
 
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
-import { emitBodyAsMarkdown } from "../core/markdoc/emit.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
+import { emitBodyAsMarkdown } from "../core/markdoc/emit/core.js";
 import { displayFromRef } from "../core/markdoc/emit-tags.js";
 
 const KeyPersonEntry = z.object({
@@ -57,6 +57,7 @@ const PropertyEntry = z.object({
 });
 
 export const BriefingSchema = cardSchema("briefing", {
+  brief: "Situational context for a directory",
   description: "Core situational context for the box or a directory — what every agent needs to know; one per directory",
   category: "authored",
   fields: {
@@ -228,7 +229,25 @@ export function compileBriefing(fields: BriefingFields, directoryLabel?: string)
 }
 
 /**
- * Seed briefing template for a new box: the stub purpose plus the two stock
+ * The default "Reaching me" section: the boxholder's policy for when and how
+ * loudly an agent notifies them, in their voice. New boxes get it in the
+ * briefing template; the agent guide carries the same text for boxes whose
+ * briefing predates it. See docs/notifications.md.
+ */
+export const REACHING_ME_HEADING = "## Reaching me";
+export const REACHING_ME_DEFAULT = `${REACHING_ME_HEADING}
+
+Tell me, quietly, when something failed or you could not understand what I
+gave you. Do not tell me that routine work succeeded. A question for me is a
+dot unless it blocks something with a date. Things I asked to be told about
+are loud. Health problems stay on the dashboard unless they stop something I
+asked for. When I ask for a reminder, make a schedule card with \`notify:\`.
+When I ask to be told when something happens, make a schedule card that runs
+\`bbx changes\` and \`bbx judge\` before any agent.`;
+
+/**
+ * Seed briefing template for a new box: the stub purpose, the default
+ * "Reaching me" section, plus the two stock
  * `openers:` a fresh box's empty chat offers. Both are phrased from the
  * person's side, so the agent is never asked something it cannot answer on
  * turn one. The agent rewrites and eventually removes
@@ -248,5 +267,7 @@ openers:
 {% purpose %}
 What this box is for.
 {% /purpose %}
+
+${REACHING_ME_DEFAULT}
 `;
 }

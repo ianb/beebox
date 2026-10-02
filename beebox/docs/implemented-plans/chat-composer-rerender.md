@@ -143,7 +143,7 @@ re-renders (it owns `input`), which is small and bounded.
    high-end number.
 3. Streaming still renders live: use the `/fakestream 4000 50 25` helper in the
    test session and watch tokens append in real time.
-4. Manual procedure in `docs/chat-scroll-testing.md` (stick-to-bottom,
+4. Manual procedure in `docs/chat/scroll.md` (stick-to-bottom,
    scroll-up disengage, load-older anchoring).
 5. Speech highlight still tracks the now-playing message (replay a `<speech>`
    message; confirm highlight + skip/stop controls — exercises the

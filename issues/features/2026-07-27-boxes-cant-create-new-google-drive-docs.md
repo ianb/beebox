@@ -15,7 +15,7 @@ sync-in + edit-existing, not create.
 
 ## What exists vs. what's missing
 
-The `GoogleDriveService` interface (`beebox/src/services/google-drive-types.ts:90-126`)
+The `GoogleDriveService` interface (`beebox/src/services/google-drive/types.ts:90-126`)
 is entirely keyed on an **existing** `fileId`:
 
 - `getFile` / `listFiles` / `listSpreadsheets` / `getSpreadsheet` — read
@@ -25,7 +25,7 @@ is entirely keyed on an **existing** `fileId`:
 
 There is **no** `createFile` / `documents.create` / `files.create` — nothing
 that mints a new Drive object. The connector
-(`beebox/src/connectors/google-drive.ts`) syncs Drive → box and pushes
+(`beebox/src/connectors/google-drive/connector.ts`) syncs Drive → box and pushes
 edits back (`created`/`updated`/`pushed` all describe *synced* folder contents,
 `google-drive.ts:173-185`), so "created" there means "newly seen in the mounted
 folder," not "created by the box."

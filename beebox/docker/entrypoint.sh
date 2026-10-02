@@ -72,7 +72,7 @@ if [[ "${BBX_SKIP_CONVERGE:-}" != "1" ]]; then
 set -euo pipefail
 BOX_ROOT="$1"
 # A v2 box is a package: it needs its own `pnpm install` before serving so
-# schemas/views resolve (mirrors scripts/smoke-external-box.ts). Only on first
+# schemas/views resolve (mirrors src/scripts/smoke-external-box.ts). Only on first
 # run — a populated node_modules means it is already installed.
 if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
   echo "beebox: first run — installing box dependencies (this is a one-time step)..." >&2

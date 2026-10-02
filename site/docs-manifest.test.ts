@@ -30,7 +30,12 @@ test("loadManifestEntries: a source outside the admissible prefixes fails the bu
   assert.throws(() => loadManifestEntries(file), DocsManifestError);
 });
 
-test("loadManifestEntries: a nested beebox/docs/ subdirectory (not design/architecture) is refused", () => {
+test("loadManifestEntries: a beebox/docs/testing/ doc is admissible", () => {
+  const file = writeManifest("- source: beebox/docs/testing/smoke.md\n  publish: dev/testing/smoke.md\n  description: x\n");
+  assert.equal(loadManifestEntries(file).length, 1);
+});
+
+test("loadManifestEntries: a nested beebox/docs/ subdirectory (not design/architecture/testing) is refused", () => {
   const file = writeManifest("- source: beebox/docs/box/foo.md\n  publish: concepts/foo.md\n  description: x\n");
   assert.throws(() => loadManifestEntries(file), DocsManifestError);
 });

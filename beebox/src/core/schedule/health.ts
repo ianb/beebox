@@ -18,12 +18,13 @@
 import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
 import {
-  isWithinBudget,
   parseDuration,
   type ParsedScheduledScript,
-} from "../../schemas/scheduled-script.js";
+} from "../../schemas/scheduled-script/schema.js";
+import { isWithinBudget } from "../../schemas/scheduled-script/due.js";
 import type { ScriptState } from "./state.js";
-import { isContendedFailure, isStaleLockFailure } from "../../lib/git.js";
+import { DEFER_REASON_TEXT, type DeferReason } from "./defer-reason.js";
+import { isContendedFailure, isStaleLockFailure } from "../../lib/git/core.js";
 
 export { conciseScheduleError } from "../../shared/schedule-error.js";
 
@@ -31,7 +32,7 @@ const { rrulestr } = rrulePkg;
 
 export type TaskHealthStatus =
   | "ok"
-  | "waiting"      // engine unavailable (e.g. quota-exhausted); deferred, not failing
+  | "waiting"      // engine unavailable (e.g. quota-exhausted), or the last run deferred with a marker; not failing
   | "inconclusive" // the last run's work completed but its check reached no verdict
   | "failing"      // last run(s) failed
   | "overdue"      // a due occurrence has gone unattempted past grace
@@ -51,6 +52,8 @@ export interface TaskHealth {
   pendingMs?: number;
   /** Why the task can't run (blocked), is disabled, or didn't parse (invalid). */
   reason?: string;
+  /** Waiting because the last run deferred on purpose: its defer marker's reason. */
+  deferReason?: DeferReason;
   /**
    * Box-relative paths of template files behind this task — its own card, the
    * procedure it runs — that have an upstream update parked in
@@ -160,6 +163,12 @@ export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
   }
   if (blockedReason) {
     return { ...base, status: "blocked", reason: blockedReason };
+  }
+  if (state.lastResult === "deferred" && state.lastDeferReason !== null) {
+    // The run deferred itself (nothing changed, nothing passed the judgment,
+    // or the judge was unavailable): the schedule waits for its next run.
+    const deferReason = state.lastDeferReason;
+    return { ...base, status: "waiting", deferReason, reason: DEFER_REASON_TEXT[deferReason] };
   }
 
   const missed = findMissedOccurrence(parsed, { lastRun: state.lastRun, cardMtime, now });

@@ -7,18 +7,19 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseCardText, cardFields } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { BrowserTaskSchema, BROWSER_TASK_INBOX_DIR } from "../../schemas/browser-task.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { browserTaskState, type BrowserTaskState } from "../../shared/browser-task-state.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 export interface BrowserTaskListItem {
   /** Box-relative card path. */
   path: string;
   title: string;
-  source: string;
-  status: "open" | "closed";
+  /** The URL the executor starts at. */
+  start: string;
+  closed: boolean;
   state: BrowserTaskState;
   inboxCount: number;
   runCount: number;
@@ -75,9 +76,9 @@ export async function listBrowserTasks(boxRoot: string, nowMs: number): Promise<
     items.push({
       path: cardRel,
       title: typeof fields["title"] === "string" ? fields["title"] : path.basename(cardRel, SUFFIX),
-      source: fields.source,
-      status: fields.status,
-      state: browserTaskState({ status: fields.status, lastUpload: fields["last-upload"], rescanAfter: fields["rescan-after"] }, nowMs),
+      start: fields.start.href,
+      closed: fields.closed === true,
+      state: browserTaskState({ closed: fields.closed, lastUpload: fields["last-upload"], rescanAfter: fields["rescan-after"] }, nowMs),
       inboxCount,
       runCount: fields.runs?.length ?? 0,
     });

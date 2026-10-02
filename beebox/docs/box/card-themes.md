@@ -1,6 +1,6 @@
 ---
 title: Card themes
-read-when: Choosing a card's visual treatment, stock, quote treatment, or Properties settings
+read-when: Choosing a card's visual treatment, stock, quote treatment, symbol, or Properties settings
 ---
 # Card themes
 
@@ -29,6 +29,15 @@ Resolution is explicit: card choice, first matching box path rule, box card-type
 choice, schema preference, box default, then plain. Properties identifies which
 of those supplied the result. A malformed or unknown choice remains visible as
 a presentation problem and falls back to plain while it is repaired.
+
+## Symbols
+
+A card's `symbol:` is the small mark that stands for the card in a tab strip, a
+listing, or a tile: `symbol: { glyph: 🍞 }`, optionally with
+`foreground:`/`background:` colours (`#rgb`, `#rrggbb`, `hsl()`,
+`hsla()`, `rgb()`, `rgba()` — nothing else), or `symbol: { src: <box ref
+to an image> }` for a picture. The glyph is an emoji or a letter or two, not
+a word. When to give a card one at all is in the agent guide's ABOUT_CARDS.
 
 ## Box defaults and location rules
 

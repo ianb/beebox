@@ -13,7 +13,7 @@
  */
 
 import { apiRawFileUrl, getApiBase } from "../api";
-import { DoclingView } from "../components/DoclingView";
+import { DoclingView } from "../components/DoclingView/view";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
 import { Stack } from "../components/ui/Stack";
@@ -21,9 +21,8 @@ import { Text } from "../components/ui/Text";
 import { StatusMessage } from "../components/ui/StatusMessage";
 import { ErrorText } from "../components/ui/ErrorText";
 import { useDoclingDocument } from "../hooks/useDoclingDocument";
-import { isDoclingPath } from "../lib/docling";
-import type { RendererProps } from "./index";
-import { registerFileType } from "./index";
+import { isDoclingPath } from "../lib/docling/parse";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 /**
  * Characters of pretty-printed JSON we will put in the DOM. A DoclingDocument
@@ -94,10 +93,12 @@ function DoclingRawView({ data }: RendererProps) {
 
 const selector = { match: (path: string) => isDoclingPath(path) };
 
-registerFileType(selector, {
+export const doclingStructureRenderer: RendererEntry = {
+  selector,
   renderer: { name: "Structure", Component: DoclingView, priority: 100 },
-});
+};
 
-registerFileType(selector, {
+export const doclingRawJsonRenderer: RendererEntry = {
+  selector,
   renderer: { name: "Raw JSON", Component: DoclingRawView, priority: 90 },
-});
+};

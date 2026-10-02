@@ -5,11 +5,11 @@
 import { useBusSubscription } from "../hooks/useBusSubscription";
 import { useState } from "react";
 import { errorMessage } from "@shared/error-guards";
-import { trpc, trpcClient } from "../lib/trpc";
+import { trpc, trpcClient } from "../lib/trpc/client";
 import { describeBrowserTaskState } from "@shared/browser-task-state";
 import { HeaderStrip } from "../components/dashboard/HeaderStrip";
 import { AttentionCards } from "../components/dashboard/AttentionCards";
-import { ScheduleOverview } from "../components/dashboard/ScheduleOverview";
+import { ScheduleOverview } from "../components/dashboard/ScheduleOverview/view";
 import { RecentActivity } from "../components/dashboard/RecentActivity";
 import { SystemInfo } from "../components/dashboard/SystemInfo";
 import { HealthWarnings, type HealthActionPending } from "../components/dashboard/HealthWarnings";

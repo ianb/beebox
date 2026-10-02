@@ -87,19 +87,19 @@ proposed changes are specified in Tracks / scope.
 | `beebox/src/core/migration-sweep.ts:97`: `if (!status.clean) return { status: "skipped-dirty", pending: pending.map((m) => m.name) };` | Remove dirty as an automatic refusal. |
 | `beebox/src/core/migration-run.ts:140`: “a soft, per-card failure — record it and continue” | Keep continuation; make unresolved per-card repair durable and visible. |
 | `beebox/src/core/migration-sweep.ts:136`: `await restoreManifest(boxRoot, snapshot);` | Preserve failed-commit rollback; also restore the staged manifest to its prior index state. |
-| `beebox/src/lib/git.ts:288`: `await withBoxGitLock(boxRoot, async () => {` and line 290: `await unstageOversizedBlobs(boxRoot);` | Keep normal Git/large-file protection. Do not use a blind whole-tree commit for migration outputs. |
-| `beebox/src/lib/git.ts:366`: `export async function stageAndCommitPaths(` | Stage untracked output as well as changes, then commit only those paths with hooks. |
+| `beebox/src/lib/git.ts:288` (moved to `beebox/src/lib/git/core.ts`): `await withBoxGitLock(boxRoot, async () => {` and line 290: `await unstageOversizedBlobs(boxRoot);` | Keep normal Git/large-file protection. Do not use a blind whole-tree commit for migration outputs. |
+| `beebox/src/lib/git.ts:366` (moved to `beebox/src/lib/git/core.ts`): `export async function stageAndCommitPaths(` | Stage untracked output as well as changes, then commit only those paths with hooks. |
 | `beebox/src/lib/git-lock.ts:296`: “cannot acquire logs loudly and runs” | This lock is not exclusive migration ownership; use the existing fail-closed file-lock primitive for shared admission. |
-| `beebox/src/cli/commands/tick-helpers.ts:83`: `export async function findBusyBlockers(` | Retain diagnostics; these probes alone cannot close admission or account for request preparation. |
+| `beebox/src/cli/commands/tick-helpers.ts:83` (moved to `beebox/src/cli/tick-helpers.ts`): `export async function findBusyBlockers(` | Retain diagnostics; these probes alone cannot close admission or account for request preparation. |
 | `beebox/deploy/server-bin/bbx-wait-quiet:4`: “Always exits 0: the wait is advisory, never a hard block.” | Deploy wait is a courtesy, not proof of exclusion. |
-| `beebox/src/core/agent/index.ts:154`: `export function createAgent(options: {` | Invoke the box's configured engine through this existing interface. |
+| `beebox/src/core/agent/index.ts:154` (moved to `beebox/src/core/agent/invoke/core.ts`): `export function createAgent(options: {` | Invoke the box's configured engine through this existing interface. |
 | `beebox/src/core/agent/types.ts:38`: `maxTurns?: number;` | Bound repair; deterministic retry remains the completion authority. |
-| `beebox/src/core/procedure/engine.ts:172`: `await stageAll(boxRoot);` | Do not introduce a generic repair procedure: its startup commit would entangle invalid input before repair begins. |
+| `beebox/src/core/procedure/engine.ts:172` (moved to `beebox/src/core/procedure/engine/core.ts`): `await stageAll(boxRoot);` | Do not introduce a generic repair procedure: its startup commit would entangle invalid input before repair begins. |
 | `beebox/src/core/question-alert.ts:69`: `export async function checkPendingQuestionsAndNotify(` | Reuse question notifications; retain schedule alerts when no notification channel is configured. |
-| `workstreams-app/src/router/router-real-effects.ts:66`: `const line = text.split("\n").find((l) => l.startsWith("BOXES="));` | Use the existing local box list. |
+| `workstreams-app/src/router/router-real-effects.ts:66` (moved to `workstreams-app/src/router/server/real-effects.ts`): `const line = text.split("\n").find((l) => l.startsWith("BOXES="));` | Use the existing local box list. |
 | `bin/lib/worktree-create.sh:418`: `grep -v '^BOXES=' "$main_env" > "$worktree_path/beebox/.env"` | Preserve worktree isolation. |
 | `beebox/src/core/docs-refresh.ts:91`: `if (!status.clean) return { status: "skipped-dirty" };` | Generated guidance must use the same dirty-input policy. |
-| `beebox/scripts/update-template-stock-hashes.ts:20`: “exists because the forward-only path above cannot see its own past.” | Existing historical-hash adoption is sufficient; do not invent a second template ledger. |
+| `beebox/scripts/update-template-stock-hashes.ts:20` (moved to `beebox/src/scripts/update-template-stock-hashes.ts`): “exists because the forward-only path above cannot see its own past.” | Existing historical-hash adoption is sufficient; do not invent a second template ledger. |
 
 History reviewed:
 
@@ -165,15 +165,15 @@ operations inside it. External editors and raw Git commands remain cooperative.
 Evidence for the existing pieces and gaps:
 
 - `beebox/src/lib/dev-bundle-reload.ts:6`: `let draining = false;` is process-local.
-- `beebox/src/webapp/server.ts:391`: `beginDevBundleDrain();` precedes its idle
+- `beebox/src/webapp/server.ts:391` (moved to `beebox/src/webapp/server/app.ts`): `beginDevBundleDrain();` precedes its idle
   check. Its request hook at line 148 rejects new mutations while draining.
 - `beebox/src/lib/dev-bundle-reload.ts:49`: `export function trackMutationStart(): () => void {`
   counts accepted request work; move this responsibility to shared admission.
-- `beebox/src/core/chat/schedules.ts:335`: `this.schedules.delete(schedule.id);`
+- `beebox/src/core/chat/schedules.ts:335` (moved to `beebox/src/core/chat/schedules/core.ts`): `this.schedules.delete(schedule.id);`
   consumes a fired timer even when delivery failed. Refusal must precede claiming it.
 - `beebox/src/webapp/routes/telegram.ts:76`: `const finishBackgroundWork = trackMutationStart();`
   already keeps detached delivery alive beyond the webhook response.
-- `beebox/src/core/chat/session/start-run.ts:116`: “await generateDocs(opts.boxRoot).catch”
+- `beebox/src/core/chat/session/start-run.ts:116` (moved to `beebox/src/core/chat/session/run/start-run.ts`): “await generateDocs(opts.boxRoot).catch”
   precedes the chat-active lock. Admission must cover preparation too.
 - `beebox/src/lib/file-lock.ts:140`: “budget runs out — a loud failure, never a silent unserialized run.”
   supplies fail-closed serialization; the fail-open Git lock is not suitable.
@@ -402,7 +402,7 @@ spawn `bbx init` while holding the Git lock. Add a `commit: false` option to
 `GenerateDocsOptions`, threaded to template sync,
 for this caller only. The convergence runner commits its measured output;
 other callers keep their default internal commits. This is needed because
-`beebox/src/core/docs-gen/index.ts:313`: `const candidates = [...status.staged, ...status.modified, ...status.untracked];`
+`beebox/src/core/docs-gen/index.ts:313` (moved to `beebox/src/core/docs-gen/generate/core.ts`): `const candidates = [...status.staged, ...status.modified, ...status.untracked];`
 collects pre-existing dirt, not just generator output. Restore/invalidate the
 existing generation marker after a failed refresh commit so a cache hit cannot
 hide uncommitted output on retry. Do not claim provisioning changes to ignored
@@ -756,7 +756,7 @@ recovery tests, and the repair-policy knowledge audit pass.
 
 Implementation and automated verification are complete. Deployment and live
 convergence evidence remain open. Current operational instructions live in
-[migrations](../migrations.md), [server operations](../server-operations.md),
+[migrations](../cards/migrations.md), [server operations](../server/operations.md),
 and the [deployment guide](../../deploy/README.md).
 
 Real-process fixtures cover shared closure/draining, retained descendants,

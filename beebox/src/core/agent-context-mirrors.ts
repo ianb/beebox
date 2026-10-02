@@ -1,11 +1,17 @@
 /** Materialize the editable Claude-authored context for Codex. */
 
 import { dirname, join, relative } from "node:path";
-import { lstat, mkdir, readFile, readdir, readlink, rm, symlink, writeFile } from "node:fs/promises";
-import { errnoCode } from "../lib/error-guards.js";
+import { lstat, mkdir, readFile, readdir, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { errnoCode } from "../shared/error-guards.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { AGENTS_MD, CLAUDE_MD } from "./agent-instruction-files.js";
+import { withDocId, withoutDocId } from "./docs-gen/shared.js";
 
+/**
+ * The line an older engine wrote into a generated `AGENTS.md` file, before the
+ * mirror became a symlink. Kept only to recognize and replace those files; the
+ * mirror itself is a symlink and carries no marker.
+ */
 const GENERATED_AGENTS_MARKER = "GENERATED from Claude guidance";
 
 async function pathKind(path: string): Promise<"missing" | "symlink" | "file" | "directory"> {
@@ -37,8 +43,15 @@ async function ensureRelativeSymlink(linkPath: string, targetPath: string): Prom
 /** Basename of `_config/_template-updates` (install-template-file.ts owns the full path). */
 const TEMPLATE_UPDATES_DIR_NAME = "_template-updates";
 
-async function findClaudeDocs(root: string): Promise<string[]> {
+interface ClaudeDocScan {
+  claudeDocs: string[];
+  /** `AGENTS.md` symlinks whose `CLAUDE.md` target is gone. */
+  danglingMirrors: string[];
+}
+
+async function findClaudeDocs(root: string): Promise<ClaudeDocScan> {
   const found: string[] = [];
+  const dangling: string[] = [];
   const visit = async (dir: string): Promise<void> => {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       // `_template-updates` holds parked copies of templates awaiting review,
@@ -50,10 +63,21 @@ async function findClaudeDocs(root: string): Promise<string[]> {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) await visit(path);
       else if (entry.isFile() && entry.name === CLAUDE_MD) found.push(path);
+      else if (entry.isSymbolicLink() && entry.name === AGENTS_MD && !(await targetExists(path))) dangling.push(path);
     }
   };
   await visit(root);
-  return found;
+  return { claudeDocs: found, danglingMirrors: dangling };
+}
+
+async function targetExists(linkPath: string): Promise<boolean> {
+  try {
+    await stat(linkPath);
+    return true;
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return false;
+    throw error;
+  }
 }
 
 /**
@@ -75,9 +99,16 @@ export async function ensureAgentsMirror(claudePath: string): Promise<string | n
 
 async function mirrorClaudeDocs(boxRoot: string): Promise<string[]> {
   const changed: string[] = [];
-  for (const claudePath of await findClaudeDocs(boxRoot)) {
+  const { claudeDocs, danglingMirrors } = await findClaudeDocs(boxRoot);
+  for (const claudePath of claudeDocs) {
     const mirror = await ensureAgentsMirror(claudePath);
     if (mirror !== null) changed.push(mirror);
+  }
+  // A `CLAUDE.md` that was removed leaves its mirror pointing at nothing;
+  // Codex would list a guide that no longer exists.
+  for (const link of danglingMirrors) {
+    await rm(link);
+    changed.push(link);
   }
   return changed;
 }
@@ -99,7 +130,31 @@ async function mirrorSkills(boxRoot: string): Promise<string[]> {
     const linkPath = join(targetDir, entry.name);
     if (await ensureRelativeSymlink(linkPath, join(sourceDir, entry.name))) changed.push(linkPath);
   }
-  return changed;
+  return [...changed, ...await pruneDanglingSkillLinks(targetDir, sourceDir)];
+}
+
+/**
+ * Remove `.agents/skills/<name>` symlinks into `.claude/skills/` whose target
+ * is gone (a managed skill was retired or renamed). A symlink has no first
+ * line to mark, so dangling is the orphan test; a link pointing anywhere else
+ * is not ours and stays.
+ */
+async function pruneDanglingSkillLinks(targetDir: string, sourceDir: string): Promise<string[]> {
+  const removed: string[] = [];
+  for (const entry of await readdir(targetDir, { withFileTypes: true })) {
+    if (!entry.isSymbolicLink()) continue;
+    const linkPath = join(targetDir, entry.name);
+    const target = await readlink(linkPath);
+    if (target !== relative(targetDir, join(sourceDir, entry.name))) continue;
+    try {
+      await stat(linkPath);
+    } catch (error) {
+      if (errnoCode(error) !== "ENOENT") throw error;
+      await rm(linkPath);
+      removed.push(linkPath);
+    }
+  }
+  return removed;
 }
 
 async function mirrorCodexHooks(boxRoot: string): Promise<string[]> {
@@ -136,13 +191,17 @@ async function mirrorCodexHooks(boxRoot: string): Promise<string[]> {
 }
 
 function ruleSkill(ruleName: string, rule: string): string {
-  const frontmatter = /^---\n([\S\s]*?)\n---\n+/.exec(rule)?.[1] ?? "";
+  const unmarked = withoutDocId(rule);
+  const frontmatter = /^---\n([\S\s]*?)\n---\n+/.exec(unmarked)?.[1] ?? "";
   const paths = [...frontmatter.matchAll(/^\s*-\s+["']?(.+?)["']?\s*$/gm)]
     .map((match) => match[1])
     .join(", ");
-  const body = rule.replace(/^---\n[\S\s]*?\n---\n+/, "");
+  const body = unmarked.replace(/^---\n[\S\s]*?\n---\n+/, "");
   const selector = paths === "" ? "relevant box files" : paths;
-  return `---\nname: beebox-rule-${ruleName}\ndescription: Apply Bee Box's ${ruleName} rules when working with ${selector}.\n---\n\nApplies to: ${selector}\n\n${body.trim()}\n`;
+  return withDocId({
+    relativePath: `.agents/skills/beebox-rule-${ruleName}/SKILL.md`,
+    content: `---\nname: beebox-rule-${ruleName}\ndescription: Apply Bee Box's ${ruleName} rules when working with ${selector}.\n---\n\nApplies to: ${selector}\n\n${body.trim()}\n`,
+  });
 }
 
 async function mirrorRules(boxRoot: string): Promise<string[]> {

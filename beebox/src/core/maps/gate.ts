@@ -8,8 +8,8 @@
  * editing.
  */
 
-import { isRepo, getStatus, hasCommits, gitBoxPrefix } from "../../lib/git.js";
-import { BOX_DIRS } from "../../lib/paths.js";
+import { isRepo, getStatus, hasCommits, gitBoxPrefix } from "../../lib/git/core.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
 import {
   DEFAULT_IGNORE_PATTERNS,
   SKELETON_HIDDEN_PATHS,

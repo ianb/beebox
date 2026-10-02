@@ -1,0 +1,155 @@
+# Box guidance
+
+The files a box agent reads as instructions (guidance surfaces), who writes
+each one, and how the engine keeps them current. For where one instruction
+should go, use the `bbx-context` skill; this page covers the files themselves.
+
+## What it is
+
+A **guidance surface** is one file or file family that Claude Code or Codex
+loads, or that an agent opens because an instruction names it. Each surface
+has one **tier** and one **class**.
+
+The tier says how eagerly a host loads it: `always` (every turn, through the
+root `CLAUDE.md` and its `@` includes), `situational` (when the agent works on
+matching paths: nested `CLAUDE.md`, `.claude/rules/`), `invoked` (by name:
+skills, procedures), `on-demand` (opened by path: package docs, compiled box
+docs), or `mirror` (Codex's copy of a Claude surface).
+
+The class says who writes the bytes:
+
+| Class | Who writes it |
+|---|---|
+| `generated` | The engine rewrites it on every sync. It carries the marker line, and edits are overwritten. |
+| `tracked` | The engine seeds it from a stock template and the box may edit it. The template tracker parks an upstream change on an edited copy (`src/core/install-template-file.ts`). |
+| `package` | The engine ships it in `node_modules/beebox/box-docs/`, outside the box tree. The box can only point at it. |
+| `owned` | The box writes it. The engine at most maintains `@` include lines in it or writes a first seed. |
+
+To classify a new surface, ask who writes the bytes after the first install.
+
+`GUIDANCE_SURFACES` in `src/core/box/guidance-surfaces.ts` is the list. This
+table restates it, and `test/core/box/guidance-sync.doctest.md` fails when the
+two differ. `<name>` stands for one path segment, and `**/` for any directory.
+
+| Surface | Tier | Class | Installed by | In box git |
+|---|---|---|---|---|
+| `CLAUDE.md` | always | owned | box; `ensureAgentContext` keeps its include lines | yes |
+| `.beebox/agent-guide.md` | always | generated | `generateDocs` | no |
+| `_content/briefing.md` | always | generated | `compileBriefings` | yes |
+| `_content/briefing.briefing.card` | always | tracked | `installBriefing` | yes |
+| `_config/main.personality.card` | always | tracked | `installPersonality` | yes |
+| `src/schemas/CLAUDE.md` | situational | tracked | walk | yes |
+| `src/views/CLAUDE.md` | situational | tracked | walk | yes |
+| `src/publications/CLAUDE.md` | situational | tracked | walk | yes |
+| `src/tricks/scripts/CLAUDE.md` | situational | tracked | walk | yes |
+| `_config/feedback/CLAUDE.md` | situational | tracked | walk | yes |
+| `src/publications/NOTES.md` | situational | owned | walk (seed once) | yes |
+| `**/MAP.md` | situational | owned | refresh-maps procedure | yes |
+| `.claude/rules/card-<type>.md` | situational | generated | walk (`generateRules`) | yes |
+| `.claude/rules/connector-<name>.md` | situational | generated | walk (`generateRules`) | yes |
+| `.claude/rules/bbx-validate-ignore.md` | situational | generated | `installValidationHooks` | yes |
+| `.claude/rules/guides-for-<type>.md` | situational | generated | `compileGuides` | yes |
+| `.claude/rules/guide-for-chat-<chat>.md` | situational | generated | `compileGuides` | yes |
+| `.claude/rules/exposition-<course>.md` | situational | generated | `compileExpositionRules` | yes |
+| `.claude/skills/<skill>/<file>` | invoked | generated | walk (`generateSkills`) | yes |
+| `_config/procedures/<name>.procedure.card` | invoked | tracked | `installProcedures` | yes |
+| `_config/<domain>.guide.card` | invoked | tracked | `installGuides` | yes |
+| `_config/schedules/<name>.scheduled-script.card` | invoked | tracked | `installSchedules` | yes |
+| `node_modules/beebox/box-docs/<doc>.md` | on-demand | package | `ensureEngineDocs` | no |
+| `_content/docs/generated/<doc>.md` | on-demand | generated | `generateDocs` | no |
+| `**/AGENTS.md` | mirror | generated | `generateAgentContextMirrors` | yes |
+| `.agents/skills/beebox-rule-<rule>/SKILL.md` | mirror | generated | `generateAgentContextMirrors` | yes |
+| `.agents/skills/<skill>` | mirror | generated | `generateAgentContextMirrors` | yes |
+| `.codex/hooks.json` | mirror | generated | `generateAgentContextMirrors` | yes |
+
+## How it works
+
+`syncBoxGuidance` (`src/core/box/guidance-sync/core.ts`) walks the registry. Both
+`initBox` and the `generateDocs` template sync call it, so a surface installs
+the same way on a new box and on every existing one. `initBox` skips the
+generators, since the rule generator loads the box's own schemas, and `bbx
+init` runs the full walk through `generateDocs` right after. The walk installs a
+tracked row through the template tracker, writes a seed once, and runs each
+generator once. A row installed by another owner names that owner: a card
+installer with its own merge policy, a later `generateDocs` phase that needs
+compiled box state, the package build, or the box.
+
+Every generated file carries this marker line, where `<path>` is its
+box-relative path:
+
+```
+<!-- DOCID:<path>; GENERATED by beebox, edits are overwritten -->
+```
+
+It is the first line, or the first line after YAML frontmatter, since Claude
+Code reads a rule's `paths:` and a skill's `name:` only at the top of the file.
+A prompt log shows which generated files reached an agent (`grep DOCID:`; see
+[prompt logging](prompts/logging.md)). The `.codex/hooks.json` file is JSON and
+says so in its `description` field instead, and a symlink has no marker.
+
+A generator's return value is its manifest. The rule and skill generators
+remove a file that carries the marker naming its own path and is not in the
+manifest, so a retired rule or skill does not linger. A file without the
+marker, such as a boxholder's own rule or skill, is left alone, with one
+exception: the name families the engine has always owned. Any
+`card-<type>.md`, `connector-<name>.md`, or `exposition-<course>.md` rule and
+any `.agents/skills/beebox-rule-*` directory the current run did not write is
+removed whether or not it carries the marker, because those names were engine
+output before the marker existed and a box must not shadow a generated rule
+under the same name. A boxholder's own rule takes a name outside those
+families. A `.agents/skills/<skill>` symlink goes when its target is gone.
+
+The families `compileGuides` writes (`guides-for-<type>.md`,
+`guide-for-chat-<chat>.md`) prune by marker and manifest too, and an
+`AGENTS.md` symlink whose `CLAUDE.md` is gone is removed by the mirror step.
+
+## Maps and tracked guides
+
+The maps finalizer (`src/core/maps/finalize/core.ts`) gives every map-bearing
+directory a `CLAUDE.md` holding the map include line. A directory whose
+`CLAUDE.md` is a tracked guide is skipped: the include would make the guide
+differ from stock, and the tracker would park every later rewrite. That
+happened on production boxes before 2026-09-26, so the finalizer and the sync
+both strip a leading include they find on a tracked guide
+(`src/core/maps/include-line.ts`). The map file itself is left where it is.
+
+The sync commit (`commitTemplateSyncChanges`) sweeps the paths
+`isTemplateManagedPath` accepts: every git-tracked `tracked` or `generated`
+row, plus the tracker's own bookkeeping and everything under `.claude/rules/`,
+`.claude/skills/`, and `.agents/skills/`.
+
+## Changing it
+
+Engine facts about a subject go in that subject's package doc under
+`docs/box/` (for example [tricks](box/tricks.md) or
+[schemas](box/schemas.md)). A tracked nested `CLAUDE.md` holds a pointer to it
+plus the box's own conventions, and a managed skill holds its trigger, its
+first commands, and a pointer. `test/core/docs-gen/package-docs.pointers.doctest.md` fails
+when a pointer names a doc the package does not ship.
+
+The agent guide follows the same rule; its ledger, bins, and handles are in
+[agent guide](agent-guide.md). A section whose facts only some runs
+need moves to a package doc and leaves one short pointer section behind:
+[provenance](box/provenance.md) holds the `{% quote %}` and `{% source %}`
+mechanics that the guide's PROVENANCE section points at, and
+[todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
+rules behind the guide's TODOS section, and [history](box/history.md) the
+commit trailers behind its HISTORY section.
+
+Review the week's changes against these rules before landing docs work: list
+the guidance sources touched since the last review
+(`git log --since=1.week --name-only -- src/core/box src/core/agent-guide
+src/core/docs-gen docs/box src/core/init-rules.ts`) and, for each, check
+that the surface is a registry row of the right class and that any fact it
+adds has one home. For each row added to the agent guide's ledger
+(`src/core/agent-guide/ledger.yaml`), check that its reason still holds. A
+`read-when:` line that promises a subject the doc does not cover is the
+failure the check most often finds.
+
+To add a surface, add its row to `GUIDANCE_SURFACES` and to the table above.
+A tracked row also needs its content in `MANAGED_STOCK_TEMPLATES`
+(`src/core/box/templates.ts`) and a ledger entry from
+`pnpm template-stock:update`. A generator writes each file through `withDocId`
+(`src/core/docs-gen/shared.ts`) and returns what it wrote. Changing a tracked
+template's text parks it on every box that edited its copy, and the
+`template-updates` health check reports each park.

@@ -7,7 +7,7 @@ issues: []
 # Composer child-actor ownership
 
 This proposal was extracted from the mixed current/future design note in the
-[current composer guide](../composer-input-machine.md). It is not authorized runtime work. The
+[current composer guide](../chat/composer.md). It is not authorized runtime work. The
 three-state speech overlay, HQ region, and keyboard transition model have
 shipped; invoking transcription and playback as child actors has not.
 

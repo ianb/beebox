@@ -31,6 +31,8 @@ export interface FileData {
   frontmatter?: Record<string, unknown>;
   /** Markdown body for cards. */
   body?: string;
+  /** File lines before `body` in the card's file (`card.get`); a rendered todo's locator is counted from it. */
+  bodyLineOffset?: number;
   /** Raw text content for non-card files (markdown, plaintext, json, etc.) */
   content?: string;
 }
@@ -64,6 +66,12 @@ export interface RendererProps {
    * a normal captioned image; other renderers ignore it. Absent outside embeds.
    */
   caption?: string;
+}
+
+/** A renderer registration: `src/renderers.ts`'s registry contract, one member per registration. */
+export interface RendererEntry {
+  selector: FileTypeSelector;
+  renderer: FileRenderer;
 }
 
 /** A renderer that can display a file. */

@@ -116,7 +116,7 @@ running engine does not know"). Not a BIG CHANGE.
   as a hang), tier-name overrides `ANTHROPIC_DEFAULT_OPUS/SONNET/HAIKU_MODEL`.
   Reuse its constants and its timeout rationale; its key source (`beebox/.env`)
   is dev-only and is NOT reused.
-- **Quota parser**: `workstreams-app/src/server/quota-glm.ts` documents Z.ai's
+- **Quota parser**: `workstreams-app/src/server/quota-glm.ts` (moved to `workstreams-app/src/server/main/quota-glm.ts`) documents Z.ai's
   quota API (raw `Authorization`, no Bearer; `percentage` is used-share;
   epoch-ms reset times). The probe-registry entry in track 4 reuses this
   endpoint knowledge; the card itself is not ported.

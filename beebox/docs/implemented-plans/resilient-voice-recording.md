@@ -925,7 +925,7 @@ done while its row still has live code.
 | 4 | Composer `pendingHqText` single slot | Replaced by the `pendingHq` list |
 | 5 | Web `input/retention.ts` + `test/frontend/lib/retention.doctest.md`, `retainVoiceAudio`, `markVoiceAudioAbsent` (incl. `InteractiveChat-dispatch.ts`), and the web-answer half of `fulfillLastAudioRequest` | The server holds the recording |
 | 6 | Native `ChatAPI.transcribeAudio` + its tests; the full-format WAV recording file in `SpeechDictation`; `VoiceAudioRetentionStore` and the native last-audio answer | The native app stages PCM, and the server answers `get-last-audio` |
-| 7 (legacy) | `POST /api/chat/transcribe-audio` (`chat-audio-routes.ts`) and its client callers; the whole `get-last-audio` tab relay: the request/answer routes (`webapp/routes/chat-last-audio-routes.ts`), `core/last-audio-pending.ts`, the `chat-last-audio-request` bus event (`core/event-bus-schemas.ts`), the handler in `InteractiveChat-ws.ts`, `lib/audio/last-audio.ts`, `components/chat/native-last-audio-request.ts`, and their doctests (`test/core/last-audio.doctest.md`, `test/frontend/native-last-audio-relay.doctest.md`, relay cases in `event-bus`/`agent-token`/`fixtures` doctests); `mobile-contract.md` §5.2 and §4.9 | After Tracks 4–6 nothing records only in a client, so `bbx chat get-last-audio` (`cli/commands/chat-audio-fetch.ts`, kept) reads staged recordings directly. `core/pending-browser-request.ts` stays: the screenshot and UI routes share it. The only iOS install is updated before /finish (boxholder, 2026-09-10) |
+| 7 (legacy) | `POST /api/chat/transcribe-audio` (`chat-audio-routes.ts`) and its client callers; the whole `get-last-audio` tab relay: the request/answer routes (`webapp/routes/chat-last-audio-routes.ts`), `core/last-audio-pending.ts`, the `chat-last-audio-request` bus event (`core/event-bus-schemas.ts`), the handler in `InteractiveChat-ws.ts`, `lib/audio/last-audio.ts`, `components/chat/native-last-audio-request.ts`, and their doctests (`test/core/last-audio.doctest.md` (moved to `beebox/test/core/last-audio-pending.doctest.md`), `test/frontend/native-last-audio-relay.doctest.md`, relay cases in `event-bus`/`agent-token`/`fixtures` doctests); `mobile-contract.md` §5.2 and §4.9 | After Tracks 4–6 nothing records only in a client, so `bbx chat get-last-audio` (`cli/commands/chat-audio-fetch.ts`, kept) reads staged recordings directly. `core/pending-browser-request.ts` stays: the screenshot and UI routes share it. The only iOS install is updated before /finish (boxholder, 2026-09-10) |
 
 ## Could this be simpler?
 
@@ -1125,7 +1125,7 @@ status comments recorded.
   - The composer `hq` region: extend the existing
     `test/frontend/composer-machine.doctest.md`.
 - Filesystem tier (`makeTmpBox()`): the job with the fake transcription service
-  (`src/core/transcription/fake.ts`) and an injected sleep/clock covers
+  (`src/core/transcription/fake.ts` (moved to `beebox/src/core/transcription/dispatch/fake.ts`)) and an injected sleep/clock covers
   retries, piece halving, exhaustion, restart resume and late delivery.
 - Route tier (`makeTestServer()`): voice create/upload/finalize/idempotency;
   the tRPC `claim`/`fallBack` CAS.

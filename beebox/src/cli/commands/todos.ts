@@ -20,12 +20,12 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { runTodoQuery } from "../../core/todo/query.js";
 import type { DerivedTodo } from "../../core/todo/collection.js";
 import { isTodoStatus, type TodoPlateState } from "../../shared/todo-model.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { formatIssues, formatTodoRow } from "./query-format.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { formatIssues, formatTodoRow } from "../query-format.js";
 
 interface TodosCliOptions {
   status?: string;
@@ -54,7 +54,7 @@ export const todosCommand = new Command("todos")
 
 /**
  * The command's logic, taking `boxRoot` directly rather than resolving it
- * from `process.cwd()` — the seam doctests drive (`test/cli/todos.doctest.md`),
+ * from `process.cwd()` — the seam doctests drive (`test/cli/commands/todos.doctest.md`),
  * same approach as `auth.ts`'s exported `run*` functions.
  */
 export async function runTodosForBox(boxRoot: string, options: TodosCliOptions): Promise<void> {
@@ -72,6 +72,10 @@ export async function runTodosForBox(boxRoot: string, options: TodosCliOptions):
       ...(options.glob !== undefined && { glob: options.glob }),
       params: {
         status: [status],
+        // The agent's own surface: it must see every todo it always has,
+        // agent-assigned included, regardless of the boxholder-scope default
+        // (Track 1).
+        scope: "all",
         ...(options.assigned !== undefined && { assigned: options.assigned }),
         ...(options.onPlate === true && { onPlate: true }),
       },

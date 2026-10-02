@@ -38,7 +38,7 @@ backends, the model provider). This feature closes that hole.
     learning destination, and no transcript entry.
 - **A secret store already exists** — connectors read `config/connectors/<name>.secret.json`
   (legacy) and `BBX_GOOGLE_TOKENS_FILE` (Google), gitignored
-  (`src/connectors/requirements.ts`). "X" is this store; the request names a target
+  (`src/connectors/requirements.ts` (moved to `beebox/src/requirements.ts`)). "X" is this store; the request names a target
   within it.
 - **Admin surface** — `AdminPage.tsx` + the admin tRPC router already own
   credential-adjacent config (Telegram, Google, allowed-emails). The write endpoint

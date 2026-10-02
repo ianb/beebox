@@ -68,7 +68,7 @@ becomes a real ongoing problem.
 ## Two distinct Google OAuth flows (which one is broken matters)
 
 1. **Login with Google** — `GET /auth/google` → `GET /auth/callback`
-   (`src/webapp/routes/auth-google.ts`). Authenticates the box owner, mints the
+   (`src/webapp/routes/auth-google.ts` (moved to `beebox/src/webapp/routes/auth/google.ts`)). Authenticates the box owner, mints the
    session cookie.
 2. **Connector pairing** — `GET /auth/google-services/callback`
    (`src/webapp/routes/admin.ts` + `trpc/routers/admin-google.ts`). Links a

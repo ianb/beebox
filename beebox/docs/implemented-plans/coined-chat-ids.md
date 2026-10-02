@@ -66,7 +66,7 @@ creates a second chat.
   Verified by spike, 2026-08-20 — see Prior art. Reused; this is the plan's
   foundation.
 - **The assignment callback's bookkeeping — but NOT its trigger.**
-  `makeOnAssigned` (`src/core/chat/session/registry.ts:249-313`) writes the
+  `makeOnAssigned` (`src/core/chat/session/registry.ts:249-313` (moved to `beebox/src/core/chat/session/registry/core.ts`)) writes the
   history entry, the feature seeds, the most-active pointer, and the husk card,
   then emits `session-assigned`. It will **not** fire for a coined session:
   `captureAssignedSessionId` returns early when the session already knows its id
@@ -77,23 +77,23 @@ creates a second chat.
   the plan's most serious error before review; every downstream claim about
   "the chat already exists" depended on it.
 - **The client already makes a mount-time round trip.**
-  `chatBootstrapProcedure` (`src/webapp/trpc/routers/chat-bootstrap-procedure.ts:58-78`)
+  `chatBootstrapProcedure` (`src/webapp/trpc/routers/chat-bootstrap-procedure.ts:58-78` (moved to `beebox/src/webapp/trpc/routers/chat/bootstrap-procedure.ts`))
   resolves the session and returns its history. Reused as the reservation point.
 - **The prewarm mechanism exists and is on in production.**
   `registry.prewarm()` (`registry.ts:111-126`), enabled by `bbx serve` via
-  `prewarmChat` (`src/webapp/routes/chat.ts:103-107`), consuming a slot warmed
-  by `startup()` (`src/services/claude-chat.ts:185-195`). Rebuilt: the slot
+  `prewarmChat` (`src/webapp/routes/chat.ts:103-107` (moved to `beebox/src/webapp/routes/chat/register.ts`)), consuming a slot warmed
+  by `startup()` (`src/services/claude-chat.ts:185-195` (moved to `beebox/src/services/claude-chat/core.ts`)). Rebuilt: the slot
   becomes per-chat and keyed by the coined id (justified below).
 - **The nullable delivery target already works and is tested.**
   `deliver-user-message.ts:141-163` creates a session for a null target;
-  `test/core/capture/deliver-message.doctest.md:32-50` covers it. Kept for the
+  `test/core/capture/deliver-message.doctest.md:32-50` (moved to `beebox/test/core/capture/prepare/deliver.message.doctest.md`) covers it. Kept for the
   deep-link and Codex cases; it stops being the common path.
 - **Rebuilt, not reused:** the four `createNew()` call sites
   (`deliver-user-message.ts:145`, `chat-send-target.ts:22`,
   `chat-schedule-fire.ts:141` and `:163`). They are the defect — nothing
   coordinates them and two can run concurrently for one intended chat.
 - **Not reached (rather than deleted):** the per-subprocess session-id file
-  (`src/core/chat/session/session-id-file.ts`, minted at `claude-chat.ts:90-98`).
+  (`src/core/chat/session/session-id-file.ts` (moved to `beebox/src/core/chat/session/id-file.ts`), minted at `claude-chat.ts:90-98`).
   Its module doc says why it exists: *"the moment the SDK emits the session id,
   the backend writes it into that file"* — with a coined id there is no such
   moment, and `start.ts` already sets `BBX_CHAT_SESSION_ID` whenever the session

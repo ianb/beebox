@@ -15,7 +15,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runCopyGrants, runMigrateSecrets } from "../../../src/cli/commands/secrets-migrate.js";
+import { runCopyGrants, runMigrateSecrets } from "../../../src/cli/commands/secrets/migrate.js";
 import { listSecrets, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { loadSecretStore } from "../../../src/core/secrets/store.js";
 

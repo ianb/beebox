@@ -3,7 +3,7 @@ import * as path from "node:path";
 
 import { execa } from "execa";
 
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 
 interface ActivationResult {
   public: Array<{ destination: string }>;

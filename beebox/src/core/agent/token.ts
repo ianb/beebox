@@ -21,7 +21,7 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 const TOKEN_RELATIVE_PATH = ".beebox/agent-token";
 const MIN_TOKEN_LENGTH = 32;

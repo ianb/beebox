@@ -17,7 +17,7 @@ gallery the way you would in any phone photo app doesn't page.
 A committed swipe defers the index change to the END of its flight:
 `commitSwipe` springs the figure a full viewport off-screen and only calls
 `onNavigate(step)` from the spring's `onDone`
-(`beebox/src/frontend/src/lib/lightbox-gesture-controller.ts`, the
+(`beebox/src/frontend/src/lib/lightbox-gesture-controller/controller.ts`, the
 `commitSwipe` case). That was deliberate — it makes the React index swap
 invisible, because the incoming peer is already dead centre when it happens.
 

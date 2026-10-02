@@ -84,7 +84,7 @@ command design.
 `collect.ts` reads/resolves feedback from boxes on `box.example.com` as
 well as local boxes. All remote ops go through `runOnServer()` in
 `run-on-server.ts` (the single chokepoint). If you're touching the remote
-path here, read [`beebox/docs/server-operations.md`](../beebox/docs/server-operations.md#writing-scripts-that-run-on-the-server)
+path here, read [`beebox/docs/server/operations.md`](../beebox/docs/server/operations.md#writing-scripts-that-run-on-the-server)
 for the rationale and the rule — short version: never SSH as root and write
 inside `/home/beebox/` directly; always drop to the `beebox` user first.
 `runOnServer` defaults to that.

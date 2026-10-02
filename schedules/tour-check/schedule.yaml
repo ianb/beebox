@@ -13,7 +13,7 @@
 #
 # Deliberately not a gate. A gate's only response to intended UI change is to go
 # red, which is how a soft-finding instrument becomes permanently red and then
-# ignored (beebox/docs/tours.md).
+# ignored (beebox/docs/testing/tours.md).
 description: "Weekly: walk every browser tour, edit the ones the app outgrew, file the rest"
 cadence: 7d
 # Five tours × two viewports, each summary read, each checkpoint screenshot

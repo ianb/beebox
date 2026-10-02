@@ -1,6 +1,8 @@
 import * as crypto from "node:crypto";
 import { z } from "zod";
 import { TokenStore, hashToken, nowIso, randomToken } from "../token-store.js";
+import { isRecord } from "../../shared/is-record.js";
+import { APNS_ENVIRONMENTS, type ApnsEnvironment } from "../../services/apns.js";
 
 const MOBILE_DEVICES_RELATIVE_PATH = ".beebox/mobile-devices.secret.json";
 const PAIRING_TOKEN_BYTES = 32;
@@ -16,6 +18,13 @@ interface PendingPairing {
   used: boolean;
 }
 
+/** The phone's APNs registration: its device token and the host that token belongs to. */
+const ApnsRegistrationSchema = z.object({
+  token: z.string().min(1),
+  environment: z.enum(APNS_ENVIRONMENTS),
+  registeredAt: z.string(),
+});
+
 const MobileDeviceSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -24,8 +33,30 @@ const MobileDeviceSchema = z.object({
   createdBy: z.string().nullable().default(null),
   lastUsedAt: z.string().optional(),
   revokedAt: z.string().optional(),
+  apns: ApnsRegistrationSchema.optional(),
 });
+
+/**
+ * One stored device. A malformed APNs registration drops the registration,
+ * never the device: the store drops a record that fails to parse, which would
+ * unpair the phone.
+ */
+function parseDevice(value: unknown): MobileDevice | null {
+  const parsed = MobileDeviceSchema.safeParse(value);
+  if (parsed.success) return parsed.data;
+  if (!isRecord(value)) return null;
+  const { apns: _malformed, ...rest } = value;
+  const withoutPush = MobileDeviceSchema.safeParse(rest);
+  if (!withoutPush.success) return null;
+  console.warn(`[pairing] dropping a malformed APNs registration on device "${withoutPush.data.label}": ${parsed.error.message}`);
+  return withoutPush.data;
+}
 export type MobileDevice = z.infer<typeof MobileDeviceSchema>;
+
+/** A device as it leaves this module: no token hash, and its push registration without the APNs token. */
+export type MobileDeviceView = Omit<MobileDevice, "tokenHash" | "apns"> & {
+  push: { environment: ApnsEnvironment; registeredAt: string } | null;
+};
 
 export interface PairingTicket {
   token: string;
@@ -71,10 +102,7 @@ const deviceStore = new TokenStore<MobileDevice>({
   // retry budget), so a crashed holder must clear in seconds, not minutes
   // (prod incident, box-family, 2026-08-01 — see file-lock.ts's module doc).
   lockProfile: "request",
-  parseRecord: (value) => {
-    const parsed = MobileDeviceSchema.safeParse(value);
-    return parsed.success ? parsed.data : null;
-  },
+  parseRecord: parseDevice,
   unreadableError: ({ storePath, cause }) => new DeviceStoreUnreadableError(storePath, { cause }),
   lockError: ({ lockPath }) => new MobileDeviceStoreLockError(lockPath),
 });
@@ -100,8 +128,11 @@ export function createMobilePairingTicket(
   return { token, expiresAt: new Date(expiresAt).toISOString() };
 }
 
-export function listMobileDevices(boxRoot: string): Array<Omit<MobileDevice, "tokenHash">> {
-  return deviceStore.read(boxRoot).map(({ tokenHash: _tokenHash, ...device }) => device);
+export function listMobileDevices(boxRoot: string): MobileDeviceView[] {
+  return deviceStore.read(boxRoot).map(({ tokenHash: _tokenHash, apns, ...device }) => ({
+    ...device,
+    push: apns === undefined ? null : { environment: apns.environment, registeredAt: apns.registeredAt },
+  }));
 }
 
 /** Who is asking about devices. `email` is null for a caller that authenticated
@@ -216,6 +247,81 @@ export function isMobileDeviceActive(boxRoot: string, deviceId: string): boolean
 
 export async function revokeMobileDevice(boxRoot: string, deviceId: string): Promise<boolean> {
   return deviceStore.revoke(boxRoot, (device) => device.id === deviceId);
+}
+
+/**
+ * Record the phone's APNs token, replacing any earlier one: tokens change on
+ * reinstall and restore, so the phone posts on every launch. A token belongs
+ * to one phone, so the same token on any other device record is cleared (a
+ * phone paired twice would otherwise get every push twice). False when the
+ * device is unknown or revoked.
+ */
+export async function registerDevicePush(
+  boxRoot: string,
+  opts: { deviceId: string; token: string; environment: ApnsEnvironment },
+): Promise<boolean> {
+  return deviceStore.withLock(boxRoot, ({ records, save }) => {
+    const device = records.find((item) => item.id === opts.deviceId);
+    if (device === undefined || device.revokedAt !== undefined) return false;
+    for (const other of records) {
+      if (other !== device && other.apns?.token === opts.token) delete other.apns;
+    }
+    device.apns = { token: opts.token, environment: opts.environment, registeredAt: nowIso() };
+    save();
+    return true;
+  });
+}
+
+/**
+ * Drop a device's APNs registration after APNs reported the token dead. Only
+ * the token that failed is removed: a phone that re-registered a new token
+ * between the send and this prune keeps it.
+ */
+export async function pruneDevicePush(boxRoot: string, opts: { deviceId: string; token: string }): Promise<boolean> {
+  return deviceStore.withLock(boxRoot, ({ records, save }) => {
+    const device = records.find((item) => item.id === opts.deviceId);
+    if (device?.apns?.token !== opts.token) return false;
+    delete device.apns;
+    save();
+    return true;
+  });
+}
+
+/** An unrevoked device's push registration, token included. Never leaves the process. */
+export interface DevicePushRegistration {
+  deviceId: string;
+  label: string;
+  token: string;
+  environment: ApnsEnvironment;
+}
+
+export function devicePushRegistrations(boxRoot: string): DevicePushRegistration[] {
+  return deviceStore
+    .read(boxRoot)
+    .flatMap((device) =>
+      device.apns === undefined || device.revokedAt !== undefined
+        ? []
+        : [{ deviceId: device.id, label: device.label, token: device.apns.token, environment: device.apns.environment }],
+    );
+}
+
+/**
+ * Pair a stand-in phone with a fake APNs token in `sandbox`, so the APNs path
+ * runs with no iPhone (`bbx pairing register-fake-push`). Its device token is
+ * never returned: nothing can authenticate as it, and the owner revokes it
+ * like any other device.
+ */
+export async function pairFakePushDevice(boxRoot: string, opts: { label: string }): Promise<{ deviceId: string; label: string }> {
+  const device: MobileDevice = {
+    id: crypto.randomUUID(),
+    label: opts.label,
+    tokenHash: hashToken(randomToken(DEVICE_TOKEN_BYTES)),
+    createdAt: nowIso(),
+    createdBy: null,
+    apns: { token: `fake-${crypto.randomBytes(16).toString("hex")}`, environment: "sandbox", registeredAt: nowIso() },
+  };
+  await deviceStore.append(boxRoot, device);
+  return { deviceId: device.id, label: device.label };
 }
 
 function pruneExpiredPairings(): void {

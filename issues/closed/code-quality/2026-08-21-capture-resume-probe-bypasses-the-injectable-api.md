@@ -12,13 +12,13 @@ Closed 2026-08-29 by this commit (`fix(capture): inject the resumable-session pr
 
 Capture's network calls go through an injectable seam so the dev harness can
 mount capture mode against an in-memory fake: `CaptureApi` +
-`useCaptureApi()` (`beebox/src/frontend/src/pages/capture/capture-api-context.tsx:19-48`),
+`useCaptureApi()` (`beebox/src/frontend/src/pages/capture/capture-api-context.tsx:19-48` (moved to `beebox/src/frontend/src/pages/capture/api-context.tsx`)),
 faked by `makeFakeApi` in
 `beebox/src/frontend/src/pages/dev/components/CaptureModeHarness.tsx:122-153`.
 
 The resumable-session probe is not part of that seam. `useCaptureResume` imports
 `listResumableCaptureSessions` straight from the module
-(`beebox/src/frontend/src/components/capture/useCaptureResume.ts:18`, called
+(`beebox/src/frontend/src/components/capture/useCaptureResume.ts:18` (moved to `beebox/src/frontend/src/components/capture/CaptureOverlay/useCaptureResume.ts`), called
 at `:45`), so it always makes a real network call.
 
 Two consequences on `/dev/capture-mode`: every open of the overlay logs

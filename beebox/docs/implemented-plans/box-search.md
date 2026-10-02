@@ -48,7 +48,7 @@ pass.)
   errors, fail before side effects, correct invocation in the error text,
   bounded output with navigable truncation, vocabulary menu (`--json`,
   `--limit`, `get`/`list`/`create`/`update`/`delete`).
-- `docs/adding-schemas.md`: the checklist any schema-surface change follows
+- `docs/cards/schemas.md`: the checklist any schema-surface change follows
   (registry, index.ts, templates, generated docs, verification).
 - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — search and
   validate output must stay quiet and structured.
@@ -77,10 +77,10 @@ pass.)
   `CardSchema.fields` stays the author-declared set (:137), so Track 1 must
   also define how globals appear on the resolved schema (see Direction).
 - **Connector card writers** — connector sync **rebuilds cards wholesale
-  from templates**: `src/connectors/gmail-threads.ts:212` (thread cards),
+  from templates**: `src/connectors/gmail-threads.ts:212` (moved to `beebox/src/connectors/gmail/threads.ts`) (thread cards),
   `:134` (message cards, rewritten when their thread changes),
-  `src/connectors/drive-handler-docs.ts:240` (gdoc cards),
-  `src/connectors/drive-handler-sheets.ts:152` (sheet cards). Any field not
+  `src/connectors/drive-handler-docs.ts:240` (moved to `beebox/src/connectors/google-drive/handlers/docs/handler.ts`) (gdoc cards),
+  `src/connectors/drive-handler-sheets.ts:152` (moved to `beebox/src/connectors/google-drive/handlers/sheets/handler.ts`) (sheet cards). Any field not
   threaded through the template is destroyed on the next sync. Track 3 adds
   `contains` preservation to these paths; nothing reusable exists.
 - **Attachment-scoped content** — gdoc content is a markdown snapshot in the
@@ -93,11 +93,11 @@ pass.)
 - **Per-edit validation hooks** — `src/core/install-validation-hooks.ts:2–16`
   installs a PostToolUse hook (`bbx validate --hook`) and a pre-commit hook
   (:36). The delivery channel exists, but hook mode currently prints
-  **nothing unless `totalErrors > 0`** (`src/cli/commands/validate.ts:185`)
+  **nothing unless `totalErrors > 0`** (`src/cli/commands/validate.ts:185` (moved to `beebox/src/cli/commands/validate/command.ts`))
   — warning-level output is new work (Track 3). PostToolUse fires only on
   agent Edit/Write/MultiEdit, not hand edits or connector writes.
 - **Ref-updating moves** — `bbx mv` (`src/cli/commands/move.ts`,
-  `src/core/commands/move-phase2.ts`) rewrites refs on move. The index does
+  `src/core/commands/move-phase2.ts` (moved to `beebox/src/core/commands/move/phase2.ts`)) rewrites refs on move. The index does
   **not** hook `bbx mv`; the manifest diff treats a move as
   remove-then-reinsert (see Track 2), which covers `git mv` and shell moves
   identically.
@@ -114,10 +114,10 @@ pass.)
   rule once, canonically.
 - **Derived-field precedent (narrow)** — `bbx describe-images`
   (`src/cli/commands/describe-images.ts`) batch-maintains
-  `image.description` (`src/schemas/image.tsx:78`). Precedent for "an agent
+  `image.description` (`src/schemas/image.tsx:78` (moved to `beebox/src/schemas/image/schema.tsx`)). Precedent for "an agent
   command maintains a frontmatter field" only — it has no staleness or
   backfill machinery; Track 3 builds those.
-- **Job creation precedent** — `src/cli/commands/wakeup-steps.ts:179`
+- **Job creation precedent** — `src/cli/commands/wakeup-steps.ts:179` (moved to `beebox/src/cli/commands/wakeup/steps.ts`)
   `createIntakeJobsForUnjobbed`. The backfill job creator follows this
   pattern.
 - **Schema-wins precedent** — `src/schemas/doc.tsx:19` declares
@@ -355,7 +355,7 @@ is independent of Track 3 once Track 1 lands.
   - **CLI**: `bbx contains list [--missing|--stale] [--json]` (searchable
     kinds only, bounded output with hint) and
     `bbx contains update <card> --text "..."` (splitCardContent + YAML
-    mutation per `docs/adding-schemas.md:155`, then re-bases the sidecar).
+    mutation per `docs/cards/schemas.md:155`, then re-bases the sidecar).
   - **Backfill**: a job-card creator in the `createIntakeJobsForUnjobbed`
     mold (`wakeup-steps.ts:179`) batching ~25 missing-`contains` cards per
     job. Connector-owned kinds enter the backfill pool only after the
@@ -522,7 +522,7 @@ Three agent-facing concepts land; each gets a `knows_directly` entry in
    both schema kinds, cardworks unit tests. Everything depends on this.
 2. **Mark operational schemas** `searchable: false` in `src/schemas/`;
    registry exposes the searchable type set.
-3. **Extraction** (`src/core/search/extract.ts`): per-kind folding,
+3. **Extraction** (`src/core/search/extract.ts` (moved to `beebox/src/core/search/extract/core.ts`)): per-kind folding,
    section split, XML walk, input-file declaration, email-body exclusion;
    pure doctests. Depends on 1–2.
 4. **Index lifecycle** (`index.ts`): build, atomic persist (index-then-

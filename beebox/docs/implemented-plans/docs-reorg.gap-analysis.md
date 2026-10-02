@@ -15,7 +15,7 @@ rather than enshrining them.
 Data-loss / corruption tier:
 
 1. **Connector sync destroys hand-added frontmatter fields except
-   `contains`.** `src/connectors/preserve-agent-fields.ts:1-49` — sync
+   `contains`.** `src/connectors/preserve-agent-fields.ts:1-49` (moved to `beebox/src/preserve-agent-fields.ts`) — sync
    rebuilds cards wholesale from templates; only `AGENT_FIELDS =
    ["contains"]` survives (applies to Gmail thread cards and Drive
    doc/sheet cards). An agent annotating a synced card with `priority:` or
@@ -24,14 +24,14 @@ Data-loss / corruption tier:
    `docs/connectors.md`. The strongest "confidently wrong, silent data
    loss" gap found.
 2. **Hub-spawned box children get a fail-closed env allowlist, not
-   `process.env`.** `src/hub/child-env.ts:8-91`; `BBX_SESSION_SECRET` /
+   `process.env`.** `src/hub/child-env.ts:8-91` (moved to `beebox/src/hub/supervisor/child-env.ts`); `BBX_SESSION_SECRET` /
    `ANTHROPIC_API_KEY` deliberately withheld. A feature tested under direct
    `bbx serve` silently loses its env var under the hub. Needed one-liner:
    "adding an env var a box reads? Also add it to `child-env.ts`."
 3. **System prompt must stay time-invariant (warm-pool cache key), and
    resumed sessions never re-send it.** `src/core/session-context.ts:1-14`
    (time context only in per-message `<chat-app>` snapshots) and
-   `src/core/agent/run.ts:191-208` (resume omits systemPrompt entirely —
+   `src/core/agent/run.ts:191-208` (moved to `beebox/src/core/agent/invoke/run.ts`) (resume omits systemPrompt entirely —
    prompt edits are invisible to open threads until session reset; only
    hint today is `reactor/DESIGN.md:78`).
 4. **Timeouts must count awake time, not wall clock.**
@@ -44,11 +44,11 @@ Data-loss / corruption tier:
    `docs/box-layout.md`.
 6. **Every card schema silently gets optional `title` and `contains`
    (`GLOBAL_CARD_FIELDS`).** `src/cards/schema.ts:63-77`; `contains` is the
-   prime retrieval field. `docs/adding-schemas.md` never mentions it and
+   prime retrieval field. `docs/cards/schemas.md` never mentions it and
    its example redeclares `title`, hiding the mechanism — new card types
    end up invisible to search.
 7. **`bypassPermissions` is hardcoded for every SDK-spawned box agent.**
-   `src/core/agent/run.ts:63`; a box's `.claude/settings.json` does not
+   `src/core/agent/run.ts:63` (moved to `beebox/src/core/agent/invoke/run.ts`); a box's `.claude/settings.json` does not
    gate engine-spawned agents. Discussed only inside the openclaw-hermes
    research corpus.
 8. **`makeTestServer` prefixes every URL with `/test`; `rootRequest()` is
@@ -115,7 +115,7 @@ answered — remain open questions in `docs-reorg.md`.
 9. **Two-and-a-half registration manifests** (`bbx boxes add` scheduler
    manifest vs `hub.json`, plus `bbx activity` reading boxes.json) read as
    one system in docs. Cross-reference or unify?
-10. `docs/composer-input-machine.md` leads with an unshipped 5-state
+10. `docs/chat/composer.md` leads with an unshipped 5-state
     design and buries the shipped 3-state reality — restructure?
 
 ## C. Documented but wrong / unfindable from point of need
@@ -125,17 +125,17 @@ answered — remain open questions in `docs-reorg.md`.
    `test/helpers/`.
 2. **`.claude/rules/doctest.md` is a stale copy** — missing the
    `=> throws ErrorName[: message]` shorthand
-   (`agent-doctest/src/doctest-hooks.ts:185-215`); 10 doctests hand-roll
+   (`agent-doctest/src/doctest-hooks.ts:185-215` (moved to `agent-doctest/src/doctest-hooks/hooks.ts`)); 10 doctests hand-roll
    try/catch instead.
 3. **CODE-STYLE.md claims knip enforces export minimalism; `knip.json`
    excludes `"exports"`.**
 4. **`eslint.config.ts` references `eslint-suppressions.json` and a
    `docs/reports/eslint-rule-suppression-audit-2026-05-30.md` path that don't resolve** (the
    audit doc lives at monorepo-root `docs/`, not beebox's).
-5. **`src/hub/hub-server.ts:1-14` comment says the hub never lazy-spawns —
+5. **`src/hub/hub-server.ts:1-14` (moved to `beebox/src/hub/server/core.ts`) comment says the hub never lazy-spawns —
    contradicted by `resolveEndpoint()` and `supervisor.ts` `lazy: true`**
    (added 2026-07-04). Fix comment; give lazy-hub a sentence in
-   `docs/adding-a-box.md`.
+   `docs/server/boxes.md`.
 6. **`src/cli/commands/boxes.ts:1-8` says `bbx serve` reads boxes.json** —
    contradicts `serve.ts:11-14` and `docs/scheduler.md:31`;
    `docs/user-stories.md` asserts the old behavior as verified.
@@ -161,5 +161,5 @@ answered — remain open questions in `docs-reorg.md`.
 
 Verified-solid (no action): `lib/trpc.ts` self-docs,
 `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
-`docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
+`docs/cards/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 the self-explaining `template-stock-hashes` doctest failure message.

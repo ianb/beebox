@@ -49,13 +49,13 @@ owner.
 
 ## What already exists
 
-- `src/webapp/trpc/routers/admin-invites.ts:14`: *"createInvite:
-  ownerProcedure"*. `src/webapp/trpc/trpc.ts:27-31` enforces `ctx.isOwner`, and
+- `src/webapp/trpc/routers/admin-invites.ts:14` (moved to `beebox/src/webapp/trpc/routers/admin/invites.ts`): *"createInvite:
+  ownerProcedure"*. `src/webapp/trpc/trpc.ts:27-31` (moved to `beebox/src/webapp/trpc/procedures.ts`) enforces `ctx.isOwner`, and
   `src/webapp/server-box-scope.ts:244` derives that from open mode or a concrete
   user whose email equals `getOwnerEmail()`. The plan reuses this authorization,
   retains the explicit non-null `ctx.user` gate for open mode, and removes only
   the local-owner identity precondition at lines 21-27.
-- `src/webapp/trpc/routers/admin-password-resets.ts:16` also declares
+- `src/webapp/trpc/routers/admin-password-resets.ts:16` (moved to `beebox/src/webapp/trpc/routers/admin/password-resets.ts`) also declares
   `createPasswordReset` on `ownerProcedure`. The plan reuses it and removes the
   same local-owner precondition at lines 22-29. Member and allowlist eligibility
   checks at lines 30-35 remain.
@@ -75,20 +75,20 @@ owner.
   member inside it. The implementation keeps ordinary user insertion dependent
   on an owner and adds an explicit invited-member insertion path that can create
   a member-only file only while an owner still resolves.
-- `src/webapp/routes/auth-invite.ts:169-190` performs throttling, hashes the new
+- `src/webapp/routes/auth-invite.ts:169-190` (moved to `beebox/src/webapp/routes/auth/invite.ts`) performs throttling, hashes the new
   password, rechecks the identity, consumes the one-use capability, and then
   calls the hashed-password insertion path. The implementation reuses this
   route, rechecks owner resolution before token consumption, and uses the
   explicit invited-member insertion API.
-- `src/webapp/trpc/routers/admin-user-details.ts:32-38` classifies the absence
+- `src/webapp/trpc/routers/admin-user-details.ts:32-38` (moved to `beebox/src/webapp/trpc/routers/admin/user-details.ts`) classifies the absence
   of a local owner as `not-initialized`. The plan changes the vocabulary so an
   absent local owner is a valid ready state; an unreadable store remains
   unavailable.
 - `src/frontend/src/components/admin/AllowedEmailsSection.tsx:30-49` renders
   the SSH instruction and mismatch error. The plan removes these obsolete
   notices. Existing per-user account badges and reset actions remain.
-- `test/webapp/trpc-admin-box-config.doctest.md:100-117` asserts the current
-  failing precondition. `test/webapp/invite-accept.doctest.md:30-93` only tests
+- `test/webapp/trpc-admin-box-config.doctest.md:100-117` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.doctest.md`) asserts the current
+  failing precondition. `test/webapp/invite-accept.doctest.md:30-93` (moved to `beebox/test/webapp/routes/auth.invite-accept.doctest.md`) only tests
   acceptance after a local owner exists. These become the primary regression
   tests.
 
@@ -291,8 +291,8 @@ server credential storage only.
 
 - Tests land before each production change. Required targeted tests are
   `test/webapp/local-users.doctest.md`,
-  `test/webapp/invite-accept.doctest.md`,
-  `test/webapp/trpc-admin-box-config.doctest.md`, and the password-reset
+  `test/webapp/invite-accept.doctest.md` (moved to `beebox/test/webapp/routes/auth.invite-accept.doctest.md`),
+  `test/webapp/trpc-admin-box-config.doctest.md` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.doctest.md`), and the password-reset
   doctests that cover owner minting and member mutation.
 - The completed branch must pass beebox typecheck, lint, doctests, and the
   full test suite before merge. Browser verification must create an invite as a

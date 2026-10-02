@@ -15,11 +15,11 @@ future to use annex. So we should just be making it right, always, and not worry
 about cases where it isn't right."*
 
 Today `bbx init` always produces a **manifest-scheme** box — asset bytes
-gitignored by `GITIGNORE_BLOCK` (`src/core/commands/attachments-gitignore.ts`)
+gitignored by `GITIGNORE_BLOCK` (`src/core/commands/attachments-gitignore.ts` (moved to `beebox/src/core/attachments-gitignore.ts`))
 and inventoried in per-directory `manifest.json` (`src/core/asset-manifest.ts`).
 `git annex init` runs only from `bbx attachments to-annex`
 (`src/core/annex/to-annex.ts:367`), and `runAnnexDoctor` is explicitly forbidden
-from converting a box (`src/core/annex/doctor.ts:290-300`: *"that is a perfectly
+from converting a box (`src/core/annex/doctor.ts:290-300` (moved to `beebox/src/core/annex/doctor/core.ts`): *"that is a perfectly
 correct state — not a defect to repair"*). The scheme itself is already retired
 on paper: `docs/implemented-plans/asset-manifests.md` opens with **"Status:
 SUPERSEDED by git-annex"**.
@@ -27,7 +27,7 @@ SUPERSEDED by git-annex"**.
 The work, as scoped by the decision:
 
 - `bbx init` runs `git annex init` and writes `UNIGNORE_BLOCK`. The dual-scheme
-  branch in `writeBoxGitignore` (`src/core/box/index.ts:245-283`) and the
+  branch in `writeBoxGitignore` (`src/core/box/index.ts:245-283` (moved to `beebox/src/core/box/structure/core.ts`)) and the
   `annexed` probe feeding it (`:136`) both collapse to one unconditional block.
   Note the ordering: `scaffoldBoxRoot` probes for annex at `:136` but does not
   `initRepo` until `:216-221`, so on a fresh init there is no `.git` yet and the
@@ -38,7 +38,7 @@ The work, as scoped by the decision:
   at the one moment the user can act on it. git-annex becomes a hard install
   dependency, and grepping every `.md`/`.sh`/`Dockerfile` finds it mentioned
   only in tests, `bin/lib/worktree-create.sh:354,367`, and a failure-mode table
-  in `docs/assets.md` — no install or deploy doc says to install it.
+  in `docs/media/assets.md` — no install or deploy doc says to install it.
 - Asset writers assert instead of accommodating. Four write asset bytes into
   attach scopes and stage them; on a manifest box the stock ignore block means
   scan-import/pdf-extract/Gmail fail at `git add`, and card submissions lose the

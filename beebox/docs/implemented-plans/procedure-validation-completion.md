@@ -45,10 +45,10 @@ The applicable principle docs and the specific principles each finding traces to
 
 ## What already exists
 
-- **`executeValidation`** — `src/core/procedure/engine-phase.ts:64-122`. Runs `shells`, then has the two stubs: `:92-104` (`// TODO: Invoke review model with instruction + git diff + why` … *"instruction checks pass by default"*) and `:107-111` (`// TODO: Re-invoke agent with failure context` … *"downgrade to warn and continue"*). **Rebuild** the stubs; **keep** the `shells` path (`:75-89`) byte-for-byte in behavior.
+- **`executeValidation`** — `src/core/procedure/engine-phase.ts:64-122` (moved to `beebox/src/core/procedure/engine/phase.ts`). Runs `shells`, then has the two stubs: `:92-104` (`// TODO: Invoke review model with instruction + git diff + why` … *"instruction checks pass by default"*) and `:107-111` (`// TODO: Re-invoke agent with failure context` … *"downgrade to warn and continue"*). **Rebuild** the stubs; **keep** the `shells` path (`:75-89`) byte-for-byte in behavior.
 - **Agent invocation with structured output** — `src/core/agent.ts:122-136` `invokeStructured<T>(schema, opts)` already exists and returns a Zod-validated `data`. The instruction-validation verdict is exactly this shape. **Reuse**; do not build a new model client.
 - **Fakeable agent factory, already threaded** — `ProcedureOptions.createAgent` (`engine-types.ts:28`) → `runSteps` (`engine.ts:113`) → `executeStep` (`engine-step.ts:46`) → `runRunPhase` (`engine-step.ts:231`). The seam reaches the run phase but **not** `executeValidation` today — that's the wiring gap to close. **Reuse** the seam; extend its reach.
-- **The fake agent** — `test/helpers/fake-agent.ts:103-107`: `invokeStructured` deliberately throws *"extend the fake when a structured-output test arrives."* That arrival is now. **Extend** it.
+- **The fake agent** — `test/helpers/fake-agent.ts:103-107` (moved to `beebox/test/core/fake-agent.ts`): `invokeStructured` deliberately throws *"extend the fake when a structured-output test arrives."* That arrival is now. **Extend** it.
 - **Git diff helpers** — `src/cli/lib/git.ts:406` `getCommitDiff(boxRoot, hash)` (diff of a **single** commit vs its parent) and `:295` `getDiff`. **Caveat that drives Track 1's design:** `gitRef` is *not* a reliable "whole step diff." `ensureGitClean` returns `getHead(boxRoot)` when the tree is already clean (`engine-phase.ts:165-166`), so when an agent makes **multiple** commits, `gitRef` is only the *last* one and `getCommitDiff(gitRef)` shows only that commit. So we **do not** reuse `getCommitDiff(gitRef)` as-is; Track 1 captures a baseline ref before the run phase and diffs `baseline..finalRef` (see Track 1 Direction). The helpers are reused at the range level (`getDiff` / a range diff), not the single-commit level.
 - **Run-card `review` field** — `RunStepValidate` (`schemas/procedure-run.ts:28-32`) already has an optional `review: z.string()`, plumbed through `StepUpdate.validate.review` (`engine-types.ts:64`) and `applyStepUpdate` (`engine-run-card.ts:166`) but never written. **Reuse** it to persist the model's verdict reasoning.
 - **Cost-control knobs** — `AgentInvokeOptions.maxTurns` (`agent-types.ts:24`) and `maxBudgetUsd` (`:30`, *"Hard cost ceiling… SDK stops with `error_max_budget_usd`"*). The engine sets `maxTurns` (`engine-step.ts:241`) but never `maxBudgetUsd`. **Reuse** for retry safety.
@@ -119,7 +119,7 @@ and does not. The schema doc admits it (`procedure.ts:81-82`).
 stays `review` (already in schema). New optional schema field `validate.model`.
 
 **First implementation chunk.** `engine-validate-model.ts` with `InstructionVerdict`
-+ `evaluateInstructions`, plus extending `test/helpers/fake-agent.ts` to support
++ `evaluateInstructions`, plus extending `test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`) to support
 `invokeStructured` (scripted verdict). Also threads the baseline-ref capture into
 `executeStep` and the range-diff into `executeValidation` (the load-bearing input).
 No open questions inside this chunk: the schema, the context inputs (range diff), the

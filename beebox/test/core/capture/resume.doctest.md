@@ -11,9 +11,9 @@ fails to compile here until this decides how it resumes.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { createEventBus } from "../../../src/core/event-bus.js";
-import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../../src/services/claude-chat.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
+import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
+import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
 import {
   createStagingSession,
@@ -21,9 +21,9 @@ import {
   addAudioChunk,
   setStagingState,
   readStagingSession,
-} from "../../../src/core/capture/staging-store.js";
+} from "../../../src/core/capture/staging-store/core.js";
 import { resumeStagingSessions } from "../../../src/core/capture/resume.js";
-import { sealVoiceSession } from "../../../src/core/voice-recording/voice-staging.js";
+import { sealVoiceSession } from "../../../src/core/voice-recording/voice-staging/core.js";
 
 const GITIGNORE = ["_tmp/", ".beebox/", "**/*.attach/**/*.jpg"].join("\n") + "\n";
 

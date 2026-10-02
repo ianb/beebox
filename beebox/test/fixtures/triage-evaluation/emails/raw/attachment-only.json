@@ -1,0 +1,39 @@
+{
+  "id": "message0001",
+  "threadId": "thread0001",
+  "internalDate": "1790553600000",
+  "snippet": "Please see attached.",
+  "payload": {
+    "mimeType": "multipart/mixed",
+    "headers": [
+      {
+        "name": "Subject",
+        "value": "Documents as requested"
+      },
+      {
+        "name": "From",
+        "value": "Noor Haddad <noor@example.invalid>"
+      },
+      {
+        "name": "To",
+        "value": "Priya Marlowe <priya@example.invalid>"
+      }
+    ],
+    "parts": [
+      {
+        "mimeType": "text/plain",
+        "body": {
+          "data": "UGxlYXNlIHNlZSBhdHRhY2hlZC4"
+        }
+      },
+      {
+        "partId": "1",
+        "mimeType": "application/pdf",
+        "filename": "statement.pdf",
+        "body": {
+          "attachmentId": "document"
+        }
+      }
+    ]
+  }
+}

@@ -20,9 +20,9 @@ session startup publishes the expected state under full-suite load.
 The 2026-08-23 finish run used the configured six-way parallel suite. It
 reported these failures:
 
-- `test/webapp/chat-send-fast-ack.doctest.md:87` observed
+- `test/webapp/chat-send-fast-ack.doctest.md:87` (moved to `beebox/test/webapp/routes/chat.send-fast-ack.doctest.md`) observed
   `started=false | errored=null` instead of `started=true | errored=null`.
-- `test/webapp/chat-send-run-start-failure.doctest.md:60` observed no error
+- `test/webapp/chat-send-run-start-failure.doctest.md:60` (moved to `beebox/test/webapp/routes/chat/send-run.start-failure.doctest.md`) observed no error
   frame and `complete=false` instead of the injected `spawn EBADF` failure and
   `complete=true`.
 

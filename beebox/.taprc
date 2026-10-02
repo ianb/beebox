@@ -28,6 +28,8 @@ node-arg:
 include:
   - test/**/*.test.ts
   - test/**/*.doctest.md
+  - src/frontend/test/**/*.test.ts
+  - src/frontend/test/**/*.doctest.md
 exclude:
   - test/manual/**
 # Cap parallel test files. tap defaults to one job per core (12 here), but route

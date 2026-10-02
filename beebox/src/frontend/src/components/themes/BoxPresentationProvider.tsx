@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useRef, useMemo, useCallback, type ReactNode } from "react";
-import { trpc, type RouterOutput } from "../../lib/trpc";
+import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { isRecord } from "@shared/is-record";
 import { useLocation, useParams } from "@tanstack/react-router";
-import { useBoxConversation } from "../chat/everywhere/conversation-context";
+import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 
 interface PresentationState {
   data: RouterOutput["presentation"]["get"] | undefined;

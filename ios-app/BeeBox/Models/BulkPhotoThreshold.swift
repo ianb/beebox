@@ -3,7 +3,7 @@ import Foundation
 /// When a photo selection is too big to ride inline in a chat message.
 ///
 /// **Mirrored constant.** The web composer holds the same rule in
-/// `beebox/src/frontend/src/components/chat/file-routing.ts`
+/// `beebox/src/frontend/src/components/chat/InteractiveChat-attachments/file-routing.ts`
 /// (`INLINE_PHOTO_LIMIT` / `routeAddedFiles`). Swift cannot import it, so the
 /// two are kept honest by `beebox/docs/mobile-contract.md` §8 — change one,
 /// change both, and change the doc.

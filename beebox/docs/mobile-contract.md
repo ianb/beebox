@@ -100,8 +100,8 @@ composer not suppressed, wrong attribution — with no error surfaced).
   |---|---|
   | native caller | `ios-app/BeeBox/Storage/PairedBoxStore.swift` — `PairedBoxStore.redeemPairing(baseURL:pairingToken:)`, types `PairingRedeemRequest`/`PairingRedeemResponse` |
   | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/redeem`, `RedeemBody` |
-  | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,createdBy,lastUsedAt?,revokedAt? }` (`createdBy` is the pairer, and null only for devices paired before it was recorded — see §1.4), `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
-  | hub wall allowance | `src/hub/hub-server.ts` — `isMobilePairingRedeem` |
+  | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,createdBy,lastUsedAt?,revokedAt?,apns? }` (`createdBy` is the pairer, and null only for devices paired before it was recorded — see §1.4), `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
+  | hub wall allowance | `src/hub/server/core.ts` — `isMobilePairingRedeem` |
   | box-scope allowance | `src/webapp/server-box-scope.ts` — `isPairingRedeemUrl` |
 - **Drift:** LOUD server-side (401/400); SILENT on iOS (maps to `false`, no toast).
 - **Benign field drift:** iOS ignores `boxSlug`, `label`, `deviceId`, `deviceLabel`. A platform may
@@ -120,6 +120,9 @@ composer not suppressed, wrong attribution — with no error surfaced).
   `devices` returns `{ scope: "box" | "own", devices }` so the UI names the list it got rather
   than implying a short one is the whole box. `revokeDevice` answers NOT_FOUND, not FORBIDDEN,
   for somebody else's device: a distinct refusal would confirm the id exists on this box.
+- **Projection:** `listMobileDevices` strips `tokenHash` and the APNs token. A device's push
+  registration (§5.9) appears as `push: { environment, registeredAt } | null`; the raw APNs token
+  never leaves the server process.
 
 ---
 
@@ -176,11 +179,11 @@ cookie** minted from that token.
 | `src/core/mobile/pairing.ts` — `verifyMobileBearer(boxRoot, authHeader)` | parses `Bearer ` prefix, delegates |
 | `src/core/mobile/pairing.ts` — `verifyMobileToken(boxRoot, token)` | SHA-256 + timing-safe compare vs non-revoked devices; writes `lastUsedAt` back |
 | `src/core/mobile/pairing.ts` — `isMobileDeviceActive(boxRoot, deviceId)` | read-only revocation check, used when renewing a cookie |
-| `src/core/mobile/mobile-session.ts` — `verifyMobileSession(boxRoot, cookie)` | per-box HMAC + `exp` check; no filesystem access |
+| `src/core/mobile/session.ts` — `verifyMobileSession(boxRoot, cookie)` | per-box HMAC + `exp` check; no filesystem access |
 | `src/core/mobile/request-auth.ts` — `resolveMobileRequestAuth(boxRoot, headers)` | **the one resolver every mobile gate uses** — cookie first, then bearer |
 | `src/webapp/server-box-scope.ts` — `addBoxAuthHook` | box auth preHandler: accepts agent bearer or `resolveMobileRequestAuth`; renews the cookie |
 | `src/webapp/server-box-scope.ts` — `createContext` | tRPC context: `mobileOk` → `authed:true` |
-| `src/webapp/server-root.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify for `/api/boxes` box list |
+| `src/webapp/server-root/root-routes.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify for `/api/boxes` box list |
 
 ### 2.3 Identity: a device acts as whoever paired it
 
@@ -207,25 +210,31 @@ owner — nor correctly fail to be, when a non-owner paired it.
 
 ### 3.1 The URL the app loads
 
-- **Wire shape:** `<baseURL>/chat?nativeComposer=1[&session=<id>][&mobileToken=<token>]`.
+- **Wire shape:** `<baseURL>/chat?nativeComposer=1[&session=<id>]`.
 - **Contract param:** `nativeComposer=1`. Mirrored: native
   `PairedBox.chatURL` builds `nativeComposer=1` (with an in-code "keep in sync" comment); web
   `ChatPage` reads it and the router schema declares it.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native URL build | `ios-app/BeeBox/Models/PairedBox.swift` — `PairedBox.chatURL`; `ios-app/BeeBox/Views/ChatWebView.swift` — `authenticatedChatURL` (appends `&mobileToken=`) |
-  | web parse | `src/frontend/src/pages/ChatPage.tsx` (reads `nativeComposer`); `src/frontend/src/router.tsx` (route schema `nativeComposer`) |
+  | native URL build | `ios-app/BeeBox/Models/PairedBox.swift` — `PairedBox.chatURL`; `ios-app/BeeBox/Views/ChatWebView.swift` — `authenticatedRequest(for:page:)` (sets `Authorization`; the URL carries no credential, §2); `PairedBox.url(forBoxPath:)` for notification-tap paths |
+  | web parse | `src/frontend/src/pages/ChatPage.tsx` (reads `nativeComposer`); `src/frontend/src/main/router.tsx` (route schema `nativeComposer`) |
+- **Notification-tap navigation.** A tapped notification (§5.10) loads a box-relative path in the
+  same chat webview: `ChatWebView.authenticatedRequest(for:page:)` with `.path(<path>)`, built by
+  `PairedBox.url(forBoxPath:)`. The chat page keeps `nativeComposer=1` there too (inserted first,
+  as `chatURL` does); other pages (`browse/…`, `views/…`, the dashboard) load as the box renders
+  them. The request authenticates by header like the initial load and carries no credential in
+  the URL.
 - **Drift:** SILENT (wrong/missing param → web composer not suppressed, bridges never enabled).
 
 ### 3.2 What `nativeComposer` changes web-side
 
 - `InteractiveChat.tsx` — `usesNativeComposer = nativeComposer === true`;
   `usesNativeShell = isEmbedded || usesNativeComposer`.
-- `InteractiveChat-view.tsx` — suppresses the web composer when `embedded || nativeComposer`.
+- `InteractiveChat/view.tsx` — suppresses the web composer when `embedded || nativeComposer`.
 - `InteractiveChat.tsx` — enables `useNativeEmissionBridge({ enabled: usesNativeShell })` and
   `useNativeLocationBridge({ enabled: usesNativeShell, boxSlug })`.
-- `InteractiveChat-voice.ts` — the web screen wake lock (`useDebouncedWakeLock`) is **not** requested;
+- `InteractiveChat/voice.ts` — the web screen wake lock (`useDebouncedWakeLock`) is **not** requested;
   the device idle timer is native property under the native composer (§4.11).
 - **Viewport/safe-area is owned by native, not the web contract** — `NativeComposerView`,
   `RootView` (safe-area insets), `ChatWebView` (inline media playback).
@@ -377,7 +386,7 @@ the contract.
   | side | anchor |
   |---|---|
   | native payload | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeEmissionV3`, `NativeEmissionV2`, `NativeEmissionFile`, `NativeEmissionSelection`; `ios-app/BeeBox/Views/ChatWebView.swift` — `NativeChatEmission` |
-  | web parse | `src/frontend/src/components/chat/native-emission.ts` — `parseNativeEmissionDetail`, `nativeEmissionFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
+  | web parse | `src/frontend/src/components/chat/everywhere/InteractiveChat/native-emission.ts` — `parseNativeEmissionDetail`, `nativeEmissionFromDetail`; `src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
 - **Drift:** LOUD for V2 (a rejected receipt carries the validation reason); legacy coercion remains
   SILENT except when no usable text or image survives.
 
@@ -430,7 +439,7 @@ mint them independently; the ids are per-emission and per-kind.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` |
+  | web post | `src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` |
   | native decode | `ios-app/BeeBox/Views/ChatWebView.swift` — `receiveEmissionReceipt`, `NativeEmissionReceipt.Disposition { sent, queued, rejected }` |
 - **Ack/dedup semantics:** native `deliver` only sends emissions not already in
   the inflight map (`inflightEmissionGenerations` — id → per-attempt generation), marks them
@@ -473,7 +482,7 @@ mint them independently; the ids are per-emission and per-kind.
   | side | anchor |
   |---|---|
 | native request + state/result decode | `ios-app/BeeBox/Views/ChatWebView.swift` — `beeboxNativeShareLocation` script, `receiveLocationState`, `receiveLocationResult` (15s timeout) |
-  | web handle | `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeLocationBridge`, `handleNativeLocationRequest` (→ `captureAndStore(boxSlug, Date.now())`), `postNativeLocationResult`, `drainNativeLocationQueue` |
+  | web handle | `src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts` — `useNativeLocationBridge`, `handleNativeLocationRequest` (→ `captureAndStore(boxSlug, Date.now())`), `postNativeLocationResult`, `drainNativeLocationQueue` |
 - **Drift:** request → SILENT→LOUD (15s native timeout); result → LOUD (status message shown).
 
 ### 4.4 Narration state (web → native)
@@ -573,7 +582,7 @@ mint them independently; the ids are per-emission and per-kind.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web command + ack | `src/frontend/src/components/chat/native-composer-command.ts`; `use-native-composer-commands.ts`; `use-companion-selection.ts`; `InteractiveChat-view.tsx` |
+  | web command + ack | `src/frontend/src/components/chat/native-composer-command.ts`; `use-native-composer-commands.ts`; `use-companion-selection.ts`; `InteractiveChat/view.tsx` |
   | native decode + durable mutation | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeComposerCommand`, `NativeComposerCommandAcknowledgement`; `Storage/ComposerDraftStore.swift` — `applySelectionCommand`; `Views/ChatWebView.swift` — `receiveComposerCommand` |
 - **Drift:** LOUD (native rejection or web 15s timeout is user-visible).
 
@@ -740,7 +749,7 @@ The relay that lets a box agent retranscribe a message dictated in the **native*
   | side | anchor |
   |---|---|
   | web relay | `src/frontend/src/components/chat/native-last-audio-request.ts`; `src/frontend/src/lib/audio/last-audio.ts` — `fulfillLastAudioRequest` |
-  | box server | `src/webapp/routes/chat-last-audio-routes.ts`; `src/core/last-audio-pending.ts` |
+  | box server | `src/webapp/routes/chat/last-audio-routes.ts`; `src/core/last-audio-pending.ts` |
   | native decode, retention, answer | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeLastAudioRequest`; `Storage/VoiceAudioRetentionStore.swift`; `Services/ChatAPI.swift` — `answerLastAudio`; `Views/ChatWebView.swift` — `receiveLastAudioRequest`; `Views/RootView.swift` — `answerLastAudioRequest` |
 - **Drift:** QUIET — a phone that stops answering looks identical to a phone that is asleep, and the
   agent sees the same "no recording is cached" either way. The fixture family `last-audio-request`
@@ -781,7 +790,7 @@ plays that (`lib/audio/tts-client.ts`), so only the page can stop it.
   | side | anchor |
   |---|---|
   | native decide + send | `ios-app/BeeBox/Services/SpeechDictation.swift` — `NativeVoiceTurnState`, `NativeVoiceTurnCommand.startDictationInterruptingSpeech`; `ios-app/BeeBox/Views/NativeComposerView.swift` — `applyVoiceTurn`; `ios-app/BeeBox/Views/ChatWebView.swift` — `deliverSpeechStopRequest`; `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeSpeechCommand` |
-  | web handle | `src/frontend/src/components/chat/native-speech-command.ts` — `nativeSpeechCommandFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeSpeechCommandBridge`; `src/frontend/src/machines/composerMachine.ts` — `STOP_SPEECH` |
+  | web handle | `src/frontend/src/components/chat/everywhere/InteractiveChat/native-speech-command.ts` — `nativeSpeechCommandFromDetail`; `src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts` — `useNativeSpeechCommandBridge`; `src/frontend/src/machines/composerMachine.ts` — `STOP_SPEECH` |
 - **Drift:** SILENT-degraded — against a web build without the handler the microphone still opens and
   the speech keeps playing into it. A page load is the same outcome: a request is **settled on the
   spot** if no document is loaded, and **abandoned** on a provisional navigation or a box/session
@@ -833,7 +842,7 @@ is not a substitute for it.
   | side | anchor |
   |---|---|
   | native hold | `ios-app/BeeBox/Services/ScreenAwake.swift` — `ScreenAwakeReason`, `ScreenAwakeState`, `ScreenAwakeHold`; `ios-app/BeeBox/Views/NativeComposerView.swift` — `screenAwakeReasons`; `ios-app/BeeBox/Views/NativeCaptureController.swift` — `NativeCaptureScreen.applyScreenAwake` |
-  | web abstention | `src/frontend/src/components/chat/InteractiveChat-voice.ts` — `useDebouncedWakeLock(nativeComposer ? false : …)`; `src/frontend/src/hooks/useWakeLock.ts` |
+  | web abstention | `src/frontend/src/components/chat/everywhere/InteractiveChat/voice.ts` — `useDebouncedWakeLock(nativeComposer ? false : …)`; `src/frontend/src/hooks/useWakeLock.ts` |
 - **Drift:** SILENT both ways. A native build without the hold sleeps under an open microphone (the
   filed bug); a web build that re-acquires its own lock under the native shell breaks nothing —
   native still holds the whole turn — but leaves two mechanisms claiming the screen, which is how
@@ -871,7 +880,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | native caller | `ios-app/BeeBox/Services/ChatAPI.swift` — `ChatAPI.transcribeAudio(fileURL:)`, `applyAuth`, `HqTranscriptionResult { text, diarized, service? }` |
-  | box handler | `src/webapp/routes/chat-audio-routes.ts` — `POST /api/chat/transcribe-audio` (→ `transcribeAudioHq({ audioBuffer, filename, boxRoot })`) |
+  | box handler | `src/webapp/routes/chat/audio-routes.ts` — `POST /api/chat/transcribe-audio` (→ `transcribeAudioHq({ audioBuffer, filename, boxRoot })`) |
 - **Drift:** LOUD for provider rejection (5xx surfaced). A provider HTTP 200 with unusable text would
   be SILENT. Float32 WAV compatibility was verified against every selectable HQ path on 2026-08-06.
 
@@ -883,7 +892,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | native caller | `ios-app/BeeBox/Services/ChatAPI.swift` — `ChatAPI.resolvedSession()`, `DefaultSessionResult { sessionId? }` |
-  | box handler | `src/webapp/routes/chat.ts` — `GET /api/chat/default` (→ `getMostActive(boxRoot)`) |
+  | box handler | `src/webapp/routes/chat/register.ts` — `GET /api/chat/default` (→ `getMostActive(boxRoot)`) |
 - **Drift:** LOUD (non-2xx `resolvedSession` throws; a transient 5xx does not silently fork a new
   session).
 
@@ -906,7 +915,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | native caller | `ios-app/BeeBox/Services/ChatAPI.swift` — `uploadFile`, `uploadFileRequest` |
-  | box handler | `src/webapp/routes/chat-uploads.ts` — `registerChatUploadRoutes` |
+  | box handler | `src/webapp/routes/chat/uploads.ts` — `registerChatUploadRoutes` |
 - **Drift:** LOUD (non-2xx, malformed metadata, interruption, and timeout produce retryable native
   attachment failure; incomplete files block send).
 
@@ -935,7 +944,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | web caller | `src/frontend/src/api-chat.ts` (`chatTurnStartSchema`, `ChatImageAttachment`) |
-  | box handler | `src/webapp/routes/chat-send-routes.ts`; `src/webapp/routes/chat-helpers.ts` — `sendBodySchema`, `validateImages` |
+  | box handler | `src/webapp/routes/chat/send-routes.ts`; `src/webapp/routes/chat/helpers.ts` — `sendBodySchema`, `validateImages` |
 - **Drift:** LOUD (400) / SILENT dedup.
 
 ### 5.6 Bulk file-upload batch (`/api/bulk/...`)
@@ -1013,7 +1022,7 @@ See §1.3 (full request/response/errors).
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | box handler | `src/webapp/routes/bulk-upload.ts` — `registerBulkUploadRoutes`; streaming write in `src/core/capture/staging-stream.ts` — `addFileStreamed` |
+  | box handler | `src/webapp/routes/bulk-upload/register.ts` — `registerBulkUploadRoutes`; streaming write in `src/core/capture/staging-stream.ts` — `addFileStreamed` |
   | native caller | `Services/BulkUploadAPI.swift` — request shaping; `Services/BulkUploadCoordinator.swift` — bounded queue (3 in flight), per-item retry, resume via `GET /sessions/:id` |
 - **Drift:** LOUD (400/409/413/404 all surface; incomplete uploads leave the item in the registry's
   missing list, which finalize reports).
@@ -1061,7 +1070,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | native caller | `Services/LogForwarder.swift` — `flushBox`/`send` |
-  | box handler | `src/webapp/trpc/routers/debugLog.ts` — `submit` |
+  | box handler | `src/webapp/trpc/routers/debug-log.ts` — `submit` |
   | box durability | `src/lib/rolling-log.ts` — `appendRollingLogStrict` |
 - **Drift:** fail-local. A forwarding failure must never break the feature it's logging — entries are
   retained client-side on any network failure or 5xx and simply wait for the next flush trigger; there
@@ -1106,6 +1115,103 @@ See §1.3 (full request/response/errors).
 - **Drift:** LOUD. Malformed envelopes, stale destinations, stale chats, authentication failure,
   and conflicting retries remain visible in the sheet and do not dismiss it.
 
+### 5.9 `POST /api/pairing/push-token` — APNs registration
+
+- **Direction:** native → box. Auth: `Authorization: Bearer <device token>` only (§2); the
+  registration belongs to the device the bearer names, so a cookie-only web request is 401.
+- **Request:** `{ token: string, environment: "sandbox" | "production" }`. `token` is the APNs
+  device token as hex (any case; stored lowercase; at most 512 characters, since Apple does not
+  promise a length). `environment` is the APNs host the build was signed for: a sandbox token
+  sent to the production host is rejected as `BadDeviceToken`, so the server cannot guess it.
+- **How iOS chooses `environment`.** From the running app's signed `aps-environment`, not from
+  the build configuration, because a locally signed Release build still carries the development
+  entitlement. The app reads `embedded.mobileprovision` from its bundle and takes `Entitlements` →
+  `aps-environment` from the plist inside the CMS envelope: `development` → `sandbox`,
+  `production` → `production`. With no embedded profile (App Store and TestFlight installs, which
+  Apple re-signs for production) it reports `production`. A simulator reports `sandbox`. Only when
+  a profile is present but unreadable, or names no known value, does it fall back to `sandbox`
+  under `DEBUG` and `production` otherwise. The token-received log line names the deciding source
+  (`profile`, `no-profile`, `simulator`, `build-fallback`).
+- **When:** on every launch after notification permission is granted. Tokens change on reinstall
+  and restore with no signal, so a single registration goes stale. The latest post replaces the
+  device's earlier registration, and the same token on any other device record is cleared.
+- **iOS posting rule.** The app registers with APNs on every launch and posts to each paired box
+  that has a device credential, once notifications are allowed. It skips a box whose last accepted
+  post (2xx) had the same token, environment, and device credential and is less than 24 hours old,
+  so an ordinary relaunch posts nothing; a new token, a newly paired or re-paired box, or a day-old
+  registration posts again. The day bound is how a registration the box pruned (below) comes back.
+  A failed post is not recorded and is retried at the next launch, foreground, or pairing change.
+  Permission `[.alert, .badge, .sound]` is requested when the first box is paired, or at launch
+  when a box is paired and the user has not decided. A denial shows one line in the paired-box
+  shell ("Notifications off", with a Settings button), and nothing is posted while it lasts.
+- **Response:** `204`, no body.
+- **Server record:** `MobileDevice.apns = { token, environment, registeredAt }`. When APNs answers a
+  send with 410 Unregistered or 400 `BadDeviceToken`, the server deletes that registration and logs
+  the device label; the next launch's post restores it.
+- **Errors:** 400 `{ error }` (bad body: non-hex token, unknown environment). 401 `{ error }`: the
+  box auth wall refuses a missing, bad, or revoked bearer with `"Not authenticated"`; a request that
+  cleared the wall another way (a web session) has no device, and the route refuses it with
+  `"Mobile device token is invalid or revoked."`.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | native caller | `ios-app/BeeBox/Services/PushRegistrar.swift` — `PushRegistrar.syncRegistrations()`, `PushTokenRequest.urlRequest(box:token:environment:)`, `PushEnvironment.current` / `resolve(isSimulator:profile:isDebug:)` / `fromProvisioningProfile` (the rule above), `PushRegistrationLedger` (the posting rule above) |
+  | native token source | `ios-app/BeeBox/BeeBoxAppDelegate.swift` — `didRegisterForRemoteNotificationsWithDeviceToken` (`PushToken.hex`, lowercase); DEBUG launch argument `-BBXFakePushToken <hex>` substitutes a token on the simulator |
+  | native entitlement | `ios-app/BeeBox/BeeBox.entitlements` — `aps-environment` (`development`; distribution signing rewrites it to `production`, and the app reports what the signed profile says) |
+  | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/push-token`, `PushTokenBody` |
+  | box device store | `src/core/mobile/pairing.ts` — `registerDevicePush`, `pruneDevicePush`, `listMobileDevices` |
+- **Fixtures:** `test/mobile-contract/fixtures/push-token/`, run through `PushTokenBody` by
+  `src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.doctest.md`, posted at the route by
+  `test/webapp/routes/pairing.push-token.doctest.md`, and matched against the request iOS builds by
+  `ios-app/BeeBoxTests/PushNotificationTests.swift`.
+- **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the
+  Admin Notifications section shows (no device listed under Phones).
+
+### 5.10 APNs notification payload (box → Apple → native)
+
+- **Direction:** box → APNs → native. Not an HTTP call the native client makes; the body the
+  phone's notification delegate receives.
+- **Headers:** `apns-push-type: alert` for every loudness, `apns-topic: <bundle id>`
+  (`BBX_APNS_BUNDLE_ID`), and `apns-collapse-id: <tag>` when the notification has a tag (a tag over
+  64 bytes is replaced by its SHA-256 hex).
+- **Body by loudness:**
+  | loudness | body |
+  |---|---|
+  | `dot` | `{ aps: { badge: 1 }, target, notificationId, box }` |
+  | `quiet` | `{ aps: { alert: { title, body }, "interruption-level": "passive", badge: 1 }, target, loudness: "quiet", notificationId, box }` |
+  | `loud` | `{ aps: { alert: { title, body }, "interruption-level": "active", badge: 1, sound: "default" }, target, loudness: "loud", notificationId, box }` |
+- **Custom keys the client reads:** `target` is the notification target string
+  (`chat:<sessionId>`, `chat:new`, `card:<path>`, `question:<path>`, `admin:<section>`,
+  `dashboard`; `src/core/notification/target.ts`); a tap opens the box URL it renders to.
+  `notificationId` is the log id; `chat:new` carries it so the chat page can show the
+  notification. `loudness` is absent for `dot`. `box` is the sending box's slug (the box
+  directory's name, `src/lib/box-slug.ts` · `boxSlug`, the same slug as the box URL prefix).
+- **What iOS does with them.** In the foreground (`willPresent`), `loud` presents banner, sound,
+  and badge; `quiet`, `dot` (no `loudness` key), and an unknown value present nothing, because the
+  webview shows its own banner. A tap (`didReceive`) renders `target` with `notificationId` to a
+  box-relative path by `NotificationTarget`, the Swift mirror of `target.ts`'s `parseTarget` and
+  `targetUrl`, and loads it in the chat webview (§3.1). A missing or unreadable target opens
+  nothing new and logs a warning. On every foreground the app clears the badge and removes
+  delivered `dot` notifications.
+- **Box identity.** The payload names the box in `box`. A tap opens on the paired box whose slug
+  (`PairedBox.slug`, the `baseURL` last path component) equals `box`. When several paired boxes
+  share the slug (two hosts, or two dev checkouts of one box), the selected box wins if it is one
+  of them, else the first. When `box` is absent (an older box) or names no paired box, the tap
+  opens on the only paired box, or on the selected one when several are paired, and logs which.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | box builder | `src/core/notification/apns-channel/payload.ts` — `buildApnsRequest` |
+  | box sender | `src/core/notification/apns-channel/core.ts` — `sendApns`; `src/services/apns.ts` |
+  | native reader | `ios-app/BeeBox/Services/NotificationCenterDelegate.swift` — `NotificationCenterDelegate` (`willPresent`, `didReceive`, `clearOnForeground`), `NotificationTapInbox` |
+  | native keys + target mirror | `ios-app/BeeBox/Models/NotificationTarget.swift` — `NotificationLoudness(userInfo:)`, `NotificationTap(userInfo:)`, `NotificationTap.pairedBox(in:selected:)`, `NotificationTarget` (mirrors `src/core/notification/target.ts`) |
+  | native navigation | `ios-app/BeeBox/Views/RootView.swift` — `openNotificationTap`; `ios-app/BeeBox/Models/PairedBox.swift` — `slug`; `ios-app/BeeBox/Views/ChatWebView.swift` — `Page.path`, `NavigationRequest` |
+- **Fixtures:** `test/mobile-contract/fixtures/apns-payload/`, run through `buildApnsRequest` by
+  the box and read through `NotificationLoudness` / `NotificationTap` by
+  `ios-app/BeeBoxTests/PushNotificationTests.swift`. The same test runs the cases of
+  `test/core/notification/target.doctest.md` against the Swift target mirror.
+- **Drift:** SILENT. A renamed key lands the tap on the app's default page with no error.
+
 ---
 
 ## 6. Server-side "mobile" awareness
@@ -1115,12 +1221,12 @@ query-param-driven — there is **no user-agent gating** anywhere.
 
 | anchor | branch | effect |
 |---|---|---|
-| `src/hub/hub-server.ts` — `hasMobileAuthAttempt` | `Bearer ` present OR `?mobileToken=` present (**presence only**) | bypasses the hub auth wall (HTTP catch-all + WS upgrade); box re-verifies — **S1** |
-| `src/hub/hub-server.ts` — `listMobileAuthorizedBoxes` | real `verifyMobileBearer`/`verifyMobileToken` | `/api/boxes` returns the mobile-authorized box list |
+| `src/hub/server/core.ts` — `hasMobileAuthAttempt` | `Bearer ` present OR `?mobileToken=` present (**presence only**) | bypasses the hub auth wall (HTTP catch-all + WS upgrade); box re-verifies — **S1** |
+| `src/hub/server/core.ts` — `listMobileAuthorizedBoxes` | real `verifyMobileBearer`/`verifyMobileToken` | `/api/boxes` returns the mobile-authorized box list |
 | `src/webapp/server-box-scope.ts` — `isPairingRedeemUrl` | `POST` + redeem URL | box auth hook lets redeem through |
 | `src/webapp/server-box-scope.ts` — `addBoxAuthHook` | `verifyMobileBearer` OR `verifyMobileToken(?mobileToken=)` | passes box auth preHandler |
 | `src/webapp/server-box-scope.ts` — `createContext` | `mobileBearerOk`/`mobileTokenOk` | `authed:true`; **`user` stays null, `isOwner:false`** (§2.3) |
-| `src/webapp/server-root.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify | mobile box list / per-box authorization for standalone server |
+| `src/webapp/server-root/root-routes.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify | mobile box list / per-box authorization for standalone server |
 | `src/core/mobile/pairing.ts` (whole module) | device store, tokens | source of truth |
 
 - **`User-Agent: BeeBox-iOS/0.1`** is sent on all four native HTTP calls but the server never
@@ -1150,7 +1256,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?/definitive?}` via `beeboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location toggle | native→web | `beeboxNativeShareLocation("<uuid>","toggle")`, queue `beeboxNativeLocationQueue`, event `beebox:native-share-location`, detail `{id,action:"toggle"}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
 | B4 | Location state/result | web→native | state `{enabled}` via `beeboxLocationState`; result `{id,success,enabled,message}` via `beeboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationState`, `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationState`, `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
-| B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
+| B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat/view.tsx` | LOUD |
 | B6 | Composer command acknowledgement | native→web | accepted `{version:1,id,accepted:true}` or rejected `{version:1,id,accepted:false,reason}` via `beeboxNativeComposerCommandAck`, queue + `beebox:native-composer-command-ack` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandAcknowledgement`; `Views/ChatWebView.swift` · `deliverComposerCommandAcknowledgements` | `native-composer-command.ts` · `nativeComposerCommandAcknowledgementFromDetail`; `use-native-composer-commands.ts` | LOUD |
 | B11 | Speech control (barge-in) | native→web | V1 `{version:1,action:"stop"}` via `beeboxNativeSpeechCommand`, queue `beeboxNativeSpeechCommandQueue`, event `beebox:native-speech-command`; no ack — §4.5 `{playing:false}` reports the stop | `Models/NativeComposerContract.swift` · `NativeSpeechCommand`; `Services/SpeechDictation.swift` · `NativeVoiceTurnState`; `Views/ChatWebView.swift` · `deliverSpeechStopRequest` | `native-speech-command.ts` · `nativeSpeechCommandFromDetail`; `use-native-bridge.ts` · `useNativeSpeechCommandBridge` | SILENT-degraded (speech plays into an open mic) |
 | B10 | Last-audio request relay | web→native | V1 `{version:1,requestId,messageId,sessionId\|null}` via `beeboxLastAudioRequest`; answered by H6, not by an ack | `Models/NativeComposerContract.swift` · `NativeLastAudioRequest`; `Views/ChatWebView.swift` · `receiveLastAudioRequest`; `Views/RootView.swift` · `answerLastAudioRequest` | `native-last-audio-request.ts`; `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` | QUIET (asleep phone is indistinguishable) |
@@ -1160,13 +1266,15 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B9 | Response generation state | web→native | `{active}` via `beeboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
 | B13 | Command result | native→web | `{version:2,id,kind,ok:true,controls[]}` or `{…,ok:false,reason}` via `beeboxNativeCommandResult`, queue + `beebox:native-command-result` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandResult`; `Models/NativeControlRegistry.swift` · `controlAnchor`; `Views/ChatWebView.swift` · `deliverComposerCommandResults` | `native-composer-command.ts` · `nativeCommandResultFromDetail`; `native-control-scan.ts` · `requestNativeControls` | LOUD in the dump |
-| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed`/`.dictationWentIdle` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
+| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed`/`.dictationWentIdle` | `components/chat/everywhere/InteractiveChat/voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized,service?}`; 500 `{error,permanent,code?}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
 | H6 | `POST /api/chat/last-audio/:requestId` | native→box | multipart `file`(last-message.wav, audio/wav) + `recordedAt`,`text`,`messageId`,`sessionId?`; or JSON `{"none":true}`; res `{ok}` / `404` when already settled | `Services/ChatAPI.swift` · `answerLastAudio`; `Storage/VoiceAudioRetentionStore.swift` | `routes/chat-last-audio-routes.ts`; `core/last-audio-pending.ts` · `fulfill`/`reportNone` | QUIET — a missing echo is IGNORED, not rejected |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,channel?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `batch`? then `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
 | H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
+| P4 | `POST /api/pairing/push-token` | native→box | req `{token,environment:sandbox\|production}`; res `204` | `Services/PushRegistrar.swift` · `PushRegistrar.syncRegistrations`, `PushTokenRequest`; `BeeBoxAppDelegate.swift` · `didRegisterForRemoteNotificationsWithDeviceToken` | `routes/pairing.ts` · `PushTokenBody`; `core/mobile/pairing.ts` · `registerDevicePush` | LOUD server / SILENT (no push) |
+| N1 | APNs payload | box→APNs→native | `{aps,target,loudness?,notificationId,box}`; headers `apns-push-type: alert`, `apns-topic`, `apns-collapse-id?` | `Services/NotificationCenterDelegate.swift` · `NotificationCenterDelegate`; `Models/NotificationTarget.swift` · `NotificationTarget`, `NotificationLoudness`, `NotificationTap` | `core/notification/apns-payload.ts` · `buildApnsRequest` | SILENT |
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
@@ -1236,6 +1344,18 @@ without the other is a contract break.
   `error|warn|log|info`, `source` slug `^[a-z][a-z0-9-]{0,15}$` (iOS always sends `"ios"`), `at` an
   offset datetime — `Services/LogForwarder.swift` ↔
   `trpc/routers/debugLog.ts` · `submit`.
+- **APNs registration** `{token,environment}`, `environment` closed to `sandbox|production` —
+  `Services/PushRegistrar.swift` · `PushTokenRequest`, `PushEnvironment` ↔ `routes/pairing.ts` ·
+  `PushTokenBody`. **APNs payload keys** `target`, `loudness` (`quiet|loud`, absent for `dot`),
+  `notificationId`, `box` (the box slug, matched against `PairedBox.slug`) beside `aps` — `Models/NotificationTarget.swift` · `NotificationLoudness`,
+  `NotificationTap` ↔ `core/notification/apns-payload.ts` · `buildApnsRequest`.
+- **Notification target rules** — `Models/NotificationTarget.swift` · `NotificationTarget` ↔
+  `core/notification/target.ts` · `parseTarget`, `targetUrl`: the six schemes, the 1000-character
+  limit, the chat-session and admin-section character rules, `encodeURIComponent`, and the admin
+  card path `_config/interface/admin.card` (`shared/system-card-paths.ts` · `SYSTEM_CARD_PATHS`).
+  One deliberate difference: Swift fences a card path to a first segment starting with `_`, where
+  the box checks the exact underscore-area list; the box canonicalizes the target before sending
+  and the browse route fences it again.
 - **Speech command V1** `{version,action:"stop"}` — `Models/NativeComposerContract.swift` ·
   `NativeSpeechCommand` ↔ `native-speech-command.ts` · `nativeSpeechCommandFromDetail`.
 - **Bridge globals** `beeboxNativeReceive` / `beeboxNativeQueue` /
@@ -1328,21 +1448,24 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   `webapp/local-users.ts`. Cross-process matters here because `bbx hub` verifies a bearer (stamping
   `lastUsedAt`) before proxying to the per-box child, which verifies it again and can revoke it, so
   two processes genuinely race the file. Those functions are now `async`. See
-  `test/core/mobile/pairing-store-concurrency.doctest.md`.
+  `test/core/mobile/pairing.store-concurrency.doctest.md`.
 - **Token in plaintext, not Keychain (OPEN, iOS I6).** `PairedBoxStore` writes `authToken` as
   plaintext JSON in Application Support.
 - **Identity unified (CLOSED 2026-09-12).** The tRPC context now resolves a mobile request to the
   device's `createdBy` identity, so `user` is that person and `isOwner` is true only when they are
   the owner (§2.3). `POST /api/chat/send` had already closed the attribution half via
-  `resolveMobileSender` (`test/webapp/routes/chat-mobile-sender.doctest.md`); the context was the
+  `resolveMobileSender` (`test/webapp/routes/chat/helpers.mobile-sender.doctest.md`); the context was the
   remaining piece.
+- **APNs payload names no box (CLOSED 2026-09-26).** §5.10's payload carries `box`, the box
+  slug, and the iOS tap opens on the paired box with that slug. A payload without `box` still opens
+  on the selected box.
 - **Duplicate deep-link handling.** `onOpenURL` + `PairingURLInbox` both redeem one URL → the second
   redeem 401s on the single-use token (§1.1).
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending
   pairings live only in process memory (10-min TTL) and can be lost to a lazy 5-min box idle-stop
   mid-flow.
 - **`mobileTokenFromUrl` duplicated 3×** — a security-relevant parser copied verbatim across
-  `hub-server.ts` / `server-box-scope.ts` / `server-root.ts`.
+  `hub-server.ts` / `server-box-scope.ts` / `server-root/root-routes.ts`.
 - **Benign field drifts.** Redeem `{boxSlug,label,deviceId,deviceLabel}` ignored by iOS; receipt
   `deduplicated` ignored by iOS; `User-Agent: BeeBox-iOS/0.1` never branched on server-side.
 - **I8 — float WAV decoder compatibility (RESOLVED 2026-08-06).** Live calls with a 48 kHz mono
@@ -1398,32 +1521,34 @@ when `android-app/` exists — add them alongside their iOS counterparts at that
 ```anchors
 # Web-side bridge, auth, and receipt surface
 beebox/src/frontend/src/components/chat/native-post.ts
-beebox/src/frontend/src/components/chat/use-native-bridge.ts
-beebox/src/frontend/src/components/chat/native-emission.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/native-emission.ts
 beebox/src/frontend/src/components/chat/native-composer-command.ts
 beebox/src/frontend/src/components/chat/native-command-bridge.ts
-beebox/src/frontend/src/components/chat/native-control-scan.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/native-control-scan.ts
 beebox/src/frontend/src/components/chat/native-control-point.ts
-beebox/src/frontend/src/components/chat/ui-scan-request-handler.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/ui-scan-request-handler.ts
 beebox/src/frontend/src/components/chat/native-last-audio-request.ts
-beebox/src/frontend/src/components/chat/native-speech-command.ts
-beebox/src/frontend/src/components/chat/use-native-composer-commands.ts
-beebox/src/frontend/src/components/chat/use-companion-selection.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/native-speech-command.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-composer-commands.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/use-companion-selection.ts
 beebox/src/frontend/src/lib/mobile-auth.ts
 beebox/src/frontend/src/input/targets/receipts.ts
 
 # Box server: pairing, mobile-token verification, native HTTP endpoints
 beebox/src/core/mobile/pairing.ts
-beebox/src/core/mobile/mobile-session.ts
+beebox/src/core/mobile/session.ts
 beebox/src/core/mobile/request-auth.ts
 beebox/src/webapp/mobile-cookie.ts
 beebox/src/webapp/routes/pairing.ts
-beebox/src/webapp/routes/chat-audio-routes.ts
-beebox/src/webapp/routes/chat-last-audio-routes.ts
-beebox/src/webapp/routes/chat-uploads.ts
-beebox/src/webapp/routes/bulk-upload.ts
+beebox/src/webapp/routes/chat/audio-routes.ts
+beebox/src/webapp/routes/chat/last-audio-routes.ts
+beebox/src/webapp/routes/chat/uploads.ts
+beebox/src/webapp/routes/bulk-upload/register.ts
 beebox/src/core/capture/staging-stream.ts
-beebox/src/webapp/trpc/routers/debugLog.ts
+beebox/src/webapp/trpc/routers/debug-log.ts
+beebox/src/core/notification/apns-channel/payload.ts
+beebox/src/core/notification/target.ts
 
 # iOS native shell: webview bridge, pairing model, paired-box storage
 ios-app/BeeBox/Views/ChatWebView.swift
@@ -1437,6 +1562,11 @@ ios-app/BeeBox/Storage/VoiceAudioRetentionStore.swift
 ios-app/BeeBox/Models/PairedBox.swift
 ios-app/BeeBox/Storage/PairedBoxStore.swift
 ios-app/BeeBox/Services/LogForwarder.swift
+ios-app/BeeBox/Services/PushRegistrar.swift
+ios-app/BeeBox/Services/NotificationCenterDelegate.swift
+ios-app/BeeBox/Models/NotificationTarget.swift
+ios-app/BeeBox/BeeBoxAppDelegate.swift
+ios-app/BeeBox/BeeBox.entitlements
 
 # Shared golden fixtures — any fixture change is a contract change (directory prefix)
 beebox/test/mobile-contract/

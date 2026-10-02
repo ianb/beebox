@@ -40,7 +40,7 @@ Why it's genuinely entangled (the fork a design must resolve):
   newly-visible types (`user`/`stream_event`/`task`) are consumed by nothing on
   the thread path (the pool listens only to `chat-response`/`session`/`turn-text`/
   `close`/`done`), and none leak into `<chat-response>` extraction or turn text.
-  Covered by `test/core/chat-thread-session-messages.doctest.md`.
+  Covered by `test/core/chat-thread-session-messages.doctest.md` (moved to `beebox/test/core/chat/session/thread.session-messages.doctest.md`).
 
 So the remaining extraction is now a **single** design question: whether the
 genuinely one-sided queue/durability/`stopping` cluster (the first two bullets,
@@ -48,4 +48,4 @@ which live only on `ChatSession`) justifies a base class or composition, or
 whether two classes over the now-shared primitives (lifecycle union,
 `pumpChatRun`, `adaptSdkMessage`) is the right resting point. No boxholder
 decision is pending on the adapter anymore. Protocol/contract is documented at
-`beebox/docs/chat-session-lifecycle.md`.
+`beebox/docs/chat/sessions.md`.

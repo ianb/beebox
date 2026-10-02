@@ -10,18 +10,17 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
-import { namedEntityFields } from "./named-entity-fields.js";
-
-const PersonStatus = z.enum(["active", "inactive", "archived"]);
-export type PersonStatusType = z.infer<typeof PersonStatus>;
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
+import { namedEntityFields } from "../named-entity-fields.js";
 
 export const PersonSchema = cardSchema("person", {
+  brief: "A key person",
   description: "A key person — identity, aliases, role, contact info, and freeform notes; referenced from briefings' key-people",
   category: "authored",
   fields: {
-    status: PersonStatus.default("active"),
     ...namedEntityFields,
+    // No longer current; absent means current.
+    archived: z.boolean().optional(),
     role: z.string().optional(),
     boxholder: z.boolean().optional(),
     email: z.string().optional(),
@@ -50,7 +49,9 @@ name in the \`First_Last\` form ABOUT_CARDS describes, not a slug or alias.
 - \`email:\`, \`phone:\`, \`address:\` — contact details, each optional.
   One value apiece; put a second email, a fax, or any other channel in
   the body notes.
-- \`status:\` — \`active\` (default), \`inactive\`, or \`archived\`.
+- \`archived: true\` — the person is no longer part of the boxholder's
+  life (moved away, a past contact). Omit it otherwise. An archived
+  boxholder is left out of the agent guide.
 
 **Body (markdown):** freeform notes / context about the person — and the
 home for contact details that don't fit the three fields above.
@@ -60,6 +61,8 @@ home for contact details that don't fit the three fields above.
   the person card if it doesn't exist.
 - When a person keeps coming up and you need a place to consolidate
   info about them.`,
+  // A person is listed and found under their name.
+  summarize: (card, base) => ({ ...base, title: card.name }),
 });
 
 export type PersonFields = InferCardFields<typeof PersonSchema>;
@@ -70,7 +73,6 @@ export function createPersonTemplate(options: {
   role?: string;
 }): string {
   const fields: Record<string, unknown> = {
-    status: "active",
     name: options.name,
   };
   if (options.aliases !== undefined && options.aliases !== "") {

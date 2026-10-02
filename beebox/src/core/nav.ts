@@ -9,13 +9,13 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { splitCardContent } from "../exports/cards.js";
 import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
 import { titleFromFilename } from "./file-summary.js";
 import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
-import { resolveRefPath } from "../shared/ref-path.js";
-import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { resolveRefPath } from "../shared/ref-path/core.js";
+import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import { isRecord } from "./card-io.js";
 
 export const NAV_CARD_PATH = "nav.card";

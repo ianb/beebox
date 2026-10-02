@@ -178,7 +178,7 @@ These are the internal exemplars each track should extend rather than rebuild:
   surfaces with injection seams; the pattern Track D's connector validation
   slots into.
 - **`frontend/src/machines/`** — six mature, typed xstate machines, all live,
-  docs in sync (`docs/composer-input-machine.md`). xstate's home; not to be
+  docs in sync (`docs/chat/composer.md`). xstate's home; not to be
   extended server-side.
 - **`bin/router.ts` `EntryState`** — plain discriminated-union lifecycle with
   guarded transitions and generation-identity race checks; the target pattern
@@ -707,7 +707,7 @@ scan's module-by-module diagnosis.
    → `idle | starting | streaming | draining | closing` union with
    invariant-checked transitions; extract the shared run-lifecycle core
    from ChatSession/ChatThreadSession (admitted near-duplicates, drifting);
-   then a `docs/chat-session-lifecycle.md` protocol doc for the
+   then a `docs/chat/sessions.md` protocol doc for the
    park/drain/evict/queue contract (the frontend has machines + state docs;
    the backend has neither).
 2. **Procedure statuses:** the z.enums already exist in
@@ -804,9 +804,9 @@ clock sweep), which unblocks item 5's registry tests.
 confirmed.
 
 **Why/Direction.**
-1. **Fix `knip.json` entries** — commit d22359c9 removed `src/cli/index.ts`
+1. **Fix `knip.json` entries** — commit d22359c9 removed `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`)
    as an entry on the false belief knip discovers it via the npm script; add
-   it and `src/hub/hub-server.ts` (and `src/dev/**`) back. Verified: with
+   it and `src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`) (and `src/dev/**`) back. Verified: with
    corrected entries, the 144 false "unused files" collapse to 3 real ones.
    Wire `lint:knip` into a check path (nothing runs it today).
 2. **Confirmed deletions:** deps `turndown`, `xml2js`, `@types/*` twins

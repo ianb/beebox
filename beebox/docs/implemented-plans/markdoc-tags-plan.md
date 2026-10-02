@@ -329,9 +329,9 @@ into a de-facto enum.
 The codebase already validates and maintains `ref:` attributes in YAML
 frontmatter:
 
-- `src/core/card-lint.ts:104` calls `extractRefs(parsed.fields)` and
+- `src/core/card-lint.ts:104` (moved to `beebox/src/core/card-lint/core.ts`) calls `extractRefs(parsed.fields)` and
   warns on broken refs.
-- `src/core/commands/move.ts:172` rewrites refs across the box when a
+- `src/core/commands/move.ts:172` (moved to `beebox/src/core/commands/move/command.ts`) rewrites refs across the box when a
   card moves.
 
 Markdoc tags introduce a new place for `ref=` attributes to live: tag
@@ -352,7 +352,7 @@ rebuilds):
    deferred — see open question 4 below — but unnecessary for this
    track since substring works for the move case.
 
-   *Implementation note: shipped in `src/core/commands/move.ts:209-261`.
+   *Implementation note: shipped in `src/core/commands/move.ts:209-261` (moved to `beebox/src/core/commands/move/command.ts`).
    The pass extends the existing attach-rewrite loop with a second
    rewrite entry keyed on the moved card's path itself; both rewrites
    apply in one read-modify-write per card.*

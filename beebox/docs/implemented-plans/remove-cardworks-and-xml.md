@@ -60,7 +60,7 @@ The docs this plan must be evaluated against:
   helpers (frontmatter + Markdoc body) follow these.
 - **The shipped Markdoc precedent.** `{% source %}` (committed
   `63141dce`) and `{% quote %}` are the densest preference for how a
-  new tag is shaped — schema in `src/shared/markdoc-config.ts`, a
+  new tag is shaped — schema in `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`), a
   renderer in the frontend, ref-attributes tracked by `extractBodyRefs`.
   Every new tag in this plan copies that shape.
 - **CLAUDE.md "don't add features beyond what the task requires."** This
@@ -83,11 +83,11 @@ five schemas and removes the scaffolding. Concretely:
   (`card-io.ts:370`) when the body is XML. **Reuse then delete:** the
   frontmatter path stays and becomes the only path; the XML branch and
   the `XmlLoadedCard` arm of the union are removed.
-- **The schema registry split.** `src/schemas/registry.ts:53`:
+- **The schema registry split.** `src/schemas/registry.ts:53` (moved to `beebox/src/schemas.ts`):
   *"export const schemas: ElementSchema[] = [ ProcedureSchema,
   ProcedureRunSchema, CaptureSessionSchema, GuideSchema, LandmarkSchema
   ]"* — **exactly five** XML schemas remain.
-  `src/schemas/registry.ts:66`: *"export const cardSchemas: CardSchema[]
+  `src/schemas/registry.ts:66` (moved to `beebox/src/schemas.ts`): *"export const cardSchemas: CardSchema[]
   = [ RecipeSchema, … ]"* already holds 28 frontmatter schemas,
   **including `RecipeSchema`.** **Reuse:** as each schema migrates it
   moves from `schemas[]` to `cardSchemas[]`; when `schemas[]` is empty
@@ -95,14 +95,14 @@ five schemas and removes the scaffolding. Concretely:
 - **Recipe is already a frontmatter schema.** `src/schemas/recipe.tsx:2`:
   *"Recipe card schema — Phase-2 frontmatter + Markdoc-annotated body."*
   The recipe Markdoc vocabulary already exists:
-  `src/shared/markdoc-config.ts:379-384` registers `ingredient`, `step`,
+  `src/shared/markdoc-config.ts:379-384` (moved to `beebox/src/shared/markdoc-config/core.ts`) registers `ingredient`, `step`,
   `yield`, `substitution`, `subrecipe`, `recipe-section`. **Reuse:**
   recipe needs only a data migration of the 2 remaining XML
   `.recipe.card` files (`~/src/boxes/test1/store/recipes/*.recipe.card`
   are still `x-card+xml`), not a schema rewrite. Recipe is the proof the
   pattern works, not a track of its own.
 - **The Markdoc backend + frontend pipeline.** `@markdoc/markdoc` is a
-  dependency. Backend: `src/shared/markdoc-config.ts` (tag schemas),
+  dependency. Backend: `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`) (tag schemas),
   `src/core/markdoc-emit*.ts` (renderable-tree → markdown emitter),
   `src/core/body-refs.ts` (`extractBodyRefs`). Frontend:
   `src/frontend/src/components/Markdown.tsx`, `Source.tsx`,
@@ -117,13 +117,13 @@ five schemas and removes the scaffolding. Concretely:
   (`markdoc-tags-plan.md:35` — any tag with a `ref` attr renames it
   before React render) is a hard constraint this plan inherits.
 - **The migrator harness.** `scripts/migrate/*.ts` per schema, plus
-  `scripts/migrate/_warnings.ts` (`beebox/CLAUDE.md:52`) which
+  `scripts/migrate/_warnings.ts` (moved to `beebox/src/scripts/migrate/_warnings.ts`) (`beebox/CLAUDE.md:52`) which
   declares known attrs/children per element and surfaces anything
   outside the allow-list — it *"Surfaced real data loss during the
   production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
   five new migrators follow this exact pattern, including warnings mode.
 - **The XPath dependency.** Only two call sites:
-  `src/core/landmark/resolve.ts:167` (expand-template placeholders) and
+  `src/core/landmark/resolve.ts:167` (moved to `beebox/src/core/landmark/resolve/core.ts`) (expand-template placeholders) and
   `src/core/commands/ls.ts:74` (fragment selectors). Both via cardworks'
   `evaluateXPathString`. **Rebuild/remove** — see the Landmark track and
   the XPath subplan.
@@ -203,12 +203,12 @@ the four hard schemas.
 `parseBodyTags(body: string, tagNames: string[]): ParsedTag[]` built on
 `Markdoc.parse` and a renderable-tree walk (per
 <https://markdoc.dev/docs/nodes>). Recipe data migration is a
-`scripts/migrate/recipe.ts` that reads the old `<recipe>` XML (still
+`scripts/migrate/recipe.ts` (moved to `beebox/src/scripts/migrate/recipe.ts`) that reads the old `<recipe>` XML (still
 parseable while cardworks exists) and emits frontmatter + `{% ingredient %}`
 /`{% step %}` body.
 
 **Vocabulary lock-ins.** None new — recipe tags are already locked at
-`src/shared/markdoc-config.ts:379-384`.
+`src/shared/markdoc-config.ts:379-384` (moved to `beebox/src/shared/markdoc-config/core.ts`).
 
 **First implementation chunk.** Write `src/core/card-body.ts`
 `parseBodyTags` + a doctest; migrate the 2 test1 recipe cards; confirm
@@ -420,7 +420,7 @@ type errors that cascade; rewrite the two system prompts.
 layer (refs/fs/loader/lint-format). Delete the `cardworks` package, the
 `node_modules/cardworks` symlink, the `workspace:*` dependency, and the
 pnpm-workspace entry. Update `beebox/CLAUDE.md`, root `CLAUDE.md`,
-`docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
+`docs/cards/format.md`, `docs/cards/schemas.md`.
 
 **Why this needs to change.** The whole point — no cardworks.
 

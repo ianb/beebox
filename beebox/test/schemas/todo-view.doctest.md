@@ -1,7 +1,7 @@
 # `todo-view` card schema
 
 Frontmatter-only schema for the `todo-view` card
-(`docs/plans/todo-collection.md` Track 4): `glob`/`status`/`assigned` are the
+(`docs/plans/todo-collection.md` Track 4): `glob`/`todo-status`/`assigned` are the
 query, no body. `glob` has NO schema default (pinned mechanism detail — see
 `src/schemas/todo-view.ts`'s module doc) — an omitted `glob` follows from the
 query's `here`, which the renderer sets to the card's own directory, not from
@@ -9,9 +9,10 @@ this schema.
 
 ```ts setup
 import { TodoViewSchema, createTodoViewTemplate } from "../../src/schemas/todo-view.js";
-import { getCardTypes, getDefaultTemplate } from "../../src/schemas/index.js";
+import { getCardTypes } from "../../src/schemas.js";
+import { getDefaultTemplate } from "../../src/templates-registry.js";
 import { parseCardText } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
 
 const schemas = await createCardSchemaMap();
 ```
@@ -38,25 +39,25 @@ parsed.fields.glob
 => undefined
 ```
 
-## `glob`/`status`/`assigned` all load when present
+## `glob`/`todo-status`/`assigned` all load when present
 
 ```ts
-const full = "---\nglob: \"_content/projects/kitchen/**\"\nstatus:\n  - open\n  - parked\nassigned: agent\n---\n";
+const full = "---\nglob: \"_content/projects/kitchen/**\"\ntodo-status:\n  - open\n  - parked\nassigned: agent\n---\n";
 const parsedFull = parseCardText(full, { source: "_content/kitchen/plate.todo-view.card", schemas, type: "todo-view" });
 parsedFull.fields.glob
 => _content/projects/kitchen/**
 
-JSON.stringify(parsedFull.fields.status)
+JSON.stringify(parsedFull.fields["todo-status"])
 => ["open","parked"]
 
 parsedFull.fields.assigned
 => agent
 ```
 
-## An out-of-enum `status` value is rejected
+## An out-of-enum `todo-status` value is rejected
 
 ```ts
-TodoViewSchema.frontmatterSchema.safeParse({ type: "todo-view", status: ["not-a-status"] }).success
+TodoViewSchema.frontmatterSchema.safeParse({ type: "todo-view", "todo-status": ["not-a-status"] }).success
 => false
 ```
 

@@ -7,7 +7,8 @@
  *    (schedule-health-box.ts).
  *  - **Box checks** — the permissions/credentials/engine sweep behind the
  *    dashboard's health warnings (`runHealthChecks`), including whether the
- *    Google authorization is still live.
+ *    Google authorization is still live. The `scheduled-tasks` check is left
+ *    out here: it restates the task section for the dashboard.
  *
  * Exit code 1 when a task is failing/overdue/invalid or a box check fails at
  * `error` severity, so scripts can gate on it. Warnings (a dead Google grant
@@ -16,9 +17,9 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxTime } from "../../lib/time.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import {
   loadScheduleHealth,
   formatDurationShort,
@@ -27,7 +28,7 @@ import {
 } from "../../core/schedule/health-box.js";
 import { conciseScheduleError, type TaskHealth } from "../../core/schedule/health.js";
 import { loadRunningScripts, type ScriptLock } from "../../core/schedule/state.js";
-import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/health.js";
+import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/health/router.js";
 
 const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   ok: "✓",
@@ -57,8 +58,11 @@ function describeStatus(task: TaskHealth): string {
       return `failing ×${task.consecutiveFailures}`;
     case "overdue":
       return `overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
-    case "ok":
     case "waiting":
+      // The reason is the status here ("waiting: nothing to do"), so the
+      // detail column leaves it out.
+      return task.reason === undefined ? "waiting" : `waiting: ${task.reason}`;
+    case "ok":
     case "inconclusive":
     case "blocked":
     case "invalid":
@@ -79,71 +83,85 @@ function describeRuns(task: TaskHealth, now: Date): string {
   return `${attempt}, ${success}`;
 }
 
-function printHealth(
+function pushTaskLines(
   health: BoxScheduleHealth,
-  { now, all, running }: { now: Date; all: boolean; running: Map<string, ScriptLock> },
+  { now, all, running, lines }: { now: Date; all: boolean; running: Map<string, ScriptLock>; lines: string[] },
 ): void {
   const tasks = all ? health.tasks : health.tasks.filter((t) => t.status !== "disabled");
   if (tasks.length === 0) {
-    console.log("No scheduled tasks.");
+    lines.push("No scheduled tasks.");
   }
   for (const task of tasks) {
     const lock = running.get(task.name);
     const detail = [
       ...(lock ? [`running (PID ${lock.pid}, since ${formatDurationShort(now.getTime() - new Date(lock.startedAt).getTime())} ago)`] : []),
       describeRuns(task, now),
-      ...(task.reason ? [task.reason] : []),
+      ...(task.reason && task.status !== "waiting" ? [task.reason] : []),
     ].join("; ");
-    console.log(
+    lines.push(
       `  ${lock ? "▶" : STATUS_GLYPHS[task.status]} ${task.name.padEnd(22)} ${describeStatus(task).padEnd(14)} ${detail}`
     );
     if ((isUnhealthy(task) || task.status === "inconclusive") && task.lastError) {
-      console.log(`      error: ${conciseScheduleError(task.lastError)}`);
+      lines.push(`      error: ${conciseScheduleError(task.lastError)}`);
     }
     // The cross-reference the boxholder otherwise has to make by hand between
     // `bbx health` and `bbx status`: this task's own fix is parked, unread.
     const parked = describeParkedUpdates(task);
     if (parked !== null && (isUnhealthy(task) || task.status === "inconclusive")) {
-      console.log(`      ${parked}`);
+      lines.push(`      ${parked}`);
     }
   }
   const hidden = health.tasks.length - tasks.length;
-  if (hidden > 0) console.log(`  (${hidden} disabled — show with --all)`);
+  if (hidden > 0) lines.push(`  (${hidden} disabled — show with --all)`);
 
   // Running scripts with no matching task card (e.g. ad-hoc / renamed scripts).
   const taskNames = new Set(health.tasks.map((t) => t.name));
   for (const [scriptName, lock] of running) {
     if (taskNames.has(scriptName)) continue;
-    console.log(`  ▶ ${scriptName.padEnd(22)} ${"running".padEnd(14)} PID ${lock.pid}, triggered by ${lock.triggeredBy}`);
+    lines.push(`  ▶ ${scriptName.padEnd(22)} ${"running".padEnd(14)} PID ${lock.pid}, triggered by ${lock.triggeredBy}`);
   }
 
   if (health.engineWait !== null) {
-    console.log(`  engine: ${health.engineWait}`);
+    lines.push(`  engine: ${health.engineWait}`);
   }
   const { scheduler } = health;
   if (scheduler.status === "running") {
-    console.log(`  scheduler: running (last tick ${formatDurationShort(scheduler.ageMs ?? 0)} ago)`);
+    lines.push(`  scheduler: running (last tick ${formatDurationShort(scheduler.ageMs ?? 0)} ago)`);
   } else if (scheduler.status === "stale") {
-    console.log(`  scheduler: NOT RUNNING (last tick ${formatDurationShort(scheduler.ageMs ?? 0)} ago)`);
+    lines.push(`  scheduler: NOT RUNNING (last tick ${formatDurationShort(scheduler.ageMs ?? 0)} ago)`);
   } else {
-    console.log("  scheduler: never seen on this box (overdue is expected if nothing runs bbx tick)");
+    lines.push("  scheduler: never seen on this box (overdue is expected if nothing runs bbx tick)");
   }
 }
 
-function printBoxChecks(checks: HealthCheck[]): void {
-  console.log("");
-  console.log("Box checks:");
+function pushBoxCheckLines(allChecks: HealthCheck[], lines: string[]): void {
+  // The task section above already lists every unhealthy task; the
+  // `scheduled-tasks` check says the same for the dashboard.
+  const checks = allChecks.filter((c) => c.name !== "scheduled-tasks");
+  lines.push("");
+  lines.push("Box checks:");
   const failures = checks.filter((c) => !c.ok);
   if (failures.length === 0) {
-    console.log(`  ✓ all ${String(checks.length)} checks pass`);
+    lines.push(`  ✓ all ${String(checks.length)} checks pass`);
     return;
   }
   for (const check of failures) {
     const glyph = check.severity === "error" ? "✗" : "!";
-    console.log(`  ${glyph} ${check.name.padEnd(22)} ${check.message}`);
+    lines.push(`  ${glyph} ${check.name.padEnd(22)} ${check.message}`);
   }
   const passing = checks.length - failures.length;
-  if (passing > 0) console.log(`  (${String(passing)} other checks pass)`);
+  if (passing > 0) lines.push(`  (${String(passing)} other checks pass)`);
+}
+
+/** The text `bbx health` prints: the task section, then the box checks. */
+export function formatHealthText(
+  health: BoxScheduleHealth,
+  { boxChecks, now, all, running }: { boxChecks: HealthCheck[]; now: Date; all: boolean; running: Map<string, ScriptLock> },
+): string {
+  const lines: string[] = [];
+  pushTaskLines(health, { now, all, running, lines });
+  pushBoxCheckLines(boxChecks, lines);
+  return lines.join("\n");
 }
 
 export const healthCommand = new Command("health")
@@ -162,8 +180,7 @@ export const healthCommand = new Command("health")
       const runningJson = [...running].map(([name, lock]) => ({ name, ...lock }));
       console.log(JSON.stringify({ ...health, running: runningJson, boxChecks }, null, 2));
     } else {
-      printHealth(health, { now, all: options.all === true, running });
-      printBoxChecks(boxChecks);
+      console.log(formatHealthText(health, { boxChecks, now, all: options.all === true, running }));
     }
 
     const checkFailed = boxChecks.some((c) => !c.ok && c.severity === "error");

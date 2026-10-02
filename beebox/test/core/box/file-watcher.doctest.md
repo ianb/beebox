@@ -18,8 +18,8 @@ import {
   COALESCE_MS,
 } from "../../../src/core/box/file-watcher.js";
 import { watchLimitStatus } from "../../../src/core/box/watch-limit.js";
-import { watchLimitHealthChecks } from "../../../src/webapp/trpc/routers/health-watch-limit.js";
-import { createEventBus, type EventBus } from "../../../src/core/event-bus.js";
+import { watchLimitHealthChecks } from "../../../src/webapp/trpc/routers/health/checks/watch-limit.js";
+import { createEventBus, type EventBus } from "../../../src/core/event-bus/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { readdirSync } from "node:fs";

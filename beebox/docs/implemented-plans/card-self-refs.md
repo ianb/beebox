@@ -42,7 +42,7 @@ Chosen design, five tracks:
 | E. Migration + lint warning | ~300 | ~250 |
 
 Total about 800 changed lines, well under the BIG CHANGE threshold. Authored
-docs (the `docs/migrations.md` table entry, this plan) are about 60 lines on
+docs (the `docs/cards/migrations.md` table entry, this plan) are about 60 lines on
 top.
 
 ## Stated preferences this plan trades against
@@ -65,11 +65,11 @@ top.
 
 ## What already exists
 
-- **Ref rewriting across the box** — `src/core/rewrite-card-refs.ts`:
+- **Ref rewriting across the box** — `src/core/rewrite-card-refs.ts` (moved to `beebox/src/core/rewrite-card-refs/core.ts`):
   `rewriteReferrerRefs` (`:301`), `collectCardRefTokens` (`:397`),
   `rewriteCardRefTokens` (`:407`), `rewriteViewRefs` (`:337`). Reused by the
   migration for inbound refs and for the card's own tokens. Precedent:
-  `scripts/migrate/todo-list-to-doc-run.ts:32-33` imports the same functions.
+  `scripts/migrate/todo-list-to-doc-run.ts:32-33` (moved to `beebox/src/scripts/migrate/todo-list-to-doc-run/run.ts`) imports the same functions.
 - **Box file listing** — `listBoxCardFiles`, `listBoxMarkdownFiles`,
   `listBoxViewFiles` in `src/core/list-cards.ts`. Reused.
 - **Attach path helpers** — `src/shared/attach-path.ts`: `cardBasename`,
@@ -80,7 +80,7 @@ top.
   parsed.path.startsWith("/") || isAttachRef(parsed.path)) { return rawRef; }"*.
 - **Card move** — `moveOne` (`move-operations.ts:330`) and
   `movePhase2CardFiles` (`move-phase2.ts`). Track D reuses `moveOne` for `.md`.
-- **Per-card lint** — `lintCard` in `src/core/card-lint.ts`, which already
+- **Per-card lint** — `lintCard` in `src/core/card-lint.ts` (moved to `beebox/src/core/card-lint/core.ts`), which already
   emits ref warnings (`:236-246`). Track E adds one warning there.
 - **Migration registry** — `MIGRATIONS` in `src/core/migrations.ts`
   (append-only, `:52` onward).
@@ -90,7 +90,7 @@ top.
   one line plus comment. Track A follows the same place but derives the name.
 
 Searched for a current producer of the flat layout: the capture writer
-(`src/core/capture/write-cards.ts:63`, *"const childAttachRel =
+(`src/core/capture/write-cards.ts:63` (moved to `beebox/src/core/capture/prepare/write-cards.ts`), *"const childAttachRel =
 `${this.sessionAttachRelDir}/${opts.childBasename}.attach`;"*) and scan import
 (`commands/scan-import-cards.ts:97-101`) both write attach scopes. A grep of `src/`,
 `templates/` for a non-`attach/` `filename.ref` writer found none. The flat
@@ -114,7 +114,7 @@ deeper directory does not break it.
 - **Why:** `file-lock.ts` creates `.bbx-reactor.lock.guard/` for the life of
   the lock. `checkBoxRoot` reports it as a stray, so the pre-commit root check
   fails every commit in the box, `bbx finish` included.
-- **Direction:** New pure module `src/lib/lock-guard.ts` exporting
+- **Direction:** New pure module `src/lib/lock-guard.ts` (moved to `beebox/src/shared/lock-guard.ts`) exporting
   `LOCK_GUARD_SUFFIX = ".guard"` and `lockGuardPath(lockPath)`. `file-lock.ts`
   uses it in place of its private `guardPath`. `box-root-vocabulary.ts` exports
   `isBoxRootVocabularyName(name: string): boolean`, which accepts listed names
@@ -140,7 +140,7 @@ deeper directory does not break it.
 - **Direction:** Replace the stem code with `resolveAttachRef(cardAbs, ref)`.
   The loader stays `attach/`-only.
 - **First chunk:** the change plus a case in
-  `test/webapp/routes-api-images.doctest.md`. No open questions.
+  `test/webapp/routes-api-images.doctest.md` (moved to `beebox/test/webapp/routes/api/register/images.doctest.md`). No open questions.
 
 ### Track C — `bbx mv` rewrites absolute refs held by moved cards
 
@@ -155,7 +155,7 @@ deeper directory does not break it.
   (`restyleRef` with `wasAbsolute: true`). An absolute ref to a target that did
   not move stays unchanged. Relative and `attach/` handling does not change.
 - **First chunk:** the change plus two cases in
-  `test/core/commands/move-command.doctest.md` (directory move with an
+  `test/core/commands/move-command.doctest.md` (moved to `beebox/test/core/commands/move/command.doctest.md`) (directory move with an
   absolute self-ref; single card with an absolute ref into its own attach
   scope). No open questions.
 
@@ -236,7 +236,7 @@ deeper directory does not break it.
   stdout is not kept.
 - **Vocabulary lock-ins:** migration name `filename-attach-scope` (manifest
   key, permanent). Reason codes are output text, not stored.
-- **First chunk:** `scripts/migrate/filename-attach-scope.ts` with
+- **First chunk:** `scripts/migrate/filename-attach-scope.ts` (moved to `beebox/src/scripts/migrate/filename-attach-scope.ts`) with
   `classifyFilenameRef` and the doctest for the rule table. No open questions.
 
 ### Track F — `v2-refs-to-v3` migration (added at /finish, boxholder request)
@@ -248,7 +248,7 @@ deeper directory does not break it.
   `/store/archive/briefs/…`; the boxholder asked, at /finish, to "try to fix
   v2 refs if they exist". Registered before `filename-attach-scope`, so a
   v2-form `filename.ref` reaches that migration in v3 form.
-- **Test:** `test/scripts/migrate/migrate-v2-refs-to-v3.doctest.md`.
+- **Test:** `test/scripts/migrate/migrate-v2-refs-to-v3.doctest.md` (moved to `beebox/test/scripts/migrate/v2-refs-to-v3.doctest.md`).
 
 ## Could this be simpler?
 
@@ -337,11 +337,11 @@ All doctest tier:
 
 - `test/lib/box-root-check.doctest.md` — guard directory accepted; an
   unrelated `.guard` name still a stray.
-- `test/webapp/routes-api-images.doctest.md` — loader resolves a dotted card
+- `test/webapp/routes-api-images.doctest.md` (moved to `beebox/test/webapp/routes/api/register/images.doctest.md`) — loader resolves a dotted card
   name; still refuses a non-`attach/` ref.
-- `test/core/commands/move-command.doctest.md` — absolute self-refs follow
+- `test/core/commands/move-command.doctest.md` (moved to `beebox/test/core/commands/move/command.doctest.md`) — absolute self-refs follow
   directory and card moves; `.md` source accepted with rewriting.
-- `test/scripts/migrate/migrate-filename-attach-scope.doctest.md` — the rule
+- `test/scripts/migrate/migrate-filename-attach-scope.doctest.md` (moved to `beebox/test/scripts/migrate/filename-attach-scope.doctest.md`) — the rule
   table through `classifyFilenameRef`, and an end-to-end run on a temp box
   (dry-run changes nothing; `--apply` repairs; second run is a no-op).
 - A card-lint doctest case for the warning (existing card-lint doctest file).
@@ -353,7 +353,7 @@ All doctest tier:
 3. Track C.
 4. Track D.
 5. Track E: classifier + doctest, then apply path, then registration and
-   `docs/migrations.md` entry, then lint warning.
+   `docs/cards/migrations.md` entry, then lint warning.
 6. Run the migration against this worktree's `test1` clone with fixture cards
    written into it: dry-run, `--apply`, `bbx validate`, manifest entry.
 7. Cross-model review of the branch.

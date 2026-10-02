@@ -12,7 +12,7 @@
  * question look like on the wire."
  */
 
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { QuestionForm } from "./questions/QuestionForm";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
@@ -22,7 +22,7 @@ import { StatusBadge } from "./ui/StatusBadge";
 import { Stack } from "./ui/Stack";
 import { bbxSource } from "../lib/source-tag";
 import { renderQuestionAnswer } from "./questions/answer-display";
-import type { RendererProps } from "../renderers";
+import type { RendererProps } from "../file-type-registry";
 
 const ANSWERABLE = new Set(["pending", "expired", "dismissed"]);
 
@@ -40,7 +40,7 @@ export function QuestionCardView({ data }: RendererProps) {
   }
 
   const onAnswered = () => void utils.status.questions.invalidate();
-  const answerable = ANSWERABLE.has(question.status ?? "pending");
+  const answerable = ANSWERABLE.has(question.state ?? "pending");
 
   if (answerable) {
     return (
@@ -65,7 +65,7 @@ export function QuestionCardView({ data }: RendererProps) {
               <Text as="div" size="sm">{question.learning.proposal}</Text>
             </Card>
           ) : null}
-          <StatusBadge status={question.status ?? "answered"} size="sm" className="self-start" />
+          <StatusBadge status={question.state ?? "answered"} size="sm" className="self-start" />
         </Stack>
       </Card>
     </div>

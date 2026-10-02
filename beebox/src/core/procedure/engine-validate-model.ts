@@ -12,11 +12,11 @@
  *
  * The review model is reached through the same `createAgent` factory the run
  * phase uses, so tests inject a fake that returns a scripted verdict (see
- * test/helpers/fake-agent.ts) rather than hitting a live model.
+ * test/core/fake-agent.ts) rather than hitting a live model.
  */
 
 import { z } from "zod";
-import { createAgent as realCreateAgent } from "../agent/index.js";
+import { createAgent as realCreateAgent } from "../agent/invoke/core.js";
 import { loadAgentEngine } from "../box/config.js";
 import { loadEffectiveBoxModel } from "../model-policy.js";
 import {

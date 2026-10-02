@@ -15,7 +15,7 @@
  */
 
 import { useCallback } from "react";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { busEventData } from "../lib/bus-events";
 import { navMenuEntries, type NavMenuEntry } from "../lib/nav-menu-entries";
 import { useBusSubscription, type RealtimeEvent } from "./useBusSubscription";

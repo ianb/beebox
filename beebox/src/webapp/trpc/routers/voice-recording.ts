@@ -8,7 +8,7 @@
  * `(recordingId, emissionId)` — see `state.ts`), so a retried call is a safe
  * replay; this router adds no side effect beyond that one write.
  *
- * Owner check mirrors `authorizeCaptureSessionOwner` (`webapp/capture-request-owner.ts`):
+ * Owner check mirrors `authorizeCaptureSessionOwner` (`webapp/routes/capture-request-owner.ts`):
  * the caller's authenticated email must match the session's `createdBy`.
  * `ctx.user` is cookie/hub identity only — unlike the raw capture routes, the
  * tRPC context does not yet resolve a mobile bearer's identity into `ctx.user`
@@ -20,7 +20,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, authedProcedure } from "../trpc.js";
+import { router, authedProcedure } from "../procedures.js";
 import {
   readStagingSession,
   isVoiceSession,
@@ -30,9 +30,9 @@ import {
   type VoiceHandoff,
   type HqFailure,
   type VoiceHqResult,
-} from "../../../core/capture/staging-store.js";
-import { applyVoiceEvent, VoiceTransitionRefusedError } from "../../../core/voice-recording/voice-staging.js";
-import { toError } from "../../../lib/error-guards.js";
+} from "../../../core/capture/staging-store/core.js";
+import { applyVoiceEvent, VoiceTransitionRefusedError } from "../../../core/voice-recording/voice-staging/core.js";
+import { toError } from "../../../shared/error-guards.js";
 import type { TrpcContext } from "../context.js";
 
 /** The DTO `status` returns. */

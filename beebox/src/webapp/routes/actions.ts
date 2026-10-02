@@ -6,12 +6,12 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import {
   runCommand,
   type CommandContext,
-} from "../../core/commands/index.js";
-import { errorMessage } from "../../lib/error-guards.js";
+} from "../../core/command-runner.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 interface CreateBody {
   path: string;

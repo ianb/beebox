@@ -1,0 +1,26 @@
+{
+  "id": "message0010",
+  "threadId": "thread0010",
+  "internalDate": "1790553600000",
+  "snippet": "Your latest account statement is ready.",
+  "payload": {
+    "mimeType": "text/plain",
+    "headers": [
+      {
+        "name": "Subject",
+        "value": "Your personal account statement"
+      },
+      {
+        "name": "From",
+        "value": "Noor Haddad <noor@example.invalid>"
+      },
+      {
+        "name": "To",
+        "value": "Priya Marlowe <priya@example.invalid>"
+      }
+    ],
+    "body": {
+      "data": "U1lOVEhFVElDLiBQcml5YSBNYXJsb3dlLCB5b3VyIHBlcnNvbmFsIGNoZWNraW5nIHN0YXRlbWVudCBpcyByZWFkeS4gVGhpcyBpcyB5b3VyIGhvdXNlaG9sZCBhY2NvdW50LCB1bnJlbGF0ZWQgdG8gdGhlIE9kZXR0ZSBNYXJsb3dlIGhvdXNlaG9sZC4"
+    }
+  }
+}

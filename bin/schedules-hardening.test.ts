@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 import { tickPath } from "./lib/schedules-launchd.js";
-import { errnoCode } from "../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
 import {
   acquireLock,
   ensureStoreRoot,

@@ -7,7 +7,7 @@ area: beebox
 
 Claude Code session transcripts live as JSONL at `~/.claude/projects/<encoded-cwd>/*.jsonl`, and every `Read` tool_use carries the file path plus offset/limit. That's free data — no instrumentation needed — describing how the agent actually uses the doc corpus, which is rarely the same as how we *think* it does.
 
-Cross-joined against the doc-graph in `src/dev/doc-graph-html.ts`, the usage data sharpens the picture:
+Cross-joined against the doc-graph in `src/dev/doc-graph-html.ts` (moved to `beebox/src/dev/doc-graph-html/html.ts`), the usage data sharpens the picture:
 
 - **High-read + always-loaded** → over-served. The doc is already in context, so re-reads mean the agent either didn't trust the context or couldn't absorb the doc at length. Candidate for trim.
 - **High-read + partial-only (offset/limit always set)** → chapter-grazing. The agent only wants section X. Candidate for split — each section becomes its own file, no agent loads the irrelevant 80%.

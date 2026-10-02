@@ -26,7 +26,7 @@ the hub was between its SIGTERM (14:13:12) and its restart (14:14:12). Batched
 queries in the same window 502'd too. Calling `admin.googleSetup` afterwards
 returns a valid `authUrl`, so nothing is broken now.
 
-`trpcFetch` in `beebox/src/frontend/src/lib/trpc/index.ts` has a case for 401
+`trpcFetch` in `beebox/src/frontend/src/lib/trpc/index.ts` (moved to `beebox/src/frontend/src/lib/trpc/client.ts`) has a case for 401
 (`reportSessionEnded`, from the one-401-ejects-the-app work) but nothing for a
 non-JSON body or a 5xx. Every surface with an error box shows the parse error
 raw, which reads like a client bug and tells the boxholder nothing actionable.
@@ -113,7 +113,7 @@ retried procedure-level 500s, which are bugs, not outages.
 Known limit: during the retries a query stays pending. A menu shows "Loading…"
 for up to about 90 s, with no "restarting" indicator.
 
-Tests: `beebox/test/frontend/lib/trpc-transient.doctest.md` runs the real
+Tests: `beebox/test/frontend/lib/trpc-transient.doctest.md` (moved to `beebox/src/frontend/test/lib/trpc/transient.trpc-transient.doctest.md`) runs the real
 `httpBatchStreamLink` + `retryLink` against a tRPC server behind a stand-in
 nginx 502. With plain `fetch` in place of `fetchFromBox`, it reproduces the
 reported `Unexpected token '<', "<!DOCTYPE "...` message and fails.

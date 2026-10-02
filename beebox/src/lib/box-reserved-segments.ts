@@ -15,7 +15,7 @@
  * they'd land), so area names below it are structural, not strays.
  */
 
-import { BOX_ROOT_VOCABULARY } from "./box-root-vocabulary.js";
+import { BOX_ROOT_VOCABULARY } from "../shared/box-root-vocabulary.js";
 
 const NON_NESTABLE_AREA_NAMES: ReadonlySet<string> = new Set(
   BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area" && entry.name !== "_tmp").map(

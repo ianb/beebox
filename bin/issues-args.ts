@@ -8,7 +8,7 @@
 
 import {
   emptyFilters, normalizeWorkstreamName, type IssueFilters,
-} from "../workstreams-app/src/server/issue-search-model.js";
+} from "../workstreams-app/src/server/main/issue-search-model.js";
 import { InvalidFlagValueError, InvalidIntegerFlagError, InvalidSinceError } from "./issues-errors.js";
 
 export const RESEARCH_STATES = ["awaiting", "researched", "none"] as const;

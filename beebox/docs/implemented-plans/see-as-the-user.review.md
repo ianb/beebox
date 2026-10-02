@@ -29,13 +29,13 @@ per-finding disposition follows the verbatim block.
    Track B defaults `--session` implicitly and broadcasts to "browser
    client(s)". Agent subprocesses receive `BBX_BOX_NAME`, `BBX_SERVER_URL`,
    and a box-wide token, but no current chat-session ID
-   (`beebox/src/core/script-env.ts:83`). Falling back to the
+   (`beebox/src/core/script-env.ts:83` (moved to `beebox/src/core/script-env/core.ts`)). Falling back to the
    most-active pointer can target another conversation if activity changes
    while the agent is working.
 
    On the browser side, the existing `forSession` helper treats either
    null side as a wildcard
-   (`beebox/src/frontend/src/components/chat/InteractiveChat-ws.ts:46`);
+   (`beebox/src/frontend/src/components/chat/InteractiveChat-ws.ts:46` (moved to `beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/ws.ts`));
    an idle `?session=new` tab would therefore accept an established
    session's request if this helper is reused. Multiple matching tabs
    would all capture or open consent UI, and "first response wins" chooses
@@ -47,7 +47,7 @@ per-finding disposition follows the verbatim block.
    specified protocol.**
    The plan promises `no-client` after a two-second ack grace, but neither
    the event nor response protocol defines an ack. The bus exposes no
-   subscriber count (`beebox/src/core/event-bus.ts:173`), and its
+   subscriber count (`beebox/src/core/event-bus.ts:173` (moved to `beebox/src/core/event-bus/core.ts`)), and its
    tRPC bridge may drop transient events for a slow subscriber
    (`beebox/src/webapp/trpc/routers/events.ts:78`). Consequently,
    no tab, wrong session, stale frontend, dropped event, background
@@ -63,7 +63,7 @@ per-finding disposition follows the verbatim block.
    `bbx chat get-last-audio` already implements CLI long-poll → transient
    bus request → browser multipart response → in-memory
    first-response-wins rendezvous
-   (`beebox/src/webapp/routes/chat-last-audio-routes.ts:1`,
+   (`beebox/src/webapp/routes/chat-last-audio-routes.ts:1` (moved to `beebox/src/webapp/routes/chat/last-audio-routes.ts`),
    `beebox/src/core/last-audio-pending.ts:1`). Yet "What already
    exists" omits it and Track B proposes rebuilding the pattern.
 
@@ -79,7 +79,7 @@ per-finding disposition follows the verbatim block.
    The plan requires an agent-initiated capture to become a visible chat
    attachment, then admits this needs a new message-injection path. The
    existing `/chat/send` path starts or queues an agent turn
-   (`beebox/src/webapp/routes/chat-send-routes.ts:247`); using it
+   (`beebox/src/webapp/routes/chat-send-routes.ts:247` (moved to `beebox/src/webapp/routes/chat/send-routes.ts`)); using it
    while the requesting agent is mid-turn creates an unwanted second user
    turn. Direct transcript mutation is a different, concurrency-sensitive
    feature.

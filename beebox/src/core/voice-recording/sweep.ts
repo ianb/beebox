@@ -15,9 +15,9 @@
  */
 
 import { getBoxTime } from "../../lib/time.js";
-import { listStagingSessions, isVoiceSession, type StagingSession } from "../capture/staging-store.js";
+import { listStagingSessions, isVoiceSession, type StagingSession } from "../capture/staging-store/core.js";
 import { cleanupStagingSession } from "../capture/staging-teardown.js";
-import { isVoiceTerminal } from "./voice-staging.js";
+import { isVoiceTerminal } from "./voice-staging/core.js";
 
 /** How long a voice recording's staging directory survives past creation, sealing, or becoming terminal. */
 export const VOICE_STAGING_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

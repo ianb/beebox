@@ -18,7 +18,7 @@ cycle still flagged the draft as an unjobbed inbox item and opened a new
 intake job. On 2026-09-03 this happened three times for the same card. Each
 job re-read the card, found it correctly filed, and closed with no change.
 
-The unjobbed check is in `beebox/src/cli/commands/wakeup-steps.ts` /
+The unjobbed check is in `beebox/src/cli/commands/wakeup-steps.ts` (moved to `beebox/src/cli/commands/wakeup/steps.ts`) /
 `wakeup.ts`.
 
 ## Why resolution is not obvious

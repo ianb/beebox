@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
 
-export type InlineActionIntent = "emphatic" | "subtle" | "danger";
+/** `quiet` keeps the surrounding text's color and underlines only on hover: a link inside text that has its own treatment (a todo's words). */
+export type InlineActionIntent = "emphatic" | "subtle" | "danger" | "quiet";
 
 interface FlashSpec {
   label: ReactNode;
@@ -25,6 +26,7 @@ const INTENT_CLASSES: Record<InlineActionIntent, string> = {
   emphatic: "text-primary hover:text-primary-dark underline",
   subtle: "text-warm-600 hover:text-warm-900 underline",
   danger: "text-danger hover:text-danger-dark underline",
+  quiet: "text-left hover:underline",
 };
 
 export function InlineAction({

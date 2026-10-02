@@ -10,7 +10,7 @@
  * clean up a stale grant), and a caller that only had a string would have to
  * pattern-match prose to tell them apart.
  *
- * These are the error arm of a `Result` (see `lib/result.ts`): callers branch
+ * These are the error arm of a `Result` (see `shared/result.ts`): callers branch
  * on the cause, so a refusal is part of `resolveSecret`'s contract rather than
  * a thrown exception. They extend `Error` anyway so a caller that would rather
  * `throw` one keeps a stack and an `instanceof`.

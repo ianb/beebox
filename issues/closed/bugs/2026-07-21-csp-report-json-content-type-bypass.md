@@ -14,7 +14,7 @@ adding a per-route `{ bodyLimit: MAX_REPORT_BODY_BYTES }` (16 KB) to the
 every content-type, so an `application/json` (or any other) POST is 413'd above
 16 KB instead of falling through to Fastify's default parser under the
 server-wide 50 MB limit. The global JSON limit other routes need is untouched.
-Test added in `test/webapp/routes/api-csp-report-bounds.doctest.md`: an oversized
+Test added in `test/webapp/routes/api-csp-report-bounds.doctest.md` (moved to `beebox/test/webapp/routes/api-csp-report.bounds.doctest.md`): an oversized
 `application/json` body → 413, nothing logged.
 
 ---

@@ -1,6 +1,6 @@
 /**
  * Fetch + `safeParse` the edge manifest from R2. Shared by the serve path
- * (`index.ts`) and the submit endpoint (`submit.ts`) so both treat the store as
+ * (`worker.ts`) and the submit endpoint (`submit.ts`) so both treat the store as
  * the same untrusted boundary (principle #3 / the Val Town lesson): a
  * missing/corrupt/invalid manifest is `null`, and every caller fails closed.
  */

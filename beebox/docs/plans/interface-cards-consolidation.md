@@ -155,7 +155,7 @@ an Admin card. Preserve the permission model, single open-card operation, and
 live conversation. Admin
 includes host-wide operations: its renderer must label that scope as the existing
 controls do; a per-box anchor does not make those operations box-local.
-The card is an address, not authorization. Admin's API checks (`src/webapp/trpc/routers/admin.ts:194`: `boxConfig: ownerProcedure.query`) and secret storage
+The card is an address, not authorization. Admin's API checks (`src/webapp/trpc/routers/admin.ts:194` (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`): `boxConfig: ownerProcedure.query`) and secret storage
 stay authoritative; no secrets move into card frontmatter or notes.
 
 **Direction:** Extend the finite shared table and renderer-location checks. Add
@@ -168,7 +168,7 @@ postcondition before recording success, including sweep and mark-applied paths.
 Do not reuse an old all-current-cards assertion for the historical migration.
 Seed, assert, dry-run descriptions, and repair errors must all take the cohort,
 not only the presence validator. The original script still calls seedSystemCards
-(`scripts/migrate/canonical-interface-cards.ts:9`); update it to pass the original
+(`scripts/migrate/canonical-interface-cards.ts:9` (moved to `beebox/src/scripts/migrate/canonical-interface-cards.ts`)); update it to pass the original
 three explicitly. `src/core/migration-run.ts:114` and `:122` gate manifest writes
 with `assertSystemCardsComplete`; make those gates name-aware for both markers.
 The original script after table growth must write only the original three, and
@@ -503,7 +503,7 @@ Use existing doctest tiers; no new framework. Extend
 `test/frontend/workspace-pane-navigation.doctest.md`,
 `test/frontend/workspace-panes.doctest.md`,
 `test/shared/system-card-paths.doctest.md`, and
-`test/cli/commands/validate-system-cards.doctest.md` for their respective decisions.
+`test/cli/commands/validate-system-cards.doctest.md` (moved to `beebox/test/cli/commands/validate/pre-commit.system-cards.doctest.md`) for their respective decisions.
 Add focused `test/frontend/history-card-state.doctest.md` and
 `test/frontend/interface-route-consolidation.doctest.md` for state/legacy routes,
 old overlay entries, and explicit chat-about behavior. Test the real adapters;

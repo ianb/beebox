@@ -42,8 +42,7 @@ Sessions are keyed by thread ref (extracted from the job card's `thread: {ref: .
 
 ```
 ---
-status: pending
-source: telegram
+connector: telegram
 description: New message from Alice
 thread:
   ref: store/chat/telegram/Alice/thread.chat-thread.card
@@ -60,12 +59,11 @@ Batch processing is natural for jobs that are independent tasks (e.g., "write a 
 
 ## Job Lifecycle
 
-1. **Creation:** Jobs appear in `_bookkeeping/jobs/` via connectors (sync phase), intake, or manual placement. They're YAML-frontmatter cards with the `.job.card` suffix (e.g. `2026-07-04T12-00-00-gmail.intake.job.card`). Each card's frontmatter carries a `source:` field naming the connector that owns it (e.g. `gmail`, `telegram`, `calendar`) or a cross-cutting bucket (`wakeup`, `feedback-sync`, `question-answer`):
+1. **Creation:** Jobs appear in `_bookkeeping/jobs/` via connectors (sync phase), intake, or manual placement. They're YAML-frontmatter cards with the `.job.card` suffix (e.g. `2026-07-04T12-00-00-gmail.intake.job.card`). A job made by a connector-scoped run carries a `connector:` field naming that connector (e.g. `gmail`, `telegram`); other jobs (full-wakeup and scan intake, question follow-ups, contains backfill) have none:
 
    ```
    ---
-   status: pending
-   source: gmail
+   connector: gmail
    priority: normal
    description: 3 new emails to triage
    items:
@@ -73,15 +71,15 @@ Batch processing is natural for jobs that are independent tasks (e.g., "write a 
      - ref: _content/inbox/2026-07-04T12-01-00-Newsletter.email.card
    ---
    ```
-2. **Discovery:** `findJobCards()` scans the directory, extracts priority and source, and sorts normal-priority first.
+2. **Discovery:** `findJobCards()` scans the directory, extracts priority and connector, and sorts normal-priority first.
 3. **Processing:** The agent does the work, commits changes, and calls `bbx finish <path>` to delete the job file.
 4. **Finalize:** After all cycles, `bbx finalize` flushes any outbound cards created during processing.
 
-## Source Filter
+## Connector Filter
 
-`runReactor` accepts a `sourceFilter` option. When set, jobs whose `source:` frontmatter field does not match are skipped — left in `_bookkeeping/jobs/` for a later run that does match them. This is how `bbx wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `source: gmail` jobs, even if telegram or feedback jobs are also pending.
+`runReactor` accepts a `connectorFilter` option. When set, jobs whose `connector:` frontmatter field does not match are skipped — left in `_bookkeeping/jobs/` for a later run that does match them. This is how `bbx wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `connector: gmail` jobs, even if telegram or other jobs are also pending.
 
-Cross-cutting jobs (e.g. `feedback-sync` for guide revisions, `question-answer` for question follow-ups) carry sources that no connector matches, so they only run when the reactor is invoked with no filter (a full `bbx wakeup`, or `bbx reactor` directly).
+Jobs with no `connector` (question follow-ups, contains backfill, full-wakeup and scan intake) match no filter, so they only run when the reactor is invoked with no filter (a full `bbx wakeup`, or `bbx reactor` directly).
 
 ## Prompt Construction
 

@@ -51,7 +51,7 @@ loader but without schema validation. Migration restores them to first-class.
   is the discriminator, **no `type:` field** in frontmatter; `bbx validate`
   output is the correctness gate; "don't add features beyond what the task
   requires."
-- **`docs/migrations.md`** — the established migration framework: `bbx migrate`
+- **`docs/cards/migrations.md`** — the established migration framework: `bbx migrate`
   drives the ordered `MIGRATIONS` manifest (`src/core/migrations.ts`), each box
   tracks applied entries in `config/migrations.jsonl`, a failed entry halts the
   run and is not recorded. New transforms are added as **manifest entries**, not
@@ -71,7 +71,7 @@ loader but without schema validation. Migration restores them to first-class.
   question, chat-thread, doc-to-gdoc, strip-type-field, repair-refs,
   asset-marker, webpage-card, landmark, recipe, procedure-run, procedure, guide,
   capture-session. **Reuse** — these run per box and cover the bulk of the
-  ~9k cards. The shared harness (`scripts/migrate/_harness.ts`) handles arg
+  ~9k cards. The shared harness (`scripts/migrate/_harness.ts` (moved to `beebox/src/scripts/migrate/_harness.ts`)) handles arg
   parsing, file walk, dry-run/apply, per-file warning collection.
 - **`bbx validate`** — the correctness gate; runs the absorbed `formatLintResults`
   + each schema's `validate` hook. **Reuse** as the per-box acceptance check.
@@ -108,7 +108,7 @@ and `box/inbox/news/` dirs. Tracked in the manifest so it's recorded per box and
 idempotent. **Open question:** delete vs. archive-then-delete — lean delete
 (git history is the archive; these are dead).
 
-**First chunk.** `scripts/migrate/delete-deprecated-cards.ts` + manifest entry +
+**First chunk.** `scripts/migrate/delete-deprecated-cards.ts` (moved to `beebox/src/scripts/migrate/delete-deprecated-cards.ts`) + manifest entry +
 a doctest on a tmp box proving the three globs are removed and other cards
 survive.
 
@@ -160,7 +160,7 @@ designed here.
 **What.** For each box, in a safe order: `bbx migrate --apply` (runs Tracks 0-1
 entries + the 28 existing), then `bbx validate`, then commit within the box repo.
 
-**Server mechanics** (`docs/server-operations.md`). Boxes are
+**Server mechanics** (`docs/server/operations.md`). Boxes are
 `/home/beebox/boxes/<box>/`, owned by `callback`; the server runs source via
 tsx (no build step), so migrators run in place:
 

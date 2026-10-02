@@ -14,15 +14,16 @@
  */
 
 import { z } from "zod";
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { TODO_STATUSES } from "../shared/todo-model.js";
 
 export const TodoViewSchema = cardSchema("todo-view", {
+  brief: "A scoped list of todos",
   description: "A todos display surface scoped to a glob — the box-wide plate, or a project-local subtree instance",
   category: "authored",
   fields: {
     glob: z.string().optional(),
-    status: z.array(z.enum(TODO_STATUSES)).optional(),
+    "todo-status": z.array(z.enum(TODO_STATUSES)).optional(),
     assigned: z.string().optional(),
   },
   instructions: `# Todo View Cards
@@ -41,7 +42,7 @@ same question from the command line.
   into that directory — that's the common case for a
   project-local plate. The box-wide instance
   (\`_content/plate.todo-view.card\`) sets \`glob: "**"\` explicitly.
-- \`status:\` — restrict to specific statuses (\`open\`, \`done\`, \`dropped\`,
+- \`todo-status:\` — restrict to todos with specific statuses (\`open\`, \`done\`, \`dropped\`,
   \`parked\`). **Omit** to see \`open\` + \`parked\` — every plate-state group
   (escalated / on-plate / quiet / parked); \`done\`/\`dropped\` stay out of
   the default view. List them explicitly to include them.
@@ -79,11 +80,11 @@ export type TodoViewFields = InferCardFields<typeof TodoViewSchema>;
 /**
  * Generate a `todo-view` card's frontmatter. `glob` is optional — omit it
  * for a subtree-scoped project plate; the box-wide stock instance
- * (`installTodoView`, `src/core/box/defaults.ts`) passes `"**"` explicitly.
+ * (`installTodoView`, `src/core/box/structure/defaults.ts`) passes `"**"` explicitly.
  */
 export function createTodoViewTemplate(options?: {
   glob?: string;
-  status?: string[];
+  "todo-status"?: string[];
   assigned?: string;
   title?: string;
 }): string {
@@ -94,8 +95,9 @@ export function createTodoViewTemplate(options?: {
   if (options?.glob !== undefined && options.glob !== "") {
     fields["glob"] = options.glob;
   }
-  if (options?.status !== undefined && options.status.length > 0) {
-    fields["status"] = options.status;
+  const todoStatus = options?.["todo-status"];
+  if (todoStatus !== undefined && todoStatus.length > 0) {
+    fields["todo-status"] = todoStatus;
   }
   if (options?.assigned !== undefined && options.assigned !== "") {
     fields["assigned"] = options.assigned;

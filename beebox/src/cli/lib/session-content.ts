@@ -9,7 +9,7 @@ import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { IMAGE_NOT_DISPLAYED } from "../../shared/chat-content-blocks.js";
 import { encodeSessionMediaRef } from "../../shared/session-media.js";
 import { STRIPPED_MEDIA_MARKER } from "./session-oversize.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 /**
  * Content block from a session log entry.
@@ -38,6 +38,11 @@ export interface SessionContentBlock {
    * the history read carrying any of them.
    */
   imageRef?: string;
+  /**
+   * For thinking blocks: the text is a progress update written for the user,
+   * not reasoning (`writesProgressUpdates` in `shared/model-ids.ts`).
+   */
+  progressUpdate?: true;
 }
 
 /** Per-tool input summarizers, keyed on the shared tool vocabulary. */
@@ -52,6 +57,8 @@ const TOOL_INPUT_SUMMARIZERS: Partial<
   Grep: (input) => `${input.pattern} in ${input.path || "."}`,
   TodoWrite: () => "update todos",
   Task: (input) => String(input.description || input.prompt || "").substring(0, 120),
+  WebSearch: (input) => String(input.query || ""),
+  WebFetch: (input) => String(input.url || ""),
 };
 
 /**
@@ -157,6 +164,8 @@ export interface TransformContentOptions {
    * Null for every ordinary line — see {@link ImageBlockContext}.
    */
   mediaRef: { sessionId: string; entryUuid: string } | null;
+  /** The line's model writes progress updates in its thinking blocks. */
+  progressUpdates?: boolean;
 }
 
 /**
@@ -177,6 +186,7 @@ export function transformContent(
   if (!Array.isArray(content)) return [];
 
   const mediaRef = options?.mediaRef ?? null;
+  const progressUpdates = options?.progressUpdates === true;
   // Counts image blocks only, in document order: the ordinal half of a media
   // reference. `session-media-extract.ts` enumerates the same array the same
   // way to find its way back, so the two must not drift.
@@ -210,7 +220,8 @@ export function transformContent(
     }
 
     if (block.type === "thinking") {
-      blocks.push({ type: "thinking", text: String(block.thinking || "") });
+      const text = String(block.thinking || "");
+      blocks.push({ type: "thinking", text, ...(progressUpdates && text.trim() ? { progressUpdate: true as const } : {}) });
       continue;
     }
     if (block.type === "redacted_thinking") {

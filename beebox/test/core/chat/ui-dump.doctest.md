@@ -9,7 +9,7 @@ the closing instruction that teaches it how to use them.
 
 ```ts setup
 import { formatUiDump } from "../../../src/core/chat/ui-dump.js";
-import type { UiScanEntry, UiScanPayload } from "../../../src/shared/ui-scan.js";
+import type { UiScanEntry, UiScanPayload } from "../../../src/shared/ui-scan/core.js";
 
 // The dump prints the scan time in the reader's own timezone ("14:32 local"),
 // so the doctest fixes the zone rather than the expectation. Node re-reads

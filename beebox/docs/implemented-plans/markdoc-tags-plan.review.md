@@ -24,11 +24,11 @@ or to the `{% quote %}` precedent the plan invokes.
   `node_modules/.vite/deps/cardworks.js:25532` (synced from
   `cardworks`) walks **structured fields only** (`walkForRefs(value,
   ...)` over arrays/objects, keys `ref`/`refs`). Body strings are
-  never scanned. Called from `src/core/card-lint.ts:104`. Track 4
+  never scanned. Called from `src/core/card-lint.ts:104` (moved to `beebox/src/core/card-lint/core.ts`). Track 4
   extends this — but the extension lives in cardworks, not in
   beebox. Plan does not say which side of the symlink owns the
   change.
-- **Move-time ref rewrite** at `src/core/commands/move.ts:132` —
+- **Move-time ref rewrite** at `src/core/commands/move.ts:132` (moved to `beebox/src/core/commands/move/command.ts`) —
   cardworks' built-in `loader.move()` rewrites frontmatter refs, and
   `move.ts:209-238` adds a second pass that does a crude **substring
   replace** of the old attach path in every other card's content. The
@@ -157,7 +157,7 @@ exists? clear-or-silent?
 ### `move.ts` body-tag `ref=` rewrite (Track 4)
 - **Failure:** Plan says "Extend `move.ts`'s rewrite pass to update
   body-tag `ref=` attributes too" (`markdoc-tags-plan.md:303-304`).
-  The current pass at `src/core/commands/move.ts:209-238` is a
+  The current pass at `src/core/commands/move.ts:209-238` (moved to `beebox/src/core/commands/move/command.ts`) is a
   substring `replaceAll`. A naive substring of the old card path
   inside a body works for full paths but mis-handles tags whose `ref`
   is a fragment (`#m12`) or a shorter relative form.
@@ -414,7 +414,7 @@ Track 2's direction. Note the tsconfig implication.
 **Citation (plan):** *"Extend `move.ts`'s rewrite pass to update
 body-tag `ref=` attributes too."*
 **Issue:** The current `move.ts` rewrite at
-`src/core/commands/move.ts:225-228` is a substring `replaceAll`. That
+`src/core/commands/move.ts:225-228` (moved to `beebox/src/core/commands/move/command.ts`) is a substring `replaceAll`. That
 works for full path matches but doesn't parse Markdoc — so a
 `ref="old/path#m12"` becomes `ref="new/path#m12"` correctly by
 luck (because the prefix matches), while a `ref="old/path"` that

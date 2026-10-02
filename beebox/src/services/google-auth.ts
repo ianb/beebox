@@ -6,7 +6,7 @@
  */
 
 import type { OAuth2Client } from "google-auth-library";
-import { classifyRefreshFailure } from "../connectors/google-auth-status.js";
+import { classifyRefreshFailure } from "../google/auth-status.js";
 
 class AccessTokenUnavailableError extends Error {
   constructor() {

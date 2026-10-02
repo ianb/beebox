@@ -8,16 +8,15 @@
  *
  * Expanded state ("peek") replaces the list row in place: same component,
  * same location, now rendering the full file viewer + controls to escalate
- * to a companion panel or open as a full page.
+ * to a companion panel.
  */
 
 import { useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import type { FileSummary } from "@core/file-summary";
-import { resolveFileTypeUI } from "../../file-types/registry";
+import { resolveFileTypeUI } from "../../file-type-registry";
 import { cn } from "../../lib/cn";
-import { FileView } from "../FileView";
-import { withBase } from "../../api";
+import { FileView } from "../FileView/view";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { CardMark } from "./CardMark";
 
@@ -35,6 +34,12 @@ interface FileEntryProps {
    * is not shown.
    */
   onPanel?: (summary: FileSummary<unknown>) => void;
+  /**
+   * When given, clicking the title opens the file (a list opens it in the
+   * other workspace pane) instead of previewing it. The peek button still
+   * previews in place.
+   */
+  onOpen?: (summary: FileSummary<unknown>) => void;
   /** Outer-layout classes only (margin, flex-self, sizing, position). */
   className?: string;
 }
@@ -75,14 +80,6 @@ function PanelIcon() {
   );
 }
 
-function PageIcon() {
-  return (
-    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3" />
-    </svg>
-  );
-}
-
 function DefaultMiddle({ data, compact }: { data: FileSummary<unknown>; compact: boolean }) {
   return (
     <div className="min-w-0">
@@ -111,14 +108,12 @@ function DefaultMiddle({ data, compact }: { data: FileSummary<unknown>; compact:
 const rightIconClass = "flex-shrink-0 p-1.5 rounded text-warm-500 hover:text-warm-700 hover:bg-warm-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 function ExpandedControls({
-  summary, boxSlug, onCollapse, onPanel,
+  summary, onCollapse, onPanel,
 }: {
   summary: FileSummary<unknown>;
-  boxSlug: string | undefined;
   onCollapse: () => void;
   onPanel?: (summary: FileSummary<unknown>) => void;
 }) {
-  const pageHref = boxSlug ? withBase(`/${boxSlug}/browse/${summary.path}`) : undefined;
   return (
     <>
       <button
@@ -140,18 +135,6 @@ function ExpandedControls({
         >
           <PanelIcon />
         </button>
-      ) : null}
-      {pageHref ? (
-        <a
-          href={pageHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Open as full page (new tab)"
-          title="Open as full page (new tab)"
-          className={rightIconClass}
-        >
-          <PageIcon />
-        </a>
       ) : null}
     </>
   );
@@ -182,7 +165,7 @@ function TitleSlot({ summary, compact, boxSlug }: { summary: FileSummary<unknown
   );
 }
 
-export function FileEntry({ summary, compact, onPanel, className }: FileEntryProps) {
+export function FileEntry({ summary, compact, onPanel, onOpen, className }: FileEntryProps) {
   compact = compact ?? false;
   const [expanded, setExpanded] = useState(false);
   const { boxSlug } = useParams({ strict: false });
@@ -208,7 +191,6 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
           </button>
           <ExpandedControls
             summary={summary}
-            boxSlug={boxSlug}
             onCollapse={() => setExpanded(false)}
             onPanel={onPanel}
           />
@@ -229,8 +211,8 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
     >
       <button
         type="button"
-        onClick={() => setExpanded(true)}
-        aria-label={`Preview ${summary.title}`}
+        onClick={() => { if (onOpen) onOpen(summary); else setExpanded(true); }}
+        aria-label={onOpen ? `Open ${summary.title}` : `Preview ${summary.title}`}
         className="flex-1 flex items-center min-w-0 py-1.5 px-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
       >
         <TitleSlot summary={summary} compact={compact} boxSlug={boxSlug} />

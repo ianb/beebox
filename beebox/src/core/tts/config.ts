@@ -14,7 +14,7 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
 import { withCardLock } from "../../lib/card-lock.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { TTS_BACKENDS, type TtsBackend } from "../../shared/tts-backends.js";
 
 export interface TtsConfig {

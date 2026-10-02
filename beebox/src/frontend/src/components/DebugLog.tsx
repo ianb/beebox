@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { trpcClient } from "../lib/trpc";
+import { trpcClient } from "../lib/trpc/client";
 import { describeArg } from "../lib/debug-log-format";
 import { CloseButton } from "./ui/CloseButton";
 

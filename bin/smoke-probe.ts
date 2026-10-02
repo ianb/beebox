@@ -10,7 +10,7 @@
  * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
  */
 
-import { isRecord } from "../beebox/src/lib/is-record.js";
+import { isRecord } from "../beebox/src/shared/is-record.js";
 import {
   BoxFailedToStartError,
   CredentialRefusedError,
@@ -27,7 +27,7 @@ import {
  *
  * These are three different bugs and the tier must not blur them: `failed` is
  * the app refusing to boot (the failure this tier exists for, which the router
- * renders as an HTML page — workstreams-app/src/router/router-failed-page.ts `renderFailedPage`); `unauthorized`
+ * renders as an HTML page — workstreams-app/src/router/server/failed-page.ts `renderFailedPage`); `unauthorized`
  * is our own credential missing; `unexpected` is anything else.
  */
 export type ProbeVerdict =

@@ -126,14 +126,14 @@ a nightly increment, far below the cap.
   with its `session`, `contextDir` and `title` (`ChatHuskEntry`, line 113).
   **[rev] This is now the discovery corpus** (Track A), replacing a scan of every
   transcript under `~/.claude/projects/`.
-- `src/webapp/trpc/routers/chat.ts:149-152` — the husk→transcript resolution
+- `src/webapp/trpc/routers/chat.ts:149-152` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`) — the husk→transcript resolution
   already written: `contextDir` picks the cwd, `getSessionLogPath(cwd, session)`
   gives the log. **Reuse** verbatim; extract it so both callers share it.
 - `src/cli/lib/session-entry.ts:17` — every parsed entry carries a `uuid`.
   **Reuse** as the span journal's boundary identity (Track A).
 - `src/lib/file-lock.ts` `acquireLock` / `releaseLock` (lines 275, 317) — the
   sanctioned cross-process lock. **Reuse** around the whole run (Track C).
-- `src/core/agent/index.ts` `createAgent(...).invokeStructured(schema, opts)` —
+- `src/core/agent/index.ts` (moved to `beebox/src/core/agent/invoke/core.ts`) `createAgent(...).invokeStructured(schema, opts)` —
   the "one cheap scoped LLM call with a Zod-validated result" helper. The retro
   observer's use is the template: `src/core/retro/observer.ts:69-76` passes
   `model: "haiku"`, `maxTurns: 4`, `maxBudgetUsd: MAX_BUDGET_USD`. **Reuse.**
@@ -146,11 +146,11 @@ a nightly increment, far below the cap.
   inside this card; the prime retrieval field for search and listings"*, each
   `z.string().optional()`. So `src/schemas/chat.ts:16-22` not listing them is
   correct, not a gap. **Reuse.**
-- `src/schemas/scheduled-script.tsx:48` `ScheduledScriptSchema` + `bbx tick`. Shipped
-  schedules are defined in code — `DEFAULT_SCHEDULES` in `src/core/box/defaults.ts`
+- `src/schemas/scheduled-script.tsx:48` (moved to `beebox/src/schemas/scheduled-script/schema.tsx`) `ScheduledScriptSchema` + `bbx tick`. Shipped
+  schedules are defined in code — `DEFAULT_SCHEDULES` in `src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`)
   (the retro entry ends at line 272), installed per box by `installSchedules`
   (line 282) through `installTemplateFile`. **Reuse**; add one entry.
-- `src/cli/commands/chat.ts:275-282` — `bbx chat` is already a command family.
+- `src/cli/commands/chat.ts:275-282` (moved to `beebox/src/cli/commands/chat/command.ts`) — `bbx chat` is already a command family.
   **Reuse** as the parent: `bbx chat review`, not a new top-level command.
 
 **Modified:**
@@ -179,7 +179,7 @@ a nightly increment, far below the cap.
   session every time it grows. New state file with a span-journal shape. The
   *loading discipline* — missing file starts fresh, corrupt file warns and starts
   fresh (`loadRetroState`, lines 56-82) — is copied.
-- `src/core/retro/discovery.ts` — retro qualifies sessions by "is this a chat, is
+- `src/core/retro/discovery.ts` (moved to `beebox/src/core/retro/discovery/core.ts`) — retro qualifies sessions by "is this a chat, is
   it quiet, is it unsettled" (lines 99-117), including a `<typed>`/`<speech>`-tag
   heuristic to tell chats from job runs. **[rev] Chat review needs none of that:**
   husk existence already answers "is this a web chat", so discovery enumerates
@@ -188,12 +188,12 @@ a nightly increment, far below the cap.
 **`contains` is not a plain string field — the surrounding machinery constrains
 this design.** Found while checking whether an accumulating `contains` was viable:
 
-- `src/core/card-lint.ts:227-228` — *"Soft budget for the `contains` field — one
+- `src/core/card-lint.ts:227-228` (moved to `beebox/src/core/card-lint/core.ts`) — *"Soft budget for the `contains` field — one
   concise sentence, not a summary essay"*, `CONTAINS_MAX_CHARS = 200`. Note it is
   a **`severity: "warning"`** (line 233), not a blocking error — so it documents
   intent but enforces nothing. An accumulating `contains` would warn on every card
   it touched.
-- `src/core/search/query.ts:21-22` — `contains` is embedded and searched with
+- `src/core/search/query.ts:21-22` (moved to `beebox/src/core/search/query/core.ts`) — `contains` is embedded and searched with
   `BOOST = { contains: 3, title: 2 }`, and the hybrid cutoff `SIMILARITY = 0.35`
   was *empirically validated* against real embeddings (lines 24-35: *"query↔target
   `contains` cosines ran 0.467-0.682, off-target median 0.161 / max 0.470"*).
@@ -203,7 +203,7 @@ this design.** Found while checking whether an accumulating `contains` was viabl
   fields that *"never count toward the contains basis"* because they are the
   derived ones. **[rev] The mechanism is narrower than the first draft claimed** —
   see Track B.
-- `src/connectors/preserve-agent-fields.ts:15` — `AGENT_FIELDS = ["contains"]`,
+- `src/connectors/preserve-agent-fields.ts:15` (moved to `beebox/src/preserve-agent-fields.ts`) — `AGENT_FIELDS = ["contains"]`,
   re-injected before a connector sync rebuilds a card. `src/connectors/CLAUDE.md:19`:
   *"Adding a new agent-owned field to a connector-managed card type means adding it
   to that list, not just writing it once and hoping the next sync leaves it alone."*
@@ -217,10 +217,10 @@ this design.** Found while checking whether an accumulating `contains` was viabl
 
 **The bug this plan also closes.** Two session-list codepaths label differently:
 
-- `src/webapp/trpc/routers/chat.ts:162` — husk-based, title-aware:
+- `src/webapp/trpc/routers/chat.ts:162` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`) — husk-based, title-aware:
   `let label = husk.title ?? husk.session.slice(0, 8);`, snippet used only
   *"if (husk.title === undefined)"* (line 163).
-- `src/webapp/trpc/routers/chat-session-procedures.ts:74-80` — history-JSON based,
+- `src/webapp/trpc/routers/chat-session-procedures.ts:74-80` (moved to `beebox/src/webapp/trpc/routers/chat/session-procedures.ts`) — history-JSON based,
   **title-blind**: `let label = sessionId.slice(0, 8);` … `if
   (meta.firstUserSnippet) label = meta.firstUserSnippet;`. It never reads a husk.
 
@@ -296,7 +296,7 @@ and skips sessions whose husk is missing — so the husk list is already exactly
 in-scope corpus, and `listChatHusks` (`src/core/chat/husk.ts:128`) returns it. The
 pass is: enumerate husks → resolve each transcript via the `contextDir` logic at
 `chat.ts:149-152` → skip missing → test quiescence (reuse `QUIESCENCE_MS`,
-`src/core/retro/discovery.ts:23`) → test growth. This deletes the `<typed>`/
+`src/core/retro/discovery.ts:23` (moved to `beebox/src/core/retro/discovery/core.ts`)) → test growth. This deletes the `<typed>`/
 `<speech>` chat-detection heuristic entirely, and with it the risk that
 `getSessionMetadata.userTurns` — which counts *any* non-plumbing user text
 (`session.ts:161-177`), not specifically web-UI turns — is mistaken for a
@@ -367,7 +367,7 @@ Resolving the next span, given a fresh parse:
 write before the journal write and called a crash between them "idempotent". It is
 not: on retry the model receives the *already-extended* account plus the same span
 again, and can duplicate or distort those notes. Retro avoids this by hashing
-evidence and deduping (`src/core/retro/scan.ts:80-86`); chat review needs an
+evidence and deduping (`src/core/retro/scan.ts:80-86` (moved to `beebox/src/core/retro/scan/core.ts`)); chat review needs an
 equivalent. The fix is to make the applied span visible **on the husk**: a
 chat-schema field `review-span` holding the `spanId` last folded in. The pass then
 short-circuits — if the computed `spanId` equals the husk's `review-span`, that
@@ -408,9 +408,9 @@ verifiable.
 type, holding the accumulated detail its one-sentence `contains` was derived from.
 
 **Why this needs to change.** The account needs a home, and `contains` cannot be
-it: `CONTAINS_MAX_CHARS = 200` (`src/core/card-lint.ts:228`) documents it as one
+it: `CONTAINS_MAX_CHARS = 200` (`src/core/card-lint.ts:228` (moved to `beebox/src/core/card-lint/core.ts`)) documents it as one
 sentence, and it is the embedded retrieval field whose scoring
-(`src/core/search/query.ts:24-35`) was fitted against one-sentence text.
+(`src/core/search/query.ts:24-35` (moved to `beebox/src/core/search/query/core.ts`)) was fitted against one-sentence text.
 
 **Scope objection, recorded.** Cross-model review argued this is premature global
 infrastructure — semantics added to every card type, plus search, connectors, docs
@@ -436,7 +436,7 @@ found no camelCase or snake_case key). Type `z.string().optional()`.
    first draft missed this entirely.
 3. `src/core/search/contains-state.ts:40` `BASIS_EXCLUDED_FIELDS` — add
    `"contains-evidence"`, as correct general policy for a derived field.
-4. `src/connectors/preserve-agent-fields.ts:15` `AGENT_FIELDS` — add it, per the
+4. `src/connectors/preserve-agent-fields.ts:15` (moved to `beebox/src/preserve-agent-fields.ts`) `AGENT_FIELDS` — add it, per the
    rule quoted from `src/connectors/CLAUDE.md:19`. Husks are not connector-managed,
    so this does not matter today; it is the field's general contract.
 5. A write primitive that can persist evidence — see below.
@@ -477,7 +477,7 @@ thin CLI-facing wrapper over it, so there stays one write path (principle #8)
 rather than two that can disagree about the sidecar.
 
 **Not searched, not embedded.** `contains-evidence` is deliberately not added to
-`TEXT_PROPERTIES` or `BOOST` (`src/core/search/query.ts:22,43`). The vector half's
+`TEXT_PROPERTIES` or `BOOST` (`src/core/search/query.ts:22 (moved to `beebox/src/core/search/query/core.ts`),43`). The vector half's
 cutoff was validated against one-sentence text; admitting a long accumulating field
 would change both the embedding corpus and the score distribution `SIMILARITY = 0.35`
 was fitted to. Open question rather than closed, since it is a plausible want.
@@ -691,7 +691,7 @@ route doctest asserting a husk title beats a first-message snippet in
 
 **What.** Ship a default schedule so boxes can run the review overnight.
 
-**Direction.** One new entry in `DEFAULT_SCHEDULES` (`src/core/box/defaults.ts`),
+**Direction.** One new entry in `DEFAULT_SCHEDULES` (`src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`)),
 following the shipped `process-retrospective` entry: an overnight `cron`, a
 `notBefore` guard, `lockGroup: "retro"` (both passes walk transcripts; no reason to
 run them concurrently), `runs: "bbx chat review run"`, and `enabled: false` so it is

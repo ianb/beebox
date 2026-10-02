@@ -9,7 +9,7 @@ import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js"
 import { userIdentity } from "../../../cli/lib/session-entry.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { mapV2Path } from "../../migrations/one-root-mapping.js";
 
 const threadReadSchema = z.object({
@@ -44,8 +44,20 @@ export interface CodexThreadMetadata {
   updatedAt: Date;
 }
 
-/** Include SDK `exec` sessions and the interactive sources used by older Bee Box chats. */
-export function codexHistoryListParams(cwds: string[], cursor: string | null): Record<string, unknown> {
+/**
+ * Include SDK `exec` sessions and the interactive sources used by older Bee Box chats.
+ *
+ * `repair` lets the app-server backfill its thread index by scanning rollout
+ * JSONL files. That scan reads every Codex session on the host, not only this
+ * box's (seconds on a dev machine with gigabytes of sessions), so listings read
+ * the index alone and repair only for threads the index is missing.
+ */
+export function codexHistoryListParams(options: {
+  cwds: string[];
+  cursor: string | null;
+  repair: boolean;
+}): Record<string, unknown> {
+  const { cwds, cursor, repair } = options;
   return {
     cursor,
     limit: 100,
@@ -53,7 +65,7 @@ export function codexHistoryListParams(cwds: string[], cursor: string | null): R
     sortDirection: "desc",
     cwd: cwds,
     sourceKinds: ["cli", "vscode", "exec", "appServer"],
-    useStateDbOnly: false,
+    useStateDbOnly: !repair,
   };
 }
 
@@ -301,16 +313,45 @@ export async function readCodexSessionUpdatedAt(boxRoot: string, sessionId: stri
   return new Date(threadReadSchema.parse(raw).thread.updatedAt * 1000);
 }
 
-/** List native metadata in one paginated RPC sequence for chat-picker rendering. */
+/**
+ * Thread ids a repair scan has already looked for, per box. A thread the scan
+ * could not find stays missing (its husk lists as dead), so looking again on
+ * every listing would put the full scan back on the hot path.
+ */
+const repairAttempted = new Map<string, Set<string>>();
+
+/**
+ * List native metadata from Codex's thread index for chat-picker rendering.
+ *
+ * `expectedIds` are the threads the caller has husks for. When the index lacks
+ * one that no earlier repair already looked for, the listing runs once more
+ * with the rollout repair scan, and the two answers are merged.
+ */
 export async function listCodexThreadMetadata(
   boxRoot: string,
-  cwds: string[],
+  options: { cwds: string[]; expectedIds: string[] },
+): Promise<Map<string, CodexThreadMetadata>> {
+  const { cwds, expectedIds } = options;
+  const indexed = await listThreadPages(boxRoot, { cwds, repair: false });
+  const attempted = repairAttempted.get(boxRoot) ?? new Set<string>();
+  const unrepaired = expectedIds.filter((id) => !indexed.has(id) && !attempted.has(id));
+  if (unrepaired.length === 0) return indexed;
+  const repaired = await listThreadPages(boxRoot, { cwds, repair: true });
+  for (const id of unrepaired) attempted.add(id);
+  repairAttempted.set(boxRoot, attempted);
+  // Merged over the index: the scan can miss a thread the index already has.
+  return new Map([...indexed, ...repaired]);
+}
+
+async function listThreadPages(
+  boxRoot: string,
+  options: { cwds: string[]; repair: boolean },
 ): Promise<Map<string, CodexThreadMetadata>> {
   return withSharedServer(boxRoot, async (server) => {
     const threads = new Map<string, CodexThreadMetadata>();
     let cursor: string | null = null;
     do {
-      const raw = await server.listThreads(codexHistoryListParams(cwds, cursor));
+      const raw = await server.listThreads(codexHistoryListParams({ ...options, cursor }));
       const page = threadListSchema.parse(raw);
       for (const thread of page.data) {
         threads.set(thread.id, {

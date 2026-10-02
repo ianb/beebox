@@ -2,9 +2,10 @@
 
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { EventEmitter } from "node:events";
-import * as readline from "node:readline";
 import { z } from "zod";
 import { codexBinaryPath } from "./codex-binary.js";
+import { jsonlLines } from "../lib/jsonl-lines.js";
+import { toError } from "../shared/error-guards.js";
 
 const rpcResponseSchema = z.looseObject({
   id: z.number(),
@@ -88,7 +89,7 @@ export class CodexHistoryServer {
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child.stderr.on("data", (chunk: Buffer) => { this.stderr += chunk.toString(); });
-    readline.createInterface({ input: this.child.stdout }).on("line", (line) => { this.handleLine(line); });
+    this.readStdout().catch((error: unknown) => { this.failPending(toError(error)); });
     this.child.on("error", (error) => {
       this.failPending(new CodexHistoryServerExitError({ detail: error.message }));
     });
@@ -145,6 +146,11 @@ export class CodexHistoryServer {
       this.pending.set(id, { operation, resolve, reject, timer });
       this.child.stdin.write(`${JSON.stringify({ id, method: operation, params })}\n`);
     });
+  }
+
+  /** Feed each stdout line to {@link handleLine}; a read failure fails every pending request. */
+  private async readStdout(): Promise<void> {
+    for await (const line of jsonlLines(this.child.stdout)) this.handleLine(line);
   }
 
   private handleLine(line: string): void {

@@ -5,7 +5,7 @@
  */
 
 import { registerSerializer } from "agent-doctest/check";
-import { isRecord } from "../../src/lib/is-record.js";
+import { isRecord } from "../../src/shared/is-record.js";
 
 /**
  * Serialize Fastify inject() response as "statusCode\n{json body}".

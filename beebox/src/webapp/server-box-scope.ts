@@ -10,22 +10,22 @@ import { secretsStoreIsIsolated } from "../core/secrets/store.js";
 import type { FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { fastifyTRPCPlugin, type CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
-import { registerApiRoutes } from "./routes/api.js";
+import { registerApiRoutes } from "./routes/api/register/core.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerHistoryRoutes } from "./routes/history.js";
-import { registerChatRoutes } from "./routes/chat.js";
+import { registerChatRoutes } from "./routes/chat/register.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
 import { registerBoxIdentityAssetRoutes } from "./routes/box-identity-assets.js";
-import { registerCaptureRoutes } from "./routes/capture.js";
+import { registerCaptureRoutes } from "./routes/capture/register.js";
 import { registerSecretsRoutes } from "./routes/secrets.js";
-import { registerBulkUploadRoutes } from "./routes/bulk-upload.js";
+import { registerBulkUploadRoutes } from "./routes/bulk-upload/register.js";
 import { registerCardSubmissionRoutes } from "./routes/card-submission.js";
-import { registerScanUploadRoutes } from "./routes/scan-upload.js";
+import { registerScanUploadRoutes } from "./routes/scan-upload/register.js";
 import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
-import { appRouter } from "./trpc/router.js";
+import { appRouter } from "./trpc/routers.js";
 import type { TrpcActor, TrpcContext } from "./trpc/context.js";
 import {
   isHubMode,
@@ -39,16 +39,16 @@ import { resolveMobileRequestAuth } from "../core/mobile/request-auth.js";
 import { renewMobileSessionCookie } from "./mobile-cookie.js";
 import { canAccessBox } from "./box-access.js";
 import { loginRedirect } from "./base-prefix.js";
-import type { EventBus } from "../core/event-bus.js";
+import type { EventBus } from "../core/event-bus/core.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
 import type { BoxSpec, InternalServerOptions } from "./server-types.js";
-import { assertNever, invariant } from "../lib/invariant.js";
+import { assertNever, invariant } from "../shared/invariant.js";
 import { AuthStoreUnavailableAtContextError } from "./local-users-errors.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
-/** Exported for the hub (`src/hub/hub-server.ts`), which needs the same
+/** Exported for the hub (`src/hub/server/core.ts`), which needs the same
  *  HTML-navigation-vs-API distinction when a proxied request is
  *  unauthenticated: API/WS gets 401, HTML navigation gets a login redirect. */
 export function isApiUrl(url: string): boolean {
@@ -365,7 +365,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
  * webhook scope under `/webhook/<slug>` (outside the auth wall).
  */
 export async function registerBox(server: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
-  const { box, eventBus } = deps;
+  const { box, eventBus, options } = deps;
 
   await server.register(async (instance) => {
     await registerBoxRoutes(instance, deps);
@@ -379,7 +379,7 @@ export async function registerBox(server: FastifyInstance, deps: BoxScopeDeps): 
   // scan-token store — which is what confines that credential to these two
   // routes. Do not fold this back into registerBoxRoutes.
   await server.register(async (instance) => {
-    await registerScanUploadRoutes({ server: instance, boxRoot: box.boxRoot });
+    await registerScanUploadRoutes({ server: instance, boxRoot: box.boxRoot, promoteRun: options.scanPromoteRun });
   }, { prefix: `/${box.slug}` });
 
   // Register webhooks at /webhook/<slug>/ — outside auth so external

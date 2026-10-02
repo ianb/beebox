@@ -122,9 +122,9 @@ instead of piling up (A, D).
   `priorityTones`. Nothing sorts, delivers, or closes by it.
 - **Per-schedule alert list only.** `ScheduledWorkstreams.tsx:77` renders
   `<ScheduleAlerts name={row.name} />` per schedule. Route
-  `/alerts/$name` (`workstreams-app/src/frontend/router.tsx:31`). The server
+  `/alerts/$name` (`workstreams-app/src/frontend/router.tsx:31` (moved to `workstreams-app/src/frontend/main/router.tsx`)). The server
   already reads every schedule when `workstream` is null
-  (`workstreams-app/src/server/schedules-command.ts:123`,
+  (`workstreams-app/src/server/schedules-command.ts:123` (moved to `workstreams-app/src/server/main/schedules-command.ts`),
   *`["alerts", "--json"]`*). Reuse that path; the page, route and tRPC input
   are new (Track C).
 - **full-suite suppression.** `schedules/full-suite/trust.ts:144`

@@ -7,19 +7,19 @@ import {
   SystemThemeChoiceSchema,
   validateSystemThemeChoice,
   type ThemeChoice,
-} from "../../../shared/card-theme.js";
+} from "../../../shared/card-theme/core.js";
 import { loadPresentationConfig } from "../../../core/box/presentation.js";
 import { resolveSystemTheme } from "../../../core/system-theme.js";
 import { boxRelativePathSchema } from "../../../core/landmark/nearest.js";
 import { updateBoxSystemTheme } from "../../box-config-write.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
-import { splitCardContent } from "../../../cards/index.js";
+import { splitCardContent } from "../../../exports/cards.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
-import { isRecord } from "../../../lib/is-record.js";
-import { createCardSchemaMap } from "../../../schemas/registry.js";
-import { ownerProcedure, publicProcedure, router } from "../trpc.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { isRecord } from "../../../shared/is-record.js";
+import { createCardSchemaMap } from "../../../schemas.js";
+import { ownerProcedure, publicProcedure, router } from "../procedures.js";
 
 const systemThemeInput = z.discriminatedUnion("scope", [
   z.object({ scope: z.literal("box"), theme: SystemThemeChoiceSchema.nullable() }),

@@ -30,9 +30,9 @@ commits carry it in any local box, so that path is covered by fixture only.
 **User-visible consequence.** In the timeline, a procedure or trick commit looks like a hand edit — no trigger badge, nothing in the aria-label — which is the exact distinction the History page exists to make. The Workflow filter is populated from history old enough to predate the rename, so it lists stale run names and silently cannot select any procedure run made since; a boxholder who wants "show me what that procedure run changed" has no filter for it. In the detail pane the procedure trailers appear only as leftover text in the commit body, because `stripTrailers` (`CommitDetail-commit.tsx:33`) strips `Session|Phase|Triggered-By|Feedback-Source|Agent|Items-Processed` and not `Procedure`/`Step`/`Run-By`.
 
 **Files involved.**
-- Readers: `beebox/src/frontend/src/components/history/CommitTimeline.tsx`, `CommitDetail-commit.tsx`, `HistoryFilterBar.tsx`, `history-filter.ts`, `HistoryBrowser.tsx`, `HistoryViewCard.tsx`
-- Server/facets: `beebox/src/lib/git-log.ts` (`getTrailerFacets`), `beebox/src/webapp/trpc/routers/history.ts` (`buildGreps`)
-- Writers: `beebox/src/core/procedure/engine.ts`, `engine-step.ts`, `engine-phase.ts`, `engine-orchestrate.ts`, `beebox/src/cli/commands/trick.ts`, `tick-helpers.ts`, `wakeup-steps.ts`, `beebox/src/connectors/*`
+- Readers: `beebox/src/frontend/src/components/history/CommitTimeline.tsx` (moved to `beebox/src/frontend/src/components/history/HistoryViewCard/CommitTimeline.tsx`), `CommitDetail-commit.tsx`, `HistoryFilterBar.tsx`, `history-filter.ts`, `HistoryBrowser.tsx`, `HistoryViewCard.tsx`
+- Server/facets: `beebox/src/lib/git-log.ts` (moved to `beebox/src/lib/git/log.ts`) (`getTrailerFacets`), `beebox/src/webapp/trpc/routers/history.ts` (`buildGreps`)
+- Writers: `beebox/src/core/procedure/engine.ts` (moved to `beebox/src/core/procedure/engine/core.ts`), `engine-step.ts`, `engine-phase.ts`, `engine-orchestrate.ts`, `beebox/src/cli/commands/trick.ts`, `tick-helpers.ts`, `wakeup-steps.ts`, `beebox/src/connectors/*`
 
 **How this was established.** Grepped every trailer writer in `beebox/src` and every trailer reader in `beebox/src/frontend/src`. Then counted trailers in the worktree's test box (`~/src/box-worktrees/user-stories-refresh/test1`): `git log --format='%(trailers:only,unfold)'` yields 1857 `Triggered-By`, 104 `Workflow`, 54 `Procedure`, 97 `Step`, 0 `Run-By`; every `Workflow:` commit has a `[workflow] …` subject (pre-rename) while current runs subject as `[procedure] …` and carry `Procedure:`. An independent browser pass over `/history` in the same box confirmed the working half (rows badged "triggered by bbx wakeup", session chip filtering to a run) and noted that rows without a `Triggered-By` — including procedure commits — show no badge at all.
 
@@ -59,8 +59,8 @@ closed issues from the same 2026-08-21 audit, whose fixes do not touch trailers.
 
 ## Updating the user-story catalog
 
-This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../../beebox/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
-flagged ❌ in [the user-story catalog](../../../beebox/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
+This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../../beebox/docs/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../../beebox/docs/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
 actually do, where every claim is checked against the source.
 
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a
@@ -81,4 +81,4 @@ pnpm exec tsx beebox/user-stories/pipeline/render.ts \
 The recheck is adversarial by design: it will not mark the story accurate just because
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
-[the pipeline README](../../../beebox/user-stories/README.md).
+[the pipeline README](../../../beebox/docs/user-stories/README.md).

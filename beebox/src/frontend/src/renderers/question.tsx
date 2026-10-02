@@ -5,8 +5,9 @@
  */
 
 import { QuestionCardView } from "../components/QuestionCardView";
-import { registerFileType } from "./index";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "question" }, {
+export const questionRenderer: RendererEntry = {
+  selector: { type: "question" },
   renderer: { name: "Question", Component: QuestionCardView, priority: 100 },
-});
+};

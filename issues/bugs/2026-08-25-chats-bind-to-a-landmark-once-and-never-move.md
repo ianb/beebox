@@ -12,7 +12,7 @@ priority: backlog
 
 ## Recovery assessment (2026-09-21)
 
-The binding mechanism remains: `beebox/src/webapp/trpc/routers/chat.ts:292-312`
+The binding mechanism remains: `beebox/src/webapp/trpc/routers/chat/router.ts:292-312`
 groups by exact `contextDir`; `core/chat/session/history.ts:237` fills only an
 undefined binding, and line 340 matches exact bindings. No fresh browser walk
 or rebind experiment was performed. No exact queue duplicate was found.
@@ -36,7 +36,7 @@ conversation sat under the generic **Box** landmark.
 > place, or whether it matters."
 
 **Mechanism, verified:** membership is exact-string equality between the chat's
-`contextDir` and the landmark's dir (`src/webapp/trpc/routers/chat.ts:227-242`)
+`contextDir` and the landmark's dir (`src/webapp/trpc/routers/chat.ts:227-242` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`))
 — no prefix, no roll-up. `contextDir` is chosen at creation from where the chat
 was started (box root → `""`) and written once; `appendHistory` only fills it
 when undefined, `""` is a real binding, and no rebind path exists. Structurally

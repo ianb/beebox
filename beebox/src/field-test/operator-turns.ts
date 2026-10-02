@@ -25,9 +25,9 @@
  */
 
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { ChatBackendRun } from "../services/claude-chat.js";
-import { startAwakeTimeout, type AwakeTimeout } from "../lib/awake-timeout.js";
-import { errorMessage } from "../lib/error-guards.js";
+import type { ChatBackendRun } from "../services/claude-chat/core.js";
+import { startAwakeTimeout, type AwakeTimeout } from "../shared/awake-timeout.js";
+import { errorMessage } from "../shared/error-guards.js";
 
 export type OperatorTurnStatus = "completed" | "turn-capped" | "timed-out" | "error";
 

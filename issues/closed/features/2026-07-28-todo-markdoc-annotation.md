@@ -35,7 +35,7 @@ Call the vet about the prescription refill
 
 ## Where this fits (precedent already exists)
 
-The shared Markdoc vocabulary lives in `src/shared/markdoc-config.ts` — one
+The shared Markdoc vocabulary lives in `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`) — one
 config used by the frontend renderer, `bbx validate`'s body-ref walker, and the
 dev-doc renderer, so **adding a tag there makes it universal by construction**
 (available in every card body + docs). Emission is in

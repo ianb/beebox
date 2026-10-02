@@ -18,7 +18,7 @@
  * tRPC calls, event stream and sleep-immune budget.
  */
 
-import type { RouterOutput } from "../trpc";
+import type { RouterOutput } from "../trpc/client";
 
 type VoiceStatus = RouterOutput["voiceRecording"]["status"];
 type ClaimOutcome = RouterOutput["voiceRecording"]["claim"];

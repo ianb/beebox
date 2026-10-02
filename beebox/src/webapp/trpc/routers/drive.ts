@@ -15,22 +15,22 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc.js";
-import { driveServiceAvailable, resolveDriveService } from "../../../connectors/google-access.js";
+import { router, publicProcedure } from "../procedures.js";
+import { driveServiceAvailable, resolveDriveService } from "../../../google/access.js";
 import { googleService } from "../google-service.js";
-import type { GoogleDriveService } from "../../../services/google-drive.js";
-import { addDriveFile } from "../../../connectors/drive-add-file.js";
-import { inspectDriveItem } from "../../../connectors/drive-inspect.js";
-import { loadDriveConfig } from "../../../connectors/drive-config.js";
-import { listFolderMounts } from "../../../connectors/drive-mount-list.js";
-import { DriveMountError } from "../../../connectors/drive-mount-errors.js";
-import { syncFolderMount } from "../../../connectors/drive-mount-sync.js";
+import type { GoogleDriveService } from "../../../services/google-drive/core.js";
+import { addDriveFile } from "../../../connectors/google-drive/add-file.js";
+import { inspectDriveItem } from "../../../connectors/google-drive/inspect.js";
+import { loadDriveConfig } from "../../../connectors/google-drive/config.js";
+import { listFolderMounts } from "../../../connectors/google-drive/mount-list.js";
+import { DriveMountError } from "../../../connectors/google-drive/mount-errors.js";
+import { syncFolderMount } from "../../../connectors/google-drive/mount-sync.js";
 import {
   linkDriveItem,
   mountDriveFolder,
   requireDriveId,
   unmountDriveFolder,
-} from "../../../connectors/drive-mounts.js";
+} from "../../../connectors/google-drive/mounts/core.js";
 
 /** A tRPC context's box root and injected services — all these procedures need. */
 interface DriveCtx {

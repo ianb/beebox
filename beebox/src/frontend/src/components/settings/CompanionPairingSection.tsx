@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import qrcode from "qrcode-generator";
 import { getApiBase } from "../../api";
 import { useBoxName } from "../../hooks/useBoxName";
-import { trpc, type RouterOutput } from "../../lib/trpc";
+import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";

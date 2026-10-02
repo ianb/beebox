@@ -15,7 +15,7 @@
 import { env } from "cloudflare:test";
 import { assert, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { handle, type WorkerDeps } from "../src/index";
+import { handle, type WorkerDeps } from "../src/worker";
 import type { Env } from "../src/env";
 import type { Jwk } from "../src/access";
 

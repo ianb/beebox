@@ -25,9 +25,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { withFileLock } from "../../lib/file-lock.js";
-import { err, ok, type Result } from "../../lib/result.js";
+import { err, ok, type Result } from "../../shared/result.js";
 import { SecretStoreAccessError } from "./errors.js";
 
 /** How long a mutation waits for a contending writer before giving up. */
@@ -107,9 +107,25 @@ const cloudflarePublishBindingSchema = z.object({
   bucketName: z.string().min(1),
   workerName: z.string().min(1),
   hostHandle: z.string().min(1),
+  /** Exact Worker Custom Domain assigned by Admin; absent for workers.dev-only sites. */
+  customHostname: z.string().min(1).optional(),
+  customHostnameStatus: z.enum(["pending", "attached"]).optional(),
   createdAt: z.string().datetime({ offset: true }),
 });
 export type CloudflarePublishBindingRecord = z.infer<typeof cloudflarePublishBindingSchema>;
+
+/** One immutable shared publishing origin per box and Cloudflare connection. */
+const cloudflarePublishBoxHostSchema = z.object({
+  connectionName: z.string().min(1),
+  accountId: z.string().regex(/^[\da-f]{32}$/i),
+  bucketName: z.string().min(1),
+  workerName: z.string().min(1),
+  hostHandle: z.string().min(1),
+  hostname: z.string().min(1),
+  status: z.enum(["pending", "attached"]),
+  createdAt: z.string().datetime({ offset: true }),
+});
+export type CloudflarePublishBoxHostRecord = z.infer<typeof cloudflarePublishBoxHostSchema>;
 
 const secretStoreSchema = z.object({
   secrets: z.record(z.string(), secretEntrySchema),
@@ -118,6 +134,8 @@ const secretStoreSchema = z.object({
   cloudflarePublishConnections: z.record(z.string(), cloudflarePublishConnectionSchema).optional(),
   /** Keyed globally by PubId so one box cannot claim another box's publication. */
   cloudflarePublishBindings: z.record(z.string(), cloudflarePublishBindingSchema).optional(),
+  /** Optional for compatibility with machine stores written before shared hosts. */
+  cloudflarePublishBoxHosts: z.record(z.string(), cloudflarePublishBoxHostSchema).optional(),
 });
 export type SecretStoreData = z.infer<typeof secretStoreSchema>;
 

@@ -15,8 +15,8 @@ import type { CardSchema, CardSummaryBase, CardSummaryParts } from "../cards/sch
 import { cardFields, formatZodIssues } from "./card-io.js";
 import { type FileLoader, type FileSummary, type LoaderInput, titleFromFilename } from "./file-summary.js";
 import { readCardSymbol } from "./card-symbol.js";
-import { isRecord } from "../lib/is-record.js";
-import { validateThemeChoice } from "../shared/card-theme.js";
+import { isRecord } from "../shared/is-record.js";
+import { validateThemeChoice } from "../shared/card-theme/core.js";
 
 interface PathRegistration {
   match: (path: string) => boolean;
@@ -41,10 +41,7 @@ export function registerPathLoader<T>(
  * or the filename, plus the global `contains:` and `symbol:` fields.
  */
 function buildBase(input: LoaderInput): CardSummaryBase {
-  const declared = input.fields?.["title"];
-  const title = typeof declared === "string" && declared.trim() !== ""
-    ? declared.trim()
-    : titleFromFilename(input.path);
+  const title = declaredTitle(input) ?? titleFromFilename(input.path);
   let base: CardSummaryBase = { title };
   const contains = input.fields?.["contains"];
   if (typeof contains === "string" && contains !== "") {
@@ -56,6 +53,12 @@ function buildBase(input: LoaderInput): CardSummaryBase {
     if (symbol !== null) base = { ...base, symbol };
   }
   return base;
+}
+
+/** The card's own non-empty `title:`, trimmed, or null. */
+function declaredTitle(input: LoaderInput): string | null {
+  const declared = input.fields?.["title"];
+  return typeof declared === "string" && declared.trim() !== "" ? declared.trim() : null;
 }
 
 /**
@@ -93,9 +96,9 @@ function cardParts(
   const parsed = isRecord(check.data) ? { ...fields, ...check.data } : fields;
   try {
     const parts = schema.summarize(cardFields({ schema, fields: parsed }, schema), base);
-    // An empty title would render a blank row; the base title always says
-    // something, so it stands in.
-    if (parts.title.trim() === "") return { ...parts, title: base.title };
+    // A title the card declares always wins over one the type derives, and
+    // an empty title would render a blank row; the base title covers both.
+    if (declaredTitle(input) !== null || parts.title.trim() === "") return { ...parts, title: base.title };
     return parts;
   } catch (e) {
     console.warn(`summarize() for card type "${type}" failed on ${input.path}; using the base summary:`, e);
@@ -154,6 +157,15 @@ export function summarize(
   if (parts.detail !== undefined) out = { ...out, detail: parts.detail };
   if (parts.attrs !== undefined) out = { ...out, attrs: parts.attrs };
   return out;
+}
+
+/**
+ * A card's display title: its `title:`, else what its type derives from its
+ * fields (`summarize`), else its filename. Listings and search both use this,
+ * so a card is found under the same title it is listed under.
+ */
+export function cardTitle(input: LoaderInput, schema: CardSchema): string {
+  return cardParts(input, { base: buildBase(input), cardSchemas: new Map([[schema.type, schema]]) }).title;
 }
 
 /**

@@ -75,7 +75,7 @@ while producing nothing stays invisible.
 | D — growth: drop level findings, watch-limit check | ~140 (about half deletions) | ~120 |
 | **Total** | **~670** | **~580** |
 
-Authored docs about 60 lines (`docs/connectors.md`, `docs/health-checks.md`).
+Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
 No generated output. About 1,300 changed lines, under the 2,000-line BIG
 CHANGE bar.
 
@@ -106,17 +106,17 @@ only part of the cluster with no workaround today.
 - **Real-box work: nothing public unvetted** (memory
   `feedback_box_work_nothing_public_unvetted`). Fixtures and doctests use
   invented connector histories. Nothing from production boxes enters them.
-- **Precedent:** `src/core/schedule/google-auth-alert.ts:1-19`, *"Alert once
+- **Precedent:** `src/core/schedule/google-auth-alert.ts:1-19` (moved to `beebox/src/core/schedule/scheduler/google-auth-alert.ts`), *"Alert once
   per breakage. The latch stores the `needsReauthSince` stamp it alerted for,
   so a repaired-then-broken-again grant alerts again while a grant that stays
   broken stays quiet."* This plan copies that shape.
 
 ## What already exists
 
-- **Sync result.** `src/connectors/index.ts:57` `SyncResult { success,
+- **Sync result.** `src/connectors/index.ts:57` (moved to `beebox/src/connector.ts`) `SyncResult { success,
   created, updated, skipped?, pushed?, jobs?, procedures?, error? }`. Reuse.
   `created` alone is **not** the "new item" count. For Gmail it holds new
-  thread cards (`src/connectors/gmail-threads.ts:243`, *"if (location.isNew)
+  thread cards (`src/connectors/gmail-threads.ts:243` (moved to `beebox/src/connectors/gmail/threads.ts`), *"if (location.isNew)
   opts.result.created.push(cardRelPath)"*) **and** every new message file,
   including messages added to already-tracked threads (`:233`,
   *"opts.result.created.push(...written.paths)"*). Those message files live in
@@ -124,35 +124,35 @@ only part of the cluster with no workaround today.
   replies on tracked threads hide the anchor incident. The plan therefore
   counts **new items** = `created` paths with no `.attach/` segment, that is,
   new top-level cards. This uses the card format's attachment-scope rule
-  (`docs/cards-as-markdown.md`), not per-connector knowledge. For Telegram
-  `created` holds new chats only (`src/connectors/telegram.ts:215`, *"if
+  (`docs/cards/format.md`), not per-connector knowledge. For Telegram
+  `created` holds new chats only (`src/connectors/telegram.ts:215` (moved to `beebox/src/connectors/telegram/connector.ts`), *"if
   (result.newThread) created.push(...)"*), so Telegram will rarely qualify as
   a steady producer. That means no false alarms for Telegram, not a wrong
   alarm.
-- **Four sync call sites.** `src/cli/commands/wakeup-connectors.ts:121`,
+- **Four sync call sites.** `src/cli/commands/wakeup-connectors.ts:121` (moved to `beebox/src/cli/commands/wakeup/connectors.ts`),
   `src/cli/commands/finalize.ts:86`, `src/core/commands/connector-sync.ts:65`,
-  `src/cli/commands/drive.ts:86`. Each calls `connector.sync()` directly.
+  `src/cli/commands/drive.ts:86` (moved to `beebox/src/cli/commands/drive/command.ts`). Each calls `connector.sync()` directly.
   Rebuild: route all four through one `syncConnector()` that records activity.
 - **Nothing records per-run results.** `wakeup-outcome.ts` emits a
   `[wakeup-outcome]` line only when `BBX_WAKEUP_OUTCOME=1`
-  (`src/cli/commands/wakeup-outcome.ts:32`); nothing persists it. Commits do
-  not separate new items from refreshes (`src/connectors/gmail-commit.ts:23`,
+  (`src/cli/commands/wakeup-outcome.ts:32` (moved to `beebox/src/cli/wakeup-outcome.ts`)); nothing persists it. Commits do
+  not separate new items from refreshes (`src/connectors/gmail-commit.ts:23` (moved to `beebox/src/connectors/gmail/commit.ts`),
   *"Pull ${notes.length} Gmail thread…"*). Searched for `lastSync`,
   `lastProduced`, `connectorRuns`: only Drive's per-card `last-sync` stamp
-  (`src/connectors/drive-card-stamp.ts:58`), which is card metadata, not run
+  (`src/connectors/drive-card-stamp.ts:58` (moved to `beebox/src/connectors/google-drive/card-stamp.ts`)), which is card metadata, not run
   history.
-- **Transient connector state.** `src/connectors/transient-state.ts:24`
+- **Transient connector state.** `src/connectors/transient-state.ts:24` (moved to `beebox/src/transient-state.ts`)
   `transientStatePath` → `_bookkeeping/connectors/<name>.state.json`,
   gitignored, fails closed on corruption (`:37-49`). Reuse for the activity
   record and the latch.
-- **Episode-latched alerts.** `src/core/schedule/google-auth-alert.ts:59-120`
+- **Episode-latched alerts.** `src/core/schedule/google-auth-alert.ts:59-120` (moved to `beebox/src/core/schedule/scheduler/google-auth-alert.ts`)
   and `health-alert.ts:62-106`, called after each scheduler tick
-  (`src/core/schedule/scheduler.ts:274`, `:297`), each in its own try/catch.
+  (`src/core/schedule/scheduler.ts:274` (moved to `beebox/src/core/schedule/scheduler/core.ts`), `:297`), each in its own try/catch.
   Reuse the pattern; add a third call beside them.
 - **Notification.** `src/core/notify-boxholder.ts:38` `notifyChannels`,
   `:69` `notifyBoxholder` (durable per-channel output cards, `deliver: true`).
   Reuse.
-- **Dashboard actions.** `src/webapp/trpc/routers/health.ts:47-53`
+- **Dashboard actions.** `src/webapp/trpc/routers/health.ts:47-53` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)
   `HealthCheck.actions?: Array<"acknowledge-box-growth" |
   "expect-box-growth-rates">`, rendered as buttons in
   `src/frontend/src/components/dashboard/HealthWarnings.tsx:47-60`, backed by
@@ -160,7 +160,7 @@ only part of the cluster with no workaround today.
 - **Box timezone.** `src/core/box/config.ts:155` `loadBoxTimezone`. Reuse for
   the day boundary. Test time comes from `getBoxTime` (`src/lib/time.ts`),
   which honours stubs.
-- **Draft errors dropped.** `src/connectors/gmail.ts:249-251`: *"const drafts
+- **Draft errors dropped.** `src/connectors/gmail.ts:249-251` (moved to `beebox/src/connectors/gmail/connector.ts`): *"const drafts
   = await uploadPendingDrafts(…); if (drafts.updated.length === 0) return;"*.
   `drafts.errors` is filled at `gmail-drafts.ts:64-69` and never read.
 - **Outbound drafts re-triaged.** `gmail-drafts.ts:11-13` states the intent:
@@ -305,7 +305,7 @@ for nothing external.
   starts, and drops it when the verdict is healthy or unwatched.
 
   - `checkConnectorActivityAndAlert(boxRoot, { now, tg, push })` in
-    `src/core/schedule/connector-activity-alert.ts`, called from
+    `src/core/schedule/connector-activity-alert.ts` (moved to `beebox/src/core/schedule/scheduler/connector-activity-alert.ts`), called from
     the scheduler after the Google auth alert. The three per-tick alerts
     (task health, Google auth, connector activity) moved from three
     copy-pasted try/catch blocks in `scheduler.ts` into one table in
@@ -315,7 +315,7 @@ for nothing external.
     `severity: "alert"`, body naming each connector and its verdict, with the
     dashboard URL.
   - `connectorActivityHealthChecks(boxRoot, { now })` in
-    `src/webapp/trpc/routers/health-connectors.ts`: one `warning` per
+    `src/webapp/trpc/routers/health-connectors.ts` (moved to `beebox/src/webapp/trpc/routers/health/checks/connectors.ts`): one `warning` per
     connector with an open, undismissed episode, named
     `connector-activity:<connector>`, `actions:
     ["dismiss-connector-episode"]`. A damaged record is one
@@ -520,7 +520,7 @@ No new test tier.
 4. Track C: verdict doctest and function, then alert and scheduler hook, then
    health check, mutation and button.
 5. Docs: `docs/connectors.md` (activity record and verdict),
-   `docs/health-checks.md` (two new checks, growth change). File the two
+   `docs/server/health-checks.md` (two new checks, growth change). File the two
    follow-up issues.
 
 ## Rollout shape

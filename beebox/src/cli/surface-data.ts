@@ -18,7 +18,7 @@
  *
  * No `Command` objects here. `surface-build.ts` is the only module that maps a
  * name to a registration, so a test can import this table without loading the
- * CLI (`test/cli/surface.doctest.md`).
+ * CLI (`test/cli/entry.surface.doctest.md`).
  */
 
 /** Who can invoke a verb: the box agent, or only a person or a unit file. */
@@ -69,13 +69,14 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "pdf", audience: "agent", smoke: { skip: "needs an existing pdf card to re-extract" } },
   { name: "relink", audience: "agent", smoke: MUTATES },
   { name: "migrate-view-links", audience: "agent", smoke: MUTATES },
+  { name: "migrate-fields", audience: "agent", smoke: MUTATES },
 
   // ---- Questions and jobs ----------------------------------------------
   { name: "answer", audience: "agent", smoke: MUTATES },
   { name: "dismiss", audience: "agent", smoke: MUTATES },
   { name: "finish", audience: "agent", smoke: { skip: "deletes the job card it is given" } },
   { name: "intake", audience: "agent", smoke: MUTATES },
-  { name: "triage", audience: "agent", smoke: MUTATES },
+  { name: "triage", audience: "agent", smoke: { run: ["triage", "decisions", "--json"] } },
   { name: "handle", audience: "agent", smoke: MUTATES },
   { name: "reactor", audience: "agent", smoke: MUTATES },
   { name: "finalize", audience: "agent", smoke: MUTATES },
@@ -92,6 +93,11 @@ export const SURFACE: readonly SurfaceEntry[] = [
   // when the boxholder asks for a run from chat. The scheduler daemon does not
   // go through this verb — it calls `runTick` in-process.
   { name: "tick", audience: "agent", smoke: { run: ["tick", "--dry-run"] } },
+  // Read-only: the paths changed since a commit, for a schedule's `runs:`.
+  { name: "changes", audience: "agent", smoke: { run: ["changes", "--since", "HEAD"] } },
+  // Asks Jev about stdin through an authored judgment card; `judge --dry-run`
+  // sends nothing but still needs a card to read, which a smoke box lacks.
+  { name: "judge", audience: "agent", smoke: { skip: "needs a judgment card fixture; test/cli/commands/judge/command.doctest.md runs --dry-run" } },
   { name: "session", audience: "agent", smoke: { run: ["session", "--list"] } },
   { name: "usage", audience: "agent", smoke: { run: ["usage", "--schema"] } },
   { name: "docs", audience: "agent", smoke: { skip: "`refresh` rewrites generated docs and commits" } },
@@ -103,6 +109,8 @@ export const SURFACE: readonly SurfaceEntry[] = [
 
   // ---- Talking to the boxholder ----------------------------------------
   { name: "chat", audience: "agent", smoke: { run: ["chat", "whats-changed"] } },
+  { name: "notify", audience: "agent", smoke: { skip: "sends a notification; `--check` exits 1 on a box with no channel" } },
+  { name: "pairing", audience: "agent", smoke: MUTATES },
 
   // ---- Credentialed: these delegate to the box's server under the agent
   //      profile (`cli/lib/credentialed-verb.ts`), which is exactly what the
@@ -131,7 +139,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   },
   {
     name: "pub",
-    subcommands: ["draft", "ls", "status", "prepare", "sites", "id"],
+    subcommands: ["draft", "ls", "status", "prepare", "sites", "id", "connections"],
     audience: "agent",
     smoke: { run: ["pub", "ls"] },
   },
@@ -156,17 +164,21 @@ export const SURFACE: readonly SurfaceEntry[] = [
 
   // ---- Engine: no agent-reachable form ----------------------------------
   { name: "maintenance", audience: "engine", reason: "deploy holds box ownership across activation; runs as root and spans the fleet" },
-  { name: "serve", audience: "engine", reason: "the hub spawns one per box (src/hub/supervisor.ts:441)" },
+  { name: "serve", audience: "engine", reason: "the hub spawns one per box (src/hub/supervisor/core.ts:441)" },
   { name: "hub", audience: "engine", reason: "a systemd ExecStart, and the dev router's backend spawn" },
   { name: "boxes", audience: "engine", reason: "the machine-wide box manifest; an agent has no second box" },
   { name: "activity", audience: "engine", reason: "reports across every box; the deploy's at-rest gate" },
   { name: "wakeup", audience: "engine", reason: "tooling profile only; `force-wakeup` is the agent's counterpart" },
   { name: "tailscale", audience: "engine", reason: "machine networking, outside any box" },
-  { name: "push", audience: "engine", reason: "`push test` fires a web push at this box's subscribers to prove delivery — an operator probe" },
   { name: "google-auth", audience: "engine", reason: "an interactive browser OAuth flow" },
   { name: "auth", audience: "engine", reason: "local accounts; every verb refuses an agent session without --agent-confirmed" },
   { name: "init", audience: "engine", reason: "scaffolds the box installation rather than its content" },
   { name: "upgrade", audience: "engine", reason: "bumps the box's engine dependency; an installation act" },
   { name: "migrate", audience: "engine", reason: "applies data migrations to the installation; deploy sweeps every box" },
+  {
+    name: "todo-review",
+    audience: "engine",
+    reason: "the stock todo-review procedure's precheck and validate; `verify` retires todos and commits, and the agent's side is the brief `check` prints",
+  },
   { name: "field-test", audience: "engine", reason: "the agent field-test harness, run by a developer in this repo" },
 ];

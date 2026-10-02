@@ -9,7 +9,7 @@ and runs `fn` unserialized rather than failing when it cannot acquire the lock.
 import { withBoxGitLock, activeBoxGitLockCount, BOX_GIT_LOCK_WAIT_MS } from "../../src/lib/git-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../src/lib/file-lock.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { getStatus } from "../../src/lib/git.js";
+import { getStatus } from "../../src/lib/git/core.js";
 import { join } from "node:path";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

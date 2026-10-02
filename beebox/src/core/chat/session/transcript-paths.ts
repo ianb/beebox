@@ -15,7 +15,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { containWithinBox } from "../../../lib/box-containment.js";
 
 /**

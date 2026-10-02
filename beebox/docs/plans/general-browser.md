@@ -89,17 +89,17 @@ None resolved outright. Related, and worth reading before designing:
 | Thing | Where | Reuse or rebuild |
 |---|---|---|
 | Markdown rendering to React | `workstreams-app/src/frontend/components/Markdown.tsx:28` | **Reuse.** |
-| In-app document reading | `workstreams-app/src/frontend/components/IssuesPane.tsx:97` | **Reuse the pattern.** |
-| Frontend routing with Zod-validated search | `workstreams-app/src/frontend/router.tsx` — TanStack Router, `basepath: "/workstreams"` | **Reuse.** |
-| Worktree root resolution | `workstreams-app/src/server/issues-mutation-service.ts:81` — `overlay.worktreeRoots.get(worktree)` | **Reuse.** |
-| Path containment against traversal and symlink escape | `workstreams-app/src/server/issue-path.ts:13-39` | **Reuse the pattern**, per the house rule at `exhibits/store.ts:9-12` (share patterns, not source). |
+| In-app document reading | `workstreams-app/src/frontend/components/IssuesPane.tsx:97` (moved to `workstreams-app/src/frontend/components/IssuesPane/panel.tsx`) | **Reuse the pattern.** |
+| Frontend routing with Zod-validated search | `workstreams-app/src/frontend/router.tsx` (moved to `workstreams-app/src/frontend/main/router.tsx`) — TanStack Router, `basepath: "/workstreams"` | **Reuse.** |
+| Worktree root resolution | `workstreams-app/src/server/issues-mutation-service.ts:81` (moved to `workstreams-app/src/server/main/issues-mutation-service.ts`) — `overlay.worktreeRoots.get(worktree)` | **Reuse.** |
+| Path containment against traversal and symlink escape | `workstreams-app/src/server/issue-path.ts:13-39` (moved to `workstreams-app/src/server/main/issue-path.ts`) | **Reuse the pattern**, per the house rule at `exhibits/store.ts:9-12` (share patterns, not source). |
 | The markdown file list, including untracked and `scratch/` | `bin/router-docs.ts:348-364` — `git ls-files --cached --others --exclude-standard`, then a deliberate re-admission of ignored `scratch/*.md` | **Reuse the logic, port it to the app.** The `scratch/` carve-out is load-bearing: *"scratch/ is exactly where agents leave deliverable orientation docs the boxholder wants to browse"*. |
 | Server-side syntax highlighting | `bin/router-docs.ts` — `highlightCodeBlocks` over hljs, for fenced blocks | **Reuse the dependency**, not the function: the app renders client-side React, so it needs hljs (or equivalent) in its own graph. |
 | Quick-open, sidebar grouping, recent-sort | `bin/router-docs.ts:519` (`renderDocQuickOpen`), `:434-442` (`renderDocSidebar`) | **Rebuild in React.** These are the affordances that must survive the consolidation — see Track 3. |
 | Closed-issue pills on rendered docs | `bin/router-docs.ts:122` — `appendClosedIssuePills` | **Port.** A small thing that makes issue links legible. |
 | `data-bbx-source` provenance tagging | `beebox/src/frontend/src/lib/source-tag.ts:7`, `beebox/docs/data-source-tagging.md` | **Extend with a `file:` type.** See Track 4. |
 | A working source-inspection overlay | `beebox/src/frontend/src/components/SourceViewOverlay.tsx:19-26` — walks up to the nearest `data-bbx-source`, highlights, click to inspect | **Reuse the technique.** This is already the affordance the comment plan needs. |
-| Exhibits, on a separate origin | `bin/workstreams-app-supervisor.ts:21-23` — *"The exhibits surface is a SECOND listener in the same supervised process group, on its own origin… The router never proxies it: exhibit URLs are direct, which is exactly why"*; credential separation at `workstreams-app/src/server/exhibits/auth.ts:8-13` | **Index, never absorb.** See the boundary below. |
+| Exhibits, on a separate origin | `bin/workstreams-app-supervisor.ts:21-23` — *"The exhibits surface is a SECOND listener in the same supervised process group, on its own origin… The router never proxies it: exhibit URLs are direct, which is exactly why"*; credential separation at `workstreams-app/src/server/exhibits/auth.ts:8-13` (moved to `workstreams-app/src/server/exhibits/app/auth.ts`) | **Index, never absorb.** See the boundary below. |
 | The exhibits ask queue, already surfaced in the app | `workstreams-app/src/frontend/pages/AsksPage.tsx` | **Reuse.** The browser links to it rather than duplicating it. |
 
 ## Prior art (external)
@@ -250,7 +250,7 @@ browser; the `kind` union members.
 union, containment re-checked after realpath, the text-size and binary
 refusals), wired through `DocumentsService.readDocument` and the
 `documents.read` tRPC query. Covered by
-`workstreams-app/test/document-read.doctest.md` and driven over HTTP against a
+`workstreams-app/test/document-read.doctest.md` (moved to `workstreams-app/test/server/document-read.doctest.md`) and driven over HTTP against a
 standalone app.
 
 ### Track 2 — Renderers
@@ -332,7 +332,7 @@ rather than as "changed nothing". `documents.read` carries `changedIn` and
 `changesUnavailable`; `documents.changedFiles` answers the other direction and
 distinguishes a quiet workstream from one that does not exist. The viewer shows
 "changed in …" with each name linking to that workstream's version of the same
-address. Covered by `workstreams-app/test/workstream-changes.doctest.md`.
+address. Covered by `workstreams-app/test/workstream-changes.doctest.md` (moved to `workstreams-app/test/server/workstream-changes.doctest.md`).
 
 ### Track 3 — Finding things
 
@@ -378,7 +378,7 @@ same reason.
 from every page and inherits the current workstream lens. The corpus is fetched
 once per lens and filtered in the browser — a few thousand paths is nothing to
 filter locally, and a round trip per keystroke would feel worse than the surface
-it replaces. Covered by `workstreams-app/test/file-index.doctest.md`. Port the
+it replaces. Covered by `workstreams-app/test/file-index.doctest.md` (moved to `beebox/test/dev/doc-graph-data/document-lifecycle.file-index.doctest.md`). Port the
 affordances that work, in React:
 - Quick-open over every browsable path (`renderDocQuickOpen`, `router-docs.ts:519`).
 - A sidebar grouped by area, with path and recently-edited sorts
@@ -393,13 +393,13 @@ affordances that work, in React:
   (`document-comments.md`, Track 3).
 
 **First implementation chunk — BUILT (2026-08-22).**
-`workstreams-app/src/server/recency.ts` and `RecentPage.tsx`, mounted at the
+`workstreams-app/src/server/recency.ts` (moved to `workstreams-app/src/server/main/recency.ts`) and `RecentPage.tsx`, mounted at the
 app's index route with the workstream list moved to `/streams` (still how you
 reach a session to focus or resume). All three views land together: aggregate,
 `?workstream=` filtered, and the distribution. A branch is asked only for
 `main..HEAD` — asking a worktree for "everything recent" returns main's month
 again under the workstream's name, which made every workstream look identically
-busy. Covered by `workstreams-app/test/recency.doctest.md`. Quick-open and the
+busy. Covered by `workstreams-app/test/recency.doctest.md` (moved to `workstreams-app/test/server/main/recency.doctest.md`). Quick-open and the
 sidebar are still to come.
 
 ### Track 4 — `file:` provenance, and the source overlay

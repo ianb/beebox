@@ -7,7 +7,7 @@
 import { Stack } from "../../../components/ui/Stack";
 import { ErrorText } from "../../../components/ui/ErrorText";
 import { Button } from "../../../components/ui/Button";
-import { TextField } from "../../../components/ui/fields";
+import { TextField } from "../../../components/ui/fields/field";
 
 interface LoginFieldsProps {
   email: string;

@@ -1,6 +1,6 @@
 # Supervisor: child env allowlist, and the readiness-timeout/exit restart race (Track D, chunk D1)
 
-Two `src/hub/supervisor.ts` behaviors, both found by cross-model review:
+Two `src/hub/supervisor/core.ts` behaviors, both found by cross-model review:
 
 1. `buildChildEnv` must ALLOWLIST what a hub-spawned box child inherits from
    the hub's own env, not spread `process.env` wholesale -- `BBX_SESSION_SECRET`
@@ -19,7 +19,7 @@ Two `src/hub/supervisor.ts` behaviors, both found by cross-model review:
    restarted) twice, and two children end up running for one box slot.
 
 ```ts setup
-import { buildChildEnv, Supervisor } from "../../src/hub/supervisor.js";
+import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -141,6 +141,27 @@ extras -- confirms the allowlist filters, it doesn't just fail to strip:
 ```ts continue
 JSON.stringify(buildChildEnv({ sourceEnv: {}, hubExtras: { BBX_HUB_SECRET: "x" } }))
 => {"BBX_HUB_SECRET":"x"}
+```
+
+The notification settings a box server sends with pass through: its APNs and
+VAPID keys (box servers are the sending side), fake mode, and fake mode's old
+name, `BBX_PUSH_FAKE`, which `notifyFakeMode()` still honors for one release.
+A child that lost the alias would send for real while the hub was faking.
+
+```ts continue
+const notifyEnv = {
+  BBX_NOTIFY_FAKE: "1",
+  BBX_PUSH_FAKE: "1",
+  BBX_APNS_KEY_PATH: "/home/beebox/apns.p8",
+  BBX_APNS_KEY_ID: "KEYID",
+  BBX_APNS_TEAM_ID: "TEAMID",
+  BBX_APNS_BUNDLE_ID: "org.example.app",
+  BBX_VAPID_PUBLIC_KEY: "vapid-public",
+  BBX_VAPID_PRIVATE_KEY: "vapid-private",
+  BBX_VAPID_SUBJECT: "mailto:boxholder@example.org",
+};
+JSON.stringify(Object.keys(buildChildEnv({ sourceEnv: notifyEnv, hubExtras: {} })).toSorted())
+=> ["BBX_APNS_BUNDLE_ID","BBX_APNS_KEY_ID","BBX_APNS_KEY_PATH","BBX_APNS_TEAM_ID","BBX_NOTIFY_FAKE","BBX_PUSH_FAKE","BBX_VAPID_PRIVATE_KEY","BBX_VAPID_PUBLIC_KEY","BBX_VAPID_SUBJECT"]
 ```
 
 ## A readiness-timeout kill's own exit event doesn't double-schedule a restart
@@ -317,7 +338,7 @@ await stopReloadFixture.cleanup();
 ## Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to "stopped"
 
 Boxholder directive (2026-07-04): a `lazy: true` hub gives each box the same
-lazy/idle semantics `workstreams-app/src/router/router.ts` already has for whole worktrees. No real
+lazy/idle semantics `workstreams-app/src/router/server/listener.ts` already has for whole worktrees. No real
 process is spawned here either -- `spawnChild`/`checkReady` are faked the
 same way as above, and the idle timer is driven by a tiny `idleMs` so the
 doctest doesn't wait out a real 5-minute default.

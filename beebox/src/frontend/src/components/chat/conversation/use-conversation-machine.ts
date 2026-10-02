@@ -4,7 +4,7 @@ import type { ConversationTarget } from "@shared/chat-composer-binding";
 import type { ChatMachineInput } from "../../../machines/chat-types";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
 import { busEventData } from "../../../lib/bus-events";
-import { ConversationControllerPool, conversationKey, type SessionAssignment } from "./controller-pool";
+import { ConversationControllerPool, conversationKey, type SessionAssignment } from "./controller-pool/pool";
 
 /**
  * The target a conversation starts from when no caller supplied one.

@@ -7,7 +7,7 @@
  * overlay is "Exit capture" (renamed from "Cancel capture session", 2026-08).
  */
 
-import { tour } from "./tour-lib/index.js";
+import { tour } from "./tour-lib/registry.js";
 
 tour(
   { name: "capture", description: "Follow the /capture deep link into chat capture mode and capture artifacts." },

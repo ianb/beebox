@@ -32,7 +32,11 @@ other marks where content came from (another card, an external file, or a
 web address) and can note the exact passage and how it was used
 ("verbatim", "a summary of the third paragraph"). A remark on a saved page
 or external file uses this same marking to point at the span it is about.
-Separately, every commit to the box records which connector or agent made
+A card's header can carry the same idea: a list of sources (another card or a
+web address) the card was derived from; for a photo or recording, how it
+arrived (which channel, when, and the original file name); and data copied in
+from email or Drive kept under its own labelled section, apart from the box's
+own fields. Separately, every commit to the box records which connector or agent made
 the change. For the curious, the markup is `{% quote %}` and `{% source %}`.
 
 **Limits**

@@ -10,6 +10,9 @@ struct RootView: View {
     @State private var showingPairSheet = false
     @State private var showingQuickChat = false
     @State private var navigationFailure: ChatWebView.NavigationFailure?
+    /// A notification tap's target, waiting for the chat webview to load it.
+    @State private var navigationRequest: ChatWebView.NavigationRequest?
+    @ObservedObject private var pushRegistrar = PushRegistrar.shared
     @State private var visibleChatSessionID: String?
     @State private var visibleChatBoxID: PairedBox.ID?
     @State private var locationShareRequest: NativeLocationShareRequest?
@@ -157,6 +160,10 @@ struct RootView: View {
                     await LogForwarder.shared.setActive(true)
                     await LogForwarder.shared.flush()
                 }
+                NotificationCenterDelegate.clearOnForeground()
+                Task {
+                    await pushRegistrar.sceneDidBecomeActive()
+                }
                 evaluatePendingEmissionRedelivery()
             }
             guard phase == .background else {
@@ -172,6 +179,10 @@ struct RootView: View {
             Task {
                 await composerDraftStore.flush()
             }
+        }
+        .onReceive(NotificationTapInbox.shared.$pending.compactMap(\.self)) { pending in
+            openNotificationTap(pending.tap)
+            NotificationTapInbox.shared.clear(pending.id)
         }
         .onReceive(emissionRedeliveryTicker) { _ in
             guard scenePhase == .active else {
@@ -234,6 +245,54 @@ struct RootView: View {
         )
     }
 
+    /// Open a tapped notification's target (contract §5.10) in the chat webview,
+    /// on the paired box the payload's `box` slug names. A payload from an
+    /// older box, or one naming no paired box, opens on the selected box.
+    private func openNotificationTap(_ tap: NotificationTap) {
+        let box: PairedBox
+        switch tap.pairedBox(in: store.boxes, selected: store.selectedBox) {
+        case .matched(let matched):
+            box = matched
+        case .ambiguous(let chosen, let matches):
+            box = chosen
+            BoxLog.info(
+                "notification tap box slug matches \(matches) paired boxes; opened on \(chosen.id == store.selectedBox?.id ? "selected" : "first") match",
+                category: .push,
+                targetBoxID: chosen.id
+            )
+        case .fallback(let fallback, let boxKeyPresent):
+            box = fallback
+            if boxKeyPresent || store.boxes.count > 1 {
+                BoxLog.info(
+                    "notification tap \(boxKeyPresent ? "box slug matches no paired box" : "payload names no box"); opened on \(store.boxes.count == 1 ? "only" : "selected") box boxes=\(store.boxes.count)",
+                    category: .push,
+                    targetBoxID: fallback.id
+                )
+            }
+        case .none:
+            BoxLog.warn("notification tap with no paired box", category: .push)
+            return
+        }
+        guard let path = tap.boxPath else {
+            BoxLog.warn(
+                "notification tap target unreadable present=\(tap.target != nil)",
+                category: .push,
+                targetBoxID: box.id
+            )
+            return
+        }
+        showingQuickChat = false
+        if store.selectedBox?.id != box.id {
+            store.select(box)
+        }
+        BoxLog.info(
+            "notification tap opening scheme=\(tap.scheme)",
+            category: .push,
+            targetBoxID: box.id
+        )
+        navigationRequest = ChatWebView.NavigationRequest(boxID: box.id, path: path)
+    }
+
     private func resignProtectedFirstResponder() {
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
@@ -251,11 +310,12 @@ struct RootView: View {
             locationShareRequest: locationShareRequest,
             screenshotRequest: screenshotRequest,
             speechStopRequest: speechStopRequest,
+            navigationRequest: navigationRequest,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
             composerCommandResults: composerCommandResults,
             onComposerBinding: { publication in
                 guard let publication else { pendingEmissionStore.invalidateBinding(); return }
-                guard publication.boxSlug == box.baseURL.lastPathComponent else { return }
+                guard publication.boxSlug == box.slug else { return }
                 if pendingEmissionStore.changesConversation(publication) {
                     narrationEnabled = false
                     hqDictationEnabled = false
@@ -353,6 +413,11 @@ struct RootView: View {
             },
             onNavigationFailure: { failure in
                 navigationFailure = failure
+            },
+            onNavigationRequestLoaded: { id in
+                if navigationRequest?.id == id {
+                    navigationRequest = nil
+                }
             }
         )
         .overlay {
@@ -365,6 +430,9 @@ struct RootView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 HStack {
+                    if pushRegistrar.permission == .denied {
+                        NotificationsOffNotice()
+                    }
                     Spacer()
                     Button {
                         resignProtectedFirstResponder()
@@ -750,5 +818,25 @@ private struct QuickChatSheet: View {
         .onDisappear {
             BoxLog.info("quick chat closed", category: .webview, targetBoxID: box.id)
         }
+    }
+}
+
+/// The one-line notification state in the paired-box shell: shown when the
+/// system has notifications turned off for the app, so the shell never implies
+/// a phone that cannot be reached is reachable (engineering principle 13).
+private struct NotificationsOffNotice: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Label("Notifications off", systemImage: "bell.slash")
+                .foregroundStyle(.secondary)
+            Button("Settings") {
+                guard let url = URL(string: UIApplication.openSettingsURLString) else {
+                    return
+                }
+                UIApplication.shared.open(url)
+            }
+        }
+        .font(.subheadline)
+        .padding(.leading)
     }
 }

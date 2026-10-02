@@ -57,11 +57,11 @@ failure that hid a five-day outage.
 
 The synthetic rule is renamed from `legacy-import` to `shorthand`, which
 **discards that rule's machine-local state**. `stateForRule`
-(`src/connectors/gmail-rules.ts:24`) looks state up strictly by rule name, so
+(`src/connectors/gmail-rules.ts:24` (moved to `beebox/src/connectors/gmail/rules.ts`)) looks state up strictly by rule name, so
 the old key is orphaned in the gitignored `gmail.state.json`: the automatic
 budget history resets, and the rule re-baselines on its first sync — recording
 the current match count without importing that backlog
-(`src/connectors/gmail-rules.ts:193`).
+(`src/connectors/gmail-rules.ts:193` (moved to `beebox/src/connectors/gmail/rules.ts`)).
 
 That is fail-closed and acceptable, but it has a consequence worth stating
 plainly: **mail that accumulated while a box was stalled will not be collected
@@ -107,7 +107,7 @@ procedure with a ref. Saving without a choice is not possible. Update the
 rules-present copy.
 
 ### Track 6 — docs + tests
-`docs/gmail-setup.md` (the shorthand section currently describes it as legacy),
+`docs/connectors/gmail.md` (the shorthand section currently describes it as legacy),
 `docs/connectors.md`. Doctests: `connector-gmail-pull.doctest.md` and
 `gmail-tracking.doctest.md` cover config parsing; add cases for missing
 `action`, a stray `action`, shorthand-with-procedure, and a missing config file.

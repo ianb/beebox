@@ -8,7 +8,7 @@
  */
 
 import type { AgentEngine } from "../../box/config.js";
-import type { ChatBackend } from "../../../services/claude-chat.js";
+import type { ChatBackend } from "../../../services/claude-chat/core.js";
 
 /**
  * Configurable knobs for a ChatSession. All fields are optional — the

@@ -7,7 +7,7 @@
  * Everything CF/R2-touching is factored into functions that take an injected
  * {@link PublishRemoteStore} (plus an injected clock/commit), so the whole flow
  * is doctestable end-to-end against `createFakePublishStore` with no network.
- * The CLI action (`src/cli/commands/pub.ts`) wires the real store from env and
+ * The CLI action (`src/cli/commands/pub/command.ts`) wires the real store from env and
  * the real TTY confirm; doctests inject fakes.
  *
  * ## R2 key layout (plan Track A)
@@ -26,9 +26,9 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { getBoxDir } from "../lib/paths.js";
-import { stageAndCommitPaths } from "../lib/git.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { getBoxDir } from "../lib/paths/core.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { extensionToMimetype } from "../lib/mimetype.js";
 import {
   createR2PublishStore,

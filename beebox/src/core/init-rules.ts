@@ -4,16 +4,21 @@
  * auto-loads when an agent reads or edits a matching card file. Connector
  * rules cover non-card files (e.g. `.ics`).
  *
- * Called from `syncTemplatesFromSource` (inside `generateDocs`). Not a
- * standalone CLI command — `bbx init` or `bbx docs refresh` regenerates a box's
- * rules.
+ * Called from `syncBoxGuidance` when the `generateDocs` template sync runs it
+ * (`initBox` runs the walk without generators). Not a standalone CLI command — `bbx init` or `bbx docs
+ * refresh` regenerates a box's rules. Each rule carries the DOCID marker after
+ * its `paths:` frontmatter.
  */
 
 import { join } from "node:path";
-import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
-import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
+import { mkdir, writeFile, readdir, readFile, unlink } from "node:fs/promises";
+import { cardSchemas, loadBoxSchemas } from "../schemas.js";
 import { getBoxShape } from "../lib/box-shape.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { guidanceSurfaceFor } from "./box/guidance-surfaces.js";
+import { readDocId, withDocId } from "./docs-gen/shared.js";
+
+/** Box-relative rules directory. */
+const RULES_DIR = ".claude/rules";
 
 export interface ConnectorRule {
   /** Rule filename without .md extension, e.g. "connector-calendar" */
@@ -66,30 +71,12 @@ Use \`bbx calendar today\`, \`bbx calendar upcoming\`, or \`bbx calendar <timesp
  * `.claude/` lives at the box root — see "Where Claude Code runs" in
  * `docs/implemented-plans/boxes-as-packages-v2.md`.
  *
- * Called by `syncTemplatesFromSource`, inside `generateDocs`.
+ * Returns the filenames written, which are also the prune manifest.
  */
 export async function generateRules(boxRoot: string): Promise<string[]> {
   const shape = await getBoxShape(boxRoot);
   const rulesDir = join(shape.boxRoot, ".claude", "rules");
   await mkdir(rulesDir, { recursive: true });
-
-  // Clean up old generated rules (card-* and connector-*)
-  try {
-    const existing = await readdir(rulesDir);
-    for (const file of existing) {
-      if (
-        (file.startsWith("card-") || file.startsWith("connector-")) &&
-        file.endsWith(".md")
-      ) {
-        await unlink(join(rulesDir, file));
-      }
-    }
-  } catch (e) {
-    // Directory may not exist yet, that's fine — nothing to clean up.
-    if (errnoCode(e) !== "ENOENT") {
-      console.debug("Skipping old-rule cleanup (rules dir not readable):", e);
-    }
-  }
 
   const generated: string[] = [];
 
@@ -99,7 +86,7 @@ export async function generateRules(boxRoot: string): Promise<string[]> {
   // `.<type>.card` file.
   const boxSchemas = await loadBoxSchemas(boxRoot);
   const cardRuleSources: Array<{ name: string; instructions: string | undefined }> = [
-    ...cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
+    ...cardSchemas.list.map((s) => ({ name: s.type, instructions: s.instructions })),
     ...boxSchemas.cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
   ];
 
@@ -116,7 +103,7 @@ paths:
 ${instructions.trim()}
 `;
 
-    await writeFile(join(rulesDir, filename), content);
+    await writeFile(join(rulesDir, filename), withDocId({ relativePath: `${RULES_DIR}/${filename}`, content }));
     generated.push(filename);
   }
 
@@ -133,9 +120,30 @@ ${pathsYaml}
 ${rule.instructions.trim()}
 `;
 
-    await writeFile(join(rulesDir, filename), content);
+    await writeFile(join(rulesDir, filename), withDocId({ relativePath: `${RULES_DIR}/${filename}`, content }));
     generated.push(filename);
   }
 
+  await pruneRules(rulesDir, new Set(generated));
   return generated;
+}
+
+/**
+ * Remove rules this generator no longer writes. A file in one of its own
+ * registry families (`card-<type>.md`, `connector-<name>.md`) goes whether or
+ * not it carries the marker, since those names were engine-owned before the
+ * marker existed. A marked file that names its own path and matches no
+ * registry row is an orphan of a retired family and goes too. Everything else
+ * stays: another generator's rule, and any rule without the marker, such as a
+ * boxholder's own.
+ */
+async function pruneRules(rulesDir: string, manifest: ReadonlySet<string>): Promise<void> {
+  for (const file of await readdir(rulesDir)) {
+    if (!file.endsWith(".md") || manifest.has(file)) continue;
+    const relPath = `${RULES_DIR}/${file}`;
+    const row = guidanceSurfaceFor(relPath);
+    const ownFamily = row?.install.via === "generator" && row.install.generator === "generateRules";
+    const markedOrphan = row === undefined && readDocId(await readFile(join(rulesDir, file), "utf8")) === relPath;
+    if (ownFamily || markedOrphan) await unlink(join(rulesDir, file));
+  }
 }

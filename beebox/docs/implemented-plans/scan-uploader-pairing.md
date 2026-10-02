@@ -48,7 +48,7 @@ The pairing protocol moved to NOT in scope with its revisit trigger.
   source and docs generic — never hardcode personal names."
 - `beebox/code-style.md`: Result-vs-throw at boundaries; no default
   parameters; custom error classes (`ConfigError` precedent,
-  `scan-uploader/src/errors.ts`).
+  `scan-uploader/src/errors.ts` (moved to `scan-uploader/src/cli/errors.ts`)).
 - Precedents: `CompanionPairingSection.tsx` (one-time secret held in
   component state, auto-cleared); the scan-upload wire contract
   (`docs/scan-upload-contract.md`); the installation-story plan's
@@ -72,12 +72,12 @@ The pairing protocol moved to NOT in scope with its revisit trigger.
   (`CompanionPairingSection.tsx:102`; Codex finding 8).
 - **Settings page structure** — `SettingsPage.tsx:27`: sections are stacked
   self-contained components. **Extended** with the new section.
-- **Uploader config validation (read side)** — `scan-uploader/src/config.ts:37-140`:
+- **Uploader config validation (read side)** — `scan-uploader/src/config.ts:37-140` (moved to `scan-uploader/src/cli/config.ts`):
   strict fail-closed *reader*; ENOENT is an error; unknown keys are
   accepted and preserved nowhere because nothing writes. **There is no
   writer** — the plan treats the config writer as net-new design (Codex
   finding 6), not reuse.
-- **Wire client + empty-check** — `scan-uploader/src/wire-client.ts` (bearer,
+- **Wire client + empty-check** — `scan-uploader/src/wire-client.ts` (moved to `scan-uploader/src/cli/wire-client.ts`) (bearer,
   runtime response validation at line 52); `docs/scan-upload-contract.md:62`
   permits an empty `check`. **Reused** for `configure`'s verification call.
 - **Install verification precedent** — `beebox/docker/smoke-dev-install.sh`.

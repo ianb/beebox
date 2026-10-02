@@ -96,10 +96,10 @@ closed-vocabulary check (Track C) flags it within one `bbx validate`.
 A call-site inventory (research pass, 2026-09-02) found: ~60 interior call
 sites take `boxRoot` meaning the content dir, consistently; ~8 need the
 package root via `BoxShape`; **three** separate bilingual resolvers exist
-(`resolveBoxRoot` `src/hub/child-spawn.ts:80`, `resolveServableBoxRoot`
+(`resolveBoxRoot` `src/hub/child-spawn.ts:80` (moved to `beebox/src/hub/supervisor/child-spawn.ts`), `resolveServableBoxRoot`
 `src/cli/commands/serve.ts:67`, `resolveOperationalRoot`
 `src/lib/box-shape.ts:139`) with different tolerance; and the two manifests
-disagree (`hub.json` stores package roots — `src/hub/hub-config.ts:140-159`
+disagree (`hub.json` stores package roots — `src/hub/hub-config.ts:140-159` (moved to `beebox/src/hub/config.ts`)
 resolves them — while `~/.config/beebox/boxes.json` stores content dirs and
 its scheduler consumer uses them unresolved). The interior is fine; every bug
 lives at the edges where a raw string arrives. One root removes the edge.
@@ -134,15 +134,15 @@ lives at the edges where a raw string arrives. One root removes the edge.
 
 | Piece | Where | Reuse or replace |
 |---|---|---|
-| Layout spec + drift-guarded doc tables | `src/lib/box-layout-spec.ts` (`BOX_LAYOUT`), doctest `test/cli/lib/box-layout-spec.doctest.md`, `docs/box-layout.md` | **Reuse the mechanism**, rewrite the data: the spec gains the root vocabulary (dirs AND spec'd root files) and the underscore reservation |
+| Layout spec + drift-guarded doc tables | `src/lib/box-layout-spec.ts` (moved to `beebox/src/lib/paths/box-layout-spec.ts`) (`BOX_LAYOUT`), doctest `test/cli/lib/box-layout-spec.doctest.md` (moved to `beebox/test/lib/paths/box-layout-spec.doctest.md`), `docs/box-layout.md` | **Reuse the mechanism**, rewrite the data: the spec gains the root vocabulary (dirs AND spec'd root files) and the underscore reservation |
 | Shape resolver | `src/lib/box-shape.ts:71` `getBoxShape` (marker `.beebox/box.json`, `BOX_MARKER` at `:20`) | **Rewrite for v3**: marker at the box root; `BoxShape` collapses to one root + derived areas; `MIN_KNOWN_SHAPE_VERSION` → 3 with a migration-pointing error for v2 |
-| Bilingual resolvers ×3 | `src/hub/child-spawn.ts:80`, `src/cli/commands/serve.ts:67`, `src/lib/box-shape.ts:139` | **Delete all three**; one `resolveBoxRoot` in `src/lib/box-shape.ts` remains, accepting the root and (transitionally) a stale `…/content` path with a clear "this manifest predates v3" error |
-| Dir lookup | `src/lib/paths.ts:184` `getBoxDir`, `BOX_DIRS` | **Reuse**, table re-pointed at the new vocabulary |
-| Ref parsing, fail-closed | `src/shared/ref-path.ts` (3-form rule, `..` escape → `null`), `src/shared/box-path.ts` | **Reuse unchanged mechanics**; the root the forms resolve against moves; relative refs tighten (Track B) |
+| Bilingual resolvers ×3 | `src/hub/child-spawn.ts:80` (moved to `beebox/src/hub/supervisor/child-spawn.ts`), `src/cli/commands/serve.ts:67`, `src/lib/box-shape.ts:139` | **Delete all three**; one `resolveBoxRoot` in `src/lib/box-shape.ts` remains, accepting the root and (transitionally) a stale `…/content` path with a clear "this manifest predates v3" error |
+| Dir lookup | `src/lib/paths.ts:184` (moved to `beebox/src/lib/paths/core.ts`) `getBoxDir`, `BOX_DIRS` | **Reuse**, table re-pointed at the new vocabulary |
+| Ref parsing, fail-closed | `src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`) (3-form rule, `..` escape → `null`), `src/shared/box-path.ts` | **Reuse unchanged mechanics**; the root the forms resolve against moves; relative refs tighten (Track B) |
 | Ref rewriting machinery | `canonical-refs.ts` (prefers leading-`/` form), `link-repair.ts` (writes box-root-absolute replacements), `rewrite-card-refs.ts` (preserves original absolute-vs-relative style; explicitly skips YAML inline-map forms, `rewrite-card-refs.ts:29-33`) | **Patterns only — the migration needs its own rewriter.** The existing three each do a narrower job than the migration needs (cross-model review, 2026-09-04); Track E builds a dedicated rewriter on `resolveRefPath` that covers markdown links, YAML ref fields (inline maps included), embeds, and attach scopes |
-| Migration registry + runbook | `src/core/migrations.ts`, `docs/migrations.md`, precedent `box-packageify` (`boxes-as-packages-v2.md` Track H) | **Reuse**: `one-root` lands as a registry migration, scratch-clone tested first |
+| Migration registry + runbook | `src/core/migrations.ts`, `docs/cards/migrations.md`, precedent `box-packageify` (`boxes-as-packages-v2.md` Track H) | **Reuse**: `one-root` lands as a registry migration, scratch-clone tested first |
 | Agent guide generation | `src/core/agent-guide/` (`REF_PATH_RULE` `source.ts:14-17`, `box-shape.ts:58-81` teaches the `../src` climb) | **Reuse**; the climb section is deleted (src is under the root now); ref rule text updated |
-| Session spawn plumbing | `src/core/agent/run.ts:74` (`cwd: options.cwd ?? options.boxRoot`), landmark scoping `src/core/chat/session/start.ts:122,157-159` | **Reuse**: `boxRoot` just becomes the one root; landmark pattern generalizes unchanged |
+| Session spawn plumbing | `src/core/agent/run.ts:74` (moved to `beebox/src/core/agent/invoke/run.ts`) (`cwd: options.cwd ?? options.boxRoot`), landmark scoping `src/core/chat/session/start.ts:122 (moved to `beebox/src/core/chat/session/run/start.ts`),157-159` | **Reuse**: `boxRoot` just becomes the one root; landmark pattern generalizes unchanged |
 | Slug derivation | `defaultSlugFor` (`src/cli/commands/serve.ts`) from the **package root** basename; single helper `src/lib/box-slug.ts` | **Reuse unchanged** — the root basename is the same directory, so every slug is stable across the migration |
 | Claude Code project identity | keyed to the git root (= the one root; unchanged by this plan) | **No change**: settings, rules, hooks, memory symlink all keep working; verified semantics 2026-09-02 research pass |
 | Git-hooks cd-into-content workaround | `src/core/install-validation-hooks.ts` (hooks `cd content/` because git runs them at the repo root — `docs/box-layout.md:52-57`) | **Delete the workaround**: hooks now already run at the box root |
@@ -365,7 +365,7 @@ migration-pointing message.
 
 Rollback per box: rename `.beebox` back, `git reset --hard` to the
 pre-migration SHA, manifest revert, remove the migrations.jsonl line
-(`docs/migrations.md` pattern).
+(`docs/cards/migrations.md` pattern).
 
 **Fleet rollout and the deploy-ordering trap:** the server deploys the
 engine by rsync on main commits (`boxes-as-packages-v2.md:535-540`), and the

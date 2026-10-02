@@ -70,7 +70,7 @@ About 800 changed lines plus this plan. Not a BIG CHANGE.
   metadata)` writes `{pid, hostname, acquiredAt, metadata}` once; `scanLocks`
   (line 548) returns live holders with that metadata. No update function
   exists; Track A adds one.
-- Server-side quiesce: `src/webapp/server.ts:404-419` polls
+- Server-side quiesce: `src/webapp/server.ts:404-419` (moved to `beebox/src/webapp/server/app.ts`) polls
   `boxMaintenanceStatus` every second and, when a phase exists and the box is
   idle, closes idle chat runs (`registry.quiesceForMaintenance`,
   `session.pauseForMaintenance` → `restart()`), releasing their run leases. So
@@ -89,7 +89,7 @@ About 800 changed lines plus this plan. Not a BIG CHANGE.
   `Retry-After` path beside it. The diagnostics event
   `post-retry-scheduled` (`chat-send-diagnostics.ts:25`) exists with
   `reasonKind: "network"`; Track D adds `"maintenance"`.
-- CLI top-level: `src/cli/index.ts:229` prints `BoxMaintenanceError.message`
+- CLI top-level: `src/cli/index.ts:229` (moved to `beebox/src/cli/entry/run.ts`) prints `BoxMaintenanceError.message`
   and exits 1. That is why the drain timeout produced no JSON line and the
   schedule reported "Unknown result".
 
@@ -311,7 +311,7 @@ Purely infrastructural; no box-agent-facing concept. Skipped.
 Doctests, all in the existing tiers: `test/lib/box-maintenance.doctest.md`
 (holders, timeout detail, `until`, `peekBoxWork`),
 `test/core/migration-sweep.doctest.md` and `test/core/docs-refresh.doctest.md`
-(no `phase.json` on a current box; deferred), `test/webapp/box-admission.doctest.md`
+(no `phase.json` on a current box; deferred), `test/webapp/box-admission.doctest.md` (moved to `beebox/test/webapp/server/box-admission.doctest.md`)
 (`Retry-After`), `schedules/box-convergence/convergence.test.ts` (24 h bound).
 The client retry is a pure decision in `api-chat.ts`; covered by its existing
 test file with a mocked `fetch`.
@@ -323,7 +323,7 @@ test file with a mocked `fetch`.
 3. C — `--yield`, deferred status, schedule wiring and reporting.
 4. D — `until`, `Retry-After`, client retry.
 5. Cross-model review; issue for the unidentified leak; docs
-   (`docs/migrations.md` admission section) updated.
+   (`docs/cards/migrations.md` admission section) updated.
 
 ## Rollout shape
 

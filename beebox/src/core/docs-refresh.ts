@@ -2,15 +2,15 @@
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { simpleGit } from "simple-git";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import { acquireBoxMaintenance, peekBoxWork } from "../lib/box-maintenance.js";
 import { getBoxShape } from "../lib/box-shape.js";
-import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import {
   generateDocs,
   generatedDocsAreCurrent,
   GENERATE_MARKER,
-} from "./docs-gen/index.js";
+} from "./docs-gen/generate/core.js";
 import { ensureEngineDocs } from "./docs-gen/box-docs.js";
 import {
   captureMigrationSnapshot,

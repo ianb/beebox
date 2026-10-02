@@ -1,5 +1,5 @@
 import { acquireBoxWork, boxWorkEnvironment } from "../../src/lib/box-maintenance.js";
-import { invariant } from "../../src/lib/invariant.js";
+import { invariant } from "../../src/shared/invariant.js";
 
 const boxRoot = process.argv[2];
 invariant(boxRoot !== undefined, "child needs a box root");

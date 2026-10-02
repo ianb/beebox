@@ -6,7 +6,7 @@
  * transcription that ends up in the markdown body.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 import { truncateTitle } from "../core/file-summary.js";
 
@@ -38,6 +38,7 @@ const TranscriptionError = z.object({
 });
 
 export const MemoSchema = cardSchema("memo", {
+  brief: "A captured text/voice note",
   description: "A captured text or voice note from the user — generic inbox input awaiting processing",
   category: "authored",
   fields: {

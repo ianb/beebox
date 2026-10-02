@@ -21,7 +21,7 @@ formatting they can't scan; the useful response is one they can hear.
 
 Each user turn is prepended with a `<chat-app .../>` tag carrying **feature
 flags plus situational context** — `composeTurnContent`
-(`src/core/chat/session/start.ts:139-160`) already assembles it, including
+(`src/core/chat/session/start.ts:139-160` (moved to `beebox/src/core/chat/session/run/start.ts`)) already assembles it, including
 box-local time and, on a new conversation, last-activity and calendar. The chat
 prompt tells the agent to skim it (`prompts.ts:99`).
 

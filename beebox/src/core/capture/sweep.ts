@@ -39,7 +39,7 @@ import {
   sealStagingSession,
   stagingSessionIsEmpty,
   isCaptureSession,
-} from "./staging-store.js";
+} from "./staging-store/core.js";
 import { discardStagingSessionIfCancellable } from "./staging-teardown.js";
 import { StagingSessionGoneError } from "./staging-errors.js";
 import { ABANDONMENT_WINDOW_MS } from "../../shared/capture-staleness.js";
@@ -154,7 +154,7 @@ export async function sweepAbandonedCaptures(deps: SweepDeps): Promise<SweepResu
 }
 
 /**
- * Box-relative paths of `delivered` capture-session cards sitting under any
+ * Box-relative paths of delivered, unannotated capture-session cards under any
  * `tmp-capture/` directory whose `time.start` is older than the stale age.
  * Reference is the card's own `time.start` (deterministic under `BBX_TIME`),
  * not file mtime (which git operations reset).
@@ -180,7 +180,7 @@ export async function findStaleTmpCaptureCards(opts: { boxRoot: string; now: num
         continue;
       }
       const parsed = parseCaptureSession(content);
-      if (parsed === null || parsed.frontmatter.status !== "delivered") continue;
+      if (parsed === null || parsed.frontmatter.delivered !== true || parsed.frontmatter.annotated === true) continue;
       const startedAt = parsed.frontmatter.time?.start;
       if (startedAt === undefined) continue;
       if (now - new Date(startedAt).getTime() < TMP_CAPTURE_STALE_MS) continue;

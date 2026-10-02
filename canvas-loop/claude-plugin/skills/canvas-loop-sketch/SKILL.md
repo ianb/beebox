@@ -15,7 +15,7 @@ Read these before writing — they are the reference; do not re-derive or inline
 
 - `canvas-loop/README.md` — the mutable tier (`setup`/`draw`), the full `Sketch` drawing API, events file, capture policy, and the `./react` `<SketchFigure>` embed component.
 - `canvas-loop/TEA.md` — the **TEA tier** (pure `init`/`update`/`draw` fold, declared `params`, the `Msg` union, the enforced discipline + lint). **Prefer this tier for new work**; name the file `*-tea.ts` so the lint discipline applies.
-- `canvas-loop/gallery/README.md` — the exercise-corpus schema and the add / re-exercise flow.
+- `canvas-loop/src/gallery/README.md` — the exercise-corpus schema and the add / re-exercise flow.
 
 ## The loop
 
@@ -43,7 +43,7 @@ Whenever the visual has a closed form, "visually difficult" collapses to "calcul
 
 ## Gallery
 
-To bank an exercise (task + delivered sketch + events + metadata) or re-run an old one, follow `canvas-loop/gallery/README.md`: create `gallery/<slug>/` with `task.md`, `sketch*.ts`, `events.json`, and `meta.yaml`; append one `runs.jsonl` line (`action: authored | rerun | ported`); then `pnpm --dir canvas-loop run gallery:check` (twice-render determinism + lint) must pass before committing. No PNGs or transcripts are committed — output is reproducible from (sketch, events, seed, harness-commit).
+To bank an exercise (task + delivered sketch + events + metadata) or re-run an old one, follow `canvas-loop/src/gallery/README.md`: create `src/gallery/<slug>/` with `task.md`, `sketch*.ts`, `events.json`, and `meta.yaml`; append one `runs.jsonl` line (`action: authored | rerun | ported`); then `pnpm --dir canvas-loop run gallery:check` (twice-render determinism + lint) must pass before committing. No PNGs or transcripts are committed — output is reproducible from (sketch, events, seed, harness-commit).
 
 ## Audit norms
 

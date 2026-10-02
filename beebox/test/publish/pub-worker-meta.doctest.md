@@ -83,7 +83,7 @@ v1.length
 
 ```ts
 const sources = await readPubWorkerSourceFiles();
-sources.has("pub-worker/src/index.ts") && sources.has("pub-worker/wrangler.jsonc")
+sources.has("pub-worker/src/worker.ts") && sources.has("pub-worker/wrangler.jsonc")
 => true
 
 CROSS_PACKAGE_SOURCES.every((name) => sources.has(`src/publish/${name}.ts`))

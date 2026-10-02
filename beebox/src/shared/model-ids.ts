@@ -55,3 +55,17 @@ const RETIRED_MODEL_IDS: Record<string, string> = {
 export function normalizeModelId(model: string): string {
   return RETIRED_MODEL_IDS[model] ?? model;
 }
+
+/**
+ * Whether a model's non-empty `thinking` blocks are progress updates: short
+ * lines written for the user before a tool call. Claude Code asks for
+ * `thinking.display: "updates"` on these models, so their reasoning blocks
+ * come back empty and any thinking text is an update, which the model can use
+ * to say things the user needs to see. Earlier Claude models return
+ * summarized reasoning in the same field, and other providers' reasoning is
+ * not an update. The API hands back only a summary of each update.
+ */
+export function writesProgressUpdates(model: string | undefined): boolean {
+  const match = /^claude-[a-z]+-(\d+)/.exec(model ?? "");
+  return match !== null && Number(match[1]) >= 5;
+}

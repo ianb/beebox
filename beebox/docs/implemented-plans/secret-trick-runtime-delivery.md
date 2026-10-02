@@ -41,7 +41,7 @@ they should not need every author to rediscover endpoint URLs, bearer headers,
 or a special wrapper command. The existing trick runner already creates the
 subprocess environment centrally (`beebox/src/cli/commands/trick.ts:116-141`),
 and `buildScriptEnv` is expressly the environment for “agents, tricks,
-procedure shell steps” (`beebox/src/core/script-env.ts:176-196`). This plan
+procedure shell steps” (`beebox/src/core/script-env.ts:176-196` (moved to `beebox/src/core/script-env/core.ts`)). This plan
 extends that seam instead of changing every trick.
 
 The value still must not be printed by the framework, placed in argv, written
@@ -57,13 +57,13 @@ convenience and transcript safety, not a same-user security boundary.
   launch (`src/cli/commands/trick.ts:72-142`).
 - `buildScriptEnv` already fail-closes inherited credentials and derives the
   current box endpoint, including the machine-owned endpoint descriptor added
-  by the preceding work (`src/core/script-env.ts:118-170`).
+  by the preceding work (`src/core/script-env.ts:118-170` (moved to `beebox/src/core/script-env/core.ts`)).
 - The raw route authenticates with `BBX_AGENT_TOKEN`, resolves one named secret
   with a short purpose, and returns `{value, suspect}` or a typed refusal
   (`src/webapp/routes/secrets.ts:97-124`; `src/core/secrets/resolve.ts:70-148`).
 - Secret declarations and grants are already the boxholder-facing lifecycle;
   `bbx secrets declare` names a slot without putting its value in the box
-  (`src/cli/commands/secrets.ts:280-327`).
+  (`src/cli/commands/secrets.ts:280-327` (moved to `beebox/src/cli/commands/secrets/command.ts`)).
 
 ## Prior art (external)
 
@@ -164,7 +164,7 @@ the whole command module public.
 
 Update the generated trick-authoring template in
 `beebox/src/core/box/templates.ts` and its stock-hash ledger, plus the tricks
-skill content in `beebox/src/core/box/skills-content.ts`, so new box agents see
+skill content in `beebox/src/core/box/skills-content.ts` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`), so new box agents see
 the sidecar contract before authoring a trick. Existing boxes with customized
 templates must not be silently overwritten; field rollout of that stock change
 is a boxholder decision.

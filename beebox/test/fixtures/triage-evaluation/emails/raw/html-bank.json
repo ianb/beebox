@@ -1,0 +1,26 @@
+{
+  "id": "message0003",
+  "threadId": "thread0003",
+  "internalDate": "1790553600000",
+  "snippet": "We have received the account closure documents.",
+  "payload": {
+    "mimeType": "text/html",
+    "headers": [
+      {
+        "name": "Subject",
+        "value": "household account update"
+      },
+      {
+        "name": "From",
+        "value": "Noor Haddad <noor@example.invalid>"
+      },
+      {
+        "name": "To",
+        "value": "Priya Marlowe <priya@example.invalid>"
+      }
+    ],
+    "body": {
+      "data": "PGh0bWw-PHN0eWxlPi5oaWRle2Rpc3BsYXk6bm9uZX08L3N0eWxlPjxib2R5PjxoMT5TWU5USEVUSUM6IEFjY291bnQgY2xvc3VyZTwvaDE-PHRhYmxlPjx0cj48dGg-QWNjb3VudCBob2xkZXI8L3RoPjx0ZD5ob3VzZWhvbGQgb2YgT2RldHRlIE1hcmxvd2U8L3RkPjwvdHI-PHRyPjx0aD5TdGF0dXM8L3RoPjx0ZD5DbG9zdXJlIGRvY3VtZW50cyBhY2NlcHRlZDwvdGQ-PC90cj48L3RhYmxlPjxwPlRoZSBob3VzZWhvbGQgYWNjb3VudCBiYWxhbmNlIGlzIHJlYWR5IGZvciB0cmFuc2ZlciB0byB0aGUgaG91c2Vob2xkIHJlcHJlc2VudGF0aXZlIGFjY291bnQuPC9wPjwvYm9keT48L2h0bWw-"
+    }
+  }
+}

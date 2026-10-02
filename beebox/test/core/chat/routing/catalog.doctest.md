@@ -1,7 +1,8 @@
 # Quick chat candidates and provisional policy
 
 ```ts setup
-import { buildRoutingCandidates, loadRoutingRubric, boundRoutingContexts } from "../../../../src/core/chat/routing/catalog.js";
+import { buildRoutingCandidates, loadRoutingRubric, boundRoutingContexts, formatRecentRoutingContext, routingHistoryMetadata } from "../../../../src/core/chat/routing/catalog.js";
+import { routingCandidateSchema } from "../../../../src/core/chat/routing/policy.js";
 import { selectRoutingDestination } from "../../../../src/core/chat/routing/policy.js";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
@@ -118,4 +119,40 @@ boundRoutingContexts(full.map(candidate => ({ ...candidate, rubric: [{ when: "x"
 
 boundRoutingContexts([{ ...full[0]!, recentContext: "Short context", contextTruncated: true }])[0]?.contextTruncated
 => true
+```
+
+Recent excerpts preserve message roles and boundaries, with the latest user
+intent kept even when assistant output fills the tail. The same rule applies in
+the aggregate serialized-budget pass.
+
+```ts
+const transcript = [
+  { uuid: "1", type: "user" as const, timestamp: "2026-09-21T11:00:00Z", content: [{ type: "text" as const, text: "<typed>Earlier request</typed>" }] },
+  { uuid: "2", type: "assistant" as const, timestamp: "2026-09-21T11:01:00Z", content: [{ type: "text" as const, text: "A".repeat(1900) }] },
+  { uuid: "3", type: "user" as const, timestamp: "2026-09-21T11:02:00Z", content: [{ type: "text" as const, text: `<chat-app snapshot="${"x".repeat(2300)}"/><typed user="human" user-email="human@example.test">Can we continue the established garden redesign and compare the soil notes?</typed>` }] },
+  { uuid: "4", type: "assistant" as const, timestamp: "2026-09-21T11:03:00Z", content: [{ type: "text" as const, text: "B".repeat(3000) }] },
+  { uuid: "5", type: "assistant" as const, timestamp: "2026-09-21T11:04:00Z", content: [] },
+];
+const excerpt = formatRecentRoutingContext(transcript);
+JSON.stringify([excerpt.length <= 2000, excerpt.includes("] user: Can we continue"), excerpt.includes("</typed>"), excerpt.includes("] assistant: B"), excerpt.includes("[truncated]"), excerpt.includes("Earlier request")])
+=> [true,true,false,true,true,false]
+
+const gapTranscript = [transcript[0]!, transcript[1]!, transcript[2]!, { ...transcript[3]!, content: [{ type: "text" as const, text: "B".repeat(1000) }] }];
+formatRecentRoutingContext(gapTranscript, 1300).includes("Earlier request")
+=> false
+
+const legacyTranscript = [{ uuid: "legacy", type: "user" as const, timestamp: "2026-09-21T11:05:00Z", content: [{ type: "text" as const, text: "Legacy unwrapped question" }] }];
+formatRecentRoutingContext(legacyTranscript)
+=> [2026-09-21T11:05:00Z] user: Legacy unwrapped question
+
+JSON.stringify(routingHistoryMetadata(96, transcript))
+=> {"totalEntries":96,"lastMessageAt":"2026-09-21T11:03:00.000Z"}
+
+const candidate = buildRoutingCandidates({ ...base, sessions: [session("one", 0)] })[0]!;
+const secondBound = boundRoutingContexts([{ ...candidate, recentContext: excerpt, totalEntries: 42, lastMessageAt: "2026-09-21T11:03:00.000Z" }], 750)[0]!;
+JSON.stringify([ (secondBound.recentContext?.length ?? 0) <= 750, secondBound.recentContext?.includes("] user: Can we continue"), secondBound.recentContext?.includes("] assistant: B"), secondBound.totalEntries, secondBound.lastMessageAt])
+=> [true,true,true,42,"2026-09-21T11:03:00.000Z"]
+
+JSON.stringify(routingCandidateSchema.parse({ id: "old", label: "Old chat", target: { kind: "existing-session", sessionId: "old", contextDir: "" } }))
+=> {"id":"old","label":"Old chat","target":{"kind":"existing-session","sessionId":"old","contextDir":""}}
 ```

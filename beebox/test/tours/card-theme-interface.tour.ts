@@ -1,5 +1,5 @@
 /** Card edges stay visible when a file opens beside the full-width Browse listing. */
-import { tour } from "./tour-lib/index.js";
+import { tour } from "./tour-lib/registry.js";
 
 tour(
   { name: "card-theme-interface", description: "Inspect a card opened from Browse at desktop and phone widths." },

@@ -6,10 +6,10 @@
  * `src/core/handle.ts`.
  */
 
-import { registerCommand } from "../command-runner.js";
+import type { CommandDefinition } from "../command-types.js";
 import { runHandle, formatHandlingLines, handleVerdict, describeHandleFailures } from "../handle.js";
 
-registerCommand({
+export const handleCommand: CommandDefinition = {
   name: "handle",
   description:
     "Run handler procedures for one or more triaged category buckets.",
@@ -41,4 +41,4 @@ registerCommand({
       ? { success: false, error: describeHandleFailures(results), data: results }
       : { success: true, data: results };
   },
-});
+};

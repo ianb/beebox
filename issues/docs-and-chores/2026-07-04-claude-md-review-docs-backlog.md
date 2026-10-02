@@ -7,7 +7,7 @@ workstream: unknown
 
 Still-open items from the 2026-04-28 CLAUDE.md self-audit
 (`CLAUDE-MD-REVIEW.md`, since deleted — most of its scope was completed and
-folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
+folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
 `docs/knowledge-audits.md` over several passes). What's left:
 
 - **Design and build a logger, then document "adding logging."** No central

@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 
 export async function optionalText(file: string): Promise<string | null> {
   try { return await fs.readFile(file, "utf8"); }

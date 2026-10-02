@@ -221,7 +221,7 @@ final class LogForwarderTests: XCTestCase {
 
     /// The submitted body is pinned by the shared golden fixtures under
     /// `beebox/test/mobile-contract/fixtures/debug-log-submit/`, which the
-    /// TS side POSTs verbatim in `test/webapp/debug-log-submit.doctest.md`.
+    /// TS side POSTs verbatim in `beebox/test/webapp/trpc/routers/debug-log.submit.doctest.md`.
     /// Editing a fixture fails both suites until both catch up.
     func testFlushPostsTheFixtureWireShape() async throws {
         let fixtures = try MobileContractFixtures.load("debug-log-submit")

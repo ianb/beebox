@@ -27,7 +27,7 @@ import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
 import { z } from "zod";
 import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
-import { trpcClient } from "./lib/trpc";
+import { trpcClient } from "./lib/trpc/client";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 import type { TranscriptState } from "@core/chat/session/availability.js";
@@ -58,6 +58,8 @@ export interface SessionContentBlock {
    * lazily, so scrollback only pays for photos actually scrolled to.
    */
   imageRef?: string;
+  /** For thinking blocks: the text is a progress update written for the user. */
+  progressUpdate?: true;
 }
 
 /**
@@ -198,6 +200,35 @@ export interface DeadChatInfo {
 
 export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[]; dead: DeadChatInfo[] }> {
   return trpcClient.chat.sessions.query();
+}
+
+/** One search result row: a chat, its best-matching chunk, and the anchor to open it at. */
+export interface ChatSearchHitInfo {
+  sessionId: string;
+  /** Entry uuid of the matched chunk — `/chat?session=<id>&m=<anchor>` lands there. */
+  anchor: string;
+  title: string;
+  snippet: string;
+  /** ISO timestamp of the matched chunk. */
+  created: string;
+  score: number;
+}
+
+/**
+ * Full-text search over this box's chat transcripts (`chat.search`). The
+ * server indexes dialogue text only; nothing here embeds or leaves the box.
+ */
+export async function searchChatTranscripts(params: { query: string; limit?: number }): Promise<{
+  results: ChatSearchHitInfo[];
+  total: number;
+  truncated: boolean;
+  warnings: string[];
+  stale: boolean;
+}> {
+  return trpcClient.chat.search.query({
+    query: params.query,
+    ...(params.limit === undefined ? {} : { limit: params.limit }),
+  });
 }
 
 export async function interruptChat(params: { sessionId: string }): Promise<{ ok: boolean }> {

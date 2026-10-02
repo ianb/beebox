@@ -1,3 +1,10 @@
 {
-  "tools": []
+  "tools": [
+    {
+      "emoji": "\ud83d\udccf",
+      "title": "Project size",
+      "href": "dev/project-size/index.html",
+      "desc": "Lines of code, tests, and docs by category and package, with commentary. Refresh: pnpm project-size"
+    }
+  ]
 }

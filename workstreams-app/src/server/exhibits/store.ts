@@ -7,7 +7,7 @@
 // is Zod-parsed before anything renders. Containment lives here and only here;
 // route handlers trust what this module returns (principle 6).
 //
-// This deliberately reimplements the shape of src/server/issue-path.ts rather
+// This deliberately reimplements the shape of src/server/main/issue-path.ts rather
 // than importing it: the two roots have different vocabularies, and the
 // resident-app precedent is to share patterns, not source.
 

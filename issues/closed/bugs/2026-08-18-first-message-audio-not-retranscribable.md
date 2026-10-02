@@ -77,7 +77,7 @@ often where the request being clarified was made.
 
 The blast radius was reduced without touching the cause:
 
-- `src/webapp/routes/chat-last-audio-routes.ts` — the `no-audio` 404 now says
+- `src/webapp/routes/chat-last-audio-routes.ts` (moved to `beebox/src/webapp/routes/chat/last-audio-routes.ts`) — the `no-audio` 404 now says
   the miss is about *this* message and that other messages in the conversation
   may still have audio, rather than "no recording is cached for the last
   message". The `no-client` 504 likewise now names itself as transient.
@@ -93,14 +93,14 @@ Traced the answer path. Retranscription is served by a **per-tab, memory-only
 retention store**: `src/frontend/src/lib/audio/last-audio.ts:10-12` —
 "Recordings live only in this tab's memory (gone on reload)", capacity 5
 (`RETENTION_CAPACITY`, line 33). `bbx chat get-last-audio` long-polls
-(`src/webapp/routes/chat-last-audio-routes.ts`), the server broadcasts a bus
+(`src/webapp/routes/chat-last-audio-routes.ts` (moved to `beebox/src/webapp/routes/chat/last-audio-routes.ts`)), the server broadcasts a bus
 event, and connected tabs answer from that store. Two distinct mechanisms
 fall out:
 
 1. **Native iOS voice sends can never be retranscribed.** The recording is
    captured natively, HQ-transcribed through the stateless
    `/api/chat/transcribe-audio` endpoint (nothing retains the upload —
-   `src/webapp/routes/chat-audio-routes.ts`), and the native audio file is
+   `src/webapp/routes/chat-audio-routes.ts` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`)), and the native audio file is
    then deleted (`ios-app/BeeBox/Views/NativeComposerView.swift:496-498,
    525-527`). The emission crosses the bridge as text (Emission V2 has no
    audio field), so the web tab's retention store never holds the blob — and

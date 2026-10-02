@@ -25,7 +25,7 @@ interface AttentionCardsProps {
 
 export function AttentionCards({ questions, inboxCount, dueBrowserTasks }: AttentionCardsProps) {
   const { boxSlug } = useParams({ strict: false });
-  const pendingQuestions = questions.filter((q) => q.status === "pending");
+  const pendingQuestions = questions.filter((q) => q.state === "pending");
   const dueTasks = dueBrowserTasks ?? [];
 
   if (pendingQuestions.length === 0 && inboxCount === 0 && dueTasks.length === 0) {

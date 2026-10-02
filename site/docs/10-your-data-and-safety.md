@@ -38,8 +38,17 @@ transcription vendor you configure. Quick chat, if you use it, sends your
 message, your routing rules, and recent conversation text through OpenRouter to
 a routing model (TypeSafe) to choose a destination; the documentation says
 this is not a zero-retention guarantee, and leaving the OpenRouter key
-ungranted avoids it while ordinary chat keeps working. Google services, Telegram, web push, and
-publishing send data only if you connect them. Gmail access is limited to
+ungranted avoids it while ordinary chat keeps working. If you opt in to the judging model for filing documents, the prepared text of
+each item and your filing rules go the same way, and a record of each decision
+stays in the box. A watch that
+notifies you when something changes in the box sends the text of the changed
+cards to the same routing model, with a request that the provider not retain
+it; it needs the same OpenRouter key. Push to the iPhone app goes through
+Apple, and push to a browser through that browser's vendor; a notification
+carries a title, a short body, and where a tap should land. Google services,
+Telegram, web push, and publishing send data only if you connect them. A
+published site is stored and served by the Cloudflare account you connect, and
+is visible to whoever has its address. Gmail access is limited to
 reading and drafting; the system never asks for permission to send mail on
 its own. The documentation states that the running system sends no usage
 tracking, analytics, crash reports, or update checks.

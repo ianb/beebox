@@ -5,7 +5,7 @@ box-scoped subprocess spawn site runs to get `BBX_BOX_NAME` and
 `BBX_SERVER_URL` (plus any caller-specific additions).
 
 ```ts setup
-import { buildScriptEnv, buildToolingScriptEnv, parsePublicUrl, prependBbxBinToPath, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../../src/core/script-env.js";
+import { buildScriptEnv, buildToolingScriptEnv, parsePublicUrl, prependBbxBinToPath, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../../src/core/script-env/core.js";
 import { serveEndpointPath, writeServeEndpoint } from "../../src/core/serve-endpoint.js";
 import { spawnProfile } from "../../src/lib/spawn-profile.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";

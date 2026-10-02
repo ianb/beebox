@@ -10,7 +10,7 @@
 
 import { acquireBoxWork, withBoxWork } from "../../../lib/box-maintenance.js";
 import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
-import type { ChatBackend } from "../../../services/claude-chat.js";
+import type { ChatBackend } from "../../../services/claude-chat/core.js";
 import { makeLog } from "./log.js";
 import { getPublicUrl } from "../../../lib/public-url.js";
 import * as fs from "node:fs/promises";
@@ -21,7 +21,7 @@ import {
   ChatScheduleManager,
   parseScheduleTags,
   parseCancelScheduleTags,
-} from "../schedules.js";
+} from "../schedules/core.js";
 import { isRecord } from "../../card-io.js";
 import { boxSlug } from "../../../lib/box-slug.js";
 

@@ -40,7 +40,7 @@ in both motion modes, real web send/resize/lazy-image probes, and authenticated
 iOS WKWebView simulator send/keyboard behavior. Physical-iPhone momentum,
 rubber-band, keyboard transitions, and delayed-image completion remain open.
 The current procedure and evidence are in
-[chat scroll testing](../../beebox/docs/chat-scroll-testing.md).
+[chat scroll testing](../../beebox/docs/chat/scroll.md).
 
 ## Original report
 
@@ -67,7 +67,7 @@ conversation with the session that takes this. What is known:
 
 - Every fix so far was verified on desktop Chromium (the `/dev/chat-scroll`
   harness, 13/13 scenarios, and the `bin/browse` procedure in
-  `docs/chat-scroll-testing.md`). The plan's own finding was that the inputs
+  `docs/chat/scroll.md`). The plan's own finding was that the inputs
   desktop Chromium does not produce — touch momentum, keyboard open/close
   clamps, `visualViewport` resizes, iOS rubber-band, frame drops during
   reflow — are where the previous model failed. None of that has been

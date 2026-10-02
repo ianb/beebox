@@ -1,10 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { href, toSearch } from "../../lib/routing";
 import { cardChatSearch } from "../../lib/system-card-navigation";
 import type { ViewTarget } from "../../lib/view-url";
-import { explicitConversationHistoryState } from "../chat/workspace/workspace-history";
+import { explicitConversationHistoryState } from "../chat/workspace/history";
 import { Button } from "../ui/Button";
 import { Dropdown, type DropdownVertical } from "../ui/Dropdown";
 import { MenuItem } from "../ui/dropdown-menu-item";
@@ -14,7 +14,7 @@ import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
-import { legacyHistoryState } from "../history/history-card-state";
+import { legacyHistoryState } from "../history/card-state";
 
 function MoreIcon() {
   return <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>;

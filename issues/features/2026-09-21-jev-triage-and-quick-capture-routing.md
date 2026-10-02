@@ -1,6 +1,6 @@
 ---
 title: "Try Jev for document triage, and for a quick-capture entry point that routes itself to the right chat and landmark"
-workstream: unattached
+workstream: jev-triage
 area: beebox
 labels: [triage, chat, models]
 filed-by: agent
@@ -20,7 +20,7 @@ option and a confidence.
 The triage stage already has the exact shape Jev serves. It compiles a
 destination doc from landmarks' `destinations:` frontmatter, runs a subagent
 over a batch of intake-complete items, and applies decisions
-(`beebox/src/core/triage/index.ts`, `instructions.ts`, `routing.ts`).
+(`beebox/src/core/triage/run/core.ts`, `instructions.ts`, `routing.ts`).
 
 The important part is what the decision carries: a **self-reported confidence
 word** — `confident` | `probable` | `guess` (`routing.ts:33`) — and behavior
@@ -88,3 +88,75 @@ decisions three ways (current agent pass, the `smallModel` slot, Jev) and
 compare agreement with what actually happened. Triage has exactly the recorded
 history to make that possible, which is why it is the better of the two to try
 first.
+
+## 2026-09-26 (notifications workstream)
+
+Partly addressed, not closed. The notifications work built the general Jev
+plumbing this issue's two applications would sit on top of:
+`jev.judge` (`src/core/judgment/service.ts`) returning a probability per
+option plus a confidence (`noul`/choice/score per
+`src/schemas/judgment-instructions.ts` (moved to `beebox/src/schemas/judgment/instructions.ts`)), and the `.judgment.card` schema
+(`src/schemas/judgment.ts` (moved to `beebox/src/schemas/judgment/schema.ts`)) plus `bbx judge` as its runner. At that time neither triage
+routing nor quick capture used it. Document triage has since been rewired in
+the admitted-document implementation. Quick Chat was implemented separately
+and is documented at [`beebox/docs/chat/quick-chat.md`](../../beebox/docs/chat/quick-chat.md);
+check that work against the broader candidate-universe questions above before
+calling this half fully resolved.
+
+## 2026-09-28 — document-triage experiment
+
+The [synthetic experiment report](../../beebox/docs/reports/jev-document-triage-experiment-2026-09-28.md)
+and [implementation plan](../../beebox/docs/implemented-plans/jev-document-triage.md) cover only
+half 1. Production routing has not changed. Current triage already uses
+smallModel, so those proposed comparison arms are now the same baseline.
+
+The corpus covers destination boundaries, MIME/body loss, attachment-only
+relevance, PDF text quality, OCR, and preparation failure. Live Jev worked on
+the synthetic text evidence, but preparation failures make a classifier-only
+replacement insufficient. No per-box thresholds have been selected.
+
+The boxholder clarified the admission boundary: unadmitted bodies/attachments
+must stay out of box content and Git; unresolved mail stays at its source with
+ID-only pending state; temporary extraction files are permitted and deleted.
+Rules must carry the necessary context, remain understandable and updateable
+as destinations change, and support a full-agent research fallback when Jev
+cannot classify well. Those requirements are in the plan. Half 2 remains open
+and is not implemented by this workstream.
+
+Further discussion favors treating unclear as an explicit outcome, letting an
+agent correct the canonical instructions when it discovers a mis-triaged item,
+and making commits identify the triaged item, instruction paths, classifier,
+and confidence signals. Mandatory upfront calibration and a separate outcome
+record system are not accepted requirements. The full plan now specifies
+explicit outcomes, bounded research and replayable instruction changes.
+
+The household-administration corpus was regenerated and all observations rerun:
+228 live Jev calls plus three current-agent batches. Jev matched 11/12 short
+destination examples (cloud-storage notes became no-match); both models matched
+all four prepared documents. Explicit unclear separated missing evidence from
+no-match, while concrete best-effort rules controlled ambiguous filing. The
+[paired report](../../beebox/docs/reports/jev-instruction-experiment-2026-09-28.md)
+records the instruction experiment. The complete admitted-document implementation
+plan requires size/scope approval before coding. Gmail admission remains outside
+that implementation unit and keeps this issue open. Quick Chat now exists in
+separate chat-routing work; the older quick-capture description is historical
+context, not a current claim that no quick-chat surface exists.
+
+## 2026-09-28 — admitted-document implementation
+
+The boxholder approved the full scope. The worktree adds opt-in `triage --engine
+jev`, preparation/instruction/judgment CLI operations, fixed-evidence and
+prepare-again replay, confirmed-outcome discovery, correction, bounded research,
+and scoped receipt-backed application. Attachment scopes travel with intake
+cards. The default classifier remains the existing agent until explicitly opted in.
+
+The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
+instruction repair and regression replay. All four new knowledge audits passed.
+Receipts intentionally retain prepared evidence until explicit deletion; deleting
+an original alone does not remove snapshots or Git history. Native Codex research
+cannot enforce a USD ceiling, though tool turns and Jev calls remain bounded.
+
+This issue stays open for Gmail pre-materialization admission and any remaining
+gap between the original generic capture-routing proposal and the separate Quick
+Chat implementation. No real box was used for model probes; worktree commits do
+not deploy. Final implementation checks are recorded in the linked plan/review.

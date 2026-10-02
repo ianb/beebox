@@ -57,7 +57,7 @@ baseBackoffMs`, alongside the existing `now` injection and for the same
 stated reason) and having that section set it past its own runtime. The
 section is about what the readiness-timeout path RECORDS, not about the retry,
 so it should not have a live retry running behind its assertions. The
-crash-loop policy moved to `src/hub/crash-backoff.ts` to keep `supervisor.ts`
+crash-loop policy moved to `src/hub/crash-backoff.ts` (moved to `beebox/src/hub/supervisor/crash-backoff.ts`) to keep `supervisor.ts`
 under its line cap.
 
 ## Worth noting for the next one of these

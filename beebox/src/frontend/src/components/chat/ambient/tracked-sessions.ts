@@ -1,6 +1,6 @@
 /** Persist only identities/labels so reload can refresh this tab's background work. */
 import { z } from "zod";
-import type { AmbientSession } from "./AmbientReplies";
+import type { AmbientSession } from "./AmbientReplies/view";
 
 const sessionsSchema = z.array(z.object({ sessionId: z.string(), label: z.string() }));
 export function readTrackedSessions(storageScope: string): AmbientSession[] {

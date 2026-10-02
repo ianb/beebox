@@ -21,7 +21,7 @@ code-executing procedures are not:
   sync, unlike the equivalent owner-gated config writes in `admin.ts`.
   (Was `drive.updateConfig` until 2026-08-26, when folder mounts became
   cards; the population question is unchanged.)
-- `scheduler.trigger` (`src/webapp/trpc/routers/scheduler.ts`) — runs a
+- `scheduler.trigger` (`src/webapp/trpc/routers/scheduler.ts` (moved to `beebox/src/webapp/trpc/routers/scheduler/router.ts`)) — runs a
   scheduled script card's shell command immediately via
   `execWithTimeout`. The strongest code-execution surface in the tRPC
   tree, at member level.

@@ -155,7 +155,7 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
      it in place. Two traps: a new test tier is a norm for every future agent
      and a mock written by the bug's author encodes the bug — say explicitly
      if one is needed; a tour is the walk written down and kept true weekly
-     (docs/tours.md), not a regression anchor for behaviour — put behaviour
+     (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
      that must stay true in a doctest. -->
 
 ## Implementation order

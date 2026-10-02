@@ -30,7 +30,7 @@ vanishes from view.
 
 ## Reproduced (2026-08-25) — and it is worse than "a slice from before the turn"
 
-`test/webapp/chat-reload-loses-in-flight.doctest.md` pins it deterministically at
+`test/webapp/chat-reload-loses-in-flight.doctest.md` (moved to `beebox/test/webapp/trpc/routers/chat.reload-loses-in-flight.doctest.md`) pins it deterministically at
 the route tier. A send is accepted, the durable claim is on disk, the persisted
 `chat-user-message` is on the bus — and `chat.bootstrap` answers
 **`kind: "empty"`**. Not a history missing one entry: no session at all.
@@ -95,7 +95,7 @@ of it assumes.
 
 Verified in the running app: with the only record of a message being its
 acceptance on the bus, a bare `/chat` load renders it instead of a blank chat.
-Covered by `test/webapp/chat-reload-loses-in-flight.doctest.md` (the
+Covered by `test/webapp/chat-reload-loses-in-flight.doctest.md` (moved to `beebox/test/webapp/trpc/routers/chat.reload-loses-in-flight.doctest.md`) (the
 reproduction, now carried through to the fix) and the
 `mergeAcceptedIntoPending` cases in `test/frontend/reconcile-pending.doctest.md`.
 

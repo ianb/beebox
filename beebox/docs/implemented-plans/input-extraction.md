@@ -104,7 +104,7 @@ typed text survives via the per-session draft restore
 (`InteractiveChat-ws.ts:63-67`); backend loopback with first-audio-wins +
 none-grace multi-tab rendezvous (`src/core/last-audio-pending.ts:59-99`,
 routes `chat-last-audio-routes.ts:59-125`); `bbx chat get-last-audio`
-(`src/cli/commands/chat-audio.ts:143-167`).
+(`src/cli/commands/chat-audio.ts:143-167` (moved to `beebox/src/cli/commands/chat/audio.ts`)).
 
 **Test infra (reused):** `test/frontend/*.doctest.md` imports frontend
 modules by relative path (e.g. `composer-machine.doctest.md:13`,

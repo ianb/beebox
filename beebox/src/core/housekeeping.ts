@@ -9,7 +9,7 @@ import * as fs from "node:fs/promises";
 import type { Stats } from "node:fs";
 import * as path from "node:path";
 import { getBoxTime } from "../lib/time.js";
-import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import { boxTmpDir, chatUploadBatchesDir } from "../lib/box-tmp.js";
 
 /**

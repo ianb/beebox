@@ -13,7 +13,7 @@ releases and immediately applies beebox-relevant security, memory, and
 correctness fixes.
 
 Three channels are assessed. **Runtime** is beebox's own use of the
-SDK (`src/core/agent/`, `src/core/chat/session/`, `src/services/claude-chat.ts`,
+SDK (`src/core/agent/`, `src/core/chat/session/`, `src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`),
 `src/services/scan-vision-claude.ts`, `src/core/sdk-hooks.ts`). **Harness** is
 the Claude Code the boxholder and every worker session run in — `.claude/hooks/`,
 `.claude/agents/finish.md` and the `/finish` flow, `bin/` worktree tooling,
@@ -26,26 +26,32 @@ merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply. **Codex** is the
 third channel, added 2026-09-05: `@openai/codex` and `@openai/codex-sdk`,
 pinned together in `beebox/package.json`, are the binary the box's Codex chats
-run (`src/services/codex-sdk-session.ts`, `src/services/codex-binary.ts`) and
+run (`src/services/codex-sdk-session.ts` (moved to `beebox/src/services/codex-sdk-session/core.ts`), `src/services/codex-binary.ts`) and
 what the production server's `codex` symlink resolves to — nothing else
 updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.280`, Codex `0.155.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.285`, Codex `0.159.1` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.281` (SDK), `2.1.281` (Claude Code), `0.156.1` (Codex)
+- **Latest reviewed upstream version:** `0.3.287` (SDK), `2.1.287` (Claude Code), `0.160.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.280` is pinned (applied 2026-09-24). Next:
-  set `verbatimPrompts: true` on every SDK `query()` beebox makes. The bump only
-  makes the option *available*; setting it is a code change outside this
-  schedule's bump (see the `0.3.280` entry). Codex `0.156.0` settles
-  2026-09-24T19:55Z.
+- **Current recommendation:** Both families moved this turn — Agent SDK to
+  `0.3.285` (which carries the background-Bash timeout change; see its entry),
+  Codex to `0.159.1`. Next: `0.3.286` (settles 2026-10-02T17:17Z), where the
+  steering probe is expected to decide the priority-`now` change, then `0.3.287`.
+  Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
+  deploy gate, but could not commit: `main` failed `doc-check` on a link to an
+  issue moved without `doc-check --fix`
+  (`beebox/docs/plans/migration-reliability.md:20`), and this schedule does not
+  alter unrelated files, so it restored its changes and stopped. `main` was
+  repaired before this turn; the reviews from that run are carried here.
 - **No run on 2026-09-14, and nothing was missed.** That run exited with
   `sessionLaunched: false` and an empty log: `0.3.271` was published at 19:47Z,
   after the run started at 17:14Z, so the newest release was `0.3.270` — already
@@ -66,7 +72,273 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### Codex 0.156.0 / 0.156.1 — pending (published 2026-09-22T19:55Z and 2026-09-23T02:45Z, ~24h and ~17h at this turn)
+### Codex 0.159.3 / 0.160.0 — pending (published 2026-09-30T23:02Z and 2026-10-01T20:26Z, ~23h and ~1h at this turn)
+
+`0.159.3` adds optional account-security reminders for local ChatGPT sign-ins.
+`0.160.0`: sessions can start outside a project with workspace defaults where
+policy permits, and resumes restore saved permissions; unsent queued messages
+resume after reconnection without duplicate sends; subagents receive their
+environment's configuration or preparation failure; SQLite stalls during
+connection setup are fixed and initialization errors are no longer masked as
+timeouts; explicit provider model catalogs no longer include unsupported bundled
+models. No removals.
+- **Action:** Settled path; takeable 2026-10-02/03 with the deploy gate.
+- **Sources:** [rust-v0.159.3](https://github.com/openai/codex/releases/tag/rust-v0.159.3), [rust-v0.160.0](https://github.com/openai/codex/releases/tag/rust-v0.160.0)
+
+### 0.3.287 / Claude Code 2.1.287 — pending (published 2026-10-01T17:03Z, ~5h at this turn)
+
+- **SDK, wanted by beebox's chat:** *"Fixed `includePartialMessages` streams
+  sending a cut-short reply's `message_stop` late or never, so apps could show
+  the reply as still in progress."* The web chat registers with
+  `includePartialMessages: true` (`webapp/routes/chat/register.ts:100`) and the
+  frontend renders the text deltas (`chat-actors.ts`), so a reply cut short could
+  have stayed "in progress" on screen.
+- **SDK, checked and clear:** a WebFetch or WebSearch call that steps aside for
+  a priority `now` message now returns `tool_use_result: { detachedToolCall: true }`,
+  with the result in a later turn — the same priority-`now` change as `0.3.286`.
+  beebox reads `tool_use_result` only transcript-side, for `toolUseResult.file.base64`
+  media (`cli/lib/session-media-extract.ts`, `session-oversize.ts`); the new shape
+  has no `file` and is ignored. MCP `structuredContent` over 1 MB is now omitted —
+  beebox has no MCP servers.
+- **2.1.287, relevant:** a folder's CLAUDE.md is no longer attached a second time
+  after a resume or a compaction — beebox resumes constantly; `claude -p` and SDK
+  sessions no longer repeat a model fallback on every later message after a
+  mid-reply model switch; tool heartbeats now reach SDK hosts while the response
+  stream is stalled; a dangerous `rm` no longer loses its always-ask safeguard when
+  the same command redirects to a `~` or wildcard path. New: "Claude Mods",
+  plugins that may modify deeper behavior, and a built-in side-agent mod;
+  `bareElicitationCapability` for MCP servers that stop connecting after the URL
+  prompt change (beebox has none).
+- **Action:** Settled path; takeable 2026-10-03.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03287), [Claude Code 2.1.287](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21287)
+
+### Codex 0.159.2 — pending (published 2026-09-30T00:03Z, ~22h at this turn)
+
+A single fix: console windows no longer flash on Windows when Codex launches
+background processes and sandboxed commands. Nothing for beebox.
+- **Action:** Settled path; takeable 2026-10-02 with the deploy gate, with
+  `0.159.0`/`0.159.1`.
+- **Sources:** [Codex rust-v0.159.2](https://github.com/openai/codex/releases/tag/rust-v0.159.2)
+
+### 0.3.286 / Claude Code 2.1.286 — pending (published 2026-09-30T17:17Z, ~4h at this turn)
+
+- **The change the steering probe gates on:** *"Changed a person's priority
+  `now` message to move running shell commands, agents and MCP calls to the
+  background and join the running turn instead of stopping it."* beebox's chat
+  steering sends priority `now` messages, and `beebox/src/scripts/sdk-steering-probe.ts`
+  has a "priority now (soft interrupt, not lost)" scenario that today expects the
+  message answered in its own turn after the interrupt. Read literally, `0.3.286`
+  answers it inside the running turn instead, which is the kind of shift the
+  probe exists to catch and which would then need `docs/chat-session-lifecycle.md`
+  and the chat steering design reconciled before shipping. Not verified ahead of
+  time: the probe resolves the bundled binary through beebox's own install
+  (`src/core/sdk-binary-path.ts` has no override), and swapping the SDK under a
+  running suite would corrupt it. The probe will decide when this reaches the
+  pin, no earlier than 2026-10-02.
+- **SDK, checked and clear:** *"Changed the TypeScript Agent SDK to leave an
+  omitted `permissionMode` to Claude Code, so a settings `defaultMode` now
+  applies and, on third-party providers or with telemetry off, the session starts
+  in auto mode like `claude -p`."* Checked every `query()` site. Agent runs
+  (`core/agent/invoke/run.ts:82`) and chat (`services/claude-chat/core.ts`) pass
+  `bypassPermissions`. Scan vision (`services/scan-vision-claude.ts`) omits it but
+  runs with `tools: []` and `settingSources: []`, so no `defaultMode` can load and
+  auto mode has nothing to review. `bin/agent-quotas-requests.ts` also omits it,
+  for a usage query.
+- **SDK, relevant:** foreground subagents no longer miss the task-tracking tools
+  when they are listed in `tools`/`allowedTools` — relevant if
+  `issues/decisions/2026-09-11-todowrite-leaves-default-tools-on-current-models.md`
+  is ever resolved by opting in.
+- **2.1.286, relevant:** `--resume` / `--continue` no longer lose every turn after
+  a batch of parallel tool calls when the earlier session crashed; API 400s after
+  a tool or hook returned a non-text value are fixed (beebox's SDK hooks return
+  objects, as the protocol expects); every turn failing when the API refuses the
+  model an alias resolves to now retries once on the previous model of the same
+  tier. Several more secret-redaction fixes in logs and transcripts.
+- **Action:** Settled path; takeable 2026-10-02 — expect the steering probe to
+  gate it.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03286), [Claude Code 2.1.286](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21286)
+
+### Codex 0.159.0 / 0.159.1 — APPLIED 2026-10-01 (published 2026-09-29T08:10Z and 20:36Z)
+
+- **Removals, checked clear:** `0.159.0` removes automatic follow-up prompt
+  suggestions with the `tui.prompt_suggestions` setting, and the bundled
+  `plugin-creator` skill. Nothing in `beebox/src`, `beebox/plugins`, `bin/` or
+  `.claude/` references either.
+- **`0.159.0`, relevant:** `.aws` directories are protected by default under
+  writable roots, and approved commands keep explicit filesystem denials; an
+  opt-in `instant_interrupt` lets new input steer mid-response; app-server clients
+  can paginate thread history from an item.
+- **`0.159.1`** makes GPT-6.1 Sol the default in the bundled and Bedrock
+  catalogs. beebox's `sol` alias names `gpt-6-sol`, one step behind again — noted
+  on `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **Action:** Applied 2026-10-01 on the settled path, both versions and both pins. Deploy gate on the workspace binary:
+  `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin --help` exits 0 on
+  `codex-cli 0.159.1`.
+- **Sources:** [rust-v0.159.0](https://github.com/openai/codex/releases/tag/rust-v0.159.0), [rust-v0.159.1](https://github.com/openai/codex/releases/tag/rust-v0.159.1)
+
+### 0.3.285 / Claude Code 2.1.285 — APPLIED 2026-10-01 (published 2026-09-29T17:35Z)
+
+- **Behavior change to watch:** *"Changed Bash/PowerShell `timeout` to bound a
+  `run_in_background` command (was ignored; default 30 min, max 2 h); the
+  `stopped` task notification for a stop at that limit says why."* Background
+  commands a box agent starts were previously unbounded; from this release they
+  stop at 30 minutes unless the call sets a longer `timeout`, capped at 2 hours.
+  Long conversions or transcriptions started in the background are the shape that
+  would notice. The stop arrives as a `stopped` task notification, which the chat
+  task strip already renders. Not filed; worth checking if long background work
+  starts ending early once this is pinned.
+- **SDK, relevant:** switching models mid-session with `setModel` no longer
+  leaves the new model on the built-in output-token limit and auto-compact
+  window; `toggleMcpServer(name, false)` now closes a not-yet-connected server;
+  `rewind_conversation` stops a backgrounded MCP call its message started;
+  `getSubagentMessages()` now includes messages a subagent read while running.
+- **2.1.285, relevant:** synchronous hooks no longer hang while a background
+  process the hook started keeps its output open — this repo's hooks do start
+  background work; fork subagents now keep the parent's plan or `dontAsk` mode,
+  which the `manual-tests` schedule uses; a rare auth failure when two sessions
+  recover a crashed process's refresh lock at once is fixed — the concurrency
+  family again.
+- **Action:** Applied 2026-10-01 on the settled path (~52h old). The background-Bash timeout change is now live for box agents. `pnpm -C beebox test`: **12,634 pass, 2 skipped, 0 fail**. `sdk-steering-probe`:
+  all four steering behaviors pass.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03285), [Claude Code 2.1.285](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21285)
+
+### Codex 0.158.0 — APPLIED 2026-09-30 (published 2026-09-28T05:12Z)
+
+- **Checked and clear:** *"Terminal input approval is enabled by default for
+  commands running with elevated permissions."* A new approval default could put
+  a prompt in front of beebox's unattended Codex chat, so checked:
+  `src/services/codex-sdk-session/core.ts` runs with `approvalPolicy: "never"`
+  and the box sandbox (`CODEX_BOX_SANDBOX`), so nothing waits on an approval.
+- Also: MCP servers needing pre-registered OAuth client secrets
+  (`codex mcp add --oauth-client-secret`), bearer tokens on direct exec-server
+  WebSocket connections, approval reviews retrying when new user input arrives,
+  command-completion events now carrying early output and reporting launch
+  failures, and sandbox fixes on Windows, Linux and macOS. No removals.
+- **Action:** Applied 2026-09-30 on the settled path (~65h old), both pins. Deploy gate on the workspace binary:
+  `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin --help` exits 0 on
+  `codex-cli 0.158.0`.
+- **Sources:** [Codex rust-v0.158.0](https://github.com/openai/codex/releases/tag/rust-v0.158.0)
+
+### 0.3.284 / Claude Code 2.1.284 — APPLIED 2026-09-30 (published 2026-09-28T17:15Z)
+
+- **2.1.284 — Sonnet 5.5.** *"Added Claude Sonnet 5.5 (`claude-sonnet-5-5`), now
+  the default Sonnet model on the Anthropic API."* beebox resolves `sonnet` to
+  `claude-sonnet-5` in `beebox/src/shared/model-ids.ts`, the same staleness as
+  the Opus alias a week ago. Probed on the current pin (`0.3.283`, CLI 2.1.283):
+  `model: "claude-sonnet-5-5"` starts and answers, so the table can move without
+  waiting for this release. Filed:
+  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **SDK, relevant:** *"Fixed `query()` closing stdin before a follow-up turn
+  woken by a finished background agent, which failed that turn's hooks,
+  `canUseTool` and SDK MCP calls with 'Stream closed'."* beebox registers
+  `PreToolUse` and `PostToolUse` callbacks (`src/core/sdk-hooks.ts`) — the Write/
+  Edit validator and the `git mv` nudge — so on a turn woken by a background agent
+  those would have failed. Also: `getSessionMessages()` / `forkSession()` fixes
+  (beebox calls neither), and Elicitation hook `{ decision: 'block' }` now
+  honored.
+- **2.1.284, relevant:** Agent SDK sessions no longer crash when a user message
+  contains an image with a malformed `source`, nor fail every later turn after a
+  malformed document block — beebox chat sends user images, and this is the
+  twelfth permanent-wedge fix this ledger has tracked. "Prompt is too long" after
+  compacting now compacts once more instead of persisting. An overloaded error
+  right after a thinking block is now retried. Auto-memory loading neutralizes
+  invisible characters and markup-imitating tags in `MEMORY.md`.
+- **Action:** Applied 2026-09-30 on the settled path (~53h old). `pnpm -C beebox test`: **12,630 pass, 2 skipped, 0 fail**. `sdk-steering-probe`:
+  all four steering behaviors pass, including "priority now" — the scenario
+  `0.3.286` is expected to change.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03284), [Claude Code 2.1.284](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21284)
+
+### 0.3.283 / Claude Code 2.1.283 — APPLIED 2026-09-28 (published 2026-09-25T18:49Z); reviewed 2026-09-26 after its changelog appeared
+
+First recorded 2026-09-25 as a bound, when neither changelog had a section for
+it and there was no `v2.1.283` tag. **Re-read 2026-09-26** once both appeared;
+the changelogs confirm what the type diff below showed and add the following.
+
+- **SDK, checked and clear:** *"Changed stream-json output to include warnings
+  and notices raised during a turn as `system/informational` messages; it
+  previously dropped them."* A new message shape could become chat noise, so
+  checked: `adaptSdkMessage`'s `system` case
+  (`src/core/chat/session/messages.ts`) maps only `init` and the four task
+  subtypes and returns `null` for any other subtype, so these are dropped as
+  before. The `unknown` sentinel catches only unrecognized top-level types.
+  Surfacing those warnings would be a deliberate choice, not an accident. Also:
+  `getSessionMessages()` / `forkSession()` no longer return a rewound-away branch
+  (beebox calls neither); omitting `max_thinking_tokens` in
+  `set_max_thinking_tokens` now leaves the budget alone (beebox does not send it).
+- **2.1.283, relevant:** SDK sessions no longer lose a deferred tool call or a
+  finished tool result when a turn ends early, or a held approval prompt after a
+  worker restart; the Skill tool now says a skill's plugin failed to load instead
+  of calling it uninstalled (beside the new `plugin_errors` field below); stdio
+  MCP servers still starting at session end are no longer left running.
+  `/doctor prompt-audit` audits CLAUDE.md files, skills, agents and commands for
+  prompting patterns written for older models — this repo has many of each, which
+  makes it a candidate to run. Managed `sandbox` settings with one invalid value
+  now fail closed instead of being ignored.
+
+What the type diff showed at the first look:
+
+What the published package shows: `sdk.d.ts` differs from `0.3.282` by 38 lines,
+all additive or clarifying — nothing removed or renamed. Bundled CLI is 2.1.283.
+- **`plugin_errors`** on the init message: plugin load-time errors, with `path`
+  for an SDK `plugins` entry that did not load at all. beebox loads its own
+  validator plugin through `plugins` in `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`), and until now a
+  failed load was silent; this is the field that would surface it.
+- Managed-settings `availableModelsMatch` (`prefix` | `exact`) and `deniedModels`;
+  the `availableModels` doc now says a `claude-opus-5` entry also allows
+  `claude-opus-5-5`.
+- `max_thinking_tokens` omitted now leaves the budget unchanged (null resets
+  it), and the startup-failure reason list gains a managed-model case.
+- **Action:** Applied 2026-09-28 on the settled path (~75h old). `pnpm -C beebox test`: **12,041 pass, 2 skipped, 0 fail**. `sdk-steering-probe`
+  (now at `beebox/src/scripts/sdk-steering-probe.ts` after the layout move in
+  `079410e97`): all four steering behaviors pass.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03283), [Claude Code 2.1.283](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21283)
+
+### Codex 0.157.1 — APPLIED 2026-09-28 with 0.157.0, nothing to assess (published 2026-09-26T01:06Z)
+
+The release notes say only that highlights "could not be determined: the supplied
+PR index is empty, and the GitHub tag comparison returned 404" — their notes
+generator failed, so the release is opaque. Nothing to assess on beebox's path.
+- **Action:** Applied 2026-09-28 on the settled path, with `0.157.0`, both pins together. Deploy gate on the workspace binary:
+  `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin --help` exits 0 on
+  `codex-cli 0.157.1`.
+- **Sources:** [Codex rust-v0.157.1](https://github.com/openai/codex/releases/tag/rust-v0.157.1)
+
+### Codex 0.157.0 — APPLIED 2026-09-28 with 0.157.1 (published 2026-09-25T02:35Z)
+
+GPT-6 Sol and Luna with Bedrock support and migration prompts for older models
+(beebox already resolves `sol`/`luna` to `gpt-6-*`); fullscreen transcripts and
+automatic background-server startup on by default for eligible *interactive*
+sessions; network restrictions now enforced across redirects and ongoing HTTP
+and WebSocket traffic; retries and a five-minute timeout for transient file
+uploads; configured proxy routing fixed for realtime connections and web search.
+No removals, so beebox's plugin path is not at risk; the deploy gate confirms at
+bump time.
+- **Action:** Settled path; takeable 2026-09-27 with the deploy gate.
+- **Sources:** [Codex rust-v0.157.0](https://github.com/openai/codex/releases/tag/rust-v0.157.0)
+
+### 0.3.282 / Claude Code 2.1.282 — APPLIED 2026-09-26 (published 2026-09-24T15:53Z)
+
+- **SDK:** a smaller `@anthropic-ai/claude-agent-sdk/core` entry point for apps
+  that bundle the SDK; `prewarm()` / `SpareProcess.claim()` (alpha) to start a
+  Claude Code process before its session is known — relevant to chat-run start
+  latency if it ever matters; host-supplied managed settings gain marketplace
+  allow/block lists. Nothing beebox depends on changes.
+- **2.1.282, relevant:** more resumed-session fixes where earlier messages were
+  re-sent in a changed form and reasoning was dropped; sessions failing every
+  turn on "Invalid `data` in `redacted_thinking` block" now drop thinking blocks
+  and retry once — the eleventh permanent-wedge fix this ledger has tracked;
+  every request failing with a 400 when history holds web-search results the API
+  cannot decrypt (for example from a turn answered through a third-party
+  gateway); requests failing for up to a minute with an "another Claude Code
+  process is refreshing it" login error after that process died mid-refresh — the
+  concurrency family; and Bash hiding a full disk quota behind "Exit code 1".
+  Bash permission rules with a mid-pattern `:*` in settings files now match;
+  this repo's schedules pass rules on the command line, where they already did.
+- **Action:** Applied 2026-09-26 on the settled path (~53h old). `pnpm -C beebox test`: **11,519 pass, 0 fail**. `sdk-steering-probe`: all four
+  steering behaviors pass.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03282), [Claude Code 2.1.282](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21282)
+
+### Codex 0.156.0 / 0.156.1 — APPLIED 2026-09-25 (published 2026-09-22T19:55Z and 2026-09-23T02:45Z)
 
 - **`0.156.1`** adds GPT-6 Sol and GPT-6 Luna to the model picker and makes the
   rate-limit switch prompt recommend GPT-6 Luna. beebox names its Codex models
@@ -84,11 +356,14 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   beebox's Codex chats. Sandbox isolation gaps closed on Windows, Linux and macOS.
   No removals, so beebox's plugin path (`codex plugin … --json`) is not at risk;
   the deploy gate confirms at bump time.
-- **Action:** Settled path; takeable 2026-09-25 with the deploy gate, both
-  together.
+- **Action:** Applied 2026-09-25 on the settled path, both versions and both
+  pins together (`0.156.0` had first been bumped and gate-checked on 2026-09-24,
+  then restored when that run could not commit). Deploy gate on the workspace
+  binary: `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin --help` exits 0
+  on `codex-cli 0.156.1`.
 - **Sources:** [rust-v0.156.0](https://github.com/openai/codex/releases/tag/rust-v0.156.0), [rust-v0.156.1](https://github.com/openai/codex/releases/tag/rust-v0.156.1)
 
-### 0.3.281 / Claude Code 2.1.281 — pending (published 2026-09-23T17:02Z, ~3h at this turn)
+### 0.3.281 / Claude Code 2.1.281 — APPLIED 2026-09-25 (published 2026-09-23T17:02Z)
 
 - **SDK, checked and clear:** the `Settings` type's `attribution` field becomes
   `boolean | {...}`, so code reading `attribution.commit` needs a narrow. Nothing
@@ -127,7 +402,8 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
     reverse: a landmark-bound chat runs with the cwd in a subdirectory and
     `additionalDirectories: [boxRoot]` (`chat/session/start.ts:158`), so the added
     directory is the cwd's *parent*. Whether that shape duplicates is unverified.
-- **Action:** Settled path; takeable 2026-09-25.
+- **Action:** Applied 2026-09-25 on the settled path (~52h old). `pnpm -C beebox test`: **11,453 pass, 0 fail** (a 21-minute run).
+  `sdk-steering-probe`: all four steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03281), [Claude Code 2.1.281](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21281)
 
 ### 0.3.280 / Claude Code 2.1.280 — APPLIED 2026-09-24 (published 2026-09-22T15:51Z)
@@ -140,7 +416,12 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   pin before writing this: the expansion does apply to beebox's prompt shapes.
   Security-relevant; the details are tracked outside this public file. The
   recommendation is to set `verbatimPrompts: true` on every SDK `query()` beebox
-  makes once `0.3.280` is in the pin. Slash-command dispatch is already
+  makes once `0.3.280` is in the pin. **Done, and verified 2026-09-29:** agent runs
+  (`core/agent/invoke/run.ts`) and scan vision set `verbatimPrompts: true`, and
+  chat turns carrying text the boxholder did not type go out with the SDK's
+  per-message `client_composed: true` (`services/claude-chat/core.ts`), landed in
+  `aedbbdbb4` and `2952eb805`. Re-probed on the pinned `0.3.283`: the same
+  chat-shaped prompt is expanded without the flag and not expanded with it. Slash-command dispatch is already
   unreachable from chat, because every chat prompt starts with a wrapper tag
   (`<typed>`, `<speech>` or `<chat-message …>`), never a leading `/`.
 - **SDK, other:** `fireReason` on task-notification origins,
@@ -151,7 +432,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   default Opus model."* beebox's `opus` alias now resolves to
   `claude-opus-5-5` (`beebox/src/shared/model-ids.ts`), and retired Opus IDs
   normalize forward. Tracked in:
-  `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`. 2.1.280 also
+  `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md` — **resolved 2026-09-23/24**: `opus` now resolves to `claude-opus-5-5`, and `sol`/`luna` to `gpt-6-*`. 2.1.280 also
   moves Pro and Team Standard plans' default from Sonnet to Opus, which reaches
   beebox only on paths that leave the model unset.
 - **2.1.280, runtime-relevant:** writes through a symlinked path are now judged
@@ -189,7 +470,7 @@ A single fix: *"New local TUI sessions now leave reasoning summaries disabled by
 default, fixing request rejection by providers that do not support them."* It
 repairs `0.155.0`'s new live-reasoning-summary display, but only for **TUI**
 sessions. beebox runs Codex through `@openai/codex-sdk`
-(`src/services/codex-sdk-session.ts`), not the TUI, so `0.155.0` carries no
+(`src/services/codex-sdk-session.ts` (moved to `beebox/src/services/codex-sdk-session/core.ts`)), not the TUI, so `0.155.0` carries no
 regression on beebox's path and the two need not be taken as a pair here.
 - **Action:** Applied 2026-09-22 on the settled path (~95h old), both pins
   together, with `0.155.0`. Deploy gate on the workspace binary:
@@ -271,7 +552,7 @@ Touch ID for MCP requests, configurable daemon update schedules.
   `400 … Input tag 'advisor_20260301'` when `ANTHROPIC_BASE_URL` points at a
   proxy or gateway (2.1.275 regression)."*
 - **Beebox applicability:** it repairs `0.3.275`, and beebox has the shape it
-  broke: with `BBX_LOG_PROMPTS=1`, `src/core/agent/run.ts` points
+  broke: with `BBX_LOG_PROMPTS=1`, `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`) points
   `ANTHROPIC_BASE_URL` at the local prompt-logger proxy. Pinning `0.3.275`
   alone would fail every request on that path. The third hotfix pair in two
   weeks, published 5h17m after the release it repairs.
@@ -304,7 +585,7 @@ Touch ID for MCP requests, configurable daemon update schedules.
 - **Probed, not reproduced — a watch item:** *"Changed queued background-task
   completions to share one model call: each still gets its own `result`, all but
   the last empty with `num_turns: 0`."* beebox treats **every** `result` as a
-  turn end: `ChatSession` (`src/core/chat/session/index.ts:257`) records a turn
+  turn end: `ChatSession` (`src/core/chat/session/index.ts:257` (moved to `beebox/src/core/chat/session/run/core.ts`)) records a turn
   marker, flips to ready, emits `done` and calls `drainQueue()`, sending any
   queued user message; `ChatThreadSession` (`thread.ts:276`) emits `turn-text`
   and `done` and calls `resolveTurn()`. Neither checks `num_turns`, so an empty
@@ -709,7 +990,7 @@ published `0.154.0` in lockstep.
   in `script-env-allowlist.ts`, so a box agent could not inherit it from the
   boxholder's shell even if it were set there. beebox *does* set
   `ANTHROPIC_BASE_URL` on one path — `BBX_LOG_PROMPTS=1` points agent runs at the
-  local prompt-logger proxy (`src/core/agent/prompt-logger.ts`) — which is the
+  local prompt-logger proxy (`src/core/agent/prompt-logger.ts` (moved to `beebox/src/core/agent/invoke/prompt-logger.ts`)) — which is the
   same family of configuration the regression hit, so this is the shape to
   remember if gateway env ever enters the picture.
 - **Action:** Settled path. **Pair it with `0.3.265`:** they are one change and
@@ -725,7 +1006,7 @@ published `0.154.0` in lockstep.
   Every beebox agent and chat thread is a multi-turn SDK session started with
   `cwd: boxRoot`, so until now the agent's shell returned to the box root at
   every message and from `0.3.265` it does not.
-  The landing spot is `ensureAgentCommitted` (`src/core/agent/commit.ts`), whose
+  The landing spot is `ensureAgentCommitted` (`src/core/agent/commit.ts` (moved to `beebox/src/core/agent/invoke/commit.ts`)), whose
   two halves stop agreeing about where they are: it checks the tree with
   `getStatus(boxRoot)` — a child process handed the box root explicitly — but
   **resumes the agent session** to do the committing, through a shell that may be
@@ -1114,7 +1395,7 @@ The rest of 0.3.259 and 2.1.259:
   `issues/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md`,
   because a gate that says "do not ship" for an inconclusive run is a gate whose
   verdicts get discounted. `pnpm -C beebox test` came back **8,524 pass, 6
-  fail**, of which `test/hub/hub-scan-token.doctest.md` hit a 303-second timeout
+  fail**, of which `test/hub/hub-scan-token.doctest.md` (moved to `beebox/test/hub/server.scan-token.doctest.md`) hit a 303-second timeout
   under load and passes in 3s on its own, and
   `test/dev/launch-session.doctest.md` fails **reproducibly** — but it fails
   identically at the previous `0.3.252` pin (checked by setting the bump aside,
@@ -1153,7 +1434,7 @@ is the argument for the two-day settling window continuing to earn its keep.
   - *"Fixed a background Bash task that is still running when a stream-json
     session ends right after an interrupt (stdin closed) never receiving its
     final `task_notification`."* That is beebox's chat stop path exactly:
-    `interrupt()` (`src/core/chat/session/index.ts:374`) and then the run ends.
+    `interrupt()` (`src/core/chat/session/index.ts:374` (moved to `beebox/src/core/chat/session/run/core.ts`)) and then the run ends.
     A background Bash task started in that turn was losing its `settled`
     bookend **upstream**, and the live task strip has no way to clear a task
     whose bookend never arrives. So this is a live producer of the wedge filed
@@ -1197,7 +1478,7 @@ interactive UI, provider plumbing (Bedrock/Vertex/Foundry/gateway), VS Code, and
   hangs. **`defaultMode` appears nowhere in this repo** (searched all settings,
   scripts and docs), and neither channel depends on it: box agents pass
   `permissionMode: "bypassPermissions"` as a `query()` option
-  (`src/core/agent/run.ts`), and worker sessions pass
+  (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`)), and worker sessions pass
   `--dangerously-skip-permissions` on the command line. Both routes are
   explicitly still supported. Note for the future: beebox *does* write
   `.claude/settings.json` into boxes (`src/core/install-validation-hooks.ts`),
@@ -1264,7 +1545,7 @@ interactive UI, provider plumbing (Bedrock/Vertex/Foundry/gateway), VS Code, and
     stream.
   Two shapes, no reproduction, so `0.3.251` is safe on this machine and the
   settled path was taken as written. Worth knowing why this machine is probably
-  not exposed: nothing here relocates the tasks dir. `beebox/src/core/agent/run.ts`
+  not exposed: nothing here relocates the tasks dir. `beebox/src/core/agent/invoke/run.ts`
   builds its child env through `buildScriptEnv`, which touches `PATH` and
   `ANTHROPIC_BASE_URL` and sets neither `TMPDIR` nor `CLAUDE_CODE_TMPDIR`, so
   box agents inherit the ordinary macOS temp dir.
@@ -1316,7 +1597,7 @@ interactive UI, provider plumbing (Bedrock/Vertex/Foundry/gateway), VS Code, and
 recorded. The single most useful thing to state about them is the frame:
 
 **Nothing here runs with permission enforcement on.** Box agents run
-`permissionMode: "bypassPermissions"` (`src/core/agent/run.ts`), and worker
+`permissionMode: "bypassPermissions"` (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`)), and worker
 sessions launch with `--dangerously-skip-permissions`
 (`bin/launch-worktree-session`). Checked for permission rules that would make
 these fixes bite: `.claude/settings.json`, `beebox/.claude/settings.json`
@@ -1416,7 +1697,7 @@ re-read is owed.
   server's tool calls.
 - **BeeBox applicability (runtime):** None. beebox calls
   `createSdkMcpServer` nowhere — it hosts no in-process MCP server, and
-  `src/core/agent/run.ts` passes no `mcpServers`. The itemized SDK content is
+  `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`) passes no `mcpServers`. The itemized SDK content is
   therefore empty for us, and everything that matters in this version is the
   Claude Code 2.1.248 it bundles, below.
 - **Action:** Never installed on its own — it settled during a quiet upstream
@@ -1541,7 +1822,7 @@ upstream but **not yet present on this machine**.
   and resumed session, a CLI restart — leaves a task showing as running with no
   event able to clear it. Both are filed as one item:
   `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md`.
-  The `permissionMode` fix does not apply: `src/core/agent/run.ts` sets
+  The `permissionMode` fix does not apply: `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`) sets
   `permissionMode: "bypassPermissions"` once and never switches mid-session.
 - **BeeBox applicability (harness):** None from the SDK side.
 - **Action:** Applied 2026-08-28 on the settled path (~54h old), the newest
@@ -1632,7 +1913,7 @@ tag before recording one as opaque.
   without it — and always for one-shot string prompts — they stop with it.
 - **BeeBox applicability (runtime):** `perTaskStopAffordance` is the one
   that matters. beebox calls `interrupt()` on the chat stop path
-  (`src/core/chat/session/index.ts:374`, via
+  (`src/core/chat/session/index.ts:374` (moved to `beebox/src/core/chat/session/run/core.ts`), via
   `webapp/trpc/routers/chat-control-procedures.ts:212`), in
   `services/claude-chat.ts:273`, and in the field-test operator turns — all of
   which today mean "stop the background subagents too". Whether the chat stop
@@ -1640,7 +1921,7 @@ tag before recording one as opaque.
   so it is filed as a decision rather than acted on:
   `issues/decisions/2026-08-25-chat-stop-and-background-subagents.md`.
   `user_message_uuid` is worth remembering next to the chat session's own uuid
-  reconciliation (`src/core/chat/session/transcript-sync.ts`,
+  reconciliation (`src/core/chat/session/transcript-sync.ts` (moved to `beebox/src/core/chat/session/run/transcript-sync.ts`),
   `accepted-messages.ts`), which correlates by hand today; no work filed yet
   because the field only appears on the live stream and the reconciliation
   reads the on-disk transcript. `costBasis` and `modelPricing` are additive:
@@ -1769,7 +2050,7 @@ missing version.
   that touches shapes beebox parses.
   - *PDF result shape.* Boxes hold PDF cards (the `document` → `pdf` card-type
     migration is in `src/core/migrations.ts`), so box agents do read PDFs.
-    `src/core/agent/render.ts` renders user messages by walking only
+    `src/core/agent/render.ts` (moved to `beebox/src/core/agent/invoke/render.ts`) renders user messages by walking only
     `tool_result` blocks, and `extractToolResultText` keeps only `text` items —
     so before this change a PDF's trailing `document` user-message rendered as
     nothing, and after it the block rides inside a `tool_result` whose text
@@ -1778,7 +2059,7 @@ missing version.
     nothing now prints `(no content)`" is exactly the kind of diff that gets
     misread as a regression.
   - *`disableAllHooks`.* beebox registers `gitMvNudgeHook` through the
-    `hooks` option in `src/core/agent/run.ts` and a `PostToolUse` validator
+    `hooks` option in `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`) and a `PostToolUse` validator
     through its local plugin. The fix only matters where a **managed** settings
     source sets `disableAllHooks`; neither this machine nor the prod box does,
     so nothing was silently off. Worth keeping in mind if managed settings ever
@@ -1832,8 +2113,8 @@ missing version.
 - **BeeBox applicability:** Nothing assessable on either channel.
 - **Action:** Applied 2026-08-25 on the settled path (~71h old) — it was the
   only version past the two-day window. `pnpm -C beebox test`: 7,866 pass,
-  27 fail, all 27 in `test/webapp/login-redirect.doctest.md` and
-  `test/webapp/mobile-spa-fallback.doctest.md` and **pre-existing** — confirmed
+  27 fail, all 27 in `test/webapp/login-redirect.doctest.md` (moved to `beebox/test/webapp/base-prefix.login-redirect.doctest.md`) and
+  `test/webapp/mobile-spa-fallback.doctest.md` (moved to `beebox/test/webapp/server-root.spa-fallback.doctest.md`) and **pre-existing** — confirmed
   by re-running both files at the previous `0.3.240` pin, where they fail
   identically. They exercise `src/webapp/base-prefix.ts`, which imports nothing
   from the SDK. `sdk-steering-probe`: all four steering behaviors pass.
@@ -1905,7 +2186,7 @@ CLI before editing.
 - **Action:** Published 2026-08-22T13:07Z. Applied 2026-08-24 via
   `pnpm update-agent-sdk` at ~51h as the newest settled version, carrying
   `0.3.239` in with it. Verified: typecheck clean, `pnpm -C beebox test`
-  7848/7848 pass, and `scripts/sdk-steering-probe.ts` holds all four steering
+  7848/7848 pass, and `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) holds all four steering
   behaviors.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03240), [Claude Code 2.1.240](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21240)
 
@@ -1931,7 +2212,7 @@ CLI before editing.
     worth knowing before reading a cost trend as a regression.
   - `SYSTEM_PROMPT_DYNAMIC_BOUNDARY`: inert. BeeBox passes
     `systemPrompt: { type: "preset", preset: "claude_code", append: … }`
-    (`src/core/agent/run.ts`), not an array, and talks to the Anthropic API
+    (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`)), not an array, and talks to the Anthropic API
     directly rather than through Bedrock/Vertex/Foundry/a gateway.
   - The `background_tasks_changed`-after-repeated-`initialize` item continues the
     thread from `0.3.238`: it further confirms the SDK expects hosts that
@@ -1990,9 +2271,9 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
     about, and it looks inert here — but the reasoning is worth writing down
     because the blast radius would be large if wrong.** BeeBox registers
     hooks on every query: `PreToolUse: [gitMvNudgeHook()]` plus the local
-    harness plugin in `src/services/claude-chat.ts`, and
+    harness plugin in `src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`), and
     `PreToolUse`/`PostToolUse` (git-mv nudge + card validator) in
-    `src/core/agent/run.ts`. It also runs a warm-subprocess pool — `startup({
+    `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`). It also runs a warm-subprocess pool — `startup({
     options: queryOptions })` spawns and initializes a CLI ahead of time, and
     `warmCompatible`/`warmSlotKey` decide whether a later `start()` may consume
     that slot. Crucially, the consuming path hands the **already-initialized
@@ -2042,7 +2323,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
 - **Action:** Published 2026-08-20T18:02Z. Applied 2026-08-23 via
   `pnpm update-agent-sdk` at ~70h as the newest settled version. Verified:
   typecheck clean, `pnpm -C beebox test` 7529/7529 pass, and
-  `scripts/sdk-steering-probe.ts` holds all four steering behaviors. The
+  `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) holds all four steering behaviors. The
   hook-callbacks-after-re-`initialize` fix analysed above is therefore now live
   at the pin — no behavior change was observed, consistent with the conclusion
   that beebox never performs that re-initialize.
@@ -2064,7 +2345,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
 - **Action:** Applied 2026-08-22 via `pnpm update-agent-sdk` at ~64h as the
   newest settled version, carrying `0.3.236` in with it. Verified: typecheck
   clean, `pnpm -C beebox test` 7496/7496 pass, and
-  `scripts/sdk-steering-probe.ts` holds all four steering behaviors.
+  `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) holds all four steering behaviors.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03237), [Claude Code 2.1.237](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21237)
 
 ### 0.3.236 — applied
@@ -2088,7 +2369,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   - **`SIGTERM in print/SDK mode no longer records an interrupted turn or
     synthetic tool denials before exiting` (2.1.236) — the most beebox-
     shaped item in this batch.** SIGTERM to an SDK session is routine here, not
-    exceptional: `src/core/agent/stream.ts:66` documents the SDK transport
+    exceptional: `src/core/agent/stream.ts:66` (moved to `beebox/src/core/agent/invoke/stream.ts`) documents the SDK transport
     SIGTERMing the CLI with a SIGKILL fallback, `bbx serve` forwards SIGTERM
     (`src/cli/commands/serve.ts:162`), `bbx hub` idle-collects children, and the
     dev router stops worktrees after five minutes. Pre-fix, each of those wrote
@@ -2171,7 +2452,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
 - **Action:** Published 2026-08-18T18:25Z; held an extra turn on 2026-08-20 at
   ~46h. Applied 2026-08-21 via `pnpm update-agent-sdk` at ~70h as the newest
   settled version. Verified: typecheck clean, `pnpm -C beebox test`
-  7460/7460 pass, and `scripts/sdk-steering-probe.ts` holds all four steering
+  7460/7460 pass, and `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) holds all four steering
   behaviors. The embedded-`grep` memory improvement flagged above is therefore
   now live at the pin.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03235), [Claude Code 2.1.235](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21235)
@@ -2229,7 +2510,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   settled version. The `ExitReason` breaking change predicted inert here did in
   fact land clean — typecheck passed with no `case`-branch fallout. Verified:
   `pnpm -C beebox test` 7415/7415 pass, and
-  `scripts/sdk-steering-probe.ts` holds all four steering behaviors.
+  `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) holds all four steering behaviors.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03234), [Claude Code 2.1.234](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21234)
 
 ### Monitor gap — two turns lost to a working-tree collision
@@ -2261,10 +2542,10 @@ clean tree, and a single long-lived uncommitted file stalls it indefinitely.
   input redirections (`< file`).
 - **BeeBox applicability (runtime):** The todo-tool removal was checked
   rather than assumed and is **inert here**. BeeBox never asks for those
-  tools: `buildQueryOptions` (`src/core/agent/run.ts`) and
-  `src/services/claude-chat.ts` pass no `tools`/`allowedTools` at all, and the
+  tools: `buildQueryOptions` (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`)) and
+  `src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`) pass no `tools`/`allowedTools` at all, and the
   one place that does set an explicit surface — `OPERATOR_TOOLS` in
-  `src/field-test/run.ts:61` — is `["Bash", "Read"]`. The many `todo` hits in
+  `src/field-test/run.ts:61` (moved to `beebox/src/field-test/run/core.ts`) — is `["Bash", "Read"]`. The many `todo` hits in
   `src/` are beebox's own `{% todo %}` card annotation, an unrelated
   concept. Notification hooks are also inert: beebox registers only
   `PreToolUse`/`PostToolUse` (`run.ts`), and runs `bypassPermissions`, so there
@@ -2282,7 +2563,7 @@ clean tree, and a single long-lived uncommitted file stalls it indefinitely.
   `pnpm update-agent-sdk` at ~93h as the newest settled version — later than the
   usual two days because the monitor was blocked for two turns (see the gap note
   above). Verified: typecheck clean, `pnpm -C beebox test` 7201/7201 pass,
-  and `scripts/sdk-steering-probe.ts` holds all four steering behaviors.
+  and `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) holds all four steering behaviors.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03233), [Claude Code 2.1.233](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21233)
 
 ### 0.3.232 — applied (parity content from Claude Code 2.1.232)
@@ -2297,7 +2578,7 @@ clean tree, and a single long-lived uncommitted file stalls it indefinitely.
   `tool_use_result`, `context_usage`, `SDKContextUsage`, and `vcs_state_changed`
   appear nowhere in `beebox/src`. Note the `tool_use_result` shape change
   is *not* the same thing as the Anthropic `tool_result` **content block** that
-  beebox does consume (`src/core/agent/render.ts`,
+  beebox does consume (`src/core/agent/render.ts` (moved to `beebox/src/core/agent/invoke/render.ts`),
   `src/cli/lib/session-content.ts`, the frontend `SessionLog`); those are
   unaffected. BeeBox also configures no MCP servers, so subagent MCP
   results do not arise.
@@ -2404,7 +2685,7 @@ one.
   `pnpm update-agent-sdk` at ~56h as the newest settled version, carrying
   `0.3.228` and `0.3.229` in with it. Verified: typecheck clean,
   `pnpm -C beebox test` 6980/6980 pass, and
-  `scripts/sdk-steering-probe.ts` holds all four steering behaviors.
+  `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) holds all four steering behaviors.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.231), [Claude Code 2.1.231](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21231)
 
 ### 0.3.230 — never published to npm (evidence for the settling window)
@@ -2436,7 +2717,7 @@ and a caution against reading the changelog as the list of installable versions.
     when a whitespace-only message was submitted` (2.1.229).** Names
     beebox's exact session type, so it was checked: **not reachable.**
     The `/chat/send` body schema refines on `v.trim().length > 0`
-    (`src/webapp/routes/chat-helpers.ts:97`), so a whitespace-only body is
+    (`src/webapp/routes/chat-helpers.ts:97` (moved to `beebox/src/webapp/routes/chat/helpers.ts`)), so a whitespace-only body is
     rejected at the HTTP boundary before it can reach the SDK. Transcription
     routes return text to the client, which then posts it through that same
     guarded route. Not act-now for that reason alone.
@@ -2458,7 +2739,7 @@ and a caution against reading the changelog as the list of installable versions.
     controls. Good to have, not act-now.
   - `Fixed dynamic workflows inside CPU-limited containers using the host
     machine's core count` — relevant to the documented Docker/VPS install
-    (`beebox/docs/docker-install.md`), where a container CPU limit is
+    (`beebox/docs/install/docker.md`), where a container CPU limit is
     normal.
   - Vertex/Bedrock SSE keepalives and the `ANTHROPIC_BASE_URL` gateway fixes do
     not apply — beebox talks to the Anthropic API directly.
@@ -2577,7 +2858,7 @@ apply. Recorded because several items land squarely on this repo's workflow.
 - **Action:** Published 2026-08-10T21:06Z; held one extra turn on 2026-08-12 at
   ~43h. Applied 2026-08-13 via `pnpm update-agent-sdk` at ~67h as the newest
   settled version. Verified: typecheck clean, `pnpm -C beebox test`
-  6830/6830 pass, and `scripts/sdk-steering-probe.ts` holds all four steering
+  6830/6830 pass, and `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) holds all four steering
   behaviors.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.227), [Claude Code 2.1.227](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21227)
 
@@ -2594,7 +2875,7 @@ outstanding work — it is durable evidence.
   `CLAUDE_CODE_OAUTH_TOKEN` with a stored login's short-lived token, breaking
   headless sessions until restart. **This is the most deployment-relevant item
   in the range.** `CLAUDE_CODE_OAUTH_TOKEN` is beebox's documented server
-  auth path (`beebox/docs/docker-install.md`,
+  auth path (`beebox/docs/install/docker.md`,
   `docs/plans/installation-story.md`), and box agents on a Docker/VPS install
   are exactly the long-running headless sessions described. Keep this as the
   explanation for any past "box agent stopped working until the service was
@@ -2636,7 +2917,7 @@ outstanding work — it is durable evidence.
   short of the window) and again 2026-08-08+62h on 2026-08-10, when it cleared.
   Applied 2026-08-10 via `pnpm update-agent-sdk` as the newest settled version.
   Verified: typecheck clean, `pnpm -C beebox test` 6680/6680 pass, and
-  `scripts/sdk-steering-probe.ts` holds all four steering behaviors. The bundled
+  `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) holds all four steering behaviors. The bundled
   Claude Code binary is now 2.1.226, matching the parity claim.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.226), [Claude Code 2.1.226](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21226)
 
@@ -2647,7 +2928,7 @@ outstanding work — it is durable evidence.
   completed, so the subagent never saw the result. No Claude Code parity claim.
 - **BeeBox applicability:** **Act-now correctness fix, directly in
   beebox's execution shape.** Every beebox query is a headless SDK
-  session (`src/core/agent/run.ts`, `src/services/claude-chat.ts`), and none of
+  session (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`), `src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`)), and none of
   them restrict the toolset — `buildQueryOptions` sets `permissionMode`,
   `maxTurns`, hooks, and system-prompt options but passes no `allowedTools`/
   `disallowedTools`, so box agents have Task and background Bash available and
@@ -2665,7 +2946,7 @@ outstanding work — it is durable evidence.
   *required* by the act-now fix, and taking `0.3.226` instead would pull an
   unsettled release that adds nothing needed. Verified with
   `pnpm -C beebox typecheck` (clean), `pnpm -C beebox test`
-  (6444/6444 pass), and `scripts/sdk-steering-probe.ts` (all four steering
+  (6444/6444 pass), and `scripts/sdk-steering-probe.ts` (moved to `beebox/src/scripts/sdk-steering-probe.ts`) (all four steering
   behaviors hold: mid-tool injection, boundary race, priority-now soft
   interrupt, priority-later queueing).
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.225), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03225)
@@ -2701,8 +2982,8 @@ outstanding work — it is durable evidence.
   - `crossSessionInbound`/`dialogExpiry`: beebox has no cross-session
     `SendMessage` usage at all, so nothing is inbound to hold. Note for later:
     beebox runs `permissionMode: "bypassPermissions"` in all three of its
-    query call sites (`src/core/agent/run.ts:72`,
-    `src/services/claude-chat.ts:96`, `scripts/sdk-steering-probe.ts:78`), which
+    query call sites (`src/core/agent/run.ts:72` (moved to `beebox/src/core/agent/invoke/run.ts`),
+    `src/services/claude-chat.ts:96` (moved to `beebox/src/services/claude-chat/core.ts`), `scripts/sdk-steering-probe.ts:78` (moved to `beebox/src/scripts/sdk-steering-probe.ts`)), which
     is exactly the mode whose inbound messages are held for approval. If
     beebox ever adopts cross-session messaging, unattended box agents would
     stall on that default and would need `crossSessionInbound` set explicitly.
@@ -2733,14 +3014,14 @@ outstanding work — it is durable evidence.
   parity claim in this release.
 - **BeeBox applicability:** Nothing breaking and nothing act-now.
   - `resumeSessionAt`/`resumeDropsTurn`: unused. BeeBox resumes by
-    session id (`resumeSessionId` in `src/core/chat/session/start-run.ts`) and
+    session id (`resumeSessionId` in `src/core/chat/session/start-run.ts` (moved to `beebox/src/core/chat/session/run/start-run.ts`)) and
     never truncates a resume, so the new option does not apply.
   - `system/permission_denied`: beebox passes no `canUseTool`, so it is a
     bare headless consumer and will start seeing these events.
     `adaptSdkMessage` (`src/core/chat/session/messages.ts:165`) returns `null`
     for unrecognized `system` subtypes, so the new event is silently dropped
     rather than mishandled. Agent runs use
-    `permissionMode: "bypassPermissions"` (`src/core/agent/run.ts:72`), so
+    `permissionMode: "bypassPermissions"` (`src/core/agent/run.ts:72` (moved to `beebox/src/core/agent/invoke/run.ts`)), so
     auto-denials should be rare there. This is a future opportunity if we ever
     want to surface denied tool calls in the chat UI.
   - `api_error_status: 529`: `isTransientClaudeFailure`

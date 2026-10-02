@@ -20,7 +20,7 @@
 import { promises as fs } from "node:fs";
 import { relative } from "node:path";
 import { brokenRefReason, resolveRefExists } from "../ref-exists.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 /** Matches `cardRef="…"` / `cardRef='…'` with a literal string value. */
 const CARD_REF_ATTR = /\bcardRef\s*=\s*(["'])([^"']*)\1/g;

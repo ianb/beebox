@@ -11,7 +11,7 @@ resolution: implemented
 
 **Closed 2026-08-25** in ca356806: `saveCalendarState` writes atomically; `loadCalendarState` tolerates only ENOENT and throws `CalendarStateCorruptError` otherwise, so the sync fails before any push. Doctest: corrupt state → no insert.
 
-`saveCalendarState` in `beebox/src/connectors/google-calendar-state.ts` writes the persistent Calendar state with a plain truncate-and-write operation. An interrupted write can leave invalid JSON. `loadCalendarState` catches that parse error and returns empty `syncTokens` and `eventFiles` maps.
+`saveCalendarState` in `beebox/src/connectors/google-calendar-state.ts` (moved to `beebox/src/connectors/google-calendar/state.ts`) writes the persistent Calendar state with a plain truncate-and-write operation. An interrupted write can leave invalid JSON. `loadCalendarState` catches that parse error and returns empty `syncTokens` and `eventFiles` maps.
 
 The empty `eventFiles` map is not a safe recovery value. `pushAndCleanOrphans` in `google-calendar-push.ts` treats every Calendar file absent from that index as a locally created event. A later sync can therefore insert copies of every existing local event into Google.
 

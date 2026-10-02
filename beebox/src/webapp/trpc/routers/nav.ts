@@ -5,7 +5,7 @@
  * this endpoint) carries the report when the card is invalid. See docs/implemented-plans/nav-card.md.
  */
 
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { resolveNav, type NavResolution } from "../../../core/nav.js";
 
 export const navRouter = router({

@@ -9,8 +9,8 @@
  *
  * The card's authored content survives: `description`, `title`, `contains`,
  * and every other field are read and written back untouched. Only the
- * extraction-derived parts — the body, `docling`, `metadata.pages`, `status`,
- * and `error` — are replaced, along with the page/figure assets in the attach
+ * extraction-derived parts — the body, `docling`, `metadata.pages`, and
+ * `error` — are replaced, along with the page/figure assets in the attach
  * scope (stale ones from the previous run are removed first, so a re-run that
  * yields fewer pages leaves no orphans).
  */
@@ -21,18 +21,18 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
-import { splitCardContent } from "../../cards/index.js";
-import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
-import { isRecord } from "../../lib/is-record.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+} from "../command-types.js";
+import { splitCardContent } from "../../exports/cards.js";
+import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
+import { isRecord } from "../../shared/is-record.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
-import { createDoclingService, type DoclingService } from "../../services/docling.js";
-import { clearExtractionAssets, extractPdf } from "./pdf-extract.js";
+import { createDoclingService, type DoclingService } from "../../services/docling/core.js";
+import { clearExtractionAssets, extractPdf } from "../pdf/extract.js";
 
 const PdfReanalyzeArgsSchema = z.object({
   card: z.string(),
@@ -151,7 +151,6 @@ export async function runPdfReanalyze(
   const paths: string[] = [cardRelPath, ...removed.map((name) => `${attachRelDir}/${name}`)];
   let body: string;
   if (extraction.ok) {
-    fields["status"] = "analyzed";
     fields["docling"] = {
       ref: `attach/${extraction.value.doclingFilename}`,
       version: extraction.value.doclingVersion,
@@ -166,12 +165,11 @@ export async function runPdfReanalyze(
   } else {
     // Same fallback as intake: the card goes back to unextracted-but-visible
     // rather than keeping a stale body that no longer matches its assets.
-    fields["status"] = "new";
     fields["error"] = extraction.error;
     delete fields["docling"];
     body = "";
     console.warn(`[pdf] reanalyze failed for ${cardRelPath}: ${extraction.error}`);
-    ctx.writeLine(`Extraction failed (status: new) — ${extraction.error}`);
+    ctx.writeLine(`Extraction failed — ${extraction.error}`);
   }
 
   await fs.writeFile(cardAbsPath, `---\n${stringifyYaml(fields)}---\n${body}`);
@@ -185,14 +183,14 @@ export async function runPdfReanalyze(
     success: true,
     data: {
       card: cardRelPath,
-      status: fields["status"],
+      extracted: extraction.ok,
       ocr: forceOcr ? "replace" : "off",
       pages: extraction.ok ? extraction.value.pageCount : 0,
     },
   };
 }
 
-registerCommand({
+export const pdfReanalyzeCommand: CommandDefinition = {
   name: "pdf-reanalyze",
   description: "Re-run extraction over an existing pdf card's original file",
   args: [
@@ -201,4 +199,4 @@ registerCommand({
     { name: "languages", description: "Comma-separated OCR language codes (with --force-ocr)", required: false, type: "string" },
   ],
   execute: (ctx, args) => runPdfReanalyze(ctx, { args }),
-});
+};

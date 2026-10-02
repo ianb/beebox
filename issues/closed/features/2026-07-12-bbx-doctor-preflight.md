@@ -8,7 +8,7 @@ resolution: implemented
 Both OpenClaw (`openclaw doctor`) and Hermes (`hermes doctor`) ship a doctor
 command, and every one of their install docs ends with it — it's what makes
 installer failures self-diagnosing. beebox has the pieces scattered:
-a health probe that's skipped on macOS (`src/webapp/trpc/routers/health.ts`),
+a health probe that's skipped on macOS (`src/webapp/trpc/routers/health.ts` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)),
 external-binary assumptions buried in `src/core/agent-guide/chat.ts:13`, and
 git-lfs hooks that degrade silently when lfs is missing.
 

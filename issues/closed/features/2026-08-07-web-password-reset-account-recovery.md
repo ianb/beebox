@@ -29,7 +29,7 @@ intentionally out of scope.
 
 **Current state (verified 2026-08-07):**
 
-- **Web has password *change*, not *reset*.** `src/webapp/routes/auth-password-change.ts`
+- **Web has password *change*, not *reset*.** `src/webapp/routes/auth-password-change.ts` (moved to `beebox/src/webapp/routes/auth/password-change.ts`)
   rotates a password but **requires the current password** (`verifyPassword` on
   `currentPassword`, 401 otherwise). No use to someone who forgot it. There is no
   forgot-password / reset route.

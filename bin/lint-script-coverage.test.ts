@@ -20,7 +20,7 @@ test("workspace lint excludes frontend only because beebox lint covers it", () =
   );
   assert.equal(
     beebox.scripts["lint:backend"],
-    "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/backend src/ scripts/ test/ user-stories/",
+    "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/backend src/ test/",
   );
   assert.equal(beebox.scripts["lint:frontend"], "cd src/frontend && pnpm lint");
 });
@@ -30,6 +30,6 @@ test("workspace lint excludes frontend only because beebox lint covers it", () =
 // `lint:changed` silently skips files the whole-tree run does check.
 // See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md.
 test("the changed-file lint covers exactly what the whole-tree scripts cover", () => {
-  assert.match(beebox.scripts["lint:backend"], / src\/ scripts\/ test\/ user-stories\/$/);
-  assert.match(frontend.scripts.lint, / src\/$/);
+  assert.match(beebox.scripts["lint:backend"], / src\/ test\/$/);
+  assert.match(frontend.scripts.lint, / src\/ test\/$/);
 });

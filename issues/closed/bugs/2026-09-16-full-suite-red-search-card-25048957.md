@@ -1,5 +1,5 @@
 ---
-title: "Full-suite red: test/box-inventory.doctest.md, test/core/migration-gitignore.doctest.md"
+title: "Full-suite red: test/box-inventory.doctest.md (moved to `beebox/test/core/box-inventory.doctest.md`), test/core/migration-gitignore.doctest.md (moved to `beebox/test/migration-flows/gitignore.doctest.md`)"
 workstream: search-card
 area: beebox
 priority: important
@@ -15,7 +15,7 @@ commit (`b8da24e4`) over first-parent `main` blames one landing:
 
 - **Landing:** `25048957` — Merge branch 'worktree-search-card'
 - **Workstream:** search-card
-- **Failing files:** `test/box-inventory.doctest.md`, `test/core/migration-gitignore.doctest.md`
+- **Failing files:** `test/box-inventory.doctest.md` (moved to `beebox/test/core/box-inventory.doctest.md`), `test/core/migration-gitignore.doctest.md` (moved to `beebox/test/migration-flows/gitignore.doctest.md`)
 
 Each file failed in the batched run and failed again on an isolated re-run, so
 it is not a flake by the ledger's definition. Nothing has been fixed; this is a

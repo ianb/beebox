@@ -61,4 +61,4 @@ from "answered no".
 
 Covered by `test/core/agent/auth-preflight.doctest.md` (retry, proceed-on-
 still-inconclusive, no caching of inconclusive, real logout still throws) and
-`test/webapp/health-claude-auth.doctest.md`.
+`test/webapp/health-claude-auth.doctest.md` (moved to `beebox/test/webapp/trpc/routers/health/checks/claude-auth.doctest.md`).

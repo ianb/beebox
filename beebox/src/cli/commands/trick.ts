@@ -15,12 +15,13 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
-import { stageAll, commit, getStatus } from "../../lib/git.js";
-import { buildScriptEnv } from "../../core/script-env.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
+import { stageAll, commit, getStatus } from "../../lib/git/core.js";
+import { buildScriptEnv } from "../../core/script-env/core.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../lib/box-shape.js";
 import { readTrickSecrets, resolveTrickSecret } from "../lib/trick-secrets.js";
+import { BOX_PACKAGE_DOCS } from "../../core/docs-gen/shared.js";
 
 const require = createRequire(import.meta.url);
 
@@ -186,7 +187,7 @@ export const trickCommand = new Command("trick")
         console.log("No tricks found.");
         console.log("");
         console.log(`Create one at ${relScriptsDir}/<name>/index.ts`);
-        console.log(`See ${relScriptsDir}/CLAUDE.md for details.`);
+        console.log(`See ${BOX_PACKAGE_DOCS}/tricks.md for details.`);
         return;
       }
 

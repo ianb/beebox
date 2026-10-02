@@ -493,9 +493,9 @@ resolved model id and treat it as opaque. Box config is owner surface.
   - `openRouterChatEnv`'s shape;
   - the unavailability guard;
   - catalog parsing.
-- Files: `test/core/openrouter-chat-models.doctest.md` (vocabulary, policy,
+- Files: `test/core/openrouter-chat-models.doctest.md` (moved to `beebox/test/core/provider-env/openrouter-chat.doctest.md`) (vocabulary, policy,
   and the spawn seam), `test/core/openrouter-catalog.doctest.md`, and
-  `test/webapp/trpc-admin-openrouter.doctest.md` (the admin procedures).
+  `test/webapp/trpc-admin-openrouter.doctest.md` (moved to `beebox/test/webapp/trpc/routers/admin.openrouter.doctest.md`) (the admin procedures).
   `glm-key.doctest.md` is unchanged.
   Existing `chat-models.doctest.md`, `chat-session-model.doctest.md`, and
   `reactor-model-policy.doctest.md` gain cases for `added`.

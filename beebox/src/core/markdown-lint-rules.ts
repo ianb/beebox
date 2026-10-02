@@ -3,10 +3,10 @@
  */
 
 import { fileExists } from "../lib/file-exists.js";
-import { invariant } from "../lib/invariant.js";
-import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { invariant } from "../shared/invariant.js";
+import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { linkTarget, matchReferenceDefinitionAt } from "./body-refs.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -199,7 +199,7 @@ export interface LinkResolution {
 
 /**
  * Resolve an inline-link url the way BBX002 does, via the shared ref algebra
- * (`src/shared/ref-path.ts`): leading `/` against the box root, anything else
+ * (`src/shared/ref-path/core.ts`): leading `/` against the box root, anything else
  * relative to the file's own directory, and — `kind: "markdown"` — no attach
  * scope, since a `.md` dossier owns no `<basename>.attach/` directory, so
  * `attach/x` is a literal subdirectory. Any `?query`/`#fragment` addresses a

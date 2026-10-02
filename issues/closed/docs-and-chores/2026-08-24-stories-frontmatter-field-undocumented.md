@@ -14,10 +14,10 @@ resolution: implemented
 Ten issues (six open, four closed, all filed 2026-08-21/23 by the user-story
 verification work) carry a `stories:` list, e.g.
 `stories: [connectors/configure-which-gmail-calendar-and-drive-content]`,
-pointing at slugs in `beebox/user-stories/catalog/2026-08-21.md`.
+pointing at slugs in `beebox/user-stories/catalog/2026-08-21.md` (moved to `beebox/docs/user-stories/catalog/2026-08-21.md`).
 
 The field appears nowhere in `issues/CLAUDE.md`'s frontmatter schema, and
-`workstreams-app/src/server/issue-domain.ts` (the one parser, shared by the
+`workstreams-app/src/server/issue-domain.ts` (moved to `workstreams-app/src/server/main/issue-domain.ts`) (the one parser, shared by the
 issue browser and `bin/issues`) ignores unknown keys, so it is invisible to
 every tool: not a filter, not a facet, not in `--json`.
 

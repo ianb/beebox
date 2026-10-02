@@ -58,7 +58,7 @@ Run from the `beebox/` directory.
    - **Clean** (no violations in `--all` across meaningful real traffic — chat
      with images, dictation/realtime voice, a p5 figure, a logged-in Google
      avatar): **propose hardening.** In
-     `beebox/src/webapp/server-root.ts` `registerCspReportingHeaders`, the
+     `beebox/src/webapp/server-root/root-routes.ts` `registerCspReportingHeaders`, the
      flip is changing the header name from `Content-Security-Policy-Report-Only`
      to `Content-Security-Policy` (keep `script-src 'self'`). **Propose only — do
      not edit or deploy without the boxholder's confirmation.** This routine

@@ -496,7 +496,7 @@ An omitted `glob` means "the subtree of this card"
 
 **The search index is not the selection machinery. Glob is.** Orama filters on
 `kind` only. The path filter is a post-hoc `startsWith`. Frontmatter is not
-indexed generically (`foldFields`, `beebox/src/core/search/extract.ts:218-283`).
+indexed generically (`foldFields`, `beebox/src/core/search/extract/core.ts:218-283`).
 There is no sort, no group-by, and no count. Five features select cards with
 their own glob resolver: view `dependencies`, `todo-view`, landmark `expand`,
 the landmarks list, and `bbx ls`.
@@ -504,7 +504,7 @@ the landmarks list, and `bbx ls`.
 **Landmark `expand` is the nearest existing collection.** It has a glob
 relative to the landmark directory, an `order` enum, a named `group` with a
 total count and a child cap, and per-match label templates
-(`beebox/src/schemas/landmark.ts:76-90`, `beebox/src/core/landmark/resolve.ts`).
+(`beebox/src/schemas/landmark.ts:76-90`, `beebox/src/core/landmark/resolve/core.ts`).
 That is (label, query) without a pluggable view.
 
 **This was designed once and parked.**

@@ -179,7 +179,7 @@ test("the deploy refuses, with the container install as the alternative, when un
   const result = spawnSync(join(worktreeDeploy, "prod-ssh"), [], { encoding: "utf8" });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /no deploy target is configured/);
-  assert.match(result.stderr, /docker-install\.md/);
+  assert.match(result.stderr, /install\/docker\.md/);
 });
 
 // ─── Invariants the scripts must keep ───────────────────────────────────────

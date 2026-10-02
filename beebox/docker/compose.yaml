@@ -8,7 +8,7 @@
 #
 # VPS:    same, plus `docker compose --profile public up -d` for Caddy + TLS.
 #
-# See docs/docker-install.md for the full local + VPS walkthrough.
+# See docs/install/docker.md for the full local + VPS walkthrough.
 
 services:
   box:
@@ -61,7 +61,7 @@ services:
       # touches the caddy service — breaking the local flow. Default to empty
       # instead; if the public profile is started without BBX_DOMAIN set, Caddy
       # itself fails loudly on the empty site address (`{$BBX_DOMAIN}` in the
-      # Caddyfile). docs/docker-install.md says to set it for the public path.
+      # Caddyfile). docs/install/docker.md says to set it for the public path.
       BBX_DOMAIN: ${BBX_DOMAIN:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro

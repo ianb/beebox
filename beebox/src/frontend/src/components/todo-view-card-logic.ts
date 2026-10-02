@@ -19,7 +19,7 @@ import type { TodoStatus } from "../../../shared/todo-model.js";
 // imports this module. The router's OUTPUT type rather than the core
 // `CollectionResult` on purpose: what reaches the browser has been through
 // JSON, where an `x: string | undefined` field becomes `x?: string`.
-import type { RouterOutput } from "../lib/trpc";
+import type { RouterOutput } from "../lib/trpc/client";
 import type { TodoLocator } from "@core/todo/collect-types";
 
 export type TodoResult = RouterOutput["collections"]["query"];
@@ -29,8 +29,8 @@ export type TodoRow = TodoResult["groups"][number]["rows"][number];
 export type TodoRowItem = TodoRow["items"][number];
 
 /**
- * The `status` filter a `todo-view` card's frontmatter resolves to. An
- * explicit `status:` list wins; an omitted one defaults to `["open",
+ * The status filter a `todo-view` card's frontmatter resolves to. An
+ * explicit `todo-status:` list wins; an omitted one defaults to `["open",
  * "parked"]` — every plate-state group an `open` todo can land in
  * (escalated/on-plate/quiet) PLUS `parked`, so the parked group is actually
  * reachable on the stock plate without the card author having to list
@@ -40,7 +40,7 @@ export type TodoRowItem = TodoRow["items"][number];
  * unless a card explicitly lists them.
  */
 export function resolveTodoViewStatusFilter(fm: Record<string, unknown>): TodoStatus[] {
-  const value = fm["status"];
+  const value = fm["todo-status"];
   if (Array.isArray(value)) {
     const statuses = value.filter((v): v is TodoStatus => typeof v === "string" && isTodoStatus(v));
     if (statuses.length > 0) return statuses;
@@ -186,6 +186,35 @@ function reductionFor(row: TodoRow, path: string[]): TodoReduction | null {
  */
 export function progressOf(reduction: TodoReduction): { done: number; total: number } {
   return { done: reduction.done, total: reduction.open + reduction.done + reduction.parked };
+}
+
+/**
+ * "15 on your plate · 4 later" — the plate headline's two numbers, both from
+ * the reduction of a boxholder-scope query. `later` is `quiet`: open minus
+ * what's already on the plate. There is no `quiet` field on the reduction —
+ * it doesn't need one, since `open` and `onPlate` already say it.
+ */
+export function plateHeadline(reduction: TodoReduction): { onPlate: number; later: number } {
+  return { onPlate: reduction.onPlate, later: reduction.open - reduction.onPlate };
+}
+
+/**
+ * How many items an `all`-scope, `assigned`-filtered query actually matched —
+ * the third headline number, "K for the agent". A query's `reduction` counts
+ * every item `scope` admitted, not what `assigned` narrowed it to (`matches`
+ * decides display, not reduction — see `CollectionDef`), so the agent count
+ * has to be read off the matching items themselves.
+ */
+export function matchingItemCount(result: TodoResult): number {
+  let count = 0;
+  for (const group of result.groups) {
+    for (const row of group.rows) {
+      for (const item of row.items) {
+        if (item.matching) count++;
+      }
+    }
+  }
+  return count;
 }
 
 export interface DatedTodo {

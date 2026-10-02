@@ -13,7 +13,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { runTour } from "./runner.js";
-import { clearRegistry, registeredTours } from "./index.js";
+import { clearRegistry, registeredTours } from "./registry.js";
 
 const __dirname = import.meta.dirname;
 const TOURS_DIR = path.resolve(__dirname, "..");

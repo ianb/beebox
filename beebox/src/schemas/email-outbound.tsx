@@ -5,10 +5,8 @@
  * live in the YAML frontmatter; the body of the email is the markdown
  * body of the card itself — what's between the closing `---` and EOF.
  *
- * Every outbound email starts as a draft uploaded to Gmail's Drafts
- * folder for the user to review and send. Future states (e.g.
- * `status: sent` for direct-send without human review) layer onto the
- * same schema.
+ * Every outbound email is a draft uploaded to Gmail's Drafts folder for
+ * the user to review and send; a `gmail-draft-id` stamp records the upload.
  *
  * Pairs with `email-message` (incoming, plus eventually mirrored sent
  * messages from the Gmail Sent folder). The two are intentionally
@@ -20,7 +18,6 @@
  *
  *   ---
  *   type: email-outbound
- *   status: draft
  *   to: alice@example.com
  *   subject: Re Weekend plans
  *   in-reply-to:
@@ -32,13 +29,13 @@
  */
 
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 
 export const EmailOutboundSchema = cardSchema("email-outbound", {
+  brief: "An outgoing email draft",
   description: "An agent-composed outgoing email — uploaded to Gmail as a draft for the user to review and send",
   category: "authored",
   fields: {
-    status: z.enum(["draft", "sent"]).default("draft"),
     to: z.string(),
     cc: z.string().optional(),
     bcc: z.string().optional(),
@@ -73,7 +70,7 @@ The card's body is the email body. Markdown subset only:
   \`email-message\` card. Use a path **relative to the draft's
   directory** (typically just \`msg-NNN.email-message.card\` since the
   draft sits in the same thread directory). The connector reads the
-  source card's \`message-id\` and \`thread-id\` to set Gmail threading
+  source card's \`email.message-id\` and \`email.thread-id\` to set Gmail threading
   headers — if the ref doesn't resolve, the upload fails rather than
   silently lose threading.
 
@@ -88,7 +85,7 @@ The card's body is the email body. Markdown subset only:
 
 ## Lifecycle
 
-- \`status: draft\` (default) — the connector uploads to Gmail's Drafts
+- A new card is a draft: the connector uploads it to Gmail's Drafts
   folder on next sync and stamps the card with \`gmail-draft-id:\` and
   \`gmail-draft-url:\`. Share the URL with the user so they can review
   and send. Once stamped, the draft is **not** re-uploaded; editing
@@ -112,8 +109,7 @@ The card's body is the email body. Markdown subset only:
 1. Place the draft in the **same directory** as the source message.
 2. Set \`in-reply-to.ref:\` pointing at the specific message you're
    replying to.
-3. Set \`subject: Re: <original subject>\`.
-4. Don't set \`status\` explicitly — it defaults to \`draft\`.`,
+3. Set \`subject: Re: <original subject>\`.`,
 });
 
 export type EmailOutboundFields = InferCardFields<typeof EmailOutboundSchema>;

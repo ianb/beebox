@@ -14,10 +14,10 @@ resolution: implemented
 
 `bbx mv some-note.md dest/` fails with
 `Source must be a .card file or directory`
-(`beebox/src/core/commands/move.ts:210`).
+(`beebox/src/core/commands/move.ts:210` (moved to `beebox/src/core/commands/move/command.ts`)).
 
 The agent guide says `bbx mv` handles "a card, a directory, or a plain `.md`
-dossier" (`beebox/src/core/agent-guide/cards.ts:133`). The SDK hook text says
+dossier" (`beebox/src/core/agent-guide/cards.ts:133` (moved to `beebox/src/core/agent-guide/guide/cards.ts`)). The SDK hook text says
 the same (`beebox/src/core/sdk-hooks.ts:144`). `move-operations.ts` already
 walks dossiers for link rewriting inside a directory move.
 

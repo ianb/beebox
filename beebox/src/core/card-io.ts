@@ -5,7 +5,6 @@
  *
  *   ---
  *   type: doc
- *   drive-id: 1abc...
  *   title: Project Notes
  *   ...
  *   ---
@@ -18,10 +17,10 @@
 
 import { readFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
-import { renderFrontmatterBlock, splitCardContent, type CardSchema, type InferCardFields } from "../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent, type CardSchema, type InferCardFields } from "../exports/cards.js";
 import { parseCardFileName } from "../shared/card-name.js";
-import { errorMessage } from "../lib/error-guards.js";
-import { isRecord } from "../lib/is-record.js";
+import { errorMessage } from "../shared/error-guards.js";
+import { isRecord } from "../shared/is-record.js";
 
 /**
  * Errors raised by the card IO layer. Caller code can catch this specifically

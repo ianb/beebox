@@ -39,7 +39,7 @@ import { z } from "zod";
 import { verifyAgentBearer } from "../../core/agent/token.js";
 import { resolveSecret, SECRET_PURPOSE_PATTERN } from "../../core/secrets/resolve.js";
 import type { SecretRefusalKind } from "../../core/secrets/errors.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 
 /**
  * Both fields are required and bounded: `purpose` is written verbatim into the

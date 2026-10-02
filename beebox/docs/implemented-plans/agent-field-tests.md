@@ -6,7 +6,7 @@ issues: []
 ---
 # Agent field tests — an agent-operator exercising realistic box activities end-to-end
 
-**Current operation:** see the [field-testing runbook](../field-testing.md).
+**Current operation:** see the [field-testing runbook](../testing/field-testing.md).
 This implemented plan preserves design rationale and implementation history.
 
 A new top test tier: a persistent Claude "operator" with a persona works through a
@@ -65,9 +65,9 @@ runs weekly or on demand, never as a CI gate.
   (principle #8: these are two different things, each done one way).
 - **Service fakes** (`src/services/`, real/fake DI per `src/services/CLAUDE.md`).
   `FakeGoogleGmailService.addMessage()` already models "an email arrives"
-  (`src/services/google-gmail.ts:272-278`: pushes the message and a
+  (`src/services/google-gmail.ts:272-278` (moved to `beebox/src/services/google-gmail/core.ts`): pushes the message and a
   `messagesAdded` history record). `createGmailConnector(boxRoot, service?)`
-  takes the optional injected service (`src/connectors/gmail.ts:268-273`).
+  takes the optional injected service (`src/connectors/gmail.ts:268-273` (moved to `beebox/src/connectors/gmail/connector.ts`)).
   **Reused**; Track 1 adds a file-backed construction path so a *subprocess*
   (`bbx wakeup`) can use the fake.
 - **`bin/browse` / agent-browser** — persistent per-worktree headless Chromium
@@ -76,14 +76,14 @@ runs weekly or on demand, never as a CI gate.
   `bbx_browse_key` cookie, fail-closed when `BBX_BROWSE_API_KEY` is unset
   (`src/core/browse-key.ts:41`, `browse/src/worktree.ts:60`). **Reused as-is**;
   the operator drives it through Bash.
-- **Agent SDK plumbing** (`src/core/agent/run.ts:203` — `runAgent`, default
+- **Agent SDK plumbing** (`src/core/agent/run.ts:203` (moved to `beebox/src/core/agent/invoke/run.ts`) — `runAgent`, default
   `maxTurns = 20`; `run.ts:72` — `permissionMode: "bypassPermissions"`).
   **Reused for box agents** (they run untouched inside the server/reactor). The
   operator gets its own thin session wrapper (Track 3) because `runAgent` is
   one-shot and box-rooted, while the operator is a long-lived multi-turn session
   rooted in the run directory.
 - **Completion detection**: tRPC `chat.status`
-  (`src/webapp/trpc/routers/chat-control-procedures.ts:115`) returns
+  (`src/webapp/trpc/routers/chat-control-procedures.ts:115` (moved to `beebox/src/webapp/trpc/routers/chat/control-procedures.ts`)) returns
   `{ sessionId, running, busy, model }` for **one** session, and reports idle
   for missing/unknown ids (`:44-55`). **Reused as one ingredient** of the
   composite quiescence check (Track 2); it is not box-wide on its own.
@@ -100,7 +100,7 @@ runs weekly or on demand, never as a CI gate.
   (`docs/testing.md:271`) and session critiques (`docs/testing.md:409`) both
   talk to real agents; `bin/manual-tests-scheduled.sh` is the weekly real-service
   cadence. Field tests slot in beside these as a new tier in `docs/testing.md`.
-- **Fake agent for doctests** (`test/helpers/fake-agent.ts:128`) — doctests
+- **Fake agent for doctests** (`test/helpers/fake-agent.ts:128` (moved to `beebox/test/core/fake-agent.ts`)) — doctests
   fake the agent; scenario `prompt:` validations and session critiques do talk
   to real agents (`docs/testing.md:271`, `:409`). The gap field tests fill is
   narrower and stated precisely: no existing tier has a persistent persona
@@ -145,9 +145,9 @@ Ordered by implementation dependency, then surface size.
   its own Zod schema, new work in this track), **and the history machinery**:
   `historyId`, `oldestValidHistoryId`, `historyRecords`. The cursor is NOT
   derived from array length — the connector's sync depends on a persisted
-  `historyId` round-trip (`src/connectors/gmail.ts:169`, `:207`), and the fake
+  `historyId` round-trip (`src/connectors/gmail.ts:169` (moved to `beebox/src/connectors/gmail/connector.ts`), `:207`), and the fake
   models constructor-seeded messages as predating history
-  (`src/services/google-gmail.ts:256`) while `addMessage()` appends a
+  (`src/services/google-gmail.ts:256` (moved to `beebox/src/services/google-gmail/core.ts`)) while `addMessage()` appends a
   `messagesAdded` record (`:272-278`); the file preserves exactly those
   semantics. "An email arrives" = `bbx field-test inject-email <fixture>`, a
   helper that appends the message plus its `messagesAdded` history record to
@@ -162,7 +162,7 @@ Ordered by implementation dependency, then surface size.
   `content/config/test-box`), written by `bbx field-test` box creation,
   committed with the box. Real boxes never contain it.
   **Also in this track:** Gmail rule evaluation currently uses the real clock
-  (`src/connectors/gmail.ts:193` — `now: new Date()`), so simulated-day mail
+  (`src/connectors/gmail.ts:193` (moved to `beebox/src/connectors/gmail/connector.ts`) — `now: new Date()`), so simulated-day mail
   behavior would ignore `BBX_TIME`. Switch it to `getBoxTime()`
   (`src/lib/time.ts:51-52`) — a small product-wide correctness fix, not
   test-only plumbing.
@@ -225,7 +225,7 @@ Ordered by implementation dependency, then surface size.
   **Day advance:** stop the server, set the new `BBX_TIME`, run the day's
   maintenance at the new time, restart the server. Two explicitly distinct
   wakeup phases (they are not interchangeable — `bbx wakeup --connector gmail`
-  skips on-wakeup scripts by design, `src/cli/commands/wakeup.ts:189`):
+  skips on-wakeup scripts by design, `src/cli/commands/wakeup.ts:189` (moved to `beebox/src/cli/commands/wakeup/command.ts`)):
   email *injection* uses the connector-scoped wakeup (sync + intake only);
   day *advance* runs a full `bbx wakeup` plus due scheduled scripts. Long-lived
   in-server state does not survive across simulated days by construction.
@@ -310,7 +310,7 @@ Ordered by implementation dependency, then surface size.
   questionnaire entries in `scenario.yaml`).
 - **First implementation chunk:** the session wrapper + questionnaire
   delivery/answer collection, exercised by a doctest with the fake chat backend
-  (`src/services/claude-chat-fake.ts` precedent) — the wrapper's mechanics are
+  (`src/services/claude-chat-fake.ts` (moved to `beebox/src/services/claude-chat/fake.ts`) precedent) — the wrapper's mechanics are
   testable without a real operator.
 
 ### Track 4 — Scenario format, first scenario, asset corpus

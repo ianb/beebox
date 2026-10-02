@@ -29,7 +29,7 @@ including the ones the model was guessing at.
 Confirmed 2026-08-14. No API change or Deepgram-side option is needed — the
 data is in responses we already receive and discard.
 
-- **Batch** — `src/core/transcription/deepgram.ts:57-62` declares
+- **Batch** — `src/core/transcription/deepgram.ts:57-62` (moved to `beebox/src/core/transcription/dispatch/deepgram.ts`) declares
   `DeepgramWord` as `word` / `start` / `end` / `punctuated_word`. Deepgram sends
   a per-word `confidence` on top of those, and the interface does not declare
   it, so the mapping at line 127 cannot carry it through. The
@@ -73,7 +73,7 @@ stored card is provenance; one that only appears in the review moment is an
 editing aid. These have different consequences for search, diffing, and what an
 agent reading the card later believes.
 
-**Voxtral parity.** `src/core/transcription/voxtral.ts` is the other backend.
+**Voxtral parity.** `src/core/transcription/voxtral.ts` (moved to `beebox/src/core/transcription/voxtral/core.ts`) is the other backend.
 If it reports nothing comparable, the design needs an answer for "this backend
 cannot mark anything" that is not silently pretending everything is confident.
 

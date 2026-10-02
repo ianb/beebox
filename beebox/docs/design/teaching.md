@@ -12,7 +12,7 @@ system when prioritizing.
 The teaching relationship exists, through a different stack than the original
 design guessed:
 
-- **Personality/guide cards** holding `source: inferred` beliefs.
+- **Personality/guide cards** holding `basis: inferred` beliefs.
 - **The retro procedure** (`bbx retro`): mines recent chat sessions for what
   the boxholder implicitly taught, integrates it as beliefs with
   recurrence-based confidence, and turns authoritative changes into question

@@ -7,9 +7,9 @@ procedure detection, and job description building.
 import {
   buildReactorSystemPrompt,
   buildReactorUserPrompt,
-} from "../../src/core/reactor/index.js";
+} from "../../src/core/reactor/prompts.js";
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
-import { buildJobDescription } from "../../src/core/reactor/batch-jobs.js";
+import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { createChatJobTemplate } from "../../src/schemas/chat-job.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -172,8 +172,8 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "_bookkeeping/jobs");
-await box.write("_bookkeeping/jobs/msg1.chat.job.card", `---\nsource: telegram\n---\nChat`);
-await box.write("_bookkeeping/jobs/sweep.intake.job.card", `---\nsource: gmail\n---\nIntake`);
+await box.write("_bookkeeping/jobs/msg1.chat.job.card", `---\nconnector: telegram\n---\nChat`);
+await box.write("_bookkeeping/jobs/sweep.intake.job.card", `---\nconnector: gmail\n---\nIntake`);
 
 const chatOnly = await findJobCards(jobsDir, { typeFilter: "chat" });
 chatOnly.length
@@ -189,24 +189,27 @@ all.length
 await box.cleanup();
 ```
 
-### Source filter drops jobs whose source field does not match
+### Connector filter drops jobs whose connector field does not match
+
+A job no connector made (here, a full wakeup's inbox triage) matches no
+connector filter:
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "_bookkeeping/jobs");
-await box.write("_bookkeeping/jobs/email.intake.job.card", `---\nsource: gmail\n---\nEmail triage`);
-await box.write("_bookkeeping/jobs/chat.chat.job.card", `---\nsource: telegram\n---\nChat`);
-await box.write("_bookkeeping/jobs/rss.intake.job.card", `---\nsource: rss\n---\nRSS triage`);
+await box.write("_bookkeeping/jobs/email.intake.job.card", `---\nconnector: gmail\n---\nEmail triage`);
+await box.write("_bookkeeping/jobs/chat.chat.job.card", `---\nconnector: telegram\n---\nChat`);
+await box.write("_bookkeeping/jobs/inbox.intake.job.card", `---\npriority: normal\n---\nInbox triage`);
 
-const gmailOnly = await findJobCards(jobsDir, { sourceFilter: "gmail" });
+const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))
 => ["email.intake.job.card"]
 
-const telegramOnly = await findJobCards(jobsDir, { sourceFilter: "telegram" });
+const telegramOnly = await findJobCards(jobsDir, { connectorFilter: "telegram" });
 JSON.stringify(telegramOnly.map((c) => c.file))
 => ["chat.chat.job.card"]
 
-// Cross-cutting jobs (different source) stay put for a future run that does match them
+// Other jobs stay put for a future run that does match them
 const noFilter = await findJobCards(jobsDir);
 noFilter.length
 => 3
@@ -214,20 +217,20 @@ noFilter.length
 await box.cleanup();
 ```
 
-### Frontmatter job cards: priority and source come from YAML fields
+### Frontmatter job cards: priority and connector come from YAML fields
 
 Current job cards are YAML frontmatter, not XML — discovery reads the
-`priority:` and `source:` fields (this regressed once when discovery
+`priority:` and `connector:` fields (this regressed once when discovery
 only grepped XML attributes, silently dropping every frontmatter job
-from source-filtered runs):
+from filtered runs):
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "_bookkeeping/jobs");
-await box.write("_bookkeeping/jobs/y1.intake.job.card", "---\nstatus: pending\ncreated: 2026-06-09T00:00:00Z\nsource: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: _content/inbox/a.memo.card\n---\n");
-await box.write("_bookkeeping/jobs/y2.intake.job.card", "---\nstatus: pending\ncreated: 2026-06-09T00:00:00Z\nsource: telegram\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
+await box.write("_bookkeeping/jobs/y1.intake.job.card", "---\nconnector: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: _content/inbox/a.memo.card\n---\n");
+await box.write("_bookkeeping/jobs/y2.intake.job.card", "---\nconnector: telegram\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
 
-const gmailOnly = await findJobCards(jobsDir, { sourceFilter: "gmail" });
+const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))
 => ["y1.intake.job.card"]
 
@@ -267,8 +270,7 @@ const desc = await buildJobDescription(
     card: { file: "task.intake.job.card", priority: "low" },
     relPath: "_bookkeeping/jobs/task.intake.job.card",
     content: createIntakeJobTemplate({
-      created: "2026-07-01T00:00:00Z",
-      source: "rss",
+      connector: "rss",
       description: "Do something",
       items: [],
       priority: "low",
@@ -302,8 +304,7 @@ const desc = await buildJobDescription(
     card: { file: "x.intake.job.card", priority: "normal" },
     relPath: "_bookkeeping/jobs/x.intake.job.card",
     content: createIntakeJobTemplate({
-      created: "2026-07-01T00:00:00Z",
-      source: "rss",
+      connector: "rss",
       description: "New items to triage",
       items: ["store/inbox/item1.card"],
     }),
@@ -339,8 +340,7 @@ const desc = await buildJobDescription(
     card: { file: "reply.chat.job.card", priority: "normal" },
     relPath: "_bookkeeping/jobs/reply.chat.job.card",
     content: createChatJobTemplate({
-      created: "2026-07-01T00:00:00Z",
-      source: "telegram",
+      connector: "telegram",
       description: "Reply",
       threadRef: "store/threads/t1.chat-thread.card",
     }),
@@ -368,8 +368,7 @@ const desc = await buildJobDescription(
     card: { file: "task.intake.job.card", priority: "normal" },
     relPath: "_bookkeeping/jobs/task.intake.job.card",
     content: createIntakeJobTemplate({
-      created: "2026-07-01T00:00:00Z",
-      source: "rss",
+      connector: "rss",
       description: "Process this",
       items: ["store/items/missing.card"],
     }),

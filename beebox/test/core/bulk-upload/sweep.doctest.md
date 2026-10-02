@@ -17,7 +17,7 @@ import {
   setStagingState,
   readStagingSession,
   writeStagingSession,
-} from "../../../src/core/capture/staging-store.js";
+} from "../../../src/core/capture/staging-store/core.js";
 import { bulkBatchCardRelPath } from "../../../src/core/bulk-upload/prepare.js";
 import { createUploadBatchTemplate } from "../../../src/schemas/upload-batch.js";
 import { sweepBulkBatches } from "../../../src/core/bulk-upload/sweep.js";
@@ -184,7 +184,7 @@ async function writeBatchCard(relDir, startedAt) {
   const card = createUploadBatchTemplate({
     batchId: "upload-x", targetSessionId: "s-target", startedAt, registered: 1, totalBytes: 6,
     received: [{ name: "a.pdf", size: 6 }], missing: [], failed: [], summary: "1 file uploaded (6 B).",
-  }).replace("status: new", "status: delivered");
+  }).replace("---\n", "---\ndelivered: true\n");
   await mkdir(box.path(relDir), { recursive: true });
   await writeFile(box.path(`${relDir}/Batch.upload-batch.card`), card);
 }
