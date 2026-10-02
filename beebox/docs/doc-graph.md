@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-02T16:57:49Z
-Total documents: 473
+Generated: 2026-10-02T17:31:00Z
+Total documents: 474
 
 ## Issues
 
@@ -71,7 +71,6 @@ These documents are not referenced by any other document.
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines) · proposal · partial
 - **docs/plans/pdf-render-webp.review.md** — "Plan Engineering Review — PDF render WebP" (104 lines) · plan review
-- **docs/plans/publication-approval-card.md** — "Publication approval cards" (126 lines) · proposal · partial
 - **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
@@ -432,7 +431,7 @@ Referenced by:
 - docs/implemented-plans/capture-mode.md:37 (mention) — - `beebox/code-style.md` — no `any`, named-params objects, custom
 - docs/implemented-plans/card-view-widgets.md:28 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional
 - docs/implemented-plans/chat-header-chips.md:72 (mention) — - `code-style.md:69` — "User-initiated actions never silently no-op"; governs
-- docs/implemented-plans/chat-review.md:59 (mention) — - **`beebox/code-style.md`** — max 2 positional params, no default
+- docs/implemented-plans/chat-review.md:66 (mention) — - **`beebox/code-style.md`** — max 2 positional params, no default
 - docs/implemented-plans/chat-scroll-redesign.md:52 (mention) — - `beebox/code-style.md:36-37` — no default parameters; max 2 positional
 - docs/implemented-plans/chat-stream-finalize-unify.md:54 (mention) — - `beebox/code-style.md:37` — max 2 positional params; new/changed
 - docs/implemented-plans/clerk-webpage-capture.md:126 (mention) — - **`beebox/code-style.md`** — no `any`; no default parameters; max 2
@@ -1063,8 +1062,9 @@ Referenced by:
 - docs/implemented-plans/card-themes.md:55 (link) — Design decisions below follow [engineering principles](../engineering-principles.md)
 - docs/implemented-plans/chat-header-chips.md:63 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-image-files.md:54 (mention) — - **`beebox/docs/engineering-principles.md` #8 (one pipeline):** every image
-- docs/implemented-plans/chat-review.md:42 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
+- docs/implemented-plans/chat-review.md:49 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/chat-session-identity.md:32 (mention) — - `docs/engineering-principles.md` #1 types are structure (`:12`) — transcript
+- docs/implemented-plans/chat-titles.md:60 (mention) — - **`docs/engineering-principles.md` #8, one way to do each thing.** The
 - docs/implemented-plans/codex-sdk-backend.md:44 (mention) — (`docs/engineering-principles.md:12`).
 - docs/implemented-plans/coined-chat-ids.md:41 (mention) — - `docs/engineering-principles.md` #2 (exhaustiveness is enforced, not hoped
 - docs/implemented-plans/commit-provenance-trailers.md:23 (mention) — - `beebox/docs/engineering-principles.md` — #3 validate at boundaries
@@ -1676,7 +1676,7 @@ Referenced by:
 - docs/design/processing.md:21 (link) — ([`../scheduler.md`](../scheduler.md)) and agent-set timers
 - docs/glossary.md:52 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
 - docs/guides.md:37 (link) — | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
-- docs/implemented-plans/chat-review.md:707 (mention) — `docs/scheduler.md`'s example set.
+- docs/implemented-plans/chat-review.md:714 (mention) — `docs/scheduler.md`'s example set.
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
 - docs/implemented-plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
@@ -2161,11 +2161,11 @@ References:
 
 #### docs/box/publishing.md
 
-Title: "Publishing a site from this box" | 653 lines | current reference
+Title: "Publishing a site from this box" | 682 lines | current reference
 
 Referenced by:
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
-- ../issues/features/2026-10-02-static-publications-render-markdown.md:53 (mention) — - Agent guidance: `docs/box/publishing.md` ("Static files") and the installed
+- ../issues/closed/features/2026-10-02-static-publications-render-markdown.md:11 (mention) — Closed: implemented on branch worktree-static-markdown-publish (commits db822652d, 407ea84bf, 058ab8a32). Open questions
 
 References:
 - → CLAUDE.md (mention)
@@ -2354,6 +2354,7 @@ Referenced by:
 - docs/implemented-plans/box-search.md:51 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
 - docs/implemented-plans/card-prominence.md:102 (mention) — `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`
 - docs/implemented-plans/card-symbol.md:246 (mention) — see the fields, the enumerations in `docs/cards/schemas.md:72` and the
+- docs/implemented-plans/chat-titles.md:484 (mention) — Codex-revision note); `docs/cards/schemas.md` and the
 - docs/implemented-plans/docs-reorg.gap-analysis.md:47 (mention) — prime retrieval field. `docs/cards/schemas.md` never mentions it and
 - docs/implemented-plans/mvp-implementation-guide.md:418 (link) — See [adding-schemas.md](../cards/schemas.md) for concrete card examples.
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards/format.md`, `docs/cards/schemas.md`.
@@ -2437,10 +2438,11 @@ References:
 
 #### docs/chat/review.md
 
-Title: "Chat review" | 172 lines | current reference
+Title: "Chat review" | 214 lines | current reference
 
 Referenced by:
 - docs/chat.md:13 (link) — | [Review](chat/review.md) | The nightly pass that writes a title, `contains`, and `contains-evidence` to each session's
+- docs/implemented-plans/chat-titles.md:54 (mention) — plan, amendments to `docs/chat/review.md` and
 - ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:82 (link) — [chat review](../../../beebox/docs/chat/review.md): its journal is keyed by
 - ../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md:12 (link) — [Chat review](../../../beebox/docs/chat/review.md) keeps two pieces of state
 - ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:41 (mention) — - Accept the cap and say so in `docs/chat/review.md`.
@@ -2448,6 +2450,7 @@ Referenced by:
 - ../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md:79 (link) — - [Chat review](../../../beebox/docs/chat/review.md) skips it too (correctly —
 
 References:
+- → docs/implemented-plans/chat-titles.md (link)
 - → docs/implemented-plans/chat-review.md (link)
 
 #### docs/chat/schedules.md
@@ -3189,7 +3192,7 @@ Title: "Box Retrospectives" | 439 lines | shipped history | implemented
 Referenced by:
 - docs/design/teaching.md:19 (mention) — cards (`../implemented-plans/box-retrospectives.md`).
 - docs/glossary.md:64 (mention) — **retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what t
-- docs/implemented-plans/chat-review.md:65 (mention) — (`docs/implemented-plans/box-retrospectives.md`, `src/core/retro/`). The same
+- docs/implemented-plans/chat-review.md:72 (mention) — (`docs/implemented-plans/box-retrospectives.md`, `src/core/retro/`). The same
 - docs/implemented-plans/questions-end-to-end.md:25 (mention) — belief (the evidence model of `docs/implemented-plans/box-retrospectives.md`:
 - docs/questions.md:34 (mention) — `docs/implemented-plans/box-retrospectives.md`: inferred beliefs cap at
 - ../issues/features/2026-07-09-memory-gardener-consolidation-loop.md:29 (mention) — - **Retro** (`src/core/retro/`, `docs/implemented-plans/box-retrospectives.md`) —
@@ -3529,11 +3532,12 @@ References:
 
 #### docs/implemented-plans/chat-review.md
 
-Title: "Chat review: size-gated overnight compaction and generated titles" | 854 lines | shipped history | implemented
+Title: "Chat review: size-gated overnight compaction and generated titles" | 861 lines | shipped history | implemented
 
 Referenced by:
-- docs/chat/review.md:9 (link) — [docs/implemented-plans/chat-review.md](../implemented-plans/chat-review.md).
+- docs/chat/review.md:15 (link) — [docs/implemented-plans/chat-review.md](../implemented-plans/chat-review.md).
 - docs/implemented-plans/card-symbol.md:127 (mention) — `docs/implemented-plans/chat-review.md:432`); this plan will not be the third
+- docs/implemented-plans/chat-titles.md:55 (mention) — `docs/implemented-plans/chat-review.md`) ~400 lines, reported separately.
 - docs/implemented-plans/doc-structure-chat.md:68 (mention) — | `chat-review.md` | `chat/review.md` | |
 - docs/implemented-plans/doc-structure.md:641 (mention) — Name failures reported by the navigators: `chat-review.md` chosen for
 - ../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:6 (mention) — discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
@@ -3542,6 +3546,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/features/2026-05-19-overnight-session-compaction.md (link)
+- → docs/implemented-plans/chat-titles.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/implemented-plans/box-retrospectives.md (mention)
@@ -3606,6 +3611,22 @@ References:
 - → CLAUDE.md (mention)
 - → src/frontend/src/components/chat/CLAUDE.md (mention)
 - → docs/chat/scroll.md (mention)
+
+#### docs/implemented-plans/chat-titles.md
+
+Title: "Chat titles for every chat, kept fresh cheaply" | 658 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat/review.md:8 (link) — Two passes share the run ([docs/plans/chat-titles.md](../implemented-plans/chat-titles.md)):
+- docs/implemented-plans/chat-review.md:35 (link) — [docs/plans/chat-titles.md](chat-titles.md).
+
+References:
+- → docs/chat/review.md (mention)
+- → docs/implemented-plans/chat-review.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/standard-card-fields.md (mention)
+- → docs/implemented-plans/notifications.md (mention)
+- → docs/cards/schemas.md (mention)
 
 #### docs/implemented-plans/clerk-contract-and-import-boundary.md
 
@@ -4825,6 +4846,7 @@ References:
 Title: "Notifications and proactive work: pieces an agent composes to reach the person" | 1347 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/chat-titles.md:159 (mention) — (`docs/implemented-plans/notifications.md`); the freshness question is a
 - docs/implemented-plans/notifications-design-notes.md:16 (link) — [notifications.md](notifications.md) differ on mechanism (output cards
 - docs/notifications.md:5 (link) — changes. Design history: [the plan](implemented-plans/notifications.md) and its
 - ../issues/closed/features/2026-08-09-agent-outcomes-need-a-voice.md:16 (link) — [docs/implemented-plans/notifications.md](../../../beebox/docs/implemented-plans/notifications.md).
@@ -5563,7 +5585,7 @@ References:
 Title: "Semantic search (box-search phase 3): hybrid BM25 + vector retrieval" | 536 lines | shipped history | implemented
 
 Referenced by:
-- docs/implemented-plans/chat-review.md:837 (mention) — the validation in `docs/plans/semantic-search.md` § Rollout rather than appending
+- docs/implemented-plans/chat-review.md:844 (mention) — the validation in `docs/plans/semantic-search.md` § Rollout rather than appending
 - docs/plans/chat-search.md:88 (mention) — - Prior art in-tree: `docs/implemented-plans/semantic-search.md` and
 
 References:
@@ -5650,6 +5672,7 @@ Title: "Standard card fields" | 635 lines | shipped history | implemented
 
 Referenced by:
 - docs/cards/migrations.md:505 (mention) — Part 1 of `docs/implemented-plans/standard-card-fields.md`. Drops `status` from job cards
+- docs/implemented-plans/chat-titles.md:80 (mention) — - **Standard card fields (`docs/implemented-plans/standard-card-fields.md`).**
 - ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md:13 (link) — Closed: implemented by [the standard card fields plan](../../../beebox/docs/implemented-plans/standard-card-fields.md) (
 
 References:
@@ -7191,9 +7214,12 @@ References:
 - → docs/plans/public-site-story-extraction.subplan.md (link)
 - → ../issues/features/2026-07-17-regenerable-app-demo-video.md (link)
 
-#### docs/plans/publication-approval-card.md **[ORPHAN]**
+#### docs/plans/publication-approval-card.md
 
 Title: "Publication approval cards" | 126 lines | proposal | partial
+
+Referenced by:
+- ../issues/decisions/2026-10-02-publication-source-and-card-split.md:31 (mention) — `beebox/docs/plans/publication-approval-card.md` added the card so review would
 
 References:
 - → docs/security-report.md (mention)
@@ -7260,6 +7286,7 @@ Referenced by:
 - docs/plans/publish-shared-host-per-box.md:23 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
 - docs/security-report.md:535 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
+- ../issues/decisions/2026-10-02-publication-source-and-card-split.md:34 (mention) — `beebox/docs/plans/publish-sites-admin.md`. That plan fixed the source root so
 
 References:
 - → ../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md (frontmatter)
@@ -8417,7 +8444,7 @@ Title: "Connectors" | 27 lines
 Referenced by:
 - CLAUDE.md:41 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/conn
 - docs/glossary.md:56 (mention) — **connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Con
-- docs/implemented-plans/chat-review.md:207 (mention) — re-injected before a connector sync rebuilds a card. `src/connectors/CLAUDE.md:19`:
+- docs/implemented-plans/chat-review.md:214 (mention) — re-injected before a connector sync rebuilds a card. `src/connectors/CLAUDE.md:19`:
 - docs/implemented-plans/doc-structure-connectors.md:50 (mention) — | calendar.md "Auth" | "unlike Gmail, which accepts app passwords" | Gmail uses the shared Google OAuth API (`gmail-setu
 - docs/implemented-plans/docs-reorg.gap-analysis.md:23 (mention) — module's own comment — not in `src/connectors/CLAUDE.md` or
 - docs/implemented-plans/file-layout.md:130 (mention) — - Per-directory instruction files: `src/connectors/CLAUDE.md`,

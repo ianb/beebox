@@ -3,7 +3,7 @@
 A finished conversation should not sit in the chat list looking like a live
 one. `chat.markDone` sets `done: true` on the chat's husk card, and
 `chat.sessions` reports it so the Recent chats panel can sort done chats into
-their own muted group below the live ones (`docs/plans/chat-titles.md`
+their own muted group below the live ones (`docs/implemented-plans/chat-titles.md`
 § Track D). Done is a state, not a deletion: the chat stays listed and
 resumable, and the nightly review ignores the mark.
 

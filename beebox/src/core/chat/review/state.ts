@@ -30,7 +30,7 @@ export const METADATA_CONSUMER = "metadata";
  * The titling consumer. Separate from the metadata journal so a chat can be
  * titled after a couple of exchanges without waiting for summary-sized
  * growth, and re-titled when its drift is smaller than a full review span
- * (`docs/plans/chat-titles.md` § Track A).
+ * (`docs/implemented-plans/chat-titles.md` § Track A).
  */
 export const TITLE_CONSUMER = "title";
 

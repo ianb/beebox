@@ -7557,7 +7557,7 @@ tests:
     response_not_contains: ["bbx notify \""]
     tags: [notifications]
 
-  # === Chat husk titles and the done mark (docs/plans/chat-titles.md) ===
+  # === Chat husk titles and the done mark (docs/implemented-plans/chat-titles.md) ===
   # Status (2026-10-02, Claude): pass on a disposable clone of the worktree's
   # test1; knows_about, 1 read (box-docs/card-chat.md), 0 searches, 38k ctx.
   # Set `title`, left `first-message` alone, hand title permanent, done =

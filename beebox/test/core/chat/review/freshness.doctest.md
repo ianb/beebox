@@ -2,7 +2,7 @@
 
 One Jev noul — *does the current title still name what the recent messages
 are about?* — decides whether a grown chat needs a reviewer call at all
-(`src/core/chat/review/freshness.ts`, `docs/plans/chat-titles.md` § Track B).
+(`src/core/chat/review/freshness.ts`, `docs/implemented-plans/chat-titles.md` § Track B).
 A confident yes keeps the title and advances the journal for free.
 
 ```ts setup

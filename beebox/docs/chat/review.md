@@ -5,7 +5,7 @@ and writes back to each session's husk card: a **title**, a one-sentence
 **`contains`**, and a running **account** of what the conversation amounted to
 (`contains-evidence`).
 
-Two passes share the run ([docs/plans/chat-titles.md](../plans/chat-titles.md)):
+Two passes share the run ([docs/plans/chat-titles.md](../implemented-plans/chat-titles.md)):
 the **summary pass** above, and a cheaper **title pass** that runs on much
 smaller growth, so short chats get real titles too. Before the title pass
 spends a model call, a **Jev freshness check** asks whether the current title

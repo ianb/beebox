@@ -318,7 +318,7 @@ Titling is decoupled from the summary gate: a couple of exchanges (2 turns,
 ~500 chars) clears the 400-char title threshold but not the 6,000-char summary
 threshold, so the session is `qualified` with `needsMetadata: false` and the
 run titles it without paying for an account
-(`docs/plans/chat-titles.md` § Track A).
+(`docs/implemented-plans/chat-titles.md` § Track A).
 
 ```ts
 const tbox = await makeTmpBox();

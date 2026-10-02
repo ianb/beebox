@@ -232,7 +232,7 @@ export async function applyReviewToHusk(
  * condition is absence, not staleness — and safe on every pass, because a
  * coined-id chat's husk is created before its transcript exists and only a
  * pass that reads the transcript can fill the field
- * (`docs/plans/chat-titles.md` § Track C).
+ * (`docs/implemented-plans/chat-titles.md` § Track C).
  *
  * The value is the person's own opening message (the same text a live list
  * label shows quoted), not model output, so it bypasses the leak scan.

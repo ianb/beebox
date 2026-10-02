@@ -1,6 +1,6 @@
 ---
 title: "Chat titles for every chat, kept fresh cheaply"
-status: draft
+status: implemented
 workstream: chat-titles
 issues: []
 ---

@@ -32,7 +32,7 @@ this plan resolves that issue's `needs: [design]`.
 consumer, a Jev freshness check that keeps a still-fitting title for free, and
 `first-message` husk storage with quoted snippet labels replaced the
 creation-time snippet `title:`. Design and measurements:
-[docs/plans/chat-titles.md](../plans/chat-titles.md) (moves here when it ships).
+[docs/implemented-plans/chat-titles.md](chat-titles.md).
 
 **Revision note (2026-07-28).** A first draft of this plan was reviewed by
 OpenAI's Codex against the real source. It falsified several load-bearing claims —

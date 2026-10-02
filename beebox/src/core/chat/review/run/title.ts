@@ -1,6 +1,6 @@
 /**
  * The title pass — the cheap gate's half of a chat-review run
- * (`docs/plans/chat-titles.md` § Track A).
+ * (`docs/implemented-plans/chat-titles.md` § Track A).
  *
  * Reads only the title journal's window, asks the reviewer for a title (after
  * the freshness check, once wired), and advances the title journal alone. A

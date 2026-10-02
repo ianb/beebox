@@ -53,7 +53,7 @@ export const REVIEW_CHAR_THRESHOLD = 6_000;
  * pass. Deliberately tiny: with two user turns already required, 400 chars
  * means "a real exchange happened", the same job the 6,000-char gate does for
  * summaries — keeping a nightly model call off trivial growth. As untuned as
- * the summary threshold (`docs/plans/chat-titles.md` § Track A).
+ * the summary threshold (`docs/implemented-plans/chat-titles.md` § Track A).
  */
 export const TITLE_CHAR_THRESHOLD = 400;
 

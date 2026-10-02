@@ -7,7 +7,7 @@
  * this span, so the cheap gate should not re-ask about the same material —
  * except when it offered no title for a chat that had none, which reconciled
  * nothing and retries on the title pass
- * (`docs/plans/chat-titles.md` § Track A).
+ * (`docs/implemented-plans/chat-titles.md` § Track A).
  */
 
 import { elideMiddle, MAX_RENDERED_CHARS, renderEntries } from "../../transcript-render.js";

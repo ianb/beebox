@@ -2,7 +2,7 @@
  * One chat-review run: discover qualifying sessions, review each unread span,
  * write the result to its husk, and advance the journal.
  *
- * Two passes share the run (`docs/plans/chat-titles.md`): the **metadata
+ * Two passes share the run (`docs/implemented-plans/chat-titles.md`): the **metadata
  * pass** (title + `contains` + account, summary-gated, `run/metadata.ts`) and
  * the **title pass** (title alone, cheap-gated, `run/title.ts`). A session
  * that qualifies for the metadata pass runs only that — it refreshes the
