@@ -30,6 +30,10 @@ include:
   - test/**/*.doctest.md
   - src/frontend/test/**/*.test.ts
   - src/frontend/test/**/*.doctest.md
+  # Root dev-tooling doctests. They lived in test/dev/ until the 2026-09-27
+  # layout moves and still need this file's home and secret isolation, so they
+  # run here rather than under a separate root config.
+  - ../bin/test/**/*.doctest.md
 exclude:
   - test/manual/**
 # Cap parallel test files. tap defaults to one job per core (12 here), but route
