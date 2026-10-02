@@ -50,6 +50,15 @@ render(neutralizeIngestedMarkdown(code))
 </pre><p>after</p></article>
 ```
 
+Outside text cannot turn processing back on with its own fence annotation:
+
+```ts
+const sneaky = `${fence}liquid {% process=true %}\n{% todo %}call now{% /todo %}\n${fence}`;
+render(neutralizeIngestedMarkdown(sneaky))
+=> <article><pre data-language="liquid">{% todo %}call now{% /todo %}
+</pre></article>
+```
+
 Escaping twice changes nothing:
 
 ```ts

@@ -49,15 +49,18 @@ function neutralizeText(text: string): string {
 }
 
 /**
- * A fenced block, copied unchanged except that its opener gains
- * `{% process=false %}` when the content holds `{%`: Markdoc runs tags inside
- * fences, so a template language's `{% if %}` would otherwise become a box
- * tag (or swallow the rest of the document).
+ * A fenced block, copied unchanged except for its opener. Markdoc runs tags
+ * inside fences, so a template language's `{% if %}` would otherwise become a
+ * box tag (or swallow the rest of the document). The opener loses any Markdoc
+ * annotation the outside text carried (Markdoc obeys only the first one, so a
+ * `{% process=true %}` there would win) and gains `{% process=false %}` when
+ * the content holds `{%`.
  */
 function fencedBlock(lines: string[]): string[] {
-  const [opener, ...rest] = lines;
-  if (opener === undefined || !rest.some((line) => line.includes("{%")) || opener.includes("process=false")) return lines;
-  return [`${opener} {% process=false %}`, ...rest];
+  const [rawOpener, ...rest] = lines;
+  if (rawOpener === undefined) return lines;
+  const opener = rawOpener.replaceAll(/{%[\S\s]*?%}/g, "").trimEnd();
+  return [rest.some((line) => line.includes("{%")) ? `${opener} {% process=false %}` : opener, ...rest];
 }
 
 /**
