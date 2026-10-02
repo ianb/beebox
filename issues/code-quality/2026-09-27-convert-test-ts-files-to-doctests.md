@@ -46,7 +46,7 @@ be written.
 
 ## Fit, from the usability review
 
-The [doctest usability review](../../beebox/docs/plans/doctest-usability.md)
+The [doctest usability review](../../beebox/docs/implemented-plans/doctest-usability.md)
 sorted every `*.test.ts` file by test shape (2026-09-28) and ran test-writing
 subjects on conversions. It found:
 

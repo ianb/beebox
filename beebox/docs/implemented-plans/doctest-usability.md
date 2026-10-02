@@ -1,6 +1,6 @@
 ---
 title: "Doctest usability: errors that teach, comparisons that show values, a runner that names what hung"
-status: partial
+status: implemented
 workstream: doctest-usability
 issues:
   - ../../../issues/closed/exploration/2026-09-27-doctest-usability-review.md
@@ -10,8 +10,8 @@ issues:
 Doctest is the repository's default test form: 1,004 `.doctest.md` files and
 12,521 `=>` assertions, written almost entirely by agents. This plan reports a
 usability review of doctest (evidence below) and proposes changes to the parser,
-the comparison and diff, the runner, and the guidance. Nothing here is
-implemented; each track needs the boxholder's approval first.
+the comparison and diff, the runner, and the guidance. Tracks A through F
+are implemented. The text below keeps the original proposal and its reasoning.
 
 **Issues addressed:**
 [doctest usability review](../../../issues/closed/exploration/2026-09-27-doctest-usability-review.md).
@@ -666,6 +666,10 @@ reports.
   (multi-line output).
 
 ### Track F: fit guidance for the conversion issue
+
+Landed as the "Fit, from the usability review" section of the
+[conversion issue](../../../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md).
+The issue itself stays open; it is the conversion work.
 
 Add a short section to the conversion issue, "Fit, from the usability review",
 with the shapes that stay code: framework self-tests, the `pub-worker` vitest
