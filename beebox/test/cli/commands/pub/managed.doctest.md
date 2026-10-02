@@ -49,11 +49,11 @@ function site(overrides: Partial<Site> = {}): Site {
 }
 ```
 
-The root commands coexist with the legacy Cloudflare `status` report.
+`bbx pub` carries only the server-managed commands.
 
 ```ts
 JSON.stringify(sites)
-=> ["setup","draft","ls","revoke","go","prepare","sites","id","connections","status"]
+=> ["prepare","sites","id","connections","status"]
 ```
 
 A remote outage must not read as disabled, even when the last observed edge

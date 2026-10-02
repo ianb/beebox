@@ -21,7 +21,6 @@ import { createGmailConnector } from "./connectors/gmail/connector.js";
 import { createGoogleDriveConnector } from "./connectors/google-drive/connector.js";
 import { createGoogleCalendarConnector } from "./connectors/google-calendar/connector.js";
 import { createTelegramConnector } from "./connectors/telegram/connector.js";
-import { createPublishSubmissionsConnector } from "./connectors/publish-submissions.js";
 
 export type {
   Connector,
@@ -46,6 +45,5 @@ export const connectorFactories = defineRegistry<ConnectorFactory>({
     googleCalendar: createGoogleCalendarConnector,
     telegram: createTelegramConnector,
     googleDrive: createGoogleDriveConnector,
-    publishSubmissions: createPublishSubmissionsConnector,
   },
 });

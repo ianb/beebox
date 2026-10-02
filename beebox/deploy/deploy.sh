@@ -488,9 +488,10 @@ RSYNC_OPTS=(-az --delete
   --exclude 'deploy/target.env'
   --exclude 'deploy/server-ip'
   --exclude 'deploy/.deploy-logs'
-  # pub-worker is a Cloudflare Worker deployed via `bbx engine pub setup` (wrangler), NOT
-  # run on the box server. Excluding its dir makes it an absent workspace member
-  # on prod, so the root `pnpm install --frozen-lockfile` skips its heavy CF
+  # pub-worker is a Cloudflare Worker the box server uploads as the prebuilt
+  # dist/pub-worker.js bundle (built above with the CLI); its source is NOT run
+  # on the box server. Excluding its dir makes it an absent workspace member on
+  # prod, so the root `pnpm install --frozen-lockfile` skips its heavy CF
   # toolchain (workerd, wrangler) — same "partial workspace installs fine" path
   # as browse/agent-browser-typed above. It stays in pnpm-workspace.yaml for local dev.
   --exclude 'pub-worker'

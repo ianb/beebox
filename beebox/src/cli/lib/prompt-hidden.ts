@@ -1,5 +1,5 @@
 /**
- * Shared no-echo secret prompt for CLI commands (`bbx auth`, `bbx pub setup`):
+ * Shared no-echo secret prompt for CLI commands (`bbx auth`):
  * raw-mode keystroke capture rather than readline's undocumented output-muting
  * private API. Handles Enter, Ctrl-C, and backspace; every other keystroke is
  * appended verbatim. A secret never goes on argv (shell history / process

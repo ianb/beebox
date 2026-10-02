@@ -1,14 +1,14 @@
 /**
- * Publication leak scan (Track E of `docs/plans/publish-pages.md`).
+ * Publication leak scan.
  *
- * A **pure** function over a rendered bundle's file map. It reports *findings*,
- * never a boolean — each finding carries a stable id so a caller can wave a
- * specific false positive through with `bbx pub draft --accept-leak <id>`. The
- * scan is a backstop, not a gate on its own: a publication bundle is treated as
+ * A **pure** function over a prepared release's file map. It reports
+ * *findings*, never a boolean — each finding carries a stable id, so the same
+ * finding keeps its identity across repeated preparations of unchanged content.
+ * The scan is a backstop, not a gate on its own: a publication is treated as
  * fully public regardless of tier (a `secret`/`accounts` tier gates *who* can
- * reach a page, not *what* a viewer does after saving it), so the human
- * file-by-file preview at flip time is the real control. This scan just makes
- * the obvious mistakes loud.
+ * reach a page, not *what* a viewer does after saving it), so a signed-in
+ * member's review of the candidate before approval is the real control. This
+ * scan just makes the obvious mistakes loud.
  *
  * ## What it scans
  * Only the **text** entries of the bundle (string values in the `files` map).
@@ -35,10 +35,10 @@
  *     form won't match a credential-prefix regex.
  *  2. **Binary / image assets** — a screenshot of an API key ships clean; we
  *     skip binaries entirely (regexing binary is meaningless).
- * For both, the **human file-by-file preview is the only real gate**. This scan
- * is a backstop consistent with the Custom-GPTs "assume extractable" lesson,
- * not a guarantee. False positives are expected (a doc legitimately quoting an
- * email); that is exactly what `--accept-leak` is for.
+ * For both, the **human review before approval is the only real gate**. This
+ * scan is a backstop consistent with the Custom-GPTs "assume extractable"
+ * lesson, not a guarantee. False positives are expected (a page legitimately
+ * quoting an email); the reviewer judges each finding.
  */
 
 import { createHash } from "node:crypto";
@@ -46,7 +46,7 @@ import { createHash } from "node:crypto";
 /** The category of a leak finding. A closed set (exhaustively switched on elsewhere). */
 export type LeakKind = "home-path" | "email" | "credential" | "external-url";
 
-/** One reported potential leak. `id` is stable across runs for `--accept-leak`. */
+/** One reported potential leak. `id` is stable across runs. */
 export interface LeakFinding {
   /** Stable id = first 12 hex of sha256(kind + file + match). Same input ⇒ same id. */
   id: string;
@@ -88,7 +88,7 @@ const HOME_PATH = /\/(?:Users|home)\/([\dA-Za-z][\w.-]*)\//g;
 const ALLOWED_HOME_NAMES = new Set(["me", "you", "user", "x"]);
 
 // A pragmatic email matcher — deliberately loose (leans toward false positives,
-// which `--accept-leak` clears) rather than risk missing a real address.
+// which the reviewer dismisses) rather than risk missing a real address.
 const EMAIL_RE = /[\w%+.-]+@[\d.A-Za-z-]+\.[A-Za-z]{2,}/g;
 
 // Absolute http(s) references — the self-containment / CSP-will-block check.
@@ -97,8 +97,8 @@ const EXTERNAL_URL_RE = /https?:\/\/[^\s"')<>]+/g;
 /**
  * Credential-shape table — a named, commented set so the roster is legible and
  * extensible. Each entry's `re` is applied globally to every text file. These
- * intentionally over-match a little; a genuine false positive is cleared per
- * finding with `--accept-leak`.
+ * intentionally over-match a little; the reviewer dismisses a genuine false
+ * positive.
  */
 const CREDENTIAL_PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   // Google API key: literal `AIza` + 35 url-safe base64 chars.
