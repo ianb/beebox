@@ -119,26 +119,6 @@ export function formatTodoLocation(todo: Pick<CollectedTodo, "path" | "locator">
   return `${path}:${String(locator.line)}${nth}`;
 }
 
-const BODY_LOCATION_RE = /^(.+):(\d+)(?:#(\d+))?$/;
-const FRONTMATTER_LOCATION_RE = /^(.+)#todos\[(\d+)]$/;
-
-/** The inverse of {@link formatTodoLocation}; `null` when `location` is in neither form. */
-export function parseTodoLocation(location: string): { path: string; locator: TodoLocator } | null {
-  const fm = FRONTMATTER_LOCATION_RE.exec(location);
-  if (fm !== null) {
-    const [, path, index] = fm;
-    if (path === undefined || index === undefined) return null;
-    return { path, locator: { kind: "frontmatter", index: Number(index) } };
-  }
-  const body = BODY_LOCATION_RE.exec(location);
-  if (body === null) return null;
-  const [, path, line, nth] = body;
-  if (path === undefined || line === undefined) return null;
-  const locator: TodoLocator =
-    nth === undefined || Number(nth) <= 1 ? { kind: "body", line: Number(line) } : { kind: "body", line: Number(line), nth: Number(nth) };
-  return { path, locator };
-}
-
 /** Body locators sort before frontmatter locators on the same card — an arbitrary but deterministic tie-break (the plan doesn't order the two kinds against each other). */
 export function compareTodoLocator(a: TodoLocator, b: TodoLocator): number {
   if (a.kind !== b.kind) return a.kind === "body" ? -1 : 1;

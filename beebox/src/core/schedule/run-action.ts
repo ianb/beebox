@@ -52,7 +52,7 @@ export interface RunActionArgs {
  * chat it opens both carry it. The tag is the schedule's name, so the phone
  * collapses repeats of one schedule only.
  */
-export function scheduledNotification(opts: { notify: ScheduleNotify; parsed: ParsedScheduledScript; scriptName: string }): NotificationInput {
+function scheduledNotification(opts: { notify: ScheduleNotify; parsed: ParsedScheduledScript; scriptName: string }): NotificationInput {
   const { notify, parsed, scriptName } = opts;
   const loudness: Loudness = notify.loudness ?? (parsed.requestedBy === "boxholder" ? "loud" : "quiet");
   const lines = [notify.body ?? "", notify.context === undefined ? "" : `Context: ${notify.context}`].filter((l) => l !== "");
@@ -66,7 +66,7 @@ export function scheduledNotification(opts: { notify: ScheduleNotify; parsed: Pa
   };
 }
 
-export async function runScheduleAction(args: RunActionArgs): Promise<ExecTiming> {
+async function runScheduleAction(args: RunActionArgs): Promise<ExecTiming> {
   const { boxRoot, parsed, scriptName, triggeredBy, stdio } = args;
   const { action } = parsed;
   if (action.kind === "notify") {

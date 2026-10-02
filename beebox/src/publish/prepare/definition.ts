@@ -51,7 +51,7 @@ export const publicationDefinitionSchema = z.discriminatedUnion("tier", [
 
 export type PublicationDefinition = z.infer<typeof publicationDefinitionSchema>;
 
-export class PublicationDefinitionError extends Error {
+class PublicationDefinitionError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "PublicationDefinitionError";
@@ -76,11 +76,6 @@ export function publicationSourcePath(args: { boxRoot: string; name: string; con
   const safeName = parsePublicationName(args.name);
   const sourceDir = args.content === "static" ? "site" : "project";
   return path.join(args.boxRoot, "src", "publications", safeName, sourceDir);
-}
-
-export function publicationDefinitionPath(boxRoot: string, name: string): string {
-  const safeName = parsePublicationName(name);
-  return path.join(boxRoot, "src", "publications", safeName, "publication.json");
 }
 
 /** Read and validate the box-owned desired config without following a symlink. */

@@ -113,7 +113,7 @@ export const edgeManifestSchema = z.discriminatedUnion("tier", [
 export type EdgeManifest = z.infer<typeof edgeManifestSchema>;
 
 /** Immutable release identity: SHA-256 of the canonical release inventory. */
-export const releaseIdSchema = z.string().regex(/^[\da-f]{64}$/);
+const releaseIdSchema = z.string().regex(/^[\da-f]{64}$/);
 
 class ReleaseInventoryMutationError extends Error {
   constructor() {
@@ -188,7 +188,11 @@ export const siteEdgeManifestSchema = z.discriminatedUnion("tier", [
   siteAnyAccountEdgeSchema,
 ]);
 
-/** All accepted edge manifests. Legacy shape remains unchanged and strict. */
+/**
+ * All accepted edge manifests. Legacy shape remains unchanged and strict.
+ *
+ * @public Imported by `pub-worker/src/manifest-store.ts`, outside the workspaces knip analyzes.
+ */
 export const storedEdgeManifestSchema = z.union([edgeManifestSchema, siteEdgeManifestSchema]);
 
 export type SiteEdgeManifest = z.infer<typeof siteEdgeManifestSchema>;

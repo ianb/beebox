@@ -10,7 +10,7 @@ export interface PlannedMove {
   to: string;
 }
 
-export class MoveListNotJsonError extends Error {
+class MoveListNotJsonError extends Error {
   readonly reason: string;
   constructor(reason: string) {
     super("move list is not valid JSON");
@@ -19,14 +19,14 @@ export class MoveListNotJsonError extends Error {
   }
 }
 
-export class MoveListShapeError extends Error {
+class MoveListShapeError extends Error {
   constructor() {
     super('expected a { "moves": [...] } object');
     this.name = "MoveListShapeError";
   }
 }
 
-export class MoveEntryNotObjectError extends Error {
+class MoveEntryNotObjectError extends Error {
   readonly index: number;
   constructor(index: number) {
     super("moves[] entry is not an object");
@@ -35,7 +35,7 @@ export class MoveEntryNotObjectError extends Error {
   }
 }
 
-export class MoveEntryMissingFromError extends Error {
+class MoveEntryMissingFromError extends Error {
   readonly index: number;
   constructor(index: number) {
     super("moves[].from must be a non-empty string");
@@ -44,7 +44,7 @@ export class MoveEntryMissingFromError extends Error {
   }
 }
 
-export class MoveEntryMissingToError extends Error {
+class MoveEntryMissingToError extends Error {
   readonly index: number;
   constructor(index: number) {
     super("moves[].to must be a non-empty string");
