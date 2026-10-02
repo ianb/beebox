@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-30T02:24:31Z
+Generated: 2026-10-02T16:57:49Z
 Total documents: 473
 
 ## Issues
@@ -128,7 +128,7 @@ Referenced by:
 - docs/box-layout.md:9 (mention) — A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working t
 - docs/box/publishing.md:21 (mention) — ├── CLAUDE.md
 - docs/cards/migrations.md:482 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
-- docs/cards/schemas.md:372 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
+- docs/cards/schemas.md:375 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
 - docs/cards/validation.md:32 (mention) — A box `CLAUDE.md` size warning appears once per file and size tier in each
 - docs/design/extensibility.md:25 (mention) — prompts), don't build it. Small additions — a `CLAUDE.md` file with custom
 - docs/design/identity.md:5 (mention) — and operating system built on Claude Code" (CLAUDE.md) is the identity;
@@ -163,6 +163,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure.md:198 (mention) — always-loaded file (`CLAUDE.md`, the agent guide) must carry, or a
 - docs/implemented-plans/docs-reorg.gap-analysis.md:39 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
 - docs/implemented-plans/docs-reorg.md:13 (mention) — history out of the way but findable, and slim CLAUDE.md files down to
+- docs/implemented-plans/doctest-usability.md:355 (mention) — - **Noisy output is a bug** (root `CLAUDE.md`, "Treat unsolicited tool
 - docs/implemented-plans/extfile-card.md:45 (mention) — (CLAUDE.md exempts *"per-box config, throwaway replies, and personal
 - docs/implemented-plans/file-layout.check.subplan.md:150 (mention) — - Rule 7 (`CLAUDE.md` states its axis): judgment, left to review.
 - docs/implemented-plans/file-layout.md:355 (mention) — candidate members; a data file such as a directory's `CLAUDE.md` is outside
@@ -224,7 +225,6 @@ Referenced by:
 - docs/plans/codex-session-startup-auth.md:21 (mention) — - `CLAUDE.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
 - docs/plans/container-first.md:79 (mention) — - `CLAUDE.md`, Time discipline: *"Long-running timeouts must count only awake
 - docs/plans/container-first.review.md:711 (mention) — **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
-- docs/plans/doctest-usability.md:355 (mention) — - **Noisy output is a bug** (root `CLAUDE.md`, "Treat unsolicited tool
 - docs/plans/document-comments.md:73 (mention) — - `CLAUDE.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
 - docs/plans/general-browser.md:78 (mention) — - `CLAUDE.md` (monorepo root) — the dev-page casualness carve-out applies to
 - docs/plans/ios-companion-app.md:29 (mention) — - `beebox/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file upload/
@@ -332,6 +332,8 @@ Referenced by:
 - ../issues/exploration/2026-09-06-per-box-symbol-strategy-note.md:37 (mention) — `CLAUDE.md`, a `.claude/rules/` glob that fires on the files it governs, or a
 - ../issues/exploration/2026-09-23-agent-over-centers-general-questions-on-the-box.md:18 (mention) — box CLAUDE.md and agent guide describe the box in detail, and nothing tells the
 - ../issues/exploration/2026-09-25-diataxis-for-agent-facing-docs.md:62 (mention) — and CLAUDE.md files.
+- ../issues/exploration/2026-09-30-codeword-for-questions-the-agent-should-decide.md:26 (mention) — the root `CLAUDE.md` asks for confirmation before hard-to-reverse or
+- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:20 (mention) — - `beebox/CLAUDE.md` and `beebox/code-style.md`;
 - ../issues/features/2026-05-28-retrospective-session-scan.md:9 (mention) — Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user
 - ../issues/features/2026-06-20-context-size-measurement-legibility.md:14 (mention) — - **Compositional breakdown.** The most *actionable* and the most work: split the baseline into system prompt vs. agent-
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:16 (mention) — and what else to sweep. The knowledge is scattered across box CLAUDE.md-equivalents,
@@ -535,6 +537,7 @@ Referenced by:
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
 - ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:35 (mention) — - **Guidance:** `beebox/code-style.md` (links the audit twice, in the lint
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:27 (mention) — >   line in `code-style.md`, or both; not whether to adopt the idea.
+- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:20 (mention) — - `beebox/CLAUDE.md` and `beebox/code-style.md`;
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
@@ -581,6 +584,7 @@ Referenced by:
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:56 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/closed/features/2026-08-10-card-view-context-menu-and-missing-card-state.md:96 (mention) — - Read `frontend.md` before building — `restrict-component-classes` applies, and
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
+- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:21 (mention) — - the root `CLAUDE.md`, nested `CLAUDE.md` files, and `frontend.md`;
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
@@ -602,6 +606,7 @@ Referenced by:
 - docs/implemented-plans/cards-as-markdown-rfc.md:79 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
 - docs/implemented-plans/doc-structure.md:89 (mention) — new `docs/testing/` directory is checked automatically. `README.md` files
+- docs/implemented-plans/doctest-usability.md:540 (mention) — `README.md` "Custom serializers"). Run today's `matchWithWildcards` on that
 - docs/implemented-plans/private-issues-shadow-repo.md:157 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
 - docs/implemented-plans/refresh-maps-correctness.md:190 (mention) — - Every child that is an anchor file (`README.md`, `*.briefing.card`,
 - docs/implemented-plans/workstreams.md:755 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
@@ -741,7 +746,7 @@ Referenced by:
 - docs/box-guidance.md:37 (mention) — | `.beebox/agent-guide.md` | always | generated | `generateDocs` | no |
 - docs/box-guidance.md:131 (link) — [agent guide](agent-guide.md). A section whose facts only some runs
 - docs/box-layout.md:3 (mention) — The on-disk shape of a beebox. This is the canonical reference for beebox developers; agents working *inside* a box see
-- docs/cards/schemas.md:371 (mention) — 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
+- docs/cards/schemas.md:374 (mention) — 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
 - docs/guides.md:34 (link) — | Agent guide: the always-loaded guide, its ledger of rules, and the bin test | [agent-guide](agent-guide.md) |
 - docs/implemented-plans/agent-guide-spec.md:11 (mention) — The always-loaded agent guide (`.beebox/agent-guide.md`, rendered from
 - docs/implemented-plans/box-docs-in-package.md:31 (mention) — | `.beebox/agent-guide.md` | engine text plus the box's procedures, personality, shape | partly |
@@ -776,6 +781,7 @@ Title: "Third-party assets and their attribution" | 32 lines | current reference
 Referenced by:
 - docs/guides.md:56 (link) — | Third-party asset attribution | [attribution](attribution.md) |
 - frontend.md:64 (mention) — rejected; see `docs/attribution.md` for why the artwork is a dependency.
+- ../issues/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md:2 (mention) — title: "Credit adopted ideas in attribution.md, and backfill it from history"
 
 #### docs/box-guidance.md
 
@@ -2159,6 +2165,7 @@ Title: "Publishing a site from this box" | 653 lines | current reference
 
 Referenced by:
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
+- ../issues/features/2026-10-02-static-publications-render-markdown.md:53 (mention) — - Agent guidance: `docs/box/publishing.md` ("Static files") and the installed
 
 References:
 - → CLAUDE.md (mention)
@@ -2173,7 +2180,7 @@ Referenced by:
 
 #### docs/box/schemas.md
 
-Title: "Writing Box-Local Schemas" | 234 lines | current reference
+Title: "Writing Box-Local Schemas" | 275 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:125 (link) — [schemas](box/schemas.md)). A tracked nested `CLAUDE.md` holds a pointer to it
@@ -2208,7 +2215,7 @@ Title: "Tricks" | 122 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:124 (link) — `docs/box/` (for example [tricks](box/tricks.md) or
-- docs/box/schemas.md:163 (mention) — **Imports.** Schema and view code (a trick keeps its own packages; see `tricks.md`) may only import from the beebox libr
+- docs/box/schemas.md:204 (mention) — **Imports.** Schema and view code (a trick keeps its own packages; see `tricks.md`) may only import from the beebox libr
 - docs/implemented-plans/agent-guide-spec.md:618 (mention) — | trick auto-commit and trailer | 6 | `tricks.md` | 5 |
 - docs/implemented-plans/doc-structure-box-guidance.md:392 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
 - src/core/agent-guide/guide.md:537 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
@@ -2334,7 +2341,7 @@ References:
 
 #### docs/cards/schemas.md
 
-Title: "Card schemas" | 386 lines | current reference
+Title: "Card schemas" | 389 lines | current reference
 
 Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -4175,6 +4182,26 @@ References:
 - → docs/implemented-plans/docs-reorg.gap-analysis.md (mention)
 - → docs/development/maintenance.md (mention)
 
+#### docs/implemented-plans/doctest-usability.md
+
+Title: "Doctest usability" | 852 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/exploration/2026-09-27-doctest-usability-review.md:13 (mention) — Closed: the review is done and its runner, guidance and test-runner changes land with the branch merge of `worktree-doct
+- ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:49 (link) — The [doctest usability review](../../beebox/docs/implemented-plans/doctest-usability.md)
+
+References:
+- → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (frontmatter)
+- → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (link)
+- → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
+- → ../issues/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
+- → ../issues/closed/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md (link)
+- → ../issues/closed/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md (link)
+- → ../issues/closed/bugs/2026-09-29-bin-test-doctests-not-run.md (link)
+- → ../issues/closed/bugs/2026-09-29-pnpm-test-unrecognized-path-runs-full-suite.md (link)
+- → CLAUDE.md (mention)
+- → README.md (mention)
+
 #### docs/implemented-plans/drive-folder-mounts.md
 
 Title: "Drive mounts: pointers, synced files, synced folders" | 450 lines | shipped history | implemented
@@ -4897,7 +4924,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines | shipped history | implemented
 
 Referenced by:
-- ../bin/CLAUDE.md:114 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../bin/CLAUDE.md:117 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 
 References:
 - → README.md (mention)
@@ -6633,32 +6660,13 @@ Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
 
-#### docs/plans/doctest-usability.md
-
-Title: "Doctest usability" | 848 lines | proposal | partial
-
-Referenced by:
-- ../issues/closed/exploration/2026-09-27-doctest-usability-review.md:13 (mention) — Closed: the review is done and its runner, guidance and test-runner changes land with the branch merge of `worktree-doct
-
-References:
-- → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (frontmatter)
-- → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (link)
-- → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
-- → ../issues/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
-- → ../issues/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md (link)
-- → ../issues/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md (link)
-- → ../issues/bugs/2026-09-29-bin-test-doctests-not-run.md (link)
-- → ../issues/bugs/2026-09-29-pnpm-test-unrecognized-path-runs-full-suite.md (link)
-- → CLAUDE.md (mention)
-- → docs/plans/README.md (mention)
-
 #### docs/plans/document-comments.md
 
 Title: "Document comments" | 945 lines | proposal | active
 
 Referenced by:
 - docs/plans/general-browser.md:17 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
-- ../bin/CLAUDE.md:91 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
+- ../bin/CLAUDE.md:94 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
 - ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md:70 (link) — - [document-comments](../../../beebox/docs/plans/document-comments.md) — the
 - ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:39 (link) — [document-comments](../../beebox/docs/plans/document-comments.md) plan
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:19 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) writes
@@ -7287,7 +7295,6 @@ Referenced by:
 - docs/plans/agent-docs.md:52 (mention) — (55 types), the prose docs from `docs/box/`, and a `README.md` index whose
 - docs/plans/asset-annex.md:1080 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/container-first.md:322 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
-- docs/plans/doctest-usability.md:540 (mention) — `README.md` "Custom serializers"). Run today's `matchWithWildcards` on that
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
@@ -8432,6 +8439,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:168 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
 - docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
 - docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
+- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:23 (mention) — - the agent guide (`beebox/src/core/agent-guide/guide.md`), whose box-side
 
 References:
 - → docs/agent-guide.md (mention)

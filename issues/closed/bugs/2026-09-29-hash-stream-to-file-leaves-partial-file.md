@@ -1,12 +1,15 @@
 ---
 title: "hashStreamToFile can leave an empty partial file after a failure"
-workstream: unattached
+workstream: doctest-usability
 area: beebox
 labels: [uploads]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-doctest-usability — a test subject writing a doctest for the module
+resolution: implemented
 ---
+
+Fixed: on failure, `hashStreamToFile` now waits for the write stream to close before removing the file. The 200-attempt reproduction went from 41 leftover files to 0; `beebox/test/lib/hash-stream-to-file.doctest.md` runs the race 100 times and fails on the old code.
 
 `beebox/src/lib/hash-stream-to-file.ts` promises that "the partial file is
 removed on any failure, so a caller never has to clean up after a throw". That

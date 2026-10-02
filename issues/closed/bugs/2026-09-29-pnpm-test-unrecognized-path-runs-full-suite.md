@@ -1,12 +1,15 @@
 ---
 title: "`pnpm test <path>` runs the whole suite when it does not recognise the path"
-workstream: unattached
+workstream: doctest-usability
 area: dev-tooling
 labels: [testing]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-doctest-usability — test subjects running one doctest
+resolution: implemented
 ---
+
+Fixed in `bin/test-tiers.ts` `tierCommand`: an argument shaped like a test file that names no file now fails with `no such test file in this package: …` and the package-relative hint, instead of appending the whole tier.
 
 In `beebox/`, `pnpm test beebox/test/x.doctest.md` (a path relative to the
 monorepo root, not the package) runs the entire suite. `tierCommand` in

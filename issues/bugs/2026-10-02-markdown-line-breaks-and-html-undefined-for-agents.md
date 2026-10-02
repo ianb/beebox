@@ -54,5 +54,5 @@ Today it is "no HTML at all" by Markdoc default, not by decision. Questions:
 - The published-site renderer (`beebox/src/publish/draft/render-docs.ts`) uses
   the same Markdoc config and must follow the same policy. The
   `static-markdown-publish` workstream
-  ([static-publications-render-markdown](../features/2026-10-02-static-publications-render-markdown.md))
+  ([static-publications-render-markdown](../closed/features/2026-10-02-static-publications-render-markdown.md))
   depends on this.

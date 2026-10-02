@@ -146,3 +146,21 @@ renderDocsPublication("![gone](does-not-exist.png)", { boxRoot: box.root, now })
 
 await box.cleanup();
 ```
+
+## Redacted content is omitted from the published page
+
+A published page has no reveal control, so `redacted` text never ships.
+
+```ts
+const box = await makeTmpBox();
+const { files } = renderDocsPublication("# Quiz\n\nAnswer: {% redacted %}forty-two{% /redacted %}\n", { boxRoot: box.root, now });
+const index = files.get("index.html");
+
+index.includes("Answer: ")
+=> true
+
+/forty-two|redacted/i.test(index)
+=> false
+
+await box.cleanup();
+```
