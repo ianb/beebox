@@ -25,6 +25,11 @@
  * else follows under "Other chats", tagged with where it lives. Every chat in
  * the box stays one scroll away — prominence, not scoping.
  *
+ * The default list is the chats you're working in. Chats you marked done and
+ * chats whose transcript is gone (expired, on another machine, unknown) stay
+ * hidden behind an "All chats" row at the bottom; search still covers them.
+ * The choice resets each time the panel opens — the short list is the default.
+ *
  * Owns its own fetch/error/retry state: a load failure renders an explicit
  * error row with a retry affordance, distinct from the empty "No sessions
  * yet" state (a caught-and-cleared load used to fall through to the empty
@@ -39,6 +44,7 @@ import { groupByTranscriptState } from "../../../../lib/transcript-state";
 import { bbxSource } from "../../../../lib/source-tag";
 import { useDropdownClose } from "../../../ui/Dropdown";
 import { TextField } from "../../../ui/fields/field";
+import { MenuItem } from "../../../ui/dropdown-menu-item";
 import { layoutSessionList } from "./session-list-grouping";
 import { relativeTime, useChatSearch, ChatSearchRows } from "./session-search";
 
@@ -53,6 +59,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
   const search = useSearch({ strict: false }) as { session?: string };
   const currentSessionId = search.session ?? null;
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const [showAll, setShowAll] = useState(false);
   const chatSearch = useChatSearch();
 
   const load = useCallback(() => {
@@ -103,6 +110,8 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
           contextDir={contextDir}
           currentSessionId={currentSessionId}
           boxSlug={boxSlug ?? ""}
+          showAll={showAll}
+          onToggleAll={() => setShowAll((v) => !v)}
         />
       )}
     </>
@@ -110,12 +119,15 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
 }
 
 /** The grouped session list plus its loading/error/empty states. */
-function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug }: {
+function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, showAll, onToggleAll }: {
   state: LoadState;
   load: () => void;
   contextDir: string | null;
   currentSessionId: string | null;
   boxSlug: string;
+  /** Include done chats and chats whose transcript is gone. */
+  showAll: boolean;
+  onToggleAll: () => void;
 }) {
   if (state.kind === "loading") {
     return <div className="px-3 py-2 text-sm text-warm-500">Loading...</div>;
@@ -147,9 +159,14 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug }:
     contextDir: activeRow?.contextDir ?? contextDir,
   });
   const rowProps = { boxSlug, currentSessionId };
+  const hiddenCount = layout.done.length + dead.length;
+  const liveCount = layout.kind === "flat" ? layout.sessions.length : layout.here.length + layout.elsewhere.length;
 
   return (
     <>
+      {liveCount === 0 && !showAll ? (
+        <div className="px-3 py-2 text-sm text-warm-500">No current chats</div>
+      ) : null}
       {layout.kind === "flat" ? (
         <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} muted={false} {...rowProps} />
       ) : (
@@ -162,12 +179,19 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug }:
           </SessionGroup>
         </>
       )}
-      {layout.done.length === 0 ? null : (
+      {showAll && layout.done.length > 0 ? (
         <SessionGroup label="Done">
           <SessionRows sessions={layout.done} showLandmark muted {...rowProps} />
         </SessionGroup>
+      ) : null}
+      {showAll ? <DeadSessionGroups dead={dead} boxSlug={boxSlug} /> : null}
+      {hiddenCount === 0 ? null : (
+        <MenuItem id="bbx-session-list-all" onClick={onToggleAll} keepOpen>
+          <span className="text-warm-500">
+            {showAll ? "Show current chats only" : `All chats (${String(hiddenCount)} done or expired)`}
+          </span>
+        </MenuItem>
       )}
-      <DeadSessionGroups dead={dead} boxSlug={boxSlug} />
     </>
   );
 }

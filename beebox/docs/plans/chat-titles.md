@@ -454,7 +454,12 @@ the list indistinguishable from living ones.
   mutation that writes the husk field under `withCardLock` (the
   `bbx-guide-api` shapes). The current session's own husk is the target;
   a brand-new chat with no husk yet offers nothing.
-- Lists: done chats sort below every live one and below "Other chats",
+- **[rev] Hidden by default (boxholder, 2026-10-02).** The Recent chats
+  panel shows only current chats. Done chats and chats whose transcript is
+  gone (expired, elsewhere, unknown) sit behind an "All chats (N done or
+  expired)" row at the bottom, which reveals the groups below; the choice
+  resets each time the panel opens. Search still covers every chat.
+- Lists, when shown: done chats sort below every live one and below "Other chats",
   carrying a muted `done` tag on the row (the `DeadSessionGroups` precedent
   for visually demoting a class, `SessionListPanel.tsx:178-203`). They stay
   clickable — done is a state, not a deletion.
