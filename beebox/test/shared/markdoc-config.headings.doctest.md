@@ -12,7 +12,7 @@ React, no DOM.
 
 ```ts setup
 import Markdoc from "@markdoc/markdoc";
-import { makeHeadingNode } from "../../src/shared/markdoc-config/core.js";
+import { makeHeadingNode } from "../../src/shared/markdoc-config/tags/core.js";
 
 const { parse, transform, renderers } = Markdoc;
 

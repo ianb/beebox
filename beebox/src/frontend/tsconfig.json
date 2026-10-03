@@ -55,7 +55,14 @@
   },
   // `../schemas/*/list-entry.tsx` — a card type's list component, which
   // lives beside its schema but is frontend code. The backend tsconfig excludes
-  // the same glob.
-  "include": ["eslint.config.ts", "src", "../shared/**/*", "../schemas/*/list-entry.tsx"],
+  // the same glob. `../types/markdown-it-footnote.d.ts` types a package the
+  // shared Markdown parser imports.
+  "include": [
+    "eslint.config.ts",
+    "src",
+    "../shared/**/*",
+    "../schemas/*/list-entry.tsx",
+    "../types/markdown-it-footnote.d.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -193,7 +193,7 @@ user content.
 
 | Directory | Purpose |
 |-----------|---------|
-| `_publish/` | Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each holding a `manifest.json` and a rendered `bundle/`. Written by `bbx pub draft`; flipped live and uploaded by the human via `bbx pub go`. See `docs/plans/publish-pages.md`. |
+| `_publish/` | Staging area for content exported out of the box: the public-site exporter (`site/box-export.ts` in the monorepo) reads a staged card graph from `_publish/public-site/`. Server-managed publications do not use it; their sources live in `src/publications/<name>/`. |
 
 ## `_tmp/` — scratch
 

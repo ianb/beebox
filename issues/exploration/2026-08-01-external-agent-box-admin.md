@@ -80,7 +80,7 @@ Two hard constraints shape every option:
 
 ## Overlaps with existing work (the meta-assistant would orchestrate these)
 
-- [pub-access setup via API not dashboard](../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md)
+- [pub-access setup via API not dashboard](../closed/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md)
   — a setup flow already being made scriptable; a natural thing to hand off.
 - [BYO Google OAuth / self-host story](../decisions/2026-07-28-byo-google-oauth-self-host-story.md)
   — connector auth is the hardest admin task and the sharpest security case.

@@ -1,7 +1,7 @@
 /**
  * The Worker's response constructors — one place each status is built, so the
- * serve path (`worker.ts`), the account-auth wrapper (`access-auth.ts`), and the
- * submit endpoint (`submit.ts`) all return byte-identical typed refusals. Every
+ * serve paths (`site.ts`, `shared-site.ts`) and the account-auth wrapper
+ * (`access-auth.ts`) all return byte-identical typed refusals. Every
  * response still leaves through `withSecurityHeaders` at the single `handle`
  * exit; these just set the status, a plain-text body, and (for 405) `Allow`.
  */
@@ -27,7 +27,7 @@ export function unauthorized(): Response {
   return plain("Unauthorized", { status: 401 });
 }
 
-/** Verified viewer, but not permitted by the current manifest (allowlist / no-submit). */
+/** Verified viewer, but not permitted by the current manifest's allowlist. */
 export function forbidden(): Response {
   return plain("Forbidden", { status: 403 });
 }
@@ -36,22 +36,7 @@ export function methodNotAllowed(allow: string): Response {
   return plain("Method Not Allowed", { status: 405, extraHeaders: { Allow: allow } });
 }
 
-/** Body content-type the endpoint won't accept (submit takes urlencoded only). */
-export function unsupportedMediaType(): Response {
-  return plain("Unsupported Media Type", { status: 415 });
-}
-
-/** Field-validation failure — the body names each offending field (submit only). */
-export function badRequest(message: string): Response {
-  return plain(message, { status: 400 });
-}
-
-/** Body exceeded the hard ceiling or the manifest's `maxSubmissionBytes`. */
-export function payloadTooLarge(): Response {
-  return plain("Payload Too Large", { status: 413 });
-}
-
-/** Daily cap or per-IP rate limit tripped. */
-export function tooManyRequests(): Response {
-  return plain("Too Many Requests", { status: 429 });
+/** The Worker was deployed without a pinned-site or shared-host binding set. */
+export function unconfigured(): Response {
+  return plain("Publication Worker is not configured: no pinned-site or shared-host bindings", { status: 500 });
 }

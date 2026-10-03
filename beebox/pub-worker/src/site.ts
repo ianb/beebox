@@ -6,6 +6,7 @@ import { resolveAssetPath, decodeSegment } from "./asset-path";
 import { contentTypeFor } from "./content-type";
 import type { WorkerDeps } from "./deps";
 import type { Env } from "./env";
+import { assertNever } from "./exhaustive";
 import { isExpired, loadManifest } from "./manifest-store";
 import { forbidden, gone, methodNotAllowed, notFound } from "./responses";
 
@@ -50,9 +51,8 @@ export async function handleSite({
   if (identity === null || identity.pubId.length === 0) return notFound();
   if (request.method !== "GET" && request.method !== "HEAD") return methodNotAllowed("GET, HEAD");
 
-  const loaded = await loadManifest(identity.pubId, env);
-  if (loaded === null || !("kind" in loaded)) return notFound();
-  const manifest = loaded;
+  const manifest = await loadManifest(identity.pubId, env);
+  if (manifest === null) return notFound();
   if (manifest.hostHandle !== identity.hostHandle) return notFound();
   if (manifest.status === "revoked" || isExpired(manifest.expiresAt, deps.now())) return gone();
   if (manifest.status === "disabled") return gone();
@@ -188,6 +188,6 @@ async function authorizeViewer({
       return auth.ok ? null : auth.response;
     }
     default:
-      return null;
+      return assertNever(manifest);
   }
 }

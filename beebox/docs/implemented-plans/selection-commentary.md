@@ -11,7 +11,7 @@ issues: []
 > `worktree-commetary` branch; the text below is forward-tense ("this plan
 > adds…") but the work is done. Where the code lives:
 >
-> - **Heading anchors** (Track 1) — `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`)
+> - **Heading anchors** (Track 1) — `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`)
 >   (`makeHeadingNode`), test `test/markdoc-headings.doctest.md`.
 > - **Selection capture / position** (Track 2) —
 >   `src/frontend/src/lib/selection-position.ts`,
@@ -183,7 +183,7 @@ unless noted.
   `src/frontend/src/components/Markdown.tsx:270–298` → Markdoc
   parse/transform/`renderers.react`. Headings currently use Markdoc's
   default `heading` node — **no `id`, no source-line data attributes**
-  (verified: `src/shared/markdoc-config.ts:258 (moved to `beebox/src/shared/markdoc-config/core.ts`)–276` registers `tags` and
+  (verified: `src/shared/markdoc-config.ts:258 (moved to `beebox/src/shared/markdoc-config/tags/core.ts`)–276` registers `tags` and
   only an `item` node override; no `heading` override). Adding heading ids
   is *net-new* (Track 2).
 - **Tag + `ref` + escaping conventions.**
@@ -242,7 +242,7 @@ Ordered by implementation dependency, then surface size.
 
 ### Track 1 — Heading anchors in rendered Markdown (prerequisite, smallest)
 
-**What.** Add a `heading` node `transform` to `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`)
+**What.** Add a `heading` node `transform` to `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`)
 that slugifies heading text into a stable `id` (collision-suffixed) and
 carries the source line from `node.lines` onto the rendered element as a
 `data-line` attribute.

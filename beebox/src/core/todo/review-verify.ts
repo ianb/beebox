@@ -59,7 +59,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const COMMIT_TEXT_MAX = 60;
 
 /** Thrown when `verify` runs with no review saved by `check`. */
-export class TodoReviewNotCheckedError extends Error {
+class TodoReviewNotCheckedError extends Error {
   constructor() {
     super("No todo review to verify: run `bbx engine todo-review check` first");
     this.name = "TodoReviewNotCheckedError";

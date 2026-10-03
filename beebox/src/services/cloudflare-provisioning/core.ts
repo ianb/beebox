@@ -1,32 +1,28 @@
 /**
  * CloudflareProvisioningClient — the account-level Cloudflare surface behind
- * `bbx pub setup` / `bbx pub status` (Track E of `docs/plans/publish-pages.md`):
- * R2 bucket creation, the account's workers.dev subdomain, the deployed
- * script's settings, and the per-script workers.dev/preview-URL toggles.
+ * server-managed publications: R2 bucket creation, the account's workers.dev
+ * subdomain, deployed script settings, the per-script workers.dev/preview-URL
+ * toggles, and custom-domain attachment for the shared host.
  *
- * Same pattern as `publish-remote-store.ts`: the CLI logic never talks to
- * Cloudflare directly — it goes through this narrow interface so setup/status
- * are fully unit-testable against {@link createFakeProvisioningClient} with no
- * network. The real implementation ({@link createCloudflareProvisioningClient})
- * calls Cloudflare's REST API (`api.cloudflare.com/client/v4/accounts/<id>/...`)
+ * Same pattern as `publish-remote-store.ts`: publication logic never talks to
+ * Cloudflare directly — it goes through this narrow interface so it is fully
+ * unit-testable against {@link createFakeProvisioningClient} with no network.
+ * The real implementation ({@link createCloudflareProvisioningClient}) calls
+ * Cloudflare's REST API (`api.cloudflare.com/client/v4/accounts/<id>/...`)
  * through the injected {@link BearerProvider}.
  *
  * ⚠️ UNVERIFIED: the adapter's API shaping is covered by injected-response
  * tests; actual token permissions and live account behavior still need an
  * operator-side run.
  *
- * CREDENTIAL MODEL (decided 2026-07-31 — `docs/implemented-plans/pub-setup-wrangler.md`):
- * this client rides the interactive wrangler-OAuth login through a
- * {@link BearerProvider} (or the `CLOUDFLARE_API_TOKEN` env escape hatch). No
- * broad management token is stored anywhere; the headless connector holds only
- * an ingestion-bucket-scoped R2 token, so a box compromise can neither
- * redeploy the Worker nor rewrite publication manifests/content.
+ * Credentials: the box server passes the machine-custody publishing-connection
+ * token (`core/secrets/cloudflare-publish.ts`) as a static bearer.
  */
 
 import { z } from "zod";
 
 import type { BearerProvider } from "../cloudflare-bearer.js";
-import { type CloudflareApiErrorDetail, ProvisioningRequestError } from "../cloudflare-provisioning-error.js";
+import { type CloudflareApiErrorDetail, ProvisioningRequestError } from "./error.js";
 import { createCloudflareDomainMethods } from "./domains.js";
 import type { CloudflareZone, WorkerDomain } from "./domains.js";
 
@@ -40,7 +36,7 @@ export interface ScriptSubdomainSettings {
   previewsEnabled: boolean;
 }
 
-/** One binding row of the deployed script's settings (only the fields status inspects). */
+/** One binding row of the deployed script's settings (only the fields deploy verification inspects). */
 export interface DeployedBinding {
   type: string;
   name: string;
@@ -49,19 +45,17 @@ export interface DeployedBinding {
   bucketName?: string | undefined;
 }
 
-/** The deployed script's settings slice status inspects (bindings incl. plain-text vars). */
+/** The deployed script's settings slice deploy verification inspects (bindings incl. plain-text vars). */
 export interface DeployedScriptSettings {
   bindings: DeployedBinding[];
 }
 
 /**
- * The account-level Cloudflare surface `bbx pub setup`/`status` use. Reads
+ * The account-level Cloudflare surface managed publications use. Reads
  * return `null` for "does not exist" (fail-soft probes); writes throw
  * {@link ProvisioningRequestError} on refusal.
  */
 export interface CloudflareProvisioningClient {
-  /** Does the R2 bucket exist? */
-  bucketExists(name: string): Promise<boolean>;
   /** Create the R2 bucket. Idempotent: resolves `{ created: false }` when it already exists. */
   createBucket(name: string): Promise<{ created: boolean }>;
   /** The account's workers.dev subdomain label (`<label>.workers.dev`), or `null` when none is registered. */
@@ -70,7 +64,7 @@ export interface CloudflareProvisioningClient {
   getScriptSettings(scriptName: string): Promise<DeployedScriptSettings | null>;
   /** The script's workers.dev routing state, or `null` when the script has never been deployed. */
   getScriptSubdomain(scriptName: string): Promise<ScriptSubdomainSettings | null>;
-  /** Set the script's workers.dev routing state (setup enforces `enabled` + previews DISABLED). */
+  /** Set the script's workers.dev routing state (deploy enforces `enabled` + previews DISABLED). */
   setScriptSubdomain(scriptName: string, settings: ScriptSubdomainSettings): Promise<void>;
   /** Active DNS zones visible to this token, including account ownership. */
   listZones(): Promise<CloudflareZone[]>;
@@ -82,7 +76,7 @@ export interface CloudflareProvisioningClient {
 
 export interface ProvisioningConfig {
   accountId: string;
-  /** The bearer seam: a static API token, or the wrangler-OAuth-backed provider. */
+  /** The bearer seam: the stored publishing-connection API token. */
   bearer: BearerProvider;
 }
 
@@ -163,10 +157,6 @@ export function createCloudflareProvisioningClient(config: ProvisioningConfig, d
   }
 
   return {
-    async bucketExists(name: string): Promise<boolean> {
-      const result = await getResult("r2 bucket probe", { url: `${base}/r2/buckets/${encodeURIComponent(name)}`, resultSchema: z.unknown() });
-      return result !== null;
-    },
     async createBucket(name: string): Promise<{ created: boolean }> {
       const res = await authedFetch(`${base}/r2/buckets`, {
         method: "POST",

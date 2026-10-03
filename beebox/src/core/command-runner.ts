@@ -19,7 +19,6 @@ export type {
   CommandDefinition,
   CommandResult,
 } from "./command-types.js";
-export { CommandArgsError, parseCommandArgs } from "./command-types.js";
 
 /**
  * Get a command by name.

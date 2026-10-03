@@ -40,7 +40,7 @@ const ROTATE_BYTES = 8 * 1024 * 1024;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Thrown when a line cannot be appended to the log. */
-export class NotificationLogWriteError extends Error {
+class NotificationLogWriteError extends Error {
   readonly logPath: string;
   constructor(logPath: string, options: { cause: unknown }) {
     super(`Could not append to the notification log ${logPath}`, options);
@@ -50,7 +50,7 @@ export class NotificationLogWriteError extends Error {
 }
 
 /** Thrown when a line would not fit one atomic append even with its body emptied. */
-export class NotificationLogLineTooLongError extends Error {
+class NotificationLogLineTooLongError extends Error {
   readonly bytes: number;
   constructor(bytes: number) {
     super(`A notification log line is ${bytes} bytes even with its body emptied; the limit is ${MAX_LINE_BYTES}`);

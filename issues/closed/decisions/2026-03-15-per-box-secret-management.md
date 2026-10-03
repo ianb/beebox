@@ -29,7 +29,7 @@ three answers in the codebase (per-box secret files, env vars, and a sourced dot
 and the publish connector — which runs on every `bbx wakeup`, including on the
 server — has no credential path in prod at all. Details and the coupled token-scope
 question:
-[pub Access setup via API](../../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
+[pub Access setup via API](../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
 Worth deciding this alongside that item rather than separately.
 
 **2026-07-31 — the publishing divergence is resolved.** The dotfile is retired:

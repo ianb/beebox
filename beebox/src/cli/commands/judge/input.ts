@@ -17,7 +17,7 @@ import { resolveRefPath } from "../../../shared/ref-path/core.js";
 import { BODY_FILE_CAP, bodyFileSection } from "../../lib/body-file-section.js";
 
 /** The trial's 400 was too short to judge on (2026-09-26). */
-export const CARD_BODY_CAP = BODY_FILE_CAP;
+const CARD_BODY_CAP = BODY_FILE_CAP;
 
 export const DEFAULT_MAX_BATCH = 20;
 
@@ -26,7 +26,7 @@ export const DEFAULT_MAX_BATCH = 20;
  * characters, so the call would fail every run and defer as `jev-unavailable`
  * forever instead of saying what to change.
  */
-export const MAX_STATE_CHARS = 60_000;
+const MAX_STATE_CHARS = 60_000;
 
 /** Below this a state is probably a subject line, not the body; the judge warns. */
 export const THIN_STATE_CHARS = 300;

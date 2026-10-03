@@ -216,6 +216,9 @@ importers:
       ky:
         specifier: ^1.14.3
         version: 1.14.3
+      markdown-it-footnote:
+        specifier: 4.0.0
+        version: 4.0.0
       markdownlint:
         specifier: ^0.40.0
         version: 0.40.0
@@ -7227,6 +7230,9 @@ packages:
   many-keys-map@3.0.3:
     resolution: {integrity: sha512-1DiZmDHPXMBgMRjeUtHy1q1VYmeJscHxhIAexX9z/zjRMP80+0ETuPfssi8z+kMY4DwUgsKuHqpjxgmeA9gBNA==}
     engines: {node: '>=18'}
+
+  markdown-it-footnote@4.0.0:
+    resolution: {integrity: sha512-WYJ7urf+khJYl3DqofQpYfEYkZKbmXmwxQV8c8mO/hGIhgZ1wOe7R4HLFNwqx7TjILbnC98fuyeSsin19JdFcQ==}
 
   markdownlint@0.40.0:
     resolution: {integrity: sha512-UKybllYNheWac61Ia7T6fzuQNDZimFIpCg2w6hHjgV1Qu0w1TV0LlSgryUGzM0bkKQCBhy2FDhEELB73Kb0kAg==}
@@ -16290,6 +16296,8 @@ snapshots:
       - supports-color
 
   many-keys-map@3.0.3: {}
+
+  markdown-it-footnote@4.0.0: {}
 
   markdownlint@0.40.0:
     dependencies:

@@ -84,7 +84,7 @@ const result = await discover(box);
 const session = result.qualified[0];
 
 Object.keys(session).sort().join(",")
-=> bootstrap,huskPath,logPath,mtime,sessionId,snippetTitle,spanChars
+=> bootstrap,huskPath,logPath,mtime,needsMetadata,sessionId,snippetTitle,spanChars,titleBootstrap,titleSpanChars
 ```
 
 Named explicitly, because these two fields are the regression: retaining either
@@ -111,7 +111,7 @@ Nothing on the object is large: a whole qualified session serializes to a couple
 of hundred bytes, whatever the transcript's size.
 
 ```ts continue
-JSON.stringify(session).length < 500
+JSON.stringify(session).length < 700
 => true
 ```
 
@@ -173,14 +173,16 @@ await box.write("_content/chat/web/2026-07-28_sessgone.chat.card", "---\nsession
 const result = await discover(box);
 JSON.stringify({
   qualified: result.qualified.map((s) => s.sessionId),
-  belowThreshold: result.belowThreshold,
+  titleOnly: result.titleOnly,
+  belowTitleThreshold: result.belowTitleThreshold,
   tooFewTurns: result.tooFewTurns,
   deferredActive: result.deferredActive,
   missingTranscripts: result.missingTranscripts,
   foreignOrigin: result.foreignOrigin,
 })
-=> {"qualified":["sessbig"],"belowThreshold":1,"tooFewTurns":1,"deferredActive":["sessnow"],"missingTranscripts":1,"foreignOrigin":0}
+=> {"qualified":["sessbig"],"titleOnly":0,"belowTitleThreshold":1,"tooFewTurns":1,"deferredActive":["sessnow"],"missingTranscripts":1,"foreignOrigin":0}
 ```
+
 
 ## Qualified sessions come back oldest first
 
@@ -283,6 +285,7 @@ const window = await readSessionWindow({
   sessionId: "sesscap",
   logPath: getSessionLogPath(box.root, "sesscap"),
   state: await loadReviewState(box.root),
+  consumer: "metadata",
 });
 JSON.stringify({
   bootstrap: window.bootstrap,
@@ -307,4 +310,38 @@ window.endPrefixHash === prefixHash([...head.entries, ...tail.entries], 5003)
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## A short chat qualifies for the title pass, not the summary pass
+
+Titling is decoupled from the summary gate: a couple of exchanges (2 turns,
+~500 chars) clears the 400-char title threshold but not the 6,000-char summary
+threshold, so the session is `qualified` with `needsMetadata: false` and the
+run titles it without paying for an account
+(`docs/implemented-plans/chat-titles.md` § Track A).
+
+```ts
+const tbox = await makeTmpBox();
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = tbox.path("claude-projects");
+
+await seed(tbox, {
+  sessionId: "sesschat",
+  entries: [
+    userEntry("t1", "please help me plan a small birthday dinner for saturday. ".repeat(8)),
+    userEntry("t2", "eight people, one vegetarian, nothing fancy — what should I make? ".repeat(8)),
+  ],
+  agoHours: 5,
+});
+const result = await discover(tbox);
+const session = result.qualified[0];
+JSON.stringify({
+  needsMetadata: session.needsMetadata,
+  titleSpanChars: session.titleSpanChars > 100,
+  titleBootstrap: session.titleBootstrap,
+})
+=> {"needsMetadata":false,"titleSpanChars":true,"titleBootstrap":"no-journal"}
+```
+
+```ts cleanup
+await tbox.cleanup();
 ```

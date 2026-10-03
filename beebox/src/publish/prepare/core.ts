@@ -13,7 +13,6 @@ import { collectPublicationFiles, stagePublicationFiles } from "./files.js";
 import { PUBLICATION_COMMAND_TIMEOUT_MS, type PrepareDeps, type PrepareResult } from "./types.js";
 
 export { PUBLICATION_FILE_LIMITS } from "./files.js";
-export { PUBLICATION_COMMAND_TIMEOUT_MS } from "./types.js";
 export type { PrepareDeps, PrepareFailure, PrepareResult, PreparedPublication, ProjectCommandRequest, RunProjectCommand } from "./types.js";
 
 /** Build/collect, scan, and stage files; no Cloudflare authority is resolved here. */

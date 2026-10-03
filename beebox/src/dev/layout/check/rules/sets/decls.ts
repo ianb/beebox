@@ -26,7 +26,7 @@ export interface MemberLocation {
   scope: string | null;
 }
 
-export const NOT_LOCATED: MemberLocation = { valid: false, name: null, scope: null };
+const NOT_LOCATED: MemberLocation = { valid: false, name: null, scope: null };
 
 /** Where `source` sits relative to `decl`'s set directory. */
 export function classifyMemberSource(decl: RegistryDecl, source: string): MemberLocation {

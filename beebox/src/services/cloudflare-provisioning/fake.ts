@@ -49,9 +49,6 @@ export function createFakeProvisioningClient(options?: FakeProvisioningOptions):
     zones,
     workerDomains,
     ops,
-    bucketExists(name: string): Promise<boolean> {
-      return Promise.resolve(buckets.has(name));
-    },
     createBucket(name: string): Promise<{ created: boolean }> {
       ops.push(`create-bucket:${name}`);
       if (buckets.has(name)) return Promise.resolve({ created: false });

@@ -60,7 +60,7 @@ The docs this plan must be evaluated against:
   helpers (frontmatter + Markdoc body) follow these.
 - **The shipped Markdoc precedent.** `{% source %}` (committed
   `63141dce`) and `{% quote %}` are the densest preference for how a
-  new tag is shaped — schema in `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`), a
+  new tag is shaped — schema in `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`), a
   renderer in the frontend, ref-attributes tracked by `extractBodyRefs`.
   Every new tag in this plan copies that shape.
 - **CLAUDE.md "don't add features beyond what the task requires."** This
@@ -95,14 +95,14 @@ five schemas and removes the scaffolding. Concretely:
 - **Recipe is already a frontmatter schema.** `src/schemas/recipe.tsx:2`:
   *"Recipe card schema — Phase-2 frontmatter + Markdoc-annotated body."*
   The recipe Markdoc vocabulary already exists:
-  `src/shared/markdoc-config.ts:379-384` (moved to `beebox/src/shared/markdoc-config/core.ts`) registers `ingredient`, `step`,
+  `src/shared/markdoc-config.ts:379-384` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`) registers `ingredient`, `step`,
   `yield`, `substitution`, `subrecipe`, `recipe-section`. **Reuse:**
   recipe needs only a data migration of the 2 remaining XML
   `.recipe.card` files (`~/src/boxes/test1/store/recipes/*.recipe.card`
   are still `x-card+xml`), not a schema rewrite. Recipe is the proof the
   pattern works, not a track of its own.
 - **The Markdoc backend + frontend pipeline.** `@markdoc/markdoc` is a
-  dependency. Backend: `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`) (tag schemas),
+  dependency. Backend: `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`) (tag schemas),
   `src/core/markdoc-emit*.ts` (renderable-tree → markdown emitter),
   `src/core/body-refs.ts` (`extractBodyRefs`). Frontend:
   `src/frontend/src/components/Markdown.tsx`, `Source.tsx`,
@@ -208,7 +208,7 @@ parseable while cardworks exists) and emits frontmatter + `{% ingredient %}`
 /`{% step %}` body.
 
 **Vocabulary lock-ins.** None new — recipe tags are already locked at
-`src/shared/markdoc-config.ts:379-384` (moved to `beebox/src/shared/markdoc-config/core.ts`).
+`src/shared/markdoc-config.ts:379-384` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`).
 
 **First implementation chunk.** Write `src/core/card-body.ts`
 `parseBodyTags` + a doctest; migrate the 2 test1 recipe cards; confirm

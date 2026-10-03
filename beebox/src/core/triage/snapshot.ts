@@ -13,7 +13,7 @@ import { deriveCategoryName, disambiguateCategoryNames } from "./instructions.js
 import { normalizeLandmarkDir } from "../landmark/root-dir.js";
 import { findDestination } from "../landmark/destination.js";
 
-export const INTAKE_GUIDE_REF = "/_config/intake.guide.card";
+const INTAKE_GUIDE_REF = "/_config/intake.guide.card";
 const digest = (text: string): string => createHash("sha256").update(text).digest("hex");
 const refSchema = z.string().refine((ref) => {
   const parsed = parseRef(ref);
@@ -37,7 +37,7 @@ export const instructionSnapshotSchema = z.object({
 });
 export type InstructionSnapshot = z.infer<typeof instructionSnapshotSchema>;
 export interface SnapshotOptions { guideOverlay?: string; landmarkOverlays?: Record<string, string> }
-export class TriageInstructionsError extends Error {
+class TriageInstructionsError extends Error {
   constructor({ kind, ref }: { kind: "ref" | "guide" | "landmark"; ref: string }) { super(`${kind === "ref" ? "Invalid instruction ref" : `Invalid ${kind} fields`}: ${ref}`); this.name = "TriageInstructionsError"; }
 }
 

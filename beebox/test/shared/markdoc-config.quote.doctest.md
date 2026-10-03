@@ -6,7 +6,7 @@ distinguish a third party's exact words from an unattributed user quote.
 ```ts setup
 import Markdoc, { type Tag } from "@markdoc/markdoc";
 import { lintBodyMarkdoc } from "../../src/core/body-markdoc-lint.js";
-import { markdocConfig } from "../../src/shared/markdoc-config/core.js";
+import { markdocConfig } from "../../src/shared/markdoc-config/tags/core.js";
 
 function isTag(value: unknown): value is Tag {
   return typeof value === "object" && value !== null && "name" in value;

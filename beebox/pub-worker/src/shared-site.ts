@@ -1,6 +1,6 @@
 /** Shared-host routing through an approved per-publication route marker. */
 
-import { sharedPublicSlugSchema, sharedRouteMarkerSchema } from "../../src/publish/manifest-edge";
+import { sharedPublicSlugSchema, sharedRouteMarkerKey, sharedRouteMarkerSchema, slugKey, type SiteEdgeManifest } from "../../src/publish/manifest-edge";
 import { decodeSegment } from "./asset-path";
 import type { WorkerDeps } from "./deps";
 import type { Env } from "./env";
@@ -68,7 +68,7 @@ export async function handleSharedSite({ request, env, deps, identity }: {
 
 async function resolveSharedPubId(route: SharedRoute, env: Env): Promise<string | null> {
   if (route.kind === "public") {
-    const pointer = await env.PUB_STORE.get(`slugs/${route.slug}`);
+    const pointer = await env.PUB_STORE.get(slugKey(route.slug));
     if (pointer === null) return null;
     const pubId = (await pointer.text()).trim();
     return PUB_ID_RE.test(pubId) ? pubId : null;
@@ -81,8 +81,8 @@ async function loadAuthorizedSharedManifest({ route, pubId, identity, env }: {
   pubId: string;
   identity: SharedIdentity;
   env: Env;
-}): Promise<Extract<Awaited<ReturnType<typeof loadManifest>>, { kind: "site" }> | null> {
-  const markerObject = await env.PUB_STORE.get(`shared-routes/${pubId}/route.json`);
+}): Promise<SiteEdgeManifest | null> {
+  const markerObject = await env.PUB_STORE.get(sharedRouteMarkerKey(pubId));
   if (markerObject === null) return null;
   let rawMarker: unknown;
   try { rawMarker = JSON.parse(await markerObject.text()); } catch (_error) { return null; }
@@ -95,7 +95,7 @@ async function loadAuthorizedSharedManifest({ route, pubId, identity, env }: {
     || marker.path !== route.basePath) return null;
 
   const stored = await loadManifest(pubId, env);
-  if (stored === null || !("kind" in stored) || stored.hostHandle !== marker.manifestHostHandle) return null;
+  if (stored === null || stored.hostHandle !== marker.manifestHostHandle) return null;
   if (route.kind === "public") {
     if (stored.tier !== "public" || stored.slug !== route.slug) return null;
     const pointer = await env.PUB_STORE.get(`slugs/${route.slug}`);

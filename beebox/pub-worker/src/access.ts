@@ -1,12 +1,12 @@
 /**
- * Cloudflare Access assertion verification (Track D of
- * `docs/plans/publish-pages.md`). Account-gated (`/a/`) publications sit behind a
+ * Cloudflare Access assertion verification. Account-gated (`accounts` /
+ * `any-account`) publications sit behind a
  * Cloudflare Access application; Access terminates the Google IdP flow, manages
  * the visitor session, and forwards a signed identity assertion (a JWT) to the
  * Worker. This module does the ONE cryptographic thing the Worker owns: verify
  * that assertion against Cloudflare's published Access JWKS and extract the
  * verified `email`. It is NOT an OAuth flow — no IdP round-trip, no session, no
- * cookie the Worker sets. The per-publication allowlist check lives in `worker.ts`.
+ * cookie the Worker sets. The per-publication allowlist check lives in `site.ts`.
  *
  * Fail-closed (principle #4): every failure — missing header, malformed token,
  * bad signature, wrong `aud`/`iss`, expired, or an unreachable JWKS — yields a
