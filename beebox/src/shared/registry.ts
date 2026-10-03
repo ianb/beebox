@@ -21,7 +21,7 @@
  * omitted `<M>` defaults to `never` and any real member fails to typecheck.
  */
 
-export class DuplicateRegistryKeyError extends Error {
+class DuplicateRegistryKeyError extends Error {
   readonly directory: string;
   readonly key: string;
   constructor(directory: string, key: string) {

@@ -29,7 +29,7 @@ const fileEntrySchema = z
 export const filesSchema = z.record(z.string(), fileEntrySchema);
 
 /** Immutable release identity: SHA-256 of the canonical release inventory. */
-export const releaseIdSchema = z.string().regex(/^[\da-f]{64}$/);
+const releaseIdSchema = z.string().regex(/^[\da-f]{64}$/);
 
 class ReleaseInventoryMutationError extends Error {
   constructor() {

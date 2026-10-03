@@ -107,7 +107,18 @@ test("scanRawRequestAccess: stands down for a TaskOutput-named helper even if no
   assert.deepEqual(scanRawRequestAccess(src, "routes/api.ts"), []);
 });
 
-test("scanRawRequestAccess: stands down on the inline containment idiom (api-browse.ts / figure.ts shape)", () => {
+test("scanRawRequestAccess: stands down on the box namespace resolver (figure.ts / api-browse.ts shape)", () => {
+  const src = `
+    const reqPath = request.query.path ?? "";
+    if (reqPath === "") return reply.status(400).send({ error: "Missing ?path" });
+    const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
+    if (!ns.ok) return reply.status(400).send({ error: "Path outside box" });
+    const stat = await fs.stat(ns.resolved);
+  `;
+  assert.deepEqual(scanRawRequestAccess(src, "routes/figure.ts"), []);
+});
+
+test("scanRawRequestAccess: stands down on the inline containment idiom (pre-2026-09 api-browse.ts shape)", () => {
   const src = `
     const reqPath = request.params["*"] || "";
     const targetDir = reqPath ? path.join(boxRoot, reqPath) : boxRoot;

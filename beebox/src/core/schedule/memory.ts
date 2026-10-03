@@ -39,7 +39,7 @@ export const MEMORY_ENV = {
 const DeferMarkerSchema = z.object({ reason: z.enum(DEFER_REASONS) });
 
 /** The largest carry kept, in UTF-8 bytes. */
-export const CARRY_MAX_BYTES = 4096;
+const CARRY_MAX_BYTES = 4096;
 
 export interface RunMemory {
   env: Record<string, string>;

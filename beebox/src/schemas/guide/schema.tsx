@@ -20,14 +20,7 @@ import {
   experimentStateIssues,
 } from "../../guide-fields.js";
 
-export {
-  ConfidenceLevelSchema,
-  type ConfidenceLevel,
-  BeliefBasisSchema,
-  type BeliefBasis,
-  ExperimentOutcomeSchema,
-  type ExperimentOutcome,
-} from "../../guide-fields.js";
+export type { ConfidenceLevel, BeliefBasis, ExperimentOutcome } from "../../guide-fields.js";
 
 // ============================================
 // Shared enums

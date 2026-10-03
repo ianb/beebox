@@ -10,7 +10,7 @@ import { publicationCardPath } from "../shared/publication-card.js";
 
 const schemas = new Map([[PublicationSchema.type, PublicationSchema]]);
 
-export abstract class PublicationReferenceCardError extends Error {
+abstract class PublicationReferenceCardError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "PublicationReferenceCardError";

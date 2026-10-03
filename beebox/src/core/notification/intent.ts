@@ -19,7 +19,7 @@ export type Loudness = (typeof LOUDNESS)[number];
 export const CHANNELS = ["apns", "web-push", "telegram"] as const;
 export type ChannelName = (typeof CHANNELS)[number];
 
-export const DELIVERY_STATUSES = ["sent", "skipped", "failed"] as const;
+const DELIVERY_STATUSES = ["sent", "skipped", "failed"] as const;
 export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number];
 
 /** One intent to reach the person. */
