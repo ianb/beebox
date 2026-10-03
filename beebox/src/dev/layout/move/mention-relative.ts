@@ -12,7 +12,7 @@ import { isModulePath } from "./mention-forms.js";
 import { computeRelativeSpecifier, pathWithoutExtension } from "./specifier.js";
 
 /** Extensions of non-TypeScript files this form is checked in. */
-export const RELATIVE_MENTION_EXTENSIONS = [".json", ".sh", ".bash", ".yml", ".yaml", ".md"];
+const RELATIVE_MENTION_EXTENSIONS = [".json", ".sh", ".bash", ".yml", ".yaml", ".md"];
 
 export function isRelativeMentionCandidateFile(path: string): boolean {
   return RELATIVE_MENTION_EXTENSIONS.some((ext) => path.endsWith(ext));

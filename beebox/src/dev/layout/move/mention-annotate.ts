@@ -57,11 +57,11 @@ function isExcludedFromAnnotate(path: string): boolean {
 }
 
 /** Every tracked Markdown file in scope for annotation. */
-export function annotateCandidateFiles(repoRoot: string): string[] {
+function annotateCandidateFiles(repoRoot: string): string[] {
   return gitLines({ repoRoot, args: ["ls-files", "-z", "--", "*.md"] }).filter((path) => !isExcludedFromAnnotate(path));
 }
 
-export function areaOf(path: string): AnnotateArea {
+function areaOf(path: string): AnnotateArea {
   if (path.startsWith("beebox/docs/plans/")) return "plans";
   if (path.startsWith("beebox/docs/implemented-plans/")) return "implemented-plans";
   if (path.startsWith("issues/closed/")) return "issues-closed";

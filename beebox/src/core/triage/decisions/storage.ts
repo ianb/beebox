@@ -16,7 +16,7 @@ import { withFileLock } from "../../../lib/file-lock.js";
 export class TriageReceiptError extends Error {
   constructor({ detail }: { detail: string }) { super(`Triage receipt: ${detail}`); this.name = "TriageReceiptError"; }
 }
-export const outcomeAssertionSchema = z.object({ label: z.string(), actor: z.enum(["user", "agent", "unknown"]), sourceRef: z.string(), at: z.string() });
+const outcomeAssertionSchema = z.object({ label: z.string(), actor: z.enum(["user", "agent", "unknown"]), sourceRef: z.string(), at: z.string() });
 const todoAnnotationSchema = z.object({ state: z.enum(["pending", "applied"]), todoId: z.string(), beforeDigest: z.string().regex(/^[\da-f]{64}$/), afterDigest: z.string().regex(/^[\da-f]{64}$/), created: z.string() });
 export const decisionReceiptSchema = z.object({
   version: z.literal(1), id: z.string().uuid(), at: z.string(),

@@ -17,7 +17,7 @@ import type { z } from "zod";
  * malformed programmatic call surfaces as a loud, localized failure instead of
  * flowing past an `as unknown as` cast as mis-typed data.
  */
-export class CommandArgsError extends Error {
+class CommandArgsError extends Error {
   readonly issues: string;
   constructor(issues: string) {
     super(`invalid command arguments: ${issues}`);

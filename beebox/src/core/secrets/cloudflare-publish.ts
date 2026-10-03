@@ -14,7 +14,7 @@ import {
   type CloudflarePublishConnectionRecord,
 } from "./store.js";
 
-export const cloudflarePublishConnectionNamePattern = /^[a-z][\da-z-]{0,39}$/;
+const cloudflarePublishConnectionNamePattern = /^[a-z][\da-z-]{0,39}$/;
 const accountIdPattern = /^[\da-f]{32}$/i;
 const pubIdPattern = /^[2-7a-z]{26}$/;
 

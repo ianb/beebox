@@ -48,7 +48,7 @@ import {
 import { browseRenderer } from "./renderers/browse.js";
 import { searchRenderer } from "./renderers/search.js";
 
-export const rendererRegistrations = defineRegistry<RendererEntry>({
+const rendererRegistrations = defineRegistry<RendererEntry>({
   directory: "./renderers",
   ordered: true, // equal-priority renderers keep this tie-break order (was renderers/setup.ts's import order)
   key: (entry) => ("type" in entry.selector ? `${entry.selector.type}:${entry.renderer.name}` : entry.renderer.name),

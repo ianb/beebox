@@ -16,7 +16,7 @@ const HISTORY_DOC_DIRS = [
   "issues/closed/",
 ];
 
-export function isHistoryDoc(path: string): boolean {
+function isHistoryDoc(path: string): boolean {
   if (baseOf(path).startsWith("CHANGELOG")) return true;
   return HISTORY_DOC_DIRS.some((dir) => path.startsWith(dir));
 }

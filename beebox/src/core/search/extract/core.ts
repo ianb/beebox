@@ -58,7 +58,7 @@ export const MARKDOWN_KIND = "markdown";
 export const ENGINE_DOC_KIND = "engine-doc";
 
 /** Whether a box-relative markdown path is one of the package's engine docs. */
-export function isEngineDocPath(relPath: string): boolean {
+function isEngineDocPath(relPath: string): boolean {
   return relPath.startsWith(`${BOX_PACKAGE_DOCS}/`);
 }
 

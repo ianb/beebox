@@ -13,7 +13,7 @@ import { publicationError } from "./managed-publications/core.js";
 
 const hostnamePattern = /^(?=.{1,253}$)(?:[\da-z](?:[\da-z-]{0,61}[\da-z])?\.)+[a-z](?:[\da-z-]{0,61}[\da-z])?$/;
 
-export function normalizeSharedPublicationHostname(value: string): string {
+function normalizeSharedPublicationHostname(value: string): string {
   const hostname = value.trim().toLowerCase().replace(/\.$/, "");
   if (!hostnamePattern.test(hostname) || isIP(hostname) !== 0) {
     throw publicationError("Enter a complete DNS hostname such as sites.example.com, without a scheme, path, port, or wildcard.");
