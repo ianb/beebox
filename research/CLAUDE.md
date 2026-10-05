@@ -43,3 +43,19 @@ something changes enough to matter, write a new review (or a follow-up
 deep-dive) rather than editing the old one in place — the old one stays as
 the record of what was true when it was written, and the new one says what
 it supersedes. Don't "maintain" a review by patching it as our code evolves.
+
+## Fetching sources
+
+Reddit (as of 2026-10-04) refuses agents on every default path: plain HTTP,
+`.json`, `bin/browse`, reader proxies, and Claude in Chrome (blocklisted). The
+official API no longer issues credentials without a manual review. What works:
+
+- Arctic Shift, no key: `https://arctic-shift.photon-reddit.com/api/posts/ids?ids=<id>`
+  and `.../api/comments/tree?link_id=<id>&limit=9999`. Archived at ingest, so
+  scores and counts are stale and removed text is missing.
+- The thread's `.rss` feed (`.../comments/<id>/.rss`). Reddit's own data, but
+  it returns 429 after a few requests.
+- `i.redd.it` images fetch directly; image posts often carry the content.
+
+Do not use stealth-browser or residential-proxy fetchers. Details and the
+proposed tool: [reddit-fetch-tool](../issues/features/2026-10-04-reddit-fetch-tool.md).
