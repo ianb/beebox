@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { Pill } from "../ui.js";
+import { issueSearchParams } from "../../lib/issue-link.js";
 import { trpc } from "../../trpc.js";
 import type { Issue, RelatedResult, RelatedRow } from "../../types.js";
 
@@ -22,7 +23,7 @@ function RelatedTarget({ row }: { row: RelatedRow }) {
   return <Link
     className="related-path"
     to="/issues"
-    search={(previous) => ({ ...previous, issue: issue.relPath, issueVisibility: issue.visibility })}
+    search={(previous) => ({ ...previous, ...issueSearchParams(issue) })}
   >{row.path}</Link>;
 }
 

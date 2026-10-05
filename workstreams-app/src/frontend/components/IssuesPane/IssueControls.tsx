@@ -6,7 +6,7 @@ import { trpc } from "../../trpc.js";
 import type { Issue, NextAction, NextActionState, Priority } from "../../types.js";
 
 const PRIORITIES: Array<{ value: Priority; symbol: string; label: string }> = [{ value: "important", symbol: "!", label: "Important" }, { value: "normal", symbol: "−", label: "Normal" }, { value: "backlog", symbol: "↓", label: "Backlog" }, { value: "uncategorized", symbol: "?", label: "Uncategorized" }];
-export const ISSUE_NEXT_ACTION_OPTIONS: Array<{ value: NextAction; label: string }> = [{ value: "discuss", label: "Discuss" }, { value: "reconfirm", label: "Reconfirm?" }, { value: "duplicate", label: "Dup?" }, { value: "invalid", label: "Invalid?" }, { value: "fixed", label: "Fixed?" }, { value: "manually-confirmed", label: "Manually confirmed" }, { value: "verify-without-me", label: "Verify without me" }];
+export const ISSUE_NEXT_ACTION_OPTIONS: Array<{ value: NextAction; label: string }> = [{ value: "discuss", label: "Discuss" }, { value: "reconfirm", label: "Reconfirm?" }, { value: "duplicate", label: "Dup?" }, { value: "invalid", label: "Invalid?" }, { value: "fixed", label: "Fixed?" }, { value: "manually-confirmed", label: "Manually confirmed" }, { value: "verify-without-me", label: "Verify without me" }, { value: "do-it", label: "Just do it" }];
 function nextActionFrom(value: string): NextAction | undefined {
   const parsed = issueNextActionSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;

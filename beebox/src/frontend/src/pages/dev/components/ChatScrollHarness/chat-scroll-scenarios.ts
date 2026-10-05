@@ -15,6 +15,7 @@
  */
 
 import type { Scenario } from "./chat-scroll-steps";
+import { SPACER_SCENARIOS } from "./chat-scroll-scenarios-spacer";
 import { OPEN_THREAD_SCENARIOS } from "./chat-scroll-scenarios-open";
 
 export type { Step, Expectation, Scenario } from "./chat-scroll-steps";
@@ -266,25 +267,10 @@ const SCENARIOS_MAIN: Scenario[] = [
       driftWhileAwayAtMost: 8,
     },
   },
-  {
-    name: "finalize-drops-spacer",
-    description: "A short reply to a send. While it streams the last turn keeps a viewport-tall spacer so the user message can sit at the top; once it is complete the spacer goes, and the view clamps to the real bottom with no blank room below the reply.",
-    steps: [
-      { k: "append", px: 300, role: "assistant" },
-      { k: "send", px: 40 },
-      { k: "stream", chunks: 3, intervalMs: 50, chunkPx: 40 },
-      { k: "finalize", shrinkBy: 20 },
-      { k: "wait", ms: 300 },
-    ],
-    expect: {
-      finalAtBottom: true,
-      finalFromBottomAtMost: 4,
-      finalHasUnseenContent: false,
-    },
-  },
+
 ];
 
-export const SCENARIOS: Scenario[] = [...SCENARIOS_MAIN, ...OPEN_THREAD_SCENARIOS];
+export const SCENARIOS: Scenario[] = [...SCENARIOS_MAIN, ...SPACER_SCENARIOS, ...OPEN_THREAD_SCENARIOS];
 
 export function findScenario(name: string): Scenario | null {
   return SCENARIOS.find((s) => s.name === name) ?? null;

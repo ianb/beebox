@@ -15,6 +15,7 @@ export const issueNextActionSchema = z.enum([
   "fixed",
   "verify-without-me",
   "manually-confirmed",
+  "do-it",
 ]);
 export type IssueNextAction = z.infer<typeof issueNextActionSchema>;
 /**

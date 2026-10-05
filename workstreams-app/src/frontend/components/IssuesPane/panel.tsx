@@ -9,6 +9,7 @@ import { Markdown } from "../Markdown.js";
 import { Button, Pill } from "../ui.js";
 import { trpc } from "../../trpc.js";
 import { issueCategoryId } from "../../lib/issue-category-nav.js";
+import { issueSearchParams } from "../../lib/issue-link.js";
 import { issueProvenance } from "../../../shared/issue-provenance.js";
 import type { Issue, IssueChange, Priority, Visibility } from "../../types.js";
 
@@ -194,8 +195,8 @@ export function IssuesPane({ issues, changes, saving, onReset, onSave, onChange 
     records.push(issue);
     byCategory.set(issue.category, records);
   }
-  function setFilters(next: IssueFilters): void { void navigate({ to: "/issues", search: { ...next, ...(search.issue ? { issue: search.issue, issueVisibility: search.issueVisibility ?? "public" } : {}) } }); }
-  function select(issue: Issue): void { void navigate({ to: "/issues", search: { ...search, issue: issue.relPath, issueVisibility: issue.visibility } }); }
+  function setFilters(next: IssueFilters): void { void navigate({ to: "/issues", search: { ...next, ...(search.issue ? { issue: search.issue, issueVisibility: search.issueVisibility === "private" ? "private" : undefined } : {}) } }); }
+  function select(issue: Issue): void { void navigate({ to: "/issues", search: { ...search, ...issueSearchParams(issue) } }); }
   function back(): void { void navigate({ to: "/issues", search: { ...search, issue: undefined, issueVisibility: undefined } }); }
   return <main className="issues-page"><header className="issues-header"><div className="issue-breadcrumb"><a href="/">/</a><Link to="/">workstreams</Link><span>/</span><h1>issues</h1></div><FilterMenu filters={search} categories={categories} needs={needs} onFilters={setFilters} /><div className="active-filters">{search.status && search.status !== "open" ? <Pill>{`status: ${search.status}`}</Pill> : null}{search.sort === "priority" ? <Pill>sort: priority</Pill> : <Pill>sort: newest filed</Pill>}{search.category ? <Pill>{`category: ${search.category}`}</Pill> : null}{search.priority ? <Pill>{`priority: ${search.priority}`}</Pill> : null}{search.needs ? <Pill tone={search.needs === "manual-testing" ? "manual" : "neutral"}>{`needs: ${search.needs}`}</Pill> : null}</div><div className="issue-save-actions"><span>{saving ? "Saving issue changes…" : `${changes.size} unsaved issue${changes.size === 1 ? "" : "s"}`}</span><Button disabled={changes.size === 0 || saving} onClick={onReset}>Reset</Button><Button intent="primary" disabled={changes.size === 0 || saving} onClick={onSave}>{saving ? "Saving…" : "Save"}</Button></div></header><div className="issue-browser"><section className="issue-list-pane" aria-label="Issues" ref={listPaneRef}>{visible.length > 0 ? <><IssueCategoryNav categories={[...byCategory.entries()].map(([name, records]) => ({ name, count: records.length }))} scrollRoot={listPaneRef} />{[...byCategory.entries()].map(([category, records]) => <section className="issue-category" id={issueCategoryId(category)} data-issue-category={category} tabIndex={-1} key={category}><h2 className="issue-category-heading">{category} <small>{records.length}</small></h2><ul className="issue-list">{records.map((issue) => { const key = issueChangeKey(issue); const isSelected = selectedKey === key; return <IssueRow key={key} issue={issue} selected={isSelected} change={changes.get(key)} rowRef={isSelected ? selectedRowRef : undefined} onSelect={() => select(issue)} onChange={onChange} />; })}</ul></section>)}</> : <p className="empty-state">No issues match these filters.</p>}</section><IssueDetail issue={selected} missing={missing} onBack={back} /></div></main>;
 }
