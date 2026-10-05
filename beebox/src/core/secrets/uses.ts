@@ -65,6 +65,7 @@ const builtinUses: Record<string, string[]> = {
   gemini: [
     "answering questions about a voice recording (`bbx chat ask-about-audio`)",
     "describing scanned images, when scan import is set to the Gemini vision backend",
+    "speech generation for chat, when the box's TTS backend is set to Gemini",
   ],
   deepgram: [
     "audio transcription of recordings",
@@ -80,7 +81,7 @@ const builtinUses: Record<string, string[]> = {
     "answering questions about recordings, and describing scanned images when the Gemini scan backend is selected, when the box has no Gemini key",
     "the Whisper high-quality transcription pass, when the box has no OpenAI key",
     "the MAI-Transcribe-2 high-quality transcription pass, which is reachable no other way",
-    "speech generation for chat, when the box's TTS backend is set to Gemini",
+    "speech generation for chat, when the box's TTS backend is set to Gemini and the box has no Gemini key or reaches Gemini's direct rate limit (speaking style is not applied on this route)",
     "OpenRouter API calls from box views, through the server-side adapter",
     "chat and agent turns on OpenRouter models the owner added in admin (never without that step)",
   ],

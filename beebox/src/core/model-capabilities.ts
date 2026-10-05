@@ -18,9 +18,10 @@
  *   (`hqRoutesThroughOpenRouter`) and need `mistral` alone. `mai` /
  *   `mai-diarized` (`isMaiHqService`) have no direct arm at all and need
  *   `openrouter` alone.
- * - `tts/resolve.ts`'s `credentialFor`: `openai` needs `openai-thinking`
+ * - `tts/resolve.ts`'s `resolveTtsService`: `openai` needs `openai-thinking`
  *   alone (no OpenRouter fallback — no OpenAI speech model exists there);
- *   `gemini` needs `openrouter` alone.
+ *   `gemini` routes through `routeVia`, preferring `gemini` and falling back
+ *   to `openrouter` — so either key makes it usable.
  *
  * Each underlying key is resolved at most once and reused across every
  * service it backs. Every resolve passes `observe: false` — this is a status
@@ -29,6 +30,7 @@
  * TTS call does.
  */
 
+import { getGeminiApiKey } from "./gemini-key.js";
 import { getMistralApiKey } from "./mistral-key.js";
 import { getOpenAiThinkingKey } from "./openai-thinking-key.js";
 import { getOpenRouterKey } from "./openrouter.js";
@@ -59,12 +61,14 @@ function capability(usable: boolean, needs: string[]): ServiceCapability {
  * make it usable otherwise.
  */
 export async function serviceCapabilities(boxRoot: string): Promise<ServiceCapabilities> {
-  const [openAiThinkingKey, mistralKey, openRouterKey] = await Promise.all([
+  const [openAiThinkingKey, mistralKey, openRouterKey, geminiKey] = await Promise.all([
     getOpenAiThinkingKey(boxRoot, { observe: false }),
     getMistralApiKey(boxRoot, { observe: false }),
     getOpenRouterKey(boxRoot, { purpose: CAPABILITY_PROBE_PURPOSE, observe: false }),
+    getGeminiApiKey(boxRoot, { purpose: CAPABILITY_PROBE_PURPOSE, observe: false }),
   ]);
   const hasOpenAiThinking = openAiThinkingKey !== null;
+  const hasGemini = geminiKey !== null;
   const hasMistral = mistralKey !== null;
   const hasOpenRouter = openRouterKey !== null;
 
@@ -88,7 +92,7 @@ export async function serviceCapabilities(boxRoot: string): Promise<ServiceCapab
 
   const tts: Record<TtsBackend, ServiceCapability> = {
     openai: capability(hasOpenAiThinking, ["openai-thinking"]),
-    gemini: capability(hasOpenRouter, ["openrouter"]),
+    gemini: capability(hasGemini || hasOpenRouter, ["gemini", "openrouter"]),
   };
 
   return { hq, tts };

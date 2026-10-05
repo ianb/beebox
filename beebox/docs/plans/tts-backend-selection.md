@@ -512,6 +512,44 @@ Two things the build changed from the design:
   useless as an empty one, and the fake returns a genuinely short buffer so the
   guard is asserted against the real shape.
 
+### 2026-10-04: Gemini 3.8 Flash-Lite, and a direct route
+
+The Gemini backend moved from `gemini-3.1-flash-tts-preview` to
+`gemini-3.8-flash-lite-tts` and gained a direct route to Google's Interactions
+API with the box's `gemini` key. That reverses the "takes an `apiKey`, not a
+`ModelRoute`" decision above **for Gemini only**: it now exists at two hosts,
+so `resolve.ts` routes it with `routeVia`, and the `ModelRoute` keeps each key
+with its own host. OpenAI keeps the bare key.
+
+Benchmark (synthetic text, 3 / 10 / 27 s of speech, medians of five, from a
+residential connection; the script lives with the exhibit):
+
+| Configuration | Total time | Cost per audio minute |
+|---|---|---|
+| 3.1 preview via OpenRouter (before) | 1.9 / 5.6 / 11.4 s | $0.030 |
+| 3.8 Flash-Lite via OpenRouter | 2.2 / 4.3 / 9.4 s | $0.0117 |
+| 3.8 Flash-Lite direct, unary | 2.7 / 4.3 / 9.0 s | $0.0117 |
+| 3.8 Flash-Lite direct, streamed and buffered (shipped) | 1.9 / 3.2 / 6.2 s | $0.014 as reported |
+| 3.8 Flash direct, unary | 2.4 / 5.0 / 10.6 s | $0.0175 |
+
+What the measurement changed:
+
+- **3.8 reads a style prefix aloud.** The colon-prefix form Track 3 built for
+  3.1 is spoken verbatim by 3.8, and OpenRouter's speech request carries no
+  field that reaches the model. So style works only on the direct route
+  (`speech_metadata` annotation), and the OpenRouter route drops it with a
+  once-per-process warning. `deliverStyle` lost its `prefix` kind.
+- **Direct key wins when both are granted**: style works there, and streamed it
+  finishes sooner than OpenRouter at every length.
+- **Streamed is faster even when buffered**, but its usage reports about 20%
+  more audio tokens per second (38 versus 32), so it may bill that much more.
+  First audio arrives in about 1.0 s at every length; using that needs a PCM
+  player in the client, which is not built.
+- **Direct has a low rate limit**: 10 requests a minute on Tier 1. When the box
+  also holds an OpenRouter key, a direct 429 overflows that clip to OpenRouter
+  (unstyled) rather than waiting out `Retry-After`.
+- All 30 prebuilt voice names render on both routes; no voice-map change.
+
 ## Rollout shape
 
 Tests named while designing, per `docs/testing.md`:

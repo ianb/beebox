@@ -114,7 +114,7 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `google-auth.ts` | `GoogleAuthService` | `createGoogleAuthService(client, { boxRoot? })` | `createFakeGoogleAuth({ accessToken? })` |
 | `google-calendar/core.ts` | `GoogleCalendarService` | `createGoogleCalendarService(auth)` | `createFakeGoogleCalendar({ calendars?, events? })` |
 | `google-gmail/core.ts` (fake in `google-gmail-fake/core.ts`) | `GoogleGmailService` | `createGoogleGmailService(auth)` | `createFakeGoogleGmail({ messages?, labels?, attachments?, historyId?, oldestValidHistoryId?, historyRecords? })` |
-| `tts.ts` | `TtsService` | `createTtsService({ backend, route })` | `createFakeTts({ backend?, stylable?, emptyResponse? })` |
+| `tts.ts` | `TtsService` | `createTtsService({ backend: "openai", apiKey })` / `({ backend: "gemini", route, overflow? })` | `createFakeTts({ backend?, stylable?, emptyResponse? })` |
 | `openai-embeddings.ts` | `EmbeddingsService` | `createEmbeddingsService(route)` | `createFakeEmbeddings({ failTimes? })` |
 | `google-drive/core.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
 | `claude-chat/core.ts` | `ChatBackend` | `createChatBackend()` | `createFakeChatBackend()` |

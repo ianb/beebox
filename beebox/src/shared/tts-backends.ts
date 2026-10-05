@@ -12,10 +12,10 @@
  */
 
 /**
- * - `openai` — `gpt-4o-mini-tts` on OpenAI's own speech endpoint. The default,
- *   and the only backend with a dedicated field for style direction.
- * - `gemini` — `gemini-3.1-flash-tts-preview` through OpenRouter. Takes style
- *   direction too, but inside the prompt (`core/tts/style.ts`).
+ * - `openai` — `gpt-4o-mini-tts` on OpenAI's own speech endpoint. The default.
+ * - `gemini` — `gemini-3.8-flash-lite-tts`, direct to Google with a `gemini`
+ *   key or through OpenRouter without one (`core/tts/resolve.ts`). Takes style
+ *   direction only on the direct route (`core/tts/style.ts`).
  */
 export const TTS_BACKENDS = ["openai", "gemini"] as const;
 export type TtsBackend = (typeof TTS_BACKENDS)[number];

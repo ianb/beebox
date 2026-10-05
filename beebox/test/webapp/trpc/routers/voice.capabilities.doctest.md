@@ -28,7 +28,7 @@ process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
 const box = await makeTmpBox({ git: true });
 const caps = await owner(box.root).voice.capabilities();
 JSON.stringify({ mai: caps.hq["mai-diarized"], gemini: caps.tts.gemini, whisper: caps.hq.whisper })
-=> {"mai":{"usable":false,"needs":["openrouter"]},"gemini":{"usable":false,"needs":["openrouter"]},"whisper":{"usable":false,"needs":["openai-thinking","openrouter"]}}
+=> {"mai":{"usable":false,"needs":["openrouter"]},"gemini":{"usable":false,"needs":["gemini","openrouter"]},"whisper":{"usable":false,"needs":["openai-thinking","openrouter"]}}
 ```
 
 Saving an unusable choice is allowed and warned about in the same response.

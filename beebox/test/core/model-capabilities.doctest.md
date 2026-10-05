@@ -3,7 +3,7 @@
 `serviceCapabilities` (`src/core/model-capabilities.ts`) tells the
 HQ-transcription and TTS pickers which options this box can actually use,
 derived from the same key-per-service facts `transcription/index.ts`'s
-`dispatchHqTranscription` and `tts/resolve.ts`'s `credentialFor` use — so
+`dispatchHqTranscription` and `tts/resolve.ts`'s `resolveTtsService` use — so
 the picker and the pass it configures can never disagree.
 
 ```ts setup
@@ -54,7 +54,7 @@ JSON.stringify(caps.tts.openai)
 => {"usable":false,"needs":["openai-thinking"]}
 
 JSON.stringify(caps.tts.gemini)
-=> {"usable":false,"needs":["openrouter"]}
+=> {"usable":false,"needs":["gemini","openrouter"]}
 ```
 
 ```ts cleanup
@@ -63,8 +63,8 @@ await box.cleanup();
 
 ## An `openrouter` grant lights up everything OpenRouter can reach
 
-MAI has no direct arm, the Whisper family falls back to OpenRouter, and TTS
-`gemini` runs through it too. `voxtral` and TTS `openai` stay unusable —
+MAI has no direct arm, and the Whisper family and TTS `gemini` fall back to
+OpenRouter. `voxtral` and TTS `openai` stay unusable —
 neither has an OpenRouter path.
 
 ```ts
@@ -118,6 +118,26 @@ caps2.hq["voxtral-diarized"].usable
 
 caps2.tts.openai.usable
 => false
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A `gemini` grant alone reaches Gemini speech
+
+Gemini speech has a direct arm, so the Google AI Studio key makes it usable
+with no OpenRouter key at all. MAI stays unusable: it has no direct arm.
+
+```ts
+await useTempStore();
+const box = await makeTmpBox();
+await setSecret({ name: "gemini", value: "AIza-placeholder-gemini-key" });
+await grantSecret({ slug: await boxSlug(box.root), name: "gemini", access: "server" });
+
+const caps = await serviceCapabilities(box.root);
+`${String(caps.tts.gemini.usable)} ${String(caps.hq.mai.usable)}`
+=> true false
 ```
 
 ```ts cleanup

@@ -1,68 +1,62 @@
-# Style delivery: where each backend's direction goes
+# Style delivery: where each route's direction goes
 
 The boxholder writes speaking style once, on the personality card. Every
-backend takes it somewhere different, and `deliverStyle`
-(`src/core/tts/style.ts`) is the pure decision about where — pure precisely
-because getting it wrong is inaudible to us and audible to them.
+backend takes it somewhere different, and one route cannot take it at all.
+`deliverStyle` (`src/core/tts/style.ts`) is the pure decision about where —
+pure precisely because getting it wrong is inaudible to us and audible to them.
 
 ```ts setup
-import { deliverStyle } from "../../../src/core/tts/style.js";
+import { deliverStyle, routeIsStylable } from "../../../src/core/tts/style.js";
 ```
 
-## OpenAI has a field for it
+## OpenAI and direct Gemini each have a field for it
+
+OpenAI's speech request has `instructions`; Google's Interactions API has a
+`speech_metadata` annotation. Either way the direction travels beside the
+text, never inside it.
 
 ```ts
-const openai = deliverStyle({ backend: "openai", text: "The delivery is late.", instructions: "Speak warmly." });
-JSON.stringify(openai)
-=> {"kind":"field","instructions":"Speak warmly."}
+deliverStyle({ backend: "openai", via: "direct", instructions: "Speak warmly." })
+=> { kind: "field", instructions: "Speak warmly." }
+
+deliverStyle({ backend: "gemini", via: "direct", instructions: "  Speak warmly.  " })
+=> { kind: "field", instructions: "Speak warmly." }
 ```
 
-## Gemini takes it inside the input, with a colon
+## Gemini over OpenRouter drops it, and says what was dropped
 
-Google's documented form is `<direction>: "<text>"`, and the punctuation is
-load-bearing rather than stylistic. Measured 2026-09-06: a direction ending in
-a **period** followed by a **short** text makes the model return HTTP 200 with
-a zero-length body — 0 of 6 renders on one input and 0 of 10 on another, with
-retries and a different voice making no difference, while the colon form
-rendered 6 of 6 at every length tried. Building the prefix here, once, is what
-stops a caller reintroducing that.
+Gemini 3.8 reads its input as a verbatim transcript, so a direction prefixed to
+the text is spoken aloud, and OpenRouter's speech request has no field that
+reaches the model (measured 2026-10-04; `style.ts` has the numbers). The
+result carries the lost direction so the caller can name it.
 
 ```ts
-const gemini = deliverStyle({ backend: "gemini", text: "The delivery is late.", instructions: "Speak warmly." });
-JSON.stringify(gemini)
-=> {"kind":"prefix","input":"Speak warmly: \"The delivery is late.\""}
+deliverStyle({ backend: "gemini", via: "openrouter", instructions: "Speak warmly." })
+=> { kind: "unsupported", dropped: "Speak warmly." }
 ```
 
-A direction the boxholder ended with a period — the natural way to write a
-sentence — is normalized rather than passed through, because that exact form is
-the one that fails.
+`routeIsStylable` is the same decision as a yes/no, and it is what
+`TtsService.stylable` reports, so the service and the delivery cannot disagree.
 
 ```ts
-const dotted = deliverStyle({ backend: "gemini", text: "Hi.", instructions: "Speak warmly and unhurriedly." });
-"input" in dotted ? dotted.input : dotted
-=> Speak warmly and unhurriedly: "Hi."
+({
+  geminiDirect: routeIsStylable("gemini", "direct"),
+  geminiOpenRouter: routeIsStylable("gemini", "openrouter"),
+  openai: routeIsStylable("openai", "direct"),
+})
+=> { geminiDirect: true, geminiOpenRouter: false, openai: true }
 ```
 
-Trailing colons and stray whitespace collapse the same way, so two cards that
-differ only in punctuation produce the same request.
+## No direction is not the same as a route that cannot take one
+
+With nothing to place, nothing is reported as dropped — an empty
+`instructions` must not be logged as a lost setting, even on the route that
+could not have honored it.
 
 ```ts
-const messy = deliverStyle({ backend: "gemini", text: "Hi.", instructions: "  Speak warmly:  " });
-"input" in messy ? messy.input : messy
-=> Speak warmly: "Hi."
-```
+deliverStyle({ backend: "gemini", via: "openrouter", instructions: undefined })
+=> { kind: "none" }
 
-## No direction is not the same as a backend that cannot take one
-
-With nothing to place, the text is spoken as written and nothing is reported as
-dropped — an empty `instructions` must not be logged as a lost setting.
-
-```ts
-const bare = deliverStyle({ backend: "gemini", text: "The delivery is late.", instructions: undefined });
-JSON.stringify(bare)
-=> {"kind":"prefix","input":"The delivery is late."}
-
-const blank = deliverStyle({ backend: "openai", text: "The delivery is late.", instructions: "   " });
-JSON.stringify(blank)
-=> {"kind":"prefix","input":"The delivery is late."}
+deliverStyle({ backend: "openai", via: "direct", instructions: "   " })
+=> { kind: "none" }
 ```

@@ -52,11 +52,12 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
   }
   // TODO(env-migration): long-tail feature-gate var, direct read per src/lib/env.ts.
   if (process.env["BBX_SCAN_VISION"] === "gemini") routes.push(["scan vision", geminiKey]);
-  // Speech is a chosen backend, not a fallback, so it reports the choice
-  // rather than which key won: `gemini` reaches OpenRouter by definition.
+  // Speech is a chosen backend first; only Gemini then has a route to pick.
   const ttsBackend = (await loadTtsConfig(boxRoot)).backend;
   if (ttsBackend === "gemini") {
-    lines.push("speech (gemini) → OpenRouter only; chosen in the voice menu");
+    lines.push(geminiKey === null
+      ? "speech (gemini) → OpenRouter, where speaking style is not applied; a gemini key would route it direct"
+      : "speech (gemini) → its own provider");
   } else {
     routes.push([`speech (${ttsBackend})`, await getOpenAiThinkingKey(boxRoot, { observe: false })]);
   }
@@ -73,8 +74,9 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
 }
 
 /**
- * Gemini reachability — the model behind audio questions (ask-about-audio) and
- * scan-import's opt-in Gemini backend (`BBX_SCAN_VISION=gemini`; scan-import
+ * Gemini reachability — the model behind audio questions (ask-about-audio),
+ * Gemini speech when the box's TTS backend is set to it, and scan-import's
+ * opt-in Gemini backend (`BBX_SCAN_VISION=gemini`; scan-import
  * defaults to the Claude backend, which needs no extra key).
  *
  * This asks whether the model is REACHABLE, not whether one particular
