@@ -27,10 +27,11 @@ box-worktrees
 beebox-worktrees
 
 # The docker/ dir itself is never needed inside the image EXCEPT entrypoint.sh
-# (which is COPYed in). Excluding the rest keeps Dockerfile/compose/doc edits
+# and codex-wrapper.sh (which are COPYed in). Excluding the rest keeps Dockerfile/compose/doc edits
 # from invalidating the slow build stage's `COPY . .`.
 beebox/docker/*
 !beebox/docker/entrypoint.sh
+!beebox/docker/codex-wrapper.sh
 
 # Deploy checkout + lock state.
 .deploy-checkout

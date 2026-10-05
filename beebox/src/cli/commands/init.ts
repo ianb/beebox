@@ -10,7 +10,9 @@
 import { Command } from "commander";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/structure/core.js";
 import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
-import { stageAll, commit, initRepo, isRepo } from "../../lib/git/core.js";
+import * as path from "node:path";
+import { stageAll, commit, initRepo, isRepo, repoRootOf } from "../../lib/git/core.js";
+import { fileExists } from "../../lib/file-exists.js";
 import { generateDocs } from "../../core/docs-gen/generate/core.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
 import { runAnnexDoctor } from "../../core/annex/doctor/core.js";
@@ -66,6 +68,33 @@ async function announceAndInitGit(
   console.log("  .claude/                              - Agent configuration");
 }
 
+/** Thrown when a new box's path lies inside another git repository. */
+export class NestedBoxError extends Error {
+  constructor(
+    readonly boxRoot: string,
+    readonly enclosingRepo: string,
+  ) {
+    super(
+      `Refusing to create a box at ${boxRoot}: it is inside the git repository at ${enclosingRepo}. ` +
+        "A box is its own repository; choose a path outside that one.",
+    );
+    this.name = "NestedBoxError";
+  }
+}
+
+/**
+ * A box must be its own repository. Inside another one, every git and annex
+ * command init runs would land on the enclosing repository. Checked before
+ * anything is written, against the nearest existing ancestor when the target
+ * does not exist yet.
+ */
+async function refuseNestedBox(boxRoot: string): Promise<void> {
+  let probe = boxRoot;
+  while (!(await fileExists(probe)) && path.dirname(probe) !== probe) probe = path.dirname(probe);
+  const enclosing = await repoRootOf(probe);
+  if (enclosing !== null && !(await isRepo(boxRoot))) throw new NestedBoxError(boxRoot, enclosing);
+}
+
 export interface InitOptions {
   branch: string;
 }
@@ -88,6 +117,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // one-root layout — see `docs/implemented-plans/one-root-box-layout.md`.
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
+  if (isFresh) await refuseNestedBox(boxRoot);
 
   // A fresh init scaffolds the whole box (npm-package half + operational
   // half, both at the same root) via the shared builder — `scaffoldBoxRoot`

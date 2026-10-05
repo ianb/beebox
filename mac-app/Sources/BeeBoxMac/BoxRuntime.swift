@@ -46,6 +46,8 @@ final class BoxRuntime: ObservableObject {
     private var log: LogWriter?
     private var statsTask: Task<Void, Never>?
     private var forwarder: PortForwarder?
+    /// Set when the current container's main process exits.
+    private var exitedWith: Int32?
 
     var firstRunSetupURL: URL? {
         guard case .running(let boxURL) = phase, let path = log?.firstRunSetupPath else { return nil }
@@ -162,6 +164,14 @@ final class BoxRuntime: ObservableObject {
             try await container.start()
             self.manager = manager
             self.container = container
+            // One wait per container: startup watches it to stop waiting on a
+            // server that already exited, and `watch` reports a later crash.
+            exitedWith = nil
+            let exit = Task { await (try? container.wait())?.exitCode }
+            Task { [weak self] in
+                let code = await exit.value
+                if self?.container === container { self?.exitedWith = code ?? -1 }
+            }
 
             guard let ip = container.interfaces.first?.ipv4Address.address else {
                 throw RuntimeError("the VM has no network interface")
@@ -176,7 +186,7 @@ final class BoxRuntime: ObservableObject {
             NSLog("beebox: ready in \(String(format: "%.1f", Date().timeIntervalSince(started)))s at \(base) (VM \(vmBase))")
             phase = .running(base.appending(path: "box/"))
             finish(succeeded: true)
-            watch(container)
+            watch(container, exit: exit)
         } catch {
             NSLog("beebox: start failed: \(error)")
             finish(succeeded: false)
@@ -185,9 +195,10 @@ final class BoxRuntime: ObservableObject {
     }
 
     private func prepareDirectories() throws {
-        for dir in [Paths.state, Paths.box, Paths.claudeConfig, Paths.machine] {
+        for dir in [Paths.state, Paths.box, Paths.claudeConfig, Paths.containerHome] {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
+        try moveLegacyMachineState()
     }
 
     /// Spike: reuse the kernel and initfs the `container` CLI downloaded.
@@ -236,6 +247,21 @@ final class BoxRuntime: ObservableObject {
         return digest
     }
 
+    /// Earlier builds pointed BBX_AUTH_FILE / BBX_SECRETS_FILE into a
+    /// `machine` folder; move those files to where the home volume keeps them.
+    private func moveLegacyMachineState() throws {
+        let fm = FileManager.default
+        let moves = [
+            (Paths.legacyMachine.appending(path: "bbx-auth.json"), Paths.containerHome.appending(path: ".bbx-auth.json")),
+            (Paths.legacyMachine.appending(path: "secrets.json"), Paths.containerHome.appending(path: ".config/beebox/secrets.json")),
+        ]
+        for (from, to) in moves where fm.fileExists(atPath: from.path) && !fm.fileExists(atPath: to.path) {
+            try fm.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fm.moveItem(at: from, to: to)
+            NSLog("beebox: moved \(from.lastPathComponent) into the home volume")
+        }
+    }
+
     private func boxIsInitialized() -> Bool {
         FileManager.default.fileExists(atPath: Paths.box.appending(path: ".beebox/box.json").path)
     }
@@ -268,10 +294,8 @@ final class BoxRuntime: ObservableObject {
             config.hostname = "beebox"
             config.mounts.append(.share(source: Paths.box.path, destination: "/data/box"))
             config.mounts.append(.share(source: Paths.claudeConfig.path, destination: "/app/claude-config"))
-            config.mounts.append(.share(source: Paths.machine.path, destination: "/app/machine"))
+            config.mounts.append(.share(source: Paths.containerHome.path, destination: "/home/node"))
             config.process.environmentVariables += [
-                "BBX_AUTH_FILE=/app/machine/bbx-auth.json",
-                "BBX_SECRETS_FILE=/app/machine/secrets.json",
                 // Claude writes transcripts under CLAUDE_CONFIG_DIR, not ~/.claude.
                 "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
             ]
@@ -303,12 +327,15 @@ final class BoxRuntime: ObservableObject {
                let http = response as? HTTPURLResponse, http.statusCode < 500 {
                 return
             }
+            if let code = exitedWith {
+                throw RuntimeError("the box exited (\(code)) before serving; see \(Paths.log.path)")
+            }
             try await Task.sleep(for: .seconds(1))
         }
         throw RuntimeError("the server did not answer within 10 minutes; see \(Paths.log.path)")
     }
 
-    private func watch(_ container: LinuxContainer) {
+    private func watch(_ container: LinuxContainer, exit: Task<Int32?, Never>) {
         statsTask = Task { [weak self] in
             while !Task.isCancelled {
                 if let stats = try? await container.statistics(categories: .memory), let mem = stats.memory {
@@ -323,11 +350,11 @@ final class BoxRuntime: ObservableObject {
             }
         }
         Task { [weak self] in
-            let status = try? await container.wait()
+            let code = await exit.value
             guard let self, self.container === container else { return }
             self.statsTask?.cancel()
             self.container = nil
-            self.phase = .failed("the box exited (\(status.map { String($0.exitCode) } ?? "unknown")); see \(Paths.log.path)")
+            self.phase = .failed("the box exited (\(code.map { String($0) } ?? "unknown")); see \(Paths.log.path)")
         }
     }
 }
