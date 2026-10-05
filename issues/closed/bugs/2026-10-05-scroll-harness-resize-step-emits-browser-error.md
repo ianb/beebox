@@ -8,7 +8,7 @@ discovered-in: worktree-chat-scroll-fixes — spacer browser verification
 resolution: implemented
 ---
 
-> Implemented: the harness records and consumes one exact ResizeObserver diagnostic during the intentional resize-race step. Chromium verification passed at `http://localhost:3210/chat-scroll-fixes/test1/dev/chat-scroll`; unrelated errors during the step and the same diagnostic after it remain in the client debug log.
+> Implemented by `e458ace17` and landed on main in `16eae8850`: the harness records and consumes one exact ResizeObserver diagnostic during the intentional resize-race step. Chromium verification passed at `http://localhost:3210/chat-scroll-fixes/test1/dev/chat-scroll`; unrelated errors during the step and the same diagnostic after it remain in the client debug log. Deployment completion and shared-router activation remain unverified.
 
 Running `window.__scrollHarness.run("open-thread-growth-before-scroll-event")`
 at `/dev/chat-scroll` passes its assertions but emits
