@@ -8,9 +8,10 @@ discovered-by: agent
 discovered-in: worktree-chat-scroll-fixes — real chat send verification
 ---
 
-Implemented in the `chat-scroll-fixes` workstream. The dev router now admits
-only direct earcon media filenames as public static assets. The shared router
-needs the usual main merge and operator restart before this change is live.
+Implemented by `e458ace17` and landed on main in `16eae8850`. The dev router
+admits only direct earcon media filenames as public static assets. Chromium
+playback was verified; physical-speaker output, iPhone Safari behavior,
+deployment completion, and shared-router activation remain unverified.
 
 In browser automation at phone width, opening a new chat, selecting keyboard
 entry, and sending `/fakestream 3 300 12` produced this client diagnostic:

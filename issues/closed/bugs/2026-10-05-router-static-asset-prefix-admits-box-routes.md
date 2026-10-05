@@ -8,9 +8,10 @@ discovered-by: agent
 discovered-in: worktree-chat-scroll-fixes — reviewing the audio unlock asset exception
 ---
 
-Implemented in the `chat-scroll-fixes` workstream. Public static access is
-limited to direct filenames, and the router shares Vite's canonical identity
-matcher. Activation requires the usual main merge and operator restart.
+Implemented by `228830414` and landed on main in `16eae8850`. Public static
+access is limited to direct filenames, and the router shares Vite's canonical
+identity matcher. Deployment completion and shared-router activation remain
+unverified; verification used synthetic credentials and no real box content.
 
 The dev router's public static asset classifier accepts every GET below the
 `assets` and `icons` path prefixes. These names are also valid box slugs.
