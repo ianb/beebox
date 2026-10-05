@@ -6,7 +6,7 @@ before any provider lookup or paid call.
 
 ```ts setup
 import { makeTestServer } from "../../../helpers/doctest-server.js";
-import { createFakeTts } from "../../../../src/services/tts.js";
+import { createFakeTts, createTtsService } from "../../../../src/services/tts.js";
 ```
 
 ## Missing opt-in rejects without calling the provider
@@ -138,7 +138,6 @@ the error body and puts it in both. This drives the real Gemini service
 through ky, with a `fetch` that answers the way Google does.
 
 ```ts
-const { createTtsService } = await import("../../../../src/services/tts.js");
 const rejecting = createTtsService({
   backend: "gemini",
   apiKey: "AIza-test",
@@ -161,6 +160,33 @@ const rejectRes = await (async () => {
 
 ```ts cleanup
 await rejectCtx.cleanup();
+```
+
+A message that echoes a key is masked before it reaches the log or the
+browser.
+
+```ts
+const echoing = createTtsService({
+  backend: "gemini",
+  apiKey: "AIza-test",
+  fetch: async () => Response.json({ error: { message: "API key AIzaSyFAKEFAKEFAKEFAKEFAKE1234 not valid" } }, { status: 400, statusText: "Bad Request" }),
+});
+const echoCtx = await makeTestServer({ services: { openaiAudio: echoing } });
+const echoBefore = console.error;
+console.error = () => {};
+const echoRes = await (async () => {
+  try {
+    return await echoCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
+  } finally {
+    console.error = echoBefore;
+  }
+})();
+echoRes.body
+=> { error: "TTS backend answered 400 Bad Request: API key [redacted key] not valid" }
+```
+
+```ts cleanup
+await echoCtx.cleanup();
 ```
 
 Blank text never reaches the provider. Gemini answers it with its own 400

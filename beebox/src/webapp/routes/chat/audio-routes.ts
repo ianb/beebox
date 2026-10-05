@@ -75,6 +75,9 @@ function handleMockTts(options: {
 /** The longest provider message carried into the log and the 502 body. */
 const MAX_PROVIDER_MESSAGE_CHARS = 300;
 
+/** OpenAI/OpenRouter (`sk-…`) and Google AI Studio (`AIza…`) key shapes. */
+const PROVIDER_KEY_PATTERN = /\b(?:sk-[\w-]{8,}|AIza[\w-]{16,})/g;
+
 /**
  * The provider's own reason for rejecting a speech request. Both providers
  * answer `{"error":{"message":"…"}}`; anything else is passed through as text.
@@ -100,7 +103,10 @@ async function providerErrorMessage(response: Response): Promise<string | null> 
   } catch (_e) {
     /* ignore: a non-JSON body is passed through as text */
   }
-  return message.length > MAX_PROVIDER_MESSAGE_CHARS ? `${message.slice(0, MAX_PROVIDER_MESSAGE_CHARS)}…` : message;
+  // The message reaches the log and the browser, so anything shaped like a
+  // provider key is masked first, in case a provider echoes one back.
+  const redacted = message.replace(PROVIDER_KEY_PATTERN, "[redacted key]");
+  return redacted.length > MAX_PROVIDER_MESSAGE_CHARS ? `${redacted.slice(0, MAX_PROVIDER_MESSAGE_CHARS)}…` : redacted;
 }
 
 /**
