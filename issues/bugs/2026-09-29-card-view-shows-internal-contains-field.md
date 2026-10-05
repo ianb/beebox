@@ -6,6 +6,7 @@ labels: [cards]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder report, 2026-09-29
+priority: important
 ---
 
 `contains` is a one-line summary of a card, written for agents and search: `Browse` lists show it under each entry, and the search index uses it. The boxholder sees it as internal, and it shouldn't appear in the body of every card. Properties is probably the right place to show it.

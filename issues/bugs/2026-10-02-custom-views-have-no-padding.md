@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder report
+priority: important
 ---
 
 Every custom (agent-authored) view renders with no side padding. Its content

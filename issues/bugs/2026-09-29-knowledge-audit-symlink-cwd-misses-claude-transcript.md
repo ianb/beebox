@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-jev-triage — auditing destination todo guidance
+priority: normal
 ---
 
 A Claude knowledge audit against a disposable synthetic box under `/tmp/`
