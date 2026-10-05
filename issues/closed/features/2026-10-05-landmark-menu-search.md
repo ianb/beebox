@@ -1,11 +1,16 @@
 ---
 title: "Landmark menu: show a search field when the box has more than 20 landmarks"
 workstream: landmark-menu-search
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request
 ---
+
+Implemented in `ceaefa66e` by adding case-insensitive substring search to the
+landmark switch menu when it has more than 20 landmarks, with keyboard handling
+and an empty-result message.
 
 The landmark menu (the place pill's "Switch to" list,
 `beebox/src/frontend/src/components/AppNav/PlacePill-panels.tsx`,
@@ -26,5 +31,5 @@ is long and the one you want is hard to find.
   text, then closes the menu.
 - An empty result shows a short "No landmarks match" line.
 
-Related: [landmark list sort modes](2026-08-06-landmark-list-sort-modes-used-name-tree.md)
+Related: [landmark list sort modes](../../features/2026-08-06-landmark-list-sort-modes-used-name-tree.md)
 changes the order of the same list.
