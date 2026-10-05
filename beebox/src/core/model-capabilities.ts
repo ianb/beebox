@@ -20,8 +20,8 @@
  *   `openrouter` alone.
  * - `tts/resolve.ts`'s `resolveTtsService`: `openai` needs `openai-thinking`
  *   alone (no OpenRouter fallback — no OpenAI speech model exists there);
- *   `gemini` routes through `routeVia`, preferring `gemini` and falling back
- *   to `openrouter` — so either key makes it usable.
+ *   `gemini` needs `gemini` alone (OpenRouter serves the model but cannot
+ *   carry style direction to it, so it is deliberately not a fallback).
  *
  * Each underlying key is resolved at most once and reused across every
  * service it backs. Every resolve passes `observe: false` — this is a status
@@ -92,7 +92,7 @@ export async function serviceCapabilities(boxRoot: string): Promise<ServiceCapab
 
   const tts: Record<TtsBackend, ServiceCapability> = {
     openai: capability(hasOpenAiThinking, ["openai-thinking"]),
-    gemini: capability(hasGemini || hasOpenRouter, ["gemini", "openrouter"]),
+    gemini: capability(hasGemini, ["gemini"]),
   };
 
   return { hq, tts };

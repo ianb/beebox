@@ -58,23 +58,23 @@ const swallowed = await seen.textToSpeech("Hi.").catch(() => "threw");
 => threw recorded=1
 ```
 
-## Gemini: each key goes to its own host
+## Gemini: one key, one host, style beside the text
 
-Gemini speech has two routes (`src/core/tts/resolve.ts` picks one from the
-box's keys). The route decides the host, the auth header, the request shape,
-and whether style direction can travel. These tests stand in for the network
-with a recording `fetch`, so what each provider would receive is visible.
+Gemini speech goes to Google's Interactions API with the box's `gemini` key —
+its only route (`src/core/tts/resolve.ts` says why OpenRouter is not one).
+These tests stand in for the network with a recording `fetch`, so what Google
+would receive is visible.
 
 ```ts setup
 import { createTtsService } from "../../src/services/tts.js";
 
-/** A `fetch` that records each request and answers with `respond(url)`. */
+/** A `fetch` that records each request and answers with `respond()`. */
 function recordingFetch(respond) {
   const calls = [];
   const fetch = async (input) => {
     const req = input instanceof Request ? input : new Request(input);
     calls.push({ url: req.url, headers: Object.fromEntries(req.headers), body: await req.json() });
-    return respond(req.url);
+    return respond();
   };
   return { calls, fetch };
 }
@@ -92,14 +92,14 @@ function interactionStream(audio) {
 }
 ```
 
-The direct route sends the `gemini` key to Google's Interactions API in its
-own header, puts style in the `speech_metadata` annotation beside the
-verbatim text, asks for a stream, and asks Google not to store the request.
-The streamed PCM chunks come back joined, as one WAV.
+The request sends the key in Google's own header, puts style in the
+`speech_metadata` annotation beside the verbatim text, asks for a stream, and
+asks Google not to store the request. The streamed PCM chunks come back
+joined, as one WAV.
 
 ```ts
 const direct = recordingFetch(() => interactionStream(pcm));
-const tts = createTtsService({ backend: "gemini", route: { via: "direct", apiKey: "AIza-test" }, fetch: direct.fetch });
+const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: direct.fetch });
 const out = await tts.textToSpeech("The delivery is late.", { voice: "Kore", instructions: "Speak warmly." });
 const call = direct.calls[0];
 ({
@@ -132,116 +132,13 @@ const call = direct.calls[0];
 }
 ```
 
-On the OpenRouter route, style direction cannot reach the model: 3.8 would
-read a prefix aloud, and the speech request has no field for it. The dropped
-direction is named once in the server log, with the fix, rather than on every
-reply.
-
-```ts
-const viaOr = recordingFetch(() => new Response(pcm));
-const tts = createTtsService({ backend: "gemini", route: { via: "openrouter", apiKey: "sk-or-v1-test" }, fetch: viaOr.fetch });
-const warnings = [];
-const originalWarn = console.warn;
-console.warn = (...args) => { warnings.push(args.map(String).join(" ")); };
-let out;
-try {
-  out = await tts.textToSpeech("The delivery is late.", { voice: "Kore", instructions: "Speak warmly." });
-  await tts.textToSpeech("Second reply.", { voice: "Kore", instructions: "Speak warmly." });
-} finally {
-  console.warn = originalWarn;
-}
-warnings
-=> ['[tts] Gemini over OpenRouter cannot apply speaking style, so "Speak warmly." is not heard. Grant the "gemini" secret to this box to speak through Google directly, where style works.']
-```
-
-The request sends the `openrouter` key as a bearer token, pins it to Google
-AI Studio, and carries the text alone; the service reports that it cannot be
-styled.
-
-```ts continue
-const call = viaOr.calls[0];
-({
-  url: call.url,
-  authorization: call.headers.authorization,
-  key: call.headers["x-goog-api-key"] ?? "(none)",
-  body: call.body,
-  stylable: tts.stylable,
-  contentType: out.contentType,
-})
-=> {
-  url: "https://openrouter.ai/api/v1/audio/speech",
-  authorization: "Bearer sk-or-v1-test",
-  key: "(none)",
-  body: {
-    model: "google/gemini-3.8-flash-lite-tts",
-    provider: { only: ["google-ai-studio"], allow_fallbacks: false, data_collection: "deny" },
-    input: "The delivery is late.",
-    voice: "Kore",
-    response_format: "pcm",
-  },
-  stylable: false,
-  contentType: "audio/wav",
-}
-```
-
-A direct stream that carries no audio — events of a shape we do not know, or
-a completed interaction with nothing in it — is the same silent-200 failure as
+A stream that carries no audio — events of a shape we do not know, or a
+completed interaction with nothing in it — is the same silent-200 failure as
 an empty body, and throws the same error.
 
 ```ts
 const empty = recordingFetch(() => new Response("event: done\ndata: [DONE]\n\n"));
-const tts = createTtsService({ backend: "gemini", route: { via: "direct", apiKey: "AIza-test" }, fetch: empty.fetch });
+const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: empty.fetch });
 await tts.textToSpeech("Hello there.")
 => throws EmptyTtsResponseError: TTS backend "gemini" returned 0 bytes — too short to be speech
-```
-
-## A direct rate limit overflows to OpenRouter, when the box has both keys
-
-Google's per-key limit for this model is low (10 requests a minute on Tier 1),
-and a conversation can reach it. With an OpenRouter key on hand, the 429 sends
-that one clip through OpenRouter at once — on time, without style — instead of
-waiting out the provider's `Retry-After`. The OpenRouter key is fetched only
-then, and still goes only to OpenRouter.
-
-```ts
-const limited = recordingFetch((url) =>
-  url.startsWith("https://generativelanguage.googleapis.com/")
-    ? new Response('{"error":{"message":"Rate limit exceeded"}}', { status: 429 })
-    : new Response(pcm));
-let overflowAsked = 0;
-const overflow = async () => { overflowAsked += 1; return "sk-or-v1-overflow"; };
-const tts = createTtsService({ backend: "gemini", route: { via: "direct", apiKey: "AIza-test" }, overflow, fetch: limited.fetch });
-const warnings = [];
-const originalWarn = console.warn;
-console.warn = (...args) => { warnings.push(args.map(String).join(" ")); };
-let out;
-try {
-  out = await tts.textToSpeech("The delivery is late.", { voice: "Kore", instructions: "Speak warmly." });
-} finally {
-  console.warn = originalWarn;
-}
-({
-  hosts: limited.calls.map((call) => new URL(call.url).host),
-  overflowAuth: limited.calls[1].headers.authorization,
-  overflowAsked,
-  warnings,
-  contentType: out.contentType,
-})
-=> {
-  hosts: ["generativelanguage.googleapis.com", "openrouter.ai"],
-  overflowAuth: "Bearer sk-or-v1-overflow",
-  overflowAsked: 1,
-  warnings: ["[tts] Gemini's direct rate limit was reached (HTTP 429); this clip goes through OpenRouter, without speaking style."],
-  contentType: "audio/wav",
-}
-```
-
-If the OpenRouter key has gone by the time it is needed, the 429 itself is the
-failure the route reports.
-
-```ts
-const limited = recordingFetch(() => new Response("{}", { status: 429, statusText: "Too Many Requests" }));
-const tts = createTtsService({ backend: "gemini", route: { via: "direct", apiKey: "AIza-test" }, overflow: async () => null, fetch: limited.fetch });
-await tts.textToSpeech("Hello there.")
-=> throws HTTPError: «*»
 ```

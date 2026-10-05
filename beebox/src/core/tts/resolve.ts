@@ -2,42 +2,35 @@
  * Turn a box's TTS config into a service that can actually speak, or say why
  * it cannot.
  *
- * **Each key goes only to its own host.** OpenAI speech exists at one host, so
- * its backend takes the `openai-thinking` key or nothing. Using `routeVia`
- * there was a real bug caught end-to-end: with no `openai-thinking` key it
- * happily returned the box's OpenRouter credential, which `createOpenAiTts`
- * then sent to `api.openai.com` for a 401. There is no OpenAI TTS model on
- * OpenRouter to fall back to.
+ * **Neither backend has a fallback, and that is the whole subtlety here.** Each
+ * one takes exactly one key, sent to exactly one host — unlike embeddings or
+ * Whisper transcription, where `routeVia` picks between a direct arm and
+ * OpenRouter. Using `routeVia` here was a real bug caught end-to-end: with no
+ * `openai-thinking` key it happily returned the box's OpenRouter credential,
+ * which `createOpenAiTts` then sent to `api.openai.com` for a 401.
  *
- * Gemini speech does exist at two hosts, so it routes the way embeddings and
- * Whisper do: `routeVia` with the `gemini` key as the direct arm, OpenRouter
- * otherwise, and the `ModelRoute` it returns carries the key together with the
- * host it belongs to. **The direct key wins when both are granted**, and the
- * OpenRouter key then catches only direct rate-limit overflow. Same
- * model and price on both routes, but only the direct route applies speaking
- * style (`style.ts`), and it streams, which finished sooner than OpenRouter at
- * every length in the 2026-10-04 benchmark
- * (`docs/plans/tts-backend-selection.md`).
+ * Gemini speech could have a second route — OpenRouter serves the same model —
+ * and briefly did. It was removed on the boxholder's call (2026-10-04): Gemini
+ * 3.8 reads style direction placed in the text aloud, and OpenRouter's speech
+ * request has no field that carries it to the model, so that route silently
+ * lost the personality card's speaking style. A regression nobody can see is
+ * worse than a missing key that says so.
  */
 
 import { getGeminiApiKey } from "../gemini-key.js";
 import { getOpenAiThinkingKey } from "../openai-thinking-key.js";
-import { getOpenRouterKey, openRouterKeyUsable, routeVia } from "../openrouter.js";
 import { createTtsService, type TtsService } from "../../services/tts.js";
 import type { TtsBackend } from "../../shared/tts-backends.js";
 import { loadTtsConfig } from "./config.js";
-
-/** The access-log label for every key this module spends. */
-const SPEECH_PURPOSE = "speech";
 
 /** No credential reaches the configured backend. Names the fix, not the symptom. */
 export class TtsNotConfiguredError extends Error {
   constructor({ backend }: { backend: TtsBackend }) {
     super(
       backend === "gemini"
-        ? 'TTS backend "gemini" needs a Google AI Studio key or an OpenRouter key. '
-          + 'Grant the "gemini" secret (preferred: speaking style works only there) or the "openrouter" '
-          + "secret to this box, or choose a different TTS backend."
+        ? 'TTS backend "gemini" needs a Google AI Studio key. Grant the "gemini" secret to this box, '
+          + "or choose a different TTS backend. An OpenRouter key does not stand in: through OpenRouter "
+          + "the speaking style is lost."
         : 'TTS backend "openai" needs an OpenAI key — OpenRouter carries no OpenAI speech model, '
           + 'so it cannot stand in. Grant the "openai-thinking" secret to this box, or choose a '
           + "different TTS backend.",
@@ -46,29 +39,19 @@ export class TtsNotConfiguredError extends Error {
   }
 }
 
+/** The one credential each backend accepts. */
+async function credentialFor(backend: TtsBackend, boxRoot: string): Promise<string | null> {
+  switch (backend) {
+    case "openai":
+      return getOpenAiThinkingKey(boxRoot, { observe: true });
+    case "gemini":
+      return getGeminiApiKey(boxRoot, { purpose: "speech", observe: true });
+  }
+}
+
 export async function resolveTtsService(boxRoot: string): Promise<TtsService> {
   const { backend } = await loadTtsConfig(boxRoot);
-  switch (backend) {
-    case "openai": {
-      const apiKey = await getOpenAiThinkingKey(boxRoot, { observe: true });
-      if (apiKey === null || apiKey === "") throw new TtsNotConfiguredError({ backend });
-      return createTtsService({ backend, apiKey });
-    }
-    case "gemini": {
-      const route = await routeVia({
-        boxRoot,
-        purpose: SPEECH_PURPOSE,
-        directKey: await getGeminiApiKey(boxRoot, { purpose: SPEECH_PURPOSE, observe: true }),
-        observe: true,
-      });
-      if (route === null || route.apiKey === "") throw new TtsNotConfiguredError({ backend });
-      // Overflow only when there is somewhere to overflow to: without it the
-      // direct route keeps retrying its own 429s. The key itself is resolved
-      // only on a direct 429 (`services/tts.ts`), so it is observed as spent
-      // only when it was.
-      if (route.via === "openrouter" || !await openRouterKeyUsable(boxRoot)) return createTtsService({ backend, route });
-      const overflow = (): Promise<string | null> => getOpenRouterKey(boxRoot, { purpose: SPEECH_PURPOSE, observe: true });
-      return createTtsService({ backend, route, overflow });
-    }
-  }
+  const apiKey = await credentialFor(backend, boxRoot);
+  if (apiKey === null || apiKey === "") throw new TtsNotConfiguredError({ backend });
+  return createTtsService({ backend, apiKey });
 }

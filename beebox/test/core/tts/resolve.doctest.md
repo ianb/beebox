@@ -1,11 +1,10 @@
-# Which key speaks for the Gemini backend
+# Which key speaks for each backend
 
 `resolveTtsService` (`src/core/tts/resolve.ts`) turns the box's chosen backend
-and its granted keys into a service. Gemini speech is reachable two ways: the
-`gemini` key goes to Google directly, the `openrouter` key goes through
-OpenRouter, and each key only ever reaches its own host. These examples read
-the route back from `stylable`, because only the direct route can apply
-speaking style (`style.ts`). No request is sent.
+and its granted keys into a service. Each backend takes exactly one key. For
+Gemini that is the `gemini` key: OpenRouter serves the same model but cannot
+carry style direction to it, so an OpenRouter key deliberately does not stand
+in. No request is sent here.
 
 ```ts setup
 import { mkdtemp } from "node:fs/promises";
@@ -32,56 +31,31 @@ async function geminiBox(grants) {
 }
 ```
 
-## Either key alone is enough
-
-A `gemini` key alone speaks direct, where style is applied.
+## The `gemini` key speaks Gemini
 
 ```ts
-const direct = await geminiBox(["gemini"]);
-(await resolveTtsService(direct.root)).stylable
-=> true
+const box = await geminiBox(["gemini"]);
+const tts = await resolveTtsService(box.root);
+({ backend: tts.backend, stylable: tts.stylable })
+=> { backend: "gemini", stylable: true }
 ```
 
 ```ts cleanup
-await direct.cleanup();
+await box.cleanup();
 ```
 
-An `openrouter` key alone speaks through OpenRouter, where it is not.
+## An OpenRouter key alone does not, and the error says why
+
+Through OpenRouter, Gemini 3.8 would lose the personality card's speaking
+style without any audible sign. A missing key that names itself is the
+better failure.
 
 ```ts
-const viaOr = await geminiBox(["openrouter"]);
-(await resolveTtsService(viaOr.root)).stylable
-=> false
+const box = await geminiBox(["openrouter"]);
+await resolveTtsService(box.root)
+=> throws TtsNotConfiguredError: TTS backend "gemini" needs a Google AI Studio key. Grant the "gemini" secret to this box, or choose a different TTS backend. An OpenRouter key does not stand in: through OpenRouter the speaking style is lost.
 ```
 
 ```ts cleanup
-await viaOr.cleanup();
-```
-
-## With both granted, the direct key wins
-
-Same model and price on both routes, but style works only direct, and the
-direct route finished sooner when measured. Granting OpenRouter on top of a
-Gemini key must not quietly lose the boxholder's speaking style.
-
-```ts
-const both = await geminiBox(["gemini", "openrouter"]);
-(await resolveTtsService(both.root)).stylable
-=> true
-```
-
-```ts cleanup
-await both.cleanup();
-```
-
-## Neither key: the error names both fixes
-
-```ts
-const none = await geminiBox([]);
-await resolveTtsService(none.root)
-=> throws TtsNotConfiguredError: TTS backend "gemini" needs a Google AI Studio key or an OpenRouter key. Grant the "gemini" secret (preferred: speaking style works only there) or the "openrouter" secret to this box, or choose a different TTS backend.
-```
-
-```ts cleanup
-await none.cleanup();
+await box.cleanup();
 ```

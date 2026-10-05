@@ -90,7 +90,7 @@ const TTS_BACKEND_OPTIONS: ReadonlyArray<{
   {
     label: "Gemini (3.8 Flash-Lite)",
     backend: "gemini",
-    note: "Its voices differ, so a personality-card voice is replaced. Tone settings apply only with the gemini secret; through OpenRouter they are not heard.",
+    note: "Its voices differ, so a personality-card voice is replaced.",
   },
 ];
 

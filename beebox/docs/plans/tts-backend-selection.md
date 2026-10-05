@@ -515,11 +515,10 @@ Two things the build changed from the design:
 ### 2026-10-04: Gemini 3.8 Flash-Lite, and a direct route
 
 The Gemini backend moved from `gemini-3.1-flash-tts-preview` to
-`gemini-3.8-flash-lite-tts` and gained a direct route to Google's Interactions
-API with the box's `gemini` key. That reverses the "takes an `apiKey`, not a
-`ModelRoute`" decision above **for Gemini only**: it now exists at two hosts,
-so `resolve.ts` routes it with `routeVia`, and the `ModelRoute` keeps each key
-with its own host. OpenAI keeps the bare key.
+`gemini-3.8-flash-lite-tts` and from OpenRouter to Google's own Interactions
+API with the box's `gemini` key. **OpenRouter is no longer a Gemini speech
+route at all**, on the boxholder's call: the "takes an `apiKey`, not a
+`ModelRoute`" decision above still holds for both backends.
 
 Benchmark (synthetic text, 3 / 10 / 27 s of speech, medians of five, from a
 residential connection; the script lives with the exhibit):
@@ -536,20 +535,25 @@ What the measurement changed:
 
 - **3.8 reads a style prefix aloud.** The colon-prefix form Track 3 built for
   3.1 is spoken verbatim by 3.8, and OpenRouter's speech request carries no
-  field that reaches the model. So style works only on the direct route
-  (`speech_metadata` annotation), and the OpenRouter route drops it with a
-  once-per-process warning. `deliverStyle` lost its `prefix` kind.
-- **Direct key wins when both are granted**: style works there, and streamed it
-  finishes sooner than OpenRouter at every length.
+  field that reaches the model. Style now travels in the direct API's
+  `speech_metadata` annotation, and `deliverStyle` lost its `prefix` kind.
+- **Why OpenRouter was dropped rather than kept as a fallback.** An
+  OpenRouter-only box would have spoken without its personality card's style,
+  a major regression nobody would notice by ear. A box set to Gemini without
+  a `gemini` key now fails `resolveTtsService` and the `gemini-api-key` health
+  check, both naming the secret. A first version kept OpenRouter as a fallback
+  and as overflow for direct 429s; it was built, reviewed, and removed.
 - **Streamed is faster even when buffered**, but its usage reports about 20%
   more audio tokens per second (38 versus 32), so it may bill that much more.
   First audio arrives in about 1.0 s at every length; using that needs a PCM
   player in the client, which is not built
   ([gemini-tts-streamed-playback](../../../issues/features/2026-10-04-gemini-tts-streamed-playback.md)).
-- **Direct has a low rate limit**: 10 requests a minute on Tier 1. When the box
-  also holds an OpenRouter key, a direct 429 overflows that clip to OpenRouter
-  (unstyled) rather than waiting out `Retry-After`.
-- All 30 prebuilt voice names render on both routes; no voice-map change.
+- **Direct has a low rate limit**: 10 requests a minute on Tier 1. A 429 is
+  retried after `Retry-After`, so a busy conversation can stall a clip for
+  several seconds; a higher Google tier raises the limit.
+- All 30 prebuilt voice names render; no voice-map change.
+- **Rollout:** a box whose voice backend is already `gemini` must have the
+  `gemini` secret granted before this deploys, or its chat speech fails.
 
 ## Rollout shape
 

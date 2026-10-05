@@ -54,7 +54,7 @@ JSON.stringify(caps.tts.openai)
 => {"usable":false,"needs":["openai-thinking"]}
 
 JSON.stringify(caps.tts.gemini)
-=> {"usable":false,"needs":["gemini","openrouter"]}
+=> {"usable":false,"needs":["gemini"]}
 ```
 
 ```ts cleanup
@@ -63,9 +63,9 @@ await box.cleanup();
 
 ## An `openrouter` grant lights up everything OpenRouter can reach
 
-MAI has no direct arm, and the Whisper family and TTS `gemini` fall back to
-OpenRouter. `voxtral` and TTS `openai` stay unusable —
-neither has an OpenRouter path.
+MAI has no direct arm, and the Whisper family falls back to OpenRouter.
+`voxtral` and both TTS backends stay unusable — neither TTS backend takes an
+OpenRouter key (Gemini through OpenRouter would lose its speaking style).
 
 ```ts
 await useTempStore();
@@ -91,7 +91,7 @@ caps.hq["whisper-llm-mini"].usable
 => true
 
 caps.tts.gemini.usable
-=> true
+=> false
 
 caps.hq.voxtral.usable
 => false
@@ -124,10 +124,10 @@ caps2.tts.openai.usable
 await box.cleanup();
 ```
 
-## A `gemini` grant alone reaches Gemini speech
+## A `gemini` grant is what reaches Gemini speech
 
-Gemini speech has a direct arm, so the Google AI Studio key makes it usable
-with no OpenRouter key at all. MAI stays unusable: it has no direct arm.
+The Google AI Studio key alone makes Gemini speech usable. MAI stays unusable:
+it runs only on OpenRouter.
 
 ```ts
 await useTempStore();

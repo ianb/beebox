@@ -52,15 +52,10 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
   }
   // TODO(env-migration): long-tail feature-gate var, direct read per src/lib/env.ts.
   if (process.env["BBX_SCAN_VISION"] === "gemini") routes.push(["scan vision", geminiKey]);
-  // Speech is a chosen backend first; only Gemini then has a route to pick.
+  // Speech is a chosen backend, not a fallback: neither backend routes
+  // through OpenRouter, so this states the fact rather than which key won.
   const ttsBackend = (await loadTtsConfig(boxRoot)).backend;
-  if (ttsBackend === "gemini") {
-    lines.push(geminiKey === null
-      ? "speech (gemini) → OpenRouter, where speaking style is not applied; a gemini key would route it direct"
-      : "speech (gemini) → its own provider");
-  } else {
-    routes.push([`speech (${ttsBackend})`, await getOpenAiThinkingKey(boxRoot, { observe: false })]);
-  }
+  lines.push(`speech (${ttsBackend}) → its own provider only; OpenRouter does not stand in`);
 
   lines.unshift(...routes.map(([label, direct]) => `${label} → ${direct === null ? "OpenRouter" : "its own provider"}`));
   return [
@@ -76,22 +71,30 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
 /**
  * Gemini reachability — the model behind audio questions (ask-about-audio),
  * Gemini speech when the box's TTS backend is set to it, and scan-import's
- * opt-in Gemini backend (`BBX_SCAN_VISION=gemini`; scan-import
- * defaults to the Claude backend, which needs no extra key).
+ * opt-in Gemini backend (`BBX_SCAN_VISION=gemini`; scan-import defaults to the
+ * Claude backend, which needs no extra key).
  *
  * This asks whether the model is REACHABLE, not whether one particular
- * credential exists, because the callers do the same: with no `gemini` key they
- * fall through to OpenRouter (`core/openrouter.ts`). Reporting "audio questions
- * will not work" on a box that answers them perfectly well would be a check
- * that lies. `model-routes` says which way it is reached.
+ * credential exists, because the callers do the same: with no `gemini` key
+ * audio questions and scan vision fall through to OpenRouter
+ * (`core/openrouter.ts`). Reporting "audio questions will not work" on a box
+ * that answers them perfectly well would be a check that lies. Speech is the
+ * exception: it takes the `gemini` key or nothing (`core/tts/resolve.ts`), so
+ * a box set to speak with Gemini and holding no `gemini` key fails here.
+ * `model-routes` says which way the rest is reached.
  */
 export async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
-  const route = await routeVia({
-    boxRoot,
-    purpose: "health-check",
-    directKey: await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false }),
-    observe: false,
-  });
+  const directKey = await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false });
+  if (directKey === null && (await loadTtsConfig(boxRoot)).backend === "gemini") {
+    return {
+      name: "gemini-api-key",
+      ok: false,
+      message: 'TTS backend "gemini" but no Gemini key — chat speech will fail. Grant the "gemini" secret '
+        + "to this box, or choose a different voice backend; an OpenRouter key does not stand in",
+      severity: "warning",
+    };
+  }
+  const route = await routeVia({ boxRoot, purpose: "health-check", directKey, observe: false });
   // TODO(env-migration): long-tail feature-gate var, direct read per src/lib/env.ts.
   const geminiSelected = process.env["BBX_SCAN_VISION"] === "gemini";
   const message =

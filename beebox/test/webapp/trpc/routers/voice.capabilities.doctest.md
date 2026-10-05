@@ -28,7 +28,7 @@ process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
 const box = await makeTmpBox({ git: true });
 const caps = await owner(box.root).voice.capabilities();
 JSON.stringify({ mai: caps.hq["mai-diarized"], gemini: caps.tts.gemini, whisper: caps.hq.whisper })
-=> {"mai":{"usable":false,"needs":["openrouter"]},"gemini":{"usable":false,"needs":["gemini","openrouter"]},"whisper":{"usable":false,"needs":["openai-thinking","openrouter"]}}
+=> {"mai":{"usable":false,"needs":["openrouter"]},"gemini":{"usable":false,"needs":["gemini"]},"whisper":{"usable":false,"needs":["openai-thinking","openrouter"]}}
 ```
 
 Saving an unusable choice is allowed and warned about in the same response.
@@ -41,16 +41,19 @@ const chosen = await owner(box.root).transcription.setHqService({ hqService: "ma
 
 ## One OpenRouter grant lights up everything it reaches
 
+Gemini speech is not among them: through OpenRouter it would lose the
+personality card's speaking style, so choosing it still saves but warns.
+
 ```ts continue
 await setSecret({ name: "openrouter", value: "sk-or-v1-placeholder-placeholder-placeholder-placeholder" });
 await grantSecret({ slug: await boxSlug(box.root), name: "openrouter", access: "server" });
 const lit = await owner(box.root).voice.capabilities();
 JSON.stringify({ mai: lit.hq["mai-diarized"].usable, gemini: lit.tts.gemini.usable, whisper: lit.hq.whisper.usable, voxtral: lit.hq.voxtral.usable, openaiTts: lit.tts.openai.usable })
-=> {"mai":true,"gemini":true,"whisper":true,"voxtral":false,"openaiTts":false}
+=> {"mai":true,"gemini":false,"whisper":true,"voxtral":false,"openaiTts":false}
 
 const ok = await owner(box.root).tts.setBackend({ backend: "gemini" });
 `${ok.backend} — ${String(ok.warning)}`
-=> gemini — null
+=> gemini — This box has no key for gemini yet; grant gemini in Admin → Secrets or it will fail on every pass.
 ```
 
 ```ts cleanup
