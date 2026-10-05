@@ -1,14 +1,16 @@
 /** Validates and stages the finished static files for one publication. */
 
+import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, mkdir, open, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { fileStats, type FilePreview } from "../draft/core.js";
 import { scanBundle, type LeakScanResult } from "../leak-scan.js";
 import { releaseIdForFiles } from "../manifest-edge.js";
 import type { PublicationDefinition } from "./definition.js";
 import { bundlePolicyError } from "./errors.js";
+import { renderMarkdownSources } from "./markdown.js";
+import type { PreparedFile } from "./types.js";
 
 /** Hard bounds for a single prepared site release; intentionally no config surface in v1. */
 export const PUBLICATION_FILE_LIMITS = {
@@ -26,16 +28,10 @@ const FORBIDDEN_BASENAMES = new Set([
 const FORBIDDEN_SECRET_EXTENSIONS = new Set([".pem", ".key", ".p12", ".pfx"]);
 const FORBIDDEN_SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 
-export interface PreparedFile {
-  path: string;
-  bytes: number;
-  sha256: string;
-}
-
 export interface CollectedPublicationFiles {
   contentHash: string;
   files: PreparedFile[];
-  preview: FilePreview[];
+  preview: PreparedFile[];
   scan: LeakScanResult;
 }
 
@@ -174,20 +170,44 @@ async function collectFiles(root: string, definition: PublicationDefinition): Pr
   };
   await visit(root);
   if (files.size === 0) throw bundlePolicyError("publication output contains no files");
-  if (!files.has("index.html")) throw bundlePolicyError("publication output must include a root index.html; SPA fallback is not supported");
   return files;
+}
+
+/** Re-check bounds after rendering (rendered pages are larger than their sources) and require the root entry. */
+function checkRenderedOutput(files: ReadonlyMap<string, Buffer>, content: PublicationDefinition["content"]): void {
+  let totalBytes = 0;
+  for (const [relative, bytes] of files) {
+    if (bytes.length > PUBLICATION_FILE_LIMITS.perFileBytes) {
+      throw bundlePolicyError(`file '${relative}' is ${bytes.length} bytes; per-file limit is ${PUBLICATION_FILE_LIMITS.perFileBytes} bytes`, { observed: bytes.length, limit: PUBLICATION_FILE_LIMITS.perFileBytes });
+    }
+    totalBytes += bytes.length;
+  }
+  if (totalBytes > PUBLICATION_FILE_LIMITS.totalBytes) {
+    throw bundlePolicyError(`bundle would be ${totalBytes} bytes; total limit is ${PUBLICATION_FILE_LIMITS.totalBytes} bytes`, { observed: totalBytes, limit: PUBLICATION_FILE_LIMITS.totalBytes });
+  }
+  if (!files.has("index.html")) {
+    const entry = content === "static" ? "a root index.html or index.md" : "a root index.html";
+    throw bundlePolicyError(`publication output must include ${entry}; SPA fallback is not supported`);
+  }
 }
 
 function asTextOrBinary(relative: string, bytes: Buffer): string | Uint8Array {
   return TEXT_EXTENSIONS.has(path.posix.extname(relative).toLowerCase()) ? bytes.toString("utf-8") : new Uint8Array(bytes);
 }
 
-/** Validate routes, enforce bounds, scan content, and create immutable input metadata. */
+/** Byte length + full sha256 hex of one bundle file. */
+function fileStats(content: Buffer): { bytes: number; sha256: string } {
+  return { bytes: content.length, sha256: createHash("sha256").update(content).digest("hex") };
+}
+
+/** Validate routes, render static Markdown, enforce bounds, scan the served content, and create immutable input metadata. */
 export async function collectPublicationFiles(args: { root: string; definition: PublicationDefinition; ownerEmail: string | null }): Promise<{ output: Map<string, Buffer>; collected: CollectedPublicationFiles }> {
   const { root, definition, ownerEmail } = args;
-  const output = await collectFiles(root, definition);
+  const source = await collectFiles(root, definition);
+  const output = definition.content === "static" ? renderMarkdownSources(source) : source;
+  checkRenderedOutput(output, definition.content);
   const statsByPath: Record<string, { bytes: number; sha256: string }> = {};
-  const preview: FilePreview[] = [];
+  const preview: PreparedFile[] = [];
   const scanFiles = new Map<string, string | Uint8Array>();
   for (const [relative, bytes] of output) {
     const stats = fileStats(bytes);

@@ -34,11 +34,9 @@ matching `family/` prefix — so a per-box instance inherits its family's reason
 ```ts
 print(builtinSecretUses("openai-thinking").join(" | "));
 print(builtinSecretUses("telegram-bot/demo-box")[0]);
-print(builtinSecretUses("publish/demo-box").length.toString());
 =>
 speech generation for chat (text-to-speech) | audio transcription (Whisper) | minting short-lived realtime-transcription keys for the browser
 receiving this box's Telegram messages (the webhook secret authenticates Telegram's callbacks)
-1
 ```
 
 A name the engine does not read has no built-in reasons — a guess would be

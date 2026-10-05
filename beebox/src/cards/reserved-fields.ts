@@ -11,7 +11,7 @@ import { GLOBAL_CARD_FIELDS, isBodyField, type CardSchema, type FieldDecl } from
  */
 const BANNED_FIELD_NAMES: Readonly<Record<string, string>> = {
   status:
-    "record the specific fact instead: the presence of the result (a `transcript`), an error field (`transcription-error`), or a named boolean such as `archived: true`",
+    "record the specific fact instead: a named boolean per state (`archived: true`), a specifically named enum (`operating: open | closed`), the presence of the result, or an error field",
   created:
     "git records when a card was written; a media capture time belongs on the media reference",
   summary:

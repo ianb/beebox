@@ -69,6 +69,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "pdf", audience: "agent", smoke: { skip: "needs an existing pdf card to re-extract" } },
   { name: "relink", audience: "agent", smoke: MUTATES },
   { name: "migrate-view-links", audience: "agent", smoke: MUTATES },
+  { name: "migrate-fields", audience: "agent", smoke: MUTATES },
 
   // ---- Questions and jobs ----------------------------------------------
   { name: "answer", audience: "agent", smoke: MUTATES },
@@ -138,15 +139,9 @@ export const SURFACE: readonly SurfaceEntry[] = [
   },
   {
     name: "pub",
-    subcommands: ["draft", "ls", "status", "prepare", "sites", "id", "connections"],
+    subcommands: ["status", "prepare", "sites", "id", "connections"],
     audience: "agent",
-    smoke: { run: ["pub", "ls"] },
-  },
-  {
-    name: "pub",
-    subcommands: ["setup", "go", "revoke"],
-    audience: "engine",
-    reason: "`setup` needs a wrangler login; `go` is the human-only flip and asks for interactive confirmation",
+    smoke: { run: ["pub", "id"] },
   },
   {
     name: "secrets",

@@ -46,7 +46,6 @@ import { GuideSchema } from "./schemas/guide/schema.js";
 import { ScheduledScriptSchema } from "./schemas/scheduled-script/schema.js";
 import { JudgmentSchema } from "./schemas/judgment/schema.js";
 import { TelegramMessageSchema } from "./schemas/telegram-message.js";
-import { PubSubmissionSchema } from "./schemas/pub-submission.js";
 import { PublicationSchema } from "./schemas/publication.js";
 import { ChatSchema } from "./schemas/chat.js";
 import { ChatThreadSchema } from "./schemas/chat-thread.js";
@@ -134,7 +133,6 @@ export const cardSchemas = defineRegistry<CardSchema>({
     EmailThreadSchema,
     EmailMessageSchema,
     TelegramMessageSchema,
-    PubSubmissionSchema,
     PublicationSchema,
     GdocSchema,
     GsheetSchema,

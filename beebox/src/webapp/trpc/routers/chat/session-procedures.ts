@@ -19,7 +19,7 @@ import {
 import { resolveFeatures } from "../../../../core/chat/features.js";
 import { MAX_SESSION_ENTRIES, type SessionEntry } from "../../../../cli/lib/session.js";
 import { loadSessionHistory } from "../../../../core/chat/session/load-history.js";
-import { titleForSession, loadChatLists, deadHuskLabel } from "../../../../core/chat/session/list/core.js";
+import { titleForSession, sessionIsDone, loadChatLists, deadHuskLabel } from "../../../../core/chat/session/list/core.js";
 import { landmarkLabelsForDirs } from "../../../../core/landmark/summaries.js";
 import { getChatRuntime } from "../../../chat-runtime.js";
 
@@ -116,6 +116,7 @@ export const chatSessionProcedures = {
         isActive: row.sessionId === mostActive,
         contextDir,
         landmarkLabel,
+        done: row.done,
       };
     });
     const deadRows = dead.map((husk) => ({
@@ -128,17 +129,24 @@ export const chatSessionProcedures = {
   }),
 
   // One session's display label, resolved exactly as `chat.bootstrap` and the
-  // pickers resolve it (husk title > first-message snippet > id prefix).
+  // pickers resolve it (husk title > first-message snippet > id prefix), plus
+  // its done mark.
   //
   // Bootstrap already carries the label for the session it answered for; this
   // is for the chat page's other case — a chat that started as `session=new`
   // and was assigned an id mid-turn, which no bootstrap ever ran for. Reading
   // only the label keeps that fetch off the transcript the running machine owns.
+  // `done` rides along for the session menu's "Mark done" toggle, which knows
+  // nothing else about the session; null means the chat has no card yet, so
+  // there is nothing to mark.
   label: publicProcedure
     .input(z.object({ session: z.string().min(1) }))
-    .query(async ({ input, ctx }): Promise<{ label: string | null }> => {
-      const label = await titleForSession(ctx.boxRoot, input.session);
-      return { label };
+    .query(async ({ input, ctx }): Promise<{ label: string | null; done: boolean | null }> => {
+      const [label, done] = await Promise.all([
+        titleForSession(ctx.boxRoot, input.session),
+        sessionIsDone(ctx.boxRoot, input.session),
+      ]);
+      return { label, done };
     }),
 
   // Resolve the "most-active" session id (for bare /chat).

@@ -105,6 +105,47 @@ dates:
 ---
 ```
 
+## Renaming a field
+
+`bbx validate` lists box-local schemas that declare a reserved field name
+(`status`, `date`, `source`, …) under "Box-local schemas declare reserved
+field names". To move the cards off such a field, write a field map and apply
+it with `bbx migrate-fields`:
+
+```yaml
+# _config/migration-runs/fields.map.yaml
+types:
+  book:
+    status: { rename: ownership }        # keep the value under a new name
+  bill:
+    status:
+      values:                             # each old value becomes these fields
+        paid: { paid: true }
+        auto-pay: { auto-pay: true }
+        unpaid: {}                        # nothing: absence means unpaid
+      unlisted: refuse                    # refuse (default) | drop
+    date: { rename: due }
+  lesson:
+    "segments[].status": { rename: stage } # each entry of a list
+  progress:
+    "units{}.status": { rename: stage }    # each value of a map
+  docket-entry:
+    date: { wrap: { field: filed, key: value } }        # filed: { value: <old date> }
+  snapshot:
+    source: { wrap: { field: sources, key: href, list: true } }  # sources: [{ href: <old> }]
+```
+
+```bash
+bbx migrate-fields _config/migration-runs/fields.map.yaml          # dry run: what would change
+bbx migrate-fields _config/migration-runs/fields.map.yaml --apply
+```
+
+Only the named keys change; every other line of a card stays as it was. A
+card with a value the map does not list, or that already has the new key, is
+refused and reported, so a person can decide. Change the schema and any view
+that reads the old field in the same commit, then run `bbx validate` and
+`bbx view typecheck`.
+
 ## Validation beyond Zod — the `validate` hook
 
 When a card type needs a rule Zod field types can't express — a cross-field

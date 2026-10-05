@@ -4,7 +4,6 @@ workstream: unknown
 area: beebox
 needs: [design]
 priority: backlog
-next-action: discuss
 ---
 
 From the Rowboat review (`research/rowboat-review.md`). Rowboat's memory isn't the

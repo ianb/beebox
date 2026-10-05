@@ -383,7 +383,7 @@ await run({ here: KITCHEN, params: params({}) });
 const referringMs = performance.now() - t1;
 print(`subtree-only ${subtreeMs.toFixed(0)} ms, with referring ${referringMs.toFixed(0)} ms`);
 [subtreeMs, referringMs].every((ms) => ms >= 0)
-=> «*»
+=> «show»
 true
 ```
 

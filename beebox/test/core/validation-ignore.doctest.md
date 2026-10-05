@@ -8,7 +8,7 @@ common case (no file) costs nothing.
 ```ts setup
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { loadValidationIgnore } from "../../src/core/validation-ignore.js";
-import { useColor } from "../../src/cli/commands/validate/command.js";
+import { useColor } from "../../src/cli/commands/validate/report.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 ```

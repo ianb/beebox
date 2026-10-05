@@ -15,7 +15,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import type { IssueNextActionState } from "../../shared/documents.js";
 import { listIssues, type IssueRecord, type ResearchState, type Visibility } from "./issue-domain.js";
+import { nextActionKey, nextActionsRoot, readNextActions } from "./issue-next-actions.js";
 
 /** Monorepo root, resolved from this file rather than the cwd (callers are location-independent). */
 export const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..", "..");
@@ -37,7 +39,9 @@ export interface IssueEntry {
   labels: string[];
   needs: string[];
   priority: string;
+  /** From the local next-action store (`issue-next-actions.ts`), not the file. */
   nextAction: string | null;
+  nextActionMessage: string | null;
   research: ResearchState;
   /** `YYYY-MM-DD` from the filename prefix; null when the name predates the convention. */
   date: string | null;
@@ -82,8 +86,9 @@ async function toEntry(options: {
   record: IssueRecord;
   issuesDir: string;
   rootLabel: string;
+  nextAction: IssueNextActionState | undefined;
 }): Promise<IssueEntry> {
-  const { record, issuesDir, rootLabel } = options;
+  const { record, issuesDir, rootLabel, nextAction } = options;
   const absPath = path.join(issuesDir, record.relPath);
   const source = await fs.readFile(absPath, "utf8");
   const bodyStart = /^---[ \t]*\r?\n[\s\S]*?^---[ \t]*\r?\n/mu.exec(source);
@@ -102,7 +107,8 @@ async function toEntry(options: {
     labels: frontmatter.labels,
     needs: frontmatter.needs,
     priority: frontmatter.priority,
-    nextAction: optional(frontmatter.nextAction),
+    nextAction: optional(nextAction?.action),
+    nextActionMessage: optional(nextAction?.message),
     research: record.research,
     date: deriveDate(record.slug),
     discoveredInWorkstream: deriveDiscoveredInWorkstream(frontmatter.discoveredIn),
@@ -142,11 +148,15 @@ export async function loadIssueEntries(
   if (options.publicOnly !== true && await isDirectory(privateDir)) {
     sources.push({ dir: privateDir, label: "private-issues", visibility: "private" });
   }
+  const nextActions = await readNextActions(await nextActionsRoot(repoRoot));
   const entries: IssueEntry[] = [];
   for (const source of sources) {
     const records = await listIssues(source.dir, source.visibility);
     for (const record of records) {
-      entries.push(await toEntry({ record, issuesDir: source.dir, rootLabel: source.label }));
+      entries.push(await toEntry({
+        record, issuesDir: source.dir, rootLabel: source.label,
+        nextAction: nextActions.get(nextActionKey(record.visibility, record.slug)),
+      }));
     }
   }
   return entries.toSorted((a, b) => a.path.localeCompare(b.path));

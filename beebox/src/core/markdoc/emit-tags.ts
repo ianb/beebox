@@ -71,6 +71,7 @@ export function emitTag(ctx: TagCtx): void {
   if (emitUniversalTag(ctx)) return;
   if (emitBriefingTag(ctx)) return;
   if (emitRecipeTag(ctx)) return;
+  if (emitMarkupTag(ctx)) return;
   const { node, out } = ctx;
   const tagName = node.tag === undefined ? "(unnamed)" : node.tag;
   console.warn(`markdoc/emit: unknown tag {% ${tagName} %}; emitting inner content only`);
@@ -217,6 +218,45 @@ function emitRecipeTag(ctx: TagCtx): boolean {
       ctx.emitChildren(node, out);
       return true;
     }
+    default:
+      return false;
+  }
+}
+
+/**
+ * Tags the parser itself produces: rebuilt raw HTML (`html`) and footnotes.
+ * HTML goes back out as HTML (Claude reads it fine); footnotes as GFM
+ * `[^n]` syntax.
+ */
+function emitMarkupTag(ctx: TagCtx): boolean {
+  const { node, out } = ctx;
+  const attrs = node.attributes;
+  switch (node.tag ?? "") {
+    case "html": {
+      const element = str(attrs, "element");
+      const rendered = Object.entries(attrs)
+        .filter(([name]) => name !== "element")
+        .map(([name, value]) => (value === true ? ` ${name.toLowerCase()}` : ` ${name.toLowerCase()}="${String(value)}"`))
+        .join("");
+      out.push(`<${element}${rendered}>`);
+      if (node.children.length === 0 && (element === "br" || element === "wbr" || element === "hr")) return true;
+      if (!node.inline) out.push("\n");
+      ctx.emitChildren(node, out);
+      out.push(node.inline ? `</${element}>` : `\n</${element}>\n\n`);
+      return true;
+    }
+    case "footnote-ref":
+      out.push(`[^${String(attrs["n"])}]`);
+      return true;
+    case "footnotes":
+      ctx.emitChildren(node, out);
+      return true;
+    case "footnote":
+      out.push(`[^${String(attrs["n"])}]: `);
+      ctx.emitChildren(node, out);
+      return true;
+    case "footnote-backref":
+      return true;
     default:
       return false;
   }

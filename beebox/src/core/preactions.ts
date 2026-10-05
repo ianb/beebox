@@ -24,7 +24,7 @@ import { errorMessage } from "../shared/error-guards.js";
 
 export type { PreAction, PreActionContext, PreActionResult } from "./preaction-types.js";
 
-export const preActions = defineRegistry<PreAction>({
+const preActions = defineRegistry<PreAction>({
   directory: "./preactions",
   key: (action) => action.name,
   ordered: false,

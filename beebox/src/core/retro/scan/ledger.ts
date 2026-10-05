@@ -9,11 +9,11 @@
 
 import * as fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
-import * as readline from "node:readline";
 import * as path from "node:path";
 import { z } from "zod";
 import { ObservationSchema } from "../observations.js";
 import { errnoCode } from "../../../shared/error-guards.js";
+import { jsonlLines } from "../../../lib/jsonl-lines.js";
 
 const LEDGER_FILE = ".beebox/retro/observations.jsonl";
 
@@ -64,9 +64,8 @@ export async function loadEvidenceHashes(boxRoot: string): Promise<Set<string>> 
 async function forEachLedgerEntry(boxRoot: string, visit: (entry: LedgerEntry) => void): Promise<void> {
   const filePath = path.join(boxRoot, LEDGER_FILE);
   const stream = createReadStream(filePath, { encoding: "utf-8" });
-  const lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
   try {
-    for await (const line of lines) {
+    for await (const line of jsonlLines(stream)) {
       if (!line.trim()) continue;
       let raw: unknown;
       try {
@@ -89,7 +88,6 @@ async function forEachLedgerEntry(boxRoot: string, visit: (entry: LedgerEntry) =
       console.warn(`retro: could not read ${LEDGER_FILE}, treating as empty:`, e);
     }
   } finally {
-    lines.close();
     stream.close();
   }
 }

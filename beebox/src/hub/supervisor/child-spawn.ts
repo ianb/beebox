@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { execa, type ResultPromise } from "execa";
 import { type BoxShape, getBoxShape, requireBoxRoot } from "../../lib/box-shape.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { fileExists } from "../../lib/file-exists.js";
+import { resolveBoxEngineBbx } from "../../lib/box-engine-bin.js";
 import { waitForHttp } from "../child-process-utils.js";
 
 export type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
@@ -66,12 +66,10 @@ export function defaultCheckReady(params: { port: number; label: string }): Prom
   });
 }
 
-/** The box's own installed `bbx` when present, else the running engine's own
+/** The box's own engine's `bbx` when installed, else the running engine's own
  *  `bbx` (a box that hasn't been `pnpm install`ed yet). */
 export async function resolveBbxBinary(shape: BoxShape): Promise<string> {
-  const ownBin = path.join(shape.boxRoot, "node_modules", ".bin", "bbx");
-  if (await fileExists(ownBin)) return ownBin;
-  return path.join(PACKAGE_ROOT, "bin", "bbx");
+  return (await resolveBoxEngineBbx(shape.boxRoot)) ?? path.join(PACKAGE_ROOT, "bin", "bbx");
 }
 
 /** Admit resolution before spawning; the child independently admits startup. */

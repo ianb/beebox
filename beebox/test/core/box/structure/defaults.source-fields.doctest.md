@@ -13,8 +13,8 @@ import * as os from "node:os";
 import { parse } from "yaml";
 import { installPersonality, installSchedules } from "../../../../src/core/box/structure/core.js";
 import { createInitialPersonalityTemplate } from "../../../../src/schemas/personality/schema.js";
-import { planSourceFields } from "../../../../src/scripts/migrate/source-fields.js";
-import { applyFieldEdits } from "../../../../src/scripts/migrate/_field-edits.js";
+import { planSourceFields } from "../../../../src/scripts/migrate/card-fields/source.js";
+import { applyFieldEdits } from "../../../../src/core/card-fields/field-edits.js";
 import { splitCardContent } from "../../../../src/cards/frontmatter.js";
 
 const SCHEDULE = "_config/schedules/refresh-maps.scheduled-script.card";

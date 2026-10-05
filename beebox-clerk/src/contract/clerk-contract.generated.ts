@@ -14,6 +14,7 @@ export interface CommentaryPayload {
   frozenHtml?: string;
   destinationDir?: string;
   timestamp?: string;
+  captureId?: string;
 }
 
 /** Result of a successful `clerk.commentary` capture. */

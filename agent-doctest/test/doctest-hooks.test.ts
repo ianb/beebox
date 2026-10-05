@@ -142,7 +142,7 @@ test("parseExamples: backticks inside quoted strings or line comments don't open
 test("generateTestSource: a semicolon at a template-literal line end is not a statement boundary", async (t) => {
   const md = '```\nconst s = `content;\nmore`;\ns.includes(";")\n=> true\n```\n';
   const source = generateTestSource(md, "/test.doctest.md");
-  t.ok(source.includes('t.check(__withPrints(__prints, s.includes(";"))'),
+  t.ok(source.includes('__doctest_t.check(__doctest_withPrints(__doctest_prints, s.includes(";"))'),
     "the check expression is the line after the literal closes");
 });
 
@@ -160,7 +160,7 @@ foo("hello")
 `;
 
   const source = generateTestSource(md, "/path/to/test.doctest.md");
-  t.ok(source.includes('import { test } from "tap"'), "should import tap");
+  t.ok(source.includes('import { test as __doctest_test'), "should import tap");
   t.ok(source.includes('import { foo } from "./foo.js"'), "should include setup");
   t.ok(source.includes("foo(\"hello\")"), "should include expression");
   t.ok(source.includes('"world"'), "should include expected value");
@@ -414,7 +414,7 @@ await failAsync()
 
   const source = generateTestSource(md, "/test.doctest.md");
   t.ok(
-    source.includes("await t.checkThrows(async () => (await failAsync())"),
+    source.includes("await __doctest_t.checkThrows(async () => (await failAsync())"),
     "throws thunk is async and awaited, so await-containing expressions compile",
   );
 });
@@ -471,7 +471,7 @@ y.name
   t.ok(source.includes("t.teardown("), "should have teardown");
   t.ok(source.includes("await x.destroy()"), "should include cleanup code");
   // Second test should NOT have the cleanup
-  const teardownCount = (source.match(/t\.teardown/g) || []).length;
+  const teardownCount = (source.match(/\.teardown\(async/g) || []).length;
   t.equal(teardownCount, 1, "cleanup should only apply to one test");
 });
 
@@ -495,7 +495,7 @@ step2()
   t.ok(source.includes("t.teardown("), "should have teardown");
   t.ok(source.includes("await cleanup()"), "should include cleanup");
   // Both steps should be in the same test (continue)
-  const testCount = (source.match(/\btest\(/g) || []).length;
+  const testCount = (source.match(/__doctest_test\(/g) || []).length;
   t.equal(testCount, 1, "should have one test function");
 });
 
@@ -512,10 +512,10 @@ world
 
   const source = generateTestSource(md, "/test.doctest.md");
   // Each test should get its own __prints and print
-  t.ok(source.includes("const __prints = []"), "should declare __prints");
+  t.ok(source.includes("const __doctest_prints = []"), "should declare __prints");
   t.ok(source.includes("const print = "), "should declare print");
   // Check should use __withPrints
-  t.ok(source.includes("__withPrints(__prints,"), "should drain prints in check");
+  t.ok(source.includes("__doctest_withPrints(__doctest_prints,"), "should drain prints in check");
 });
 
 // ── Throws parsing ──────────────────────────────────────────────────────────
@@ -590,6 +590,15 @@ print("second");
 
   const source = generateTestSource(md, "/test.doctest.md");
   // Two tests, each with their own __prints
-  const printDecls = (source.match(/const __prints = \[\]/g) || []).length;
+  const printDecls = (source.match(/const __doctest_prints = \[\]/g) || []).length;
   t.equal(printDecls, 2, "each test should have its own __prints");
+});
+
+test("declaresName and blockDeclarations: destructuring and imports count, type-only imports do not", async (t) => {
+  const { declaresName, blockDeclarations } = await import("../src/doctest-hooks/doctest-runtime.ts");
+  t.notOk(declaresName('import type { t } from "./types.js";', "t"), "a type-only import does not bind t");
+  t.notOk(declaresName('import { type t, u } from "./x.js";', "t"), "a type specifier does not bind t");
+  t.ok(declaresName('import { u as t } from "./x.js";', "t"));
+  t.same(blockDeclarations('const { box, items: [first] } = make();\nconst [a, , b = 2, ...rest] = list;\nimport d, { e as f } from "./m.js";'),
+    ["box", "first", "a", "b", "rest", "d", "f"]);
 });

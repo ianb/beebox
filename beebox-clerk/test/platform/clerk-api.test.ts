@@ -4,6 +4,8 @@ import {
   parseDestinationsData,
   parseCommentaryResult,
   parseTabArrangementResult,
+  postCommentary,
+  ClerkApiError,
 } from "../../src/platform/clerk-api.js";
 
 test("readEnvelopeData unwraps a well-formed tRPC success envelope", async (t) => {
@@ -75,4 +77,68 @@ test("parseTabArrangementResult validates the handoff response", async (t) => {
   });
   t.equal(parseTabArrangementResult({ card: "x", open: "y" }), null);
   t.equal(parseTabArrangementResult({ card: "x", open: 2, transferId: "abc" }), null);
+});
+
+const box = { boxUrl: "http://localhost:3210/main/test1", slug: "test1", title: "Test" };
+const capturePayload = {
+  url: "https://example.com/a",
+  title: "A",
+  readableMarkdown: "body",
+  captureId: "30000000-0000-4000-8000-000000000000",
+};
+const okBody = JSON.stringify({ result: { data: { created: ["_content/inbox/A.webpage.card"], open: "chat" } } });
+
+export class UnexpectedFetchError extends Error {
+  constructor() {
+    super("unexpected extra fetch");
+  }
+}
+
+/** What fetch throws when the connection drops before a response. */
+export class NetworkDownError extends TypeError {
+  constructor() {
+    super("Failed to fetch");
+  }
+}
+
+/** Replace fetch with a scripted sequence of outcomes; returns the request bodies it saw. */
+function scriptFetch(
+  onTeardown: (restore: () => void) => void,
+  outcomes: Array<"network" | number>,
+): { bodies: unknown[] } {
+  const seen: { bodies: unknown[] } = { bodies: [] };
+  const original = globalThis.fetch;
+  onTeardown(() => {
+    globalThis.fetch = original;
+  });
+  globalThis.fetch = async (_url, init) => {
+    seen.bodies.push(JSON.parse(String(init?.body)));
+    const outcome = outcomes.shift();
+    if (outcome === undefined) throw new UnexpectedFetchError();
+    if (outcome === "network") throw new NetworkDownError();
+    return new Response(outcome === 200 ? okBody : "error", { status: outcome });
+  };
+  return seen;
+}
+
+test("postCommentary retries a lost response with the same captureId", async (t) => {
+  const seen = scriptFetch((restore) => t.teardown(restore), ["network", 503, 200]);
+  const result = await postCommentary(box, { payload: capturePayload, retryDelaysMs: [0, 0] });
+  t.same(result, { created: ["_content/inbox/A.webpage.card"], open: "chat" });
+  t.equal(seen.bodies.length, 3);
+  t.same(seen.bodies, [capturePayload, capturePayload, capturePayload]);
+});
+
+test("postCommentary does not retry the box's own error answer", async (t) => {
+  const seen = scriptFetch((restore) => t.teardown(restore), [409]);
+  const error: unknown = await postCommentary(box, { payload: capturePayload, retryDelaysMs: [0, 0] }).catch((e: unknown) => e);
+  t.ok(error instanceof ClerkApiError && error.status === 409);
+  t.equal(seen.bodies.length, 1);
+});
+
+test("postCommentary gives up after its bounded retries", async (t) => {
+  const seen = scriptFetch((restore) => t.teardown(restore), ["network", "network", "network"]);
+  const error: unknown = await postCommentary(box, { payload: capturePayload, retryDelaysMs: [0, 0] }).catch((e: unknown) => e);
+  t.ok(error instanceof ClerkApiError && error.status === 0);
+  t.equal(seen.bodies.length, 3);
 });

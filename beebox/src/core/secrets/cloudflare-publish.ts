@@ -14,7 +14,7 @@ import {
   type CloudflarePublishConnectionRecord,
 } from "./store.js";
 
-export const cloudflarePublishConnectionNamePattern = /^[a-z][\da-z-]{0,39}$/;
+const cloudflarePublishConnectionNamePattern = /^[a-z][\da-z-]{0,39}$/;
 const accountIdPattern = /^[\da-f]{32}$/i;
 const pubIdPattern = /^[2-7a-z]{26}$/;
 
@@ -322,11 +322,4 @@ export async function listCloudflarePublishBindings(boxSlug: string): Promise<Cl
     .filter(([, binding]) => binding.boxSlug === boxSlug)
     .map(([pubId, binding]) => ({ pubId, ...binding }))
     .toSorted((a, b) => a.pubId.localeCompare(b.pubId));
-}
-
-/** Used by legacy CLI paths to refuse mutation of server-managed publications. */
-export async function isServerManagedPublication(pubId: string): Promise<boolean> {
-  const loaded = await loadSecretStore();
-  if (!loaded.ok) throw connectionError(`The machine secret store could not be read: ${loaded.error}`);
-  return loaded.value.cloudflarePublishBindings?.[pubId] !== undefined;
 }

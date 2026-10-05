@@ -15,6 +15,7 @@ import { createWebpageTemplate } from "../../../../schemas/webpage.js";
 import { router, authedProcedure } from "../../procedures.js";
 import { BOX_DIRS } from "../../../../lib/paths/core.js";
 import { saveTextualInput, saveTextualOutput, shareDestinationsOutput } from "./contract.js";
+import { escapeMarkdownText, neutralizeIngestedMarkdown } from "../../../../shared/markdoc-config/ingest.js";
 
 const INBOX_DIR = BOX_DIRS.inbox;
 
@@ -52,10 +53,12 @@ export const shareRouter = router({
             title,
             url: input.url,
             capturedAt: input.capturedAt,
-            content: `[${title}](${input.url})`,
+            // The title comes from the shared page: escape it to plain text.
+            content: `[${escapeMarkdownText(title, { indent: "" })}](${input.url})`,
             shareId: input.shareId,
           })
-        : createDocTemplate({ title, body: input.text, shareId: input.shareId });
+        : // Shared text comes from another app: escape its raw HTML and Markdoc tags.
+          createDocTemplate({ title, body: neutralizeIngestedMarkdown(input.text), shareId: input.shareId });
 
       return withCardLock(absPath, async () => {
         const existing = await findShareCard(ctx.boxRoot, input.shareId);

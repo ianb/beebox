@@ -6,6 +6,7 @@ labels: [full-suite, schedules, host-load]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — "this computer got really slow", 2026-09-25
+priority: important
 ---
 
 On 2026-09-25 the boxholder's Mac (16 GB RAM) became very slow. At that

@@ -90,7 +90,6 @@ distinct for boxes, for the reason `core/openai-thinking-key.ts` records: *"a
 transcription key is not consent to pay for embeddings, and boxes may hold
 different keys for each."* Nothing in a box reads `BBX_OPENAI_API_KEY` for
 transcription; only the dev tooling does.
-| `publish/<box>` | `publish/connector-secret.ts` | `publish.secret.json` | — |
 
 `openai` and `openai-thinking` are two names for two keys on purpose: a
 transcription key is not consent to pay for embeddings, and the split predates
@@ -114,12 +113,10 @@ surfaces:
   `GOOGLE_OAUTH_CLIENT_SECRET` from the environment, and that is real
   configuration for that surface, not a legacy fallback.
 
-The last two are **single-box** entries: they carry `owningBox` +
-`shareable: false` and are granted automatically by the flow that creates them
-(telegram setup, `bbx pub setup --mint-connector-token`). A grant to any other
-box is refused with an explanation — a Telegram bot token routes to one webhook
-URL and an R2 token is scoped to one bucket, so sharing would break routing
-rather than merely be unwise.
+`telegram-bot/<box>` is a **single-box** entry: it carries `owningBox` +
+`shareable: false` and is granted automatically by telegram setup. A grant to
+any other box is refused with an explanation — a Telegram bot token routes to
+one webhook URL, so sharing would break routing rather than merely be unwise.
 
 ## Why a secret exists
 
@@ -195,9 +192,8 @@ label), bounded only so the store and the admin page stay readable: one line,
 shape, which is what keeps one entry, one grant, and one rotation true for
 every provider. A credential that is structurally several fields is stored as a
 **JSON string** the consumer parses and validates with its own zod schema —
-`deepgram` (`{apiKey, projectId}`), `telegram-bot/<box>`
-(`{botToken, webhookSecret}`), `publish/<box>`
-(`{accountId, bucket, apiToken}`).
+`deepgram` (`{apiKey, projectId}`) and `telegram-bot/<box>`
+(`{botToken, webhookSecret}`).
 
 A stored value that is not valid JSON, or does not match the consumer's shape,
 degrades to **not configured** with one warning naming the secret
@@ -311,9 +307,8 @@ are **advisory toward the value and authoritative about who decides**:
 - **Probe** (`src/core/secrets/probe-registry.ts`) — after a value is stored, one
   cheap harmless authenticated call decides `verified: ok | failed | unchecked`
   on the entry. `mistral`/`openai`/`openai-thinking`/`gemini`/`deepgram` use a
-  models-or-projects listing; `telegram-bot/<box>` uses `getMe`; `publish/<box>`
-  has none (an R2 check is neither free of side effects nor cheap) and stays
-  `unchecked`, as does any name with no entry.
+  models-or-projects listing; `telegram-bot/<box>` uses `getMe`; any name with
+  no entry stays `unchecked`.
 
 **Probe targets are server-owned and nothing else can name one.** An
 agent-supplied probe URL would send the freshly-saved secret wherever the agent

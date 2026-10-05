@@ -15,7 +15,6 @@
  */
 
 import { createReadStream } from "node:fs";
-import * as readline from "node:readline";
 import type { ChatSession } from "./run/core.js";
 import type { ChatSessionRegistry } from "./registry/core.js";
 import type { EventBus } from "../../event-bus/core.js";
@@ -26,6 +25,7 @@ import { resolveChatEngine } from "./engine.js";
 import { resolveChatTarget } from "./target.js";
 import { loadSessionHistory } from "./load-history.js";
 import { MAX_SESSION_ENTRIES } from "../../../cli/lib/session.js";
+import { jsonlLines } from "../../../lib/jsonl-lines.js";
 
 /** Raised when the non-busy `send()` of a delivered user message fails. Retryable. */
 export class UserMessageDeliveryError extends Error {
@@ -98,13 +98,11 @@ export async function userMessageAlreadyLanded(opts: {
     // (2026-08-01). `marker` sits inside a single JSONL line, so a per-line
     // match is equivalent to a whole-file match.
     const fileStream = createReadStream(logPath, { encoding: "utf-8" });
-    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
     try {
-      for await (const line of rl) {
+      for await (const line of jsonlLines(fileStream)) {
         if (line.includes(marker)) return true;
       }
     } finally {
-      rl.close();
       fileStream.destroy();
     }
     return false;

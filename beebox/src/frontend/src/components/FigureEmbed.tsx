@@ -34,7 +34,7 @@ const cast = <T,>(c: T) => c as unknown as ComponentType<Record<string, unknown>
 export function makeEmbedComponents(ctx: LinkContext): MarkdownComponentOverrides {
   const DefaultImg = makeImg(ctx);
   const { onNavigate } = ctx;
-  function Img({ src, alt, title }: { src?: string; alt?: string; title?: string }) {
+  function Img({ src, alt, title, width }: { src?: string; alt?: string; title?: string; width?: string }) {
     // An in-box, non-image path embeds the card/file inline via its own viewer.
     // Images and external URLs are ordinary markdown images.
     // A `null` target is an embed path that escapes the box root; it falls
@@ -60,7 +60,7 @@ export function makeEmbedComponents(ctx: LinkContext): MarkdownComponentOverride
         />
       );
     }
-    return <DefaultImg src={src} alt={alt} title={title} />;
+    return <DefaultImg src={src} alt={alt} title={title} width={width} />;
   }
   return { Img: cast(Img) };
 }

@@ -24,7 +24,8 @@
 import { Fragment, useMemo } from "react";
 import * as React from "react";
 import { transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
-import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config/core";
+import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config/tags/core";
+import { makeHtmlTag } from "@shared/markdoc-config/tags/html-schema";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
 import { makeBriefingComponents } from "./BriefingTags";
@@ -52,8 +53,8 @@ import type { ReactNode } from "react";
 // Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
 // `parse` — see lib/markdoc-parse.ts.
 
-export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string }> {
-  return function Img({ src, alt, title }) {
+export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string; width?: string }> {
+  return function Img({ src, alt, title, width }) {
     // A markdown image pointed at a recognized video URL renders an embedded
     // player instead. ID extraction can still fail on a YouTube-looking URL —
     // `detectVideoEmbed` returns null there and we fall through to the image.
@@ -69,17 +70,25 @@ export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; a
       format: "auto",
     }) ?? resolved;
     const proxyFallbackSrc = externalImageProxyUrl(resolved, ctx.boxSlug);
-    return (
+    const image = (
       <Image
         src={displaySrc}
         lightboxSrc={resolved}
         alt={alt ?? ""}
         size="chat"
         lightbox
-        className="block mx-auto my-2"
+        className={width === undefined ? "block mx-auto my-2" : "block w-full my-2"}
         {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}
         {...(title !== undefined ? { title } : {})}
       />
+    );
+    if (width === undefined) return image;
+    // An HTML `<img width>` (the only way to size an image in a body): pixels
+    // or a percentage of the column, never wider than the column.
+    return (
+      <span className="block mx-auto max-w-full" style={{ width: width.endsWith("%") ? width : `${width}px` }}>
+        {image}
+      </span>
     );
   };
 }
@@ -118,7 +127,15 @@ function isLoneImageReactChildren(children: ReactNode): boolean {
   return imgCount === 1;
 }
 
-function Para({ children }: { children?: ReactNode }) {
+const PARA_ALIGN_CLASSES: Record<string, string> = {
+  left: "text-left",
+  center: "text-center",
+  right: "text-right",
+  justify: "text-justify",
+};
+
+/** `align`, `title`, `lang` and `dir` arrive only from an HTML `<p>` (see `makeHtmlTag`). */
+function Para({ children, align, title, lang, dir }: { children?: ReactNode; align?: string; title?: string; lang?: string; dir?: string }) {
   if (isLoneImageReactChildren(children)) {
     return children;
   }
@@ -126,7 +143,12 @@ function Para({ children }: { children?: ReactNode }) {
   // (inline file previews, figures, our custom tags), which is invalid inside
   // <p> and triggers React DOM-nesting warnings. `.bbx-paragraph` (index.css)
   // restores the prose paragraph spacing.
-  return <div className="bbx-paragraph">{children}</div>;
+  const alignClass = align === undefined ? undefined : PARA_ALIGN_CLASSES[align];
+  return (
+    <div className={alignClass === undefined ? "bbx-paragraph" : `bbx-paragraph ${alignClass}`} title={title} lang={lang} dir={dir}>
+      {children}
+    </div>
+  );
 }
 
 interface RenderConfigBundle {
@@ -137,6 +159,8 @@ interface RenderConfigBundle {
 function buildRenderConfig(linkCtx: LinkContext, cardPath: string | null): RenderConfigBundle {
   const config: Config = {
     ...markdocConfig,
+    // An HTML `<p>` renders as `Para`, the same `<div>` a Markdown paragraph gets.
+    tags: { ...markdocConfig.tags, html: makeHtmlTag({ paragraph: "Para" }) },
     nodes: {
       ...markdocConfig.nodes,
       document: { render: "Fragment" },
@@ -158,6 +182,7 @@ function buildRenderConfig(linkCtx: LinkContext, cardPath: string | null): Rende
           src: { type: String },
           alt: { type: String },
           title: { type: String },
+          width: { type: String },
         },
       },
     },

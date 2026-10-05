@@ -12,7 +12,7 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { resolveRefPath } from "../../shared/ref-path/core.js";
 
 /** The root briefing, box-relative (`core/docs-gen/compile.ts` reads the same file). */
-export const ROOT_BRIEFING_PATH = "_content/briefing.briefing.card";
+const ROOT_BRIEFING_PATH = "_content/briefing.briefing.card";
 
 /** The stock stub a new box's briefing carries; it says nothing about the box. */
 const STUB_PURPOSE = "What this box is for.";

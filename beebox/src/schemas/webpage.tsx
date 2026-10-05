@@ -49,6 +49,8 @@ export const WebpageSchema = cardSchema("webpage", {
     frozen: z.object({ ref: z.string() }).optional(),
     /** Stable id supplied by an external share operation for retry deduplication. */
     "share-id": z.string().uuid().optional(),
+    /** Stable id supplied by a Clerk capture for retry deduplication. */
+    "capture-id": z.string().uuid().optional(),
     // The readable markdown rendering of the page. The card IS the document.
     body: body(z.string()),
   },
@@ -69,6 +71,8 @@ said, and edit it only to fix capture artifacts, not to rewrite the page.
 - \`frozen:\` — optional in-box ref (\`attach/page.frozen\`) to the frozen
   snapshot of the page, served sandboxed.
 - \`title:\` — optional human label; defaults to the captured page title.
+- \`capture-id:\` / \`share-id:\` — retry dedupe keys written by Clerk / the
+  iOS share extension; leave them unchanged.
 
 ## Body
 
@@ -111,6 +115,7 @@ export function createWebpageTemplate(options: {
   excerpt?: string | undefined;
   frozenRef?: string | undefined;
   shareId?: string | undefined;
+  captureId?: string | undefined;
 }): string {
   const fields: Record<string, unknown> = {
     title: options.title,
@@ -134,6 +139,9 @@ export function createWebpageTemplate(options: {
   }
   if (options.shareId !== undefined && options.shareId !== "") {
     fields["share-id"] = options.shareId;
+  }
+  if (options.captureId !== undefined && options.captureId !== "") {
+    fields["capture-id"] = options.captureId;
   }
   const yamlText = stringifyYaml(fields);
   const bodyText = options.content;

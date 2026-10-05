@@ -52,7 +52,7 @@ const MARKDOWN_LIBRARIES = [
   "react-markdown", "markdown-to-jsx", "commonmark", "snarkdown", "@mdx-js/", "@markdoc/markdoc",
 ];
 
-export const VIEW_MARKDOWN_MESSAGE =
+const VIEW_MARKDOWN_MESSAGE =
   "Render card text with `Markdown` from `beebox/view-widgets`. If it lacks something this view needs, say so in `_config/feedback/`.";
 
 export interface ViewMarkdownProblem {

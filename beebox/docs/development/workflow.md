@@ -40,7 +40,9 @@ you fix; you file when it is outside your current work or genuinely unsettled.
 Bodies are written in Simplified Technical English, because an issue is read
 cold months later.
 
-`next-action:` is how the maintainer hands an idea back to an agent. `discuss`
+A next action is how the maintainer hands an idea back to an agent. It lives in
+a local store outside git (`bin/issues next-action`), optionally with a message
+in the maintainer's own words. `discuss`
 routes an item back to them; `reconfirm`, `duplicate`, `invalid`, and `fixed`
 are provisional, asking the next agent to check a suspected outcome; and
 `manually-confirmed` and `verify-without-me` settle a human testing gate.

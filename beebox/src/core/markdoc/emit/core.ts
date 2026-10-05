@@ -29,12 +29,8 @@
  * but not React-aware.
  */
 
-import Markdoc from "@markdoc/markdoc";
-
+import { parseMarkdown } from "../../../shared/markdoc-config/parse/core.js";
 import { emitNode } from "./nodes.js";
-
-// eslint-disable-next-line import-x/no-named-as-default-member
-const { parse } = Markdoc;
 
 /**
  * Parse a markdown/Markdoc body and emit it as plain markdown text.
@@ -42,7 +38,7 @@ const { parse } = Markdoc;
  */
 export function emitBodyAsMarkdown(body: string): string {
   if (body.trim() === "") return "";
-  const ast = parse(body);
+  const ast = parseMarkdown(body);
   const out: string[] = [];
   emitNode(ast, out);
   let text = out.join("");

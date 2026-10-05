@@ -353,7 +353,7 @@ done.body.staged
 => true
 
 done.body.sessionId
-=> «*»
+=> «uuid»
 ```
 
 ```ts cleanup

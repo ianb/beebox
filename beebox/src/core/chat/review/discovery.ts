@@ -30,7 +30,7 @@ import { errnoCode } from "../../../shared/error-guards.js";
 import { listChatHusks, type ChatHuskEntry } from "../husk-read.js";
 import { localOrigin } from "../session/origin.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
-import { METADATA_CONSUMER, sessionState, type ReviewState } from "./state.js";
+import { METADATA_CONSUMER, TITLE_CONSUMER, sessionState, type ReviewState } from "./state.js";
 import { resolveSpan, spanSize, type BootstrapReason, type ResolvedSpan, type SpanPageReader } from "./span.js";
 import { resolveChatEngine } from "../session/engine.js";
 import { loadSessionHistory } from "../session/load-history.js";
@@ -47,6 +47,15 @@ export const QUIESCENCE_MS = 30 * 60 * 1000;
 
 /** Pre-elision rendered chars of new material required to trigger a review. */
 export const REVIEW_CHAR_THRESHOLD = 6_000;
+
+/**
+ * Pre-elision rendered chars of new material required to trigger a **title**
+ * pass. Deliberately tiny: with two user turns already required, 400 chars
+ * means "a real exchange happened", the same job the 6,000-char gate does for
+ * summaries — keeping a nightly model call off trivial growth. As untuned as
+ * the summary threshold (`docs/implemented-plans/chat-titles.md` § Track A).
+ */
+export const TITLE_CHAR_THRESHOLD = 400;
 
 /** Real user turns in the whole session before it is reviewed at all. */
 const REVIEW_MIN_USER_TURNS = 2;
@@ -78,10 +87,20 @@ export interface QualifiedSession {
   /** Native harness that owns the transcript. Missing means legacy Claude. */
   engine?: AgentEngine;
   mtime: Date;
-  /** Pre-elision rendered length of the span, measured during the scan. */
+  /** Pre-elision rendered length of the metadata span, measured during the scan. */
   spanChars: number;
-  /** Why the span was read from the top, or null when it continues the journal. */
+  /** Why the metadata span was read from the top, or null when it continues the journal. */
   bootstrap: BootstrapReason | null;
+  /**
+   * False when the metadata span is below REVIEW_CHAR_THRESHOLD — the session
+   * qualifies for the title pass only. Summary-sized growth flips it, and the
+   * metadata pass then advances both journals.
+   */
+  needsMetadata: boolean;
+  /** Pre-elision rendered length of the title span (the cheaper gate's measure). */
+  titleSpanChars: number;
+  /** Why the title span was read from the top, or null when it continues the journal. */
+  titleBootstrap: BootstrapReason | null;
   /**
    * The title `ensureChatHusk` would derive from this transcript. Lets the
    * reviewer tell an untouched auto-title from one a person typed.
@@ -94,7 +113,19 @@ export interface DiscoveryResult {
   qualified: QualifiedSession[];
   /** Skipped: transcript changed within the quiescence window. */
   deferredActive: string[];
-  /** Skipped: not enough new material since the last applied span. */
+  /**
+   * Skipped: not enough new material for even a title pass since the last
+   * applied span. Sessions between this and the summary gate are *qualified*
+   * (title-only) and counted in {@link titleOnly}, not skipped.
+   */
+  belowTitleThreshold: number;
+  /** Qualified sessions whose growth clears the title gate but not the summary gate. */
+  titleOnly: number;
+  /**
+   * Qualified sessions that failed the summary gate — a subset of
+   * `qualified` (the title-only ones above). Reported so `status` keeps
+   * answering "how many are worth a full review".
+   */
   belowThreshold: number;
   /** Skipped: fewer than REVIEW_MIN_USER_TURNS real user turns. */
   tooFewTurns: number;
@@ -118,6 +149,8 @@ function emptyResult(): DiscoveryResult {
   return {
     qualified: [],
     deferredActive: [],
+    belowTitleThreshold: 0,
+    titleOnly: 0,
     belowThreshold: 0,
     tooFewTurns: 0,
     missingTranscripts: 0,
@@ -159,21 +192,24 @@ function codexPages(boxRoot: string, sessionId: string): SpanPageReader {
 }
 
 /**
- * Locate one session's unread span. Both discovery (to measure the span) and
- * the reviewer (to render it) go through this. The reviewer re-reads rather
- * than being handed discovery's array on purpose: see {@link QualifiedSession}.
+ * Locate one session's unread span for one journal consumer. Both discovery
+ * (to measure the span) and the reviewer (to render it) go through this; the
+ * consumer names which journal the span continues — `metadata` or `title`.
+ * The reviewer re-reads rather than being handed discovery's array on
+ * purpose: see {@link QualifiedSession}.
  * Returns null when the transcript is gone.
  */
 export async function readSessionWindow(args: {
   sessionId: string;
   logPath: string;
   state: ReviewState;
+  consumer: string;
   boxRoot?: string;
 }): Promise<ResolvedSpan | null> {
   const readPage = args.boxRoot === undefined
     ? claudePages(args.logPath)
     : codexPages(args.boxRoot, args.sessionId);
-  const applied = sessionState(args.state, args.sessionId).applied[METADATA_CONSUMER] ?? null;
+  const applied = sessionState(args.state, args.sessionId).applied[args.consumer] ?? null;
   try {
     const span = await resolveSpan({ readPage, applied, limit: PARSE_LIMIT });
     if (span.clipped) {
@@ -239,24 +275,39 @@ async function qualifyHusk(
     return null;
   }
 
-  // Scoped to this block so the window is unreachable the moment the scalars
-  // below have been taken from it — the array must not outlive qualification.
-  const span = await readSessionWindow({
+  // Scoped to this block so the windows are unreachable the moment the scalars
+  // below have been taken from them — the arrays must not outlive
+  // qualification. Two windows are resolved — the summary journal's and the
+  // title journal's — but they share one read whenever the two boundaries
+  // coincide, which is every session the metadata pass has already advanced
+  // (it advances both).
+  const windowArgs = {
     sessionId: husk.session,
     logPath,
     state: options.state,
     ...(engine === "codex" ? { boxRoot } : {}),
-  });
+  } as const;
+  const appliedFor = (consumer: string) =>
+    sessionState(options.state, husk.session).applied[consumer] ?? null;
+  const span = await readSessionWindow({ ...windowArgs, consumer: METADATA_CONSUMER });
   if (span === null) {
     result.missingTranscripts += 1;
     return null;
   }
-  const spanChars = spanSize(span);
-  const bootstrap = span.bootstrap;
-  if (spanChars < REVIEW_CHAR_THRESHOLD) {
-    result.belowThreshold += 1;
+  const titleSpan = appliedFor(TITLE_CONSUMER)?.endUuid === appliedFor(METADATA_CONSUMER)?.endUuid
+    ? span
+    : await readSessionWindow({ ...windowArgs, consumer: TITLE_CONSUMER });
+  if (titleSpan === null) {
+    result.missingTranscripts += 1;
     return null;
   }
+  const titleSpanChars = spanSize(titleSpan);
+  if (titleSpanChars < TITLE_CHAR_THRESHOLD) {
+    result.belowTitleThreshold += 1;
+    return null;
+  }
+  const spanChars = spanSize(span);
+  const needsMetadata = spanChars >= REVIEW_CHAR_THRESHOLD;
 
   return {
     sessionId: husk.session,
@@ -265,7 +316,10 @@ async function qualifyHusk(
     ...(engine === "codex" ? { engine } : {}),
     mtime,
     spanChars,
-    bootstrap,
+    bootstrap: span.bootstrap,
+    needsMetadata,
+    titleSpanChars,
+    titleBootstrap: titleSpan.bootstrap,
     snippetTitle: meta.firstUserSnippet?.trim() || null,
   };
 }
@@ -291,5 +345,8 @@ export async function discoverSessions(
   // Oldest first, so a capped run makes progress on the longest-neglected
   // sessions rather than re-visiting the freshest every night.
   result.qualified.sort((a, b) => a.mtime.getTime() - b.mtime.getTime());
+  // Post-counts, not per-husk flags: each is a fact about the qualified set.
+  result.titleOnly = result.qualified.filter((q) => !q.needsMetadata).length;
+  result.belowThreshold = result.titleOnly;
   return result;
 }

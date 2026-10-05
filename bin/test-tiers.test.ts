@@ -162,6 +162,23 @@ test("a real path after an option is still an explicit file list", () => {
   );
 });
 
+test("a test-file path that names no file is refused, not widened to the whole tier", () => {
+  // `pnpm test beebox/test/x.doctest.md` run inside beebox/: the path is
+  // monorepo-relative, so it names nothing, and the old behaviour appended
+  // every file in the tier.
+  assert.throws(
+    () =>
+      tierCommand({
+        command: ["tap", "beebox/test/x.doctest.md"],
+        tier: "ordinary",
+        taprcFiles: TAPRC_FILES,
+        careful: CAREFUL,
+        isFile: () => false,
+      }),
+    (e: unknown) => e instanceof TierListError && /no such test file in this package: beebox\/test\/x\.doctest\.md/.test(e.message),
+  );
+});
+
 test("a command that is not tap is not rewritten", () => {
   const command = ["pnpm", "exec", "vitest"];
   assert.deepEqual(

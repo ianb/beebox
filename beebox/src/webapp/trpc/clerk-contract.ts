@@ -27,6 +27,11 @@ export const commentaryInput = z.object({
   // Box-relative dir of a landmark commentary destination; omitted → inbox.
   destinationDir: z.string().optional(),
   timestamp: z.string().optional(),
+  // Client-generated once per capture and resent unchanged on retry; the box
+  // stores it as the webpage card's `capture-id` and replays the existing
+  // result instead of writing a second card. Optional so an installed
+  // extension built before this field still captures (without dedupe).
+  captureId: z.string().uuid().optional(),
 });
 
 /** Result of a successful `clerk.commentary` capture. */

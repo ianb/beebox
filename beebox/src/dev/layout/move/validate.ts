@@ -12,7 +12,7 @@
 import { gitTrackedFiles } from "./git-ops.js";
 import type { PlannedMove } from "./list.js";
 
-export class DuplicateMoveSourceError extends Error {
+class DuplicateMoveSourceError extends Error {
   readonly path: string;
   constructor(path: string) {
     super("two moves share the same `from`");
@@ -21,7 +21,7 @@ export class DuplicateMoveSourceError extends Error {
   }
 }
 
-export class DuplicateMoveTargetError extends Error {
+class DuplicateMoveTargetError extends Error {
   readonly path: string;
   constructor(path: string) {
     super("two moves share the same `to`");
@@ -30,7 +30,7 @@ export class DuplicateMoveTargetError extends Error {
   }
 }
 
-export class MoveChainCycleError extends Error {
+class MoveChainCycleError extends Error {
   readonly moves: string;
   constructor(moves: string) {
     super("moves form a cycle and cannot be ordered");
@@ -39,7 +39,7 @@ export class MoveChainCycleError extends Error {
   }
 }
 
-export class MoveSourceMissingError extends Error {
+class MoveSourceMissingError extends Error {
   readonly path: string;
   constructor(path: string) {
     super("`from` does not exist as a tracked file (and no other move produces it first)");
@@ -48,7 +48,7 @@ export class MoveSourceMissingError extends Error {
   }
 }
 
-export class MoveTargetExistsError extends Error {
+class MoveTargetExistsError extends Error {
   readonly path: string;
   constructor(path: string) {
     super("`to` already exists");

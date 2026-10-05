@@ -9,7 +9,11 @@ box.
 
 **Rules and context.** A box has standing-instruction files (`CLAUDE.md` and
 `.claude/rules/`, for the curious) that the agent loads, the same mechanism a
-coding agent already uses on any programming project. Per-directory context
+coding agent already uses on any programming project. Every agent turn also
+carries a hand-written guide that the engine fills in for that box (its card
+types, procedures, and directory layout), and the agent opens longer engine
+documents on demand, finding them with the same search it uses on the box's
+own files. Per-directory context
 lives in **briefing** cards: what every agent working in that area needs to
 know, one per directory.
 

@@ -6,7 +6,6 @@ labels: [capture, chat, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder found a months-old failed capture in chat
-next-action: fixed
 resolution: implemented
 ---
 

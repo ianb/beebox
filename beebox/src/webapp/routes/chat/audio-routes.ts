@@ -29,10 +29,12 @@ import {
   type CompiledSpeakingVoice,
 } from "../../../schemas/personality/schema.js";
 import { errnoCode } from "../../../shared/error-guards.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { HTTPError, TimeoutError } from "ky";
 import { serveMockTts } from "./tts-mock.js";
 import { resolveTtsService, TtsNotConfiguredError } from "../../../core/tts/resolve.js";
 import { loadTtsConfig } from "../../../core/tts/config.js";
+import { InteractionStreamError } from "../../../core/tts/interaction-stream.js";
 import { EmptyTtsResponseError, type TtsService } from "../../../services/tts.js";
 import { DEFAULT_VOICE, type TtsBackend } from "../../../shared/tts-backends.js";
 import type { ChatRoutesContext } from "./context.js";
@@ -70,6 +72,43 @@ function handleMockTts(options: {
   return serveMockTts(reply, { text, fixture, delayMs, chunkMs, chunkSize, failText });
 }
 
+/** The longest provider message carried into the log and the 502 body. */
+const MAX_PROVIDER_MESSAGE_CHARS = 300;
+
+/** OpenAI/OpenRouter (`sk-…`) and Google AI Studio (`AIza…`) key shapes. */
+const PROVIDER_KEY_PATTERN = /\b(?:sk-[\w-]{8,}|AIza[\w-]{16,})/g;
+
+/**
+ * The provider's own reason for rejecting a speech request. Both providers
+ * answer `{"error":{"message":"…"}}`; anything else is passed through as text.
+ * Without this the 502 said only "400 Bad Request", and a real Gemini 400 on
+ * 2026-10-04 left nothing to diagnose it from.
+ */
+async function providerErrorMessage(response: Response): Promise<string | null> {
+  let body: string;
+  try {
+    body = (await response.text()).trim();
+  } catch (e) {
+    // The body stream can already be consumed or reset; the status still stands.
+    console.warn("[chat-tts] could not read the provider's error body:", e);
+    return null;
+  }
+  if (body === "") return null;
+  let message = body;
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (isRecord(parsed) && isRecord(parsed["error"]) && typeof parsed["error"]["message"] === "string") {
+      message = parsed["error"]["message"];
+    }
+  } catch (_e) {
+    /* ignore: a non-JSON body is passed through as text */
+  }
+  // The message reaches the log and the browser, so anything shaped like a
+  // provider key is masked first, in case a provider echoes one back.
+  const redacted = message.replace(PROVIDER_KEY_PATTERN, "[redacted key]");
+  return redacted.length > MAX_PROVIDER_MESSAGE_CHARS ? `${redacted.slice(0, MAX_PROVIDER_MESSAGE_CHARS)}…` : redacted;
+}
+
 /**
  * A speech backend's failure in one line, or null when the error is not the
  * backend's (a bug here should still be a 500). ky's `HTTPError` carries the
@@ -77,10 +116,17 @@ function handleMockTts(options: {
  * the network reason in `cause`; a `TimeoutError` means the provider accepted
  * the request and never finished it. Leaving that last one out sent a real
  * OpenRouter speech timeout to the boxholder as a bare 500 "Internal server
- * error" — the very outcome the 502 below was added to prevent.
+ * error" — the very outcome the 502 below was added to prevent. An
+ * `InteractionStreamError` is the direct Gemini route failing after its
+ * stream began: an error event, a malformed event, or a stall.
  */
-function describeBackendFailure(e: unknown): string | null {
-  if (e instanceof HTTPError) return `TTS backend answered ${String(e.response.status)} ${e.response.statusText}`.trim();
+async function describeBackendFailure(e: unknown): Promise<string | null> {
+  if (e instanceof InteractionStreamError) return `TTS backend ${e.message}`;
+  if (e instanceof HTTPError) {
+    const status = `TTS backend answered ${String(e.response.status)} ${e.response.statusText}`.trim();
+    const reason = await providerErrorMessage(e.response);
+    return reason === null ? status : `${status}: ${reason}`;
+  }
   if (e instanceof TimeoutError) return `TTS backend timed out: ${e.message}`;
   if (e instanceof TypeError) {
     const reason = e.cause instanceof Error ? e.cause.message : e.message;
@@ -170,6 +216,11 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
     if (mockReply !== undefined) return mockReply;
 
     const { text, instructions, voice } = request.body;
+    // Nothing to say is the caller's mistake, not the provider's: Gemini
+    // answers it with a 400 that would otherwise surface as a backend failure.
+    if (typeof text !== "string" || text.trim() === "") {
+      return reply.status(400).send({ error: "Nothing to speak: the text is empty" });
+    }
     const resolvedVoice = voice && VOICE_MODEL_SET.has(voice) ? voice : DEFAULT_VOICE;
 
     // The injected service is the test seam; production resolves one from the
@@ -201,7 +252,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
       // are the backend's failure, not ours: a 502 that names it, not a bare
       // 500 "Internal server error" with the reason lost (2026-09-08: a
       // "fetch failed" on this route reached the boxholder as exactly that).
-      const failure = describeBackendFailure(e);
+      const failure = await describeBackendFailure(e);
       if (failure !== null) {
         console.error(`[chat-tts] ${failure}`);
         return reply.status(502).send({ error: failure });

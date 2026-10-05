@@ -1,8 +1,8 @@
 # Smoke recognizes Browse as a card without weakening content checks
 
 ```javascript
-const { isBrowseCardUrl, browseListingModeRef, browseDetailMatches } = await import("../../../bin/smoke-browse.ts");
-const { cardViewRendered, directoryRowCount } = await import("../../../bin/smoke-snapshot.ts");
+const { isBrowseCardUrl, browseListingModeRef, browseDetailMatches } = await import("../smoke-browse.ts");
+const { cardViewRendered, directoryRowCount } = await import("../smoke-snapshot.ts");
 const cardUrl = new URL("http://localhost:3210/work/test1/chat");
 cardUrl.searchParams.set("card", '_config/interface/browse.card?viewState={"directory":"_content"}');
 isBrowseCardUrl(cardUrl.href)

@@ -41,7 +41,7 @@ export function IssuesPage() {
     setChanges((current) => {
       const updated = new Map(current);
       const key = issueChangeKey(next);
-      if (next.priority === next.originalPriority && next.nextAction === next.originalNextAction) updated.delete(key);
+      if (next.priority === next.originalPriority) updated.delete(key);
       else updated.set(key, next);
       return updated;
     });

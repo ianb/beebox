@@ -1,10 +1,9 @@
 # Publication leak scan
 
-`scanBundle` (Track E of `docs/plans/publish-pages.md`) is a **pure** scan over a
-rendered bundle's file map. It reports *findings, not a boolean* — each finding
-carries a stable id an operator can wave through with `bbx pub draft
---accept-leak <id>`. It scans only text entries; binary entries are skipped and
-listed. These examples pin one fixture per pattern class, the clean case, the
+`scanBundle` is a **pure** scan over a prepared release's file map. It reports
+*findings, not a boolean* — each finding carries a stable id, so an unchanged
+finding keeps its identity across preparations. It scans only text entries;
+binary entries are skipped and listed. These examples pin one fixture per pattern class, the clean case, the
 binary-skip case, and the stable-id contract.
 
 ```ts setup
@@ -134,10 +133,11 @@ mixed.skippedBinaries.join(",")
 => assets/shot.png
 ```
 
-## Finding ids are stable — the anchor `--accept-leak` references
+## Finding ids are stable
 
 The id is a hash of (kind, file, match), so the same input yields the same id
-across runs. That is what lets an operator accept a specific finding by id.
+across runs. That is what lets a reviewer recognize a finding they already
+judged when the same content is prepared again.
 
 ```ts
 const a = scanOne("home " + REAL_HOME + "x/");

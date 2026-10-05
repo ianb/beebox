@@ -95,13 +95,13 @@ export async function createFieldBox(runDir: string): Promise<FieldBox> {
     cwd: runDir,
     reject: false,
     all: true,
-    // Pin the box's git hooks to THIS checkout's `bbx`. Without the override,
-    // `resolveBbxBin()` deliberately routes a linked worktree's hooks at the
-    // MAIN checkout's `bbx` (worktrees are ephemeral; a stamped path that
-    // vanishes silently disables validation) — but a field box is created by
-    // this checkout to exercise this checkout, and init's own baseline commit
-    // runs the hook immediately. A `main` that predates a flag the new hook
-    // uses would fail that commit and take the whole run down with it.
+    // Pin the box's git hooks to THIS checkout's `bbx`. A field box is
+    // created by this checkout to exercise this checkout, and init's own
+    // baseline commit runs the hook immediately. Without the override,
+    // `resolveBbxBin()` stamps the box's own engine when `node_modules/beebox`
+    // already exists, else rebases a linked worktree's path onto the MAIN
+    // checkout — and a `main` that predates a flag the new hook uses would
+    // fail that commit and take the whole run down with it.
     env: { BBX_HOOK_BIN: bbxBinary() },
     extendEnv: true,
   });

@@ -6,6 +6,8 @@ import {
   type ReadablePage,
 } from "../../src/domain/commentary.js";
 
+const CAPTURE_ID = "30000000-0000-4000-8000-000000000000";
+
 const fullPage: ReadablePage = {
   title: "An Article",
   siteName: "Example Site",
@@ -21,6 +23,7 @@ test("buildCommentaryPayload passes a full page through", async (t) => {
     frozenHtml: "<html>frozen</html>",
     destinationDir: "store/reading",
     timestamp: "2026-06-11T00:00:00Z",
+    captureId: CAPTURE_ID,
   });
   t.same(payload, {
     url: "https://example.com/article",
@@ -32,6 +35,7 @@ test("buildCommentaryPayload passes a full page through", async (t) => {
     frozenHtml: "<html>frozen</html>",
     destinationDir: "store/reading",
     timestamp: "2026-06-11T00:00:00Z",
+    captureId: CAPTURE_ID,
   });
 });
 
@@ -41,12 +45,14 @@ test("buildCommentaryPayload omits null/empty optionals", async (t) => {
     frozenHtml: null,
     destinationDir: null,
     timestamp: "2026-06-11T00:00:00Z",
+    captureId: CAPTURE_ID,
   });
   t.same(payload, {
     url: "https://example.com/article",
     title: "An Article",
     readableMarkdown: "# An Article\n\nBody.",
     timestamp: "2026-06-11T00:00:00Z",
+    captureId: CAPTURE_ID,
   });
   t.notOk("frozenHtml" in payload);
   t.notOk("destinationDir" in payload);
@@ -58,6 +64,7 @@ test("buildCommentaryPayload falls back to a link when no readable markdown", as
     frozenHtml: null,
     destinationDir: null,
     timestamp: "2026-06-11T00:00:00Z",
+    captureId: CAPTURE_ID,
   });
   t.equal(payload.readableMarkdown, "[An Article](https://example.com/article)");
 });
@@ -68,6 +75,7 @@ test("buildCommentaryPayload falls back to url for an empty title", async (t) =>
     frozenHtml: null,
     destinationDir: null,
     timestamp: "2026-06-11T00:00:00Z",
+    captureId: CAPTURE_ID,
   });
   t.equal(payload.title, "https://example.com/article");
   t.equal(

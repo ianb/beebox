@@ -8,8 +8,8 @@ deleting it stops tracking without changing Gmail.
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../../../src/exports/cards.js";
-import { planSourceFields } from "../../../src/scripts/migrate/source-fields.js";
-import { applyFieldEdits } from "../../../src/scripts/migrate/_field-edits.js";
+import { planSourceFields } from "../../../src/scripts/migrate/card-fields/source.js";
+import { applyFieldEdits } from "../../../src/core/card-fields/field-edits.js";
 import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
