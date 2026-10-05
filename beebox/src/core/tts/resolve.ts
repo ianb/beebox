@@ -22,7 +22,7 @@
 
 import { getGeminiApiKey } from "../gemini-key.js";
 import { getOpenAiThinkingKey } from "../openai-thinking-key.js";
-import { getOpenRouterKey, routeVia } from "../openrouter.js";
+import { getOpenRouterKey, openRouterKeyUsable, routeVia } from "../openrouter.js";
 import { createTtsService, type TtsService } from "../../services/tts.js";
 import type { TtsBackend } from "../../shared/tts-backends.js";
 import { loadTtsConfig } from "./config.js";
@@ -62,9 +62,11 @@ export async function resolveTtsService(boxRoot: string): Promise<TtsService> {
         observe: true,
       });
       if (route === null || route.apiKey === "") throw new TtsNotConfiguredError({ backend });
-      if (route.via === "openrouter") return createTtsService({ backend, route });
-      // Resolved only on a direct 429 (`services/tts.ts`), so the key is
-      // observed as spent only when it was.
+      // Overflow only when there is somewhere to overflow to: without it the
+      // direct route keeps retrying its own 429s. The key itself is resolved
+      // only on a direct 429 (`services/tts.ts`), so it is observed as spent
+      // only when it was.
+      if (route.via === "openrouter" || !await openRouterKeyUsable(boxRoot)) return createTtsService({ backend, route });
       const overflow = (): Promise<string | null> => getOpenRouterKey(boxRoot, { purpose: SPEECH_PURPOSE, observe: true });
       return createTtsService({ backend, route, overflow });
     }
