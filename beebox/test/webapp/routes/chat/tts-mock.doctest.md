@@ -129,6 +129,56 @@ JSON.stringify({ status: downRes.statusCode, body: downRes.body, logged: errors.
 await downCtx.cleanup();
 ```
 
+## A provider's rejection carries the provider's reason
+
+On 2026-10-04 a real Gemini request failed with only "TTS backend answered
+400 Bad Request" in the server log and the 502 — the provider's message, the
+one thing that says what was wrong, was dropped. The route now reads it from
+the error body and puts it in both. This drives the real Gemini service
+through ky, with a `fetch` that answers the way Google does.
+
+```ts
+const { createTtsService } = await import("../../../../src/services/tts.js");
+const rejecting = createTtsService({
+  backend: "gemini",
+  apiKey: "AIza-test",
+  fetch: async () => Response.json({ error: { message: "Voice name not found", code: "invalid_request" } }, { status: 400, statusText: "Bad Request" }),
+});
+const rejectCtx = await makeTestServer({ services: { openaiAudio: rejecting } });
+const rejectErrors: string[] = [];
+const errorBefore = console.error;
+console.error = (...args: unknown[]) => rejectErrors.push(args.map(String).join(" "));
+const rejectRes = await (async () => {
+  try {
+    return await rejectCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
+  } finally {
+    console.error = errorBefore;
+  }
+})();
+({ status: rejectRes.statusCode, body: rejectRes.body, logged: rejectErrors.some((line) => line.includes("Voice name not found")) })
+=> { status: 502, body: { error: "TTS backend answered 400 Bad Request: Voice name not found" }, logged: true }
+```
+
+```ts cleanup
+await rejectCtx.cleanup();
+```
+
+Blank text never reaches the provider. Gemini answers it with its own 400
+("Input string cannot be empty"), which would read as a backend failure; it is
+the caller's, so the route says so.
+
+```ts
+const blankAudio = createFakeTts({ backend: "gemini" });
+const blankCtx = await makeTestServer({ services: { openaiAudio: blankAudio } });
+const blankRes = await blankCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "  \n " } });
+({ status: blankRes.statusCode, body: blankRes.body, providerCalls: blankAudio.speeches.length })
+=> { status: 400, body: { error: "Nothing to speak: the text is empty" }, providerCalls: 0 }
+```
+
+```ts cleanup
+await blankCtx.cleanup();
+```
+
 ## A backend that accepts and never finishes is a 502 too
 
 A provider that takes the request and then stalls raises ky's `TimeoutError`,
