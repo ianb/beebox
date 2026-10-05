@@ -72,7 +72,7 @@ export interface AdminGroupDef {
 }
 
 export const ADMIN_GROUPS: readonly AdminGroupDef[] = [
-  { tab: "agents", label: "Agents", description: "What runs the box's agents: the engine, its models, and the accounts behind them.", sections: ["agent-engine", "openrouter-models", "claude-code", "codex"] },
+  { tab: "agents", label: "Agents", description: "What runs the box's agents: the engine, its models, and the accounts behind them.", sections: ["agent-engine", "claude-code", "codex", "openrouter-models"] },
   { tab: "people", label: "People", description: "Who can sign in to this box.", sections: ["allowed-users", "invite"] },
   { tab: "connections", label: "Connections", description: "Outside services this box talks to.", sections: ["google-services", "gmail-filters", "telegram", "cloudflare-publishing"] },
   { tab: "secrets", label: "Secrets", description: "API keys this box can use, and the keys shared across boxes on this host.", sections: ["secrets"] },

@@ -42,8 +42,11 @@ screen continues below the fold and the button lights up
 The live spacer uses `100cqh` inside the size-contained scroller. Do not mirror
 viewport height through React state: the delayed spacer update permits a
 browser clamp before the new height lands and rerenders the message list on
-composer growth. `useSendSpacer` records the completed send on idle so a
-background refresh cannot recreate that send's spacer.
+composer growth. Completion retains the spacer. The controller reduces its CSS minimum only
+by actual blank space and surplus scroll range below the viewport; the reduction lives on the
+scroller so finalization and background refreshes cannot recreate consumed
+space. A transfer after replacement or reordering restores any shortage in the
+legal scroll range and its commit-time clamp before paint. A new send resets it before anchoring.
 
 The controller keeps *geometry* state only (previous `scrollHeight`, previous
 `fromBottom`, one anchor) and no *intent* state: it never asks whether a scroll
@@ -72,8 +75,8 @@ depends on:
   scan-boundary wrapper holding the whole transcript), which measure no shift;
   and anchoring to the topmost *partly*-visible item would miss an image
   decoding inside it, which grows it downward without moving its own top.
-- **The last turn carries `min-height: <scroller clientHeight>`** once the person
-  has sent in this session (the controller reports `viewportPx`), so "the user
+- **The last turn carries a viewport-based minimum height** once the person
+  has sent in this session, so "the user
   message at the top of the screen" is a reachable scroll position even for a
   one-line reply. It moves down with the turn.
 

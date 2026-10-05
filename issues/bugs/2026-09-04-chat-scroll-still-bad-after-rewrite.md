@@ -85,3 +85,16 @@ same session only if it is genuinely the same work.
 The work: find out what "still bad" actually is, on the surfaces where the
 boxholder sees it, before changing the controller again. Six patches and one
 rewrite have each been declared done against desktop evidence.
+
+## 2026-10-05 — short-reply completion jump
+
+The new concrete report reproduced in the Chromium harness: removing the send
+spacer at completion moved the sent message down by 212 px. The worktree fix
+retains that space and consumes only surplus scroll range below the viewport.
+The regression now keeps the message at 0 px. Review also exposed over-trimming
+during viewport resizing and a 49 px jump when a no-response reply disappeared;
+both are corrected. Added scenarios cover those transitions, scrolling space
+away, later appended content, and a second send; all 31 harness scenarios
+pass at desktop and phone widths. This does not close the physical-device
+verification concerns above. Real chat synthetic sends were checked at both
+widths; authoritative backend finalization was not exercised in this pass.

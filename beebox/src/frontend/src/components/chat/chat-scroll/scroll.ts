@@ -40,10 +40,13 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import type { MutableRefObject } from "react";
 import { easeOrSnapToTop } from "./ease.js";
 import { anchorChild, anchorOffset, type Anchor } from "./anchor";
+import { trimSendSpacer, resetSendSpacer, transferSendSpacer, captureSpacerPosition } from "./spacer";
 import { currentBottomTop } from "./bottom.js";
 import { armPrependSnapshot, clearTimer, movedUp } from "./refs.js";
 import { decideReconcile, type ReconcileAction } from "./scroll-reconcile";
 import { recordScrollTrace } from "../../../lib/scroll-diagnostics/diagnostics";
+
+export { SEND_SPACER_MIN_HEIGHT } from "./spacer";
 
 /** Distance from the bottom that still counts as "at the bottom". Never exact
  *  equality — sub-pixel/retina rounding makes `=== 0` unreachable. */
@@ -286,13 +289,12 @@ export function useChatScroll(): ChatScroll {
   const anchorRef = useRef<Anchor | null>(null);
   const anchorTimerRef = useRef<number | null>(null);
   const openHoldRef = useRef(new OpenHold());
-  const observersRef = useRef<ScrollObservers>({
-    content: null,
-    scroller: null,
-    live: null,
-  });
+  const observersRef = useRef<ScrollObservers>({ content: null, scroller: null, live: null });
 
+  const anchorEaseCancelRef = useRef<(() => void) | null>(null);
   const measure = useCallback((el: HTMLDivElement) => {
+    captureSpacerPosition(el);
+    if (!anchorEaseCancelRef.current) trimSendSpacer(el, liveContentElRef.current);
     const fromBottom = currentBottomTop(el, liveContentElRef.current) - el.scrollTop;
     // Growth is noticed here, not only in reconcile: a scroll event (the
     // previous write's) can precede the resize callback in the same frame, and
@@ -308,7 +310,6 @@ export function useChatScroll(): ChatScroll {
     return Math.max(0, fromBottom);
   }, [setAtBottomFlag, setUnseen]);
 
-  const anchorEaseCancelRef = useRef<(() => void) | null>(null);
   const writeTop = useCallback((top: number, behavior: ScrollBehavior) => {
     const el = scrollerElRef.current;
     if (!el) return;
@@ -335,6 +336,7 @@ export function useChatScroll(): ChatScroll {
   const anchorToTop = useCallback((target: Element | null) => {
     const el = scrollerElRef.current;
     if (!el || !target) return;
+    resetSendSpacer(el);
     endOpenPhase("send");
     setUnseen(false);
     // The one user-initiated jump gets the quick ease (chat-scroll-ease.ts);
@@ -441,9 +443,10 @@ export function useChatScroll(): ChatScroll {
   }, [reconcile]);
 
   const liveContentRef = useCallback((el: HTMLDivElement | null) => {
+    if (scrollerElRef.current) transferSendSpacer(scrollerElRef.current, { live: el, writeTop });
     liveContentElRef.current = el;
     observeResize({ refs: observersRef, key: "live", el, onResize: () => reconcile("content") });
-  }, [reconcile]);
+  }, [reconcile, writeTop]);
 
   useEffect(() => scrollCleanup({
     observers: observersRef.current, timers: [anchorTimerRef, prependTimerRef],
