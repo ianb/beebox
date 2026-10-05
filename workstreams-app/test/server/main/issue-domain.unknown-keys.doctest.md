@@ -55,11 +55,25 @@ JSON.stringify(parse([
   "area: beebox",
   "labels: [soft-launch]",
   "priority: important",
-  "next-action: discuss",
   "filed-by: agent",
   "discovered-by: agent",
   "discovered-in: worktree-foo — while doing X",
   "resolution: implemented",
 ].join("\n")).unknownKeys)
 => []
+```
+
+## A retired field is reported like any other
+
+Next actions moved to a local store outside git. A `next-action:` line left on
+an old branch is therefore unknown, so it surfaces instead of silently doing
+nothing.
+
+```ts
+JSON.stringify(parse([
+  'title: "Something broke"',
+  "workstream: unattached",
+  "next-action: discuss",
+].join("\n")).unknownKeys)
+=> ["next-action"]
 ```
