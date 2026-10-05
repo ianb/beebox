@@ -28,6 +28,7 @@ import { isWidthStep, resizeHarnessWidth } from "./chat-scroll-width";
 import type { RunSummary } from "./chat-scroll-steps";
 import type { Scenario, Step } from "./chat-scroll-scenarios";
 import { Sampler, fromBottomOf, type RunContext } from "./chat-scroll-sampler";
+import { runExpectedResizeRace } from "./chat-scroll-expected-diagnostic";
 
 export type { RunSummary } from "./chat-scroll-steps";
 export type { RunContext } from "./chat-scroll-sampler";
@@ -68,8 +69,8 @@ class HarnessNotMountedError extends Error {
   }
 }
 
-function growTwiceInOnePass(opts: { el: HTMLDivElement; ctx: RunContext; px: number; againPx: number }): void {
-  const { el, ctx, px, againPx } = opts;
+function growTwiceInOnePass(opts: { el: HTMLDivElement; ctx: RunContext; px: number; againPx: number; armExpectedDiagnostic: () => void }): void {
+  const { el, ctx, px, againPx, armExpectedDiagnostic } = opts;
   // A one-shot observer created after the controller's runs after it in
   // the same pass; a layout change made inside it is delivered in that
   // pass's next iteration — before any scroll event.
@@ -80,6 +81,7 @@ function growTwiceInOnePass(opts: { el: HTMLDivElement; ctx: RunContext; px: num
     if (fired) return;
     fired = true;
     ro.disconnect();
+    armExpectedDiagnostic();
     flushApply(() => ctx.apply((prev) => growLast(prev, againPx)));
   });
   ro.observe(content);
@@ -181,8 +183,10 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       return;
     }
     case "growTwiceInOnePass": {
-      growTwiceInOnePass({ el, ctx, px: step.px, againPx: step.againPx });
-      await settle();
+      await runExpectedResizeRace(ctx, async (armExpectedDiagnostic) => {
+        growTwiceInOnePass({ el, ctx, px: step.px, againPx: step.againPx, armExpectedDiagnostic });
+        await settle();
+      });
       return;
     }
     case "userWheel":
