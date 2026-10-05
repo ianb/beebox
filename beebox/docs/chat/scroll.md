@@ -42,6 +42,25 @@ never from what the controller says about itself.
 A run takes ~40s. It is deterministic: the same seed, fixed pixel heights, and a
 per-scenario reset that goes through the controller's open-thread path.
 
+## Short-reply spacer regression (2026-10-05)
+
+Completion retains the spacer instead of letting the browser clamp the sent
+message downward. Scrolling and content growth remove only actual blank space
+below the viewport. Real reply content below the fold does not consume that
+minimum: it may be needed again after a keyboard resize or a shorter finalize.
+If completion replaces or reorders the last item, its spacer restores any
+shortage in the legal scroll range and any commit-time clamp before paint.
+If the content being read disappears entirely, return to remaining content
+instead of restoring a viewport inside blank space.
+
+The spacer scenario group covers short completion, scrolling away, appended
+content, another send, viewport shrink/restore, long-to-short completion, and
+no-response removal, authoritative user-key replacement, and pending-bubble
+reordering. Use `finalUserMessageTop` to check completion and the
+actual scroll-range measurement to check consumption. Real chat `/fakestream`
+sends check the composer wiring; they do not prove authoritative backend
+finalization.
+
 ## The browser procedure
 
 ### Setup
@@ -90,7 +109,7 @@ bin/browse eval --no-wait '(()=>{const s=document.querySelector("[data-testid=ch
 
 Sending again must re-anchor to the newest user message. If `userTop` is far
 from 0 on a short reply, suspect the last-turn spacer (`min-height` on the last
-item, from the controller's `viewportPx`): without it the anchor position is not
+item, based on the scroller's CSS container height): without it the anchor position is not
 a reachable scroll offset.
 
 ### The reply does not follow
@@ -199,8 +218,9 @@ bin/browse eval 'JSON.stringify(window.__m)'
 
 Finalize must not briefly remove the assistant turn and restore it after the
 history request. That transient collapse is the regression
-`chat-machine-finalize.doctest.md` guards. Record intentional send-spacer
-removal separately; a height decrease by itself is not proof of that bug.
+`chat-machine-finalize.doctest.md` guards. The send spacer remains after completion; a short reply must leave the sent
+message at the top. Scrolling upward consumes only spacer below the viewport.
+A height decrease by itself is not proof of a content-collapse bug.
 
 ### Reproduction scripts
 

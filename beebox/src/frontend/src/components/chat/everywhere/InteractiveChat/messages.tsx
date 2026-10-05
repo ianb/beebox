@@ -14,8 +14,7 @@ import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
 import type { ModelMarker } from "../../InteractiveChat-helpers";
-import { useSendSpacer } from "./chat-scroll-spacer";
-import { useChatScroll } from "../../chat-scroll/scroll";
+import { useChatScroll, SEND_SPACER_MIN_HEIGHT } from "../../chat-scroll/scroll";
 import {
   buildDataItems,
   dataItemKey,
@@ -232,7 +231,7 @@ function MessageListInner({
 
   // The bounded open-thread hold ends once the first history render has landed.
   const loading = snapshot.matches("loading");
-  const showSendSpacer = useSendSpacer(sendSignal, snapshot.matches("idle"));
+  const showSendSpacer = sendSignal > 0;
   useEffect(() => {
     if (!loading && messages.length > 0) settleOpen();
   }, [loading, messages.length, settleOpen]);
@@ -320,14 +319,9 @@ function MessageListInner({
               // transition so React reconciles it in place — no remount/flash.
               const natural = dataItemKey(item);
               const key = liveKey && liveTargetUuid && natural === liveTargetUuid ? liveKey : natural;
-              // The last turn carries a viewport-tall min-height from the send
-              // until its reply is complete, so "the user message at the top of
-              // the screen" is a reachable scroll position while the reply
-              // streams in. Once the turn is done the room below it is only
-              // blank space; dropping it lets the browser clamp the view to the
-              // real bottom — one move, at finalize, to a place that shows the
-              // whole reply.
-              const spacer = showSendSpacer && index === data.length - 1 ? "100cqh" : undefined;
+              // Completion retains the send's room. The controller consumes
+              // only surplus space below the viewport, without scrolling.
+              const spacer = showSendSpacer && index === data.length - 1 ? SEND_SPACER_MIN_HEIGHT : undefined;
               return (
                 <div
                   key={key}

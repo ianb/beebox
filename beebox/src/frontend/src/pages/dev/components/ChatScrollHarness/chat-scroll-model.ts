@@ -107,3 +107,22 @@ export class HarnessStore {
     this.set(initialContent());
   }
 }
+
+/** Finalize changes that replace keyed nodes or move a pending bubble. */
+export function changeTail(prev: HarnessContent, operation: "remove" | "remove-and-rekey" | "swap"): HarnessContent {
+  const messages = prev.messages.slice();
+  const last = messages.pop();
+  switch (operation) {
+    case "remove":
+      break;
+    case "swap":
+      if (last) messages.splice(-1, 0, last);
+      break;
+    case "remove-and-rekey": {
+      const user = messages.at(-1);
+      if (user) messages[messages.length - 1] = { ...user, id: prev.nextId };
+      break;
+    }
+  }
+  return { ...prev, messages, nextId: prev.nextId + 1 };
+}

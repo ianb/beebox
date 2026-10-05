@@ -23,6 +23,7 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { SEND_SPACER_MIN_HEIGHT } from "../../../../components/chat/chat-scroll/scroll";
 import { Button } from "../../../../components/ui/Button";
 import { Text } from "../../../../components/ui/Text";
 import { Hint } from "../../../../components/ui/Hint";
@@ -321,7 +322,7 @@ function ScrollFrame({ content, attachScroller, attachContent, attachLiveContent
               data-testid="harness-message"
               data-role={m.role}
               className={m.role === "assistant" ? "rounded bg-white border border-warm-200" : "rounded bg-primary-100 border border-primary-200 ml-12"}
-              style={{ minHeight: content.lastTurnSpacer && m.id === lastId ? "100cqh" : undefined }}
+              style={{ minHeight: content.lastTurnSpacer && m.id === lastId ? SEND_SPACER_MIN_HEIGHT : undefined }}
             >
               <div
                 ref={content.lastTurnSpacer && m.id === lastId ? attachLiveContent : undefined}

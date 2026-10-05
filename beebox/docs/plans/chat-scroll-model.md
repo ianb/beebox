@@ -89,11 +89,11 @@ Writes, exhaustively:
    the scroll-to-bottom button shows. (The boxholder's proposal and the
    ChatGPT/claude.ai behaviour.) The last turn carries
    `min-height: 100cqh` (the scroller is a size container) so "at the top" is reachable when the
-   reply is short; the spacer lasts until the reply is complete (2026-08-26:
-   it used to persist until the next send, leaving a screen of blank room
-   under every finished reply — dropping it at finalize lets the browser
-   clamp the view to the real bottom, one move to a place showing the whole
-   reply). Ordering on send:
+   reply is short. As of 2026-10-05 the spacer remains after completion:
+   removing it made a short reply jump down as the browser clamped the view.
+   The controller reduces its minimum height only by actual blank space within
+   the surplus scroll range below the viewport, leaving visible content stationary. A CSS container
+   unit still handles viewport changes synchronously. Ordering on send:
    the previous turn loses its spacer, the new user turn gains it, and the
    scroll write runs in a layout effect after that commit — one write, after
    the shrink above and the growth below have both landed, so nothing clamps.
