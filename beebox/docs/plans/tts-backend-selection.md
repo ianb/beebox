@@ -544,7 +544,8 @@ What the measurement changed:
 - **Streamed is faster even when buffered**, but its usage reports about 20%
   more audio tokens per second (38 versus 32), so it may bill that much more.
   First audio arrives in about 1.0 s at every length; using that needs a PCM
-  player in the client, which is not built.
+  player in the client, which is not built
+  ([gemini-tts-streamed-playback](../../../issues/features/2026-10-04-gemini-tts-streamed-playback.md)).
 - **Direct has a low rate limit**: 10 requests a minute on Tier 1. When the box
   also holds an OpenRouter key, a direct 429 overflows that clip to OpenRouter
   (unstyled) rather than waiting out `Retry-After`.
