@@ -77,7 +77,7 @@ high-water mark. Levers, cheapest first:
   no override, so a restart still signs everyone out.
 - **Claude sign-in through Admin → Agents works inside the VM.** The first
   chat before that showed CLI-only advice
-  ([agent-login-onboarding-in-web](../../issues/features/2026-09-30-agent-login-onboarding-in-web.md)).
+  ([agent-login-onboarding-in-web](../../issues/closed/features/2026-09-30-agent-login-onboarding-in-web.md)).
 - **Quit took two clicks** (`terminateLater` left the app running after the
   box stopped). Quit and SIGTERM now stop the box and exit directly.
 - **A restart waited 5 minutes.** Quitting right after a chat turn: the

@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeClaudeCli } from "../../../../src/services/claude-cli.js";
+import { resetAgentReadinessCache } from "../../../../src/core/agent/readiness.js";
 import { createFakeCodexCli } from "../../../../src/services/codex-cli/core.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { CONFIG_RELATIVE_PATH } from "../../../../src/webapp/box-config-write.js";
@@ -73,6 +74,7 @@ default applies.
 ```ts continue
 await patchConfig(box.root, { agentModel: "claude-opus-5-5" });
 codexCli.status = { kind: "logged-in" };
+resetAgentReadinessCache();
 const before = await owner.readiness();
 JSON.stringify([before.anyReady, before.defaultReady])
 => [true,false]
@@ -89,6 +91,7 @@ Signing in to Claude Code later changes nothing: the Codex default still runs.
 
 ```ts continue
 claudeCli.loggedIn = true;
+resetAgentReadinessCache();
 (await owner.reconcileDefault()).switched
 => false
 
@@ -103,6 +106,7 @@ default to that list instead of leaving a default the box does not offer.
 
 ```ts continue
 codexCli.status = { kind: "logged-out" };
+resetAgentReadinessCache();
 await patchConfig(box.root, { engines: { codex: true, claude: false } });
 await owner.reconcileDefault();
 const listed = await config(box.root);
@@ -118,6 +122,7 @@ reconciling pins that model as the default.
 
 ```ts continue
 claudeCli.loggedIn = false;
+resetAgentReadinessCache();
 await patchConfig(box.root, { openrouterModels: [{ id: "qwen/qwen3-coder", label: "Qwen3 Coder" }] });
 (await owner.readiness()).openrouter
 => not-ready
@@ -143,6 +148,7 @@ default either.
 ```ts continue
 await patchConfig(box.root, { agentModel: undefined, agentEngine: "claude" });
 claudeCli.authStatus = async () => ({ probeInconclusive: true });
+resetAgentReadinessCache();
 const unsure = await owner.readiness();
 JSON.stringify([unsure.claude, unsure.defaultReady])
 => ["unknown",true]
@@ -159,6 +165,7 @@ Code here", not a transient non-answer, so it does not keep chat unblocked.
 ```ts continue
 await patchConfig(box.root, { openrouterModels: [] });
 claudeCli.authStatus = async () => ({ probeInconclusive: true, error: "spawn claude ENOENT", cliMissing: true });
+resetAgentReadinessCache();
 const missing = await owner.readiness();
 JSON.stringify([missing.claude, missing.anyReady])
 => ["not-ready",false]
@@ -176,6 +183,30 @@ await patchConfig(box.root, { agentModel: "glm-5.3" });
 const glm = await owner.readiness();
 JSON.stringify([glm.defaultReady, glm.anyReady])
 => [true,true]
+```
+
+## Answers are cached, and the admin page's live probe refreshes them
+
+Each login probe spawns a CLI, and the web UI asks on every load and focus,
+so a sign-in is remembered for minutes. A logout made outside the admin page
+shows up when that expires; the admin page's own status check updates the
+cache at once, which is how a sign-in it is polling for unblocks chat.
+
+```ts continue
+await patchConfig(box.root, { agentModel: undefined, agentEngine: "codex" });
+codexCli.status = { kind: "logged-in" };
+resetAgentReadinessCache();
+(await owner.readiness()).codex
+=> ready
+
+codexCli.status = { kind: "logged-out" };
+(await owner.readiness()).codex
+=> ready
+
+const adminCaller = appRouter.createCaller({ boxRoot: box.root, boxSlug: "test", eventBus, services: { claudeCli, codexCli }, authed: true, user: { email: "owner@example.com", name: "Owner" }, isOwner: true }).admin;
+await adminCaller.codexStatus();
+(await owner.readiness()).codex
+=> not-ready
 ```
 
 ## Only the owner can move the default

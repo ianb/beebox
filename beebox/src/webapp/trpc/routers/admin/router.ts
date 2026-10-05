@@ -9,13 +9,11 @@ import { telegramLegacySecretPath, telegramSecretName } from "../../../../connec
 import { forgetBoxSecret, setAndGrantSecret } from "../../../../core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../lib/box-slug.js";
 import { createTelegramService } from "../../../../services/telegram.js";
-import { createClaudeCliService } from "../../../../services/claude-cli.js";
-import { createCodexCliService } from "../../../../services/codex-cli/core.js";
-import { resetCodexAuthCache } from "../../../../core/agent/auth-preflight.js";
 import { resolveBoxPublicUrl } from "../../../../lib/public-url.js";
 import { baseServerUrl } from "../../../base-server-url.js";
 import { googleAdminProcedures } from "./google.js";
 import { backupAdminProcedures } from "./backup.js";
+import { agentAuthAdminProcedures } from "./agent-auth.js";
 import { openrouterAdminProcedures } from "./openrouter.js";
 import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../../services/tailscale.js";
@@ -296,61 +294,7 @@ export const adminRouter = router({
   ...backupAdminProcedures,
   ...openrouterAdminProcedures,
 
-  claudeStatus: ownerProcedure.query(async ({ ctx }) => {
-    const claude = ctx.services.claudeCli ?? createClaudeCliService();
-    return claude.authStatus();
-  }),
-
-  claudeLogin: ownerProcedure.mutation(async ({ ctx }) => {
-    const claude = ctx.services.claudeCli ?? createClaudeCliService();
-    const ownerEmail = process.env.BBX_OWNER_EMAIL;
-    const result = await claude.authLogin(ownerEmail);
-    if (result.authUrl) {
-      return { authUrl: result.authUrl, status: "waiting" as const };
-    }
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: result.error ?? "Failed to get auth URL",
-    });
-  }),
-
-  claudeSubmitCode: ownerProcedure
-    .input(z.object({ code: z.string().trim().min(1).max(512) }))
-    .mutation(async ({ ctx, input }) => {
-      const claude = ctx.services.claudeCli ?? createClaudeCliService();
-      const result = await claude.authSubmitCode(input.code);
-      if (result.accepted) return { accepted: true as const };
-      throw new TRPCError({ code: "BAD_REQUEST", message: result.error ?? "Code not accepted" });
-    }),
-
-  claudeLogout: ownerProcedure.mutation(async ({ ctx }) => {
-    const claude = ctx.services.claudeCli ?? createClaudeCliService();
-    return claude.authLogout();
-  }),
-
-  codexStatus: ownerProcedure.query(async ({ ctx }) => {
-    const codex = ctx.services.codexCli ?? createCodexCliService();
-    return codex.authStatus();
-  }),
-
-  codexLogin: ownerProcedure.mutation(async ({ ctx }) => {
-    const codex = ctx.services.codexCli ?? createCodexCliService();
-    return codex.authLogin();
-  }),
-
-  codexCancelLogin: ownerProcedure.mutation(async ({ ctx }) => {
-    const codex = ctx.services.codexCli ?? createCodexCliService();
-    const result = await codex.authCancel();
-    if (!result.success) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error ?? "Could not cancel Codex login" });
-    return result;
-  }),
-
-  codexLogout: ownerProcedure.mutation(async ({ ctx }) => {
-    const codex = ctx.services.codexCli ?? createCodexCliService();
-    const result = await codex.authLogout();
-    if (result.success) resetCodexAuthCache();
-    return result;
-  }),
+  ...agentAuthAdminProcedures,
 
   /**
    * The box's current Tailscale URL, or null when it isn't exposed. Shells

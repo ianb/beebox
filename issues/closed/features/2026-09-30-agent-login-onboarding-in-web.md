@@ -6,7 +6,17 @@ labels: [install]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-installable-app — first chat in the Mac spike app
+resolution: implemented
 ---
+
+> **Closed 2026-10-05: implemented, in the shape the boxholder chose.**
+> `agents.readiness` (`beebox/src/core/agent/readiness.ts`) reports whether
+> a Claude Code login, a Codex login, or an OpenRouter key with an added
+> model can run. While none can, the composer is replaced by a notice and an
+> owner opening the box lands on Admin → Agents (OpenRouter now last there).
+> A default that cannot run moves to one that can. The boxholder's direction
+> replaced the first-run "pick an agent" step proposed below.
+
 
 Job: a new boxholder who installed a packaged box (container, Mac app, NAS)
 sends a first chat message and needs an agent account connected. They have
@@ -32,5 +42,5 @@ What is missing:
   Code and Codex as equal choices and sets the engine from the choice. The
   boxholder raised this: neither should read as the default.
 - The container image has no `codex` on PATH
-  ([docker-image-missing-qpdf-and-docling](../bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md));
+  ([docker-image-missing-qpdf-and-docling](../../bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md));
   check that the Codex section works in the container before relying on it.

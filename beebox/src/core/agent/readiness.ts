@@ -69,10 +69,49 @@ async function defaultState(boxRoot: string, states: Record<"claude" | "codex" |
   return added.some((m) => m.id === model) ? states.openrouter : "not-ready";
 }
 
+/**
+ * Login probes spawn a CLI each, and the web UI asks on every page load and
+ * window focus, so answers are cached per process (logins are machine-wide):
+ * a sign-in for minutes, anything else for seconds so a new sign-in shows up
+ * quickly. The admin page's live status checks refresh the cache, so the
+ * sign-in it is polling for unblocks chat right away.
+ */
+const READY_TTL_MS = 5 * 60 * 1000;
+const NOT_READY_TTL_MS = 10 * 1000;
+
+type Provider = "claude" | "codex";
+const probeCache = new Map<Provider, { state: ProviderState; at: number }>();
+
+function remember(provider: Provider, state: ProviderState): ProviderState {
+  probeCache.set(provider, { state, at: Date.now() });
+  return state;
+}
+
+async function cachedProbe(provider: Provider, probe: () => Promise<ProviderState>): Promise<ProviderState> {
+  const hit = probeCache.get(provider);
+  if (hit !== undefined && Date.now() - hit.at < (hit.state === "ready" ? READY_TTL_MS : NOT_READY_TTL_MS)) return hit.state;
+  return remember(provider, await probe());
+}
+
+/** Record a live Claude status (the admin page's own probe). */
+export function rememberClaudeStatus(status: Record<string, unknown>): void {
+  remember("claude", claudeState(status));
+}
+
+/** Record a live Codex status (the admin page's own probe). */
+export function rememberCodexStatus(status: CodexAuthStatus): void {
+  remember("codex", codexState(status));
+}
+
+/** Forget cached answers, after a logout or between test steps. */
+export function resetAgentReadinessCache(): void {
+  probeCache.clear();
+}
+
 export async function checkAgentReadiness(boxRoot: string, services: ReadinessServices): Promise<AgentReadiness> {
   const [claude, codex, openrouter] = await Promise.all([
-    services.claudeCli.authStatus().then(claudeState),
-    services.codexCli.authStatus().then(codexState),
+    cachedProbe("claude", () => services.claudeCli.authStatus().then(claudeState)),
+    cachedProbe("codex", () => services.codexCli.authStatus().then(codexState)),
     openrouterState(boxRoot),
   ]);
   const states = { claude, codex, openrouter };
