@@ -28,14 +28,29 @@ The Cloudflare publishing token field has the same shape
 Search for other credential inputs (connector setup, any token field) and fix
 them together.
 
-## Direction to verify
+## Boxholder decisions (2026-10-05)
 
-- Do not use `type="password"`. Use a text input with `autocomplete="off"`,
-  `spellcheck={false}`, `autoCapitalize="off"`, and mask the value with CSS
-  (`-webkit-text-security: disc`, supported in Chrome and Safari). A
-  show/hide toggle can remove the mask.
-- Check whether submitting through `fetch` without a native form `submit`
-  event also avoids the prompt.
-- Verify in a real Chrome and Safari profile with the built-in password
-  manager on (the headless test browser does not show the save prompt), and
-  confirm screen readers still announce the field sensibly.
+- **Plain text input.** A secret is "not secret like a password". The value
+  field is an ordinary visible text input, not masked: no `type="password"`
+  and no CSS masking. Keep `autocomplete="off"`, `spellcheck={false}`, and
+  `autoCapitalize="off"` so the browser neither saves nor alters the key.
+- **The boxholder can show a stored value.** Today a value is "never shown
+  again" after saving. The boxholder wants a way to show it in Admin.
+- **Not exposed to the agent.** Showing is a signed-in owner action in the
+  UI. Agents keep their current access, which is through grants and never by
+  reading values back.
+
+The "show" part changes the security surface: a new owner-gated read of
+secret values. It needs its own route review, an entry in
+`beebox/docs/security-report.md` (security-report skill), and a decision on
+details such as whether showing is logged (the secrets access log exists,
+`beebox/src/core/secrets/access-log.ts`) and whether it requires a fresh
+sign-in.
+
+## Verify
+
+- In a real Chrome and Safari profile with the built-in password manager on,
+  setting a secret shows no save prompt. The headless test browser does not
+  show the prompt.
+- The other credential inputs (the Cloudflare token field above, any
+  connector token field) get the same treatment.
