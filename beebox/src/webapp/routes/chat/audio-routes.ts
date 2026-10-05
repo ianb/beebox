@@ -33,6 +33,7 @@ import { HTTPError, TimeoutError } from "ky";
 import { serveMockTts } from "./tts-mock.js";
 import { resolveTtsService, TtsNotConfiguredError } from "../../../core/tts/resolve.js";
 import { loadTtsConfig } from "../../../core/tts/config.js";
+import { InteractionStreamError } from "../../../core/tts/interaction-stream.js";
 import { EmptyTtsResponseError, type TtsService } from "../../../services/tts.js";
 import { DEFAULT_VOICE, type TtsBackend } from "../../../shared/tts-backends.js";
 import type { ChatRoutesContext } from "./context.js";
@@ -77,9 +78,12 @@ function handleMockTts(options: {
  * the network reason in `cause`; a `TimeoutError` means the provider accepted
  * the request and never finished it. Leaving that last one out sent a real
  * OpenRouter speech timeout to the boxholder as a bare 500 "Internal server
- * error" — the very outcome the 502 below was added to prevent.
+ * error" — the very outcome the 502 below was added to prevent. An
+ * `InteractionStreamError` is the direct Gemini route failing after its
+ * stream began: an error event, a malformed event, or a stall.
  */
 function describeBackendFailure(e: unknown): string | null {
+  if (e instanceof InteractionStreamError) return `TTS backend ${e.message}`;
   if (e instanceof HTTPError) return `TTS backend answered ${String(e.response.status)} ${e.response.statusText}`.trim();
   if (e instanceof TimeoutError) return `TTS backend timed out: ${e.message}`;
   if (e instanceof TypeError) {

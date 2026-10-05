@@ -1,7 +1,7 @@
 # TTS container routing
 
 The TTS backends disagree about container. OpenAI returns `audio/mpeg`; Gemini
-asks OpenRouter for `pcm` and wraps it as `audio/wav` (`services/tts.ts`).
+returns raw PCM that the server wraps as `audio/wav` (`services/tts.ts`).
 MediaSource plays the first and supports **no** WAV type, and appending WAV to a
 source buffer opened as `audio/mpeg` does not fail at `addSourceBuffer` — the
 element errors later with `MEDIA_ERR_SRC_NOT_SUPPORTED` and the utterance is

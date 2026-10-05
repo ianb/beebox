@@ -87,7 +87,11 @@ const TTS_BACKEND_OPTIONS: ReadonlyArray<{
   note?: string;
 }> = [
   { label: "OpenAI (gpt-4o-mini-tts)", backend: "openai" },
-  { label: "Gemini (via OpenRouter)", backend: "gemini", note: "preview model. Its voices differ, so a personality-card voice is replaced." },
+  {
+    label: "Gemini (3.8 Flash-Lite)",
+    backend: "gemini",
+    note: "Its voices differ, so a personality-card voice is replaced.",
+  },
 ];
 
 function optionLabel(options: ReadonlyArray<{ label: string; service: string }>, service: string | null): string {
