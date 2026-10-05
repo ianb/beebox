@@ -81,6 +81,31 @@ with years of history will feel the `git log -p` and fsck rows most.
    An app needs an in-app or admin-UI flow for them before it is
    self-service.
 
+## Disk use (addendum, 2026-10-05)
+
+Over a week of builds the runtime's store grew to 59 GB on the
+boxholder's Mac, with 32 GB left free on disk:
+
+- The builder's BuildKit cache: 23 GB. It lives in a sparse ext4 disk image
+  that never hands freed blocks back to macOS. `buildctl prune
+  --keep-storage` shrank the cache to 5.8 GB, and the file stayed at 23 GB.
+  Capping the cache inside the builder does not bound disk use; only
+  deleting the builder does.
+- Unpacked snapshots of old, untagged image builds: about 20 GB.
+- A leftover container and throwaway test boxes: about 11 GB. A
+  `container run --rm` whose CLI is killed (here by `timeout`) leaves the VM
+  running; it held 2 GB of RAM for hours unnoticed.
+
+The runtime's own commands cleaned it (`container builder delete`,
+`container prune`, `container image prune` for untagged images), plus
+deleting finished test boxes: 59 GB → 7.6 GB.
+
+The rule for every build (and for the app, which must apply it to whatever it
+pulls or builds): refuse to start under 30 GB free; afterwards delete the
+builder, remove stopped containers, and prune untagged images. The price is a
+cold build each time (about 5-7 min). The app should also check for and stop
+VMs it did not start cleanly.
+
 ## Not tested
 
 - Completing a real Claude or Codex login, and an agent run inside the VM.
