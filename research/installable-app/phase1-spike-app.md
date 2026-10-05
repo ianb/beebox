@@ -86,8 +86,14 @@ high-water mark. Levers, cheapest first:
   `.git/bbx-maintenance/work/`. The next start's maintenance step waited for
   the lease to go stale (`LOCK_STALE_MS.default`, 5 min) before serving,
   with no output. An idle box stops in 0.3 s with no leftovers. The timeout is now
-  60 s and the exit time is logged; which close hook is slow after a chat
-  turn is not yet known.
+  60 s and the exit time is logged.
+- **The slow stop was the spike's own port forwarder** (found 2026-10-04).
+  `stop()` released the forwarder before signalling the server; the relay
+  loop held only a weak reference and stopped, so the server's WebSocket
+  close frame never reached the browser and `ws` waited its 30 s
+  `closeTimeout`. With a browser attached: 30.0 s before the fix, 3.1 s
+  after. The same server natively, or reached at the VM's address, stops in
+  0.0–0.1 s; beebox itself is not at fault.
 - **Menu icon** now distinguishes stopped (outline box), starting/stopping
   (hourglass), serving (filled box), and failed (warning).
 

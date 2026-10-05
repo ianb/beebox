@@ -60,8 +60,13 @@ final class BoxRuntime: ObservableObject {
     func stop() async {
         statsTask?.cancel()
         statsTask = nil
-        forwarder?.stop()
-        forwarder = nil
+        // The forwarder stays up until the server has exited: the server's
+        // WebSocket close frames reach the browser through it, and without
+        // them the server waits out its 30 s close timeout.
+        defer {
+            forwarder?.stop()
+            forwarder = nil
+        }
         let stopping = Date()
         defer { NSLog("beebox: stopped in \(String(format: "%.1f", Date().timeIntervalSince(stopping)))s") }
         let hadContainer = container != nil

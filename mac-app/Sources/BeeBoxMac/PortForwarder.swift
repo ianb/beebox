@@ -32,8 +32,10 @@ final class PortForwarder: @unchecked Sendable {
                     break
                 }
             }
-            listener.newConnectionHandler = { [weak self] client in
-                self?.bridge(client)
+            let target = self.target
+            let queue = self.queue
+            listener.newConnectionHandler = { client in
+                Self.bridge(client, to: target, on: queue)
             }
             listener.start(queue: queue)
         }
@@ -43,7 +45,9 @@ final class PortForwarder: @unchecked Sendable {
         listener.cancel()
     }
 
-    private func bridge(_ client: NWConnection) {
+    /// Static, so established connections keep relaying after the
+    /// forwarder itself is released; they end when either side closes.
+    private static func bridge(_ client: NWConnection, to target: NWEndpoint, on queue: DispatchQueue) {
         let upstream = NWConnection(to: target, using: .tcp)
         client.stateUpdateHandler = { state in
             if case .failed = state { upstream.cancel() }
@@ -59,8 +63,8 @@ final class PortForwarder: @unchecked Sendable {
         pipe(from: upstream, to: client)
     }
 
-    private func pipe(from source: NWConnection, to destination: NWConnection) {
-        source.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
+    private static func pipe(from source: NWConnection, to destination: NWConnection) {
+        source.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { data, _, isComplete, error in
             if let data, !data.isEmpty {
                 destination.send(content: data, completion: .contentProcessed { sendError in
                     if sendError != nil {
@@ -70,11 +74,14 @@ final class PortForwarder: @unchecked Sendable {
                 })
             }
             if isComplete || error != nil {
-                // Half-close: tell the other side no more data is coming.
-                destination.send(content: nil, isComplete: true, completion: .contentProcessed { _ in })
+                // Half-close: tell the other side no more data is coming. TCP
+                // sends a FIN only for the final message context; the default
+                // context leaves the write side open, and the box server's
+                // WebSocket close then waits out its 30 s close timeout.
+                destination.send(content: nil, contentContext: .finalMessage, isComplete: true, completion: .contentProcessed { _ in })
                 return
             }
-            self?.pipe(from: source, to: destination)
+            pipe(from: source, to: destination)
         }
     }
 }
