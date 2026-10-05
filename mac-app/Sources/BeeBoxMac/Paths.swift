@@ -25,10 +25,12 @@ enum Paths {
     /// Claude Code's config and credentials (CLAUDE_CONFIG_DIR in the image).
     static let claudeConfig = state.appending(path: "claude-config", directoryHint: .isDirectory)
 
-    /// Machine-level beebox state the image keeps in the container's home
-    /// (accounts, secrets). The container's home does not survive a restart,
-    /// so the app mounts this folder and points the env overrides at it.
-    static let machine = state.appending(path: "machine", directoryHint: .isDirectory)
+    /// The container user's home, mounted at /home/node: accounts, the session
+    /// key, the secret store, the Codex login, and uv/Docling caches. The
+    /// image keeps nothing it needs there (see the Dockerfile).
+    static let containerHome = state.appending(path: "home", directoryHint: .isDirectory)
+    /// Earlier spike builds kept accounts and secrets here via env overrides.
+    static let legacyMachine = state.appending(path: "machine", directoryHint: .isDirectory)
 
     static let kernel = state.appending(path: "vmlinux")
     static let initfs = state.appending(path: "initfs.ext4")

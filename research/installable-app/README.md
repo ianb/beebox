@@ -34,7 +34,7 @@ it asks what an app would add on top of it.
    image lacks `qpdf` and `uv`/Docling, which the server installs. In the
    container, PDF scan uploads get a 503 and document mode cannot run. A
    native Mac bundle would be a third list. Filed:
-   [docker-image-missing-qpdf-and-docling](../../issues/bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md).
+   [docker-image-missing-qpdf-and-docling](../../issues/closed/bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md).
 4. **A native app gives up containment.** In the container, agents see
    `/data/box` and their own home. As a native Mac process, agents run as
    the user with the user's SSH keys, browser profiles, and every other

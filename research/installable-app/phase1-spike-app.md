@@ -71,7 +71,7 @@ high-water mark. Levers, cheapest first:
 
 - **Accounts lost on restart.** Accounts, secrets, and the session key live
   in the container user's home, which the app recreated on each start
-  ([container-loses-machine-state-on-recreate](../../issues/bugs/2026-09-30-container-loses-machine-state-on-recreate.md);
+  ([container-loses-machine-state-on-recreate](../../issues/closed/bugs/2026-09-30-container-loses-machine-state-on-recreate.md);
   the Docker install has the same gap). The app now mounts a `machine`
   folder and sets `BBX_AUTH_FILE` / `BBX_SECRETS_FILE`; the session key has
   no override, so a restart still signs everyone out.
@@ -116,7 +116,7 @@ high-water mark. Levers, cheapest first:
 - **Logins.** Claude and Codex logins are URL + pasted code in a terminal;
   the app needs a flow for them. The image also lacks `codex` on PATH, `qpdf`,
   and Docling
-  ([docker-image-missing-qpdf-and-docling](../../issues/bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md)).
+  ([docker-image-missing-qpdf-and-docling](../../issues/closed/bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md)).
 - **Not tested:** an agent run, sleep and wake, launch at login, a proper
   `.app` bundle, Developer ID signing and notarization, Tailscale in the
   image.

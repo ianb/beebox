@@ -31,6 +31,11 @@ services:
       # here). A NAMED volume so it survives `docker compose down` and container
       # rebuilds; `down -v` destroys it (re-login needed).
       - claude-auth:/app/claude-config
+      # The runtime user's home: accounts and invites, the session key, the
+      # machine secret store, the Codex login, and the uv/Docling caches. A
+      # NAMED volume so a recreated container keeps them; `down -v` drops it
+      # (everyone signs in again, accounts and stored keys are gone).
+      - home:/home/node
     # Optional: provider keys (see the parent .env.example) and, as the
     # headless-auth fallback, CLAUDE_CODE_OAUTH_TOKEN from a laptop-side
     # `claude setup-token`. Absent .env is fine.
@@ -70,5 +75,6 @@ services:
 
 volumes:
   claude-auth:
+  home:
   caddy-data:
   caddy-config:
