@@ -11,8 +11,9 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
  * landmarks only; landmark-less chats live on the Landmarks page.
  */
 
-import { type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+import { TextField } from "../ui/fields/field";
 import { href } from "../../lib/routing";
 import { withBase } from "../../api";
 import { AppBarRecentFilesSlot } from "../app-bar-chrome";
@@ -60,16 +61,69 @@ function LandmarkRows({
   currentDir: string | null;
   onSelectLandmark: (dir: string) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const searchable = landmarks.length > 20;
+  useEffect(() => {
+    if (searchable) searchRef.current?.focus();
+  }, [searchable]);
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const visibleLandmarks = !searchable || normalizedQuery === ""
+    ? landmarks
+    : landmarks.filter((landmark) => `${landmark.label}\n${landmark.dir}`.toLocaleLowerCase().includes(normalizedQuery));
+
   return (
     <>
+      {searchable ? (
+        <div className="px-3 py-2" role="none">
+          <TextField
+            id="bbx-switch-menu-landmark-search"
+            label="Search landmarks"
+            inputRef={searchRef}
+            hideLabel
+            type="search"
+            placeholder="Search landmarks"
+            value={query}
+            onChange={setQuery}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                const menu = event.currentTarget.closest('[role="menu"]');
+                const firstLandmark = menu?.querySelector<HTMLElement>('[data-landmark-row="true"]');
+                if (firstLandmark) {
+                  firstLandmark.focus();
+                } else if (visibleLandmarks[0] !== undefined) {
+                  onSelectLandmark(visibleLandmarks[0].dir);
+                }
+              }
+              if (event.key === "Enter" && visibleLandmarks.length > 0) {
+                event.preventDefault();
+                const firstRow = event.currentTarget.closest('[role="menu"]')?.querySelector<HTMLButtonElement>('[data-landmark-row="true"]');
+                if (firstRow) {
+                  firstRow.click();
+                } else {
+                  const firstLandmark = visibleLandmarks[0];
+                  if (firstLandmark !== undefined) onSelectLandmark(firstLandmark.dir);
+                }
+              }
+              if (event.key === "Escape" && query !== "") {
+                event.stopPropagation();
+                event.preventDefault();
+                setQuery("");
+              }
+            }}
+          />
+        </div>
+      ) : null}
       {/* Keyed by card path, not dir: `byLandmark` emits one bucket per
           landmark card, and nothing stops a directory holding two — keying by
           dir would then hand React duplicate keys. */}
-      {landmarks.map((landmark) => {
+      {visibleLandmarks.map((landmark) => {
         const current = currentDir !== null && landmark.dir === currentDir;
         return (
           <MenuItem
             key={landmark.path}
+            data-landmark-row="true"
             onClick={() => onSelectLandmark(landmark.dir)}
             active={current}
           >
@@ -91,6 +145,9 @@ function LandmarkRows({
           </MenuItem>
         );
       })}
+      {searchable && normalizedQuery !== "" && visibleLandmarks.length === 0 ? (
+        <MenuItem disabled onClick={() => {}}>No landmarks match</MenuItem>
+      ) : null}
     </>
   );
 }
