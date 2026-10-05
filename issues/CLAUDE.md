@@ -127,8 +127,8 @@ name.
 - The next action is a removable request from the developer. It is not
   frontmatter: it lives in a local store outside git, and `bin/issues
   next-action` reads, sets, and clears it. Values are `discuss`, `reconfirm`,
-  `duplicate`, `invalid`, `fixed`, `manually-confirmed`, and
-  `verify-without-me`, each with an optional message; a message alone is a
+  `duplicate`, `invalid`, `fixed`, `manually-confirmed`,
+  `verify-without-me`, and `do-it`, each with an optional message; a message alone is a
   direct instruction. Agents normally answer these requests rather than set
   them; the narrow exception is `discuss` when work reaches a concrete human
   judgment call. Explain that call in the body.
@@ -139,6 +139,10 @@ to close blindly. Verify them, act on the evidence, and clear the request
 (`bin/issues next-action <issue> --clear`) after acting or disproving it. Clear
 `discuss` after the conversation produces a disposition. Quote a message in the
 issue body when it records a decision; the store keeps no history.
+
+`do-it` authorizes implementation: the developer judged the fix small. Fix it
+inline within the `bbx-issue-actions` fix-in-place limits; if it proves larger,
+clear `do-it`, set `discuss`, and record why in the body.
 
 `manually-confirmed` is authoritative: the developer confirmed the fix. Read
 the issue to ensure the confirmation covers its full scope, then close it as
