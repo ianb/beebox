@@ -74,6 +74,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "LC_ALL",
   "LC_CTYPE",
   "LC_MESSAGES",
+  "UV_TORCH_BACKEND", // `uvx docling` (services/docling/core.ts) must resolve the same PyTorch build the host prefetched; the container image sets cpu.
 
   // --- Claude Agent SDK / codex config knobs (not credentials) ---
   "CODEX_HOME", // Keep explicit agent env aligned with auth preflight and plugin installation.

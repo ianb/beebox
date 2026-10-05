@@ -42,5 +42,5 @@ What is missing:
   Code and Codex as equal choices and sets the engine from the choice. The
   boxholder raised this: neither should read as the default.
 - The container image has no `codex` on PATH
-  ([docker-image-missing-qpdf-and-docling](../../bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md));
+  ([docker-image-missing-qpdf-and-docling](../bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md));
   check that the Codex section works in the container before relying on it.

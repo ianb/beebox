@@ -7,7 +7,20 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-installable-app — the Mac spike app lost the boxholder's password after a restart
 priority: important
+resolution: implemented
 ---
+
+> **Closed 2026-10-05.** Compose mounts a named `home` volume at
+> `/home/node`, so everything beebox keeps in the runtime user's home
+> survives a recreated container: accounts and invites, the session key,
+> the secret store, `~/.local/share/beebox`, the Codex login, and the
+> uv/Docling caches. The image keeps nothing it needs in home (Claude CLI
+> in `/opt/claude`, corepack in `/opt/corepack`, git settings in the system
+> config). The suspected transcript mismatch is fixed by
+> `BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects` in the image.
+> Verified in the Mac spike app, which mounts the same home: a password
+> account and a signed-in session both survived a full stop and restart.
+
 
 Machine-level beebox state defaults to the runtime user's home directory:
 

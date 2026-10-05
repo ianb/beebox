@@ -49,6 +49,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "LC_ALL",
   "LC_CTYPE",
   "LC_MESSAGES",
+  "UV_TORCH_BACKEND", // `uvx docling` (services/docling/core.ts) must resolve the same PyTorch build the host prefetched; the container image sets cpu.
 
   // --- Box-legitimate config/secrets a `bbx serve` child reads directly ---
   "PUBLIC_URL", // src/lib/public-url.ts, telegram-helpers.ts, script-env.ts fallback.

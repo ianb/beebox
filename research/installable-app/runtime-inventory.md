@@ -33,7 +33,7 @@ are upper bounds. A realistic native bundle is 1–1.5 GB before Docling.
 - The image and the server have separate lists, and they have drifted
   (`qpdf`, `ffmpeg`, `uv`/Docling). `qpdf`'s absence refuses PDF scan
   uploads with a 503 (`beebox/src/core/scan/validate.ts:67`). Filed as
-  [docker-image-missing-qpdf-and-docling](../../issues/bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md).
+  [docker-image-missing-qpdf-and-docling](../../issues/closed/bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md).
 - The agent contract names a subset
   (`beebox/src/core/agent-guide/chat.ts`); `pnpm run doctor` checks another
   subset. Any packaged form adds one more list. A single machine-readable

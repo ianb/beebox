@@ -6,7 +6,21 @@ labels: [install]
 filed-by: agent
 discovered-in: worktree-installable-app — runtime inventory for the installable-app research
 priority: important
+resolution: implemented
 ---
+
+> **Closed 2026-10-05.** The image now installs `qpdf` and `ffmpeg`, puts
+> `uv`/`uvx` in `/usr/local/bin`, and gives `codex` a PATH entry that runs
+> beebox's pinned Codex (`beebox/docker/codex-wrapper.sh`). On first start the
+> entrypoint fetches the pinned Docling and its models in the background into
+> the persistent home volume; `UV_TORCH_BACKEND=cpu` keeps that at ~1.9 GB
+> instead of 6.4 GB. `beebox/docker/smoke-docker.sh` now fails if any
+> promised tool is missing or does not run. Verified by building the image
+> with Apple's `container` and running the same tool check (the Docker smoke
+> harness itself was not run: no Docker daemon on the build Mac). Not done:
+> one machine-readable host-dependency manifest shared by the Dockerfile,
+> `setup-server.sh`, and the doctor; the smoke check is the guard for now.
+
 
 The server provisioning script and the Docker image keep separate lists of
 host binaries, and the lists have drifted.
@@ -18,7 +32,7 @@ host binaries, and the lists have drifted.
   Nothing checks the image.
 
 Consequences in the container, the primary install path
-([container-first](../features/2026-09-06-container-install-is-the-primary-path.md)):
+([container-first](../../features/2026-09-06-container-install-is-the-primary-path.md)):
 
 - `qpdfAvailable()` fails, and every PDF scan upload is refused with a 503
   (`beebox/src/core/scan/validate.ts:67-99`).
@@ -36,7 +50,7 @@ Consequences in the container, the primary install path
 Observed again 2026-09-29 running the image under Apple's `container`: the
 server logs `qpdf is not installed; PDF scan uploads will be refused with
 503` at startup, and `codex` is not found
-([phase 0 note](../../research/installable-app/phase0-apple-container.md)).
+([phase 0 note](../../../research/installable-app/phase0-apple-container.md)).
 
 ## Why the fix is not only "add two packages"
 
@@ -44,7 +58,7 @@ There are at least four lists: the Dockerfile, `setup-server.sh`,
 `deploy.sh`'s post-deploy check, and `pnpm run doctor`. The agent contract
 in `beebox/src/core/agent-guide/chat.ts` names a fifth subset. Any packaged
 app would add another
-([installable-app research](../../research/installable-app/runtime-inventory.md)).
+([installable-app research](../../../research/installable-app/runtime-inventory.md)).
 One machine-readable host-dependency manifest that each consumer reads would
 stop the drift. Docling in the image also has a size cost: its model
 pre-fetch and PyTorch environment are large, and pre-fetching them at build

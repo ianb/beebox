@@ -112,6 +112,19 @@ if ! bbx host sync --box "$BOX_ROOT"; then
   echo "beebox: some recorded host packages were not installed; see bbx health." >&2
 fi
 
+# Fetch the pinned Docling's model weights once, in the background, so the
+# first scanned PDF does not spend minutes downloading them inside its 10-minute
+# budget (deploy/hetzner/setup-server.sh does the same at provisioning). They
+# land in the persistent home volume; the marker records the version fetched.
+DOCLING_VERSION="$(cat /app/docling-version)"
+DOCLING_MARKER="$HOME/.cache/beebox/docling-models-$DOCLING_VERSION"
+if [[ ! -f "$DOCLING_MARKER" ]]; then
+  mkdir -p "$(dirname "$DOCLING_MARKER")"
+  echo "beebox: fetching Docling $DOCLING_VERSION models in the background (one time; log: $DOCLING_MARKER.log)" >&2
+  ( uvx --from "docling==$DOCLING_VERSION" docling-tools models download layout tableformer \
+      > "$DOCLING_MARKER.log" 2>&1 && touch "$DOCLING_MARKER" ) &
+fi
+
 # Serve the box on all interfaces inside the container; the host-side port
 # mapping (compose) decides who can reach it.
 exec bbx engine serve "$BOX_ROOT" --host 0.0.0.0 --port 3210

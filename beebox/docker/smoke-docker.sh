@@ -67,6 +67,23 @@ if ! docker build -f "$REPO_ROOT/beebox/docker/Dockerfile" -t "$IMAGE_TAG" "$REP
 fi
 echo "smoke: ok — image built ($IMAGE_TAG)"
 
+# ── 0. the tools a box runs are on PATH ────────────────────────────────────
+# The server's list (deploy/hetzner/setup-server.sh, deploy.sh's post-deploy
+# check) and this image's list drifted once: no qpdf (PDF scan uploads 503),
+# no uv (Docling), no codex. Each name must resolve and run.
+if ! docker run --rm --entrypoint bash "$IMAGE_TAG" -c '
+    set -e
+    for t in qpdf pdfinfo pdftoppm pandoc magick xlsx2csv ffmpeg git git-lfs git-annex uv uvx claude codex bbx; do
+      command -v "$t" >/dev/null || { echo "missing: $t"; exit 1; }
+    done
+    claude --version | grep -q "Claude Code"
+    codex --version | grep -q "^codex-cli "
+    uv --version | grep -q "^uv "
+    git config --get filter.lfs.clean >/dev/null' > "$LOG_DIR/tools.log" 2>&1; then
+  fail "image is missing a tool the box host promises" "$LOG_DIR/tools.log"
+fi
+echo "smoke: ok — box-host tools present (qpdf, ffmpeg, uv, claude, codex, …)"
+
 # ── 1. no-args on an empty box volume → nonzero + init message ───────────
 set +e
 dc run --rm box > "$LOG_DIR/empty.log" 2>&1

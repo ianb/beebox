@@ -76,7 +76,7 @@ with years of history will feel the `git log -p` and fsck rows most.
    `uv`/Docling is missing, and `codex` is installed only as a transitive
    dependency at `/app/node_modules/.pnpm/node_modules/.bin/codex`, so the
    documented in-container `codex login --device-auth` cannot run. Recorded
-   in [docker-image-missing-qpdf-and-docling](../../issues/bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md).
+   in [docker-image-missing-qpdf-and-docling](../../issues/closed/bugs/2026-09-29-docker-image-missing-qpdf-and-docling.md).
 7. **Logins still need a terminal.** Both agent logins are URL + pasted code.
    An app needs an in-app or admin-UI flow for them before it is
    self-service.
