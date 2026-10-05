@@ -1,6 +1,6 @@
 ---
 title: "Landmark menu: show a search field when the box has more than 20 landmarks"
-workstream: unattached
+workstream: landmark-menu-search
 area: beebox
 filed-by: agent
 discovered-by: Ian
