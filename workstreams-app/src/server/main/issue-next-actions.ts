@@ -117,10 +117,12 @@ export async function readNextActions(root: string | null): Promise<Map<string, 
 
 async function ensureStore(root: string): Promise<void> {
   const marker = path.join(root, NEXT_ACTIONS_MARKER);
-  const marked = await fs.lstat(marker).then((stats) => stats.isFile(), () => false);
-  if (marked) return;
+  const isMarked = (): Promise<boolean> => fs.lstat(marker).then((stats) => stats.isFile(), () => false);
+  if (await isMarked()) return;
   const exists = await fs.lstat(root).then(() => true, () => false);
   if (exists && (await fs.readdir(root)).length > 0) {
+    // A concurrent first write may have created the marker since the check above.
+    if (await isMarked()) return;
     throw new UnmarkedNextActionStoreError(root);
   }
   await fs.mkdir(root, { recursive: true });
