@@ -5,6 +5,7 @@ area: beebox
 labels: [install]
 filed-by: agent
 discovered-in: worktree-installable-app — runtime inventory for the installable-app research
+priority: important
 ---
 
 The server provisioning script and the Docker image keep separate lists of

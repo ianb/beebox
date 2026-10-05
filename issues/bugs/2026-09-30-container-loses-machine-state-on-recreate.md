@@ -6,6 +6,7 @@ labels: [install]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-installable-app — the Mac spike app lost the boxholder's password after a restart
+priority: important
 ---
 
 Machine-level beebox state defaults to the runtime user's home directory:
