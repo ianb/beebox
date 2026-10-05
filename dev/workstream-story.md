@@ -54,7 +54,6 @@ None of the above works if findings still live in sessions. Before: the develope
 title: "Sweep's live-agent guard fails open"
 workstream: unattached        # who OWNS resolving it
 discovered-in: worktree-importer — while testing sync
-next-action: discuss          # the developer's note to the next agent
 ---
 ```
 
@@ -66,7 +65,7 @@ There is no external issue tracker. The queue lives in git, so it gets git's who
 
 - **The directory is the state.** `bugs/` → open bug; `closed/bugs/` → done. Changing state is `git mv`; a link checker heals every reference after a move; git history is the archive.
 - **Grep is the query engine.** "What's waiting on me?" is a grep for `manual-testing`. "What does this workstream own?" is a grep for its name.
-- **Triage is frontmatter.** The developer reads the queue and writes `priority:` and `next-action:` tags (`discuss`, `reconfirm`, `fixed?`…) — notes-to-the-next-agent, written at the one moment the whole queue was in view. Working those tags off is itself agent work.
+- **Triage is a priority plus a request.** The developer reads the queue and sets `priority:` in frontmatter and a next action (`discuss`, `reconfirm`, `fixed?`…, or a free-text message) — notes-to-the-next-agent, written at the one moment the whole queue was in view. Next actions stay out of git, in a local store, so triage never makes commits. Working those requests off is itself agent work.
 - **It merges with the code.** An issue filed in a worktree rides the same branch, lands in the same merge, and is validated by the same pre-commit hooks as everything else.
 
 ## The life of an issue

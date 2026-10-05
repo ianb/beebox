@@ -6,6 +6,7 @@ labels: [voice, transcription]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — investigating repeated recording alarms on a prod box with a flaky upstream network
+priority: important
 ---
 
 The web client plays `recordingDropped` (`krell-alarm-7.wav`, volume 0.7)

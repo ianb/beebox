@@ -15,9 +15,11 @@ import {
 } from "./issue-overlay.js";
 import type {
   Issue,
+  IssueNextActionState,
   Plan,
   TestingQueue,
 } from "../../shared/documents.js";
+import { nextActionKey, nextActionsRoot, readNextActions, writeNextAction } from "./issue-next-actions.js";
 import type { WorkstreamIssue } from "../../shared/workstreams.js";
 import type { DocumentsService } from "../services.js";
 import { resolveIssueTarget, saveIssueChanges } from "./issues-mutation-service.js";
@@ -26,6 +28,13 @@ import { collectWorkstreamChanges, type WorkstreamChanges } from "../workstream-
 import { createBrowseReads } from "./browse-reads.js";
 
 const DOCUMENT_CACHE_MS = 60_000;
+
+class NoNextActionStoreError extends Error {
+  constructor() {
+    super("the main checkout is not a git checkout, so it has no next-action store");
+    this.name = "NoNextActionStoreError";
+  }
+}
 
 interface DocumentsSnapshot {
   issues: IssueRecord[];
@@ -106,10 +115,18 @@ async function authoritativeIssues(options: {
   return [...main.filter((issue) => !touched.has(issueKey(issue))), ...selected];
 }
 
-function publicIssue(issue: IssueRecord, entries?: OverlayEntry[] | undefined): Issue {
+type NextActions = Map<string, IssueNextActionState>;
+
+function publicIssue(
+  issue: IssueRecord,
+  extras?: { overlay?: OverlayEntry[] | undefined; nextActions?: NextActions },
+): Issue {
+  const entries = extras?.overlay;
+  const nextAction = extras?.nextActions?.get(nextActionKey(issue.visibility, issue.slug));
   return {
     ...issue,
     ...(entries && entries.length > 0 ? { overlay: entries } : {}),
+    ...(nextAction ? { nextAction } : {}),
   };
 }
 
@@ -222,12 +239,18 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
     return [...publicIssues, ...privateIssues];
   }
 
+  // Read on every request, outside the snapshot cache: the store changes the
+  // moment the developer picks a value or an agent clears one.
+  async function nextActions(): Promise<NextActions> {
+    return readNextActions(await nextActionsRoot(options.mainRoot));
+  }
+
   return {
     ...createBrowseReads({ mainRoot: options.mainRoot, snapshot }),
     async listIssues(): Promise<Issue[]> {
-      const state = await snapshot();
+      const [state, actions] = await Promise.all([snapshot(), nextActions()]);
       return (await currentIssues(state)).map((issue) =>
-        publicIssue(issue, overlayMap(state.overlay, issue.visibility).get(issue.relPath)),
+        publicIssue(issue, { overlay: overlayMap(state.overlay, issue.visibility).get(issue.relPath), nextActions: actions }),
       );
     },
     async issueDetail(relPath, visibility): Promise<Issue> {
@@ -240,7 +263,10 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
       });
       const source = await fs.readFile(target, "utf8");
       const issue = parseIssueFile({ relPath, source, visibility });
-      return { ...publicIssue(issue, overlayMap(state.overlay, visibility).get(relPath)), body: parseFrontmatter(source).body };
+      return {
+        ...publicIssue(issue, { overlay: overlayMap(state.overlay, visibility).get(relPath), nextActions: await nextActions() }),
+        body: parseFrontmatter(source).body,
+      };
     },
     async listPlans(): Promise<Plan[]> {
       return (await snapshot()).plans;
@@ -264,7 +290,7 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
       ).toSorted((left, right) =>
         Number(left.closed) - Number(right.closed) || left.frontmatter.title.localeCompare(right.frontmatter.title),
       ).map((issue) => ({
-        issue: publicIssue(issue, overlayMap(state.overlay, issue.visibility).get(issue.relPath)),
+        issue: publicIssue(issue, { overlay: overlayMap(state.overlay, issue.visibility).get(issue.relPath) }),
         ...workstreamIssueIndicators({
           workstream: name,
           issue,
@@ -282,6 +308,15 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
       });
       cache = null;
       return saved;
+    },
+    async setIssueNextAction(input): Promise<IssueNextActionState | null> {
+      const root = await nextActionsRoot(options.mainRoot);
+      if (root === null) throw new NoNextActionStoreError();
+      return writeNextAction({
+        root,
+        key: nextActionKey(input.visibility, input.slug),
+        request: { action: input.action, message: input.message },
+      });
     },
   };
 }
