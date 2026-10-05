@@ -4,7 +4,17 @@ workstream: unattached
 area: beebox
 filed-by: agent
 discovered-in: worktree-installable-app — a throwaway box for a shutdown reproduction
+resolution: implemented
 ---
+
+> **Closed 2026-10-05.** Cause: `isRepo` (`beebox/src/lib/git/core.ts`)
+> used simple-git's `checkIsRepo()`, true anywhere inside a repository, so
+> init skipped `git init` and later git/annex commands found the enclosing
+> repository. `isRepo` now means "root of its own repository" (new
+> `repoRootOf` helper), and `runInit` refuses a fresh target inside another
+> repository with `NestedBoxError` before writing anything. Test:
+> `beebox/test/cli/commands/init.nested-repo.doctest.md`.
+
 
 Running `pnpm bbx engine init <path>` with `<path>` under the monorepo's
 gitignored `scratch/` directory:
