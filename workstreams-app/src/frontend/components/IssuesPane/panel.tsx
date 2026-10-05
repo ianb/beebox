@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Ref } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
-import { CopyIssuePath, IssueTags, NextActionSelect, PriorityControls } from "./IssueControls.js";
+import { CopyIssuePath, IssueTags, NextActionMessage, NextActionSelect, PriorityControls, useNextAction } from "./IssueControls.js";
 import { IssueCategoryNav } from "./IssueCategoryNav.js";
 import { IssueRelated } from "./IssueRelated.js";
 import { Markdown } from "../Markdown.js";
@@ -10,7 +10,7 @@ import { Button, Pill } from "../ui.js";
 import { trpc } from "../../trpc.js";
 import { issueCategoryId } from "../../lib/issue-category-nav.js";
 import { issueProvenance } from "../../../shared/issue-provenance.js";
-import type { Issue, IssueChange, NextAction, Priority, Visibility } from "../../types.js";
+import type { Issue, IssueChange, Priority, Visibility } from "../../types.js";
 
 export interface IssueFilters {
   status?: "open" | "closed" | "all" | undefined;
@@ -70,14 +70,12 @@ function issueDate(issue: Issue): string {
   return issue.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
 }
 
-function editedChange(issue: Issue, values: { priority: Priority; nextAction?: NextAction | undefined }): IssueChange {
+function editedChange(issue: Issue, priority: Priority): IssueChange {
   return {
     relPath: issue.relPath,
     visibility: issue.visibility,
     originalPriority: issue.frontmatter.priority,
-    originalNextAction: issue.frontmatter.nextAction ?? null,
-    priority: values.priority,
-    nextAction: values.nextAction ?? null,
+    priority,
   };
 }
 
@@ -115,8 +113,8 @@ function FilterMenu({ filters, categories, needs, onFilters }: { filters: IssueF
 
 function IssueRow({ issue, selected, change, rowRef, onSelect, onChange }: { issue: Issue; selected: boolean; change?: IssueChange | undefined; rowRef?: Ref<HTMLLIElement> | undefined; onSelect: () => void; onChange: (change: IssueChange) => void }) {
   const priority = change?.priority ?? issue.frontmatter.priority;
-  const nextAction = change ? change.nextAction ?? undefined : issue.frontmatter.nextAction;
-  return <li className={selected ? "selected" : ""} ref={rowRef}><div className="issue-title-row"><button type="button" className="issue-title" onClick={onSelect}>{issue.frontmatter.title}</button><CopyIssuePath issue={issue} /></div><span className="issue-meta">{issueDate(issue)} · {issue.slug.replace(/^\d{4}-\d{2}-\d{2}-?/, "")}</span><div className="issue-actions-row"><IssueTags issue={issue} /><div className="issue-edit-controls"><PriorityControls value={priority} onChange={(value) => onChange(editedChange(issue, { priority: value, nextAction }))} /><NextActionSelect value={nextAction} onChange={(value) => onChange(editedChange(issue, { priority, nextAction: value }))} /></div></div></li>;
+  const nextAction = useNextAction(issue);
+  return <li className={selected ? "selected" : ""} ref={rowRef}><div className="issue-title-row"><button type="button" className="issue-title" onClick={onSelect}>{issue.frontmatter.title}</button><CopyIssuePath issue={issue} /></div><span className="issue-meta">{issueDate(issue)} · {issue.slug.replace(/^\d{4}-\d{2}-\d{2}-?/, "")}</span><div className="issue-actions-row"><IssueTags issue={issue} /><div className="issue-edit-controls"><PriorityControls value={priority} onChange={(value) => onChange(editedChange(issue, value))} /><NextActionSelect model={nextAction} /></div></div><NextActionMessage model={nextAction} /></li>;
 }
 
 /**

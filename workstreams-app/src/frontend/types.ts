@@ -9,5 +9,6 @@ export type { ActionResult, ActionVerb, AskQueue, AskQueueEntry, AskType, Browse
 export type Workstream = WorkstreamSummary;
 export type QuotaWindow = Quota["windows"][number];
 export type Priority = Issue["frontmatter"]["priority"];
-export type NextAction = NonNullable<Issue["frontmatter"]["nextAction"]>;
+export type NextActionState = NonNullable<Issue["nextAction"]>;
+export type NextAction = NonNullable<NextActionState["action"]>;
 export type Visibility = Issue["visibility"];

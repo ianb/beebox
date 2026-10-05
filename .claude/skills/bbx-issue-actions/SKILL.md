@@ -3,14 +3,16 @@ name: bbx-issue-actions
 description: Use to triage or resolve issue next-action tags (discuss, reconfirm, duplicate, invalid, fixed, manually-confirmed, verify-without-me), including released manual-testing gates. Use bbx-pick-issues to choose new work.
 ---
 
-# Working `next-action:` tags
+# Working next-action requests
 
-`next-action:` says what must happen next before an issue leaves the queue. `discuss`
+A next action says what must happen next before an issue leaves the queue. It
+lives in a local store outside git, not in frontmatter; `bin/issues next-action`
+reads and clears it. `discuss`
 routes an issue to the developer; `manually-confirmed` records a completed human
 check; the other values are **provisional agent tasks** where
 someone suspects an outcome and is asking the next agent to check it.
 
-**The developer writes these tags — effectively all of them.** The field is how they hand
+**The developer writes these tags — effectively all of them.** The request is how they hand
 an idea back: they read the queue, form a suspicion about an item, and leave it
 here for whoever picks it up next. So working this queue is answering them, not
 processing a backlog, and every tag carries the context of the moment they had the
@@ -34,31 +36,29 @@ For `discuss`, your job is only to frame and surface the discussion.
 
 Second rule, equally load-bearing:
 
-> Remove the field after acting on it or disproving it.
+> Clear the request after acting on it or disproving it.
 
-A stale `next-action:` re-invites the same work forever. Every issue you touch
-leaves with the field gone.
+A stale request re-invites the same work forever. Every issue you touch leaves
+with `bin/issues next-action <issue> --clear` run. The store keeps no history, so
+record the outcome, quoting any message it answered, in the issue body first.
+
+A request may carry a **message**: the developer's own words. With a value, it
+narrows or explains the value. Alone, it is the instruction; do what it asks
+within the same rules (`discuss`-like when it asks a question, provisional when
+it guesses an outcome).
 
 ## Finding the work
 
-`bin/issues` (see `bin/CLAUDE.md`) replaces the ad-hoc grep loops this section
-used to carry. Everything tagged, with the tag and title:
+Every pending request, with its value, issue, title, and message (a request
+whose issue no longer exists is listed as an orphan; report it, don't clear it):
 
 ```bash
-bin/issues list --next-action discuss --next-action reconfirm --next-action duplicate \
-  --next-action invalid --next-action fixed --next-action manually-confirmed \
-  --next-action verify-without-me
+bin/issues next-action
+bin/issues next-action --next-action reconfirm --json
 ```
 
-One value only, and the same as JSON for scripting:
-
-```bash
-bin/issues list --next-action reconfirm
-bin/issues list --next-action fixed --json
-```
-
-Cross-reference with priority, since a tagged `important` issue is worth doing
-first: add `--priority important`. To see whether a `fixed?`/`duplicate?` guess
+To combine with other filters, `bin/issues list --next-action fixed --priority
+important` works too; a tagged `important` issue is worth doing first. To see whether a `fixed?`/`duplicate?` guess
 holds, `bin/issues similar <path> --all` lists the closed siblings that may
 already own the work, and `bin/issues show <path>` prints the frontmatter and
 body head.
@@ -68,7 +68,7 @@ body head.
 **`discuss` — bring this to the developer before doing the work.** Summarize the decision
 or design tension and the smallest useful set of options. Do not treat this as
 permission to implement, and do not silently convert it into research. After
-the discussion, remove the field and record the resulting disposition or next
+the discussion, clear the request and record the resulting disposition or next
 step in the issue.
 
 **`reconfirm` — two questions, in order.** The most common tag, and it is
@@ -80,7 +80,7 @@ step in the issue.
    it no longer exists.
 
 Three outcomes: fixed → close `implemented` naming the commit; moot → close
-`wontfix` saying what made it moot; still live → remove the field and record what
+`wontfix` saying what made it moot; still live → clear the request and record what
 you checked, so the next pass starts further along. A flake tagged `reconfirm`
 needs a real run, not a reading.
 
@@ -183,7 +183,7 @@ Name concrete residual failure modes, not a disclaimer — "the camera
 acquisition call has no automated coverage, so a crash there reaches users
 first" is useful; "not fully tested" is not.
 
-When you cannot settle it, that is a legitimate outcome. Remove the field, write
+When you cannot settle it, that is a legitimate outcome. Clear the request, write
 what you checked and what would settle it, and move on. An issue that has been
 investigated twice with no note is worse than one nobody touched.
 

@@ -106,6 +106,13 @@ ranking or parsing into `bin/`. Embedding keys are tried as
 `BBX_OPENAI_API_KEY`, `THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY` in
 the app child's environment. Public and all-visibility indexes stay separate.
 
+Next actions are not frontmatter. They live in `<parent>/dev-issue-actions/`
+beside main (override `BBX_ISSUE_ACTIONS_ROOT`), keyed by visibility and slug
+so they follow moved issues. The issue browser writes them at once and nothing
+commits them; `bin/issues next-action` lists, sets, and clears them from any
+checkout. `workstreams-app/src/server/main/issue-next-actions.ts` is the only
+reader and writer.
+
 ## Private-issues shadow repo (`private-issues`)
 
 Every checkout mount remains a symlink. Roots are derived and identity marked;

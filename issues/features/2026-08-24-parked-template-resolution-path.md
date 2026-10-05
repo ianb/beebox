@@ -3,7 +3,6 @@ title: "Give parked template updates a resolution path (accept / diff / merge) i
 workstream: unattached
 area: beebox
 priority: normal
-next-action: discuss
 labels: [templates, boxes]
 filed-by: agent
 discovered-in: honest-diagnostics — split out of the parked-updates health issue

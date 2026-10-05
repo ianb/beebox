@@ -5,7 +5,6 @@ area: router
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstream-story — relative-path SVGs in a dev/ .md page all rendered broken
-next-action: reconfirm
 resolution: implemented
 ---
 > **⏳ Awaiting manual testing** — fix landed in `worktree-workstream-story`
