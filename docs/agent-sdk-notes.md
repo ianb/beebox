@@ -32,26 +32,22 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.286`, Codex `0.159.2` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.289`, Codex `0.160.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.289` (SDK), `2.1.289` (Claude Code), `0.160.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.290` (SDK), `2.1.290` (Claude Code), `0.160.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Take Agent SDK `0.3.287` and Codex `0.160.0`
-  (with `0.159.3`) next turn; both are settled. The 2026-10-03 bump was
-  reverted before commit: the npm registry delivered ~40 KB/s, and two
-  `pnpm install` attempts (30 and 20 minutes) never fetched the
-  `@openai/codex@0.160.0-darwin-arm64` platform package, so the deploy gate ran
-  the stale `0.159.2` binary and could not verify `0.160.0`. That turn landed
-  the ledger and the 2026-10-02 commit (which `bin/land` refused because the
-  main checkout was left mid-merge). After `0.3.287`: `0.3.288` (settles
-  2026-10-04T18:33Z), then `0.3.289`, **whose changelog did not exist at review
-  time** — a re-read is owed. Open:
-  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **Current recommendation:** Both families moved on 2026-10-05 — Agent SDK
+  to `0.3.289` (taking `0.3.287` and `0.3.288`), Codex to `0.160.0` (taking
+  `0.159.3`). The 2026-10-03 attempt had been reverted when a stalled npm
+  registry kept the Codex platform binary from installing. Next: `0.3.290`
+  (settles 2026-10-07T18:15Z), **whose changelog did not exist at review time**
+  — a re-read is owed; Codex `0.160.1` (settles 2026-10-07T18:33Z, Windows-only
+  fix). Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -78,17 +74,52 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.289 / Claude Code 2.1.289 — pending; changelog UNPUBLISHED at this turn (re-read next turn)
+### Codex 0.160.1 — pending, nothing relevant (published 2026-10-05T18:33Z)
 
-Published 2026-10-03T20:12Z, under 2h before this turn. Neither changelog had a
-section for it — the SDK changelog on `main` stops at `0.3.288`, Claude Code's
-at `2.1.288`. This entry is a bound, not a review. What the package shows: its
-`sdk.d.ts` is **byte-identical** to `0.3.288`'s, so nothing beebox compiles
-against changed; the bundled CLI is 2.1.289. The next turn must read both
-changelogs once they carry the section.
-- **Action:** Settled path; takeable 2026-10-05 — after the re-read.
+Backport to 0.160: remote stdio MCP servers launched with explicitly configured
+remote environment variables keep `SYSTEMROOT`, `TEMP` and `TMP` (a Windows
+executor fix). beebox runs Codex on macOS and Linux and configures no remote
+stdio MCP servers. Settled path.
+- **Sources:** [rust-v0.160.1](https://github.com/openai/codex/releases/tag/rust-v0.160.1)
 
-### 0.3.288 / Claude Code 2.1.288 — pending (published 2026-10-02T18:33Z, ~3h at this turn)
+### 0.3.290 / Claude Code 2.1.290 — pending; changelog UNPUBLISHED at this turn (re-read next turn)
+
+Published 2026-10-05T18:15Z, ~5h before this turn. Neither changelog nor the
+GitHub releases had a section for it. This entry is a bound from the package's
+`sdk.d.ts` diff against `0.3.289`; the bundled CLI is 2.1.290.
+- **New built-in tool `OfferChromeSetup`** (`reason?` in; `outcome:
+  "connected" | "not_now" | "no_attempt_yet"` out). Not in
+  `shared/known-tools.ts`, so beebox's renderers use their unknown-tool
+  fallback if it appears in a run. Whether it is offered in headless SDK
+  sessions is for the changelog re-read.
+- **WebFetch gains `offset`** to page through long pages.
+- **`claudeAiMcp` opt-out tightened:** when set, an explicitly passed
+  claudeai-proxy server no longer connects either. beebox sets neither.
+- **New setting `idleCompaction: false`** stops Claude Code compacting a long
+  conversation while the session is idle. Relevant to long-lived chat sessions
+  if idle compaction is observed; no change now.
+- `resume_reason` now also covers turns that continue from a permission answer
+  or in-flight tool calls after a worker restart (hosted sessions; not beebox).
+- **Action:** Settled path; takeable 2026-10-07 — after the re-read.
+
+### 0.3.289 / Claude Code 2.1.289 — APPLIED 2026-10-05 (published 2026-10-03T20:12Z); re-read 2026-10-05
+
+SDK parity-only; `sdk.d.ts` byte-identical to `0.3.288`. Claude Code 2.1.289 is
+mostly mod/plugin rendering fixes. What touches this repo:
+  - **Bash deny/ask rules under sandbox auto-allow** no longer miss a command
+    behind an env-var prefix with an expanded value (`TZ="$HOME" rm -rf build`)
+    or after a bare variable assignment. HARNESS: worker sessions run with
+    permission rules; this closes a bypass only when the sandbox auto-allows
+    commands. RUNTIME: beebox agents run `bypassPermissions` without the
+    sandbox, so unaffected.
+  - Deny rules on a nested part of a compound shell command now hold over a
+    user-installed mod's approval on managed machines (not this setup).
+  - `Read` deny rules now apply to IDE @-mentions through a symlink (IDE only).
+- **Beebox applicability:** no change needed; the harness fix arrives with the
+  installed Claude Code, not this pin.
+- **Action:** Applied 2026-10-05 on the settled path.
+
+### 0.3.288 / Claude Code 2.1.288 — APPLIED 2026-10-05 (published 2026-10-02T18:33Z)
 
 - **Upstream:** SDK parity-only. 2.1.288 is large; what touches this repo:
   - Mid-response API timeouts no longer fail the turn — non-interactive sessions
@@ -107,10 +138,10 @@ changelogs once they carry the section.
   - Reporting a message to another session as delivered when that session held
     it — corrected, with SDK sessions now able to learn of it mid-turn.
 - **Beebox applicability:** fixes only; nothing to adjust.
-- **Action:** Settled path; takeable 2026-10-04.
+- **Action:** Applied 2026-10-05 with `0.3.289`.
 - **Sources:** [Claude Code 2.1.288](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21288)
 
-### Codex 0.159.3 / 0.160.0 — pending, settled; bump reverted 2026-10-03 (published 2026-09-30T23:02Z and 2026-10-01T20:26Z)
+### Codex 0.159.3 / 0.160.0 — APPLIED 2026-10-05 (published 2026-09-30T23:02Z and 2026-10-01T20:26Z)
 
 `0.159.3` adds optional account-security reminders for local ChatGPT sign-ins.
 `0.160.0`: sessions can start outside a project with workspace defaults where
@@ -120,10 +151,10 @@ environment's configuration or preparation failure; SQLite stalls during
 connection setup are fixed and initialization errors are no longer masked as
 timeouts; explicit provider model catalogs no longer include unsupported bundled
 models. No removals.
-- **Action:** Take on the settled path, both versions and both pins. A 2026-10-03 bump was reverted before commit: the registry stall left `node_modules/@openai/codex-darwin-arm64` at `0.159.2`, so the deploy gate could not run the new binary. No defect in `0.160.0` was found.
+- **Action:** Applied 2026-10-05, both versions and both pins; the deploy gate passed on `codex-cli 0.160.0`. A 2026-10-03 attempt was reverted before commit because a registry stall left `node_modules/@openai/codex-darwin-arm64` at `0.159.2`.
 - **Sources:** [rust-v0.159.3](https://github.com/openai/codex/releases/tag/rust-v0.159.3), [rust-v0.160.0](https://github.com/openai/codex/releases/tag/rust-v0.160.0)
 
-### 0.3.287 / Claude Code 2.1.287 — pending, settled; bump reverted 2026-10-03 (published 2026-10-01T17:03Z)
+### 0.3.287 / Claude Code 2.1.287 — APPLIED 2026-10-05 (published 2026-10-01T17:03Z)
 
 - **SDK, wanted by beebox's chat:** *"Fixed `includePartialMessages` streams
   sending a cut-short reply's `message_stop` late or never, so apps could show
@@ -147,7 +178,7 @@ models. No removals.
   plugins that may modify deeper behavior, and a built-in side-agent mod;
   `bareElicitationCapability` for MCP servers that stop connecting after the URL
   prompt change (beebox has none).
-- **Action:** Take on the settled path; it carries the `includePartialMessages` fix for beebox's web chat. A 2026-10-03 bump passed `pnpm -C beebox typecheck`, but was reverted with the Codex bump before the steering probe and suite ran, because the same `pnpm install` could not complete against a stalled registry.
+- **Action:** Applied 2026-10-05 with `0.3.289`; the `includePartialMessages` fix for beebox's web chat is now in the pin. The steering probe passed on bundled CLI 2.1.289, and `pnpm -C beebox test` passed (12,778 pass, 2 skip). A 2026-10-03 attempt was reverted with the Codex bump when `pnpm install` stalled.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03287), [Claude Code 2.1.287](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21287)
 
 ### Codex 0.159.2 — APPLIED 2026-10-02 (published 2026-09-30T00:03Z)
