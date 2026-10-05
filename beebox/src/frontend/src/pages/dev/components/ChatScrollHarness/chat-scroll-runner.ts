@@ -22,32 +22,15 @@
 import { flushSync } from "react-dom";
 import { assertNever } from "@shared/invariant";
 import type { HarnessContent, HarnessMessage } from "./chat-scroll-model";
-import { makeRandom } from "./chat-scroll-model";
+import { makeRandom, changeTail } from "./chat-scroll-model";
 import { isImageStep, runImageStep } from "./chat-scroll-images";
 import { isWidthStep, resizeHarnessWidth } from "./chat-scroll-width";
+import type { RunSummary } from "./chat-scroll-steps";
 import type { Scenario, Step } from "./chat-scroll-scenarios";
 import { Sampler, fromBottomOf, type RunContext } from "./chat-scroll-sampler";
 
+export type { RunSummary } from "./chat-scroll-steps";
 export type { RunContext } from "./chat-scroll-sampler";
-
-export interface RunSummary {
-  scenario: string;
-  durationMs: number;
-  finalAtBottom: boolean;
-  finalFromBottom: number;
-  finalHasUnseenContent: boolean;
-  finalUserMessageTop: number;
-  maxFromBottomWhileAtBottom: number;
-  leftBottomCount: number;
-  reachedBottomCount: number;
-  leftBottomWithoutIntent: boolean;
-  driftWhileAwayPx: number;
-  flingReversals: number;
-  writes: number;
-  samples: number;
-  pass: boolean;
-  failures: string[];
-}
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -83,6 +66,24 @@ class HarnessNotMountedError extends Error {
     super("the harness scroller is not mounted");
     this.name = "HarnessNotMountedError";
   }
+}
+
+function growTwiceInOnePass(opts: { el: HTMLDivElement; ctx: RunContext; px: number; againPx: number }): void {
+  const { el, ctx, px, againPx } = opts;
+  // A one-shot observer created after the controller's runs after it in
+  // the same pass; a layout change made inside it is delivered in that
+  // pass's next iteration — before any scroll event.
+  const content = el.firstElementChild;
+  if (!content) throw new HarnessNotMountedError();
+  let fired = false;
+  const ro = new ResizeObserver(() => {
+    if (fired) return;
+    fired = true;
+    ro.disconnect();
+    flushApply(() => ctx.apply((prev) => growLast(prev, againPx)));
+  });
+  ro.observe(content);
+  ctx.apply((prev) => growLast(prev, px));
 }
 
 async function runStep(step: Step, deps: StepDeps): Promise<void> {
@@ -150,9 +151,13 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       }
       await settle();
       return;
+    case "changeTail":
+      ctx.apply((prev) => changeTail(prev, step.operation));
+      await settle();
+      return;
     case "finalize":
-      // The reply is complete: the last-turn spacer goes with the shrink.
-      ctx.apply((prev) => ({ ...growLast(prev, -step.shrinkBy), lastTurnSpacer: false }));
+      // Completion changes content, not the send spacer lifecycle.
+      ctx.apply((prev) => growLast(prev, -step.shrinkBy));
       await settle();
       return;
     case "prepend":
@@ -176,20 +181,7 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       return;
     }
     case "growTwiceInOnePass": {
-      // A one-shot observer created after the controller's runs after it in
-      // the same pass; a layout change made inside it is delivered in that
-      // pass's next iteration — before any scroll event.
-      const content = el.firstElementChild;
-      if (!content) throw new HarnessNotMountedError();
-      let fired = false;
-      const ro = new ResizeObserver(() => {
-        if (fired) return;
-        fired = true;
-        ro.disconnect();
-        flushApply(() => ctx.apply((prev) => growLast(prev, step.againPx)));
-      });
-      ro.observe(content);
-      ctx.apply((prev) => growLast(prev, step.px));
+      growTwiceInOnePass({ el, ctx, px: step.px, againPx: step.againPx });
       await settle();
       return;
     }
@@ -293,6 +285,8 @@ function evaluate(scenario: Scenario, summary: Omit<RunSummary, "pass" | "failur
   if (e.finalUserMessageTopAtMost !== undefined) {
     check(Math.abs(summary.finalUserMessageTop) <= e.finalUserMessageTopAtMost, `|finalUserMessageTop| ${summary.finalUserMessageTop} > ${e.finalUserMessageTopAtMost}`);
   }
+  if (e.finalSpareAtMost !== undefined) check(summary.finalSpare <= e.finalSpareAtMost, `spare ${summary.finalSpare} > ${e.finalSpareAtMost}`);
+  if (e.finalUserMessageTopNear !== undefined) check(Math.abs(summary.finalUserMessageTop - e.finalUserMessageTopNear) <= 4, `user top ${summary.finalUserMessageTop} != ${e.finalUserMessageTopNear}`);
   if (e.writesAtMost !== undefined) check(summary.writes <= e.writesAtMost, `writes ${summary.writes} > ${e.writesAtMost}`);
   if (e.flingReversalsAtMost !== undefined) check(summary.flingReversals <= e.flingReversalsAtMost, `flingReversals ${summary.flingReversals} > ${e.flingReversalsAtMost}`);
   return failures;
@@ -321,6 +315,7 @@ export async function runScenario(scenario: Scenario, ctx: RunContext): Promise<
     scenario: scenario.name,
     durationMs: Math.round(performance.now() - startedAt),
     finalAtBottom: ctx.atBottom(),
+    finalSpare: el ? Math.round(el.scrollHeight - el.scrollTop - el.clientHeight) : -1,
     finalFromBottom: el ? Math.round(fromBottomOf(el)) : -1,
     finalHasUnseenContent: ctx.hasUnseenContent(),
     finalUserMessageTop: lastUserMessageTop(el, ctx.content()),
