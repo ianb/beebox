@@ -17,7 +17,7 @@ import { hasProgressUpdate } from "../../message-parsing";
 import type { ModelMarker } from "../../InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureVerbs } from "../../capture-bubble";
 import { invariant } from "@shared/invariant";
-import type { SpeechSegmentState } from "../../../../machines/speechPlaybackMachine";
+import type { SpeechSegmentState } from "../../../../machines/speech-segment-states";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
 import { Button } from "../../../ui/Button";
@@ -107,6 +107,7 @@ export interface SpeechPlaybackState {
   playingMessageId: string | null;
   statusMessageId: string | null;
   segmentStates: Record<number, SpeechSegmentState>;
+  segmentFailures: Record<number, string>;
   playingSegmentIndex: number | null;
   remainingCount: number;
 }
@@ -255,6 +256,7 @@ function GroupItem({
           speechPlaying={playingThis}
           speechActiveIndex={playingThis ? speechPlayback.playingSegmentIndex : null}
           speechSegmentStates={statusThis ? speechPlayback.segmentStates : {}}
+          speechSegmentFailures={statusThis ? speechPlayback.segmentFailures : {}}
           anySpeechPlaying={speechPlayback.isPlaying}
           speechCanSkip={Boolean(speechPlayback.isPlaying && speechPlayback.remainingCount > 1)}
           onStopSpeech={handleStopSpeech}

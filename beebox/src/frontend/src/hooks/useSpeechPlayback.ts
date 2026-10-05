@@ -6,7 +6,7 @@
 import { useEffect, useCallback, useRef, useMemo } from "react";
 import { useMachine } from "@xstate/react";
 import { speechPlaybackMachine } from "../machines/speechPlaybackMachine";
-import type { SpeechSegmentState } from "../machines/speechPlaybackMachine";
+import type { SpeechSegmentState } from "../machines/speech-segment-states";
 import { getTTSClient } from "../lib/audio/tts-client/client";
 import { logSpeechEvent } from "../lib/audio/speech-test-log";
 import type { SpeechSegment } from "../lib/audio/speech-parsing/parse";
@@ -32,6 +32,8 @@ export interface SpeechPlayback {
   statusMessageId: string | null;
   /** Absolute segment index → generation/playback/failure progress. */
   segmentStates: Record<number, SpeechSegmentState>;
+  /** Absolute segment index → why it failed; read where `segmentStates` says "failed". */
+  segmentFailures: Record<number, string>;
   /** Absolute index of the segment currently playing, or null when idle. */
   playingSegmentIndex: number | null;
   /** Segments still queued, including the one currently playing. */
@@ -57,7 +59,7 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
 
   const isPlaying = snapshot.matches("playing");
   const { playingMessageId } = snapshot.context;
-  const { statusMessageId, segmentStates } = snapshot.context;
+  const { statusMessageId, segmentStates, segmentFailures } = snapshot.context;
   const remainingCount = snapshot.context.queue.length;
   const head = snapshot.context.queue.at(0);
   const playingSegmentIndex = head !== undefined ? head.index : null;
@@ -120,6 +122,7 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
       playingMessageId,
       statusMessageId,
       segmentStates,
+      segmentFailures,
       playingSegmentIndex,
       remainingCount,
       playSegments,
@@ -133,6 +136,7 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
       playingMessageId,
       statusMessageId,
       segmentStates,
+      segmentFailures,
       playingSegmentIndex,
       remainingCount,
       playSegments,
