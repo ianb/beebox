@@ -80,6 +80,15 @@ docker compose up -d
 Your box (`./data/box`), Claude credentials, and accounts (the named
 volumes) are untouched by a rebuild.
 
+**Upgrading from an install without the `home` volume** (before
+2026-10-05): local accounts, stored provider keys, and the Codex login lived
+in the container itself, which every recreate discarded. The first start with
+the new compose file is one more such recreate. Open the first-run setup link
+from `docker compose logs box` to create the owner account again, re-enter
+keys in Admin → Secrets, and sign in to Codex again. The box itself and the
+Claude login (`claude-auth` volume) carry over. From then on, all of it
+survives updates.
+
 **The box converges on start.** Before serving, the container runs
 `bbx migrate --sweep` (card data) and `bbx docs refresh` (the box's generated
 agent docs, card rules, and managed skills) against `/data/box`, so an engine

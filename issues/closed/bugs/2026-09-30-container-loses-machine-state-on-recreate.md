@@ -20,6 +20,10 @@ resolution: implemented
 > `BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects` in the image.
 > Verified in the Mac spike app, which mounts the same home: a password
 > account and a signed-in session both survived a full stop and restart.
+> Not carried over: state from an install that predates the volume (it lives
+> in the old container layer). `beebox/docs/install/docker.md` "Updating"
+> says so; a copy-across procedure was not written because it could not be
+> tested without a Docker daemon.
 
 
 Machine-level beebox state defaults to the runtime user's home directory:
