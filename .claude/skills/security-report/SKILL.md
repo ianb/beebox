@@ -106,7 +106,7 @@ it current (step 4 above).
 
 | Category | Paths |
 |---|---|
-| Endpoints & auth | `beebox/src/webapp/`, `beebox/src/hub/`, `beebox/pub-worker/src/` |
+| Endpoints & auth | `beebox/src/webapp/`, `beebox/src/hub/`, `beebox/pub-worker/src/`, `workstreams-app/src/router/server/` |
 | Credentials | `beebox/src/webapp/auth*`, `beebox/src/webapp/local-users*`, `beebox/src/webapp/auth-capabilities.ts`, `beebox/src/webapp/setup-token.ts`, `beebox/src/core/token-store.ts`, `beebox/src/core/agent/token.ts`, `beebox/src/core/mobile/`, `beebox/src/core/scan/tokens.ts`, `beebox/src/core/*-key.ts`, `beebox/src/core/search/embeddings-key.ts`, `beebox/src/google/token-store.ts`, `beebox/src/google/auth.ts`, `beebox/src/webapp/trpc/routers/admin/router.ts`, `beebox/src/lib/env.ts`, `beebox/deploy/`, any `process.env` addition anywhere |
 | Data egress | `beebox/src/connectors/`, `beebox/src/core/agent/`, `beebox/src/core/transcription/`, `beebox/src/services/`, `beebox/src/publish/`, `beebox/src/core/external/` |
 | Internal practices | `beebox/src/shared/ref-path/core.ts`, `beebox/src/lib/file-lock.ts`, `beebox/src/lib/card-lock.ts`, `beebox/src/webapp/` (CSP, throttles), `beebox/src/lib/atomic-write.ts` |
