@@ -1,6 +1,6 @@
 ---
 name: bbx-issue-actions
-description: Use to triage or resolve issue next-action tags (discuss, reconfirm, duplicate, invalid, fixed, manually-confirmed, verify-without-me), including released manual-testing gates. Use bbx-pick-issues to choose new work.
+description: Use to triage or resolve issue next-action tags (discuss, reconfirm, duplicate, invalid, fixed, manually-confirmed, verify-without-me, do-it), including released manual-testing gates. Use bbx-pick-issues to choose new work.
 ---
 
 # Working next-action requests
@@ -136,6 +136,14 @@ issue once to make sure the confirmation covers the whole item, then close it
 as `implemented`. When it carries `needs: [manual-testing]`, this tag is the
 developer's explicit permission to clear that gate as part of closing it.
 
+**`do-it` — the developer judged this small: fix it.** The only value that
+authorizes implementation by itself. Confirm the issue still holds, then fix it
+inline under the limits in "Fixing in place", with a test where one fits, and
+close it `implemented`. Do not reopen the design question; a message narrows
+what to do. If the work is larger than those limits, or needs a decision the
+issue does not settle, stop: clear `do-it`, set `discuss` with the reason in
+the body. `bin/issues next-action --next-action do-it` is the batch.
+
 ## Verification bar
 
 Each provisional tag is a hypothesis from someone with less context than you
@@ -202,7 +210,7 @@ together.
 
 ## Fixing in place
 
-Working provisional tags includes permission to fix a contained, verifiable
+Working provisional tags, and `do-it`, include permission to fix a contained, verifiable
 problem inline (a lint fix, a wrong string, or a one-file bug with a test). This
 never applies to `discuss`, regardless of blast radius, and it does not override
 a `needs: [manual-testing]` gate.
