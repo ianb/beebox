@@ -90,7 +90,7 @@ export interface BoxTarget {
  *   root APIs, which stay session-only. These paths never serve box data —
  *   Vite owns them, so a box literally named `src`/`node_modules` is already
  *   unreachable in dev anyway (this classification mirrors the proxy's real
- *   routing). Built `assets`/`icons` are separately in `unauth-allowlist`.
+ *   routing). Built `assets`/`icons`/`earcons` are separately in `unauth-allowlist`.
  * - `unknown`: anything else — deny (fail closed).
  */
 export type RouterRoute =
@@ -206,7 +206,10 @@ function isPublicFrontendAssetPath(rest: string): boolean {
     rest === "/assets" ||
     rest.startsWith("/assets/") ||
     rest === "/icons" ||
-    rest.startsWith("/icons/")
+    rest.startsWith("/icons/") ||
+    // Only direct media files: Vite proxies nested /<box>/api and /auth
+    // paths, including for a box whose slug happens to be "earcons".
+    /^\/earcons\/[\da-z-]+\.(mp3|wav)$/.test(rest)
   );
 }
 
@@ -285,7 +288,7 @@ function classifyWorktreePrefix({ method, rest }: { method: string; rest: string
   // callback). Method-agnostic: login is a POST, `/auth/me` a GET.
   if (rest === "/auth" || rest.startsWith("/auth/")) return { kind: "unauth-allowlist" };
 
-  // `/<w>/{assets,icons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
+  // `/<w>/{assets,icons,earcons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
   if (method === "GET" && isPublicFrontendAssetPath(rest)) return { kind: "unauth-allowlist" };
 
   // `/<w>/dev` / `/<w>/dev/...` — the worktree's dev space, served from disk.
