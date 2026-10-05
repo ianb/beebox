@@ -26,6 +26,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../../../lib/routing";
 import type { ChatAgentEngine } from "@shared/chat-models.js";
 import { ChatRenderProfiler } from "./ChatRenderProfiler";
+import { AgentGate } from "../../../agents/AgentReadiness";
 
 
 /**
@@ -297,7 +298,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           />
         </>
       }
-      composerSection={nativeComposer ? null : <ComposerRegion {...props} />}
+      composerSection={nativeComposer ? null : <AgentGate><ComposerRegion {...props} /></AgentGate>}
         debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
       />
     </ChatRenderProfiler>

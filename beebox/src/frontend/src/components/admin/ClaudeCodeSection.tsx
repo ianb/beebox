@@ -9,6 +9,7 @@ import { claudeAuthMachine } from "../../machines/claudeAuthMachine.js";
 import { ExternalLink } from "../ui/ExternalLink";
 import { Button } from "../ui/Button";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { useRefreshAgentReadinessOnLogin } from "../../hooks/useAgentReadiness";
 
 const DESCRIPTION =
   "Claude Code runs background agents (scheduler, reactor). Authenticate with your Anthropic account to enable these features.";
@@ -17,6 +18,7 @@ export function ClaudeCodeSection() {
   const [snapshot, send] = useMachine(claudeAuthMachine);
   const [code, setCode] = useState("");
   const { status, error, authUrl } = snapshot.context;
+  useRefreshAgentReadinessOnLogin(status?.loggedIn === true);
   const isSubmittingCode = snapshot.matches("submittingCode");
   const isLoading = snapshot.matches("loading");
   const isStarting = snapshot.matches("starting");
