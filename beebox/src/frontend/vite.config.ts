@@ -5,6 +5,8 @@ import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
 import { perBoxIdentityAssetPattern } from "../shared/box-identity-asset-routes.js";
 import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin/plugin";
 
+// Vite reads these build controls while constructing its server/build config;
+// app runtime env parsing cannot configure this file.
 const {
   FRONTEND_PORT: frontendPortEnv,
   BACKEND_PORT: backendPortEnv,
