@@ -269,7 +269,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       if (!inRoot && !inMenu) closeMenu();
     }
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") closeMenu();
+      if (e.key === "Escape" && !e.defaultPrevented) closeMenu();
     }
     document.addEventListener("mousedown", handlePointer);
     document.addEventListener("keydown", handleKey);
