@@ -30,15 +30,24 @@ them together.
 
 ## Boxholder decisions (2026-10-05)
 
-- **Plain text input.** A secret is "not secret like a password". The value
-  field is an ordinary visible text input, not masked: no `type="password"`
-  and no CSS masking. Keep `autocomplete="off"`, `spellcheck={false}`, and
-  `autoCapitalize="off"` so the browser neither saves nor alters the key.
+- **Not a password field, but hidden by default.** A secret is "not secret
+  like a password", so drop `type="password"`. But agents take screenshots of
+  the app (`bin/browse` for tests and exhibits, Claude in Chrome in the
+  boxholder's browser), and a visible value would enter agent context that
+  way. So the input is a text field masked with CSS
+  (`-webkit-text-security: disc`), with a show toggle for checking a pasted
+  value. Keep `autocomplete="off"`, `spellcheck={false}`, and
+  `autoCapitalize="off"`.
 - **The boxholder can show a stored value.** Today a value is "never shown
   again" after saving. The boxholder wants a way to show it in Admin.
 - **Not exposed to the agent.** Showing is a signed-in owner action in the
   UI. Agents keep their current access, which is through grants and never by
-  reading values back.
+  reading values back. To keep screenshots from catching it: the stored value
+  is not in the page until the owner clicks Show (fetched then), and it
+  re-hides after about 30 s, on blur, and on navigation. Proposed, not yet
+  decided: refuse Show when `navigator.webdriver` is set, which blocks
+  automation-driven browsers such as `bin/browse` (it cannot block Claude in
+  Chrome, which runs in the boxholder's own browser).
 
 The "show" part changes the security surface: a new owner-gated read of
 secret values. It needs its own route review, an entry in
