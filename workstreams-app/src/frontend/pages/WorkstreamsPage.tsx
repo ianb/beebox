@@ -6,6 +6,7 @@ import { WorkstreamIssueSummary } from "../components/WorkstreamIssueSummary.js"
 import { Button, Pill } from "../components/ui.js";
 import { relativeTime } from "../lib/format.js";
 import { trpc } from "../trpc.js";
+import { usePageIdentity } from "../lib/page-identity.js";
 import type { Issue, Workstream } from "../types.js";
 
 function launchStateFor(row: Workstream): { section: string; note: string } | null {
@@ -70,6 +71,7 @@ function WorkstreamsContent({ rows, issues, warnings }: { rows: Workstream[]; is
 }
 
 export function WorkstreamsPage() {
+  usePageIdentity("streams");
   const workstreams = trpc.workstreams.list.useQuery(undefined, { staleTime: 10_000, refetchOnWindowFocus: true });
   const issues = trpc.issues.list.useQuery(undefined, { staleTime: 10_000, refetchOnWindowFocus: true });
   const error = workstreams.error ? `Couldn’t load workstreams: ${workstreams.error.message}` : issues.error ? `Couldn’t load workstream issues: ${issues.error.message}` : null;

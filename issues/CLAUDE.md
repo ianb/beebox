@@ -214,6 +214,12 @@ category, `../<category>/<file>.md` across categories, and a full relative path
 from docs. Give external URLs descriptive link text. Plain text may name an
 issue that does not exist yet.
 
+When you point the developer at an issue in chat or a report, link the issue
+browser, not the file path:
+`http://localhost:3210/workstreams/issues?issue=features%2F2026-09-29-nas-app-store-targets.md`.
+The `issue` value is the path under `issues/`, URL-encoded. Add
+`&issueVisibility=private` only for a private issue; public is the default.
+
 Issue basenames must be unique across the tree; duplicates fail doc-check.
 After any move, close,
 reclassification, or rename, run `pnpm --dir beebox doc-check --fix`; it repairs

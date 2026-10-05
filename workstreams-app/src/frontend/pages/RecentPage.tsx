@@ -5,6 +5,7 @@ import { Button, Pill } from "../components/ui.js";
 import { trpc } from "../trpc.js";
 import type { Quota, RecentFeed, RecentFile } from "../types.js";
 import { issueRelPathFromRepoPath } from "../../shared/documents.js";
+import { usePageIdentity } from "../lib/page-identity.js";
 
 /**
  * The browser's front door (`docs/plans/general-browser.md`, Track 3).
@@ -120,6 +121,7 @@ export function RecentView({ feed, quotas, quotaError, workstream }: { feed: Rec
 }
 
 export function RecentPage({ workstream }: { workstream: string | null }) {
+  usePageIdentity("recent", workstream);
   const recent = trpc.documents.recent.useQuery();
   const quotas = trpc.quotas.get.useQuery();
   const quotaItems = quotas.data?.items ?? [];
