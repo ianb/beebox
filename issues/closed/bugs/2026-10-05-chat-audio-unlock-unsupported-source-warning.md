@@ -58,4 +58,4 @@ frontend assets containing no box data; this bounded exception requires no
 change to that assertion.
 
 The broader pre-existing static-prefix classification mismatch is tracked
-in [the separate router issue](../../bugs/2026-10-05-router-static-asset-prefix-admits-box-routes.md).
+in [the separate router issue](2026-10-05-router-static-asset-prefix-admits-box-routes.md).

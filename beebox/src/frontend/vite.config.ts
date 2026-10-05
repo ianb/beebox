@@ -2,11 +2,18 @@ import { resolve as resolvePath } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
+import { perBoxIdentityAssetPattern } from "../shared/box-identity-asset-routes.js";
 import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin/plugin";
-import { perBoxIdentityAssetPattern } from "./src/dev/vite-proxy";
 
-const FRONTEND_PORT = Number(process.env.FRONTEND_PORT) || 3210;
-const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
+const {
+  FRONTEND_PORT: frontendPortEnv,
+  BACKEND_PORT: backendPortEnv,
+  REACT_COMPILER: reactCompilerEnv,
+  VITE_BASE: viteBaseEnv,
+  BBX_ANALYZE_BUNDLE: analyzeBundleEnv,
+} = process.env;
+const FRONTEND_PORT = Number(frontendPortEnv) || 3210;
+const BACKEND_PORT = Number(backendPortEnv) || 3211;
 
 // When this Vite instance is fronted by the monorepo dev router, it gets
 // asked to serve at a path prefix like "/main/" or "/foo/". The router
@@ -20,16 +27,16 @@ const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
 // to opt out for debugging a suspected compiler issue. target:"18" pairs with
 // the react-compiler-runtime dependency (React 19 ships the runtime; 18 needs
 // the shim).
-const REACT_COMPILER = process.env.REACT_COMPILER !== "0";
+const REACT_COMPILER = reactCompilerEnv !== "0";
 
-const VITE_BASE = process.env.VITE_BASE || "/";
+const VITE_BASE = viteBaseEnv || "/";
 const BASE_PREFIX = VITE_BASE.replace(/\/$/, ""); // "" when base is "/", "/main" otherwise
 
 // Repeatable production bundle composition analysis, run via
 // `pnpm analyze:bundle` (src/dev/analyze-bundle/analyze.ts), which sets this env var
 // before shelling out to `vite build`. Absent/unset on every ordinary build
 // (dev server and plain `pnpm build`), so the plugin never runs by default.
-const ANALYZE_BUNDLE = process.env.BBX_ANALYZE_BUNDLE === "1";
+const ANALYZE_BUNDLE = analyzeBundleEnv === "1";
 
 // Dev CSP (Report-Only). Vite serves the dev HTML, so the dev policy is set
 // here rather than by Fastify. The report path must carry the base prefix so the
