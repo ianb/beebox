@@ -24,6 +24,7 @@ import { actionsRouter } from "./routers/actions.js";
 import { commandsRouter } from "./routers/commands.js";
 import { debugLogRouter } from "./routers/debug-log.js";
 import { adminRouter } from "./routers/admin/router.js";
+import { agentsRouter } from "./routers/agents.js";
 import { collectionsRouter } from "./routers/collections.js";
 import { healthRouter } from "./routers/health/router.js";
 import { driveRouter } from "./routers/drive.js";
@@ -68,6 +69,7 @@ const routerMembers = {
   commands: commandsRouter,
   debugLog: debugLogRouter,
   admin: adminRouter,
+  agents: agentsRouter,
   collections: collectionsRouter,
   health: healthRouter,
   drive: driveRouter,
