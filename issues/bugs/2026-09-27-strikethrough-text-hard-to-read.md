@@ -6,6 +6,7 @@ labels: [frontend, readability]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
+priority: normal
 ---
 
 The developer finds struck-through text hard to read. Struck text is still

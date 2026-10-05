@@ -5,6 +5,7 @@ area: beebox
 labels: [tests, environments]
 filed-by: agent
 discovered-in: worktree-knip-sweep — two full beebox suite runs on 2026-10-02, on a slow network link
+priority: important
 ---
 
 `test/core/pdf/extract.integration.doctest.md` says it skips loudly wherever

@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-todos-ui — browser walkthrough of todos on test1
+priority: important
 ---
 
 Opening `/<prefix>/test1/browse/projects/porch-rebuild/Plan.doc.card` (no

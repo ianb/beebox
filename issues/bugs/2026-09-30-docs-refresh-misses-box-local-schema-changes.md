@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-card-fields-review — applying box-local field renames on production boxes
+priority: normal
 ---
 
 After a box's `src/schemas/*.ts` changed and was committed, `bbx docs refresh
