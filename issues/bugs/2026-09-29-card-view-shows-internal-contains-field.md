@@ -18,3 +18,9 @@ priority: important
 **Fix direction.** Decide which fields are for reading and which are for Properties, and filter by that list rather than by adding names to the one at `view.tsx:85`. Check that Properties still shows the hidden fields, and that the `Browse` list's `contains` line is unaffected.
 
 Related: [review the standard card fields](../closed/code-quality/2026-09-27-review-standard-card-fields.md) (the `card-fields-review` workstream is reviewing the global fields) and [card Properties design session](../features/2026-09-27-card-properties-design-session.md).
+
+## Next-action note (2026-10-06)
+
+The developer's message: "I think contains could go in properties". That is
+the direction the `quick-wins-oct` workstream is implementing: hide `contains`
+and `contains-evidence` from the reading view and keep them in Properties.
