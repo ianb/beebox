@@ -1,19 +1,20 @@
 # Agent SDK release applicability
 
 This file is a cumulative, newest-first, beebox-specific view of Agent SDK
-releases. The daily persistent monitor session maintains it — the
-`sdk-update` schedule (`schedules/sdk-update/`, `bin/schedules list`), whose
-`run` script parses the **Latest reviewed upstream version** line below to
-decide whether there is anything to start a session for. Keep that line's
-shape. It reads upstream
-release notes in light of the SDK surfaces beebox actually uses. Applied
+releases. The `sdk-update` schedule maintains it: the `run` script beside this
+file parses the **Latest reviewed upstream version** line below to decide
+whether there is anything to start a session for, so keep that line's shape,
+and the persistent monitor session (`prompt.md`, also beside this file) reads
+upstream release notes in light of the SDK surfaces beebox actually uses.
+`bin/schedules list` shows its last runs. Paths below are repo-relative unless
+they start with `src/` or `test/`, which are under `beebox/`. Applied
 entries stay here because they can explain regressions and expose future
 opportunities elsewhere in the code. The monitor automatically bumps settled
 releases and immediately applies beebox-relevant security, memory, and
 correctness fixes.
 
 Three channels are assessed. **Runtime** is beebox's own use of the
-SDK (`src/core/agent/`, `src/core/chat/session/`, `src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`),
+SDK (`src/core/agent/`, `src/core/chat/session/`, `src/services/claude-chat/core.ts`,
 `src/services/scan-vision-claude.ts`, `src/core/sdk-hooks.ts`). **Harness** is
 the Claude Code the boxholder and every worker session run in — `.claude/hooks/`,
 `.claude/agents/finish.md` and the `/finish` flow, `bin/` worktree tooling,
@@ -26,7 +27,7 @@ merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply. **Codex** is the
 third channel, added 2026-09-05: `@openai/codex` and `@openai/codex-sdk`,
 pinned together in `beebox/package.json`, are the binary the box's Codex chats
-run (`src/services/codex-sdk-session.ts` (moved to `beebox/src/services/codex-sdk-session/core.ts`), `src/services/codex-binary.ts`) and
+run (`src/services/codex-sdk-session/core.ts`, `src/services/codex-binary.ts`) and
 what the production server's `codex` symlink resolves to — nothing else
 updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
@@ -556,7 +557,7 @@ A single fix: *"New local TUI sessions now leave reasoning summaries disabled by
 default, fixing request rejection by providers that do not support them."* It
 repairs `0.155.0`'s new live-reasoning-summary display, but only for **TUI**
 sessions. beebox runs Codex through `@openai/codex-sdk`
-(`src/services/codex-sdk-session.ts` (moved to `beebox/src/services/codex-sdk-session/core.ts`)), not the TUI, so `0.155.0` carries no
+(`src/services/codex-sdk-session/core.ts`), not the TUI, so `0.155.0` carries no
 regression on beebox's path and the two need not be taken as a pair here.
 - **Action:** Applied 2026-09-22 on the settled path (~95h old), both pins
   together, with `0.155.0`. Deploy gate on the workspace binary:
@@ -2357,7 +2358,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
     about, and it looks inert here — but the reasoning is worth writing down
     because the blast radius would be large if wrong.** BeeBox registers
     hooks on every query: `PreToolUse: [gitMvNudgeHook()]` plus the local
-    harness plugin in `src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`), and
+    harness plugin in `src/services/claude-chat/core.ts`, and
     `PreToolUse`/`PostToolUse` (git-mv nudge + card validator) in
     `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`). It also runs a warm-subprocess pool — `startup({
     options: queryOptions })` spawns and initializes a CLI ahead of time, and
@@ -2629,7 +2630,7 @@ clean tree, and a single long-lived uncommitted file stalls it indefinitely.
 - **BeeBox applicability (runtime):** The todo-tool removal was checked
   rather than assumed and is **inert here**. BeeBox never asks for those
   tools: `buildQueryOptions` (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`)) and
-  `src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`) pass no `tools`/`allowedTools` at all, and the
+  `src/services/claude-chat/core.ts` pass no `tools`/`allowedTools` at all, and the
   one place that does set an explicit surface — `OPERATOR_TOOLS` in
   `src/field-test/run.ts:61` (moved to `beebox/src/field-test/run/core.ts`) — is `["Bash", "Read"]`. The many `todo` hits in
   `src/` are beebox's own `{% todo %}` card annotation, an unrelated
@@ -3014,7 +3015,7 @@ outstanding work — it is durable evidence.
   completed, so the subagent never saw the result. No Claude Code parity claim.
 - **BeeBox applicability:** **Act-now correctness fix, directly in
   beebox's execution shape.** Every beebox query is a headless SDK
-  session (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`), `src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`)), and none of
+  session (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`), `src/services/claude-chat/core.ts`), and none of
   them restrict the toolset — `buildQueryOptions` sets `permissionMode`,
   `maxTurns`, hooks, and system-prompt options but passes no `allowedTools`/
   `disallowedTools`, so box agents have Task and background Bash available and

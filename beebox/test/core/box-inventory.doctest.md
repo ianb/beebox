@@ -124,3 +124,29 @@ if (annexBox !== undefined) {
 await annexBox?.cleanup();
 await box.cleanup();
 ```
+
+## Publication build output and dependency trees are not inventoried
+
+A box with a publication project's `dist/` and `node_modules/` inventories the
+same as one holding only the project's `src/` file.
+
+```ts
+const project = "_content/trips/Site.attach/project";
+const onlySource = await makeTmpBox();
+await onlySource.write(`${project}/src/readme.md`, "# Source\n");
+const withBuild = await makeTmpBox();
+await withBuild.write(`${project}/src/readme.md`, "# Source\n");
+await withBuild.write(`${project}/dist/page.md`, "# Built\n");
+await withBuild.write(`${project}/dist/stray.note.card`, "---\n---\n");
+await withBuild.write(`${project}/node_modules/pkg/README.md`, "# pkg\n");
+const counts = async (root: string): Promise<string> => {
+  const inv = await scanBoxInventory(root, { now: new Date("2026-08-12T12:00:00Z") });
+  return JSON.stringify([inv.direct, inv.grouped].map((items) => items.map((item) => [item.type, item.count])));
+};
+const same = (await counts(onlySource.root)) === (await counts(withBuild.root));
+await onlySource.cleanup();
+await withBuild.cleanup();
+print(String(same));
+=>
+true
+```

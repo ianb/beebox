@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-06T19:08:34Z
+Generated: 2026-10-06T20:12:24Z
 Total documents: 478
 
 ## Issues
@@ -300,6 +300,7 @@ Referenced by:
 - ../issues/closed/docs-and-chores/2026-08-03-one-temp-file-convention-for-agents.md:24 (mention) — the box's own CLAUDE.md / agent-guide / rules, not this repo's docs). So the box
 - ../issues/closed/docs-and-chores/2026-08-22-doc-check-skips-untracked-docs.md:28 (mention) — monorepo CLAUDE.md describes that set as the convention ("reads every `.md` in
 - ../issues/closed/docs-and-chores/2026-09-21-card-refs-cannot-link-package-docs-guide-silent-on-it.md:31 (mention) — `node_modules/`, `.git/`, `CLAUDE.md`, `package.json`, any unlisted root
+- ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:26 (mention) — repeats the routing in the root `CLAUDE.md`. Move any line it has that
 - ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md:17 (mention) — The always-loaded layer (agent-guide.md, CLAUDE.md includes, system prompts) has no size discipline: every addition feel
 - ../issues/closed/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:33 (mention) — simplicity bet (`beebox/CLAUDE.md`). Note the cost is NOT "N standing agents":
 - ../issues/closed/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:2 (mention) — title: "Can directory-scoped rules replace generated CLAUDE.md / @-includes?"
@@ -319,7 +320,6 @@ Referenced by:
 - ../issues/docs-and-chores/2026-09-16-remove-claude-isms-from-repo-docs.md:43 (mention) — 1. **Sweep.** Rewrite hits in present-tense reference docs, CLAUDE.md files,
 - ../issues/docs-and-chores/2026-09-18-move-to-agents-md-only.md:20 (mention) — after install. The documented workaround for those is to keep a `CLAUDE.md`
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:35 (mention) — - **Always referenced, from the same directory.** The `CLAUDE.md` in the
-- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:23 (mention) — repeats the routing in the root `CLAUDE.md`. Move any line it has that
 - ../issues/exploration/2026-03-04-claude-code-memory-concerns.md:11 (mention) — - Custom subagents don't inherit CLAUDE.md or `.claude/rules/` (only built-in subagents do)
 - ../issues/exploration/2026-05-19-subagent-strategy.md:28 (mention) — Connected concern: subagents in beebox don't inherit CLAUDE.md or rules (per [Claude Code Memory Concerns](2026-03-04-cl
 - ../issues/exploration/2026-05-28-before-you-build-this.md:12 (mention) — Convention to make it stick: a short rule in `CLAUDE.md` ("before writing a new component / helper / schema, run `bbx re
@@ -464,6 +464,7 @@ Referenced by:
 - docs/implemented-plans/normalize-chat-links.md:90 (mention) — - **`beebox/code-style.md:` no default parameters; max 2 positional
 - docs/implemented-plans/open-chat-from-card.md:54 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional params (the new
 - docs/implemented-plans/procedure-validation-completion.md:41 (mention) — - **`beebox/code-style.md`** — no `any`; no default parameters; max 2 positional params (named-params objects); custom e
+- docs/implemented-plans/prompt-calibration.md:139 (mention) — - Remove the root's link to the completed lint-suppression audit (`docs/reports/eslint-rule-suppression-audit-2026-05-30
 - docs/implemented-plans/questions-end-to-end.md:76 (mention) — - `beebox/code-style.md` — Result-vs-throw convention, `withCardLock`
 - docs/implemented-plans/refresh-clerk.md:29 (mention) — - `beebox/code-style.md` — no optional chaining, no default params, max
 - docs/implemented-plans/refresh-maps-convergence.md:77 (link) — - **[`code-style.md`](../../code-style.md)** — logging levels, max 2 positional
@@ -528,13 +529,13 @@ Referenced by:
 - ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:84 (mention) — `beebox/code-style.md` already says a file drops the redundant prefix when
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:103 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
 - ../issues/closed/decisions/2026-07-15-single-export-should-ignore-types.md:16 (mention) — convention (`code-style.md`) plus review covers the residual concern. The custom
+- ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:39 (mention) — - **Guidance:** `beebox/code-style.md` (links the audit twice, in the lint
 - ../issues/closed/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:35 (at-include) — - Engine side: `beebox/CLAUDE.md:174` uses `@code-style.md` (an @-include of a
 - ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:46 (mention) — these take `invariant()` per `code-style.md`, not a graceful refusal.
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/code-quality/2026-09-14-principles-to-rules-loop.md:29 (mention) — mechanical rules — its own words, *"`code-style.md` says how to write a line,
 - ../issues/code-quality/2026-09-14-what-can-we-remove-sweep.md:39 (mention) — - **`code-style.md`'s defensiveness rules** and principle 6 already say what
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
-- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:36 (mention) — - **Guidance:** `beebox/code-style.md` (links the audit twice, in the lint
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:27 (mention) — >   line in `code-style.md`, or both; not whether to adopt the idea.
 - ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:21 (mention) — - `beebox/CLAUDE.md` and `beebox/code-style.md`;
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
@@ -617,6 +618,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:123 (mention) — - `README.md:3` — "the `bbx` CLI is the interface"
 - ../issues/closed/decisions/2026-08-19-bee-box-rename.md:27 (mention) — moved to Discord, and `README.md` links the Bee Box server there.
 - ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:22 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
+- ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:81 (mention) — root `CLAUDE.md`, so nothing moved into `CLAUDE.md`. The root `README.md`
 - ../research/CLAUDE.md:11 (mention) — `pai/`, …) with a `README.md` index: a table of the corpus's documents plus
 - ../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md:4 (link) — architecture framing in the first-pass [README](README.md)). This is a code-reading
 - ../research/backend-alternatives/2026-07-18-synthesis.md:3 (link) — *2026-07-18. Supersedes the first-pass [README](README.md) analysis (kept as a record
@@ -1033,8 +1035,8 @@ Referenced by:
 - docs/user-stories/catalog/2026-08-21.md:8708 (mention) — **Code check** — beebox/package.json defines both scripts: "doc-graph": tsx src/dev/doc-graph.ts > docs/doc-graph.md and
 - src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/development/
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts` (move
+- ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:42 (mention) — - **Docs:** `beebox/docs/doc-graph.md` (regenerate it),
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:105 (mention) — `doc-graph.md` is now. The developer does not expect agents editing the
-- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:39 (mention) — - **Docs:** `beebox/docs/doc-graph.md` (regenerate it),
 
 #### docs/engineering-principles.md
 
@@ -1643,9 +1645,9 @@ Referenced by:
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:58 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
+- ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:25 (mention) — - **`docs/README.md` is deleted.** It is a documentation map that mostly
 - ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:16 (mention) — > as the search path) now live in `beebox/docs/README.md` "Organizing
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:38 (mention) — addressed (`docs/README.md` says so), so an invitee browsing `docs/`
-- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:22 (mention) — - **`docs/README.md` is deleted.** It is a documentation map that mostly
 - ../issues/exploration/2026-09-25-diataxis-for-agent-facing-docs.md:38 (mention) — in `beebox/docs/README.md` (flat reference, `design/` for why, `plans/`,
 
 References:
@@ -4154,7 +4156,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:357 (mention) — - Unanswered from the gap analysis (docs-reorg.gap-analysis.md B6–B9):
 - docs/implemented-plans/remove-bbx-render.md:351 (mention) — - `docs/plans/docs-reorg.gap-analysis.md:57-59` — cites the SSR `window`-guard
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
-- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:40 (mention) — `beebox/docs/implemented-plans/docs-reorg.gap-analysis.md`,
+- ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:43 (mention) — `beebox/docs/implemented-plans/docs-reorg.gap-analysis.md`,
 
 References:
 - → docs/implemented-plans/docs-reorg.md (link)
@@ -5030,7 +5032,7 @@ Title: "Calibrate skill discovery and the root agent instructions" | 279 lines |
 
 Referenced by:
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:9 (link) — Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. T
-- ../issues/docs-and-chores/2026-09-27-retire-root-docs-directory.md:41 (mention) — `beebox/docs/implemented-plans/prompt-calibration.md`.
+- ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:44 (mention) — `beebox/docs/implemented-plans/prompt-calibration.md`.
 
 References:
 - → ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md (frontmatter)
@@ -5038,7 +5040,7 @@ References:
 - → ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md (link)
 - → docs/implemented-plans/docs-reorg.md (link)
 - → docs/reports/prompt-calibration-pilot-2026-09-12.md (link)
-- → ../docs/reports/eslint-rule-suppression-audit-2026-05-30.md (link)
+- → code-style.md (mention)
 - → ../beebox/CLAUDE.md (link)
 - → ../beebox-clerk/CLAUDE.md (link)
 - → ../ios-app/CLAUDE.md (link)

@@ -203,6 +203,6 @@ cheapest thing that actually delivers it?*
   the watchlist to re-evaluate.
 - `research/backend-alternatives/2026-07-18-sdk-coupling-audit.md` — the layer
   map any port has to satisfy.
-- The Agent SDK monitor's ledger (`docs/agent-sdk-notes.md` at the repo root)
+- The Agent SDK monitor's ledger (`schedules/sdk-update/agent-sdk-notes.md`)
   already tracks upstream SDK *and* Claude Code releases — a good place to
   notice a change that raises or lowers the urgency here.
