@@ -55,7 +55,8 @@ Fields:
 - \`connection\`: the connection that the site deploys through.
 - \`tier\`: the requested audience. Use \`public\`, \`secret\`, \`accounts\`, or
   \`any-account\`.
-- \`slug\`: the requested hostname label. Use it only with tier \`public\`.
+- \`slug\`: the requested path on the box's shared hostname. The site is
+  served at \`/<slug>/\`. Use it only with tier \`public\`.
 - \`emails\`: the reader emails. Use it only with tier \`accounts\`, and there
   it is required.
 

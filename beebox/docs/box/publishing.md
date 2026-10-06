@@ -4,166 +4,154 @@ read-when: Creating, preparing, reviewing, or changing a static site published f
 
 # Publishing a site from this box
 
-This guide covers sites authored under `src/publications/` and served as
-static files from this box's shared publishing hostname. Read it before
-preparing or changing a publication. Pages published by one box share a
-browser origin, storage, and script access by the boxholder's choice; treat
-them as mutually trusting. Shared authoring notes are in
-`src/publications/NOTES.md`; use the scope headings there when adding a lesson.
+A publication is one `publication` card. The card holds the settings. The
+card's attach folder holds the site files. The server serves the files as a
+static site on this box's shared publishing hostname. Read this guide before
+you prepare or change a publication.
 
-## Start with a publication folder
+## The publication card
 
-Each site has a stable folder name and a `publication.json` definition:
+Put the card with the content that it publishes. Any folder under `_content/`
+is correct. Name the file `<Name>.publication.card`.
+
+This example is a public site about a camping trip:
 
 ```text
-src/publications/
-├── NOTES.md
-├── CLAUDE.md
-└── field-guide/
-    ├── publication.json
-    └── site/                  # static mode: finished files; .md renders to .html
-        ├── index.html
-        ├── styles.css
-        └── assets/
+_content/trips/
+├── Tahoe.card                    # the trip that the site is about
+├── Tahoe Site.publication.card
+└── Tahoe Site.attach/
+    └── static/
+        ├── index.md              # served as index.html
+        └── campsite.jpg
 ```
 
-For a new site, run `bbx pub id` to generate a fresh secure `pubId`; preserve
-that value in the definition across every refresh. Before creating sites,
-check `bbx pub connections` to see which Cloudflare connections are granted to
-this box. The boxholder or administrator selects one connection and one
-hostname for the box in **Admin → Cloudflare publishing**. This is a one-time
-box setup that can happen before the first site. Use the selected connection
-name in each new site's definition. Do not guess a name, inspect machine
-secrets, or search private server configuration. If there is no selected
-connection and hostname, ask for Admin setup. `bbx pub connections` lists
-active connections granted to this box; it never prints credentials.
-`bbx pub status` shows managed publication state and the box's connections.
-Without configured box-server credentials, it returns an error; run it through
-the configured box agent.
+`Tahoe Site.publication.card`:
 
-The definition chooses a content mode and requested audience. The server
-derives the source root, owning box, shared Worker, storage location, and
-release id from trusted server state. Never add a bucket name, Worker name,
-host name, output path, access credential, arbitrary build command, or another
-box's id to the definition.
+```markdown
+---
+title: Tahoe trip
+pubId: abcdefghijklmnop2345672345
+connection: replace-with-the-selected-connection
+tier: public
+slug: tahoe
+---
 
-Example public static definition:
-
-```json
-{
-  "pubId": "abcdefghijklmnop2345672345",
-  "connection": "replace-with-the-box-admin-selected-connection",
-  "content": "static",
-  "title": "Field guide",
-  "tier": "public",
-  "slug": "field-guide"
-}
+Notes: the boxholder wants no last names on this site.
 ```
 
-Replace the connection placeholder with the exact active name printed by
-`bbx pub connections` that the boxholder selected in Admin; the example value
-is not a configured connection. `pubId` is a stable, random base32 id assigned
-once; preserve it on every refresh and never copy the example id. `connection`
-must match this box's selected publishing connection. It does not contain or
-grant credentials. New managed account-restricted tiers remain disabled until
-a separate consent and security design. The requested `tier` may be `public`,
-`secret`, `accounts`, or `any-account`. Public definitions require an explicit
-`slug`. Secret definitions use the stable `pubId` path and do not take a slug
-or email list. A box member approves the actual audience and destination in
-the Publications area of the app.
+Then prepare it with the box-relative card path:
 
-An incomplete or ungranted connection is an actionable setup error. Do not
-copy a credential from another box or work around a missing grant. After
-preparing a new publication, give the boxholder the direct approval link
-printed by the CLI. A signed-in box member reviews and approves it in the app.
+```sh
+bbx pub prepare "_content/trips/Tahoe Site.publication.card"
+```
+
+Then tell the boxholder: "The site is prepared. Open the Tahoe Site card in
+the app, review the files and scan findings, and choose Enable." The command
+prints the card link and the URL. A public site is served at
+`https://<box-host>/<slug>/`, here `https://<box-host>/tahoe/`.
+
+The fields:
+
+- `title`: the site title.
+- `pubId`: the identity of the site. Run `bbx pub id` one time for each new
+  card. Never change the value. Never copy the example value.
+- `connection`: the Cloudflare connection for the site. `bbx pub status`
+  prints the connections granted to this box and the connection of the shared
+  hostname. Use that name. If there is no connection or hostname, ask the
+  boxholder to set one up in **Admin → Cloudflare publishing**. Do not guess a
+  name or look for credentials.
+- `tier`: the requested audience: `public`, `secret`, `accounts`, or
+  `any-account`.
+- `slug`: the path of a `public` site on the shared hostname. It is required
+  for a public site on that hostname. Use lowercase, at most 63 characters.
+  `s`, `p`, and `a` are reserved. Use `slug` only with tier `public`.
+- `emails`: the reader emails. Use it only with tier `accounts`, where it is
+  required.
+
+A `secret` site has no slug. It is served at `https://<box-host>/s/<pubId>/`.
+The full path is the reader's key. Give it only to the intended reader. Do not
+shorten it or write it in a public page, a shared note, or an issue.
+
+The card body is private notes about the site: decisions, sources, and
+requests from the boxholder. The body is never published. Read it before you
+change the site.
+
+Do not put approval, the served audience, the hostname, status, a bucket, a
+Worker, a build command, or credentials in the card. The server owns them.
+
+Never copy a publication card. A copy has the same `pubId`. `bbx validate`
+reports the duplicate, and prepare refuses it. To move or rename a card, use
+`bbx mv`. It moves the attach folder with the card.
 
 ## Choose static files or a site project
 
+The attach folder contains exactly one of these folders:
+
+- `static/`: finished files. Markdown files are rendered to pages.
+- `project/`: a frontend project with `package.json`. Its `dist/` is
+  published.
+
 ### Static files
 
-Put a complete site in `src/publications/<name>/site/`. Include a root
-`index.html` or `index.md`; every linked file must be present in the same
-folder. Static mode does not need a `package.json`, lockfile, install, or
-build. The publisher copies the finished folder, renders Markdown, scans the
-result, and stages it for server-side upload.
+Put a complete site in `<Name>.attach/static/`. Include `index.html` or
+`index.md` at the root. Every linked file must be in the folder. No install or
+build runs.
 
-To publish documents, write them as Markdown; do not convert them to HTML.
-Each `.md` file renders to a page with the same name and an `.html` extension,
-with the box's Markdown styling and no JavaScript:
+Write documents as Markdown. Do not convert them to HTML. Each `.md` file
+renders to a page with the same name and an `.html` extension. The page has the
+box's Markdown styling and no JavaScript.
 
-```text
-site/
-├── index.md          # served as index.html; links to the other pages
-├── packing-list.md   # served as packing-list.html
-└── photos/
-    └── campsite.jpg
-```
-
-- Link between pages with relative `.md` paths. A Markdown link to
-  `packing-list.md` renders as a link to `packing-list.html`. Images and other files use paths relative to the `.md`
-  file and are published unchanged.
+- Link between pages with relative `.md` paths. A link to `packing-list.md`
+  renders as a link to `packing-list.html`. Images and other files use paths
+  relative to the `.md` file. They are published unchanged.
 - The page title is `title:` from YAML frontmatter, else the first `#`
   heading, else the file name.
-- The `.md` source is not published. A `foo.md` and a `foo.html` in the same
-  folder is a preparation error; keep one.
-- Write plain Markdown. Task lists render as checkboxes. `redacted` content
-  is left out of the published page entirely. Other box Markdoc tags, such as
-  `quote`, `source`, and `todo`, are a preparation error, because a static
-  page cannot render them.
+- The `.md` source is not published. A `foo.md` and a `foo.html` in one folder
+  is an error. Keep one.
+- Task lists render as checkboxes. `redacted` content is left out. Other box
+  Markdoc tags, such as `quote`, `source`, and `todo`, are an error.
 - Use hand-written HTML and CSS only when the site needs its own layout. A
   site can mix both.
 
-Only static mode renders Markdown. A site project publishes `dist/` as built.
+A file over 1 MB in `static/` blocks the box commit, unless its extension is a
+known asset type such as an image, a video, or a PDF. Keep large data out of
+`static/`.
 
-Use ordinary relative paths such as `./styles.css`, `./assets/logo.svg`, and
-`./details/`. Each page and asset request resolves to the active release at
-request time, so publishing an update can change what a later request returns.
-A directory URL works only when that directory contains a published
-`index.html`; there is no SPA catch-all. Each public site has its own
-explicit slug and URL at `https://<box-host>/<slug>/`; secret sites use
-`https://<box-host>/s/<pubId>/`. The `/s`, `/p`, `/a`, and Worker-owned
-`/__*` paths are reserved. Builds should use relative URLs or their explicit
-publication path prefix. Do not use a site root path such as `/assets/logo.svg`
-unless the site deliberately includes its publication prefix.
+Use relative paths such as `./styles.css` and `./details/`. A directory URL
+works only when the directory has an `index.html`. There is no SPA catch-all.
+The `/s`, `/p`, `/a`, and `/__*` paths are reserved. Do not use a root path
+such as `/assets/logo.svg`.
 
 ### Site project
 
-Use this when you want TypeScript/JSX, React, Tailwind, or another frontend
-build tool. The complete optional React/Tailwind starter recipe appears below;
-copy its files into `src/publications/<name>/project/` and run `pnpm install`
-to create the site-local lockfile. You can also author a conventional frontend
-project there:
+Use a project for TypeScript, JSX, React, Tailwind, or another build tool.
+Put it in `<Name>.attach/project/`:
 
 ```text
-src/publications/field-guide/
-├── publication.json
-└── project/
-    ├── package.json
-    ├── pnpm-lock.yaml
-    ├── index.html
-    ├── vite.config.ts
-    └── src/
-        ├── main.tsx
-        └── styles.css
+Field Guide.attach/project/
+├── package.json
+├── pnpm-lock.yaml
+├── index.html
+├── vite.config.ts
+└── src/
+    ├── main.tsx
+    └── styles.css
 ```
 
-Keep dependencies local to this project; do not modify the box-root package or
-engine lockfile. Do not import Bee Box frontend components into a published site. Declare dependencies in `project/package.json`, commit the
-site-local `pnpm-lock.yaml`, and provide the ordinary `build` script. Prepare
-runs `pnpm install --frozen-lockfile` and `pnpm run build`, then publishes only
-`project/dist/`. The build can use its own declared bundler and dependency
-graph; it must emit a static site with `dist/index.html`. A missing or stale
-lockfile, missing build script, nonzero build, or timeout is reported as a
-preparation failure before promotion. Fix the project and prepare again; these
-local failures do not replace the current release.
+Keep dependencies in this project. Do not change the box-root package or
+lockfile. Do not import Bee Box frontend components. Commit the project's
+`pnpm-lock.yaml` and give it a `build` script. Prepare runs
+`pnpm install --frozen-lockfile` and `pnpm run build`, then publishes only
+`dist/`. The build must write `dist/index.html`. `dist/` and `node_modules/`
+are not committed. A stale lockfile, a missing build script, or a failed build
+stops prepare. The current release stays live.
 
-Build scripts run as trusted box code with the existing same-user filesystem
-privileges. The publisher gives them a reduced child environment without the
-server's credential variables; this is credential hygiene, not a sandbox.
-Keep secrets, package source, lockfiles, `node_modules/`, notes, and source maps
-out of `dist/`. The publisher rejects these by name/path and refuses symlinks,
-hidden files, source files, and reserved route segments. Current bounds are
-2,000 files, 25 MiB per file, and 100 MiB total.
+The build runs as box code with the box's file access. It does not get the
+server's credentials. Keep secrets, source, lockfiles, `node_modules/`, notes,
+and source maps out of `dist/`. The publisher refuses them, and it refuses
+symlinks, hidden files, and reserved route segments. The limits are 2,000
+files, 25 MiB for each file, and 100 MiB in total.
 
 ### Optional React/Tailwind starting point
 
@@ -175,8 +163,6 @@ responsive layout. It includes local `SiteLayout`, `Header`, `Nav`, `Main`,
 purpose, navigation, and featured content. Copy the following files to the
 matching paths under `project/`. Static sites and other stacks remain supported;
 the starter imports no Bee Box frontend code or components.
-
-
 
 #### Starter files
 
@@ -541,67 +527,43 @@ box member to enable the site.
 
 ## Prepare, approve, and update
 
-1. Write the definition and complete static files or project source in the
-   fixed folder for that publication.
-2. Run `bbx pub prepare <name>` to ask the authenticated Bee Box server to
-   prepare that folder by name. The server reads files from the registered box, validates
-   routes and size, builds project mode if selected, scans content, and uploads
-   an immutable release. The request contains only the publication name; it
-   cannot choose another box, id, bucket, or Worker. A new site remains
-   disabled. On an enabled site, a successful prepare within the approved
-   audience and destination publishes immediately. If the requested audience
-   or destination differs, it prepares a candidate and keeps the old release
-   live until a signed-in box member approves that scope. A failed build or
-   scan before upload/promotion leaves the current release live. If a remote
-   write may have succeeded but read-back or activation verification fails,
-   serving state is unknown; do not claim that the old release was restored.
-   The command prints `publication URL: <full-url>` and an `approval:` line.
-   Preserve the whole destination URL,
-   including `/s/<pubId>/` for a secret link; the PubId path is the viewer's
-   capability, and shortening it makes the link unusable. Share a secret URL
-   privately with its intended recipient; do not write it into shared notes,
-   a public page, or a public issue. The output also prints a direct
-   publication-card approval link when `BBX_SERVER_URL` and `BBX_BOX_NAME` are
-   available. Otherwise the line says to open this box's Publications area from
-   the app menu and choose the publication card. Tell the boxholder to sign in
-   to this box, open the linked publication card, review its requested audience
-   and file/scan summary, then choose **Enable** or **Approve**. The Publications
-   area links to existing cards and can create a missing reference card when
-   the member explicitly chooses that action. The member's app action is required; no CLI command can enable
-   or approve it.
-2. For a first enable or scope change, the boxholder must review the title,
-   destination, requested audience, emitted file summary, and leak-scan findings
-   in the app. If a scan
-   finding is real, remove the exposed material and prepare again. Do not wave
-   through a suspected secret. An ordinary same-scope content refresh does not
-   require a separate snapshot approval.
-3. A signed-in member of this box enables the publication in the app. That
-   action authorizes the requested audience and destination. Global
-   administrators manage Cloudflare connections and per-box grants; they do
-   not need to be the member who approves a site.
-4. After enablement, you may refresh content within the approved audience and
-   destination. Any audience or destination change, including narrowing or
-   widening recipients or changing a public slug, needs fresh approval from a
-   signed-in member. A local build or scan failure before promotion leaves the
-   current release active. If a remote write may have succeeded but its
-   read-back/activation check fails, inspect `bbx pub status` and treat serving
-   state as unknown; the publisher does not promise rollback.
-5. A signed-in box member can disable the publication in the app. Disablement
-   stops every release at the serving edge. Revocation is terminal; a disabled
-   publication may be enabled again after its approval state is still valid.
+1. Write the card and the files in its attach folder.
+2. Run `bbx pub prepare <card-path>`. The server reads the files, builds a
+   project, checks routes and sizes, scans for leaks, and uploads a release.
+   The command prints the URL and an `approval:` line with the card link.
+3. Tell the boxholder to open the card in the app, review the audience, files,
+   and scan findings, and choose **Enable**. Only a signed-in box member can
+   enable a site. No CLI command can do it.
+4. If a scan finding is real, remove the material and prepare again. Do not
+   ask the boxholder to accept a suspected secret.
 
-The app's safe summary/preview is text and metadata only; it never executes
-published JavaScript on the authenticated Bee Box origin. On the box's shared
-publishing hostname, however, every published page has the same browser
-origin. A page's scripts can read or change that origin's web storage and can
-make same-origin requests to other published paths, including secret-link
-paths whose PubId is known. The boxholder has explicitly chosen mutual trust
-among publications in one box. Do not put sensitive data in shared browser
-storage or rely on CORS to separate sites. Content updates within an
-already-approved scope are allowed without a new member click. To inspect the
-actual site, use a local preview or visit its published URL after enablement.
-If approval changes the destination or audience, the old route is no longer
-approved.
+After the site is enabled, prepare it again to publish new content. A content
+change goes live at once. A change to `tier`, `slug`, or `emails` is a
+request. The current release stays live until a signed-in member approves the
+request on the card. While a request waits, the command prints the current URL
+and the candidate URL. Keep them separate.
+
+A failed build or scan leaves the current release live. If an upload may have
+written files but its check failed, the serving state is unknown. Run
+`bbx pub status` and report that. Do not say the old release was restored.
+
+A member can disable the site on its card. Disable stops every release.
+
+To see what is published, use these commands:
+
+- `bbx pub status`: the state of each publication and the box's connections.
+- `bbx pub files <card-path>`: the files in the active release.
+- `bbx pub cat <card-path> <file>`: one file from the active release. Add
+  `--pending` to read the candidate that waits for approval.
+
+There is no local copy of a published site. Use these commands, not the
+attach folder, to check what readers get.
+
+The app shows a text summary of the files. It never runs published
+JavaScript. All published pages of this box share one browser origin. A
+page's scripts can read the origin's web storage and request other published
+paths, which include secret paths with a known `pubId`. The boxholder accepts
+this. Do not put sensitive data in browser storage.
 
 ## Shared hostname for this box
 
@@ -617,15 +579,9 @@ certificate changes start when the owner submits the assignment, before any
 site is enabled. The owner should review existing DNS and Workers Routes
 first. A successful API mapping does not prove HTTPS is ready.
 
-The agent does not run CLI setup or assign a host. It checks
-`bbx pub connections`, uses the selected connection name in publication
-definitions, prepares the site, and gives the boxholder the `approval:` link
-printed by the CLI. A signed-in member reviews and approves the publication
-card opened by that link. Public sites require an explicit slug and use
-`https://<box-host>/<slug>/`; secret sites use
-`https://<box-host>/s/<pubId>/`. Preserve the complete secret path and share it
-privately. `/s`, `/p`, `/a`, and Worker-owned `__*` routes are reserved and
-cannot be public slugs.
+The agent does not set up or assign a host. It reads the selected connection
+from `bbx pub status`, puts that name in each card, prepares the site, and
+gives the boxholder the card link that prepare prints.
 
 Existing per-publication `workers.dev` URLs and custom hostnames continue to
 serve their old routes. A publication can join the shared hostname only after
@@ -642,22 +598,6 @@ distinct while review is pending. If the old per-publication Worker still has
 an active URL, the app and status output identify it separately from the
 shared-host destination.
 
-## Private publication notes
-
-Use `src/publications/NOTES.md` for durable authoring lessons shared across
-sites. This is ordinary private box guidance, not a publication source and not
-copied into a release. Use the headings already in that file:
-
-- **All sites** — defaults that apply to every publication.
-- **Site: `<name>`** — decisions specific to one publication.
-- **Path: `<site>/<relative-path>`** — details for a particular area, for
-  example `<site>/site/styles/` in static mode or
-  `<site>/project/src/components/` in project mode.
-
-Read applicable notes before changing a site. Promote a reusable lesson to
-`All sites`; do not spread a site-specific decision to other sites without a
-reason. Initialization preserves this file rather than overwriting it.
-
 ## Output and route restrictions
 
 The publisher requires `index.html` at the output root, and the Worker serves
@@ -669,8 +609,8 @@ rejected. Route paths are case-sensitive. Use `./` links for site assets so a
 page continues to load its own matching CSS, JavaScript, JSON, and images after
 a refresh.
 
-If the definition, build, leak scan, or upload fails, fix the reported cause
-and prepare again. Change the site source, not prepared output: prepare stages
+If the card, build, leak scan, or upload fails, fix the reported cause
+and prepare again. Change the files in the attach folder, not prepared output: prepare stages
 each release in a temporary directory outside the box, and the server-owned
 publication operation controls what becomes an active release.
 
