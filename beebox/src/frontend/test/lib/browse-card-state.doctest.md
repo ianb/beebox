@@ -164,5 +164,5 @@ missing detail as the normal Browse behavior does:
 const legacy = { path: "projects/Plan.doc.card", viewer: null, params: {}, viewState: null };
 const missing = await legacyBrowseTarget(legacy, { lookupKind: async () => "missing", missingKind: "file" });
 missing.viewState.detail.path
-=> "_content/projects/Plan.doc.card"
+=> _content/projects/Plan.doc.card
 ```
