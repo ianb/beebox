@@ -10,17 +10,18 @@ import type { NativeShellWindow } from "../../../../src/components/chat/native-p
 ```
 
 HQ dictation uses its own state channel so native can distinguish persistent
-HQ from narration mode:
+HQ from narration mode. `diarized` says the box's HQ service labels speakers,
+which keeps native's HQ pass on the box instead of on the device:
 
 ```ts
 const calls: Array<{ channel: string; payload: string }> = [];
 const shell: NativeShellWindow = {
   beeboxNativePost: (channel, payload) => calls.push({ channel, payload }),
 };
-postNativeHqDictationState(false, shell);
-postNativeHqDictationState(true, shell);
+postNativeHqDictationState({ enabled: false, diarized: false }, shell);
+postNativeHqDictationState({ enabled: true, diarized: true }, shell);
 JSON.stringify(calls)
-=> [{"channel":"beeboxHqDictationState","payload":"{\"enabled\":false}"},{"channel":"beeboxHqDictationState","payload":"{\"enabled\":true}"}]
+=> [{"channel":"beeboxHqDictationState","payload":"{\"enabled\":false,\"diarized\":false}"},{"channel":"beeboxHqDictationState","payload":"{\"enabled\":true,\"diarized\":true}"}]
 ```
 
 The neutral bridge receives the current state as a JSON payload:

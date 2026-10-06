@@ -204,6 +204,13 @@ function validateNarrationState(fx) {
   return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
 }
 
+// ── hq-dictation-state (contract §4.4a): `diarized` absent reads false ──
+function validateHqDictationState(fx) {
+  const { enabled, diarized = false } = fx.input;
+  const got = typeof enabled === "boolean" && typeof diarized === "boolean" ? { enabled, diarized } : null;
+  return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
+}
+
 // ── pairing-url: a contract-faithful parse of beebox://pair (contract §1.1) ──
 function parsePairingURL(raw) {
   let url;
@@ -415,6 +422,17 @@ The current session's narration flag is mirrored to native without ambiguity:
 ```ts
 runFamily("narration-state", validateNarrationState)
 => {"family":"narration-state","cases":2,"pass":2}
+```
+
+## hq-dictation-state
+
+The HQ flag and whether the box's HQ service labels speakers. A payload from
+web that predates `diarized` reads as not diarized; a non-boolean value in either field
+is ignored:
+
+```ts
+runFamily("hq-dictation-state", validateHqDictationState)
+=> {"family":"hq-dictation-state","cases":6,"pass":6}
 ```
 
 ## pairing-url

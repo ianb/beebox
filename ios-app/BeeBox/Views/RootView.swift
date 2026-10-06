@@ -23,6 +23,9 @@ struct RootView: View {
     @State private var locationSharingEnabled = false
     @State private var narrationEnabled = false
     @State private var hqDictationEnabled = false
+    /// The box's HQ service labels speakers (contract §4.4a), which keeps the
+    /// HQ pass on the server. A box setting, so a conversation change keeps it.
+    @State private var hqDiarizationRequested = false
     @State private var speechPlaybackActive = false
     @State private var responseActive = false
     @State private var screenshotRequest: NativeScreenshotRequest?
@@ -130,6 +133,7 @@ struct RootView: View {
             locationSharingEnabled = false
             narrationEnabled = false
             hqDictationEnabled = false
+            hqDiarizationRequested = false
             speechPlaybackActive = false
             responseActive = false
             screenshotRequest = nil
@@ -194,6 +198,13 @@ struct RootView: View {
 
     /// Redeliver pending emissions whose receipt has not arrived within the
     /// backoff, and log the two transitions worth diagnosing later.
+    private func prefetchOnDeviceHqAssetsIfNeeded() {
+        guard (hqDictationEnabled || narrationEnabled) && hqDiarizationRequested == false else {
+            return
+        }
+        OnDeviceHqTranscriber.prefetchAssets()
+    }
+
     private func evaluatePendingEmissionRedelivery(now: Date = Date()) {
         guard let boxID = store.selectedBox?.id else {
             return
@@ -362,9 +373,12 @@ struct RootView: View {
             },
             onNarrationStateChange: { enabled in
                 narrationEnabled = enabled
+                prefetchOnDeviceHqAssetsIfNeeded()
             },
-            onHqDictationStateChange: { enabled in
-                hqDictationEnabled = enabled
+            onHqDictationStateChange: { state in
+                hqDictationEnabled = state.enabled
+                hqDiarizationRequested = state.diarized
+                prefetchOnDeviceHqAssetsIfNeeded()
             },
             onSpeechPlaybackStateChange: { playing in
                 if speechPlaybackActive != playing {
@@ -453,6 +467,7 @@ struct RootView: View {
                     captureAvailable: composerBox.sessionID?.isEmpty == false,
                     narrationEnabled: narrationEnabled,
                     hqDictationEnabled: hqDictationEnabled,
+                    hqDiarizationRequested: hqDiarizationRequested,
                     speechPlaybackActive: speechPlaybackActive,
                     responseActive: responseActive,
                     locationSharingEnabled: locationSharingEnabled,
