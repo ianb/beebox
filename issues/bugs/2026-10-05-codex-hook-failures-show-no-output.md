@@ -18,7 +18,51 @@ such as a validation failure, in a form Codex drops.
 This issue is about dev sessions. Also check whether box sessions (box agents
 running on Codex, with the box's own validation hooks) have the same problem.
 
-## Findings so far (2026-10-05)
+## Root cause (2026-10-05)
+
+The failing hook is the **Bee Box Codex plugin's box-validation hook**, not
+the repo's lint hook.
+
+- `beebox-codex@beebox` is installed globally (`~/.codex/config.toml`,
+  marketplace `beebox` sourced from the main checkout's `beebox/`, cached
+  2026-08-31 under `~/.codex/plugins/cache/beebox/beebox-codex/`). Its
+  `hooks/hooks.json` adds SessionStart (`bbx agent-context --hook`) and
+  PostToolUse on `apply_patch|Edit|Write` (`bbx validate --hook`) to **every**
+  Codex session, including dev worktrees.
+- Its `scripts/run-bbx.sh` walks up from the cwd and runs the first `bbx` it
+  finds. In a dev worktree that is `<worktree>/beebox/bin/bbx`, which runs the
+  worktree's in-progress source through tsx.
+- Reproduced in `secret-field-masking`: the agent's edit made
+  `beebox/src/webapp/trpc/routers/secrets.ts` import
+  `../../../lib/box-time.js`, which does not exist. Every later edit's hook
+  run crashed at import with `ERR_MODULE_NOT_FOUND` and exit 1. Codex showed
+  only "hook exited with code 1" and gave the model none of the stderr. (The
+  import is a real bug in that branch; typecheck will also catch it.)
+- A throwaway `codex exec` project reproduced "SessionStart Failed" and
+  "PostToolUse Failed" from the same plugin with no project hooks involved.
+
+### Also found
+
+- Codex runs a hook only after its file is trusted by hash
+  (`[hooks.state]` in `~/.codex/config.toml`). The only trusted project hook
+  is `~/src/beebox/.codex/hooks.json`. The generated
+  `<worktree>/.codex/hooks.json` files are at new paths, so the
+  `vibe-check lint --hook` hook probably never runs in worktree sessions.
+  A probe project's untrusted hooks did not run. Verify in a real worktree.
+- The plugin cache is a 2026-08-31 snapshot; it does not follow repo changes.
+
+## Fix directions
+
+1. The box plugin's hooks must not act in a dev checkout: `run-bbx.sh` or
+   `bbx validate --hook` should exit 0 silently when the cwd is not a box.
+2. A hook crash must not be silent to the model. Find Codex's hook output
+   contract and report failures in a form the model sees (and for box
+   sessions, make validation failures readable).
+3. Make worktree lint hooks trusted, or run lint another way under Codex, and
+   make the lint hook read `apply_patch` payloads.
+4. Decide how the plugin cache is refreshed when the plugin source changes.
+
+## Earlier findings (2026-10-05)
 
 - Codex runs two hook sets in a dev worktree:
   - The generated project hook `<worktree>/.codex/hooks.json`, written by
