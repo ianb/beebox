@@ -1,12 +1,15 @@
 ---
 title: "The landmark menu takes ~22 s to open after a server restart, waiting on a Codex repair scan it does not need"
 workstream: place-menu-speed
+resolution: implemented
 area: beebox
 labels: [codex, performance]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder noticed the landmark menu is slow
 ---
+
+**Closed:** resolved by 6673cd5fc (and e2f6aa517). Item 4, the whole-box landmark glob, was a note rather than a fix and is unchanged.
 
 The landmark menu (`chat.placeMenu`,
 `beebox/src/webapp/trpc/routers/chat/place-menu-procedure.ts`) is slow to
