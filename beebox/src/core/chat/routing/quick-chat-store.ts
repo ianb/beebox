@@ -24,8 +24,8 @@ function quickChatDir(boxRoot: string): string {
   return path.join(boxRoot, ".beebox", "quick-chat");
 }
 
-/** The closed location; also where `quickChat.prepare` keeps its records. */
-export function closedRecordPath(boxRoot: string, id: string): string {
+/** The closed location; also where the retired `quickChat.prepare` kept its records. */
+function closedRecordPath(boxRoot: string, id: string): string {
   invariant(UUID.test(id), "Quick chat record ids are UUIDs");
   return path.join(quickChatDir(boxRoot), `${id}.json`);
 }

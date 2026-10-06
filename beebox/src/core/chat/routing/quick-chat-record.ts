@@ -54,9 +54,9 @@ const recordSchema = z.discriminatedUnion("state", [
 export type QuickChatRecord = z.infer<typeof recordSchema>;
 export type SendingQuickChatRecord = Extract<QuickChatRecord, { state: "sending" }>;
 
-export const legacyReceiptSchema = z.object({ sessionId: z.string().optional(), turnId: z.string().optional(), queued: z.boolean().optional() });
-/** The record `quickChat.prepare` writes; it has no state. */
-export const legacyQuickChatRecordSchema = z.object({
+const legacyReceiptSchema = z.object({ sessionId: z.string().optional(), turnId: z.string().optional(), queued: z.boolean().optional() });
+/** The record the retired `quickChat.prepare` wrote; it has no state. */
+const legacyQuickChatRecordSchema = z.object({
   id: z.string().uuid(), message: z.string(), createdAt: z.string(),
   sourceId: z.string().uuid().optional(),
   candidates: z.array(routingCandidateSchema), selected: routingCandidateSchema,
@@ -65,7 +65,6 @@ export const legacyQuickChatRecordSchema = z.object({
   delivery: deliverySchema.nullable(),
   receipt: legacyReceiptSchema.optional(),
 });
-export type LegacyQuickChatRecord = z.infer<typeof legacyQuickChatRecordSchema>;
 
 /** The session a delivery names, when it names one before the engine runs. */
 export function deliverySessionId(delivery: QuickChatDelivery | null): string | undefined {

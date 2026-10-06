@@ -1,7 +1,7 @@
-import { createJevService, serializeJevRequest, type JevDecision, type JevService } from "../../../services/jev.js";
-import { getOpenRouterKey } from "../../openrouter.js";
+import { createJevService, serializeJevRequest, type JevDecision, type JevService } from "../../../../services/jev.js";
+import { getOpenRouterKey } from "../../../openrouter.js";
 import { boundRoutingContexts } from "./catalog.js";
-import type { RoutingCandidate } from "./policy.js";
+import type { RoutingCandidate } from "../policy.js";
 
 /**
  * Ask Jev where one quick chat message belongs. Returns null when the box has

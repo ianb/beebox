@@ -1,9 +1,9 @@
 # Quick chat candidates and provisional policy
 
 ```ts setup
-import { buildRoutingCandidates, loadRoutingRubric, boundRoutingContexts, formatRecentRoutingContext, routingHistoryMetadata } from "../../../../src/core/chat/routing/catalog.js";
-import { routingCandidateSchema } from "../../../../src/core/chat/routing/policy.js";
-import { selectRoutingDestination } from "../../../../src/core/chat/routing/policy.js";
+import { buildRoutingCandidates, loadRoutingRubric, boundRoutingContexts, formatRecentRoutingContext, routingHistoryMetadata } from "../../../../../src/core/chat/routing/quick-chat-submit/catalog.js";
+import { routingCandidateSchema } from "../../../../../src/core/chat/routing/policy.js";
+import { selectRoutingDestination } from "../../../../../src/core/chat/routing/policy.js";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";

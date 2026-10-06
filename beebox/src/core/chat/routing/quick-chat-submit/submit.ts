@@ -10,22 +10,22 @@
  */
 
 import { randomUUID } from "node:crypto";
-import type { JevService } from "../../../services/jev.js";
-import { JevError } from "../../../services/jev-wire.js";
-import { getBoxTime } from "../../../lib/time.js";
-import { errorMessage } from "../../../shared/error-guards.js";
-import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
-import { loadLandmarkSummaries } from "../../landmark/summaries.js";
-import { seedFeaturesForNewChat } from "../../landmark/features.js";
-import type { ReserveResult } from "../session/reserve.js";
+import type { JevService } from "../../../../services/jev.js";
+import { JevError } from "../../../../services/jev-wire.js";
+import { getBoxTime } from "../../../../lib/time.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
+import { loadAgentEngine, type AgentEngine } from "../../../box/config.js";
+import { loadLandmarkSummaries } from "../../../landmark/summaries.js";
+import { seedFeaturesForNewChat } from "../../../landmark/features.js";
+import type { ReserveResult } from "../../session/reserve.js";
 import { loadRoutingCandidates, RoutingCatalogError } from "./catalog.js";
-import { routingDisposition, selectRoutingDestination, type RoutingCandidate } from "./policy.js";
-import { judgeQuickChat } from "./quick-chat-judge.js";
+import { routingDisposition, selectRoutingDestination, type RoutingCandidate } from "../policy.js";
+import { judgeQuickChat } from "./judge.js";
 import {
   deliveryExpired, deliverySessionId, quickChatChoiceIds,
   type QuickChatDelivery, type QuickChatReason, type QuickChatRecord, type SendingQuickChatRecord,
-} from "./quick-chat-record.js";
-import { readQuickChatRecord, saveQuickChatRecord, withQuickChatLock } from "./quick-chat-store.js";
+} from "../quick-chat-record.js";
+import { readQuickChatRecord, saveQuickChatRecord, withQuickChatLock } from "../quick-chat-store.js";
 
 /** What one delivery attempt reports, in the record's terms. */
 export type QuickChatDeliveryOutcome =
