@@ -27,7 +27,7 @@ const HOME_PATH = /\/(?:Users|home)\/([\dA-Za-z][\w.-]*)\//g;
  * are content the card records, not a developer's path leaking into it.
  */
 function insideUrl(text: string, index: number): boolean {
-  const start = Math.max(text.lastIndexOf(" ", index), text.lastIndexOf("\n", index), text.lastIndexOf("\t", index)) + 1;
+  const start = Math.max(text.lastIndexOf(" ", index), text.lastIndexOf("\n", index), text.lastIndexOf("\t", index), text.lastIndexOf("(", index), text.lastIndexOf("<", index)) + 1;
   return text.slice(start, index).includes("://");
 }
 

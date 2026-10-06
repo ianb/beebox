@@ -1,6 +1,6 @@
 ---
 title: "`bbx create`'s key=value args parse JSON arrays but not JSON objects, so an object-typed template field can't be passed on the command line"
-workstream: unattached
+workstream: quick-wins-oct
 area: beebox
 filed-by: agent
 discovered-by: agent

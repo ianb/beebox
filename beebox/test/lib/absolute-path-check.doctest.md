@@ -58,3 +58,10 @@ JSON.stringify([
 ])
 => [[],[],["/Users/beebox/"]]
 ```
+
+An ordinary URL can contain a `/home/` route without naming a machine path:
+
+```ts
+findAbsoluteMachinePaths("See https://example.gov/App/home/section/page")
+=> []
+```

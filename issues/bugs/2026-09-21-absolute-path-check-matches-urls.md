@@ -1,6 +1,6 @@
 ---
 title: "bbx validate's absolute-machine-path guard flags /home/ or /Users/ inside ordinary URLs"
-workstream: unattached
+workstream: quick-wins-oct
 area: beebox
 filed-by: agent
 discovered-by: agent

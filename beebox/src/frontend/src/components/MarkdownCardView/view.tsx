@@ -78,12 +78,18 @@ function QuoteSpeakersLine({
   );
 }
 
+const INTERNAL_READING_FIELDS = new Set(["contains", "contains-evidence"]);
+
+export function readingFrontmatter(fields: Record<string, unknown>, mode: RendererProps["mode"]): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([key]) => key !== "theme" && !INTERNAL_READING_FIELDS.has(key) && (key !== "title" || mode === "embed")),
+  );
+}
+
 export function MarkdownCardView(props: RendererProps & { hideEmptyBody?: boolean }) {
   const { data, onNavigate, mode } = props;
   const hideEmptyBody = props.hideEmptyBody ?? false;
-  const frontmatter = data.frontmatter === undefined ? undefined : Object.fromEntries(
-    Object.entries(data.frontmatter).filter(([key]) => key !== "theme" && (key !== "title" || mode === "embed")),
-  );
+  const frontmatter = data.frontmatter === undefined ? undefined : readingFrontmatter(data.frontmatter, mode);
   const body = data.body;
   const speakers = body === undefined ? [] : extractQuoteSpeakers(body);
   const { boxSlug } = useParams({ strict: false });

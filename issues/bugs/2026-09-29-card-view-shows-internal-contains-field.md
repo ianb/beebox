@@ -1,6 +1,6 @@
 ---
 title: "The card view shows `contains` on every card; it's an internal field and belongs in Properties"
-workstream: unattached
+workstream: quick-wins-oct
 area: beebox
 labels: [cards]
 filed-by: agent

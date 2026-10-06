@@ -1,6 +1,6 @@
 ---
 title: "Chat-agent system instructions' worked example for pointing at the attach control names a control ('paperclip') that does not exist in the product"
-workstream: unattached
+workstream: quick-wins-oct
 area: beebox
 filed-by: agent
 discovered-by: agent

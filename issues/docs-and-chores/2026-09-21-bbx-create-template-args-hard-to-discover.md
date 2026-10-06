@@ -1,6 +1,6 @@
 ---
 title: "`bbx create`'s key=value template arguments are undiscoverable: the natural flag guess errors with no pointer to --describe-template"
-workstream: unattached
+workstream: quick-wins-oct
 area: beebox
 filed-by: agent
 discovered-by: agent

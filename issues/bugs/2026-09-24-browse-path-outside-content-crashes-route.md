@@ -1,6 +1,6 @@
 ---
 title: "A /browse/ URL whose path fails validation shows the route crash page, not a not-found state"
-workstream: unattached
+workstream: quick-wins-oct
 area: beebox
 filed-by: agent
 discovered-by: agent

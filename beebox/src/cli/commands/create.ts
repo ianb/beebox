@@ -25,8 +25,16 @@ interface CreateOptions {
 
 export const createCommand = new Command("create")
   .description("Create a new card from template")
+  .configureOutput({
+    outputError: (message, write) => {
+      write(message);
+      if (message.startsWith("error: unknown option ")) {
+        write("Template arguments use positional key=value pairs. Use --describe-template <name> to see a template's keys.\n");
+      }
+    },
+  })
   .argument("[path]", "Path for new card (relative to box root or absolute)")
-  .argument("[args...]", "Template arguments as key=value pairs")
+  .argument("[args...]", "Template key=value arguments (see --describe-template <name>)")
   .option(
     "-t, --template <name>",
     "Override template (usually inferred from card type in filename)"
@@ -82,7 +90,7 @@ export const createCommand = new Command("create")
     }
 
     // Parse key=value positional args.
-    // Values starting with [ are parsed as JSON arrays.
+    // Values starting with [ or { are parsed as JSON arrays or objects.
     // Repeated keys are collected into arrays automatically.
     const parsedArgs: Record<string, unknown> = {};
     for (const arg of kvArgs) {
@@ -94,13 +102,13 @@ export const createCommand = new Command("create")
       const key = arg.slice(0, eqIndex);
       const raw = arg.slice(eqIndex + 1);
 
-      // Try JSON array parsing for values like '["a","b"]'
+      // Try JSON parsing for array and object values.
       let value: unknown = raw;
-      if (raw.startsWith("[")) {
+      if (raw.startsWith("[") || raw.startsWith("{")) {
         try {
           value = JSON.parse(raw);
         } catch (_e) {
-          // Not valid JSON: the value just isn't a JSON array, keep the raw string as-is.
+          // Not valid JSON: keep the raw string as-is.
           // The parse error carries no actionable info for a key=value CLI argument.
         }
       }

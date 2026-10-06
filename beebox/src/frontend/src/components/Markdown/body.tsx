@@ -23,7 +23,7 @@
 
 import { Fragment, useMemo } from "react";
 import * as React from "react";
-import { transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
+import Markdoc, { type Config, type RenderableTreeNode } from "@markdoc/markdoc";
 import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config/tags/core";
 import { makeHtmlTag } from "@shared/markdoc-config/tags/html-schema";
 import { makeQuoteComponents } from "./Quote";
@@ -49,6 +49,9 @@ import { parseMarkdown } from "../../lib/markdoc-parse";
 import { useBoxSlug } from "../../lib/box-slug";
 import { transformedResolvedImageUrl } from "../../lib/image-transform-url";
 import type { ReactNode } from "react";
+
+const transform = Markdoc["transform"];
+const renderers = Markdoc["renderers"];
 
 // Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
 // `parse` — see lib/markdoc-parse.ts.

@@ -81,7 +81,7 @@ export async function legacyBrowseTarget(target: ViewTarget, {
   lookupKind: (path: string) => Promise<BrowsePathKind>;
   missingKind: BrowseMissingKind;
 }): Promise<ViewTarget> {
-  const path = canonicalPath(target.path);
+  const path = canonicalPath(target.path) ?? canonicalPath(`_content/${target.path}`);
   if (path === null) throw new BrowseLocationError(target.path, false);
   const kind = path === "" ? "directory" : await lookupKind(path);
   if (kind === "missing" && missingKind === "directory") throw new BrowseLocationError(path, true);
