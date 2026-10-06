@@ -1,6 +1,6 @@
 ---
 title: "Box screen: a thought goes in before the box loads"
-status: active
+status: partial
 workstream: quick-chat-design
 issues:
   - ../../../issues/features/2026-09-25-quick-drop-entry-points.md
@@ -376,3 +376,90 @@ The agent-facing navigation description changes: where Dashboard, Browse, Histor
 ## Rollout shape
 
 Done when the doctests and XCTests named above pass, `pnpm test:changed` and `pnpm lint:changed` pass, the mobile-contract check passes, and the browser and simulator walks are recorded as an exhibit. Record shape changes are read-compatible; no migration runs. The server and web parts deploy on merge. The iOS part reaches the phone with the next build the boxholder installs; an older build keeps working through the web box screen. A physical-phone check of dictation on the box screen and of the launch rule is manual testing for the boxholder.
+
+## Implementation evidence
+
+Implemented on 2026-10-06 in one batch on `worktree-quick-chat-design`. The
+plan is partial: the code is in place and the automated tests pass, but the
+manual checks below have not run.
+
+**Commits per track.**
+
+| Track | Commits |
+|---|---|
+| 1. Server | `d45b33711` (policy, records), `03a20ce56` (`createUserMessageSender`; it landed inside the iOS composer commit of the same hash), `788617ecf` (`submit`, `choose`, `discard`, `home`), `1ae16e22d` (contract fixtures, §5.11) |
+| 2. Web box screen | `542675d50` (page, reducer, redirect, selector tile), `fdef22dfe` (removes `prepare` and `receipt`) |
+| 3. App bar menus | `9819c60c5` (landmark menu, folder menu, landmarks filter) |
+| 4. iOS | `1e6784df4` (launch rule), `394eadfb7` (draft scope), `743391f52` (outbox), `03a20ce56` (composer submit target), `2b687ae08` (`QuickChatAPI`), `958bc35a7` (`BoxScreenView`), `01c4747cd` (root surface, interception, removals), `8b8298225` (multi-box fixture) |
+| Docs | `4cf8a18b5`, `528d81318`, `6fb8bc70d`, `08ec1272c`, `35921460d`, `533b2ab84`, and this section |
+
+**Test results reported by the workers.**
+
+- Server doctests, all passing: `routingDisposition` 6/6, record 14/14,
+  shared message-id claims across the route and `submit` 4/4, router
+  `quick-chat.submit` 29/29, contract fixtures 5/5. The existing send-route
+  doctests pass unchanged.
+- Web: box screen state doctest 23/23 (each row face and a reload with a
+  stored unsent thought); the route test 3/3, which fails if
+  `BoxConversationShell` mounts or a query other than `quickChat.home` runs;
+  landmark filter 9/9; landmark menu 2/2; place label 12/12; quick chat
+  router, record, and catalog doctests 108/108 after the file move. A browser
+  walk at phone and desktop widths covered the box screen (empty,
+  `needs-choice`, sent), both menus, the box row, and the landmarks filter.
+- iOS: the full `BeeBoxTests` target on the iPhone 17e simulator, 403 passed
+  and 0 failed, including `RootSurfaceRuleTests`, `QuickChatOutboxTests`,
+  `QuickChatAPITests`, `BoxScreenStoreTests`, `ChatWebViewRequestTests` with
+  the prefixed-URL interception case, and the shared fixture decoders.
+  Simulator screenshots cover each box screen face.
+- `pnpm typecheck`, `pnpm lint:changed`, `pnpm layout-check`,
+  `pnpm doc-check`, and `pnpm mobile-contract-check` pass.
+
+**Deviations recorded by the workers.**
+
+- `QuickChatView` gained `expired: true` for a `sending` record past the
+  6-day window, so that clients offer only Open chat and Discard.
+- Delivery wraps the thought as `<typed>…</typed>`, as the composer does, so
+  that the sender is attributed.
+- `channel` comes from the procedure input only; the tRPC context has no
+  User-Agent.
+- The chat runtime also exposes `resolveSendTarget`. A 404 for a chat that no
+  longer resumes is treated as `destination-gone`, as is the 410.
+- The catalog, judge, and submit modules live in
+  `src/core/chat/routing/quick-chat-submit/`, and `home` in
+  `src/core/chat/routing/quick-chat-home.ts`, because of the layout rules.
+- A record written by the old page without a receipt is read as `sending` but
+  is not moved to `open/`, so `home` does not list it; a retry by id works.
+- The box screen route declares `staticData.standalone`; `ProductLayout`
+  skips the conversation shell for any such route, and Publications uses the
+  same flag. The route test builds a small router from the real route
+  options, because the app router cannot load under Node.
+- The landmark filter is at `src/frontend/src/lib/landmark-filter.ts`. The
+  folder menu order is Open directory, Search, Recent files, then the
+  landmark's links. The Landmark card row was also removed from the chat's own
+  folder-menu body. The web "Boxes" section is hidden in the native shell. A
+  `sending` record with no error also shows as "Not delivered".
+- iOS: `initialSurface` returns nil for "stay where it was", and
+  `hasPendingEmissions` is optional while the restore runs. Pending
+  emissions force `.web` only when the rule would move the surface. A box
+  switch resets to `.undecided` and waits for that box's restore.
+- iOS: the `.quickChat` closure is async and returns whether the outbox
+  stored the thought; the draft clears only after that. The outbox has no
+  rejected state; a 4xx from `submit` retries on the same backoff until the
+  7 days run out. Waiting-to-send rows offer Retry and Discard. "Pair or
+  Manage Boxes" stays in the "+" menu. Voice preparations count as pending
+  emissions.
+- Docs: the `nav.card` schema instructions and its health warning now name
+  the box screen. The security report amendment for the removed and added
+  procedures is drafted for the boxholder's review.
+
+**Not yet verified.**
+
+- A real cold launch of the iOS app against a paired box. Pairing on the
+  simulator stopped at the "Open in Bee Box?" confirmation.
+- Dictation on the box screen on a physical phone.
+- The sorted path through Jev against a box with an `openrouter` grant, in
+  the browser and in the app. The browser walk covered only
+  `routing-unavailable`, then a chosen destination.
+- Routing quality and the provisional 0.9 floor.
+- The new `box-screen-box-wide-pages` knowledge audit and a re-run of
+  `quick-chat-rubric-maintenance` after the box doc edit.
