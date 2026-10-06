@@ -66,9 +66,8 @@ export function findLeaks(grepOutput: string): string[] {
     for (const match of content.matchAll(HOME_PATH)) {
       const name = match[1];
       if (name === undefined || ALLOWED_NAMES.has(name)) continue;
-      const start = Math.max(content.lastIndexOf(" ", match.index), content.lastIndexOf("\n", match.index), content.lastIndexOf("\t", match.index), content.lastIndexOf("(", match.index), content.lastIndexOf("<", match.index)) + 1;
-      const urlPrefix = content.slice(start, match.index);
-      if (urlPrefix.includes("://") && !/^file:/i.test(urlPrefix)) continue;
+      const urlPrefix = /([a-z][\w+.-]*):\/\/[^\s"'()<>`]*$/i.exec(content.slice(0, match.index));
+      if (urlPrefix !== null && urlPrefix[1]?.toLowerCase() !== "file") continue;
       problems.push(`home path leak: ${file}:${lineno} -> ${match[0]}`);
     }
   }

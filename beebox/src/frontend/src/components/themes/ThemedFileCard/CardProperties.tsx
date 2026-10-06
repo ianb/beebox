@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { useEffect, useRef } from "react";
 import { trpc } from "../../../lib/trpc/client";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
@@ -13,8 +14,17 @@ export function CardFacts({ data }: { data: FileData }) {
   return <dl className="mt-4">
     <dt>Filed at</dt><dd>{data.path}</dd>
     <dt>Card type</dt><dd>{data.type}</dd>
+    {cardSummaryRows(fm).map(({ label, value }) => <Fragment key={label}><dt>{label}</dt><dd>{value}</dd></Fragment>)}
     {typeof fm?.prominence === "string" ? <><dt>Prominence</dt><dd>{fm.prominence}</dd></> : null}
   </dl>;
+}
+
+export function cardSummaryRows(frontmatter: FileData["frontmatter"]): Array<{ label: string; value: string }> {
+  const rows: Array<{ label: string; value: string }> = [];
+  if (typeof frontmatter?.contains === "string") rows.push({ label: "Contains", value: frontmatter.contains });
+  const evidence = frontmatter?.["contains-evidence"];
+  if (typeof evidence === "string") rows.push({ label: "Contains evidence", value: evidence });
+  return rows;
 }
 
 /** Mounted only while Properties is open: no box scan for every visible card. */

@@ -69,7 +69,7 @@ helpText.includes("Template key=value arguments") && helpText.includes("--descri
 
 let errorText = "";
 createCommand.configureOutput({ writeErr: (text) => { errorText += text; } }).exitOverride();
-try { createCommand.parse(["node", "bbx", "example.doc.card", "--title", "Example"]); } catch {}
+try { createCommand.parse(["node", "bbx", "example.doc.card", "--title", "Example"]); } catch { /* Commander exitOverride throws after writing the expected error hint. */ }
 errorText.includes("positional key=value") && errorText.includes("--describe-template <name>")
 => true
 ```

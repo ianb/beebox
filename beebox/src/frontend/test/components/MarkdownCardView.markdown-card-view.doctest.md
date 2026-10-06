@@ -92,9 +92,9 @@ import { readingFrontmatter } from "../../src/components/MarkdownCardView/view.j
 ```
 
 ```ts
-JSON.stringify(readingFrontmatter({ title: "Example", contains: "internal", "contains-evidence": ["source"], custom: "visible", prominence: "global" }, "page"))
+JSON.stringify(readingFrontmatter({ title: "Example", contains: "internal", "contains-evidence": "source", custom: "visible", prominence: "global" }, "page"))
 => {"custom":"visible","prominence":"global"}
 
-JSON.stringify(readingFrontmatter({ title: "Example", contains: "internal", "contains-evidence": ["source"] }, "embed"))
+JSON.stringify(readingFrontmatter({ title: "Example", contains: "internal", "contains-evidence": "source" }, "embed"))
 => {"title":"Example"}
 ```

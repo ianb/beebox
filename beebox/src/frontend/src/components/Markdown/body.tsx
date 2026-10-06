@@ -50,8 +50,9 @@ import { useBoxSlug } from "../../lib/box-slug";
 import { transformedResolvedImageUrl } from "../../lib/image-transform-url";
 import type { ReactNode } from "react";
 
-const transform = Markdoc["transform"];
-const renderers = Markdoc["renderers"];
+// Named value imports don't resolve from this CommonJS module under Node's ESM loader.
+// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
+const { transform, renderers } = Markdoc;
 
 // Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
 // `parse` — see lib/markdoc-parse.ts.

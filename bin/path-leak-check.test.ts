@@ -47,6 +47,17 @@ test("still flags a real home path in a file URL", () => {
   assert.deepEqual(out, [`home path leak: docs/links.md:1 -> ${U}janedoe/`]);
 });
 
+test("quoted file URLs and compact JSON still expose real home paths", () => {
+  const lines = [
+    `docs/links.md:1:href="file://${U}janedoe/src/report.png"`,
+    `transcript.jsonl:2:{"url":"https://example.gov/home/page","cwd":"${U}janedoe/src"}`,
+  ].join("\n");
+  assert.deepEqual(findLeaks(lines), [
+    `home path leak: docs/links.md:1 -> ${U}janedoe/`,
+    `home path leak: transcript.jsonl:2 -> ${U}janedoe/`,
+  ]);
+});
+
 test("reports every offending segment on a line", () => {
   const out = findLeaks(`m.md:1:${U}ann/a and ${U}bob/b`);
   assert.deepEqual(out, [
