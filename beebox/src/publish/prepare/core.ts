@@ -6,7 +6,7 @@ import path from "node:path";
 
 import { errorMessage } from "../../shared/error-guards.js";
 import { withFileLock } from "../../lib/file-lock.js";
-import { parsePublicationName, readPublicationDefinition, publicationSourcePath, type PublicationDefinition } from "./definition.js";
+import { parsePublicationName, readPublicationDefinition, publicationSourcePath, type PublicationDefinition } from "../publication-definition.js";
 import { prepareProject } from "./project.js";
 import { BundlePolicyError, ProjectCommandError } from "./errors.js";
 import { collectPublicationFiles, stagePublicationFiles } from "./files.js";

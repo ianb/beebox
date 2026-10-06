@@ -1,4 +1,4 @@
-import type { PublicationDefinition } from "./definition.js";
+import type { PublicationDefinition } from "../publication-definition.js";
 import type { LeakScanResult } from "../leak-scan.js";
 
 export const PUBLICATION_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;

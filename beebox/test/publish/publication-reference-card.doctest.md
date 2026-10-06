@@ -16,7 +16,7 @@ const pubId = "abcdefghijklmnopqrstuvwxyz";
 The schema requires a valid publication id and does not store permission fields.
 
 ```ts
-const valid = parseCardText(createPublicationCardTemplate({ pubId, title: "Home" }), {
+const valid = parseCardText(createPublicationCardTemplate({ pubId, title: "Home", connection: "cf", tier: "secret" }), {
   source: "home.publication.card",
   schemas: new Map([[PublicationSchema.type, PublicationSchema]]),
 });

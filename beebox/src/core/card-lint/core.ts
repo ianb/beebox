@@ -62,6 +62,7 @@ import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./node-refs.js";
 import { lintCardSymbolSrc, lintFigureEntry, lintLandmarkSymbolSrc } from "./path-fields.js";
 import { lintFilenameAttachRef } from "./filename-attach.js";
 import { lintDuplicateChatSession } from "./chat-duplicates.js";
+import { lintDuplicatePublicationId } from "./publication-duplicates.js";
 import { findAbsoluteMachinePaths } from "../../lib/absolute-path-check.js";
 import { conceptMapShapeWarnings } from "../../schemas/concept-map.js";
 import { errorMessage } from "../../shared/error-guards.js";
@@ -312,6 +313,10 @@ async function lintFrontmatterCard(input: {
   // lint-chat-duplicates.ts for why it can't be a schema `validate` hook.
   if (type === "chat") {
     errors.push(...(await lintDuplicateChatSession({ path, fields: parsed.fields, boxRoot: options.boxRoot, run: options })));
+  }
+  // Same shape for publications: `pubId` is the identity, one card per id.
+  if (type === "publication") {
+    errors.push(...(await lintDuplicatePublicationId({ path, fields: parsed.fields, boxRoot: options.boxRoot, run: options })));
   }
   // No absolute machine paths (Track B, `docs/implemented-plans/one-root-box-layout.md`):
   // a real developer home directory embedded in card content is a leak, not

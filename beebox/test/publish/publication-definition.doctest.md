@@ -5,8 +5,8 @@ Publication definitions are strict agent-authored settings at
 directory; the definition cannot supply arbitrary paths or build commands.
 
 ```ts setup
-import { publicationDefinitionSchema, readPublicationDefinition, publicationSourcePath } from "../../../src/publish/prepare/definition.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { definitionFromCard, publicationDefinitionSchema, readPublicationDefinition, publicationSourcePath } from "../../src/publish/publication-definition.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const validDefinition = {
   pubId: "abcdefghijklmnop2345672345",
@@ -87,4 +87,28 @@ let nameError = "";
 (() => { try { publicationSourcePath({ boxRoot: "/box", name: "../outside", content: "static" }); } catch (error) { nameError = error.message; } })();
 nameError.includes("invalid publication name")
 => true
+```
+
+## A publication card becomes a prepare definition
+
+`definitionFromCard` joins the card's request fields with the content mode and
+validates the result once, through the definition schema.
+
+```ts continue
+const cardPubId = "abcdefghijklmnopqrstuvwxyz";
+JSON.stringify(definitionFromCard({ type: "publication", title: "Team", pubId: cardPubId, connection: "cf", tier: "accounts", emails: ["Kim@Example.com", "ari@example.com"] }, "static"))
+=> {"pubId":"abcdefghijklmnopqrstuvwxyz","connection":"cf","content":"static","title":"Team","tier":"accounts","emails":["ari@example.com","kim@example.com"]}
+
+JSON.stringify(definitionFromCard({ title: "Home", pubId: cardPubId, connection: "cf", tier: "public", slug: "home" }, "project"))
+=> {"pubId":"abcdefghijklmnopqrstuvwxyz","connection":"cf","content":"project","title":"Home","tier":"public","slug":"home"}
+```
+
+A card that breaks a rule throws with the field named.
+
+```ts continue
+let message = "";
+try { definitionFromCard({ title: "Home", pubId: cardPubId, connection: "cf", tier: "secret", slug: "home" }, "static"); }
+catch (error) { message = error instanceof Error ? `${error.name}: ${error.message}` : "not an error"; }
+message
+=> PublicationDefinitionError: publication card abcdefghijklmnopqrstuvwxyz is invalid at card: Unrecognized key: "slug"
 ```

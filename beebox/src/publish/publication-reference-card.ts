@@ -5,10 +5,28 @@ import path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { parseCardText } from "../core/card-io.js";
-import { PublicationSchema, createPublicationCardTemplate } from "../schemas/publication.js";
+import { z } from "zod";
+import { body, cardSchema, renderFrontmatterBlock } from "../exports/cards.js";
+import { pubIdSchema } from "./manifest.js";
 import { publicationCardPath } from "../shared/publication-card.js";
 
-const schemas = new Map([[PublicationSchema.type, PublicationSchema]]);
+/**
+ * Interim: the reference card holds only `pubId`, which the request-carrying
+ * `publication` schema no longer accepts. This module is removed once prepare
+ * reads the publication card itself; until then it reads and writes its own
+ * minimal shape.
+ */
+const ReferenceCardSchema = cardSchema("publication", {
+  brief: "Interim publication reference",
+  description: "The pubId-only reference card written by the old prepare flow",
+  category: "authored",
+  fields: { pubId: pubIdSchema, body: body(z.string()) },
+});
+const schemas = new Map([[ReferenceCardSchema.type, ReferenceCardSchema]]);
+
+function referenceCardText(input: { pubId: string; title: string }): string {
+  return renderFrontmatterBlock({ title: input.title, pubId: input.pubId }, "");
+}
 
 abstract class PublicationReferenceCardError extends Error {
   constructor(message: string) {
@@ -59,7 +77,7 @@ export async function ensurePublicationReferenceCard(args: {
     const existing = await readExisting({ absolutePath, cardPath, pubId: args.pubId });
     if (existing) return { cardPath, created: false };
     try {
-      await writeFile(absolutePath, createPublicationCardTemplate({ pubId: args.pubId, title: args.title }), { flag: "wx", mode: 0o644 });
+      await writeFile(absolutePath, referenceCardText({ pubId: args.pubId, title: args.title }), { flag: "wx", mode: 0o644 });
       return { cardPath, created: true };
     } catch (error) {
       if (errnoCode(error) !== "EEXIST") throw new PublicationCardCreateError();

@@ -11,7 +11,7 @@ import path from "node:path";
 import { createFakePublishStore } from "../../src/services/publish-remote-store.js";
 import { createFakeProvisioningClient } from "../../src/services/cloudflare-provisioning/core.js";
 import { releaseIdForFiles, siteEdgeManifestSchema } from "../../src/publish/manifest-edge.js";
-import { publicationDefinitionSchema } from "../../src/publish/prepare/definition.js";
+import { publicationDefinitionSchema } from "../../src/publish/publication-definition.js";
 import { defaultManagedPublicationRuntime } from "../../src/services/managed-publication-runtime/core.js";
 import { prepareManagedPublication, readCandidate } from "../../src/publish/managed-publications/core.js";
 import { approveManagedPublication, disableManagedPublication, enableManagedPublication } from "../../src/publish/managed-publication-actions.js";
