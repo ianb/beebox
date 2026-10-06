@@ -79,14 +79,13 @@ async function waitForQuietHost(): Promise<boolean> {
   const bar = os.availableParallelism() * QUIET_LOAD_PER_CORE;
   for (let waited = 0; ; waited += QUIET_POLL_MS) {
     const load = os.loadavg()[0] ?? 0;
-    const { level, pageouts, swapFreeBytes } = readMemoryPressure();
+    const { level, pageouts } = readMemoryPressure();
     // A rate needs two polls: the lifetime counter is only logged.
     const pageoutRate = await readPageoutRate();
-    const blockers = hostBlockers({ load1: load, bar, level, swapFreeBytes, pageoutRate });
-    const swapGb = swapFreeBytes === null ? "n/a" : (swapFreeBytes / 1024 ** 3).toFixed(1);
+    const blockers = hostBlockers({ load1: load, bar, level, pageoutRate });
     const rate = pageoutRate === null ? "n/a" : pageoutRate.toFixed(0);
     const detail =
-      `load1 ${load.toFixed(1)}, pressure ${String(level)}, swap free ${swapGb} GB, ` +
+      `load1 ${load.toFixed(1)}, pressure ${String(level)}, ` +
       `pageouts ${String(pageouts)} (${rate}/s)`;
     if (blockers.length === 0) {
       process.stdout.write(

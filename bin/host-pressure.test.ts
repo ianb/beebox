@@ -10,7 +10,6 @@ import {
   pageoutRate,
   parsePageouts,
   parsePressureLevel,
-  parseSwapFreeBytes,
   pressureDecision,
 } from "./host-pressure.js";
 
@@ -61,17 +60,7 @@ test("ignoreLoad bypasses only the refusal, not the warning", () => {
   assert.equal(pressureDecision({ mode: "full", level: 1, ignoreLoad: true }), "proceed");
 });
 
-// ── swap and pageout rate ───────────────────────────────────────────────────
-
-test("parseSwapFreeBytes reads vm.swapusage's free figure in any unit", () => {
-  assert.equal(parseSwapFreeBytes("total = 16384.00M  used = 16272.00M  free = 112.00M  (encrypted)\n"), 112 * 1024 ** 2);
-  assert.equal(parseSwapFreeBytes("total = 2.00G  used = 0.50G  free = 1.50G  (encrypted)"), 1.5 * 1024 ** 3);
-});
-
-test("parseSwapFreeBytes is null on anything else (non-Darwin, error text)", () => {
-  assert.equal(parseSwapFreeBytes(""), null);
-  assert.equal(parseSwapFreeBytes("sysctl: unknown oid 'vm.swapusage'\n"), null);
-});
+// ── pageout rate ───────────────────────────────────────────────────
 
 test("pageoutRate is pages per second between two samples", () => {
   assert.equal(pageoutRate({ pageouts: 1000, atMs: 0 }, { pageouts: 1500, atMs: 5000 }), 100);
