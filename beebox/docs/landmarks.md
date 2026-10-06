@@ -107,7 +107,7 @@ The enum can grow without breaking existing cards.
 
 An `expand` carrying a `group: <title>` keeps its matches **grouped under that title** instead of flattening them into the flat link list. Collapsed, the group shows its title and a child count (e.g. `Images · 134`); expanded, it reveals the matched links. Use it for broad "all the X" globs (e.g. `group: Images` over `**/*.image.card`) that would otherwise flood the flat grid. An `expand` without `group` flattens inline as before.
 
-Both surfaces — the Landmarks page grid and the chat-header landmark menu — render a group as a collapsed-by-default disclosure; on the header menu the children open in the companion sidebar just like flat links. Group children resolve server-side, capped at 50 (the collapsed `count` stays exact); a larger group renders its first 50 with a "+N more" note.
+Both surfaces — the Landmarks page grid and the app bar's folder menu — render a group as a collapsed-by-default disclosure; on the folder menu the children open in the companion sidebar just like flat links. Group children resolve server-side, capped at 50 (the collapsed `count` stays exact); a larger group renders its first 50 with a "+N more" note.
 
 ### Dedup
 
@@ -162,7 +162,12 @@ design is dropped, not deferred.)
 
 Ordering comes from `chat.byLandmark` (latest session activity first, then
 chat-less landmarks with the box root ahead of alphabetical), and the page
-does not re-sort — so the page and the app bar's switch menu agree.
+does not re-sort — so the page and the app bar's landmark menu agree.
+
+A **Find a landmark** field sits above the sections. It is not focused on
+arrival. Empty, the page shows the full hierarchy. With text, it shows the
+matching landmarks and their ancestors, in the same indented form
+(`src/frontend/src/lib/landmark-filter.ts`).
 
 Two things render outside the per-landmark sections:
 
@@ -176,21 +181,29 @@ Two things render outside the per-landmark sections:
 
 `view: landmarks` cards render this same component, sessions included.
 
-### App bar — switch menu and here menu
+### App bar — landmark menu and folder menu
 
-The unified app bar (`docs/implemented-plans/top-nav-ia.md`) is the compact surface:
+The unified app bar is the compact surface. Each half of the place pill has
+one job:
 
-- **Switch menu** (the place pill's left half) lists every landmark as a row
-  — symbol, label, and its fresh-chat count — plus `All landmarks →` to the
-  page above. Tapping a row resumes the landmark's most recent chat or
-  starts one in its directory. The menu lists landmarks only; the "Other
-  chats" bucket is reachable through the page. Parse problems surface here
-  too. Data is fetched lazily on first open.
-- **Here menu** (the place pill's right half) is the current directory's
-  landmark: Open `<dir>/`, its pinned links at root level (never in a
-  sub-panel), grouped expands as disclosures, and — on chat pages — Recent
-  files. Links open in the companion pane on chat, and navigate normally
-  elsewhere.
+- **Landmark menu** (the place pill's left half) says where the conversation
+  is and where it can move. Its first row, `Box: <name>`, opens the box
+  screen (`/<box>/box`) with a full page load; the box screen holds the
+  box-wide pages (Dashboard, Browse, History, Storage summary), the
+  `nav.card` shortcuts, and the other boxes (see
+  [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
+  landmark**, which opens the page above. Then every landmark as a row —
+  symbol, label, and its fresh-chat count — with a filter field past 20
+  landmarks. Tapping a row resumes the landmark's most recent chat or starts
+  one in its directory. The menu lists landmarks only; the "Other chats"
+  bucket is reachable through the page. Parse problems surface here too.
+  Data is fetched lazily on first open.
+- **Folder menu** (the place pill's right half) is the current directory's
+  landmark: Open `<dir>/`, Search (the box's search page), on chat pages
+  Recent files, then its pinned links at root level (never in a sub-panel)
+  and grouped expands as disclosures. Links open in the companion pane on
+  chat, and navigate normally elsewhere. The folder half renders only when
+  a landmark resolves for the directory.
 
 ### The browser tab, and everywhere else a box is drawn
 
@@ -221,7 +234,7 @@ box-name setting anywhere.
 | Merged activity surface | `src/frontend/src/components/landmarks/` (`LandmarksList`, `LandmarkSection`, `LandmarkSessions`) |
 | Landmarks page | `src/frontend/src/pages/landmarks/LandmarksPage.tsx` |
 | Chat buckets per landmark | `chat.byLandmark` (`src/webapp/trpc/routers/chat/router.ts`) |
-| App-bar switch / here menus | `src/frontend/src/components/AppNav/PlacePill.tsx` + the bar's chrome slots |
+| App-bar landmark / folder menus | `src/frontend/src/components/AppNav/PlacePill.tsx` + the bar's chrome slots |
 | API endpoint | tRPC procedure under `src/webapp/trpc/routers/` (lists landmark cards + resolves expands server-side) |
 | Doctest coverage | `test/core/landmark/resolve.schema.doctest.md` (schema validation, expand semantics, dedup, order) |
 

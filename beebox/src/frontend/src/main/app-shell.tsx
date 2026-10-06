@@ -7,7 +7,8 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Outlet, useLocation, useParams } from "@tanstack/react-router";
+import { Outlet, useParams } from "@tanstack/react-router";
+import { useStandalonePage } from "./standalone-page";
 import { useQueryClient } from "@tanstack/react-query";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "../components/DebugLog";
 import { reportPreviousAdminHang } from "../lib/admin-hang-probe";
@@ -112,8 +113,7 @@ export function ProductLayout() {
   usePresenceHeartbeat();
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
-  const location = useLocation();
-  const standalonePage = location.pathname.endsWith("/publications");
+  const standalonePage = useStandalonePage();
   const handleToggleSourceView = sourceView.toggle;
   const handleCloseSourceView = sourceView.toggle;
   return (

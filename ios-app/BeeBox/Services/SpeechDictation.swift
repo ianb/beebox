@@ -167,6 +167,9 @@ final class SpeechDictation: ObservableObject {
     @Published private(set) var preparationMessage: String?
     @Published var transcript = ""
     @Published var errorMessage: String?
+    /// Whether spoken send keywords end the recording as commands. Off, every
+    /// word is transcript.
+    var detectsKeywords = true
 
     private let audioEngine = AVAudioEngine()
     private let audioSession: any AudioSessionControlling
@@ -538,7 +541,7 @@ final class SpeechDictation: ObservableObject {
             return
         }
         let currentTranscript = seedText.isEmpty ? spoken : "\(seedText) \(spoken)"
-        if let keyword = SpeechKeywords.detect(currentTranscript) {
+        if detectsKeywords, let keyword = SpeechKeywords.detect(currentTranscript) {
             let key = "\(keyword.action.rawValue):\(keyword.matchedPhrase)"
             if key != firedKeywordKey {
                 firedKeywordKey = key

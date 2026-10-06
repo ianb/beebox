@@ -1,10 +1,10 @@
 /**
  * Nav card schema — the box-editable top navigation.
  *
- * A positional card (`nav.card`) at the box root. Its `entries` list adds a
- * section to the app bar's switch menu (docs/plans/top-nav-ia.md Track C3);
- * when the card is absent or invalid, the menu simply shows its builtin rows
- * (and an invalid card is surfaced as a health warning — see
+ * A positional card (`nav.card`) at the box root. Its `entries` list adds
+ * shortcut links to the box screen's "In this box" section
+ * (docs/plans/box-screen.md); when the card is absent or invalid, the box
+ * screen shows no shortcuts (and an invalid card is surfaced as a health warning — see
  * runHealthChecks). First slice of docs/plans/interface-as-cards.md; plan in
  * docs/implemented-plans/nav-card.md.
  *
@@ -66,9 +66,9 @@ export const NavSchema: CardSchema = cardSchema("nav", {
   searchable: false,
   instructions: `# Nav Card
 
-\`nav.card\` at the box root adds the box's own entries to the app bar's place menu (the one that opens from the box ▸ landmark pill). Editing it reshapes that section immediately — no deploy. When the card is absent or invalid, the menu shows only its builtin rows, and an invalid card also raises a health warning naming the problem. Deleting the card is always a safe way back to stock navigation.
+\`nav.card\` at the box root adds the box's own shortcut links to the box screen, under **In this box**, after Dashboard, Browse, History, and Storage summary. The box screen is the screen for the whole box: the box row at the top of the app bar's landmark menu opens it, and the phone app shows it at launch. Editing the card changes the shortcuts immediately — no deploy. When the card is absent or invalid, the box screen shows no shortcuts, and an invalid card also raises a health warning naming the problem. Deleting the card is always a safe way back to stock navigation.
 
-Entries pointing at a destination the menu already reaches (\`/\`, \`/chat\`, \`/chats\`, \`/landmarks\`, \`/browse\`, \`/history\`, \`/dashboard\`) are skipped rather than shown twice — pin cards and the less-travelled routes.
+Entries pointing at a destination the box screen already links (\`/\`, \`/chat\`, \`/chats\`, \`/browse\`, \`/history\`, \`/dashboard\`) are skipped rather than shown twice — pin cards and the less-travelled routes.
 
 \`\`\`yaml
 entries:
@@ -78,9 +78,9 @@ entries:
 \`\`\`
 
 - **\`href\`** — a builtin route. \`label\` defaults to the route's standard name.
-- **\`ref\`** — any card, by box path (leading \`/\`, from the box root); it opens in Browse. \`label\` defaults to the target's title. Use this to pin a card (a project, a list, a note) into the menu.
+- **\`ref\`** — any card, by box path (leading \`/\`, from the box root); it opens in Browse. \`label\` defaults to the target's title. Use this to pin a card (a project, a list, a note) to the box screen.
 
-Keep the list short — this is a menu section, not a directory. Order is display order.`,
+Keep the list short — these are shortcuts, not a directory. Order is display order.`,
 });
 
 /**
