@@ -106,6 +106,16 @@ final class QuickChatOutbox: ObservableObject {
     /// before any request starts.
     @discardableResult
     func add(text: String, boxID: UUID) async -> QuickChatOutboxEntry? {
+        guard let entry = await store(text: text, boxID: boxID) else {
+            return nil
+        }
+        await attempt(entry.id)
+        return entry
+    }
+
+    /// Store a new thought without attempting it. Returns nil when it could not
+    /// be written, so the caller keeps its own copy.
+    func store(text: String, boxID: UUID) async -> QuickChatOutboxEntry? {
         let entry = QuickChatOutboxEntry(
             id: UUID(),
             boxID: boxID,
@@ -119,8 +129,19 @@ final class QuickChatOutbox: ObservableObject {
             entries.removeAll { $0.id == entry.id }
             return nil
         }
-        await attempt(entry.id)
         return entry
+    }
+
+    /// Drop the entries of boxes that are no longer paired. Called when a box
+    /// is removed; an unpaired box's entries are never removed earlier.
+    func forgetBoxes(except pairedBoxIDs: Set<UUID>) async {
+        let removed = entries.filter { pairedBoxIDs.contains($0.boxID) == false }
+        guard removed.isEmpty == false else {
+            return
+        }
+        entries.removeAll { pairedBoxIDs.contains($0.boxID) == false }
+        await persist()
+        BoxLog.info("quick chat outbox dropped entries of unpaired boxes count=\(removed.count)", category: .composer)
     }
 
     /// The person's Retry. Runs whatever the backoff or the retry window says.

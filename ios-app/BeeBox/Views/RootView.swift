@@ -55,6 +55,8 @@ struct RootView: View {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("--composer-fixture=") }) {
                 NativeComposerFixtureScreen()
+            } else if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("--box-screen-fixture=") }) {
+                BoxScreenFixtureScreen()
             } else if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("--capture-fixture=") }) {
                 NativeCaptureFixtureScreen()
             } else {

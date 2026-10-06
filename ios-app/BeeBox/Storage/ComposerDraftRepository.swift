@@ -199,6 +199,23 @@ actor ComposerDraftRepository {
             .write(to: quickChatOutboxURL, options: .atomic)
     }
 
+    /// The last `quickChat.home` answer for a box, so the box screen draws at
+    /// once on the next launch. A cache: an unreadable copy is dropped.
+    func loadQuickChatHome(boxID: UUID) -> QuickChatHome? {
+        let url = boxDirectory(boxID: boxID).appendingPathComponent("quick-chat-home.json")
+        guard let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(QuickChatHome.self, from: data)
+    }
+
+    func saveQuickChatHome(_ home: QuickChatHome, boxID: UUID) throws {
+        let directory = boxDirectory(boxID: boxID)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(home)
+            .write(to: directory.appendingPathComponent("quick-chat-home.json"), options: .atomic)
+    }
+
     func savePayload(_ data: Data, filename: String, boxID: UUID) throws {
         let url = try payloadURL(filename: filename, boxID: boxID)
         try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

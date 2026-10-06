@@ -8,9 +8,11 @@ import UIKit
 /// `.conversation` hands the message to `PendingEmissionStore` for the web
 /// chat's bound conversation. `.quickChat` hands the final text to its closure
 /// and does nothing else: no pending emission, no binding check, text only.
+/// The closure answers whether the text is stored; the draft clears only then,
+/// so a kill between the two cannot lose the thought.
 enum NativeComposerSubmitTarget {
     case conversation
-    case quickChat((String) -> Void)
+    case quickChat(@MainActor (String) async -> Bool)
 }
 
 struct NativeComposerView: View {
@@ -778,19 +780,25 @@ struct NativeComposerView: View {
         }
     }
 
-    /// Hand the text to the quick chat target and clear the draft. A quick chat
-    /// message is text only and has no emission id to key a recording under,
-    /// so the recording is dropped.
-    private func submitQuickChat(text: String, audioURL: URL?, deliver: (String) -> Void) {
+    /// Hand the text to the quick chat target, then clear the draft once the
+    /// target has stored it. A quick chat message is text only and has no
+    /// emission id to key a recording under, so the recording is dropped.
+    private func submitQuickChat(text: String, audioURL: URL?, deliver: @escaping @MainActor (String) async -> Bool) {
         if let audioURL {
             try? FileManager.default.removeItem(at: audioURL)
         }
         let sendingBoxID = box.id
-        deliver(text)
         dictation.resetDictationState()
         focused = false
         statusText = nil
+        isPreparingSend = true
         Task {
+            let stored = await deliver(text)
+            isPreparingSend = false
+            guard stored else {
+                statusText = "This thought could not be saved. It is still here."
+                return
+            }
             await draftStore.clearForSending(boxID: sendingBoxID)
         }
     }

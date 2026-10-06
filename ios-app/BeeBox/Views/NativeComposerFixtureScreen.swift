@@ -224,6 +224,7 @@ struct NativeComposerFixtureScreen: View {
         }
         return .quickChat { text in
             quickChatSent.append(text)
+            return true
         }
     }
 
