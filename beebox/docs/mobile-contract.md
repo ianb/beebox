@@ -513,7 +513,8 @@ mint them independently; the ids are per-emission and per-kind.
 - **Wire shape:** `{ enabled: boolean, diarized: boolean }` on `beeboxHqDictationState`.
   `diarized` is true when the box's HQ service labels speakers (`voxtral-diarized`,
   `mai-diarized`; `isDiarizedHqService` in `src/shared/transcription-services.ts`). Web reads it
-  from `transcription.config`, posts false until that query answers, and re-posts on change.
+  from `transcription.config`, posts true while that query is loading or refetching (fail
+  closed, which covers the moment after the HQ service is switched), and re-posts on change.
 - **Semantics:** the web posts the resolved HQ setting for the visible chat. Native defaults to off.
   When enabled, both the native Send button and ordinary spoken-send keyword enter the durable HQ
   audio preparation path. Typed messages remain direct sends; the explicit cleanup keyword remains

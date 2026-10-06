@@ -191,24 +191,46 @@ private enum SpeechTranscriberPass {
 
         let text: String
         do {
+            // A throwing group still awaits every child before it exits, and
+            // task cancellation alone does not end a stalled analyzer or its
+            // results stream. So the child that gives up finishes the analyzer
+            // itself, which ends both siblings, before it throws.
             text = try await withThrowingTaskGroup(of: String?.self) { group in
                 group.addTask {
-                    var text = ""
-                    for try await result in transcriber.results where result.isFinal {
-                        text += String(result.text.characters)
-                    }
-                    return text
-                }
-                group.addTask {
-                    if let lastSample = try await analyzer.analyzeSequence(from: audioFile) {
-                        try await analyzer.finalizeAndFinish(through: lastSample)
-                    } else {
+                    do {
+                        var text = ""
+                        for try await result in transcriber.results where result.isFinal {
+                            text += String(result.text.characters)
+                        }
+                        return text
+                    } catch {
                         await analyzer.cancelAndFinishNow()
+                        throw error
                     }
-                    return nil
                 }
                 group.addTask {
-                    try await Task.sleep(for: OnDeviceHqTranscriber.timeout(forAudioSeconds: audioSeconds))
+                    do {
+                        if let lastSample = try await analyzer.analyzeSequence(from: audioFile) {
+                            try await analyzer.finalizeAndFinish(through: lastSample)
+                        } else {
+                            await analyzer.cancelAndFinishNow()
+                        }
+                        return nil
+                    } catch {
+                        await analyzer.cancelAndFinishNow()
+                        throw error
+                    }
+                }
+                group.addTask {
+                    do {
+                        try await Task.sleep(for: OnDeviceHqTranscriber.timeout(forAudioSeconds: audioSeconds))
+                    } catch {
+                        // Cancelled: either both siblings finished, or the
+                        // caller's task was cancelled with them still running.
+                        await analyzer.cancelAndFinishNow()
+                        throw error
+                    }
+                    await analyzer.cancelAndFinishNow()
                     throw OnDeviceHqTranscriber.Skip.timedOut
                 }
                 var transcript: String?

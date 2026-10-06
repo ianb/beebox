@@ -93,7 +93,10 @@ Decisions on the details above:
   HQ service is `voxtral-diarized` or `mai-diarized` posts `diarized:true` on
   `beeboxHqDictationState`. The preparation captures that value at the send
   gesture and persists it, so a relaunch resumes with the setting the message
-  was sent under. Older web omits the field, which reads as false.
+  was sent under. Web posts `diarized:true` while it loads or refetches the
+  box's transcription config, so a send in that window, including just after
+  the setting changes, also stays on the server. Older web omits the field,
+  which reads as false.
 - **Locale:** `DictationTranscriber` does not count. If `SpeechTranscriber` is
   unavailable or lacks the locale, the server path runs.
 - **Assets:** the send never waits on a download; missing assets go to the

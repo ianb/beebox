@@ -79,14 +79,15 @@ function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnabled: bo
 /**
  * Contract §4.4a. `diarized` tells native the box's HQ service labels
  * speakers, so its HQ pass stays on the box rather than on the device. It
- * reads false until the config query answers, and the state is re-posted when
- * it does.
+ * reads true while the config query is loading or refetching (fail closed: a
+ * send in that window, including right after the HQ service is switched, keeps
+ * the server path), and the state is re-posted when it answers.
  */
 function useNativeHqDictationBridge(opts: { enabled: boolean; hqDictationEnabled: boolean; sessionId: string | null }) {
   const { enabled, hqDictationEnabled, sessionId } = opts;
   const configQuery = trpc.transcription.config.useQuery(undefined, { enabled });
   const hqService = configQuery.data?.hqService;
-  const diarized = hqService !== undefined && isDiarizedHqService(hqService);
+  const diarized = configQuery.isFetching || hqService === undefined || isDiarizedHqService(hqService);
   useEffect(() => {
     if (!enabled) return;
     postNativeHqDictationState({ enabled: hqDictationEnabled, diarized }, window);
