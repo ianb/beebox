@@ -14,7 +14,7 @@ import { Text } from "../../ui/Text";
 type PublicationSite = RouterOutput["publications"]["list"]["sites"][number];
 
 /** Rows with no card at all; duplicate-card rows have cards and are fixed there. */
-export function orphanPublications(sites: readonly PublicationSite[]): PublicationSite[] {
+function orphanPublications(sites: readonly PublicationSite[]): PublicationSite[] {
   return sites.filter((site) => site.cardPath === null && site.duplicateCardPaths.length === 0);
 }
 

@@ -219,9 +219,10 @@ Managed static-site publishing deliberately exposes selected box content.
 Each box has one Admin-configured hostname and shared Worker; public paths use
 `/<slug>/` and secret-link paths use `/s/<pubId>/`. Before first enablement or
 a scope change, a signed-in member reviews the requested audience, destination,
-file summary, and leak-scan findings in the app. That grant permits subsequent
-content updates in the same scope without per-snapshot approval. The agent can
-build and prepare; a changed audience or destination cannot go live until a
+file summary, and leak-scan findings on the publication card in the app. That
+grant permits subsequent content updates in the same scope without
+per-snapshot approval. The agent can edit the card's request, build, prepare,
+and read back published files; a changed audience or destination cannot go live until a
 member approves it. The boxholder explicitly accepts that pages published by
 one box share browser origin, storage, and same-origin script access. CORS does
 not separate those pages; no iframe or per-publication origin isolation is

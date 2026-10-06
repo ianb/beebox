@@ -49,19 +49,25 @@ reservation is permanent in Bee Box v1, including after a manual Cloudflare
 detach. This is targeted, not a full inventory of unrelated changes or the
 private security tier. Review the current diff before treating it as complete.
 
-**Scoped amendment (2026-10-06; DRAFT — unreviewed):** Covers only the
-publication-card-home change: the publication request now lives in a box card
-(`<Name>.publication.card`) instead of `publication.json`. The card is still
-agent-editable desired config; approval, enable, and disable stay server-owned
-and member-gated. `publications.ensureCard` and the Publications page are
-removed; review happens on the card. `publications.releaseFile` replaces the
-member-only `previewFile` and lets the box agent read one file of the active
-release or pending candidate (also through `bbx pub files` / `bbx pub cat`); it
-grants no write, approve, enable, or disable power. The owner-only Admin list
-shows publications without a card; its Disable button calls the member-gated
-`publications.disable`. The existing `generated-at-rev` remains the
-full-inventory anchor; other changes since that anchor and the private security
-tier were not reviewed in this pass. The overview is unchanged.
+**Scoped amendment (2026-10-06; DRAFT — unreviewed):** Reflects the
+publication-card change on the `publication-home` branch (base `d8ae1cd1a`).
+The publication request (connection, tier, slug, emails, title, pubId) moved
+from `src/publications/<name>/publication.json` to the frontmatter of a
+`_content/**/<Name>.publication.card`. It stays agent-editable desired config;
+approval, served audience, hostname, and status stay server-owned.
+`publications.ensureCard` (wrote and committed a pointer card) and the
+Publications page are removed, and `prepare` writes no card or config into the
+box. `publications.releaseFile` replaces the member-only `previewFile` and is
+open to the box agent by boxholder decision (2026-10-06: agent read access to
+published files is a debugging tool). Changed rows: §1 `publications.list,
+prepare`, `releaseFile`, `approve/enable/disable/revoke`; §6a intro and the
+new "Publication card input" row. Migration `publication-cards-2026-10`
+rewrites box files only and touches no binding, R2 object, or credential; the
+new `git check-ignore --stdin -z` helper is a local subprocess with no shell
+and adds no surface. `generated-at-rev` is not advanced: the 232 `main`
+commits between it and this branch's base were not reconciled in this pass.
+The private security tier holds no publishing item. The overview's Publishing
+paragraph now names the card and the agent's read-back of published files.
 
 **Scoped amendment (2026-09-26; DRAFT — unreviewed):** Replaces per-publication
 hostname setup with one owner-configured shared Worker and hostname per box.
@@ -216,10 +222,10 @@ Notable abilities, and the items that are more than routine:
 | tRPC `admin.*`, `pairing.*`, `scanTokens.*` | Connector setup, device pairing, credential minting | ok | — | owner | Uniformly `ownerProcedure` |
 | tRPC `cloudflarePublishConnections.*` | Save/verify/revoke host Cloudflare API credentials and grant/revoke a named connection for a box | mitigated | high | owner | Credentials are saved server-side; box agents never receive them. A grant scopes server-mediated publication operations, not arbitrary same-user code. |
 | tRPC `secrets.revealValue`, `cloudflarePublishConnections.revealToken` (`src/webapp/trpc/routers/secrets.ts`, `cloudflare-publish-connections.ts`) | Return one stored credential after explicit Admin Show | mitigated | high | owner | `authenticatedOwnerProcedure`; UI refuses when `navigator.webdriver` is true; successful reveal is fail-closed on the `owner-read` audit event. Values are transiently held in the owner browser response/DOM and cleared on Hide, timeout, blur, page hide, secret-row collapse, or component unmount/navigation. |
-| tRPC `publications.list`, `publications.prepare` | Read managed publication status; prepare/refresh the publication defined by one box card | mitigated | med | authed | `prepare` takes only the box-relative `<Name>.publication.card` path. The card is agent-editable desired config and grants no authority: the server derives the box, pubId binding, Worker, bucket, and connection grant. Same-approved-scope refresh may publish immediately; scope changes become candidates. |
-| tRPC `publications.releaseFile` (`routers/publications.ts`, `publish/managed-publication-queries.ts`) | Read one file of the active release or pending candidate (UI review, `bbx pub files`/`cat`) | mitigated | low | authed (user or agent) | Read-only. Any release id other than the manifest's active release or the current candidate is refused; path syntax is validated, the binding lookup is scoped to this box, the path must be in that release's inventory, text is size-limited, and bytes are checked against the inventory length and sha256. No write, approve, enable, or disable power. |
+| tRPC `publications.list`, `publications.prepare` (`routers/publications.ts:58`, `:64`) | Read managed publication status; prepare/refresh the publication defined by one box card | mitigated | med | authed (user or agent) | `publicationReadProcedure` (`routers/publications.ts:30-35`) admits a signed-in member or the box agent. `prepare` takes only a box-relative `<Name>.publication.card` path under `_content/`, resolved through `parseRef`/`resolveRefPath` (`publish/prepare/card-source.ts:47-61`). The card is agent-editable desired config and grants no authority: the server derives the box, pubId binding, Worker, bucket, and connection grant. Prepare writes and commits nothing into the box. Same-approved-scope refresh may publish immediately; scope changes become candidates. |
+| tRPC `publications.releaseFile` (`routers/publications.ts:96-102`; `publish/managed-publication-queries.ts:147-182`) | Read one file of the active release or pending candidate (card review UI, `bbx pub files`/`cat`) | mitigated | low | authed (user or agent) | Read-only; agent access approved by the boxholder 2026-10-06 as a debugging tool. Path syntax is validated (`:155`), the binding lookup is scoped to this box (`:158`), any release other than the manifest's active release or the binding-matched candidate is refused (`:163-169`), and the path must be in that release's inventory (`:171-172`). Only text files under the size limit return bytes, checked against the inventory length and sha256 (`:175-180`); binaries return metadata only. No write, approve, enable, or disable power (doctest `managed-publications.doctest.md:335-346`). |
 | tRPC `publications.configureSharedHost` (`routers/publications.ts`) | Configure one hostname and selected publishing connection for this box | mitigated | high | owner | Requires `authenticatedOwnerProcedure`; mapping is machine-owned and immutable. The server verifies the box grant, creates or reuses this box+connection bucket, deploys the shared Worker with `workers.dev` and previews disabled, attaches the hostname, and marks it attached only after exact provider read-back. A pending mapping blocks preparation and can be retried from Admin. An owner can repeat setup to redeploy a changed Worker bundle; an attached hostname is read back rather than reattached, and pinned-site Workers are not touched. DNS/certificate changes begin during initial setup before any site is enabled; there is no automatic detach, move, or reassignment. HTTPS and minimum provider permissions remain unverified. |
-| tRPC `publications.approve`, `enable`, `disable`, `revoke` | Mutate publication serving authority from the publication card (or, for publications without a card, Disable from the owner-only Admin list) | mitigated | high | member | Requires a signed-in member who can access this box; global Cloudflare administration is not required. The Admin list is owner-only but its Disable button calls the same member-gated `publications.disable`. Agent config and CLI cannot approve audience or destination. |
+| tRPC `publications.approve`, `enable`, `disable`, `revoke` (`routers/publications.ts:86`, `:104`, `:113`, `:122`) | Mutate publication serving authority from the publication card (or, for publications without a card, Disable from the owner-only Admin list) | mitigated | high | member | `publicationHumanProcedure` (`routers/publications.ts:38-43`) requires a signed-in member who can access this box; agent and open contexts get FORBIDDEN (`managed-publications.doctest.md:188-205`, `:335-346`). Global Cloudflare administration is not required. The Admin list (`frontend/.../CloudflarePublishConnectionsSection/OrphanPublications.tsx:75`) is owner-only but its Disable button calls the same member-gated `publications.disable`. Agent config and CLI cannot approve audience or destination. |
 | tRPC `scheduler.trigger`, `commands.executeSync`, `drive.updateConfig`, `calendar.updateConfig` | Run scheduled script cards / registered commands; rewrite sync config | gap | med | authed | Member-level code execution and config writes; moot single-operator (fail-closed owner-only), bites on multi-member boxes — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
 | tRPC `transcription.deepgramTempKey` / `openaiRealtimeKey` | Mint short-TTL (≤20 min) scoped third-party keys for browser-direct streaming | mitigated | low | authed | Long-lived provider keys never leave the server |
 | tRPC `clerk.*` (Chrome extension) | Page capture/commentary, tab arrangement | ok | — | authed | Rides the session cookie + per-origin CORS reflection for `chrome-extension://`; no separate extension credential |
@@ -362,7 +368,8 @@ Publishing has one flow. Static sites render `.md` to `.html` at prepare
 time (`src/publish/prepare/core/markdown.ts`); box Markdoc component tags are
 rejected, `redacted` content is omitted, and the leak scan runs over the rendered
 output (`src/publish/prepare/core/files.ts:218`). Sites use `bbx pub prepare
-<name>` through the authenticated box API. A signed-in box member approves
+<card path>` through the authenticated box API; the publication request is
+the frontmatter of a `<Name>.publication.card` under `_content/`. A signed-in box member approves
 first enablement and every audience/destination change. After that, a prepare
 inside the approved scope may immediately replace the live content. This is
 an ongoing publication permission, not a per-snapshot review. The server-side
@@ -380,6 +387,7 @@ an accepted host-trust tradeoff, not cryptographic agent isolation.
 | Per-box shared-host setup | `src/publish/managed-publication-shared-host.ts`, `src/core/secrets/cloudflare-publish.ts` | mitigated | high | owner | Authenticated owner selects one granted connection and hostname for the box before any site exists. The hostname is reserved as pending before remote writes, then marked attached after exact Worker-domain read-back. DNS/certificate changes may begin during setup. No automatic detach, move, or reassignment exists; HTTPS and provider permissions remain live-validation gaps. |
 | Machine credential / build trust | API token stays in server secret store and is never sent to agent API. Site install/build runs with reduced environment but same OS user and filesystem privileges | accepted | high | local | A hostile or compromised same-user process can read host secrets; managed publication does not claim that boundary |
 | Rendered Markdown pages (`prepare/markdown-page.ts`) | `.md` sources in static-mode publications render through the same parser and HTML allow-list as in-app cards, without bare-URL autolinking. The publication CSP permits `script-src 'self' https:` for built sites, so the allow-list is what keeps script out of a rendered page | ok | low | public |
+| Publication card input (`src/publish/prepare/card-source.ts`, `src/schemas/publication.ts`) | Prepare accepts only `_content/**/<Name>.publication.card` (`card-source.ts:47-61`). It refuses a symlink at the card, its parent directories, the attach folder, and the source folder (`:66-99`, `:126-131`), and refuses a pubId claimed by more than one card (`:112-118`). The source root is exactly `<Name>.attach/static/` or the build output `<Name>.attach/project/dist` (`:120-137`, `prepare/core/prepare-publication.ts:65`) | mitigated | med | authed | The card is agent-writable request config; these checks keep prepare inside one declared folder and stop two cards from driving one binding. Audience and destination still need member approval |
 | Edge manifest hygiene | Provenance/box identifiers stripped from everything edge-side (`manifest-edge.ts:10-12`) | ok | — | — |
 | Pre-auth status oracle (pinned-site mode) | `handleSite` returns 404/410 for missing, disabled, revoked or expired publications before `authorizeViewer` runs (`pub-worker/src/site.ts:50-64`), so an unauthenticated requester holding a PubId can tell states apart. Matters only once Access-gated tiers are live (no Access vars are bound today). The access-log flood half of the old finding left with the legacy `/a/` route | gap | low | public | [pub-worker-preauth-oracle-and-log-flood](../../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md) |
 | Unconfigured Worker fails closed | Neither binding set: every request gets a 500 naming the misconfiguration, with no R2 read (`pub-worker/src/worker.ts`, `route`) | ok | low | public | |

@@ -1,6 +1,6 @@
 ---
 title: "The publication card is the publication"
-status: draft
+status: active
 workstream: publication-home
 issues:
   - ../../../issues/decisions/2026-10-02-publication-source-and-card-split.md
