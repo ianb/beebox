@@ -66,3 +66,8 @@ no length limit.
 Related: the live transcription failure that takes the HQ pass down,
 [live-transcription-failure-loses-the-hq-pass](../bugs/2026-09-10-live-transcription-failure-loses-the-hq-pass.md),
 may become moot when the HQ pass is on-device.
+
+Also related: [bias Apple speech with box vocabulary](2026-09-11-bias-apple-speech-with-box-vocabulary.md).
+Once the on-device pass produces the HQ text, the box's proper nouns matter
+more; `SpeechAnalyzer` accepts contextual strings, so the two may be done
+together.
