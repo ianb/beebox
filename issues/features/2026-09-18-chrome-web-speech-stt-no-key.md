@@ -77,3 +77,25 @@ from the browser feeds the existing HQ flow and voice keywords
 the message so the box knows which engine produced it.
 
 Priority may be stale given the wider goal.
+
+## Decision (2026-10-06)
+
+After reviewing the options, the boxholder chose:
+
+- **Try the built-in Web Speech API with on-device processing**: Chrome with
+  `processLocally` (language pack downloaded), and Safari on macOS. The
+  silence and session-limit behavior is an accepted annoyance; handle it with
+  a transparent restart rather than avoiding the API.
+- **iPhone is out of scope.** The native app covers it (Apple's
+  SpeechAnalyzer; see
+  [on-device HQ transcription](2026-10-06-ios-on-device-hq-transcription.md)).
+- **Shipping our own model is rejected for now.** Running Moonshine,
+  Parakeet, or Whisper in the page (WebGPU via Transformers.js or ONNX
+  Runtime Web) would give the best quality we control, but it means a
+  model download of a few hundred MB and GPU/CPU load in the browser.
+  Moonshine was the strongest candidate for live streaming if this is
+  revisited.
+
+Background from the 2026-10-06 survey: Firefox has no Web Speech recognition;
+Chrome without `processLocally` sends audio to Google; Safari reportedly works
+offline only for English.
