@@ -50,6 +50,8 @@ final class BoxRuntime: ObservableObject {
     private var forwarder: PortForwarder?
     /// Set when the current container's main process exits.
     private var exitedWith: Int32?
+    /// Set when the in-VM relay that carries HTTP to the host exits.
+    private var relayExited = false
 
     var firstRunSetupURL: URL? {
         guard case .running(let boxURL) = phase, let path = log?.firstRunSetupPath else { return nil }
@@ -156,11 +158,14 @@ final class BoxRuntime: ObservableObject {
                 root: Paths.state,
                 network: try VmnetNetwork()
             )
+            try BundleConfig.vminit.write(to: Paths.initfsSource, atomically: true, encoding: .utf8)
             let source = ImageSource(store: manager.imageStore) { [weak self] line in
                 await MainActor.run { self?.phase = .working(line) }
             }
-            let (image, fetched) = try await source.image()
-            if fetched || !boxIsInitialized() { progress?.operation = .firstStart }
+            let (image, _) = try await source.image()
+            // Only creating the box makes a first start; an app update's image
+            // download is slow too, but it is still an ordinary start.
+            if !boxIsInitialized() { progress?.operation = .firstStart }
             let log = try LogWriter(url: Paths.log)
             self.log = log
 
@@ -185,7 +190,20 @@ final class BoxRuntime: ObservableObject {
                 if self?.container === container { self?.exitedWith = code ?? -1 }
             }
 
-            try await startHTTPRelay(container, log: log)
+            let relay = try await startHTTPRelay(container, log: log)
+            relayExited = false
+            let relayExit = Task { _ = try? await relay.wait() }
+            Task { [weak self] in
+                await relayExit.value
+                guard let self, self.container === container else { return }
+                self.relayExited = true
+                // After startup, the box would look Running while every request
+                // fails; say so instead.
+                if case .running = self.phase {
+                    appLog("the connection relay in the VM exited")
+                    self.phase = .failed("the connection to the box stopped (its relay in the VM exited); Stop and Start the box. See \(Paths.appLog.path)")
+                }
+            }
             let forwarder = try PortForwarder(localPort: Self.localPort, targetSocket: Paths.httpSocket)
             try await forwarder.start()
             self.forwarder = forwarder
@@ -223,15 +241,20 @@ final class BoxRuntime: ObservableObject {
             try fm.moveItem(at: from, to: to)
             appLog("moved \(from.lastPathComponent) into the home volume")
         }
-        // Earlier builds copied in the kernel and initfs the `container` CLI
-        // had downloaded; the kernel is bundled now and the initfs comes from
-        // the vminit image.
-        for stale in ["vmlinux", "initfs.ext4"] {
-            let url = Paths.state.appending(path: stale)
-            if fm.fileExists(atPath: url.path) {
-                try fm.removeItem(at: url)
-                appLog("removed the old copied \(stale)")
-            }
+        // Earlier builds copied in the kernel the `container` CLI had
+        // downloaded; the kernel is bundled now.
+        let oldKernel = Paths.state.appending(path: "vmlinux")
+        if fm.fileExists(atPath: oldKernel.path) {
+            try fm.removeItem(at: oldKernel)
+            appLog("removed the old copied kernel")
+        }
+        // The framework builds initfs.ext4 from the vminit image only when the
+        // file is missing, and otherwise reuses it whatever made it. Rebuild
+        // when it was made from a different vminit (or by an earlier build).
+        let madeFrom = try? String(contentsOf: Paths.initfsSource, encoding: .utf8)
+        if madeFrom != BundleConfig.vminit, fm.fileExists(atPath: Paths.initfs.path) {
+            try fm.removeItem(at: Paths.initfs)
+            appLog("rebuilding the init filesystem for \(BundleConfig.vminit)")
         }
     }
 
@@ -304,7 +327,7 @@ final class BoxRuntime: ObservableObject {
     /// image's own Node; Containerization carries that socket out to the host
     /// (`config.sockets`, direction .outOf). Started per launch, it dies with
     /// the VM.
-    private func startHTTPRelay(_ container: LinuxContainer, log: LogWriter) async throws {
+    private func startHTTPRelay(_ container: LinuxContainer, log: LogWriter) async throws -> LinuxProcess {
         let script = """
             const net = require("net"), fs = require("fs");
             try { fs.unlinkSync("\(Self.guestSocket)"); } catch (_e) {}
@@ -320,6 +343,7 @@ final class BoxRuntime: ObservableObject {
             config.stderr = log
         }
         try await relay.start()
+        return relay
     }
 
     private func waitForServer(_ base: URL) async throws {
@@ -331,6 +355,9 @@ final class BoxRuntime: ObservableObject {
             }
             if let code = exitedWith {
                 throw RuntimeError("the box exited (\(code)) before serving; see \(Paths.log.path)")
+            }
+            if relayExited {
+                throw RuntimeError("the connection relay in the VM exited before the box served; see \(Paths.log.path)")
             }
             try await Task.sleep(for: .seconds(1))
         }

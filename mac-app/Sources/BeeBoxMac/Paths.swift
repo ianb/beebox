@@ -35,6 +35,10 @@ enum Paths {
 
     static let log = state.appending(path: "box.log")
     static let appLog = state.appending(path: "app.log")
+    /// Built by the framework from the vminit image (ContainerManager), and
+    /// the reference it was built from.
+    static let initfs = state.appending(path: "initfs.ext4")
+    static let initfsSource = state.appending(path: "initfs.ext4.source")
     /// Host end of the vsock relay to the server (see PortForwarder).
     static let httpSocket = state.appending(path: "http.sock")
     static let timings = state.appending(path: "timings.json")
