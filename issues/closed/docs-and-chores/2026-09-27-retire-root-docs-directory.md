@@ -1,6 +1,7 @@
 ---
 title: "Retire the root docs/ directory: move the Agent SDK ledger beside its schedule, delete the lint audit and the map"
 workstream: retire-root-docs
+resolution: implemented
 area: docs
 labels: [docs]
 filed-by: agent
@@ -8,6 +9,8 @@ discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
 priority: important
 ---
+
+**Closed.** Implemented in 41ca5601a (move) and 514999dbf (ledger header). Divergence: the ledger landed in `schedules/sdk-update/`, not `beebox/docs/`, because anything under `beebox/` deploys and the schedule commits ledger-only changes most days.
 
 The monorepo root has a `docs/` directory that holds only three leftover
 files. It arrived with the May import of the old repository and has no job
