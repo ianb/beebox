@@ -83,4 +83,4 @@ Nothing offers a merge, and nothing says a choice is pending.
 card belongs to a task that is failing or inconclusive), and a failing task's
 line names the parked path. The resolution-path items (`bbx template
 accept`/`diff`, three-way merge, box-owned fields) were not built here — see
-[template resolution path](../../features/2026-08-24-parked-template-resolution-path.md).
+[template resolution path](../features/2026-08-24-parked-template-resolution-path.md).

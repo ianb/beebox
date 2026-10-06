@@ -36,7 +36,9 @@ export async function mergeWithoutConflict({ local, base, upstream, card }: { lo
       }
       return result.stdout;
     } catch (error) {
-      if (isRecord(error) && typeof error.code === "number" && error.code >= 1 && error.code <= 127) return null;
+      // git merge-file uses 1 specifically for a content conflict; larger
+      // statuses indicate a failed invocation and must remain visible.
+      if (isRecord(error) && error.code === 1) return null;
       throw error;
     }
   } finally {

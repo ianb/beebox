@@ -12,7 +12,7 @@ resolution: implemented
 > `beebox/scripts/migrate/rekey-template-versions.ts` (moved to `beebox/src/scripts/migrate/rekey-template-versions.ts`) fixes part 1 (the key
 > rename). Part 2 (an automated rewrite leaving the recorded hash stale) is
 > not fixed here — it is recorded as a requirement on
-> [parked template resolution](../../features/2026-08-24-parked-template-resolution-path.md),
+> [parked template resolution](../features/2026-08-24-parked-template-resolution-path.md),
 > which stays open.
 
 `_config/template-versions.json` records the stock hash `installTemplateFile`
@@ -54,4 +54,4 @@ as a boxholder edit and parks every update. On `test1`, `refresh-maps` and
 force-accepted by hand. Deciding how an automated rewrite should record its
 result is tracked with the rest of the parked-template work.
 
-Related: [parked template resolution](../../features/2026-08-24-parked-template-resolution-path.md).
+Related: [parked template resolution](../features/2026-08-24-parked-template-resolution-path.md).
