@@ -6,9 +6,12 @@ import {
   listCloudflarePublishConnections,
   revokeCloudflarePublishConnection,
   revokeCloudflarePublishGrant,
+  revealCloudflarePublishToken,
   saveCloudflarePublishConnection,
 } from "../../../core/secrets/cloudflare-publish.js";
 import { CloudflarePublishTokenVerificationError, createCloudflarePublishTokenVerifier } from "../../../services/cloudflare-publish-token-verifier.js";
+import { appendOwnerSecretRead } from "../../../core/secrets/access-log.js";
+import { getBoxTimeISO } from "../../../lib/time.js";
 import { authenticatedOwnerProcedure, router } from "../procedures.js";
 
 const nameSchema = z.string().trim().regex(/^[a-z][\da-z-]{0,39}$/);
@@ -30,6 +33,15 @@ export const cloudflarePublishConnectionsRouter = router({
   list: authenticatedOwnerProcedure.query(() =>
     lifecycle(() => listCloudflarePublishConnections()),
   ),
+
+  revealToken: authenticatedOwnerProcedure
+    .input(z.object({ name: nameSchema }).strict())
+    .mutation(async ({ ctx, input }) => {
+      const token = await lifecycle(() => revealCloudflarePublishToken(input.name));
+      if (!token) throw new TRPCError({ code: "NOT_FOUND", message: "This connection has no stored token." });
+      await appendOwnerSecretRead({ ts: getBoxTimeISO(ctx.boxRoot), box: ctx.boxSlug, secret: `cloudflare-publish/${input.name}`, purpose: "owner revealed token in Admin" });
+      return { token };
+    }),
 
   /** Verify the token against the named account, then atomically save/rotate it. */
   save: authenticatedOwnerProcedure

@@ -164,6 +164,13 @@ export async function listCloudflarePublishConnections(): Promise<CloudflarePubl
   return summaries;
 }
 
+/** Explicit owner reveal; normal connection listings never return credentials. */
+export async function revealCloudflarePublishToken(name: string): Promise<string | null> {
+  const loaded = await loadSecretStore();
+  if (!loaded.ok) throw connectionError("The machine secret store could not be read.");
+  return loaded.value.cloudflarePublishConnections?.[name]?.apiToken ?? null;
+}
+
 /** Store a previously verified token, preserving grants when rotating in-place. */
 export async function saveCloudflarePublishConnection(opts: {
   name: string;

@@ -4,8 +4,9 @@
  *
  * The store is one file per machine while an admin page belongs to one box, so
  * this table is reachable from every box's Secrets section — there is no
- * separate hub UI to put it in. It lists NAMES and grants across every box,
- * never values, which is exactly why a secret's name must not itself carry
+ * separate hub UI to put it in. It lists NAMES and grants across every box;
+ * values only enter the DOM after an explicit temporary reveal, which is why
+ * a secret's name must not itself carry
  * anything sensitive.
  */
 
@@ -21,6 +22,7 @@ import { Text } from "../../ui/Text";
 import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
 import { SecretUsesBlock } from "./uses";
+import { RevealSecretValue } from "./RevealSecretValue";
 
 type MachineView = RouterOutput["secrets"]["machineView"];
 type MachineSecret = MachineView["secrets"][number];
@@ -47,7 +49,7 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
   return (
     <Accordion
       id={controlAddress("bbx-admin-secrets-machine-key", secret.name)}
-      keepMounted
+      keepMounted={false}
       title={
         <>
           <Text mono size="sm">{secret.name}</Text>
@@ -61,6 +63,7 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
     >
       <Stack gap="xs">
         {secret.note === undefined ? null : <Hint>{secret.note}</Hint>}
+        {secret.hasValue ? <RevealSecretValue name={secret.name} /> : null}
         <SecretUsesBlock uses={secret.uses} />
         <Text size="xs" tone="muted">
           {lastUsedSummary(secret)}

@@ -13,6 +13,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { Readable } from "node:stream";
 import type { FastifyReply } from "fastify";
 import { WebSocket as WsWebSocket } from "ws";
 import { transcribeAudioHq } from "../../../core/transcription/dispatch/core.js";
@@ -28,14 +29,21 @@ import {
   CompiledSpeakingVoiceSchema,
   type CompiledSpeakingVoice,
 } from "../../../schemas/personality/schema.js";
-import { errnoCode } from "../../../shared/error-guards.js";
+import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { HTTPError, TimeoutError } from "ky";
 import { serveMockTts } from "./tts-mock.js";
 import { resolveTtsService, TtsNotConfiguredError } from "../../../core/tts/resolve.js";
 import { loadTtsConfig } from "../../../core/tts/config.js";
 import { InteractionStreamError } from "../../../core/tts/interaction-stream.js";
-import { EmptyTtsResponseError, type TtsService } from "../../../services/tts.js";
+import { Mp3EncoderError } from "../../../core/tts/mp3-encoder.js";
+import {
+  EmptyTtsResponseError,
+  SpeechCancelledError,
+  TtsStreamTimeoutError,
+  type TtsAudioStream,
+  type TtsService,
+} from "../../../services/tts.js";
 import { DEFAULT_VOICE, type TtsBackend } from "../../../shared/tts-backends.js";
 import type { ChatRoutesContext } from "./context.js";
 import { readSessionLogTail } from "../../../core/chat/session/log-tail.js";
@@ -116,12 +124,15 @@ async function providerErrorMessage(response: Response): Promise<string | null> 
  * the network reason in `cause`; a `TimeoutError` means the provider accepted
  * the request and never finished it. Leaving that last one out sent a real
  * OpenRouter speech timeout to the boxholder as a bare 500 "Internal server
- * error" — the very outcome the 502 below was added to prevent. An
- * `InteractionStreamError` is the direct Gemini route failing after its
- * stream began: an error event, a malformed event, or a stall.
+ * error" — the very outcome the 502 below was added to prevent. The streaming
+ * path adds three: an `InteractionStreamError` (Gemini's stream sent an error
+ * or malformed event), an `Mp3EncoderError` (ffmpeg missing or failed), and a
+ * `TtsStreamTimeoutError` (the whole clip missed its deadline).
  */
 async function describeBackendFailure(e: unknown): Promise<string | null> {
-  if (e instanceof InteractionStreamError) return `TTS backend ${e.message}`;
+  if (e instanceof InteractionStreamError || e instanceof Mp3EncoderError || e instanceof TtsStreamTimeoutError) {
+    return `TTS backend failed: ${e.message}`;
+  }
   if (e instanceof HTTPError) {
     const status = `TTS backend answered ${String(e.response.status)} ${e.response.statusText}`.trim();
     const reason = await providerErrorMessage(e.response);
@@ -133,6 +144,48 @@ async function describeBackendFailure(e: unknown): Promise<string | null> {
     return `TTS backend unreachable: ${reason}`;
   }
   return null;
+}
+
+/**
+ * The clip's bytes for the response: head, then the rest. The route's
+ * `try/catch` only covers work before `reply.send` returns, so a failure after
+ * the head is handled here: logged with the provider's reason and rethrown so
+ * the response is destroyed. The browser then sees
+ * a broken download (its streaming player fails the segment) rather than a
+ * clean end to half a sentence (principle 4).
+ */
+async function* guardedSpeech(audio: TtsAudioStream): AsyncGenerator<Buffer> {
+  let sent = audio.head.length;
+  yield audio.head;
+  try {
+    for await (const chunk of audio.rest) {
+      sent += chunk.length;
+      yield chunk;
+    }
+  } catch (e) {
+    // `rest` has already cancelled the clip on its way out. A cancel is the
+    // browser leaving, which nobody needs to investigate.
+    if (e instanceof SpeechCancelledError) {
+      console.debug(`[chat-tts] stream stopped after ${String(sent)} bytes: the browser left`);
+    } else {
+      console.error(`[chat-tts] stream failed after ${String(sent)} bytes: ${(await describeBackendFailure(e)) ?? errorMessage(e)}`);
+    }
+    throw e;
+  }
+}
+
+/**
+ * Stream a clip as the response. A close with the body unfinished is the
+ * browser leaving (stop, a new reply, navigation): stop the provider and any
+ * encoder. A close after the last byte is benign (the screenshot route's
+ * pattern, `screenshot-routes.ts`).
+ */
+function sendSpeech(reply: FastifyReply, audio: TtsAudioStream): FastifyReply {
+  reply.raw.on("close", () => {
+    if (!reply.raw.writableFinished) audio.cancel();
+  });
+  reply.header("Content-Type", audio.contentType);
+  return reply.send(Readable.from(guardedSpeech(audio)));
 }
 
 export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
@@ -238,9 +291,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
     const ttsOpts: { voice?: string; instructions?: string } = { voice: resolvedVoice };
     if (instructions) ttsOpts.instructions = instructions;
     try {
-      const result = await service.textToSpeech(text, ttsOpts);
-      reply.header("Content-Type", result.contentType);
-      return reply.send(result.audio);
+      return sendSpeech(reply, await service.streamSpeech(text, ttsOpts));
     } catch (e) {
       if (e instanceof EmptyTtsResponseError) {
         // Loud rather than silent: a zero-length body played as success is

@@ -1,24 +1,25 @@
-# TTS service: the fake, and the guard against silent failure
+# TTS service: streamed speech, the fake, and the guard against silent failure
 
 `TtsService` (`src/services/tts.ts`) is one interface over several speech
-backends. These cover the fake every route test uses, and the one behaviour the
-real implementations share: a response too short to be audio is an error, not a
-result.
+backends. `streamSpeech` resolves once the clip's head has arrived and hands
+over the rest as a stream (`docs/plans/tts-streamed-playback.md`). These cover
+the fake every route test uses, and what the real implementations share: a
+clip too short to be audio is an error, not a result.
 
 ```ts setup
-import { createFakeTts, EmptyTtsResponseError } from "../../src/services/tts.js";
+import { collectAudio, createFakeTts, EmptyTtsResponseError } from "../../src/services/tts.js";
 ```
 
 ## The fake records what it was asked to say
 
 ```ts
 const tts = createFakeTts();
-const result = await tts.textToSpeech("Hello there.", { voice: "coral", instructions: "Warmly." });
-`${result.contentType} ${String(result.audio.length > 0)}`
-=> audio/mpeg true
+const audio = await tts.streamSpeech("Hello there.", { voice: "coral", instructions: "Warmly." });
+({ contentType: audio.contentType, hasAudio: (await collectAudio(audio)).length > 0 })
+=> { contentType: "audio/mpeg", hasAudio: true }
 
-JSON.stringify(tts.speeches)
-=> [{"text":"Hello there.","voice":"coral","instructions":"Warmly."}]
+tts.speeches
+=> [{ text: "Hello there.", voice: "coral", instructions: "Warmly." }]
 ```
 
 Its backend and stylability are declarable, because the route and the picker
@@ -27,35 +28,34 @@ both branch on them.
 ```ts
 const gem = createFakeTts({ backend: "gemini", stylable: true });
 const mute = createFakeTts({ backend: "openai", stylable: false });
-`${gem.backend}/${String(gem.stylable)} ${mute.backend}/${String(mute.stylable)}`
-=> gemini/true openai/false
+({ gem: [gem.backend, gem.stylable], mute: [mute.backend, mute.stylable] })
+=> { gem: ["gemini", true], mute: ["openai", false] }
 ```
 
-## A too-short response is an error, never a result
+## A too-short clip is an error, never a result
 
-Gemini has been observed answering HTTP 200 with a zero-length body. A buffer
+Gemini has been observed answering HTTP 200 with a zero-length body. A clip
 that short reaches the browser as silence, which the boxholder blames on their
-speakers rather than on the backend — so the service throws instead of
-returning it.
+speakers rather than on the backend — so `streamSpeech` rejects before anything
+is sent, instead of handing over an empty stream.
 
-The fake returns a genuinely empty buffer rather than a flag meaning "pretend
-it was empty": a mock written by the bug's author encodes the bug, so the guard
-is asserted against the real shape.
+The fake produces a genuinely empty clip rather than a flag meaning "pretend it
+was empty", and runs it through the same head check as the real backends.
 
 ```ts
 const broken = createFakeTts({ backend: "gemini", emptyResponse: true });
-await broken.textToSpeech("Hello there.")
+await broken.streamSpeech("Hello there.")
 => throws EmptyTtsResponseError: TTS backend "gemini" returned 0 bytes — too short to be speech
 ```
 
-The call is still recorded, so a test can tell "never asked" from "asked and
-got nothing".
+The call is still recorded, and the clip is cancelled, so a test can tell
+"never asked" from "asked and got nothing".
 
 ```ts
 const seen = createFakeTts({ emptyResponse: true });
-const swallowed = await seen.textToSpeech("Hi.").catch(() => "threw");
-`${String(swallowed)} recorded=${String(seen.speeches.length)}`
-=> threw recorded=1
+const swallowed = await seen.streamSpeech("Hi.").catch(() => "threw");
+({ swallowed, recorded: seen.speeches.length, cancels: seen.cancels })
+=> { swallowed: "threw", recorded: 1, cancels: 1 }
 ```
 
 ## Gemini: one key, one host, style beside the text
@@ -67,6 +67,10 @@ would receive is visible.
 
 ```ts setup
 import { createTtsService } from "../../src/services/tts.js";
+import { InteractionStreamError } from "../../src/core/tts/interaction-stream.js";
+
+/** An MP3-looking buffer of `bytes` bytes: a frame header, padded. */
+const mp3Head = (bytes) => Buffer.concat([Buffer.from([0xff, 0xf3, 0x84, 0xc4]), Buffer.alloc(bytes - 4)]);
 
 /** A `fetch` that records each request and answers with `respond()`. */
 function recordingFetch(respond) {
@@ -79,28 +83,56 @@ function recordingFetch(respond) {
   return { calls, fetch };
 }
 
-// 1000 bytes of 24 kHz 16-bit silence — long enough to pass the playability guard.
-const pcm = Buffer.alloc(1000);
+// Half a second of 24 kHz 16-bit silence: enough MP3 to pass the head check.
+const pcm = Buffer.alloc(24000);
+
+const delta = (part) => `event: step.delta\ndata: ${JSON.stringify({ event_type: "step.delta", delta: { type: "audio", data: part.toString("base64") } })}\n\n`;
 
 /** A streamed Interactions answer carrying `audio` as two SSE delta events. */
 function interactionStream(audio) {
   const half = audio.length / 2;
-  const delta = (part) => `event: step.delta\ndata: ${JSON.stringify({ event_type: "step.delta", delta: { type: "audio", data: part.toString("base64") } })}\n\n`;
   return new Response(delta(audio.subarray(0, half)) + delta(audio.subarray(half)) + "event: done\ndata: [DONE]\n\n", {
     headers: { "Content-Type": "text/event-stream" },
   });
+}
+
+/**
+ * A response body that sends `first`, then waits for the test to call
+ * `release(last)` (or `fail()`) before it sends the rest. Records whether the
+ * consumer cancelled it.
+ */
+function heldBody(first) {
+  const encoder = new TextEncoder();
+  const state = { cancelled: false };
+  let controllerRef;
+  const body = new ReadableStream({
+    start(controller) {
+      controllerRef = controller;
+      controller.enqueue(typeof first === "string" ? encoder.encode(first) : first);
+    },
+    cancel() { state.cancelled = true; },
+  });
+  return {
+    body,
+    state,
+    release(last) {
+      controllerRef.enqueue(typeof last === "string" ? encoder.encode(last) : last);
+      controllerRef.close();
+    },
+  };
 }
 ```
 
 The request sends the key in Google's own header, puts style in the
 `speech_metadata` annotation beside the verbatim text, asks for a stream, and
-asks Google not to store the request. The streamed PCM chunks come back
-joined, as one WAV.
+asks Google not to store the request. The streamed PCM comes back as MP3,
+encoded on the way, starting with an MPEG audio frame.
 
 ```ts
 const direct = recordingFetch(() => interactionStream(pcm));
 const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: direct.fetch });
-const out = await tts.textToSpeech("The delivery is late.", { voice: "Kore", instructions: "Speak warmly." });
+const audio = await tts.streamSpeech("The delivery is late.", { voice: "Kore", instructions: "Speak warmly." });
+const out = await collectAudio(audio);
 const call = direct.calls[0];
 ({
   url: call.url,
@@ -112,9 +144,8 @@ const call = direct.calls[0];
   content: call.body.input[0].content[0],
   voice: call.body.generation_config.speech_config[0].voice,
   stylable: tts.stylable,
-  contentType: out.contentType,
-  riff: out.audio.subarray(0, 4).toString(),
-  bytes: out.audio.length,
+  contentType: audio.contentType,
+  frameSync: out[0] === 0xff && (out[1] & 0xe0) === 0xe0,
 })
 => {
   url: "https://generativelanguage.googleapis.com/v1beta/interactions",
@@ -126,9 +157,8 @@ const call = direct.calls[0];
   content: { type: "text", text: "The delivery is late.", annotations: [{ type: "speech_metadata", style: "Speak warmly." }] },
   voice: "Kore",
   stylable: true,
-  contentType: "audio/wav",
-  riff: "RIFF",
-  bytes: 1044,
+  contentType: "audio/mpeg",
+  frameSync: true,
 }
 ```
 
@@ -139,7 +169,7 @@ an empty body, and throws the same error.
 ```ts
 const empty = recordingFetch(() => new Response("event: done\ndata: [DONE]\n\n"));
 const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: empty.fetch });
-await tts.textToSpeech("Hello there.")
+await tts.streamSpeech("Hello there.")
 => throws EmptyTtsResponseError: TTS backend "gemini" returned 0 bytes — too short to be speech
 ```
 
@@ -160,7 +190,7 @@ const quota = recordingFetch(() =>
   }));
 const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: quota.fetch });
 const started = Date.now();
-const failure = await tts.textToSpeech("Hello there.").catch((e) => e);
+const failure = await tts.streamSpeech("Hello there.").catch((e) => e);
 ({ error: failure.name, status: failure.response.status, requests: quota.calls.length, fast: Date.now() - started < 1000 })
 => { error: "HTTPError", status: 429, requests: 1, fast: true }
 ```
@@ -176,7 +206,69 @@ const brief = recordingFetch(() => {
     : interactionStream(pcm);
 });
 const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: brief.fetch });
-const out = await tts.textToSpeech("Hello there.");
+const out = await tts.streamSpeech("Hello there.");
 ({ requests: brief.calls.length, contentType: out.contentType })
-=> { requests: 2, contentType: "audio/wav" }
+=> { requests: 2, contentType: "audio/mpeg" }
+```
+
+## The head arrives before the provider finishes
+
+The point of streaming: `streamSpeech` resolves on the first plausible audio,
+while the provider is still sending. For Gemini, the first half second of PCM
+is held back from the rest until the test releases it; the head is already in
+hand by then.
+
+```ts
+const held = heldBody(delta(pcm));
+const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: async () => new Response(held.body) });
+const audio = await tts.streamSpeech("The delivery is late.");
+const headFirst = { headBytes: audio.head.length >= 512, providerStillOpen: !held.state.cancelled };
+held.release(delta(pcm) + "event: done\ndata: [DONE]\n\n");
+const total = (await collectAudio(audio)).length;
+({ ...headFirst, moreAfterHead: total > audio.head.length })
+=> { headBytes: true, providerStillOpen: true, moreAfterHead: true }
+```
+
+OpenAI already answers MP3, so its body passes through unchanged, and its head
+also arrives before the body ends.
+
+```ts
+const first = mp3Head(604);
+const held = heldBody(first);
+const tts = createTtsService({ backend: "openai", apiKey: "sk-test", fetch: async () => new Response(held.body) });
+const audio = await tts.streamSpeech("The delivery is late.");
+const headIsFirstChunk = audio.head.equals(first);
+held.release(Buffer.alloc(300, 1));
+({ headIsFirstChunk, total: (await collectAudio(audio)).length })
+=> { headIsFirstChunk: true, total: 904 }
+```
+
+## A failure after the head comes out of the rest
+
+Once the head is handed over, the route has started its response. A provider
+error after that cannot reject `streamSpeech`; it surfaces while reading
+`rest`, for the route to end the response with.
+
+```ts
+const held = heldBody(delta(pcm));
+const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: async () => new Response(held.body) });
+const audio = await tts.streamSpeech("The delivery is late.");
+held.release(`event: error\ndata: {"event_type":"error","error":{"message":"backend overloaded"}}\n\n`);
+await collectAudio(audio)
+=> throws InteractionStreamError: Gemini stream failed: backend overloaded
+```
+
+## Stopping early cancels the provider
+
+A consumer that stops reading (the route, when the browser leaves) stops the
+provider's response, so no audio is generated for nobody.
+
+```ts
+const held = heldBody(mp3Head(700));
+const tts = createTtsService({ backend: "openai", apiKey: "sk-test", fetch: async () => new Response(held.body) });
+const audio = await tts.streamSpeech("The delivery is late.");
+audio.cancel();
+await eventually(() => held.state.cancelled === true, { label: "provider body cancelled" });
+held.state.cancelled
+=> true
 ```

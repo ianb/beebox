@@ -42,9 +42,15 @@ export function emptyRunLines(): string[] {
   return ["no test imports the changed paths", "# { total: 0, pass: 0, selected: 0 }"];
 }
 
-/** Graph paths are repo-relative; tap names them relative to beebox. */
-function stripPackagePrefix(path: string): string {
-  return path.startsWith("beebox/") ? path.slice("beebox/".length) : path;
+/**
+ * Graph paths are repo-relative; the beebox runner takes paths relative to
+ * beebox. A root-infrastructure doctest (`bin/test/…`) runs from the package
+ * as `../bin/test/…`, so it gets beebox's loaders (bin/CLAUDE.md). Passed
+ * through unprefixed, it named no file in the package, and the runner refused
+ * the whole selection.
+ */
+export function packageRelative(path: string): string {
+  return path.startsWith("beebox/") ? path.slice("beebox/".length) : `../${path}`;
 }
 
 function readRepoFile(repoRelative: string): string | null {
@@ -169,7 +175,7 @@ export async function main(argv: string[]): Promise<number> {
     // careful test still runs — selectTests keeps what the branch touched.
     exclude: carefulExclusions(),
   });
-  const files = selection.selected.map(stripPackagePrefix);
+  const files = selection.selected.map(packageRelative);
 
   if (files.length === 0) {
     const [message, summary] = emptyRunLines();
@@ -178,7 +184,7 @@ export async function main(argv: string[]): Promise<number> {
     try {
       recordEmptyRun({
         changed,
-        implicated: selection.implicated.map(stripPackagePrefix),
+        implicated: selection.implicated.map(packageRelative),
         accounted: isAccounted({ graph, changed }),
       });
     } catch (e) {
