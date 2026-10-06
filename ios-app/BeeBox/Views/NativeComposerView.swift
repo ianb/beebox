@@ -1447,14 +1447,20 @@ struct NativeComposerView: View {
         batchProgress = nil
 
         switch outcome {
-        case .delivered(let uploaded, let failed), .accepted(let uploaded, let failed):
-            // Sealed either way, so the box holds the bytes AND the note: the
+        case .delivered(let uploaded, let failed),
+             .accepted(let uploaded, let failed),
+             .undeliverable(let uploaded, let failed):
+            // Sealed every way, so the box holds the bytes AND the note: the
             // staged copies are redundant and the text has been carried away.
-            // If delivery ultimately fails, the box surfaces it to the chat agent
-            // rather than this client retrying — see `notifyStranded`.
+            // If delivery fails, the box notifies the boxholder and hands the
+            // batch to the chat agent rather than this client retrying.
             BulkPhotoStaging.discard(staged.prepared)
             clearComposerTextIfUnchanged(from: consumedNote)
-            if case .accepted = outcome {
+            if case .undeliverable = outcome {
+                BoxLog.error("photo batch sealed but undeliverable photos=\(uploaded)", category: .upload)
+                statusText = "\(uploaded) photos reached the box, but it could not add them to the chat."
+                    + " They are kept on the box."
+            } else if case .accepted = outcome {
                 statusText = "\(uploaded) photos sent — the box is still processing them."
             } else {
                 statusText = failed == 0

@@ -82,3 +82,25 @@ export function bulkBatchHasNothingToReport(session: StagingSession): boolean {
     session.note === undefined
   );
 }
+
+/**
+ * The uploader's failed-item report minus every item whose bytes did arrive.
+ *
+ * The report is the client's claim; the staged files are the fact. An upload
+ * the client gave up on (it timed out on the phone) can still have finished on
+ * the box, and keeping it in `failed` reports data loss that did not happen.
+ * Matching mirrors arrival in `prepare.ts`: by registry id when the report
+ * carries one, by name only for an id-less report against an id-less file.
+ */
+export function failedItemsNotArrived<T extends { id?: string | undefined; name: string }>(opts: {
+  failedItems: readonly T[];
+  files: StagingSession["files"];
+}): T[] {
+  const arrivedIds = new Set<string>();
+  const arrivedNames = new Set<string>();
+  for (const file of opts.files) {
+    if (file.itemId !== undefined) arrivedIds.add(file.itemId);
+    else arrivedNames.add(file.originalName);
+  }
+  return opts.failedItems.filter((f) => (f.id !== undefined ? !arrivedIds.has(f.id) : !arrivedNames.has(f.name)));
+}

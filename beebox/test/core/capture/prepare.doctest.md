@@ -130,8 +130,8 @@ await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
 await tick();
 
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const attach = `tmp-capture/${basename}.attach`;
-const docRel = `tmp-capture/${basename}.capture-session.card`;
+const attach = `_content/tmp-capture/${basename}.attach`;
+const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
 ```
 
 One capture card, one audio card per segment, both transcribed — and with
@@ -202,7 +202,7 @@ events.find((e) => e.event === "chat-user-message").data.message === expectedWra
 
 const delivered = events.find((e) => e.event === "capture-status" && e.data.status === "delivered");
 delivered.data.docPath
-=> tmp-capture/capture-20260709T1400-«*».capture-session.card
+=> _content/tmp-capture/capture-20260709T1400-«*».capture-session.card
 ```
 
 The staging session's media was cleaned up once delivered:
@@ -249,7 +249,7 @@ const eventBus = createEventBus(box.root);
 await prepareCaptureSession({ boxRoot: box.root, id: staged.id, eventBus, registry });
 await tick();
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T15:00:00.000Z", id: staged.id });
-const attach = `tmp-capture/${basename}.attach`;
+const attach = `_content/tmp-capture/${basename}.attach`;
 JSON.stringify({
   media: await box.read(`${attach}/audio-001.attach/audio-001.m4a`),
   cardNamesM4A: (await box.read(`${attach}/audio-001.audio.card`)).includes("ref: attach/audio-001.m4a"),
@@ -289,7 +289,7 @@ await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
 await tick();
 
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const partialBody = splitCardContent(await box.read(`tmp-capture/${basename}.capture-session.card`)).body;
+const partialBody = splitCardContent(await box.read(`_content/tmp-capture/${basename}.capture-session.card`)).body;
 partialBody.includes("[audio clip 2 not transcribed]")
 => true
 ```
@@ -299,7 +299,7 @@ later — possibly with no `<capture>` message in view — sees why an audio car
 has no transcript:
 
 ```ts continue
-(await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("transcription-failed: true")
+(await box.read(`_content/tmp-capture/${basename}.capture-session.card`)).includes("transcription-failed: true")
 => true
 ```
 
@@ -307,7 +307,7 @@ The failed clip's own card says why, in `transcription-error:`; the clip that
 transcribed carries a transcript and no error:
 
 ```ts continue
-const attachDir = `tmp-capture/${basename}.attach`;
+const attachDir = `_content/tmp-capture/${basename}.attach`;
 const clipCards = (await readdir(box.path(attachDir))).filter((f) => f.endsWith(".audio.card")).toSorted();
 const clips = await Promise.all(clipCards.map(async (f) => parseYaml(splitCardContent(await box.read(`${attachDir}/${f}`)).frontmatterText)));
 clips.map((c) => `${c.transcript === undefined ? "none" : "transcript"}/${c["transcription-error"] === undefined ? "ok" : "error"}`).join(" ")
@@ -373,7 +373,7 @@ The document is committed exactly once, and the body is assembled:
 
 ```ts continue
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const docRel = `tmp-capture/${basename}.capture-session.card`;
+const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
 const bodyAfterFirst = splitCardContent(await box.read(docRel)).body.trim();
 bodyAfterFirst.startsWith("Walked through the kitchen.")
 => true
@@ -540,7 +540,7 @@ await readStagingSession({ boxRoot: box.root, id })
 => null
 
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-(await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("delivered: true")
+(await box.read(`_content/tmp-capture/${basename}.capture-session.card`)).includes("delivered: true")
 => true
 ```
 
@@ -561,8 +561,8 @@ await configureBox(box);
 const id = await stageSealedSession(box.root);
 
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const cardRel = `tmp-capture/${basename}.capture-session.card`;
-const attachRel = `tmp-capture/${basename}.attach`;
+const cardRel = `_content/tmp-capture/${basename}.capture-session.card`;
+const attachRel = `_content/tmp-capture/${basename}.attach`;
 // Seed an invalid card (bogus `delivered`, no session-id) + an empty attach dir,
 // so prepare skips the write step and validates the pre-seeded card.
 await mkdir(`${box.root}/${attachRel}`, { recursive: true });
@@ -635,8 +635,8 @@ await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
 await tick();
 
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const docRel = `tmp-capture/${basename}.capture-session.card`;
-const attachRel = `tmp-capture/${basename}.attach`;
+const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
+const attachRel = `_content/tmp-capture/${basename}.attach`;
 ```
 
 The capture delivered (staging cleaned up) and the card was committed —

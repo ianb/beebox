@@ -34,7 +34,7 @@ import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { userMessageAlreadyLanded } from "../chat/session/deliver-user-message.js";
 import { listStagingSessions, isBulkSession, readStagingSession, writeStagingSession, type StagingSession, type StagingSessionState } from "../capture/staging-store/core.js";
 import { cleanupStagingSession, discardStagingSessionIfCancellable } from "../capture/staging-teardown.js";
-import { bulkBatchHasNothingToReport } from "./batch-format.js";
+import { bulkBatchHasNothingToReport, failedItemsNotArrived } from "./batch-format.js";
 import { StagingSessionGoneError } from "../capture/staging-errors.js";
 import { bulkBatchCardRelPath } from "./prepare.js";
 
@@ -124,7 +124,7 @@ async function surfaceStrandedBatch(opts: {
     targetSessionId: session.targetSessionId,
     state: session.state,
     receivedCount: session.files.length,
-    failedCount: session.failedItems?.length ?? 0,
+    failedCount: failedItemsNotArrived({ failedItems: session.failedItems ?? [], files: session.files }).length,
     registeredCount: session.expectedItems?.length ?? 0,
     note: session.note,
   });

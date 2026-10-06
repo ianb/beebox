@@ -20,7 +20,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAndCommitPaths } from "../../lib/git/core.js";
-import { sanitizeFilename, dedupeName, summarizeBatch } from "./batch-format.js";
+import { sanitizeFilename, dedupeName, summarizeBatch, failedItemsNotArrived } from "./batch-format.js";
+import { landmarkScanRelDir } from "../landmark/root-dir.js";
 import { createUploadBatchTemplate, parseUploadBatch, type UploadBatchReceived } from "../../schemas/upload-batch.js";
 import {
   readStagingSession,
@@ -91,7 +92,7 @@ export interface PreparedBulkBatch {
 export async function prepareBulkBatch(opts: {
   boxRoot: string;
   id: string;
-  /** Box-relative target context dir; `""`/absent lands at the box root. */
+  /** Box-relative target context dir; `""` (the root scope) lands under `_content/`. */
   contextDir: string;
   /** Items the uploader reported failing (name + reason), for the `failed` list. */
   failedItems?: BulkFailedItem[];
@@ -238,9 +239,10 @@ async function buildBatchSummary(opts: {
     else arrivedKeys.add(`name:${file.originalName}`);
   }
 
-  const failed = failedItems.map((f) => ({ name: f.name, reason: f.reason }));
+  const stillFailed = failedItemsNotArrived({ failedItems, files: session.files });
+  const failed = stillFailed.map((f) => ({ name: f.name, reason: f.reason }));
   const failedKeys = new Set<string>();
-  for (const f of failedItems) {
+  for (const f of stillFailed) {
     // Key by id when the uploader knows it, by name ONLY as the fallback for one
     // that doesn't. Adding both would let a single failed item mask every OTHER
     // registry item sharing its name: two picks both called `image.png`, one
@@ -307,11 +309,15 @@ export function bulkBatchSlug(opts: { startedAt: string; id: string }): string {
   return `upload-${formattedDate}-${opts.id.slice(0, 8)}`;
 }
 
-/** Box-relative batch dir: `<contextDir>/tmp-upload/<slug>` (root when contextDir is ""). */
+/**
+ * Box-relative batch dir: `<contextDir>/tmp-upload/<slug>`. A root-scope chat
+ * (`contextDir` "") lands under `_content/`, the root scope's physical home:
+ * the box root is a closed vocabulary, and a bare `tmp-upload/` there made the
+ * commit hook refuse every batch.
+ */
 function bulkBatchRelDir(opts: { startedAt: string; id: string; contextDir: string }): string {
   const slug = bulkBatchSlug({ startedAt: opts.startedAt, id: opts.id });
-  const uploadRelDir = opts.contextDir !== "" ? `${opts.contextDir}/tmp-upload` : "tmp-upload";
-  return `${uploadRelDir}/${slug}`;
+  return `${landmarkScanRelDir(opts.contextDir)}/tmp-upload/${slug}`;
 }
 
 /** Box-relative path of a batch's `upload-batch` card, derived from the session. */

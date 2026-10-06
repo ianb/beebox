@@ -219,12 +219,11 @@ final class BulkUploadTests: XCTestCase {
     // MARK: - Delivery confirmation
 
     /// A seal is a HAND-OFF, not a delivery. If the box later fails to deliver,
-    /// the coordinator reports `.accepted` — not `.failed` — because the box now
-    /// holds the bytes and the note and will surface the failure to the chat
-    /// agent itself. Reporting `.failed` here would have this client mount its
-    /// own recovery in parallel, and two recovery paths for one batch is how it
-    /// gets delivered twice.
-    func testFailedDeliveryAfterSealIsAHandOffNotAFailure() async {
+    /// the coordinator reports `.undeliverable` — not `.failed`, because the box
+    /// holds the bytes and the note and owns recovery (a client retry in
+    /// parallel is how a batch gets delivered twice), and not `.accepted`,
+    /// because "still processing" would hide a failure the person must see.
+    func testFailedDeliveryAfterSealIsReportedUndeliverable() async {
         let transport = ScriptedTransport(uploadStatuses: Array(repeating: 200, count: 9))
         transport.postFinalizeStatus = Data(#"""
         {"sessionId":"s1","state":"failed:deliver","registered":[],"received":[]}
@@ -236,7 +235,7 @@ final class BulkUploadTests: XCTestCase {
 
         let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: { "keep me" })
 
-        XCTAssertEqual(outcome, .accepted(uploaded: 1, failed: 0))
+        XCTAssertEqual(outcome, .undeliverable(uploaded: 1, failed: 0))
     }
 
     /// A batch that never sealed is a genuine failure: the box does not have it,
