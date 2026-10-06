@@ -6,6 +6,7 @@ labels: [tests]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-smoke-review — the weekly smoke-tier review, 2026-09-23
+priority: backlog
 ---
 
 The smoke tier gates a landing only when the landing goes through `/finish`:

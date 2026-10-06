@@ -6,6 +6,7 @@ labels: [markdown]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request
+priority: normal
 ---
 
 A long Markdown card has no way to see its structure or jump to a section.

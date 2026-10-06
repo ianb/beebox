@@ -7,6 +7,7 @@ next-action: discuss
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request for a design discussion
+priority: important
 ---
 
 Bee Box is general: cards, chat, connectors, schedules, views. A new user meets

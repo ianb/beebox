@@ -6,6 +6,7 @@ labels: [todos, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-todos-ui — boxholder request while reviewing the todos-ui plan
+priority: backlog
 ---
 
 In the todo list, the "eye" preview on a card header expands the whole card

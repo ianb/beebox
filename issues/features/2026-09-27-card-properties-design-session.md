@@ -7,6 +7,7 @@ labels: [frontend, properties, cards]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
+priority: normal
 ---
 
 The developer feels that a card's Properties panel does not pull its weight

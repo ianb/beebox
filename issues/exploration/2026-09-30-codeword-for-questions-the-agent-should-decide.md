@@ -6,6 +6,7 @@ labels: [agent-workflow]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder request
+priority: normal
 ---
 
 Agents in this repository often ask the developer questions the developer

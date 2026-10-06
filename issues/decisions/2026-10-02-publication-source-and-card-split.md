@@ -6,6 +6,7 @@ area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-static-markdown-publish — explaining where publications live after Markdown rendering landed
+priority: normal
 ---
 
 One publication has two box locations that do not refer to each other.

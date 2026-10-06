@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request after the 2026-09-23 knip-sweep work
+priority: normal
 ---
 
 A knowledge audit checks recall: did the agent find the target knowledge?

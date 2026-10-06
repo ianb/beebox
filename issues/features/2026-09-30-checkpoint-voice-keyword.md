@@ -6,6 +6,7 @@ labels: [voice, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder request
+priority: important
 ---
 
 **Job:** When I dictate a long train of thought, I want to send what I have

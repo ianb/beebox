@@ -6,6 +6,7 @@ labels: [chat, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder wanting a better way for the agent to show what it is referring to
+priority: important
 ---
 
 When a chat answer is about several things — three photos, the two documents

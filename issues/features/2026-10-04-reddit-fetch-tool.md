@@ -5,6 +5,7 @@ area: dev-tooling
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder shared a Reddit thread to review
+priority: normal
 ---
 
 The boxholder shares Reddit threads for agents to review. On 2026-10-04 every

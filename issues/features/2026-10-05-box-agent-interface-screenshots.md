@@ -6,6 +6,7 @@ labels: [agent-guidance]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request
+priority: backlog
 ---
 
 A box agent knows the box's files and commands but has never seen the app.
