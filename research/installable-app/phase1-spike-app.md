@@ -97,6 +97,46 @@ high-water mark. Levers, cheapest first:
 - **Menu icon** now distinguishes stopped (outline box), starting/stopping
   (hourglass), serving (filled box), and failed (warning).
 
+## Packaging (2026-10-06)
+
+The spike became a real `BeeBox.app` (`mac-app/scripts/build-app.sh`) and a
+28 MB DMG (`make-dmg.sh`), ad hoc signed until the Developer ID exists.
+
+- **Kernel:** bundled (30 MB): Kata 3.32.0's `vmlinux-6.18.35-197-debug`,
+  the one Apple's `container` recommends. The release tarball is ~700 MB, so
+  `fetch-kernel.sh` downloads it once per build machine, keeps only the
+  SHA-256-checked kernel, and deletes the tarball.
+- **Init filesystem:** pulled on first launch from
+  `ghcr.io/apple/containerization/vminit:0.48.0`, the tag matching the
+  pinned package.
+- **beebox image:** pulled on first launch from `ghcr.io/ianb/beebox:<app
+  version>` (published by `.github/workflows/image.yml` on `v*` tags, not
+  yet run). A newer version's pull removes the image it replaces. GitHub's
+  registry answers 401, not 404, for a missing or private image, so the app
+  says both.
+- **Sparkle 2.10.0:** "Check for Updates…" against the latest Release's
+  `appcast.xml`, off until the bundle carries the update-signing public key.
+  SwiftPM's binary-artifact download of Sparkle hung (0% CPU, no traffic)
+  while curl fetched the same file in under a second, so `fetch-sparkle.sh`
+  vendors it, pinned by SHA-256.
+- **Local Network privacy:** as a bundled app, connecting to the VM's
+  bridge address failed with "Local network prohibited" (a bare binary run
+  from Terminal inherited Terminal's permission). The app now reaches the
+  server over a Unix socket that Containerization relays out of the VM over
+  vsock; a small Node relay in the VM bridges it to port 3210. No prompt,
+  and a stop with a browser attached takes 0.7 s.
+- **Hardened runtime and ad hoc signing:** library validation needs a shared
+  Team ID, which ad hoc signatures lack, so an ad hoc build with the
+  hardened runtime cannot load Sparkle. The script enables the hardened
+  runtime only for a real identity (notarization needs it then).
+- **Old macOS:** `LSMinimumSystemVersion` 26.0. Launching a test build that
+  claimed 99.0 was refused by LaunchServices with error -10825
+  (incompatible system version), the path where macOS shows its own
+  "requires macOS 26.0 or later" alert. A Mac that cannot run VMs gets the
+  app's own message.
+- **Diagnostics:** a bundled app's NSLog lines were hard to find, so the app
+  writes `app.log` beside `box.log` (menu: Show App Log).
+
 ## Gaps before this is an app for other people
 
 - **Stable address — fixed in the spike, and required.** The VM gets a new

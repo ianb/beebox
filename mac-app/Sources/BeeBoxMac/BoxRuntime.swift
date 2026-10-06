@@ -1,6 +1,7 @@
 import Containerization
 import ContainerizationExtras
 import Foundation
+import Virtualization
 
 /// Owns the VM that runs the beebox image: prepares the runtime, initializes
 /// the box on first run, serves it, and reports status and memory.
@@ -31,8 +32,9 @@ final class BoxRuntime: ObservableObject {
     private var ticker: Timer?
 
     static let containerID = "box"
-    static let imageReference = "beebox:phase0"
     static let serverPort: UInt16 = 3210
+    /// The relay's socket inside the VM.
+    nonisolated static let guestSocket = "/tmp/beebox-http.sock"
     /// Stable local port for the browser. `BEEBOX_PORT` overrides it.
     static let localPort: UInt16 = {
         if let override = ProcessInfo.processInfo.environment["BEEBOX_PORT"], let port = UInt16(override) {
@@ -70,7 +72,7 @@ final class BoxRuntime: ObservableObject {
             forwarder = nil
         }
         let stopping = Date()
-        defer { NSLog("beebox: stopped in \(String(format: "%.1f", Date().timeIntervalSince(stopping)))s") }
+        defer { appLog("stopped in \(String(format: "%.1f", Date().timeIntervalSince(stopping)))s") }
         let hadContainer = container != nil
         if hadContainer { begin(.stop) }
         if let container {
@@ -83,23 +85,23 @@ final class BoxRuntime: ObservableObject {
                 try await container.kill(.term)
                 let signalled = Date()
                 let status = try await container.wait(timeoutInSeconds: 60)
-                NSLog("beebox: server exited \(status.exitCode) \(String(format: "%.1f", Date().timeIntervalSince(signalled)))s after SIGTERM")
+                appLog("server exited \(status.exitCode) \(String(format: "%.1f", Date().timeIntervalSince(signalled)))s after SIGTERM")
             } catch {
                 // A forced stop leaves the server's lock files behind; the next
                 // start waits for them to go stale (5 minutes).
-                NSLog("beebox: server did not exit within 60s of SIGTERM, forcing: \(error)")
+                appLog("server did not exit within 60s of SIGTERM, forcing: \(error)")
             }
             do {
                 try await container.stop()
             } catch {
-                NSLog("beebox: stop failed: \(error)")
+                appLog("stop failed: \(error)")
             }
         }
         if var manager {
             do {
                 try manager.delete(Self.containerID)
             } catch {
-                NSLog("beebox: delete failed: \(error)")
+                appLog("delete failed: \(error)")
             }
             self.manager = manager
         }
@@ -139,16 +141,26 @@ final class BoxRuntime: ObservableObject {
             let started = Date()
             begin(.start)
             phase = .working("Preparing runtime…")
+            guard VZVirtualMachine.isSupported else {
+                throw RuntimeError("this Mac cannot run virtual machines (for example, macOS itself running in a VM without nested virtualization)")
+            }
+            guard let kernelPath = Paths.kernel else {
+                throw RuntimeError("the app bundle has no Linux kernel; build it with scripts/build-app.sh, or set BEEBOX_KERNEL")
+            }
             try prepareDirectories()
-            try prepareKernelAndInitfs()
-            var manager = try ContainerManager(
-                kernel: Kernel(path: Paths.kernel, platform: .linuxArm),
-                initfs: .block(format: "ext4", source: Paths.initfs.path, destination: "/", options: ["ro"]),
+            // The init filesystem comes from Apple's vminit image, pulled once
+            // (small) at the version matching the pinned Containerization.
+            var manager = try await ContainerManager(
+                kernel: Kernel(path: kernelPath, platform: .linuxArm),
+                initfsReference: BundleConfig.vminit,
                 root: Paths.state,
                 network: try VmnetNetwork()
             )
-            let image = try await loadImage(manager.imageStore)
-            if !boxIsInitialized() { progress?.operation = .firstStart }
+            let source = ImageSource(store: manager.imageStore) { [weak self] line in
+                await MainActor.run { self?.phase = .working(line) }
+            }
+            let (image, fetched) = try await source.image()
+            if fetched || !boxIsInitialized() { progress?.operation = .firstStart }
             let log = try LogWriter(url: Paths.log)
             self.log = log
 
@@ -173,22 +185,19 @@ final class BoxRuntime: ObservableObject {
                 if self?.container === container { self?.exitedWith = code ?? -1 }
             }
 
-            guard let ip = container.interfaces.first?.ipv4Address.address else {
-                throw RuntimeError("the VM has no network interface")
-            }
-            let vmBase = URL(string: "http://\(ip):\(Self.serverPort)/")!
-            phase = .working("Waiting for the server…")
-            try await waitForServer(vmBase)
-            let forwarder = try PortForwarder(localPort: Self.localPort, targetHost: "\(ip)", targetPort: Self.serverPort)
+            try await startHTTPRelay(container, log: log)
+            let forwarder = try PortForwarder(localPort: Self.localPort, targetSocket: Paths.httpSocket)
             try await forwarder.start()
             self.forwarder = forwarder
             let base = URL(string: "http://localhost:\(Self.localPort)/")!
-            NSLog("beebox: ready in \(String(format: "%.1f", Date().timeIntervalSince(started)))s at \(base) (VM \(vmBase))")
+            phase = .working("Waiting for the server…")
+            try await waitForServer(base)
+            appLog("ready in \(String(format: "%.1f", Date().timeIntervalSince(started)))s at \(base)")
             phase = .running(base.appending(path: "box/"))
             finish(succeeded: true)
             watch(container, exit: exit)
         } catch {
-            NSLog("beebox: start failed: \(error)")
+            appLog("start failed: \(error)")
             finish(succeeded: false)
             phase = .failed(String(describing: error))
         }
@@ -199,52 +208,6 @@ final class BoxRuntime: ObservableObject {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
         try moveLegacyMachineState()
-    }
-
-    /// Spike: reuse the kernel and initfs the `container` CLI downloaded.
-    private func prepareKernelAndInitfs() throws {
-        let fm = FileManager.default
-        let cliRoot = Paths.spikeInputs.appending(path: "app")
-        if !fm.fileExists(atPath: Paths.kernel.path) {
-            let link = cliRoot.appending(path: "kernels/default.kernel-arm64")
-            let target = try fm.destinationOfSymbolicLink(atPath: link.path)
-            try clone(URL(filePath: target), to: Paths.kernel)
-        }
-        if !fm.fileExists(atPath: Paths.initfs.path) {
-            try clone(cliRoot.appending(path: "containers/buildkit/initfs.ext4"), to: Paths.initfs)
-        }
-    }
-
-    private func clone(_ source: URL, to destination: URL) throws {
-        if Darwin.clonefile(source.path, destination.path, 0) != 0 {
-            try FileManager.default.copyItem(at: source, to: destination)
-        }
-    }
-
-    /// Loads the image from the spike's OCI layout, replacing the stored one
-    /// when the layout holds a different digest (a rebuilt image).
-    private func loadImage(_ store: ImageStore) async throws -> Image {
-        let layout = Paths.spikeInputs.appending(path: "oci/layout")
-        let wanted = try layoutDigest(layout)
-        if let image = try? await store.get(reference: Self.imageReference) {
-            if image.digest == wanted { return image }
-            NSLog("beebox: image changed (\(image.digest) → \(wanted)); reloading")
-            try await store.delete(reference: Self.imageReference, performCleanup: true)
-        }
-        phase = .working("Loading the beebox image…")
-        progress?.operation = .firstStart
-        let images = try await store.load(from: layout)
-        guard let image = images.first else {
-            throw RuntimeError("no image in \(layout.path)")
-        }
-        return image
-    }
-
-    private func layoutDigest(_ layout: URL) throws -> String {
-        struct Index: Decodable { struct Manifest: Decodable { let digest: String }; let manifests: [Manifest] }
-        let index = try JSONDecoder().decode(Index.self, from: Data(contentsOf: layout.appending(path: "index.json")))
-        guard let digest = index.manifests.first?.digest else { throw RuntimeError("no manifest in \(layout.path)") }
-        return digest
     }
 
     /// Earlier builds pointed BBX_AUTH_FILE / BBX_SECRETS_FILE into a
@@ -258,7 +221,17 @@ final class BoxRuntime: ObservableObject {
         for (from, to) in moves where fm.fileExists(atPath: from.path) && !fm.fileExists(atPath: to.path) {
             try fm.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
             try fm.moveItem(at: from, to: to)
-            NSLog("beebox: moved \(from.lastPathComponent) into the home volume")
+            appLog("moved \(from.lastPathComponent) into the home volume")
+        }
+        // Earlier builds copied in the kernel and initfs the `container` CLI
+        // had downloaded; the kernel is bundled now and the initfs comes from
+        // the vminit image.
+        for stale in ["vmlinux", "initfs.ext4"] {
+            let url = Paths.state.appending(path: stale)
+            if fm.fileExists(atPath: url.path) {
+                try fm.removeItem(at: url)
+                appLog("removed the old copied \(stale)")
+            }
         }
     }
 
@@ -295,6 +268,13 @@ final class BoxRuntime: ObservableObject {
             config.mounts.append(.share(source: Paths.box.path, destination: "/data/box"))
             config.mounts.append(.share(source: Paths.claudeConfig.path, destination: "/app/claude-config"))
             config.mounts.append(.share(source: Paths.containerHome.path, destination: "/home/node"))
+            if arguments == nil {
+                config.sockets = [UnixSocketConfiguration(
+                    source: URL(filePath: Self.guestSocket),
+                    destination: Paths.httpSocket,
+                    direction: .outOf
+                )]
+            }
             config.process.environmentVariables += [
                 // Claude writes transcripts under CLAUDE_CONFIG_DIR, not ~/.claude.
                 "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
@@ -318,6 +298,28 @@ final class BoxRuntime: ObservableObject {
         guard status.exitCode == 0 else {
             throw RuntimeError("\(arguments.joined(separator: " ")) exited \(status.exitCode); see \(Paths.log.path)")
         }
+    }
+
+    /// Inside the VM, relay a Unix socket to the server's TCP port, using the
+    /// image's own Node; Containerization carries that socket out to the host
+    /// (`config.sockets`, direction .outOf). Started per launch, it dies with
+    /// the VM.
+    private func startHTTPRelay(_ container: LinuxContainer, log: LogWriter) async throws {
+        let script = """
+            const net = require("net"), fs = require("fs");
+            try { fs.unlinkSync("\(Self.guestSocket)"); } catch (_e) {}
+            net.createServer((c) => {
+              const u = net.connect(\(Self.serverPort), "127.0.0.1");
+              c.pipe(u); u.pipe(c);
+              c.on("error", () => u.destroy()); u.on("error", () => c.destroy());
+            }).listen("\(Self.guestSocket)");
+            """
+        let relay = try await container.exec("http-relay") { config in
+            config.arguments = ["node", "-e", script]
+            config.stdout = log
+            config.stderr = log
+        }
+        try await relay.start()
     }
 
     private func waitForServer(_ base: URL) async throws {

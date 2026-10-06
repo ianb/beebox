@@ -1,21 +1,23 @@
 import Foundation
 import Network
 
-/// Forwards `127.0.0.1:<port>` to the VM's server. The VM's own address
-/// changes on every launch and is not a browser secure context (the web UI
-/// needs `crypto.randomUUID`, which only secure contexts expose);
-/// `localhost` is stable and secure. Raw TCP, so WebSockets pass through.
+/// Forwards `127.0.0.1:<port>` to the box server. The target is a host Unix
+/// socket that Containerization relays into the VM over vsock, not the VM's
+/// IP: macOS treats a bundled app's connections to the VM's bridge address as
+/// local-network access (a permission prompt, and "Local network prohibited"
+/// until granted). `localhost` is also stable across launches and a browser
+/// secure context. Raw byte relay, so WebSockets pass through.
 final class PortForwarder: @unchecked Sendable {
     private let listener: NWListener
     private let target: NWEndpoint
     private let queue = DispatchQueue(label: "beebox.port-forwarder")
 
-    init(localPort: UInt16, targetHost: String, targetPort: UInt16) throws {
+    init(localPort: UInt16, targetSocket: URL) throws {
         let params = NWParameters.tcp
         params.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: localPort)!)
         params.allowLocalEndpointReuse = true
         listener = try NWListener(using: params)
-        target = .hostPort(host: NWEndpoint.Host(targetHost), port: NWEndpoint.Port(rawValue: targetPort)!)
+        target = .unix(path: targetSocket.path)
     }
 
     /// Starts listening; returns once the listener is ready or has failed.

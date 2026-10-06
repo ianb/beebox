@@ -1,4 +1,5 @@
 import AppKit
+import Sparkle
 import SwiftUI
 
 @main
@@ -7,7 +8,7 @@ struct BeeBoxMacApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            BoxMenu(runtime: delegate.runtime, quit: delegate.stopAndExit)
+            BoxMenu(runtime: delegate.runtime, updater: delegate.updater, quit: delegate.stopAndExit)
         } label: {
             BoxIcon(runtime: delegate.runtime)
         }
@@ -17,6 +18,11 @@ struct BeeBoxMacApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let runtime = BoxRuntime()
+    /// Sparkle, only when the bundle carries a feed and the update-signing
+    /// key; an updater without the key would fail every check.
+    let updater: SPUStandardUpdaterController? = BundleConfig.updatesConfigured
+        ? SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        : nil
 
     private var termSource: DispatchSourceSignal?
 
@@ -63,6 +69,7 @@ struct BoxIcon: View {
 
 struct BoxMenu: View {
     @ObservedObject var runtime: BoxRuntime
+    let updater: SPUStandardUpdaterController?
     let quit: () -> Void
 
     var body: some View {
@@ -84,6 +91,11 @@ struct BoxMenu: View {
         Divider()
         Button("Show Box Folder") { NSWorkspace.shared.open(Paths.box) }
         Button("Show Log") { NSWorkspace.shared.open(Paths.log) }
+        Button("Show App Log") { NSWorkspace.shared.open(Paths.appLog) }
+        Divider()
+        Button("Check for Updates…") { updater?.checkForUpdates(nil) }
+            .disabled(updater == nil)
+        Text("Bee Box \(BundleConfig.version)")
         Divider()
         Button(runtime.isRunning ? "Stop Box and Quit" : "Quit Bee Box") { quit() }
     }
