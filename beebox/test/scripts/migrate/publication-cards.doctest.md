@@ -18,6 +18,7 @@ import { parseFrontmatterObject } from "../../../src/cards/frontmatter.js";
 import { loadCardFile } from "../../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { preparePublication } from "../../../src/publish/prepare/core/prepare-publication.js";
+import { publicationCardsByPubId } from "../../../src/core/card-lint/publication-duplicates.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 const FIXTURES = join(import.meta.dirname, "publication-cards-fixtures");
@@ -243,4 +244,33 @@ JSON.parse(await plain.read("_config/template-versions.json"))
 
 await exists(plain, "_content/publications/NOTES.md")
 => false
+```
+
+## Two old definitions with one publication id
+
+Only the first becomes a card. The second `publication.json` stays in place and
+is reported, on the first run and on every rerun, so the box never holds two
+cards with one `pubId`.
+
+```ts
+const twins = await makeTmpBox();
+const twinId = "bbbbbbbbbbbbbbbbbbbbbbbb22";
+const twinJson = JSON.stringify({ pubId: twinId, connection: "cf", content: "static", title: "Twin", tier: "secret" });
+for (const name of ["alpha", "beta"]) {
+  await twins.write(`src/publications/${name}/publication.json`, twinJson);
+  await twins.write(`src/publications/${name}/site/index.html`, `<h1>${name}</h1>`);
+}
+const twinFirst = await migratePublicationCards({ boxRoot: twins.root, apply: true });
+const twinSecond = await migratePublicationCards({ boxRoot: twins.root, apply: true });
+
+twinFirst.warnings
+=> ["src/publications/beta/publication.json repeats the pubId of the publication card _content/publications/alpha.publication.card; left in place"]
+
+twinSecond
+=> { actions: [], warnings: ["src/publications/beta/publication.json repeats the pubId of the publication card _content/publications/alpha.publication.card; left in place"] }
+
+(await publicationCardsByPubId(twins.root)).get(twinId)
+=> ["_content/publications/alpha.publication.card"]
+
+await twins.cleanup();
 ```

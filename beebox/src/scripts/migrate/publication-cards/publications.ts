@@ -1,7 +1,7 @@
 /** Rules a-d: turn one `src/publications/<name>/` into a publication card plus attach folder. */
 
 import * as path from "node:path";
-import { splitCardContent } from "../../../cards/frontmatter.js";
+import { parseFrontmatterObject, splitCardContent } from "../../../cards/frontmatter.js";
 import { publicationDefinitionSchema, type PublicationDefinition } from "../../../publish/publication-definition.js";
 import { createPublicationCardTemplate } from "../../../schemas/publication.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
@@ -58,17 +58,30 @@ async function readOldDefinition(ctx: MigrationContext, { pubDir, jsonRel }: { p
   return null;
 }
 
+/**
+ * A card that already holds request fields is a migrated publication, from
+ * this run or an earlier one. A pointer card has only `title` and `pubId`.
+ */
+async function alreadyMigratedCard(ctx: MigrationContext, found: readonly string[]): Promise<string | undefined> {
+  for (const rel of found) {
+    const frontmatter = parseFrontmatterObject((await readOrNull(ctx, rel)) ?? "");
+    if (frontmatter?.["connection"] !== undefined) return rel;
+  }
+  return undefined;
+}
+
 /** Rules a-d for one publication directory. `cards` lists the cards carrying its pubId. */
 export async function migratePublication(ctx: MigrationContext, { name, cards }: { name: string; cards: Map<string, string[]> }): Promise<void> {
   const pubDir = `src/publications/${name}`;
   const jsonRel = `${pubDir}/publication.json`;
   const def = await readOldDefinition(ctx, { pubDir, jsonRel });
   if (def === null) return;
-  if (ctx.migratedPubIds.has(def.pubId)) {
-    ctx.warnings.push(`${jsonRel} repeats the pubId of a publication already migrated; left in place`);
+  const found = cards.get(def.pubId) ?? [];
+  const migrated = await alreadyMigratedCard(ctx, found);
+  if (migrated !== undefined) {
+    ctx.warnings.push(`${jsonRel} repeats the pubId of the publication card ${migrated}; left in place`);
     return;
   }
-  const found = cards.get(def.pubId) ?? [];
   const defaultCard = `${DEFAULT_DIR}/${def.pubId}.publication.card`;
   const kept = found.includes(defaultCard) ? defaultCard : found[0];
   const aliases = found.filter((rel) => rel !== kept);
@@ -106,7 +119,7 @@ export async function migratePublication(ctx: MigrationContext, { name, cards }:
   }
   for (const rel of [...found, target]) ctx.handledCards.add(rel);
   ctx.migratedCards.push(target);
-  ctx.migratedPubIds.add(def.pubId);
+  cards.set(def.pubId, [target]);
 
   if (srcKind === "dir") {
     if (selected === "project") {
