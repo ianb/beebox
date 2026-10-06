@@ -586,6 +586,10 @@ await prepareError(box, "_content/Example.note.md")
 await prepareError(box, "../x.publication.card")
 => invalid-definition: publication card path '../x.publication.card' is not a file inside the box
 
+await box.write("_tmp/Scratch.publication.card", "---\ntitle: Scratch\n---\n");
+await prepareError(box, "_tmp/Scratch.publication.card")
+=> invalid-definition: publication card '_tmp/Scratch.publication.card' must be under _content/
+
 await prepareError(box, "_content/Missing.publication.card")
 => invalid-definition: publication card _content/Missing.publication.card is not a regular file
 

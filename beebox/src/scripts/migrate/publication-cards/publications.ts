@@ -64,6 +64,10 @@ export async function migratePublication(ctx: MigrationContext, { name, cards }:
   const jsonRel = `${pubDir}/publication.json`;
   const def = await readOldDefinition(ctx, { pubDir, jsonRel });
   if (def === null) return;
+  if (ctx.migratedPubIds.has(def.pubId)) {
+    ctx.warnings.push(`${jsonRel} repeats the pubId of a publication already migrated; left in place`);
+    return;
+  }
   const found = cards.get(def.pubId) ?? [];
   const defaultCard = `${DEFAULT_DIR}/${def.pubId}.publication.card`;
   const kept = found.includes(defaultCard) ? defaultCard : found[0];
@@ -102,6 +106,7 @@ export async function migratePublication(ctx: MigrationContext, { name, cards }:
   }
   for (const rel of [...found, target]) ctx.handledCards.add(rel);
   ctx.migratedCards.push(target);
+  ctx.migratedPubIds.add(def.pubId);
 
   if (srcKind === "dir") {
     if (selected === "project") {

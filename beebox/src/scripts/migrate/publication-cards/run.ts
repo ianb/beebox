@@ -30,7 +30,7 @@ export interface PublicationCardsReport {
 
 /** Migrate one box. With `apply: false` it reports what it would do without writing. */
 export async function migratePublicationCards({ boxRoot, apply }: { boxRoot: string; apply: boolean }): Promise<PublicationCardsReport> {
-  const ctx: MigrationContext = { boxRoot, apply, actions: [], warnings: [], handledCards: new Set(), migratedCards: [] };
+  const ctx: MigrationContext = { boxRoot, apply, actions: [], warnings: [], handledCards: new Set(), migratedCards: [], migratedPubIds: new Set() };
   const rootKind = await entryKind(ctx, "src/publications");
   if (rootKind === "symlink") ctx.warnings.push("src/publications is a symlink; publications not migrated");
   if (rootKind === "dir") {

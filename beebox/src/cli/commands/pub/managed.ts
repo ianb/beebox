@@ -25,15 +25,14 @@ export function publicationDestinationUrl(args: { hostname: string | null; pubId
   return buildPublicationUrl({ workersHostname: args.hostname, pubId: args.pubId, scope: args.scope });
 }
 
-export function publicationApprovalUrl(args: { serverUrl: string | undefined; boxName?: string; approvalPath?: string }): string | null {
-  const { serverUrl, boxName, approvalPath } = args;
-  if (serverUrl === undefined || serverUrl.length === 0 || (approvalPath === undefined && (boxName === undefined || boxName.length === 0))) return null;
+export function publicationApprovalUrl(args: { serverUrl: string | undefined; approvalPath: string }): string | null {
+  const { serverUrl, approvalPath } = args;
+  if (serverUrl === undefined || serverUrl.length === 0) return null;
   try {
     const base = new URL(serverUrl);
     if (base.protocol !== "https:" && base.protocol !== "http:") return null;
-    const target = approvalPath ?? `/${encodeURIComponent(boxName ?? "")}/publications`;
-    if (!target.startsWith("/") || target.startsWith("//")) return null;
-    return new URL(target, base.origin).toString();
+    if (!approvalPath.startsWith("/") || approvalPath.startsWith("//")) return null;
+    return new URL(approvalPath, base.origin).toString();
   } catch (error) {
     void error;
     return null;

@@ -128,11 +128,11 @@ is still reported:
 
 ```ts
 const pub = await makeTmpBox();
-await put(pub.root, "Site.attach/project/node_modules/pkg/bundle.wasm-blob", BIG);
-await put(pub.root, "Site.attach/project/dist/app.bundle", BIG);
-await put(pub.root, "Site.attach/static/app.bundle", BIG);
+await put(pub.root, "_content/trips/Site.attach/project/node_modules/pkg/bundle.wasm-blob", BIG);
+await put(pub.root, "_content/trips/Site.attach/project/dist/app.bundle", BIG);
+await put(pub.root, "_content/trips/Site.attach/static/app.bundle", BIG);
 (await findUnlistedBinaries(pub.root)).map((f) => f.relPath).join(", ")
-=> Site.attach/static/app.bundle
+=> _content/trips/Site.attach/static/app.bundle
 
 await pub.cleanup();
 ```

@@ -134,13 +134,10 @@ publicationSiteLines([site({
 })])[0].includes("legacy workers.dev URL")
 => false
 
-publicationApprovalUrl({ serverUrl: "https://boxes.example", boxName: "family" })
-=> https://boxes.example/family/publications
-
-publicationApprovalUrl({ serverUrl: "https://boxes.example", boxName: "family", approvalPath: candidate.approvalUrl })
+publicationApprovalUrl({ serverUrl: "https://boxes.example", approvalPath: candidate.approvalUrl })
 => https://boxes.example/box-a/browse/notes/Notes.publication.card
 
-publicationApprovalUrl({ serverUrl: undefined, boxName: "family" })
+publicationApprovalUrl({ serverUrl: undefined, approvalPath: candidate.approvalUrl })
 => null
 ```
 

@@ -29,7 +29,7 @@ function refineTierFields(fields: Record<string, unknown>, ctx: z.core.$Refineme
 }
 
 export const PublicationSchema: CardSchema = cardSchema("publication", {
-  brief: "One published site and its request",
+  brief: "One published site",
   description: "A card that is one publication: it holds the requested connection, audience, and address, plus private notes",
   category: "authored",
   fields: {

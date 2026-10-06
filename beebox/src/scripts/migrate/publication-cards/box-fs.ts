@@ -17,6 +17,8 @@ export interface MigrationContext {
   handledCards: Set<string>;
   /** Final paths of the cards this run wrote. */
   migratedCards: string[];
+  /** pubIds already turned into a card in this run; a second definition with one is left in place. */
+  migratedPubIds: Set<string>;
 }
 
 export function abs(ctx: MigrationContext, rel: string): string {

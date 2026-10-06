@@ -20,6 +20,8 @@ import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 import { definitionFromCard, type PublicationDefinition } from "../publication-definition.js";
 
 const PUBLICATION_CARD_SUFFIX = ".publication.card";
+/** Cards outside the content area (scratch, config, bookkeeping) are not publications. */
+const CONTENT_PREFIX = "_content/";
 const schemas = new Map([[PublicationSchema.type, PublicationSchema]]);
 
 /** A card or source problem, carrying the prepare failure reason it maps to. */
@@ -49,6 +51,9 @@ export function resolvePublicationCardPath(card: string): string {
   }
   const resolved = resolveRefPath({ fromPath: undefined, ref: parsed.path, kind: "card" });
   if (resolved === null) throw definitionError(`publication card path '${card}' is not a file inside the box`);
+  if (!resolved.startsWith(CONTENT_PREFIX)) {
+    throw definitionError(`publication card '${resolved}' must be under ${CONTENT_PREFIX}`);
+  }
   if (!resolved.endsWith(PUBLICATION_CARD_SUFFIX)) {
     throw definitionError(`'${resolved}' is not a publication card; the path must end with ${PUBLICATION_CARD_SUFFIX}`);
   }

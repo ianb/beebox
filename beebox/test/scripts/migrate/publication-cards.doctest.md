@@ -191,8 +191,8 @@ await box.read(`${pubs}/orphan-notes.md`)
 «blankline»
 Keep me.
 
-(await box.read(".gitignore")).split("\n").filter((l) => l.startsWith("*.attach/"))
-=> ["*.attach/project/dist/"]
+(await box.read(".gitignore")).split("\n").filter((l) => l.includes(".attach/project/"))
+=> ["**/*.attach/project/dist/"]
 ```
 
 Every remaining `.publication.card` loads through the box's card registry,
