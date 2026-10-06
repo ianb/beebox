@@ -177,6 +177,7 @@ final class PendingEmissionStore: ObservableObject {
         action: SpeechKeywordAction,
         matchedPhrase: String,
         appendsKeywordTag: Bool = true,
+        diarizationRequested: Bool = false,
         audioURL: URL?,
         boxID: UUID,
         binding: NativeSendBinding? = nil,
@@ -201,6 +202,7 @@ final class PendingEmissionStore: ObservableObject {
             action: action,
             matchedPhrase: matchedPhrase,
             appendsKeywordTag: appendsKeywordTag,
+            diarizationRequested: diarizationRequested,
             audioFilename: audioFilename,
             createdAt: Date()
         )

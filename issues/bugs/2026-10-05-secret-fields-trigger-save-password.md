@@ -1,11 +1,14 @@
 ---
 title: "Entering a secret makes the browser offer to save it as a password"
 workstream: secret-field-masking
+needs: [manual-testing]
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder report
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `956ce3b2b` (secret-field-masking); set a machine secret in real Chrome and Safari with the built-in password manager on and confirm neither offers to save it. Only the developer clears this.
 
 When the boxholder sets a secret in Admin, the browser offers to save the
 value as a password. A secret is a machine credential (an API key or token),
@@ -67,3 +70,7 @@ is logged in the existing access log; fresh sign-in is not required.
 - With the built-in password manager enabled, set a machine secret in real
   Chrome and Safari profiles and confirm neither browser offers to save it as a
   password. Headless browser testing cannot verify this prompt behavior.
+
+## Next-action note (2026-10-06)
+
+Checked "fixed?": fixed in code by merge 956ce3b2b (secret-field-masking): text input with the CSS mask and `autoComplete="off"` in `SecretsSection/forms.tsx`, owner-only Show refused under `navigator.webdriver`, the Cloudflare token field, a security-report entry, and doctests. Only the browser prompt check remains, which needs a real browser; set `needs: [manual-testing]`.

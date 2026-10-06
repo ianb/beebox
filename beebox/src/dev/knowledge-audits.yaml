@@ -88,6 +88,8 @@ tests:
   # against a disposable standalone clone with installed package-doc files.
   # Earlier fixture attempts had a missing @import after cleanup removed a
   # node_modules symlink; those were fixture failures, not rubric recall.
+  # Status (2026-10-06, Claude): 1/1 passed, 0 reads/searches, 24k context,
+  # after the guide gained the "waits for the person" sentence; same clone setup.
   - id: quick-chat-rubric-maintenance
     prompt: >
       The boxholder wants quick captures about their garden to reach the right
@@ -100,7 +102,7 @@ tests:
     watch_for: "Names the YAML rubric, preserves authored rules, retains an existing chat, and distinguishes session continuity from landmark placement"
     fixture:
       CLAUDE.md: |
-        @node_modules/beebox/box-docs/chat/quick-chat.md
+        @node_modules/beebox/box-docs/quick-chat.md
     correct_contains:
       - "_config/chat-routing.yaml"
       - "keepEligible"
@@ -110,6 +112,28 @@ tests:
       - '(?:metadata|recency|summar|transcript|facts)[\s\S]{0,350}(?:router|generat|current|separat)|(?:router|generat|current|separat)[\s\S]{0,350}(?:metadata|recency|summar|transcript|facts)'
       - '(?:existing|continu|resum)[\s\S]{0,350}(?:new|start)|(?:new|start)[\s\S]{0,350}(?:existing|continu|resum)'
     tags: [quick-chat]
+
+  # The box-wide pages and the nav.card shortcuts moved from the app bar's
+  # landmark menu to the box screen (box-screen plan).
+  # Status (2026-10-06, Claude): 1/1 passed, 0 reads/searches, 23k context,
+  # against a disposable standalone clone with installed package-doc files.
+  - id: box-screen-box-wide-pages
+    prompt: >
+      The boxholder asks where to find Dashboard, Browse, History, and Storage
+      summary now, and where the shortcuts you added to nav.card appear. How do
+      they get there in the browser, and on the phone? Explain only; do not
+      read files, use tools, or change anything.
+    expected_level: knows_directly
+    watch_for: "Names the box screen, reached from the box row of the app bar's landmark menu and shown at phone launch; places nav.card shortcuts under In this box, not in a menu"
+    fixture:
+      CLAUDE.md: |
+        @node_modules/beebox/box-docs/card-nav.md
+    correct_contains: ["box screen"]
+    correct_matches:
+      - '(?:box row|landmark menu|place menu|place pill)'
+      - '(?:phone|iOS|app)[\s\S]{0,200}(?:launch|open|start)|(?:launch|open|start)[\s\S]{0,200}(?:phone|iOS|app)'
+      - 'In this box'
+    tags: [quick-chat, navigation]
 
   # === Engine docs are searchable ===
   # Status (2026-09-26, Claude): 1/1 passed on test1; ran `bbx search`, read
@@ -5042,6 +5066,30 @@ tests:
     should_read: ["node_modules/beebox/box-docs/views.md"]
     correct_contains_any: ["attachments", "fileUrl"]
     tags: [views, attachments]
+
+  # === Views: card inset vs full bleed ===
+  #
+  # The card insets a view by default; a view opts into running to the card's
+  # edges with `export const layout = "full-bleed"`. Lives in views.md
+  # (Metadata Exports + Styling), so knows_about. Passes 2026-10-06: reads
+  # views.md, names the export, and says ordinary views need no outer padding.
+
+  - id: views-full-bleed-layout
+    prompt: >
+      I'm writing a view for a card type that shows a big map. Right now the
+      map has a margin around it inside the card, but I want it to fill the
+      card edge to edge. How do I do that? And for my other views, should I
+      add padding around their content?
+    expected_level: knows_about
+    watch_for: >
+      Reads node_modules/beebox/box-docs/views.md, then says to add
+      `export const layout = "full-bleed"` to the map view, and that other
+      views need no outer padding because the card insets them by default.
+      Must NOT suggest negative margins, wrapper CSS hacks, or adding outer
+      padding to ordinary views.
+    should_read: ["node_modules/beebox/box-docs/views.md"]
+    correct_contains_any: ["full-bleed"]
+    tags: [views, layout]
 
   # === Views: render-test command (bbx view test) ===
   #

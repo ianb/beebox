@@ -49,3 +49,7 @@ whether two classes over the now-shared primitives (lifecycle union,
 `pumpChatRun`, `adaptSdkMessage`) is the right resting point. No boxholder
 decision is pending on the adapter anymore. Protocol/contract is documented at
 `beebox/docs/chat/sessions.md`.
+
+## Next-action note (2026-10-06)
+
+Checked "fixed?": not fixed. `ChatSession` (`beebox/src/core/chat/session/run/core.ts:53`) and `ChatThreadSession` (`beebox/src/core/chat/session/thread.ts:113`) are still separate classes with no shared base. The shared pieces noted earlier (lifecycle union, `pumpChatRun`, `adaptSdkMessage`) predate this issue; the class-collapse question is still undecided. `beebox/docs/chat/sessions.md:97` points here.

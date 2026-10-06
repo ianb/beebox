@@ -1,4 +1,5 @@
 import type { SendBinding } from "@shared/chat-composer-binding";
+import { isDiarizedHqService } from "@shared/transcription-services";
 import { useEffect } from "react";
 import type { Emission } from "../../../../input/emission";
 import type { Receipt } from "../../../../input/targets/receipts";
@@ -14,6 +15,7 @@ import { nativeSpeechCommandFromDetail } from "./native-speech-command";
 import { createNativeDispatchRegistry, resolveNativeDispatch } from "./native-emission-redelivery";
 import type { NativeShellChannel, NativeShellWindow } from "../../native-post";
 import { postNativeMessage } from "../../native-post";
+import { trpc } from "../../../../lib/trpc/client";
 
 declare global {
   interface Window {
@@ -74,12 +76,22 @@ function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnabled: bo
   }, [enabled, narrationEnabled]);
 }
 
+/**
+ * Contract §4.4a. `diarized` tells native the box's HQ service labels
+ * speakers, so its HQ pass stays on the box rather than on the device. It
+ * reads true while the config query is loading or refetching (fail closed: a
+ * send in that window, including right after the HQ service is switched, keeps
+ * the server path), and the state is re-posted when it answers.
+ */
 function useNativeHqDictationBridge(opts: { enabled: boolean; hqDictationEnabled: boolean; sessionId: string | null }) {
   const { enabled, hqDictationEnabled, sessionId } = opts;
+  const configQuery = trpc.transcription.config.useQuery(undefined, { enabled });
+  const hqService = configQuery.data?.hqService;
+  const diarized = configQuery.isFetching || hqService === undefined || isDiarizedHqService(hqService);
   useEffect(() => {
     if (!enabled) return;
-    postNativeHqDictationState(hqDictationEnabled, window);
-  }, [enabled, hqDictationEnabled, sessionId]);
+    postNativeHqDictationState({ enabled: hqDictationEnabled, diarized }, window);
+  }, [enabled, hqDictationEnabled, diarized, sessionId]);
 }
 
 function useNativeSpeechPlaybackBridge(opts: { enabled: boolean; playing: boolean }) {
@@ -270,8 +282,11 @@ export function postNativeNarrationState(enabled: boolean, shell: NativeShellWin
   postNativeMessage(shell, { channel: "beeboxNarrationState", payload: { enabled } });
 }
 
-export function postNativeHqDictationState(enabled: boolean, shell: NativeShellWindow): void {
-  postNativeMessage(shell, { channel: "beeboxHqDictationState", payload: { enabled } });
+export function postNativeHqDictationState(
+  state: { enabled: boolean; diarized: boolean },
+  shell: NativeShellWindow,
+): void {
+  postNativeMessage(shell, { channel: "beeboxHqDictationState", payload: state });
 }
 
 export function postNativeSpeechPlaybackState(playing: boolean, shell: NativeShellWindow): void {

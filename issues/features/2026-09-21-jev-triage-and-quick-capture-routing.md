@@ -11,7 +11,7 @@ discovered-in: main — boxholder wanting to try this soon
 Two uses of the same idea, and the boxholder wants to try them soon: a typed,
 calibrated judgment where today there is a prompt and a parse. The model is
 Jev, TypeSafe's System One model
-([exploration](../exploration/2026-09-17-typesafe-system-one-judgments.md)):
+([exploration](../closed/exploration/2026-09-17-typesafe-system-one-judgments.md)):
 send state plus typed questions, get back an answer with a probability per
 option and a confidence.
 
@@ -160,3 +160,7 @@ This issue stays open for Gmail pre-materialization admission and any remaining
 gap between the original generic capture-routing proposal and the separate Quick
 Chat implementation. No real box was used for model probes; worktree commits do
 not deploy. Final implementation checks are recorded in the linked plan/review.
+
+## Next-action note (2026-10-06)
+
+Checked "fixed?": partly. Quick capture: Quick chat routes through a Jev choice (`beebox/docs/chat/quick-chat.md`; plan `beebox/docs/plans/chat-routing.md`, status partial); its entry points are now with the `quick-chat-design` workstream. Document triage: a Jev engine exists (`beebox/src/core/triage/judge.ts`) but production routing is unchanged, no per-box thresholds are chosen, and preparation failures block a classifier-only replacement (2026-09-28 note). Telegram and non-chat destinations remain.

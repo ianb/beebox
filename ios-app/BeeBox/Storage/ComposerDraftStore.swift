@@ -16,6 +16,7 @@ final class ComposerDraftStore: ObservableObject {
     @Published private(set) var isReady = false
     @Published private(set) var restoreNotice: String?
 
+    let scope: ComposerDraftScope
     private let repository: ComposerDraftRepository
     private let defaults: UserDefaults
     private var activeBoxID: UUID?
@@ -26,9 +27,11 @@ final class ComposerDraftStore: ObservableObject {
     private var voiceSelectionContext: VoiceSelectionContext?
 
     init(
+        scope: ComposerDraftScope,
         repository: ComposerDraftRepository = ComposerDraftRepository(),
         defaults: UserDefaults = .standard
     ) {
+        self.scope = scope
         self.repository = repository
         self.defaults = defaults
     }
@@ -46,7 +49,7 @@ final class ComposerDraftStore: ObservableObject {
         let previousWasReady = isReady
         isReady = false
         if let previousBoxID, previousWasReady {
-            try? await repository.save(previousDraft, boxID: previousBoxID)
+            try? await repository.save(previousDraft, boxID: previousBoxID, scope: scope)
         }
         guard activationGeneration == generation else {
             return
@@ -66,7 +69,7 @@ final class ComposerDraftStore: ObservableObject {
         }
         restoreNotice = nil
         do {
-            if var restored = try await repository.load(boxID: boxID) {
+            if var restored = try await repository.load(boxID: boxID, scope: scope) {
                 let missingImageIDs = await repository.missingImageIDs(restored.images, boxID: boxID)
                 let missingOriginalIDs = await repository.missingOriginalIDs(restored.images, boxID: boxID)
                 let missingFileIDs = await repository.missingFileIDs(restored.files, boxID: boxID)
@@ -125,8 +128,10 @@ final class ComposerDraftStore: ObservableObject {
         guard activationIsCurrent(boxID: boxID, generation: generation) else {
             return
         }
+        // The pre-repository text draft was the chat composer's; a new
+        // thought must never adopt it.
         let key = legacyDraftKey(boxID: boxID)
-        if let legacyText = defaults.string(forKey: key) {
+        if scope == .conversation, let legacyText = defaults.string(forKey: key) {
             draft = .empty
             ComposerDraftReducer.reduce(&draft, .setText(legacyText))
             defaults.removeObject(forKey: key)
@@ -207,7 +212,7 @@ final class ComposerDraftStore: ObservableObject {
         )
         saveTask?.cancel()
         do {
-            try await repository.save(draft, boxID: boxID)
+            try await repository.save(draft, boxID: boxID, scope: scope)
             return .accepted(id: command.id)
         } catch {
             draft = previous
@@ -371,7 +376,7 @@ final class ComposerDraftStore: ObservableObject {
             await flush()
             return draft.uploadBatchID
         }
-        guard var stored = try? await repository.load(boxID: boxID) else {
+        guard var stored = try? await repository.load(boxID: boxID, scope: scope) else {
             return nil
         }
         if let existing = stored.uploadBatchID {
@@ -379,7 +384,7 @@ final class ComposerDraftStore: ObservableObject {
         }
         let batchID = ComposerUploadBatch.newID()
         ComposerDraftReducer.reduce(&stored, .setUploadBatchID(batchID))
-        try? await repository.save(stored, boxID: boxID)
+        try? await repository.save(stored, boxID: boxID, scope: scope)
         return stored.uploadBatchID
     }
 
@@ -467,7 +472,7 @@ final class ComposerDraftStore: ObservableObject {
             }
             return
         }
-        guard var stored = try? await repository.load(boxID: boxID),
+        guard var stored = try? await repository.load(boxID: boxID, scope: scope),
               var image = stored.images.first(where: { $0.id == id }),
               var original = image.original else {
             return
@@ -475,7 +480,7 @@ final class ComposerDraftStore: ObservableObject {
         mutate(&original)
         image.original = original
         ComposerDraftReducer.reduce(&stored, .updateImage(image))
-        try? await repository.save(stored, boxID: boxID)
+        try? await repository.save(stored, boxID: boxID, scope: scope)
     }
 
     func removeImage(id: Int) async {
@@ -542,13 +547,13 @@ final class ComposerDraftStore: ObservableObject {
             await flush()
             return
         }
-        guard var stored = try? await repository.load(boxID: boxID),
+        guard var stored = try? await repository.load(boxID: boxID, scope: scope),
               var file = stored.files.first(where: { $0.id == id }) else {
             return
         }
         file.state = state
         ComposerDraftReducer.reduce(&stored, .updateFile(file))
-        try? await repository.save(stored, boxID: boxID)
+        try? await repository.save(stored, boxID: boxID, scope: scope)
     }
 
     func setFileProgress(id: Int, progress: Double, boxID: UUID) async {
@@ -563,14 +568,14 @@ final class ComposerDraftStore: ObservableObject {
             scheduleSave()
             return
         }
-        guard var stored = try? await repository.load(boxID: boxID),
+        guard var stored = try? await repository.load(boxID: boxID, scope: scope),
               var file = stored.files.first(where: { $0.id == id }),
               case .uploading = file.state else {
             return
         }
         file.state = .uploading(progress: boundedProgress)
         ComposerDraftReducer.reduce(&stored, .updateFile(file))
-        try? await repository.save(stored, boxID: boxID)
+        try? await repository.save(stored, boxID: boxID, scope: scope)
     }
 
     func markFileUploaded(id: Int, upload: UploadedChatFile, boxID: UUID) async {
@@ -583,13 +588,13 @@ final class ComposerDraftStore: ObservableObject {
             await flush()
             return
         }
-        guard var stored = try? await repository.load(boxID: boxID),
+        guard var stored = try? await repository.load(boxID: boxID, scope: scope),
               var file = stored.files.first(where: { $0.id == id }) else {
             return
         }
         apply(upload, to: &file)
         ComposerDraftReducer.reduce(&stored, .updateFile(file))
-        try? await repository.save(stored, boxID: boxID)
+        try? await repository.save(stored, boxID: boxID, scope: scope)
     }
 
     private func apply(_ upload: UploadedChatFile, to file: inout DraftFile) {
@@ -648,7 +653,7 @@ final class ComposerDraftStore: ObservableObject {
 
     func clearForSending(boxID: UUID) async {
         guard activeBoxID == boxID else {
-            try? await repository.save(.empty, boxID: boxID)
+            try? await repository.save(.empty, boxID: boxID, scope: scope)
             return
         }
         ComposerDraftReducer.reduce(&draft, .reset)
@@ -660,7 +665,7 @@ final class ComposerDraftStore: ObservableObject {
             draft = snapshot
             await flush()
         } else {
-            try? await repository.save(snapshot, boxID: boxID)
+            try? await repository.save(snapshot, boxID: boxID, scope: scope)
         }
     }
 
@@ -707,7 +712,7 @@ final class ComposerDraftStore: ObservableObject {
         }
         let snapshot = draft
         do {
-            try await repository.save(snapshot, boxID: activeBoxID)
+            try await repository.save(snapshot, boxID: activeBoxID, scope: scope)
         } catch {
             if self.activeBoxID == activeBoxID {
                 restoreNotice = "Draft could not be saved."

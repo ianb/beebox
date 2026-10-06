@@ -23,8 +23,7 @@
  * (`enabled`), then cached, with every later open invalidating in the
  * background so the cached rows paint instantly and refresh behind them. A
  * bar that mounts on every page must not carry either at rest (the rationale
- * AppNav already states for `status.navStatus`). The same applies to the
- * `nav.card` section's query.
+ * AppNav already states for `status.navStatus`).
  *
  * The gate stays, and the switch menu's cache is warmed in idle time instead
  * (`useIdlePrefetch`), once the face's own identity query has settled: the
@@ -42,20 +41,17 @@
  * to reconsider this split, not to quietly widen the payload.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { trpc } from "../../lib/trpc/client";
 import type { Place } from "../../lib/place-label";
 import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
-import { useNavMenuEntries } from "../../hooks/useNavMenuEntries";
 import { useLazyMenuOpen } from "../../hooks/useLazyMenuOpen";
 import { useIdlePrefetch } from "../../hooks/useIdlePrefetch";
-import { SwitchMenuBody, type SwitchLandmark, type SwitchPanel } from "./PlacePill-panels";
+import { SwitchMenuBody, type SwitchLandmark } from "./PlacePill-panels";
 import { CardMark } from "../ui/CardMark";
 import { HereMenuBody } from "./PlacePill-here";
-import { AppBarHereSlot, useAppBarHereMenuClaimed, useAppBarRecentFilesClaimed } from "../app-bar-chrome";
-import { isNativeShell } from "../chat/native-post";
-import { webBoxSwitchingAvailable } from "../../lib/native-shell-navigation";
+import { AppBarHereSlot, useAppBarHereMenuClaimed } from "../app-bar-chrome";
 
 /** Folder glyph on the here half — the shape the chat's context chip used. */
 function FolderIcon() {
@@ -103,12 +99,9 @@ export function PlacePill({
    */
   place: Place;
 }) {
-  const [switchPanel, setSwitchPanel] = useState<SwitchPanel>("root");
   const utils = trpc.useUtils();
   const openLandmarkChat = useOpenLandmarkChat(boxSlug);
   const hereClaimed = useAppBarHereMenuClaimed();
-  const recentFilesClaimed = useAppBarRecentFilesClaimed();
-  const boxSwitchingAvailable = webBoxSwitchingAvailable(isNativeShell());
 
   // Mount-path: identity only (label, symbol, dir) — no link/expand
   // resolution. Runs on every place, so it stays cheap (see file header).
@@ -130,10 +123,7 @@ export function PlacePill({
   const hereLinks = hereQuery.data?.landmark?.links ?? [];
   const hereGroups = hereQuery.data?.landmark?.groups ?? [];
 
-  const switchMenu = useLazyMenuOpen(() => {
-    void utils.chat.placeMenu.invalidate();
-    void utils.nav.get.invalidate();
-  });
+  const switchMenu = useLazyMenuOpen(() => { void utils.chat.placeMenu.invalidate(); });
   const switchQuery = trpc.chat.placeMenu.useQuery(undefined, { enabled: switchMenu.opened });
   // The disabled query above is already an observer, so the warmed entry is
   // not collected while the bar is mounted. The first open still refetches
@@ -150,10 +140,6 @@ export function PlacePill({
       console.error("[app-bar] switch menu: chat.placeMenu failed:", switchError.message);
     }
   }, [switchError]);
-  // The box's own nav.card section — same first-open laziness as the
-  // landmark list, and it keeps the card's live-invalidation subscription
-  // that the retired link row used to own (Track C3).
-  const navEntries = useNavMenuEntries({ base: `/${boxSlug}`, enabled: switchMenu.opened });
 
   // `|| place.label`: an empty landmark label must not blank the face (the
   // backend falls back to the card's filename, but this face must render
@@ -183,8 +169,6 @@ export function PlacePill({
         align="left"
         width="w-[20rem]"
         className="min-w-0 flex"
-        panelIndex={switchPanel === "root" ? 0 : 1}
-        onClose={() => setSwitchPanel("root")}
         trigger={({ open, toggle, ariaProps }) => (
           // w-full is load-bearing on a Dropdown trigger — measured in-browser
           // on the retired ContextChip: the native <button> doesn't stretch to
@@ -213,20 +197,13 @@ export function PlacePill({
         )}
       >
         <SwitchMenuBody
-          panel={switchPanel}
           boxSlug={boxSlug}
           boxName={boxName}
           currentDir={place.dir}
           landmarks={switchRows}
           landmarksFailed={switchError !== null}
           onRetryLandmarks={() => { void switchQuery.refetch(); }}
-          navEntries={navEntries}
           problemCount={switchData === undefined ? 0 : switchData.problems.length}
-          recentFilesClaimed={recentFilesClaimed}
-          boxSwitchingAvailable={boxSwitchingAvailable}
-          onOpenBoxPanel={() => setSwitchPanel("box")}
-          onOpenRecentFiles={() => setSwitchPanel("recent-files")}
-          onBackToRoot={() => setSwitchPanel("root")}
           onSelectLandmark={(dir) => { void openLandmarkChat(dir); }}
         />
       </Dropdown>
@@ -270,7 +247,6 @@ export function PlacePill({
             ) : (
               <HereMenuBody
                 dir={landmark.dir}
-                landmarkPath={landmark.path}
                 boxSlug={boxSlug}
                 links={hereLinks}
                 groups={hereGroups}

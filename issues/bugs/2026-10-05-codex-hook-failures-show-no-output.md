@@ -121,3 +121,7 @@ the repo's lint hook.
 4. Make the lint hook understand Codex `apply_patch` payloads (the files the
    patch touches).
 5. Repeat for box sessions on Codex.
+
+## Next-action note (2026-10-06)
+
+Checked "fixed?": partly, by merge 5d7a909f (codex-plugin-hooks), which changed only `beebox/plugins/beebox-codex/scripts/run-bbx.sh`. Done: direction 1 (the plugin hooks exit 0 outside a box, keyed on the `.beebox` marker) and direction 2 for box validation (failures return `additionalContext` JSON, exit 0); box-generated copies need a package update to get it. Not done: direction 3 (worktree lint-hook trust; `apply_patch` payloads in `personal-vibe-check/bin/vibe-check.ts`). Partly: direction 4 (the cache refresh is documented here, not automated).

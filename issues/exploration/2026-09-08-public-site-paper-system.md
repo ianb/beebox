@@ -52,3 +52,7 @@ policy remain design questions. The broader site's content is still marked
 editorial drafts. Unlisted is indexing behavior, not a privacy boundary.
 
 ## Research (incomplete)
+
+## Next-action note (2026-10-06)
+
+Checked "fixed?": partly. 3777331df (2026-09-10) built the visual and navigation baseline for the static site. Still open by this issue's own terms: public prefix naming, tabs, and deep-link policy. The "Research (incomplete)" section is still empty.

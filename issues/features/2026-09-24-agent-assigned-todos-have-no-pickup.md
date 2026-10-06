@@ -71,3 +71,7 @@ preserving the existing 25-item cap, recheck rules, procedure turn budget and
 authority. It does not implement the unapproved separate executor sketch or its
 attempt/containment policy. Keep those questions distinct when reconciling this
 issue; do not claim the sketch was implemented.
+
+## Next-action note (2026-10-06)
+
+Checked "fixed?": not fixed. 2e7bf35df and the todos-ui work gave the todo-review job a scheduled precheck that includes fresh agent todos, but the bounded agent-todos executor this issue asks for was not built: no procedure in `beebox/src/`, no attempt limits or parking. The design question stands.

@@ -23,9 +23,8 @@ import {
 
 const MENU_SNAPSHOT = `- navigation "Primary" [ref=e1]
   - button "Where you are: Chat" [expanded=true, ref=e12, id=bbx-nav-place]
-- menuitem "Box: test1 ›" [ref=e2, id=bbx-switch-menu-box]
-- menuitem "All landmarks →" [ref=e3, id=bbx-switch-menu-landmarks]
-- menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]
+- menuitem "Box: test1" [ref=e2, id=bbx-switch-menu-box]
+- menuitem "Find a landmark" [ref=e3, id=bbx-switch-menu-landmarks]
 - StaticText "SWITCH TO"
 - menuitem "Box" [ref=e5]
 - menuitem "Acids & Bases" [ref=e6]`;
@@ -60,7 +59,7 @@ test("placeMenuFailure: a click that did not open the menu", () => {
 });
 
 test("placeMenuFailure: fixed rows but no landmarks is its own failure", () => {
-  const empty = MENU_SNAPSHOT.split("\n").slice(0, 5).join("\n");
+  const empty = MENU_SNAPSHOT.split("\n").slice(0, 4).join("\n");
   const failure = placeMenuFailure(readPlaceMenu(empty), empty);
   assert.match(failure?.message ?? "", /lists no landmarks/);
 });
@@ -160,14 +159,13 @@ test("placeSwitchFailure: arriving where we aimed passes", () => {
   );
 });
 
-test("readPlaceMenu: nav-card rows above 'Switch to' are not landmarks", () => {
-  // A box with nav entries renders them as plain menuitems before the section
-  // header (PlacePill-panels.tsx, NavCardRows). Counting those as landmarks
-  // let the walk try to switch to a route.
+test("readPlaceMenu: rows above 'Switch to' are not landmarks", () => {
+  // The menu once rendered a box's nav entries as plain menuitems before the
+  // section header. Counting those as landmarks let the walk try to switch to
+  // a route; any row above the header stays out of the landmark list.
   const snapshot = `- button "Where you are: Chat" [expanded=true, ref=e1, id=bbx-nav-place]
-- menuitem "Box: test1 ›" [ref=e2, id=bbx-switch-menu-box]
-- menuitem "All landmarks →" [ref=e3, id=bbx-switch-menu-landmarks]
-- menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]
+- menuitem "Box: test1" [ref=e2, id=bbx-switch-menu-box]
+- menuitem "Find a landmark" [ref=e3, id=bbx-switch-menu-landmarks]
 - menuitem "Today's questions" [ref=e5]
 - StaticText "SWITCH TO"
 - menuitem "Box" [ref=e6]
@@ -181,7 +179,7 @@ test("readPlaceMenu: a menu with no 'Switch to' section lists no landmarks", () 
   // Fails closed. Silently treating every menuitem as a landmark is how the
   // nav-card rows got in.
   const snapshot = `- button "Where you are: Chat" [expanded=true, ref=e1, id=bbx-nav-place]
-- menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]`;
+- menuitem "Find a landmark" [ref=e3, id=bbx-switch-menu-landmarks]`;
   assert.deepEqual(readPlaceMenu(snapshot).landmarks, []);
 });
 
@@ -200,9 +198,8 @@ test("stripRowDecorations: the menu's additions are not part of the label", () =
 
 test("readPlaceMenu: the current row is marked, not just named", () => {
   const snapshot = `- button "Where you are: Box" [expanded=true, ref=e1, id=bbx-nav-place]
-- menuitem "Box: test1 ›" [ref=e2, id=bbx-switch-menu-box]
-- menuitem "All landmarks →" [ref=e3, id=bbx-switch-menu-landmarks]
-- menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]
+- menuitem "Box: test1" [ref=e2, id=bbx-switch-menu-box]
+- menuitem "Find a landmark" [ref=e3, id=bbx-switch-menu-landmarks]
 - StaticText "SWITCH TO"
 - menuitem "Box (current)" [ref=e6]
 - menuitem "Acids & Bases 3" [ref=e7]`;
@@ -255,9 +252,8 @@ test("readPlaceMenu: an interactive-only snapshot yields nothing, and says so", 
   // finds no landmarks at all rather than silently treating nav rows as
   // landmarks — the walk fails loudly instead of switching to a route.
   const interactiveOnly = `- button "Where you are: Chat" [expanded=true, ref=e1, id=bbx-nav-place]
-- menuitem "Box: test1 ›" [ref=e2, id=bbx-switch-menu-box]
-- menuitem "All landmarks →" [ref=e3, id=bbx-switch-menu-landmarks]
-- menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]
+- menuitem "Box: test1" [ref=e2, id=bbx-switch-menu-box]
+- menuitem "Find a landmark" [ref=e3, id=bbx-switch-menu-landmarks]
 - menuitem "Box" [ref=e5]`;
   const reading = readPlaceMenu(interactiveOnly);
   assert.deepEqual(reading.landmarks, []);
@@ -265,7 +261,7 @@ test("readPlaceMenu: an interactive-only snapshot yields nothing, and says so", 
 });
 
 test("menuItemNames / hasDomId read the snapshot as written", () => {
-  assert.equal(menuItemNames(MENU_SNAPSHOT).length, 5);
+  assert.equal(menuItemNames(MENU_SNAPSHOT).length, 4);
   assert.equal(hasDomId(MENU_SNAPSHOT, "bbx-nav-place"), true);
   assert.equal(hasDomId(MENU_SNAPSHOT, "bbx-composer-input"), false);
 });

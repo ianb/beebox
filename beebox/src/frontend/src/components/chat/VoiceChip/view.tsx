@@ -14,7 +14,7 @@
  * context the full chip needs.
  */
 
-import type { HqTranscriptionService } from "@shared/transcription-services";
+import { isDiarizedHqService, type HqTranscriptionService } from "@shared/transcription-services";
 import { memo, useState, type ReactNode } from "react";
 import { Dropdown } from "../../ui/Dropdown";
 import { MenuItem, MenuDivider } from "../../ui/dropdown-menu-item";
@@ -42,8 +42,7 @@ export function voiceChipDiarizationEnabled({ hqDictationEnabled, narrationEnabl
   narrationEnabled: boolean;
   hqService: HqTranscriptionService | null;
 }): boolean {
-  return (hqDictationEnabled || narrationEnabled)
-    && (hqService === "voxtral-diarized" || hqService === "mai-diarized");
+  return (hqDictationEnabled || narrationEnabled) && hqService !== null && isDiarizedHqService(hqService);
 }
 
 export interface VoiceChipFaceState {

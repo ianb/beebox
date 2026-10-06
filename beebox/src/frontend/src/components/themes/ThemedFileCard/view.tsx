@@ -3,7 +3,7 @@ import { useParams } from "@tanstack/react-router";
 import { withBase } from "../../../api";
 import { ExternalIconLink } from "../../ui/ExternalIconLink";
 import { resolveCardTheme } from "@shared/card-theme/core";
-import { CardThemeSurface } from "./CardThemeSurface";
+import { CardThemeSurface, useShowCardFront } from "./CardThemeSurface";
 import { useBoxPresentation } from "../BoxPresentationProvider";
 import { themeOriginLabel } from "../../../themes/registry";
 import type { FileData, FileRenderer } from "../../../file-type-registry";
@@ -53,6 +53,34 @@ function RelatedFileProperties({ data, target, boxSlug, onNavigate, onClose }: {
   </>;
 }
 
+/** Choosing a view turns the card over so the person sees what they chose. */
+function ViewChooser({ data, renderers, active, hasExplicitView, onSelect }: {
+  data: FileData; renderers: FileRenderer[]; active: FileRenderer; hasExplicitView: boolean;
+  onSelect: (name: string | null) => void;
+}) {
+  const showFront = useShowCardFront();
+  const first = renderers.at(0);
+  function choose(name: string | null) {
+    onSelect(name);
+    showFront();
+  }
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-semibold mb-2">View</h3>
+      <div className="flex flex-wrap gap-2">
+        {renderers.map((renderer) => <Button
+          key={renderer.name}
+          size="sm"
+          intent={renderer === active ? "secondary" : "ghost"}
+          aria-pressed={renderer === active}
+          onClick={() => choose(renderer.name)}
+        >{rendererDisplayLabel({ registeredName: renderer.name, filePath: data.path, hasTypeSpecificRenderer: first?.name !== "Card" })}</Button>)}
+      </div>
+      {first ? <div className="mt-2"><Button size="sm" intent="ghost" disabled={!hasExplicitView} onClick={() => choose(null)}>Use preferred view</Button></div> : null}
+    </div>
+  );
+}
+
 export function ThemedFileCard({ data, mode, renderers, active, target, hasExplicitView, onSelect, onNavigate, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
 
   const { boxSlug } = useParams({ strict: false });
@@ -71,7 +99,6 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
   });
   const title = typeof data.frontmatter?.title === "string" ? data.frontmatter.title : displayName(data.path);
   const error = presentation?.error ?? theme.problem?.message;
-  const first = renderers.at(0);
   function handlePresentationRetry() { presentation?.retry(); }
   const properties = (
     <>
@@ -82,19 +109,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
         <dt>Chosen by</dt><dd>{themeOriginLabel(theme.origin)}</dd>
       </dl>
       <FileSpecificProperties data={data} theme={theme} isCard={isCard} />
-      <div className="mt-6">
-        <h3 className="text-sm font-semibold mb-2">View</h3>
-        <div className="flex flex-wrap gap-2">
-          {renderers.map((renderer) => <Button
-            key={renderer.name}
-            size="sm"
-            intent={renderer === active ? "secondary" : "ghost"}
-            aria-pressed={renderer === active}
-            onClick={() => onSelect(renderer.name)}
-          >{rendererDisplayLabel({ registeredName: renderer.name, filePath: data.path, hasTypeSpecificRenderer: first?.name !== "Card" })}</Button>)}
-        </div>
-        {first ? <div className="mt-2"><Button size="sm" intent="ghost" disabled={!hasExplicitView} onClick={() => onSelect(null)}>Use preferred view</Button></div> : null}
-      </div>
+      <ViewChooser data={data} renderers={renderers} active={active} hasExplicitView={hasExplicitView} onSelect={onSelect} />
       <RelatedFileProperties data={data} target={target} boxSlug={boxSlug} onNavigate={onNavigate} onClose={onClose} />
     </>
   );

@@ -13,12 +13,15 @@
  * all) renders nothing — the section is simply absent, but the chip and menu
  * around it remain; a query FAILURE renders an explicit "Couldn't load
  * landmark links" row, rather than being indistinguishable from "no links"
- * (the bug in the retired button).
+ * (the bug in the retired button). A section with rows opens with a divider.
+ * The landmark card itself is not a row: the agent edits it, not the person
+ * (docs/plans/box-screen.md, track 3).
  */
 
 import { useState } from "react";
 import { trpc } from "../../../../lib/trpc/client";
 import { useDropdownClose } from "../../../ui/Dropdown";
+import { MenuDivider } from "../../../ui/dropdown-menu-item";
 
 interface ResolvedLink {
   ref: string;
@@ -50,7 +53,7 @@ export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelPr
 
   if (isError) {
     return (
-      <div className="px-3 py-2 text-sm text-danger-dark">
+      <div className="px-3 py-2 text-sm text-danger-dark border-t border-warm-200">
         Couldn&rsquo;t load landmark links: {error.message}.{" "}
         <button id="bbx-landmark-links-retry" type="button" onClick={() => void refetch()} className="underline hover:no-underline">
           Retry
@@ -62,17 +65,12 @@ export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelPr
   const landmark = data?.landmark ?? null;
   const links = landmark?.links ?? [];
   const groups = landmark?.groups ?? [];
-  if (landmark === null) return null;
-  const landmarkCard: ResolvedLink = {
-    ref: landmark.path,
-    label: "Landmark card",
-    title: "Landmark card",
-    exists: true,
-  };
+  if (links.length === 0 && groups.length === 0) return null;
 
   return (
+    <>
+    <MenuDivider />
     <div className="py-1">
-      <MenuLink id="bbx-chat-here-menu-landmark-card" link={landmarkCard} onPanel={onPanel} />
       {links.map((link) => (
         <MenuLink key={link.ref} link={link} onPanel={onPanel} />
       ))}
@@ -80,15 +78,15 @@ export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelPr
         <MenuGroup key={group.label} group={group} onPanel={onPanel} />
       ))}
     </div>
+    </>
   );
 }
 
-function MenuLink({ id, link, onPanel }: { id?: string; link: ResolvedLink; onPanel: (link: ResolvedLink) => void }) {
+function MenuLink({ link, onPanel }: { link: ResolvedLink; onPanel: (link: ResolvedLink) => void }) {
   const close = useDropdownClose();
   return (
     <button
       type="button"
-      id={id}
       role="menuitem"
       onClick={() => { close(); onPanel(link); }}
       className="w-full text-left px-3 py-3.5 hover:bg-warm-100 flex items-center gap-2 text-warm-800"

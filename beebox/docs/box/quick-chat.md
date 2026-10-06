@@ -4,8 +4,9 @@ read-when: Maintaining Quick chat destination rules or keeping an older conversa
 # Quick chat routing rules
 
 Quick chat chooses among landmark chats and recent resumable web chats, then
-sends the captured text before showing the result. New chat in a landmark and
-continuing an existing conversation are different actions. Prefer continuing
+posts the captured text when the choice is clear. An uncertain thought waits
+on the box screen until the person chooses a conversation. New chat in a
+landmark and continuing an existing conversation are different actions. Prefer continuing
 an existing conversation when the topic fits; creating a new session does not
 mean creating a new landmark.
 
@@ -33,12 +34,11 @@ resolve from the rubric file; query and fragment refs are invalid. A landmark
 rule applies to that place's eligible existing chats and its new-chat option.
 A chat rule applies only to that chat. Set `keepEligible: true` on the chat
 entry to keep an older existing conversation eligible beyond the recent-chat
-window; its card and resumable session must still exist. Missing targets stop
-routing visibly. Background landmarks need explicit rubric entries.
+window; its card and resumable session must still exist. A missing target
+stops routing: every thought then waits for the person to choose. Background landmarks need explicit rubric entries.
 
 Do not put credentials in this file. Quick chat uses the box-granted
 OpenRouter key and sends captured text, candidate facts, rules, and bounded
 conversation text through OpenRouter to TypeSafe Jev. It handles text only.
-The result links open the selected chat with the original text staged in its
-composer. Opening another destination does not send a second copy, undo agent
-actions, or move the original transcript.
+A posted thought cannot be moved; the person corrects a wrong destination in
+that chat.

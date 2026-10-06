@@ -19,9 +19,15 @@ struct NativeComposerFixtureScreen: View {
         return url
     }()
 
-    private let fixture = ProcessInfo.processInfo.arguments
+    private static let fixtureName = ProcessInfo.processInfo.arguments
         .first { $0.hasPrefix("--composer-fixture=") }?
         .replacingOccurrences(of: "--composer-fixture=", with: "") ?? "empty"
+    private let fixture = Self.fixtureName
+    /// The `quick-chat` state hosts the composer as the box screen will: a
+    /// new-thought draft and the quick chat submit target.
+    private static var isQuickChat: Bool {
+        fixtureName == "quick-chat"
+    }
     /// `--composer-point=<control-id>:<action>` performs one pointer action as
     /// soon as the anchors have registered, so a plain screenshot of the
     /// `control-registry` fixture captures the ring (or the refusal) without
@@ -55,11 +61,16 @@ struct NativeComposerFixtureScreen: View {
     /// sentence a refusal comes back with, neither of which a unit test can show.
     @State private var fixtureRing: FixtureRing?
     @State private var lastRefusal: String?
+    /// What the `quick-chat` state's submit target has received.
+    @State private var quickChatSent: [String] = []
 
     init() {
         let repository = ComposerDraftRepository(rootURL: Self.fixtureRootURL)
         self.repository = repository
-        _draftStore = StateObject(wrappedValue: ComposerDraftStore(repository: repository))
+        _draftStore = StateObject(wrappedValue: ComposerDraftStore(
+            scope: Self.isQuickChat ? .newThought : .conversation,
+            repository: repository
+        ))
         _pendingStore = StateObject(wrappedValue: PendingEmissionStore(repository: repository))
     }
 
@@ -70,7 +81,7 @@ struct NativeComposerFixtureScreen: View {
                     box: box,
                     draftStore: draftStore,
                     pendingStore: pendingStore,
-                    captureAvailable: true,
+                    captureAvailable: Self.isQuickChat == false,
                     narrationEnabled: false,
                     hqDictationEnabled: false,
                     speechPlaybackActive: false,
@@ -78,6 +89,7 @@ struct NativeComposerFixtureScreen: View {
                     locationSharingEnabled: false,
                     onToggleLocationSharing: {},
                     onTakeScreenshot: {},
+                    submitTarget: fixtureSubmitTarget,
                     automaticallyResumeVoicePreparations: false,
                     voiceStateOverride: fixtureVoiceState,
                     initiallyFocused: fixture == "keyboard-shown",
@@ -106,6 +118,11 @@ struct NativeComposerFixtureScreen: View {
                 VStack(alignment: .leading, spacing: 18) {
                     if fixture == "control-registry" {
                         registryReadout
+                    } else if Self.isQuickChat {
+                        fixtureBubble("New thought. The box picks the conversation.", outgoing: false)
+                        ForEach(Array(quickChatSent.enumerated()), id: \.offset) { _, text in
+                            fixtureBubble("Quick chat target received: \(text)", outgoing: true)
+                        }
                     } else {
                         fixtureBubble("Fixture conversation", outgoing: false)
                         fixtureBubble("The native composer stays docked below this web content.", outgoing: true)
@@ -201,6 +218,16 @@ struct NativeComposerFixtureScreen: View {
             .frame(maxWidth: .infinity, alignment: outgoing ? .trailing : .leading)
     }
 
+    private var fixtureSubmitTarget: NativeComposerSubmitTarget {
+        guard Self.isQuickChat else {
+            return .conversation
+        }
+        return .quickChat { text in
+            quickChatSent.append(text)
+            return true
+        }
+    }
+
     @MainActor
     private func seedFixture() async {
         guard seeded == false else {
@@ -214,7 +241,7 @@ struct NativeComposerFixtureScreen: View {
         for file in draft.files {
             try? await repository.savePayload(Data("fixture file".utf8), filename: file.filename, boxID: box.id)
         }
-        try? await repository.save(draft, boxID: box.id)
+        try? await repository.save(draft, boxID: box.id, scope: draftStore.scope)
         try? await repository.savePendingEmissions(fixturePending, boxID: box.id)
         if fixtureVoicePreparations.isEmpty == false {
             try? await repository.saveVoicePreparations(fixtureVoicePreparations, boxID: box.id)
@@ -228,6 +255,8 @@ struct NativeComposerFixtureScreen: View {
         switch fixture {
         case "typing", "keyboard-shown":
             return draft(text: "A draft in progress with a useful insertion point.")
+        case "quick-chat":
+            return draft(text: "Remind me to renew my passport")
         case "multiline":
             return draft(text: "First paragraph for the agent.\n\nA second paragraph wraps across several lines so the native editor grows without covering the active line or the chat above it.")
         case "many-attachments":

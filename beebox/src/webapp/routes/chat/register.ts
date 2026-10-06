@@ -9,6 +9,7 @@
  * {@link ChatRoutesContext} (registry, schedule manager, event bus, dedup map):
  *
  * - chat-send-routes.ts    — POST /api/chat/send, /api/chat/self-note
+ * - user-message-sender.ts — delivery shared by /api/chat/send and quickChat
  * - chat-audio-routes.ts   — transcribe-audio, voice-config, tts, transcribe-ws
  *
  * Session controls (history, sessions, status, set-model, set-feature,
@@ -37,7 +38,9 @@ import { registerChatUploadRoutes } from "./uploads.js";
 import type { ChatRoutesContext } from "./context.js";
 import { setChatRuntime, clearChatRuntime } from "../../chat-runtime.js";
 import { registerChatSendRoutes } from "./send-routes.js";
-import { loadProcessedMessageIds } from "./send-dedup.js";
+import { createInFlightSends, loadProcessedMessageIds } from "./send-dedup.js";
+import { createUserMessageSender } from "./user-message-sender.js";
+import { resolveSendTargetResult } from "./send-target.js";
 import { registerChatAudioRoutes } from "./audio-routes.js";
 import { registerChatLastAudioRoutes } from "./last-audio-routes.js";
 import { registerChatAudioReviewRoutes } from "./audio-review-routes.js";
@@ -197,6 +200,21 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
     processedMessageIds: loadProcessedMessageIds(boxRoot),
   };
 
+  // One sender per box: the send route and `quickChat` share its durable
+  // message-id claims and its in-flight table, so one message id posts once
+  // whichever path delivers it. Volatile claims live for one request each, so
+  // they belong to this registration — not to the persisted map, which
+  // outlives the process.
+  const sendUserMessage = createUserMessageSender({
+    boxRoot,
+    eventBus,
+    registry,
+    scheduleManager,
+    wireSession,
+    processedMessageIds: ctx.processedMessageIds,
+    inFlightSends: createInFlightSends(),
+  });
+
   // Expose the live registry + schedule manager to the chat tRPC procedures
   // (session controls live in tRPC; see webapp/chat-runtime.ts).
   setChatRuntime(boxRoot, {
@@ -204,6 +222,8 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
     scheduleManager,
     wireSession,
     maintenance,
+    resolveSendTarget: (args) => resolveSendTargetResult(ctx, args),
+    sendUserMessage,
   });
 
   server.get("/api/chat/default", async () => {
@@ -211,7 +231,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
     return { sessionId };
   });
 
-  registerChatSendRoutes(ctx);
+  registerChatSendRoutes(ctx, { sendUserMessage });
   registerChatAudioRoutes(ctx);
   registerChatLastAudioRoutes(ctx);
   registerChatAudioReviewRoutes(ctx);

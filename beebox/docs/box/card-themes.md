@@ -87,8 +87,8 @@ these interface parts rather than a card. Flat, Spectrum, and Paper support the
 system; Sticky note is a card theme only. Paper offers Slate, Terracotta, and Blue palettes
 (stored as `cream`, `manila`, and `blue` respectively).
 
-A landmark can override the box system theme. Open its card from the **here** menu,
-turn to **Properties**, and use the separate **System theme** picker. **Use box
+A landmark can override the box system theme. Open the landmark's directory from the
+folder menu (**Open <dir>/**), open its landmark card, turn to **Properties**, and use the separate **System theme** picker. **Use box
 default** removes that override. An agent can make the same choice in landmark
 frontmatter:
 

@@ -225,7 +225,7 @@ export async function bundleView(
 }
 
 /**
- * Get a view's metadata: name, description, dependencies, modes,
+ * Get a view's metadata: name, description, dependencies, modes, layout,
  * rendersCardTypes. Compiles the view for the node target and imports the
  * real module in a subprocess (see `view-meta-import.ts`) rather than
  * regexing source text, so metadata reflects what the view actually exports
@@ -235,7 +235,8 @@ export async function bundleView(
  *
  * Never throws: a view that fails to compile or import degrades to a
  * filename + "Failed to compile" marker (see `listViews`) rather than
- * vanishing from the listing.
+ * vanishing from the listing; one with an invalid metadata export (e.g. an
+ * unknown `layout`) degrades the same way, with a marker naming the export.
  */
 export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHostContext }): Promise<ViewMeta> {
   // No host given means no box package hosts this compile — the engine does.
@@ -247,6 +248,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
     description: "Failed to compile",
     dependencies: [],
     modes: ["page"],
+    layout: "inset",
     rendersCardTypes: [],
   };
 
@@ -271,17 +273,21 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
   let meta: Omit<ViewMeta, "lastModified">;
   try {
     const { output } = await bundleView(viewPath, { target: "node" });
-    const imported = await importViewMetadata(output, viewHost);
-    meta = imported
-      ? {
-          name: imported.name ?? slug,
-          slug,
-          description: imported.description ?? "",
-          dependencies: imported.dependencies ?? [],
-          modes: imported.modes ?? ["page"],
-          rendersCardTypes: imported.rendersCardTypes ?? [],
-        }
-      : fallback;
+    const result = await importViewMetadata(output, viewHost);
+    if (result === null) meta = fallback;
+    else if ("invalid" in result) meta = { ...fallback, description: `Invalid metadata export ${result.invalid}` };
+    else {
+      const imported = result.meta;
+      meta = {
+        name: imported.name ?? slug,
+        slug,
+        description: imported.description ?? "",
+        dependencies: imported.dependencies ?? [],
+        modes: imported.modes ?? ["page"],
+        layout: imported.layout ?? "inset",
+        rendersCardTypes: imported.rendersCardTypes ?? [],
+      };
+    }
   } catch (_e) {
     // Compiling for the node target failed (e.g. a syntax error) — same
     // degrade-to-marker fallback as an import failure.

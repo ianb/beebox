@@ -326,13 +326,22 @@ async function renderWindowedSession(options: {
 export async function runSinceMode(options: {
   boxRoot: string;
   since: SinceWindow;
+  /** Window only this session; every session when absent. */
+  sessionId?: string | undefined;
   renderOptions: RenderOptions;
   raw: boolean;
   toolReport: boolean;
   allowHuge: boolean;
 }): Promise<void> {
-  const { boxRoot, since, renderOptions, raw, toolReport, allowHuge } = options;
-  const allSessions = await listSessions(boxRoot);
+  const { boxRoot, since, sessionId, renderOptions, raw, toolReport, allowHuge } = options;
+  let allSessions = await listSessions(boxRoot);
+  if (sessionId !== undefined) {
+    allSessions = allSessions.filter((s) => s.sessionId === sessionId);
+    if (allSessions.length === 0) {
+      console.error(`Session ${sessionId} not found for this box.`);
+      process.exit(1);
+    }
+  }
   const prefiltered = allSessions.filter(
     (s) => s.mtime.getTime() >= since.cutoff
   );
@@ -343,7 +352,11 @@ export async function runSinceMode(options: {
   });
 
   if (inWindow.length === 0) {
-    console.log(`No sessions with activity since ${since.label}.`);
+    console.log(
+      sessionId === undefined
+        ? `No sessions with activity since ${since.label}.`
+        : `No activity in session ${sessionId} since ${since.label}.`
+    );
     return;
   }
 

@@ -250,7 +250,7 @@ the contract.
 | `beeboxSession` | `window.location.href` (string) | `Coordinator.userContentController` → `onSessionChange(visibleSessionID)` |
 | `beeboxEmissionReceipt` | `Receipt` object (§4.2) | → `receiveEmissionReceipt` |
 | `beeboxLocationResult` | `{ id, success, message }` | → `receiveLocationResult` |
-| `beeboxHqDictationState` | `{ enabled }` | → `receiveHqDictationState` |
+| `beeboxHqDictationState` | `{ enabled, diarized }` | → `receiveHqDictationState` |
 | `beeboxComposerCommand` | V1 or V2 composer command (§4.7, §4.8) | → `receiveComposerCommand` |
 | `beeboxLastAudioRequest` | V1 last-audio request (§4.9) | → `receiveLastAudioRequest` |
 
@@ -280,6 +280,27 @@ the contract.
   `pageLoaded=false`. Inflight *emission* IDs clear later, on `didCommit` — the old document can
   still deliver a real receipt while a provisional navigation is pending — and `didFinish`
   redelivers the same persisted emission IDs into the new page.
+
+### 3.5 The box screen navigation (web → native, by URL)
+
+- **Wire shape:** a main-frame navigation to `<baseURL>/box` (the web box screen). The web
+  landmark menu's box row is a plain document navigation to that URL, not a router link and not a
+  bridge command: the command envelope cannot report an unknown kind back to the web (§4.8), so a
+  command would fail silently on an older build.
+- **Native behavior:** `decidePolicyFor` checks the URL before the same-origin allow (§3.4),
+  cancels the navigation, and shows the native box screen. The web view stays mounted and hidden
+  behind it. The match compares origin and path against `baseURL` plus `/box`, because the box is
+  served under a path prefix (`/main/test1/box` matches, `/main/test1/browse` and
+  `/main/test2/box` do not); a query or trailing slash does not change the match.
+- **Fallback:** a build without the check loads the web box screen in its web view, which works
+  without the native bridge.
+- **Anchors:** native `ios-app/BeeBox/Views/ChatWebView.swift` — `isBoxScreenURL(_:boxBaseURL:)`,
+  `Coordinator.mainFramePolicy(for:)`, `onOpenBoxScreen`; test
+  `ios-app/BeeBoxTests/ChatWebViewRequestTests.swift` —
+  `testBoxScreenNavigationUnderAPrefixIsInterceptedAndOtherPagesLoad`. Web: the route `/<box>/box`
+  and the landmark menu's box row.
+- **Drift:** SILENT-degraded. A renamed route on either side loads the web box screen in the web
+  view instead of the native one.
 
 ---
 
@@ -381,7 +402,9 @@ the contract.
   `Emission { id, origin, text, images, files, selections, diarized, hqText?, hqService?,
   hqFallback? }`. `hqText:true` says the text came from the completed HQ pass;
   `hqFallback:true` says requested HQ failed and realtime text was substituted, which the
-  assembler persists as `hq="failed"`. Legacy payloads produce empty `files` and `selections`.
+  assembler persists as `hq="failed"`. `hqService` names the engine and is stamped as
+  `<speech stt-service="…">`: a box HQ service from §5.2, or `apple-speech-transcriber` when iOS
+  ran the HQ pass on the device (§4.4a). Web passes the value through without a closed set. Legacy payloads produce empty `files` and `selections`.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -508,19 +531,38 @@ mint them independently; the ids are per-emission and per-kind.
 
 ### 4.4a HQ dictation state (web → native)
 
-- **Wire shape:** `{ enabled: boolean }` on `beeboxHqDictationState`.
+- **Wire shape:** `{ enabled: boolean, diarized: boolean }` on `beeboxHqDictationState`.
+  `diarized` is true when the box's HQ service labels speakers (`voxtral-diarized`,
+  `mai-diarized`; `isDiarizedHqService` in `src/shared/transcription-services.ts`). Web reads it
+  from `transcription.config`, posts true while that query is loading or refetching (fail
+  closed, which covers the moment after the HQ service is switched), and re-posts on change.
 - **Semantics:** the web posts the resolved HQ setting for the visible chat. Native defaults to off.
   When enabled, both the native Send button and ordinary spoken-send keyword enter the durable HQ
   audio preparation path. Typed messages remain direct sends; the explicit cleanup keyword remains
   HQ regardless of this state.
+- **On-device HQ pass (iOS 26+):** the preparation first runs Apple's `SpeechTranscriber` over the
+  recording (`Services/OnDeviceHqTranscriber.swift`). When it returns text, that is the HQ result:
+  the emission carries `hqText:true`, `hqService:"apple-speech-transcriber"`, `diarized:false`,
+  and §5.2 is not called. It is skipped, and §5.2 runs as before, when any of these hold: the
+  preparation was staged with `diarized:true` (captured at the send gesture and persisted, so a
+  relaunch resumes with the value the user sent under); iOS is older than 26;
+  `SpeechTranscriber` is unavailable (including every simulator) or lacks the locale
+  (`DictationTranscriber` does not count); the language assets are not installed; or the pass
+  errors, returns no text, or exceeds twice the recording's length (30 s minimum). Native starts
+  the one-time asset download in the background when HQ dictation or narration turns on for a
+  box without diarization; a send never waits on it.
 - **Anchors:** web `use-native-bridge.ts` — `useNativeHqDictationBridge`; native
-  `Views/ChatWebView.swift` — `receiveHqDictationState`; `Views/NativeComposerView.swift` —
-  `send`, `sendKeywordIntent`.
-- **Drift:** fail-local — an absent or malformed state leaves native HQ dictation off. If HQ
-  transcription later fails, the durable preparation visibly falls back to its live transcript
-  with `hqFallback:true`. Native holds one bounded UIKit background-task assertion around the
-  one-shot request. A preparation reached while the application is already non-active stays staged
-  until foregrounding; this is best-effort foreground transport, not a background `URLSession`.
+  `Views/ChatWebView.swift` — `receiveHqDictationState`, `hqDictationState(from:)`;
+  `Views/NativeComposerView.swift` — `send`, `sendKeywordIntent`, `transcribeOnDevice`;
+  `Services/OnDeviceHqTranscriber.swift`. Fixtures: `hq-dictation-state/`.
+- **Drift:** fail-local — an absent or malformed `enabled` leaves native HQ dictation off; a
+  non-boolean `diarized` drops the whole message; an absent `diarized` (older web) reads false, so
+  such a box gets the on-device pass even with a diarized HQ service. If HQ transcription later
+  fails, the durable preparation visibly falls back to its live transcript with
+  `hqFallback:true`. Native holds one bounded UIKit background-task assertion around the
+  on-device pass and the one-shot request. A preparation reached while the application is
+  already non-active stays staged until foregrounding; this is best-effort foreground transport,
+  not a background `URLSession`.
 
 ### 4.5 Speech playback state (web → native)
 
@@ -862,7 +904,8 @@ See §1.3 (full request/response/errors).
 
 ### 5.2 `POST /api/chat/transcribe-audio` — HQ audio transcription
 
-- **Direction:** native → box.
+- **Direction:** native → box. On iOS 26+ this is the fallback behind the on-device HQ pass
+  (§4.4a), and the only HQ path for a box whose HQ service labels speakers.
 - **Request:** `POST`; `Content-Type: multipart/form-data`; `User-Agent: BeeBox-iOS/0.1`;
   `Authorization: Bearer <token>`. Multipart body: text field `session=<resolved session id>`; file
   field `file`, filename `segment.wav`, content-type `audio/wav`.
@@ -1216,6 +1259,40 @@ See §1.3 (full request/response/errors).
   `test/core/notification/target.doctest.md` against the Swift target mirror.
 - **Drift:** SILENT. A renamed key lands the tap on the app's default page with no error.
 
+### 5.11 Quick chat — `quickChat.submit`, `choose`, `discard`, `home`
+
+- **Direction:** native → box, bearer-authenticated tRPC (not batched). `POST
+  /api/trpc/quickChat.submit` `{id,message,channel?}`, `POST /api/trpc/quickChat.choose`
+  `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.discard` `{id}`, and `GET
+  /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. Each mutation answers a
+  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. Each
+  `recentChats` row is `{sessionId,label,lastActivity,landmark:{dir,label,symbol}|null}`, newest
+  first: the fresh landmark chats plus the box's last chat, whose `landmark` is `null` when no
+  landmark resolves for its directory. Shapes:
+  `src/core/chat/routing/quick-chat-record.ts` (`quickChatViewSchema`) and
+  `src/webapp/trpc/routers/quick-chat.ts` (inputs, `quickChatHomeSchema`).
+- **Fixtures:** `test/mobile-contract/fixtures/quick-chat/`, parsed field for field by
+  `test/webapp/trpc/routers/quick-chat.contract-fixtures.doctest.md` and by
+  `ios-app/BeeBoxTests/QuickChatAPITests.swift`, which also checks the three request bodies
+  against `submit-request.json`, `choose-request.json`, and `discard-request.json`.
+- **Native caller:** the box screen, which has no web session mounted, so this is the one native
+  path that sends a chat message without the web view (`ios-app/CLAUDE.md`, bridge discipline).
+  The record `id` is a client-made UUID, sent lowercase; it becomes the chat message id, so a
+  repeated `submit` of one id returns one record and posts once. A `sending` view with
+  `expired: true` is past the six-day delivery limit and offers only Open chat and Discard.
+- **Outbox:** the phone stores `{id,boxID,text,createdAt,attempts,lastAttemptAt}` in
+  `quick-chat-outbox.json` before the first request and removes an entry only when `submit`
+  answers. A failed request keeps it; retries follow a backoff while the app is in the
+  foreground, and once per launch, for seven days, then the row reads "Not sent". An entry for a
+  box that is unpaired is removed when the box is removed. The last `home` answer is cached per
+  box so the screen draws before the refresh.
+- **Anchors:** native `ios-app/BeeBox/Services/QuickChatAPI.swift` · `QuickChatAPI`;
+  `ios-app/BeeBox/Models/QuickChatView.swift` · `QuickChatView`, `QuickChatHome`;
+  `ios-app/BeeBox/Storage/QuickChatOutbox.swift`; `ios-app/BeeBox/Storage/BoxScreenStore.swift`.
+  Box `src/webapp/trpc/routers/quick-chat.ts`; `src/core/chat/routing/quick-chat-record.ts`.
+- **Drift:** LOUD. A request the server rejects keeps the entry in the outbox and the row
+  visible; an answer the phone cannot decode fails the refresh and shows "Could not refresh".
+
 ---
 
 ## 6. Server-side "mobile" awareness
@@ -1233,8 +1310,11 @@ query-param-driven — there is **no user-agent gating** anywhere.
 | `src/webapp/server-root/root-routes.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify | mobile box list / per-box authorization for standalone server |
 | `src/core/mobile/pairing.ts` (whole module) | device store, tokens | source of truth |
 
-- **`User-Agent: BeeBox-iOS/0.1`** is sent on all four native HTTP calls but the server never
-  branches on it — informational / for logs only.
+- **`User-Agent: BeeBox-iOS/0.1`** is sent on every native HTTP call from the app: each request
+  shaped by `BoxRequest.apply` (`ChatAPI`, `CaptureAPI`, `BulkUploadAPI`, `LogForwarder`,
+  `PushRegistrar`, `QuickChatAPI`), `ChatAPI`'s directly built requests, and the pairing redeem.
+  The share extension sends `BeeBox-iOS-Share/0.1`. The server never branches on either —
+  informational / for logs only.
 
 ---
 
@@ -1265,7 +1345,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B11 | Speech control (barge-in) | native→web | V1 `{version:1,action:"stop"}` via `beeboxNativeSpeechCommand`, queue `beeboxNativeSpeechCommandQueue`, event `beebox:native-speech-command`; no ack — §4.5 `{playing:false}` reports the stop | `Models/NativeComposerContract.swift` · `NativeSpeechCommand`; `Services/SpeechDictation.swift` · `NativeVoiceTurnState`; `Views/ChatWebView.swift` · `deliverSpeechStopRequest` | `native-speech-command.ts` · `nativeSpeechCommandFromDetail`; `use-native-bridge.ts` · `useNativeSpeechCommandBridge` | SILENT-degraded (speech plays into an open mic) |
 | B10 | Last-audio request relay | web→native | V1 `{version:1,requestId,messageId,sessionId\|null}` via `beeboxLastAudioRequest`; answered by H6, not by an ack | `Models/NativeComposerContract.swift` · `NativeLastAudioRequest`; `Views/ChatWebView.swift` · `receiveLastAudioRequest`; `Views/RootView.swift` · `answerLastAudioRequest` | `native-last-audio-request.ts`; `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` | QUIET (asleep phone is indistinguishable) |
 | B7 | Narration state | web→native | `{enabled}` via `beeboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
-| B14 | HQ dictation state | web→native | `{enabled}` via `beeboxHqDictationState` | `Views/ChatWebView.swift` · `receiveHqDictationState`; `Views/NativeComposerView.swift` · `send`, `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeHqDictationBridge` | fail-local |
+| B14 | HQ dictation state | web→native | `{enabled,diarized}` via `beeboxHqDictationState`; `diarized` keeps the HQ pass off the device | `Views/ChatWebView.swift` · `receiveHqDictationState`; `Views/NativeComposerView.swift` · `send`, `sendKeywordIntent`, `transcribeOnDevice` | `use-native-bridge.ts` · `useNativeHqDictationBridge` | fail-local |
 | B8 | Speech playback state | web→native | `{playing}` via `beeboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | B9 | Response generation state | web→native | `{active}` via `beeboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
@@ -1282,6 +1362,8 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
+| Q1 | `quickChat.submit` / `choose` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id}`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
+| W3 | Box screen navigation (§3.5) | web→native | main-frame navigation to `<baseURL>/box`, cancelled by native | `Views/ChatWebView.swift` · `isBoxScreenURL`, `Coordinator.mainFramePolicy(for:)` | the `/<box>/box` route; the landmark menu's box row | SILENT-degraded |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `bbx_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
 | U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
@@ -1551,6 +1633,8 @@ beebox/src/webapp/routes/chat/uploads.ts
 beebox/src/webapp/routes/bulk-upload/register.ts
 beebox/src/core/capture/staging-stream.ts
 beebox/src/webapp/trpc/routers/debug-log.ts
+beebox/src/webapp/trpc/routers/quick-chat.ts
+beebox/src/core/chat/routing/quick-chat-record.ts
 beebox/src/core/notification/apns-channel/payload.ts
 beebox/src/core/notification/target.ts
 
@@ -1562,6 +1646,8 @@ ios-app/BeeBox/Services/SpeechDictation.swift
 ios-app/BeeBox/Services/ScreenAwake.swift
 ios-app/BeeBox/Storage/ComposerDraftStore.swift
 ios-app/BeeBox/Services/ChatAPI.swift
+ios-app/BeeBox/Services/QuickChatAPI.swift
+ios-app/BeeBox/Models/QuickChatView.swift
 ios-app/BeeBox/Storage/VoiceAudioRetentionStore.swift
 ios-app/BeeBox/Models/PairedBox.swift
 ios-app/BeeBox/Storage/PairedBoxStore.swift
@@ -1576,19 +1662,17 @@ ios-app/BeeBox/BeeBox.entitlements
 beebox/test/mobile-contract/
 ```
 
-## Quick chat evaluation entry
+## Native box screen
 
-The iOS Quick chat button presents `<baseURL>/quick-chat` in an independent
-webview sheet. It reuses paired-box authentication and same-origin navigation,
-but installs no native composer bridge. The web form owns routing and ordinary
-chat send; the main native conversation, draft, and pending emissions remain
-mounted behind the sheet. Done returns to them. This is an explicit entry, not
-an automatic app cold-start rule. Existing native recording state is not
-transferred to the sheet.
+The iOS app opens on a native box screen (`ios-app/BeeBox/Views/BoxScreenView.swift`) on a cold
+launch, after 30 minutes or more in the background, or after the web content process ended in the
+background; otherwise it returns to where it was. A notification tap, or pending chat messages
+waiting in `PendingEmissionStore`, open the web app instead. The rule is
+`ios-app/BeeBox/Models/RootSurface.swift` · `RootSurfaceRule`, driven by `RootView`.
 
-The standalone web route shows the chosen destination and competing probabilities
-after sending. A destination link opens ordinary web chat inside the sheet.
-No emission version, native target type, or binding JSON changes for this trial.
-Owners: `ios-app/BeeBox/Views/RootView.swift`, `ChatWebView.swift`, and
-`src/frontend/src/pages/quick-chat/QuickChatPage.tsx`. Request/authentication and
-absence of the native bridge are covered by `ChatWebViewRequestTests`.
+The box screen mounts no web content. Its composer sends through `quickChat.submit` (§5.11) with a
+new-thought draft stored apart from the chat draft. Its links (recent chats, "All chats", the
+box-wide pages, the box's shortcuts) show the web app at a box-relative path through the same
+`ChatWebView.NavigationRequest` a notification tap uses (§3.1). The web app returns to the box
+screen through the navigation in §3.5. The web view, once created, stays mounted and hidden behind
+the box screen. No emission version, native target type, or binding JSON changes for the box screen.

@@ -9,10 +9,6 @@ discovered-in: main session — boxholder found a months-old failed capture in c
 resolution: implemented
 ---
 
-> **⏳ Awaiting manual testing** — fix landed in `9e6caef8`. A failed chip now
-> states its age and offers Retry **and** Discard. Your own stuck capture from
-> 2026-08-04 is still there and is yours to clear. Only the developer clears
-> this.
 
 A capture chip in chat reads **"7 photos, 1 clip"** with **"failed — tap to
 retry"** underneath. It has apparently been there a long time. There is no way
@@ -152,3 +148,7 @@ verb entirely).
    `discarded`, and leave. It must not come back on reload.
 4. If you would rather see whether it can still succeed, press **Retry** first —
    the chip should switch to a working face rather than sitting silent.
+
+## Next-action note (2026-10-06)
+
+Checked "fixed?": properly closed. Fix 9e6caef8, boxholder-verified 2026-08-24 (64485d2db). Code holds: `DELETE /api/capture/sessions/:id` (`beebox/src/webapp/routes/capture/register.ts:189`) and the discard and age label in `capture-bubble.tsx`. Removed the stale "Awaiting manual testing" banner.

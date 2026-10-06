@@ -54,3 +54,7 @@ To settle:
   snapshot is per turn and cheap; a command works outside chat too.
 - Guide text: a sentence in the agent guide telling the agent to check before
   recommending a surface the user may not have.
+
+## Next-action note (2026-10-06)
+
+A `do-it` request was set. Changed to `discuss`: it still holds and carries `needs: [design]`. The fix spans a last-seen stamp in the Clerk router, a new `bbx` command over paired phones, the extension stamp and Telegram, plus agent-guide text: about 150-300 lines in 5-8 files under `beebox/` (deploys). The issue's own "To settle" list (stamp or inference, command or snapshot line, guide text) and where a frequently rewritten stamp lives (avoid git churn) need answers first.

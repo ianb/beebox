@@ -51,3 +51,7 @@ repoints that `doc-check` does not see.
 The ledger grows every day. When it moves, decide whether to archive
 entries older than some cutoff, keeping the reviewed-version marker line in
 the format the run script parses.
+
+## Next-action note (2026-10-06)
+
+A `do-it` request was set. Changed to `discuss`: it still holds, but it is about 30 files of mechanical path edits plus three deletions, beyond an inline fix. The one breakage doc-check cannot see is `schedules/sdk-update/run.ts` (its `LEDGER` path constant). It follows the doc-move procedure in `beebox/docs/README.md`. Ready to hand to a small session if wanted.
