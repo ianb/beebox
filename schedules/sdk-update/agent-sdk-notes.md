@@ -40,15 +40,14 @@ Codex entries here are labeled as such; they carry their own pin.
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.290` (SDK), `2.1.290` (Claude Code), `0.160.1` (Codex)
+- **Latest reviewed upstream version:** `0.3.292` (SDK), `2.1.292` (Claude Code), `0.160.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved on 2026-10-05 — Agent SDK
-  to `0.3.289` (taking `0.3.287` and `0.3.288`), Codex to `0.160.0` (taking
-  `0.159.3`). The 2026-10-03 attempt had been reverted when a stalled npm
-  registry kept the Codex platform binary from installing. Next: `0.3.290`
-  (settles 2026-10-07T18:15Z), **whose changelog did not exist at review time**
-  — a re-read is owed; Codex `0.160.1` (settles 2026-10-07T18:33Z, Windows-only
-  fix). Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **Current recommendation:** No bump on 2026-10-06; nothing settled and
+  nothing act-now. Next: `0.3.290` and Codex `0.160.1` (settle 2026-10-07 at
+  18:15Z and 18:33Z), then `0.3.291` (2026-10-08T03:33Z) and `0.3.292`
+  (2026-10-08T17:14Z). **Before taking `0.3.292`**, check its background-command
+  wait (see its entry). Open:
+  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -83,25 +82,65 @@ executor fix). beebox runs Codex on macOS and Linux and configures no remote
 stdio MCP servers. Settled path.
 - **Sources:** [rust-v0.160.1](https://github.com/openai/codex/releases/tag/rust-v0.160.1)
 
-### 0.3.290 / Claude Code 2.1.290 — pending; changelog UNPUBLISHED at this turn (re-read next turn)
+### 0.3.292 / Claude Code 2.1.292 — pending (published 2026-10-06T17:14Z, ~6h at this turn); check before applying
 
-Published 2026-10-05T18:15Z, ~5h before this turn. Neither changelog nor the
-GitHub releases had a section for it. This entry is a bound from the package's
-`sdk.d.ts` diff against `0.3.289`; the bundled CLI is 2.1.290.
-- **New built-in tool `OfferChromeSetup`** (`reason?` in; `outcome:
-  "connected" | "not_now" | "no_attempt_yet"` out). Not in
-  `shared/known-tools.ts`, so beebox's renderers use their unknown-tool
-  fallback if it appears in a run. Whether it is offered in headless SDK
-  sessions is for the changelog re-read.
-- **WebFetch gains `offset`** to page through long pages.
-- **`claudeAiMcp` opt-out tightened:** when set, an explicitly passed
-  claudeai-proxy server no longer connects either. beebox sets neither.
-- **New setting `idleCompaction: false`** stops Claude Code compacting a long
-  conversation while the session is idle. Relevant to long-lived chat sessions
-  if idle compaction is observed; no change now.
-- `resume_reason` now also covers turns that continue from a permission answer
-  or in-flight tool calls after a worker restart (hosted sessions; not beebox).
-- **Action:** Settled path; takeable 2026-10-07 — after the re-read.
+- **RUNTIME, behavior change to check before applying:** *"Fixed one-shot
+  `claude -p` and Agent SDK runs stopping a background command 5 seconds after
+  the final result … both are now waited for."* A beebox agent run
+  (`core/agent/invoke/run.ts`, `bypassPermissions`) that starts a background
+  Bash command could now stay open after its result. `runAgent` has no
+  wall-clock bound of its own (abort only through the caller's `signal`).
+  Before taking this version, confirm whether `runAgent` returns at the
+  `result` message or waits for the process to exit; if the second, the
+  schedules or chat that call it need a bound.
+- **SDK additions, no beebox use:** `agent_id` on subagent messages,
+  `parent_task_id` / `run_id` on task events, typed `ListAgents` results,
+  `recipient_kind` on SendMessage, `suppressAlwaysAllowRule` in `canUseTool`
+  options (beebox passes no `canUseTool`). Subagents with declared auto mode now
+  use `canUseTool` when auto mode is unavailable.
+- **Claude Code, HARNESS:** `<system-reminder>` tags in hook output are now
+  escaped (checked: `.claude/` hooks emit none). Agent tool gains `effort`.
+  Fixed scheduled tasks after `/resume`/`/clear` never firing, and a background
+  session's `/loop` stopping after a process restart. Stdio MCP servers now
+  negotiate protocol 2026-07-28 by default (beebox runtime configures no MCP
+  servers). `claude -p` / SDK first turn no longer waits on HTTP/SSE MCP
+  `resources/list`. Security fixes (UNC paths, 8.3 names, sandbox read-deny
+  re-points, mid-read link swaps) are Windows-only or sandbox-only here.
+- **Action:** Settled path from 2026-10-08T17:14Z, after the check above.
+- **Sources:** [SDK 0.3.292](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03292), [Claude Code 2.1.292](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21292)
+
+### 0.3.291 / Claude Code 2.1.291 — pending (published 2026-10-06T03:33Z); probed, not act-now
+
+SDK parity-only. Claude Code 2.1.291 fixes two regressions: cloud sessions
+dropping permission answers (2.1.290; not beebox), and *"the last messages of a
+session could be lost when quitting"* (2.1.288). The pin bundles 2.1.289, and
+beebox resumes chat and agent sessions from the `.jsonl` transcript, so this
+was probed on the current pin: five SDK sessions (`query()` to completion, as
+`runAgent` does) all kept their final reply in the transcript. The normal
+SDK end path is not affected; an interrupted or aborted session was not probed.
+- **Action:** Settled path; takeable 2026-10-08T03:33Z.
+
+### 0.3.290 / Claude Code 2.1.290 — pending (published 2026-10-05T18:15Z); re-read 2026-10-06
+
+- **RUNTIME, wanted by beebox's chat:** *"Fixed `includePartialMessages`
+  streams leaving a message without `message_stop` when the stream was cut,
+  interrupted or fell back to non-streaming."* Follows the 0.3.287 fix; the web
+  chat streams partial messages (`webapp/routes/chat/register.ts:100`).
+- **SDK, no beebox use:** WebFetch `offset`; Claude in Chrome results keep
+  `_meta`; deny/ask rules now catch `toolAliases` tools under wildcards;
+  `--replay-user-messages` duplicate-uuid timing; `resume_reason` widened.
+  The type diff also adds an `OfferChromeSetup` tool and an `idleCompaction`
+  setting; neither is in the changelog, and beebox's renderers fall back for
+  unknown tools (`shared/known-tools.ts`).
+- **Claude Code, HARNESS:** fixed background agents failing with "Agent stalled"
+  and Workflow subagents restarting after a Mac wakes from sleep (this laptop
+  sleeps); `/loop` and scheduled tasks now survive compaction; Bash permission
+  checks now prompt for `rg` / `git grep` with shell-expanded wildcards and for
+  some zsh variable names (worker sessions under manual rules may see more
+  prompts); unbounded memory on very large HTTP MCP responses (beebox runtime
+  has no MCP servers).
+- **Action:** Settled path; takeable 2026-10-07T18:15Z.
+- **Sources:** [SDK 0.3.290](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03290), [Claude Code 2.1.290](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21290)
 
 ### 0.3.289 / Claude Code 2.1.289 — APPLIED 2026-10-05 (published 2026-10-03T20:12Z); re-read 2026-10-05
 
