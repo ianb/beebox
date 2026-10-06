@@ -1285,8 +1285,11 @@ query-param-driven — there is **no user-agent gating** anywhere.
 | `src/webapp/server-root/root-routes.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify | mobile box list / per-box authorization for standalone server |
 | `src/core/mobile/pairing.ts` (whole module) | device store, tokens | source of truth |
 
-- **`User-Agent: BeeBox-iOS/0.1`** is sent on all four native HTTP calls but the server never
-  branches on it — informational / for logs only.
+- **`User-Agent: BeeBox-iOS/0.1`** is sent on every native HTTP call from the app: each request
+  shaped by `BoxRequest.apply` (`ChatAPI`, `CaptureAPI`, `BulkUploadAPI`, `LogForwarder`,
+  `PushRegistrar`, `QuickChatAPI`), `ChatAPI`'s directly built requests, and the pairing redeem.
+  The share extension sends `BeeBox-iOS-Share/0.1`. The server never branches on either —
+  informational / for logs only.
 
 ---
 
