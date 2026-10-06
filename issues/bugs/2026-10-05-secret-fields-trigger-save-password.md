@@ -1,6 +1,6 @@
 ---
 title: "Entering a secret makes the browser offer to save it as a password"
-workstream: unattached
+workstream: secret-field-masking
 area: beebox
 filed-by: agent
 discovered-by: Ian
@@ -44,17 +44,15 @@ them together.
   UI. Agents keep their current access, which is through grants and never by
   reading values back. To keep screenshots from catching it: the stored value
   is not in the page until the owner clicks Show (fetched then), and it
-  re-hides after about 30 s, on blur, and on navigation. Proposed, not yet
-  decided: refuse Show when `navigator.webdriver` is set, which blocks
+  re-hides after about 30 s, on blur, and on navigation. The owner accepted
+  refusing Show when `navigator.webdriver` is set, which blocks
   automation-driven browsers such as `bin/browse` (it cannot block Claude in
   Chrome, which runs in the boxholder's own browser).
 
 The "show" part changes the security surface: a new owner-gated read of
 secret values. It needs its own route review, an entry in
-`beebox/docs/security-report.md` (security-report skill), and a decision on
-details such as whether showing is logged (the secrets access log exists,
-`beebox/src/core/secrets/access-log.ts`) and whether it requires a fresh
-sign-in.
+`beebox/docs/security-report.md` (security-report skill). Each successful Show
+is logged in the existing access log; fresh sign-in is not required.
 
 ## Verify
 
@@ -63,3 +61,9 @@ sign-in.
   show the prompt.
 - The other credential inputs (the Cloudflare token field above, any
   connector token field) get the same treatment.
+
+## Manual testing
+
+- With the built-in password manager enabled, set a machine secret in real
+  Chrome and Safari profiles and confirm neither browser offers to save it as a
+  password. Headless browser testing cannot verify this prompt behavior.
