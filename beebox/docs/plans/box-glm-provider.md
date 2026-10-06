@@ -25,7 +25,7 @@ resolves
 the GLM slice of its Shape A — but that issue stays open: it scopes a generic
 per-provider config surface (OpenRouter, vLLM, API-billed Anthropic), which this
 plan does not build. Not related:
-[2026-09-15-scan-vision-integration-fails-when-not-logged-in](../../../issues/bugs/2026-09-15-scan-vision-integration-fails-when-not-logged-in.md)
+[2026-09-15-scan-vision-integration-fails-when-not-logged-in](../../../issues/closed/bugs/2026-09-15-scan-vision-integration-fails-when-not-logged-in.md)
 touches the same `claude auth status` weakness but is a dev-machine login problem.
 
 **Spike results (2026-09-15, recorded in the pluggability issue):** the full
