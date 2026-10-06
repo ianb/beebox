@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: normal
+resolution: implemented
 ---
+
+> **Closed (2026-10-06):** `bbx session <id> --since <when>` now shows only that session's activity in the window (`runSinceMode` takes an optional `sessionId`). `--latest` with `--since` stays rejected. Test: `beebox/test/cli/commands/session/modes.since-one-session.doctest.md`. Done from a `do-it` request.
 
 `bbx session` explicitly rejects combining `--since` with a session ID (or
 `--latest`): "`--since cannot be combined with a session ID or --latest. Use
