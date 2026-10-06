@@ -18,6 +18,7 @@ import { migrateCommand } from "./commands/migrate.js";
 import { docsCommand } from "./commands/docs.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { statusCommand } from "./commands/status.js";
+import { templateCommand } from "./commands/template.js";
 import { validateCommand } from "./commands/validate/command.js";
 import { agentContextCommand } from "./commands/agent-context.js";
 import { createCommand } from "./commands/create.js";
@@ -88,6 +89,7 @@ const ALL: readonly Command[] = [
   docsCommand,
   upgradeCommand,
   statusCommand,
+  templateCommand,
   validateCommand,
   agentContextCommand,
   createCommand,

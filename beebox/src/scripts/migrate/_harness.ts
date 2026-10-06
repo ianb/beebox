@@ -29,11 +29,13 @@
  *   ```
  */
 
-import { readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import type { WarningCollector } from "./_warnings.js";
 import { WarningCollector as WarningCollectorClass } from "./_warnings.js";
 import { errorMessage, errnoCode } from "../../shared/error-guards.js";
+import { readVersions, TEMPLATE_UPDATES_DIR } from "../../core/install-template-file.js";
+import { recordAutomatedTemplateRewrite } from "../../core/template-update.js";
 
 export type ConvertOutcome = "converted" | "already";
 
@@ -110,10 +112,20 @@ export async function runMigration(opts: MigrationOptions): Promise<void> {
   let converted = 0;
   let already = 0;
   const failed: Array<{ file: string; error: string }> = [];
+  const versions = await readVersions(absRoot);
   for (const f of files) {
     try {
+      const relPath = relative(absRoot, f);
+      const trackedTemplate = versions[relPath]?.sha256 !== undefined && !relPath.startsWith(`${TEMPLATE_UPDATES_DIR}/`);
+      const before = trackedTemplate ? await readFile(f, "utf8") : null;
       const r = await opts.convert(f, { warnings, apply });
-      if (r === "converted") converted++;
+      if (r === "converted") {
+        if (before !== null) {
+          const after = await readFile(f, "utf8");
+          await recordAutomatedTemplateRewrite({ boxRoot: absRoot, relPath, before, after });
+        }
+        converted++;
+      }
       else already++;
     } catch (e) {
       failed.push({ file: f, error: errorMessage(e) });

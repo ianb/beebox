@@ -1,12 +1,18 @@
 ---
 title: "Give parked template updates a resolution path (accept / diff / merge) instead of hand-copying"
-workstream: unattached
+workstream: parked-templates
+resolution: implemented
 area: beebox
 priority: normal
 labels: [templates, boxes]
 filed-by: agent
 discovered-in: honest-diagnostics — split out of the parked-updates health issue
 ---
+
+Closed by commit 71ea815b3: added `bbx template diff`, `accept`, and `resolve`,
+records reviewed and automated template rewrites, and safely merges disjoint
+local and upstream edits. The fourth candidate, box-owned fields, was also
+applied to scheduled-script templates through the existing schema policy.
 
 `bbx health` and `bbx status` now report parked template updates
 (`config/_template-updates/<path>`), and say to copy the file over or delete
@@ -25,18 +31,18 @@ Candidates, roughly in order of cost:
   a card that only needs a local paragraph does not detach from upstream.
 
 Origin and the measured cost of the missing path:
-[parked updates invisible in health](../closed/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
+[parked updates invisible in health](../bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
 
 ## Two requirements added 2026-09-19
 
 - **Guide cards are merged by a box agent**, per the boxholder's decision in
-  [guide-card template updates](../closed/decisions/2026-09-19-guide-card-template-updates-park-forever.md).
+  [guide-card template updates](../decisions/2026-09-19-guide-card-template-updates-park-forever.md).
   Whatever this builds has to let an agent write the merge and record that the
   box has resolved that version, or every later update re-parks the same copy.
 - **An automated rewrite must record what it wrote.** A migration or rename
   that edits a template file in place leaves the tracker's hash stale, so the
   installer reads stale stock as a boxholder edit and parks forever
-  ([tracker keys](../closed/bugs/2026-09-19-template-tracker-keys-not-migrated-to-one-root.md),
+  ([tracker keys](../bugs/2026-09-19-template-tracker-keys-not-migrated-to-one-root.md),
   second part). On `test1` this hit `refresh-maps` and `process-retrospective`.
 
 ## Re-encounter (2026-10-01)

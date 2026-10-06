@@ -49,6 +49,23 @@ await box.cleanup();
 
 ## A v3 key that the content-relative mapping would move is left alone
 
+A re-key preserves the stock snapshot and an unresolved pending version:
+
+```ts
+const box = await makeTmpBox();
+await box.write("_config/example.guide.card", "local\n");
+await box.write(TRACKER, JSON.stringify({
+  "config/example.guide.card": { sha256: "old", "installed-at": "2026-09-01", stock: "stock\n", pending: "new" },
+}));
+await rekeyTemplateVersions({ boxRoot: box.root, apply: true });
+await tracker(box)
+=> { "_config/example.guide.card": { sha256: "old", "installed-at": "2026-09-01", stock: "stock\n", pending: "new" } }
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 `src/views/CLAUDE.md` is already a v3 path, but `mapV2Path` is
 content-relative and would send it to `_content/src/views/CLAUDE.md`. The
 file exists, so the key is kept.

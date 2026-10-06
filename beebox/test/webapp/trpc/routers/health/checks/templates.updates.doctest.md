@@ -55,7 +55,7 @@ JSON.stringify({ ok: warn.ok, severity: warn.severity })
 => {"ok":false,"severity":"warning"}
 
 warn.message
-=> 2 template updates parked for review: _config/briefing.guide.card, _config/procedures/refresh-maps.procedure.card. Accept one by copying _config/_template-updates/<path> over <path>, or discard the parked copy.
+=> 2 template updates parked for review: _config/briefing.guide.card, _config/procedures/refresh-maps.procedure.card. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.
 ```
 
 ```ts cleanup
@@ -90,7 +90,7 @@ JSON.stringify({ ok: err.ok, severity: err.severity })
 => {"ok":false,"severity":"error"}
 
 err.message
-=> 1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task that is failing: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Accept one by copying _config/_template-updates/<path> over <path>, or discard the parked copy.
+=> 1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task that is failing: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.
 ```
 
 Without the schedule health (the dashboard and `/api/health` have none loaded)
@@ -141,7 +141,7 @@ print(unjudgedCheck.severity);
 print(unjudgedCheck.message);
 =>
 error
-1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task whose last check reached no verdict: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Accept one by copying _config/_template-updates/<path> over <path>, or discard the parked copy.
+1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task whose last check reached no verdict: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.
 ```
 
 ```ts cleanup

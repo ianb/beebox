@@ -86,6 +86,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
 
   // ---- Reading the box's own state -------------------------------------
   { name: "status", audience: "agent", smoke: { run: ["status"] } },
+  { name: "template", audience: "agent", smoke: { skip: "diff needs a parked file; accept and resolve mutate the box" } },
   { name: "health", audience: "agent", smoke: { run: ["health"] } },
   { name: "scheduled", audience: "agent", smoke: { run: ["scheduled"] } },
   // Per-box, not fleet-wide: `--box` defaults to the current directory, and the
