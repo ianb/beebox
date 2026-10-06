@@ -1,12 +1,15 @@
 ---
 title: "bbx validate's absolute-machine-path guard flags /home/ or /Users/ inside ordinary URLs"
-workstream: unattached
+workstream: quick-wins-oct
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
+resolution: implemented
 ---
+
+> **Resolved** in `5cf62c6e6`.
 
 `bbx validate` flagged a plain `https://` URL as leaking an "absolute machine
 path" because the URL's own path happened to contain a `/home/` segment
