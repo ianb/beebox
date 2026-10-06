@@ -14,6 +14,7 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { TextField } from "../ui/fields/field";
+import { Button } from "../ui/Button";
 import { href } from "../../lib/routing";
 import { withBase } from "../../api";
 import { AppBarRecentFilesSlot } from "../app-bar-chrome";
@@ -55,18 +56,20 @@ function LandmarkRows({
   boxSlug,
   currentDir,
   onSelectLandmark,
+  searchOpen,
 }: {
   landmarks: SwitchLandmark[];
   boxSlug: string;
   currentDir: string | null;
   onSelectLandmark: (dir: string) => void;
+  searchOpen: boolean;
 }) {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const searchable = landmarks.length > 20;
   useEffect(() => {
-    if (searchable) searchRef.current?.focus();
-  }, [searchable]);
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const visibleLandmarks = !searchable || normalizedQuery === ""
     ? landmarks
@@ -74,7 +77,7 @@ function LandmarkRows({
 
   return (
     <>
-      {searchable ? (
+      {searchable && searchOpen ? (
         <div className="px-3 py-2" role="none">
           <TextField
             id="bbx-switch-menu-landmark-search"
@@ -88,8 +91,7 @@ function LandmarkRows({
             onKeyDown={(event) => {
               if (event.key === "ArrowDown") {
                 event.preventDefault();
-                const menu = event.currentTarget.closest('[role="menu"]');
-                const firstLandmark = menu?.querySelector<HTMLElement>('[data-landmark-row="true"]');
+                const firstLandmark = event.currentTarget.closest('[role="menu"]')?.querySelector<HTMLElement>("#bbx-switch-menu-landmark-first");
                 if (firstLandmark) {
                   firstLandmark.focus();
                 } else if (visibleLandmarks[0] !== undefined) {
@@ -98,7 +100,7 @@ function LandmarkRows({
               }
               if (event.key === "Enter" && visibleLandmarks.length > 0) {
                 event.preventDefault();
-                const firstRow = event.currentTarget.closest('[role="menu"]')?.querySelector<HTMLButtonElement>('[data-landmark-row="true"]');
+                const firstRow = event.currentTarget.closest('[role="menu"]')?.querySelector<HTMLButtonElement>("#bbx-switch-menu-landmark-first");
                 if (firstRow) {
                   firstRow.click();
                 } else {
@@ -123,7 +125,7 @@ function LandmarkRows({
         return (
           <MenuItem
             key={landmark.path}
-            data-landmark-row="true"
+            id={landmark === visibleLandmarks[0] ? "bbx-switch-menu-landmark-first" : undefined}
             onClick={() => onSelectLandmark(landmark.dir)}
             active={current}
           >
@@ -171,6 +173,7 @@ function LandmarkList({
   boxSlug,
   currentDir,
   onSelectLandmark,
+  searchOpen,
 }: {
   landmarks: SwitchLandmark[] | null;
   failed: boolean;
@@ -178,6 +181,7 @@ function LandmarkList({
   boxSlug: string;
   currentDir: string | null;
   onSelectLandmark: (dir: string) => void;
+  searchOpen: boolean;
 }) {
   if (landmarks !== null) {
     return (
@@ -186,6 +190,7 @@ function LandmarkList({
         boxSlug={boxSlug}
         currentDir={currentDir}
         onSelectLandmark={onSelectLandmark}
+        searchOpen={searchOpen}
       />
     );
   }
@@ -279,6 +284,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
     boxSwitchingAvailable,
     onOpenBoxPanel, onOpenRecentFiles, onBackToRoot, onSelectLandmark,
   } = props;
+  const [searchOpen, setSearchOpen] = useState(false);
   switch (panel) {
     case "root":
       return (
@@ -300,7 +306,20 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
           ) : null}
           <NavCardRows entries={navEntries} />
           <MenuDivider />
-          <SectionHeader>Switch to</SectionHeader>
+          <div className="flex items-center justify-between pr-2"><SectionHeader>Switch to</SectionHeader>
+            {landmarks !== null && landmarks.length > 20 ? (
+              <Button
+                id="bbx-switch-menu-landmark-search-toggle"
+                intent="ghost"
+                size="sm"
+                label="Search landmarks"
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>}
+                aria-expanded={searchOpen}
+                aria-controls="bbx-switch-menu-landmark-search"
+                onClick={() => setSearchOpen(true)}
+              />
+            ) : null}
+          </div>
           <LandmarkList
             landmarks={landmarks}
             failed={landmarksFailed}
@@ -308,6 +327,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
             boxSlug={boxSlug}
             currentDir={currentDir}
             onSelectLandmark={onSelectLandmark}
+            searchOpen={searchOpen}
           />
           <ProblemRow count={problemCount} boxSlug={boxSlug} />
         </>

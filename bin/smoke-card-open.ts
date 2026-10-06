@@ -24,6 +24,10 @@ async function revealFoldedRows(session: BrowseSession, listing: string): Promis
   if (firstCardRow(listing) !== null) return listing;
   const modeRef = browseListingModeRef(listing);
   if (modeRef === null) return listing;
+  // The Browse listing can extend below its pane while the chat composer is
+  // fixed over the bottom of the viewport. Move the switch into view before
+  // clicking so it is not covered by the composer.
+  await session.run(["scrollintoview", `@${modeRef}`]);
   await session.clickRef(modeRef);
   await session.waitForReady();
   return browseListingSnapshot(session);
