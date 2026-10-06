@@ -7,7 +7,10 @@ labels: [knowledge, intake, provenance]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder shared the gist
+resolution: superseded
 ---
+
+> **Closed (2026-10-06):** its one kept idea moved to the contradiction/supersession feature issue.
 
 [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
 is an idea file for a coding agent. An agent maintains a markdown wiki from a
@@ -109,7 +112,7 @@ guidance whatever happens to the rest of this issue.
   (`beebox/src/schemas/place.tsx`, registered). Only a topic or concept card
   type is genuinely missing, and `concept-map` is a different thing: one card
   holding a whole courseware graph, with concepts as in-card nodes.
-- It pointed at [backlinks surface](../features/2026-05-11-backlinks-surface.md)
+- It pointed at [backlinks surface](../../features/2026-05-11-backlinks-surface.md)
   as related work. That issue cites `cardworks` and two functions that no
   longer exist, and the card panel and pre-delete warning it asks for have
   since shipped. It needs rewriting or closing on its own account.
@@ -117,7 +120,7 @@ guidance whatever happens to the rest of this issue.
   store, per-directory `MAP.md`, connector ingest, the Law of Saving, and box
   search. Also dropped: a flat append-only log, which the History card covers
   well enough; and "the agent proposes what to read next", which is
-  [/spark mode](../features/2026-05-19-spark-mode.md).
+  [/spark mode](../../features/2026-05-19-spark-mode.md).
 
 ## Still open
 
@@ -125,3 +128,7 @@ The gist scopes itself to roughly a hundred sources and a few hundred pages,
 and says dedicated search tooling becomes advisable past that. Production
 boxes are larger. Nothing here depends on the index-file approach, but any
 future "read the index first" design does, and that question stays open.
+
+## Decision (2026-10-06)
+
+The one idea worth keeping, contradiction and supersession as a recorded state, is filed as [cards record contradicted and superseded claims](../../features/2026-10-06-cards-record-contradicted-and-superseded-claims.md). The rest is parity with what a box already does. Closed.
