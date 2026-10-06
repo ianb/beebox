@@ -95,6 +95,24 @@ A `needs-choice` thought has one of three reasons:
 composer. A send acknowledgment does not mean that the agent finished its
 work.
 
+## After the person's send or choose
+
+When the person's own Send, choice, or Retry on the box screen comes back
+`sent` with a session id, the box screen opens that chat, as **Open chat**
+does. The thought is already stored and posted, so nothing is lost if the
+chat is slow to load. Any other answer keeps the person on the box screen and
+scrolls its row into view: `sent` without a session id, `needs-choice`,
+"Not delivered", and, on iOS, "Waiting to send" or "Not sent". The row's
+status line is announced: on iOS as an accessibility announcement, on the web
+through the line's `role="status"`. On the web an unsent thought shows in the
+status line under the pinned input, which is always in view.
+
+Answers the person did not just ask for only update the list: an outbox retry
+on the backoff or at launch, the web page's own retry of a stored thought on
+reload, rows from the `home` refresh, and any answer that arrives after the
+person left the box screen, switched boxes, or, on iOS, put the app in the
+background. A discard opens nothing.
+
 ## Post or ask
 
 Jev returns a probability for each candidate. The application then applies

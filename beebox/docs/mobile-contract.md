@@ -1676,3 +1676,13 @@ box-wide pages, the box's shortcuts) show the web app at a box-relative path thr
 `ChatWebView.NavigationRequest` a notification tap uses (§3.1). The web app returns to the box
 screen through the navigation in §3.5. The web view, once created, stays mounted and hidden behind
 the box screen. No emission version, native target type, or binding JSON changes for the box screen.
+
+When the person's own Send, choice, or Retry on the showing box screen comes back `sent` with a
+session id, the box screen opens that chat with the same `NavigationRequest` as its "Open chat"
+button. Any other answer (`sent` without a session id, `needs-choice`, "Not delivered", "Waiting to
+send") stays on the box screen, scrolls the row into view, and posts an accessibility announcement
+of its status line. Outbox retries on the backoff or at launch, rows from `quickChat.home`, and
+answers that land after the person left the box screen, switched boxes, or backgrounded the app
+only update the rows. `ios-app/BeeBox/Storage/BoxScreenStore.swift` · `followUp` decides this;
+tests in `BoxScreenStoreTests`. The web box screen does the same from its reducer's `followUp`
+(`pages/box-screen/state.ts`).

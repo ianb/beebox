@@ -14,6 +14,14 @@
  * Rows come from `quickChat.home`, overridden by the answers this page has
  * received since (`answered`): an answer is the record's newest state as far
  * as this page knows.
+ *
+ * An answer to a send or a choose the person just made on this page sets a
+ * `followUp`: open the chat it went to, or, when there is no chat to open,
+ * bring its row into view. Answers nobody on this page is waiting for (the
+ * reload's own retry, a discard, rows from `home`) only update the list. The
+ * state lives with the mounted page, so an answer that arrives after the
+ * person left the box screen or switched boxes reaches no page and opens
+ * nothing.
  */
 
 import { z } from "zod";
@@ -40,16 +48,34 @@ export interface BoxScreenState {
   /** Record ids with a choose, retry, or discard in flight. */
   busy: string[];
   rowErrors: Record<string, string>;
+  /** Ids whose answer the person is waiting for: their own send, choose, or retry on this page. */
+  awaiting: string[];
+  /** What the page does next with an answer the person was waiting for; cleared once done. */
+  followUp: BoxScreenFollowUp | null;
 }
+
+/** The DOM id of a record's row, which a `reveal` follow-up scrolls into view. */
+export function quickChatRowId(id: string): string {
+  return `bbx-box-screen-row-${id}`;
+}
+
+/** Open the chat a thought went to, or scroll its row into view. */
+export type BoxScreenFollowUp = { kind: "open-chat"; sessionId: string } | { kind: "reveal"; id: string };
+
+/** Who started a submit: the person pressing Send, or the page retrying a stored thought on reload. */
+type SubmitOrigin = "send" | "reload";
+/** A row request; choose and retry are the person's own, so their answers follow up. */
+type RowRequest = "choose" | "retry" | "discard";
 
 export type BoxScreenAction =
   | { type: "edit"; text: string }
-  | { type: "submit-started"; unsent: Unsent }
+  | { type: "submit-started"; unsent: Unsent; origin: SubmitOrigin }
   | { type: "submit-answered"; view: QuickChatView }
   | { type: "submit-failed"; error: string }
-  | { type: "row-started"; id: string }
+  | { type: "row-started"; id: string; request: RowRequest }
   | { type: "row-answered"; view: QuickChatView }
-  | { type: "row-failed"; id: string; error: string };
+  | { type: "row-failed"; id: string; error: string }
+  | { type: "follow-up-done" };
 
 /** The storage key: one per box instance (`storageScopeFor`), apart from the composer's `bbx-input-emission`. */
 export function boxScreenStorageKey(input: { boxSlug: string; scope: string }): string {
@@ -82,6 +108,8 @@ export function restoreBoxScreen(stored: StoredBoxScreen): BoxScreenState {
     answered: [],
     busy: [],
     rowErrors: {},
+    awaiting: [],
+    followUp: null,
   };
 }
 
@@ -116,9 +144,9 @@ export interface SubmitEffects {
  * before the answer arrives retries with the same id on reload, never a new
  * one. The stored draft is the message, as `restoreBoxScreen` reads it back.
  */
-export async function submitUnsent(unsent: Unsent, effects: SubmitEffects): Promise<void> {
+export async function submitUnsent({ unsent, origin }: { unsent: Unsent; origin: SubmitOrigin }, effects: SubmitEffects): Promise<void> {
   effects.store({ draft: unsent.message, unsent });
-  effects.dispatch({ type: "submit-started", unsent });
+  effects.dispatch({ type: "submit-started", unsent, origin });
   try {
     effects.dispatch({ type: "submit-answered", view: await effects.request(unsent) });
   } catch (error) {
@@ -131,6 +159,32 @@ function upsert(answered: QuickChatView[], view: QuickChatView): QuickChatView[]
   return [view, ...answered.filter((old) => old.id !== view.id)];
 }
 
+/**
+ * What follows an answer the person was waiting for. A sent thought with a
+ * chat opens that chat; the thought is already stored and posted, so a slow
+ * chat loses nothing. Anything else stays on the box screen with its row in
+ * view. A discarded thought has no row and needs nothing.
+ */
+export function followUpFor(view: QuickChatView): BoxScreenFollowUp | null {
+  switch (view.state) {
+    case "sent": {
+      const sessionId = view.destination?.sessionId;
+      return sessionId === undefined ? { kind: "reveal", id: view.id } : { kind: "open-chat", sessionId };
+    }
+    case "needs-choice":
+    case "sending":
+      return { kind: "reveal", id: view.id };
+    case "discarded":
+      return null;
+  }
+}
+
+/** Fold an answer into the waiting list; only an awaited answer replaces the follow-up. */
+function answeredFollowUp(state: BoxScreenState, view: QuickChatView): Pick<BoxScreenState, "awaiting" | "followUp"> {
+  if (!state.awaiting.includes(view.id)) return { awaiting: state.awaiting, followUp: state.followUp };
+  return { awaiting: state.awaiting.filter((id) => id !== view.id), followUp: followUpFor(view) };
+}
+
 function withoutKey(record: Record<string, string>, key: string): Record<string, string> {
   return Object.fromEntries(Object.entries(record).filter(([id]) => id !== key));
 }
@@ -139,11 +193,15 @@ export function boxScreenReducer(state: BoxScreenState, action: BoxScreenAction)
   switch (action.type) {
     case "edit":
       return { ...state, draft: action.text };
-    case "submit-started":
-      return { ...state, unsent: action.unsent, submitting: true, submitError: null };
+    case "submit-started": {
+      const others = state.awaiting.filter((id) => id !== action.unsent.id);
+      const awaiting = action.origin === "send" ? [...others, action.unsent.id] : others;
+      return { ...state, unsent: action.unsent, submitting: true, submitError: null, awaiting };
+    }
     case "submit-answered":
       return {
         ...state,
+        ...answeredFollowUp(state, action.view),
         unsent: null,
         submitting: false,
         submitError: null,
@@ -151,13 +209,29 @@ export function boxScreenReducer(state: BoxScreenState, action: BoxScreenAction)
         answered: upsert(state.answered, action.view),
       };
     case "submit-failed":
-      return { ...state, submitting: false, submitError: action.error };
-    case "row-started":
-      return { ...state, busy: [...state.busy, action.id], rowErrors: withoutKey(state.rowErrors, action.id) };
+      // The status line under the pinned input says so; no row to reveal.
+      return { ...state, submitting: false, submitError: action.error, awaiting: state.awaiting.filter((id) => id !== state.unsent?.id) };
+    case "row-started": {
+      const others = state.awaiting.filter((id) => id !== action.id);
+      const awaiting = action.request === "discard" ? others : [...others, action.id];
+      return { ...state, busy: [...state.busy, action.id], rowErrors: withoutKey(state.rowErrors, action.id), awaiting };
+    }
     case "row-answered":
-      return { ...state, busy: state.busy.filter((id) => id !== action.view.id), answered: upsert(state.answered, action.view) };
+      return {
+        ...state,
+        ...answeredFollowUp(state, action.view),
+        busy: state.busy.filter((id) => id !== action.view.id),
+        answered: upsert(state.answered, action.view),
+      };
     case "row-failed":
-      return { ...state, busy: state.busy.filter((id) => id !== action.id), rowErrors: { ...state.rowErrors, [action.id]: action.error } };
+      return {
+        ...state,
+        busy: state.busy.filter((id) => id !== action.id),
+        rowErrors: { ...state.rowErrors, [action.id]: action.error },
+        awaiting: state.awaiting.filter((id) => id !== action.id),
+      };
+    case "follow-up-done":
+      return { ...state, followUp: null };
   }
 }
 

@@ -8,13 +8,18 @@
  * router), so nothing here loads a chat. The page reads `quickChat.home`
  * and writes through `submit`, `choose`, and `discard`; the server stores and
  * delivers every thought, so the page never sends a chat message itself.
+ *
+ * When the person's own send or choose comes back, the page acts on the
+ * reducer's `followUp`: it opens the chat the thought went to, or scrolls the
+ * row into view when there is no chat to open.
  */
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { errorMessage } from "@shared/error-guards";
 import { trpc, trpcClient } from "../../lib/trpc/client";
 import { getApiBase } from "../../api-core";
+import { href, toSearch } from "../../lib/routing";
 import { storageScopeFor } from "../../lib/storage-scope";
 import { useBoxes } from "../../hooks/useBoxes";
 import { useBoxName } from "../../hooks/useBoxName";
@@ -27,9 +32,9 @@ import { QuickChatList, type QuickChatRowActions } from "../../components/box-sc
 import { BoxPageLinks, BoxScreenSection, OtherBoxes, RecentChatList } from "../../components/box-screen/BoxScreenSections";
 import { NewThoughtInput } from "../../components/box-screen/NewThoughtInput";
 import {
-  boxScreenReducer, boxScreenRows, boxScreenStorageKey, parseStoredBoxScreen, pendingRetry, restoreBoxScreen,
+  boxScreenReducer, boxScreenRows, boxScreenStorageKey, parseStoredBoxScreen, pendingRetry, quickChatRowId, restoreBoxScreen,
   storedBoxScreen, submission, submitUnsent, unsentStatus,
-  type BoxScreenAction, type BoxScreenState, type QuickChatView, type StoredBoxScreen,
+  type BoxScreenAction, type BoxScreenFollowUp, type BoxScreenState, type QuickChatView, type StoredBoxScreen,
 } from "./state";
 
 export function BoxScreenPage() {
@@ -55,18 +60,18 @@ function writeStored(key: string | null, stored: StoredBoxScreen): void {
 /** Submit, choose, retry, and discard, each folding its answer into the page state. */
 function useQuickChatActions(key: string | null, dispatch: (action: BoxScreenAction) => void) {
   const utils = trpc.useUtils();
-  const submit = useCallback(async (unsent: { id: string; message: string }) => {
-    await submitUnsent(unsent, {
+  const submit = useCallback(async (unsent: { id: string; message: string }, origin: "send" | "reload") => {
+    await submitUnsent({ unsent, origin }, {
       store: (stored) => writeStored(key, stored),
       request: (input) => trpcClient.quickChat.submit.mutate(input),
       dispatch,
     });
     void utils.quickChat.home.invalidate();
   }, [key, dispatch, utils]);
-  const rowAction = useCallback(async (view: QuickChatView, request: () => Promise<QuickChatView>) => {
-    dispatch({ type: "row-started", id: view.id });
+  const rowAction = useCallback(async ({ view, request }: { view: QuickChatView; request: "choose" | "retry" | "discard" }, call: () => Promise<QuickChatView>) => {
+    dispatch({ type: "row-started", id: view.id, request });
     try {
-      dispatch({ type: "row-answered", view: await request() });
+      dispatch({ type: "row-answered", view: await call() });
       void utils.quickChat.home.invalidate();
     } catch (error) {
       console.error("[box-screen] quick chat action failed", error);
@@ -74,17 +79,32 @@ function useQuickChatActions(key: string | null, dispatch: (action: BoxScreenAct
     }
   }, [dispatch, utils]);
   const rowActions: QuickChatRowActions = {
-    onChoose: (view, candidateId) => rowAction(view, () => trpcClient.quickChat.choose.mutate({ id: view.id, candidateId })),
-    onRetry: (view) => rowAction(view, () => trpcClient.quickChat.submit.mutate({ id: view.id, message: view.message })),
-    onDiscard: (view) => rowAction(view, () => trpcClient.quickChat.discard.mutate({ id: view.id })),
+    onChoose: (view, candidateId) => rowAction({ view, request: "choose" }, () => trpcClient.quickChat.choose.mutate({ id: view.id, candidateId })),
+    onRetry: (view) => rowAction({ view, request: "retry" }, () => trpcClient.quickChat.submit.mutate({ id: view.id, message: view.message })),
+    onDiscard: (view) => rowAction({ view, request: "discard" }, () => trpcClient.quickChat.discard.mutate({ id: view.id })),
   };
   return { submit, rowActions };
+}
+
+/** Carry out the reducer's follow-up once: open the chat, or bring the row into view. */
+function useFollowUp({ boxSlug, followUp }: { boxSlug: string; followUp: BoxScreenFollowUp | null }, dispatch: (action: BoxScreenAction) => void) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (followUp === null) return;
+    dispatch({ type: "follow-up-done" });
+    if (followUp.kind === "open-chat") {
+      void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: followUp.sessionId }) });
+      return;
+    }
+    document.getElementById(quickChatRowId(followUp.id))?.scrollIntoView({ block: "nearest" });
+  }, [boxSlug, followUp, dispatch, navigate]);
 }
 
 function BoxScreen({ boxSlug }: { boxSlug: string }) {
   const key = storageKey(boxSlug);
   const [state, dispatch] = useReducer(boxScreenReducer, key, readStored);
   const { submit, rowActions } = useQuickChatActions(key, dispatch);
+  useFollowUp({ boxSlug, followUp: state.followUp }, dispatch);
   const home = trpc.quickChat.home.useQuery();
   const { boxes } = useBoxes();
   const { boxName } = useBoxName();
@@ -98,7 +118,7 @@ function BoxScreen({ boxSlug }: { boxSlug: string }) {
     if (retried.current) return;
     retried.current = true;
     const unsent = pendingRetry(state);
-    if (unsent !== null) void submit(unsent);
+    if (unsent !== null) void submit(unsent, "reload");
   }, [state, submit]);
 
   const rows = boxScreenRows(home.data, state);
@@ -136,7 +156,7 @@ function BoxScreen({ boxSlug }: { boxSlug: string }) {
       <NewThoughtInput
         draft={state.draft}
         onChange={(text) => dispatch({ type: "edit", text })}
-        onSend={() => { const next = submission(state, crypto.randomUUID()); if (next !== null) void submit(next); }}
+        onSend={() => { const next = submission(state, crypto.randomUUID()); if (next !== null) void submit(next, "send"); }}
         sending={state.submitting}
         status={unsentStatus(state)}
       />
