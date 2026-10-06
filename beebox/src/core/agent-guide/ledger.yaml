@@ -703,7 +703,7 @@ rows:
 
   # --- BOX_CODE ---
   - id: box-code.where
-    rule: Box-authored code lives under `src/` at the box root (schemas, views, tricks), is the agent's to edit, and hot-reloads without a restart; a `CLAUDE.md` under each directory, and under `src/publications/` for sites, says what to read first.
+    rule: Box-authored code lives under `src/` at the box root (schemas, views, tricks), is the agent's to edit, and hot-reloads without a restart; a `CLAUDE.md` under each directory says what to read first.
     handle: BOX_CODE
     bin: core
     reason: An agent asked to add a type or a view needs to know where it goes and that it can just edit; the nested CLAUDE.md files carry the rest, and load when the agent works there.
@@ -715,10 +715,10 @@ rows:
     reason: A guardrail an agent needs before it reaches for `pnpm add` or an engine upgrade to solve an unrelated task.
     audits: [box-packageify-stance-b-off-limits, box-packageify-bbx-upgrade]
   - id: box-code.publications
-    rule: Published sites live under `src/publications/`; a site project keeps its own `package.json`, builds only static files, and imports no Bee Box frontend components.
+    rule: A published site is a `publication` card; its files live in the card's attach folder (`static/` or `project/`), and `publishing.md` has the procedure.
     handle: BOX_CODE
     bin: indirect
-    reason: Applies only when working on a site; `src/publications/CLAUDE.md` points at publishing.md, which had the rest; the frontend-components sentence moved there.
+    reason: Applies only when working on a site; the `publication` schema instructions point at publishing.md, which has the rest.
     audits: [publishing-site-authoring]
     mechanics: box-docs/publishing.md
   - id: box-code.imports

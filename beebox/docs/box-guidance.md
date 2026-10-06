@@ -40,10 +40,8 @@ two differ. `<name>` stands for one path segment, and `**/` for any directory.
 | `_config/main.personality.card` | always | tracked | `installPersonality` | yes |
 | `src/schemas/CLAUDE.md` | situational | tracked | walk | yes |
 | `src/views/CLAUDE.md` | situational | tracked | walk | yes |
-| `src/publications/CLAUDE.md` | situational | tracked | walk | yes |
 | `src/tricks/scripts/CLAUDE.md` | situational | tracked | walk | yes |
 | `_config/feedback/CLAUDE.md` | situational | tracked | walk | yes |
-| `src/publications/NOTES.md` | situational | owned | walk (seed once) | yes |
 | `**/MAP.md` | situational | owned | refresh-maps procedure | yes |
 | `.claude/rules/card-<type>.md` | situational | generated | walk (`generateRules`) | yes |
 | `.claude/rules/connector-<name>.md` | situational | generated | walk (`generateRules`) | yes |

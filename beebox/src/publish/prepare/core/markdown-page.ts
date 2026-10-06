@@ -18,8 +18,8 @@ import Markdoc from "@markdoc/markdoc";
 import { parse as parseYaml } from "yaml";
 import type { Config, Node, RenderableTreeNode, RenderableTreeNodes } from "@markdoc/markdoc";
 
-import { markdocConfig, makeHeadingNode } from "../../shared/markdoc-config/tags/core.js";
-import { parseMarkdown } from "../../shared/markdoc-config/parse/core.js";
+import { markdocConfig, makeHeadingNode } from "../../../shared/markdoc-config/tags/core.js";
+import { parseMarkdown } from "../../../shared/markdoc-config/parse/core.js";
 
 // Named value imports (`{ parse, transform, renderers }`) don't resolve from
 // this CommonJS module under Node's ESM loader (the doctest/CLI backend path);

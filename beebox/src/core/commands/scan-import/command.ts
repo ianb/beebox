@@ -51,7 +51,7 @@ import {
   type CommandResult,
 } from "../../command-types.js";
 import { createCardSchemaMap } from "../../../schemas.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { createCaptureSessionTemplate } from "../../../schemas/capture-session.js";
 import { resolveScanPages, bundleResolvedPages } from "./helpers.js";
 import { type ScanVisionService } from "../../../services/scan-vision.js";

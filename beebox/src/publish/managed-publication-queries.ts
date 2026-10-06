@@ -7,8 +7,7 @@ import type { ManagedPublicationRuntime } from "../services/managed-publication-
 import { defaultManagedPublicationRuntime } from "../services/managed-publication-runtime/core.js";
 import type { PublicationCandidate } from "./managed-publications/core.js";
 import { publicationError, readCandidate, readSharedRouteMarker, readSiteManifest, storeFor } from "./managed-publications/core.js";
-import { hasPublicationReferenceCard } from "./publication-reference-card.js";
-import { publicationCardPath } from "../shared/publication-card.js";
+import { publicationCardsByPubId } from "../core/card-lint/publication-duplicates.js";
 import { extensionToMimetype } from "../lib/mimetype.js";
 
 /** Content-type for a release object, by extension; unknown extensions fall back to a safe binary type. */
@@ -21,12 +20,13 @@ const PREVIEW_TEXT_LIMIT = 64 * 1024;
 
 export async function listManagedPublications(args: { boxRoot: string; boxSlug: string }, injectedRuntime?: ManagedPublicationRuntime) {
   const runtime = injectedRuntime ?? defaultManagedPublicationRuntime;
-  const [bindings, rows, boxHost] = await Promise.all([
+  const [bindings, rows, boxHost, cardsByPubId] = await Promise.all([
     runtime.listBindings(args.boxSlug),
     runtime.listConnections(),
     runtime.getBoxHost(args.boxSlug),
+    publicationCardsByPubId(args.boxRoot),
   ]);
-  const sites = await Promise.all(bindings.map((binding) => managedPublicationRow({ binding, args, runtime, rows, boxHost })));
+  const sites = await Promise.all(bindings.map((binding) => managedPublicationRow({ binding, args, runtime, rows, boxHost, cardPaths: cardsByPubId.get(binding.pubId) ?? [] })));
   return {
     sharedHost: boxHost === null ? null : { hostname: boxHost.hostname, connectionName: boxHost.connectionName, status: boxHost.status },
     sites,
@@ -39,20 +39,20 @@ async function managedPublicationRow(args: {
   runtime: ManagedPublicationRuntime;
   rows: Awaited<ReturnType<ManagedPublicationRuntime["listConnections"]>>;
   boxHost: Awaited<ReturnType<ManagedPublicationRuntime["getBoxHost"]>>;
+  /** Box-relative publication cards claiming this pubId. */
+  cardPaths: string[];
 }) {
-  const { binding, boxHost } = args;
+  const { binding, boxHost, cardPaths } = args;
   const row = args.rows.find((item) => item.name === binding.connectionName);
   const connection = row === undefined
     ? { name: binding.connectionName, status: "missing" as const, capabilities: { tokenForAccount: "unverified" as const, r2ObjectWrite: "unverified" as const, workerDeploy: "unverified" as const, accessLive: "unverified" as const } }
     : { name: row.name, status: row.tokenStatus, capabilities: row.capabilities };
   const remote = await readRemotePublication({ ...args, row });
   const { manifest, candidate, sharedRoute, hostname, remoteStatus } = remote;
-  const cardPath = publicationCardPath(binding.pubId);
-  const hasCard = await hasPublicationReferenceCard(args.args.boxRoot, binding.pubId);
   return {
     pubId: binding.pubId,
-    cardPath,
-    hasCard,
+    cardPath: cardPaths.length === 1 ? cardPaths[0] ?? null : null,
+    duplicateCardPaths: cardPaths.length > 1 ? cardPaths : [],
     assignedCustomHostname: binding.customHostname ?? null,
     customHostnameStatus: binding.customHostnameStatus ?? null,
     name: typeof candidate?.name === "string" ? candidate.name : binding.pubId,
@@ -70,6 +70,9 @@ async function managedPublicationRow(args: {
       expiresAt: manifest.expiresAt,
     },
     activeReleaseId: manifest?.activeRelease.id ?? null,
+    activeFiles: manifest === null ? [] : Object.entries(manifest.activeRelease.files)
+      .map(([filePath, entry]) => ({ path: filePath, bytes: entry.bytes, sha256: entry.sha256 }))
+      .toSorted((left, right) => left.path.localeCompare(right.path)),
     remoteStatus,
     pending: candidate === null ? null : {
       revision: candidate.revision,
@@ -137,11 +140,15 @@ async function verifiedSharedRoute(args: {
   return { hostname: marker.hostname, path: marker.path };
 }
 
-export async function previewManagedPublicationFile(args: {
+/**
+ * Read one file of a publication's active release or pending candidate. Any
+ * other release id is refused, so this never reaches retired release objects.
+ */
+export async function readManagedPublicationReleaseFile(args: {
   boxRoot: string;
   boxSlug: string;
   pubId: string;
-  expectedRevision: string;
+  releaseId: string;
   path: string;
 }, injectedRuntime?: ManagedPublicationRuntime) {
   const runtime = injectedRuntime ?? defaultManagedPublicationRuntime;
@@ -151,19 +158,26 @@ export async function previewManagedPublicationFile(args: {
   const binding = await runtime.getBinding({ pubId: args.pubId, boxSlug: args.boxSlug });
   if (binding === null) throw publicationError("Publication is not registered on this server.");
   const { store } = await storeFor({ binding, boxRoot: args.boxRoot, runtime, purpose: "publish-prepare" });
-  const candidate = await readCandidate(store, args.pubId);
-  if (candidate === null || candidate.revision !== args.expectedRevision) throw publicationError("The publication candidate changed. Refresh the preview before opening this file.");
-  if (candidate.requestedScope.hostHandle !== binding.hostHandle || candidate.pubId !== binding.pubId) throw publicationError("The pending candidate does not match this server-owned publication binding.");
-  const inventory = candidate.files[args.path];
-  if (inventory === undefined) throw publicationError("That path is not in the pending publication inventory.");
+  const [manifest, candidate] = await Promise.all([readSiteManifest(store, args.pubId), readCandidate(store, args.pubId)]);
+  let files: SiteEdgeManifest["activeRelease"]["files"];
+  if (manifest !== null && manifest.activeRelease.id === args.releaseId) {
+    files = manifest.activeRelease.files;
+  } else if (candidate !== null && candidate.releaseId === args.releaseId) {
+    if (candidate.requestedScope.hostHandle !== binding.hostHandle || candidate.pubId !== binding.pubId) throw publicationError("The pending candidate does not match this server-owned publication binding.");
+    files = candidate.files;
+  } else {
+    throw publicationError("That release is neither the active release nor the pending candidate.");
+  }
+  const inventory = Object.prototype.hasOwnProperty.call(files, args.path) ? files[args.path] : undefined;
+  if (inventory === undefined) throw publicationError("That path is not in the release inventory.");
   const extension = path.posix.extname(args.path).toLowerCase();
   const contentType = bundleContentType(args.path);
   if (!TEXT_ASSET_EXTENSIONS.has(extension)) return { kind: "binary" as const, bytes: inventory.bytes, contentType };
   if (inventory.bytes > PREVIEW_TEXT_LIMIT) return { kind: "too-large" as const, bytes: inventory.bytes, contentType, limit: PREVIEW_TEXT_LIMIT };
-  const key = `pubs/${args.pubId}/releases/${candidate.releaseId}/${args.path}`;
+  const key = `pubs/${args.pubId}/releases/${args.releaseId}/${args.path}`;
   const bytes = await store.get(key);
   if (bytes.byteLength !== inventory.bytes || createHash("sha256").update(bytes).digest("hex") !== inventory.sha256) {
-    throw publicationError("The pending publication file failed its integrity check.");
+    throw publicationError("The publication file failed its integrity check.");
   }
   return { kind: "text" as const, text: new TextDecoder().decode(bytes), bytes: inventory.bytes, contentType, truncated: false };
 }

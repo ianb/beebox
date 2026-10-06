@@ -19,7 +19,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { sanitizeFilename, dedupeName, summarizeBatch, failedItemsNotArrived } from "./batch-format.js";
 import { landmarkScanRelDir } from "../landmark/root-dir.js";
 import { attachDirFor } from "../../shared/attach-path.js";

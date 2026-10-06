@@ -36,7 +36,7 @@ import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../../install-
 import { installValidationHooks } from "../../install-validation-hooks.js";
 import { getBoxShape, type BoxShape } from "../../../lib/box-shape.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
-import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../../lib/git/core.js";
+import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../../lib/git/core/operations.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "../shared.js";
 import { getTemplatesOwnedBy, type TemplateDefinition } from "../../../templates-registry.js";
 import { ensureEngineDocs, writeBoxCardDocs } from "../box-docs.js";

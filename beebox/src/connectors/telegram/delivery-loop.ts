@@ -17,7 +17,7 @@ import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { cardFields, parseCardText, serializeCardText } from "../../core/card-io.js";
 import type { CardSchema } from "../../exports/cards.js";
 import { createCardSchemaMap } from "../../schemas.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { BOX_DIRS } from "../../lib/paths/core.js";
 
 const OUTPUT_DIR = BOX_DIRS.output;

@@ -36,7 +36,7 @@ import {
   engineWaitReason,
 } from "../core/schedule/engine-wait.js";
 import { getBoxTime } from "../lib/time.js";
-import { stageAndCommitPaths } from "../lib/git/core.js";
+import { stageAndCommitPaths } from "../lib/git/core/operations.js";
 
 /**
  * Run all on-wakeup scheduled scripts that are due.

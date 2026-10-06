@@ -8,7 +8,7 @@ import {
   commit, getLog, getLogPaginated, getDiff, getCommitDiff,
   hasCommits, getHead, clean, isNothingToCommitError,
   stageAndCommitPaths,
-} from "../../src/lib/git/core.js";
+} from "../../src/lib/git/core/operations.js";
 import {
   getCurrentBranch, createBranch, checkoutBranch, createTag, deleteTag,
 } from "../../src/lib/git-refs.js";

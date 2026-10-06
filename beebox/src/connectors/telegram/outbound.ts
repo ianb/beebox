@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { errorMessage } from "../../shared/error-guards.js";
 import { glob } from "glob";
 import type { ChatThreadFields } from "../../schemas/chat-thread.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { getBoxDir } from "../../lib/paths/core.js";
 import { updateTransientState } from "../../transient-state.js";
 import { findUnsentAgentMessages, stampSentMessage } from "../../job-cards/chat-utils.js";

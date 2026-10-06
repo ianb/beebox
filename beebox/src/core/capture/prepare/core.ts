@@ -26,11 +26,11 @@ import type { EventBus } from "../../event-bus/core.js";
 import type { ChatSession } from "../../chat/session/run/core.js";
 import type { ChatSessionRegistry } from "../../chat/session/registry/core.js";
 import { buildLoadContext } from "../../load-context.js";
-import { lintCardsDispatch } from "../../card-lint/core.js";
+import { lintCardsDispatch } from "../../card-lint/core/lint-cards.js";
 import { parseCardText, serializeCardText } from "../../card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { withCardLock } from "../../../lib/card-lock.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import {
   readStagingSession,
   setStagingState,

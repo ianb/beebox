@@ -4,12 +4,14 @@ import path from "node:path";
 import { z } from "zod";
 
 import { filesSchema, releaseIdForFiles, sharedMarkerMatchesScope, sharedPublicSlugSchema, sharedRouteMarkerKey, sharedRouteMarkerSchema, siteEdgeManifestSchema, type SharedRouteMarker, type SiteEdgeManifest } from "../manifest-edge.js";
-import type { PreparedPublication } from "../prepare/core.js";
+import type { PreparedPublication } from "../prepare/core/prepare-publication.js";
+import { resolvePublicationCardPath } from "../prepare/card-source.js";
 import type { ManagedPublicationRuntime } from "../../services/managed-publication-runtime/core.js";
 import { defaultManagedPublicationRuntime } from "../../services/managed-publication-runtime/core.js";
 import type { PublishRemoteStore } from "../../services/publish-remote-store.js";
 import { staticBearer } from "../../services/cloudflare-bearer.js";
 import { withFileLock } from "../../lib/file-lock.js";
+import { cardBasename } from "../../shared/attach-path.js";
 import { ensureWorkerDeployment } from "./workers.js";
 
 const SCAN_SAMPLE_LIMIT = 100;
@@ -213,16 +215,14 @@ async function shouldAutoRefreshManifest(args: { latest: SiteEdgeManifest | null
 export async function prepareManagedPublication(args: {
   boxRoot: string;
   boxSlug: string;
-  name: string;
+  card: string;
   ownerEmail: string | null;
-  ensureReferenceCard?: (identity: { boxRoot: string; pubId: string; title: string }) => Promise<{ cardPath: string; created: boolean }>;
 }, injectedRuntime?: ManagedPublicationRuntime) {
   const runtime = injectedRuntime ?? defaultManagedPublicationRuntime;
-  const result = await runtime.prepare({ boxRoot: args.boxRoot, name: args.name }, { ownerEmail: args.ownerEmail });
+  const result = await runtime.prepare({ boxRoot: args.boxRoot, card: args.card }, { ownerEmail: args.ownerEmail });
   if (!result.ok) throw publicationError(result.message);
   const prepared = result.prepared;
   try {
-    await ensurePreparedReferenceCard(args.ensureReferenceCard, { boxRoot: args.boxRoot, pubId: prepared.pubId, title: prepared.definition.title });
     const binding = await reservePublicationBinding({ prepared, args, runtime });
     const connection = await runtime.resolveCredential({ name: prepared.definition.connection, boxSlug: args.boxSlug, purpose: "publish-prepare", at: runtime.now(args.boxRoot).toISOString() });
     if (connection.accountId !== binding.accountId) throw publicationError("The publication binding is pinned to another Cloudflare account.");
@@ -258,7 +258,7 @@ export async function prepareManagedPublication(args: {
     const candidateBody = {
       schemaVersion: 1 as const,
       pubId: prepared.pubId,
-      name: args.name,
+      name: cardBasename(args.card),
       title: prepared.definition.title,
       requestedScope: scope,
       releaseId,
@@ -269,7 +269,7 @@ export async function prepareManagedPublication(args: {
     };
     const candidate = { ...candidateBody, revision: createHash("sha256").update(stable(candidateBody)).digest("hex") };
     await persistPreparedCandidate({ boxRoot: args.boxRoot, boxSlug: args.boxSlug, pubId: prepared.pubId, store, existing, scope, candidate, runtime });
-    return { pubId: prepared.pubId, name: args.name, title: prepared.definition.title, revision: candidate.revision, releaseId, requestedScope: scope, preparedAt: candidate.preparedAt, preview: prepared.preview, scan: candidate.scan };
+    return { pubId: prepared.pubId, cardPath: resolvePublicationCardPath(args.card), name: cardBasename(args.card), title: prepared.definition.title, revision: candidate.revision, releaseId, requestedScope: scope, preparedAt: candidate.preparedAt, preview: prepared.preview, scan: candidate.scan };
   } finally {
     await prepared.cleanup();
   }
@@ -280,13 +280,6 @@ function attachedHostForConnection(
   connectionName: string,
 ): NonNullable<Awaited<ReturnType<ManagedPublicationRuntime["getBoxHost"]>>> | null {
   return boxHost !== null && boxHost.status === "attached" && boxHost.connectionName === connectionName ? boxHost : null;
-}
-
-async function ensurePreparedReferenceCard(
-  ensureReferenceCard: Parameters<typeof prepareManagedPublication>[0]["ensureReferenceCard"],
-  identity: { boxRoot: string; pubId: string; title: string },
-): Promise<{ cardPath: string; created: boolean } | undefined> {
-  return ensureReferenceCard?.(identity);
 }
 
 async function reservePublicationBinding(args: {

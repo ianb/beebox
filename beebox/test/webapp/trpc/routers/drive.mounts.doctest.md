@@ -18,7 +18,7 @@ import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../
 // Importing the connector registers the docs/sheets handlers — that is what
 // makes a Doc or Sheet child syncable rather than pointer-only.
 import { createGoogleDriveConnector } from "../../../../src/connectors/google-drive/connector.js";
-import { getLog } from "../../../../src/lib/git/core.js";
+import { getLog } from "../../../../src/lib/git/core/operations.js";
 
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 const SHEET_MIME = "application/vnd.google-apps.spreadsheet";

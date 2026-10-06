@@ -16,7 +16,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer, TEST_SLUG } from "../../../helpers/doctest-server.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
-import { getLog } from "../../../../src/lib/git/core.js";
+import { getLog } from "../../../../src/lib/git/core/operations.js";
 import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../../../src/services/google-drive/core.js";
 import { mountDriveFolder, type MountFolderResult } from "../../../../src/connectors/google-drive/mounts/core.js";
 import { inspectDriveItem, type DriveInspectResult } from "../../../../src/connectors/google-drive/inspect.js";

@@ -22,7 +22,7 @@ import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { fileExists } from "../lib/file-exists.js";
 import { boxSlug } from "../lib/box-slug.js";
-import { getStatus, stageAll, commit } from "../lib/git/core.js";
+import { getStatus, stageAll, commit } from "../lib/git/core/operations.js";
 import { requireBoxRoot } from "../lib/box-shape.js";
 
 /**

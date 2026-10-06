@@ -24,7 +24,7 @@ import { createCommentaryTemplate } from "../../../schemas/commentary.js";
 import { attachmentPath } from "../../../shared/attach-path.js";
 import { listDestinations } from "../../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../../job-cards/chat-utils.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { createTabArrangementCard } from "../../../schemas/tab-arrangement.js";
 import { parseFrontmatterObject } from "../../../exports/cards.js";
 import { withCardLock } from "../../../lib/card-lock.js";

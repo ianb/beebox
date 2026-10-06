@@ -35,5 +35,5 @@ The reader scrolls.
 - Phone layout: a floating panel at the top right does not fit a narrow
   screen. A collapsed button that opens the list is one option.
 - Whether it highlights the current section while scrolling.
-- Whether the published-site renderer (`beebox/src/publish/prepare/markdown-page.ts`)
+- Whether the published-site renderer (`beebox/src/publish/prepare/core/markdown-page.ts`)
   should emit the same TOC.

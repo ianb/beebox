@@ -20,7 +20,7 @@ import * as path from "node:path";
 import { errorMessage } from "../../shared/error-guards.js";
 import { boxSlug } from "../../lib/box-slug.js";
 import type { Connector, SyncResult } from "../../connector.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { loadTransientState, updateTransientState } from "../../transient-state.js";
 import { createChatJob } from "../../job-cards/chat-utils.js";
 import { getBoxTimeISO } from "../../lib/time.js";

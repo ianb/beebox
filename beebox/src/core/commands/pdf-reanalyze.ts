@@ -29,7 +29,7 @@ import {
 import { splitCardContent } from "../../exports/cards.js";
 import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 import { isRecord } from "../../shared/is-record.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { createDoclingService, type DoclingService } from "../../services/docling/core.js";
 import { clearExtractionAssets, extractPdf } from "../pdf/extract.js";

@@ -28,7 +28,7 @@ import { compileGuides } from "../../../src/core/docs-gen/compile/core.js";
 import { readDocId, withDocId } from "../../../src/core/docs-gen/shared.js";
 import { commitTemplateSyncChanges } from "../../../src/core/docs-gen/generate/core.js";
 import { execFileSync } from "node:child_process";
-import { getStatus } from "../../../src/lib/git/core.js";
+import { getStatus } from "../../../src/lib/git/core/operations.js";
 
 const exists = async (root: string, rel: string): Promise<boolean> => {
   try {
@@ -150,21 +150,21 @@ parking.
 
 ```ts continue
 const versionsPath = path.join(box.root, "_config/template-versions.json");
-for (const rel of ["src/tricks/scripts/CLAUDE.md", "src/publications/CLAUDE.md"]) {
+for (const rel of ["src/tricks/scripts/CLAUDE.md", "src/views/CLAUDE.md"]) {
   await fs.rm(path.join(box.root, rel));
 }
 const seeded = JSON.parse(await fs.readFile(versionsPath, "utf8"));
 delete seeded["src/tricks/scripts/CLAUDE.md"];
-delete seeded["src/publications/CLAUDE.md"];
+delete seeded["src/views/CLAUDE.md"];
 await fs.writeFile(versionsPath, JSON.stringify(seeded, null, 2) + "\n");
 
 await syncBoxGuidance(box.root, { generators: true });
 
-await exists(box.root, "src/tricks/scripts/CLAUDE.md") && await exists(box.root, "src/publications/CLAUDE.md")
+await exists(box.root, "src/tricks/scripts/CLAUDE.md") && await exists(box.root, "src/views/CLAUDE.md")
 => true
 
 const versions = JSON.parse(await fs.readFile(versionsPath, "utf8"));
-["src/publications/CLAUDE.md", "src/tricks/scripts/CLAUDE.md"].every((k) => typeof versions[k]?.sha256 === "string")
+["src/tricks/scripts/CLAUDE.md", "src/views/CLAUDE.md"].every((k) => typeof versions[k]?.sha256 === "string")
 => true
 ```
 
@@ -183,10 +183,10 @@ GUIDANCE_SURFACES
   .map((row) => row.path)
 => []
 
-isTemplateManagedPath("src/publications/CLAUDE.md") && isTemplateManagedPath("nested/dir/AGENTS.md")
+isTemplateManagedPath("src/views/CLAUDE.md") && isTemplateManagedPath("nested/dir/AGENTS.md")
 => true
 
-isTemplateManagedPath("CLAUDE.md") || isTemplateManagedPath("src/publications/NOTES.md") || isTemplateManagedPath("_content/MAP.md")
+isTemplateManagedPath("CLAUDE.md") || isTemplateManagedPath("_content/MAP.md")
 => false
 ```
 
@@ -285,7 +285,7 @@ unrelated work.
 
 ```ts
 const box = await makeTmpBox({ git: true, deps: true });
-await fs.rm(path.join(box.root, "src/publications/CLAUDE.md"));
+await fs.rm(path.join(box.root, "src/views/CLAUDE.md"));
 execFileSync("git", ["commit", "-q", "-am", "an older box"], { cwd: box.root });
 await box.write("notes.md", "work in progress\n");
 
@@ -296,8 +296,8 @@ const status = await getStatus(box.root);
 JSON.stringify({ modified: status.modified, untracked: status.untracked })
 => {"modified":[],"untracked":["notes.md"]}
 
-JSON.stringify(lastCommit(box.root).split("\n").filter((line) => line.startsWith("Sync") || line === "src/publications/CLAUDE.md" || line === ".claude/rules/card-memo.md"))
-=> ["Sync templates from upstream",".claude/rules/card-memo.md","src/publications/CLAUDE.md"]
+JSON.stringify(lastCommit(box.root).split("\n").filter((line) => line.startsWith("Sync") || line === "src/views/CLAUDE.md" || line === ".claude/rules/card-memo.md"))
+=> ["Sync templates from upstream",".claude/rules/card-memo.md","src/views/CLAUDE.md"]
 ```
 
 ```ts cleanup
