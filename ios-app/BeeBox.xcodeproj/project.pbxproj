@@ -80,6 +80,7 @@
 		B72000C12C3C000100000001 /* VoiceAudioRetentionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */; };
 		B72000C32C3C000100000001 /* VoiceAudioRetentionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */; };
 		E1A000002C3C000100000001 /* BoxRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000012C3C000100000001 /* BoxRequest.swift */; };
+		B0C500112F00000100000002 /* QuickChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500112F00000100000001 /* QuickChatAPI.swift */; };
 		E1A000022C3C000100000001 /* BoxLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000032C3C000100000001 /* BoxLog.swift */; };
 		E1A000042C3C000100000001 /* LogForwarder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000052C3C000100000001 /* LogForwarder.swift */; };
 		E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000072C3C000100000001 /* LogForwarderTests.swift */; };
@@ -95,8 +96,10 @@
 		F1A000022E00000100000001 /* NotificationCenterDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000032E00000100000001 /* NotificationCenterDelegate.swift */; };
 		F1A000042E00000100000001 /* NotificationTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000052E00000100000001 /* NotificationTarget.swift */; };
 		B0C500012F00000100000002 /* RootSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500012F00000100000001 /* RootSurface.swift */; };
+		B0C500102F00000100000002 /* QuickChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500102F00000100000001 /* QuickChatView.swift */; };
 		F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000072E00000100000001 /* PushNotificationTests.swift */; };
 		B0C500042F00000100000002 /* QuickChatOutboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500042F00000100000001 /* QuickChatOutboxTests.swift */; };
+		B0C500122F00000100000002 /* QuickChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500122F00000100000001 /* QuickChatAPITests.swift */; };
 		B0C500022F00000100000002 /* RootSurfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500022F00000100000001 /* RootSurfaceTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -208,6 +211,7 @@
 		B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionStore.swift; sourceTree = "<group>"; };
 		B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionTests.swift; sourceTree = "<group>"; };
 		E1A000012C3C000100000001 /* BoxRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxRequest.swift; sourceTree = "<group>"; };
+		B0C500112F00000100000001 /* QuickChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatAPI.swift; sourceTree = "<group>"; };
 		E1A000032C3C000100000001 /* BoxLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLog.swift; sourceTree = "<group>"; };
 		E1A000052C3C000100000001 /* LogForwarder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogForwarder.swift; sourceTree = "<group>"; };
 		E1A000072C3C000100000001 /* LogForwarderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogForwarderTests.swift; sourceTree = "<group>"; };
@@ -222,8 +226,10 @@
 		F1A000032E00000100000001 /* NotificationCenterDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterDelegate.swift; sourceTree = "<group>"; };
 		F1A000052E00000100000001 /* NotificationTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTarget.swift; sourceTree = "<group>"; };
 		B0C500012F00000100000001 /* RootSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootSurface.swift; sourceTree = "<group>"; };
+		B0C500102F00000100000001 /* QuickChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatView.swift; sourceTree = "<group>"; };
 		F1A000072E00000100000001 /* PushNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationTests.swift; sourceTree = "<group>"; };
 		B0C500042F00000100000001 /* QuickChatOutboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatOutboxTests.swift; sourceTree = "<group>"; };
+		B0C500122F00000100000001 /* QuickChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatAPITests.swift; sourceTree = "<group>"; };
 		B0C500022F00000100000001 /* RootSurfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootSurfaceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -295,6 +301,7 @@
 				5A1000122C3C000100000001 /* PairedBox.swift */,
 				F1A000052E00000100000001 /* NotificationTarget.swift */,
 				B0C500012F00000100000001 /* RootSurface.swift */,
+				B0C500102F00000100000001 /* QuickChatView.swift */,
 				5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
 				B72000022C3C000100000001 /* NativeComposerContract.swift */,
@@ -355,6 +362,7 @@
 				5A10002F2C3C000100000001 /* CaptureAPI.swift */,
 				5A1000912C3C000100000001 /* BulkUploadAPI.swift */,
 				E1A000012C3C000100000001 /* BoxRequest.swift */,
+				B0C500112F00000100000001 /* QuickChatAPI.swift */,
 				F1A000032E00000100000001 /* NotificationCenterDelegate.swift */,
 				F1A000012E00000100000001 /* PushRegistrar.swift */,
 				E1A000032C3C000100000001 /* BoxLog.swift */,
@@ -382,6 +390,7 @@
 				5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */,
 				F1A000072E00000100000001 /* PushNotificationTests.swift */,
 				B0C500042F00000100000001 /* QuickChatOutboxTests.swift */,
+				B0C500122F00000100000001 /* QuickChatAPITests.swift */,
 				B0C500022F00000100000001 /* RootSurfaceTests.swift */,
 				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
 				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
@@ -582,6 +591,7 @@
 				5A1000022C3C000100000001 /* PairedBox.swift in Sources */,
 				F1A000042E00000100000001 /* NotificationTarget.swift in Sources */,
 				B0C500012F00000100000002 /* RootSurface.swift in Sources */,
+				B0C500102F00000100000002 /* QuickChatView.swift in Sources */,
 				5A1000032C3C000100000001 /* PairedBoxStore.swift in Sources */,
 				5A1000042C3C000100000001 /* RootView.swift in Sources */,
 				5A1000052C3C000100000001 /* PairBoxView.swift in Sources */,
@@ -621,6 +631,7 @@
 				5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */,
 				5A1000902C3C000100000001 /* BulkUploadAPI.swift in Sources */,
 				E1A000002C3C000100000001 /* BoxRequest.swift in Sources */,
+				B0C500112F00000100000002 /* QuickChatAPI.swift in Sources */,
 				F1A000022E00000100000001 /* NotificationCenterDelegate.swift in Sources */,
 				F1A000002E00000100000001 /* PushRegistrar.swift in Sources */,
 				E1A000022C3C000100000001 /* BoxLog.swift in Sources */,
@@ -647,6 +658,7 @@
 				5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */,
 				F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */,
 				B0C500042F00000100000002 /* QuickChatOutboxTests.swift in Sources */,
+				B0C500122F00000100000002 /* QuickChatAPITests.swift in Sources */,
 				B0C500022F00000100000002 /* RootSurfaceTests.swift in Sources */,
 				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
 				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
