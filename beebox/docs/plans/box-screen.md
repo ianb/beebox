@@ -463,3 +463,23 @@ manual checks below have not run.
 - Routing quality and the provisional 0.9 floor.
 - The new `box-screen-box-wide-pages` knowledge audit and a re-run of
   `quick-chat-rubric-maintenance` after the box doc edit.
+
+### Review and audits (2026-10-06)
+
+A cross-model review of the branch diff traced the lost-post and double-post paths, the send-route extraction, the disposition rule, and the iOS launch states. Four findings were verified and fixed, each with a test:
+
+- `a994c88d1`: the web box screen stored the unsent thought's id in a later effect; a tab that died in between could post twice. The id is now stored before the request starts.
+- `cd5dbf9ca`: the disposition treated every candidate without a landmark as one place. The place is now the landmark, or the candidate's own directory.
+- `cb8e69dd3`: the box screen could omit the last chat when its directory had no landmark. `home` now always includes the most recent resumable chat; `landmark` is nullable through the contract.
+- `d33473db8`: on iOS a notification tap after a long background stay could be overridden by the foreground handler. A tap now consumes the pending foreground decision.
+
+A second round confirmed that the four fixes hold and reported nothing new.
+
+Three findings were not fixed:
+
+- Recent files is absent from the folder menu while the transcript is hidden. The claim was tied to transcript visibility before this plan; this is not a regression.
+- A crash between recording the user message and recording its message-id claim can cost one duplicate on retry. This window belongs to `POST /api/chat/send` and predates the plan. Accepted risk.
+- A raw chat send and a quick chat submit that share one id could record the wrong destination. Each client mints a new id per message; not reachable in ordinary use.
+
+Knowledge audits `quick-chat-rubric-maintenance` and `box-screen-box-wide-pages` each passed 1/1 with no reads or searches, against a disposable standalone clone of the test box with the package docs installed as files.
+

@@ -88,6 +88,8 @@ tests:
   # against a disposable standalone clone with installed package-doc files.
   # Earlier fixture attempts had a missing @import after cleanup removed a
   # node_modules symlink; those were fixture failures, not rubric recall.
+  # Status (2026-10-06, Claude): 1/1 passed, 0 reads/searches, 24k context,
+  # after the guide gained the "waits for the person" sentence; same clone setup.
   - id: quick-chat-rubric-maintenance
     prompt: >
       The boxholder wants quick captures about their garden to reach the right
@@ -111,8 +113,10 @@ tests:
       - '(?:existing|continu|resum)[\s\S]{0,350}(?:new|start)|(?:new|start)[\s\S]{0,350}(?:existing|continu|resum)'
     tags: [quick-chat]
 
-  # Not yet run (2026-10-06, box-screen plan): the box-wide pages and the
-  # nav.card shortcuts moved from the app bar's landmark menu to the box screen.
+  # The box-wide pages and the nav.card shortcuts moved from the app bar's
+  # landmark menu to the box screen (box-screen plan).
+  # Status (2026-10-06, Claude): 1/1 passed, 0 reads/searches, 23k context,
+  # against a disposable standalone clone with installed package-doc files.
   - id: box-screen-box-wide-pages
     prompt: >
       The boxholder asks where to find Dashboard, Browse, History, and Storage
