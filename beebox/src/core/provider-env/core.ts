@@ -52,7 +52,28 @@ export async function liveProviderRefusal(params: { boxRoot: string; model: stri
   }
 }
 
+/**
+ * Claude Code's own traffic to Anthropic, switched off for every run whose
+ * model answers somewhere else. The CLI treats a custom `ANTHROPIC_BASE_URL`
+ * as the Claude API, so usage metrics stay on unless disabled.
+ * `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` also stops feature-flag fetches,
+ * update and release-note checks, and feedback uploads; any value, even `0`,
+ * turns it on, so first-party runs do not get it. WebFetch's domain check
+ * still sends each hostname to Anthropic (`docs/security-report.md`).
+ */
+const NO_ANTHROPIC_TELEMETRY = {
+  DISABLE_TELEMETRY: "1",
+  DISABLE_ERROR_REPORTING: "1",
+  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
+} as const;
+
+/** Any run that points the CLI at another endpoint also gets {@link NO_ANTHROPIC_TELEMETRY}, so a new provider cannot forget it. */
 async function additionsFor(params: { boxRoot: string; model: string; purpose: string }): Promise<Record<string, string> | null> {
+  const endpoint = await endpointFor(params);
+  return endpoint === null ? null : { ...endpoint, ...NO_ANTHROPIC_TELEMETRY };
+}
+
+async function endpointFor(params: { boxRoot: string; model: string; purpose: string }): Promise<Record<string, string> | null> {
   const provider = providerOf(params.model);
   switch (provider) {
     case "anthropic":

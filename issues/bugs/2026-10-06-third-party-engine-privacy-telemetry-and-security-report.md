@@ -1,6 +1,6 @@
 ---
 title: "Chat on OpenRouter or GLM models: turn off Claude Code telemetry, and give the security report an honest row for it"
-workstream: unattached
+workstream: third-party-engine-privacy
 area: beebox
 labels: [security, providers]
 filed-by: agent

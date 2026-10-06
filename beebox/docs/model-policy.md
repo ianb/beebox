@@ -174,7 +174,12 @@ public catalog: the id must exist and support tool calling.
   results on third-party models (OpenRouter and GLM) carry no cost figure.
 - **Data:** Claude Code sends the requests, so the per-request host pin that
   the optional OpenRouter services use cannot apply. Host choice and data
-  retention follow the OpenRouter account's privacy settings.
+  retention follow the OpenRouter account's privacy settings. Every
+  third-party run, GLM included, sets `DISABLE_TELEMETRY`,
+  `DISABLE_ERROR_REPORTING`, and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
+  to turn off Claude Code's own telemetry and other nonessential traffic to
+  Anthropic (`src/core/provider-env/core.ts`). WebFetch's domain check is not
+  covered and still sends each fetched hostname to Anthropic.
 
 Tested through a full agent turn (tools, structured output, resume), 2026-09-19:
 `moonshotai/kimi-k2-0905:exacto`, `deepseek/deepseek-v3.2`, `qwen/qwen3-coder`.

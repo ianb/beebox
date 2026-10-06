@@ -194,11 +194,38 @@ const box = await boxWith({ openrouterModels: [kimi] });
 await grantKey(box.root);
 const env: Record<string, string | undefined> = { KEEP: "yes" };
 const additions = await providerEnvAdditions({ boxRoot: box.root, model: kimi.id, purpose: "test", env });
-JSON.stringify(additions) === JSON.stringify(openRouterChatEnv({ key: "placeholder-openrouter-key", model: kimi.id }))
-=> true
+JSON.stringify(Object.keys(additions ?? {}).filter((k) => !(k in openRouterChatEnv({ key: "k", model: kimi.id }))))
+=> ["DISABLE_TELEMETRY","DISABLE_ERROR_REPORTING","CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]
 
 JSON.stringify([env.KEEP, env.ANTHROPIC_BASE_URL, env.ANTHROPIC_API_KEY, env.ANTHROPIC_DEFAULT_HAIKU_MODEL, env.CLAUDE_CODE_SUBAGENT_MODEL])
 => ["yes","https://openrouter.ai/api","","moonshotai/kimi-k2-0905:exacto","moonshotai/kimi-k2-0905:exacto"]
+
+await box.cleanup();
+```
+
+## Third-party runs send Claude Code's telemetry nowhere
+
+Claude Code treats a custom `ANTHROPIC_BASE_URL` as the Claude API, so its
+usage metrics would still go to Anthropic. Every run on a non-Claude model
+turns them off, together with error reports and the rest of the CLI's
+nonessential traffic. The seam adds the flags for any provider that sets an
+endpoint, so a new provider gets them too. First-party runs get none of them:
+`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` counts as set even at `0`.
+
+```ts
+const flags = ["DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"];
+const box = await boxWith({ openrouterModels: [kimi] });
+await grantKey(box.root);
+await setSecret({ name: "glm", value: "placeholder-glm-key" });
+await grantSecret({ slug: await boxSlug(box.root), name: "glm", access: "server" });
+const flagsOf = async (model: string | null) => {
+  const additions = await providerEnvAdditions({ boxRoot: box.root, model, purpose: "test" });
+  return flags.map((f) => additions?.[f] ?? "unset").join(",");
+};
+const seen: string[] = [];
+for (const model of [kimi.id, "glm-5.3", "claude-opus-5-5", null]) seen.push(await flagsOf(model));
+JSON.stringify(seen)
+=> ["1,1,1","1,1,1","unset,unset,unset","unset,unset,unset"]
 
 await box.cleanup();
 ```
