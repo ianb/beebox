@@ -161,6 +161,7 @@ When the `_content/` location is missing, legacy file navigation retains that
 missing detail as the normal Browse behavior does:
 
 ```ts
+const legacy = { path: "projects/Plan.doc.card", viewer: null, params: {}, viewState: null };
 const missing = await legacyBrowseTarget(legacy, { lookupKind: async () => "missing", missingKind: "file" });
 missing.viewState.detail.path
 => "_content/projects/Plan.doc.card"
