@@ -749,23 +749,94 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         let repository = ComposerDraftRepository(rootURL: rootURL)
         var draft = ComposerDraft.empty
         ComposerDraftReducer.reduce(&draft, .setText("durable text"))
-        try await repository.save(draft, boxID: boxID)
+        try await repository.save(draft, boxID: boxID, scope: .conversation)
 
-        let restored = try await ComposerDraftRepository(rootURL: rootURL).load(boxID: boxID)
+        let restored = try await ComposerDraftRepository(rootURL: rootURL).load(boxID: boxID, scope: .conversation)
         XCTAssertEqual(restored, draft)
         let files = try FileManager.default.contentsOfDirectory(atPath: rootURL.appendingPathComponent(boxID.uuidString.lowercased()).path)
         XCTAssertEqual(files, ["manifest.json"])
     }
 
+    @MainActor
+    func testConversationDraftStoredBeforeScopesStillLoads() async throws {
+        let suite = "ComposerDraftScopeLegacy.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        var draft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&draft, .setText("written by an older build"))
+        let boxDirectory = rootURL.appendingPathComponent(boxID.uuidString.lowercased(), isDirectory: true)
+        try FileManager.default.createDirectory(at: boxDirectory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(ComposerDraftManifest(boxID: boxID, draft: draft))
+            .write(to: boxDirectory.appendingPathComponent("manifest.json"))
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+
+        let conversation = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
+        await conversation.activate(boxID: boxID)
+        let newThought = ComposerDraftStore(scope: .newThought, repository: repository, defaults: defaults)
+        await newThought.activate(boxID: boxID)
+
+        XCTAssertEqual(conversation.draft.text, "written by an older build")
+        XCTAssertEqual(newThought.draft.text, "")
+    }
+
+    @MainActor
+    func testScopesKeepSeparateDraftsForOneBox() async throws {
+        let suite = "ComposerDraftScopes.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let conversation = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
+        let newThought = ComposerDraftStore(scope: .newThought, repository: repository, defaults: defaults)
+        await conversation.activate(boxID: boxID)
+        await newThought.activate(boxID: boxID)
+
+        conversation.setText("half a chat message")
+        newThought.setText("half a new thought")
+        await conversation.flush()
+        await newThought.flush()
+        await newThought.clearForSending(boxID: boxID)
+
+        let relaunchedConversation = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
+        let relaunchedNewThought = ComposerDraftStore(scope: .newThought, repository: repository, defaults: defaults)
+        await relaunchedConversation.activate(boxID: boxID)
+        await relaunchedNewThought.activate(boxID: boxID)
+        XCTAssertEqual(relaunchedConversation.draft.text, "half a chat message", "sending a new thought leaves the chat draft")
+        XCTAssertEqual(relaunchedNewThought.draft.text, "")
+        let files = try FileManager.default.contentsOfDirectory(
+            atPath: rootURL.appendingPathComponent(boxID.uuidString.lowercased()).path
+        )
+        XCTAssertEqual(Set(files), ["manifest.json", "new-thought.json"])
+    }
+
+    @MainActor
+    func testNewThoughtNeverAdoptsTheLegacyTextDraft() async throws {
+        let suite = "ComposerDraftScopeDefaults.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        defaults.set("an old chat draft", forKey: "draft.\(boxID.uuidString)")
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+
+        let newThought = ComposerDraftStore(scope: .newThought, repository: repository, defaults: defaults)
+        await newThought.activate(boxID: boxID)
+        XCTAssertEqual(newThought.draft.text, "")
+
+        let conversation = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
+        await conversation.activate(boxID: boxID)
+        XCTAssertEqual(conversation.draft.text, "an old chat draft")
+    }
+
     func testCorruptManifestIsQuarantined() async throws {
         let boxID = UUID()
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let manifestURL = await repository.manifestURL(boxID: boxID)
+        let manifestURL = await repository.manifestURL(boxID: boxID, scope: .conversation)
         try FileManager.default.createDirectory(at: manifestURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data("not json".utf8).write(to: manifestURL)
 
         await XCTAssertThrowsErrorAsync {
-            _ = try await repository.load(boxID: boxID)
+            _ = try await repository.load(boxID: boxID, scope: .conversation)
         }
         let files = try FileManager.default.contentsOfDirectory(atPath: manifestURL.deletingLastPathComponent().path)
         XCTAssertFalse(files.contains("manifest.json"))
@@ -796,7 +867,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let boxID = UUID()
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        let store = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await store.activate(boxID: boxID)
         store.setText("old dictated words")
 
@@ -808,7 +879,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
 
         XCTAssertEqual(restartSeed, "")
         XCTAssertEqual(store.draft.text, "new words after erase")
-        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        let relaunched = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await relaunched.activate(boxID: boxID)
         XCTAssertEqual(relaunched.draft.text, "new words after erase")
     }
@@ -820,7 +891,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let boxID = UUID()
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        let store = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await store.activate(boxID: boxID)
 
         await store.addImage(data: Data("first".utf8), mimeType: "image/jpeg", fileExtension: "jpg")
@@ -832,7 +903,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         XCTAssertFalse(store.draft.text.contains("[image#1]"))
         XCTAssertTrue(store.draft.text.contains("[image#2]"))
 
-        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        let relaunched = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await relaunched.activate(boxID: boxID)
         XCTAssertEqual(relaunched.draft.images.map(\.id), [2])
         let attachments = try await relaunched.emissionImages(from: relaunched.draft, boxID: boxID)
@@ -847,14 +918,14 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let boxID = UUID()
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        let store = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await store.activate(boxID: boxID)
 
         let imported = await store.beginImageImport(data: Data("source".utf8), mimeType: "image/png")
         let image = try XCTUnwrap(imported)
         XCTAssertEqual(image.state, .uploading(progress: 0))
 
-        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        let relaunched = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await relaunched.activate(boxID: boxID)
         XCTAssertEqual(
             relaunched.draft.images.first?.state,
@@ -877,9 +948,9 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             &draft,
             .addImage(DraftImage(id: 4, filename: "missing.jpg", mimeType: "image/jpeg", state: .local))
         )
-        try await repository.save(draft, boxID: boxID)
+        try await repository.save(draft, boxID: boxID, scope: .conversation)
 
-        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        let store = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await store.activate(boxID: boxID)
 
         XCTAssertTrue(store.draft.images.isEmpty)
@@ -897,7 +968,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         let payload = Data("report".utf8)
         try payload.write(to: sourceURL)
         let repository = ComposerDraftRepository(rootURL: rootURL.appendingPathComponent("drafts"))
-        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        let store = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await store.activate(boxID: boxID)
 
         let imported = await store.addFile(
@@ -917,7 +988,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             mimetype: "application/pdf"
         ), boxID: boxID)
 
-        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        let relaunched = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await relaunched.activate(boxID: boxID)
         let emitted = try relaunched.emissionFiles(from: relaunched.draft)
         XCTAssertEqual(emitted.map(\.path), ["_tmp/report.pdf"])
@@ -931,7 +1002,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let boxID = UUID()
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        let store = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await store.activate(boxID: boxID)
         let command = NativeComposerCommand(
             id: "selection-command-1",
@@ -951,7 +1022,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         XCTAssertEqual(store.draft.text, "[selection#1]")
         XCTAssertEqual(store.draft.processedCommandIDs, [command.id])
 
-        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        let relaunched = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await relaunched.activate(boxID: boxID)
         let afterRelaunch = await relaunched.applySelectionCommand(command, boxID: boxID)
         XCTAssertEqual(afterRelaunch, first)
@@ -981,6 +1052,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let boxID = UUID()
         let store = ComposerDraftStore(
+            scope: .conversation,
             repository: ComposerDraftRepository(rootURL: rootURL),
             defaults: defaults
         )
@@ -1016,7 +1088,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
     func testSelectionCommandBeforeStartupActivationRestoresThenPersists() async throws {
         let boxID = UUID()
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let store = ComposerDraftStore(repository: repository)
+        let store = ComposerDraftStore(scope: .conversation, repository: repository)
         let command = NativeComposerCommand(
             id: "startup-selection",
             selection: NativeComposerCommand.Selection(
@@ -1030,7 +1102,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
 
         XCTAssertTrue(acknowledgement.accepted)
         XCTAssertTrue(store.isReady)
-        let relaunched = ComposerDraftStore(repository: repository)
+        let relaunched = ComposerDraftStore(scope: .conversation, repository: repository)
         await relaunched.activate(boxID: boxID)
         XCTAssertEqual(relaunched.draft.selections.first?.text, "arrived early")
         XCTAssertTrue(relaunched.draft.text.contains("[selection#1]"))
@@ -1045,9 +1117,9 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         ComposerDraftReducer.reduce(&firstDraft, .setText("first"))
         var secondDraft = ComposerDraft.empty
         ComposerDraftReducer.reduce(&secondDraft, .setText("second"))
-        try await repository.save(firstDraft, boxID: firstBoxID)
-        try await repository.save(secondDraft, boxID: secondBoxID)
-        let store = ComposerDraftStore(repository: repository)
+        try await repository.save(firstDraft, boxID: firstBoxID, scope: .conversation)
+        try await repository.save(secondDraft, boxID: secondBoxID, scope: .conversation)
+        let store = ComposerDraftStore(scope: .conversation, repository: repository)
 
         let firstActivation = Task { await store.activate(boxID: firstBoxID) }
         await Task.yield()
@@ -1212,7 +1284,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let boxID = UUID()
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let draftStore = ComposerDraftStore(repository: repository, defaults: defaults)
+        let draftStore = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         let pendingStore = PendingEmissionStore(repository: repository)
         await draftStore.activate(boxID: boxID)
         await pendingStore.activate(boxID: boxID)
@@ -1247,7 +1319,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
 
         let relaunchedPending = PendingEmissionStore(repository: repository)
         await relaunchedPending.activate(boxID: boxID)
-        let relaunchedDraft = ComposerDraftStore(repository: repository, defaults: defaults)
+        let relaunchedDraft = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await relaunchedDraft.activate(boxID: boxID)
         XCTAssertEqual(relaunchedPending.voicePreparations, [preparation])
         XCTAssertEqual(relaunchedDraft.draft.text, "next draft")
@@ -1325,7 +1397,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         let secondBox = UUID()
         defaults.set("legacy text", forKey: "draft.\(firstBox.uuidString)")
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        let store = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
 
         await store.activate(boxID: firstBox)
         XCTAssertEqual(store.draft.text, "legacy text")
@@ -1591,7 +1663,7 @@ final class ComposerImageOriginalTests: XCTestCase {
         suite: String
     ) throws -> (ComposerDraftStore, UserDefaults) {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        return (ComposerDraftStore(repository: repository, defaults: defaults), defaults)
+        return (ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults), defaults)
     }
 
     @MainActor
@@ -1788,7 +1860,7 @@ final class ComposerImageOriginalTests: XCTestCase {
         XCTAssertEqual(second, first)
         XCTAssertEqual(store.draft.uploadBatchID, first)
 
-        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        let relaunched = ComposerDraftStore(scope: .conversation, repository: repository, defaults: defaults)
         await relaunched.activate(boxID: boxID)
         XCTAssertEqual(relaunched.draft.uploadBatchID, first)
 
@@ -1818,7 +1890,7 @@ final class ComposerImageOriginalTests: XCTestCase {
         )))
         try await repository.savePayload(Data("small".utf8), filename: "image-1.jpg", boxID: boxID)
         try await repository.savePayload(Data("original".utf8), filename: "image-source-1.heic", boxID: boxID)
-        try await repository.save(draft, boxID: boxID)
+        try await repository.save(draft, boxID: boxID, scope: .conversation)
 
         let suite = "ComposerImageOriginalRelaunch.\(UUID().uuidString)"
         let (store, defaults) = try makeStore(repository, suite: suite)

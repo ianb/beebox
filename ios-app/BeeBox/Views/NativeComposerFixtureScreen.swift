@@ -59,7 +59,7 @@ struct NativeComposerFixtureScreen: View {
     init() {
         let repository = ComposerDraftRepository(rootURL: Self.fixtureRootURL)
         self.repository = repository
-        _draftStore = StateObject(wrappedValue: ComposerDraftStore(repository: repository))
+        _draftStore = StateObject(wrappedValue: ComposerDraftStore(scope: .conversation, repository: repository))
         _pendingStore = StateObject(wrappedValue: PendingEmissionStore(repository: repository))
     }
 
@@ -214,7 +214,7 @@ struct NativeComposerFixtureScreen: View {
         for file in draft.files {
             try? await repository.savePayload(Data("fixture file".utf8), filename: file.filename, boxID: box.id)
         }
-        try? await repository.save(draft, boxID: box.id)
+        try? await repository.save(draft, boxID: box.id, scope: .conversation)
         try? await repository.savePendingEmissions(fixturePending, boxID: box.id)
         if fixtureVoicePreparations.isEmpty == false {
             try? await repository.saveVoicePreparations(fixtureVoicePreparations, boxID: box.id)

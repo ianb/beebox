@@ -5,7 +5,7 @@ struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
     @EnvironmentObject private var boxLockManager: BoxLockManager
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var composerDraftStore = ComposerDraftStore()
+    @StateObject private var composerDraftStore = ComposerDraftStore(scope: .conversation)
     @StateObject private var pendingEmissionStore = PendingEmissionStore()
     @State private var showingPairSheet = false
     @State private var showingQuickChat = false

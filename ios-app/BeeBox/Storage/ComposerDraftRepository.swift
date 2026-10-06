@@ -42,6 +42,14 @@ struct VoicePreparationManifest: Codable, Equatable, Sendable {
     }
 }
 
+/// Which composer a draft belongs to. Part of the draft's storage key, so the
+/// chat composer and the box screen's new-thought composer never read or write
+/// each other's draft.
+enum ComposerDraftScope: Equatable, Sendable {
+    case conversation
+    case newThought
+}
+
 actor ComposerDraftRepository {
     enum RepositoryError: Error {
         case unsupportedVersion(Int)
@@ -59,8 +67,8 @@ actor ComposerDraftRepository {
             .appendingPathComponent("composer-drafts", isDirectory: true)
     }
 
-    func load(boxID: UUID) throws -> ComposerDraft? {
-        let url = manifestURL(boxID: boxID)
+    func load(boxID: UUID, scope: ComposerDraftScope) throws -> ComposerDraft? {
+        let url = manifestURL(boxID: boxID, scope: scope)
         guard fileManager.fileExists(atPath: url.path) else {
             return nil
         }
@@ -79,11 +87,11 @@ actor ComposerDraftRepository {
         }
     }
 
-    func save(_ draft: ComposerDraft, boxID: UUID) throws {
+    func save(_ draft: ComposerDraft, boxID: UUID, scope: ComposerDraftScope) throws {
         let directory = boxDirectory(boxID: boxID)
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         let data = try JSONEncoder().encode(ComposerDraftManifest(boxID: boxID, draft: draft))
-        try data.write(to: manifestURL(boxID: boxID), options: .atomic)
+        try data.write(to: manifestURL(boxID: boxID, scope: scope), options: .atomic)
     }
 
     func loadConversationStartups(boxID: UUID) throws -> [NativeConversationStartup] {
@@ -262,8 +270,14 @@ actor ComposerDraftRepository {
         }
     }
 
-    func manifestURL(boxID: UUID) -> URL {
-        boxDirectory(boxID: boxID).appendingPathComponent("manifest.json")
+    /// `.conversation` keeps the location drafts had before scopes existed.
+    func manifestURL(boxID: UUID, scope: ComposerDraftScope) -> URL {
+        switch scope {
+        case .conversation:
+            return boxDirectory(boxID: boxID).appendingPathComponent("manifest.json")
+        case .newThought:
+            return boxDirectory(boxID: boxID).appendingPathComponent("new-thought.json")
+        }
     }
 
     func pendingManifestURL(boxID: UUID) -> URL {
