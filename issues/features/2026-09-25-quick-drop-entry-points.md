@@ -8,6 +8,7 @@ labels: [capture, quick-chat, ios]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-25
+design: ../../beebox/docs/plans/box-screen.md
 ---
 
 The boxholder wants a better way to quickly drop things into the box. Two
@@ -83,3 +84,33 @@ Checked in code, in a browser at phone width, and in the iOS simulator.
 
 Not driven: the Quick chat sheet inside the simulator (no tap automation was
 used), the box selector page (owner login), and any real routing call.
+
+## 2026-10-06 — the in-app door is implemented (quick-chat-design)
+
+The [box screen plan](../../beebox/docs/plans/box-screen.md) is implemented on
+`worktree-quick-chat-design` and not yet landed. Reference:
+[Quick chat](../../beebox/docs/chat/quick-chat.md).
+
+- **The box screen** is the in-app door, on web at `/<box>/box` and native on
+  iOS. A cold launch of the iOS app shows it before any web content loads.
+  The box row of the app bar's landmark menu opens it.
+- **One server operation.** `quickChat.submit` stores, routes, and delivers a
+  thought in one request. `choose`, `discard`, and `home` complete it.
+  `prepare` and `receipt` are removed.
+- **After the drop.** A clear thought posts and the row names the chat. An
+  uncertain thought waits on the box screen with up to four choices. A
+  routing failure stores the thought and asks; it no longer sends nothing.
+- **Offline phone.** The iOS outbox keeps a thought until the server accepts
+  it, and retries for 7 days.
+
+Still open, so this issue stays open:
+
+- Siri, Shortcuts, the Action Button, a widget, and a Control Center control
+  (an App Intent that calls `quickChat.submit`), tracked in
+  [iOS App Intent capture](2026-08-08-ios-siri-app-intent-capture.md).
+- The share sheet: it keeps its picker. An automatic destination through
+  `submit` is a small follow-up.
+- The Mac: nothing exists outside the browser.
+- A notification for a thought that waits for a choice. The box screen shows
+  it on the next open.
+- Photos, files, and voice capture as a quick drop. Routing judges text only.
