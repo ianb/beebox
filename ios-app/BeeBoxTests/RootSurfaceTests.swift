@@ -209,4 +209,70 @@ final class RootSurfaceRuleTests: XCTestCase {
             }
         }
     }
+
+    // MARK: a notification tap and the pending foreground decision
+
+    /// RootView's order of operations: each event updates the pending stay,
+    /// then the surface; the scene becoming active turns the stay into its
+    /// foreground event.
+    private struct Lifecycle {
+        var state: RootSurfaceState
+        var stay: BackgroundStay?
+
+        mutating func apply(_ event: RootSurfaceEvent) {
+            stay = RootSurfaceRule.pendingStay(stay, after: event)
+            state = RootSurfaceRule.transition(state, on: event)
+        }
+
+        mutating func becomeActive(at now: Date) {
+            if let event = RootSurfaceRule.foregroundEvent(for: stay, now: now, hasPendingEmissions: false) {
+                apply(event)
+            }
+        }
+    }
+
+    private let backgrounded = Date(timeIntervalSince1970: 1_000_000)
+
+    func testATapBeforeTheForegroundEventAfterALongStayStaysOnTheWeb() {
+        for start in [RootSurfaceState(surface: .web, webMounted: true), RootSurfaceState(surface: .boxScreen, webMounted: false)] {
+            var lifecycle = Lifecycle(state: start, stay: BackgroundStay(since: backgrounded))
+            lifecycle.apply(.notificationTap)
+            lifecycle.becomeActive(at: backgrounded.addingTimeInterval(31 * minute))
+            XCTAssertEqual(lifecycle.state, RootSurfaceState(surface: .web, webMounted: true), "from \(start)")
+            XCTAssertNil(lifecycle.stay)
+        }
+    }
+
+    func testAForegroundEventBeforeTheTapShowsTheBoxScreenThenTheTapOpensTheWeb() {
+        var lifecycle = Lifecycle(state: RootSurfaceState(surface: .web, webMounted: true), stay: BackgroundStay(since: backgrounded))
+        lifecycle.becomeActive(at: backgrounded.addingTimeInterval(31 * minute))
+        XCTAssertEqual(lifecycle.state, RootSurfaceState(surface: .boxScreen, webMounted: false))
+        lifecycle.apply(.notificationTap)
+        XCTAssertEqual(lifecycle.state, RootSurfaceState(surface: .web, webMounted: true))
+    }
+
+    func testTheStayRecordsAWebContentProcessThatEnded() {
+        var stay = BackgroundStay(since: backgrounded)
+        stay.webContentEnded = true
+        XCTAssertEqual(
+            RootSurfaceRule.foregroundEvent(for: stay, now: backgrounded.addingTimeInterval(minute), hasPendingEmissions: false),
+            .returnedToForeground(backgroundedFor: minute, webContentAlive: false, hasPendingEmissions: false)
+        )
+        XCTAssertNil(RootSurfaceRule.foregroundEvent(for: nil, now: backgrounded, hasPendingEmissions: false))
+    }
+
+    func testOnlyATapOrTheForegroundEventConsumesTheStay() {
+        let stay = BackgroundStay(since: backgrounded)
+        let kept: [RootSurfaceEvent] = [
+            .restoreCompleted(hasPendingEmissions: false), .openWeb, .openBoxScreen, .boxSwitched, .webContentTerminated,
+        ]
+        for event in kept {
+            XCTAssertEqual(RootSurfaceRule.pendingStay(stay, after: event), stay, "\(event)")
+        }
+        XCTAssertNil(RootSurfaceRule.pendingStay(stay, after: .notificationTap))
+        XCTAssertNil(RootSurfaceRule.pendingStay(
+            stay,
+            after: .returnedToForeground(backgroundedFor: minute, webContentAlive: true, hasPendingEmissions: false)
+        ))
+    }
 }

@@ -21,6 +21,15 @@ struct RootSurfaceState: Equatable, Sendable {
     static let launching = RootSurfaceState(surface: .undecided, webMounted: false)
 }
 
+/// A stay in the background whose foreground decision has not been made.
+/// Recorded when the app enters the background; consumed by the next
+/// foreground event or by a notification tap, whichever comes first.
+struct BackgroundStay: Equatable, Sendable {
+    var since: Date
+    /// The web content process ended during the stay.
+    var webContentEnded = false
+}
+
 enum RootSurfaceEvent: Equatable, Sendable {
     /// The selected box's pending-emission restore returned, after a cold
     /// launch or a box switch.
@@ -116,6 +125,39 @@ enum RootSurfaceRule {
                 return state
             }
             return RootSurfaceState(surface: state.surface, webMounted: false)
+        }
+    }
+}
+
+extension RootSurfaceRule {
+    /// The foreground event a pending stay produces when the app becomes
+    /// active, or nil when none is pending: a cold launch, a second
+    /// activation, or a stay a notification tap already consumed.
+    static func foregroundEvent(
+        for stay: BackgroundStay?,
+        now: Date,
+        hasPendingEmissions: Bool
+    ) -> RootSurfaceEvent? {
+        guard let stay else {
+            return nil
+        }
+        return .returnedToForeground(
+            backgroundedFor: now.timeIntervalSince(stay.since),
+            webContentAlive: stay.webContentEnded == false,
+            hasPendingEmissions: hasPendingEmissions
+        )
+    }
+
+    /// The stay still pending after `event`. A notification tap decides the
+    /// surface itself, so it consumes the stay: iOS can deliver the tap before
+    /// the scene becomes active, and the foreground event that follows must
+    /// not apply the 30-minute rule over the tap's target.
+    static func pendingStay(_ stay: BackgroundStay?, after event: RootSurfaceEvent) -> BackgroundStay? {
+        switch event {
+        case .notificationTap, .returnedToForeground:
+            return nil
+        case .restoreCompleted, .openWeb, .openBoxScreen, .boxSwitched, .webContentTerminated:
+            return stay
         }
     }
 }

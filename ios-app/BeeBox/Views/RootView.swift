@@ -15,10 +15,10 @@ struct RootView: View {
     @StateObject private var boxScreenStore = BoxScreenStore()
     /// What the person sees, and whether `ChatWebView` exists behind it.
     @State private var surfaceState = RootSurfaceState.launching
-    /// When the app last went to the background. In memory only: a killed app
-    /// is a cold launch.
-    @State private var backgroundedAt: Date?
-    @State private var webContentEndedInBackground = false
+    /// The last stay in the background, until the foreground event or a
+    /// notification tap decides the surface. In memory only: a killed app is
+    /// a cold launch.
+    @State private var backgroundStay: BackgroundStay?
     @State private var showingPairSheet = false
     @State private var navigationFailure: ChatWebView.NavigationFailure?
     /// A notification tap's target, waiting for the chat webview to load it.
@@ -204,8 +204,7 @@ struct RootView: View {
             guard phase == .background else {
                 return
             }
-            backgroundedAt = Date()
-            webContentEndedInBackground = false
+            backgroundStay = BackgroundStay(since: Date())
             boxScreenStore.setForeground(false)
             LogFlushBackgroundTask().begin()
             if store.selectedBox?.requiresDeviceUnlock == true {
@@ -342,6 +341,13 @@ struct RootView: View {
     }
 
     private func applySurface(_ event: RootSurfaceEvent) {
+        // Before the no-change return: a tap that finds the web app already
+        // shown still consumes the pending foreground decision.
+        let stay = RootSurfaceRule.pendingStay(backgroundStay, after: event)
+        if event == .notificationTap, backgroundStay != nil {
+            BoxLog.info("notification tap consumed the pending foreground return", category: .lifecycle)
+        }
+        backgroundStay = stay
         let next = RootSurfaceRule.transition(surfaceState, on: event)
         guard next != surfaceState else {
             return
@@ -356,17 +362,17 @@ struct RootView: View {
     }
 
     private func returnToForeground() {
-        guard let backgroundedAt, let boxID = store.selectedBox?.id else {
+        guard let boxID = store.selectedBox?.id else {
             return
         }
-        self.backgroundedAt = nil
-        let webContentAlive = webContentEndedInBackground == false
-        webContentEndedInBackground = false
-        applySurface(.returnedToForeground(
-            backgroundedFor: Date().timeIntervalSince(backgroundedAt),
-            webContentAlive: webContentAlive,
+        guard let event = RootSurfaceRule.foregroundEvent(
+            for: backgroundStay,
+            now: Date(),
             hasPendingEmissions: hasPendingEmissions(boxID: boxID)
-        ))
+        ) else {
+            return
+        }
+        applySurface(event)
     }
 
     private func hasPendingEmissions(boxID: PairedBox.ID) -> Bool {
@@ -561,7 +567,7 @@ struct RootView: View {
                 if scenePhase == .active {
                     applySurface(.webContentTerminated)
                 } else {
-                    webContentEndedInBackground = true
+                    backgroundStay?.webContentEnded = true
                 }
             }
         )
