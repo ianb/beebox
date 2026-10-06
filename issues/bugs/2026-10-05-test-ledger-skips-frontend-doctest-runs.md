@@ -6,6 +6,7 @@ labels: [tests]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-chat-scroll-fixes — checking the router static-prefix fix
+priority: important
 ---
 
 `pnpm test:changed` selected the frontend public-assets doctest and passed

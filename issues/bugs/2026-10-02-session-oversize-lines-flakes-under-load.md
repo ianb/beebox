@@ -5,6 +5,7 @@ area: beebox
 labels: [tests, flaky]
 filed-by: agent
 discovered-in: worktree-knip-sweep — two full beebox suite runs on 2026-10-02
+priority: normal
 ---
 
 `test/cli/lib/session.oversize-lines.doctest.md` failed in both full
