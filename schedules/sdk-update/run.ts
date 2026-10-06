@@ -3,8 +3,9 @@
  * the ledger has not reviewed yet?
  *
  * Deliberately cheap and deliberately dumb — VERSIONS ONLY. It reads two npm
- * registries and one line of `docs/agent-sdk-notes.md`, and it never fetches a
- * changelog, never reads beebox's source, and never judges relevance.
+ * registries and one line of the ledger (`agent-sdk-notes.md`, beside this
+ * script), and it never fetches a changelog, never reads beebox's source, and
+ * never judges relevance.
  * All of that is the session's work, and starting an Opus session every day to
  * discover "nothing was published" is the cost this head exists to avoid.
  *
@@ -31,7 +32,7 @@ import { execa } from "execa";
 
 const SCHEDULE_DIR = import.meta.dirname;
 const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
-const LEDGER = path.join(REPO_ROOT, "docs", "agent-sdk-notes.md");
+const LEDGER = path.join(SCHEDULE_DIR, "agent-sdk-notes.md");
 
 /** The three npm packages, in the order the briefing lists them. */
 const PACKAGES = [
@@ -98,7 +99,7 @@ async function readBaselines(): Promise<{ channel: string; version: string }[]> 
   const claudeCode = match?.[2];
   const codex = match?.[3];
   if (sdk === undefined || claudeCode === undefined || codex === undefined) {
-    refuse('docs/agent-sdk-notes.md has no "Latest reviewed upstream version" line (SDK, Claude Code, Codex) to measure from');
+    refuse('schedules/sdk-update/agent-sdk-notes.md has no "Latest reviewed upstream version" line (SDK, Claude Code, Codex) to measure from');
   }
   return [
     { channel: "SDK", version: sdk },
@@ -137,8 +138,8 @@ const body = [
   "",
   "This head checked versions only — it read no changelogs and judged no",
   "relevance. Assess each one on its channel, update",
-  "`docs/agent-sdk-notes.md`, and bump the pin if the rules in your system",
-  "prompt say to.",
+  "`schedules/sdk-update/agent-sdk-notes.md`, and bump the pin if the rules in",
+  "your system prompt say to.",
   "",
 ].join("\n");
 

@@ -1,6 +1,6 @@
 ---
-title: "Retire the root docs/ directory: move the Agent SDK ledger into beebox/docs/, delete the lint audit and the map"
-workstream: unattached
+title: "Retire the root docs/ directory: move the Agent SDK ledger beside its schedule, delete the lint audit and the map"
+workstream: retire-root-docs
 area: docs
 labels: [docs]
 filed-by: agent
@@ -59,3 +59,23 @@ A `do-it` request was set. Changed to `discuss`: it still holds, but it is about
 ## Decision (2026-10-06)
 
 Approved. Run by an Opus session because the developer wants each moved document to make sense in its new location, not just a mechanical path change. Assigned to the `retire-root-docs` workstream.
+
+## Resolution (2026-10-06)
+
+- **The ledger moved to `schedules/sdk-update/agent-sdk-notes.md`, not
+  `beebox/docs/`** (developer's choice when asked). Any change under
+  `beebox/` deploys to production (`bin/deployed-paths.ts`), and the schedule
+  lands a ledger-only commit on many days, so `beebox/docs/` would have turned
+  each of those into a deploy and restart. Beside the run script and prompt
+  that own it, the ledger keeps its basename, and ledger-only commits still
+  ship nothing. No archiving cutoff: the prompt treats old entries as
+  regression evidence.
+- **The lint audit's history is now three sentences in `beebox/code-style.md`**
+  ("Lint rule suppression"), and the two `beebox/eslint.config.ts` comments
+  point there. Git history keeps the full report.
+- **Every line of `docs/README.md` already had a home** in
+  `beebox/docs/README.md`, `beebox/CLAUDE.md`, `research/CLAUDE.md`, or the
+  root `CLAUDE.md`, so nothing moved into `CLAUDE.md`. The root `README.md`
+  now points at `beebox/docs/README.md`.
+- Verified: `bin/schedules run sdk-update --dry-run` reads the baseline
+  (`0.3.290` / `2.1.290` / `0.160.1`) from the new path.

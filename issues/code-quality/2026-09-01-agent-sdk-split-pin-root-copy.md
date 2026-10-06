@@ -14,7 +14,7 @@ the pin the `sdk-update` schedule maintains (`0.3.251` today). The monorepo root
 `package.json` carries a second, unmanaged one, still at **`0.3.226`** —
 published 2026-08-08, roughly 25 releases back. The ledger diagnosed the split
 when it appeared — see "Monitor reliability — the SDK pin has split in two
-(needs a decision)" in `docs/agent-sdk-notes.md`, which called the perpetual
+(needs a decision)" in `schedules/sdk-update/agent-sdk-notes.md`, which called the perpetual
 "behind" reading correctly — but it was never filed, and the header line has
 since softened it to a reporting quirk. Filing it now, with one effect that
 section did not cover.
@@ -78,5 +78,5 @@ Removing it is the tidier end state, but it is the one that can break an import
 path somewhere in the monorepo, so it wants a look at what actually resolves the
 root copy before anything moves.
 
-Context: the "split-pin note" in `docs/agent-sdk-notes.md`, which this issue
+Context: the "split-pin note" in `schedules/sdk-update/agent-sdk-notes.md`, which this issue
 supersedes as the record of the problem.

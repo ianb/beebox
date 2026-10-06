@@ -32,5 +32,5 @@ to stop it. Adopting the option probably implies building that surface first,
 which is why this is a decision rather than a one-line flag flip.
 
 The option ships in 0.3.246, which is ahead of the current pin — nothing can be
-implemented until the pin reaches it. See the 0.3.246 entry in
-`../../docs/agent-sdk-notes.md`.
+implemented until the pin reaches it. See the 0.3.246 entry in the
+[SDK ledger](../../schedules/sdk-update/agent-sdk-notes.md).
