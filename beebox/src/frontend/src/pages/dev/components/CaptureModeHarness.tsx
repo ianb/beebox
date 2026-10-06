@@ -229,6 +229,7 @@ function RetryBanners() {
           <div className="text-xs font-mono text-warm-500">{feedback.phase}</div>
           <div className="bg-gray-900 text-white rounded-lg overflow-hidden">
             <CaptureControls
+              includeControlIds={false}
               sessionId="fake" recording={false} finalizing={false} hasContent
               pendingUploads={feedback.phase === "retrying" ? 3 : 0}
               photosFailed={2} audioFailed={1} filesFailed={0}

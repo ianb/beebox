@@ -120,13 +120,14 @@ export interface ComposerSectionProps {
   expiredAttachmentsNotice: ReactNode;
   inputArea: ReactNode;
   mobileRow: ReactNode;
+  includeControlIds?: boolean;
 }
 
 export function ChatComposerSection(props: ComposerSectionProps) {
   const {
     attachments, pendingImageCount, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRetryFileAttachment, onRemoveSelection,
     fileInputRef, onFileInputChange, typingMode, typingLocked, setTypingMode, setTypingLocked,
-    isTranscribing, recoveredDictation, expiredAttachmentsNotice, inputArea, mobileRow,
+    isTranscribing, recoveredDictation, expiredAttachmentsNotice, inputArea, mobileRow, includeControlIds = true,
   } = props;
   return (
     <>
@@ -163,7 +164,7 @@ export function ChatComposerSection(props: ComposerSectionProps) {
           {typingMode ? (
             <div className="absolute -top-10 right-3 flex gap-1 z-10">
               <button
-                id="bbx-composer-keyboard-lock"
+                id={includeControlIds ? "bbx-composer-keyboard-lock" : undefined}
                 onClick={() => setTypingLocked((v) => !v)}
                 className={`p-1.5 rounded-full shadow-sm backdrop-blur-sm ${typingLocked ? "bg-primary text-white hover:bg-primary-dark" : "bg-warm-100/90 text-warm-600 hover:bg-warm-300"}`}
                 aria-pressed={typingLocked}
@@ -180,7 +181,7 @@ export function ChatComposerSection(props: ComposerSectionProps) {
                 )}
               </button>
               <button
-                id="bbx-composer-keyboard-close"
+                id={includeControlIds ? "bbx-composer-keyboard-close" : undefined}
                 onClick={() => { setTypingMode(false); setTypingLocked(false); }}
                 className="p-1.5 rounded-full bg-warm-100/90 text-warm-600 hover:bg-warm-300 shadow-sm backdrop-blur-sm"
                 title="Close keyboard"
