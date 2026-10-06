@@ -221,7 +221,7 @@ invalid `publication.json`.
 
 ```ts continue
 await migratePublicationCards({ boxRoot: box.root, apply: true })
-=> { actions: [], warnings: ["src/publications/app/ has no publication.json; left in place", "src/publications/broken/publication.json is invalid; left in place: [\n  {\n    \"code\": \"invalid_value\",\n    \"values\": [\n      \"public\",\n      \"secret\",\n      \"accounts\",\n      \"any-account\"\n    ],\n    \"path\": [\n      \"tier\"\n    ],\n    \"message\": \"Invalid option: expected one of \\\"public\\\"|\\\"secret\\\"|\\\"accounts\\\"|\\\"any-account\\\"\"\n  }\n]"] }
+=> { actions: [], warnings: ["src/publications/app/ has no publication.json; left in place", "src/publications/broken/publication.json is invalid; left in place: tier: Invalid discriminator value. Expected 'public' | 'secret' | 'accounts' | 'any-account'"] }
 ```
 
 ## Stock guidance only

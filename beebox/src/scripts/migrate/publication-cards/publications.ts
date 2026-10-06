@@ -1,34 +1,25 @@
 /** Rules a-d: turn one `src/publications/<name>/` into a publication card plus attach folder. */
 
 import * as path from "node:path";
-import { z } from "zod";
 import { splitCardContent } from "../../../cards/frontmatter.js";
-import { pubIdSchema } from "../../../publish/manifest.js";
-import {
-  publicationConnectionSchema,
-  publicationEmailsSchema,
-  publicationSlugSchema,
-  publicationTierSchema,
-  publicationTitleSchema,
-} from "../../../publish/publication-definition.js";
+import { publicationDefinitionSchema, type PublicationDefinition } from "../../../publish/publication-definition.js";
 import { createPublicationCardTemplate } from "../../../schemas/publication.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { entryKind, move, readOrNull, remove, removeIfEmpty, writeText, type MigrationContext } from "./box-fs.js";
 
-/** The retired `publication.json` shape. */
-const OldPublicationSchema = z.object({
-  pubId: pubIdSchema,
-  connection: publicationConnectionSchema,
-  content: z.enum(["static", "project"]),
-  title: publicationTitleSchema,
-  tier: publicationTierSchema,
-  slug: publicationSlugSchema.optional(),
-  emails: publicationEmailsSchema.optional(),
-});
-type OldPublication = z.infer<typeof OldPublicationSchema>;
+/**
+ * The retired `publication.json` shape is the strict definition schema, which
+ * the engine still uses for the card's request. A file it rejects cannot become
+ * a valid card, so it is reported and left in place.
+ */
+type OldPublication = PublicationDefinition;
 
 function optionalFields(def: OldPublication): { slug?: string; emails?: string[] } {
-  return { ...(def.slug === undefined ? {} : { slug: def.slug }), ...(def.emails === undefined ? {} : { emails: def.emails }) };
+  return {
+    ...(def.tier === "public" && def.slug !== undefined ? { slug: def.slug } : {}),
+    ...(def.tier === "accounts" ? { emails: def.emails } : {}),
+  };
 }
 
 const DEFAULT_DIR = "_content/publications";
@@ -45,22 +36,34 @@ async function targetPath(ctx: MigrationContext, { name, def, kept }: { name: st
   return kept ?? `${dir}/${name}-${def.pubId.slice(0, 6)}.publication.card`;
 }
 
+/** Read one `publication.json`; a missing or rejected file is reported and yields null. */
+async function readOldDefinition(ctx: MigrationContext, { pubDir, jsonRel }: { pubDir: string; jsonRel: string }): Promise<OldPublication | null> {
+  const raw = await readOrNull(ctx, jsonRel);
+  if (raw === null) {
+    ctx.warnings.push(`${pubDir}/ has no publication.json; left in place`);
+    return null;
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch (e) {
+    ctx.warnings.push(`${jsonRel} is not valid JSON; left in place: ${errorMessage(e)}`);
+    return null;
+  }
+  const parsed = publicationDefinitionSchema.safeParse(json);
+  if (parsed.success) return parsed.data;
+  const issue = parsed.error.issues[0];
+  const detail = issue === undefined ? "rejected" : `${issue.path.join(".") || "definition"}: ${issue.message}`;
+  ctx.warnings.push(`${jsonRel} is invalid; left in place: ${detail}`);
+  return null;
+}
+
 /** Rules a-d for one publication directory. `cards` lists the cards carrying its pubId. */
 export async function migratePublication(ctx: MigrationContext, { name, cards }: { name: string; cards: Map<string, string[]> }): Promise<void> {
   const pubDir = `src/publications/${name}`;
   const jsonRel = `${pubDir}/publication.json`;
-  const raw = await readOrNull(ctx, jsonRel);
-  if (raw === null) {
-    ctx.warnings.push(`${pubDir}/ has no publication.json; left in place`);
-    return;
-  }
-  let def: OldPublication;
-  try {
-    def = OldPublicationSchema.parse(JSON.parse(raw));
-  } catch (e) {
-    ctx.warnings.push(`${jsonRel} is invalid; left in place: ${e instanceof Error ? e.message : String(e)}`);
-    return;
-  }
+  const def = await readOldDefinition(ctx, { pubDir, jsonRel });
+  if (def === null) return;
   const found = cards.get(def.pubId) ?? [];
   const defaultCard = `${DEFAULT_DIR}/${def.pubId}.publication.card`;
   const kept = found.includes(defaultCard) ? defaultCard : found[0];
