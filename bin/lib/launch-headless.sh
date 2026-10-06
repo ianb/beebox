@@ -26,6 +26,7 @@
 #   LH_SESSION_ID         pre-minted uuid for `persistent` claude       (claude)
 #   LH_SESSION_RESUME     1 when that session already has a transcript
 #   LH_CWD                the checkout or worktree the session runs in  (codex)
+#   LH_TIMEOUT_MS         the run's timeout; caps one foreground command (claude)
 #
 # The prompt is NEVER an argv element: both CLIs read it from stdin, and a
 # briefing carrying a failure log is exactly the string a shell would mangle.
@@ -57,7 +58,14 @@ launch_headless_claude() {
     echo "launch-headless: no system prompt file at ${LH_SYSTEM_PROMPT_FILE:-}" >&2
     return 2
   fi
-  argv=(claude -p --brief --name "$LH_WORKSTREAM")
+  # A headless session ends when the agent ends its turn, so a command it
+  # backgrounds to "wait for" outlives the session and the work is lost
+  # (knip-sweep, 2026-09-15 and 2026-09-30). Background tasks are switched off,
+  # and one foreground command may run as long as the whole run is allowed to,
+  # instead of the 10-minute default that made backgrounding the suite tempting.
+  argv=(env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1)
+  [ -n "${LH_TIMEOUT_MS:-}" ] && argv+=("BASH_MAX_TIMEOUT_MS=$LH_TIMEOUT_MS")
+  argv+=(claude -p --brief --name "$LH_WORKSTREAM")
   [ -n "${LH_MODEL:-}" ] && argv+=(--model "$LH_MODEL")
   [ -n "${LH_EFFORT:-}" ] && argv+=(--effort "$LH_EFFORT")
   # --setting-sources user is load-bearing, not decoration: a nested claude -p

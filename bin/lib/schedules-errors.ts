@@ -84,3 +84,11 @@ export class NoWorkstreamToStartError extends ScheduleError {
     this.name = "NoWorkstreamToStartError";
   }
 }
+
+/** `bin/schedules run --replay` named a run with no stored handoff. */
+export class NoHandoffToReplayError extends ScheduleError {
+  constructor(readonly scheduleName: string, readonly runId: string) {
+    super(`${scheduleName} run ${runId} has no stored handoff to replay`);
+    this.name = "NoHandoffToReplayError";
+  }
+}
