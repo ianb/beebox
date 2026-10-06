@@ -68,6 +68,9 @@ function routingFailure(error: unknown): never {
 
 const idSchema = z.string().uuid();
 const channelSchema = z.enum(CHAT_CHANNELS).optional();
+export const quickChatSubmitInput = z.object({ id: idSchema, message: z.string().trim().min(1).max(12000), channel: channelSchema });
+export const quickChatChooseInput = z.object({ id: idSchema, candidateId: z.string().min(1), channel: channelSchema });
+export const quickChatDiscardInput = z.object({ id: idSchema });
 const recentChatSchema = z.object({ sessionId: z.string(), label: z.string(), lastActivity: z.string(),
   landmark: z.object({ dir: z.string(), label: z.string(), symbol: z.string().nullable() }) });
 export const quickChatHomeSchema = z.object({
@@ -118,15 +121,15 @@ function requestFailure(error: unknown): never {
 
 export const quickChatRouter = router({
   /** Store, route, and deliver one thought. A repeat with the same id returns the stored record, retrying a pending delivery. */
-  submit: authedProcedure.input(z.object({ id: idSchema, message: z.string().trim().min(1).max(12000), channel: channelSchema }))
+  submit: authedProcedure.input(quickChatSubmitInput)
     .output(quickChatViewSchema)
     .mutation(async ({ ctx, input }) => view(await submitQuickChat(context(ctx, input.channel), input).catch(requestFailure), ctx)),
   /** Fix the person's chosen destination for a stored thought, and deliver it. */
-  choose: authedProcedure.input(z.object({ id: idSchema, candidateId: z.string().min(1), channel: channelSchema }))
+  choose: authedProcedure.input(quickChatChooseInput)
     .output(quickChatViewSchema)
     .mutation(async ({ ctx, input }) => view(await chooseQuickChat(context(ctx, input.channel), input).catch(requestFailure), ctx)),
   /** End a stored thought that was not sent. */
-  discard: authedProcedure.input(z.object({ id: idSchema }))
+  discard: authedProcedure.input(quickChatDiscardInput)
     .output(quickChatViewSchema)
     .mutation(async ({ ctx, input }) => view(await discardQuickChat({ boxRoot: ctx.boxRoot }, input).catch(requestFailure), ctx)),
   /** What the box screen shows. */

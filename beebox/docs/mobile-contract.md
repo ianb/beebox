@@ -1216,6 +1216,18 @@ See §1.3 (full request/response/errors).
   `test/core/notification/target.doctest.md` against the Swift target mirror.
 - **Drift:** SILENT. A renamed key lands the tap on the app's default page with no error.
 
+### 5.11 Quick chat — `quickChat.submit`, `choose`, `discard`, `home`
+
+- **Direction:** native → box, bearer-authenticated tRPC (not batched). `POST
+  /api/trpc/quickChat.submit` `{id,message,channel?}`, `POST /api/trpc/quickChat.choose`
+  `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.discard` `{id}`, and `GET
+  /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. Each mutation answers a
+  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. Shapes:
+  `src/core/chat/routing/quick-chat-record.ts` (`quickChatViewSchema`) and
+  `src/webapp/trpc/routers/quick-chat.ts` (inputs, `quickChatHomeSchema`).
+- **Fixtures:** `test/mobile-contract/fixtures/quick-chat/`, parsed field for field by
+  `test/webapp/trpc/routers/quick-chat.contract-fixtures.doctest.md`.
+
 ---
 
 ## 6. Server-side "mobile" awareness
