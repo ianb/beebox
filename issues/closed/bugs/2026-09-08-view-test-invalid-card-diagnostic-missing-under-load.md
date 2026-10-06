@@ -1,12 +1,15 @@
 ---
 title: "`view test` can miss an invalid selected card under parallel test load"
-workstream: unattached
+workstream: test-suite-health
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-paper-cards — final changed-test verification
 priority: important
+resolution: implemented
 ---
+
+**Closed 2026-10-06 (test-suite-health, `2379efcf3`).** The doctest execs the prebuilt CLI, which loads `dist/exports/*` and `dist/view-widgets/*` at runtime. `bundle.ts` renamed only `dist/cli.mjs` atomically and wrote the rest in place, and the suite rebuilds the bundle mid-run (`hub.e2e.doctest.md`). With a bundle-rebuild loop running beside it, the invalid-card case failed 1 run in 8 (`--allow-invalid-cards` exited 1). After every output was staged and renamed: 16/16. The exact original signature (exit 0, no card named) was not reproduced; a partly read `dist/exports/cards.js` during schema loading fits it, but that is unconfirmed. The full-suite logs since 2026-09-05 hold one failure of this file, a 1,043 s timeout on a stalled host.
 
 `test/cli/commands/view-test-command.doctest.md` (moved to `beebox/test/cli/commands/view/command.test-command.doctest.md`) failed during a parallel
 `test:changed` run. The case at line 275 creates

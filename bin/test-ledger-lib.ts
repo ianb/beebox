@@ -89,6 +89,31 @@ export interface TapFileResult {
 // ── pure parsing and classification ─────────────────────────────────────────
 
 /**
+ * Path prefixes (relative to `beebox/`, where tap runs) of the test files tap
+ * reports. Mirrors the `include` globs in `beebox/.taprc`: `test/`,
+ * `src/frontend/test/` and the root dev-tooling doctests, which tap names
+ * `../bin/test/...`. A root outside this list has its results dropped, so add
+ * it here whenever `.taprc` gains an `include` root.
+ */
+export const TEST_FILE_ROOTS = ["test/", "src/frontend/test/", "../bin/test/"] as const;
+
+/**
+ * Graph paths are repo-relative; the beebox runner takes paths relative to
+ * beebox. A root-infrastructure doctest (`bin/test/…`) runs from the package
+ * as `../bin/test/…`, so it gets beebox's loaders (bin/CLAUDE.md). Passed
+ * through unprefixed, it named no file in the package, and the runner refused
+ * the whole selection.
+ */
+export function packageRelative(path: string): string {
+  return path.startsWith("beebox/") ? path.slice("beebox/".length) : `../${path}`;
+}
+
+/** Inverse of {@link packageRelative}: a name tap reports, as a repo-relative path. */
+export function repoRelative(tapName: string): string {
+  return tapName.startsWith("../") ? tapName.slice("../".length) : `beebox/${tapName}`;
+}
+
+/**
  * Per-file results from raw TAP.
  *
  * tap emits one line per test file: `ok 3 - test/foo.doctest.md # time=1234ms`.
@@ -101,7 +126,7 @@ export function parseTapFiles(raw: string): TapFileResult[] {
     const match = /^(ok|not ok) \d+ - (\S+)(?: # time=([\d.]+)ms)?/.exec(line);
     if (match === null) continue;
     const [, status, file, time] = match;
-    if (file === undefined || !file.startsWith("test/")) continue;
+    if (file === undefined || !TEST_FILE_ROOTS.some((root) => file.startsWith(root))) continue;
     results.push({
       file,
       ok: status === "ok",

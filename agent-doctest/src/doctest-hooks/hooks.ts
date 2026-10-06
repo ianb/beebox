@@ -29,9 +29,9 @@ export {
   type ThrowsExample,
   parseExamples,
   parseExample,
-  generateTestSource,
   generateTestModule,
 } from "./doctest-generate.ts";
+export { generateTestSource } from "./doctest-load.ts";
 
 // ── Loader hooks ────────────────────────────────────────────────────────────
 //

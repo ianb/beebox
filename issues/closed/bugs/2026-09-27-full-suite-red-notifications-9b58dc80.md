@@ -1,12 +1,15 @@
 ---
 title: "Full-suite red: test/webapp/trpc-hq-preferences.doctest.md (moved to `beebox/test/webapp/trpc/routers/chat.hq-preferences.doctest.md`)"
-workstream: notifications
+workstream: test-suite-health
 area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-notifications — the hourly full-suite run on main
+resolution: implemented
 ---
+
+**Closed 2026-10-06 (test-suite-health, `f1ba1944e`).** Not deterministic: the file passed alone (5/5 and under load), but failed in five hourly full-suite runs from 2026-09-26 to 2026-10-06 with `reload: on / history: on` after an accepted `setFeature(off)`. Cause: a real lost update in the reserved-chat feature handoff. The start wrote the seed and only then closed the handoff, and the atomic write fsyncs the directory after the new file is visible, so a toggle in that window folded into an already-written seed. Toggling the moment the seed was visible lost it 20/20 times. The start now closes the handoff when it takes the seed, before queuing the write. The doctest failed at run 10 of a 12-hog load loop before the fix and passed 40/40 after. Regression example added to `beebox/test/core/chat/session/history.features-persistence.doctest.md`.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `9b58dc80`. Bisecting the landings since the last tested

@@ -12,14 +12,19 @@ what would not be normal is this file silently passing while testing nothing,
 so the assertion below names which of the two happened.
 
 Warm (uv environment and model weights cached) this takes a few seconds. The
-probe below runs `uvx --offline`, so an environment that is not already built
-is a fast skip, never a build: building it downloads a multi-hundred-MB torch
-environment and makes macOS Gatekeeper verify every dylib, which is not a
-thing a test run should do on its own. Warm it once by hand with
-`uvx --from docling==<DOCLING_VERSION> docling convert --help`.
+test never touches the network: it sets `UV_OFFLINE` and `HF_HUB_OFFLINE` for
+itself and its children. A missing environment is a fast skip at the probe,
+never a build: building it downloads a multi-hundred-MB torch environment and
+makes macOS Gatekeeper verify every dylib, which is not a thing a test run
+should do on its own. Missing model weights are a skip at the extraction, never
+a download: on a slow link the download once outran the test's timeout, and
+`--help` in the probe never loads the models, so the probe cannot see them.
+Warm both once by hand by converting any PDF:
+`uvx --from docling==<DOCLING_VERSION> --with onnxruntime --with rapidocr docling convert <some.pdf> --output /tmp/docling-warm`.
 
-The suite shares the developer's uv cache (`test/helpers/isolate-user-home.ts`),
-so a warmed environment stays warm under the isolated test HOME.
+The suite shares the developer's uv and Hugging Face hub caches
+(`test/helpers/isolate-user-home.ts`), so a warmed machine stays warm under the
+isolated test HOME.
 
 ```ts setup
 import { createDoclingService, doclingArgs } from "../../../src/services/docling/core.js";
@@ -30,12 +35,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execa } from "execa";
 
-// Probe: can Docling run here at all? `--offline` answers from the uv cache
-// only — an already-built environment says yes in about a second, an absent
-// one fails in under a second instead of building itself — and no uv at all
-// throws. Either failure is a skip.
+// Offline for this process and every child it starts, the real extraction
+// included: uv answers from its cache, Hugging Face from its hub cache.
+process.env["UV_OFFLINE"] = "1";
+process.env["HF_HUB_OFFLINE"] = "1";
+
+// Probe: can Docling run here at all? Offline, uv answers from its cache only —
+// an already-built environment (with the same `--with` set the real call uses)
+// says yes in about a second, an absent one fails in under a second instead of
+// building itself — and no uv at all throws. Either failure is a skip.
 async function doclingRunnable() {
-  const probe = await execa("uvx", ["--offline", "--from", `docling==${DOCLING_VERSION}`, "docling", "convert", "--help"], {
+  const probe = await execa("uvx", ["--from", `docling==${DOCLING_VERSION}`, "--with", "onnxruntime", "--with", "rapidocr", "docling", "convert", "--help"], {
     timeout: 60_000,
     reject: false,
   }).catch((e) => ({ exitCode: 1, message: e.message }));
@@ -43,8 +53,15 @@ async function doclingRunnable() {
   return `uvx/docling ${DOCLING_VERSION} is not runnable here (${probe.message ?? `exit ${String(probe.exitCode)}`})`;
 }
 
-const skipReason = await doclingRunnable();
-if (skipReason) console.warn(`[skipped] pdf-extract-integration: ${skipReason}`);
+const probeSkip = await doclingRunnable();
+if (probeSkip) console.warn(`[skipped] pdf-extract-integration: ${probeSkip}`);
+
+// Offline, uncached weights fail inside huggingface_hub's snapshot download.
+// That is the one extraction failure that means "not warmed" rather than
+// "broken"; every other failure stays a failure.
+function weightsMissing(result) {
+  return !result.ok && result.error.includes("huggingface_hub") && /snapshot_download|offline/i.test(result.error);
+}
 ```
 
 ## The argv we send is the argv we mean
@@ -82,9 +99,11 @@ await writeFile(pdfPath, textPdf());
 const workDir = join(dir, "work");
 await import("node:fs/promises").then((fs) => fs.mkdir(workDir, { recursive: true }));
 
-const result = skipReason
+const result = probeSkip
   ? { skipped: true }
   : await createDoclingService().extract(pdfPath, { workDir, ocr: "off", languages: null });
+const skipReason = probeSkip ?? (weightsMissing(result) ? "Docling model weights are not in the Hugging Face hub cache" : null);
+if (skipReason && !probeSkip) console.warn(`[skipped] pdf-extract-integration: ${skipReason}`);
 
 // One line, whichever path ran — so a skip is visible rather than a silent pass.
 skipReason ? "SKIPPED" : (result.ok ? "EXTRACTED" : `FAILED: ${result.error}`)
