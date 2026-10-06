@@ -209,16 +209,14 @@ Procedure cards in \`_config/procedures/\` are installed by \`bbx engine init\` 
 
 - **\`bbx engine init\` on a fresh box**: Templates are copied directly.
 - **\`bbx engine init\` on an existing box (unchanged procedures)**: Templates are updated in place.
-- **\`bbx engine init\` on an existing box (modified procedures)**: The new template is parked under \`_config/_template-updates/_config/procedures/<name>.procedure.card\` so you can diff and merge manually. The active file at \`_config/procedures/<name>.procedure.card\` is left untouched.
+- **\`bbx engine init\` on an existing box (modified procedures)**: Separate edits merge automatically when a last-stock snapshot exists. Conflicts park the new template under \`_config/_template-updates/_config/procedures/<name>.procedure.card\`; the active file is left untouched.
 
 To check for updates:
 \`\`\`bash
-ls _config/_template-updates/_config/procedures/
-# If any exist, compare with the main version and merge changes
-diff _config/procedures/refresh-maps.procedure.card _config/_template-updates/_config/procedures/refresh-maps.procedure.card
+bbx template diff _config/procedures/refresh-maps.procedure.card
 \`\`\`
 
-After merging, delete the file under \`_config/_template-updates/_config/procedures/\`. The next \`bbx engine init\` will see your merged version as the current copy.
+After editing the active file to combine both changes, run \`bbx template resolve _config/procedures/refresh-maps.procedure.card\`. This records the upstream version and clears the park. Use \`bbx template accept <path>\` only when the local edits can be discarded.
 
 ## Git History
 

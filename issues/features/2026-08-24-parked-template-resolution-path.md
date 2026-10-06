@@ -1,6 +1,6 @@
 ---
 title: "Give parked template updates a resolution path (accept / diff / merge) instead of hand-copying"
-workstream: unattached
+workstream: parked-templates
 area: beebox
 priority: normal
 labels: [templates, boxes]

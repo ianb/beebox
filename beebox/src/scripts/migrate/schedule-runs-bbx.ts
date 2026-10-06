@@ -27,6 +27,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { errnoCode, errorMessage } from "../../shared/error-guards.js";
+import { recordAutomatedTemplateRewrite } from "../../core/template-update.js";
 
 /** `runs: cb …` at any indentation, the command word alone. */
 const RUNS_CB = /^(\s*(?:-\s*)?runs:\s*)cb(?=\s|$)/gmu;
@@ -62,7 +63,10 @@ async function main(): Promise<number> {
     const after = rewriteRuns(before);
     if (after === before) continue;
     changed.push(path.relative(boxRoot, file));
-    if (apply) await fs.writeFile(file, after);
+    if (apply) {
+      await fs.writeFile(file, after);
+      await recordAutomatedTemplateRewrite({ boxRoot, relPath: path.relative(boxRoot, file), before, after });
+    }
   }
   const verb = apply ? "rewrote" : "would rewrite";
   process.stdout.write(`[schedule-runs-bbx] ${verb} ${String(changed.length)} scheduled-script card(s).\n`);

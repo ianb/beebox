@@ -1,4 +1,18 @@
 tests:
+  # Status (2026-10-06, Codex): passed on a disposable standalone clone;
+  # 2 files read, 1 search. Configured Claude transcript was unavailable.
+  - id: parked-template-resolution
+    prompt: >
+      Health reports a parked update for _config/intake.guide.card, which has
+      learned rules I need to keep. Consult the engine command reference and
+      explain how you inspect and resolve this update so the same upstream
+      version does not park again. Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/bbx-commands.md"]
+    watch_for: "Uses template diff, edits local to preserve learned rules, and template resolve; does not blindly accept or merely delete the park."
+    correct_contains: ["bbx template diff", "bbx template resolve"]
+    tags: [templates]
+
   # === Replayable document triage ===
   # Status (2026-09-29, Codex): pass on a disposable standalone synthetic box;
   # knows_about, 6 files read, 6 searches. Read generated triage-instructions
