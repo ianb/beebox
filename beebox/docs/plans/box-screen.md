@@ -69,7 +69,8 @@ Paths are monorepo-relative.
 - `beebox/src/frontend/src/components/AppNav/nav.tsx:91`: the avatar menu has Settings, Admin, Publications, Source View, Debug Log, Reload, Sign out. **Unchanged.**
 - `beebox/src/webapp/trpc/routers/nav.ts:12`: `get: publicProcedure.query(...)` returns the resolved `nav.card`. **Reuse** on the box screen.
 - `beebox/src/frontend/src/components/BoxSelectionTiles.tsx:75`: `to={href(`/${box.slug}/quick-chat`)}` under the label "Quick chat". **Change** the target to the box screen.
-- `beebox/docs/mobile-contract.md:589`: "Command envelope V2 (web → native)" on the `beeboxComposerCommand` channel, with kinds such as `scan-controls`. **Reuse** for the web menu's request to show the native box screen.
+- `ios-app/BeeBox/Views/ChatWebView.swift:506`: `decidePolicyFor navigationAction` already decides every main-frame navigation and cancels those outside the box's origin. **Reuse** to catch the navigation to `/<box>/box`.
+- `ios-app/BeeBox/Views/ChatWebView.swift:90`: `struct NavigationRequest` carries a path for the web view to open; notification taps use it (`RootView.swift:293`). **Reuse** to open a box-wide page from the native box screen.
 - `ios-app/BeeBox/Views/ComposerActionsView.swift:84`: `Section("Boxes")` lists paired boxes and calls `store.select(box)`. **Move** the list to the box screen; reuse the selection call.
 - `beebox/src/webapp/server-box-scope.ts:302`: a paired device's bearer token passes `authedProcedure` (`mobileOk`). The share extension calls `share.destinations` and `share.saveTextual` this way. **Reuse**; no new auth.
 - `ios-app/BeeBox/Views/RootView.swift:306`: `ChatWebView(` is constructed whenever a box is selected. `ChatWebView.swift:219` creates a new `WKWebView` in `makeUIView` and line 224 loads it. **Change**: construct it only when a chat is shown.
@@ -175,6 +176,8 @@ The route's state is route-local today: `send-routes.ts:57` reads `processedMess
 
 A duplicate answer carries no outcome. `send-dedup.ts:158` answers a durable duplicate with `{ deduplicated: true }` only: no turn id, no queued flag, no assigned session. So the record must hold the destination before delivery starts. The `sending` record stores the destination label and the session id when one exists (an existing chat, or a reserved id). When a repeated delivery is answered as a duplicate, the record becomes `sent` with that stored destination and without `queued`. A new chat on a non-Claude engine has no stored session id; its row offers "All chats".
 
+Duplicate protection ends when the message-id claim expires (`send-dedup.ts:24`, 7 days). A `sending` record stores `deliveryStartedAt` at its first attempt. A delivery attempt more than 6 days after that is refused: the row says "This may already be in <label>. Open the chat to check." and offers Open chat and Discard only.
+
 **Record storage.** Records in `needs-choice` or `sending` live in `.beebox/quick-chat/open/<id>.json`. A record moves to `.beebox/quick-chat/<id>.json` when it becomes `sent` or `discarded`. `home` lists the `open/` directory, so its cost does not grow with history, and an unfinished message never ages out of view. The lock path does not move with the record: every procedure locks `.beebox/quick-chat/<id>.json.lock`, whatever the state. The record gains `sentAt` and `discardedAt`. `recentlySent` is the records whose `sentAt` is in the last 24 hours, at most five; `home` finds them by reading the newest closed records by file time and filtering on `sentAt`. Existing records have no `state`; the reader treats a record with a `receipt` as `sent` and one without as `sending`.
 
 **Vocabulary lock-ins.** The four state names, the three reasons, the procedure names, and the `open/` directory.
@@ -201,7 +204,7 @@ Send generates an id, keeps `{id, message}` in browser storage under a key of it
 - `needs-choice`: the reason in words ("Not sure where this goes", "Could not sort this", "That chat is gone"), the choices as buttons, and Discard.
 - `sending` with `lastError`: "Not delivered", with Retry and Discard.
 
-The percentages, the "Jev's top choices" block, the staged-text correction links, and the read-only textarea state are removed. `/<box>/quick-chat` redirects to `/<box>/box`. The box selector tile's second link points to the box screen and reads "New thought". The page renders inside the product layout without the conversation shell, as the Publications page does (`main/app-shell.tsx:116`, `standalonePage`), so it does not load a chat.
+The percentages, the "Jev's top choices" block, the staged-text correction links, and the read-only textarea state are removed. `/<box>/quick-chat` redirects to `/<box>/box`. The box selector tile's second link points to the box screen and reads "New thought". **The page must not mount the chat.** `ProductLayout` mounts `BoxConversationShell` for every route except one: `main/app-shell.tsx:116` has `const standalonePage = location.pathname.endsWith("/publications");` and line 132 has `{standalonePage ? null : <BoxConversationShell />}<Outlet />`. Today's `/quick-chat` page is an ordinary child, so it mounts the conversation shell and loads chat state. The box screen route is added to that exception by route identity, not by a path suffix, and a frontend test renders the route and fails if `BoxConversationShell` mounts or any `chat.*` query other than `quickChat.home` runs. The app bar stays; its pill runs one light identity query at rest (`PlacePill.tsx:17`).
 
 **First implementation chunk.** The page state as a pure reducer over `home` data and `submit`/`choose` results, with a doctest for each row face and for reload with a stored unsent message.
 
@@ -220,43 +223,47 @@ The percentages, the "Jev's top choices" block, the staged-text correction links
 | Landmarks page | The hierarchy | A filter field above the hierarchy. Empty shows the hierarchy. Text shows matching landmarks in the same indented form |
 | Avatar menu | Settings, Admin, Publications, device items | Unchanged |
 
-- The box row is a link to `/<box>/box` on web. In the native shell it posts a Command envelope V2 command with kind `show-box-screen` and does not navigate.
-- "Find a landmark" replaces "All landmarks →" and opens the landmarks page with the filter field focused.
+- The box row is a plain document navigation to `/<box>/box` (an `href`, as "Other boxes →" is today at `PlacePill-panels.tsx:352`), not a router link. In a browser it loads the web box screen. In the native shell the app intercepts it; see track 4. No bridge command is added: the command envelope cannot report an unknown kind back to the web (`mobile-contract.md:642`), so a command would fail silently on an older build.
+- "Find a landmark" replaces "All landmarks →" and opens the landmarks page. The page is the landmarks system card rendered by `LandmarksList`, which has no filter or focus state today (`LandmarksList.tsx:61`). `LandmarksList` gains local filter state and a field. The row passes a view parameter that focuses the field on arrival.
 - "Search" in the folder menu stays the box's search page. Landmark search and file search stay separate, by the boxholder's decision.
 - The Recent files row moves to the folder menu with its sub-panel. The chat still supplies the body through the same slot (`AppBarRecentFilesSlot`); only the slot's host changes. The folder half renders only when a landmark resolves for the directory (`PlacePill.tsx:11`: "Rendered only when a landmark actually resolves for the place's directory"). The boxholder accepts this: "Chat folders pretty much always have landmarks."
 - `NavCardRows`, the box panel (`case "box"`), `onOpenBoxPanel`, and `webBoxSwitchingAvailable` are deleted.
 
-**Vocabulary lock-ins.** The command kind `show-box-screen`. The row label "Find a landmark".
+**Vocabulary lock-ins.** The route `/<box>/box`. The row label "Find a landmark".
 
 **First implementation chunk.** The landmarks page filter as a pure function over the `landmarks.list` rows that keeps each match's ancestors for indentation, with a doctest table. Then the menu rows.
 
 ### 4. iOS: box screen, outbox, launch rule
 
-**What.** A native `BoxScreenView`, a `QuickChatOutbox`, a rule for when the box screen shows, and the handler for `show-box-screen`.
+**What.** A native `BoxScreenView`, a `QuickChatOutbox`, a rule for when the box screen shows, and the interception of the web navigation to the box screen.
 
 **Why.** The app constructs the web chat for every launch (`RootView.swift:306`), so the composer is usable only after the last conversation loads, and its message goes to that conversation.
 
 **Direction.**
 
-- **Root state.** `RootView` gains `surface: .undecided | .boxScreen | .chat(sessionID: String?) | .page(path: String)`. `ChatWebView` is constructed only for `.chat` and `.page`. The native composer below it stays as it is for those.
-- **Launch rule.** A cold launch goes to `.boxScreen`. On return to the foreground, the app goes to `.boxScreen` when it was in the background for 30 minutes or more, or when the web content process ended while in the background. Otherwise it stays where it was. A notification tap goes to its target directly (`openNotificationTap`, `RootView.swift:251`); it sets `.chat` before it sets `navigationRequest`, because `ChatWebView` must exist to consume the request. The app records the background time in memory; a killed app is a cold launch. `ChatWebView` reloads itself when its content process ends and tells nobody (`ChatWebView.swift:491`), so it gains an `onWebContentTerminated` callback that `RootView` records for the rule.
-- **Pending chat messages come first.** Messages already sent from the chat composer wait in `PendingEmissionStore` and are delivered only through a mounted `ChatWebView` (`RootView.swift:306` passes `pendingEmissions: pendingEmissionStore.deliveries`). If the selected box has pending emissions, the app opens on `.chat` for their conversation, whatever the other inputs say.
+- **Root state.** `RootView` gains two pieces of state. `surface: .undecided | .boxScreen | .web` says what the person sees. `webMounted: Bool` says whether `ChatWebView` exists. `ChatWebView` is the whole web app, not only chat pages; the native composer below it stays as it is whenever `surface` is `.web`.
+  - Cold launch: `.boxScreen`, `webMounted == false`. No web view is created and nothing loads.
+  - First move to `.web` (a recent chat, a box-wide page, a notification tap): `webMounted` becomes true and the web view loads its target.
+  - Back to the box screen from the web app: `.boxScreen`, `webMounted` stays true. The web view is hidden, not destroyed, so returning is immediate.
+  - The launch rule's 30-minute return, a box switch, or the end of the web content process sets `webMounted` to false.
+- **Launch rule.** A cold launch goes to `.boxScreen`. On return to the foreground, the app goes to `.boxScreen` when it was in the background for 30 minutes or more, or when the web content process ended while in the background. Otherwise it stays where it was. A notification tap goes to its target directly (`openNotificationTap`, `RootView.swift:251`); it sets `.web` and `webMounted` before it sets `navigationRequest`, because `ChatWebView` must exist to consume the request. The app records the background time in memory; a killed app is a cold launch. `ChatWebView` reloads itself when its content process ends and tells nobody (`ChatWebView.swift:491`), so it gains an `onWebContentTerminated` callback that `RootView` records for the rule.
+- **Pending chat messages come first.** Messages already sent from the chat composer wait in `PendingEmissionStore` and are delivered only through a mounted `ChatWebView` (`RootView.swift:306` passes `pendingEmissions: pendingEmissionStore.deliveries`). If the selected box has pending emissions, the app opens on `.web` for their conversation, whatever the other inputs say.
 - **The rule waits for the restore.** `PendingEmissionStore` loads its entries asynchronously when the box is activated (`RootView.swift:143`, `.task(id: store.selectedBox?.id)`). The surface stays `.undecided`, drawing only the background, until that activation returns. Then the rule runs once with `hasPendingEmissions` known. The restore reads local storage only.
-- **Box screen content, top to bottom.** "Needs you": outbox entries not yet accepted, then the server's `open` list. Then sent rows for this app session's submissions. Then "Pick up where you left off": `recentChats`, the first one styled as the primary action, and "All chats", which opens the web chat list. Then "In this box": Dashboard, Browse, History, Storage, and the `shortcuts`; each sets `.page(path:)`. Then "Boxes", only with two or more paired boxes. The composer is pinned at the bottom with the line "New thought. The box picks the conversation."
+- **Box screen content, top to bottom.** "Needs you": outbox entries not yet accepted, then the server's `open` list. Then sent rows for this app session's submissions. Then "Pick up where you left off": `recentChats`, the first one styled as the primary action, and "All chats", which opens the web chat list. Then "In this box": Dashboard, Browse, History, Storage, and the `shortcuts`; each sets `.web` and issues a `NavigationRequest` for its path, as a notification tap does. Then "Boxes", only with two or more paired boxes. The composer is pinned at the bottom with the line "New thought. The box picks the conversation."
 - **Loading.** The box screen draws at once from the outbox and a cached copy of the last `home` answer for the box, then refreshes. The composer does not wait for the refresh.
 - **Composer seam.** `NativeComposerView` gains `submitTarget: .conversation | .quickChat((String) -> Void)`. This is more than one call site. The composer reaches `pendingStore.enqueue(...)` from `enqueueMessage` (line 1006) and from a second site near line 825 that captures its own binding, and the binding guard "Choose a conversation before sending." appears at lines 723, 772, 827, 903, 1015, and 1274. The change routes every send through one private function that switches on `submitTarget`. For `.quickChat` it calls the closure with the final text and clears the draft; it never touches `PendingEmissionStore` and never checks a binding. The box screen hosts the composer with `captureAvailable: false`. For `.quickChat` the composer hides the "+" button, the screenshot action, and location sharing, and turns off spoken send keywords and high-quality transcription. Dictation on the box screen is on-device (`SpeechDictation`) and fills the text field; the person sends with the Send button.
-- **Two drafts.** `RootView` owns one `ComposerDraftStore` today (`RootView.swift:8`), and the composer binds its text to it. The box screen gets a second instance with its own storage key. A half-typed chat message stays with the chat; a half-typed new thought stays with the box screen.
-- **Outbox.** `QuickChatOutbox` persists `{id, boxID, text, createdAt, attempts, lastAttemptAt}` in the app's repository. Submitting adds an entry and starts `submit`. Success removes the entry and shows the returned view. A network failure keeps the entry; the app retries with backoff while it is in the foreground and once on each launch. After 7 days without success the entry stops retrying and shows "Not sent" with Retry and Discard. The 7 days matches the server's message-id retention, so a late retry cannot post twice.
-- **Result rows.** The same three faces as the web page. Choosing a destination calls `choose`. "Open chat" sets `.chat(sessionID)`.
-- **The way back.** The web landmark menu's box row posts `show-box-screen`; the app sets `.boxScreen`. The web view stays alive behind it until the launch rule or a box switch drops it, so returning to the chat is immediate.
+- **Two drafts.** `RootView` owns one `ComposerDraftStore` today (`RootView.swift:8`), and the composer binds its text to it. The store has no storage namespace: it activates by box id against one repository load path (`ComposerDraftStore.swift:36`), so two instances would read and write the same draft. `ComposerDraftStore` and its repository calls gain a `scope` parameter (`.conversation` or `.newThought`) that is part of the storage key. The box screen gets a second instance with `.newThought`. A half-typed chat message stays with the chat; a half-typed new thought stays with the box screen.
+- **Outbox.** `QuickChatOutbox` persists `{id, boxID, text, createdAt, attempts, lastAttemptAt}` in the app's repository. Submitting adds an entry and starts `submit`. Success removes the entry and shows the returned view. A network failure keeps the entry; the app retries with backoff while it is in the foreground and once on each launch. After 7 days without success the entry stops retrying and shows "Not sent" with Retry and Discard. An outbox entry has no server record, so nothing was delivered and a late Retry cannot post twice.
+- **Result rows.** The same three faces as the web page. Choosing a destination calls `choose`. "Open chat" sets `.web` with that session.
+- **The way back.** The web landmark menu's box row navigates to `/<box>/box`. `decidePolicyFor` recognizes that path on the box's origin, cancels the navigation, and sets `.boxScreen`. An older build does not recognize it and loads the web box screen in the web view, which works without the native bridge.
 - **Removed.** The "Quick chat" button above the composer, `QuickChatSheet`, `showingQuickChat`, `ChatWebView`'s `.quickChat` page, and `Section("Boxes")` in the "+" menu.
 - **Box switch and lock.** Selecting a box reloads the box screen for that box. A locked box shows `LockedBoxView` over the box screen, as it does over chat today. `obstructedNativeSurface` (`RootView.swift:580`) gains a case for the box screen.
 - **Native API.** `QuickChatAPI` with `submit`, `choose`, `discard`, `home`, using `BoxRequest.apply` for the bearer token, in the pattern of `ShareExtensionAPI`.
-- **Contract.** `mobile-contract.md` gains a section 5 entry for the four procedures and a section 4.8 entry for `show-box-screen`, each with shared fixtures under `beebox/test/mobile-contract/fixtures/`. The "Quick chat evaluation entry" section is replaced. `ios-app/CLAUDE.md:160` gains the stated exception.
+- **Contract.** `mobile-contract.md` gains a section 5 entry for the four procedures and a section 3 entry for the intercepted `/<box>/box` navigation, with shared fixtures for the procedures under `beebox/test/mobile-contract/fixtures/`. The "Quick chat evaluation entry" section is replaced. `ios-app/CLAUDE.md:160` gains the stated exception.
 
 **Vocabulary lock-ins.** `surface`, `submitTarget`, `QuickChatOutbox`, `BoxScreenView`.
 
-**First implementation chunk.** The launch rule as a pure function `initialSurface(coldLaunch:, backgroundedFor:, webContentAlive:, notificationTap:, hasPendingEmissions:)` with XCTest cases for each input. Then `QuickChatOutbox` with tests for add, accept, network failure, the 7-day stop, and restart.
+**First implementation chunk.** The launch rule as a pure function `initialSurface(coldLaunch:, backgroundedFor:, webContentAlive:, notificationTap:, hasPendingEmissions:)` with XCTest cases for each input, and the `surface`/`webMounted` transitions as a second pure function with a case for each bullet above. Then `QuickChatOutbox` with tests for add, accept, network failure, the 7-day stop, and restart.
 
 ## Could this be simpler?
 
@@ -282,6 +289,7 @@ None.
 | Catalog cannot be built (invalid rubric, more than 255 candidates) | Planned router doctest | Stored as `needs-choice` with "New general chat" only | Clear |
 | Server stops after writing `sending` and before delivery | Planned router doctest that re-submits the id | Record stays in `open/`; the box screen shows "Not delivered"; a repeat `submit` or Retry delivers | Clear |
 | Server stops after delivery and before writing `sent` | Planned doctest: second delivery with the same message id | The message-id claim answers the second attempt as a duplicate; the record becomes `sent` with the destination it stored before delivery. Whether the message was queued is not recovered | Clear |
+| Retry of a `sending` record after the message-id claim expired | Planned router doctest with a late clock | Refused past 6 days; the row sends the person to the chat to check | Clear |
 | Chosen chat deleted between routing and delivery | Planned router doctest | `needs-choice`, `destination-gone` | Clear |
 | Chosen chat is busy | Existing send-route queue test; planned view test | `sent` with `queued`; the row says "Queued in" | Clear |
 | Server restarts while the message waits in a busy chat's queue | No | No. The queue is memory only (`run/core.ts:61`: `private messageQueue: ChatSendInput[] = []`) | The record says `sent`; the agent may never run it. Existing behavior of every queued send. Documented risk, see NOT in scope |
@@ -293,8 +301,8 @@ None.
 | App opens while a chat message is still undelivered | Planned launch-rule XCTest, with the restore pending and complete | The surface waits for the restore; pending emissions force `.chat` | Clear |
 | The box screen's cached list is stale | Planned `BoxScreenView` fixture | Refresh replaces it; a failed refresh shows "Could not refresh" above the list | Clear |
 | Web content process ends in the background | Planned launch-rule XCTest | Return goes to the box screen | Clear |
-| An older iOS build receives `show-box-screen` | Planned contract fixture for an unknown kind | Native reports a command it could not decode as a failed command result (`mobile-contract.md:642`); the web row then navigates to `/<box>/box` | Clear |
-| A chat's directory has no landmark | No | The folder half is absent, so Recent files is unreachable for that chat | Silent. Accepted by the boxholder: "Chat folders pretty much always have landmarks" |
+| An older iOS build meets the navigation to `/<box>/box` | Planned `ChatWebViewRequestTests` case for the interception; the web page test covers the fallback | The older build loads the web box screen in its web view | Clear |
+| A chat's directory has no landmark | No | The folder half is absent (`PlacePill.tsx:234`), so Recent files is unreachable for that chat. Today the row shows for every chat (`ChatBarChrome.tsx:108`) | Silent. The boxholder answered this exact case with "Chat folders pretty much always have landmarks". Confirm at approval; the fallback is to keep the row in the landmark menu only when the folder half is absent |
 | Confident post lands in the wrong chat | No test can cover routing quality | No undo. The row names the chat and links to it. The person corrects it in that chat | Clear, not recoverable. Accepted for this version |
 
 No critical gap: every new codepath has a planned test and a visible state, except the two rows marked accepted.
@@ -331,6 +339,7 @@ No critical gap: every new codepath has a planned test and a visible state, exce
 
 ## Open design questions
 
+- **Names the boxholder has not chosen.** The route `/<box>/box`, the box selector tile's label "New thought", the menu row "Find a landmark", the composer line "New thought. The box picks the conversation.", and the section headings "Needs you", "Pick up where you left off", and "In this box". The mockups used most of them. Lean: keep them; each is one string.
 - **One landing or two.** Tracks 1 to 3 are web and server and deploy on merge. Track 4 holds most of the risk: the composer seam, the outbox, and the launch rule. Lean: approve the whole plan, build in the listed order, and let the boxholder land tracks 1 to 3 early if track 4 runs long.
 - **Storage summary on the box screen.** It is one of four box-wide pages and may be rarely used. Lean: keep it in the row.
 - **Web index route.** Opening `/<box>/` could show the box screen, as the phone's cold launch does. Lean: no; a browser tab is usually opened to continue a chat.
@@ -346,7 +355,7 @@ The agent-facing navigation description changes: where Dashboard, Browse, Histor
 - Pure doctests: `routingDisposition`, the record reader, the box screen reducer, the landmarks filter.
 - Router doctests with the fake Jev service (`createFakeJev`, `jev.ts:135`) and the caller pattern in `test/webapp/trpc/routers/quick-chat.doctest.md`: every row of the failure table that names one.
 - Send-route doctests, unchanged, cover the route after the extraction. They do not cover the shared state, so one new doctest sends the same message id through `POST /api/chat/send` and through `quickChat.submit` against one runtime, in both orders, and expects one chat message.
-- Mobile-contract fixtures for the four procedures and the `show-box-screen` command, parsed by both the Swift and TypeScript sides.
+- Mobile-contract fixtures for the four procedures, parsed by both the Swift and TypeScript sides, and a `ChatWebViewRequestTests` case for the intercepted navigation.
 - XCTest: `initialSurface`, `QuickChatOutbox`, `QuickChatAPI` request shapes, the two draft stores.
 - A DEBUG `--box-screen-fixture=<state>` launch argument, in the pattern of `--composer-fixture=`, for simulator screenshots of each face.
 - A browser walk of the three menus and the box screen at phone and desktop widths, recorded as an exhibit.
@@ -359,7 +368,7 @@ The agent-facing navigation description changes: where Dashboard, Browse, Histor
 3. `submit`, `choose`, `discard`, `home`; remove `prepare` and `receipt`.
 4. The web box screen (track 2) and the `/quick-chat` redirect.
 5. The landmarks page filter, then the landmark and folder menus (track 3).
-6. Mobile-contract fixtures, `QuickChatAPI`, and the `show-box-screen` command.
+6. Mobile-contract fixtures, `QuickChatAPI`, and the navigation interception.
 7. `initialSurface`, `QuickChatOutbox`, the second draft store.
 8. `BoxScreenView`, the composer seam; remove the button, the sheet, and the "+" menu's box list.
 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.md`, `ios-app/CLAUDE.md`, security report section 3.
