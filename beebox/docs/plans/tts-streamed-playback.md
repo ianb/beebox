@@ -52,6 +52,17 @@ scripts ~40, removing the WAV path ~20) and about 330 test lines. Docs: this pla
   the first PCM, and encoding finished within 2 ms of the last PCM chunk (three
   runs). At 64 kbit/s the MP3 was about one sixth the size of the WAV the route
   sends today.
+- Whether the early MP3 bytes carry audio, not only a header (three runs, with
+  `-id3v2_version 0 -write_xing 0`): the MP3 output reached 0.5 s of audio
+  0–26 ms after the PCM input did, and 1 s of audio 0–34 ms after. The encoder
+  holds back about 0.2 s of audio (at most 0.4 s) while encoding, but Gemini
+  delivers about 12 s of audio in 2 s, so that costs milliseconds of wall time.
+- Nothing between the server and the browser buffers the stream: production
+  nginx sets `proxy_buffering off` (`deploy/nginx/beebox.conf:29`), and the
+  existing browser test shows the dev router passing a stream through (playback
+  starts before the mock download completes). How soon the browser's
+  MediaSource starts playing these frames is not measured yet; Implementation
+  order step 4 measures it.
 
 ## Stated preferences this plan trades against
 
