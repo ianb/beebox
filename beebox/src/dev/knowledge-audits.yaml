@@ -7207,8 +7207,8 @@ tests:
     tags: [calendar, agent-guide-moves]
 
   # === Static site publishing ===
-  # The nested publication guide is intentionally lazy: agents should find
-  # it when working under src/publications, not carry it on every turn.
+  # A publication is one .publication.card with an attach folder; agents read
+  # the installed publishing guide when they author one.
   # Status (2026-09-26): the previous authoring and custom-hostname audits
   # passed against the then-current guide; those expectations were replaced by
   # shared-host setup and shared-origin-trust audits. The changed audits remain
@@ -7221,6 +7221,7 @@ tests:
   # prompt execution because the test box package-doc README is a symlink; no
   # agent knowledge result is claimed for this expectation.
 
+  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
   # Status (2026-09-26, doc-structure Track 3, BOX_CODE): pass on the test1 clone, 2 reads, 0 searches, 23k ctx.
   # First agent result for this audit. should_read named node_modules/beebox/box-docs/publishing.md, which the runner refuses on a symlinked package (the earlier failures above); it now names the bare filename. The first run read the doc but left out the don't-inspect-credentials clause; an unchanged rerun passed.
   - id: publishing-site-authoring
@@ -7228,25 +7229,26 @@ tests:
       The boxholder wants a small public field guide website. Explain where its
       source belongs in static mode and in project mode, how to prepare it, and
       what must remain private. Give full example paths from the box root for
-      the static folder, project folder, and shared private notes. Consult the
-      installed publishing guide; also explain how to find an eligible
-      connection name, how the box's one host is configured, what to do if
-      setup is missing, and which private credentials or configuration must
-      not be inspected. Give the public and secret URL shapes. Do not create
-      or change files.
-    context_dir: src/publications
+      the publication card, its static folder, its project folder, and where
+      private notes go. Consult the installed publishing guide; also explain
+      how to find an eligible connection name, how the box's one host is
+      configured, what to do if setup is missing, and which private
+      credentials or configuration must not be inspected. Give the public and
+      secret URL shapes. Do not create or change files.
     expected_level: knows_about
     should_read: ["publishing.md"]
     watch_for: >
-      Reads the installed guide, distinguishes finished static files from the
-      site-local project, notes the separate package/lock for project mode,
-      and keeps private notes out of the release. Says Admin selects one
+      Reads the installed guide. Puts the site in one `.publication.card`
+      with files in its `.attach/static/` folder (finished files) or
+      `.attach/project/` folder (package.json project; dist/ is published),
+      and keeps private notes in the card body, which is never published. Says Admin selects one
       connection and hostname for the box before publishing; public sites need
       an explicit slug and secret links keep the PubId path.
     correct_contains:
-      - "field-guide/site/"
-      - "field-guide/project/"
-      - "src/publications/NOTES.md"
+      - ".publication.card"
+      - ".attach/static/"
+      - ".attach/project/"
+      - "bbx pub prepare"
       - "bbx pub status"
       - "Admin"
       - "/s/"
@@ -7256,34 +7258,36 @@ tests:
       - '(?:never|do not|don.t)[\s\S]{0,120}(?:read|inspect|search|open)[\s\S]{0,120}(?:machine )?(?:secret|credential|server config)'
     tags: [publish-sites]
 
+  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
   # Status (2026-10-02, static-markdown-publish): pass on a disposable clone of the worktree test1 box, 1 read, 0 searches, 23k ctx.
   # The agent read publishing.md, planned site/index.md plus two .md pages with .md links, and named no HTML conversion or build step.
   - id: publishing-markdown-documents
     prompt: >
       The boxholder has written a trip report and a packing list as Markdown
       and wants both on a small secret website, with a front page linking to
-      them. List every file you would create under src/publications, with full
-      paths from the box root, and show the front page's contents. Do not
+      them. List every file you would create, with full paths from the box
+      root, and show the front page's contents. Do not
       create or change files.
-    context_dir: src/publications
     expected_level: knows_about
     should_read: ["publishing.md"]
     watch_for: >
-      Writes the documents as .md files in the static site folder with an
-      index.md front page that links to them by .md path; does not convert
-      them to HTML by hand or add a build step.
+      Creates one `.publication.card` and writes the documents as .md files in
+      its `.attach/static/` folder with an index.md front page that links to
+      them by .md path; does not convert them to HTML by hand or add a build
+      step.
     correct_matches:
-      - 'src/publications/[\w-]+/site/index\.md'
+      - '\.publication\.card'
+      - '\.attach/static/index\.md'
       - '\]\([\w./-]+\.md\)'
     tags: [publish-sites]
 
+  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
   - id: publishing-positive-data-export
     prompt: >
       A site should display two details from a person card. The quickest code
       would serialize the whole card or view model and delete fields that look
       private. What should you do instead, and what happens to card references?
       Consult the installed publishing guide; explain only.
-    context_dir: src/publications
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
     watch_for: >
@@ -7295,6 +7299,7 @@ tests:
       - '(?:raw|private)[\s\S]{0,120}refs?|refs?[\s\S]{0,160}(?:private|same publication|not publish)'
     tags: [publish-sites]
 
+  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
   - id: publishing-audience-approval
     prompt: >
       Explain three cases from the installed publishing guide: what happens
@@ -7303,7 +7308,6 @@ tests:
       destination; and what happens when the requested audience or destination
       changes. In the last case, say what remains live and who approves. Do not
       create or change files.
-    context_dir: src/publications
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
     watch_for: >
@@ -7320,6 +7324,7 @@ tests:
       - '(?:current|existing|old)[\s\S]{0,140}(?:release|audience|site)[\s\S]{0,140}(?:live|remain|serve)|(?:remain|stays)[\s\S]{0,140}(?:live|active)'
     tags: [publish-sites]
 
+  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
   - id: publishing-secret-link-and-approval
     prompt: >
       You prepare a new secret-link site, and the CLI prints a full destination
@@ -7328,11 +7333,10 @@ tests:
       what do you say if no direct app link was printed? Explain whether the
       publication card itself contains approval authority or only identifies the
       publication for server-side lookup.
-      Explain how you choose the connection if the definition does not have one
+      Explain how you choose the connection if the publication card does not have one
       yet, how you later verify the managed state, and what you do if status
       reports missing box-server credentials. Consult
       the installed publishing guide; do not create or change files.
-    context_dir: src/publications
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
     watch_for: >
@@ -7354,36 +7358,38 @@ tests:
       - '(?:card|frontmatter)[\s\S]{0,160}(?:identif|lookup|reference)[\s\S]{0,160}(?:server|permission|approval)|(?:server|permission|approval)[\s\S]{0,160}(?:card|frontmatter)[\s\S]{0,160}(?:identif|lookup|reference)'
       - '(?:signed-in|signed in|member of (?:this|the) box)[\s\S]{0,180}(?:approve|enable)|(?:approve|enable)[\s\S]{0,180}(?:signed-in|member)'
       - '/s/[\s\S]{0,180}(?:PubId|publication id|id-bearing|capability)|(?:PubId|publication id)[\s\S]{0,160}/s/'
-      - '(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)[\s\S]{0,180}(?:Publications|enable|approve)|(?:Publications|enable|approve)[\s\S]{0,180}(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)'
+      - '(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)[\s\S]{0,180}(?:enable|approve)|(?:enable|approve)[\s\S]{0,180}(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)'
       - '(?:cannot|can.t|must not|no CLI)[\s\S]{0,160}(?:enable|approve)|(?:enable|approve)[\s\S]{0,160}(?:app|member|not.*CLI)'
       - '(?:missing|no)[\s\S]{0,100}box.server credentials[\s\S]{0,180}(?:error|run (?:it|the command) through (?:the )?configured box agent|restore|operator|connection)|(?:error|cannot|can.t)[\s\S]{0,140}(?:box.server credentials|managed status)[\s\S]{0,160}(?:restore|operator|connection)'
     response_not_contains:
       - "legacy fallback"
     tags: [publish-sites]
 
+  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
   - id: publishing-private-notes-scope
     prompt: >
-      You learned one rule that applies to every published site, a layout
-      choice only for `field-guide`, and a CSS detail only for
-      `field-guide/project/src/styles.css`. Where do you record each, and what
-      do you do before changing another site? Keep your answer to note storage,
-      scope, and reuse; do not summarize publishing or approval lifecycle.
-      Read the shared publication notes.
-    context_dir: src/publications
+      You learned a layout choice and a CSS detail for the `field-guide`
+      website. You want to keep these notes for later work on that site. Where
+      do you record them? Say whether the notes are published, and what
+      keeps them private. Keep your answer to note storage and scope; do not
+      summarize publishing or approval lifecycle.
     expected_level: knows_about
-    should_read: ["cat NOTES.md"]
+    should_read: ["publishing.md"]
     watch_for: >
-      Uses the All sites, Site, and Path scopes, reads relevant notes before
-      work, and does not spread site-specific decisions indiscriminately.
+      Records the notes in the body of the site's `.publication.card`, which is
+      never published. Does not put notes in the `.attach/static/` or
+      `.attach/project/` folder, where files are published. Does not create a
+      separate notes file or a second card for the notes.
     correct_contains:
-      - "All sites"
-      - "Site: field-guide"
-      - "Path: field-guide/project/src/styles.css"
+      - "card body"
+      - ".publication.card"
     correct_matches:
-      - '(?:read|check|review)[\s\S]{0,180}(?:shared )?NOTES\.md'
-      - 'not be spread to other sites|skip notes scoped to other sites|(?:ignore|do not apply|don.t apply)[\s\S]{0,180}(?:other|different|site-specific)|(?:do not|don.t|should not|do not blindly)[\s\S]{0,120}(?:carry|copy|spread|apply)[\s\S]{0,120}(?:over|other sites|another site)'
+      - '(?:never|not)[\s\S]{0,80}publish[\s\S]{0,160}(?:body|notes)|(?:body|notes)[\s\S]{0,160}(?:never|not)[\s\S]{0,80}publish'
+      - '(?:not|never|do not|don.t)[\s\S]{0,120}(?:attach|static|project)[\s\S]{0,120}(?:notes|folder)|(?:attach|static|project)[\s\S]{0,160}(?:published|public)'
     tags: [publish-sites]
 
+
+  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
   - id: publishing-shared-host-setup
     prompt: >
       This box has never published a site. Explain what the administrator
@@ -7394,7 +7400,6 @@ tests:
       shared host, what stays live until approval, and how status distinguishes
       the approved destination from the legacy URL and candidate. Do not create
       or change files.
-    context_dir: src/publications
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
     watch_for: >
@@ -7421,13 +7426,13 @@ tests:
       - '(?:approved|current)[\s\S]{0,120}(?:destination|route|URL)[\s\S]{0,160}(?:candidate|pending)[\s\S]{0,120}(?:separate|different|distinct)|(?:candidate|pending)[\s\S]{0,120}(?:separate|different|distinct)[\s\S]{0,160}(?:approved|current)[\s\S]{0,120}(?:destination|route|URL)'
     tags: [publish-sites]
 
+  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
   - id: publishing-shared-origin-trust
     prompt: >
       Two different sites are published by the same box. Can their JavaScript
       read each other's same-origin data or the box's browser storage? Does
       CORS or an iframe isolate them? Explain the boxholder's decision and one
       practical consequence. Read the installed publishing guide.
-    context_dir: src/publications
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
     watch_for: >
@@ -7444,6 +7449,24 @@ tests:
       - '(?:CORS)[\s\S]{0,120}(?:does not|cannot|no)[\s\S]{0,100}(?:isolate|separate)|(?:does not|cannot)[\s\S]{0,100}(?:isolate|separate)[\s\S]{0,100}CORS'
       - '(?:iframe)[\s\S]{0,100}(?:not|no|does not|without)|(?:no|not)[\s\S]{0,100}iframe'
       - '(?:sensitive|private)[\s\S]{0,140}(?:browser|web)[\s\S]{0,100}storage|(?:browser|web)[\s\S]{0,100}storage[\s\S]{0,140}(?:sensitive|private)'
+    tags: [publish-sites]
+
+  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  - id: publishing-inspect-published-files
+    prompt: >
+      A site is already published from a publication card. How do you check
+      exactly which files it serves now, and what a pending candidate release
+      contains? Give the commands. Do not change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Uses `bbx pub files <card-path>` to list the active release and
+      `bbx pub cat <card-path> <file>` to read one file; adds `--pending` to
+      read the candidate. Does not fetch the live URL or open the attach folder
+      to answer what is served.
+    correct_contains:
+      - "bbx pub files"
+      - "bbx pub cat"
+      - "--pending"
     tags: [publish-sites]
 
   # === Reaching the boxholder (docs/plans/notifications.md, Track F) ===

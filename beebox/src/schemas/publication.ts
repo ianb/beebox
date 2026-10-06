@@ -68,7 +68,11 @@ Put the site files in the card's attach folder. Use exactly one of these:
 - \`<Name>.attach/project/\`: a project with \`package.json\`. Its \`dist/\`
   folder is published.
 
-Do not copy a publication card. Two cards with one \`pubId\` is an error.
+Do not copy a publication card. Two cards with one \`pubId\` is an error. To move or
+rename it, use \`bbx mv\`.
+
+To see what is published, run \`bbx pub files <card-path>\` or
+\`bbx pub cat <card-path> <file>\`. Add \`--pending\` to read the candidate.
 
 Do not put approval, the audience that is actually served, the hostname, or
 status in this card. The server owns them. A change to \`tier\`, \`slug\`, or
