@@ -18,7 +18,7 @@ function blobNames(listing: string): string[] {
 }
 
 import { execFileSync } from "node:child_process";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
@@ -32,6 +32,9 @@ import {
 } from "../../../src/core/capture/staging-store/core.js";
 import { selectPendingCaptures, selectResumableCaptures } from "../../../src/core/capture/pending.js";
 import { prepareBulkBatch } from "../../../src/core/bulk-upload/prepare.js";
+import { checkBoxRoot } from "../../../src/lib/box-root-check.js";
+import { parseUploadBatch } from "../../../src/schemas/upload-batch.js";
+import { attachDirFor } from "../../../src/shared/attach-path.js";
 
 async function pathExists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -145,6 +148,122 @@ Staging is retained (not deleted at prepare time):
 ```ts continue
 (await readStagingSession({ boxRoot: box.root, id })) !== null
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Where a batch lands: the chat's context dir, `_content/` at the root scope
+
+A chat scoped to a landmark lands its batch under that landmark's directory. A
+chat scoped to the whole box (`contextDir` `""`) lands under `_content/`, which
+is where the root scope lives on disk. The box root itself is a closed
+vocabulary: a bare `tmp-upload/` there made the commit hook refuse every batch,
+so the batch never committed and its `<upload>` message never went out.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const file = { filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "a.jpg", mimeType: "image/jpeg", itemId: "a", content: "JPG" };
+const rootId = await stageBulk(box.root, { expectedItems: [{ id: "a", name: "a.jpg" }], files: [file] });
+const scopedId = await stageBulk(box.root, { expectedItems: [{ id: "a", name: "a.jpg" }], files: [file] });
+
+const atRoot = await prepareBulkBatch({ boxRoot: box.root, id: rootId, contextDir: "" });
+const scoped = await prepareBulkBatch({ boxRoot: box.root, id: scopedId, contextDir: "_content/projects/garden" });
+[atRoot.cardRelPath, scoped.cardRelPath].map((p) => p.replaceAll(atRoot.batchSlug, "<slug>").replaceAll(scoped.batchSlug, "<slug>")).join("\n")
+=> _content/tmp-upload/<slug>/<slug>.upload-batch.card
+_content/projects/garden/tmp-upload/<slug>/<slug>.upload-batch.card
+```
+
+The card is named after the batch, so its attach scope is the one every
+attach-aware tool derives from the card (`<basename>.attach`). `bbx rm` and
+`bbx mv` carry the files with the card; the former fixed name,
+`Batch.upload-batch.attach`, matched no tool and was left behind.
+
+```ts continue
+({ scope: atRoot.attachRelDir.replaceAll(atRoot.batchSlug, "<slug>"), derived: attachDirFor(atRoot.cardRelPath).replaceAll(atRoot.batchSlug, "<slug>") })
+=> { scope: "_content/tmp-upload/<slug>/<slug>.attach", derived: "_content/tmp-upload/<slug>/<slug>.attach" }
+```
+
+Neither batch leaves anything at the box root for the root check to refuse:
+
+```ts continue
+await checkBoxRoot(box.root)
+=> []
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A batch prepared under the old fixed names keeps them
+
+Before 2026-10 every batch was `Batch.upload-batch.card` beside
+`Batch.upload-batch.attach/`. A batch the old code had written but not yet
+delivered (an agent was busy, then the server restarted for a deploy) resumes
+under those names. Deriving the new name instead would find no card, prepare
+the batch a second time, and deliver a second `<upload>` message.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const id = await stageBulk(box.root, {
+  expectedItems: [{ id: "a", name: "a.jpg" }],
+  files: [{ filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "a.jpg", mimeType: "image/jpeg", itemId: "a", content: "JPG" }],
+});
+// What the old code left: the batch prepared and committed under the fixed names.
+const fresh = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+const dir = fresh.cardRelPath.slice(0, fresh.cardRelPath.lastIndexOf("/"));
+execFileSync("git", ["mv", fresh.cardRelPath, `${dir}/Batch.upload-batch.card`], { cwd: box.root });
+execFileSync("git", ["mv", fresh.attachRelDir, `${dir}/Batch.upload-batch.attach`], { cwd: box.root });
+execFileSync("git", ["commit", "-qm", "old names"], { cwd: box.root });
+
+const resumed = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+({
+  card: resumed.cardRelPath.slice(dir.length + 1),
+  scope: resumed.attachRelDir.slice(dir.length + 1),
+  entries: (await readdir(box.path(dir))).sort(),
+  received: resumed.counts.received,
+})
+=> { card: "Batch.upload-batch.card", scope: "Batch.upload-batch.attach", entries: ["Batch.upload-batch.attach", "Batch.upload-batch.card"], received: 1 }
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A reported failure whose bytes arrived counts as received
+
+The uploader's failed list is its claim; the staged bytes are the fact. A phone
+can give up on an upload that timed out on its side after the box had already
+received every byte. That item is received, and the card must not report it
+as lost.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const id = await stageBulk(box.root, {
+  expectedItems: [{ id: "a", name: "photo-009.jpg" }, { id: "b", name: "photo-010.jpg" }],
+  files: [
+    { filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "photo-009.jpg", mimeType: "image/jpeg", itemId: "a", content: "JPEG" },
+  ],
+});
+const batch = await prepareBulkBatch({
+  boxRoot: box.root, id, contextDir: "",
+  failedItems: [
+    { id: "a", name: "photo-009.jpg", reason: "The request timed out" },
+    { id: "b", name: "photo-010.jpg", reason: "The request timed out" },
+  ],
+});
+const card = await box.read(batch.cardRelPath);
+({ counts: batch.counts, body: splitCardContent(card).body.trim() })
+=> { counts: { registered: 2, received: 1, missing: 0, failed: 1 }, body: "1 file uploaded (4 B); 1 failed." }
+```
+
+Only `photo-010.jpg`, whose bytes never arrived, stays in `failed`:
+
+```ts continue
+const fm = parseUploadBatch(card).frontmatter;
+({ failed: fm.failed.map((f) => f.name), received: fm.received.map((r) => r.name) })
+=> { failed: ["photo-010.jpg"], received: ["photo-009.jpg"] }
 ```
 
 ```ts cleanup

@@ -1,12 +1,27 @@
 ---
 title: "Scheduled runs leave finished work on their worktree branches; later runs do not land it"
-workstream: unattached
+workstream: schedule-session-landing
 area: schedules
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — disk cleanup and worktree review, 2026-10-02
 priority: important
+resolution: implemented
 ---
+
+Resolved in the schedule-session-landing workstream. After every run of a
+worktree schedule, a branch whose merge into `main` would change `main` is the
+runner-owned `unlanded-commits` condition (`normal`). It stays open through
+each digest and is filed after a week. The briefing lists the inherited
+commits, so a prompt that lets the session land its own work covers them too.
+The runner never lands.
+
+Correction to "Observed": `cross-box-leak-scan` run `20261002-014511` was not
+refused. It launched and reported (`runs/20261002-014511.result.json`). The
+only "session already live" refusal is run `20260904-013251`, which read
+`live` (a process signal), not `unknown`. Its cause cannot be recovered
+because the alert did not carry the guard's reason. Refusal alerts now carry
+it.
 
 Worktree schedules commit on a long-lived branch and are expected to land with
 `bin/land` (bbx-authoring-schedules, "How work leaves a worktree schedule").

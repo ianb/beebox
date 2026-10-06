@@ -6,6 +6,7 @@ labels: [agent-workflow]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — crediting reader-context-writing and incident-investigation
+priority: normal
 ---
 
 The boxholder wants to credit the people whose ideas Bee Box adopts.

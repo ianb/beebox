@@ -13,6 +13,7 @@ import {
   assetGitignorePatterns,
   assetLargefilesExpression,
   BULK_BATCH_ATTACH_PATTERN,
+  LEGACY_BULK_BATCH_ATTACH_PATTERN,
   CAPTURE_STAGING_IGNORE_PATTERN,
 } from "../../src/lib/asset-extensions.js";
 ```
@@ -114,14 +115,15 @@ assetAnnexAttributes()
 *.[fF][rR][oO][zZ][eE][nN] filter=annex
 # A bulk batch holds arbitrary types and widens largefiles itself; the
 # filter has to reach those paths for that to mean anything.
+**/upload-*.attach/** filter=annex
 **/*.upload-batch.attach/** filter=annex
 ```
 
-Every extension gets a line, plus the one path line, and the marker names the
+Every extension gets a line, plus the two batch path lines, and the marker names the
 owner so drift from git-annex's own file is visible without a diff:
 
 ```ts
-assetAnnexAttributes().split("\n").filter((l) => l.endsWith("filter=annex")).length === ASSET_EXTENSIONS.length + 1
+assetAnnexAttributes().split("\n").filter((l) => l.endsWith("filter=annex")).length === ASSET_EXTENSIONS.length + 2
 => true
 
 assetAnnexAttributes().startsWith(ANNEX_ATTRIBUTES_MARKER)
@@ -154,15 +156,19 @@ the unscoped `annex.largefiles` safe:
 => false
 ```
 
-The batch line is the only non-extension entry, and it is what makes the
+The batch lines are the only non-extension entries, and they are what make the
 batch-local `.gitattributes` (`* annex.largefiles=anything`, written by
 `core/bulk-upload/prepare.ts`) mean anything: largefiles is only consulted for a
 path the filter-process sees. Without this line a batch's `.zip` and
 extensionless files commit as raw blobs while its photos annex — verified at
-1.5 MB each before it was added.
+1.5 MB each before it was added. The first line matches a batch's scope,
+`<slug>.attach`, named after its `upload-…` slug so the match follows the card
+when `bbx rm` or `bbx mv` moves it. The second covers scopes written before
+2026-10 under the old fixed name, which survive in trash and rescued batches.
 
 ```ts
-assetAnnexAttributes().includes(`${BULK_BATCH_ATTACH_PATTERN} filter=annex`)
+assetAnnexAttributes().includes(`${BULK_BATCH_ATTACH_PATTERN} filter=annex`) &&
+  assetAnnexAttributes().includes(`${LEGACY_BULK_BATCH_ATTACH_PATTERN} filter=annex`)
 => true
 
 BULK_BATCH_ATTACH_PATTERN.startsWith("**/")

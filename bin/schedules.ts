@@ -9,7 +9,7 @@
  * Verbs:
  *   list [--json]                 what is scheduled, and whether it is running
  *   tick                          one launchd firing: run everything due
- *   run <name> [--dry-run] [--force]
+ *   run <name> [--dry-run] [--force] [--replay <runId>]
  *   logs <name> [--run <id>]      a run's output
  *   handoff --title <t> --body @file|-      "there is work" (called BY `run`)
  *   alert --title <t> --message <m> [...]   the report (called BY a session)
@@ -43,6 +43,7 @@ import {
 import {
   ensureStoreRoot,
   readAlerts,
+  readHandoff,
   readScheduleState,
   readStoreState,
   latestRunId,
@@ -54,6 +55,7 @@ import {
   nextDueAtMs,
   readRunLog,
   refuseRunHere,
+  replayRun,
   runSchedule,
 } from "./lib/schedules-runner.js";
 import { tick } from "./lib/schedules-tick.js";
@@ -85,9 +87,11 @@ const USAGE = `usage: bin/schedules <command>
                                   next due, overdue, open alerts — plus when
                                   the scheduler last ticked.
   tick                            One scheduler firing (what launchd runs).
-  run <name> [--dry-run] [--force]
+  run <name> [--dry-run] [--force] [--replay <runId>]
                                   Run one schedule. --dry-run writes nothing;
-                                  --force ignores due-ness.
+                                  --force ignores due-ness. --replay starts a
+                                  session on that run's stored handoff
+                                  without running \`run\` again.
   logs <name> [--run <id>]        A run's log (latest run by default).
   handoff --title <t> --body @file|-
                                   Called by a \`run\` script: there is work.
@@ -221,6 +225,26 @@ async function commandRun(context: Context, args: string[]): Promise<number> {
     return 2;
   }
   const deps = runnerDeps(context);
+
+  const replayOf = flags(args).get("replay");
+  if (replayOf !== undefined) {
+    if (dryRun || replayOf === "") {
+      process.stderr.write("schedules run: --replay needs a run id and cannot be a dry run\n");
+      return 2;
+    }
+    if (schedule.config.workstream === null) {
+      process.stderr.write(`schedules run: ${name} has no workstream; there is no session to replay\n`);
+      return 2;
+    }
+    await ensureStoreRoot(context.storeRoot);
+    if ((await readHandoff(context.storeRoot, { name, runId: replayOf })) === null) {
+      process.stderr.write(`schedules run: ${name} run ${replayOf} has no stored handoff\n`);
+      return 2;
+    }
+    const replayed = await replayRun(deps, { schedule, replayOf });
+    process.stdout.write(replayed.kind === "skipped" ? `${name} skipped: ${replayed.reason}\n` : `${name} ${replayed.runId}: replayed ${replayOf}\n`);
+    return 0;
+  }
 
   if (!dryRun && !args.includes("--force")) {
     await ensureStoreRoot(context.storeRoot);

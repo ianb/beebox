@@ -1,12 +1,20 @@
 ---
 title: "A worktree schedule stops for good when a prior session leaves uncommitted edits"
-workstream: unattached
+workstream: schedule-session-landing
 area: schedules
 filed-by: agent
 discovered-by: agent
 discovered-in: main — investigating the 2026-09-23 knip-sweep failure
 priority: important
+resolution: implemented
 ---
+
+Resolved in the schedule-session-landing workstream. Before the merge, the
+runner parks uncommitted edits as one commit on
+`refs/schedules/<name>/parked/<runId>`, resets the tree, and tells the session
+(`prepareScheduleWorktree`, `bin/lib/schedules-branch.ts`). Nothing is
+committed onto the branch and nothing is discarded. A stored handoff replays
+with `bin/schedules run <name> --replay <runId>`.
 
 A worktree schedule merges `main` into its branch before it starts a session
 (`bin/lib/schedules-workstream.ts:306`). If a prior session left uncommitted

@@ -3,6 +3,7 @@ title: "universal confidence rubric"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: important
 ---
 
 Percentage confidence numbers have no shared meaning — neither model nor user has calibrated 65%-vs-70% intuitions, so "60% confidence" is theater. But gradation itself is real and useful, provided each level is defined by an operational rubric: what evidence justifies it, what behavior it licenses, what promotes or demotes it. Draft bands:

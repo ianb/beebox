@@ -18,7 +18,7 @@ import {
   readStagingSession,
   writeStagingSession,
 } from "../../../src/core/capture/staging-store/core.js";
-import { bulkBatchCardRelPath } from "../../../src/core/bulk-upload/prepare.js";
+import { resolveBulkBatchPaths } from "../../../src/core/bulk-upload/prepare.js";
 import { createUploadBatchTemplate } from "../../../src/schemas/upload-batch.js";
 import { sweepBulkBatches } from "../../../src/core/bulk-upload/sweep.js";
 import { getBoxTime } from "../../../src/lib/time.js";
@@ -69,7 +69,7 @@ const preparing = await makeBulk(box.root, { state: "preparing" });
 // A delivering batch whose <upload> already landed in the target transcript.
 const landedTarget = "s-landed";
 const delivering1 = await makeBulk(box.root, { state: "delivering", target: landedTarget });
-const doc = bulkBatchCardRelPath({ startedAt: delivering1.createdAt, id: delivering1.id, contextDir: "" });
+const doc = (await resolveBulkBatchPaths({ boxRoot: box.root, startedAt: delivering1.createdAt, id: delivering1.id, contextDir: "" })).cardRelPath;
 await seedTranscript(box.root, landedTarget, JSON.stringify({ type: "user", text: `<upload doc="${doc}">` }) + "\n");
 
 // A delivering batch whose message never landed (empty transcript).

@@ -34,9 +34,9 @@ import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { userMessageAlreadyLanded } from "../chat/session/deliver-user-message.js";
 import { listStagingSessions, isBulkSession, readStagingSession, writeStagingSession, type StagingSession, type StagingSessionState } from "../capture/staging-store/core.js";
 import { cleanupStagingSession, discardStagingSessionIfCancellable } from "../capture/staging-teardown.js";
-import { bulkBatchHasNothingToReport } from "./batch-format.js";
+import { bulkBatchHasNothingToReport, failedItemsNotArrived } from "./batch-format.js";
 import { StagingSessionGoneError } from "../capture/staging-errors.js";
-import { bulkBatchCardRelPath } from "./prepare.js";
+import { resolveBulkBatchPaths } from "./prepare.js";
 
 /** No-activity window after which an open bulk batch is surfaced as abandoned. */
 const BULK_ABANDONMENT_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
@@ -124,7 +124,7 @@ async function surfaceStrandedBatch(opts: {
     targetSessionId: session.targetSessionId,
     state: session.state,
     receivedCount: session.files.length,
-    failedCount: session.failedItems?.length ?? 0,
+    failedCount: failedItemsNotArrived({ failedItems: session.failedItems ?? [], files: session.files }).length,
     registeredCount: session.expectedItems?.length ?? 0,
     note: session.note,
   });
@@ -270,7 +270,8 @@ async function deliveredMessageLanded(opts: {
   session: { createdAt: string; id: string; contextDir?: string | undefined; targetSessionId: string | null };
 }): Promise<boolean> {
   const { boxRoot, session } = opts;
-  const cardRelPath = bulkBatchCardRelPath({
+  const { cardRelPath } = await resolveBulkBatchPaths({
+    boxRoot,
     startedAt: session.createdAt,
     id: session.id,
     contextDir: session.contextDir ?? "",

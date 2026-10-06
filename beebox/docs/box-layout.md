@@ -120,7 +120,8 @@ _content/
 ```
 
 Prepared captures land in a `tmp-capture/` directory inside the target
-chat's context area (tracked and committed, unlike `_tmp/`) as a
+chat's context area — `_content/tmp-capture/` for a chat scoped to the whole
+box, since the root is a closed vocabulary — (tracked and committed, unlike `_tmp/`) as a
 capture-session card + attach scope; the chat agent annotates and files
 them out — `tmp-capture/` must not accumulate. Flow reference:
 `docs/implemented-plans/capture-mode.md`; agent duties:

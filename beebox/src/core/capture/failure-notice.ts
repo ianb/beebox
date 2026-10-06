@@ -2,7 +2,9 @@
  * A capture that failed for good tells the person who has left: one `quiet`
  * notification to the chat it was headed for, sent only when nobody is present
  * in the app (an open app already shows the failed capture bubble). Success
- * sends nothing. See docs/implemented-plans/notifications.md (Track E).
+ * sends nothing. See docs/implemented-plans/notifications.md (Track E). A bulk
+ * upload that fails after its seal sends the same notice through
+ * {@link notifyStagingFailed}, whatever the presence: no web UI shows it.
  */
 
 import { errorMessage } from "../../shared/error-guards.js";
@@ -21,20 +23,46 @@ export async function notifyCaptureFailed(
   boxRoot: string,
   opts: { id: string; reason: string; services?: NotifyServices | undefined },
 ): Promise<NotifyResult | null> {
+  return notifyStagingFailed(boxRoot, {
+    ...opts,
+    title: "A capture could not be finished",
+    source: "capture",
+    // An open app already shows the failed capture bubble.
+    skipWhenPresent: true,
+  });
+}
+
+/**
+ * The shared body of a staging failure notice: one `quiet` notification to the
+ * chat the staged work was headed for (a new chat when none was resolved).
+ * `skipWhenPresent` sends nothing while someone has the web app open, for a
+ * flow whose own UI already shows the failure. Never throws.
+ */
+export async function notifyStagingFailed(
+  boxRoot: string,
+  opts: {
+    id: string;
+    title: string;
+    reason: string;
+    source: string;
+    skipWhenPresent: boolean;
+    services?: NotifyServices | undefined;
+  },
+): Promise<NotifyResult | null> {
   try {
     const now = getBoxTime(boxRoot);
-    if ((await livePresence(boxRoot, { now })).activeWeb > 0) return null;
+    if (opts.skipWhenPresent && (await livePresence(boxRoot, { now })).activeWeb > 0) return null;
     const session = await readStagingSession({ boxRoot, id: opts.id });
     const sessionId = session?.targetSessionId ?? null;
     // With no chat resolved yet, a new chat carries the notice as its banner.
     const target: Target = sessionId === null ? { kind: "chat-new" } : { kind: "chat", sessionId };
     return await notifyBoxholder(boxRoot, {
-      intent: { title: "A capture could not be finished", body: opts.reason, target, loudness: "quiet", tag: `capture:${opts.id}`, source: "capture" },
+      intent: { title: opts.title, body: opts.reason, target, loudness: "quiet", tag: `${opts.source}:${opts.id}`, source: opts.source },
       now,
       services: opts.services,
     });
   } catch (e) {
-    console.error(`[capture] could not send the failure notice for ${opts.id}:`, e);
+    console.error(`[${opts.source}] could not send the failure notice for ${opts.id}:`, e);
     return null;
   }
 }

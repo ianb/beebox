@@ -57,7 +57,7 @@ export function runnerDeps(context: Context): RunnerDeps {
 
 // ─── Argument reading ─────────────────────────────────────────────────────
 
-const VALUE_FLAGS = new Set(["title", "message", "details", "body", "priority", "workstream", "run", "condition", "except"]);
+const VALUE_FLAGS = new Set(["replay", "title", "message", "details", "body", "priority", "workstream", "run", "condition", "except"]);
 
 /** `--flag value`, values consumed unconditionally: a message of "-- no" is
  *  the author's words, not a flag (the bin/comments rule). */

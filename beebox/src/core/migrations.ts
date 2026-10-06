@@ -202,6 +202,9 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Give each `source` that is not a derived-from pointer its own name, and
   // move media acquisition times into `filename.via`. See the script's planners.
   { name: "source-fields-2026-09", script: "src/scripts/migrate/card-fields/run.ts" },
+  // Re-apply `.git/info/attributes`: bulk batches now name their attach scope
+  // after the card (`<slug>.attach`), so the rendering gained a line for it.
+  { name: "annex-config-2026-10", script: "src/scripts/migrate/annex-config.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
