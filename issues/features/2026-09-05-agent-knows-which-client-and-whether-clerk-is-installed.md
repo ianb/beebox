@@ -58,3 +58,7 @@ To settle:
 ## Next-action note (2026-10-06)
 
 A `do-it` request was set. Changed to `discuss`: it still holds and carries `needs: [design]`. The fix spans a last-seen stamp in the Clerk router, a new `bbx` command over paired phones, the extension stamp and Telegram, plus agent-guide text: about 150-300 lines in 5-8 files under `beebox/` (deploys). The issue's own "To settle" list (stamp or inference, command or snapshot line, guide text) and where a frequently rewritten stamp lives (avoid git churn) need answers first.
+
+## Decision (2026-10-06)
+
+The developer considers it simple; to be started in a session shortly. The "To settle" items above are for that session to decide.

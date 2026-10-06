@@ -21,7 +21,7 @@ Report substantive signal only; skip predictable gripes.
 ## Research (2026-10-04)
 
 Read through the Arctic Shift archive (see
-[reddit-fetch-tool](../features/2026-10-04-reddit-fetch-tool.md)). The post
+[fetch-blocked-pages](../features/2026-10-04-fetch-blocked-pages.md)). The post
 text was removed; the post is one screenshot of the author's kitchen-tablet
 app, plus 104 comments.
 

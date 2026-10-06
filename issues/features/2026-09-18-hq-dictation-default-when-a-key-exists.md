@@ -54,3 +54,7 @@ is a setting most utterances never get.
 
 Related: [a no-key STT path](2026-09-18-chrome-web-speech-stt-no-key.md),
 [diarization as a capability](2026-08-31-request-diarization-as-capability-not-model.md).
+
+## Decision (2026-10-06)
+
+Not combined with the `ios-on-device-hq` workstream, which is nearly finished. The direction stands: HQ dictation should not be an opt-in setting. Removing the setting is the remaining work, not yet started.
