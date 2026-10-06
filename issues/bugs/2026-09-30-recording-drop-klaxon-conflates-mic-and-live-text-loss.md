@@ -64,3 +64,13 @@ path so that the frequency can be measured.
 
 The iOS app has its own audio feedback. Check whether it makes the same
 conflation before closing this.
+
+## Resolution (2026-10-06)
+
+- Mic loss plays `mic-lost.wav` (authored, two falling pairs) on web and iOS.
+- Live-text loss plays the quiet `live-text-paused.wav` only after 2 s
+  (`LIVE_TEXT_CUE_DELAY`), and `live-text-resumed.wav` on return if the pause
+  cue played. Shorter drops are silent; the overlay chip still shows.
+- The stalled-socket path logs a `console.warn`.
+- iOS has no conflation: its only drop cue fires on an audio-session
+  interruption (mic loss). It now uses the same new asset.

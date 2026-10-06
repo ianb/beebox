@@ -99,3 +99,16 @@ collected. A useful first step: collect the misheard forms from live-text
 logs (the untagged phrase appearing as plain words, per the pattern in
 `narration-mode-doc.ts:39`) to see what the transcriber actually produces.
 
+
+## Decided (2026-10-06)
+
+- **Taught sign-off:** "over and out". It is an idiom, so the transcriber's
+  language model restores it from poor audio, which "send and close" does not
+  get.
+- **Kept and added aliases:** the "send and …" family stays, with "send and
+  finished"; "finished talking" is new. It can fire on "I finished talking to
+  the contractor": a final transcript matches anywhere.
+- **Mic off adds:** "close (the) mic/microphone", "mute (the)
+  mic/microphone", "pause listening". The hint stays "microphone off".
+- Both matchers now take the longest phrase at a position, so "send and close
+  the mic" no longer leaves "the mic" in the sent text.

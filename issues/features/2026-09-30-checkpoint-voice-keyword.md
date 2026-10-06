@@ -58,3 +58,16 @@ completed request.
   talking.
 - **Merging.** Should the next message after a checkpoint be shown or treated
   as a continuation of the same thought?
+
+## Decided (2026-10-06)
+
+- **Phrase:** "send checkpoint" (taught), with "commit checkpoint" and
+  "add checkpoint". The commit/add forms take no article, so "add a
+  checkpoint before the deploy" stays speech.
+- **Tag:** `<send-checkpoint-message phrase="…" />`.
+- **Agent behavior:** no `<speech>` and no questions; a no-response ack, or
+  quiet work with a bare ack. The next message continues the thought. The UI
+  does not merge the messages.
+- A synthetic test (macOS TTS through Deepgram) did not tell good phrases
+  from bad ones: "send and close" passed it 16/16. Phrase choice rests on
+  judgment and real use.
