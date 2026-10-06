@@ -71,29 +71,50 @@ function audioFrom(data: string): Buffer | null {
   return Buffer.from(event.delta.data, "base64");
 }
 
-/** All PCM carried by the stream, concatenated in order. */
-export async function collectInteractionAudio(body: ReadableStream<Uint8Array>): Promise<Buffer> {
-  const chunks: Buffer[] = [];
+/**
+ * The PCM carried by the stream, one chunk per audio event, as each arrives.
+ * Stopping early (a consumer that returns, or throws) cancels the body, which
+ * aborts the provider's response.
+ */
+export async function* interactionAudioChunks(body: ReadableStream<Uint8Array>): AsyncGenerator<Buffer> {
   let pending = "";
-  const take = (event: string): void => {
-    const data = eventData(event);
-    const audio = data === null ? null : audioFrom(data);
-    if (audio !== null) chunks.push(audio);
-  };
   // An explicit reader rather than `for await`: the frontend's DOM typings,
   // which typecheck this file through the router types, lack async iteration.
   const reader = body.getReader();
   const decoder = new TextDecoder();
-  for (let read = await reader.read(); !read.done; read = await reader.read()) {
-    pending = (pending + decoder.decode(read.value, { stream: true })).replaceAll("\r\n", "\n");
-    let end = pending.indexOf("\n\n");
-    while (end >= 0) {
-      take(pending.slice(0, end));
-      pending = pending.slice(end + 2);
-      end = pending.indexOf("\n\n");
+  let finished = false;
+  try {
+    for (let read = await reader.read(); !read.done; read = await reader.read()) {
+      pending = (pending + decoder.decode(read.value, { stream: true })).replaceAll("\r\n", "\n");
+      let end = pending.indexOf("\n\n");
+      while (end >= 0) {
+        const audio = eventAudio(pending.slice(0, end));
+        pending = pending.slice(end + 2);
+        if (audio !== null) yield audio;
+        end = pending.indexOf("\n\n");
+      }
     }
+    pending += decoder.decode();
+    const last = pending.trim() === "" ? null : eventAudio(pending);
+    if (last !== null) yield last;
+    finished = true;
+  } finally {
+    if (!finished) await reader.cancel().catch((e: unknown) => {
+      // The body may already be errored; the cancel only releases it.
+      console.debug("[tts] interaction stream cancel after early stop:", e);
+    });
   }
-  pending += decoder.decode();
-  if (pending.trim() !== "") take(pending);
+}
+
+/** One SSE event's audio, if it carries any. */
+function eventAudio(event: string): Buffer | null {
+  const data = eventData(event);
+  return data === null ? null : audioFrom(data);
+}
+
+/** All PCM carried by the stream, concatenated in order. */
+export async function collectInteractionAudio(body: ReadableStream<Uint8Array>): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of interactionAudioChunks(body)) chunks.push(chunk);
   return Buffer.concat(chunks);
 }
