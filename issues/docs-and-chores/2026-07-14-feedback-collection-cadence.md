@@ -4,6 +4,7 @@ workstream: unknown
 area: beebox
 filed-by: agent
 discovered-in: main session — while reviewing accumulated box feedback (all 9 items stale)
+priority: normal
 ---
 
 Box agents (and users, via them) file feedback with `bbx feedback` into each box's
