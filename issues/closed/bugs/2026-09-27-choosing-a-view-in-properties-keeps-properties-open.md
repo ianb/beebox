@@ -1,6 +1,7 @@
 ---
 title: "Choosing a view in a card's Properties leaves Properties open instead of showing the view"
 workstream: card-view-fixes
+resolution: implemented
 area: beebox
 labels: [frontend, views, properties]
 filed-by: agent
@@ -8,6 +9,8 @@ discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
 priority: important
 ---
+
+Closed by c33bb4996. Choosing a view or "Use preferred view" now turns the card back to its front. Divergence: the issue said the component already receives `onClose`; that callback closes the card. The panel state is CardThemeSurface's `back`, now exposed through a ShowFront context.
 
 In a card's Properties panel, the person picks a different view for the
 card. The view changes, but the Properties panel stays open, so the person
