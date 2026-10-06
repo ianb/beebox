@@ -281,6 +281,27 @@ the contract.
   still deliver a real receipt while a provisional navigation is pending — and `didFinish`
   redelivers the same persisted emission IDs into the new page.
 
+### 3.5 The box screen navigation (web → native, by URL)
+
+- **Wire shape:** a main-frame navigation to `<baseURL>/box` (the web box screen). The web
+  landmark menu's box row is a plain document navigation to that URL, not a router link and not a
+  bridge command: the command envelope cannot report an unknown kind back to the web (§4.8), so a
+  command would fail silently on an older build.
+- **Native behavior:** `decidePolicyFor` checks the URL before the same-origin allow (§3.4),
+  cancels the navigation, and shows the native box screen. The web view stays mounted and hidden
+  behind it. The match compares origin and path against `baseURL` plus `/box`, because the box is
+  served under a path prefix (`/main/test1/box` matches, `/main/test1/browse` and
+  `/main/test2/box` do not); a query or trailing slash does not change the match.
+- **Fallback:** a build without the check loads the web box screen in its web view, which works
+  without the native bridge.
+- **Anchors:** native `ios-app/BeeBox/Views/ChatWebView.swift` — `isBoxScreenURL(_:boxBaseURL:)`,
+  `Coordinator.mainFramePolicy(for:)`, `onOpenBoxScreen`; test
+  `ios-app/BeeBoxTests/ChatWebViewRequestTests.swift` —
+  `testBoxScreenNavigationUnderAPrefixIsInterceptedAndOtherPagesLoad`. Web: the route `/<box>/box`
+  and the landmark menu's box row.
+- **Drift:** SILENT-degraded. A renamed route on either side loads the web box screen in the web
+  view instead of the native one.
+
 ---
 
 ## 4. Bridge channels — emission, location, and composer mutation
@@ -1226,7 +1247,26 @@ See §1.3 (full request/response/errors).
   `src/core/chat/routing/quick-chat-record.ts` (`quickChatViewSchema`) and
   `src/webapp/trpc/routers/quick-chat.ts` (inputs, `quickChatHomeSchema`).
 - **Fixtures:** `test/mobile-contract/fixtures/quick-chat/`, parsed field for field by
-  `test/webapp/trpc/routers/quick-chat.contract-fixtures.doctest.md`.
+  `test/webapp/trpc/routers/quick-chat.contract-fixtures.doctest.md` and by
+  `ios-app/BeeBoxTests/QuickChatAPITests.swift`, which also checks the three request bodies
+  against `submit-request.json`, `choose-request.json`, and `discard-request.json`.
+- **Native caller:** the box screen, which has no web session mounted, so this is the one native
+  path that sends a chat message without the web view (`ios-app/CLAUDE.md`, bridge discipline).
+  The record `id` is a client-made UUID, sent lowercase; it becomes the chat message id, so a
+  repeated `submit` of one id returns one record and posts once. A `sending` view with
+  `expired: true` is past the six-day delivery limit and offers only Open chat and Discard.
+- **Outbox:** the phone stores `{id,boxID,text,createdAt,attempts,lastAttemptAt}` in
+  `quick-chat-outbox.json` before the first request and removes an entry only when `submit`
+  answers. A failed request keeps it; retries follow a backoff while the app is in the
+  foreground, and once per launch, for seven days, then the row reads "Not sent". An entry for a
+  box that is unpaired is removed when the box is removed. The last `home` answer is cached per
+  box so the screen draws before the refresh.
+- **Anchors:** native `ios-app/BeeBox/Services/QuickChatAPI.swift` · `QuickChatAPI`;
+  `ios-app/BeeBox/Models/QuickChatView.swift` · `QuickChatView`, `QuickChatHome`;
+  `ios-app/BeeBox/Storage/QuickChatOutbox.swift`; `ios-app/BeeBox/Storage/BoxScreenStore.swift`.
+  Box `src/webapp/trpc/routers/quick-chat.ts`; `src/core/chat/routing/quick-chat-record.ts`.
+- **Drift:** LOUD. A request the server rejects keeps the entry in the outbox and the row
+  visible; an answer the phone cannot decode fails the refresh and shows "Could not refresh".
 
 ---
 
@@ -1294,6 +1334,8 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
+| Q1 | `quickChat.submit` / `choose` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id}`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
+| W3 | Box screen navigation (§3.5) | web→native | main-frame navigation to `<baseURL>/box`, cancelled by native | `Views/ChatWebView.swift` · `isBoxScreenURL`, `Coordinator.mainFramePolicy(for:)` | the `/<box>/box` route; the landmark menu's box row | SILENT-degraded |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `bbx_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
 | U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
@@ -1563,6 +1605,8 @@ beebox/src/webapp/routes/chat/uploads.ts
 beebox/src/webapp/routes/bulk-upload/register.ts
 beebox/src/core/capture/staging-stream.ts
 beebox/src/webapp/trpc/routers/debug-log.ts
+beebox/src/webapp/trpc/routers/quick-chat.ts
+beebox/src/core/chat/routing/quick-chat-record.ts
 beebox/src/core/notification/apns-channel/payload.ts
 beebox/src/core/notification/target.ts
 
@@ -1574,6 +1618,8 @@ ios-app/BeeBox/Services/SpeechDictation.swift
 ios-app/BeeBox/Services/ScreenAwake.swift
 ios-app/BeeBox/Storage/ComposerDraftStore.swift
 ios-app/BeeBox/Services/ChatAPI.swift
+ios-app/BeeBox/Services/QuickChatAPI.swift
+ios-app/BeeBox/Models/QuickChatView.swift
 ios-app/BeeBox/Storage/VoiceAudioRetentionStore.swift
 ios-app/BeeBox/Models/PairedBox.swift
 ios-app/BeeBox/Storage/PairedBoxStore.swift
@@ -1588,19 +1634,17 @@ ios-app/BeeBox/BeeBox.entitlements
 beebox/test/mobile-contract/
 ```
 
-## Quick chat evaluation entry
+## Native box screen
 
-The iOS Quick chat button presents `<baseURL>/quick-chat` in an independent
-webview sheet. It reuses paired-box authentication and same-origin navigation,
-but installs no native composer bridge. The web form owns routing and ordinary
-chat send; the main native conversation, draft, and pending emissions remain
-mounted behind the sheet. Done returns to them. This is an explicit entry, not
-an automatic app cold-start rule. Existing native recording state is not
-transferred to the sheet.
+The iOS app opens on a native box screen (`ios-app/BeeBox/Views/BoxScreenView.swift`) on a cold
+launch, after 30 minutes or more in the background, or after the web content process ended in the
+background; otherwise it returns to where it was. A notification tap, or pending chat messages
+waiting in `PendingEmissionStore`, open the web app instead. The rule is
+`ios-app/BeeBox/Models/RootSurface.swift` · `RootSurfaceRule`, driven by `RootView`.
 
-The standalone web route shows the chosen destination and competing probabilities
-after sending. A destination link opens ordinary web chat inside the sheet.
-No emission version, native target type, or binding JSON changes for this trial.
-Owners: `ios-app/BeeBox/Views/RootView.swift`, `ChatWebView.swift`, and
-`src/frontend/src/pages/quick-chat/QuickChatPage.tsx`. Request/authentication and
-absence of the native bridge are covered by `ChatWebViewRequestTests`.
+The box screen mounts no web content. Its composer sends through `quickChat.submit` (§5.11) with a
+new-thought draft stored apart from the chat draft. Its links (recent chats, "All chats", the
+box-wide pages, the box's shortcuts) show the web app at a box-relative path through the same
+`ChatWebView.NavigationRequest` a notification tap uses (§3.1). The web app returns to the box
+screen through the navigation in §3.5. The web view, once created, stays mounted and hidden behind
+the box screen. No emission version, native target type, or binding JSON changes for the box screen.

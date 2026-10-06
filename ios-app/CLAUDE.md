@@ -8,6 +8,8 @@ surface and simulator-pairing shortcut.
 
 - The app is a native SwiftUI shell around the existing web chat. `RootView`
   embeds `ChatWebView` and adds native pairing, composition, speech, and capture.
+  It opens on the native box screen and creates `ChatWebView` only when the web
+  app is first shown (`Models/RootSurface.swift`).
 - The webview is still the chat client: it owns transcript/session state, target
   busy/queue state, dispatch, and server-rendered pending messages. Do not build
   parallel native models for those concerns.
@@ -159,6 +161,9 @@ signing changes.
 - `beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/native-emission.ts` and the
   hooks beside it are the web side. Native must submit an `Emission` to the
   visible web session; it must not call chat-send APIs behind the webview.
+  The one exception is a quick chat submission from the box screen, where no
+  web session is mounted: `QuickChatAPI` calls `quickChat.submit` and the
+  server routes and delivers it (contract §5.11).
 - Web-to-native traffic uses named `WKScriptMessageHandler` channels. Validate
   every message body before mutating state. Native-to-web queues are
   authoritative; DOM events are wake signals.
@@ -196,6 +201,10 @@ the complete state set for a simulator and restores its status-bar override.
 Use `simctl ui <device> appearance` and `content_size` to repeat representative
 states in dark mode and accessibility sizes. The `keyboard-shown` reference
 requires the simulator's hardware-keyboard connection to be disabled.
+
+The box screen has its own fixture: `--box-screen-fixture=<state>`, where state
+is `empty`, `multi-box`, `needs-choice`, `not-delivered`, `waiting-to-send`,
+`sent`, or `refresh-failed`. It uses isolated stores and a fake server.
 
 For user-facing composer or capture work, record which of these were actually
 tested. Do not describe a simulator-only pass as device verification.

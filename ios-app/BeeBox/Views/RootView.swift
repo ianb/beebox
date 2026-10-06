@@ -7,8 +7,19 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var composerDraftStore = ComposerDraftStore(scope: .conversation)
     @StateObject private var pendingEmissionStore = PendingEmissionStore()
+    /// The box screen's new-thought draft, separate from the chat's draft.
+    @StateObject private var newThoughtDraftStore = ComposerDraftStore(scope: .newThought)
+    /// The box screen's composer requires a pending store; a quick chat send
+    /// never touches it, so this one is never activated.
+    @StateObject private var boxScreenPendingStore = PendingEmissionStore()
+    @StateObject private var boxScreenStore = BoxScreenStore()
+    /// What the person sees, and whether `ChatWebView` exists behind it.
+    @State private var surfaceState = RootSurfaceState.launching
+    /// When the app last went to the background. In memory only: a killed app
+    /// is a cold launch.
+    @State private var backgroundedAt: Date?
+    @State private var webContentEndedInBackground = false
     @State private var showingPairSheet = false
-    @State private var showingQuickChat = false
     @State private var navigationFailure: ChatWebView.NavigationFailure?
     /// A notification tap's target, waiting for the chat webview to load it.
     @State private var navigationRequest: ChatWebView.NavigationRequest?
@@ -109,11 +120,6 @@ struct RootView: View {
         .sheet(isPresented: $showingPairSheet) {
             PairBoxView()
         }
-        .sheet(isPresented: $showingQuickChat) {
-            if let box = store.selectedBox, !boxLockManager.isLocked(box) {
-                QuickChatSheet(box: box)
-            }
-        }
         .onChange(of: store.selectedBox?.id) { _, newBoxID in
             if let newBoxID {
                 BoxLog.info(
@@ -122,8 +128,14 @@ struct RootView: View {
                     targetBoxID: newBoxID
                 )
             }
-            showingQuickChat = false
             resignProtectedFirstResponder()
+            // A new box starts afresh, as a cold launch does, unless a
+            // notification tap for it is waiting to open in the web app.
+            if let newBoxID, navigationRequest?.boxID == newBoxID {
+                surfaceState = RootSurfaceRule.transition(.launching, on: .notificationTap)
+            } else {
+                applySurface(.boxSwitched)
+            }
             boxLockManager.relock()
             visibleChatBoxID = newBoxID
             visibleChatSessionID = nil
@@ -142,12 +154,31 @@ struct RootView: View {
             controlRing = nil
             pendingEmissionStore.deactivate()
         }
+        .task {
+            // The scene is usually active before this runs, and `onChange`
+            // does not report the initial phase.
+            boxScreenStore.updateBoxes(store.boxes)
+            boxScreenStore.setForeground(scenePhase == .active)
+            await boxScreenStore.start()
+        }
+        .onReceive(store.$boxes) { boxes in
+            boxScreenStore.updateBoxes(boxes)
+        }
         .task(id: store.selectedBox?.id) {
             guard let boxID = store.selectedBox?.id else {
                 return
             }
+            await boxScreenStore.loadCachedHome(boxID: boxID)
             await composerDraftStore.activate(boxID: boxID)
+            await newThoughtDraftStore.activate(boxID: boxID)
             await pendingEmissionStore.activate(boxID: boxID)
+            guard Task.isCancelled == false, store.selectedBox?.id == boxID else {
+                return
+            }
+            // The launch rule waits for the restore: pending chat messages are
+            // delivered only through a mounted web view.
+            applySurface(.restoreCompleted(hasPendingEmissions: hasPendingEmissions(boxID: boxID)))
+            await boxScreenStore.refresh(boxID: boxID)
         }
         .onChange(of: scenePhase) { _, phase in
             if let boxID = store.selectedBox?.id {
@@ -158,6 +189,8 @@ struct RootView: View {
                 )
             }
             if phase == .active {
+                boxScreenStore.setForeground(true)
+                returnToForeground()
                 Task {
                     await LogForwarder.shared.setActive(true)
                     await LogForwarder.shared.flush()
@@ -171,15 +204,18 @@ struct RootView: View {
             guard phase == .background else {
                 return
             }
+            backgroundedAt = Date()
+            webContentEndedInBackground = false
+            boxScreenStore.setForeground(false)
             LogFlushBackgroundTask().begin()
             if store.selectedBox?.requiresDeviceUnlock == true {
                 showingPairSheet = false
-                showingQuickChat = false
                 resignProtectedFirstResponder()
             }
             boxLockManager.relock()
             Task {
                 await composerDraftStore.flush()
+                await newThoughtDraftStore.flush()
             }
         }
         .onReceive(NotificationTapInbox.shared.$pending.compactMap(\.self)) { pending in
@@ -283,7 +319,6 @@ struct RootView: View {
             )
             return
         }
-        showingQuickChat = false
         if store.selectedBox?.id != box.id {
             store.select(box)
         }
@@ -292,7 +327,70 @@ struct RootView: View {
             category: .push,
             targetBoxID: box.id
         )
+        // `ChatWebView` must exist to consume the request, so the web app is
+        // shown and mounted first.
+        applySurface(.notificationTap)
         navigationRequest = ChatWebView.NavigationRequest(boxID: box.id, path: path)
+    }
+
+    /// Show the web app at a box-relative path: a recent chat, a box-wide page,
+    /// or a shortcut on the box screen.
+    private func openWeb(path: String, box: PairedBox) {
+        resignProtectedFirstResponder()
+        applySurface(.openWeb)
+        navigationRequest = ChatWebView.NavigationRequest(boxID: box.id, path: path)
+    }
+
+    private func applySurface(_ event: RootSurfaceEvent) {
+        let next = RootSurfaceRule.transition(surfaceState, on: event)
+        guard next != surfaceState else {
+            return
+        }
+        let message = "root surface=\(next.surface) webMounted=\(next.webMounted) event=\(Self.eventName(event))"
+        if let boxID = store.selectedBox?.id {
+            BoxLog.info(message, category: .lifecycle, targetBoxID: boxID)
+        } else {
+            BoxLog.info(message, category: .lifecycle)
+        }
+        surfaceState = next
+    }
+
+    private func returnToForeground() {
+        guard let backgroundedAt, let boxID = store.selectedBox?.id else {
+            return
+        }
+        self.backgroundedAt = nil
+        let webContentAlive = webContentEndedInBackground == false
+        webContentEndedInBackground = false
+        applySurface(.returnedToForeground(
+            backgroundedFor: Date().timeIntervalSince(backgroundedAt),
+            webContentAlive: webContentAlive,
+            hasPendingEmissions: hasPendingEmissions(boxID: boxID)
+        ))
+    }
+
+    private func hasPendingEmissions(boxID: PairedBox.ID) -> Bool {
+        pendingEmissionStore.pending.contains { $0.boxID == boxID }
+            || pendingEmissionStore.voicePreparations.isEmpty == false
+    }
+
+    private static func eventName(_ event: RootSurfaceEvent) -> String {
+        switch event {
+        case .restoreCompleted(let hasPendingEmissions):
+            "restoreCompleted pending=\(hasPendingEmissions)"
+        case .returnedToForeground(let backgroundedFor, let webContentAlive, let hasPendingEmissions):
+            "returnedToForeground after=\(Int(backgroundedFor))s webAlive=\(webContentAlive) pending=\(hasPendingEmissions)"
+        case .notificationTap:
+            "notificationTap"
+        case .openWeb:
+            "openWeb"
+        case .openBoxScreen:
+            "openBoxScreen"
+        case .boxSwitched:
+            "boxSwitched"
+        case .webContentTerminated:
+            "webContentTerminated"
+        }
     }
 
     private func resignProtectedFirstResponder() {
@@ -304,7 +402,41 @@ struct RootView: View {
         )
     }
 
+    /// The box screen, the web app, or, until the launch rule has run, only the
+    /// background. The web app stays mounted, hidden, behind the box screen
+    /// once it exists, so returning to it is immediate.
     private func boxContent(box: PairedBox, composerBox: PairedBox) -> some View {
+        ZStack {
+            Color(uiColor: .systemBackground)
+                .ignoresSafeArea()
+            if surfaceState.webMounted {
+                let shown = surfaceState.surface == .web
+                webContent(box: box, composerBox: composerBox, composerShown: shown)
+                    .opacity(shown ? 1 : 0)
+                    .allowsHitTesting(shown)
+                    .accessibilityHidden(shown == false)
+            }
+            if surfaceState.surface == .boxScreen {
+                BoxScreenView(
+                    box: box,
+                    boxes: store.boxes,
+                    screenStore: boxScreenStore,
+                    outbox: boxScreenStore.outbox,
+                    draftStore: newThoughtDraftStore,
+                    pendingStore: boxScreenPendingStore,
+                    onOpen: { path in
+                        openWeb(path: path, box: box)
+                    },
+                    onSelectBox: { other in
+                        store.select(other)
+                    }
+                )
+                .environment(\.nativeControlRegistry, controlRegistry)
+            }
+        }
+    }
+
+    private func webContent(box: PairedBox, composerBox: PairedBox, composerShown: Bool) -> some View {
         ChatWebView(
             box: box,
             pendingEmissions: pendingEmissionStore.deliveries,
@@ -420,6 +552,17 @@ struct RootView: View {
                 if navigationRequest?.id == id {
                     navigationRequest = nil
                 }
+            },
+            onOpenBoxScreen: {
+                resignProtectedFirstResponder()
+                applySurface(.openBoxScreen)
+            },
+            onWebContentTerminated: {
+                if scenePhase == .active {
+                    applySurface(.webContentTerminated)
+                } else {
+                    webContentEndedInBackground = true
+                }
             }
         )
         .overlay {
@@ -430,50 +573,48 @@ struct RootView: View {
         .environment(\.nativeControlRegistry, controlRegistry)
         .id(box.id)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 0) {
-                HStack {
-                    if pushRegistrar.permission == .denied {
-                        NotificationsOffNotice()
-                    }
-                    Spacer()
-                    Button {
-                        resignProtectedFirstResponder()
-                        showingQuickChat = true
-                        BoxLog.info("quick chat opened", category: .webview, targetBoxID: box.id)
-                    } label: {
-                        Label("Quick chat", systemImage: "arrow.triangle.branch")
-                    }
-                    .font(.subheadline)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-                }
-                .background(.bar)
-                NativeComposerView(
-                    box: composerBox,
-                    draftStore: composerDraftStore,
-                    pendingStore: pendingEmissionStore,
-                    captureAvailable: composerBox.sessionID?.isEmpty == false,
-                    narrationEnabled: narrationEnabled,
-                    hqDictationEnabled: hqDictationEnabled,
-                    speechPlaybackActive: speechPlaybackActive,
-                    responseActive: responseActive,
-                    locationSharingEnabled: locationSharingEnabled,
-                    locationShareResult: locationShareResult,
-                    screenshotResult: screenshotResult,
-                    onToggleLocationSharing: {
-                        locationShareResult = nil
-                        locationShareRequest = NativeLocationShareRequest()
-                    },
-                    onTakeScreenshot: {
-                        screenshotResult = nil
-                        screenshotRequest = NativeScreenshotRequest()
-                    },
-                    onInterruptSpeech: {
-                        speechStopRequest = NativeSpeechStopRequest()
-                    },
-                    requiresConversationBinding: true
-                )
+            // Only while the web app is shown; the box screen has its own.
+            if composerShown {
+                webComposer(composerBox: composerBox)
             }
+        }
+    }
+
+    private func webComposer(composerBox: PairedBox) -> some View {
+        VStack(spacing: 0) {
+            if pushRegistrar.permission == .denied {
+                HStack {
+                    NotificationsOffNotice()
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+                .background(.bar)
+            }
+            NativeComposerView(
+                box: composerBox,
+                draftStore: composerDraftStore,
+                pendingStore: pendingEmissionStore,
+                captureAvailable: composerBox.sessionID?.isEmpty == false,
+                narrationEnabled: narrationEnabled,
+                hqDictationEnabled: hqDictationEnabled,
+                speechPlaybackActive: speechPlaybackActive,
+                responseActive: responseActive,
+                locationSharingEnabled: locationSharingEnabled,
+                locationShareResult: locationShareResult,
+                screenshotResult: screenshotResult,
+                onToggleLocationSharing: {
+                    locationShareResult = nil
+                    locationShareRequest = NativeLocationShareRequest()
+                },
+                onTakeScreenshot: {
+                    screenshotResult = nil
+                    screenshotRequest = NativeScreenshotRequest()
+                },
+                onInterruptSpeech: {
+                    speechStopRequest = NativeSpeechStopRequest()
+                },
+                requiresConversationBinding: true
+            )
         }
     }
 
@@ -579,8 +720,8 @@ struct RootView: View {
         if boxLockManager.isLocked(box) {
             return "The box is locked, so its native controls are covered by the unlock screen."
         }
-        if showingQuickChat {
-            return "The Quick chat sheet is covering the app's native controls."
+        if surfaceState.surface != .web {
+            return "The box screen is covering the web app and its native controls."
         }
         if showingPairSheet {
             return "The box-pairing sheet is covering the app's native controls."
@@ -792,34 +933,6 @@ struct UnreachableBoxView: View {
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
-    }
-}
-
-/// A separate web surface leaves the main chat and its native draft mounted.
-private struct QuickChatSheet: View {
-    let box: PairedBox
-    @Environment(\.dismiss) private var dismiss
-    @State private var navigationFailure: ChatWebView.NavigationFailure?
-
-    var body: some View {
-        NavigationStack {
-            ChatWebView(box: box, page: .quickChat, onNavigationFailure: { navigationFailure = $0 })
-                .overlay {
-                    if let failure = navigationFailure {
-                        UnreachableBoxView(box: box, failure: failure)
-                    }
-                }
-                .navigationTitle("Quick chat")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
-                    }
-                }
-        }
-        .onDisappear {
-            BoxLog.info("quick chat closed", category: .webview, targetBoxID: box.id)
-        }
     }
 }
 
