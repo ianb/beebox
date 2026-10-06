@@ -45,7 +45,7 @@ function uploadCommitCount(boxRoot) {
 
 async function batchCardRel(box) {
   const dirs = await readdir(box.path("_content/tmp-upload"));
-  return `_content/tmp-upload/${dirs[0]}/Batch.upload-batch.card`;
+  return `_content/tmp-upload/${dirs[0]}/${dirs[0]}.upload-batch.card`;
 }
 
 // Stage a sealed bulk session bound to `target`, with one uploaded file.
@@ -136,15 +136,15 @@ the phone down, so the box sends one `quiet` notification to the chat the batch
 was headed for:
 
 ```ts continue
-JSON.stringify(await notices(box.root), null, 1)
+await notices(box.root)
 => [
- {
-  "title": "An upload could not be added to the chat",
-  "body": "1 file reached the box but could not be added to the chat. The chat it was sent to no longer exists. They are kept on the box, and the assistant will be asked to recover them.",
-  "target": "chat:s-missing",
-  "loudness": "quiet",
-  "source": "bulk-upload"
- }
+  {
+    title: "An upload could not be added to the chat",
+    body: "1 file reached the box but could not be added to the chat. The chat it was sent to no longer exists. They are kept on the box, and the assistant will be asked to recover them.",
+    target: "chat:s-missing",
+    loudness: "quiet",
+    source: "bulk-upload",
+  },
 ]
 ```
 
@@ -168,8 +168,8 @@ await writePresence(box.root, { activeWeb: 1, now: new Date() });
 
 await markBulkPreparationFailed({ boxRoot: box.root, id });
 const [notice] = await notices(box.root);
-JSON.stringify({ state: (await readStagingSession({ boxRoot: box.root, id })).state, body: notice.body })
-=> {"state":"failed:prepare","body":"1 file reached the box but could not be added to the chat. Saving them to the box failed. They are kept on the box, and the assistant will be asked to recover them."}
+({ state: (await readStagingSession({ boxRoot: box.root, id })).state, body: notice.body })
+=> { state: "failed:prepare", body: "1 file reached the box but could not be added to the chat. Saving them to the box failed. They are kept on the box, and the assistant will be asked to recover them." }
 ```
 
 ```ts cleanup

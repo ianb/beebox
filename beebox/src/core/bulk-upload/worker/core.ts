@@ -35,7 +35,7 @@ import type { NotifyServices } from "../../notify-boxholder.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { parseCardText, serializeCardText } from "../../card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
-import { prepareBulkBatch, bulkBatchSlug, bulkBatchCardRelPath } from "../prepare.js";
+import { prepareBulkBatch, bulkBatchSlug, resolveBulkBatchPaths } from "../prepare.js";
 import { bulkBatchHasNothingToReport } from "../batch-format.js";
 import { buildUploadWrapper, resolveBulkDeliveryTarget } from "./deliver.js";
 import * as fs from "node:fs/promises";
@@ -150,7 +150,7 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
   // is in the transcript, finish the bookkeeping without re-sending — exactly one
   // <upload> ever reaches the chat. A first finalize has no card yet → skipped.
   const contextDir = session.contextDir ?? "";
-  const cardRelPath = bulkBatchCardRelPath({ startedAt: session.createdAt, id, contextDir });
+  const { cardRelPath } = await resolveBulkBatchPaths({ boxRoot, startedAt: session.createdAt, id, contextDir });
   const batchSlug = bulkBatchSlug({ startedAt: session.createdAt, id });
   if (await fileExists(path.join(boxRoot, cardRelPath))) {
     const landed = await userMessageAlreadyLanded({

@@ -22,6 +22,7 @@ import * as path from "node:path";
 import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { sanitizeFilename, dedupeName, summarizeBatch, failedItemsNotArrived } from "./batch-format.js";
 import { landmarkScanRelDir } from "../landmark/root-dir.js";
+import { attachDirFor } from "../../shared/attach-path.js";
 import { createUploadBatchTemplate, parseUploadBatch, type UploadBatchReceived } from "../../schemas/upload-batch.js";
 import {
   readStagingSession,
@@ -107,8 +108,7 @@ export async function prepareBulkBatch(opts: {
   const batchSlug = bulkBatchSlug({ startedAt: session.createdAt, id });
   const batchRelDir = bulkBatchRelDir({ startedAt: session.createdAt, id, contextDir });
   assertBatchDirContained({ boxRoot, batchRelDir });
-  const cardRelPath = `${batchRelDir}/Batch.upload-batch.card`;
-  const attachRelDir = `${batchRelDir}/Batch.upload-batch.attach`;
+  const { cardRelPath, attachRelDir } = await resolveBulkBatchPaths({ boxRoot, startedAt: session.createdAt, id, contextDir });
   const cardAbsPath = path.join(boxRoot, cardRelPath);
   const attachAbsDir = path.join(boxRoot, attachRelDir);
 
@@ -320,9 +320,37 @@ function bulkBatchRelDir(opts: { startedAt: string; id: string; contextDir: stri
   return `${landmarkScanRelDir(opts.contextDir)}/tmp-upload/${slug}`;
 }
 
-/** Box-relative path of a batch's `upload-batch` card, derived from the session. */
-export function bulkBatchCardRelPath(opts: { startedAt: string; id: string; contextDir: string }): string {
-  return `${bulkBatchRelDir(opts)}/Batch.upload-batch.card`;
+/** A batch's card and its attach scope, box-relative. */
+export interface BulkBatchPaths {
+  cardRelPath: string;
+  attachRelDir: string;
+}
+
+/**
+ * Where a batch's card and attach scope live, derived from the session.
+ *
+ * The card is named after the batch slug so its attach scope, by the
+ * `<basename>.attach` convention every attach-aware tool follows, is
+ * `<slug>.attach`: `bbx rm` and `bbx mv` carry it with the card, and the
+ * `upload-` prefix keeps it on the annex filter path (`BULK_BATCH_ATTACH_PATTERN`)
+ * wherever the card is moved. Before 2026-10 the names were fixed,
+ * `Batch.upload-batch.card` + `Batch.upload-batch.attach`, matching neither the
+ * convention nor any tool. A batch already written under those names keeps
+ * them: resuming it under the new names would prepare and deliver it twice.
+ */
+export async function resolveBulkBatchPaths(opts: {
+  boxRoot: string;
+  startedAt: string;
+  id: string;
+  contextDir: string;
+}): Promise<BulkBatchPaths> {
+  const batchRelDir = bulkBatchRelDir(opts);
+  const legacyCard = `${batchRelDir}/Batch.upload-batch.card`;
+  if (await fileExists(path.join(opts.boxRoot, legacyCard))) {
+    return { cardRelPath: legacyCard, attachRelDir: `${batchRelDir}/Batch.upload-batch.attach` };
+  }
+  const cardRelPath = `${batchRelDir}/${bulkBatchSlug(opts)}.upload-batch.card`;
+  return { cardRelPath, attachRelDir: attachDirFor(cardRelPath) };
 }
 
 /** Latest `uploadedAt` across the staged files, or `null` when there are none. */

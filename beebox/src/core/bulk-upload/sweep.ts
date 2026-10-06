@@ -36,7 +36,7 @@ import { listStagingSessions, isBulkSession, readStagingSession, writeStagingSes
 import { cleanupStagingSession, discardStagingSessionIfCancellable } from "../capture/staging-teardown.js";
 import { bulkBatchHasNothingToReport, failedItemsNotArrived } from "./batch-format.js";
 import { StagingSessionGoneError } from "../capture/staging-errors.js";
-import { bulkBatchCardRelPath } from "./prepare.js";
+import { resolveBulkBatchPaths } from "./prepare.js";
 
 /** No-activity window after which an open bulk batch is surfaced as abandoned. */
 const BULK_ABANDONMENT_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
@@ -270,7 +270,8 @@ async function deliveredMessageLanded(opts: {
   session: { createdAt: string; id: string; contextDir?: string | undefined; targetSessionId: string | null };
 }): Promise<boolean> {
   const { boxRoot, session } = opts;
-  const cardRelPath = bulkBatchCardRelPath({
+  const { cardRelPath } = await resolveBulkBatchPaths({
+    boxRoot,
     startedAt: session.createdAt,
     id: session.id,
     contextDir: session.contextDir ?? "",
