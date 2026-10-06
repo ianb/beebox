@@ -30,7 +30,9 @@ enum NativeEarcon: CaseIterable, Equatable {
         case .recordingError:
             NativeEarconResource(filename: "recording-error.wav", volume: 0.7)
         case .recordingDropped:
-            NativeEarconResource(filename: "krell-alarm-7.wav", volume: 0.7)
+            // Fires on an audio-session interruption: the microphone is gone.
+            // Same asset and volume as the web `micLost` cue.
+            NativeEarconResource(filename: "mic-lost.wav", volume: 0.5)
         }
     }
 }

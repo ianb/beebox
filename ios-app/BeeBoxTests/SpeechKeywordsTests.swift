@@ -12,8 +12,9 @@ final class SpeechKeywordsTests: XCTestCase {
             SpeechKeywords.keywordHintsWithText,
             [
                 "\"send message\"",
+                "\"send checkpoint\"",
                 "\"clean up and send\"",
-                "\"send and close\"",
+                "\"over and out\"",
                 "\"erase message\"",
                 "\"cancel message\"",
                 "\"microphone off\"",
@@ -167,7 +168,7 @@ final class SpeechKeywordsTests: XCTestCase {
     /// control tag behind: the tag is message content the moment it lands in
     /// the composer.
     func testOnlySendingActionsCommitTheKeywordSubstitution() {
-        for action in [SpeechKeywordAction.send, .sendHq, .sendClose] {
+        for action in [SpeechKeywordAction.send, .sendHq, .sendClose, .sendCheckpoint] {
             XCTAssertTrue(action.commitsKeywordSubstitution, "\(action) stages the draft as a message")
         }
         for action in [SpeechKeywordAction.cancel, .micOff, .erase] {
@@ -283,6 +284,7 @@ final class SpeechKeywordsTests: XCTestCase {
         )
         XCTAssertFalse(conversation.keywordSendClosesMicrophone(.send))
         XCTAssertFalse(conversation.keywordSendClosesMicrophone(.sendHq))
+        XCTAssertFalse(conversation.keywordSendClosesMicrophone(.sendCheckpoint))
         XCTAssertTrue(conversation.keywordSendClosesMicrophone(.sendClose))
 
         XCTAssertEqual(quickChat.keywordSendPlan(for: cleanUp, narrationEnabled: false), .live(text: cleanUp.processedTranscript))

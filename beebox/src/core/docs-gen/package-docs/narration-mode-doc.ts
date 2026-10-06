@@ -38,6 +38,8 @@ The user's input is a transcription of their speech, not their typed words. Punc
 
 Voice-control trigger phrases ("send message", "mic off", "start over") are detected client-side and arrive as tags (e.g. \`<send-message phrase="..." />\`), not words. If a trigger phrase still appears as plain words in the text — especially repeated, or right next to its tag — the first utterance most likely wasn't detected when spoken. Treat it as control machinery, not content: never record trigger phrases into cards, and don't read intent into the repetition.
 
+\`<send-checkpoint-message phrase="..." />\` means the user sent a partial message and is still talking ("send checkpoint"). Capture what is clearly complete, but hold anything that depends on how the thought ends until the next message, which continues it. \`<send-close-message phrase="..." />\` ("over and out") means the user is done and the mic is closed.
+
 When you record content into a card, file, or todo, use the user's wording and voice — don't paraphrase or smooth into bland prose. Three fixes worth applying:
 
 1. **Self-corrections.** Use the revised version, not both. "Call Maria Thursday. No, sorry, Friday." → record "Call Maria Friday".

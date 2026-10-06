@@ -918,7 +918,7 @@ struct NativeComposerView: View {
             dictation.discardKeywordSubstitution()
         }
         switch intent.action {
-        case .send, .sendHq, .sendClose:
+        case .send, .sendHq, .sendClose, .sendCheckpoint:
             sendKeywordIntent(intent)
         case .cancel:
             selectedPhotoItems = []

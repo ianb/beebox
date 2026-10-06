@@ -11,7 +11,8 @@ The real actor needs the audio worklet, so these examples drive the machine
 with a fake one that answers the way the real actor does: `STOP` gets an
 immediate `TRANSCRIPTION_DONE` carrying the recording, and `CANCEL` discards
 it. `s.emit(event)` plays the actor's side. Delays are shortened per example;
-earcon actions are silenced.
+earcon actions are silenced, or logged as `cue <name>` where an example asks
+for `cues: true`.
 
 ```ts setup
 import { createActor, fromCallback } from "xstate";
@@ -31,16 +32,14 @@ const unrefClock = {
   clearTimeout: (handle: ReturnType<typeof setTimeout>) => clearTimeout(handle),
 };
 
-const quiet = () => {};
-const SILENT_EARCONS = {
-  playRecordingDropped: quiet,
-  playRecordingResumed: quiet,
-  playMicOffSound: quiet,
-  playStartFailedSound: quiet,
-};
+const EARCON_ACTIONS = ["playMicLost", "playRecordingResumed", "playLiveTextPaused", "playLiveTextResumed", "playMicOffSound", "playStartFailedSound"] as const;
 
-function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean }) {
+function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean; cues?: boolean }) {
   const log: string[] = [];
+  const cues: string[] = [];
+  const earcons = Object.fromEntries(
+    EARCON_ACTIONS.map((name) => [name, () => { if (opts?.cues) cues.push(name.replace(/^play/, "")); }]),
+  );
   const recording = {
     recordingId: "rec-1",
     seal: (opts: { emissionId: string | null; hq: { emissionId: string } | null }) => log.push(`seal ${opts.hq === null ? "null" : opts.hq.emissionId}`),
@@ -61,7 +60,7 @@ function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean })
   const actor = createActor(
     realtimeTranscriptionMachine.provide({
       actors: { transcriptionActor: fake },
-      actions: SILENT_EARCONS,
+      actions: earcons,
       delays: opts?.delays ?? {},
     }),
     { clock: unrefClock },
@@ -72,6 +71,7 @@ function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean })
   return {
     actor,
     log,
+    cues,
     recording,
     emitted,
     emit: (event: unknown) => toMachine(event),
@@ -240,6 +240,71 @@ bareClose.emit({ type: "WS_CONNECTED" });
 bareClose.emit({ type: "WS_CLOSED" });
 bareClose.state()
 => recordingLocal
+```
+
+## Each loss gets the cue its consequence calls for
+
+A lost microphone means no audio is being recorded, so it plays the urgent
+`MicLost` cue at once, and its return plays the go-live cue:
+
+```ts
+const s = segment({ cues: true });
+s.emit({ type: "MIC_LIVE" });
+s.emit({ type: "WS_CONNECTED" });
+s.emit({ type: "CONNECTION_DEGRADED", cause: "microphone" });
+s.emit({ type: "CONNECTION_RESTORED" });
+s.cues.join(",")
+=> MicLost,RecordingResumed
+```
+
+Losing live text only pauses spoken keywords, and most drops heal within a
+second or two. A drop that heals inside `LIVE_TEXT_CUE_DELAY` makes no sound
+at all:
+
+```ts
+const s = segment({ cues: true, delays: { LIVE_TEXT_CUE_DELAY: 30 } });
+s.emit({ type: "MIC_LIVE" });
+s.emit({ type: "WS_CONNECTED" });
+s.emit({ type: "CONNECTION_DEGRADED", cause: "network" });
+s.emit({ type: "CONNECTION_RESTORED" });
+await sleep(60);
+s.cues.join(",")
+=> 
+```
+
+A drop that lasts plays the quiet pause cue once, and the return plays its
+mirror. A socket that can't be fixed (`WS_ERROR`) is the same kind of loss and
+gets the same quiet cue:
+
+```ts
+const s = segment({ cues: true, delays: { LIVE_TEXT_CUE_DELAY: 10 } });
+s.emit({ type: "MIC_LIVE" });
+s.emit({ type: "WS_CONNECTED" });
+s.emit({ type: "CONNECTION_DEGRADED", cause: "network" });
+await sleep(40);
+s.emit({ type: "CONNECTION_RESTORED" });
+s.cues.join(",")
+=> LiveTextPaused,LiveTextResumed
+
+const fatal = segment({ cues: true, delays: { LIVE_TEXT_CUE_DELAY: 10 } });
+fatal.emit({ type: "MIC_LIVE" });
+fatal.emit({ type: "WS_CONNECTED" });
+fatal.emit({ type: "WS_ERROR", message: "Live transcription unavailable (code 1008) — still recording" });
+await sleep(40);
+fatal.cues.join(",")
+=> LiveTextPaused
+```
+
+A segment whose first socket is slow to open never had live text, so waiting
+in `recordingLocal` at the start is silent:
+
+```ts
+const s = segment({ cues: true, delays: { LIVE_TEXT_CUE_DELAY: 10 } });
+s.emit({ type: "MIC_LIVE" });
+await sleep(40);
+s.emit({ type: "WS_CONNECTED" });
+s.cues.join(",")
+=> 
 ```
 
 ## STOP from `recordingLocal` ends the segment with its recording
