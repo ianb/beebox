@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-jev-triage — reviewing test harness safety fixes
+priority: important
 ---
 
 The audit CLI forces docs generation once before its test loop. The runner

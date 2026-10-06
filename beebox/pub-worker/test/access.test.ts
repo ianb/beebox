@@ -1,20 +1,18 @@
 /**
- * Track D — account tiers via Cloudflare Access. Exercises the `/a/` serve path
- * end to end with a real RS256 signature: an in-test keypair signs Access-style
- * assertions, the matching public JWKS is injected through the `getJwks` seam (no
- * network — principle #10), and the Worker clock + access-log id are injected so
- * `exp` checks and the logged object are deterministic.
+ * Account tiers via Cloudflare Access, through the pinned-site serve path.
+ * Exercises `accounts` and `any-account` site manifests end to end with a real
+ * RS256 signature: an in-test keypair signs Access-style assertions, the
+ * matching public JWKS is injected through the `getJwks` seam (no network —
+ * principle #10), and the Worker clock is injected so `exp` checks are
+ * deterministic.
  *
  * The suite drives {@link handle} directly (rather than `SELF.fetch`) so it can
  * supply the injected `WorkerDeps` and an Access-configured `Env`; the same R2
- * bindings (`env.PUB_STORE` for manifests/bundles, `env.PUB_INGEST` for the
- * written access-log — the content/ingestion split, Codex cross-review amendment
- * 1) back both, so seeding/reading through `env` is visible to the served
- * request.
+ * binding backs both, so seeding through `env` is visible to the served request.
  */
 import { env } from "cloudflare:test";
-import { assert, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { z } from "zod";
+import { assert, beforeAll, describe, expect, it } from "vitest";
+import { releaseIdForFiles, siteEdgeManifestSchema } from "../../src/publish/manifest-edge";
 import { handle, type WorkerDeps } from "../src/worker";
 import type { Env } from "../src/env";
 import type { Jwk } from "../src/access";
@@ -24,27 +22,13 @@ const AUD = "test-access-aud-tag";
 const KID = "test-key-1";
 const NOW_MS = Date.UTC(2026, 6, 15, 12, 0, 0);
 const NOW_S = Math.floor(NOW_MS / 1000);
-const LOG_ID = "fixed-log-id";
 
 const ALLOWED_EMAIL = "ada@example.com";
 const OTHER_EMAIL = "grace@example.com";
 
-const ACCT_ID = "e".repeat(26); // accounts tier, allowlist = [ALLOWED_EMAIL]
-const ACCT_EMPTY_ID = "f".repeat(26); // accounts tier, no allowedEmails (nobody)
-const ANY_ID = "g".repeat(26); // any-account tier
-
-const ACCT_HTML = "<h1>account bundle</h1>";
-const ANY_HTML = "<h1>any-account bundle</h1>";
-
-const EXPECTED_HEADERS: Record<string, string> = {
-  "X-Robots-Tag": "noindex",
-  "Referrer-Policy": "no-referrer",
-  "Cache-Control": "no-store",
-  "X-Content-Type-Options": "nosniff",
-  "Cross-Origin-Opener-Policy": "same-origin",
-  "Content-Security-Policy":
-    "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; connect-src 'none'",
-};
+const SITE_ID = "e".repeat(26);
+const HOST_HANDLE = "account-site-host";
+const SITE_HTML = "<h1>account bundle</h1>";
 
 /** The assertion header value on a request: a signed token, or absent. */
 type AssertionHeader = string | null;
@@ -65,16 +49,6 @@ interface SignOptions {
 interface ServeOptions {
   env: Env;
   deps: WorkerDeps;
-}
-
-function assertSecurityHeaders(res: Response): void {
-  for (const [name, value] of Object.entries(EXPECTED_HEADERS)) {
-    expect(res.headers.get(name), `header ${name}`).toBe(value);
-  }
-}
-
-function fileEntry(bytes: number): { bytes: number; sha256: string } {
-  return { bytes, sha256: "0".repeat(64) };
 }
 
 let privateKey: CryptoKey;
@@ -126,13 +100,19 @@ function makeDeps(overrides?: Partial<WorkerDeps>): WorkerDeps {
   return {
     now: () => NOW_MS,
     jwksFor: () => () => Promise.resolve([publicJwk]),
-    newId: () => LOG_ID,
     ...overrides,
   };
 }
 
 function configuredEnv(): Env {
-  return { ...env, ACCESS_TEAM_DOMAIN: ISS, ACCESS_AUD: AUD };
+  return {
+    PUB_STORE: env.PUB_STORE,
+    ACCESS_TEAM_DOMAIN: ISS,
+    ACCESS_AUD: AUD,
+    PUB_WORKER_VERSION: undefined,
+    PUB_ID: SITE_ID,
+    HOST_HANDLE,
+  };
 }
 
 function accessRequest(path: string, assertionHeader: AssertionHeader): Request {
@@ -146,125 +126,123 @@ function serve(path: string, assertionHeader: AssertionHeader, overrides?: Parti
   return handle({ request: accessRequest(path, assertionHeader), env: opts.env, deps: opts.deps });
 }
 
-beforeEach(async () => {
-  await env.PUB_STORE.put(
-    `pubs/${ACCT_ID}/manifest.json`,
-    JSON.stringify({
-      tier: "accounts",
-      allowedEmails: [ALLOWED_EMAIL],
-      status: "live",
-      expiresAt: null,
-      files: { "index.html": fileEntry(ACCT_HTML.length) },
-    }),
-  );
-  await env.PUB_STORE.put(`pubs/${ACCT_ID}/bundle/index.html`, ACCT_HTML);
+type AccountAudience = { tier: "accounts"; allowedEmails: string[] } | { tier: "any-account" };
 
-  // accounts tier with NO allowedEmails — parses fine, but means nobody.
-  await env.PUB_STORE.put(
-    `pubs/${ACCT_EMPTY_ID}/manifest.json`,
-    JSON.stringify({
-      tier: "accounts",
-      status: "live",
-      expiresAt: null,
-      files: { "index.html": fileEntry(ACCT_HTML.length) },
-    }),
-  );
-  await env.PUB_STORE.put(`pubs/${ACCT_EMPTY_ID}/bundle/index.html`, ACCT_HTML);
+/** Seed one account-tier site release for the pinned Worker. */
+async function seedSite(audience: AccountAudience): Promise<void> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(SITE_HTML));
+  const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const files = { "index.html": { bytes: new TextEncoder().encode(SITE_HTML).byteLength, sha256 } };
+  const releaseId = await releaseIdForFiles(files);
+  const manifest = siteEdgeManifestSchema.parse({
+    kind: "site",
+    hostHandle: HOST_HANDLE,
+    status: "live",
+    expiresAt: null,
+    activeRelease: { id: releaseId, files },
+    ...audience,
+  });
+  await env.PUB_STORE.put(`pubs/${SITE_ID}/manifest.json`, JSON.stringify(manifest));
+  await env.PUB_STORE.put(`pubs/${SITE_ID}/releases/${releaseId}/index.html`, SITE_HTML);
+}
 
-  await env.PUB_STORE.put(
-    `pubs/${ANY_ID}/manifest.json`,
-    JSON.stringify({
-      tier: "any-account",
-      status: "live",
-      expiresAt: null,
-      files: { "index.html": fileEntry(ANY_HTML.length) },
-    }),
-  );
-  await env.PUB_STORE.put(`pubs/${ANY_ID}/bundle/index.html`, ANY_HTML);
-});
+const SITE_PATH = `/a/${SITE_ID}/index.html`;
 
 describe("accounts tier — allowlist gating", () => {
-  it("serves the bundle for an allowlisted email with a valid assertion (200 + headers)", async () => {
-    const res = await serve(`/a/${ACCT_ID}/index.html`, await signAssertion(validClaims()));
+  it("serves the release for an allowlisted email with a valid assertion", async () => {
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
+    const res = await serve(SITE_PATH, await signAssertion(validClaims()));
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
-    expect(await res.text()).toBe(ACCT_HTML);
-    assertSecurityHeaders(res);
+    expect(await res.text()).toBe(SITE_HTML);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("matches the allowlist case-insensitively against the verified email", async () => {
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
+    const res = await serve(SITE_PATH, await signAssertion(validClaims({ email: ALLOWED_EMAIL.toUpperCase() })));
+    expect(res.status).toBe(200);
   });
 
   it("403s a valid assertion whose email is not in the allowlist", async () => {
-    const res = await serve(`/a/${ACCT_ID}/index.html`, await signAssertion(validClaims({ email: OTHER_EMAIL })));
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
+    const res = await serve(SITE_PATH, await signAssertion(validClaims({ email: OTHER_EMAIL })));
     expect(res.status).toBe(403);
-    assertSecurityHeaders(res);
-  });
-
-  it("403s everyone when allowedEmails is absent/empty (fail-closed = nobody)", async () => {
-    const res = await serve(`/a/${ACCT_EMPTY_ID}/index.html`, await signAssertion(validClaims()));
-    expect(res.status).toBe(403);
-    assertSecurityHeaders(res);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 
 describe("account tiers — assertion rejection is always 401 (never serve)", () => {
   it("401s a missing assertion", async () => {
-    const res = await serve(`/a/${ACCT_ID}/index.html`, null);
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
+    const res = await serve(SITE_PATH, null);
     expect(res.status).toBe(401);
-    assertSecurityHeaders(res);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("401s an expired assertion", async () => {
-    const res = await serve(`/a/${ACCT_ID}/index.html`, await signAssertion(validClaims({ exp: NOW_S - 3600, iat: NOW_S - 7200 })));
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
+    const res = await serve(SITE_PATH, await signAssertion(validClaims({ exp: NOW_S - 3600, iat: NOW_S - 7200 })));
     expect(res.status).toBe(401);
   });
 
   it("401s an assertion with the wrong aud", async () => {
-    const res = await serve(`/a/${ACCT_ID}/index.html`, await signAssertion(validClaims({ aud: "some-other-aud" })));
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
+    const res = await serve(SITE_PATH, await signAssertion(validClaims({ aud: "some-other-aud" })));
     expect(res.status).toBe(401);
   });
 
   it("401s a tampered signature", async () => {
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
     const [header, payload, sig] = (await signAssertion(validClaims())).split(".");
     assert(header !== undefined && payload !== undefined && sig !== undefined, "signed token should have three segments");
     // Flip the FIRST signature char (its top 6 bits are always significant —
     // flipping the last char lands in padding bits for a 256-byte signature and
     // decodes to the same bytes).
     const tampered = `${header}.${payload}.${sig.startsWith("A") ? "B" : "A"}${sig.slice(1)}`;
-    const res = await serve(`/a/${ACCT_ID}/index.html`, tampered);
+    const res = await serve(SITE_PATH, tampered);
     expect(res.status).toBe(401);
   });
 
   it("401s an alg:none token (no RS256 downgrade)", async () => {
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
     const header = jsonToBase64Url({ alg: "none", kid: KID, typ: "JWT" });
     const payload = jsonToBase64Url(validClaims());
-    const res = await serve(`/a/${ACCT_ID}/index.html`, `${header}.${payload}.`);
+    const res = await serve(SITE_PATH, `${header}.${payload}.`);
+    expect(res.status).toBe(401);
+  });
+
+  it("401s when the JWKS is unreachable", async () => {
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
+    const res = await serve(SITE_PATH, await signAssertion(validClaims()), { deps: makeDeps({ jwksFor: () => () => Promise.resolve(null) }) });
     expect(res.status).toBe(401);
   });
 });
 
-describe("any-account tier — any verified email, view logged", () => {
-  it("serves any valid email and writes a per-view access-log object", async () => {
-    const res = await serve(`/a/${ANY_ID}/index.html`, await signAssertion(validClaims({ email: OTHER_EMAIL })));
+describe("any-account tier — any verified email", () => {
+  it("serves any valid email", async () => {
+    await seedSite({ tier: "any-account" });
+    const res = await serve(SITE_PATH, await signAssertion(validClaims({ email: OTHER_EMAIL })));
     expect(res.status).toBe(200);
-    expect(await res.text()).toBe(ANY_HTML);
-    assertSecurityHeaders(res);
+    expect(await res.text()).toBe(SITE_HTML);
+  });
 
-    const logObject = await env.PUB_INGEST.get(`access-log/${ANY_ID}/${LOG_ID}.json`);
-    assert(logObject !== null, "expected an access-log object to be written for the any-account view");
-    const entry: unknown = JSON.parse(await logObject.text());
-    const parsed = z.object({ ts: z.string(), pubId: z.string(), email: z.string() }).parse(entry);
-    expect(parsed).toEqual({ ts: new Date(NOW_MS).toISOString(), pubId: ANY_ID, email: OTHER_EMAIL });
+  it("401s a missing assertion", async () => {
+    await seedSite({ tier: "any-account" });
+    expect((await serve(SITE_PATH, null)).status).toBe(401);
   });
 });
 
 describe("account tiers unconfigured — fail closed to 404", () => {
-  it("404s /a/ when Access is not configured (empty team domain / aud)", async () => {
-    // Chosen fail-closed status: 404 (not 401). With no Access config the box has
-    // not set up account tiers, so `/a/` is not a served surface here — treat it
-    // like a missing surface rather than advertising gated content with a 401.
-    const res = await serve(`/a/${ACCT_ID}/index.html`, await signAssertion(validClaims()), {
-      env: { ...env, ACCESS_TEAM_DOMAIN: "", ACCESS_AUD: "" },
+  it("404s account-tier content when Access is not configured (empty team domain / aud)", async () => {
+    // With no Access config the box has not set up account tiers, so the gated
+    // surface is not served here — treat it like a missing surface rather than
+    // advertising gated content with a 401.
+    await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
+    const res = await serve(SITE_PATH, await signAssertion(validClaims()), {
+      env: { ...configuredEnv(), ACCESS_TEAM_DOMAIN: "", ACCESS_AUD: "" },
     });
     expect(res.status).toBe(404);
-    assertSecurityHeaders(res);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });

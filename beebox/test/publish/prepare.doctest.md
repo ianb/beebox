@@ -255,6 +255,177 @@ result.message.includes("CLAUDE.md")
 await box.cleanup();
 ```
 
+## Static mode renders Markdown pages and does not ship the sources
+
+Each `.md` file becomes a sibling `.html` page styled by the box's Markdown
+renderer. The page title comes from frontmatter `title:`, then the first H1,
+then the file name. `index.md` satisfies the root-entry rule. Relative links to `.md`
+pages point at the rendered `.html`; external and anchor links are unchanged.
+Images and other files pass through. The release id, file list, and leak scan
+all describe the rendered pages, so a reviewer sees what is served.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.md", [
+  "---",
+  "title: Trip notes",
+  "---",
+  "# Welcome",
+  "",
+  "Read [the packing list](packing.md#tents), [day one](days/one.md?print=1), or [elsewhere](https://example.com/a.md).",
+  "",
+  "![map](assets/map.svg)",
+  "",
+].join("\n"));
+await box.write("src/publications/example/site/packing.md", "# Packing list\n\nWrite to someone@example.org.\n");
+await box.write("src/publications/example/site/days/one.md", "No heading here; back to [the index](../index.md).\n");
+await box.write("src/publications/example/site/assets/map.svg", "<svg xmlns='http://www.w3.org/2000/svg'/>");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+result.ok
+=> true
+
+JSON.stringify(result.prepared.preview.map((file) => file.path))
+=> ["assets/map.svg","days/one.html","index.html","packing.html"]
+
+result.prepared.contentHash === await releaseIdForFiles(Object.fromEntries(result.prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }])))
+=> true
+
+const index = await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8");
+index.includes("<title>Trip notes</title>")
+=> true
+
+index.includes('href="packing.html#tents"') && index.includes('href="days/one.html?print=1"')
+=> true
+
+index.includes('href="https://example.com/a.md"') && index.includes('src="assets/map.svg"')
+=> true
+
+index.includes("<script")
+=> false
+
+const packing = await readFile(path.join(result.prepared.stagedDir, "packing.html"), "utf-8");
+packing.includes("<title>Packing list</title>")
+=> true
+
+const dayOne = await readFile(path.join(result.prepared.stagedDir, "days/one.html"), "utf-8");
+dayOne.includes("<title>one</title>") && dayOne.includes('href="../index.html"')
+=> true
+
+result.prepared.scan.findings.filter((finding) => finding.match === "someone@example.org").map((finding) => finding.file)
+=> ["packing.html"]
+
+await result.prepared.cleanup();
+```
+
+Rendering is deterministic, so preparing an unchanged site again yields the same
+release id.
+
+```ts continue
+const again = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+again.ok && again.prepared.contentHash === result.prepared.contentHash
+=> true
+
+await again.prepared.cleanup();
+await box.cleanup();
+```
+
+## A Markdown page and an authored HTML page for the same path is an error
+
+`foo.md` next to `foo.html` is ambiguous, so prepare refuses it and the author
+keeps one. Invalid Markdoc tags also fail before anything is staged.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.md", "# Home\n");
+await box.write("src/publications/example/site/index.html", "<h1>Home</h1>");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok ? "ok" : `${result.reason}: ${result.message}`
+=> bundle-policy: 'index.md' renders to 'index.html', which also exists; keep only one of them
+
+await box.cleanup();
+```
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.md", "# Home\n\n{% no-such-tag %}\n");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok ? "ok" : `${result.reason}: ${result.message.includes("'index.md:3' has invalid Markdoc")}`
+=> bundle-policy: true
+
+await box.cleanup();
+```
+
+Box Markdoc tags render to app components, which a static page cannot show.
+A task-list item becomes a plain disabled checkbox. `redacted` content is
+omitted entirely, inline or block. Any other box tag fails prepare.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.md", [
+  "# Quiz",
+  "",
+  "- [x] Tent",
+  "- [ ] Stove",
+  "",
+  "The answer is {% redacted %}forty-two{% /redacted %}.",
+  "",
+  "{% redacted %}",
+  "A whole hidden paragraph.",
+  "{% /redacted %}",
+  "",
+].join("\n"));
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+const index = result.ok ? await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8") : result.message;
+index.includes('<input type="checkbox" disabled="" checked="">') && index.includes('<input type="checkbox" disabled="">') && !index.includes("<Task")
+=> true
+
+index.includes("The answer is .")
+=> true
+
+/forty-two|hidden paragraph|redacted/i.test(index)
+=> false
+
+if (result.ok) await result.prepared.cleanup();
+await box.write("src/publications/example/site/index.md", "# Quote\n\n{% quote %}Hello{% /quote %}\n");
+const quoted = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+quoted.ok ? "ok" : `${quoted.reason}: ${quoted.message}`
+=> bundle-policy: Markdown file 'index.md' uses a box Markdoc tag (QuoteInline) that published pages do not support; remove it or write plain Markdown
+
+await box.cleanup();
+```
+
+## Project mode publishes `dist/` Markdown as written
+
+Rendering belongs to static mode. A project build owns its output.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box, { ...definition, content: "project" });
+await box.write("src/publications/example/project/package.json", JSON.stringify({ scripts: { build: "vite build" } }));
+await box.write("src/publications/example/project/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, {
+  ownerEmail: null,
+  runProjectCommand: async ({ step, cwd }) => {
+    if (step !== "build") return;
+    await mkdir(path.join(cwd, "dist"), { recursive: true });
+    await writeFile(path.join(cwd, "dist/index.html"), "<h1>Built</h1>");
+    await writeFile(path.join(cwd, "dist/readme.md"), "# Raw");
+  },
+});
+
+JSON.stringify(result.ok && result.prepared.preview.map((file) => file.path))
+=> ["index.html","readme.md"]
+
+if (result.ok) await result.prepared.cleanup();
+await box.cleanup();
+```
+
 ## Unsafe output fails closed
 
 Hidden files, source maps, exact sensitive filenames, symlinks, and non-regular

@@ -37,7 +37,11 @@ reviewable set of edits, not a silent rewrite.
 A card's structured header can hold keys its type does not declare, but such
 a key is dropped when the card is read and flagged for removal, so the
 durable place for an unplaced fact is the body's free text, never a stray
-field (for the curious: the loader is lenient rather than strict by design). Migrations are written by the agent
+field (for the curious: the loader is lenient rather than strict by design). A few common names (status, created, summary, date, modified, source) are
+reserved: a built-in type cannot use them, and a box's own type that does gets
+a health warning. A command moves a box's existing cards off a reserved name,
+using a mapping the agent writes, with a dry run first, and refuses values the
+mapping does not cover. Migrations are written by the agent
 or a developer in response to a real change; the box does not reshape cards
 on its own. The documentation does not say whether a proposed new type is
 applied automatically or only after you agree to it.

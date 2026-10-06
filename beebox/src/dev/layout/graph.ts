@@ -45,24 +45,6 @@ export function childrenOf(layout: PackageLayout, dir: string): { files: LayoutF
   return { files, dirs };
 }
 
-/** target path → modules and tests that import it (value or type). */
-export function importersOf(layout: PackageLayout): Map<string, Set<string>> {
-  const importers = new Map<string, Set<string>>();
-  for (const file of layout.files.values()) {
-    if (file.kind !== "module" && file.kind !== "test") continue;
-    for (const edge of file.imports) {
-      if (edge.target === null) continue;
-      let set = importers.get(edge.target);
-      if (set === undefined) {
-        set = new Set();
-        importers.set(edge.target, set);
-      }
-      set.add(file.path);
-    }
-  }
-  return importers;
-}
-
 /** Lowest directory containing every path. */
 export function commonDir(paths: string[]): string {
   if (paths.length === 0) return "";

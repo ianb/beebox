@@ -99,7 +99,7 @@ types have views) here.
  * `publishing.md` (`docs/box/publishing.md`); this box's own lessons live in
  * the box-owned `NOTES.md` beside this guide.
  */
-export const PUBLICATIONS_CLAUDE_MD = `# Publication Sites
+const PUBLICATIONS_CLAUDE_MD = `# Publication Sites
 
 Before creating, preparing, or changing a site, read \`${BOX_PACKAGE_DOCS}/publishing.md\`.
 

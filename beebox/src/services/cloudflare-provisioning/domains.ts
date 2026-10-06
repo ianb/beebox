@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ProvisioningRequestError } from "../cloudflare-provisioning-error.js";
+import { ProvisioningRequestError } from "./error.js";
 
 export interface CloudflareZone { id: string; name: string; status: string; accountId: string }
 export interface WorkerDomain { id: string; hostname: string; service: string; environment: string; zoneId: string; zoneName: string }

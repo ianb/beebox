@@ -6,6 +6,7 @@ labels: [agent-workflow, writing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder shared the reader-context-writing repository
+priority: important
 ---
 
 **Credit:** [reader-context-writing](https://github.com/yaniv256/reader-context-writing)
@@ -63,7 +64,7 @@ argument map. Instead of one tag per kind, one generic tag:
   so an agent knows how to fill it and a linter can check it.
 
 Compared with the source's HTML comments, a tag is validated by the card's
-Markdoc config (`beebox/src/shared/markdoc-config/core.ts`, the `tags:` map),
+Markdoc config (`beebox/src/shared/markdoc-config/tags/core.ts`, the `tags:` map),
 can carry typed attributes, and is visible to the box's tooling. Strip-on-render
 replaces the separate clean file: the card is the one file, and display is the
 projection.

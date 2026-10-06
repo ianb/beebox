@@ -37,7 +37,7 @@ const failureMessages = {
   budget: "Jev daily budget exhausted",
   requestSize: "Serialized Jev request exceeds the supported request size",
 };
-export class TriageJudgmentError extends Error {
+class TriageJudgmentError extends Error {
   constructor({ reason }: { reason: keyof typeof failureMessages }) { super(failureMessages[reason]); this.name = "TriageJudgmentError"; }
 }
 export class TriageBudgetError extends TriageJudgmentError {

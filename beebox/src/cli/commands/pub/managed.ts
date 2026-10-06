@@ -96,7 +96,7 @@ export function publicationSiteLines(sites: PublicationSite[]): string[] {
   });
 }
 
-export function publicationConnectionsLines(result: PublicationConnections): string[] {
+function publicationConnectionsLines(result: PublicationConnections): string[] {
   return result.connections.length === 0
     ? ["No active Cloudflare publishing connections are granted to this box."]
     : ["Active Cloudflare publishing connections granted to this box:", ...result.connections.map((name) => `  ${name}`)];
@@ -106,10 +106,6 @@ export function publicationSharedHostLines(sharedHost: SharedHost): string[] {
   if (sharedHost === null) return ["Shared publication host: not configured; a member must set it up in Admin before new publications can be prepared."];
   const state = sharedHost.status === "attached" ? "ready" : "setup pending; member should retry in Admin";
   return [`Shared publication host: https://${sharedHost.hostname}/ (${state}; connection ${sharedHost.connectionName})`];
-}
-
-export function publicationApprovalLines(): string[] {
-  return approvalLinkLines();
 }
 
 export function publicationPreparedLines(candidate: PublicationCandidate, site: PublicationSite | undefined): string[] {
@@ -171,6 +167,25 @@ const sitesCommand = new Command("sites")
     }
   });
 
+const statusCommand = new Command("status")
+  .description("Report this box's publishing connections and server-managed publication status")
+  .action(async () => {
+    const client = boxClient();
+    if (!client.ok) printBoxClientError(client.error.message);
+    try {
+      const [connections, publications] = await Promise.all([
+        client.value.publications.connections.query(),
+        client.value.publications.list.query(),
+      ]);
+      console.log("Server-managed publication status:");
+      for (const line of publicationConnectionsLines(connections)) console.log(line);
+      for (const line of publicationSiteLines(publications.sites)) console.log(line);
+      if (publications.sites.length > 0) for (const line of approvalLinkLines()) console.log(line);
+    } catch (error) {
+      printBoxClientError(errorMessage(error));
+    }
+  });
+
 const prepareCommand = new Command("prepare")
   .description("Build and prepare a named site on this box's server")
   .argument("<name>", "Publication folder name under src/publications")
@@ -191,3 +206,4 @@ export const pubManagedPrepareCommand = prepareCommand;
 export const pubManagedSitesCommand = sitesCommand;
 export const pubManagedIdCommand = idCommand;
 export const pubManagedConnectionsCommand = connectionsCommand;
+export const pubManagedStatusCommand = statusCommand;

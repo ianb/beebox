@@ -7,6 +7,7 @@ labels: [ui, navigation]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-paper-cards — planning multi-pane card navigation
+priority: backlog
 ---
 
 Opening card links currently accumulates tabs until the unpinned-tab cap evicts

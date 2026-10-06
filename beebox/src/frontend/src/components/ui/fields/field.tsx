@@ -1,4 +1,4 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { useId, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { FieldShell, inputClasses } from "./shell";
 
 export { RadioGroup } from "./radio";
@@ -20,6 +20,7 @@ export interface TextFieldProps extends NativeInputPassThrough {
   helper?: ReactNode;
   id?: string;
   inputClassName?: string;
+  inputRef?: Ref<HTMLInputElement>;
   /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
   className?: string;
   /** When true, the label is visually hidden but remains for screen readers. */
@@ -35,6 +36,7 @@ export function TextField({
   helper,
   id,
   inputClassName,
+  inputRef,
   className,
   required,
   hideLabel,
@@ -50,6 +52,7 @@ export function TextField({
     <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <input
         id={fieldId}
+        ref={inputRef}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}

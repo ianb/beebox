@@ -15,8 +15,20 @@ export const issueNextActionSchema = z.enum([
   "fixed",
   "verify-without-me",
   "manually-confirmed",
+  "do-it",
 ]);
 export type IssueNextAction = z.infer<typeof issueNextActionSchema>;
+/**
+ * The developer's request about an issue, from the local next-action store
+ * (`src/server/main/issue-next-actions.ts`), never from git. A message alone is
+ * a direct instruction; with an action it explains the action.
+ */
+export const issueNextActionStateSchema = z.object({
+  action: issueNextActionSchema.optional(),
+  message: z.string().min(1).optional(),
+  at: z.string(),
+}).refine((state) => state.action !== undefined || state.message !== undefined, "next action needs an action or a message");
+export type IssueNextActionState = z.infer<typeof issueNextActionStateSchema>;
 export const issueVisibilitySchema = z.enum(["public", "private"]);
 export const issueRelPathSchema = z.string().regex(
   /^(?:(?:closed\/)?(?:bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)\/|deferred\/)[A-Za-z0-9][A-Za-z0-9._-]*\.md$/u,
@@ -52,7 +64,6 @@ const issueFrontmatterSchema = z.object({
   discoveredIn: z.string().optional(),
   resolution: z.string().optional(),
   design: z.string().optional(),
-  nextAction: issueNextActionSchema.optional(),
 });
 
 const issueOverlaySchema = z.object({
@@ -71,6 +82,7 @@ export const issueSchema = z.object({
   body: z.string().optional(),
   frontmatter: issueFrontmatterSchema,
   overlay: z.array(issueOverlaySchema).optional(),
+  nextAction: issueNextActionStateSchema.optional(),
 });
 
 /**
@@ -152,9 +164,14 @@ export const issueChangeSchema = z.object({
   relPath: issueRelPathSchema,
   visibility: issueVisibilitySchema,
   priority: issuePrioritySchema,
-  nextAction: issueNextActionSchema.nullable(),
   originalPriority: issuePrioritySchema,
-  originalNextAction: issueNextActionSchema.nullable(),
+});
+
+export const issueNextActionInputSchema = z.object({
+  visibility: issueVisibilitySchema,
+  slug: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/u),
+  action: issueNextActionSchema.nullable(),
+  message: z.string().max(4_000).nullable(),
 });
 
 export type Issue = z.infer<typeof issueSchema>;
@@ -162,6 +179,7 @@ export type Plan = z.infer<typeof planSchema>;
 export type Quota = z.infer<typeof quotaSchema>;
 export type TestingQueue = z.infer<typeof testingQueueSchema>;
 export type IssueChange = z.infer<typeof issueChangeSchema>;
+export type IssueNextActionInput = z.infer<typeof issueNextActionInputSchema>;
 export type IssueVisibility = z.infer<typeof issueVisibilitySchema>;
 export type RelatedRow = z.infer<typeof relatedRowSchema>;
 export type RelatedResult = z.infer<typeof relatedResultSchema>;

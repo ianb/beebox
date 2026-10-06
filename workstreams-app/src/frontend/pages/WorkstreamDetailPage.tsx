@@ -4,10 +4,12 @@ import { ScheduleAlerts } from "../components/ScheduleAlerts.js";
 import { ScheduleFacts } from "../components/ScheduledWorkstreams.js";
 import { WorkstreamIssueSummary } from "../components/WorkstreamIssueSummary.js";
 import { trpc } from "../trpc.js";
+import { usePageIdentity } from "../lib/page-identity.js";
 
 export function WorkstreamDetailPage() {
   const params = useParams({ strict: false });
   const name = typeof params.name === "string" ? params.name : "workstream";
+  usePageIdentity("streams", name);
   const detail = trpc.workstreams.detail.useQuery({ name });
   if (detail.isLoading) return <main className="simple-page"><section className="loading-skeleton" aria-busy="true"><span /><span /></section></main>;
   if (detail.isError) return <main className="simple-page"><section className="error-state"><p>Couldn’t load {name}: {detail.error.message}</p><Button onClick={() => void detail.refetch()}>Retry</Button></section></main>;

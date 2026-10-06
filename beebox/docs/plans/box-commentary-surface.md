@@ -138,7 +138,7 @@ sources:
   with `"; "`, all optional. **Reuse** this whole stack; Track A renames the
   emitted attribute to `pos` and lets `{% source %}` carry the same values.
 
-- **The `source` Markdoc tag — EXTEND.** `src/shared/markdoc-config.ts:133-149` (moved to `beebox/src/shared/markdoc-config/core.ts`)
+- **The `source` Markdoc tag — EXTEND.** `src/shared/markdoc-config.ts:133-149` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`)
   defines `source` with exactly two attributes: *"ref: { type: String,
   required: true }, as: { type: String }"* — **no** `pos`, `version`, or hash
   attribute today. Track A adds them.

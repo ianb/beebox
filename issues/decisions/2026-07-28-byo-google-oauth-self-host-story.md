@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked about BYO-domain auth
 needs: [decision]
+priority: backlog
 ---
 
 The Google OAuth verification pain (unverified-app warning, restricted-scope

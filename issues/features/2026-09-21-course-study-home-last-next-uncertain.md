@@ -6,6 +6,7 @@ labels: [journey-findings, courseware, ui]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — D chemistry journey, 2026-09-21
+priority: backlog
 ---
 
 When a learner returns to a course, they need one readable place that answers

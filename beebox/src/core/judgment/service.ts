@@ -21,7 +21,7 @@ import { getOpenRouterKey } from "../openrouter.js";
 /** A state longer than this is cut in the debug log. */
 const LOGGED_STATE_CHARS = 500;
 
-export const JEV_FAKE_ENV = "BBX_JEV_FAKE";
+const JEV_FAKE_ENV = "BBX_JEV_FAKE";
 
 /** A confident fixed answer: yes is noul 1, the first option, the top level; no is the reverse. */
 export function fixedAnswer(question: JudgeQuestion, { yes }: { yes: boolean }): JudgeAnswer {

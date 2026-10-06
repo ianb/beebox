@@ -22,6 +22,7 @@ import { Hint } from "../../ui/Hint";
 import { Heading } from "../../ui/Heading";
 import { SecretValueForm } from "./forms";
 import { SecretUsesBlock } from "./uses";
+import { RevealSecretValue } from "./RevealSecretValue";
 
 type BoxStatus = RouterOutput["secrets"]["boxStatus"];
 type FormatHints = RouterOutput["secrets"]["formatHints"];
@@ -54,7 +55,7 @@ function GrantedRow({
   return (
     <Accordion
       id={controlAddress("bbx-admin-secrets-key", secret.name)}
-      keepMounted
+      keepMounted={false}
       title={
         <>
           <Text mono size="sm">{secret.name}</Text>
@@ -67,6 +68,7 @@ function GrantedRow({
       <Stack gap="sm">
         {secret.note === undefined ? null : <Hint>{secret.note}</Hint>}
         <SecretUsesBlock uses={secret.uses} />
+        {secret.hasValue ? <RevealSecretValue name={secret.name} /> : null}
         <Text size="xs" tone="muted">
           {secret.lastUsed === undefined ? "Never used by this box" : `Last used ${new Date(secret.lastUsed).toLocaleString()}`}
           {secret.verified?.reason === undefined ? "" : ` · ${secret.verified.reason}`}

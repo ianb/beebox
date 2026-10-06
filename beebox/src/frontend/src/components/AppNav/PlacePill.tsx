@@ -26,11 +26,13 @@
  * AppNav already states for `status.navStatus`). The same applies to the
  * `nav.card` section's query.
  *
- * The gate stays. Nothing warms this cache today: the idle prefetch lived on
- * ChatPage, which the persistent box conversation shell replaced, so the first
- * open paints "Loading…". This query owns none of that either way — it just
- * reads whatever cache exists — so restoring a warm-up is a change at the
- * prefetching page, not here.
+ * The gate stays, and the switch menu's cache is warmed in idle time instead
+ * (`useIdlePrefetch`), once the face's own identity query has settled: the
+ * menu then opens on rows rather than "Loading…", and nothing on the page
+ * waits for it. The pill is the warmer because it is the one component that
+ * mounts once per box and owns the menu (the warm-up used to live on
+ * ChatPage, which the persistent conversation shell replaced). The here menu
+ * is not warmed: it is per-place, so a warm-up would run on every navigation.
  *
  * This menu used to read `chat.byLandmark`, the full picker payload: every chat
  * in the box, bucketed and *named*. It drew none of that but the counts, and
@@ -47,6 +49,7 @@ import type { Place } from "../../lib/place-label";
 import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
 import { useNavMenuEntries } from "../../hooks/useNavMenuEntries";
 import { useLazyMenuOpen } from "../../hooks/useLazyMenuOpen";
+import { useIdlePrefetch } from "../../hooks/useIdlePrefetch";
 import { SwitchMenuBody, type SwitchLandmark, type SwitchPanel } from "./PlacePill-panels";
 import { CardMark } from "../ui/CardMark";
 import { HereMenuBody } from "./PlacePill-here";
@@ -132,6 +135,12 @@ export function PlacePill({
     void utils.nav.get.invalidate();
   });
   const switchQuery = trpc.chat.placeMenu.useQuery(undefined, { enabled: switchMenu.opened });
+  // The disabled query above is already an observer, so the warmed entry is
+  // not collected while the bar is mounted. The first open still refetches
+  // behind the cached rows, and every later open invalidates.
+  useIdlePrefetch(() => utils.chat.placeMenu.prefetch(), {
+    enabled: place.dir === null || !identityQuery.isPending,
+  });
   const switchData = switchQuery.data;
   // A failed load is shown in the menu as a retry row, and logged: without
   // both, the menu sat on "Loading…" forever with nothing anywhere saying why.

@@ -7,6 +7,7 @@ labels: [todos]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-todos-ui — boxholder direction while designing tickable todos
+priority: normal
 ---
 
 Some todos cannot be meaningfully "done" by a status change. "Find the phone

@@ -41,7 +41,6 @@ workstream: example
 needs: [manual-testing]
 labels: [router]
 priority: normal
-next-action: reconfirm
 ---
 # Example issue
 
@@ -78,6 +77,8 @@ workstream: example
 ---
 `);
   await fs.writeFile(path.join(root, ".gitignore"), "/private-issues\n");
+  // Next actions live beside the main checkout; keep each fixture's store private to it.
+  process.env["BBX_ISSUE_ACTIONS_ROOT"] = await fs.mkdtemp(path.join(os.tmpdir(), "workstreams-next-actions-"));
   await fs.symlink(privateRoot, path.join(root, "private-issues"));
   await git(root, ["init", "-q"]);
   await git(root, ["config", "user.email", "test@example.com"]);
@@ -145,7 +146,6 @@ const associated = parseIssueFile({
 title: Associated issue
 workstream: example
 discovered-in: worktree-example — investigation
-next-action: discuss
 ---
 `,
 });
@@ -159,7 +159,6 @@ workstream: example
 });
 previouslyClosed.closed = true;
 JSON.stringify({
-  nextAction: associated.frontmatter.nextAction,
   reopened: workstreamIssueIndicators({
     workstream: "example", issue: associated, main: previouslyClosed, changedHere: true,
   }),
@@ -167,7 +166,7 @@ JSON.stringify({
     workstream: "example", issue: associated, changedHere: true,
   }),
 })
-=> {"nextAction":"discuss","reopened":{"owned":true,"discovered":true,"activity":"reopened"},"opened":{"owned":true,"discovered":true,"activity":"opened"}}
+=> {"reopened":{"owned":true,"discovered":true,"activity":"reopened"},"opened":{"owned":true,"discovered":true,"activity":"opened"}}
 ```
 
 The detail boundary rejects traversal even when called below tRPC, and public
@@ -184,9 +183,7 @@ await documents.saveIssueChanges([{
   relPath: "closed/bugs/../../secret.md",
   visibility: "public",
   priority: "backlog",
-  nextAction: null,
   originalPriority: "normal",
-  originalNextAction: null,
 }])
 => throws InvalidIssuePathError: invalid issue path: closed/bugs/../../secret.md
 
@@ -195,7 +192,7 @@ JSON.stringify({ title: privateDetail.frontmatter.title, body: privateDetail.bod
 => {"title":"Private example","body":"Private body."}
 ```
 
-Saving changes updates both fields and makes exactly one path-scoped commit.
+Saving changes updates priority and makes exactly one path-scoped commit.
 An unrelated dirty file remains uncommitted.
 
 ```ts continue
@@ -204,50 +201,43 @@ const saved = await documents.saveIssueChanges([{
   relPath: "bugs/2026-08-13-example.md",
   visibility: "public",
   priority: "important",
-  nextAction: null,
   originalPriority: "normal",
-  originalNextAction: "reconfirm",
 }]);
 const source = await fs.readFile(fixture.issuePath, "utf8");
 const status = (await git(fixture.root, ["status", "--short"])).stdout;
 const subject = (await git(fixture.root, ["log", "-1", "--pretty=%s"])).stdout;
-JSON.stringify({
-  saved,
-  important: source.includes("priority: important"),
-  actionRemoved: !source.includes("next-action:"),
-  status,
-  subject,
-})
-=> {"saved":1,"important":true,"actionRemoved":true,"status":"?? notes.txt","subject":"Update issue metadata"}
+JSON.stringify({ saved, important: source.includes("priority: important"), status, subject })
+=> {"saved":1,"important":true,"status":"?? notes.txt","subject":"Update issue metadata"}
 ```
 
-The discussion action survives the complete mutation path and can be cleared
-again once the discussion produces a disposition.
+A next action never touches the issue file or git. It is written to the local
+store at once, keyed by visibility and slug, appears on the listed issue, and
+clears when both the action and the message are withdrawn. A message can stand
+alone.
 
 ```ts continue
-await documents.saveIssueChanges([{
-  relPath: "bugs/2026-08-13-second.md",
-  visibility: "public",
-  priority: "normal",
-  nextAction: "discuss",
-  originalPriority: "normal",
-  originalNextAction: null,
-}]);
-const discussSource = await fs.readFile(fixture.secondIssuePath, "utf8");
-await documents.saveIssueChanges([{
-  relPath: "bugs/2026-08-13-second.md",
-  visibility: "public",
-  priority: "normal",
-  nextAction: null,
-  originalPriority: "normal",
-  originalNextAction: "discuss",
-}]);
-const discussedSource = await fs.readFile(fixture.secondIssuePath, "utf8");
+const headBefore = (await git(fixture.root, ["rev-parse", "HEAD"])).stdout;
+const set = await documents.setIssueNextAction({
+  visibility: "public", slug: "2026-08-13-second", action: "discuss", message: "  Ask about the cache  ",
+});
+const listed = (await documents.listIssues()).find((issue) => issue.slug === "2026-08-13-second");
+const privateListed = (await documents.listIssues()).find((issue) => issue.visibility === "private");
+const messageOnly = await documents.setIssueNextAction({
+  visibility: "public", slug: "2026-08-13-second", action: null, message: "Check the log first",
+});
+const cleared = await documents.setIssueNextAction({
+  visibility: "public", slug: "2026-08-13-second", action: null, message: "",
+});
 JSON.stringify({
-  discussWritten: discussSource.includes("next-action: discuss"),
-  discussCleared: !discussedSource.includes("next-action:"),
+  set: { action: set?.action, message: set?.message },
+  listed: listed?.nextAction?.action,
+  privateUntouched: privateListed?.nextAction ?? null,
+  messageOnly: { action: messageOnly?.action ?? null, message: messageOnly?.message },
+  cleared,
+  fileUntouched: !(await fs.readFile(fixture.secondIssuePath, "utf8")).includes("next-action"),
+  noCommit: (await git(fixture.root, ["rev-parse", "HEAD"])).stdout === headBefore,
 })
-=> {"discussWritten":true,"discussCleared":true}
+=> {"set":{"action":"discuss","message":"Ask about the cache"},"listed":"discuss","privateUntouched":null,"messageOnly":{"action":null,"message":"Check the log first"},"cleared":null,"fileUntouched":true,"noCommit":true}
 ```
 
 A stale browser revision fails before writing or committing.
@@ -257,9 +247,7 @@ await documents.saveIssueChanges([{
   relPath: "bugs/2026-08-13-example.md",
   visibility: "public",
   priority: "backlog",
-  nextAction: null,
   originalPriority: "normal",
-  originalNextAction: null,
 }])
 => throws IssueMutationError: issue priority changed since the page loaded: bugs/2026-08-13-example.md
 ```
@@ -275,17 +263,13 @@ const batchConflict = await documents.saveIssueChanges([
     relPath: "bugs/2026-08-13-example.md",
     visibility: "public",
     priority: "backlog",
-    nextAction: null,
     originalPriority: "important",
-    originalNextAction: null,
   },
   {
     relPath: "bugs/2026-08-13-second.md",
     visibility: "public",
     priority: "backlog",
-    nextAction: null,
     originalPriority: "important",
-    originalNextAction: null,
   },
 ]).catch((error: unknown) => error instanceof Error ? error.message : String(error));
 JSON.stringify({
@@ -305,17 +289,13 @@ const renameFailure = await saveIssueChanges({
       relPath: "bugs/2026-08-13-example.md",
       visibility: "public",
       priority: "backlog",
-      nextAction: null,
       originalPriority: "important",
-      originalNextAction: null,
     },
     {
       relPath: "bugs/2026-08-13-second.md",
       visibility: "public",
       priority: "backlog",
-      nextAction: null,
       originalPriority: "normal",
-      originalNextAction: null,
     },
   ],
   operations: {
@@ -345,9 +325,7 @@ const privateSaved = await documents.saveIssueChanges([{
   relPath: "bugs/2026-08-13-example.md",
   visibility: "private",
   priority: "backlog",
-  nextAction: null,
   originalPriority: "normal",
-  originalNextAction: null,
 }]);
 const publicAfterPrivateSave = await fs.readFile(fixture.issuePath, "utf8");
 const privateAfterSave = await fs.readFile(fixture.privateIssuePath, "utf8");

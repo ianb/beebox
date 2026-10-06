@@ -14,12 +14,11 @@ const CSS = "body { color: black }";
 const JSON_CONTENT = "{\"version\":1}";
 const NOW = Date.parse("2026-09-26T12:00:00.000Z");
 type ManifestStatus = "live" | "disabled" | "revoked";
-const deps: WorkerDeps = { now: () => NOW, jwksFor: () => async () => null, newId: () => "unused" };
+const deps: WorkerDeps = { now: () => NOW, jwksFor: () => async () => null };
 
 function sharedEnv(overrides: Partial<Env> = {}): Env {
   return {
     PUB_STORE: env.PUB_STORE,
-    PUB_INGEST: env.PUB_INGEST,
     ACCESS_TEAM_DOMAIN: undefined,
     ACCESS_AUD: undefined,
     PUB_WORKER_VERSION: undefined,

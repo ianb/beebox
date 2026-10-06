@@ -17,7 +17,7 @@ import { formatDurationShort } from "../../../../../core/schedule/health-box.js"
 import type { HealthCheck } from "../router.js";
 
 /** Where the admin page's Google Services section lives, ready to reconnect. */
-export function reauthorizeUrl(slug: string): string {
+function reauthorizeUrl(slug: string): string {
   return `/${slug}/admin?reconnect=google`;
 }
 

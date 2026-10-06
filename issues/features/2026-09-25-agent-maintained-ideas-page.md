@@ -6,6 +6,7 @@ labels: [proactive, retro]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder reviewing Muse's "ideas" page, 2026-09-25
+priority: backlog
 ---
 
 The boxholder was impressed by the ideas page in Muse (a consumer assistant).

@@ -5,10 +5,13 @@ contracts live in `bin/docs/`; read the indicated reference before editing.
 
 ## Tests for `bin/` tooling
 
-New root-infrastructure tests normally belong in `beebox/test/dev/*.doctest.md`,
-including shell fixtures and CLI behavior. Existing `bin/*.test.ts` files are
-not precedent. Use a traditional test only when a doctest would be circular and
-explain why. Router unit tests live in `workstreams-app/test/router/`.
+New root-infrastructure tests are doctests under `bin/test/`, mirroring the
+file they test (`bin/lib/x.ts` → `bin/test/lib/x.doctest.md`), including shell
+fixtures and CLI behavior. They run in beebox's suite, under its home and
+secret isolation: `cd beebox && pnpm exec tap ../bin/test/<path>.doctest.md`.
+Existing `bin/*.test.ts` files are not precedent. Use a traditional test only
+when a doctest would be circular and explain why. Router unit tests live in
+`workstreams-app/test/router/`.
 
 ## Commit safety
 
@@ -102,6 +105,13 @@ The shared implementation lives in `workstreams-app/src/server/`; do not fork
 ranking or parsing into `bin/`. Embedding keys are tried as
 `BBX_OPENAI_API_KEY`, `THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY` in
 the app child's environment. Public and all-visibility indexes stay separate.
+
+Next actions are not frontmatter. They live in `<parent>/dev-issue-actions/`
+beside main (override `BBX_ISSUE_ACTIONS_ROOT`), keyed by visibility and slug
+so they follow moved issues. The issue browser writes them at once and nothing
+commits them; `bin/issues next-action` lists, sets, and clears them from any
+checkout. `workstreams-app/src/server/main/issue-next-actions.ts` is the only
+reader and writer.
 
 ## Private-issues shadow repo (`private-issues`)
 

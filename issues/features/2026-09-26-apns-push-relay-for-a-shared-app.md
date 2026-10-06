@@ -6,6 +6,7 @@ labels: [notifications, ios]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-notifications — while landing APNs delivery (2026-09-26)
+priority: backlog
 ---
 
 The notifications work (`beebox/docs/implemented-plans/notifications.md`, Track B and C)

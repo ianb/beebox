@@ -3,7 +3,7 @@
  * `Content-Type`.
  *
  * The TTS backends disagree about container: OpenAI returns `audio/mpeg`,
- * while Gemini asks OpenRouter for `pcm` and wraps it as `audio/wav`
+ * while Gemini returns raw PCM that the server wraps as `audio/wav`
  * (`services/tts.ts`). MediaSource plays the first and supports no WAV type at
  * all — and appending WAV to a source buffer opened as `audio/mpeg` does not
  * fail at `addSourceBuffer`. The element errors later with
@@ -11,7 +11,8 @@
  *
  * A blob plays either one, so anything unstreamable is buffered whole instead.
  */
-import { playAudioBlob, playAudioStream } from "../context";
+import { playAudioBlob } from "../context";
+import { playAudioStream } from "./stream-playback";
 
 /** The media type from a `Content-Type` header, keeping only the `codecs`
  *  parameter — the one `MediaSource.isTypeSupported` accepts. */

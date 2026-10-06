@@ -138,13 +138,6 @@ export function getTemplatesOwnedBy(owner: string): TemplateDefinition[] {
 }
 
 /**
- * Find templates that can create a given card type.
- */
-export function getTemplatesForCardType(cardType: string): TemplateDefinition[] {
-  return getAllTemplates().filter((t) => t.cardTypes.includes(cardType));
-}
-
-/**
  * Get the default template for a given card type.
  * Returns the template whose defaultForTypes includes this card type.
  */

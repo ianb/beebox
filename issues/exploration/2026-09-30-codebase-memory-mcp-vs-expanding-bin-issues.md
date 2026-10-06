@@ -6,6 +6,7 @@ labels: [agent-workflow]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder asked whether the repo has code embedding search
+priority: normal
 ---
 
 The repository has no code search beyond text. `bin/issues search` (BM25,

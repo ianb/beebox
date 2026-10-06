@@ -16,14 +16,14 @@
 import * as fs from "node:fs/promises";
 import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../../husk-read.js";
 import { huskTranscriptPath } from "../../husk-transcript.js";
-import { resolveSessionLabel, type SessionLabelSource } from "./label.js";
+import { quoteSnippet, resolveSessionLabel, type SessionLabelSource } from "./label.js";
 import { assertNever } from "../../../../shared/invariant.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { mapInBatches, mapInBatchesSettled } from "../../../../lib/map-batched.js";
 import { loadHistoryEntries } from "../history.js";
 import { resolveChatEngine } from "../engine.js";
 import { deriveTranscriptState, type TranscriptState } from "../availability.js";
-import { listCodexThreadMetadata, type CodexThreadMetadata } from "../codex-transcript.js";
+import { listCodexThreadMetadata, type CodexThreadMetadata } from "../codex-transcript/core.js";
 import { containedSessionCwd } from "../transcript-paths.js";
 import type { AgentEngine } from "../../../box/config.js";
 
@@ -55,6 +55,8 @@ export interface ChatSessionEntry {
   logPath: string;
   /** The husk's editorial `title`, when it has one. Free — it rode the husk. */
   title: string | undefined;
+  /** The boxholder's close mark (`done: true`) — a done chat sorts below live ones. */
+  done: boolean;
   /**
    * The Codex thread's verbatim first user message, envelope and all, as
    * `thread/list` reports it. Free — one list call already carries it for every
@@ -85,6 +87,12 @@ export interface DeadHuskEntry {
   /** The husk's editorial `title`, when it has one. */
   title: string | undefined;
   /**
+   * The husk's stored opening snippet (`first-message`), when it has one —
+   * for a dead husk the only surviving trace of what the conversation opened
+   * with, displayed quoted rather than as if it were a title.
+   */
+  firstMessage: string | undefined;
+  /**
    * Why there is nothing to resume. Never `present` — that is what makes the
    * husk dead, and it is the enumeration's job to keep the two lists disjoint.
    */
@@ -113,9 +121,18 @@ interface ChatEnumeration {
  * Husks are resolved concurrently, not in sequence: the app bar's place menu
  * waits on the whole set. `allSettled` per code-style — one husk's failure is
  * already a per-husk skip, and must not abandon the others.
+ *
+ * `repairCodexIndex: false` skips Codex's rollout repair scan (see
+ * `listCodexThreadMetadata`), so a Codex chat missing from Codex's thread index
+ * is left out instead of looked for. For callers that only count recent
+ * activity, such as the app bar's place menu: the scan can take tens of
+ * seconds, and the threads it finds are old ones.
  */
-export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEntry[]> {
-  return (await enumerateChats(boxRoot)).live;
+export async function listSessionEntries(
+  boxRoot: string,
+  options?: { repairCodexIndex?: boolean },
+): Promise<ChatSessionEntry[]> {
+  return (await enumerateChats(boxRoot, { repairCodexIndex: options?.repairCodexIndex ?? true })).live;
 }
 
 /**
@@ -126,7 +143,7 @@ export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEn
  * orders these by when the chat happened; there is no mtime left to sort on.
  */
 export async function loadDeadHusks(boxRoot: string): Promise<DeadHuskEntry[]> {
-  return (await enumerateChats(boxRoot)).dead;
+  return (await enumerateChats(boxRoot, { repairCodexIndex: true })).dead;
 }
 
 /**
@@ -147,8 +164,9 @@ export async function loadDeadHusks(boxRoot: string): Promise<DeadHuskEntry[]> {
  */
 async function readCodexThreads(
   boxRoot: string,
-  codexHusks: ChatHuskEntry[],
+  options: { codexHusks: ChatHuskEntry[]; repair: boolean },
 ): Promise<Map<string, CodexThreadMetadata> | null> {
+  const { codexHusks, repair } = options;
   if (codexHusks.length === 0) return new Map();
   // Contained, like every other resolution of a husk's `context-dir`: the
   // field is a card value, and an escaping one reads from the box root.
@@ -157,6 +175,7 @@ async function readCodexThreads(
     return await listCodexThreadMetadata(boxRoot, {
       cwds: [...cwds],
       expectedIds: codexHusks.map((husk) => husk.session),
+      repair,
     });
   } catch (error) {
     console.warn("[chat] codex thread metadata unavailable; omitting this box's codex chats:", error);
@@ -165,7 +184,7 @@ async function readCodexThreads(
 }
 
 /** The single husk-read-and-stat pass behind both enumerations. */
-async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
+async function enumerateChats(boxRoot: string, options: { repairCodexIndex: boolean }): Promise<ChatEnumeration> {
   const [husks, history] = await Promise.all([listChatHusks(boxRoot), loadHistoryEntries(boxRoot)]);
   const historyById = new Map(history.map((entry) => [entry.id, entry]));
   // Resolved once per husk, up front: which engine ran a chat decides both
@@ -179,10 +198,10 @@ async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
       historyEngine: historyById.get(husk.session)?.engine ?? null,
     })] as const,
   }));
-  const codexThreads = await readCodexThreads(
-    boxRoot,
-    husks.filter((husk) => engines.get(husk.session) === "codex"),
-  );
+  const codexThreads = await readCodexThreads(boxRoot, {
+    codexHusks: husks.filter((husk) => engines.get(husk.session) === "codex"),
+    repair: options.repairCodexIndex,
+  });
   const settled = await mapInBatchesSettled(husks, {
     size: READ_CONCURRENCY,
     map: (husk) => resolveHusk({
@@ -239,16 +258,20 @@ export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]
  * twice for one page.
  */
 export async function loadChatLists(boxRoot: string): Promise<{ sessions: ChatSessionRow[]; dead: DeadHuskEntry[] }> {
-  const { live, dead } = await enumerateChats(boxRoot);
+  const { live, dead } = await enumerateChats(boxRoot, { repairCodexIndex: true });
   return { sessions: await labelEntries(live), dead };
 }
 
 /**
  * A dead chat's display name, in the same order a live one's resolves — minus
- * the transcript scan, because the transcript is exactly what is gone.
+ * the transcript scan, because the transcript is exactly what is gone. The
+ * stored opening snippet renders quoted (a snippet, not a title); the id
+ * prefix is the last resort.
  */
 export function deadHuskLabel(husk: DeadHuskEntry): string {
-  return husk.title === undefined || husk.title === "" ? husk.sessionId.slice(0, 8) : husk.title;
+  if (husk.title !== undefined && husk.title !== "") return husk.title;
+  if (husk.firstMessage !== undefined && husk.firstMessage !== "") return quoteSnippet(husk.firstMessage);
+  return husk.sessionId.slice(0, 8);
 }
 
 async function labelEntries(entries: ChatSessionEntry[]): Promise<ChatSessionRow[]> {
@@ -331,6 +354,7 @@ async function deadHusk(husk: ChatHuskEntry): Promise<HuskResolution> {
       huskPath: husk.path,
       contextDir: husk.contextDir,
       title: husk.title,
+      firstMessage: husk.firstMessage,
       transcript: await deriveTranscriptState({ husk, present: false }),
     },
   };
@@ -380,6 +404,7 @@ async function resolveHusk(options: {
       huskPath: husk.path,
       logPath,
       title: husk.title,
+      done: husk.done === true,
       ...(codexMetadata === undefined ? {} : { nativePreview: codexMetadata.preview }),
     },
   };
@@ -395,6 +420,16 @@ async function resolveHusk(options: {
  * transcript, and an id with neither is named from its prefix (not an error —
  * `chat.bootstrap` already treats a transcript-less id as a normal state).
  */
+/**
+ * Whether the boxholder has marked this session done (`done: true` on its
+ * husk), or null when the session has no husk — a brand-new chat has no card
+ * to mark, so a caller offering the toggle must offer nothing.
+ */
+export async function sessionIsDone(boxRoot: string, sessionId: string): Promise<boolean | null> {
+  const husk = await findChatHuskEntry(boxRoot, sessionId);
+  return husk === null ? null : husk.done === true;
+}
+
 /**
  * The session's *editorial* title — the husk card's `title`, or null when
  * the session has none (yet). Deliberately no first-message/id fallback:

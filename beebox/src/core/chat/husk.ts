@@ -21,7 +21,7 @@ import { withCardLock } from "../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../box/config.js";
 import { extractSnippet } from "../../cli/lib/session-text.js";
 import { errnoCode } from "../../shared/error-guards.js";
-import { readCodexSessionUpdatedAt } from "./session/codex-transcript.js";
+import { readCodexSessionUpdatedAt } from "./session/codex-transcript/core.js";
 import { loadSessionHistory } from "./session/load-history.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import {
@@ -42,8 +42,13 @@ function huskFileName(sessionId: string, date: Date): string {
   return `${date.toISOString().slice(0, 10)}_${shortId(sessionId)}.chat.card`;
 }
 
-/** Best-effort title from the transcript's first user message; null when unavailable. */
-async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<string | null> {
+/**
+ * Best-effort opening snippet from the transcript's first user message; null
+ * when unavailable. The husk's durable `first-message`, never its `title` — a
+ * snippet is what a list shows *quoted*, and writing it into `title:` is what
+ * left dead husks carrying raw transcript openings as if they were titles.
+ */
+async function readFirstMessage(boxRoot: string, sessionId: string): Promise<string | null> {
   try {
     const { entries } = await loadSessionHistory(boxRoot, {
       sessionId,
@@ -58,14 +63,15 @@ async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<str
     // between a raw user message and a display label
     // (`cli/lib/session-text.ts`), and it strips the `<typed>`/`<speech>` shell
     // as well as the `<chat-app …/>` snapshot prepend. This used to strip only
-    // the latter, so a husk titled from an existing transcript was named
+    // the latter, so the value written from an existing transcript was named
     // `<typed user="…" user-email="…">…</typed>` — putting a sender's email
-    // address into a committed card title and into the session chip
+    // address into a committed card field
     // (`issues/bugs/2026-08-25-backfilled-husk-title-keeps-the-typed-wrapper.md`).
     return extractSnippet(raw, TITLE_MAX_LEN);
   } catch (_e) {
-    // No transcript yet (brand-new session) or unreadable — the husk starts
-    // untitled; enrichment is editorial, not plumbing.
+    // No transcript yet (brand-new session, or a coined id whose run has not
+    // started) or unreadable — the field stays absent; review passes fill it
+    // later when the transcript exists (see `run/husk-write.ts`).
     return null;
   }
 }
@@ -84,7 +90,7 @@ export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string;
   const existing = await findChatHuskEntry(boxRoot, opts.sessionId);
   if (existing !== null) return existing.path;
 
-  const title = await readSnippetTitle(boxRoot, opts.sessionId);
+  const firstMessage = await readFirstMessage(boxRoot, opts.sessionId);
   // Provenance is written at CREATE only. The transcript this husk points at
   // is being written on this machine right now, so this is the one moment the
   // origin is known without inference — and a value already on a card is never
@@ -102,7 +108,7 @@ export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string;
     engine,
     origin: origin.id,
     originName: origin.name,
-    ...(title !== null ? { title } : {}),
+    ...(firstMessage !== null ? { firstMessage } : {}),
   });
   // `wx` so a concurrent ensure can't clobber; losing the race is success.
   try {
@@ -111,6 +117,33 @@ export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string;
     if (errnoCode(e) !== "EEXIST") throw e;
   }
   return relPath;
+}
+
+/**
+ * Set or clear the boxholder's close mark on a session's husk
+ * (`done: true`). Returns the box-relative husk path, or null when the
+ * session has no husk (a brand-new chat — the caller offers nothing).
+ *
+ * One field, under the card lock, body preserved: the same read-modify-write
+ * discipline `stampHuskProvenance` follows, so a concurrent review write on
+ * the same card cannot interleave.
+ */
+export async function setChatHuskStatus(boxRoot: string, opts: { sessionId: string; done: boolean }): Promise<string | null> {
+  const husk = await findChatHuskEntry(boxRoot, opts.sessionId);
+  if (husk === null) return null;
+  const absPath = path.join(boxRoot, husk.path);
+  await withCardLock(absPath, async () => {
+    const content = await fs.readFile(absPath, "utf-8");
+    const split = splitCardContent(content);
+    const fields = parseHuskFrontmatter(content);
+    // Unreadable frontmatter: the lists already warned about it; a rewrite
+    // would be guessing at what the file meant.
+    if (!split.hasFrontmatter || fields === null) return;
+    if (opts.done) fields["done"] = true;
+    else delete fields["done"];
+    await writeFileAtomic(absPath, { content: renderFrontmatterBlock(fields, split.body) });
+  });
+  return husk.path;
 }
 
 /**

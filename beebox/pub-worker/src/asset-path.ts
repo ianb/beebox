@@ -38,8 +38,8 @@ export function resolveAssetPath(rawSegments: readonly string[]): string | null 
 /**
  * Decode a single path segment once and reject it if, after decoding, it is a
  * traversal (`..`/`.`), carries a path separator (`/` or `\`), is empty, holds a
- * NUL, or begins with the reserved `__` prefix (which guards the Worker's own
- * `/__submit/` and account-route seams from bundle-path collision).
+ * NUL, or begins with the reserved `__` prefix (which keeps internal paths
+ * such as `__release/` out of reach of a request).
  */
 function checkDecoded(raw: string): string | null {
   let decoded: string;

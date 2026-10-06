@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-jev-triage — destination todo question review
+priority: normal
 ---
 
 A destination can ask a per-item `todo-question`; yes adds an ordinary

@@ -11,7 +11,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
-import type { SpeechSegmentState } from "../../machines/speechPlaybackMachine";
+import type { SpeechSegmentState } from "../../machines/speech-segment-states";
 
 const stateDescription: Record<SpeechSegmentState, string> = {
   waiting: "Speech audio is being prepared.",
@@ -22,10 +22,13 @@ const stateDescription: Record<SpeechSegmentState, string> = {
 export function SpeechChunk({
   name,
   state,
+  failureReason,
   children,
 }: {
   name?: string | undefined;
   state?: SpeechSegmentState | undefined;
+  /** Why the audio failed; shown only while `state` is "failed". */
+  failureReason?: string | undefined;
   children: ReactNode;
 }) {
   const description = state === undefined ? undefined : stateDescription[state];
@@ -45,6 +48,9 @@ export function SpeechChunk({
         <div className="-ml-1 text-[10px] font-semibold uppercase tracking-wide text-warm-600 mb-0.5">{name}</div>
       ) : null}
       {children}
+      {state === "failed" && failureReason !== undefined ? (
+        <p className="mt-1 text-xs text-danger">Speech failed: {failureReason}</p>
+      ) : null}
     </div>
   );
 }

@@ -14,7 +14,7 @@ import type { DriveTypeHandler } from "./types.js";
 import { docsHandler } from "./handlers/docs/handler.js";
 import { sheetsHandler } from "./handlers/sheets/handler.js";
 
-export const driveHandlers = defineRegistry<DriveTypeHandler>({
+const driveHandlers = defineRegistry<DriveTypeHandler>({
   directory: "./handlers",
   entry: "handler",
   ordered: false,

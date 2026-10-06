@@ -20,7 +20,7 @@ what every agent working there needs to know: the key people (each linked to
 their person card), the subjects involved, and the questions offered on an empty
 chat. A todo-view card is a live, self-updating list gathering every todo
 written anywhere beneath the directory, plus todos elsewhere that link into it,
-grouped by the card and heading each was written under, so the plate is
+grouped by the card and heading each was written under, with a checkbox to tick each off where it sits, so the plate is
 assembled rather than maintained. Prose becomes
 doc cards. A chat opened at the landmark starts knowing what the area is about,
 and the agent can still look anywhere else in the box.
@@ -38,7 +38,8 @@ notice on its own that a project has gone quiet: it keeps track, reminds you, an
 runs what you asked for, and it does not anticipate. Where a todo sits is what it
 means, so one written under the wrong heading is grouped with the wrong thing.
 The navigation shows a count of waiting questions and of todos on the plate, but
-the plate count is a bare number beside an icon and can read as a wrong total.
+the badge is a bare number beside an icon and can read as a wrong total, though the
+plate page's headline states what it counts.
 
 **What makes it possible**
 

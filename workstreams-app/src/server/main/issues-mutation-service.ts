@@ -7,7 +7,6 @@ import { execa } from "execa";
 
 import {
   parseIssueFile,
-  setIssueNextAction,
   setIssuePriority,
   type IssueRecord,
   type Visibility,
@@ -36,7 +35,6 @@ function mutationError(reason: string, issue: string): IssueMutationError {
     "changed-read": `issue changed while being read: ${issue}`,
     "changed-save": `issue changed while being saved: ${issue}`,
     "priority-conflict": `issue priority changed since the page loaded: ${issue}`,
-    "action-conflict": `issue next action changed since the page loaded: ${issue}`,
     "new-issue": `commit this new issue before changing its priority: ${issue}`,
     "other-edits": `issue has other uncommitted edits: ${issue}`,
     "staged-edits": `issue has staged edits: ${issue}`,
@@ -109,10 +107,7 @@ async function assertMetadataOnly(options: {
     stripFinalNewline: false,
   });
   if (head.exitCode !== 0) throw mutationError("new-issue", issue.relPath);
-  const normalizedHead = setIssueNextAction(
-    setIssuePriority(head.stdout, issue.frontmatter.priority),
-    issue.frontmatter.nextAction,
-  );
+  const normalizedHead = setIssuePriority(head.stdout, issue.frontmatter.priority);
   if (normalizedHead !== source) throw mutationError("other-edits", issue.relPath);
   const staged = await execa("git", ["diff", "--cached", "--quiet", "--", repoPath], {
     cwd: repoRoot,
@@ -184,14 +179,8 @@ async function prepareChange(
   if (change.originalPriority !== issue.frontmatter.priority) {
     throw mutationError("priority-conflict", change.relPath);
   }
-  if (change.originalNextAction !== (issue.frontmatter.nextAction ?? null)) {
-    throw mutationError("action-conflict", change.relPath);
-  }
   await assertMetadataOnly({ target, source, issue });
-  const updated = setIssueNextAction(
-    setIssuePriority(source, change.priority),
-    change.nextAction ?? undefined,
-  );
+  const updated = setIssuePriority(source, change.priority);
   return { change, target, source, updated, stat: afterRead };
 }
 

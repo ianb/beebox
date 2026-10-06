@@ -7,6 +7,7 @@ labels: [chat, search, multi-user, identity]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-chat-search — chat-search design discussion, 2026-09-28
+priority: backlog
 ---
 
 Boxholder direction (2026-09-28): once chat transcripts are searchable from

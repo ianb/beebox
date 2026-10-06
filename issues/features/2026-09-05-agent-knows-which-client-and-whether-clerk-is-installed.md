@@ -7,6 +7,7 @@ labels: [soft-launch]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-launch-docs — planning the "what could you do with your box" starter doc
+priority: normal
 ---
 
 Boxholder (2026-09-05): the agent should have a command to detect whether the

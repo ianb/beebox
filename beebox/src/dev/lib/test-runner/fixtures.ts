@@ -6,14 +6,14 @@ import { ensurePackageDocs } from "../../../core/docs-gen/package-docs/core.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import type { AuditTest } from "../test-suite-schema.js";
 
-export class UnsafeAuditFixturePathError extends Error {
+class UnsafeAuditFixturePathError extends Error {
   constructor(params: { relPath: string; reason: "escapes the box" | "crosses a symbolic link" }) {
     super(`Knowledge-audit fixture path ${params.reason}: ${params.relPath}`);
     this.name = "UnsafeAuditFixturePathError";
   }
 }
 
-export class AuditPackageDocsSetupError extends Error {
+class AuditPackageDocsSetupError extends Error {
   constructor(reason: string) {
     super(`Cannot prepare generated package docs for knowledge audit: ${reason}`);
     this.name = "AuditPackageDocsSetupError";

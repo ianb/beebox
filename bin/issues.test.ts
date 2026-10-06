@@ -120,6 +120,9 @@ void test("needs, next-action, research, since, and discovered-in each narrow", 
   assert.deepEqual(await filtered(root, (f) => { f.nextAction = ["reconfirm"]; }), [
     "2026-02-10-composer-splices-drafts",
   ]);
+  // The request comes from the local store, message included, not from frontmatter.
+  const composer = byPath(await loadIssueEntries({ repoRoot: root })).get("issues/bugs/2026-02-10-composer-splices-drafts.md");
+  assert.equal(composer?.nextActionMessage, "Still happens after the draft refactor?");
   assert.deepEqual(await filtered(root, (f) => { f.research = "researched"; }), [
     "2026-03-01-search-the-queue",
   ]);

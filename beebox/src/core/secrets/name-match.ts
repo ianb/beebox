@@ -3,7 +3,7 @@
  *
  * Store names are flat identifiers, and per-box instances use `name/<box-slug>`
  * (`docs/secrets.md`). A registry entry therefore matches either EXACTLY
- * (`mistral`) or by PREFIX for the per-box family (`telegram-bot/`, `publish/`)
+ * (`mistral`) or by PREFIX for the per-box family (`telegram-bot/`)
  * — the same lookup both registries need, kept in one place so they can never
  * disagree about which entry a name belongs to.
  *

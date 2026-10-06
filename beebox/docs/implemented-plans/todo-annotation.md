@@ -59,7 +59,7 @@ justified by these, not the other way around.
 - `beebox/code-style.md` — exhaustiveness (`assertNever` over status),
   no silent catches, one shape not two (single frontmatter entry shape).
 - **Shipped precedents (densest source):** `{% quote %}` / `{% source %}` in
-  `src/shared/markdoc-config.ts:126-186` (moved to `beebox/src/shared/markdoc-config/core.ts`) (inline/block split via
+  `src/shared/markdoc-config.ts:126-186` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`) (inline/block split via
   `node.inline`; typed attributes; `validate()` for ref-xor-href; the
   `ref` → `sourceRef` React rename), and the questions subsystem
   (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
@@ -74,7 +74,7 @@ justified by these, not the other way around.
 
 ## What already exists
 
-- **The shared Markdoc vocabulary** — `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`) (one
+- **The shared Markdoc vocabulary** — `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`) (one
   config for the frontend renderer, `bbx validate`, and dev docs; header
   comment: "Add new tags here"). **Reused**: `todo` and `see-also` are added
   here, making them universal by construction.
@@ -172,7 +172,7 @@ Ordered by implementation dependency, then surface size.
 ### Track 1 — the `{% todo %}` and `{% see-also %}` tags + rendering
 
 **What.** Add `todo` (wrapper, inline or block) and `see-also` (wrapper,
-ref-carrying, rendered footnote-style) to `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/core.ts`), with
+ref-carrying, rendered footnote-style) to `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`), with
 React components in `Markdown.tsx`.
 
 **Why.** No deliberate, machine-legible capture form exists today — checkboxes

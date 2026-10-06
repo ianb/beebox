@@ -6,6 +6,7 @@ labels: [docs]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
+priority: important
 ---
 
 The monorepo root has a `docs/` directory that holds only three leftover

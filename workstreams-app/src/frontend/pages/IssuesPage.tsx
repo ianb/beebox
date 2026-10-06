@@ -1,8 +1,9 @@
-import { useBlocker } from "@tanstack/react-router";
+import { useBlocker, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { issueChangeKey, IssuesPane } from "../components/IssuesPane/panel.js";
 import { Button } from "../components/ui.js";
+import { usePageIdentity } from "../lib/page-identity.js";
 import { trpc } from "../trpc.js";
 import type { Issue, IssueChange } from "../types.js";
 
@@ -30,6 +31,9 @@ export function IssuesPage() {
     shouldBlockFn: ({ current, next }) => navigationGuard.shouldBlock({ currentRouteId: current.routeId, nextRouteId: next.routeId, confirmDiscard: () => window.confirm(DISCARD_ISSUE_CHANGES) }),
   });
   const issues = trpc.issues.list.useQuery();
+  const search = useSearch({ strict: false });
+  const focused = issues.data?.items.find((issue) => issue.relPath === search.issue && issue.visibility === (search.issueVisibility ?? "public"));
+  usePageIdentity("issues", focused?.frontmatter.title ?? null);
   const utils = trpc.useUtils();
   const save = trpc.issues.save.useMutation({
     onSuccess: async () => {
@@ -41,7 +45,7 @@ export function IssuesPage() {
     setChanges((current) => {
       const updated = new Map(current);
       const key = issueChangeKey(next);
-      if (next.priority === next.originalPriority && next.nextAction === next.originalNextAction) updated.delete(key);
+      if (next.priority === next.originalPriority) updated.delete(key);
       else updated.set(key, next);
       return updated;
     });

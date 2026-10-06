@@ -21,7 +21,7 @@ JSON.stringify(importers('from "@openai/codex-sdk"'))
 => ["src/services/codex-sdk-session/core.ts"]
 
 JSON.stringify(importers('codex-history-server.js"'))
-=> ["src/core/chat/session/codex-transcript.ts"]
+=> ["src/core/chat/session/codex-transcript/core.ts"]
 
 fs.existsSync(path.join("src", "services", "codex-app-server.ts"))
 => false

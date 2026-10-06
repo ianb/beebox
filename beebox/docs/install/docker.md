@@ -77,8 +77,17 @@ docker compose build --pull
 docker compose up -d
 ```
 
-Your box (`./data/box`) and Claude credentials (the named volume) are
-untouched by a rebuild.
+Your box (`./data/box`), Claude credentials, and accounts (the named
+volumes) are untouched by a rebuild.
+
+**Upgrading from an install without the `home` volume** (before
+2026-10-05): local accounts, stored provider keys, and the Codex login lived
+in the container itself, which every recreate discarded. The first start with
+the new compose file is one more such recreate. Open the first-run setup link
+from `docker compose logs box` to create the owner account again, re-enter
+keys in Admin → Secrets, and sign in to Codex again. The box itself and the
+Claude login (`claude-auth` volume) carry over. From then on, all of it
+survives updates.
 
 **The box converges on start.** Before serving, the container runs
 `bbx migrate --sweep` (card data) and `bbx docs refresh` (the box's generated
@@ -294,7 +303,8 @@ The box requires a login. Create the first (owner) account with
 `docker compose run --rm box bbx auth create-user`, or open the first-run setup
 URL the server prints to its log. This uses the built-in local password method —
 no external service. Credentials are scrypt-hashed in `~/.bbx-auth.json` (mode
-0600) inside the box volume.
+0600) in the runtime user's home, the `home` named volume, so they survive
+rebuilds and recreated containers.
 
 Once that owner exists, use a box's Admin page to create a 15-minute,
 single-use member invite. It can be pinned to an email or left open for the
@@ -352,6 +362,11 @@ Either way, the doctor-style check is `docker compose run --rm box claude
 auth status`. Serving pages needs no login; running an agent (chat, reactor)
 does.
 
+**Codex** is the other engine. Sign in from the box's Admin → Agents page, or
+in a terminal with `docker compose run --rm box codex login --device-auth`
+(open the printed URL, enter the code). The login persists in the `home`
+volume.
+
 ## Data and volumes
 
 - **`./data/box`** — the box package (a git repo you own): cards, config,
@@ -359,9 +374,17 @@ does.
   and survives everything Docker does. Back this up.
 - **`claude-auth`** (named volume) — the Claude login credentials. Survives
   `docker compose down` and rebuilds.
+- **`home`** (named volume) — the runtime user's home: local accounts and
+  invites, the session signing key, the machine secret store (provider keys),
+  the Codex login, and the uv/Docling caches. Survives `docker compose down`
+  and rebuilds. On the first start the container fetches Docling (CPU
+  PyTorch) and its model weights into it in the background: about 2 GB, a
+  minute or two on a fast connection (`docker compose logs box` names the
+  log file).
 
 > **Warning:** `docker compose down -v` deletes named volumes, including
-> `claude-auth`. You will need to `claude auth login` again. Plain
+> `claude-auth` and `home`. You will need to sign in to Claude and Codex
+> again, recreate accounts, and re-enter stored keys. Plain
 > `docker compose down` (no `-v`) is safe.
 
 ## Ownership note (bind-mount UID)

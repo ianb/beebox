@@ -9,7 +9,7 @@
  * attach scope). The markdown body is the assembled transcript: transcribed
  * speech interleaved, in timeline order, with `{% image %}` markers (where a
  * photo was taken) and `{% silence %}` markers (gaps) — see
- * `src/shared/markdoc-config/core.ts`.
+ * `src/shared/markdoc-config/tags/core.ts`.
  *
  * The chat agent — not a background procedure — annotates and files these
  * cards; see `instructions` below.

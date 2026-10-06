@@ -184,6 +184,8 @@ export interface ChatSessionInfo {
   contextDir: string;
   /** That landmark's display label ("Root" for the box root). */
   landmarkLabel: string;
+  /** The boxholder's close mark — done chats sort below live ones. */
+  done: boolean;
 }
 
 /**
@@ -200,6 +202,21 @@ export interface DeadChatInfo {
 
 export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[]; dead: DeadChatInfo[] }> {
   return trpcClient.chat.sessions.query();
+}
+
+/**
+ * One session's display identity for the session menu: its label (as the chip
+ * shows it) and whether the boxholder has marked it done — null when the chat
+ * has no card yet, so there is nothing to mark. The menu knows nothing else
+ * about the session, so this is all it asks.
+ */
+export async function getChatSessionIdentity(sessionId: string): Promise<{ label: string | null; done: boolean | null }> {
+  return trpcClient.chat.label.query({ session: sessionId });
+}
+
+/** Set or clear the boxholder's done mark on a chat's husk. */
+export async function markChatDone(sessionId: string, done: boolean): Promise<void> {
+  await trpcClient.chat.markDone.mutate({ sessionId, done });
 }
 
 /** One search result row: a chat, its best-matching chunk, and the anchor to open it at. */

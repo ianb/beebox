@@ -20,6 +20,7 @@
 import { assertNever } from "../../../../beebox/src/shared/invariant.js";
 import { isScanUploadSubpath } from "../../../../beebox/src/hub/server/scan-gate.js";
 import { isPairingRedeemUrl } from "../../../../beebox/src/webapp/routes/pairing.js";
+import { isBoxIdentityAssetPath } from "../../../../beebox/src/shared/box-identity-asset-routes.js";
 
 /**
  * The router-scoped variant of `isPairingRedeemUrl`. The shared matcher is
@@ -90,7 +91,7 @@ export interface BoxTarget {
  *   root APIs, which stay session-only. These paths never serve box data —
  *   Vite owns them, so a box literally named `src`/`node_modules` is already
  *   unreachable in dev anyway (this classification mirrors the proxy's real
- *   routing). Built `assets`/`icons` are separately in `unauth-allowlist`.
+ *   routing). Built `assets`/`icons`/`earcons` are separately in `unauth-allowlist`.
  * - `unknown`: anything else — deny (fail closed).
  */
 export type RouterRoute =
@@ -203,10 +204,16 @@ function isPublicFrontendAssetPath(rest: string): boolean {
   return (
     rest === "/manifest.webmanifest" ||
     rest === "/sw.js" ||
-    rest === "/assets" ||
-    rest.startsWith("/assets/") ||
-    rest === "/icons" ||
-    rest.startsWith("/icons/")
+    // Vite proxies /<box>/api and /auth before serving static files. Only
+    // direct filenames may skip box auth; separators, escapes, and dot
+    // segments can otherwise normalize into a box route downstream.
+    (/^\/(assets|icons)\/[\w-][\w.-]*$/.test(rest) &&
+      // The identity-asset proxy excludes icons, but still owns these
+      // filenames for a box whose slug is "assets".
+      !isBoxIdentityAssetPath(rest)) ||
+    // Only direct media files: Vite proxies nested /<box>/api and /auth
+    // paths, including for a box whose slug happens to be "earcons".
+    /^\/earcons\/[\da-z-]+\.(mp3|wav)$/.test(rest)
   );
 }
 
@@ -285,7 +292,7 @@ function classifyWorktreePrefix({ method, rest }: { method: string; rest: string
   // callback). Method-agnostic: login is a POST, `/auth/me` a GET.
   if (rest === "/auth" || rest.startsWith("/auth/")) return { kind: "unauth-allowlist" };
 
-  // `/<w>/{assets,icons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
+  // `/<w>/{assets,icons,earcons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
   if (method === "GET" && isPublicFrontendAssetPath(rest)) return { kind: "unauth-allowlist" };
 
   // `/<w>/dev` / `/<w>/dev/...` — the worktree's dev space, served from disk.

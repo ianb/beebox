@@ -68,7 +68,7 @@ function matchingAliasRoot(params: { oldSpecifier: string; aliases: Aliases }): 
   return null;
 }
 
-export function computeAliasSpecifier(params: {
+function computeAliasSpecifier(params: {
   oldSpecifier: string;
   newImporterDir: string;
   newTargetPath: string;

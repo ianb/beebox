@@ -8,6 +8,7 @@ import { DocumentLifecyclePills } from "../components/DocumentLifecyclePills.js"
 import { Markdown } from "../components/Markdown.js";
 import { Button, Pill } from "../components/ui.js";
 import { trpc } from "../trpc.js";
+import { usePageIdentity } from "../lib/page-identity.js";
 import type { BrowsedDocument, DirectoryEntry } from "../types.js";
 
 /**
@@ -142,6 +143,7 @@ export function BrowseView({ document }: { document: BrowsedDocument }) {
 }
 
 export function BrowsePage({ file, workstream }: { file: string; workstream: string | null }) {
+  usePageIdentity("browse", file.split("/").findLast((segment) => segment !== "") ?? null);
   const document = trpc.documents.read.useQuery({ relPath: file, workstream });
   if (document.isLoading) {
     return (
