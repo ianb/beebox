@@ -195,7 +195,7 @@ function stripNodeNoise(text: string): string {
   return text
     .split("\n")
     .filter((line) => !/^\(node:\d+\) \[DEP\d+] DeprecationWarning:/.test(line))
-    .filter((line) => !/^\(Use `node --trace-deprecation/.test(line))
+    .filter((line) => !line.startsWith("(Use `node --trace-deprecation"))
     .join("\n");
 }
 

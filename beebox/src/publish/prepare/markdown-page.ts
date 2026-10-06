@@ -94,7 +94,7 @@ function docRenderConfig(): Config {
   return {
     ...markdocConfig,
     nodes: {
-      ...(markdocConfig.nodes ?? {}),
+      ...markdocConfig.nodes,
       // Fresh per render so the duplicate-slug set is scoped to this pass
       // (same reason `Markdown.tsx` builds it per call).
       heading: makeHeadingNode(),

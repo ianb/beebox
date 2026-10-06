@@ -291,7 +291,7 @@ async function findStaleTmpUploadCards(opts: { boxRoot: string; now: number }): 
   const { boxRoot, now } = opts;
 
   const stale: UnfiledBatch[] = [];
-  for (const dir of await findTmpUploadDirs(boxRoot, boxRoot)) {
+  for (const dir of await findTmpUploadDirs(boxRoot)) {
     for (const card of await batchCardsIn(dir)) {
       const parsed = parseUploadBatch(await fs.readFile(card, "utf-8").catch(() => ""));
       if (parsed === null || parsed.frontmatter.delivered !== true) continue;
@@ -336,7 +336,7 @@ async function batchCardsIn(tmpUploadDir: string): Promise<string[]> {
 }
 
 /** Recursively collect every `tmp-upload` directory under `root`. */
-async function findTmpUploadDirs(boxRoot: string, root: string): Promise<string[]> {
+async function findTmpUploadDirs(root: string): Promise<string[]> {
   const found: string[] = [];
   let entries: Dirent[];
   try {
@@ -352,7 +352,7 @@ async function findTmpUploadDirs(boxRoot: string, root: string): Promise<string[
       found.push(abs);
       continue;
     }
-    found.push(...(await findTmpUploadDirs(boxRoot, abs)));
+    found.push(...(await findTmpUploadDirs(abs)));
   }
   return found;
 }

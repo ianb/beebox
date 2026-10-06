@@ -136,7 +136,7 @@ export async function buildBackendStartOptions(
   });
   const env: Record<string, string | undefined> = {
     ...baseEnv,
-    ...(ctx.options.extraEnv ?? {}),
+    ...ctx.options.extraEnv,
   };
   const startOpts: ChatBackendStartOptions = {
     engine,

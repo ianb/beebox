@@ -67,7 +67,7 @@ function mergeIngestState(fresh: TelegramState, working: TelegramState): Telegra
     merged.lastUpdateId = Math.max(fresh.lastUpdateId ?? 0, working.lastUpdateId);
   }
   if (working.chatMappings) {
-    merged.chatMappings = { ...working.chatMappings, ...(fresh.chatMappings ?? {}) };
+    merged.chatMappings = { ...working.chatMappings, ...fresh.chatMappings };
   }
   return merged;
 }
@@ -354,7 +354,7 @@ class TelegramConnector implements Connector {
         connectorName: "telegram",
         defaultValue: {},
         update: (fresh) => {
-          const freshCallbacks = { ...(fresh.callbacks ?? {}) };
+          const freshCallbacks = { ...fresh.callbacks };
           for (const { threadRef, at } of fired) {
             if (freshCallbacks[threadRef]?.at === at) delete freshCallbacks[threadRef];
           }
