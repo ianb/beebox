@@ -38,9 +38,9 @@ an encoder: PCM in, MP3 out, through `ffmpeg`.
 reporting intact (an empty or failed stream still reaches the chat as a reason,
 never as silence), and cleanup when the browser goes away.
 
-One track, three commits. Estimate: about 350 changed source lines (service
-stream shape ~150, MP3 encoder ~80, route ~60, two scripts ~40, removing the WAV
-path ~20) and about 300 test lines. Docs: this plan plus small edits to
+One track, four commits. Estimate: about 380 changed source lines (service
+stream shape ~150, MP3 encoder ~80, route ~80, client `appendChunk` ~10, two
+scripts ~40, removing the WAV path ~20) and about 330 test lines. Docs: this plan plus small edits to
 `docs/plans/tts-backend-selection.md` and the services table. Not a BIG CHANGE.
 
 **Measured before planning (2026-10-05, synthetic text, Tier 1 Gemini key):**
@@ -71,13 +71,18 @@ path ~20) and about 300 test lines. Docs: this plan plus small edits to
 
 ## What already exists
 
-- **The browser already streams MP3 for the head segment.**
+- **The browser already streams MP3 for the head segment** (clean path traced
+  end to end; real-route check in Implementation order step 3).
   `src/frontend/src/lib/audio/tts-client/client.ts:229`,
   `if (supportsMediaSource()) { await this.streamAndPlay(...)`, and
   `playable.ts:40`, `if (contentType !== null && MediaSource.isTypeSupported(contentType))`,
   routes `audio/mpeg` into `playAudioStream` (`src/frontend/src/lib/audio/context.ts:281`),
-  which appends chunks to a `SourceBuffer` as they arrive. Reuse unchanged.
-  Gemini audio misses this today only because the route labels it `audio/wav`.
+  which appends chunks to a `SourceBuffer` as they arrive, calls
+  `endOfStream()` when the body ends, and caches the assembled buffer. Reuse,
+  with one fix to `appendChunk` error handling (Track 1). Gemini audio misses
+  this today only because the route labels it `audio/wav`. The existing browser
+  test plays fixture MP3s from the mock, not an unknown-length ffmpeg stream, so
+  the real-route check is part of this plan.
 - **Prefetch and cache already read whole streams.** `client.ts:350`,
   `const buffer = await this.readStreamToBuffer(response);` then
   `this.cache.set(resolved.key, buffer)`. Reuse unchanged.
@@ -181,12 +186,25 @@ bytes exist at about 0.7 s. The browser can already play from the first chunk.
   non-zero exit is a typed `Mp3EncoderError` naming ffmpeg. The child is killed
   when `signal` aborts or the consumer stops early.
 - Route: `const audio = await service.streamSpeech(text, ttsOpts)`; set
-  `Content-Type: audio/mpeg`; send `Readable.from(concat(head, rest))`. On
-  `request.raw` close before the end, call `audio.cancel()`. A failure while
-  iterating `rest` logs `[chat-tts] stream failed after <n> bytes: <reason>`
-  and destroys the response with the error, so the browser's
-  `playAudioStream` pump rejects (`context.ts`, `pump error`) and the segment
-  shows as failed.
+  `Content-Type: audio/mpeg`; send `Readable.from(guarded(audio))`, where
+  `guarded` is an async generator that yields `head`, then each chunk of `rest`,
+  inside its own `try/catch`. The route's existing `try/catch`
+  (`audio-routes.ts:240`) only covers work before `reply.send` returns, so
+  failures after the head need this wrapper: on a throw from `rest` it logs
+  `[chat-tts] stream failed after <n> bytes: <reason>`, calls `audio.cancel()`,
+  and destroys `reply.raw` with the error. The browser's `playAudioStream` pump
+  then rejects and the segment shows as failed.
+- Disconnect: listen on `reply.raw` `close` and cancel only when
+  `!reply.raw.writableFinished`, the pattern at
+  `src/webapp/routes/chat/screenshot-routes.ts:243` (*"a close with an
+  unfinished body is the disconnect; a close after we've written the reply is
+  benign"*). The request side is already fully read when synthesis starts, so
+  `request.raw` would miss a disconnect.
+- Client, one small change: `appendChunk` (`src/frontend/src/lib/audio/context.ts:255`)
+  resolves on `updateend` only. Per the MSE spec a failed append fires `error`
+  and then `updateend`, so today a bad chunk resolves as success and the clip
+  may hang or fail late. Listen for `error` and `abort` too and reject, so a
+  stream the browser cannot decode fails the segment at once.
 - `createFakeTts` returns a `TtsAudioStream` from a fixed MP3 buffer, with an
   option to fail after the head, so route tests can drive the mid-stream path.
 - `gen-tts-fixtures.ts` and `tts-latency.ts` collect the stream into a buffer.
@@ -207,6 +225,12 @@ Nothing calls them yet.
 - **Simplest version:** stream OpenAI only; leave Gemini buffered. It changes
   one line in the service and the route, but the backend in use is Gemini, so it
   does not fix the reported problem.
+- **Gemini-only streaming beside the buffered method:** add a streaming method
+  for Gemini, keep `textToSpeech` for OpenAI. Smaller by perhaps 60 lines, but
+  leaves two ways to produce speech (principle 8) and keeps OpenAI's 0.3–0.7 s
+  wait after its first bytes, which is the baseline the boxholder compares
+  Gemini against. OpenAI streaming costs a few lines in the same path, so the
+  plan does both.
 - **Next simplest:** stream Gemini's PCM to the browser as an endless WAV and
   play it with Web Audio, as the issue first proposed. It avoids ffmpeg but needs
   a second player in the client, beside `playAudioStream`, with its own stop,
@@ -236,10 +260,10 @@ measurement before writing.
 | ffmpeg missing on the host | Planned: encoder doctest with a bad binary name | `Mp3EncoderError` before head → 502 naming ffmpeg | Clear |
 | Provider stream errors after the head (error event, connection reset) | Planned: route doctest with a fake that fails after the head | Route logs and destroys the response | Clear: browser pump error → segment failed. The reason the chat shows is the browser's generic network error; the server log has the provider's |
 | ffmpeg exits non-zero mid-clip | Planned: encoder doctest | `Mp3EncoderError` from `rest` → same as above | Clear, as above |
-| Browser stops or navigates away mid-clip | Planned: route doctest, close the request, assert `cancel` ran | `request.raw` close → `cancel()` aborts the provider fetch and kills ffmpeg | Silent by design: nobody is listening. Without it, ffmpeg children and provider requests would leak |
+| Browser stops or navigates away mid-clip | Planned: route doctest, close the connection mid-body, assert `cancel` ran | `reply.raw` close with `!writableFinished` → `cancel()` aborts the provider fetch and kills ffmpeg | Silent by design: nobody is listening. Without it, ffmpeg children and provider requests would leak |
 | Whole-call deadline passes mid-stream (stalled provider) | Existing deadline doctest covers before head; planned case after head | Deadline aborts fetch → `InteractionStreamError` from `rest` → destroy | Clear, as above |
 | Firefox or another browser without MSE `audio/mpeg` | Existing: `playable.tts-container-routing.doctest.md` | `playable.ts:40` buffers the whole response and plays it | Clear: works, just not streamed |
-| A `SourceBuffer` rejects the ffmpeg output (unexpected header) | Planned: browser speech check against the real route on the dev router | `playAudioStream` `addSourceBuffer`/`onerror` → failed segment | Clear, but a regression for every clip: verified in Implementation order chunk 3 before shipping |
+| A `SourceBuffer` rejects the ffmpeg output (unexpected header, truncated frame) | Planned: browser check against the real route, including a clip cut off mid-stream | `appendChunk` rejects on `error`/`abort` (new), `addSourceBuffer` throw and media `onerror` (existing) → failed segment | Clear after the `appendChunk` fix; today it can resolve as success and hang |
 
 No critical gap: every new codepath has handling, and none fails silently except
 the deliberate cancel on disconnect.
@@ -312,14 +336,18 @@ None: this is transport infrastructure with no agent-facing concept.
 1. **Encoder and chunked Gemini reader.** `pcmToMp3`, `Mp3EncoderError`,
    `interactionAudioChunks`, their doctests. No callers change.
 2. **Service and route.** `streamSpeech`, `TtsAudioStream`, `takeHead`; both
-   backends; the route streams; `createFakeTts` streams; the two scripts
-   collect; `pcmToWav` and `wav.ts` removed with their doctest. Route and service
-   doctests updated.
-3. **Verify end to end.** Run `src/scripts/tts-latency.ts` for both backends and
+   backends; the route streams through `guarded` with the `reply.raw` close
+   handler; `createFakeTts` streams; the two scripts collect; `pcmToWav` and
+   `wav.ts` removed with their doctest. Route and service doctests updated,
+   including a failure after the head and a disconnect mid-body.
+3. **Client `appendChunk` rejects on `SourceBuffer` `error`/`abort`.** One
+   function in `context.ts`.
+4. **Verify end to end.** Run `src/scripts/tts-latency.ts` for both backends and
    record time to head. On the dev router with a test box, play a three-segment
    reply in desktop Chrome on each backend and confirm the first segment starts
-   at about the head time, and that a stopped clip leaves no `ffmpeg` process
-   behind. Record the numbers in this plan.
+   at about the head time and plays to the end, that a stopped clip leaves no
+   `ffmpeg` process behind, and that a clip cut off mid-stream (kill the
+   provider connection) shows as failed. Record the numbers in this plan.
 
 ## Rollout shape
 
