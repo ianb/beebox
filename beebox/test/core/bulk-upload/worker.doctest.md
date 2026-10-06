@@ -22,7 +22,17 @@ import {
   setStagingState,
   readStagingSession,
 } from "../../../src/core/capture/staging-store/core.js";
-import { prepareAndDeliverBulkBatch } from "../../../src/core/bulk-upload/worker/core.js";
+import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../../src/core/bulk-upload/worker/core.js";
+import { readRecent } from "../../../src/core/notification/log.js";
+import { writePresence } from "../../../src/core/notification/presence.js";
+
+/** The box's logged notifications, reduced to what the person sees. */
+async function notices(boxRoot) {
+  return (await readRecent(boxRoot, { days: 1 })).map(({ intent }) => {
+    const { title, body, target, loudness, source } = intent;
+    return { title, body, target, loudness, source };
+  });
+}
 
 async function pathExists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -34,8 +44,8 @@ function uploadCommitCount(boxRoot) {
 }
 
 async function batchCardRel(box) {
-  const dirs = await readdir(box.path("tmp-upload"));
-  return `tmp-upload/${dirs[0]}/Batch.upload-batch.card`;
+  const dirs = await readdir(box.path("_content/tmp-upload"));
+  return `_content/tmp-upload/${dirs[0]}/${dirs[0]}.upload-batch.card`;
 }
 
 // Stage a sealed bulk session bound to `target`, with one uploaded file.
@@ -116,13 +126,53 @@ await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mo
 JSON.stringify({
   state: (await readStagingSession({ boxRoot: box.root, id })).state,
   sent: sent.length,
-  noBatchDir: !(await pathExists(box.path("tmp-upload"))),
+  noBatchDir: !(await pathExists(box.path("_content/tmp-upload"))),
 })
 => {"state":"failed:deliver","sent":0,"noBatchDir":true}
 ```
 
+The person who uploaded is told. They saw finalize succeed and have likely put
+the phone down, so the box sends one `quiet` notification to the chat the batch
+was headed for:
+
+```ts continue
+await notices(box.root)
+=> [
+  {
+    title: "An upload could not be added to the chat",
+    body: "1 file reached the box but could not be added to the chat. The chat it was sent to no longer exists. They are kept on the box, and the assistant will be asked to recover them.",
+    target: "chat:s-missing",
+    loudness: "quiet",
+    source: "bulk-upload",
+  },
+]
+```
+
 ```ts cleanup
 eventBus.close();
+await box.cleanup();
+```
+
+## A preparation that throws is recorded and reported, even with the app open
+
+The finalize route, the startup resume and the sweep all catch a worker that
+threw (a refused commit, say) and record it through `markBulkPreparationFailed`.
+The error text stays in the server log; the person gets a plain sentence.
+Unlike a capture, the notice goes out while someone has the web app open: no
+web UI shows a bulk batch's progress.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const id = await stageSealedBulk(box.root, { target: "s-known" });
+await writePresence(box.root, { activeWeb: 1, now: new Date() });
+
+await markBulkPreparationFailed({ boxRoot: box.root, id });
+const [notice] = await notices(box.root);
+({ state: (await readStagingSession({ boxRoot: box.root, id })).state, body: notice.body })
+=> { state: "failed:prepare", body: "1 file reached the box but could not be added to the chat. Saving them to the box failed. They are kept on the box, and the assistant will be asked to recover them." }
+```
+
+```ts cleanup
 await box.cleanup();
 ```
 

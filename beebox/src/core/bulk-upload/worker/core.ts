@@ -30,10 +30,12 @@ import {
   UserMessageDeliveryError,
 } from "../../chat/session/deliver-user-message.js";
 import { withCardLock } from "../../../lib/card-lock.js";
+import { notifyStagingFailed } from "../../capture/failure-notice.js";
+import type { NotifyServices } from "../../notify-boxholder.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { parseCardText, serializeCardText } from "../../card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
-import { prepareBulkBatch, bulkBatchSlug, bulkBatchCardRelPath } from "../prepare.js";
+import { prepareBulkBatch, bulkBatchSlug, resolveBulkBatchPaths } from "../prepare.js";
 import { bulkBatchHasNothingToReport } from "../batch-format.js";
 import { buildUploadWrapper, resolveBulkDeliveryTarget } from "./deliver.js";
 import * as fs from "node:fs/promises";
@@ -47,15 +49,41 @@ export interface PrepareBulkDeps {
   wireSession?: ((session: ChatSession) => void) | undefined;
 }
 
-/** Record a bulk preparation/delivery failure state (best-effort, error paths). */
+/**
+ * Record a bulk preparation/delivery failure state and tell the boxholder.
+ *
+ * The uploader saw finalize succeed and has usually moved on, so the state write
+ * alone reaches nobody until the sweep hands the batch to the chat agent. The
+ * notice goes out whether or not the web app is open: no web UI shows a bulk
+ * batch's progress. Best-effort throughout: this runs on error paths that must
+ * not mask the original failure.
+ */
 export async function markBulkPreparationFailed(opts: {
   boxRoot: string;
   id: string;
+  /**
+   * One sentence for the person: what went wrong. Defaults to a plain one —
+   * a thrown error's text (an absolute path, a git command line) is for the
+   * server log, which the caller already wrote.
+   */
+  reason?: string | undefined;
   state?: StagingSessionState;
+  services?: NotifyServices | undefined;
 }): Promise<void> {
   const state = opts.state ?? "failed:prepare";
   await setStagingState({ boxRoot: opts.boxRoot, id: opts.id, state }).catch((e: unknown) => {
     console.error(`[bulk] Recording ${state} for ${opts.id} failed:`, e);
+  });
+  const session = await readStagingSession({ boxRoot: opts.boxRoot, id: opts.id }).catch(() => null);
+  const count = session?.files.length ?? 0;
+  const files = `${String(count)} file${count === 1 ? "" : "s"}`;
+  await notifyStagingFailed(opts.boxRoot, {
+    id: opts.id,
+    title: "An upload could not be added to the chat",
+    reason: `${files} reached the box but could not be added to the chat. ${opts.reason ?? "Saving them to the box failed."} They are kept on the box, and the assistant will be asked to recover them.`,
+    source: "bulk-upload",
+    skipWhenPresent: false,
+    services: opts.services,
   });
 }
 
@@ -111,7 +139,7 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
         });
   if (target === null) {
     console.error(`[bulk] Target chat for batch ${id} (session=${session.targetSessionId}) no longer exists; leaving retryable`);
-    await markBulkPreparationFailed({ boxRoot, id, state: "failed:deliver" });
+    await markBulkPreparationFailed({ boxRoot, id, state: "failed:deliver", reason: "The chat it was sent to no longer exists." });
     return;
   }
 
@@ -122,7 +150,7 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
   // is in the transcript, finish the bookkeeping without re-sending — exactly one
   // <upload> ever reaches the chat. A first finalize has no card yet → skipped.
   const contextDir = session.contextDir ?? "";
-  const cardRelPath = bulkBatchCardRelPath({ startedAt: session.createdAt, id, contextDir });
+  const { cardRelPath } = await resolveBulkBatchPaths({ boxRoot, startedAt: session.createdAt, id, contextDir });
   const batchSlug = bulkBatchSlug({ startedAt: session.createdAt, id });
   if (await fileExists(path.join(boxRoot, cardRelPath))) {
     const landed = await userMessageAlreadyLanded({
@@ -175,7 +203,7 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
   } catch (e) {
     if (e instanceof UserMessageDeliveryError) {
       console.error(`[bulk] Delivery failed for batch ${prepared.batchSlug}:`, e);
-      await markBulkPreparationFailed({ boxRoot, id, state: "failed:deliver" });
+      await markBulkPreparationFailed({ boxRoot, id, state: "failed:deliver", reason: "Sending the upload message failed." });
       return;
     }
     throw e;

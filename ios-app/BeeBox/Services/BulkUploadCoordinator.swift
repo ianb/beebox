@@ -26,6 +26,11 @@ enum BulkUploadOutcome: Equatable, Sendable {
     /// and counts (`bulk-upload/sweep.ts`, `notifyStranded`) — which is a better
     /// recovery path than a retry button on a phone that may never come back.
     case accepted(uploaded: Int, failed: Int)
+    /// Sealed, and the box then reported it could not add the batch to the chat
+    /// (`failed:*`). Still the box's to recover, so the client mounts no retry,
+    /// but the person must be told: "still processing" here is the silent
+    /// failure the box's own notice exists to end.
+    case undeliverable(uploaded: Int, failed: Int)
     /// Never sealed — the box does not have this batch. The caller keeps the
     /// user's text so they can try again.
     case failed(message: String)
@@ -173,11 +178,12 @@ actor BulkUploadCoordinator {
                     return .delivered(uploaded: uploaded.count, failed: failed.count)
                 }
                 if state.state.hasPrefix("failed:") {
-                    // Sealed, so the box owns it and will surface the failure to
-                    // the chat agent. Reporting `accepted` rather than `failed`
-                    // keeps this client from also trying to recover — two
-                    // recovery paths for one batch is how it gets delivered twice.
-                    return .accepted(uploaded: uploaded.count, failed: failed.count)
+                    // Sealed, so the box owns recovery: it notifies the boxholder
+                    // and hands the batch to the chat agent. `undeliverable`, not
+                    // `failed`, keeps this client from also trying to recover —
+                    // two recovery paths for one batch is how it gets delivered
+                    // twice — while still telling the person it went wrong.
+                    return .undeliverable(uploaded: uploaded.count, failed: failed.count)
                 }
             case .rejected(.sessionGone):
                 // Staging is torn down only after a delivered batch.

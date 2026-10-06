@@ -1,12 +1,15 @@
 ---
 title: "Bulk upload lands in an uncommittable box-root directory and fails silently when its chat message never delivers — recurred 3 times on one production box"
-workstream: unattached
+workstream: bulk-upload-stranding
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
+resolution: implemented
 ---
+
+Closed: fixed in ff50dcb0e (landing dir under `_content/`, failure notification, reconciled failed count); see Resolution below.
 
 A recurring three-part failure hit one production box's bulk-photo-upload path
 three times in one week (photo counts: 12, 6, and 4; each a live, dated event
@@ -85,3 +88,29 @@ unfiled, and sent the boxholder a `dot` notification on 2026-09-30. The
 landing path in `prepare.ts:313` is unchanged on main. Commit `326ed9c74`
 (2026-09-28, detaching bulk workers from the request's permit) may address the
 Part 1 delivery failure, but no upload after it has been checked.
+
+## Resolution (2026-10-06, worktree-bulk-upload-stranding)
+
+- **Landing dir.** A root-scope chat (`contextDir` `""`) now lands under
+  `_content/tmp-upload/` through `landmarkScanRelDir`. This is the existing v3
+  rule that maps the root scope to `_content/`. Capture had the same latent
+  fallback (`tmp-capture/` at the root) and was fixed the same way. The
+  documented contract ("inside the chat's context dir") is unchanged; only the
+  root-scope case moved.
+- **Silent failure.** The refused root commit was itself what produced
+  `failed:prepare`, so the landing-dir fix removes the observed cause.
+  `326ed9c74` fixed a separate cause (permit expiry). Any `failed:*` now sends
+  the boxholder a `quiet` notification to the target chat. The iOS app reports
+  `failed:*` seen within its 30-second poll as a failure, not as "still
+  processing". The web bulk uploader was removed on 2026-09-06, so iOS is the
+  only uploader.
+- **Stale `failed` count.** The server drops reported failures whose bytes
+  arrived in staging (`failedItemsNotArrived`).
+
+**Recovering a box that still has stranded batches.** No migration is needed,
+because the root-path batches never committed. `bbx status` / `bbx validate`
+list any stray root `tmp-upload/`. Move it with
+`bbx mv tmp-upload/<slug> _content/tmp-upload/<slug>` and commit. Alternatively,
+delete the uncommitted root copy and set the staging session from `failed:prepare`
+back to `sealed`, and the sweep re-prepares it at the new path. Batches already
+rescued by hand (for example into `_tmp/stranded-uploads/`) need no action.

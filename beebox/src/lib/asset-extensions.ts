@@ -122,7 +122,15 @@ function anyCaseGlob(ext: string): string {
  * Unanchored for the same reason as {@link CAPTURE_STAGING_IGNORE_PATTERN}: a
  * batch lands under `<contextDir>/tmp-upload/`, not only the box root.
  */
-export const BULK_BATCH_ATTACH_PATTERN = "**/*.upload-batch.attach/**";
+export const BULK_BATCH_ATTACH_PATTERN = "**/upload-*.attach/**";
+
+/**
+ * The attach-scope name batches used before 2026-10 (`Batch.upload-batch.attach`).
+ * Kept so annexed files in such scopes, which survive in trash and in rescued
+ * batches, stay on the filter path; dropping it would make `bbx doctor annex`
+ * refuse to scope the attributes file on any box holding one.
+ */
+export const LEGACY_BULK_BATCH_ATTACH_PATTERN = "**/*.upload-batch.attach/**";
 
 /**
  * {@link ASSET_EXTENSIONS} as the contents of `.git/info/attributes` — which
@@ -156,6 +164,7 @@ export function assetAnnexAttributes(): string {
     "# A bulk batch holds arbitrary types and widens largefiles itself; the",
     "# filter has to reach those paths for that to mean anything.",
     `${BULK_BATCH_ATTACH_PATTERN} filter=annex`,
+    `${LEGACY_BULK_BATCH_ATTACH_PATTERN} filter=annex`,
     "",
   ].join("\n");
 }

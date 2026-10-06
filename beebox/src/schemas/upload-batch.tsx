@@ -104,8 +104,9 @@ expected.** The card groups the whole batch; every uploaded file lives in the
 card's attach scope (\`{basename}.attach/\`), inventoried by that scope's
 \`manifest.json\`.
 
-The card lands under \`tmp-upload/<batch-slug>/\` inside the chat's context dir —
-a landing zone, not storage (a sibling of capture's \`tmp-capture/\`).
+The card lands under \`tmp-upload/<batch-slug>/\` inside the chat's context dir
+(\`_content/tmp-upload/\` for a chat scoped to the whole box) — a landing zone,
+not storage (a sibling of capture's \`tmp-capture/\`).
 
 Frontmatter:
 - \`delivered: true\` — the chat message went out. There is no "filed" marker:

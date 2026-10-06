@@ -37,7 +37,7 @@ await box.write("_content/inbox/email/thread/message.txt", "mail");
 await box.write("_content/chat/session/transcript.md", "chat");
 await box.write("_content/drive/folder/deep/document.md", "drive");
 await box.write("_content/drive/folder/deep/line\nbreak.md", "drive with newline");
-await box.write("tmp-upload/image.jpg", "image");
+await box.write("_content/tmp-upload/image.jpg", "image");
 await box.write(".beebox/ignored.txt", "state");
 await fs.mkdir(box.path("node_modules/pkg"), { recursive: true });
 await fs.writeFile(box.path("node_modules/pkg/index.js"), "ignored");
@@ -52,7 +52,7 @@ const measured = await measureBoxGrowth(box.root, { now: at("2026-08-05T12:00:00
 
 // Connector subtrees always float to the ranked top regardless of size, so
 // they reliably survive the size cap below. Every other entry —
-// `_content/chat/session`, `tmp-upload`, `box-link` — is the same size as
+// `_content/chat/session`, `_content/tmp-upload`, `box-link` — is the same size as
 // many of the skeleton's own "unknown" entries and can lose a ranking tie
 // against them, so only the connector paths are asserted here.
 print(`directories: ${measured.counts.directories - baseline.counts.directories}`);

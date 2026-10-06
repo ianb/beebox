@@ -57,6 +57,7 @@ import {
   CaptureDeliveryError,
 } from "./deliver.js";
 import { notifyCaptureFailed } from "../failure-notice.js";
+import { landmarkScanRelDir } from "../../landmark/root-dir.js";
 import type { NotifyServices } from "../../notify-boxholder.js";
 
 /**
@@ -202,8 +203,8 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
   eventBus.emit("capture-status", { stagingId: id, sessionId: null, status: "preparing" });
   timer.mark("setup");
 
-  const captureRelDir =
-    target.contextDir !== null && target.contextDir !== "" ? `${target.contextDir}/tmp-capture` : "tmp-capture";
+  // A root-scope chat lands under `_content/`: the box root is a closed vocabulary.
+  const captureRelDir = `${landmarkScanRelDir(target.contextDir ?? "")}/tmp-capture`;
   const sessionDir = stagingSessionDir(boxRoot, id);
 
   const timestamps = collectTimestamps(session).toSorted();
