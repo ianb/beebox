@@ -1,12 +1,15 @@
 ---
 title: "Test selection and full-suite attribution cannot see `bin/` shell scripts"
-workstream: unattached
+workstream: test-suite-health
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — while explaining why test/dev/workstream-list.doctest.md went red for five full-suite runs
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-10-06:** fixed by commit 01f482e9d, with the boxholder's directory-based rule instead of a shell `source` graph. A `bin/<name>` spawn literal is a ref whose unit is the first segment under `bin/`; a changed `bin/` path selects every spawner of the same unit; `bin/lib` selects every `bin/` spawner. Root doctests (`bin/test/**`) are graph entrypoints through `beebox/.taprc`, so they are covered, and full-suite attribution uses the same `selectTests`. Evidence: `node --import tsx --test bin/test-select-bin.test.ts bin/test-select.test.ts schedules/full-suite/attribution.test.ts` passed (the issue's case, `bin/lib` fan-out, an unrelated script selecting nothing, src/dist unchanged). On the real tree with a working graph, 28 tests spawn a `bin/` script (22 under `bin/test/`), so a `bin/lib/session-registry.sh` change selects 28 and `bin/workstreams` selects 6 including `bin/test/workstreams.list.doctest.md`. The real selection CLI currently fails open to all tests for a separate reason: [the test graph build fails on three doctests](../../bugs/2026-10-06-test-graph-build-fails-on-three-doctests.md). Root `bin/*.test.ts` and `schedules/*/*.test.ts` run under `node --test` with no selection at all.
 
 A change to a `bin/` shell script selects no tests and can be blamed for no
 failure. 52 test files under `beebox/test/` spawn a `bin/` script, and every one
