@@ -11,7 +11,7 @@ resolution: implemented
 > Closed: the decision is recorded (a box agent merges the update). Implementing
 > a resolution path is handed to
 > [parked template resolution](../features/2026-08-24-parked-template-resolution-path.md),
-> which now carries this as an explicit requirement and stays open.
+> which implements agent resolution and records the reviewed upstream version.
 
 A guide card is a learning surface: `triage-rules` accumulate
 `source: inferred` entries. Once a box learns anything, its guide differs

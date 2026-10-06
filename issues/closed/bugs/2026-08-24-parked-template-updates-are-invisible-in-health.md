@@ -82,5 +82,5 @@ Nothing offers a merge, and nothing says a choice is pending.
 `bbx health` now has a `template-updates` box check (warn; error when the parked
 card belongs to a task that is failing or inconclusive), and a failing task's
 line names the parked path. The resolution-path items (`bbx template
-accept`/`diff`, three-way merge, box-owned fields) were not built here — see
+accept`/`diff`, three-way merge, box-owned fields) were built in the separate
 [template resolution path](../features/2026-08-24-parked-template-resolution-path.md).

@@ -36,9 +36,9 @@ export async function mergeWithoutConflict({ local, base, upstream, card }: { lo
       }
       return result.stdout;
     } catch (error) {
-      // git merge-file uses 1 specifically for a content conflict; larger
-      // statuses indicate a failed invocation and must remain visible.
-      if (isRecord(error) && error.code === 1) return null;
+      // git merge-file returns the number of conflict regions (so 2 means two
+      // conflicts); fatal invocation statuses are outside the 1–127 range.
+      if (isRecord(error) && typeof error.code === "number" && error.code >= 1 && error.code <= 127) return null;
       throw error;
     }
   } finally {
