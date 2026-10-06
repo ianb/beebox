@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
+resolution: implemented
 ---
+
+> **Resolved** in `fd3ef5612`. The route tries the omitted path under `_content/`, and the linked manual-testing instructions now use the canonical URL.
 
 An agent reflexively wrote `bbx create path -t browser-task --title X --source
 Y` and got `error: unknown option --title`. The real form is positional

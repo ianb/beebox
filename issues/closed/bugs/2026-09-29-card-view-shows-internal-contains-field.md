@@ -7,7 +7,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder report, 2026-09-29
 priority: important
+resolution: implemented
 ---
+
+> **Resolved** in `5cf62c6e6`.
 
 `contains` is a one-line summary of a card, written for agents and search: `Browse` lists show it under each entry, and the search index uses it. The boxholder sees it as internal, and it shouldn't appear in the body of every card. Properties is probably the right place to show it.
 
@@ -17,7 +20,7 @@ priority: important
 
 **Fix direction.** Decide which fields are for reading and which are for Properties, and filter by that list rather than by adding names to the one at `view.tsx:85`. Check that Properties still shows the hidden fields, and that the `Browse` list's `contains` line is unaffected.
 
-Related: [review the standard card fields](../closed/code-quality/2026-09-27-review-standard-card-fields.md) (the `card-fields-review` workstream is reviewing the global fields) and [card Properties design session](../features/2026-09-27-card-properties-design-session.md).
+Related: [review the standard card fields](../code-quality/2026-09-27-review-standard-card-fields.md) (the `card-fields-review` workstream is reviewing the global fields) and [card Properties design session](../../features/2026-09-27-card-properties-design-session.md).
 
 ## Next-action note (2026-10-06)
 

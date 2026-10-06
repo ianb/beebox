@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-todos-ui — browser walkthrough of todos on test1
 priority: important
+resolution: implemented
 ---
+
+> **Resolved** in `fd3ef5612`. The route tries the omitted path under `_content/`, and the linked manual-testing instructions now use the canonical URL.
 
 Opening `/<prefix>/test1/browse/projects/porch-rebuild/Plan.doc.card` (no
 `_content/` segment) shows "This page hit an error" with a
@@ -21,5 +24,5 @@ input (an old link, a hand-typed URL), so it should get a not-found state
 with a way back, not the crash page.
 
 The manual-testing text of
-[verify todo annotation rendering](../features/2026-07-29-verify-todo-annotation-rendering.md)
+[verify todo annotation rendering](../../features/2026-07-29-verify-todo-annotation-rendering.md)
 still gives the URL without `_content/`.
