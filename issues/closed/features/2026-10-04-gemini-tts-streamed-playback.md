@@ -1,10 +1,13 @@
 ---
 title: "Gemini speech: play streamed PCM as it arrives (first audio in about 1 s)"
-workstream: unattached
+workstream: gemini-tts-38
 area: beebox
 filed-by: agent
 discovered-in: gemini-tts-38 — Gemini 3.8 TTS benchmark
+resolution: implemented
 ---
+
+**Closed:** Resolved by the plan `beebox/docs/implemented-plans/tts-streamed-playback.md` (commits 794204cae, 70fe47f69, dcca0f8c7). Divergence: the server encodes Gemini PCM to MP3 with ffmpeg and streams it, rather than playing PCM through Web Audio. iOS keeps buffered playback by decision.
 
 The direct Gemini speech route (`beebox/src/services/tts.ts`) already asks
 Google for a stream, but the server buffers the whole clip and sends one WAV,

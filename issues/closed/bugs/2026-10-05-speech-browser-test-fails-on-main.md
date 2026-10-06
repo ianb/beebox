@@ -1,12 +1,15 @@
 ---
 title: "The speech browser test fails 14 of 16 checks on main"
-workstream: unattached
+workstream: gemini-tts-38
 area: beebox
 labels: [tests]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-gemini-tts-38 — verifying streamed speech playback
+resolution: implemented
 ---
+
+**Closed:** Resolved by 5cf3e241f: the script's directory and the mock's fixture path were wrong; both fixed (16/16).
 
 `beebox/src/scripts/test-speech-browser.sh` drives the dev-only `/dev/speech`
 harness through `bin/browse` and asserts on `window.__speechTestLog`. On

@@ -1,12 +1,15 @@
 ---
 title: "`pnpm test:changed` refuses to run when the selection includes `bin/test/` doctests"
-workstream: unattached
+workstream: gemini-tts-38
 area: beebox
 labels: [tests]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-gemini-tts-38 — running change-selected tests for TTS streaming
+resolution: implemented
 ---
+
+**Closed:** Resolved by b4f7cfad9: selected `bin/` doctests run from the package as `../bin/test/...`.
 
 `pnpm test:changed` in `beebox/` stops before running anything:
 

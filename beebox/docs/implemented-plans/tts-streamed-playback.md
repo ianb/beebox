@@ -1,9 +1,9 @@
 ---
 title: "Stream speech audio from the provider to the browser"
-status: draft
+status: implemented
 workstream: gemini-tts-38
 issues:
-  - ../../../issues/features/2026-10-04-gemini-tts-streamed-playback.md
+  - ../../../issues/closed/features/2026-10-04-gemini-tts-streamed-playback.md
 ---
 # Stream speech audio from the provider to the browser
 
@@ -17,7 +17,7 @@ server as MP3, so the desktop browser's existing streaming player starts the
 first segment after its first chunk.
 
 **Issues addressed:**
-[gemini-tts-streamed-playback](../../../issues/features/2026-10-04-gemini-tts-streamed-playback.md).
+[gemini-tts-streamed-playback](../../../issues/closed/features/2026-10-04-gemini-tts-streamed-playback.md).
 Searched the open queue for `tts`, `text-to-speech`, `speech playback`, and
 `MediaSource`: the other hits are about speech *input* or iOS microphone
 behavior (`ios-input-plane-parity`, `ios-mic-pause-during-speech-not-shown`,
@@ -321,7 +321,7 @@ the deliberate cancel on disconnect.
 
 ## Open design questions
 
-- **Should the head threshold be larger than 512 bytes?** 512 bytes of 64 kbit/s
+- **Resolved: the head threshold stays 512 bytes.** (Question was: should it be larger?) 512 bytes of 64 kbit/s
   MP3 is about 64 ms of audio, which is enough to prove the stream is audio and
   small enough not to delay the start. Lean: keep 512, the rule that exists.
 
@@ -381,6 +381,10 @@ None: this is transport infrastructure with no agent-facing concept.
 - No `ffmpeg` processes remained after the test and measurement runs.
 
 ## Rollout shape
+
+Shipped. All four implementation-order steps are done. Open after landing: a
+spoken Gemini reply in the real app (the worktree route had no Gemini key) and
+an iOS reply check; iOS keeps buffered playback by decision.
 
 Done when:
 - the doctests named above pass, with `pnpm test:changed`, typecheck, and lint

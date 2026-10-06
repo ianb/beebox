@@ -547,7 +547,7 @@ What the measurement changed:
   more audio tokens per second (38 versus 32), so it may bill that much more.
   First audio arrives in about 1.0 s at every length; using that needs a PCM
   player in the client, which is not built
-  ([gemini-tts-streamed-playback](../../../issues/features/2026-10-04-gemini-tts-streamed-playback.md)).
+  ([gemini-tts-streamed-playback](../../../issues/closed/features/2026-10-04-gemini-tts-streamed-playback.md)).
 - **Direct has a low rate limit**: 10 requests a minute on Tier 1. A 429 is
   retried after `Retry-After`, so a busy conversation can stall a clip for
   several seconds; a higher Google tier raises the limit.
