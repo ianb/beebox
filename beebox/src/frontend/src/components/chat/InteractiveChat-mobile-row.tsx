@@ -20,7 +20,7 @@ export function MobileTextareaRow({
   isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend,
-  onPaste, onDrop,
+  onPaste, onDrop, includeControlIds,
 }: {
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
@@ -35,7 +35,10 @@ export function MobileTextareaRow({
   onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+  /** Omit authored addresses when rendered repeatedly in a development gallery. */
+  includeControlIds?: boolean;
 }) {
+  const hasControlIds = includeControlIds !== false;
   const input = useInputValue();
   const setInput = useInputStore().set;
 
@@ -52,7 +55,7 @@ export function MobileTextareaRow({
         // bar's row can be in the DOM at the same time (the bar stays mounted
         // under `hidden sm:block` while typing), so they cannot share one id.
         // Recorded in docs/plans/agent-points-at-ui.md, Track 1.
-        id="bbx-composer-input-mobile"
+        id={hasControlIds ? "bbx-composer-input-mobile" : undefined}
         ref={textareaRef}
         value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
         onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); setInput(e.target.value); } }}
@@ -69,7 +72,7 @@ export function MobileTextareaRow({
       {isTranscribing ? (
         <>
           <button
-            id="bbx-composer-dictation-cancel-mobile"
+            id={hasControlIds ? "bbx-composer-dictation-cancel-mobile" : undefined}
             onClick={handleCancelTranscription}
             className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
             title="Cancel (Esc)"
@@ -79,7 +82,7 @@ export function MobileTextareaRow({
             </svg>
           </button>
           <button
-            id="bbx-composer-dictation-edit-mobile"
+            id={hasControlIds ? "bbx-composer-dictation-edit-mobile" : undefined}
             onClick={() => {
               onStopDictation();
               const text = transcription.transcript;
@@ -103,7 +106,7 @@ export function MobileTextareaRow({
       {/* One send control for both branches, same as the button bar's row —
           see ComposerSendButton. */}
       <ComposerSendButton
-        id="bbx-composer-send-mobile"
+        id={hasControlIds ? "bbx-composer-send-mobile" : undefined}
         size="md"
         onClick={() => {
           routeComposerSend({
