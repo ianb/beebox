@@ -123,28 +123,24 @@ function NameFieldWithSuggestion({
  * The secret value: the format entry lends its prefix as the placeholder and
  * its hint as the helper.
  *
- * A machine credential is not a login, but every password manager reads
- * `type="password"` in a submitting form as one and offers to save it. Chrome
- * ignores `autocomplete="off"` on a password field, so the opt-out is
- * `new-password` plus the managers' own ignore attributes. The field keeps
- * `type="password"` because that is what masks the value while it is typed.
+ * Text semantics keep password managers from treating this as a login; CSS
+ * masks the text while it is typed.
  */
 function ValueField({ id, entry, value, onChange }: { id?: string; entry: FormatHints[number] | null; value: string; onChange: (value: string) => void }) {
   return (
     <TextField
       id={id}
       label="Value"
-      type="password"
+      type="text"
+      inputClassName="bbx-secret-value-mask"
       value={value}
       onChange={onChange}
-      autoComplete="new-password"
-      data-1p-ignore=""
-      data-lpignore="true"
-      data-bwignore="true"
-      data-form-type="other"
+      autoComplete="off"
+      spellCheck={false}
+      autoCapitalize="off"
       required
       placeholder={entry === null || entry.prefix === undefined ? undefined : `${entry.prefix}…`}
-      helper={entry === null ? "Stored in the machine secret store; never shown again." : entry.hint}
+      helper={entry === null ? "Stored in the machine secret store." : entry.hint}
     />
   );
 }
