@@ -13,9 +13,16 @@
  * the box's MAP, grouped by directory; recency ordering belongs to the app
  * bar's switch menu, not here.
  *
+ * A filter field sits above the list ("Find a landmark" in the app bar opens
+ * this page). Empty, it shows the whole hierarchy; with text, the matching
+ * landmarks and their ancestors, in the same indented form
+ * (`filterLandmarks`). It is not focused on arrival, so a phone's keyboard
+ * does not cover the hierarchy.
+ *
  * See docs/landmarks.md.
  */
 
+import { useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc/client";
 import type { RouterOutput } from "../../lib/trpc/client";
@@ -27,6 +34,8 @@ import { StatusMessage } from "../ui/StatusMessage";
 import { Heading } from "../ui/Heading";
 import { LandmarkSection } from "./LandmarkSection";
 import { LandmarkSessions } from "./LandmarkSessions";
+import { TextField } from "../ui/fields/field";
+import { filterLandmarks } from "../../lib/landmark-filter";
 
 type LandmarkRow = RouterOutput["landmarks"]["list"]["landmarks"][number];
 type ChatBucket = RouterOutput["chat"]["byLandmark"]["landmarks"][number];
@@ -63,6 +72,7 @@ export function LandmarksList() {
   const slug = boxSlug ?? "";
   const list = trpc.landmarks.list.useQuery();
   const chats = trpc.chat.byLandmark.useQuery();
+  const [filter, setFilter] = useState("");
 
   if (list.isLoading || chats.isLoading) {
     return <StatusMessage>Loading…</StatusMessage>;
@@ -102,11 +112,23 @@ export function LandmarksList() {
     );
   }
 
+  const filtering = filter.trim() !== "";
+  const shown = filterLandmarks(landmarks, filter);
   return (
     <Stack gap="md">
+      <TextField
+        id="bbx-landmarks-filter"
+        label="Find a landmark"
+        hideLabel
+        type="search"
+        placeholder="Find a landmark"
+        value={filter}
+        onChange={setFilter}
+      />
       {problems.length > 0 ? <LandmarkProblems problems={problems} /> : null}
 
-      {joinByDir(landmarks, buckets).map(({ landmark, bucket }) => (
+      {filtering && shown.length === 0 ? <Text as="p" tone="subtle">No landmarks match.</Text> : null}
+      {joinByDir(shown, buckets).map(({ landmark, bucket }) => (
         <LandmarkSection
           key={landmark.path}
           landmark={landmark}
@@ -121,7 +143,7 @@ export function LandmarksList() {
        * deleted. Last, because it's the leftovers; "New chat" here binds to
        * the root, the one directory that always exists.
        */}
-      {hasUnassigned ? (
+      {hasUnassigned && !filtering ? (
         <Card padding="md" border="subtle" shadow>
           <Stack gap="md">
             <div className="flex items-center gap-3">

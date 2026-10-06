@@ -12,9 +12,10 @@
  * `PortaledMenuScope` around it on the caller's side, or its `MenuItem`s
  * couldn't dismiss the menu.
  *
- * Rows: "Open <dir>/" (only with a context dir), the landmark's links/groups
- * (`LandmarkLinksPanel`, absent when there are none), a divider, and
- * "Recent files ›" leading to the `RecentFilesPanel` sub-panel.
+ * Rows: "Open <dir>/" (only with a context dir), "Search", "Recent files ›"
+ * leading to the `RecentFilesPanel` sub-panel, then the landmark's links and
+ * groups after a divider (`LandmarkLinksPanel`, absent when there are none) — the
+ * folder menu's order in docs/plans/box-screen.md track 3.
  *
  * The panel swap is local state here rather than the `Dropdown`'s
  * `panelIndex`, which lives on the far side of the portal: the rows still
@@ -86,14 +87,13 @@ function RootPanel({
     <>
       {dir !== null ? <OpenDirLink dir={dir} boxSlug={boxSlug} /> : null}
       <MenuItem id="bbx-here-search" onClick={onOpenSearch} keepOpen>Search</MenuItem>
-      <LandmarkLinksPanel contextDir={dir} onPanel={onLandmarkPanel} />
-      <MenuDivider />
       <MenuItem id="bbx-here-recent-files" onClick={onOpenRecentFiles} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Recent files</span>
           <span className="text-warm-500">›</span>
         </span>
       </MenuItem>
+      <LandmarkLinksPanel contextDir={dir} onPanel={onLandmarkPanel} />
     </>
   );
 }
@@ -160,27 +160,4 @@ export const ContextMenuBody = memo(function ContextMenuBody(props: ContextMenuB
     case "recent-files":
       return <RecentFilesSubPanel onBack={() => setPanel("root")} messages={messages} onFilePanel={onFilePanel} />;
   }
-});
-
-/**
- * The Recent-files list alone — the body the chat portals into the switch
- * menu's "Recent files ›" sub-panel (`AppBarRecentFilesSlot`; the back row
- * lives on the bar side, where the panel state is). Memoized with the same
- * stable-props discipline as `ContextMenuBody` above: `messages` changes when
- * a turn lands, not per token, and `onZoomView` is a `[]`-dep callback.
- */
-export const RecentFilesMenuBody = memo(function RecentFilesMenuBody({
-  messages,
-  onZoomView,
-}: {
-  messages: SessionEntry[];
-  onZoomView: OnZoomView;
-}): ReactNode {
-  const onFilePanel: RecentFilesPanelFileHandler = (summary) => {
-    onZoomView({
-      target: { path: summary.path, viewer: null, params: {}, viewState: null },
-      label: summary.title,
-    });
-  };
-  return <RecentFilesPanel entries={messages} onPanel={onFilePanel} />;
 });
