@@ -7,6 +7,7 @@ before any provider lookup or paid call.
 ```ts setup
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { createFakeTts, createTtsService } from "../../../../src/services/tts.js";
+import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 ```
 
 ## Missing opt-in rejects without calling the provider
@@ -57,22 +58,22 @@ JSON.stringify({ status: response.statusCode, contentType: response.headers["con
 await ctx.cleanup();
 ```
 
-## The backend's content type reaches the browser
+## Speech is always MP3, head first
 
-A backend that answers WAV rather than MP3 must not have its bytes labelled
-`audio/mpeg` — the player picks its playback path from this header, and a
-mislabelled body fails in the browser rather than here.
+Both backends answer MP3 — Gemini's PCM is encoded on the way — so the
+browser's streaming player takes every clip. The body is the clip's head
+followed by the rest.
 
 ```ts
-const wavAudio = createFakeTts({ backend: "gemini", contentType: "audio/wav" });
-const wavCtx = await makeTestServer({ services: { openaiAudio: wavAudio } });
-const wavRes = await wavCtx.rawRequest({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
-JSON.stringify({ status: wavRes.statusCode, contentType: wavRes.headers["content-type"], calls: wavAudio.speeches.length })
-=> {"status":200,"contentType":"audio/wav","calls":1}
+const gemAudio = createFakeTts({ backend: "gemini", restChunks: [Buffer.alloc(100, 7)] });
+const gemCtx = await makeTestServer({ services: { openaiAudio: gemAudio } });
+const gemRes = await gemCtx.rawRequest({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
+({ status: gemRes.statusCode, contentType: gemRes.headers["content-type"], bytes: Buffer.byteLength(gemRes.payload, "latin1"), calls: gemAudio.speeches.length })
+=> { status: 200, contentType: "audio/mpeg", bytes: «int», calls: 1 }
 ```
 
 ```ts cleanup
-await wavCtx.cleanup();
+await gemCtx.cleanup();
 ```
 
 ## A too-short body is a 502, not silence
@@ -106,7 +107,7 @@ log gains the cause for everything else.
 const unreachable = {
   backend: "openai" as const,
   stylable: true,
-  textToSpeech: async () => {
+  streamSpeech: async () => {
     throw new TypeError("fetch failed", { cause: new Error("getaddrinfo ENOTFOUND api.openai.com") });
   },
 };
@@ -205,6 +206,81 @@ const blankRes = await blankCtx.request({ method: "POST", url: "/api/chat/tts", 
 await blankCtx.cleanup();
 ```
 
+## A failure after the head breaks the download, and is logged
+
+Once the head is sent, the response is a 200 and cannot become a 502. A
+provider failure after that ends the download with an error, so the browser's
+streaming player fails the segment instead of playing half a sentence as if it
+were whole. The server log names the provider's reason. This needs a real
+socket: `inject` cannot show a broken download.
+
+```ts
+const failing = createFakeTts({ backend: "gemini", failAfterHead: new TypeError("fetch failed", { cause: new Error("socket hang up") }) });
+const failCtx = await makeTestServer({ services: { openaiAudio: failing } });
+await failCtx.server.listen({ port: 0, host: "127.0.0.1" });
+const failAddr = failCtx.server.server.address();
+const failPort = typeof failAddr === "object" && failAddr !== null ? failAddr.port : 0;
+const failLogs: string[] = [];
+const beforeFail = console.error;
+console.error = (...args: unknown[]) => failLogs.push(args.map(String).join(" "));
+const download = await (async () => {
+  try {
+    const res = await fetch(`http://127.0.0.1:${failPort}/test/api/chat/tts`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${getOrCreateAgentToken(failCtx.boxRoot)}`, "content-type": "application/json" },
+      body: JSON.stringify({ text: "Hi." }),
+    });
+    const status = res.status;
+    const outcome = await res.arrayBuffer().then(() => "complete", (e: Error) => `broken (${e.name})`);
+    return { status, outcome };
+  } finally {
+    console.error = beforeFail;
+  }
+})();
+({ ...download, logged: failLogs.some((line) => line.includes("stream failed after") && line.includes("socket hang up")), cancelled: failing.cancels > 0 })
+=> { status: 200, outcome: "broken (TypeError)", logged: true, cancelled: true }
+```
+
+```ts cleanup
+await failCtx.cleanup();
+```
+
+## The browser leaving stops the clip
+
+When the browser stops listening — a stop, a new reply, a closed tab — the
+connection closes with the body unfinished. The route cancels the clip, which
+aborts the provider request and kills any encoder, so no audio is generated
+for nobody. The fake here holds its stream open after the head until the test
+says otherwise.
+
+```ts
+let releaseRest: () => void = () => {};
+const restGate = new Promise<void>((resolve) => { releaseRest = resolve; });
+const slow = createFakeTts({ backend: "gemini", beforeEachRestChunk: () => restGate });
+const slowCtx = await makeTestServer({ services: { openaiAudio: slow } });
+await slowCtx.server.listen({ port: 0, host: "127.0.0.1" });
+const slowAddr = slowCtx.server.server.address();
+const slowPort = typeof slowAddr === "object" && slowAddr !== null ? slowAddr.port : 0;
+const leaving = new AbortController();
+const res = await fetch(`http://127.0.0.1:${slowPort}/test/api/chat/tts`, {
+  method: "POST",
+  headers: { authorization: `Bearer ${getOrCreateAgentToken(slowCtx.boxRoot)}`, "content-type": "application/json" },
+  body: JSON.stringify({ text: "Hi." }),
+  signal: leaving.signal,
+});
+const reader = res.body.getReader();
+const firstRead = await reader.read();
+leaving.abort();
+await eventually(() => slow.cancels === 1, { label: "the route cancels the clip" });
+releaseRest();
+({ status: res.status, gotHead: firstRead.value.length > 0, cancels: slow.cancels })
+=> { status: 200, gotHead: true, cancels: 1 }
+```
+
+```ts cleanup
+await slowCtx.cleanup();
+```
+
 ## A backend that accepts and never finishes is a 502 too
 
 A provider that takes the request and then stalls raises ky's `TimeoutError`,
@@ -218,7 +294,7 @@ const { TimeoutError } = await import("ky");
 const stalled = {
   backend: "gemini" as const,
   stylable: true,
-  textToSpeech: async () => {
+  streamSpeech: async () => {
     throw new TimeoutError(new Request("https://openrouter.ai/api/v1/audio/speech", { method: "POST" }));
   },
 };

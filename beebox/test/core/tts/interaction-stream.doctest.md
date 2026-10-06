@@ -1,12 +1,19 @@
-# Collecting audio from a streamed Gemini answer
+# Reading audio from a streamed Gemini answer
 
-The direct Gemini speech route streams its request and buffers the result,
-because that finishes about a third sooner than the unary call.
-`collectInteractionAudio` (`src/core/tts/interaction-stream.ts`) reads the
-server-sent events and keeps only the audio.
+Gemini speech is always requested as a stream, and each audio chunk goes on to
+the MP3 encoder as it arrives. `interactionAudioChunks`
+(`src/core/tts/interaction-stream.ts`) reads the server-sent events and yields
+only the audio.
 
 ```ts setup
-import { collectInteractionAudio } from "../../../src/core/tts/interaction-stream.js";
+import { interactionAudioChunks } from "../../../src/core/tts/interaction-stream.js";
+
+/** Every chunk the stream yields, joined. */
+async function collectInteractionAudio(body) {
+  const chunks = [];
+  for await (const chunk of interactionAudioChunks(body)) chunks.push(chunk);
+  return Buffer.concat(chunks);
+}
 
 /** A byte stream that delivers `text` in the given pieces, as a network would. */
 function streamOf(...pieces) {
@@ -66,4 +73,23 @@ An event that is not JSON fails the same way.
 ```ts
 await collectInteractionAudio(streamOf(`event: step.delta\ndata: {not json\n\n`))
 => throws InteractionStreamError: Gemini stream failed: unparseable event: «*»
+```
+
+## Stopping early cancels the provider's body
+
+A consumer that stops after the first chunk — the browser left — cancels the
+response body, which closes the connection to the provider.
+
+```ts
+let cancelled = false;
+const encoder = new TextEncoder();
+const open = new ReadableStream({
+  start(controller) { controller.enqueue(encoder.encode(audioEvent([1, 2]))); },
+  cancel() { cancelled = true; },
+});
+const chunks = interactionAudioChunks(open);
+const first = await chunks.next();
+await chunks.return(undefined);
+({ first: [...first.value], cancelled })
+=> { first: [1, 2], cancelled: true }
 ```

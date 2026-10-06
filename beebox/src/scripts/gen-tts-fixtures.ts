@@ -13,7 +13,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createTtsService } from "../services/tts.js";
+import { collectAudio, createTtsService } from "../services/tts.js";
 
 const OUT_DIR = join(import.meta.dirname, "..", "src", "webapp", "test-fixtures", "tts");
 
@@ -34,13 +34,13 @@ async function main(): Promise<void> {
   mkdirSync(OUT_DIR, { recursive: true });
 
   for (const clip of CLIPS) {
-    const result = await audio.textToSpeech(clip.text, {
+    const result = await collectAudio(await audio.streamSpeech(clip.text, {
       voice: "marin",
       instructions: "Calm and clear.",
-    });
+    }));
     const path = join(OUT_DIR, clip.name);
-    writeFileSync(path, result.audio);
-    console.log(`wrote ${path} (${result.audio.length} bytes)`);
+    writeFileSync(path, result);
+    console.log(`wrote ${path} (${String(result.length)} bytes)`);
   }
 }
 
