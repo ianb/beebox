@@ -69,6 +69,9 @@ export class FakeMissingFileError extends Error {
 export function tick(): Promise<void> {
   return new Promise((r) => setImmediate(r));
 }
+/** Wall-time bound for `awaitProbes`; generous, since only a failing test waits it out. */
+const AWAIT_PROBES_MS = 10_000;
+
 export async function ticks(n: number): Promise<void> {
   for (let i = 0; i < n; i++) await tick();
 }
@@ -225,7 +228,9 @@ export interface Harness {
   /** Pending probes created since the last take, cleared out. */
   takePendingProbes(): Deferred[];
   /** Tick the loop until at least `count` probes are pending, then take them.
-   *  (Cold start has several real-fs awaits before it reaches waitForHttp.) */
+   *  Cold start has several real-fs awaits before it reaches waitForHttp, so
+   *  the wait is bounded by wall time, not a tick count: a loaded host's slow
+   *  fs once outran 100 ticks and returned no probes. */
   awaitProbes(count: number): Promise<Deferred[]>;
   /** Names the resolver should treat as unknown (→ 404 from startWorktree). */
   unknownNames: Set<string>;
@@ -332,7 +337,8 @@ export async function makeHarness(options?: { devNoHub?: boolean }): Promise<Har
       return out;
     },
     awaitProbes: async (count) => {
-      for (let i = 0; i < 100 && pendingProbes.length < count; i++) await tick();
+      const deadline = Date.now() + AWAIT_PROBES_MS;
+      while (pendingProbes.length < count && Date.now() < deadline) await tick();
       const out = pendingProbes;
       pendingProbes = [];
       return out;
