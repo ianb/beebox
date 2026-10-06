@@ -64,14 +64,15 @@ export function UserMessageText({ text, attachedFileIds }: { text: string; attac
   const stripped = stripUserDisplayTags(text, { attachedFileIds });
 
   const parts: MessagePart[] = [];
-  // Pills: <send-message phrase="…"/> / <send-close-message phrase="…"/> (voice
-  // keyword — plain send and the "send and close" sign-off render the same pill),
+  // Pills: <send-message phrase="…"/> / <send-close-message phrase="…"/> /
+  // <send-checkpoint-message phrase="…"/> (voice keyword — every send variant
+  // renders the same pill),
   // <user-selection ref="…" pos="…">quoted text</user-selection> (attached
   // document text), and <unsure>word</unsure> (a low-confidence dictated word,
   // Track 4 of docs/plans/transcript-confidence.md — see message-parsing.ts's
   // stripUserDisplayTags for why the wrapper survives that generic strip: only
   // the <speech>/<typed> shell tags are stripped there, not inner markers).
-  const tagRe = /<send(?:-close)?-message\s+phrase="([^"]*?)"\s*\/>|<user-selection\b([^>]*)>([\S\s]*?)<\/user-selection>|<unsure>([\S\s]*?)<\/unsure>/gi;
+  const tagRe = /<send(?:-close|-checkpoint)?-message\s+phrase="([^"]*?)"\s*\/>|<user-selection\b([^>]*)>([\S\s]*?)<\/user-selection>|<unsure>([\S\s]*?)<\/unsure>/gi;
   let lastIndex = 0;
   let match;
   while ((match = tagRe.exec(stripped)) !== null) {

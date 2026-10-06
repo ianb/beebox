@@ -2817,6 +2817,41 @@ tests:
       bothering the user with both versions.
     max_turns: 15
 
+  # === Voice send variants: checkpoint and sign-off tags ===
+  #
+  # The chat prompt's "messages you receive" section says a message ending in
+  # <send-checkpoint-message …/> is partial: no <speech>, no questions, a
+  # no-response ack or quiet work, and the next message continues it.
+  #
+  # Status (2026-10-06): 2/2 pass on the worktree box, and the six narration
+  # audits still pass after the overlay trim that kept the prompt in budget.
+  # The close tag is documented only in narration-mode.md; the agent finds it
+  # there or reads it as a normal finished message, which is correct.
+
+  - id: checkpoint-partial-stays-quiet
+    prompt: |
+      <chat-app narration="off" prose="on" time="2026-10-06T10:00:00Z"/>
+      <speech>Okay so for the Portland trip next month, the budget is around two thousand, and I want to figure out where we stay. <send-checkpoint-message phrase="send checkpoint" /></speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Treats the message as partial: no <speech> reply, no questions or suggestions about lodging. Emits <ack kind=\"no-response\"/> (or a bare ack for quiet capture). Does not answer as if the request were complete."
+    correct_contains_any: ["no-response", "<ack"]
+    response_not_contains: ["<speech>", "?"]
+    should_not_read: []
+    tags: [chat, voice, checkpoint]
+    notes: >
+      Voice-in normally implies voice-out; the checkpoint tag overrides that.
+      Failure mode: a spoken lodging recommendation that talks over a user
+      who is still dictating.
+
+  - id: checkpoint-tag-meanings
+    prompt: "Some of my voice messages end with <send-checkpoint-message phrase=\"send checkpoint\" /> and others with <send-close-message phrase=\"over and out\" />. What does each mean for how you reply, including to the message after a checkpoint?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Checkpoint: partial message, the user is still talking — stay quiet (no speech, no questions), and read the next message as the continuation; reply fully when a message arrives without the tag. Close: the user is done and the mic is closed — a normal full reply."
+    correct_contains_any: ["partial", "still talking", "continu"]
+    tags: [chat, voice, checkpoint]
+
   - id: ack-no-response
     prompt: |
       <chat-app narration="on" prose="off" time="2026-05-14T10:00:00Z"/>

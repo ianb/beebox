@@ -52,13 +52,15 @@ export const recordingStop = new EarCon({ name: "recordingStop", filename: "reco
 export const recordingError = new EarCon({ name: "recordingError", filename: "recording-error.wav", volume: 0.7 });
 // Source: https://freesound.org/people/SoapBoxRocket/sounds/846141/ — see SOURCES.md
 export const alarm = new EarCon({ name: "alarm", filename: "krell-alarm-7.wav", volume: 0.8 });
-// Mid-session recording feedback. recordingDropped fires the moment the
-// transport's liveness check fails (network stalled mid-recording);
-// recordingResumed fires when a transparent reconnect succeeds. The drop cue
-// is deliberately alarm-like and distinct from recordingStart so the user can
-// tell "recording broke" from "recording started" without looking. Resume
-// reuses the familiar go-live cue ("you're recording again"). These point at
-// existing assets for now; bespoke audio can be dropped in without touching
-// call sites. Coordinate the file choices with the sibling fail-to-start cue.
-export const recordingDropped = new EarCon({ name: "recordingDropped", filename: "krell-alarm-7.wav", volume: 0.7 });
+// Mid-session recording feedback, split by consequence. micLost fires when
+// the microphone is gone: no audio is recorded, and the segment ends unless it
+// returns, so it is the one urgent cue. liveTextPaused fires when live text
+// has been down a couple of seconds while the recording continues — only
+// spoken keywords are lost, so it is quiet, and liveTextResumed (its mirror)
+// marks the return. recordingResumed reuses the go-live cue for "the mic is
+// back". mic-lost.wav and the live-text pair are authored here (SOURCES.md);
+// iOS plays the same mic-lost.wav for an audio-session interruption.
+export const micLost = new EarCon({ name: "micLost", filename: "mic-lost.wav", volume: 0.5 });
 export const recordingResumed = new EarCon({ name: "recordingResumed", filename: "recording-start.mp3", volume: 0.7 });
+export const liveTextPaused = new EarCon({ name: "liveTextPaused", filename: "live-text-paused.wav", volume: 0.3 });
+export const liveTextResumed = new EarCon({ name: "liveTextResumed", filename: "live-text-resumed.wav", volume: 0.3 });

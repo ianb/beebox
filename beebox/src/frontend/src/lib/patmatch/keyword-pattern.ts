@@ -104,14 +104,21 @@ export class KeywordPattern {
     const words = tokenizeInput(input);
     for (let i = 0; i < words.length; i++) {
       const rest = words.slice(i);
+      // The longest phrase at the earliest position wins, whatever the
+      // pattern's line order: "send and close the mic" must not capture just
+      // "send and close" and leave "the mic" in the message. The iOS port
+      // (SpeechKeywords.swift) picks the same way.
       const matchResults = this.matcher.match(rest);
-      const firstResult = matchResults[0];
-      if (firstResult !== undefined) {
+      let best: (typeof matchResults)[number] | undefined;
+      for (const result of matchResults) {
+        if (best === undefined || result.captured.length > best.captured.length) best = result;
+      }
+      if (best !== undefined) {
         return new InputMatch({
           leading: words.slice(0, i),
-          captured: firstResult.captured,
-          remaining: firstResult.remaining,
-          tags: firstResult.tags,
+          captured: best.captured,
+          remaining: best.remaining,
+          tags: best.tags,
         });
       }
     }

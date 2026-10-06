@@ -296,7 +296,7 @@ final class NativeEarconStateTests: XCTestCase {
         XCTAssertEqual(NativeEarcon.recordingStart.resource, .init(filename: "recording-start.mp3", volume: 0.7))
         XCTAssertEqual(NativeEarcon.recordingStop.resource, .init(filename: "recording-stop.mp3", volume: 0.7))
         XCTAssertEqual(NativeEarcon.recordingError.resource, .init(filename: "recording-error.wav", volume: 0.7))
-        XCTAssertEqual(NativeEarcon.recordingDropped.resource, .init(filename: "krell-alarm-7.wav", volume: 0.7))
+        XCTAssertEqual(NativeEarcon.recordingDropped.resource, .init(filename: "mic-lost.wav", volume: 0.5))
     }
 
     func testAppBundleContainsEveryEarconResource() throws {

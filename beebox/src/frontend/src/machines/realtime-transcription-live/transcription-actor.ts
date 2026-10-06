@@ -227,6 +227,7 @@ class TranscriptionSession {
       if (ws.bufferedAmount === 0) {
         this.lastDrainedAt = performance.now();
       } else if (performance.now() - this.lastDrainedAt > STALL_TIMEOUT_MS) {
+        console.warn(`[realtime-transcription] socket stalled mid-recording (bufferedAmount=${ws.bufferedAmount}) — reconnecting`);
         this.dropLink();
       }
     }, WATCHDOG_INTERVAL_MS);

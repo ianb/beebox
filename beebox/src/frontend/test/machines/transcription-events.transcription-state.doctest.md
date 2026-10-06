@@ -44,7 +44,7 @@ const quiet = () => {};
 const actor = createActor(
   realtimeTranscriptionMachine.provide({
     actors: { transcriptionActor: fake },
-    actions: { playRecordingDropped: quiet, playRecordingResumed: quiet, playMicOffSound: quiet, playStartFailedSound: quiet },
+    actions: { playMicLost: quiet, playRecordingResumed: quiet, playLiveTextPaused: quiet, playLiveTextResumed: quiet, playMicOffSound: quiet, playStartFailedSound: quiet },
   }),
 );
 actor.start();

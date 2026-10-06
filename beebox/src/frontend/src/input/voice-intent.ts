@@ -21,7 +21,7 @@ import type { HqWaitOutcome } from "../lib/audio/hq-wait";
 import type { SelectionItem } from "../lib/selection/serialize";
 import type { FinalWord } from "../machines/transcription-events";
 import { joinTranscript, spokenTextStart } from "../components/chat/InteractiveChat-helpers";
-import { appendSendKeywordTag, detectKeyword } from "../lib/audio/speech-keywords";
+import { appendSendKeywordTag, detectKeyword, sendKeywordIn, type SendKeywordAction } from "../lib/audio/speech-keywords";
 import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
 import { resolveEmissionWords } from "./unsure-words/mark";
 
@@ -109,7 +109,7 @@ export const UNTRANSCRIBED_PLACEHOLDER = "[recording not transcribed]";
 
 /** The send keyword a voice message ended with, re-applied to its HQ text. */
 export interface VoiceSendKeyword {
-  action: "send" | "sendClose";
+  action: SendKeywordAction;
   matchedPhrase: string;
 }
 
@@ -121,7 +121,11 @@ export interface VoiceSendKeyword {
  */
 export function sendKeywordOf(intent: Extract<VoiceIntent, { kind: "submit" }>): VoiceSendKeyword | null {
   if (intent.matchedPhrase === "") return null;
-  return { action: intent.closeMic ? "sendClose" : "send", matchedPhrase: intent.matchedPhrase };
+  // The variant is read from the tag the keyword put in the text, the one
+  // record of which send was spoken (closeMic alone can't tell a checkpoint
+  // from a plain send).
+  const tagged = sendKeywordIn(intent.text);
+  return { action: tagged?.action ?? (intent.closeMic ? "sendClose" : "send"), matchedPhrase: intent.matchedPhrase };
 }
 
 /**
