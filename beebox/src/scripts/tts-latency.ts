@@ -4,8 +4,9 @@
  * Runs the deployed path in-process against a test box: `resolveTtsService`
  * (config + secret resolution) and the real service, whose HTTP calls pass
  * through a timing `fetch` (the service's test seam). For each call it records
- * key resolution, provider response headers, first audio bytes, total, retries
- * (any second fetch is a ky retry, e.g. a 429), and payload size. A last
+ * key resolution, provider response headers, the provider's first audio bytes,
+ * the head (when the route would start sending, `streamSpeech` resolving),
+ * total, retries (any second fetch is a ky retry, e.g. a 429), and payload size. A last
  * scenario sends a reply's three segments at once, as the chat client's
  * prefetch does.
  *
@@ -27,7 +28,7 @@ import { getGeminiApiKey } from "../core/gemini-key.js";
 import { getOpenAiThinkingKey } from "../core/openai-thinking-key.js";
 import { loadTtsConfig, updateTtsConfig } from "../core/tts/config.js";
 import { resolveTtsService } from "../core/tts/resolve.js";
-import { createTtsService } from "../services/tts.js";
+import { collectAudio, createTtsService } from "../services/tts.js";
 import { invariant } from "../shared/invariant.js";
 import type { TtsBackend } from "../shared/tts-backends.js";
 
@@ -51,6 +52,7 @@ interface CallTiming {
   resolveMs: number;
   headersMs: number;
   firstAudioMs: number;
+  headMs: number;
   totalMs: number;
   fetches: number;
   bytes: number;
@@ -105,16 +107,19 @@ async function timeCall(
   const apiKey = backend === "gemini" && geminiKey !== undefined ? geminiKey : await keyOf(resolved, boxRoot);
   const { fetch: timed, marks } = timingFetch(t0, backend === "gemini" ? "step.delta" : null);
   const service = createTtsService({ backend, apiKey, fetch: timed });
-  const out = await service.textToSpeech(TEXTS[textId] ?? "", { voice: VOICE, instructions: INSTRUCTIONS });
+  const stream = await service.streamSpeech(TEXTS[textId] ?? "", { voice: VOICE, instructions: INSTRUCTIONS });
+  const headMs = performance.now() - t0;
+  const audio = await collectAudio(stream);
   return {
     backend,
     text: textId,
     resolveMs,
     headersMs: marks.headersMs,
     firstAudioMs: marks.firstAudioMs,
+    headMs,
     totalMs: performance.now() - t0,
     fetches: marks.fetches,
-    bytes: out.audio.length,
+    bytes: audio.length,
   };
 }
 
@@ -189,14 +194,14 @@ async function main(): Promise<void> {
     await updateTtsConfig(boxRoot, { backend: original });
   }
 
-  console.log("| backend | segment | resolve | headers | first audio | total | retries | bytes |");
-  console.log("|---|---|---|---|---|---|---|---|");
+  console.log("| backend | segment | resolve | headers | first audio | head | total | retries | bytes |");
+  console.log("|---|---|---|---|---|---|---|---|---|");
   for (const backend of ["openai", "gemini"] as const) {
     for (const textId of Object.keys(TEXTS)) {
       const rows = calls.filter((c) => c.backend === backend && c.text === textId);
       const pick = (f: (c: CallTiming) => number): string => sec(median(rows.map(f)));
       const retries = rows.reduce((n, c) => n + c.fetches - 1, 0);
-      console.log(`| ${backend} | ${textId} | ${pick((c) => c.resolveMs)} | ${pick((c) => c.headersMs)} | ${pick((c) => c.firstAudioMs)} | ${pick((c) => c.totalMs)} | ${String(retries)} | ${String(median(rows.map((c) => c.bytes)))} |`);
+      console.log(`| ${backend} | ${textId} | ${pick((c) => c.resolveMs)} | ${pick((c) => c.headersMs)} | ${pick((c) => c.firstAudioMs)} | ${pick((c) => c.headMs)} | ${pick((c) => c.totalMs)} | ${String(retries)} | ${String(median(rows.map((c) => c.bytes)))} |`);
     }
   }
   for (const backend of ["openai", "gemini"] as const) {
