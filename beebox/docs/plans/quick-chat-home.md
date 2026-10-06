@@ -15,7 +15,7 @@ Today the iOS app loads the full web chat and the last conversation first. Quick
 
 ## Smallest fix and budget
 
-**BIG CHANGE.** The estimate is about 2,900 changed lines. The boxholder must approve this size before implementation.
+**BIG CHANGE.** The estimate is about 3,150 changed lines. The boxholder must approve this size before implementation.
 
 The smallest fix for the reported problem is a native screen with a text field that posts to the existing `quickChat.prepare` and then sends from native code. It fails on the reported recovery defects: the two-step send still loses the message when the caller stops between steps, and a routing failure still sends nothing.
 
@@ -25,7 +25,7 @@ The chosen design has three tracks.
 |---|---|---|---|
 | 1. Server: one submit operation, disposition policy, records | 450 | 400 | includes extracting the send-route body |
 | 2. Web: Quick chat page on the new operation | 250 | 100 | deletes the client-side send and the draft staging |
-| 3. iOS: Home screen, outbox, launch rule, Home button | 1,100 | 350 | replaces the Quick chat sheet |
+| 3. iOS: Home screen, outbox, launch rule, Home button | 1,300 | 400 | replaces the Quick chat sheet |
 | Authored docs | 250 | | quick-chat.md, mobile-contract.md, ios-app/CLAUDE.md, security report |
 
 What the size buys: a thought is stored by the server in one request; every caller (web, Home, later Siri and the share sheet) gets the same routing and the same recovery; the phone shows a composer before any web content loads.
@@ -37,7 +37,7 @@ What the size buys: a thought is stored by the server in one request; every call
 - The boxholder, 2026-10-06: "if you had the app open recently, and everything is loaded/cached, then it would show the last conversation. But if not then you get this screen. Also you should be able to get back to this screen."
 - The boxholder, 2026-10-06: "I'm slightly concerned it's too complicated for the one-box situation." With one box the Boxes section is absent. With nothing unfinished the Needs you section is absent.
 - This reverses two lines of `beebox/docs/plans/chat-routing.md`: "There is no ask-me outcome" and "Automatic iOS cold-start heuristics: explicit button is the first version". Both were choices for an evaluation surface that the boxholder has now evaluated.
-- `ios-app/CLAUDE.md:160`: "Native must submit an `Emission` to the visible web session; it must not call chat-send APIs behind the webview." Home has no visible web session. The plan amends the rule to name the exception: a quick chat submission from a screen with no web chat mounted. Precedent: the share extension already posts to `chat/send` in exact mode (`beebox/docs/mobile-contract.md:1284`, row S3).
+- `ios-app/CLAUDE.md:160`: "Native must submit an `Emission` to the visible web session; it must not call chat-send APIs behind the webview." Home has no visible web session. The plan amends the rule to name the exception: a quick chat submission from a screen with no web chat mounted. Narrow precedent: the share extension already calls the box from native code with the device token, and posts to `chat/send` for a chat the person picked (`beebox/docs/mobile-contract.md:1284`, row S3). It is precedent for native HTTP and auth. It is not precedent for server routing, a new-chat reservation, or an outbox; those are new in this plan.
 - Principle 4, "Resilient AND never silent". A routing failure today ends with "Your message has not been sent." The new operation stores the thought and asks.
 - Principle 8, "One way to do each thing". Delivery reuses the send route's own body. It does not add a third delivery implementation beside the route and `deliverUserMessage`.
 - Principle 13, "A control shows the state the system is in". Home shows stored-not-sent, sending, sent, and not-delivered as different faces.
@@ -145,9 +145,20 @@ export function routingDisposition(args: {
 
 It sums the probabilities of the candidates in the same place as `selected` (same `landmark.path`, or the root when neither has a landmark). It returns `post` when that sum is at least `postFloor`, default 0.9. Against the ten samples above this posts seven and asks three ("passport", "Dana", "ok"). The floor is provisional and is one named constant.
 
-**Delivery.** Extract the body of the `POST /api/chat/send` handler, from sender attribution through the queued-or-started reply, into `sendUserMessage(deps, { target, message, messageId, user, channel, images, cardFields })` beside the route. The route calls it with the values it already computes. `quickChat` calls it with `messageId = record.id`, the caller's identity (`ctx.user`, which a paired device fills from `createdBy`), and the channel the caller reports (the share extension already sends `channel:"ios-native"`, `mobile-contract.md:1284`). A `CHAT_SESSION_UNAVAILABLE` result moves the record to `needs-choice` with `reason: "destination-gone"`. Any other failure leaves it `sending` with `lastError`.
+**Delivery.** Extract the body of the `POST /api/chat/send` handler, from sender attribution through the queued-or-started outcome, into a factory beside the route:
 
-**Record storage.** Records in `needs-choice` or `sending` live in `.beebox/quick-chat/open/<id>.json`. A record moves to `.beebox/quick-chat/<id>.json` when it becomes `sent` or `discarded`. `home` lists the `open/` directory, so its cost does not grow with history, and an unfinished message never ages out of view. `recentlySent` is the records sent in the last 24 hours, found by file time, at most five. Existing records have no `state`; the reader treats a record with a `receipt` as `sent` and one without as `sending`.
+```ts
+createUserMessageSender(deps: {
+  boxRoot; eventBus; registry; scheduleManager; wireSession;
+  processedMessageIds: Map<string, number>; inFlightSends: InFlightSends;
+}): (args: { target; message; messageId?; user: SessionUser | null; channel; images?; cardFields? }) => Promise<SendOutcome>
+```
+
+The route's state is route-local today: `send-routes.ts:57` reads `processedMessageIds` from `ChatRoutesContext` and line 60 creates `inFlightSends` inside `registerChatSendRoutes`. The tRPC context has neither. So `routes/chat/register.ts` creates the sender once, next to `setChatRuntime(boxRoot, {` (line 202), passes it to `registerChatSendRoutes`, and adds it to `ChatRuntime` (`webapp/chat-runtime.ts:17`) as `sendUserMessage`. The route and `quickChat` then share one dedup map and one in-flight table. The route keeps what belongs to HTTP: body parsing, image validation, target resolution with its reply codes, and identity from the request. `quickChat` reaches the sender through `getChatRuntime(ctx.boxRoot)`, as it reaches the registry today, and calls it with `messageId = record.id`, the caller's identity (`ctx.user`, which a paired device fills from `createdBy`), and the channel the caller reports (the share extension already sends `channel:"ios-native"`, `mobile-contract.md:1284`). A `CHAT_SESSION_UNAVAILABLE` result moves the record to `needs-choice` with `reason: "destination-gone"`. Any other failure leaves it `sending` with `lastError`.
+
+A duplicate answer carries no outcome. `send-dedup.ts:158` answers a durable duplicate with `{ deduplicated: true }` only: no turn id, no queued flag, no assigned session. So the record must hold the destination before delivery starts. The `sending` record stores the destination label and the session id when one exists (an existing chat, or a reserved id). When a repeated delivery is answered as a duplicate, the record becomes `sent` with that stored destination and without `queued`. A new chat on a non-Claude engine has no stored session id; its row offers "All chats".
+
+**Record storage.** Records in `needs-choice` or `sending` live in `.beebox/quick-chat/open/<id>.json`. A record moves to `.beebox/quick-chat/<id>.json` when it becomes `sent` or `discarded`. `home` lists the `open/` directory, so its cost does not grow with history, and an unfinished message never ages out of view. The lock path does not move with the record: every procedure locks `.beebox/quick-chat/<id>.json.lock`, whatever the state. The record gains `sentAt` and `discardedAt`. `recentlySent` is the records whose `sentAt` is in the last 24 hours, at most five; `home` finds them by reading the newest closed records by file time and filtering on `sentAt`. Existing records have no `state`; the reader treats a record with a `receipt` as `sent` and one without as `sending`.
 
 **Vocabulary lock-ins.** The four state names, the three reasons, the procedure names, and the `open/` directory.
 
@@ -178,10 +189,11 @@ The percentages, the "Jev's top choices" block, the staged-text correction links
 **Direction.**
 
 - **Root state.** `RootView` gains `surface: .home | .chat(sessionID: String?)`. `ChatWebView` is constructed only for `.chat`. The native composer below it stays as it is for `.chat`.
-- **Launch rule.** A cold launch starts on `.home`. On return to the foreground, the app goes to `.home` when it was in the background for 30 minutes or more, or when the web content process ended while in the background (`webViewWebContentProcessDidTerminate`, `ChatWebView.swift:491`). Otherwise it stays on the chat it was showing. A notification tap goes to its target chat directly (`openNotificationTap`, `RootView.swift:251`). The app records the background time in memory; a killed app is a cold launch.
+- **Launch rule.** A cold launch starts on `.home`. On return to the foreground, the app goes to `.home` when it was in the background for 30 minutes or more, or when the web content process ended while in the background (`webViewWebContentProcessDidTerminate`, `ChatWebView.swift:491`). Otherwise it stays on the chat it was showing. A notification tap goes to its target chat directly (`openNotificationTap`, `RootView.swift:251`); it sets `.chat` before it sets `navigationRequest`, because `ChatWebView` must exist to consume the request. The app records the background time in memory; a killed app is a cold launch. `ChatWebView` reloads itself when its content process ends and tells nobody (`ChatWebView.swift:491`), so it gains an `onWebContentTerminated` callback that `RootView` records for the rule.
+- **Pending chat messages come first.** Messages already sent from the chat composer wait in `PendingEmissionStore` and are delivered only through a mounted `ChatWebView` (`RootView.swift:306` passes `pendingEmissions: pendingEmissionStore.deliveries`). If the selected box has pending emissions, the app opens on `.chat` for their conversation, whatever the other inputs say. Home never hides an undelivered chat message.
 - **Home content, top to bottom.** "Needs you": outbox entries not yet accepted, then the server's `open` list. Then `recentlySent` rows for this app session's submissions. Then "Pick up where you left off": `recentChats`, the first one styled as the primary action, and "All chats", which opens the web chat list. Then "Boxes", only with two or more paired boxes. The composer is pinned at the bottom with the line "New thought. The box picks the conversation."
 - **Loading.** Home draws at once from the outbox and a cached copy of the last `home` answer for the box, then refreshes. The composer does not wait for the refresh.
-- **Composer seam.** `NativeComposerView` gains `submitTarget: .conversation | .quickChat((String) -> Void)`. For `.quickChat`, `enqueueMessage` calls the closure with the final text and clears the draft. Home hosts it with `requiresConversationBinding: false` and `captureAvailable: false`. The "+" button, the screenshot action, location sharing, and spoken send keywords are hidden for `.quickChat`. Dictation works as in chat. High-quality transcription uses the last value of the box's setting that the web chat reported; the app stores that value per box.
+- **Composer seam.** `NativeComposerView` gains `submitTarget: .conversation | .quickChat((String) -> Void)`. This is more than one call site. The composer reaches `pendingStore.enqueue(...)` from `enqueueMessage` (line 1006) and from a second site near line 825 that captures its own binding, and the binding guard "Choose a conversation before sending." appears at lines 723, 772, 827, 903, 1015, and 1274. The change routes every send through one private function that switches on `submitTarget`. For `.quickChat` it calls the closure with the final text and clears the draft; it never touches `PendingEmissionStore` and never checks a binding. Home hosts the composer with `captureAvailable: false`. For `.quickChat` the composer hides the "+" button, the screenshot action, and location sharing, and turns off spoken send keywords and high-quality transcription. Dictation on Home is on-device (`SpeechDictation`) and fills the text field; the person sends with the Send button.
 - **Outbox.** `QuickChatOutbox` persists `{id, boxID, text, createdAt, attempts, lastAttemptAt}` in the app's repository. Submitting from Home adds an entry and starts `submit`. Success removes the entry and shows the returned view. A network failure keeps the entry; the app retries with backoff while it is in the foreground and once on each launch. After 7 days without success the entry stops retrying and shows "Not sent" with Retry and Discard. The 7 days matches the server's message-id retention, so a late retry cannot post twice.
 - **Result rows.** The same three faces as the web page. Choosing a destination calls `choose`. "Open chat" switches to `.chat(sessionID)`.
 - **Home button.** The bar above the chat composer shows "Home" where "Quick chat" was. `QuickChatSheet`, `showingQuickChat`, and `ChatWebView`'s `.quickChat` page are removed.
@@ -191,7 +203,7 @@ The percentages, the "Jev's top choices" block, the staged-text correction links
 
 **Vocabulary lock-ins.** `surface`, `submitTarget`, `QuickChatOutbox`, `HomeView`.
 
-**First implementation chunk.** The launch rule as a pure function `initialSurface(coldLaunch:, backgroundedFor:, webContentAlive:, notificationTap:)` with XCTest cases for each input. Then `QuickChatOutbox` with tests for add, accept, network failure, the 7-day stop, and restart.
+**First implementation chunk.** The launch rule as a pure function `initialSurface(coldLaunch:, backgroundedFor:, webContentAlive:, notificationTap:, hasPendingEmissions:)` with XCTest cases for each input. Then `QuickChatOutbox` with tests for add, accept, network failure, the 7-day stop, and restart.
 
 ## Could this be simpler?
 
@@ -214,7 +226,8 @@ None.
 | Jev key missing, timeout, or malformed answer | Planned router doctest with the fake service | Record stored as `needs-choice`, `routing-unavailable` | Clear |
 | Catalog cannot be built (invalid rubric, more than 255 candidates) | Planned router doctest | Stored as `needs-choice` with "New general chat" only | Clear |
 | Server stops after writing `sending` and before delivery | Planned router doctest that re-submits the id | Record stays in `open/`; Home shows "Not delivered"; a repeat `submit` or Retry delivers | Clear |
-| Server stops after delivery and before writing `sent` | Planned doctest: second delivery with the same message id | The message-id claim answers the second attempt as a duplicate; the record becomes `sent` | Clear |
+| Server stops after delivery and before writing `sent` | Planned doctest: second delivery with the same message id | The message-id claim answers the second attempt as a duplicate; the record becomes `sent` with the destination it stored before delivery. Whether the message was queued is not recovered | Clear |
+| App opens on Home while a chat message is still undelivered | Planned launch-rule XCTest | Pending emissions force `.chat` | Clear |
 | Chosen chat deleted between routing and delivery | Planned router doctest | `needs-choice`, `destination-gone` | Clear |
 | Chosen chat is busy | Existing send-route queue test; planned view test | `sent` with `queued`; the row says "Queued in" | Clear |
 | Server restarts while the message waits in a busy chat's queue | No | No. The queue is memory only (`run/core.ts:61`: `private messageQueue: ChatSendInput[] = []`) | The record says `sent`; the agent may never run it. Existing behavior of every queued send. Documented risk, see NOT in scope |
@@ -250,6 +263,7 @@ No critical gap: every new codepath has a planned test and a visible state. The 
 - Calibrating the post floor: needs real records. The constant is provisional.
 - Making the busy-chat queue survive a restart: a property of every chat send, not of this plan.
 - Preloading the last chat's web view behind Home.
+- High-quality transcription on Home: `ChatAPI.transcribeAudio` resolves a chat session first (`ChatAPI.swift:110`), and the setting is reported by the web chat. Home uses on-device dictation.
 - The web box selector page as Home: the Quick chat page is the web Home. The selector keeps its link.
 - Telegram, jobs, and inbox destinations: unchanged from `chat-routing.md`.
 
@@ -259,6 +273,7 @@ No critical gap: every new codepath has a planned test and a visible state. The 
 - **A hold before a confident post.** A few seconds with a Change button would let the person stop a wrong post. The boxholder's words were "directly post if it's high confidence". Lean: no hold in this version.
 - **An unplaced thought nobody returns to.** It stays in "Needs you" with no time limit. Lean: keep it; add a notification when the target type exists.
 - **The post floor.** 0.9 from ten synthetic samples. Lean: ship it, then review real records after two weeks of use.
+- **One landing or two.** Tracks 1 and 2 fix the broken web behavior and prove the server contract with about 1,200 lines. Track 3 holds most of the risk: the composer seam, the outbox, and the launch rule. The cross-model reviewer recommends approving tracks 1 and 2 first. Lean: approve the whole plan, build in the listed order, and let the boxholder land tracks 1 and 2 early if track 3 runs long. The reported problem is the phone.
 - **Preloading the last chat.** It would make the "last chat" tap faster and costs a web load on every cold launch. Lean: no, until the tap feels slow.
 
 ## Knowledge audits
@@ -269,7 +284,7 @@ The agent-facing concept is unchanged: the rubric in `_config/chat-routing.yaml`
 
 - Pure doctests: `routingDisposition`, the record reader, the web page reducer.
 - Router doctests with the fake Jev service (`createFakeJev`, `jev.ts:135`) and the caller pattern in `test/webapp/trpc/routers/quick-chat.doctest.md`: every row of the failure table that names one.
-- Send-route doctests, unchanged, prove the extraction kept the route's behavior.
+- Send-route doctests, unchanged, cover the route after the extraction. They do not cover the shared state, so one new doctest sends the same message id through `POST /api/chat/send` and through `quickChat.submit` against one runtime, in both orders, and expects one chat message.
 - Mobile-contract fixtures for the four procedures, parsed by both the Swift and TypeScript sides.
 - XCTest: `initialSurface`, `QuickChatOutbox`, `QuickChatAPI` request shapes.
 - A DEBUG `--home-fixture=<state>` launch argument, in the pattern of `--composer-fixture=`, for simulator screenshots of each Home face.
