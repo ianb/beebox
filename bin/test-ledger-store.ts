@@ -18,6 +18,7 @@ import {
   classifyFailure,
   hashFileset,
   ledgerPaths,
+  packageRelative,
   parseTapFiles,
   type LedgerRecord,
 } from "./test-ledger-lib.js";
@@ -111,7 +112,7 @@ export function recordRun(input: {
   const accounted = input.graph === null ? null : input.graph.accounted;
 
   const ranFiles = results.map((r) => r.file);
-  const implicatedFiles = implicated === null ? [] : [...implicated].map(stripPackagePrefix);
+  const implicatedFiles = implicated === null ? [] : [...implicated].map(packageRelative);
   const implicatedForClass = implicated === null ? null : new Set(implicatedFiles);
 
   const record: LedgerRecord = {
@@ -164,10 +165,6 @@ export function appendLedgerRecord(input: {
   appendFileSync(paths.ledger, `${JSON.stringify(input.record)}\n`);
 }
 
-/** Graph paths are repo-relative; TAP names them relative to beebox. */
-function stripPackagePrefix(path: string): string {
-  return path.startsWith("beebox/") ? path.slice("beebox/".length) : path;
-}
 
 export async function computeGraph(changed: string[]): Promise<GraphView | null> {
   try {

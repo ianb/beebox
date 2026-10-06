@@ -40,3 +40,17 @@ test("an unresolved entrypoint is reachable by any in-scope change", () => {
 test("a baseline run keeps every new red visible as unattributed", () => {
   assert.deepEqual(unbisectedFiles({ real: ["test/a.test.ts"], bisectable: [] }), ["test/a.test.ts"]);
 });
+
+test("a failing file named the way tap reports it maps back to its graph path", () => {
+  // TAP reports `src/frontend/test/...` relative to beebox and a root doctest
+  // as `../bin/test/...`; the graph keys are repo-relative.
+  const g = graph();
+  g.tests.set("beebox/src/frontend/test/f.doctest.md", new Set(["beebox/src/frontend/x.ts"]));
+  g.tests.set("bin/test/b.doctest.md", new Set(["beebox/src/a.ts"]));
+  const frontend = (changed: string[]): boolean =>
+    landingReachesFile({ graph: g, spawnEdges: new Map(), cliBundleInputs: new Set(), changed, file: "src/frontend/test/f.doctest.md" });
+  assert.equal(frontend(["beebox/src/frontend/x.ts"]), true);
+  assert.equal(frontend(["beebox/src/a.ts"]), false);
+  const root = landingReachesFile({ graph: g, spawnEdges: new Map(), cliBundleInputs: new Set(), changed: ["beebox/src/a.ts"], file: "../bin/test/b.doctest.md" });
+  assert.equal(root, true);
+});

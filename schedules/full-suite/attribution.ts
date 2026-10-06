@@ -1,5 +1,6 @@
 import type { TestGraph } from "../../bin/test-graph-query.js";
 import { scopedChanges } from "../../bin/test-graph-query.js";
+import { repoRelative } from "../../bin/test-ledger-lib.js";
 import { selectTests } from "../../bin/test-select-lib.js";
 import type { Landing } from "./lib.js";
 
@@ -40,7 +41,7 @@ export function landingReachesFile(input: {
     spawnEdges: input.spawnEdges,
     cliBundleInputs: input.cliBundleInputs,
   });
-  return selection.selected.includes(`beebox/${input.file}`);
+  return selection.selected.includes(repoRelative(input.file));
 }
 
 /** Real failures that were not selected for bisect remain visible in the alert. */
