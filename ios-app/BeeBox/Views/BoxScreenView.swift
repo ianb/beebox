@@ -4,6 +4,10 @@ import SwiftUI
 /// chats, the box-wide pages, the other boxes, and a composer for a new thought.
 /// It is not a chat and mounts no web content; each link hands a box-relative
 /// path to `onOpen`, which shows the web app at that path.
+///
+/// When the person's own send or choose comes back, the store's `followUp`
+/// says what to do: open the chat it went to, as "Open chat" does, or scroll
+/// its row into view and announce its status line.
 struct BoxScreenView: View {
     /// Box-relative paths of the box-wide pages, as the web landmark menu used.
     static let boxPages: [(label: String, path: String, symbol: String)] = [
@@ -45,6 +49,9 @@ struct BoxScreenView: View {
                         proxy.scrollTo(Self.boxesSectionID, anchor: .top)
                     }
                 }
+                .onChange(of: screenStore.followUp) { _, request in
+                    perform(request, proxy: proxy)
+                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle(box.label)
@@ -54,6 +61,34 @@ struct BoxScreenView: View {
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 composer
+            }
+        }
+        .onAppear {
+            screenStore.setShownBox(box.id)
+        }
+        .onChange(of: box.id) { _, boxID in
+            screenStore.setShownBox(boxID)
+        }
+        .onDisappear {
+            screenStore.setShownBox(nil)
+        }
+    }
+
+    private func perform(_ request: BoxScreenFollowUpRequest?, proxy: ScrollViewProxy) {
+        guard let request, request.boxID == box.id else {
+            return
+        }
+        screenStore.consumeFollowUp(request)
+        switch request.followUp {
+        case .openChat(let sessionID):
+            onOpen(Self.chatPath(sessionID: sessionID))
+        case .reveal(let rowID, let status):
+            // After this update has put the row in the list.
+            DispatchQueue.main.async {
+                withAnimation {
+                    proxy.scrollTo(rowID, anchor: .center)
+                }
+                UIAccessibility.post(notification: .announcement, argument: status)
             }
         }
     }
@@ -86,8 +121,10 @@ struct BoxScreenView: View {
                     switch need {
                     case .outbox(let entry, let status):
                         outboxRow(entry, status: status)
+                            .id(entry.id)
                     case .record(let view):
                         recordRow(view)
+                            .id(view.id)
                     }
                 }
             }
@@ -101,6 +138,7 @@ struct BoxScreenView: View {
             Section {
                 ForEach(sent) { view in
                     sentRow(view)
+                        .id(view.id)
                 }
             }
         }
@@ -233,7 +271,7 @@ struct BoxScreenView: View {
     private func outboxActions(_ entry: QuickChatOutboxEntry) -> some View {
         HStack {
             Button("Retry") {
-                Task { await outbox.retry(id: entry.id) }
+                Task { await screenStore.retryOutboxEntry(id: entry.id, boxID: box.id) }
             }
             Button("Discard", role: .destructive) {
                 Task { await outbox.discard(id: entry.id) }
@@ -251,13 +289,13 @@ struct BoxScreenView: View {
                 .lineLimit(4)
             switch view.state {
             case .needsChoice:
-                Text(Self.reasonText(view.reason))
+                Text(view.statusLine)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 choiceButtons(view)
                 discardButton(view)
             case .sending where view.expired == true:
-                Text(view.lastError ?? "This may already be in \(view.destination?.label ?? "the chat"). Open the chat to check.")
+                Text(view.statusLine)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 HStack {
@@ -265,7 +303,7 @@ struct BoxScreenView: View {
                     discardButton(view)
                 }
             case .sending:
-                Text("Not delivered")
+                Text(view.statusLine)
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.red)
                 if let lastError = view.lastError {
@@ -348,10 +386,7 @@ struct BoxScreenView: View {
                 .lineLimit(2)
                 .foregroundStyle(.secondary)
             HStack {
-                Label(
-                    "\(view.queued == true ? "Queued in" : "Sent to") \(view.destination?.label ?? "a chat")",
-                    systemImage: "checkmark.circle"
-                )
+                Label(view.statusLine, systemImage: "checkmark.circle")
                 .font(.footnote)
                 Spacer()
                 openChatButton(view)
@@ -394,17 +429,6 @@ struct BoxScreenView: View {
     }
 
     // MARK: Text and paths
-
-    static func reasonText(_ reason: QuickChatView.Reason?) -> String {
-        switch reason {
-        case .uncertain, nil:
-            "Not sure where this goes"
-        case .routingUnavailable:
-            "Could not sort this"
-        case .destinationGone:
-            "That chat is gone"
-        }
-    }
 
     static func chatPath(sessionID: String) -> String {
         var components = URLComponents()

@@ -13,6 +13,46 @@ import UIKit
 enum NativeComposerSubmitTarget {
     case conversation
     case quickChat(@MainActor (String) async -> Bool)
+
+    func voicePolicy(hqDictationEnabled: Bool) -> NativeComposerVoicePolicy {
+        switch self {
+        case .conversation:
+            NativeComposerVoicePolicy(sendsToConversation: true, highQualityTranscription: hqDictationEnabled)
+        case .quickChat:
+            NativeComposerVoicePolicy(sendsToConversation: false, highQualityTranscription: false)
+        }
+    }
+}
+
+/// What spoken commands do for a submit target.
+///
+/// Every keyword works on both targets: the send keywords send through the
+/// same submit as the Send button, and cancel, erase, and mic off act on the
+/// draft and the microphone, which a quick chat composer also has. A quick
+/// chat composer has no high-quality transcription, so "clean up and send"
+/// sends the live transcript, and every spoken send closes the microphone, as
+/// the Send button does: a sent thought may open its chat.
+struct NativeComposerVoicePolicy: Equatable {
+    var sendsToConversation: Bool
+    var highQualityTranscription: Bool
+
+    var detectsKeywords: Bool { true }
+
+    func keywordSendPlan(for intent: SpeechKeywordResult, narrationEnabled: Bool) -> NativeVoiceKeywordSendPlan {
+        guard sendsToConversation else {
+            return .live(text: intent.processedTranscript)
+        }
+        return NativeVoiceKeywordSendPlan.make(
+            liveTranscript: intent.processedTranscript,
+            action: intent.action,
+            narrationEnabled: narrationEnabled,
+            hqDictationEnabled: highQualityTranscription
+        )
+    }
+
+    func keywordSendClosesMicrophone(_ action: SpeechKeywordAction) -> Bool {
+        sendsToConversation == false || action == .sendClose
+    }
 }
 
 struct NativeComposerView: View {
@@ -771,12 +811,12 @@ struct NativeComposerView: View {
             }
         case .quickChat(let deliver):
             switch submission {
-            case .message(let text, _, _, let audioURL):
-                submitQuickChat(text: text, audioURL: audioURL, deliver: deliver)
+            case .message(let text, _, let voiceKeywordAction, let audioURL):
+                submitQuickChat(text: text, spoken: voiceKeywordAction != nil, audioURL: audioURL, deliver: deliver)
             case .voicePreparation(let liveTranscript, _, _, _, _, let audioURL, _):
-                // Unreachable: a quick chat composer turns high-quality
-                // transcription off. The live transcript is the final text.
-                submitQuickChat(text: liveTranscript, audioURL: audioURL, deliver: deliver)
+                // Unreachable: a quick chat composer has no high-quality
+                // transcription. The live transcript is the final text.
+                submitQuickChat(text: liveTranscript, spoken: true, audioURL: audioURL, deliver: deliver)
             }
         }
     }
@@ -784,7 +824,12 @@ struct NativeComposerView: View {
     /// Hand the text to the quick chat target, then clear the draft once the
     /// target has stored it. A quick chat message is text only and has no
     /// emission id to key a recording under, so the recording is dropped.
-    private func submitQuickChat(text: String, audioURL: URL?, deliver: @escaping @MainActor (String) async -> Bool) {
+    private func submitQuickChat(
+        text: String,
+        spoken: Bool,
+        audioURL: URL?,
+        deliver: @escaping @MainActor (String) async -> Bool
+    ) {
         if let audioURL {
             try? FileManager.default.removeItem(at: audioURL)
         }
@@ -797,6 +842,9 @@ struct NativeComposerView: View {
             let stored = await deliver(text)
             isPreparingSend = false
             guard stored else {
+                if spoken {
+                    applyEarcon(.cancelWaiting)
+                }
                 statusText = "This thought could not be saved. It is still here."
                 return
             }
@@ -816,12 +864,16 @@ struct NativeComposerView: View {
         sendsToConversation && requiresConversationBinding
     }
 
+    private var voicePolicy: NativeComposerVoicePolicy {
+        submitTarget.voicePolicy(hqDictationEnabled: hqDictationEnabled)
+    }
+
     private var voiceKeywordsEnabled: Bool {
-        sendsToConversation
+        voicePolicy.detectsKeywords
     }
 
     private var highQualityTranscriptionEnabled: Bool {
-        sendsToConversation && hqDictationEnabled
+        voicePolicy.highQualityTranscription
     }
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
@@ -905,16 +957,11 @@ struct NativeComposerView: View {
             return
         }
         applyEarcon(.voiceMessageSent(responseAlreadyActive: responseActive))
-        if intent.action == .sendClose {
+        if voicePolicy.keywordSendClosesMicrophone(intent.action) {
             applyVoiceTurn(.voiceMessageSent(closeMicrophone: true))
         }
         let audioURL = dictation.consumeRecordedAudioURL()
-        switch NativeVoiceKeywordSendPlan.make(
-            liveTranscript: intent.processedTranscript,
-            action: intent.action,
-            narrationEnabled: narrationEnabled,
-            hqDictationEnabled: highQualityTranscriptionEnabled
-        ) {
+        switch voicePolicy.keywordSendPlan(for: intent, narrationEnabled: narrationEnabled) {
         case .live(let text):
             // The recording used to be deleted here. It is kept instead, so a
             // box agent can retranscribe this message later — and this is the

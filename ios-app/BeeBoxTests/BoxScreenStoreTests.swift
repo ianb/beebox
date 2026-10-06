@@ -7,6 +7,9 @@ final class BoxScreenStoreTests: XCTestCase {
     fileprivate final class FakeClient: QuickChatClient {
         var offline = false
         var submitAnswer: QuickChatView.State = .needsChoice
+        /// The destination of a `sending` or `sent` answer.
+        var destination: QuickChatView.Destination?
+        var lastError: String?
         var homeAnswer = QuickChatHome(open: [], recentlySent: [], recentChats: [], shortcuts: [])
         var homeFails = false
         var submitted: [(UUID, String)] = []
@@ -14,18 +17,27 @@ final class BoxScreenStoreTests: XCTestCase {
         /// Runs inside `home`, before it answers, so a test can land an answer
         /// while a refresh is in flight.
         var duringHome: (@MainActor () async -> Void)?
+        /// Runs inside `submit`, before it answers, so a test can leave the
+        /// box screen while the request is out.
+        var duringSubmit: (@MainActor () async -> Void)?
 
         func submit(id: UUID, message: String) async throws -> QuickChatView {
             submitted.append((id, message))
+            await duringSubmit?()
             if offline {
                 throw URLError(.notConnectedToInternet)
             }
-            return view(id: id, message: message, state: submitAnswer)
+            var answer = view(id: id, message: message, state: submitAnswer)
+            answer.destination = destination
+            answer.lastError = lastError
+            return answer
         }
 
         func choose(id: UUID, candidateId: String) async throws -> QuickChatView {
             chosen.append(candidateId)
-            return view(id: id, message: "chosen", state: .sent)
+            var answer = view(id: id, message: "chosen", state: .sent)
+            answer.destination = destination
+            return answer
         }
 
         func discard(id: UUID) async throws -> QuickChatView {
@@ -200,6 +212,170 @@ final class BoxScreenStoreTests: XCTestCase {
 
         let remaining = try await repository.loadQuickChatOutbox()
         XCTAssertEqual(remaining, [])
+    }
+
+    // MARK: After the person's own send or choose
+
+    func testASentAnswerToThePersonsSendOpensItsChat() async throws {
+        let client = FakeClient()
+        client.submitAnswer = .sent
+        client.destination = .init(label: "Trip planning", sessionId: "s1")
+        let (store, _) = makeStore(client)
+        await store.start()
+        store.setShownBox(box.id)
+
+        _ = await store.submitThought("Check the lumber order", boxID: box.id)
+        try await waitUntil { store.followUp != nil }
+
+        let request = try XCTUnwrap(store.followUp)
+        XCTAssertEqual(request.boxID, box.id)
+        XCTAssertEqual(request.followUp, .openChat(sessionID: "s1"))
+        XCTAssertEqual(store.sent(boxID: box.id).map(\.message), ["Check the lumber order"])
+        store.consumeFollowUp(request)
+        XCTAssertNil(store.followUp)
+    }
+
+    func testAChoiceThatPostsOpensItsChat() async throws {
+        let client = FakeClient()
+        client.destination = .init(label: "Trip planning", sessionId: "s2")
+        let open = view(id: UUID(), message: "Remind me", state: .needsChoice)
+        client.homeAnswer.open = [open]
+        let (store, _) = makeStore(client)
+        await store.refresh(boxID: box.id)
+        XCTAssertNil(store.followUp, "rows from home follow up nothing")
+        store.setShownBox(box.id)
+
+        await store.choose(.init(candidateId: "c2", label: "Trip planning"), for: open, boxID: box.id)
+
+        XCTAssertEqual(store.followUp?.followUp, .openChat(sessionID: "s2"))
+    }
+
+    /// With no chat to open, the box screen stays and brings the row into
+    /// view with its status line.
+    func testAnswersWithNoChatToOpenRevealTheirRow() async throws {
+        let cases: [(QuickChatView.State, QuickChatView.Destination?, String?, String)] = [
+            (.sent, .init(label: "New general chat"), nil, "Sent to New general chat"),
+            (.needsChoice, nil, nil, "Not sure where this goes"),
+            (.sending, .init(label: "Trip planning", sessionId: "s1"), "Chat is not running", "Not delivered"),
+        ]
+        for (state, destination, lastError, status) in cases {
+            let client = FakeClient()
+            client.submitAnswer = state
+            client.destination = destination
+            client.lastError = lastError
+            let (store, _) = makeStore(client)
+            await store.start()
+            store.setShownBox(box.id)
+
+            _ = await store.submitThought("A thought", boxID: box.id)
+            try await waitUntil { store.followUp != nil }
+
+            let id = try XCTUnwrap(client.submitted.first?.0)
+            XCTAssertEqual(store.followUp?.followUp, .reveal(rowID: id, status: status), "\(state)")
+        }
+    }
+
+    func testAnOfflineSendRevealsItsWaitingRowAndALaterRetryOpensNothing() async throws {
+        let client = FakeClient()
+        client.offline = true
+        let (store, _) = makeStore(client)
+        await store.start()
+        store.setShownBox(box.id)
+
+        _ = await store.submitThought("Ask Dana about the 14th", boxID: box.id)
+        try await waitUntil { store.followUp != nil }
+
+        let entry = try XCTUnwrap(store.outbox.entries.first)
+        let request = try XCTUnwrap(store.followUp)
+        XCTAssertEqual(request.followUp, .reveal(rowID: entry.id, status: "Waiting to send"))
+        store.consumeFollowUp(request)
+
+        // The backoff retry succeeds later, into a chat: the list updates, and
+        // the screen stays where the person is.
+        client.offline = false
+        client.submitAnswer = .sent
+        client.destination = .init(label: "Trip planning", sessionId: "s1")
+        await store.outbox.retry(id: entry.id)
+
+        XCTAssertEqual(store.sent(boxID: box.id).map(\.id), [entry.id])
+        XCTAssertNil(store.followUp)
+    }
+
+    func testThePersonsRetryOfAWaitingRowFollowsUp() async throws {
+        let client = FakeClient()
+        client.offline = true
+        let (store, _) = makeStore(client)
+        await store.start()
+        store.setShownBox(box.id)
+        _ = await store.submitThought("Ask Dana about the 14th", boxID: box.id)
+        try await waitUntil { store.followUp != nil }
+        store.consumeFollowUp(try XCTUnwrap(store.followUp))
+        let entry = try XCTUnwrap(store.outbox.entries.first)
+
+        client.offline = false
+        client.submitAnswer = .sent
+        client.destination = .init(label: "Trip planning", sessionId: "s1")
+        await store.retryOutboxEntry(id: entry.id, boxID: box.id)
+
+        XCTAssertEqual(store.followUp?.followUp, .openChat(sessionID: "s1"))
+    }
+
+    func testALaunchRetryOnlyUpdatesTheRows() async throws {
+        let client = FakeClient()
+        client.offline = true
+        let (store, repository) = makeStore(client)
+        await store.start()
+        _ = await store.submitThought("Stored before the app closed", boxID: box.id)
+        try await waitUntil { client.submitted.count == 1 && store.outbox.inFlight.isEmpty }
+
+        client.offline = false
+        client.submitAnswer = .sent
+        client.destination = .init(label: "Trip planning", sessionId: "s1")
+        let relaunched = BoxScreenStore(repository: repository, client: { _ in client })
+        relaunched.updateBoxes([box])
+        relaunched.setShownBox(box.id)
+        await relaunched.start()
+
+        XCTAssertEqual(relaunched.sent(boxID: box.id).map(\.message), ["Stored before the app closed"])
+        XCTAssertNil(relaunched.followUp)
+    }
+
+    func testAnAnswerAfterLeavingSwitchingBoxesOrBackgroundingOnlyUpdatesTheRows() async throws {
+        let otherBoxID = UUID()
+        let leaves: [(String, @MainActor (BoxScreenStore) -> Void)] = [
+            ("left the box screen", { $0.setShownBox(nil) }),
+            ("switched boxes", { $0.setShownBox(otherBoxID) }),
+            ("went to the background", { $0.setForeground(false) }),
+        ]
+        for (name, leave) in leaves {
+            let client = FakeClient()
+            client.submitAnswer = .sent
+            client.destination = .init(label: "Trip planning", sessionId: "s1")
+            let (store, _) = makeStore(client)
+            await store.start()
+            store.setShownBox(box.id)
+            client.duringSubmit = { leave(store) }
+
+            _ = await store.submitThought("A thought", boxID: box.id)
+            try await waitUntil { store.outbox.entries.isEmpty }
+
+            XCTAssertEqual(store.sent(boxID: box.id).map(\.message), ["A thought"], name)
+            XCTAssertNil(store.followUp, name)
+        }
+    }
+
+    func testADiscardFollowsUpNothing() async {
+        let client = FakeClient()
+        let open = view(id: UUID(), message: "Remind me", state: .needsChoice)
+        client.homeAnswer.open = [open]
+        let (store, _) = makeStore(client)
+        await store.refresh(boxID: box.id)
+        store.setShownBox(box.id)
+
+        await store.discard(open, boxID: box.id)
+
+        XCTAssertEqual(store.needs(boxID: box.id), [])
+        XCTAssertNil(store.followUp)
     }
 
     func testShortcutAndChatPaths() {

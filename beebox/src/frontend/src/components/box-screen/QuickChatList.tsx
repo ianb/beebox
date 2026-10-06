@@ -6,11 +6,15 @@
  *
  * "Open chat" only navigates. It does not copy the thought into the chat's
  * composer: the thought is already in the chat.
+ *
+ * Each row carries `quickChatRowId` so the page can scroll an answer into
+ * view, and its status line is a polite live region, so the answer to the
+ * person's own send or choose is announced where it lands.
  */
 
 import { href, toSearch } from "../../lib/routing";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
-import { rowFace, type QuickChatView } from "../../pages/box-screen/state";
+import { quickChatRowId, rowFace, type QuickChatView } from "../../pages/box-screen/state";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { ErrorText } from "../ui/ErrorText";
@@ -38,20 +42,25 @@ function DiscardButton({ view, busy, actions }: { view: QuickChatView; busy: boo
   return <Button id={`bbx-box-screen-discard-${view.id}`} size="sm" intent="ghost" disabled={busy} onClick={() => actions.onDiscard(view)}>Discard</Button>;
 }
 
+/** A row's status line: "Sent to …", "Not sure where this goes", "Not delivered". */
+function FaceTitle({ children, tone }: { children: string; tone?: "danger" }) {
+  return <div role="status"><Text weight="medium" tone={tone}>{children}</Text></div>;
+}
+
 function FaceBody({ view, boxSlug, busy, actions }: { view: QuickChatView; boxSlug: string; busy: boolean; actions: QuickChatRowActions }) {
   const face = rowFace(view);
   switch (face.kind) {
     case "sent":
       return (
         <Row justify="between" gap="sm" wrap>
-          <Text weight="medium">{face.title}</Text>
+          <FaceTitle>{face.title}</FaceTitle>
           <ChatLink link={face.link} boxSlug={boxSlug} id={view.id} />
         </Row>
       );
     case "needs-choice":
       return (
         <Stack gap="sm">
-          <Text weight="medium">{face.title}</Text>
+          <FaceTitle>{face.title}</FaceTitle>
           <Row gap="sm" wrap>
             {face.choices.map((choice) => (
               <Button key={choice.candidateId} id={`bbx-box-screen-choose-${view.id}-${choice.candidateId}`} size="sm" disabled={busy}
@@ -66,7 +75,7 @@ function FaceBody({ view, boxSlug, busy, actions }: { view: QuickChatView; boxSl
     case "not-delivered":
       return (
         <Stack gap="sm">
-          <Text weight="medium" tone="danger">{face.title}</Text>
+          <FaceTitle tone="danger">{face.title}</FaceTitle>
           {face.detail === null ? null : <Text size="sm" tone="muted">{face.detail}</Text>}
           <Row gap="sm" wrap>
             <Button id={`bbx-box-screen-retry-${view.id}`} size="sm" intent="primary" disabled={busy} onClick={() => actions.onRetry(view)}>Retry</Button>
@@ -77,7 +86,7 @@ function FaceBody({ view, boxSlug, busy, actions }: { view: QuickChatView; boxSl
     case "expired":
       return (
         <Stack gap="sm">
-          <Text weight="medium">{face.title}</Text>
+          <FaceTitle>{face.title}</FaceTitle>
           <Row gap="md" align="center" wrap>
             <ChatLink link={face.link} boxSlug={boxSlug} id={view.id} />
             <DiscardButton view={view} busy={busy} actions={actions} />
@@ -97,7 +106,7 @@ function QuickChatRow({ view, boxSlug, busy, error, actions }: {
   actions: QuickChatRowActions;
 }) {
   return (
-    <li>
+    <li id={quickChatRowId(view.id)}>
       <Card padding="sm" border="subtle">
         <Stack gap="sm">
           <Text as="p" size="sm" tone="subtle" italic>&ldquo;{view.message}&rdquo;</Text>

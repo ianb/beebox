@@ -201,8 +201,7 @@ final class SpeechKeywordsTests: XCTestCase {
         XCTAssertEqual(dictation.state, .preparingHQ)
     }
 
-    /// The quick chat composer turns keywords off: "send message" is words to
-    /// keep, not a command, and the person sends with the button.
+    /// With detection off, "send message" is words to keep, not a command.
     @MainActor
     func testKeywordsOffKeepsSpokenCommandWordsAsTranscript() {
         let dictation = SpeechDictation()
@@ -213,6 +212,83 @@ final class SpeechKeywordsTests: XCTestCase {
         XCTAssertNil(dictation.keywordIntent)
         XCTAssertEqual(dictation.transcript, "Remind me to send message to Dana")
         XCTAssertTrue(dictation.hasDictatedText)
+    }
+
+    /// The box screen's composer listens for spoken keywords, as the chat
+    /// composer does. It has no high-quality transcription.
+    func testQuickChatComposerDetectsKeywordsWithoutHighQualityTranscription() {
+        let quickChat = NativeComposerSubmitTarget.quickChat { _ in true }.voicePolicy(hqDictationEnabled: true)
+        XCTAssertTrue(quickChat.detectsKeywords)
+        XCTAssertFalse(quickChat.highQualityTranscription)
+
+        let conversation = NativeComposerSubmitTarget.conversation.voicePolicy(hqDictationEnabled: true)
+        XCTAssertTrue(conversation.detectsKeywords)
+        XCTAssertTrue(conversation.highQualityTranscription)
+        XCTAssertFalse(NativeComposerSubmitTarget.conversation.voicePolicy(hqDictationEnabled: false).highQualityTranscription)
+    }
+
+    /// "Send message" on the box screen hands the quick chat closure the same
+    /// text a conversation's live send would post: the command words become
+    /// the send tag.
+    @MainActor
+    func testSpokenSendOnTheBoxScreenHandsTheCleanedTextToTheQuickChatClosure() async throws {
+        var delivered: [String] = []
+        let target = NativeComposerSubmitTarget.quickChat { text in
+            delivered.append(text)
+            return true
+        }
+        let policy = target.voicePolicy(hqDictationEnabled: false)
+        let dictation = SpeechDictation()
+        dictation.detectsKeywords = policy.detectsKeywords
+
+        dictation.ingestRecognizedSpeechForTesting("Call the plumber about the leak send message")
+
+        let intent = try XCTUnwrap(dictation.keywordIntent)
+        XCTAssertEqual(intent.action, .send)
+        dictation.commitKeywordSubstitution()
+        // Narration on would hold a conversation send for the HQ pass; the box
+        // screen sends the live transcript whatever the chat's settings say.
+        guard case .live(let text) = policy.keywordSendPlan(for: intent, narrationEnabled: true) else {
+            return XCTFail("a quick chat keyword send is a live send")
+        }
+        guard case .quickChat(let deliver) = target else {
+            return XCTFail("expected the quick chat target")
+        }
+        let stored = await deliver(text)
+
+        XCTAssertTrue(stored)
+        XCTAssertEqual(delivered, ["Call the plumber about the leak <send-message phrase=\"send message\" />"])
+        XCTAssertEqual(delivered, [dictation.transcript])
+        let conversation = NativeComposerSubmitTarget.conversation.voicePolicy(hqDictationEnabled: false)
+        XCTAssertEqual(conversation.keywordSendPlan(for: intent, narrationEnabled: false), .live(text: text))
+        XCTAssertTrue(policy.keywordSendClosesMicrophone(.send))
+    }
+
+    /// The conversation composer keeps its keyword behavior: narration or
+    /// "clean up and send" holds the send for transcription, and only "send
+    /// and close" closes the microphone. On the box screen "clean up and send"
+    /// is a live send, because there is no transcription pass to wait for.
+    func testConversationKeywordSendsAreUnchangedAndQuickChatHasNoHqPass() {
+        let send = SpeechKeywordResult(action: .send, processedTranscript: "buy milk <send-message phrase=\"send message\" />", matchedPhrase: "send message")
+        let cleanUp = SpeechKeywordResult(action: .sendHq, processedTranscript: "buy milk <send-message phrase=\"clean up and send\" />", matchedPhrase: "clean up and send")
+        let conversation = NativeComposerSubmitTarget.conversation.voicePolicy(hqDictationEnabled: false)
+        let quickChat = NativeComposerSubmitTarget.quickChat { _ in true }.voicePolicy(hqDictationEnabled: false)
+
+        XCTAssertEqual(conversation.keywordSendPlan(for: send, narrationEnabled: false), .live(text: send.processedTranscript))
+        XCTAssertEqual(conversation.keywordSendPlan(for: send, narrationEnabled: true), .hq)
+        XCTAssertEqual(conversation.keywordSendPlan(for: cleanUp, narrationEnabled: false), .hq)
+        XCTAssertEqual(
+            NativeComposerSubmitTarget.conversation.voicePolicy(hqDictationEnabled: true).keywordSendPlan(for: send, narrationEnabled: false),
+            .hq
+        )
+        XCTAssertFalse(conversation.keywordSendClosesMicrophone(.send))
+        XCTAssertFalse(conversation.keywordSendClosesMicrophone(.sendHq))
+        XCTAssertTrue(conversation.keywordSendClosesMicrophone(.sendClose))
+
+        XCTAssertEqual(quickChat.keywordSendPlan(for: cleanUp, narrationEnabled: false), .live(text: cleanUp.processedTranscript))
+        for action in [SpeechKeywordAction.send, .sendHq, .sendClose] {
+            XCTAssertTrue(quickChat.keywordSendClosesMicrophone(action), "\(action) on the box screen ends the voice turn")
+        }
     }
 
     @MainActor

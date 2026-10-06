@@ -10,7 +10,7 @@ the web page reads the same answers the phone does.
 import { readFileSync } from "node:fs";
 import {
   boxScreenReducer, boxScreenRows, boxScreenStorageKey, parseStoredBoxScreen, pendingRetry,
-  restoreBoxScreen, rowFace, storedBoxScreen, submission, submitUnsent, unsentStatus,
+  followUpFor, restoreBoxScreen, rowFace, storedBoxScreen, submission, submitUnsent, unsentStatus,
 } from "../../../src/pages/box-screen/state.js";
 
 const fixtures = new URL("../../../../../test/mobile-contract/fixtures/quick-chat/", import.meta.url);
@@ -93,7 +93,7 @@ const unsent = submission(state, ID);
 unsent
 => { id: "11111111-2222-4333-8444-555555555555", message: "Call the plumber" }
 
-state = run(state, [{ type: "submit-started", unsent }]);
+state = run(state, [{ type: "submit-started", unsent, origin: "send" }]);
 [unsentStatus(state), storedBoxScreen(state)]
 => ["Sending…", { draft: "  Call the plumber  ", unsent: { id: "11111111-2222-4333-8444-555555555555", message: "Call the plumber" } }]
 
@@ -111,7 +111,7 @@ edited text is a new thought.
 
 ```ts
 let state = run(fresh(), [{ type: "edit", text: "Call the plumber" }]);
-state = run(state, [{ type: "submit-started", unsent: submission(state, ID) }, { type: "submit-failed", error: "Failed to fetch" }]);
+state = run(state, [{ type: "submit-started", unsent: submission(state, ID), origin: "send" }, { type: "submit-failed", error: "Failed to fetch" }]);
 unsentStatus(state)
 => Not sent: Failed to fetch
 
@@ -135,7 +135,7 @@ new id.
 const calls = [];
 const unsent = { id: ID, message: "Book the vet" };
 const answer = { id: ID, message: "Book the vet", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "uncertain", choices: [] };
-await submitUnsent(unsent, {
+await submitUnsent({ unsent, origin: "send" }, {
   store: (stored) => calls.push(["store", stored]),
   request: async (input) => { calls.push(["request", input.id]); return answer; },
   dispatch: (action) => calls.push(["dispatch", action.type]),
@@ -160,7 +160,7 @@ pendingRetry(reloaded)
 const failed = [];
 const originalConsoleError = console.error;
 console.error = (message) => failed.push(["logged", message]);
-await submitUnsent(unsent, {
+await submitUnsent({ unsent, origin: "send" }, {
   store: (stored) => failed.push(["store", stored.unsent.id]),
   request: async () => { failed.push(["request"]); throw new Error("Failed to fetch"); },
   dispatch: (action) => failed.push(["dispatch", action.type]),
@@ -188,7 +188,7 @@ const state = restoreBoxScreen(parseStoredBoxScreen(raw));
 [state.draft, unsentStatus(state), pendingRetry(state)]
 => ["Book the vet", "Waiting to send", { id: "11111111-2222-4333-8444-555555555555", message: "Book the vet" }]
 
-pendingRetry(run(state, [{ type: "submit-started", unsent: pendingRetry(state) }]))
+pendingRetry(run(state, [{ type: "submit-started", unsent: pendingRetry(state), origin: "reload" }]))
 => null
 ```
 
@@ -221,7 +221,7 @@ the screen, and a chosen one moves from "Needs you" to sent.
 const home = fixture("home");
 const [uncertain, notDelivered] = home.open;
 let state = run(fresh(), [
-  { type: "row-started", id: uncertain.id },
+  { type: "row-started", id: uncertain.id, request: "choose" },
   { type: "row-answered", view: { ...uncertain, state: "sent", reason: undefined, choices: undefined, destination: { label: "Trip planning" } } },
   { type: "row-answered", view: { ...notDelivered, state: "discarded", destination: undefined, lastError: undefined } },
 ]);
@@ -233,7 +233,128 @@ const rows = boxScreenRows(home, state);
 A failed choose or discard leaves the row and says what went wrong:
 
 ```ts
-const state = run(fresh(), [{ type: "row-started", id: ID }, { type: "row-failed", id: ID, error: "Chat is not running" }]);
+const state = run(fresh(), [{ type: "row-started", id: ID, request: "choose" }, { type: "row-failed", id: ID, error: "Chat is not running" }]);
 [state.busy, state.rowErrors]
 => [[], { "11111111-2222-4333-8444-555555555555": "Chat is not running" }]
+```
+
+## After the person's own send or choose
+
+A send the person just made that comes back `sent` with a chat opens that
+chat. The thought is already stored and posted, so a slow chat loses nothing.
+The fixtures share one record id, so the sent answer is the same thought.
+
+```ts
+const sent = fixture("view-sent");
+const sendIt = (view) => run(fresh(), [
+  { type: "edit", text: view.message },
+  { type: "submit-started", unsent: { id: view.id, message: view.message }, origin: "send" },
+  { type: "submit-answered", view },
+]);
+let state = sendIt(sent);
+[state.followUp, state.awaiting]
+=> [{ kind: "open-chat", sessionId: "0b7d4c1e-6a2f-4e8b-9c3d-2f1a5e7b9d40" }, []]
+
+run(state, [{ type: "follow-up-done" }]).followUp
+=> null
+```
+
+A choose the person made opens the chat it posted to, the same way:
+
+```ts continue
+const open = fixture("view-needs-choice-uncertain");
+run(fresh(), [
+  { type: "row-started", id: open.id, request: "choose" },
+  { type: "row-answered", view: sent },
+]).followUp
+=> { kind: "open-chat", sessionId: "0b7d4c1e-6a2f-4e8b-9c3d-2f1a5e7b9d40" }
+```
+
+When there is no chat to open, the page stays and brings the row into view:
+sent without a session id, a thought that needs a choice, and one that was not
+delivered. The row's status line is a live region, so the answer is also
+announced.
+
+```ts continue
+[
+  sendIt(fixture("view-sent-no-session")).followUp,
+  sendIt(open).followUp,
+  sendIt(fixture("view-sending-not-delivered")).followUp,
+]
+=> [
+  { kind: "reveal", id: "5f0c2a9e-3b1d-4c7a-9e2f-8d6b1a4c3e70" },
+  { kind: "reveal", id: "5f0c2a9e-3b1d-4c7a-9e2f-8d6b1a4c3e70" },
+  { kind: "reveal", id: "5f0c2a9e-3b1d-4c7a-9e2f-8d6b1a4c3e70" },
+]
+
+followUpFor(fixture("view-discarded"))
+=> null
+```
+
+A send that fails stays in the input, and the pinned status line under it
+says "Not sent", so nothing needs scrolling. The thought is no longer awaited:
+only pressing Send again makes its answer follow up.
+
+```ts continue
+state = run(fresh(), [
+  { type: "edit", text: sent.message },
+  { type: "submit-started", unsent: { id: sent.id, message: sent.message }, origin: "send" },
+  { type: "submit-failed", error: "Failed to fetch" },
+]);
+[unsentStatus(state), state.awaiting, state.followUp]
+=> ["Not sent: Failed to fetch", [], null]
+```
+
+## Answers nobody on the page asked for
+
+The reload's own retry of a stored thought only updates the list, even when
+the answer is `sent` with a chat:
+
+```ts continue
+const reloaded = restoreBoxScreen({ draft: "", unsent: { id: sent.id, message: sent.message } });
+state = run(reloaded, [
+  { type: "submit-started", unsent: pendingRetry(reloaded), origin: "reload" },
+  { type: "submit-answered", view: sent },
+]);
+[state.followUp, boxScreenRows(undefined, state).sent.length]
+=> [null, 1]
+```
+
+A discard is the person's action, but it has no chat and no row to show:
+
+```ts continue
+run(fresh(), [
+  { type: "row-started", id: open.id, request: "discard" },
+  { type: "row-answered", view: fixture("view-discarded") },
+]).followUp
+=> null
+```
+
+Rows that arrive from the `home` refresh never pass through the reducer, so
+a sent row there opens nothing:
+
+```ts continue
+const home = fixture("home");
+[fresh().followUp, boxScreenRows(home, fresh()).sent.length]
+=> [null, 1]
+```
+
+The page state belongs to the mounted page for one box (`BoxScreenPage` keys
+it by box). When the person leaves the box screen or switches boxes, the old
+page and its reducer are gone, and a late answer has nowhere to land. The new
+page starts awaiting nothing, so an answer for a thought it did not send
+follows up nothing:
+
+```ts continue
+[restoreBoxScreen({ draft: "", unsent: null }).awaiting, run(fresh(), [{ type: "submit-answered", view: sent }]).followUp]
+=> [[], null]
+```
+
+A later answer that nobody awaits keeps a follow-up the page has not acted on
+yet:
+
+```ts continue
+state = run(sendIt(sent), [{ type: "row-answered", view: fixture("view-sent-queued") }]);
+state.followUp
+=> { kind: "open-chat", sessionId: "0b7d4c1e-6a2f-4e8b-9c3d-2f1a5e7b9d40" }
 ```
