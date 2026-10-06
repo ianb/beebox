@@ -40,7 +40,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { withCardLock } from "../../lib/card-lock.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { parseRecheck, RECHECK_NEVER, TODO_AGENT } from "../../shared/todo-model.js";

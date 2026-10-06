@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../procedures.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import {
   availableCalendarsWithSyncing,
   loadCalendarConfig,

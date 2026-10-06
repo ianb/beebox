@@ -36,7 +36,7 @@ import { runCollectedChild } from "../../lib/run-child.js";
 import { findBoxRoot, NotInBoxError } from "../../lib/paths/core.js";
 import { acquireBoxMaintenance, boxWorkEnvironment, type BoxMaintenance } from "../../lib/box-maintenance.js";
 import { getBoxShape } from "../../lib/box-shape.js";
-import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../../lib/git/core.js";
+import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../../lib/git/core/operations.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { toError, errorMessage } from "../../shared/error-guards.js";
 

@@ -89,7 +89,7 @@ Reframed hypotheses, from the original transcript: every freeze coincided
 with a long-running chat turn, and a page reload always restored
 responsiveness with state intact. So either (a) git-index contention
 between the chat turn's commits and the upload worker's
-`stageAndCommitPaths` (`withIndexLockRetry` in `src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`) retries
+`stageAndCommitPaths` (`withIndexLockRetry` in `src/lib/git.ts` (moved to `beebox/src/lib/git/core/operations.ts`) retries
 once after 2s — check whether real contention cascades), or (b) the
 "freeze" is partly a FRONTEND/tab hang, not the server at all — total
 non-response to snapshot/screenshot with reload-fixes-it fits a blocked
@@ -114,7 +114,7 @@ that's the next step when this recurs):
 - `src/webapp/trpc/routers/status.ts` (`browse`) — per-directory recursive
   `readdir` for attachment counts; potentially O(dirs) recursive walks per
   single call.
-- `src/webapp/trpc/routers/status.ts` (`activity`) + `src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`)
+- `src/webapp/trpc/routers/status.ts` (`activity`) + `src/lib/git.ts` (moved to `beebox/src/lib/git/core/operations.ts`)
   `getLog` — git-log on the request path; check whether it shells out
   synchronously.
 - `src/core/commands/wakeup.ts` — `execSync("which bbx", ...)`, a synchronous

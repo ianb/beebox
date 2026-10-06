@@ -8,7 +8,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { installProcedures, installGuides, installSchedules, installPersonality } from "../../../src/core/box/structure/core.js";
 import { scaffoldBoxRoot } from "../../../src/core/box/package.js";
-import { stageAll, commit, getLog, getStatus, isRepo, initRepo } from "../../../src/lib/git/core.js";
+import { stageAll, commit, getLog, getStatus, isRepo, initRepo } from "../../../src/lib/git/core/operations.js";
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "bbx-init-test-"));

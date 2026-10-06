@@ -15,7 +15,7 @@ import { execFileSync } from "node:child_process";
 import { chmod, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { commit, stageAll } from "../../src/lib/git/core.js";
+import { commit, stageAll } from "../../src/lib/git/core/operations.js";
 
 function git(box, ...args) {
   return execFileSync("git", args, { cwd: box.root }).toString().trim();

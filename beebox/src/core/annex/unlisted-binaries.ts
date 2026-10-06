@@ -29,6 +29,7 @@ import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { isAssetExtension } from "../../lib/asset-extensions.js";
 import { findAttachScopes } from "../../lib/attach-scopes.js";
+import { ignoredPaths } from "../../lib/git/check-ignore.js";
 import { errnoCode } from "../../shared/error-guards.js";
 
 /**
@@ -92,7 +93,11 @@ export async function findUnlistedBinaries(boxRoot: string): Promise<UnlistedBin
     await walkScope({ absDir: scope.absPath, relPrefix: scope.relPath, found });
   }
 
-  return found;
+  // Git never commits an ignored file, so its bytes cannot reach history: a
+  // publication project's `node_modules/` and build `dist/` sit inside an
+  // attach scope but are ignored, and reporting them would be a false alarm.
+  const ignored = await ignoredPaths(boxRoot, found.map((f) => f.relPath));
+  return found.filter((f) => !ignored.has(f.relPath));
 }
 
 /**

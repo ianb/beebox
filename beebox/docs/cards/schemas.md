@@ -89,7 +89,7 @@ Key patterns:
 When a card type needs a rule Zod field types can't express — a cross-field
 constraint, a format refinement on a string, or validation of the body's parsed
 structure — put it in a **`validate` hook on the schema**, *not* in a branch of
-`src/core/card-lint/core.ts`. The hook co-locates the rule with the schema that
+`src/core/card-lint/core/lint-cards.ts`. The hook co-locates the rule with the schema that
 defines the type, and card-lint dispatches it generically.
 
 ```ts

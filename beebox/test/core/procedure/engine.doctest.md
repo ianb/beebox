@@ -6,7 +6,7 @@ tracking state in run cards, and handling various step outcomes.
 ```ts setup
 import { startProcedure, resumeProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { getLog } from "../../../src/lib/git/core.js";
+import { getLog } from "../../../src/lib/git/core/operations.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
 ```
 

@@ -11,7 +11,7 @@ priority: normal
 `bbx trick <name>` runs the trick as a child process and, only if it exits 0,
 calls `commitIfDirty(boxRoot, name)` (`beebox/src/cli/commands/trick.ts:36-44`,
 called at line 232). That function does `getStatus()` → if clean return → else
-`stageAll(boxRoot)` (stages the **entire working tree**, `beebox/src/lib/git/core.ts:288`)
+`stageAll(boxRoot)` (stages the **entire working tree**, `beebox/src/lib/git/core/operations.ts:288`)
 → `commit()`. This is check-then-act across processes, and it stages
 everything dirty, not just the trick's own output.
 
@@ -39,7 +39,7 @@ running an image-generation trick that fires several times concurrently
 
 ## The fix already exists in the codebase, unused here
 
-`beebox/src/lib/git/core.ts:334-392` already defines `commitPaths` (commit only
+`beebox/src/lib/git/core/operations.ts:334-392` already defines `commitPaths` (commit only
 given paths) and `stageAndCommitPaths` (stage + commit a path set,
 **tolerating a concurrent committer** — a "nothing to commit" result from a
 sibling process is treated as success, not an error; see the docstring at

@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { simpleGit } from "simple-git";
-import { gitBoxPrefix, unstageFiles } from "../../../../lib/git/core.js";
+import { gitBoxPrefix, unstageFiles } from "../../../../lib/git/core/operations.js";
 import { attachDirFor } from "../../../../shared/attach-path.js";
 import type { TrashMove, TrashReceipt } from "../../../commands/trash/command.js";
 

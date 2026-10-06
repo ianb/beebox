@@ -53,8 +53,6 @@ export type GuidanceInstall =
   | { via: "tracker"; template: StockTemplateName }
   /** The walk runs this generator once. */
   | { via: "generator"; generator: GuidanceGenerator }
-  /** The walk writes the seed once, if the file is missing; the box owns it after that. */
-  | { via: "seed"; seed: "publications-notes" }
   /**
    * Installed outside the walk: by a card installer with its own merge policy,
    * by a later `generateDocs` phase that needs compiled box state, by the
@@ -93,12 +91,8 @@ export const GUIDANCE_SURFACES: readonly GuidanceSurface[] = [
   // situational: loaded when the agent works on matching paths.
   { path: "src/schemas/CLAUDE.md", tier: "situational", class: "tracked", install: tracker("schemas-guide-v2"), gitTracked: true },
   { path: "src/views/CLAUDE.md", tier: "situational", class: "tracked", install: tracker("views-guide-v2"), gitTracked: true },
-  { path: "src/publications/CLAUDE.md", tier: "situational", class: "tracked", install: tracker("publications-guide-v1"), gitTracked: true },
   { path: "src/tricks/scripts/CLAUDE.md", tier: "situational", class: "tracked", install: tracker("tricks-guide-v2"), gitTracked: true },
   { path: "_config/feedback/CLAUDE.md", tier: "situational", class: "tracked", install: tracker("agent-feedback-guide"), gitTracked: true },
-  // The box's own notes: seeded with headings once, then box-written. Tracking
-  // it would park the stock headings on every box that uses the notes.
-  { path: "src/publications/NOTES.md", tier: "situational", class: "owned", install: { via: "seed", seed: "publications-notes" }, gitTracked: true },
   // Directory maps: an agent writes MAP.md in the refresh-maps procedure, and
   // the finalize step adds an `@MAP.md` include to the directory's CLAUDE.md.
   { path: "**/MAP.md", tier: "situational", class: "owned", install: owner("refreshMaps"), gitTracked: true },

@@ -16,7 +16,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { stageAndCommitPaths, getStatus } from "../../src/lib/git/core.js";
+import { stageAndCommitPaths, getStatus } from "../../src/lib/git/core/operations.js";
 import { LOCK_STALE_MS } from "../../src/lib/file-lock.js";
 
 const PACKAGE_ROOT = join(import.meta.dirname, "../..");

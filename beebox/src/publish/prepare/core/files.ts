@@ -5,9 +5,9 @@ import { constants } from "node:fs";
 import { lstat, mkdir, open, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { scanBundle, type LeakScanResult } from "../leak-scan.js";
-import { releaseIdForFiles } from "../manifest-edge.js";
-import type { PublicationDefinition } from "./definition.js";
+import { scanBundle, type LeakScanResult } from "../../leak-scan.js";
+import { releaseIdForFiles } from "../../manifest-edge.js";
+import type { PublicationDefinition } from "../../publication-definition.js";
 import { bundlePolicyError } from "./errors.js";
 import { renderMarkdownSources } from "./markdown.js";
 import type { PreparedFile } from "./types.js";

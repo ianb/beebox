@@ -30,7 +30,7 @@ placeholder names (`me`, `you`, `user`, `x`), which does not help here: the
 segment after `/home/` is an arbitrary URL path component, not a personal-name
 path at all.
 
-This is called from `beebox/src/core/card-lint/core.ts:320`, so it fires on every
+This is called from `beebox/src/core/card-lint/core/lint-cards.ts:320`, so it fires on every
 `bbx validate` run over card content containing such a URL.
 
 ## Why the resolution isn't obvious

@@ -38,12 +38,6 @@ export const TEMPLATE_STOCK_HASHES = {
       "ef850476650452469d989cb94c85d1d8b1fa10eee32d3568930cbb12d15489cc",
     ],
   },
-  "publications-guide-v1": {
-    current: "05eb76019f668aa2d613aa248faf4687d51ce9e56cd060787a9d35c5a90de372",
-    superseded: [
-      "78255aba6d2484c7ccdd0e1b91982d9c53376da52da2021755aa13b779a098ca",
-    ],
-  },
   "schemas-guide-v2": {
     current: "d597ae37034efae913366d3afbf5561785dbc633445df8832ff8cb9e588c855f",
     superseded: [
