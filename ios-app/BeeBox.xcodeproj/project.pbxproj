@@ -93,7 +93,9 @@
 		F1A000002E00000100000001 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000012E00000100000001 /* PushRegistrar.swift */; };
 		F1A000022E00000100000001 /* NotificationCenterDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000032E00000100000001 /* NotificationCenterDelegate.swift */; };
 		F1A000042E00000100000001 /* NotificationTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000052E00000100000001 /* NotificationTarget.swift */; };
+		B0C500012F00000100000002 /* RootSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500012F00000100000001 /* RootSurface.swift */; };
 		F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000072E00000100000001 /* PushNotificationTests.swift */; };
+		B0C500022F00000100000002 /* RootSurfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500022F00000100000001 /* RootSurfaceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -216,7 +218,9 @@
 		F1A000012E00000100000001 /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrar.swift; sourceTree = "<group>"; };
 		F1A000032E00000100000001 /* NotificationCenterDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterDelegate.swift; sourceTree = "<group>"; };
 		F1A000052E00000100000001 /* NotificationTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTarget.swift; sourceTree = "<group>"; };
+		B0C500012F00000100000001 /* RootSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootSurface.swift; sourceTree = "<group>"; };
 		F1A000072E00000100000001 /* PushNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationTests.swift; sourceTree = "<group>"; };
+		B0C500022F00000100000001 /* RootSurfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootSurfaceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -286,6 +290,7 @@
 			children = (
 				5A1000122C3C000100000001 /* PairedBox.swift */,
 				F1A000052E00000100000001 /* NotificationTarget.swift */,
+				B0C500012F00000100000001 /* RootSurface.swift */,
 				5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
 				B72000022C3C000100000001 /* NativeComposerContract.swift */,
@@ -371,6 +376,7 @@
 				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
 				5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */,
 				F1A000072E00000100000001 /* PushNotificationTests.swift */,
+				B0C500022F00000100000001 /* RootSurfaceTests.swift */,
 				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
 				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
@@ -569,6 +575,7 @@
 				5A1000012C3C000100000001 /* BeeBoxApp.swift in Sources */,
 				5A1000022C3C000100000001 /* PairedBox.swift in Sources */,
 				F1A000042E00000100000001 /* NotificationTarget.swift in Sources */,
+				B0C500012F00000100000002 /* RootSurface.swift in Sources */,
 				5A1000032C3C000100000001 /* PairedBoxStore.swift in Sources */,
 				5A1000042C3C000100000001 /* RootView.swift in Sources */,
 				5A1000052C3C000100000001 /* PairBoxView.swift in Sources */,
@@ -632,6 +639,7 @@
 				5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */,
 				5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */,
 				F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */,
+				B0C500022F00000100000002 /* RootSurfaceTests.swift in Sources */,
 				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
 				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
