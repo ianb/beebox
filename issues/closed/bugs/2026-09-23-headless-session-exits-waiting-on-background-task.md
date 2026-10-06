@@ -1,12 +1,21 @@
 ---
 title: "A headless scheduled session exits for good when it ends its turn to wait on a background task"
-workstream: unattached
+workstream: schedule-session-landing
 area: schedules
 filed-by: agent
 discovered-by: agent
 discovered-in: main — investigating the 2026-09-23 knip-sweep failure
 priority: important
+resolution: implemented
 ---
+
+Resolved in the schedule-session-landing workstream. Claude scheduled sessions
+now run with `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` (Bash rejects
+`run_in_background`) and `BASH_MAX_TIMEOUT_MS` set to the run's timeout
+(`bin/lib/launch-headless.sh`). The shared briefing says the session is
+single-shot (`bin/lib/schedules-briefing.ts`). The bailed-run alert says
+whether the worktree is dirty and names `bin/schedules run <name> --replay
+<runId>`. Codex has no equivalent switch; it gets the briefing text only.
 
 A scheduled session runs headless and single-shot. If the agent starts a
 command in the background and ends its turn to wait for it, the process exits.

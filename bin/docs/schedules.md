@@ -60,6 +60,28 @@ The exact foreground runners are `claude -p` and `codex exec`.
 it prints the argv one element per line. Agent/model/default flag assembly stays
 there rather than in individual schedules.
 
+A headless session ends when the agent ends its turn, and nothing resumes it.
+Claude sessions run with `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` and
+`BASH_MAX_TIMEOUT_MS` set to the run's timeout, and every briefing says to run
+long commands in the foreground and commit before ending the turn.
+
+## Worktree branch between runs
+
+Before a worktree session starts (after the liveness guard), the runner parks
+any uncommitted edits as one commit on `refs/schedules/<name>/parked/<runId>`,
+resets the tree, merges `main`, and lists the branch's commits that `main`
+lacks. The briefing names both; the session decides under its prompt's
+authority. A refusal alert carries the liveness guard's reason.
+
+After every run of a worktree schedule, a branch holding work `main` lacks is
+the runner-owned `unlanded-commits` condition (`normal`); it resolves once the
+branch lands or is gone. The runner never lands.
+
+A bailed-run alert says whether the worktree is dirty and names
+`bin/schedules run <name> --replay <runId>`, which starts a new run's session on
+that run's stored handoff without running `run` (the baseline has usually
+moved) and without stamping `lastRunAt`.
+
 Codex cannot implement Claude's `tools`, `allowedTools`, `disallowedTools`,
 `maxBudgetUsd`, or `effort`. A Codex schedule declaring one fails closed. Its
 `prompt.md` leads the briefing rather than becoming an appended system prompt.

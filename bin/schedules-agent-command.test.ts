@@ -45,9 +45,13 @@ test("the claude command carries the sandbox, the prompt file, and a fresh sessi
     LH_ALLOWED_TOOLS: "Edit(issues/**)\nRead(bin/**)",
     LH_DISALLOWED_TOOLS: "Read(private-issues/**)",
     LH_MAX_BUDGET_USD: "2",
+    LH_TIMEOUT_MS: "7200000",
   });
   assert.equal(built.exitCode, 0, built.stderr);
+  // Background tasks are off and one foreground command may use the whole run:
+  // a headless session that backgrounds work and ends its turn loses it.
   assert.deepEqual(built.argv, [
+    "env", "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1", "BASH_MAX_TIMEOUT_MS=7200000",
     "claude", "-p", "--brief", "--name", "knip-sweep", "--model", "opus",
     "--permission-mode", "dontAsk", "--setting-sources", "user", "--disable-slash-commands",
     "--append-system-prompt-file", path.join(REPO, "package.json"),
@@ -62,7 +66,8 @@ test("the claude command carries the sandbox, the prompt file, and a fresh sessi
 test("effort rides the claude command and is refused for codex", async () => {
   const built = await headlessArgv({ ...CLAUDE_ENV, LH_EFFORT: "high" });
   assert.equal(built.exitCode, 0, built.stderr);
-  assert.deepEqual(built.argv.slice(0, 9), [
+  assert.deepEqual(built.argv.slice(0, 11), [
+    "env", "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1",
     "claude", "-p", "--brief", "--name", "knip-sweep", "--model", "opus", "--effort", "high",
   ]);
   // Absent means absent: the CLI's own default is what an unstated effort means.

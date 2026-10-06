@@ -137,3 +137,41 @@ The wait now keeps the last row, and the same failure reads:
 ```
 
 Verified by re-breaking the fixture on purpose. No engine change was needed.
+
+## 2026-09-16 recurrence in a second gitless fixture
+
+Weekly `test:manual` (`schedules/manual-tests`, run `20260915-204151`, log
+`~/src/schedule-runs/manual-tests/runs/20260915-204151.log`) failed at commit
+`7894bba8f` on `main`, one file first-parent-descended from `ba7121b7`/
+`969d97fa5`. `test/manual/chat-queue-real.doctest.md:46` builds its box with
+plain `makeTmpBox()` (no `{ git: true }`), then constructs a `ChatSession` and
+calls `session.send(...)`. `ChatSession.startRun` calls `acquireBoxWork`
+(`src/core/chat/session/index.ts:307`), which hits the same assert as the
+hub-e2e case:
+
+```
+not ok 1 - Box maintenance requires a Git repository: /var/folders/.../T/bbx-doctest-BBhBR5
+  stack: |
+    invariant (src/lib/invariant.ts:58:20)
+    <anonymous> (src/lib/box-maintenance.ts:37:7)
+```
+
+Same mechanism as the hub-e2e fixture above (`directoryFor` in
+`box-maintenance.ts:33` asserts a Git dir for every admitted box), a different
+call site (`acquireBoxWork` on an ordinary chat send, not
+`acquireBoxStartup` on hub startup) and a different fixture
+(`test/helpers/doctest-helpers.ts`'s `makeTmpBox()` default, not
+`makeFixtureBox`'s `initBox({ skipGit: true })`). Unlike hub-e2e, nobody has
+fixed this call site yet — the whole doctest now fails before sending a single
+message, so the weekly suite is not exercising real-SDK queue-draining
+behavior at all (this is the doctest that specifically proves the "second
+message never processed" class of user report; see the closed
+[chat-queue-real hard-fails on lapsed login](../closed/bugs/2026-09-08-chat-queue-real-hard-fails-on-lapsed-claude-login.md)
+issue for its other failure modes).
+
+Given the "not a supported shape" resolution above, the fix here is the same
+shape as the hub-e2e one: pass `{ git: true }` to this test's `makeTmpBox()`
+call (and audit other manual/doctest fixtures that construct a `ChatSession`
+or otherwise call into `acquireBoxWork`/`acquireBoxMaintenance` over a gitless
+box — this makes two independent fixtures caught by the same trap within a
+day of the landing).
