@@ -308,3 +308,68 @@ export async function acquire(input: {
     await new Promise((resolve) => setTimeout(resolve, POLL_MS));
   }
 }
+
+// ── the full-run lock ───────────────────────────────────────────────────────
+
+/**
+ * One lock file for "a FULL suite is running on this machine", beside the
+ * slots. The slots cap concurrent runs at two; this keeps those two from both
+ * being full suites. 2026-09-25: the hourly schedule and a worktree's own
+ * `pnpm test` ran together on a 16 GB host and exhausted swap.
+ */
+export const FULL_RUN = "full-run";
+
+/**
+ * Set by the process that already holds the full-run lock (the full-suite
+ * schedule, which must decide to defer before it creates a checkout) so the
+ * ledger wrapper it spawns does not queue behind its own parent.
+ */
+export const FULL_RUN_HELD_ENV = "BBX_FULL_RUN_LOCK_HELD";
+
+/** Longest a worktree's own full run queues behind another full run before giving up. */
+export const FULL_RUN_WAIT_MS = 45 * 60 * 1000;
+
+export type FullRunClaim = { held: Held; blockedBy: null } | { held: null; blockedBy: LockRecord };
+
+/**
+ * Claim the full-run lock, waiting at most `waitMs` (0 = one look, then give
+ * up). Same stale rules and exclusive-create mutex as the slots. The caller
+ * decides what a refusal means: the schedule defers its tick, a worktree run
+ * exits non-zero.
+ */
+export async function acquireFullRun(input: {
+  dir: string;
+  branch: string;
+  waitMs: number;
+  /** Prefix on the one waiting line, so each caller names itself. */
+  label?: string;
+}): Promise<FullRunClaim> {
+  mkdirSync(input.dir, { recursive: true });
+  const path = join(input.dir, FULL_RUN);
+  const deadline = Date.now() + input.waitMs;
+  let announced = false;
+  for (;;) {
+    const staleProbe = probe();
+    const holder = readLive(path, staleProbe);
+    if (holder === null) {
+      const record: LockRecord = {
+        pid: process.pid,
+        branch: input.branch,
+        at: new Date().toISOString(),
+        bootTimeMs: staleProbe.bootTimeMs,
+      };
+      if (claim(path, record)) {
+        return { held: { concurrency: 0, release: () => releaseOwn(path, process.pid) }, blockedBy: null };
+      }
+      continue;
+    }
+    if (Date.now() >= deadline) return { held: null, blockedBy: holder };
+    if (!announced && input.waitMs > 0) {
+      console.error(
+        `${input.label ?? "test-ledger"}: waiting for another full run (held by pid ${String(holder.pid)}, branch ${holder.branch}, since ${holder.at})`,
+      );
+      announced = true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+  }
+}
