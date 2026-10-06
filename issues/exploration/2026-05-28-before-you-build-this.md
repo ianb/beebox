@@ -12,3 +12,7 @@ Idea: an index of available units — UI components, hooks, helpers, schemas, ca
 Convention to make it stick: a short rule in `CLAUDE.md` ("before writing a new component / helper / schema, run `bbx reuse-search 'description'` and consider the candidates") plus a pre-commit nudge when a new file in `src/components/ui/` or `src/lib/` doesn't appear in the index yet.
 
 Open questions: where embeddings live (local Faiss index in `.callback-cache/`? a small server?); how to keep the index from going stale (rebuild on file change vs. on demand); whether the search is a CLI or a tRPC procedure the agent calls; how to surface *what was missed* — false negatives are the painful kind ("the helper existed but the search didn't return it").
+
+## Next-action note (2026-10-06)
+
+Checked "fixed?": not fixed. No commit names this issue, and no reuse-search step exists. The open [structured module docs and code search](../features/2026-08-12-structured-module-docs-and-code-search.md) carries a similar idea (a search bbx-plan runs before designing) and is also unbuilt.

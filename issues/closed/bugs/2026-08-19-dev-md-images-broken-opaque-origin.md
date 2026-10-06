@@ -7,10 +7,6 @@ discovered-by: Ian
 discovered-in: worktree-workstream-story — relative-path SVGs in a dev/ .md page all rendered broken
 resolution: implemented
 ---
-> **⏳ Awaiting manual testing** — fix landed in `worktree-workstream-story`
-> (the `/dev/` sandbox CSP is removed); after merge + router restart, open a
-> dev `.md` with relative images and confirm they render. Only the developer
-> clears this.
 
 Every `/dev/` response carried `Content-Security-Policy: sandbox` (no
 `allow-same-origin`), so a rendered `.md` page had an **opaque origin**. Its
@@ -53,4 +49,4 @@ quick-open palette again (the sibling issue).
 
 ## Next-action note (2026-10-06)
 
-Reconfirmed: fixed by 30400a662 (removed the /dev sandbox CSP), confirmed by the boxholder 2026-08-24 (81e0a5ba0). Code still holds: `workstreams-app/src/router/server/docs.ts` serveDev sets no Content-Security-Policy, pinned by `workstreams-app/test/router/server/docs.test.ts:108`. The "Awaiting manual testing" banner above is stale.
+Reconfirmed: fixed by 30400a662 (removed the /dev sandbox CSP), confirmed by the boxholder 2026-08-24 (81e0a5ba0). Code still holds: `workstreams-app/src/router/server/docs.ts` serveDev sets no Content-Security-Policy, pinned by `workstreams-app/test/router/server/docs.test.ts:108`.

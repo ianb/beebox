@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder shared typesafe.ai
+resolution: implemented
 ---
+
+> **Closed (2026-10-06):** evaluated and adopted: Jev runs in production (`beebox/src/services/jev.ts`); remaining triage work is in the jev-triage issue.
 
 [TypeSafe](https://typesafe.ai/) sells a hosted model (Jev, their "System One"
 model) that answers typed questions about supplied state. It returns an answer
@@ -42,14 +45,14 @@ parsing what comes back. Candidates where the needed answer is a label, a rank,
 or a yes/no:
 
 - **Inbox triage and job routing** — which handler an incoming item needs.
-  Related: [triage agent session routing](../closed/features/2026-06-28-triage-agent-session-routing.md),
+  Related: [triage agent session routing](../features/2026-06-28-triage-agent-session-routing.md),
   where the open question is "which existing session should this message join?"
   That is a Choice over candidate sessions.
 - **Search ranking** — reranking issue or card search candidates by relevance.
 - **Validation and audit judgments** — the refresh-maps validate judge, and
   knowledge-audit grading, which today spend an agent turn per judgment.
 - **Cheap passes already split out** — the `smallModel` slot
-  ([closed issue](../closed/features/2026-08-25-small-model-slot.md)) exists
+  ([closed issue](../features/2026-08-25-small-model-slot.md)) exists
   because title, summary, chat-review, and procedure-judge passes do not need
   a flagship model. Those are the same shape.
 
@@ -71,7 +74,7 @@ a threshold you can set, and a defensible "not sure, ask a person" branch.
    measurement on our own data before a threshold decides anything. Any trial
    should compare against the same judgment from the `smallModel` slot, on
    recorded cases, not on their cookbook examples.
-4. **Prior art in the queue.** [OpenRouter consolidation](../closed/exploration/2026-08-31-openrouter-optional-services-consolidation.md)
+4. **Prior art in the queue.** [OpenRouter consolidation](2026-08-31-openrouter-optional-services-consolidation.md)
    was the last look at adding an optional model service. Read its disposition
    before proposing another.
 
@@ -82,3 +85,7 @@ procedure judge or an inbox-triage decision — and run it three ways offline: t
 current agent pass, a `smallModel` pass, and a TypeSafe Choice/Noul. Compare
 agreement with the recorded outcome, latency, and cost. No box content leaves
 the machine until the boxholder approves the egress for that trial.
+
+## Next-action note (2026-10-06)
+
+Checked "fixed?": the evaluation is done and acted on. Jev was adopted in production (`beebox/src/services/jev.ts`, security-report egress entry `beebox/docs/security-report.md:284`), the smallest experiment this issue proposed was run (`beebox/docs/reports/jev-document-triage-experiment-2026-09-28.md`), and Quick chat routes through it. Remaining triage work lives in [jev triage and quick-capture routing](../../features/2026-09-21-jev-triage-and-quick-capture-routing.md). Closed as implemented.
