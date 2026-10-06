@@ -1,6 +1,7 @@
 ---
 title: "The recording-drop alarm is too aggressive, and it sounds the same for a lost mic and a lost live-text socket"
 workstream: voice-keywords-cues
+resolution: implemented
 area: beebox
 labels: [voice, transcription]
 filed-by: agent
@@ -8,6 +9,9 @@ discovered-by: Ian
 discovered-in: main session — investigating repeated recording alarms on a prod box with a flaky upstream network
 priority: important
 ---
+
+
+**Closed:** implemented in commit 0f0468053 (with follow-ups 81bcd67c8 and 7e63a85b3, which dropped "finished talking" from the sign-off family). See the Decided/Resolution section below for the choices.
 
 The web client plays `recordingDropped` (`krell-alarm-7.wav`, volume 0.7)
 for two different failures. The sound is also much too aggressive. It was a

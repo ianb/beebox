@@ -1,6 +1,7 @@
 ---
 title: "A \"checkpoint\" voice keyword: send now, and tell the agent I am still talking"
 workstream: voice-keywords-cues
+resolution: implemented
 area: beebox
 labels: [voice, chat]
 filed-by: agent
@@ -8,6 +9,9 @@ discovered-by: Ian
 discovered-in: main session — boxholder request
 priority: important
 ---
+
+
+**Closed:** implemented in commit 0f0468053 (with follow-ups 81bcd67c8 and 7e63a85b3, which dropped "finished talking" from the sign-off family). See the Decided/Resolution section below for the choices.
 
 **Job:** When I dictate a long train of thought, I want to send what I have
 so far without ending my turn. Then the agent can start work, or simply hold
