@@ -56,7 +56,7 @@ export function selectRoutingDestination(args: {
 }
 
 /** Provisional: posts the clear samples and asks on the debatable ones. Calibrate from stored records. */
-export const QUICK_CHAT_POST_FLOOR = 0.9;
+const QUICK_CHAT_POST_FLOOR = 0.9;
 
 /**
  * Where a candidate lands: its landmark, or its own context directory when it

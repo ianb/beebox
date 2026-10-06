@@ -106,7 +106,7 @@ ties favor existing chats.
 
 Second, it decides to post or ask. It adds the probabilities of every
 candidate in the same place as the selected one: the same landmark, or the
-box root when neither has a landmark. When that sum is 0.9 or more, the
+same directory when a candidate has no landmark. When that sum is 0.9 or more, the
 thought is posted. Otherwise it waits as `uncertain`. A split between a
 landmark's chat and a new chat in that landmark is therefore not doubt.
 

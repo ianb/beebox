@@ -16,12 +16,12 @@ import { isRecord } from "../../../shared/is-record.js";
 import { AGENT_ENGINES } from "../../../shared/agent-models.js";
 import { routingCandidateSchema, type RoutingCandidate } from "./policy.js";
 
-export const QUICK_CHAT_STATES = ["needs-choice", "sending", "sent", "discarded"] as const;
+const QUICK_CHAT_STATES = ["needs-choice", "sending", "sent", "discarded"] as const;
 export const QUICK_CHAT_REASONS = ["uncertain", "routing-unavailable", "destination-gone"] as const;
 export type QuickChatReason = (typeof QUICK_CHAT_REASONS)[number];
 
 /** Duplicate protection lasts 7 days (send-dedup.ts); refuse a late delivery a day before that. */
-export const QUICK_CHAT_DELIVERY_WINDOW_MS = 6 * 24 * 60 * 60 * 1000;
+const QUICK_CHAT_DELIVERY_WINDOW_MS = 6 * 24 * 60 * 60 * 1000;
 const MAX_CHOICES = 4;
 
 const deliverySchema = z.object({
@@ -103,7 +103,7 @@ export function deliveryExpired(record: SendingQuickChatRecord, now: number): bo
   return now - Date.parse(record.deliveryStartedAt) > QUICK_CHAT_DELIVERY_WINDOW_MS;
 }
 
-export function expiredDeliveryMessage(label: string): string {
+function expiredDeliveryMessage(label: string): string {
   return `This may already be in ${label}. Open the chat to check.`;
 }
 
@@ -137,7 +137,7 @@ export function quickChatView(record: QuickChatRecord, now: number): QuickChatVi
 }
 
 /** The candidate for a new chat at the box root; every catalog ends with one. */
-export function isGeneralCandidate(candidate: RoutingCandidate): boolean {
+function isGeneralCandidate(candidate: RoutingCandidate): boolean {
   return candidate.target.kind === "new-session" && candidate.target.contextDir === "";
 }
 
