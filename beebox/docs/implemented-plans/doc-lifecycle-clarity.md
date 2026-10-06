@@ -18,7 +18,7 @@ conventions rather than adding a documentation management system.
 ## 1. Enforce lifecycle consistency at landing
 
 Extend the existing validator rather than add another checklist.
-`beebox/src/dev/doc-frontmatter.ts:70-71` already rejects non-implemented status
+`beebox/src/dev/doc-frontmatter.ts:70-71` (moved to `beebox/src/dev/doc-check/frontmatter.ts`) already rejects non-implemented status
 inside `implemented-plans/` and inappropriate status inside
 `unimplemented-plans/`; it does not reject terminal status inside `plans/`.
 Require the complete mapping:

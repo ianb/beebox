@@ -8,19 +8,21 @@
  */
 
 import { Command } from "commander";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/structure/core.js";
 import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
-import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
-import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
+import * as path from "node:path";
+import { stageAll, commit, initRepo, isRepo, repoRootOf } from "../../lib/git/core.js";
+import { fileExists } from "../../lib/file-exists.js";
+import { generateDocs } from "../../core/docs-gen/generate/core.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
-import { runAnnexDoctor } from "../../core/annex/doctor.js";
+import { runAnnexDoctor } from "../../core/annex/doctor/core.js";
 import { requireGitAnnex } from "../../core/annex/require-git-annex.js";
-import { annexNewBox } from "../../core/annex/annex-new-box.js";
+import { annexNewBox } from "../../core/annex/new-box.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { boxSlugFromShape } from "../../lib/box-slug.js";
 import { createGitAnnexService, type GitAnnexService } from "../../services/git-annex.js";
-import { openSearchIndex } from "../../core/search/refresh.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { openSearchIndex } from "../../core/search/refresh/core.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /**
  * Print the fresh-init banner and initialize git at the box root. Split out of
@@ -47,7 +49,7 @@ async function announceAndInitGit(
   console.log("Git repository initialized with initial commit.");
 
   // Annex HERE, not in `initBox`. `initBox` writes the box `.gitignore` from
-  // an annex probe (`src/core/box/index.ts`), but `scaffoldBoxRoot` calls it
+  // an annex probe (`src/core/box/structure/core.ts`), but `scaffoldBoxRoot` calls it
   // before there is a `.git` — so on a fresh init the probe can only ever read
   // false and the box would be written manifest-scheme no matter what. The
   // repository has to exist first, so this step re-writes the `.gitignore` the
@@ -66,9 +68,35 @@ async function announceAndInitGit(
   console.log("  .claude/                              - Agent configuration");
 }
 
+/** Thrown when a new box's path lies inside another git repository. */
+export class NestedBoxError extends Error {
+  constructor(
+    readonly boxRoot: string,
+    readonly enclosingRepo: string,
+  ) {
+    super(
+      `Refusing to create a box at ${boxRoot}: it is inside the git repository at ${enclosingRepo}. ` +
+        "A box is its own repository; choose a path outside that one.",
+    );
+    this.name = "NestedBoxError";
+  }
+}
+
+/**
+ * A box must be its own repository. Inside another one, every git and annex
+ * command init runs would land on the enclosing repository. Checked before
+ * anything is written, against the nearest existing ancestor when the target
+ * does not exist yet.
+ */
+async function refuseNestedBox(boxRoot: string): Promise<void> {
+  let probe = boxRoot;
+  while (!(await fileExists(probe)) && path.dirname(probe) !== probe) probe = path.dirname(probe);
+  const enclosing = await repoRootOf(probe);
+  if (enclosing !== null && !(await isRepo(boxRoot))) throw new NestedBoxError(boxRoot, enclosing);
+}
+
 export interface InitOptions {
   branch: string;
-  docidDebug?: boolean;
 }
 
 /**
@@ -89,6 +117,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // one-root layout — see `docs/implemented-plans/one-root-box-layout.md`.
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
+  if (isFresh) await refuseNestedBox(boxRoot);
 
   // A fresh init scaffolds the whole box (npm-package half + operational
   // half, both at the same root) via the shared builder — `scaffoldBoxRoot`
@@ -179,8 +208,9 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // Install default scheduled scripts
   const schedules = await installSchedules(boxRoot);
   if (schedules.length > 0) {
-    changes.push(`Installed ${schedules.length} schedule(s) in _config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
+    changes.push(`Installed ${schedules.length} schedule(s) in _config/schedules/ (map refresh, run cleanup, retrospective, and todo review enabled; other seeds disabled)`);
     changes.push("  refresh-maps may invoke an efficient-tier agent when directory structure changes, including a full map build on a fresh box.");
+    changes.push("  todo-review invokes an agent once a day, only when a todo is overdue, newly started, or stale.");
     changes.push("  Enable an opt-in schedule in the dashboard or by setting enabled: true after reviewing it and configuring any required connector secrets.");
     for (const s of schedules) changes.push(`  ${s}`);
   }
@@ -188,18 +218,6 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // Symlink .claude/memory/ so auto-memory is git-tracked
   const memoryLinked = await symlinkClaudeMemory(boxRoot);
   if (memoryLinked) changes.push("Linked .claude/memory/ → ~/.claude/projects/ (auto-memory now git-tracked)");
-
-  // Set or clear the docid-debug marker. Both directions are reported: the
-  // marker persists across runs, so "it is off now" is as much a change as
-  // "it is on now", and a silent clear leaves the operator guessing.
-  if (options.docidDebug !== undefined) {
-    await setDocIdDebug(boxRoot, options.docidDebug);
-    changes.push(
-      options.docidDebug
-        ? "DOCID markers enabled (grep for DOCID: in prompt logs to verify inclusion)"
-        : "DOCID markers disabled",
-    );
-  }
 
   // A fresh init prints its list here, in step order, so the slow generate/
   // index progress below still reads as progress rather than arriving before
@@ -234,7 +252,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     if (check.status === "failed") console.warn(`git-annex: ${check.message}`);
   }
 
-  // Generate agent documentation (picks up docid-debug from marker file).
+  // Generate agent documentation.
   // This is also where card rules (`generateRules`) and the managed box skills
   // (`generateSkills`) are written — `syncTemplatesFromSource` owns both, so
   // `bbx init` no longer calls them itself and there is one path that keeps a
@@ -293,8 +311,8 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   if (isFresh) {
     // Point at the thing to open, not at another CLI command: the box is a web
     // app, and a fresh box's chat now opens with suggested questions to start
-    // from. `bbx serve` prints the box's URL on startup.
-    console.log(`\nNext: run 'bbx serve' and open the ${boxSlugFromShape(boxShape)} URL it prints.`);
+    // from. `bbx engine serve` prints the box's URL on startup.
+    console.log(`\nNext: run 'bbx engine serve' and open the ${boxSlugFromShape(boxShape)} URL it prints.`);
   }
 }
 
@@ -302,11 +320,6 @@ export const initCommand = new Command("init")
   .description("Initialize or update a Bee Box")
   .argument("[path]", "Path to initialize", ".")
   .option("-b, --branch <name>", "Initial branch name", "main")
-  .option("--docid-debug", "Add DOCID markers to generated docs (persists until --no-docid-debug)")
-  // Declared explicitly: commander does not derive `--no-x` from `--x`, so the
-  // help text above promised a flag that did not exist and the marker could
-  // only ever be set, never cleared, from the CLI.
-  .option("--no-docid-debug", "Clear the DOCID marker set by a previous --docid-debug")
   .action(async (targetPath: string, options: InitOptions) => {
     try {
       await runInit(targetPath, options);

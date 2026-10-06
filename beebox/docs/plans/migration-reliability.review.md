@@ -7,8 +7,8 @@ existing reload admission, configured agent interface, question cards/notificati
 template installers, and existing deployment and schedule callers.
 
 Evidence: `beebox/src/core/migration-run.ts:130` defines `computePending`;
-`beebox/src/lib/git.ts:366` defines `stageAndCommitPaths`;
-`beebox/src/core/agent/index.ts:154` defines `createAgent`;
+`beebox/src/lib/git.ts:366` (moved to `beebox/src/lib/git/core.ts`) defines `stageAndCommitPaths`;
+`beebox/src/core/agent/index.ts:154` (moved to `beebox/src/core/agent/invoke/core.ts`) defines `createAgent`;
 `beebox/src/core/question-alert.ts:69` defines
 `checkPendingQuestionsAndNotify`.
 
@@ -133,7 +133,7 @@ next invocation. A verified no-work authentication failure can retry.
 ### Stage new output and restore original staging on rejection
 
 **Location in plan:** Track 2, One application path with Git recovery.
-**Citation:** `beebox/src/lib/git.ts:375`: `await stageFiles(boxRoot, paths);`.
+**Citation:** `beebox/src/lib/git.ts:375` (moved to `beebox/src/lib/git/core.ts`): `await stageFiles(boxRoot, paths);`.
 **Issue:** Calling `commitPaths` alone misses new, untracked interface cards.
 Restoring only the manifest after a rejected commit leaves other attempt output
 staged for an unrelated writer.

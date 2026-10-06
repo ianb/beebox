@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { vapidPublicKey } from "../../../core/send-push.js";
 import { addSubscription, removeEndpointFromBox } from "../../../core/push-subscriptions.js";
 

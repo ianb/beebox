@@ -8,7 +8,7 @@
  * capture.
  */
 
-import type { StagingSession } from "./staging-store.js";
+import type { StagingSession } from "./staging-store/core.js";
 
 export const MAX_STAGED_BYTES = 1024 * 1024 * 1024; // 1 GiB
 export const MAX_STAGED_ITEMS = 500;

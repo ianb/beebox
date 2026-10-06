@@ -20,7 +20,7 @@ retired format.
   asset manifest into its attach scope and commits it. The batch-local
   `.gitattributes` even carries a `manifest.json annex.largefiles=nothing` line
   to keep it out of the annex.
-- `beebox/src/core/capture/write-cards.ts:71` — every capture child card
+- `beebox/src/core/capture/write-cards.ts:71` (moved to `beebox/src/core/capture/prepare/write-cards.ts`) — every capture child card
   gets a per-scope manifest, staged at `:72`.
 - `beebox/src/core/commands/attachments.ts:263,302` — `bbx attachments`
   still maintains manifests.

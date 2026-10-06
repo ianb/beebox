@@ -14,7 +14,7 @@ import {
   MAX_RETAINED_BYTES,
   MAX_SESSION_ENTRIES,
 } from "../../../src/cli/lib/session.js";
-import { writeBigSessionLog } from "../../helpers/session-log-fixture.js";
+import { writeBigSessionLog } from "./session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { spawn } from "node:child_process";
 import { join } from "node:path";

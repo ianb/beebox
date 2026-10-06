@@ -14,7 +14,7 @@ resolution: implemented
 Fixed in `cross-box-leak-scan`: `listSessionRoots` resolves the row through
 `containedSessionCwd`, the same helper `resolveSessionLogPath` already used;
 an escaping row collapses to the box root and is skipped. Covered in
-`test/cli/lib/session-multi-root.doctest.md`.
+`test/cli/lib/session-multi-root.doctest.md` (moved to `beebox/test/cli/lib/session.multi-root.doctest.md`).
 
 `listSessionRoots` (`beebox/src/core/chat/session/history.ts:185`) reads
 `contextDir` out of the per-checkout session-history JSON and joins it straight

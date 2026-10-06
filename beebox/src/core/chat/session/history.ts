@@ -25,12 +25,12 @@ import { makeLog } from "./log.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { containedSessionCwd, getSessionDir, getSessionLogPath } from "./transcript-paths.js";
-import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
-import { readCodexSessionUpdatedAt } from "./codex-transcript.js";
+import { readCodexSessionUpdatedAt } from "./codex-transcript/core.js";
 
 const HISTORY_FILE = ".beebox/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".beebox/chat-session-id.json";
@@ -332,7 +332,7 @@ export async function getLastSessionForDirectory(boxRoot: string, contextDir: st
   // Testing caveat: this means tests that exercise this helper can't just
   // call appendHistory — they must also seed an empty JSONL at the path
   // resolveSessionLogPath() produces, or every entry looks like a ghost and
-  // the helper returns null. See test/core/chat-session-history.doctest.md's
+  // the helper returns null. See test/core/chat/session/history.doctest.md's
   // seedSessionLog/cleanupSessionLogs helpers.
   for (let i = entries.length - 1; i >= 0; i -= 1) {
     const entry = entries[i];

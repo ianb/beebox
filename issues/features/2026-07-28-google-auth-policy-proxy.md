@@ -216,7 +216,7 @@ own issues — both are conditional on this proxy direction:
 - **Incremental authorization.** Today the OAuth flow requests all scopes
   (calendar, gmail, drive) upfront regardless of a box's `googleServices` policy
   (`src/core/box/config.ts` `isGoogleServiceAllowed`, checked post-hoc in
-  `src/connectors/requirements.ts:23-28`). Requesting only the scopes a box needs
+  `src/connectors/requirements.ts:23-28` (moved to `beebox/src/requirements.ts`)). Requesting only the scopes a box needs
   shrinks the blast radius of a leaked `BBX_GOOGLE_TOKENS_FILE`. Open question:
   once the proxy owns the single Google grant (Tier 1), incremental auth mostly
   matters only for the BYO / direct-mode path — decide its relevance during design.

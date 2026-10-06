@@ -197,7 +197,8 @@ actor ComposerDraftRepository {
             return ChatImageAttachment(
                 id: image.id,
                 mimeType: image.mimeType,
-                dataBase64: data.base64EncodedString()
+                dataBase64: data.base64EncodedString(),
+                path: image.original?.uploadedPath
             )
         }
     }
@@ -211,8 +212,8 @@ actor ComposerDraftRepository {
     }
 
     func removePayloads(for images: [DraftImage], boxID: UUID) {
-        for image in images {
-            try? removePayload(filename: image.filename, boxID: boxID)
+        for filename in images.flatMap(\.payloadFilenames) {
+            try? removePayload(filename: filename, boxID: boxID)
         }
     }
 
@@ -224,14 +225,29 @@ actor ComposerDraftRepository {
 
     func missingImageIDs(_ images: [DraftImage], boxID: UUID) -> [Int] {
         images.compactMap { image in
-            guard
-                let url = try? payloadURL(filename: image.filename, boxID: boxID),
-                fileManager.fileExists(atPath: url.path)
-            else {
-                return image.id
-            }
-            return nil
+            payloadExists(filename: image.filename, boxID: boxID) ? nil : image.id
         }
+    }
+
+    /// Images whose ORIGINAL payload is gone while its state still expects it.
+    ///
+    /// Deliberately separate from `missingImageIDs`: a missing original costs
+    /// the message its `[image#N]:` line, while a missing image costs the
+    /// message the image, so the two cannot share a verdict.
+    func missingOriginalIDs(_ images: [DraftImage], boxID: UUID) -> [Int] {
+        images.compactMap { image in
+            guard let original = image.original, original.hasPayload else {
+                return nil
+            }
+            return payloadExists(filename: original.filename, boxID: boxID) ? nil : image.id
+        }
+    }
+
+    private func payloadExists(filename: String, boxID: UUID) -> Bool {
+        guard let url = try? payloadURL(filename: filename, boxID: boxID) else {
+            return false
+        }
+        return fileManager.fileExists(atPath: url.path)
     }
 
     func missingFileIDs(_ files: [DraftFile], boxID: UUID) -> [Int] {

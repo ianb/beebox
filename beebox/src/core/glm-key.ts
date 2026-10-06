@@ -18,7 +18,7 @@
 
 import { resolveSecret } from "./secrets/resolve.js";
 import type { SecretRefusal } from "./secrets/errors.js";
-import { providerOf } from "../shared/agent-models.js";
+import { ProviderSetupError } from "./provider-setup-error.js";
 
 /** The store name this key lives under. */
 const GLM_SECRET_NAME = "glm";
@@ -40,34 +40,14 @@ export interface GlmEnvAdditions {
   API_TIMEOUT_MS: string;
 }
 
-/** Pure — the env additions for a resolved key. The provider gate lives with
- * the caller (`providerOf(model) === "glm"`), not here. */
+/** Pure — the env additions for a resolved key. The provider gate lives in
+ * `core/provider-env.ts`, not here. */
 export function glmEnvAdditions(key: string): GlmEnvAdditions {
   return {
     ANTHROPIC_BASE_URL: GLM_BASE_URL,
     ANTHROPIC_AUTH_TOKEN: key,
     API_TIMEOUT_MS: GLM_API_TIMEOUT_MS,
   };
-}
-
-/**
- * Resolve the GLM child-env additions for a resolved chat model, or null when
- * the model is not GLM. The one seam for chat-path injection — the batch/agent
- * path (run.ts) does its own because its prompt-logger interaction differs.
- */
-export async function glmChatAdditions(params: {
-  boxRoot: string;
-  /** The resolved model for the run — null/undefined/non-glm means no additions. */
-  model: string | null | undefined;
-  /** Access-log label for the key resolution. */
-  purpose: string;
-  /** When given, the additions are also merged into this env in place. */
-  env?: Record<string, string | undefined>;
-}): Promise<GlmEnvAdditions | null> {
-  if (params.model === null || params.model === undefined || providerOf(params.model) !== "glm") return null;
-  const additions = glmEnvAdditions(await resolveGlmKeyOrThrow(params.boxRoot, { purpose: params.purpose }));
-  if (params.env) Object.assign(params.env, additions);
-  return additions;
 }
 
 /**
@@ -83,11 +63,12 @@ export async function glmKeyUsable(boxRoot: string): Promise<boolean> {
 }
 
 /** Thrown when a GLM-model run has no usable key. Names the setup commands. */
-export class GlmKeyError extends Error {
+export class GlmKeyError extends ProviderSetupError {
   readonly refusal: SecretRefusal;
 
   constructor(refusal: SecretRefusal) {
     super(
+      "glm",
       `This run selected a GLM model, but no usable GLM key is available for this box (${refusal.message}) ` +
         `— set one up with \`bbx secrets set ${GLM_SECRET_NAME}\` and grant it with \`bbx secrets grant <box-slug> ${GLM_SECRET_NAME}\`.`,
     );

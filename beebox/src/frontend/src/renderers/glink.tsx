@@ -10,14 +10,17 @@
  * of rendering nothing.
  */
 
-import { Markdown } from "../components/Markdown";
+import { Markdown } from "../components/Markdown/body";
 import { Badge } from "../components/ui/Badge";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { Hint } from "../components/ui/Hint";
+import { Heading } from "../components/ui/Heading";
+import { isRecord } from "@shared/is-record";
 import { driveMimeLabel } from "../lib/drive-card-display";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 /** The frontmatter field, when it is a non-empty string. */
 function field(fm: Record<string, unknown>, key: string): string | null {
@@ -38,9 +41,10 @@ function OriginBadge({ origin }: { origin: string | null }) {
 
 function GlinkView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
-  const name = field(frontmatter, "name");
-  const link = field(frontmatter, "link");
-  const mime = field(frontmatter, "mime");
+  const drive = isRecord(frontmatter["drive"]) ? frontmatter["drive"] : {};
+  const name = field(frontmatter, "title");
+  const link = field(drive, "link");
+  const mime = field(drive, "mime");
   const origin = field(frontmatter, "origin");
   const notes = (data.body ?? "").trim();
 
@@ -48,13 +52,13 @@ function GlinkView({ data, onNavigate }: RendererProps) {
     <Stack gap="md" className="p-4">
       <Stack gap="xs">
         <Row gap="sm" align="center" wrap>
-          <Text as="h2" size="lg" weight="semibold">{name ?? "Drive item"}</Text>
+          <Heading level={2}>{name ?? "Drive item"}</Heading>
           <Badge tone="neutral">{driveMimeLabel(mime ?? "")}</Badge>
           <OriginBadge origin={origin} />
         </Row>
-        <Text as="p" size="sm" tone="muted">
+        <Hint>
           Not copied into the box — the card records where this lives and what it is for.
-        </Text>
+        </Hint>
         <Row gap="sm" align="center" wrap>
           {link === null ? (
             <Text size="sm" tone="danger">No Drive link on this card yet.</Text>
@@ -78,6 +82,7 @@ function GlinkView({ data, onNavigate }: RendererProps) {
   );
 }
 
-registerFileType({ type: "glink" }, {
+export const glinkRenderer: RendererEntry = {
+  selector: { type: "glink" },
   renderer: { name: "Drive pointer", Component: GlinkView, priority: 100 },
-});
+};

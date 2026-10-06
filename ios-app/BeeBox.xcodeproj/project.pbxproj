@@ -42,6 +42,7 @@
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
 		5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001B2C3C000100000001 /* SpeechDictation.swift */; };
 		5A100D012C3C000100000001 /* ScreenAwake.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100D022C3C000100000001 /* ScreenAwake.swift */; };
+		C9B000012D8A000100000001 /* BackgroundExecutionHold.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9B000022D8A000100000001 /* BackgroundExecutionHold.swift */; };
 		5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001E2C3C000100000001 /* ChatImageAttachment.swift */; };
 		5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001F2C3C000100000001 /* SpeechKeywords.swift */; };
 		5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000212C3C000100000001 /* QRScannerView.swift */; };
@@ -74,6 +75,7 @@
 		5A100AC02C3C000100000001 /* AudioSessionRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */; };
 		5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */; };
 		B7200D032C3C000100000001 /* ScreenAwakeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7200D042C3C000100000001 /* ScreenAwakeTests.swift */; };
+		C9B000032D8A000100000001 /* BackgroundExecutionHoldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9B000042D8A000100000001 /* BackgroundExecutionHoldTests.swift */; };
 		B72000C12C3C000100000001 /* VoiceAudioRetentionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */; };
 		B72000C32C3C000100000001 /* VoiceAudioRetentionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */; };
 		E1A000002C3C000100000001 /* BoxRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000012C3C000100000001 /* BoxRequest.swift */; };
@@ -88,6 +90,10 @@
 		E2A000062D7B000100000001 /* SharedSelectedBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */; };
 		E2A000072D7B000100000001 /* ShareExtensionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000122D7B000100000001 /* ShareExtensionAPI.swift */; };
 		E2A000082D7B000100000001 /* ShareExtensionAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */; };
+		F1A000002E00000100000001 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000012E00000100000001 /* PushRegistrar.swift */; };
+		F1A000022E00000100000001 /* NotificationCenterDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000032E00000100000001 /* NotificationCenterDelegate.swift */; };
+		F1A000042E00000100000001 /* NotificationTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000052E00000100000001 /* NotificationTarget.swift */; };
+		F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000072E00000100000001 /* PushNotificationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -161,6 +167,7 @@
 		5A10001A2C3C000100000001 /* NativeComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerView.swift; sourceTree = "<group>"; };
 		5A10001B2C3C000100000001 /* SpeechDictation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictation.swift; sourceTree = "<group>"; };
 		5A100D022C3C000100000001 /* ScreenAwake.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenAwake.swift; sourceTree = "<group>"; };
+		C9B000022D8A000100000001 /* BackgroundExecutionHold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundExecutionHold.swift; sourceTree = "<group>"; };
 		5A10001E2C3C000100000001 /* ChatImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachment.swift; sourceTree = "<group>"; };
 		5A10001F2C3C000100000001 /* SpeechKeywords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywords.swift; sourceTree = "<group>"; };
 		5A1000212C3C000100000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
@@ -192,6 +199,7 @@
 		5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionRoutingTests.swift; sourceTree = "<group>"; };
 		5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureFinishTests.swift; sourceTree = "<group>"; };
 		B7200D042C3C000100000001 /* ScreenAwakeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenAwakeTests.swift; sourceTree = "<group>"; };
+		C9B000042D8A000100000001 /* BackgroundExecutionHoldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundExecutionHoldTests.swift; sourceTree = "<group>"; };
 		B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionStore.swift; sourceTree = "<group>"; };
 		B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionTests.swift; sourceTree = "<group>"; };
 		E1A000012C3C000100000001 /* BoxRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxRequest.swift; sourceTree = "<group>"; };
@@ -205,6 +213,10 @@
 		E2A000142D7B000100000001 /* BeeBoxShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BeeBoxShareExtension.entitlements; sourceTree = "<group>"; };
 		E2A000152D7B000100000001 /* BeeBox.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BeeBox.entitlements; sourceTree = "<group>"; };
 		E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionAPITests.swift; sourceTree = "<group>"; };
+		F1A000012E00000100000001 /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrar.swift; sourceTree = "<group>"; };
+		F1A000032E00000100000001 /* NotificationCenterDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterDelegate.swift; sourceTree = "<group>"; };
+		F1A000052E00000100000001 /* NotificationTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTarget.swift; sourceTree = "<group>"; };
+		F1A000072E00000100000001 /* PushNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -273,6 +285,7 @@
 			isa = PBXGroup;
 			children = (
 				5A1000122C3C000100000001 /* PairedBox.swift */,
+				F1A000052E00000100000001 /* NotificationTarget.swift */,
 				5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
 				B72000022C3C000100000001 /* NativeComposerContract.swift */,
@@ -321,6 +334,7 @@
 			isa = PBXGroup;
 			children = (
 				C83000022C3C000100000001 /* BoxLockManager.swift */,
+				C9B000022D8A000100000001 /* BackgroundExecutionHold.swift */,
 				5A1000192C3C000100000001 /* ChatAPI.swift */,
 				5A100AB02C3C000100000001 /* AudioSessionRouting.swift */,
 				5A10001B2C3C000100000001 /* SpeechDictation.swift */,
@@ -331,6 +345,8 @@
 				5A10002F2C3C000100000001 /* CaptureAPI.swift */,
 				5A1000912C3C000100000001 /* BulkUploadAPI.swift */,
 				E1A000012C3C000100000001 /* BoxRequest.swift */,
+				F1A000032E00000100000001 /* NotificationCenterDelegate.swift */,
+				F1A000012E00000100000001 /* PushRegistrar.swift */,
 				E1A000032C3C000100000001 /* BoxLog.swift */,
 				E1A000052C3C000100000001 /* LogForwarder.swift */,
 				5A1000932C3C000100000001 /* BulkUploadCoordinator.swift */,
@@ -346,6 +362,7 @@
 			isa = PBXGroup;
 			children = (
 				C83000042C3C000100000001 /* BoxLockTests.swift */,
+				C9B000042D8A000100000001 /* BackgroundExecutionHoldTests.swift */,
 				5A1001BB2C3C000100000001 /* PairedBoxStoreTests.swift */,
 				5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */,
 				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
@@ -353,6 +370,7 @@
 				5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */,
 				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
 				5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */,
+				F1A000072E00000100000001 /* PushNotificationTests.swift */,
 				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
 				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
@@ -550,6 +568,7 @@
 			files = (
 				5A1000012C3C000100000001 /* BeeBoxApp.swift in Sources */,
 				5A1000022C3C000100000001 /* PairedBox.swift in Sources */,
+				F1A000042E00000100000001 /* NotificationTarget.swift in Sources */,
 				5A1000032C3C000100000001 /* PairedBoxStore.swift in Sources */,
 				5A1000042C3C000100000001 /* RootView.swift in Sources */,
 				5A1000052C3C000100000001 /* PairBoxView.swift in Sources */,
@@ -572,6 +591,7 @@
 				5A100AA02C3C000100000001 /* AudioSessionRouting.swift in Sources */,
 				5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */,
 				5A100D012C3C000100000001 /* ScreenAwake.swift in Sources */,
+				C9B000012D8A000100000001 /* BackgroundExecutionHold.swift in Sources */,
 				5A1000962C3C000100000001 /* BulkPhotoThreshold.swift in Sources */,
 				5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */,
 				5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */,
@@ -587,6 +607,8 @@
 				5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */,
 				5A1000902C3C000100000001 /* BulkUploadAPI.swift in Sources */,
 				E1A000002C3C000100000001 /* BoxRequest.swift in Sources */,
+				F1A000022E00000100000001 /* NotificationCenterDelegate.swift in Sources */,
+				F1A000002E00000100000001 /* PushRegistrar.swift in Sources */,
 				E1A000022C3C000100000001 /* BoxLog.swift in Sources */,
 				E1A000042C3C000100000001 /* LogForwarder.swift in Sources */,
 				5A1000922C3C000100000001 /* BulkUploadCoordinator.swift in Sources */,
@@ -609,6 +631,7 @@
 				5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */,
 				5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */,
 				5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */,
+				F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */,
 				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
 				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
@@ -616,6 +639,7 @@
 				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
 				B72000F22C3C000100000001 /* NativeControlRegistryTests.swift in Sources */,
 				B7200D032C3C000100000001 /* ScreenAwakeTests.swift in Sources */,
+				C9B000032D8A000100000001 /* BackgroundExecutionHoldTests.swift in Sources */,
 				B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */,
 				B72000C32C3C000100000001 /* VoiceAudioRetentionTests.swift in Sources */,
 				E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */,

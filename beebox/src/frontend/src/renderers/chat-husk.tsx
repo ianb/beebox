@@ -4,8 +4,9 @@
  */
 
 import { ChatHuskView } from "../components/chat-husk/ChatHuskView";
-import { registerFileType } from "./index";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "chat" }, {
+export const chatHuskRenderer: RendererEntry = {
+  selector: { type: "chat" },
   renderer: { name: "Chat", Component: ChatHuskView, priority: 100 },
-});
+};

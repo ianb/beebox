@@ -10,14 +10,14 @@ import { parseIso8601DurationMs, isIso8601Duration } from "../../src/shared/iso-
 
 const now = Date.parse("2026-09-13T12:00:00Z");
 const day = 86_400_000;
-const state = (input: { status?: unknown; lastUpload?: unknown; rescanAfter?: unknown }) =>
-  browserTaskState({ status: input.status ?? "open", lastUpload: input.lastUpload, rescanAfter: input.rescanAfter }, now);
+const state = (input: { closed?: unknown; lastUpload?: unknown; rescanAfter?: unknown }) =>
+  browserTaskState({ closed: input.closed, lastUpload: input.lastUpload, rescanAfter: input.rescanAfter }, now);
 ```
 
 ## The five states
 
 ```ts
-JSON.stringify(state({ status: "closed", lastUpload: "2026-09-01T00:00:00Z", rescanAfter: "P1D" }))
+JSON.stringify(state({ closed: true, lastUpload: "2026-09-01T00:00:00Z", rescanAfter: "P1D" }))
 => {"kind":"closed"}
 
 JSON.stringify(state({}))
@@ -45,7 +45,7 @@ JSON.stringify([state({ lastUpload: "yesterday" }).kind, state({ lastUpload: "20
 
 ```ts
 JSON.stringify([
-  describeBrowserTaskState(state({ status: "closed" })),
+  describeBrowserTaskState(state({ closed: true })),
   describeBrowserTaskState(state({})),
   describeBrowserTaskState(state({ lastUpload: "2026-09-01T00:00:00Z" })),
   describeBrowserTaskState(state({ lastUpload: "2026-09-12T00:00:00Z", rescanAfter: "P14D" })),

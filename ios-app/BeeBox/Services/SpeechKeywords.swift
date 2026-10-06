@@ -92,7 +92,7 @@ private struct InputMatch {
 ///
 /// Keep this vocabulary, matching order, tag names, and phrase normalization in
 /// sync with the TypeScript implementation and
-/// `beebox/test/frontend/lib/speech-keywords.doctest.md`. The Swift app
+/// `beebox/src/frontend/test/lib/audio/speech-keywords.doctest.md`. The Swift app
 /// owns native dictation, but the persisted chat text is still read by the same
 /// box-side prompt/display code as web voice input, so drift here is user-visible.
 ///
@@ -100,6 +100,24 @@ private struct InputMatch {
 /// keyword tag (`isProtected`), so its own output can never be re-consumed as
 /// input. Vocabulary and tag shape are unchanged; only nesting is bounded.
 enum SpeechKeywords {
+    /// Representative phrases shown beside the native microphone while it is
+    /// live. This is presentation guidance, not a second detection contract:
+    /// detection remains local to this Swift implementation and may accept
+    /// alternates that are not shown here.
+    static let keywordHintsWithText = [
+        "\"send message\"",
+        "\"clean up and send\"",
+        "\"send and close\"",
+        "\"erase message\"",
+        "\"cancel message\"",
+        "\"microphone off\"",
+    ]
+
+    /// Before dictation has produced text, only ending the microphone turn is
+    /// useful. Keep this separate so the UI cannot suggest an action with no
+    /// text to act on.
+    static let keywordHintsWithoutText = ["\"microphone off\""]
+
     private static let sendHqPatterns = [
         ["clean", "up", "and", "send"],
         ["send", "and", "clean", "up"],

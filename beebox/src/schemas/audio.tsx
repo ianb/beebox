@@ -2,10 +2,10 @@
  * Audio card schema — audio clips from capture sessions.
  *
  * Created by the capture preparation worker, which also fills in
- * transcript + summary and sets duration on the filename during its
- * deterministic transcription pass (`src/core/capture/prepare.ts`). A clip
- * whose transcription failed at prepare time stays `status: new` with no
- * `transcript:` — see `transcription-error:` below.
+ * the transcript and sets duration on the filename during its
+ * deterministic transcription pass (`src/core/capture/prepare/core.ts`). A
+ * `transcript:` means the clip is transcribed; a clip whose transcription
+ * failed at prepare time has none — see `transcription-error:` below.
  *
  * Layout: `audio-001.audio.card` next to `audio-001.attach/audio-001.webm`.
  * Word-level timing data lives alongside as
@@ -14,15 +14,12 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../cards/index.js";
-
-const AudioStatusSchema = z.enum(["new", "transcribed"]);
-export type AudioStatus = z.infer<typeof AudioStatusSchema>;
+import { cardSchema, type InferCardFields } from "../exports/cards.js";
+import { MediaViaSchema, type MediaVia } from "../cards/media-via.js";
 
 const FilenameEntry = z.object({
   ref: z.string(),
-  recorded: z.string().datetime({ offset: true }),
-  source: z.string(),
+  via: MediaViaSchema,
   duration: z.string().optional(),
 });
 
@@ -34,12 +31,11 @@ const TranscriptionError = z.object({
 });
 
 export const AudioSchema = cardSchema("audio", {
-  description: "A recorded speech clip from a capture session — audio file in the attach scope, transcript and summary filled on transcription",
+  brief: "A recorded speech clip",
+  description: "A recorded speech clip from a capture session — audio file in the attach scope, transcript filled on transcription",
   category: "synced",
   fields: {
-    status: AudioStatusSchema.default("new"),
     filename: FilenameEntry,
-    summary: z.string().optional(),
     transcript: z.string().optional(),
     "transcription-error": TranscriptionError.optional(),
   },
@@ -50,25 +46,21 @@ session. The audio file itself lives in the card's attach scope,
 pointed to by \`filename.ref:\` (attach scope: see ABOUT_CARDS).
 
 Frontmatter:
-- \`filename:\` — \`{ref, recorded, source, duration?}\` for the audio
-  file. \`duration\` is set after transcription.
-- \`summary:\` — brief summary of what was said (filled during
-  transcription).
-- \`transcript:\` — full text transcription (added during
-  transcription, absent when new).
+- \`filename:\` — \`{ref, via, duration?}\` for the audio file.
+  \`via.channel\` is how it was recorded (\`microphone\`), \`via.at\` when
+  recording started; \`via.note\` may say how or why, in prose.
+  \`duration\` is set after transcription.
+- \`transcript:\` — full text transcription. Present means the clip
+  is transcribed.
 - \`transcription-error:\` — set if transcription failed.
 
-Status: new (not yet transcribed, no \`transcript\`/\`summary\`) →
-transcribed (transcription complete).
-
-If status is "new" with no \`transcript:\`, the audio hasn't been
+If there is no \`transcript:\`, the audio hasn't been
 transcribed yet — don't treat it as empty content. This usually means
 the transcription provider was unavailable when the capture was
 prepared (see the parent capture-session card's
 \`transcription-failed:\` flag). You can retry it yourself: run
 \`bbx chat retranscribe --file <path-to-the-attached-audio-file>\`,
-copy the printed transcript into \`transcript:\` (and a short
-\`summary:\`), and set \`status: transcribed\`. If the retry also
+and copy the printed transcript into \`transcript:\`. If the retry also
 fails, record it in \`transcription-error:\` and note it in your
 annotation instead of fabricating a transcript.`,
 });
@@ -76,16 +68,13 @@ annotation instead of fabricating a transcript.`,
 export type AudioFields = InferCardFields<typeof AudioSchema>;
 
 export function createAudioTemplate(options: {
-  recordedAt: string;
-  source: string;
+  via: MediaVia;
   filename: string;
 }): string {
   const fields = {
-    status: "new",
     filename: {
       ref: `attach/${options.filename}`,
-      recorded: options.recordedAt,
-      source: options.source,
+      via: options.via,
     },
   };
   return `---\n${stringifyYaml(fields)}---\n`;

@@ -1,0 +1,57 @@
+id: F-newcomer
+title: What would I even use this for?
+
+box:
+  base: empty
+  setup: null
+
+assets: []
+sittings: 1
+budget_actions: 60
+
+situation: |
+  You are curious about this and have an evening to try it. You want to
+  understand what it could add to the ways you already keep track of your
+  life.
+
+  You work full time and share a home with your partner. You take an evening
+  Spanish class, occasionally organise a meal with neighbours, and keep
+  meaning to deal with the small household jobs that accumulate. Your phone
+  calendar works reasonably well. Other bits of life end up in phone notes,
+  message threads, and a pile of papers. You would like fewer small things
+  to slip your mind, without taking on another system to maintain.
+
+  Find out what this is actually for. By the end, you want to be able to tell
+  your friend which things in your own life you would genuinely use it for,
+  if any, and what you expected it to do that it apparently does not. You
+  are willing to try something small to find out. You are not ready to
+  connect accounts or give it access to other people's information, though
+  you would want to see what connecting would involve before deciding.
+
+closing: |
+  Before you finish, decide whether there is anything here you would come
+  back for. If there is, leave and return the way you would next time, and
+  pick up that thread. If there isn't, explain what would have made it worth
+  returning. Tell your friend what you would use it for, what you would keep
+  doing elsewhere, and what you still cannot tell from trying it.
+
+# Reader only. This must never be included in the walker prompt.
+watch_for: |
+  Compare the newcomer's understanding with what they actually observed.
+  Separate a capability demonstrated in the UI from a promise made by the
+  assistant, and both from an assumption. Do not convert "I couldn't find it"
+  into "the product cannot do it" without independent verification.
+
+  The output is the person's considered use/no-use decision, not a checklist
+  of features or an obligation to create stored material. A plausible decision
+  not to adopt is a valid outcome. Verify any claimed saved work independently.
+
+  Notice how first-screen language, examples, visible controls, and chat shape
+  the perceived purpose. Does the person learn a useful scope and its limits,
+  or merely hear an expansive sales pitch? Preserve positive discoveries and
+  expected-but-missing uses with the same care as faults.
+
+  Record any return path as a same-sitting revisit, not evidence of sustained
+  use. Do not test microphone behavior, account integrations, external sending,
+  or future delivery in this run. Distinguish deliberate consent boundaries
+  from capabilities that were attempted and failed.

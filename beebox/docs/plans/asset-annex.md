@@ -13,7 +13,7 @@ issues: []
 > deleted, and every box is annex-shaped from its first commit rather than
 > converted later. Its command surface, its `isAnnexBox`-as-a-choice framing,
 > and every "boxes that have not migrated" clause are all stale. What survives
-> is the storage design itself. Current model: [`../assets.md`](../assets.md).
+> is the storage design itself. Current model: [`../assets.md`](../media/assets.md).
 
 Move box assets (photos, scans, audio, video — the binary subset of
 attachments) from the hand-rolled manifest system onto git-annex, with
@@ -193,7 +193,7 @@ mid-pattern `.attach/` anchors the scope and no `**` is needed.
   / `overwrite` (`:75` dispatch). **Mostly retired.** `overwrite` loses
   its purpose entirely: under annex, writing a file in place and
   committing is the supported path.
-- **`src/core/commands/attachments-gitignore.ts`** — `init-gitignore`,
+- **`src/core/commands/attachments-gitignore.ts` (moved to `beebox/src/core/attachments-gitignore.ts`)** — `init-gitignore`,
   which *adds* the asset patterns. **Inverted** into the migration that
   removes them (finding 7).
 - **`src/core/install-validation-hooks.ts:222-253`** — the generated
@@ -289,14 +289,14 @@ wrong and would have been destructive.** Attach scopes legitimately
 hold committed non-assets: on prod estate, **1,844 tracked files live
 inside `.attach/` scopes** — 1,206 `.card`, 397 `.json`, 145 `.md`, 81
 `.txt`, 8 `.xlsx`, 6 `.csv`. Capture writes child cards *into* the
-parent scope (`src/core/capture/write-cards.ts`), and the existing scan
+parent scope (`src/core/capture/write-cards.ts` (moved to `beebox/src/core/capture/prepare/write-cards.ts`)), and the existing scan
 excludes them explicitly — `src/core/asset-manifest-scan.ts:116`:
 `if (d.name.endsWith(".card")) continue;`. A path glob would have
 turned 1,206 committed cards into annex pointers on the first
 conversion, handing pointer text to every card parser.
 
 The correct source of truth already exists:
-`ASSET_GITIGNORE_EXTENSIONS` (`src/core/commands/attachments-gitignore.ts:57-76`)
+`ASSET_GITIGNORE_EXTENSIONS` (`src/core/commands/attachments-gitignore.ts:57-76` (moved to `beebox/src/core/attachments-gitignore.ts`))
 — **the** list, already rendered into two places, and already including
 `frozen`. This plan renders it into a third form and deletes one:
 
@@ -376,7 +376,7 @@ box `.gitignore`, but **keeps two things**: the capture staging rule
 the shape; the implementation is `bbx attachments to-annex`, which:
 requires a clean working tree; resolves manifests it wrote rather than
 globbing `manifest.json` (boxes contain unrelated manifests —
-`src/publish/manifest.ts`, `src/core/search/manifest.ts`,
+`src/publish/manifest.ts`, `src/core/search/manifest.ts` (moved to `beebox/src/core/search/refresh/manifest.ts`),
 `src/frontend/public/manifest.webmanifest`); preflights free bytes
 against the box's asset total before touching anything; and lands
 pointers *and* manifest removals in a single commit so there is no
@@ -485,7 +485,7 @@ So:
   cloned box gets configured.
 - **`runHealthChecks`** — checks 1 and 5 register at `error` severity,
   so they surface on the dashboard and fail `bbx health` (exit 1) for
-  the deploy runbooks (`docs/health-checks.md`) without touching
+  the deploy runbooks (`docs/server/health-checks.md`) without touching
   serving.
 
 This is a strictly better answer to the plan's original critical gap
@@ -529,10 +529,10 @@ readers. The real read sites are independent:
 
 | site | what it does with bytes |
 |---|---|
-| `src/webapp/routes/api-files.ts` | `/api/files/*` takes any box path — stat, HEAD/304, range, full body |
+| `src/webapp/routes/api-files.ts` (moved to `beebox/src/webapp/routes/api/register/files.ts`) | `/api/files/*` takes any box path — stat, HEAD/304, range, full body |
 | `/api/image` | image serving/derivation |
-| `src/core/capture/transcribe-clips.ts` | reads resolved audio, ships it to transcription |
-| `src/publish/render-docs.ts` | reads image bytes when rendering published docs |
+| `src/core/capture/transcribe-clips.ts` (moved to `beebox/src/core/capture/prepare/transcribe-clips.ts`) | reads resolved audio, ships it to transcription |
+| `src/publish/render-docs.ts` (moved to `beebox/src/publish/draft/render-docs.ts`) | reads image bytes when rendering published docs |
 | `src/webapp/routes/figure.ts` | compiles figure source out of attach scopes |
 | box agents | plain filesystem reads — **no application boundary at all** |
 
@@ -543,7 +543,7 @@ One predicate, one error type, six call sites (#8). A per-route fix
 would leave transcription silently shipping 101 bytes of pointer text
 to a speech API and publishing embedding it as an image.
 
-The agent row has no code fix. It gets a `docs/assets.md` sentence and
+The agent row has no code fix. It gets a `docs/media/assets.md` sentence and
 a knowledge audit (Track H) — an agent that reads a pointer should
 recognize it, which is exactly what the `asset-content-absent` audit
 tests.
@@ -585,7 +585,7 @@ have left the guard silently inert:
 
 `fsck` **does not run from `housekeeping.ts`**, and the earlier draft's
 locking claim was wrong: `runHousekeeping` is called inside an
-otherwise unlocked wakeup flow (`src/cli/commands/wakeup.ts`), and
+otherwise unlocked wakeup flow (`src/cli/commands/wakeup.ts` (moved to `beebox/src/cli/commands/wakeup/command.ts`)), and
 housekeeping takes no lock, so "hold `file-lock.ts`" would have
 excluded only other holders of that same lock — i.e. nothing.
 
@@ -640,7 +640,7 @@ asset bytes are gitignored. If `annex.largefiles` simply matched
 which is wrong in two ways:
 
 - **It stores superseded content permanently.** Captures are triaged,
-  renamed, re-encoded, and EXIF-rotated (`docs/image-orientation.md`)
+  renamed, re-encoded, and EXIF-rotated (`docs/media/image-orientation.md`)
   before reaching their final home. Annexing at arrival mints an
   immutable object for each intermediate version; the annex accumulates
   content nothing references.
@@ -658,11 +658,11 @@ The rule's path needs care in two ways an earlier draft got wrong:
 
 - **No `content/` prefix.** The managed `.gitignore` is written at the
   box root, and for a v2 box the box root *is* `content/`
-  (`src/core/box/index.ts` writes it to `resolvedRoot`). A
+  (`src/core/box/index.ts` (moved to `beebox/src/core/box/structure/core.ts`) writes it to `resolvedRoot`). A
   `content/tmp-capture/…` rule resolves to `content/content/…` and
   matches nothing.
 - **`tmp-capture` is not only at the root.** Delivery targets
-  `<contextDir>/tmp-capture/` (`src/core/capture/deliver.ts:55`), and
+  `<contextDir>/tmp-capture/` (`src/core/capture/deliver.ts:55` (moved to `beebox/src/core/capture/prepare/deliver.ts`)), and
   the context directory varies by chat, so an anchored rule misses real
   captures and annexes them on arrival — the exact outcome this track
   exists to prevent.
@@ -688,7 +688,7 @@ Two consequences that must be handled rather than assumed:
    This is an **operational** condition, not a configuration one — it
    varies with how far behind triage is, and it has no one-time fix. So
    it goes in `runHealthChecks`
-   (`src/webapp/trpc/routers/health.ts:24-29`), which already carries
+   (`src/webapp/trpc/routers/health.ts:24-29` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)), which already carries
    the `"error" | "warning"` severity split, feeds both `bbx health` and
    the dashboard's warnings, and exits non-zero only on `error`. Not in
    `bbx doctor annex` (Track C), and emphatically not in the `bbx serve`
@@ -756,9 +756,9 @@ this was invisible.
 
 ### Track H — docs and knowledge audits
 
-`docs/asset-manifests.md` is rewritten as `docs/assets.md` describing
+`docs/asset-manifests.md` is rewritten as `docs/media/assets.md` describing
 the annex model; the manifest doc moves to `docs/implemented-plans/`
-since it accurately records a system that existed. `docs/migrations.md`
+since it accurately records a system that existed. `docs/cards/migrations.md`
 gets the Track B runbook. Knowledge audits below.
 
 ## Subplans
@@ -827,7 +827,7 @@ rather than let "on git-annex" read as "safe".
   (`docs/asset-manifests.md:220`). Under annex it is *accepted*: the
   clean filter ingests the new content as a new key on `git add`. That
   is better — it is a version, not an error — but it is a change, and
-  `docs/assets.md` must say so.
+  `docs/media/assets.md` must say so.
 - **Fabricated free-form value** — **N/A.** Every value is
   machine-computed (a key, a size, a hash). No free-form field exists
   for an agent to invent.
@@ -1030,7 +1030,7 @@ tool. Named up front:
 
 - `test/lib/annex-pointer.doctest.md` — pure tier: real pointer, real
   JPEG, empty file, text file starting with `/`.
-- `test/core/commands/attachments-unignore.doctest.md` — filesystem
+- `test/core/commands/attachments-unignore.doctest.md` (moved to `beebox/test/core/attachments-gitignore.doctest.md`) — filesystem
   tier (`makeTmpBox()`): asset annexed, card in git, manifest removed,
   re-run idempotent.
 - `test/webapp/routes/attach-absent.doctest.md` — route tier

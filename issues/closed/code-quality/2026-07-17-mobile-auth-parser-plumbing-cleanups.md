@@ -25,8 +25,8 @@ A grab-bag of internal-consistency issues around mobile auth plumbing, none urge
 tracking together:
 
 - **`mobileTokenFromUrl` duplicated verbatim 3×** — a security-relevant query-param parser copy-pasted
-  across `beebox/src/hub/hub-server.ts`, `beebox/src/webapp/server-box-scope.ts`, and
-  `beebox/src/webapp/server-root.ts`. Should be hoisted to one shared implementation so a future
+  across `beebox/src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`), `beebox/src/webapp/server-box-scope.ts`, and
+  `beebox/src/webapp/server-root.ts` (moved to `beebox/src/webapp/server-root/root-routes.ts`). Should be hoisted to one shared implementation so a future
   fix (e.g. tightening validation) doesn't need three edits kept in sync by hand.
 - **`isPairingRedeemUrl` uses an unanchored `endsWith` match** (`beebox/src/webapp/routes/pairing.ts`)
   — `path.endsWith("/api/pairing/redeem")` matches `/anything/api/pairing/redeem`, not just the intended

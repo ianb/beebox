@@ -19,7 +19,7 @@ import { execSync } from "node:child_process";
 import { runUpgrade, UpgradeStepFailedError, DirtyWorkingTreeError } from "../../../src/cli/commands/upgrade.js";
 import { BoxShapeError } from "../../../src/lib/box-shape.js";
 import { acquireBoxWork, boxMaintenanceStatus, boxWorkEnvironment, withoutBoxWork } from "../../../src/lib/box-maintenance.js";
-import { getStatus, getHead, getLog } from "../../../src/lib/git.js";
+import { getStatus, getHead, getLog } from "../../../src/lib/git/core.js";
 
 async function waitForClosed(boxRoot) {
   for (let attempt = 0; attempt < 100; attempt++) {
@@ -290,7 +290,7 @@ admission only after the final commit. No installer or live box is contacted.
 
 ```ts
 const boxRoot = await makeV3Fixture();
-const active = await acquireBoxWork(boxRoot);
+const active = await acquireBoxWork(boxRoot, { reason: "test" });
 const calls = [];
 let denied = false;
 let childJoins = false;
@@ -298,7 +298,7 @@ let maintenancePermit = false;
 const fake = makeFakeRunner({ boxRoot, calls });
 const runCommand = async (request) => {
   if (request.label === "pnpm-install") {
-    denied = await withoutBoxWork(() => acquireBoxWork(boxRoot)).then(async work => { await work.release(); return false; }, () => true);
+    denied = await withoutBoxWork(() => acquireBoxWork(boxRoot, { reason: "test" })).then(async work => { await work.release(); return false; }, () => true);
     maintenancePermit = JSON.parse(boxWorkEnvironment().BBX_BOX_WORK).maintenance;
   }
   if (request.label === "bbx-migrate") childJoins = request.args.includes("--within-maintenance");

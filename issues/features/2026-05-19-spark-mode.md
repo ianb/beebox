@@ -12,7 +12,7 @@ The premise: the agent runs a proactive layer continuously, with normal suppress
 
 This presupposes the full suppression-discipline stack. Without it the bin is empty and spark is just "the agent rambling." Inputs probably come from:
 
-- Parked proactive observations (see *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompt-audits.md#park-ignored-proactive-observations) audit)
+- Parked proactive observations (see *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompts/lenses.md#park-ignored-proactive-observations) audit)
 - Hypotheses crossing confirmation/refutation thresholds (see [Hypothesis tracking](../exploration/2026-05-19-hypothesis-tracking.md))
 - Behavioral-profile and autonomy-matrix promotion candidates (see [Declared per-box autonomy matrix with encounter queue](../exploration/2026-05-19-autonomy-matrix.md), [Correction counting → spec promotion](../exploration/2026-05-19-correction-counting-spec-promotion.md))
 - Recurring corrections worth surfacing as proposed rules

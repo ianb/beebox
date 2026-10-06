@@ -20,7 +20,7 @@ The measured figures come from the profiling in
 - Cold template-box build: **1,023 ms**. Warm clones after it: 387 ms mean,
   332 ms median. Cleanup: 69.6 ms.
 - The fastest file in the whole run is
-  `test/core/external-url-fetch.doctest.md` at **0.828 s**, which is close to
+  `test/core/external-url-fetch.doctest.md` (moved to `beebox/test/core/external/url-check/fetch.doctest.md`) at **0.828 s**, which is close to
   pure floor — it does almost no work.
 - At roughly 0.9 s × 480 files, the floor is about **430 file-seconds against a
   3,374.8 file-second aggregate: 12–13%**.

@@ -22,7 +22,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { boxSlug } from "../../lib/box-slug.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import type { SecretRefusalKind } from "./errors.js";
 import { loadSecretStore, mutateSecretStore, secretsLogDir } from "./store.js";
@@ -49,11 +49,18 @@ export interface SecretAccessEvent {
   box: string;
   secret: string;
   purpose: string;
-  event: "resolve" | "refuse" | "mint";
+  event: "resolve" | "refuse" | "mint" | "owner-read";
   refusal?: SecretRefusalKind;
 }
 
 let warnedAboutLog = false;
+
+export class SecretAuditWriteError extends Error {
+  constructor() {
+    super("Secret reveal could not be audited.");
+    this.name = "SecretAuditWriteError";
+  }
+}
 
 function warnOnce(message: string): void {
   if (warnedAboutLog) return;
@@ -75,6 +82,18 @@ export async function appendSecretAccessEvent(event: SecretAccessEvent): Promise
     await fs.appendFile(segment, `${JSON.stringify(event)}\n`, { mode: 0o600 });
   } catch (e) {
     warnOnce(`access log unwritable at ${segment}: ${errorMessage(e)} (resolution proceeded)`);
+  }
+}
+
+/** Owner-initiated disclosure is fail-closed: do not return a value unless its access was recorded. */
+export async function appendOwnerSecretRead(event: Omit<SecretAccessEvent, "event">): Promise<void> {
+  const segment = accessLogSegmentPath(event.ts);
+  try {
+    await fs.mkdir(path.dirname(segment), { recursive: true, mode: 0o700 });
+    await fs.appendFile(segment, `${JSON.stringify({ ...event, event: "owner-read" })}\n`, { mode: 0o600 });
+  } catch (error) {
+    void error;
+    throw new SecretAuditWriteError();
   }
 }
 

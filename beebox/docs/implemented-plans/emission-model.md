@@ -29,7 +29,7 @@ The current model, after `ef20af7f` (2026-08-15):
   `src/frontend/src/lib/chat-receipt-settlement.ts`). No side manufactures a
   verdict from elapsed time (`docs/mobile-contract.md` §4.2).
 - The server **claims the messageId before running** and persists claims for 7
-  days (`src/webapp/routes/chat-send-routes.ts:207-215`,
+  days (`src/webapp/routes/chat-send-routes.ts:207-215` (moved to `beebox/src/webapp/routes/chat/send-routes.ts`),
   `MESSAGE_ID_TTL_MS`), so redelivering the same emission ID is idempotent.
 - iOS keeps a **durable pending-emission queue** that replays on relaunch
   (`ios-app/BeeBox/Storage/PendingEmissionStore.swift` — `activate()` at
@@ -133,7 +133,7 @@ remaining pending states bounded exits.
   long wait is not a rejection).
 - **In-band failure surfacing precedent**: queue-drain failures are reported
   on the session as `error` events, not HTTP responses
-  (`src/core/chat/session/index.ts:289-301`). Track A's spawn-failure
+  (`src/core/chat/session/index.ts:289-301` (moved to `beebox/src/core/chat/session/run/core.ts`)). Track A's spawn-failure
   surfacing follows this shape.
 - **`removePersistedEmission`** already exists (`emission-persist.ts`) — Track
   C only adds the synchronous call site the 2026-07-23 issue identified.

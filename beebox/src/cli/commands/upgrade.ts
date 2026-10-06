@@ -29,16 +29,16 @@
  */
 
 import * as fs from "node:fs/promises";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import * as path from "node:path";
 import { Command } from "commander";
 import { runCollectedChild } from "../../lib/run-child.js";
-import { findBoxRoot, NotInBoxError } from "../../lib/paths.js";
+import { findBoxRoot, NotInBoxError } from "../../lib/paths/core.js";
 import { acquireBoxMaintenance, boxWorkEnvironment, type BoxMaintenance } from "../../lib/box-maintenance.js";
 import { getBoxShape } from "../../lib/box-shape.js";
-import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../../lib/git.js";
+import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../../lib/git/core.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { toError, errorMessage } from "../../lib/error-guards.js";
+import { toError, errorMessage } from "../../shared/error-guards.js";
 
 const OLD_ENGINE_BBX_BIN = path.join(PACKAGE_ROOT, "bin", "bbx");
 
@@ -285,7 +285,7 @@ async function upgradeUnderMaintenance(
     const newBbxBin = path.join(boxRoot, "node_modules/.bin/bbx");
 
     // Step 3: data migrations.
-    const migrate = await runCommand({ label: UPGRADE_STEPS.bbxMigrate, command: newBbxBin, args: ["migrate", "--apply", "--within-maintenance"], cwd: boxRoot });
+    const migrate = await runCommand({ label: UPGRADE_STEPS.bbxMigrate, command: newBbxBin, args: ["engine", "migrate", "--apply", "--within-maintenance"], cwd: boxRoot });
     if (migrate.code !== 0) throw new UpgradeStepFailedError(UPGRADE_STEPS.bbxMigrate, migrate.output);
 
     // Step 4+5: template sync + regen tail (`bbx init`'s update path covers
@@ -293,7 +293,7 @@ async function upgradeUnderMaintenance(
     // may have already run `bbx init` internally when migrations were
     // pending: when NOTHING was pending, migrate returns early without
     // touching templates at all, so this step must not be skipped.
-    const init = await runCommand({ label: UPGRADE_STEPS.bbxInit, command: newBbxBin, args: ["init", boxRoot], cwd: boxRoot });
+    const init = await runCommand({ label: UPGRADE_STEPS.bbxInit, command: newBbxBin, args: ["engine", "init", boxRoot], cwd: boxRoot });
     if (init.code !== 0) throw new UpgradeStepFailedError(UPGRADE_STEPS.bbxInit, init.output);
 
     // Step 6: typecheck the box's own src/ under the new engine's base tsconfig.

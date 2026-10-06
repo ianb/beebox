@@ -8,7 +8,7 @@ resolution: implemented
 ---
 
 **Resolved (worktree-fix-bugs).** Root cause: `forwardStream`
-(`beebox/src/hub/child-output-log.ts`) called `void appendRollingLog(...)`
+(`beebox/src/hub/child-output-log.ts` (moved to `beebox/src/hub/supervisor/child-output-log.ts`)) called `void appendRollingLog(...)`
 fire-and-forget per line, and `appendRollingLog` (`beebox/src/lib/rolling-log.ts`)
 is multi-step async (mkdir → appendFile → stat → maybe truncate) with no
 serialization — concurrent calls, cross-stream and same-stream alike, could
@@ -16,10 +16,10 @@ complete out of order, an in-process async race rather than a POSIX pipe
 ordering issue. Fix: `rolling-log.ts` now keeps a module-level
 `Map<string, Promise<void>>` chaining each call for a given file path off the
 previous in-flight promise for that path, clearing the entry once its chain
-drains. Verified 30/30 on `pnpm exec tap run test/hub/child-output-log.doctest.md`
+drains. Verified 30/30 on `pnpm exec tap run test/hub/child-output-log.doctest.md` (moved to `beebox/test/hub/supervisor/child-output-log.doctest.md`)
 in a loop (previously ~15-20% failure in isolation per the prior investigator).
 
-`beebox/test/hub/child-output-log.doctest.md` fails intermittently on
+`beebox/test/hub/child-output-log.doctest.md` (moved to `beebox/test/hub/supervisor/child-output-log.doctest.md`) fails intermittently on
 an assertion about interleaved stdout/stderr ordering from a spawned child —
 reproduced identically on an untouched tree (changes stashed), so it's a
 pre-existing race in the test (or in the log capture it exercises), not

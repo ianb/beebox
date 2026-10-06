@@ -5,7 +5,7 @@ workstream: unknown
 issues: []
 ---
 > Frozen record of the XML→YAML/Markdoc RFC — implemented 2026-05. Kept verbatim for the design reasoning and migration history; not maintained.
-> The living format reference is `docs/cards-as-markdown.md`.
+> The living format reference is `docs/cards/format.md`.
 
 # RFC: Cards as Markdown + YAML Frontmatter
 
@@ -13,7 +13,7 @@ issues: []
 
 ## Implementation status
 
-**Phase 1 — frontmatter wrapper** (May 21–22): every `.card` file gained a YAML frontmatter block, initially with `content-type: application/x-card+xml` so legacy XML bodies kept parsing through cardworks. This is the substrate that lets per-schema cards flip to flat YAML without breaking the loader. See `scripts/migrate/card-frontmatter.ts`.
+**Phase 1 — frontmatter wrapper** (May 21–22): every `.card` file gained a YAML frontmatter block, initially with `content-type: application/x-card+xml` so legacy XML bodies kept parsing through cardworks. This is the substrate that lets per-schema cards flip to flat YAML without breaking the loader. See `scripts/migrate/card-frontmatter.ts` (moved to `beebox/src/scripts/migrate/card-frontmatter.ts`).
 
 **Phase 2 — per-schema flat-YAML migration** (May 22–23): each card type's body XML moved into the YAML frontmatter as typed fields. Body, where it exists, is plain markdown (no inline-attributed prose yet). Migrated schemas:
 
@@ -46,9 +46,9 @@ Each of these has cases where a YAML array of items would either lose inline-pro
 
 **Loader dispatch:** `src/core/card-io.ts` `loadCardFile()` returns a `FrontmatterLoadedCard`, dispatching on the `cardSchemas` Map (keyed by the filename `type`). (Historically this was a `FrontmatterLoadedCard | XmlLoadedCard` union with an XML fallback through cardworks `parseCard`; the migration is complete and cardworks has been removed, so only the frontmatter path remains. The rest of this document is the original decision record from before the migration.)
 
-**Migration infrastructure:** `scripts/migrate/*.ts` per schema, plus `scripts/migrate/_warnings.ts` shared helper that declares the known attrs/children per element and surfaces anything outside that allow-list at the end of the run. Surfaced real data loss during the production migration (e.g. ledger's box-local `<legal>`/`<properties>`/`<finances>` children on briefing; `role`/`notes` attrs on `<person>` children in records; `<boxholder ref="...">` on personality). All known gaps fixed in the migrators and re-run cleanly.
+**Migration infrastructure:** `scripts/migrate/*.ts` per schema, plus `scripts/migrate/_warnings.ts` (moved to `beebox/src/scripts/migrate/_warnings.ts`) shared helper that declares the known attrs/children per element and surfaces anything outside that allow-list at the end of the run. Surfaced real data loss during the production migration (e.g. ledger's box-local `<legal>`/`<properties>`/`<finances>` children on briefing; `role`/`notes` attrs on `<person>` children in records; `<boxholder ref="...">` on personality). All known gaps fixed in the migrators and re-run cleanly.
 
-**Tracking which migrations have been applied per box** is handled by `bbx migrate` against the per-box append-only manifest `config/migrations.jsonl`, compared to the canonical `MIGRATIONS` array in `src/core/migrations.ts`. New migrators get appended there; new boxes seed the manifest as all-applied via `bbx init`. Full author guide + runbook in `docs/migrations.md`.
+**Tracking which migrations have been applied per box** is handled by `bbx migrate` against the per-box append-only manifest `config/migrations.jsonl`, compared to the canonical `MIGRATIONS` array in `src/core/migrations.ts`. New migrators get appended there; new boxes seed the manifest as all-applied via `bbx init`. Full author guide + runbook in `docs/cards/migrations.md`.
 
 ---
 
@@ -2485,7 +2485,7 @@ config/schemas/
     family-member.ts         # box-specific shared tag
 ```
 
-Same `defineCard` and `defineTag` helpers. Same Zod schemas. Same validator hooks. The box's `.ts` files import from `beebox/schemas` (resolved via the registry hook in `src/schemas/registry.ts` that already exists for today's `.ts` schemas).
+Same `defineCard` and `defineTag` helpers. Same Zod schemas. Same validator hooks. The box's `.ts` files import from `beebox/schemas` (resolved via the registry hook in `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`) that already exists for today's `.ts` schemas).
 
 This stays consistent with today's pattern — boxes write `.ts` files, with a small set of imports from the runtime. No new file format to learn.
 

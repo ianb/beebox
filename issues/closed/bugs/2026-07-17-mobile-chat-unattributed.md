@@ -13,7 +13,7 @@ back to `resolveMobileSender` (`webapp/routes/chat-helpers.ts`) when there is no
 device's `createdBy` email (the strict single-identity option: attribute to the
 user who paired the device; a device paired in open mode carries no `createdBy`
 and stays unattributed, matching the cookie path). Test:
-`test/webapp/routes/chat-mobile-sender.doctest.md`.
+`test/webapp/routes/chat-mobile-sender.doctest.md` (moved to `beebox/test/webapp/routes/chat/helpers.mobile-sender.doctest.md`).
 
 Requests authenticated via the mobile device token (bearer or `?mobileToken=`) get `authed: true` in
 tRPC's `createContext` (`beebox/src/webapp/server-box-scope.ts`), but `user` stays `null` and

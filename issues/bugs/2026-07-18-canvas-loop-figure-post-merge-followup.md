@@ -21,9 +21,9 @@ phone width (~390px)"* and p5/three/d3 starters were reworked to size from
 `mount.clientWidth` via a `ResizeObserver`. **canvas-loop was not reconciled to
 this** — it renders at a fixed `module.canvas` size:
 
-- `canvas-loop/browser/mount.ts:162` sets `canvas.width = size.width` (fixed,
+- `canvas-loop/src/browser/mount.ts:162` sets `canvas.width = size.width` (fixed,
   `module.canvas ?? DEFAULT_CANVAS`); no `ResizeObserver`, no container query.
-- `canvas-loop/browser/figure.css` `.cl-canvas` has **no `max-width: 100%`** —
+- `canvas-loop/src/browser/figure.css` `.cl-canvas` has **no `max-width: 100%`** —
   `display: block` at intrinsic resolution. A 500×400 sketch overflows a
   ~390px phone viewport.
 
@@ -59,7 +59,7 @@ The demo `Orbit.figure.card` (in the test box at
 `~/src/box-worktrees/…/test1/content/store/figures/`) was verified at the DOM
 level only — canvas mounted at declared size, generated controls present, no
 error state — because the browse screenshot op flaked
-([agent-browser-screenshot-flake](2026-07-10-agent-browser-screenshot-flake.md),
+([agent-browser-screenshot-flake](../closed/bugs/2026-07-10-agent-browser-screenshot-flake.md),
 [browse-daemon-wedges-on-animated-canvas](2026-07-14-browse-daemon-wedges-on-animated-canvas.md)).
 Its rendered frames were checked separately via the headless CLI. **To close:**
 open the card in a real browser and eyeball it — sun + 3 planets animate, the

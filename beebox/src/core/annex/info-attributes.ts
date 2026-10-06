@@ -20,7 +20,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { assetAnnexAttributes, isAssetExtension } from "../../lib/asset-extensions.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 /** Where git-annex's repository-local attributes live. */
 export function annexInfoAttributesPath(repoRoot: string): string {

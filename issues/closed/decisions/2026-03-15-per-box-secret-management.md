@@ -20,7 +20,7 @@ Options to consider:
 - A `bbx secrets` command to list which secrets each box has/is missing
 - Fall back to env vars more aggressively (the env var `BBX_MISTRAL_API_KEY` exists but is commented out by default in setup)
 
-For now: manually copy secret files to new boxes. See `docs/adding-a-box.md`'s "Connector secrets" section.
+For now: manually copy secret files to new boxes. See `docs/server/boxes.md`'s "Connector secrets" section.
 
 **2026-07-19 — a divergent pattern appeared.** The publish-pages feature stores its
 Cloudflare credentials in a machine-level `~/.beebox-publish.env` that the user must
@@ -29,7 +29,7 @@ three answers in the codebase (per-box secret files, env vars, and a sourced dot
 and the publish connector — which runs on every `bbx wakeup`, including on the
 server — has no credential path in prod at all. Details and the coupled token-scope
 question:
-[pub Access setup via API](../../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
+[pub Access setup via API](../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
 Worth deciding this alongside that item rather than separately.
 
 **2026-07-31 — the publishing divergence is resolved.** The dotfile is retired:

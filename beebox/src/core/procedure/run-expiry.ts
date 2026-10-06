@@ -9,8 +9,8 @@
  * archive; git history retains everything.
  */
 
-import { parseDuration } from "../../schemas/scheduled-script-duration.js";
-import type { ParsedProcedure } from "./engine-types.js";
+import { parseDuration } from "../../scheduled-script-duration.js";
+import type { ParsedProcedure, RunOutcome } from "./engine-types.js";
 
 /** Default expiry for completed runs. */
 export const COMPLETED_RUN_EXPIRY = "30d";
@@ -62,22 +62,22 @@ export function validateRunExpiry(attr: string, value: string): void {
 export interface ComputeRunExpiresParams {
   /** An `inconclusive` run keeps the longer (failed) retention: an unjudged
    *  run is exactly the kind someone comes back to look at. */
-  status: "completed" | "failed" | "inconclusive";
+  outcome: RunOutcome;
   completedAt: string;
   procedure: ParsedProcedure;
 }
 
 /**
  * Compute the `expires` attribute value for a finished run: the procedure
- * card's override if present, else the status-based default, applied to the
+ * card's override if present, else the outcome-based default, applied to the
  * completion time. Returns "never" or an ISO datetime.
  */
 export function computeRunExpires(params: ComputeRunExpiresParams): string {
-  const { status, completedAt, procedure } = params;
+  const { outcome, completedAt, procedure } = params;
   const override =
-    status === "completed" ? procedure.runExpiry : procedure.failedRunExpiry;
+    outcome === "completed" ? procedure.runExpiry : procedure.failedRunExpiry;
   const spec =
-    override ?? (status === "completed" ? COMPLETED_RUN_EXPIRY : FAILED_RUN_EXPIRY);
+    override ?? (outcome === "completed" ? COMPLETED_RUN_EXPIRY : FAILED_RUN_EXPIRY);
   if (spec === "never") return "never";
   return new Date(Date.parse(completedAt) + parseDuration(spec)).toISOString();
 }

@@ -14,7 +14,7 @@
  */
 
 import webpush from "web-push";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -44,6 +44,8 @@ export interface PushPayload {
    * shared app icon when it is absent.
    */
   icon?: string | undefined;
+  /** Show without sound or vibration (a `quiet` notification). */
+  silent?: boolean | undefined;
 }
 
 /** A send either delivered or the endpoint is gone and should be pruned. */

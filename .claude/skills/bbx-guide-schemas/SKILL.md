@@ -6,7 +6,7 @@ description: Use when creating or changing beebox card types, schema fields, or 
 # Card schemas: the model, then the checklist
 
 A guide skill: the mental model and the boundaries. The worked example
-and file-by-file checklist live in `beebox/docs/adding-schemas.md`.
+and file-by-file checklist live in `beebox/docs/cards/schemas.md`.
 
 ## The model
 
@@ -34,15 +34,29 @@ Things the schema system does that you'd otherwise miss:
   sets it per type, and `category: "system"` implies `background`).
   `theme: { name, stock? }` selects presentation independently of the view;
   `cardSchema`'s own `theme` option sets the type preference.
-  Don't redeclare any of these — a schema's own declaration silently
-  wins.
+  Don't redeclare any of these, except `title: z.string()` to require
+  a title.
+- **Every new field needs a named reader** (a query, a UI surface, or code),
+  and some names are banned: `status`, `created`, `summary`, `date`,
+  `modified`, `source`, plus the global names. A registry test rejects them
+  on built-in schemas; box-local ones get a health warning. The rules and
+  the alternatives are in `docs/cards/schemas.md` ("Adding a field").
 - Cards also accept an optional catalog-validated `theme: {name, stock?}`
   presentation choice. It is independent of the preferred view; read
   `node_modules/beebox/box-docs/card-themes.md` before setting a schema theme
   preference or advising on a card override.
+- **A type owns its summary.** `cardSchema`'s `summarize(card, base)` hook
+  decides how the type appears in lists (todo list headers, recent files,
+  `bbx query` text). `card` is typed from the schema's own fields and the hook
+  runs only on a validated card; spread `base` and add `detail`/`attrs`, or
+  replace it. The React list component is a separate registry: it lives beside
+  the schema as `src/schemas/<type>.list-entry.tsx`, is registered from
+  `src/frontend/src/file-types/builtins.tsx`, types its props with
+  `SummaryAttrs<typeof XSchema>`, and reaches schema/core/cards code by
+  `import type` only (lint-enforced). See `docs/cards/schemas.md`.
 - **`instructions` prose is injected into agent context** when an agent
   processes cards of that type — it's prompt surface (see
-  `docs/prompt-surface-review.md` before writing more than a couple of
+  `docs/prompts/review.md` before writing more than a couple of
   lines).
 - **Reserialization reorders frontmatter keys** to the schema's declared
   field order; a one-field mutation rewrites the whole block.
@@ -57,4 +71,4 @@ boxes already hold — rename/remove a field, change type/format/
 extension, split/merge fields, move data between cards — **invoke
 bbx-migration**; that's a data migration even when the diff only touches
 a schema. New agent-facing conventions also want a knowledge-audit entry
-(`docs/knowledge-audits.md`).
+(`docs/testing/knowledge-audits.md`).

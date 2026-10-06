@@ -28,7 +28,7 @@ affordance can be less frightening than a permanent delete.
 being trashed, and after it's gone those refs dangle.
 
 **The scan for this already exists.** `bbx mv` solves the harder version of the
-same problem: `src/core/rewrite-card-refs.ts` + `src/core/commands/move-operations.ts`
+same problem: `src/core/rewrite-card-refs.ts` (moved to `beebox/src/core/rewrite-card-refs/core.ts`) + `src/core/commands/move-operations.ts` (moved to `beebox/src/core/commands/move/operations.ts`)
 walk every other card *and* every plain `.md`, **resolve** each ref against the
 card holding it (the same way the renderer and `bbx validate` resolve them), and
 rewrite it in whatever style it was written — box-root-absolute stays absolute,

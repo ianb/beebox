@@ -3,7 +3,7 @@ title: "Reliable box maintenance and migration with Git recovery"
 status: partial
 workstream: migration-reliability
 issues:
-  - ../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md
+  - ../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md
 ---
 # Reliable box maintenance and migration with Git recovery
 
@@ -13,11 +13,11 @@ repair, and existing questions and alerts for decisions that need a person.
 Migration, deployment, and reload share one boundary: close admission to new
 work, drain accepted work, perform maintenance, verify readiness, then reopen.
 
-**Issues addressed:** [Local boxes never converge](../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
+**Issues addressed:** [Local boxes never converge](../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
 Related but not closed by this plan: [parked template resolution](../../../issues/features/2026-08-24-parked-template-resolution-path.md),
 [template recurrence](../../../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md),
-[incorrect shipped procedure templates](../../../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md),
-and [one-root migration performance](../../../issues/code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md).
+[incorrect shipped procedure templates](../../../issues/closed/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md),
+and [one-root migration performance](../../../issues/closed/code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md).
 
 ## Smallest fix and budget
 
@@ -87,19 +87,19 @@ proposed changes are specified in Tracks / scope.
 | `beebox/src/core/migration-sweep.ts:97`: `if (!status.clean) return { status: "skipped-dirty", pending: pending.map((m) => m.name) };` | Remove dirty as an automatic refusal. |
 | `beebox/src/core/migration-run.ts:140`: “a soft, per-card failure — record it and continue” | Keep continuation; make unresolved per-card repair durable and visible. |
 | `beebox/src/core/migration-sweep.ts:136`: `await restoreManifest(boxRoot, snapshot);` | Preserve failed-commit rollback; also restore the staged manifest to its prior index state. |
-| `beebox/src/lib/git.ts:288`: `await withBoxGitLock(boxRoot, async () => {` and line 290: `await unstageOversizedBlobs(boxRoot);` | Keep normal Git/large-file protection. Do not use a blind whole-tree commit for migration outputs. |
-| `beebox/src/lib/git.ts:366`: `export async function stageAndCommitPaths(` | Stage untracked output as well as changes, then commit only those paths with hooks. |
+| `beebox/src/lib/git.ts:288` (moved to `beebox/src/lib/git/core.ts`): `await withBoxGitLock(boxRoot, async () => {` and line 290: `await unstageOversizedBlobs(boxRoot);` | Keep normal Git/large-file protection. Do not use a blind whole-tree commit for migration outputs. |
+| `beebox/src/lib/git.ts:366` (moved to `beebox/src/lib/git/core.ts`): `export async function stageAndCommitPaths(` | Stage untracked output as well as changes, then commit only those paths with hooks. |
 | `beebox/src/lib/git-lock.ts:296`: “cannot acquire logs loudly and runs” | This lock is not exclusive migration ownership; use the existing fail-closed file-lock primitive for shared admission. |
-| `beebox/src/cli/commands/tick-helpers.ts:83`: `export async function findBusyBlockers(` | Retain diagnostics; these probes alone cannot close admission or account for request preparation. |
+| `beebox/src/cli/commands/tick-helpers.ts:83` (moved to `beebox/src/cli/tick-helpers.ts`): `export async function findBusyBlockers(` | Retain diagnostics; these probes alone cannot close admission or account for request preparation. |
 | `beebox/deploy/server-bin/bbx-wait-quiet:4`: “Always exits 0: the wait is advisory, never a hard block.” | Deploy wait is a courtesy, not proof of exclusion. |
-| `beebox/src/core/agent/index.ts:154`: `export function createAgent(options: {` | Invoke the box's configured engine through this existing interface. |
+| `beebox/src/core/agent/index.ts:154` (moved to `beebox/src/core/agent/invoke/core.ts`): `export function createAgent(options: {` | Invoke the box's configured engine through this existing interface. |
 | `beebox/src/core/agent/types.ts:38`: `maxTurns?: number;` | Bound repair; deterministic retry remains the completion authority. |
-| `beebox/src/core/procedure/engine.ts:172`: `await stageAll(boxRoot);` | Do not introduce a generic repair procedure: its startup commit would entangle invalid input before repair begins. |
+| `beebox/src/core/procedure/engine.ts:172` (moved to `beebox/src/core/procedure/engine/core.ts`): `await stageAll(boxRoot);` | Do not introduce a generic repair procedure: its startup commit would entangle invalid input before repair begins. |
 | `beebox/src/core/question-alert.ts:69`: `export async function checkPendingQuestionsAndNotify(` | Reuse question notifications; retain schedule alerts when no notification channel is configured. |
-| `workstreams-app/src/router/router-real-effects.ts:66`: `const line = text.split("\n").find((l) => l.startsWith("BOXES="));` | Use the existing local box list. |
+| `workstreams-app/src/router/router-real-effects.ts:66` (moved to `workstreams-app/src/router/server/real-effects.ts`): `const line = text.split("\n").find((l) => l.startsWith("BOXES="));` | Use the existing local box list. |
 | `bin/lib/worktree-create.sh:418`: `grep -v '^BOXES=' "$main_env" > "$worktree_path/beebox/.env"` | Preserve worktree isolation. |
 | `beebox/src/core/docs-refresh.ts:91`: `if (!status.clean) return { status: "skipped-dirty" };` | Generated guidance must use the same dirty-input policy. |
-| `beebox/scripts/update-template-stock-hashes.ts:20`: “exists because the forward-only path above cannot see its own past.” | Existing historical-hash adoption is sufficient; do not invent a second template ledger. |
+| `beebox/scripts/update-template-stock-hashes.ts:20` (moved to `beebox/src/scripts/update-template-stock-hashes.ts`): “exists because the forward-only path above cannot see its own past.” | Existing historical-hash adoption is sufficient; do not invent a second template ledger. |
 
 History reviewed:
 
@@ -165,15 +165,15 @@ operations inside it. External editors and raw Git commands remain cooperative.
 Evidence for the existing pieces and gaps:
 
 - `beebox/src/lib/dev-bundle-reload.ts:6`: `let draining = false;` is process-local.
-- `beebox/src/webapp/server.ts:391`: `beginDevBundleDrain();` precedes its idle
+- `beebox/src/webapp/server.ts:391` (moved to `beebox/src/webapp/server/app.ts`): `beginDevBundleDrain();` precedes its idle
   check. Its request hook at line 148 rejects new mutations while draining.
 - `beebox/src/lib/dev-bundle-reload.ts:49`: `export function trackMutationStart(): () => void {`
   counts accepted request work; move this responsibility to shared admission.
-- `beebox/src/core/chat/schedules.ts:335`: `this.schedules.delete(schedule.id);`
+- `beebox/src/core/chat/schedules.ts:335` (moved to `beebox/src/core/chat/schedules/core.ts`): `this.schedules.delete(schedule.id);`
   consumes a fired timer even when delivery failed. Refusal must precede claiming it.
 - `beebox/src/webapp/routes/telegram.ts:76`: `const finishBackgroundWork = trackMutationStart();`
   already keeps detached delivery alive beyond the webhook response.
-- `beebox/src/core/chat/session/start-run.ts:116`: “await generateDocs(opts.boxRoot).catch”
+- `beebox/src/core/chat/session/start-run.ts:116` (moved to `beebox/src/core/chat/session/run/start-run.ts`): “await generateDocs(opts.boxRoot).catch”
   precedes the chat-active lock. Admission must cover preparation too.
 - `beebox/src/lib/file-lock.ts:140`: “budget runs out — a loud failure, never a silent unserialized run.”
   supplies fail-closed serialization; the fail-open Git lock is not suitable.
@@ -232,13 +232,16 @@ all parent environment variables or make a successor server's ordinary requests
 privileged merely because its launcher holds the maintenance capability.
 
 The maintenance phase records owner attempt/generation and progress, with
-liveness owned by its held file lock. After a stale owner is reclaimed through
-the existing primitive, a new controller may reopen a pre-mutation attempt only
-if the old generation passes existing health/canary checks and no replacement
-began. After mutation or replacement begins, owner death leaves admission closed
-until a new controller reconciles the attempt; lock expiry alone must not reopen
-it. Expose this state in existing health and schedule diagnostics. Normal
-completion and safe pre-change abort explicitly reopen the gate.
+liveness owned by its held file lock. **Amended 2026-09-17 by
+[box-maintenance-no-wedge.md](../implemented-plans/box-maintenance-no-wedge.md):** a phase record
+closes the box only while its owner lock is held. Owner death, a failed
+attempt, or an abandoned deploy leaves the record as unfinished maintenance,
+which refuses nothing; the next completed attempt clears it. The original
+rule, "owner death leaves admission closed until a new controller reconciles
+the attempt; lock expiry alone must not reopen it", wedged four boxes on
+2026-09-16 and is withdrawn. Expose this state in existing health and schedule
+diagnostics. Normal completion and safe pre-change abort explicitly reopen the
+gate.
 
 Drain has a ten-minute limit, separate from the operation's execution budget.
 On drain timeout, abort maintenance and report the blocking work; do not proceed
@@ -280,17 +283,14 @@ and its startup convergence has been accounted for. A bound HTTP port returning
 within controller readiness; do not add a new public API or acknowledgement
 channel. Lazy hub startup and scheduler prestart must honor the gate. Reads may
 continue where compatible; mutating startup runs only with an explicit maintenance
-capability. A failure result cannot silently clear maintenance merely to serve.
-A committed partial migration with a durable question can reopen; an uncertain
-half-applied hard failure cannot. Scripts-only deferred repair hands ownership
-to the scheduled convergence runner by releasing exclusive ownership while
-retaining the closed recovery phase; it must be able to
-repair a closed box without depending on normal HTTP/chat admission. Report the
-unavailable box until recovery succeeds. A question alone does not make a
-hard-failed box safe to reopen. Read-only question inspection remains available;
-recording an answer uses a narrow maintenance-owned CLI recovery action, then
-the next convergence attempt consumes it. Ordinary work cannot bypass the gate
-by posing as recovery. Notifications run as part of the maintenance attempt.
+capability. A failure result does not clear the maintenance record, but the record no
+longer closes the box once its owner is gone (amended 2026-09-17, see above):
+a hard failure reopens with its partial output uncommitted in the tree and its
+before-image under the recovery ref, and the pending migration plus its
+question report the state. Scripts-only deferred repair hands the record to the
+scheduled convergence runner by releasing ownership. A question is answered
+through the ordinary path; the fenced CLI recovery action was removed with the
+amendment. Notifications run as part of the maintenance attempt.
 
 **Vocabulary lock-ins.** One per-box work lease and maintenance phase record,
 shared by existing callers. No separate migration lock, reload admission counter,
@@ -308,7 +308,11 @@ into the shared module and wire ordinary work owners before using it for mutatio
 **What and why.** Move script application into one core path used by `--apply`
 and `--sweep`. Both accept dirty input. Keep status and explicit manifest repair
 commands, and keep v2 bootstrap separate. Manual mode may execute registered
-procedure migrations; unattended mode reports them as requiring attention.
+procedure migrations. **Amended 2026-09-17 by
+[procedure-migration-convergence.md](../implemented-plans/procedure-migration-convergence.md):**
+unattended `--repair` mode runs them too, one run per human answer; the
+original "reports them as requiring attention" left every box waiting for a
+person and is withdrawn.
 
 **Direction.** Retain `sweepMigrations` as the core owner while replacing its
 policy, rather than layering a second orchestrator over it. Its typed result
@@ -398,7 +402,7 @@ spawn `bbx init` while holding the Git lock. Add a `commit: false` option to
 `GenerateDocsOptions`, threaded to template sync,
 for this caller only. The convergence runner commits its measured output;
 other callers keep their default internal commits. This is needed because
-`beebox/src/core/docs-gen/index.ts:313`: `const candidates = [...status.staged, ...status.modified, ...status.untracked];`
+`beebox/src/core/docs-gen/index.ts:313` (moved to `beebox/src/core/docs-gen/generate/core.ts`): `const candidates = [...status.staged, ...status.modified, ...status.untracked];`
 collects pre-existing dirt, not just generator output. Restore/invalidate the
 existing generation marker after a failed refresh commit so a cache hit cannot
 hide uncommitted output on retry. Do not claim provisioning changes to ignored
@@ -520,7 +524,9 @@ malformed JSON is unknown/failure, never an empty successful fleet. Emit one
 important alert for unresolved failures, human decisions, or unavailable coverage;
 use existing schedule state to avoid repeating identical detail every hour.
 Busy alone is deferred, but continued pending work is reported on the daily
-cadence even if it is always busy. A fully current result is silent; partial
+cadence even if it is always busy. After the 2026-09-17 amendment a pending
+procedure is applied rather than reported; the daily report names only a
+procedure whose failure question is unanswered. A fully current result is silent; partial
 conversion and outstanding questions remain attention items even with no pending registry entries. Schedule run
 records prove the check occurred.
 
@@ -589,7 +595,7 @@ No silent failure listed below is accepted as the intended behavior.
 | New work races gate closure | Planned cross-process fixture | Atomic registration versus closure | Deferred before mutation |
 | Accepted agent needs CLI tools during drain | Planned descendant fixture | Retained validated lease | Completes, no deadlock |
 | Timer fires while closed | Planned timer fixture | Admission before consuming, resume pending delivery | Pending, not lost |
-| Deploy/reload controller dies | Planned process handoff fixture | Durable phase, successor reconciliation | Closed with recovery diagnostic |
+| Deploy/reload controller dies | `test/lib/box-maintenance.doctest.md` (amended 2026-09-17) | Record stays; box reopens when the owner lock is gone | Health and hub 503 name the record |
 | Busy task never finishes | Planned drain-timeout fixture | Abort before mutation, report blocker | No forced migration |
 | Concurrent maintenance or recursive repair call | Planned process fixture | Shared ownership and reentry refusal | Busy/error |
 | External editor writes during migration | External tools are outside admission | Git recovery; no filesystem transaction claim | Explicit scope limit |
@@ -750,7 +756,7 @@ recovery tests, and the repair-policy knowledge audit pass.
 
 Implementation and automated verification are complete. Deployment and live
 convergence evidence remain open. Current operational instructions live in
-[migrations](../migrations.md), [server operations](../server-operations.md),
+[migrations](../cards/migrations.md), [server operations](../server/operations.md),
 and the [deployment guide](../../deploy/README.md).
 
 Real-process fixtures cover shared closure/draining, retained descendants,

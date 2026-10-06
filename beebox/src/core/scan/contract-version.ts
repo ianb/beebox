@@ -3,7 +3,7 @@
  *
  * WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
  *
- * Its twin is `scan-uploader/src/contract-version.ts`. The two share no code by
+ * Its twin is `scan-uploader/src/cli/contract-version.ts`. The two share no code by
  * design — the uploader is a stand-alone package — so this constant exists in
  * two places and the contract doc is the coordination point.
  *

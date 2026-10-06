@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import { readdir, readFile, writeFile, appendFile, mkdir, access } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { createEventBus } from "../../../src/core/event-bus.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {
   createStagingSession,
@@ -21,8 +21,8 @@ import {
   sealStagingSession,
   setStagingState,
   readStagingSession,
-} from "../../../src/core/capture/staging-store.js";
-import { prepareAndDeliverBulkBatch } from "../../../src/core/bulk-upload/worker.js";
+} from "../../../src/core/capture/staging-store/core.js";
+import { prepareAndDeliverBulkBatch } from "../../../src/core/bulk-upload/worker/core.js";
 
 async function pathExists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -86,7 +86,7 @@ const cardRel = await batchCardRel(box);
 JSON.stringify({
   sent: sent.length,
   wrapper: sent[0]?.startsWith(`<upload doc="${cardRel}"`) ?? false,
-  delivered: (await box.read(cardRel)).includes("status: delivered"),
+  delivered: (await box.read(cardRel)).includes("delivered: true"),
   stagingGone: (await readStagingSession({ boxRoot: box.root, id })) === null,
 })
 => {"sent":1,"wrapper":true,"delivered":true,"stagingGone":true}
@@ -164,7 +164,7 @@ Re-running delivers (send succeeds now), cleans up staging, and adds no new
 await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
 JSON.stringify({
   stagingGone: (await readStagingSession({ boxRoot: box.root, id })) === null,
-  delivered: (await box.read(cardRel)).includes("status: delivered"),
+  delivered: (await box.read(cardRel)).includes("delivered: true"),
   commits: uploadCommitCount(box.root),
 })
 => {"stagingGone":true,"delivered":true,"commits":1}
@@ -226,7 +226,7 @@ JSON.stringify({
   sends,
   uploadLines: (await readFile(logPath, "utf-8")).split("\n").filter((l) => l.includes("<upload ")).length,
   stagingGone: (await readStagingSession({ boxRoot: box.root, id })) === null,
-  delivered: (await box.read(cardRel)).includes("status: delivered"),
+  delivered: (await box.read(cardRel)).includes("delivered: true"),
 })
 => {"enqueued":1,"sends":0,"uploadLines":1,"stagingGone":true,"delivered":true}
 ```
@@ -284,7 +284,7 @@ JSON.stringify({
   sends,
   uploadLines: (await readFile(logPath, "utf-8")).split("\n").filter((l) => l.includes("<upload ")).length,
   stagingGone: (await readStagingSession({ boxRoot: box.root, id })) === null,
-  delivered: (await box.read(cardRel)).includes("status: delivered"),
+  delivered: (await box.read(cardRel)).includes("delivered: true"),
 })
 => {"sends":0,"uploadLines":1,"stagingGone":true,"delivered":true}
 ```

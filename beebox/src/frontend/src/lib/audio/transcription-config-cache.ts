@@ -8,7 +8,7 @@
  */
 
 import { getApiBase } from "../../api-core";
-import { trpcClient } from "../trpc";
+import { trpcClient } from "../trpc/client";
 import { TRANSCRIPTION_SERVICES, type TranscriptionService } from "@shared/transcription-services.js";
 
 /** Keyed by the box's API base, which carries the box slug (and dev worktree). */

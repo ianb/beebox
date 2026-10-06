@@ -37,10 +37,10 @@ but *handling it gracefully* is where we can be better than the field.
 
 ## The pieces already exist (this is wiring, not greenfield)
 
-- **Token refresh:** `src/connectors/google-auth.ts` refreshes the access token
+- **Token refresh:** `src/connectors/google-auth.ts` (moved to `beebox/src/google/auth.ts`) refreshes the access token
   from the stored refresh token — the natural place to catch a dead credential
   (Google returns `invalid_grant` when the refresh token is expired/revoked).
-- **Health:** `src/webapp/trpc/routers/health-engine.ts` + `bbx health`
+- **Health:** `src/webapp/trpc/routers/health-engine.ts` (moved to `beebox/src/webapp/trpc/routers/health/checks/engine.ts`) + `bbx health`
   (`src/cli/commands/health.ts`) — the surface a "Google needs re-auth"
   condition should appear in.
 - **Proactive notify:** `src/core/notify-boxholder.ts` `notifyBoxholder()`

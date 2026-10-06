@@ -14,10 +14,10 @@
  */
 
 import * as fs from "node:fs";
-import * as readline from "node:readline";
 import { z } from "zod";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { isRecord } from "../../core/card-io.js";
+import { jsonlLines } from "../../lib/jsonl-lines.js";
 
 /** One assistant line of a Claude Code session JSONL (fields we read). */
 const contextUsageLineSchema = z.object({
@@ -88,10 +88,8 @@ function parseUsage(usage: unknown): TurnUsage | null {
  */
 export async function readTurnUsage(logPath: string): Promise<TurnUsage[]> {
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-
   const turns: TurnUsage[] = [];
-  for await (const line of rl) {
+  for await (const line of jsonlLines(fileStream)) {
     if (!line.trim()) continue;
     let parsedLine: unknown;
     try {

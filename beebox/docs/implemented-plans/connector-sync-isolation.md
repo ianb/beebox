@@ -48,12 +48,12 @@ Every design choice and review finding below traces to these preferences.
 ## What already exists
 
 - **Calendar iteration and the early return.**
-  `src/connectors/google-calendar.ts:175-189` loops over configured calendars,
+  `src/connectors/google-calendar.ts:175-189` (moved to `beebox/src/connectors/google-calendar/connector.ts`) loops over configured calendars,
   then says *"if (outcome.error) { return { success: false, created, updated,
   error: outcome.error }; }"*. Reuse the loop. Replace only its early-return
   policy.
 - **Per-calendar catch and 410 retry.**
-  `src/connectors/google-calendar.ts:270-285` catches one calendar's error. A
+  `src/connectors/google-calendar.ts:270-285` (moved to `beebox/src/connectors/google-calendar/connector.ts`) catches one calendar's error. A
   non-410 error saves state and returns a contextual error. A 410 deletes that
   calendar's token and retries with `syncToken: undefined`, but that second
   await is inside the catch and can escape the member boundary. The current
@@ -61,84 +61,84 @@ Every design choice and review finding below traces to these preferences.
   Reuse the boundary, but protect both attempts, inspect only HTTP status, and
   return a discriminated outcome.
 - **A partial-write accounting gap.**
-  `src/connectors/google-calendar-sync.ts:262-286` creates its accumulator
+  `src/connectors/google-calendar-sync.ts:262-286` (moved to `beebox/src/connectors/google-calendar/sync.ts`) creates its accumulator
   locally and returns it only after every fetched event is reconciled. The
   caller at `google-calendar.ts:270-272` collects only after the awaited call
   resolves. If reconciliation writes one event and then throws on another, the
   written path is absent from the connector's commit list. Change accumulator
   ownership so every completed write is retained after a later failure.
 - **A failed attempt can advance its token.**
-  `src/connectors/google-calendar-state.ts:219-224` stores a returned
+  `src/connectors/google-calendar-state.ts:219-224` (moved to `beebox/src/connectors/google-calendar/state.ts`) stores a returned
   `nextSyncToken` before event reconciliation starts. If a later event throws,
   saving that mutated state would skip the unprocessed tail next run. Snapshot
   the calendar's incoming token and restore it on an ordinary failed outcome.
 - **Post-calendar local work.**
-  `src/connectors/google-calendar.ts:192-206` runs local delete processing,
+  `src/connectors/google-calendar.ts:192-206` (moved to `beebox/src/connectors/google-calendar/connector.ts`) runs local delete processing,
   pushes locally created events, and saves state only after every calendar.
   Reuse these passes after the loop, including after partial pull failure.
   Their HTTP failure paths already preserve local files and log warnings:
-  `src/connectors/google-calendar-push.ts:61-113` and `:131-183`.
+  `src/connectors/google-calendar-push.ts:61-113` (moved to `beebox/src/connectors/google-calendar/push.ts`) and `:131-183`.
 - **Path-scoped calendar commits.**
-  `src/connectors/google-calendar.ts:208-231` constructs an explicit list of
+  `src/connectors/google-calendar.ts:208-231` (moved to `beebox/src/connectors/google-calendar/connector.ts`) constructs an explicit list of
   changed event files plus connector state/config, then calls
   `stageAndCommitPaths`. Reuse this path and extend the narrative message with
   failed calendar IDs.
 - **Connector-level isolation and counting.**
-  `src/cli/commands/wakeup-connectors.ts:68-88` catches one connector failure
+  `src/cli/commands/wakeup-connectors.ts:68-88` (moved to `beebox/src/cli/commands/wakeup/connectors.ts`) catches one connector failure
   and continues. It increments `totalErrors`, but `:90-99` prints the count and
   returns only `{ activeConnector }`. Extend the return value with the error
   count. Do not rebuild connector orchestration.
 - **A conditional health surface that already understands process failure.**
   The seeded calendar task runs `bbx wakeup --connector google-calendar`
-  (`src/core/box/defaults.ts:249-257`), but it is seeded disabled. When enabled,
+  (`src/core/box/defaults.ts:249-257` (moved to `beebox/src/core/box/structure/defaults.ts`)), but it is seeded disabled. When enabled,
   `src/lib/exec-with-timeout.ts:130-140` turns a nonzero child exit into a
-  command failure, `src/cli/commands/tick-helpers.ts:270-299` records the
+  command failure, `src/cli/commands/tick-helpers.ts:270-299` (moved to `beebox/src/cli/tick-helpers.ts`) records the
   classified result, and `src/core/schedule/state.ts:200-219` increments
   `consecutiveFailures`. Health is failing after one failure
   (`src/core/schedule/health.ts:125-134`); proactive notification starts after
   two consecutive failures and only with a configured channel
   (`src/core/schedule/health-box.ts:185-198`,
-  `src/core/schedule/health-alert.ts:57-100`). Reuse this conditional surface
+  `src/core/schedule/health-alert.ts:57-100` (moved to `beebox/src/core/schedule/scheduler/health-alert.ts`)). Reuse this conditional surface
   rather than add connector-specific health state.
 - **Drive's current live-card scan.**
-  `src/connectors/google-drive.ts:137-165` globs every registered Drive card
+  `src/connectors/google-drive.ts:137-165` (moved to `beebox/src/connectors/google-drive/connector.ts`) globs every registered Drive card
   type under the box root, then syncs each independently. Reuse the handler
   registry and per-card error isolation. Move discovery and ID parsing into one
   shared module.
 - **Trash is inside the scan root.**
-  `src/core/commands/trash.ts:139-152` moves a card to `getBoxDir(...,
-  "trash")`; `src/lib/box-layout-spec.ts:158-162` defines that directory as
+  `src/core/commands/trash.ts:139-152` (moved to `beebox/src/core/commands/trash/command.ts`) moves a card to `getBoxDir(...,
+  "trash")`; `src/lib/box-layout-spec.ts:158-162` (moved to `beebox/src/lib/paths/box-layout-spec.ts`) defines that directory as
   `store/trash`. The current Drive glob has no semantic exclusion, so the
   issue's trash mechanism is confirmed.
 - **`bbx rm` already commits the tombstone.**
-  `src/core/commands/trash.ts:211-221` commits the card move and its related
+  `src/core/commands/trash.ts:211-221` (moved to `beebox/src/core/commands/trash/command.ts`) commits the card move and its related
   paths with a `Trashed-By: bbx rm` trailer. The card in `store/trash` is already
   durable, cross-machine intent; Drive does not need a second history file.
 - **Gmail's ignore-list precedent.**
-  `src/connectors/gmail-tracking.ts:10-18` excludes `node_modules/**`, `.git/**`,
+  `src/connectors/gmail-tracking.ts:10-18` (moved to `beebox/src/connectors/gmail/tracking.ts`) excludes `node_modules/**`, `.git/**`,
   `tmp/**`, `.beebox/**`, `procedure/runs/**`, and `store/trash/**` from
   its live registry. Reuse the infrastructure ignores. Drive treats trash
   specially as a tombstone source instead of discarding its IDs.
 - **Folder discovery recreates absent cards.**
-  `src/connectors/google-drive.ts:282-323` lists a mounted remote folder, skips
+  `src/connectors/google-drive.ts:282-323` (moved to `beebox/src/connectors/google-drive/connector.ts`) lists a mounted remote folder, skips
   only IDs in `existingDriveIds`, and creates a card for every other supported
   file. A hard-deleted folder child therefore reappears. This is separate from
   the live-card glob bug.
 - **Drive's machine-local state is deliberately transient.**
-  `src/connectors/google-drive-state.ts:1-14` calls
+  `src/connectors/google-drive-state.ts:1-14` (moved to `beebox/src/connectors/google-drive/state.ts`) calls
   `google-drive.state.json` gitignored and delta-merges concurrent writers.
   Do not put durable untracking intent there; losing that file on a new machine
   is an expected reset.
 - **Drive config and status callers already exist.**
-  `src/connectors/drive-config.ts:14-21` defines folder mounts, and
-  `src/cli/commands/drive.ts:219-260` independently globs Drive cards for
+  `src/connectors/drive-config.ts:14-21` (moved to `beebox/src/connectors/google-drive/config.ts`) defines folder mounts, and
+  `src/cli/commands/drive.ts:219-260` (moved to `beebox/src/cli/commands/drive/command.ts`) independently globs Drive cards for
   status. Its legacy-only `drive-id="..."` regular expression at
-  `src/cli/commands/drive.ts:244` also misses YAML-backed Drive cards. Keep
+  `src/cli/commands/drive.ts:244` (moved to `beebox/src/cli/commands/drive/command.ts`) also misses YAML-backed Drive cards. Keep
   folder config user-authored. Make status consume the same parsed live working
   set as sync.
 - **Existing test seams.**
-  `test/connectors/connector-google-calendar.doctest.md:282-357` wraps a fake
-  calendar to force 410 recovery. `test/connectors/connector-drive.doctest.md:16-207`
+  `test/connectors/connector-google-calendar.doctest.md:282-357` (moved to `beebox/test/connectors/google-calendar.doctest.md`) wraps a fake
+  calendar to force 410 recovery. `test/connectors/connector-drive.doctest.md:16-207` (moved to `beebox/test/connectors/google-drive.doctest.md`)
   uses a fake Drive service and temporary Git box. Extend these files rather
   than create a new test tier.
 
@@ -243,7 +243,7 @@ discover all remote children.
 
 **Direction:**
 
-1. Add `src/connectors/google-drive-tracking.ts`. It owns Drive card discovery
+1. Add `src/connectors/google-drive-tracking.ts` (moved to `beebox/src/connectors/google-drive/tracking.ts`). It owns Drive card discovery
    and `drive-id` parsing for both YAML and legacy card formats. Return live
    cards outside infrastructure/trash plus Drive IDs found under
    `store/trash/**`. Ignore `node_modules/**`, `.git/**`, `tmp/**`,
@@ -285,8 +285,8 @@ adversarial recheck confirms the implementation.
 
 **Direction:**
 
-1. Update `docs/google-drive.md` and the Drive skill text in
-   `src/core/box/skills-content.ts`: `bbx rm <card>` stops sync without deleting
+1. Update `docs/connectors/drive.md` and the Drive skill text in
+   `src/core/box/skills-content.ts` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`): `bbx rm <card>` stops sync without deleting
    the remote file; restoring/recreating it resumes sync; a raw hard delete of
    a folder child does not override the still-configured folder mount.
 2. Add one `knows_directly` audit asking how to stop and resume one Drive file

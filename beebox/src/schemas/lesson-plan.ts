@@ -8,8 +8,8 @@
  * A segment names the concept-map node(s) it advances and, for a material
  * segment, refs the material card it uses.
  *
- * Incompleteness is visible, not silent: a `material` segment either has its
- * card (`status: ready`) or is explicitly deferred (`status: planned`). The
+ * Incompleteness is visible, not silent: a `material` segment either refs its
+ * card or is explicitly deferred (`planned: true`). The
  * box-aware lint (card-lint.ts → lint-node-refs.ts) warns on a material segment
  * that is neither, and on a `concepts` id that names no node in the course's
  * concept-map.
@@ -22,20 +22,18 @@
  * See docs/plans/courseware-lesson-plan.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { z } from "zod";
 
 /** Whether a segment plays out live in chat or leans on a pre-made material card. */
 const SegmentMode = z.enum(["interactive", "material"]);
 
-/** A material segment's authoring state: its card exists, or it's outlined-but-deferred. */
-const SegmentStatus = z.enum(["planned", "ready"]);
-
 /** One step in the delivery flow. */
 const Segment = z.object({
   do: z.string(),
   mode: SegmentMode,
-  status: SegmentStatus.optional(),
+  /** The material card is outlined here but not built yet. */
+  planned: z.boolean().optional(),
   concepts: z.array(z.string()).optional(),
   material: z.object({ ref: z.string() }).optional(),
   note: z.string().optional(),
@@ -47,6 +45,7 @@ const lessonPlanFields = {
 };
 
 export const LessonPlanSchema: CardSchema = cardSchema("lesson-plan", {
+  brief: "A course's ordered delivery flow",
   description: "A course's ordered delivery flow — segments tagged interactive (live in chat) or material (pre-made card), tied to concept-map nodes",
   category: "authored",
   fields: lessonPlanFields,
@@ -76,24 +75,23 @@ segments:
     concepts: [proton-transfer]          # concept-map node id(s) this advances
   - do: Walk the proton-transfer figure; have them predict each step first
     mode: material
-    status: ready                        # the card exists
     concepts: [proton-transfer, conjugate-pairs]
-    material: { ref: /_content/courses/Acids.attach/material/Proton_Transfer.figure.card }
+    material: { ref: /_content/courses/Acids.attach/material/Proton_Transfer.figure.card }   # the card exists
     note: Predict-then-reveal; don't just show it
   - do: Written recap of strong-vs-weak acids to re-read later
     mode: material
-    status: planned                      # outlined, not built yet
+    planned: true                        # outlined, not built yet
     concepts: [acid-strength]
 \`\`\`
 
-## Status — make deferral visible, never silent
+## Deferral — make it visible, never silent
 
 A build does **not** author all the material up front. Most material segments stay outlined. Mark each material segment honestly:
 
-- **ready** — the \`material\` card exists; ref it.
-- **planned** — the card is outlined here but not built yet (authored later, during teaching).
+- the \`material\` card exists — ref it in \`material\`.
+- \`planned: true\` — the card is outlined here but not built yet (authored later, during teaching). Remove it when you build the card and ref it.
 
-The lint **warns** on a \`material\` segment that has neither a \`material\` ref nor \`status: planned\` — so "incomplete material" is a stated fact, not a hidden gap. A complete build is *not* "every segment authored"; it's "every material segment is \`ready\` or explicitly \`planned\`." A mostly-interactive, mostly-\`planned\` course is a complete plan.
+The lint **warns** on a \`material\` segment that has neither a \`material\` ref nor \`planned: true\` — so "incomplete material" is a stated fact, not a hidden gap. A complete build is *not* "every segment authored"; it's "every material segment has its card or is explicitly \`planned\`." A mostly-interactive, mostly-\`planned\` course is a complete plan.
 
 ## Concepts
 
@@ -106,7 +104,7 @@ The framing: the arc of the course, where it goes live vs material-backed, and w
 
 /**
  * Starter lesson-plan for \`bbx create\`: one interactive and one material segment
- * showing both modes and the \`status\` convention, plus a framing body.
+ * showing both modes and the \`planned\` convention, plus a framing body.
  */
 export function createLessonPlanTemplate(options: { title?: string | undefined }): string {
   const fields: Record<string, unknown> = {
@@ -119,7 +117,7 @@ export function createLessonPlanTemplate(options: { title?: string | undefined }
       {
         do: "A made artifact (figure/doc) for the part that earns one.",
         mode: "material",
-        status: "planned",
+        planned: true,
         concepts: ["first-concept"],
       },
     ],

@@ -19,7 +19,7 @@ discovered-in: main session — boxholder noticed capture failing on first messa
 > substantial half — `resolveCaptureDeliveryTarget` admitted a target only if
 > history included it, and a reserved chat has no history entry until its first
 > turn, so removing the UI gate alone would have shipped the misdirection the
-> gate prevented. Pinned by `test/core/capture/deliver-reserved.doctest.md`.
+> gate prevented. Pinned by `test/core/capture/deliver-reserved.doctest.md` (moved to `beebox/test/core/capture/prepare/deliver.reserved.doctest.md`).
 
 Capture does not work on the first message of a chat. This is **deliberate, not
 broken**: the affordance is disabled until the chat has a server-assigned
@@ -63,7 +63,7 @@ layer handles null deliberately:
 - `core/chat/session/deliver-user-message.ts:141-163` — on a null target it
   calls `registry.createNew()` and wires `session-assigned` to persist the id
   back via `setStagingTargetSessionId`.
-- Covered by `test/core/capture/deliver-message.doctest.md:32-50`.
+- Covered by `test/core/capture/deliver-message.doctest.md:32-50` (moved to `beebox/test/core/capture/prepare/deliver.message.doctest.md`).
 
 The literal `"new"` sentinel never leaks into the capture path either — the
 chat machine normalizes it to `null` at `machines/chatMachine.ts:88`. So the

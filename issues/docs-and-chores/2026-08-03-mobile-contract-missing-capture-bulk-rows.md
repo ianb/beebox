@@ -4,16 +4,17 @@ workstream: skill-review
 area: beebox
 filed-by: agent
 discovered-in: worktree-skill-review — codex review of the new bbx-ios-overlap skill
+priority: normal
 ---
 
 `docs/mobile-contract.md` presents itself as the canonical Contract Surface
 Index (§7) with a same-commit sync rule, but it lags shipped code:
 
-- No capture rows at all, while `src/webapp/routes/capture.ts` ↔
+- No capture rows at all, while `src/webapp/routes/capture.ts` (moved to `beebox/src/webapp/routes/capture/register.ts`) ↔
   `ios-app/BeeBox/Services/CaptureAPI.swift` is a live contract surface.
 - Bulk-upload endpoints' native side is marked "deferred", while
   `ios-app/BeeBox/Services/BulkUploadAPI.swift` and
-  `BulkUploadCoordinator.swift` ship against `src/webapp/routes/bulk-upload.ts`.
+  `BulkUploadCoordinator.swift` ship against `src/webapp/routes/bulk-upload.ts` (moved to `beebox/src/webapp/routes/bulk-upload/register.ts`).
 - The hook anchor block (~line 785) omits `capture.ts`, `CaptureAPI.swift`,
   `BulkUploadAPI.swift`, and `BulkUploadCoordinator.swift`, so the commit
   tripwire never fires for changes to those files.

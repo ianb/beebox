@@ -1,0 +1,5 @@
+{
+  "variant": "request",
+  "input": { "token": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF", "environment": "production" },
+  "expected": { "token": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "environment": "production" }
+}

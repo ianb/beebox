@@ -120,7 +120,7 @@ export function LoginPage() {
                 {methods.setupRequired ? (
                   <Text as="p" tone="subtle" size="sm" center>
                     No account yet? Run the first-run setup (see the server
-                    console for the link), or run <code>bbx auth create-user</code>.
+                    console for the link), or run <code>bbx engine auth create-user</code>.
                   </Text>
                 ) : null}
               </>

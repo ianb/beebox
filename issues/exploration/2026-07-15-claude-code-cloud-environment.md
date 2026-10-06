@@ -93,7 +93,7 @@ The full `install → typecheck → lint → test` chain runs from the **repo al
 
 - **Tests are self-contained.** `makeTmpBox()` (`beebox/test/helpers/doctest-helpers.ts:39`)
   builds throwaway boxes in the OS tmpdir; route doctests boot Fastify against
-  tmp git repos; agents/services are faked (`test/helpers/fake-agent.ts`,
+  tmp git repos; agents/services are faked (`test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`),
   `src/services/`). The scenario loader that defaults to `~/src/boxes/scenarios`
   is not exercised by any included test. **No `~/src/boxes/test1` needed.**
 - **Build is offline.** `pretest` bundles the `dist/` package exports via esbuild;

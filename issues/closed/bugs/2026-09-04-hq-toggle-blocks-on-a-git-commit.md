@@ -15,7 +15,7 @@ chip calls `landmarks.setHqPreference` and only updates after the mutation
 resolves (`src/frontend/src/components/chat/VoiceChip.tsx:238`, invalidates
 on success). The mutation (`src/core/landmark/hq-preference.ts`) rewrites the
 landmark card under the card lock, then calls `stageAndCommitPaths`
-(`src/lib/git.ts:371`) and awaits it. That call:
+(`src/lib/git.ts:371` (moved to `beebox/src/lib/git/core.ts`)) and awaits it. That call:
 
 - takes the box git lock (`withBoxGitLock`), so it queues behind any
   autocommit, sweep, or agent commit already holding it;

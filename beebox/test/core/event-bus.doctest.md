@@ -15,8 +15,8 @@ reconnecting across a deploy resync instead of replaying stale-shaped rows.
 ```ts setup
 import Database from "better-sqlite3";
 import { join } from "node:path";
-import { createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus.js";
-import { eventSchemas } from "../../src/core/event-bus-schemas.js";
+import { createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
+import { eventSchemas } from "../../src/core/event-bus/schemas.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const TS = "2026-07-09T00:00:00.000Z";
@@ -46,17 +46,18 @@ const samples = {
   "chat-retranscription": { sessionId: "s1", messageId: "msg-1", newText: "corrected text", service: "whisper", diarized: false, recordedAt: TS },
   "chat-audio-consulted": { sessionId: "s1", messageId: "msg-1", command: "ask-about-audio", question: "did I say can or cannot?" },
   "voice-recording-status": { recordingId: "rec-1", sessionId: "s1", hq: { state: "queued" }, handoff: { mode: "open" } },
+  "notification": { id: "n1", title: "Call the vet", body: "", target: "chat:new", loudness: "loud", source: "health-alert", url: "/box/chat?new=1&notification=n1" },
 };
 ```
 
 ## Every event round-trips through its schema
 
-The sample catalog covers all 21 events, and each parses cleanly against the
+The sample catalog covers all 22 events, and each parses cleanly against the
 schema the read boundary uses:
 
 ```ts
 Object.keys(samples).length
-=> 21
+=> 22
 
 JSON.stringify(Object.keys(samples).sort()) === JSON.stringify(Object.keys(eventSchemas).sort())
 => true

@@ -1,5 +1,5 @@
 import { answerWithAdmission } from "../../core/commands/answer.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 /**
  * bbx answer - Answer a pending question from CLI
  *
@@ -7,9 +7,9 @@ import { invariant } from "../../lib/invariant.js";
  */
 
 import { Command } from "commander";
-import { findBoxRoot } from "../../lib/paths.js";
-import { createCliContext } from "../../core/commands/index.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { findBoxRoot } from "../../lib/paths/core.js";
+import { createCliContext } from "../../core/command-runner.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /**
  * Handler for answer command

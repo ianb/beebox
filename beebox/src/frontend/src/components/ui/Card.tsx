@@ -24,8 +24,12 @@ export interface CardProps {
   className?: string;
   /** Render as a different element. Use `"section"` (with `aria-label`) for landmark grouping. Default `"div"`. */
   as?: "div" | "section" | "article";
+  /** Stable `bbx-` address for a landmark card (see lib/ui-scan). */
+  id?: string;
   "aria-label"?: string;
   "aria-labelledby"?: string;
+  /** Marks the card as busy (e.g. still loading) for assistive tech. */
+  "aria-busy"?: boolean;
 }
 
 const PADDING_CLASSES: Record<CardPadding, string> = {
@@ -64,8 +68,10 @@ export function Card({
   muted,
   className,
   as: asArg,
+  id,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
+  "aria-busy": ariaBusy,
 }: CardProps) {
   padding = padding ?? "md";
   background = background ?? "white";
@@ -83,5 +89,5 @@ export function Card({
     muted ? "opacity-60" : "",
     className,
   );
-  return <Tag className={classes} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy}>{children}</Tag>;
+  return <Tag id={id} className={classes} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} aria-busy={ariaBusy}>{children}</Tag>;
 }

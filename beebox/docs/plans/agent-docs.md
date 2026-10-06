@@ -44,15 +44,15 @@ Design constraints, from the boxholder's framing (2026-09-12):
 - **`site/agent-prompt.ts`** renders a titled, id-addressed, copyable
   agent-directed prompt block. The home card already carries
   `{% agent-prompt id="install-with-your-agent" %}` pointing at
-  `raw.githubusercontent.com/.../agent-install.md`.
+  `raw.githubusercontent.com/.../install/agent.md`.
 - **`beebox/box-docs/`** (gitignored, ~5,300 lines, 66 files) is a generated
   reference corpus that is a pure function of the engine source:
   `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
   `views.md`, one `card-<type>.md` per built-in schema with `instructions`
   (55 types), the prose docs from `docs/box/`, and a `README.md` index whose
   rows say *when to read* each doc. Writer: `ensurePackageDocs()` in
-  `src/core/docs-gen/package-docs.ts`; standalone entry:
-  `scripts/build-box-docs.ts`. No box content by construction. This is the
+  `src/core/docs-gen/package-docs.ts` (moved to `beebox/src/core/docs-gen/package-docs/core.ts`); standalone entry:
+  `scripts/build-box-docs.ts` (moved to `beebox/src/scripts/build-box-docs.ts`). No box content by construction. This is the
   largest single piece of the corpus and it cannot drift.
 - **`beebox/docs/`** flat: 67 files, ~21k lines. Roughly 44 are reference
   ("how it works now"): card format, box layout, connectors and their setup,
@@ -220,11 +220,11 @@ would truncate in most fetchers and is the flat dump the framing rules out.
 
 | Kind | Source | How it gets in | Drift |
 |---|---|---|---|
-| Generated | engine doc set (`engineDocs()`) | site build runs `scripts/export-box-docs.ts`, writes the set | none: pure function of engine |
+| Generated | engine doc set (`engineDocs()`) | site build runs `scripts/export-box-docs.ts` (moved to `beebox/src/scripts/export-box-docs.ts`), writes the set | none: pure function of engine |
 | Promoted | allowlisted files under `beebox/docs/` | listed in `site/docs-manifest.yaml` | content-hash rebuild; scrub gate |
 | Authored | `site/cards/*.site-page.card` twins; a few new orientation pages | existing site pipeline | existing authorship rules |
 
-**Generated.** A new export-only script, `beebox/scripts/export-box-docs.ts`,
+**Generated.** A new export-only script, `beebox/scripts/export-box-docs.ts` (moved to `beebox/src/scripts/export-box-docs.ts`),
 prints the engine doc set (`engineDocs()` from `package-docs.ts`) as JSON on
 stdout with no filesystem side effect. The site build shells out to it
 (site/ stays free of beebox imports, as `site/CLAUDE.md` requires) and
@@ -557,4 +557,29 @@ pushed for two hours, and the Cloudflare build of main failed on a
 scrub-gate hit nobody saw locally. Finish now runs the canonical site build
 before a merge and the post-merge hook says when main is ahead of origin.) Also added: `capabilities/integrity.md` (links parsed and
 checked, references rewritten on a move, validation at several layers).
+
+## Keeping it current (2026-09-16)
+
+The corpus is maintained the way the security report is: on a cadence, by
+an agent, from the git record. `schedules/agent-docs-refresh/` runs weekly:
+its script hands off the first-parent commits on `main` since the last
+refresh that touched anything the corpus describes (engine source and docs,
+the manifest's sources, the authored pages, the companion apps, README and
+CONTRIBUTING); the session maps them to pages, verifies against the code,
+edits the authored pages and the manifest, builds with the Cloudflare
+command, lands with `bin/land`, and pushes `main` so the site rebuilds.
+Framing changes and new spine pages stay the boxholder's; the session
+reports them instead of making them.
+
+## Themes as the frame (2026-09-18)
+
+`site/docs-themes.md` (internal, not published) names the ten themes that
+distinguish Bee Box, what each means, how the product expresses it, and where
+it is thinner than the theme claims. It is the frame the corpus is written
+against, and it is deliberately more thorough than any published presentation
+of it. The front page carries a short public version as a `## Themes` section,
+one line per theme with the pages that carry it, so a reading agent can
+explore by theme rather than by directory. The home card carries the shortest
+version: a description, the attributes as a list, and the three prompts
+(learn, install, work on the code). The weekly refresh keeps the three in step.
 

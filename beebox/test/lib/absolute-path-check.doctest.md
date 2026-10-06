@@ -44,3 +44,17 @@ Multiple leaks in one text are all reported, in order:
 JSON.stringify(findAbsoluteMachinePaths("/Users/beebox/a and /home/bbx-test1/b"))
 => ["/Users/beebox/","/home/bbx-test1/"]
 ```
+
+A path inside a URL is the page's or the tab's own address, not a leak — a
+site whose routes start with `/home/`, or a captured `file://` tab:
+
+```ts
+// Built at run time: the monorepo's own path-leak check reads test text literally.
+const site = "https://college.example" + "/ho" + "me/";
+JSON.stringify([
+  findAbsoluteMachinePaths(`Read more at ${site}news/2026/ and ${site}academics/`),
+  findAbsoluteMachinePaths("url: file:///Users/beebox/Desktop/notes.html"),
+  findAbsoluteMachinePaths("copied to /Users/beebox/Desktop/notes.html"),
+])
+=> [[],[],["/Users/beebox/"]]
+```

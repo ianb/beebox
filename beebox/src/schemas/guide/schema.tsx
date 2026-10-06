@@ -1,0 +1,187 @@
+/**
+ * Guide schema definition and shared enums (Phase-2 frontmatter, no body).
+ *
+ * The guide is the "theory of user" for any domain — a living document
+ * capturing triage rules, named actions, experiments, reactions, and
+ * context notes. Everything is structured metadata (the parser flattens it
+ * into `ParsedGuide`), so it lives in YAML frontmatter; per-rule
+ * confidence/basis are just fields on each rule object.
+ */
+
+import { z } from "zod";
+import { cardSchema, type CardSchema } from "../../exports/cards.js";
+import {
+  ConfidenceLevelSchema,
+  type ConfidenceLevel,
+  BeliefBasisSchema,
+  type BeliefBasis,
+  type ExperimentOutcome,
+  experimentStageFields,
+  experimentStateIssues,
+} from "../../guide-fields.js";
+
+export type { ConfidenceLevel, BeliefBasis, ExperimentOutcome } from "../../guide-fields.js";
+
+// ============================================
+// Shared enums
+// ============================================
+
+const ReactionSentimentSchema = z.enum([
+  "positive",
+  "negative",
+  "neutral",
+]);
+export type ReactionSentiment = z.infer<typeof ReactionSentimentSchema>;
+
+const ContextDuration = z.enum(["ongoing", "temporary", "past"]);
+
+// ============================================
+// Field validators
+// ============================================
+
+const TriageRuleField = z.object({
+  text: z.string(),
+  confidence: ConfidenceLevelSchema.default("low"),
+  basis: BeliefBasisSchema.default("inferred"),
+  ref: z.string().optional(),
+  action: z.string().optional(),
+});
+
+const DefaultActionField = z.object({
+  action: z.string(),
+  text: z.string().optional(),
+});
+
+const ActionField = z.object({
+  name: z.string(),
+  when: z.string().optional(),
+  instructions: z.string().optional(),
+});
+
+const ObservationField = z.object({
+  text: z.string(),
+  ref: z.string().optional(),
+});
+
+const ExperimentField = z.object({
+  id: z.string(),
+  ...experimentStageFields,
+  hypothesis: z.string().optional(),
+  approach: z.string().optional(),
+  observations: z.array(ObservationField).optional(),
+  conclusion: z.string().optional(),
+});
+
+const ReactionField = z.object({
+  id: z.string(),
+  sentiment: ReactionSentimentSchema.default("neutral"),
+  text: z.string(),
+});
+
+const ContextNoteField = z.object({
+  text: z.string(),
+  duration: ContextDuration.default("ongoing"),
+});
+
+const guideFields = {
+  version: z.string().default("1.0.0"),
+  "job-types": z.array(z.string()).optional(),
+  "applies-to": z.string().optional(),
+  "triage-rules": z.array(TriageRuleField).optional(),
+  "default-action": DefaultActionField.optional(),
+  actions: z.array(ActionField).optional(),
+  experiments: z.array(ExperimentField).optional(),
+  reactions: z.array(ReactionField).optional(),
+  "context-notes": z.array(ContextNoteField).optional(),
+};
+
+export const GuideSchema: CardSchema = cardSchema("guide", {
+  brief: "Preferences for one domain",
+  description: "A living theory of the user for a job type — triage rules, actions, experiments, and reactions with confidence tracking",
+  category: "authored",
+  searchable: false,
+  validate: ({ fields }) => experimentStateIssues(fields["experiments"]),
+  fields: guideFields,
+  instructions: `# Handling Guides
+
+A guide is a living document — the theory of the user. Treat it as a model to be refined, not a static config. It is pure YAML frontmatter (no body).
+
+**Confidence ladder:** hypothesis → low → medium → high → confirmed. Only upgrade when there's evidence. Only downgrade when evidence contradicts. Never jump from hypothesis to confirmed in one step.
+
+For document triage, \`_config/intake.guide.card\` governs decisions while landmark destinations define filing boundaries. Before changing either, read \`node_modules/beebox/box-docs/triage-instructions.md\` and test a candidate against prior decisions.
+
+**Basis hierarchy:** a belief's \`basis\` is what it rests on: user-stated > feedback > inferred > default. A user-stated belief overrides anything inferred.
+
+**Retrospective-inferred beliefs.** When enabled, the weekly \`process-retrospective\` mines past
+chat sessions and writes what it learned into personality/guide cards as
+\`basis: inferred\` entries — treat those as the agent's own working hypotheses:
+don't promote them past \`medium\`, and don't use them to contradict a
+\`user-stated\` belief (that takes the boxholder's say-so). The full
+confidence-ladder detail lives with the retrospective procedure; run reports are
+in \`_content/reviews/retro/\`.
+
+**ALWAYS have active experiments.** If all experiments are resolved, propose new ones. Experiments are how the system learns — without them it stagnates. Aim for 1-3 active experiments at any time.
+
+**\`experiments\`** is a list of \`{ id, hypothesis?, approach?, observations?, conclusion? }\` plus its stage: a new entry is proposed; set \`active: true\` when you start running it; when it concludes, remove \`active\` and set \`outcome:\` to \`successful\`, \`unsuccessful\`, \`mixed\`, or \`inconclusive\` (with a \`conclusion\`). Never set both \`active\` and \`outcome\`. Concluded experiments stay in the card as history but are left out of agent context.
+
+**\`triage-rules\`** is a list of \`{ text, confidence, basis, ref?, action? }\`. A rule's \`action\` names an entry in \`actions\`. \`default-action\` says what happens when no rule matches.
+
+**\`actions\`** are named things the agent can do (proper nouns like "Write Brief", "Archive"). Each is \`{ name, when?, instructions? }\`.
+
+When revising based on feedback: cite the specific source in a rule's \`ref\` and explain changes in experiment \`observations\`. Every change should be traceable to evidence.
+
+Don't remove rules just because one interaction got a "meh" rating. Look for patterns across multiple interactions before downgrading confidence.`,
+});
+
+/** Standalone object schema for parsing a guide's frontmatter directly. */
+export const GuideObject = z.object(guideFields);
+export type GuideFields = z.infer<typeof GuideObject>;
+/** Back-compat alias for the guide fields type. */
+export type Guide = GuideFields;
+
+// ============================================
+// Parsed guide
+// ============================================
+
+export interface ParsedGuide {
+  version: string;
+  jobTypes: string[];
+  appliesTo: string | undefined;
+  triageRules: Array<{
+    text: string;
+    confidence: ConfidenceLevel;
+    basis: BeliefBasis;
+    ref: string | undefined;
+    action: string | undefined;
+  }>;
+  defaultAction: {
+    action: string;
+    text: string | undefined;
+  } | undefined;
+  actions: Array<{
+    name: string;
+    when: string | undefined;
+    instructions: string | undefined;
+  }>;
+  experiments: Array<{
+    id: string;
+    active: boolean;
+    outcome: ExperimentOutcome | undefined;
+    hypothesis: string | undefined;
+    approach: string | undefined;
+    observations: Array<{
+      text: string;
+      ref: string | undefined;
+    }>;
+    conclusion: string | undefined;
+  }>;
+  reactions: Array<{
+    id: string;
+    sentiment: ReactionSentiment;
+    text: string;
+  }>;
+  contextNotes: Array<{
+    text: string;
+    duration: "ongoing" | "temporary" | "past";
+  }>;
+}

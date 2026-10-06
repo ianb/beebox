@@ -66,7 +66,7 @@ undiagnosable. Related filed issue:
 
 Server sink (REUSE, small extension):
 
-- `src/webapp/trpc/routers/debugLog.ts` · `submit` — tRPC mutation taking
+- `src/webapp/trpc/routers/debugLog.ts` (moved to `beebox/src/webapp/trpc/routers/debug-log.ts`) · `submit` — tRPC mutation taking
   `{ entries: [{ level, message }] }`, appends `ts [level] message\n` lines via
   `appendRollingLog` to `<boxRoot>/.beebox/client-debug.log` (~100KB
   rolling truncate; concurrency-safe via its in-process promise chain — it
@@ -78,7 +78,7 @@ Server sink (REUSE, small extension):
   deletes its only copy on ack — chunk 1 adds a strict-append variant for this
   route.
 - Wire: no transformer is configured on the tRPC stack
-  (`src/webapp/trpc/trpc.ts` · `initTRPC.context<TrpcContext>().create()`), so
+  (`src/webapp/trpc/trpc.ts` (moved to `beebox/src/webapp/trpc/procedures.ts`) · `initTRPC.context<TrpcContext>().create()`), so
   per the tRPC v11 HTTP-RPC spec a non-batched mutation is
   `POST <baseURL>/api/trpc/debugLog.submit` with the input object as raw JSON
   body. Routing verified against the dev router (unauthenticated probe reached
@@ -292,7 +292,7 @@ needs cutting):
 `source`/`at` line rendering; `docs/client-debug-log.md` gains an iOS section;
 `docs/mobile-contract.md` gains §5.7 (H5 in §7), the §8 mirrored wire-shape
 constants, and anchor-manifest entries for
-`beebox/src/webapp/trpc/routers/debugLog.ts` +
+`beebox/src/webapp/trpc/routers/debugLog.ts` (moved to `beebox/src/webapp/trpc/routers/debug-log.ts`) +
 `ios-app/BeeBox/Services/LogForwarder.swift`.
 
 ## Subplans

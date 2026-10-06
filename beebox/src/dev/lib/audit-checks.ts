@@ -1,6 +1,7 @@
 /** Automated knowledge-audit checks over normalized agent behavior. */
 
-import type { AgentBehavior, AutomatedChecks, AuditTest } from "./test-runner.js";
+import type { AgentBehavior, AutomatedChecks, AuditTest } from "./test-runner/runner.js";
+import type { SearchWhere } from "./test-suite-schema.js";
 
 interface RunChecksContext {
   behavior: AgentBehavior;
@@ -42,6 +43,13 @@ export function runChecks(
     }
     return { expected, found: false };
   });
+  const cardsNotUnderChecks = (test.cards_not_under ?? []).map((prefix) => {
+    const normalized = prefix.replace(/^\.?\//, "");
+    for (const filePath of newOrModifiedCards.keys()) {
+      if (filePath.replace(/^\.?\//, "").startsWith(normalized)) return { prefix, found: true, foundAt: filePath };
+    }
+    return { prefix, found: false };
+  });
   const shouldReadChecks = (test.should_read ?? []).map((file) => ({
     file,
     wasRead: behavior.filesRead.some((read) => read.includes(file)),
@@ -61,12 +69,14 @@ export function runChecks(
     return { expected, found: !!matched, ...(matched && { matchedCommand: matched }) };
   });
   return {
+    ...(test.should_search !== undefined && { shouldSearchCheck: checkSearch(test.should_search, behavior) }),
     containsChecks,
     matchesChecks,
     notContainsChecks,
     notMatchesChecks,
     containsAnyCheck,
     cardsContainChecks,
+    cardsNotUnderChecks,
     shouldReadChecks,
     shouldReadAnyCheck,
     shouldNotReadChecks,
@@ -81,8 +91,27 @@ export function automatedChecksPassed(checks: AutomatedChecks): boolean {
     checks.notMatchesChecks.every((check) => !check.found) &&
     (checks.containsAnyCheck?.found ?? true) &&
     checks.cardsContainChecks.every((check) => check.found) &&
+    checks.cardsNotUnderChecks.every((check) => !check.found) &&
     checks.shouldReadChecks.every((check) => check.wasRead) &&
     (checks.shouldReadAnyCheck?.wasRead ?? true) &&
     checks.shouldNotReadChecks.every((check) => !check.wasRead) &&
-    checks.bashContainsChecks.every((check) => check.found);
+    checks.bashContainsChecks.every((check) => check.found) &&
+    (checks.shouldSearchCheck?.found ?? true);
+}
+
+const WEB_SEARCH_TOOLS = new Set(["WebSearch", "WebFetch"]);
+const BOX_SEARCH_COMMAND = /\bbbx\s+search\b/i;
+
+/**
+ * Did the agent look something up where the audit asks? A web lookup is a
+ * WebSearch or WebFetch in `searches` (both runners record provider searches
+ * under that tool name); a box lookup is a `bbx search` shell command.
+ */
+function checkSearch(where: SearchWhere, behavior: AgentBehavior): NonNullable<AutomatedChecks["shouldSearchCheck"]> {
+  const web = behavior.searches.find((search) => WEB_SEARCH_TOOLS.has(search.tool));
+  const box = behavior.bashRawCommands.find((command) => BOX_SEARCH_COMMAND.test(command));
+  const webMatch = web && `${web.tool} ${web.summary}`;
+  const byWhere: Record<SearchWhere, string | undefined> = { web: webMatch, box, any: webMatch ?? box };
+  const matched = byWhere[where];
+  return { where, found: matched !== undefined, ...(matched !== undefined && { matched }) };
 }

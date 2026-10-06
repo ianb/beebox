@@ -5,6 +5,6 @@
     "jsx": "react-jsx",
     "types": ["node", "react", "react-dom"]
   },
-  "include": ["**/*.ts", "**/*.tsx", "../../dev-demo/**/*.ts", "../../dev-demo/**/*.tsx", "../../test/**/*.tsx"],
+  "include": ["**/*.ts", "**/*.tsx", "../../test/**/*.tsx"],
   "exclude": ["dist"]
 }

@@ -41,9 +41,9 @@ to ≤5 steps; if the probe needs more, split it into rounds.
    from the device with no devtools, bounded in memory and log volume, and
    content-free (numbers, enum-ish strings, element counts — never message
    text, card paths, or URLs; the trace transits a log a bug report might
-   quote). The house pattern is `src/frontend/src/lib/scroll-diagnostics.ts` +
+   quote). The house pattern is `src/frontend/src/lib/scroll-diagnostics/diagnostics.ts` +
    its `/scrolldebug` composer command (frontend-only command riding the
-   `/fakestream` interception seam in `machines/chat-actors.ts`): ring buffer,
+   `/fakestream` interception seam in `machines/chatMachine/chat-actors.ts`): ring buffer,
    periodic flush through `console.warn`, which the closed-debug-panel client
    forwards into `client-debug.log`. Reuse that toggle/flush shape — and for
    scroll/layout work reuse that very module — rather than inventing a channel.

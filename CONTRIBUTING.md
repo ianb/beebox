@@ -11,13 +11,13 @@ pull requests are not yet solicited. Read
 [`beebox/CLAUDE.md`](beebox/CLAUDE.md) and [`beebox/code-style.md`](beebox/code-style.md) first: they
 are what the maintainer's own coding agent reads before touching this
 codebase, and a change that ignores them will need rework.
-[How development happens here](beebox/docs/development-process.md) is the
+[How development happens here](beebox/docs/development.md) is the
 overview of the process around those instructions, and links the pages on agent
 coding, the workflow, agent testing, and the technologies in use.
 
 ## Set up
 
-Follow [the developer install guide](beebox/docs/developer-install.md) for prerequisites and the
+Follow [the developer install guide](beebox/docs/install/developer.md) for prerequisites and the
 install sequence. Once installed, create your own test box with `bbx init`
 rather than reusing anyone else's; a box is a data directory, so making a new
 one is cheap.

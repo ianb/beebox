@@ -1,0 +1,111 @@
+/**
+ * Telegram bot connection for a box: shows configured status or setup
+ * instructions for creating a bot and pasting the token.
+ */
+
+import { useState, useEffect, useCallback } from "react";
+import { trpc, trpcClient } from "../../../lib/trpc/client";
+import { getQueryKey } from "@trpc/react-query";
+import { fetchSharedStatus } from "../../../lib/trpc/shared-status";
+import { errorMessage } from "@shared/error-guards";
+import {
+  TelegramConnectedView,
+  TelegramSetupView,
+  type TelegramStatus,
+} from "./views";
+import { AdminSectionCard } from "../AdminSectionCard";
+
+const DESCRIPTION = "Connect a Telegram bot to receive and respond to messages in Telegram groups or private chats.";
+
+export function TelegramSection() {
+  const [status, setStatus] = useState<TelegramStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [botToken, setBotToken] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      // Shared with the admin overview's query of the same procedure.
+      const data = await fetchSharedStatus({ queryKey: getQueryKey(trpc.admin.telegramStatus, undefined, "query"), queryFn: () => trpcClient.admin.telegramStatus.query() });
+      setStatus(data);
+      setError(null);
+      return data;
+    } catch (err) {
+      setError(errorMessage(err));
+      return null;
+    }
+  }, []);
+
+  // Mount-only fetch.
+
+  useEffect(() => {
+    // fetchStatus catches its own errors into `error` state.
+    void fetchStatus().finally(() => setLoading(false));
+  }, [fetchStatus]);
+
+
+  const handleConnect = async () => {
+    if (!botToken.trim()) return;
+    setConnecting(true);
+    setError(null);
+
+    try {
+      await trpcClient.admin.telegramSetup.mutate({ botToken: botToken.trim() });
+      setBotToken("");
+      await fetchStatus();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    setError(null);
+
+    try {
+      await trpcClient.admin.telegramDisconnect.mutate();
+      await fetchStatus();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminSectionCard id="telegram" description={DESCRIPTION} busy>
+        <p className="text-sm text-warm-600">Checking status...</p>
+      </AdminSectionCard>
+    );
+  }
+
+  return (
+    <AdminSectionCard id="telegram" description={DESCRIPTION}>
+      {status?.configured ? (
+        <TelegramConnectedView
+          status={status}
+          disconnecting={disconnecting}
+          onDisconnect={() => void handleDisconnect()}
+        />
+      ) : (
+        <TelegramSetupView
+          botToken={botToken}
+          connecting={connecting}
+          onBotTokenChange={setBotToken}
+          onConnect={() => void handleConnect()}
+        />
+      )}
+
+      {error ? (
+        <div className="mt-3 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
+          {error}
+        </div>
+      ) : null}
+    </AdminSectionCard>
+  );
+}

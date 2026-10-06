@@ -38,7 +38,7 @@ transcription, or speech playback.
   make code pass. Fix the code, or raise it with the boxholder first."* This plan
   removes a lint rule (the `useMachine` ban). That was raised with the boxholder
   and approved before this plan was written — see Track 3.
-- **Precedent:** `bbx view test` (`src/cli/commands/view.ts:352`) is the surviving
+- **Precedent:** `bbx view test` (`src/cli/commands/view.ts:352` (moved to `beebox/src/cli/commands/view/command.ts`)) is the surviving
   "run React outside the webapp" path. It keeps `react-dom/server` and `cheerio`
   alive, so this removal drops no dependency.
 
@@ -52,11 +52,11 @@ citations:
   *"export const renderCommand = new Command("render")"*. It builds the child
   script path at `render.ts:51` and spawns the tsx child at `render.ts:82`.
 - `src/cli/commands/index.ts:44` — *"export { renderCommand } from
-  "./render.js";"*. This is a **barrel**, and it is where `src/cli/index.ts:52`
-  gets the symbol; `src/cli/index.ts:52` is an import *from the barrel*, not
+  "./render.js";"*. This is a **barrel**, and it is where `src/cli/index.ts:52` (moved to `beebox/src/cli/entry/run.ts`)
+  gets the symbol; `src/cli/index.ts:52` (moved to `beebox/src/cli/entry/run.ts`) is an import *from the barrel*, not
   from `commands/render.ts`. Both must change. (The barrel itself contradicts
   `code-style.md`'s no-barrels rule; that is pre-existing and out of scope here.)
-- `src/cli/index.ts:127` — *"program.addCommand(renderCommand);"*.
+- `src/cli/index.ts:127` (moved to `beebox/src/cli/entry/run.ts`) — *"program.addCommand(renderCommand);"*.
 - `src/frontend/src/ssr/` — **9 files, 935 lines**: `render.tsx` (344),
   `state-registry.ts` (180), `state-registry-machines.ts` (154),
   `state-registry-routes.ts` (128), `setup.ts` (43), `noop-trpc.ts` (25),
@@ -130,9 +130,9 @@ citations:
   third argument, commented *"required for SSR (`bbx render` …)"*.
 
 **Dependencies:** none are dropped. `cheerio` (`package.json:113`) and
-`react-dom/server` are both still used by `src/cli/commands/view.ts:33-34,106`
+`react-dom/server` are both still used by `src/cli/commands/view.ts:33-34 (moved to `beebox/src/cli/commands/view/command.ts`),106`
 — the surviving "run React outside the webapp" path is **`bbx view test`**
-(`src/cli/commands/view.ts:352`, registered at `:384-389`). There is no
+(`src/cli/commands/view.ts:352` (moved to `beebox/src/cli/commands/view/command.ts`), registered at `:384-389`). There is no
 `bbx view render`. `bbx view test` renders *compiled agent views* through the
 Node view host (`view.ts:176-177`: *"const { NodeViewHostProvider } = await
 import("beebox/view-widgets");"*), **not** through the app's component
@@ -215,7 +215,7 @@ commit with the lint-rule change from Track 3.
 
 **What.** Delete `src/cli/commands/render.ts`, its barrel export
 (`src/cli/commands/index.ts:44`), its import and registration in
-`src/cli/index.ts` (`:52`, `:127`), all of `src/frontend/src/ssr/`,
+`src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`) (`:52`, `:127`), all of `src/frontend/src/ssr/`,
 `test/frontend/state-registry-routes.doctest.md`, and
 `docs/ssr-render-testing.md`.
 
@@ -338,7 +338,7 @@ that `bin/browse` is the way to look at a page; `src/frontend/tsconfig.json:36-3
 and `eslint.config.mjs:59,67,74,82,112` (comments referring to `bbx render` as a
 tsx-with-frontend-tsconfig context — doctests still are, so the comments are
 re-attributed, not deleted); `vite.config.ts:20`;
-`src/cli/commands/view.ts:103` (*"mirrors `bbx render`"*).
+`src/cli/commands/view.ts:103` (moved to `beebox/src/cli/commands/view/command.ts`) (*"mirrors `bbx render`"*).
 
 **Live plans and issues that cite `bbx render` as an available capability** — these
 mislead a reader who picks them up after the removal, so each is rewritten (not
@@ -357,12 +357,12 @@ deleted) to say the capability is gone and to point at `bin/browse`:
 
 **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
 `docs/doc-graph.html`) still list the deleted doc. `doc-check --fix` explicitly
-skips generated files (`src/dev/doc-check.ts:36`: *"const GENERATED_NO_SCAN =
+skips generated files (`src/dev/doc-check.ts:36` (moved to `beebox/src/dev/doc-check/check.ts`): *"const GENERATED_NO_SCAN =
 new Set(["beebox/docs/doc-graph.md", …])"*), so `pnpm doc-graph` and
 `pnpm doc-graph-html` must be run as part of this chunk.
 
 Historical records are **not** edited: `docs/implemented-plans/*`,
-`user-stories/catalog/2026-06-26.md`, and the closed issues under
+`user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`), and the closed issues under
 `issues/closed/` describe what was true when they were written. They are only
 touched if `doc-check` reports a broken link out of them (the deletion of
 `docs/ssr-render-testing.md` may produce one).
@@ -459,7 +459,7 @@ rather than skipped:
   Historical records; see Track 4(c).
 - **A custom lint rule banning module-scope browser globals.** Considered and
   declined in the crash-fix issue itself; removing SSR does not revive the case.
-- **Touching `bbx view test`** (`src/cli/commands/view.ts:352`). Different
+- **Touching `bbx view test`** (`src/cli/commands/view.ts:352` (moved to `beebox/src/cli/commands/view/command.ts`)). Different
   command, different purpose (agent-authored views), still works.
 
 ## Open design questions
@@ -485,7 +485,7 @@ Existing audits were checked for references to `bbx render` or SSR — grep over
 
 1. **Chunk A — delete the command and SSR graph** (Track 2). Delete
    `src/cli/commands/render.ts`, its barrel export (`commands/index.ts:44`), the
-   two `src/cli/index.ts` lines, `src/frontend/src/ssr/`,
+   two `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`) lines, `src/frontend/src/ssr/`,
    `test/frontend/state-registry-routes.doctest.md`, and
    `docs/ssr-render-testing.md`. Depends on nothing. Typechecks and tests green
    on its own.

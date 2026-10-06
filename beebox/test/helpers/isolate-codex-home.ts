@@ -7,7 +7,7 @@
  * `~/.codex/config.toml` with this checkout's path as the source, and
  * re-points an existing registration whenever the path differs.
  *
- * Exactly one test reaches it (`test/core/chat-start-choice.doctest.md`
+ * Exactly one test reaches it (`test/core/chat/session/engine.start-choice.doctest.md`
  * records a codex-engine session start, whose husk reads a snippet title,
  * which opens the real Codex history app-server). That was enough: the hourly
  * `full-suite` schedule runs in a temp checkout, so the run re-pointed the

@@ -44,7 +44,7 @@ offers what `bin/workstreams archive` will reject:
 - **Unarchive** is an archived row's only verb: the others act on something the
   boxholder deliberately put away.
 
-`test/workstream-archive-actions.doctest.md` pins each of those cases,
+`test/workstream-archive-actions.doctest.md` (moved to `workstreams-app/test/frontend/components/WorkstreamActions.archive.doctest.md`) pins each of those cases,
 including both halves of the culled split — merged is archivable, unmerged is
 not. `workstream-launching-ui.doctest.md` needed its dormant expectation
 updated for the new verb, with a note saying why.

@@ -15,7 +15,7 @@
  */
 
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
-import { assertNever } from "../lib/invariant.js";
+import { assertNever } from "../shared/invariant.js";
 import type { ChatContentBlock } from "./claude-chat-types.js";
 
 /** The `ContentBlockParam[]` the SDK's `SDKUserMessage.message.content` accepts. */

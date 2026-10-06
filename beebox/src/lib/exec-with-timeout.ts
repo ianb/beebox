@@ -3,7 +3,7 @@
  *
  * Spawns through a process group so the entire tree can be killed on
  * expiry (a plain kill leaves grandchildren running). The deadline counts
- * only awake time — see lib/awake-timeout.ts for why a single setTimeout
+ * only awake time — see shared/awake-timeout.ts for why a single setTimeout
  * would instead fire the moment the machine wakes from a sleep that
  * started mid-run, killing work that barely got to execute.
  *
@@ -13,7 +13,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { startAwakeTimeout, type AwakeElapsed } from "./awake-timeout.js";
+import { startAwakeTimeout, type AwakeElapsed } from "../shared/awake-timeout.js";
 
 /** Default per-script timeout: 10 minutes of awake runtime. */
 export const SCRIPT_TIMEOUT = 10 * 60 * 1000;

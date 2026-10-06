@@ -10,9 +10,9 @@ resolution: implemented
 ---
 
 `bbx wakeup` runs its reactor cycle with `skipLowPriority: true`
-(`beebox/src/cli/commands/wakeup.ts:128`). A reactor cycle skips
+(`beebox/src/cli/commands/wakeup.ts:128` (moved to `beebox/src/cli/commands/wakeup/command.ts`)). A reactor cycle skips
 entirely when every pending job is low priority
-(`beebox/src/core/reactor/cycle.ts:123`). Scheduled wakeup is the only
+(`beebox/src/core/reactor/cycle.ts:123` (moved to `beebox/src/core/reactor/engine/cycle.ts`)). Scheduled wakeup is the only
 thing that runs a reactor on a deployed box. So a box whose `box/jobs` holds
 only low-priority cards never drains them — not late, never.
 
@@ -26,7 +26,7 @@ ticks every minute.
 
 The stuck `contains-backfill` card is not just stale — it disables the search
 index. `createContainsBackfillJob`
-(`beebox/src/cli/commands/wakeup-steps.ts:376`) returns early when a
+(`beebox/src/cli/commands/wakeup-steps.ts:376` (moved to `beebox/src/cli/commands/wakeup/steps.ts`)) returns early when a
 `contains-backfill` job is already pending, and that early return is *before*
 its `openSearchIndex(boxRoot)` call on line 381:
 
@@ -80,7 +80,7 @@ delayed by a low-priority backlog. Age comes from the timestamp prefix every
 job-card writer stamps into the filename — no card mutation, nothing to keep
 in sync; an unstamped name falls back to mtime, and an age that can't be
 established reads as young. See `discoverStage` in
-`beebox/src/core/reactor/cycle.ts`.
+`beebox/src/core/reactor/cycle.ts` (moved to `beebox/src/core/reactor/engine/cycle.ts`).
 
 **The index refresh has its own footing.** Rather than hoisting the one line,
 `openSearchIndex` moved out of `createContainsBackfillJob` entirely and became

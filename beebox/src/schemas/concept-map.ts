@@ -12,7 +12,7 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema, type LintIssue } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema, type LintIssue } from "../exports/cards.js";
 import { z } from "zod";
 
 /** Knowledge-component type — a strong hint to *how* a node is taught. */
@@ -124,6 +124,7 @@ export function conceptMapShapeWarnings(fields: Record<string, unknown>): LintIs
 }
 
 export const ConceptMapSchema: CardSchema = cardSchema("concept-map", {
+  brief: "Knowledge graph for one topic",
   description: "A module-scale knowledge graph for one bounded topic — concepts as in-card nodes with typed edges; a course component",
   category: "authored",
   validate: ({ fields }) => conceptMapErrors(fields),

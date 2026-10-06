@@ -73,7 +73,7 @@ pnpm --dir beebox exec tap test/frontend/trpc-directory-resolution.test.ts
 ## 2026-09-02 — verified stale (survey note)
 
 Passes on `main` at `01791868b` in isolation (1/1, 2.2s). The blamed landing
-`7f47b493` touched `bin/`, `schedules/`, `issues/`, `src/dev/doc-frontmatter.ts`
+`7f47b493` touched `bin/`, `schedules/`, `issues/`, `src/dev/doc-frontmatter.ts` (moved to `beebox/src/dev/doc-check/frontmatter.ts`)
 and workstreams-app — nothing under `src/frontend/` or this test. In the hourly
 run's own isolated re-run, children 5, 10, 11 and 12 of the 12 concurrent
 loader children failed with a bare `Command failed:` and the test took 15.2s,
@@ -85,6 +85,6 @@ on the same loaded machine. Mis-attribution by `schedules/full-suite/`.
 
 Verified stale (note above): the failure was host contention, and the blamed
 landing cannot reach the failing file. An instance of
-[fixed-timeout-budgets-fail-under-host-load](../../deferred/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
 the mis-attribution itself is fixed by the full-suite-verdicts workstream
 (slowdown-gated verdicts + import-cone attribution in schedules/full-suite/).

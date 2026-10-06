@@ -4,7 +4,7 @@
  * page className restriction). See ChatScrollHarness for details.
  */
 
-import { ChatScrollHarness } from "./components/ChatScrollHarness";
+import { ChatScrollHarness } from "./components/ChatScrollHarness/view";
 
 export function ChatScrollPage() {
   return <ChatScrollHarness />;

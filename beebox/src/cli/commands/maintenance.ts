@@ -4,13 +4,13 @@ import { realpath, stat } from "node:fs/promises";
 import { userInfo } from "node:os";
 import { Command } from "commander";
 import { z } from "zod";
-import { defaultHubConfigPath, loadHubConfig } from "../../hub/hub-config.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { defaultHubConfigPath, loadHubConfig } from "../../hub/config.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import {
   closeBoxMaintenance, boxMaintenanceStatus, boxWorkEnvironment, type BoxMaintenance,
 } from "../../lib/box-maintenance.js";
 import { captureMigrationSnapshot } from "../../core/migration-recovery.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 /** Root deployment scripts retain privilege; gate files belong to the box user. */
 async function boxIdentity(roots: string[]): Promise<() => void> {
@@ -43,7 +43,7 @@ export async function runMaintenance(roots: string[], invocation: { command: str
   const held: { root: string; handle: BoxMaintenance }[] = [];
   const completed = new Set<string>();
   try {
-    for (const root of boxes) held.push({ root, handle: await closeBoxMaintenance(root, { reason: "deployment", recover: true }) });
+    for (const root of boxes) held.push({ root, handle: await closeBoxMaintenance(root, { reason: "deployment" }) });
     for (const { handle } of held) await handle.drain();
     for (const { root, handle } of held) {
       const snapshot = await handle.run(() => captureMigrationSnapshot(root, "deployment"));

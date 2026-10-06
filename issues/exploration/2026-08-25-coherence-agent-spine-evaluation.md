@@ -46,7 +46,7 @@ never checks that a doc **says** something true. Today:
 
 - `beebox/docs/security-overview.md:66` states "On fresh boxes, scheduled
   agent runs are off by default."
-- `src/core/box/defaults.ts` ships **three** seeded schedules `enabled: true` —
+- `src/core/box/defaults.ts` (moved to `beebox/src/core/box/structure/defaults.ts`) ships **three** seeded schedules `enabled: true` —
   `refresh-maps`, `gc-procedure-runs`, `process-retrospective`.
 
 A false claim, in the security document whose stated premise is leading "with
@@ -89,7 +89,7 @@ notable difference.
   `--host codex`), which is the same problem the AGENTS.md mirror generator
   solves here. Worth seeing how they handle it.
 
-Related: [proving-it-works](2026-08-14-proving-it-works-demo-video-plugin.md) —
+Related: [proving-it-works](../closed/exploration/2026-08-14-proving-it-works-demo-video-plugin.md) —
 the other outside tool in the queue, and the same shape of question: adopt,
 borrow the idea, or neither. Record the call either way so the link is not
 re-evaluated later.

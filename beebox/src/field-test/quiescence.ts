@@ -24,12 +24,12 @@
 
 import { z } from "zod";
 import { findJobCards } from "../core/reactor/job-discovery.js";
-import { listStagingSessions } from "../core/capture/staging-store.js";
+import { listStagingSessions } from "../core/capture/staging-store/core.js";
 import { isBulkSession } from "../core/capture/staging-schema.js";
-import { startAwakeTimeout } from "../lib/awake-timeout.js";
-import { sleep } from "../lib/sleep.js";
-import { errorMessage } from "../lib/error-guards.js";
-import { getBoxDir } from "../lib/paths.js";
+import { startAwakeTimeout } from "../shared/awake-timeout.js";
+import { setTimeout as sleep } from "node:timers/promises";
+import { errorMessage } from "../shared/error-guards.js";
+import { getBoxDir } from "../lib/paths/core.js";
 
 /** Bulk-upload states that mean the box still owes the batch work. `open` is
  *  deliberately excluded: an open batch is waiting on the *uploader*, and an

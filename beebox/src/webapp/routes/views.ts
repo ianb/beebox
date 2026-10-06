@@ -9,7 +9,7 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { bundleView, getViewMeta, buildErrorModule, resolveViewsDir } from "../views/compiler.js";
+import { bundleView, getViewMeta, buildErrorModule, resolveViewsDir } from "../views/compiler/compile.js";
 import { boxPackageHost } from "../views/node-view-runtime.js";
 import { loadViewCards } from "../../core/views/cards.js";
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { withBase } from "../api";
-import { trpc, trpcClient } from "../lib/trpc";
+import { trpc, trpcClient } from "../lib/trpc/client";
 import { errorMessage } from "@shared/error-guards";
 
 export interface ResetLink {

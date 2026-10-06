@@ -6,7 +6,7 @@
  * and the same summary line.
  */
 
-import { humanBytes } from "../../lib/human-bytes.js";
+import { humanBytes } from "../../shared/human-bytes.js";
 import type { StagingSession } from "../capture/staging-schema.js";
 
 /**

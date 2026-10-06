@@ -5,17 +5,15 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot, findBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot, findBoxRoot } from "../../lib/paths/core.js";
 import {
   runCommand,
   createCliContext,
-} from "../../core/commands/index.js";
-import {
-  getAllTemplates,
-  describeTemplateArgs,
-} from "../../schemas/index.js";
-import { loadBoxSchemas } from "../../schemas/registry.js";
-import { errorMessage } from "../../lib/error-guards.js";
+} from "../../core/command-runner.js";
+import { getAllTemplates } from "../../templates-registry.js";
+import { describeTemplateArgs } from "../../templates-describe.js";
+import { loadBoxSchemas } from "../../schemas.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 interface CreateOptions {
   template?: string;

@@ -21,6 +21,7 @@ import type { SessionRowItem } from "../session-pickers/SessionRow";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { ChevronIcon } from "./ChevronIcon";
 import { LandmarkSessions } from "./LandmarkSessions";
 import type { CardSymbolData } from "@shared/card-symbol";
@@ -110,7 +111,7 @@ export function LandmarkSection({
           {/* min-w-0 flex-1: the path below wraps break-all, so a shrink-to-fit
               header column would break a short path mid-word. */}
           <Stack gap="xs" className="min-w-0 flex-1">
-            <Text as="h2" size="lg" weight="bold">{labelText}</Text>
+            <Heading level={2}>{labelText}</Heading>
             <PathLink dir={landmark.dir} boxSlug={boxSlug} />
           </Stack>
         </div>

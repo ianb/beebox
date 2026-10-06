@@ -78,7 +78,7 @@ struct ChatAPI: Sendable {
     enum ChatAPIError: LocalizedError {
         case invalidResponse
         case fileTooLarge
-        case server(String)
+        case server(message: String, status: Int?, permanent: Bool?, code: String?)
 
         var errorDescription: String? {
             switch self {
@@ -86,7 +86,7 @@ struct ChatAPI: Sendable {
                 "The box returned an unexpected response."
             case .fileTooLarge:
                 "Files must be 50 MB or smaller."
-            case .server(let message):
+            case .server(let message, _, _, _):
                 message
             }
         }
@@ -142,7 +142,12 @@ struct ChatAPI: Sendable {
                 "transcribe-audio failed status=\(http.statusCode) bytes=\(request.httpBody?.count ?? 0): \(message)",
                 category: .composer
             )
-            throw ChatAPIError.server(message)
+            throw ChatAPIError.server(
+                message: message,
+                status: http.statusCode,
+                permanent: error?.permanent,
+                code: error?.code
+            )
         }
         do {
             return try JSONDecoder().decode(HqTranscriptionResult.self, from: data)
@@ -220,7 +225,7 @@ struct ChatAPI: Sendable {
                 "last-audio answer failed status=\(http.statusCode): \(message)",
                 category: .composer
             )
-            throw ChatAPIError.server(message)
+            throw ChatAPIError.server(message: message, status: http.statusCode, permanent: nil, code: nil)
         }
         // The one drift this path can suffer silently: a `200 {ok:false,
         // ignored:true}` means the server threw the answer away because the
@@ -236,13 +241,22 @@ struct ChatAPI: Sendable {
         }
     }
 
+    /// `batch` files the upload under one directory per composed message
+    /// (`ComposerUploadBatch`). Nil uploads keep the server's flat behaviour,
+    /// which is what a draft restored from before batches existed gets.
     func uploadFile(
         data: Data,
         filename: String,
         mimeType: String,
+        batch: String?,
         onProgress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> UploadedChatFile {
-        var request = try uploadFileRequest(data: data, filename: filename, mimeType: mimeType)
+        var request = try uploadFileRequest(
+            data: data,
+            filename: filename,
+            mimeType: mimeType,
+            batch: batch
+        )
         guard let body = request.httpBody else {
             throw ChatAPIError.invalidResponse
         }
@@ -274,7 +288,7 @@ struct ChatAPI: Sendable {
                 "file upload failed status=\(http.statusCode) bytes=\(data.count) mime=\(mimeType): \(message)",
                 category: .composer
             )
-            throw ChatAPIError.server(message)
+            throw ChatAPIError.server(message: message, status: http.statusCode, permanent: nil, code: nil)
         }
         guard let uploaded = try? JSONDecoder().decode(UploadedChatFile.self, from: responseData) else {
             BoxLog.error(
@@ -295,7 +309,12 @@ struct ChatAPI: Sendable {
         return uploaded
     }
 
-    func uploadFileRequest(data: Data, filename: String, mimeType: String) throws -> URLRequest {
+    func uploadFileRequest(
+        data: Data,
+        filename: String,
+        mimeType: String,
+        batch: String?
+    ) throws -> URLRequest {
         guard data.count <= ChatUploadLimits.maximumFileBytes else {
             throw ChatAPIError.fileTooLarge
         }
@@ -306,6 +325,12 @@ struct ChatAPI: Sendable {
         request.setValue("BeeBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
         applyAuth(to: &request)
         var body = Data()
+        // BEFORE the file part, without exception: the server reads text fields
+        // off the file's own multipart entry, so a field that arrives after the
+        // file is not seen at all.
+        if let batch {
+            body.appendMultipartField(name: "batch", value: batch, boundary: boundary)
+        }
         body.appendMultipartFile(
             name: "file",
             filename: Self.safeMultipartFilename(filename),
@@ -347,7 +372,7 @@ struct ChatAPI: Sendable {
                 "default-session lookup failed status=\(http.statusCode)",
                 category: .net
             )
-            throw ChatAPIError.server(message)
+            throw ChatAPIError.server(message: message, status: http.statusCode, permanent: nil, code: nil)
         }
         let result: DefaultSessionResult
         do {
@@ -441,6 +466,8 @@ private struct DefaultSessionResult: Decodable {
 
 private struct ErrorBody: Decodable {
     var error: String?
+    var permanent: Bool?
+    var code: String?
 }
 
 /// The non-error half of an answer response: `{ok, ignored?}`.

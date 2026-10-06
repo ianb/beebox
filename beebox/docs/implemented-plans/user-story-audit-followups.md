@@ -6,7 +6,7 @@ issues: []
 ---
 # User-story audit — follow-up plans
 
-This plan triages the 95 `IAN:` comments left on `user-stories/catalog/2026-06-26.md` (the
+This plan triages the 95 `IAN:` comments left on `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) (the
 auto-generated user-story catalog). Each comment was investigated against the
 **current** code by a read-only agent, classified, and given a concrete action
 grounded in real file paths.
@@ -16,11 +16,11 @@ Four buckets, matching the maintainer's framing:
 - **A — Removals.** Features that were partially removed; the leftover
   pages/components/endpoints are cleanup debt.
 - **B — Doc-only corrections.** The code is right; the *story* (or a real doc)
-  is wrong. Mostly fixing file citations and over-claims in `user-stories/catalog/2026-06-26.md`.
+  is wrong. Mostly fixing file citations and over-claims in `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`).
 - **C — Small fixes.** Real, narrow bugs with a known file and change.
 - **D — Substantial features.** Missing capability that needs design + build.
 
-Item numbers (`[n]`) refer to the order in `user-stories/catalog/2026-06-26.md`; they're kept so
+Item numbers (`[n]`) refer to the order in `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`); they're kept so
 every comment is traceable back to its story.
 
 ## Implementation status (2026-06-26)
@@ -34,7 +34,7 @@ every comment is traceable back to its story.
   [29] reframed to "changes in the sync commit"; [38] kept (x-bbx-DELETE) minus
   the review-job mention.
 - **Bucket B — done.** 44 doc corrections + item [47] reframed to TTS-only +
-  `docs/calendar.md` updated ([46]).
+  `docs/connectors/calendar.md` updated ([46]).
 - **Bucket C — done.** All small fixes applied (see C section). Notable: [67]
   needed no change (tRPC `wsLink` already resumes via `tracked()`); [58] was the
   web wakeup trigger — removed (agent-managed now), story deleted; [92] resume
@@ -53,7 +53,7 @@ every comment is traceable back to its story.
   - **D11 (ref-attribute normalization) — built.** `procedure-ref` (landmark) and
     `frozen` (webpage + commentary) were bare-string refs not under a `ref` key;
     normalized to `<field>: { ref: … }`, which makes `walkForRefs` + `bbx mv`
-    rewriting work automatically. Migrator `scripts/migrate/normalize-ref-keys.ts`
+    rewriting work automatically. Migrator `scripts/migrate/normalize-ref-keys.ts` (moved to `beebox/src/scripts/migrate/normalize-ref-keys.ts`)
     added and **registered in `src/core/migrations.ts`**, so `bbx migrate --apply`
     picks it up per box (manifest-tracked) — no manual per-box invocation.
     (`question-ref` left as-is: its ref already lives under a `ref` key, so it's
@@ -91,7 +91,7 @@ are user-visible) → D (pick by priority; most are independent).
 ### A1. Bookmark / "share to box" target — *remove* — items [2], [7]
 The PWA share-target UI is fully built and renders, but the `bookmark` card
 schema it depends on was deleted (no `BookmarkSchema` in
-`src/schemas/registry.ts`), so every save errors out. The live-app browser pass
+`src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`)), so every save errors out. The live-app browser pass
 confirmed this end-to-end.
 
 - Delete `src/frontend/src/pages/SharePage.tsx`, `useShareNote.ts`,
@@ -126,7 +126,7 @@ unregistered `voice-memo` card type.
 
 ### A4. Calendar-review job cards — *remove (decide first)* — items [29], [34], [35], [38]
 The calendar-review job is created **after** sync commits
-(`src/connectors/google-calendar.ts:216-224`) — it's post-hoc, informational,
+(`src/connectors/google-calendar.ts:216-224` (moved to `beebox/src/connectors/google-calendar/connector.ts`)) — it's post-hoc, informational,
 and has no approval/reject gate. IAN: reporting/logging is enough; a review job
 card isn't warranted. Deletions ([38]) and the "priority" enum ([35]) are all
 downstream of this.
@@ -162,7 +162,7 @@ we don't build the browse UI, delete it; if we do, wire it in.
 `src/cli/commands/prompt.ts` is a one-shot runner the story mislabels as
 "interactive." IAN: not needed at all.
 
-- Remove `src/cli/commands/prompt.ts`, unregister from `src/cli/index.ts`,
+- Remove `src/cli/commands/prompt.ts`, unregister from `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`),
   delete the story.
 - **Effort:** small.
 
@@ -175,7 +175,7 @@ catalog. **Effort:** trivial.
 ## B — Doc-only corrections
 
 The code behaves correctly; the catalog (or, where noted, a real doc) is wrong.
-Most are one-line edits to `user-stories/catalog/2026-06-26.md`. Batch them in a single pass.
+Most are one-line edits to `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`). Batch them in a single pass.
 
 **Wrong file citations** (replace the cited file, no behavior change):
 [14] drop `list-cards.ts` (unrelated to dotted-path query) ·
@@ -206,7 +206,7 @@ trade-off) ·
 [38] x-bbx-DELETE is immediate deletion + post-hoc log ·
 [41] callback timers are agent-controlled — reframe "As an agent" ·
 [42] backlog skip on first sync is automatic and fine ·
-[46] update `docs/calendar.md`: bidirectional sync *is* implemented, auto-sync
+[46] update `docs/connectors/calendar.md`: bidirectional sync *is* implemented, auto-sync
 off by default, push path untested ·
 [49] events are created by editing/agent-writing `.ics` files, no UI ·
 [50] / [53] Telegram webhook filtering is hardcoded to `message`/`edited_message`
@@ -232,8 +232,8 @@ are separate ·
 [93] todo template is a flat skeleton; nested/notes via manual edit (controls
 are D2).
 
-**Effort:** the whole bucket is ~1-2 hours of editing `user-stories/catalog/2026-06-26.md` plus a
-small `docs/calendar.md` update ([46]).
+**Effort:** the whole bucket is ~1-2 hours of editing `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) plus a
+small `docs/connectors/calendar.md` update ([46]).
 
 ---
 
@@ -254,7 +254,7 @@ Grouped; each is a contained change.
   Add `bbx attachments verify` (and optionally auto-claim) as a hook stage.
   **Small.**
 - **Person cards aren't committed / never updated** — items [32], [36].
-  `updatePersonEntry()` (`src/connectors/chat-utils.ts:267-274`) writes a
+  `updatePersonEntry()` (`src/connectors/chat-utils.ts:267-274` (moved to `beebox/src/job-cards/chat-utils.ts`)) writes a
   one-time skeleton, doesn't stage it, and never updates it. Return the card
   path so callers stage it ([36]); add an opt-in `force` update that refreshes
   Telegram metadata (name/username/ids) without clobbering agent-owned fields

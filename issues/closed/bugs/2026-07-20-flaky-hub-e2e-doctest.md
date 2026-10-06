@@ -11,10 +11,10 @@ Resolved by commit `6d3c7073`, which gives this deliberately heavy test a
 10-minute file-local TAP timeout and two-minute startup readiness polls. The
 shorter teardown polls stay unchanged so orphaned processes still fail quickly.
 
-`test/hub/hub-e2e.doctest.md` failed twice in a row in full `pnpm -C beebox test`
-runs, both times as `waitFor: timed out` at `test/hub/hub-e2e.doctest.md:51` (the
+`test/hub/hub-e2e.doctest.md` (moved to `beebox/test/hub.e2e.doctest.md`) failed twice in a row in full `pnpm -C beebox test`
+runs, both times as `waitFor: timed out` at `test/hub/hub-e2e.doctest.md:51` (moved to `beebox/test/hub.e2e.doctest.md`) (the
 30s poll wrapper), with the whole file taking ~31s. In isolation
-(`pnpm exec tap run test/hub/hub-e2e.doctest.md`) it passes 8/8 in ~5s.
+(`pnpm exec tap run test/hub/hub-e2e.doctest.md` (moved to `beebox/test/hub.e2e.doctest.md`)) it passes 8/8 in ~5s.
 
 What makes it more than routine flake noise: both failures came immediately after
 a heavy `pnpm install` (the SDK bump churned ~400 packages), and two subsequent
@@ -37,7 +37,7 @@ Two parallel-run failures during the chat-photo-batch-upload work, both green on
 an immediate serial or repeat run — so the same contention family, but the
 symptom is worth recording because it is **not** a timeout:
 
-- `pnpm exec tap test/core/bulk-upload/*.doctest.md test/webapp/routes/bulk-upload-routes.doctest.md`
+- `pnpm exec tap test/core/bulk-upload/*.doctest.md test/webapp/routes/bulk-upload-routes.doctest.md` (moved to `beebox/test/webapp/routes/bulk-upload.doctest.md`)
   → `{ total: 10, pass: 6, fail: 4 }`, and the failing files reported
   **`1..0 # no tests found`** with `exitCode: 1`. With `-j1`: 64/64 pass.
 - Full `pnpm test` → `{ total: 5231, pass: 5224, fail: 7 }`; immediate re-run
@@ -59,7 +59,7 @@ much more.
 
 The full `pnpm test` run timed out this file after 300 seconds. The first and
 only test was still running its setup expression at
-`test/hub/hub-e2e.doctest.md:109`:
+`test/hub/hub-e2e.doctest.md:109` (moved to `beebox/test/hub.e2e.doctest.md`):
 
 ```text
 not ok 1 - hub-e2e.doctest.md:109 — await execFileP("node", ["scripts/build-cli.mjs"], { cwd: PACKAGE_ROOT })

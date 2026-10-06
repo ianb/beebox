@@ -30,7 +30,7 @@
  */
 
 import { z, type ZodType } from "zod";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 
 /** Metadata key carrying a ref field's inline-safety kind (see module comment). */
 const REF_KIND_META = "beeBoxRefKind";

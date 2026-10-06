@@ -5,7 +5,7 @@
  * _bookkeeping/procedure/runs/<name>_<timestamp>/run.procedure-run.card
  */
 
-import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
+import { splitCardContent, cardSchema, type CardSchema } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { INCONCLUSIVE_REASONS } from "../shared/inconclusive.js";
@@ -58,7 +58,8 @@ export const RunStep = z.object({
 
 const procedureRunFields = {
   procedure: z.string(),
-  status: z.enum(["pending", "running", "completed", "failed", "inconclusive"]),
+  // How the run finished; absent while it has not (running, or interrupted).
+  outcome: z.enum(["completed", "failed", "inconclusive"]).optional(),
   "started-at": Iso,
   "completed-at": Iso.optional(),
   directive: z.string().optional(),
@@ -67,6 +68,7 @@ const procedureRunFields = {
 };
 
 export const ProcedureRunSchema: CardSchema = cardSchema("procedure-run", {
+  brief: "One procedure run's state",
   description: "Engine-managed execution state for one run of a procedure — read for progress, don't edit (except expires)",
   category: "system",
   searchable: false,
@@ -75,9 +77,9 @@ export const ProcedureRunSchema: CardSchema = cardSchema("procedure-run", {
 
 This card is managed by the procedure engine. Agents should read it to understand execution progress but should NOT modify it directly — with one exception: the \`expires\` field.
 
-Check the root \`status\` field for overall progress: pending → running → completed/failed/inconclusive. Each entry in \`steps\` also has its own status.
+The root \`outcome\` field says how the run finished: \`completed\`, \`failed\`, or \`inconclusive\`. A run with no \`outcome\` has not finished — it is running, or it was interrupted (\`bbx procedure resume\` continues it). Each entry in \`steps\` has its own status.
 
-\`inconclusive\` means every step's work completed but at least one \`validate\` check never reached a verdict (its review ran out of turns, timed out, or returned nothing parseable). The work is unjudged, not wrong — do not redo it on that basis; read the step's \`validate.error\` for the reason.
+An \`inconclusive\` outcome means every step's work completed but at least one \`validate\` check never reached a verdict (its review ran out of turns, timed out, or returned nothing parseable). The work is unjudged, not wrong — do not redo it on that basis; read the step's \`validate.error\` for the reason.
 
 Step statuses: pending → running → completed/skipped/failed. Look at a step's \`precheck.status\` to see why it was skipped, \`run.error\` for run-agent or shell failures, and \`validate.error\` / \`validate.status\` for validation failures (\`validate.status: inconclusive\` is a non-verdict, not a failure).
 

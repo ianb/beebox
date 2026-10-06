@@ -37,7 +37,7 @@ import { useParams, useRouterState } from "@tanstack/react-router";
 import { placeLabel } from "../lib/place-label";
 import { useAppBarPublishedPlace } from "./app-bar-chrome";
 import { usePlaceMark } from "./DocumentTitle";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 
 /** Renders nothing; publishes the current place's mark while a box is open. */
 export function DocumentPlace() {

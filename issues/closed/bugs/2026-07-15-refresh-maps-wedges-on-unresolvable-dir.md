@@ -28,7 +28,7 @@ git at the stored `asOf` triggers it.
    dir is still dirty) ⇒ validate **fails** (observed: "Validation still failing
    after 1 retry — failing the step").
 4. Because the step fails, **`finalize` never runs** — and `finalize`
-   (`src/core/maps/finalize.ts:89`, `state.maps[dir] = { asOf: head }`) is the
+   (`src/core/maps/finalize.ts:89` (moved to `beebox/src/core/maps/finalize/core.ts`), `state.maps[dir] = { asOf: head }`) is the
    only thing that advances `asOf` to HEAD. So `asOf` stays stale, and the next
    run repeats from step 1. Forever.
 

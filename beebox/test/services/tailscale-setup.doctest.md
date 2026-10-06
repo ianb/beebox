@@ -14,9 +14,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { runTailscaleSetup, runTailscaleStop } from "../../src/services/tailscale-setup.js";
+import { runTailscaleSetup, runTailscaleStop } from "../../src/services/tailscale-setup/core.js";
 import { classifyAuthPosture } from "../../src/services/tailscale-target.js";
-import { loadExposureFile, recordExposure, clearExposure } from "../../src/services/tailscale-exposure.js";
+import { loadExposureFile, recordExposure, clearExposure } from "../../src/services/tailscale-setup/exposure.js";
 import { acquireLock, releaseLock } from "../../src/lib/file-lock.js";
 
 // A machine-level exposure file scoped to this test run (record/clear write here).

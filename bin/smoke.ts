@@ -31,7 +31,7 @@
  *
  * It restarts the checkout's dev-server generation first, on purpose: the
  * router runs TypeScript straight off disk and nothing reloads it
- * (workstreams-app/src/router/router-lifecycle.ts), so without a restart this would test whatever
+ * (workstreams-app/src/router/lifecycle.ts), so without a restart this would test whatever
  * source was on disk whenever the generation happened to start. That restart is
  * also the floor the tier exists for — a server that cannot boot fails here.
  *
@@ -41,7 +41,7 @@
 
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
-import { invariant } from "../beebox/src/lib/invariant.js";
+import { invariant } from "../beebox/src/shared/invariant.js";
 import { findCardRow } from "./smoke-card-open.js";
 import {
   BrowseListEmptyError,
@@ -256,11 +256,12 @@ function buildSteps(input: {
       await session.clickRef(ref);
       await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('[data-workspace-card]')).some(node => !node.hidden && node.getAttribute('data-workspace-card') === ${JSON.stringify(expectedPath)})`]);
       await session.waitForReady();
-      const snapshot = await session.snapshot();
-      const url = await session.getUrl();
       const { stdout: detail } = await session.run(["snapshot", "-s", `[data-workspace-card=${JSON.stringify(expectedPath)}] [role="tabpanel"]`]);
       if (!cardViewRendered(detail)) {
-        throw new CardViewMissingError({ name: row.name, url, snapshot });
+        // The whole-page snapshot is failure evidence only. Taken on every
+        // walk it cost ~10s of the two-minute budget: an unscoped snapshot
+        // looks up each unmatched control's id in a separate browser call.
+        throw new CardViewMissingError({ name: row.name, url: await session.getUrl(), snapshot: await session.snapshot() });
       }
     },
   });

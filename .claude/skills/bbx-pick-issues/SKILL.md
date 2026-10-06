@@ -8,7 +8,7 @@ description: "Use to choose work from the issue queue: survey related clusters, 
 Choosing work from ~350 open issues is a judgment task with a tooling layer
 under it. The tooling (`bin/issues`) makes surveys cheap; this skill is about
 what to do with the survey, and — above all — **what you are allowed to do at
-each step**. Field semantics (`priority:`, `next-action:`, `needs:`,
+each step**. Field semantics (`priority:`, next actions, `needs:`,
 `discovered-in:`) are in `issues/CLAUDE.md`; nothing here overrides it.
 
 ## The mode you are in
@@ -19,7 +19,7 @@ requires a new instruction from them — you never promote yourself.
 
 | Their words (examples) | Mode | Allowed | Not allowed |
 |---|---|---|---|
-| "look at", "look into", "what's in the queue", "find a cluster", "what's related to X", "what should we work on" | **Investigate** | `bin/issues` queries; read issues in full; check the code for what has since shipped; write up findings; append dated notes to issue *bodies* recording what you verified (found stale, re-encountered — per `issues/CLAUDE.md`) | changing frontmatter (`priority:`, `needs:`, `next-action:`, `workstream:`), closing, moving or merging issues; launching anything; choosing a model |
+| "look at", "look into", "what's in the queue", "find a cluster", "what's related to X", "what should we work on" | **Investigate** | `bin/issues` queries; read issues in full; check the code for what has since shipped; write up findings; append dated notes to issue *bodies* recording what you verified (found stale, re-encountered — per `issues/CLAUDE.md`) | changing frontmatter (`priority:`, `needs:`, `workstream:`) or next actions, closing, moving or merging issues; launching anything; choosing a model |
 | "propose", "what would you do", "make a plan for", "pick one", "which of these" | **Propose** | everything above, plus one ranked recommendation with the issue set, the kind of session it deserves, and a draft briefing | launching; setting `priority:`; closing or merging issues |
 | "do it", "launch", "start a worktree on X", "go" — naming a specific item or approving a specific proposal | **Act** | launch via the `launch-worktree-session` skill (which still asks about model when unsure), passing `--issue <path>` for the issue the workstream takes responsibility for and listing the rest of the cluster in the briefing; amend the chosen issues per `issues/CLAUDE.md` | widening to a second item, cluster, or session without a fresh "go" |
 
@@ -84,8 +84,9 @@ Signals, roughly in order of how well they have predicted a real body of work:
   owner or a tombstone. Not a clustering signal.
 
 Exclude by default: `needs: [manual-testing]` (the developer's own queue),
-`watch/` (trigger-driven, never picked), and anything with a `next-action:`
-tag (that is `bbx-issue-actions` territory — mention them, don't work them).
+`watch/` (trigger-driven, never picked), and anything with a next action
+(`bin/issues next-action`; that is `bbx-issue-actions` territory — mention
+them, don't work them).
 
 **Route against existing workstreams, at survey time.** Run `bin/workstreams
 list` before surveying: an issue a LIVE workstream owns or plainly covers is
@@ -109,7 +110,7 @@ options for one question.
 
 - Filing something you noticed while surveying → the `issues` skill (search
   first; re-encounter rules apply).
-- Issues with `next-action:` tags → `bbx-issue-actions`.
+- Issues with next-action requests → `bbx-issue-actions`.
 - Launching → `launch-worktree-session` (only in Act mode).
 - A survey that produced a fact worth keeping — a cluster judged *not* to be
   one body of work, an issue found stale — goes into the issue bodies as

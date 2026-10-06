@@ -24,7 +24,7 @@
  *    "procedure/runs")` literally, box-root-relative — a gap in the landed
  *    Tracks A–C (procedure runs wasn't in `BOX_ROOT_VOCABULARY` either). Both
  *    are now fixed: `BOX_LAYOUT` carries a `procedureRuns` entry
- *    (`_bookkeeping/procedure/runs`, `src/lib/box-layout-spec.ts`), and every
+ *    (`_bookkeeping/procedure/runs`, `src/lib/paths/box-layout-spec.ts`), and every
  *    v3 call site reads it via `BOX_DIRS.procedureRuns` /
  *    `getBoxDir(boxRoot, "procedureRuns")`. This mapper converts
  *    `content/procedure/**` → `_bookkeeping/procedure/**`, so a migrated
@@ -42,7 +42,7 @@
  *    `_content/<name>` since `store/` was always user content in v2.
  */
 
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 
 /**
  * The exhaustive set of v2 `content/`-relative top-level names this mapper
@@ -291,4 +291,42 @@ function mapConfigArea(rest: string): MapV2PathResult {
     }
   }
   return { kind: "move", newPath: joinRel("_config", rest) };
+}
+
+/**
+ * v2 `content/`-relative heads whose subtrees {@link mapV2Path} moves by
+ * prefix substitution. Only {@link v2ContentPathsFor} reads it, and that
+ * function checks every candidate against `mapV2Path` itself, so a missing
+ * head loses an alias and an extra head adds nothing.
+ */
+const V2_SUBTREE_HEADS = [
+  "", "box", "store", "people", "places", "docs", "tmp", "config", "tricks", ".claude", "procedure",
+  "box/inbox", "box/jobs", "box/output", "box/questions", "box/resources", "box/publish",
+  "store/archive", "store/trash", "store/usage", "store/recipes", "store/todos", "store/drive",
+  "store/calendar", "store/chat", "store/reviews",
+];
+
+/**
+ * The inverse of {@link mapV2Path} for one v3 path: every v2
+ * `content/`-relative path that the migration moved to `v3RelPath`. Usually
+ * one, sometimes two (`_content/notes` came from `notes` or `store/notes`),
+ * and empty for v3 paths with no v2 origin. The box root itself has no entry
+ * here: v2's `content/` root mapped to it as a whole, outside this table.
+ *
+ * For runtime records that still name v2 paths, such as a Codex thread's
+ * recorded cwd: a reader that only knows the v3 path asks for these aliases.
+ */
+export function v2ContentPathsFor(v3RelPath: string): string[] {
+  if (v3RelPath === "") return [];
+  const segments = v3RelPath.split("/");
+  const found = new Set<string>();
+  for (const head of V2_SUBTREE_HEADS) {
+    for (let strip = 0; strip <= Math.min(2, segments.length); strip++) {
+      const candidate = joinRel(head, segments.slice(strip).join("/")).replace(/^\//, "").replace(/\/$/, "");
+      if (candidate === "") continue;
+      const mapped = mapV2Path(candidate);
+      if (mapped.kind === "move" && mapped.newPath === v3RelPath) found.add(candidate);
+    }
+  }
+  return [...found].toSorted();
 }

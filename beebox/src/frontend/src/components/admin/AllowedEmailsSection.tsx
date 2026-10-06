@@ -1,6 +1,6 @@
 /** Box access list and operator-issued password resets for existing members. */
 
-import { type RouterOutput } from "../../lib/trpc";
+import { type RouterOutput } from "../../lib/trpc/client";
 import { useAllowedEmails, type ResetLink } from "../../hooks/useAllowedEmails";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -9,7 +9,12 @@ import { InlineAction } from "../ui/InlineAction";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
-import { TextField } from "../ui/fields";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
+import { TextField } from "../ui/fields/field";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION = "Email addresses that can access this box. Leave empty to keep the box owner-only.";
 
 type AllowedUserDetail = RouterOutput["admin"]["boxConfig"]["allowedUserDetails"][number];
 type LocalPasswordStatus = RouterOutput["admin"]["boxConfig"]["localPasswordStatus"];
@@ -31,9 +36,9 @@ function LocalPasswordNotice({ status }: { status: LocalPasswordStatus }) {
   if (status === "ready") return null;
   return (
     <div role="alert">
-      <Text as="p" size="sm" tone="danger">
+      <ErrorText>
         The local password store is unavailable. Password-account details and resets cannot be loaded.
-      </Text>
+      </ErrorText>
     </div>
   );
 }
@@ -50,7 +55,7 @@ function AllowedUserRows(options: {
   if (options.emails.length === 0) {
     return (
       <Card background="warm" border="subtle" padding="sm">
-        <Text size="sm" tone="muted">Owner-only — no additional users can access this box.</Text>
+        <Hint>Owner-only — no additional users can access this box.</Hint>
       </Card>
     );
   }
@@ -101,6 +106,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
         </Text>
         <Button
           id="bbx-admin-reset-link-copy"
+          className="self-start"
           type="button"
           intent="secondary"
           onClick={() => navigator.clipboard.writeText(resetLink.url)}
@@ -115,9 +121,9 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
 
 function LoadingAllowedUsers() {
   return (
-    <Card as="section" aria-label="Allowed users" shadow>
-      <Text size="sm" tone="muted">Loading allowed users…</Text>
-    </Card>
+    <AdminSectionCard id="allowed-users" description={DESCRIPTION} busy>
+      <Hint>Loading allowed users…</Hint>
+    </AdminSectionCard>
   );
 }
 
@@ -149,81 +155,72 @@ export function AllowedEmailsSection() {
   const visibleEmails = emails.filter((email) => email !== configQuery.data?.ownerEmail);
 
   return (
-    <Card as="section" aria-label="Allowed users" shadow>
-      <Stack gap="md">
-        <Stack gap="xs">
-          <Text as="h2" size="lg" weight="semibold">Allowed Users</Text>
-          <Text size="sm" tone="muted">
-            Email addresses that can access this box. Leave empty to keep the box owner-only.
-          </Text>
-        </Stack>
+    <AdminSectionCard id="allowed-users" description={DESCRIPTION}>
+      {configQuery.data?.ownerEmail ? (
+        <Card background="warm" border="subtle" padding="sm">
+          <Row justify="between" wrap>
+            <Text size="sm" breakAll>{configQuery.data.ownerEmail}</Text>
+            <Text size="xs" tone="muted">owner — always has access</Text>
+          </Row>
+        </Card>
+      ) : null}
 
-        {configQuery.data?.ownerEmail ? (
-          <Card background="warm" border="subtle" padding="sm">
-            <Row justify="between" wrap>
-              <Text size="sm" breakAll>{configQuery.data.ownerEmail}</Text>
-              <Text size="xs" tone="muted">owner — always has access</Text>
-            </Row>
-          </Card>
-        ) : null}
+      {configQuery.data ? <LocalPasswordNotice status={configQuery.data.localPasswordStatus} /> : null}
 
-        {configQuery.data ? <LocalPasswordNotice status={configQuery.data.localPasswordStatus} /> : null}
+      <AllowedUserRows
+        emails={visibleEmails}
+        details={details}
+        googleLoginConfigured={configQuery.data?.googleLoginConfigured === true}
+        resettingEmail={resettingEmail}
+        removingEmail={removingEmail}
+        onReset={createReset}
+        onRemove={(email) => saveEmails(emails.filter((candidate) => candidate !== email), email)}
+      />
 
-        <AllowedUserRows
-          emails={visibleEmails}
-          details={details}
-          googleLoginConfigured={configQuery.data?.googleLoginConfigured === true}
-          resettingEmail={resettingEmail}
-          removingEmail={removingEmail}
-          onReset={createReset}
-          onRemove={(email) => saveEmails(emails.filter((candidate) => candidate !== email), email)}
+      <Row gap="sm" align="start">
+        <TextField
+          id="bbx-admin-allowed-email-input"
+          label="Allowed email"
+          hideLabel
+          type="email"
+          value={newEmail}
+          onChange={(value) => {
+            setNewEmail(value);
+            setPendingExistingEmail(null);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void addEmail();
+            }
+          }}
+          placeholder="user@example.com"
+          className="flex-1"
         />
+        <Button
+          id="bbx-admin-allowed-email-add"
+          intent="primary"
+          onClick={() => void addEmail()}
+          disabled={!newEmail.trim().includes("@")}
+          loading={updateMutation.isPending || checking}
+          loadingLabel={checking ? "Checking…" : "Saving…"}
+        >
+          Add
+        </Button>
+      </Row>
 
-        <Row gap="sm" align="start">
-          <TextField
-            id="bbx-admin-allowed-email-input"
-            label="Allowed email"
-            hideLabel
-            type="email"
-            value={newEmail}
-            onChange={(value) => {
-              setNewEmail(value);
-              setPendingExistingEmail(null);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                void addEmail();
-              }
-            }}
-            placeholder="user@example.com"
-            className="flex-1"
-          />
-          <Button
-            id="bbx-admin-allowed-email-add"
-            intent="primary"
-            onClick={() => void addEmail()}
-            disabled={!newEmail.trim().includes("@")}
-            loading={updateMutation.isPending || checking}
-            loadingLabel={checking ? "Checking…" : "Saving…"}
-          >
-            Add
-          </Button>
-        </Row>
+      {pendingExistingEmail ? (
+        <Card background="info" border="subtle" padding="sm">
+          <Text size="sm">
+            A local password account already exists for {pendingExistingEmail}. Adding it grants that account
+            access; click Add again to confirm.
+          </Text>
+        </Card>
+      ) : null}
 
-        {pendingExistingEmail ? (
-          <Card background="info" border="subtle" padding="sm">
-            <Text size="sm">
-              A local password account already exists for {pendingExistingEmail}. Adding it grants that account
-              access; click Add again to confirm.
-            </Text>
-          </Card>
-        ) : null}
+      {resetLink ? <ResetLinkCard resetLink={resetLink} /> : null}
 
-        {resetLink ? <ResetLinkCard resetLink={resetLink} /> : null}
-
-        {queryError || mutationError ? <Text size="sm" tone="danger">{queryError ?? mutationError}</Text> : null}
-      </Stack>
-    </Card>
+      {queryError || mutationError ? <ErrorText>{queryError ?? mutationError}</ErrorText> : null}
+    </AdminSectionCard>
   );
 }

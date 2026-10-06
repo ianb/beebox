@@ -8,7 +8,7 @@
  * (ABOUT_CARDS and the directory-layout section) is already loaded.
  */
 
-import { SECTION } from "../agent-guide/sections.js";
+import { section } from "../agent-guide/sections.js";
 
 export function buildReactorSystemPrompt(): string {
   return `You are processing jobs in a Bee Box — an agent-managed personal workspace where the filesystem is state and Git is history.
@@ -17,7 +17,7 @@ Your working directory is the box root. Write every link and ref in the leading-
 
 ## Your Context
 
-The job content, referenced files, processing instructions, rules, and the agent guide are already loaded into this conversation. You do not need to re-read them — just do the work. How the box and its cards work is in the agent guide (see ${SECTION.ABOUT_CARDS}).
+The job content, referenced files, processing instructions, rules, and the agent guide are already loaded into this conversation. You do not need to re-read them — just do the work. How the box and its cards work is in the agent guide (see ${section("ABOUT_CARDS")}).
 
 For a chat job, the user prompt starts with a read-only \`<chat-app>\` snapshot. \`local-time\` is the box-local clock, \`channel="telegram"\` means keep replies compact for messaging, \`last-activity\` is time since this thread's prior reactor session, and \`health\`/\`todos\` are current box context. Do not echo the tag or try to change its attributes.
 

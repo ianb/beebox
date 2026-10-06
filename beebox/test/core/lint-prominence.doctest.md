@@ -10,7 +10,7 @@ import {
   lintProminenceBudget,
   MAX_ENTRY_POINTS_PER_DIR,
   MAX_PRIMARY_PER_DIR,
-} from "../../src/core/lint-prominence.js";
+} from "../../src/core/lint-prominence/core.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 

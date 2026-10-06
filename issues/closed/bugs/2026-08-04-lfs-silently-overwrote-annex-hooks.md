@@ -37,7 +37,7 @@ hooks quietly replaced by another tool's — or deleted by a user cleaning up �
 and the only symptom is unlocked-file content silently not being updated on
 checkout or merge.
 
-Worth considering: have `runAnnexDoctor` (`src/core/annex/doctor.ts`) check that
+Worth considering: have `runAnnexDoctor` (`src/core/annex/doctor.ts` (moved to `beebox/src/core/annex/doctor/core.ts`)) check that
 `post-checkout` and `post-merge` exist and invoke `git annex`, and repair them
 if not. That would have caught this at any `bbx init`. The `post-commit` case is
 harder — it legitimately holds both another tool's block and beebox's own,

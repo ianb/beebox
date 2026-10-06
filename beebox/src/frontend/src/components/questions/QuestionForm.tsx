@@ -14,15 +14,17 @@
  */
 
 import { useState } from "react";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { bbxSource } from "../../lib/source-tag";
-import { RadioGroup, TextareaField } from "../ui/fields";
+import { RadioGroup, TextareaField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
-import type { RouterOutput } from "../../lib/trpc";
+import { ErrorText } from "../ui/ErrorText";
+import { Heading } from "../ui/Heading";
+import type { RouterOutput } from "../../lib/trpc/client";
 
 export type QuestionInfo = RouterOutput["status"]["questions"]["items"][number];
 
@@ -48,9 +50,9 @@ function QuestionContext({ question }: { question: QuestionInfo }) {
   const hasLearning = question.learning?.proposal !== undefined;
   return (
     <>
-      <Text as="h2" size="lg" weight="bold" className="mb-2">
+      <Heading level={2} className="mb-2">
         {question.name}
-      </Text>
+      </Heading>
       <Text as="p" className="mb-2">
         {question.prompt}
       </Text>
@@ -85,7 +87,7 @@ const SUBMIT_ROW_CLASSES = "sticky bottom-0 bg-white py-2 -mb-2";
 
 function DismissButton({ question, onAnswered }: { question: QuestionInfo; onAnswered: () => void }) {
   const dismissMutation = trpc.actions.dismiss.useMutation({ onSuccess: () => onAnswered() });
-  if (question.status !== "pending") return null;
+  if (question.state !== "pending") return null;
   return (
     <Button
       type="button"
@@ -126,7 +128,7 @@ function ConfirmForm({ question, onAnswered }: { question: QuestionInfo; onAnswe
         placeholder="Add context for your answer..."
         rows={2}
       />
-      {error !== null ? <Text as="div" tone="danger" size="sm">{error}</Text> : null}
+      {error !== null ? <ErrorText>{error}</ErrorText> : null}
       <Row gap="sm" className={SUBMIT_ROW_CLASSES}>
         <Button
           type="button"

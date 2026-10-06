@@ -98,7 +98,7 @@ export async function loadBoxesConfig(configPath?: string): Promise<BoxesConfig>
 async function saveBoxesConfig(config: BoxesConfig): Promise<void> {
   // Atomic: this is the scheduler's live box list, and a torn write leaves the
   // scheduler unable to parse it at its next start (matching how the hub's own
-  // routing table is written — see src/hub/hub-config-edit.ts).
+  // routing table is written — see src/hub/config-edit.ts).
   await writeFileAtomic(CONFIG_FILE, { content: JSON.stringify(config, null, 2) + "\n" });
 }
 

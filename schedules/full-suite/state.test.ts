@@ -8,10 +8,8 @@ import {
   nextKnownRed,
   nextPendingAfterUntrusted,
   readKnownRed,
-  readLastAlert,
   readPending,
   writeKnownRed,
-  writeLastAlert,
   writePending,
 } from "./state.js";
 
@@ -54,7 +52,7 @@ test("a pending entry keeps its original base across later untrusted runs", () =
   assert.equal(second["test/b.test.ts"]?.base, "2".repeat(40));
 });
 
-test("pending and last-alert state round-trip, and clear", async () => {
+test("pending state round-trips and clears", async () => {
   const directory = await mkdtemp(join(tmpdir(), "full-suite-state-"));
   const previous = process.env["SCHEDULE_STATE_DIR"];
   process.env["SCHEDULE_STATE_DIR"] = directory;
@@ -65,12 +63,6 @@ test("pending and last-alert state round-trip, and clear", async () => {
     assert.deepEqual(await readPending(), { "test/a.test.ts": entry });
     await writePending({});
     assert.deepEqual(await readPending(), {});
-
-    assert.equal(await readLastAlert(), null);
-    await writeLastAlert({ fingerprint: "deferred:test/a.test.ts", raisedAt: "2026-09-01T00:00:00.000Z" });
-    assert.equal((await readLastAlert())?.fingerprint, "deferred:test/a.test.ts");
-    await writeLastAlert(null);
-    assert.equal(await readLastAlert(), null);
   } finally {
     if (previous === undefined) delete process.env["SCHEDULE_STATE_DIR"];
     else process.env["SCHEDULE_STATE_DIR"] = previous;

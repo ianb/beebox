@@ -13,12 +13,13 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { InlineAction } from "../ui/InlineAction";
 import { Accordion } from "../ui/Accordion";
 import { JsonView } from "../ui/JsonView";
 import { isRecord } from "@shared/is-record";
-import type { RendererProps } from "../../renderers";
-import type { BatchSummary } from "./browser-task-data";
+import type { RendererProps } from "../../file-type-registry";
+import type { BatchSummary } from "./data";
 
 const MAX_COLUMNS = 5;
 /** Property names that read as long text and belong in the expanded row, not a column. */
@@ -27,7 +28,7 @@ const LONG_TEXT = /text|notes?|description|body|caption|summary/i;
 const LEAD_ORDER = [/^(name|title|event)$/i, /^(start|date|when|posted)/i, /^(venue|where|place)$/i, /^(group)$/i, /^(unsure|confidence|sure)$/i];
 
 /** Pick the table's columns from the record schema; falls back to the first record's keys. */
-export function pickColumns(schemaJson: unknown, sample: unknown): string[] {
+function pickColumns(schemaJson: unknown, sample: unknown): string[] {
   const props = isRecord(schemaJson) && isRecord(schemaJson["properties"]) ? schemaJson["properties"] : null;
   const candidates: string[] = [];
   if (props !== null) {
@@ -64,7 +65,7 @@ export function BatchList({ heading, batches, empty, schemaJson, onNavigate }: {
   return (
     <Card padding="md">
       <Stack gap="sm">
-        <Text as="h2" size="lg" weight="bold">{heading}</Text>
+        <Heading level={2}>{heading}</Heading>
         {batches.length === 0 ? <Text as="p" tone="subtle">{empty}</Text> : batches.map((b) => (
           <Accordion key={b.id} variant="plain" title={<BatchTitle batch={b} />}>
             <BatchTable batch={b} schemaJson={schemaJson} onNavigate={onNavigate} />

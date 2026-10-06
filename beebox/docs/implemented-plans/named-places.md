@@ -13,8 +13,8 @@ issues: []
 > "Named places" section of `src/core/agent-guide/location.ts`. Codex-reviewed at
 > plan and diff stages. The `aliases`-standardization sweep (rename
 > `person.called → aliases` + a shared named-entity fragment + a card migration)
-> was done separately afterward — see `src/schemas/named-entity-fields.ts` and
-> `scripts/migrate/person-aliases.ts`.
+> was done separately afterward — see `src/schemas/named-entity-fields.ts` (moved to `beebox/src/named-entity-fields.ts`) and
+> `scripts/migrate/person-aliases.ts` (moved to `beebox/src/scripts/migrate/person-aliases.ts`).
 
 Let the boxholder define named places ("Home", "Office") as cards with a
 center coordinate and a radius, then have `bbx location get` report *which named
@@ -44,7 +44,7 @@ Direction, not open questions:
 ## Stated preferences this plan trades against
 
 - `beebox/CLAUDE.md` (Cards) — *"Schemas live in `src/schemas/`. Cards use
-  `cardSchema(type, { fields, instructions? })` ... `src/schemas/registry.ts`
+  `cardSchema(type, { fields, instructions? })` ... `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`)
   lists them in `cardSchemas[]`."* New schema follows this registration path.
 - `beebox/CLAUDE.md` (Cards) — *"Mutations to frontmatter cards are
   parse-mutate-reserialize via `yaml`'s `parse`/`stringify`."* `bbx location mark`
@@ -79,7 +79,7 @@ Direction, not open questions:
   `createPersonTemplate`). **Reuse the pattern** — `place.tsx` mirrors its shape,
   directory convention, and template helper. Person commits `contact` (addresses)
   to git, the precedent for committing place coords.
-- **Schema registration.** `src/schemas/registry.ts:60` (`cardSchemas: CardSchema[]`),
+- **Schema registration.** `src/schemas/registry.ts:60` (moved to `beebox/src/schemas.ts`) (`cardSchemas: CardSchema[]`),
   `PersonSchema` imported at `:40` and listed at `:87`. **Reuse** — import + add
   `PlaceSchema`.
 - **Card mutate path.** `src/cards/frontmatter.ts:41` `splitCardContent` (splits
@@ -179,7 +179,7 @@ Ordered by dependency: schema → geo util → mark → get-resolve → guide.
   `:230` — `createPersonTemplate` only works with `bbx create` because of that
   entry), and add `places` to `BOX_DIRS` (`src/cli/lib/paths.ts:54` has `people`
   but no `places`), keeping `docs/box-layout.md` and the box-shape agent guide
-  (`src/core/agent-guide/box-shape.ts`) in sync (the docs require it). Without
+  (`src/core/agent-guide/box-shape.ts` (moved to `beebox/src/core/agent-guide/guide/box-shape.ts`)) in sync (the docs require it). Without
   these, the agent would have to hand-author the file + directory.
 - **Vocabulary lock-ins:** type `place`; directory `places/`; filename
   `places/<Name>.place.card`; fields `name`, `aliases`, `address`, `lat`, `lng`,
@@ -453,12 +453,12 @@ the whole plan completes.
     `validate` hook returns a lint issue (T1).
   - `test/core/geo.doctest.md` (pure) — haversine vs a known distance within
     tolerance; inside/outside radius; nearest-wins on overlap; empty → null (T2).
-  - `test/location-mark.doctest.md` (`makeTmpBox`) — first mark stamps
+  - `test/location-mark.doctest.md` (moved to `beebox/test/core/place-mark.doctest.md`) (`makeTmpBox`) — first mark stamps
     lat/lng/radius and leaves body + a non-schema frontmatter key verbatim;
     inside-fix mark is a no-op; outside-fix mark leaves the card unchanged and
     reports distance; `mark --expand` grows the radius; no-fix errors; out-of-box
     path errors; stale-fix proceeds with the age reported (T3).
-  - `test/location-resolve.doctest.md` (`makeTmpBox`) — fix inside a place →
+  - `test/location-resolve.doctest.md` (moved to `beebox/test/core/place-cards.doctest.md`) (`makeTmpBox`) — fix inside a place →
     name prepended + JSON `place`; fix outside → unchanged; coordless/archived
     skipped; one unparseable place card skipped, others still match (T4).
 - **Knowledge audit:** one `knows_directly` entry, written and **run** against a

@@ -36,7 +36,7 @@ import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { getBoxTime } from "../lib/time.js";
 import type {
   GmailAttachmentData,

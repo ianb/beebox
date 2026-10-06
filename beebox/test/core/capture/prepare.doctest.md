@@ -8,13 +8,14 @@ deterministically with no API key or Claude subprocess.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
-import { mkdir, writeFile, appendFile, readFile, rm, access } from "node:fs/promises";
+import { mkdir, writeFile, appendFile, readFile, readdir, rm, access } from "node:fs/promises";
+import { parse as parseYaml } from "yaml";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { splitCardContent } from "../../../src/cards/index.js";
-import { createEventBus } from "../../../src/core/event-bus.js";
-import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../../src/services/claude-chat.js";
+import { splitCardContent } from "../../../src/exports/cards.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
+import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
+import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {
@@ -23,10 +24,11 @@ import {
   addPhoto,
   setStagingState,
   readStagingSession,
-} from "../../../src/core/capture/staging-store.js";
-import { prepareCaptureSession } from "../../../src/core/capture/prepare.js";
-import { sessionBasenameFor } from "../../../src/core/capture/write-cards.js";
-import { buildCaptureWrapper } from "../../../src/core/capture/deliver.js";
+} from "../../../src/core/capture/staging-store/core.js";
+import { prepareCaptureSession } from "../../../src/core/capture/prepare/core.js";
+import { sessionBasenameFor } from "../../../src/core/capture/prepare/write-cards.js";
+import { buildCaptureWrapper } from "../../../src/core/capture/prepare/deliver.js";
+import { readRecent } from "../../../src/core/notification/log.js";
 
 async function pathExists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -142,11 +144,18 @@ nothing left untranscribed, the card carries no `transcription-failed` flag:
 (await box.read(docRel)).includes("transcription-failed")
 => false
 
-(await box.read(`${attach}/audio-001.audio.card`)).includes("status: transcribed")
+(await box.read(`${attach}/audio-001.audio.card`)).includes("transcript:")
 => true
 
-(await box.read(`${attach}/audio-002.audio.card`)).includes("status: transcribed")
+(await box.read(`${attach}/audio-002.audio.card`)).includes("transcript:")
 => true
+```
+
+A capture that succeeds sends no notification:
+
+```ts continue
+(await readRecent(box.root, { days: 36500 })).length
+=> 0
 ```
 
 Each clip has a `.timing.json` sidecar with its words:
@@ -178,7 +187,7 @@ subjects.filter((s) => s.startsWith("Capture delivered: ")).length
 execFileSync("git", ["log", "--format=%(trailers:key=Created-By,valueonly)"], { cwd: box.root }).toString().includes("capture")
 => true
 
-(await box.read(docRel)).includes("status: delivered")
+(await box.read(docRel)).includes("delivered: true")
 => true
 ```
 
@@ -193,7 +202,7 @@ events.find((e) => e.event === "chat-user-message").data.message === expectedWra
 
 const delivered = events.find((e) => e.event === "capture-status" && e.data.status === "delivered");
 delivered.data.docPath
-=> «*»
+=> tmp-capture/capture-20260709T1400-«*».capture-session.card
 ```
 
 The staging session's media was cleaned up once delivered:
@@ -286,12 +295,23 @@ partialBody.includes("[audio clip 2 not transcribed]")
 ```
 
 The card itself records the failure in frontmatter, so an agent annotating it
-later — possibly with no `<capture>` message in view — sees why the audio card
-is still `new`:
+later — possibly with no `<capture>` message in view — sees why an audio card
+has no transcript:
 
 ```ts continue
 (await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("transcription-failed: true")
 => true
+```
+
+The failed clip's own card says why, in `transcription-error:`; the clip that
+transcribed carries a transcript and no error:
+
+```ts continue
+const attachDir = `tmp-capture/${basename}.attach`;
+const clipCards = (await readdir(box.path(attachDir))).filter((f) => f.endsWith(".audio.card")).toSorted();
+const clips = await Promise.all(clipCards.map(async (f) => parseYaml(splitCardContent(await box.read(`${attachDir}/${f}`)).frontmatterText)));
+clips.map((c) => `${c.transcript === undefined ? "none" : "transcript"}/${c["transcription-error"] === undefined ? "ok" : "error"}`).join(" ")
+=> transcript/ok none/error
 ```
 
 The delivered wrapper carries `transcription-failed`, with the summary taken
@@ -520,7 +540,7 @@ await readStagingSession({ boxRoot: box.root, id })
 => null
 
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-(await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("status: delivered")
+(await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("delivered: true")
 => true
 ```
 
@@ -543,10 +563,10 @@ const id = await stageSealedSession(box.root);
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
 const cardRel = `tmp-capture/${basename}.capture-session.card`;
 const attachRel = `tmp-capture/${basename}.attach`;
-// Seed an invalid card (bogus status enum, no session-id) + an empty attach dir,
+// Seed an invalid card (bogus `delivered`, no session-id) + an empty attach dir,
 // so prepare skips the write step and validates the pre-seeded card.
 await mkdir(`${box.root}/${attachRel}`, { recursive: true });
-await writeFile(`${box.root}/${cardRel}`, "---\nstatus: not-a-real-status\n---\n");
+await writeFile(`${box.root}/${cardRel}`, "---\ndelivered: not-a-boolean\n---\n");
 
 const registry = {
   getOrCreate: () => ({ isBusy: () => false, enqueue: () => {}, send: async () => true, getSessionId: () => "x" }),
@@ -557,6 +577,15 @@ await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(bo
 
 (await readStagingSession({ boxRoot: box.root, id })).state
 => failed:assemble
+```
+
+With nobody present in the app, the person gets one `quiet` notice. This
+capture never resolved a target chat, so the notice opens a new one:
+
+```ts continue
+const [notice] = await readRecent(box.root, { days: 36500 });
+`${notice.intent.loudness} | ${notice.intent.target} | ${notice.intent.source} | ${notice.intent.body}`
+=> quiet | chat:new | capture | The capture could not be saved: the cards it wrote did not validate.
 ```
 
 The invalid files this run wrote are deleted — no orphaned uncommitted files,
@@ -617,7 +646,7 @@ flipped to `delivered` — while the attach files exist on disk untracked:
 await readStagingSession({ boxRoot: box.root, id })
 => null
 
-(await box.read(docRel)).includes("status: delivered")
+(await box.read(docRel)).includes("delivered: true")
 => true
 
 await pathExists(`${box.root}/${attachRel}/audio-001.audio.card`)

@@ -1,0 +1,303 @@
+/**
+ * SessionListPanel — the "Recent chats" sub-panel body.
+ *
+ * Rendered by `SessionChip`'s "Recent chats ›" row. The unified bar briefly
+ * retired it (docs/implemented-plans/top-nav-ia.md Track C2) on the theory
+ * that the place pill's switch menu covered finding a session — it doesn't:
+ * that menu switches *landmarks* and resumes each one's newest chat, so a
+ * sibling session in the landmark you're already in had no route back short
+ * of the Landmarks page. Restored where it always was, in the chat's own menu
+ * (boxholder call, 2026-08-07).
+ *
+ * Lists this box's web chat sessions; each row shows
+ * the first user message as a label and the session-id suffix for
+ * disambiguation. Clicking a row navigates to `/chat?session=<id>` so
+ * ChatPage can route into it.
+ *
+ * A search field across the top searches WHAT WAS SAID — the transcripts,
+ * not the labels (`chat.search`, docs/plans/chat-search.md). A result row
+ * opens the chat at the matching message (`&m=<entry uuid>`). While a query
+ * is active it replaces the grouped list; Escape (or clearing the field)
+ * restores it. The field and result rows live in `session-search.tsx`.
+ *
+ * The list is landmark-aware but never landmark-*filtered*: the chats bound to
+ * the landmark you're chatting in come first under its name, and everything
+ * else follows under "Other chats", tagged with where it lives. Every chat in
+ * the box stays one scroll away — prominence, not scoping.
+ *
+ * The default list is the chats you're working in. Chats you marked done and
+ * chats whose transcript is gone (expired, on another machine, unknown) stay
+ * hidden behind an "All chats" row at the bottom; search still covers them.
+ * The choice resets each time the panel opens — the short list is the default.
+ *
+ * Owns its own fetch/error/retry state: a load failure renders an explicit
+ * error row with a retry affordance, distinct from the empty "No sessions
+ * yet" state (a caught-and-cleared load used to fall through to the empty
+ * state, indistinguishable from a genuinely empty box).
+ */
+
+import { useState, useEffect, useCallback } from "react";
+import { Link, useParams, useSearch } from "@tanstack/react-router";
+import { href, toSearch } from "../../../../lib/routing";
+import { getChatSessions, type ChatSessionInfo, type DeadChatInfo } from "../../../../api";
+import { groupByTranscriptState } from "../../../../lib/transcript-state";
+import { bbxSource } from "../../../../lib/source-tag";
+import { useDropdownClose } from "../../../ui/Dropdown";
+import { TextField } from "../../../ui/fields/field";
+import { MenuItem } from "../../../ui/dropdown-menu-item";
+import { layoutSessionList } from "./session-list-grouping";
+import { relativeTime, useChatSearch, ChatSearchRows } from "./session-search";
+
+type LoadState =
+  | { kind: "loading" }
+  | { kind: "error" }
+  | { kind: "loaded"; sessions: ChatSessionInfo[]; dead: DeadChatInfo[] };
+
+export function SessionListPanel({ contextDir }: { contextDir: string | null }) {
+  const { boxSlug } = useParams({ strict: false });
+  // eslint-disable-next-line no-restricted-syntax -- `strict: false` collapses the search type across every route; this component only ever renders under routes that carry an optional `session` string param, matching the ChatPage/HistoryPage convention.
+  const search = useSearch({ strict: false }) as { session?: string };
+  const currentSessionId = search.session ?? null;
+  const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const [showAll, setShowAll] = useState(false);
+  const chatSearch = useChatSearch();
+
+  const load = useCallback(() => {
+    setState({ kind: "loading" });
+    getChatSessions()
+      .then((result) => setState({ kind: "loaded", sessions: result.sessions, dead: result.dead }))
+      .catch((e) => {
+        console.error("Failed to load sessions:", e);
+        setState({ kind: "error" });
+      });
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return (
+    <>
+      <div className="border-b border-warm-100 p-2">
+        <TextField
+          label="Search chats"
+          hideLabel
+          type="search"
+          value={chatSearch.field}
+          onChange={(value) => chatSearch.setField(value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.stopPropagation();
+              chatSearch.clear();
+            }
+          }}
+          placeholder="Search what was said…"
+        />
+      </div>
+      {chatSearch.active ? (
+        <ChatSearchRows
+          query={chatSearch.query}
+          state={chatSearch.state}
+          sessions={state.kind === "loaded" ? state.sessions : []}
+          boxSlug={boxSlug ?? ""}
+          currentSessionId={currentSessionId}
+          onRetry={() => chatSearch.retry()}
+        />
+      ) : (
+        <SessionListBody
+          state={state}
+          load={load}
+          contextDir={contextDir}
+          currentSessionId={currentSessionId}
+          boxSlug={boxSlug ?? ""}
+          showAll={showAll}
+          onToggleAll={() => setShowAll((v) => !v)}
+        />
+      )}
+    </>
+  );
+}
+
+/** The grouped session list plus its loading/error/empty states. */
+function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, showAll, onToggleAll }: {
+  state: LoadState;
+  load: () => void;
+  contextDir: string | null;
+  currentSessionId: string | null;
+  boxSlug: string;
+  /** Include done chats and chats whose transcript is gone. */
+  showAll: boolean;
+  onToggleAll: () => void;
+}) {
+  if (state.kind === "loading") {
+    return <div className="px-3 py-2 text-sm text-warm-500">Loading...</div>;
+  }
+  if (state.kind === "error") {
+    return (
+      <div className="px-3 py-2 text-sm text-danger-dark">
+        Couldn&rsquo;t load chats.{" "}
+        <button id="bbx-session-list-retry" type="button" onClick={() => load()} className="underline hover:no-underline">
+          Retry
+        </button>
+      </div>
+    );
+  }
+  const { sessions, dead } = state;
+  if (sessions.length === 0 && dead.length === 0) {
+    return <div className="px-3 py-2 text-sm text-warm-500">No chats yet</div>;
+  }
+
+  // Prefer the current session's own row over the `contextDir` prop: a resumed
+  // root-bound chat resolves to `null` there (the history file doesn't persist
+  // an empty binding, and `directoryFor` can't tell "root" from "unknown"), and
+  // the prop is only populated for a brand-new chat anyway. The row's
+  // `contextDir` comes from the husk and is already normalized, so it matches
+  // the other rows exactly.
+  const activeRow = sessions.find((s) => s.sessionId === currentSessionId);
+  const layout = layoutSessionList({
+    sessions,
+    contextDir: activeRow?.contextDir ?? contextDir,
+  });
+  const rowProps = { boxSlug, currentSessionId };
+  const hiddenCount = layout.done.length + dead.length;
+  const liveCount = layout.kind === "flat" ? layout.sessions.length : layout.here.length + layout.elsewhere.length;
+
+  return (
+    <>
+      {liveCount === 0 && !showAll ? (
+        <div className="px-3 py-2 text-sm text-warm-500">No current chats</div>
+      ) : null}
+      {layout.kind === "flat" ? (
+        <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} muted={false} {...rowProps} />
+      ) : (
+        <>
+          <SessionGroup label={layout.hereLabel}>
+            <SessionRows sessions={layout.here} showLandmark={false} muted={false} {...rowProps} />
+          </SessionGroup>
+          <SessionGroup label="Other chats">
+            <SessionRows sessions={layout.elsewhere} showLandmark muted={false} {...rowProps} />
+          </SessionGroup>
+        </>
+      )}
+      {showAll && layout.done.length > 0 ? (
+        <SessionGroup label="Done">
+          <SessionRows sessions={layout.done} showLandmark muted {...rowProps} />
+        </SessionGroup>
+      ) : null}
+      {showAll ? <DeadSessionGroups dead={dead} boxSlug={boxSlug} /> : null}
+      {hiddenCount === 0 ? null : (
+        <MenuItem id="bbx-session-list-all" onClick={onToggleAll} keepOpen>
+          <span className="text-warm-500">
+            {showAll ? "Show current chats only" : `All chats (${String(hiddenCount)} done or expired)`}
+          </span>
+        </MenuItem>
+      )}
+    </>
+  );
+}
+
+/**
+ * The chats that no longer have a transcript here, after every live one and
+ * under a heading saying why (`docs/implemented-plans/chat-session-identity.md`, Track 3).
+ * They were invisible before — a chat whose transcript expired simply left the
+ * list, so the box looked like it had forgotten the conversation entirely.
+ *
+ * Each row goes to the husk card: there is nothing at `/chat?session=` to open.
+ */
+function DeadSessionGroups({ dead, boxSlug }: { dead: DeadChatInfo[]; boxSlug: string }) {
+  const close = useDropdownClose();
+  if (dead.length === 0) return null;
+  return (
+    <>
+      {groupByTranscriptState(dead).map((group) => (
+        <SessionGroup key={group.label} label={group.label}>
+          {group.rows.map((s) => (
+            <Link
+              key={s.sessionId}
+              role="menuitem"
+              to={href(`/${boxSlug}/browse/${s.huskPath}`)}
+              onClick={close}
+              className="block px-3 py-2 text-sm text-warm-500 hover:bg-warm-100"
+            >
+              <div className="flex items-baseline gap-2">
+                <span className="flex-1 truncate">{s.label}</span>
+                <span className="text-xs flex-shrink-0 font-mono">{s.sessionId.slice(0, 8)}</span>
+              </div>
+            </Link>
+          ))}
+        </SessionGroup>
+      ))}
+    </>
+  );
+}
+
+/**
+ * A labelled run of rows. The heading is `aria-hidden` because the group's
+ * `aria-label` already announces it — otherwise a screen reader reads the
+ * name twice on entering the group.
+ */
+function SessionGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div role="group" aria-label={label}>
+      <div
+        aria-hidden="true"
+        className="px-3 py-1 bg-warm-50 border-y border-warm-100 text-xs font-medium uppercase tracking-wide text-warm-500 truncate"
+      >
+        {label}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SessionRows({
+  sessions,
+  boxSlug,
+  currentSessionId,
+  showLandmark,
+  muted,
+}: {
+  sessions: ChatSessionInfo[];
+  boxSlug: string;
+  currentSessionId: string | null;
+  showLandmark: boolean;
+  /** True for the done group: the whole row recedes behind its heading. */
+  muted: boolean;
+}) {
+  const close = useDropdownClose();
+  return (
+    <>
+      {sessions.map((s) => {
+        const isViewing = currentSessionId === s.sessionId;
+        const idSuffix = s.sessionId.slice(0, 8);
+        return (
+          <Link
+            key={s.sessionId}
+            role="menuitem"
+            to={href(`/${boxSlug}/chat`)}
+            search={toSearch({ session: s.sessionId })}
+            onClick={close}
+            {...bbxSource("session", s.sessionId)}
+            className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50" : ""}`}
+          >
+            <div className="flex items-baseline gap-2">
+              <span className={`flex-1 truncate ${isViewing ? "font-medium" : ""} ${muted ? "text-warm-500" : isViewing ? "text-warm-900" : "text-warm-800"}`}>
+                {s.label}
+              </span>
+              <span className="text-xs text-warm-500 flex-shrink-0 font-mono">{idSuffix}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-0.5">
+              {s.isActive ? (
+                <span className="text-xs text-success-dark">active</span>
+              ) : null}
+              <span className="text-xs text-warm-500">{relativeTime(s.lastUsedAt)}</span>
+              {showLandmark ? (
+                <span className="text-xs text-warm-500 truncate">in {s.landmarkLabel}</span>
+              ) : null}
+            </div>
+          </Link>
+        );
+      })}
+    </>
+  );
+}

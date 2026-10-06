@@ -16,7 +16,7 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { z } from "zod";
 
 /** One candidate way to present, with an honest rating of its fit here. */
@@ -34,6 +34,7 @@ const expositionPlanFields = {
 };
 
 export const ExpositionPlanSchema: CardSchema = cardSchema("exposition-plan", {
+  brief: "How to present a subject",
   description: "A worked plan for how to present a subject — learner translation, rated approaches, and compiled presentation rules",
   category: "authored",
   fields: expositionPlanFields,

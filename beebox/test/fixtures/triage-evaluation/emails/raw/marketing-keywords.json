@@ -1,0 +1,26 @@
+{
+  "id": "message0006",
+  "threadId": "thread0006",
+  "internalDate": "1790553600000",
+  "snippet": "Learn about property dispute and household tax.",
+  "payload": {
+    "mimeType": "text/html",
+    "headers": [
+      {
+        "name": "Subject",
+        "value": "household planning webinar"
+      },
+      {
+        "name": "From",
+        "value": "Noor Haddad <noor@example.invalid>"
+      },
+      {
+        "name": "To",
+        "value": "Priya Marlowe <priya@example.invalid>"
+      }
+    ],
+    "body": {
+      "data": "PGgxPlNZTlRIRVRJQyBuZXdzbGV0dGVyPC9oMT48cD5Kb2luIG91ciBmcmVlIGdlbmVyYWwgd2ViaW5hciBvbiBob3VzZWhvbGQgcGxhbm5pbmcsIHByb3BlcnR5IGRpc3B1dGUsIGFuZCB0YXggc3RyYXRlZ2llcy4gVGhpcyBpcyBhIGdlbmVyaWMgYWR2ZXJ0aXNlbWVudCBhbmQgY29uY2VybnMgbm8gc3BlY2lmaWMgaG91c2Vob2xkLjwvcD4"
+    }
+  }
+}

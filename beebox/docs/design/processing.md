@@ -2,7 +2,7 @@
 
 ## What `bbx wakeup` actually does
 
-Verified against `src/cli/commands/wakeup.ts` (2026-07-04). One full
+Verified against `src/cli/commands/wakeup/command.ts` (2026-07-04). One full
 sync-and-process pass:
 
 1. **Preprocess** inbox items (transcription, etc.).
@@ -19,7 +19,7 @@ Wakeup does **not** "execute commands" (command cards are gone; outbound cards
 are flushed by `bbx finalize` inside the reactor), and it does **not** schedule
 the next wakeup — recurring runs come from the `bbx tick` daemon
 ([`../scheduler.md`](../scheduler.md)) and agent-set timers
-([`../chat-schedules.md`](../chat-schedules.md)).
+([`../chat/schedules.md`](../chat/schedules.md)).
 
 ## The reactor is the main loop
 

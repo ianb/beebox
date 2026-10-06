@@ -60,13 +60,13 @@ the ear gets when the eye is elsewhere.
     explicit author opt-in checked by a doctest, not an inference from markup
     and not a request that the agent be careful.
 - `beebox/CLAUDE.md` — "don't add features beyond what the task
-  requires"; the `src/shared/ref-path.ts` fails-closed precedent.
+  requires"; the `src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`) fails-closed precedent.
 - `beebox/code-style.md` — no default parameters, max two positional
   params, `as` ban, the `Result`-vs-throw split, logging levels.
 - `beebox/frontend.md` — primitives own appearance, `className` is
   outer-layout only, `restrict-component-classes`.
 - **Precedents, denser than the docs:**
-  - `src/webapp/routes/chat-screenshot-routes.ts` — the agent→browser
+  - `src/webapp/routes/chat-screenshot-routes.ts` (moved to `beebox/src/webapp/routes/chat/screenshot-routes.ts`) — the agent→browser
     round-trip, with its outcome vocabulary and its loopback auth split.
   - `src/frontend/src/components/Markdown.tsx:150-156` `BrokenLink` — the
     established treatment for a link that leads nowhere.
@@ -84,7 +84,7 @@ payload (`fulfill`, first-wins) or by reporting 'I have nothing'
 (`reportNone`…). Silence times out."* It already carries the two-phase ack that
 distinguishes `no-client` from `timeout`
 (`pending-browser-request.ts:11-18`). `chat-screenshot-routes.ts:1-31` is a
-complete worked consumer, and `src/cli/commands/chat.ts:186-275` is its CLI
+complete worked consumer, and `src/cli/commands/chat.ts:186-275` (moved to `beebox/src/cli/commands/chat/command.ts`) is its CLI
 half, including the outcome switch (`declined` / `no-client` / `timeout` /
 `failed`). **Reused wholesale.** `bbx chat ui` is a sibling of `bbx chat
 screenshot` with a JSON fulfillment instead of a PNG.
@@ -164,7 +164,7 @@ pointing are read together.
 
 **Nothing collapses old context.** Searched for it; there is no mechanism. The
 `<chat-app>` snapshot is prepended to the user message *text*
-(`src/core/chat/session/start.ts:178`: ``text: `${snapshot}\n${rawInput.text}` ``)
+(`src/core/chat/session/start.ts:178` (moved to `beebox/src/core/chat/session/run/start.ts`): ``text: `${snapshot}\n${rawInput.text}` ``)
 and therefore stays verbatim in the SDK transcript for the session's life.
 `stripChatAppTags` (`src/shared/chat-tags.ts`) is display-side only. This is a
 load-bearing fact for the on-demand decision below.
@@ -463,7 +463,7 @@ broken; a *duplicate* cannot be detected this way (`getElementById` returns the
 first in document order), which is precisely why uniqueness is enforced
 upstream by axe in the tours rather than at resolve time. The scan, which walks
 the document anyway, reports any duplicated `bbx-` id in its header as a second
-line of defence. Fails closed, like `resolveRefPath` (`src/shared/ref-path.ts`).
+line of defence. Fails closed, like `resolveRefPath` (`src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`)).
 
 **Vocabulary lock-ins.** The `bbx-` id prefix, `data-bbx-does`, `data-bbx-reveal`,
 the kebab-case id form, the action names `point` / `focus` / `reveal`, and the
@@ -631,7 +631,7 @@ inventory only exists in the client.
   `{failed:"…"}`.
 - The rendezvous is `createPendingBrowserRequests<UiScanFulfillment>` with the
   same 2 s ack window, so `no-client` and `timeout` stay honestly distinct.
-- `bbx chat ui` in `src/cli/commands/chat.ts`, `--session`, `--timeout`, and the
+- `bbx chat ui` in `src/cli/commands/chat.ts` (moved to `beebox/src/cli/commands/chat/command.ts`), `--session`, `--timeout`, and the
   same outcome switch.
 
 **No consent prompt.** The screenshot flow has one
@@ -683,7 +683,7 @@ idea, copied deliberately (`domhelprepresentation.ts:1-19`).
 **Snapshot per turn, or on demand.** On demand only, and this is the strongest
 evidence in the plan. Our `<chat-app>` snapshot is prepended to the user
 message *text* and never rewritten
-(`src/core/chat/session/start.ts:178`); there is no collapse mechanism anywhere
+(`src/core/chat/session/start.ts:178` (moved to `beebox/src/core/chat/session/run/start.ts`)); there is no collapse mechanism anywhere
 in the codebase. So a per-turn dump of ~50 lines would be permanently resident
 once per turn — tens of thousands of tokens of dead, increasingly-wrong context
 in a long conversation. memory-atlas can afford per-message injection precisely
@@ -721,7 +721,7 @@ Authored ids, chosen so web and native agree (Track 5 uses the same strings):
 | `bbx-nav-session` | `SessionChip.tsx:206` | — |
 | `bbx-nav-voice` | `VoiceChip.tsx:228` | — |
 | `bbx-nav-profile` | `AppNav.tsx:44-58` | — |
-| `bbx-nav-todo` / `bbx-nav-errors` | `AppNav.tsx:168,187` | — |
+| `bbx-nav-questions` / `bbx-nav-todo` / `bbx-nav-errors` | `app-nav-badges.tsx` | — |
 | `bbx-composer-add` | `InteractiveChat-composer.tsx:208` | `ComposerActionsView` trigger |
 | `bbx-composer-input` | `InteractiveChat-composer.tsx:60` | `ComposerTextView.swift:30` |
 | `bbx-composer-send` | `InteractiveChat-composer.tsx:121` | `NativeComposerView.swift:361` |
@@ -778,7 +778,7 @@ question; only the prohibition fixes the case where the agent asserts one
 unasked. It lands early, in the agent guide (`behavior.ts`, committed
 `7d34f0ef`), and this paragraph extends it with the way to look.
 
-A pointer to `bbx chat ui` also goes in `src/core/box/skills-content.ts`,
+A pointer to `bbx chat ui` also goes in `src/core/box/skills-content.ts` (moved to `beebox/src/core/box/guidance-sync/skills-content.ts`),
 alongside the existing `bbx chat screenshot` sentence
 (`skills-content.ts:455`), phrased the same way: reach for it when interface
 location is genuinely the question, not by reflex.
@@ -1239,7 +1239,7 @@ honest native meanings.
   the entry cap.
 - `test/frontend/lib/view-url.doctest.md` (extend) — `control:` classification,
   params, unknown action degrades to `point`, empty id falls through.
-- `test/webapp/routes/chat-ui-routes.doctest.md` — the four outcomes, the
+- `test/webapp/routes/chat-ui-routes.doctest.md` (moved to `beebox/test/webapp/routes/chat/ui-routes.doctest.md`) — the four outcomes, the
   loopback guard 403, the Zod-reject path, and the native-unavailable coverage
   value.
 - A tour assertion in `test/tours/nav-pages.tour.ts` that every `Dropdown`

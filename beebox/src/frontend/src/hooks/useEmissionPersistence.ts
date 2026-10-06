@@ -51,6 +51,7 @@ import {
   isEmptyEmissionDraft,
   adoptLegacyComposerDrafts,
   partitionFiles,
+  restoredImageOriginal,
   type PersistedEmission,
 } from "../input/emission-persist";
 import { apiRawFileUrl, getApiBase } from "../api-core";
@@ -155,11 +156,14 @@ export function useEmissionPersistence(opts: {
       // Persistence only ever saves landed files (`emission-persist.ts`), so
       // every entry here has a path; a defensive skip keeps a hand-edited or
       // older payload from throwing mid-restore.
-      const checks = await Promise.all(p.files.flatMap((f) => {
-        const path = uploadedPath(f);
-        if (path === null) return [];
-        return [fileExists(path).then((exists) => [path, exists] as const)];
-      }));
+      // Image originals are checked the same way: a landed `_tmp/` path the
+      // sweep has since removed must not come back as a usable file line.
+      const restoredPaths = [
+        ...p.files.flatMap((f) => { const path = uploadedPath(f); return path === null ? [] : [path]; }),
+        ...p.images.flatMap((image) => image.original?.status === "uploaded" ? [image.original.path] : []),
+      ];
+      const checks = await Promise.all(restoredPaths.map((path) =>
+        fileExists(path).then((exists) => [path, exists] as const)));
       // Commit-time recheck: the file HEADs are a network round trip, and
       // the user may have started typing during it. Their live composition
       // wins — abort rather than clobber (the persisted draft is then
@@ -176,10 +180,14 @@ export function useEmissionPersistence(opts: {
       // freshly-attached composition and the `<attachments>` block a later send
       // writes matches the tokens in its own body.
       editor.setText(normalizeComposerTokens(p.text));
-      editor.restoreImages(p.images.map((image): ImageItem => ({
+      const restoredImages = p.images.map((image): ImageItem => ({
         ...image,
         objectUrl: `data:${image.mimeType};base64,${image.dataBase64}`,
-      })));
+        original: restoredImageOriginal(image.original, { existingPaths }),
+      }));
+      editor.restoreImages(restoredImages);
+      // Later uploads from this draft join the same `_tmp/chat/<batch>/`.
+      if (p.uploadBatch !== undefined) editor.restoreUploadBatch(p.uploadBatch);
       for (const file of live) editor.addFile(file);
       // Dead files (their tmp/ upload was swept) must not leave dangling
       // [file#N] tokens in the restored text — a send would reference an

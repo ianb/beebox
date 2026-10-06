@@ -36,7 +36,7 @@ being up to explain that the box is down.
 
 ## Reaching a local box is genuinely hard, which makes the silence worse
 
-The dev router binds loopback only (`workstreams-app/src/router/router-core.ts:53`
+The dev router binds loopback only (`workstreams-app/src/router/core/engine.ts:53`
 — `server.listen(port, "127.0.0.1")`), so a local box is reachable from the
 phone only through Tailscale. Two distinct ways it fails, and the person cannot
 tell them apart from a blank screen:

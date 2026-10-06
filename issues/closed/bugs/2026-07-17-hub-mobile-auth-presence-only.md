@@ -8,7 +8,7 @@ resolution: implemented
 ---
 
 **Closed (implemented).** The presence-only gate is gone: `hasMobileAuth` in
-`src/hub/hub-server.ts` now calls `verifyMobileRequest`
+`src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`) now calls `verifyMobileRequest`
 (`src/core/mobile/request-auth.ts`), which validates the bearer against the
 device store / the `bbx_mobile` cookie against its per-box HMAC. Both the HTTP
 catch-all and the WS-upgrade path reject an unverified request BEFORE
@@ -16,10 +16,10 @@ catch-all and the WS-upgrade path reject an unverified request BEFORE
 slug validity. The verification landed in commit 44da6cef ("auth: harden
 against Codex review findings"); this closure adds the explicit no-enumeration
 proof — a bogus credential on a real slug answers identically to an unknown slug
-— in `test/hub/hub-server-auth.doctest.md`.
+— in `test/hub/hub-server-auth.doctest.md` (moved to `beebox/test/hub/server.auth.doctest.md`).
 
 
-`hasMobileAuthAttempt` in `beebox/src/hub/hub-server.ts` decides whether to let a request past
+`hasMobileAuthAttempt` in `beebox/src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`) decides whether to let a request past
 the hub's pre-upgrade auth wall by checking only that an `Authorization: Bearer …` header OR a
 `?mobileToken=` query param is *present* — it never validates the token against the box's device
 store. This gate is used both on the HTTP catch-all and on the WebSocket upgrade path to bypass the

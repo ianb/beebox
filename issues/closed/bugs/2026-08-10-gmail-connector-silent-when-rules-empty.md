@@ -18,7 +18,7 @@ resolution: implemented
 > shorthand config without an action errors on purpose, so no box keeps
 > collecting on an implied rule. Direction 4 (detecting a connector that
 > stopped producing) is the surviving idea and moved to
-> [detect-a-connector-that-stopped-producing](../../features/2026-08-10-detect-a-connector-that-stopped-producing.md).
+> [detect-a-connector-that-stopped-producing](../features/2026-08-10-detect-a-connector-that-stopped-producing.md).
 
 A box with no `config/connectors/gmail.json` behaved in two opposite ways
 across one deploy, and was never told about either.
@@ -74,7 +74,7 @@ by comparing per-day first-message dates across the thread cards.
 4. **A connector that used to produce items and abruptly stopped is detectable
    generically** — compare a connector's last-import time against its own recent
    history. That would catch this class without per-connector knowledge. Compare
-   [box-growth-warning-cannot-clear](../../bugs/2026-08-10-box-growth-warning-cannot-clear.md):
+   [box-growth-warning-cannot-clear](2026-08-10-box-growth-warning-cannot-clear.md):
    the health surface warned loudly and continuously about the box being large,
    while this stall went entirely unreported.
 

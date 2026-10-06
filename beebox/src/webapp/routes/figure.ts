@@ -19,7 +19,7 @@
 import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { bundleView } from "../views/compiler.js";
+import { bundleView } from "../views/compiler/compile.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import { attachDirOwnerBasename, cardBasename, isAttachDirName } from "../../shared/attach-path.js";
 

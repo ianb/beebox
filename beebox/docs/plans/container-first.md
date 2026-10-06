@@ -102,7 +102,7 @@ Reused as is:
   cache-gated on the engine version, commits template-managed paths, skips a
   dirty box. Its generated output `_content/docs/generated/`
   (`src/core/docs-gen/shared.ts:14`) is gitignored
-  (`src/core/box/index.ts:255-256`).
+  (`src/core/box/index.ts:255-256` (moved to `beebox/src/core/box/structure/core.ts`)).
 - **`bbx upgrade`'s snapshot-and-revert shape** (`upgrade.ts:259`
   `const snapshotSha = await getHead(boxRoot);`, `:302` `revertUpgrade`,
   typecheck at `:284-290`, commit with an `Upgraded-To` trailer at
@@ -110,8 +110,8 @@ Reused as is:
   use the command itself: its dependency swap (`:264`, `pnpm install` of a
   new spec) has nothing to swap in a single-engine image. Its structure is
   copied into `bbx converge`.
-- **The engine-link health check** (`src/webapp/trpc/routers/health-engine.ts`)
-  and `runHealthChecks` (`src/webapp/trpc/routers/health.ts:217`): the home
+- **The engine-link health check** (`src/webapp/trpc/routers/health-engine.ts` (moved to `beebox/src/webapp/trpc/routers/health/checks/engine.ts`))
+  and `runHealthChecks` (`src/webapp/trpc/routers/health.ts:217` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)): the home
   for the new converge-state check.
 - **`bbx activity`** (`src/cli/commands/activity.ts:10`: *"Exit 0 = at rest.
   Exit 1 = busy"*) and its caller `deploy/server-bin/bbx-wait-quiet:17-19`
@@ -143,16 +143,16 @@ Reused as is:
   remote. The image workflow is a second file with its own permissions.
 - **The smoke harnesses**: `docker/smoke-docker.sh`, `docker/smoke-vps-install.sh`
   (dind; already chowns the bind mount to 1000), `docker/smoke-dev-install.sh`,
-  and `scripts/smoke-upgrade.ts:238-241` (`bbx upgrade --to file:<second tarball>`,
+  and `scripts/smoke-upgrade.ts:238-241` (moved to `beebox/src/scripts/smoke-upgrade.ts`) (`bbx upgrade --to file:<second tarball>`,
   one hop; its `WIDGET_SCHEMA` at `:43-49`).
-- **`scripts/release.ts`** builds the tarball (`:84`, `pnpm pack`) and never
+- **`scripts/release.ts` (moved to `beebox/src/scripts/release.ts`)** builds the tarball (`:84`, `pnpm pack`) and never
   writes `version` (verified: no write to `package.json`). `package.json:3`
   is `"version": "0.1.0"` and there are no git tags (`git tag | wc -l` = 0).
 - **The external-tool promise** (`src/core/agent-guide/chat.ts:14-16`):
   `pandoc`, `magick`, `poppler-utils`, `xlsx2csv`/`openpyxl`, and `fclones`
   are *"Always available on the box host"*. Both image architectures must
   honor it.
-- **git-annex, not LFS.** `docs/assets.md:10` (*"no LFS, `annex.thin=false`"*)
+- **git-annex, not LFS.** `docs/media/assets.md:10` (*"no LFS, `annex.thin=false`"*)
   and `:193` (the shipped attributes file *"carries no `filter=lfs` rules at
   all"*). Any rollback text is written against annex.
 
@@ -312,7 +312,7 @@ Rebuilt, with reason:
   against the previous engine while the new one serves them. A `link:`
   spec would fix the skew but would commit a container-only absolute path
   into the user's `package.json` and lockfile (both tracked; the box
-  `.gitignore` at `src/core/box/index.ts:236` ignores only `node_modules/`),
+  `.gitignore` at `src/core/box/index.ts:236` (moved to `beebox/src/core/box/structure/core.ts`) ignores only `node_modules/`),
   making the box less portable than today.
 - **Direction.**
   - Layout: `container/Dockerfile`, `container/entrypoint.sh`,
@@ -322,7 +322,7 @@ Rebuilt, with reason:
     `tailscale.env.example`, `.gitignore`, `README.md`),
     `container/smoke/` (the three harnesses plus the new update harness),
     `container/README.md` (the install and update guide, replacing
-    `docs/docker-install.md`; it leaves the `beebox/docs` tree and the docs
+    `docs/install/docker.md`; it leaves the `beebox/docs` tree and the docs
     browser on purpose, since it documents files beside it), and
     `container/CLAUDE.md` (a short map). The root `CLAUDE.md` project list
     and the `beebox/CLAUDE.md` Guides table gain the new entries in Track E.
@@ -479,7 +479,7 @@ Rebuilt, with reason:
     by `compareEngineVersions`: exit 3 with the refusal text, touching
     nothing. (1) Dirty tree: `git add -A` and commit
     `Checkpoint before engine <serving> (unvalidated)` with
-    `Created-By: bbx-converge`, passing `--no-verify` (`src/lib/git.ts:76`
+    `Created-By: bbx-converge`, passing `--no-verify` (`src/lib/git.ts:76` (moved to `beebox/src/lib/git/core.ts`)
     supports it). The box's pre-commit hook has two gates
     (`src/core/install-validation-hooks.ts:208-260`): card validation, and
     `git annex pre-commit .` (`:220-236`). The checkpoint skips only the
@@ -488,7 +488,7 @@ Rebuilt, with reason:
     reason a tree is dirty at restart. The annex step runs explicitly
     before the commit, so annexed content is handled exactly as the hook
     would. Secrets stay out by the box `.gitignore`
-    (`src/core/box/index.ts:246`, `_config/connectors/*.secret.*`); large
+    (`src/core/box/index.ts:246` (moved to `beebox/src/core/box/structure/core.ts`), `_config/connectors/*.secret.*`); large
     files go where the box's annex attributes send them, as any commit does.
     (2) `snapshotSha = HEAD`. (3) The sweep as it exists, script-kind only,
     one commit per migration; `needs-procedure` is recorded as pending, not
@@ -499,7 +499,7 @@ Rebuilt, with reason:
     failure or timeout in 3 to 5: `git reset --hard <snapshotSha>` plus
     clean without `-x`, as `revertUpgrade` does (`upgrade.ts:185-195`),
     write `.beebox/converge-failure.json` `{ engineVersion, step, snapshot, output, at }`
-    (machine-local; `.beebox/` is gitignored, `src/core/box/index.ts:255`),
+    (machine-local; `.beebox/` is gitignored, `src/core/box/index.ts:255` (moved to `beebox/src/core/box/structure/core.ts`)),
     exit 2. The checkpoint commit is not reverted: it is the user's work.
     A failure in step 1 (the checkpoint itself) is also exit 2 with the
     record, and nothing to revert. The command's top level catches every
@@ -514,7 +514,7 @@ Rebuilt, with reason:
   - Refusal text (exit 3): both versions, and the two ways out with exact
     commands: `./update <recorded version>`, or
     `git -C data/box reset --hard <snapshot>` followed by
-    `git -C data/box annex fix` (the repair `docs/assets.md:168` names for a
+    `git -C data/box annex fix` (the repair `docs/media/assets.md:168` names for a
     box whose unlocked files need re-pointing). Whether the second command
     is needed after a plain reset is settled by the harness (Track F,
     scenario 3 seeds an annexed file), and the printed text follows what the
@@ -557,7 +557,7 @@ Rebuilt, with reason:
     is the trade against "dev is never open" (soft-launch posture): a
     static page that names no box and reads nothing is the state the
     system is in, and hiding it behind the auth wall would need the box.
-    `/healthz` (`src/webapp/server-root.ts:176`) answers 503 while
+    `/healthz` (`src/webapp/server-root.ts:176` (moved to `beebox/src/webapp/server-root/root-routes.ts`)) answers 503 while
     refusing; the Dockerfile gains `HEALTHCHECK CMD curl -fsS http://127.0.0.1:3210/healthz`,
     so `docker compose ps` shows `unhealthy` rather than `Up` for a
     refusing container.
@@ -583,8 +583,8 @@ Rebuilt, with reason:
   or guides knows about `container/`.
 - **Why this needs to change.** `<root>/README.md:13-17` lists the
   from-source guide first; `<root>/site/cards/index.site-page.card:20-21`
-  does the same; `docs/agent-install.md:28-29` says the engine is *"this
-  repository (or a Docker image built from it)"*; `docs/developer-install.md:1-6`
+  does the same; `docs/install/agent.md:28-29` says the engine is *"this
+  repository (or a Docker image built from it)"*; `docs/install/developer.md:1-6`
   presents Docker as an alternative. The docker README table still says
   `bbx serve /data/box/content` (`docker/README.md:11`). The root
   `CLAUDE.md` project list and the `beebox/CLAUDE.md` Guides table point at
@@ -601,10 +601,10 @@ Rebuilt, with reason:
   - `<root>/site/cards/index.site-page.card:18-31`: image first,
     from-source under a contributor line; the agent prompt points at
     `container/README.md`.
-  - `docs/agent-install.md`: the engine is a published image; the Docker
+  - `docs/install/agent.md`: the engine is a published image; the Docker
     path is the default and the from-source path is offered only when the
     user says they want to hack on the code.
-  - `docs/developer-install.md`: first paragraph names itself the
+  - `docs/install/developer.md`: first paragraph names itself the
     contributor path.
   - `container/README.md`: the guide, rewritten around the three commands,
     `update`, the three roots, the rollback procedure as the harness proved
@@ -612,7 +612,7 @@ Rebuilt, with reason:
     only, the "a box with its own dependencies" limitation, and the
     checklist sections kept.
   - Root `CLAUDE.md` project list and `beebox/CLAUDE.md` Guides table:
-    `container/` and its README replace the `docs/docker-install.md` row.
+    `container/` and its README replace the `docs/install/docker.md` row.
   - `src/frontend/src/components/settings/ScanUploaderSection.tsx:82-87`
     tells the user to `git clone` and `pnpm install` the scan uploader. That
     tool runs on the machine with the scanner, not in the box, so the

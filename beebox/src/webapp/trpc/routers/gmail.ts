@@ -13,11 +13,11 @@
  */
 
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { googleService } from "../google-service.js";
-import { resolveGmailService, resolveGoogleAuth } from "../../../connectors/google-access.js";
-import { trackGmailThread } from "../../../connectors/gmail-track.js";
-import { runReadOnlyGws, UnsafeGwsCommandError } from "../../../connectors/gmail-gws.js";
+import { resolveGmailService, resolveGoogleAuth } from "../../../google/access.js";
+import { trackGmailThread } from "../../../connectors/gmail/track.js";
+import { runReadOnlyGws, UnsafeGwsCommandError } from "../../../connectors/gmail/gws.js";
 import { TRPCError } from "@trpc/server";
 
 /**

@@ -12,16 +12,16 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
-import { commitPaths, pathsHaveChanges } from "../../lib/git.js";
-import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
+import { commitPaths, pathsHaveChanges } from "../../lib/git/core.js";
+import { getBoxDir, BOX_DIRS } from "../../lib/paths/core.js";
 import { fmt } from "../../lib/format.js";
-import { parseDuration } from "../../schemas/scheduled-script-duration.js";
-import { loadRunningProcedures } from "../schedule/state.js";
-import { ok, type Result } from "../../lib/result.js";
+import { parseDuration } from "../../scheduled-script-duration.js";
+import { loadRunningProcedures } from "../schedule/running-procedures.js";
+import { ok, type Result } from "../../shared/result.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ProcedureError } from "./engine-types.js";
 import { COMPLETED_RUN_EXPIRY, FAILED_RUN_EXPIRY, MAX_RUNS_PER_PROCEDURE } from "./run-expiry.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 const RUN_DIR_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{4}$/;
 
@@ -36,8 +36,8 @@ function procedureNameOf(dirName: string): string {
 
 /**
  * When a run dir may be deleted, as epoch ms — or "never"/"invalid" to keep
- * it. Legacy cards without `expires` get the status-based default from
- * their completion time; crashed runs (non-terminal status) and unreadable
+ * it. Legacy cards without `expires` get the outcome-based default from
+ * their completion time; crashed runs (no outcome) and unreadable
  * cards are failure-like and get the failed default from the best available
  * timestamp.
  */
@@ -65,7 +65,7 @@ async function resolveExpiry(runDir: string): Promise<number | "never" | "invali
   }
 
   const defaultExpiry =
-    run.status === "completed" ? COMPLETED_RUN_EXPIRY : FAILED_RUN_EXPIRY;
+    run.outcome === "completed" ? COMPLETED_RUN_EXPIRY : FAILED_RUN_EXPIRY;
   const baseline =
     Date.parse(run["completed-at"] ?? "") ||
     Date.parse(run["started-at"]) ||

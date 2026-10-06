@@ -14,9 +14,9 @@
  */
 
 import type { ChatImageAttachment } from "../../api-chat";
-import { applySelections } from "../../lib/selection/serialize";
+import { applySelections, escapeAttr, escapeText } from "../../lib/selection/serialize";
 import type { Emission } from "../emission";
-import { markUnsureWords } from "../unsure-words";
+import { markUnsureWords } from "../unsure-words/mark";
 import { composerToken, composerTokenIn } from "@shared/composer-tokens";
 
 /**
@@ -30,6 +30,37 @@ export interface ChatWitness {
   localTime: string;
   zoomedView: string | null;
   timePassed: string | null;
+  /**
+   * The notification whose `chat:new` tap started this conversation, carried
+   * by its first message only. Absent otherwise.
+   */
+  notificationOpened?: WitnessNotification | undefined;
+}
+
+/** A notification as the witness carries it: plain values from the notification log. */
+export interface WitnessNotification {
+  id: string;
+  title: string;
+  body: string;
+  /** When it was sent (ISO). */
+  at: string;
+}
+
+/**
+ * The `<notification-opened>` context block, a sibling of the message like
+ * `<attachments>`, in the shape the server's `<schedule-fired>` uses. The
+ * title and body were written by an agent or script, so they are escaped.
+ */
+function notificationOpenedBlock(notification: WitnessNotification): string {
+  return [
+    "",
+    `<notification-opened id="${escapeAttr(notification.id)}" sent-at="${escapeAttr(notification.at)}">`,
+    escapeText(notification.title),
+    ...(notification.body.trim() === "" ? [] : [escapeText(notification.body)]),
+    "",
+    "The boxholder started this conversation by opening this notification.",
+    "</notification-opened>",
+  ].join("\n");
 }
 
 /** The wire payload for a SEND: the wrapped message + image attachments. */
@@ -134,16 +165,29 @@ export function assembleChatMessage(
 
   // File attachments emit a sibling <attachments> block of markdown-style
   // reference links so the agent sees the path each [fileN] token resolves
-  // to without inlining the file's bytes.
-  const attachmentsBlock = emission.files.length > 0
-    ? "\n<attachments>\n" +
-      fileTokens.map((e) => `${e.token ?? composerToken("file", e.file.id)}: ${e.file.path}`).join("\n") +
-      "\n</attachments>"
+  // to without inlining the file's bytes. An inline image whose ORIGINAL
+  // file landed gets a line of the same shape after the files: the pixels
+  // are in the image block, the line is the file to work on. An image with
+  // no path (upload failed, or an older client) gets no line — the absence is
+  // the signal, and the agent's prompt says so. Readers of `[image#N]` stop
+  // at this block (`attachmentsBlockStart`), so the line is never mistaken for
+  // a second anchor.
+  const imageLines = emission.images.flatMap((image) => image.path === undefined
+    ? []
+    : [`${composerTokenIn(emission.text, { kind: "image", id: image.id }) ?? composerToken("image", image.id)}: ${image.path}`]);
+  const lines = [
+    ...fileTokens.map((e) => `${e.token ?? composerToken("file", e.file.id)}: ${e.file.path}`),
+    ...imageLines,
+  ];
+  const attachmentsBlock = lines.length > 0
+    ? "\n<attachments>\n" + lines.join("\n") + "\n</attachments>"
     : "";
 
   return {
     messageId: emission.id,
-    message: wrapped + attachmentsBlock,
-    images: emission.images,
+    message: wrapped + attachmentsBlock + (witness.notificationOpened === undefined ? "" : notificationOpenedBlock(witness.notificationOpened)),
+    // The wire body carries only what the server keys the image blocks on;
+    // the path reaches it through the message text above.
+    images: emission.images.map(({ id, mimeType, dataBase64 }) => ({ id, mimeType, dataBase64 })),
   };
 }

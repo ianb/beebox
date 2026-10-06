@@ -1,7 +1,7 @@
 ---
 name: view-card-shape
 description: |-
-  Update box-local custom views (views/*.tsx) to the current ViewCard shape after
+  Update box-local custom views (src/views/*.tsx) to the current ViewCard shape after
   the card-shape cleanup. The ViewCard a view receives changed: `tagName` became
   `type`, and `attrs`, `text`, `children`, `element`, and the top-level `status`
   were removed — card data now lives in `frontmatter` (parsed YAML fields) and
@@ -24,7 +24,7 @@ steps:
             echo "Views fail to render — running the fix step."
           elif ! bbx view typecheck >/dev/null 2>&1; then
             echo "Views have type errors against ViewProps — running the fix step."
-          elif grep -rEl '\.(tagName|attrs|element)\b' views/ 2>/dev/null | grep -q .; then
+          elif grep -rEl '\.(tagName|attrs|element)\b' src/views/ 2>/dev/null | grep -q .; then
             echo "Views still reference removed ViewCard fields — running the fix step."
           else
             exit $CHECK_SKIP
@@ -34,7 +34,7 @@ steps:
     run:
       agents:
         - prompt: |-
-            Migrate this box's custom views (views/*.tsx) to the current ViewCard
+            Migrate this box's custom views (src/views/*.tsx) to the current ViewCard
             interface. The ViewCard a view receives CHANGED:
               - `card.tagName`  → `card.type`
               - `card.status`   → `card.frontmatter?.status`
@@ -46,13 +46,13 @@ steps:
                 actual card of that type to see where each field now lives.
 
             Maintain a checklist file at
-            `config/migration-runs/view-card-shape.checklist.md`. Create it with
+            `_config/migration-runs/view-card-shape.checklist.md`. Create it with
             exactly these items as markdown checkboxes, and change `- [ ]` to
             `- [x]` ONLY when that item is genuinely done, appending a one-line
             note of what you changed and where (cite the file):
 
             - [ ] Ran `bbx view check --allow-invalid-cards --json` AND `grep -rnE
-                  '\.(tagName|attrs|children|text|element)\b|card\.status' views/`
+                  '\.(tagName|attrs|children|text|element)\b|card\.status' src/views/`
                   to find both views that fail to render AND views that still
                   reference removed fields. NOTE: a view can use `card.tagName`
                   (now undefined) and still render without throwing — it is
@@ -95,7 +95,7 @@ steps:
         - |-
           # Completeness gate: the checklist must exist, have at least one
           # checked box, and have no unchecked boxes left.
-          f="config/migration-runs/view-card-shape.checklist.md"
+          f="_config/migration-runs/view-card-shape.checklist.md"
           test -f "$f" && grep -q '\[x\]' "$f" && ! grep -q '\[ \]' "$f"
       severity: abort
       instructions:

@@ -7,7 +7,7 @@
  */
 
 import type { FastifyReply } from "fastify";
-import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../core/mobile/mobile-session.js";
+import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../core/mobile/session.js";
 import { isMobileDeviceActive, type MobileBearerIdentity } from "../core/mobile/pairing.js";
 import type { MobileRequestAuth } from "../core/mobile/request-auth.js";
 import { getPublicUrl } from "../lib/public-url.js";

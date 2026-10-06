@@ -91,7 +91,7 @@ of branches where it is free.
 ## What already exists
 
 - **The transform is a shared, exported function.** `generateTestSource` at
-  `agent-doctest/src/doctest-hooks.ts:366`, published as `agent-doctest/hooks`.
+  `agent-doctest/src/doctest-hooks.ts:366` (moved to `agent-doctest/src/doctest-hooks/hooks.ts`), published as `agent-doctest/hooks`.
   The graph pass calls it rather than reimplementing it. **Verified working** —
   the spike built all 484 entrypoints through it.
 - **The resolution rules live in one file and must stay that way.** The loader's
@@ -99,7 +99,7 @@ of branches where it is free.
 - **The resolution surface is one alias.** `"@shared/*": ["./src/shared/*"]`
   (`beebox/tsconfig.json:37-39`); the frontend's other four are
   deliberately unresolvable in the doctest program (`tsconfig.json:34-36`).
-- **esbuild already drives a build step** (`scripts/build-cli.ts:32`,
+- **esbuild already drives a build step** (`scripts/build-cli.ts:32` (moved to `beebox/src/scripts/build-cli/build/bundle.ts`),
   `packages: "external"`). Reused with `metafile: true`, `write: false`.
 - **`/finish` already computes the diff** (`.claude/agents/finish.md:69-70`) and
   has a per-path verification map (`:184-196`). Reused verbatim.
@@ -190,7 +190,7 @@ Two plugins: the doctest transform (`generateTestSource`, `loader: "ts"`,
 **extracted** from `doctest-hooks.ts`.
 
 The extraction target is specified, because leaving it open would put an
-unresolved question inside a first chunk: **`agent-doctest/src/resolve-rules.ts`**
+unresolved question inside a first chunk: **`agent-doctest/src/resolve-rules.ts` (moved to `agent-doctest/src/doctest-hooks/resolve-rules.ts`)**
 — `.mjs`, matching the hook that consumes it, so no cross-language boundary is
 introduced into a published package. Added to `exports` as `./resolve-rules`
 alongside the existing four (`agent-doctest/package.json:6-10`); imported
@@ -534,7 +534,7 @@ selected = alwaysRun ∪ graph.unresolved ∪ changedTests ∪ implicated
 and **no `FULL` fallback.** `alwaysRun` is edge-based rather than a set: each
 (spawner test → source ref it hands a child process) pair is an extra edge, so
 a spawner runs when the change matches one of ITS refs — and a `dist/cli.mjs`
-ref matches the bundle's real inputs, computed from `scripts/build-cli.ts`'s
+ref matches the bundle's real inputs, computed from `scripts/build-cli.ts` (moved to `beebox/src/scripts/build-cli/build/bundle.ts`)'s
 entry (932 files across most of `src/`, not `src/cli/**`) — instead of all ten
 spawners running on every selected run. An unaccounted path contributes nothing. If the
 result is empty the selector prints `no test imports the changed paths` and

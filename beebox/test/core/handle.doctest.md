@@ -17,7 +17,7 @@ import {
   TRIAGE_ITEMS_ENV,
 } from "../../src/core/handle.js";
 import { formatHandleInconclusiveLine } from "../../src/shared/inconclusive.js";
-import { createCollectorContext } from "../../src/core/commands/index.js";
+import { createCollectorContext } from "../../src/core/command-runner.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 

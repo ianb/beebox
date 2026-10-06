@@ -23,7 +23,7 @@
  * share one implementation.
  */
 
-import { BOX_ROOT_VOCABULARY } from "../lib/box-root-vocabulary.js";
+import { BOX_ROOT_VOCABULARY } from "./box-root-vocabulary.js";
 
 const AREA_NAMES: readonly string[] = BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area").map(
   (entry): string => entry.name

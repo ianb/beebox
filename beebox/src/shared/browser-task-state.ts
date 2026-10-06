@@ -1,6 +1,6 @@
 /**
  * The lifecycle state of a browser-task card, derived from its fields. A
- * feed task is a standing subscription: `open | closed` alone cannot say
+ * feed task is a standing subscription: `closed` alone cannot say
  * whether it has ever run or whether it is overdue. This is the one place
  * that judgment lives; the view, the dashboard, and the list procedure all
  * call it.
@@ -19,7 +19,8 @@ export type BrowserTaskState =
   | { kind: "due"; lastAt: string; dueAt: string; overdueMs: number };
 
 export interface BrowserTaskStateInput {
-  status: unknown;
+  /** The card's `closed` field. */
+  closed: unknown;
   /** The card's `last-upload`, an ISO instant, or absent. */
   lastUpload: unknown;
   /** The card's `rescan-after`, an ISO-8601 duration, or absent. */
@@ -27,7 +28,7 @@ export interface BrowserTaskStateInput {
 }
 
 export function browserTaskState(input: BrowserTaskStateInput, nowMs: number): BrowserTaskState {
-  if (input.status === "closed") return { kind: "closed" };
+  if (input.closed === true) return { kind: "closed" };
   const lastAt = typeof input.lastUpload === "string" ? input.lastUpload : null;
   const lastMs = lastAt === null ? Number.NaN : new Date(lastAt).getTime();
   if (lastAt === null || Number.isNaN(lastMs)) return { kind: "never-scanned" };

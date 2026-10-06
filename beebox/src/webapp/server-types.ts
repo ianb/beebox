@@ -6,8 +6,8 @@
 
 import type { ChatBackend } from "../services/claude-chat-types.js";
 import type { FastifyInstance } from "fastify";
-import type { Services } from "../services/index.js";
-import type { EventBus } from "../core/event-bus.js";
+import type { Services } from "../services/container.js";
+import type { EventBus } from "../core/event-bus/core.js";
 
 export interface BoxSpec {
   slug: string;
@@ -65,6 +65,8 @@ export interface InternalServerOptions extends ServerOptions {
    * Claude subprocess.
    */
   chatBackend?: ChatBackend | undefined;
+  /** Replace scan promotion work in route tests while retaining lifecycle wiring. */
+  scanPromoteRun?: ((boxRoot: string) => Promise<void>) | undefined;
   /**
    * Directory holding the built frontend (`index.html` and friends). Defaults
    * to `<package root>/src/frontend/dist`, which is what every production

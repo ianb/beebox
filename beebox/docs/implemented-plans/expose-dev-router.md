@@ -35,7 +35,7 @@ password (owner); and the paired **iOS app must work** through it.
 - `code-style.md` — no default params, max-2-positional, no `any`, blessed cast
   helpers; the router's large defensive budget (code-style: "process-supervision
   code keeps the biggest defensive budget").
-- **Precedent (the spine): the prod hub's front-door auth**, `src/hub/hub-server.ts`
+- **Precedent (the spine): the prod hub's front-door auth**, `src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`)
   — `decideHubAuth`/`hasMobileAuth`/`stripHubHeaders`/`verifyMobileRequest` +
   lazy cold-start. The router adopts this; reuse over reinvention.
 - **Precedent: the box preHandler** `src/webapp/server-box-scope.ts:62`
@@ -43,7 +43,7 @@ password (owner); and the paired **iOS app must work** through it.
 
 ## What already exists
 
-- **The hub is already an authenticating proxy.** `src/hub/hub-server.ts`:
+- **The hub is already an authenticating proxy.** `src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`):
   `hasMobileAuth`/`verifyMobileRequest` fully verify mobile bearer/cookie before
   proxying or cold-starting (closed risk S1, per mobile-contract); `decideHubAuth`
   (228) gates; `stripHubHeaders` (206) removes client-supplied `x-bbx-*`;

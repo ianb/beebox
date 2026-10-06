@@ -9,13 +9,13 @@ import {
   PARKED_TEMPLATE_RESOLUTION,
   TEMPLATE_UPDATES_DIR,
 } from "../../core/install-template-file.js";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
 import { checkBoxRoot } from "../../lib/box-root-check.js";
-import { loadBoxSchemas } from "../../schemas/registry.js";
-import { listSchemaLoadFailures } from "../../schemas/schema-load-status.js";
+import { loadBoxSchemas } from "../../schemas.js";
+import { listSchemaLoadFailures } from "../../schema-load-status.js";
 import { getEngineVersionReport } from "../../core/engine-version.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const statusCommand = new Command("status")
   .description("Show current state summary")
@@ -69,8 +69,8 @@ export const statusCommand = new Command("status")
       }
 
       // Questions
-      const pending = state.questions.filter(q => q.status === "pending");
-      const answered = state.questions.filter(q => q.status === "answered");
+      const pending = state.questions.filter(q => q.state === "pending");
+      const answered = state.questions.filter(q => q.state === "answered");
       console.log(`Questions: ${pending.length} pending, ${answered.length} answered`);
       if (pending.length > 0 && options.verbose) {
         printCards(pending);
@@ -147,7 +147,6 @@ async function printRootStrays(boxRoot: string): Promise<void> {
 
 function printCards(cards: CardInfo[]): void {
   for (const card of cards) {
-    const status = card.status ? ` [${card.status}]` : "";
-    console.log(`  - ${card.relativePath}${status}`);
+    console.log(`  - ${card.relativePath}`);
   }
 }

@@ -8,15 +8,19 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, cardRef, type InferCardFields } from "../cards/index.js";
+import { cardSchema, cardRef, type InferCardFields } from "../exports/cards.js";
 
 export const IntakeJobSchema = cardSchema("intake-job", {
+  brief: "A job to triage arrivals",
   description: "A system job to triage newly arrived inbox items; created by connectors and bbx wakeup",
   category: "system",
   searchable: false,
   fields: {
-    status: z.string().default("pending"),
-    source: z.string(),
+    /**
+     * The connector whose scoped wakeup made this job, when one did.
+     * `bbx wakeup --connector X` drains only jobs with `connector: X`.
+     */
+    connector: z.string().optional(),
     priority: z.enum(["normal", "low"]).default("normal"),
     description: z.string(),
     items: z.array(cardRef()),
@@ -53,14 +57,13 @@ An intake job means new items have arrived in the inbox and need triage.
 export type IntakeJobFields = InferCardFields<typeof IntakeJobSchema>;
 
 export function createIntakeJobTemplate(options: {
-  source: string;
+  connector?: string | undefined;
   description: string;
   items: string[];
   priority?: "normal" | "low";
 }): string {
   const fields: Record<string, unknown> = {
-    status: "pending",
-    source: options.source,
+    ...(options.connector === undefined ? {} : { connector: options.connector }),
     priority: options.priority ?? "normal",
     description: options.description,
     items: options.items.map((ref) => ({ ref })),

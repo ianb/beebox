@@ -5,7 +5,7 @@
 
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
-import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { FriendlyDate } from "../ui/FriendlyDate";
 import { isRecord } from "@shared/is-record";
 import type { BrowserTaskRunEntry } from "@schemas/browser-task";
@@ -42,7 +42,7 @@ export function RunsTable({ runs }: { runs: unknown }) {
   return (
     <Card padding="md">
       <Stack gap="sm">
-        <Text as="h2" size="lg" weight="bold">Runs</Text>
+        <Heading level={2}>Runs</Heading>
         <div className="overflow-x-auto">
           <RunsGrid rows={rows} />
         </div>

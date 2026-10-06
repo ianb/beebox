@@ -90,3 +90,12 @@ a different backend may fail differently. Related:
 [mark low-confidence words in a transcript](../closed/features/2026-08-15-mark-low-confidence-words-in-transcripts.md)
 — the same confidence data would show, concretely, how badly the canonical
 phrase is being heard rather than leaving it to impression.
+
+## Re-encounter (2026-09-30)
+
+The boxholder reports that "send and close" still does not get detected well
+in ordinary use, and wants it improved soon. No new transcript samples were
+collected. A useful first step: collect the misheard forms from live-text
+logs (the untagged phrase appearing as plain words, per the pattern in
+`narration-mode-doc.ts:39`) to see what the transcriber actually produces.
+

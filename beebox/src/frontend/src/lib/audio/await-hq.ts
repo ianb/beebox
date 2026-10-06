@@ -8,7 +8,7 @@
 
 import { startAwakeTimeout } from "@shared/awake-timeout.js";
 import { delay } from "@shared/backoff.js";
-import { trpcClient } from "../trpc";
+import { trpcClient } from "../trpc/client";
 import { busEventData, unwrapBusEvent, type WireBusEvent } from "../bus-events";
 import { createHqWaiter, type HqWaitDeps, type HqWaitOutcome, type HqWaitRequest, type HqWaiter } from "./hq-wait";
 

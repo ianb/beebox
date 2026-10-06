@@ -14,7 +14,7 @@
  */
 
 import { serviceCapabilities } from "../../../core/model-capabilities.js";
-import { ownerProcedure, router } from "../trpc.js";
+import { ownerProcedure, router } from "../procedures.js";
 
 export const voiceRouter = router({
   capabilities: ownerProcedure.query(({ ctx }) => serviceCapabilities(ctx.boxRoot)),

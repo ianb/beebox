@@ -12,6 +12,19 @@ Thin wrapper around the upstream [`agent-browser`](https://github.com/vercel-lab
 
 Cheat sheet: [`.claude/skills/browse/SKILL.md`](../.claude/skills/browse/SKILL.md).
 
+Scrolling is page-scoped by default. For an inner pane, pass its CSS selector
+explicitly; the upstream command supports this form and the wrapper forwards
+it unchanged:
+
+```bash
+bin/browse scroll down 500 --selector ".scroll-container"
+```
+
+Do not infer an active pane from the page. Discover the intended scrollable
+element from the snapshot or its geometry, then target that selector. A bare
+`scroll` can report success while leaving an inner pane at the same position
+when the document itself has no scroll range.
+
 **`BROWSE_BASE_URL`** overrides the router-derived base for a driver that owns its own server instead of going through the shared dev router (beebox's field-test harness starts a dedicated `bbx serve` on a free port). It moves both the `/`-leading path rewrite and the browse-key cookie's host, so `BROWSE_BASE_URL=http://127.0.0.1:4711/box bin/browse open /` drives that server's box and authenticates it with the short-lived cookie in this worktree's isolated profile. Unset (normal use) changes nothing.
 
 ## Layout
@@ -21,13 +34,13 @@ src/                                  CLI entry, worktree detection, screenshot 
 packages/agent-browser-typed/         Typed TS interface to the upstream CLI surface
   src/commands/                       One typed function per upstream subcommand
   help/                               Checked-in `agent-browser <cmd> --help` snapshots
-  scripts/verify-help.ts              Diffs captured vs current; reports drift
+  src/scripts/verify-help.ts          Diffs captured vs current; reports drift
 ```
 
 ## Adding a typed command
 
 1. Add `packages/agent-browser-typed/src/commands/<cmd>.ts` with a single exported function.
-2. Re-export from `packages/agent-browser-typed/src/index.ts`.
+2. Re-export from `packages/agent-browser-typed/src/exports/agent-browser-typed.ts`.
 3. Capture the help snapshot: `node_modules/agent-browser/bin/agent-browser-darwin-arm64 <cmd> --help > packages/agent-browser-typed/help/<cmd>.txt`.
 4. `pnpm verify-help` to confirm it matches.
 

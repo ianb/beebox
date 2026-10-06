@@ -24,13 +24,13 @@ Decide one of three things:
 - **Real leak.** Fix it by reusing the existing containment helpers named in
   `static-sweep.ts`'s doc comment (`containWithinBox`, `resolveCardPath`, etc.
   — don't invent a new one unless none fits). Add a regression assertion to
-  `beebox/test/webapp/cross-box-probe.doctest.md` proving the fix (create it
+  `beebox/test/scenarios/cross-box-probe.doctest.md` proving the fix (create it
   with one such assertion if it doesn't exist yet — the run script's `probe`
   line means it's missing). Report at `important`.
 - **False positive.** The sweep's regex over-matched. Say concretely why the
   line isn't the leak shape it looks like. Report at `fyi`.
 - **Real but accepted.** Same-user file readability is the documented
-  env-level posture; box paths and slugs are not confidential. `backlog`, with
+  env-level posture; box paths and slugs are not confidential. `fyi`, with
   the reason. Never mark something accepted just because a fix is hard — that
   is a real leak you're deferring, not an accepted one.
 
@@ -49,8 +49,8 @@ human should update given what you found.
 
 ## Finishing
 
-End with `bin/schedules alert --title "<one line>" --message "<paragraph>"
---priority <important|normal|fyi|backlog>` or `bin/schedules done` if nothing
+End with `bin/schedules alert --title "<one line>" --message "<Markdown: the finding, then a list>"
+--priority <important|normal|fyi>` or `bin/schedules done` if nothing
 needed doing. Say what you fixed, what you filed, what you called a false
 positive and why, and the branch's state (commits, suite status, ready to
 land or not).

@@ -81,7 +81,7 @@ one in this table; see "Google client credentials" below.
 **One deliberate reuse outside this table.** The dev repo's document-comment
 surface transcribes spoken comments with `BBX_OPENAI_API_KEY` — the
 `openai` (embeddings) variable above — rather than minting a third name
-(`workstreams-app/src/server/transcribe-openai.ts`). That is a **boxholder
+(`workstreams-app/src/server/main/transcribe-openai.ts`). That is a **boxholder
 decision, 2026-08-22**, on the grounds that a dev-surface key on the developer's
 own machine did not earn its own name.
 
@@ -90,7 +90,6 @@ distinct for boxes, for the reason `core/openai-thinking-key.ts` records: *"a
 transcription key is not consent to pay for embeddings, and boxes may hold
 different keys for each."* Nothing in a box reads `BBX_OPENAI_API_KEY` for
 transcription; only the dev tooling does.
-| `publish/<box>` | `publish/connector-secret.ts` | `publish.secret.json` | — |
 
 `openai` and `openai-thinking` are two names for two keys on purpose: a
 transcription key is not consent to pay for embeddings, and the split predates
@@ -114,12 +113,10 @@ surfaces:
   `GOOGLE_OAUTH_CLIENT_SECRET` from the environment, and that is real
   configuration for that surface, not a legacy fallback.
 
-The last two are **single-box** entries: they carry `owningBox` +
-`shareable: false` and are granted automatically by the flow that creates them
-(telegram setup, `bbx pub setup --mint-connector-token`). A grant to any other
-box is refused with an explanation — a Telegram bot token routes to one webhook
-URL and an R2 token is scoped to one bucket, so sharing would break routing
-rather than merely be unwise.
+`telegram-bot/<box>` is a **single-box** entry: it carries `owningBox` +
+`shareable: false` and is granted automatically by telegram setup. A grant to
+any other box is refused with an explanation — a Telegram bot token routes to
+one webhook URL, so sharing would break routing rather than merely be unwise.
 
 ## Why a secret exists
 
@@ -195,9 +192,8 @@ label), bounded only so the store and the admin page stay readable: one line,
 shape, which is what keeps one entry, one grant, and one rotation true for
 every provider. A credential that is structurally several fields is stored as a
 **JSON string** the consumer parses and validates with its own zod schema —
-`deepgram` (`{apiKey, projectId}`), `telegram-bot/<box>`
-(`{botToken, webhookSecret}`), `publish/<box>`
-(`{accountId, bucket, apiToken}`).
+`deepgram` (`{apiKey, projectId}`) and `telegram-bot/<box>`
+(`{botToken, webhookSecret}`).
 
 A stored value that is not valid JSON, or does not match the consumer's shape,
 degrades to **not configured** with one warning naming the secret
@@ -286,11 +282,17 @@ forgetting it is how a credential ends up committed):
    slot. The declaring box is recorded, so `bbx secrets status <box>` shows what
    it is still waiting on. An agent can declare; only the boxholder can supply a
    value or grant it (at `agent` access, for this endpoint to work).
-2. Resolve it **at call time**, every time. Hold the value in a local variable
-   for the length of the outbound request.
-3. Never write it anywhere: not a card, not a config file, not an env var, not a
-   log line, not the code. There is one copy, in the store, and rotation is
-   supposed to touch only that copy.
+2. For a trick, add `secrets.json` beside its `index.ts`, for example:
+   `[{"name":"openai-images","reason":"image-generation","env":"OPENAI_API_KEY"}]`.
+3. Run the trick normally with `bbx trick <name>`. The runner resolves the
+   declaration at launch and injects the value only into that child process.
+4. Never write the value yourself: not a card, config file, argument, log line,
+   or source file. The framework does not print it, but a trick can still expose
+   its own environment, so do not log or commit it.
+
+The raw HTTP route described above is a low-level engine reference. Do not
+debug it with shell `curl`: its successful response contains the plaintext
+credential and would put it in the tool transcript.
 
 ## Verification: the probe and format registries
 
@@ -305,9 +307,8 @@ are **advisory toward the value and authoritative about who decides**:
 - **Probe** (`src/core/secrets/probe-registry.ts`) — after a value is stored, one
   cheap harmless authenticated call decides `verified: ok | failed | unchecked`
   on the entry. `mistral`/`openai`/`openai-thinking`/`gemini`/`deepgram` use a
-  models-or-projects listing; `telegram-bot/<box>` uses `getMe`; `publish/<box>`
-  has none (an R2 check is neither free of side effects nor cheap) and stays
-  `unchecked`, as does any name with no entry.
+  models-or-projects listing; `telegram-bot/<box>` uses `getMe`; any name with
+  no entry stays `unchecked`.
 
 **Probe targets are server-owned and nothing else can name one.** An
 agent-supplied probe URL would send the freshly-saved secret wherever the agent
@@ -340,14 +341,16 @@ network path; an injected `fetch` still runs.
 ## The admin page
 
 The owner-only **Secrets** section on any box's admin page is the boxholder's
-surface (`src/frontend/src/components/admin/SecretsSection*.tsx`):
+surface (`src/frontend/src/components/admin/SecretsSection/*.tsx`):
 
-- **This box** — every granted name with its access level, verification badge,
-  note, **what it is used for** (built-in, declared, and observed — see "Why a
-  secret exists"), and last-used; set/rotate a value (masked input, soft format warnings);
-  raise/lower access; revoke; supply values for slots the agent declared; revoke
-  stale grants; grant an existing machine-level name (the picker hides names
-  another box owns exclusively).
+- **This box** — every granted name as one collapsed row (name, access level,
+  verification badge); open a row for its note, **what it is used for**
+  (built-in, declared, and observed — see "Why a secret exists"), last-used,
+  and the actions: set/rotate a value (masked input, soft format warnings),
+  raise/lower access, revoke. Below the rows, "Add a key to this box": grant an
+  existing machine-level name (the picker hides names another box owns
+  exclusively), or add a new one through the service picker. Slots the agent
+  declared and stale grants are listed when present.
 - **Machine-wide** (Decision 8) — every name on the machine, its grants across
   every box, `shareable` flags, uses, last-used, and removal. Reachable from any box's
   page, since the store is machine-level and there is no separate hub UI.
@@ -487,13 +490,13 @@ real store.
 
 From Admin → Secrets on a box, adding a key means "and use it here": the value
 is stored and this box is granted it at `server` access in one locked write
-(`setAndGrantSecret`), and the page says what the key now does. Granting is
-the advanced case — one store, many boxes, a second box borrowing what the
-first holds — and lives under *"Use a key another box already has"* at the
-bottom of the tab, shown only when there is something to borrow. The
+(`setAndGrantSecret`), and the page says what the key now does. Granting a
+name another box already holds is offered first under "Add a key to this box",
+shown when there is something to grant; with several boxes it is the ordinary
+case (2026-09-25; it was a closed disclosure at the bottom before). The
 Machine-wide tab's add form stores without granting, for that deliberate case.
 
-The names the engine recognises are offered as buttons, each with a
+The names the engine recognises are offered in the service picker, each with a
 **guide** (`core/secrets/guide-registry.ts`): what the credential is, where a
 person gets one, and what it looks like. What it is *used for* is not in the
 guide — it is joined from `uses.ts`, so a new consumer of a key shows up on the

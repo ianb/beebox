@@ -7,19 +7,21 @@ import { isRecord } from "@shared/is-record";
 import { apiRawFileUrl, getApiBase } from "../api";
 import { TabBar } from "../components/ui/TabBar";
 import { Text } from "../components/ui/Text";
+import { Hint } from "../components/ui/Hint";
+import { Heading } from "../components/ui/Heading";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { SheetTable, type CellValue } from "../components/SheetTable";
 import { AttachedComments } from "../components/AttachedComments";
 import { resolveRelativePath } from "../lib/view-url";
-import type { RendererProps } from "./index";
-import { registerFileType } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 // ─── Parsing ────────────────────────────────────────────────────────────────
 
 interface ParsedSheet {
   title: string;
+  /** When the file last changed on Drive. */
   modified: string;
   link: string;
   owner: string;
@@ -40,12 +42,13 @@ function parseSheetFrontmatter(fm: Record<string, unknown>): ParsedSheet {
       )
     : [];
 
+  const drive = isRecord(fm.drive) ? fm.drive : {};
   return {
     title: strOf(fm.title),
-    modified: strOf(fm.modified),
-    link: strOf(fm.link),
-    owner: strOf(fm.owner),
-    driveId: strOf(fm["drive-id"]),
+    modified: strOf(drive.modified),
+    link: strOf(drive.link),
+    owner: strOf(drive.owner),
+    driveId: strOf(drive.id),
     tabs,
   };
 }
@@ -110,10 +113,10 @@ function SheetView({ data }: RendererProps) {
       {/* Header */}
       <Row justify="between" align="start">
         <div>
-          <Text as="h2" size="lg" weight="semibold">{sheet.title}</Text>
+          <Heading level={2}>{sheet.title}</Heading>
           {sheet.modified ? (
             <Text as="p" size="xs" tone="muted">
-              Last synced: {new Date(sheet.modified).toLocaleString()}
+              Modified on Drive: {new Date(sheet.modified).toLocaleString()}
             </Text>
           ) : null}
         </div>
@@ -132,7 +135,7 @@ function SheetView({ data }: RendererProps) {
 
       {/* Table */}
       {loading ? (
-        <Text size="sm" tone="muted">Loading spreadsheet data...</Text>
+        <Hint>Loading spreadsheet data...</Hint>
       ) : (
         <SheetTable rows={currentRows} />
       )}
@@ -144,6 +147,7 @@ function SheetView({ data }: RendererProps) {
 
 // ─── Registration ───────────────────────────────────────────────────────────
 
-registerFileType({ type: "gsheet" }, {
+export const gsheetRenderer: RendererEntry = {
+  selector: { type: "gsheet" },
   renderer: { name: "Spreadsheet", Component: SheetView, priority: 100 },
-});
+};

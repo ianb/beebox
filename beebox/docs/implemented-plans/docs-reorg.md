@@ -54,7 +54,7 @@ plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
   and `user-story-audit-followups.md` (mostly done).
 - **Worst drift case: `triage-design.md`** — still opens with "early notes,
   design in progress" while the triage pipeline is fully built
-  (`src/core/triage/index.ts` etc.) and ~13 other docs cite this file as the
+  (`src/core/triage/index.ts` (moved to `beebox/src/core/triage/run/core.ts`) etc.) and ~13 other docs cite this file as the
   reference architecture. An agent landing there cold would badly misjudge
   whether the pipeline exists.
 - Root causes are known and self-documented: `plans/README.md`'s "Wiring
@@ -315,7 +315,7 @@ design sections are written)*
 2. **Corrections + non-obvious-conventions batch** — DONE (86cc902a).
    38 items: all confirmed-wrong claims fixed; 13 undocumented
    conventions documented at colocated homes (new `src/hub/CLAUDE.md`,
-   `docs/card-validation.md`); findability quick wins (Guides rows,
+   `docs/cards/validation.md`); findability quick wins (Guides rows,
    orphan links, prompt-audits ↔ bbx-prompt-review cross-refs).
 3. **CLAUDE.md slimming** — DONE. Root 47→34 lines (mechanism →
    `bin/CLAUDE.md`); beebox CLAUDE.md deduped/trimmed with
@@ -387,7 +387,7 @@ design sections are written)*
 
 **Critical gap:** orphan/broken-link creation is silent between manual
 doc-graph runs — track 7 is the fix; until it lands, `pnpm doc-graph`
-belongs in the maintenance cadence (it is listed in docs/maintenance.md).
+belongs in the maintenance cadence (it is listed in docs/development/maintenance.md).
 
 ## NOT in scope
 
@@ -395,7 +395,7 @@ belongs in the maintenance cadence (it is listed in docs/maintenance.md).
   templates, rules) — that's the bbx-context/bbx-prompt-review surface;
   this plan only touched it where dev docs were wrong about it.
 - The 277-unused-exports knip backlog (recorded in ideas.md).
-- Splitting `test/helpers/fake-agent.ts` to clear its pre-existing
+- Splitting `test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`) to clear its pre-existing
   single-export lint errors (noted during the reactor fix).
 - Automating design-doc freshness (e.g. doctest-enforced doc claims)
   beyond box-layout.md's existing doctest guard.

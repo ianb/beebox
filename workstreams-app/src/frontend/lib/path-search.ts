@@ -9,7 +9,7 @@
 // is what says so.
 
 import type { DocumentKind } from "../../shared/documents.js";
-import type { DocumentLifecycle } from "../../../../beebox/src/dev/document-lifecycle.js";
+import type { DocumentLifecycle } from "../../../../beebox/src/dev/doc-graph-data/document-lifecycle.js";
 
 export interface IndexedPath {
   relPath: string;

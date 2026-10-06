@@ -1,0 +1,116 @@
+# A journey is a person with a goal, not a script of steps. Everything here either
+# shapes the world the person arrives in, or is handed to them verbatim.
+#
+# `watch_for` is the one field that must NEVER reach the walker — it is for whoever
+# reads the notes afterwards.
+#
+# People named here are from docs/example-names.md — the canonical fictional
+# roster — so nothing in this journey refers to a real person.
+
+id: A-lending
+title: I want to remember who has my stuff
+
+box:
+  base: empty
+  # No setup: the person arrives with memories, not material. Everything the box
+  # ends up holding has to come out of their head through conversation, which is
+  # the seam this journey tests — B tested intake from photos; this tests intake
+  # from recollection, with all its fuzziness intact.
+  setup: null
+
+# No assets, deliberately. An asset would become the task (observed in the B
+# pilot); this person's only input is what they remember, at the level of
+# confidence they actually remember it.
+assets: []
+
+sittings: 1
+budget_actions: 50
+
+# Handed to the person verbatim. Their life and their reason — no product words,
+# no routes. The fuzziness is not colour; it is the material. A person who could
+# produce a tidy table of their lends would not need help.
+situation: |
+  You lend things to people and then lose track. Not valuable things, mostly —
+  books, tools, camping gear — but it adds up, and twice now you have bought a
+  replacement for something that was sitting in a friend's garage the whole time.
+
+  What you can actually remember, sitting down tonight:
+
+  Idris has your camping stove. That one you are sure of — he borrowed it in
+  spring for a trip that got cancelled, and it never came back. It matters right
+  now because you have a campsite booked for mid-October and you want the stove
+  back well before that.
+
+  Noor has two of your books. You can only name one for certain — "The Overstory".
+  The other you remember handing her at the same time but not what it was.
+
+  The good tape measure is a sore spot. You think you lent it to Bram around
+  March, but you are honestly not sure you didn't just lose it. You have been
+  doing without one since.
+
+  And it goes the other way too: Marisol's cake carrier has been in your hall
+  closet since a birthday two months ago, and every time you see it you feel a
+  small stab of guilt.
+
+  What you want is to stop holding all this in your head. In a month you would
+  like to be able to ask — who has what of mine, what do I have of other
+  people's, and what should I actually chase this week — and trust the answer.
+  Tonight is the first evening: you are finding out whether this is going to be
+  any good for that before you put more of your life into it.
+
+closing: |
+  Getting tonight's memories in is not the finish line. Life keeps moving while
+  you do this, and two things happen during your evening:
+
+  Noor texts — she has finished The Overstory and will drop it round tomorrow,
+  and the other book (she reminds you: it was "Piranesi") she would like to keep
+  for another month. That is both a return on its way and a mystery solved.
+
+  And your neighbour Saoirse knocks: she is painting her landing and asks to
+  borrow your stepladder. You say yes. Future-you needs to know it is gone.
+
+  Get both of those in. Then spend what is left of your time on the questions you
+  came for: who has what, what do you owe, and what should you chase this week —
+  and whether you believe the answers. Push on the tape-measure doubt too: you
+  want it recorded the way you actually hold it, not flattened into a certainty
+  you do not have.
+
+# For the reader of the notes. Never shown to the walker.
+watch_for: |
+  Lending is state that changes, and the changes are the test. B measured intake;
+  this measures whether records survive contact with a return, a correction, and
+  a brand-new lend an hour after setup. Watch whether Noor's return CLOSES
+  something — status change, record gone, however the box models it — or whether
+  it just piles a contradicting sentence on top of the original ("has two books"
+  + "returned one"), leaving a future reader to do the arithmetic. That
+  accumulation is the same rot as B's counts-in-prose.
+
+  Both directions. Borrowed and lent are mirror images, and the cake carrier is
+  there to see whether the box keeps the direction straight — "what do I owe"
+  and "who owes me" must not blur into one pile of stuff-related notes.
+
+  Uncertainty held honestly. The tape measure is possibly-lent-possibly-lost and
+  the person SAYS so. B's walk showed the agent honouring "mark it unknown" for
+  contents; the question here is whether doubt about a fact survives being
+  recorded, or whether the record comes back later as confident fact ("Bram has
+  the tape measure") — manufactured certainty, the exact thing they came to
+  escape.
+
+  The chase question. "What should I chase this week" has a right answer shaped
+  by time: the stove has an October deadline, the tape measure is blocked on
+  resolving the doubt, Piranesi is settled for a month, the cake carrier is
+  theirs to act on any time. A flat list of open loops is a worse answer than a
+  short one that respects why each item matters.
+
+  People. Idris, Noor, Bram, Marisol, Saoirse — five names, each attached to an
+  object and nothing else. Does the box grow a notion of these people (person
+  cards exist as machinery)? Does the walker ever discover that people are a
+  thing here, or do names stay strings inside item records?
+
+  Vague time. "Spring", "around March", "a birthday two months ago" — does any
+  of that survive into the records, and does anything downstream (the chase
+  answer, any reminder offered) actually use it?
+
+  Whether anything OFFERS to follow up. The box has scheduling machinery; the
+  October deadline is a natural hook. Does the agent volunteer a nudge, does the
+  person ask for one, does anything land that would actually fire?

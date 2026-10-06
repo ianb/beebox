@@ -12,7 +12,7 @@ should be extracted behind something like `pnpm serve` / its own entry point.
 
 `bbx` currently exposes **62 registered top-level commands**. `serve` and `hub`
 are the clearest non-agent ones; the whole surface deserves a pass, tracked in
-[audit the `bbx` subcommand surface](2026-08-08-audit-bbx-subcommand-surface.md).
+[audit the `bbx` subcommand surface](../closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md).
 
 ## The bigger cost is dependencies, not bundle bytes
 
@@ -38,7 +38,7 @@ the server tree entirely. That's the win worth having.
 
 Two need a judgment call rather than an assumption:
 
-- `esbuild` — used by the view compiler (`src/webapp/views/compiler.ts`). Boxes
+- `esbuild` — used by the view compiler (`src/webapp/views/compiler.ts` (moved to `beebox/src/webapp/views/compiler/compile.ts`)). Boxes
   don't compile their own views, the engine does, so this looks server-side, but
   confirm against `bbx view test` / `view-typecheck`, which are plausibly
   box-facing.
@@ -50,7 +50,7 @@ Two need a judgment call rather than an assumption:
 
 `bbx serve` is not just a dev convenience — extraction has to keep these working:
 
-- `src/hub/supervisor.ts:432` spawns `["serve", boxRoot, "--slug", …]` as a
+- `src/hub/supervisor.ts:432` (moved to `beebox/src/hub/supervisor/core.ts`) spawns `["serve", boxRoot, "--slug", …]` as a
   child process per box. The hub is how prod runs; see
   `beebox/CLAUDE.md`.
 - systemd units in `deploy/setup-server.sh:210` and

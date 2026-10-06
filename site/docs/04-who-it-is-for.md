@@ -18,8 +18,8 @@ the system checks. Terms are defined in [the glossary](concepts/glossary.md).
   repair, even though daily use happens in a web interface and chat.
 - You want an assistant whose memory is plain files you own, that accumulates
   records over months, and that you can read, correct, and version.
-- You are willing to run an agent that has real filesystem and shell access
-  to the box.
+- You are comfortable with an assistant that works directly on your files,
+  the way a coding agent works on a code repository.
 
 ## It does not fit you if
 

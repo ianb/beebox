@@ -5,7 +5,7 @@ area: beebox
 labels: [typescript, tooling]
 filed-by: agent
 discovered-by: agent
-discovered-in: mjs-to-typescript worktree — adding `scripts/build-cli.ts` to a tsconfig
+discovered-in: mjs-to-typescript worktree — adding `scripts/build-cli.ts` (moved to `beebox/src/scripts/build-cli/build/bundle.ts`) to a tsconfig
 priority: normal
 ---
 
@@ -20,7 +20,7 @@ in August 2026 (`tsconfig.user-stories.json`, filed after a `tsc` run over that
 directory turned out to be the first one ever — ~1,400 unchecked lines). The same
 hole is still open for the other two:
 
-- `scripts/` — 14 `.ts` files plus shell scripts. Only `scripts/build-cli.ts` is
+- `scripts/` — 14 `.ts` files plus shell scripts. Only `scripts/build-cli.ts` (moved to `beebox/src/scripts/build-cli/build/bundle.ts`) is
   type-checked, via `tsconfig.tooling.json`, because the `.mjs` sweep added it.
 - `test/` — the tap suites and `.doctest.md` fixtures' companion `.ts`.
 

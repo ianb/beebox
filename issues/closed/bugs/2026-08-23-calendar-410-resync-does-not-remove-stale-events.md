@@ -12,16 +12,16 @@ resolution: implemented
 
 **What is wrong.** The Google Calendar connector treats an invalid incremental
 sync token as recoverable, but it implements only the token half of recovery.
-`beebox/src/connectors/google-calendar.ts:280-285` deletes the token,
+`beebox/src/connectors/google-calendar.ts:280-285` (moved to `beebox/src/connectors/google-calendar/connector.ts`) deletes the token,
 saves state, and calls `syncCalendar` without a token. It does not clear or
 reconcile the affected calendar's existing `eventFiles` entries and `.ics`
 files.
 
-`beebox/src/connectors/google-calendar-sync.ts:267-286` fetches the full
+`beebox/src/connectors/google-calendar-sync.ts:267-286` (moved to `beebox/src/connectors/google-calendar/sync.ts`) fetches the full
 window and reconciles only events returned by Google. There is no pass that
 removes a previously tracked event absent from the new full response. The real
 service does not request `showDeleted` on a full-window list
-(`beebox/src/services/google-calendar.ts:106-123`). An event deleted
+(`beebox/src/services/google-calendar.ts:106-123` (moved to `beebox/src/services/google-calendar/core.ts`)). An event deleted
 remotely while the token was invalid can therefore remain indefinitely as a
 stale local `.ics` file.
 

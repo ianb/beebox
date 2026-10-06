@@ -198,3 +198,11 @@ Pending author bodies are replaced before either HTML or Markdown is rendered;
 other empty bodies fail the build. Provenance is appended automatically,
 independently of any editorial note inside the body. Main documents can opt
 into the same fields. Changing a card's suffix does not waive this guard.
+
+## Single-column pages
+
+A page card with `layout: single` renders without a context pane: the reading
+card alone, centered, the way the navigation card itself renders. The front
+page uses it so the prompts sit above the fold in one document. Everything
+else about the page (menu, `next`, links) is unchanged.
+

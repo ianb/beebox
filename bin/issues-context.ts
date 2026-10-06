@@ -10,15 +10,15 @@
 import {
   REPO_ROOT, loadIssueEntries, matchesFilters,
   type IssueEntry, type IssueFilters,
-} from "../workstreams-app/src/server/issue-search-model.js";
+} from "../workstreams-app/src/server/main/issue-search-model.js";
 import {
   EMBEDDING_KEY_VARS, manifestPaths, refreshIndex, resolveEmbeddingsService,
   type IndexScope,
-} from "../workstreams-app/src/server/issue-index.js";
+} from "../workstreams-app/src/server/main/issue-index.js";
 import {
   DOCS_SUBDIR, issueDocument, loadDocDocuments, type IndexDocument,
-} from "../workstreams-app/src/server/issue-index-documents.js";
-import type { IndexHit, SearchMode } from "../workstreams-app/src/server/issue-index-query.js";
+} from "../workstreams-app/src/server/main/issue-index-documents.js";
+import type { IndexHit, SearchMode } from "../workstreams-app/src/server/main/issue-index-query.js";
 import { narrowsToIssues, type ParsedValues } from "./issues-args.js";
 import {
   AmbiguousIssueError, CorpusNotEmbeddedError, MissingEmbeddingsKeyError,

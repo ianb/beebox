@@ -6,17 +6,16 @@
  * question declared one — records the durable learning the answer teaches.
  */
 
-import { cardSchema, cardRef, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
-import { QuestionLearning, type QuestionLearningFields } from "./question.js";
+import { cardSchema, cardRef, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
+import { QuestionLearning, type QuestionLearningFields } from "../question-fields.js";
 import { z } from "zod";
 
 export const QuestionFollowupJobSchema = cardSchema("question-followup-job", {
+  brief: "A job carrying an answer",
   description: "A system job created when the user answers a question — carries the directive and answer for an agent to act on",
   category: "system",
   searchable: false,
   fields: {
-    status: z.string().default("pending"),
-    source: z.string().default("question-answer"),
     description: z.string(),
     "question-ref": cardRef(),
     directive: z.string(),
@@ -39,7 +38,7 @@ A user has answered a question. Your job has up to three steps — do all that a
 4. **If \`learning:\` is present, record it.** \`learning.proposal\` is the
    belief being tested; the user's answer either confirms it, denies it, or
    qualifies it. Record the outcome in \`learning.sink\` (\`guide\`,
-   \`briefing\`, or \`personality\`) as a \`source: user-stated\` belief —
+   \`briefing\`, or \`personality\`) as a \`basis: user-stated\` belief —
    the evidence model in \`docs/implemented-plans/box-retrospectives.md\`
    applies: quote the answer, ref the question card. A "no" is also
    learning — record the decline against the proposal rather than silently
@@ -78,8 +77,6 @@ export function createQuestionFollowupJobTemplate(options: {
   learning?: QuestionLearningFields;
 }): string {
   const fields: Record<string, unknown> = {
-    status: "pending",
-    source: "question-answer",
     description: options.description,
     "question-ref": { ref: options.questionRef },
     directive: options.directive,

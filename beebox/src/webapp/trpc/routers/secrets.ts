@@ -9,12 +9,12 @@
  * surface for every other box's credentials on the same host. Open access does
  * not qualify here; a real signed-in owner identity does.
  *
- * Otherwise owner-gated throughout, and **no procedure here returns a secret value** —
- * not on a read, not as an echo after a write, not in an error message. Every
- * shape below is metadata: whether a slot holds a value, when it was last used,
- * what the last verification concluded. That is the whole point of a custody
- * store; a "just show me the key" affordance would hand every credential on the
- * machine to any browser session that reaches an owner's admin page.
+ * Normal procedures are metadata-only. The explicit `revealValue` procedure
+ * returns a stored value only to a real signed-in owner after an explicit
+ * request; the Admin UI separately refuses when navigator.webdriver is true.
+ * The route records successful disclosure in the access log.
+ * Every other shape below is metadata: whether a slot holds a value, when it
+ * was last used, and what the last verification concluded.
  *
  * Two views, because the store is machine-level while a box's page is not
  * (Decision 8): `boxStatus` is this box's own situation — what it can resolve,
@@ -41,8 +41,10 @@ import {
 import { builtinSecretUses } from "../../../core/secrets/uses.js";
 import { describeSecretProbe, probeSecret, type SecretVerified } from "../../../core/secrets/probe-registry.js";
 import { loadSecretStore, secretAccessLevelSchema } from "../../../core/secrets/store.js";
+import { appendOwnerSecretRead } from "../../../core/secrets/access-log.js";
+import { getBoxTimeISO } from "../../../lib/time.js";
 import { boxSlug } from "../../../lib/box-slug.js";
-import { authenticatedOwnerProcedure, router } from "../trpc.js";
+import { authenticatedOwnerProcedure, router } from "../procedures.js";
 
 /**
  * Store names are flat identifiers; `name/<box>` is the per-box form. Trimmed
@@ -122,6 +124,21 @@ export const secretsRouter = router({
     const boxes = store.ok ? Object.keys(store.value.grants).toSorted() : [];
     return { thisBox: slug, boxes, secrets };
   }),
+
+  /** Explicit, audited owner read. Values enter the page only after this call. */
+  revealValue: authenticatedOwnerProcedure
+    .input(z.object({ name: secretNameSchema }).strict())
+    .mutation(async ({ ctx, input }) => {
+      const loaded = await loadSecretStore();
+      if (!loaded.ok) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "The secret store could not be read." });
+      const value = loaded.value.secrets[input.name]?.value;
+      if (value === undefined) throw new TRPCError({ code: "NOT_FOUND", message: "This secret has no stored value." });
+      await appendOwnerSecretRead({
+        ts: getBoxTimeISO(ctx.boxRoot), box: ctx.boxSlug, secret: input.name,
+        purpose: "owner revealed value in Admin",
+      });
+      return { value };
+    }),
 
   /** The soft-format registry, fetched once so the UI can warn as the user types. */
   formatHints: authenticatedOwnerProcedure.query(() => listSecretFormats()),

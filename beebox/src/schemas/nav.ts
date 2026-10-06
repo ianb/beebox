@@ -23,10 +23,10 @@
  */
 
 import { z } from "zod";
-import { cardSchema, splitCardContent, type CardSchema } from "../cards/index.js";
+import { cardSchema, splitCardContent, type CardSchema } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { NAV_ROUTES } from "../shared/nav-routes.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 
 const validHrefs = new Set(NAV_ROUTES.map((r) => r.href));
 const hrefList = NAV_ROUTES.map((r) => r.href).join(", ");
@@ -61,6 +61,7 @@ const NavObject = z.object(navFields);
 export type NavFields = z.infer<typeof NavObject>;
 
 export const NavSchema: CardSchema = cardSchema("nav", {
+  brief: "The box's top navigation",
   fields: navFields,
   searchable: false,
   instructions: `# Nav Card

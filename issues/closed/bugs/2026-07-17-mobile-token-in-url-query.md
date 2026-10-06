@@ -32,8 +32,8 @@ WebKit history is replayable indefinitely until someone notices and manually rev
 lack of expiry compounds the leak surface rather than bounding it.
 
 Consumed at three call sites that would all need to change together:
-`beebox/src/hub/hub-server.ts`, `beebox/src/webapp/server-box-scope.ts`, and
-`beebox/src/webapp/server-root.ts` (all read `?mobileToken=` via a duplicated
+`beebox/src/hub/hub-server.ts` (moved to `beebox/src/hub/server/core.ts`), `beebox/src/webapp/server-box-scope.ts`, and
+`beebox/src/webapp/server-root.ts` (moved to `beebox/src/webapp/server-root/root-routes.ts`) (all read `?mobileToken=` via a duplicated
 `mobileTokenFromUrl` parser — see the related code-quality issue for that duplication).
 
 Fix direction: scope the URL query param to a short-lived, single-use handshake token distinct from

@@ -13,15 +13,16 @@
  */
 
 import { apiRawFileUrl, getApiBase } from "../api";
-import { DoclingView } from "../components/DoclingView";
+import { DoclingView } from "../components/DoclingView/view";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { StatusMessage } from "../components/ui/StatusMessage";
+import { ErrorText } from "../components/ui/ErrorText";
 import { useDoclingDocument } from "../hooks/useDoclingDocument";
-import { isDoclingPath } from "../lib/docling";
-import type { RendererProps } from "./index";
-import { registerFileType } from "./index";
+import { isDoclingPath } from "../lib/docling/parse";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 /**
  * Characters of pretty-printed JSON we will put in the DOM. A DoclingDocument
@@ -45,12 +46,12 @@ function DoclingRawView({ data }: RendererProps) {
   const basename = data.path.split("/").pop() ?? data.path;
   const downloadUrl = apiRawFileUrl(getApiBase(), data.path);
 
-  if (isLoading) return <Text as="div" tone="subtle" className="p-4">Loading extraction…</Text>;
+  if (isLoading) return <StatusMessage className="p-4">Loading extraction…</StatusMessage>;
   if (error !== null || loaded === undefined) {
     return (
       <Stack gap="sm" className="p-4">
-        <Text as="p" tone="danger">Could not read {basename}: {error?.message ?? "no content"}</Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download the file</ExternalLink>
+        <ErrorText>Could not read {basename}: {error?.message ?? "no content"}</ErrorText>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );
   }
@@ -65,7 +66,7 @@ function DoclingRawView({ data }: RendererProps) {
           This extraction is {String(Math.round(loaded.text.length / 1024))} KB of JSON —
           too much to show at once. The Structure view reads it; the raw file downloads here.
         </Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download the file</ExternalLink>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );
   }
@@ -79,7 +80,7 @@ function DoclingRawView({ data }: RendererProps) {
           This extraction is {String(Math.round(pretty.length / 1024))} KB of JSON — too
           much to show at once. The Structure view reads it; the raw file downloads here.
         </Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download the file</ExternalLink>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );
   }
@@ -92,10 +93,12 @@ function DoclingRawView({ data }: RendererProps) {
 
 const selector = { match: (path: string) => isDoclingPath(path) };
 
-registerFileType(selector, {
+export const doclingStructureRenderer: RendererEntry = {
+  selector,
   renderer: { name: "Structure", Component: DoclingView, priority: 100 },
-});
+};
 
-registerFileType(selector, {
+export const doclingRawJsonRenderer: RendererEntry = {
+  selector,
   renderer: { name: "Raw JSON", Component: DoclingRawView, priority: 90 },
-});
+};

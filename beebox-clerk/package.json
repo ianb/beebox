@@ -8,7 +8,7 @@
     "dev": "wxt",
     "build": "wxt build",
     "postinstall": "wxt prepare",
-    "test": "tap test/*.test.ts",
+    "test": "tap --include='test/**/*.test.ts'",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/"
   },
@@ -40,7 +40,7 @@
   },
   "tap": {
     "plugin": [
-      "!@tapjs/node-serialize"
+      "!@tapjs/typescript"
     ],
     "node-arg": [
       "--import=tsx"

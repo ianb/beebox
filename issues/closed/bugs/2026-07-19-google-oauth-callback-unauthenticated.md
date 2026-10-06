@@ -9,14 +9,14 @@ resolution: implemented
 
 **Closed (implemented).** Fixed by requiring a one-time, server-minted `state`
 nonce on the connector OAuth callback: `googleSetup` (owner-gated) mints and
-persists the nonce (`src/connectors/google-oauth-state.ts`), and the callback
+persists the nonce (`src/connectors/google-oauth-state.ts` (moved to `beebox/src/google/oauth-state.ts`)), and the callback
 (`src/webapp/routes/admin.ts`) verifies-and-consumes it before exchanging any
 `code` — a caller who never passed the owner wall has no valid nonce, so no
 token write happens. Nonce is one-time (replay-safe) and short-lived; the
 `returnPath` and initiating owner now travel in the stored record, not the URL.
 See the commit adding `google-oauth-state.ts` plus its doctests
-(`test/connectors/google-oauth-state.doctest.md`,
-`test/webapp/routes/routes-google-oauth-callback.doctest.md`).
+(`test/connectors/google-oauth-state.doctest.md` (moved to `beebox/test/google/oauth-state.doctest.md`),
+`test/webapp/routes/routes-google-oauth-callback.doctest.md` (moved to `beebox/test/webapp/routes/auth/google.oauth-callback.doctest.md`)).
 
 Surfaced by a cross-model (Codex) security review of the local-password-auth
 branch; **pre-existing**, not introduced by that work, so it was filed rather

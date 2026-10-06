@@ -5,7 +5,7 @@ targets. Resolving one does not require adding it to the source scan, while a
 missing target or a relative path that escapes the monorepo stays unresolved.
 
 ```ts setup
-import { resolveExternalRef, type ExternalResolveContext } from "../../src/dev/doc-graph-data.js";
+import { resolveExternalRef, type ExternalResolveContext } from "../../src/dev/doc-graph-data/data.js";
 
 const context: ExternalResolveContext = {
   fromFile: "CLAUDE.md",

@@ -35,7 +35,7 @@ is the path the message's markdown carries:
 The migration moved `store/` (and `box/`, `people/`, `docs/`, `tmp/`,
 `config/`, `tricks/`) under the v3 areas and rewrote refs inside box content,
 but a chat transcript is not box content: it lives in the engine's session
-store, and nothing rewrote it. The resolver (`src/shared/ref-path.ts`,
+store, and nothing rewrote it. The resolver (`src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`),
 `view-url.ts`'s `resolveImageSrc`) resolves `/store/…` literally, the file and
 image routes look for a directory that no longer exists, and the card fetch
 behind an `.image.card` embed 404s. Every pre-migration message with an image

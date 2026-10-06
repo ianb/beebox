@@ -14,7 +14,7 @@ import { basename, join } from "node:path";
 import { homedir } from "node:os";
 import { parseEnv } from "node:util";
 import { request as httpRequest } from "node:http";
-import { invariant } from "../beebox/src/lib/invariant.js";
+import { invariant } from "../beebox/src/shared/invariant.js";
 import {
   BudgetExhaustedError,
   MissingBoxSlugError,
@@ -149,7 +149,7 @@ export function browseKey(): string | null {
 /**
  * The router's unix socket. A request arriving there is `trustedLocal` — a
  * browser cannot originate one, so the router treats the socket itself as the
- * capability and asks for no credential (workstreams-app/src/router/router-auth.ts). That is what lets
+ * capability and asks for no credential (workstreams-app/src/router/server/auth.ts). That is what lets
  * this tier drive the control plane it otherwise has no session for.
  */
 function routerSocket(): string {

@@ -25,7 +25,7 @@ The idle engine is the substrate for that, not an argument against it.
 Connectors are the abstraction for touching the outside world: each pulls
 external state into the box as cards, transforms formats, and pushes outbound
 cards back out (flushed by `bbx finalize`). See [`../connectors.md`](../connectors.md);
-calendar, a prime early integration, is [`../calendar.md`](../calendar.md).
+calendar, a prime early integration, is [`../calendar.md`](../connectors/calendar.md).
 
 The old claim that "nothing else is particularly privileged — not voice, not
 web, not any particular UI" no longer holds: **the web has become privileged**,

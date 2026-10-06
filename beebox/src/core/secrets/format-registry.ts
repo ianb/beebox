@@ -76,11 +76,6 @@ const secretFormats: Record<string, SecretFormat> = {
     pattern: /^{/,
     minLength: 20,
   },
-  "publish/": {
-    hint: 'JSON holding the R2 credentials: {"accountId": "…", "bucket": "…", "apiToken": "…"}. Normally written by `bbx pub setup`.',
-    pattern: /^{/,
-    minLength: 20,
-  },
 };
 
 function toEntry(key: string, format: SecretFormat): SecretFormatEntry {

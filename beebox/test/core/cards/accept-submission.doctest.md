@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { createEventBus, type EventBus } from "../../../src/core/event-bus.js";
+import { createEventBus, type EventBus } from "../../../src/core/event-bus/core.js";
 import { createBrowserTaskTemplate } from "../../../src/schemas/browser-task.js";
 import { acceptSubmission } from "../../../src/core/cards/accept-submission.js";
 
@@ -45,7 +45,7 @@ await box.write(
   "_content/tasks/Task.browser-task.card",
   createBrowserTaskTemplate({
     title: "Pottery Scan",
-    source: "https://example.com/feed",
+    start: "https://example.com/feed",
     prompt: "Scan the feed for show announcements.",
   })
 );
@@ -180,7 +180,7 @@ JSON.stringify({ ok: stray.ok, status: !stray.ok ? stray.status : null, kinds: !
 ```ts continue
 await box.write(
   "_content/tasks/Closed.browser-task.card",
-  "---\ntype: browser-task\ntitle: Closed Task\nstatus: closed\nsource: https://example.com/closed\n---\nDone scanning.\n"
+  "---\ntype: browser-task\ntitle: Closed Task\nclosed: true\nstart:\n  href: https://example.com/closed\n---\nDone scanning.\n"
 );
 box.commitAll("seed closed task");
 

@@ -15,9 +15,9 @@ strip below the status bar, and the banner is drawn on top. With both visible,
 the red banner hides the "Camera" and "Microphone" select labels.
 
 `CaptureErrorBanner` is `absolute top-14 … z-20`
-(`beebox/src/frontend/src/components/capture/CaptureErrorBanner.tsx:13`).
+(`beebox/src/frontend/src/components/capture/CaptureErrorBanner.tsx:13` (moved to `beebox/src/frontend/src/components/capture/CaptureOverlay/CaptureErrorBanner.tsx`)).
 `DeviceSettings` sits in normal flow directly under the status bar
-(`beebox/src/frontend/src/components/capture/CaptureOverlay.tsx:136-141`,
+(`beebox/src/frontend/src/components/capture/CaptureOverlay.tsx:136-141` (moved to `beebox/src/frontend/src/components/capture/CaptureOverlay/view.tsx`),
 panel markup in `DeviceSettings.tsx:21`), which is the same vertical band.
 
 The two are shown together in an ordinary case: the camera fails to start, the

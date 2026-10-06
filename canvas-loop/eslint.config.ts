@@ -11,8 +11,8 @@ import teaPlugin from "@ianbicking/canvas-loop/eslint";
 // on the package's non-JSX .ts files (they key off components/hooks/JSX).
 const base = vibeCheck({
   react: true,
-  roots: ["src", "examples", "gallery", "test", "browser", "dev-demo"],
-  ignores: ["**/*.mjs", "out/**", "gallery/out/**", "browser/dist/**"],
+  roots: ["src", "test"],
+  ignores: ["**/*.mjs", "out/**", "src/gallery/out/**", "src/browser/dist/**"],
 });
 
 // The TEA discipline (see TEA.md) applies to TEA sketches only. The mutable and
@@ -27,7 +27,7 @@ const teaSketches = teaPlugin.configs.recommended;
 // Kept out of `configs.recommended` because it needs tsconfig project membership
 // (gallery/ added to tsconfig include); wired in here on the same file glob.
 const teaExhaustiveness = {
-  files: ["examples/**/*-tea.ts", "gallery/**/*-tea.ts"],
+  files: ["src/examples/**/*-tea.ts", "src/gallery/**/*-tea.ts"],
   languageOptions: { parserOptions: { projectService: true } },
   rules: {
     "@typescript-eslint/switch-exhaustiveness-check": [
@@ -46,7 +46,7 @@ const teaExhaustiveness = {
 // library-code cap of 300 punishes — the fjord experiment burned edit rounds
 // compressing working code to fit. Sketch dirs only, still a hard cap.
 const sketchLineBudget = {
-  files: ["examples/**/*.ts", "gallery/**/*.ts"],
+  files: ["src/examples/**/*.ts", "src/gallery/**/*.ts"],
   rules: {
     "max-lines": ["error", { max: 600, skipBlankLines: true, skipComments: true }],
   },

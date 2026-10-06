@@ -1,8 +1,8 @@
 // Gallery corpus check (the `cli gallery check` subcommand): renders every
-// gallery/<slug> exercise, asserts run-twice byte-identical determinism, and
-// lints its sketch file. Read-only — the repo's gallery/ directory is never
+// src/gallery/<slug> exercise, asserts run-twice byte-identical determinism, and
+// lints its sketch file. Read-only — the repo's src/gallery/ directory is never
 // written to; each run lands in a throwaway temp directory. See
-// gallery/README.md for the on-disk schema this reads.
+// src/gallery/README.md for the on-disk schema this reads.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,7 +12,7 @@ import { parse as parseYaml } from "yaml";
 import { CliError } from "./errors.js";
 import { parseEvents } from "./events.js";
 import type { ScriptEvent } from "./events.js";
-import type { RunResult } from "./recorder.js";
+import type { RunResult } from "./recorder/frame-recorder.js";
 import { run } from "./runtime.js";
 import type { Sketch, SketchEventHandler, SketchModule } from "./sketch.js";
 import { parseTeaEvents } from "./tea-events.js";
@@ -20,7 +20,7 @@ import { isTeaModule, toTeaModule } from "./tea-load.js";
 import { teaRun } from "./tea-runtime.js";
 
 const PACKAGE_ROOT = new URL("../../", import.meta.url);
-const GALLERY_DIR = new URL("gallery/", PACKAGE_ROOT);
+const GALLERY_DIR = new URL("src/gallery/", PACKAGE_ROOT);
 const SKETCH_FILE_NAMES = ["sketch-tea.ts", "sketch.ts"] as const;
 
 const OPTIONAL_HANDLERS = [
@@ -86,7 +86,7 @@ function optionalInt(params: { record: Record<string, unknown>; key: string; fal
 }
 
 function loadMeta(exerciseDir: URL, slug: string): GalleryMeta {
-  const where = `gallery/${slug}/meta.yaml`;
+  const where = `src/gallery/${slug}/meta.yaml`;
   const raw: unknown = parseYaml(readFileSync(new URL("meta.yaml", exerciseDir), "utf8"));
   if (!isRecord(raw)) throw new CliError({ detail: `${where} must be a YAML mapping` });
   return {
@@ -108,7 +108,7 @@ function sketchFileName(exerciseDir: URL, slug: string): string {
   for (const name of SKETCH_FILE_NAMES) {
     if (exists(new URL(name, exerciseDir))) return name;
   }
-  throw new CliError({ detail: `gallery/${slug}: no sketch.ts or sketch-tea.ts found` });
+  throw new CliError({ detail: `src/gallery/${slug}: no sketch.ts or sketch-tea.ts found` });
 }
 
 function readFn<T>(mod: Record<string, unknown>, name: string): T | undefined {

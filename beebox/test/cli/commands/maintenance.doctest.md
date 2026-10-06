@@ -11,7 +11,7 @@ import { join, dirname } from "node:path";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { mkdir, writeFile, rm } from "node:fs/promises";
-import { defaultHubConfigPath } from "../../../src/hub/hub-config.js";
+import { defaultHubConfigPath } from "../../../src/hub/config.js";
 import { pathToFileURL } from "node:url";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { runMaintenance } from "../../../src/cli/commands/maintenance.js";
@@ -22,7 +22,7 @@ const { acquireBoxMaintenance, boxMaintenanceStatus, acquireBoxWork } = await im
 const roots = Object.keys(JSON.parse(process.env.BBX_MAINTENANCE_PERMITS));
 for (const root of roots) {
   if ((await boxMaintenanceStatus(root)).phase !== "exclusive") throw Error("not closed");
-  try { await acquireBoxWork(root); throw Error("admitted"); }
+  try { await acquireBoxWork(root, { reason: "test" }); throw Error("admitted"); }
   catch (error) { if (error.name !== "BoxMaintenanceError") throw error; }
 }
 for (const root of roots) {

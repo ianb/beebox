@@ -15,12 +15,12 @@ Run directories are a **recent cache, not an archive** — git history retains e
 ```
 _config/
   procedures/
-    process-pages.procedure.card
+    browser-task-drain.procedure.card
 
 _bookkeeping/
   procedure/
     runs/
-      process-pages_2026-02-06T2000/
+      browser-task-drain_2026-02-06T2000/
         run.procedure-run.card
 ```
 
@@ -46,37 +46,34 @@ scripts read naturally inline.
 ## Step Structure
 
 Condensed from a real definition
-(`templates/procedures/process-pages.procedure.card`):
+(`templates/procedures/browser-task-drain.procedure.card`):
 
 ```yaml
 steps:
-  - id: intake
-    description: Classify and route saved pages
+  - id: drain
+    description: File every waiting batch, record by record
     precheck:
       shells:
         - |-
-          count=$(ls _content/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
+          count=$(find _content -path '*.attach/inbox/*' -name records.json 2>/dev/null | wc -l)
           if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
-          echo "Found $count page(s) to process"
+          echo "Found $count batch(es) waiting in browser-task inboxes"
       whys:
-        - No saved pages to process
+        - No browser-task batch is waiting
     run:
       agents:
-        - prompt: >-
+        - prompt: |-
             Your agent prompt here...
           model: balanced
-          max-turns: 30
+          max-turns: 60
     validate:
       shells:
         - |-
-          remaining=$(ls _content/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
-          questions=$(ls _bookkeeping/questions/intake-*.question.card 2>/dev/null | wc -l)
-          [ "$remaining" -eq 0 ] || [ "$questions" -gt 0 ]
-      instructions:
-        - |-
-          Every page should either be routed to a destination, trashed,
-          or have a question created asking the user what to do.
-      severity: abort
+          # Fail while any batch in an inbox/ has not started filing.
+          ...
+      whys:
+        - Every batch that was waiting has at least started filing
+      severity: review
 ```
 
 ### Shell Commands
@@ -132,14 +129,14 @@ concrete reason in `validate.error`, and:
 - it does **not** fail the step, at any severity, including `abort` — `abort`
   hard-gates a failing check, and a check that never decided has not failed;
 - it does **not** trigger the `severity: review` work-agent retry;
-- the run's terminal status becomes `inconclusive` rather than `completed`,
+- the run card's `outcome` becomes `inconclusive` rather than `completed`,
   and `bbx procedure run` exits **3** (`INCONCLUSIVE_EXIT_CODE` — 2 already
   means "migration applied with per-card failures") with one stderr line:
   `Inconclusive: procedure <name> — review of step <id> reached max turns (16); work completed`;
 - `bbx procedure resume` on that run reports the same thing: the work is done
   and nothing re-judges it, so resume re-reads the non-verdict from the run
   card and exits the same way rather than saying "completed — nothing to
-  resume". `inconclusive` is a terminal run status;
+  resume". An `inconclusive` run is never re-opened;
 - `bbx migrate` does **not** record a migration whose procedure ended
   inconclusive as applied, and stops the sweep — retiring a migration on an
   unread check is the same misreading one level up;
@@ -226,7 +223,7 @@ The engine enforces **git-clean between steps**. Agent steps produce two commits
 
 **Finished runs expire.** At completion the engine stamps an `expires` attribute on the run card: `completed-at` + 30 days for completed runs, + 90 days for failed runs (failures get investigated late). Procedure cards can override with `run-expiry` / `failed-run-expiry` attributes (`"60d"`, `"12w"`, or `"never"`). Because the expiration lives on the run itself, anyone — agent, human, a future tool — can retain a specific run by editing its card: set `expires="never"` to pin it, or push the date out.
 
-**`bbx procedure gc` sweeps expired runs.** Installed by `bbx init` as the `gc-procedure-runs` daily schedule. It is deliberately dumb: delete what's past its date. It always keeps the newest run per procedure (`bbx procedure status` reads it) and anything still running. Legacy cards without `expires` use the status-based default from their `completed-at`; crashed runs (stuck at `running` with a stale card) expire 90 days after `started-at`.
+**`bbx procedure gc` sweeps expired runs.** Installed by `bbx init` as the `gc-procedure-runs` daily schedule. It is deliberately dumb: delete what's past its date. It always keeps the newest run per procedure (`bbx procedure status` reads it) and anything still running. Legacy cards without `expires` use the outcome-based default from their `completed-at`; crashed runs (no `outcome`, with a stale card) expire 90 days after `started-at`.
 
 ## CLI
 
@@ -243,8 +240,9 @@ step, reusing the existing run dir/card rather than starting over. The resume
 point is the first step whose recorded status is neither `completed` nor
 `skipped` — i.e. the failed step (execution halts there, so everything after is
 still `pending`). Earlier completed/skipped steps are not re-run. The run's
-original directive carries over unless `--directive` overrides it. Resuming an
-already-completed run is a no-op.
+original directive carries over unless `--directive` overrides it. Resuming
+removes a failed run's `outcome`; finishing again writes the new one. Resuming
+an already-completed run is a no-op.
 
 ## Git History
 

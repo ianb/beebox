@@ -10,9 +10,10 @@
  *
  * Every call appends a payload-only line to the box's gitignored
  * `.beebox/push-debug.log` (no endpoints or keys) so triggers are
- * inspectable even with zero real subscribers. `BBX_PUSH_FAKE=1` routes through
- * a fake service (and a synthetic endpoint when none are subscribed), so any
- * trigger can be exercised on desktop with no setup. See
+ * inspectable even with zero real subscribers. `BBX_NOTIFY_FAKE=1`
+ * (`notification/fake-mode.ts`) routes through a fake service (and a synthetic
+ * endpoint when none are subscribed), so any trigger can be exercised on
+ * desktop with no setup. See
  * docs/plans/web-push-notifications.md (Track B).
  */
 
@@ -26,8 +27,9 @@ import {
   type StoredPushSubscription,
 } from "../services/push.js";
 import { endpointsForBox, removeEndpoint } from "./push-subscriptions.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { boxSlug as resolveBoxSlug } from "../lib/box-slug.js";
+import { notifyFakeMode } from "./notification/fake-mode.js";
 
 export interface SendPushResult {
   sent: number;
@@ -48,13 +50,28 @@ export function vapidPublicKey(): string | null {
   return process.env.BBX_VAPID_PUBLIC_KEY ?? null;
 }
 
-function realPushFromEnv(): PushService {
+function vapidKeys(): { publicKey: string; privateKey: string } | null {
   // TODO(env-migration): BBX_VAPID_* are validated + redacted at startup
   // (lib/env.ts serverEnvSchema); the reads stay here alongside the
   // "throw if unconfigured" logic that a schema shouldn't own.
   const publicKey = process.env.BBX_VAPID_PUBLIC_KEY;
   const privateKey = process.env.BBX_VAPID_PRIVATE_KEY;
-  if (!publicKey || !privateKey) throw new VapidNotConfiguredError();
+  return publicKey && privateKey ? { publicKey, privateKey } : null;
+}
+
+/**
+ * Whether a send without an injected service can go out: VAPID keys are set,
+ * or fake mode (`BBX_NOTIFY_FAKE=1`) routes it through the fake. Otherwise `sendPush` throws
+ * {@link VapidNotConfiguredError}.
+ */
+export function webPushConfigured(): boolean {
+  return notifyFakeMode() || vapidKeys() !== null;
+}
+
+function realPushFromEnv(): PushService {
+  const keys = vapidKeys();
+  if (keys === null) throw new VapidNotConfiguredError();
+  const { publicKey, privateKey } = keys;
   // VAPID subject must be a mailto: or https: contact URI; the server's public
   // URL is a valid one and avoids hardcoding any address.
   const subject = process.env.BBX_VAPID_SUBJECT ?? process.env.PUBLIC_URL ?? "mailto:bbx@localhost";
@@ -88,7 +105,7 @@ export async function sendPush(
   // behind the dev router. A leading slash would skip that prefix and 404 in
   // dev only.
   const payload: PushPayload = { icon: `${boxSlug}/icon-192.png`, ...opts.payload };
-  const forceFake = process.env.BBX_PUSH_FAKE === "1";
+  const forceFake = notifyFakeMode();
   const push = opts.push ?? (forceFake ? createFakePush() : realPushFromEnv());
 
   let endpoints = await endpointsForBox(boxSlug);

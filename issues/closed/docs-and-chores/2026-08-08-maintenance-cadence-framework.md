@@ -9,7 +9,7 @@ filed-by: agent
 discovered-in: main session — boxholder wants recurring updates on a cadence
 ---
 
-**Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single launchd tick replace the ad hoc per-job plists. Four tasks are enrolled (sdk-update, manual-tests, knip-sweep, docling-update) — see commits 69bf1bd1 (schema/loader), 568ada2e (lint + tick), 9eeb572e and 62d2c10c (enroll sdk-update/manual-tests). Remaining not-yet-enrolled tasks are tracked in `beebox/docs/maintenance.md` as ordinary follow-up work under the `bbx-authoring-schedules` skill, not as an open design gap.
+**Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single launchd tick replace the ad hoc per-job plists. Four tasks are enrolled (sdk-update, manual-tests, knip-sweep, docling-update) — see commits 69bf1bd1 (schema/loader), 568ada2e (lint + tick), 9eeb572e and 62d2c10c (enroll sdk-update/manual-tests). Remaining not-yet-enrolled tasks are tracked in `beebox/docs/development/maintenance.md` as ordinary follow-up work under the `bbx-authoring-schedules` skill, not as an open design gap.
 
 The boxholder wants a **coherent way to run recurring maintenance/update tasks on
 a cadence** — Agent SDK updates, the security-overview.md regeneration, manual testing,
@@ -19,7 +19,7 @@ mix: some tasks have a full automated cadence, others rely on someone rememberin
 
 ## What already exists (this is not greenfield — generalize it)
 
-`beebox/docs/maintenance.md` catalogs the periodic tasks, and there are
+`beebox/docs/development/maintenance.md` catalogs the periodic tasks, and there are
 **two working scheduled agent-runner patterns** that already answer all three
 questions for the tasks they cover:
 
@@ -60,7 +60,7 @@ human memory, with inconsistent (or no) reporting:
 - **Feedback collection** — [feedback-collection-cadence](../../docs-and-chores/2026-07-14-feedback-collection-cadence.md)
   ("items rot before review").
 - **Codex — nothing at all** (added 2026-08-15). Grep the repo: Codex appears
-  in neither `docs/maintenance.md` nor this issue, and no version of it is
+  in neither `docs/development/maintenance.md` nor this issue, and no version of it is
   pinned anywhere. The Anthropic side has a daily monitor, a filtered ledger
   (`docs/agent-sdk-notes.md`), and auto-bump after a settling window; the OpenAI
   side has none of those. The boxholder's ask is explicit: **whatever we do for
@@ -126,6 +126,6 @@ and standardize report + issue-raising across all of them.
   — the release/update-story decision this dovetails with.
 - [meta-issues](../../docs-and-chores/2026-07-21-meta-issues.md) — this coordinates several tasks/issues,
   so it may itself be a meta/tracking issue.
-- `beebox/docs/maintenance.md` (the task catalog),
+- `beebox/docs/development/maintenance.md` (the task catalog),
   `beebox/docs/knowledge-audits.md`,
   `beebox/docs/scheduled/csp-violation-review.md` (the runbook precedent).

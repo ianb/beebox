@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { RendererProps } from "../renderers";
+import type { RendererProps } from "../file-type-registry";
 import { bbxSource } from "../lib/source-tag";
 import { requestTabArrangement, type ArrangementRelayResult } from "../lib/tab-arrangement-relay";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
-import { CheckboxField } from "./ui/fields";
+import { CheckboxField } from "./ui/fields/field";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
 
 interface CapturedTab {
   id: string;
@@ -18,15 +19,16 @@ interface CapturedTab {
 
 interface ArrangementData {
   transferId: string;
-  status: "draft" | "ready";
-  source: { windows: Array<{ id: string; tabs: CapturedTab[] }> };
+  /** The boxholder agreed the proposal; only then can it be applied. */
+  ready: boolean;
+  capturedTabs: { windows: Array<{ id: string; tabs: CapturedTab[] }> };
   proposal: { windows: Array<{ id: string; tabs: string[] }>; close: string[] };
 }
 
 export function TabArrangementView({ data }: RendererProps) {
   const arrangement = useMemo(() => parseArrangement(data.frontmatter), [data.frontmatter]);
   if (arrangement === null) {
-    return <Text as="div" tone="danger" className="p-4">This tab arrangement card is malformed. Open Source to repair it.</Text>;
+    return <ErrorText className="p-4">This tab arrangement card is malformed. Open Source to repair it.</ErrorText>;
   }
   return (
     <TabArrangementEditor
@@ -69,10 +71,10 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
     });
   }, []);
 
-  const tabs = new Map(arrangement.source.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab]));
+  const tabs = new Map(arrangement.capturedTabs.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab]));
   const deleted = new Set(proposal.close);
   const remainingCount = tabs.size - deleted.size;
-  const canApply = arrangement.status === "ready" && relay?.ok === true && relay.state === "ready";
+  const canApply = arrangement.ready && relay?.ok === true && relay.state === "ready";
 
   return (
     <div className="mx-auto max-w-4xl p-4" {...bbxSource("card", path)}>
@@ -80,7 +82,7 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
         <header>
           <div className="flex flex-wrap items-center gap-2">
             <Text as="h1" size="lg" weight="semibold">Tab arrangement</Text>
-            <Badge tone={arrangement.status === "ready" ? "success" : "warning"}>{arrangement.status}</Badge>
+            <Badge tone={arrangement.ready ? "success" : "warning"}>{arrangement.ready ? "ready" : "draft"}</Badge>
           </div>
           <Text as="p" size="sm" tone="subtle" className="mt-1">
             Check or uncheck tabs to mark them for deletion. Deleted tabs stay in place here for review; Clerk validates the live tabs again before changing anything.
@@ -111,7 +113,7 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
 
         <ArrangementActions
           relay={relay}
-          status={arrangement.status}
+          ready={arrangement.ready}
           canApply={canApply}
           onApply={apply}
           onUndo={undo}
@@ -123,12 +125,12 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
 
 function ArrangementActions(props: {
   relay: ArrangementRelayResult | null;
-  status: "draft" | "ready";
+  ready: boolean;
   canApply: boolean;
   onApply: () => Promise<void>;
   onUndo: () => Promise<void>;
 }) {
-  const { relay, status, canApply, onApply, onUndo } = props;
+  const { relay, ready, canApply, onApply, onUndo } = props;
   return (
     <Card background="info" border="subtle">
       <Stack gap="sm">
@@ -137,8 +139,8 @@ function ArrangementActions(props: {
         ) : (
           <Text as="p" size="sm" tone={relay.ok ? "default" : "danger"}>{relay.message}</Text>
         )}
-        {status !== "ready" ? (
-          <Text as="p" size="sm" tone="subtle">Set the card’s status to ready when the proposal is agreed.</Text>
+        {!ready ? (
+          <Text as="p" size="sm" tone="subtle">Set ready: true on the card when the proposal is agreed.</Text>
         ) : null}
         <div className="flex flex-wrap gap-2">
           <Button intent="primary" disabled={!canApply} onClick={onApply} loadingLabel="Applying…">Apply in Chrome</Button>
@@ -186,13 +188,13 @@ function TabRow(props: {
 
 function normalizeProposal(arrangement: ArrangementData): ArrangementData["proposal"] {
   const arranged = new Set(arrangement.proposal.windows.flatMap((window) => window.tabs));
-  const sourceIds = arrangement.source.windows.flatMap((window) => window.tabs.map((tab) => tab.id));
+  const sourceIds = arrangement.capturedTabs.windows.flatMap((window) => window.tabs.map((tab) => tab.id));
   if (sourceIds.every((id) => arranged.has(id))) return arrangement.proposal;
 
   const windows = arrangement.proposal.windows.map((window) => ({ ...window, tabs: [...window.tabs] }));
   const survivorIds = new Set(windows.flatMap((window) => window.tabs));
   const deleted = new Set(arrangement.proposal.close);
-  for (const sourceWindow of arrangement.source.windows) {
+  for (const sourceWindow of arrangement.capturedTabs.windows) {
     const ids = sourceWindow.tabs.map((tab) => tab.id);
     for (const id of ids) {
       if (!deleted.has(id) || windows.some((window) => window.tabs.includes(id))) continue;
@@ -200,7 +202,7 @@ function normalizeProposal(arrangement: ArrangementData): ArrangementData["propo
       insertNearNeighbors({ tabs: target.tabs, id, sourceIds: ids });
     }
   }
-  const pinned = new Map(arrangement.source.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab.pinned]));
+  const pinned = new Map(arrangement.capturedTabs.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab.pinned]));
   for (const window of windows) {
     window.tabs = [
       ...window.tabs.filter((id) => pinned.get(id) === true),
@@ -256,16 +258,16 @@ function insertNearNeighbors(options: { tabs: string[]; id: string; sourceIds: s
 function parseArrangement(frontmatter: Record<string, unknown> | undefined): ArrangementData | null {
   if (frontmatter === undefined) return null;
   const transferId = frontmatter["transfer-id"];
-  const status = frontmatter["status"];
-  const source = parseSource(frontmatter["source"]);
+  const ready = frontmatter["ready"] ?? false;
+  const capturedTabs = parseCapturedTabs(frontmatter["captured-tabs"]);
   const proposal = parseProposal(frontmatter["proposal"]);
-  if (typeof transferId !== "string" || (status !== "draft" && status !== "ready") || source === null || proposal === null) return null;
-  return { transferId, status, source, proposal };
+  if (typeof transferId !== "string" || typeof ready !== "boolean" || capturedTabs === null || proposal === null) return null;
+  return { transferId, ready, capturedTabs, proposal };
 }
 
-function parseSource(value: unknown): ArrangementData["source"] | null {
+function parseCapturedTabs(value: unknown): ArrangementData["capturedTabs"] | null {
   if (!isObject(value) || !Array.isArray(value.windows)) return null;
-  const windows: ArrangementData["source"]["windows"] = [];
+  const windows: ArrangementData["capturedTabs"]["windows"] = [];
   for (const rawWindow of value.windows) {
     if (!isObject(rawWindow) || typeof rawWindow.id !== "string" || !Array.isArray(rawWindow.tabs)) return null;
     const tabs: CapturedTab[] = [];

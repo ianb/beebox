@@ -15,20 +15,24 @@
  *  - `X-Content-Type-Options: nosniff` — we always set an explicit Content-Type
  *    and never let the browser sniff.
  *  - `Cross-Origin-Opener-Policy: same-origin` — isolate the browsing context.
- *  - CSP — no external egress of any kind (the anti-exfiltration boundary):
- *    `connect-src 'none'` even on submit-enabled pubs (submissions are plain
- *    HTML form POSTs, `form-action 'self'`).
+ *  - CSP — published sites may load `https:` scripts, styles, images, and
+ *    fonts, but `connect-src 'self'`, `form-action 'none'`, and
+ *    `frame-ancestors 'none'` keep a page from posting data out or being framed.
+ *  - `Cross-Origin-Resource-Policy: same-origin` — assets are not embeddable
+ *    cross-origin.
  */
 const CSP = [
   "default-src 'none'",
-  "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
-  "media-src 'self'",
-  "form-action 'self'",
+  "script-src 'self' https:",
+  "style-src 'self' 'unsafe-inline' https:",
+  "img-src 'self' data: https:",
+  "font-src 'self' data: https:",
+  "connect-src 'self'",
+  "worker-src 'self'",
+  "object-src 'none'",
   "base-uri 'none'",
   "frame-ancestors 'none'",
-  "connect-src 'none'",
+  "form-action 'none'",
 ].join("; ");
 
 const SECURITY_HEADERS: Readonly<Record<string, string>> = {
@@ -38,6 +42,7 @@ const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   "X-Content-Type-Options": "nosniff",
   "Cross-Origin-Opener-Policy": "same-origin",
   "Content-Security-Policy": CSP,
+  "Cross-Origin-Resource-Policy": "same-origin",
 };
 
 /**
@@ -47,9 +52,6 @@ const SECURITY_HEADERS: Readonly<Record<string, string>> = {
  */
 export function withSecurityHeaders(res: Response): Response {
   const headers = new Headers(res.headers);
-  for (const name of Object.keys(SECURITY_HEADERS)) {
-    const value = SECURITY_HEADERS[name];
-    if (value !== undefined) headers.set(name, value);
-  }
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }

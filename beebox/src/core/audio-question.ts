@@ -11,7 +11,7 @@
  */
 
 import ky from "ky";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 import { OPENROUTER_BASE_URL, openRouterProvider, type ModelRoute } from "./openrouter.js";
 
 export const AUDIO_QUESTION_MODEL = "gemini-3.7-flash";

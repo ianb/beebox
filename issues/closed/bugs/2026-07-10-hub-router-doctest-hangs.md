@@ -18,7 +18,7 @@ beneath the stash. Fixed by pairing the fake secret (and its cleanup) in
 `box-picker` and `mobile-spa-fallback` doctests; all pass in ~1.7s
 (previously a 5-minute handle-leak timeout).
 
-`test/hub/hub-router.doctest.md` hung and timed out (~5 minutes, tap's
+`test/hub/hub-router.doctest.md` (moved to `beebox/test/hub/server.router.doctest.md`) hung and timed out (~5 minutes, tap's
 default handle-leak timeout) on a full `pnpm test` run in this worktree, on
 `hub-router.doctest.md:112 — const box = await startFakeBox();`. Confirmed
 **pre-existing and unrelated** to the lint-rule change in this session: `git
@@ -26,7 +26,7 @@ stash` back to the unmodified tree and re-running the same file reproduces
 the same hang.
 
 The same run also logged a `MissingOAuthClientSecretError` from
-`registerAuthRoutes` (`src/webapp/routes/auth.ts:79`) partway through —
+`registerAuthRoutes` (`src/webapp/routes/auth.ts:79` (moved to `beebox/src/webapp/routes/auth/register.ts`)) partway through —
 `GOOGLE_OAUTH_CLIENT_ID` was set in the ambient environment without
 `GOOGLE_OAUTH_CLIENT_SECRET`. Unclear yet whether that's the same failure as
 the hang (a box startup that throws during plugin registration could plausibly
@@ -40,7 +40,7 @@ router/box-startup bug.
 
 - Does this reproduce on `main`, or only in this worktree?
 - Is it the same failure mode as the known
-  `test/hub/child-output-log.doctest.md` stream-ordering race
+  `test/hub/child-output-log.doctest.md` (moved to `beebox/test/hub/supervisor/child-output-log.doctest.md`) stream-ordering race
   (`2026-07-09-flaky-child-output-log-doctest.md`), or a distinct hang?
 - Where is `GOOGLE_OAUTH_CLIENT_ID` getting set without its secret — a leaked
   shell/session env var, or something the test setup itself sets?

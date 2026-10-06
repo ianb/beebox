@@ -7,8 +7,8 @@
 
 import { Command } from "commander";
 import path from "node:path";
-import { requireBoxRoot } from "../../lib/paths.js";
-import { openSearchIndex } from "../../core/search/refresh.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
+import { openSearchIndex } from "../../core/search/refresh/core.js";
 import {
   loadContainsState,
   listMissing,
@@ -18,7 +18,7 @@ import {
   updateContainsField,
   ContainsUpdateError,
 } from "../../core/search/contains-update.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /** Human output cap per group; --json is always complete. */
 const LIST_CAP = 100;

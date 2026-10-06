@@ -18,7 +18,7 @@
 import { build, type Metafile, type BuildFailure, type Plugin, type PluginBuild } from "esbuild";
 import { readFileSync } from "node:fs";
 import { relative, resolve, dirname, join } from "node:path";
-import { candidateFiles, isRelative } from "../agent-doctest/src/resolve-rules.ts";
+import { candidateFiles, isRelative } from "../agent-doctest/src/doctest-hooks/resolve-rules.ts";
 import {
   cacheFile,
   changedBetween,
@@ -174,7 +174,7 @@ class DoctestHooksUnavailableError extends Error {
 
 
 export async function buildGraphFrom(config: GraphConfig): Promise<TestGraph> {
-  const hooksPath = join(REPO_ROOT, "agent-doctest/src/doctest-hooks.ts");
+  const hooksPath = join(REPO_ROOT, "agent-doctest/src/doctest-hooks/hooks.ts");
   const hooks: unknown = await import(hooksPath);
   if (!isDoctestHooks(hooks)) throw new DoctestHooksUnavailableError(hooksPath);
   const { generateTestSource } = hooks;
@@ -369,7 +369,7 @@ export async function buildGraph(options?: CacheOptions): Promise<TestGraph> {
  * The repo files esbuild bundles into `beebox/dist/cli.mjs`.
  *
  * A test that execs the bundle has no import edge to anything in it, and the
- * bundle is not `src/cli/**`: `scripts/build-cli.ts` bundles `src/cli/index.ts`
+ * bundle is not `src/cli/**`: `src/scripts/build-cli/build/bundle.ts` bundles `src/cli/entry/run.ts`
  * transitively, which reads 932 files across nearly every `src/` subtree. The
  * selector needs the real set to decide whether a change reaches such a test
  * (plan revision 2026-08-25, mechanism B). Mirrors that script's build options;
@@ -377,7 +377,7 @@ export async function buildGraph(options?: CacheOptions): Promise<TestGraph> {
  */
 export async function cliBundleInputs(): Promise<Set<string>> {
   const result = await build({
-    entryPoints: [join(PACKAGE_ROOT, "src/cli/index.ts")],
+    entryPoints: [join(PACKAGE_ROOT, "src/cli/entry/run.ts")],
     bundle: true,
     packages: "external",
     write: false,

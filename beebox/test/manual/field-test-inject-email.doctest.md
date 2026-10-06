@@ -12,7 +12,7 @@ one agent session per run, on top of a real `bbx init` and two `bbx wakeup`
 subprocesses. Unattended runtime is ~4 minutes and it costs one agent session's
 API credit. The in-process half of the same pipeline (the gate, the state
 format, `sync()` producing cards) is covered for free in
-`test/field-test/fake-gmail.doctest.md`; what only this can prove is that a
+`test/field-test/fake-gmail-gate.doctest.md`; what only this can prove is that a
 SUBPROCESS sees the fake mailbox at all.
 
 Assertions are on shape — files present, counts — never on what the agent
@@ -24,8 +24,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createFieldBox } from "../../src/field-test/run-box.js";
 import { loadFieldScenario } from "../../src/field-test/scenario.js";
-import { seedFieldBox, scenarioNeedsGmail } from "../../src/field-test/run-seed.js";
-import { baselineGmailSync, injectEmail } from "../../src/field-test/pre-actions.js";
+import { seedFieldBox, scenarioNeedsGmail } from "../../src/field-test/run/seed.js";
+import { baselineGmailSync, injectEmail } from "../../src/field-test/run/pre-actions.js";
 import { loadFakeGmailState } from "../../src/field-test/fake-gmail-state.js";
 import { fileExists } from "../../src/lib/file-exists.js";
 
@@ -87,7 +87,7 @@ await fileExists(join(box.boxRoot, "_config/connectors/gmail.json"))
 
 // The scenario's chat model is pinned as the box's model policy
 // (`agentModel` in `_config/box.json`), which `seedFieldBox` writes and commits
-// as part of the baseline (`src/field-test/run-seed.ts`).
+// as part of the baseline (`src/field-test/run/seed.ts`).
 JSON.parse(await readFile(join(box.boxRoot, "_config/box.json"), "utf8")).agentModel === scenario.models.chat
 => true
 ```

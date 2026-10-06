@@ -11,12 +11,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import {
-  registerCommand,
-  runCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
+import { runScanImportCommand } from "../scan-import-dispatch.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import {
   loadLedger,
@@ -28,8 +28,8 @@ import {
   type UploadLedger,
   type UploadLedgerEntry,
   type ScanGroup,
-} from "./upload-helpers.js";
-import { errorMessage } from "../../lib/error-guards.js";
+} from "../upload-helpers.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { isRecord } from "../card-io.js";
 
 const UploadArgsSchema = z.object({
@@ -162,7 +162,7 @@ async function processGroup(
   const scanArgs: Record<string, unknown> = { inputs: group.files };
   if (extraContext && extraContext.trim().length > 0) scanArgs["context"] = extraContext;
   if (source !== undefined && source.trim().length > 0) scanArgs["source"] = source;
-  const result = await runCommand({ name: "scan-import", args: scanArgs, ctx });
+  const result = await runScanImportCommand(ctx, scanArgs);
 
   if (!result.success) {
     ctx.writeLine(`  failed: ${result.error}`);
@@ -241,7 +241,7 @@ async function executeUpload(
   };
 }
 
-registerCommand({
+export const uploadCommand: CommandDefinition = {
   name: "upload",
   description: "Upload a batch of files to the box (dedup by content hash)",
   args: [
@@ -253,4 +253,4 @@ registerCommand({
     { name: "limit", description: "Process at most N files (sorted; useful for smoke tests)", required: false, type: "number" },
   ],
   execute: executeUpload,
-});
+};

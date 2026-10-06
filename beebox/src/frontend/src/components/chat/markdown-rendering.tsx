@@ -6,17 +6,17 @@
 
 import { useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
-import { Markdown, type MarkdownComponentOverrides } from "../Markdown";
+import { Markdown, type MarkdownComponentOverrides } from "../Markdown/body";
 import { Image } from "../ui/Image";
 import { VideoEmbed } from "../ui/VideoEmbed";
 import { detectVideoEmbed } from "../../lib/video-url";
-import { FileView } from "../FileView";
+import { FileView } from "../FileView/view";
 import { externalImageProxyUrl, isExternalUrl, resolveContentTarget, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
 import { useBustedImageSrc } from "../../lib/file-version";
 import { transformedResolvedImageUrl } from "../../lib/image-transform-url";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 import { isImagePath, stripSpeechTags } from "./message-parsing";
-import { useConversationSelectionCapture } from "./everywhere/card-context";
+import { useConversationSelectionCapture } from "./everywhere/card-context/context";
 
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 

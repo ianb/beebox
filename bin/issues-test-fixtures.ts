@@ -11,7 +11,8 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { IssueEntry } from "../workstreams-app/src/server/issue-search-model.js";
+import { writeNextAction } from "../workstreams-app/src/server/main/issue-next-actions.js";
+import type { IssueEntry } from "../workstreams-app/src/server/main/issue-search-model.js";
 
 export interface Fixture {
   category: string;
@@ -43,7 +44,6 @@ const FIXTURES: Fixture[] = [
       "workstream: unattached",
       "area: beebox",
       "labels: [soft-launch]",
-      "next-action: reconfirm",
       "discovered-in: worktree-user-stories-refresh — while testing the composer",
     ].join("\n"),
     body: "Typing in one thread lands text in another.\n",
@@ -90,9 +90,20 @@ export async function writeFixtures(root: string, fixtures?: Fixture[]): Promise
   }
 }
 
+/**
+ * A temp tree is not a git checkout, so it has no store beside a main checkout;
+ * point the store inside the tree. The composer issue carries the one request.
+ */
 export async function makeRepo(): Promise<string> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "issues-cli-"));
   await writeFixtures(root);
+  const store = path.join(root, "next-actions");
+  process.env["BBX_ISSUE_ACTIONS_ROOT"] = store;
+  await writeNextAction({
+    root: store,
+    key: "public/2026-02-10-composer-splices-drafts",
+    request: { action: "reconfirm", message: "Still happens after the draft refactor?" },
+  });
   return root;
 }
 

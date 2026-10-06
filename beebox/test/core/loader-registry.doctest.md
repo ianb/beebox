@@ -1,103 +1,49 @@
 # Loader Registry
 
-Produces `FileSummary` values for files, dispatched by card type or path pattern.
+Produces `FileSummary` values for files. A card's summary belongs to its card
+type: the registry builds the standard base and hands it to the schema's
+`summarize` hook. Non-card files go through path loaders registered here.
 
 ```ts setup
 import {
-  registerTypeLoader,
   registerPathLoader,
   resetLoaderRegistry,
   summarize,
 } from "../../src/core/loader-registry.js";
-import type { FileLoader } from "../../src/core/file-summary.js";
+import { summaryText, type FileLoader } from "../../src/core/file-summary.js";
+import { cardSchema, body, type CardSchema } from "../../src/cards/schema.js";
+import { z } from "zod";
+
+/** The box's schema map, as `buildLoadContext` produces it. */
+function schemaMap(...schemas: CardSchema[]): Map<string, CardSchema> {
+  return new Map(schemas.map(s => [s.type, s]));
+}
+
+const NO_SCHEMAS = new Map<string, CardSchema>();
 ```
 
-## Fallback strips extensions and underscores
+## Base summary: filename, `title:`, `contains:`, `symbol:`
 
-No registration needed — fallback handles everything.
+A file with no card type gets the filename, cleaned up.
 
 ```ts
 resetLoaderRegistry();
-const s = summarize({ path: "_content/inbox/Meeting_Notes.memo.card" });
-s.title
+summarize({ path: "_content/inbox/Meeting_Notes.memo.card" }, NO_SCHEMAS).title
 => Meeting Notes
-```
 
-```ts
-resetLoaderRegistry();
-const s = summarize({ path: "photo-001.jpg" });
-s.title
+summarize({ path: "photo-001.jpg" }, NO_SCHEMAS).title
 => photo 001
 ```
 
-## type loader wins over path match
-
-```ts
-resetLoaderRegistry();
-registerPathLoader<{ size: "large" }>(
-  (p: string) => p.endsWith(".card"),
-  (raw) => ({ path: raw.path, title: "path-matched", attrs: { size: "large" } }),
-);
-registerTypeLoader<{ status: string }>("memo", (raw) => ({
-  path: raw.path,
-  type: "memo",
-  title: "tag-matched",
-  attrs: { status: String(raw.fields === undefined ? "unknown" : raw.fields["status"] ?? "unknown") },
-}));
-const s = summarize({ path: "_content/inbox/foo.memo.card", type: "memo", fields: { status: "new" } });
-s.title
-=> tag-matched
-
-JSON.stringify(s.attrs)
-=> {"status":"new"}
-```
-
-## Path match fires when no type registered
-
-```ts
-resetLoaderRegistry();
-registerPathLoader<Record<string, never>>(
-  (p: string) => p.endsWith(".md"),
-  (raw) => ({ path: raw.path, title: `md:${raw.path}`, attrs: {} }),
-);
-const s = summarize({ path: "store/notes/todo.md" });
-s.title
-=> md:store/notes/todo.md
-```
-
-## type collision is last-wins with a warning
-
-```ts
-resetLoaderRegistry();
-const warnings: string[] = [];
-const original = console.warn;
-console.warn = (msg: string) => { warnings.push(msg); };
-const first: FileLoader<Record<string, never>> = (raw) => ({ path: raw.path, title: "first", attrs: {} });
-const second: FileLoader<Record<string, never>> = (raw) => ({ path: raw.path, title: "second", attrs: {} });
-registerTypeLoader("memo", first);
-registerTypeLoader("memo", second);
-console.warn = original;
-warnings.length
-=> 1
-```
+`title`, `contains` and `symbol` belong to every card, so the registry reads
+them rather than each card type remembering to.
 
 ```ts continue
-summarize({ path: "a.memo.card", type: "memo" }).title
-=> second
-```
-
-## Global card fields are surfaced without teaching every loader about them
-
-`title`, `contains` and `symbol` belong to every card, so `summarize` reads them
-rather than each loader remembering to.
-
-```ts
-resetLoaderRegistry();
 const s = summarize({
   path: "_content/figures/Cube.figure.card",
   type: "figure",
   fields: { title: "Rotating Cube Demo", contains: "A spinning cube.", symbol: { glyph: "🧊" }, theme: { name: "paper", stock: "blue" } },
-});
+}, NO_SCHEMAS);
 [s.type, s.title, s.contains, s.symbol?.glyph, s.cardTheme?.name, s.cardTheme?.stock].join("|")
 => figure|Rotating Cube Demo|A spinning cube.|🧊|paper|blue
 ```
@@ -109,45 +55,234 @@ or schema default silently win over something the author wrote. A theme of the
 wrong SHAPE carries nothing, and resolves to plain.
 
 ```ts continue
-const unknownTheme = summarize({ path: "_content/x.doc.card", type: "doc", fields: { theme: { name: "velvet" } } });
+const unknownTheme = summarize({ path: "_content/x.doc.card", type: "doc", fields: { theme: { name: "velvet" } } }, NO_SCHEMAS);
 JSON.stringify([unknownTheme.type, unknownTheme.cardTheme])
 => ["doc",{"name":"velvet","stock":"neutral"}]
 
-const malformedTheme = summarize({ path: "_content/y.doc.card", type: "doc", fields: { theme: "paper" } });
+const malformedTheme = summarize({ path: "_content/y.doc.card", type: "doc", fields: { theme: "paper" } }, NO_SCHEMAS);
 JSON.stringify(malformedTheme.cardTheme)
 => {"name":"plain","stock":"neutral"}
 
-const raw = summarize({ path: "_content/x.txt" });
+const raw = summarize({ path: "_content/x.txt" }, NO_SCHEMAS);
 JSON.stringify([raw.type, raw.cardTheme])
 => [null,null]
-```
-
-A card's own `title:` beats the filename — that is the whole point, and it is
-what makes a retitled card retitle its tab.
-
-```ts continue
-summarize({ path: "_content/notes/Old_Name.doc.card", type: "doc", fields: { title: "New Name" } }).title
-=> New Name
-```
-
-But it never beats a title the loader computed on purpose. A memo's title IS
-its text, and a loader that made a real choice keeps it; the test is that the
-loader's title differs from what the filename alone would give.
-
-```ts continue
-registerTypeLoader("memo", (raw) => ({ path: raw.path, title: "the memo's own text", attrs: {} }));
-summarize({ path: "_content/inbox/Note.memo.card", type: "memo", fields: { title: "Ignored" } }).title
-=> the memo's own text
 ```
 
 A malformed symbol is dropped rather than shipped — `readCardSymbol` validates
 before it resolves.
 
 ```ts continue
-resetLoaderRegistry();
-summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: "🧊" } }).symbol
+summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: "🧊" } }, NO_SCHEMAS).symbol
 => undefined
 
-summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: { glyph: "  " } } }).symbol
+summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: { glyph: "  " } } }, NO_SCHEMAS).symbol
 => undefined
+```
+
+## A card type with no `summarize` gets the base
+
+```ts
+resetLoaderRegistry();
+const PlainSchema = cardSchema("plain", { fields: { note: z.string() } });
+const s = summarize(
+  { path: "_content/notes/Old_Name.plain.card", type: "plain", fields: { type: "plain", note: "hi", title: "New Name" } },
+  schemaMap(PlainSchema),
+);
+JSON.stringify(s)
+=> {"path":"_content/notes/Old_Name.plain.card","title":"New Name","type":"plain"}
+```
+
+## Extending the base: `{ ...base, detail }`
+
+The common case. The type keeps the standard title and adds a second line.
+
+```ts
+resetLoaderRegistry();
+const TaskSchema = cardSchema("task", {
+  fields: { state: z.enum(["open", "done"]), owner: z.string().optional() },
+  summarize: (card, base) => ({ ...base, detail: card.owner === undefined ? card.state : `${card.state} · ${card.owner}` }),
+});
+const s = summarize(
+  { path: "_content/work/Rewire_Lamp.task.card", type: "task", fields: { type: "task", state: "open", owner: "Dana Whitfield", contains: "The rewiring job." } },
+  schemaMap(TaskSchema),
+);
+JSON.stringify(s)
+=> {"path":"_content/work/Rewire_Lamp.task.card","title":"Rewire Lamp","type":"task","contains":"The rewiring job.","detail":"open · Dana Whitfield"}
+```
+
+`summaryText` is the text form of the same summary, for the agent-facing
+surfaces that have no React tree.
+
+```ts continue
+summaryText(s)
+=> Rewire Lamp — open · Dana Whitfield
+
+summaryText({ path: "a.card", title: "Just a title" })
+=> Just a title
+
+summaryText({ path: "a.card", title: "Blank detail", detail: "   " })
+=> Blank detail
+```
+
+## Replacing the base, and typed `attrs`
+
+A type whose title is not its filename replaces it, and hands its list
+component a typed payload.
+
+```ts
+resetLoaderRegistry();
+interface QuoteAttrs { length: number }
+const QuoteSchema = cardSchema("quote", {
+  fields: { said: z.string(), body: body(z.string()) },
+  summarize: (card, base) => {
+    const attrs: QuoteAttrs = { length: card.body.length };
+    return { ...base, title: card.said, detail: `${String(card.body.length)} characters`, attrs };
+  },
+});
+const s = summarize(
+  { path: "_content/Q.quote.card", type: "quote", fields: { type: "quote", said: "Kaito Ishikawa", body: "Measure twice." } },
+  schemaMap(QuoteSchema),
+);
+[s.title, s.detail, JSON.stringify(s.attrs)].join("|")
+=> Kaito Ishikawa|14 characters|{"length":14}
+```
+
+## A card that failed validation keeps the base from its filename
+
+`summarize` runs only on fields a schema vouched for. When the card didn't
+load, the registry has no fields to hand over, and the row is still the row.
+
+```ts continue
+JSON.stringify(summarize({ path: "_content/Broken_Quote.quote.card" }, schemaMap(QuoteSchema)))
+=> {"path":"_content/Broken_Quote.quote.card","title":"Broken Quote"}
+```
+
+## A hook never sees fields its schema did not vouch for
+
+A `summarize` hook is typed as receiving this type's validated fields, and it
+is entitled to read them that way — `card.state.toUpperCase()` on a card type
+whose `state` is a `z.enum`. The production callers load the card first, so
+its fields were validated; `summarize` is exported, though, and a caller that
+hands over a raw bag must not be the one that makes a schema's hook wrong.
+The fields are checked against the schema before the hook is called, and a bag
+that fails keeps the base summary.
+
+```ts
+resetLoaderRegistry();
+const calls: string[] = [];
+const ImageSchema = cardSchema("image", {
+  fields: { status: z.enum(["draft", "published"]) },
+  summarize: (card, base) => {
+    calls.push(card.status);
+    return { ...base, detail: card.status.toUpperCase() };
+  },
+});
+const warnings: string[] = [];
+const original = console.warn;
+console.warn = (msg: string) => { warnings.push(msg); };
+const s = summarize({ path: "_content/Kite.image.card", type: "image", fields: { type: "image", status: 7 } }, schemaMap(ImageSchema));
+console.warn = original;
+JSON.stringify([s.title, s.detail, calls.length])
+=> ["Kite",null,0]
+```
+
+The fall back is visible, not silent: whoever called `summarize` that way gets
+told which field was wrong.
+
+```ts continue
+warnings[0]
+=> summarize() was handed unvalidated "image" fields for _content/Kite.image.card; using the base summary:
+```
+
+Validated fields reach the hook exactly as before.
+
+```ts continue
+summarize({ path: "_content/Kite.image.card", type: "image", fields: { type: "image", status: "draft" } }, schemaMap(ImageSchema)).detail
+=> DRAFT
+```
+
+The hook reads what the schema parsed, so a field the caller left out arrives
+with its default, and the body (which the frontmatter schema does not know)
+still comes through.
+
+```ts continue
+const NoteSchema = cardSchema("note", {
+  fields: { state: z.enum(["new", "kept"]).default("new"), body: body(z.string()) },
+  summarize: (card, base) => ({ ...base, detail: `${card.state}: ${card.body}` }),
+});
+summarize({ path: "_content/Kite.note.card", type: "note", fields: { type: "note", body: "string is frayed" } }, schemaMap(NoteSchema)).detail
+=> new: string is frayed
+```
+
+## A `summarize` that throws is a bug in that schema, not a lost row
+
+```ts
+resetLoaderRegistry();
+const BadSchema = cardSchema("bad", {
+  fields: { n: z.number() },
+  summarize: () => { throw new Error("schema author's bug"); },
+});
+const warnings: string[] = [];
+const original = console.warn;
+console.warn = (msg: string) => { warnings.push(msg); };
+const s = summarize({ path: "_content/Thing.bad.card", type: "bad", fields: { type: "bad", n: 1 } }, schemaMap(BadSchema));
+console.warn = original;
+s.title
+=> Thing
+
+warnings.length
+=> 1
+```
+
+```ts continue
+warnings[0]
+=> summarize() for card type "bad" failed on _content/Thing.bad.card; using the base summary:
+```
+
+## An empty title falls back to the base title
+
+A blank title renders a blank row; the base title always says something.
+
+```ts
+resetLoaderRegistry();
+const EmptySchema = cardSchema("empty", {
+  fields: { n: z.number() },
+  summarize: (_card, base) => ({ ...base, title: "   ", detail: "still here" }),
+});
+const s = summarize({ path: "_content/Some_Card.empty.card", type: "empty", fields: { type: "empty", n: 1 } }, schemaMap(EmptySchema));
+[s.title, s.detail].join("|")
+=> Some Card|still here
+```
+
+## Path loaders still answer for non-card files
+
+Cards never reach these — their type's schema answers for them.
+
+```ts
+resetLoaderRegistry();
+registerPathLoader<Record<string, never>>(
+  (p: string) => p.endsWith(".md"),
+  (raw) => ({ path: raw.path, title: `md:${raw.path}`, attrs: {} }),
+);
+summarize({ path: "store/notes/todo.md" }, NO_SCHEMAS).title
+=> md:store/notes/todo.md
+```
+
+A path loader's own title wins over the filename — it computed it on purpose.
+Two matching loaders is a registration mistake: the first wins, loudly.
+
+```ts continue
+const warnings: string[] = [];
+const original = console.warn;
+console.warn = (msg: string) => { warnings.push(msg); };
+const second: FileLoader<Record<string, never>> = (raw) => ({ path: raw.path, title: "second", attrs: {} });
+registerPathLoader((p: string) => p.endsWith(".md"), second);
+const s = summarize({ path: "store/notes/todo.md" }, NO_SCHEMAS);
+console.warn = original;
+[s.title, String(warnings.length)].join("|")
+=> md:store/notes/todo.md|1
+```
+
+```ts cleanup
+resetLoaderRegistry();
 ```

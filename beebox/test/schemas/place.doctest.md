@@ -7,7 +7,7 @@ mark`); the `validate` hook flags a half-set coordinate.
 ```ts setup
 import { PlaceSchema, createPlaceTemplate } from "../../src/schemas/place.js";
 import { parseCardText } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
 
 const schemas = await createCardSchemaMap();
 const v = PlaceSchema.validate;
@@ -23,7 +23,7 @@ PlaceSchema.type
 ## A coordless draft (name + address + body) validates
 
 ```ts
-const draft = "---\nstatus: active\nname: Home\naddress: 123 Main St\n---\nWhere the boxholder works.\n";
+const draft = "---\nname: Home\naddress: 123 Main St\n---\nWhere the boxholder works.\n";
 const parsed = parseCardText(draft, { source: "places/Home.place.card", schemas });
 parsed.fields.name
 => Home
@@ -35,7 +35,7 @@ parsed.fields.address
 ## A full card with coordinates validates
 
 ```ts
-const full = "---\nstatus: active\nname: Home\nlat: 45.5231\nlng: -122.6765\nradius: 120\n---\nbody\n";
+const full = "---\nname: Home\nlat: 45.5231\nlng: -122.6765\nradius: 120\n---\nbody\n";
 const parsed = parseCardText(full, { source: "places/Home.place.card", schemas });
 JSON.stringify([parsed.fields.lat, parsed.fields.lng, parsed.fields.radius])
 => [45.5231,-122.6765,120]
@@ -44,7 +44,7 @@ JSON.stringify([parsed.fields.lat, parsed.fields.lng, parsed.fields.radius])
 ## Out-of-range latitude fails the per-field Zod check
 
 ```ts
-PlaceSchema.frontmatterSchema.safeParse({ type: "place", status: "active", name: "X", lat: 999, lng: 0 }).success
+PlaceSchema.frontmatterSchema.safeParse({ type: "place", name: "X", lat: 999, lng: 0 }).success
 => false
 ```
 

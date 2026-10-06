@@ -31,7 +31,7 @@ below points there). Open questions at the bottom remain open — unchanged.
 ## Subpath layout (dependency isolation is the point)
 
 **Status (2026-07-14): shipped** — `.`/`./headless`/`./react`/`./eslint`
-exports live; isolation verified by `test/self-reference.test.ts`. Deviation:
+exports live; isolation verified by `test/exports/core.test.ts`. Deviation:
 the browser runtime sits in `browser/` and the demo in `dev-demo/` rather than
 a single `src/react/`. See `canvas-loop/CHANGELOG.md`.
 

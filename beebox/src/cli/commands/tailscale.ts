@@ -5,7 +5,7 @@
  * `setup` (the guided serve-config loop) is chunk 2.
  *
  * This file is presentation only: it wires the real deps, runs the state
- * machine in `src/services/tailscale-status.ts`, formats the report, and maps
+ * machine in `src/services/tailscale-status/core.ts`, formats the report, and maps
  * the terminal state to the process exit code (like `health.ts` over
  * `health-box.ts`). All logic and the injectable seam live in the service
  * modules.
@@ -15,16 +15,16 @@ import * as readline from "node:readline";
 
 import { Command } from "commander";
 
-import { errorMessage } from "../../lib/error-guards.js";
-import { assertNever } from "../../lib/invariant.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { assertNever } from "../../shared/invariant.js";
 import { createRealTailscaleDeps, type TailscaleTarget } from "../../services/tailscale.js";
 import { defaultHubConfigPath, resolveTargetOrDiscover } from "../../services/tailscale-discovery.js";
 import {
   runTailscaleSetup,
   runTailscaleStop,
   type SetupIo,
-} from "../../services/tailscale-setup.js";
-import { reportToJson, runTailscaleStatus } from "../../services/tailscale-status.js";
+} from "../../services/tailscale-setup/core.js";
+import { reportToJson, runTailscaleStatus } from "../../services/tailscale-status/core.js";
 import { ambiguousTarget, type TailscaleReport } from "../../services/tailscale-report.js";
 
 /** The `--target` help shared by all three subcommands: optional, auto-detected

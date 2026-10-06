@@ -92,7 +92,7 @@ dependency), so it is more foundation than conflict.
   parts removed. That is judgment, not mechanism — the same problem as the
   public/private issue split, which might be prior art worth reading.
 - **Migration.** Moving a schema out of core changes where existing cards'
-  definitions come from. `docs/migrations.md` step 7 applies: whatever moves,
+  definitions come from. `docs/cards/migrations.md` step 7 applies: whatever moves,
   file the legacy-removal issue at the same time.
 
 ## Read: TiddlyWiki's plugin system (2026-08-19)
@@ -141,3 +141,36 @@ What does not transfer: no isolation and no dependency resolution (a `dependents
 list, a `core-version`, a numeric priority, and later-wins precedence is the
 whole system). The public-specifier boundary — `beebox/{cards,schema,view-widgets}`
 — is already a stronger contract and should stay the plugin API.
+
+## Prior art (2026-09-24)
+
+[Agent Plugins spec](2026-09-24-agent-plugins-spec.md): an external packaging format with rules worth borrowing (root containment, skip-invalid-components, no credentials in the package), though probably not the format itself.
+
+## What a plugin should carry (boxholder, 2026-09-24)
+
+While reviewing the Agent Plugins spec, the boxholder listed what a beebox
+plugin should ship:
+
+- documentation;
+- maybe a trigger skill, mostly a pointer to the documentation;
+- command-line tools;
+- maybe views;
+- schemas, often as a stub that the box agent extends.
+
+The last item has no counterpart in the plugin formats reviewed. They all
+treat a plugin as read-only code. A stub that the agent grows after install is
+closer to a template. It meets the template-update problem: an upstream change
+to a template that the box has edited must not overwrite the box's edits.
+Today a changed template parks for approval (`_config/template-versions.json`).
+
+## 2026-09-29 — evidence from Omi's app marketplace
+
+Omi's only payout data (a 2024 snapshot, `community-plugin-stats.json`)
+shows almost all of it went to prompt-only apps: a prompt run over each
+finished conversation, or a prompt added to chat. Notion and Zapier connectors
+were the only code apps with real payouts. The data is small and stale, but
+it points the same way as the TiddlyWiki finding: the extension people use is
+a prompt at a hook, and code is the escalation. The review
+([research/omi-review.md](../../research/omi-review.md), finding 6) lists the
+parts of Omi's model to avoid: uid-as-identity auth, unsandboxed webhooks that
+get the full conversation, and one consent dialog at enable time.

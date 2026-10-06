@@ -61,8 +61,8 @@ landmark and has everything.
 - **Box-level, repo-level, or both?** The trigger was *box* maintenance, and
   landmarks are a box construct — so this is per-box. But "handle other things"
   and "CLAUDE.md" could also mean a repo-side maintenance owner. Note that
-  `docs/maintenance.md` already owns **dev/code** maintenance (audits, sweeps, SDK
-  updates) and `docs/health-checks.md` owns deployed-server runbooks — this admin
+  `docs/development/maintenance.md` already owns **dev/code** maintenance (audits, sweeps, SDK
+  updates) and `docs/server/health-checks.md` owns deployed-server runbooks — this admin
   landmark is the **box-operational** layer, distinct from both. Settle the
   boundary and the cross-links rather than overlapping them.
 - **Briefing vs a new vehicle.** Is the maintenance playbook a `briefing` card

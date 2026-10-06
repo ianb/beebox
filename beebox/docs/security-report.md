@@ -1,18 +1,93 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-14
-model: gpt-6-astra
-reviewed-by: DRAFT — unreviewed
+generated-at-rev: c8428cca5
+date: 2026-10-02
+model: claude-sonnet-5-5
+reviewed-by: Ian Bicking
 ---
 
 # Security report — structured version
+
+**Scoped amendment (2026-10-05; DRAFT — unreviewed):** Adds the explicit
+owner-only credential reveal procedures. This amendment does not re-audit the
+rest of the inventory.
+
+**Scoped amendment (2026-10-02; reviewed by Ian Bicking):** Reflects the removal of
+the legacy publication flow (`bec8749e3`, `6b8968965`) and the static-Markdown
+render step. Gone: `bbx pub draft/go/ls/revoke/setup`, `_publish/<pub-id>/`
+drafts, the Wrangler/Access/token services, the `publish/<box>` R2 secret and
+ingestion bucket, submissions, tombstone revoke, the `/__version`, `/__submit`
+and `/p|s|a/<key>` legacy Worker routes, and the Worker access log. The Worker
+now serves only shared-host or pinned-site (managed) mode and answers 500 "not
+configured" with neither binding set. Static publications render `.md` to
+`.html` at prepare time; the leak scan covers the rendered output. Earlier
+amendments below that mention legacy Workers, `bbx pub go`, or submissions
+describe removed surface. Scoped to publishing; the private tier and unrelated
+changes were not re-audited, and the full-inventory anchor is unchanged.
+
+**Scoped amendment (2026-09-24; DRAFT — unreviewed):** Adds the managed
+static-site publishing credential, server/member procedure boundary, project
+build egress and privileges, and isolated Worker serving controls. The full
+inventory anchor remains `67f4d34ea59c91840d6444b907dc31ed937f8e21`; this
+scoped amendment covers changes through `aa084d01ebdee12e2e88d210c2c5a5c85b7cc294`
+plus the uncommitted publish-pages worktree. This is a targeted update, not a full inventory of the many
+unrelated changes since the prior anchor or of the private security tier.
+Review the current diff before treating it as complete.
+
+**Scoped amendment (2026-09-25; DRAFT — unreviewed):** Adds the custom-host
+mutation and Cloudflare DNS/routing side effect. The full inventory anchor
+remains `67f4d34ea59c91840d6444b907dc31ed937f8e21`; the previous publishing
+amendment remains in effect, and this one covers through `0136dfb34` plus the
+current uncommitted worktree. It records authenticated-owner authorization,
+the server-derived publication binding, reservation and candidate update
+before the remote attach, exact provider read-back, and the fail-closed
+pending state. DNS/certificate work can begin while serving remains disabled;
+HTTPS readiness and the added permissions are not live-verified. Bee Box only
+checks existing Worker Custom Domain assignments, not DNS records or Workers
+Routes; pre-existing routing/traffic effects remain a risk. A hostname
+reservation is permanent in Bee Box v1, including after a manual Cloudflare
+detach. This is targeted, not a full inventory of unrelated changes or the
+private security tier. Review the current diff before treating it as complete.
+
+**Scoped amendment (2026-09-26; DRAFT — unreviewed):** Replaces per-publication
+hostname setup with one owner-configured shared Worker and hostname per box.
+New managed sites enroll their approved public slug or secret PubId path by a
+route marker; legacy per-publication Workers and URLs remain readable, while
+the setup UI/RPC is removed. The boxholder explicitly accepts that pages in a
+box share browser origin, storage, and same-origin script access. CORS and
+iframes are not isolation controls, and the pages are treated as mutually
+trusted. Account-restricted tiers remain disabled pending a separate design.
+This scoped update reflects the current publishing worktree, not unrelated
+security surfaces or a full private-tier review.
+
+**Scoped amendment (2026-09-21), reviewed by Ian:** Quick chat only, against
+`34eaa95fc3f9a48d29f4e2d32c6e8aab3e3de04b`. The unchanged `generated-at-rev` remains the
+previous full-inventory anchor. Unrelated historical changes, the private
+security tier, and the complete surface map were not re-audited.
+
+**Scoped amendment (2026-09-28), reviewed by Ian:** Adds opt-in admitted-document
+triage and replay against `5844a1024`. The OpenRouter → TypeSafe row below now
+covers prepared document and attachment text plus compiled intake and landmark
+rules; preparation may invoke the existing scan-vision and Docling services.
+Unclear cases may invoke the full box agent, whose ordinary privileges and
+persistent prompts/transcripts apply. Applied receipts retain prepared text and
+effective rules in box Git history. This pipeline applies only to admitted
+material; Gmail pre-materialization filtering and quick capture are not included.
+This is a scoped update, not a re-audit of unrelated security changes or the
+private security tier; the full-inventory anchor remains unchanged.
 
 The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 is the primary consumer; updates are adjudicated against
 `generated-at-rev` per the rubric in
 [`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/beebox/blob/main/.claude/skills/security-report/SKILL.md)
 (repo root).
+
+**Scoped amendment (2026-09-17):** Added box package installs (§5 row, §8
+item 13, and the §4 blast-radius clause) for `worktree-box-host-packages`,
+fixed the §5 process-model user, and recorded the `files.kind`
+transport-auth and cross-box tests. Targeted, not a full refresh; the
+`generated-at-rev` anchor is unchanged. Ian reviewed this amendment and the
+2026-09-09/09-14/09-16 amendments below on 2026-09-17.
 
 **Scoped amendment (2026-09-14):** This draft adds migration-maintenance
 accounting against `23e37c44c6438f9f5832baa1fd2437144b5b89a8` plus the
@@ -74,7 +149,7 @@ via `BBX_HUB_SECRET`-gated headers the hub injects after stripping any
 client-supplied `x-bbx-*` headers (`auth.ts:373-449`,
 `hub-server.ts:249-294`).
 
-tRPC procedure tiers (`src/webapp/trpc/trpc.ts`): `ownerProcedure`
+tRPC procedure tiers (`src/webapp/trpc/procedures.ts`): `ownerProcedure`
 narrows to the owner; `authedProcedure` checks `ctx.authed`;
 `publicProcedure` is plain `t.procedure` with **no auth middleware of
 its own** — it is safe only because the transport wall already ran, a
@@ -90,13 +165,12 @@ the member-tier gap below.
 | `POST /api/csp-report` (`api-csp-report.ts:147`) | Browsers POST CSP reports uncredentialed by spec; body carries no secrets; amplification-bounded (16KB body / 2048-char field / 20 reports) | ok | low | public |
 | `GET /api/build-info` (`server-root.ts:209`) | Pre-auth "what's running here" probe; build hash + open-mode flag only | ok | low | public |
 | Hub static bundle (`/assets/*`, `/icons/*`, `/earcons/*`, `manifest.webmanifest`, `sw.js`) | The SPA must load before the user can log in; no box data | ok | low | public |
-| pub-worker `GET /__version` | Content hash of code that is itself versioned in the repo | ok | low | public |
 
 ### Own-credential routes (outside the session wall)
 
 | Route | Auth | State | Sev | Reach | Notes |
 |---|---|---|---|---|---|
-| `/auth/login`, `/auth/methods`, `/auth/me`, `/auth/logout` (`src/webapp/routes/auth.ts:144-228`) | Login is the credential; throttled scrypt verify (per-IP + per-account backoff, global scrypt cap) | ok | — | public | Necessarily pre-auth |
+| `/auth/login`, `/auth/methods`, `/auth/me`, `/auth/logout` (`src/webapp/routes/auth/register.ts:144-228`) | Login is the credential; throttled scrypt verify (per-IP + per-account backoff, global scrypt cap) | ok | — | public | Necessarily pre-auth |
 | `/auth/setup` (`setup-token.ts`) | One-time in-memory token, 15-min TTL, printed to server console only | accepted | high | public | The setup-token window: a zero-user box with an exposed port is claimable until the owner account exists. Accepted with the TTL + self-disabling route as mitigation; provision promptly (`bbx auth create-user`). |
 | `/auth/invite` (`auth-invite.ts:224,247`) | 32-byte single-use invite capability, 15-min TTL, hash-at-rest, throttled | ok | — | public | See invite items in §2 and the open-invite accepted risk in §8 |
 | `/auth/reset-password` (`auth-password-reset.ts`) | 32-byte single-use password-reset capability (same store as invites), 15-min TTL, hash-at-rest, its own throttle isolated from login/invite throttles, re-checks the member is still eligible (role + `allowedEmails`) at both inspect and consume time | ok | — | public | Operator-minted per member from Allowed Users (`admin.createPasswordReset`, ownerProcedure); success bumps `gen`, revoking the member's other sessions. See §6b account lifecycle and §2 credentials |
@@ -116,7 +190,8 @@ Notable abilities, and the items that are more than routine:
 | Surface | Abilities | State | Sev | Reach | Notes |
 |---|---|---|---|---|---|
 | `api-files.ts`, `api-files-write.ts`, `api-browse.ts`, `api-image.ts`, `history.ts` | Read/write/delete/commit raw box files; read any historical git blob | ok | — | authed | Path containment via `ref-path.ts` + route guards |
-| tRPC `files.kind` (`src/webapp/trpc/routers/files.ts:72`) | Classify a box path as file, directory, or missing; no file contents or writes | ok | low | authed | `publicProcedure` relies on the existing transport wall (`server-box-scope.ts:68,172`), not procedure-local auth. `file-kind.ts:9-17` uses `resolveBoxNamespacePathOnDisk` in read mode before `stat`; the shared guard checks namespace containment and symlink targets. Empty/root path returns directory without disk access. `test/webapp/files-kind.doctest.md` covers classification, lexical traversal, and a symlink into package internals; its direct caller does not test transport authentication. |
+| tRPC `files.kind` (`src/webapp/trpc/routers/files/router.ts:72`) | Classify a box path as file, directory, or missing; no file contents or writes | ok | low | authed | `publicProcedure` relies on the existing transport wall (`server-box-scope.ts:68,172`), not procedure-local auth. `file-kind.ts:9-17` uses `resolveBoxNamespacePathOnDisk` in read mode before `stat`; the shared guard checks namespace containment and symlink targets. Empty/root path returns directory without disk access. `test/webapp/trpc/routers/files/kind.doctest.md` covers classification, lexical traversal, and a symlink into package internals; `test/webapp/auth.required.doctest.md` covers the transport wall (401 without a credential, 200 with one), and `test/scenarios/cross-box-probe.doctest.md` covers a sibling box's path (`BAD_REQUEST`). |
+| tRPC `quickChat.prepare` / `quickChat.receipt` | Routing judgment, destination reservation, and receipt records | mitigated | medium | authed | Uses existing box authentication; preparation sends context to Jev (§3) and can incur provider spend. |
 | tRPC `share.destinations` / `share.saveTextual` | Write a new card (inbox or a landmark dir) from shared URL/text content; used by the iOS share extension | ok | — | authed | Card-schema-validated before write, `withCardLock`-serialized, `share-id`-deduped against replay; same auth tier as the file-write surface above |
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | `mock: true` TTS is rejected unless explicit development surfaces are enabled; it cannot silently fall through to a paid provider call |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |
@@ -125,13 +200,21 @@ Notable abilities, and the items that are more than routine:
 | `GET /api/proxy-image` | Server-side fetch of arbitrary public image URLs | gap | low | authed | SSRF-guarded (see §4). A possible auth-scope mismatch is under verification and **tracked privately** until confirmed harmless or fixed |
 | `GET /api/external` (`api-external.ts:47`) | Reads configured paths outside the box root | mitigated | high | unreachable | Registered only with explicit `devSurfaces`; production launchers omit it and absence fails closed. If enabled, an authed member can rewrite `_config/box.json` through the raw file API and widen `externalRoots`, so this remains a high-impact local-development capability rather than a hardened member boundary |
 | tRPC `admin.*`, `pairing.*`, `scanTokens.*` | Connector setup, device pairing, credential minting | ok | — | owner | Uniformly `ownerProcedure` |
+| tRPC `cloudflarePublishConnections.*` | Save/verify/revoke host Cloudflare API credentials and grant/revoke a named connection for a box | mitigated | high | owner | Credentials are saved server-side; box agents never receive them. A grant scopes server-mediated publication operations, not arbitrary same-user code. |
+| tRPC `secrets.revealValue`, `cloudflarePublishConnections.revealToken` (`src/webapp/trpc/routers/secrets.ts`, `cloudflare-publish-connections.ts`) | Return one stored credential after explicit Admin Show | mitigated | high | owner | `authenticatedOwnerProcedure`; UI refuses when `navigator.webdriver` is true; successful reveal is fail-closed on the `owner-read` audit event. Values are transiently held in the owner browser response/DOM and cleared on Hide, timeout, blur, page hide, secret-row collapse, or component unmount/navigation. |
+| tRPC `publications.list`, `publications.prepare`, `publications.ensureCard` | Read managed publication status; prepare/refresh a named site; explicitly create or reuse its reference card | mitigated | med | authed/member | `prepare` takes only the publication name. `ensureCard` requires a signed-in member and only creates/preserves the same-box reference card; card fields do not grant authority. The server derives the box, pubId, Worker, bucket, and connection grant. Same-approved-scope refresh may publish immediately; scope changes become candidates. |
+| tRPC `publications.configureSharedHost` (`routers/publications.ts`) | Configure one hostname and selected publishing connection for this box | mitigated | high | owner | Requires `authenticatedOwnerProcedure`; mapping is machine-owned and immutable. The server verifies the box grant, creates or reuses this box+connection bucket, deploys the shared Worker with `workers.dev` and previews disabled, attaches the hostname, and marks it attached only after exact provider read-back. A pending mapping blocks preparation and can be retried from Admin. An owner can repeat setup to redeploy a changed Worker bundle; an attached hostname is read back rather than reattached, and pinned-site Workers are not touched. DNS/certificate changes begin during initial setup before any site is enabled; there is no automatic detach, move, or reassignment. HTTPS and minimum provider permissions remain unverified. |
+| tRPC `publications.approve`, `previewFile`, `enable`, `disable`, `revoke` | Review candidate metadata/text and mutate publication serving authority | mitigated | high | member | Requires a signed-in member who can access this box; global Cloudflare administration is not required. Agent config and CLI cannot approve audience or destination. |
 | tRPC `scheduler.trigger`, `commands.executeSync`, `drive.updateConfig`, `calendar.updateConfig` | Run scheduled script cards / registered commands; rewrite sync config | gap | med | authed | Member-level code execution and config writes; moot single-operator (fail-closed owner-only), bites on multi-member boxes — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
 | tRPC `transcription.deepgramTempKey` / `openaiRealtimeKey` | Mint short-TTL (≤20 min) scoped third-party keys for browser-direct streaming | mitigated | low | authed | Long-lived provider keys never leave the server |
 | tRPC `clerk.*` (Chrome extension) | Page capture/commentary, tab arrangement | ok | — | authed | Rides the session cookie + per-origin CORS reflection for `chrome-extension://`; no separate extension credential |
 | Hub catch-all proxy + WS proxy (`hub-server.ts`) | Routes `/<slug>/...` to children with injected identity | ok | — | public→authed | WS reconnects never cold-start an idle box (anti-resurrection-storm) |
 | WS-auth end-to-end test coverage | — | gap | low | — | The `gen`/identity resolver is unit-tested but no test drives a real socket-level subscription upgrade — [no-socket-level-ws-auth-test](../../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md) |
 
-pub-worker routes are in §6a.
+pub-worker (Cloudflare Worker, GET/HEAD only, no box credentials): the entry
+point picks shared-host or pinned-site mode from its bindings and otherwise
+returns 500 "not configured" without reading R2 (`pub-worker/src/worker.ts`,
+`route`). It has no writable routes and no public status endpoint. Details in §6a.
 
 ## 2. Credentials
 
@@ -145,6 +228,7 @@ pub-worker routes are in §6a.
 | `BBX_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
 | `BBX_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router, plus the router's read-only dev surfaces — `GET`/`HEAD` on `/<w>/dev/…` and `/workstreams/…`, the `dev-read` class in `bin/router-auth.ts`). On a box whose `_config/box.json` sets `agentBrowsing: "owner"` (test boxes built for agent-driven browsing) the key resolves to the **box owner's identity** inside that box — `ownerProcedure`, capture, chat attribution — but never `authenticatedOwnerProcedure` (the machine-level secret store); on every other box it is nobody (`webapp/box-identity.ts`). NOT the control surfaces: `/`, `/__router/*`, and every mutating `/workstreams/*` verb stay owner-session-only | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
 | Agent loopback token — `.beebox/agent-token` (`agent/token.ts:26-48`) | 0600, gitignored; injected as `BBX_AGENT_TOKEN` into box subprocesses | Call back into its **own** box only | Per-box | Permanent, no rotation | ok — trust boundary is explicit: the agents are the box |
+| Declared trick secrets — `secrets.json` plus `bbx trick` child environment (`cli/lib/trick-secrets.ts`, `cli/commands/trick.ts`) | Value remains in the machine secret store; the runner resolves it at launch and injects it only into the selected trick child under its declared env name | Spend/abuse the granted provider account | Per-box grant; one selected trick invocation | Re-resolved each run; revoke by changing the box grant or rotating the store entry | mitigated — the runner never puts the value in argv, files, logs, or the parent environment; a trick can still print its own environment because it runs with the box agent's permissions |
 | Mobile device tokens — `.beebox/mobile-devices.secret.json` (`pairing.ts`, `token-store.ts`) | SHA-256 hash at rest, 0600, locked atomic RMW | Full member-level box access per device | Per-box, per-device | **No expiry**; explicit revoke propagates ≤1h via the `bbx_mobile` cookie TTL | gap — [mobile-device-token-no-expiry](../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md). On-device (iOS) storage moved from plaintext JSON to Keychain (`AfterFirstUnlockThisDeviceOnly`, shared app-group access group for the main app + the new share extension) in `571bb83f` — [ios-token-plaintext-not-keychain](../../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md), now closed |
 | Mobile session secret — `.beebox/mobile-session.secret` (`mobile-session.ts`) | 0600; 1-hour signed cookie | Rides WS upgrades without exposing the device token | Per-box | 1h TTL, renewed per response | ok |
 | Scan-uploader tokens — `.beebox/scan-tokens.secret.json` (`scan/tokens.ts`) | Same TokenStore guarantees; deliberately a separate store from mobile | Scan-ingestion only | Per-box | Permanent until named revoke | ok |
@@ -153,17 +237,16 @@ pub-worker routes are in §6a.
 | VAPID keys — `BBX_VAPID_*` (`send-push.ts:46-60`) | Env only; redacted | Send push notifications as the box (no data access) | Server-wide | Operator-set | ok |
 | Provider keys — Mistral / Deepgram / OpenAI / Gemini / OpenRouter (`mistral-key.ts`, `deepgram-key.ts`, `embeddings-key.ts`, `openai-thinking-key.ts`, `gemini-key.ts`, `openrouter.ts`) | Machine secret store only, per-box grant (`docs/secrets.md`) — the box-file and env-var fallbacks (`BBX_MISTRAL_API_KEY`, `BBX_DEEPGRAM_API_KEY`/`_PROJECT`, `BBX_OPENAI_API_KEY`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`, `SKE_GEMINI_API_KEY`) have been removed, along with their entries in `SECRET_ENV_NAMES` and the hub/tooling allowlists | Spend/abuse the provider account | Per-box grant | Operator-set | ok — the file-mode gap this row used to carry is closed with the fallback that created it: [connector-secret-file-modes](../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md) |
 | Telegram — `telegram-bot/<box>` in the machine secret store (`routers/admin.ts`, `telegram-helpers.ts`) | Same store guarantees as every entry; no longer a box file | Bot token = full bot control; webhook secret = forge inbound updates | Per-box, `shareable: false` | Permanent until re-setup | ok — the missing-mode gap this row used to carry no longer applies now that the value isn't a box file |
-| Publish connector — `publish/<box>` in the machine secret store (`connector-secret.ts`) | Same store guarantees as every entry; strict-Zod, minted scoped, no longer a box file | R2 **ingestion bucket only** — cannot touch published content or `allowedEmails` | Per-box, per-bucket, `shareable: false` | Permanent; revoke via Cloudflare dashboard | ok |
 | `ANTHROPIC_API_KEY` | **Deliberately withheld** (absent from both the hub and script-env allowlists; also stripped in `cli/bootstrap.ts`) | — | — | — | ok — a leak-prevention control forcing subscription auth, not a stored credential |
 
 **Positive control — the hub child-env allowlist**
-(`src/hub/child-env.ts:42-119`): per-box children receive an exact-name
-allowlist of env vars, never a spread. `src/hub/child-spawn.ts` explicitly sets
+(`src/hub/supervisor/child-env.ts:42-119`): per-box children receive an exact-name
+allowlist of env vars, never a spread. `src/hub/supervisor/child-spawn.ts` explicitly sets
 `extendEnv: false`, so the subprocess library cannot merge ambient parent
 variables back into that allowlist. `BBX_SESSION_SECRET` never reaches a
 child (a box that could verify a cookie could forge one for a sibling);
 `ANTHROPIC_API_KEY` is excluded; widening requires a named entry with a
-reasoned comment. `src/core/script-env.ts` applies the same posture one
+reasoned comment. `src/core/script-env/core.ts` applies the same posture one
 level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 subprocess inherits only `script-env-allowlist.ts`'s named entries, so the
 hub trust secrets, `BBX_SESSION_SECRET`, `BBX_BROWSE_API_KEY`,
@@ -174,6 +257,10 @@ credential name and prefix removed, since the store is the only place a
 connector reads one from and a spawned `runs:` command has no reason to
 inherit it. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.doctest.md`.
+The standard trick runner is a deliberate exception by declaration: it resolves
+only the selected trick's named dependencies and puts those values in that
+single child environment for that invocation; it does not widen the general
+allowlist or persist the values.
 **Scope of the control**: env-level, not OS-level. Everything runs as
 one OS user, so file-backed secrets (`~/.bbx-session-secret`,
 `~/.bbx-auth.json`) stay readable by any process that goes looking; the
@@ -192,14 +279,16 @@ wakeup cycle or routine use without a per-action confirmation.
 | **OpenAI** (`openai-audio.ts`, `openai-embeddings.ts`) | When configured: Whisper is the default HQ re-transcription pass; embeddings run on the automatic index refresh | Raw audio + context prompt; **each card's searchable text** + literal search queries; TTS reply text | Separate keys (transcription ≠ embeddings, deliberate) | Switch transcription service; omit embeddings key → text-only search | ok |
 | **Deepgram / OpenAI Realtime — browser-direct** (`deepgram-key.ts`, `openai-realtime-key.ts`) | Live dictation when selected | Raw microphone audio streamed **from the browser straight to the vendor** | Server-minted ephemeral key (≤20 min); long-lived key stays server-side | Per-box transcription config | ok — distinct risk shape, named in SECURITY.md |
 | **Google Gemini** (`scan-vision.ts:79-106`) | Only when `BBX_SCAN_VISION=gemini` (default is Claude) | Scanned photos | `gemini` secret-store entry, per-box grant | Env opt-in (`BBX_SCAN_VISION`) selects the backend; the key itself is store-only | ok |
-| **OpenRouter** (`core/openrouter.ts`) | Only for a service whose own provider key is absent — an added intermediary, never an override. Covers embeddings, audio questions, the Whisper HQ transcription pass, and the opt-in Gemini scan backend. Also the sole route for the `mai` HQ transcription services (Microsoft MAI-Transcribe-2, served by Azure) and for the `gemini` TTS backend, neither of which has a direct arm | Whatever that service already sends: card text and search queries, scanned photos, voice audio, chat reply text | Single `openrouter` secret, store-only | Grant the service's own key instead, or omit the OpenRouter key entirely | ok — requests pin `data_collection: "deny"`, and pin the upstream provider (`only`) wherever the endpoint accepts routing preferences, so the data reaches the same company the direct call would |
+| **Cloudflare publishing API token** (`src/core/secrets/cloudflare-publish.ts`, `src/webapp/trpc/routers/cloudflare-publish-connections.ts`) | Server machine secret store (`~/.config/beebox/secrets.json` by default; `BBX_SECRETS_FILE` override; atomic mode 0600) | Per-box R2 buckets/objects, shared Worker scripts/settings, and exact Worker-domain listing/attachment in the selected account | Admin-managed connection plus per-box grant and server-derived box-host mapping; hostname setup requires zone access in addition to Worker/R2 permissions | Admin can revoke the token/grant; this blocks future server operations but does not unpublish already-live sites. Cloudflare's permission labels and API authorization behavior have not been live-verified. Same-OS-user processes can read machine state; no hostile-local-code boundary is claimed | accepted (§8) |
+| **OpenRouter** (`core/openrouter.ts`) | Only for a service whose own provider key is absent — an added intermediary, never an override. Covers embeddings, audio questions, the Whisper HQ transcription pass, and the opt-in Gemini scan backend. Also the sole route for the `mai` HQ transcription services (Microsoft MAI-Transcribe-2, served by Azure) and for the `gemini` TTS backend, neither of which has a direct arm. Quick chat has a separate TypeSafe row below | Whatever that service already sends: card text and search queries, scanned photos, voice audio, chat reply text | Single `openrouter` secret, store-only | Grant the service's own key instead, or omit the OpenRouter key entirely | ok — requests pin `data_collection: "deny"`, and pin the upstream provider (`only`) wherever the endpoint accepts routing preferences, so the data reaches the same company the direct call would |
+| **OpenRouter → TypeSafe Jev** (`src/services/jev.ts:89,119`; `src/core/triage/judge.ts`; `src/webapp/trpc/routers/quick-chat.ts:62`) | Quick chat on user send; document triage only when explicitly run with the Jev engine, including judge and replay | Quick chat sends captured text and bounded conversation context as described above. Document triage sends prepared admitted-document and attachment text, evidence refs/digests, and compiled intake/landmark rules; replay makes a fresh paid call. Preparation can separately send images through the existing scan-vision backend and PDFs through existing Docling extraction. No new provider or credential is introduced | Existing `openrouter` secret, resolved at server access for this box; never sent to the browser | Omit the box grant to disable Jev calls; direct chat and legacy agent triage remain available. Gmail admission is unchanged. Unclear document cases may invoke the full box agent, which has ordinary box privileges and persistent prompts/transcripts | mitigated; medium / authed — fixed Decisions URL, `only: ["TypeSafe"]`, `allow_fallbacks: false`, `data_collection: "deny"`. These are requested provider policy controls, not a verified zero-retention promise. Existing request cap and timeout apply; response keys/probabilities are validated before selection. Prepared text and effective rules are retained in applied Git-backed triage receipts until those records are deleted; deleting the source alone does not erase them. |
 | **Google Gmail** (`gmail.ts`, `gmail-drafts.ts`) | Automatic sync | IN: full messages/attachments. OUT: **drafts only — no `gmail.send` scope exists**; autonomous sending is architecturally impossible today | Shared fleet OAuth token | `googleServices.gmail` per-box flag (default off) | ok |
 | **Google Calendar** (`google-calendar.ts`) | Automatic sync | Event create/edit/delete (title, description, attendees) | Same token | `googleServices.calendar` | ok |
 | **Google Drive/Sheets/Docs** (`google-drive.ts`, handlers) | Automatic sync | Two-way edits to files the box already tracks; **full `drive` scope**, not `drive.file` (deliberate, to sync pre-existing docs by URL) | Same token | `googleServices.drive` | accepted (§8 — shared broad token) |
 | **Telegram** (`connectors/telegram.ts`, `telegram-outbound.ts`) | Automatic once configured | Agent-authored reply text (no attachment path); registers the public webhook URL | Per-box bot token (`telegram-bot/<box>` in the secret store) | Presence of the granted secret | ok |
 | **Web Push** (`send-push.ts`, `services/push.ts`) | Automatic on finalize | Full notification payload (agent-authored title/body/URL), VAPID-encrypted, through the browser's push service (FCM/Mozilla/Apple) | Server VAPID keypair | Browser subscription | ok |
 | **Box git remote** (`lib/git.ts:416-460`, `wakeup.ts:149`) | Automatic at the end of every wakeup | **The entire incremental box history** — every card, email, chat | Host git credentials | Operator-chosen remote; no remote → skipped | ok (stated plainly; see [git-push-confirmation](../../issues/decisions/2026-07-20-git-push-confirmation.md)) |
-| **Cloudflare (publish)** (`publish/setup.ts`, `go.ts`) | Human-gated CLI only. `bbx pub setup` itself calls Cloudflare's API (buckets, subdomain, Access provisioning, worker deploy — `setup.ts:165-207`) with no confirm beyond running it; **content** uploads only on `bbx pub go`'s interactive TTY confirm | Provisioning: static config, no content. Publish: the rendered bundle + a stripped edge manifest (no box identifiers) | Operator's wrangler OAuth (never stored on the box); box holds only the ingestion-scoped token | Never run `bbx pub setup` → fully inert | ok |
+| **Cloudflare (managed static sites)** (`src/publish/managed-publications/core.ts`, `src/publish/managed-publication-shared-host.ts`, `src/services/managed-publication-runtime/core.ts`) | Authenticated owner configures one hostname and connection for a box before its first site; agent `bbx pub prepare <name>` uploads release files; a signed-in member approves first enable and scope changes; same-approved-scope refresh may update live content immediately | Static release files and serving manifest; one shared Worker and R2 bucket per box use the server-side API token | Machine secret-store Cloudflare token, never returned by box API; server validates connection grant and box-host mapping | Member can disable; removing token/grant blocks new mutations but does not itself disable already-live sites. Hostname attachment begins DNS/cert changes during Admin setup before a site is enabled. | mitigated |
 | **Tailscale** (`tailscale-setup.ts`) | Manual CLI | Traffic to the tailnet via `tailscale serve` — **never `funnel`** (a discovered funnel grant is a hard failure); control-plane traffic belongs to the OS daemon | — | `bbx tailscale stop` / don't install | ok |
 | **Adapter proxy** (`api-adapters.ts:33-104`) | Box-local code calling `/api/adapters/:adapter/*` (never automatic) | The authed request body, forwarded to **Replicate**, Mistral, Anthropic, or OpenAI with the box's stored key injected server-side | Per-box stored keys | Only reachable behind the wall; inert without a stored key | ok |
 | **Outbound URL fetches** (`proxy-image.ts`, `url-fetch.ts`) | Image proxy per render; link check on validate | The URL itself (query strings can carry data) | None forwarded | — | mitigated — SSRF guards, §4 |
@@ -211,12 +300,13 @@ wakeup cycle or routine use without a per-action confirmation.
 
 | Practice | Where | State | Notes |
 |---|---|---|---|
-| Maintenance admission | `src/lib/box-maintenance.ts`, `src/webapp/box-admission.ts`, `src/webapp/trpc/trpc.ts` | mitigated | Low severity; authenticated/local reachability. `BBX_BOX_WORK` and its loopback header must match a live, box-scoped lease or maintenance owner. They preserve accepted work through draining and do not replace route authentication. Global login/setup remains available while box writes are closed. `actions.answer` delegates admission to the shared answer command; only a pending migration question with its real Git recovery ref can be answered under a recovery owner while closed. That path keeps maintenance closed and does not run a generic follow-up job. |
+| Quick chat records and automatic selection | `src/webapp/trpc/routers/quick-chat.ts`; `src/core/chat/routing/policy.ts` | mitigated | Routing uses enumerated destinations and sends immediately, potentially triggering agent actions before the result is shown. Destination links stage the original text in another chat and cannot undo those actions. Local decision records retain the message, candidate context, and outcome in `.beebox/quick-chat/` (mode 0600; no automatic expiry). |
+| Maintenance admission | `src/lib/box-maintenance.ts`, `src/webapp/server/box-admission.ts`, `src/webapp/trpc/procedures.ts` | mitigated | Low severity; authenticated/local reachability. `BBX_BOX_WORK` and its loopback header must match a live, box-scoped lease or maintenance owner. They preserve accepted work through draining and do not replace route authentication. Global login/setup remains available while box writes are closed. `actions.answer` delegates admission to the shared answer command; only a pending migration question with its real Git recovery ref can be answered under a recovery owner while closed. That path keeps maintenance closed and does not run a generic follow-up job. |
 | Migration recovery | `src/core/migration-recovery.ts`, `src/core/migration-repair.ts` | mitigated | Medium severity; local/operator reachability. Git recovery refs preserve tracked and unignored input without changing HEAD/index; ignored runtime data and missing annex objects are outside that snapshot. Bounded repair uses the configured agent's existing permissions, with human questions for unresolved data choices; the bound is not a sandbox. |
 | Fail-closed credential store | `local-users-errors.ts`, `server-box-scope.ts:112-114` | ok | Corrupt/unreadable store → 503, never "no session" |
 | Client error sanitization | `webapp/trpc/trpc.ts`, `webapp/server.ts:114-128` | ok | tRPC unconditionally removes response stacks and replaces internal-error messages; raw 5xx responses stay generic; full errors remain in server-side logs |
 | Development-surface opt-in | `server-types.ts`, `lib/env.ts`, `routes/api.ts`, `routes/chat-audio-routes.ts` | mitigated | `BBX_DEV_SURFACES=1` is a strict positive opt-in set only by development launchers; omission disables the external-file route and rejects mock TTS before provider lookup |
-| Path traversal containment | `src/shared/ref-path.ts` | ok | All ref/path resolution goes through one pure module; `..` escaping the box root → `null` everywhere, never clamped (frontend clamping removed 2026-07-30); callers must degrade visibly |
+| Path traversal containment | `src/shared/ref-path/core.ts` | ok | All ref/path resolution goes through one pure module; `..` escaping the box root → `null` everywhere, never clamped (frontend clamping removed 2026-07-30); callers must degrade visibly |
 | Login throttling | `login-throttle.ts` | ok | Per-(IP,email) exponential backoff + per-IP and per-email buckets (X-Forwarded-For rotation defeated) + global scrypt concurrency cap 2 (memory-DoS guard); all maps hard-capped at 4000 entries; throttle, never lockout |
 | Session mechanics | `auth.ts` | ok | HMAC-SHA256 cookie, 30-day TTL, timing-safe verify with length pre-check; `gen`-based revocation on password change/user removal; hub mode never verifies cookies in the box process |
 | Timing-safe comparisons | `auth.ts:68-76,171-184`, `browse-key.ts:57-72` | ok | All bearer/secret compares |
@@ -224,21 +314,27 @@ wakeup cycle or routine use without a per-action confirmation.
 | Cross-box browser isolation | — | accepted | Boxes share one origin; a script in one box can make same-origin requests to a sibling. Accepted single-operator; server-side forgery still blocked (session secret never reaches boxes). [boxes-share-one-origin](../../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md) |
 | SSRF guards | `proxy-image.ts:50-121`, `url-fetch.ts:122-190` | ok | http(s) only; DNS-resolved block of loopback/private/link-local (incl. cloud metadata)/CGNAT/multicast, v4+v6+mapped; every redirect hop re-validated (max 3); 25MB/10s caps; `image/*` only; no cookie/Referer forwarding |
 | Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §8 |
-| Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest.ts`) | ok | |
+| Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest-edge.ts`) | ok | |
+| Markdown body rendering (raw HTML) | `src/shared/markdoc-config/html-policy.ts`, `src/shared/markdoc-config/parse/` (`html-tokens.ts`, `html-inline.ts`), `tags/html-schema.ts` | mitigated | Medium severity; authed reachability (anyone or anything that writes a card body, connectors included). Card bodies, chat and published Markdown pages accept raw HTML only through an element/attribute allow-list. Each fragment is rebuilt as a Markdoc node at parse time, so raw HTML text never reaches `innerHTML` and renderers only see allowed element names. Raw HTML keeps no `style`/`class`/`id`/event-handler attributes (Markdoc's own `{% .cls %}`/`{% #id %}` annotations can still set `class`/`id`, as before); no `script`, `iframe`, `form`, `svg` or `object`. `<a href>`/`<img src>` become Markdown links/images and get markdown-it's URL check (no `javascript:`/`vbscript:`/`file:`; `data:` only for images). With the app CSP Report-Only, the allow-list is the only control against script in a body. Markdoc tags stay live in every body. |
+| Ingested-text escaping | `src/shared/markdoc-config/ingest.ts`; callers `webapp/trpc/routers/clerk.ts`, `webapp/trpc/routers/share/router.ts`, `core/commands/scan-import/pdf.ts` | mitigated | Low severity. Web clips, PDF text, iOS shared text and share titles have raw HTML and Markdoc tag openers backslash-escaped at write time. Third-party text then renders literally instead of as allow-listed HTML, links or box tags. Agent-written cards built from outside text (e.g. `record`/`doc` cards from scraped posts) are not escaped and rely on the allow-list. |
+| Published project preparation | `src/publish/prepare/project.ts`, `src/publish/prepare/files.ts` | accepted | Site-local `pnpm install --frozen-lockfile` and `pnpm run build` execute as trusted box code with existing same-OS filesystem privileges. A reduced child environment removes server credential variables, but this is not a sandbox. Registry/network access is possible during installation/build. Only validated `dist/` output is staged; failures before activation do not promote a partial release. |
+| Shared-host setup | `src/publish/managed-publication-shared-host.ts`, `src/webapp/trpc/routers/publications.ts`, `src/core/secrets/cloudflare-publish.ts` | mitigated | Authenticated global owner configures one immutable hostname/connection mapping per box before publication setup. Server checks the box grant, reserves pending state, verifies the shared Worker identity and exact provider attachment, then records attached state. It does not rewrite or delete old per-publication Workers/hostnames. DNS/certificate changes can start before a page is enabled; no detach/move/reassignment is available. HTTPS readiness and minimum provider permissions remain unverified. |
+| Published-site browser policy | `pub-worker/src/headers.ts`, `pub-worker/src/shared-site.ts`, `pub-worker/src/site.ts` | accepted | Enforced CSP, same-origin CORP, no permissive CORS, `nosniff`, and `no-referrer` apply. New publications for one box share a hostname and browser origin; their JavaScript can access shared web storage and make same-origin requests to other publication paths, including a known secret PubId path. The boxholder explicitly accepts mutual trust among pages in that box. CORS and iframe isolation are not provided. Different boxes use different hosts. |
 | Atomic secret writes | `lib/atomic-write.ts` + per-store 0600 modes | ok | Exceptions tracked as the §2 connector-mode gap |
-| **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user. This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
-| Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md) |
+| **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user, plus root package installs through the §5 wrapper (distro-only, service-free). This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
+| Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md) |
 
 ## 5. Operational security
 
 | Item | Detail | State | Sev | Reach |
 |---|---|---|---|---|
-| Process model | `bbx hub` (systemd, dedicated non-root `callback` user) spawns one `bbx serve` child per box, bundled `dist/cli.mjs` | ok | — | — |
+| Process model | `bbx hub` (systemd, dedicated non-root `beebox` user, `setup-server.sh:19`) spawns one `bbx serve` child per box, bundled `dist/cli.mjs` | ok | — | — |
 | Bind defaults | `bbx serve` → `localhost` (`serve.ts:99`); hub → `127.0.0.1` (`hub-config.ts:104`); no `0.0.0.0` anywhere in `src/` | mitigated | med | local | Control is default-loopback + nginx as the only public listener. Residual: operator-overridable — nothing in code *refuses* a non-loopback bind. (No recorded decision that this is fine, so it is not marked `accepted`.) |
 | TLS — public path | Cloudflare-proxied, SSL mode "Flexible": **edge→origin is plain HTTP** (nginx :80 → 127.0.0.1) | gap | high | public (passive on-path) | [cloudflare-flexible-ssl-origin-plaintext](../../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md) |
 | TLS — Tailscale path | Terminated by `tailscale serve` (LE certs), tailnet-only | ok | — | — |
 | Tailscale exposure gate | `tailscale-target.ts`, `tailscale-setup.ts:100-160` | mitigated | — | — | Refuses to expose a target that can't prove an auth-enforcing posture (`/auth/me` probe, anonymous-401 check); funnel never invoked, detected funnel = hard failure |
 | Cross-box env isolation | Hub child-env allowlist (§2) | mitigated | — | — | |
+| Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host-apt`); NOPASSWD sudoers entry for the `beebox` user, that one path only; `deploy.sh` installs both from the build checkout via stdin, never from the box-user-owned `/opt/beebox`, and `visudo -c` checks the entry. The Docker image carries the same wrapper for `node`. | accepted | high | local (any box agent) | The wrapper is the whole boundary: re-execs under an empty environment with `bash -p`; exact package names only (apt's regex fallback blocked); a private apt config reads only the distro's deb822 sources file (the legacy `sources.list` is ignored), so third-party sources are invisible; refuses any upgrade or removal; installs only the inspected `name=version` set with `--no-download`; refuses packages that ship system units (including under `/etc/systemd/system`), init scripts, root cron jobs, D-Bus system services, systemd generators, sudoers/polkit rules, or setuid/setgid files. Every attempt is logged to `/var/log/beebox/host-apt.log`. Residual: distro maintainer scripts run as root, a `postinst` `setcap` is not detected, and installs are host-wide (every box sees them). Boxholder decision 2026-09-17 (sudo wrapper, distro only, refuse services); `docs/plans/box-host-packages.md`. Regression: `deploy/server-bin/bbx-host-apt.smoke.sh` (Docker, Ubuntu 24.04 + Debian bookworm). |
 | Secrets on the server | `/home/beebox/.env`, 0600 (`setup-server.sh:186`) | ok | — | — | |
 | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require manual application; documented in `deploy/README.md` but not decided-acceptable — [deploy-infra-drift-setup-server-not-rerun](../../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md) |
 | Backups | No first-class mechanism; box git remotes optional; annex `numcopies: 1`, no annex remote | gap | med | — | [server-backup-story](../../issues/decisions/2026-08-07-server-backup-story.md) |
@@ -247,28 +343,33 @@ wakeup cycle or routine use without a per-action confirmation.
 
 ### 6a. Publishing
 
-The flow: `bbx pub draft` renders a single named doc to a static bundle
-and **leak-scans it before anything enters git history**
-(`draft.ts:250-255`); `bbx pub go` re-scans, shows a full file-by-file
-preview, and requires an interactive TTY confirmation that refuses on a
-non-TTY (`go.ts:115-132`) — agents cannot flip a publication live through
-the blessed path. The control is **procedural, not cryptographic**
-(`go.ts:11-19`, stated in-code): an agent with box shell access could
-script around the confirm; the real controls are the Cloudflare
-credential living outside the box, the interactive confirm, and the git +
-`bbx pub ls` audit trail.
+Publishing has one flow. Static sites render `.md` to `.html` at prepare
+time (`src/publish/prepare/markdown.ts`); box Markdoc component tags are
+rejected, `redacted` content is omitted, and the leak scan runs over the rendered
+output (`src/publish/prepare/files.ts:218`). Sites use `bbx pub prepare
+<name>` through the authenticated box API. A signed-in box member approves
+first enablement and every audience/destination change. After that, a prepare
+inside the approved scope may immediately replace the live content. This is
+an ongoing publication permission, not a per-snapshot review. The server-side
+Cloudflare credential is outside the box API response, but build scripts run
+as trusted box code under the same OS user and can read machine state; this is
+an accepted host-trust tradeoff, not cryptographic agent isolation.
 
 | Item | Detail | State | Sev | Reach |
 |---|---|---|---|---|
-| Leak scan (`leak-scan.ts`) | Scans text entries for home paths, non-owner emails, credential shapes, absolute URLs. **A backstop, not a gate**: stated blind spots are prose PII in the inlined card JSON and **binary/image assets (skipped entirely — a screenshot of a key ships clean)**; the human preview is the only real gate | accepted | med | — |
+| Leak scan (`leak-scan.ts`) | Scans text entries for likely leaks, with blind spots including contextual prose and image content. A signed-in member reviews findings and file summary for first enablement/scope change; same-scope updates after approval do not receive a snapshot approval | mitigated | med | — |
 | Bundles are fully public regardless of tier | Tier gates *who can reach the page*, not what a viewer does after saving it; `public` and `secret` bundles are stored and scanned identically | accepted | — | — |
-| `secret` tier = capability URL | `/s/<pub-id>` has **zero authentication** — the ≥128-bit CSPRNG pub-id is the credential (`manifest.ts:77-94`, `index.ts:141-143`) | accepted | med | public | The name invites misreading as access-controlled; SECURITY.md states it plainly |
-| `accounts` / `any-account` tiers | Cloudflare Access JWT, RS256 pinned (no `alg` downgrade), fail-closed on every axis (unconfigured Access → 404, empty allowlist → nobody, JWKS failure → 401) | ok | — | — |
-| Submissions (`submit.ts`) | Form-urlencoded only, 1MiB cap, manifest re-validated, no-public-submit twice-enforced; per-day cap best-effort; per-IP limit optional | ok | low | public |
-| Bucket split | `PUB_STORE` (content — worker read-only, laptop-written) vs `PUB_INGEST` (submissions — worker-written, box-readable); a stolen box connector token cannot touch published content | mitigated | — | — |
-| Edge manifest hygiene | Provenance/box identifiers stripped from everything edge-side (`manifest.ts:10-12`) | ok | — | — |
-| Revoke (`lifecycle.ts:253-298`) | Tombstone written first, synchronously (R2 strongly consistent — next request 410s); bundle deletion best-effort after; `Cache-Control: no-store` throughout so revoked URLs can't serve from cache; partial cleanup risks orphaned bytes, never re-exposure | ok | — | — |
-| Pre-auth oracle + log flood on `/a/` routes | Manifest status readable before Access verification; `any-account` access-log writes before asset validation | gap | low | public | [pub-worker-preauth-oracle-and-log-flood](../../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md) |
+| `secret` tier = capability URL | `/s/<pub-id>` has **zero authentication** — the ≥128-bit CSPRNG pub-id is the credential (`manifest.ts:39-53`, `pub-worker/src/shared-site.ts:121-124`, `site.ts:164-166`) | accepted | med | public | The name invites misreading as access-controlled; SECURITY.md states it plainly |
+| `accounts` / `any-account` tiers | The pinned-site Worker path validates an Access JWT for these tiers (`pub-worker/src/site.ts:164-189`; the switch ends in `assertNever`, so a new tier cannot fall through to open). The shared-host path serves only `public` and `secret` manifests and 404s the rest (`shared-site.ts:97-104`). No Access bindings are provisioned for managed Workers, and enablement remains blocked pending separate consent and security design | mitigated | — | unreachable | The current managed path fails closed and does not expose an unprotected account-restricted route |
+| Managed publication binding and URLs | Server binds each publication to its box, PubId, Worker host handle, account, and storage target. New sites use the per-box shared Worker and approved paths; pinned per-PubId Workers (one publication each) remain a supported mode. Secret PubIds are path capabilities | mitigated | high | public | A route marker enrolls the approved host/path but does not override manifest status, release, or audience. Same-box origin access is an accepted trust decision (§4, §8). |
+| Per-box shared-host setup | `src/publish/managed-publication-shared-host.ts`, `src/core/secrets/cloudflare-publish.ts` | mitigated | high | owner | Authenticated owner selects one granted connection and hostname for the box before any site exists. The hostname is reserved as pending before remote writes, then marked attached after exact Worker-domain read-back. DNS/certificate changes may begin during setup. No automatic detach, move, or reassignment exists; HTTPS and provider permissions remain live-validation gaps. |
+| Machine credential / build trust | API token stays in server secret store and is never sent to agent API. Site install/build runs with reduced environment but same OS user and filesystem privileges | accepted | high | local | A hostile or compromised same-user process can read host secrets; managed publication does not claim that boundary |
+| Rendered Markdown pages (`prepare/markdown-page.ts`) | `.md` sources in static-mode publications render through the same parser and HTML allow-list as in-app cards, without bare-URL autolinking. The publication CSP permits `script-src 'self' https:` for built sites, so the allow-list is what keeps script out of a rendered page | ok | low | public |
+| Edge manifest hygiene | Provenance/box identifiers stripped from everything edge-side (`manifest-edge.ts:10-12`) | ok | — | — |
+| Pre-auth status oracle (pinned-site mode) | `handleSite` returns 404/410 for missing, disabled, revoked or expired publications before `authorizeViewer` runs (`pub-worker/src/site.ts:50-64`), so an unauthenticated requester holding a PubId can tell states apart. Matters only once Access-gated tiers are live (no Access vars are bound today). The access-log flood half of the old finding left with the legacy `/a/` route | gap | low | public | [pub-worker-preauth-oracle-and-log-flood](../../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md) |
+| Unconfigured Worker fails closed | Neither binding set: every request gets a 500 naming the misconfiguration, with no R2 read (`pub-worker/src/worker.ts`, `route`) | ok | low | public | |
+| Revocation and serving state | The Worker re-reads the manifest per request and returns 410 for revoked, disabled, or expired publications (`site.ts:57-58`, `shared-site.ts:55-56`), and sends `Cache-Control: no-store` on every response (`pub-worker/src/headers.ts:41`), so revoked URLs do not serve from cache. The tombstone-first revoke and bundle deletion of the legacy flow are gone; serving state is the manifest status alone | ok | low | public | |
+| Legacy flow removed | No box-side write path to R2, no ingestion bucket, no submissions endpoint, no per-publication connector secret remain; the Worker has no write routes | ok | — | — | Removes the former submission-intake and connector-token surface |
 
 ### 6b. Account lifecycle
 
@@ -311,10 +412,10 @@ context:**
 
 | Channel | Source | file:line |
 |---|---|---|
-| Email bodies + attachments | Gmail connector | `src/connectors/gmail.ts` |
+| Email bodies + attachments | Gmail connector | `src/connectors/gmail/connector.ts` |
 | Web clippings + frozen-page HTML | Chrome extension (`beebox-clerk`) | `beebox-clerk/src/platform/clerk-api.ts` |
-| Telegram message text | Telegram connector | `src/connectors/telegram.ts` |
-| Calendar event content | Calendar connector (attendee-supplied titles/descriptions) | `src/connectors/google-calendar.ts` |
+| Telegram message text | Telegram connector | `src/connectors/telegram/connector.ts` |
+| Calendar event content | Calendar connector (attendee-supplied titles/descriptions) | `src/connectors/google-calendar/connector.ts` |
 | Image text (OCR/vision) | Scan-import + vision models — injection can hide *in a screenshot* | `src/services/scan-vision-claude.ts` |
 | Voice transcripts | Transcription pipeline | `src/core/transcription/` |
 | Card bodies generally | Any of the above lands as a card, and cards become agent context | `src/core/card-io.ts` |
@@ -327,9 +428,12 @@ containment:
 - **Deployment model** — the audience is single-operator boxes; the
   blast radius is your own data, not other tenants'.
 - **Schedules off by default** — nothing auto-processes untrusted input
-  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md)).
+  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md)).
 - **Human-in-the-loop on the few gated actions** — the publish flip and
   credential-writing `bbx auth` refuse to proceed unattended.
+- **Ingest escaping is a display control, not an injection control** —
+  clipped pages, PDF text and shared text are escaped so they cannot
+  render as HTML or box tags (§4), but the agent still reads the same text.
 
 Honest read: a determined injection that reaches the agent has the
 agent's full shell/file capability, and nothing structural stops it. The
@@ -349,7 +453,7 @@ another box's caller. Three channels, and what covers each:
 
 | Channel | What a leak looks like | Control | Verified by |
 |---|---|---|---|
-| **A. Network** — a request carrying box A's credential (session cookie, agent bearer, mobile token) reaches box B's data, through B's scope or through A's scope with a path that climbs out | The recurring shape: a caller-supplied path-like input joined onto `boxRoot` without a containment helper (`boxRelativePath`, `containWithinBox`, `resolveContainedRef`, `resolveCardPath`, …) | Per-scope auth wall (`server-box-scope.ts`, §1) rejects A's credential on B; every path input in the route and tRPC inventory (§1) is bounded by a containment helper — must be **zero** exceptions | `test/webapp/cross-box-probe.doctest.md` (the regression anchor: box A's bearer against every read surface of box B); `schedules/cross-box-leak-scan` static sweep, weekly, hands off any new unbounded path input |
+| **A. Network** — a request carrying box A's credential (session cookie, agent bearer, mobile token) reaches box B's data, through B's scope or through A's scope with a path that climbs out | The recurring shape: a caller-supplied path-like input joined onto `boxRoot` without a containment helper (`boxRelativePath`, `containWithinBox`, `resolveContainedRef`, `resolveCardPath`, …) | Per-scope auth wall (`server-box-scope.ts`, §1) rejects A's credential on B; every path input in the route and tRPC inventory (§1) is bounded by a containment helper — must be **zero** exceptions | `test/scenarios/cross-box-probe.doctest.md` (the regression anchor: box A's bearer against every read surface of box B); `schedules/cross-box-leak-scan` static sweep, weekly, hands off any new unbounded path input |
 | **B. Filesystem** — a box process reads another box's files or shared host state directly | `~/.bbx-session-secret`, `~/.bbx-auth.json`, the machine secret store, the shared Google token, `~/.claude/projects/<encoded cwd>`, `/tmp/claude-<uid>/…` | **Accepted for now** as the env-level posture (§8), with a fix on the books — [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md): one OS user, files are readable by any same-user process. Compensations: 0600/0700 modes; per-cwd keying of transcripts and task output; `bbx secrets` refuses an agent asking about another box (`secrets-guard.ts`) | `schedules/cross-box-leak-scan` host audit (local, and production over SSH from the main checkout): modes, per-cwd keying maps each project dir to at most one box, no nested box roots, no undocumented file under `~/.config/beebox` / `~/.local/share/beebox` |
 | **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2) | `test/hub/supervisor.doctest.md` |
 
@@ -416,9 +520,12 @@ Every `accepted` item, with its rationale:
    >5-min mid-critical-section suspension against a sub-millisecond
    synchronous RMW; effectively unreachable on the server deploy path.
    Accepted 2026-07-21 over fencing-token CAS. (§4)
-9. **Leak-scan blind spots + bundles-are-public** — the human
-   file-by-file preview is the real publish gate; binaries ship
-   unscanned; tier gates viewers, not content. (§6a)
+9. **Leak-scan blind spots + bundles-are-public** — members review the
+   file summary and findings for first enablement/scope changes, but an
+   already-approved scope permits immediate content refresh without
+   snapshot approval; binaries and contextual appropriateness remain
+   scan limitations. Public and secret-link content is fully readable by
+   anyone who can reach its URL. (§6a)
 10. **`secret`-tier publications are capability URLs** — unguessability
     (≥128-bit) is the entire access control. (§6a)
 11. **Prompt injection is unmitigated by containment** — accepted for now
@@ -434,6 +541,31 @@ Every `accepted` item, with its rationale:
    the posture for now — a per-box boundary is tracked in
    [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md);
    the network channel is tested to zero and re-swept weekly. (§7b)
+
+13. **Box agents install distro packages as root** — through one validating
+   sudo wrapper: distro sources only, additive only, no services, root jobs,
+   privilege grants or setuid files. Distro maintainer scripts still run as
+   root for a package an LLM chose, a `postinst` `setcap` goes undetected,
+   and the install is host-wide. Accepted 2026-09-17 on the boxholder's
+   judgment that distro packages are safe, over asking the boxholder for
+   each install. (§5)
+
+14. **Managed publication shares host trust with the box agent** — the
+   Cloudflare API token stays in the server's machine secret store and is
+   never returned by the box API, but box project install/build code runs
+   under the same OS user and existing filesystem privileges. A reduced
+   child environment is credential hygiene, not a sandbox. This is the
+   accepted host trust boundary; member approval protects audience/destination
+   changes, not each content update. Accepted 2026-09-24 in the
+   [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+
+15. **Pages within one box share an origin** — JavaScript on one publication
+   can access shared web storage and make same-origin requests to other paths
+   on that box host, including a secret path whose PubId is known. CORS does
+   not separate them, and the product adds no iframe. Accepted 2026-09-26 by
+   the boxholder; publications within one box are mutually trusted. Separate
+   boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+   (§4, §6a)
 
 Not in this roll-up because no acceptance decision has been made — these
 are **gaps**, tracked, awaiting fix or a decision: bind host being

@@ -7,7 +7,7 @@
  * dispatcher already extracts the refs itself (`extractRefs` over frontmatter,
  * `extractBodyRefs` over the Markdoc body); this only answers "does it exist".
  *
- * Ref semantics (the 3-form rule) live in `src/shared/ref-path.ts` — this
+ * Ref semantics (the 3-form rule) live in `src/shared/ref-path/core.ts` — this
  * module only turns its box-relative answer into an absolute path and asks the
  * filesystem. A ref's `?query`/`#fragment` is split off BEFORE the existence
  * check: `feedback.target.ref` is documented as `path#fragment`
@@ -17,9 +17,10 @@
 
 import { access } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
-import { parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
+import { BOX_ROOT_VOCABULARY } from "../shared/box-root-vocabulary.js";
 
 interface RefExistsInput {
   /** The raw ref string as written in the card. */
@@ -35,7 +36,7 @@ interface RefExistsInput {
  * names no in-box file — it escapes the box root, or its path part is empty
  * (a fragment-/query-only ref like `#risks` or `?view=x`, which used to resolve
  * to the containing directory and pass the existence check). The shared algebra
- * fails closed on both — see `src/shared/ref-path.ts`. Any `?query`/`#fragment`
+ * fails closed on both — see `src/shared/ref-path/core.ts`. Any `?query`/`#fragment`
  * is dropped: it addresses a location *within* the target, not a different file.
  */
 function resolveRefToPath(input: RefExistsInput): string | null {
@@ -70,6 +71,19 @@ export function resolveContainedRef(input: RefExistsInput): BoxRelativePath | nu
   // `BoxRelativePath` brand — kept even though the shared algebra already
   // refuses escapes, so the branded type still traces to one checked producer.
   return abs === null ? null : containWithinBox(input.boxRoot, abs);
+}
+
+const AREA_NAMES = BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area").map((entry) => `\`${entry.name}\``);
+
+/**
+ * The tail of a broken-ref lint message, after the ref itself. A ref the box
+ * namespace fence refuses (`node_modules/`, `src/`, a `..` escape) is a
+ * different problem from a missing file, and "does not exist" sent authors
+ * looking for a file that was never the issue — so say which it is.
+ */
+export function brokenRefReason(input: RefExistsInput): string {
+  if (parseRef(input.ref).path === "" || resolveContainedRef(input) !== null) return "does not exist";
+  return `points outside the box — a ref reaches only the box's areas (${AREA_NAMES.join(", ")}); package docs under \`node_modules/\` can't be linked, so name them in plain text`;
 }
 
 /**

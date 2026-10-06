@@ -6,7 +6,7 @@ import { build } from "esbuild";
 import { buildStampJson } from "./src/build-revision.js";
 
 await build({
-  entryPoints: ["src/cli.ts"],
+  entryPoints: ["src/cli/main.ts"],
   outfile: "dist/scan-uploader.mjs",
   bundle: true,
   platform: "node",

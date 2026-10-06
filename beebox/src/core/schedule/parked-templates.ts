@@ -14,7 +14,7 @@
  *   - the procedure it runs, when `runs` is a `bbx procedure run <name>` command
  */
 
-import { BOX_DIRS } from "../../lib/paths.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
 
 /**
  * The box-relative procedure card a `runs` command executes, or null when the
@@ -68,7 +68,7 @@ function firstOperand(tail: string): string | null {
 }
 
 /** The box-relative card path for a scheduled task. */
-function scheduleCardForTask(name: string): string {
+export function scheduleCardForTask(name: string): string {
   return `${BOX_DIRS.schedules}/${name}.scheduled-script.card`;
 }
 

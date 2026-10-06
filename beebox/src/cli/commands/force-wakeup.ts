@@ -20,8 +20,8 @@ import { Command } from "commander";
 import type { inferRouterOutputs } from "@trpc/server";
 import { boxClient } from "../lib/box-client.js";
 import { reportRefusal, refusalFor, type VerbRefusal } from "../lib/credentialed-verb.js";
-import type { AppRouter } from "../../webapp/trpc/router.js";
-import type { WakeupConnectorOutcome } from "./wakeup-outcome.js";
+import type { AppRouter } from "../../webapp/trpc/routers.js";
+import type { WakeupConnectorOutcome } from "../wakeup-outcome.js";
 
 type ForceResult = inferRouterOutputs<AppRouter>["wakeup"]["force"];
 
@@ -92,7 +92,7 @@ export async function forceWakeup(options: ForceWakeupOptions): Promise<
     );
     return { ok: true, value };
   } catch (error) {
-    return { ok: false, error: refusalFor(error) };
+    return { ok: false, error: refusalFor(error, { remote: true }) };
   }
 }
 

@@ -72,7 +72,7 @@
     "reason": "The package bin map ships the tombstone under the retired command's name for installed dependencies."
   },
   {
-    "path": "beebox/scripts/migrate/schedule-runs-bbx.ts",
+    "path": "beebox/src/scripts/migrate/schedule-runs-bbx.ts",
     "occurrenceClass": "standalone-cli-token",
     "expectedCount": 4,
     "reason": "The migrator that rewrites boxes' scheduled-script runs: fields off the retired command must name it to explain and match it."
@@ -96,6 +96,12 @@
     "reason": "The registry comment for schedule-runs-bbx-2026-09 names the retired command the migration retires."
   },
   {
+    "path": "beebox/test/scripts/migrate/schedule-engine-verbs.doctest.md",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 1,
+    "reason": "The migrator must DECLINE a card still naming the retired command; asserting that requires the literal."
+  },
+  {
     "path": "beebox/src/lib/state-migration.ts",
     "occurrenceClass": "config-cli-directory",
     "expectedCount": 2,
@@ -114,7 +120,7 @@
     "reason": "The persisted-state migration recognizes the former package dependency."
   },
   {
-    "path": "beebox/test/cli/cb-tombstone.doctest.md",
+    "path": "beebox/test/bin/cb-tombstone.doctest.md",
     "occurrenceClass": "standalone-cli-token",
     "expectedCount": 9,
     "reason": "The regression fixture proves stale invocations of the retired command get the migration message and never perform work."
@@ -132,25 +138,25 @@
     "reason": "The regression fixture proves repeated retired managed hooks are replaced."
   },
   {
-    "path": "beebox/test/core/migrations/schedule-runs-bbx.doctest.md",
+    "path": "beebox/test/migration-flows/schedule-runs-bbx.doctest.md",
     "occurrenceClass": "standalone-cli-token",
     "expectedCount": 5,
     "reason": "The regression fixture proves the retired command word is rewritten and nothing else is."
   },
   {
-    "path": "beebox/test/dev/workstream-box-state.doctest.md",
+    "path": "bin/test/lib/workstream-box-state.doctest.md",
     "occurrenceClass": "dot-state-directory",
     "expectedCount": 1,
     "reason": "The regression fixture proves cloned pre-rename box markers are migrated without changing the source box."
   },
   {
-    "path": "beebox/test/dev/workstream-box-state.doctest.md",
+    "path": "bin/test/lib/workstream-box-state.doctest.md",
     "occurrenceClass": "kebab-name",
     "expectedCount": 4,
     "reason": "The regression fixture proves worktree setup migrates the retired engine dependency in existing box packages."
   },
   {
-    "path": "beebox/test/hub/hub-config.doctest.md",
+    "path": "beebox/test/hub/config.doctest.md",
     "occurrenceClass": "dot-state-directory",
     "expectedCount": 2,
     "reason": "Hub discovery fixtures prove legacy state is recognized without router-side mutation."
@@ -294,7 +300,7 @@
     "reason": "Router fixtures cover legacy marker and state discovery without mutation."
   },
   {
-    "path": "workstreams-app/test/router/router-config.test.ts",
+    "path": "workstreams-app/test/router/server/config.test.ts",
     "occurrenceClass": "kebab-name",
     "expectedCount": 3,
     "reason": "The router regression proves a renamed product can continue using its existing physical main-checkout directory."

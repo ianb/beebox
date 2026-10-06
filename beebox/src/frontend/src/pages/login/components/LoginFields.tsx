@@ -5,9 +5,9 @@
  */
 
 import { Stack } from "../../../components/ui/Stack";
-import { Text } from "../../../components/ui/Text";
+import { ErrorText } from "../../../components/ui/ErrorText";
 import { Button } from "../../../components/ui/Button";
-import { TextField } from "../../../components/ui/fields";
+import { TextField } from "../../../components/ui/fields/field";
 
 interface LoginFieldsProps {
   email: string;
@@ -33,7 +33,7 @@ export function LoginFields({ email, onEmail, password, onPassword, error, submi
       />
       {error !== null ? (
         <div role="alert">
-          <Text as="p" tone="danger" size="sm">{error}</Text>
+          <ErrorText>{error}</ErrorText>
         </div>
       ) : null}
       <Button id="bbx-login-submit" type="submit" intent="primary" fullWidth loading={submitting}>

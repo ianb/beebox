@@ -116,3 +116,31 @@ Full notes: `beebox/user-stories/work/journeys/B-inventory-2026-08-23*/notes.md`
 > Plan: `beebox/docs/implemented-plans/vocab-glossary-sweep.md`.
 
 > 2026-09-02 survey (bbx-pick-issues): re-verified still true. `app-shell.tsx` still says "No box matches …", `AppNav.tsx` debug-log badge still ungated, `SessionChip`/`PlacePill` still say "Session menu"/"Place:", `VoiceChip-panels.tsx` still labels raw Deepgram/Whisper. Filename-as-heading and agent-reply jargon halves are fixed. Grouped with 2026-08-08-markdown-not-rendering-in-agent-output (agent imitates `[→ …]` compiled-doc markup) and 2026-08-24-agent-records-counts-in-prose-though-measures-exists as one internals-leak vocabulary sweep.
+
+
+> Recovered 2026-09-21 from the August 25 journey A report. This is historical
+> evidence, not a fresh re-encounter; current status and priority are unchanged.
+
+## Third collection, 2026-08-25 (journey A)
+
+Same instrument, different walk, and the collisions repeat with two additions.
+
+- **Box, again, thrice**: "The account is a box, there's a menu item called
+  Box, a landmark called Box, and a cardboard-box icon, and I don't think
+  they're all the same box." Five minutes in: "Box, box, box."
+- **Card, told four times, defined never**: "Files end in `.doc.card`, there's
+  a Card/Source toggle, and something called 'this chat's card'. I've been told
+  the word four times and never told the meaning."
+- **New: paths as the primary label.** The document panel's tab is
+  `store/lending/Lending.doc.card`; on the Landmarks page the card's *title*
+  ("Lent & Borrowed") is not a link — only the path `store/lending/` is, so
+  opening your own list means clicking a file path. Plate rows cite provenance
+  as a path too. "It makes the thing feel like it belongs to the computer
+  rather than to me." (The card-header half of this was fixed 2026-08-09; the
+  panel tab, landmark link, and plate provenance are new surfaces.)
+- **New: mechanism vocabulary reaching answers.** Asked where their reminders
+  live, the user was taught "dated todos" vs "scheduled nudges" — two names
+  whose difference "is about how the app is built, not about anything I care
+  about. To me they are all 'things that will remind me'."
+- **Landmark, again** — learned only by watching one appear: "I'd rather have
+  been told, but I'll take arriving there."

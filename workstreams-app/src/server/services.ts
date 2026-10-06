@@ -6,6 +6,8 @@ import type {
   WorkstreamChangedFiles,
   Issue,
   IssueChange,
+  IssueNextActionInput,
+  IssueNextActionState,
   Plan,
   IssueVisibility,
   Quota,
@@ -80,6 +82,8 @@ export interface DocumentsService {
   testingQueue(): Promise<TestingQueue>;
   issuesForWorkstream(name: string): Promise<WorkstreamIssue[]>;
   saveIssueChanges(changes: IssueChange[]): Promise<number>;
+  /** Set or clear one issue's next action in the local store. Written at once; never committed. */
+  setIssueNextAction(input: IssueNextActionInput): Promise<IssueNextActionState | null>;
   /**
    * One browsable path. `workstream` is a LENS, not a location: null reads the
    * main checkout, a name reads that worktree's copy of the same address.

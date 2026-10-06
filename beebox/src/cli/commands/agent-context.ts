@@ -2,7 +2,7 @@
 
 import { Command } from "commander";
 import { join } from "node:path";
-import { findBoxRoot, requireBoxRoot } from "../../lib/paths.js";
+import { findBoxRoot, requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { expandClaudeIncludes } from "../../core/agent-context-includes.js";
 

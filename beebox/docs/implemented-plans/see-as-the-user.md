@@ -58,15 +58,15 @@ Reused (nothing here is rebuilt):
   bus event broadcasts the id to connected chat tabs, tabs answer with a
   payload (`fulfill`, first-wins) or "I have nothing" (`reportNone`, which
   starts a grace window), and silence times out. The routes
-  (`src/webapp/routes/chat-last-audio-routes.ts`) carry the browser's answer
+  (`src/webapp/routes/chat-last-audio-routes.ts` (moved to `beebox/src/webapp/routes/chat/last-audio-routes.ts`)) carry the browser's answer
   as multipart, and the whole loop is doctested
-  (`test/core/last-audio.doctest.md`). Track B **generalizes this primitive**
+  (`test/core/last-audio.doctest.md` (moved to `beebox/test/core/last-audio-pending.doctest.md`)). Track B **generalizes this primitive**
   (rename/extract a shared pending-request module with a type parameter for
   the fulfillment payload) rather than writing a parallel copy — principle
   #8. The bus event precedent is `chat-last-audio-request { requestId }`
-  (`src/core/event-bus-schemas.ts`).
+  (`src/core/event-bus-schemas.ts` (moved to `beebox/src/core/event-bus/schemas.ts`)).
 - **UI-state context on every chat send.** `sendBodySchema` carries
-  `openCard`, `cardActivity`, `cardState` (`src/webapp/routes/chat-helpers.ts:65-78`),
+  `openCard`, `cardActivity`, `cardState` (`src/webapp/routes/chat-helpers.ts:65-78` (moved to `beebox/src/webapp/routes/chat/helpers.ts`)),
   serialized into the `<chat-app>` snapshot
   (`src/core/chat/features.ts:152-183`; spec section in
   `src/core/chat/session/prompts.ts:92`). Chat `images` ride the send body
@@ -75,16 +75,16 @@ Reused (nothing here is rebuilt):
   the plan does not touch this machinery.
 - **CLI→live-server command pattern.** `bbx chat self-note` posts to
   `${BBX_SERVER_URL}/${BBX_BOX_NAME}/api/chat/self-note` with
-  `loopbackHeaders()` (`src/cli/commands/chat.ts:33-46,55-56`). The agent
+  `loopbackHeaders()` (`src/cli/commands/chat.ts:33-46 (moved to `beebox/src/cli/commands/chat/command.ts`),55-56`). The agent
   subprocess env provides `BBX_SERVER_URL`/`BBX_BOX_NAME` but **no chat
-  session id** (`src/core/script-env.ts:83-101`) — a gap this plan closes
+  session id** (`src/core/script-env.ts:83-101` (moved to `beebox/src/core/script-env/core.ts`)) — a gap this plan closes
   (Track B) rather than working around with "most-active session" guessing.
 - **Typed event bus with WS subscription.** SQLite-backed bus bridged to
   tRPC subscriptions (`src/webapp/trpc/routers/events.ts:53-60`), typed via
-  zod schemas in `src/core/event-bus-schemas.ts` (adding an event means a
+  zod schemas in `src/core/event-bus-schemas.ts` (moved to `beebox/src/core/event-bus/schemas.ts`) (adding an event means a
   schema entry + `EVENT_SCHEMA_GENERATION` bump,
   `event-bus-schemas.ts:76`); transience is chosen at the emit site
-  (`emitTransient`, `src/core/event-bus.ts:173`). Note the bridge may drop
+  (`emitTransient`, `src/core/event-bus.ts:173` (moved to `beebox/src/core/event-bus/core.ts`)). Note the bridge may drop
   transient events for a slow/backgrounded subscriber (`events.ts:78-94`) —
   the Track B protocol is designed so a dropped request degrades to
   `no-client`, never to a hang.
@@ -283,7 +283,7 @@ e.g. while debugging a custom view it just wrote.
   `no-client` (tab closed, event dropped by the WS bridge, stale frontend,
   user on phone); *acked but never answered* → `timeout` (user ignoring
   the popup).
-- **Routes** (`src/webapp/routes/chat-screenshot-routes.ts`, shaped like
+- **Routes** (`src/webapp/routes/chat-screenshot-routes.ts` (moved to `beebox/src/webapp/routes/chat/screenshot-routes.ts`), shaped like
   `chat-last-audio-routes.ts`):
   - `POST /api/chat/screenshot/request` — loopback-only long-poll. Body
     `{session, timeoutMs}`. Creates the pending entry, emits transient bus
@@ -301,7 +301,7 @@ e.g. while debugging a custom view it just wrote.
     PNG magic bytes, size cap shared with `MAX_IMAGE_BYTES`
     (`chat-helpers.ts:102`). Unknown/settled requestId → 404 (matching
     last-audio's contract).
-- **Command** (`src/cli/commands/chat.ts`, alongside self-note):
+- **Command** (`src/cli/commands/chat.ts` (moved to `beebox/src/cli/commands/chat/command.ts`), alongside self-note):
   `bbx chat screenshot [--session <id>] [--timeout <seconds>]` (default 45
   — long enough for a human to answer the popup). Prints exactly one of:
   - the absolute path of the saved image + a `fidelity:` line (exit 0),
@@ -339,7 +339,7 @@ e.g. while debugging a custom view it just wrote.
   the indicator shows the thumbnail at capture time.
 - **Discoverability**: one line in `src/core/agent-guide/commands.ts`
   (`keyCommandsSection()`); the generated reference picks the command up
-  from Commander (`src/core/docs-gen/bbx-commands.ts`); a sentence in the
+  from Commander (`src/core/docs-gen/bbx-commands.ts` (moved to `beebox/src/core/docs-gen/package-docs/bbx-commands.ts`)); a sentence in the
   chat system prompt near the `<chat-app>` spec
   (`src/core/chat/session/prompts.ts:92`) saying screenshots exist and
   when to reach for one.

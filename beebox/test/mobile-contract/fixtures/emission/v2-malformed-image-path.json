@@ -1,0 +1,21 @@
+{
+  "input": {
+    "version": 2,
+    "id": "ios-v2-bad-image-path",
+    "origin": "typed",
+    "text": "Do not drop a malformed image path silently",
+    "diarized": false,
+    "images": [
+      {
+        "id": 1,
+        "mimeType": "image/jpeg",
+        "dataBase64": "aW1hZ2U=",
+        "path": 42
+      }
+    ],
+    "files": [],
+    "selections": []
+  },
+  "expected": null,
+  "expectedReason": "Invalid native emission V2: malformed image, file, or selection"
+}

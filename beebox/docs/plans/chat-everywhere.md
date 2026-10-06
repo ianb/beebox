@@ -67,8 +67,8 @@ anchors from this checkout; quoted code is the stronger reference.
 | `src/frontend/src/components/chat/InteractiveChat-card-hooks.ts:85-88`: `openCard?`, `cardActivity?`, `cardState?`; `:132`: `activeView.target.path` | Generalize the current single focused-card source to primary routes and overlays. Preserve selections as independently captured evidence. |
 | `src/frontend/src/components/chat/native-emission.ts:13-24`: `NativeEmissionV2` contains `id`, `origin`, `text`, `images`, `files`, `selections` | It has no recipient. Native pending sends need captured destination metadata, not merely a longer-lived web listener. |
 | `../ios-app/BeeBox/Storage/PendingEmissionStore.swift:158-175`: `enqueue` accepts `boxID` and content, and constructs `PendingEmission` | Extend durable pending and voice-preparation records with destination/context; keep native draft ownership and receipt handling. |
-| `src/webapp/routes/chat-send-target.ts:99-105`: “reservation has to be admitted here too”; `getReservation(sessionId)` precedes resumability check | Reuse backend exact-session validation for reserved and committed IDs; add its missing web-client propagation in B. Missing/expired reservations fail explicitly rather than retargeting. |
-| `src/core/event-bus-schemas.ts:171-175`: `chat-complete` carries session identity and time | Completion invalidates history; it is not the answer text. Unknown/null session IDs never become the selected session. |
+| `src/webapp/routes/chat-send-target.ts:99-105` (moved to `beebox/src/webapp/routes/chat/send-target.ts`): “reservation has to be admitted here too”; `getReservation(sessionId)` precedes resumability check | Reuse backend exact-session validation for reserved and committed IDs; add its missing web-client propagation in B. Missing/expired reservations fail explicitly rather than retargeting. |
+| `src/core/event-bus-schemas.ts:171-175` (moved to `beebox/src/core/event-bus/schemas.ts`): `chat-complete` carries session identity and time | Completion invalidates history; it is not the answer text. Unknown/null session IDs never become the selected session. |
 | `src/frontend/src/components/chat/ChatMessages.tsx:116,186` and `CalloutBlock.tsx:24-42`: callouts parsed from messages and rendered with Markdown | Reuse parsing/rendering outside the transcript. The current renderer has no unread/pending queue. |
 | `src/frontend/src/hooks/useBusSubscription.ts:1-12`: reconnect/replay requires full resync beyond retention | Use transcript-backed catchup, not event receipt as durable reply storage. |
 | `src/core/chat/session/prompts.ts:181`: narration means the user is “speaking at length and does not expect answers” | Ambient mode must not enable narration or reinterpret it as read-aloud. Keep current voice/prose/HQ semantics. |
@@ -421,7 +421,7 @@ unread reconstruction. Arbitrarily old visual material is durable in the
 conversation; the ambient preview is bounded. Real pending question cards retain
 their existing queue/status workflow. No new notification center or paged history
 catchup is required. The server does support offset pages
-(`src/webapp/trpc/routers/chat-session-procedures.ts:37-55`); deliberately do not
+(`src/webapp/trpc/routers/chat-session-procedures.ts:37-55` (moved to `beebox/src/webapp/trpc/routers/chat/session-procedures.ts`)); deliberately do not
 add a second paging consumer for this feature.
 
 **Vocabulary lock-ins:** reply attention is separate from send receipt.
@@ -701,7 +701,7 @@ The implementation uses the existing doctest tiers. Its focused coverage lives i
 - `test/frontend/chat/card-conversation-context.doctest.md` and `card-activity-store.doctest.md` for focused content, selection sources, and source-scoped activity.
 - `test/frontend/chat/ambient-replies.doctest.md` for transcript projection, background attribution, dismissal, reconnect, and incomplete history.
 - `test/mobile-contract/fixtures.doctest.md` plus shared composer-binding/native-emission fixtures for version, target, assignment, and recovery boundaries.
-- `test/webapp/chat-exact-committed.doctest.md` and `chat-send-routes-validation.doctest.md` for exact-session admission and context validation.
+- `test/webapp/chat-exact-committed.doctest.md` (moved to `beebox/test/webapp/routes/chat/send-target.exact-committed.doctest.md`) and `chat-send-routes-validation.doctest.md` for exact-session admission and context validation.
 - `ComposerDraftTests.swift` and `SpeechKeywordsTests.swift` for native binding persistence, record upgrade, receipts, keyword send, and box isolation. The recorded native run used a simulator.
 
 Extract decisions into pure functions; route tests exercise actual backend

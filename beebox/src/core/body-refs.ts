@@ -27,17 +27,10 @@
  * separate `Markdoc.validate` path that the frontend already runs.
  */
 
-// Markdoc ships dual CJS/ESM but its `exports` field is null, so Node
-// ESM imports resolve to the CJS bundle — which only exposes a default
-// export. Vite bundles the .mjs file on the frontend, so the frontend
-// can use named imports; the backend can't. Pull `parse` off the default.
-import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
-import { isExternalRef } from "../shared/ref-path.js";
+import { parseMarkdown } from "../shared/markdoc-config/parse/core.js";
+import { isExternalRef } from "../shared/ref-path/core.js";
 import { detectDisplayFormPath } from "../shared/display-path.js";
-
-// eslint-disable-next-line import-x/no-named-as-default-member
-const { parse } = Markdoc;
 
 export interface BodyRef {
   /** Display path for the warning — `body:<line>:<tagName>.<attr>` or `body:<line>:link`. */
@@ -62,7 +55,9 @@ function isGenuinelyExternal(ref: string): boolean {
 /**
  * THE pattern for an inline markdown link/image target in card-ish text:
  * `[text](path)` / `![alt](path)`, capturing the opening `…](` run and the
- * target token separately so a rewriter can splice a replacement in.
+ * target token separately so a rewriter can splice a replacement in. The
+ * token is either bare or CommonMark's angle-bracket form (`<a b.md>`, which
+ * may hold spaces); {@link linkTarget} strips the brackets.
  *
  * A factory rather than a shared `const` because it is `/g` — a module-level
  * global regex carries `lastIndex` between callers, which is a classic
@@ -70,7 +65,37 @@ function isGenuinelyExternal(ref: string): boolean {
  * `extractBodyLinks` (validate side) and `rewrite-card-refs.ts` (`bbx mv`).
  */
 export function inlineLinkPattern(): RegExp {
-  return /(!?\[[^\]]*]\(\s*)([^\s()]+)/g;
+  return /(!?\[[^\]]*]\(\s*)(<[^\n<>]*>|[^\s()]+)/g;
+}
+
+/**
+ * THE pattern for a link target written as HTML: the `href` of an `<a>` or
+ * `src` of an `<img>` (the raw-HTML allow-list turns both into ordinary links
+ * and images), quoted or unquoted. Groups: the run up to the value, the quote
+ * (empty when unquoted), the target. Shared with `rewrite-card-refs` like
+ * {@link inlineLinkPattern}; a factory for the same `/g` reason.
+ */
+export function htmlLinkPattern(): RegExp {
+  return /(<(?:a|img)\b[^<>]*?\s(?:href|src)\s*=\s*)(["']?)((?<=["'])[^"'<>]*|[^\s"'<=>`]+)\2/gi;
+}
+
+/**
+ * The target a link token names: CommonMark's angle-bracket destination
+ * (`<path with spaces>`) loses its brackets; a bare token is unchanged.
+ */
+export function linkTarget(token: string): { target: string; angled: boolean } {
+  const angled = token.length >= 2 && token.startsWith("<") && token.endsWith(">");
+  return { target: angled ? token.slice(1, -1) : token, angled };
+}
+
+/**
+ * Write a link target back as a destination token. A bare destination ends at
+ * a space or parenthesis, so a target holding one — or one that was already
+ * angled — gets CommonMark's angle-bracket form, which markdown-it (Markdoc's
+ * parser) and {@link inlineLinkPattern} both read.
+ */
+export function formatLinkDestination(target: string, { angled }: { angled: boolean }): string {
+  return angled || /[\s()]/.test(target) ? `<${target}>` : target;
 }
 
 /**
@@ -90,7 +115,13 @@ export function extractBodyLinks(body: string): BodyRef[] {
   if (body === "") return [];
   const out: BodyRef[] = [];
   for (const match of body.matchAll(inlineLinkPattern())) {
-    const ref = match[2];
+    if (match[2] === undefined) continue;
+    const ref = linkTarget(match[2]).target;
+    if (isGenuinelyExternal(ref)) continue;
+    out.push({ path: `body:${String(lineAt(body, match.index))}:link`, ref });
+  }
+  for (const match of body.matchAll(htmlLinkPattern())) {
+    const ref = match[3];
     if (ref === undefined || isGenuinelyExternal(ref)) continue;
     out.push({ path: `body:${String(lineAt(body, match.index))}:link`, ref });
   }
@@ -225,7 +256,8 @@ export function matchReferenceDefinitionAt(
   const { rest: afterBlockquote, stripped: blockquoteStripped } = stripBlockquotePrefixes(noCR);
   const { rest: labelCore, stripped: listStripped } = stripListMarker(afterBlockquote);
   const stripped = blockquoteStripped + listStripped;
-  const label = /^[\t ]{0,3}\[[^\]]+]:(.*)$/.exec(labelCore);
+  // A `[^label]:` line is a footnote definition, not a link reference.
+  const label = /^[\t ]{0,3}\[(?!\^)[^\]]+]:(.*)$/.exec(labelCore);
   if (label === null) return null;
   const afterColon = label[1] ?? "";
   if (afterColon.trim() !== "") {
@@ -275,7 +307,7 @@ export function extractBodyRefs(body: string): BodyRef[] {
   if (body === "") return [];
   let ast: Node;
   try {
-    ast = parse(body);
+    ast = parseMarkdown(body);
   } catch (_e) {
     // Intentional: per this module's header, a Markdoc parse failure means
     // "no body refs found". Markdoc parses any legal CommonMark (a superset),

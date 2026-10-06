@@ -1,5 +1,5 @@
 ---
-title: "Full-suite red: test/scripts/release-manifest.doctest.md"
+title: "Full-suite red: test/scripts/release-manifest.doctest.md (moved to `beebox/test/scripts/release.manifest.doctest.md`)"
 workstream: install-remaining
 area: beebox
 priority: important
@@ -19,7 +19,7 @@ commit (`4e5a0c0e`) over first-parent `main` blames one landing:
 
 - **Landing:** `dcdaa0eb` — Merge branch 'worktree-install-remaining'
 - **Workstream:** install-remaining
-- **Failing file:** `test/scripts/release-manifest.doctest.md`
+- **Failing file:** `test/scripts/release-manifest.doctest.md` (moved to `beebox/test/scripts/release.manifest.doctest.md`)
 
 Each file failed in the batched run and failed again on an isolated re-run, so
 it is not a flake by the ledger's definition. Nothing has been fixed; this is a

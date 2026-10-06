@@ -1,5 +1,6 @@
 import { isRecord } from "@shared/is-record";
 import type { ViewState } from "@shared/view-state";
+import { adminTabForSection, isAdminSectionId, isAdminTab, type AdminSectionId, type AdminTab } from "../components/admin/sections";
 
 export interface AdminArrivalState {
   google?: "connected" | "error";
@@ -8,39 +9,61 @@ export interface AdminArrivalState {
 }
 
 export type AdminCardStateResult =
-  | { ok: true; arrival: AdminArrivalState }
+  | { ok: true; arrival: AdminArrivalState; tab: AdminTab | null; section: AdminSectionId | null }
   | { ok: false; error: string };
 
+/**
+ * The card's view state: an arrival notice from an OAuth return, the open
+ * tab, and a section to land on (a notification's `admin:<section>` target).
+ */
 export function parseAdminCardState(value: ViewState | null | undefined): AdminCardStateResult {
-  if (value === null || value === undefined) return { ok: true, arrival: {} };
+  if (value === null || value === undefined) return { ok: true, arrival: {}, tab: null, section: null };
   if (!isRecord(value)) return invalidAdminState();
   const google = value["google"];
   const message = value["message"];
   const reconnect = value["reconnect"];
+  const tab = value["tab"];
+  const section = value["section"];
   if (!(google === undefined || google === "connected" || google === "error")
     || !(message === undefined || typeof message === "string")
-    || !(reconnect === undefined || reconnect === "google")) return invalidAdminState();
-  return { ok: true, arrival: { ...(google ? { google } : {}), ...(message === undefined ? {} : { message }), ...(reconnect ? { reconnect } : {}) } };
+    || !(reconnect === undefined || reconnect === "google")
+    || !(tab === undefined || isAdminTab(tab))
+    || !(section === undefined || isAdminSectionId(section))) return invalidAdminState();
+  return { ok: true, arrival: { ...(google ? { google } : {}), ...(message === undefined ? {} : { message }), ...(reconnect ? { reconnect } : {}) }, tab: tab ?? null, section: section ?? null };
+}
+
+/** The same state with a different tab open; arrival keys are untouched. */
+export function adminTabViewState(value: ViewState | null | undefined, tab: AdminTab): ViewState {
+  return { ...value, tab };
 }
 
 export function adminArrivalViewState(search: Record<string, unknown>): ViewState | null {
   const google = search["google"];
   const message = search["message"];
   const reconnect = search["reconnect"];
-  const state: AdminArrivalState = {
+  const tab = search["tab"];
+  const state: ViewState = {
     ...((google === "connected" || google === "error") ? { google } : {}),
     ...(typeof message === "string" ? { message } : {}),
     ...(reconnect === "google" ? { reconnect } : {}),
+    ...(isAdminTab(tab) ? { tab } : {}),
   };
-  return Object.keys(state).length === 0 ? null : { ...state };
+  return Object.keys(state).length === 0 ? null : state;
 }
 
+/**
+ * Consume the arrival. A Google arrival opened Google's tab, so consuming it
+ * pins that tab unless the URL already named one; otherwise the page would
+ * fall back to the default tab the moment the notice was acknowledged.
+ */
 export function clearAdminArrivalState(value: ViewState | null | undefined): ViewState {
   if (!value) return {};
   const next = { ...value };
+  const landedOnGoogle = next["google"] !== undefined || next["reconnect"] !== undefined;
   delete next["google"];
   delete next["message"];
   delete next["reconnect"];
+  if (landedOnGoogle && !isAdminTab(next["tab"])) next["tab"] = adminTabForSection("google-services");
   return next;
 }
 

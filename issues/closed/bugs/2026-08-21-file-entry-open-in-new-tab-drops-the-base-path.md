@@ -23,7 +23,7 @@ const pageHref = boxSlug ? href(`/${boxSlug}/browse/${summary.path}`) : undefine
 `to` typing (`beebox/src/frontend/src/lib/routing.ts:12-14`). The router
 prepends `basepath` for a `to`; a plain `<a href>` gets nothing. The same link
 built for the same purpose elsewhere uses `withBase`
-(`beebox/src/frontend/src/components/FileView.tsx:275`), which is the
+(`beebox/src/frontend/src/components/FileView.tsx:275` (moved to `beebox/src/frontend/src/components/FileView/view.tsx`)), which is the
 helper for hardcoded paths
 (`beebox/src/frontend/src/api-core.ts:38-47`).
 

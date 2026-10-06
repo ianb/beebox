@@ -50,7 +50,7 @@ timeline was:
 > [long-lived processes never reload the rebuilt bundle](2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md):
 > `bin/bbx` stamps `BBX_DEV_BUNDLE_PATH`/`BBX_DEV_BUNDLE_ID` at spawn, identifying
 > the exact artifact loaded by *identity* rather than mtime ordering, and
-> `src/webapp/server.ts:359-383` polls for a replacement.
+> `src/webapp/server.ts:359-383` (moved to `beebox/src/webapp/server/app.ts`) polls for a replacement.
 >
 > The design is careful in the right places. A **hub child** drains before
 > reloading — pausing chat schedules, waiting for no active mutations, idle chat

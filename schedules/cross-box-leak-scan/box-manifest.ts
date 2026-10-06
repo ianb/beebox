@@ -82,7 +82,7 @@ function malformedManifest(filePath: string, reason: string): ManifestLoadResult
 }
 
 /** Read `hub.json`'s `boxes: { slug: { path } }` (mirrors
- *  `beebox/src/hub/hub-config.ts`), tolerating relative `path` values by
+ *  `beebox/src/hub/config.ts`), tolerating relative `path` values by
  *  resolving them against the config file's own directory the way the real
  *  loader does. A MISSING file reads as no boxes (most machines never run
  *  `bbx hub`); a PRESENT file that fails to read, parse, or match the

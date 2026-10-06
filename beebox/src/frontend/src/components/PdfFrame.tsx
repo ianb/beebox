@@ -76,7 +76,7 @@ export function PdfFrame({ src, title, downloadName, mode, workspacePdf }: PdfFr
         </Text>
         <PdfActions src={src} downloadName={downloadName} />
       </div>}
-      <object data={src} type="application/pdf" title={title} className={workspacePdf ? "w-full h-full flex-1 min-h-0" : FRAME_CLASSES[surface]}>
+      <object key={src} data={src} type="application/pdf" title={title} className={workspacePdf ? "w-full h-full flex-1 min-h-0" : FRAME_CLASSES[surface]}>
         {/* Shown by the browser only when it can't display the PDF inline. */}
         <div className="p-4 flex flex-col items-start gap-3 bg-warm-50">
           <Text as="p" size="sm" tone="subtle">

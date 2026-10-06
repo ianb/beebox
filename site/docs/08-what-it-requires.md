@@ -14,7 +14,11 @@ does not run on a phone.
 **A coding-agent login.** Claude Code or Codex. For Claude, the documentation
 requires you to sign in with a Claude subscription yourself; it says an API
 key alone will not work, by design. The documentation does not describe
-running Bee Box against a local model.
+running Bee Box against a local model. A box can optionally run other vendors'
+models on the Claude side instead: GLM models through a Z.ai key, or models the
+owner adds through an OpenRouter key (billed per use). Only three OpenRouter
+models are recorded as tested through a full agent turn, and the documentation
+warns that others may fail turns that need tools.
 
 **Accounts, per connector, all optional.** A Google account, plus signing in
 with it and a one-time setup, for Gmail, Calendar, and Drive; the

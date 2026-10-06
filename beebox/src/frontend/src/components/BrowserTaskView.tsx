@@ -10,14 +10,16 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import type { RendererProps } from "../renderers";
-import { Markdown } from "./Markdown";
+import type { RendererProps } from "../file-type-registry";
+import { Markdown } from "./Markdown/body";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Pre } from "./ui/Pre";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
+import { Heading } from "./ui/Heading";
 import { Accordion } from "./ui/Accordion";
 import { ExternalLink } from "./ui/ExternalLink";
 import { bbxSource } from "../lib/source-tag";
@@ -31,7 +33,7 @@ import { SubmissionForm, type SubmissionValidation } from "./browser-task/Submis
 import { TaskStatus } from "./browser-task/TaskStatus";
 import { BatchList } from "./browser-task/BatchList";
 import { RunsTable } from "./browser-task/RunsTable";
-import { INBOX_DIR, PROCESSED_DIR, fetchBoxText, loadBatches, schemaPath, type BatchSummary } from "./browser-task/browser-task-data";
+import { INBOX_DIR, PROCESSED_DIR, fetchBoxText, loadBatches, schemaPath, type BatchSummary } from "./browser-task/data";
 
 interface AttachState {
   schemaText: string | null;
@@ -47,7 +49,7 @@ interface AttachState {
 
 export function BrowserTaskView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
-  const { status, source, watermark, lastUpload, rescanAfter, subjectRef, limit } = readTaskFields(frontmatter);
+  const { closed, start, watermark, lastUpload, rescanAfter, subjectRef, limit } = readTaskFields(frontmatter);
   const body = data.body ?? "";
   const [attach, setAttach] = useState<AttachState | null>(null);
 
@@ -87,10 +89,10 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
     [attach?.schemaJson],
   );
 
-  const copyBlock = buildCopyBlock({ body, source, watermark, limit, schemaText: attach?.schemaText ?? null, cardPath: data.path });
+  const copyBlock = buildCopyBlock({ body, start, watermark, limit, schemaText: attach?.schemaText ?? null, cardPath: data.path });
 
   const disabledReason =
-    status === "closed" ? "This task is closed and does not accept submissions."
+    closed ? "This task is closed and does not accept submissions."
     : attach === null ? "Loading the record schema…"
     : attach.schemaProblem;
 
@@ -99,7 +101,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
       <Stack gap="md">
         <TaskStatus
           cardPath={data.path}
-          status={status}
+          closed={closed}
           lastUpload={lastUpload}
           rescanAfter={rescanAfter}
           subjectRef={subjectRef}
@@ -119,9 +121,9 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 
         <SubmissionForm cardPath={data.path} validate={validate} disabledReason={disabledReason} onAccepted={() => void reload()} />
 
-        <Accordion title={<Text as="h2" size="lg" weight="bold">Prompt</Text>} defaultOpen={false}>
+        <Accordion title={<Heading level={2}>Prompt</Heading>} defaultOpen={false}>
           <Stack gap="sm">
-            {source !== null ? <Text as="p" size="sm">Start at <ExternalLink href={source}>{source}</ExternalLink></Text> : null}
+            {start !== null ? <Text as="p" size="sm">Start at <ExternalLink href={start}>{start}</ExternalLink></Text> : null}
             {limit !== null ? <Text as="p" size="sm">Bound: {limit}</Text> : null}
             {watermark !== null ? <Text as="p" size="sm">Watermark: <Text as="span" mono>{watermark}</Text></Text> : null}
             <Markdown onNavigate={onNavigate} basePath={data.path}>{body}</Markdown>
@@ -141,15 +143,15 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 function SchemaCard({ attach }: { attach: AttachState | null }) {
   let content;
   if (attach === null) content = <Text as="p" tone="subtle">Loading…</Text>;
-  else if (attach.schemaText === null) content = <Text as="p" tone="danger">Missing: put a JSON Schema for one record at attach/schema.json.</Text>;
+  else if (attach.schemaText === null) content = <ErrorText>Missing: put a JSON Schema for one record at attach/schema.json.</ErrorText>;
   else content = <Pre boxed scroll="md">{attach.schemaText}</Pre>;
   const problem = attach !== null && attach.schemaText !== null ? attach.schemaProblem : null;
   return (
-    <Accordion title={<Text as="h2" size="lg" weight="bold">Record schema</Text>} defaultOpen={false}>
+    <Accordion title={<Heading level={2}>Record schema</Heading>} defaultOpen={false}>
       <Card padding="sm" border="none">
         <Stack gap="sm">
           {content}
-          {problem !== null ? <Text as="p" tone="danger" size="sm">{problem}</Text> : null}
+          {problem !== null ? <ErrorText>{problem}</ErrorText> : null}
         </Stack>
       </Card>
     </Accordion>
@@ -157,8 +159,8 @@ function SchemaCard({ attach }: { attach: AttachState | null }) {
 }
 
 interface TaskFields {
-  status: "open" | "closed";
-  source: string | null;
+  closed: boolean;
+  start: string | null;
   watermark: string | null;
   lastUpload: string | null;
   rescanAfter: string | null;
@@ -170,9 +172,10 @@ interface TaskFields {
 function readTaskFields(fm: Record<string, unknown>): TaskFields {
   const str = (key: string): string | null => (typeof fm[key] === "string" ? fm[key] : null);
   const subject = fm["subject"];
+  const start = fm["start"];
   return {
-    status: fm["status"] === "closed" ? "closed" : "open",
-    source: str("source"),
+    closed: fm["closed"] === true,
+    start: isRecord(start) && typeof start["href"] === "string" ? start["href"] : null,
     watermark: str("watermark"),
     lastUpload: str("last-upload"),
     rescanAfter: str("rescan-after"),
@@ -182,9 +185,9 @@ function readTaskFields(fm: Record<string, unknown>): TaskFields {
 }
 
 /** Everything the executor needs, as one block to paste into its own session. */
-function buildCopyBlock(opts: { body: string; source: string | null; watermark: string | null; limit: string | null; schemaText: string | null; cardPath: string }): string {
+function buildCopyBlock(opts: { body: string; start: string | null; watermark: string | null; limit: string | null; schemaText: string | null; cardPath: string }): string {
   const parts = [opts.body.trim()];
-  if (opts.source !== null) parts.push(`Start at: ${opts.source}`);
+  if (opts.start !== null) parts.push(`Start at: ${opts.start}`);
   if (opts.limit !== null) parts.push(`Bound: ${opts.limit}`);
   if (opts.watermark !== null) parts.push(`Stop at the watermark: ${opts.watermark}`);
   if (opts.schemaText !== null) parts.push("Each record must match this JSON Schema:\n```json\n" + opts.schemaText.trim() + "\n```");

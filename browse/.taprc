@@ -1,0 +1,16 @@
+plugin:
+  - "!@tapjs/typescript"
+node-arg:
+  - --import=tsx
+  - --import=agent-doctest/tap
+  - --import=agent-doctest/loader
+include:
+  # Doctests only, `browse`'s own and its `agent-browser-typed` sub-package's:
+  # that package has no test/typecheck/lint scripts of its own
+  # (bin/workspace-packages.ts), so `browse`'s whole-tree checks are what cover
+  # it, exactly like its `tsc --noEmit` and `eslint .` already do.
+  - test/**/*.doctest.md
+  - packages/*/test/**/*.doctest.md
+reporter: tap
+color: false
+disable-coverage: true

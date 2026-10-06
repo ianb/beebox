@@ -1,10 +1,9 @@
 import { z, type ZodType } from "zod";
 import type { LintIssue } from "./lint-format.js";
-import { isRecord } from "../lib/is-record.js";
 import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
 import { CardSymbol, type CardSymbolData } from "../shared/card-symbol.js";
 import { Prominence, type ProminenceLevel, type EffectiveLevel } from "../shared/prominence.js";
-import { ThemeChoiceSchema, validateThemeChoice, type ThemeChoice } from "../shared/card-theme.js";
+import { ThemeChoiceSchema, validateThemeChoice, type ThemeChoice } from "../shared/card-theme/core.js";
 
 /**
  * Card schemas describe a card file's full shape: most fields live in the
@@ -68,9 +67,9 @@ export type FieldDecl = ZodType | BodyField;
 
 /**
  * Optional frontmatter fields available on every card type, injected into
- * the frontmatter schema by cardSchema() unless the schema declares its own
- * field of the same name (the schema's declaration wins — e.g. a card type
- * may require `title` rather than leave it optional).
+ * the frontmatter schema by cardSchema(). A schema must not redeclare one
+ * (`reservedFieldProblems` in `./reserved-fields.ts`), except to make `title`
+ * required (`title: z.string()`).
  *
  * - `title` — human-readable display title.
  * - `contains` — one sentence stating what can be found inside this card;
@@ -95,10 +94,12 @@ export type FieldDecl = ZodType | BodyField;
  *   by the host because a self-contained Zod schema cannot read box settings.
  *
  * Adding/removing a field here? Update the enumerations in
- * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/adding-schemas.md`.
+ * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`.
  */
+const TITLE_FIELD = z.string().optional();
+
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
-  title: z.string().optional(),
+  title: TITLE_FIELD,
   contains: z.string().optional(),
   "contains-evidence": z.string().optional(),
   todos: TodosFieldSchema,
@@ -120,6 +121,28 @@ export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
  */
 export interface CardValidateInput {
   fields: Record<string, unknown>;
+}
+
+/**
+ * The summary every card gets for free, before its type has a say: the
+ * `title:` field (or the filename), and the global `contains:` and `symbol:`
+ * fields. A card type's {@link CardSchemaConfig.summarize} receives this and
+ * either extends it (`{ ...base, detail }`) or replaces parts of it.
+ */
+export interface CardSummaryBase {
+  title: string;
+  contains?: string;
+  symbol?: CardSymbolData;
+}
+
+/**
+ * What a card type's `summarize` returns: the base summary's fields, plus a
+ * second line of display text (`detail`) and the type's own typed `attrs`,
+ * which a list component reads through {@link SummaryAttrs}.
+ */
+export interface CardSummaryParts<TAttrs = unknown> extends CardSummaryBase {
+  detail?: string;
+  attrs?: TAttrs;
 }
 
 /**
@@ -168,15 +191,26 @@ export interface TemplateMergePolicy {
 /**
  * Configuration for cardSchema().
  */
-export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
+export interface CardSchemaConfig<
+  TTag extends string,
+  TFields extends Record<string, FieldDecl>,
+  TAttrs = unknown,
+> {
   /** All fields keyed by name. At most one may be body()-wrapped. */
   fields: TFields;
   /**
-   * One line saying what a card of this type is / is for — shown in the agent
-   * guide's card-type catalogue. Optional only so box-local schemas keep
-   * loading without one; every built-in schema declares it.
+   * One line saying what a card of this type is / is for — the type's row in
+   * the package-docs index and the template listing. Optional so box-local
+   * schemas keep loading without one.
    */
   description?: string;
+  /**
+   * What the type is, in five words or fewer — its entry in the agent guide's
+   * card-type list, which every box agent reads on every turn. Every built-in
+   * schema declares one; a box-local schema without one is listed with its
+   * `description`.
+   */
+  brief?: string;
   /** Who creates cards of this type (see {@link CardCategory}). Defaults to "authored". */
   category?: CardCategory;
   /**
@@ -237,6 +271,20 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
    * every card type that does not act as an inbox.
    */
   submissions?: CardSubmissions;
+  /**
+   * How a card of this type appears in a list: a header, a row, a todo
+   * grouping. It receives the card's own validated fields and the standard
+   * {@link CardSummaryBase}, and returns the parts to display —
+   * `{ ...base, detail }` to extend, or fresh values to replace.
+   *
+   * It runs only for a card that parsed against this schema; one that failed
+   * validation keeps the base summary derived from its filename. It must be
+   * pure: no box access, no clock, no I/O. Returning `attrs` gives the type's
+   * list component a typed payload — see {@link SummaryAttrs}.
+   *
+   * Omit it and cards of this type get the base summary.
+   */
+  summarize?: (card: CardFieldsOf<TTag, TFields>, base: CardSummaryBase) => CardSummaryParts<TAttrs>;
 }
 
 /** One problem with a submission, addressed by a path the form can show. */
@@ -285,11 +333,14 @@ export interface CardSubmissions {
 export interface CardSchema<
   TTag extends string = string,
   TFields extends Record<string, FieldDecl> = Record<string, FieldDecl>,
+  TAttrs = unknown,
 > {
   readonly type: TTag;
   readonly fields: TFields;
   /** One-line catalogue description (see {@link CardSchemaConfig.description}). */
   readonly description?: string;
+  /** Five-word agent-guide entry (see {@link CardSchemaConfig.brief}). */
+  readonly brief?: string;
   /** Who creates cards of this type. Defaults to "authored". */
   readonly category: CardCategory;
   /**
@@ -321,7 +372,35 @@ export interface CardSchema<
   readonly templateMerge?: TemplateMergePolicy;
   /** Submission contract, when this card type acts as an inbox (see {@link CardSubmissions}). */
   readonly submissions?: CardSubmissions;
+  /**
+   * How a card of this type summarizes itself for a list (see
+   * {@link CardSchemaConfig.summarize}). `core/loader-registry.ts` calls it;
+   * it survives `cardSchema()` so runtime code reaches it through the schema
+   * map rather than a side registry.
+   *
+   * Declared with method syntax, deliberately: a `CardSchema<"memo", …>` has
+   * to stay assignable to a plain `CardSchema` (the schema map holds them all
+   * as one type), and a property-position callback taking the schema's own
+   * field type would make that fail on the contravariant parameter. The caller
+   * closes the hole by passing fields `cardFields()` already vouched for
+   * against this same schema.
+   */
+  summarize?(card: CardFieldsOf<TTag, TFields>, base: CardSummaryBase): CardSummaryParts<TAttrs>;
 }
+
+/**
+ * The typed `attrs` a card type's `summarize` produces, read off the schema
+ * constant: `ListProps<SummaryAttrs<typeof ImageSchema>>`. A list component
+ * that expects a different shape is a compile error, so the component and the
+ * summary cannot drift apart.
+ */
+export type SummaryAttrs<S extends CardSchema> = S extends CardSchema<
+  string,
+  Record<string, FieldDecl>,
+  infer TAttrs
+>
+  ? TAttrs
+  : never;
 
 /**
  * The inferred value type of a single field declaration — the body-wrapped or
@@ -354,11 +433,40 @@ type InferFieldsRecord<TFields extends Record<string, FieldDecl>> = {
   [K in OptionalFieldKeys<TFields>]?: InferFieldDecl<TFields[K]>;
 };
 
+/** The inferred value types of {@link GLOBAL_CARD_FIELDS}. */
+interface GlobalCardFieldValues {
+  title?: string;
+  contains?: string;
+  "contains-evidence"?: string;
+  todos?: TodoEntry[];
+  symbol?: CardSymbolData;
+  prominence?: ProminenceLevel;
+  theme?: ThemeChoice;
+}
+
+/**
+ * The validated shape of a parsed card's `fields` object, built from the same
+ * pieces `cardSchema()` assembles: the injected `type` literal, the
+ * author-declared fields (body unwrapped, `.optional()`/`.default()`
+ * optionality honoured), and the global fields the schema didn't declare
+ * itself.
+ *
+ * Stated over the two type parameters rather than over a `CardSchema` because
+ * {@link CardSchemaConfig.summarize} needs it while `cardSchema()` is still
+ * inferring `TFields` — a conditional over `CardSchema<TTag, TFields>` there
+ * would not resolve. {@link InferCardFields} is this same type, reached from a
+ * schema constant.
+ */
+export type CardFieldsOf<
+  TTag extends string,
+  TFields extends Record<string, FieldDecl>,
+> = { type: TTag }
+  & InferFieldsRecord<TFields>
+  & Omit<GlobalCardFieldValues, keyof TFields>;
+
 /**
  * The validated shape of a parsed card's `fields` object, derived from the
- * schema itself: the injected `type` literal, the author-declared fields (with
- * body unwrapped and `.optional()`/`.default()` optionality honoured), and the
- * global fields ({@link GLOBAL_CARD_FIELDS}) that aren't already declared.
+ * schema itself (see {@link CardFieldsOf}).
  *
  * This replaces the hand-written `XFields` interfaces that used to parallel
  * each schema — one declaration is now the single source of truth for both the
@@ -370,21 +478,39 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
   infer TTag,
   infer TFields
 >
-  ? { type: TTag }
-    & InferFieldsRecord<TFields>
-    & Omit<
-      {
-        title?: string;
-        contains?: string;
-        "contains-evidence"?: string;
-        todos?: TodoEntry[];
-        symbol?: CardSymbolData;
-        prominence?: ProminenceLevel;
-        theme?: ThemeChoice;
-      },
-      keyof TFields
-    >
+  ? CardFieldsOf<TTag, TFields>
   : never;
+
+/**
+ * Add a schema's declared frontmatter fields to `shape`, and return its body
+ * field (at most one, always named `body`).
+ */
+function addDeclaredFields(
+  type: string,
+  { fields, shape }: { fields: Record<string, FieldDecl>; shape: Record<string, ZodType> },
+): { bodyFieldName: string | null; bodyField: BodyField | null } {
+  let bodyFieldName: string | null = null;
+  let bodyField: BodyField | null = null;
+  for (const [name, decl] of Object.entries(fields)) {
+    if (!isBodyField(decl)) {
+      shape[name] = decl;
+      continue;
+    }
+    if (name !== "body") {
+      // One vocabulary across every card type: the file-body field is
+      // always `body`. (On disk the body has no field name at all, so
+      // this constrains code, not card files. It also makes multiple
+      // body fields impossible — object keys are unique.)
+      throw new CardSchemaDeclarationError(
+        type,
+        `the body field must be named "body" (got "${name}")`
+      );
+    }
+    bodyFieldName = name;
+    bodyField = decl;
+  }
+  return { bodyFieldName, bodyField };
+}
 
 /**
  * Declare a card schema. The result tells the loader/serializer which
@@ -397,43 +523,35 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
 export function cardSchema<
   TTag extends string,
   TFields extends Record<string, FieldDecl>,
->(type: TTag, config: CardSchemaConfig<TFields>): CardSchema<TTag, TFields> {
+  TAttrs = unknown,
+>(
+  type: TTag,
+  config: CardSchemaConfig<TTag, TFields, TAttrs>
+): CardSchema<TTag, TFields, TAttrs> {
   if (config.theme !== undefined) {
     const checkedTheme = validateThemeChoice(config.theme, `cardSchema(${type}) theme`);
     if (checkedTheme.problem !== null) {
       throw new CardSchemaDeclarationError(type, checkedTheme.problem.message);
     }
   }
-  let bodyFieldName: string | null = null;
-  let bodyField: BodyField | null = null;
   const frontmatterShape: Record<string, ZodType> = {
     type: z.literal(type),
   };
-  for (const [name, decl] of Object.entries(config.fields)) {
-    if (isBodyField(decl)) {
-      if (name !== "body") {
-        // One vocabulary across every card type: the file-body field is
-        // always `body`. (On disk the body has no field name at all, so
-        // this constrains code, not card files. It also makes multiple
-        // body fields impossible — object keys are unique.)
-        throw new CardSchemaDeclarationError(
-          type,
-          `the body field must be named "body" (got "${name}")`
-        );
-      }
-      bodyFieldName = name;
-      bodyField = decl;
-    } else {
-      frontmatterShape[name] = decl;
-    }
-  }
+  // The title leads the frontmatter, ahead of the type's own fields: parse
+  // order is serialization order. A type may declare it (to require it); the
+  // declaration then lands in this first position.
+  const declaredTitle = config.fields["title"];
+  frontmatterShape["title"] = declaredTitle !== undefined && !isBodyField(declaredTitle) ? declaredTitle : TITLE_FIELD;
+  const { bodyFieldName, bodyField } = addDeclaredFields(type, { fields: config.fields, shape: frontmatterShape });
   if (bodyField === null && Object.keys(config.fields).length === 0) {
     throw new CardSchemaDeclarationError(type, "must declare at least one field");
   }
   const globalFieldNames: string[] = [];
   for (const [name, validator] of Object.entries(GLOBAL_CARD_FIELDS)) {
-    if (name in config.fields) continue; // schema-wins: author declaration takes precedence
-    frontmatterShape[name] = validator;
+    // A box-local schema that redeclares a global still loads with its own
+    // declaration; reservedFieldProblems reports it.
+    if (name in config.fields) continue;
+    if (name !== "title") frontmatterShape[name] = validator;
     globalFieldNames.push(name);
   }
   // Lenient (not `.strict()`): an unknown frontmatter key is stripped in
@@ -458,7 +576,7 @@ export function cardSchema<
   // ordinary would set it, though none currently do).
   const defaultProminence: EffectiveLevel =
     config.prominence ?? (category === "system" ? "background" : "ordinary");
-  const schema: CardSchema<TTag, TFields> = {
+  const schema: CardSchema<TTag, TFields, TAttrs> = {
     type,
     fields: config.fields,
     bodyFieldName,
@@ -471,9 +589,12 @@ export function cardSchema<
   };
   // Optional members are spread in only when present so a schema that declares
   // neither still produces the same object shape (exactOptionalPropertyTypes).
-  let resolved: CardSchema<TTag, TFields> = schema;
+  let resolved: CardSchema<TTag, TFields, TAttrs> = schema;
   if (config.description !== undefined) {
     resolved = { ...resolved, description: config.description };
+  }
+  if (config.brief !== undefined) {
+    resolved = { ...resolved, brief: config.brief };
   }
   if (config.theme !== undefined) {
     resolved = { ...resolved, defaultTheme: config.theme };
@@ -493,56 +614,8 @@ export function cardSchema<
   if (config.submissions !== undefined) {
     resolved = { ...resolved, submissions: config.submissions };
   }
+  if (config.summarize !== undefined) {
+    resolved = { ...resolved, summarize: config.summarize };
+  }
   return resolved;
-}
-
-/**
- * Walk a parsed fields object and pull out every reference.
- *
- * Refs are identified by convention, not by schema declaration:
- *   - any key literally named `ref` whose value is a string
- *   - any key literally named `refs` whose value is an array of strings
- *
- * Refs can appear at any depth — inside nested objects, inside array
- * elements, etc. Each result carries a JSON path (with indices filled
- * in) so callers can attach lint errors to a specific position.
- */
-export function extractRefs(
-  fields: Record<string, unknown>
-): Array<{ path: string; ref: string }> {
-  const out: Array<{ path: string; ref: string }> = [];
-  walkForRefs(fields, { currentPath: "", out });
-  return out;
-}
-
-interface WalkForRefsOptions {
-  currentPath: string;
-  out: Array<{ path: string; ref: string }>;
-}
-
-function walkForRefs(value: unknown, { currentPath, out }: WalkForRefsOptions): void {
-  if (Array.isArray(value)) {
-    for (const [i, item] of value.entries()) {
-      walkForRefs(item, { currentPath: `${currentPath}[${String(i)}]`, out });
-    }
-    return;
-  }
-  if (!isRecord(value)) return;
-  for (const [key, child] of Object.entries(value)) {
-    const childPath = currentPath === "" ? key : `${currentPath}.${key}`;
-    if (key === "ref" && typeof child === "string") {
-      out.push({ path: childPath, ref: child });
-      continue;
-    }
-    if (key === "refs" && Array.isArray(child)) {
-      const items: unknown[] = child;
-      for (const [i, item] of items.entries()) {
-        if (typeof item === "string") {
-          out.push({ path: `${childPath}[${String(i)}]`, ref: item });
-        }
-      }
-      continue;
-    }
-    walkForRefs(child, { currentPath: childPath, out });
-  }
 }

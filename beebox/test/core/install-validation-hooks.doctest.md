@@ -10,6 +10,7 @@ Both writes are idempotent and merge-aware. The settings file preserves unrelate
 
 ```ts setup
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import { installValidationHooks } from "../../src/core/install-validation-hooks.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -137,6 +138,44 @@ bbxCalls
   false,
   false,
   false
+]
+```
+
+## Which `bbx` gets stamped — the engine the box depends on
+
+When the box has an installed engine (`node_modules/beebox`), the hooks run
+that engine's `bin/bbx`, resolved to its real path — so a managed worktree's
+box clone, whose link points at the worktree's checkout, validates its
+commits with the worktree's schemas, whichever checkout reinstalls the hooks.
+`BBX_HOOK_BIN` still wins when set, so this case clears it:
+
+```ts
+const box = await makeBox();
+const engine = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-fake-engine-"));
+await fs.mkdir(path.join(engine, "bin"));
+await fs.writeFile(path.join(engine, "bin", "bbx"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+await fs.mkdir(path.join(box.root, "node_modules"), { recursive: true });
+await fs.symlink(engine, path.join(box.root, "node_modules", "beebox"));
+
+const savedOverride = process.env["BBX_HOOK_BIN"];
+delete process.env["BBX_HOOK_BIN"];
+try {
+  await installValidationHooks(box.root);
+} finally {
+  if (savedOverride !== undefined) process.env["BBX_HOOK_BIN"] = savedOverride;
+}
+
+const expected = JSON.stringify(path.join(await fs.realpath(engine), "bin", "bbx"));
+const preCommit = await fs.readFile(path.join(box.root, ".git/hooks/pre-commit"), "utf-8");
+const settings = JSON.parse(await fs.readFile(path.join(box.root, ".claude/settings.json"), "utf-8"));
+[
+  preCommit.includes(`BBX=${expected}\n`),
+  settings.hooks.PostToolUse[0].hooks[0].command === `${expected} validate --hook`,
+]
+=>
+[
+  true,
+  true
 ]
 ```
 
@@ -312,7 +351,7 @@ settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
 If `.git/` does not exist (a non-box directory, or a fixture that skipped git), only the settings file gets written; the pre-commit step is skipped instead of bootstrapping a stray `.git/hooks/` directory:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: "none" });
 const changed = await installValidationHooks(box.root);
 changed.sort()
 => [

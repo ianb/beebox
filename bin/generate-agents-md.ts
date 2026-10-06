@@ -3,7 +3,8 @@
  * Generate gitignored Codex mirrors for OpenAI Codex CLI sessions
  * (`bin/launch-worktree-session --agent codex`): AGENTS.md beside every tracked
  * CLAUDE.md, path-scoped Claude rules embedded into the nearest AGENTS.md, and
- * .agents/skills symlinks for every tracked Claude skill.
+ * .agents/skills symlinks for every tracked Claude skill, and a
+ * .codex/agents/<name>.toml for every tracked Claude subagent.
  *
  * Codex reads AGENTS.md where Claude Code reads CLAUDE.md: its harness injects
  * the root→cwd chain at session start, and its system prompt tells the model
@@ -38,6 +39,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
+
+import { generateCodexAgents, generateCodexHooks } from "./generate-codex-agents.js";
 
 class TrackedAgentsMdError extends Error {
   constructor(readonly tracked: string[]) {
@@ -120,7 +123,9 @@ Claude skills are mirrored into \`.agents/skills/\`; invoke a Claude-style
 \`/<name>\` skill as Codex \`$<name>\`. Claude path-scoped rules are embedded in
 the nearest AGENTS.md; apply them only when their \`paths\` frontmatter matches.
 Where docs call for the Claude Agent tool, use Codex's collaboration subagent
-tools. Ignore unsupported Claude-only features: the persistent memory directory,
+tools. Claude subagents in \`.claude/agents/\` are mirrored to
+\`.codex/agents/\` with their model pins mapped to Codex models; spawn the named
+agent (e.g. \`finish\`) so its pinned model applies. Ignore unsupported Claude-only features: the persistent memory directory,
 \`<system-reminder>\` semantics, Remote Control, and \`claude --worktree\` /
 EnterWorktree. Everything else — the issue queue, commit discipline, lint rules,
 router URLs, testing tiers — applies to you fully.
@@ -338,9 +343,12 @@ function main(): void {
   const checkoutDir = resolve(positional[0] ?? process.cwd());
   const agentsFiles = generateAgentsFiles(checkoutDir, worktreeName);
   const skillLinks = generateSkillLinks(checkoutDir);
+  const codexAgents = generateCodexAgents(checkoutDir);
+  const codexHooks = generateCodexHooks(checkoutDir);
   console.log(
-    `generate-agents-md: wrote ${agentsFiles.length} AGENTS.md mirror(s) and ` +
-      `${skillLinks.length} skill link(s) in ${checkoutDir}`,
+    `generate-agents-md: wrote ${agentsFiles.length} AGENTS.md mirror(s), ` +
+      `${skillLinks.length} skill link(s), ${codexAgents.length} Codex agent(s), and ` +
+      `${codexHooks === null ? 0 : 1} Codex hook file(s) in ${checkoutDir}`,
   );
 }
 

@@ -22,7 +22,7 @@ type TurnFrameKind = "msg" | "resync" | "error";
 export type ChatSendDiagnosticEvent =
   | { event: "post-issued"; detail: { attempt: number } }
   | { event: "post-http-response"; detail: { attempt: number; status: number } }
-  | { event: "post-retry-scheduled"; detail: { reasonKind: "network"; delayMs: number } }
+  | { event: "post-retry-scheduled"; detail: { reasonKind: "network" | "maintenance"; delayMs: number } }
   | { event: "post-error"; detail: { reasonKind: ChatSendReasonKind } }
   | { event: "post-response"; detail: { outcome: "deduplicated" | "queued" | "turn-started" | "empty" } }
   | { event: "receipt-pending"; detail: { elapsedMs: number } }

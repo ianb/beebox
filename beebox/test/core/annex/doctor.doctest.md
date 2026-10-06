@@ -1,7 +1,7 @@
 # `bbx doctor annex`
 
 Is git-annex set up correctly in this repository? See
-`src/core/annex/doctor.ts`.
+`src/core/annex/doctor/core.ts`.
 
 **Repair by default.** Most of what can be wrong is something the box can put
 right, so reporting it to a human who then runs the obvious command is a wasted
@@ -15,10 +15,10 @@ import {
   formatAnnexDoctor,
   ANNEX_PRECOMMIT_LINE,
   ANNEX_SMUDGE_LINE,
-} from "../../../src/core/annex/doctor.js";
+} from "../../../src/core/annex/doctor/core.js";
 import { assetAnnexAttributes, assetLargefilesExpression } from "../../../src/lib/asset-extensions.js";
 import { writeAnnexInfoAttributes } from "../../../src/core/annex/info-attributes.js";
-import { UNIGNORE_BLOCK } from "../../../src/core/commands/attachments-gitignore.js";
+import { UNIGNORE_BLOCK } from "../../../src/core/attachments-gitignore.js";
 import { assetGitignorePatterns } from "../../../src/lib/asset-extensions.js";
 
 /**

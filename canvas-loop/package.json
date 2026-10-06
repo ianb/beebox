@@ -6,34 +6,34 @@
   "private": true,
   "exports": {
     ".": {
-      "types": "./src/core/index.ts",
-      "default": "./src/core/index.ts"
+      "types": "./src/exports/core.ts",
+      "default": "./src/exports/core.ts"
     },
     "./headless": {
-      "types": "./src/headless/index.ts",
-      "default": "./src/headless/index.ts"
+      "types": "./src/exports/headless.ts",
+      "default": "./src/exports/headless.ts"
     },
     "./react": {
-      "types": "./src/react/index.ts",
-      "default": "./src/react/index.ts"
+      "types": "./src/exports/react.ts",
+      "default": "./src/exports/react.ts"
     },
     "./browser": {
-      "types": "./browser/mount.ts",
-      "default": "./browser/mount.ts"
+      "types": "./src/browser/mount.ts",
+      "default": "./src/browser/mount.ts"
     },
-    "./browser/figure.css": "./browser/figure.css",
+    "./browser/figure.css": "./src/browser/figure.css",
     "./eslint": {
-      "types": "./src/eslint/index.ts",
-      "default": "./src/eslint/index.ts"
+      "types": "./src/eslint/plugin.ts",
+      "default": "./src/eslint/plugin.ts"
     }
   },
   "scripts": {
     "cli": "node --import tsx src/headless/cli.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json && tsc --noEmit -p src/dev-demo/tsconfig.json && tsc --noEmit -p src/exports/tsconfig.json",
     "lint": "eslint .",
-    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test test/*.test.ts test/*.test.tsx",
-    "build:playground": "node --import tsx browser/build.ts",
-    "build:dev-demo": "node --import tsx dev-demo/build.ts",
+    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test",
+    "build:playground": "node --import tsx src/browser/build.ts",
+    "build:dev-demo": "node --import tsx src/dev-demo/build.ts",
     "gallery:check": "node --import tsx src/headless/cli.ts gallery check",
     "sync:claude-skill": "mkdir -p ../.claude/skills/canvas-loop-sketch && cp claude-plugin/skills/canvas-loop-sketch/SKILL.md ../.claude/skills/canvas-loop-sketch/SKILL.md"
   },

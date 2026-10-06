@@ -14,7 +14,7 @@
 
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { QuestionForm, type QuestionInfo } from "./QuestionForm";
 import { renderQuestionAnswer } from "./answer-display";
@@ -22,6 +22,7 @@ import { bbxSource } from "../../lib/source-tag";
 import { Stack } from "../ui/Stack";
 import { Card } from "../ui/Card";
 import { Text } from "../ui/Text";
+import { StatusMessage } from "../ui/StatusMessage";
 import { StatusBadge } from "../ui/StatusBadge";
 
 function answeredCard(q: QuestionInfo) {
@@ -32,7 +33,7 @@ function answeredCard(q: QuestionInfo) {
           {q.prompt ?? q.name}
         </Text>
         {renderQuestionAnswer(q, { size: "sm", tone: "default" })}
-        <StatusBadge status={q.status ?? "answered"} size="sm" />
+        <StatusBadge status={q.state ?? "answered"} size="sm" className="self-start" />
       </Stack>
     </Card>
   );
@@ -41,7 +42,7 @@ function answeredCard(q: QuestionInfo) {
 function demotedCard(q: QuestionInfo, onAnswered: () => void) {
   return (
     <Stack key={q.path} gap="xs">
-      <StatusBadge status={q.status ?? "expired"} size="sm" />
+      <StatusBadge status={q.state ?? "expired"} size="sm" className="self-start" />
       <QuestionForm question={q} sourcePath={q.relativePath} onAnswered={onAnswered} />
     </Stack>
   );
@@ -63,7 +64,7 @@ function invalidCard(q: QuestionInfo, boxSlug: string | undefined) {
           Invalid question card
         </Text>
         {boxSlug !== undefined ? (
-          <Link to={href(`/${boxSlug}/browse/${q.relativePath}`)}>
+          <Link to={href(`/${boxSlug}/browse/${q.relativePath}`)} className="self-start">
             <Text as="span" size="sm" tone="emphasis">{label}</Text>
           </Link>
         ) : (
@@ -98,19 +99,19 @@ export function QuestionsList() {
   const onAnswered = () => void utils.status.questions.invalidate();
 
   // Malformed cards (bad frontmatter, etc.) come back from status.questions
-  // with `invalid: true` and no `status` — they must stay visible so the
-  // boxholder can find and fix them, but they don't belong in any status
+  // with `invalid: true` and no `state` — they must stay visible so the
+  // boxholder can find and fix them, but they don't belong in any state
   // bucket (they aren't pending, answered, dismissed, or expired).
   const invalid = questions.filter((q) => q.invalid === true);
-  const pending = questions.filter((q) => q.invalid !== true && q.status === "pending");
-  const answered = questions.filter((q) => q.invalid !== true && q.status === "answered");
+  const pending = questions.filter((q) => q.invalid !== true && q.state === "pending");
+  const answered = questions.filter((q) => q.invalid !== true && q.state === "answered");
   const demoted = questions.filter(
-    (q) => q.invalid !== true && (q.status === "dismissed" || q.status === "expired")
+    (q) => q.invalid !== true && (q.state === "dismissed" || q.state === "expired")
   );
   const archive = [...demoted, ...answered];
 
   if (isLoading) {
-    return <Text as="div" tone="subtle" className="p-8">Loading...</Text>;
+    return <StatusMessage>Loading...</StatusMessage>;
   }
 
   return (

@@ -183,8 +183,43 @@ export async function getCommentaryDestinations(box: EnabledBox): Promise<Commen
   return trpcQuery(box, { procedure: "clerk.commentaryDestinations", shape: parseDestinationsData });
 }
 
-export async function postCommentary(box: EnabledBox, payload: CommentaryPayload): Promise<CommentaryResult> {
-  return trpcMutation(box, { procedure: "clerk.commentary", input: payload, shape: parseCommentaryResult });
+/**
+ * Waits before each retry of a commentary POST. Two retries cover a dropped
+ * connection or a restarting box without holding the capture for long.
+ */
+const COMMENTARY_RETRY_DELAYS_MS = [1000, 3000];
+
+/**
+ * Failures after which the box may or may not have written the capture: no
+ * response at all, or a proxy/gateway error in front of the box. A 500 is the
+ * box's own answer and is not retried.
+ */
+function isAmbiguousFailure(error: unknown): boolean {
+  return error instanceof ClerkApiError && [0, 502, 503, 504].includes(error.status);
+}
+
+/**
+ * Post one capture, retrying an ambiguous failure with the SAME payload. The
+ * payload's `captureId` makes a replay safe: the box returns the first
+ * attempt's result instead of writing a second card. A new user action must
+ * build a new payload (new `captureId`); only this retry loop reuses one.
+ */
+export async function postCommentary(
+  box: EnabledBox,
+  request: { payload: CommentaryPayload & { captureId: string }; retryDelaysMs?: readonly number[] },
+): Promise<CommentaryResult> {
+  const { payload } = request;
+  const retryDelaysMs = request.retryDelaysMs ?? COMMENTARY_RETRY_DELAYS_MS;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await trpcMutation(box, { procedure: "clerk.commentary", input: payload, shape: parseCommentaryResult });
+    } catch (error) {
+      const delay = retryDelaysMs[attempt];
+      if (delay === undefined || !isAmbiguousFailure(error)) throw error;
+      console.info(`[clerk] commentary post failed (attempt ${attempt + 1}); retrying capture ${payload.captureId}`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
 }
 
 export async function postTabArrangement(

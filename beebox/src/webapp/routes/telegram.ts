@@ -10,18 +10,18 @@
 
 import * as path from "node:path";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import {
   loadTelegramConfig,
   processWebhookUpdate,
   extractMessage,
   type TelegramUpdate,
-} from "../../connectors/telegram.js";
+} from "../../connectors/telegram/connector.js";
 import { telegramUpdateSchema } from "../../services/telegram-schemas.js";
 import { ChatSessionPool } from "../../core/chat/session/pool.js";
 import { sendTelegramMessage, startTypingIndicator } from "../../core/telegram-send.js";
-import { appendMessageToThread } from "../../connectors/chat-utils.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { appendMessageToThread } from "../../job-cards/chat-utils.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { acquireBoxWork } from "../../lib/box-maintenance.js";
 
 interface RegisterTelegramRoutesOptions {
@@ -73,7 +73,7 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
         const chatDescription = extracted.msg.chat.title ?? extracted.senderName;
 
         // Fire-and-forget: send to pool, deliver responses, archive
-        const work = await acquireBoxWork(boxRoot);
+        const work = await acquireBoxWork(boxRoot, { reason: "telegram message" });
         void work.run(() => handleChatMessage({
           pool,
           boxRoot,

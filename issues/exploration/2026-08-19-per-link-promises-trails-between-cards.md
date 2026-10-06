@@ -64,7 +64,7 @@ index or competes with it.
 ## The mechanism already exists; the convention does not
 
 This is a discipline on machinery that is already mature, not a new subsystem:
-`src/shared/ref-path.ts` (the three-form ref rule), `core/canonical-refs.ts` and
+`src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`) (the three-form ref rule), `core/canonical-refs.ts` and
 `canonicalize-refs.ts` (checking and rewriting), the `normalize-ref-keys`
 migration that already moved bare-string refs onto a `ref` key, and ref repair on
 move via `bbx mv` and `doc-check --fix`.

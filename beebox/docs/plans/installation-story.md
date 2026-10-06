@@ -53,7 +53,7 @@ Track C.)*
   *"bbx is what the box runs, I'm not sure we should be so quick to use it for
   external operations like doctor"*; developer install first, with local
   Docker exercising the cloud install; prefer `claude auth login`.
-- Precedent: `scripts/smoke-external-box.ts` — the shipped pattern for
+- Precedent: `scripts/smoke-external-box.ts` (moved to `beebox/src/scripts/smoke-external-box.ts`) — the shipped pattern for
   "verify the stranger sequence actually works, from outside the repo." Its
   sequence (tarball → `bbx init` → **box-local `pnpm install`** → validate →
   serve → HTTP probes) is the contract the Docker lifecycle must reproduce.
@@ -74,7 +74,7 @@ Track C.)*
   performs exactly that second install). Any container or quickstart that
   checks `.bbx-box` at the package root, serves the package root, or skips
   the box-local install is wrong by construction.
-- **Loopback-by-default binds, already correct.** `src/webapp/server.ts:185`
+- **Loopback-by-default binds, already correct.** `src/webapp/server.ts:185` (moved to `beebox/src/webapp/server/app.ts`)
   `const host = options.host ?? "localhost"`; `src/cli/commands/serve.ts:90`
   `.option("-h, --host <host>", "Host to bind to", "localhost")`;
   `src/cli/commands/hub.ts:50` `const host = config.host ?? "127.0.0.1"`.
@@ -82,7 +82,7 @@ Track C.)*
   bind changes needed.
 - **Claude auth checking, two halves.** `src/services/claude-cli.ts` shells
   to `claude auth status/login/logout` (typed service with a fake, already
-  injected into the admin router); `src/webapp/trpc/routers/health.ts:270-273`
+  injected into the admin router); `src/webapp/trpc/routers/health.ts:270-273` (moved to `beebox/src/webapp/trpc/routers/health/router.ts`)
   peeks at `~/.claude/.credentials.json` and *"On macOS they live in the
   Keychain instead … so skip the check there"*. Health checks have their own
   result shape `{ name, ok, message, severity }` (`health.ts:22`). **Reuse
@@ -92,7 +92,7 @@ Track C.)*
   the agent *"Always available on the box host … `pandoc`, `imagemagick`
   (`magick`), `poppler-utils` (`pdftotext`, `pdfimages`)"*. This is the
   authoritative list the doctor checks and the Docker image must satisfy.
-- **git-lfs is wired per-box at init.** `src/core/box/index.ts:130-145`
+- **git-lfs is wired per-box at init.** `src/core/box/index.ts:130-145` (moved to `beebox/src/core/box/structure/core.ts`)
   writes LFS `.gitattributes` filters into every new box. Filters only
   function when `git lfs install` has run for the user/repo — installing
   the binary alone is insufficient (Track D must run it; the doctor must
@@ -102,10 +102,10 @@ Track C.)*
   musl-first bug). The doctor reuses it as a check ("SDK binary resolves for
   this platform"), and it constrains the Docker base image to glibc (Debian,
   not Alpine).
-- **The stranger sequence, already executable.** `scripts/smoke-external-box.ts`
+- **The stranger sequence, already executable.** `scripts/smoke-external-box.ts` (moved to `beebox/src/scripts/smoke-external-box.ts`)
   scaffolds a fresh v2 box in a temp dir against a packed tarball, with zero
   monorepo context, and prints the authoritative "Stranger sequence" block.
-  `scripts/release.ts` + `build:cli` produce the tarball (frontend built at
+  `scripts/release.ts` (moved to `beebox/src/scripts/release.ts`) + `build:cli` produce the tarball (frontend built at
   `release.ts:67-72`). **Reuse heavily** — as the specification of what the
   container lifecycle must do, not as a claim that building an image tests
   it (it doesn't; Track D adds its own lifecycle test).
@@ -121,7 +121,7 @@ Track C.)*
   3211 ~/boxes/dev1` (backend watch); terminal 2 `cd
   beebox/src/frontend && FRONTEND_PORT=3210 BACKEND_PORT=3211 pnpm
   dev` (Vite + HMR, proxies `/api` and `/auth` to the backend). Documented
-  in `docs/developer-install.md`.
+  in `docs/install/developer.md`.
 - **`bbx` is not reachable from the monorepo root.** Root `package.json` had
   no `bbx` script; the binary belongs to the `beebox` package
   (`beebox/package.json` `"bbx": "./bin/bbx"`). **Decided (C2):** add
@@ -130,7 +130,7 @@ Track C.)*
   sequence still uses `cd beebox && pnpm bbx …`.
 - **Secret-file conventions.** `*.secret.json` gitignore convention
   (`docs/box-layout.md:194`), Telegram validate-then-persist
-  (`src/webapp/trpc/routers/admin.ts:60-78`). Reused as-is; this plan adds
+  (`src/webapp/trpc/routers/admin.ts:60-78` (moved to `beebox/src/webapp/trpc/routers/admin/router.ts`)). Reused as-is; this plan adds
   only the missing `.env.example`.
 - **Prod deploy scripts** (`deploy/*.sh`) — **deliberately not reused** for
   the public path. They stay personal (release plan Track C decision); the
@@ -284,9 +284,9 @@ in A's pin, B's doctor checks, C's verified sequence).
   backend-only. And there is no `.env.example` anywhere — the only env
   enumeration is `deploy/README.md` prose, which wrongly lists
   `ANTHROPIC_API_KEY` as required (the code deletes it:
-  `src/cli/bootstrap.ts:31`, `src/core/script-env.ts:106`).
+  `src/cli/bootstrap.ts:31` (moved to `beebox/src/cli/entry/bootstrap.ts`), `src/core/script-env.ts:106` (moved to `beebox/src/core/script-env/core.ts`)).
 - **Direction.**
-  - **Doc**: `docs/developer-install.md` — written and linked from the
+  - **Doc**: `docs/install/developer.md` — written and linked from the
     root README's Layout section (C2; superseded the plan-time note that
     release-plan Track E owns the link — the small pointer landed here
     instead). Content: prerequisites (Node 22, matching Track A's decided
@@ -337,14 +337,14 @@ in A's pin, B's doctor checks, C's verified sequence).
     piece 2, implemented here.)
   - **git-lfs loudness**: the husky guards keep degrading gracefully, but
     gain a one-line stderr warning (`git-lfs not found — media files will
-    not be handled; see docs/developer-install.md`) instead of `|| true`
+    not be handled; see docs/install/developer.md`) instead of `|| true`
     silence. Doctor makes it a failed check.
 - **Vocabulary lock-ins.** None.
 - **First implementation chunk (C1) — done.** The dev-loop spike, verified
   on a clean clone; landed two fixes (commit `0d2fbfb8`): `bbx init`
   defaults the box's `beebox` dep to `link:<checkout>`, and `bbx
   serve <package-root>` resolves down to `content/`.
-- **Second implementation chunk (C2) — done.** `docs/developer-install.md`,
+- **Second implementation chunk (C2) — done.** `docs/install/developer.md`,
   `beebox/.env.example`, the `deploy/README.md` correction, and the
   husky git-lfs stderr warnings (`post-commit`, `post-merge`, `pre-push`),
   plus a root `"bbx": "pnpm --dir beebox bbx"` convenience script
@@ -389,7 +389,7 @@ in A's pin, B's doctor checks, C's verified sequence).
       `/data/box/content/.bbx-box` exists, `/data/box/package.json` exists,
       and the box git repo has a HEAD commit (guards the partial-init case
       where `bbx init` wrote the marker but died before its final commit —
-      `src/core/box/index.ts:63` writes the marker early,
+      `src/core/box/index.ts:63` (moved to `beebox/src/core/box/structure/core.ts`) writes the marker early,
       `src/cli/commands/init.ts` commits at the end). On failure: print
       the exact recovery commands, exit nonzero. Additionally, when
       `/data/box/node_modules` is missing, run the **box-local
@@ -420,7 +420,7 @@ in A's pin, B's doctor checks, C's verified sequence).
     clean shutdown. This — not the image build itself — is what makes the
     Docker path verified; installing the same tarball the external smoke
     uses gives artifact identity, not test identity.
-  - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
+  - **Guide**: `docs/install/docker.md` — local usage first (init, auth,
     up, open `http://localhost:3210`), then the VPS section: same compose,
     DNS + `--profile public` for Caddy TLS, the Tailscale-only variant
     (keep loopback mapping, join tailnet, zero open ports), Google OAuth
@@ -559,13 +559,13 @@ the agent is told. No entries in `src/dev/knowledge-audits.yaml`.
 5. **C1: dev-loop spike** (`serve` on a clean clone, built frontend,
    `Procfile.dev`, `--dev` scope); fix what it surfaces; settle the root
    `bbx` convenience script.
-6. **C2: `docs/developer-install.md` + `.env.example` +
+6. **C2: `docs/install/developer.md` + `.env.example` +
    `deploy/README.md` correction + husky lfs warning.** Depends on B1
    (doc ends with `pnpm doctor`) and C1.
 7. **D1: Dockerfile + argv entrypoint + compose + lifecycle test**,
    exercised locally end-to-end (init → box-local install → auth
    experiment → serve → one chat turn). Depends on A1 and C1.
-8. **D2: Caddy profile + `docs/docker-install.md`** (local + VPS + auth
+8. **D2: Caddy profile + `docs/install/docker.md`** (local + VPS + auth
    fallback + Tailscale variant).
 
 ## Rollout shape
@@ -577,9 +577,9 @@ the agent is told. No entries in `src/dev/knowledge-audits.yaml`.
   codepaths' contracts. The container lifecycle test is the Docker path's
   done-when — build → init → box install → serve → HTTP probe → shutdown —
   designed alongside the entrypoint, not after it.
-  `scripts/smoke-external-box.ts` stays the regression anchor for the
+  `scripts/smoke-external-box.ts` (moved to `beebox/src/scripts/smoke-external-box.ts`) stays the regression anchor for the
   tarball artifact both paths consume. The plan's overall done-when adds:
-  one clean-clone walkthrough of `docs/developer-install.md` on a machine
+  one clean-clone walkthrough of `docs/install/developer.md` on a machine
   without the personal `~/src` layout (a temp `git clone` + fresh
   `~/boxes` path suffices), and one real cheap-VPS run of the compose file
   before the guide ships.

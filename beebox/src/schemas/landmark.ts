@@ -26,12 +26,12 @@
  * See docs/landmarks.md and docs/triage.md.
  */
 
-import { splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { CardSymbol } from "../shared/card-symbol.js";
 import { Prominence } from "../shared/prominence.js";
-import { SystemThemeChoiceSchema } from "../shared/card-theme.js";
+import { SystemThemeChoiceSchema } from "../shared/card-theme/core.js";
 
 /** Sort order for `expand` fan-out results. */
 export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
@@ -118,6 +118,7 @@ export type LandmarkNavigationData = z.infer<typeof LandmarkNavigation>;
 export const LandmarkDestination = z.object({
   for: z.array(z.string()),
   rules: z.string().optional(),
+  "todo-question": z.string().trim().min(1).optional(),
   procedure: z.object({ ref: z.string() }).optional(),
 });
 export type LandmarkDestinationData = z.infer<typeof LandmarkDestination>;
@@ -153,6 +154,7 @@ const LightweightLandmarkObject = LandmarkObject.extend({ "system-theme": z.unkn
 export type LandmarkFields = z.infer<typeof LandmarkObject>;
 
 export const LandmarkSchema: CardSchema = cardSchema("landmark", {
+  brief: "Marks a notable directory",
   description: "Marks its directory as a notable spot — a curated navigation bookmark and/or a triage filing destination; one per directory",
   category: "authored",
   // A landmark is a place marker, not a visitable file: it never lists in a
@@ -202,6 +204,10 @@ Add \`group: <title>\` to an \`expand\` to keep its matches grouped as a **colla
 **Don't add a description or purpose field.** A bookmark seen many times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs prose, write a doc card and link to it.
 
 ## \`destinations\` (agent-facing filing targets)
+
+An optional \`todo-question\` asks a yes/no question about each routed item. A yes adds an ordinary agent-assigned todo for the scheduled todo review; omit it for filing only. This does not authorize extra actions or run an agent immediately.
+
+For triage, destination rules explain scope and boundaries; \`_config/intake.guide.card\` governs decision policy. To repair a rule and test regressions, read \`node_modules/beebox/box-docs/triage-instructions.md\`.
 
 \`\`\`yaml
 destinations:

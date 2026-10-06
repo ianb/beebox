@@ -28,7 +28,7 @@ test file, directly or transitively.** By area:
 **It is not a coverage percentage.** "No test imports this file" is a weaker
 statement than "no test exercises this file": a module can be reached through a
 booted Fastify server, a spawned CLI, or a React render without the test naming
-it. Route doctests, for instance, import `src/webapp/server.ts` and reach a large
+it. Route doctests, for instance, import `src/webapp/server.ts` (moved to `beebox/src/webapp/server/app.ts`) and reach a large
 graph through it — that graph *is* counted here.
 
 What it does mean is that for these 430 files there is no import path from any

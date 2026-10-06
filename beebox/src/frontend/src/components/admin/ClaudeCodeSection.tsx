@@ -8,11 +8,17 @@ import { useMachine } from "@xstate/react";
 import { claudeAuthMachine } from "../../machines/claudeAuthMachine.js";
 import { ExternalLink } from "../ui/ExternalLink";
 import { Button } from "../ui/Button";
+import { AdminSectionCard } from "./AdminSectionCard";
+import { useRefreshAgentReadinessOnLogin } from "../../hooks/useAgentReadiness";
+
+const DESCRIPTION =
+  "Claude Code runs background agents (scheduler, reactor). Authenticate with your Anthropic account to enable these features.";
 
 export function ClaudeCodeSection() {
   const [snapshot, send] = useMachine(claudeAuthMachine);
   const [code, setCode] = useState("");
   const { status, error, authUrl } = snapshot.context;
+  useRefreshAgentReadinessOnLogin(status?.loggedIn === true);
   const isSubmittingCode = snapshot.matches("submittingCode");
   const isLoading = snapshot.matches("loading");
   const isStarting = snapshot.matches("starting");
@@ -22,27 +28,14 @@ export function ClaudeCodeSection() {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-lg font-semibold text-warm-800">Claude Code</h2>
-          <span className="text-xs bg-warm-200 text-warm-600 px-2 py-0.5 rounded">System-wide</span>
-        </div>
+      <AdminSectionCard id="claude-code" description={DESCRIPTION} busy>
         <p className="text-sm text-warm-600">Checking status...</p>
-      </div>
+      </AdminSectionCard>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center gap-2 mb-2">
-        <h2 className="text-lg font-semibold text-warm-800">Claude Code</h2>
-        <span className="text-xs bg-warm-200 text-warm-600 px-2 py-0.5 rounded">System-wide</span>
-      </div>
-      <p className="text-sm text-warm-700 mb-4">
-        Claude Code runs background agents (scheduler, reactor). Authenticate with
-        your Anthropic account to enable these features.
-      </p>
-
+    <AdminSectionCard id="claude-code" description={DESCRIPTION}>
       {status?.loggedIn ? (
         <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm">
           <span className="font-medium text-success-dark">Authenticated</span>
@@ -131,6 +124,6 @@ export function ClaudeCodeSection() {
           Refresh
         </Button>
       </div>
-    </div>
+    </AdminSectionCard>
   );
 }

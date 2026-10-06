@@ -1,0 +1,557 @@
+# Static and project publication preparation
+
+`preparePublication` is a server-side, Cloudflare-free step. It reads the
+registered box's strict definition, collects safe files from a fixed source
+root, leak-scans the output, and returns a private temporary staging directory.
+The caller owns cleanup and passes only the publication name over the RPC.
+
+```ts setup
+import { mkdir, readFile, symlink, truncate, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { preparePublication, PUBLICATION_FILE_LIMITS } from "../../src/publish/prepare/core.js";
+import { releaseIdForFiles } from "../../src/publish/manifest-edge.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
+
+const definition = {
+  pubId: "abcdefghijklmnop2345672345",
+  connection: "personal",
+  content: "static",
+  title: "Example site",
+  tier: "secret",
+};
+
+async function writeDefinition(box, value = definition, name = "example") {
+  await box.write(`src/publications/${name}/publication.json`, JSON.stringify(value));
+}
+```
+
+## Static mode copies only safe files and uses canonical release identity
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.html", "<h1>Example</h1>");
+await box.write("src/publications/example/site/styles/main.css", "body { color: black; }");
+await box.write("src/publications/NOTES.md", "private shared notes");
+await box.write("src/publications/CLAUDE.md", "private authoring guidance");
+
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+result.ok
+=> true
+
+result.prepared.contentHash === await releaseIdForFiles(Object.fromEntries(result.prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }])))
+=> true
+
+JSON.stringify(result.prepared.preview.map((file) => file.path))
+=> ["index.html","styles/main.css"]
+
+result.prepared.files.some((file) => file.path.includes("NOTES.md") || file.path.includes("CLAUDE.md"))
+=> false
+
+(await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8"))
+=> <h1>Example</h1>
+
+await result.prepared.cleanup();
+await box.cleanup();
+```
+
+## Same-publication builds are serialized before they touch `dist/`
+
+The per-name source lock protects install, build, collection, and local
+staging. It is released before the service takes its remote serving-state
+lock, so disablement does not wait for a package install.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box, { ...definition, content: "project" });
+await box.write("src/publications/example/project/package.json", JSON.stringify({ scripts: { build: "vite build" } }));
+await box.write("src/publications/example/project/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+let buildCount = 0;
+let firstBuildStarted: () => void = () => {};
+const started = new Promise((resolve) => { firstBuildStarted = resolve; });
+let finishFirstBuild: () => void = () => {};
+const firstGate = new Promise((resolve) => { finishFirstBuild = resolve; });
+const deps = {
+  ownerEmail: null,
+  runProjectCommand: async ({ step, cwd }) => {
+    if (step !== "build") return;
+    const current = ++buildCount;
+    if (current === 1) {
+      firstBuildStarted();
+      await firstGate;
+    }
+    await mkdir(path.join(cwd, "dist"), { recursive: true });
+    await writeFile(path.join(cwd, "dist/index.html"), `<p>build-${current}</p>`);
+  },
+};
+const firstPrepare = preparePublication({ boxRoot: box.root, name: "example" }, deps);
+await started;
+const secondPrepare = preparePublication({ boxRoot: box.root, name: "example" }, deps);
+await new Promise((resolve) => setTimeout(resolve, 30));
+
+buildCount
+=> 1
+
+finishFirstBuild();
+const firstResult = await firstPrepare;
+const secondResult = await secondPrepare;
+firstResult.ok && secondResult.ok
+=> true
+
+await readFile(path.join(firstResult.prepared.stagedDir, "index.html"), "utf-8")
+=> <p>build-1</p>
+
+await readFile(path.join(secondResult.prepared.stagedDir, "index.html"), "utf-8")
+=> <p>build-2</p>
+
+await firstResult.prepared.cleanup();
+await secondResult.prepared.cleanup();
+await box.cleanup();
+```
+
+## Static mode needs no package files or project runner
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.html", "static only");
+let commandCount = 0;
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, {
+  ownerEmail: null,
+  runProjectCommand: async () => { commandCount++; },
+});
+
+result.ok
+=> true
+
+commandCount
+=> 0
+
+await result.prepared.cleanup();
+await box.cleanup();
+```
+
+## Project mode clears stale output and runs only the standard commands
+
+The runner is injectable. Production calls only `pnpm install --frozen-lockfile`
+and `pnpm run build`, with a minimal environment that excludes server and agent
+credential variables.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box, { ...definition, content: "project" });
+await box.write("src/publications/example/project/package.json", JSON.stringify({ scripts: { build: "vite build" } }));
+await box.write("src/publications/example/project/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+await box.write("src/publications/example/project/dist/stale-private.txt", "must disappear before build");
+const calls = [];
+const parentEnv = { PATH: "/usr/bin:/bin", HOME: "/home/agent", LANG: "C.UTF-8", CLOUDFLARE_API_TOKEN: "not-in-child", OPENAI_API_KEY: "not-in-child" };
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, {
+  ownerEmail: null,
+  parentEnv,
+  runProjectCommand: async (request) => {
+    calls.push(request);
+    if (request.step === "build") {
+      await mkdir(path.join(request.cwd, "dist"), { recursive: true });
+      await writeFile(path.join(request.cwd, "dist/index.html"), "<h1>Built site</h1>");
+    }
+  },
+});
+
+result.ok
+=> true
+
+JSON.stringify(calls.map((call) => call.step))
+=> ["install","build"]
+
+JSON.stringify(Object.keys(calls[0].env).sort())
+=> ["HOME","LANG","PATH","TEMP","TMP","TMPDIR"]
+
+calls[0].env.CLOUDFLARE_API_TOKEN
+=> undefined
+
+JSON.stringify(result.prepared.preview.map((file) => file.path))
+=> ["index.html"]
+
+await result.prepared.cleanup();
+await box.cleanup();
+```
+
+## A failed build returns no staged release
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box, { ...definition, content: "project" });
+await box.write("src/publications/example/project/package.json", JSON.stringify({ scripts: { build: "vite build" } }));
+await box.write("src/publications/example/project/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+await box.write("_publish/abcdefghijklmnop2345672345/manifest.json", "existing live pointer must not change");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, {
+  ownerEmail: null,
+  runProjectCommand: async ({ step }) => { if (step === "build") throw new Error("script failed CLOUDFLARE_API_TOKEN=credential-value"); },
+});
+
+result.ok
+=> false
+
+result.reason
+=> project-command-failed
+
+result.step
+=> build
+
+result.message.includes("credential-value")
+=> false
+
+result.message.includes("CLOUDFLARE_API_TOKEN=[redacted]")
+=> true
+
+await box.read("_publish/abcdefghijklmnop2345672345/manifest.json")
+=> existing live pointer must not change
+
+await box.cleanup();
+```
+
+## Internal release paths and public slug aliases are reserved
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box, { ...definition, tier: "public", slug: "example" });
+await box.write("src/publications/example/site/index.html", "<h1>Example</h1>");
+await box.write("src/publications/example/site/p/example/photo.jpg", "collision");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok
+=> false
+
+result.message.includes("public alias")
+=> true
+
+await box.cleanup();
+```
+
+## Private notes, metadata, and uncompiled source cannot enter a release
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box, { ...definition, content: "project" });
+await box.write("src/publications/example/project/package.json", JSON.stringify({ scripts: { build: "vite build" } }));
+await box.write("src/publications/example/project/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, {
+  ownerEmail: null,
+  runProjectCommand: async ({ step, cwd }) => {
+    if (step === "build") {
+      await mkdir(path.join(cwd, "dist"), { recursive: true });
+      await writeFile(path.join(cwd, "dist/index.html"), "<h1>Built</h1>");
+      await writeFile(path.join(cwd, "dist/CLAUDE.md"), "private notes");
+    }
+  },
+});
+
+result.ok
+=> false
+
+result.message.includes("CLAUDE.md")
+=> true
+
+await box.cleanup();
+```
+
+## Static mode renders Markdown pages and does not ship the sources
+
+Each `.md` file becomes a sibling `.html` page styled by the box's Markdown
+renderer. The page title comes from frontmatter `title:`, then the first H1,
+then the file name. `index.md` satisfies the root-entry rule. Relative links to `.md`
+pages point at the rendered `.html`; external and anchor links are unchanged.
+Images and other files pass through. The release id, file list, and leak scan
+all describe the rendered pages, so a reviewer sees what is served.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.md", [
+  "---",
+  "title: Trip notes",
+  "---",
+  "# Welcome",
+  "",
+  "Read [the packing list](packing.md#tents), [day one](days/one.md?print=1), or [elsewhere](https://example.com/a.md).",
+  "",
+  "![map](assets/map.svg)",
+  "",
+].join("\n"));
+await box.write("src/publications/example/site/packing.md", "# Packing list\n\nWrite to someone@example.org.\n");
+await box.write("src/publications/example/site/days/one.md", "No heading here; back to [the index](../index.md).\n");
+await box.write("src/publications/example/site/assets/map.svg", "<svg xmlns='http://www.w3.org/2000/svg'/>");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+result.ok
+=> true
+
+JSON.stringify(result.prepared.preview.map((file) => file.path))
+=> ["assets/map.svg","days/one.html","index.html","packing.html"]
+
+result.prepared.contentHash === await releaseIdForFiles(Object.fromEntries(result.prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }])))
+=> true
+
+const index = await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8");
+index.includes("<title>Trip notes</title>")
+=> true
+
+index.includes('href="packing.html#tents"') && index.includes('href="days/one.html?print=1"')
+=> true
+
+index.includes('href="https://example.com/a.md"') && index.includes('src="assets/map.svg"')
+=> true
+
+index.includes("<script")
+=> false
+
+const packing = await readFile(path.join(result.prepared.stagedDir, "packing.html"), "utf-8");
+packing.includes("<title>Packing list</title>")
+=> true
+
+const dayOne = await readFile(path.join(result.prepared.stagedDir, "days/one.html"), "utf-8");
+dayOne.includes("<title>one</title>") && dayOne.includes('href="../index.html"')
+=> true
+
+result.prepared.scan.findings.filter((finding) => finding.match === "someone@example.org").map((finding) => finding.file)
+=> ["packing.html"]
+
+await result.prepared.cleanup();
+```
+
+Rendering is deterministic, so preparing an unchanged site again yields the same
+release id.
+
+```ts continue
+const again = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+again.ok && again.prepared.contentHash === result.prepared.contentHash
+=> true
+
+await again.prepared.cleanup();
+await box.cleanup();
+```
+
+## A Markdown page and an authored HTML page for the same path is an error
+
+`foo.md` next to `foo.html` is ambiguous, so prepare refuses it and the author
+keeps one. Invalid Markdoc tags also fail before anything is staged.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.md", "# Home\n");
+await box.write("src/publications/example/site/index.html", "<h1>Home</h1>");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok ? "ok" : `${result.reason}: ${result.message}`
+=> bundle-policy: 'index.md' renders to 'index.html', which also exists; keep only one of them
+
+await box.cleanup();
+```
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.md", "# Home\n\n{% no-such-tag %}\n");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok ? "ok" : `${result.reason}: ${result.message.includes("'index.md:3' has invalid Markdoc")}`
+=> bundle-policy: true
+
+await box.cleanup();
+```
+
+Box Markdoc tags render to app components, which a static page cannot show.
+A task-list item becomes a plain disabled checkbox. `redacted` content is
+omitted entirely, inline or block. Any other box tag fails prepare.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.md", [
+  "# Quiz",
+  "",
+  "- [x] Tent",
+  "- [ ] Stove",
+  "",
+  "The answer is {% redacted %}forty-two{% /redacted %}.",
+  "",
+  "{% redacted %}",
+  "A whole hidden paragraph.",
+  "{% /redacted %}",
+  "",
+].join("\n"));
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+const index = result.ok ? await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8") : result.message;
+index.includes('<input type="checkbox" disabled="" checked="">') && index.includes('<input type="checkbox" disabled="">') && !index.includes("<Task")
+=> true
+
+index.includes("The answer is .")
+=> true
+
+/forty-two|hidden paragraph|redacted/i.test(index)
+=> false
+
+if (result.ok) await result.prepared.cleanup();
+await box.write("src/publications/example/site/index.md", "# Quote\n\n{% quote %}Hello{% /quote %}\n");
+const quoted = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+quoted.ok ? "ok" : `${quoted.reason}: ${quoted.message}`
+=> bundle-policy: Markdown file 'index.md' uses a box Markdoc tag (QuoteInline) that published pages do not support; remove it or write plain Markdown
+
+await box.cleanup();
+```
+
+## Project mode publishes `dist/` Markdown as written
+
+Rendering belongs to static mode. A project build owns its output.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box, { ...definition, content: "project" });
+await box.write("src/publications/example/project/package.json", JSON.stringify({ scripts: { build: "vite build" } }));
+await box.write("src/publications/example/project/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, {
+  ownerEmail: null,
+  runProjectCommand: async ({ step, cwd }) => {
+    if (step !== "build") return;
+    await mkdir(path.join(cwd, "dist"), { recursive: true });
+    await writeFile(path.join(cwd, "dist/index.html"), "<h1>Built</h1>");
+    await writeFile(path.join(cwd, "dist/readme.md"), "# Raw");
+  },
+});
+
+JSON.stringify(result.ok && result.prepared.preview.map((file) => file.path))
+=> ["index.html","readme.md"]
+
+if (result.ok) await result.prepared.cleanup();
+await box.cleanup();
+```
+
+## Unsafe output fails closed
+
+Hidden files, source maps, exact sensitive filenames, symlinks, and non-regular
+files are refused instead of silently omitted from the release.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.html", "<h1>Example</h1>");
+await box.write("src/publications/example/site/.env", "NOT A PUBLIC FILE");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok
+=> false
+
+result.reason
+=> bundle-policy
+
+result.message.includes("hidden output path")
+=> true
+
+await box.cleanup();
+```
+
+## Per-file and file-count limits report observed and configured values
+
+The collector checks stat size before reading and refuses a file once its
+bounded read crosses the limit.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+const oversizedPath = box.path("src/publications/example/site/large.bin");
+await mkdir(path.dirname(oversizedPath), { recursive: true });
+await writeFile(oversizedPath, Buffer.alloc(0));
+await truncate(oversizedPath, PUBLICATION_FILE_LIMITS.perFileBytes + 1);
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok
+=> false
+
+result.reason
+=> bundle-policy
+
+result.observed
+=> 26214401
+
+result.limit
+=> 26214400
+
+await box.cleanup();
+```
+
+## Total bytes and file count are bounded
+
+The total-byte guard stops before opening the first file that would cross the
+limit. The file-count guard stops before reading file 2,001.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+const site = box.path("src/publications/example/site");
+await mkdir(site, { recursive: true });
+for (let i = 0; i < 4; i++) {
+  const file = path.join(site, `part-${i}.bin`);
+  await writeFile(file, Buffer.alloc(0));
+  await truncate(file, PUBLICATION_FILE_LIMITS.perFileBytes);
+}
+const oneMoreByte = path.join(site, "part-4.bin");
+await writeFile(oneMoreByte, "x");
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok
+=> false
+
+result.observed
+=> 104857601
+
+result.limit
+=> 104857600
+
+await box.cleanup();
+```
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+const site = box.path("src/publications/example/site");
+await mkdir(site, { recursive: true });
+for (let i = 0; i <= PUBLICATION_FILE_LIMITS.files; i++) {
+  await writeFile(path.join(site, `file-${String(i).padStart(4, "0")}.txt`), "");
+}
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok
+=> false
+
+result.observed
+=> 2001
+
+result.limit
+=> 2000
+
+await box.cleanup();
+```
+
+## Staged files are cleaned on preparation errors
+
+The error result carries no server-owned staging path, so a failed scan or
+project step cannot be uploaded accidentally.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("src/publications/example/site/index.html", "<h1>Example</h1>");
+await symlink("index.html", box.path("src/publications/example/site/index-copy.html"));
+const result = await preparePublication({ boxRoot: box.root, name: "example" }, { ownerEmail: null });
+
+result.ok
+=> false
+
+result.reason
+=> bundle-policy
+
+"prepared" in result
+=> false
+
+await box.cleanup();
+```

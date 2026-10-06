@@ -2,10 +2,11 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import * as path from "node:path";
 import { execa } from "execa";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import type { GrowthHistory, GrowthMeasurement, SubtreeCounts } from "./model.js";
-import { BOX_DIRS } from "../../lib/paths.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
+import { measureBytes } from "./bytes.js";
 
 const MAX_SUBTREES = 20;
 const MAX_PREFIX_SEGMENTS = 3;
@@ -268,5 +269,8 @@ export async function scanBoxGrowth(
   const history = tree.complete
     ? await measureHistory(boxRoot, deadline)
     : { status: "unavailable" as const, error: "Git history was not measured because the filesystem scan was incomplete" };
-  return { measuredAt: options.now.toISOString(), ...tree, history };
+  const bytes = tree.complete
+    ? await measureBytes(boxRoot, deadline)
+    : { status: "unavailable" as const, error: "Disk use was not measured because the filesystem scan was incomplete" };
+  return { measuredAt: options.now.toISOString(), ...tree, history, bytes };
 }

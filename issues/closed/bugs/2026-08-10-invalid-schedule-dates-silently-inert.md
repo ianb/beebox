@@ -8,7 +8,7 @@ resolution: implemented
 ---
 
 Implemented in the `schedule-cadence` workstream: `at`/`until` now require an
-ISO 8601 shape that parses (`src/schemas/scheduled-script-fields.ts`), `cron`
+ISO 8601 shape that parses (`src/schemas/scheduled-script-fields.ts` (moved to `beebox/src/scheduled-script-fields.ts`)), `cron`
 must parse AND produce a previous occurrence, `rrule` must parse, and
 cron/at/rrule are mutually exclusive (schema `superRefine`, fail-closed at
 load). `createScheduledScriptTemplate` validates its output and throws rather
@@ -18,11 +18,11 @@ false. Sweep confirmed zero existing cards on any real box fail the new
 validation.
 
 The `scheduled-script` schema types `at` and `until` as plain `z.string()`
-(`src/schemas/scheduled-script.tsx:54-56`). A malformed date passes validation
+(`src/schemas/scheduled-script.tsx:54-56` (moved to `beebox/src/schemas/scheduled-script/schema.tsx`)). A malformed date passes validation
 and then does nothing at runtime:
 
 - `until`: `isDue` compares `ctx.now > new Date(script.until)`
-  (`src/schemas/scheduled-script.tsx:195`). An invalid date makes the
+  (`src/schemas/scheduled-script.tsx:195` (moved to `beebox/src/schemas/scheduled-script/schema.tsx`)). An invalid date makes the
   comparison always false, so the expiry bound silently never fires — the
   schedule runs forever while the card claims a cutoff.
 - `at`: `new Date(script.at)` invalid means `ctx.now >= atDate` is always

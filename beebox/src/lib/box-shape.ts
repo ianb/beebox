@@ -17,7 +17,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "./error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { LEGACY_PACKAGE_NAME, migrateBoxState } from "./state-migration.js";
 import {
   BoxShapeError,
@@ -64,7 +64,7 @@ type PackageJsonShape = z.infer<typeof packageJsonShapeSchema>;
  * absent or `< 3` predates the one-root layout — including the common case
  * of a v2 PACKAGE root (no marker of its own, but one at `<boxRoot>/content`)
  * or a v2 CONTENT root (basename `content`, marker `shapeVersion: 2`) — and
- * gets a `bbx migrate`-pointing hard error.
+ * gets a hard error naming the shape (there is no conversion any more).
  *
  * @param boxRoot - The box root directory (contains `.beebox/box.json`)
  * @throws BoxShapeError if the marker predates the one-root layout

@@ -36,11 +36,75 @@ enum DraftTransferState: Codable, Equatable, Sendable {
     case failed(message: String)
 }
 
+/// The draft's upload batch: one directory on the box per composed message.
+///
+/// Both composers mint the message id only at send, so the batch id is the
+/// draft's own identity instead. It is minted lazily by the first attachment
+/// upload and dies with the draft, so a message's originals and files land
+/// together and a later message never joins them.
+enum ComposerUploadBatch {
+    /// 16 characters of `[A-Za-z0-9_-]`, URL-safe and directory-safe.
+    static let idLength = 16
+
+    static func newID() -> String {
+        let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+        return String((0..<idLength).map { _ in
+            alphabet[Int.random(in: 0..<alphabet.count)]
+        })
+    }
+}
+
+/// The image's ORIGINAL bytes, kept beside the downscaled copy that goes inline
+/// and uploaded to the box so the agent gets a file it can crop, OCR, or attach.
+///
+/// `filename` names the `image-source-<uuid>` payload in the draft directory.
+/// That payload exists only until the upload lands: `.uploaded` keeps the
+/// box-relative path and nothing else, while `.uploading` and `.failed` keep the
+/// bytes so a retry has something to send.
+struct DraftOriginal: Codable, Equatable, Sendable {
+    var filename: String
+    /// The SOURCE mime type, which the image's own `mimeType` no longer carries
+    /// once the downscale has re-encoded it (an HEIC photo inlines as JPEG).
+    var mimeType: String
+    var state: DraftTransferState
+
+    /// Whether `filename` still names bytes on disk.
+    var hasPayload: Bool {
+        switch state {
+        case .local, .uploading, .failed:
+            true
+        case .uploaded:
+            false
+        }
+    }
+
+    /// The landed box-relative path, if the upload finished.
+    var uploadedPath: String? {
+        guard case .uploaded(let path) = state else {
+            return nil
+        }
+        return path
+    }
+}
+
 struct DraftImage: Codable, Equatable, Identifiable, Sendable {
     var id: Int
     var filename: String
     var mimeType: String
     var state: DraftTransferState
+    /// Absent in drafts persisted before originals were kept, and on images
+    /// added through paths that have no original (`addImage`).
+    var original: DraftOriginal? = nil
+
+    /// Every payload this image owns in the draft directory. Cleanup and
+    /// missing-payload checks iterate this, never `filename` alone, so no site
+    /// can leak or overlook the original.
+    var payloadFilenames: [String] {
+        guard let original, original.hasPayload else {
+            return [filename]
+        }
+        return [filename, original.filename]
+    }
 }
 
 struct DraftFile: Codable, Equatable, Identifiable, Sendable {
@@ -75,6 +139,9 @@ struct ComposerDraft: Codable, Equatable, Sendable {
     var nextFileID: Int
     var nextSelectionID: Int
     var processedCommandIDs: [String] = []
+    /// Minted by the first attachment upload; absent until then, and in drafts
+    /// persisted before batches existed.
+    var uploadBatchID: String? = nil
 
     static let empty = ComposerDraft(
         text: "",
@@ -85,7 +152,8 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         nextImageID: 1,
         nextFileID: 1,
         nextSelectionID: 1,
-        processedCommandIDs: []
+        processedCommandIDs: [],
+        uploadBatchID: nil
     )
 
     private enum CodingKeys: String, CodingKey {
@@ -98,6 +166,7 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         case nextFileID
         case nextSelectionID
         case processedCommandIDs
+        case uploadBatchID
     }
 
     init(
@@ -109,7 +178,8 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         nextImageID: Int,
         nextFileID: Int,
         nextSelectionID: Int,
-        processedCommandIDs: [String] = []
+        processedCommandIDs: [String] = [],
+        uploadBatchID: String? = nil
     ) {
         self.text = text
         self.selection = selection
@@ -120,6 +190,7 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         self.nextFileID = nextFileID
         self.nextSelectionID = nextSelectionID
         self.processedCommandIDs = processedCommandIDs
+        self.uploadBatchID = uploadBatchID
     }
 
     init(from decoder: Decoder) throws {
@@ -133,6 +204,29 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         nextFileID = try container.decode(Int.self, forKey: .nextFileID)
         nextSelectionID = try container.decode(Int.self, forKey: .nextSelectionID)
         processedCommandIDs = try container.decodeIfPresent([String].self, forKey: .processedCommandIDs) ?? []
+        uploadBatchID = try container.decodeIfPresent(String.self, forKey: .uploadBatchID)
+    }
+}
+
+extension ComposerDraft {
+    /// True while an image is not yet ready to send: still encoding, failed to
+    /// encode, or with its ORIGINAL upload still in flight.
+    ///
+    /// A `.failed` original deliberately does NOT block. The inline pixels are
+    /// the primary payload; the message simply carries no `[image#N]:` line.
+    var hasIncompleteImages: Bool {
+        images.contains { image in
+            switch image.state {
+            case .local:
+                break
+            case .uploading, .uploaded, .failed:
+                return true
+            }
+            if case .uploading = image.original?.state {
+                return true
+            }
+            return false
+        }
     }
 }
 
@@ -235,8 +329,21 @@ struct PendingEmission: Codable, Equatable, Identifiable, Sendable {
     var diarized: Bool
     var hqText: Bool? = nil
     var hqService: String? = nil
+    var hqFallback: Bool? = nil
     var state: PendingEmissionState
     var createdAt: Date
+}
+
+enum VoicePreparationOutcome: Equatable, Sendable {
+    case hq(text: String, diarized: Bool, service: String?)
+    case fallback(text: String)
+
+    var text: String {
+        switch self {
+        case .hq(let text, _, _), .fallback(let text):
+            text
+        }
+    }
 }
 
 /// When a `pending` emission is redelivered, and when it has waited long enough
@@ -342,6 +449,7 @@ enum ComposerDraftMutation: Equatable, Sendable {
     case addSelection(DraftSelection)
     case updateFile(DraftFile)
     case updateImage(DraftImage)
+    case setUploadBatchID(String)
     case applySelectionCommand(commandID: String, selection: DraftSelection)
     case removeImage(Int)
     case removeFile(Int)
@@ -385,6 +493,12 @@ enum ComposerDraftReducer {
                 return
             }
             draft.images[index] = image
+        case .setUploadBatchID(let batchID):
+            // Idempotent: the first attachment mints it and the rest reuse it.
+            guard draft.uploadBatchID == nil else {
+                return
+            }
+            draft.uploadBatchID = batchID
         case .applySelectionCommand(let commandID, let selection):
             guard draft.processedCommandIDs.contains(commandID) == false else {
                 return

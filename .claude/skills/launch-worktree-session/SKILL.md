@@ -75,15 +75,19 @@ turning your own guesses into instructions.
 ## Choose the agent and model
 
 For launches driven by this skill, the default is Codex: `--agent codex`.
-With no `--model`, the Codex launcher pins `gpt-5.6-sol`. Do not confuse this
+With no `--model`, the Codex launcher pins `gpt-6-sol`. Do not confuse this
 skill policy with the executable's bare default, which is Claude.
 
 The human's explicit choice or standing preference always wins. Ask when the
 agent or model is materially ambiguous; model selection affects capability and
 quota. Do not silently promote a task because it looks difficult.
 
+- Prefer Codex Luna (`--model gpt-6-luna`) for straightforward work that
+  needs little discernment or discussion: a bug fix with a clear cause, a
+  mechanical change, a well-specified implementation. Choose it without asking.
 - Claude requires an explicit `--model`; otherwise it inherits the human's
-  saved CLI default. `opus` is the usual harder-work option.
+  saved CLI default. Opus 5.5 (`claude-opus-5-5`) is the usual harder-work
+  option; whenever Opus is chosen, use 5.5.
 - `claude-fable-5-1` and Codex `gpt-6-astra` are the top choices for genuinely
   difficult architecture, unresolved design, or judgment-heavy work. Use them
   when the human selected them, or ask first.
@@ -156,6 +160,13 @@ label them unresolved):
 Codex reads generated `AGENTS.md` files and `$skill` names; Claude reads
 `CLAUDE.md` and `/skill` names. Use the vocabulary the receiving agent will
 recognize.
+
+**Never write a bare `$skill` or `/skill` in briefing prose.** Both are
+invocation syntax, and the receiving agent runs them. A Codex session briefed
+with "land on main only through `$finish` when they ask" invoked `$finish` on
+its first turn, before reading anything (2026-09-20). Name the skill without
+its sigil — "use the finish skill", "the bbx-plan skill" — and keep the sigil
+for a line you actually intend the session to execute.
 
 ## Launch
 

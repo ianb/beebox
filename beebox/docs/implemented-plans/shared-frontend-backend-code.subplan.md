@@ -117,7 +117,7 @@ it, lay down the convention for future shared modules.
 
 2. **Move `markdoc-config.ts`** from
    `src/frontend/src/lib/markdoc-config.ts` to
-   `src/shared/markdoc-config.ts`. The file already has no React
+   `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`). The file already has no React
    dependency (it imports from `@markdoc/markdoc` only).
 
 3. **Update frontend `tsconfig.json`** to include `../shared/**/*`
@@ -138,7 +138,7 @@ it, lay down the convention for future shared modules.
 
 6. **Backend Markdoc → markdown emitter** lives at
    `src/core/markdoc-emit.ts` (backend-only, not shared). It
-   imports the schema config from `src/shared/markdoc-config.ts`.
+   imports the schema config from `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`).
    It's used by Track 2's `compileBriefing` rewrite to render
    briefing bodies into the markdown form that `@`-includes into
    CLAUDE.md. **Default behavior for unknown tags** (per parent
@@ -196,7 +196,7 @@ it, lay down the convention for future shared modules.
   bundle.
 - **Test exists?** Vite's bundler will warn; the linter will not.
 - **Handling exists?** Convention-level: a top-of-file comment in
-  `src/shared/markdoc-config.ts` calls out the "pure TS, no
+  `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`) calls out the "pure TS, no
   platform APIs" rule. Future shared modules inherit by example.
 - **Clear-or-silent?** Clear at build time; silent at edit time
   unless the contributor notices the comment.
@@ -220,7 +220,7 @@ it, lay down the convention for future shared modules.
 - **Stale ref** — N/A.
 - **Two agents touching the same card** — N/A.
 - **Hand-edit drift** — If a boxholder adds a new tag to
-  `src/shared/markdoc-config.ts` without also adding a corresponding
+  `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`) without also adding a corresponding
   React component to `Markdown.tsx`, the frontend will render the
   tag as a fragment-with-children but without any tag-specific UI.
   Markdoc's renderer falls back to no-op for unknown component
@@ -292,7 +292,7 @@ One chunk:
 
 1. Create `src/shared/` directory.
 2. Move `src/frontend/src/lib/markdoc-config.ts` →
-   `src/shared/markdoc-config.ts` (git mv).
+   `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`) (git mv).
 3. Add `@shared/*` path alias to `src/frontend/tsconfig.json` and
    include `../shared/**/*` in its `include` array.
 4. Update the import in
@@ -301,7 +301,7 @@ One chunk:
 5. Update Vite config if needed (Vite respects tsconfig path
    aliases; verify).
 6. Add a top-of-file comment to
-   `src/shared/markdoc-config.ts` documenting the "pure TS, no
+   `src/shared/markdoc-config.ts` (moved to `beebox/src/shared/markdoc-config/tags/core.ts`) documenting the "pure TS, no
    platform APIs" rule.
 7. Run `pnpm typecheck` and `pnpm lint` to confirm both sides
    resolve the new path.

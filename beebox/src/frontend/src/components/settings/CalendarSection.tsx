@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { trpc, type RouterOutput } from "../../lib/trpc";
-import { CheckboxField, NumberField } from "../ui/fields";
+import { trpc, type RouterOutput } from "../../lib/trpc/client";
+import { CheckboxField, NumberField } from "../ui/fields/field";
 import { Row } from "../ui/Row";
 import { GoogleConnectLink } from "./GoogleConnectLink";
 
@@ -72,7 +72,7 @@ export function CalendarSection() {
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow p-6 mt-6">
+      <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-warm-800 mb-4">
           Google Calendar
         </h2>
@@ -86,7 +86,7 @@ export function CalendarSection() {
 
   if (!calendars) {
     return (
-      <div className="bg-white rounded-lg shadow p-6 mt-6">
+      <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-warm-800 mb-4">
           Google Calendar
         </h2>
@@ -96,7 +96,7 @@ export function CalendarSection() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 mt-6">
+    <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-semibold text-warm-800 mb-2">
         Google Calendar
       </h2>

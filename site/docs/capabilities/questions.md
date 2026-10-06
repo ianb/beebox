@@ -30,8 +30,9 @@ procedures as they run.
 
 **How it works, briefly**
 
-A question is a `question` card with a status (pending, answered, dismissed,
-expired), the question text, and the kind of answer expected. Answering it
+A question is a `question` card with the question text and the kind of answer
+expected. It has no status label: whether it is waiting, answered, dismissed,
+or expired follows from which of those times is recorded on it. Answering it
 creates a follow-up job that hands your answer back to the agent that asked,
 and optionally writes a learned fact into a guide, briefing, or personality
 card so it shapes future behavior. Questions are created as the box works,

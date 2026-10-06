@@ -26,7 +26,7 @@ is orchestration, not tracking; one paragraph at the end.
 
 Beads' `Issue` struct (`internal/types/types.go`) against our closed
 frontmatter schema (`issues/CLAUDE.md`, parser
-`workstreams-app/src/server/issue-domain.ts`).
+`workstreams-app/src/server/main/issue-domain.ts`).
 
 | Concern | Beads | Ours | Same problem? |
 |---|---|---|---|

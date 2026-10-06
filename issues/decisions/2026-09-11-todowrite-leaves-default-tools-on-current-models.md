@@ -18,8 +18,8 @@ Agent SDK `0.3.268`:
 
 beebox's model table (`src/shared/model-ids.ts`) resolves `opus` →
 `claude-opus-5`, `sonnet` → `claude-sonnet-5` and `fable` → `claude-fable-5-1`,
-all outside that list. Neither `src/core/agent/run.ts` nor
-`src/services/claude-chat.ts` passes `tools` or `allowedTools`. So from `0.3.268`
+all outside that list. Neither `src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`) nor
+`src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`) passes `tools` or `allowedTools`. So from `0.3.268`
 on, Claude box agents and chat sessions on the default models **no longer have
 TodoWrite or the Task tools** unless beebox opts them back in. Only `haiku`
 (`claude-haiku-4-5`) keeps them.

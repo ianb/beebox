@@ -1,4 +1,4 @@
-import { useWorkspace } from "../components/chat/workspace/WorkspaceProvider";
+import { useWorkspace } from "../components/chat/workspace/WorkspaceProvider/provider";
 /**
  * Standard "navigate to a view URL" handler for {@link Markdown} / {@link FileView}.
  *

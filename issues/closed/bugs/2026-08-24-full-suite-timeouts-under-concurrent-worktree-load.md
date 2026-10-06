@@ -19,7 +19,7 @@ same time):
   and `run.doctest.md:369` both timed out waiting on child-process readiness;
   the suite-level per-file timeout then expired the whole file
   (`not ok 619 - timeout! expired: test/field-test/run.doctest.md`).
-- `test/hub/hub-e2e.doctest.md` — `execFileP("node", ["scripts/build-cli.mjs"])`
+- `test/hub/hub-e2e.doctest.md` (moved to `beebox/test/hub.e2e.doctest.md`) — `execFileP("node", ["scripts/build-cli.mjs"])`
   took 184s (vs ~12.7s solo) and the subsequent `waitFor` timed out after
   120000ms waiting for the fixture box to report `status=running` via
   `/healthz`.
@@ -43,6 +43,6 @@ reduce how much runs concurrently in the first place.
 ## 2026-09-02 — closed: superseded
 
 Consolidated with the other load-timeout filings into
-[fixed-timeout-budgets-fail-under-host-load](../../deferred/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
 the harness-side fix (quiet-host wait, slowdown-gated verdicts, import-cone
 attribution) landed from the full-suite-verdicts workstream.

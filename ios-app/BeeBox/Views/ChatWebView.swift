@@ -14,6 +14,7 @@ struct NativeChatEmission: Equatable, Identifiable {
     var diarized: Bool
     var hqText: Bool? = nil
     var hqService: String? = nil
+    var hqFallback: Bool? = nil
     var images: [ChatImageAttachment]
     var files: [NativeEmissionFile] = []
     var selections: [NativeEmissionSelection] = []
@@ -74,6 +75,24 @@ enum NativeComposerCommandDelivery {
 }
 
 struct ChatWebView: UIViewRepresentable {
+    enum Page: Equatable {
+        case chat
+        case quickChat
+        /// A box-relative path, such as a notification target's deep link
+        /// (contract §5.10). Used to build a request; a webview created for
+        /// `.chat` loads it in place so the bridge stays registered.
+        case path(String)
+    }
+
+    /// One navigation of the chat webview to a box-relative path, requested by
+    /// native code (a notification tap). The id makes a repeat tap on the same
+    /// target a new request.
+    struct NavigationRequest: Equatable, Identifiable {
+        let id = UUID()
+        var boxID: PairedBox.ID
+        var path: String
+    }
+
     enum NewWindowDestination: Equatable {
         case currentContext
         case browser
@@ -90,11 +109,13 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     var box: PairedBox
+    var page: Page
     var pendingEmissions: [NativeChatEmission]
     var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
     var locationShareRequest: NativeLocationShareRequest?
     var screenshotRequest: NativeScreenshotRequest?
     var speechStopRequest: NativeSpeechStopRequest?
+    var navigationRequest: NavigationRequest?
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
     var composerCommandResults: [NativeComposerCommandResult]
     var onComposerBinding: (NativeComposerBinding?) -> Void
@@ -114,14 +135,17 @@ struct ChatWebView: UIViewRepresentable {
     var onLastAudioRequest: (NativeLastAudioRequest) -> Void
     var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
     var onNavigationFailure: (NavigationFailure?) -> Void
+    var onNavigationRequestLoaded: (NavigationRequest.ID) -> Void
 
     init(
         box: PairedBox,
+        page: Page = .chat,
         pendingEmissions: [NativeChatEmission] = [],
         emissionRedeliveryRequest: NativeEmissionRedeliveryRequest? = nil,
         locationShareRequest: NativeLocationShareRequest? = nil,
         screenshotRequest: NativeScreenshotRequest? = nil,
         speechStopRequest: NativeSpeechStopRequest? = nil,
+        navigationRequest: NavigationRequest? = nil,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
         composerCommandResults: [NativeComposerCommandResult] = [],
         onComposerBinding: @escaping (NativeComposerBinding?) -> Void = { _ in },
@@ -140,14 +164,17 @@ struct ChatWebView: UIViewRepresentable {
         onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in },
         onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
         onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
-        onNavigationFailure: @escaping (NavigationFailure?) -> Void = { _ in }
+        onNavigationFailure: @escaping (NavigationFailure?) -> Void = { _ in },
+        onNavigationRequestLoaded: @escaping (NavigationRequest.ID) -> Void = { _ in }
     ) {
         self.box = box
+        self.page = page
         self.pendingEmissions = pendingEmissions
         self.emissionRedeliveryRequest = emissionRedeliveryRequest
         self.locationShareRequest = locationShareRequest
         self.screenshotRequest = screenshotRequest
         self.speechStopRequest = speechStopRequest
+        self.navigationRequest = navigationRequest
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
         self.composerCommandResults = composerCommandResults
         self.onComposerBinding = onComposerBinding
@@ -167,21 +194,24 @@ struct ChatWebView: UIViewRepresentable {
         self.onLastAudioRequest = onLastAudioRequest
         self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
         self.onNavigationFailure = onNavigationFailure
+        self.onNavigationRequestLoaded = onNavigationRequestLoaded
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = Self.makeConfiguration()
-        configuration.userContentController.add(context.coordinator, name: "beeboxComposerBinding")
-        configuration.userContentController.add(context.coordinator, name: "beeboxSession")
-        configuration.userContentController.add(context.coordinator, name: "beeboxEmissionReceipt")
-        configuration.userContentController.add(context.coordinator, name: "beeboxLocationResult")
-        configuration.userContentController.add(context.coordinator, name: "beeboxLocationState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxNarrationState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxHqDictationState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxSpeechPlaybackState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxResponseState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxComposerCommand")
-        configuration.userContentController.add(context.coordinator, name: "beeboxLastAudioRequest")
+        if page == .chat {
+            configuration.userContentController.add(context.coordinator, name: "beeboxComposerBinding")
+            configuration.userContentController.add(context.coordinator, name: "beeboxSession")
+            configuration.userContentController.add(context.coordinator, name: "beeboxEmissionReceipt")
+            configuration.userContentController.add(context.coordinator, name: "beeboxLocationResult")
+            configuration.userContentController.add(context.coordinator, name: "beeboxLocationState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxNarrationState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxHqDictationState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxSpeechPlaybackState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxResponseState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxComposerCommand")
+            configuration.userContentController.add(context.coordinator, name: "beeboxLastAudioRequest")
+        }
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
         }
@@ -190,7 +220,9 @@ struct ChatWebView: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
-        webView.load(request())
+        if loadNavigationRequest(into: webView, coordinator: context.coordinator) == false {
+            webView.load(request())
+        }
         return webView
     }
 
@@ -228,7 +260,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.speechStopRequest = speechStopRequest
         context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
         context.coordinator.composerCommandResults = composerCommandResults
-        if webView.url == nil {
+        if loadNavigationRequest(into: webView, coordinator: context.coordinator) == false, webView.url == nil {
             webView.load(request())
         }
         context.coordinator.abandonRequestedInflightEmissions()
@@ -301,6 +333,7 @@ struct ChatWebView: UIViewRepresentable {
         /// generation is ever asked, so one counter is enough.
         private var lastEmissionGeneration = 0
         var composerBindingNegotiated = false
+        var handledNavigationRequestID: NavigationRequest.ID?
         private var handledRedeliveryRequestID: NativeEmissionRedeliveryRequest.ID?
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
@@ -1055,8 +1088,17 @@ struct ChatWebView: UIViewRepresentable {
     /// `setCookie`'s completion handler is documented-unreliable and can hang
     /// (WebKit bug 185483). Letting the navigation response set the cookie uses
     /// WebKit's own network stack and sidesteps that entirely.
-    static func authenticatedRequest(for box: PairedBox) -> URLRequest {
-        var request = URLRequest(url: box.chatURL)
+    static func authenticatedRequest(for box: PairedBox, page: Page = .chat) -> URLRequest {
+        let url: URL
+        switch page {
+        case .chat:
+            url = box.chatURL
+        case .quickChat:
+            url = box.baseURL.appendingPathComponent("quick-chat")
+        case .path(let path):
+            url = box.url(forBoxPath: path) ?? box.chatURL
+        }
+        var request = URLRequest(url: url)
         if let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines),
            authToken.isEmpty == false {
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
@@ -1065,17 +1107,36 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     private func request() -> URLRequest {
-        Self.authenticatedRequest(for: box)
+        Self.authenticatedRequest(for: box, page: page)
     }
 
-    private func startupScript() -> WKUserScript? {
+    /// Load a pending native navigation once. Returns whether one was loaded.
+    private func loadNavigationRequest(into webView: WKWebView, coordinator: Coordinator) -> Bool {
+        guard
+            let navigationRequest,
+            navigationRequest.boxID == box.id,
+            coordinator.handledNavigationRequestID != navigationRequest.id
+        else {
+            return false
+        }
+        coordinator.handledNavigationRequestID = navigationRequest.id
+        webView.load(Self.authenticatedRequest(for: box, page: .path(navigationRequest.path)))
+        let id = navigationRequest.id
+        let loaded = onNavigationRequestLoaded
+        DispatchQueue.main.async {
+            loaded(id)
+        }
+        return true
+    }
+
+    func startupScript() -> WKUserScript? {
         guard
             let originData = try? JSONEncoder().encode(Self.origin(from: box.baseURL) ?? ""),
             let allowedOrigin = String(data: originData, encoding: .utf8)
         else {
             return nil
         }
-        let sessionObserver = """
+        let sessionObserver = page == .chat ? """
         (() => {
           const allowedOrigin = \(allowedOrigin);
           if (window.location.origin !== allowedOrigin) return;
@@ -1132,7 +1193,7 @@ struct ChatWebView: UIViewRepresentable {
           window.addEventListener('popstate', post);
           post();
         })();
-        """
+        """ : ""
         guard let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines), !authToken.isEmpty else {
             return WKUserScript(source: sessionObserver, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         }

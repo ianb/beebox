@@ -1,5 +1,5 @@
 /**
- * The load gate and repeat suppression, on the shape of the real incident:
+ * The load gate and alert condition keys, on the shape of the real incident:
  * the 2026-08-30..09-01 event where `file-watcher.doctest.md` ran at 16–195×
  * its healthy median and eight identical hourly alerts went unacknowledged.
  */
@@ -12,13 +12,12 @@ import { LEDGER_SOURCE, completionMarker, TIERS } from "./lib.js";
 import {
   SLOWDOWN_MIN_SAMPLES,
   SLOWDOWN_UNTRUSTED,
-  alertFingerprint,
+  alertCondition,
   batchSlowdown,
   durationHistories,
   median,
   renderDeferredAlert,
   runIsUntrusted,
-  shouldSuppressAlert,
 } from "./trust.js";
 
 function tierRecord(durations: Record<string, number>, overrides?: Partial<LedgerRecord>): LedgerRecord {
@@ -170,28 +169,17 @@ test("a run's tiers are judged together, so the careful tier's few files ride th
   assert.deepEqual(histories.get("test/careful.doctest.md"), [1500, 1500, 1500, 1500, 1500]);
 });
 
-// ─── repeat suppression ───────────────────────────────────────────────────
+// ─── alert conditions ─────────────────────────────────────────────────────
 
-test("the fingerprint is the kind and the file set, order-blind", () => {
+test("a condition names the standing problem, not the failing files", () => {
+  assert.equal(alertCondition({ kind: "red-unattributed", culprits: [] }), "red-unattributed");
+  assert.equal(alertCondition({ kind: "deferred", culprits: [] }), "deferred");
+  // Blamed red is keyed by its landings, order-blind: a new culprit is news.
   assert.equal(
-    alertFingerprint({ kind: "deferred", files: ["b", "a"] }),
-    alertFingerprint({ kind: "deferred", files: ["a", "b"] }),
+    alertCondition({ kind: "red-blamed", culprits: ["bbbbbbbb1234", "aaaaaaaa5678"] }),
+    alertCondition({ kind: "red-blamed", culprits: ["aaaaaaaa5678", "bbbbbbbb1234"] }),
   );
-  assert.notEqual(
-    alertFingerprint({ kind: "deferred", files: ["a"] }),
-    alertFingerprint({ kind: "red-blamed", files: ["a"] }),
-  );
-});
-
-test("an unchanged condition is suppressed inside the window and re-raised after it", () => {
-  const fingerprint = alertFingerprint({ kind: "deferred", files: ["test/a.test.ts"] });
-  const previous = { fingerprint, raisedAt: "2026-09-01T00:00:00.000Z" };
-  assert.equal(shouldSuppressAlert({ previous, fingerprint, now: new Date("2026-09-01T08:00:00Z") }), true);
-  assert.equal(shouldSuppressAlert({ previous, fingerprint, now: new Date("2026-09-02T01:00:00Z") }), false);
-  // A different condition always alerts.
-  const other = alertFingerprint({ kind: "deferred", files: ["test/b.test.ts"] });
-  assert.equal(shouldSuppressAlert({ previous, fingerprint: other, now: new Date("2026-09-01T01:00:00Z") }), false);
-  assert.equal(shouldSuppressAlert({ previous: null, fingerprint, now: new Date("2026-09-01T01:00:00Z") }), false);
+  assert.equal(alertCondition({ kind: "red-blamed", culprits: ["aaaaaaaa5678"] }), "red:aaaaaaaa");
 });
 
 test("the deferred alert says why no verdict was reached", () => {

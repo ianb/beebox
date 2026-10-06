@@ -8,7 +8,7 @@
 
 import {
   emptyFilters, normalizeWorkstreamName, type IssueFilters,
-} from "../workstreams-app/src/server/issue-search-model.js";
+} from "../workstreams-app/src/server/main/issue-search-model.js";
 import { InvalidFlagValueError, InvalidIntegerFlagError, InvalidSinceError } from "./issues-errors.js";
 
 export const RESEARCH_STATES = ["awaiting", "researched", "none"] as const;
@@ -44,6 +44,8 @@ export const options = {
   needs: { type: "string", multiple: true },
   priority: { type: "string", multiple: true },
   "next-action": { type: "string", multiple: true },
+  message: { type: "string" },
+  clear: { type: "boolean" },
 } as const;
 
 /** The shape `options` above produces — spelled out so the rest of the file is plainly typed. */
@@ -71,6 +73,8 @@ export interface ParsedValues {
   needs?: string[] | undefined;
   priority?: string[] | undefined;
   "next-action"?: string[] | undefined;
+  message?: string | undefined;
+  clear?: boolean | undefined;
 }
 
 export function buildFilters(values: ParsedValues): IssueFilters {

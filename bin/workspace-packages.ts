@@ -39,8 +39,9 @@ const VERIFICATION_SCRIPTS = ["test", "typecheck", "lint"];
  *
  * A package that defines none cannot own a path: `browse/packages/agent-browser-typed`
  * is a workspace package with no scripts at all, and what checks it is
- * `browse`'s own whole-tree `tsc --noEmit` and `eslint .`. Attributing a path
- * to it would run nothing.
+ * `browse`'s own whole-tree `tsc --noEmit`, `eslint .`, and now `tap` (its
+ * doctest lives under `browse/`'s own `.taprc`, not a `.taprc` of its own).
+ * Attributing a path to it would run nothing.
  */
 function verifiesItself(root: string, dir: string): boolean {
   const file = join(root, dir, "package.json");

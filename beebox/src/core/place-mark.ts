@@ -15,13 +15,13 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Document, parseDocument } from "yaml";
-import { splitCardContent } from "../cards/index.js";
-import { toRelativePath } from "../lib/paths.js";
+import { splitCardContent } from "../exports/cards.js";
+import { toRelativePath } from "../lib/paths/core.js";
 import { loadLocation, type StoredLocation } from "./location-store.js";
 import { locationAge } from "./location-format.js";
 import { describeElapsed } from "./session-context.js";
 import { haversineMeters, DEFAULT_PLACE_RADIUS_M, MIN_PLACE_RADIUS_M } from "./geo.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 /** Why a mark didn't (or did) change the card — drives the CLI message. */
 export type MarkOutcome = "set" | "expanded" | "inside" | "outside";

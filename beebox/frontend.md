@@ -110,7 +110,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<Button>` — labeled or icon-only commit-action. Props: `intent` (primary/secondary/destructive/accent/success/ghost), `shape` (rect/circle), `size`, `icon`, `loading` (auto-on for Promise `onClick`), `loadingLabel` (takes a function `(secs) => ...` to show elapsed time), `flash` (post-click feedback like "Copied!"). Discriminated union enforces `label` for icon-only variants.
 - `<CloseButton>` — X-icon dismiss. `onDark` prop for dark backdrops.
 - `<CancelButton>` — semantic shortcut for `<Button intent="secondary">Cancel</Button>`.
-- `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger. Has `flash` for clipboard copies etc.
+- `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger/quiet (`quiet` keeps the surrounding color and underlines on hover). Has `flash` for clipboard copies etc.
 
 **Inputs** (all in `ui/fields.tsx`)
 - `<TextField>`, `<TextareaField>`, `<NumberField>` — label + input + error + helper, pass-through of native validation attrs (`required`, `minLength`, `pattern`, etc.). `hideLabel` for sr-only labels. Value/onChange are controlled.
@@ -137,17 +137,20 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<JsonView>` — human-friendly JSON renderer (keys label indented values, arrays as hanging-indent `0:`/`1:` lists, recursive). Strings keep whitespace and wrap on any character; numbers/booleans/null show via `JSON.stringify` in a distinct color. Use for tool-call args and similar object dumps instead of `JSON.stringify` in a `<Pre>`.
 - `<Badge>` — pill label. Tones: neutral/info/success/warning/danger/accent. Sizes: sm/md.
 - `<StatusBadge>` — card-status badge that maps `status` (new/pending/answered/processing/processed) to the right Badge tone. Pass `children` to override the displayed text (e.g., show a count instead).
-- `<Text>` — typography primitive. `as` (span/p/div/h1..h6), `tone`, `size`, `weight`, `italic`, `mono`, `truncate`, `center`, `uppercase` (uppercase + tracking-wide, for small section headings), `breakAll` (break long URLs across any character).
+- `<Heading level={2|3}>` — section heading. Renders a real `h2`/`h3`; the level sets the look (2: lg semibold, 3: sm semibold). Pick the level from the page outline, never for size.
+- `<Hint>` — secondary explanatory text under a heading or control: a small muted `<p>`. Inline metadata beside other content (a timestamp in a `Row`) stays `<Text size="xs" tone="muted">`.
+- `<ErrorText>` — an error message: a small danger-colored `<p>`. Not a live region; the component that shows a new error owns any announcement.
+- `<StatusMessage>` — a pane's placeholder while it has nothing to show (loading, empty, not found): padded, `role="status"`. Errors use `<ErrorText>`.
+- `<Text>` — typography primitive for text no role above covers. `as` (span/p/div/h1..h6), `tone`, `size`, `weight`, `italic`, `mono`, `truncate`, `center`, `uppercase` (uppercase + tracking-wide, for small section headings), `breakAll` (break long URLs across any character).
 
 **Layout containers**
-- `<Stack>` — vertical `space-y-*` between children. `gap: none/xs/sm/md/lg`.
+- `<Stack>` — vertical flex column with `gap: none/xs/sm/md/lg` (default `md`). Children stretch to the full width; an inline-level child (a `Button`, a `Badge`) that should keep its natural width takes `className="self-start"`. A child's own margin adds to the gap, so space children with `gap`, not margins. Also the page-level scroll container: `overflow` (visible/hidden/auto/scroll), `focusable` (keyboard-scrollable; set it with `overflow="auto"`), `align` (start/center/end/stretch), and `hideOnMobile` (`hidden sm:flex`, for the detail pane of a two-pane layout).
 - `<Row>` — horizontal flex with gap/align/justify/wrap.
-- `<Column>` — vertical flex-col (different from Stack: uses flex not space-y, has align). Takes `overflow` (visible/hidden/auto/scroll) so it can serve as a page-level scroll container. `hideOnMobile` makes it `hidden sm:flex` — typical for the detail pane in a two-pane layout.
 - `<Card>` — bordered box with padding/background/shadow/rounding props. `muted` dims the card to indicate inactive/archived content.
 - `<Accordion>` — collapsible disclosure. `variant: bordered/plain`.
 
 **Overlays & Composite**
-- `<FileEntry>` — canonical one-line file representation (icon + title/path + peek button) shared across the recent-files dropdown and tool-use expansions. Expands in place to the full file viewer; `onPanel` escalates to a companion side panel.
+- `<FileEntry>` — canonical one-line file representation (icon + title/path + peek button) shared across the recent-files dropdown and tool-use expansions. Expands in place to the full file viewer; `onPanel` escalates to a companion side panel; `onOpen` makes the title open the file instead of previewing it.
 - `<Dropdown>` + `<MenuItem>` + `<MenuDivider>` — menu with click-outside, escape-to-close, auto-close on select. `<Dropdown>` takes a render-prop `trigger`. A `MenuItem` with `href` also accepts `download` (filename) and `target="_blank"` for file actions.
 - `<TabBar>` — generic tab group with active state.
 - `<ImageLightbox>` — fullscreen image overlay (usually accessed via `<Image lightbox>` rather than directly).
@@ -189,7 +192,7 @@ The generic theme gallery is installed explicitly into a development box from
 `test/fixtures/theme-tour`. From the monorepo root:
 
 ```sh
-node --import tsx beebox/scripts/install-theme-tour.ts <box-root>
+node --import tsx beebox/src/scripts/install-theme-tour.ts <box-root>
 bin/tour card-themes
 bin/tour card-theme-previews
 bin/tour card-theme-interface

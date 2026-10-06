@@ -1,0 +1,6 @@
+# A condition open for a week becomes a private issue instead of repeating.
+# Its own schedule, not tick work, so the git commit and the private-issues
+# lock wait stay out of the scheduler (docs/plans/schedule-alert-signal.md).
+description: "File schedule alert conditions open for a week as private issues"
+cadence: 1d
+timeout: 1h

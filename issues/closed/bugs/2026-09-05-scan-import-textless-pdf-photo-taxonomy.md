@@ -6,8 +6,8 @@ resolution: implemented
 ---
 
 Resolved by `01d934919` (`scan-import: a scanned PDF is a document, whether or
-not OCR was on`, `beebox/src/core/commands/scan-import.ts`,
-`beebox/src/core/commands/scan-import-pdf.ts`), diverging from this issue's own
+not OCR was on`, `beebox/src/core/commands/scan-import.ts` (moved to `beebox/src/core/commands/scan-import/command.ts`),
+`beebox/src/core/commands/scan-import-pdf.ts` (moved to `beebox/src/core/commands/scan-import/pdf.ts`)), diverging from this issue's own
 sketch of the fix: instead of routing textless PDFs through vision OCR into a
 document-shaped card, a single PDF now always goes to pdf mode and Docling
 itself force-OCRs when the text-layer probe finds nothing to read (leaving an
@@ -19,7 +19,7 @@ back | trash` vocabulary no longer applies to document pages because they
 never reach it.
 
 `scan-import` dispatches a single PDF on one bit — whether it carries an
-embedded text layer (`src/core/commands/scan-import.ts:99-111`):
+embedded text layer (`src/core/commands/scan-import.ts:99-111` (moved to `beebox/src/core/commands/scan-import/command.ts`)):
 
 - text layer present → pdf mode (Docling extraction, `source.pdf.card`)
 - no text layer → the photo flow, pages rendered with `pdftoppm`

@@ -28,7 +28,7 @@
  * Browse sort.
  */
 
-import { naturalCompare } from "../lib/natural-sort.js";
+import { naturalCompare } from "./natural-sort.js";
 import type { EffectiveLevel } from "./prominence.js";
 import type { CardSymbolData } from "./card-symbol.js";
 

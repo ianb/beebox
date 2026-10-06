@@ -18,17 +18,17 @@ import * as path from "node:path";
 import {
   parseScheduledScript,
   ScheduledScriptSchema,
-} from "../../schemas/scheduled-script.js";
+} from "../../schemas/scheduled-script/schema.js";
 import { cardFields, parseCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
-import { checkMissingConnectors } from "../../connectors/requirements.js";
+import { createCardSchemaMap } from "../../schemas.js";
+import { checkMissingConnectors } from "../../requirements.js";
 import { loadScriptState } from "./state.js";
 import { evaluateTaskHealth, type TaskHealth } from "./health.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { boxEngineUnavailability, engineWaitReason } from "./engine-wait.js";
 import { listParkedTemplateUpdates, parkedUpdatePath } from "../install-template-file.js";
 import { parkedUpdatesForTask } from "./parked-templates.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 
 const HEARTBEAT_FILE = ".beebox/scheduler-heartbeat";
 const HEARTBEAT_STALE_MS = 5 * 60 * 1000;
@@ -120,7 +120,7 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
         name, parsed, state, now, cardMtime, missingConnectors,
         engineWaitReason: engineWait ?? undefined,
       });
-      tasks.push(withParkedUpdates(task, { runs: parsed.runs, parked }));
+      tasks.push(withParkedUpdates(task, { runs: parsed.action.kind === "runs" ? parsed.action.command : undefined, parked }));
     } catch (err) {
       // A card that doesn't parse has no `runs` to read, but its own card may
       // still be the thing with a parked update — that is a likely cause.

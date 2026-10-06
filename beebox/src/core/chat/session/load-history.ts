@@ -21,9 +21,9 @@ import {
   type SessionEntry,
   type SessionLogSlice,
 } from "../../../cli/lib/session.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { resolveRecordedChatEngine } from "./engine.js";
-import { readCodexSessionHistoryIfPresent } from "./codex-transcript.js";
+import { readCodexSessionHistoryIfPresent } from "./codex-transcript/core.js";
 
 // Re-exported so callers of the loader name their slice from the same module.
 export type { SessionLogSlice } from "../../../cli/lib/session.js";

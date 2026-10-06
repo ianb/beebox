@@ -17,6 +17,9 @@ const regexPatternSchema = z.string().min(1).refine((pattern) => {
   }
 }, { message: "Must be a valid non-empty regular expression" });
 
+const searchWhereSchema = z.enum(["web", "box", "any"]);
+export type SearchWhere = z.infer<typeof searchWhereSchema>;
+
 export const auditTestSchema = z.object({
   id: z.string(),
   prompt: z.string(),
@@ -35,11 +38,19 @@ export const auditTestSchema = z.object({
    */
   response_not_matches: z.array(regexPatternSchema).optional(),
   cards_contain: z.array(z.string()).optional(),
+  /** Box-relative directory prefixes no created or modified card may sit under (`_tmp/`). */
+  cards_not_under: z.array(z.string()).optional(),
   should_read: z.array(z.string()).optional(),
   /** At least one path fragment must appear in observed reads. */
   should_read_any: z.array(z.string()).min(1).optional(),
   should_not_read: z.array(z.string()).optional(),
   bash_contains: z.array(z.string()).optional(),
+  /**
+   * The agent must have looked something up before answering: `web` a web
+   * search or fetch (Claude's WebSearch/WebFetch, or a Codex provider
+   * search), `box` a `bbx search` command, `any` either.
+   */
+  should_search: searchWhereSchema.optional(),
   style: z.string().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),

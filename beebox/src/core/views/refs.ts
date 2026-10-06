@@ -19,8 +19,8 @@
 
 import { promises as fs } from "node:fs";
 import { relative } from "node:path";
-import { resolveRefExists } from "../ref-exists.js";
-import { invariant } from "../../lib/invariant.js";
+import { brokenRefReason, resolveRefExists } from "../ref-exists.js";
+import { invariant } from "../../shared/invariant.js";
 
 /** Matches `cardRef="…"` / `cardRef='…'` with a literal string value. */
 const CARD_REF_ATTR = /\bcardRef\s*=\s*(["'])([^"']*)\1/g;
@@ -76,7 +76,7 @@ export async function lintViewRefs(viewAbsPath: string, boxRoot: string): Promis
     const refPathOnly = qIdx === -1 ? ref : ref.slice(0, qIdx);
     const exists = await resolveRefExists({ ref: refPathOnly, fromPath: "", boxRoot });
     if (!exists) {
-      warnings.push(`Broken reference at ${refPath}: ${ref} does not exist`);
+      warnings.push(`Broken reference at ${refPath}: ${ref} ${brokenRefReason({ ref: refPathOnly, fromPath: "", boxRoot })}`);
     }
   }
   return warnings;

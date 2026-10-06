@@ -1,6 +1,6 @@
 /**
  * Shared record shapes for the todo collector (`collect.ts`) and its two
- * capture-form walkers (`collect-body.ts` for `{% todo %}`, `collect.ts`
+ * capture-form extractors (`extract-body.ts` for `{% todo %}`, `extract.ts`
  * itself for the frontmatter `todos:` list).
  *
  * Optional attribute fields are typed `X | undefined` rather than `X?:` —
@@ -12,19 +12,31 @@
  */
 
 import type { TodoPlateInput, TodoPlateState, TodoStatus } from "../../shared/todo-model.js";
+import type { TodoLocator } from "../../shared/todo-locators.js";
+import type { TodoSeeAlso } from "../../shared/todo-text.js";
 
-/** Where a todo lives within its card: a body `{% todo %}` tag (line, 1-indexed, in the FILE, not the body) or an entry in the frontmatter `todos:` list (index). */
-export type TodoLocator = { kind: "body"; line: number } | { kind: "frontmatter"; index: number };
+/**
+ * Where a todo lives within its card. Defined in `shared/todo-locators.ts`
+ * (with the pass that assigns it, `assignLocators`) because the frontend
+ * render path needs the same type; re-exported here so every existing
+ * `collect-types.js` import keeps working.
+ */
+export type { TodoLocator };
 
-/** A `{% see-also %}` reference, from either capture form. */
-export interface TodoSeeAlso {
-  ref: string | undefined;
-  href: string | undefined;
-  note: string | undefined;
-}
+/** Defined beside the text flattening that builds it (`shared/todo-text.ts`); re-exported for existing imports. */
+export type { TodoSeeAlso };
 
-/** One collected todo, from either capture form, with its derived plate-state. */
-export interface CollectedTodo {
+/**
+ * One todo exactly as its card spells it — the output of the PURE extract
+ * stage (`extract.ts`). Nothing here depends on a clock, a timezone, or any
+ * other card, which is what lets a cache sit in front of extraction later
+ * (`docs/plans/todo-collection.md`, Track 2).
+ *
+ * The three position/reference fields are what make an undated todo legible:
+ * where it was written (`sectionPath`, `parent`), what the author said right
+ * after it (`annotation`), and what it points at (`refs`).
+ */
+export interface TodoItem {
   /** Box-relative card path. */
   path: string;
   locator: TodoLocator;
@@ -36,7 +48,25 @@ export interface CollectedTodo {
   created: string | undefined;
   due: string | undefined;
   start: string | undefined;
+  /** The todo-review's next-check date, or `"never"` (`docs/plans/todos-ui.md`, Track 7). Never an input to plate state. */
+  recheck: string | undefined;
   seeAlso: TodoSeeAlso[];
+  /** Heading texts above the todo, outermost first. `[]` for a frontmatter todo, or a body todo written above the first heading. */
+  sectionPath: string[];
+  /** The todo whose list item (or block-form `{% todo %}`) contains this one, or `null` at the top level. */
+  parent: TodoLocator | null;
+  /** Text written after the closing tag inside the same paragraph, with its leading separator trimmed. `""` when there is none. */
+  annotation: string;
+  /** Box-relative paths this todo points at — resolved, deduped, in order of appearance, NOT checked for existence. */
+  refs: string[];
+}
+
+/**
+ * One collected todo with the box-local plate-state derived onto it — the
+ * output of the derive stage (`derive.ts`). The clock lives here and nowhere
+ * upstream.
+ */
+export interface CollectedTodo extends TodoItem {
   plateState: TodoPlateState;
 }
 
@@ -76,10 +106,28 @@ export interface CollectTodosOptions {
   glob?: string;
 }
 
-/** `path:line` for a body todo, `path#todos[i]` for a frontmatter one — the CLI's locator display form (`bbx todos`, duplicate-id messages). */
+/**
+ * `path:line` for a body todo (`path:line#2` for the second and later todo on
+ * that line), `path#todos[i]` for a frontmatter one — the CLI's locator
+ * display form (`bbx todos`, duplicate-id messages, the review sweep's job
+ * items) and the identity a collection keys items by.
+ */
 export function formatTodoLocation(todo: Pick<CollectedTodo, "path" | "locator">): string {
   const { path, locator } = todo;
-  return locator.kind === "body" ? `${path}:${String(locator.line)}` : `${path}#todos[${String(locator.index)}]`;
+  if (locator.kind === "frontmatter") return `${path}#todos[${String(locator.index)}]`;
+  const nth = locator.nth === undefined || locator.nth <= 1 ? "" : `#${String(locator.nth)}`;
+  return `${path}:${String(locator.line)}${nth}`;
+}
+
+/** Body locators sort before frontmatter locators on the same card — an arbitrary but deterministic tie-break (the plan doesn't order the two kinds against each other). */
+export function compareTodoLocator(a: TodoLocator, b: TodoLocator): number {
+  if (a.kind !== b.kind) return a.kind === "body" ? -1 : 1;
+  if (a.kind === "body" && b.kind === "body") {
+    if (a.line !== b.line) return a.line - b.line;
+    return (a.nth ?? 1) - (b.nth ?? 1);
+  }
+  if (a.kind === "frontmatter" && b.kind === "frontmatter") return a.index - b.index;
+  return 0;
 }
 
 /**
@@ -87,7 +135,7 @@ export function formatTodoLocation(todo: Pick<CollectedTodo, "path" | "locator">
  * `TodoPlateInput`'s fields are optional (`?:`), not `X | undefined`, so
  * under `exactOptionalPropertyTypes` an `undefined` value can't be assigned
  * to the key directly; it must be omitted instead. Shared by both capture
- * forms (`collect-body.ts`'s tag walk, `collect.ts`'s frontmatter-entry
+ * forms (`extract-body.ts`'s tag walk, `extract.ts`'s frontmatter-entry
  * walk) so the omission dance isn't repeated.
  */
 export function plateInputFor(input: {

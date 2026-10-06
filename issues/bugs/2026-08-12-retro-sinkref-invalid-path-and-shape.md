@@ -53,6 +53,6 @@ the `learning`-shaped equivalent — so one vocabulary covers both subsystems.
 
 Worth checking before doing it: observations are the observer's **structured
 output schema**, so changing the shape changes an LLM output contract and the
-observer prompt, not just field names. `src/core/retro/report.ts:85` reads
+observer prompt, not just field names. `src/core/retro/report.ts:85` (moved to `beebox/src/core/retro/scan/report.ts`) reads
 `obs.sinkRef`. And confirm whether observations are persisted in retro run state
 — if they are, this needs a migration rather than a rename.

@@ -38,7 +38,7 @@ corrected result is upside down. The value comes from the vision pass, which
 already records that it is best-effort
 (`beebox/src/services/scan-vision-claude.ts:13`, "Rotation is best-effort
 (measured inconsistent)"). The contract is stated in
-`beebox/src/core/commands/scan-import-gemini.ts:103`: degrees clockwise
+`beebox/src/core/describe-images/gemini.ts:103`: degrees clockwise
 the image needs to be rotated to view correctly. Nothing in the UI lets a person
 correct a wrong value.
 
@@ -48,8 +48,8 @@ frontmatter field and its rendering.
 
 ## Updating the user-story catalog
 
-This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../beebox/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
-flagged ❌ in [the user-story catalog](../../beebox/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
+This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../beebox/docs/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../beebox/docs/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
 actually do, where every claim is checked against the source.
 
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a
@@ -62,12 +62,12 @@ Workflow({scriptPath: "beebox/dist/workflows/recheck.workflow.mjs",
           args: {root: "<repo root>", date: "2026-08-21",
                  ids: ["browse/view-a-photo-card-with-its-analysis"]}})
 
-pnpm exec tsx beebox/user-stories/pipeline/apply-recheck.ts 2026-08-21
-pnpm exec tsx beebox/user-stories/pipeline/render.ts \
-  > beebox/user-stories/catalog/2026-08-21.md
+pnpm exec tsx beebox/src/scripts/user-stories/apply-recheck.ts 2026-08-21
+pnpm exec tsx beebox/src/scripts/user-stories/render/core.ts \
+  > beebox/docs/user-stories/catalog/2026-08-21.md
 ```
 
 The recheck is adversarial by design: it will not mark the story accurate just because
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
-[the pipeline README](../../beebox/user-stories/README.md).
+[the pipeline README](../../beebox/docs/user-stories/README.md).

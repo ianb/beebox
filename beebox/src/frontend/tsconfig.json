@@ -42,9 +42,27 @@
       "@backend/*": ["../webapp/*"],
       "@shared/*": ["../shared/*"],
       "@core/*": ["../core/*"],
+      // `@schemas/<name>.list-entry` — listed before the `@schemas/*`
+      // wildcard below (TypeScript tries path patterns in listed order, so a
+      // more specific entry must come first): the wildcard would otherwise
+      // map it to `../schemas/<name>.list-entry`, but the list component
+      // lives at `../schemas/<name>/list-entry.tsx` (a directory member).
+      // One literal entry per list component, mirroring the vite.config.ts
+      // alias regex; add a line here when another schema grows one.
+      "@schemas/image.list-entry": ["../schemas/image/list-entry"],
       "@schemas/*": ["../schemas/*"]
     }
   },
-  "include": ["eslint.config.ts", "src", "../shared/**/*"],
+  // `../schemas/*/list-entry.tsx` — a card type's list component, which
+  // lives beside its schema but is frontend code. The backend tsconfig excludes
+  // the same glob. `../types/markdown-it-footnote.d.ts` types a package the
+  // shared Markdown parser imports.
+  "include": [
+    "eslint.config.ts",
+    "src",
+    "../shared/**/*",
+    "../schemas/*/list-entry.tsx",
+    "../types/markdown-it-footnote.d.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -7,7 +7,7 @@ import {
   listScanTokens,
   revokeScanToken,
 } from "../../../core/scan/tokens.js";
-import { router, ownerProcedure } from "../trpc.js";
+import { router, ownerProcedure } from "../procedures.js";
 
 /**
  * Minting and revoking the box's scan upload credentials. Owner-only, like the

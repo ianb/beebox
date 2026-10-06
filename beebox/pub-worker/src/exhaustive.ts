@@ -1,7 +1,7 @@
 /**
  * Local exhaustiveness terminator — the Worker imports ONLY `manifest-edge.ts`
  * from the box (a boundary the plan keeps deliberately thin), so it carries its
- * own tiny `assertNever` rather than reaching into `src/lib/invariant.ts`.
+ * own tiny `assertNever` rather than reaching into `src/shared/invariant.ts`.
  * Reaching it means a manifest tier was added without a matching serve arm — a
  * compile error first, a loud throw if ever hit at runtime.
  */

@@ -7,11 +7,11 @@ import { renderToString } from "react-dom/server";
 // canvas. JSX is avoided here (plain `createElement`) so the test runs under
 // tsx regardless of the ambient jsx runtime config.
 import { SketchFigure } from "@ianbicking/canvas-loop/react";
-import { asPlaygroundModule } from "../browser/sketch-types.js";
-import * as orbit from "../examples/orbit-tea.js";
-import * as fjord from "../examples/fjord-tea.js";
-import { controlModels } from "../browser/controls-model.js";
-import { resolveValues } from "../src/react/figure-internals.js";
+import { asPlaygroundModule } from "../src/browser/sketch-types.js";
+import * as orbit from "../src/examples/orbit-tea.js";
+import * as fjord from "../src/examples/fjord-tea.js";
+import { controlModels } from "../src/browser/controls-model.js";
+import { resolveValues } from "../src/react/SketchFigure/figure-internals.js";
 
 const orbitModule = asPlaygroundModule(orbit);
 const fjordModule = asPlaygroundModule(fjord);

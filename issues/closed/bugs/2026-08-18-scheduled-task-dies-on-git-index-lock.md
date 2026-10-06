@@ -85,7 +85,7 @@ Both pieces of the real answer already exist in this codebase, applied to other
 resources:
 
 **1. Hold a lock across the whole stage-and-commit span.**
-`stageAndCommitPaths` (`src/lib/git.ts:309`) is already the single door every
+`stageAndCommitPaths` (`src/lib/git.ts:309` (moved to `beebox/src/lib/git/core.ts`)) is already the single door every
 in-repo writer goes through. Wrapping its body in `src/lib/file-lock.ts` (on
 `proper-lockfile`, with mtime-freshness stale recovery — the house mechanism
 for exactly this) turns contention into *queueing* instead of failure.

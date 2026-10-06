@@ -69,3 +69,7 @@ Landed concepts/enriched-markdown.md (quote, source, todo as the baseline marks)
 ChatGPT retry against beebox.run: absolute links helped but the markdown corpus still confused the agent; switched to spartan HTML renderings with a deep index on the front page (2026-09-12 evening).
 
 Landed the development-process docs (five pages) and the contributor preamble rewrite.
+
+Landed the weekly agent-docs-refresh schedule.
+
+Landed the themes frame (site/docs-themes.md), the Themes section on llms.txt, and the home card as title, description, attributes, and prompts.

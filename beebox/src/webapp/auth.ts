@@ -17,7 +17,7 @@ import * as os from "node:os";
 import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyRequest } from "fastify";
 import { parseCookieHeader } from "../lib/cookies.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "./local-users.js";
 import { getLocalUserCached } from "./local-users-cache.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
@@ -293,9 +293,7 @@ export function verifySession(cookie: string): SessionUser | null {
  * Extract the authenticated user from a request's session cookie.
  */
 export function getSessionUser(request: FastifyRequest): SessionUser | null {
-  const cookie = request.cookies[COOKIE_NAME];
-  if (!cookie) return null;
-  return verifySession(cookie);
+  return getSessionUserFromCookieHeader(request.headers.cookie);
 }
 
 /**

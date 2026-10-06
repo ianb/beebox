@@ -13,7 +13,7 @@ The history page shows changed files with a `content/` prefix — for example
 the repository root, and the box's git root is the directory above the box root.
 The path filter takes a box-relative path
 (`beebox/src/webapp/trpc/routers/history.ts:83-91` resolves the input
-against `ctx.boxRoot`; `beebox/src/lib/git-log.ts:58` documents the field as
+against `ctx.boxRoot`; `beebox/src/lib/git-log.ts:58` (moved to `beebox/src/lib/git/log.ts`) documents the field as
 "One box-relative path").
 
 So copying a path out of the diff panel into the filter returns nothing. The page

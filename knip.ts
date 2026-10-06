@@ -1,5 +1,5 @@
 import type { KnipConfig } from "knip";
-import { doctestImports } from "./beebox/scripts/knip-doctest-imports.js";
+import { doctestImports } from "./beebox/src/scripts/knip-doctest-imports.js";
 
 /**
  * Knip runs from the MONOREPO ROOT, not from beebox.
@@ -20,19 +20,26 @@ const config: KnipConfig = {
   workspaces: {
     // Monorepo tooling: bin/ (the dev router, hooks, generators) and dev/.
     ".": {
-      entry: ["bin/*.ts", "bin/**/*.test.ts"],
-      project: ["bin/**/*.ts"],
+      // bin/test doctests are consumers the same way beebox's are: an export
+      // reached only from one is used.
+      entry: ["bin/*.ts", "bin/**/*.test.ts", "bin/test/**/*.doctest.md"],
+      project: ["bin/**/*.ts", "bin/test/**/*.doctest.md"],
       // Invoked through bin/browse, a shell script knip does not read.
       ignoreDependencies: ["agent-browser"],
     },
     "beebox": {
       entry: [
-        "src/webapp/server.ts",
-        "src/schemas/index.ts",
-        "src/connectors/index.ts",
-        "src/cli/index.ts",
+        "src/webapp/server/app.ts",
+        "src/schemas.ts",
+        "src/connectors.ts",
+        "src/cli/entry/run.ts",
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",
+        // Declarative-only `defineRegistry` completeness declaration
+        // (docs/plans/file-layout.md rule 1/4): `appRouter` is built from the
+        // same `routerMembers` object, but nothing imports the registry
+        // module for its own sake.
+        "src/webapp/trpc/routers.ts",
         // The box-facing specifiers (beebox/cards, ./schema, ./server)
         // need no entry: knip reads package.json "exports" and maps the dist
         // paths back through tsconfig. Same for the frontend's main.tsx, which
@@ -42,14 +49,15 @@ const config: KnipConfig = {
         // used. Doctests are markdown — see `compilers` below.
         "test/**/*.ts",
         "test/**/*.doctest.md",
-        "scripts/**/*.ts",
+        "src/scripts/**/*.ts",
       ],
       project: [
         "src/**/*.{ts,tsx}",
         "!src/frontend/**",
+        "!src/schemas/*/list-entry.tsx",
         "test/**/*.ts",
         "test/**/*.doctest.md",
-        "scripts/**/*.ts",
+        "src/scripts/**/*.ts",
       ],
       ignoreDependencies: [
         // Resolved dynamically, so no static import exists to find:
@@ -64,23 +72,46 @@ const config: KnipConfig = {
         // Its config block lives in beebox/package.json, but the runner
         // is the monorepo-root .husky/pre-commit — knip sees neither end.
         "lint-staged",
-        // Frontend deps, reached from test/frontend/*.doctest.md.
-        "xstate",
+        // Frontend dep, reached from test/frontend/*.doctest.md.
         "@ianbicking/canvas-loop",
-        "@tanstack/react-query",
+        // Not dependencies: test/core/views/markdown-check.doctest.md passes
+        // view source importing these to the checker as a string, and
+        // test/dev/layout/move/mention-annotate.pipeline.doctest.md shows an
+        // `import x from "pkg/src/a.ts"` line as expected output. The doctest
+        // compiler lifts import statements by regex and cannot tell fixture
+        // text from the fence's own imports.
+        "react-markdown",
+        "remark-parse",
+        "markdown-it",
+        "pkg",
       ],
       // Two doctests dynamic-import a module from inside a template literal
       // that a spawned subprocess evaluates, so the specifier is relative to
       // the package root rather than to the .md file. The edge is real; only
       // knip's resolution of it from this location fails.
+      //
+      // `./old.js` and `./new.js` are the same fixture-string case as the
+      // markdown libraries above: test/dev/layout/move/ts-edit.doctest.md
+      // feeds source text containing those specifiers to `rewriteTsFile`.
       ignoreUnresolved: [
         "./src/webapp/auth-capabilities.ts",
         "./src/webapp/box-config-write.ts",
+        "./old.js",
+        "./new.js",
       ],
     },
     "beebox/src/frontend": {
-      entry: ["src/components/view-widgets/node-entry.tsx"],
-      project: ["src/**/*.{ts,tsx}"],
+      entry: [
+        "src/exports/view-widgets.tsx",
+        // Bundled on its own into the deploy page by
+        // beebox/src/scripts/build-deploy-page.ts, which names it by path.
+        "src/deploy-page/poll.ts",
+        // The suite is a consumer too: an export reached only from a test is
+        // used. Doctests are markdown — see the root `compilers` config.
+        "test/**/*.ts",
+        "test/**/*.doctest.md",
+      ],
+      project: ["src/**/*.{ts,tsx}", "../schemas/*/list-entry.tsx", "test/**/*.{ts,tsx}"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and
         // the runtime it injects is never imported by hand (React 18 needs it;
@@ -120,6 +151,8 @@ const config: KnipConfig = {
     "tar",
     "ps",
     "lsof",
+    // box-growth/bytes.ts measures disk use with `du -sk`.
+    "du",
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
     // A tracked executable in this repo, run by the root `dev` script.

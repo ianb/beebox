@@ -269,7 +269,7 @@ The revised descriptions pass YAML and description-only scope checks. All 23 Cod
 
 Applied the reviewed root assembly exactly, rebasing its links and promoting section headings. The root is 850 words, down from 2,242. Regenerated all 18 gitignored AGENTS.md mirrors and 23 skill links with the worktree name; verified that the root mirror contains the exact source and retains worktree orientation. The link audit found all 29 root targets and anchors valid and no incoming root-heading links to repair.
 
-The required resolver prerequisite is in `beebox/src/dev/doc-graph-data.ts`, covered by `beebox/test/dev/doc-graph-data.doctest.md`. The change-selected test run passed all three assertions, and focused lint/doc-check passed. No full suite was run; no runtime application behavior changed.
+The required resolver prerequisite is in `beebox/src/dev/doc-graph-data.ts` (moved to `beebox/src/dev/doc-graph-data/data.ts`), covered by `beebox/test/dev/doc-graph-data.doctest.md`. The change-selected test run passed all three assertions, and focused lint/doc-check passed. No full suite was run; no runtime application behavior changed.
 
 The second cross-model pass found no material root implementation defects and confirmed the first review's corrections remain intact. Its doc-check caveat was based on an earlier planning snapshot; the applied root now passes doc-check with the resolver fix. Both tracks landed in main at `8af2a5aff`; empirical trigger evaluation remains separate.
 

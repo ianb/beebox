@@ -363,7 +363,7 @@ struct NativeComposerFixtureScreen: View {
                 originalName: "field-notes.pdf",
                 size: 84_000,
                 mimetype: "application/pdf",
-                state: .uploaded(path: "tmp/fixture.pdf")
+                state: .uploaded(path: "_tmp/fixture.pdf")
             ))
         )
         ComposerDraftReducer.reduce(&value, .addSelection(fixtureSelection))

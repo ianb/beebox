@@ -1,0 +1,144 @@
+{
+  "files": {
+    "item-001.memo.card": "case-01",
+    "item-002.memo.card": "case-02",
+    "item-003.memo.card": "case-03",
+    "item-004.memo.card": "case-04",
+    "item-005.memo.card": "case-05",
+    "item-006.memo.card": "case-06",
+    "item-007.memo.card": "case-07",
+    "item-008.memo.card": "case-08",
+    "item-009.memo.card": "case-09",
+    "item-010.memo.card": "case-10",
+    "item-011.memo.card": "case-11",
+    "item-012.memo.card": "case-12"
+  },
+  "configuredModel": "claude-haiku-4-5-20251001",
+  "elapsedMs": 29143,
+  "categories": [
+    {
+      "name": "belongings",
+      "dir": "_content/belongings",
+      "rules": "For the fictional household of Odette Marlowe: individual movable possessions or groups of possessions, their identification, valuation, or disposal; photographs of such objects. A workshop building itself belongs in workshop.",
+      "procedureRef": null
+    },
+    {
+      "name": "history",
+      "dir": "_content/history",
+      "rules": "For the fictional household of Odette Marlowe: memories, tributes, family photographs, and biographical records. A historical document needed for a current property transaction belongs to the relevant property category.",
+      "procedureRef": null
+    },
+    {
+      "name": "legal",
+      "dir": "_content/legal",
+      "rules": "For the fictional household of Odette Marlowe: court filings, property disputes, lawyer correspondence and lawyer invoices. Exclude tax returns and bank statements.",
+      "procedureRef": null
+    },
+    {
+      "name": "money",
+      "dir": "_content/money",
+      "rules": "For the fictional household of Odette Marlowe: account statements, account closures, general bills and payments. Lawyer invoices belong in legal. Property maintenance goes to residence or workshop. Tax-preparation records belong in taxes.",
+      "procedureRef": null
+    },
+    {
+      "name": "notes",
+      "dir": "_content/notes",
+      "rules": "For the fictional household of Odette Marlowe: cross-topic research notes and annotated reading. A document whose subject clearly belongs to a specialized destination goes there instead.",
+      "procedureRef": null
+    },
+    {
+      "name": "residence",
+      "dir": "_content/residence",
+      "rules": "For the fictional household of Odette Marlowe: the Rivermouth rental house, tenants, repairs, property taxes, insurance, and sale. Records explicitly for preparing income tax returns go to taxes.",
+      "procedureRef": null
+    },
+    {
+      "name": "taxes",
+      "dir": "_content/taxes",
+      "rules": "For the fictional household of Odette Marlowe: returns, tax forms, and records explicitly gathered for preparing a tax return, including rental income and workshop expenses. An ordinary property bill is not tax preparation just because it includes tax.",
+      "procedureRef": null
+    },
+    {
+      "name": "workshop",
+      "dir": "_content/workshop",
+      "rules": "For the fictional household of Odette Marlowe: the Greenhollow workshop building, its repairs, sale, and building photographs. Individual movable objects go to belongings; records explicitly for tax preparation go to taxes.",
+      "procedureRef": null
+    }
+  ],
+  "decisions": [
+    {
+      "file": "item-001.memo.card",
+      "category": "legal",
+      "confidence": "confident",
+      "reason": "Court hearing notice for a boundary dispute. Legal category explicitly covers 'court filings, property disputes'."
+    },
+    {
+      "file": "item-002.memo.card",
+      "category": "money",
+      "confidence": "confident",
+      "reason": "Bank account closing statement. Money category covers 'account statements, account closures'."
+    },
+    {
+      "file": "item-003.memo.card",
+      "category": "taxes",
+      "confidence": "confident",
+      "reason": "Rental income and expenses assembled expressly for tax return preparation. Taxes category explicitly covers 'records explicitly gathered for preparing a tax return, including rental income'."
+    },
+    {
+      "file": "item-004.memo.card",
+      "category": "residence",
+      "confidence": "confident",
+      "reason": "Repair invoice for Rivermouth rental house boiler. Residence category covers 'repairs' at the rental property; money category excludes 'Property maintenance' which routes to residence/workshop."
+    },
+    {
+      "file": "item-005.memo.card",
+      "category": "workshop",
+      "confidence": "confident",
+      "reason": "Building inspection of Greenhollow workshop before sale. Workshop category covers 'the Greenhollow workshop building, its repairs, sale, and building photographs'."
+    },
+    {
+      "file": "item-006.memo.card",
+      "category": "belongings",
+      "confidence": "confident",
+      "reason": "Photograph and inventory of portable violin with valuation for sale. Belongings category covers 'individual movable possessions, their identification, valuation, or disposal; photographs of such objects'."
+    },
+    {
+      "file": "item-007.memo.card",
+      "category": "history",
+      "confidence": "confident",
+      "reason": "Family remembrance and biographical content about Odette Marlowe's interests. History category covers 'memories, tributes, family photographs, and biographical records'."
+    },
+    {
+      "file": "item-008.memo.card",
+      "category": "notes",
+      "confidence": "confident",
+      "reason": "Cross-topic research notes comparing document management systems for household administration. Notes category covers 'cross-topic research notes and annotated reading'."
+    },
+    {
+      "file": "item-009.memo.card",
+      "category": "legal",
+      "confidence": "confident",
+      "reason": "Attorney invoice for property dispute case work. Legal category covers 'lawyer correspondence and lawyer invoices'; money category explicitly excludes lawyer invoices."
+    },
+    {
+      "file": "item-010.memo.card",
+      "category": "residence",
+      "confidence": "confident",
+      "reason": "Old deed to Rivermouth rental house needed for current sale. Residence category covers the rental property and its sale; history rule notes that historical documents needed for current property transactions route to the relevant property category."
+    },
+    {
+      "file": "item-011.memo.card",
+      "category": null,
+      "confidence": "guess",
+      "reason": "Generic travel advertisement with no connection to Odette Marlowe's household. Does not match criteria for any category, which are all defined for the household of Odette Marlowe."
+    },
+    {
+      "file": "item-012.memo.card",
+      "category": "notes",
+      "confidence": "confident",
+      "reason": "Research notes on selecting cloud storage for household documents. Fits notes category as cross-topic research affecting document administration across household topics."
+    }
+  ],
+  "applications": [],
+  "empty": false
+}

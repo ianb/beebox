@@ -5,10 +5,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRawFileUrl, getApiBase } from "../api";
 import { Pre } from "../components/ui/Pre";
-import { Text } from "../components/ui/Text";
+import { StatusMessage } from "../components/ui/StatusMessage";
+import { ErrorText } from "../components/ui/ErrorText";
 import { RequestError } from "../lib/errors";
-import type { RendererProps } from "./index";
-import { registerFileType } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 /**
  * Raw source view for frontmatter cards. Fetches the verbatim file text on
@@ -28,11 +28,11 @@ function SourceRenderer({ data }: RendererProps) {
     },
   });
   if (isLoading) {
-    return <Text as="div" tone="subtle" className="p-4">Loading source…</Text>;
+    return <StatusMessage className="p-4">Loading source…</StatusMessage>;
   }
   if (error || text === undefined) {
     const message = error instanceof Error ? error.message : "No content";
-    return <Text as="div" tone="danger" className="p-4">{message}</Text>;
+    return <ErrorText className="p-4">{message}</ErrorText>;
   }
   return (
     <div className="p-4">
@@ -41,7 +41,7 @@ function SourceRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileType(
-  { match: (_path, data) => data?.kind === "frontmatter" },
-  { renderer: { name: "Source", Component: SourceRenderer, priority: 10 } },
-);
+export const sourceRenderer: RendererEntry = {
+  selector: { match: (_path, data) => data?.kind === "frontmatter" },
+  renderer: { name: "Source", Component: SourceRenderer, priority: 10 },
+};

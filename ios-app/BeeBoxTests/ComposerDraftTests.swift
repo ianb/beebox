@@ -911,7 +911,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         await store.setFileProgress(id: file.id, progress: 0.75, boxID: boxID)
         XCTAssertEqual(store.draft.files.first?.state, .uploading(progress: 0.75))
         await store.markFileUploaded(id: file.id, upload: UploadedChatFile(
-            path: "tmp/report.pdf",
+            path: "_tmp/report.pdf",
             originalName: "report.pdf",
             size: payload.count,
             mimetype: "application/pdf"
@@ -920,7 +920,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
         await relaunched.activate(boxID: boxID)
         let emitted = try relaunched.emissionFiles(from: relaunched.draft)
-        XCTAssertEqual(emitted.map(\.path), ["tmp/report.pdf"])
+        XCTAssertEqual(emitted.map(\.path), ["_tmp/report.pdf"])
         XCTAssertEqual(relaunched.draft.text, "[file#1]")
     }
 
@@ -1258,10 +1258,11 @@ final class ComposerDraftRepositoryTests: XCTestCase {
 
         try await relaunchedPending.finishVoicePreparation(
             id: preparation.id,
-            text: "original HQ <send-message phrase=\"send now\" />",
-            diarized: true,
-            hqText: true,
-            hqService: "test-hq"
+            outcome: .hq(
+                text: "original HQ <send-message phrase=\"send now\" />",
+                diarized: true,
+                service: "test-hq"
+            )
         )
         XCTAssertTrue(relaunchedPending.voicePreparations.isEmpty)
         XCTAssertEqual(relaunchedPending.pending.map(\.id), [preparation.id, nextEmission.id])
@@ -1277,6 +1278,42 @@ final class ComposerDraftRepositoryTests: XCTestCase {
                 boxID: boxID
             )
         }
+    }
+
+    @MainActor
+    func testVoicePreparationFallbackProvenanceSurvivesRelaunch() async throws {
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        let audioURL = rootURL.deletingLastPathComponent()
+            .appendingPathComponent("voice-fallback-\(UUID().uuidString).wav")
+        try Data("voice bytes".utf8).write(to: audioURL)
+        defer { try? FileManager.default.removeItem(at: audioURL) }
+        let preparation = try await store.stageVoicePreparation(
+            draft: .empty,
+            liveTranscript: "realtime text",
+            priorInput: "",
+            action: .send,
+            matchedPhrase: "send message",
+            audioURL: audioURL,
+            boxID: boxID,
+            binding: testBinding,
+            bindingRevision: 1
+        )
+
+        try await store.finishVoicePreparation(
+            id: preparation.id,
+            outcome: .fallback(text: "realtime text")
+        )
+        XCTAssertEqual(store.pending.first?.hqFallback, true)
+        XCTAssertNil(store.pending.first?.hqText)
+        XCTAssertEqual(store.deliveries.first?.hqFallback, true)
+
+        let relaunched = PendingEmissionStore(repository: repository)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(relaunched.pending.first?.hqFallback, true)
+        XCTAssertEqual(relaunched.deliveries.first?.hqFallback, true)
     }
 
     @MainActor
@@ -1530,6 +1567,279 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             emission,
             now: created.addingTimeInterval(120)
         ))
+    }
+}
+
+/// The inline image's ORIGINAL bytes: kept through the downscale, uploaded to
+/// the box, and carried to the emission as `path`. Plan:
+/// `beebox/docs/plans/chat-image-files.md` Track 4.
+final class ComposerImageOriginalTests: XCTestCase {
+    private var rootURL: URL!
+
+    override func setUpWithError() throws {
+        rootURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: rootURL)
+    }
+
+    @MainActor
+    private func makeStore(
+        _ repository: ComposerDraftRepository,
+        suite: String
+    ) throws -> (ComposerDraftStore, UserDefaults) {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        return (ComposerDraftStore(repository: repository, defaults: defaults), defaults)
+    }
+
+    @MainActor
+    func testImportKeepsTheOriginalAndTheLandedUploadRemovesIt() async throws {
+        let suite = "ComposerImageOriginal.\(UUID().uuidString)"
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let (store, defaults) = try makeStore(repository, suite: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        await store.activate(boxID: boxID)
+
+        let begunImage = await store.beginImageImport(data: Data("original".utf8), mimeType: "image/heic")
+        let begun = try XCTUnwrap(begunImage)
+        let sourceFilename = begun.filename
+        XCTAssertTrue(sourceFilename.hasPrefix("image-source-"))
+
+        let importedImage = await store.completeImageImport(
+            id: begun.id,
+            data: Data("downscaled".utf8),
+            mimeType: "image/jpeg",
+            fileExtension: "jpg",
+            boxID: boxID
+        )
+        let imported = try XCTUnwrap(importedImage)
+        XCTAssertNotEqual(imported.filename, sourceFilename)
+        XCTAssertEqual(imported.state, .local)
+        XCTAssertEqual(imported.original?.filename, sourceFilename)
+        XCTAssertEqual(imported.original?.mimeType, "image/heic")
+        XCTAssertEqual(imported.original?.state, .uploading(progress: 0))
+        XCTAssertEqual(imported.payloadFilenames, [imported.filename, sourceFilename])
+        // The source payload is the only copy of the original bytes.
+        let keptBytes = try await repository.loadPayload(filename: sourceFilename, boxID: boxID)
+        XCTAssertEqual(keptBytes, Data("original".utf8))
+        let originalBytes = await store.imageOriginalData(for: imported, boxID: boxID)
+        XCTAssertEqual(originalBytes, Data("original".utf8))
+
+        await store.setImageOriginalProgress(id: begun.id, progress: 0.5, boxID: boxID)
+        XCTAssertEqual(store.draft.images.first?.original?.state, .uploading(progress: 0.5))
+
+        await store.markImageOriginalUploaded(id: begun.id, path: "_tmp/original.heic", boxID: boxID)
+        let uploaded = try XCTUnwrap(store.draft.images.first)
+        XCTAssertEqual(uploaded.original?.state, .uploaded(path: "_tmp/original.heic"))
+        XCTAssertEqual(uploaded.payloadFilenames, [uploaded.filename])
+        await XCTAssertThrowsErrorAsync {
+            _ = try await repository.loadPayload(filename: sourceFilename, boxID: boxID)
+        }
+
+        let attachments = try await store.emissionImages(from: store.draft, boxID: boxID)
+        XCTAssertEqual(attachments.map(\.path), ["_tmp/original.heic"])
+        XCTAssertEqual(attachments.first?.dataBase64, Data("downscaled".utf8).base64EncodedString())
+    }
+
+    @MainActor
+    func testRemovalAndDiscardClearBothPayloads() async throws {
+        let suite = "ComposerImageOriginalCleanup.\(UUID().uuidString)"
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let (store, defaults) = try makeStore(repository, suite: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        await store.activate(boxID: boxID)
+
+        let begunImage = await store.beginImageImport(data: Data("original".utf8), mimeType: "image/png")
+        let begun = try XCTUnwrap(begunImage)
+        let importedImage = await store.completeImageImport(
+            id: begun.id,
+            data: Data("downscaled".utf8),
+            mimeType: "image/png",
+            fileExtension: "png",
+            boxID: boxID
+        )
+        let imported = try XCTUnwrap(importedImage)
+        let snapshot = store.draft
+
+        await store.removeImage(id: imported.id)
+        for filename in imported.payloadFilenames {
+            await XCTAssertThrowsErrorAsync {
+                _ = try await repository.loadPayload(filename: filename, boxID: boxID)
+            }
+        }
+
+        // The pending/discard path removes the same list.
+        for filename in imported.payloadFilenames {
+            try await repository.savePayload(Data("bytes".utf8), filename: filename, boxID: boxID)
+        }
+        await store.discard(snapshot, boxID: boxID)
+        for filename in imported.payloadFilenames {
+            await XCTAssertThrowsErrorAsync {
+                _ = try await repository.loadPayload(filename: filename, boxID: boxID)
+            }
+        }
+    }
+
+    func testDraftJSONRoundTripsWithAndWithoutTheOriginalKey() throws {
+        var draft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&draft, .addImage(DraftImage(
+            id: 1,
+            filename: "image-1.jpg",
+            mimeType: "image/jpeg",
+            state: .local,
+            original: DraftOriginal(
+                filename: "image-source-1.heic",
+                mimeType: "image/heic",
+                state: .uploaded(path: "_tmp/a.heic")
+            )
+        )))
+        let encoded = try JSONEncoder().encode(draft)
+        XCTAssertEqual(try JSONDecoder().decode(ComposerDraft.self, from: encoded), draft)
+
+        // A draft persisted by a build that had no originals carries no key.
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        var images = try XCTUnwrap(object["images"] as? [[String: Any]])
+        XCTAssertNotNil(images[0]["original"])
+        images[0].removeValue(forKey: "original")
+        object["images"] = images
+        let legacy = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(ComposerDraft.self, from: legacy)
+        XCTAssertNil(decoded.images.first?.original)
+        XCTAssertEqual(decoded.images.first?.payloadFilenames, ["image-1.jpg"])
+    }
+
+    func testEmissionImageEncodesPathOnlyWhenTheOriginalLanded() throws {
+        let withoutPath = ChatImageAttachment(id: 1, mimeType: "image/png", dataBase64: "aW1n")
+        let withPath = ChatImageAttachment(id: 2, mimeType: "image/png", dataBase64: "aW1n", path: "_tmp/a.png")
+
+        let bare = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try JSONEncoder().encode(withoutPath)) as? [String: Any]
+        )
+        XCTAssertNil(bare["path"])
+        XCTAssertEqual(Set(bare.keys), ["id", "mimeType", "dataBase64"])
+
+        let full = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try JSONEncoder().encode(withPath)) as? [String: Any]
+        )
+        XCTAssertEqual(full["path"] as? String, "_tmp/a.png")
+
+        // An emission from a build that sent no path still decodes.
+        let decoded = try JSONDecoder().decode(
+            ChatImageAttachment.self,
+            from: Data(#"{"id":3,"mimeType":"image/png","dataBase64":"aW1n"}"#.utf8)
+        )
+        XCTAssertNil(decoded.path)
+    }
+
+    func testSendGateBlocksOnlyWhileTheOriginalIsStillUploading() {
+        func draft(_ original: DraftOriginal?) -> ComposerDraft {
+            var value = ComposerDraft.empty
+            value.images = [DraftImage(
+                id: 1,
+                filename: "image-1.jpg",
+                mimeType: "image/jpeg",
+                state: .local,
+                original: original
+            )]
+            return value
+        }
+        let source = "image-source-1.heic"
+        XCTAssertFalse(draft(nil).hasIncompleteImages)
+        XCTAssertTrue(draft(DraftOriginal(
+            filename: source, mimeType: "image/heic", state: .uploading(progress: 0.4)
+        )).hasIncompleteImages)
+        // A failed original costs the message its path, not its send.
+        XCTAssertFalse(draft(DraftOriginal(
+            filename: source, mimeType: "image/heic", state: .failed(message: "offline")
+        )).hasIncompleteImages)
+        XCTAssertFalse(draft(DraftOriginal(
+            filename: source, mimeType: "image/heic", state: .uploaded(path: "_tmp/a.heic")
+        )).hasIncompleteImages)
+
+        var encoding = draft(nil)
+        encoding.images[0].state = .uploading(progress: 0)
+        XCTAssertTrue(encoding.hasIncompleteImages)
+    }
+
+    @MainActor
+    func testUploadBatchIDIsMintedOnceReusedPersistedAndClearedOnSend() async throws {
+        let suite = "ComposerUploadBatch.\(UUID().uuidString)"
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let (store, defaults) = try makeStore(repository, suite: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        await store.activate(boxID: boxID)
+
+        // An untouched draft claims no directory.
+        XCTAssertNil(store.draft.uploadBatchID)
+
+        let minted = await store.ensureUploadBatchID(boxID: boxID)
+        let first = try XCTUnwrap(minted)
+        XCTAssertEqual(first.count, ComposerUploadBatch.idLength)
+        XCTAssertNil(first.rangeOfCharacter(from: CharacterSet(
+            charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        ).inverted))
+        // The draft's other attachments file under the same batch.
+        let second = await store.ensureUploadBatchID(boxID: boxID)
+        XCTAssertEqual(second, first)
+        XCTAssertEqual(store.draft.uploadBatchID, first)
+
+        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(relaunched.draft.uploadBatchID, first)
+
+        await relaunched.clearForSending(boxID: boxID)
+        XCTAssertNil(relaunched.draft.uploadBatchID)
+        // The next message gets its own directory.
+        let reminted = await relaunched.ensureUploadBatchID(boxID: boxID)
+        let next = try XCTUnwrap(reminted)
+        XCTAssertNotEqual(next, first)
+    }
+
+    @MainActor
+    func testRelaunchResumesAnInterruptedOriginalAndFailsAVanishedOne() async throws {
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let boxID = UUID()
+        var draft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&draft, .addImage(DraftImage(
+            id: 1,
+            filename: "image-1.jpg",
+            mimeType: "image/jpeg",
+            state: .local,
+            original: DraftOriginal(
+                filename: "image-source-1.heic",
+                mimeType: "image/heic",
+                state: .uploading(progress: 0.3)
+            )
+        )))
+        try await repository.savePayload(Data("small".utf8), filename: "image-1.jpg", boxID: boxID)
+        try await repository.savePayload(Data("original".utf8), filename: "image-source-1.heic", boxID: boxID)
+        try await repository.save(draft, boxID: boxID)
+
+        let suite = "ComposerImageOriginalRelaunch.\(UUID().uuidString)"
+        let (store, defaults) = try makeStore(repository, suite: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        await store.activate(boxID: boxID)
+        // The bytes are still on disk, so the upload is repeated rather than
+        // abandoned; a request cannot be resumed but it can be started again.
+        XCTAssertEqual(store.draft.images.first?.original?.state, .uploading(progress: 0.3))
+        XCTAssertEqual(store.resumableImageOriginals().map(\.id), [1])
+
+        try await repository.removePayload(filename: "image-source-1.heic", boxID: boxID)
+        let (relaunched, secondDefaults) = try makeStore(repository, suite: suite + ".2")
+        defer { secondDefaults.removePersistentDomain(forName: suite + ".2") }
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(relaunched.draft.images.map(\.id), [1])
+        XCTAssertEqual(
+            relaunched.draft.images.first?.original?.state,
+            .failed(message: "The original file is missing. The agent gets the reduced copy only.")
+        )
+        XCTAssertTrue(relaunched.resumableImageOriginals().isEmpty)
+        XCTAssertFalse(relaunched.draft.hasIncompleteImages)
     }
 }
 

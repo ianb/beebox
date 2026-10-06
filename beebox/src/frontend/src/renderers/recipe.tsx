@@ -6,8 +6,9 @@
  */
 
 import { RecipeView } from "../components/RecipeView";
-import { registerFileType } from "./index";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "recipe" }, {
+export const recipeRenderer: RendererEntry = {
+  selector: { type: "recipe" },
   renderer: { name: "Recipe", Component: RecipeView, priority: 100 },
-});
+};

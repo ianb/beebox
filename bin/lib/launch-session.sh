@@ -18,7 +18,7 @@ launch_session_build() {
   LS_LAUNCH_TOKEN="${LS_LAUNCH_TOKEN:-$(uuidgen 2>/dev/null || printf '%s-%s-%s' "$(date +%s)" "$$" "$RANDOM")}"
 
   if [ "$LS_AGENT" = "codex" ] && [ -z "$LS_MODEL" ]; then
-    LS_MODEL="gpt-5.6-sol"
+    LS_MODEL="gpt-6-sol"
   fi
 
   # A `glm-*` model routes the SAME claude agent at Z.ai's Anthropic-compatible
@@ -157,6 +157,14 @@ for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
   skill_name=\$(basename "\$(dirname "\$claude_skill")")
   if [ ! -L "\$wt_path/.agents/skills/\$skill_name" ] || [ ! -f "\$wt_path/.agents/skills/\$skill_name/SKILL.md" ]; then
     echo "launch-worktree-session: missing Codex mirror for skill \$skill_name — refusing to launch codex without repo skills" >&2
+    exit 1
+  fi
+done
+for claude_agent in "\$wt_path"/.claude/agents/*.md; do
+  [ -f "\$claude_agent" ] || continue
+  agent_name=\$(basename "\$claude_agent" .md)
+  if [ ! -f "\$wt_path/.codex/agents/\$agent_name.toml" ]; then
+    echo "launch-worktree-session: missing Codex mirror for agent \$agent_name — refusing to launch codex without its pinned model" >&2
     exit 1
   fi
 done

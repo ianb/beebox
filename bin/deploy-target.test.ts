@@ -179,7 +179,7 @@ test("the deploy refuses, with the container install as the alternative, when un
   const result = spawnSync(join(worktreeDeploy, "prod-ssh"), [], { encoding: "utf8" });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /no deploy target is configured/);
-  assert.match(result.stderr, /docker-install\.md/);
+  assert.match(result.stderr, /install\/docker\.md/);
 });
 
 // ─── Invariants the scripts must keep ───────────────────────────────────────
@@ -193,6 +193,7 @@ test("deploying from a worktree is refused even though the main checkout has a t
   rmSync(join(worktreeDeploy, "target.env"), { force: true });
   copyFileSync(join(SOURCE_DEPLOY, "deploy.sh"), join(worktreeDeploy, "deploy.sh"));
   chmodSync(join(worktreeDeploy, "deploy.sh"), 0o755);
+  copyFileSync(join(SOURCE_DEPLOY, "deploy-outcome.sh"), join(worktreeDeploy, "deploy-outcome.sh"));
 
   const result = spawnSync(join(worktreeDeploy, "deploy.sh"), ["--ref", "HEAD"], {
     encoding: "utf8",

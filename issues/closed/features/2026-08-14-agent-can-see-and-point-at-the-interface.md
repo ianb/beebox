@@ -211,7 +211,7 @@ stating in the design so the next reader does not read it as backsliding.
   [agent-browser scoped to a box](../../features/2026-06-12-agent-browser-scoped-to-box.md) —
   the "look at" half of this issue, from the self-verification angle.
 - **A channel for per-turn situational context.** `composeTurnContent`
-  (`src/core/chat/session/start.ts:139-160`) already prepends a `<chat-app …/>`
+  (`src/core/chat/session/start.ts:139-160` (moved to `beebox/src/core/chat/session/run/start.ts`)) already prepends a `<chat-app …/>`
   tag to every user turn. That is the natural place for a UI snapshot to ride,
   and it is the same seam
   [screen-unfocused](../../features/2026-08-13-tell-the-agent-the-screen-is-unfocused.md) wants.

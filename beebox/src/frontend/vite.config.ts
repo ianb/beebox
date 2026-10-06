@@ -2,11 +2,20 @@ import { resolve as resolvePath } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
-import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin";
-import { perBoxIdentityAssetPattern } from "./vite-proxy";
+import { perBoxIdentityAssetPattern } from "../shared/box-identity-asset-routes.js";
+import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin/plugin";
 
-const FRONTEND_PORT = Number(process.env.FRONTEND_PORT) || 3210;
-const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
+// Vite reads these build controls while constructing its server/build config;
+// app runtime env parsing cannot configure this file.
+const {
+  FRONTEND_PORT: frontendPortEnv,
+  BACKEND_PORT: backendPortEnv,
+  REACT_COMPILER: reactCompilerEnv,
+  VITE_BASE: viteBaseEnv,
+  BBX_ANALYZE_BUNDLE: analyzeBundleEnv,
+} = process.env;
+const FRONTEND_PORT = Number(frontendPortEnv) || 3210;
+const BACKEND_PORT = Number(backendPortEnv) || 3211;
 
 // When this Vite instance is fronted by the monorepo dev router, it gets
 // asked to serve at a path prefix like "/main/" or "/foo/". The router
@@ -20,16 +29,16 @@ const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
 // to opt out for debugging a suspected compiler issue. target:"18" pairs with
 // the react-compiler-runtime dependency (React 19 ships the runtime; 18 needs
 // the shim).
-const REACT_COMPILER = process.env.REACT_COMPILER !== "0";
+const REACT_COMPILER = reactCompilerEnv !== "0";
 
-const VITE_BASE = process.env.VITE_BASE || "/";
+const VITE_BASE = viteBaseEnv || "/";
 const BASE_PREFIX = VITE_BASE.replace(/\/$/, ""); // "" when base is "/", "/main" otherwise
 
 // Repeatable production bundle composition analysis, run via
-// `pnpm analyze:bundle` (src/dev/analyze-bundle.ts), which sets this env var
+// `pnpm analyze:bundle` (src/dev/analyze-bundle/analyze.ts), which sets this env var
 // before shelling out to `vite build`. Absent/unset on every ordinary build
 // (dev server and plain `pnpm build`), so the plugin never runs by default.
-const ANALYZE_BUNDLE = process.env.BBX_ANALYZE_BUNDLE === "1";
+const ANALYZE_BUNDLE = analyzeBundleEnv === "1";
 
 // Dev CSP (Report-Only). Vite serves the dev HTML, so the dev policy is set
 // here rather than by Fastify. The report path must carry the base prefix so the
@@ -82,9 +91,18 @@ export default defineConfig({
     // (Probed 2026-07-12: tsx pointed at src/frontend/tsconfig.json resolves a
     // value import through @core, so tsx is not the guard — the eslint rule is;
     // see the tsconfig paths comment.)
-    alias: {
-      "@shared": resolvePath(__dirname, "../shared"),
-    },
+    // Array form: the regex entry aliases ONE spelling through @schemas —
+    // `@schemas/<name>.list-entry`, a card type's list component, which is
+    // frontend code living beside its schema at `schemas/<name>/list-entry.tsx`.
+    // Everything else under @schemas stays unaliased, so a value import
+    // through it still fails this build.
+    alias: [
+      {
+        find: /^@schemas\/([\w-]+)\.list-entry$/,
+        replacement: `${resolvePath(__dirname, "../schemas")}/$1/list-entry`,
+      },
+      { find: "@shared", replacement: resolvePath(__dirname, "../shared") },
+    ],
   },
   optimizeDeps: {
     // @ianbicking/canvas-loop is a linked workspace package whose subpaths
@@ -106,6 +124,16 @@ export default defineConfig({
     // reach us. Vite's default localhost-resolution sometimes lands on ::1
     // only, which the router doesn't follow.
     host: "127.0.0.1",
+    // On macOS, poll instead of using FSEvents. Vite serves a module from its
+    // cache until the watcher reports a change, and FSEvents delivery depends
+    // on the machine-wide fseventsd daemon. When fseventsd is overloaded,
+    // events arrive 1-15 s late or not at all. Vite then serves the old code
+    // with no error, and a restart does not help (measured 2026-09-25; see
+    // issues/bugs/2026-09-25-worktree-vite-serves-stale-modules-because-fsevents-lags.md).
+    // Polling calls stat() on each watched file, so it does not use fseventsd.
+    // At 1 s it adds about 1% of one core per running Vite (100 ms, chokidar's
+    // default, adds about 7%).
+    watch: process.platform === "darwin" ? { usePolling: true, interval: 1000, binaryInterval: 1000 } : undefined,
     // Report-Only CSP on every dev response (incl. the HTML document), so dev
     // exercises the policy and surfaces external-origin mistakes early.
     headers: DEV_CSP_HEADERS,

@@ -75,7 +75,6 @@ design: ../../beebox/docs/plans/foo.md
 area: beebox
 labels: [soft-launch]
 priority: important
-next-action: discuss
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-foo — while doing X
@@ -84,7 +83,7 @@ resolution: implemented
 ```
 
 Unknown keys are reported by
-`workstreams-app/src/server/issue-domain.ts`; adding a real field requires
+`workstreams-app/src/server/main/issue-domain.ts`; adding a real field requires
 updating both this contract and `KNOWN_FRONTMATTER_KEYS` there.
 
 ### Identity and grouping
@@ -123,19 +122,27 @@ name.
   requires a plan; `decision` requires the developer to choose. These are
   standing properties and are independent of the `decisions/` category.
   Research state belongs in the body, not `needs:`. An issue may carry both
-  `needs: [decision]` and `next-action: discuss`: one is a standing gate and the
-  other is the current queue action.
-- `next-action:` is a removable request from the developer. Values are
-  `discuss`, `reconfirm`, `duplicate`, `invalid`, `fixed`,
-  `manually-confirmed`, and `verify-without-me`. Agents normally answer these
-  values rather than set them; the narrow exception is `discuss` when work
-  reaches a concrete human judgment call. Explain that call in the body.
+  `needs: [decision]` and a `discuss` next action: one is a standing gate and
+  the other is the current queue action.
+- The next action is a removable request from the developer. It is not
+  frontmatter: it lives in a local store outside git, and `bin/issues
+  next-action` reads, sets, and clears it. Values are `discuss`, `reconfirm`,
+  `duplicate`, `invalid`, `fixed`, `manually-confirmed`,
+  `verify-without-me`, and `do-it`, each with an optional message; a message alone is a
+  direct instruction. Agents normally answer these requests rather than set
+  them; the narrow exception is `discuss` when work reaches a concrete human
+  judgment call. Explain that call in the body.
 
 `discuss` means surface the decision and do not implement. `reconfirm`,
 `duplicate`, `invalid`, and `fixed` are provisional hypotheses, not permission
-to close blindly. Verify them, act on the evidence, and remove the field after
-acting or disproving it. Remove `discuss` after the conversation produces a
-disposition.
+to close blindly. Verify them, act on the evidence, and clear the request
+(`bin/issues next-action <issue> --clear`) after acting or disproving it. Clear
+`discuss` after the conversation produces a disposition. Quote a message in the
+issue body when it records a decision; the store keeps no history.
+
+`do-it` authorizes implementation: the developer judged the fix small. Fix it
+inline within the `bbx-issue-actions` fix-in-place limits; if it proves larger,
+clear `do-it`, set `discuss`, and record why in the body.
 
 `manually-confirmed` is authoritative: the developer confirmed the fix. Read
 the issue to ensure the confirmation covers its full scope, then close it as
@@ -171,7 +178,7 @@ fix has landed, put this status directly after frontmatter:
 ```
 
 The developer clears this gate after a successful test, either directly or
-through `next-action: manually-confirmed`. Agents remove it only through two
+through a `manually-confirmed` next action. Agents remove it only through two
 explicit transitions: a fresh re-encounter proves the fix failed, or
 `verify-without-me` releases the human gate for an evidence-based disposition.
 
@@ -206,6 +213,12 @@ Link related issues with relative Markdown links: a bare filename within one
 category, `../<category>/<file>.md` across categories, and a full relative path
 from docs. Give external URLs descriptive link text. Plain text may name an
 issue that does not exist yet.
+
+When you point the developer at an issue in chat or a report, link the issue
+browser, not the file path:
+`http://localhost:3210/workstreams/issues?issue=features%2F2026-09-29-nas-app-store-targets.md`.
+The `issue` value is the path under `issues/`, URL-encoded. Add
+`&issueVisibility=private` only for a private issue; public is the default.
 
 Issue basenames must be unique across the tree; duplicates fail doc-check.
 After any move, close,
@@ -246,7 +259,7 @@ where and under what conditions it appeared, then apply the matching transition:
   opening status, and treat it as an open bug. This is the explicit agent-removal
   exception to the human-owned gate.
 - For `priority: normal` or `backlog`, do not change priority. Note that the
-  priority may be stale and, if no `next-action:` exists, set `discuss` so the
+  priority may be stale and, if no next action exists, set `discuss` so the
   developer sees it. Preserve any existing next action. `important` needs no
   priority note.
 - Reopen a closed issue with `git mv`, remove `resolution:`, and record what the
@@ -282,6 +295,6 @@ For a new item, choose the dominant category and write
 `filed-by: agent`, accurate `discovered-by:`, and
 `discovered-in: worktree-<name> — <context>`. Omit `priority:` unless the
 developer supplied it. Assign the current workstream only when it explicitly
-accepted responsibility. Use `next-action: discuss` only for a concrete human
+accepted responsibility. Set a `discuss` next action only for a concrete human
 decision explained in the body. Do not fix the out-of-scope work while filing,
 and do not file trivia.

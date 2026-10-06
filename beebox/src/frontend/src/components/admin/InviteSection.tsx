@@ -1,12 +1,16 @@
 import { useState, type FormEvent } from "react";
 import { withBase } from "../../api";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
-import { CheckboxField, TextField } from "../ui/fields";
+import { ErrorText } from "../ui/ErrorText";
+import { CheckboxField, TextField } from "../ui/fields/field";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION = "The link creates one member account for this box and expires after 15 minutes.";
 
 const LOCAL_OWNER_REQUIRED =
   "Local password accounts aren't initialized for this owner. Create the owner account on the server before issuing invite links.";
@@ -15,8 +19,8 @@ function InviteError({ message }: { message: string }) {
   return (
     <div role="alert">
       <Stack gap="xs">
-        <Text as="p" size="sm" tone="danger">{message}</Text>
-        {message === LOCAL_OWNER_REQUIRED ? <Text as="div" size="sm" mono>bbx auth create-user</Text> : null}
+        <ErrorText>{message}</ErrorText>
+        {message === LOCAL_OWNER_REQUIRED ? <Text as="div" size="sm" mono>bbx engine auth create-user</Text> : null}
       </Stack>
     </div>
   );
@@ -54,15 +58,9 @@ export function InviteSection() {
   };
 
   return (
-    <Card as="section" aria-label="Invite a user" shadow>
+    <AdminSectionCard id="invite" description={DESCRIPTION}>
       <form onSubmit={(event) => void submit(event)}>
         <Stack gap="md">
-          <Stack gap="xs">
-            <Text as="h2" size="lg" weight="semibold">Create invite link</Text>
-            <Text size="sm" tone="muted">
-              The link creates one member account for this box and expires after 15 minutes.
-            </Text>
-          </Stack>
           <CheckboxField
             id="bbx-admin-invite-open"
             label="Let invitee enter email"
@@ -87,7 +85,7 @@ export function InviteSection() {
             error={emailError}
             autoComplete="email"
           />
-          <Button id="bbx-admin-invite-create" type="submit" intent="primary" loading={createInvite.isPending} loadingLabel="Creating…">
+          <Button id="bbx-admin-invite-create" className="self-start" type="submit" intent="primary" loading={createInvite.isPending} loadingLabel="Creating…">
             Create invite link
           </Button>
           {createInvite.error ? <InviteError message={createInvite.error.message} /> : null}
@@ -108,6 +106,6 @@ export function InviteSection() {
           ) : null}
         </Stack>
       </form>
-    </Card>
+    </AdminSectionCard>
   );
 }

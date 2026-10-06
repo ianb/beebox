@@ -40,7 +40,7 @@ accurate again, and `trpc-nav-status.doctest.md` needed no change. Inline
 questions can still supersede both badges later.
 
 `AppNav` renders one badge, the on-plate todo count
-(`beebox/src/frontend/src/components/AppNav.tsx:104-105`, `:140`). The
+(`beebox/src/frontend/src/components/AppNav.tsx:104-105` (moved to `beebox/src/frontend/src/components/AppNav/nav.tsx`), `:140`). The
 pending-question badge was removed — a comment at `:116-117` records it ("the
 question events this used to watch moved out with the questions badge") — but
 the count behind it stayed.

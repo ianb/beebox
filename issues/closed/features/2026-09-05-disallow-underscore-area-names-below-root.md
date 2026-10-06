@@ -4,7 +4,7 @@ workstream: box-layout-criteria
 resolution: implemented
 ---
 
-The v3 root closed vocabulary (`beebox/src/lib/box-root-vocabulary.ts`,
+The v3 root closed vocabulary (`beebox/src/lib/box-root-vocabulary.ts` (moved to `beebox/src/shared/box-root-vocabulary.ts`),
 enforced by `bbx validate` and the pre-commit root check) governs only the
 root level. Nothing today prevents a directory named `_content`, `_config`,
 `_bookkeeping`, `_publish`, or `_tmp` from being created *inside* an area —

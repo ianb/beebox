@@ -6,6 +6,7 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: backlog
 ---
 
 Two coupled tensions, boxholder-raised 2026-07-20:
@@ -22,14 +23,14 @@ Two coupled tensions, boxholder-raised 2026-07-20:
    family as the
    [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)),
    a statement of what "updating" means for existing boxes
-   (`docs/migrations.md` is currently a maintainer runbook, not an
+   (`docs/cards/migrations.md` is currently a maintainer runbook, not an
    operator answer).
 
 To settle: does the soft launch track `main` or tagged releases; minimum
 viable release ritual (tag + notes + migration flag?); how a running box
 or its operator learns an update exists (a doctor check? a dashboard
 health line?); and where the update section lives in
-`docs/docker-install.md`. Interacts with the deferred npm-publish rung
+`docs/install/docker.md`. Interacts with the deferred npm-publish rung
 ([installation-remaining-work](../features/2026-07-19-installation-remaining-work.md)
 item 6) but is upstream of it — release discipline is needed even for
 git-pull distribution. Not a launch gate per the

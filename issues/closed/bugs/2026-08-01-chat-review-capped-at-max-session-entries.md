@@ -38,7 +38,7 @@ Options, unsettled:
   transcript length.
 - Persist a rolling prefix hash in the journal, so a re-read does not have to
   re-hash the prefix at all.
-- Accept the cap and say so in `docs/chat-review.md`.
+- Accept the cap and say so in `docs/chat/review.md`.
 
 ## What was fixed (post-review, 2026-08-01)
 

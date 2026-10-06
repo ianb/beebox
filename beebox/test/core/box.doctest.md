@@ -11,9 +11,9 @@ box root.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { isValidBox, getBoxMetadata, initBox } from "../../src/core/box/index.js";
+import { isValidBox, getBoxMetadata, initBox } from "../../src/core/box/structure/core.js";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
-import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths.js";
+import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths/core.js";
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "bbx-doctest-"));
@@ -66,6 +66,7 @@ _bookkeeping/trash
 _bookkeeping/usage
 _config
 _config/connectors
+_config/feedback
 _config/interface
 _config/procedures
 _config/schedules

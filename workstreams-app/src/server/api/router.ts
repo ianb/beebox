@@ -8,6 +8,8 @@ import {
 } from "../../shared/workstreams.js";
 import {
   issueChangeSchema,
+  issueNextActionInputSchema,
+  issueNextActionStateSchema,
   issueRelPathSchema,
   issueSchema,
   issueVisibilitySchema,
@@ -91,6 +93,11 @@ const issuesRouter = router({
     .output(z.object({ saved: z.number().int().nonnegative() }))
     .mutation(async ({ input, ctx }) => ({
       saved: await ctx.services.documents.saveIssueChanges(input.changes),
+    })),
+  setNextAction: procedure.input(issueNextActionInputSchema)
+    .output(z.object({ nextAction: issueNextActionStateSchema.nullable() }))
+    .mutation(async ({ input, ctx }) => ({
+      nextAction: await ctx.services.documents.setIssueNextAction(input),
     })),
 });
 

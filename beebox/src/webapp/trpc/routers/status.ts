@@ -2,25 +2,25 @@ import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { getSystemState } from "../../../core/state.js";
 import { generateContext } from "../../context.js";
 import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";
-import { parseCardName } from "../../../lib/paths.js";
+import { parseCardName } from "../../../lib/paths/core.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
-import { getLog } from "../../../lib/git.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { getLog } from "../../../lib/git/core.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { containWithinBox } from "../../../lib/box-containment.js";
-import { isInBoxNamespace } from "../../../lib/box-namespace.js";
+import { isInBoxNamespace } from "../../../shared/ref-path/box-namespace.js";
 import { verifyBoxNamespaceOnDisk } from "../../../lib/box-namespace-resolve.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
-import { BOX_ROOT_VOCABULARY } from "../../../lib/box-root-vocabulary.js";
+import { BOX_ROOT_VOCABULARY } from "../../../shared/box-root-vocabulary.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
-import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { createCardSchemaMap } from "../../../schemas.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
 import { getNavCounts } from "../../../core/nav-counts.js";
-import { naturalCompare } from "../../../lib/natural-sort.js";
-import type { CardInfo } from "../../../core/state.js";
+import { naturalCompare } from "../../../shared/natural-sort.js";
+import type { QuestionCardInfo } from "../../../core/state.js";
 import type { DirectorySummary, ProminenceWalkContext } from "../../../core/landmark/prominence-index.js";
 import {
   cardEffectiveProminence,
@@ -31,8 +31,8 @@ import {
 import type { EffectiveLevel } from "../../../shared/prominence.js";
 import type { CardSchema } from "../../../cards/schema.js";
 
-/** A question card's answerable/archive-relevant fields, layered onto its `CardInfo`. */
-export interface QuestionInfo extends CardInfo {
+/** A question card's answerable/archive-relevant fields, layered onto its listing entry. */
+export interface QuestionInfo extends QuestionCardInfo {
   prompt?: string | undefined;
   memo?: string | undefined;
   inputType?: QuestionFields["input"]["type"] | undefined;
@@ -42,7 +42,7 @@ export interface QuestionInfo extends CardInfo {
   /**
    * Set when the card failed to parse against `QuestionSchema` (bad
    * frontmatter, a superRefine violation, …). An invalid card carries only
-   * its `CardInfo` fields — `status` is whatever `getSystemState` found (or
+   * its listing fields — `state` is whatever `getSystemState` found (or
    * undefined) — so callers must still surface it rather than dropping it:
    * a card the boxholder needs to fix by hand is exactly the one that must
    * not silently vanish from the list.
@@ -63,8 +63,9 @@ export interface BrowseCard {
   relativePath: string;
   name: string;
   type: string;
-  status?: string | undefined;
   title?: string | undefined;
+  /** The card's `conflict` field is true: a synced Drive file awaits a merge. */
+  conflict?: true;
   /** True if this card has a `<basename>.attach/` directory (i.e. attachments). */
   hasAttachments?: boolean;
   /** The card's effective level: its own declared `prominence`, else its type's default. */
@@ -150,8 +151,8 @@ async function buildBrowseCard(
     relativePath,
     name: parsed.name,
     type: parsed.type,
-    ...(str("status") !== undefined && { status: str("status") }),
     ...(str("title") !== undefined && { title: str("title") }),
+    ...(fm["conflict"] === true && { conflict: true }),
     hasAttachments,
     prominence,
   };
@@ -186,6 +187,7 @@ export const statusRouter = router({
         questions: state.questions.length,
         pendingQuestions: navCounts.pendingQuestions,
         onPlateTodos: navCounts.onPlateTodos,
+        escalatedTodos: navCounts.escalatedTodos,
       },
     };
   }),

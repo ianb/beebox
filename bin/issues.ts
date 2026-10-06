@@ -10,7 +10,7 @@
  *
  * Stateless means every run re-reads every issue file. The only thing carried
  * between runs is the embedding cache under `.issues-index/` (gitignored). The
- * index itself lives in `workstreams-app/src/server/issue-index.ts`, next to
+ * index itself lives in `workstreams-app/src/server/main/issue-index.ts`, next to
  * `issue-domain.ts` — the dev issue browser's "Related" list is the same
  * ranking over the same cache, so there is one implementation and two callers.
  *
@@ -23,10 +23,10 @@ import { parseArgs } from "node:util";
 
 import {
   GROUP_KEYS, REPO_ROOT, filterIssues, groupIssues, loadIssueEntries,
-  type GroupKey,
-} from "../workstreams-app/src/server/issue-search-model.js";
-import { DOCS_SUBDIR } from "../workstreams-app/src/server/issue-index-documents.js";
-import { runSearch } from "../workstreams-app/src/server/issue-index-query.js";
+  type GroupKey, type IssueEntry,
+} from "../workstreams-app/src/server/main/issue-search-model.js";
+import { DOCS_SUBDIR } from "../workstreams-app/src/server/main/issue-index-documents.js";
+import { runSearch } from "../workstreams-app/src/server/main/issue-index-query.js";
 import {
   SEARCH_MODES, buildFilters, oneOf, options, positiveInt, resultBudget,
   type ParsedValues,
@@ -35,9 +35,14 @@ import {
   acceptHit, openIndex, publicOnly, requireQueryVector, resolveEntry, whereClause,
 } from "./issues-context.js";
 import {
-  MissingGroupKeyError, MissingSearchQueryError, MissingShowPathError,
-  MissingSimilarPathError, NoStoredEmbeddingError, UnknownSubcommandError, UsageError,
+  ConflictingNextActionError, InvalidNextActionValueError, MissingGroupKeyError, MissingSearchQueryError,
+  MissingShowPathError, MissingSimilarPathError, NoNextActionStoreError, NoStoredEmbeddingError,
+  UnknownSubcommandError, UsageError,
 } from "./issues-errors.js";
+import { issueNextActionSchema, type IssueNextActionState } from "../workstreams-app/src/shared/documents.js";
+import {
+  nextActionKey, nextActionsRoot, readNextActions, writeNextAction, type NextActionRequest,
+} from "../workstreams-app/src/server/main/issue-next-actions.js";
 import { emitJson, issueLine, reportHits } from "./issues-output.js";
 import { activateDueRepositories } from "./deferred-issues.js";
 
@@ -49,6 +54,11 @@ const USAGE = `bin/issues — survey and search the issue queue
   issues similar <issue-path> [filters]    issues (and docs) like this one
   issues show <issue-path>                 frontmatter + the top of the body
   issues activate-due [--apply]            preview, or move due deferred issues into their categories
+  issues next-action                       every pending request from the developer
+  issues next-action <issue>               one issue's request
+  issues next-action <issue> <value> [--message <text>] | --message <text>
+                                           set a request (replaces any existing one)
+  issues next-action <issue> --clear       remove it after acting on it
 
 Status (every subcommand):  default open only, --closed only closed, --all both.
 Filters: --category --area --label --workstream --discovered-in --needs
@@ -60,6 +70,9 @@ search:  --mode text|hybrid|semantic — text is BM25 and offline; hybrid and se
          need a key AND a fully embedded corpus, and ERROR when either is missing.
          With no --mode, hybrid is tried and falls back to text with a stderr notice.
 similar: --docs  also rank ${DOCS_SUBDIR}/**/*.md as prior art
+next-action: requests live in a local store outside git (dev-issue-actions/
+         beside the main checkout; BBX_ISSUE_ACTIONS_ROOT overrides). Values:
+         ${issueNextActionSchema.options.join(" ")}
 Common:  --json  --limit N  --rebuild (discard .issues-index/ first)
 
 Embeddings key, first match wins: BBX_OPENAI_API_KEY, THINKING_OPENAI_API_KEY,
@@ -192,6 +205,63 @@ async function commandActivateDue(values: ParsedValues): Promise<void> {
   }
 }
 
+function describeNextAction(state: IssueNextActionState | null): string {
+  if (state === null) return "no next action";
+  return `${state.action ?? "message"}${state.message === undefined ? "" : ` — “${state.message}”`}`;
+}
+
+async function listNextActions(values: ParsedValues, entries: IssueEntry[]): Promise<void> {
+  const stored = await readNextActions(await nextActionsRoot(REPO_ROOT));
+  const wanted = values["next-action"] ?? [];
+  const byKey = new Map(entries.map((entry) => [nextActionKey(entry.visibility, entry.slug), entry]));
+  // A request whose issue is gone is still the developer's words: listed, never dropped.
+  const rows = [...stored.entries()]
+    .filter(([, state]) => wanted.length === 0 || (state.action !== undefined && wanted.includes(state.action)))
+    .map(([key, state]) => ({ key, path: byKey.get(key)?.path ?? null, title: byKey.get(key)?.title ?? null, ...state }));
+  if (values.json === true) {
+    emitJson(rows);
+    return;
+  }
+  for (const row of rows) {
+    process.stdout.write(`${(row.action ?? "message").padEnd(19)} ${row.path ?? `(no such issue: ${row.key})`}  ${row.title ?? ""}\n`);
+    if (row.message !== undefined) process.stdout.write(`${" ".repeat(20)}“${row.message}”\n`);
+  }
+  process.stdout.write(`${String(rows.length)} request(s)\n`);
+}
+
+/** The request a write asks for; null clears. */
+function requestedNextAction(values: ParsedValues, value: string | undefined): NextActionRequest | null {
+  if (values.clear === true) {
+    if (value !== undefined || values.message !== undefined) throw new ConflictingNextActionError();
+    return null;
+  }
+  const action = value === undefined ? null : issueNextActionSchema.safeParse(value);
+  if (action !== null && !action.success) throw new InvalidNextActionValueError(issueNextActionSchema.options);
+  return { action: action?.data ?? null, message: values.message ?? null };
+}
+
+async function commandNextAction(values: ParsedValues, positionals: string[]): Promise<void> {
+  const [needle, value] = positionals;
+  const entries = await loadIssueEntries({ repoRoot: REPO_ROOT });
+  if (needle === undefined) {
+    await listNextActions(values, entries);
+    return;
+  }
+  const entry = resolveEntry(entries, needle);
+  const key = nextActionKey(entry.visibility, entry.slug);
+  const root = await nextActionsRoot(REPO_ROOT);
+  let state: IssueNextActionState | null;
+  if (values.clear === true || value !== undefined || values.message !== undefined) {
+    const request = requestedNextAction(values, value);
+    if (root === null) throw new NoNextActionStoreError();
+    state = await writeNextAction({ root, key, request });
+  } else {
+    state = (await readNextActions(root)).get(key) ?? null;
+  }
+  if (values.json === true) emitJson({ key, path: entry.path, nextAction: state });
+  else process.stdout.write(`${entry.path}: ${describeNextAction(state)}\n`);
+}
+
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -210,6 +280,7 @@ async function main(): Promise<void> {
     case "similar": return commandSimilar(values, rest);
     case "show": return commandShow(values, rest);
     case "activate-due": return commandActivateDue(values);
+    case "next-action": return commandNextAction(values, rest);
     default: throw new UnknownSubcommandError(command);
   }
 }

@@ -7,14 +7,14 @@
  * obvious command afterwards is a wasted round trip.
  *
  * Deliberately NOT a `bbx serve` startup gate — see the header of
- * src/core/annex/doctor.ts for why.
+ * src/core/annex/doctor/core.ts for why.
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { createGitAnnexService } from "../../services/git-annex.js";
-import { formatAnnexDoctor, runAnnexDoctor } from "../../core/annex/doctor.js";
+import { formatAnnexDoctor, runAnnexDoctor } from "../../core/annex/doctor/core.js";
 
 const annexSubcommand = new Command("annex")
   .description("Check (and by default repair) this box's git-annex configuration")

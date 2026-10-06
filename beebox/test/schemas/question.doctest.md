@@ -4,14 +4,14 @@ Question cards ask the user something and route the answer back for
 processing. An answer has two products: the immediate effect (`directive:`)
 and, optionally, durable knowledge the answer teaches (`learning:` — see
 `docs/implemented-plans/questions-end-to-end.md`). This covers the `input` cross-field
-refinement, the status/learning/expiry vocabulary, and the three template
+refinement, the lifecycle state, the learning/expiry vocabulary, and the three template
 builders. Round-trip answer behavior lives in
-`test/core/commands/answer-command.doctest.md`.
+`test/core/commands/answer.doctest.md`.
 
 ```ts setup
 import {
   QuestionSchema,
-  QuestionStatus,
+  questionState,
   createSelectQuestionTemplate,
   createTextQuestionTemplate,
   createConfirmQuestionTemplate,
@@ -22,7 +22,6 @@ const ASKED_AT = "2026-07-10T09:00:00-07:00";
 function baseFields(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     type: "question",
-    status: "pending",
     prompt: "What color?",
     input: { type: "text" },
     ...overrides,
@@ -73,20 +72,19 @@ QuestionSchema.frontmatterSchema.safeParse(baseFields({ input: { type: "confirm"
 => true
 ```
 
-## Status: pending, answered, dismissed, expired — expired/dismissed remain answerable, only the enum is checked here
+## State: read from which lifecycle timestamp the card carries
+
+`questionState` is the one place a question's state is derived. It also takes
+loose frontmatter, which the nav count reads without a full load.
 
 ```ts
-JSON.stringify(QuestionStatus.options)
-=> ["pending","answered","dismissed","expired"]
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "dismissed", "dismissed-at": ASKED_AT })).success
-=> true
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "expired", "expired-at": ASKED_AT })).success
-=> true
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "closed" })).success
-=> false
+[
+  baseFields(),
+  baseFields({ answer: { text: "Blue" }, "answered-at": ASKED_AT }),
+  baseFields({ "dismissed-at": ASKED_AT }),
+  baseFields({ "expired-at": ASKED_AT }),
+].map(questionState).join(", ")
+=> pending, answered, dismissed, expired
 ```
 
 ## `answered-by` is gone — an unknown key is stripped, not rejected
@@ -157,15 +155,11 @@ QuestionSchema.frontmatterSchema.safeParse(baseFields({ "asked-at": ASKED_AT }))
 QuestionSchema.frontmatterSchema.safeParse(baseFields({ "asked-at": "2026-07-10" })).success
 => false
 
-QuestionSchema.frontmatterSchema.safeParse(
-  baseFields({ status: "dismissed", "dismissed-at": ASKED_AT })
-).success
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ "dismissed-at": ASKED_AT })).success
 => true
 
-QuestionSchema.frontmatterSchema.safeParse(
-  baseFields({ status: "expired", "expired-at": ASKED_AT })
-).success
-=> true
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expired-at": "2026-07-10" })).success
+=> false
 ```
 
 ## Select template: sets `asked-at`, carries `learning`
@@ -183,7 +177,6 @@ createSelectQuestionTemplate({
 })
 =>
 ---
-status: pending
 memo: Context here
 prompt: What do you want?
 input:
@@ -213,7 +206,6 @@ createTextQuestionTemplate({
 })
 =>
 ---
-status: pending
 memo: Context
 prompt: What is this?
 input:
@@ -253,61 +245,36 @@ QuestionSchema.frontmatterSchema.safeParse(
 => true
 ```
 
-## Status/lifecycle coherence: each status owns exactly its own fields
+## Lifecycle coherence: at most one timestamp, and an answer only with `answered-at`
 
-`answered` requires `answer` + `answered-at`; `dismissed` requires
-`dismissed-at`; `expired` requires `expired-at`. A card must not carry another
-status's lifecycle fields — status is single.
-
-```ts
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "answered" })).success
-=> false
-
-QuestionSchema.frontmatterSchema.safeParse(
-  baseFields({ status: "answered", answer: { text: "Blue" }, "answered-at": ASKED_AT })
-).success
-=> true
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "dismissed" })).success
-=> false
-
-QuestionSchema.frontmatterSchema.safeParse(
-  baseFields({ status: "dismissed", "dismissed-at": ASKED_AT })
-).success
-=> true
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "expired" })).success
-=> false
-
-QuestionSchema.frontmatterSchema.safeParse(
-  baseFields({ status: "expired", "expired-at": ASKED_AT })
-).success
-=> true
-```
-
-A `pending` card must carry none of the terminal fields, and a terminal card
-must not carry a foreign status's timestamp:
+`answered-at` requires `answer`; `answer` and `answered-via` require
+`answered-at`; a card carries at most one of `answered-at`, `dismissed-at`,
+`expired-at`.
 
 ```ts
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ "answered-at": ASKED_AT })).success
+=> false
+
 QuestionSchema.frontmatterSchema.safeParse(
-  baseFields({ status: "pending", "expired-at": ASKED_AT })
+  baseFields({ answer: { text: "Blue" }, "answered-at": ASKED_AT, "answered-via": "web" })
+).success
+=> true
+
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ answer: { text: "x" } })).success
+=> false
+
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ "answered-via": "cli" })).success
+=> false
+
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({ answer: { text: "Blue" }, "answered-at": ASKED_AT, "dismissed-at": ASKED_AT })
 ).success
 => false
 
 QuestionSchema.frontmatterSchema.safeParse(
-  baseFields({ status: "pending", answer: { text: "x" } })
-).success
-=> false
-
-QuestionSchema.frontmatterSchema.safeParse(
-  baseFields({
-    status: "answered",
-    answer: { text: "Blue" },
-    "answered-at": ASKED_AT,
-    "dismissed-at": ASKED_AT,
-  })
-).success
-=> false
+  baseFields({ "dismissed-at": ASKED_AT, "expired-at": ASKED_AT })
+).error?.issues.map((issue) => issue.message).join("; ")
+=> "expired-at" must not appear with "dismissed-at"
 ```
 
 ## Confirm template: no options, `asked-at` still set
@@ -320,7 +287,6 @@ createConfirmQuestionTemplate({
 })
 =>
 ---
-status: pending
 memo: Context
 prompt: Is this right?
 input:
@@ -338,8 +304,7 @@ through to the builders. Validation is strict: a bad `expires-after` or a
 `learning` missing its `proposal` is rejected at the args boundary.
 
 ```ts setup
-import { getTemplate } from "../../src/schemas/templates-registry.js";
-import "../../src/schemas/templates-builtins.js";
+import { getTemplate } from "../../src/templates-registry.js";
 
 // Parse raw args through the template's own schema, then generate — exercising
 // both the argsSchema (accepts the contract fields) and the passthrough.

@@ -2,7 +2,7 @@
  * Shared internal types for the reactor module.
  */
 
-import type { createAgent as realCreateAgent } from "../agent/index.js";
+import type { createAgent as realCreateAgent } from "../agent/invoke/core.js";
 
 /** Parsed info about a single job card found on disk. */
 export interface JobCardInfo {

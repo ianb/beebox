@@ -67,5 +67,5 @@ real question is which existing shape wins:
 
 - [PDF at a URL into the commentary path](../features/2026-08-09-pdf-url-into-the-commentary-path.md)
   — the case that surfaced this; an ingested paper wants to record its origin.
-- `docs/adding-schemas.md` — where a shared field would need documenting.
+- `docs/cards/schemas.md` — where a shared field would need documenting.
 - `bbx-migration` skill — any change to an existing card's on-disk shape.

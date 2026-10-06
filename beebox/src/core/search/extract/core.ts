@@ -1,0 +1,350 @@
+/**
+ * Card → search-document extraction.
+ *
+ * Pure module: callers read files and pass content in; nothing here touches
+ * the filesystem. The indexer drives it in two phases:
+ *
+ *   1. `declareInputFiles(card)` — extra files (beyond the `.card` file)
+ *      whose content this card's documents are built from. The indexer
+ *      watches them in its manifest and passes their content back in.
+ *   2. `extractCardDocs(...)` — the card's search documents.
+ *
+ * Email bodies are deliberately NOT inputs: they live outside the card
+ * because the content is untrusted (see src/schemas/email-message.tsx) and
+ * indexing them would re-inject untrusted text into agent context via
+ * search excerpts. Mail is reached via subject/snippet/participants and the
+ * agent-written `contains`.
+ */
+
+import type { LoadedCard, FrontmatterLoadedCard } from "../../card-io.js";
+import { isRecord } from "../../card-io.js";
+import { resolveAttachRef } from "../../../shared/attach-path.js";
+import { titleFromFilename, truncateTitle } from "../../file-summary.js";
+import { cardTitle } from "../../loader-registry.js";
+import { splitMarkdownSections } from "./markdown-sections.js";
+import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
+
+/** One Orama document. `fragment` is "" for the card's own document. */
+export interface SearchDoc {
+  /** `<path>#<fragment>` — unique within the index. */
+  id: string;
+  path: string;
+  fragment: string;
+  kind: string;
+  title: string;
+  contains: string;
+  content: string;
+  contentHash: string;
+  /**
+   * The embedding vector, when this doc has one. Omitted (never `null`) for
+   * docs without one — Orama throws on an explicit `null` field, but skips
+   * inserting a key that's absent entirely. Extraction itself never sets
+   * this; the refresh pass adds it in a later remove/re-insert.
+   */
+  embedding?: number[];
+}
+
+/** Bodies longer than this split into per-section documents. */
+export const SECTION_SPLIT_THRESHOLD = 2000;
+
+/** The `kind` for standalone markdown files (not cards). */
+export const MARKDOWN_KIND = "markdown";
+
+/**
+ * The `kind` for the engine's reference docs shipped in the installed package
+ * (`node_modules/beebox/box-docs/`). Same extraction as `markdown`; the kind
+ * lets `--kind engine-doc` find "how does beebox do X" without card noise.
+ */
+export const ENGINE_DOC_KIND = "engine-doc";
+
+/** Whether a box-relative markdown path is one of the package's engine docs. */
+function isEngineDocPath(relPath: string): boolean {
+  return relPath.startsWith(`${BOX_PACKAGE_DOCS}/`);
+}
+
+const TITLE_MAX = 80;
+
+/**
+ * Kinds whose pipeline-maintained summary field doubles as the `contains`
+ * fallback (role separation: `description` stays the visual/file summary —
+ * alt text etc. — while also satisfying retrieval until an explicit
+ * `contains` is written).
+ */
+const CONTAINS_FALLBACK_FIELD: Record<string, string> = {
+  image: "description",
+  file: "description",
+};
+
+/**
+ * The card's effective `contains`: the explicit field, or the per-kind
+ * fallback. The single source for the index column, the staleness sidecar,
+ * and the missing-contains worklist — a described image is not "missing".
+ */
+export function effectiveContains(kind: string, fields: Record<string, unknown>): string {
+  const explicit = str(fields["contains"]);
+  if (explicit !== undefined) return explicit;
+  const fallbackField = CONTAINS_FALLBACK_FIELD[kind];
+  if (fallbackField === undefined) return "";
+  return str(fields[fallbackField]) ?? "";
+}
+
+/**
+ * Extra files this card's documents are built from (box-relative paths).
+ * Currently only gdocs declare one: the markdown content snapshot in the
+ * card's attach scope.
+ */
+export function declareInputFiles(input: { path: string; card: LoadedCard }): string[] {
+  const { path, card } = input;
+  if (card.schema.type !== "gdoc") return [];
+  const content = card.fields["content"];
+  const ref = isRefObject(content) ? content.ref : undefined;
+  if (ref === undefined) return [];
+  const resolved = resolveAttachRef(path, ref);
+  return resolved === null ? [] : [resolved];
+}
+
+export interface ExtractInput {
+  /** Box-relative card path. */
+  path: string;
+  card: LoadedCard;
+  /** Hash of the card file content (computed by the indexer). */
+  contentHash: string;
+  /** Content of each declared input file, keyed by box-relative path. */
+  inputContents?: Map<string, string>;
+}
+
+/**
+ * Extract the search documents for one card: the card document plus
+ * per-section documents when the body is long.
+ */
+export function extractCardDocs(input: ExtractInput): SearchDoc[] {
+  const { path, card, contentHash } = input;
+  const fields = card.fields;
+  const kind = card.schema.type;
+  const fold = foldFields(kind, fields);
+  // The same title the card lists under (its `title:`, else its type's
+  // derived title, else the filename).
+  const title = truncateTitle(
+    cardTitle({ path, type: kind, fields }, card.schema).replace(/\s+/g, " ").trim(),
+    TITLE_MAX
+  );
+  const contains = effectiveContains(kind, fields);
+
+  const bodyText = bodyTextFor(card, input);
+  const base = { path, kind, title, contains, contentHash };
+
+  if (bodyText.length <= SECTION_SPLIT_THRESHOLD) {
+    const content = joinContent([...fold.extra, bodyText]);
+    return [{ ...base, id: docId(path, ""), fragment: "", content }];
+  }
+
+  const { preamble, sections } = splitMarkdownSections(bodyText);
+  const cardDoc: SearchDoc = {
+    ...base,
+    id: docId(path, ""),
+    fragment: "",
+    content: joinContent([...fold.extra, preamble]),
+  };
+  const sectionDocs = sections.map((s): SearchDoc => ({
+    ...base,
+    id: docId(path, s.fragment),
+    fragment: s.fragment,
+    content: normalizeContent(s.text),
+  }));
+  return dedupeDocIds([cardDoc, ...sectionDocs]);
+}
+
+function docId(path: string, fragment: string): string {
+  return `${path}#${fragment}`;
+}
+
+/**
+ * Repeated headings produce identical fragment paths; ids must be unique
+ * within the index, so duplicates get a ~N suffix.
+ */
+function dedupeDocIds(docs: SearchDoc[]): SearchDoc[] {
+  const seen = new Map<string, number>();
+  return docs.map((d) => {
+    const n = seen.get(d.id) ?? 0;
+    seen.set(d.id, n + 1);
+    if (n === 0) return d;
+    const fragment = `${d.fragment}~${String(n + 1)}`;
+    return { ...d, fragment, id: docId(d.path, fragment) };
+  });
+}
+
+/**
+ * Extract documents for a standalone markdown file (kind "markdown", or
+ * "engine-doc" under the package docs directory): title from the first heading, same section-splitting rules as card
+ * bodies, no contains.
+ */
+export function extractMarkdownFileDocs(input: {
+  path: string;
+  content: string;
+  contentHash: string;
+}): SearchDoc[] {
+  const { path, content, contentHash } = input;
+  const heading = content.match(/^#{1,6}\s+(.+)$/m);
+  const title = truncateTitle(
+    firstNonEmpty([heading?.[1], titleFromFilename(path)]).replace(/\s+/g, " ").trim(),
+    TITLE_MAX
+  );
+  const kind = isEngineDocPath(path) ? ENGINE_DOC_KIND : MARKDOWN_KIND;
+  const base = { path, kind, title, contains: "", contentHash };
+
+  if (content.length <= SECTION_SPLIT_THRESHOLD) {
+    return [{ ...base, id: docId(path, ""), fragment: "", content: normalizeContent(content) }];
+  }
+  const { preamble, sections } = splitMarkdownSections(content);
+  return dedupeDocIds([
+    { ...base, id: docId(path, ""), fragment: "", content: normalizeContent(preamble) },
+    ...sections.map((s): SearchDoc => ({
+      ...base,
+      id: docId(path, s.fragment),
+      fragment: s.fragment,
+      content: normalizeContent(s.text),
+    })),
+  ]);
+}
+
+/** The markdown text a card's content documents are built from. */
+function bodyTextFor(card: FrontmatterLoadedCard, input: ExtractInput): string {
+  if (card.schema.type === "gdoc") {
+    const declared = declareInputFiles({ path: input.path, card });
+    const first = declared[0];
+    if (first === undefined) return "";
+    return input.inputContents?.get(first) ?? "";
+  }
+  const bodyName = card.schema.bodyFieldName;
+  if (bodyName === null) return "";
+  const body = card.fields[bodyName];
+  return typeof body === "string" ? body : "";
+}
+
+interface FoldResult {
+  /** Frontmatter text folded into the card document's content. */
+  extra: string[];
+}
+
+/** Per-kind frontmatter folding into searchable text. */
+function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
+  switch (kind) {
+    case "email-thread":
+      return {
+        extra: compact([
+          str(path2(fields["email"], "subject")),
+          ...strArray(path2(fields["email"], "participants")),
+          ...strArray(path2(fields["email"], "labels")),
+        ]),
+      };
+    case "email-message":
+      // The body file is deliberately excluded — see module doc.
+      return {
+        extra: compact([
+          str(path2(fields["email"], "subject")),
+          str(path2(fields["email"], "from")),
+          str(path2(fields["email"], "to")),
+          str(path2(fields["email"], "snippet")),
+        ]),
+      };
+    case "person":
+      return {
+        extra: compact([
+          str(fields["name"]),
+          str(fields["role"]),
+          str(fields["email"]),
+          str(fields["phone"]),
+          str(fields["address"]),
+        ]),
+      };
+    case "record":
+      return {
+        extra: compact([str(fields["name"]), str(fields["description"]), str(fields["notes"])]),
+      };
+    case "image":
+      // text: carries the OCR'd content the analysis step keeps (amounts,
+      // account numbers, names) — the needles people search for.
+      return {
+        extra: compact([str(fields["description"]), ...textBlockContents(fields["text"])]),
+      };
+    case "file":
+      return { extra: compact([str(fields["description"])]) };
+    case "gsheet":
+      return { extra: tabTitles(fields["sheets"]) };
+    case "telegram-message":
+      return { extra: compact([str(fields["text"])]) };
+    default:
+      return { extra: [] };
+  }
+}
+
+function isRefObject(value: unknown): value is { ref: string } {
+  return isRecord(value) && typeof value["ref"] === "string";
+}
+
+function str(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}
+
+function strArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === "string" && v.trim() !== "");
+}
+
+function path2(value: unknown, key: string): unknown {
+  if (!isRecord(value)) return undefined;
+  return value[key];
+}
+
+function textBlockContents(text: unknown): string[] {
+  if (!Array.isArray(text)) return [];
+  const contents: string[] = [];
+  for (const block of text) {
+    const content = str(path2(block, "content"));
+    if (content !== undefined) contents.push(content);
+  }
+  return contents;
+}
+
+function tabTitles(sheets: unknown): string[] {
+  if (!Array.isArray(sheets)) return [];
+  const titles: string[] = [];
+  for (const tab of sheets) {
+    const title = str(path2(tab, "title"));
+    if (title !== undefined) titles.push(title);
+  }
+  return titles;
+}
+
+function compact(values: Array<string | undefined>): string[] {
+  return values.filter((v): v is string => v !== undefined);
+}
+
+function firstNonEmpty(values: Array<string | undefined>): string {
+  for (const v of values) {
+    if (v !== undefined && v.trim() !== "") return v;
+  }
+  return "";
+}
+
+function joinContent(parts: string[]): string {
+  return normalizeContent(
+    parts
+      .map((p) => p.trim())
+      .filter((p) => p !== "")
+      .join("\n")
+  );
+}
+
+/**
+ * Split unbroken character runs longer than 64 chars. Nobody searches a
+ * 64+ char token (they're OCR mash like "ReturnOMB No.1545-00742025Dept..."),
+ * and Orama's radix tree nests per character — runs past ~100 chars blow
+ * msgpack's depth limit when the index persists.
+ *
+ * Exported for the chat-transcript extractor, whose chunk contents face the
+ * same radix-tree constraint.
+ */
+export function normalizeContent(text: string): string {
+  return text.trim().replace(/\S{64}/g, "$& ");
+}

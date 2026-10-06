@@ -1,19 +1,19 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type LintIssue } from "../cards/index.js";
+import { body, cardSchema, type LintIssue } from "../exports/cards.js";
 import {
   capturedTabSet,
   tabArrangementProposal,
   tabTransferScope,
-} from "../webapp/trpc/routers/clerk-contract.js";
+} from "../webapp/trpc/clerk-contract.js";
 
 interface ArrangementFields {
-  source: z.infer<typeof capturedTabSet>;
+  capturedTabs: z.infer<typeof capturedTabSet>;
   proposal: z.infer<typeof tabArrangementProposal>;
 }
 
 export function arrangementIssues(fields: ArrangementFields): LintIssue[] {
-  const sourceTabs = fields.source.windows.flatMap((window) => window.tabs);
+  const sourceTabs = fields.capturedTabs.windows.flatMap((window) => window.tabs);
   const sourceIds = new Set(sourceTabs.map((tab) => tab.id));
   const arranged = fields.proposal.windows.flatMap((window) => window.tabs);
   const arrangedIds = new Set<string>();
@@ -45,7 +45,7 @@ export function arrangementIssues(fields: ArrangementFields): LintIssue[] {
     issues.push({
       type: "validation",
       severity: "error",
-      message: "every source tab must appear in exactly one proposed window; deleted tabs must also be listed in close",
+      message: "every captured tab must appear in exactly one proposed window; deleted tabs must also be listed in close",
     });
   } else if (annotated) {
     for (const id of closedIds) {
@@ -77,15 +77,16 @@ export function arrangementIssues(fields: ArrangementFields): LintIssue[] {
 }
 
 function validatedArrangementIssues(fields: Record<string, unknown>): LintIssue[] {
-  const source = capturedTabSet.safeParse(fields["source"]);
+  const capturedTabs = capturedTabSet.safeParse(fields["captured-tabs"]);
   const proposal = tabArrangementProposal.safeParse(fields["proposal"]);
   // The card schema reports field-level Zod errors separately. Cross-field
   // checks only run once both halves have a usable shape.
-  if (!source.success || !proposal.success) return [];
-  return arrangementIssues({ source: source.data, proposal: proposal.data });
+  if (!capturedTabs.success || !proposal.success) return [];
+  return arrangementIssues({ capturedTabs: capturedTabs.data, proposal: proposal.data });
 }
 
 export const TabArrangementSchema = cardSchema("tab-arrangement", {
+  brief: "A captured set of tabs",
   description: "A Clerk-captured tab set and an identity-preserving proposal for arranging it",
   category: "synced",
   validate: ({ fields }) => validatedArrangementIssues(fields),
@@ -93,28 +94,30 @@ export const TabArrangementSchema = cardSchema("tab-arrangement", {
     "transfer-id": z.string().uuid(),
     scope: tabTransferScope,
     "captured-at": z.string().datetime(),
-    source: capturedTabSet,
+    // The tabs as captured: the "before" that `proposal` rearranges.
+    "captured-tabs": capturedTabSet,
     proposal: tabArrangementProposal,
-    status: z.enum(["draft", "ready"]).default("draft"),
+    // The boxholder agreed the proposal; absent means it is still a draft.
+    ready: z.boolean().optional(),
     body: body(z.string()),
   },
   instructions: `# Tab Arrangement Cards
 
 A tab arrangement card is a captured browser snapshot sent by Bee Box Clerk.
 Help the boxholder reorganize it by editing only the \`proposal\` and explanatory
-body. Preserve every source tab UUID: each UUID must appear exactly once
+body. Preserve every captured tab UUID: each UUID must appear exactly once
 in one proposed window's ordered \`tabs\` list. Mark tabs to delete by also adding
 their UUIDs to \`close\`; keep those UUIDs in their proposed window and roughly in
 place so the boxholder can review them in context. Never replace a UUID with a
-URL. Existing source window UUIDs preserve those windows; a new UUID creates a
+URL. Existing captured window UUIDs preserve those windows; a new UUID creates a
 new window. Keep pinned tabs before unpinned tabs in each window, and leave at
 least one tab open.
 
-Set \`status: ready\` only when the boxholder agrees the proposal is ready to
+Set \`ready: true\` only when the boxholder agrees the proposal is ready to
 apply. Applying is always a separate, explicit action in the card viewer. Clerk
 will refuse the whole change before mutation if the live tabs no longer exactly
 match the captured snapshot. Do not edit \`transfer-id\`, \`scope\`,
-\`captured-at\`, or \`source\`.
+\`captured-at\`, or \`captured-tabs\`.
 `,
 });
 
@@ -129,9 +132,8 @@ export function createTabArrangementCard(input: {
     "transfer-id": input.transferId,
     scope: input.scope,
     "captured-at": input.capturedAt,
-    source: input.source,
+    "captured-tabs": input.source,
     proposal: input.proposal,
-    status: "draft",
   });
   return `---\n${frontmatter}---\n\nCaptured by Bee Box Clerk. Revise the proposal with the boxholder before applying.\n`;
 }

@@ -10,14 +10,17 @@ import type {
   HookCallbackMatcher,
   HookJSONOutput,
 } from "@anthropic-ai/claude-agent-sdk";
-import { formatLintResults } from "../cards/index.js";
+import { formatLintResults } from "../exports/cards.js";
 import { customLinkRules, linkRuleConfig } from "./markdown-lint-rules.js";
-import { lintCardsDispatch } from "./card-lint.js";
+import { lintCardsDispatch } from "./card-lint/core.js";
 import { buildLoadContext } from "./load-context.js";
-import { isViewFile, findBoxRoot } from "../lib/paths.js";
-import { lintViewFile } from "../webapp/views/compiler.js";
+import { dirname } from "node:path";
+import { isViewFile, isViewSourceFile, findBoxRoot } from "../lib/paths/core.js";
+import { lintViewFile } from "../webapp/views/compiler/compile.js";
+import { lintViewMarkdown } from "./views/markdown-check/core.js";
 import { isRecord } from "./card-io.js";
 import { isBuiltinLintableMarkdown } from "./list-cards.js";
+import { connectorOwnedEditWarning, isConnectorOwnedMarkdown } from "./connector-owned-markdown.js";
 
 function markdownConfig(boxRoot: string): Record<string, unknown> {
   return { default: false, MD009: true, MD037: true, MD038: true, MD047: true, ...linkRuleConfig(boxRoot) };
@@ -52,16 +55,18 @@ export function cardValidatorHook(): HookCallbackMatcher {
         const filePath = extractFilePath(post.tool_input);
         if (filePath === null) return {};
 
-        // Agent-authored view: compile-check it (syntax/JSX/imports).
-        if (isViewFile(filePath)) {
-          const err = await lintViewFile(filePath);
-          if (err === null) return {};
-          return {
-            hookSpecificOutput: {
-              hookEventName: "PostToolUse",
-              additionalContext: `View compile error for ${filePath}:\n${err}`,
-            },
-          };
+        // Agent-authored view: compile-check it (syntax/JSX/imports), then
+        // require card text to render through `Markdown` — in the view and in
+        // the local helpers it imports. A helper under views/ gets the
+        // Markdown check alone.
+        if (isViewSourceFile(filePath)) {
+          const err = isViewFile(filePath) ? await lintViewFile(filePath) : null;
+          const compileError = err === null ? null : `View compile error for ${filePath}:\n${err}`;
+          const root = (await findBoxRoot(dirname(filePath))) ?? dirname(filePath);
+          const markdownErr = compileError === null ? await lintViewMarkdown(filePath, { root }) : null;
+          const additionalContext = compileError ?? (markdownErr === null ? null : `View error for ${filePath}:\n${markdownErr}`);
+          if (additionalContext === null) return {};
+          return { hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext } };
         }
 
         // Tricks dir layout enforcement.
@@ -82,6 +87,19 @@ export function cardValidatorHook(): HookCallbackMatcher {
             hookSpecificOutput: {
               hookEventName: "PostToolUse",
               additionalContext: additional,
+            },
+          };
+        }
+
+        // A two-way-synced card's markdown is a mirror of an upstream document,
+        // and whatever is on disk gets pushed back out. Say so instead of
+        // linting it — lint on connector output is what provoked the edit that
+        // destroyed two Google Docs.
+        if (await isConnectorOwnedMarkdown(filePath)) {
+          return {
+            hookSpecificOutput: {
+              hookEventName: "PostToolUse",
+              additionalContext: connectorOwnedEditWarning(filePath),
             },
           };
         }

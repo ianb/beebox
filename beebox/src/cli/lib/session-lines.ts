@@ -19,7 +19,7 @@
  *   enormous text turn. The raw line rides along for the one caller that makes
  *   a placeholder out of it; everything else skips it.
  *
- * **What this still does not bound:** the raw line itself. `readline` builds the
+ * **What this still does not bound:** the raw line itself. The line reader builds the
  * whole 1.3 MB string before anything can measure it. What the guard removes is
  * the object graph `JSON.parse` would build from it — the multiplier, not the
  * line. Removing the line too means reading the file in chunks and eliding
@@ -28,8 +28,8 @@
  */
 
 import * as fs from "node:fs";
-import * as readline from "node:readline";
 import { isOversizeLine, stripInlineMedia } from "./session-oversize.js";
+import { jsonlLines } from "../../lib/jsonl-lines.js";
 
 /** One line of a transcript, already measured against the byte bound. */
 export type TranscriptLine =
@@ -43,15 +43,14 @@ export type TranscriptLine =
  *
  * Breaking out of the loop early is expected — `readFirstUserSnippet` stops at
  * the first real user message, and the whole point there is not reading the
- * rest. The generator's `finally` closes the interface and destroys the handle,
+ * rest. The generator's `finally` destroys the handle,
  * so an early exit cannot leave the file open until GC.
  */
 export async function* readTranscriptLines(logPath: string): AsyncGenerator<TranscriptLine> {
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
   let lineNumber = 0;
   try {
-    for await (const line of rl) {
+    for await (const line of jsonlLines(fileStream)) {
       lineNumber += 1;
       if (!isOversizeLine(line)) {
         yield { kind: "parseable", lineNumber, text: line, mediaStripped: false };
@@ -67,7 +66,6 @@ export async function* readTranscriptLines(logPath: string): AsyncGenerator<Tran
       yield { kind: "parseable", lineNumber, text: stripped, mediaStripped: true };
     }
   } finally {
-    rl.close();
     fileStream.destroy();
   }
 }

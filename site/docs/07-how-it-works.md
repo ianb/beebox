@@ -31,10 +31,11 @@ trace why something moved. The agent reads that history too.
 installed directly or run in an isolated container. The box is your data and
 can be updated or moved independently.
 
-**The agent runs with real capabilities.** The agent that runs inside a box
-has full permissions: no list of allowed actions restricts what it can do. It
-can run any command on the machine and read or write any file in the box.
-Read [security/overview.md](security/overview.md) before deciding.
+**The agent works with real tools.** Inside a box it can run commands and
+read or write files, the same access a coding agent has in a code
+repository; that is what lets it build things and act rather than only
+answer. What this means for your data is on
+[your data and safety](10-your-data-and-safety.md).
 
 **The wakeup cycle.** A **wakeup** is one pass: preprocess inbox items, run
 housekeeping and any scheduled tasks, sync connected services, create a job

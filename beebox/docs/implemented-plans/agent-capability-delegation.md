@@ -4,7 +4,7 @@ status: implemented
 workstream: agent-capability-delegation
 issues:
   - ../../../issues/features/2026-07-20-agent-containment-allowed-directories.md
-  - ../../../issues/features/2026-07-20-schedules-off-by-default.md
+  - ../../../issues/closed/features/2026-07-20-schedules-off-by-default.md
 ---
 # Agent self-configuration of credentialed connectors (Drive first)
 

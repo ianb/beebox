@@ -14,7 +14,7 @@ resolution: implemented
 submission's image bytes into an attach scope and stages at `:195-199` by
 naming the *directory*. `git add <dir>` silently skips ignored contents, so on
 a manifest-scheme box the stock asset-ignore block
-(`GITIGNORE_BLOCK`, `src/core/commands/attachments-gitignore.ts`) drops every
+(`GITIGNORE_BLOCK`, `src/core/commands/attachments-gitignore.ts` (moved to `beebox/src/core/attachments-gitignore.ts`)) drops every
 asset byte: they are not committed, not in a `manifest.json` (nothing on this
 path calls `saveManifest`), and not in `git status`. Exit code 0.
 

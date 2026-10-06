@@ -7,6 +7,7 @@ labels: [craft, principles]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "what code is longer than it needs to be, protecting against something that isn't that important or likely, or handling a situation that is impossible"
+priority: normal
 ---
 
 The boxholder's framing: *"What can we remove? What code is longer than it needs

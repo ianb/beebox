@@ -1,12 +1,45 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-03
-model: claude-fable-5-1
-reviewed-by: Ian
+generated-at-rev: c8428cca5
+date: 2026-10-02
+model: claude-sonnet-5-5
+reviewed-by: Ian Bicking
 ---
 
 # Security overview
+
+**Scoped amendment (2026-09-21), reviewed by Ian:** Quick chat only, against
+`34eaa95fc3f9a48d29f4e2d32c6e8aab3e3de04b`. The unchanged `generated-at-rev` remains the
+previous full-inventory anchor. Unrelated historical changes, the private
+security tier, and the complete surface map were not re-audited.
+
+**Scoped amendment (2026-09-24; DRAFT — unreviewed):** Updates managed site
+publishing authority and Cloudflare credential custody against
+`aa084d01ebdee12e2e88d210c2c5a5c85b7cc294` plus the uncommitted publish-pages
+worktree. This is not a full security-report refresh.
+
+**Scoped amendment (2026-09-25; DRAFT — unreviewed):** Adds owner-only custom
+hostname assignment: DNS and certificate changes can begin while the site is
+disabled, and a signed-in member separately approves the destination. An
+uncertain attachment stays pending and blocks approval/enable. The preflight
+checks Worker Custom Domain assignments, not existing DNS records or Workers
+Routes, and a hostname reservation cannot be released from Bee Box, even after
+manual Cloudflare detach. HTTPS readiness and the least-privilege token
+permissions have not been live-tested; the full inventory anchor remains
+unchanged.
+
+**Scoped amendment (2026-09-26; DRAFT — unreviewed):** Replaces per-publication
+hostname setup with one shared hostname and Worker per box. Pages in one box
+share browser origin, storage, and same-origin script access by explicit
+boxholder decision; CORS and iframes do not provide isolation. New public paths
+are `/<slug>/` and secret-link paths are `/s/<pubId>/`. Existing per-publication
+URLs remain compatible, while account-restricted managed sites stay blocked.
+Cloudflare hostname permission requirements and live HTTPS readiness remain
+unverified.
+
+**Scoped amendment (2026-09-28), reviewed by Ian:** Adds opt-in admitted-document
+triage and replay against `5844a1024`. Unrelated security surfaces and the
+private tier were not re-audited; the full-inventory anchor remains unchanged.
 
 beebox is a personal assistant that a Claude Code agent operates on
 your behalf: it reads your email, listens to your voice memos, edits your
@@ -63,8 +96,12 @@ the box directory, and no current call site widens it beyond that — but
 the scope parameter itself is unguarded caller input, and either way it
 is a convention the agent operates within, not a sandbox that contains
 it. Treat "what can the agent do" and "what can beebox do" as the
-same question. On fresh boxes, scheduled agent runs are off by default —
-nothing runs until you turn it on.
+same question. On a server or in the Docker image it can also install
+distro packages as root through one validating wrapper, which allows only
+additive installs from the distro sources and refuses packages that add
+services, root jobs, privilege grants or setuid files; the packages'
+install scripts still run as root. On fresh boxes, scheduled agent runs are
+off by default — nothing runs until you turn it on.
 
 ## Prompt injection — the risk we most want you to understand
 
@@ -81,10 +118,12 @@ We're telling you this plainly because the honest mitigations today are
 thin. There is no injection filter and no containment sandbox. What
 actually reduces the risk is the shape of how you run it: it's your own
 single-operator box (the blast radius is your data, not a stranger's),
-scheduled processing is off until you enable it, and the few dangerous
-actions — publishing, changing credentials — refuse to happen without a
-human present. That's a real posture, but it's mitigation-by-how-you-
-deploy, not a guarantee the agent can't be turned against you. Tighter
+scheduled processing is off until you enable it, and account credentials
+are managed outside the box agent's API. A signed-in box member approves a
+site's first enable and any audience or destination change; after that the
+agent may publish content updates within the approved scope. This is a real
+permission boundary at the app API, not a sandbox against hostile code running
+as the same OS user. Tighter
 containment is
 [tracked](../../issues/features/2026-07-20-agent-containment-allowed-directories.md)
 and not yet built. Until it is, be deliberate about which untrusted
@@ -112,6 +151,20 @@ The summary:
   A generic adapter proxy can also forward requests to Replicate,
   Mistral, Anthropic, or OpenAI with the box's stored key — used by
   box-local code, never automatically.
+- **OpenRouter → TypeSafe** — Quick chat sends your message, destination
+  rules, conversation labels and identifiers, and bounded recent conversation
+  text to Jev to choose where the message goes. It uses the box's granted
+  OpenRouter key, pins TypeSafe with fallback disabled, and requests no data
+  collection. This is not a zero-retention guarantee. Avoid Quick chat or omit
+  that key grant to avoid this egress; ordinary direct chat remains available.
+  Quick chat sends to the selected conversation before showing the result.
+  Destination links stage the original text in another chat; they cannot undo
+  agent actions. Opt-in document triage and replay also send prepared admitted
+  document and attachment text plus filing rules; replay makes a fresh paid
+  call. Preparation can use existing OCR/vision services, and unclear cases can
+  involve the full box agent. Applied triage receipts retain prepared text and
+  effective rules until deleted; deleting the source alone does not erase them.
+  Gmail filtering before import is not part of this pipeline.
 - **Google** — if you connect it: Gmail (read + **drafts only** — the
   code requests no send scope, so autonomous email sending is
   impossible today), Calendar (two-way), Drive/Sheets/Docs (two-way,
@@ -122,10 +175,14 @@ The summary:
   (Google/Mozilla/Apple).
 - **Your git remote** — every wakeup pushes the box's full history to
   the remote *you* configured; no remote, no push.
-- **Cloudflare** — only if you set up publishing. `bbx pub setup` itself
-  calls Cloudflare's API to provision buckets and deploy the worker (no
-  box content); box content uploads only when you interactively confirm
-  a publish (below).
+- **Cloudflare** — if configured, the server uses its machine-held API token
+  to provision one shared Worker and R2 bucket per publishing box, upload
+  release files after `bbx pub prepare <name>`, and attach the box's
+  Admin-selected hostname. A member enables a new site or approves a scope
+  change; same-scope content refreshes can publish immediately. Managed
+  account-restricted sites remain blocked pending a separate design. DNS and
+  certificate work begins when the box owner assigns the hostname. HTTPS
+  readiness and provider permissions have not been live-verified.
 - **Nothing else.** The running system sends no telemetry, analytics,
   crash reports, or update checks — verified absent, not just
   unpromised. (The monorepo's developer maintenance scripts in `bin/`
@@ -152,24 +209,32 @@ probe (a hash and a flag), the login/static assets needed to reach the
 login page, and — for its 15-minute first-run window — the setup route,
 gated by a token printed only to the server console. Everything else
 that skips the session wall carries its own dedicated credential
-(Telegram webhook secret, diagnostic bearer key, Cloudflare Access JWT).
+(Telegram webhook secret, diagnostic bearer key).
 The full route-by-route table is
 [§1 of the structured report](security-report.md#1-endpoints-auth-abilities).
 
 ## Publishing
 
-Publishing a document is the one flow that deliberately makes box
-content public, so it gets its own controls: a leak scan runs before
-anything enters git history, and flipping a publication live requires a
-human typing a confirmation at an interactive terminal — an agent can't
-do it through the blessed path. Be clear about two things the design
-says out loud: the leak scan is a **backstop, not a gate** (it can't
-read prose or the inside of images — the file-by-file preview you
-confirm is the real control), and a published bundle is **fully public
-content** regardless of tier. Tiers gate who can *reach* a page —
-`secret` means an unguessable capability URL with no login, `accounts`
-means Cloudflare Access with an email allowlist — not what a viewer does
-with it after loading it.
+Managed static-site publishing deliberately exposes selected box content.
+Each box has one Admin-configured hostname and shared Worker; public paths use
+`/<slug>/` and secret-link paths use `/s/<pubId>/`. Before first enablement or
+a scope change, a signed-in member reviews the requested audience, destination,
+file summary, and leak-scan findings in the app. That grant permits subsequent
+content updates in the same scope without per-snapshot approval. The agent can
+build and prepare; a changed audience or destination cannot go live until a
+member approves it. The boxholder explicitly accepts that pages published by
+one box share browser origin, storage, and same-origin script access. CORS does
+not separate those pages; no iframe or per-publication origin isolation is
+provided. Treat publications in one box as mutually trusting. DNS/certificate
+effects begin when the owner configures the host, before any page is enabled.
+Static sites render Markdown to HTML at prepare time, reject box component
+tags, and omit `redacted` content; the leak scan runs over that rendered output.
+Leak scanning is a backstop, not a guarantee that content is appropriate or
+free of secrets. The older draft/`go` publication flow, its submission intake,
+and its separate R2 ingestion credential no longer exist; the Worker is
+read-only. Public and secret-link bundles are fully public to anyone with the URL; a secret URL is a bearer
+capability, not a login. Managed account-restricted publication is not ready
+pending a separate consent and security design.
 
 ## Known limitations and accepted risks
 
@@ -188,6 +253,17 @@ The ones you should actually weigh:
   The owner's own recovery is still `bbx auth set-password` on the host;
   full email self-service reset was rejected as operationally complex,
   and MFA/passkeys are deferred.
+- **Managed-site code and same-user trust**: project install/build scripts
+  run as trusted box code with existing filesystem privileges. The child
+  process environment omits server credentials, but a same-OS-user process
+  can read the machine secret store. Site JavaScript may load author-chosen
+  HTTPS modules/resources; CSP and cross-origin response policy do not isolate
+  pages on the box's shared origin. Same-origin JavaScript can read or change
+  shared web storage and request other publication paths, including a known
+  secret-link path. The boxholder accepted mutual trust among publications in
+  one box; malicious approved code can exploit that trust. See the accepted
+  publishing trust tradeoff in
+  [§8 of the structured report](security-report.md#8-accepted-risks-roll-up).
 - **One Google token, broad scopes, all boxes**: per-box service policy
   is enforced in application code, not by Google. Compromise of the
   token file is fleet-wide Google access

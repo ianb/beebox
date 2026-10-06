@@ -1,5 +1,5 @@
 import { loadLandmarkSummaries } from "../../landmark/summaries.js";
-import { loadAllSessions } from "./list.js";
+import { loadAllSessions } from "./list/core.js";
 
 export const CHAT_FRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 

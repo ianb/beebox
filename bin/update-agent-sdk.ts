@@ -29,7 +29,7 @@
  *
  * After a bump, run:
  *   pnpm -C beebox test
- *   node --import tsx beebox/scripts/sdk-steering-probe.ts   (real API calls; SDK bumps)
+ *   node --import tsx beebox/src/scripts/sdk-steering-probe.ts   (real API calls; SDK bumps)
  * then commit. Prod picks the new version up on the next main-merge deploy
  * (the lockfile change triggers a clean reinstall on the server).
  */

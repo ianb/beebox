@@ -1,5 +1,5 @@
 // Generated docs (plan: "Sources", Generated row): the engine's reference doc
-// set, exported by `beebox/scripts/export-box-docs.ts` as JSON with no
+// set, exported by `beebox/src/scripts/export-box-docs.ts` as JSON with no
 // filesystem side effect. `card-<type>.md` becomes `reference/cards/<type>.md`;
 // every other file becomes `reference/<filename>`. Every doc still passes the
 // scrub gate — a pure function of the engine source can still quote a real
@@ -48,7 +48,7 @@ export function loadGeneratedDocs(params: { beeboxDir: string; repoRoot: string;
   const { beeboxDir, repoRoot, base } = params;
   let raw: string;
   try {
-    raw = execFileSync("pnpm", ["--dir", beeboxDir, "exec", "tsx", "scripts/export-box-docs.ts"], {
+    raw = execFileSync("pnpm", ["--dir", beeboxDir, "exec", "tsx", "src/scripts/export-box-docs.ts"], {
       encoding: "utf8",
       maxBuffer: 64 * 1024 * 1024,
     });

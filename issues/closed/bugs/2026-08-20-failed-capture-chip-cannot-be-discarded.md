@@ -6,7 +6,6 @@ labels: [capture, chat, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder found a months-old failed capture in chat
-next-action: fixed
 resolution: implemented
 ---
 
@@ -85,7 +84,7 @@ grows a second verb.
 **The discard plumbing is nearly all present.** `cancelCaptureSession` already
 exists client-side (`src/frontend/src/pages/capture/capture-api.ts:300`),
 `DELETE /api/capture/sessions/:id` already exists
-(`src/webapp/routes/capture.ts:185`), and
+(`src/webapp/routes/capture.ts:185` (moved to `beebox/src/webapp/routes/capture/register.ts`)), and
 `discardStagingSessionIfCancellable` explicitly permits this state — "an `open`
 batch is still uploading and a `failed:*` one is dead, so both may be thrown
 away" (`core/capture/staging-teardown.ts`). Adding the verb is mostly UI.

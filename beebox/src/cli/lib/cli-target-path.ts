@@ -24,7 +24,7 @@ import {
   displayFormPathMessage,
   type DisplayFormPathMatch,
 } from "../../shared/display-path.js";
-import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
+import { BOX_ROOT_VOCABULARY } from "../../shared/box-root-vocabulary.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
 
 const AREA_NAMES: ReadonlySet<string> = new Set(

@@ -1,107 +1,67 @@
 /**
- * The `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track 5b): a
- * deterministic wakeup-housekeeping hook, following the `question-aging.ts`
- * precedent — resurfacing needs a call site, not just guidance.
+ * The `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track
+ * 5b). Since `docs/plans/todos-ui.md` Track 7 it runs as the precheck of the
+ * stock `todo-review` procedure (`bbx engine todo-review check`,
+ * `review-check.ts`) on its own daily schedule, not inside `bbx wakeup`.
  *
- * Runs the collector and computes three sets of *open* todos:
+ * Runs the todo collection box-wide (`core/todo/query.ts`, the same runner
+ * `bbx query todos` and the web list use) and computes four sets of *open*
+ * todos, leaving out any todo whose `recheck` is `never` or still ahead:
  * - **escalated** — past `due`.
- * - **stirring** — crossed `start` since the last sweep (a durable
- *   box-local-date baseline, persisted the same way the questions sweep
- *   persists its latch — see `question-alert.ts`'s `.beebox/…json`
- *   precedent). Only this set needs a baseline: escalated and stale are
- *   recomputed fresh every pass, so re-running the sweep with nothing new
- *   correctly reports nothing new for THIS set without extra bookkeeping.
+ * - **stirring** — crossed `start` since the last sweep. The baseline is the
+ *   sweep's own (`lastSweepDateEpoch`, `review-state.ts`), handed to the
+ *   runner as the query's `since`; the collection derives `stirring` from
+ *   it. Only this set needs a baseline: escalated and stale are recomputed
+ *   fresh every pass.
+ * - **actionable** — open, assigned to the agent, and on-plate. Fresh todos
+ *   enter this set on the next precheck without needing an invented date.
  * - **stale** — open, has `created`, is more than 45 days old, and has
  *   neither `start` nor `due` (so it never even entered the escalated/
  *   stirring math).
  *
- * When all three are empty, the sweep does nothing and injects nothing —
- * no job card, no console output. When any is nonempty, it queues a
- * `todo-review-job` card (mirroring the contains-backfill job's "wakeup
- * housekeeping step queues a job the reactor picks up" pattern — the
- * shipped precedent for getting a compact brief into the reactor's next
- * cycle without inventing a new channel) UNLESS a `todo-review` job is
- * already pending, so a slow-to-process brief doesn't get restated every
- * wakeup. The sweep only computes; the job's own instructions are what
- * tell the agent to judge and raise with the boxholder, never to silently
- * resolve anything (Track 5's "the sweep computes, the agent judges, the
- * human decides").
+ * The sweep only computes. `review-check.ts` turns the sets into the brief the
+ * procedure's agent works from, and the brief's instructions say what it may
+ * change ("the sweep computes, the agent judges, the human decides"). No job
+ * card is written: a card would also be picked up by the wakeup reactor, and
+ * two agents would work the same review.
  */
 
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { z } from "zod";
-import { getBoxDir } from "../../lib/paths.js";
 import { getBoxTime } from "../../lib/time.js";
 import { loadBoxTimezone } from "../box/config.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
-import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
-import { sleep } from "../../lib/sleep.js";
-import { findJobCards } from "../reactor/job-discovery.js";
-import { collectTodos } from "./collect.js";
-import { formatTodoLocation, type CollectedTodo } from "./collect-types.js";
-import { resolveStartEpoch, parseIsoDate, boxLocalDateEpoch } from "../../shared/todo-model.js";
-import { createTodoReviewJobTemplate, type TodoReviewJobItem } from "../../schemas/todo-review-job.js";
+import { runTodoQuery } from "./query.js";
+import { summaryText } from "../file-summary.js";
+import { formatTodoLocation } from "./collect-types.js";
+import type { DerivedTodo } from "./collection.js";
+import { parseIsoDate, boxLocalDateEpoch, recheckDefers, RECHECK_NEVER, resolveStartEpoch, TODO_AGENT } from "../../shared/todo-model.js";
+import type { TodoReviewJobItem } from "../../schemas/todo-review-job.js";
 
-const SWEEP_STATE_PATH = ".beebox/todo-review-sweep.json";
-const SWEEP_LOCK_PATH = ".beebox/todo-review-sweep.lock";
-// Bounded retry against a concurrent sweep (another `bbx wakeup`/`bbx tick`
-// run) — generous enough to outlast a normal sweep's own runtime (a
-// collector pass + one job-card write), short enough that a genuinely stuck
-// holder fails loud rather than wedging the caller indefinitely.
-const LOCK_RETRIES = 20;
-const LOCK_RETRY_MS = 250;
 const STALE_DAYS = 45;
+const CARD_LABEL_MAX = 80;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const JOB_SOURCE = "todo-review";
 
-/** Thrown when the sweep's cross-process lock stays held by another process for the whole retry budget. */
-class TodoReviewSweepLockError extends Error {
-  constructor(lockPath: string) {
-    super(`Could not acquire the todo-review sweep lock at ${lockPath} — another process held it too long`);
-    this.name = "TodoReviewSweepLockError";
-  }
+/** The box-local calendar date today, as the UTC-midnight epoch `start`/`due`/`recheck` parse to. */
+export async function boxTodayEpoch(boxRoot: string): Promise<number> {
+  const timeZone = (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return boxLocalDateEpoch(getBoxTime(boxRoot), timeZone);
 }
 
-const sweepStateSchema = z.object({
-  // A box-local calendar-date epoch (see `boxLocalDateEpoch`), stored as a
-  // number, NOT a wall-clock ISO instant — `start`/`due` are calendar dates,
-  // and comparing a calendar epoch against a wall-clock timestamp would
-  // undercount a `start` dated earlier the same day a sweep happens to run
-  // mid-afternoon.
-  lastSweepDateEpoch: z.number().optional(),
-});
+/**
+ * A swept todo, plus the two things that make it readable in the brief
+ * without opening the card: what the card is, and what heading it sat under.
+ */
+export type SweptTodo = DerivedTodo & { card: string; section: string };
 
-interface SweepState {
-  lastSweepDateEpoch: number | null;
+interface ComputeInput {
+  todayEpoch: number;
+  /** Whether a todo with `recheck="never"` stays out of review (`review-check.ts` decides). */
+  neverDefers: (todo: SweptTodo) => boolean;
 }
 
-async function loadSweepState(boxRoot: string): Promise<SweepState> {
-  try {
-    const raw = await fs.readFile(path.join(boxRoot, SWEEP_STATE_PATH), "utf-8");
-    const data = sweepStateSchema.parse(JSON.parse(raw));
-    return { lastSweepDateEpoch: data.lastSweepDateEpoch ?? null };
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn("Could not read todo-review sweep state, treating as first run:", e);
-    }
-    return { lastSweepDateEpoch: null };
-  }
-}
-
-async function saveSweepState(boxRoot: string, state: SweepState): Promise<void> {
-  const absPath = path.join(boxRoot, SWEEP_STATE_PATH);
-  await fs.mkdir(path.dirname(absPath), { recursive: true });
-  await fs.writeFile(absPath, `${JSON.stringify(state, null, 2)}\n`);
-}
-
-export interface TodoReviewSweepResult {
-  escalated: CollectedTodo[];
-  stirring: CollectedTodo[];
-  stale: CollectedTodo[];
-  /** Relative path of the job card created this pass, or null (empty sets, or a prior job is still pending). */
-  jobPath: string | null;
+export interface TodoReviewSets {
+  escalated: SweptTodo[];
+  stirring: SweptTodo[];
+  actionable: SweptTodo[];
+  stale: SweptTodo[];
 }
 
 /**
@@ -122,153 +82,100 @@ function ageInDays(created: string, todayEpoch: number): number | null {
   return Math.floor((todayEpoch - epoch) / MS_PER_DAY);
 }
 
-/** Split a box's open todos into escalated / stirring / stale, per the module doc's definitions. */
-function computeSets(
-  todos: CollectedTodo[],
-  { todayEpoch, lastSweepEpoch }: { todayEpoch: number; lastSweepEpoch: number },
-): Pick<TodoReviewSweepResult, "escalated" | "stirring" | "stale"> {
-  const open = todos.filter((t) => t.status === "open");
+/**
+ * Split a box's open todos into escalated / stirring / actionable / stale, per the module
+ * doc's definitions. `stirring` is already decided — the collection derived
+ * it from the `since` baseline this sweep handed the runner — so the sweep
+ * only needs date arithmetic for its actionable-start and stale rules.
+ */
+function computeSets(all: SweptTodo[], input: ComputeInput): TodoReviewSets {
+  const { todayEpoch, neverDefers } = input;
+  // A todo whose `recheck` is still ahead is out of every set: the review
+  // already looked at it and said when to look again (Track 7). Whether a
+  // `never` still holds is the caller's call (it knows who wrote it).
+  const todos = all.filter((t) => !(t.recheck === RECHECK_NEVER ? neverDefers(t) : recheckDefers(t.recheck, todayEpoch)));
 
-  const escalated = open.filter((t) => t.plateState === "escalated");
+  const escalated = todos.filter((t) => t.plateState === "escalated");
 
-  const stirring = open.filter((t) => {
-    if (t.plateState !== "on-plate" || t.start === undefined) return false;
+  const stirring = todos.filter((t) => t.stirring);
+
+  const actionable = todos.filter((t) => {
+    if (t.assigned !== TODO_AGENT || (t.plateState !== "on-plate" && t.plateState !== "escalated")) return false;
+    // A malformed/unresolvable start does not make a future start actionable.
+    if (t.start === undefined) return true;
     const startEpoch = resolveStartEpoch(t.start, t.due);
-    return startEpoch !== null && startEpoch > lastSweepEpoch;
+    return startEpoch !== null && startEpoch <= todayEpoch;
   });
 
-  const stale = open.filter((t) => {
+  const stale = todos.filter((t) => {
     if (t.start !== undefined || t.due !== undefined || t.created === undefined) return false;
     const age = ageInDays(t.created, todayEpoch);
     return age !== null && age > STALE_DAYS;
   });
 
-  return { escalated, stirring, stale };
+  return { escalated, stirring, actionable, stale };
 }
 
 /** One item's `detail` line — whichever date drove it into its set, human-readable. */
-function detailFor(todo: CollectedTodo, kind: "escalated" | "stirring" | "stale"): string {
+function detailFor(todo: SweptTodo, kind: "escalated" | "stirring" | "actionable" | "stale"): string {
   switch (kind) {
     case "escalated":
       return `due ${todo.due ?? "?"}`;
     case "stirring":
       return `started ${todo.start ?? "?"}`;
+    case "actionable":
+      return "agent follow-up";
     case "stale":
       return `created ${todo.created ?? "?"}`;
   }
 }
 
-function toJobItem(todo: CollectedTodo, kind: "escalated" | "stirring" | "stale"): TodoReviewJobItem {
+export function toBriefItem(todo: SweptTodo, kind: "escalated" | "stirring" | "actionable" | "stale"): TodoReviewJobItem {
   const item: TodoReviewJobItem = {
     locator: formatTodoLocation(todo),
     text: todo.text,
     detail: detailFor(todo, kind),
   };
   if (todo.assigned !== undefined) item.assigned = todo.assigned;
+  // Where it was written. A locator says which line; these say what the
+  // reader would have seen around it, so the brief reads in context.
+  // A card with no title summarizes as its body, which can be the whole card:
+  // one line is enough to say which card it is.
+  if (todo.card !== "") item.card = todo.card.length > CARD_LABEL_MAX ? `${todo.card.slice(0, CARD_LABEL_MAX - 1)}…` : todo.card;
+  if (todo.section !== "") item.section = todo.section;
   return item;
 }
 
-/**
- * Run the todo-review sweep once, guarded by the standard cross-process lock
- * (`file-lock.ts`) so two concurrent wakeups (or a wakeup racing a manual
- * `bbx tick`) can't both load the same `lastSweepDateEpoch` baseline, each
- * compute a job, and step on each other's write. Bounded retry against a
- * live holder, same shape as `withQuestionTransition`'s lock loop
- * (`core/commands/question-transition.ts`) — a genuinely stuck holder fails
- * loud rather than blocking the caller forever.
- */
-export async function runTodoReviewSweep(boxRoot: string): Promise<TodoReviewSweepResult> {
-  const lockPath = path.join(boxRoot, SWEEP_LOCK_PATH);
-  await fs.mkdir(path.dirname(lockPath), { recursive: true });
-
-  for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-    try {
-      await acquireLock(lockPath, { purpose: "todo-review-sweep" });
-    } catch (e) {
-      if (e instanceof LockHeldError) {
-        await sleep(LOCK_RETRY_MS);
-        continue;
-      }
-      throw e;
-    }
-    try {
-      return await runTodoReviewSweepLocked(boxRoot);
-    } finally {
-      await releaseLock(lockPath);
-    }
-  }
-  throw new TodoReviewSweepLockError(lockPath);
-}
-
-/**
- * The sweep's actual work, run while holding the lock above.
- *
- * `lastSweepDateEpoch` only advances past today when this pass's findings
- * actually reached the reactor: either the sets were genuinely empty (nothing
- * to report — always safe to move forward), or a job got queued this pass. If
- * a `todo-review` job was ALREADY pending (or queuing throws), the baseline is
- * left where it was — advancing it anyway would fold this pass's newly
- * stirring/stale items into the baseline and make them permanently
- * unreportable once the pending job finally clears (the durability bug this
- * fixes). Leaving the baseline alone means the next sweep recomputes the same
- * sets and tries again.
- */
-async function runTodoReviewSweepLocked(boxRoot: string): Promise<TodoReviewSweepResult> {
-  const now = getBoxTime(boxRoot);
-  const timeZone = (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const todayEpoch = boxLocalDateEpoch(now, timeZone);
-
-  const state = await loadSweepState(boxRoot);
-  const lastSweepEpoch = state.lastSweepDateEpoch ?? 0; // first run: everything already on-plate counts as "crossed since the box existed"
-
-  const { todos } = await collectTodos(boxRoot);
-  const sets = computeSets(todos, { todayEpoch, lastSweepEpoch });
-
-  const isEmpty = sets.escalated.length === 0 && sets.stirring.length === 0 && sets.stale.length === 0;
-  if (isEmpty) {
-    await saveSweepState(boxRoot, { lastSweepDateEpoch: todayEpoch });
-    return { ...sets, jobPath: null };
-  }
-
-  const jobPath = await queueReviewJob(boxRoot, sets);
-  if (jobPath !== null) {
-    await saveSweepState(boxRoot, { lastSweepDateEpoch: todayEpoch });
-  }
-  return { ...sets, jobPath };
-}
-
-async function queueReviewJob(
-  boxRoot: string,
-  sets: Pick<TodoReviewSweepResult, "escalated" | "stirring" | "stale">,
-): Promise<string | null> {
-  const jobsDir = getBoxDir(boxRoot, "jobs");
-  const pending = await findJobCards(jobsDir, { sourceFilter: JOB_SOURCE });
-  if (pending.length > 0) return null; // a brief is already waiting to be judged; don't restate it
-
-  const created = getBoxTime(boxRoot).toISOString();
-  const stamp = created.slice(0, 16).replaceAll(":", "-");
-  const jobFilename = `${stamp}.todo-review.job.card`;
-  const card = createTodoReviewJobTemplate({
-    escalated: sets.escalated.map((t) => toJobItem(t, "escalated")),
-    stirring: sets.stirring.map((t) => toJobItem(t, "stirring")),
-    stale: sets.stale.map((t) => toJobItem(t, "stale")),
+/** Every open todo the box holds, each carrying its card's summary text and its heading path. */
+async function sweptTodos(boxRoot: string, lastSweepEpoch: number): Promise<SweptTodo[]> {
+  const result = await runTodoQuery(boxRoot, {
+    // `scope: "all"` — the sweep's job brief rides agent follow-ups along as
+    // an exception (module doc, point 4); a default `boxholder` scope would
+    // make them invisible to it.
+    query: { here: "", params: { status: ["open"], scope: "all" } },
+    since: lastSweepEpoch,
   });
-
-  await fs.mkdir(jobsDir, { recursive: true });
-  const jobPath = path.join(jobsDir, jobFilename);
-  await fs.writeFile(jobPath, card);
-  const relJobPath = path.relative(boxRoot, jobPath);
-  try {
-    await stageAndCommitPaths(boxRoot, {
-      paths: [relJobPath],
-      message: `Queue todo-review job (${String(sets.escalated.length)} escalated, ${String(sets.stirring.length)} stirring, ${String(sets.stale.length)} stale)`,
-      trailers: { "Created-By": "todo-review-sweep" },
-    });
-  } catch (e) {
-    // A commit failure shouldn't lose the sweep's work — the job file is on
-    // disk either way; log it loudly rather than throwing, same posture as
-    // the root-landmark refill in wakeup.ts.
-    console.warn(`Could not commit todo-review job ${relJobPath}: ${errorMessage(e)}`);
+  const out: SweptTodo[] = [];
+  for (const group of result.groups) {
+    for (const row of group.rows) {
+      const card = summaryText(row.card);
+      for (const item of row.items) {
+        if (!item.matching) continue;
+        out.push({ ...item, card, section: item.sectionPath.join(" › ") });
+      }
+    }
   }
-  return relJobPath;
+  return out;
+}
+
+/**
+ * The four sets for today. Pure over the box's files and the caller's
+ * baseline: no lock, no state write. The caller (`review-check.ts`) holds the
+ * sweep lock and decides when the baseline moves.
+ */
+export async function computeTodoReviewSets(
+  boxRoot: string,
+  input: ComputeInput & { lastSweepEpoch: number },
+): Promise<TodoReviewSets> {
+  return computeSets(await sweptTodos(boxRoot, input.lastSweepEpoch), input);
 }

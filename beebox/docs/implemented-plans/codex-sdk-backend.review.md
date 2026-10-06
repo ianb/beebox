@@ -13,7 +13,7 @@ issues:
 The plan now accounts for both execution item mappers. Live chat and transcript history
 use `src/services/codex-tool-activity.ts:72`: “One provider-owned conversion point used
 by both live streaming and history.” Batch execution instead imports its activity mapper
-from `src/core/agent/codex-run-activity.ts` at `src/core/agent/codex-run.ts:22-27`.
+from `src/core/agent/codex-run-activity.ts` (moved to `beebox/src/core/agent/codex-run/activity.ts`) at `src/core/agent/codex-run.ts:22-27` (moved to `beebox/src/core/agent/codex-run/core.ts`).
 
 The transcript exception is small and isolated. `src/core/chat/session/codex-transcript.ts:98-102`
 uses `thread/read`; lines 219-250 list threads; lines 262-266 delete one thread. The plan
@@ -128,7 +128,7 @@ silently.
 
 **Location in plan:** Track 1 and Track 2.
 
-**Citation:** `src/services/codex-chat.ts:243-249` creates and initializes one app-server
+**Citation:** `src/services/codex-chat.ts:243-249` (moved to `beebox/src/services/claude-chat/codex-chat.ts`) creates and initializes one app-server
 for a chat, while the Codex SDK launches `codex exec` for a run.
 
 **Issue:** Each SDK turn can add process startup and session reload latency. Cancellation

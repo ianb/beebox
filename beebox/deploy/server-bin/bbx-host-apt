@@ -1,0 +1,237 @@
+#!/bin/bash -p
+#
+# bbx-host-apt — the one root code path that lets a box install distro packages.
+#
+#   sudo /usr/local/sbin/bbx-host-apt install --box <slug> -- <pkg> [<pkg> ...]
+#
+# The box OS user (shared by every box on the host) may run this through a
+# NOPASSWD sudoers entry with ANY arguments, so this script is the whole
+# privilege boundary. It installs only packages that:
+#   - are exact package names in the DISTRO sources (a private apt config
+#     hides third-party sources such as NodeSource);
+#   - add packages without upgrading or removing any installed one;
+#   - ship no persistent root activation (system units, init scripts, root
+#     cron jobs, D-Bus system services, systemd generators), no privilege
+#     grants (sudoers.d, polkit), and no setuid/setgid file.
+# Residual risk, accepted by the boxholder: distro maintainer scripts run as
+# root, and a postinst `setcap` is not detected.
+#
+# Installed root:root 0755 by deploy/deploy.sh from the deploying checkout —
+# never copied out of /opt/beebox, which the box user owns. Plain bash on
+# purpose: root must execute only root-owned system binaries.
+#
+# Exit codes: 0 installed or already present · 1 apt/system error ·
+# 2 refused by policy (reason on stderr) · 64 usage.
+#
+# Change this file → run deploy/server-bin/bbx-host-apt.smoke.sh (needs Docker).
+# Plan: docs/plans/box-host-packages.md.
+
+readonly SELF=/usr/local/sbin/bbx-host-apt
+readonly CLEAN_PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+# ── Clean process state ──────────────────────────────────────────────────
+# `bash -p` already ignores BASH_ENV, SHELLOPTS and imported functions. Re-exec
+# under an empty environment unless it is exactly the one we would build, so a
+# forged "already clean" marker buys nothing. Caller identity is kept for the
+# log only.
+env_is_clean() {
+  local name
+  for name in $(compgen -e); do
+    case "$name" in
+      PATH) [[ "$PATH" == "$CLEAN_PATH" ]] || return 1 ;;
+      LANG) [[ "$LANG" == C.UTF-8 ]] || return 1 ;;
+      DEBIAN_FRONTEND) [[ "$DEBIAN_FRONTEND" == noninteractive ]] || return 1 ;;
+      BBX_HOST_APT_CALLER | PWD | OLDPWD | SHLVL | _) ;;
+      *) return 1 ;;
+    esac
+  done
+}
+if ! env_is_clean; then
+  exec /usr/bin/env -i PATH="$CLEAN_PATH" LANG=C.UTF-8 DEBIAN_FRONTEND=noninteractive \
+    BBX_HOST_APT_CALLER="${SUDO_USER:-unknown}" /bin/bash --noprofile --norc -p "$SELF" "$@"
+fi
+
+set -euf -o pipefail
+IFS=$' \t\n'
+umask 022
+cd /
+
+die() { echo "bbx-host-apt: $1" >&2; exit "${2:-1}"; }
+
+[[ "$EUID" -eq 0 ]] || die "must run as root (through sudo)"
+
+caller="${BBX_HOST_APT_CALLER:-unknown}"
+[[ "$caller" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || caller=invalid
+
+# ── Log ──────────────────────────────────────────────────────────────────
+# Every attempt gets one line, usage errors included. Only validated values
+# and our own reason text reach it; argv that failed validation is not logged.
+readonly LOG=/var/log/beebox/host-apt.log
+install -d -o root -g root -m 0755 /var/log/beebox
+box=""
+requested=()
+new_set=()
+log() {
+  local outcome="$1" reason="$2"
+  printf '{"time":"%s","caller":"%s","box":"%s","requested":"%s","new":"%s","outcome":"%s","reason":"%s"}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$caller" "$box" "${requested[*]:-}" "${new_set[*]:-}" \
+    "$outcome" "${reason//\"/\'}" >> "$LOG"
+}
+usage_error() { log usage "$1"; die "$1" 64; }
+refuse() { log refused "$1"; die "refused: $1" 2; }
+fail() { log error "$1"; die "$1" 1; }
+
+# ── Arguments ────────────────────────────────────────────────────────────
+readonly USAGE="usage: bbx-host-apt install --box <slug> -- <pkg> [<pkg> ...]"
+[[ $# -ge 5 && "$1" == install && "$2" == --box && "$4" == -- ]] || usage_error "$USAGE"
+[[ "$3" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || usage_error "$USAGE"
+box="$3"
+shift 4
+[[ $# -le 10 ]] || usage_error "at most 10 packages per call"
+for pkg in "$@"; do
+  [[ "$pkg" =~ ^[a-z0-9][a-z0-9+.-]{1,63}$ ]] || usage_error "not a valid package name (not logged)"
+done
+requested=("$@")
+
+# Serialize everything below: the private apt state is shared by all callers.
+exec 9> /run/bbx-host-apt.lock
+flock -w 900 9 || fail "another package install held the lock for 15 minutes"
+
+# ── Private apt configuration: distro sources only ───────────────────────
+# Same ownership as apt's own directories: root-owned, with the `partial/`
+# download areas owned by apt's unprivileged `_apt` fetcher.
+readonly STATE=/var/lib/bbx-host-apt CACHE=/var/cache/bbx-host-apt
+fetcher=root
+getent passwd _apt > /dev/null && fetcher=_apt
+for dir in "$STATE" "$STATE/lists" "$STATE/sources.list.d" "$CACHE"; do
+  [[ ! -L "$dir" ]] || fail "$dir is a symlink"
+  install -d -o root -g root -m 0755 "$dir"
+done
+[[ ! -L "$CACHE/archives" ]] || fail "$CACHE/archives is a symlink"
+rm -rf -- "$CACHE/archives"
+install -d -o root -g root -m 0755 "$CACHE/archives"
+for dir in "$STATE/lists/partial" "$CACHE/archives/partial"; do
+  [[ ! -L "$dir" ]] || fail "$dir is a symlink"
+  install -d -o "$fetcher" -g root -m 0700 "$dir"
+done
+
+# Only the distro's own deb822 file counts. The legacy one-line
+# /etc/apt/sources.list is ignored: it can hold any repository, and current
+# Ubuntu (24.04+) and Debian (12+) keep their archive in the deb822 file.
+find "$STATE/sources.list.d" -mindepth 1 -delete
+for distro in ubuntu debian; do
+  src="/etc/apt/sources.list.d/$distro.sources"
+  if [[ -f "$src" && ! -L "$src" ]]; then
+    install -o root -g root -m 0644 "$src" "$STATE/sources.list.d/"
+  fi
+done
+[[ -n "$(find "$STATE/sources.list.d" -mindepth 1 -print -quit)" ]] \
+  || fail "no distro sources file (/etc/apt/sources.list.d/ubuntu.sources or debian.sources)"
+
+APT=(
+  -o Dir::Etc::sourcelist=/dev/null
+  -o "Dir::Etc::sourceparts=$STATE/sources.list.d"
+  -o "Dir::State::Lists=$STATE/lists"
+  -o "Dir::Cache::archives=$CACHE/archives"
+  -o DPkg::Lock::Timeout=300
+)
+INSTALL_FLAGS=(--no-install-recommends --no-remove)
+
+apt-get "${APT[@]}" update -qq || fail "apt-get update failed"
+
+# ── Exact names; drop the ones already installed ─────────────────────────
+todo=()
+for pkg in "${requested[@]}"; do
+  # apt treats a name containing . or + as a regex when nothing matches it
+  # exactly, so demand an exact real (non-virtual) package first.
+  names=$(apt-cache "${APT[@]}" pkgnames -- "$pkg") || fail "apt-cache failed"
+  grep -qxF -- "$pkg" <<< "$names" || refuse "$pkg is not a package in this host's distro sources"
+  if [[ "$(dpkg-query -W -f='${db:Status-Abbrev}' -- "$pkg" 2>/dev/null || true)" == "ii " ]]; then
+    echo "bbx-host-apt: $pkg is already installed"
+  else
+    todo+=("$pkg")
+  fi
+done
+if [[ ${#todo[@]} -eq 0 ]]; then
+  log already-installed ""
+  exit 0
+fi
+
+# ── Simulate: additive only ──────────────────────────────────────────────
+# Sets `planned` to the sorted name=version lines of the new set; refuses
+# upgrades and removals. Runs in the main shell so refuse/fail exit the script.
+planned=()
+simulate() {
+  local sim line
+  sim=$(apt-get "${APT[@]}" -s install "${INSTALL_FLAGS[@]}" "$@" -- "${targets[@]}" 2>&1) \
+    || fail "apt-get could not plan the install: $(tail -n 3 <<< "$sim" | tr '\n' ' ')"
+  if grep -q '^Remv ' <<< "$sim"; then
+    refuse "installing would remove: $(awk '/^Remv /{print $2}' <<< "$sim" | tr '\n' ' ')"
+  fi
+  if grep -qE '^Inst [^ ]+ \[' <<< "$sim"; then
+    refuse "installing would upgrade: $(awk '/^Inst [^ ]+ \[/{print $2}' <<< "$sim" | tr '\n' ' ')"
+  fi
+  local unsorted=()
+  while read -r line; do
+    if [[ "$line" =~ ^Inst\ ([^ ]+)\ \(([^ ]+)\  ]]; then
+      unsorted+=("${BASH_REMATCH[1]}=${BASH_REMATCH[2]}")
+    fi
+  done <<< "$sim"
+  planned=()
+  if [[ ${#unsorted[@]} -gt 0 ]]; then
+    mapfile -t planned < <(printf '%s\n' "${unsorted[@]}" | sort)
+  fi
+}
+
+targets=("${todo[@]}")
+simulate
+new_set=("${planned[@]}")
+[[ ${#new_set[@]} -gt 0 ]] || fail "apt planned no packages for: ${todo[*]}"
+
+# Pin the requested packages to the simulated versions from here on.
+pinned=()
+for pkg in "${todo[@]}"; do
+  for entry in "${new_set[@]}"; do
+    [[ "${entry%%=*}" == "$pkg" ]] && pinned+=("$entry")
+  done
+done
+[[ ${#pinned[@]} -eq ${#todo[@]} ]] || fail "could not pin versions for: ${todo[*]}"
+targets=("${pinned[@]}")
+
+# ── Download exactly that set and inspect every file ─────────────────────
+apt-get "${APT[@]}" -qq -y --download-only install "${INSTALL_FLAGS[@]}" -- "${targets[@]}" > /dev/null \
+  || fail "download failed"
+
+readonly FORBIDDEN='^\./((usr/)?lib/systemd/system/[^/]+\.(service|socket|timer|path)|etc/systemd/system/.+|etc/init\.d/[^/]+|etc/cron\.(d|hourly|daily|weekly|monthly)/[^/]+|usr/share/dbus-1/system-services/[^/]+|(usr/)?lib/systemd/system-generators/[^/]+|etc/sudoers\.d/[^/]+|etc/polkit-1/.+|usr/share/polkit-1/rules\.d/[^/]+)$'
+downloaded=()
+while IFS= read -r -d '' deb; do
+  name=$(dpkg-deb -f "$deb" Package)
+  version=$(dpkg-deb -f "$deb" Version)
+  downloaded+=("$name=$version")
+  listing=$(dpkg-deb -c "$deb") || fail "cannot list $deb"
+  while read -r perms _owner _size _date _time path; do
+    path="${path%% -> *}"
+    if [[ "$path" =~ $FORBIDDEN ]]; then
+      refuse "$name ships ${path#.} (packages that add services, root jobs or privilege grants need the boxholder)"
+    fi
+    if [[ "$perms" =~ ^[-h]..[sS] || "$perms" =~ ^[-h].....[sS] ]]; then
+      refuse "$name ships a setuid/setgid file ${path#.}"
+    fi
+  done <<< "$listing"
+done < <(find "$CACHE/archives" -maxdepth 1 -type f -name '*.deb' -print0)
+
+if [[ ${#downloaded[@]} -gt 0 ]]; then
+  mapfile -t downloaded < <(printf '%s\n' "${downloaded[@]}" | sort)
+fi
+[[ "${downloaded[*]}" == "${new_set[*]}" ]] \
+  || fail "downloaded files do not match the planned set (planned: ${new_set[*]}; got: ${downloaded[*]})"
+
+# ── Install only what was inspected ──────────────────────────────────────
+simulate --no-download
+[[ "${planned[*]}" == "${new_set[*]}" ]] || fail "the planned set changed during the install; retry"
+
+apt-get "${APT[@]}" -qq -y --no-download install "${INSTALL_FLAGS[@]}" -- "${targets[@]}" \
+  || fail "apt-get install failed"
+
+log installed ""
+echo "bbx-host-apt: installed ${todo[*]} (${#new_set[@]} new packages)"

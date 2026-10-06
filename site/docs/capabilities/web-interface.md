@@ -13,13 +13,22 @@ desktop and phone.
 
 - **Dashboard** — what needs your attention, with links to Browse, History, and Storage.
 - **Chat** — a conversation with the agent, typed or spoken.
+- **Quick chat**: one text box for a thought you have not decided where to
+  put. A routing service picks which conversation it belongs in, or a new one,
+  and the text is sent there without a confirmation step. The result shows the
+  three strongest choices, each a link that opens that chat with your text
+  waiting in its composer. It needs an OpenRouter key granted to the box, and
+  your message and recent conversation text go to that service (see
+  [your data and safety](../10-your-data-and-safety.md)). The documentation
+  calls it a surface for evaluating the routing, so expect it to be rough.
 - **Browse** — a file-and-card browser over the whole box, with a workspace of tabs so several things stay open at once.
+- **Todos**: a todo shows a live checkbox on its card and in lists, so you can tick it where you read it (any member of the box can) or add it to the chat you are typing. A card and a directory each show a one-line count of what is open there. Todos assigned to the agent stay out of your default view, and a daily review the box runs proposes changes to your todos and makes none itself.
 - **Questions** — the queue of things the agent is asking you.
 - **Landmarks** — a curated map of the box's notable places.
 - **History** — every change, drawn from git, with diffs and the files touched.
 - **Storage** — how much space the box is using and where.
 - **Settings** — pairing a phone, connectors, and other account controls.
-- **Admin** — host-wide controls: which agent is running, allowed users, invites, notifications.
+- **Admin**: host-wide controls, owner only, in six tabs: an overview of each section's state, agents (which agent is running and which extra OpenRouter models a box may run), people (allowed users and invites), connections, secrets (each key a collapsed row showing what uses it), and the host, which holds notifications: browser push on or off, a three-day list of what each channel did, and the paired phones.
 
 Each kind of card gets its own display: a recipe with scalable amounts, a
 course with its lessons and your progress, a dashboard or a todo list, a
@@ -42,8 +51,11 @@ way it edits any other file. See [views.md](views.md).
 
 **Limits**
 
-The navigation bar shows no counts for pending questions or open todos;
-open Questions or a todo view to see how many are waiting. Some card-body
+The navigation bar shows a count of questions waiting for you and of todos on
+your plate, each linking to its list. The badge is still a bare number beside an
+icon, so it can read as a wrong total; the plate page's headline states the
+number and what it covers ("N on your plate, M later, K for the agent"), and
+todos assigned to the agent are left out of the badge. Some card-body
 links still point at an older internal address rather than the one that
 actually opens, though following one still works. A rotated photo
 occasionally renders upside down or clipped.

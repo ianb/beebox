@@ -2,6 +2,7 @@ import { Button, Pill } from "../components/ui.js";
 import { groupAskQueue } from "../lib/ask-queue.js";
 import { friendlyTimestamp } from "../lib/format.js";
 import { trpc } from "../trpc.js";
+import { usePageIdentity } from "../lib/page-identity.js";
 import { askTypeLabels, type AskQueue, type AskQueueEntry, type AskType } from "../types.js";
 
 const GROUP_PROSE: Record<AskType, string> = {
@@ -89,6 +90,7 @@ export function AskQueueView({ queue }: { queue: AskQueue }) {
 }
 
 export function AsksPage() {
+  usePageIdentity("asks");
   const asks = trpc.exhibits.askQueue.useQuery();
   if (asks.isLoading) {
     return <main className="simple-page"><section className="loading-skeleton" aria-busy="true"><span /><span /></section></main>;

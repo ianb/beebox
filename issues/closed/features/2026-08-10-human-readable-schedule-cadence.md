@@ -33,7 +33,7 @@ dependencies, and ships 30+ locales. It's a port of the C#
 `cron-expression-descriptor`, so it's well-trodden.
 
 **But cron is only one of the schedule vocabulary's timing forms.** The
-`scheduled-script` schema (`src/schemas/scheduled-script.tsx:53-59`) has:
+`scheduled-script` schema (`src/schemas/scheduled-script.tsx:53-59` (moved to `beebox/src/schemas/scheduled-script/schema.tsx`)) has:
 
 | Field | What it is |
 |---|---|

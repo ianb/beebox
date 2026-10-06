@@ -21,8 +21,8 @@ import {
   redactCodexAuthDetail,
 } from "../../../src/core/agent/auth-preflight.js";
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../src/services/claude-cli.js";
-import { createFakeCodexCli } from "../../../src/services/codex-cli.js";
-import { createChatBackend } from "../../../src/services/claude-chat.js";
+import { createFakeCodexCli } from "../../../src/services/codex-cli/core.js";
+import { createChatBackend } from "../../../src/services/claude-chat/core.js";
 
 /** A probe that answers `n` times with no usable result, then as given. */
 function flakyCli(inconclusiveTimes, then) {

@@ -12,9 +12,10 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 
 export const DocSchema = cardSchema("doc", {
+  brief: "The default card for prose",
   description: "A generic typed document (title + markdown body) — the default for agent-authored prose instead of a plain .md",
   category: "authored",
   fields: {

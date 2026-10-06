@@ -1,6 +1,6 @@
 ---
 description: "How to build, test, and contribute to Bee Box: how development happens here, repo layout, running from source, and how a change lands."
-start-here: [development-process.md, agent-coding.md, development-workflow.md, agent-testing.md, technologies.md, contributing.md, monorepo-claude-md.md, claude-md.md, code-style.md, testing.md, engineering-principles.md, developer-install.md]
+start-here: [development-process.md, agent-coding.md, development-workflow.md, technologies.md, contributing.md, monorepo-claude-md.md, claude-md.md, code-style.md, testing.md, engineering-principles.md, developer-install.md]
 ---
 Bee Box is developed in an unusually agentic way. One maintainer directs
 coding agents (Claude Code and Codex); the agents do most of the typing and

@@ -11,9 +11,9 @@ import {
   cardSchema,
   formatLintResults,
   type CardSchema,
-} from "../../src/cards/index.js";
+} from "../../src/exports/cards.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { lintCardsDispatch } from "../../src/core/card-lint.js";
+import { lintCardsDispatch } from "../../src/core/card-lint/core.js";
 import type { LoadCardContext } from "../../src/core/card-io.js";
 import { CommentarySchema } from "../../src/schemas/commentary.js";
 import { ExtfileSchema } from "../../src/schemas/extfile.js";
@@ -23,6 +23,7 @@ import { ConceptMapSchema } from "../../src/schemas/concept-map.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
 import { FigureSchema } from "../../src/schemas/figure.js";
 import { ChatSchema } from "../../src/schemas/chat.js";
+import { ImageSchema } from "../../src/schemas/image/schema.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -69,6 +70,7 @@ const ctx: LoadCardContext = {
     ["landmark", LandmarkSchema],
     ["figure", FigureSchema],
     ["chat", ChatSchema],
+    ["image", ImageSchema],
   ]),
 };
 ```
@@ -272,6 +274,25 @@ const result2 = await lintCardsDispatch(
 );
 result2.results[0]!.warnings.find((w) => w.type === "reference")!.message
 => Broken reference at body:1:source.ref: nowhere/at/all.card does not exist
+```
+
+A ref the box namespace fence refuses says so instead. A package doc exists on
+disk under `node_modules/`, but no ref can reach it, and "does not exist" would
+send the author looking for a missing file:
+
+```ts
+const boxFence = await makeTmpBox();
+await boxFence.write("node_modules/beebox/box-docs/card-doc.md", "# doc\n");
+await boxFence.write(
+  "_content/box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"/node_modules/beebox/box-docs/card-doc.md\" usage=\"verbatim\" %}{% /source %}\n",
+);
+const resultFence = await lintCardsDispatch(
+  [boxFence.path("_content/box/notes/Meeting.doc.card")],
+  { boxRoot: boxFence.root, ctx },
+);
+resultFence.results[0]!.warnings.find((w) => w.type === "reference")!.message
+=> Broken reference at body:1:source.ref: /node_modules/beebox/box-docs/card-doc.md points outside the box — a ref reaches only the box's areas (`_content`, `_config`, `_bookkeeping`, `_publish`, `_tmp`); package docs under `node_modules/` can't be linked, so name them in plain text
 ```
 
 An `attach/…` ref never gets the content-form suggestion — it's a legitimate,
@@ -795,7 +816,7 @@ await box.write(
 );
 await box.write(
   "_content/store/Learner.progress.card",
-  "---\ncourse: { ref: Acids.course.card }\nentries:\n  - node: acids\n    status: partial\n    basis: observed\n    evidence: [heard them explain it]\n  - node: ghost\n    status: solid\n    basis: observed\n    evidence: [refers to a node the map lacks]\n---\nProgress.\n",
+  "---\ncourse: { ref: Acids.course.card }\nentries:\n  - node: acids\n    level: partial\n    basis: observed\n    evidence: [heard them explain it]\n  - node: ghost\n    level: solid\n    basis: observed\n    evidence: [refers to a node the map lacks]\n---\nProgress.\n",
 );
 const result = await lintCardsDispatch(
   [box.path("_content/store/Learner.progress.card")],
@@ -842,7 +863,7 @@ result.results[0]!.warnings[0]!.message.includes("ghost")
 => true
 ```
 
-A `material` segment that has neither a `material` ref nor `status: planned` is a
+A `material` segment that has neither a `material` ref nor `planned: true` is a
 **deferral warning** — "incomplete material" is stated, never silent:
 
 ```ts
@@ -867,7 +888,7 @@ result.results[0]!.warnings[0]!.message.includes("no material card")
 ```
 
 A valid plan — every `concepts` id real, every material segment either `ready`
-with a resolvable ref or explicitly `planned` — is silent:
+with a resolvable ref or explicitly `planned: true` — is silent:
 
 ```ts
 const box = await makeTmpBox();
@@ -878,7 +899,7 @@ await box.write(
 await box.write("_content/store/Acids.attach/Recap.doc.card", "---\ntitle: Recap\n---\nRecap.\n");
 await box.write(
   "_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card",
-  "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Read the recap\n    mode: material\n    status: ready\n    concepts: [bases]\n    material: { ref: Recap.doc.card }\n  - do: A future figure, not built yet\n    mode: material\n    status: planned\n---\nFlow.\n",
+  "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Read the recap\n    mode: material\n    concepts: [bases]\n    material: { ref: Recap.doc.card }\n  - do: A future figure, not built yet\n    mode: material\n    planned: true\n---\nFlow.\n",
 );
 const result = await lintCardsDispatch(
   [box.path("_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card")],
@@ -1139,6 +1160,32 @@ JSON.stringify([figures.totalErrors, figures.totalWarnings])
 
 figures.results[1]!.warnings[0]!.message
 => Broken reference at entry: attach/missing.ts does not exist
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Media cards: `filename.ref` must be in `attach/` form
+
+An `image`, `audio`, `file` or `pdf` card keeps its file in its attach scope,
+and every reader of `filename.ref` accepts only `attach/<file>`. A legacy
+flat-layout ref resolves, so the broken-ref walk is silent; this warning names
+the move that fixes it.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/cap/photo-004.jpg", "JPG");
+await box.write(
+  "_content/cap/photo-004-Beach.image.card",
+  "---\nfilename:\n  ref: /_content/cap/photo-004.jpg\n  via:\n    channel: scan\n    at: 2026-01-02T03:04:05Z\n---\n",
+);
+const media = await lintCardsDispatch([box.path("_content/cap/photo-004-Beach.image.card")], { boxRoot: box.root, ctx });
+media.results[0]!.warnings.map((w) => w.message)
+=>
+[
+  "filename.ref must point into the card's attach scope: move photo-004.jpg into photo-004-Beach.attach/ and write `ref: attach/photo-004.jpg` (found `/_content/cap/photo-004.jpg`)"
+]
 ```
 
 ```ts cleanup

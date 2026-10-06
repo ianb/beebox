@@ -4,7 +4,7 @@ import { Document, parseDocument } from "yaml";
 import { splitCardContent } from "../../cards/frontmatter.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { landmarkScanDir, landmarkRelPath } from "./root-dir.js";
 
 export type LandmarkHqPreference = "inherit" | "on" | "off";

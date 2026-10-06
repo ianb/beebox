@@ -19,7 +19,7 @@ import { execa } from "execa";
 
 import { loadSchedules, type LoadedSchedule, type ScheduleConfig } from "./lib/schedules.js";
 import type { DesktopNotification, RunnerDeps } from "./lib/schedules-alerts.js";
-import { errnoCode } from "../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
 
 const tempDirs: string[] = [];
 

@@ -11,7 +11,7 @@ priority: important
 ---
 
 Google Drive comment threads are written beside an exported card as
-`<basename>.comments.json` (`beebox/src/connectors/drive-comments-sidecar.ts:25`),
+`<basename>.comments.json` (`beebox/src/connectors/google-drive/comments-sidecar.ts:25`),
 referenced by a `comments: { ref }` field, rendered by `AttachedComments.tsx`,
 and described to box agents in `core/box/skills-content.ts:317,323`.
 

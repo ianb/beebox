@@ -15,7 +15,7 @@
  */
 
 import { z } from "zod";
-import { cardSchema, body, type CardSchema, type LintIssue } from "../cards/index.js";
+import { cardSchema, body, type CardSchema, type LintIssue } from "../exports/cards.js";
 import { NAMED_VIEW_NAMES, NAMED_VIEWS, namedViewFor } from "../shared/named-views.js";
 
 const nameList = NAMED_VIEW_NAMES.join(", ");
@@ -60,6 +60,7 @@ function validateViewParams({ fields }: { fields: Record<string, unknown> }): Li
 }
 
 export const ViewSchema: CardSchema = cardSchema("view", {
+  brief: "An interface view card",
   fields: viewFields,
   searchable: false,
   validate: validateViewParams,

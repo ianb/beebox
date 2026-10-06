@@ -47,7 +47,7 @@ it describes, the same convention as `.landmark.card`
 (`src/schemas/landmark.ts:4-6`: *"the file lives inside the directory it
 describes"*). Because the card is the mount, `config/connectors/google-drive.json`'s
 `folders` array goes away — one way to mount (principle 8), and the same
-rule the file mount already follows (`src/connectors/drive-config.ts:7`:
+rule the file mount already follows (`src/connectors/drive-config.ts:7` (moved to `beebox/src/connectors/google-drive/config.ts`):
 *"Individual file mounts don't need config — the card's existence IS the
 config."*).
 
@@ -59,7 +59,7 @@ config."*).
   card types, not a `mode:` field on one type; the connector dispatches on
   type, never on an optional field.
 - Principle 3 (validate at boundaries): the Drive `files.list` response is
-  already parsed through zod (`test/services/google-drive-schemas.doctest.md`);
+  already parsed through zod (`test/services/google-drive-schemas.doctest.md` (moved to `beebox/test/services/google-drive/schemas.doctest.md`));
   new fields (`shortcutDetails`) go through the same schema.
 - Principle 4 / 13 (never silent; a control shows real state): a folder card
   and its view show *pending*, *synced*, *conflict*, *unsupported* per child;
@@ -76,7 +76,7 @@ config."*).
   has all its contents mirrored over" (2026-08-26); a one-level mirror
   would be a different promise.
 - Precedent: `CalendarSection.tsx` + `routers/calendar.ts` for the settings
-  mutation; `syncFolder` (`src/connectors/google-drive.ts:267-306`) for
+  mutation; `syncFolder` (`src/connectors/google-drive.ts:267-306` (moved to `beebox/src/connectors/google-drive/connector.ts`)) for
   discovery; `extfile` (`src/schemas/extfile.tsx:1-14`) for a pointer card
   with no body copy.
 
@@ -106,7 +106,7 @@ config."*).
   verified by grep of `src/`), `DriveSection.tsx` read-only header and its
   `bbx drive add` instruction, `drive.available` (spreadsheet list; not a
   folder picker and not used for mounting), `drive-config.ts` `folders`
-  after migration, `docs/google-drive.md:141-150` "Folder Mounts" section.
+  after migration, `docs/connectors/drive.md:141-150` "Folder Mounts" section.
 - Schema renderer registry: `frontend/src/file-type-registry.ts`
   `registerFileType`; `renderers/gsheet.tsx` and `renderers/extfile.tsx` are
   the shipped per-schema renderers a `gfolder` renderer copies.
@@ -233,7 +233,7 @@ accepts `/folders/<id>`; `DriveFile` gains `trashed`; fake service gains
 folder, shortcut, and trashed fixtures; `syncFolder` reads from cards
 instead of config, emits `glink` for unsupported children, trashes
 Drive-trashed children, recurses one level per pass with a cycle guard.
-Doctest: `test/connectors/connector-drive-folder.doctest.md`.
+Doctest: `test/connectors/connector-drive-folder.doctest.md` (moved to `beebox/test/connectors/google-drive.folder.doctest.md`).
 
 ### Track 2 — CLI plumbing and migration
 
@@ -435,7 +435,7 @@ are answerable from skill text alone.
 2. Track 2 CLI commands; then config→card conversion. Depends on 1.
 3. Track 3 router + settings + skill text + audits. Depends on 2.
 4. Track 4 renderers + `syncFolder` mutation. Depends on 3.
-5. Docs: rewrite `docs/google-drive.md` folder section; amend the
+5. Docs: rewrite `docs/connectors/drive.md` folder section; amend the
    2026-06-26 issue (done at plan time); close both issues at /finish.
 
 ## Rollout shape

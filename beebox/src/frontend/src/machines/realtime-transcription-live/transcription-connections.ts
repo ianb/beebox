@@ -1,0 +1,353 @@
+/**
+ * Per-service WebSocket connection helpers for the realtime transcription
+ * machine. Each `start*Connection` opens a socket to its service, wires up
+ * onmessage parsing into the shared {@link ServiceCallbacks}, and returns a
+ * {@link ConnectionHandle} the actor uses to push PCM and end the stream.
+ *
+ * See `realtimeTranscriptionMachine.ts` for the service-branching docs.
+ */
+
+import { getApiBase } from "../../api";
+import { isRecord } from "@shared/is-record";
+import { deepgramKeyManager } from "../../lib/audio/deepgram-key";
+import { openaiRealtimeKeyManager } from "../../lib/audio/openai-realtime-key";
+import type { FinalWord } from "../transcription-events";
+
+export interface ConnectionHandle {
+  ws: WebSocket;
+  /** Send a chunk of 16-bit PCM (16kHz mono) to the service. */
+  sendPcm: (samples: ArrayBuffer) => void;
+  /** Tell the service we're done sending audio. */
+  endStream: () => void;
+}
+
+export interface TextUpdate {
+  finalText: string;
+  interimText: string;
+  /**
+   * Mirrors `finalText`: the current connection's accumulated finalized
+   * words, snapshotted at the same call as the text it describes. Only
+   * Deepgram passes it; Voxtral/OpenAI omit it (equivalent to `[]`).
+   */
+  finalWords?: FinalWord[];
+}
+
+export interface ServiceCallbacks {
+  onTextUpdate: (update: TextUpdate) => void;
+  onDone: (text?: string) => void;
+  onServerError: (message: string) => void;
+}
+
+/**
+ * How often to send Deepgram a KeepAlive text frame. Deepgram closes an idle
+ * socket (no audio *or* KeepAlive) after 10s with 1011/NET-0001, so 5s leaves a
+ * comfortable margin. During active recording the continuous PCM frames already
+ * reset the timer; KeepAlive is the belt-and-suspenders that covers any pause
+ * in audio (e.g. a silent gap between turns) without dropping the connection.
+ */
+const DEEPGRAM_KEEPALIVE_INTERVAL_MS = 5000;
+
+/**
+ * Final-transcript accessors keyed by their socket. The Deepgram/OpenAI paths
+ * accumulate text the actor reads back in `onclose` (via {@link socketFinalText}).
+ * A WeakMap keeps the accessor beside the socket without patching a non-standard
+ * field onto the `WebSocket` DOM type — which needed an `as` cast — and lets the
+ * socket's entry be GC'd with it.
+ */
+const finalTextAccessors = new WeakMap<WebSocket, () => string>();
+
+/** The accumulated-final-transcript accessor registered for a socket, if any. */
+export function socketFinalText(ws: WebSocket): (() => string) | undefined {
+  return finalTextAccessors.get(ws);
+}
+
+/**
+ * Accumulated-finalized-words accessors, mirroring {@link finalTextAccessors}.
+ * Only Deepgram registers one; a socket with no entry has no word data.
+ */
+const finalWordsAccessors = new WeakMap<WebSocket, () => FinalWord[]>();
+
+/** The accumulated-finalized-words accessor registered for a socket, if any. */
+export function socketFinalWords(ws: WebSocket): (() => FinalWord[]) | undefined {
+  return finalWordsAccessors.get(ws);
+}
+
+/**
+ * Read `words[]` off a Deepgram `is_final` Results message, guarding at the
+ * boundary since the WS success payload is raw `JSON.parse`, not
+ * zod-validated. Prefers `punctuated_word` (matches how `accumulatedFinal`
+ * is built from the smart-formatted transcript); falls back to `word`.
+ * `confidence` is attached only when it's a real number. A malformed entry
+ * (no usable string word) is skipped rather than failing the whole message —
+ * fewer confidence entries is an acceptable degradation, a wrong one isn't.
+ */
+export function extractFinalWords(msg: unknown): FinalWord[] {
+  if (!isRecord(msg)) return [];
+  const channel = msg.channel;
+  if (!isRecord(channel)) return [];
+  const alternatives = channel.alternatives;
+  if (!Array.isArray(alternatives)) return [];
+  const first: unknown = alternatives[0];
+  if (!isRecord(first)) return [];
+  const words = first.words;
+  if (!Array.isArray(words)) return [];
+
+  const result: FinalWord[] = [];
+  for (const entry of words) {
+    if (!isRecord(entry)) continue;
+    const punctuated = entry.punctuated_word;
+    const raw = entry.word;
+    const word = typeof punctuated === "string" ? punctuated : typeof raw === "string" ? raw : null;
+    if (word === null) continue;
+    const confidence = typeof entry.confidence === "number" ? entry.confidence : undefined;
+    result.push(confidence === undefined ? { word } : { word, confidence });
+  }
+  return result;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCodePoint(byte);
+  }
+  return btoa(binary);
+}
+
+export function startVoxtralConnection(callbacks: ServiceCallbacks): ConnectionHandle {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${protocol}//${window.location.host}${getApiBase()}/chat/transcribe-ws`;
+  const ws = new WebSocket(wsUrl);
+  let accumulated = "";
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "transcription.text.delta") {
+        const delta = msg.delta ?? msg.text ?? "";
+        if (delta) {
+          accumulated += delta;
+          callbacks.onTextUpdate({ finalText: accumulated, interimText: "" });
+        }
+      } else if (msg.type === "transcription.done") {
+        const text = typeof msg.text === "string" && msg.text ? msg.text : accumulated;
+        callbacks.onDone(text);
+      } else if (msg.type === "error") {
+        const rawErr: unknown = msg.error;
+        const errMsg = isRecord(rawErr)
+          ? (typeof rawErr.message === "string" ? rawErr.message : JSON.stringify(rawErr))
+          : rawErr || "Transcription error";
+        callbacks.onServerError(String(errMsg));
+      }
+      // session.created, session.updated, transcription.segment,
+      // transcription.language — log only / ignore
+    } catch (_e) {
+      // Non-JSON message, ignore
+    }
+  };
+
+  return {
+    ws,
+    sendPcm: (samples) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({
+        type: "input_audio.append",
+        audio: arrayBufferToBase64(samples),
+      }));
+    },
+    endStream: () => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: "input_audio.end" }));
+    },
+  };
+}
+
+export async function startDeepgramConnection(callbacks: ServiceCallbacks): Promise<ConnectionHandle> {
+  const tempKey = await deepgramKeyManager.getKey();
+  const params = new URLSearchParams({
+    model: "nova-3",
+    encoding: "linear16",
+    sample_rate: "16000",
+    channels: "1",
+    interim_results: "true",
+    smart_format: "true",
+    punctuate: "true",
+    no_delay: "true",
+    endpointing: "1500",
+    utterance_end_ms: "1500",
+    mip_opt_out: "true",
+    language: "en-US",
+  });
+  const wsUrl = `wss://api.deepgram.com/v1/listen?${params.toString()}`;
+  const ws = new WebSocket(wsUrl, ["token", tempKey]);
+  let accumulatedFinal = "";
+  let accumulatedWords: FinalWord[] = [];
+
+  // Keep the socket alive across silent gaps; self-clears once the socket is
+  // closing/closed so a discarded (reconnect) or finished socket leaves no
+  // dangling timer. Must be a text frame per Deepgram's spec.
+  const keepAliveId = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "KeepAlive" }));
+    } else if (ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
+      clearInterval(keepAliveId);
+    }
+  }, DEEPGRAM_KEEPALIVE_INTERVAL_MS);
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "Results") {
+        const transcript: string = msg.channel?.alternatives?.[0]?.transcript ?? "";
+        const isFinal: boolean = !!msg.is_final;
+        if (isFinal) {
+          // Words are appended in lockstep with accumulatedFinal — both only
+          // change on the same non-empty-transcript branch — so the two
+          // stay aligned for the reconnect merge in transcription-actor.ts.
+          if (transcript.trim()) {
+            accumulatedFinal = (accumulatedFinal + " " + transcript).trim();
+            accumulatedWords = accumulatedWords.concat(extractFinalWords(msg));
+          }
+          callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: "", finalWords: accumulatedWords });
+        } else {
+          callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: transcript, finalWords: accumulatedWords });
+        }
+      } else if (msg.type === "UtteranceEnd") {
+        // Drop any stray interim
+        callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: "", finalWords: accumulatedWords });
+      } else if (msg.type === "Metadata") {
+        // Sent at session end — ignore here, onclose drives done
+      } else if (msg.type === "Error" || msg.type === "error") {
+        const errMsg = msg.description || msg.message || JSON.stringify(msg);
+        callbacks.onServerError(String(errMsg));
+      }
+    } catch (_e) {
+      // Non-JSON message, ignore
+    }
+  };
+
+  // The done signal is delivered when Deepgram closes the socket after
+  // CloseStream — wire it via the actor's onclose handler below by stashing
+  // the accumulated-text accessor beside the socket (see finalTextAccessors).
+  finalTextAccessors.set(ws, () => accumulatedFinal);
+  finalWordsAccessors.set(ws, () => accumulatedWords);
+
+  return {
+    ws,
+    sendPcm: (samples) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(samples);
+    },
+    endStream: () => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: "CloseStream" }));
+    },
+  };
+}
+
+/**
+ * Linear-interpolate 16kHz Int16 PCM up to 24kHz (3 output samples per 2
+ * input samples). OpenAI's realtime audio input requires rate >= 24000;
+ * the shared pcm-processor worklet emits 16kHz for Deepgram/Voxtral, so we
+ * upsample on this path rather than forking the worklet.
+ */
+function upsamplePcm16To24(buf: ArrayBuffer): ArrayBuffer {
+  const src = new Int16Array(buf);
+  if (src.length === 0) return new ArrayBuffer(0);
+  const outLen = Math.floor((src.length * 3) / 2);
+  const out = new Int16Array(outLen);
+  const lastIdx = src.length - 1;
+  for (let i = 0; i < outLen; i++) {
+    const pos = (i * 2) / 3;
+    const i0 = Math.floor(pos);
+    const i1 = i0 < lastIdx ? i0 + 1 : lastIdx;
+    const frac = pos - i0;
+    // i0 and i1 are both clamped into [0, lastIdx] above, and src has at
+    // least one element (the `src.length === 0` case returned early), so
+    // both reads are always in bounds; the `?? 0` fallbacks are unreachable
+    // but honest to the array-index type.
+    out[i] = Math.round((src[i0] ?? 0) * (1 - frac) + (src[i1] ?? 0) * frac);
+  }
+  return out.buffer;
+}
+
+export async function startOpenAIRealtimeConnection(callbacks: ServiceCallbacks): Promise<ConnectionHandle> {
+  const tempKey = await openaiRealtimeKeyManager.getKey();
+  // Browsers can't set an Authorization header on WebSocket, so OpenAI
+  // accepts the ephemeral client secret via subprotocol.
+  // Transcription sessions: no `?model=` param (the server rejects it) and
+  // no `?intent=transcription` (that was beta-only). The session's type and
+  // transcription model are set via the session.update sent on open.
+  const wsUrl = "wss://api.openai.com/v1/realtime";
+  const ws = new WebSocket(wsUrl, [
+    "realtime",
+    `openai-insecure-api-key.${tempKey}`,
+  ]);
+  let accumulatedFinal = "";
+
+  ws.addEventListener("open", () => {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+      type: "session.update",
+      session: {
+        type: "transcription",
+        audio: {
+          input: {
+            format: { type: "audio/pcm", rate: 24000 },
+            transcription: { model: "gpt-realtime-whisper" },
+          },
+        },
+      },
+    }));
+  });
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "conversation.item.input_audio_transcription.delta") {
+        // Whisper deltas are stable (no LLM-style revisions), and without
+        // turn_detection the .completed event won't fire until the user
+        // stops — so keyword spotting (which runs on finalTranscript only)
+        // would never see anything mid-utterance. Treat each delta as final.
+        const delta: string = msg.delta ?? "";
+        if (delta) {
+          accumulatedFinal = accumulatedFinal + delta;
+          callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: "" });
+        }
+      } else if (msg.type === "conversation.item.input_audio_transcription.completed") {
+        // Deltas already streamed the full text into accumulatedFinal; the
+        // completed event is just a segment marker. Nothing to append.
+        callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: "" });
+      } else if (msg.type === "conversation.item.input_audio_transcription.failed") {
+        const errMsg = msg.error?.message || "Transcription failed";
+        callbacks.onServerError(String(errMsg));
+      } else if (msg.type === "error") {
+        const errMsg = msg.error?.message || JSON.stringify(msg.error ?? msg);
+        callbacks.onServerError(String(errMsg));
+      }
+      // session.created, session.updated, input_audio_buffer.* — ignore
+    } catch (_e) {
+      // Non-JSON message, ignore
+    }
+  };
+
+  // Mirror the Deepgram pattern: the actor's onclose finalizes from the
+  // accumulated-text accessor stored beside the socket (see finalTextAccessors).
+  finalTextAccessors.set(ws, () => accumulatedFinal);
+
+  return {
+    ws,
+    sendPcm: (samples) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      const upsampled = upsamplePcm16To24(samples);
+      ws.send(JSON.stringify({
+        type: "input_audio_buffer.append",
+        audio: arrayBufferToBase64(upsampled),
+      }));
+    },
+    endStream: () => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+    },
+  };
+}

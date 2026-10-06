@@ -13,7 +13,7 @@ resolution: implemented
 already-landed message"): the Codex-engine branch now loads `{ mode: "tail",
 tail: MAX_SESSION_ENTRIES }` instead of `{ mode: "page", offset: 0, limit:
 MAX_SESSION_ENTRIES }`, so a message landed near the tail of a thread longer
-than 5000 entries is found. `test/core/codex-transcript.doctest.md` pins the
+than 5000 entries is found. `test/core/codex-transcript.doctest.md` (moved to `beebox/test/core/chat/session/codex-transcript.doctest.md`) pins the
 tail-vs-page slicing. No divergence from the issue's proposed fix.
 
 `userMessageAlreadyLanded` (`src/core/chat/session/deliver-user-message.ts`)

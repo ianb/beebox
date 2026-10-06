@@ -18,16 +18,17 @@
  */
 
 import Markdoc from "@markdoc/markdoc";
+import { parseMarkdown } from "../shared/markdoc-config/parse/core.js";
 import type { Node } from "@markdoc/markdoc";
-import { markdocConfig } from "../shared/markdoc-config.js";
-import type { LintIssue } from "../cards/index.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { markdocConfig } from "../shared/markdoc-config/tags/core.js";
+import type { LintIssue } from "../exports/cards.js";
+import { errorMessage } from "../shared/error-guards.js";
 
 // Markdoc ships dual CJS/ESM but its `exports` field is null, so Node ESM
 // imports resolve to the CJS bundle, which only exposes a default export.
 // Destructure off it — same pattern as `body-refs.ts` / `markdoc-config.ts`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { parse, validate } = Markdoc;
+const { validate } = Markdoc;
 
 /**
  * Parse+validate a card body against the shared Markdoc vocabulary. Returns
@@ -43,7 +44,7 @@ export function lintBodyMarkdoc(bodyText: string): LintIssue[] {
   if (bodyText === "") return [];
   let ast: Node;
   try {
-    ast = parse(bodyText);
+    ast = parseMarkdown(bodyText);
   } catch (e) {
     return [
       {
@@ -55,10 +56,14 @@ export function lintBodyMarkdoc(bodyText: string): LintIssue[] {
   }
   const tagSpans = collectTagSpans(ast);
   return validate(ast, markdocConfig)
-    .filter((entry) => entry.error.level === "error" || entry.error.level === "critical")
+    // `html-unsupported` warnings come from the raw-HTML rewrite
+    // (`shared/markdoc-config/parse/html-tokens.ts`): markup that was clearly meant
+    // as HTML but renders as text or loses an attribute.
+    .filter((entry) => entry.error.level === "error" || entry.error.level === "critical" || entry.error.id === "html-unsupported")
     .map((entry) => {
       const line = lineFor(entry.lines);
-      const tagName = tagNameFor(tagSpans, entry.lines);
+      // Raw-HTML warnings name their element in the message; no Markdoc tag owns them.
+      const tagName = entry.error.id === "html-unsupported" ? "HTML" : tagNameFor(tagSpans, entry.lines);
       return {
         type: "validation" as const,
         severity: "warning" as const,
@@ -70,7 +75,7 @@ export function lintBodyMarkdoc(bodyText: string): LintIssue[] {
 /**
  * A tag node's authored name and source line span. Exported (alongside
  * `collectTagSpans`/`tagNameFor`) so the todo collector
- * (`core/todo/collect-body.ts`) can reuse the same "which tag does this
+ * (`core/todo/extract-body.ts`) can reuse the same "which tag does this
  * validate error belong to" attribution logic rather than re-deriving it —
  * it needs to tell a `{% todo %}`/`{% see-also %}` validation error apart
  * from an unrelated one in the same body (`docs/implemented-plans/todo-annotation.md`,

@@ -10,9 +10,9 @@
  * setup and clears it on server close.
  */
 
-import type { ChatSession } from "../core/chat/session/index.js";
-import type { ChatSessionRegistry } from "../core/chat/session/registry.js";
-import type { ChatScheduleManager } from "../core/chat/schedules.js";
+import type { ChatSession } from "../core/chat/session/run/core.js";
+import type { ChatSessionRegistry } from "../core/chat/session/registry/core.js";
+import type { ChatScheduleManager } from "../core/chat/schedules/core.js";
 
 export interface ChatRuntime {
   registry: ChatSessionRegistry;
@@ -36,12 +36,4 @@ export function clearChatRuntime(boxRoot: string): void {
 /** The box's chat runtime, or undefined if its chat routes aren't registered. */
 export function getChatRuntime(boxRoot: string): ChatRuntime | undefined {
   return runtimes.get(boxRoot);
-}
-
-/** Process-wide safe boundary for a bundle-backed server replacement. */
-export function chatRuntimesAreIdle(): boolean {
-  for (const runtime of runtimes.values()) {
-    if (runtime.registry.snapshotAll().some((session) => session.busy)) return false;
-  }
-  return true;
 }

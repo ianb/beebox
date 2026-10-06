@@ -28,11 +28,11 @@ import * as path from "node:path";
 import { getBoxTime, getBoxTimeISO } from "../../lib/time.js";
 import { parseUploadBatch } from "../../schemas/upload-batch.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { userMessageAlreadyLanded } from "../chat/session/deliver-user-message.js";
-import { listStagingSessions, isBulkSession, readStagingSession, writeStagingSession, type StagingSession, type StagingSessionState } from "../capture/staging-store.js";
+import { listStagingSessions, isBulkSession, readStagingSession, writeStagingSession, type StagingSession, type StagingSessionState } from "../capture/staging-store/core.js";
 import { cleanupStagingSession, discardStagingSessionIfCancellable } from "../capture/staging-teardown.js";
 import { bulkBatchHasNothingToReport } from "./batch-format.js";
 import { StagingSessionGoneError } from "../capture/staging-errors.js";
@@ -293,7 +293,7 @@ async function findStaleTmpUploadCards(opts: { boxRoot: string; now: number }): 
   for (const dir of await findTmpUploadDirs(boxRoot, boxRoot)) {
     for (const card of await batchCardsIn(dir)) {
       const parsed = parseUploadBatch(await fs.readFile(card, "utf-8").catch(() => ""));
-      if (parsed === null || parsed.frontmatter.status !== "delivered") continue;
+      if (parsed === null || parsed.frontmatter.delivered !== true) continue;
       if (parsed.frontmatter["sweep-notified"] !== undefined) continue; // Already surfaced once.
       const startedAt = parsed.frontmatter.time?.start;
       if (startedAt === undefined) continue;

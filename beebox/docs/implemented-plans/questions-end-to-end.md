@@ -102,19 +102,19 @@ Design decisions settled with the boxholder (2026-07-10):
   50-65, agent instructions at 23-45): generic reactor job carrying
   `question-ref`, `directive`, `answer`. Reused; instructions extended for
   learning capture.
-- **Producers** — triage guesses (`src/core/triage/routing.ts:93-126`,
+- **Producers** — triage guesses (`src/core/triage/routing.ts:93-126` (moved to `beebox/src/core/triage/run/routing.ts`),
   `createGuessQuestion`: one select question per `guess`-confidence item,
   options = categories + `_other`); scan-import
-  (`src/core/commands/scan-import-cards.ts:94-113,125-151,153-177`); the
+  (`src/core/commands/scan-import-cards.ts:94-113 (moved to `beebox/src/core/commands/scan-import/cards.ts`),125-151,153-177`); the
   retrospective integrate step
   (`templates/procedures/process-retrospective.procedure.card:165-191` —
   *"a proposed briefing correction becomes a question card quoting the
   evidence"*). All reused; triage and retro gain `learning:`.
 - **Knowledge sinks + evidence model** — personality card
   (`config/main.personality.card`), guide cards
-  (`src/schemas/guide-elements.tsx:19-30`, `ConfidenceLevel`,
+  (`src/schemas/guide-elements.tsx:19-30` (moved to `beebox/src/schemas/guide/schema.tsx`), `ConfidenceLevel`,
   `BeliefSource`), briefing card (`src/schemas/briefing.tsx`, compiled into
-  the box `CLAUDE.md` via `src/core/docs-gen/claude-md.ts:20`). Reused as-is
+  the box `CLAUDE.md` via `src/core/docs-gen/claude-md.ts:20` (moved to `beebox/src/core/docs-gen/generate/claude-md.ts`)). Reused as-is
   — `learning.sink` is exactly the retro sink vocabulary minus `question`
   itself. No new store.
 - **Surfacing** — `QuestionsPage`/`QuestionsList`
@@ -134,11 +134,11 @@ Design decisions settled with the boxholder (2026-07-10):
   (`src/core/notify-boxholder.ts:67`) fans out to web-push +
   Telegram-message output cards; `checkPendingQuestionsAndNotify` runs from
   `bbx finalize` (`src/cli/commands/finalize.ts:32`); the scheduler daemon
-  ticks every box every 60s (`src/core/schedule/scheduler.ts:216` is the
+  ticks every box every 60s (`src/core/schedule/scheduler.ts:216` (moved to `beebox/src/core/schedule/scheduler/core.ts`) is the
   model for a time-based sweep, with per-task latch state via
   `src/core/schedule/state.ts`). Reused: the aging sweep rides this pattern.
 - **Prompt surface** — `questionsSection`
-  (`src/core/agent-guide/cards.ts:174-181`) and the where-to-record table
+  (`src/core/agent-guide/cards.ts:174-181` (moved to `beebox/src/core/agent-guide/guide/cards.ts`)) and the where-to-record table
   (`src/core/agent-guide/behavior.ts:78-84`, *"When in doubt, ask"*). Both
   rewritten in Track E. Note `cards.ts:178` currently promises *"Set
   `answered-by` to your agent name so the answer routes back to you"* —
@@ -146,7 +146,7 @@ Design decisions settled with the boxholder (2026-07-10):
   promise are removed.
 - **Locks/commits** — `withCardLock` (`src/lib/card-lock.ts`, in-process
   only per its module comment), `file-lock.ts` (the cross-process
-  primitive), `stageAndCommitPaths` (`src/lib/git.ts`, no rollback on
+  primitive), `stageAndCommitPaths` (`src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`), no rollback on
   failure). Reused; Track B composes them into a guarded cross-process
   transition with commit-failure rollback.
 - **Dead/duplicated code touched** — raw-Fastify `POST /api/actions/answer`
@@ -220,10 +220,10 @@ expired-at: …                          # set by the aging sweep
 - `learning.sink` reuses the retro sink vocabulary
   (`src/core/retro/observations.ts:19`) minus `question`. No `claude-md`
   sink: the briefing compiles into the box CLAUDE.md
-  (`src/core/docs-gen/claude-md.ts:20`), so briefing *is* the CLAUDE.md
+  (`src/core/docs-gen/claude-md.ts:20` (moved to `beebox/src/core/docs-gen/generate/claude-md.ts`)), so briefing *is* the CLAUDE.md
   path — **with one constraint** (codex finding): `compileBriefings` only
   compiles the *root* briefing; directory briefings are an explicit TODO
-  (`src/core/docs-gen/compile.ts:74-101`). A `learning.ref` targeting a
+  (`src/core/docs-gen/compile.ts:74-101` (moved to `beebox/src/core/docs-gen/compile/core.ts`)). A `learning.ref` targeting a
   directory briefing would record a belief no agent's context ever sees.
   For sink `briefing`, `ref` must be the root briefing (schema instructions
   say so; the follow-up job instructions repeat it).
@@ -251,8 +251,8 @@ script: strip `answered-by:` from existing question cards; backfill
 stray question cards (scan-import's attach-scope questions — Track E) into
 `box/questions/`; verify no existing select question violates the options
 refinement (the one-option select fixture in
-`test/schemas/schemas.doctest.md:156` gets updated alongside). Run per
-`docs/migrations.md` on test1 + prod boxes. The two live test1 retro
+`test/schemas/schemas.doctest.md:156` (moved to `beebox/test/schemas.doctest.md`) gets updated alongside). Run per
+`docs/cards/migrations.md` on test1 + prod boxes. The two live test1 retro
 questions also get their directives fixed: they instruct edits to the
 briefing's `<agent-needs-to-know>` element, a tag retired by the Markdoc
 migration (current vocabulary is `{% correction %}`, `src/schemas/
@@ -320,7 +320,7 @@ zero test references; (5) the raw route duplicates the tRPC procedure.
   integrate step's evidence discipline (quote the answer, ref the question).
 
 **First chunk.** Atomic commit + status-guard change + `answer.ts` doctest
-(`test/core/commands/answer-command.doctest.md`: select by letter/label/id,
+(`test/core/commands/answer-command.doctest.md` (moved to `beebox/test/core/commands/answer.doctest.md`): select by letter/label/id,
 confirm by selectedId+note, text, expired-answerable, already-answered
 rejection, single-commit assertion).
 
@@ -530,7 +530,7 @@ it now; the iOS app's push story will re-open surfacing as its own plan.
 - **Partial migration / transition state** — **ADDRESSED**: all new fields
   optional, old cards load unchanged during the window; the only breaking
   change (`answered-by` removal, select refinement) lands in the same commit
-  as its migration script; boxes migrate per `docs/migrations.md`. A
+  as its migration script; boxes migrate per `docs/cards/migrations.md`. A
   question created pre-migration and answered post-migration works — the
   answer path never touches the removed field.
 
@@ -615,11 +615,11 @@ Each chunk is a commit-sized unit with its tests; the plan ships as one unit
 - **Knowledge audits** land with Track E and are executed (status comment
   recorded in `knowledge-audits.yaml`) before completion.
 - **Migration**: scripted, run first on a scratch clone of test1, then
-  test1, then prod boxes per `docs/migrations.md`; `bbx validate` clean
+  test1, then prod boxes per `docs/cards/migrations.md`; `bbx validate` clean
   before and after. Small blast radius (a handful of question cards exist).
 - **User-story re-audit**: after implementation, re-run the user-story
   method scoped to questions (reader agents → adversarial verification →
-  `bin/browse` checks, per `user-stories/catalog/2026-06-26.md`'s
+  `bin/browse` checks, per `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`)'s
   method note) as the acceptance pass — the subsystem this plan exists to
   fix was flagged by exactly that method.
 
@@ -641,7 +641,7 @@ restatement of it):
   partially-migrated card carrying stale lifecycle fields for its current
   status would otherwise load successfully.
 - **Fail-closed path containment** — `resolveContainedQuestionPath`
-  (`src/core/commands/question-transition.ts`) rejects a `question` path
+  (`src/core/commands/question-transition.ts` (moved to `beebox/src/core/question-transition.ts`)) rejects a `question` path
   that resolves outside the box (`../` segments, or an absolute path
   escaping `boxRoot`) before any transition touches disk; the web tRPC
   boundary additionally rejects absolute paths outright. Not explicitly

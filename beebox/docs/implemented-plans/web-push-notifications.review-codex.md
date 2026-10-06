@@ -23,7 +23,7 @@ Plan Track A says keep one root/base SW and carry box in subscription/payload, w
 Track B stores subscriptions per box. Actual code registers one SW at
 `withBase("/sw.js")` (`src/frontend/src/main.tsx:23-24`,
 `src/frontend/src/api-core.ts:45-47`) and serves the same frontend at root and each
-box prefix (`src/webapp/server.ts:100-106`, `src/webapp/server-box-scope.ts:176-183`).
+box prefix (`src/webapp/server.ts:100-106` (moved to `beebox/src/webapp/server/app.ts`), `src/webapp/server-box-scope.ts:176-183`).
 A `PushSubscription` is unique to the SW registration, not to a box; MDN also calls
 the endpoint a capability URL. So the same browser endpoint will be duplicated across
 box files, 404/410 pruning in one box will not prune the others, and
@@ -40,7 +40,7 @@ but then rejects a push/notification card and calls `sendPush` directly. The
 code/docs make card durability load-bearing: `box/output/` is "Outbound cards staged
 for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
 are committed, deleted on success, or stamped failed
-(`src/schemas/telegram-message.ts:31-44`; `src/connectors/telegram-output-cards.ts:56-68`),
+(`src/schemas/telegram-message.ts:31-44`; `src/connectors/telegram-output-cards.ts:56-68` (moved to `beebox/src/connectors/telegram/output-cards.ts`)),
 and `bbx finalize` runs outbound connectors (`src/cli/commands/finalize.ts:18-32`).
 Direct push has no committed intent, no replay, no failed card, and no `bbx finalize`
 path. Either add a `.web-push.card` connector or explicitly scope v1 as a direct
@@ -51,7 +51,7 @@ connector flushed by `bbx finalize` (Track C).
 **3. High: push-only health alerts can be silently lost after the latch.**
 Current health alerts latch tasks after writing the Telegram card, and a Telegram
 delivery failure leaves an inspectable failed card
-(`src/core/schedule-health-alert.ts:80-97`, `src/connectors/telegram-output-cards.ts:60-68`).
+(`src/core/schedule-health-alert.ts:80-97`, `src/connectors/telegram-output-cards.ts:60-68` (moved to `beebox/src/connectors/telegram/output-cards.ts`)).
 The plan's `sendPush` keeps transient failures, logs/counts them, and moves on. In a
 push-only box, a transient 429/5xx can produce no user-visible artifact and still
 suppress that unhealthy episode if `checkHealthAndAlert` is rewired as planned. Do
@@ -65,7 +65,7 @@ are scattered. UI emits `question-answered` and generic `card-created`, not "que
 became pending" (`src/webapp/trpc/routers/actions.ts:42-47`, `:82-86`). Triage writes
 questions directly to `box/questions/` (`src/core/triage-routing.ts:140-155`). Scan
 import writes question cards under attach scopes
-(`src/core/commands/scan-import-cards.ts:90-99`, `:128-137`, `:154-163`), while the
+(`src/core/commands/scan-import-cards.ts:90-99` (moved to `beebox/src/core/commands/scan-import/cards.ts`), `:128-137`, `:154-163`), while the
 web status only scans `box/questions/` (`src/core/state.ts:128-132`). Minimal version:
 health-alerts only; later add a central `createQuestion` API/event if question pushes
 matter.

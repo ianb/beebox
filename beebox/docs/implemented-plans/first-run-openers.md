@@ -86,7 +86,7 @@ regression. When the purpose is still the stock stub and the person says
 
 ### 5. Backend query
 
-`chat.openers` (tRPC, `src/webapp/trpc/routers/chat.ts`), input
+`chat.openers` (tRPC, `src/webapp/trpc/routers/chat.ts` (moved to `beebox/src/webapp/trpc/routers/chat/router.ts`)), input
 `{ contextDir?: string }`: read that directory's briefing card (root when
 unset), return its frontmatter `{ openers: string[] }`. Missing briefing or
 empty list → `[]`.
@@ -106,7 +106,7 @@ at `bbx serve` / the box URL as appropriate).
 
 ## Tests
 
-- `test/schemas/briefing-compile.doctest.md` — opener emission.
+- `test/schemas/briefing-compile.doctest.md` (moved to `beebox/test/schemas.briefing-compile.doctest.md`) — opener emission.
 - Unit test for the opener extraction used by `chat.openers`.
 - Frontend: empty-state renders openers and a click sends the text.
 

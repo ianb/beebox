@@ -15,17 +15,17 @@
  */
 
 import { createReadStream } from "node:fs";
-import * as readline from "node:readline";
-import type { ChatSession } from "./index.js";
-import type { ChatSessionRegistry } from "./registry.js";
-import type { EventBus } from "../../event-bus.js";
+import type { ChatSession } from "./run/core.js";
+import type { ChatSessionRegistry } from "./registry/core.js";
+import type { EventBus } from "../../event-bus/core.js";
 import { resolveSessionLogPath } from "./history.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { resolveChatEngine } from "./engine.js";
 import { resolveChatTarget } from "./target.js";
 import { loadSessionHistory } from "./load-history.js";
 import { MAX_SESSION_ENTRIES } from "../../../cli/lib/session.js";
+import { jsonlLines } from "../../../lib/jsonl-lines.js";
 
 /** Raised when the non-busy `send()` of a delivered user message fails. Retryable. */
 export class UserMessageDeliveryError extends Error {
@@ -98,13 +98,11 @@ export async function userMessageAlreadyLanded(opts: {
     // (2026-08-01). `marker` sits inside a single JSONL line, so a per-line
     // match is equivalent to a whole-file match.
     const fileStream = createReadStream(logPath, { encoding: "utf-8" });
-    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
     try {
-      for await (const line of rl) {
+      for await (const line of jsonlLines(fileStream)) {
         if (line.includes(marker)) return true;
       }
     } finally {
-      rl.close();
       fileStream.destroy();
     }
     return false;
@@ -184,8 +182,11 @@ export async function deliverUserMessage(opts: {
     });
   };
 
+  // Capture and upload wrappers are composed by beebox around names and
+  // transcripts, not typed at the composer.
+  const input = { text: message, clientComposed: true as const };
   if (session.isBusy()) {
-    session.enqueue({ text: message });
+    session.enqueue(input);
     recordUserMessage();
     return { sessionId: id, queued: true };
   }
@@ -203,7 +204,7 @@ export async function deliverUserMessage(opts: {
   // dispatched, while a throw is ambiguous — it may have gone out before the
   // failure — and treating the two alike would let a retry double-deliver. The
   // callers' crash-recovery paths depend on that distinction.
-  const sent = await session.send({ text: message });
+  const sent = await session.send(input);
   if (!sent) throw new UserMessageDeliveryError();
   recordUserMessage();
   return { sessionId: session.getSessionId(), queued: false };

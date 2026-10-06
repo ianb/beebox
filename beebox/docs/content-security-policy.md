@@ -10,7 +10,7 @@ step (below).
 - **`src/lib/csp.ts`** — `buildCspPolicy({ mode, reportPath })` is the single
   source of truth for the directive set. Prod and dev share it so they can't
   drift; only `script-src`/`style-src` and the report path differ by mode.
-- **Built webapp** — `registerCspReportingHeaders` (`src/webapp/server-root.ts`) adds an
+- **Built webapp** — `registerCspReportingHeaders` (`src/webapp/server-root/root-routes.ts`) adds an
   `onSend` hook that sets `Content-Security-Policy-Report-Only` +
   `Reporting-Endpoints` on `text/html` responses. It keys on content-type (API
   and asset responses get no CSP) and **yields to any route that already set a
@@ -80,7 +80,7 @@ CSP entry — only things the browser contacts directly.
 
 ## Reviewing violations + hardening
 
-`pnpm csp-digest` (`src/dev/csp-digest.ts`) dedupes the log and prints a digest:
+`pnpm csp-digest` (`src/dev/csp-report/digest.ts`) dedupes the log and prints a digest:
 each directive+origin that fired, with counts and a first/last-seen window, or
 "safe to harden" when clean. By default it runs **incrementally** against the
 local primary box (`~/src/boxes/test1`): it reports only entries newer than the

@@ -390,7 +390,7 @@ Everything else below is still future work.
 The canonical surface the boxholder wants is **mostly not built** — that's the
 central gap. The pieces that exist are scattered and duplicative.
 
-- `src/core/agent-guide/index.ts:64-93` — assembles the guide from per-concept
+- `src/core/agent-guide/index.ts:64-93` (moved to `beebox/src/core/agent-guide/guide/core.ts`) — assembles the guide from per-concept
   section files, `@`-included into CLAUDE.md; **every box agent loads it**
   (chat and reactor). This is why the system prompts' box-concepts blocks are
   redundant. `calendarSection()` and `driveSection()` are included
@@ -412,12 +412,12 @@ central gap. The pieces that exist are scattered and duplicative.
   `<destination for="triage">` angle-bracket notation; commentary flags it as
   possibly-stale XML. Audit whether the landmark schema takes a `{% destination %}`
   Markdoc tag now (Track 1 / audit).
-- `src/schemas/registry.ts` — `SheetSchema` type is **`sheet`** (bare), while
+- `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`) — `SheetSchema` type is **`sheet`** (bare), while
   the Doc side is `gdoc`. The `.sheet.card` → `.gsheet.card` rename is a real
   card-type migration (subplan). `drive.ts:17,27` shows each Drive card pairs
   with a data dir / `.md` — the "move both together" mechanic the commentary
   wants collapsed to `bbx mv`.
-- `src/webapp/routes/proxy-image.ts:127` — `/api/proxy-image?url=`, SSRF-guarded.
+- `src/webapp/routes/proxy-image.ts:127` (moved to `beebox/src/webapp/routes/api/proxy-image.ts`) — `/api/proxy-image?url=`, SSRF-guarded.
   The external-image capability (recipe `hero-image` href, chat image display)
   already exists; reuse.
 
@@ -646,6 +646,12 @@ change is its own chunk (test + mid-session gate). Voice-out-default stays an
 open question.
 
 ### Track 5 — Agent-guide per-section trims + string normalization (rounds 1+2)
+
+**Superseded** by [the agent guide spec](../implemented-plans/agent-guide-spec.md) for
+the agent-guide sections themselves: every section was binned and rewritten
+against a ledger, and the string-array-to-template-literal normalization is
+moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
+plan's tracks are untouched.
 
 **What.** Per-section edits, most deferring shared concepts to Track 0. Plus a
 cross-cutting refactor: **normalize each section from string-array to a single

@@ -5,8 +5,9 @@
  */
 
 import { ConceptMapView } from "../components/concept-map/ConceptMapView";
-import { registerFileType } from "./index";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "concept-map" }, {
+export const conceptMapRenderer: RendererEntry = {
+  selector: { type: "concept-map" },
   renderer: { name: "Concept Map", Component: ConceptMapView, priority: 100 },
-});
+};

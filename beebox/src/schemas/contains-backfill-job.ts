@@ -7,16 +7,15 @@
  * `bbx contains list --missing` is empty. Processed by the reactor agent.
  */
 
-import { cardSchema, cardRef, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { cardSchema, cardRef, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { z } from "zod";
 
 export const ContainsBackfillJobSchema: CardSchema = cardSchema("contains-backfill-job", {
+  brief: "Job writing missing contains: lines",
   description: "A system job to write missing contains: fields for a batch of cards; bbx wakeup queues one batch per cycle",
   category: "system",
   searchable: false,
   fields: {
-    status: z.string().default("pending"),
-    source: z.string().default("contains-backfill"),
     priority: z.enum(["normal", "low"]).default("low"),
     description: z.string(),
     items: z.array(cardRef()),
@@ -51,8 +50,6 @@ export function createContainsBackfillJobTemplate(options: {
       ? ` ${String(options.remaining)} more cards remain; the next wakeup queues another batch.`
       : "";
   const fields: Record<string, unknown> = {
-    status: "pending",
-    source: "contains-backfill",
     priority: "low",
     description: `Write the contains: field for ${String(count)} cards missing it.${remainingNote}`,
     items: options.items.map((ref) => ({ ref })),

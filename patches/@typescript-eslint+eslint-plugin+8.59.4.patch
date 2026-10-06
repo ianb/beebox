@@ -1,0 +1,19 @@
+diff --git a/node_modules/@typescript-eslint/eslint-plugin/dist/rules/no-misused-promises.js b/node_modules/@typescript-eslint/eslint-plugin/dist/rules/no-misused-promises.js
+index ba6af968b..e4dd7d65f 100644
+--- a/node_modules/@typescript-eslint/eslint-plugin/dist/rules/no-misused-promises.js
++++ b/node_modules/@typescript-eslint/eslint-plugin/dist/rules/no-misused-promises.js
+@@ -459,8 +459,13 @@ exports.default = (0, util_1.createRule)({
+                 while (current && !(0, util_1.isFunction)(current)) {
+                     current = current.parent;
+                 }
+-                return (0, util_1.nullThrows)(current, util_1.NullThrowsReasons.MissingParent);
++                return current;
+             })();
++            // A `return` with no enclosing function is legal in a CommonJS module, and
++            // there is no function signature for the returned value to be misused against.
++            if (!functionNode) {
++                return;
++            }
+             if (functionNode.returnType &&
+                 !isPossiblyFunctionType(functionNode.returnType)) {
+                 return;

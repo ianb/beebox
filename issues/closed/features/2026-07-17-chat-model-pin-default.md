@@ -48,11 +48,11 @@ box-wide pointer**:
   `.beebox/chat-model.json` — the path is `DEFAULT_MODEL_FILE`
   (`src/core/chat/session/state.ts`).
 - Every `ChatSession` defaults `modelFile` to that same box path
-  (`src/core/chat/session/index.ts:106`), and holds an in-memory
+  (`src/core/chat/session/index.ts:106` (moved to `beebox/src/core/chat/session/run/core.ts`)), and holds an in-memory
   `currentModel: string | null` (`index.ts:86`) where **null means the SDK
   default**, not "follow the box default."
 - The selector calls tRPC `setModel({ session, model })`
-  (`src/webapp/trpc/routers/chat-control-procedures.ts:51`), which sets the
+  (`src/webapp/trpc/routers/chat-control-procedures.ts:51` (moved to `beebox/src/webapp/trpc/routers/chat/control-procedures.ts`)), which sets the
   session's model **and can restart it** (returns `restarted`).
 
 So selecting a model is effectively box-global and restart-y — which is the
@@ -93,6 +93,6 @@ idea needs a genuine two-level split:
   the default already.)
 
 Surfaces: `src/frontend/src/components/chat/InteractiveChat*.tsx` (selector UI),
-`src/webapp/trpc/routers/chat-control-procedures.ts` (setModel + a new set-default),
+`src/webapp/trpc/routers/chat-control-procedures.ts` (moved to `beebox/src/webapp/trpc/routers/chat/control-procedures.ts`) (setModel + a new set-default),
 `src/core/chat/session/{state,index,options}.ts` (box pointer, per-session model,
 modelFile). Same selector touched by the recent Sonnet-5 label/id fix.

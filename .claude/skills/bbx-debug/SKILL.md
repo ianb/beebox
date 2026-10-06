@@ -31,10 +31,9 @@ disproportionate effort here; be aggressive and creative.
   regression test (write it first). Pick the tier: pure-function
   (`.doctest.md`), route (`makeTestServer()`), or filesystem (`makeTmpBox()`).
   See `agent-doctest/docs/syntax.md`, `beebox/test/helpers/` (monorepo-relative).
-- **`bbx scenario run <name>`** — multi-step end-to-end (wakeup, connectors,
-  agent runs). Runs from the beginning every time (no checkpoint-resume);
-  `--dry-run` only parses the card — it proves nothing about runtime behavior.
-  See `docs/testing.md`.
+- **`bbx engine field-test run <name>`** — multi-step end-to-end (wakeup,
+  connectors, agent runs) with a persona operator against a real box. Runs from
+  the beginning every time (no checkpoint-resume). See `docs/testing.md`.
 - **curl the dev router** — `curl http://localhost:3210/<wt>/<box>/api/...` for a
   backend route, or Fastify `inject()` in a route doctest (no server spin-up).
 - **`bin/browse`** — headless repro of a frontend bug: `snapshot`, `eval`,

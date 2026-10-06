@@ -22,11 +22,6 @@
  * | `openrouter` | `GET https://openrouter.ai/api/v1/key` |
  * | `telegram-bot/<box>` | `GET https://api.telegram.org/bot<token>/getMe` |
  *
- * `publish/<box>` deliberately has NO probe: verifying an R2 token means a
- * bucket operation, which is neither free of side effects nor cheap, so the
- * publish credential stays `unchecked` rather than getting a probe that
- * violates the harmlessness rule.
- *
  * **Three outcomes, and the middle one matters.** `ok` and `failed` are what
  * they sound like; anything that does not distinguish a bad credential from a
  * bad day — a 500, a timeout, DNS failure — records `unchecked` with a reason.
@@ -39,7 +34,7 @@
  */
 
 import { z } from "zod";
-import { errnoCode, toError } from "../../lib/error-guards.js";
+import { errnoCode, toError } from "../../shared/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { parseJsonSecret } from "./json-secret.js";
 import { lookupByName } from "./name-match.js";

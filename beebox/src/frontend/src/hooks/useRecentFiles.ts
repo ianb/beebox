@@ -9,7 +9,7 @@
 
 import { useMemo } from "react";
 import type { SessionEntry, SessionContentBlock } from "../api";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import type { FileSummary } from "@core/file-summary";
 import { parseAcks } from "../lib/structured-output-parsing";
 import { boxRelativePath } from "@shared/box-path.js";

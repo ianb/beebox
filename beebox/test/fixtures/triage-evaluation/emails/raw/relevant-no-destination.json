@@ -1,0 +1,26 @@
+{
+  "id": "message0009",
+  "threadId": "thread0009",
+  "internalDate": "1790553600000",
+  "snippet": "Sharing a memory for the household family archive.",
+  "payload": {
+    "mimeType": "text/plain",
+    "headers": [
+      {
+        "name": "Subject",
+        "value": "A memory of Odette"
+      },
+      {
+        "name": "From",
+        "value": "Noor Haddad <noor@example.invalid>"
+      },
+      {
+        "name": "To",
+        "value": "Priya Marlowe <priya@example.invalid>"
+      }
+    ],
+    "body": {
+      "data": "U1lOVEhFVElDLiBQbGVhc2Uga2VlcCB0aGlzIG1lbW9yeSBpbiBPZGV0dGUgTWFybG93ZSBob3VzZWhvbGQgY29ycmVzcG9uZGVuY2U6IHNoZSB0YXVnaHQgbWUgdG8gZ2FyZGVuIHdoZW4gSSB3YXMgeW91bmcuIE5vIGxlZ2FsLCBmaW5hbmNpYWwsIG9yIHByb3BlcnR5IGFjdGlvbiBpcyByZXF1ZXN0ZWQu"
+    }
+  }
+}

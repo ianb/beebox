@@ -46,7 +46,7 @@ Why this fits agent cognition (assessment from the agent side, same date):
   image tokens; full-app screenshots are mostly wasted pixels. Being able to
   request a crop/zoom of a region is the visual analog of `--selector`.
 - Determinism is the big win over `bin/browse`: no flake, no waits, goldens are
-  possible (cf. [agent-browser-screenshot-flake](../../bugs/2026-07-10-agent-browser-screenshot-flake.md)).
+  possible (cf. [agent-browser-screenshot-flake](../bugs/2026-07-10-agent-browser-screenshot-flake.md)).
 - Honest scope limit: this covers canvas-drawn programs (p5.js/Processing-style
   creative coding, sims, visualizations) — a new programming surface for boxes.
   It does not replace browse for the real DOM/CSS app UI. Related tension about
@@ -126,9 +126,9 @@ top-level `canvas-loop/` (peer of `agent-doctest/`) as `@ianbicking/canvas-loop`
 (EXPERIMENTAL, 0.1.0), split into subpath exports — `.` (core TEA contract,
 zero heavy deps), `./headless` (`@napi-rs/canvas` runner + CLI), `./react`
 (`<SketchFigure>` embed component), `./eslint` (the `tea/*` plugin). The five
-experiments below became the `canvas-loop/gallery/` exercise corpus — six
+experiments below became the `canvas-loop/gallery/` (moved to `canvas-loop/src/gallery`) exercise corpus — six
 entries, since the particle task ran twice (Sonnet and Opus); schema in
-`canvas-loop/gallery/README.md`; `experiments/` retired. A `<SketchFigure>`
+`canvas-loop/gallery/README.md` (moved to `canvas-loop/src/gallery/README.md`); `experiments/` retired. A `<SketchFigure>`
 demo renders at `dev/canvas-loop.html`, and a Claude Code plugin
 (`canvas-loop/claude-plugin/`, skill `canvas-loop-sketch`, wired into
 `.claude/skills/`) packages the author→run→Read-transcript loop as agent
@@ -136,7 +136,7 @@ guidance. The scripted `snapshot` events entry all three experiment agents
 asked for shipped. Full per-track record: `canvas-loop/CHANGELOG.md` and
 `canvas-loop/LIBRARY-PLAN.md`. The dated sections below are the original
 experiment logs — their `sandbox/canvas-loop/...` paths are preserved as
-history (the sketches they name now live under `canvas-loop/gallery/`).
+history (the sketches they name now live under `canvas-loop/gallery/` (moved to `canvas-loop/src/gallery`)).
 
 ## Experiment (2026-07-14) — prototype built and tested on a fresh agent
 
@@ -490,7 +490,7 @@ Experiment 4's `ctx` reliance resolved: `polygon(points)`, a tuple-union
 sanctioned callback — it scopes state rather than being data). All primitives
 are serializable data, preserving the command-list/browser-render option.
 Sufficiency proven empirically: the fjord — the heaviest `ctx` user — ported
-to `examples/fjord-tea.ts` with zero `ctx`, visually equivalent frames
+to `examples/fjord-tea.ts` (moved to `canvas-loop/src/examples/fjord-tea.ts`) with zero `ctx`, visually equivalent frames
 (verified). One remaining `ctx`-only need surfaced: `lineJoin` (the wet-rim
 stroke renders miter instead of round in the port). Also done, boxholder-
 authorized: `max-lines` raised to 600 in sketch dirs. Frame gallery of all

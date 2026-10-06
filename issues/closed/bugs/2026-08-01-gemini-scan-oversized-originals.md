@@ -8,7 +8,7 @@ Resolved by `0499b247`. The shared scan runner now creates bounded JPEGs for
 both vision backends while it leaves the archived originals unchanged.
 
 `bbx scan-import`'s photo flow archives input files verbatim and sends those
-copies to the analysis backend (`beebox/src/core/commands/scan-import.ts`
+copies to the analysis backend (`beebox/src/core/commands/scan-import.ts` (moved to `beebox/src/core/commands/scan-import/command.ts`)
 — the `.scan-archive` copy loop). The Claude backend normalizes every page
 before send (`scan-vision-claude.ts`: sharp → JPEG, long edge 2000px, q88),
 but the opt-in **Gemini backend does not** — `analyzeScanBatchWithGemini`

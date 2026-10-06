@@ -17,7 +17,15 @@ export type { TelegramUpdate } from "./telegram-schemas.js";
 export interface TelegramSentMessage {
   chatId: string | number;
   text: string;
+  /** Sent with `disable_notification`: the recipient's client makes no sound. */
+  silent: boolean;
   messageId: number;
+}
+
+export interface TelegramMessage {
+  text: string;
+  /** Deliver without a sound (Telegram's `disable_notification`). */
+  silent?: boolean | undefined;
 }
 
 export interface WebhookInfo {
@@ -35,7 +43,7 @@ export interface TelegramService {
   getMe(): Promise<BotUser>;
   sendMessage(
     chatId: string | number,
-    text: string,
+    message: TelegramMessage,
   ): Promise<{ message_id: number }>;
   setWebhook(
     url: string,
@@ -66,8 +74,8 @@ export function createTelegramService(botToken: string): TelegramService {
       const me = await bot.api.getMe();
       return { username: me.username, first_name: me.first_name };
     },
-    async sendMessage(chatId, text) {
-      const result = await bot.api.sendMessage(chatId, text);
+    async sendMessage(chatId, { text, silent }) {
+      const result = await bot.api.sendMessage(chatId, text, silent === true ? { disable_notification: true } : {});
       return { message_id: result.message_id };
     },
     async setWebhook(url, options) {
@@ -137,9 +145,9 @@ export function createFakeTelegram(
       };
     },
 
-    async sendMessage(chatId, text) {
+    async sendMessage(chatId, { text, silent }) {
       const messageId = nextMessageId++;
-      fake.sent.push({ chatId, text, messageId });
+      fake.sent.push({ chatId, text, silent: silent === true, messageId });
       return { message_id: messageId };
     },
 

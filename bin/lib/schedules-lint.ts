@@ -19,7 +19,7 @@ import * as path from "node:path";
 import { execa } from "execa";
 import { z } from "zod";
 
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 
 import { loadSchedules, type ScheduleEntry } from "./schedules.js";
 import {

@@ -20,7 +20,7 @@ reports success while no message ever reaches the chat.
 
 **The same class exists in capture, at two call sites left untouched:**
 
-- `src/webapp/routes/capture.ts` — the DELETE route reads + authorizes the
+- `src/webapp/routes/capture.ts` (moved to `beebox/src/webapp/routes/capture/register.ts`) — the DELETE route reads + authorizes the
   session, then calls `cleanupStagingSession` unconditionally. A finalize landing
   during authorization leaves the worker owning a session the route then deletes.
 - `src/core/capture/sweep.ts` — the abandonment sweep evaluates an unlocked

@@ -10,23 +10,15 @@
  * by that scope's `manifest.json` per `docs/asset-manifests.md`.
  *
  * The chat agent — not a background procedure — files these batches; see
- * `instructions` below. There is deliberately no terminal `filed`/`done`
- * status: a fully-filed batch is *deleted* (card + attach dir removed), so the
- * only lifecycle is `new` → `delivered`, and the card's mere existence means
+ * `instructions` below. There is deliberately no `filed`/`done` marker: a
+ * fully-filed batch is *deleted* (card + attach dir removed), so the only
+ * recorded fact is `delivered: true`, and the card's mere existence means
  * "still has files to place."
  */
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, splitCardContent, type CardSchema } from "../cards/index.js";
-
-/**
- * `new` (written by preparation, not yet delivered) → `delivered` (the
- * `<upload>` chat message was sent). No terminal status: a fully-filed batch is
- * deleted, not marked done.
- */
-const UploadBatchStatusSchema = z.enum(["new", "delivered"]);
-export type UploadBatchStatus = z.infer<typeof UploadBatchStatusSchema>;
+import { body, cardSchema, splitCardContent, type CardSchema } from "../exports/cards.js";
 
 const BatchTime = z.object({
   start: z.string().datetime({ offset: true }),
@@ -60,7 +52,8 @@ const FailedItem = z.object({
 });
 
 const uploadBatchFields = {
-  status: UploadBatchStatusSchema.default("new"),
+  /** The `<upload>` chat message was sent; the unfiled-batch sweep reads it. */
+  delivered: z.boolean().optional(),
   "batch-id": z.string(),
   /**
    * The chat session this batch was uploaded into, persisted at prepare time so
@@ -96,6 +89,7 @@ const uploadBatchFields = {
 };
 
 export const UploadBatchSchema: CardSchema = cardSchema("upload-batch", {
+  brief: "A bulk upload awaiting filing",
   description: "A bulk file-upload batch landed under a chat's tmp-upload/, awaiting the agent to file each file to its destination",
   category: "synced",
   searchable: true,
@@ -114,9 +108,9 @@ The card lands under \`tmp-upload/<batch-slug>/\` inside the chat's context dir 
 a landing zone, not storage (a sibling of capture's \`tmp-capture/\`).
 
 Frontmatter:
-- \`status\` — \`new\` (just written) → \`delivered\` (the chat message went out).
-  There is no "filed" status: a fully-filed batch is **deleted**, so a card that
-  still exists still has files to place.
+- \`delivered: true\` — the chat message went out. There is no "filed" marker:
+  a fully-filed batch is **deleted**, so a card that still exists still has
+  files to place.
 - \`batch-id\` — the batch's landing slug.
 - \`time\` — \`{ start, end? }\`.
 - \`counts\` — \`{ registered, received, missing, failed }\` item tallies.
@@ -171,7 +165,7 @@ nothing regenerates it.
 
 /** Frontmatter-only object schema (the summary body lives outside Zod). */
 const UploadBatchObject = z.object({
-  status: UploadBatchStatusSchema.default("new"),
+  delivered: z.boolean().optional(),
   "batch-id": z.string(),
   "target-session": z.string().optional(),
   "sweep-notified": z.string().optional(),
@@ -237,7 +231,6 @@ export function createUploadBatchTemplate(options: {
   if (options.endedAt) time.end = options.endedAt;
 
   const fields: Record<string, unknown> = {
-    status: "new",
     "batch-id": options.batchId,
     ...(options.targetSessionId ? { "target-session": options.targetSessionId } : {}),
     time,

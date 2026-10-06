@@ -20,6 +20,7 @@ import {
 import { cn } from "../../lib/cn";
 import { Card } from "../ui/Card";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Badge } from "../ui/Badge";
 import { CloseButton } from "../ui/CloseButton";
 
@@ -167,9 +168,9 @@ function DetailPanel({ concept, onClose }: { concept: ParsedConcept; onClose: ()
           <ul className="mt-1 list-disc pl-4">
             {concept.misconceptions.map((m) => (
               <li key={m}>
-                <Text size="sm" tone="muted">
+                <Hint>
                   {m}
-                </Text>
+                </Hint>
               </li>
             ))}
           </ul>

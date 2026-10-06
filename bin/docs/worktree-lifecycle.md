@@ -77,8 +77,11 @@ supplied. Resume uses only the recorded, shape-validated session ID; missing
 transcripts become a declared fresh session before opening a tab.
 
 `bin/generate-agents-md.ts` mirrors tracked `CLAUDE.md`, embeds nearest scoped
-rules verbatim, symlinks complete skills, and adds the root Codex preamble. It
-refuses tracked AGENTS files and non-generated skill collisions. Fresh and
+rules verbatim, symlinks complete skills, adds the root Codex preamble, and
+writes `.codex/agents/<name>.toml` from `.claude/agents/*.md`
+(`bin/generate-codex-agents.ts`). A Claude `model:` alias with no Codex mapping
+fails generation, so a named agent never inherits the session model. It
+refuses tracked AGENTS files and non-generated skill or agent collisions. Fresh and
 resumed creation regenerate; Codex launch fails closed without the root mirror.
 Edit CLAUDE/rule/skill sources, never generated AGENTS files.
 

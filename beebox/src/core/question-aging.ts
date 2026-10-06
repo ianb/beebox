@@ -7,33 +7,33 @@
  * ones. A question's age is computed from its durable `asked-at` field, NEVER
  * from latch state: a lost or corrupt latch file must not reset a question's
  * age or block its expiry (the latch here only dedups the one nudge
- * notification). Expiry never depends on `notifyChannels` — `notifyBoxholder`
- * already no-ops itself when no channel is configured, so expiry runs
- * regardless; only nudge *delivery* is channel-gated by that same no-op.
+ * notification). Expiry never depends on `notifyChannels`: `notifyBoxholder`
+ * logs a nudge as `no-audience` when no channel is configured, so expiry runs
+ * regardless and only nudge *delivery* depends on a channel.
  *
  * See docs/implemented-plans/questions-end-to-end.md (Track D).
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { boxSlug } from "../lib/box-slug.js";
 import { getSystemState } from "./state.js";
 import { cardFields, parseCardText } from "./card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
+import { createCardSchemaMap } from "../schemas.js";
 import {
   QuestionSchema,
   parseIso8601DurationMs,
   type QuestionFields,
 } from "../schemas/question.js";
-import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
-import { withQuestionTransition, resolveContainedQuestionPath } from "./commands/question-transition.js";
+import { renderFrontmatterBlock, splitCardContent } from "../exports/cards.js";
+import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
 import { loadQuestionLatch, saveQuestionLatch } from "./question-alert.js";
 import { notifyBoxholder } from "./notify-boxholder.js";
+import { parseTarget } from "./notification/target.js";
 import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import type { CommandContext } from "./command-runner.js";
 import type { TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
-import { createEventBus } from "./event-bus.js";
+import { createEventBus } from "./event-bus/core.js";
 
 /**
  * Default pending-question expiry window, when a card carries no
@@ -59,8 +59,6 @@ export interface QuestionAgingResult {
 }
 
 export interface QuestionAgingOptions {
-  /** Flush nudge notification cards immediately instead of the next finalize. */
-  deliver?: boolean;
   /** Injected services (tests / immediate delivery), forwarded to notifyBoxholder. */
   tg?: TelegramService | undefined;
   push?: PushService | undefined;
@@ -83,7 +81,7 @@ function nudgeThresholdMs(fields: QuestionFields): number {
 }
 
 /**
- * Flip a pending question to `expired` under the shared guarded transition.
+ * Expire a pending question (`expired-at`) under the shared guarded transition.
  * Returns true if this call performed the expiry, false if it lost a race
  * with a simultaneous answer/dismiss (the question re-read as non-pending) —
  * the loser skips silently, per the plan's failure-modes table.
@@ -103,11 +101,10 @@ async function expireQuestion(
     ctx,
     fullPath,
     questionRef: relativePath,
-    allowedStatuses: ["pending"],
-    disallowedMessage: (status) =>
-      `Question is no longer pending (status: ${status}); skipping expiry`,
+    allowedStates: ["pending"],
+    disallowedMessage: (state) =>
+      `Question is no longer pending (it is ${state}); skipping expiry`,
     plan: ({ fields, content }) => {
-      fields.status = "expired";
       fields["expired-at"] = getBoxTimeISO(ctx.boxRoot);
 
       const split = splitCardContent(content);
@@ -163,7 +160,7 @@ export async function ageQuestions(
   const now = getBoxTime(boxRoot);
 
   const state = await getSystemState(boxRoot);
-  const pending = state.questions.filter((q) => q.status === "pending");
+  const pending = state.questions.filter((q) => q.state === "pending");
   const schemas = await createCardSchemaMap(boxRoot);
 
   const latch = await loadQuestionLatch(boxRoot);
@@ -212,15 +209,15 @@ export async function ageQuestions(
 
     if (ageMs >= nudgeThresholdMs(fields) && latch.nudged[q.relativePath] === undefined) {
       await notifyBoxholder(boxRoot, {
-        title: "⏰ Reminder: a question is waiting",
-        body: fields.prompt,
-        url: `/${await boxSlug(boxRoot)}/browse/${q.relativePath}`,
-        severity: "info",
-        name: "question-nudge",
-        deliver: options.deliver ?? false,
+        intent: {
+          title: "⏰ Reminder: a question is waiting",
+          body: fields.prompt,
+          target: parseTarget(`question:${q.relativePath}`),
+          loudness: "quiet",
+          source: "question-nudge",
+        },
         now,
-        tg: options.tg,
-        push: options.push,
+        services: { tg: options.tg, push: options.push },
       });
       latch.nudged[q.relativePath] = now.toISOString();
       nudged.push(q.relativePath);

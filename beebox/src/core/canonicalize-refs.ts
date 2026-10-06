@@ -51,10 +51,11 @@ import {
   collectViewRefTokens,
   rewriteCardRefTokens,
   rewriteViewRefTokens,
-} from "./rewrite-card-refs.js";
-import { assertNever } from "../lib/invariant.js";
-import { isTrashedCard } from "../lib/paths.js";
+} from "./rewrite-card-refs/core.js";
+import { assertNever } from "../shared/invariant.js";
+import { isTrashedCard } from "../lib/paths/core.js";
 import type { ValidationIgnore } from "./validation-ignore.js";
+import { formatLinkDestination } from "./body-refs.js";
 
 export interface CanonicalizeReport {
   /** Card/view refs rewritten to their box-root form, same target as before. */
@@ -289,7 +290,10 @@ function spliceUrl(
   const span = line.slice(link.index, link.index + link.length);
   const at = span.lastIndexOf(link.url);
   if (at === -1) return null;
-  const newSpan = span.slice(0, at) + newUrl + span.slice(at + link.url.length);
+  // Inside `<…>` the brackets stay; a bare destination gains them if needed.
+  const angled = span[at - 1] === "<";
+  const replacement = angled ? newUrl : formatLinkDestination(newUrl, { angled: false });
+  const newSpan = span.slice(0, at) + replacement + span.slice(at + link.url.length);
   return line.slice(0, link.index) + newSpan + line.slice(link.index + link.length);
 }
 

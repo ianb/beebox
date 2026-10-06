@@ -7,7 +7,7 @@
  * `useEffect` bodies in `InteractiveChat-voice.ts` / `-speech.ts`. The single
  * worst offender was `voicePaused`: a boolean straining to encode "the mic was
  * paused *for* this speech, so resume it when playback ends." See
- * `docs/composer-input-machine.md` for the design rationale.
+ * `docs/chat/composer.md` for the design rationale.
  *
  * Scope: this machine owns only the *overlay* that no existing machine owns —
  * the three speech-coordination states `idle | speaking | pausedForSpeech`.
@@ -30,7 +30,7 @@
  */
 
 import { setup, assign, emit } from "xstate";
-import type { SpeechSegment } from "../lib/audio/speech-parsing";
+import type { SpeechSegment } from "../lib/audio/speech-parsing/parse";
 
 /**
  * Device command emitted by the machine for the wiring layer to execute

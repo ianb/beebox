@@ -1,0 +1,74 @@
+{
+  "rules": {
+    "money": "For the fictional household of Odette Marlowe: account statements, account closures, general bills and payments. Lawyer invoices belong in legal. Property maintenance goes to residence or workshop. Tax-preparation records belong in taxes.",
+    "taxes": "For the fictional household of Odette Marlowe: returns, tax forms, and records explicitly gathered for preparing a tax return, including rental income and workshop expenses. An ordinary property bill is not tax preparation just because it includes tax.",
+    "residence": "For the fictional household of Odette Marlowe: the Rivermouth rental house, tenants, repairs, property taxes, insurance, and sale. Records explicitly for preparing income tax returns go to taxes.",
+    "workshop": "For the fictional household of Odette Marlowe: the Greenhollow workshop building, its repairs, sale, and building photographs. Individual movable objects go to belongings; records explicitly for tax preparation go to taxes.",
+    "belongings": "For the fictional household of Odette Marlowe: individual movable possessions or groups of possessions, their identification, valuation, or disposal; photographs of such objects. A workshop building itself belongs in workshop.",
+    "history": "For the fictional household of Odette Marlowe: memories, tributes, family photographs, and biographical records. A historical document needed for a current property transaction belongs to the relevant property category.",
+    "notes": "For the fictional household of Odette Marlowe: cross-topic research notes and annotated reading. A document whose subject clearly belongs to a specialized destination goes there instead.",
+    "legal": "For the fictional household of Odette Marlowe: court filings, property disputes, lawyer correspondence and lawyer invoices. Exclude tax returns and bank statements."
+  },
+  "cases": [
+    {
+      "id": "case-01",
+      "body": "SYNTHETIC. Court hearing notice for a boundary dispute involving the household of Odette Marlowe. Priya Marlowe is asked to attend.",
+      "expected": "legal"
+    },
+    {
+      "id": "case-02",
+      "body": "SYNTHETIC. Closing statement for the bank account of the household of Odette Marlowe. Funds transferred to household checking.",
+      "expected": "money"
+    },
+    {
+      "id": "case-03",
+      "body": "SYNTHETIC. household of Odette Marlowe. Rivermouth rental income and expenses, assembled expressly for preparing the annual income tax return.",
+      "expected": "taxes"
+    },
+    {
+      "id": "case-04",
+      "body": "SYNTHETIC. household of Odette Marlowe. Repair invoice for the boiler at the Rivermouth rental house. Pay from household funds.",
+      "expected": "residence"
+    },
+    {
+      "id": "case-05",
+      "body": "SYNTHETIC. household of Odette Marlowe. Building inspection of the Greenhollow workshop before its sale. Roof and exterior wall condition noted.",
+      "expected": "workshop"
+    },
+    {
+      "id": "case-06",
+      "body": "SYNTHETIC. household of Odette Marlowe. Photograph and inventory note for a portable violin found at the workshop. Identify its maker and arrange valuation for sale.",
+      "expected": "belongings"
+    },
+    {
+      "id": "case-07",
+      "body": "SYNTHETIC. Family remembrance of Odette Marlowe for the household archive. Her old garden notebooks show how much she enjoyed teaching children.",
+      "expected": "history"
+    },
+    {
+      "id": "case-08",
+      "body": "SYNTHETIC. Research notes for administering the household of Odette Marlowe. Comparing general systems for coordinating documents and family discussions across all household topics.",
+      "expected": "notes"
+    },
+    {
+      "id": "case-09",
+      "body": "SYNTHETIC. Invoice from attorney Noor Haddad for work on the property dispute case of Odette Marlowe. Payment is requested from the household.",
+      "expected": "legal"
+    },
+    {
+      "id": "case-10",
+      "body": "SYNTHETIC. household of Odette Marlowe. Old deed to the Rivermouth rental house, needed now to establish title before its current sale.",
+      "expected": "residence"
+    },
+    {
+      "id": "case-11",
+      "body": "SYNTHETIC generic travel advertisement sent to Priya Marlowe. It has no connection to the household.",
+      "expected": null
+    },
+    {
+      "id": "case-12",
+      "body": "SYNTHETIC. household of Odette Marlowe. Notes on selecting a cloud storage service for the family household documents.",
+      "expected": "notes"
+    }
+  ]
+}

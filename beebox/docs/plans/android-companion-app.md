@@ -64,9 +64,9 @@ advantage over the iOS target, which needs macOS/Xcode.
   via `WebView.evaluateJavascript`. No web change is needed in this direction.
 - **HQ transcription accepts standard WAV — reuse (verify per provider).** `POST
   /api/chat/transcribe-audio` reads one multipart file and dispatches to
-  `transcribeAudioHq` (`src/webapp/routes/chat-audio-routes.ts:57-92`), whose default
+  `transcribeAudioHq` (`src/webapp/routes/chat-audio-routes.ts:57-92` (moved to `beebox/src/webapp/routes/chat/audio-routes.ts`)), whose default
   `hqService` is `whisper` (`whisper-1`) and whose diarized path is Voxtral
-  (`src/core/transcription/index.ts:235-258`). The server **forwards the bytes to the
+  (`src/core/transcription/index.ts:235-258` (moved to `beebox/src/core/transcription/dispatch/core.ts`)). The server **forwards the bytes to the
   configured provider unmodified** — it does not resample. Provider-side acceptance of
   a 16 kHz mono **16-bit PCM** WAV is *expected* (Whisper and Voxtral both document
   WAV support) and keeps uploads small, but it **must be verified against each

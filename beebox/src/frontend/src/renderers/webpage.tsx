@@ -6,8 +6,9 @@
  */
 
 import { WebpageView } from "../components/WebpageView";
-import { registerFileType } from "./index";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "webpage" }, {
+export const webpageRenderer: RendererEntry = {
+  selector: { type: "webpage" },
   renderer: { name: "Webpage", Component: WebpageView, priority: 100 },
-});
+};

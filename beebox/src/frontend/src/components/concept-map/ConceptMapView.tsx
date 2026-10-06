@@ -8,9 +8,9 @@
  */
 
 import { Suspense, lazy, useMemo } from "react";
-import type { RendererProps } from "../../renderers/index";
+import type { RendererProps } from "../../file-type-registry";
 import { parseConcepts } from "./concept-data";
-import { Markdown } from "../Markdown";
+import { Markdown } from "../Markdown/body";
 import { Text } from "../ui/Text";
 
 const ConceptGraph = lazy(() => import("./ConceptGraph"));

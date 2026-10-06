@@ -1,0 +1,58 @@
+{
+  "files": {
+    "item-001.memo.card": "digital-property",
+    "item-002.memo.card": "scan-financial",
+    "item-003.memo.card": "junk-layer-legal",
+    "item-004.memo.card": "photo-property"
+  },
+  "configuredModel": "claude-haiku-4-5-20251001",
+  "elapsedMs": 14481,
+  "categories": [
+    {
+      "name": "financial",
+      "dir": "_content/financial",
+      "rules": "Bank accounts, account closure, tax, and other financial administration specifically concerning this household. Property repair invoices go to property instead.",
+      "procedureRef": null
+    },
+    {
+      "name": "legal",
+      "dir": "_content/legal",
+      "rules": "Court, property disputes, legal representation, and legal notices specifically concerning this household. Exclude generic legal marketing.",
+      "procedureRef": null
+    },
+    {
+      "name": "property",
+      "dir": "_content/property",
+      "rules": "Maintenance, valuation, sale, and repairs of property belonging to this household, including associated repair invoices.",
+      "procedureRef": null
+    }
+  ],
+  "decisions": [
+    {
+      "file": "item-001.memo.card",
+      "category": "property",
+      "confidence": "confident",
+      "reason": "Property repair invoice. The rules explicitly state that property repair invoices belong in the property category, not financial."
+    },
+    {
+      "file": "item-002.memo.card",
+      "category": "financial",
+      "confidence": "confident",
+      "reason": "Bank account closure letter. Clearly falls under bank accounts and account closure, which are explicitly listed financial administration items."
+    },
+    {
+      "file": "item-003.memo.card",
+      "category": "legal",
+      "confidence": "confident",
+      "reason": "Court notice concerning a household records hearing. Explicitly matches legal notices specifically concerning this household."
+    },
+    {
+      "file": "item-004.memo.card",
+      "category": "property",
+      "confidence": "confident",
+      "reason": "Property maintenance inspection and work record (roof gutter clearing). Matches property maintenance category."
+    }
+  ],
+  "applications": [],
+  "empty": false
+}

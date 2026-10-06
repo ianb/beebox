@@ -44,7 +44,7 @@ const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
 const PROD_AUDIT_FILES = ["host-audit.ts", "box-manifest.ts"] as const;
 const SCHEDULES_CLI = path.join(REPO_ROOT, "bin", "schedules");
 const DRY_RUN = process.env["SCHEDULE_DRY_RUN"] === "1";
-const PROBE_DOCTEST = path.join(REPO_ROOT, "beebox", "test", "webapp", "cross-box-probe.doctest.md");
+const PROBE_DOCTEST = path.join(REPO_ROOT, "beebox", "test", "scenarios", "cross-box-probe.doctest.md");
 
 function refuse(message: string): never {
   process.stderr.write(`cross-box-leak-scan: ${message}\n`);
@@ -124,7 +124,7 @@ async function runProdHostAudit(): Promise<string[]> {
 
 async function checkProbeDoctest(): Promise<string[]> {
   if (await fileExists(PROBE_DOCTEST)) return [];
-  return ["probe  missing  beebox/test/webapp/cross-box-probe.doctest.md"];
+  return ["probe  missing  beebox/test/scenarios/cross-box-probe.doctest.md"];
 }
 
 /**

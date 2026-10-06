@@ -20,7 +20,12 @@ test("empty and ambiguous prompt bodies fail rather than copying unintended text
   assert.throws(() => renderBody(body.replace("```\nRead", "Explanation.\n\n```\nRead"), context), /exactly one/);
 });
 
-test("the machine-facing twin preserves prompt text and fences", () => {
+test("the machine-facing twin keeps the prompt's title as its label, plus the fence", () => {
+  // The title is the only thing that says what the block is for; a bare fence
+  // on a page carrying three prompts tells a fetcher nothing.
   const twin = twinMarkdown(body, { nuggets: [], asides: new Map() });
-  assert.equal(twin, "```\nRead the guide. Ask before changing my machine.\n```\n");
+  assert.equal(
+    twin,
+    "**Install Bee Box** (paste into your agent or AI chat):\n```\nRead the guide. Ask before changing my machine.\n```\n",
+  );
 });

@@ -45,7 +45,7 @@ Being raised separately with the user-stories workstream — out of scope here.
 
 ESLint 9.39.4 and jiti 2.7.0 are installed, so `eslint.config.ts` is supported.
 `build-cli.mjs` runs as `node scripts/build-cli.mjs` and could be
-`tsx scripts/build-cli.ts`. The rule implementation and its test are ordinary
+`tsx scripts/build-cli.ts` (moved to `beebox/src/scripts/build-cli/build/bundle.ts`). The rule implementation and its test are ordinary
 modules.
 
 | File | Lines |

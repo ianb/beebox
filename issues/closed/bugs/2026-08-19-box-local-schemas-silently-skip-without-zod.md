@@ -32,7 +32,7 @@ Two parts:
 `dependencies`, at the same range the engine itself develops against (read from
 the engine manifest like `react`/`typescript` already were), so a fresh box can
 load a box-local schema without the owner discovering the missing dependency
-through a warning. `test/cli/lib/init-v2.doctest.md` pins it.
+through a warning. `test/cli/lib/init-v2.doctest.md` (moved to `beebox/test/core/box/structure.init-v2.doctest.md`) pins it.
 
 **Silent fallback — already addressed, verified today.** A schema file that
 exists but fails to load is no longer only a load-time warning:

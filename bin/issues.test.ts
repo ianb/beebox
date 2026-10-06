@@ -18,10 +18,10 @@ import { createFakeEmbeddings } from "../beebox/src/services/openai-embeddings.j
 import {
   deriveDate, deriveDiscoveredInWorkstream, emptyFilters, filterIssues, groupIssues,
   loadIssueEntries, normalizeWorkstreamName,
-} from "../workstreams-app/src/server/issue-search-model.js";
-import { indexDirectory, refreshIndex } from "../workstreams-app/src/server/issue-index.js";
-import { issueDocument } from "../workstreams-app/src/server/issue-index-documents.js";
-import { runSearch } from "../workstreams-app/src/server/issue-index-query.js";
+} from "../workstreams-app/src/server/main/issue-search-model.js";
+import { indexDirectory, refreshIndex } from "../workstreams-app/src/server/main/issue-index.js";
+import { issueDocument } from "../workstreams-app/src/server/main/issue-index-documents.js";
+import { runSearch } from "../workstreams-app/src/server/main/issue-index-query.js";
 import { byPath, makeRepo } from "./issues-test-fixtures.js";
 
 // ─── Derivation ──────────────────────────────────────────────────────────────
@@ -120,6 +120,9 @@ void test("needs, next-action, research, since, and discovered-in each narrow", 
   assert.deepEqual(await filtered(root, (f) => { f.nextAction = ["reconfirm"]; }), [
     "2026-02-10-composer-splices-drafts",
   ]);
+  // The request comes from the local store, message included, not from frontmatter.
+  const composer = byPath(await loadIssueEntries({ repoRoot: root })).get("issues/bugs/2026-02-10-composer-splices-drafts.md");
+  assert.equal(composer?.nextActionMessage, "Still happens after the draft refactor?");
   assert.deepEqual(await filtered(root, (f) => { f.research = "researched"; }), [
     "2026-03-01-search-the-queue",
   ]);

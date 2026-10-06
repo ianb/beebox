@@ -1,18 +1,17 @@
-/** The run's one report: a `bin/schedules` alert, or `done` when suppressed. */
+/** The run's one report: a `bin/schedules` alert under a condition, or `done`. */
 import * as path from "node:path";
 
 import { execa } from "execa";
 
-import { alertFingerprint, shouldSuppressAlert } from "./trust.js";
+import { alertCondition, type AlertKind } from "./trust.js";
 import { REPO_ROOT } from "./repo.js";
-import { readLastAlert, writeLastAlert } from "./state.js";
 
 const SCHEDULES_CLI = path.join(REPO_ROOT, "bin", "schedules");
 
 /**
- * `bin/schedules alert|done`, which handle `SCHEDULE_DRY_RUN` themselves.
- * Returns whether the CLI accepted it; a failed report is loud but not fatal —
- * the runner's own ended-without-reporting alert is the backstop.
+ * `bin/schedules alert|done|resolve`, which handle `SCHEDULE_DRY_RUN`
+ * themselves. Returns whether the CLI accepted it; a failed report is loud but
+ * not fatal — the runner's own ended-without-reporting alert is the backstop.
  */
 export async function report(args: string[]): Promise<boolean> {
   const result = await execa(SCHEDULES_CLI, args, { stdout: "inherit", stderr: "inherit", reject: false });
@@ -23,33 +22,27 @@ export async function report(args: string[]): Promise<boolean> {
   return delivered;
 }
 
-async function alert(input: { title: string; message: string; priority: string }): Promise<boolean> {
-  return report(["alert", "--priority", input.priority, "--title", input.title, "--message", input.message]);
-}
-
 /**
- * One report per run, with repeat suppression: an unchanged condition inside
- * the repeat window reports `done` instead of re-raising the same alert. The
- * 08-30 load event raised the identical baseline-red alert eight hourly runs
- * in a row; the record is durable, the repetition was pure noise.
+ * Raise this run's finding under its condition. The store turns a repeat into
+ * an update of the open alert, so an unchanged condition is one record with a
+ * count rather than an alert per hourly run.
+ *
+ * `verdict` says whether this run judged the code. A run that did (red,
+ * flakes) is the current truth, so every other condition it did not report
+ * has cleared. A run that did not (host under load, environment failure)
+ * leaves earlier conditions alone.
  */
-export async function alertOnce(input: {
-  kind: string;
-  files: readonly string[];
+export async function raiseCondition(input: {
+  kind: AlertKind;
+  culprits: readonly string[];
+  priority: "important" | "normal" | "fyi";
   title: string;
   message: string;
-  priority: string;
+  verdict: boolean;
 }): Promise<void> {
-  const fingerprint = alertFingerprint({ kind: input.kind, files: input.files });
-  const previous = await readLastAlert();
-  if (shouldSuppressAlert({ previous, fingerprint, now: new Date() })) {
-    process.stdout.write(`full-suite: unchanged condition (${input.kind}); alert suppressed, reporting done.\n`);
-    await report(["done"]);
-    return;
-  }
-  // Suppression state only records a DELIVERED alert: suppressing the next
-  // run's alert because this one failed to send would hide the condition.
-  if (await alert(input)) {
-    await writeLastAlert({ fingerprint, raisedAt: new Date().toISOString() });
-  }
+  const condition = alertCondition({ kind: input.kind, culprits: input.culprits });
+  await report([
+    "alert", "--priority", input.priority, "--condition", condition, "--title", input.title, "--message", input.message,
+  ]);
+  if (input.verdict) await report(["resolve", "--except", condition]);
 }

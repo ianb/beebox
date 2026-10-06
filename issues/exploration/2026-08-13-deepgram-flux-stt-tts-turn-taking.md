@@ -12,7 +12,7 @@ priority: backlog
 
 Deepgram has a **Flux** family worth looking at: Flux STT, Flux TTS, and
 built-in turn-taking. We already use Deepgram
-(`src/core/transcription/deepgram.ts`, with a `deepgram-key.ts` on the frontend
+(`src/core/transcription/deepgram.ts` (moved to `beebox/src/core/transcription/dispatch/deepgram.ts`), with a `deepgram-key.ts` on the frontend
 audio side), so this is evaluating a newer model from an existing vendor rather
 than adding one.
 

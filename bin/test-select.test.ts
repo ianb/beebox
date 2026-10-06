@@ -15,7 +15,7 @@ import { join, dirname } from "node:path";
 import { buildGraphFrom, testEntrypoints, REPO_ROOT } from "./test-graph.js";
 import type { TestGraph } from "./test-graph-query.js";
 import { selectTests, spawnedSourceRefs, spawnerEdges } from "./test-select-lib.js";
-import { emptyRunLines } from "./test-select.js";
+import { emptyRunLines, packageRelative } from "./test-select.js";
 
 /** A graph stated directly, so the rule is tested without an esbuild pass. */
 function graphOf(input: {
@@ -86,7 +86,7 @@ test("a spawner is selected by a change to what it spawns, and by nothing else",
 });
 
 test("a dist/cli.mjs spawner follows the bundle's real inputs", () => {
-  // `scripts/build-cli.ts` bundles src/cli/index.ts TRANSITIVELY — 932 files
+  // `scripts/build-cli.ts` bundles src/cli/entry/run.ts TRANSITIVELY — 932 files
   // across nearly every src/ subtree, not src/cli/**. The caller computes the
   // set; a null one fails open on all of src/.
   const graph = graphOf({ tests: { [`${BOX}test/cli/cli.doctest.md`]: [] } });
@@ -264,6 +264,15 @@ test("spawnerEdges catches a test whose CHILD imports source the parent does not
 });
 
 // ── the shell ───────────────────────────────────────────────────────────────
+
+test("selected paths are relative to the beebox package, including root bin/ doctests", () => {
+  // A bin/ doctest runs from the package as ../bin/test/…; passed through
+  // bare, the runner found no such file and refused the whole selection.
+  assert.deepEqual(
+    ["beebox/test/a.doctest.md", "beebox/src/frontend/test/b.doctest.md", "bin/test/lib/c.doctest.md"].map(packageRelative),
+    ["test/a.doctest.md", "src/frontend/test/b.doctest.md", "../bin/test/lib/c.doctest.md"],
+  );
+});
 
 test("an empty selection prints the reason and a summary line finish can parse", () => {
   assert.deepEqual(emptyRunLines(), [

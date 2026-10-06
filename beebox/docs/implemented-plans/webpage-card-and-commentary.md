@@ -66,7 +66,7 @@ Every direction below traces back to one of these.
 ## What already exists
 
 - **Card-type system.** `cardSchema(type, { fields })` registered in
-  `src/schemas/registry.ts:39-91`; type resolved from the `Name.type.card`
+  `src/schemas/registry.ts:39-91` (moved to `beebox/src/schemas.ts`); type resolved from the `Name.type.card`
   filename + frontmatter `type:` field. A new `webpage` type is a normal
   registration, not a parser change. *Reuse.*
 - **Commentary schema.** `src/schemas/commentary.tsx:20-39` — `title`,
@@ -251,7 +251,7 @@ anchor rendering, retargeting `onJumpToQuote` to the body. Today's
 
 ### Track 4 — Migration
 
-**What.** `scripts/migrate/webpage-card.ts` + a `MIGRATIONS` entry. For each
+**What.** `scripts/migrate/webpage-card.ts` (moved to `beebox/src/scripts/migrate/webpage-card.ts`) + a `MIGRATIONS` entry. For each
 existing fused `Foo.commentary.card` carrying `source`/`captured`/`frozen`
 provenance:
 - create `Foo.webpage.card` taking over the basename — body lifted from
@@ -451,7 +451,7 @@ worktree.
   existing data — that's the regression-risk piece.
 - **Knowledge audits** — updated `commentary-capture-files` + new
   `webpage-vs-commentary` land *with* the plan, run green.
-- **Migration approach.** Forward migrator (`scripts/migrate/webpage-card.ts`)
+- **Migration approach.** Forward migrator (`scripts/migrate/webpage-card.ts` (moved to `beebox/src/scripts/migrate/webpage-card.ts`))
   for existing captured commentaries; small volume, idempotent via the
   `migrations.jsonl` manifest. Back-compat: the `commentary` schema keeps
   reading `source`/`captured`/`frozen` for one release window so a

@@ -10,8 +10,9 @@ import { href, toSearch } from "../../lib/routing";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
-import type { RendererProps } from "../../renderers/index";
-import { trpc } from "../../lib/trpc";
+import { Hint } from "../ui/Hint";
+import type { RendererProps } from "../../file-type-registry";
+import { trpc } from "../../lib/trpc/client";
 import { DeleteChatAction } from "../chat-delete/DeleteChatDialog";
 import { transcriptStateLabel } from "../../lib/transcript-state";
 
@@ -32,9 +33,9 @@ export function ChatHuskView({ data }: RendererProps) {
   if (session === "") {
     return (
       <Card padding="md" border="subtle" muted>
-        <Text as="div" size="sm" tone="muted">
+        <Hint>
           {data.path} has no session field — not a usable chat husk.
-        </Text>
+        </Hint>
       </Card>
     );
   }

@@ -7,7 +7,7 @@
 // inferred from scope. See docs/plans/web-push-notifications.md (Track A).
 //
 // Payload contract (JSON the server sends, web-push-notifications.md):
-//   { title: string, body: string, url: string, tag?: string }
+//   { title: string, body: string, url: string, tag?: string, icon?: string, silent?: boolean }
 
 // Take control of open pages as soon as an updated SW activates, so a newly
 // deployed push handler governs already-open tabs without a manual reload.
@@ -42,6 +42,8 @@ self.addEventListener("push", (event) => {
       // which Android masks to a silhouette. A full-colour emoji through that
       // mask is a shapeless blob, so the badge stays the app's own.
       badge: sharedIcon,
+      // A `quiet` notification shows without sound or vibration.
+      silent: payload.silent === true,
     }),
   );
 });

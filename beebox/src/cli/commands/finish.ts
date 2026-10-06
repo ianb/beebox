@@ -7,9 +7,9 @@
 
 import { Command } from "commander";
 import * as path from "node:path";
-import { requireBoxRoot, toRelativePath } from "../../lib/paths.js";
+import { requireBoxRoot, toRelativePath } from "../../lib/paths/core.js";
 import { finishJob } from "../../core/finish-job.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const finishCommand = new Command("finish")
   .description("Complete a job by deleting its card file")

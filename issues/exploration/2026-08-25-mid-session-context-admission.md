@@ -5,7 +5,7 @@ area: beebox
 priority: backlog
 ---
 
-The system prompt is sent once at session creation (`src/services/claude-chat.ts`), and
+The system prompt is sent once at session creation (`src/services/claude-chat.ts` (moved to `beebox/src/services/claude-chat/core.ts`)), and
 everything after comes from the agent re-reading files. A card edited by a connector, a
 schedule, or the boxholder in another surface mid-chat is invisible until the agent
 happens to read it — and nothing in beebox names this or decides it.

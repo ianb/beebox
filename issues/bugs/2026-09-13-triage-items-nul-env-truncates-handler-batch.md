@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-prompt-calibration — verifying the current triage documentation
+priority: backlog
 ---
 
 `bbx handle` can pass only the first item in a multi-item category bucket to a
@@ -34,6 +35,6 @@ exercise the failing live boundary.
 Use a representation that survives process environment transport, or pass the
 batch through a different channel. Add coverage that reaches a spawned handler
 with at least two paths, including a path with spaces. Update
-`beebox/src/core/docs-gen/triage.ts`, which currently advertises the broken
+`beebox/src/core/docs-gen/package-docs/triage.ts`, which currently advertises the broken
 NUL-delimited shell recipe, together with the runtime contract. Keep
 `beebox/docs/triage.md` aligned with the corrected transport.

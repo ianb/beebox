@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Install the repo-owned nginx site (deploy/nginx/beebox.conf) as the server's
+# only enabled site, test the whole configuration, and reload nginx on change.
+#
+#   bbx-nginx-site install <site file>
+#
+# The deploy owns what nginx serves: sites-available/beebox is the repo file,
+# and sites-enabled holds exactly one symlink to it. Anything else enabled
+# (production's hand-made `callback` site from before the rename, which also
+# claims default_server on :80) is moved to /etc/nginx/pre-deploy-owned/ with
+# a timestamp, never deleted.
+#
+# `nginx -t` runs on every install, changed or not, so a configuration that
+# would stop nginx from starting fails the deploy before anything stops. When
+# this run changed something and the test fails, both site directories are
+# restored exactly as they were and nothing is reloaded.
+#
+# Paths are overridable for test/deploy/nginx-site.doctest.md only.
+set -euo pipefail
+shopt -s nullglob
+
+etc="${BBX_NGINX_ETC:-/etc/nginx}"
+nginx_bin="${BBX_NGINX_BIN:-/usr/sbin/nginx}"
+reload_cmd="${BBX_NGINX_RELOAD:-systemctl reload nginx}"
+available="$etc/sites-available/beebox"
+enabled_dir="$etc/sites-enabled"
+aside="$etc/pre-deploy-owned"
+
+[[ "${1:-}" == install && -n "${2:-}" ]] || { echo "usage: bbx-nginx-site install <site file>" >&2; exit 2; }
+src="$2"
+[[ -s "$src" ]] || { echo "bbx-nginx-site: site file missing or empty: $src" >&2; exit 1; }
+
+snapshot=$(mktemp -d)
+trap 'rm -rf "$snapshot"' EXIT
+cp -a "$etc/sites-available" "$etc/sites-enabled" "$snapshot/"
+changed=0
+moved=()
+
+if ! cmp -s "$src" "$available"; then
+  install -m 0644 "$src" "$available"
+  echo "  nginx: installed the repo site file"
+  changed=1
+fi
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+for entry in "$enabled_dir"/*; do
+  if [[ "$entry" == "$enabled_dir/beebox" && -L "$entry" && "$(readlink "$entry")" == "$available" ]]; then
+    continue
+  fi
+  mkdir -p "$aside"
+  dest="$aside/$(basename "$entry").$stamp"
+  mv "$entry" "$dest"
+  moved+=("$dest")
+  echo "  nginx: disabled $entry (kept as $dest)"
+  changed=1
+done
+if [[ ! -L "$enabled_dir/beebox" ]]; then
+  ln -s "$available" "$enabled_dir/beebox"
+  changed=1
+fi
+
+if ! test_output=$("$nginx_bin" -t -q 2>&1); then
+  echo "$test_output" >&2
+  if [[ $changed -eq 1 ]]; then
+    rm -rf "$etc/sites-available" "$etc/sites-enabled"
+    cp -a "$snapshot/sites-available" "$snapshot/sites-enabled" "$etc/"
+    if (( ${#moved[@]} )); then rm -f "${moved[@]}"; fi
+    echo "  FAILED: nginx -t rejects the configuration with the repo site; restored the previous sites." >&2
+  else
+    echo "  FAILED: nginx -t rejects the current configuration (this deploy changed nothing in it)." >&2
+  fi
+  exit 1
+fi
+if [[ $changed -eq 1 ]]; then
+  $reload_cmd
+  echo "  nginx: reloaded"
+fi

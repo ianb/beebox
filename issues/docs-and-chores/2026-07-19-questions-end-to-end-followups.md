@@ -12,8 +12,8 @@ unfinished operational steps, and the review passes left named test gaps.
 ## Rollout (blocking — the feature is half-deployed until these run)
 
 - **Run the `question-lifecycle` migration on prod boxes and
-  `~/src/boxes/test1`** per `beebox/docs/migrations.md`
-  (`scripts/migrate/question-lifecycle-run.ts` — dry-run first, then
+  `~/src/boxes/test1`** per `beebox/docs/cards/migrations.md`
+  (`scripts/migrate/question-lifecycle-run.ts` (moved to `beebox/src/scripts/migrate/question-lifecycle-run/run.ts`) — dry-run first, then
   `--apply`; exit code 2 means select-options violations to fix by hand).
   It has only run on the questions worktree's test-box clone. Until it
   runs, existing question cards on those boxes carry the retired
@@ -33,7 +33,7 @@ unfinished operational steps, and the review passes left named test gaps.
 
 The doctests cover the in-process happy and rollback paths; the
 process-level failure modes of the guarded transition
-(`src/core/commands/question-transition.ts`) are untested:
+(`src/core/commands/question-transition.ts` (moved to `beebox/src/core/question-transition.ts`)) are untested:
 
 - **Two-process contention** on the per-question file lock (CLI answer vs
   web answer vs aging expiry as separate processes) — lock timeout and the

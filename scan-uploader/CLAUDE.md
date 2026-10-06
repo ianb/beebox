@@ -34,7 +34,7 @@ part of it carries `// WIRE CONTRACT (scan-upload): …`. Change both sides, tha
 document, and the server's route doctests in one change.
 
 **If you change what a correct client must *do*, bump
-`SCAN_CONTRACT_VERSION`** in `src/contract-version.ts` *and* in
+`SCAN_CONTRACT_VERSION`** in `src/cli/contract-version.ts` *and* in
 `beebox/src/core/scan/contract-version.ts` — two spellings of one number, never
 per-side versions. That covers the client obligations (settle gate, identity
 snapshot, restat-before-disposition, which responses permit a disposition), the
@@ -69,7 +69,7 @@ different.
 
 The sweep runs under launchd with stdout going to
 `~/Library/Logs/scan-uploader.log`, which nobody reads. Anything a person needs
-to know goes through `src/notify.ts`, under two rules its header explains in
+to know goes through `src/cli/notify.ts`, under two rules its header explains in
 full: silence on a quiet sweep, and only newly-observed events. A *sticky*
 condition — a rejected file the server keeps remembering, a drift verdict that
 holds until someone re-copies the bundle — must not be notified per sweep, or
@@ -88,7 +88,7 @@ pnpm build                     # only needed for the copy-the-bundle path
 ```
 
 `bin/scan-uploader` (repo root) runs the CLI from source via tsx, so a checkout
-needs no build. Tests use a fake HTTP server (`test/fake-scan-server.ts`) and
+needs no build. Tests use a fake HTTP server (`test/cli/fake-scan-server.ts`) and
 package-local temp dirs (`test/tmp/`) — never the real network, never `/tmp`.
 
 Doctests here use bare fences (` ``` `, ` ```continue `, ` ```cleanup `), not

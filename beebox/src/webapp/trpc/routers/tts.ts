@@ -9,7 +9,7 @@
  */
 
 import { z } from "zod";
-import { router, ownerProcedure, publicProcedure } from "../trpc.js";
+import { router, ownerProcedure, publicProcedure } from "../procedures.js";
 import { loadTtsConfig, updateTtsConfig } from "../../../core/tts/config.js";
 import { TTS_BACKENDS } from "../../../shared/tts-backends.js";
 import { serviceCapabilities, unusableWarning } from "../../../core/model-capabilities.js";

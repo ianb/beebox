@@ -1,29 +1,28 @@
 /**
  * Answer command - Answer a pending question.
  *
- * This is the core logic shared by both CLI and web API. The status change,
+ * This is the core logic shared by both CLI and web API. The state change,
  * the answered-card write, and the follow-up-job write all land in ONE guarded,
  * atomic commit (see `question-transition.ts`).
  */
 
-import { acquireBoxWork, BoxMaintenanceError } from "../../lib/box-maintenance.js";
-import { answerFencedMigrationQuestion } from "../migration-answer.js";
+import { withBoxWork } from "../../lib/box-maintenance.js";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
-import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
-import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { withQuestionTransition, resolveContainedQuestionPath } from "../question-transition.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 
 const AnswerVia = z.enum(["web", "cli"]);
 type AnswerViaValue = z.infer<typeof AnswerVia>;
@@ -223,11 +222,10 @@ async function executeAnswer(
     ctx,
     fullPath,
     questionRef: question,
-    // Answering is allowed from every non-terminal status: expired and
+    // Answering is allowed from every non-terminal state: expired and
     // dismissed questions stay answerable; only `answered` is terminal.
-    allowedStatuses: ["pending", "expired", "dismissed"],
-    disallowedMessage: (status) =>
-      `Question is already answered (status: ${status}); an answered question is terminal`,
+    allowedStates: ["pending", "expired", "dismissed"],
+    disallowedMessage: () => "Question is already answered; an answered question is terminal",
     plan: async ({ fields, content }) => {
       const r = resolveAnswer(fields, {
         answer: answerArgs.answer,
@@ -236,16 +234,15 @@ async function executeAnswer(
       if (!r.ok) return { ok: false, result: r.result };
       resolved = r;
 
-      fields.status = "answered";
       fields.answer = {
         text: r.answerText,
         ...(r.selectedId !== undefined && { selected: r.selectedId }),
       };
       fields["answered-at"] = getBoxTimeISO(ctx.boxRoot);
       fields["answered-via"] = via;
-      // Clear stale lifecycle bookkeeping from a prior expired/dismissed state:
-      // status is single, so an `answered` card must not carry `dismissed-at`
-      // or `expired-at` (the schema's coherence refinement enforces this).
+      // Clear the timestamp of a prior expired/dismissed state: a card carries
+      // at most one of `answered-at`, `dismissed-at`, `expired-at` (the
+      // schema's coherence refinement enforces this).
       delete fields["dismissed-at"];
       delete fields["expired-at"];
 
@@ -266,7 +263,7 @@ async function executeAnswer(
       return {
         ok: true,
         plan: {
-          // Job FIRST, then the card: the card's status flip is the commit
+          // Job FIRST, then the card: the card's `answered-at` is the commit
           // point, so the follow-up job must already exist on disk before it
           // (see applyAndCommit's write-order invariant). A crash between the
           // two writes leaves job+pending-question (recoverable), never an
@@ -308,28 +305,17 @@ async function executeAnswer(
   };
 }
 
-/** HTTP and CLI defer answer admission here so a fenced recovery can respond. */
-export async function answerWithAdmission(opts: { ctx: CommandContext; args: Record<string, unknown>; onAnswered?: () => void }): Promise<CommandResult> {
+/** HTTP and CLI answers share one admitted span; a migration's question is answered like any other once its owner is gone. */
+export function answerWithAdmission(opts: { ctx: CommandContext; args: Record<string, unknown>; onAnswered?: () => void }): Promise<CommandResult> {
   const { ctx, args } = opts;
-  let work;
-  try { work = await acquireBoxWork(ctx.boxRoot); }
-  catch (error) {
-    if (!(error instanceof BoxMaintenanceError)) throw error;
-    const parsed = parseCommandArgs(args, AnswerArgsSchema);
-    if (parsed.question) {
-      const recovery = await answerFencedMigrationQuestion({ boxRoot: ctx.boxRoot, question: parsed.question, answer: parsed.answer, via: parsed.via ?? "cli" });
-      if (recovery) return recovery;
-    }
-    throw error;
-  }
-  try { return await work.run(async () => {
+  return withBoxWork({ boxRoot: ctx.boxRoot, reason: "answer" }, async () => {
     const result = await executeAnswer(ctx, args);
     if (result.success) opts.onAnswered?.();
     return result;
-  }); } finally { await work.release(); }
+  });
 }
 
-registerCommand({
+export const answerCommand: CommandDefinition = {
   name: "answer",
   description: "Answer a pending question",
   args: [
@@ -360,6 +346,6 @@ registerCommand({
     },
   ],
   execute: executeAnswer,
-});
+};
 
 export { executeAnswer };

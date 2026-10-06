@@ -9,7 +9,7 @@ See `docs/triage.md` §Triage (stage 2).
 
 ```ts setup
 import { compileTriageInstructions } from "../../src/core/triage/instructions.js";
-import { runTriage } from "../../src/core/triage/index.js";
+import { runTriage } from "../../src/core/triage/run/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 

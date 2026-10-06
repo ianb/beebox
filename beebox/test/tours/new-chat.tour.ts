@@ -10,7 +10,7 @@
  * put the photos in — impossible.
  */
 
-import { tour } from "./tour-lib/index.js";
+import { tour } from "./tour-lib/registry.js";
 
 tour(
   { name: "new-chat", description: "Open a brand-new chat and check it is addressable before its first message." },
@@ -18,7 +18,8 @@ tour(
     await t.go("/chat?session=new");
     await t.checkpoint("fresh-chat");
 
-    await t.expect.heading("Chat", { level: 1 });
+    await t.expect.heading("Workspace", { level: 1 });
+    await t.expect.landmark("Compose message");
     await t.expect.button("Add");
     await t.expect.noPageErrors();
 

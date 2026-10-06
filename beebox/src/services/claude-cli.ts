@@ -6,7 +6,8 @@
  */
 
 import { spawn, execFile } from "node:child_process";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "../shared/invariant.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 // ─── Service interface ───────────────────────────────────────────────────────
 
@@ -17,6 +18,8 @@ import { invariant } from "../lib/invariant.js";
  * second means we do. Callers that gate on auth must not treat them alike.
  */
 export const AUTH_PROBE_INCONCLUSIVE = "probeInconclusive";
+/** Set alongside {@link AUTH_PROBE_INCONCLUSIVE} when the `claude` binary is not on PATH. */
+export const CLI_MISSING = "cliMissing";
 
 export interface ClaudeCliService {
   authStatus(): Promise<Record<string, unknown>>;
@@ -58,8 +61,10 @@ export function createClaudeCliService(): ClaudeCliService {
             // logout: an empty probe intermittently happens on a perfectly
             // authenticated machine, and reporting it as `loggedIn: false`
             // fails runs closed while naming a remedy that isn't the problem.
+            // A CLI that cannot be spawned at all is not transient: say so,
+            // so readiness can tell "no Claude Code here" from a flaky probe.
             resolve(err
-              ? { [AUTH_PROBE_INCONCLUSIVE]: true, error: err.message }
+              ? { [AUTH_PROBE_INCONCLUSIVE]: true, error: err.message, ...(errnoCode(err) === "ENOENT" ? { [CLI_MISSING]: true } : {}) }
               : { [AUTH_PROBE_INCONCLUSIVE]: true, raw: output });
           }
         });

@@ -20,7 +20,7 @@ import path from "node:path";
 import { execa } from "execa";
 
 import type { BrowsedDocument, DirectoryEntry, DocumentKind } from "../shared/documents.js";
-import { documentLifecycle, planStatusFromSource } from "../../../beebox/src/dev/document-lifecycle.js";
+import { documentLifecycle, planStatusFromSource } from "../../../beebox/src/dev/doc-graph-data/document-lifecycle.js";
 import { emptyChanges, workstreamsForPath, type WorkstreamChanges } from "./workstream-changes.js";
 
 export class InvalidDocumentPathError extends Error {

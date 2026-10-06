@@ -10,6 +10,7 @@ Use the guidance for the area you are changing:
 - **Stand-alone scan uploader (laptop client):** [scan-uploader/CLAUDE.md](scan-uploader/CLAUDE.md). Zero runtime dependencies and copied as one file; it shares a [wire contract](beebox/docs/scan-upload-contract.md) with beebox's scan routes, versioned by a hand-bumped `SCAN_CONTRACT_VERSION`.
 - **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/CLAUDE.md](personal-vibe-check/CLAUDE.md). Edit it here; the old standalone checkout is stale.
 - **Doctest framework:** [agent-doctest/README.md](agent-doctest/README.md); application tests live in their packages.
+- **Experimental Mac app (spike):** [mac-app/README.md](mac-app/README.md) — a menu-bar app that runs the beebox image in a VM via Apple's Containerization; findings in [research/installable-app/](research/installable-app/README.md).
 - **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](canvas-loop/README.md); use [canvas-loop-sketch](.claude/skills/canvas-loop-sketch/SKILL.md) for sketches and gallery work.
 - **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/CLAUDE.md](bin/CLAUDE.md) documents their mechanics.
 - **External-tool research:** [research/CLAUDE.md](research/CLAUDE.md).
@@ -22,6 +23,8 @@ When asked to spin off work, use [launch-worktree-session](.claude/skills/launch
 
 One shared dev router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...`. Use the worktree's short name, without the branch's `worktree-` prefix. HTTP requests wake idle worktrees; WebSockets do not. **Do not restart or `panic` the shared router from a worktree without asking the boxholder.** Lifecycle details: [bin/CLAUDE.md](bin/CLAUDE.md#lifecycle-commands).
 
+Never search the whole home directory (`find ~`, `grep -r ~`, `rg ~`). It walks iCloud Drive, Photos, Music, and Calendars and raises macOS privacy prompts. Search the specific directory, or ask where a file lives.
+
 Use [browse](.claude/skills/browse/SKILL.md) and `bin/browse` for browser work; `/`-leading paths resolve in this worktree. Tracked HTML and Markdown in `dev/` are served at `/<worktree>/dev/`; the repository doc browser is at `/<worktree>/dev/docs/`. See [dev/README.md](dev/README.md).
 
 For recurring work or missed scheduled runs, use [bbx-authoring-schedules](.claude/skills/bbx-authoring-schedules/SKILL.md). `bin/schedules list` shows the catalog, last runs, and overdue work; [bin/CLAUDE.md](bin/CLAUDE.md#schedules-binschedules) covers scheduling mechanics.
@@ -29,6 +32,8 @@ For recurring work or missed scheduled runs, use [bbx-authoring-schedules](.clau
 ## Implement and verify
 
 Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/CLAUDE.md](beebox/CLAUDE.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks.
+
+Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys your test box is granted before assuming you cannot, and ask before sending real box content out or spending real money: [real model calls](beebox/docs/testing/real-models.md).
 
 **Do not disable or weaken lint rules to make code pass without explicit permission for that change.** This includes rule removal, lower severity, looser options, and suppressions. Fix the code; ask if the rule needs changing. The existing exception is one `eslint-disable-next-line <rule> -- <concrete justification>` for a true, narrow false positive. Finish coordinated edits before reacting to per-edit lint output, then verify any diagnostics that remain.
 

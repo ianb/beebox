@@ -14,7 +14,7 @@ boxholder noted the counter-case: *"Sometimes I think we're going to want ad
 hoc views, like the agent able to show something without creating a whole card
 to show it."*
 
-The tension: "views attach to cards" (`beebox/src/core/views/doc.ts` —
+The tension: "views attach to cards" (`beebox/src/core/views/doc/core.ts` —
 no card-less standalone views) makes every surface durable, addressable, and
 tended — but it taxes ephemeral display. If the agent just wants to *show* a
 filtered list, a comparison, a one-off chart mid-conversation, minting a card

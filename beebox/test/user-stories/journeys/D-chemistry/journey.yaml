@@ -1,0 +1,67 @@
+# Typed-recollection variant; real handwritten-note photographs are not available.
+id: D-chemistry
+title: I'm teaching myself chemistry and my notes are a mess
+
+box:
+  base: empty
+  setup: null
+
+assets: []
+sittings: 1
+budget_actions: 60
+
+situation: |
+  You are teaching yourself introductory chemistry out of a textbook, mostly
+  because you would like to understand what you read about materials and the
+  environment. There is no exam or teacher keeping you on track. You usually
+  have about an hour in the evening, three or four evenings a week.
+
+  Your notes are scattered between a notebook and your phone. You keep
+  rereading the beginning because you cannot remember what you understood
+  last time and what you only copied. You want one place to keep your study
+  together and make it easier to pick up where you left off.
+
+  You have read the opening material on atoms, elements and the periodic
+  table. You think you understand that atomic number counts protons. You
+  are less sure about isotopes and ions: your remembered example is carbon-14
+  having six protons and eight neutrons, but you still mix up which particles
+  change when an atom gets a charge. You have also tried balancing equations;
+  you can see why atoms should not disappear, but you sometimes change a
+  little number inside a formula to make the totals work. You have not yet
+  studied moles or worked through quantitative reaction calculations.
+
+  Tonight you can describe these notes from memory, but you do not have
+  photographs or the textbook to upload. You want to sort out where you
+  stand, work on one of the things that is confusing you, and leave with a
+  manageable idea of what to study next. You want to learn rather than just
+  collect tidy-looking notes. You are not planning experiments at home.
+
+closing: |
+  Once you have done a little actual study, leave the app and return as you
+  would on another evening. You have only twenty minutes for this next bit.
+  Find out where you got to and decide what to work on. Try a small piece of
+  that work, then check whether what remains uncertain still makes sense to
+  you. At the end, say whether you would keep using this alongside your
+  textbook, what you wanted and could not find, and what you would need to
+  bring another time.
+
+# Reader only. Never include in the walker prompt.
+watch_for: |
+  Follow the person's goal of continuity in self-directed study. Do not require
+  any particular product schema, view, or study method. Separate a useful
+  document from evidence of an ongoing learning workflow.
+
+  Distinguish read, copied, practised and demonstrated understanding. Check
+  whether the box claims mastery before the person answers, and whether an
+  actual wrong answer and its reasoning remain visible after correction.
+  Do not treat a simulated student's performance as an educational outcome.
+
+  Verify saved facts, study organization, any progress claims and next steps
+  independently. Include positive findings and closing wishes. Preserve the
+  distinction between what the assistant promised and what the person could
+  find and use. Watch the return path without telling the walker how to return.
+
+  This variant has no handwritten assets. It cannot establish handwriting
+  recognition, upload quality or fidelity to a textbook. No microphone,
+  external account, notification delivery, or practical chemistry testing.
+  The return is within one sitting, not evidence of long-term retention.

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useBoxConversation } from "../chat/everywhere/conversation-context";
-import { trpc, type RouterOutput } from "../../lib/trpc";
+import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
+import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
 import { ArchiveChatSection } from "./ArchiveChatSection";
 

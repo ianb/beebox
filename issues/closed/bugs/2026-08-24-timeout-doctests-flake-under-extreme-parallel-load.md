@@ -29,7 +29,7 @@ The whole suite took 1,782,731ms (~29.7 minutes) versus a normal ~207,000ms
 `test/dev/auto-sweep-detach.doctest.md:64` polls with a hardcoded timeout
 (`await sleep(100)` loop) waiting for a log condition; under 8-9x slowdown the
 poll budget is exceeded even though the underlying operation eventually
-succeeds. `test/field-test/lifecycle.doctest.md` and
+succeeds. `test/field-test/lifecycle.doctest.md` (moved to `beebox/test/field-test/run.lifecycle.doctest.md`) and
 `test/field-test/run.doctest.md` are long-running box-lifecycle doctests that
 hit tap's own suite-level timeout the same way.
 
@@ -62,6 +62,6 @@ tests from concurrent-load runs.
 ## 2026-09-02 — closed: superseded
 
 Consolidated with the other load-timeout filings into
-[fixed-timeout-budgets-fail-under-host-load](../../deferred/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
 the harness-side fix (quiet-host wait, slowdown-gated verdicts, import-cone
 attribution) landed from the full-suite-verdicts workstream.

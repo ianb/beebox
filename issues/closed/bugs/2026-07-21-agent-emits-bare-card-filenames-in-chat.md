@@ -29,7 +29,7 @@ growth: the chat prompt's Links example now models an in-sentence card
 reference with a human-title label (`The dates are in [the beta launch
 plan](/store/notes/Beta_Launch.doc.card)` — `src/core/chat/session/prompts.ts`),
 and the cards-guide validation example uses a real labeled link instead of
-metasyntactic `[label](store/x.card)` (`src/core/agent-guide/cards.ts`). The
+metasyntactic `[label](store/x.card)` (`src/core/agent-guide/cards.ts` (moved to `beebox/src/core/agent-guide/guide/cards.ts`)). The
 site audit below stands otherwise: every other bare `.card` occurrence is
 type-naming, a directory listing, a CLI arg, or a ref attribute — correctly
 bare.

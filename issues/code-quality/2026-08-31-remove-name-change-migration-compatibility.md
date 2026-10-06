@@ -4,6 +4,7 @@ workstream: unattached
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-name-change-plan — retaining compatibility during the Bee Box rename
+priority: important
 ---
 
 The 2026-08-31 Bee Box rename retained compatibility code so existing state can

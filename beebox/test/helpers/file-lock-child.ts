@@ -7,7 +7,7 @@
  * Prints `acquired` on stdout once the lock is held; never exits on its own.
  */
 import { acquireLock, requestScopedLock } from "../../src/lib/file-lock.js";
-import { invariant } from "../../src/lib/invariant.js";
+import { invariant } from "../../src/shared/invariant.js";
 
 const lockPath = process.argv[2];
 invariant(lockPath !== undefined, "file-lock-child requires a lock path argument");

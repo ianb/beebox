@@ -122,7 +122,7 @@ agent to discover; skipped with that rationale.
 
 Doctests: `test/shared/browser-task-state.doctest.md` (the judgment),
 `test/schemas/browser-task.doctest.md` (the fields), and
-`test/webapp/trpc-browser-task.doctest.md` (the listing). The view has no
+`test/webapp/trpc-browser-task.doctest.md` (moved to `beebox/test/webapp/trpc/routers/browser-task.doctest.md`) (the listing). The view has no
 automated tier beyond typecheck and lint; one screenshot exhibit.
 
 ## Implementation order

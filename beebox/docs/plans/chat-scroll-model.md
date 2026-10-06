@@ -87,13 +87,17 @@ Writes, exhaustively:
    viewport. The reply streams in below it and fills the screen without any
    scrolling. If the reply outgrows the screen, it continues below the fold;
    the scroll-to-bottom button shows. (The boxholder's proposal and the
-   ChatGPT/claude.ai behaviour.) The last turn carries
-   `min-height: 100cqh` (the scroller is a size container) so "at the top" is reachable when the
-   reply is short; the spacer lasts until the reply is complete (2026-08-26:
-   it used to persist until the next send, leaving a screen of blank room
-   under every finished reply — dropping it at finalize lets the browser
-   clamp the view to the real bottom, one move to a place showing the whole
-   reply). Ordering on send:
+   ChatGPT/claude.ai behaviour.) The last turn uses a viewport-sized minimum
+   (the scroller is a size container) so "at the top" is reachable when the
+   reply is short. The current implementation expresses this with
+   `SEND_SPACER_MIN_HEIGHT` in [the spacer
+   controller](../../src/frontend/src/components/chat/chat-scroll/spacer.ts).
+   As of 2026-10-05 the spacer remains after completion:
+   removing it made a short reply jump down as the browser clamped the view.
+   The controller reduces its minimum height only by actual blank space within
+   the surplus scroll range below the viewport, leaving visible content
+   stationary. A CSS container unit still handles viewport changes
+   synchronously. Ordering on send:
    the previous turn loses its spacer, the new user turn gains it, and the
    scroll write runs in a layout effect after that commit — one write, after
    the shrink above and the growth below have both landed, so nothing clamps.
@@ -196,7 +200,7 @@ does not need to distinguish.
 
 Harness gaps to close in Track 1: the harness scroller must set
 `overflow-anchor: none` like the app (the prepend finding was compensated by
-Chrome's native anchoring, which the app disables); `docs/chat-scroll-testing.md`
+Chrome's native anchoring, which the app disables); `docs/chat/scroll.md`
 must say `/fakestream` content vanishes at finalize in server-backed sessions
 and that `bin/browse eval --no-wait` is required mid-stream.
 
@@ -211,7 +215,7 @@ is the way to get the boxholder's actual traces; the trace pipeline exists.
    controller (it follows); that is the before-state.
 2. **Controller rewrite** — `useChatScroll` per the model, registered in the
    harness, all scenarios green, `decideScroll` deleted, nested CLAUDE.md and
-   `docs/chat-scroll-testing.md` rewritten to the new model.
+   `docs/chat/scroll.md` rewritten to the new model.
 3. **Wire into `MessageList`** — send anchors the user message; last-turn
    min-height; button semantics unchanged. `bin/browse` procedure run; iOS
    checklist run by the boxholder; `/scrolldebug` trace requested if anything
@@ -221,10 +225,14 @@ is the way to get the boxholder's actual traces; the trace pipeline exists.
 
 Tracks 1-3 are implemented in the controller and harness. The 2026-09-04
 follow-up corrects intra-message image anchoring, composer resizing, and send
-spacer ownership. The harness passes 20/20 scenarios in normal and reduced
-motion; real Chromium probes cover sends, composer resizing, and delayed images.
+spacer ownership. The 2026-10-05 short-reply fix retains completed-send space
+and trims only surplus blank range below the viewport; the browser harness
+covers short completion, scrolling, later growth, rekeying, reordering, and
+reply removal. The broader device verification remains open below. The
+harness passes 20/20 scenarios in normal and reduced motion; real Chromium
+probes cover sends, composer resizing, and delayed images.
 Authenticated iOS WKWebView simulator evidence covers sending and keyboard
-opening during a live reply. See [the current verification record](../chat-scroll-testing.md).
+opening during a live reply. See [the current verification record](../chat/scroll.md).
 
 **Outstanding:** physical-iPhone momentum, rubber-band, keyboard transitions,
 and delayed-image checks remain unverified. The earlier issue was closed as

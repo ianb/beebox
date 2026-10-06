@@ -23,7 +23,7 @@ import { useEffect } from "react";
 import { useParams } from "@tanstack/react-router";
 import { emojiFaviconUri } from "@shared/favicon";
 import { apiFileUrl } from "../lib/view-url";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 
 /**
  * The icon link in the served document, and the app's OWN icon href.

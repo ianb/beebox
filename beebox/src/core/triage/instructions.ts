@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { glob } from "glob";
 import { parseLandmarkFields, type LandmarkFields } from "../../schemas/landmark.js";
 import { findDestination } from "../landmark/destination.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { normalizeLandmarkDir } from "../landmark/root-dir.js";
 
 /**
@@ -31,6 +31,9 @@ export interface TriageCategory {
   dir: string;
   /** `rules` text, trimmed; empty string if none. */
   rules: string;
+  /** Optional per-item agent follow-up question and its source landmark. */
+  todoQuestion?: string;
+  landmarkRef?: string;
   /**
    * The destination's handler procedure ref, or null if none. The triage
    * stage only needs to know the destination — the handle stage runs the
@@ -48,7 +51,7 @@ export interface CompiledTriageInstructions {
 
 const SAFE_NAME_RE = /^[\w.-]+$/;
 
-function deriveCategoryName(dir: string): string {
+export function deriveCategoryName(dir: string): string {
   if (dir === "" || dir === ".") return "root";
   const last = path.basename(dir);
   if (!SAFE_NAME_RE.test(last)) {
@@ -96,6 +99,7 @@ export async function compileTriageInstructions(
       name: deriveCategoryName(normalizedDir),
       dir: normalizedDir,
       rules: triageDest.rules?.trim() ?? "",
+      ...(triageDest["todo-question"] ? { todoQuestion: triageDest["todo-question"], landmarkRef: `/${relPath.split(path.sep).join("/")}` } : {}),
       procedureRef: triageDest.procedure?.ref ?? null,
     });
   }
@@ -107,6 +111,13 @@ export async function compileTriageInstructions(
     return a.dir.localeCompare(b.dir);
   });
 
+  disambiguateCategoryNames(categories);
+
+  return { doc: renderDoc(categories), categories };
+}
+
+/** Keep holding directory names identical across the legacy and Jev engines. */
+export function disambiguateCategoryNames(categories: Array<Pick<TriageCategory, "name" | "dir">>): void {
   // Detect name collisions: two landmarks both deriving to the same
   // category name. Disambiguate by appending the parent directory.
   const seen = new Map<string, number>();
@@ -120,7 +131,6 @@ export async function compileTriageInstructions(
     }
   }
 
-  return { doc: renderDoc(categories), categories };
 }
 
 function renderDoc(categories: TriageCategory[]): string {
@@ -139,6 +149,7 @@ function renderDoc(categories: TriageCategory[]): string {
     lines.push(`## \`${cat.name}\``);
     lines.push("");
     lines.push(`Directory: \`${cat.dir || "(box root)"}\``);
+    if (cat.todoQuestion) lines.push(`Todo question (answer yes/no for each item placed here): ${cat.todoQuestion}`);
     lines.push("");
     if (cat.rules) {
       lines.push("Rules:");

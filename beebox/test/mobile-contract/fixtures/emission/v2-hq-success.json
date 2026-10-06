@@ -1,0 +1,25 @@
+{
+  "input": {
+    "version": 2,
+    "id": "ios-hq-success-1",
+    "origin": "voice",
+    "text": "clean HQ text",
+    "diarized": true,
+    "hqText": true,
+    "hqService": "mai-diarized",
+    "images": [],
+    "files": [],
+    "selections": []
+  },
+  "expected": {
+    "id": "ios-hq-success-1",
+    "origin": "voice",
+    "text": "clean HQ text",
+    "images": [],
+    "files": [],
+    "selections": [],
+    "diarized": true,
+    "hqText": true,
+    "hqService": "mai-diarized"
+  }
+}

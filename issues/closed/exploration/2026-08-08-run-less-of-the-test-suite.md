@@ -138,16 +138,16 @@ The loaded beebox run ranked these files highest:
 
 | Rank | File | Loaded time | `makeTestServer()` calls |
 | ---: | --- | ---: | ---: |
-| 1 | `test/hub/hub-e2e.doctest.md` | 110.8 s | 0 |
-| 2 | `test/webapp/chat-send-run-start-failure.doctest.md` | 68.5 s | 4 |
+| 1 | `test/hub/hub-e2e.doctest.md` (moved to `beebox/test/hub.e2e.doctest.md`) | 110.8 s | 0 |
+| 2 | `test/webapp/chat-send-run-start-failure.doctest.md` (moved to `beebox/test/webapp/routes/chat/send-run.start-failure.doctest.md`) | 68.5 s | 4 |
 | 3 | `test/webapp/routes/scan-upload.doctest.md` | 58.2 s | 10 |
-| 4 | `test/webapp/trpc-chat-bootstrap.doctest.md` | 48.2 s | 1 |
-| 5 | `test/webapp/session-gen.doctest.md` | 46.0 s | 1 |
-| 6 | `test/webapp/routes/routes-figure.doctest.md` | 44.8 s | 11 |
-| 7 | `test/webapp/routes/routes-views.doctest.md` | 44.6 s | 5 |
-| 8 | `test/webapp/scan-auth.doctest.md` | 43.4 s | 1 |
-| 9 | `test/webapp/routes/routes-google-oauth-callback.doctest.md` | 39.8 s | 2 |
-| 10 | `test/webapp/trpc-admin-box-config.doctest.md` | 39.6 s | 0 |
+| 4 | `test/webapp/trpc-chat-bootstrap.doctest.md` (moved to `beebox/test/webapp/trpc/routers/chat.bootstrap.doctest.md`) | 48.2 s | 1 |
+| 5 | `test/webapp/session-gen.doctest.md` (moved to `beebox/test/webapp/auth.session-gen.doctest.md`) | 46.0 s | 1 |
+| 6 | `test/webapp/routes/routes-figure.doctest.md` (moved to `beebox/test/webapp/routes/figure.doctest.md`) | 44.8 s | 11 |
+| 7 | `test/webapp/routes/routes-views.doctest.md` (moved to `beebox/test/webapp/routes/views.doctest.md`) | 44.6 s | 5 |
+| 8 | `test/webapp/scan-auth.doctest.md` (moved to `beebox/test/webapp/routes/scan-upload/scan-auth.doctest.md`) | 43.4 s | 1 |
+| 9 | `test/webapp/routes/routes-google-oauth-callback.doctest.md` (moved to `beebox/test/webapp/routes/auth/google.oauth-callback.doctest.md`) | 39.8 s | 2 |
+| 10 | `test/webapp/trpc-admin-box-config.doctest.md` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.doctest.md`) | 39.6 s | 0 |
 
 All 480 executed file durations (478 doctests after excluding two manual files,
 plus two `.test.ts` files) summed to 3,374.8 file-seconds. The top ten summed to
@@ -248,355 +248,355 @@ measure process time only, not the cost of executing their tests.
 
 | Rank | File | Time | Result |
 | ---: | --- | ---: | --- |
-| 1 | `test/hub/hub-e2e.doctest.md` | 110.824 s | pass |
-| 2 | `test/webapp/chat-send-run-start-failure.doctest.md` | 68.515 s | pass |
+| 1 | `test/hub/hub-e2e.doctest.md` (moved to `beebox/test/hub.e2e.doctest.md`) | 110.824 s | pass |
+| 2 | `test/webapp/chat-send-run-start-failure.doctest.md` (moved to `beebox/test/webapp/routes/chat/send-run.start-failure.doctest.md`) | 68.515 s | pass |
 | 3 | `test/webapp/routes/scan-upload.doctest.md` | 58.177 s | pass |
-| 4 | `test/webapp/trpc-chat-bootstrap.doctest.md` | 48.239 s | pass |
-| 5 | `test/webapp/session-gen.doctest.md` | 46.031 s | pass |
-| 6 | `test/webapp/routes/routes-figure.doctest.md` | 44.752 s | pass |
-| 7 | `test/webapp/routes/routes-views.doctest.md` | 44.608 s | pass |
-| 8 | `test/webapp/scan-auth.doctest.md` | 43.358 s | pass |
-| 9 | `test/webapp/routes/routes-google-oauth-callback.doctest.md` | 39.752 s | pass |
-| 10 | `test/webapp/trpc-admin-box-config.doctest.md` | 39.630 s | pass |
-| 11 | `test/webapp/trpc-chat-by-landmark.doctest.md` | 36.538 s | pass |
-| 12 | `test/webapp/routes/routes-files-write.doctest.md` | 35.711 s | pass |
-| 13 | `test/webapp/trpc-connector-config.doctest.md` | 35.652 s | pass |
-| 14 | `test/webapp/trpc-clerk.doctest.md` | 33.869 s | pass |
-| 15 | `test/webapp/routes/routes-external.doctest.md` | 30.748 s | pass |
-| 16 | `test/webapp/trpc-health-box-growth.doctest.md` | 29.742 s | pass |
-| 17 | `test/webapp/trpc-actions.doctest.md` | 29.499 s | pass |
-| 18 | `test/core/screenshot.doctest.md` | 29.445 s | pass |
-| 19 | `test/webapp/routes/routes-api.doctest.md` | 29.426 s | pass |
-| 20 | `test/webapp/routes/bulk-upload-routes.doctest.md` | 29.262 s | pass |
-| 21 | `test/webapp/trpc-landmarks-list.doctest.md` | 27.736 s | pass |
-| 22 | `test/webapp/routes/capture-routes.doctest.md` | 26.769 s | pass |
-| 23 | `test/webapp/debug-log-submit.doctest.md` | 26.705 s | pass |
-| 24 | `test/webapp/history-blob-annex.doctest.md` | 25.414 s | pass |
-| 25 | `test/services/scan-vision-claude-integration.doctest.md` | 25.060 s | pass |
-| 26 | `test/core/procedure/procedure-engine.doctest.md` | 24.919 s | pass |
-| 27 | `test/webapp/routes/routes-actions.doctest.md` | 23.850 s | pass |
+| 4 | `test/webapp/trpc-chat-bootstrap.doctest.md` (moved to `beebox/test/webapp/trpc/routers/chat.bootstrap.doctest.md`) | 48.239 s | pass |
+| 5 | `test/webapp/session-gen.doctest.md` (moved to `beebox/test/webapp/auth.session-gen.doctest.md`) | 46.031 s | pass |
+| 6 | `test/webapp/routes/routes-figure.doctest.md` (moved to `beebox/test/webapp/routes/figure.doctest.md`) | 44.752 s | pass |
+| 7 | `test/webapp/routes/routes-views.doctest.md` (moved to `beebox/test/webapp/routes/views.doctest.md`) | 44.608 s | pass |
+| 8 | `test/webapp/scan-auth.doctest.md` (moved to `beebox/test/webapp/routes/scan-upload/scan-auth.doctest.md`) | 43.358 s | pass |
+| 9 | `test/webapp/routes/routes-google-oauth-callback.doctest.md` (moved to `beebox/test/webapp/routes/auth/google.oauth-callback.doctest.md`) | 39.752 s | pass |
+| 10 | `test/webapp/trpc-admin-box-config.doctest.md` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.doctest.md`) | 39.630 s | pass |
+| 11 | `test/webapp/trpc-chat-by-landmark.doctest.md` (moved to `beebox/test/webapp/trpc/routers/chat.by-landmark.doctest.md`) | 36.538 s | pass |
+| 12 | `test/webapp/routes/routes-files-write.doctest.md` (moved to `beebox/test/webapp/routes/api/register/files-write.doctest.md`) | 35.711 s | pass |
+| 13 | `test/webapp/trpc-connector-config.doctest.md` (moved to `beebox/test/webapp/trpc/routers.connector-config.doctest.md`) | 35.652 s | pass |
+| 14 | `test/webapp/trpc-clerk.doctest.md` (moved to `beebox/test/webapp/trpc/routers/clerk.doctest.md`) | 33.869 s | pass |
+| 15 | `test/webapp/routes/routes-external.doctest.md` (moved to `beebox/test/webapp/routes/api/register/external.doctest.md`) | 30.748 s | pass |
+| 16 | `test/webapp/trpc-health-box-growth.doctest.md` (moved to `beebox/test/webapp/trpc/routers/health/procedures.box-growth.doctest.md`) | 29.742 s | pass |
+| 17 | `test/webapp/trpc-actions.doctest.md` (moved to `beebox/test/webapp/trpc/routers/actions.doctest.md`) | 29.499 s | pass |
+| 18 | `test/core/screenshot.doctest.md` (moved to `beebox/test/core/pending-browser-request.screenshot.doctest.md`) | 29.445 s | pass |
+| 19 | `test/webapp/routes/routes-api.doctest.md` (moved to `beebox/test/webapp/routes/api.doctest.md`) | 29.426 s | pass |
+| 20 | `test/webapp/routes/bulk-upload-routes.doctest.md` (moved to `beebox/test/webapp/routes/bulk-upload.doctest.md`) | 29.262 s | pass |
+| 21 | `test/webapp/trpc-landmarks-list.doctest.md` (moved to `beebox/test/webapp/trpc/routers/landmarks.list.doctest.md`) | 27.736 s | pass |
+| 22 | `test/webapp/routes/capture-routes.doctest.md` (moved to `beebox/test/webapp/routes/capture.doctest.md`) | 26.769 s | pass |
+| 23 | `test/webapp/debug-log-submit.doctest.md` (moved to `beebox/test/webapp/trpc/routers/debug-log.submit.doctest.md`) | 26.705 s | pass |
+| 24 | `test/webapp/history-blob-annex.doctest.md` (moved to `beebox/test/webapp/trpc/routers/history.blob-annex.doctest.md`) | 25.414 s | pass |
+| 25 | `test/services/scan-vision-claude-integration.doctest.md` (moved to `beebox/test/services/scan-vision-claude.integration.doctest.md`) | 25.060 s | pass |
+| 26 | `test/core/procedure/procedure-engine.doctest.md` (moved to `beebox/test/core/procedure/engine.doctest.md`) | 24.919 s | pass |
+| 27 | `test/webapp/routes/routes-actions.doctest.md` (moved to `beebox/test/webapp/routes/actions.doctest.md`) | 23.850 s | pass |
 | 28 | `test/core/commands/document-extract-integration.doctest.md` | 23.714 s | pass |
-| 29 | `test/cli/commands/view-test-command.doctest.md` | 23.335 s | pass |
-| 30 | `test/webapp/password-login.doctest.md` | 22.279 s | pass |
-| 31 | `test/webapp/password-reset.doctest.md` | 22.211 s | pass |
-| 32 | `test/webapp/healthz-schema-failures.doctest.md` | 22.030 s | pass |
-| 33 | `test/webapp/invite-accept.doctest.md` | 21.948 s | pass |
-| 34 | `test/webapp/password-change.doctest.md` | 21.901 s | pass |
-| 35 | `test/webapp/routes/api-csp-report-bounds.doctest.md` | 21.874 s | pass |
+| 29 | `test/cli/commands/view-test-command.doctest.md` (moved to `beebox/test/cli/commands/view/command.test-command.doctest.md`) | 23.335 s | pass |
+| 30 | `test/webapp/password-login.doctest.md` (moved to `beebox/test/webapp/routes/auth.password-login.doctest.md`) | 22.279 s | pass |
+| 31 | `test/webapp/password-reset.doctest.md` (moved to `beebox/test/webapp/routes/auth/password-reset.doctest.md`) | 22.211 s | pass |
+| 32 | `test/webapp/healthz-schema-failures.doctest.md` (moved to `beebox/test/webapp/server-root.healthz-schema-failures.doctest.md`) | 22.030 s | pass |
+| 33 | `test/webapp/invite-accept.doctest.md` (moved to `beebox/test/webapp/routes/auth.invite-accept.doctest.md`) | 21.948 s | pass |
+| 34 | `test/webapp/password-change.doctest.md` (moved to `beebox/test/webapp/routes/auth/password-change.doctest.md`) | 21.901 s | pass |
+| 35 | `test/webapp/routes/api-csp-report-bounds.doctest.md` (moved to `beebox/test/webapp/routes/api-csp-report.bounds.doctest.md`) | 21.874 s | pass |
 | 36 | `test/core/box/file-watcher.doctest.md` | 21.168 s | pass |
 | 37 | `test/webapp/history-blob-paths.doctest.md` | 21.126 s | pass |
-| 38 | `test/webapp/chat-send-routes-validation.doctest.md` | 21.111 s | pass |
-| 39 | `test/hub/hub-scan-token.doctest.md` | 20.137 s | pass |
-| 40 | `test/webapp/healthz-engine-version.doctest.md` | 20.087 s | pass |
-| 41 | `test/webapp/hub-mode-auth.doctest.md` | 19.925 s | pass |
-| 42 | `test/hub/hub-server-auth.doctest.md` | 19.807 s | pass |
-| 43 | `test/cli/lib/init-v2.doctest.md` | 19.692 s | pass |
-| 44 | `test/webapp/routes/frozen-serve.doctest.md` | 18.799 s | pass |
-| 45 | `test/webapp/login-redirect.doctest.md` | 18.600 s | pass |
-| 46 | `test/cli/lib/self-note.doctest.md` | 18.283 s | pass |
-| 47 | `test/webapp/routes/routes-api-adapters.doctest.md` | 18.220 s | pass |
-| 48 | `test/webapp/push-subscribe.doctest.md` | 18.086 s | pass |
-| 49 | `test/webapp/trpc-scheduler.doctest.md` | 17.826 s | pass |
-| 50 | `test/webapp/trpc-scan-tokens.doctest.md` | 17.540 s | pass |
+| 38 | `test/webapp/chat-send-routes-validation.doctest.md` (moved to `beebox/test/webapp/routes/chat/send-routes.validation.doctest.md`) | 21.111 s | pass |
+| 39 | `test/hub/hub-scan-token.doctest.md` (moved to `beebox/test/hub/server.scan-token.doctest.md`) | 20.137 s | pass |
+| 40 | `test/webapp/healthz-engine-version.doctest.md` (moved to `beebox/test/webapp/server-root.healthz-engine-version.doctest.md`) | 20.087 s | pass |
+| 41 | `test/webapp/hub-mode-auth.doctest.md` (moved to `beebox/test/webapp/auth.hub-mode.doctest.md`) | 19.925 s | pass |
+| 42 | `test/hub/hub-server-auth.doctest.md` (moved to `beebox/test/hub/server.auth.doctest.md`) | 19.807 s | pass |
+| 43 | `test/cli/lib/init-v2.doctest.md` (moved to `beebox/test/core/box/structure.init-v2.doctest.md`) | 19.692 s | pass |
+| 44 | `test/webapp/routes/frozen-serve.doctest.md` (moved to `beebox/test/webapp/server.frozen-serve.doctest.md`) | 18.799 s | pass |
+| 45 | `test/webapp/login-redirect.doctest.md` (moved to `beebox/test/webapp/base-prefix.login-redirect.doctest.md`) | 18.600 s | pass |
+| 46 | `test/cli/lib/self-note.doctest.md` (moved to `beebox/test/cli/lib/session.self-note.doctest.md`) | 18.283 s | pass |
+| 47 | `test/webapp/routes/routes-api-adapters.doctest.md` (moved to `beebox/test/webapp/routes/api/register/adapters.doctest.md`) | 18.220 s | pass |
+| 48 | `test/webapp/push-subscribe.doctest.md` (moved to `beebox/test/webapp/trpc/routers/push.subscribe.doctest.md`) | 18.086 s | pass |
+| 49 | `test/webapp/trpc-scheduler.doctest.md` (moved to `beebox/test/webapp/trpc/routers/scheduler.doctest.md`) | 17.826 s | pass |
+| 50 | `test/webapp/trpc-scan-tokens.doctest.md` (moved to `beebox/test/webapp/trpc/routers/scan-tokens.doctest.md`) | 17.540 s | pass |
 | 51 | `test/core/scan/promote.doctest.md` | 17.524 s | pass |
-| 52 | `test/hub/hub-router.doctest.md` | 17.294 s | pass |
-| 53 | `test/webapp/login-page.doctest.md` | 17.002 s | pass |
-| 54 | `test/webapp/location-capture.doctest.md` | 16.690 s | pass |
-| 55 | `test/scripts/migrate/migrate-todo-list-to-doc.doctest.md` | 16.270 s | pass |
-| 56 | `test/cli/commands/wakeup-helpers.doctest.md` | 15.519 s | pass |
-| 57 | `test/webapp/trpc-share.doctest.md` | 15.121 s | pass |
-| 58 | `test/webapp/auth-required.doctest.md` | 14.530 s | pass |
-| 59 | `test/cli/commands/serve-dev-args.doctest.md` | 14.263 s | pass |
-| 60 | `test/core/agent-token.doctest.md` | 14.219 s | pass |
+| 52 | `test/hub/hub-router.doctest.md` (moved to `beebox/test/hub/server.router.doctest.md`) | 17.294 s | pass |
+| 53 | `test/webapp/login-page.doctest.md` (moved to `beebox/test/webapp/routes/auth/login-page.doctest.md`) | 17.002 s | pass |
+| 54 | `test/webapp/location-capture.doctest.md` (moved to `beebox/test/webapp/trpc/routers/location.capture.doctest.md`) | 16.690 s | pass |
+| 55 | `test/scripts/migrate/migrate-todo-list-to-doc.doctest.md` (moved to `beebox/test/scripts/migrate/todo-list-to-doc-run.doctest.md`) | 16.270 s | pass |
+| 56 | `test/cli/commands/wakeup-helpers.doctest.md` (moved to `beebox/test/cli/commands/wakeup/command.doctest.md`) | 15.519 s | pass |
+| 57 | `test/webapp/trpc-share.doctest.md` (moved to `beebox/test/webapp/trpc/routers/share.doctest.md`) | 15.121 s | pass |
+| 58 | `test/webapp/auth-required.doctest.md` (moved to `beebox/test/webapp/auth.required.doctest.md`) | 14.530 s | pass |
+| 59 | `test/cli/commands/serve-dev-args.doctest.md` (moved to `beebox/test/cli/commands/serve.dev-args.doctest.md`) | 14.263 s | pass |
+| 60 | `test/core/agent-token.doctest.md` (moved to `beebox/test/core/agent/token.doctest.md`) | 14.219 s | pass |
 | 61 | `test/core/capture/prepare.doctest.md` | 13.901 s | pass |
-| 62 | `test/webapp/chat-sessions-label.doctest.md` | 13.887 s | pass |
+| 62 | `test/webapp/chat-sessions-label.doctest.md` (moved to `beebox/test/webapp/trpc/routers/chat.sessions-label.doctest.md`) | 13.887 s | pass |
 | 63 | `test/cli/commands/serve-resolve-box-root.doctest.md` | 13.749 s | pass |
-| 64 | `test/core/commands/answer-command.doctest.md` | 13.257 s | pass |
-| 65 | `test/scripts/migrate/migrate-webpage-card.doctest.md` | 12.827 s | pass |
+| 64 | `test/core/commands/answer-command.doctest.md` (moved to `beebox/test/core/commands/answer.doctest.md`) | 13.257 s | pass |
+| 65 | `test/scripts/migrate/migrate-webpage-card.doctest.md` (moved to `beebox/test/scripts/migrate/webpage-card.doctest.md`) | 12.827 s | pass |
 | 66 | `test/hub/supervisor.doctest.md` | 12.639 s | pass |
 | 67 | `test/webapp/trpc-todos-list.doctest.md` | 12.503 s | pass |
-| 68 | `test/schemas/personality-boxholder.doctest.md` | 12.369 s | pass |
-| 69 | `test/core/last-audio.doctest.md` | 12.297 s | pass |
-| 70 | `test/cli/commands/view-check.doctest.md` | 12.159 s | pass |
-| 71 | `test/webapp/health-claude-auth.doctest.md` | 12.118 s | pass |
-| 72 | `test/connectors/connector-drive-docs.doctest.md` | 11.838 s | pass |
-| 73 | `test/webapp/capture-pending-sessions.doctest.md` | 11.526 s | pass |
+| 68 | `test/schemas/personality-boxholder.doctest.md` (moved to `beebox/test/schemas.personality-boxholder.doctest.md`) | 12.369 s | pass |
+| 69 | `test/core/last-audio.doctest.md` (moved to `beebox/test/core/last-audio-pending.doctest.md`) | 12.297 s | pass |
+| 70 | `test/cli/commands/view-check.doctest.md` (moved to `beebox/test/cli/commands/view/command.check.doctest.md`) | 12.159 s | pass |
+| 71 | `test/webapp/health-claude-auth.doctest.md` (moved to `beebox/test/webapp/trpc/routers/health/checks/claude-auth.doctest.md`) | 12.118 s | pass |
+| 72 | `test/connectors/connector-drive-docs.doctest.md` (moved to `beebox/test/connectors/google-drive/handlers/docs.doctest.md`) | 11.838 s | pass |
+| 73 | `test/webapp/capture-pending-sessions.doctest.md` (moved to `beebox/test/webapp/trpc/routers/capture.pending-sessions.doctest.md`) | 11.526 s | pass |
 | 74 | `test/core/commands/document-extract.doctest.md` | 11.272 s | pass |
 | 75 | `test/schemas/pub-submission.doctest.md` | 11.259 s | pass |
-| 76 | `test/cli/lib/init.doctest.md` | 11.116 s | pass |
+| 76 | `test/cli/lib/init.doctest.md` (moved to `beebox/test/core/box/structure.init.doctest.md`) | 11.116 s | pass |
 | 77 | `test/cli/commands/trick.doctest.md` | 11.058 s | pass |
-| 78 | `test/webapp/api-files-serving-hardening.doctest.md` | 11.041 s | pass |
-| 79 | `test/webapp/health-git-writable.doctest.md` | 10.714 s | pass |
-| 80 | `test/core/maps/maps-precheck.doctest.md` | 10.563 s | pass |
-| 81 | `test/connectors/connector-gmail-pull.doctest.md` | 10.517 s | pass |
+| 78 | `test/webapp/api-files-serving-hardening.doctest.md` (moved to `beebox/test/webapp/routes/api/register/files.serving-hardening.doctest.md`) | 11.041 s | pass |
+| 79 | `test/webapp/health-git-writable.doctest.md` (moved to `beebox/test/webapp/trpc/routers/health/checks/writability.git-writable.doctest.md`) | 10.714 s | pass |
+| 80 | `test/core/maps/maps-precheck.doctest.md` (moved to `beebox/test/core/maps/precheck.doctest.md`) | 10.563 s | pass |
+| 81 | `test/connectors/connector-gmail-pull.doctest.md` (moved to `beebox/test/connectors/gmail.pull.doctest.md`) | 10.517 s | pass |
 | 82 | `test/core/annex/to-annex.doctest.md` | 10.200 s | pass |
-| 83 | `test/connectors/connector-gmail-drafts.doctest.md` | 9.919 s | pass |
-| 84 | `test/connectors/connector-google-calendar.doctest.md` | 9.903 s | pass |
-| 85 | `test/webapp/trpc-nav-status.doctest.md` | 9.786 s | pass |
-| 86 | `test/cli/lib/git.doctest.md` | 9.752 s | pass |
-| 87 | `test/core/reactor-integration.doctest.md` | 9.722 s | pass |
+| 83 | `test/connectors/connector-gmail-drafts.doctest.md` (moved to `beebox/test/connectors/gmail/drafts.doctest.md`) | 9.919 s | pass |
+| 84 | `test/connectors/connector-google-calendar.doctest.md` (moved to `beebox/test/connectors/google-calendar.doctest.md`) | 9.903 s | pass |
+| 85 | `test/webapp/trpc-nav-status.doctest.md` (moved to `beebox/test/webapp/trpc/routers/status.nav.doctest.md`) | 9.786 s | pass |
+| 86 | `test/cli/lib/git.doctest.md` (moved to `beebox/test/lib/git.doctest.md`) | 9.752 s | pass |
+| 87 | `test/core/reactor-integration.doctest.md` (moved to `beebox/test/core/reactor/engine.integration.doctest.md`) | 9.722 s | pass |
 | 88 | `test/schemas/question.doctest.md` | 9.635 s | pass |
-| 89 | `test/webapp/views-compiler-v2.doctest.md` | 9.635 s | pass |
-| 90 | `test/cli/lib/view-lint-hooks.doctest.md` | 9.630 s | pass |
-| 91 | `test/core/scheduler.doctest.md` | 9.530 s | pass |
-| 92 | `test/core/commands/dismiss-command.doctest.md` | 9.481 s | pass |
-| 93 | `test/connectors/connector-drive.doctest.md` | 9.356 s | pass |
+| 89 | `test/webapp/views-compiler-v2.doctest.md` (moved to `beebox/test/webapp/views/compiler.v2.doctest.md`) | 9.635 s | pass |
+| 90 | `test/cli/lib/view-lint-hooks.doctest.md` (moved to `beebox/test/webapp/views/compiler.lint-hooks.doctest.md`) | 9.630 s | pass |
+| 91 | `test/core/scheduler.doctest.md` (moved to `beebox/test/core/schedule/scheduler.doctest.md`) | 9.530 s | pass |
+| 92 | `test/core/commands/dismiss-command.doctest.md` (moved to `beebox/test/core/commands/dismiss.doctest.md`) | 9.481 s | pass |
+| 93 | `test/connectors/connector-drive.doctest.md` (moved to `beebox/test/connectors/google-drive.doctest.md`) | 9.356 s | pass |
 | 94 | `test/schemas/place.doctest.md` | 9.347 s | pass |
 | 95 | `test/cli/lib/session-retention.doctest.md` | 9.048 s | pass |
-| 96 | `test/core/chat-session-with-spawner.doctest.md` | 8.943 s | pass |
-| 97 | `test/webapp/api-files-annex-absent.doctest.md` | 8.813 s | pass |
-| 98 | `test/core/chat-session-transcript-sync.doctest.md` | 8.687 s | pass |
+| 96 | `test/core/chat-session-with-spawner.doctest.md` (moved to `beebox/test/core/chat/session/run.with-spawner.doctest.md`) | 8.943 s | pass |
+| 97 | `test/webapp/api-files-annex-absent.doctest.md` (moved to `beebox/test/webapp/routes/api/register/files.annex-absent.doctest.md`) | 8.813 s | pass |
+| 98 | `test/core/chat-session-transcript-sync.doctest.md` (moved to `beebox/test/core/chat/session/run.transcript-sync.doctest.md`) | 8.687 s | pass |
 | 99 | `test/core/commands/connector-sync.doctest.md` | 8.606 s | pass |
-| 100 | `test/service-openai-embeddings.doctest.md` | 8.565 s | pass |
-| 101 | `test/webapp/health-engine.doctest.md` | 8.443 s | pass |
-| 102 | `test/connectors/connector-telegram.doctest.md` | 8.364 s | pass |
-| 103 | `test/core/chat-session.doctest.md` | 8.348 s | pass |
+| 100 | `test/service-openai-embeddings.doctest.md` (moved to `beebox/test/services/openai-embeddings.doctest.md`) | 8.565 s | pass |
+| 101 | `test/webapp/health-engine.doctest.md` (moved to `beebox/test/webapp/trpc/routers/health/checks/engine.doctest.md`) | 8.443 s | pass |
+| 102 | `test/connectors/connector-telegram.doctest.md` (moved to `beebox/test/connectors/telegram.doctest.md`) | 8.364 s | pass |
+| 103 | `test/core/chat-session.doctest.md` (moved to `beebox/test/core/chat/session/run.doctest.md`) | 8.348 s | pass |
 | 104 | `test/core/capture/sweep.doctest.md` | 8.305 s | pass |
-| 105 | `test/services/service-claude-chat.doctest.md` | 8.186 s | pass |
-| 106 | `test/webapp/views-compiler.doctest.md` | 8.058 s | pass |
+| 105 | `test/services/service-claude-chat.doctest.md` (moved to `beebox/test/services/claude-chat.doctest.md`) | 8.186 s | pass |
+| 106 | `test/webapp/views-compiler.doctest.md` (moved to `beebox/test/webapp/views/compiler.doctest.md`) | 8.058 s | pass |
 | 107 | `test/core/bulk-upload/prepare.doctest.md` | 7.933 s | pass |
-| 108 | `test/webapp/mobile-spa-fallback.doctest.md` | 7.903 s | pass |
-| 109 | `test/scripts/migrate/migrate-retire-process-captures.doctest.md` | 7.740 s | pass |
-| 110 | `test/connectors/telegram-webhook.doctest.md` | 7.678 s | pass |
-| 111 | `test/core/agent-session.doctest.md` | 7.644 s | pass |
-| 112 | `test/core/chat-session-run-start-failure.doctest.md` | 7.604 s | pass |
-| 113 | `test/core/procedure/procedure-agent.doctest.md` | 7.524 s | pass |
+| 108 | `test/webapp/mobile-spa-fallback.doctest.md` (moved to `beebox/test/webapp/server-root.spa-fallback.doctest.md`) | 7.903 s | pass |
+| 109 | `test/scripts/migrate/migrate-retire-process-captures.doctest.md` (moved to `beebox/test/scripts/migrate/retire-process-pages/captures.doctest.md`) | 7.740 s | pass |
+| 110 | `test/connectors/telegram-webhook.doctest.md` (moved to `beebox/test/connectors/telegram/webhook.doctest.md`) | 7.678 s | pass |
+| 111 | `test/core/agent-session.doctest.md` (moved to `beebox/test/core/agent/invoke/run.session.doctest.md`) | 7.644 s | pass |
+| 112 | `test/core/chat-session-run-start-failure.doctest.md` (moved to `beebox/test/core/chat/session/run.start-failure.doctest.md`) | 7.604 s | pass |
+| 113 | `test/core/procedure/procedure-agent.doctest.md` (moved to `beebox/test/core/procedure/engine.agent.doctest.md`) | 7.524 s | pass |
 | 114 | `test/cards/ref-fields.doctest.md` | 7.503 s | pass |
 | 115 | `test/schemas/todo-view.doctest.md` | 7.502 s | pass |
 | 116 | `test/webapp/auth-capabilities.doctest.md` | 7.480 s | pass |
 | 117 | `test/core/bulk-upload/worker.doctest.md` | 7.431 s | pass |
-| 118 | `test/core/todo-review-sweep.doctest.md` | 7.378 s | pass |
-| 119 | `test/webapp/routes/ls-format.doctest.md` | 7.358 s | pass |
-| 120 | `test/webapp/chat-default-route.doctest.md` | 7.323 s | pass |
-| 121 | `test/core/procedure/procedure-review-retry.doctest.md` | 7.323 s | pass |
-| 122 | `test/core/schedule-health-alert.doctest.md` | 7.313 s | pass |
-| 123 | `test/core/search/contains-evidence.doctest.md` | 7.216 s | pass |
-| 124 | `test/core/chat-session-registry.doctest.md` | 7.208 s | pass |
+| 118 | `test/core/todo-review-sweep.doctest.md` (moved to `beebox/test/core/todo/review-sweep.doctest.md`) | 7.378 s | pass |
+| 119 | `test/webapp/routes/ls-format.doctest.md` (moved to `beebox/test/webapp/routes/commands.ls-format.doctest.md`) | 7.358 s | pass |
+| 120 | `test/webapp/chat-default-route.doctest.md` (moved to `beebox/test/webapp/routes/chat.default-route.doctest.md`) | 7.323 s | pass |
+| 121 | `test/core/procedure/procedure-review-retry.doctest.md` (moved to `beebox/test/core/procedure/engine.review-retry.doctest.md`) | 7.323 s | pass |
+| 122 | `test/core/schedule-health-alert.doctest.md` (moved to `beebox/test/core/schedule/scheduler/health-alert.doctest.md`) | 7.313 s | pass |
+| 123 | `test/core/search/contains-evidence.doctest.md` (moved to `beebox/test/core/search/contains-update.evidence.doctest.md`) | 7.216 s | pass |
+| 124 | `test/core/chat-session-registry.doctest.md` (moved to `beebox/test/core/chat/session/registry.doctest.md`) | 7.208 s | pass |
 | 125 | `test/schemas/question-followup-job.doctest.md` | 7.082 s | pass |
-| 126 | `test/core/capture/deliver-message.doctest.md` | 7.035 s | pass |
+| 126 | `test/core/capture/deliver-message.doctest.md` (moved to `beebox/test/core/capture/prepare/deliver.message.doctest.md`) | 7.035 s | pass |
 | 127 | `test/core/search/contains-state.doctest.md` | 7.016 s | pass |
-| 128 | `test/webapp/extension-cors.doctest.md` | 6.999 s | pass |
-| 129 | `test/schemas/view-card.doctest.md` | 6.979 s | pass |
-| 130 | `test/cli/commands/contains-backfill.doctest.md` | 6.976 s | pass |
-| 131 | `test/core/command-streaming.doctest.md` | 6.971 s | pass |
-| 132 | `test/webapp/health-google.doctest.md` | 6.905 s | pass |
-| 133 | `test/core/commands/scan-import-photo-flow.doctest.md` | 6.811 s | pass |
-| 134 | `test/core/chat-session-delete.doctest.md` | 6.739 s | pass |
-| 135 | `test/schemas/schemas.doctest.md` | 6.696 s | pass |
-| 136 | `test/webapp/csp-headers.doctest.md` | 6.611 s | pass |
+| 128 | `test/webapp/extension-cors.doctest.md` (moved to `beebox/test/webapp/server-root.extension-cors.doctest.md`) | 6.999 s | pass |
+| 129 | `test/schemas/view-card.doctest.md` (moved to `beebox/test/schemas.view-card.doctest.md`) | 6.979 s | pass |
+| 130 | `test/cli/commands/contains-backfill.doctest.md` (moved to `beebox/test/cli/commands/wakeup/steps.doctest.md`) | 6.976 s | pass |
+| 131 | `test/core/command-streaming.doctest.md` (moved to `beebox/test/webapp/routes/commands.streaming.doctest.md`) | 6.971 s | pass |
+| 132 | `test/webapp/health-google.doctest.md` (moved to `beebox/test/webapp/trpc/routers/health/checks/google.doctest.md`) | 6.905 s | pass |
+| 133 | `test/core/commands/scan-import-photo-flow.doctest.md` (moved to `beebox/test/core/commands/scan-import/command.photo-flow.doctest.md`) | 6.811 s | pass |
+| 134 | `test/core/chat-session-delete.doctest.md` (moved to `beebox/test/core/chat/session/delete.doctest.md`) | 6.739 s | pass |
+| 135 | `test/schemas/schemas.doctest.md` (moved to `beebox/test/schemas.doctest.md`) | 6.696 s | pass |
+| 136 | `test/webapp/csp-headers.doctest.md` (moved to `beebox/test/webapp/server-root.csp-headers.doctest.md`) | 6.611 s | pass |
 | 137 | `test/core/triage.doctest.md` | 6.607 s | pass |
-| 138 | `test/core/mobile/pairing-store-concurrency.doctest.md` | 6.448 s | pass |
-| 139 | `test/package-exports.doctest.md` | 6.414 s | pass |
-| 140 | `test/location-resolve.doctest.md` | 6.393 s | pass |
-| 141 | `test/location-mark.doctest.md` | 6.350 s | pass |
-| 142 | `test/webapp/trpc-status-onplate.doctest.md` | 6.345 s | pass |
-| 143 | `test/core/procedure/procedure-instruction-validation.doctest.md` | 6.260 s | pass |
-| 144 | `test/location-format.doctest.md` | 6.124 s | pass |
+| 138 | `test/core/mobile/pairing-store-concurrency.doctest.md` (moved to `beebox/test/core/mobile/pairing.store-concurrency.doctest.md`) | 6.448 s | pass |
+| 139 | `test/package-exports.doctest.md` (moved to `beebox/test/exports.doctest.md`) | 6.414 s | pass |
+| 140 | `test/location-resolve.doctest.md` (moved to `beebox/test/core/place-cards.doctest.md`) | 6.393 s | pass |
+| 141 | `test/location-mark.doctest.md` (moved to `beebox/test/core/place-mark.doctest.md`) | 6.350 s | pass |
+| 142 | `test/webapp/trpc-status-onplate.doctest.md` (moved to `beebox/test/webapp/trpc/routers/status.onplate.doctest.md`) | 6.345 s | pass |
+| 143 | `test/core/procedure/procedure-instruction-validation.doctest.md` (moved to `beebox/test/core/procedure/engine.instruction-validation.doctest.md`) | 6.260 s | pass |
+| 144 | `test/location-format.doctest.md` (moved to `beebox/test/core/location-format.doctest.md`) | 6.124 s | pass |
 | 145 | `test/core/validation-ignore.doctest.md` | 6.118 s | pass |
 | 146 | `test/core/annex/doctor.doctest.md` | 6.063 s | pass |
 | 147 | `test/connectors/push-output-cards.doctest.md` | 6.049 s | pass |
-| 148 | `test/core/search/search-hybrid-query.doctest.md` | 5.937 s | pass |
-| 149 | `test/core/commands/move-command.doctest.md` | 5.905 s | pass |
-| 150 | `test/cli/commands/view-typecheck.doctest.md` | 5.867 s | pass |
+| 148 | `test/core/search/search-hybrid-query.doctest.md` (moved to `beebox/test/core/search/query.hybrid.doctest.md`) | 5.937 s | pass |
+| 149 | `test/core/commands/move-command.doctest.md` (moved to `beebox/test/core/commands/move/command.doctest.md`) | 5.905 s | pass |
+| 150 | `test/cli/commands/view-typecheck.doctest.md` (moved to `beebox/test/cli/commands/view/typecheck.doctest.md`) | 5.867 s | pass |
 | 151 | `test/schemas/box-schemas-v2.doctest.md` | 5.851 s | pass |
-| 152 | `test/core/search/search-crash-safety.doctest.md` | 5.836 s | pass |
-| 153 | `test/core/search/search-embeddings.doctest.md` | 5.815 s | pass |
-| 154 | `test/core/chat-thread-session-messages.doctest.md` | 5.653 s | pass |
-| 155 | `test/core/search/search-index.doctest.md` | 5.646 s | pass |
-| 156 | `test/core/schedule-health.doctest.md` | 5.639 s | pass |
-| 157 | `test/core/schedule-state.doctest.md` | 5.621 s | pass |
-| 158 | `test/connectors/telegram-output-cards.doctest.md` | 5.612 s | pass |
+| 152 | `test/core/search/search-crash-safety.doctest.md` (moved to `beebox/test/core/search/refresh.crash-safety.doctest.md`) | 5.836 s | pass |
+| 153 | `test/core/search/search-embeddings.doctest.md` (moved to `beebox/test/core/search/refresh.embeddings.doctest.md`) | 5.815 s | pass |
+| 154 | `test/core/chat-thread-session-messages.doctest.md` (moved to `beebox/test/core/chat/session/thread.session-messages.doctest.md`) | 5.653 s | pass |
+| 155 | `test/core/search/search-index.doctest.md` (moved to `beebox/test/core/search/refresh.index.doctest.md`) | 5.646 s | pass |
+| 156 | `test/core/schedule-health.doctest.md` (moved to `beebox/test/core/schedule/health.doctest.md`) | 5.639 s | pass |
+| 157 | `test/core/schedule-state.doctest.md` (moved to `beebox/test/core/schedule/state.doctest.md`) | 5.621 s | pass |
+| 158 | `test/connectors/telegram-output-cards.doctest.md` (moved to `beebox/test/connectors/telegram/output-cards.doctest.md`) | 5.612 s | pass |
 | 159 | `test/core/script-env.doctest.md` | 5.603 s | pass |
-| 160 | `test/location-store.doctest.md` | 5.596 s | pass |
-| 161 | `test/services/google-drive-schemas.doctest.md` | 5.596 s | pass |
-| 162 | `test/webapp/trpc-status-questions.doctest.md` | 5.594 s | pass |
-| 163 | `test/core/reactor-cycle.doctest.md` | 5.580 s | pass |
+| 160 | `test/location-store.doctest.md` (moved to `beebox/test/core/location-store.doctest.md`) | 5.596 s | pass |
+| 161 | `test/services/google-drive-schemas.doctest.md` (moved to `beebox/test/services/google-drive/schemas.doctest.md`) | 5.596 s | pass |
+| 162 | `test/webapp/trpc-status-questions.doctest.md` (moved to `beebox/test/webapp/trpc/routers/status.questions.doctest.md`) | 5.594 s | pass |
+| 163 | `test/core/reactor-cycle.doctest.md` (moved to `beebox/test/core/reactor/engine/cycle.doctest.md`) | 5.580 s | pass |
 | 164 | `test/services/tailscale.doctest.md` | 5.540 s | pass |
 | 165 | `test/webapp/mobile-cookie.doctest.md` | 5.469 s | pass |
-| 166 | `test/connectors/gmail-tracking.doctest.md` | 5.345 s | pass |
+| 166 | `test/connectors/gmail-tracking.doctest.md` (moved to `beebox/test/connectors/gmail/tracking.doctest.md`) | 5.345 s | pass |
 | 167 | `test/services/scan-vision-claude.doctest.md` | 5.301 s | pass |
 | 168 | `test/core/bulk-upload/sweep.doctest.md` | 5.231 s | pass |
 | 169 | `test/services/claude-chat-content.doctest.md` | 5.179 s | pass |
-| 170 | `test/webapp/first-run-setup-owner.doctest.md` | 5.164 s | pass |
-| 171 | `test/core/maps/maps-finalize.doctest.md` | 5.150 s | pass |
+| 170 | `test/webapp/first-run-setup-owner.doctest.md` (moved to `beebox/test/webapp/setup-token.first-run-owner.doctest.md`) | 5.164 s | pass |
+| 171 | `test/core/maps/maps-finalize.doctest.md` (moved to `beebox/test/core/maps/finalize.doctest.md`) | 5.150 s | pass |
 | 172 | `test/core/reactor.doctest.md` | 5.126 s | pass |
 | 173 | `test/schemas/tab-arrangement.test.ts` | 5.121 s | pass |
 | 174 | `test/lib/file-lock.doctest.md` | 5.119 s | pass |
 | 175 | `test/core/annex/info-attributes.doctest.md` | 5.115 s | pass |
-| 176 | `test/cli/lib/session-oversize-lines.doctest.md` | 5.101 s | pass |
+| 176 | `test/cli/lib/session-oversize-lines.doctest.md` (moved to `beebox/test/cli/lib/session.oversize-lines.doctest.md`) | 5.101 s | pass |
 | 177 | `test/schemas/document.doctest.md` | 5.003 s | pass |
-| 178 | `test/core/view-cards.doctest.md` | 4.991 s | pass |
+| 178 | `test/core/view-cards.doctest.md` (moved to `beebox/test/core/views/cards.doctest.md`) | 4.991 s | pass |
 | 179 | `test/core/scan/quarantine.doctest.md` | 4.864 s | pass |
 | 180 | `test/core/question-aging.doctest.md` | 4.817 s | pass |
-| 181 | `test/shared/markdoc-headings.doctest.md` | 4.762 s | pass |
-| 182 | `test/shared/markdoc-redacted.doctest.md` | 4.684 s | pass |
-| 183 | `test/webapp/routes/chat-schedule-fire.doctest.md` | 4.676 s | pass |
-| 184 | `test/cli/todos.doctest.md` | 4.662 s | pass |
+| 181 | `test/shared/markdoc-headings.doctest.md` (moved to `beebox/test/shared/markdoc-config.headings.doctest.md`) | 4.762 s | pass |
+| 182 | `test/shared/markdoc-redacted.doctest.md` (moved to `beebox/test/shared/markdoc-config.redacted.doctest.md`) | 4.684 s | pass |
+| 183 | `test/webapp/routes/chat-schedule-fire.doctest.md` (moved to `beebox/test/webapp/routes/chat/schedule-fire.doctest.md`) | 4.676 s | pass |
+| 184 | `test/cli/todos.doctest.md` (moved to `beebox/test/cli/commands/todos.doctest.md`) | 4.662 s | pass |
 | 185 | `test/publish/lifecycle.doctest.md` | 4.636 s | pass |
-| 186 | `test/scripts/migrate/migrate-delete-deprecated.doctest.md` | 4.619 s | pass |
-| 187 | `test/shared/markdoc-source.doctest.md` | 4.577 s | pass |
+| 186 | `test/scripts/migrate/migrate-delete-deprecated.doctest.md` (moved to `beebox/test/scripts/migrate/delete-deprecated-cards.doctest.md`) | 4.619 s | pass |
+| 187 | `test/shared/markdoc-source.doctest.md` (moved to `beebox/test/shared/markdoc-config.source.doctest.md`) | 4.577 s | pass |
 | 188 | `test/core/chat/review/run.doctest.md` | 4.574 s | pass |
-| 189 | `test/core/chat-whats-changed.doctest.md` | 4.568 s | pass |
+| 189 | `test/core/chat-whats-changed.doctest.md` (moved to `beebox/test/core/chat/whats-changed.doctest.md`) | 4.568 s | pass |
 | 190 | `test/publish/setup.doctest.md` | 4.564 s | pass |
 | 191 | `test/services/tailscale-setup.doctest.md` | 4.548 s | pass |
 | 192 | `test/webapp/local-users.doctest.md` | 4.531 s | pass |
 | 193 | `test/core/session-context.doctest.md` | 4.521 s | pass |
-| 194 | `test/core/todo-ambient-summary.doctest.md` | 4.509 s | pass |
+| 194 | `test/core/todo-ambient-summary.doctest.md` (moved to `beebox/test/core/todo/ambient-summary.doctest.md`) | 4.509 s | pass |
 | 195 | `test/publish/go.doctest.md` | 4.505 s | pass |
 | 196 | `test/webapp/box-config-write.doctest.md` | 4.487 s | pass |
 | 197 | `test/core/scan/tokens.doctest.md` | 4.485 s | pass |
 | 198 | `test/core/notify-boxholder.doctest.md` | 4.447 s | pass |
 | 199 | `test/lib/asset-content.doctest.md` | 4.433 s | pass |
-| 200 | `test/connectors/transient-state.doctest.md` | 4.390 s | pass |
+| 200 | `test/connectors/transient-state.doctest.md` (moved to `beebox/test/transient-state.doctest.md`) | 4.390 s | pass |
 | 201 | `test/lib/box-tmp.doctest.md` | 4.381 s | pass |
 | 202 | `test/publish/status.doctest.md` | 4.340 s | pass |
 | 203 | `test/core/todo-collect.doctest.md` | 4.338 s | pass |
 | 204 | `test/dev/lib/test-runner.doctest.md` | 4.336 s | pass |
-| 205 | `test/core/search/search-extract.doctest.md` | 4.327 s | pass |
-| 206 | `test/scripts/release-manifest.doctest.md` | 4.317 s | pass |
-| 207 | `test/scripts/migrate/migrate-person-contact-split.doctest.md` | 4.312 s | pass |
-| 208 | `test/webapp/trpc-procedures.doctest.md` | 4.305 s | pass |
-| 209 | `test/webapp/static-asset-cache.doctest.md` | 4.296 s | pass |
+| 205 | `test/core/search/search-extract.doctest.md` (moved to `beebox/test/core/search/extract/core.doctest.md`) | 4.327 s | pass |
+| 206 | `test/scripts/release-manifest.doctest.md` (moved to `beebox/test/scripts/release.manifest.doctest.md`) | 4.317 s | pass |
+| 207 | `test/scripts/migrate/migrate-person-contact-split.doctest.md` (moved to `beebox/test/scripts/migrate/person-contact-split.doctest.md`) | 4.312 s | pass |
+| 208 | `test/webapp/trpc-procedures.doctest.md` (moved to `beebox/test/webapp/trpc/procedures.doctest.md`) | 4.305 s | pass |
+| 209 | `test/webapp/static-asset-cache.doctest.md` (moved to `beebox/test/webapp/static-cache.doctest.md`) | 4.296 s | pass |
 | 210 | `test/core/handle.doctest.md` | 4.290 s | pass |
 | 211 | `test/services/tailscale-discovery.doctest.md` | 4.250 s | pass |
-| 212 | `test/services/service-google-calendar.doctest.md` | 4.234 s | pass |
+| 212 | `test/services/service-google-calendar.doctest.md` (moved to `beebox/test/services/google-calendar.doctest.md`) | 4.234 s | pass |
 | 213 | `test/services/scan-vision.doctest.md` | 4.231 s | pass |
-| 214 | `test/box-shape.doctest.md` | 4.229 s | pass |
-| 215 | `test/services/service-google-gmail.doctest.md` | 4.228 s | pass |
-| 216 | `test/cli/lib/session-multi-root.doctest.md` | 4.214 s | pass |
+| 214 | `test/box-shape.doctest.md` (moved to `beebox/test/lib/box-shape.doctest.md`) | 4.229 s | pass |
+| 215 | `test/services/service-google-gmail.doctest.md` (moved to `beebox/test/services/google-gmail-fake.doctest.md`) | 4.228 s | pass |
+| 216 | `test/cli/lib/session-multi-root.doctest.md` (moved to `beebox/test/cli/lib/session.multi-root.doctest.md`) | 4.214 s | pass |
 | 217 | `test/shared/delivered-user-message.doctest.md` | 4.210 s | pass |
-| 218 | `test/core/scan-procedures.doctest.md` | 4.192 s | pass |
-| 219 | `test/box-containment.doctest.md` | 4.152 s | pass |
+| 218 | `test/core/scan-procedures.doctest.md` (moved to `beebox/test/core/docs-gen/compile.scan-procedures.doctest.md`) | 4.192 s | pass |
+| 219 | `test/box-containment.doctest.md` (moved to `beebox/test/lib/box-containment.doctest.md`) | 4.152 s | pass |
 | 220 | `test/lib/attach-lint.doctest.md` | 4.148 s | pass |
-| 221 | `test/core/agent-guide-box-shape.doctest.md` | 4.095 s | pass |
-| 222 | `test/scripts/migrate/migrate-strip-entry-timestamps.doctest.md` | 4.090 s | pass |
-| 223 | `test/scripts/migrate/migrate-person-aliases.doctest.md` | 4.090 s | pass |
-| 224 | `test/push-send.doctest.md` | 4.066 s | pass |
-| 225 | `test/cli/commands/validate-markdown.doctest.md` | 4.019 s | pass |
+| 221 | `test/core/agent-guide-box-shape.doctest.md` (moved to `beebox/test/core/agent-guide/guide/box-shape.doctest.md`) | 4.095 s | pass |
+| 222 | `test/scripts/migrate/migrate-strip-entry-timestamps.doctest.md` (moved to `beebox/test/scripts/migrate/strip-entry-timestamps.doctest.md`) | 4.090 s | pass |
+| 223 | `test/scripts/migrate/migrate-person-aliases.doctest.md` (moved to `beebox/test/scripts/migrate/person-aliases.doctest.md`) | 4.090 s | pass |
+| 224 | `test/push-send.doctest.md` (moved to `beebox/test/core/send-push.doctest.md`) | 4.066 s | pass |
+| 225 | `test/cli/commands/validate-markdown.doctest.md` (moved to `beebox/test/cli/validate-markdown.doctest.md`) | 4.019 s | pass |
 | 226 | `test/schemas/scheduled-script.doctest.md` | 4.017 s | pass |
 | 227 | `test/shared/card-name.doctest.md` | 3.914 s | pass |
-| 228 | `test/core/transcription-config.doctest.md` | 3.902 s | pass |
-| 229 | `test/scripts/migrate/migrate-question-lifecycle.doctest.md` | 3.890 s | pass |
+| 228 | `test/core/transcription-config.doctest.md` (moved to `beebox/test/core/transcription/dispatch.config.doctest.md`) | 3.902 s | pass |
+| 229 | `test/scripts/migrate/migrate-question-lifecycle.doctest.md` (moved to `beebox/test/scripts/migrate/question-lifecycle-run/lifecycle.doctest.md`) | 3.890 s | pass |
 | 230 | `test/shared/box-path.doctest.md` | 3.868 s | pass |
 | 231 | `test/mobile-contract/fixtures.doctest.md` | 3.856 s | pass |
-| 232 | `test/core/boxes-config.doctest.md` | 3.845 s | pass |
+| 232 | `test/core/boxes-config.doctest.md` (moved to `beebox/test/core/box/boxes-config.doctest.md`) | 3.845 s | pass |
 | 233 | `test/core/card-lint.doctest.md` | 3.820 s | pass |
 | 234 | `test/services/service-openai-audio.doctest.md` | 3.809 s | pass |
 | 235 | `test/core/install-validation-hooks.doctest.md` | 3.808 s | pass |
 | 236 | `test/cli/commands/upgrade.doctest.md` | 3.786 s | pass |
-| 237 | `test/scripts/migrate/migrate-recipe-source-shape.doctest.md` | 3.783 s | pass |
-| 238 | `test/shared/markdoc-todo.doctest.md` | 3.707 s | pass |
-| 239 | `test/core/google-auth-alert.doctest.md` | 3.697 s | pass |
-| 240 | `test/core/markdown-link-rules.doctest.md` | 3.676 s | pass |
-| 241 | `test/connectors/intake-utils.doctest.md` | 3.652 s | pass |
+| 237 | `test/scripts/migrate/migrate-recipe-source-shape.doctest.md` (moved to `beebox/test/scripts/migrate/recipe-source-shape.doctest.md`) | 3.783 s | pass |
+| 238 | `test/shared/markdoc-todo.doctest.md` (moved to `beebox/test/shared/markdoc-config.todo.doctest.md`) | 3.707 s | pass |
+| 239 | `test/core/google-auth-alert.doctest.md` (moved to `beebox/test/core/schedule/scheduler/google-auth-alert.doctest.md`) | 3.697 s | pass |
+| 240 | `test/core/markdown-link-rules.doctest.md` (moved to `beebox/test/core/markdown-lint-rules.doctest.md`) | 3.676 s | pass |
+| 241 | `test/connectors/intake-utils.doctest.md` (moved to `beebox/test/job-cards/intake-utils.doctest.md`) | 3.652 s | pass |
 | 242 | `test/core/canonical-refs.doctest.md` | 3.633 s | pass |
-| 243 | `test/core/box-schemas.doctest.md` | 3.630 s | pass |
+| 243 | `test/core/box-schemas.doctest.md` (moved to `beebox/test/core/load-context.schemas.doctest.md`) | 3.630 s | pass |
 | 244 | `test/publish/draft.doctest.md` | 3.602 s | pass |
-| 245 | `test/core/commands/trash-command.doctest.md` | 3.551 s | pass |
+| 245 | `test/core/commands/trash-command.doctest.md` (moved to `beebox/test/core/commands/trash/command.doctest.md`) | 3.551 s | pass |
 | 246 | `test/connectors/publish-submissions.doctest.md` | 3.484 s | pass |
-| 247 | `test/connectors/google-drive-state.doctest.md` | 3.421 s | pass |
-| 248 | `test/cli/auth-command.doctest.md` | 3.419 s | pass |
-| 249 | `test/webapp/health-snapshot.doctest.md` | 3.416 s | pass |
-| 250 | `test/connectors/preserve-agent-fields.doctest.md` | 3.414 s | pass |
+| 247 | `test/connectors/google-drive-state.doctest.md` (moved to `beebox/test/connectors/google-drive/state.doctest.md`) | 3.421 s | pass |
+| 248 | `test/cli/auth-command.doctest.md` (moved to `beebox/test/cli/commands/auth.doctest.md`) | 3.419 s | pass |
+| 249 | `test/webapp/health-snapshot.doctest.md` (moved to `beebox/test/webapp/trpc/routers/health/checks/snapshot.doctest.md`) | 3.416 s | pass |
+| 250 | `test/connectors/preserve-agent-fields.doctest.md` (moved to `beebox/test/preserve-agent-fields.doctest.md`) | 3.414 s | pass |
 | 251 | `test/shared/image-orientation.doctest.md` | 3.402 s | pass |
 | 252 | `test/core/question-alert.doctest.md` | 3.402 s | pass |
-| 253 | `test/webapp/routes/chat-mobile-sender.doctest.md` | 3.360 s | pass |
-| 254 | `test/hub/box-picker.doctest.md` | 3.351 s | pass |
+| 253 | `test/webapp/routes/chat-mobile-sender.doctest.md` (moved to `beebox/test/webapp/routes/chat/helpers.mobile-sender.doctest.md`) | 3.360 s | pass |
+| 254 | `test/hub/box-picker.doctest.md` (moved to `beebox/test/hub/server/box-picker.doctest.md`) | 3.351 s | pass |
 | 255 | `test/core/chat/review/discovery.doctest.md` | 3.347 s | pass |
-| 256 | `test/core/box-growth-health.doctest.md` | 3.304 s | pass |
-| 257 | `test/core/procedure/procedure-gc.doctest.md` | 3.304 s | pass |
-| 258 | `test/cli/lib/time.doctest.md` | 3.294 s | pass |
-| 259 | `test/core/agent-guide-card-types.doctest.md` | 3.273 s | pass |
-| 260 | `test/cli/commands/migrate-mark-applied.doctest.md` | 3.234 s | pass |
+| 256 | `test/core/box-growth-health.doctest.md` (moved to `beebox/test/core/box-growth/health.doctest.md`) | 3.304 s | pass |
+| 257 | `test/core/procedure/procedure-gc.doctest.md` (moved to `beebox/test/core/procedure/gc.doctest.md`) | 3.304 s | pass |
+| 258 | `test/cli/lib/time.doctest.md` (moved to `beebox/test/lib/time.doctest.md`) | 3.294 s | pass |
+| 259 | `test/core/agent-guide-card-types.doctest.md` (moved to `beebox/test/core/agent-guide/guide/cards.doctest.md`) | 3.273 s | pass |
+| 260 | `test/cli/commands/migrate-mark-applied.doctest.md` (moved to `beebox/test/cli/commands/migrate.mark-applied.doctest.md`) | 3.234 s | pass |
 | 261 | `test/core/card-io.doctest.md` | 3.206 s | pass |
 | 262 | `test/core/capture/staging-store.doctest.md` | 3.195 s | pass |
-| 263 | `test/core/commands/pdf-probe.doctest.md` | 3.167 s | pass |
+| 263 | `test/core/commands/pdf-probe.doctest.md` (moved to `beebox/test/core/pdf/probe.doctest.md`) | 3.167 s | pass |
 | 264 | `test/core/box.doctest.md` | 3.158 s | pass |
-| 265 | `test/cards/todos-field.doctest.md` | 3.148 s | pass |
+| 265 | `test/cards/todos-field.doctest.md` (moved to `beebox/test/cards/schema.todos.doctest.md`) | 3.148 s | pass |
 | 266 | `test/core/scan/promote-debounce.doctest.md` | 3.144 s | pass |
 | 267 | `test/core/annex/is-annex-box.doctest.md` | 3.124 s | pass |
-| 268 | `test/scripts/migrate/migrate-gsheet-rename.doctest.md` | 3.124 s | pass |
-| 269 | `test/core/commands/command-args-validation.doctest.md` | 3.111 s | pass |
-| 270 | `test/webapp/chat-landmark-summaries.doctest.md` | 3.080 s | pass |
-| 271 | `test/publish/render-docs.doctest.md` | 3.079 s | pass |
-| 272 | `test/hub/hub-config.doctest.md` | 3.048 s | pass |
-| 273 | `test/scripts/migrate/migrate-normalize-ref-keys.doctest.md` | 3.043 s | pass |
-| 274 | `test/core/mobile/mobile-session.doctest.md` | 3.040 s | pass |
-| 275 | `test/cli/commands/tick-create-after-success.doctest.md` | 3.017 s | pass |
-| 276 | `test/services/service-call-log.doctest.md` | 3.011 s | pass |
-| 277 | `test/core/landmark/landmark-schema.doctest.md` | 2.988 s | pass |
+| 268 | `test/scripts/migrate/migrate-gsheet-rename.doctest.md` (moved to `beebox/test/scripts/migrate/gsheet-rename.doctest.md`) | 3.124 s | pass |
+| 269 | `test/core/commands/command-args-validation.doctest.md` (moved to `beebox/test/core/command-runner.args-validation.doctest.md`) | 3.111 s | pass |
+| 270 | `test/webapp/chat-landmark-summaries.doctest.md` (moved to `beebox/test/webapp/routes/chat.landmark-summaries.doctest.md`) | 3.080 s | pass |
+| 271 | `test/publish/render-docs.doctest.md` (moved to `beebox/test/publish/draft/render-docs.doctest.md`) | 3.079 s | pass |
+| 272 | `test/hub/hub-config.doctest.md` (moved to `beebox/test/hub/config.doctest.md`) | 3.048 s | pass |
+| 273 | `test/scripts/migrate/migrate-normalize-ref-keys.doctest.md` (moved to `beebox/test/scripts/migrate/normalize-ref-keys.doctest.md`) | 3.043 s | pass |
+| 274 | `test/core/mobile/mobile-session.doctest.md` (moved to `beebox/test/core/mobile/session.doctest.md`) | 3.040 s | pass |
+| 275 | `test/cli/commands/tick-create-after-success.doctest.md` (moved to `beebox/test/cli/commands/tick.create-after-success.doctest.md`) | 3.017 s | pass |
+| 276 | `test/services/service-call-log.doctest.md` (moved to `beebox/test/services/call-log.doctest.md`) | 3.011 s | pass |
+| 277 | `test/core/landmark/landmark-schema.doctest.md` (moved to `beebox/test/core/landmark/resolve.schema.doctest.md`) | 2.988 s | pass |
 | 278 | `test/lib/asset-extensions.doctest.md` | 2.978 s | pass |
-| 279 | `test/services/service-telegram.doctest.md` | 2.969 s | pass |
-| 280 | `test/core/chat/render-entries.doctest.md` | 2.960 s | pass |
+| 279 | `test/services/service-telegram.doctest.md` (moved to `beebox/test/services/telegram.doctest.md`) | 2.969 s | pass |
+| 280 | `test/core/chat/render-entries.doctest.md` (moved to `beebox/test/core/chat/transcript-render.doctest.md`) | 2.960 s | pass |
 | 281 | `test/core/annex/unlisted-binaries.doctest.md` | 2.905 s | pass |
-| 282 | `test/core/chat-features-persistence.doctest.md` | 2.876 s | pass |
+| 282 | `test/core/chat-features-persistence.doctest.md` (moved to `beebox/test/core/chat/session/history.features-persistence.doctest.md`) | 2.876 s | pass |
 | 283 | `test/publish/pub-worker-meta.doctest.md` | 2.869 s | pass |
 | 284 | `test/lib/card-lock.doctest.md` | 2.853 s | pass |
-| 285 | `test/core/view-refs.doctest.md` | 2.851 s | pass |
+| 285 | `test/core/view-refs.doctest.md` (moved to `beebox/test/core/views/refs.doctest.md`) | 2.851 s | pass |
 | 286 | `test/lib/box-slug.doctest.md` | 2.850 s | pass |
 | 287 | `test/core/link-repair.doctest.md` | 2.818 s | pass |
-| 288 | `test/schemas/briefing-compile.doctest.md` | 2.796 s | pass |
-| 289 | `test/webapp/routes/bulk-upload-stream-gate.doctest.md` | 2.793 s | pass |
-| 290 | `test/webapp/routes/chat-image-orientation.doctest.md` | 2.771 s | pass |
+| 288 | `test/schemas/briefing-compile.doctest.md` (moved to `beebox/test/schemas.briefing-compile.doctest.md`) | 2.796 s | pass |
+| 289 | `test/webapp/routes/bulk-upload-stream-gate.doctest.md` (moved to `beebox/test/webapp/routes/bulk-upload/stream-gate.doctest.md`) | 2.793 s | pass |
+| 290 | `test/webapp/routes/chat-image-orientation.doctest.md` (moved to `beebox/test/webapp/routes/chat/helpers.image-orientation.doctest.md`) | 2.771 s | pass |
 | 291 | `test/core/asset-manifest-scan.doctest.md` | 2.765 s | pass |
-| 292 | `test/cli/commands/tick-force.doctest.md` | 2.752 s | pass |
+| 292 | `test/cli/commands/tick-force.doctest.md` (moved to `beebox/test/cli/commands/tick.force.doctest.md`) | 2.752 s | pass |
 | 293 | `test/core/agent/auth-preflight.doctest.md` | 2.691 s | pass |
-| 294 | `test/core/bulk-upload/upload-wrapper.doctest.md` | 2.680 s | pass |
+| 294 | `test/core/bulk-upload/upload-wrapper.doctest.md` (moved to `beebox/test/core/bulk-upload/worker/deliver.doctest.md`) | 2.680 s | pass |
 | 295 | `test/lib/csp.doctest.md` | 2.649 s | pass |
 | 296 | `test/core/chat-task-events.doctest.md` | 2.633 s | pass |
-| 297 | `test/connectors/chat-utils.doctest.md` | 2.622 s | pass |
+| 297 | `test/connectors/chat-utils.doctest.md` (moved to `beebox/test/job-cards/chat-utils.doctest.md`) | 2.622 s | pass |
 | 298 | `test/lib/exec-with-timeout.doctest.md` | 2.619 s | pass |
-| 299 | `test/webapp/capture-resumable-sessions.doctest.md` | 2.617 s | pass |
-| 300 | `test/cli/commands/session-huge-guard.doctest.md` | 2.589 s | pass |
+| 299 | `test/webapp/capture-resumable-sessions.doctest.md` (moved to `beebox/test/webapp/trpc/routers/capture.resumable-sessions.doctest.md`) | 2.617 s | pass |
+| 300 | `test/cli/commands/session-huge-guard.doctest.md` (moved to `beebox/test/cli/commands/session/modes.huge-guard.doctest.md`) | 2.589 s | pass |
 | 301 | `test/dev/lib/audit-box.doctest.md` | 2.566 s | pass |
 | 302 | `test/publish/submission.doctest.md` | 2.553 s | pass |
-| 303 | `test/schemas/card-loaders.doctest.md` | 2.544 s | pass |
+| 303 | `test/schemas/card-loaders.doctest.md` (moved to `beebox/test/schemas.card-loaders.doctest.md`) | 2.544 s | pass |
 | 304 | `test/core/nav.doctest.md` | 2.544 s | pass |
-| 305 | `test/webapp/ws-auth.doctest.md` | 2.511 s | pass |
-| 306 | `test/core/capture/capture-wrapper.doctest.md` | 2.507 s | pass |
-| 307 | `test/cli/lib/chat-routes.doctest.md` | 2.505 s | pass |
-| 308 | `test/core/view-link-migration.doctest.md` | 2.488 s | pass |
-| 309 | `test/core/procedure/procedure-validate-model.doctest.md` | 2.480 s | pass |
-| 310 | `test/hub/child-output-log.doctest.md` | 2.460 s | pass |
+| 305 | `test/webapp/ws-auth.doctest.md` (moved to `beebox/test/webapp/auth.ws.doctest.md`) | 2.511 s | pass |
+| 306 | `test/core/capture/capture-wrapper.doctest.md` (moved to `beebox/test/core/capture/prepare/deliver.doctest.md`) | 2.507 s | pass |
+| 307 | `test/cli/lib/chat-routes.doctest.md` (moved to `beebox/test/cli/lib/session.chat-routes.doctest.md`) | 2.505 s | pass |
+| 308 | `test/core/view-link-migration.doctest.md` (moved to `beebox/test/core/views/link-migration.doctest.md`) | 2.488 s | pass |
+| 309 | `test/core/procedure/procedure-validate-model.doctest.md` (moved to `beebox/test/core/procedure/engine-validate-model.doctest.md`) | 2.480 s | pass |
+| 310 | `test/hub/child-output-log.doctest.md` (moved to `beebox/test/hub/supervisor/child-output-log.doctest.md`) | 2.460 s | pass |
 | 311 | `test/shared/attach-path.doctest.md` | 2.433 s | pass |
 | 312 | `test/shared/ref-path.doctest.md` | 2.421 s | pass |
-| 313 | `test/core/commands/attachments-unignore.doctest.md` | 2.388 s | pass |
-| 314 | `test/core/chat-session-history.doctest.md` | 2.367 s | pass |
+| 313 | `test/core/commands/attachments-unignore.doctest.md` (moved to `beebox/test/core/attachments-gitignore.doctest.md`) | 2.388 s | pass |
+| 314 | `test/core/chat-session-history.doctest.md` (moved to `beebox/test/core/chat/session/history.doctest.md`) | 2.367 s | pass |
 | 315 | `test/core/chat/review/span.doctest.md` | 2.342 s | pass |
 | 316 | `test/core/asset-manifest.doctest.md` | 2.334 s | pass |
-| 317 | `test/core/chat-turn-buffer.doctest.md` | 2.328 s | pass |
-| 318 | `test/webapp/auth-public-url-fallback.doctest.md` | 2.323 s | pass |
+| 317 | `test/core/chat-turn-buffer.doctest.md` (moved to `beebox/test/core/chat/turn-buffer.doctest.md`) | 2.328 s | pass |
+| 318 | `test/webapp/auth-public-url-fallback.doctest.md` (moved to `beebox/test/webapp/routes/auth.public-url-fallback.doctest.md`) | 2.323 s | pass |
 | 319 | `test/shared/model-ids.doctest.md` | 2.314 s | pass |
-| 320 | `test/core/generate-docs.doctest.md` | 2.310 s | pass |
-| 321 | `test/connectors/calendar-sync-decision.doctest.md` | 2.293 s | pass |
-| 322 | `test/core/box-skills.doctest.md` | 2.287 s | pass |
+| 320 | `test/core/generate-docs.doctest.md` (moved to `beebox/test/core/docs-gen/generate.doctest.md`) | 2.310 s | pass |
+| 321 | `test/connectors/calendar-sync-decision.doctest.md` (moved to `beebox/test/connectors/google-calendar/decide.doctest.md`) | 2.293 s | pass |
+| 322 | `test/core/box-skills.doctest.md` (moved to `beebox/test/core/box/guidance-sync/skills.doctest.md`) | 2.287 s | pass |
 | 323 | `test/publish/cloudflare-auth.doctest.md` | 2.287 s | pass |
-| 324 | `test/core/chat-husk.doctest.md` | 2.267 s | pass |
-| 325 | `test/core/commands/gemini-json-boundary.doctest.md` | 2.266 s | pass |
-| 326 | `test/webapp/pairing-routes.test.ts` | 2.257 s | pass |
-| 327 | `test/connector-response.doctest.md` | 2.215 s | pass |
-| 328 | `test/core/chat-schedules.doctest.md` | 2.182 s | pass |
-| 329 | `test/core/chat-card-activity.doctest.md` | 2.174 s | pass |
+| 324 | `test/core/chat-husk.doctest.md` (moved to `beebox/test/core/chat/husk.doctest.md`) | 2.267 s | pass |
+| 325 | `test/core/commands/gemini-json-boundary.doctest.md` (moved to `beebox/test/core/describe-images/helpers.json-boundary.doctest.md`) | 2.266 s | pass |
+| 326 | `test/webapp/pairing-routes.test.ts` (moved to `beebox/test/webapp/routes/pairing.test.ts`) | 2.257 s | pass |
+| 327 | `test/connector-response.doctest.md` (moved to `beebox/test/services/connector-response.doctest.md`) | 2.215 s | pass |
+| 328 | `test/core/chat-schedules.doctest.md` (moved to `beebox/test/core/chat/schedules.doctest.md`) | 2.182 s | pass |
+| 329 | `test/core/chat-card-activity.doctest.md` (moved to `beebox/test/core/chat/card-activity.doctest.md`) | 2.174 s | pass |
 | 330 | `test/lib/mimetype.doctest.md` | 2.167 s | pass |
-| 331 | `test/lib/filename.doctest.md` | 2.162 s | pass |
+| 331 | `test/lib/filename.doctest.md` (moved to `beebox/test/shared/filename.doctest.md`) | 2.162 s | pass |
 | 332 | `test/core/template-stock-hashes.doctest.md` | 2.160 s | pass |
-| 333 | `test/connectors/google-oauth-state.doctest.md` | 2.137 s | pass |
+| 333 | `test/connectors/google-oauth-state.doctest.md` (moved to `beebox/test/google/oauth-state.doctest.md`) | 2.137 s | pass |
 | 334 | `test/core/finish-job.doctest.md` | 2.132 s | pass |
-| 335 | `test/core/capture/write-cards-audio-format.doctest.md` | 2.108 s | pass |
+| 335 | `test/core/capture/write-cards-audio-format.doctest.md` (moved to `beebox/test/core/capture/prepare/write-cards.audio-format.doctest.md`) | 2.108 s | pass |
 | 336 | `test/frontend/capture-message.doctest.md` | 2.101 s | pass |
 | 337 | `test/publish/manifest.doctest.md` | 2.092 s | pass |
-| 338 | `test/webapp/login-throttle.doctest.md` | 2.084 s | pass |
-| 339 | `test/hub/hub-http-error.doctest.md` | 2.077 s | pass |
-| 340 | `test/core/box-defaults-landmark.doctest.md` | 2.070 s | pass |
-| 341 | `test/core/retro/retro-walker.doctest.md` | 2.069 s | pass |
+| 338 | `test/webapp/login-throttle.doctest.md` (moved to `beebox/test/webapp/routes/auth/login-throttle.doctest.md`) | 2.084 s | pass |
+| 339 | `test/hub/hub-http-error.doctest.md` (moved to `beebox/test/hub/server/http-error.doctest.md`) | 2.077 s | pass |
+| 340 | `test/core/box-defaults-landmark.doctest.md` (moved to `beebox/test/core/box/structure/defaults.landmark.doctest.md`) | 2.070 s | pass |
+| 341 | `test/core/retro/retro-walker.doctest.md` (moved to `beebox/test/core/retro/discovery.doctest.md`) | 2.069 s | pass |
 | 342 | `test/dev/lib/box-guard.doctest.md` | 2.065 s | pass |
-| 343 | `test/connectors/calendar-utils.doctest.md` | 2.058 s | pass |
-| 344 | `test/core/git-mv-nudge.doctest.md` | 2.055 s | pass |
-| 345 | `test/core/landmark/landmark-nearest.doctest.md` | 2.042 s | pass |
-| 346 | `test/core/box-defaults-todo-view.doctest.md` | 2.036 s | pass |
+| 343 | `test/connectors/calendar-utils.doctest.md` (moved to `beebox/test/connectors/google-calendar/utils.doctest.md`) | 2.058 s | pass |
+| 344 | `test/core/git-mv-nudge.doctest.md` (moved to `beebox/test/core/sdk-hooks.git-mv-nudge.doctest.md`) | 2.055 s | pass |
+| 345 | `test/core/landmark/landmark-nearest.doctest.md` (moved to `beebox/test/core/landmark/nearest.doctest.md`) | 2.042 s | pass |
+| 346 | `test/core/box-defaults-todo-view.doctest.md` (moved to `beebox/test/core/box/structure/defaults.todo-view.doctest.md`) | 2.036 s | pass |
 | 347 | `test/shared/todo-model.doctest.md` | 2.022 s | pass |
 | 348 | `test/core/commands/attachments-gitignore.doctest.md` | 2.005 s | pass |
-| 349 | `test/core/external-url-check.doctest.md` | 2.001 s | pass |
+| 349 | `test/core/external-url-check.doctest.md` (moved to `beebox/test/core/external/url-check.doctest.md`) | 2.001 s | pass |
 | 350 | `test/dev/lib/context-history.doctest.md` | 1.981 s | pass |
 | 351 | `test/frontend/lib/place-label.doctest.md` | 1.974 s | pass |
 | 352 | `test/frontend/chat-machine-finalize.doctest.md` | 1.973 s | zero tests |
@@ -607,41 +607,41 @@ measure process time only, not the cost of executing their tests.
 | 357 | `test/core/chat/review/state.doctest.md` | 1.952 s | pass |
 | 358 | `test/frontend/voice-chip-face.doctest.md` | 1.951 s | zero tests |
 | 359 | `test/frontend/lib/retention.doctest.md` | 1.947 s | pass |
-| 360 | `test/result.doctest.md` | 1.946 s | pass |
-| 361 | `test/connectors/google-auth-status.doctest.md` | 1.931 s | pass |
-| 362 | `test/webapp/auth-hub-identity.doctest.md` | 1.929 s | pass |
+| 360 | `test/result.doctest.md` (moved to `beebox/test/shared/result.doctest.md`) | 1.946 s | pass |
+| 361 | `test/connectors/google-auth-status.doctest.md` (moved to `beebox/test/google/auth-status.doctest.md`) | 1.931 s | pass |
+| 362 | `test/webapp/auth-hub-identity.doctest.md` (moved to `beebox/test/webapp/auth.hub-identity.doctest.md`) | 1.929 s | pass |
 | 363 | `test/core/browse-key.doctest.md` | 1.891 s | pass |
 | 364 | `test/frontend/chat/processing-status-display.doctest.md` | 1.879 s | zero tests |
 | 365 | `test/frontend/capture-upload-retry.doctest.md` | 1.873 s | zero tests |
 | 366 | `test/publish/leak-scan.doctest.md` | 1.868 s | pass |
-| 367 | `test/core/box-config.doctest.md` | 1.867 s | pass |
-| 368 | `test/lib/is-record.doctest.md` | 1.860 s | pass |
-| 369 | `test/core/intake.doctest.md` | 1.855 s | pass |
+| 367 | `test/core/box-config.doctest.md` (moved to `beebox/test/core/box/config.doctest.md`) | 1.867 s | pass |
+| 368 | `test/lib/is-record.doctest.md` (moved to `beebox/test/shared/is-record.doctest.md`) | 1.860 s | pass |
+| 369 | `test/core/intake.doctest.md` (moved to `beebox/test/core/commands/intake/run.doctest.md`) | 1.855 s | pass |
 | 370 | `test/frontend/todo-view-card-logic.doctest.md` | 1.853 s | pass |
-| 371 | `test/core/landmark/landmark-feature-seed.doctest.md` | 1.812 s | pass |
-| 372 | `test/core/retro/retro-scan.doctest.md` | 1.811 s | pass |
+| 371 | `test/core/landmark/landmark-feature-seed.doctest.md` (moved to `beebox/test/core/landmark/features.seed.doctest.md`) | 1.812 s | pass |
+| 372 | `test/core/retro/retro-scan.doctest.md` (moved to `beebox/test/core/retro/scan.doctest.md`) | 1.811 s | pass |
 | 373 | `test/dev/lib/context-usage.doctest.md` | 1.805 s | pass |
-| 374 | `test/invariant.doctest.md` | 1.803 s | pass |
+| 374 | `test/invariant.doctest.md` (moved to `beebox/test/shared/invariant.doctest.md`) | 1.803 s | pass |
 | 375 | `test/frontend/turn-message-stream.doctest.md` | 1.800 s | zero tests |
 | 376 | `test/frontend/lib/patmatch.doctest.md` | 1.791 s | pass |
-| 377 | `test/private-link-check.doctest.md` | 1.767 s | pass |
-| 378 | `test/cli/lib/box-layout-spec.doctest.md` | 1.764 s | pass |
+| 377 | `test/private-link-check.doctest.md` (moved to `beebox/test/dev/doc-check/private-link.doctest.md`) | 1.767 s | pass |
+| 378 | `test/cli/lib/box-layout-spec.doctest.md` (moved to `beebox/test/lib/paths/box-layout-spec.doctest.md`) | 1.764 s | pass |
 | 379 | `test/frontend/voice-intent.doctest.md` | 1.761 s | pass |
 | 380 | `test/lib/atomic-write.doctest.md` | 1.743 s | pass |
 | 381 | `test/frontend/lib/view-bindings.doctest.md` | 1.741 s | zero tests |
 | 382 | `test/frontend/lib/speech-parsing.doctest.md` | 1.737 s | pass |
 | 383 | `test/frontend/lib/video-url.doctest.md` | 1.734 s | pass |
-| 384 | `test/dev/lib/duplication.doctest.md` | 1.733 s | pass |
+| 384 | `test/dev/lib/duplication.doctest.md` (moved to `beebox/test/dev/lib/prompt-viewer-data/duplication.doctest.md`) | 1.733 s | pass |
 | 385 | `test/core/event-bus.doctest.md` | 1.730 s | pass |
-| 386 | `test/lib/error-guards.doctest.md` | 1.726 s | pass |
-| 387 | `test/core/commands/describe-images-helpers.doctest.md` | 1.725 s | pass |
-| 388 | `test/print.doctest.md` | 1.722 s | pass |
+| 386 | `test/lib/error-guards.doctest.md` (moved to `beebox/test/shared/error-guards.doctest.md`) | 1.726 s | pass |
+| 387 | `test/core/commands/describe-images-helpers.doctest.md` (moved to `beebox/test/core/describe-images/helpers.doctest.md`) | 1.725 s | pass |
+| 388 | `test/print.doctest.md` (moved to `beebox/test/doctest/print.doctest.md`) | 1.722 s | pass |
 | 389 | `test/lib/multipart.doctest.md` | 1.720 s | pass |
 | 390 | `test/frontend/lib/view-url.doctest.md` | 1.718 s | pass |
-| 391 | `test/core/voxtral-transcription.doctest.md` | 1.713 s | pass |
-| 392 | `test/dev/csp-digest.doctest.md` | 1.713 s | pass |
-| 393 | `test/lib/natural-sort.doctest.md` | 1.710 s | pass |
-| 394 | `test/webapp/routes/proxy-image.doctest.md` | 1.701 s | pass |
+| 391 | `test/core/voxtral-transcription.doctest.md` (moved to `beebox/test/core/transcription/voxtral.doctest.md`) | 1.713 s | pass |
+| 392 | `test/dev/csp-digest.doctest.md` (moved to `beebox/test/dev/csp-report/digest.doctest.md`) | 1.713 s | pass |
+| 393 | `test/lib/natural-sort.doctest.md` (moved to `beebox/test/shared/natural-sort.doctest.md`) | 1.710 s | pass |
+| 394 | `test/webapp/routes/proxy-image.doctest.md` (moved to `beebox/test/webapp/routes/api/proxy-image.doctest.md`) | 1.701 s | pass |
 | 395 | `test/frontend/lib/audio-cache.doctest.md` | 1.700 s | pass |
 | 396 | `test/frontend/chat/reconnect-refresh-gate.doctest.md` | 1.698 s | pass |
 | 397 | `test/frontend/lib/wav-encode.doctest.md` | 1.698 s | pass |
@@ -649,7 +649,7 @@ measure process time only, not the cost of executing their tests.
 | 399 | `test/frontend/emission-assemble.doctest.md` | 1.680 s | pass |
 | 400 | `test/frontend/audio-playback-errors.doctest.md` | 1.676 s | zero tests |
 | 401 | `test/frontend/speech-playback-machine.doctest.md` | 1.671 s | zero tests |
-| 402 | `test/core/chat-features.doctest.md` | 1.666 s | pass |
+| 402 | `test/core/chat-features.doctest.md` (moved to `beebox/test/core/chat/features.doctest.md`) | 1.666 s | pass |
 | 403 | `test/frontend/lib/selection-serialize.doctest.md` | 1.666 s | pass |
 | 404 | `test/frontend/lib/selection-position.doctest.md` | 1.660 s | pass |
 | 405 | `test/webapp/base-server-url.doctest.md` | 1.648 s | pass |
@@ -659,24 +659,24 @@ measure process time only, not the cost of executing their tests.
 | 409 | `test/frontend/components/chat/InteractiveChat-recovery.doctest.md` | 1.617 s | pass |
 | 410 | `test/frontend/upload-message.doctest.md` | 1.617 s | pass |
 | 411 | `test/frontend/native-composer-command.doctest.md` | 1.614 s | pass |
-| 412 | `test/hub/hub-health.doctest.md` | 1.613 s | pass |
+| 412 | `test/hub/hub-health.doctest.md` (moved to `beebox/test/hub/health.doctest.md`) | 1.613 s | pass |
 | 413 | `test/frontend/commit-detail-diff-pointers.doctest.md` | 1.607 s | pass |
 | 414 | `test/frontend/lib/fetch-coalescer.doctest.md` | 1.598 s | pass |
-| 415 | `test/cli/lib/paths.doctest.md` | 1.594 s | pass |
+| 415 | `test/cli/lib/paths.doctest.md` (moved to `beebox/test/lib/paths.doctest.md`) | 1.594 s | pass |
 | 416 | `test/frontend/native-narration-bridge.doctest.md` | 1.582 s | zero tests |
 | 417 | `test/core/engine-version.doctest.md` | 1.582 s | pass |
 | 418 | `test/frontend/chat-target.doctest.md` | 1.575 s | pass |
 | 419 | `test/frontend/context-chip-label.doctest.md` | 1.570 s | pass |
 | 420 | `test/frontend/upload-queue.doctest.md` | 1.566 s | pass |
-| 421 | `test/connectors/google-calendar-state.doctest.md` | 1.560 s | pass |
+| 421 | `test/connectors/google-calendar-state.doctest.md` (moved to `beebox/test/connectors/google-calendar/state.doctest.md`) | 1.560 s | pass |
 | 422 | `test/frontend/speech-progress-indicators.doctest.md` | 1.556 s | pass |
 | 423 | `test/frontend/emission-persist.doctest.md` | 1.556 s | pass |
-| 424 | `test/prompt-fence.doctest.md` | 1.554 s | pass |
+| 424 | `test/prompt-fence.doctest.md` (moved to `beebox/test/lib/prompt-fence.doctest.md`) | 1.554 s | pass |
 | 425 | `test/frontend/lib/deferred-resync.doctest.md` | 1.553 s | pass |
-| 426 | `test/core/commands/scan-import-helpers.doctest.md` | 1.551 s | pass |
+| 426 | `test/core/commands/scan-import-helpers.doctest.md` (moved to `beebox/test/core/commands/scan-import/helpers.doctest.md`) | 1.551 s | pass |
 | 427 | `test/frontend/lib/figure-params.doctest.md` | 1.548 s | pass |
 | 428 | `test/frontend/lib/chunked-recorder.doctest.md` | 1.547 s | pass |
-| 429 | `test/core/capture/audio-concat.doctest.md` | 1.535 s | pass |
+| 429 | `test/core/capture/audio-concat.doctest.md` (moved to `beebox/test/core/capture/prepare/audio-concat.doctest.md`) | 1.535 s | pass |
 | 430 | `test/frontend/chat-scroll-reconcile.doctest.md` | 1.530 s | pass |
 | 431 | `test/core/extfile-sync.doctest.md` | 1.524 s | pass |
 | 432 | `test/frontend/screenshot-request.doctest.md` | 1.512 s | pass |
@@ -685,7 +685,7 @@ measure process time only, not the cost of executing their tests.
 | 435 | `test/core/compile-exposition-rules.doctest.md` | 1.503 s | pass |
 | 436 | `test/frontend/session-list-grouping.doctest.md` | 1.498 s | pass |
 | 437 | `test/frontend/lib/stream-entry.doctest.md` | 1.488 s | pass |
-| 438 | `test/core/commands/upload-helpers.doctest.md` | 1.486 s | pass |
+| 438 | `test/core/commands/upload-helpers.doctest.md` (moved to `beebox/test/core/upload-helpers.doctest.md`) | 1.486 s | pass |
 | 439 | `test/frontend/chat-session-transition.doctest.md` | 1.485 s | pass |
 | 440 | `test/frontend/reconcile-pending.doctest.md` | 1.471 s | pass |
 | 441 | `test/frontend/native-emission-bridge.doctest.md` | 1.465 s | pass |
@@ -693,41 +693,41 @@ measure process time only, not the cost of executing their tests.
 | 443 | `test/frontend/history-blob-paths.doctest.md` | 1.454 s | pass |
 | 444 | `test/core/body-refs.doctest.md` | 1.449 s | pass |
 | 445 | `test/frontend/lib/error-guards.doctest.md` | 1.443 s | pass |
-| 446 | `test/shared/view-params.doctest.md` | 1.434 s | pass |
+| 446 | `test/shared/view-params.doctest.md` (moved to `beebox/test/shared/named-views.doctest.md`) | 1.434 s | pass |
 | 447 | `test/frontend/emission-editor.doctest.md` | 1.419 s | pass |
 | 448 | `test/frontend/native-post.doctest.md` | 1.415 s | pass |
-| 449 | `test/core/commands/scan-import-cards.doctest.md` | 1.400 s | pass |
+| 449 | `test/core/commands/scan-import-cards.doctest.md` (moved to `beebox/test/core/commands/scan-import/cards.doctest.md`) | 1.400 s | pass |
 | 450 | `test/frontend/composer-machine.doctest.md` | 1.394 s | pass |
 | 451 | `test/frontend/photo-batch-threshold.doctest.md` | 1.390 s | pass |
 | 452 | `test/frontend/native-box-switching.doctest.md` | 1.386 s | pass |
-| 453 | `test/core/chat/session-id-file.doctest.md` | 1.383 s | pass |
+| 453 | `test/core/chat/session-id-file.doctest.md` (moved to `beebox/test/core/chat/session/id-file.doctest.md`) | 1.383 s | pass |
 | 454 | `test/frontend/lightbox-gesture-reducer.doctest.md` | 1.376 s | pass |
-| 455 | `test/core/markdoc/emit-nodes.doctest.md` | 1.361 s | pass |
+| 455 | `test/core/markdoc/emit-nodes.doctest.md` (moved to `beebox/test/core/markdoc/emit/core.doctest.md`) | 1.361 s | pass |
 | 456 | `test/core/install-template-file.doctest.md` | 1.354 s | pass |
 | 457 | `test/frontend/toast-store.doctest.md` | 1.349 s | pass |
-| 458 | `test/env.doctest.md` | 1.331 s | pass |
-| 459 | `test/doc-link-repair.doctest.md` | 1.291 s | pass |
+| 458 | `test/env.doctest.md` (moved to `beebox/test/lib/env.doctest.md`) | 1.331 s | pass |
+| 459 | `test/doc-link-repair.doctest.md` (moved to `beebox/test/dev/doc-check/link-repair.doctest.md`) | 1.291 s | pass |
 | 460 | `test/frontend/screenshot-capture.doctest.md` | 1.285 s | pass |
 | 461 | `test/frontend/receipts.doctest.md` | 1.278 s | pass |
 | 462 | `test/frontend/native-speech-playback-bridge.doctest.md` | 1.253 s | zero tests |
 | 463 | `test/frontend/speech-message.doctest.md` | 1.247 s | pass |
 | 464 | `test/core/pending-browser-request.doctest.md` | 1.220 s | pass |
 | 465 | `test/dev/lib/report.doctest.md` | 1.216 s | pass |
-| 466 | `test/cli/lib/format.doctest.md` | 1.213 s | pass |
+| 466 | `test/cli/lib/format.doctest.md` (moved to `beebox/test/lib/format.doctest.md`) | 1.213 s | pass |
 | 467 | `test/frontend/frontend-api.doctest.md` | 1.189 s | zero tests |
-| 468 | `test/core/push-subscriptions-store.doctest.md` | 1.188 s | pass |
-| 469 | `test/core/external-ref.doctest.md` | 1.161 s | pass |
-| 470 | `test/core/chat-session-lifecycle.doctest.md` | 1.160 s | pass |
-| 471 | `test/connectors/drive-sheet-data.doctest.md` | 1.154 s | pass |
-| 472 | `test/connectors/drive-types.doctest.md` | 1.151 s | pass |
+| 468 | `test/core/push-subscriptions-store.doctest.md` (moved to `beebox/test/core/push-subscriptions.doctest.md`) | 1.188 s | pass |
+| 469 | `test/core/external-ref.doctest.md` (moved to `beebox/test/core/external/ref.doctest.md`) | 1.161 s | pass |
+| 470 | `test/core/chat-session-lifecycle.doctest.md` (moved to `beebox/test/core/chat/session/lifecycle.doctest.md`) | 1.160 s | pass |
+| 471 | `test/connectors/drive-sheet-data.doctest.md` (moved to `beebox/test/connectors/google-drive/handlers/sheets/sheet-data.doctest.md`) | 1.154 s | pass |
+| 472 | `test/connectors/drive-types.doctest.md` (moved to `beebox/test/connectors/google-drive/types.doctest.md`) | 1.151 s | pass |
 | 473 | `test/dev/lib/session-report.doctest.md` | 1.123 s | pass |
 | 474 | `test/core/claude-md-lint.doctest.md` | 1.116 s | pass |
-| 475 | `test/core/commands/scan-guide-context.doctest.md` | 1.036 s | pass |
+| 475 | `test/core/commands/scan-guide-context.doctest.md` (moved to `beebox/test/core/commands/scan-import/guide-context.doctest.md`) | 1.036 s | pass |
 | 476 | `test/frontend/lib/dictation-draft.doctest.md` | 1.028 s | pass |
-| 477 | `test/core/chat-response-extraction.doctest.md` | 1.028 s | pass |
-| 478 | `test/core/procedure/procedure-run-status.doctest.md` | 0.921 s | pass |
+| 477 | `test/core/chat-response-extraction.doctest.md` (moved to `beebox/test/core/chat/session/thread.response-extraction.doctest.md`) | 1.028 s | pass |
+| 478 | `test/core/procedure/procedure-run-status.doctest.md` (moved to `beebox/test/core/procedure/engine-types.run-status.doctest.md`) | 0.921 s | pass |
 | 479 | `test/core/geo.doctest.md` | 0.901 s | pass |
-| 480 | `test/core/external-url-fetch.doctest.md` | 0.828 s | pass |
+| 480 | `test/core/external-url-fetch.doctest.md` (moved to `beebox/test/core/external/url-check/fetch.doctest.md`) | 0.828 s | pass |
 
 </details>
 

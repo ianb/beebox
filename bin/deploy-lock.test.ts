@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
   copyFileSync,
@@ -29,7 +29,7 @@ function fixture() {
   const fakeBin = join(root, "fake-bin");
   mkdirSync(deployDir, { recursive: true });
   mkdirSync(fakeBin);
-  for (const name of ["deploy.sh", "deploy-target.sh"]) {
+  for (const name of ["deploy.sh", "deploy-target.sh", "deploy-outcome.sh"]) {
     copyFileSync(join(ROOT, "beebox", "deploy", name), join(deployDir, name));
     chmodSync(join(deployDir, name), 0o755);
   }
@@ -140,24 +140,45 @@ test("a failed lock holder chains to a newer request", () => {
   assert.match(chainedLog, /Deploy failed \(exit 24\)/);
 });
 
-test("a signal-style failure does not start a chained deploy", () => {
+test("a real interrupt does not start a chained deploy", async () => {
+  // A child exiting with a signal-shaped code (e.g. ssh returning 130) is not
+  // proof deploy.sh itself was signalled — see
+  // issues/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md, which made
+  // deploy.sh trust only its own INT/TERM/HUP trap. So this exercises the real
+  // trap: send SIGINT to deploy.sh's own process group while it is mid-run.
   const f = fixture();
   fakeCommand(
     join(f.fakeBin, "ssh"),
-    'printf "%s\\n" "$NEW_SHA" > "$REQUESTED_FILE_FOR_TEST"\nexit 130',
+    'printf "%s\\n" "$NEW_SHA" > "$REQUESTED_FILE_FOR_TEST"\nsleep 5',
   );
-  const result = spawnSync(join(f.deployDir, "deploy.sh"), ["--ref", f.first], {
-    encoding: "utf8",
+  const child = spawn(join(f.deployDir, "deploy.sh"), ["--ref", f.first], {
     env: {
       ...process.env,
       NEW_SHA: f.second,
       PATH: `${f.fakeBin}:${process.env.PATH}`,
       REQUESTED_FILE_FOR_TEST: join(f.root, ".deploy-requested"),
     },
+    detached: true,
+  });
+  let stdout = "";
+  child.stdout?.on("data", (chunk: Buffer) => {
+    stdout += chunk.toString();
   });
 
-  assert.equal(result.status, 130);
-  assert.doesNotMatch(result.stdout, /chaining after failed attempt/);
+  const exit = new Promise<{ status: number | null; signal: NodeJS.Signals | null }>((res) => {
+    child.on("exit", (status, signal) => res({ status, signal }));
+  });
+  // Wait until deploy.sh has actually started the (sleeping) fake ssh before
+  // interrupting it, or the signal could land before the trap is armed.
+  while (!stdout.includes(`Deploying ref '${f.first}'`)) {
+    await new Promise((res) => setTimeout(res, 20));
+  }
+  process.kill(-child.pid!, "SIGINT");
+  const { status } = await exit;
+
+  assert.equal(status, 130);
+  assert.match(stdout, /Deploy interrupted \(SIGINT\)/);
+  assert.doesNotMatch(stdout, /chaining after failed attempt/);
 });
 
 test("deploy hooks persist intent before starting a detached child", () => {

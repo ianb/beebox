@@ -18,8 +18,8 @@ import * as os from "node:os";
 import { promisify } from "node:util";
 import { z } from "zod";
 
-import { isRecord } from "../lib/is-record.js";
-import { sleep } from "../lib/sleep.js";
+import { isRecord } from "../shared/is-record.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
 const execFileAsync = promisify(execFile);
 

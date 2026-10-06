@@ -117,7 +117,7 @@ Interface + real + fake per the services pattern, subsuming today's
 The fake records invocations and returns scripted results (logged-in/out,
 deploy success/failure) — setup logic stays fully doctested with no wrangler.
 
-### B. Setup flow rework (`src/publish/setup.ts`)
+### B. Setup flow rework (`src/publish/setup.ts` (moved to `beebox/src/publish/setup/core.ts`))
 
 1. Resolve auth: env `CLOUDFLARE_API_TOKEN`+`CLOUDFLARE_ACCOUNT_ID` if present
    (unchanged escape hatch), else wrangler `whoami`. Not logged in → typed
@@ -137,7 +137,7 @@ deploy success/failure) — setup logic stays fully doctested with no wrangler.
    `accessSetupInstructions` (stale dashboard prose). New output: short,
    states account tiers are optional, and where each credential lives.
 
-### C. Provisioning client extension (`src/services/cloudflare-provisioning.ts`)
+### C. Provisioning client extension (`src/services/cloudflare-provisioning.ts` (moved to `beebox/src/services/cloudflare-provisioning/core.ts`))
 
 New ops (+ fake state): `getAccessOrganization()`, `findAccessApp({domain})`,
 `createAccessApp(...)`, `listAppPolicies(appId)`, `createAppPolicy(appId, ...)`,

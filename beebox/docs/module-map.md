@@ -5,39 +5,41 @@ growth has a rule to check against instead of regrowing a second grab-bag.
 Decide where a new helper goes by its *dependencies* and its *consumers*, not
 by vibe.
 
-- **`src/lib/`** — the single home for **generic cross-cutting utilities** with
-  **no dependency on `core/`, `schemas/`, `connectors/`, or `webapp/`**. It is
-  the lowest layer; everything may import it and it imports nothing upward
-  (enforced by keeping it a leaf — verify with `pnpm lint:circular`). Examples:
-  `content-hash`, `mimetype`, `file-exists`, `public-url`, `sleep`,
-  `atomic-write` (`writeFileAtomic`, crash-safe whole-file replacement for small
-  state and credential stores),
-  `awake-timeout`, `git*`/`paths`/`box-shape` (promoted from `cli/lib` in the
-  Track G reorg), `time` (`getBoxTime`), `format` (chalk), `box-config`. **Check
-  here before writing your own** — a hand-rolled copy of something already in
-  `lib/` is the regrowth pattern this directory exists to prevent.
-
-- **`src/shared/`** — code shared **specifically between the frontend and the
-  backend** (isomorphic; must run in the browser bundle *and* Node). It may
+- **`src/shared/`** — the lowest layer of the package: **isomorphic,
+  dependency-free code that must run in the browser bundle *and* Node**.
+  Everything else in the package may import it, and it imports nothing else
+  in the package (no `core/`, `schemas/`, `connectors/`, `webapp/`, or
+  `lib/` — enforced by keeping it a leaf; verify with `pnpm lint:circular`).
+  It may not touch `node:` builtins or any server-only dependency. It may
   encode a small amount of domain knowledge (tool names, card-name parsing,
-  markdoc config, nav routes) but must stay bundler-safe (no `node:` builtins,
-  no server-only deps). If a helper is backend-only, it belongs in `lib/` or
-  `core/`, not here. A `shared/` module **may import a bundler-safe `lib/`
-  module** (e.g. `lib/invariant.ts`, which is dependency-free) — `lib/` is the
-  lower leaf layer, so `shared/ → lib/` is a downward edge, not a cycle. It may
-  NOT import `core/`, `schemas/`, `webapp/`, or any `node:`-touching `lib/`
-  module. **Ref/path algebra lives here, in exactly one module**:
-  `shared/ref-path.ts` (`parseRef`, `resolveRefPath`) owns the 3-form rule and
-  fail-closed containment for every in-box ref, backend and frontend alike —
-  building on `shared/attach-path.ts` (attach-scope naming) and
-  `shared/box-path.ts` (the box-relative canonical form). A new consumer imports
-  it; it never re-derives the rules with `path.resolve` or a segment split. **Frontend-consumed leaf helper?** When a dependency-free `lib/` helper
-  (e.g. `is-record`, `invariant`, `error-guards`) is also needed by the browser —
-  which the import-boundary rule forbids from reaching into backend `lib/` — keep
-  the implementation in `lib/` (so `lib/` stays a leaf) and add a thin
-  `shared/<name>.ts` that re-exports it as the `@shared/<name>` entry point. Do
-  NOT invert this by moving the impl into `shared/` and re-exporting from `lib/`:
-  that makes `lib/` import upward into `shared/`, breaking the leaf invariant.
+  markdoc config, nav routes) as long as it stays bundler-safe. Examples:
+  `invariant`/`assertNever`, `is-record`, `error-guards`, `result`,
+  `awake-timeout`. **A helper both the frontend and the backend need lives
+  here** — there is no separate re-export shim; the implementation itself
+  moves to `shared/` and every importer, frontend and backend alike, imports
+  it from there directly (via `@shared/<name>` in the frontend, a relative
+  import in the backend). **Ref/path algebra lives here, in exactly one
+  module**: `shared/ref-path/core.ts` (`parseRef`, `resolveRefPath`) owns the
+  3-form rule and fail-closed containment for every in-box ref, backend and
+  frontend alike — building on `shared/attach-path.ts` (attach-scope naming)
+  and `shared/box-path.ts` (the box-relative canonical form). A new consumer
+  imports it; it never re-derives the rules with `path.resolve` or a segment
+  split.
+
+- **`src/lib/`** — **generic, backend-only cross-cutting utilities** that may
+  use Node (`node:` builtins, server-only deps) and may import `shared/`
+  (a downward edge, not a cycle), but never `core/`, `schemas/`,
+  `connectors/`, or `webapp/`. Examples: `content-hash`, `mimetype`,
+  `file-exists`, `public-url`, `atomic-write` (`writeFileAtomic`, crash-safe
+  whole-file replacement for small state and credential stores), `git*`/
+  `paths`/`box-shape` (promoted from `cli/lib` in the Track G reorg), `time`
+  (`getBoxTime`), `format` (chalk), `box-config`. **Check here before writing
+  your own** — a hand-rolled copy of something already in `lib/` is the
+  regrowth pattern this directory exists to prevent. If a `lib/` helper turns
+  out to be dependency-free and the frontend also needs it, move the
+  implementation down into `shared/` rather than reaching across the
+  boundary — `lib/` never imports upward into `shared/`'s consumers, and
+  `shared/` never imports back into `lib/`.
 
 - **`src/types/`** — **ambient `.d.ts` declarations only**: module
   augmentations and global/ambient types (e.g. the `beebox/view-widgets`
@@ -54,5 +56,6 @@ by vibe.
   what re-created the "second `lib/`" the reorg collapsed; put generic helpers
   in `src/lib/`.
 
-Rule of thumb: **no core deps → `src/lib/`; frontend+backend both → `src/shared/`;
-ambient `.d.ts` → `src/types/`; core-coupled CLI/session helper → `src/cli/lib/`.**
+Rule of thumb: **isomorphic and dependency-free → `src/shared/`; backend-only
+generic helper → `src/lib/`; ambient `.d.ts` → `src/types/`; core-coupled
+CLI/session helper → `src/cli/lib/`.**

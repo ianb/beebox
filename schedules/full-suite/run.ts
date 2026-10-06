@@ -24,10 +24,10 @@ import type { Batch } from "./attribution.js";
 import { TIERS, batchExit, completionMarker, isHostQuiet, tierProducedResults, workstreamOf } from "./lib.js";
 import { batchSlowdown, durationHistories, runIsUntrusted } from "./trust.js";
 import { readBatch } from "./batch.js";
-import { alertOnce, report } from "./reporting.js";
+import { raiseCondition, report } from "./reporting.js";
 import { createCheckout, failingFiles, removeCheckout, runTier, type Checkout, type SuiteRun } from "./checkout.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
-import { readPending, writeKnownRed, writeLastAlert, writePending } from "./state.js";
+import { readPending, writeKnownRed, writePending } from "./state.js";
 import { currentDurations, deferRed, handleRed } from "./red.js";
 
 const DRY_RUN = process.env["SCHEDULE_DRY_RUN"] === "1";
@@ -165,13 +165,12 @@ async function main(): Promise<void> {
     // pending state is left untouched so the next hourly tick retries the
     // same pinned commit rather than skipping ahead.
     process.stdout.write("full-suite: host still loaded after 40m; deferred to the next tick.\n");
-    // alertOnce is the run's one report here — it delivers the alert or, when
-    // suppressed as a repeat of the same condition, reports `done` itself
-    // (see deferRed's callers in red.ts for the same pattern). A `report`
-    // call after it would be a second report for one run.
-    await alertOnce({
+    // No verdict: earlier conditions stand, and this one says the run was
+    // skipped. It is the run's one report.
+    await raiseCondition({
       kind: "deferred",
-      files: [],
+      culprits: [],
+      verdict: false,
       priority: "fyi",
       title: "full suite: deferred, host still loaded after the wait budget",
       message: `The full-suite run at \`${batch.pinned.slice(0, 8)}\` skipped: the host was still loaded after ` +
@@ -192,8 +191,8 @@ async function main(): Promise<void> {
     const runs = [ordinary, careful];
     const failures = failingFiles(runs);
     // An untrusted run yields NO verdicts in either direction: red is
-    // deferred, and green neither clears known-red/pending nor resets alert
-    // suppression — a pass at 5× usual speed is as unmeasured as a failure.
+    // deferred, and green neither clears known-red/pending nor resolves alert
+    // conditions — a pass at 5× usual speed is as unmeasured as a failure.
     const slowdown = batchSlowdown({ current: currentDurations(runs), histories });
     const endPressure = readMemoryPressure();
     const factorLabel = slowdown.factor === null ? "n/a" : `${slowdown.factor.toFixed(1)}×`;
@@ -219,8 +218,9 @@ async function main(): Promise<void> {
       process.stdout.write("full-suite: green.\n");
       await writeKnownRed([]);
       await writePending({});
-      await writeLastAlert(null);
       await markComplete({ batch, runs });
+      // Green is a verdict: every condition this schedule raised has cleared.
+      await report(["resolve"]);
       await report(["done"]);
       return;
     }

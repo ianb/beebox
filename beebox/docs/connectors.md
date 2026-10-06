@@ -1,6 +1,6 @@
 # Connectors
 
-Connectors bridge external services to the box filesystem. Each implements the `Connector` interface with a `sync()` method that pulls data in (and sometimes pushes data out).
+How external services reach the box filesystem: the framework every connector shares, and one page per connector.
 
 ## How connectors work
 
@@ -25,44 +25,80 @@ Procedure requests are run by wakeup orchestration after connector writes finish
 
 Sync rebuilds a connector-managed card's content wholesale from its template; any agent-added field the template doesn't know about is lost unless it's one of the few fields `preserve-agent-fields.ts` explicitly carries forward (currently just `contains`).
 
-## Connector inventory
+## Members
 
-| Connector | File | Card types | Direction | Service-injected | Setup doc |
-|-----------|------|-----------|-----------|-----------------|-----------|
-| Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes | [telegram-setup.md](telegram-setup.md) |
-| Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](calendar.md) |
-| Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-setup.md](gmail-setup.md) |
-| Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](google-drive.md) |
+Every built-in connector is service-injected (see below). Shared Google
+authorization for the three Google connectors: [Google auth](connectors/google-auth.md).
+
+| Connector | File | Card types | Direction | Page |
+|---|---|---|---|---|
+| Telegram | `telegram.ts` | `chat-thread` | Two-way | [Telegram](connectors/telegram.md) |
+| Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
+| Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | [Gmail](connectors/gmail.md) |
+| Google Drive | `google-drive.ts` | `gsheet`, `gdoc`, `gfolder`, `glink` | Two-way | [Drive](connectors/drive.md) |
 
 ## Lifecycle
 
 Connectors are called during `bbx wakeup`:
 1. `wakeup.ts` loads connector configs for the box
 2. Creates connector instances (with optional service injection)
-3. Calls `sync()` on each
+3. Calls `syncConnector(connector, { boxRoot })` on each, which runs `sync()`
+   and records the attempt (see *Activity record* below)
 4. Reports results
+
+Every caller that syncs a connector (wakeup, `bbx finalize`, the `sync`
+command, `bbx drive sync`) goes through `syncConnector`, never `sync()`
+directly, so each attempt is recorded once.
+
+### Activity record
+
+`connectors/activity.ts` keeps, per connector and box-local day, the number of
+sync attempts and how many succeeded, errored or skipped, plus the counts of new
+items, raw `created` paths and `updated` paths. It lives in machine-local
+transient state (`_bookkeeping/connectors/connector-activity.state.json`) and
+keeps 60 days.
+
+A **new item** is a `created` path outside any `.attach/` scope, that is, a new
+top-level card. Files inside a card's attachment scope belong to a card that
+already counted: Gmail lists every new message file in `created`, including
+replies on threads the box already tracks, so raw `created` would count a
+connector that only refreshes old threads as productive.
+
+A connector reports what it did through `SyncResult` as before. To be counted
+correctly it must put new top-level cards in `created`, and set `error` when
+part of the sync failed even if the rest succeeded (Gmail does this for a draft
+that fails to upload).
+
+`connectors/activity-verdict.ts` reads the record and decides whether a
+connector has gone quiet or keeps failing; the scheduler alerts once per
+episode and the dashboard shows a warning. See
+[health-checks.md](server/health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
 
 Telegram also has a webhook route (`routes/telegram.ts`) for real-time message delivery, separate from the polling in `sync()`.
 
 ## Configuration
 
-Each connector reads its non-credential config from `_config/connectors/`:
-- `google-calendar.json` — `{ calendars, syncDaysBack, syncDaysForward }`
-- `gmail.json` — named Gmail query rules with a bounded `track` action, a
-  `procedure` action, or a `stage` action (record a pending summary and do
-  nothing else), or the equivalent `query`/`labels` shorthand for a single rule.
-  Every shape states its action explicitly; a missing action, or a missing file,
-  is an error that stops the sync rather than a silent no-op. The history
-  cursor, budgets, and bounded pending summaries live in gitignored
-  `_bookkeeping/connectors/gmail.state.json`.
-  A live email-thread card is the sole tracking registry; deleting it untracks
-  the thread without changing Gmail. See [gmail-setup.md](gmail-setup.md).
+A connector with non-credential config reads it from
+`_config/connectors/<name>.json`; the shape, and whether one exists at all, is
+on the connector's page (Telegram has none; Drive's configuration is its
+cards). Credentials come from the machine [secret store](secrets.md).
+Transient state (sync cursors, mappings) lives in
+`_bookkeeping/connectors/<name>.state.json` or `<name>-state.json`,
+machine-owned and gitignored.
 
-Telegram's credentials (`{ botToken, webhookSecret }`) are the store's
-`telegram-bot/<box>` secret, resolved by `connectors/telegram-helpers.ts` —
-see [`docs/secrets.md`](secrets.md).
+## Freshness metadata
 
-Transient state (last sync offsets, mappings) goes in `_bookkeeping/connectors/<name>.state.json` or `<name>-state.json`.
+A convention for any file that caches an external source of truth, applied
+wherever a cache is designed.
+
+Any file that's a cache of an external source of truth (Gmail/Calendar/Drive snapshots, web fetches, synthesized briefings) should carry freshness metadata, but only where staleness would cause confidently-wrong output. Recipe categories: don't bother. Calendar snapshots: definitely.
+
+Two timestamps, not one: `last_sync` (when we last checked) and `data_through` (cutoff of the actual data). They diverge when a check found nothing new — without both, "May 11" is ambiguous between "stopped checking" and "checked, nothing new." Sidecar `<file>.sync.json` is usually cleaner than an inline header (no diff noise in the human-readable file).
+
+Hardest case: synthesized caches. A briefing built from 30 cards has `data_through = min(inputs.data_through)`, not its own generation timestamp. If the pipeline doesn't propagate this, the briefing looks fresh while resting on stale inputs — this is where silent-stale bugs actually live.
+
+When and how an agent tells the user about staleness is a
+[prompt lens](prompts/lenses.md#cache-freshness-surfaced-conditionally).
 
 ## Service injection
 

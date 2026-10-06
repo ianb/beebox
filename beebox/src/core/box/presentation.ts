@@ -1,7 +1,7 @@
 import {
   parsePresentationConfig,
   type PresentationConfigResult,
-} from "../../shared/card-theme.js";
+} from "../../shared/card-theme/core.js";
 import { loadBoxConfigResult } from "./config.js";
 
 /** Read and validate only the presentation subtree without changing other settings. */

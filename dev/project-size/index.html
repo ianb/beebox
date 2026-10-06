@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Size</title>
+<!--
+  Renders report.markdown with the numbers from data/latest.json.
+  - ```dataset <name>``` in report.markdown places a dataset as a table with bars.
+  - ```treemap <name>``` places a tree from the snapshot's `trees` as a treemap.
+  - {{name}} places one number from the snapshot's `values`.
+  Refresh the numbers with `pnpm project-size` (bin/project-size.ts).
+-->
+<script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-hierarchy@3/dist/d3-hierarchy.min.js"></script>
+<style>
+  :root {
+    --bg: #fbf8f3; --fg: #2b2620; --muted: #7a6f62; --rule: #e6ddd0;
+    --bar: #c9a36b; --bar-bg: #efe6d8; --code-bg: #f1ebe1; --missing: #b3261e;
+    /* Treemap categories: the reference palette's first three slots, validated
+       all-pairs against this surface (aqua is under 3:1, so boxes carry labels
+       and tooltips, and the tables are the table view). */
+    --cat-code: #2a78d6; --cat-tests: #eb6834; --cat-docs: #1baf7a;
+    --group: #f3ede3; --tip-bg: #2b2620; --tip-fg: #fbf8f3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1d1a16; --fg: #ece5da; --muted: #a49886; --rule: #3a342c;
+      --bar: #c9a36b; --bar-bg: #2e2922; --code-bg: #2a251f; --missing: #f2b8b5;
+      --cat-code: #3987e5; --cat-tests: #d95926; --cat-docs: #199e70;
+      --group: #25211c; --tip-bg: #ece5da; --tip-fg: #1d1a16;
+    }
+  }
+  body { background: var(--bg); color: var(--fg); margin: 0; font: 16px/1.55 system-ui, -apple-system, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { margin-bottom: 4px; }
+  .stamp { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  h2 { margin-top: 36px; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+  code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
+  figure.dataset { margin: 16px 0 24px; overflow-x: auto; }
+  figure.dataset figcaption { font-weight: 600; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { padding: 4px 8px; border-bottom: 1px solid var(--rule); text-align: left; white-space: nowrap; }
+  th { font-weight: 600; color: var(--muted); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.bar { width: 40%; min-width: 80px; }
+  .bar-track { background: var(--bar-bg); height: 10px; border-radius: 2px; }
+  .bar-fill { background: var(--bar); height: 10px; border-radius: 2px; }
+  .missing { color: var(--missing); font-weight: 600; }
+  figure.treemap { margin: 16px 0 28px; }
+  figure.treemap figcaption { font-weight: 600; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  .legend { display: flex; gap: 16px; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; background: var(--sw); }
+  .tm { position: relative; width: 100%; }
+  .tm .g { position: absolute; background: var(--group); border-radius: 3px; overflow: hidden; }
+  .tm .g > b { position: absolute; left: 4px; top: 1px; right: 4px; font-size: 11px; line-height: 13px; font-weight: 600; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tm .g.d1 > b { font-size: 12px; }
+  .tm .leaf { position: absolute; border-radius: 2px; }
+  .tip { position: fixed; pointer-events: none; background: var(--tip-bg); color: var(--tip-fg); font-size: 12px; padding: 4px 7px; border-radius: 4px; display: none; z-index: 10; white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+  <div id="report">Loading…</div>
+</main>
+<script>
+  const fmt = new Intl.NumberFormat("en-US");
+  // Zero reads as a dash; line counts round to the nearest 1,000 (a column's
+  // `round`, or any inline value whose name ends in "lines").
+  function show(value, round) {
+    const n = Number(value) || 0;
+    if (n === 0) return "–";
+    if (!round) return fmt.format(n);
+    const r = Math.round(n / round) * round;
+    return r === 0 ? `<${fmt.format(round)}` : fmt.format(r);
+  }
+
+  function renderDataset(name, dataset) {
+    if (!dataset) return `<p class="missing">No dataset named “${name}” in data/latest.json.</p>`;
+    const barKey = dataset.bar;
+    const max = barKey ? Math.max(1, ...dataset.rows.map((row) => Number(row[barKey]) || 0)) : 0;
+    const head = dataset.columns.map((c) => `<th class="${c.numeric ? "num" : ""}">${c.label}</th>`).join("") + (barKey ? "<th></th>" : "");
+    const body = dataset.rows.map((row) => {
+      const cells = dataset.columns.map((c) => {
+        const v = row[c.key];
+        return c.numeric ? `<td class="num">${show(v, c.round)}</td>` : `<td>${String(v ?? "")}</td>`;
+      }).join("");
+      const bar = barKey ? `<td class="bar"><div class="bar-track"><div class="bar-fill" style="width:${(100 * (Number(row[barKey]) || 0)) / max}%"></div></div></td>` : "";
+      return `<tr>${cells}${bar}</tr>`;
+    }).join("");
+    return `<figure class="dataset"><figcaption>${dataset.title}</figcaption><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></figure>`;
+  }
+
+  const CATEGORY_LABEL = { code: "Code", tests: "Tests", docs: "Docs" };
+  const tip = document.createElement("div");
+  tip.className = "tip";
+  document.body.appendChild(tip);
+
+  function drawTreemap(el, tree) {
+    const width = el.clientWidth;
+    const height = Math.max(320, Math.min(640, Math.round(width * 0.7)));
+    el.style.height = `${height}px`;
+    el.innerHTML = "";
+    const root = d3.hierarchy(tree.root).sum((d) => d.value || 0).sort((a, b) => b.value - a.value);
+    const header = (node) => (node.depth > 0 && node.children && node.x1 - node.x0 > 44 && node.y1 - node.y0 > 30 ? 15 : 2);
+    d3.treemap().size([width, height]).paddingInner(2).paddingOuter(2).paddingTop(header).round(true)(root);
+    const total = root.value;
+    for (const node of root.descendants()) {
+      if (node.depth === 0) continue;
+      const box = document.createElement("div");
+      box.style.cssText = `left:${node.x0}px;top:${node.y0}px;width:${node.x1 - node.x0}px;height:${node.y1 - node.y0}px`;
+      const path = node.ancestors().reverse().slice(1).map((n) => n.data.name).filter((n, i, all) => n !== all[i - 1]).join(" / ");
+      if (node.children) {
+        box.className = `g d${node.depth}`;
+        if (header(node) > 2) box.innerHTML = `<b>${node.data.name}</b>`;
+        box.dataset.tip = `${path} — ${fmt.format(Math.round(node.value / 1000) * 1000)} lines (${Math.round((100 * node.value) / total)}%)`;
+      } else {
+        box.className = "leaf";
+        box.style.background = `var(--cat-${node.data.category})`;
+        box.dataset.tip = `${path} — ${CATEGORY_LABEL[node.data.category]}: ${fmt.format(Math.round(node.value / 1000) * 1000 || node.value)} lines`;
+      }
+      el.appendChild(box);
+    }
+  }
+
+  function renderTreemap(name, tree) {
+    if (!tree) return `<p class="missing">No tree named “${name}” in data/latest.json.</p>`;
+    const legend = Object.entries(CATEGORY_LABEL).map(([k, label]) => `<span style="--sw: var(--cat-${k})">${label}</span>`).join("");
+    return `<figure class="treemap"><figcaption>${tree.title}</figcaption><div class="legend">${legend}</div><div class="tm" data-tree="${name}"></div></figure>`;
+  }
+
+  function wireTreemaps(root, data) {
+    const maps = [...root.querySelectorAll(".tm")];
+    const draw = () => maps.forEach((el) => drawTreemap(el, data.trees[el.dataset.tree]));
+    draw();
+    let pending = 0;
+    window.addEventListener("resize", () => { cancelAnimationFrame(pending); pending = requestAnimationFrame(draw); });
+    root.addEventListener("mousemove", (event) => {
+      const target = event.target.closest?.("[data-tip]");
+      if (!target || !target.closest(".tm")) { tip.style.display = "none"; return; }
+      tip.textContent = target.dataset.tip;
+      tip.style.display = "block";
+      const x = Math.min(event.clientX + 12, window.innerWidth - tip.offsetWidth - 8);
+      tip.style.left = `${Math.max(8, x)}px`;
+      tip.style.top = `${event.clientY + 14}px`;
+    });
+    root.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+  }
+
+  async function main() {
+    const [markdown, data] = await Promise.all([
+      fetch("report.markdown", { cache: "no-store" }).then((r) => r.text()),
+      fetch("data/latest.json", { cache: "no-store" }).then((r) => r.json()),
+    ]);
+    const blocks = [];
+    const withBlocks = markdown.replace(/^```(dataset|treemap)\s+(\S+)\s*\n```$/gm, (_m, kind, name) => {
+      blocks.push({ kind, name });
+      return `<div data-dataset-slot="${blocks.length - 1}"></div>`;
+    });
+    const withValues = withBlocks.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, key) =>
+      key in data.values ? show(data.values[key], key.endsWith("lines") ? 1000 : 0) : `<span class="missing">{{${key}}}</span>`);
+    const report = document.getElementById("report");
+    report.innerHTML = marked.parse(withValues);
+    report.querySelectorAll("[data-dataset-slot]").forEach((slot) => {
+      const { kind, name } = blocks[Number(slot.getAttribute("data-dataset-slot"))];
+      slot.outerHTML = kind === "treemap" ? renderTreemap(name, (data.trees ?? {})[name]) : renderDataset(name, data.datasets[name]);
+    });
+    wireTreemaps(report, data);
+    const h1 = report.querySelector("h1");
+    const stamp = document.createElement("div");
+    stamp.className = "stamp";
+    stamp.textContent = `Numbers from ${data.collectedAt.slice(0, 16).replace("T", " ")} UTC at ${data.commit}. Refresh: pnpm project-size`;
+    (h1 ?? report.firstChild)?.after(stamp);
+  }
+
+  main().catch((error) => {
+    document.getElementById("report").innerHTML = `<p class="missing">Could not load the report: ${error.message}</p>`;
+    console.error(error);
+  });
+</script>
+</body>
+</html>

@@ -30,7 +30,7 @@ not a custom substring/grep implementation.
   `walk.ts:15-24`. → **Trashed/archived cards are not indexed.**
 - **Excluded card types:** any schema with `searchable: false` (operational
   types like jobs/runs), via `getSearchableTypes()`,
-  `src/schemas/registry.ts:414-420`; agent guide tells the agent to use
+  `src/schemas/registry.ts:414-420` (moved to `beebox/src/schemas.ts`); agent guide tells the agent to use
   `bbx ls` for those instead (`src/core/agent-guide/search.ts:16-17`).
 - **Deliberately NOT indexed: email bodies.** `extract.ts:12-16` — untrusted
   content is kept out of the index so a search excerpt can't re-inject
@@ -47,7 +47,7 @@ not a custom substring/grep implementation.
 - Long bodies (`> SECTION_SPLIT_THRESHOLD = 2000` chars, `extract.ts:39`) are
   split into **per-heading-section documents** with a hierarchical
   `fragment` id like `/Components/Programs`, via
-  `src/core/search/markdown-sections.ts:33-71` (`splitMarkdownSections`).
+  `src/core/search/markdown-sections.ts:33-71` (moved to `beebox/src/core/search/extract/markdown-sections.ts`) (`splitMarkdownSections`).
 - **Attachments/binaries:** only OCR'd text (for images) makes it in; no raw
   binary content indexing.
 - **Chat threads/transcripts: not indexed at all** (see §5).
@@ -69,7 +69,7 @@ not a custom substring/grep implementation.
   any declared `inputs` (e.g. gdoc snapshot files), and a `skipped` flag for
   cards that failed to parse (so a broken card warns once, not every
   refresh).
-- **Refresh algorithm** — `src/core/search/refresh.ts` `openSearchIndex()`
+- **Refresh algorithm** — `src/core/search/refresh.ts` (moved to `beebox/src/core/search/refresh/core.ts`) `openSearchIndex()`
   (line 64) → `refreshUnderLock()` (line 86): restores the persisted index +
   manifest, walks the filesystem (`walkCardFiles`), diffs by `relPath`
   against the manifest:
@@ -101,7 +101,7 @@ not a custom substring/grep implementation.
   (`refresh.ts:75-78`, surfaced in `SearchBoxResult.stale`, `query.ts:49`).
 
 ### Query semantics: ranked full-text, not substring/regex
-- `src/core/search/query.ts` `searchBox()` (line 63) calls Orama's
+- `src/core/search/query.ts` (moved to `beebox/src/core/search/query/core.ts`) `searchBox()` (line 63) calls Orama's
   `search()` over `properties: ["title", "contains", "content"]` with field
   boosts `{ contains: 3, title: 2 }` (`query.ts:14, 84-90`) — a
   BM25/TF-IDF-style ranked retrieval, tokenized, not exact substring or
@@ -119,7 +119,7 @@ not a custom substring/grep implementation.
 - Results truncated to `limit` (default `DEFAULT_LIMIT = 10`, `query.ts:16,
   68, 98`), with a `truncated`/`hint` nudge to narrow by
   `--kind`/`--path`/`--limit` (`query.ts:113-117`).
-- **Excerpting** — `src/core/search/excerpt.ts` `generateExcerpt()`
+- **Excerpting** — `src/core/search/excerpt.ts` (moved to `beebox/src/core/search/query/excerpt.ts`) `generateExcerpt()`
   (line 13): finds the earliest occurrence of any lowercase query token in
   the doc's `content` (or `contains` as fallback, `query.ts:108`), extends
   ±100 chars to word boundaries, adds `...` markers. This is plain substring
@@ -184,7 +184,7 @@ not a custom substring/grep implementation.
 
 - `src/core/agent-guide/search.ts` (49 lines) — pure documentation text
   (`searchSection()`), injected into the agent's system-prompt/guide via
-  `src/core/agent-guide/index.ts:30,63`. Key instructions to the agent
+  `src/core/agent-guide/index.ts:30 (moved to `beebox/src/core/agent-guide/guide/core.ts`),63`. Key instructions to the agent
   (lines 13-22):
   - *"prefer it over `grep` for finding cards by content: it understands
     card structure, ranks by relevance, and weights the `contains:` field

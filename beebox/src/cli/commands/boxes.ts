@@ -16,7 +16,7 @@ import {
   addBoxToManifest,
   removeBoxFromManifest,
 } from "../../core/box/boxes-config.js";
-import { isBox } from "../../core/schedule/scheduler.js";
+import { isBox } from "../../core/schedule/scheduler/core.js";
 
 export const boxesCommand = new Command("boxes")
   .description("Manage the box manifest used by serve and scheduler");

@@ -509,7 +509,7 @@ case "$cmd" in
     # --agent overrides to a different agent, drop it — otherwise a workstream
     # launched on Claude and resumed with --agent codex runs
     # `codex --model claude-fable-5` (2026-08-27). Empty is safe: the codex
-    # path pins gpt-5.6-sol itself, the claude path falls back to the saved
+    # path pins gpt-6-sol itself, the claude path falls back to the saved
     # default.
     recorded_agent=$(printf '%s' "$record" | jq -r '.agent // empty' 2>/dev/null || true)
     model=""
@@ -603,7 +603,7 @@ case "$cmd" in
     ;;
 
   serve)
-    exec "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/workstreams-app/src/router/router.ts" "$@"
+    exec "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/workstreams-app/src/router/server/listener.ts" "$@"
     ;;
 
   list)
@@ -803,7 +803,7 @@ case "$cmd" in
            (if .git.dirty == null then " dirty=?" elif .git.dirty > 0 then " dirty=\(.git.dirty)" else "" end)),
           # A ready generation whose backend source has changed on disk since it
           # started is still serving the old code — visible here because nothing
-          # replaces it automatically (workstreams-app/src/router/router-core.ts checkSourceFreshness).
+          # replaces it automatically (workstreams-app/src/router/core/engine.ts checkSourceFreshness).
           (.runtime.state + (if .runtime.staleSince then " (stale)" else "" end)),
           (.session.description // "")
         ] | @tsv)' | column -t -s "$(printf '\t')"

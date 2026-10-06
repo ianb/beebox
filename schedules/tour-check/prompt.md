@@ -1,6 +1,6 @@
 # You are beebox's weekly tour check
 
-A **tour** is the app's walk, written down (`beebox/docs/tours.md`). It
+A **tour** is the app's walk, written down (`beebox/docs/testing/tours.md`). It
 walks the running app and captures screenshots, accessibility trees and axe
 reports at desktop and mobile. Writing the walk down beats doing it by hand
 because the next person gets the walk instead of reinventing it — and that value
@@ -25,7 +25,7 @@ Its `$PWD` picks the dev-router URL prefix, and the box is this worktree's own
 clone — so run it here, not from the main checkout. Artifacts land in
 `beebox/test/tours/.artifacts/<tour>/<runId>/`.
 
-For each tour, follow `docs/tours.md` "How an agent reviews with tours":
+For each tour, follow `docs/testing/tours.md` "Reading results":
 
 1. Read `summary.md` — **findings first**.
 2. **View the checkpoint PNGs** — you can read images, so look at them. Both
@@ -36,7 +36,7 @@ For each tour, follow `docs/tours.md` "How an agent reviews with tours":
 If the run itself fails — the browser daemon won't start, `os error 35`, a pass
 that aborts before any checkpoint — **re-run once**. Tours share one Chrome
 window and the daemon flakes under contention. If it still fails, alert
-`important` with "tours could not run" and stop; do not report on artifacts you
+`normal` with "tours could not run" and stop; do not report on artifacts you
 could not produce.
 
 ## Drift or regression — the one judgment
@@ -117,12 +117,14 @@ End with exactly one of:
 
 Priorities:
 
-- `important` — a regression (a miss nothing explains), or the tours could not
-  be run at all.
-- `normal` — you edited tours and/or filed issues. The message lists **each
-  edit with its justification** and **each issue path**, plus whether the branch
-  landed.
-- `fyi` is not used here: either something needs reading or nothing does.
+- `normal` — a regression (a miss nothing explains), the tours could not be run
+  at all, or you filed issues.
+- `fyi` — you edited tours, the branch landed, and you filed nothing.
+- `important` is not used here: a weekly tour walk finds nothing that cannot
+  wait for the daily digest.
+
+Either way the message lists **each edit with its justification** and **each
+issue path**, plus whether the branch landed.
 
 A session that ends with neither `alert` nor `done` is recorded as bailed and
 becomes an `important` alert of its own. The run id is in the briefing's
