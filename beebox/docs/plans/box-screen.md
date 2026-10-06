@@ -1,6 +1,6 @@
 ---
 title: "Box screen: a thought goes in before the box loads"
-status: draft
+status: active
 workstream: quick-chat-design
 issues:
   - ../../../issues/features/2026-09-25-quick-drop-entry-points.md
@@ -15,7 +15,7 @@ Today the iOS app loads the full web chat and the last conversation first. Quick
 
 ## Smallest fix and budget
 
-**BIG CHANGE.** The estimate is about 3,750 changed lines. The boxholder has agreed the design in discussion and has not yet approved this size.
+**BIG CHANGE.** The estimate is about 3,750 changed lines. The boxholder approved this size and scope on 2026-10-06 ("Yes, looks good... Do it in one batch"), for implementation as one landing.
 
 The smallest fix for the reported problem is a native screen with a text field that posts to the existing `quickChat.prepare` and then sends from native code. It fails on the reported recovery defects: the two-step send still loses the message when the caller stops between steps, and a routing failure still sends nothing.
 
@@ -302,7 +302,7 @@ None.
 | The box screen's cached list is stale | Planned `BoxScreenView` fixture | Refresh replaces it; a failed refresh shows "Could not refresh" above the list | Clear |
 | Web content process ends in the background | Planned launch-rule XCTest | Return goes to the box screen | Clear |
 | An older iOS build meets the navigation to `/<box>/box` | Planned `ChatWebViewRequestTests` case for the interception; the web page test covers the fallback | The older build loads the web box screen in its web view | Clear |
-| A chat's directory has no landmark | No | The folder half is absent (`PlacePill.tsx:234`), so Recent files is unreachable for that chat. Today the row shows for every chat (`ChatBarChrome.tsx:108`) | Silent. The boxholder answered this exact case with "Chat folders pretty much always have landmarks". Confirm at approval; the fallback is to keep the row in the landmark menu only when the folder half is absent |
+| A chat's directory has no landmark | No | The folder half is absent (`PlacePill.tsx:234`), so Recent files is unreachable for that chat. Today the row shows for every chat (`ChatBarChrome.tsx:108`) | Silent. The boxholder answered this exact case with "Chat folders pretty much always have landmarks". The boxholder approved the plan with this row as written, 2026-10-06 |
 | Confident post lands in the wrong chat | No test can cover routing quality | No undo. The row names the chat and links to it. The person corrects it in that chat | Clear, not recoverable. Accepted for this version |
 
 No critical gap: every new codepath has a planned test and a visible state, except the two rows marked accepted.
@@ -339,8 +339,7 @@ No critical gap: every new codepath has a planned test and a visible state, exce
 
 ## Open design questions
 
-- **Names the boxholder has not chosen.** The route `/<box>/box`, the box selector tile's label "New thought", the menu row "Find a landmark", the composer line "New thought. The box picks the conversation.", and the section headings "Needs you", "Pick up where you left off", and "In this box". The mockups used most of them. Lean: keep them; each is one string.
-- **One landing or two.** Tracks 1 to 3 are web and server and deploy on merge. Track 4 holds most of the risk: the composer seam, the outbox, and the launch rule. Lean: approve the whole plan, build in the listed order, and let the boxholder land tracks 1 to 3 early if track 4 runs long.
+- **Names the boxholder has not chosen.** The route `/<box>/box`, the box selector tile's label "New thought", the menu row "Find a landmark", the composer line "New thought. The box picks the conversation.", and the section headings "Needs you", "Pick up where you left off", and "In this box". The mockups used most of them. The boxholder approved the plan with these names, 2026-10-06; each is one string to change later.
 - **Storage summary on the box screen.** It is one of four box-wide pages and may be rarely used. Lean: keep it in the row.
 - **Web index route.** Opening `/<box>/` could show the box screen, as the phone's cold launch does. Lean: no; a browser tab is usually opened to continue a chat.
 
