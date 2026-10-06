@@ -290,7 +290,7 @@ async function loadRepairAttempted(boxRoot: string): Promise<Set<string>> {
   }
 }
 
-/** Ids without a husk any more are dropped, so the record never outgrows the box's chats. */
+/** Callers pass only ids that still have husks, so each scan prunes the record to the box's chats. */
 async function saveRepairAttempted(boxRoot: string, ids: Iterable<string>): Promise<void> {
   const content = `${JSON.stringify({ ids: [...ids].toSorted() }, null, 2)}\n`;
   await writeFileAtomic(path.join(boxRoot, REPAIR_ATTEMPTED_FILE), { content });
