@@ -52,3 +52,24 @@ JSON.stringify(createResult)
 ```ts continue
 await cbox.cleanup();
 ```
+
+## `bbx create` template argument help
+
+Unknown option errors guide users to positional template key=value arguments
+and template-specific argument descriptions:
+
+```ts setup
+import { createCommand } from "../../../src/cli/commands/create.js";
+```
+
+```ts
+const helpText = createCommand.helpInformation();
+helpText.includes("Template key=value arguments") && helpText.includes("--describe-template <name>")
+=> true
+
+let errorText = "";
+createCommand.configureOutput({ writeErr: (text) => { errorText += text; } }).exitOverride();
+try { createCommand.parse(["node", "bbx", "example.doc.card", "--title", "Example"]); } catch { /* Commander exitOverride throws after writing the expected error hint. */ }
+errorText.includes("positional key=value") && errorText.includes("--describe-template <name>")
+=> true
+```

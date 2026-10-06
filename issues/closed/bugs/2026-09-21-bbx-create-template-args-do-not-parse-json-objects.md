@@ -1,12 +1,15 @@
 ---
 title: "`bbx create`'s key=value args parse JSON arrays but not JSON objects, so an object-typed template field can't be passed on the command line"
-workstream: unattached
+workstream: quick-wins-oct
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
+resolution: implemented
 ---
+
+> **Resolved** in `fd3ef5612`. The route tries the omitted path under `_content/`, and the linked manual-testing instructions now use the canonical URL.
 
 An agent ran `bbx create -t question ... learning='{"...": "..."}'` (the
 command was spelled `callback`-era at the time; the behavior is unchanged) and got

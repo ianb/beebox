@@ -37,6 +37,27 @@ test("a bare web route without a trailing name-slash never matches", () => {
   assert.deepEqual(findLeaks(`src/routes.ts:12:app.get("${H}dashboard")`), []);
 });
 
+test("allows ordinary URLs whose paths contain home-like segments", () => {
+  const url = "https://example.gov/App/home/" + "section/page";
+  assert.deepEqual(findLeaks(`docs/links.md:1:${url}`), []);
+});
+
+test("still flags a real home path in a file URL", () => {
+  const out = findLeaks(`docs/links.md:1:file://${U}janedoe/src/report.png`);
+  assert.deepEqual(out, [`home path leak: docs/links.md:1 -> ${U}janedoe/`]);
+});
+
+test("quoted file URLs and compact JSON still expose real home paths", () => {
+  const lines = [
+    `docs/links.md:1:href="file://${U}janedoe/src/report.png"`,
+    `transcript.jsonl:2:{"url":"https://example.gov/home/page","cwd":"${U}janedoe/src"}`,
+  ].join("\n");
+  assert.deepEqual(findLeaks(lines), [
+    `home path leak: docs/links.md:1 -> ${U}janedoe/`,
+    `home path leak: transcript.jsonl:2 -> ${U}janedoe/`,
+  ]);
+});
+
 test("reports every offending segment on a line", () => {
   const out = findLeaks(`m.md:1:${U}ann/a and ${U}bob/b`);
   assert.deepEqual(out, [

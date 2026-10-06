@@ -84,3 +84,17 @@ renderFields({ todos: [{ due: "2026-09-15" }] }).includes("data-todo-status")
 renderFields({ meta: { todos } }).includes("data-todo-status")
 => false
 ```
+
+## Internal summary fields stay out of the reading view
+
+```ts setup
+import { readingFrontmatter } from "../../src/components/MarkdownCardView/view.js";
+```
+
+```ts
+JSON.stringify(readingFrontmatter({ title: "Example", contains: "internal", "contains-evidence": "source", custom: "visible", prominence: "global" }, "page"))
+=> {"custom":"visible","prominence":"global"}
+
+JSON.stringify(readingFrontmatter({ title: "Example", contains: "internal", "contains-evidence": "source" }, "embed"))
+=> {"title":"Example"}
+```
