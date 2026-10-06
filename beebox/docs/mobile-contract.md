@@ -528,6 +528,12 @@ mint them independently; the ids are per-emission and per-kind.
   restores the pre-keyword transcript) and refuses to match inside an existing markup tag; web never
   re-feeds composer text to detection, so it needs neither guard. Neither side may assume the
   other's detector fired.
+- **Shared vocabulary and tags.** Both detectors accept the same phrases, check actions in the
+  same order, and take the longest phrase at the earliest position. The tags are `send-message`
+  (send and clean-up send), `send-close-message` (sign-off; mic stays closed),
+  `send-checkpoint-message` (a plain send that marks the message partial), `cancel-message`,
+  `mic-off`, and `erase-message`. The golden vectors in
+  `test/mobile-contract/fixtures/speech-keywords/` pin both sides.
 
 ### 4.4a HQ dictation state (web → native)
 

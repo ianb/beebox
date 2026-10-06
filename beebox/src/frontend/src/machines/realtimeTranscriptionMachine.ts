@@ -35,8 +35,8 @@
  * doctest provides a fake.
  */
 
-import { setup, assign, emit, fromCallback, not, stateIn, type SnapshotFrom } from "xstate";
-import { recordingStop, recordingError, recordingDropped, recordingResumed } from "../lib/audio/earcons";
+import { setup, assign, emit, enqueueActions, fromCallback, not, stateIn, type SnapshotFrom } from "xstate";
+import { recordingStop, recordingError, micLost, recordingResumed, liveTextPaused, liveTextResumed } from "../lib/audio/earcons";
 import type { PendingRecording } from "../lib/audio/voice-stager";
 import {
   MachineActionError,
@@ -76,7 +76,15 @@ const EMPTY_SEGMENT = {
   finalWords: null,
   error: null,
   recording: null,
+  liveTextCue: "none",
 } as const;
+
+/**
+ * Where a live-text loss is in its cue cycle: `dropped` (live text went away
+ * mid-recording, no sound yet), `announced` (the pause cue played, so its
+ * return gets the matching cue), or `none`.
+ */
+type LiveTextCue = "none" | "dropped" | "announced";
 
 // -- Machine --
 
@@ -95,6 +103,7 @@ export const realtimeTranscriptionMachine = setup({
        */
       finalWords: FinalWord[] | null;
       error: string | null;
+      liveTextCue: LiveTextCue;
       /**
        * The ended segment's staged recording, set on TRANSCRIPTION_DONE. The
        * hook hands it to a submit, or seals it with `hq: null`.
@@ -111,6 +120,7 @@ export const realtimeTranscriptionMachine = setup({
   },
   guards: {
     micDrop: ({ event }) => event.type === "CONNECTION_DEGRADED" && event.cause === "microphone",
+    liveTextDropped: ({ context }) => context.liveTextCue === "dropped",
   },
   actions: {
     applyTextUpdate: assign(({ event }) => {
@@ -147,12 +157,26 @@ export const realtimeTranscriptionMachine = setup({
     setMicInterrupted: assign({ error: "Microphone interrupted — recovering…" }),
     setMicDropEnded: assign({ error: "Recording stopped — the microphone was taken away" }),
     clearError: assign({ error: null }),
-    playRecordingDropped: () => {
-      recordingDropped.play();
+    playMicLost: () => {
+      micLost.play();
     },
     playRecordingResumed: () => {
       recordingResumed.play();
     },
+    markLiveTextDropped: assign({ liveTextCue: "dropped" as const }),
+    announceLiveTextPaused: assign({ liveTextCue: "announced" as const }),
+    playLiveTextPaused: () => {
+      liveTextPaused.play();
+    },
+    // Live text is back: the return cue only answers a pause cue that played,
+    // so a drop that healed inside the debounce stays silent end to end.
+    playLiveTextResumed: () => {
+      liveTextResumed.play();
+    },
+    settleLiveTextReturned: enqueueActions(({ context, enqueue }) => {
+      if (context.liveTextCue === "announced") enqueue("playLiveTextResumed");
+      enqueue.assign({ liveTextCue: "none" });
+    }),
     setStartFailedError: assign({ error: "Recording didn't start. Please try again." }),
     sendStopToTranscriber: ({ system }) => {
       // systemId (below) makes the actor reachable here; `id` alone is
@@ -176,6 +200,10 @@ export const realtimeTranscriptionMachine = setup({
     // Memory no longer grows with the segment (audio stages to the box), so
     // a conversation is sent in hour-long parts rather than stopping.
     MAX_DURATION: 60 * 60 * 1000,
+    // How long live text may stay lost before its pause cue plays. Most
+    // drops on a flaky uplink reconnect within a second or two; those stay
+    // silent (the overlay chip still shows the pause).
+    LIVE_TEXT_CUE_DELAY: 2000,
     // How long the microphone may stay lost before the segment ends. Bounds
     // only a mic loss: a network drop keeps recording in `recordingLocal`.
     RECONNECT_WINDOW: 8000,
@@ -245,16 +273,25 @@ export const realtimeTranscriptionMachine = setup({
           // No SILENCE_TIMEOUT: no live text arrives to reset it (MAX_DURATION
           // still bounds the segment). Errors about the live socket keep the
           // recording going; the actor has already stopped or kept retrying.
+          // Losing live text only pauses spoken keywords, so it gets a quiet
+          // cue, and only once the loss has lasted (never at segment start,
+          // before the first socket opens: liveTextCue is still "none").
+          after: {
+            LIVE_TEXT_CUE_DELAY: {
+              guard: "liveTextDropped",
+              actions: ["playLiveTextPaused", "announceLiveTextPaused"],
+            },
+          },
           on: {
-            WS_CONNECTED: "recording",
+            WS_CONNECTED: { target: "recording", actions: "settleLiveTextReturned" },
             CONNECTION_RESTORED: {
               target: "recording",
-              actions: ["playRecordingResumed", "clearError"],
+              actions: ["settleLiveTextReturned", "clearError"],
             },
             CONNECTION_DEGRADED: {
               guard: "micDrop",
               target: "reconnecting",
-              actions: ["playRecordingDropped", "setMicInterrupted"],
+              actions: ["playMicLost", "setMicInterrupted"],
             },
             WS_ERROR: { actions: "setError" },
             SERVER_ERROR: { actions: "setError" },
@@ -278,16 +315,16 @@ export const realtimeTranscriptionMachine = setup({
           on: {
             TEXT_UPDATE: { target: "recording", reenter: true, actions: "applyTextUpdate" },
             CONNECTION_DEGRADED: [
-              { guard: "micDrop", target: "reconnecting", actions: ["playRecordingDropped", "setMicInterrupted"] },
+              { guard: "micDrop", target: "reconnecting", actions: ["playMicLost", "setMicInterrupted"] },
               // Network: the audio keeps staging, only live text pauses.
-              { target: "recordingLocal", actions: "playRecordingDropped" },
+              { target: "recordingLocal", actions: "markLiveTextDropped" },
             ],
             // A socket that can't be fixed by reconnecting (1003/1008 close,
             // or a service-level error) ends live text for this segment, not
             // the recording.
-            WS_ERROR: { target: "recordingLocal", actions: ["setError", "playRecordingDropped"] },
-            SERVER_ERROR: { target: "recordingLocal", actions: ["setError", "playRecordingDropped"] },
-            WS_CLOSED: "recordingLocal",
+            WS_ERROR: { target: "recordingLocal", actions: ["setError", "markLiveTextDropped"] },
+            SERVER_ERROR: { target: "recordingLocal", actions: ["setError", "markLiveTextDropped"] },
+            WS_CLOSED: { target: "recordingLocal", actions: "markLiveTextDropped" },
             STOP: { target: "finalizing", actions: "sendStopToTranscriber" },
             CANCEL: "cancelling",
             TRANSCRIPTION_DONE: { target: "#realtimeTranscription.idle", actions: "setFinalTranscript" },

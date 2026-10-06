@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "send checkpoint"
+  },
+  "expected": {
+    "action": "sendCheckpoint"
+  }
+}

@@ -20,12 +20,26 @@ const sendHqPattern = KeywordPattern.compile(`
 // `send`, which restarts the mic for a continuous conversation. Checked FIRST in
 // detectKeyword — it owns the "send and …" / "over and out" shape, which overlaps
 // both plain `send` ("send and finish the message" → `finish … message`) and
-// micOff ("send and stop the mic" → `stop the mic`); the close variant wins both.
+// micOff ("send and stop the mic" / "send and close the mic" → `stop the mic` /
+// `close the mic`); the close variant wins both. "Over and out" is the taught
+// phrase: an idiom the transcriber restores reliably, where "send and close"
+// is often heard as "set a closed".
 const sendClosePattern = KeywordPattern.compile(`
-  send and (close | stop | finish | done | sign off)
+  over and out
+  finished talking
+  send and (close | stop | finish | finished | done | sign off)
   send and close (the)? (mic | microphone | message)
   set a closed (the)? (mic | microphone | message)
-  over and out
+`);
+
+// "Send checkpoint": the same client action as plain `send` (send, re-arm the
+// mic), but the agent gets its own tag meaning "partial — I am still talking".
+// Always two words with "checkpoint", so talking ABOUT checkpoints ("add a
+// checkpoint before the deploy") does not fire; only the send verbs take an
+// article.
+const sendCheckpointPattern = KeywordPattern.compile(`
+  (send | sent) (a | the)? checkpoint (message)?
+  (commit | add) checkpoint
 `);
 
 const cancelPattern = KeywordPattern.compile(`
@@ -38,7 +52,10 @@ const micOffPattern = KeywordPattern.compile(`
   mic off
   turn off (the)? (microphone | mic)
   stop (the)? (microphone | mic)
+  close (the)? (microphone | mic)
+  mute (the)? (microphone | mic)
   stop listening
+  pause listening
 `);
 
 const erasePattern = KeywordPattern.compile(`
@@ -47,7 +64,10 @@ const erasePattern = KeywordPattern.compile(`
   start over
 `);
 
-export type KeywordAction = "send" | "sendHq" | "sendClose" | "cancel" | "micOff" | "erase";
+export type KeywordAction = "send" | "sendHq" | "sendClose" | "sendCheckpoint" | "cancel" | "micOff" | "erase";
+
+/** The send variants whose tag a persisted voice message carries (HQ shares plain send's). */
+export type SendKeywordAction = "send" | "sendClose" | "sendCheckpoint";
 
 export interface KeywordResult {
   action: KeywordAction;
@@ -70,6 +90,7 @@ const ACTION_TAG_NAMES: Record<KeywordAction, string> = {
   // HQ is preparation for a normal send, not a distinct agent-side command.
   sendHq: "send-message",
   sendClose: "send-close-message",
+  sendCheckpoint: "send-checkpoint-message",
   cancel: "cancel-message",
   micOff: "mic-off",
   erase: "erase-message",
@@ -86,7 +107,7 @@ export function stripKeywordTags(text: string): string {
   // Literal alternation of ACTION_TAG_NAMES' values (the lint bans a
   // constructed RegExp); the doctest strips every action's tag, so a new
   // action name added without extending this pattern fails there.
-  return text.replace(/\s*<(?:send-message|send-close-message|cancel-message|mic-off|erase-message)\b[^<>]*\/>/g, "").trim();
+  return text.replace(/\s*<(?:send-message|send-close-message|send-checkpoint-message|cancel-message|mic-off|erase-message)\b[^<>]*\/>/g, "").trim();
 }
 
 function keywordTag(action: KeywordAction, phrase: string): string {
@@ -108,11 +129,11 @@ function asResult(action: KeywordAction, match: InputMatch): KeywordResult {
  * send), so an HQ result without it means the normalizer smoothed the phrase
  * away — append the tag rather than lose the trigger. A duplicate trigger is
  * harmless; a silently vanished one isn't. `action` carries the send variant
- * (`send` vs `sendClose`) so the persisted record reflects the close sign-off.
+ * so the persisted record keeps the close sign-off or the checkpoint.
  */
 export function appendSendKeywordTag(
   transcript: string,
-  { action, matchedPhrase }: { action: "send" | "sendClose"; matchedPhrase: string }
+  { action, matchedPhrase }: { action: SendKeywordAction; matchedPhrase: string }
 ): string {
   return `${transcript.trim()} ${keywordTag(action, matchedPhrase)}`.trim();
 }
@@ -122,12 +143,13 @@ export function appendSendKeywordTag(
  * {@link appendSendKeywordTag} — so a voice send restored after a reload can
  * put the same tag on its HQ text. Null when the transcript has none.
  */
-export function sendKeywordIn(transcript: string): { action: "send" | "sendClose"; matchedPhrase: string } | null {
-  const match = /<(send-message|send-close-message) phrase="([^"]*)" \/>/.exec(transcript);
+export function sendKeywordIn(transcript: string): { action: SendKeywordAction; matchedPhrase: string } | null {
+  const match = /<(send-message|send-close-message|send-checkpoint-message) phrase="([^"]*)" \/>/.exec(transcript);
   if (!match) return null;
   const [, tag, escaped] = match;
   const matchedPhrase = (escaped ?? "").replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
-  return { action: tag === "send-close-message" ? "sendClose" : "send", matchedPhrase };
+  const action: SendKeywordAction = tag === "send-close-message" ? "sendClose" : tag === "send-checkpoint-message" ? "sendCheckpoint" : "send";
+  return { action, matchedPhrase };
 }
 
 export function detectKeyword(
@@ -142,13 +164,19 @@ export function detectKeyword(
     return match;
   };
 
-  // Checked first. Its patterns only match "send and …" / "over and out", which
-  // no other keyword contains, so leading steals nothing — and it has to win
-  // over the overlaps: plain `send` ("send and finish the message" → also
-  // `finish … message`) and micOff ("send and stop the mic" → also `stop the
-  // mic`). Both of those should send-and-close, not just send / just mute.
+  // Checked first. Its patterns only match "send and …", "over and out", and
+  // "finished talking", which no other keyword contains, so leading steals
+  // nothing — and it has to win over the overlaps: plain `send` ("send and
+  // finish the message" → also `finish … message`) and micOff ("send and stop
+  // / close the mic" → also `stop the mic` / `close the mic`). Those should
+  // send-and-close, not just send / just mute.
   const sendCloseMatch = tryMatch(sendClosePattern);
   if (sendCloseMatch) return asResult("sendClose", sendCloseMatch);
+
+  // No other pattern contains "checkpoint", so order does not matter here; it
+  // sits with the other send variants.
+  const sendCheckpointMatch = tryMatch(sendCheckpointPattern);
+  if (sendCheckpointMatch) return asResult("sendCheckpoint", sendCheckpointMatch);
 
   const sendHqMatch = tryMatch(sendHqPattern);
   if (sendHqMatch) return asResult("sendHq", sendHqMatch);

@@ -1,6 +1,6 @@
 ---
 title: "A \"checkpoint\" voice keyword: send now, and tell the agent I am still talking"
-workstream: unattached
+workstream: voice-keywords-cues
 area: beebox
 labels: [voice, chat]
 filed-by: agent

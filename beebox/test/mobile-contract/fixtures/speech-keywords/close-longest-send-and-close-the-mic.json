@@ -1,0 +1,10 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "send and close the mic"
+  },
+  "expected": {
+    "action": "sendClose",
+    "processedTranscript": "<send-close-message phrase=\"send and close the mic\" />"
+  }
+}

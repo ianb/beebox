@@ -1,6 +1,6 @@
 ---
 title: "The recording-drop alarm is too aggressive, and it sounds the same for a lost mic and a lost live-text socket"
-workstream: unattached
+workstream: voice-keywords-cues
 area: beebox
 labels: [voice, transcription]
 filed-by: agent

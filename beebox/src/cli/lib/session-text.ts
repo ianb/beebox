@@ -40,7 +40,7 @@ export function stripSpeechWrappers(text: string): string {
   // Drop <instructions>...</instructions> voice-direction blocks
   out = out.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/g, "");
   // Drop self-closing voice-keyword marker tags
-  out = out.replace(/<(?:send-message|send-close-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
+  out = out.replace(/<(?:send-message|send-close-message|send-checkpoint-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
   // Drop the <chat-app …> snapshot tag prepended to every user message
   out = stripChatAppTags(out);
   // Drop <user-selection …>…</user-selection> whole: the inner text is a
