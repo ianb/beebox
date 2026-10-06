@@ -17,8 +17,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import type { FastifyReply } from "fastify";
+import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 
-const FIXTURE_DIR = join(import.meta.dirname, "test-fixtures", "tts");
+/**
+ * Through `PACKAGE_ROOT`, not this file's own directory: the box server runs
+ * from the bundled `dist/cli.mjs`, where `import.meta.dirname` is `dist/`, and
+ * the mock answered every request "fixture missing" — which failed 14 of the
+ * speech browser test's 16 checks. `src/scripts/gen-tts-fixtures.ts` writes
+ * to the same path.
+ */
+const TTS_FIXTURE_DIR = join(PACKAGE_ROOT, "src", "webapp", "routes", "chat", "test-fixtures", "tts");
 const FIXTURES = ["seg0.mp3", "seg1.mp3", "seg2.mp3"];
 
 export interface MockTtsRequest {
@@ -54,7 +62,7 @@ export function serveMockTts(reply: FastifyReply, req: MockTtsRequest): FastifyR
   if (req.failText && req.text.includes(req.failText)) {
     return reply.status(503).send({ error: "mock TTS generation failure" });
   }
-  const file = join(FIXTURE_DIR, pickFixture(req));
+  const file = join(TTS_FIXTURE_DIR, pickFixture(req));
   if (!existsSync(file)) {
     return reply
       .status(500)

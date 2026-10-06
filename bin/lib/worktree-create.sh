@@ -451,8 +451,8 @@ EOF
 
   # 5. Refresh box hooks: the cloned box's .git/hooks/pre-commit and
   # .claude/settings.json have the source box's bbx path baked in. Re-run
-  # bbx init against the cloned box from the WORKTREE's bbx so its hooks point
-  # at the worktree's bbx. Idempotent (bbx init is "initialize or update").
+  # bbx engine init against the cloned box from the WORKTREE's bbx so its hooks point
+  # at the worktree's bbx. Idempotent (bbx engine init is "initialize or update").
   if [ -d "$BOX_DEST" ]; then
     echo "[worktree-create] refreshing box hooks (worktree's bbx -> $BOX_DEST)..." >&2
     # BBX_HOOK_BIN is belt-and-braces: resolveBbxBin() already stamps the bbx of
@@ -462,7 +462,7 @@ EOF
     # MAIN checkout, whose stale bbx rejects cards using in-flight schema changes
     # (issues/closed/bugs/2026-07-10-box-hook-stale-cross-checkout-bbx.md).
     (exec 198>&-; BBX_HOOK_BIN="$worktree_path/beebox/bin/bbx" \
-      "$worktree_path/beebox/bin/bbx" init "$BOX_DEST" >/dev/null)
+      "$worktree_path/beebox/bin/bbx" engine init "$BOX_DEST" >/dev/null)
   fi
 
   if ! printf 'ready\t%s\n' "$worktree_path" > "$state_file"; then

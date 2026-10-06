@@ -2,7 +2,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { resolveIssuePath } from "./issue-path.js";
-import { issueNextActionSchema, type IssueNextAction } from "../../shared/documents.js";
 
 export const ISSUE_CATEGORIES = [
   "bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch",
@@ -25,7 +24,6 @@ export interface IssueFrontmatter {
   discoveredIn?: string;
   resolution?: string;
   design?: string;
-  nextAction?: IssueNextAction;
 }
 
 export interface IssueRecord {
@@ -121,7 +119,7 @@ function researchState(body: string): ResearchState {
  */
 const KNOWN_FRONTMATTER_KEYS = new Set([
   "title", "workstream", "needs", "design", "area", "labels", "priority",
-  "next-action", "filed-by", "discovered-by", "discovered-in", "resolution",
+  "filed-by", "discovered-by", "discovered-in", "resolution",
   // Deferred-only lifecycle metadata. Deferred files are intentionally not
   // returned by listIssues(); the activation script consumes these fields and
   // removes them when it moves the issue into its category directory.
@@ -143,9 +141,6 @@ export function parseIssueFile(options: {
   const priorityValue = scalar(data.priority);
   const priority: IssuePriority = priorityValue === "important" || priorityValue === "normal" || priorityValue === "backlog"
     ? priorityValue : "uncategorized";
-  const nextValue = scalar(data["next-action"]);
-  const parsedNextAction = issueNextActionSchema.safeParse(nextValue);
-  const nextAction = parsedNextAction.success ? parsedNextAction.data : undefined;
   const optional = {
     area: scalar(data.area), filedBy: scalar(data["filed-by"]), discoveredBy: scalar(data["discovered-by"]),
     discoveredIn: scalar(data["discovered-in"]), resolution: scalar(data.resolution), design: scalar(data.design),
@@ -160,7 +155,6 @@ export function parseIssueFile(options: {
       workstream: scalar(data.workstream) ?? "unknown",
       needs: list(data.needs), labels: list(data.labels), priority,
       ...Object.fromEntries(Object.entries(optional).filter((entry) => entry[1] !== undefined)),
-      ...(nextAction ? { nextAction } : {}),
     },
     research: researchState(body),
     unknownKeys: Object.keys(data).filter((k) => !KNOWN_FRONTMATTER_KEYS.has(k)).toSorted(),
@@ -224,17 +218,6 @@ export function setIssuePriority(source: string, priority: IssuePriority): strin
   const frontmatter = source.slice(0, end);
   if (priority === "uncategorized") return `${frontmatter.replace(linePattern, "")}${source.slice(end)}`;
   const line = `priority: ${priority}`;
-  return linePattern.test(frontmatter)
-    ? `${frontmatter.replace(linePattern, `${line}${newline}`)}${source.slice(end)}`
-    : `${frontmatter}${line}${newline}${source.slice(end)}`;
-}
-
-export function setIssueNextAction(source: string, nextAction: IssueNextAction | undefined): string {
-  const { end, newline } = frontmatterEnd(source);
-  const linePattern = /^next-action:[^\r\n]*(?:\r?\n)?/mu;
-  const frontmatter = source.slice(0, end);
-  if (!nextAction) return `${frontmatter.replace(linePattern, "")}${source.slice(end)}`;
-  const line = `next-action: ${nextAction}`;
   return linePattern.test(frontmatter)
     ? `${frontmatter.replace(linePattern, `${line}${newline}`)}${source.slice(end)}`
     : `${frontmatter}${line}${newline}${source.slice(end)}`;

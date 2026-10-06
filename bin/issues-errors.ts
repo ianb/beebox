@@ -135,3 +135,26 @@ export class UnknownSubcommandError extends UsageError {
     this.name = "UnknownSubcommandError";
   }
 }
+
+/** `next-action <issue>` was given a value AND --clear, or --message AND --clear. */
+export class ConflictingNextActionError extends UsageError {
+  public constructor() {
+    super("next-action: --clear cannot be combined with a value or --message");
+    this.name = "ConflictingNextActionError";
+  }
+}
+
+/** Writing needs the store beside the main checkout, which needs a git checkout. */
+export class NoNextActionStoreError extends UsageError {
+  public constructor() {
+    super("next-action: not in a git checkout and BBX_ISSUE_ACTIONS_ROOT is unset, so there is no store");
+    this.name = "NoNextActionStoreError";
+  }
+}
+
+export class InvalidNextActionValueError extends UsageError {
+  public constructor(allowed: readonly string[]) {
+    super(`next-action value must be one of: ${allowed.join(", ")}`);
+    this.name = "InvalidNextActionValueError";
+  }
+}

@@ -10,7 +10,7 @@ amending, closing, or reclassifying anything. Nothing here adds to it.
 
 What it covers, so you know what there is to look up: the seven category
 directories and how to pick one; the frontmatter fields and who owns each
-(`priority:` and `next-action:` are the developer's, `needs:` gates like
+(`priority:` and the out-of-git next action are the developer's, `needs:` gates like
 `manual-testing` have strict entry/exit rules, `discovered-in:` is provenance
 not ownership, `workstream:` is rarely meaningful); title and cross-link
 conventions that `doc-check` enforces; body style (STE, tensions not

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "../components/ui.js";
 import { trpc } from "../trpc.js";
+import { usePageIdentity } from "../lib/page-identity.js";
 import type { ActionVerb, Issue, Workstream } from "../types.js";
 
 function TestingRow({ issue, worktree, row }: { issue: Issue; worktree?: string | undefined; row?: Workstream | undefined }) {
@@ -18,6 +19,7 @@ export function TestingQueue({ landed, pending, rows }: { landed: Issue[]; pendi
 }
 
 export function TestingPage() {
+  usePageIdentity("testing");
   const testing = trpc.testing.list.useQuery();
   const workstreams = trpc.workstreams.list.useQuery();
   if (testing.isLoading || workstreams.isLoading) return <main className="simple-page"><section className="loading-skeleton" aria-busy="true"><span /><span /></section></main>;

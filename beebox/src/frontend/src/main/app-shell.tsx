@@ -38,6 +38,7 @@ import { BoxSlugProvider } from "../lib/box-slug";
 import { QuickSearchOverlay } from "../components/search/QuickSearchOverlay";
 import { NotificationBanner } from "../components/notifications/NotificationBanner";
 import { usePresenceHeartbeat } from "../hooks/usePresenceHeartbeat";
+import { AgentReadinessGuard } from "../components/agents/AgentReadiness";
 
 
 // Re-exported for the route tree
@@ -118,6 +119,7 @@ export function ProductLayout() {
   return (
     <BoxShellProviders key={boxSlug} boxSlug={boxSlug ?? ""}>
         <DocumentIcon />
+        <AgentReadinessGuard />
         <DocumentPlace />
         <Stack gap="none" className="h-app">
           <AppNav

@@ -1,6 +1,7 @@
 import { Link, useParams, useSearch } from "@tanstack/react-router";
 
 import { ScheduleAlerts } from "../components/ScheduleAlerts.js";
+import { usePageIdentity } from "../lib/page-identity.js";
 
 /**
  * `/alerts` — every schedule's alerts, where the daily digest and every popup
@@ -11,6 +12,7 @@ export function ScheduleAlertPage() {
   const search = useSearch({ strict: false });
   const name = typeof params.name === "string" ? params.name : null;
   const selectedAlert = typeof search.alert === "string" ? search.alert : null;
+  usePageIdentity("alerts", name);
   return (
     <main className="simple-page">
       <p>

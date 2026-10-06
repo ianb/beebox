@@ -1,23 +1,25 @@
-# The admin Secrets procedures: owner-gated, and never a value
+# The admin Secrets procedures: owner-gated, with explicit audited reveal
 
 `src/webapp/trpc/routers/secrets.ts` is the boxholder's management surface for
 the machine store (`docs/implemented-plans/secret-custody.md`, Track 2's management-surface
 bullet, and Decision 8 for the machine-wide view).
 
-The load-bearing property is negative and is asserted on every response below:
-**no procedure returns a secret value** — not on a read, not as an echo after a
-write, not inside an error. A "just show me the key" affordance would hand every
-credential on the machine to any browser session that reaches an owner's page.
+Ordinary procedures are metadata-only. `revealValue` is the sole exception: it
+returns one value after an explicit owner request and records the event without
+the value. The Admin UI separately refuses when `navigator.webdriver` is true.
 
 Placeholder values throughout.
 
 ```ts setup
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { setAndGrantSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
+import { accessLogSegmentPath } from "../../../../src/core/secrets/access-log.js";
+import { getBoxTimeISO } from "../../../../src/lib/time.js";
+import { mayRevealSecretInBrowser } from "../../../../src/shared/secret-reveal.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
 const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
@@ -289,6 +291,43 @@ await box2.cleanup();
 await rm(dir2, { recursive: true, force: true });
 ```
 
+## Explicit reveal is owner-gated and audited
+
+```ts
+const revealDir = await mkdtemp(join(tmpdir(), "bbx-secrets-reveal-"));
+process.env.BBX_SECRETS_FILE = join(revealDir, "secrets.json");
+const revealBox = await makeTmpBox({ git: true });
+const ownerForReveal = caller(revealBox.root);
+await ownerForReveal.secrets.setValue({ name: "z-reveal-test", value: "reveal-value-fixture" });
+print(`non-owner refused: ${await attempt(caller(revealBox.root, { isOwner: false }).secrets.revealValue({ name: "z-reveal-test" }))}`);
+print(`legacy webdriver claim refused: ${await attempt(ownerForReveal.secrets.revealValue({ name: "z-reveal-test", webdriver: true }))}`);
+const shown = await ownerForReveal.secrets.revealValue({ name: "z-reveal-test" });
+const log = await (await import("node:fs/promises")).readFile(accessLogSegmentPath(getBoxTimeISO(revealBox.root)), "utf8");
+const event = JSON.parse(log.trim().split("\n").at(-1));
+print(`value returned: ${shown.value}`);
+print(`owner-read logged: ${event.event === "owner-read" && event.secret === "z-reveal-test"}`);
+print(`value excluded from log: ${!log.includes("reveal-value-fixture")}`);
+print(`webdriver UI policy: ${mayRevealSecretInBrowser(true)} ${mayRevealSecretInBrowser(false)}`);
+const logPath = join(revealDir, "secrets-log");
+await rm(logPath, { recursive: true, force: true });
+await writeFile(logPath, "not a directory");
+print(`audit write failure refuses value: ${await attempt(ownerForReveal.secrets.revealValue({ name: "z-reveal-test" }))}`);
+=>
+non-owner refused: FORBIDDEN
+legacy webdriver claim refused: BAD_REQUEST
+value returned: reveal-value-fixture
+owner-read logged: true
+value excluded from log: true
+webdriver UI policy: false true
+audit write failure refuses value: INTERNAL_SERVER_ERROR
+```
+
+```ts cleanup
+await revealBox.cleanup();
+await rm(revealDir, { recursive: true, force: true });
+```
+
+
 ## Open access is not an owner here
 
 Every other owner surface in the app treats an open-access box — one whose
@@ -309,6 +348,7 @@ const open = caller(box.root, { isOwner: true, isAuthenticatedOwner: false });
 
 print(`boxStatus: ${await attempt(open.secrets.boxStatus())}`);
 print(`machineView: ${await attempt(open.secrets.machineView())}`);
+print(`revealValue: ${await attempt(open.secrets.revealValue({ name: "mistral" }))}`);
 print(`formatHints: ${await attempt(open.secrets.formatHints())}`);
 print(`setValue: ${await attempt(open.secrets.setValue({ name: "mistral", value: "x" }))}`);
 print(`grant: ${await attempt(open.secrets.grant({ box: "any", name: "mistral", access: "server" }))}`);
@@ -318,6 +358,7 @@ print(`remove: ${await attempt(open.secrets.remove({ name: "mistral" }))}`);
 =>
 boxStatus: FORBIDDEN
 machineView: FORBIDDEN
+revealValue: FORBIDDEN
 formatHints: FORBIDDEN
 setValue: FORBIDDEN
 grant: FORBIDDEN

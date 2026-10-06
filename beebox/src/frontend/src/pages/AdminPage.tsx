@@ -84,9 +84,9 @@ function scrollToSection(id: AdminSectionId): void {
 function AgentsPanel() {
   return <>
     <ProbeSection name="AgentEngine"><AgentEngineSection /></ProbeSection>
-    <ProbeSection name="OpenRouterModels"><OpenRouterModelsSection /></ProbeSection>
     <ProbeSection name="ClaudeCode"><ClaudeCodeSection /></ProbeSection>
     <ProbeSection name="Codex"><CodexSection /></ProbeSection>
+    <ProbeSection name="OpenRouterModels"><OpenRouterModelsSection /></ProbeSection>
   </>;
 }
 

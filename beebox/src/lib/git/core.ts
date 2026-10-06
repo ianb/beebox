@@ -46,6 +46,7 @@ import { parseTrailers } from "../../shared/commit-trailers.js";
 
 export { isNothingToCommitError, isContendedFailure, isStaleLockFailure } from "./internal.js";
 export { withBoxGitLock } from "../git-lock.js";
+export { isRepo, repoRootOf } from "./repo.js";
 export { getLogPaginated, getTrailerFacets } from "./log.js";
 export type {
   FileStat,
@@ -105,17 +106,6 @@ export async function initRepo(
   await simpleGit(boxRoot).raw(["init", "-b", initialBranch]);
 }
 
-/**
- * Check if a directory is a git repository.
- */
-export async function isRepo(dir: string): Promise<boolean> {
-  try {
-    return await simpleGit(dir).checkIsRepo();
-  } catch (_e) {
-    // checkIsRepo throws when dir is not a git repo — that's the answer we want.
-    return false;
-  }
-}
 
 /**
  * The box's path within its git repository — POSIX-style, with a trailing

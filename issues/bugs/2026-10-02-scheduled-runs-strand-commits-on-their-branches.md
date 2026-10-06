@@ -5,6 +5,7 @@ area: schedules
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — disk cleanup and worktree review, 2026-10-02
+priority: important
 ---
 
 Worktree schedules commit on a long-lived branch and are expected to land with

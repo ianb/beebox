@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: normal
 ---
 
 `bbx session` explicitly rejects combining `--since` with a session ID (or

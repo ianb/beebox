@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-file-layout — change-selected tests after the core layout moves
+priority: important
 ---
 
 `beebox/test/core/box/file-watcher.doctest.md` fails four subtests on

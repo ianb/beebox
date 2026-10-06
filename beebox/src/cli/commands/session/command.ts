@@ -36,7 +36,7 @@ import {
   type SinceWindow,
 } from "./modes.js";
 import { invariant } from "../../../shared/invariant.js";
-import { readCodexSessionHistory } from "../../../core/chat/session/codex-transcript.js";
+import { readCodexSessionHistory } from "../../../core/chat/session/codex-transcript/core.js";
 import {
   parseDiagnosticEngine,
   resolveDiagnosticEngine,

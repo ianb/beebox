@@ -9,6 +9,7 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { useRefreshAgentReadinessOnLogin } from "../../hooks/useAgentReadiness";
 
 const DESCRIPTION =
   "Codex runs chats and background agents for boxes configured to use OpenAI. Authentication is stored by Codex for the Bee Box service account.";
@@ -32,6 +33,7 @@ function CodexStatusSummary({ loading, status }: { loading: boolean; status: Cod
 export function CodexSection() {
   const [snapshot, send] = useMachine(codexAuthMachine);
   const { status, error, verificationUrl, userCode } = snapshot.context;
+  useRefreshAgentReadinessOnLogin(status?.kind === "logged-in");
   const loading = snapshot.matches("loading");
   const starting = snapshot.matches("starting");
   const polling = snapshot.matches("polling");

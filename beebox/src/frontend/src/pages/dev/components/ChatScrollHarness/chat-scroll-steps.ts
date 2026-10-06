@@ -13,8 +13,10 @@ export type Step =
   /** Grow the last message `chunks` times by `chunkPx`, every `intervalMs`. */
   | { k: "stream"; chunks: number; intervalMs: number; chunkPx: number }
   /** Replace the streamed message with a shorter final one; the last-turn
-   *  spacer goes with it (the reply is complete). */
+   *  spacer remains to protect the reading position. */
   | { k: "finalize"; shrinkBy: number }
+  /** Completion removes, replaces, or reorders the final items. */
+  | { k: "changeTail"; operation: "remove" | "remove-and-rekey" | "swap" }
   /** Load `count` older messages above (captureForPrepend runs first). */
   | { k: "prepend"; count: number }
   /** Set the below-list chrome height — clientHeight moves, content doesn't. */
@@ -66,6 +68,10 @@ export type Step =
 export interface Expectation {
   /** Within the at-bottom margin when the scenario ends. */
   finalAtBottom?: boolean;
+  /** Unused scroll range below the current viewport. */
+  finalSpareAtMost?: number;
+  /** Expected newest user offset after deliberate scrolling. */
+  finalUserMessageTopNear?: number;
   /** Distance from the bottom at the end, in px. */
   finalFromBottomAtMost?: number;
   /** Content must have grown past the fold and stayed there (no follow). */
@@ -93,4 +99,24 @@ export interface Scenario {
   description: string;
   steps: Step[];
   expect: Expectation;
+}
+
+export interface RunSummary {
+  scenario: string;
+  durationMs: number;
+  finalAtBottom: boolean;
+  finalSpare: number;
+  finalFromBottom: number;
+  finalHasUnseenContent: boolean;
+  finalUserMessageTop: number;
+  maxFromBottomWhileAtBottom: number;
+  leftBottomCount: number;
+  reachedBottomCount: number;
+  leftBottomWithoutIntent: boolean;
+  driftWhileAwayPx: number;
+  flingReversals: number;
+  writes: number;
+  samples: number;
+  pass: boolean;
+  failures: string[];
 }

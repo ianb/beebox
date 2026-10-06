@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: important
 ---
 
 `uv` and `uvx` are installed on the server. The Python tools guide

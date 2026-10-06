@@ -7,6 +7,7 @@ labels: [todos]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-todos-ui — walking todos in a field box
+priority: normal
 ---
 
 An agent writes `{% todo assigned="agent" by="agent" created="..." %}` for

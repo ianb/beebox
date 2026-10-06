@@ -33,7 +33,7 @@ import type { ChatReviewer } from "../reviewer.js";
 import type { TitleFreshnessChecker } from "../freshness.js";
 import { loadReviewState, saveReviewState, type ReviewState } from "../state.js";
 import { LockHeldError, withChatReviewLock } from "../lock.js";
-import { readCodexSessionUpdatedAt } from "../../session/codex-transcript.js";
+import { readCodexSessionUpdatedAt } from "../../session/codex-transcript/core.js";
 
 export interface RunOptions {
   reviewer: ChatReviewer;

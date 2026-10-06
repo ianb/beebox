@@ -32,7 +32,8 @@ async function waitUntilIdle(actor) {
 
 The middle segment rejects from the real machine's `ttsClient.speak` boundary.
 Playback continues through the third segment, but index 1 remains failed after
-the queue finishes.
+the queue finishes, with the error's message kept as the reason the chunk
+shows.
 
 ```ts
 const ttsClient = {
@@ -61,6 +62,9 @@ await waitUntilIdle(actor);
 console.error = originalConsoleError;
 JSON.stringify(actor.getSnapshot().context.segmentStates)
 => {"1":"failed"}
+
+actor.getSnapshot().context.segmentFailures
+=> { 1: "media playback rejected" }
 
 playbackErrors.length
 => 1

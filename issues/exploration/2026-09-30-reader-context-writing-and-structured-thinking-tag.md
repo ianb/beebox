@@ -6,6 +6,7 @@ labels: [agent-workflow, writing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder shared the reader-context-writing repository
+priority: important
 ---
 
 **Credit:** [reader-context-writing](https://github.com/yaniv256/reader-context-writing)

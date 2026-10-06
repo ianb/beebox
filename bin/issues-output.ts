@@ -20,7 +20,7 @@ export function issueLine(entry: IssueEntry): string {
   const marks = [
     entry.priority === "important" ? "!" : "",
     entry.visibility === "private" ? "P" : "",
-    entry.nextAction === null ? "" : "?",
+    entry.nextAction === null && entry.nextActionMessage === null ? "" : "?",
   ].join("");
   return [
     pad(entry.date ?? "----------", 10),

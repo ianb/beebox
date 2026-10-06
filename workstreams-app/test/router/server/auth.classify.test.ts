@@ -15,6 +15,25 @@ import { classifyRouterRoute } from "../../../src/router/server/auth.js";
 
 // --- classifier ---------------------------------------------------------------
 
+test("classifier: shared earcons are static assets, not a box named earcons", () => {
+  for (const url of ["/main/earcons/silence.mp3", "/main/earcons/tick2.wav", "/chat-scroll-fixes/earcons/recording-start.mp3?version=1"]) {
+    assert.deepEqual(classifyRouterRoute({ method: "GET", url }), { kind: "unauth-allowlist" }, url);
+  }
+  for (const { method, url, targetBox } of [
+    { method: "POST", url: "/main/earcons/silence.mp3", targetBox: "earcons" },
+    { method: "GET", url: "/main/earcons-private/silence.mp3", targetBox: "earcons-private" },
+    { method: "GET", url: "/main/test1/earcons/silence.mp3", targetBox: "test1" },
+    { method: "GET", url: "/main/test1/api/files/private.mp3", targetBox: "test1" },
+    { method: "GET", url: "/main/earcons", targetBox: "earcons" },
+    { method: "GET", url: "/main/earcons/api/files/private.mp3", targetBox: "earcons" },
+    { method: "GET", url: "/main/earcons/auth/me", targetBox: "earcons" },
+    { method: "GET", url: "/main/earcons/api%2Ffiles%2Fprivate.mp3", targetBox: "earcons" },
+    { method: "GET", url: "/main/earcons/..%2Ftest1%2Fapi%2Ffiles%2Fprivate.mp3", targetBox: "earcons" },
+  ]) {
+    assert.deepEqual(classifyRouterRoute({ method, url }), { kind: "box", targetWorktree: "main", targetBox }, url);
+  }
+});
+
 test("classifier: exhaustive route-shape mapping", () => {
   const c = (method: string, url: string) => classifyRouterRoute({ method, url });
 
@@ -149,4 +168,3 @@ test("classifier: query string does not change classification", () => {
     targetBox: "test1",
   });
 });
-

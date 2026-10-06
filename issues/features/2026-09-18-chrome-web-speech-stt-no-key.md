@@ -6,6 +6,7 @@ labels: [voice, transcription]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder wants a no-key dictation path on the web
+priority: normal
 ---
 
 Every dictation path today needs a provider key. `loadTranscriptionConfig`

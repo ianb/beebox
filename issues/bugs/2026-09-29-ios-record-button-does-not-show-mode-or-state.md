@@ -6,6 +6,7 @@ labels: [voice]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder report, 2026-09-29
+priority: normal
 ---
 
 On web, the record button shows which mode and state voice input is in. The native iOS composer's button does not. The boxholder noticed it most in narration mode.

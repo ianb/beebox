@@ -1,8 +1,6 @@
 ---
 title: "Remove the one-root migration's v2 bootstrap path"
 workstream: box-layout-criteria
-activate-on: 2026-10-05
-category: code-quality
 filed-by: agent
 discovered-by: Ian
 discovered-in: box-layout-criteria — Track E of docs/implemented-plans/one-root-box-layout.md (or docs/implemented-plans/ once moved)

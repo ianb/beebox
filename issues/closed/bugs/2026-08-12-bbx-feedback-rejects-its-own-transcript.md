@@ -8,7 +8,6 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main session — bbx feedback triage from a real box
 priority: normal
-next-action: discuss
 ---
 
 > Implemented in `453400e0d`: the `bbx feedback` command and raw transcript embedding path were removed; legacy notes are migrated with trailing whitespace normalization before card collection.

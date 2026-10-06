@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "../components/ui.js";
 import { trpc } from "../trpc.js";
+import { usePageIdentity } from "../lib/page-identity.js";
 import type { Plan } from "../types.js";
 
 const STATUSES = ["draft", "active", "partial", "implemented", "superseded", "parked"];
@@ -10,6 +11,7 @@ export function PlansList({ plans }: { plans: Plan[] }) {
 }
 
 export function PlansPage() {
+  usePageIdentity("plans");
   const plans = trpc.plans.list.useQuery();
   if (plans.isLoading) return <main className="simple-page"><section className="loading-skeleton" aria-busy="true"><span /><span /></section></main>;
   if (plans.isError) return <main className="simple-page"><section className="error-state"><p>Couldn’t load plans: {plans.error.message}</p><Button onClick={() => void plans.refetch()}>Retry</Button></section></main>;

@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: backlog
 ---
 
 `bbx chat retranscribe` re-runs a voice recording through the HQ transcriber
