@@ -54,7 +54,7 @@ const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
 export function ComposerSendButton({
   id, onClick, disabled, title, size,
 }: {
-  id: string;
+  id?: string;
   onClick: () => void;
   disabled: boolean;
   title: string;
@@ -84,7 +84,7 @@ export function ComposerSendButton({
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, onVoiceSegmentSend, onPaste, onDrop,
+  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -102,12 +102,13 @@ function DesktopComposerRow({
   onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+  includeControlIds: boolean;
 }) {
   const noteTyped = useComposerCaret({ textareaRef, text: input });
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
       <TextareaAutosize
-        id="bbx-composer-input"
+        id={includeControlIds ? "bbx-composer-input" : undefined}
         ref={textareaRef}
         autoFocus
         enterKeyHint="send"
@@ -125,7 +126,7 @@ function DesktopComposerRow({
       {isTranscribing ? (
         <>
           <button
-            id="bbx-composer-dictation-cancel"
+            id={includeControlIds ? "bbx-composer-dictation-cancel" : undefined}
             onClick={handleCancelTranscription}
             className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
             title="Cancel (Esc)"
@@ -135,7 +136,7 @@ function DesktopComposerRow({
             </svg>
           </button>
           <button
-            id="bbx-composer-dictation-edit"
+            id={includeControlIds ? "bbx-composer-dictation-edit" : undefined}
             onClick={() => {
               onStopDictation();
               const text = transcription.transcript;
@@ -157,7 +158,7 @@ function DesktopComposerRow({
           whether dictation is in flight, but the role — and the id — is the
           same either way, so it renders outside the branch. */}
       <ComposerSendButton
-        id="bbx-composer-send"
+        id={includeControlIds ? "bbx-composer-send" : undefined}
         size="lg"
         onClick={() => {
           routeComposerSend({
@@ -196,7 +197,7 @@ export function ChatInputArea({
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  narrationEnabled,
+  narrationEnabled, includeControlIds,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -229,7 +230,10 @@ export function ChatInputArea({
   /** When set, the capture affordance renders disabled with this tooltip (X1). */
   captureDisabledReason?: string | undefined;
   narrationEnabled: boolean;
+  /** Omit authored addresses when rendered repeatedly in a development gallery. */
+  includeControlIds?: boolean;
 }) {
+  const hasControlIds = includeControlIds !== false;
   // Subscribing read of the composer text — this is the component a keystroke
   // re-renders (and its small button-bar subtree), not the chat at large.
   const input = useInputValue();
@@ -258,7 +262,7 @@ export function ChatInputArea({
           trigger={({ toggle, ariaProps }) => (
             <button
               type="button"
-              id="bbx-composer-add"
+              id={hasControlIds ? "bbx-composer-add" : undefined}
               data-bbx-reveal
               // The menu's contents are the whole point of the description —
               // the scan cannot see inside a closed menu.
@@ -276,16 +280,16 @@ export function ChatInputArea({
           )}
         >
           {captureEnabled ? (
-            <MenuItem id="bbx-composer-add-capture" onClick={onEnterCapture} disabled={captureDisabledReason !== undefined}>
+            <MenuItem id={hasControlIds ? "bbx-composer-add-capture" : undefined} onClick={onEnterCapture} disabled={captureDisabledReason !== undefined}>
               {captureDisabledReason !== undefined ? `Capture… (${captureDisabledReason.toLowerCase()})` : "Capture…"}
             </MenuItem>
           ) : null}
           {/* One file entry: where the files land (inline vs. bulk batch) is
               decided by `file-routing.ts`, not by the user picking a menu item
               (issues/features/2026-08-03-attach-vs-upload-menu-confusing.md). */}
-          <MenuItem id="bbx-composer-add-files" onClick={onAddFiles}>Add files…</MenuItem>
-          <ScreenshotMenuItem addFiles={addFiles} />
-          <ShareLocationMenuItem />
+          <MenuItem id={hasControlIds ? "bbx-composer-add-files" : undefined} onClick={onAddFiles}>Add files…</MenuItem>
+          <ScreenshotMenuItem addFiles={addFiles} includeControlId={hasControlIds} />
+          <ShareLocationMenuItem includeControlId={hasControlIds} />
         </Dropdown>
 
         {/* First-class capture button on the mobile row (room the desktop
@@ -293,7 +297,7 @@ export function ChatInputArea({
         {captureEnabled ? (
           <button
             type="button"
-            id="bbx-composer-capture"
+            id={hasControlIds ? "bbx-composer-capture" : undefined}
             onClick={onEnterCapture}
             disabled={captureDisabledReason !== undefined}
             className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -323,6 +327,7 @@ export function ChatInputArea({
           onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={onPaste}
           onDrop={onDrop}
+          includeControlIds={hasControlIds}
         />
 
         {/* Mobile: spacer */}
@@ -330,7 +335,7 @@ export function ChatInputArea({
 
         {/* Mobile-only: keyboard button */}
         <button
-          id="bbx-composer-keyboard"
+          id={hasControlIds ? "bbx-composer-keyboard" : undefined}
           onClick={onKeyboard}
           className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
           title="Type a message"
@@ -351,6 +356,7 @@ export function ChatInputArea({
           clearDraft={clearDraft}
           onUnpause={onUnpause}
           onVoice={onVoice}
+          includeControlId={hasControlIds}
         />
       </div>
     </section>
