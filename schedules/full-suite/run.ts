@@ -16,13 +16,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { readMemoryPressure, readPageoutRate } from "../../bin/host-pressure.js";
+import { hostBlockers, readMemoryPressure, readPageoutRate } from "../../bin/host-pressure.js";
 import { gitCommonDir } from "../../bin/test-git.js";
 import { appendLedgerRecord, readRecords } from "../../bin/test-ledger.js";
 import { hashFileset, ledgerPaths } from "../../bin/test-ledger-lib.js";
 import { acquireFullRun, lockDir } from "../../bin/test-locks.js";
 import type { Batch } from "./attribution.js";
-import { TIERS, batchExit, completionMarker, hostBlockers, tierProducedResults, workstreamOf } from "./lib.js";
+import { TIERS, batchExit, completionMarker, tierProducedResults, workstreamOf } from "./lib.js";
 import { batchSlowdown, durationHistories, runIsUntrusted } from "./trust.js";
 import { readBatch } from "./batch.js";
 import { raiseCondition, report } from "./reporting.js";
@@ -79,14 +79,13 @@ async function waitForQuietHost(): Promise<boolean> {
   const bar = os.availableParallelism() * QUIET_LOAD_PER_CORE;
   for (let waited = 0; ; waited += QUIET_POLL_MS) {
     const load = os.loadavg()[0] ?? 0;
-    const { level, pageouts, swapFreeBytes } = readMemoryPressure();
+    const { level, pageouts } = readMemoryPressure();
     // A rate needs two polls: the lifetime counter is only logged.
     const pageoutRate = await readPageoutRate();
-    const blockers = hostBlockers({ load1: load, bar, level, swapFreeBytes, pageoutRate });
-    const swapGb = swapFreeBytes === null ? "n/a" : (swapFreeBytes / 1024 ** 3).toFixed(1);
+    const blockers = hostBlockers({ load1: load, bar, level, pageoutRate });
     const rate = pageoutRate === null ? "n/a" : pageoutRate.toFixed(0);
     const detail =
-      `load1 ${load.toFixed(1)}, pressure ${String(level)}, swap free ${swapGb} GB, ` +
+      `load1 ${load.toFixed(1)}, pressure ${String(level)}, ` +
       `pageouts ${String(pageouts)} (${rate}/s)`;
     if (blockers.length === 0) {
       process.stdout.write(

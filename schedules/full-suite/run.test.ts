@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import { homedir } from "node:os";
 import { test } from "node:test";
 
+import { isHostQuiet } from "../../bin/host-pressure.js";
 import type { LedgerRecord } from "../../bin/test-ledger-lib.js";
 import {
   ENVIRONMENT_CLUSTER_FILES,
@@ -30,7 +31,6 @@ import {
   firstErrorLine,
   firstErrorLines,
   isEnvironmentFailure,
-  isHostQuiet,
   issuePath,
   lastTestedCommit,
   narrowBisect,
