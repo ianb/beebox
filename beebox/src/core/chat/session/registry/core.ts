@@ -48,6 +48,8 @@ export class ChatSessionRegistry extends EventEmitter {
   private readonly cleanupIntervalMs: number;
   private readonly buildSessionOptions: (sessionId: string | null) => ChatSessionOptions;
   private readonly backend: ChatBackend;
+  /** Aborted by shutdown(); a prewarm still probing when it fires spawns nothing. */
+  private readonly lifetime = new AbortController();
   private cleanupTimer: NodeJS.Timeout | null = null;
   /** Deadline clock (never BBX_TIME-frozen); injectable for tests. */
   private readonly now: () => number;
@@ -121,11 +123,11 @@ export class ChatSessionRegistry extends EventEmitter {
   async prewarm(): Promise<void> {
     if (this.maintenance.paused) return; this.prewarmRequested = true;
     this.lastUse = this.now();
-    await prewarmBackend({ boxRoot: this.boxRoot, backend: this.backend, baseOptions: this.buildSessionOptions(null) });
+    await prewarmBackend({ boxRoot: this.boxRoot, backend: this.backend, baseOptions: this.buildSessionOptions(null), signal: this.lifetime.signal });
     this.closeWarmIfPaused();
   }
 
-  private closeWarmIfPaused(): void { if (this.maintenance.paused) this.backend.closeWarm?.(); }
+  private closeWarmIfPaused(): void { if (this.maintenance.paused) void this.backend.closeWarm?.(); } // never rejects (ChatBackend.closeWarm)
 
   /**
    * Accept a client-coined chat id so the chat becomes addressable before its
@@ -144,7 +146,7 @@ export class ChatSessionRegistry extends EventEmitter {
       boxRoot: this.boxRoot,
       store: this.reservations,
       backend: this.backend,
-      baseOptions: this.buildSessionOptions(null),
+      baseOptions: this.buildSessionOptions(null), signal: this.lifetime.signal,
       ...opts,
     });
   }
@@ -469,12 +471,13 @@ export class ChatSessionRegistry extends EventEmitter {
     // a Claude subprocess around the clock. The next accessor re-warms it.
     if (this.backend.closeWarm !== undefined && this.now() - this.lastUse > this.idleTimeoutMs) {
       if (this.backend.hasWarm?.() === true) log("sweep", "Reaping idle warm slot");
-      this.backend.closeWarm();
+      void this.backend.closeWarm(); // never rejects (ChatBackend.closeWarm); the sweep does not wait on it
     }
   }
 
-  /** Preserve entries/queued input while closing idle SDK runs for maintenance. */
-  quiesceForMaintenance(): void { this.maintenance.paused = true; this.stopCleanup(); this.backend.closeWarm?.();
+  /** Preserve entries/queued input while closing idle SDK runs for maintenance.
+   *  closeWarm never rejects (see ChatBackend.closeWarm); quiescing does not wait on it. */
+  quiesceForMaintenance(): void { this.maintenance.paused = true; this.stopCleanup(); void this.backend.closeWarm?.();
     for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.pauseForMaintenance(); }
 
   resumeAfterMaintenance(): void { this.maintenance.paused = false; for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.resumeAfterMaintenance(); this.startCleanup(); }
@@ -482,8 +485,8 @@ export class ChatSessionRegistry extends EventEmitter {
   /** Tear down all entries AND the backend's warm slot (a subprocess too).
    *  Call on server shutdown. */
   async shutdown(): Promise<void> {
-    this.stopCleanup();
-    this.backend.closeWarm?.();
+    // Waits for an in-flight warm-up to abort, so none outlives the server.
+    this.lifetime.abort(); this.stopCleanup(); await this.backend.closeWarm?.();
     const sessions = [...this.entries.values()].map((entry) => entry.session).concat([...this.pending]);
     this.entries.clear();
     this.pending.clear();
