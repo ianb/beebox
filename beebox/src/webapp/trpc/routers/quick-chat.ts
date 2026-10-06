@@ -1,50 +1,33 @@
-import { mkdir, readFile } from "node:fs/promises";
-import * as path from "node:path";
+import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../procedures.js";
 import type { TrpcContext } from "../context.js";
 import { loadRoutingCandidates, boundRoutingContexts, RoutingCatalogError } from "../../../core/chat/routing/catalog.js";
-import { routingCandidateSchema, selectRoutingDestination } from "../../../core/chat/routing/policy.js";
+import { selectRoutingDestination } from "../../../core/chat/routing/policy.js";
+import { legacyQuickChatRecordSchema, legacyReceiptSchema, type LegacyQuickChatRecord } from "../../../core/chat/routing/quick-chat-record.js";
+import { closedRecordPath, withQuickChatLock } from "../../../core/chat/routing/quick-chat-store.js";
 import { createJevService, serializeJevRequest } from "../../../services/jev.js";
 import { JevError } from "../../../services/jev-wire.js";
 import { getOpenRouterKey } from "../../../core/openrouter.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { errnoCode, toError } from "../../../shared/error-guards.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
-import { withFileLock } from "../../../lib/file-lock.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 import { loadLandmarkSummaries } from "../../../core/landmark/summaries.js";
 import { loadAgentEngine } from "../../../core/box/config.js";
 import { seedFeaturesForNewChat } from "../../../core/landmark/features.js";
 
-const receiptSchema = z.object({ sessionId: z.string().optional(), turnId: z.string().optional(), queued: z.boolean().optional() });
-const recordSchema = z.object({
-  id: z.string().uuid(), message: z.string(), createdAt: z.string(),
-  sourceId: z.string().uuid().optional(),
-  candidates: z.array(routingCandidateSchema), selected: routingCandidateSchema,
-  probabilities: z.record(z.string(), z.number()), model: z.string(), confidence: z.number(),
-  preferenceApplied: z.boolean(),
-  delivery: z.object({ session: z.string(), exactSession: z.boolean(), contextDir: z.string(), engine: z.enum(["claude", "codex"]) }).nullable(),
-  receipt: receiptSchema.optional(),
-});
-export type QuickChatRecord = z.infer<typeof recordSchema>;
+type QuickChatRecord = LegacyQuickChatRecord;
 const prepareSchema = z.object({ id: z.string().uuid(), message: z.string().trim().min(1).max(12000), sourceId: z.string().uuid().optional(), candidateId: z.string().optional() });
 
-function recordPath(boxRoot: string, id: string): string {
-  return path.join(boxRoot, ".beebox", "quick-chat", `${id}.json`);
-}
 async function readRecord(boxRoot: string, id: string): Promise<QuickChatRecord | null> {
-  try { return recordSchema.parse(JSON.parse(await readFile(recordPath(boxRoot, id), "utf8"))); }
+  try { return legacyQuickChatRecordSchema.parse(JSON.parse(await readFile(closedRecordPath(boxRoot, id), "utf8"))); }
   catch (error) { if (errnoCode(error) === "ENOENT") return null; throw error; }
 }
 async function saveRecord(boxRoot: string, record: QuickChatRecord): Promise<void> {
-  await writeFileAtomic(recordPath(boxRoot, record.id), { content: JSON.stringify(record), mode: 0o600 });
-}
-async function locked<T>({ boxRoot, id }: { boxRoot: string; id: string }, run: () => Promise<T>): Promise<T> {
-  await mkdir(path.dirname(recordPath(boxRoot, id)), { recursive: true });
-  return withFileLock({ lockPath: `${recordPath(boxRoot, id)}.lock`, metadata: { purpose: "quick-chat" }, waitMs: 35000 }, run);
+  await writeFileAtomic(closedRecordPath(boxRoot, record.id), { content: JSON.stringify(record), mode: 0o600 });
 }
 async function reserve(ctx: TrpcContext, record: QuickChatRecord): Promise<void> {
   const target = record.selected.target;
@@ -81,7 +64,7 @@ function routingFailure(error: unknown): never {
 }
 
 export const quickChatRouter = router({
-  prepare: authedProcedure.input(prepareSchema).mutation(async ({ ctx, input }) => locked({ boxRoot: ctx.boxRoot, id: input.id }, async () => {
+  prepare: authedProcedure.input(prepareSchema).mutation(async ({ ctx, input }) => withQuickChatLock({ boxRoot: ctx.boxRoot, id: input.id }, async () => {
     const previous = await readRecord(ctx.boxRoot, input.id);
     if (previous) {
       if (previous.message !== input.message || previous.sourceId !== input.sourceId || (input.candidateId !== undefined && previous.selected.id !== input.candidateId)) throw new TRPCError({ code: "CONFLICT", message: "This send already has different text. Start another message." });
@@ -104,7 +87,7 @@ export const quickChatRouter = router({
     await saveRecord(ctx.boxRoot, record);
     return record;
   }).catch(routingFailure)),
-  receipt: authedProcedure.input(z.object({ id: z.string().uuid(), receipt: receiptSchema })).mutation(async ({ ctx, input }) => locked({ boxRoot: ctx.boxRoot, id: input.id }, async () => {
+  receipt: authedProcedure.input(z.object({ id: z.string().uuid(), receipt: legacyReceiptSchema })).mutation(async ({ ctx, input }) => withQuickChatLock({ boxRoot: ctx.boxRoot, id: input.id }, async () => {
     const record = await readRecord(ctx.boxRoot, input.id);
     if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "Routing result is unavailable" });
     if (!record.delivery) throw new TRPCError({ code: "BAD_REQUEST", message: "This routing result has no delivery" });

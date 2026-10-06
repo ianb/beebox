@@ -54,3 +54,31 @@ export function selectRoutingDestination(args: {
     && first.probability - existing.probability <= existingMargin ? existing : first;
   return { selected: preferred.candidate, ranked, preferenceApplied: preferred !== first };
 }
+
+/** Provisional: posts the clear samples and asks on the debatable ones. Calibrate from stored records. */
+export const QUICK_CHAT_POST_FLOOR = 0.9;
+
+/** Where a candidate lands: its landmark, or the root when it has none. */
+function routingPlace(candidate: RoutingCandidate): string | null {
+  return candidate.landmark?.path ?? null;
+}
+
+/**
+ * Post when the judged probability of `selected`'s place reaches the floor;
+ * otherwise ask the person. A place's mass sums every candidate in it, so a
+ * split between a landmark's chat and a new chat in that landmark is not doubt.
+ */
+export function routingDisposition(args: {
+  selected: RoutingCandidate;
+  ranked: RankedRoutingCandidate[];
+  postFloor?: number;
+}): "post" | "ask" {
+  const postFloor = args.postFloor ?? QUICK_CHAT_POST_FLOOR;
+  invariant(Number.isFinite(postFloor) && postFloor >= 0 && postFloor <= 1, "Routing post floor must be between zero and one");
+  const place = routingPlace(args.selected);
+  const mass = args.ranked
+    .filter((entry) => routingPlace(entry.candidate) === place)
+    .reduce((sum, entry) => sum + entry.probability, 0);
+  // Summation error must not move a place that sits exactly on the floor.
+  return mass + 1e-9 >= postFloor ? "post" : "ask";
+}
