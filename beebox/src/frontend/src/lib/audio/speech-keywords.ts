@@ -26,7 +26,6 @@ const sendHqPattern = KeywordPattern.compile(`
 // is often heard as "set a closed".
 const sendClosePattern = KeywordPattern.compile(`
   over and out
-  finished talking
   send and (close | stop | finish | finished | done | sign off)
   send and close (the)? (mic | microphone | message)
   set a closed (the)? (mic | microphone | message)
@@ -164,9 +163,8 @@ export function detectKeyword(
     return match;
   };
 
-  // Checked first. Its patterns only match "send and …", "over and out", and
-  // "finished talking", which no other keyword contains, so leading steals
-  // nothing — and it has to win over the overlaps: plain `send` ("send and
+  // Checked first. Its patterns only match "send and …" and "over and out",
+  // which no other keyword contains, so leading steals nothing — and it has to win over the overlaps: plain `send` ("send and
   // finish the message" → also `finish … message`) and micOff ("send and stop
   // / close the mic" → also `stop the mic` / `close the mic`). Those should
   // send-and-close, not just send / just mute.

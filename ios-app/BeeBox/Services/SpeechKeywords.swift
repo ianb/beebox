@@ -127,7 +127,6 @@ enum SpeechKeywords {
 
     private static let sendClosePatterns = [
         ["over", "and", "out"],
-        ["finished", "talking"],
         ["send", "and", "close"],
         ["send", "and", "stop"],
         ["send", "and", "finish"],

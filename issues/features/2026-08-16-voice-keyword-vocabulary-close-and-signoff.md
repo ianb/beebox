@@ -106,8 +106,8 @@ logs (the untagged phrase appearing as plain words, per the pattern in
   language model restores it from poor audio, which "send and close" does not
   get.
 - **Kept and added aliases:** the "send and …" family stays, with "send and
-  finished"; "finished talking" is new. It can fire on "I finished talking to
-  the contractor": a final transcript matches anywhere.
+  finished". "Finished talking" was tried and dropped: a final transcript
+  matches anywhere, so "I'm not finished talking" would send and close.
 - **Mic off adds:** "close (the) mic/microphone", "mute (the)
   mic/microphone", "pause listening". The hint stays "microphone off".
 - Both matchers now take the longest phrase at a position, so "send and close

@@ -63,9 +63,6 @@ gets its own action and tag. The older "send and close" family still works:
 detectKeyword("over and out")?.action
 => sendClose
 
-detectKeyword("finished talking")?.action
-=> sendClose
-
 detectKeyword("send and close")?.action
 => sendClose
 
