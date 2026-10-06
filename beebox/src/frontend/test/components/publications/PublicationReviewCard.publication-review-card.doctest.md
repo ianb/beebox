@@ -24,6 +24,7 @@ const site = {
   requested: null,
   approved: { tier: "public", status: "disabled", slug: "notes", expiresAt: null },
   activeReleaseId: "a".repeat(64),
+  activeFiles: [],
   remoteStatus: { status: "available" },
   pending: null,
   connection: { name: "publishing", status: "active", capabilities: { accessLive: "verified" } },
@@ -110,6 +111,7 @@ const alreadyApprovedSite = {
   ...preparedSite,
   approved: { tier: "secret", status: "disabled", expiresAt: null },
   activeReleaseId: "b".repeat(64),
+  activeFiles: [],
   pending: { ...preparedSite.pending, releaseId: "b".repeat(64), requestedScope: { ...preparedSite.pending.requestedScope } },
 };
 const alreadyApprovedMarkup = renderToStaticMarkup(React.createElement(PublicationReviewCard, {

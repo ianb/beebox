@@ -16,7 +16,7 @@ import { createPublicationCardTemplate } from "../../src/schemas/publication.js"
 import { defaultManagedPublicationRuntime } from "../../src/services/managed-publication-runtime/core.js";
 import { prepareManagedPublication, readCandidate } from "../../src/publish/managed-publications/core.js";
 import { approveManagedPublication, disableManagedPublication, enableManagedPublication } from "../../src/publish/managed-publication-actions.js";
-import { listManagedPublications, previewManagedPublicationFile } from "../../src/publish/managed-publication-queries.js";
+import { listManagedPublications, readManagedPublicationReleaseFile } from "../../src/publish/managed-publication-queries.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { publicationsRouter } from "../../src/webapp/trpc/routers/publications.js";
 import type { CloudflarePublishConnectionSummary } from "../../src/core/secrets/cloudflare-publish.js";
@@ -300,15 +300,52 @@ JSON.stringify({ status: afterDisableManifest.status, activeUnchanged: afterDisa
 => {"status":"disabled","activeUnchanged":true,"candidateExists":true}
 ```
 
-Member preview reads only inventory-listed text and rejects traversal paths.
+Release file reads cover the active release and the pending candidate only.
+They read inventory-listed text and reject traversal paths, unknown paths,
+retired releases, and another box's publication.
 
 ```ts continue
-const preview = await previewManagedPublicationFile({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: afterDisable.revision, path: "index.html" }, runtime);
-const traversalRejected = await Promise.resolve()
-  .then(() => previewManagedPublicationFile({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: afterDisable.revision, path: "../pending.json" }, runtime))
-  .then(() => false, () => true);
-JSON.stringify({ kind: preview.kind, textMatches: preview.kind === "text" && preview.text === source, traversalRejected })
-=> {"kind":"text","textMatches":true,"traversalRejected":true}
+const scopedRuntime = { ...runtime, getBinding: async (query) => (query.boxSlug === "box-a" && query.pubId === pubId ? binding : null) };
+const read = (overrides) => readManagedPublicationReleaseFile({ boxRoot, boxSlug: "box-a", pubId, releaseId: afterDisable.releaseId, path: "index.html", ...overrides }, scopedRuntime);
+const rejection = (overrides) => read(overrides).then(() => "accepted", (error) => error.message);
+const pendingFile = await read({});
+const activeFile = await read({ releaseId: refreshed.releaseId });
+JSON.stringify({
+  pending: pendingFile.kind === "text" && pendingFile.text === source,
+  active: activeFile.kind === "text" && activeFile.text !== source && activeFile.text.length > 0,
+  previousDiffers: candidate.releaseId !== refreshed.releaseId && candidate.releaseId !== afterDisable.releaseId,
+  previous: await rejection({ releaseId: candidate.releaseId }),
+  unknown: await rejection({ releaseId: "f".repeat(64) }),
+  traversal: await rejection({ path: "../pending.json" }),
+  missing: await rejection({ path: "missing.html" }),
+  otherBox: await rejection({ boxSlug: "box-b" }),
+}, null, 1)
+=> {
+ "pending": true,
+ "active": true,
+ "previousDiffers": true,
+ "previous": "That release is neither the active release nor the pending candidate.",
+ "unknown": "That release is neither the active release nor the pending candidate.",
+ "traversal": "Invalid publication file path.",
+ "missing": "That path is not in the release inventory.",
+ "otherBox": "Publication is not registered on this server."
+}
+```
+
+The box agent may read release files through `releaseFile`, but it still
+cannot approve, enable, or disable.
+
+```ts continue
+const agent = publicationCaller("agent").publications;
+const agentRead = await agent.releaseFile({ pubId, releaseId: afterDisable.releaseId, path: "index.html" });
+const refused = (call) => Promise.resolve().then(call).then(() => "accepted", (error) => error.code);
+JSON.stringify({
+  read: agentRead.kind,
+  approve: await refused(() => agent.approve({ pubId, expectedRevision: afterDisable.revision })),
+  enable: await refused(() => agent.enable({ pubId })),
+  disable: await refused(() => agent.disable({ pubId })),
+})
+=> {"read":"text","approve":"FORBIDDEN","enable":"FORBIDDEN","disable":"FORBIDDEN"}
 ```
 
 A failed remote write never reports a successful disable.

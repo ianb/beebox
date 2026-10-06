@@ -13,7 +13,7 @@ import {
   enableManagedPublication,
   revokeManagedPublication,
 } from "../../../publish/managed-publication-actions.js";
-import { listManagedPublications, previewManagedPublicationFile } from "../../../publish/managed-publication-queries.js";
+import { listManagedPublications, readManagedPublicationReleaseFile } from "../../../publish/managed-publication-queries.js";
 import { configureManagedPublicationSharedHost } from "../../../publish/managed-publication-shared-host.js";
 import { cardBrowseUrl } from "../../../shared/card-browse-url.js";
 import { authenticatedOwnerProcedure, authedProcedure, router } from "../procedures.js";
@@ -92,11 +92,12 @@ export const publicationsRouter = router({
       } catch (error) { publicationError(error); }
     }),
 
-  previewFile: publicationHumanProcedure
-    .input(z.object({ pubId: pubIdInput, expectedRevision: z.string().regex(/^[\da-f]{64}$/), path: z.string().min(1).max(1024) }).strict())
+  /** Agent-readable debugging view of the active release or pending candidate; no write power. */
+  releaseFile: publicationReadProcedure
+    .input(z.object({ pubId: pubIdInput, releaseId: z.string().regex(/^[\da-f]{64}$/), path: z.string().min(1).max(1024) }).strict())
     .query(async ({ ctx, input }) => {
       try {
-        return await previewManagedPublicationFile({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, ...input }, ctx.services.managedPublicationRuntime);
+        return await readManagedPublicationReleaseFile({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, ...input }, ctx.services.managedPublicationRuntime);
       } catch (error) { publicationError(error); }
     }),
 

@@ -1,5 +1,7 @@
 /** Agent-facing commands for box-managed publications. */
 
+import path from "node:path";
+
 import { Command } from "commander";
 import type { inferRouterOutputs } from "@trpc/server";
 
@@ -138,8 +140,71 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
   return lines;
 }
 
+class PublicationCardNotPreparedError extends Error {
+  constructor(cardPath: string) {
+    super(`No prepared publication has card ${cardPath}. Run \`bbx pub prepare ${cardPath}\` first, or check that it is a <Name>.publication.card.`);
+    this.name = "PublicationCardNotPreparedError";
+  }
+}
+
+/** Find the publication whose single card is `cardPath` (box-relative; `./` and redundant segments are ignored). */
+export function publicationForCard(sites: PublicationSite[], cardPath: string): PublicationSite {
+  const normalized = path.posix.normalize(cardPath.replaceAll("\\", "/")).replace(/^(\.\/)+/, "");
+  const site = sites.find((item) => item.cardPath === normalized);
+  if (site === undefined) throw new PublicationCardNotPreparedError(normalized);
+  return site;
+}
+
+export function publicationFilesLines(site: PublicationSite): string[] {
+  const lines = site.activeReleaseId === null
+    ? ["active release: none"]
+    : [`active release ${site.activeReleaseId}:`, ...site.activeFiles.map((file) => `  ${file.path}  ${file.bytes} bytes`)];
+  if (site.pending !== null && site.pending.releaseId !== site.activeReleaseId) {
+    lines.push(`pending release ${site.pending.releaseId}:`);
+    for (const file of site.pending.preview) lines.push(`  ${file.path}  ${file.bytes} bytes`);
+  }
+  return lines;
+}
+
+const filesCommand = new Command("files")
+  .description("List the files of a publication's active release and pending candidate")
+  .argument("<card-path>", "Box-relative path of the publication card")
+  .action(async (card: string) => {
+    const client = boxClient();
+    if (!client.ok) printBoxClientError(client.error.message);
+    try {
+      const { sites } = await client.value.publications.list.query();
+      for (const line of publicationFilesLines(publicationForCard(sites, card))) console.log(line);
+    } catch (error) {
+      printBoxClientError(errorMessage(error));
+    }
+  });
+
+const catCommand = new Command("cat")
+  .description("Print one text file from a publication's active release (or its pending candidate)")
+  .argument("<card-path>", "Box-relative path of the publication card")
+  .argument("<file>", "Path of the file inside the release")
+  .option("--pending", "Read from the pending candidate instead of the active release")
+  .action(async (...actionArgs: [card: string, file: string, options: { pending?: boolean }]) => {
+    const [card, file, options] = actionArgs;
+    const client = boxClient();
+    if (!client.ok) printBoxClientError(client.error.message);
+    try {
+      const { sites } = await client.value.publications.list.query();
+      const site = publicationForCard(sites, card);
+      const releaseId = options.pending === true ? site.pending?.releaseId ?? null : site.activeReleaseId;
+      if (releaseId === null) printBoxClientError(options.pending === true ? "This publication has no pending candidate." : "This publication has no active release.");
+      const result = await client.value.publications.releaseFile.query({ pubId: site.pubId, releaseId, path: file });
+      if (result.kind === "binary") printBoxClientError(`${file} is a binary file (${result.bytes} bytes, ${result.contentType}); not printed.`);
+      if (result.kind === "too-large") printBoxClientError(`${file} is too large to print (${result.bytes} bytes; limit ${result.limit}).`);
+      process.stdout.write(result.text);
+    } catch (error) {
+      printBoxClientError(errorMessage(error));
+    }
+  });
+
 const idCommand = new Command("id")
-  .description("Generate a cryptographically random publication id for publication.json")
+  .description("Generate a cryptographically random publication id for a publication card")
   .action(() => console.log(generatePubId()));
 
 const statusCommand = new Command("status")
@@ -180,3 +245,5 @@ const prepareCommand = new Command("prepare")
 export const pubManagedPrepareCommand = prepareCommand;
 export const pubManagedIdCommand = idCommand;
 export const pubManagedStatusCommand = statusCommand;
+export const pubManagedFilesCommand = filesCommand;
+export const pubManagedCatCommand = catCommand;
