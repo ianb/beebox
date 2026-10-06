@@ -125,12 +125,20 @@ export interface ViewFile {
 
 export type ViewMode = "page" | "chat";
 
+/**
+ * How the card surface frames a view. `"inset"` (the default) pads the view
+ * like the built-in card renderers; `"full-bleed"` runs it to the card's edges
+ * for maps, wide tables, and image grids.
+ */
+export type ViewLayout = "inset" | "full-bleed";
+
 export interface ViewMeta {
   name: string;
   slug: string;
   description: string;
   dependencies: string[];
   modes: ViewMode[];
+  layout: ViewLayout;
   /** Card types this view renders — bound on card pages, peeks, and view: links. */
   rendersCardTypes: string[];
   lastModified: string;

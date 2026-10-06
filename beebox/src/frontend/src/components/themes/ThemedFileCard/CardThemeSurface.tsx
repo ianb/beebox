@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme/core";
 import { controlAddress } from "@shared/ui-scan/control-address";
 import type { FileViewMode } from "../../file-view-types";
@@ -8,9 +8,26 @@ export interface CardThemeSurfaceProps {
   title: string;
   mode: Exclude<FileViewMode, "embed">;
   children: ReactNode;
+  /** The back face; its controls can turn the card over with {@link useShowCardFront}. */
   properties: ReactNode;
   actions?: ReactNode;
   problem?: ReactNode;
+}
+
+const ShowFrontContext = createContext<(() => void) | null>(null);
+
+class ShowCardFrontContextError extends Error {
+  constructor() {
+    super("useShowCardFront must be used inside a CardThemeSurface's properties");
+    this.name = "ShowCardFrontContextError";
+  }
+}
+
+/** Turn the enclosing card from its properties back to its front, as the toggle does. */
+export function useShowCardFront(): () => void {
+  const showFront = useContext(ShowFrontContext);
+  if (showFront === null) throw new ShowCardFrontContextError();
+  return showFront;
 }
 
 /** Front stays mounted while turned over, retaining authored view state. */
@@ -31,12 +48,15 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
   useEffect(() => {
     front.current?.toggleAttribute("inert", back);
   }, [back]);
-  function flip() {
+  const flip = useCallback(() => {
     if (turn !== null) return;
     toggle.current?.focus();
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) setBack(!back);
     else setTurn("out");
-  }
+  }, [turn, back]);
+  const showFront = useCallback(() => {
+    if (back) flip();
+  }, [back, flip]);
   return (
     <article
       className="bbx-card-theme bbx-card-surface"
@@ -82,7 +102,7 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
         {children}
       </div>
       <section id={backId} className="bbx-card-back" hidden={!back} aria-label="Card properties">
-        {back ? properties : null}
+        {back ? <ShowFrontContext.Provider value={showFront}>{properties}</ShowFrontContext.Provider> : null}
       </section>
     </article>
   );
