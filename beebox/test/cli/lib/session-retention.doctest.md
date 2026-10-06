@@ -16,29 +16,7 @@ import {
 } from "../../../src/cli/lib/session.js";
 import { writeBigSessionLog } from "./session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { spawn } from "node:child_process";
-import { join } from "node:path";
-
-const PACKAGE_ROOT = join(import.meta.dirname, "../../..");
-const CHILD_SCRIPT = join(PACKAGE_ROOT, "test/helpers/parse-session-log-child.ts");
-
-// Parse in a child process under a hard heap cap. The whole point is that the
-// ceiling is enforced by V8, not by an in-process assertion a parse could pass
-// while still allocating the world.
-function parseUnderHeapCap(logPath, slice, heapMb) {
-  return new Promise((resolve) => {
-    const child = spawn(
-      process.execPath,
-      [`--max-old-space-size=${heapMb}`, "--import", "tsx", CHILD_SCRIPT, logPath, JSON.stringify(slice)],
-      { cwd: PACKAGE_ROOT, stdio: ["ignore", "pipe", "pipe"] },
-    );
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (c) => { stdout += String(c); });
-    child.stderr.on("data", (c) => { stderr += String(c); });
-    child.once("exit", (code) => resolve({ code, stdout, stderr }));
-  });
-}
+import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
 ```
 
 ## A big transcript, parsed under a 64 MB heap cap
@@ -53,19 +31,14 @@ const box = await makeTmpBox();
 const logPath = box.path("big.jsonl");
 await writeBigSessionLog({ logPath, lines: 2400, payloadBytes: 30_000 });
 
-const run = await parseUnderHeapCap(logPath, { mode: "tail", tail: 200, minRealUserMessages: 2 }, 64);
-const out = JSON.parse(run.stdout);
-print(`exit: ${run.code}`);
+const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 64 });
 print(`entries: ${out.entries}`);
 print(`total: ${out.total}`);
 print(`hasMore: ${out.hasMore}`);
-print(`heap under cap: ${out.heapUsedMb < 64}`);
 =>
-exit: 0
 entries: 200
 total: 1800
 hasMore: true
-heap under cap: true
 ```
 
 Before the bound, this same child (parsing the whole file, then slicing a tail
@@ -79,14 +52,11 @@ A page request of the same transcript is bounded the same way — retention is
 the window, not the file:
 
 ```ts continue
-const paged = await parseUnderHeapCap(logPath, { mode: "page", offset: 10, limit: 40 }, 64);
-const pageOut = JSON.parse(paged.stdout);
-print(`exit: ${paged.code}`);
+const pageOut = await parseUnderHeapCap({ logPath, slice: { mode: "page", offset: 10, limit: 40 }, heapMb: 64 });
 print(`entries: ${pageOut.entries}`);
 print(`total: ${pageOut.total}`);
 print(`hasMore: ${pageOut.hasMore}`);
 =>
-exit: 0
 entries: 40
 total: 1800
 hasMore: true

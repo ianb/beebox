@@ -1,6 +1,6 @@
 ---
 title: "file-watcher doctest expects a box listing without _config/feedback and src/publications"
-workstream: unattached
+workstream: test-suite-health
 area: beebox
 filed-by: agent
 discovered-by: agent
