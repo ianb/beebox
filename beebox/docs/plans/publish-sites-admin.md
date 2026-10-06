@@ -7,6 +7,8 @@ issues:
 ---
 # Static site publishing with admin setup and human approval
 
+> **Superseded shape:** [publication-card-home.md](publication-card-home.md) replaces the `src/publications/<name>/` source folder and the reference card described here. A publication is now one `publication` card with its files in the card's attach folder.
+
 When an agent prepares a small site from box data, the boxholder should be able to enable or disable that publication in the app, without using a CLI. Agents may update the published content, but every audience or destination change needs fresh approval from a signed-in member of that box.
 
 **Issue relationship:**

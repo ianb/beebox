@@ -5,7 +5,7 @@ read-when: Writing a card body that needs more than plain prose — a line break
 # Markdown in card bodies
 
 A card body is GitHub Flavored Markdown (GFM) with the differences below. The
-same rules apply to chat messages and to Markdown pages a publication renders.
+same rules apply to chat messages and to Markdown pages that a publication renders from its `static/` folder.
 The box's own tags (`{% quote %}`, `{% source %}`, `{% todo %}`, and the rest)
 are documented with their features; this page covers the Markdown around them.
 

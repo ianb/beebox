@@ -1,6 +1,6 @@
 # Publication card review controls
 
-The reference card renders current publication state from the server-returned
+The publication card renders current publication state from the server-returned
 site record. The card's `pubId` only selects that record; actions use the
 publication id and current candidate revision supplied by the server.
 

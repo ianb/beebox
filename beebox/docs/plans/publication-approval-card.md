@@ -6,6 +6,8 @@ issues: []
 ---
 # Publication approval cards
 
+> **Superseded shape:** [publication-card-home.md](publication-card-home.md) replaces the `src/publications/<name>/` source folder and the reference card described here. A publication is now one `publication` card with its files in the card's attach folder.
+
 When an agent prepares a publication, the boxholder should open that publication's card to review its candidate and control serving. The card is a stable reference to the publication; server-owned binding and serving state remain the authority.
 
 **Issues addressed:** none; no matching open issue was found.
