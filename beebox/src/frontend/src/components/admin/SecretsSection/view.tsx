@@ -32,7 +32,7 @@ import { MachineSecretsView } from "./machine";
 import { AdminSectionCard } from "../AdminSectionCard";
 
 const DESCRIPTION =
-  "API keys live in one store outside every box, and each box holds a grant to the ones it may use. Values are never shown here — saving one replaces it.";
+  "API keys live in one store outside every box, and each box holds a grant to the ones it may use. Stored values stay hidden unless you choose Show.";
 
 export function SecretsSection() {
   const [machineWide, setMachineWide] = useState(false);
