@@ -1,11 +1,14 @@
 ---
 title: "`bbx rm` of an upload-batch card reportedly leaves its `.attach/` scope behind"
-workstream: unattached
+workstream: bulk-upload-stranding
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-bulk-upload-stranding — end-to-end upload check on test1
+resolution: implemented
 ---
+
+Closed: fixed in 899656690 (batch card named after the batch slug so its `.attach` scope moves with `bbx rm`); see Resolution below.
 
 During an end-to-end bulk-upload check on test1, the box's chat agent filed a
 test batch by trashing its card with `bbx rm`. The agent then reported that the

@@ -166,7 +166,7 @@ fixed this call site yet — the whole doctest now fails before sending a single
 message, so the weekly suite is not exercising real-SDK queue-draining
 behavior at all (this is the doctest that specifically proves the "second
 message never processed" class of user report; see the closed
-[chat-queue-real hard-fails on lapsed login](../closed/bugs/2026-09-08-chat-queue-real-hard-fails-on-lapsed-claude-login.md)
+[chat-queue-real hard-fails on lapsed login](2026-09-08-chat-queue-real-hard-fails-on-lapsed-claude-login.md)
 issue for its other failure modes).
 
 Given the "not a supported shape" resolution above, the fix here is the same

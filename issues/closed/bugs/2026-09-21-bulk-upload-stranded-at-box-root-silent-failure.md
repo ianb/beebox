@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
+resolution: implemented
 ---
+
+Closed: fixed in ff50dcb0e (landing dir under `_content/`, failure notification, reconciled failed count); see Resolution below.
 
 A recurring three-part failure hit one production box's bulk-photo-upload path
 three times in one week (photo counts: 12, 6, and 4; each a live, dated event
