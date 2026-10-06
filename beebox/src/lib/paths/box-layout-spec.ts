@@ -233,10 +233,12 @@ export const BOX_LAYOUT = [
     description:
       "Staging area for content exported out of the box: the public-site exporter (`site/box-export.ts` " +
       "in the monorepo) reads a staged card graph from `_publish/public-site/`. Server-managed publications " +
-      "do not use it; their sources live in `src/publications/<name>/`.",
+      "do not use it: each is a `publication` card whose source files live in the card's attach folder " +
+      "(`<Name>.attach/static/` or `<Name>.attach/project/`).",
     agentDescription:
-      "Staging area for exported content (`_publish/public-site/`). Publications you prepare live in " +
-      "`src/publications/<name>/`, not here.",
+      "Staging area for exported content (`_publish/public-site/`). Publications you prepare are " +
+      "`publication` cards with their source files in the card's attach folder " +
+      "(`<Name>.attach/static/` or `<Name>.attach/project/`), not here.",
   },
 
   // _tmp/ — scratch.
@@ -304,12 +306,6 @@ export const BOX_LAYOUT = [
     path: "src/tricks/lib",
     area: "tricks",
     description: "Shared helpers used by `src/tricks/scripts/`.",
-  },
-  {
-    path: "src/publications",
-    area: "publishing",
-    description:
-      "Agent-authored static site files and site-local frontend projects. Read `node_modules/beebox/box-docs/publishing.md` before publishing; shared notes stay private here.",
   },
 
   // .claude/ — agent configuration

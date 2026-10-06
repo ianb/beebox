@@ -85,6 +85,9 @@ publicationPreparedLines(candidate, site()).at(-1)
 
 publicationPreparedLines(candidate, site({ activeReleaseId: null, approved: null, pending: { ...candidate, requestedScope: candidate.requestedScope } })).at(-1)
 =>   waiting for a signed-in box member to approve and enable this release.
+
+publicationPreparedLines(candidate, site({ remoteStatus: { status: "unavailable", reason: "cloudflare-unavailable" } })).at(-1)
+=>   serving state is unknown; check the publication card _content/publications/abcdefghijklmnopqrstuvwxyz.publication.card before describing it as live or disabled.
 ```
 
 Publication links preserve the tier route, and the approval link uses the

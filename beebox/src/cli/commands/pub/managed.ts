@@ -131,7 +131,7 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
   lines.push(...approvalLinkLines(candidate.approvalUrl));
   for (const file of candidate.preview) lines.push(`    ${file.path}  ${file.bytes} bytes  sha256:${file.sha256.slice(0, 16)}…`);
   if (site?.remoteStatus.status === "unavailable") {
-    lines.push("  serving state is unknown; check the Publications page before describing it as live or disabled.");
+    lines.push(`  serving state is unknown; check the publication card ${candidate.cardPath} before describing it as live or disabled.`);
   } else if (site?.approved?.status === "live" && site.activeReleaseId === candidate.releaseId) {
     lines.push("  content is live under the already approved audience; within-scope updates take effect immediately.");
   } else {
