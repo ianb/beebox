@@ -10,7 +10,7 @@ the web page reads the same answers the phone does.
 import { readFileSync } from "node:fs";
 import {
   boxScreenReducer, boxScreenRows, boxScreenStorageKey, parseStoredBoxScreen, pendingRetry,
-  restoreBoxScreen, rowFace, storedBoxScreen, submission, unsentStatus,
+  restoreBoxScreen, rowFace, storedBoxScreen, submission, submitUnsent, unsentStatus,
 } from "../../../src/pages/box-screen/state.js";
 
 const fixtures = new URL("../../../../../test/mobile-contract/fixtures/quick-chat/", import.meta.url);
@@ -120,6 +120,60 @@ submission(state, OTHER_ID).id
 
 submission(run(state, [{ type: "edit", text: "Call the electrician" }]), OTHER_ID)
 => { id: "99999999-8888-4777-8666-555555555555", message: "Call the electrician" }
+```
+
+## The stored record comes before the request
+
+`submitUnsent` writes `{id, message}` to storage before it starts the request.
+If the tab dies after the server has the thought and before the answer comes
+back, the reload finds the same id and the server answers with the record it
+already has. A record written only after the request started (for example
+from a React effect) leaves a window where a reload sends the text under a
+new id.
+
+```ts
+const calls = [];
+const unsent = { id: ID, message: "Book the vet" };
+const answer = { id: ID, message: "Book the vet", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "uncertain", choices: [] };
+await submitUnsent(unsent, {
+  store: (stored) => calls.push(["store", stored]),
+  request: async (input) => { calls.push(["request", input.id]); return answer; },
+  dispatch: (action) => calls.push(["dispatch", action.type]),
+});
+calls
+=> [
+  ["store", { draft: "Book the vet", unsent: { id: "11111111-2222-4333-8444-555555555555", message: "Book the vet" } }],
+  ["dispatch", "submit-started"],
+  ["request", "11111111-2222-4333-8444-555555555555"],
+  ["dispatch", "submit-answered"],
+]
+```
+
+What the store call wrote is what a reload restores, and a failed request
+leaves that record in place for the retry:
+
+```ts continue
+const reloaded = restoreBoxScreen(parseStoredBoxScreen(JSON.stringify(calls[0][1])));
+pendingRetry(reloaded)
+=> { id: "11111111-2222-4333-8444-555555555555", message: "Book the vet" }
+
+const failed = [];
+const originalConsoleError = console.error;
+console.error = (message) => failed.push(["logged", message]);
+await submitUnsent(unsent, {
+  store: (stored) => failed.push(["store", stored.unsent.id]),
+  request: async () => { failed.push(["request"]); throw new Error("Failed to fetch"); },
+  dispatch: (action) => failed.push(["dispatch", action.type]),
+});
+console.error = originalConsoleError;
+failed
+=> [
+  ["store", "11111111-2222-4333-8444-555555555555"],
+  ["dispatch", "submit-started"],
+  ["request"],
+  ["logged", "[box-screen] quickChat.submit failed"],
+  ["dispatch", "submit-failed"],
+]
 ```
 
 ## Reload with a stored unsent thought

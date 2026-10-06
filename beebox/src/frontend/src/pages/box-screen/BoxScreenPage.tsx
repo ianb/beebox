@@ -28,7 +28,8 @@ import { BoxPageLinks, BoxScreenSection, OtherBoxes, RecentChatList } from "../.
 import { NewThoughtInput } from "../../components/box-screen/NewThoughtInput";
 import {
   boxScreenReducer, boxScreenRows, boxScreenStorageKey, parseStoredBoxScreen, pendingRetry, restoreBoxScreen,
-  storedBoxScreen, submission, unsentStatus, type BoxScreenState, type QuickChatView,
+  storedBoxScreen, submission, submitUnsent, unsentStatus,
+  type BoxScreenAction, type BoxScreenState, type QuickChatView, type StoredBoxScreen,
 } from "./state";
 
 export function BoxScreenPage() {
@@ -45,19 +46,23 @@ function readStored(key: string | null): BoxScreenState {
   return restoreBoxScreen(parseStoredBoxScreen(key === null ? null : localStorage.getItem(key)));
 }
 
+function writeStored(key: string | null, stored: StoredBoxScreen): void {
+  if (key === null) return;
+  try { localStorage.setItem(key, JSON.stringify(stored)); }
+  catch (error) { console.warn("[box-screen] could not store the new-thought draft", error); }
+}
+
 /** Submit, choose, retry, and discard, each folding its answer into the page state. */
-function useQuickChatActions(dispatch: (action: Parameters<typeof boxScreenReducer>[1]) => void) {
+function useQuickChatActions(key: string | null, dispatch: (action: BoxScreenAction) => void) {
   const utils = trpc.useUtils();
   const submit = useCallback(async (unsent: { id: string; message: string }) => {
-    dispatch({ type: "submit-started", unsent });
-    try {
-      dispatch({ type: "submit-answered", view: await trpcClient.quickChat.submit.mutate(unsent) });
-      void utils.quickChat.home.invalidate();
-    } catch (error) {
-      console.error("[box-screen] quickChat.submit failed", error);
-      dispatch({ type: "submit-failed", error: errorMessage(error) });
-    }
-  }, [dispatch, utils]);
+    await submitUnsent(unsent, {
+      store: (stored) => writeStored(key, stored),
+      request: (input) => trpcClient.quickChat.submit.mutate(input),
+      dispatch,
+    });
+    void utils.quickChat.home.invalidate();
+  }, [key, dispatch, utils]);
   const rowAction = useCallback(async (view: QuickChatView, request: () => Promise<QuickChatView>) => {
     dispatch({ type: "row-started", id: view.id });
     try {
@@ -79,16 +84,13 @@ function useQuickChatActions(dispatch: (action: Parameters<typeof boxScreenReduc
 function BoxScreen({ boxSlug }: { boxSlug: string }) {
   const key = storageKey(boxSlug);
   const [state, dispatch] = useReducer(boxScreenReducer, key, readStored);
-  const { submit, rowActions } = useQuickChatActions(dispatch);
+  const { submit, rowActions } = useQuickChatActions(key, dispatch);
   const home = trpc.quickChat.home.useQuery();
   const { boxes } = useBoxes();
   const { boxName } = useBoxName();
 
-  useEffect(() => {
-    if (key === null) return;
-    try { localStorage.setItem(key, JSON.stringify(storedBoxScreen(state))); }
-    catch (error) { console.warn("[box-screen] could not store the new-thought draft", error); }
-  }, [key, state]);
+  // Keeps the draft in storage as it is typed. Send writes its record itself, before the request.
+  useEffect(() => { writeStored(key, storedBoxScreen(state)); }, [key, state]);
 
   // A thought stored by an earlier visit goes out again, once, with its own id.
   const retried = useRef(false);

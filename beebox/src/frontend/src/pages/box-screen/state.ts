@@ -4,8 +4,10 @@
  * browser.
  *
  * A new thought is kept in browser storage as `unsent` — its id and text —
- * from Send until `quickChat.submit` answers. A reload restores it and submits
- * again with the same id, so a lost answer never becomes a second message. The
+ * from Send until `quickChat.submit` answers. The stored record is written
+ * before the request starts (`submitUnsent`), so a tab that dies mid-request
+ * still has the id. A reload restores it and submits again with the same id,
+ * so a lost answer never becomes a second message. The
  * key is the box screen's own; the chat composer's draft is never read or
  * written here, so neither draft can replace the other.
  *
@@ -15,6 +17,7 @@
  */
 
 import { z } from "zod";
+import { errorMessage } from "@shared/error-guards";
 import type { RouterOutput } from "../../lib/trpc/client";
 
 export type QuickChatView = RouterOutput["quickChat"]["submit"];
@@ -97,6 +100,31 @@ export function submission(state: BoxScreenState, freshId: string): Unsent | nul
 /** The unsent thought a restored page submits on its own, before anyone presses Send. */
 export function pendingRetry(state: BoxScreenState): Unsent | null {
   return state.submitting || state.submitError !== null ? null : state.unsent;
+}
+
+/** What a submit touches outside the reducer. */
+export interface SubmitEffects {
+  /** Writes the stored record synchronously. */
+  store: (stored: StoredBoxScreen) => void;
+  request: (unsent: Unsent) => Promise<QuickChatView>;
+  dispatch: (action: BoxScreenAction) => void;
+}
+
+/**
+ * Submit one thought. The `{id, message}` record is in storage before the
+ * request starts: a page that closes after the server has the thought and
+ * before the answer arrives retries with the same id on reload, never a new
+ * one. The stored draft is the message, as `restoreBoxScreen` reads it back.
+ */
+export async function submitUnsent(unsent: Unsent, effects: SubmitEffects): Promise<void> {
+  effects.store({ draft: unsent.message, unsent });
+  effects.dispatch({ type: "submit-started", unsent });
+  try {
+    effects.dispatch({ type: "submit-answered", view: await effects.request(unsent) });
+  } catch (error) {
+    console.error("[box-screen] quickChat.submit failed", error);
+    effects.dispatch({ type: "submit-failed", error: errorMessage(error) });
+  }
 }
 
 function upsert(answered: QuickChatView[], view: QuickChatView): QuickChatView[] {
