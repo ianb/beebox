@@ -50,3 +50,7 @@ resolved. The `template-updates` health check is back to failing on that box,
 and only a recorded resolution clears it. The `normal` priority may be stale:
 every box with a customized briefing or personality shows a failing health
 check after each deploy until this exists.
+
+## Decision (2026-10-06)
+
+The developer approved building it: `bbx template diff` and `accept` first, and a three-way merge where it applies cleanly. Assigned to the `parked-templates` workstream.
