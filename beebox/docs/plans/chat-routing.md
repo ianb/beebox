@@ -9,6 +9,15 @@ issues:
 
 When the boxholder has a thought to send, they should not have to find the right conversation first. Quick chat selects an existing conversation or a new conversation in the right landmark, delivers through ordinary chat, and then shows the routing result.
 
+**Superseded in part by [box-screen.md](box-screen.md).** The catalog, the
+rubric, the Jev judgment, and the existing-chat preference from this plan stay
+in use. The box screen plan replaced its surface: the `/<box>/quick-chat` page,
+the iOS sheet, `quickChat.prepare` and `quickChat.receipt`, the staged-text
+destination links, and the rule that every thought is sent. An uncertain
+thought now waits for the person. The current behavior is in
+[Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
+still open, so this plan stays partial.
+
 **Issues addressed:** The closed session-routing issue above. Related: `issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md` also owns document triage, which this plan does not resolve; do not close that combined issue. `issues/features/2026-08-02-mcp-launch-into-chat.md` concerns agent-initiated handoffs and remains separate.
 
 ## Smallest fix and budget
@@ -194,7 +203,8 @@ are supporting evidence, not a preference for long conversations regardless of
 fit.
 
 The smallest change is to improve the existing bounded catalog excerpt and add
-optional metadata. `src/core/chat/routing/catalog.ts:158` currently uses
+optional metadata. `src/core/chat/routing/catalog.ts:158` (since moved to
+`src/core/chat/routing/quick-chat-submit/catalog.ts`) used
 `candidate.recentContext = text.slice(-2000);`, which can remove the user request
 and its role when an assistant reply is long. Preserve labeled message excerpts
 through both budget passes, and retain recent user context during tool-heavy
