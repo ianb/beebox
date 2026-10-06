@@ -125,7 +125,8 @@ export class TurnBuffer {
 
   private bump(): void {
     this.version += 1;
-    for (const settle of [...this.waiters]) settle();
+    // Snapshot: each settle deletes itself from the set as it runs.
+    for (const settle of Array.from(this.waiters)) settle();
   }
 }
 

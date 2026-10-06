@@ -9,7 +9,7 @@ import { formatMarkdownResults } from "../../validate-markdown.js";
 import { formatAttachLintErrors } from "../../../lib/attach-lint.js";
 import { formatProminenceLintWarnings } from "../../../core/lint-prominence/core.js";
 import { formatCanonicalReport, type CanonicalBuckets } from "./canonical.js";
-import { getStatus } from "../../../lib/git/core.js";
+import { getStatus } from "../../../lib/git/core/operations.js";
 import type { ValidationResults } from "./command.js";
 
 /**

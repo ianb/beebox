@@ -24,8 +24,9 @@ import { execa } from "execa";
 import { z } from "zod";
 
 import { type Handoff, type LoadedSchedule, type Outcome, type ScheduleState, type ScheduleWorkstream } from "./schedules.js";
-import { briefingFor, LOG_TAIL_LINES } from "./schedules-briefing.js";
-import { logPath, readResult, tailLog, updateScheduleState } from "./schedules-store.js";
+import { briefingFor, LOG_TAIL_LINES, type Inherited } from "./schedules-briefing.js";
+import { dirtyPaths, parkedNote, prepareScheduleWorktree } from "./schedules-branch.js";
+import { logPath, readHandoff, readResult, tailLog, updateScheduleState } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
 import { errnoCode } from "../../beebox/src/shared/error-guards.js";
@@ -56,15 +57,23 @@ function workstreamsCli(deps: RunnerDeps): string {
   return path.join(deps.mainRoot, "bin", "workstreams");
 }
 
+export interface Liveness {
+  state: string;
+  /** The guard's own reason, or why the guard could not be read. Carried into
+   *  the refusal alert: the 2026-09-04 cross-box-leak-scan refusal said only
+   *  "(live)", so which signal fired could not be found afterwards. */
+  reason: string;
+}
+
 /**
  * The guard is asked, never re-implemented: `bin/workstreams agent-liveness`
  * is the one implementation of it, and a second one is how the fail-open sweep
  * bug of 2026-08-04 happened. A guard that cannot answer reads as `unknown`,
  * which counts as live.
  */
-export async function agentState(deps: RunnerDeps, worktreePath: string): Promise<string> {
+export async function agentState(deps: RunnerDeps, worktreePath: string): Promise<Liveness> {
   const result = await execa(workstreamsCli(deps), ["agent-liveness", worktreePath], { reject: false });
-  if (result.exitCode !== 0) return "unknown";
+  if (result.exitCode !== 0) return { state: "unknown", reason: `agent-liveness exited ${String(result.exitCode)}: ${result.stderr.trim()}` };
   // Truncated or non-JSON stdout from a guard that still exited 0 is exactly
   // the case that must fail CLOSED. Parsing it outside a try turned an
   // unanswerable guard into a thrown launcher — no alert, no session, and the
@@ -74,11 +83,11 @@ export async function agentState(deps: RunnerDeps, worktreePath: string): Promis
     payload = JSON.parse(result.stdout);
   } catch (_e) {
     /* ignore: non-JSON stdout from the guard reads as "unknown" — fail closed */
-    return "unknown";
+    return { state: "unknown", reason: "agent-liveness printed non-JSON output" };
   }
   const parsed = livenessSchema.safeParse(payload);
-  if (!parsed.success) return "unknown";
-  return parsed.data.paths[worktreePath]?.state ?? "unknown";
+  if (!parsed.success) return { state: "unknown", reason: "agent-liveness output did not match its schema" };
+  return parsed.data.paths[worktreePath] ?? { state: "unknown", reason: "agent-liveness did not report this path" };
 }
 
 /** One bash call per registry function: the shell library is the only writer of
@@ -157,7 +166,7 @@ function listEnv(values: string[] | undefined): string {
 /** Assemble the agent command through the one shell library that knows these
  *  flags. A refusal (codex asked for constraints it has no equivalent for) is
  *  its stderr, and it stops the launch. */
-async function agentArgv(input: { workstream: ScheduleWorkstream; name: string; dir: string; cwd: string; identity: SessionIdentity }): Promise<{ ok: true; argv: string[] } | { ok: false; reason: string }> {
+async function agentArgv(input: { workstream: ScheduleWorkstream; name: string; dir: string; cwd: string; identity: SessionIdentity; timeoutMs: number }): Promise<{ ok: true; argv: string[] } | { ok: false; reason: string }> {
   const { workstream } = input;
   const result = await execa(path.join(import.meta.dirname, "launch-headless.sh"), [], {
     reject: false,
@@ -177,6 +186,7 @@ async function agentArgv(input: { workstream: ScheduleWorkstream; name: string; 
       LH_SESSION_ID: input.identity.sessionId ?? "",
       LH_SESSION_RESUME: input.identity.resume ? "1" : "0",
       LH_CWD: input.cwd,
+      LH_TIMEOUT_MS: String(input.timeoutMs),
     },
   });
   if (result.exitCode !== 0) return { ok: false, reason: result.stderr.trim() === "" ? `launch-headless exited ${String(result.exitCode)}` : result.stderr.trim() };
@@ -199,6 +209,8 @@ export interface StartRequest {
   /** The schedule's state as of BEFORE this run stamped itself: what says
    *  whether a persistent session exists yet. */
   previous: ScheduleState;
+  /** `bin/schedules run --replay`: the run whose handoff this one re-delivers. */
+  replayOf: string | null;
 }
 
 /**
@@ -210,8 +222,12 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
   const workstream = schedule.config.workstream;
   if (workstream === null) throw new NoWorkstreamToStartError(schedule.name);
   const logFile = logPath(deps.storeRoot, { name: schedule.name, runId });
+  let inherited: Inherited | null = null;
+  let briefed = false;
   const alert = async (input: { title: string; message: string; details: string | null; priority: "important" | "fyi" }): Promise<void> => {
-    await raiseAlert(deps, { workstream: schedule.name, runId, ...input, condition: null });
+    const parked = briefed ? null : inherited?.parked ?? null;
+    const message = parked === null ? input.message : `${input.message}\n\n${parkedNote(parked)}`;
+    await raiseAlert(deps, { workstream: schedule.name, runId, ...input, message, condition: null });
   };
 
   let cwd = deps.mainRoot;
@@ -229,45 +245,28 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
     }
     cwd = worktreePath;
 
-    const state = await agentState(deps, cwd);
-    if (LIVE_STATES.has(state)) {
+    const liveness = await agentState(deps, cwd);
+    if (LIVE_STATES.has(liveness.state)) {
       // Not a failure: the work is recorded and the person (or agent) already
       // in that worktree can pick it up. Starting a second agent there is the
       // rug-pull the guard exists to prevent.
       await alert({
         title: "work waiting, session already live",
-        message: `${schedule.name} has work waiting, but its worktree already has an agent (${state}).`,
-        details: null,
+        message: `${schedule.name} has work waiting, but its worktree already has an agent (${liveness.state}).`,
+        details: `agent-liveness: ${liveness.reason}`,
         priority: "fyi",
       });
       return { kind: "refused", ...NOT_LAUNCHED };
     }
 
-    // Bring the branch up to date with `main` before the session starts.
-    //
-    // A worktree schedule is long-lived: `bin/workstreams create` re-attaches an
-    // existing branch rather than rebuilding it, so without this the session
-    // resumes on whatever `main` looked like the first time the worktree was
-    // made. Asking the prompt to do it works until an agent forgets, and the
-    // whole point of a scheduled run is that nobody is watching.
-    //
-    // Plain merge, not `--ff-only`: a schedule that commits between lands
-    // carries its own commits, so its branch is legitimately ahead. A fresh
-    // worktree is already at `main`, where this is a no-op.
-    //
-    // Done AFTER the liveness guard, so it never writes into a tree an agent is
-    // using — and a conflict is a stop, never something resolved unattended.
-    const freshened = await execa("git", ["-C", cwd, "merge", "--no-edit", "main"], { reject: false });
-    if (freshened.exitCode !== 0) {
-      await execa("git", ["-C", cwd, "merge", "--abort"], { reject: false });
-      await alert({
-        title: "could not bring the worktree up to date with main",
-        message: `${schedule.name} has work waiting, but merging \`main\` into ${path.basename(cwd)} failed — the run was not started.`,
-        details: [freshened.stdout, freshened.stderr].filter((s) => s.trim() !== "").join("\n") || null,
-        priority: "important",
-      });
+    // After the liveness guard, so nothing here writes into a tree an agent
+    // is using.
+    const prepared = await prepareScheduleWorktree(cwd, { name: schedule.name, runId });
+    if (!prepared.ok) {
+      await alert({ ...prepared.failure, priority: "important" });
       return { kind: "unlaunchable", ...NOT_LAUNCHED };
     }
+    inherited = prepared.inherited;
   }
   // A `worktree: false` schedule runs in the main checkout, which the boxholder
   // also works in; the liveness guard is deliberately not applied there (it
@@ -294,7 +293,7 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
   }
 
   const identity = await sessionIdentity(deps, { schedule, workstream, previous: request.previous });
-  const command = await agentArgv({ workstream, name: schedule.name, dir: schedule.dir, cwd, identity });
+  const command = await agentArgv({ workstream, name: schedule.name, dir: schedule.dir, cwd, identity, timeoutMs: schedule.config.timeoutMs });
   if (!command.ok) {
     await registryCall(deps, { fn: "session_registry_fail_launch", args: [schedule.name, token, "headless-command-refused"] });
     await alert({
@@ -308,7 +307,9 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
 
   const logTail = await tailLog(logFile, LOG_TAIL_LINES);
   const stateDir = path.join(deps.storeRoot, schedule.name);
-  let briefing = briefingFor({ name: schedule.name, runId, handoff: request.handoff, logTail, outcome: request.outcome, logFile, stateDir });
+  let briefing = briefingFor({
+    name: schedule.name, runId, handoff: request.handoff, logTail, outcome: request.outcome, logFile, stateDir, inherited, replayOf: request.replayOf,
+  });
   if (workstream.agent === "codex") {
     // Codex has no --append-system-prompt-file: the schedule's prompt leads the
     // briefing instead, so the same prompt.md serves both agents.
@@ -317,6 +318,7 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
 
   const env = scheduleEnv({ name: schedule.name, dir: schedule.dir, runId, stateDir, dryRun: false });
   const [file, ...args] = command.argv;
+  briefed = true;
   const session = await execChild({ file: file ?? "", args }, { cwd, env, timeoutMs: schedule.config.timeoutMs, logFile, input: briefing });
 
   const completed = await registryCall(deps, {
@@ -361,7 +363,7 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
     }
   }
 
-  await alertIfBailed(deps, { name: schedule.name, runId, logFile });
+  await alertIfBailed(deps, { name: schedule.name, runId, logFile, worktree: workstream.worktree ? cwd : null });
   return { kind: "launched", sessionExit: session.exitCode, checkExit, timedOut: session.timedOut };
 }
 
@@ -381,14 +383,30 @@ async function isExecutable(filePath: string): Promise<boolean> {
  * (the session just ended) and from the next tick when a lock left by a dead
  * runner is reclaimed (the laptop was shut down mid-session).
  */
-export async function alertIfBailed(deps: RunnerDeps, run: { name: string; runId: string; logFile: string }): Promise<boolean> {
+export async function alertIfBailed(deps: RunnerDeps, run: { name: string; runId: string; logFile: string; worktree: string | null }): Promise<boolean> {
   if ((await readResult(deps.storeRoot, run)) !== null) return false;
   const tail = await tailLog(run.logFile, LOG_TAIL_LINES);
+  // The person reading this needs to know what the session left, and how to
+  // finish it: by the next run the `run` script's baseline has usually moved,
+  // so waiting for the cadence hands off nothing.
+  const notes: string[] = [];
+  if (run.worktree !== null) {
+    const dirty = await dirtyPaths(run.worktree);
+    if (dirty === null) notes.push(`- Could not read the worktree's state (\`${run.worktree}\`).`);
+    else if (dirty.length > 0) {
+      notes.push(`- The worktree has ${String(dirty.length)} uncommitted path(s). The next session parks them on \`refs/schedules/${run.name}/parked/<runId>\` and is told about them.`);
+    }
+  }
+  if ((await readHandoff(deps.storeRoot, run)) !== null) {
+    notes.push(`- Replay this run's handoff now: \`bin/schedules run ${run.name} --replay ${run.runId}\`.`);
+  }
+  const message = [`${run.name} started a session for run ${run.runId} that ended without \`bin/schedules alert\` or \`done\`.`];
+  if (notes.length > 0) message.push("", ...notes);
   await raiseAlert(deps, {
     workstream: run.name,
     runId: run.runId,
     title: "session ended without reporting",
-    message: `${run.name} started a session for run ${run.runId} that ended without \`bin/schedules alert\` or \`done\`.`,
+    message: message.join("\n"),
     details: tail === "" ? null : `Last ${String(LOG_TAIL_LINES)} log lines:\n\n\`\`\`\n${tail}\n\`\`\``,
     priority: "important",
     condition: null,

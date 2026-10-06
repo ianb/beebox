@@ -47,8 +47,10 @@ import { mapV2Path } from "../../core/migrations/one-root-mapping.js";
 const TRACKER_REL = "_config/template-versions.json";
 
 interface TrackerEntry {
-  sha256: string;
-  "installed-at": string;
+  sha256?: string;
+  "installed-at"?: string;
+  stock?: string;
+  pending?: string;
 }
 
 export interface RekeyResult {
@@ -62,8 +64,19 @@ function entryOf(value: unknown): TrackerEntry | null {
   if (!isRecord(value)) return null;
   const sha256 = value["sha256"];
   const installedAt = value["installed-at"];
-  if (typeof sha256 !== "string" || typeof installedAt !== "string") return null;
-  return { sha256, "installed-at": installedAt };
+  const stock = value["stock"];
+  const pending = value["pending"];
+  if (sha256 !== undefined && typeof sha256 !== "string") return null;
+  if (installedAt !== undefined && typeof installedAt !== "string") return null;
+  if (stock !== undefined && typeof stock !== "string") return null;
+  if (pending !== undefined && typeof pending !== "string") return null;
+  if (sha256 === undefined && pending === undefined) return null;
+  return {
+    ...(sha256 === undefined ? {} : { sha256 }),
+    ...(installedAt === undefined ? {} : { "installed-at": installedAt }),
+    ...(stock === undefined ? {} : { stock }),
+    ...(pending === undefined ? {} : { pending }),
+  };
 }
 
 /**
@@ -88,7 +101,7 @@ async function existsInBox(boxRoot: string, relKey: string): Promise<boolean> {
 
 /** Which of two entries for one path to keep: the later install wrote the file on disk. */
 function later(a: TrackerEntry, b: TrackerEntry): TrackerEntry {
-  return a["installed-at"] >= b["installed-at"] ? a : b;
+  return (a["installed-at"] ?? "") >= (b["installed-at"] ?? "") ? a : b;
 }
 
 /**

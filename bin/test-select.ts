@@ -26,7 +26,7 @@ import { join } from "node:path";
 import { changedPaths, git, treeHash } from "./test-git.js";
 import { buildGraph, cliBundleInputs, REPO_ROOT } from "./test-graph.js";
 import { isAccounted } from "./test-graph-query.js";
-import { hashFileset, type LedgerRecord } from "./test-ledger-lib.js";
+import { hashFileset, packageRelative, type LedgerRecord } from "./test-ledger-lib.js";
 import { appendLedgerRecord } from "./test-ledger.js";
 import { selectTests, spawnerEdges } from "./test-select-lib.js";
 import { carefulExclusions } from "./test-tiers.js";
@@ -40,11 +40,6 @@ const PACKAGE_ROOT = join(REPO_ROOT, "beebox");
  */
 export function emptyRunLines(): string[] {
   return ["no test imports the changed paths", "# { total: 0, pass: 0, selected: 0 }"];
-}
-
-/** Graph paths are repo-relative; tap names them relative to beebox. */
-function stripPackagePrefix(path: string): string {
-  return path.startsWith("beebox/") ? path.slice("beebox/".length) : path;
 }
 
 function readRepoFile(repoRelative: string): string | null {
@@ -169,7 +164,7 @@ export async function main(argv: string[]): Promise<number> {
     // careful test still runs — selectTests keeps what the branch touched.
     exclude: carefulExclusions(),
   });
-  const files = selection.selected.map(stripPackagePrefix);
+  const files = selection.selected.map(packageRelative);
 
   if (files.length === 0) {
     const [message, summary] = emptyRunLines();
@@ -178,7 +173,7 @@ export async function main(argv: string[]): Promise<number> {
     try {
       recordEmptyRun({
         changed,
-        implicated: selection.implicated.map(stripPackagePrefix),
+        implicated: selection.implicated.map(packageRelative),
         accounted: isAccounted({ graph, changed }),
       });
     } catch (e) {

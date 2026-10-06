@@ -1,6 +1,6 @@
 # Publication card review controls
 
-The reference card renders current publication state from the server-returned
+The publication card renders current publication state from the server-returned
 site record. The card's `pubId` only selects that record; actions use the
 publication id and current candidate revision supplied by the server.
 
@@ -14,6 +14,8 @@ globalThis.React = React;
 const site = {
   pubId: "pub-reference-1",
   name: "notes",
+  cardPath: "publications/Notes.publication.card",
+  duplicateCardPaths: [],
   title: "Notes",
   hostname: "notes.example.workers.dev",
   sharedRoute: null,
@@ -22,6 +24,7 @@ const site = {
   requested: null,
   approved: { tier: "public", status: "disabled", slug: "notes", expiresAt: null },
   activeReleaseId: "a".repeat(64),
+  activeFiles: [],
   remoteStatus: { status: "available" },
   pending: null,
   connection: { name: "publishing", status: "active", capabilities: { accessLive: "verified" } },
@@ -108,6 +111,7 @@ const alreadyApprovedSite = {
   ...preparedSite,
   approved: { tier: "secret", status: "disabled", expiresAt: null },
   activeReleaseId: "b".repeat(64),
+  activeFiles: [],
   pending: { ...preparedSite.pending, releaseId: "b".repeat(64), requestedScope: { ...preparedSite.pending.requestedScope } },
 };
 const alreadyApprovedMarkup = renderToStaticMarkup(React.createElement(PublicationReviewCard, {

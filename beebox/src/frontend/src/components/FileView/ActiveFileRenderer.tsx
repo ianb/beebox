@@ -35,7 +35,7 @@ export function ActiveFileRenderer(props: ActiveFileRendererProps) {
     return (
       <BoundAgentViewRenderer
         slug={binding.slug}
-        mode={mode === "chat" ? "chat" : "page"}
+        embedded={mode === "embed"}
         path={path}
         params={params}
         ownedViewState={viewState}

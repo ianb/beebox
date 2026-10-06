@@ -54,3 +54,12 @@ export type MaiHqService = "mai" | "mai-diarized";
 export function isMaiHqService(service: HqTranscriptionService): service is MaiHqService {
   return service === "mai" || service === "mai-diarized";
 }
+
+/**
+ * The HQ services that label speakers. A native client keeps the HQ pass on
+ * the box for these instead of transcribing on the device, because Apple's
+ * on-device model cannot separate speakers (mobile contract §4.4a).
+ */
+export function isDiarizedHqService(service: HqTranscriptionService): boolean {
+  return service === "voxtral-diarized" || service === "mai-diarized";
+}

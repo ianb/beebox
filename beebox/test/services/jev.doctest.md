@@ -8,7 +8,7 @@ These tests use synthetic data and never contact OpenRouter.
 import { parseJevResponse, createFakeJev, createJevService, serializeJevRequest } from "../../src/services/jev.js";
 import { JevError } from "../../src/services/jev-wire.js";
 import { parseJudgeResponse, serializeJudgeRequest } from "../../src/services/jev-judge.js";
-import { boundRoutingContexts } from "../../src/core/chat/routing/catalog.js";
+import { boundRoutingContexts } from "../../src/core/chat/routing/quick-chat-submit/catalog.js";
 const keys = ["garden", "weekend", "new"];
 function response(probabilities: unknown, confidence: unknown = 0.8) {
   return { model: "typesafe/jev-1.13-test", answers: { destination: { type: "choice", probabilities, confidence } } };

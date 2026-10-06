@@ -6,6 +6,7 @@ labels: [install]
 filed-by: agent
 discovered-in: worktree-installable-app — installable-app research
 design: ../../research/installable-app/README.md
+priority: backlog
 ---
 
 A box that a phone reaches all day needs an always-on host. A laptop is not

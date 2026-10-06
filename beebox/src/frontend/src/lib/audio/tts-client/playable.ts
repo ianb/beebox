@@ -11,7 +11,8 @@
  *
  * A blob plays either one, so anything unstreamable is buffered whole instead.
  */
-import { playAudioBlob, playAudioStream } from "../context";
+import { playAudioBlob } from "../context";
+import { playAudioStream } from "./stream-playback";
 
 /** The media type from a `Content-Type` header, keeping only the `codecs`
  *  parameter — the one `MediaSource.isTypeSupported` accepts. */

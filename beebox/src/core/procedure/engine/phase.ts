@@ -6,7 +6,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getStatus, stageAll, commit, getHead, withBoxGitLock } from "../../../lib/git/core.js";
+import { getStatus, stageAll, commit, getHead, withBoxGitLock } from "../../../lib/git/core/operations.js";
 import { getRangeDiff } from "../../../lib/git-range.js";
 import { fmt } from "../../../lib/format.js";
 import { getBoxTime } from "../../../lib/time.js";

@@ -14,7 +14,7 @@ import { type Connector } from "../../../connectors.js";
 import { runPreActions } from "../../../core/preactions.js";
 import { getSystemState } from "../../../core/state.js";
 import { errorMessage } from "../../../shared/error-guards.js";
-import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
 import { collectExistingJobRefs, releaseTakenItems } from "./job-refs.js";
 import { createContainsBackfillJobTemplate } from "../../../schemas/contains-backfill-job.js";

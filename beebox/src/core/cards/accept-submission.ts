@@ -20,7 +20,7 @@ import { fileTypeFromFile } from "file-type";
 import { withCardLock } from "../../lib/card-lock.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
-import { stageAndCommitPaths, unstageFiles } from "../../lib/git/core.js";
+import { stageAndCommitPaths, unstageFiles } from "../../lib/git/core/operations.js";
 import type { EventBus } from "../event-bus/core.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";

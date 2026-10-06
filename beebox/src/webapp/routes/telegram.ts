@@ -21,7 +21,7 @@ import { telegramUpdateSchema } from "../../services/telegram-schemas.js";
 import { ChatSessionPool } from "../../core/chat/session/pool.js";
 import { sendTelegramMessage, startTypingIndicator } from "../../core/telegram-send.js";
 import { appendMessageToThread } from "../../job-cards/chat-utils.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { acquireBoxWork } from "../../lib/box-maintenance.js";
 
 interface RegisterTelegramRoutesOptions {

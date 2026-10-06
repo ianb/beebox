@@ -20,7 +20,7 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { stageAndCommitPaths, unstageFiles } from "../lib/git/core.js";
+import { stageAndCommitPaths, unstageFiles } from "../lib/git/core/operations.js";
 import { toRelativePath, isCardFile } from "../lib/paths/core.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";

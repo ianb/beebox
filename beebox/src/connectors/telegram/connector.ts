@@ -20,7 +20,7 @@ import * as path from "node:path";
 import { errorMessage } from "../../shared/error-guards.js";
 import { boxSlug } from "../../lib/box-slug.js";
 import type { Connector, SyncResult } from "../../connector.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { loadTransientState, updateTransientState } from "../../transient-state.js";
 import { createChatJob } from "../../job-cards/chat-utils.js";
 import { getBoxTimeISO } from "../../lib/time.js";
@@ -67,7 +67,7 @@ function mergeIngestState(fresh: TelegramState, working: TelegramState): Telegra
     merged.lastUpdateId = Math.max(fresh.lastUpdateId ?? 0, working.lastUpdateId);
   }
   if (working.chatMappings) {
-    merged.chatMappings = { ...working.chatMappings, ...(fresh.chatMappings ?? {}) };
+    merged.chatMappings = { ...working.chatMappings, ...fresh.chatMappings };
   }
   return merged;
 }
@@ -354,7 +354,7 @@ class TelegramConnector implements Connector {
         connectorName: "telegram",
         defaultValue: {},
         update: (fresh) => {
-          const freshCallbacks = { ...(fresh.callbacks ?? {}) };
+          const freshCallbacks = { ...fresh.callbacks };
           for (const { threadRef, at } of fired) {
             if (freshCallbacks[threadRef]?.at === at) delete freshCallbacks[threadRef];
           }

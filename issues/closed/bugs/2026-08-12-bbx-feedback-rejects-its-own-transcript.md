@@ -53,3 +53,7 @@ anywhere a capture path validates input it could simply normalize.
 This matters more than its size suggests: `bbx feedback` is the channel for
 reporting friction, so friction *in it* costs the reports that would have come
 next.
+
+## Decision (2026-10-06)
+
+Properly closed; the request is cleared. Loose end: whether the feedback-to-doc-cards migration has run on production (17 of 22 items were stuck) was not checked.

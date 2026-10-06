@@ -24,7 +24,7 @@ import {
 import { isWithinBudget } from "../../schemas/scheduled-script/due.js";
 import type { ScriptState } from "./state.js";
 import { DEFER_REASON_TEXT, type DeferReason } from "./defer-reason.js";
-import { isContendedFailure, isStaleLockFailure } from "../../lib/git/core.js";
+import { isContendedFailure, isStaleLockFailure } from "../../lib/git/core/operations.js";
 
 export { conciseScheduleError } from "../../shared/schedule-error.js";
 

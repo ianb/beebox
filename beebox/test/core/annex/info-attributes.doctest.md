@@ -81,3 +81,18 @@ not match it:
 uncoveredAnnexedPaths(["a.attach/IMG_0001.HEIC", "a.attach/CLIP.MOV"])
 => []
 ```
+
+A bulk batch's scope holds arbitrary types, so any file in it counts as
+covered: the current `<slug>.attach` name (wherever the card was moved, since
+the slug travels with it) and the pre-2026-10 `Batch.upload-batch.attach`. A
+`.zip` outside either scope is still a gap:
+
+```ts
+uncoveredAnnexedPaths([
+  "_content/tmp-upload/upload-20261006T0627-d8f4fda6/upload-20261006T0627-d8f4fda6.attach/a.zip",
+  "_content/.trash/upload-20261006T0627-d8f4fda6.attach/b.zip",
+  "_tmp/stranded/upload-20260912T0800-0a1b2c3d/Batch.upload-batch.attach/c.csv",
+  "_content/projects/upload-notes.zip",
+])
+=> ["_content/projects/upload-notes.zip"]
+```

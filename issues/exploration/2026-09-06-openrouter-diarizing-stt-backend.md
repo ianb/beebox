@@ -6,6 +6,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-openrouter-services — probing what OpenRouter can serve after Voxtral was ruled out
 labels: [providers, voice]
+priority: normal
 ---
 
 `voxtral-diarized` is the box's only speaker-labeled transcription mode, and it

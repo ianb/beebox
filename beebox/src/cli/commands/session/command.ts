@@ -36,7 +36,7 @@ import {
   type SinceWindow,
 } from "./modes.js";
 import { invariant } from "../../../shared/invariant.js";
-import { readCodexSessionHistory } from "../../../core/chat/session/codex-transcript.js";
+import { readCodexSessionHistory } from "../../../core/chat/session/codex-transcript/core.js";
 import {
   parseDiagnosticEngine,
   resolveDiagnosticEngine,
@@ -133,9 +133,9 @@ function validateSessionOptions(options: {
     console.error("--engine codex currently requires an explicit session ID.");
     process.exit(1);
   }
-  if (options.since && (options.sessionId || options.latest)) {
+  if (options.since && options.latest) {
     console.error(
-      "--since cannot be combined with a session ID or --latest. Use one or the other."
+      "--since cannot be combined with --latest. Give a session ID to window one session."
     );
     process.exit(1);
   }
@@ -203,11 +203,13 @@ export const sessionCommand = new Command("session")
         return;
       }
 
-      // --since without --list: windowed multi-session view.
+      // --since without --list: windowed view of every session, or of the
+      // one named session.
       if (since) {
         await runSinceMode({
           boxRoot,
           since,
+          sessionId,
           renderOptions,
           raw: !!options.raw,
           toolReport: !!options.toolReport,

@@ -4,6 +4,7 @@ workstream: unattached
 area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, a first-time user with no orientation
+priority: important
 ---
 
 A person opening a box for the first time, told only that this is an AI-powered

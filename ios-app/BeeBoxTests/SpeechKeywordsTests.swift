@@ -201,6 +201,20 @@ final class SpeechKeywordsTests: XCTestCase {
         XCTAssertEqual(dictation.state, .preparingHQ)
     }
 
+    /// The quick chat composer turns keywords off: "send message" is words to
+    /// keep, not a command, and the person sends with the button.
+    @MainActor
+    func testKeywordsOffKeepsSpokenCommandWordsAsTranscript() {
+        let dictation = SpeechDictation()
+        dictation.detectsKeywords = false
+
+        dictation.ingestRecognizedSpeechForTesting("Remind me to send message to Dana")
+
+        XCTAssertNil(dictation.keywordIntent)
+        XCTAssertEqual(dictation.transcript, "Remind me to send message to Dana")
+        XCTAssertTrue(dictation.hasDictatedText)
+    }
+
     @MainActor
     func testAcceptedSendCommitsTheTagSubstitution() throws {
         let dictation = SpeechDictation()
@@ -375,6 +389,22 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
                 from: try MobileContractFixtures.jsonString(from: input)
             )
             XCTAssertEqual(enabled, expected["enabled"] as? Bool, "\(name): enabled")
+        }
+    }
+
+    func testHqDictationStateFixturesDecodeThroughNativeSeam() throws {
+        let fixtures = try MobileContractFixtures.load("hq-dictation-state")
+        XCTAssertFalse(fixtures.isEmpty, "no HQ dictation state fixtures found")
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let state = ChatWebView.hqDictationState(from: try MobileContractFixtures.jsonString(from: input))
+            if fixture["expected"] is NSNull {
+                XCTAssertNil(state, "\(name): malformed state must be ignored")
+                continue
+            }
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): missing expected")
+            XCTAssertEqual(state?.enabled, expected["enabled"] as? Bool, "\(name): enabled")
+            XCTAssertEqual(state?.diarized, expected["diarized"] as? Bool, "\(name): diarized")
         }
     }
 

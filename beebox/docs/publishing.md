@@ -125,7 +125,7 @@ Cloudflare resources.
 
 After the box host is set, the agent can prepare a site. The CLI reports its
 full public or secret URL and a direct `approval:` link. A signed-in member
-reviews the candidate in **Publications** before the route is enrolled on the
+reviews the candidate on the publication card before the route is enrolled on the
 shared hostname. Public paths require an explicit slug and use
 `/<slug>/`; secret-link paths use `/s/<pubId>/`. Do not share only a hostname
 for a secret publication.
@@ -155,64 +155,64 @@ Worker is stale, have the owner retry that setup before preparing content.
 
 ## Box agent and member workflow
 
-The agent owns files under `src/publications/<name>/`. It asks the server to
-prepare a named publication; the request cannot select another box, PubId,
-bucket, Worker, or credential. `bbx pub id` generates the stable CSPRNG PubId
-for a new `publication.json`. Before authoring, the agent runs
-`bbx pub connections` to discover granted connection names. It uses only the
-connection selected for this box in Admin; it never selects or changes the
-hostname itself. If Admin has not configured the box host, the agent asks the
+A publication is one `<Name>.publication.card` under `_content/`. Its
+frontmatter holds `title`, `pubId`, `connection`, the requested `tier`, and
+`slug` (public) or `emails` (accounts). Its body is private notes and is never
+published. The site files are in the card's attach folder, in exactly one of
+`<Name>.attach/static/` (finished files; Markdown is rendered) or
+`<Name>.attach/project/` (a `package.json` project whose `dist/` is
+published). The agent writes the card and the files. It asks the server to
+prepare the card by its box-relative path; the request cannot select another
+box, PubId, bucket, Worker, or credential. `bbx pub id` generates the stable
+CSPRNG PubId for a new card. `bbx pub status` prints the connections granted
+to this box and the shared hostname's connection. The agent uses only the
+connection selected for this box in Admin. It never selects or changes the
+hostname. If Admin has not configured the box host, the agent asks the
 boxholder to do that in the app. It never reads machine secrets or private
 server config. The box-managed CLI surface is:
 
 ```sh
 bbx pub id
-bbx pub connections
-bbx pub prepare field-guide
+bbx pub prepare "_content/guides/Field Guide.publication.card"
 bbx pub status
+bbx pub files "_content/guides/Field Guide.publication.card"
+bbx pub cat "_content/guides/Field Guide.publication.card" index.html --pending
 ```
 
-`bbx pub prepare <name>` builds a site project when configured, scans and
-uploads an immutable release, and reports the prepared/live state. A new
-publication remains disabled until a box member approves it in the Bee Box
-app. A same-audience/same-destination refresh of an enabled publication
-becomes active as soon as preparation succeeds. A changed audience or
-destination waits for a box member to approve it in the app. `bbx pub prepare` prints a
-`publication URL:` line with the complete destination and an `approval:` line
-with a direct link to that box's Publications page when `BBX_SERVER_URL` and
-`BBX_BOX_NAME` are configured; otherwise it tells you to use the app menu.
-Preserve the full
-secret URL path `/s/<pubId>/`; the id-bearing path is the capability, and a
-hostname-only URL will not work. `bbx pub status` reports managed publication
-state, granted connection names, and publication URLs. Without configured
-box-server credentials, it returns an error; run it through the configured box
-agent. `bbx pub sites` is also available for the managed site list.
+`bbx pub prepare <card-path>` builds a project when present, scans and uploads
+an immutable release, and reports the prepared and live state. A new
+publication stays disabled until a box member enables it on the card's page in
+the app (`/<box>/browse/<card path>`). A refresh of an enabled publication with
+the same audience and destination goes live when preparation succeeds. A
+change to `tier`, `slug`, or `emails` is a request that waits for a signed-in
+member. Prepare prints a `publication URL:` line and an `approval:` line with
+the card link. Preserve the full secret URL path `/s/<pubId>/`; the id-bearing
+path is the capability. `bbx pub files` and `bbx pub cat` read the active
+release, or the pending candidate with `--pending`; there is no local
+published copy. Approval, served audience, hostname, and status are server
+state and never written to the box.
 
-For first enablement or a scope change, a signed-in member opens the direct
-Publications URL printed on the `approval:` line (or signs into this box and
-opens **Publications** from the profile menu), reviews the title, displayed
-host and path, requested tier and recipients, file summary, and leak-scan findings, then
-chooses **Enable** or **Approve**. This is an ongoing permission for the agent to update content within
-that approved audience; it is not approval of every content snapshot. The app
-shows metadata and safe text summaries; it never runs the site's JavaScript on
-the authenticated Bee Box origin.
+Copying a card duplicates its `pubId`: `bbx validate` reports it and prepare
+refuses. Move or rename a card with `bbx mv`, which moves the attach folder
+too. A file over 1 MB in `static/` whose extension is not a listed asset type
+blocks the box commit.
 
-After enablement, the agent can refresh content and confirm state:
+For first enablement or a scope change, a signed-in member opens the card,
+reviews the title, host and path, requested tier and recipients, file summary,
+and leak-scan findings, then chooses **Enable** or **Approve**. This is an
+ongoing permission for the agent to update content within that approved
+audience; it is not approval of every content snapshot. The app shows
+metadata and safe text summaries; it never runs the site's JavaScript on the
+authenticated Bee Box origin.
 
-```sh
-bbx pub prepare field-guide
-bbx pub status
-```
-
-Any change to tier, recipient list, public slug, or origin requires new member
-approval. A failed build, scan, or upload before promotion leaves the current
-release live. If a remote write may have succeeded but its read-back or
-activation check fails, report the serving state as unknown; do not claim
-rollback. A box member disables a site
-from **Publications**; the edge then returns HTTP 410 for the site and every
-release URL. Confirm the disabled state in `bbx pub status` and by fetching the
-previous URL. If the server cannot reach Cloudflare to verify disablement, the
-app must report the serving state as unknown rather than claiming success.
+A failed build, scan, or upload before promotion leaves the current release
+live. If a remote write may have succeeded but its read-back or activation
+check fails, report the serving state as unknown; do not claim rollback. A box
+member disables a site on its card; the edge then returns HTTP 410 for the
+site and every release URL. If the server cannot reach Cloudflare to verify
+disablement, the app reports the serving state as unknown. The owner-only
+**Admin → Cloudflare publishing** page lists publications without a card and
+can disable them.
 
 ## First live verification session
 
@@ -234,10 +234,11 @@ URL, preserve and provide the complete path printed by the CLI.
    deployment may still show unverified until setup succeeds.
 3. The agent creates one minimal static public test site with a unique title,
    `index.html`, a relative CSS asset, and an explicit public slug; writes its
-   definition with a fresh `bbx pub id`; then runs `bbx pub prepare <name>`.
+   `publication` card with a fresh `bbx pub id`; then runs
+   `bbx pub prepare <card-path>`.
    The agent gives the member the direct `approval:` link and waits. It does
    not enable the site.
-4. The member reviews the candidate in **Publications** and enables it. Use
+4. The member reviews the candidate on the publication card and enables it. Use
    the app-displayed `https://<box-host>/<slug>/` URL; do not construct one
    from the PubId.
 5. The agent checks that the stable public route serves the current page and
@@ -261,7 +262,7 @@ URL, preserve and provide the complete path printed by the CLI.
 6. The agent changes one harmless sentence and runs `bbx pub prepare <name>`
    again. Confirm the page at the same stable URL changes without a new member
    click. Each later asset request also uses the active release at that time.
-7. The member disables the page in **Publications**. The agent verifies
+7. The member disables the page on the publication card. The agent verifies
    `bbx pub status` reports disabled and the previously working public URL now
    returns 410. Re-enable only after the member takes a fresh deliberate
    action.

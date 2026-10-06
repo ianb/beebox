@@ -48,13 +48,14 @@ async function runScreenshotCapture(addFiles: AddFiles): Promise<void> {
   }
 }
 
-export function ScreenshotMenuItem({ addFiles }: { addFiles: AddFiles }) {
+export function ScreenshotMenuItem({ addFiles, includeControlId }: { addFiles: AddFiles; includeControlId?: boolean }) {
+  const hasControlId = includeControlId !== false;
   // Hidden where a capture would resolve `unsupported` (no getDisplayMedia).
   if (!isScreenshotSupported()) return null;
   return (
     // captureTabScreenshot calls getDisplayMedia synchronously before its first
     // await, so this click still counts as the required user gesture.
-    <MenuItem id="bbx-composer-add-screenshot" onClick={() => void runScreenshotCapture(addFiles)}>
+    <MenuItem id={hasControlId ? "bbx-composer-add-screenshot" : undefined} onClick={() => void runScreenshotCapture(addFiles)}>
       Send screenshot…
     </MenuItem>
   );

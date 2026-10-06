@@ -61,3 +61,7 @@ consolidation is revertable.
   a procedure feeding an agent, not a silent auto-rewriter.)
 - **Overlap with retro** — should this be a retro phase, or its own subsystem? They
   share "quiescence + scheduled walk + agent pass" machinery.
+
+## Decision (2026-10-06)
+
+Keep; priority set to backlog by the developer.

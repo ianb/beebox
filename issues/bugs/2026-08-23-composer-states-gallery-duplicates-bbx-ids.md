@@ -1,6 +1,6 @@
 ---
 title: Bee Box surfaces render duplicate bbx control ids
-workstream: unknown
+workstream: bbx-ids-gallery
 priority: backlog
 discovered-in: worktree-publish-pages — publication card browser verification
 ---
@@ -41,3 +41,7 @@ collision.
 
 Discuss whether to include the Admin Overview collision in the same fix now or
 keep this issue limited to the development galleries.
+
+## Decision (2026-10-06)
+
+The developer approved the first option: gallery copies render unaddressed (an id prefix or suppression prop threaded through the harness). Assigned to the `bbx-ids-gallery` workstream.

@@ -14,7 +14,7 @@ import { CalloutStack } from "../CalloutBlock";
 import { ActivityGroup } from "./activity-rendering";
 import { MarkdownContent, type OnZoomView } from "../markdown-rendering";
 import { countSpeech, groupIntoParts, type SelfNoteInfo } from "../message-parsing";
-import type { SpeechSegmentState } from "../../../machines/speechPlaybackMachine";
+import type { SpeechSegmentState } from "../../../machines/speech-segment-states";
 
 export interface ReplaySpeechOptions {
   messageId: string;
@@ -34,12 +34,14 @@ function AssistantSpeechText({
   indexOffset,
   activeIndex,
   segmentStates,
+  segmentFailures,
   onZoomView,
 }: {
   text: string;
   indexOffset: number;
   activeIndex: number | null;
   segmentStates: Record<number, SpeechSegmentState>;
+  segmentFailures: Record<number, string>;
   onZoomView?: OnZoomView;
 }) {
   const parts = useMemo(() => splitSpeechParts(text), [text]);
@@ -52,6 +54,7 @@ function AssistantSpeechText({
           <SpeechChunk
             key={i}
             name={part.segment.name}
+            failureReason={segmentFailures[indexOffset + part.index]}
             state={
               segmentStates[indexOffset + part.index]
                 ?? (activeIndex !== null && indexOffset + part.index === activeIndex
@@ -73,6 +76,7 @@ export function AssistantMessage({
   speechPlaying,
   speechActiveIndex,
   speechSegmentStates,
+  speechSegmentFailures,
   anySpeechPlaying,
   speechCanSkip,
   onStopSpeech,
@@ -89,6 +93,8 @@ export function AssistantMessage({
   speechActiveIndex?: number | null;
   /** Per-segment progress, including failures that remain after playback advances. */
   speechSegmentStates?: Record<number, SpeechSegmentState>;
+  /** Why each failed segment failed, keyed like `speechSegmentStates`. */
+  speechSegmentFailures?: Record<number, string>;
   /** Some speech (this message or another) is currently playing. */
   anySpeechPlaying?: boolean;
   /** A next segment exists in the currently-playing queue. */
@@ -116,6 +122,7 @@ export function AssistantMessage({
   const showProse = proseEnabled !== false;
   const activeIndex = speechActiveIndex === undefined ? null : speechActiveIndex;
   const segmentStates = speechSegmentStates ?? {};
+  const segmentFailures = speechSegmentFailures ?? {};
 
   // Absolute speech-segment index at the start of each group, so a chunk's
   // highlight index stays correct even when tool activity splits the message
@@ -172,6 +179,7 @@ export function AssistantMessage({
                 indexOffset={groupSpeechOffsets[i] ?? 0}
                 activeIndex={activeIndex}
                 segmentStates={segmentStates}
+                segmentFailures={segmentFailures}
                 onZoomView={onZoomView}
               />
             )

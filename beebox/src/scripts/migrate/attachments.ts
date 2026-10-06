@@ -336,7 +336,7 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
   for (const rel of allRel) {
     if (rel.endsWith(".card")) continue;
     if (/\.attach\//.test(rel)) continue;
-    if (/\.attach$/.test(rel)) continue;
+    if (rel.endsWith(".attach")) continue;
 
     const dirRel = path.dirname(rel);
     const leafName = path.basename(rel);

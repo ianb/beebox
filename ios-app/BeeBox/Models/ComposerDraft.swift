@@ -436,6 +436,11 @@ struct VoicePreparation: Codable, Equatable, Identifiable, Sendable {
     /// Nil in manifests written before button-triggered HQ sends existed; nil
     /// preserves the historical keyword-tag behavior.
     var appendsKeywordTag: Bool? = nil
+    /// The box's HQ service labelled speakers when the message was sent, so
+    /// the HQ pass stays on the server. Captured at the send gesture, like the
+    /// binding, because a relaunch resumes before the web re-posts its state.
+    /// Nil in manifests written before the on-device pass existed.
+    var diarizationRequested: Bool? = nil
     var audioFilename: String?
     var createdAt: Date
 }

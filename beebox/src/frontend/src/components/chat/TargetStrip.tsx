@@ -24,8 +24,9 @@ export function TargetStrip(props: {
   onInterrupt: () => void;
   speechPlaying: boolean;
   onStopSpeech: () => void;
+  includeControlIds?: boolean;
 }) {
-  const { status, pendingCount, isStreaming, onInterrupt, speechPlaying, onStopSpeech } = props;
+  const { status, pendingCount, isStreaming, onInterrupt, speechPlaying, onStopSpeech, includeControlIds = true } = props;
   const hasContent = status.state === "busy" || pendingCount > 0 || isStreaming || speechPlaying;
   if (!hasContent) return null;
 
@@ -39,7 +40,7 @@ export function TargetStrip(props: {
       </div>
       {speechPlaying ? (
         <button
-          id="bbx-chat-stop-speech"
+          id={includeControlIds ? "bbx-chat-stop-speech" : undefined}
           onClick={onStopSpeech}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
           title="Stop speaking"
@@ -52,7 +53,7 @@ export function TargetStrip(props: {
       ) : null}
       {isStreaming ? (
         <button
-          id="bbx-chat-stop-agent"
+          id={includeControlIds ? "bbx-chat-stop-agent" : undefined}
           onClick={onInterrupt}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
           title="Stop"

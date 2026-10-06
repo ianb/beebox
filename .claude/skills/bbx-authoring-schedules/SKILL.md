@@ -100,6 +100,12 @@ properties come with it that a schedule does not have to build:
   between lands is legitimately ahead. A conflict is an `important` alert and
   the run does not start; nothing is resolved unattended.
 
+Before that merge, the runner parks any uncommitted edits an earlier session
+left on `refs/schedules/<name>/parked/<runId>` and tells the session; after the
+run, a branch still holding work `main` lacks is an `unlanded-commits`
+condition. The briefing also lists those commits, so a prompt that lets the
+session land its own work covers inherited commits too.
+
 That second one is why **`prompt.md` should not tell the session to pull or
 merge `main` itself.** It begins on current `main` already. A long-lived
 worktree is re-attached, not rebuilt, so without the runner doing this a
@@ -185,7 +191,10 @@ codex: prepended to the briefing). Three things it must state:
   with neither is recorded as **bailed** and becomes an `important` alert —
   that is the silent-failure refusal the whole design exists for. The run id is
   in the briefing's trailer, so a session that lost its environment can still
-  report.
+  report. The session is single-shot: it ends with the agent's turn. The
+  shared briefing says so and background tasks are off, so `prompt.md` need
+  not repeat it. A bailed run's handoff can be re-delivered with `bin/schedules
+  run <name> --replay <runId>`.
 
 ## 5. When to write `check`
 

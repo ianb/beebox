@@ -129,7 +129,7 @@ type Spec = ReturnType<typeof specFor>;
 
 function noop() {}
 
-function StateBlock({ spec }: { spec: Spec }) {
+function StateBlock({ spec, includeControlIds }: { spec: Spec; includeControlIds: boolean }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Static store for the gallery: the value never changes (set is a no-op,
@@ -167,6 +167,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       onEnterCapture={noop}
       captureEnabled
       narrationEnabled={spec.narrationEnabled}
+      includeControlIds={includeControlIds}
     />
   );
   const mobileRow = (
@@ -179,6 +180,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       clearDraft={noop}
       onStopDictation={noop}
       onVoiceSegmentSend={noop}
+      includeControlIds={includeControlIds}
     />
   );
   const targetStrip = (
@@ -189,6 +191,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       onInterrupt={noop}
       speechPlaying={spec.speechPlaying}
       onStopSpeech={noop}
+      includeControlIds={includeControlIds}
     />
   );
   return (
@@ -221,6 +224,7 @@ function StateBlock({ spec }: { spec: Spec }) {
         expiredAttachmentsNotice={null}
         inputArea={inputArea}
         mobileRow={mobileRow}
+        includeControlIds={includeControlIds}
       />
     </div>
     </InputStoreProvider>
@@ -238,7 +242,7 @@ export function ComposerStatesHarness() {
     if (!c) return <div className="p-6 font-mono text-sm text-warm-600">Unknown state: {selected}</div>;
     return (
       <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 py-4">
-        <StateBlock spec={specFor(c)} />
+        <StateBlock spec={specFor(c)} includeControlIds />
       </div>
     );
   }
@@ -256,7 +260,7 @@ export function ComposerStatesHarness() {
           <div className="max-w-5xl mx-auto px-4 pb-1 text-xs font-mono text-warm-500">
             {comboKey(c)} — {comboLabel(c)}
           </div>
-          <StateBlock spec={specFor(c)} />
+          <StateBlock spec={specFor(c)} includeControlIds={false} />
         </div>
       ))}
       <div className="max-w-5xl mx-auto px-4 pt-4 mt-4 border-t border-warm-300">

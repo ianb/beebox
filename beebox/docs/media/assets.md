@@ -86,8 +86,11 @@ Two deliberate exceptions:
   `annex.largefiles=anything`, because a batch really does hold arbitrary
   types. Control files are exempted. That file needs a partner: `largefiles` is
   consulted only for paths the filter-process sees, so `.git/info/attributes`
-  carries one non-extension line (`**/*.upload-batch.attach/**`) putting batch
-  scopes on the filter's path. Without it the batch-local setting is inert for
+  carries non-extension lines putting batch scopes on the filter's path:
+  `**/upload-*.attach/**` for a batch's `<slug>.attach` scope (named after the
+  card, so it stays matched when `bbx rm` or `bbx mv` moves the card), and
+  `**/*.upload-batch.attach/**` for scopes written before 2026-10 under the old
+  fixed name. Without it the batch-local setting is inert for
   exactly the extensions it exists to cover — that was the state between
   2026-08-04 and 2026-08-18, when a batch's `.zip` committed as raw bytes while
   its photos annexed.

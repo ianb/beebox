@@ -25,23 +25,47 @@ final class ChatWebViewRequestTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret-device-token")
     }
 
-    func testQuickChatAuthenticatesWithoutNativeComposerOrSessionParameters() {
-        let box = makeBox(authToken: "secret-device-token").withSessionID("existing-session")
-        let request = ChatWebView.authenticatedRequest(for: box, page: .quickChat)
+    /// The web landmark menu's box row navigates to `/<box>/box`; the native
+    /// box screen answers it. The box lives under a path prefix, so the check
+    /// compares the path, and runs before the same-origin allow.
+    func testBoxScreenNavigationUnderAPrefixIsInterceptedAndOtherPagesLoad() {
+        var opened = 0
+        var external: [URL] = []
+        let coordinator = ChatWebView.Coordinator(
+            boxID: UUID(),
+            allowedOrigin: "http://127.0.0.1:3210",
+            boxBaseURL: URL(string: "http://127.0.0.1:3210/main/test1")!,
+            onSessionChange: { _ in },
+            onEmissionDeliveryAttempt: { _ in },
+            onEmissionReceipt: { _ in },
+            onLocationShareResult: { _ in },
+            onLocationSharingStateChange: { _ in },
+            onNarrationStateChange: { _ in },
+            onSpeechPlaybackStateChange: { _ in },
+            onResponseStateChange: { _ in },
+            onScreenshotResult: { _ in },
+            onComposerCommand: { _ in },
+            onComposerCommandAcknowledgementDelivered: { _ in },
+            onOpenBoxScreen: { opened += 1 },
+            openExternalURL: { external.append($0) }
+        )
 
-        XCTAssertEqual(request.url?.absoluteString, "https://box.example.com/test1/quick-chat")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret-device-token")
-        XCTAssertEqual(box.sessionID, "existing-session")
-    }
+        XCTAssertEqual(coordinator.mainFramePolicy(for: URL(string: "http://127.0.0.1:3210/main/test1/box")!), .cancel)
+        XCTAssertEqual(opened, 1)
+        XCTAssertEqual(coordinator.mainFramePolicy(for: URL(string: "http://127.0.0.1:3210/main/test1/box/?from=menu")!), .cancel)
+        XCTAssertEqual(opened, 2)
 
-    func testQuickChatStartupCarriesAuthWithoutNativeBridge() {
-        let view = ChatWebView(box: makeBox(authToken: "secret-device-token"), page: .quickChat)
-        let source = view.startupScript()?.source ?? ""
+        XCTAssertEqual(coordinator.mainFramePolicy(for: URL(string: "http://127.0.0.1:3210/main/test1/browse")!), .allow)
+        XCTAssertEqual(coordinator.mainFramePolicy(for: URL(string: "http://127.0.0.1:3210/main/test1/boxes")!), .allow)
+        // Another box under the same router is not this box's screen.
+        XCTAssertEqual(coordinator.mainFramePolicy(for: URL(string: "http://127.0.0.1:3210/main/test2/box")!), .allow)
+        XCTAssertEqual(coordinator.mainFramePolicy(for: URL(string: "http://127.0.0.1:3210/box")!), .allow)
+        XCTAssertEqual(opened, 2)
+        XCTAssertEqual(external, [])
 
-        XCTAssertTrue(source.contains("beebox.mobileAuthToken"))
-        XCTAssertTrue(source.contains("window.location.origin === allowedOrigin"))
-        XCTAssertFalse(source.contains("beeboxNativeReceive"))
-        XCTAssertFalse(source.contains("messageHandlers"))
+        XCTAssertEqual(coordinator.mainFramePolicy(for: URL(string: "https://example.org/main/test1/box")!), .cancel)
+        XCTAssertEqual(opened, 2)
+        XCTAssertEqual(external.map(\.host), ["example.org"])
     }
 
     func testRequestURLCarriesNoCredential() {
@@ -141,8 +165,11 @@ final class ChatWebViewRequestTests: XCTestCase {
     }
 
     func testHQDictationStateDecodesNeutralBridgePayload() {
-        XCTAssertEqual(ChatWebView.hqDictationEnabled(from: #"{"enabled":true}"#), true)
-        XCTAssertNil(ChatWebView.hqDictationEnabled(from: #"{"enabled":"yes"}"#))
+        XCTAssertEqual(
+            ChatWebView.hqDictationState(from: #"{"enabled":true,"diarized":true}"#),
+            NativeHqDictationState(enabled: true, diarized: true)
+        )
+        XCTAssertNil(ChatWebView.hqDictationState(from: #"{"enabled":"yes"}"#))
     }
 
     func testSpeechPlaybackStateDecodesNeutralBridgePayload() {

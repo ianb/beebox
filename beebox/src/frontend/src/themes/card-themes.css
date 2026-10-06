@@ -124,6 +124,9 @@
   padding: var(--bbx-content-padding, 1rem);
   max-width: 54rem;
 }
+.bbx-card-view[data-view-layout="inset"] {
+  padding: var(--bbx-content-padding, 1rem);
+}
 .bbx-card-front[data-card-mode="chat"] {
   max-height: 24rem;
   overflow: auto;

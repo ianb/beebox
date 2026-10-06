@@ -8,7 +8,8 @@ tour(
     await t.expect.heading("One note, three stocks", { level: 2 });
     await t.checkpoint("browse-card-desk");
     const framed = await t.eval(`(() => {
-      const desk = document.querySelector(".bbx-interface-card-desk");
+      // A phone shows one pane; the Browse pane stays mounted but hidden.
+      const desk = document.querySelector('[data-workspace-card="_content/theme-tour/comparison-paper.memo.card"] .bbx-interface-card-desk[aria-hidden="false"]');
       const card = desk?.querySelector(".bbx-card-surface");
       if (!desk || !card) return false;
       const d = desk.getBoundingClientRect(), c = card.getBoundingClientRect();

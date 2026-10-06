@@ -128,7 +128,7 @@ export function makeOpenCard(
       {
         ...target,
         viewer: opts?.viewer ?? target.viewer,
-        params: { ...target.params, ...(opts?.params ?? {}) },
+        params: { ...target.params, ...opts?.params },
       },
       opts?.label === undefined ? undefined : { label: opts.label },
     );

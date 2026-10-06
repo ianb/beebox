@@ -13,6 +13,7 @@
  */
 
 interface StatusBarProps {
+  includeControlIds?: boolean;
   recording: boolean;
   recordingTime: number;
   formatTime: (s: number) => string;
@@ -99,10 +100,10 @@ export function StatusBar(props: StatusBarProps) {
             )}
           </div>
         ) : null}
-        <button id="bbx-capture-add-file" onClick={props.onPickFile} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Upload file" aria-label="Upload file"><span aria-hidden="true">&#128206;</span></button>
-        <button id="bbx-capture-add-gallery" onClick={props.onPickGallery} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Add from gallery" aria-label="Add from gallery"><span aria-hidden="true">&#128247;</span></button>
+        <button id={props.includeControlIds === false ? undefined : "bbx-capture-add-file"} onClick={props.onPickFile} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Upload file" aria-label="Upload file"><span aria-hidden="true">&#128206;</span></button>
+        <button id={props.includeControlIds === false ? undefined : "bbx-capture-add-gallery"} onClick={props.onPickGallery} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Add from gallery" aria-label="Add from gallery"><span aria-hidden="true">&#128247;</span></button>
         <button
-          id="bbx-capture-settings"
+          id={props.includeControlIds === false ? undefined : "bbx-capture-settings"}
           onClick={props.onToggleSettings}
           className={`p-1 text-lg ${props.showSettings ? "text-white" : "text-gray-400 hover:text-white"}`}
           title="Device settings"

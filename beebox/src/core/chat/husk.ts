@@ -21,7 +21,7 @@ import { withCardLock } from "../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../box/config.js";
 import { extractSnippet } from "../../cli/lib/session-text.js";
 import { errnoCode } from "../../shared/error-guards.js";
-import { readCodexSessionUpdatedAt } from "./session/codex-transcript.js";
+import { readCodexSessionUpdatedAt } from "./session/codex-transcript/core.js";
 import { loadSessionHistory } from "./session/load-history.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import {

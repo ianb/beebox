@@ -62,3 +62,15 @@ file). `open`, `snapshot`, `click`, and `eval` kept working throughout, so
 all UI verification fell back to DOM reads. That screenshots worked earlier
 in the same session and later stopped fits the asleep-or-locked display
 hypothesis; it was not checked directly.
+
+Re-encountered 2026-09-30 (weekly tour check, run 20260930-200521, worktree
+`tour-check`). Four tours captured normally: browse-walk, capture,
+card-theme-interface, and card-themes (01:06–01:15 UTC). After that, every
+tour stopped at its first screenshot: card-theme-previews, nav-pages,
+new-chat, system-themes, and workspace-panes. The error was
+`✗ CDP command timed out: Page.captureScreenshot`. One mobile screenshot call
+did not return for more than 16 minutes, and it was stopped by hand. A
+new daemon with new Chrome profiles failed in the same way. `open`, `eval`,
+and `snapshot` in new sessions kept working. The failure did not depend on the
+page: `/chat`, a card in Browse, and the workspace-panes card all failed.
+Artifacts: `beebox/test/tours/.artifacts/{nav-pages,new-chat,workspace-panes}/2026-10-01T02-*/summary.md`.

@@ -13,10 +13,11 @@ approval.
 
 ## Your durable product
 
-`docs/agent-sdk-notes.md` — a cumulative, newest-first, **beebox-specific**
-filtering of upstream releases. It is not a generic changelog summary. Entries
-stay after their versions are applied: they are durable evidence for
-regressions, behavior changes, and opportunities elsewhere in beebox.
+`schedules/sdk-update/agent-sdk-notes.md` — a cumulative, newest-first,
+**beebox-specific** filtering of upstream releases. It is not a generic
+changelog summary. Entries stay after their versions are applied: they are
+durable evidence for regressions, behavior changes, and opportunities
+elsewhere in beebox.
 
 Keep the header's **Latest reviewed upstream version** line accurate for all
 three channels (SDK, Claude Code, Codex). It is the baseline the schedule's `run` script measures from, so a
@@ -107,13 +108,13 @@ all.
    `codex` from `PATH`: `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin
    --help` from the repo root. Update the ledger's pin,
    recommendation, and applied/pending labels to match what is installed. Commit
-   exactly `docs/agent-sdk-notes.md`, `beebox/package.json`, and
+   exactly `schedules/sdk-update/agent-sdk-notes.md`, `beebox/package.json`, and
    `pnpm-lock.yaml` as applicable, then **`bin/land`** to fast-forward `main`
    onto your branch. Do not claim the deployment completed unless you actually
    verified its per-run log.
 10. If no bump is due but the notes changed, commit only
-    `docs/agent-sdk-notes.md`, then `bin/land`. That root-doc-only commit does
-    not deploy beebox.
+    `schedules/sdk-update/agent-sdk-notes.md`, then `bin/land`. That ledger-only
+    commit does not deploy beebox.
 11. **`bin/land` can legitimately refuse**, and that is not a failure to work
     around: it requires the main checkout to be clean and on `main`, and the
     merge to be a fast-forward. If it refuses, your commit is already safe on

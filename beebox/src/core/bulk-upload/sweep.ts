@@ -30,13 +30,13 @@ import { parseUploadBatch } from "../../schemas/upload-batch.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { userMessageAlreadyLanded } from "../chat/session/deliver-user-message.js";
 import { listStagingSessions, isBulkSession, readStagingSession, writeStagingSession, type StagingSession, type StagingSessionState } from "../capture/staging-store/core.js";
 import { cleanupStagingSession, discardStagingSessionIfCancellable } from "../capture/staging-teardown.js";
-import { bulkBatchHasNothingToReport } from "./batch-format.js";
+import { bulkBatchHasNothingToReport, failedItemsNotArrived } from "./batch-format.js";
 import { StagingSessionGoneError } from "../capture/staging-errors.js";
-import { bulkBatchCardRelPath } from "./prepare.js";
+import { resolveBulkBatchPaths } from "./prepare.js";
 
 /** No-activity window after which an open bulk batch is surfaced as abandoned. */
 const BULK_ABANDONMENT_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
@@ -124,7 +124,7 @@ async function surfaceStrandedBatch(opts: {
     targetSessionId: session.targetSessionId,
     state: session.state,
     receivedCount: session.files.length,
-    failedCount: session.failedItems?.length ?? 0,
+    failedCount: failedItemsNotArrived({ failedItems: session.failedItems ?? [], files: session.files }).length,
     registeredCount: session.expectedItems?.length ?? 0,
     note: session.note,
   });
@@ -270,7 +270,8 @@ async function deliveredMessageLanded(opts: {
   session: { createdAt: string; id: string; contextDir?: string | undefined; targetSessionId: string | null };
 }): Promise<boolean> {
   const { boxRoot, session } = opts;
-  const cardRelPath = bulkBatchCardRelPath({
+  const { cardRelPath } = await resolveBulkBatchPaths({
+    boxRoot,
     startedAt: session.createdAt,
     id: session.id,
     contextDir: session.contextDir ?? "",
@@ -290,7 +291,7 @@ async function findStaleTmpUploadCards(opts: { boxRoot: string; now: number }): 
   const { boxRoot, now } = opts;
 
   const stale: UnfiledBatch[] = [];
-  for (const dir of await findTmpUploadDirs(boxRoot, boxRoot)) {
+  for (const dir of await findTmpUploadDirs(boxRoot)) {
     for (const card of await batchCardsIn(dir)) {
       const parsed = parseUploadBatch(await fs.readFile(card, "utf-8").catch(() => ""));
       if (parsed === null || parsed.frontmatter.delivered !== true) continue;
@@ -335,7 +336,7 @@ async function batchCardsIn(tmpUploadDir: string): Promise<string[]> {
 }
 
 /** Recursively collect every `tmp-upload` directory under `root`. */
-async function findTmpUploadDirs(boxRoot: string, root: string): Promise<string[]> {
+async function findTmpUploadDirs(root: string): Promise<string[]> {
   const found: string[] = [];
   let entries: Dirent[];
   try {
@@ -351,7 +352,7 @@ async function findTmpUploadDirs(boxRoot: string, root: string): Promise<string[
       found.push(abs);
       continue;
     }
-    found.push(...(await findTmpUploadDirs(boxRoot, abs)));
+    found.push(...(await findTmpUploadDirs(abs)));
   }
   return found;
 }

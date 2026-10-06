@@ -34,7 +34,7 @@ import { METADATA_CONSUMER, TITLE_CONSUMER, sessionState, type ReviewState } fro
 import { resolveSpan, spanSize, type BootstrapReason, type ResolvedSpan, type SpanPageReader } from "./span.js";
 import { resolveChatEngine } from "../session/engine.js";
 import { loadSessionHistory } from "../session/load-history.js";
-import { readCodexSessionUpdatedAt } from "../session/codex-transcript.js";
+import { readCodexSessionUpdatedAt } from "../session/codex-transcript/core.js";
 import type { AgentEngine } from "../../box/config.js";
 import { stripChatAppTags } from "../../../shared/chat-tags.js";
 

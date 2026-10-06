@@ -82,7 +82,7 @@ async function injectStrandedSelfNote(opts: {
     `${String(batch.receivedCount)} of ${String(batch.registeredCount)} file(s) reached the box` +
     `${batch.failedCount > 0 ? `, ${String(batch.failedCount)} failed to upload` : ""}; ` +
     `the bytes are still staged under \`_tmp/capture-staging/${batch.sessionId}/\`. ${introduction} ` +
-    "They have not been told this failed and may believe the upload worked. " +
+    "The box sent them a notification when it failed, but they may not have seen it and may believe the upload worked. " +
     "Tell them what happened, and — if you can work out where the files should go from what they " +
     "said — offer to place them. Do not silently discard the batch.";
   const wrapped = `<self-note ref="bulk-upload-stranded">\n${body}\n</self-note>`;

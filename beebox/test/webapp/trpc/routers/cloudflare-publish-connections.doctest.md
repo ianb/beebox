@@ -1,8 +1,9 @@
 # Cloudflare publishing connections stay server-held
 
 Admin connection procedures store a verified account token in machine custody,
-expose metadata only, and grant it to boxes at `server` access. The ordinary
-secret APIs never receive this credential value.
+expose metadata only except for the explicitly audited owner reveal, and grant
+it to boxes at `server` access. The ordinary secret APIs never receive this
+credential value.
 
 ```ts setup
 import { mkdtemp, readFile } from "node:fs/promises";
@@ -14,6 +15,8 @@ import { resolveCloudflarePublishCredential } from "../../../../src/core/secrets
 import { getCloudflarePublishBinding, reserveCloudflarePublishBinding } from "../../../../src/core/secrets/cloudflare-publish.js";
 import { listSecrets } from "../../../../src/core/secrets/lifecycle.js";
 import { resolveSecret } from "../../../../src/core/secrets/resolve.js";
+import { accessLogSegmentPath } from "../../../../src/core/secrets/access-log.js";
+import { getBoxTimeISO } from "../../../../src/lib/time.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
 const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
@@ -79,6 +82,23 @@ print(JSON.stringify({
   stored: raw.cloudflarePublishConnections.studio.apiToken === "placeholder-cloudflare-token",
 }));
 => {"connection":"studio","genericNames":[],"stored":true}
+```
+
+Only an authenticated owner may explicitly reveal the saved token. The audit
+event identifies the credential without recording its value. Browser UI
+refuses Show when `navigator.webdriver` is true; this is a client-side check.
+
+```ts continue
+print(`non-owner refused: ${await message(caller(false).cloudflarePublishConnections.revealToken({ name: "studio" }))}`);
+print(`legacy webdriver claim refused: ${await message(owner.cloudflarePublishConnections.revealToken({ name: "studio", webdriver: true }))}`);
+const revealed = await owner.cloudflarePublishConnections.revealToken({ name: "studio" });
+const log = await readFile(accessLogSegmentPath(getBoxTimeISO(box.root)), "utf8");
+const event = JSON.parse(log.trim().split("\n").at(-1));
+print(JSON.stringify({ value: revealed.token, logged: event.event === "owner-read", logContainsValue: log.includes("placeholder-cloudflare-token") }));
+=>
+non-owner refused: FORBIDDEN
+legacy webdriver claim refused: BAD_REQUEST
+{"value":"placeholder-cloudflare-token","logged":true,"logContainsValue":false}
 ```
 
 A grant is always `server`; there is no API input that can raise a publishing

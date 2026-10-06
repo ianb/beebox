@@ -37,13 +37,16 @@ import {
   releaseLock,
   tailLog,
   updateScheduleState,
+  writeHandoff,
   writeRunExit,
 } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { resolveConditions } from "./schedules-alert-lifecycle.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
 import { alertIfBailed, startWorkstream } from "./schedules-workstream.js";
+import { accountForUnlanded, scheduleWorktreePath } from "./schedules-branch.js";
 import { errnoCode } from "../../beebox/src/shared/error-guards.js";
+import { NoHandoffToReplayError, NoWorkstreamToStartError } from "./schedules-errors.js";
 
 /** How many log lines a `failed` alert carries as details. */
 const LOG_TAIL_LINES = 40;
@@ -142,8 +145,9 @@ export type RunReport =
  * have at the end of a live session — otherwise a mid-session shutdown is the
  * one way a bailed run stays silent.
  */
-async function accountForReclaimedRun(deps: RunnerDeps, reclaimed: { name: string; runId: string }): Promise<void> {
-  const exit = await readRunExit(deps.storeRoot, reclaimed);
+async function accountForReclaimedRun(deps: RunnerDeps, reclaimed: { schedule: LoadedSchedule; runId: string }): Promise<void> {
+  const { name } = reclaimed.schedule;
+  const exit = await readRunExit(deps.storeRoot, { name, runId: reclaimed.runId });
   if (exit === null) {
     // No exit record at all: the runner died between the `run` script and the
     // accounting. If that script had already written a handoff, the work it
@@ -152,13 +156,13 @@ async function accountForReclaimedRun(deps: RunnerDeps, reclaimed: { name: strin
     // delivery. The session is deliberately NOT started here: a reclaim runs
     // inside another schedule's tick, and starting an agent from it would move
     // the launch out of the one place that accounts for it.
-    const handoff = await readHandoff(deps.storeRoot, reclaimed);
+    const handoff = await readHandoff(deps.storeRoot, { name, runId: reclaimed.runId });
     if (handoff === null) return;
     await raiseAlert(deps, {
-      workstream: reclaimed.name,
+      workstream: name,
       runId: reclaimed.runId,
       title: INTERRUPTED_HANDOFF_ALERT_TITLE,
-      message: `${reclaimed.name} run ${reclaimed.runId} handed off "${handoff.title}" and was killed before it could start or record a session.`,
+      message: `${name} run ${reclaimed.runId} handed off "${handoff.title}" and was killed before it could start or record a session.\n\nReplay it: \`bin/schedules run ${name} --replay ${reclaimed.runId}\`.`,
       details: handoff.body,
       priority: "important",
       condition: null,
@@ -166,11 +170,93 @@ async function accountForReclaimedRun(deps: RunnerDeps, reclaimed: { name: strin
     return;
   }
   if (!exit.sessionLaunched) return;
-  await alertIfBailed(deps, { ...reclaimed, logFile: logPath(deps.storeRoot, reclaimed) });
+  const run = { name, runId: reclaimed.runId };
+  const worktree = reclaimed.schedule.config.workstream?.worktree === true ? await scheduleWorktreePath(deps.mainRoot, name) : null;
+  await alertIfBailed(deps, { ...run, logFile: logPath(deps.storeRoot, run), worktree });
 }
 
 /** The title a reclaimed run's orphaned handoff is filed under. */
 export const INTERRUPTED_HANDOFF_ALERT_TITLE = "run interrupted after handoff";
+
+/**
+ * The store shape and the schedule's lock, for a run that writes. Returns the
+ * skip report when another run holds the lock, null once this run holds it.
+ *
+ * Marker first, then the schedule's own directory: a run reached directly
+ * (a test, a future caller) must leave the store in the same shape the CLI's
+ * entry points do, or the session's own `bin/schedules done` refuses it.
+ */
+async function takeRunLock(deps: RunnerDeps, input: { schedule: LoadedSchedule; runId: string; at: Date }): Promise<RunReport | null> {
+  const { schedule } = input;
+  await ensureStoreRoot(deps.storeRoot);
+  await ensureScheduleDir(deps.storeRoot, schedule.name);
+  const lock = await acquireLock(deps.storeRoot, {
+    name: schedule.name,
+    runId: input.runId,
+    pid: deps.pid,
+    isProcessAlive: deps.isProcessAlive,
+    at: input.at,
+    staleAfterMs: lockStaleAfterMs(schedule.config.timeoutMs),
+    bootTimeMs: deps.bootTimeMs(),
+  });
+  if (lock.kind === "held") {
+    // Not an alert: the NEXT tick's overdue derivation is the signal if this
+    // keeps happening, and a lock held by a live run is normal.
+    return { kind: "skipped", name: schedule.name, reason: `lock held by pid ${String(lock.pid ?? 0)}` };
+  }
+  if (lock.reclaimed !== null) {
+    await accountForReclaimedRun(deps, { schedule, runId: lock.reclaimed.runId });
+  }
+  return null;
+}
+
+/**
+ * `bin/schedules run <name> --replay <runId>`: start a session on a stored
+ * handoff, without running `run` again.
+ *
+ * A session that bailed leaves its handoff in `runs/<id>.handoff.json`, but
+ * its `run` script has usually already moved the baseline (knip-sweep rewrites
+ * `last-report.txt` before handing off), so a forced rerun hands off nothing.
+ * The replay is a run of its own — new run id, own log, own result — so the
+ * reporting contract and the bailed-run check apply to it unchanged. It does
+ * not stamp `lastRunAt`: the schedule's `run` did not run, and due-ness stays
+ * the cadence's.
+ */
+export async function replayRun(deps: RunnerDeps, request: { schedule: LoadedSchedule; replayOf: string }): Promise<RunReport> {
+  const { schedule, replayOf } = request;
+  if (schedule.config.workstream === null) throw new NoWorkstreamToStartError(schedule.name);
+  const original = await readHandoff(deps.storeRoot, { name: schedule.name, runId: replayOf });
+  if (original === null) throw new NoHandoffToReplayError(schedule.name, replayOf);
+  const at = deps.now();
+  const runId = runIdFor(at);
+  const skipped = await takeRunLock(deps, { schedule, runId, at });
+  if (skipped !== null) return skipped;
+  const previous = await readScheduleState(deps.storeRoot, schedule.name);
+  try {
+    const handoff = { ...original, runId, at: at.toISOString() };
+    await writeHandoff(deps.storeRoot, { name: schedule.name, ...handoff });
+    await fs.appendFile(logPath(deps.storeRoot, { name: schedule.name, runId }), `[schedules] replaying the handoff of run ${replayOf}\n`, "utf8");
+    const writeExit = async (session: { sessionExit: number | null; checkExit: number | null; timedOut: boolean }): Promise<void> => {
+      await writeRunExit(deps.storeRoot, {
+        name: schedule.name,
+        runId,
+        runExit: null,
+        sessionExit: session.sessionExit,
+        checkExit: session.checkExit,
+        sessionLaunched: true,
+        timedOut: session.timedOut,
+        at: deps.now().toISOString(),
+      });
+    };
+    await writeExit({ sessionExit: null, checkExit: null, timedOut: false });
+    const session = await startWorkstream(deps, { schedule, runId, outcome: "handoff", handoff, previous, replayOf });
+    await writeExit(session);
+    await accountForUnlanded(deps, { schedule, runId });
+    return { kind: "ran", name: schedule.name, runId, outcome: "handoff", exitCode: null, timedOut: false, handoff, alertId: null };
+  } finally {
+    await releaseLock(deps.storeRoot, schedule.name);
+  }
+}
 
 /**
  * One execution of one schedule: lock, run, classify, record, and — when the
@@ -212,29 +298,9 @@ export async function runSchedule(
     };
   }
 
-  // Marker first, then the schedule's own directory: a run reached directly
-  // (a test, a future caller) must leave the store in the same shape the CLI's
-  // entry points do, or the session's own `bin/schedules done` refuses it.
-  await ensureStoreRoot(deps.storeRoot);
-  await ensureScheduleDir(deps.storeRoot, schedule.name);
+  const skipped = await takeRunLock(deps, { schedule, runId, at });
+  if (skipped !== null) return skipped;
   const previous = await readScheduleState(deps.storeRoot, schedule.name);
-  const lock = await acquireLock(deps.storeRoot, {
-    name: schedule.name,
-    runId,
-    pid: deps.pid,
-    isProcessAlive: deps.isProcessAlive,
-    at,
-    staleAfterMs: lockStaleAfterMs(schedule.config.timeoutMs),
-    bootTimeMs: deps.bootTimeMs(),
-  });
-  if (lock.kind === "held") {
-    // Not an alert: the NEXT tick's overdue derivation is the signal if this
-    // keeps happening, and a lock held by a live run is normal.
-    return { kind: "skipped", name: schedule.name, reason: `lock held by pid ${String(lock.pid ?? 0)}` };
-  }
-  if (lock.reclaimed !== null) {
-    await accountForReclaimedRun(deps, { name: schedule.name, runId: lock.reclaimed.runId });
-  }
 
   try {
     const logFile = logPath(deps.storeRoot, { name: schedule.name, runId });
@@ -301,9 +367,10 @@ export async function runSchedule(
       });
     }
     if (willLaunch) {
-      const session = await startWorkstream(deps, { schedule, runId, outcome, handoff, previous });
+      const session = await startWorkstream(deps, { schedule, runId, outcome, handoff, previous, replayOf: null });
       await writeExit(session);
     }
+    await accountForUnlanded(deps, { schedule, runId });
     return { kind: "ran", name: schedule.name, runId, outcome, exitCode: result.exitCode, timedOut: result.timedOut, handoff, alertId };
   } finally {
     await releaseLock(deps.storeRoot, schedule.name);

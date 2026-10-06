@@ -6,7 +6,7 @@ import {
   getCommitDiff,
   getLogPaginated,
   getTrailerFacets,
-} from "../../../lib/git/core.js";
+} from "../../../lib/git/core/operations.js";
 import {
   CONNECTOR_TRAILER_KEYS,
   FEEDBACK_TRAILER_KEYS,
@@ -19,7 +19,7 @@ import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../cli/lib/session.j
 import { resolveSessionLogPath } from "../../../core/chat/session/history.js";
 import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
 import { resolveChatEngine } from "../../../core/chat/session/engine.js";
-import { codexSessionExists } from "../../../core/chat/session/codex-transcript.js";
+import { codexSessionExists } from "../../../core/chat/session/codex-transcript/core.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import * as path from "node:path";

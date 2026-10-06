@@ -148,6 +148,17 @@ function usePanelSlideDirection({ open, panelIndex }: { open: boolean; panelInde
   return direction;
 }
 
+/** Visible viewport bounds for fixed popovers, including iOS keyboard resize. */
+function visibleViewport() {
+  const viewport = window.visualViewport;
+  return {
+    width: viewport?.width ?? window.innerWidth,
+    height: viewport?.height ?? window.innerHeight,
+    left: viewport?.offsetLeft ?? 0,
+    top: viewport?.offsetTop ?? 0,
+  };
+}
+
 export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose, panelIndex }: DropdownProps) {
   const align = alignArg ?? "right";
   const vertical = verticalArg ?? "below";
@@ -209,17 +220,19 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       const rect = root.getBoundingClientRect();
       const gap = 4;
       const margin = 8;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+      // On iOS the on-screen keyboard reduces the visual viewport while the
+      // layout viewport (innerHeight) stays full-size. Portaled fixed menus
+      // must be clamped to the visible area or their lower rows sit behind it.
+      const { width: vw, height: vh, left: viewportLeft, top: viewportTop } = visibleViewport();
       const next: CSSProperties = { position: "fixed", maxWidth: vw - margin * 2 };
       // Vertical: anchor the near edge to the trigger, then bound the far edge
       // to the viewport so a tall menu gains a scrollbar instead of overflowing.
       if (vertical === "above") {
-        next.bottom = vh - rect.top + gap;
-        next.maxHeight = rect.top - gap - margin;
+        next.bottom = window.innerHeight - rect.top + gap;
+        next.maxHeight = rect.top - gap - viewportTop - margin;
       } else {
         next.top = rect.bottom + gap;
-        next.maxHeight = vh - (rect.bottom + gap) - margin;
+        next.maxHeight = viewportTop + vh - (rect.bottom + gap) - margin;
       }
       // Horizontal: align to the trigger per `align`, then clamp the whole box
       // within [margin, vw - margin]. `right-0`-style alignment measured only
@@ -229,12 +242,14 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       const rawWidth = menu ? menu.getBoundingClientRect().width : 0;
       const effWidth = Math.min(rawWidth, vw - margin * 2);
       const anchored = align === "right" ? rect.right - effWidth : rect.left;
-      next.left = Math.max(margin, Math.min(anchored, vw - margin - effWidth));
+      next.left = Math.max(viewportLeft + margin, Math.min(anchored, viewportLeft + vw - margin - effWidth));
       setCoords(next);
     };
     update();
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("scroll", update);
     // A width-class swap (a menu whose sub-panel needs more room) now eases via
     // CSS `transition-[width]` rather than snapping, so the menu's measured
     // width changes continuously over ~150ms — a one-shot `update()` at the
@@ -251,6 +266,8 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
     return () => {
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("scroll", update);
       resizeObserver?.disconnect();
     };
     // `width` participates because a panel swap may change the menu's width
@@ -269,7 +286,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       if (!inRoot && !inMenu) closeMenu();
     }
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") closeMenu();
+      if (e.key === "Escape" && !e.defaultPrevented) closeMenu();
     }
     document.addEventListener("mousedown", handlePointer);
     document.addEventListener("keydown", handleKey);

@@ -23,6 +23,7 @@ states=(
   expired-attachment
   keyboard-shown
   control-registry
+  quick-chat
 )
 
 mkdir -p "$output_dir"

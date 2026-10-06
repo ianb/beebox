@@ -7,7 +7,7 @@ and preserves pending manifests and Git recovery references.
 import { z } from "zod";
 import { createClaudeAgent } from "../../src/core/agent/invoke/core.js";
 import { createCodexAgent } from "../../src/core/agent/codex-agent.js";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -28,7 +28,12 @@ async function stopped(pid) {
   while (true) {
     try { process.kill(pid, 0); }
     catch (error) { if (error.code === "ESRCH") return true; throw error; }
-    const state = execFileSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" }).trim();
+    // `ps -p` exits 1 when the pid is gone, and the process can exit between
+    // the kill(0) above and this call; that is the stopped outcome too.
+    const ps = spawnSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" });
+    if (ps.status === 1) return true;
+    if (ps.status !== 0) throw new Error(`ps failed (${String(ps.status)}): ${ps.stderr}`);
+    const state = ps.stdout.trim();
     // A zombie has exited and cannot continue executing; init may reap it
     // shortly after the process-group SIGKILL reaches it.
     if (!state || state.startsWith("Z")) return true;

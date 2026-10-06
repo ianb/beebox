@@ -4,7 +4,7 @@ import { findChatHuskEntry, type ChatHuskEntry } from "../husk-read.js";
 import { resolveSessionLogPath } from "./history.js";
 import type { ChatSessionRegistry } from "./registry/core.js";
 import { resolveRecordedChatEngine } from "./engine.js";
-import { codexSessionExists } from "./codex-transcript.js";
+import { codexSessionExists } from "./codex-transcript/core.js";
 import { localOrigin } from "./origin.js";
 
 /**

@@ -22,8 +22,12 @@
 # exercises the same real React onClick handlers a mouse would.
 
 set -uo pipefail
-cd "$(dirname "$0")/.." || exit 1
+# The package root (this script lives in src/scripts/), so ../bin/browse is the
+# monorepo's browser driver. Every browse call below discards stderr, so a
+# wrong path here failed 14 of 16 checks silently; check it up front.
+cd "$(dirname "$0")/../.." || exit 1
 BROWSE="../bin/browse"
+[ -x "$BROWSE" ] || { echo "test-speech-browser: $BROWSE not found (run from a monorepo checkout)" >&2; exit 1; }
 
 pass=0
 fail=0

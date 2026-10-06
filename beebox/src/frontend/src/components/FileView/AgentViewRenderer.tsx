@@ -29,7 +29,7 @@ import {
 import { type NavigateHint, type ViewTarget } from "../../lib/view-url";
 import { viewSlugFromSourcePath } from "../../lib/view-source-path";
 import { type ViewState } from "../../lib/view-url";
-import type { ViewHistory } from "@core/views/types.js";
+import type { ViewHistory, ViewLayout } from "@core/views/types.js";
 import { useViewHistory } from "../../hooks/useViewHistory";
 // Side effect: installs window.__bbxViewWidgets so the compiler's
 // `beebox/view-widgets` shim can hand CardLink/CardRef/Markdown to compiled views.
@@ -86,9 +86,6 @@ function withModifiedReporting(
   };
 }
 
-type ViewMode = "page" | "chat";
-
-
 // Expose React globally so agent-generated views can use it
 // via the esbuild shim that references window.__bbxReact
 declare global {
@@ -109,7 +106,11 @@ if (typeof window !== "undefined" && !window.__bbxReact) {
 
 interface AgentViewRendererProps {
   slug: string;
-  mode: ViewMode;
+  /**
+   * Rendered inside another card's body (a `view:` embed), whose content
+   * area already supplies the inset — so the view's own layout is not applied.
+   */
+  embedded: boolean;
   /** Query parameters passed to the view component and cards API. */
   params?: Record<string, string>;
   viewState?: ViewState | null;
@@ -178,7 +179,7 @@ interface ViewModule {
   name?: string;
   description?: string;
   dependencies?: string[];
-  modes?: ViewMode[];
+  layout?: ViewLayout;
 }
 
 interface CardsPayload {
@@ -215,7 +216,7 @@ async function fetchCardsJson(url: string): Promise<CardsPayload> {
   return data;
 }
 
-export function AgentViewRenderer({ slug: rawSlug, mode, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
+export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
@@ -373,9 +374,10 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, viewState, canP
   }
 
   const Component = mod.default;
-  const containerClass = mode === "chat"
-    ? "max-h-96 overflow-auto border rounded-lg p-3"
-    : "w-full";
+  // The card surface owns chat-mode height and scrolling; this applies only
+  // the view's inset. An unrecognized `layout` export falls back to "inset";
+  // view metadata validation is what reports it.
+  const layout: ViewLayout = embedded || mod.layout === "full-bleed" ? "full-bleed" : "inset";
 
   // The view host the card widgets (CardLink/CardRef) consume.
   const viewHost = buildViewHost({
@@ -386,7 +388,7 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, viewState, canP
   });
 
   return (
-    <div className={containerClass}>
+    <div className="bbx-card-view" data-view-layout={layout}>
       <ViewErrorBoundary onRetry={() => void loadModule()} resetKey={reloadSeq}>
         <ViewHostProvider value={viewHost}>
           <Component

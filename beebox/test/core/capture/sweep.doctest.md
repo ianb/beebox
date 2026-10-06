@@ -92,7 +92,7 @@ The committed capture card is marked partial, and the delivered wrapper carries
 
 ```ts continue
 const basename = sessionBasenameFor({ actualStartedAt: EARLY, id });
-const docRel = `tmp-capture/${basename}.capture-session.card`;
+const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
 (await box.read(docRel)).includes("partial: true")
 => true
 

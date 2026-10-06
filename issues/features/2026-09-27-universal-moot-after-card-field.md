@@ -7,6 +7,7 @@ labels: [cards, schema]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
+priority: important
 ---
 
 Many cards stop mattering at a known time: an event notice after the event,

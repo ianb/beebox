@@ -26,11 +26,11 @@ import type { EventBus } from "../../event-bus/core.js";
 import type { ChatSession } from "../../chat/session/run/core.js";
 import type { ChatSessionRegistry } from "../../chat/session/registry/core.js";
 import { buildLoadContext } from "../../load-context.js";
-import { lintCardsDispatch } from "../../card-lint/core.js";
+import { lintCardsDispatch } from "../../card-lint/core/lint-cards.js";
 import { parseCardText, serializeCardText } from "../../card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { withCardLock } from "../../../lib/card-lock.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import {
   readStagingSession,
   setStagingState,
@@ -57,6 +57,7 @@ import {
   CaptureDeliveryError,
 } from "./deliver.js";
 import { notifyCaptureFailed } from "../failure-notice.js";
+import { landmarkScanRelDir } from "../../landmark/root-dir.js";
 import type { NotifyServices } from "../../notify-boxholder.js";
 
 /**
@@ -202,8 +203,8 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
   eventBus.emit("capture-status", { stagingId: id, sessionId: null, status: "preparing" });
   timer.mark("setup");
 
-  const captureRelDir =
-    target.contextDir !== null && target.contextDir !== "" ? `${target.contextDir}/tmp-capture` : "tmp-capture";
+  // A root-scope chat lands under `_content/`: the box root is a closed vocabulary.
+  const captureRelDir = `${landmarkScanRelDir(target.contextDir ?? "")}/tmp-capture`;
   const sessionDir = stagingSessionDir(boxRoot, id);
 
   const timestamps = collectTimestamps(session).toSorted();

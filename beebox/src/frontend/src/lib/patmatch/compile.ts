@@ -15,9 +15,7 @@ import {
 import { normalizeWord } from "./tokenize";
 
 export class TokenStream {
-  constructor(private tokens: (string | Record<string, string>)[]) {
-    this.tokens = tokens;
-  }
+  constructor(private tokens: (string | Record<string, string>)[]) {}
   next() {
     return this.tokens.shift();
   }

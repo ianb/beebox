@@ -7,6 +7,7 @@ labels: [todos, cards]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-collection-views — reading the todos of a working box as design material
+priority: backlog
 ---
 
 In a working box, one real task appears as a `{% todo %}` in several cards. Of

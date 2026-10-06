@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 /* Custom styles */
+.bbx-secret-value-mask {
+  -webkit-text-security: disc;
+}
+
 body {
   @apply bg-warm-50 text-warm-900;
 }

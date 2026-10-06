@@ -6,6 +6,7 @@ labels: [agent-workflow]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — reviewing which custom lint rules exist
+priority: important
 ---
 
 Many rules in the instruction files are mechanical: "always use X, never

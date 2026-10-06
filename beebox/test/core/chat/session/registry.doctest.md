@@ -387,3 +387,24 @@ JSON.stringify({ warm: backend.hasWarm(), starts: backend.prewarmCount })
 await registry.shutdown();
 await box.cleanup();
 ```
+
+## Shutdown during a prewarm's probe spawns nothing
+
+A prewarm first probes the box for the start options, and only then asks the
+backend to spawn. A shutdown that lands during the probe must stop the spawn:
+the server is gone, and the box directory may be next. A test server that
+reserved a chat and was cleaned up at once used to start a real Claude Code
+warm-up in an already deleted directory.
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+const registry = makeRegistry(box, backend);
+await Promise.all([registry.prewarm(), registry.shutdown()]);
+backend.prewarmCount
+=> 0
+```
+
+```ts cleanup
+await box.cleanup();
+```

@@ -16,7 +16,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../../../shared/error-guards.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { createTextQuestionTemplate } from "../../../schemas/question.js";

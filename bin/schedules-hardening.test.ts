@@ -197,7 +197,7 @@ test("a liveness guard that exits 0 with unparseable output reads as unknown", a
   await fs.writeFile(cli, '#!/bin/sh\nprintf \'{"ok":true,"paths":{\'\n', "utf8");
   await fs.chmod(cli, 0o755);
   const fake = await makeDeps({ schedulesRoot, nowMs: Date.parse("2026-08-24T12:00:00Z"), mainRoot });
-  assert.equal(await agentState(fake.deps, "/tmp/some-worktree"), "unknown");
+  assert.equal((await agentState(fake.deps, "/tmp/some-worktree")).state, "unknown");
 });
 
 test("a registry completion the shell refuses is an important alert", async () => {

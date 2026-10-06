@@ -15,30 +15,10 @@ import { parseSessionLog, MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/se
 import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
 import { writeGiantLineSessionLog } from "./session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { spawn } from "node:child_process";
+import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
 import fs from "node:fs/promises";
 import { join } from "node:path";
 
-const PACKAGE_ROOT = join(import.meta.dirname, "../../..");
-const CHILD_SCRIPT = join(PACKAGE_ROOT, "test/helpers/parse-session-log-child.ts");
-
-// Parse in a child process under a hard heap cap — the ceiling is enforced by
-// V8, not by an in-process assertion a parse could pass while allocating the
-// world. (Same harness as session-retention.doctest.md.)
-function parseUnderHeapCap(logPath, slice, heapMb) {
-  return new Promise((resolve) => {
-    const child = spawn(
-      process.execPath,
-      [`--max-old-space-size=${heapMb}`, "--import", "tsx", CHILD_SCRIPT, logPath, JSON.stringify(slice)],
-      { cwd: PACKAGE_ROOT, stdio: ["ignore", "pipe", "pipe"] },
-    );
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (c) => { stdout += String(c); });
-    child.stderr.on("data", (c) => { stderr += String(c); });
-    child.once("exit", (code) => resolve({ code, stdout, stderr }));
-  });
-}
 ```
 
 The threshold is far above any human-authored turn and far below the ~1.3 MB
@@ -49,36 +29,38 @@ MAX_SESSION_LINE_BYTES
 => 262144
 ```
 
-## A transcript of 1 MB+ lines parses under a 64 MB heap cap
+## A transcript of 1 MB+ lines parses without retaining its giant payloads
 
 40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64 inflation
 is counted), interleaved with normal-sized turns. `tail: 200` covers the whole
 file, so retention bounds nothing here — only the per-line byte bound keeps the
-parse inside the cap.
+giant payloads out of the result. The child measures the heap the parse result
+holds after a forced GC (`retainedMb`); a 128 MB cap backs it up against a parse
+that allocates the world. (A tight cap was the assertion once, and flaked: the
+bounded parse and tsx together sit near 64 MB, and when a run near a cap dies
+depends on GC timing — see `parse-under-heap-cap.ts`.)
 
 ```ts
 const box = await makeTmpBox();
 const logPath = box.path("giant.jsonl");
 await writeGiantLineSessionLog({ logPath, giantLines: 40, giantBytes: 1_200_000, normalLinesBetween: 3 });
 
-const run = await parseUnderHeapCap(logPath, { mode: "tail", tail: 200, minRealUserMessages: 2 }, 64);
-const out = JSON.parse(run.stdout);
-print(`exit: ${run.code}`);
+const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 128 });
 print(`entries: ${out.entries}`);
 print(`total: ${out.total}`);
 print(`stubs: ${out.stubs}`);
 print(`stub sample: ${out.stubSample}`);
-print(`heap under cap: ${out.heapUsedMb < 64}`);
+print(`retained under 8 MB: ${out.retainedMb < 8}`);
 =>
-exit: 0
 entries: 120
 total: 120
 stubs: 20
 stub sample: [message too large to display: ~«int» KB]
-heap under cap: true
+retained under 8 MB: true
 ```
 
-Without the bound the same child died at the cap:
+Without the bound the same parse retained 30 MB, and under the old 64 MB cap
+the child died:
 
     FATAL ERROR: Ineffective mark-compacts near heap limit
     Allocation failed - JavaScript heap out of memory

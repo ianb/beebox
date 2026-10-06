@@ -3,6 +3,18 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 
+/// Where the composer's sends go.
+///
+/// `.conversation` hands the message to `PendingEmissionStore` for the web
+/// chat's bound conversation. `.quickChat` hands the final text to its closure
+/// and does nothing else: no pending emission, no binding check, text only.
+/// The closure answers whether the text is stored; the draft clears only then,
+/// so a kill between the two cannot lose the thought.
+enum NativeComposerSubmitTarget {
+    case conversation
+    case quickChat(@MainActor (String) async -> Bool)
+}
+
 struct NativeComposerView: View {
     var box: PairedBox
     @ObservedObject var draftStore: ComposerDraftStore
@@ -10,6 +22,7 @@ struct NativeComposerView: View {
     var captureAvailable: Bool
     var narrationEnabled: Bool
     var hqDictationEnabled: Bool
+    var hqDiarizationRequested = false
     var speechPlaybackActive: Bool
     var responseActive: Bool
     var locationSharingEnabled: Bool
@@ -21,6 +34,7 @@ struct NativeComposerView: View {
     /// and fixture screens need not supply a webview.
     var onInterruptSpeech: () -> Void = {}
     var requiresConversationBinding = false
+    var submitTarget: NativeComposerSubmitTarget = .conversation
     var automaticallyResumeVoicePreparations = true
     var backgroundTaskApplication: any BackgroundTaskApplication = UIApplication.shared
     var voiceStateOverride: VoiceCompositionState?
@@ -98,7 +112,7 @@ struct NativeComposerView: View {
                     return
                 }
                 pendingReferenceDate = Date()
-                if automaticallyResumeVoicePreparations {
+                if automaticallyResumeVoicePreparations, sendsToConversation {
                     resumeVoicePreparations(
                         pendingStore.voicePreparations,
                         foregroundTransitionIsAuthoritative: true
@@ -159,7 +173,7 @@ struct NativeComposerView: View {
             applyEarcon(.responseActiveChanged(active))
         }
         .onChange(of: pendingStore.voicePreparations) { _, preparations in
-            if automaticallyResumeVoicePreparations {
+            if automaticallyResumeVoicePreparations, sendsToConversation {
                 resumeVoicePreparations(preparations)
             }
         }
@@ -198,13 +212,13 @@ struct NativeComposerView: View {
             }
         }
         .onChange(of: locationShareResult) { _, result in
-            guard let result else {
+            guard sendsToConversation, let result else {
                 return
             }
             statusText = result.message
         }
         .onChange(of: screenshotResult) { _, result in
-            guard let result else {
+            guard sendsToConversation, let result else {
                 return
             }
             guard let data = result.data else {
@@ -296,23 +310,15 @@ struct NativeComposerView: View {
                 .scrollBounceBehavior(.basedOnSize)
             }
 
-            if requiresConversationBinding, let composerBindingStatusText {
+            if needsConversationBinding, let composerBindingStatusText {
                 Text(composerBindingStatusText)
                     .font(.caption).foregroundStyle(.secondary)
                     .accessibilityIdentifier("bbx-composer-destination")
             }
             HStack(alignment: .bottom, spacing: 10) {
-                composerButton(
-                    systemImage: "plus",
-                    accessibilityLabel: "Add",
-                    controlID: "bbx-composer-add",
-                    does: "opens the attach menu — capture, take photo, choose photos, "
-                        + "paste an image, choose a file, screenshot the chat, share location, switch box",
-                    controlDisabled: isSending,
-                    onReveal: { showingActions = true },
-                    action: { showingActions = true }
-                )
-                .disabled(isSending)
+                if sendsToConversation {
+                    addButton
+                }
 
                 textEntryAndTrailingControlWithKeywordHint
             }
@@ -323,9 +329,25 @@ struct NativeComposerView: View {
         }
     }
 
+    /// Attachments, capture, the screenshot, and location sharing all live
+    /// behind this button, so a quick chat composer hides it.
+    private var addButton: some View {
+        composerButton(
+            systemImage: "plus",
+            accessibilityLabel: "Add",
+            controlID: "bbx-composer-add",
+            does: "opens the attach menu — capture, take photo, choose photos, "
+                + "paste an image, choose a file, screenshot the chat, share location, switch box",
+            controlDisabled: isSending,
+            onReveal: { showingActions = true },
+            action: { showingActions = true }
+        )
+        .disabled(isSending)
+    }
+
     private var textEntryAndTrailingControlWithKeywordHint: some View {
         VStack(alignment: .trailing, spacing: 4) {
-            if voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
+            if voiceKeywordsEnabled, voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
                 Text(currentKeywordHint)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -358,7 +380,10 @@ struct NativeComposerView: View {
     }
 
     private var voiceKeywordAccessibilityHint: String {
-        "While dictating, say send message, clean up and send, send and close, erase message, cancel message, or microphone off."
+        guard voiceKeywordsEnabled else {
+            return "Dictated words fill the text field. Send with the Send button."
+        }
+        return "While dictating, say send message, clean up and send, send and close, erase message, cancel message, or microphone off."
     }
 
     /// What to say while there is no send binding — one line per state, because
@@ -393,7 +418,8 @@ struct NativeComposerView: View {
 
     private var composerContext: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if pendingStore.pending.isEmpty == false || pendingStore.voicePreparations.isEmpty == false {
+            if sendsToConversation,
+               pendingStore.pending.isEmpty == false || pendingStore.voicePreparations.isEmpty == false {
                 PendingEmissionList(
                     emissions: pendingStore.pending,
                     voicePreparations: pendingStore.voicePreparations,
@@ -453,7 +479,7 @@ struct NativeComposerView: View {
             ?? dictation.preparationMessage
             ?? statusText
             ?? draftStore.restoreNotice
-            ?? pendingStore.notice
+            ?? (sendsToConversation ? pendingStore.notice : nil)
     }
 
     private var batchProgressText: String? {
@@ -474,8 +500,8 @@ struct NativeComposerView: View {
 
     private var hasScrollableComposerContext: Bool {
         Self.contextNeedsScrolling(
-            pendingCount: pendingStore.pending.count,
-            voicePreparationCount: pendingStore.voicePreparations.count,
+            pendingCount: sendsToConversation ? pendingStore.pending.count : 0,
+            voicePreparationCount: sendsToConversation ? pendingStore.voicePreparations.count : 0,
             imageCount: draftStore.draft.images.count,
             fileCount: draftStore.draft.files.count,
             selectionCount: draftStore.draft.selections.count
@@ -586,7 +612,9 @@ struct NativeComposerView: View {
             systemImage: "mic.fill",
             accessibilityLabel: "Start dictation",
             controlID: "bbx-composer-mic",
-            does: "tap to dictate continuously; say a send keyword to send hands-free",
+            does: voiceKeywordsEnabled
+                ? "tap to dictate continuously; say a send keyword to send hands-free"
+                : "tap to dictate into the text field",
             action: requestMicrophone
         )
         .accessibilityHint(voiceKeywordAccessibilityHint)
@@ -679,8 +707,8 @@ struct NativeComposerView: View {
         }
         let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
         let audioURL = origin == .voice ? dictation.consumeRecordedAudioURL() : nil
-        if origin == .voice, hqDictationEnabled {
-            prepareVoiceSend(
+        if origin == .voice, highQualityTranscriptionEnabled {
+            submit(.voicePreparation(
                 liveTranscript: message,
                 priorInput: dictation.dictationSeedText(),
                 action: .send,
@@ -688,10 +716,112 @@ struct NativeComposerView: View {
                 appendsKeywordTag: false,
                 audioURL: audioURL,
                 closeMicrophone: true
-            )
+            ))
             return
         }
-        enqueueMessage(text: message, origin: origin, diarized: false, retainingAudioAt: audioURL)
+        submit(.message(text: message, origin: origin, voiceKeywordAction: nil, audioURL: audioURL))
+    }
+
+    /// One send, before it is handed to its target.
+    private enum ComposerSubmission {
+        case message(
+            text: String,
+            origin: NativeChatEmission.Origin,
+            voiceKeywordAction: SpeechKeywordAction?,
+            audioURL: URL?
+        )
+        /// A voice message held for high-quality transcription first.
+        case voicePreparation(
+            liveTranscript: String,
+            priorInput: String,
+            action: SpeechKeywordAction,
+            matchedPhrase: String,
+            appendsKeywordTag: Bool,
+            audioURL: URL?,
+            closeMicrophone: Bool
+        )
+    }
+
+    /// Every send path ends here, so the target decides what a send does.
+    private func submit(_ submission: ComposerSubmission) {
+        switch submitTarget {
+        case .conversation:
+            switch submission {
+            case .message(let text, let origin, let voiceKeywordAction, let audioURL):
+                enqueueMessage(
+                    text: text,
+                    origin: origin,
+                    diarized: false,
+                    voiceKeywordAction: voiceKeywordAction,
+                    retainingAudioAt: audioURL
+                )
+            case .voicePreparation(
+                let liveTranscript, let priorInput, let action, let matchedPhrase,
+                let appendsKeywordTag, let audioURL, let closeMicrophone
+            ):
+                prepareVoiceSend(
+                    liveTranscript: liveTranscript,
+                    priorInput: priorInput,
+                    action: action,
+                    matchedPhrase: matchedPhrase,
+                    appendsKeywordTag: appendsKeywordTag,
+                    audioURL: audioURL,
+                    closeMicrophone: closeMicrophone
+                )
+            }
+        case .quickChat(let deliver):
+            switch submission {
+            case .message(let text, _, _, let audioURL):
+                submitQuickChat(text: text, audioURL: audioURL, deliver: deliver)
+            case .voicePreparation(let liveTranscript, _, _, _, _, let audioURL, _):
+                // Unreachable: a quick chat composer turns high-quality
+                // transcription off. The live transcript is the final text.
+                submitQuickChat(text: liveTranscript, audioURL: audioURL, deliver: deliver)
+            }
+        }
+    }
+
+    /// Hand the text to the quick chat target, then clear the draft once the
+    /// target has stored it. A quick chat message is text only and has no
+    /// emission id to key a recording under, so the recording is dropped.
+    private func submitQuickChat(text: String, audioURL: URL?, deliver: @escaping @MainActor (String) async -> Bool) {
+        if let audioURL {
+            try? FileManager.default.removeItem(at: audioURL)
+        }
+        let sendingBoxID = box.id
+        dictation.resetDictationState()
+        focused = false
+        statusText = nil
+        isPreparingSend = true
+        Task {
+            let stored = await deliver(text)
+            isPreparingSend = false
+            guard stored else {
+                statusText = "This thought could not be saved. It is still here."
+                return
+            }
+            await draftStore.clearForSending(boxID: sendingBoxID)
+        }
+    }
+
+    private var sendsToConversation: Bool {
+        if case .conversation = submitTarget {
+            return true
+        }
+        return false
+    }
+
+    /// A binding is a conversation's; a quick chat send never checks one.
+    private var needsConversationBinding: Bool {
+        sendsToConversation && requiresConversationBinding
+    }
+
+    private var voiceKeywordsEnabled: Bool {
+        sendsToConversation
+    }
+
+    private var highQualityTranscriptionEnabled: Bool {
+        sendsToConversation && hqDictationEnabled
     }
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
@@ -720,7 +850,7 @@ struct NativeComposerView: View {
             )
             return
         }
-        if intent.action.commitsKeywordSubstitution && requiresConversationBinding
+        if intent.action.commitsKeywordSubstitution && needsConversationBinding
             && pendingStore.composerBinding?.sendBinding == nil {
             dictation.discardKeywordSubstitution()
             statusText = "Choose a conversation before sending."
@@ -769,7 +899,7 @@ struct NativeComposerView: View {
     }
 
     private func sendKeywordIntent(_ intent: SpeechKeywordResult) {
-        guard !requiresConversationBinding || pendingStore.composerBinding?.sendBinding != nil else {
+        guard !needsConversationBinding || pendingStore.composerBinding?.sendBinding != nil else {
             dictation.discardKeywordSubstitution()
             statusText = "Choose a conversation before sending."
             return
@@ -783,26 +913,20 @@ struct NativeComposerView: View {
             liveTranscript: intent.processedTranscript,
             action: intent.action,
             narrationEnabled: narrationEnabled,
-            hqDictationEnabled: hqDictationEnabled
+            hqDictationEnabled: highQualityTranscriptionEnabled
         ) {
         case .live(let text):
             // The recording used to be deleted here. It is kept instead, so a
             // box agent can retranscribe this message later — and this is the
             // path where that matters most: a live send is the narration-off
             // send, which commits the realtime transcript.
-            enqueueMessage(
-                text: text,
-                origin: .voice,
-                diarized: false,
-                voiceKeywordAction: intent.action,
-                retainingAudioAt: audioURL
-            )
+            submit(.message(text: text, origin: .voice, voiceKeywordAction: intent.action, audioURL: audioURL))
             return
         case .hq:
             break
         }
         let priorInput = dictation.consumeKeywordSeedText()
-        prepareVoiceSend(
+        submit(.voicePreparation(
             liveTranscript: intent.processedTranscript,
             priorInput: priorInput,
             action: intent.action,
@@ -810,7 +934,7 @@ struct NativeComposerView: View {
             appendsKeywordTag: true,
             audioURL: audioURL,
             closeMicrophone: intent.action == .sendClose
-        )
+        ))
     }
 
     private func prepareVoiceSend(
@@ -824,7 +948,7 @@ struct NativeComposerView: View {
     ) {
         let capturedBinding = pendingStore.composerBinding
         let replacesFirstEmissionID = pendingStore.replacementFirstEmissionID(for: capturedBinding?.sendBinding)
-        guard !requiresConversationBinding || capturedBinding?.sendBinding != nil else {
+        guard !needsConversationBinding || capturedBinding?.sendBinding != nil else {
             statusText = "Choose a conversation before sending."
             return
         }
@@ -841,6 +965,7 @@ struct NativeComposerView: View {
                     action: action,
                     matchedPhrase: matchedPhrase,
                     appendsKeywordTag: appendsKeywordTag,
+                    diarizationRequested: hqDiarizationRequested,
                     audioURL: audioURL,
                     boxID: sendingBox.id,
                     binding: capturedBinding?.sendBinding, bindingRevision: capturedBinding?.revision,
@@ -900,7 +1025,7 @@ struct NativeComposerView: View {
         box: PairedBox,
         foregroundTransitionIsAuthoritative: Bool = false
     ) {
-        guard !requiresConversationBinding || preparation.binding != nil else {
+        guard !needsConversationBinding || preparation.binding != nil else {
             statusText = "Saved voice message needs a conversation. Restore it before sending."
             return
         }
@@ -971,6 +1096,9 @@ struct NativeComposerView: View {
             )
         }
         defer { backgroundHold.end() }
+        if let onDevice = await transcribeOnDevice(preparation, audioURL: audioURL) {
+            return onDevice
+        }
         do {
             let hqResult = try await ChatAPI(box: box).transcribeAudio(fileURL: audioURL)
             return .hq(
@@ -999,6 +1127,47 @@ struct NativeComposerView: View {
         }
     }
 
+    /// The on-device HQ pass. When it produces text, that text is the HQ
+    /// result and the server is not called; nil sends the caller on to the
+    /// server path, which keeps its own live-transcript fallback.
+    private func transcribeOnDevice(
+        _ preparation: VoicePreparation,
+        audioURL: URL
+    ) async -> VoicePreparationOutcome? {
+        let startUptime = ProcessInfo.processInfo.systemUptime
+        func elapsedMilliseconds() -> Int {
+            Int((ProcessInfo.processInfo.systemUptime - startUptime) * 1_000)
+        }
+        do {
+            let result = try await OnDeviceHqTranscriber.transcribe(
+                fileURL: audioURL,
+                diarizationRequested: preparation.diarizationRequested == true
+            )
+            BoxLog.info(
+                "voice HQ on-device preparation=\(preparation.id.uuidString)"
+                    + " audioMs=\(Int(result.audioSeconds * 1_000)) elapsedMs=\(elapsedMilliseconds())",
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
+            return .hq(
+                text: VoicePreparationResolver.text(for: preparation, hqTranscript: result.text),
+                diarized: false,
+                service: OnDeviceHqTranscriber.serviceName
+            )
+        } catch {
+            let skip = error as? OnDeviceHqTranscriber.Skip ?? .failed(String(reflecting: type(of: error)))
+            let message = "voice HQ on-device skipped preparation=\(preparation.id.uuidString)"
+                + " reason=\(skip.logLabel) elapsedMs=\(elapsedMilliseconds())"
+            switch skip {
+            case .timedOut, .failed, .emptyTranscript:
+                BoxLog.warn(message, category: .composer, targetBoxID: preparation.boxID)
+            case .diarizationRequested, .osTooOld, .transcriberUnavailable, .unsupportedLocale, .assetsNotInstalled:
+                BoxLog.info(message, category: .composer, targetBoxID: preparation.boxID)
+            }
+            return nil
+        }
+    }
+
     /// `retainingAudioAt` is the just-finished recording, if this send has one.
     /// The store TAKES the file (moves it), so the caller must not delete it.
     /// The emission id is generated by `enqueue`, so retention happens after
@@ -1012,7 +1181,7 @@ struct NativeComposerView: View {
     ) {
         let capturedBinding = pendingStore.composerBinding
         let replacesFirstEmissionID = pendingStore.replacementFirstEmissionID(for: capturedBinding?.sendBinding)
-        guard !requiresConversationBinding || capturedBinding?.sendBinding != nil else {
+        guard !needsConversationBinding || capturedBinding?.sendBinding != nil else {
             statusText = "Choose a conversation before sending."
             return
         }
@@ -1180,12 +1349,14 @@ struct NativeComposerView: View {
         case .none:
             break
         case .startDictation:
+            dictation.detectsKeywords = voiceKeywordsEnabled
             dictation.startIfNeeded(currentText: text)
         case .startDictationInterruptingSpeech:
             // The microphone opens now, not after the box finishes its sentence
             // — a person who starts talking over you expects to be heard. The
             // page owns the speech, so ask it to stop; nothing waits on that
             // answer, because a lost command must not cost the user their turn.
+            dictation.detectsKeywords = voiceKeywordsEnabled
             dictation.startIfNeeded(currentText: text)
             onInterruptSpeech()
         case .stopDictation:
@@ -1263,7 +1434,7 @@ struct NativeComposerView: View {
     }
 
     private var hasSendableContent: Bool {
-        hasTextContent || draftStore.draft.images.isEmpty == false
+        hasTextContent || (sendsToConversation && draftStore.draft.images.isEmpty == false)
     }
 
     private var hasTextContent: Bool {
@@ -1271,7 +1442,7 @@ struct NativeComposerView: View {
     }
 
     private var sendDisabled: Bool {
-        (requiresConversationBinding && pendingStore.composerBinding?.sendBinding == nil)
+        (needsConversationBinding && pendingStore.composerBinding?.sendBinding == nil)
             || isSending || hasIncompleteImages || hasIncompleteFiles || hasSendableContent == false
     }
 
@@ -1289,7 +1460,7 @@ struct NativeComposerView: View {
     }
 
     private var hasUnconfirmedPendingEmission: Bool {
-        pendingStore.pending.contains { emission in
+        sendsToConversation && pendingStore.pending.contains { emission in
             if case .pending = emission.state {
                 return true
             }
@@ -1447,14 +1618,20 @@ struct NativeComposerView: View {
         batchProgress = nil
 
         switch outcome {
-        case .delivered(let uploaded, let failed), .accepted(let uploaded, let failed):
-            // Sealed either way, so the box holds the bytes AND the note: the
+        case .delivered(let uploaded, let failed),
+             .accepted(let uploaded, let failed),
+             .undeliverable(let uploaded, let failed):
+            // Sealed every way, so the box holds the bytes AND the note: the
             // staged copies are redundant and the text has been carried away.
-            // If delivery ultimately fails, the box surfaces it to the chat agent
-            // rather than this client retrying — see `notifyStranded`.
+            // If delivery fails, the box notifies the boxholder and hands the
+            // batch to the chat agent rather than this client retrying.
             BulkPhotoStaging.discard(staged.prepared)
             clearComposerTextIfUnchanged(from: consumedNote)
-            if case .accepted = outcome {
+            if case .undeliverable = outcome {
+                BoxLog.error("photo batch sealed but undeliverable photos=\(uploaded)", category: .upload)
+                statusText = "\(uploaded) photos reached the box, but it could not add them to the chat."
+                    + " They are kept on the box."
+            } else if case .accepted = outcome {
                 statusText = "\(uploaded) photos sent — the box is still processing them."
             } else {
                 statusText = failed == 0

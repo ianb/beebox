@@ -6,6 +6,7 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: backlog
 ---
 
 "Git push confirmation is something to definitely consider" (boxholder,

@@ -13,7 +13,7 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 ## Metadata extraction
 
-The compiler extracts name, description, dependencies, modes, and rendersCardTypes from `export const` declarations via regex:
+The compiler extracts name, description, dependencies, modes, layout, and rendersCardTypes from the view's named exports:
 
 ```ts
 const tmp = await mkdtemp(join(tmpdir(), "views-test-"));
@@ -25,6 +25,7 @@ export const name = "Test View";
 export const description = "A simple test";
 export const dependencies = ["_content/**/*.card", "_content/**/*.card"];
 export const modes = ["page", "chat"];
+export const layout = "full-bleed";
 export const rendersCardTypes = ["sandbox"];
 export default function Test() {
   return window.__bbxReact.createElement("div", null, "hello");
@@ -52,6 +53,9 @@ JSON.stringify(meta.rendersCardTypes)
 
 JSON.stringify(meta.modes)
 => ["page","chat"]
+
+meta.layout
+=> full-bleed
 ```
 
 ## Compilation output
@@ -216,6 +220,28 @@ meta.description
 
 JSON.stringify(meta.dependencies)
 => []
+
+meta.layout
+=> inset
+```
+
+An unknown `layout` fails validation. The view degrades like a broken one,
+and the marker names the export, so the author can see what to fix:
+
+```ts continue
+await writeFile(join(viewsDir2, "wide.tsx"), `
+export const layout = "wide";
+export const rendersCardTypes = ["sandbox"];
+export default function Wide() {
+  return window.__bbxReact.createElement("div", null, "wide");
+}
+`);
+const wide = (await compileView(join(viewsDir2, "wide.tsx"))).meta;
+JSON.stringify([wide.rendersCardTypes, wide.layout])
+=> [[],"inset"]
+
+wide.description.startsWith("Invalid metadata export layout:")
+=> true
 ```
 
 ## Error module

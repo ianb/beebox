@@ -1,6 +1,7 @@
 import type { TestGraph } from "../../bin/test-graph-query.js";
 import { scopedChanges } from "../../bin/test-graph-query.js";
-import { selectTests } from "../../bin/test-select-lib.js";
+import { repoRelative } from "../../bin/test-ledger-lib.js";
+import { changedBinUnits, selectTests } from "../../bin/test-select-lib.js";
 import type { Landing } from "./lib.js";
 
 export interface Batch {
@@ -33,14 +34,19 @@ export function landingReachesFile(input: {
   changed: string[];
   file: string;
 }): boolean {
-  if (scopedChanges(input.changed).length === 0) return false;
+  // `bin/` is outside `scopedChanges` but not outside the spawn edges: a script
+  // change reaches the tests that spawn it. With nothing in scope, an
+  // unresolved entrypoint's fail-open must not count, or a `bin/`-only landing
+  // is blamed for any test the graph could not resolve.
+  const inScope = scopedChanges(input.changed).length > 0;
+  if (!inScope && changedBinUnits(input.changed).size === 0) return false;
   const selection = selectTests({
-    graph: input.graph,
+    graph: inScope ? input.graph : { ...input.graph, unresolved: new Set() },
     changed: input.changed,
     spawnEdges: input.spawnEdges,
     cliBundleInputs: input.cliBundleInputs,
   });
-  return selection.selected.includes(`beebox/${input.file}`);
+  return selection.selected.includes(repoRelative(input.file));
 }
 
 /** Real failures that were not selected for bisect remain visible in the alert. */

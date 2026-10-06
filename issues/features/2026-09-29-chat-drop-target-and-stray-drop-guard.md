@@ -6,6 +6,7 @@ labels: [chat, attachments]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder question, 2026-09-29
+priority: backlog
 ---
 
 The boxholder asked whether files and images can be dragged into the web chat. They can, onto the textbox. `handleDrop` (`beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/actions.ts`) passes every dropped file to `addFiles`, so images become `[image#N]` and other files `[file#N]`. Checked 2026-09-29 on test1 with a simulated drop of a PNG and a text file; both attached.

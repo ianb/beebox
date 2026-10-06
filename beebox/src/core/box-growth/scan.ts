@@ -66,7 +66,10 @@ function sourceForPath(relativePath: string): Pick<SubtreeCounts, "source" | "so
     return { source: "connector", sourceLabel: "Google Drive" };
   }
   if (relativePath.startsWith(`${BOX_DIRS.chat}/`)) return { source: "chat", sourceLabel: null };
-  if (["tmp-capture", "tmp-upload", "captures"].some((name) => relativePath === name || relativePath.startsWith(`${name}/`))) {
+  // Capture and upload landing dirs sit inside a chat's context dir (the root
+  // scope's under `_content/`), so they match at any depth.
+  const segments = relativePath.split("/");
+  if (segments.includes("tmp-capture") || segments.includes("tmp-upload") || segments[0] === "captures") {
     return { source: "user-input", sourceLabel: null };
   }
   if (

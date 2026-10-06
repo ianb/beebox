@@ -17,8 +17,10 @@ import { ExternalLink } from "../../ui/ExternalLink";
 import { FriendlyDate } from "../../ui/FriendlyDate";
 import { AdminSectionCard } from "../AdminSectionCard";
 import { SharedPublicationHost } from "./SharedPublicationHost";
+import { OrphanPublications } from "./OrphanPublications";
 import { Accordion } from "../../ui/Accordion";
 import { TokenSetupGuidance } from "./guidance";
+import { RevealCloudflareToken } from "./RevealCloudflareToken";
 
 type Connection = RouterOutput["cloudflarePublishConnections"]["list"][number];
 
@@ -113,6 +115,7 @@ export function CloudflarePublishConnectionsSection() {
           ))}
         </Stack>
         <SharedPublicationHost />
+        <OrphanPublications />
 
         <Accordion
           id="bbx-admin-cf-publish-add"
@@ -176,7 +179,7 @@ export function ConnectionEditor({
         <Hint>Saving checks that the token is active and can identify the selected account. It does not test publishing permissions; the first site setup checks those.</Hint>
         <TextField id="bbx-admin-cf-publish-name" label="Connection name" value={name} onChange={setName} required maxLength={40} pattern="[a-z][a-z0-9-]{0,39}" helper="Choose a Bee Box label, such as makers. Lowercase letters, digits, and hyphens; starts with a letter." />
         <TextField id="bbx-admin-cf-publish-account" label="Cloudflare account ID" value={accountId} onChange={setAccountId} required minLength={32} maxLength={32} pattern="[a-fA-F0-9]{32}" helper={<span>Find it in Cloudflare under <Text weight="medium">Workers & Pages → Account Details</Text>, or follow <ExternalLink id="bbx-admin-cf-publish-account-help" href="https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/" variant="inline">Cloudflare&apos;s account ID instructions</ExternalLink>.</span>} />
-        <TextField id="bbx-admin-cf-publish-token" label="API token" type="password" autoComplete="new-password" value={apiToken} onChange={setApiToken} required maxLength={4096} />
+        <TextField id="bbx-admin-cf-publish-token" label="API token" type="text" inputClassName="bbx-secret-value-mask" autoComplete="off" spellCheck={false} autoCapitalize="off" value={apiToken} onChange={setApiToken} required maxLength={4096} />
         <TokenSetupGuidance />
         <Row gap="sm" wrap>
           <Button id="bbx-admin-cf-publish-save" type="submit" intent="primary" loading={pending} loadingLabel="Verifying…">{rotateTarget === null ? "Verify and save" : "Verify and rotate"}</Button>
@@ -231,6 +234,8 @@ function ConnectionCard({
           <Text size="sm">Account <Text mono>{connection.accountId}</Text> · {connection.credentialType} · token {tokenId}</Text>
           <Text size="sm" tone="muted">Verified: {connection.verifiedAt === null ? "not verified" : <FriendlyDate iso={connection.verifiedAt} />}</Text>
         </Stack>
+
+        {connection.tokenStatus === "active" ? <RevealCloudflareToken name={connection.name} /> : null}
 
         <Stack gap="xs">
           <Text size="sm" weight="medium">Verified capabilities</Text>

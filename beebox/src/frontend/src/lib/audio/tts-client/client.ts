@@ -22,7 +22,7 @@ import { isTTSVoice, type TTSVoice } from "../speech-parsing/parse";
 import { RequestError } from "../../errors";
 import { invariant } from "@shared/invariant";
 import type { PrefetchHandle, ResolvedSpeechKey, SpeechOptions, VoiceConfig } from "./tts-types";
-import { PlaybackError, PlaybackStoppedError } from "./tts-errors";
+import { PlaybackError, PlaybackStoppedError, ttsRequestError } from "./tts-errors";
 
 export type { PrefetchHandle, VoiceConfig } from "./tts-types";
 
@@ -281,11 +281,7 @@ class TTSClient {
       body: this.requestBody(text, resolved),
       signal: ac.signal,
     });
-    if (!response.ok) {
-      const err = await response.text();
-      const message = `TTS API error ${response.status}: ${err}`;
-      throw new RequestError(message);
-    }
+    if (!response.ok) throw await ttsRequestError(response);
     this.currentAbort = null;
 
     const body = response.body;
@@ -349,11 +345,7 @@ class TTSClient {
       signal,
     });
 
-    if (!response.ok) {
-      const err = await response.text();
-      const message = `TTS API error ${response.status}: ${err}`;
-      throw new RequestError(message);
-    }
+    if (!response.ok) throw await ttsRequestError(response);
 
     const buffer = await this.readStreamToBuffer(response);
     this.cache.set(resolved.key, buffer);

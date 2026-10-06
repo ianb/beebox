@@ -72,3 +72,7 @@ the synthetic numbers were misleading; trust the real ones):
 Option 3 composes with any of the others and is cheap; 2 is worth doing
 regardless as a low-effort issue filing. Content-embedding ambitions
 (beyond `contains`) stay blocked until one of 2/4 lands.
+
+## Discussion note (2026-10-06)
+
+Proposed: cache the restored index in memory in the long-running server, and wait on upstream for the CLI. The developer is not sure about the caching. Still open.

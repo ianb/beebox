@@ -7,6 +7,7 @@ labels: [frontend, properties, cards]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
+priority: normal
 ---
 
 The developer feels that a card's Properties panel does not pull its weight
@@ -27,7 +28,7 @@ Questions for the session:
   panel serve now?
 - Which of these belong in the card itself, in the card chrome, or in a
   view, instead of a separate panel? The view picker is one example; see
-  [choosing a view keeps Properties open](../bugs/2026-09-27-choosing-a-view-in-properties-keeps-properties-open.md).
+  [choosing a view keeps Properties open](../closed/bugs/2026-09-27-choosing-a-view-in-properties-keeps-properties-open.md).
 - What Properties should show that it does not: for example the card's
   type, its schema fields, its history, or its attachments.
 - How it relates to the Source view and to the frontmatter the card already

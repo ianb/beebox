@@ -13,6 +13,12 @@ reviewed-by: Ian Bicking
 previous full-inventory anchor. Unrelated historical changes, the private
 security tier, and the complete surface map were not re-audited.
 
+**Scoped amendment (2026-10-06), reviewed by Ian:** Quick chat only.
+The box screen on web and iOS replaces the Quick chat page; the server now
+stores, routes, and posts each thought, and an uncertain thought waits for the
+person. The Jev egress path is unchanged. This is not a full security-report
+refresh.
+
 **Scoped amendment (2026-09-24; DRAFT — unreviewed):** Updates managed site
 publishing authority and Cloudflare credential custody against
 `aa084d01ebdee12e2e88d210c2c5a5c85b7cc294` plus the uncommitted publish-pages
@@ -157,9 +163,9 @@ The summary:
   OpenRouter key, pins TypeSafe with fallback disabled, and requests no data
   collection. This is not a zero-retention guarantee. Avoid Quick chat or omit
   that key grant to avoid this egress; ordinary direct chat remains available.
-  Quick chat sends to the selected conversation before showing the result.
-  Destination links stage the original text in another chat; they cannot undo
-  agent actions. Opt-in document triage and replay also send prepared admitted
+  Quick chat posts to the selected conversation without confirmation when
+  the routing is clear, and that post cannot be undone; an unclear thought
+  waits for you to choose. Opt-in document triage and replay also send prepared admitted
   document and attachment text plus filing rules; replay makes a fresh paid
   call. Preparation can use existing OCR/vision services, and unclear cases can
   involve the full box agent. Applied triage receipts retain prepared text and
@@ -219,9 +225,10 @@ Managed static-site publishing deliberately exposes selected box content.
 Each box has one Admin-configured hostname and shared Worker; public paths use
 `/<slug>/` and secret-link paths use `/s/<pubId>/`. Before first enablement or
 a scope change, a signed-in member reviews the requested audience, destination,
-file summary, and leak-scan findings in the app. That grant permits subsequent
-content updates in the same scope without per-snapshot approval. The agent can
-build and prepare; a changed audience or destination cannot go live until a
+file summary, and leak-scan findings on the publication card in the app. That
+grant permits subsequent content updates in the same scope without
+per-snapshot approval. The agent can edit the card's request, build, prepare,
+and read back published files; a changed audience or destination cannot go live until a
 member approves it. The boxholder explicitly accepts that pages published by
 one box share browser origin, storage, and same-origin script access. CORS does
 not separate those pages; no iframe or per-publication origin isolation is

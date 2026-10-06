@@ -7,6 +7,7 @@ labels: [chat, search]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-chat-search — chat-search design discussion, 2026-09-28
+priority: normal
 ---
 
 Once chat transcript search exists (see
