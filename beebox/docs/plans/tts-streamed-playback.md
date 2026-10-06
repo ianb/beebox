@@ -360,6 +360,26 @@ None: this is transport infrastructure with no agent-facing concept.
    `ffmpeg` process behind, and that a clip cut off mid-stream (kill the
    provider connection) shows as failed. Record the numbers in this plan.
 
+## Verification results (2026-10-05)
+
+- **Time to head** (`src/scripts/tts-latency.ts`, medians of five, synthetic
+  text, Tier 1 key): Gemini 0.70 / 0.66 / 0.60 s for 3, 7 and 11 s of speech,
+  where the whole clip took 1.19 / 1.71 / 2.28 s. OpenAI 0.86 / 1.01 / 1.14 s,
+  where the whole clip took 1.03 / 1.36 / 1.87 s. Gemini's MP3 is 25–75 KB
+  where the WAV was 140–436 KB.
+- **Chrome plays ffmpeg's MP3 through MediaSource as it arrives.** A clip from
+  the real service, appended in 4 KB slices 50 ms apart: every append
+  succeeded, playback started 1 ms after the first slice (about 0.5 s of audio
+  in), a second before the last slice, and the 9.5 s clip played to the end.
+- **Not run against the dev router's real route.** Worktree servers use an
+  isolated, empty secret store by design
+  (`workstreams-app/src/router/core/worktree-start.ts:104`), so the route there
+  has no Gemini key, and copying a real key into it was not done. The route's
+  streaming over a real socket (head, failure after the head, cancel on close)
+  is covered by `test/webapp/routes/chat/tts-mock.doctest.md`. A spoken reply in
+  the real app is the first check after landing.
+- No `ffmpeg` processes remained after the test and measurement runs.
+
 ## Rollout shape
 
 Done when:
