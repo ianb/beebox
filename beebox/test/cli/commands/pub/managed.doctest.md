@@ -20,7 +20,7 @@ const candidate: Candidate = {
   name: "notes",
   title: "Notes",
   cardPath: "_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
-  approvalUrl: "/box-a/views/_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
+  approvalUrl: "/box-a/browse/notes/Notes.publication.card",
   commitWarning: null,
   revision: "b".repeat(64),
   releaseId,
@@ -34,8 +34,8 @@ function site(overrides: Partial<Site> = {}): Site {
     pubId: candidate.pubId,
     name: "notes",
     title: "Notes",
-    cardPath: "_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
-    hasCard: true,
+    cardPath: "notes/Notes.publication.card",
+    duplicateCardPaths: [],
     hostname: "notes.example.workers.dev",
     requested: { tier: "public", slug: "notes" },
     approved: { tier: "public", status: "live", slug: "notes", expiresAt: null },
@@ -53,7 +53,7 @@ function site(overrides: Partial<Site> = {}): Site {
 
 ```ts
 JSON.stringify(sites)
-=> ["prepare","sites","id","connections","status"]
+=> ["prepare","id","status"]
 ```
 
 A remote outage must not read as disabled, even when the last observed edge
@@ -134,7 +134,7 @@ publicationApprovalUrl({ serverUrl: "https://boxes.example", boxName: "family" }
 => https://boxes.example/family/publications
 
 publicationApprovalUrl({ serverUrl: "https://boxes.example", boxName: "family", approvalPath: candidate.approvalUrl })
-=> https://boxes.example/box-a/views/_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card
+=> https://boxes.example/box-a/browse/notes/Notes.publication.card
 
 publicationApprovalUrl({ serverUrl: undefined, boxName: "family" })
 => null

@@ -58,7 +58,7 @@ The orphan half is cheap: `findInboundCardRefs`
 panel and a pre-delete warning, and no lint uses it. The concept half is the
 valuable half, and structural lint could never grow into it: card lint checks
 schemas, ref existence, path forms, and Markdoc
-(`beebox/src/core/card-lint/core.ts`), all of which ask whether a card is
+(`beebox/src/core/card-lint/core/lint-cards.ts`), all of which ask whether a card is
 well-formed, never whether the box is missing one.
 
 Output is a proposal for the boxholder, not a validation failure.

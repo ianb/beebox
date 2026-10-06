@@ -1,11 +1,14 @@
 # Publication definition
 
-Publication definitions are strict agent-authored settings at
-`src/publications/<name>/publication.json`. Content mode chooses a fixed source
-directory; the definition cannot supply arbitrary paths or build commands.
+A publication card `<dir>/<Name>.publication.card` holds the strict,
+agent-authored settings. The sibling attach folder chooses the content mode
+(`<Name>.attach/static/` or `<Name>.attach/project/`); the card cannot supply
+arbitrary paths or build commands.
 
 ```ts setup
-import { definitionFromCard, publicationDefinitionSchema, readPublicationDefinition, publicationSourcePath } from "../../src/publish/publication-definition.js";
+import { definitionFromCard, publicationDefinitionSchema } from "../../src/publish/publication-definition.js";
+import { readPublicationCardSource, resolvePublicationCardPath } from "../../src/publish/prepare/card-source.js";
+import { createPublicationCardTemplate } from "../../src/schemas/publication.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const validDefinition = {
@@ -58,35 +61,65 @@ publicationDefinitionSchema.safeParse({ ...validDefinition, tier: "accounts", sl
 => false
 ```
 
-## Content mode derives the fixed roots
-
-```ts
-publicationSourcePath({ boxRoot: "/box", name: "example", content: "static" }) === "/box/src/publications/example/site"
-=> true
-
-publicationSourcePath({ boxRoot: "/box", name: "example", content: "project" }) === "/box/src/publications/example/project"
-=> true
-```
-
-## A malformed definition gets a field-specific error
+## The attach folder derives the content mode and source root
 
 ```ts
 const box = await makeTmpBox();
-await box.write("src/publications/example/publication.json", JSON.stringify({ ...validDefinition, unknown: true }));
-const loaded = await readPublicationDefinition({ boxRoot: box.root, name: "example" }).catch((error) => error.message);
+const card = createPublicationCardTemplate({ pubId: validDefinition.pubId, title: "Example site", connection: "personal", tier: "secret" });
+await box.write("_content/Example.publication.card", card);
+await box.write("_content/Example.attach/static/index.html", "<h1>Hi</h1>");
+const staticSource = await readPublicationCardSource({ boxRoot: box.root, cardPath: "_content/Example.publication.card" });
+staticSource.definition.content
+=> static
+
+staticSource.sourceRoot === box.path("_content/Example.attach/static")
+=> true
+
+await box.write("_content/Site.publication.card", createPublicationCardTemplate({ pubId: "bcdefghijklmnop234567abcde", title: "Site", connection: "personal", tier: "secret" }));
+await box.write("_content/Site.attach/project/package.json", "{}");
+const projectSource = await readPublicationCardSource({ boxRoot: box.root, cardPath: "_content/Site.publication.card" });
+projectSource.definition.content
+=> project
+
+projectSource.sourceRoot === box.path("_content/Site.attach/project")
+=> true
+
+await box.cleanup();
+```
+
+## A malformed card gets a field-specific error
+
+```ts
+const box = await makeTmpBox();
+const base = createPublicationCardTemplate({ pubId: validDefinition.pubId, title: "Example site", connection: "personal", tier: "secret" });
+await box.write("_content/Example.publication.card", base.replace("tier: secret", "tier: everyone"));
+await box.write("_content/Example.attach/static/index.html", "x");
+const loaded = await readPublicationCardSource({ boxRoot: box.root, cardPath: "_content/Example.publication.card" }).catch((error) => error.message);
 await box.cleanup();
 
-loaded.includes("unknown")
+loaded.startsWith("publication card _content/Example.publication.card cannot be used")
+=> true
+
+loaded.includes("tier")
 => true
 ```
 
-## Names cannot become arbitrary path segments
+## Card paths cannot become arbitrary paths
 
 ```ts
-let nameError = "";
-(() => { try { publicationSourcePath({ boxRoot: "/box", name: "../outside", content: "static" }); } catch (error) { nameError = error.message; } })();
-nameError.includes("invalid publication name")
-=> true
+const refused = (card) => { try { resolvePublicationCardPath(card); return "ok"; } catch (error) { return error.message; } };
+
+resolvePublicationCardPath("_content/Example.publication.card")
+=> _content/Example.publication.card
+
+refused("../outside.publication.card")
+=> publication card path '../outside.publication.card' is not a file inside the box
+
+refused("_content/Example.card")
+=> '_content/Example.card' is not a publication card; the path must end with .publication.card
+
+refused("_content/Example.publication.card?x=1")
+=> publication card path '_content/Example.publication.card?x=1' must not carry a query or fragment
 ```
 
 ## A publication card becomes a prepare definition

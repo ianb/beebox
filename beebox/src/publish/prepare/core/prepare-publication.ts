@@ -1,12 +1,14 @@
 /** Prepare one agent-authored publication for the server-owned publisher. */
 
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { errorMessage } from "../../shared/error-guards.js";
-import { withFileLock } from "../../lib/file-lock.js";
-import { parsePublicationName, readPublicationDefinition, publicationSourcePath, type PublicationDefinition } from "../publication-definition.js";
+import { errorMessage } from "../../../shared/error-guards.js";
+import { withFileLock } from "../../../lib/file-lock.js";
+import type { PublicationDefinition } from "../../publication-definition.js";
+import { PublicationCardSourceError, readPublicationCardSource, resolvePublicationCardPath } from "../card-source.js";
 import { prepareProject } from "./project.js";
 import { BundlePolicyError, ProjectCommandError } from "./errors.js";
 import { collectPublicationFiles, stagePublicationFiles } from "./files.js";
@@ -17,23 +19,26 @@ export type { PrepareDeps, PrepareFailure, PrepareResult, PreparedPublication, P
 
 /** Build/collect, scan, and stage files; no Cloudflare authority is resolved here. */
 export async function preparePublication(
-  args: { boxRoot: string; name: string },
+  args: { boxRoot: string; card: string },
   deps: PrepareDeps,
 ): Promise<PrepareResult> {
-  let name: string;
+  let cardPath: string;
   try {
-    name = parsePublicationName(args.name);
+    cardPath = resolvePublicationCardPath(args.card);
   } catch (error) {
     return { ok: false, reason: "invalid-definition", message: errorMessage(error) };
   }
+  // Keyed by the card path, so the card is read once, inside the lock; the
+  // source folder the lock guards belongs to that path.
+  const lockKey = createHash("sha256").update(cardPath).digest("hex").slice(0, 32);
   const lockDir = path.join(args.boxRoot, ".beebox", "publish-prepare-locks");
   try {
     await mkdir(lockDir, { recursive: true });
     return await withFileLock({
-      lockPath: path.join(lockDir, `${name}.lock`),
-      metadata: { purpose: "publication-local-prepare", name },
+      lockPath: path.join(lockDir, `card-${lockKey}.lock`),
+      metadata: { purpose: "publication-local-prepare", card: cardPath },
       waitMs: PUBLICATION_COMMAND_TIMEOUT_MS * 2 + 20_000,
-    }, () => preparePublicationUnlocked({ ...args, name }, deps));
+    }, () => preparePublicationUnlocked({ boxRoot: args.boxRoot, cardPath }, deps));
   } catch (error) {
     return { ok: false, reason: "invalid-source", message: errorMessage(error) };
   }
@@ -41,20 +46,21 @@ export async function preparePublication(
 
 /** Local source/build lock; released before the caller mutates remote serving state. */
 async function preparePublicationUnlocked(
-  args: { boxRoot: string; name: string },
+  args: { boxRoot: string; cardPath: string },
   deps: PrepareDeps,
 ): Promise<PrepareResult> {
   let definition: PublicationDefinition;
+  let sourceRoot: string;
   try {
-    definition = await readPublicationDefinition(args);
+    ({ definition, sourceRoot } = await readPublicationCardSource(args));
   } catch (error) {
+    if (error instanceof PublicationCardSourceError) return { ok: false, reason: error.reason, message: error.message };
     return { ok: false, reason: "invalid-definition", message: errorMessage(error) };
   }
 
   let taskRoot: string | null = null;
   try {
     taskRoot = await mkdtemp(path.join(os.tmpdir(), "bbx-publish-prepare-"));
-    const sourceRoot = publicationSourcePath({ boxRoot: args.boxRoot, name: args.name, content: definition.content });
     if (definition.content === "project") await prepareProject({ projectRoot: sourceRoot, taskRoot, deps });
     const outputRoot = definition.content === "static" ? sourceRoot : path.join(sourceRoot, "dist");
     const { output, collected } = await collectPublicationFiles({ root: outputRoot, definition, ownerEmail: deps.ownerEmail });

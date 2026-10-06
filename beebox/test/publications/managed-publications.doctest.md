@@ -6,12 +6,13 @@ Disabling only changes the edge authority; it does not remove the Worker route.
 
 ```ts setup
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createFakePublishStore } from "../../src/services/publish-remote-store.js";
 import { createFakeProvisioningClient } from "../../src/services/cloudflare-provisioning/core.js";
 import { releaseIdForFiles, siteEdgeManifestSchema } from "../../src/publish/manifest-edge.js";
 import { publicationDefinitionSchema } from "../../src/publish/publication-definition.js";
+import { createPublicationCardTemplate } from "../../src/schemas/publication.js";
 import { defaultManagedPublicationRuntime } from "../../src/services/managed-publication-runtime/core.js";
 import { prepareManagedPublication, readCandidate } from "../../src/publish/managed-publications/core.js";
 import { approveManagedPublication, disableManagedPublication, enableManagedPublication } from "../../src/publish/managed-publication-actions.js";
@@ -65,12 +66,12 @@ const runtime = {
     },
   }),
   workerBundle: async () => new TextEncoder().encode("worker module"),
-  prepare: async ({ name }) => {
+  prepare: async ({ card }) => {
     const bytes = new TextEncoder().encode(source);
     await writeFile(path.join(releaseDir, "index.html"), bytes);
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     const files = { "index.html": { bytes: bytes.length, sha256 } };
-    const definition = publicationDefinitionSchema.parse({ pubId, connection: "main", content: "static", title: name, tier, ...(tier === "public" && includeSlug ? { slug } : {}), ...(tier === "accounts" ? { emails: ["member@example.com"] } : {}) });
+    const definition = publicationDefinitionSchema.parse({ pubId, connection: "main", content: "static", title: card, tier, ...(tier === "public" && includeSlug ? { slug } : {}), ...(tier === "accounts" ? { emails: ["member@example.com"] } : {}) });
     return { ok: true, prepared: {
       definition, pubId, contentHash: await releaseIdForFiles(files), stagedDir: releaseDir,
       files: [{ path: "index.html", bytes: bytes.length, sha256 }],
@@ -122,7 +123,7 @@ function publicationConnectionsCaller(actor) {
 A first prepare writes a pending candidate and disabled edge authority.
 
 ```ts
-const candidate = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
+const candidate = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
 const firstManifest = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
 JSON.stringify({ status: firstManifest.status, candidate: candidate.revision.length, release: firstManifest.activeRelease.id === candidate.releaseId })
 => {"status":"disabled","candidate":64,"release":true}
@@ -144,49 +145,44 @@ JSON.stringify({ stale, disabled: disabled.status, enabled: enabled.status })
 => {"stale":true,"disabled":"disabled","enabled":"live"}
 ```
 
-The explicit card ensure action is member-only, idempotent, and returns the
-canonical card route. Listing detects the card without creating it.
+A listed site names the card that claims its pubId.
 
 ```ts continue
-const beforeCard = await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime);
-const firstCard = await publicationCaller("user").publications.ensureCard({ pubId });
-const secondCard = await publicationCaller("user").publications.ensureCard({ pubId });
-const agentCard = await Promise.resolve()
-  .then(() => publicationCaller("agent").publications.ensureCard({ pubId }))
-  .then(() => "allowed", (error) => error.code);
-const afterCard = await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime);
-JSON.stringify({
-  before: beforeCard.sites[0]?.hasCard,
-  created: firstCard.created,
-  repeated: secondCard.created,
-  path: firstCard.cardPath,
-  url: firstCard.approvalUrl,
-  listed: afterCard.sites[0]?.hasCard,
-  agentCard,
-})
-=> {"before":false,"created":true,"repeated":false,"path":"_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card","url":"/box-a/views/_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card","listed":true,"agentCard":"FORBIDDEN"}
+const HOME_CARD = "_content/Home.publication.card";
+await box.write(HOME_CARD, createPublicationCardTemplate({ pubId, connection: "main", title: "Home", tier: "public", slug: "demo" }));
+const listedHome = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime)).sites.find((site) => site.pubId === pubId);
+({ cardPath: listedHome.cardPath, duplicateCardPaths: listedHome.duplicateCardPaths })
+=> { cardPath: "_content/Home.publication.card", duplicateCardPaths: [] }
 ```
 
-A mismatched reference card fails before binding reservation or remote writes.
+Two cards that claim the same pubId leave the site without a card and list
+both claimants.
 
 ```ts continue
-const collisionCardPath = `_content/publications/${pubId}.publication.card`;
-await writeFile(box.path(collisionCardPath), "---\ntitle: Wrong publication\npubId: bcdefghijklmnopqrstuvwxyz2\n---\n");
-let bindingReserved = false;
-const collisionRuntime = {
-  ...runtime,
-  getBinding: async () => null,
-  reserveBinding: async (input) => {
-    bindingReserved = true;
-    return { ...input, accountId: "0123456789abcdef0123456789abcdef", createdAt: input.createdAt };
-  },
-};
-const putsBeforeCollision = store.puts.length;
-const collisionError = await Promise.resolve()
-  .then(() => publicationCaller("user", true, "box-a", collisionRuntime).publications.prepare({ name: "home" }))
-  .then(() => "prepared", (error) => error.message);
-JSON.stringify({ actionable: collisionError.includes(collisionCardPath) && collisionError.includes("Move or rename"), bindingReserved, remoteWrites: store.puts.length - putsBeforeCollision })
-=> {"actionable":true,"bindingReserved":false,"remoteWrites":0}
+await box.write("_content/Copy.publication.card", createPublicationCardTemplate({ pubId, connection: "main", title: "Copy", tier: "public", slug: "demo" }));
+const listedDuplicate = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime)).sites.find((site) => site.pubId === pubId);
+await rm(box.path("_content/Copy.publication.card"));
+({ cardPath: listedDuplicate.cardPath, duplicateCardPaths: listedDuplicate.duplicateCardPaths })
+=> { cardPath: null, duplicateCardPaths: ["_content/Copy.publication.card", "_content/Home.publication.card"] }
+```
+
+A binding whose pubId no card claims is an orphan: no card and no duplicates.
+
+```ts continue
+const orphanPubId = "qrstuvwxyzabcdefghijklmnop";
+const orphanRuntime = { ...runtime, listBindings: async () => [...(await runtime.listBindings()), { ...binding, pubId: orphanPubId }] };
+const orphan = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, orphanRuntime)).sites.find((site) => site.pubId === orphanPubId);
+({ cardPath: orphan.cardPath, duplicateCardPaths: orphan.duplicateCardPaths })
+=> { cardPath: null, duplicateCardPaths: [] }
+```
+
+Prepare through the API takes the card path and returns the card's browse URL
+as the approval link.
+
+```ts continue
+const prepared = await publicationCaller("user").publications.prepare({ card: HOME_CARD });
+({ cardPath: prepared.cardPath, approvalUrl: prepared.approvalUrl })
+=> { cardPath: "_content/Home.publication.card", approvalUrl: "/box-a/browse/_content/Home.publication.card" }
 ```
 
 Agent and open contexts cannot change serving state; a signed-in member can.
@@ -233,7 +229,7 @@ manifest until a member approves that exact candidate.
 ```ts continue
 tier = "secret";
 connectionRows = [{ name: "main", accountId: "0123456789abcdef0123456789abcdef", credentialType: "account-api-token", verifiedAt: null, tokenId: "private-token-id", tokenStatus: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "unverified", workerDeploy: "unverified", accessLive: "unverified" }, grants: [{ boxSlug: "box-a", access: "server" }] }];
-const changed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
+const changed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
 const remainsPublic = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
 JSON.stringify({ approvedTier: remainsPublic.tier, approvedReleaseStillLive: remainsPublic.activeRelease.id === candidate.releaseId, pendingTier: changed.requestedScope.tier })
 => {"approvedTier":"public","approvedReleaseStillLive":true,"pendingTier":"secret"}
@@ -255,7 +251,7 @@ Account approval fails closed until Access is actually verified.
 
 ```ts continue
 tier = "accounts";
-const accountCandidate = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
+const accountCandidate = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
 const accessBlocked = await Promise.resolve()
   .then(() => approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: accountCandidate.revision }, runtime))
   .then(() => false, () => true);
@@ -273,7 +269,7 @@ previous inventory remains available for the bounded overlap window.
 ```ts continue
 tier = "public";
 source = "<h1>Second</h1>";
-const refreshed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
+const refreshed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
 const refreshedManifest = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
 JSON.stringify({
   newActive: refreshedManifest.activeRelease.id === refreshed.releaseId,
@@ -298,7 +294,7 @@ runtime.workerBundle = async () => {
   return originalBundle();
 };
 source = "<h1>Third</h1>";
-const afterDisable = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
+const afterDisable = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
 const afterDisableManifest = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
 JSON.stringify({ status: afterDisableManifest.status, activeUnchanged: afterDisableManifest.activeRelease.id === refreshed.releaseId, candidateExists: afterDisable.revision.length === 64 })
 => {"status":"disabled","activeUnchanged":true,"candidateExists":true}
@@ -367,7 +363,7 @@ manifest no longer claims that path. A second publication can then claim it.
 
 ```ts continue
 slug = "moved";
-const moved = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
+const moved = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
 await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: moved.revision }, runtime);
 const oldPointerRemains = new TextDecoder().decode(await store.get("slugs/demo")) === pubId;
 const movedManifest = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
@@ -375,7 +371,7 @@ const oldPathInert = movedManifest.slug !== "demo";
 pubId = "zyxwvutsrqponmlkjihgfedcba";
 binding = null;
 slug = "demo";
-const reclaimed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "other", ownerEmail: null }, runtime);
+const reclaimed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Other.publication.card", ownerEmail: null }, runtime);
 await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: reclaimed.revision }, runtime);
 JSON.stringify({ oldPointerRemains, oldPathInert, reclaimedBy: new TextDecoder().decode(await store.get("slugs/demo")) })
 => {"oldPointerRemains":true,"oldPathInert":true,"reclaimedBy":"zyxwvutsrqponmlkjihgfedcba"}
@@ -526,7 +522,7 @@ const legacyRuntime = {
   reserveBinding: async () => legacyBinding,
   listBindings: async () => [legacyBinding],
 };
-const legacyCandidate = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "legacy", ownerEmail: null }, legacyRuntime);
+const legacyCandidate = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Legacy.publication.card", ownerEmail: null }, legacyRuntime);
 const legacyScope = legacyCandidate.requestedScope;
 await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId: legacyPubId, expectedRevision: legacyCandidate.revision }, legacyRuntime);
 const legacySite = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, legacyRuntime)).sites[0];

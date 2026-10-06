@@ -7,8 +7,7 @@ import type { ManagedPublicationRuntime } from "../services/managed-publication-
 import { defaultManagedPublicationRuntime } from "../services/managed-publication-runtime/core.js";
 import type { PublicationCandidate } from "./managed-publications/core.js";
 import { publicationError, readCandidate, readSharedRouteMarker, readSiteManifest, storeFor } from "./managed-publications/core.js";
-import { hasPublicationReferenceCard } from "./publication-reference-card.js";
-import { publicationCardPath } from "../shared/publication-card.js";
+import { publicationCardsByPubId } from "../core/card-lint/publication-duplicates.js";
 import { extensionToMimetype } from "../lib/mimetype.js";
 
 /** Content-type for a release object, by extension; unknown extensions fall back to a safe binary type. */
@@ -21,12 +20,13 @@ const PREVIEW_TEXT_LIMIT = 64 * 1024;
 
 export async function listManagedPublications(args: { boxRoot: string; boxSlug: string }, injectedRuntime?: ManagedPublicationRuntime) {
   const runtime = injectedRuntime ?? defaultManagedPublicationRuntime;
-  const [bindings, rows, boxHost] = await Promise.all([
+  const [bindings, rows, boxHost, cardsByPubId] = await Promise.all([
     runtime.listBindings(args.boxSlug),
     runtime.listConnections(),
     runtime.getBoxHost(args.boxSlug),
+    publicationCardsByPubId(args.boxRoot),
   ]);
-  const sites = await Promise.all(bindings.map((binding) => managedPublicationRow({ binding, args, runtime, rows, boxHost })));
+  const sites = await Promise.all(bindings.map((binding) => managedPublicationRow({ binding, args, runtime, rows, boxHost, cardPaths: cardsByPubId.get(binding.pubId) ?? [] })));
   return {
     sharedHost: boxHost === null ? null : { hostname: boxHost.hostname, connectionName: boxHost.connectionName, status: boxHost.status },
     sites,
@@ -39,20 +39,20 @@ async function managedPublicationRow(args: {
   runtime: ManagedPublicationRuntime;
   rows: Awaited<ReturnType<ManagedPublicationRuntime["listConnections"]>>;
   boxHost: Awaited<ReturnType<ManagedPublicationRuntime["getBoxHost"]>>;
+  /** Box-relative publication cards claiming this pubId. */
+  cardPaths: string[];
 }) {
-  const { binding, boxHost } = args;
+  const { binding, boxHost, cardPaths } = args;
   const row = args.rows.find((item) => item.name === binding.connectionName);
   const connection = row === undefined
     ? { name: binding.connectionName, status: "missing" as const, capabilities: { tokenForAccount: "unverified" as const, r2ObjectWrite: "unverified" as const, workerDeploy: "unverified" as const, accessLive: "unverified" as const } }
     : { name: row.name, status: row.tokenStatus, capabilities: row.capabilities };
   const remote = await readRemotePublication({ ...args, row });
   const { manifest, candidate, sharedRoute, hostname, remoteStatus } = remote;
-  const cardPath = publicationCardPath(binding.pubId);
-  const hasCard = await hasPublicationReferenceCard(args.args.boxRoot, binding.pubId);
   return {
     pubId: binding.pubId,
-    cardPath,
-    hasCard,
+    cardPath: cardPaths.length === 1 ? cardPaths[0] ?? null : null,
+    duplicateCardPaths: cardPaths.length > 1 ? cardPaths : [],
     assignedCustomHostname: binding.customHostname ?? null,
     customHostnameStatus: binding.customHostnameStatus ?? null,
     name: typeof candidate?.name === "string" ? candidate.name : binding.pubId,

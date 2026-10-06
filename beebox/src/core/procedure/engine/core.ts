@@ -10,7 +10,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun, type ProcedureRunFields } from "../../../schemas/procedure-run.js";
-import { stageAll, commit, withBoxGitLock } from "../../../lib/git/core.js";
+import { stageAll, commit, withBoxGitLock } from "../../../lib/git/core/operations.js";
 import { fmt } from "../../../lib/format.js";
 import { getBoxTime, getBoxTimeISO } from "../../../lib/time.js";
 import { ok, err, type Result } from "../../../shared/result.js";

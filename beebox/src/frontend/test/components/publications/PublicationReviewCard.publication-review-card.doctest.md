@@ -14,6 +14,8 @@ globalThis.React = React;
 const site = {
   pubId: "pub-reference-1",
   name: "notes",
+  cardPath: "publications/Notes.publication.card",
+  duplicateCardPaths: [],
   title: "Notes",
   hostname: "notes.example.workers.dev",
   sharedRoute: null,

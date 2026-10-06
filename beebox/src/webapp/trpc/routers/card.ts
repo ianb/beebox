@@ -16,7 +16,7 @@ import { createCollectorContext } from "../../../core/command-runner.js";
 import { ThemeChoiceSchema, validateThemeChoice } from "../../../shared/card-theme/core.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { MovedCardRecoveryCauseError } from "../../../core/moved-card-recovery.js";
 import { resolveMovedCardPath } from "../../../core/moved-card-forwarding.js";
 

@@ -13,7 +13,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { runInit } from "../../../src/cli/commands/init.js";
-import { isRepo, repoRootOf } from "../../../src/lib/git/core.js";
+import { isRepo, repoRootOf } from "../../../src/lib/git/core/operations.js";
 
 const dir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "bbx-init-nested-")));
 const outer = path.join(dir, "outer");

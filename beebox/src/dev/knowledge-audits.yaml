@@ -7247,7 +7247,7 @@ tests:
       - "field-guide/site/"
       - "field-guide/project/"
       - "src/publications/NOTES.md"
-      - "bbx pub connections"
+      - "bbx pub status"
       - "Admin"
       - "/s/"
       - "slug"
@@ -7336,18 +7336,16 @@ tests:
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
     watch_for: >
-      Uses only an active, granted connection from `bbx pub connections`; does
+      Uses only an active, granted connection from `bbx pub status`; does
       not inspect machine credentials; preserves the complete `/s/<pubId>/`
       capability path and shares it privately with the boxholder. Directs a
-      signed-in member to the returned publication card link or the profile
-      menu → Publications, and does not treat the CLI or card contents as able
+      signed-in member to the returned publication card link, and does not treat the CLI or card contents as able
       to enable or approve. The card identifies the publication; the server
       resolves its state and requires a signed-in member for permission changes. Uses managed
       status through the configured box agent; if server credentials are
       missing, reports the status error and asks the operator to restore the
       box-server connection if it persists.
     correct_contains:
-      - "bbx pub connections"
       - "bbx pub status"
       - "/s/"
       - "publication card"
@@ -7410,7 +7408,7 @@ tests:
       destination is distinct from the approved route.
     correct_contains:
       - "Admin"
-      - "bbx pub connections"
+      - "bbx pub status"
       - "/s/"
       - "approval"
     correct_matches:

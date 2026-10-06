@@ -38,15 +38,18 @@ export function publicationApprovalUrl(args: { serverUrl: string | undefined; bo
   }
 }
 
-function approvalLinkLines(approvalPath?: string): string[] {
+function approvalLinkLines(approvalPath: string): string[] {
   const url = publicationApprovalUrl({
     serverUrl: process.env.BBX_SERVER_URL,
     ...(process.env.BBX_BOX_NAME === undefined ? {} : { boxName: process.env.BBX_BOX_NAME }),
-    ...(approvalPath === undefined ? {} : { approvalPath }),
-  });
-  return url === null
-    ? [approvalPath === undefined ? "  approval: open this box's Publications page from the app menu." : `  approval: open the publication card ${approvalPath} in this box's app.`]
-    : [`  approval: ${url}${new URL(url).hostname === "localhost" ? " (local app URL)" : ""}`];
+    approvalPath,
+  }) ?? approvalPath;
+  return [`  approval: open the publication card ${url} in this box's app.`];
+}
+
+function cardLabel(site: PublicationSite): string {
+  if (site.duplicateCardPaths.length > 0) return `duplicate cards: ${site.duplicateCardPaths.join(", ")}`;
+  return site.cardPath === null ? "no card (orphan)" : `card ${site.cardPath}`;
 }
 
 function siteDestination(site: PublicationSite): string | null {
@@ -92,7 +95,7 @@ export function publicationSiteLines(sites: PublicationSite[]): string[] {
       : "";
     const destinationLabel = servingScope === null ? "candidate URL" : "publication";
     const legacyAlias = legacyWorkersDestination(site);
-    return `${site.name} — ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; ${destinationLabel}: ${destination}` : ""}${legacyAlias ? `; legacy workers.dev URL: ${legacyAlias}` : ""}${candidate}`;
+    return `${site.name} — ${cardLabel(site)}; ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; ${destinationLabel}: ${destination}` : ""}${legacyAlias ? `; legacy workers.dev URL: ${legacyAlias}` : ""}${candidate}`;
   });
 }
 
@@ -135,37 +138,9 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
   return lines;
 }
 
-const connectionsCommand = new Command("connections")
-  .description("List active Cloudflare publishing connections granted to this box")
-  .action(async () => {
-    const client = boxClient();
-    if (!client.ok) printBoxClientError(client.error.message);
-    try {
-      const result: PublicationConnections = await client.value.publications.connections.query();
-      for (const line of publicationConnectionsLines(result)) console.log(line);
-    } catch (error) {
-      printBoxClientError(errorMessage(error));
-    }
-  });
-
 const idCommand = new Command("id")
   .description("Generate a cryptographically random publication id for publication.json")
   .action(() => console.log(generatePubId()));
-
-const sitesCommand = new Command("sites")
-  .description("List this box's server-managed publication status")
-  .action(async () => {
-    const client = boxClient();
-    if (!client.ok) printBoxClientError(client.error.message);
-    try {
-      const result = await client.value.publications.list.query();
-      for (const line of publicationSharedHostLines(result.sharedHost)) console.log(line);
-      for (const line of publicationSiteLines(result.sites)) console.log(line);
-      if (result.sites.length > 0) for (const line of approvalLinkLines()) console.log(line);
-    } catch (error) {
-      printBoxClientError(errorMessage(error));
-    }
-  });
 
 const statusCommand = new Command("status")
   .description("Report this box's publishing connections and server-managed publication status")
@@ -179,8 +154,8 @@ const statusCommand = new Command("status")
       ]);
       console.log("Server-managed publication status:");
       for (const line of publicationConnectionsLines(connections)) console.log(line);
+      for (const line of publicationSharedHostLines(publications.sharedHost)) console.log(line);
       for (const line of publicationSiteLines(publications.sites)) console.log(line);
-      if (publications.sites.length > 0) for (const line of approvalLinkLines()) console.log(line);
     } catch (error) {
       printBoxClientError(errorMessage(error));
     }
@@ -188,12 +163,12 @@ const statusCommand = new Command("status")
 
 const prepareCommand = new Command("prepare")
   .description("Build and prepare a named site on this box's server")
-  .argument("<name>", "Publication folder name under src/publications")
-  .action(async (name: string) => {
+  .argument("<card-path>", "Box-relative path of the publication card")
+  .action(async (card: string) => {
     const client = boxClient();
     if (!client.ok) printBoxClientError(client.error.message);
     try {
-      const candidate = await client.value.publications.prepare.mutate({ name });
+      const candidate = await client.value.publications.prepare.mutate({ card });
       const { sites } = await client.value.publications.list.query();
       const site = sites.find((item) => item.pubId === candidate.pubId);
       for (const line of publicationPreparedLines(candidate, site)) console.log(line);
@@ -203,7 +178,5 @@ const prepareCommand = new Command("prepare")
   });
 
 export const pubManagedPrepareCommand = prepareCommand;
-export const pubManagedSitesCommand = sitesCommand;
 export const pubManagedIdCommand = idCommand;
-export const pubManagedConnectionsCommand = connectionsCommand;
 export const pubManagedStatusCommand = statusCommand;

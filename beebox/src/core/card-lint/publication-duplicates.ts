@@ -17,7 +17,11 @@ import { listBoxCardFiles } from "../list-cards.js";
 
 const runIndexes = new WeakMap<object, Promise<Map<string, string[]>>>();
 
-async function buildIndex(boxRoot: string): Promise<Map<string, string[]>> {
+/**
+ * Map each `pubId` to the box-relative paths of the publication cards that
+ * carry it. Shared by this rule and local publish prepare.
+ */
+export async function publicationCardsByPubId(boxRoot: string): Promise<Map<string, string[]>> {
   const files = (await listBoxCardFiles(boxRoot)).filter((file) => file.endsWith(".publication.card")).toSorted();
   const index = new Map<string, string[]>();
   for (const file of files) {
@@ -32,7 +36,7 @@ async function buildIndex(boxRoot: string): Promise<Map<string, string[]>> {
 function pubIdIndex(input: { boxRoot: string; run: object }): Promise<Map<string, string[]>> {
   const cached = runIndexes.get(input.run);
   if (cached !== undefined) return cached;
-  const built = buildIndex(input.boxRoot);
+  const built = publicationCardsByPubId(input.boxRoot);
   runIndexes.set(input.run, built);
   return built;
 }

@@ -15,7 +15,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getHead } from "../../lib/git/core.js";
+import { getHead } from "../../lib/git/core/operations.js";
 import { invariant } from "../../shared/invariant.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { CLAUDE_MD, AGENTS_MD } from "../agent-instruction-files.js";

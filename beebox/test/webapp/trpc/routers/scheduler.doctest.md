@@ -11,7 +11,7 @@ throws are covered here (running a real script is exercised elsewhere).
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import { getLog } from "../../../../src/lib/git/core.js";
+import { getLog } from "../../../../src/lib/git/core/operations.js";
 import { parse as parseYaml } from "yaml";
 
 function caller(boxRoot) {

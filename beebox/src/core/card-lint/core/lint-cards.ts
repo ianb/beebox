@@ -31,7 +31,7 @@
  * double-report the same violation).
  */
 import { relative } from "node:path";
-import { isSystemCardType, systemCardLocationError } from "../../shared/system-card-paths.js";
+import { isSystemCardType, systemCardLocationError } from "../../../shared/system-card-paths.js";
 
 
 import { readFile } from "node:fs/promises";
@@ -42,31 +42,31 @@ import {
   type LintResult,
   type LintSummary,
   type LintIssue,
-} from "../../exports/cards.js";
+} from "../../../exports/cards.js";
 import { parse as parseYaml } from "yaml";
-import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "../card-io.js";
+import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "../../card-io.js";
 import { symbolIssues } from "./symbol.js";
-import { extractBodyLinks, extractBodyRefs } from "../body-refs.js";
-import { detectDisplayFormPath, displayFormPathMessage } from "../../shared/display-path.js";
-import { isAttachRef } from "../../shared/attach-path.js";
-import { parseRef, formatRefSuffix, isUrlRef } from "../../shared/ref-path/core.js";
-import { lintBodyMarkdoc } from "../body-markdoc-lint.js";
-import { brokenRefReason, resolveRefExists } from "../ref-exists.js";
+import { extractBodyLinks, extractBodyRefs } from "../../body-refs.js";
+import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
+import { isAttachRef } from "../../../shared/attach-path.js";
+import { parseRef, formatRefSuffix, isUrlRef } from "../../../shared/ref-path/core.js";
+import { lintBodyMarkdoc } from "../../body-markdoc-lint.js";
+import { brokenRefReason, resolveRefExists } from "../../ref-exists.js";
 import {
   boxRelativeDoc,
   canonicalIssueMessage,
   cardRefProbe,
   planCanonicalRef,
-} from "../canonical-refs.js";
+} from "../../canonical-refs.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./node-refs.js";
 import { lintCardSymbolSrc, lintFigureEntry, lintLandmarkSymbolSrc } from "./path-fields.js";
 import { lintFilenameAttachRef } from "./filename-attach.js";
 import { lintDuplicateChatSession } from "./chat-duplicates.js";
-import { lintDuplicatePublicationId } from "./publication-duplicates.js";
-import { findAbsoluteMachinePaths } from "../../lib/absolute-path-check.js";
-import { conceptMapShapeWarnings } from "../../schemas/concept-map.js";
-import { errorMessage } from "../../shared/error-guards.js";
-import { validateThemeChoice } from "../../shared/card-theme/core.js";
+import { lintDuplicatePublicationId } from "../publication-duplicates.js";
+import { findAbsoluteMachinePaths } from "../../../lib/absolute-path-check.js";
+import { conceptMapShapeWarnings } from "../../../schemas/concept-map.js";
+import { errorMessage } from "../../../shared/error-guards.js";
+import { validateThemeChoice } from "../../../shared/card-theme/core.js";
 
 export interface LintDispatchOptions {
   /**

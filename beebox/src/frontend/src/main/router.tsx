@@ -19,7 +19,6 @@ import { trpcClient } from "../lib/trpc/client";
 import { QuickChatPage } from "../pages/quick-chat/QuickChatPage";
 import { ChatPage } from "../pages/ChatPage";
 import { chatSearchSchema } from "../lib/chat-route-search";
-import { PublicationsPage } from "../pages/PublicationsPage";
 import { BoxRedirect, BoxValidationLayout, DevHarnessLayout, ProductLayout, RootLayout } from "./app-shell";
 import { RouteError } from "../components/RouteError";
 import { LoginPage } from "../pages/login/LoginPage";
@@ -216,7 +215,7 @@ const adminRoute = createRoute({
     reconnect: z.string().optional(),
   }),
 });
-const publicationsRoute = createRoute({ staticData: { title: "Publications" }, getParentRoute: () => productLayoutRoute, path: "/publications", component: PublicationsPage }); const cardRoute = createRoute({
+const cardRoute = createRoute({
   staticData: { title: null },
   getParentRoute: () => productLayoutRoute,
   path: "/card/$",
@@ -324,7 +323,6 @@ const routeTree = rootRoute.addChildren([
     captureRoute,
     settingsRoute,
     adminRoute,
-    publicationsRoute,
     cardRoute,
     viewRoute,
     landmarksRoute,

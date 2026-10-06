@@ -12,7 +12,7 @@ import { z } from "zod";
 import { parseCommandArgs, type CommandContext, type CommandDefinition, type CommandResult } from "../../command-types.js";
 import { getBoxDir, isCardFile, parseCardName } from "../../../lib/paths/core.js";
 import { BoxPathArgError, resolveCliTargetPath } from "../../../cli/lib/cli-target-path.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
 import { NotFoundError } from "../../../lib/errors.js";
 import { invariant } from "../../../shared/invariant.js";

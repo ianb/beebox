@@ -18,7 +18,7 @@ import { typeFromFilename } from "../../../core/card-io.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 
 export const browserTaskRouter = router({

@@ -5,7 +5,7 @@ one site twice, so `lintCardsDispatch` reports every card in the pair.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { lintCardsDispatch } from "../../../src/core/card-lint/core.js";
+import { lintCardsDispatch } from "../../../src/core/card-lint/core/lint-cards.js";
 import { PublicationSchema } from "../../../src/schemas/publication.js";
 
 const ctx = { cardSchemas: new Map([[PublicationSchema.type, PublicationSchema]]) };

@@ -119,3 +119,31 @@ const empty = await makeTmpBox();
 
 await empty.cleanup();
 ```
+
+Files git ignores are not reported: git never commits them, so their bytes
+cannot reach history. A publication card's buildable project keeps
+`node_modules/` and a `dist/` build inside its attach scope, and the box
+`.gitignore` covers both. The same large file in `static/`, which is committed,
+is still reported:
+
+```ts
+const pub = await makeTmpBox();
+await put(pub.root, "Site.attach/project/node_modules/pkg/bundle.wasm-blob", BIG);
+await put(pub.root, "Site.attach/project/dist/app.bundle", BIG);
+await put(pub.root, "Site.attach/static/app.bundle", BIG);
+(await findUnlistedBinaries(pub.root)).map((f) => f.relPath).join(", ")
+=> Site.attach/static/app.bundle
+
+await pub.cleanup();
+```
+
+Outside a git repository nothing is ignored, so every candidate is kept:
+
+```ts
+const bare = await makeTmpBox({ git: "none" });
+await put(bare.root, "Site.attach/project/dist/app.bundle", BIG);
+(await findUnlistedBinaries(bare.root)).map((f) => f.relPath).join(", ")
+=> Site.attach/project/dist/app.bundle
+
+await bare.cleanup();
+```

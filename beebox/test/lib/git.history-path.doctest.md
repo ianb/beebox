@@ -7,7 +7,7 @@ menu and the useful missing-card state.
 ```ts setup
 import { rename, unlink } from "node:fs/promises";
 import { join } from "node:path";
-import { getLogPaginated } from "../../src/lib/git/core.js";
+import { getLogPaginated } from "../../src/lib/git/core/operations.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 

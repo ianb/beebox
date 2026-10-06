@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Outlet, useLocation, useParams } from "@tanstack/react-router";
+import { Outlet, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "../components/DebugLog";
 import { reportPreviousAdminHang } from "../lib/admin-hang-probe";
@@ -112,8 +112,6 @@ export function ProductLayout() {
   usePresenceHeartbeat();
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
-  const location = useLocation();
-  const standalonePage = location.pathname.endsWith("/publications");
   const handleToggleSourceView = sourceView.toggle;
   const handleCloseSourceView = sourceView.toggle;
   return (
@@ -129,7 +127,7 @@ export function ProductLayout() {
           <PresentationNotice />
           <NotificationBanner />
           <main className="flex-1 min-h-0">
-            {standalonePage ? null : <BoxConversationShell />}<Outlet />
+            <BoxConversationShell /><Outlet />
           </main>
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
           <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
