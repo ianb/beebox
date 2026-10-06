@@ -3,8 +3,8 @@
 `routingDisposition` decides whether a judged quick chat message posts to its
 selected destination or waits for the person to choose. It sums the judged
 probability of every candidate in the selected destination's place (its
-landmark, or the root when it has none) and posts when that sum reaches the
-floor, 0.9 by default.
+landmark, or its context directory when it has none) and posts when that sum
+reaches the floor, 0.9 by default.
 
 ```ts setup
 import { routingDisposition, selectRoutingDestination } from "../../../../src/core/chat/routing/policy.js";
@@ -78,16 +78,35 @@ decide({ general: 1 }, { candidates: candidates.filter((candidate) => candidate.
 => New general chat: post
 ```
 
-A selected chat with no landmark is in the root place, together with the new
-general chat. Their sum reaches the floor even though neither alone does.
+A selected chat with no landmark is in the place of its context directory.
+A chat at the box root with no landmark shares the root with the new general
+chat, so their sum reaches the floor even though neither alone does.
 
 ```ts
 const unplaced = [
   { id: "loose", label: "Loose ends", target: { kind: "existing-session", sessionId: "s-loose", contextDir: "" } },
+  { id: "foo", label: "Foo notes", target: { kind: "existing-session", sessionId: "s-foo", contextDir: "projects/foo" } },
+  { id: "foo-2", label: "Foo budget", target: { kind: "existing-session", sessionId: "s-foo-2", contextDir: "projects/foo" } },
   ...candidates,
 ];
 decide({ loose: 0.5, general: 0.45, trip: 0.05 }, { candidates: unplaced })
 => Loose ends: post
+```
+
+Landmark-less candidates in different directories are different places. A
+chat in `projects/foo` and the new general chat at the root do not add up, so
+a split between them asks:
+
+```ts continue
+decide({ general: 0.55, foo: 0.40, trip: 0.05 }, { candidates: unplaced })
+=> New general chat: ask
+```
+
+Two landmark-less chats in the same directory still sum:
+
+```ts continue
+decide({ foo: 0.5, "foo-2": 0.45, trip: 0.05 }, { candidates: unplaced })
+=> Foo notes: post
 ```
 
 A floor of 1 posts only a place that holds every probability. Floating-point

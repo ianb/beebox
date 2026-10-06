@@ -58,9 +58,13 @@ export function selectRoutingDestination(args: {
 /** Provisional: posts the clear samples and asks on the debatable ones. Calibrate from stored records. */
 export const QUICK_CHAT_POST_FLOOR = 0.9;
 
-/** Where a candidate lands: its landmark, or the root when it has none. */
-function routingPlace(candidate: RoutingCandidate): string | null {
-  return candidate.landmark?.path ?? null;
+/**
+ * Where a candidate lands: its landmark, or its own context directory when it
+ * has none. Two landmark-less candidates are one place only when they work in
+ * the same directory.
+ */
+function routingPlace(candidate: RoutingCandidate): string {
+  return candidate.landmark === undefined ? `dir:${candidate.target.contextDir}` : `landmark:${candidate.landmark.path}`;
 }
 
 /**

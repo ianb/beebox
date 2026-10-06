@@ -161,7 +161,7 @@ export function routingDisposition(args: {
 }): "post" | "ask"
 ```
 
-It sums the probabilities of the candidates in the same place as `selected` (same `landmark.path`, or the root when neither has a landmark). It returns `post` when that sum is at least `postFloor`, default 0.9. Against the ten samples above this posts seven and asks three ("passport", "Dana", "ok"). The floor is provisional and is one named constant.
+It sums the probabilities of the candidates in the same place as `selected` (same `landmark.path`; a candidate without a landmark is in the place of its `contextDir`). It returns `post` when that sum is at least `postFloor`, default 0.9. Against the ten samples above this posts seven and asks three ("passport", "Dana", "ok"). The floor is provisional and is one named constant.
 
 **Delivery.** Extract the body of the `POST /api/chat/send` handler, from sender attribution through the queued-or-started outcome, into a factory beside the route:
 
