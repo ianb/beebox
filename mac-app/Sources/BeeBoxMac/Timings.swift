@@ -52,7 +52,7 @@ struct Timings: Codable {
         do {
             try JSONEncoder().encode(self).write(to: Paths.timings, options: .atomic)
         } catch {
-            NSLog("beebox: could not save timings: \(error)")
+            appLog("could not save timings: \(error)")
         }
     }
 }

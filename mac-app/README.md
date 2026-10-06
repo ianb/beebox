@@ -1,35 +1,67 @@
-# Bee Box for Mac (spike)
+# Bee Box for Mac
 
 A menu-bar app that runs the beebox Linux image in a lightweight VM through
 Apple's [Containerization](https://github.com/apple/containerization)
-framework (pinned at 0.48.0). It is an experiment, not a shipped install
-path; results are in
+framework (pinned at 0.48.0). Experimental; findings are in
 [phase1-spike-app.md](../research/installable-app/phase1-spike-app.md).
 
-Requires macOS 26 on Apple silicon and full Xcode.
+Requires macOS 26 on Apple silicon. An older macOS refuses to open the app
+with the system's own "requires macOS 26.0 or later" message
+(`LSMinimumSystemVersion`); a Mac that cannot run VMs gets the app's own
+failure message in the menu.
 
-## Inputs it borrows (spike only)
+## What the app uses
 
-The app does not yet pull an image or carry its own kernel. It reads, from
-`~/Library/Caches/beebox-phase0/` (override with `BEEBOX_SPIKE_INPUTS`):
+| Piece | Source |
+|---|---|
+| Linux kernel | Bundled: Kata Containers 3.32.0's `vmlinux-6.18.35-197-debug` (the kernel Apple's `container` recommends), fetched and SHA-256-checked by `scripts/fetch-kernel.sh` |
+| Init filesystem | Pulled on first launch: `ghcr.io/apple/containerization/vminit:0.48.0` |
+| beebox image | Pulled on first launch: `ghcr.io/ianb/beebox:<app version>`, published by `.github/workflows/image.yml` on a `v*` tag. A newer app version pulls its own tag and removes the old image |
+| Updates | Sparkle 2.10.0 (`scripts/fetch-sparkle.sh`), feed at the latest GitHub Release's `appcast.xml`. Off until the bundle carries `SUPublicEDKey` |
 
-- `oci/layout/` — the image as an OCI layout
-  (`container image save beebox:phase0 -o beebox.tar`, then untar).
-- `app/kernels/default.kernel-arm64` and
-  `app/containers/buildkit/initfs.ext4` — downloaded by Apple's `container`
-  CLI.
+## Build
 
-## Build and run
+Full Xcode is required.
 
 ```sh
-./build.sh                  # builds and signs; an unsigned build cannot start a VM
-.build/release/BeeBoxMac
+scripts/build-app.sh      # → build/BeeBox.app (ad hoc signed)
+scripts/make-dmg.sh       # → build/BeeBox-<version>.dmg
 ```
 
-The box lives in `~/BeeBoxSpike/box` (override with `BEEBOX_BOX_DIR`).
-Runtime state lives in `~/Library/Application Support/BeeBoxSpike` and must
-not move: the framework records absolute paths. `BEEBOX_VM_MEMORY_MB` sets
-the VM size; the default is a quarter of physical memory, 2–4 GiB.
+`build-app.sh` reads `VERSION` (also the image tag), `SIGN_IDENTITY`
+(a Developer ID Application identity; ad hoc by default),
+`SPARKLE_PUBLIC_KEY`, `BUNDLE_ID` (default `run.beebox.mac`), and
+`BEEBOX_IMAGE`. `make-dmg.sh` signs the DMG with a real `SIGN_IDENTITY`, and
+notarizes and staples it when `NOTARY_PROFILE` names an
+`xcrun notarytool store-credentials` profile. Downloads are cached in
+`~/Library/Caches/beebox-mac-build`.
 
-Quit from the menu, or send SIGTERM; both stop the server gracefully before
-the VM goes down.
+## Run during development
+
+```sh
+open -n build/BeeBox.app \
+  --env BEEBOX_IMAGE_LAYOUT=$HOME/Library/Caches/beebox-phase0/oci/layout
+```
+
+| Variable | Effect |
+|---|---|
+| `BEEBOX_IMAGE_LAYOUT` | Load the image from a local OCI layout (`container image save`, then untar) instead of pulling |
+| `BEEBOX_IMAGE` | Pull a different image reference |
+| `BEEBOX_STATE_DIR`, `BEEBOX_BOX_DIR`, `BEEBOX_PORT` | A second, throwaway instance |
+| `BEEBOX_VM_MEMORY_MB` | VM size (default: a quarter of RAM, 2–4 GiB) |
+| `BEEBOX_KERNEL` | Kernel path for a bare `swift build` binary, which has no bundle |
+
+The box lives in `~/BeeBoxSpike/box`; runtime state in
+`~/Library/Application Support/BeeBoxSpike`, which must not move (the
+framework records absolute paths). The box is served at
+`http://localhost:3280/box/`.
+
+## Release (once the keys exist)
+
+1. Tag `vX.Y.Z` and push it: the workflow publishes `ghcr.io/ianb/beebox:X.Y.Z`.
+   The first time, make the package public in its GitHub settings.
+2. `VERSION=X.Y.Z SIGN_IDENTITY="Developer ID Application: …" SPARKLE_PUBLIC_KEY=… scripts/build-app.sh`
+3. `NOTARY_PROFILE=beebox-notary SIGN_IDENTITY=… scripts/make-dmg.sh`
+4. Generate `appcast.xml` with Sparkle's `generate_appcast` (signs with the
+   EdDSA private key in the keychain) and attach it and the DMG to the
+   GitHub Release.
