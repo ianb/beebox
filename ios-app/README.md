@@ -26,8 +26,11 @@ Agent and contributor build/test guidance lives in [`CLAUDE.md`](CLAUDE.md).
 - Speech input uses Apple's on-device `SpeechAnalyzer` and `SpeechTranscriber`
   on iOS 26. `DictationTranscriber` covers unsupported iOS 26 hardware/locales,
   and `SFSpeechRecognizer` remains the iOS 17–25 fallback. The first use of a
-  locale may download its system-managed model. A recorded WAV is still kept in
-  parallel for the box's HQ transcription and diarization pass at send time.
+  locale may download its system-managed model. A recorded WAV is kept in
+  parallel for the HQ pass at send time. On iOS 26 with `SpeechTranscriber`
+  available, that pass runs on the phone and the box is not called; otherwise,
+  and always when the box's HQ service labels speakers, the box transcribes it
+  (`../beebox/docs/mobile-contract.md` §4.4a).
 - A floating chevron on the webview's leading edge appears whenever the page
   has history to go back to, and disappears on the chat itself. The shell has
   no browser chrome, so before it the only way out of a card or the browse view

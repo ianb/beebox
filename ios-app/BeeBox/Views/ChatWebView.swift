@@ -20,6 +20,14 @@ struct NativeChatEmission: Equatable, Identifiable {
     var selections: [NativeEmissionSelection] = []
 }
 
+/// `beeboxHqDictationState` (contract §4.4a). `diarized` is the box's HQ
+/// service labelling speakers, which keeps the HQ pass on the server; a
+/// payload from web that predates the field reads as not diarized.
+struct NativeHqDictationState: Equatable {
+    var enabled: Bool
+    var diarized: Bool
+}
+
 struct NativeEmissionReceipt: Equatable {
     enum Disposition: String {
         case sent
@@ -125,7 +133,7 @@ struct ChatWebView: UIViewRepresentable {
     var onLocationShareResult: (NativeLocationShareResult) -> Void
     var onLocationSharingStateChange: (Bool) -> Void
     var onNarrationStateChange: (Bool) -> Void
-    var onHqDictationStateChange: (Bool) -> Void
+    var onHqDictationStateChange: (NativeHqDictationState) -> Void
     var onSpeechPlaybackStateChange: (Bool) -> Void
     var onResponseStateChange: (Bool) -> Void
     var onScreenshotResult: (NativeScreenshotResult) -> Void
@@ -155,7 +163,7 @@ struct ChatWebView: UIViewRepresentable {
         onLocationShareResult: @escaping (NativeLocationShareResult) -> Void = { _ in },
         onLocationSharingStateChange: @escaping (Bool) -> Void = { _ in },
         onNarrationStateChange: @escaping (Bool) -> Void = { _ in },
-        onHqDictationStateChange: @escaping (Bool) -> Void = { _ in },
+        onHqDictationStateChange: @escaping (NativeHqDictationState) -> Void = { _ in },
         onSpeechPlaybackStateChange: @escaping (Bool) -> Void = { _ in },
         onResponseStateChange: @escaping (Bool) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
@@ -306,7 +314,7 @@ struct ChatWebView: UIViewRepresentable {
         var onLocationShareResult: (NativeLocationShareResult) -> Void
         var onLocationSharingStateChange: (Bool) -> Void
         var onNarrationStateChange: (Bool) -> Void
-        var onHqDictationStateChange: (Bool) -> Void
+        var onHqDictationStateChange: (NativeHqDictationState) -> Void
         var onSpeechPlaybackStateChange: (Bool) -> Void
         var onResponseStateChange: (Bool) -> Void
         var onScreenshotResult: (NativeScreenshotResult) -> Void
@@ -362,7 +370,7 @@ struct ChatWebView: UIViewRepresentable {
             onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
             onLocationSharingStateChange: @escaping (Bool) -> Void,
             onNarrationStateChange: @escaping (Bool) -> Void,
-            onHqDictationStateChange: @escaping (Bool) -> Void = { _ in },
+            onHqDictationStateChange: @escaping (NativeHqDictationState) -> Void = { _ in },
             onSpeechPlaybackStateChange: @escaping (Bool) -> Void,
             onResponseStateChange: @escaping (Bool) -> Void,
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
@@ -781,10 +789,10 @@ struct ChatWebView: UIViewRepresentable {
         }
 
         private func receiveHqDictationState(_ body: Any) {
-            guard let enabled = ChatWebView.hqDictationEnabled(from: body) else {
+            guard let state = ChatWebView.hqDictationState(from: body) else {
                 return
             }
-            onHqDictationStateChange(enabled)
+            onHqDictationStateChange(state)
         }
 
         private func receiveSpeechPlaybackState(_ body: Any) {
@@ -1039,8 +1047,20 @@ struct ChatWebView: UIViewRepresentable {
         dictionaryPayload(from: body)?["enabled"] as? Bool
     }
 
-    static func hqDictationEnabled(from body: Any) -> Bool? {
-        dictionaryPayload(from: body)?["enabled"] as? Bool
+    static func hqDictationState(from body: Any) -> NativeHqDictationState? {
+        guard
+            let payload = dictionaryPayload(from: body),
+            let enabled = payload["enabled"] as? Bool
+        else {
+            return nil
+        }
+        guard let rawDiarized = payload["diarized"] else {
+            return NativeHqDictationState(enabled: enabled, diarized: false)
+        }
+        guard let diarized = rawDiarized as? Bool else {
+            return nil
+        }
+        return NativeHqDictationState(enabled: enabled, diarized: diarized)
     }
 
     static func speechPlaybackActive(from body: Any) -> Bool? {

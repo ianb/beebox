@@ -1230,6 +1230,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             priorInput: "original",
             action: .send,
             matchedPhrase: "send now",
+            diarizationRequested: true,
             audioURL: audioURL,
             boxID: boxID, binding: testBinding, bindingRevision: 1
         )
@@ -1250,6 +1251,11 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         let relaunchedDraft = ComposerDraftStore(repository: repository, defaults: defaults)
         await relaunchedDraft.activate(boxID: boxID)
         XCTAssertEqual(relaunchedPending.voicePreparations, [preparation])
+        XCTAssertEqual(
+            relaunchedPending.voicePreparations.first?.diarizationRequested,
+            true,
+            "a relaunch resumes before the web re-posts its HQ state"
+        )
         XCTAssertEqual(relaunchedDraft.draft.text, "next draft")
         XCTAssertTrue(relaunchedPending.deliveries.isEmpty)
         let restoredAudioURL = await relaunchedPending.voiceAudioURL(for: preparation)
