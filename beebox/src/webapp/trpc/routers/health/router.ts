@@ -251,13 +251,13 @@ export async function runHealthChecks(
   // --- Interface card checks ---
 
   // nav.card, when present, must validate and point at real targets. An
-  // absent card is fine (the menu has its builtin rows); a broken one just
-  // renders no section, so this warning is the only place the breakage shows.
+  // absent card is fine (the box screen has its builtin pages); a broken one
+  // just yields no shortcuts, so this warning is the only place the breakage shows.
   const nav = await resolveNav(boxRoot);
   if (nav.status !== "absent") {
     const navProblem =
       nav.status === "invalid"
-        ? `${NAV_CARD_PATH} is invalid (its menu section is not rendered): ${nav.error}`
+        ? `${NAV_CARD_PATH} is invalid (the box screen shows no shortcuts): ${nav.error}`
         : nav.problems.length > 0
           ? `${NAV_CARD_PATH}: ${nav.problems.join("; ")}`
           : null;
