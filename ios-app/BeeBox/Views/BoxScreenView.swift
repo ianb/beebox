@@ -13,6 +13,7 @@ struct BoxScreenView: View {
         ("Storage", "views/_config/interface/inventory.card", "internaldrive"),
     ]
     static let allChatsPath = "chats"
+    private static let boxesSectionID = "boxes"
 
     var box: PairedBox
     var boxes: [PairedBox]
@@ -24,16 +25,26 @@ struct BoxScreenView: View {
     @ObservedObject var pendingStore: PendingEmissionStore
     var onOpen: (String) -> Void
     var onSelectBox: (PairedBox) -> Void
+    /// Open scrolled to the Boxes section, for the multi-box fixture.
+    var initiallyShowsBoxes = false
 
     var body: some View {
         NavigationStack {
-            List {
-                refreshNotice
-                needsSection
-                sentSection
-                recentSection
-                boxSection
-                boxesSection
+            ScrollViewReader { proxy in
+                List {
+                    refreshNotice
+                    needsSection
+                    sentSection
+                    recentSection
+                    boxSection
+                    boxesSection
+                }
+                .task(id: screenStore.homes[box.id] != nil) {
+                    // Again once the home answer lands, which grows the list above.
+                    if initiallyShowsBoxes {
+                        proxy.scrollTo(Self.boxesSectionID, anchor: .top)
+                    }
+                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle(box.label)
@@ -157,6 +168,7 @@ struct BoxScreenView: View {
                     .disabled(other.id == box.id)
                 }
             }
+            .id(Self.boxesSectionID)
         }
     }
 

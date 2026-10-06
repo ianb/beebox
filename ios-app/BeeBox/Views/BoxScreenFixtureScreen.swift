@@ -54,7 +54,8 @@ struct BoxScreenFixtureScreen: View {
             draftStore: draftStore,
             pendingStore: pendingStore,
             onOpen: { opened = $0 },
-            onSelectBox: { opened = "box \($0.label)" }
+            onSelectBox: { opened = "box \($0.label)" },
+            initiallyShowsBoxes: fixture == "multi-box"
         )
         .overlay(alignment: .top) {
             if let opened {
