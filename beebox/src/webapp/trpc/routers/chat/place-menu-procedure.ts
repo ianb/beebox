@@ -70,10 +70,12 @@ export const chatPlaceMenuProcedure = {
   placeMenu: publicProcedure.query(async ({ ctx }): Promise<PlaceMenuData> => {
     const cutoff = Date.now() - CHAT_FRESH_WINDOW_MS;
     // `listSessionEntries`, not `loadAllSessions`: identity + mtime only, so no
-    // transcript is opened to name a chat this menu will never name.
+    // transcript is opened to name a chat this menu will never name. No Codex
+    // repair scan either: it reads every Codex session on the host, and this
+    // menu only counts activity, which Codex indexes as it runs a thread.
     const [{ summaries, problems }, entries] = await Promise.all([
       loadLandmarkSummaries(ctx.boxRoot),
-      listSessionEntries(ctx.boxRoot),
+      listSessionEntries(ctx.boxRoot, { repairCodexIndex: false }),
     ]);
 
     const byDir = new Map<string, DirActivity>();

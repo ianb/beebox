@@ -1,16 +1,17 @@
 /** Adapt supported Codex app-server thread history into the chat history model. */
 
 import { z } from "zod";
-import { ensureCodexPluginInstalled } from "../../agent/ensure-codex-plugin.js";
-import { CodexHistoryServer } from "../../../services/codex-history-server.js";
-import { CodexHistoryRpcError } from "../../../services/codex-history-server.js";
-import { normalizeCodexToolItem } from "../../../services/codex-tool-activity.js";
-import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js";
-import { userIdentity } from "../../../cli/lib/session-entry.js";
+import { ensureCodexPluginInstalled } from "../../../agent/ensure-codex-plugin.js";
+import { CodexHistoryServer } from "../../../../services/codex-history-server.js";
+import { CodexHistoryRpcError } from "../../../../services/codex-history-server.js";
+import { normalizeCodexToolItem } from "../../../../services/codex-tool-activity.js";
+import type { SessionEntry, SessionLogSlice } from "../../../../cli/lib/session.js";
+import { userIdentity } from "../../../../cli/lib/session-entry.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { errnoCode } from "../../../shared/error-guards.js";
-import { mapV2Path } from "../../migrations/one-root-mapping.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
+import { realpathThreadCwd, retiredV2ContentCwds } from "./v2-cwd.js";
+import { writeFileAtomic } from "../../../../lib/atomic-write.js";
 
 const threadReadSchema = z.object({
   thread: z.looseObject({
@@ -98,6 +99,7 @@ async function withSharedServer<T>(boxRoot: string, operation: (server: CodexHis
   await ensureCodexPluginInstalled();
   const entry = sharedServer(boxRoot);
   if (entry.idleTimer !== null) clearTimeout(entry.idleTimer);
+  entry.server.keepProcessAlive(true);
   const result = entry.chain.then(async () => {
     try {
       await entry.ready;
@@ -118,6 +120,7 @@ async function withSharedServer<T>(boxRoot: string, operation: (server: CodexHis
       entry.server.close();
     }, IDLE_CLOSE_MS);
     entry.idleTimer.unref();
+    entry.server.keepProcessAlive(false);
   });
   return result;
 }
@@ -132,55 +135,6 @@ class CodexSessionOutsideBoxError extends Error {
   constructor() {
     super("Codex session belongs to a working directory outside this box");
     this.name = "CodexSessionOutsideBoxError";
-  }
-}
-
-/**
- * Finding 4 (round 5 hardening): a Codex thread recorded BEFORE the one-root
- * migration carries a `cwd` under the retired v2 operational root
- * (`<boxRoot>/content[/…]`) — Codex's own session storage is external to the
- * box's own repo (a subprocess-managed history the migration never touches),
- * so that `cwd` is frozen exactly as the session recorded it. Once `content/`
- * is gone, `fs.realpathSync(threadCwd)` throws ENOENT and every such thread
- * becomes permanently unreadable.
- *
- * A narrow READ-time fallback: when `threadCwd` doesn't exist AND sits under
- * `<boxRoot>/content`, translate it through the same v2 → v3 mapping table
- * the migration itself used (`one-root-mapping.ts`'s `mapV2Path` — the
- * content root itself maps to the box root; a nested `content/<sub>` maps to
- * whatever area `<sub>` landed in) and retry the ownership check against the
- * translated path. A `threadCwd` this can't translate (outside `content/`
- * entirely, or naming something `mapV2Path` doesn't recognize) falls through
- * to the original ENOENT, unchanged.
- */
-function translateRetiredV2ContentCwd(boxRoot: string, threadCwd: string): string | null {
-  // Compared against the RAW `boxRoot` (as passed in, not realpath'd) — it's
-  // the same value a v2-era session recorded its cwd relative to, so the
-  // prefix match holds even when `boxRoot` itself sits behind a symlink
-  // (e.g. macOS's `/var` -> `/private/var`); the result is realpath'd by the
-  // caller once it's built.
-  const v2ContentRoot = path.join(boxRoot, "content");
-  if (threadCwd !== v2ContentRoot && !threadCwd.startsWith(v2ContentRoot + path.sep)) return null;
-  if (threadCwd === v2ContentRoot) return boxRoot;
-  const contentRelPath = path.relative(v2ContentRoot, threadCwd).split(path.sep).join("/");
-  const mapped = mapV2Path(contentRelPath);
-  return mapped.kind === "move" ? path.join(boxRoot, mapped.newPath) : null;
-}
-
-/** Realpath `threadCwd` for the ownership check below, falling back to the
- * v2→v3 translation above when the raw path is a retired content-root path
- * that no longer exists. Any other `realpathSync` failure (a session whose
- * cwd never existed, or was removed for an unrelated reason) propagates
- * unchanged — this fallback covers exactly the one-root migration's own
- * retired layout, nothing else. */
-function realpathThreadCwd(boxRoot: string, threadCwd: string): string {
-  try {
-    return fs.realpathSync(threadCwd);
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") throw e;
-    const translated = translateRetiredV2ContentCwd(boxRoot, threadCwd);
-    if (translated === null) throw e;
-    return fs.realpathSync(translated);
   }
 }
 
@@ -314,31 +268,63 @@ export async function readCodexSessionUpdatedAt(boxRoot: string, sessionId: stri
 }
 
 /**
- * Thread ids a repair scan has already looked for, per box. A thread the scan
- * could not find stays missing (its husk lists as dead), so looking again on
- * every listing would put the full scan back on the hot path.
+ * Thread ids a repair scan has already looked for, per box, kept in the box's
+ * runtime state rather than in memory. A thread the scan could not find stays
+ * missing (its husk lists as dead), and the scan reads every Codex session on
+ * the host (~20 s on a dev machine), so a record that died with the process
+ * put the scan back on the first listing after every server restart.
  */
-const repairAttempted = new Map<string, Set<string>>();
+const REPAIR_ATTEMPTED_FILE = ".beebox/codex-repair-attempted.json";
+
+const repairAttemptedSchema = z.object({ ids: z.array(z.string()) });
+
+async function loadRepairAttempted(boxRoot: string): Promise<Set<string>> {
+  try {
+    const raw = await fs.promises.readFile(path.join(boxRoot, REPAIR_ATTEMPTED_FILE), "utf-8");
+    return new Set(repairAttemptedSchema.parse(JSON.parse(raw)).ids);
+  } catch (error) {
+    if (errnoCode(error) !== "ENOENT") {
+      console.warn("[codex] repair record unreadable; treating as empty:", error);
+    }
+    return new Set();
+  }
+}
+
+/** Ids without a husk any more are dropped, so the record never outgrows the box's chats. */
+async function saveRepairAttempted(boxRoot: string, ids: Iterable<string>): Promise<void> {
+  const content = `${JSON.stringify({ ids: [...ids].toSorted() }, null, 2)}\n`;
+  await writeFileAtomic(path.join(boxRoot, REPAIR_ATTEMPTED_FILE), { content });
+}
 
 /**
  * List native metadata from Codex's thread index for chat-picker rendering.
  *
- * `expectedIds` are the threads the caller has husks for. When the index lacks
- * one that no earlier repair already looked for, the listing runs once more
- * with the rollout repair scan, and the two answers are merged.
+ * `cwds` are the directories the caller's chats are bound to; the listing
+ * also asks for their retired v2 aliases. `expectedIds` are the threads the
+ * caller has husks for. With `repair`, when the index lacks one that no
+ * earlier repair already looked for, the listing runs once more with the
+ * rollout repair scan, and the two answers are merged. Without it, a thread
+ * missing from the index is missing from the answer.
  */
 export async function listCodexThreadMetadata(
   boxRoot: string,
-  options: { cwds: string[]; expectedIds: string[] },
+  options: { cwds: string[]; expectedIds: string[]; repair: boolean },
 ): Promise<Map<string, CodexThreadMetadata>> {
-  const { cwds, expectedIds } = options;
+  const { expectedIds, repair } = options;
+  const cwds = [...new Set(options.cwds.flatMap((cwd) => [cwd, ...retiredV2ContentCwds(boxRoot, cwd)]))];
   const indexed = await listThreadPages(boxRoot, { cwds, repair: false });
-  const attempted = repairAttempted.get(boxRoot) ?? new Set<string>();
+  if (!repair) return indexed;
+  const attempted = await loadRepairAttempted(boxRoot);
   const unrepaired = expectedIds.filter((id) => !indexed.has(id) && !attempted.has(id));
   if (unrepaired.length === 0) return indexed;
   const repaired = await listThreadPages(boxRoot, { cwds, repair: true });
-  for (const id of unrepaired) attempted.add(id);
-  repairAttempted.set(boxRoot, attempted);
+  const expected = new Set(expectedIds);
+  try {
+    await saveRepairAttempted(boxRoot, [...attempted, ...unrepaired].filter((id) => expected.has(id)));
+  } catch (error) {
+    // The listing itself succeeded; an unsaved record only costs a later scan.
+    console.warn("[codex] could not save repair record:", error);
+  }
   // Merged over the index: the scan can miss a thread the index already has.
   return new Map([...indexed, ...repaired]);
 }

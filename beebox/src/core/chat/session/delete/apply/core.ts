@@ -19,7 +19,7 @@ import type { ChatSessionRegistry } from "../../registry/core.js";
 import { parseSdkSessionId } from "../../id.js";
 import { finishDeletedHusks } from "./husks.js";
 import { logDeletePhase } from "./log.js";
-import { codexSessionExists, deleteCodexSession } from "../../codex-transcript.js";
+import { codexSessionExists, deleteCodexSession } from "../../codex-transcript/core.js";
 import type { AgentEngine } from "../../../../box/config.js";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";

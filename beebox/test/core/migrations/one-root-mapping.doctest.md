@@ -8,7 +8,7 @@ internally) — an unrecognized top-level name or subdirectory comes back
 it instead of silently dropping data.
 
 ```ts setup
-import { mapV2Path } from "../../../src/core/migrations/one-root-mapping.js";
+import { mapV2Path, v2ContentPathsFor } from "../../../src/core/migrations/one-root-mapping.js";
 ```
 
 ## Every v2 area maps to its documented v3 destination
@@ -225,4 +225,31 @@ JSON.stringify([
   mapV2Path(".mystery-state.json"),
 ])
 => [{"kind":"move","newPath":"_content/images/portrait.image.card"},{"kind":"move","newPath":"_content/notes.md"},{"kind":"unmapped"}]
+```
+
+## The inverse: which v2 paths moved to a v3 path
+
+Runtime records outside the box, such as a Codex thread's cwd, still name
+v2 paths. `v2ContentPathsFor` answers "what was this v3 path called in v2",
+and every answer maps forward to the input. A v3 path can have two origins,
+since both a loose top-level dir and a free-form `store/` bucket landed in
+`_content/`. A path with no v2 origin answers nothing, and so does the box
+root, which v2's `content/` root mapped to as a whole.
+
+```ts
+JSON.stringify({
+  recipes: v2ContentPathsFor("_content/recipes/soups"),
+  notes: v2ContentPathsFor("_content/notes"),
+  runs: v2ContentPathsFor("_bookkeeping/procedure/runs"),
+  tricks: v2ContentPathsFor("src/tricks/weather"),
+  v3Only: v2ContentPathsFor("notes"),
+  root: v2ContentPathsFor(""),
+})
+=> {"recipes":["recipes/soups","store/recipes/soups"],"notes":["notes","store/notes"],"runs":["procedure/runs"],"tricks":["tricks/weather"],"v3Only":[],"root":[]}
+
+v2ContentPathsFor("_content/recipes/soups").every((v2) => {
+  const mapped = mapV2Path(v2);
+  return mapped.kind === "move" && mapped.newPath === "_content/recipes/soups";
+})
+=> true
 ```

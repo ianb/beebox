@@ -8,8 +8,9 @@ import {
   adaptCodexThreadHistory,
   assertCodexThreadCwd,
   codexHistoryListParams,
-} from "../../../../src/core/chat/session/codex-transcript.js";
-import { normalizeCodexSdkToolItem, normalizeCodexToolItem } from "../../../../src/services/codex-tool-activity.js";
+} from "../../../../../src/core/chat/session/codex-transcript/core.js";
+import { retiredV2ContentCwds } from "../../../../../src/core/chat/session/codex-transcript/v2-cwd.js";
+import { normalizeCodexSdkToolItem, normalizeCodexToolItem } from "../../../../../src/services/codex-tool-activity.js";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -218,4 +219,22 @@ JSON.stringify({ isCodexSessionOutsideBoxError: err instanceof Error && err.name
 
 ```ts cleanup
 fs.rmSync(root, { recursive: true, force: true });
+```
+
+## Listing asks for the retired v2 cwds too
+
+Reading one thread translates its old cwd forward (above). Listing has the
+opposite problem: Codex filters `thread/list` on the exact cwd it recorded,
+so a chat started before the migration lists only under its v2 path, and
+its husk used to read as dead although its rollout was intact. The listing
+therefore asks for each v3 cwd's v2 aliases as well. The box root's alias is
+the v2 `content/` root, and a cwd outside the box has none.
+
+```ts
+JSON.stringify({
+  root: retiredV2ContentCwds("/boxes/b", "/boxes/b"),
+  recipes: retiredV2ContentCwds("/boxes/b", "/boxes/b/_content/recipes"),
+  outside: retiredV2ContentCwds("/boxes/b", "/boxes/other/_content/recipes"),
+})
+=> {"root":["/boxes/b/content"],"recipes":["/boxes/b/content/recipes","/boxes/b/content/store/recipes"],"outside":[]}
 ```
