@@ -5,10 +5,11 @@ import { fileURLToPath } from "node:url";
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(scriptDir, "..", "..", "..", "..");
 
-export async function buildPublicationWorker() {
+/** `outfile` lets bundle.ts stage the build and rename it into dist/. */
+export async function buildPublicationWorker(outfile) {
   await build({
     entryPoints: [path.join(root, "pub-worker/src/worker.ts")],
-    outfile: path.join(root, "dist/pub-worker.js"),
+    outfile: outfile ?? path.join(root, "dist/pub-worker.js"),
     bundle: true,
     platform: "browser",
     format: "esm",

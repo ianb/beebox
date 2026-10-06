@@ -26,7 +26,7 @@ import { join } from "node:path";
 import { changedPaths, git, treeHash } from "./test-git.js";
 import { buildGraph, cliBundleInputs, REPO_ROOT } from "./test-graph.js";
 import { isAccounted } from "./test-graph-query.js";
-import { hashFileset, type LedgerRecord } from "./test-ledger-lib.js";
+import { hashFileset, packageRelative, type LedgerRecord } from "./test-ledger-lib.js";
 import { appendLedgerRecord } from "./test-ledger.js";
 import { selectTests, spawnerEdges } from "./test-select-lib.js";
 import { carefulExclusions } from "./test-tiers.js";
@@ -40,17 +40,6 @@ const PACKAGE_ROOT = join(REPO_ROOT, "beebox");
  */
 export function emptyRunLines(): string[] {
   return ["no test imports the changed paths", "# { total: 0, pass: 0, selected: 0 }"];
-}
-
-/**
- * Graph paths are repo-relative; the beebox runner takes paths relative to
- * beebox. A root-infrastructure doctest (`bin/test/…`) runs from the package
- * as `../bin/test/…`, so it gets beebox's loaders (bin/CLAUDE.md). Passed
- * through unprefixed, it named no file in the package, and the runner refused
- * the whole selection.
- */
-export function packageRelative(path: string): string {
-  return path.startsWith("beebox/") ? path.slice("beebox/".length) : `../${path}`;
 }
 
 function readRepoFile(repoRelative: string): string | null {

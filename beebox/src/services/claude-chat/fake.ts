@@ -115,10 +115,11 @@ export function createFakeChatBackend(): FakeChatBackend {
     closeWarmFor(sessionId: string): void {
       backend.closedWarmFor.push(sessionId);
     },
-    closeWarm(): void {
+    closeWarm(): Promise<void> {
       backend.closeWarmCount += 1;
       warmEpoch += 1;
       warmHeld = false;
+      return Promise.resolve();
     },
     hasWarm(): boolean {
       return warmHeld || pendingWarms.length > 0;

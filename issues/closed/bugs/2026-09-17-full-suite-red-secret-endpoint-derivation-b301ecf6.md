@@ -1,12 +1,15 @@
 ---
 title: "Full-suite red: test/box-inventory.doctest.md (moved to `beebox/test/core/box-inventory.doctest.md`), test/cli/lib/init.doctest.md (moved to `beebox/test/core/box/structure.init.doctest.md`)"
-workstream: secret-endpoint-derivation
+workstream: test-suite-health
 area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-secret-endpoint-derivation — the hourly full-suite run on main
+resolution: superseded
 ---
+
+**Closed 2026-10-06 (test-suite-health): no longer reproduces.** Both files pass at `d11498926` and later: `box-inventory` and `structure.init` with the notifications file, 17/17 alone twice and three times under 8 CPU hogs. Neither has failed in the ledger's later full-suite records.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `eaa9703b`. Bisecting the landings since the last tested

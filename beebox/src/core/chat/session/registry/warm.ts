@@ -81,11 +81,14 @@ export function prewarmReservedChat(opts: {
   contextDir: string | null;
   engine: AgentEngine;
   model?: string | undefined;
+  /** The registry's lifetime; see {@link prewarmBackend}. */
+  signal: AbortSignal;
 }): void {
   void prewarmBackend({
     boxRoot: opts.boxRoot,
     backend: opts.backend,
     baseOptions: opts.baseOptions,
+    signal: opts.signal,
     coinedSessionId: opts.sessionId,
     engine: opts.engine,
     ...(opts.model !== undefined ? { model: opts.model } : {}),
@@ -95,7 +98,9 @@ export function prewarmReservedChat(opts: {
 
 /**
  * Pre-warm a subprocess. Best-effort: a failure is logged and the next send
- * falls back to a cold spawn.
+ * falls back to a cold spawn. `signal` is the registry's lifetime: the probe
+ * awaits box files first, and a registry shut down meanwhile must not spawn a
+ * subprocess afterwards, in a box directory that may already be gone.
  */
 export async function prewarmBackend(opts: {
   boxRoot: string;
@@ -105,10 +110,13 @@ export async function prewarmBackend(opts: {
   contextDir?: string | undefined;
   engine?: AgentEngine | undefined;
   model?: string | undefined;
+  signal: AbortSignal;
 }): Promise<void> {
   if (opts.backend.prewarm === undefined) return;
   try {
-    await opts.backend.prewarm(await probeStartOptions(opts));
+    const start = await probeStartOptions(opts);
+    if (opts.signal.aborted) return;
+    await opts.backend.prewarm(start);
   } catch (e) {
     log("prewarm", `Prewarm failed: ${e instanceof Error ? e.message : String(e)}`);
   }

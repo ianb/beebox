@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { execa } from "execa";
 
 import { readMemoryPressure } from "../../bin/host-pressure.js";
+import { FULL_RUN_HELD_ENV } from "../../bin/test-locks.js";
 import { parseTapFiles } from "../../bin/test-ledger-lib.js";
 import { LEDGER_SOURCE } from "./lib.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
@@ -128,7 +129,7 @@ export async function runTier(input: { checkout: Checkout; tier: "ordinary" | "c
     // defaults to "full") would otherwise refuse with no TAP output if
     // pressure spiked again during `pnpm install`, and a refusal reads as a
     // clean, empty-failures run to `failingFiles` — a false green.
-    env: { ...process.env, BBX_TEST_IGNORE_LOAD: "1" },
+    env: { ...process.env, BBX_TEST_IGNORE_LOAD: "1", [FULL_RUN_HELD_ENV]: "1" },
   });
   process.stdout.write(result.all ?? "");
   return { output: result.all ?? "", exitCode: result.exitCode ?? null };

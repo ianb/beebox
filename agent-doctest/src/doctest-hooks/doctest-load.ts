@@ -10,7 +10,7 @@
 
 import { basename } from "node:path";
 import { transformSync } from "esbuild";
-import { generateTestModule } from "./doctest-generate.ts";
+import { generateTestModule, type GeneratedModule } from "./doctest-generate.ts";
 import { DoctestSyntaxError, formatSyntaxError, parseErrorHints } from "./doctest-errors.ts";
 import { rewriteInlineSourceMap, type LineMap } from "./line-map.ts";
 
@@ -41,12 +41,12 @@ function nearestMd(lineMap: LineMap, generatedLine: number): number {
 }
 
 /**
- * Generate and transform the body module. When esbuild rejects an example,
+ * Generate the test module and transform it. When esbuild rejects an example,
  * that example's statement/expression split is redone by asking esbuild
  * (see doctest-split.ts `oracleSplit`) and the module is regenerated; only
  * if that fails too is the error reported, placed on the markdown line.
  */
-export function loadDoctestBody(markdown: string, filePath: string): string {
+function transformTestModule(markdown: string, filePath: string): { mod: GeneratedModule; code: string } {
   const oracle = new Set<number>();
   const mdLines = markdown.split("\n");
   for (let attempt = 0; ; attempt++) {
@@ -74,8 +74,25 @@ export function loadDoctestBody(markdown: string, filePath: string): string {
         hints: parseErrorHints({ problem: failure.text, text: mdLines[line - 1] ?? "", prevExpectedGap }),
       }));
     }
-    return rewriteInlineSourceMap(code, { lineMap: mod.lineMap, markdown });
+    return { mod, code };
   }
+}
+
+/** The body module tap runs: the transformed test module, mapped back to the markdown. */
+export function loadDoctestBody(markdown: string, filePath: string): string {
+  const { mod, code } = transformTestModule(markdown, filePath);
+  return rewriteInlineSourceMap(code, { lineMap: mod.lineMap, markdown });
+}
+
+/**
+ * The generated TypeScript test module, with the same esbuild-checked
+ * statement/expression splits the loader uses. Tools that parse a doctest's
+ * imports (the test-selection graph, layout-check) call this rather than
+ * `generateTestModule`, whose first-guess split can leave source that esbuild
+ * rejects but tap runs fine.
+ */
+export function generateTestSource(markdown: string, filePath: string): string {
+  return transformTestModule(markdown, filePath).mod.source;
 }
 
 /**

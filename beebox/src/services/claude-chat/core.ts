@@ -223,6 +223,10 @@ function createClaudeChatBackend(): ChatBackend {
   }
   const warmSlots = new Map<string, WarmSlot>();
   const warming = new Map<string, Promise<void>>();
+  // Abort handles for warm-ups still in flight; closeWarm() aborts them. A
+  // warm-up leaves this set when it settles, so an installed slot's controller
+  // is never aborted out from under the run that later consumes it.
+  const warmAborts = new Set<AbortController>();
   // Bumped by closeWarm() to abandon an in-flight startup(): the warming
   // continuation installs its fresh WarmQuery only if the epoch is unchanged,
   // otherwise it closes it immediately. Covers the consume-then-re-warm path
@@ -238,10 +242,12 @@ function createClaudeChatBackend(): ChatBackend {
     // state every chat was in before warming existed.
     if (warmSlots.size + warming.size >= MAX_WARM_SLOTS) return Promise.resolve();
     const epochAtStart = warmEpoch;
+    const controller = new AbortController();
+    warmAborts.add(controller);
     const pending = (async (): Promise<void> => {
       try {
         const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
-        const wq = await startup({ options: queryOptions });
+        const wq = await startup({ options: { ...queryOptions, abortController: controller } });
         if (warmEpoch !== epochAtStart) {
           // closeWarm() ran while we were warming — abandon this slot rather
           // than installing a process nobody asked to keep.
@@ -250,9 +256,12 @@ function createClaudeChatBackend(): ChatBackend {
           warmSlots.set(key, { warmQuery: wq, opts, sessionIdFilePath });
         }
       } catch (e) {
+        // closeWarm() aborted it on purpose; there is nothing to report.
+        if (controller.signal.aborted) return;
         // Warming is best-effort; the next start() will fall back to a cold spawn.
         console.warn("Chat backend warm-up failed, will cold-spawn on next start:", e);
       } finally {
+        warmAborts.delete(controller);
         warming.delete(key);
       }
     })();
@@ -342,12 +351,17 @@ function createClaudeChatBackend(): ChatBackend {
       slot.warmQuery.close();
       warmSlots.delete(sessionId);
     },
-    closeWarm(): void {
-      // Bump the epoch so any in-flight startup() abandons its result when it
-      // lands (see startWarming), then drop every slot we're already holding.
+    async closeWarm(): Promise<void> {
+      // Bump the epoch so any in-flight startup() abandons its result if it
+      // still lands (see startWarming), abort those startups so their
+      // subprocesses stop now, then drop every slot we're already holding.
       warmEpoch += 1;
+      const inFlight = [...warming.values()];
+      for (const controller of warmAborts) controller.abort();
       for (const slot of warmSlots.values()) slot.warmQuery.close();
       warmSlots.clear();
+      // Warm-ups catch their own failures, so these never reject.
+      await Promise.all(inFlight);
     },
     hasWarm(): boolean {
       // Answers for the speculative slot specifically: the registry uses this
@@ -411,7 +425,7 @@ export function createChatBackend(): ChatBackend {
     prewarm: async (opts) => {
       if (opts.engine !== "codex") await claude.prewarm?.(opts);
     },
-    closeWarm: () => claude.closeWarm?.(),
+    closeWarm: async () => { await claude.closeWarm?.(); },
     closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
     hasWarm: () => claude.hasWarm?.() ?? false,
   };

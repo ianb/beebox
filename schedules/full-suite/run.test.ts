@@ -259,7 +259,7 @@ test("bisect finds the first failing landing, and asks about log2 of them", asyn
 
 // ─── the quiet-host decision ──────────────────────────────────────────────
 
-test("isHostQuiet needs both load under bar and pressure under critical", () => {
+test("isHostQuiet needs both load under bar and pressure under warn", () => {
   assert.equal(isHostQuiet({ load1: 4, bar: 8, level: 1 }), true);
   // 2026-09-11: load1 8 read quiet against a bar of 12 while swap thrashed —
   // pressure has to gate independently of load, not just raise the bar.
@@ -271,8 +271,8 @@ test("isHostQuiet treats a missing pressure signal (non-Darwin) as no objection"
   assert.equal(isHostQuiet({ load1: 4, bar: 8, level: null }), true);
 });
 
-test("isHostQuiet is not tripped by warn, only critical", () => {
-  assert.equal(isHostQuiet({ load1: 4, bar: 8, level: 2 }), true);
+test("isHostQuiet is tripped by warn (2026-09-25: the gate passed at level 2)", () => {
+  assert.equal(isHostQuiet({ load1: 4, bar: 8, level: 2 }), false);
 });
 
 // ─── did a tier actually run ──────────────────────────────────────────────

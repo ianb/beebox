@@ -8,13 +8,19 @@
 //
 // An external sourcemap (cli.mjs.map) gives real stack traces under
 // `node --enable-source-maps` without slowing startup — node loads the map
-// lazily, only when formatting an error. We build into a temp dir and rename
-// both files in, so a concurrent `bbx` invocation (bin/bbx self-heals on
-// staleness) never sees a half-written bundle.
+// lazily, only when formatting an error.
+//
+// Every output is built into a temp dir and renamed into dist/ at the end, so
+// a concurrent reader never sees a half-written file. That reader can be a
+// `bbx` invocation (bin/bbx self-heals on staleness) or a test: the suite
+// rebuilds the bundle mid-run (hub.e2e.doctest.md) while other tests exec the
+// CLI, which loads dist/exports/* and dist/view-widgets/* at runtime. When
+// only cli.mjs was renamed, `view test` under that overlap failed on a
+// partly written export.
 import { build } from "esbuild";
 import { buildPublicationWorker } from "./pub-worker.mjs";
-import { copyFile, rename, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { copyFile, mkdir, readdir, rename, rm } from "node:fs/promises";
+import { dirname, join, relative } from "node:path";
 
 const root = join(import.meta.dirname, "..", "..", "..", "..");
 const distDir = join(root, "dist");
@@ -23,8 +29,8 @@ const tmpDir = join(distDir, `.build-${process.pid}`);
 const t = process.hrtime.bigint();
 await build({
   entryPoints: [join(root, "src/cli/entry/run.ts")],
-  // Build "cli.mjs" inside a temp dir so the emitted //# sourceMappingURL is
-  // the relative "cli.mjs.map", which stays correct after we move both into dist/.
+  // Every output is built under tmpDir with its dist/ path and basename, so the emitted
+  // //# sourceMappingURL (relative, e.g. "cli.mjs.map") stays correct in dist/.
   outfile: join(tmpDir, "cli.mjs"),
   bundle: true,
   platform: "node",
@@ -34,12 +40,6 @@ await build({
   sourcemap: true,
   logLevel: "warning",
 });
-
-// Move the map first, then the .mjs, so the bundle never references a
-// not-yet-present map. rename() is atomic within the same filesystem.
-await rename(join(tmpDir, "cli.mjs.map"), join(distDir, "cli.mjs.map"));
-await rename(join(tmpDir, "cli.mjs"), join(distDir, "cli.mjs"));
-await rm(tmpDir, { recursive: true, force: true });
 
 // Also build the public card-primitive layer (the `beebox/cards` export)
 // to a single bundled dist/exports/cards.js. Box-local schema files import
@@ -52,7 +52,7 @@ await rm(tmpDir, { recursive: true, force: true });
 // tree's emit path (dist/exports/cards.js), same pattern as schema/server below.
 await build({
   entryPoints: [join(root, "src/exports/cards.ts")],
-  outfile: join(distDir, "exports", "cards.js"),
+  outfile: join(tmpDir, "exports", "cards.js"),
   bundle: true,
   platform: "node",
   format: "esm",
@@ -69,7 +69,7 @@ await build({
 // export map target is valid after EITHER build — same pattern as cards above.
 await build({
   entryPoints: [join(root, "src/exports/schema.ts")],
-  outfile: join(distDir, "exports", "schema.js"),
+  outfile: join(tmpDir, "exports", "schema.js"),
   bundle: true,
   platform: "node",
   format: "esm",
@@ -86,7 +86,7 @@ await build({
 // Same tsc-tree path alignment as schema above.
 await build({
   entryPoints: [join(root, "src/exports/server.ts")],
-  outfile: join(distDir, "exports", "server.js"),
+  outfile: join(tmpDir, "exports", "server.js"),
   bundle: true,
   platform: "node",
   format: "esm",
@@ -112,7 +112,7 @@ await build({
 // external box — see the F1 release smoke test).
 await build({
   entryPoints: [join(root, "src/frontend/src/exports/view-widgets.tsx")],
-  outfile: join(distDir, "view-widgets", "index.js"),
+  outfile: join(tmpDir, "view-widgets", "index.js"),
   bundle: true,
   platform: "node",
   format: "esm",
@@ -128,11 +128,23 @@ await build({
 // typecheck their imports — the esbuild bundle itself emits no declarations.
 await copyFile(
   join(root, "src/exports/view-widgets.d.ts"),
-  join(distDir, "view-widgets", "index.d.ts"),
+  join(tmpDir, "view-widgets", "index.d.ts"),
 );
 
 // Package the exact module Worker uploaded by server-managed publications.
-await buildPublicationWorker();
+await buildPublicationWorker(join(tmpDir, "pub-worker.js"));
+
+// Move every staged file into dist/, maps first, so a file never references a
+// not-yet-present map. rename() is atomic within the same filesystem.
+const staged = (await readdir(tmpDir, { recursive: true, withFileTypes: true }))
+  .filter((entry) => entry.isFile())
+  .map((entry) => relative(tmpDir, join(entry.parentPath, entry.name)))
+  .toSorted((a, b) => Number(b.endsWith(".map")) - Number(a.endsWith(".map")));
+for (const relPath of staged) {
+  await mkdir(dirname(join(distDir, relPath)), { recursive: true });
+  await rename(join(tmpDir, relPath), join(distDir, relPath));
+}
+await rm(tmpDir, { recursive: true, force: true });
 
 const ms = Number(process.hrtime.bigint() - t) / 1e6;
 process.stderr.write(`built dist/cli.mjs in ${ms | 0}ms\n`);

@@ -191,7 +191,3 @@ export function generateTestModule(markdown: string, options: GenerateOptions): 
   return { source: out.map((l) => l.text).join("\n"), lineMap: buildLineMap(out), blocks, examples };
 }
 
-/** The generated module source. Kept for callers of the original API. */
-export function generateTestSource(markdown: string, filePath: string): string {
-  return generateTestModule(markdown, { filePath }).source;
-}

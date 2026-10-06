@@ -80,27 +80,20 @@ async function seedTree(root: string, dirs: number, perDir: number): Promise<voi
 }
 
 /**
- * Every directory `bbx init` scaffolds up front — present in any fresh v3
- * box regardless of what a test itself creates (the underscore areas, plus
- * the `src/` code tree the watcher also covers). Assertions below filter
- * these out so the expected list reads as "what did *this test* add,"
- * matching each test's own scenario rather than the full box skeleton.
+ * The directories a fresh box's watcher already covers — whatever `bbx init`
+ * scaffolds, read from a real fresh box rather than listed by hand, so new
+ * scaffolding cannot make these tests stale. Assertions below filter these
+ * out so the expected list reads as "what did *this test* add," matching each
+ * test's own scenario rather than the full box skeleton.
  */
-const SKELETON_DIRS = new Set([
-  "_bookkeeping", "_bookkeeping/archive", "_bookkeeping/archive/done",
-  "_bookkeeping/archive/failed", "_bookkeeping/archive/processed",
-  "_bookkeeping/connectors", "_bookkeeping/jobs", "_bookkeeping/output",
-  "_bookkeeping/questions", "_bookkeeping/resources", "_bookkeeping/usage",
-  "_config", "_config/connectors", "_config/interface", "_config/procedures", "_config/schedules",
-  "_config/schemas", "_content", "_content/calendar", "_content/chat",
-  "_content/drive", "_content/inbox", "_content/inbox/intake",
-  "_content/inbox/staged", "_content/inbox/triaged",
-  "_content/inbox/triaged/_unsure", "_content/inbox/unhandled",
-  "_content/people", "_content/places", "_content/recipes",
-  "_content/reviews", "_content/reviews/retro", "_content/todos",
-  "_publish", "_tmp", "src", "src/schemas", "src/tricks", "src/tricks/lib",
-  "src/tricks/scripts", "src/views",
-]);
+const skeletonBox = await makeTmpBox();
+const skeletonBus = createEventBus(skeletonBox.root, { pollInterval: 60_000 });
+const skeletonWatcher = ensureBoxWatcher(skeletonBox.root, { eventBus: skeletonBus });
+await skeletonWatcher.ready;
+const SKELETON_DIRS = new Set(skeletonWatcher.watchedDirs());
+await closeBoxWatcher(skeletonBox.root);
+skeletonBus.close();
+await skeletonBox.cleanup();
 
 /** `watcher.watchedDirs()`, with the scaffolded skeleton filtered out. */
 function testDirs(watcher: { watchedDirs(): string[] }): string {
@@ -123,7 +116,7 @@ const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
 testDirs(watcher)
-=> . _bookkeeping/procedure store store/dir0 store/dir1 store/dir2 store/dir3
+=> store store/dir0 store/dir1 store/dir2 store/dir3
 ```
 
 ```ts cleanup
@@ -289,7 +282,7 @@ await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach/fresh"), 5
 await watcher.settled();
 
 testDirs(watcher)
-=> . _bookkeeping/procedure store store/Trip.attach store/Trip.attach/fresh
+=> store store/Trip.attach store/Trip.attach/fresh
 ```
 
 ```ts cleanup
@@ -361,7 +354,7 @@ await waitFor(() => watcher.watchedDirs().includes("store/real"), 5000, "the rea
 await watcher.settled();
 
 testDirs(watcher)
-=> . _bookkeeping/procedure junk junk/sub junk/sub/noisy store store/real
+=> junk junk/sub junk/sub/noisy store store/real
 ```
 
 ```ts cleanup
@@ -443,7 +436,7 @@ const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
 testDirs(watcher)
-=> . _bookkeeping/procedure _content/inbox/email _content/inbox/email/thread.attach store store/keep
+=> _content/inbox/email _content/inbox/email/thread.attach store store/keep
 ```
 
 ```ts cleanup
