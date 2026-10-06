@@ -267,7 +267,7 @@ export class ChatSessionRegistry extends EventEmitter {
               ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
               seedFeatures: reservation.seedFeatures,
               engine: reservation.engine,
-              onFeaturesWritten: reservationFeatures.markWritten,
+              onSeedTaken: reservationFeatures.close,
             }),
           }
         : {}),
@@ -396,7 +396,7 @@ export class ChatSessionRegistry extends EventEmitter {
     params: {
       contextDir?: string | undefined;
       seedFeatures?: Record<string, string> | undefined;
-      engine?: AgentEngine | undefined; onFeaturesWritten?: (() => void) | undefined;
+      engine?: AgentEngine | undefined; onSeedTaken?: (() => void) | undefined;
     },
   ): Promise<void> {
     // Released on the history write, not before it: until that row exists the

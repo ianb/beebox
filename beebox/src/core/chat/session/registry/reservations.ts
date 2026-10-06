@@ -15,10 +15,10 @@ import type { AgentEngine } from "../../../box/config.js";
 
 const log = makeLog("ChatSessionRegistry");
 
-/** Keep pre-start edits on the seed until that seed has become durable. */
+/** Keep pre-start edits on the seed until the start takes the seed to write it. */
 export function createReservationFeatureHandoff(seedFeatures: Record<string, string>): {
   persist: (updates: Record<string, string>) => boolean;
-  markWritten: () => void;
+  close: () => void;
 } {
   let pending = true;
   return {
@@ -27,7 +27,7 @@ export function createReservationFeatureHandoff(seedFeatures: Record<string, str
       Object.assign(seedFeatures, updates);
       return true;
     },
-    markWritten: () => { pending = false; },
+    close: () => { pending = false; },
   };
 }
 

@@ -19,6 +19,8 @@ import { FeatureStore } from "../../../../src/core/chat/session/run/features.js"
 import { resolveRecordedChatEngine } from "../../../../src/core/chat/session/engine.js";
 import { reserveChatSession, ChatReservationStore } from "../../../../src/core/chat/session/reserve.js";
 import { clearBoxConfigCache, loadAgentEngine } from "../../../../src/core/box/config.js";
+import { recordSessionStart } from "../../../../src/core/chat/session/registry/start-record.js";
+import { createReservationFeatureHandoff } from "../../../../src/core/chat/session/registry/reservations.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -203,6 +205,48 @@ print(`engine kept: ${(await loadHistoryEntries(box.root)).find((e) => e.id === 
 =>
 written:   {"narration":"on"}
 engine kept: codex
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A toggle while the start writes its seed is not lost
+
+A reserved chat's pre-start toggles fold into its feature seed, and the start
+writes that seed into the new history row. The handoff between the two closes
+when the start takes the seed for its write. It once closed only after the
+write returned. The atomic write fsyncs the directory after the new file is
+visible, so a toggle in that window folded into a seed that had already been
+written, and the chat came back with the seed value. The full suite hit this
+under load in `chat.hq-preferences.doctest.md`. Toggling the moment the seed is
+visible lost the toggle every time.
+
+The poll below checks on every event-loop turn rather than with `eventually`,
+whose interval can step over the fsync window:
+
+```ts
+const box = await makeTmpBox();
+const sessionId = "55555555-5555-4555-8555-555555555555";
+const seed = { "hq-dictation": "on" };
+const handoff = createReservationFeatureHandoff(seed);
+const store = new FeatureStore({
+  boxRoot: box.root,
+  getSessionId: () => sessionId,
+  seedFeatures: seed,
+  persistPending: handoff.persist,
+  onChange: () => {},
+});
+await store.ensureLoaded();
+
+const started = recordSessionStart(box.root, { sessionId, seedFeatures: seed, engine: "claude", onSeedTaken: handoff.close });
+while ((await getFeaturesForSession(box.root, sessionId))?.["hq-dictation"] !== "on") {
+  await new Promise((resolve) => setImmediate(resolve));
+}
+await store.set("hq-dictation", "off");
+await started;
+await getFeaturesForSession(box.root, sessionId)
+=> { "hq-dictation": "off" }
 ```
 
 ```ts cleanup
