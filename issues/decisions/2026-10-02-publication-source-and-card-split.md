@@ -1,6 +1,6 @@
 ---
 title: "A publication lives in two unconnected places: source in src/publications/, control card in _content/publications/"
-workstream: unattached
+workstream: publication-home
 needs: [decision]
 area: beebox
 filed-by: agent
