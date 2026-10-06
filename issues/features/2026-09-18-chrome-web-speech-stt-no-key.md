@@ -1,5 +1,5 @@
 ---
-title: "Offer browser Web Speech dictation so the web works with no transcription key"
+title: "Offer browser Web Speech as a live-transcription option, and as the no-key fallback"
 workstream: unattached
 area: beebox
 labels: [voice, transcription]
@@ -44,3 +44,36 @@ on the web immediately.
   [HQ by default](2026-09-18-hq-dictation-default-when-a-key-exists.md).
 - **Mobile.** iOS Safari's support differs, and the native iOS composer has
   its own audio path, so this may be desktop-web only.
+
+## Re-encounter (2026-10-06): an option for live transcription, not only a fallback
+
+The boxholder raised this again with a wider goal: browser speech recognition
+as an **option for live transcription even when a key is configured**, "even
+if it only replaces live transcription". The HQ pass stays as it is. This
+changes the "fallback, not a competitor" framing above: the browser engine is
+a candidate for the live path, and the server provider keeps HQ.
+
+New facts (web research, 2026-10-06; verify in the browsers):
+
+- **On-device mode.** Chrome 139 added `processLocally` on
+  `SpeechRecognition`: with a downloaded language pack, audio stays on the
+  device. That answers most of the "where the audio goes" question above for
+  Chrome. Safari reportedly works offline only for English.
+- **Session limits.** The boxholder recalls a limit of about five minutes.
+  Chrome is known to end a session after a stretch of silence even with
+  `continuous = true`, and historically capped sessions (about 60 s in older
+  reports). Live dictation would need to restart the recognizer
+  transparently and stitch results without dropping or duplicating words.
+  Measure the real limits in current Chrome and Safari.
+- **iPhone Safari.** Reports say `continuous` keeps the mic open on iPhone
+  without delivering final results. The native iOS composer has its own path
+  (Apple's SpeechAnalyzer), so this is likely desktop web and Android only.
+
+What to establish, in addition to the list above: a browser-speech choice in
+the transcription settings (or per device) that replaces only the streaming
+service; restart and stitching behavior at the session limit; how live text
+from the browser feeds the existing HQ flow and voice keywords
+(`beebox/src/frontend/src/lib/audio/speech-keywords.ts`); and provenance on
+the message so the box knows which engine produced it.
+
+Priority may be stale given the wider goal.
