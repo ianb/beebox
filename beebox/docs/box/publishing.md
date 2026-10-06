@@ -151,7 +151,8 @@ The build runs as box code with the box's file access. It does not get the
 server's credentials. Keep secrets, source, lockfiles, `node_modules/`, notes,
 and source maps out of `dist/`. The publisher refuses them, and it refuses
 symlinks, hidden files, and reserved route segments. The limits are 2,000
-files, 25 MiB for each file, and 100 MiB in total.
+files, 25 MiB for each file, and 100 MiB in total. A git-annex pointer file
+(content not fetched) is refused; run `git annex get` on it and prepare again.
 
 ### Optional React/Tailwind starting point
 
