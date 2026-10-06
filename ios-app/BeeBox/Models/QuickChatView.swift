@@ -57,7 +57,8 @@ struct QuickChatRecentChat: Codable, Equatable, Identifiable, Sendable {
     var sessionId: String
     var label: String
     var lastActivity: String
-    var landmark: Landmark
+    /// Nil only for the last chat when no landmark resolves for its directory.
+    var landmark: Landmark?
 
     var id: String { sessionId }
 }

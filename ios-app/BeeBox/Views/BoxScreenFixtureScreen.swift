@@ -167,6 +167,8 @@ private struct FixtureQuickChatClient: QuickChatClient {
             open: open,
             recentlySent: [],
             recentChats: [
+                .init(sessionId: "6e2a9c4d-1b3f-4d7e-8a5c-9f0b2d4e6a80", label: "Plan the week", lastActivity: "2026-10-06T14:30:00.000Z",
+                      landmark: nil),
                 .init(sessionId: trip.sessionId ?? "", label: "Trip planning", lastActivity: "2026-10-06T12:00:00.000Z",
                       landmark: .init(dir: "_content/travel", label: "Travel", symbol: "✈️")),
                 .init(sessionId: "3c9e1a7b-5d2f-4e6a-8b0c-4d2f6a8c0e10", label: "Household", lastActivity: "2026-10-05T18:30:00.000Z",

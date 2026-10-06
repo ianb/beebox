@@ -12,7 +12,7 @@ sender: it claims each message id the way `send-dedup.ts` does, so a second
 delivery of one id is answered as a duplicate.
 
 ```ts setup
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdir, writeFile, rm, utimes } from "node:fs/promises";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { setChatRuntime, clearChatRuntime } from "../../../../src/webapp/chat-runtime.js";
@@ -20,7 +20,7 @@ import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.
 import { createFakeJev } from "../../../../src/services/jev.js";
 import { JevError } from "../../../../src/services/jev-wire.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
+import { containedSessionCwd, getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 
 const EVENT_BUS = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
 function caller(boxRoot, jev, options) {
@@ -409,23 +409,27 @@ await box.cleanup();
 
 ## Home: what the box screen shows
 
-`home` lists unfinished thoughts, the ones sent in the last day, recent chats
-whose directory has a landmark, and the box's `nav.card` shortcuts. Shortcuts
-are box-relative; the routes the box screen already shows are left out.
+`home` lists unfinished thoughts, the ones sent in the last day, recent chats,
+and the box's `nav.card` shortcuts. Recent chats are the chats whose directory
+has a landmark, plus the last chat wherever it is: this box's only chat is at
+the root, which has no landmark, so its row has a null landmark and the label
+the Chats list gives it (an untitled chat's quoted opening). Shortcuts are box-relative; the routes the box screen already shows are
+left out.
 
 ```ts
-const { box } = await gardenBox();
+const { box, sessionId } = await gardenBox();
 scriptedRuntime(box.root);
 await box.write("nav.card", "---\nentries:\n  - { href: /questions }\n  - { href: /browse }\n  - { ref: /_content/Garden/Garden.landmark.card, label: Garden plan }\n---\n");
 const api = caller(box.root, judged({ c0: 0.5, c1: 0.45, c2: 0.05 }));
 await api.submit({ id: randomUUID(), message: "Unsure thought" });
 await api.choose({ id: (await api.submit({ id: randomUUID(), message: "Sorted thought" })).id, candidateId: "c0" });
 const home = await api.home();
-[home.open.map((view) => [view.message, view.state]), home.recentlySent.map((view) => [view.message, view.state]), home.recentChats, home.shortcuts]
+const rootChats = home.recentChats.map((chat) => [chat.sessionId === sessionId, chat.label, chat.landmark]);
+[home.open.map((view) => [view.message, view.state]), home.recentlySent.map((view) => [view.message, view.state]), rootChats, home.shortcuts]
 => [
   [["Unsure thought", "needs-choice"]],
   [["Sorted thought", "sent"]],
-  [],
+  [[true, "“Plan the week”", null]],
   [{ label: "Questions", to: "/questions" }, { label: "Garden plan", to: "/browse/_content/Garden/Garden.landmark.card" }],
 ]
 ```
@@ -436,6 +440,41 @@ Every procedure needs an authenticated caller.
 const anonymous = caller(box.root, undefined, { authed: false });
 [await failure(() => anonymous.home()), await failure(() => anonymous.submit({ id: randomUUID(), message: "x" })), await failure(() => anonymous.discard({ id: randomUUID() }))]
 => ["UNAUTHORIZED: Not authenticated", "UNAUTHORIZED: Not authenticated", "UNAUTHORIZED: Not authenticated"]
+```
+
+```ts cleanup
+clearChatRuntime(box.root);
+await box.cleanup();
+```
+
+## The last chat leads the recent chats, once
+
+The recent chats are newest first. A last chat without a landmark leads the
+landmark chats. When the last chat has a landmark it is already in the list,
+and it appears once; a chat without a landmark that is not the last one is left
+out, as the other recent-chat lists leave it out.
+
+```ts
+const { box, sessionId: rootChat } = await gardenBox();
+scriptedRuntime(box.root);
+const gardenChat = randomUUID();
+const gardenLog = getSessionLogPath(containedSessionCwd(box.root, "_content/Garden"), gardenChat);
+await mkdir(dirname(gardenLog), { recursive: true });
+await writeFile(gardenLog, JSON.stringify({ type: "user", uuid: randomUUID(), timestamp: new Date().toISOString(), message: { role: "user", content: [{ type: "text", text: "Order seeds" }] } }) + "\n");
+await box.write(`_content/chat/web/2026-09-22_${gardenChat}.chat.card`, `---\nsession: ${gardenChat}\ncontext-dir: _content/Garden\n---\n\n`);
+const api = caller(box.root, judged({ c0: 1 }));
+const rows = async () => (await api.home()).recentChats.map((chat) => [chat.sessionId === rootChat ? "root chat" : "garden chat", chat.landmark?.label ?? null]);
+
+const earlier = new Date(Date.now() - 60_000);
+await utimes(gardenLog, earlier, earlier);
+await rows()
+=> [["root chat", null], ["garden chat", "Garden"]]
+
+const rootLog = getSessionLogPath(box.root, rootChat);
+const earliest = new Date(Date.now() - 120_000);
+await utimes(rootLog, earliest, earliest);
+await rows()
+=> [["garden chat", "Garden"]]
 ```
 
 ```ts cleanup

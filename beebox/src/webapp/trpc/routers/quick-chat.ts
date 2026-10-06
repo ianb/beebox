@@ -21,7 +21,7 @@ export const quickChatSubmitInput = z.object({ id: idSchema, message: z.string()
 export const quickChatChooseInput = z.object({ id: idSchema, candidateId: z.string().min(1), channel: channelSchema });
 export const quickChatDiscardInput = z.object({ id: idSchema });
 const recentChatSchema = z.object({ sessionId: z.string(), label: z.string(), lastActivity: z.string(),
-  landmark: z.object({ dir: z.string(), label: z.string(), symbol: z.string().nullable() }) });
+  landmark: z.object({ dir: z.string(), label: z.string(), symbol: z.string().nullable() }).nullable() });
 export const quickChatHomeSchema = z.object({
   open: z.array(quickChatViewSchema), recentlySent: z.array(quickChatViewSchema),
   recentChats: z.array(recentChatSchema), shortcuts: z.array(z.object({ label: z.string(), to: z.string() })),

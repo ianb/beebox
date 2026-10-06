@@ -40,9 +40,10 @@ function RecentChatLink({ chat, boxSlug, primary }: { chat: RecentChat; boxSlug:
     <li>
       <Link id={`bbx-box-screen-recent-${chat.sessionId}`} to={href(`/${boxSlug}/chat`)} search={toSearch({ session: chat.sessionId })}
         className={primary ? PRIMARY_TILE : PLAIN_TILE}>
-        {chat.landmark.symbol === null ? null : <span className="shrink-0 leading-none" aria-hidden>{chat.landmark.symbol}</span>}
+        {chat.landmark === null || chat.landmark.symbol === null ? null : <span className="shrink-0 leading-none" aria-hidden>{chat.landmark.symbol}</span>}
         <span className="min-w-0 truncate font-medium">{chat.label}</span>
-        <span className={`ml-auto shrink-0 text-xs ${primary ? "text-white/80" : "text-warm-500"}`}>{chat.landmark.label}</span>
+        {/* The last chat may have no landmark; its own label then stands alone. */}
+        {chat.landmark === null ? null : <span className={`ml-auto shrink-0 text-xs ${primary ? "text-white/80" : "text-warm-500"}`}>{chat.landmark.label}</span>}
       </Link>
     </li>
   );

@@ -370,10 +370,12 @@ struct BoxScreenView: View {
                     Text(chat.label)
                         .font(primary ? .headline : .body)
                         .lineLimit(1)
-                    Text([chat.landmark.symbol, chat.landmark.label].compactMap(\.self).joined(separator: " "))
-                        .font(.caption)
-                        .foregroundStyle(primary ? Color.white.opacity(0.85) : Color.secondary)
-                        .lineLimit(1)
+                    if let landmark = chat.landmark {
+                        Text([landmark.symbol, landmark.label].compactMap(\.self).joined(separator: " "))
+                            .font(.caption)
+                            .foregroundStyle(primary ? Color.white.opacity(0.85) : Color.secondary)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer()
                 Image(systemName: "chevron.right")

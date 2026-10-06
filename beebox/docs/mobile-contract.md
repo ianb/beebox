@@ -1243,7 +1243,10 @@ See §1.3 (full request/response/errors).
   /api/trpc/quickChat.submit` `{id,message,channel?}`, `POST /api/trpc/quickChat.choose`
   `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.discard` `{id}`, and `GET
   /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. Each mutation answers a
-  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. Shapes:
+  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. Each
+  `recentChats` row is `{sessionId,label,lastActivity,landmark:{dir,label,symbol}|null}`, newest
+  first: the fresh landmark chats plus the box's last chat, whose `landmark` is `null` when no
+  landmark resolves for its directory. Shapes:
   `src/core/chat/routing/quick-chat-record.ts` (`quickChatViewSchema`) and
   `src/webapp/trpc/routers/quick-chat.ts` (inputs, `quickChatHomeSchema`).
 - **Fixtures:** `test/mobile-contract/fixtures/quick-chat/`, parsed field for field by

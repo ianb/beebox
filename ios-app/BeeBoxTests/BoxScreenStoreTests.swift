@@ -168,6 +168,7 @@ final class BoxScreenStoreTests: XCTestCase {
     func testAFailedRefreshKeepsTheCachedHomeAndTheNextLaunchDrawsFromTheCache() async throws {
         let client = FakeClient()
         client.homeAnswer.recentChats = [
+            .init(sessionId: "s0", label: "Plan the week", lastActivity: "t", landmark: nil),
             .init(sessionId: "s1", label: "Trip planning", lastActivity: "t", landmark: .init(dir: "_content/travel", label: "Travel")),
         ]
         let (store, repository) = makeStore(client)
@@ -177,12 +178,13 @@ final class BoxScreenStoreTests: XCTestCase {
         await store.refresh(boxID: box.id)
 
         XCTAssertEqual(store.refreshes[box.id], .failed)
-        XCTAssertEqual(store.homes[box.id]?.recentChats.map(\.label), ["Trip planning"])
+        XCTAssertEqual(store.homes[box.id]?.recentChats.map(\.label), ["Plan the week", "Trip planning"])
 
         let relaunched = BoxScreenStore(repository: repository, client: { _ in client })
         relaunched.updateBoxes([box])
         await relaunched.loadCachedHome(boxID: box.id)
-        XCTAssertEqual(relaunched.homes[box.id]?.recentChats.map(\.label), ["Trip planning"])
+        XCTAssertEqual(relaunched.homes[box.id]?.recentChats.map(\.label), ["Plan the week", "Trip planning"])
+        XCTAssertNil(relaunched.homes[box.id]?.recentChats.first?.landmark)
     }
 
     func testRemovingABoxDropsItsOutboxEntries() async throws {

@@ -52,6 +52,12 @@
       ],
       "recentChats": [
         {
+          "sessionId": "6e2a9c4d-1b3f-4d7e-8a5c-9f0b2d4e6a80",
+          "label": "Plan the week",
+          "lastActivity": "2026-10-06T14:30:00.000Z",
+          "landmark": null
+        },
+        {
           "sessionId": "0b7d4c1e-6a2f-4e8b-9c3d-2f1a5e7b9d40",
           "label": "Trip planning",
           "lastActivity": "2026-10-06T12:00:00.000Z",

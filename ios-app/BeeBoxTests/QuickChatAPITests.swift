@@ -83,9 +83,11 @@ final class QuickChatAPITests: XCTestCase {
 
         XCTAssertEqual(home.open.map(\.state), [.needsChoice, .sending])
         XCTAssertEqual(home.recentlySent.first?.queued, true)
-        XCTAssertEqual(home.recentChats.map(\.label), ["Trip planning", "Household"])
-        XCTAssertEqual(home.recentChats.first?.landmark.symbol, "✈️")
-        XCTAssertNil(home.recentChats.last?.landmark.symbol)
+        XCTAssertEqual(home.recentChats.map(\.label), ["Plan the week", "Trip planning", "Household"])
+        XCTAssertNil(home.recentChats.first?.landmark)
+        XCTAssertEqual(home.recentChats[1].landmark?.symbol, "✈️")
+        XCTAssertNotNil(home.recentChats.last?.landmark)
+        XCTAssertNil(home.recentChats.last?.landmark?.symbol)
         XCTAssertEqual(home.shortcuts.map(\.to), ["/questions", "/browse/_content/garden/Garden.landmark.card"])
     }
 
