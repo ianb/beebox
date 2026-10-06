@@ -32,3 +32,23 @@ unification: both file formats have live prod instances.
 Refs: `beebox/docs/scheduler.md`, `beebox/docs/server/boxes.md`,
 `beebox/src/hub/CLAUDE.md`,
 `beebox/docs/implemented-plans/boxes-as-packages-v2.md`.
+
+## Decision (2026-10-06)
+
+The developer's message: "I don't really understand this one and don't know if
+I even care. But maybe we just do it according to whatever you think."
+
+Decided: **keep the two manifests, and cross-document them.** Checked on main:
+the split still exists. `~/.config/beebox/boxes.json` (`bbx boxes`) feeds the
+scheduler and `bbx activity` (`beebox/src/core/box/boxes-config.ts`,
+`beebox/src/core/schedule/scheduler/core.ts`); `hub.json`
+(`beebox/src/hub/config.ts`) is the hub's routing table, and `bbx serve` reads
+neither (`beebox/src/cli/commands/serve.ts:137`). They answer different
+questions on different machines: the scheduler runs where no hub exists, and
+the hub is an independent component. Unifying them would migrate two live
+formats for no user-visible gain.
+
+Remaining work is documentation: each manifest's doc names the other and says
+which command writes it (`beebox/docs/scheduler.md`,
+`beebox/docs/server/boxes.md`, the hub docs). A `bbx boxes add --hub`
+convenience is optional and not part of this decision.
