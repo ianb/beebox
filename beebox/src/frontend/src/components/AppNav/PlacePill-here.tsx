@@ -1,7 +1,9 @@
 /**
- * The `PlacePill`'s here menu, reduced form (docs/plans/top-nav-ia.md Track
- * C1): "Open <dir>/" plus the landmark's curated links and groups, rendered
- * as plain navigations to the card route.
+ * The `PlacePill`'s folder ("here") menu, reduced form (docs/plans/top-nav-ia.md
+ * Track C1, docs/plans/box-screen.md track 3): "Open <dir>/", "Search", and
+ * the landmark's curated links and groups, rendered as plain navigations to
+ * the card route. The landmark card itself is not a row: the agent edits it,
+ * not the person.
  *
  * The full form — the chat's own `ContextMenuBody`, whose rows open in the
  * companion pane (`onZoomView`) and which adds "Recent files ›" — needs chat
@@ -106,13 +108,11 @@ function HereGroupRows({ group, boxSlug }: { group: HereGroup; boxSlug: string }
  */
 export function HereMenuBody({
   dir,
-  landmarkPath,
   boxSlug,
   links,
   groups,
 }: {
   dir: string;
-  landmarkPath: string;
   boxSlug: string;
   links: HereLink[];
   groups: HereGroup[];
@@ -127,9 +127,6 @@ export function HereMenuBody({
       <MenuItem id="bbx-here-menu-search" onClick={() => openView({
         path: SYSTEM_CARD_PATHS.search, viewer: null, params: {}, viewState: null,
       }, { label: "Search" })}>Search</MenuItem>
-      <MenuItem id="bbx-here-menu-landmark-card" onClick={() => openView({
-        path: landmarkPath, viewer: null, params: {}, viewState: null,
-      }, { label: "Landmark card" })}>Landmark card</MenuItem>
       {hasBookmarks ? <MenuDivider /> : null}
       {links.map((link) => (
         <HereLinkRow key={link.ref} link={link} boxSlug={boxSlug} />

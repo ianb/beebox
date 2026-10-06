@@ -81,7 +81,6 @@ export function expandedState(snapshot: string, domId: string): boolean | null {
 const FIXED_MENU_IDS = [
   "bbx-switch-menu-box",
   "bbx-switch-menu-landmarks",
-  "bbx-switch-menu-recent-files",
 ];
 
 /** The exact copy the menu shows when its landmark query failed (Retry row). */
@@ -141,16 +140,16 @@ export interface PlaceMenuReading {
  * Read the open menu, from a FULL accessibility snapshot.
  *
  * Not the interactive-only view: the only thing separating landmark rows from
- * the nav-card rows above them is a `StaticText` section header, which that
+ * the fixed rows above them is a `StaticText` section header, which that
  * view drops. Given an interactive snapshot this returns no landmarks, which
  * `placeMenuFailure` reports as an empty menu — loudly wrong rather than
  * quietly permissive.
  *
  * Landmark rows are the menuitems BELOW the "Switch to" header, not "every
- * menuitem that is not one of the three fixed ids". A box with nav cards
- * renders those as plain menuitems above that header
- * (`PlacePill-panels.tsx`, `NavCardRows`), and counting them as landmarks
- * meant the walk could try to switch to a route.
+ * menuitem that is not one of the fixed ids". The menu once rendered a box's
+ * nav-card entries as plain menuitems above that header, and counting them as
+ * landmarks meant the walk could try to switch to a route; reading below the
+ * header keeps any future row above it out of the landmark list.
  */
 export function readPlaceMenu(snapshot: string): PlaceMenuReading {
   const lines = snapshot.split("\n");

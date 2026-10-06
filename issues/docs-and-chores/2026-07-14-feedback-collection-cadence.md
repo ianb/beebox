@@ -45,3 +45,11 @@ Related bugs surfaced in the same review (context, not blockers):
   `content/`; the 2026-07-14 run only surfaced `remote:` items, never local.
   Unverified — worth a look (the remote path is the source of truth, so low
   urgency).
+
+## Next-action note (2026-10-06)
+
+A `do-it` request was set. Changed to `discuss`: the issue lists four options and picks none. The smallest is a weekly schedule that runs `feedback-review/collect.ts` and reports the unresolved count (about 40-80 lines in `schedules/`, no deploy). Open questions: which option; schedule or post-deploy hook; and how a schedule reaches the production feedback, since `collect.ts` needs the server address that only the main checkout has.
+
+## Decision (2026-10-06)
+
+A local schedule in this monorepo (`schedules/`, run by `bin/schedules`), not a box schedule, pulls the production feedback in. It replaces the hand-run `feedback-review/collect.ts` step.

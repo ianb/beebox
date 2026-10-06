@@ -1,0 +1,93 @@
+{
+  "result": {
+    "data": {
+      "open": [
+        {
+          "id": "5f0c2a9e-3b1d-4c7a-9e2f-8d6b1a4c3e70",
+          "message": "Remind me to renew my passport",
+          "createdAt": "2026-10-06T14:02:11.000Z",
+          "state": "needs-choice",
+          "reason": "uncertain",
+          "choices": [
+            {
+              "candidateId": "c2",
+              "label": "Trip planning",
+              "detail": "Travel"
+            },
+            {
+              "candidateId": "c9",
+              "label": "New general chat"
+            },
+            {
+              "candidateId": "c0",
+              "label": "Household",
+              "detail": "Home"
+            }
+          ]
+        },
+        {
+          "id": "9a1e3c5b-7d2f-4b6a-8c0e-1f3d5b7a9c20",
+          "message": "Order more coffee filters",
+          "createdAt": "2026-10-06T13:40:00.000Z",
+          "state": "sending",
+          "destination": {
+            "label": "Household",
+            "sessionId": "3c9e1a7b-5d2f-4e6a-8b0c-4d2f6a8c0e10"
+          },
+          "lastError": "Chat is not running on the box. Retry in a moment."
+        }
+      ],
+      "recentlySent": [
+        {
+          "id": "2d4f6b8a-0c1e-4a3b-9d5f-7e9a1c3b5d60",
+          "message": "The dishwasher repair is Tuesday at 10",
+          "createdAt": "2026-10-06T09:15:00.000Z",
+          "state": "sent",
+          "destination": {
+            "label": "Household",
+            "sessionId": "3c9e1a7b-5d2f-4e6a-8b0c-4d2f6a8c0e10"
+          },
+          "queued": true
+        }
+      ],
+      "recentChats": [
+        {
+          "sessionId": "6e2a9c4d-1b3f-4d7e-8a5c-9f0b2d4e6a80",
+          "label": "Plan the week",
+          "lastActivity": "2026-10-06T14:30:00.000Z",
+          "landmark": null
+        },
+        {
+          "sessionId": "0b7d4c1e-6a2f-4e8b-9c3d-2f1a5e7b9d40",
+          "label": "Trip planning",
+          "lastActivity": "2026-10-06T12:00:00.000Z",
+          "landmark": {
+            "dir": "_content/travel",
+            "label": "Travel",
+            "symbol": "✈️"
+          }
+        },
+        {
+          "sessionId": "3c9e1a7b-5d2f-4e6a-8b0c-4d2f6a8c0e10",
+          "label": "Household",
+          "lastActivity": "2026-10-05T18:30:00.000Z",
+          "landmark": {
+            "dir": "_content/home",
+            "label": "Home",
+            "symbol": null
+          }
+        }
+      ],
+      "shortcuts": [
+        {
+          "label": "Questions",
+          "to": "/questions"
+        },
+        {
+          "label": "Garden plan",
+          "to": "/browse/_content/garden/Garden.landmark.card"
+        }
+      ]
+    }
+  }
+}

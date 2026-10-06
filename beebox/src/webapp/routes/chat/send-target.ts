@@ -1,22 +1,15 @@
 import type { FastifyReply } from "fastify";
-import type { ChatSession } from "../../../core/chat/session/run/core.js";
 import { seedFeaturesForNewChat } from "../../../core/landmark/features.js";
 import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
 import { isResumableSession } from "../../../core/chat/session/recent-landmark.js";
 import { resolveChatTarget, type ChatTargetSpec } from "../../../core/chat/session/target.js";
 import type { ChatRoutesContext } from "./context.js";
+import type { ResolvedSendTarget, SendTargetArgs, SendTargetResult } from "../../chat-runtime.js";
 import { loadAddedModels, loadEnabledEngines, type AgentEngine } from "../../../core/box/config.js";
 import { isChatModelAllowed } from "../../../shared/chat-models.js";
 
-interface ResolveSendArgs {
-  sessionParam: string;
-  contextDir: string | undefined;
-  requestSeedFeatures: Record<string, string> | undefined;
-  exactSession: boolean;
-  /** Engine and model chosen before the chat existed; `"new"` sends only. */
-  engine?: AgentEngine | undefined;
-  model?: string | undefined;
-}
+type TargetContext = Pick<ChatRoutesContext, "registry" | "boxRoot" | "wireSession">;
+type ResolveSendArgs = SendTargetArgs;
 
 /** A `"new"` send naming an engine the box does not offer, or a model that engine cannot run. */
 class UnavailableChatChoiceError extends Error {
@@ -60,7 +53,7 @@ async function validatedChoice(
   return args.model === undefined ? (args.engine === undefined ? {} : { engine }) : { engine, model: args.model };
 }
 
-async function resolveSendTarget(ctx: ChatRoutesContext, args: ResolveSendArgs): Promise<{ session: ChatSession; id: string | null }> {
+async function resolveSendTarget(ctx: TargetContext, args: ResolveSendArgs): Promise<ResolvedSendTarget> {
   const { registry, boxRoot, wireSession } = ctx;
   if (args.exactSession) await assertExactSessionTarget(ctx, args.sessionParam);
   // `"new"` is the legacy shape: a client that did not coin an id (an older
@@ -123,25 +116,26 @@ class ExactSessionTargetError extends Error {
   }
 }
 
+export async function resolveSendTargetResult(ctx: TargetContext, args: ResolveSendArgs): Promise<SendTargetResult> {
+  try {
+    return { ok: true, target: await resolveSendTarget(ctx, args) };
+  } catch (error) {
+    if (error instanceof ExactSessionTargetError) return { ok: false, status: error.status, error: error.message };
+    if (error instanceof UnavailableChatChoiceError) return { ok: false, status: 400, error: error.detail };
+    if (!(error instanceof UnavailableChatSessionError)) throw error;
+    return { ok: false, status: 410, error: error.message, code: "CHAT_SESSION_UNAVAILABLE" };
+  }
+}
+
 /** Resolve a send target while mapping stale/deleting sessions to a named 410. */
 export async function resolveSendTargetForRoute(options: {
   ctx: ChatRoutesContext;
   args: ResolveSendArgs;
   reply: FastifyReply;
-}): Promise<Awaited<ReturnType<typeof resolveSendTarget>> | null> {
-  try {
-    return await resolveSendTarget(options.ctx, options.args);
-  } catch (error) {
-    if (error instanceof ExactSessionTargetError) {
-      await options.reply.status(error.status).send({ error: error.message });
-      return null;
-    }
-    if (error instanceof UnavailableChatChoiceError) {
-      await options.reply.status(400).send({ error: error.detail });
-      return null;
-    }
-    if (!(error instanceof UnavailableChatSessionError)) throw error;
-    await options.reply.status(410).send({ error: error.message, code: "CHAT_SESSION_UNAVAILABLE" });
-    return null;
-  }
+}): Promise<ResolvedSendTarget | null> {
+  const result = await resolveSendTargetResult(options.ctx, options.args);
+  if (result.ok) return result.target;
+  const { status, error, code } = result;
+  await options.reply.status(status).send(code === undefined ? { error } : { error, code });
+  return null;
 }

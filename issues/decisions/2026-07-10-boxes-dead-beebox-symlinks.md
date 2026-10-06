@@ -62,3 +62,7 @@ needs a deliberate decision), or finishing the Track F real-install
 story locally (but a pinned install would end the update-all-boxes-at-
 once property the boxholder wants). Detection now makes breakage loud;
 repair remains a human `ln -sfn` guided by the health message.
+
+## Decision (2026-10-06)
+
+Fix it: engine init and health repair a dead `node_modules/beebox` link automatically. To be done in a small (Codex Luna) session after the current batch of work lands.

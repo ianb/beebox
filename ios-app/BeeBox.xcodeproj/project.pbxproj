@@ -11,6 +11,7 @@
 		5A1000022C3C000100000001 /* PairedBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000122C3C000100000001 /* PairedBox.swift */; };
 		5A1000032C3C000100000001 /* PairedBoxStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000132C3C000100000001 /* PairedBoxStore.swift */; };
 		5A1000042C3C000100000001 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000142C3C000100000001 /* RootView.swift */; };
+		B0C500142F00000100000002 /* BoxScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500142F00000100000001 /* BoxScreenView.swift */; };
 		5A1000052C3C000100000001 /* PairBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000152C3C000100000001 /* PairBoxView.swift */; };
 		5A1000062C3C000100000001 /* ChatWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000162C3C000100000001 /* ChatWebView.swift */; };
 		B72000F42C3C000100000001 /* NativeControlRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000F52C3C000100000001 /* NativeControlRingView.swift */; };
@@ -20,6 +21,8 @@
 		B7200AA12C3C000100000001 /* ComposerToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7200AA22C3C000100000001 /* ComposerToken.swift */; };
 		B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000142C3C000100000001 /* ComposerDraftRepository.swift */; };
 		B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000162C3C000100000001 /* ComposerDraftStore.swift */; };
+		B0C500032F00000100000002 /* QuickChatOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500032F00000100000001 /* QuickChatOutbox.swift */; };
+		B0C500132F00000100000002 /* BoxScreenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500132F00000100000001 /* BoxScreenStore.swift */; };
 		B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000182C3C000100000001 /* ComposerDraftTests.swift */; };
 		B72000F22C3C000100000001 /* NativeControlRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000F32C3C000100000001 /* NativeControlRegistryTests.swift */; };
 		B72000192C3C000100000001 /* ComposerTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001A2C3C000100000001 /* ComposerTextView.swift */; };
@@ -27,6 +30,7 @@
 		B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001C2C3C000100000001 /* ChatAPITests.swift */; };
 		B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001E2C3C000100000001 /* PendingEmissionStore.swift */; };
 		B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */; };
+		B0C500152F00000100000002 /* BoxScreenFixtureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500152F00000100000001 /* BoxScreenFixtureScreen.swift */; };
 		C83000012C3C000100000001 /* BoxLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000022C3C000100000001 /* BoxLockManager.swift */; };
 		C83000032C3C000100000001 /* BoxLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000042C3C000100000001 /* BoxLockTests.swift */; };
 		D94000012C3C000100000001 /* NativeEarcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D94000112C3C000100000001 /* NativeEarcons.swift */; };
@@ -81,6 +85,7 @@
 		B72000C12C3C000100000001 /* VoiceAudioRetentionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */; };
 		B72000C32C3C000100000001 /* VoiceAudioRetentionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */; };
 		E1A000002C3C000100000001 /* BoxRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000012C3C000100000001 /* BoxRequest.swift */; };
+		B0C500112F00000100000002 /* QuickChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500112F00000100000001 /* QuickChatAPI.swift */; };
 		E1A000022C3C000100000001 /* BoxLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000032C3C000100000001 /* BoxLog.swift */; };
 		E1A000042C3C000100000001 /* LogForwarder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000052C3C000100000001 /* LogForwarder.swift */; };
 		E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000072C3C000100000001 /* LogForwarderTests.swift */; };
@@ -95,7 +100,13 @@
 		F1A000002E00000100000001 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000012E00000100000001 /* PushRegistrar.swift */; };
 		F1A000022E00000100000001 /* NotificationCenterDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000032E00000100000001 /* NotificationCenterDelegate.swift */; };
 		F1A000042E00000100000001 /* NotificationTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000052E00000100000001 /* NotificationTarget.swift */; };
+		B0C500012F00000100000002 /* RootSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500012F00000100000001 /* RootSurface.swift */; };
+		B0C500102F00000100000002 /* QuickChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500102F00000100000001 /* QuickChatView.swift */; };
 		F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000072E00000100000001 /* PushNotificationTests.swift */; };
+		B0C500042F00000100000002 /* QuickChatOutboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500042F00000100000001 /* QuickChatOutboxTests.swift */; };
+		B0C500162F00000100000002 /* BoxScreenStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500162F00000100000001 /* BoxScreenStoreTests.swift */; };
+		B0C500122F00000100000002 /* QuickChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500122F00000100000001 /* QuickChatAPITests.swift */; };
+		B0C500022F00000100000002 /* RootSurfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500022F00000100000001 /* RootSurfaceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -135,6 +146,7 @@
 		5A1000122C3C000100000001 /* PairedBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairedBox.swift; sourceTree = "<group>"; };
 		5A1000132C3C000100000001 /* PairedBoxStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairedBoxStore.swift; sourceTree = "<group>"; };
 		5A1000142C3C000100000001 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		B0C500142F00000100000001 /* BoxScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxScreenView.swift; sourceTree = "<group>"; };
 		5A1000152C3C000100000001 /* PairBoxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairBoxView.swift; sourceTree = "<group>"; };
 		5A1000162C3C000100000001 /* ChatWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebView.swift; sourceTree = "<group>"; };
 		B72000F52C3C000100000001 /* NativeControlRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeControlRingView.swift; sourceTree = "<group>"; };
@@ -146,6 +158,8 @@
 		B7200AA22C3C000100000001 /* ComposerToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerToken.swift; sourceTree = "<group>"; };
 		B72000142C3C000100000001 /* ComposerDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftRepository.swift; sourceTree = "<group>"; };
 		B72000162C3C000100000001 /* ComposerDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftStore.swift; sourceTree = "<group>"; };
+		B0C500032F00000100000001 /* QuickChatOutbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatOutbox.swift; sourceTree = "<group>"; };
+		B0C500132F00000100000001 /* BoxScreenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxScreenStore.swift; sourceTree = "<group>"; };
 		B72000182C3C000100000001 /* ComposerDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftTests.swift; sourceTree = "<group>"; };
 		B72000F32C3C000100000001 /* NativeControlRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeControlRegistryTests.swift; sourceTree = "<group>"; };
 		B720001A2C3C000100000001 /* ComposerTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerTextView.swift; sourceTree = "<group>"; };
@@ -153,6 +167,7 @@
 		B720001C2C3C000100000001 /* ChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPITests.swift; sourceTree = "<group>"; };
 		B720001E2C3C000100000001 /* PendingEmissionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingEmissionStore.swift; sourceTree = "<group>"; };
 		B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerFixtureScreen.swift; sourceTree = "<group>"; };
+		B0C500152F00000100000001 /* BoxScreenFixtureScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxScreenFixtureScreen.swift; sourceTree = "<group>"; };
 		C83000022C3C000100000001 /* BoxLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockManager.swift; sourceTree = "<group>"; };
 		C83000042C3C000100000001 /* BoxLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockTests.swift; sourceTree = "<group>"; };
 		D94000112C3C000100000001 /* NativeEarcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeEarcons.swift; sourceTree = "<group>"; };
@@ -207,6 +222,7 @@
 		B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionStore.swift; sourceTree = "<group>"; };
 		B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionTests.swift; sourceTree = "<group>"; };
 		E1A000012C3C000100000001 /* BoxRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxRequest.swift; sourceTree = "<group>"; };
+		B0C500112F00000100000001 /* QuickChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatAPI.swift; sourceTree = "<group>"; };
 		E1A000032C3C000100000001 /* BoxLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLog.swift; sourceTree = "<group>"; };
 		E1A000052C3C000100000001 /* LogForwarder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogForwarder.swift; sourceTree = "<group>"; };
 		E1A000072C3C000100000001 /* LogForwarderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogForwarderTests.swift; sourceTree = "<group>"; };
@@ -220,7 +236,13 @@
 		F1A000012E00000100000001 /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrar.swift; sourceTree = "<group>"; };
 		F1A000032E00000100000001 /* NotificationCenterDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterDelegate.swift; sourceTree = "<group>"; };
 		F1A000052E00000100000001 /* NotificationTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTarget.swift; sourceTree = "<group>"; };
+		B0C500012F00000100000001 /* RootSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootSurface.swift; sourceTree = "<group>"; };
+		B0C500102F00000100000001 /* QuickChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatView.swift; sourceTree = "<group>"; };
 		F1A000072E00000100000001 /* PushNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationTests.swift; sourceTree = "<group>"; };
+		B0C500042F00000100000001 /* QuickChatOutboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatOutboxTests.swift; sourceTree = "<group>"; };
+		B0C500162F00000100000001 /* BoxScreenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxScreenStoreTests.swift; sourceTree = "<group>"; };
+		B0C500122F00000100000001 /* QuickChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatAPITests.swift; sourceTree = "<group>"; };
+		B0C500022F00000100000001 /* RootSurfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootSurfaceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -290,6 +312,8 @@
 			children = (
 				5A1000122C3C000100000001 /* PairedBox.swift */,
 				F1A000052E00000100000001 /* NotificationTarget.swift */,
+				B0C500012F00000100000001 /* RootSurface.swift */,
+				B0C500102F00000100000001 /* QuickChatView.swift */,
 				5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
 				B72000022C3C000100000001 /* NativeComposerContract.swift */,
@@ -310,6 +334,8 @@
 				5A1000332C3C000100000001 /* CaptureStore.swift */,
 				B72000142C3C000100000001 /* ComposerDraftRepository.swift */,
 				B72000162C3C000100000001 /* ComposerDraftStore.swift */,
+				B0C500032F00000100000001 /* QuickChatOutbox.swift */,
+				B0C500132F00000100000001 /* BoxScreenStore.swift */,
 				B720001E2C3C000100000001 /* PendingEmissionStore.swift */,
 				B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */,
 			);
@@ -320,11 +346,13 @@
 			isa = PBXGroup;
 			children = (
 				5A1000142C3C000100000001 /* RootView.swift */,
+				B0C500142F00000100000001 /* BoxScreenView.swift */,
 				5A1000152C3C000100000001 /* PairBoxView.swift */,
 				5A1000162C3C000100000001 /* ChatWebView.swift */,
 				B72000F52C3C000100000001 /* NativeControlRingView.swift */,
 				5A10001A2C3C000100000001 /* NativeComposerView.swift */,
 				B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */,
+				B0C500152F00000100000001 /* BoxScreenFixtureScreen.swift */,
 				B720001A2C3C000100000001 /* ComposerTextView.swift */,
 				5A10002A2C3C000100000001 /* ComposerActionsView.swift */,
 				5A1000212C3C000100000001 /* QRScannerView.swift */,
@@ -350,6 +378,7 @@
 				5A10002F2C3C000100000001 /* CaptureAPI.swift */,
 				5A1000912C3C000100000001 /* BulkUploadAPI.swift */,
 				E1A000012C3C000100000001 /* BoxRequest.swift */,
+				B0C500112F00000100000001 /* QuickChatAPI.swift */,
 				F1A000032E00000100000001 /* NotificationCenterDelegate.swift */,
 				F1A000012E00000100000001 /* PushRegistrar.swift */,
 				E1A000032C3C000100000001 /* BoxLog.swift */,
@@ -377,6 +406,10 @@
 				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
 				5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */,
 				F1A000072E00000100000001 /* PushNotificationTests.swift */,
+				B0C500042F00000100000001 /* QuickChatOutboxTests.swift */,
+				B0C500162F00000100000001 /* BoxScreenStoreTests.swift */,
+				B0C500122F00000100000001 /* QuickChatAPITests.swift */,
+				B0C500022F00000100000001 /* RootSurfaceTests.swift */,
 				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
 				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
@@ -575,8 +608,11 @@
 				5A1000012C3C000100000001 /* BeeBoxApp.swift in Sources */,
 				5A1000022C3C000100000001 /* PairedBox.swift in Sources */,
 				F1A000042E00000100000001 /* NotificationTarget.swift in Sources */,
+				B0C500012F00000100000002 /* RootSurface.swift in Sources */,
+				B0C500102F00000100000002 /* QuickChatView.swift in Sources */,
 				5A1000032C3C000100000001 /* PairedBoxStore.swift in Sources */,
 				5A1000042C3C000100000001 /* RootView.swift in Sources */,
+				B0C500142F00000100000002 /* BoxScreenView.swift in Sources */,
 				5A1000052C3C000100000001 /* PairBoxView.swift in Sources */,
 				5A1000062C3C000100000001 /* ChatWebView.swift in Sources */,
 				B72000F42C3C000100000001 /* NativeControlRingView.swift in Sources */,
@@ -586,6 +622,8 @@
 				B7200AA12C3C000100000001 /* ComposerToken.swift in Sources */,
 				B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */,
 				B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */,
+				B0C500032F00000100000002 /* QuickChatOutbox.swift in Sources */,
+				B0C500132F00000100000002 /* BoxScreenStore.swift in Sources */,
 				B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */,
 				B72000C12C3C000100000001 /* VoiceAudioRetentionStore.swift in Sources */,
 				C83000012C3C000100000001 /* BoxLockManager.swift in Sources */,
@@ -594,6 +632,7 @@
 				5A1000082C3C000100000001 /* ChatAPI.swift in Sources */,
 				5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */,
 				B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */,
+				B0C500152F00000100000002 /* BoxScreenFixtureScreen.swift in Sources */,
 				5A100AA02C3C000100000001 /* AudioSessionRouting.swift in Sources */,
 				5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */,
 				5A100D012C3C000100000001 /* ScreenAwake.swift in Sources */,
@@ -614,6 +653,7 @@
 				5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */,
 				5A1000902C3C000100000001 /* BulkUploadAPI.swift in Sources */,
 				E1A000002C3C000100000001 /* BoxRequest.swift in Sources */,
+				B0C500112F00000100000002 /* QuickChatAPI.swift in Sources */,
 				F1A000022E00000100000001 /* NotificationCenterDelegate.swift in Sources */,
 				F1A000002E00000100000001 /* PushRegistrar.swift in Sources */,
 				E1A000022C3C000100000001 /* BoxLog.swift in Sources */,
@@ -640,6 +680,10 @@
 				5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */,
 				5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */,
 				F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */,
+				B0C500042F00000100000002 /* QuickChatOutboxTests.swift in Sources */,
+				B0C500162F00000100000002 /* BoxScreenStoreTests.swift in Sources */,
+				B0C500122F00000100000002 /* QuickChatAPITests.swift in Sources */,
+				B0C500022F00000100000002 /* RootSurfaceTests.swift in Sources */,
 				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
 				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,

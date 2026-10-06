@@ -9,22 +9,13 @@
  */
 
 import { acquireBoxWork } from "../../../lib/box-maintenance.js";
-import { randomUUID } from "node:crypto";
-import type { FastifyReply } from "fastify";
-import { errorMessage } from "../../../shared/error-guards.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
 import { summarizeWhatsChanged } from "../../../core/chat/whats-changed.js";
 import type { SessionUser } from "../../auth.js";
 import { resolveBoxIdentity } from "../../box-identity.js";
 import type { ChatRoutesContext } from "./context.js";
 import { resolveSendTargetForRoute } from "./send-target.js";
-import { type TurnCapture, captureTurn, startAckedRun } from "./send-run.js";
-import {
-  type SendOutcome,
-  claimMessageId,
-  createInFlightSends,
-  recordDurableClaim,
-} from "./send-dedup.js";
+import type { UserMessageSender } from "../../chat-runtime.js";
 import {
   type SendBody,
   type SelfNoteBody,
@@ -33,10 +24,8 @@ import {
   selfNoteBodySchema,
   whatsChangedBodySchema,
   resolveChannel,
-  buildSendInput,
   extractCardFields,
   escapeXmlAttr,
-  injectUserAttr,
   resolveMobileSender,
   validateImages,
   warnOnUnnormalizedImageOrientation,
@@ -53,11 +42,11 @@ function validateInboundImages(images: SendBody["images"]): { error: string; sta
   return null;
 }
 
-export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
-  const { server, boxRoot, eventBus, registry, scheduleManager, processedMessageIds } = ctx;
-  // Volatile claims live for one request each, so they belong to this box's
-  // route registration — not to the persisted map, which outlives the process.
-  const inFlightSends = createInFlightSends();
+export function registerChatSendRoutes(
+  ctx: ChatRoutesContext,
+  { sendUserMessage }: { sendUserMessage: UserMessageSender },
+): void {
+  const { server, boxRoot, registry } = ctx;
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody | undefined }>("/api/chat/send", async (request, reply) => {
     const parsed = sendBodySchema.safeParse(request.body ?? {});
@@ -84,7 +73,6 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       },
     });
     if (target === null) return;
-    const { session: chatSession, id: knownId } = target;
 
     // Identify the sender through the box's one identity resolver — a cookie or
     // hub session is the desktop/web path, and on a box that opted into
@@ -99,139 +87,18 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
         ? { email: identity.email, name: identity.name ?? identity.email }
         : await resolveMobileSender(boxRoot, request.headers);
 
-    // Slash commands (e.g. /compact) are parsed by the claude CLI when they
-    // appear at the very start of the user text — any prefix/suffix would
-    // break detection, so skip user-attr and pending-schedules injection.
-    const isSlashCommand = message.startsWith("/");
-    const attributed = user && !isSlashCommand ? injectUserAttr(message, user) : message;
+    // Where the user is sending from, for the snapshot's `channel` attr: the
+    // client's own reading (the only one that can see the native shell), with
+    // the User-Agent guess as the fallback for a client that sends nothing.
+    const channel = resolveChannel(body.channel, request.headers["user-agent"]);
 
-    // Deduplicate retries: a duplicate either shares the in-flight request's
-    // outcome or is answered `deduplicated: true` from the durable claim —
-    // never from this process's volatile claim alone (see chat-send-dedup.ts).
-    const claim = messageId ? claimMessageId({ messageId, processedMessageIds, inFlightSends }) : null;
-    if (claim !== null && claim.kind === "duplicate") {
-      const shared = await claim.outcome;
-      return reply.status(shared.status).send(shared.body);
-    }
-    // `respond` gives the volatile claim back with this request's real outcome.
-    // EVERY exit below goes through it — a claim left unsettled would park each
-    // duplicate POST for this id until its client gave up.
-    let settleInFlight = claim === null ? null : claim.settle;
-    const respond = (outcome: SendOutcome): FastifyReply => {
-      if (settleInFlight !== null) {
-        settleInFlight(outcome);
-        settleInFlight = null;
-      }
-      return reply.status(outcome.status).send(outcome.body);
-    };
+    // Companion-pane state for the `open-card`/`card-activity`/`card-state`
+    // snapshot attrs, normalized + filtered at this parse boundary. Rides
+    // enqueue and send like `channel`.
+    const cardFields = extractCardFields(body);
 
-    // Everything from here to the ack runs under the volatile claim, so an
-    // unexpected throw (a bus listener, a registry call) must settle it before
-    // it escapes — otherwise every duplicate and retry POST for this id parks
-    // on a promise nobody resolves, which is worse than the 500 itself. The
-    // capture is failed too when one exists: the pin it holds would otherwise
-    // keep the session alive with no turn to finish.
-    let capture: TurnCapture | null = null;
-    try {
-      // Broadcast the user message to other clients via the event bus. This is a
-      // *persisted* event — the user's turn in the conversation history — and
-      // recording it IS acceptance: it happens on both paths immediately before
-      // the ack, whether the message was queued or is about to be handed to the
-      // engine. A run that then fails to start no longer contradicts it: the
-      // failure reaches the client on the turn stream instead of as a 500 that
-      // invited a retry which recorded the message a second time
-      // (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
-      // For pending-new sessions, sessionId is still unknown; subscribers will
-      // see it once `session-assigned` fires.
-      //
-      // The durable claim is taken here and nowhere else, so acceptance has ONE
-      // durability point: a crash before this loses the claim and the message
-      // together (the client's retry runs it once), a crash after loses neither
-      // (the retry is answered `deduplicated: true` and history really has it).
-      // Message first, claim second — the millisecond between them can only cost
-      // a duplicate, never a message the client was told the box had.
-      const recordUserMessage = (): void => {
-        eventBus.emit("chat-user-message", {
-          sessionId: knownId,
-          message: attributed,
-          user: user ? { email: user.email, name: user.name } : null,
-          timestamp: new Date().toISOString(),
-        });
-        if (messageId) recordDurableClaim(boxRoot, { messageId, processedMessageIds });
-      };
-
-      // Where the user is sending from, for the snapshot's `channel` attr: the
-      // client's own reading (the only one that can see the native shell), with
-      // the User-Agent guess as the fallback for a client that sends nothing.
-      const channel = resolveChannel(body.channel, request.headers["user-agent"]);
-
-      // Companion-pane state for the `open-card`/`card-activity`/`card-state`
-      // snapshot attrs, normalized + filtered at this parse boundary. Rides
-      // enqueue and send like `channel`.
-      const cardFields = extractCardFields(body);
-
-      // If busy, record and queue — the queue drains on the next "done", and the
-      // completed turn surfaces via the chat-complete event → history refresh.
-      // Record first, enqueue second: a throw while recording then leaves nothing
-      // queued, so the retry that follows the 500 runs the message once instead
-      // of delivering the copy this request already handed to the session.
-      if (chatSession.isBusy()) {
-        recordUserMessage();
-        chatSession.enqueue(buildSendInput({ text: attributed, images, channel, cardFields }));
-        return respond({ status: 200, body: { queued: true } });
-      }
-
-      // Append active schedule info so the agent knows what's pending.
-      // Skip for slash commands so they remain at the start of the text.
-      const pendingInfo = isSlashCommand ? "" : scheduleManager.formatPendingForPrompt();
-      const fullMessage = pendingInfo ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>" : attributed;
-
-      // Touch + enforce the live cap + mark most-active for an already-known
-      // session. (A pending "new" session has no id yet for these.)
-      if (knownId !== null) {
-        registry.touch(knownId, { subprocessUse: true });
-        registry.enforceLiveCap(knownId);
-        await registry.markMostActive(knownId).catch((e: unknown) => {
-          console.error(`[chat] markMostActive(${knownId}) failed:`, e);
-        });
-      }
-      // Pin the session for the turn's lifetime so it survives the idle sweep and
-      // a concurrent send's LRU eviction. pinSession works for a pending "new"
-      // session too (it carries into the entry's refCount on id promotion), which
-      // a by-id pin couldn't. Released when the turn settles (see captureTurn).
-      const releasePin = registry.pinSession(chatSession);
-
-      // Wire the session's output into a resumable buffer *before* sending, so a
-      // frame emitted before send() resolves (e.g. a prewarmed subprocess) isn't
-      // dropped. The output flows over chat.turnStream, resumable by this turnId.
-      const turnId = randomUUID();
-      capture = captureTurn(chatSession, { turnId, releasePin });
-
-      // Record, ack, THEN start the run — the busy path's shape, extended to the
-      // idle one. The response means "the box durably has your message", not "the
-      // engine started": a cold spawn takes minutes, and waiting for it left every
-      // client (and every retry timer) parked in a pending state for that whole
-      // window. The turn buffer is already wired, so no frame the run emits is
-      // lost between the ack and the client's subscribe, and a start failure
-      // surfaces on that stream instead of as an HTTP status
-      // (see startAckedRun; docs/plans/emission-model.md, Track A).
-      recordUserMessage();
-      const work = await acquireBoxWork(boxRoot, { reason: "chat send" });
-      startAckedRun(chatSession, {
-        work,
-        input: buildSendInput({ text: fullMessage, images, channel, cardFields }),
-        capture,
-      });
-      return respond({ status: 200, body: { turnId } });
-    } catch (e) {
-      console.error("[chat] send failed after the message id was claimed:", e);
-      capture?.fail(errorMessage(e));
-      if (settleInFlight !== null) {
-        settleInFlight({ status: 500, body: { error: errorMessage(e) } });
-        settleInFlight = null;
-      }
-      throw e;
-    }
+    const outcome = await sendUserMessage({ target, message, messageId, user, channel, images, cardFields });
+    return reply.status(outcome.status).send(outcome.body);
   });
 
   // POST /api/chat/self-note — inject a self-note into a session transcript.

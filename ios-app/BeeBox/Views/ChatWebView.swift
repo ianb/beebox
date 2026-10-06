@@ -85,7 +85,6 @@ enum NativeComposerCommandDelivery {
 struct ChatWebView: UIViewRepresentable {
     enum Page: Equatable {
         case chat
-        case quickChat
         /// A box-relative path, such as a notification target's deep link
         /// (contract §5.10). Used to build a request; a webview created for
         /// `.chat` loads it in place so the bridge stays registered.
@@ -144,6 +143,11 @@ struct ChatWebView: UIViewRepresentable {
     var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
     var onNavigationFailure: (NavigationFailure?) -> Void
     var onNavigationRequestLoaded: (NavigationRequest.ID) -> Void
+    /// The web app navigated to `/<box>/box`; the native box screen answers it.
+    var onOpenBoxScreen: () -> Void
+    /// The web content process ended. The view reloads itself; the launch rule
+    /// needs to know.
+    var onWebContentTerminated: () -> Void
 
     init(
         box: PairedBox,
@@ -173,7 +177,9 @@ struct ChatWebView: UIViewRepresentable {
         onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
         onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
         onNavigationFailure: @escaping (NavigationFailure?) -> Void = { _ in },
-        onNavigationRequestLoaded: @escaping (NavigationRequest.ID) -> Void = { _ in }
+        onNavigationRequestLoaded: @escaping (NavigationRequest.ID) -> Void = { _ in },
+        onOpenBoxScreen: @escaping () -> Void = {},
+        onWebContentTerminated: @escaping () -> Void = {}
     ) {
         self.box = box
         self.page = page
@@ -203,6 +209,8 @@ struct ChatWebView: UIViewRepresentable {
         self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
         self.onNavigationFailure = onNavigationFailure
         self.onNavigationRequestLoaded = onNavigationRequestLoaded
+        self.onOpenBoxScreen = onOpenBoxScreen
+        self.onWebContentTerminated = onWebContentTerminated
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -259,7 +267,10 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onLastAudioRequest = onLastAudioRequest
         context.coordinator.onSpeechStopRequestSettled = onSpeechStopRequestSettled
         context.coordinator.onNavigationFailure = onNavigationFailure
+        context.coordinator.onOpenBoxScreen = onOpenBoxScreen
+        context.coordinator.onWebContentTerminated = onWebContentTerminated
         context.coordinator.boxID = box.id
+        context.coordinator.boxBaseURL = box.baseURL
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
         context.coordinator.emissionRedeliveryRequest = emissionRedeliveryRequest
@@ -284,6 +295,7 @@ struct ChatWebView: UIViewRepresentable {
         Coordinator(
             boxID: box.id,
             allowedOrigin: Self.origin(from: box.baseURL),
+            boxBaseURL: box.baseURL,
             onComposerBinding: onComposerBinding,
             onSessionChange: onSessionChange,
             onEmissionDeliveryAttempt: onEmissionDeliveryAttempt,
@@ -300,13 +312,17 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommandResultDelivered: onComposerCommandResultDelivered,
             onLastAudioRequest: onLastAudioRequest,
             onSpeechStopRequestSettled: onSpeechStopRequestSettled,
-            onNavigationFailure: onNavigationFailure
+            onNavigationFailure: onNavigationFailure,
+            onOpenBoxScreen: onOpenBoxScreen,
+            onWebContentTerminated: onWebContentTerminated
         )
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate {
         var boxID: PairedBox.ID
         var allowedOrigin: String?
+        /// The box's own URL, prefix included, for recognizing `/<box>/box`.
+        var boxBaseURL: URL?
         var onComposerBinding: (NativeComposerBinding?) -> Void
     var onSessionChange: (String?) -> Void
         var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
@@ -324,6 +340,8 @@ struct ChatWebView: UIViewRepresentable {
         var onLastAudioRequest: (NativeLastAudioRequest) -> Void
         var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
         var onNavigationFailure: (NavigationFailure?) -> Void
+        var onOpenBoxScreen: () -> Void
+        var onWebContentTerminated: () -> Void
         var pendingEmissions: [NativeChatEmission] = []
         var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
         var locationShareRequest: NativeLocationShareRequest?
@@ -363,6 +381,7 @@ struct ChatWebView: UIViewRepresentable {
         init(
             boxID: PairedBox.ID,
             allowedOrigin: String?,
+            boxBaseURL: URL? = nil,
             onComposerBinding: @escaping (NativeComposerBinding?) -> Void = { _ in },
         onSessionChange: @escaping (String?) -> Void,
             onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void,
@@ -380,6 +399,8 @@ struct ChatWebView: UIViewRepresentable {
             onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
             onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
             onNavigationFailure: @escaping (NavigationFailure?) -> Void = { _ in },
+            onOpenBoxScreen: @escaping () -> Void = {},
+            onWebContentTerminated: @escaping () -> Void = {},
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -389,6 +410,7 @@ struct ChatWebView: UIViewRepresentable {
         ) {
             self.boxID = boxID
             self.allowedOrigin = allowedOrigin
+            self.boxBaseURL = boxBaseURL
             self.onComposerBinding = onComposerBinding
         self.onSessionChange = onSessionChange
             self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
@@ -406,6 +428,8 @@ struct ChatWebView: UIViewRepresentable {
             self.onLastAudioRequest = onLastAudioRequest
             self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
             self.onNavigationFailure = onNavigationFailure
+            self.onOpenBoxScreen = onOpenBoxScreen
+            self.onWebContentTerminated = onWebContentTerminated
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -507,6 +531,7 @@ struct ChatWebView: UIViewRepresentable {
             onComposerBinding(nil)
             inflightEmissionGenerations.removeAll()
             webView.reload()
+            onWebContentTerminated()
         }
 
         func webView(
@@ -522,12 +547,23 @@ struct ChatWebView: UIViewRepresentable {
                 decisionHandler(.allow)
                 return
             }
-            if ChatWebView.origin(from: url) == allowedOrigin || url.scheme == "about" {
-                decisionHandler(.allow)
-                return
+            decisionHandler(mainFramePolicy(for: url))
+        }
+
+        /// A main-frame navigation: the box screen is answered natively, the
+        /// box's own origin loads here, and anything else opens outside.
+        func mainFramePolicy(for url: URL) -> WKNavigationActionPolicy {
+            // Before the same-origin allow: the box screen is same-origin.
+            if let boxBaseURL, ChatWebView.isBoxScreenURL(url, boxBaseURL: boxBaseURL) {
+                BoxLog.info("web navigation to the box screen answered natively", category: .webview, targetBoxID: boxID)
+                onOpenBoxScreen()
+                return .cancel
             }
-            decisionHandler(.cancel)
+            if ChatWebView.origin(from: url) == allowedOrigin || url.scheme == "about" {
+                return .allow
+            }
             openExternalURL(url)
+            return .cancel
         }
 
         func webView(
@@ -1089,6 +1125,18 @@ struct ChatWebView: UIViewRepresentable {
         return payload
     }
 
+    /// Whether `url` is the box's web box screen, `<baseURL>/box`. The box lives
+    /// under a path prefix, so the path is compared, not only the origin. A
+    /// query or fragment does not change the page.
+    static func isBoxScreenURL(_ url: URL, boxBaseURL: URL) -> Bool {
+        guard let urlOrigin = origin(from: url), urlOrigin == origin(from: boxBaseURL) else {
+            return false
+        }
+        let basePath = boxBaseURL.path.hasSuffix("/") ? String(boxBaseURL.path.dropLast()) : boxBaseURL.path
+        let path = url.path.hasSuffix("/") ? String(url.path.dropLast()) : url.path
+        return path == "\(basePath)/box"
+    }
+
     /// The initial chat navigation, authenticated by header rather than by a
     /// URL query parameter.
     ///
@@ -1113,8 +1161,6 @@ struct ChatWebView: UIViewRepresentable {
         switch page {
         case .chat:
             url = box.chatURL
-        case .quickChat:
-            url = box.baseURL.appendingPathComponent("quick-chat")
         case .path(let path):
             url = box.url(forBoxPath: path) ?? box.chatURL
         }

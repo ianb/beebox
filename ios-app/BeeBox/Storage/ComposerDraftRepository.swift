@@ -42,6 +42,14 @@ struct VoicePreparationManifest: Codable, Equatable, Sendable {
     }
 }
 
+/// Which composer a draft belongs to. Part of the draft's storage key, so the
+/// chat composer and the box screen's new-thought composer never read or write
+/// each other's draft.
+enum ComposerDraftScope: Equatable, Sendable {
+    case conversation
+    case newThought
+}
+
 actor ComposerDraftRepository {
     enum RepositoryError: Error {
         case unsupportedVersion(Int)
@@ -59,8 +67,8 @@ actor ComposerDraftRepository {
             .appendingPathComponent("composer-drafts", isDirectory: true)
     }
 
-    func load(boxID: UUID) throws -> ComposerDraft? {
-        let url = manifestURL(boxID: boxID)
+    func load(boxID: UUID, scope: ComposerDraftScope) throws -> ComposerDraft? {
+        let url = manifestURL(boxID: boxID, scope: scope)
         guard fileManager.fileExists(atPath: url.path) else {
             return nil
         }
@@ -79,11 +87,11 @@ actor ComposerDraftRepository {
         }
     }
 
-    func save(_ draft: ComposerDraft, boxID: UUID) throws {
+    func save(_ draft: ComposerDraft, boxID: UUID, scope: ComposerDraftScope) throws {
         let directory = boxDirectory(boxID: boxID)
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         let data = try JSONEncoder().encode(ComposerDraftManifest(boxID: boxID, draft: draft))
-        try data.write(to: manifestURL(boxID: boxID), options: .atomic)
+        try data.write(to: manifestURL(boxID: boxID, scope: scope), options: .atomic)
     }
 
     func loadConversationStartups(boxID: UUID) throws -> [NativeConversationStartup] {
@@ -166,6 +174,46 @@ actor ComposerDraftRepository {
             return
         }
         try fileManager.removeItem(at: url)
+    }
+
+    func loadQuickChatOutbox() throws -> [QuickChatOutboxEntry] {
+        let url = quickChatOutboxURL
+        guard fileManager.fileExists(atPath: url.path) else {
+            return []
+        }
+        do {
+            let manifest = try JSONDecoder().decode(QuickChatOutboxManifest.self, from: Data(contentsOf: url))
+            guard manifest.version == QuickChatOutboxManifest.currentVersion else {
+                throw RepositoryError.unsupportedVersion(manifest.version)
+            }
+            return manifest.entries
+        } catch {
+            try quarantineManifest(at: url)
+            throw error
+        }
+    }
+
+    func saveQuickChatOutbox(_ entries: [QuickChatOutboxEntry]) throws {
+        try fileManager.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        try JSONEncoder().encode(QuickChatOutboxManifest(entries: entries))
+            .write(to: quickChatOutboxURL, options: .atomic)
+    }
+
+    /// The last `quickChat.home` answer for a box, so the box screen draws at
+    /// once on the next launch. A cache: an unreadable copy is dropped.
+    func loadQuickChatHome(boxID: UUID) -> QuickChatHome? {
+        let url = boxDirectory(boxID: boxID).appendingPathComponent("quick-chat-home.json")
+        guard let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(QuickChatHome.self, from: data)
+    }
+
+    func saveQuickChatHome(_ home: QuickChatHome, boxID: UUID) throws {
+        let directory = boxDirectory(boxID: boxID)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(home)
+            .write(to: directory.appendingPathComponent("quick-chat-home.json"), options: .atomic)
     }
 
     func savePayload(_ data: Data, filename: String, boxID: UUID) throws {
@@ -262,8 +310,14 @@ actor ComposerDraftRepository {
         }
     }
 
-    func manifestURL(boxID: UUID) -> URL {
-        boxDirectory(boxID: boxID).appendingPathComponent("manifest.json")
+    /// `.conversation` keeps the location drafts had before scopes existed.
+    func manifestURL(boxID: UUID, scope: ComposerDraftScope) -> URL {
+        switch scope {
+        case .conversation:
+            return boxDirectory(boxID: boxID).appendingPathComponent("manifest.json")
+        case .newThought:
+            return boxDirectory(boxID: boxID).appendingPathComponent("new-thought.json")
+        }
     }
 
     func pendingManifestURL(boxID: UUID) -> URL {
@@ -272,6 +326,12 @@ actor ComposerDraftRepository {
 
     func voicePreparationManifestURL(boxID: UUID) -> URL {
         boxDirectory(boxID: boxID).appendingPathComponent("voice-preparation.json")
+    }
+
+    /// One file for every box: each entry carries its own `boxID`, and the
+    /// launch attempt covers all of them.
+    var quickChatOutboxURL: URL {
+        rootURL.appendingPathComponent("quick-chat-outbox.json")
     }
 
     private func boxDirectory(boxID: UUID) -> URL {
