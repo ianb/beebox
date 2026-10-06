@@ -1,9 +1,9 @@
 ---
 title: "The publication card is the publication"
-status: active
+status: implemented
 workstream: publication-home
 issues:
-  - ../../../issues/decisions/2026-10-02-publication-source-and-card-split.md
+  - ../../../issues/closed/decisions/2026-10-02-publication-source-and-card-split.md
 ---
 # The publication card is the publication
 

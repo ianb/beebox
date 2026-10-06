@@ -1,6 +1,7 @@
 ---
 title: "A publication lives in two unconnected places: source in src/publications/, control card in _content/publications/"
 workstream: publication-home
+resolution: implemented
 needs: [decision]
 area: beebox
 filed-by: agent
@@ -8,6 +9,8 @@ discovered-by: Ian
 discovered-in: worktree-static-markdown-publish — explaining where publications live after Markdown rendering landed
 priority: normal
 ---
+
+**Closed (implemented).** The boxholder chose "the card is the publication" on 2026-10-06; resolved by the `publication-home` workstream (merge commit in `main`; plan `beebox/docs/implemented-plans/publication-card-home.md`). Request fields live in `<Name>.publication.card`, source in its attach folder, and `src/publications/`, `publication.json` and the pointer card are removed.
 
 One publication has two box locations that do not refer to each other.
 
@@ -59,6 +62,6 @@ Questions to decide:
 
 - A third, older mechanism, `bbx pub draft` with `_publish/<pub-id>/`, was
   retired 2026-10-02.
-- [Static publications render Markdown](../closed/features/2026-10-02-static-publications-render-markdown.md)
+- [Static publications render Markdown](../features/2026-10-02-static-publications-render-markdown.md)
   made a site of `.md` documents simple to write, which makes a
   card-shaped publication more natural.
