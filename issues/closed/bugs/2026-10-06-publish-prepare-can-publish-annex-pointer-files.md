@@ -1,11 +1,17 @@
 ---
 title: "bbx pub prepare publishes git-annex pointer text when an asset's content is not present"
-workstream: unattached
+workstream: publication-home
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-publication-home — checking how annexed assets interact with publication source
 ---
+
+**Closed 2026-10-06:** prepare now refuses any output file whose content is a
+git-annex pointer (`isAnnexPointer` from `beebox/src/lib/annex-pointer.ts`, called
+in `beebox/src/publish/prepare/core/files.ts`). Detection is by content, so it
+behaves the same on every box.
 
 `annex.largefiles` is unscoped, so an image or PDF in a publication's source
 folder is an annexed file. In a working tree it is an ordinary unlocked file.

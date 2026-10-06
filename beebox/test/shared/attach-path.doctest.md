@@ -14,6 +14,7 @@ import {
   isAttachDirName,
   attachDirOwnerBasename,
   isInsideAttachScope,
+  isPublicationBuildOutputPath,
 } from "../../src/shared/attach-path.js";
 ```
 
@@ -213,4 +214,20 @@ isInsideAttachScope("inbox/Foo.memo.card")
 
 isInsideAttachScope("store/regular/path/file.txt")
 => false
+```
+
+## Publication build output
+
+A path at or below `<name>.attach/project/dist` is a publication project's
+build output; box walkers skip it. Other `dist` segments are ordinary content.
+
+```ts
+[
+  "_content/a/X.attach/project/dist",
+  "_content/a/X.attach/project/dist/sub/f.js",
+  "_content/a/X.attach/static/dist/f.js",
+  "_content/a/project/dist/f.js",
+  "_content/a/X.attach/project/src/dist.ts",
+].map(isPublicationBuildOutputPath)
+=> [ true, true, false, false, false ]
 ```

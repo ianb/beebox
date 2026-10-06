@@ -20,20 +20,21 @@ function shareLabel(opts: { busy: boolean; error: string | null; enabled: boolea
 /** One address for both branches — the row is the same role either way. */
 const SHARE_LOCATION_ID = "bbx-composer-share-location";
 
-export function ShareLocationMenuItem() {
+export function ShareLocationMenuItem({ includeControlId }: { includeControlId?: boolean }) {
+  const hasControlId = includeControlId !== false;
   const { boxSlug } = useParams({ strict: false });
   const { available, enabled, busy, error, toggle } = useLocationShare(boxSlug);
 
   if (!available) {
     return (
-      <MenuItem id={SHARE_LOCATION_ID} onClick={() => {}} disabled>
+      <MenuItem id={hasControlId ? SHARE_LOCATION_ID : undefined} onClick={() => {}} disabled>
         Location unavailable
       </MenuItem>
     );
   }
 
   return (
-    <MenuItem id={SHARE_LOCATION_ID} onClick={toggle} disabled={busy} active={enabled} danger={error !== null} keepOpen>
+    <MenuItem id={hasControlId ? SHARE_LOCATION_ID : undefined} onClick={toggle} disabled={busy} active={enabled} danger={error !== null} keepOpen>
       {shareLabel({ busy, error, enabled })}
     </MenuItem>
   );

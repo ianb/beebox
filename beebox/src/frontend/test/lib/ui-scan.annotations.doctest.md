@@ -14,14 +14,21 @@ Document-level id *uniqueness* is axe's job in `bin/tour --all`
 the source, axe checks the rendered page. The two catch different things: a
 component rendered twice on one page is invisible here and obvious there.
 
+The dev galleries aren't part of `bin/tour --all`, so this check renders the
+repeated control subtrees. Full route uniqueness is verified in the worktree
+browser; the capture overlay is opened there because it mounts only after a click.
+
 ```ts setup
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import * as React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 
 const FRONTEND_SRC = join(PACKAGE_ROOT, "src/frontend/src");
 const PLAN = join(PACKAGE_ROOT, "docs/plans/agent-points-at-ui.md");
+globalThis.React = React;
 
 interface SourceFile { path: string; text: string }
 
@@ -235,4 +242,54 @@ SOURCE_IDS.filter((id) => !/^bbx-[a-z0-9]+(-[a-z0-9]+)*$/.test(id))
 
 SOURCE_IDS.filter((id) => countInSource(id) !== 1).map((id) => id + ": " + countInSource(id))
 => []
+```
+
+## Dev galleries render each authored address at most once
+
+The exploded composer gallery and capture-mode gallery render reusable
+components several times. Repeated controls are intentionally unaddressed
+there; the single-state composer remains a faithful app component with its
+normal `bbx-` addresses.
+
+```ts
+const { TargetStrip } = await import("../../src/components/chat/TargetStrip.js");
+const { CaptureControls } = await import("../../src/components/capture/CaptureControls.js");
+function renderedIds(markup: string) {
+  const ids = [...markup.matchAll(/\sid="(bbx-[^"]+)"/g)].map((match) => match[1]!);
+  return ids.filter((id, i) => ids.indexOf(id) !== i).sort();
+}
+function composerCopy(includeControlIds: boolean, busy: boolean) {
+  return React.createElement(React.Fragment, null,
+    React.createElement("button", { id: includeControlIds ? "bbx-composer-keyboard-lock" : undefined }),
+    React.createElement("button", { id: includeControlIds ? "bbx-composer-keyboard-close" : undefined }),
+    React.createElement(TargetStrip, {
+      status: busy ? { state: "busy", disposition: "will-queue" } : { state: "ready" },
+      pendingCount: 0, isStreaming: busy, speechPlaying: false,
+      onInterrupt: () => {}, onStopSpeech: () => {}, includeControlIds,
+    }),
+  );
+}
+const composerGallery = renderToStaticMarkup(React.createElement(React.Fragment, null,
+  ...Array.from({ length: 20 }, () => composerCopy(false, true)),
+));
+const composerSingleState = renderToStaticMarkup(composerCopy(true, true));
+const retryProps = {
+  sessionId: "fake", recording: false, finalizing: false, hasContent: true,
+  pendingUploads: 0, photosFailed: 1, audioFailed: 0, filesFailed: 0,
+  retryFeedback: { phase: "idle" as const }, onDone: () => {}, onCancel: () => {},
+  onToggleRecording: () => {}, onRetryFailed: () => {}, onSkipPending: () => {},
+};
+const captureGallery = renderToStaticMarkup(React.createElement(React.Fragment, null,
+  ...Array.from({ length: 4 }, () => React.createElement(CaptureControls, { ...retryProps, includeControlIds: false })),
+  React.createElement(CaptureControls, retryProps),
+));
+({ composerGalleryDuplicates: renderedIds(composerGallery),
+  composerSingleStateHasKeyboardIds: composerSingleState.includes('id="bbx-composer-keyboard-lock"') && composerSingleState.includes('id="bbx-composer-keyboard-close"'),
+  captureGalleryDuplicates: renderedIds(captureGallery) })
+=>
+  {
+    "composerGalleryDuplicates": [],
+    "composerSingleStateHasKeyboardIds": true,
+    "captureGalleryDuplicates": []
+  }
 ```

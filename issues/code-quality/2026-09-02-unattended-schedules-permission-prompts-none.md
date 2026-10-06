@@ -45,4 +45,4 @@ Not urgent: no schedule run has been observed to hang this way. Filed because
 the backstop is cheap and the failure it prevents is the one this system reports
 worst.
 
-Context: the 2.1.259 entry in `docs/agent-sdk-notes.md`.
+Context: the 2.1.259 entry in `schedules/sdk-update/agent-sdk-notes.md`.

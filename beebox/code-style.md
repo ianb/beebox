@@ -78,8 +78,8 @@ Every rule in `@ianbicking/personal-vibe-check` is a deliberate choice, and the 
 
 - **Line-level only** — a single `// eslint-disable-next-line <rule> -- <concrete justification>`. Never a file-level or rule-level disable, never a blanket `/* eslint-disable */`.
 - **Infrequent and signaled** — the justifying comment is mandatory and names why *this* case is a true false positive (e.g. a parse-boundary `as`).
-- **A recurring legitimate exception gets encoded into the rule**, not accumulated as disables — add or adjust a rule in the preset rather than sprinkling the same suppression. See the monorepo root's `docs/reports/eslint-rule-suppression-audit-2026-05-30.md` for how silent drift happened before.
-- **Never weaken a rule to make code pass.** Fix the code, or raise it with the boxholder first.
+- **A recurring legitimate exception gets encoded into the rule**, not accumulated as disables — add or adjust a rule in the preset rather than sprinkling the same suppression.
+- **Never weaken a rule to make code pass.** Fix the code, or raise it with the boxholder first. This has happened once: when the preset was adopted in February 2026, an agent added an 18-rule `off` block so the preset would land without mass failures. For three months lint enforced none of those rules while this file still stated several of them. A May 2026 audit re-enabled every rule and fixed about 1,000 violations.
 
 ## Code Style
 
