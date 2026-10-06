@@ -176,6 +176,29 @@ actor ComposerDraftRepository {
         try fileManager.removeItem(at: url)
     }
 
+    func loadQuickChatOutbox() throws -> [QuickChatOutboxEntry] {
+        let url = quickChatOutboxURL
+        guard fileManager.fileExists(atPath: url.path) else {
+            return []
+        }
+        do {
+            let manifest = try JSONDecoder().decode(QuickChatOutboxManifest.self, from: Data(contentsOf: url))
+            guard manifest.version == QuickChatOutboxManifest.currentVersion else {
+                throw RepositoryError.unsupportedVersion(manifest.version)
+            }
+            return manifest.entries
+        } catch {
+            try quarantineManifest(at: url)
+            throw error
+        }
+    }
+
+    func saveQuickChatOutbox(_ entries: [QuickChatOutboxEntry]) throws {
+        try fileManager.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        try JSONEncoder().encode(QuickChatOutboxManifest(entries: entries))
+            .write(to: quickChatOutboxURL, options: .atomic)
+    }
+
     func savePayload(_ data: Data, filename: String, boxID: UUID) throws {
         let url = try payloadURL(filename: filename, boxID: boxID)
         try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -286,6 +309,12 @@ actor ComposerDraftRepository {
 
     func voicePreparationManifestURL(boxID: UUID) -> URL {
         boxDirectory(boxID: boxID).appendingPathComponent("voice-preparation.json")
+    }
+
+    /// One file for every box: each entry carries its own `boxID`, and the
+    /// launch attempt covers all of them.
+    var quickChatOutboxURL: URL {
+        rootURL.appendingPathComponent("quick-chat-outbox.json")
     }
 
     private func boxDirectory(boxID: UUID) -> URL {
