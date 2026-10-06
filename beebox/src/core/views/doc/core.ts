@@ -70,6 +70,7 @@ const metadataAndPropsSection = `## Metadata Exports
 | \`description\` | string | Yes | What this view shows |
 | \`dependencies\` | string[] | Yes | Glob patterns for files that affect rendering |
 | \`modes\` | string[] | Yes | Where the view can appear: \`"page"\`, \`"chat"\`, or both |
+| \`layout\` | string | No | \`"inset"\` (default) or \`"full-bleed"\` — see Styling |
 | \`rendersCardTypes\` | string[] | Yes | Card types this view renders — see below |
 
 ### Rendering a card type
@@ -323,7 +324,16 @@ save.`;
 
 const stylingAndErrorsSection = `## Styling
 
-Views render inside the app's existing layout. You can use:
+Views render inside the card. By default (\`layout = "inset"\`) the card pads
+the view to line up with its title, so do not add outer padding. For content
+that should reach the card's edges — a map, a wide table, an image grid —
+export \`layout = "full-bleed"\` and pad any text inside the view yourself:
+
+\`\`\`tsx
+export const layout = "full-bleed";
+\`\`\`
+
+You can use:
 - Inline styles (as shown in examples)
 - Standard HTML/CSS
 - The app uses Tailwind CSS classes — these are available if you know them, but inline styles are fine

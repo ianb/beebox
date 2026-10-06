@@ -77,6 +77,15 @@ tour(
     await clickVisibleButton(t, "Use default");
     await t.checkpoint("use-default");
     await t.expect.custom("Use default returns to the resolved fallback", (snapshot) => snapshot.includes("Following the box and card type defaults."));
+    // Choosing a view turns the card over, so the person sees the view they chose.
+    await clickVisibleButton(t, "Original text");
+    await t.checkpoint("chose-original-text");
+    await t.expect.custom("choosing a view returns to the card front", (snapshot) =>
+      !snapshot.includes("Back to card") && snapshot.includes("title: One note, three stocks"));
+    await clickVisibleButton(t, "Properties");
+    await clickVisibleButton(t, "Use preferred view");
+    await t.expect.custom("Use preferred view also returns to the card front", (snapshot) =>
+      !snapshot.includes("Back to card") && snapshot.includes("clay samples"));
     await t.expect.noPageErrors();
 
     await t.go(`${CARD}mixed-stocks.memo.card`);

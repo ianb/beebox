@@ -1,6 +1,6 @@
 ---
 title: "Every custom view runs edge to edge; full bleed should be an option, not the only layout"
-workstream: unattached
+workstream: card-view-fixes
 area: beebox
 filed-by: agent
 discovered-by: Ian

@@ -1,6 +1,6 @@
 ---
 title: "Choosing a view in a card's Properties leaves Properties open instead of showing the view"
-workstream: unattached
+workstream: card-view-fixes
 area: beebox
 labels: [frontend, views, properties]
 filed-by: agent
