@@ -12,7 +12,7 @@ import type { TranscriptionHandle } from "./view";
 const CIRCLE_BTN = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
 
 export function VoiceToggleButton({
-  voicePaused, isTranscribing, narrationEnabled, transcription, onStopDictation, setInput, clearDraft, onUnpause, onVoice,
+  voicePaused, isTranscribing, narrationEnabled, transcription, onStopDictation, setInput, clearDraft, onUnpause, onVoice, includeControlId,
 }: {
   voicePaused: boolean;
   isTranscribing: boolean;
@@ -23,10 +23,12 @@ export function VoiceToggleButton({
   clearDraft: () => void;
   onUnpause: () => void;
   onVoice: () => void;
+  includeControlId?: boolean;
 }) {
+  const hasControlId = includeControlId !== false;
   return (
     <button
-      id="bbx-composer-mic"
+      id={hasControlId ? "bbx-composer-mic" : undefined}
       // Four states, one address: the description tracks the same four the
       // `title` below does, so a scan reports what the mic does *now* rather
       // than a static catalogue entry.

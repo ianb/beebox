@@ -9,6 +9,7 @@
 import { forwardRef } from "react";
 
 interface CameraViewportProps {
+  includeControlIds?: boolean;
   cameraOn: boolean;
   flashing: boolean;
   onTap: () => void;
@@ -17,9 +18,10 @@ interface CameraViewportProps {
 }
 
 export const CameraViewport = forwardRef<HTMLVideoElement, CameraViewportProps>(function CameraViewport(
-  { cameraOn, flashing, onTap, onToggleCamera, onFlipCamera },
+  { cameraOn, flashing, onTap, onToggleCamera, onFlipCamera, includeControlIds },
   ref,
 ) {
+  const hasControlIds = includeControlIds !== false;
   return (
     <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden">
       <video
@@ -32,7 +34,7 @@ export const CameraViewport = forwardRef<HTMLVideoElement, CameraViewportProps>(
       {/* Full-area tap target — take a photo when on, start the camera when off.
           Kept as a sibling of the overlay buttons so we never nest <button> in <button>. */}
       <button
-        id="bbx-capture-shutter"
+        id={hasControlIds ? "bbx-capture-shutter" : undefined}
         type="button"
         onClick={onTap}
         aria-label={cameraOn ? "Take photo" : "Start camera"}
@@ -53,7 +55,7 @@ export const CameraViewport = forwardRef<HTMLVideoElement, CameraViewportProps>(
             <div className="w-16 h-16 rounded-full border-4 border-white/40" />
           </div>
           <button
-            id="bbx-capture-camera-off"
+            id={hasControlIds ? "bbx-capture-camera-off" : undefined}
             type="button"
             onClick={onToggleCamera}
             aria-label="Turn camera off"
@@ -65,7 +67,7 @@ export const CameraViewport = forwardRef<HTMLVideoElement, CameraViewportProps>(
             </svg>
           </button>
           <button
-            id="bbx-capture-camera-flip"
+            id={hasControlIds ? "bbx-capture-camera-flip" : undefined}
             type="button"
             onClick={onFlipCamera}
             aria-label="Flip camera"
