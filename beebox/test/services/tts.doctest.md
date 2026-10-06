@@ -142,3 +142,41 @@ const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: em
 await tts.textToSpeech("Hello there.")
 => throws EmptyTtsResponseError: TTS backend "gemini" returned 0 bytes — too short to be speech
 ```
+
+## A long rate-limit wait fails at once; a short one is retried
+
+ky honors `Retry-After` in full. A free-tier Gemini key over its daily quota
+answered 429 with a wait of about 26 minutes, and every clip then sat silent
+until the 90 s stream deadline. A clip is useless by then, so a 429 asking for
+more than two seconds fails at once, after one request, with the provider's
+status for the route to report.
+
+```ts
+const quota = recordingFetch(() =>
+  Response.json({ error: { message: "Rate limit exceeded (limit: 10 requests per day on Free Tier)" } }, {
+    status: 429,
+    statusText: "Too Many Requests",
+    headers: { "Retry-After": "1572" },
+  }));
+const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: quota.fetch });
+const started = Date.now();
+const failure = await tts.textToSpeech("Hello there.").catch((e) => e);
+({ error: failure.name, status: failure.response.status, requests: quota.calls.length, fast: Date.now() - started < 1000 })
+=> { error: "HTTPError", status: 429, requests: 1, fast: true }
+```
+
+A short wait is still worth it: the retry speaks the clip.
+
+```ts
+let answered = 0;
+const brief = recordingFetch(() => {
+  answered += 1;
+  return answered === 1
+    ? new Response("{}", { status: 429, headers: { "Retry-After": "0" } })
+    : interactionStream(pcm);
+});
+const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: brief.fetch });
+const out = await tts.textToSpeech("Hello there.");
+({ requests: brief.calls.length, contentType: out.contentType })
+=> { requests: 2, contentType: "audio/wav" }
+```

@@ -59,3 +59,21 @@ failed.includes("border-double")
 failed.includes("Speech audio failed.")
 => true
 ```
+
+## A failure says why
+
+A failed chunk shows the reason the playback machine recorded — for a rate
+limit, the provider's own message — so the boxholder sees "Free Tier" or a
+missing key where they noticed the silence. The reason shows only while the
+chunk is failed.
+
+```ts
+const why = "TTS backend answered 429 Too Many Requests: Rate limit exceeded (limit: 10 requests per day on Free Tier)";
+const explained = renderToStaticMarkup(React.createElement(SpeechChunk, { state: "failed", failureReason: why }, "Spoken words"));
+explained.includes(`Speech failed: ${why}`)
+=> true
+
+const recovered = renderToStaticMarkup(React.createElement(SpeechChunk, { state: "playing", failureReason: why }, "Spoken words"));
+recovered.includes("Speech failed")
+=> false
+```

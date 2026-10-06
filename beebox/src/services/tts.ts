@@ -13,7 +13,7 @@
  * an OpenRouter key must never change what the box sounds like.
  */
 
-import ky, { type RetryOptions } from "ky";
+import ky, { HTTPError, type RetryOptions } from "ky";
 import { collectInteractionAudio, InteractionStreamError } from "../core/tts/interaction-stream.js";
 import { deliverStyle } from "../core/tts/style.js";
 import { resolveVoice } from "../core/tts/voices.js";
@@ -103,7 +103,28 @@ const TTS_RETRY = {
   // timeout, 529 provider overloaded), which it does not know about.
   statusCodes: [408, 429, 500, 502, 503, 504, 524, 529],
   retryOnTimeout: true,
+  shouldRetry: ({ error }) => (isLongRateLimit(error) ? false : undefined),
 } satisfies RetryOptions;
+
+/**
+ * The longest `Retry-After` worth waiting for. A clip is useless once the reply
+ * has moved on, and ky honors the header in full: a free-tier Gemini key over
+ * its daily quota answered 429 with "retry in 26m12s", and every clip then sat
+ * silent until the 90 s stream deadline (2026-10-05). Past this, the 429 fails
+ * at once, carrying the provider's message to the chat.
+ */
+const MAX_RETRY_AFTER_MS = 2_000;
+
+/** A 429 asking for a longer wait than `MAX_RETRY_AFTER_MS`. */
+function isLongRateLimit(error: Error): boolean {
+  if (!(error instanceof HTTPError) || error.response.status !== 429) return false;
+  const header = error.response.headers.get("Retry-After");
+  if (header === null) return false;
+  const seconds = Number(header);
+  const waitMs = Number.isNaN(seconds) ? Date.parse(header) - Date.now() : seconds * 1000;
+  // An unparseable header is no reason to wait an unknown time.
+  return Number.isNaN(waitMs) || waitMs > MAX_RETRY_AFTER_MS;
+}
 
 /** OpenAI's speech endpoint, which takes style direction in its own `instructions` field. */
 function createOpenAiTts(apiKey: string, fetchImpl: typeof fetch | undefined): TtsService {
