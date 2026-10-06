@@ -19,6 +19,15 @@ import { setup, assign, fromPromise } from "xstate";
 import { shouldPrefetchSpeech } from "../lib/audio/context";
 import type { SpeechSegment } from "../lib/audio/speech-parsing/parse";
 import type { getTTSClient, PrefetchHandle } from "../lib/audio/tts-client/client";
+import {
+  failedSegment,
+  failureReason,
+  hasFailures,
+  onlyFailures,
+  waitingStates,
+  withoutSegment,
+  type SpeechSegmentState,
+} from "./speech-segment-states";
 
 type TTSClient = ReturnType<typeof getTTSClient>;
 
@@ -43,7 +52,6 @@ interface QueueItem {
   index: number;
 }
 
-export type SpeechSegmentState = "waiting" | "playing" | "failed";
 
 interface SpeechPlaybackContext {
   playingMessageId: string | null;
@@ -51,6 +59,11 @@ interface SpeechPlaybackContext {
   statusMessageId: string | null;
   /** Absolute segment index → visible progress state. Successful segments disappear. */
   segmentStates: Record<number, SpeechSegmentState>;
+  /**
+   * Absolute segment index → why that segment failed, shown beside the
+   * failure. Read only where `segmentStates` says "failed".
+   */
+  segmentFailures: Record<number, string>;
   /** Items waiting to play. The current one sits at [0] during playback. */
   queue: QueueItem[];
   /** Captured when the first PLAY arrives; reused across self-transitions. */
@@ -101,38 +114,6 @@ function abortPending(items: QueueItem[]): void {
   }
 }
 
-function waitingStates(items: QueueItem[]): Record<number, SpeechSegmentState> {
-  return Object.fromEntries(items.map((item) => [item.index, "waiting"]));
-}
-
-function withoutSegment(
-  states: Record<number, SpeechSegmentState>,
-  index: number,
-): Record<number, SpeechSegmentState> {
-  const next = { ...states };
-  delete next[index];
-  return next;
-}
-
-function failedSegment(
-  states: Record<number, SpeechSegmentState>,
-  index: number,
-): Record<number, SpeechSegmentState> {
-  return { ...states, [index]: "failed" };
-}
-
-function onlyFailures(
-  states: Record<number, SpeechSegmentState>,
-): Record<number, SpeechSegmentState> {
-  return Object.fromEntries(
-    Object.entries(states).filter(([, state]) => state === "failed"),
-  );
-}
-
-function hasFailures(states: Record<number, SpeechSegmentState>): boolean {
-  return Object.values(states).includes("failed");
-}
-
 function currentQueueIndex(queue: QueueItem[]): number {
   const item = queue[0];
   if (item === undefined) throw new EmptySpeechQueueError();
@@ -176,6 +157,7 @@ export const speechPlaybackMachine = setup({
     playingMessageId: null,
     statusMessageId: null,
     segmentStates: {},
+    segmentFailures: {},
     queue: [],
     ttsClient: null,
     onComplete: input.onComplete,
@@ -194,6 +176,7 @@ export const speechPlaybackMachine = setup({
               playingMessageId: event.messageId,
               statusMessageId: event.messageId,
               segmentStates: waitingStates(queue),
+              segmentFailures: {},
               queue,
               ttsClient: event.ttsClient,
             };
@@ -267,12 +250,16 @@ export const speechPlaybackMachine = setup({
               ({ event }) => {
                 console.error("[speech] segment failed, skipping:", event.error);
               },
-              assign(({ context }) => ({
+              assign(({ context, event }) => ({
                 queue: context.queue.slice(1),
                 segmentStates: failedSegment(
                   context.segmentStates,
                   currentQueueIndex(context.queue),
                 ),
+                segmentFailures: {
+                  ...context.segmentFailures,
+                  [currentQueueIndex(context.queue)]: failureReason(event.error),
+                },
               })),
             ],
           },
@@ -283,13 +270,17 @@ export const speechPlaybackMachine = setup({
                 console.error("[speech] segment failed:", event.error);
                 abortPending(context.queue.slice(1));
               },
-              assign(({ context }) => ({
+              assign(({ context, event }) => ({
                 queue: [],
                 playingMessageId: null,
                 segmentStates: failedSegment(
                   context.segmentStates,
                   currentQueueIndex(context.queue),
                 ),
+                segmentFailures: {
+                  ...context.segmentFailures,
+                  [currentQueueIndex(context.queue)]: failureReason(event.error),
+                },
               })),
               ({ context }) => {
                 context.onComplete?.();
