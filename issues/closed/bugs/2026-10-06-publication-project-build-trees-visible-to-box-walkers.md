@@ -1,11 +1,17 @@
 ---
 title: "A publication project's node_modules/ and dist/ are visible to the file watcher and box-wide card and Markdown walkers"
-workstream: unattached
+workstream: publication-home
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-publication-home — moving publication source into the card's attach folder
 ---
+
+**Closed 2026-10-06:** the file watcher no longer descends into any
+`node_modules/`, and one predicate, `isPublicationBuildOutputPath`
+(`beebox/src/shared/attach-path.ts`), keeps `<name>.attach/project/dist/` out
+of the watcher, card and Markdown listings, box inventory, and search walk.
 
 A publication card can keep a buildable project in `<Name>.attach/project/`.
 `bbx pub prepare` creates `node_modules/` and `dist/` there. Git ignores both.
@@ -30,4 +36,4 @@ folders adds a special case to generic walkers. One option is a shared
 "git-ignored paths are not box content" filter, as the unlisted-binary walk now
 uses (`beebox/src/lib/git/check-ignore.ts`).
 
-Related: [the watcher ceiling leaves attach scopes unwatched](2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md).
+Related: [the watcher ceiling leaves attach scopes unwatched](../../bugs/2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md).
