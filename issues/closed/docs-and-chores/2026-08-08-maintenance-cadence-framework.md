@@ -25,7 +25,7 @@ questions for the tasks they cover:
 
 - **Agent SDK release monitor** (`bin/update-agent-sdk-scheduled.sh`) — a daily
   **launchd** job resumes a persistent **Opus** session that reads each new SDK
-  release, writes a filtered ledger (`docs/agent-sdk-notes.md`), auto-bumps after
+  release, writes a filtered ledger (`schedules/sdk-update/agent-sdk-notes.md`), auto-bumps after
   a settling window (or immediately for security/memory/correctness fixes), and
   notifies the boxholder. (Docling currency rides the same job.)
 - **Manual test suite** (`bin/manual-tests-scheduled.sh`) — a weekly launchd job;
@@ -62,7 +62,7 @@ human memory, with inconsistent (or no) reporting:
 - **Codex — nothing at all** (added 2026-08-15). Grep the repo: Codex appears
   in neither `docs/development/maintenance.md` nor this issue, and no version of it is
   pinned anywhere. The Anthropic side has a daily monitor, a filtered ledger
-  (`docs/agent-sdk-notes.md`), and auto-bump after a settling window; the OpenAI
+  (`schedules/sdk-update/agent-sdk-notes.md`), and auto-bump after a settling window; the OpenAI
   side has none of those. The boxholder's ask is explicit: **whatever we do for
   Claude Code and the Agent SDK — update, notes, cadence — we need the same for
   Codex.**

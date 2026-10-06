@@ -28,8 +28,9 @@ me before anything that affects my system or accounts.
 
 To work on the code: [`CONTRIBUTING.md`](CONTRIBUTING.md), or point your agent at `https://beebox.run/llms-dev.txt`.
 
-The [documentation map](docs/README.md) separates current guides, proposals,
-and historical records across the monorepo.
+Each package keeps its own documentation. For the main system,
+[`beebox/docs/README.md`](beebox/docs/README.md) separates current guides,
+proposals, and historical records.
 
 ## Layout
 

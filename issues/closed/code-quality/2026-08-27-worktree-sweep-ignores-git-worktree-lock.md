@@ -47,5 +47,5 @@ hand, which is the failure mode the trash-based path was built to avoid. Any
 adoption should say what unwedges it — the sweep printing the lock reason it
 refused on, at minimum.
 
-Context: the 2.1.248 entry in `docs/agent-sdk-notes.md`, alongside 2.1.218's
+Context: the 2.1.248 entry in `schedules/sdk-update/agent-sdk-notes.md`, alongside 2.1.218's
 worktree git isolation change.

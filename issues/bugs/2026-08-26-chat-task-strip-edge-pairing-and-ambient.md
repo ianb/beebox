@@ -47,7 +47,7 @@ not to swap it.
 
 Both land in the same small area, which is why they are one item. The pin
 reached 0.3.243 on 2026-08-26; `ambient` needs 0.3.247, `background_tasks_changed`
-is already available. See the 0.3.247 entry in `../../docs/agent-sdk-notes.md`.
+is already available. See the 0.3.247 entry in the [SDK ledger](../../schedules/sdk-update/agent-sdk-notes.md).
 
 Related: [chat stop and background subagents](../decisions/2026-08-25-chat-stop-and-background-subagents.md).
 
