@@ -88,8 +88,8 @@ message and bounded conversation context to TypeSafe through OpenRouter to
 choose a destination. Each wakeup pushes
 the box's git history to whatever remote you configured — and nowhere
 else. Bee Box itself sends no telemetry or analytics. The Claude Code CLI it
-runs sends Anthropic usage metrics on Claude models unless you set
-`DISABLE_TELEMETRY=1`.
+runs sends Anthropic usage metrics on Claude models unless you turn that off
+in Admin → Agent engine and model.
 
 The full accounting — every endpoint, credential, and egress point, and
 what the agent can actually do — is in [the security overview](docs/security-overview.md).

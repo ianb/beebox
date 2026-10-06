@@ -203,31 +203,49 @@ JSON.stringify([env.KEEP, env.ANTHROPIC_BASE_URL, env.ANTHROPIC_API_KEY, env.ANT
 await box.cleanup();
 ```
 
-## Third-party runs send Claude Code's telemetry nowhere
+## Claude Code telemetry: always off on third-party models, a box setting otherwise
 
 Claude Code treats a custom `ANTHROPIC_BASE_URL` as the Claude API, so its
 usage metrics would still go to Anthropic. Every run on a non-Claude model
 turns them off, together with error reports and the rest of the CLI's
 nonessential traffic. The seam adds the flags for any provider that sets an
-endpoint, so a new provider gets them too. First-party runs get none of them:
-`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` counts as set even at `0`.
+endpoint, so a new provider gets them too. A first-party run follows the box's
+`claudeCodeTelemetry`, which is on unless the owner turns it off.
 
 ```ts
 const flags = ["DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"];
-const box = await boxWith({ openrouterModels: [kimi] });
-await grantKey(box.root);
-await setSecret({ name: "glm", value: "placeholder-glm-key" });
-await grantSecret({ slug: await boxSlug(box.root), name: "glm", access: "server" });
-const flagsOf = async (model: string | null) => {
-  const additions = await providerEnvAdditions({ boxRoot: box.root, model, purpose: "test" });
-  return flags.map((f) => additions?.[f] ?? "unset").join(",");
-};
-const seen: string[] = [];
-for (const model of [kimi.id, "glm-5.3", "claude-opus-5-5", null]) seen.push(await flagsOf(model));
-JSON.stringify(seen)
-=> ["1,1,1","1,1,1","unset,unset,unset","unset,unset,unset"]
+async function flagsByModel(config: Record<string, unknown>) {
+  const box = await boxWith({ openrouterModels: [kimi], ...config });
+  await grantKey(box.root);
+  await setSecret({ name: "glm", value: "placeholder-glm-key" });
+  await grantSecret({ slug: await boxSlug(box.root), name: "glm", access: "server" });
+  const seen: string[] = [];
+  for (const model of [kimi.id, "glm-5.3", "claude-opus-5-5", null]) {
+    const additions = await providerEnvAdditions({ boxRoot: box.root, model, purpose: "test" });
+    seen.push(flags.map((f) => additions?.[f] ?? "-").join(","));
+  }
+  await box.cleanup();
+  return JSON.stringify(seen);
+}
 
-await box.cleanup();
+await flagsByModel({})
+=> ["1,1,1","1,1,1","-,-,-","-,-,-"]
+
+await flagsByModel({ claudeCodeTelemetry: "on" })
+=> ["1,1,1","1,1,1","-,-,-","-,-,-"]
+```
+
+Turned off, a first-party run gets the two telemetry flags but not
+`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`: the setting covers telemetry, and
+that variable also stops checks the owner did not ask to stop. A value the
+loader does not recognize reads as off.
+
+```ts continue
+await flagsByModel({ claudeCodeTelemetry: "off" })
+=> ["1,1,1","1,1,1","1,1,-","1,1,-"]
+
+await flagsByModel({ claudeCodeTelemetry: "maybe" })
+=> ["1,1,1","1,1,1","1,1,-","1,1,-"]
 ```
 
 `OpenRouterSetupError` and GLM's key error share one base, so every spawn

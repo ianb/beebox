@@ -1,7 +1,7 @@
 /**
  * The one seam that decides what a claude-engine run's child env needs for
- * its model's provider — first-party (nothing), GLM (Z.ai's endpoint and the
- * `glm` key), or an owner-added OpenRouter model. Every spawn path calls it:
+ * its model's provider — first-party (only the box's telemetry choice), GLM
+ * (Z.ai's endpoint and the `glm` key), or an owner-added OpenRouter model. Every spawn path calls it:
  * chat start, prewarm, thread start, batch runs, and both preflights. A
  * refusal throws {@link ProviderSetupError} before any subprocess exists, and
  * nothing here ever falls back to a subscription model — quietly changing who
@@ -10,6 +10,7 @@
 
 import { assertNever } from "../../shared/invariant.js";
 import { isThirdPartyModel, providerOf } from "../../shared/agent-models.js";
+import { loadClaudeCodeTelemetry } from "../box/config.js";
 import { glmEnvAdditions, resolveGlmKeyOrThrow } from "../glm-key.js";
 import { openRouterChatAdditions } from "./openrouter-chat.js";
 import { ProviderSetupError } from "../provider-setup-error.js";
@@ -28,8 +29,9 @@ export async function providerEnvAdditions(params: {
   env?: Record<string, string | undefined>;
 }): Promise<Record<string, string> | null> {
   const { boxRoot, model, purpose } = params;
-  if (model === null || model === undefined) return null;
-  const additions = await additionsFor({ boxRoot, model, purpose });
+  const additions = model === null || model === undefined
+    ? await firstPartyAdditions(boxRoot)
+    : await additionsFor({ boxRoot, model, purpose });
   if (additions !== null && params.env) Object.assign(params.env, additions);
   return additions;
 }
@@ -58,7 +60,8 @@ export async function liveProviderRefusal(params: { boxRoot: string; model: stri
  * as the Claude API, so usage metrics stay on unless disabled.
  * `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` also stops feature-flag fetches,
  * update and release-note checks, and feedback uploads; any value, even `0`,
- * turns it on, so first-party runs do not get it. WebFetch's domain check
+ * turns it on, so first-party runs never get it; their telemetry follows the
+ * box setting instead ({@link firstPartyAdditions}). WebFetch's domain check
  * still sends each hostname to Anthropic (`docs/security-report.md`).
  */
 const NO_ANTHROPIC_TELEMETRY = {
@@ -67,8 +70,21 @@ const NO_ANTHROPIC_TELEMETRY = {
   CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
 } as const;
 
+/**
+ * A first-party run sends Claude Code's metrics and error reports unless the
+ * box turned them off (`claudeCodeTelemetry`). Nonessential traffic stays on:
+ * the owner chose Anthropic for these runs, and the setting is about
+ * telemetry only.
+ */
+async function firstPartyAdditions(boxRoot: string): Promise<Record<string, string> | null> {
+  if ((await loadClaudeCodeTelemetry(boxRoot)) === "on") return null;
+  return { DISABLE_TELEMETRY: "1", DISABLE_ERROR_REPORTING: "1" };
+}
+
 /** Any run that points the CLI at another endpoint also gets {@link NO_ANTHROPIC_TELEMETRY}, so a new provider cannot forget it. */
 async function additionsFor(params: { boxRoot: string; model: string; purpose: string }): Promise<Record<string, string> | null> {
+  const provider = providerOf(params.model);
+  if (provider === "anthropic") return firstPartyAdditions(params.boxRoot);
   const endpoint = await endpointFor(params);
   return endpoint === null ? null : { ...endpoint, ...NO_ANTHROPIC_TELEMETRY };
 }

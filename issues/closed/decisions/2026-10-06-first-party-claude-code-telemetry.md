@@ -1,13 +1,20 @@
 ---
 title: "Decide whether first-party agent runs should turn off Claude Code's own telemetry"
-workstream: unattached
-needs: [decision]
+workstream: third-party-engine-privacy
 area: beebox
 labels: [security, providers]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-third-party-engine-privacy — checking what Claude Code sends besides model requests
+resolution: implemented
 ---
+
+> **Resolved 2026-10-06:** the developer asked for a per-box setting, on by
+> default if the telemetry content looked acceptable. It does: Anthropic
+> documents no content, and the 2.1.289 binary sends event names, ids, model,
+> version, platform, and skill/MCP names. `claudeCodeTelemetry` in
+> `_config/box.json`, toggled in Admin → Agent engine and model; off sets
+> `DISABLE_TELEMETRY` and `DISABLE_ERROR_REPORTING` for first-party runs.
 
 Beebox's own code sends no telemetry. The Claude Code subprocess that runs
 every agent turn does: usage metrics to Anthropic and Anthropic's logging
