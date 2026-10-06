@@ -538,3 +538,7 @@ existing way to give a directory a card.
 Its set is an explicit list of refs that the agent chooses. It is ephemeral and
 has no address. It shares the rendering half, a per-type item preview, which is
 the unbuilt tile registry.
+
+## Next-action note (2026-10-06)
+
+Checked as a possible duplicate: it is not. Neighbours are adjacent, not the same scope: the plugins design (blocked on this one), the chat stack of referenced things (an ephemeral list, which this issue already calls a neighbour), and per-link trails. Only the todo instance of a collection landed (2026-09-20); non-todo collections, Markdown embedding, indexing, and box-authored collections remain unbuilt here.

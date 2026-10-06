@@ -50,3 +50,7 @@ dev markdown page with a relative image — e.g.
 broken-image icons. While there, Cmd-P in `/main/dev/docs/` should open the
 quick-open palette again (the sibling issue).
 
+
+## Next-action note (2026-10-06)
+
+Reconfirmed: fixed by 30400a662 (removed the /dev sandbox CSP), confirmed by the boxholder 2026-08-24 (81e0a5ba0). Code still holds: `workstreams-app/src/router/server/docs.ts` serveDev sets no Content-Security-Policy, pinned by `workstreams-app/test/router/server/docs.test.ts:108`. The "Awaiting manual testing" banner above is stale.
