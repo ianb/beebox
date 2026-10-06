@@ -1,13 +1,16 @@
 ---
 title: "The test graph build fails whole on three doctests, so selection fails open to every test"
-workstream: unattached
+workstream: test-suite-health
 area: monorepo
 labels: [tests, test-selection]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-test-suite-health — running the selection CLI on a bin/ change
 priority: important
+resolution: implemented
 ---
+
+**Closed 2026-10-06 (test-suite-health, `7012f882f`).** The loader and the graph diverged because tap's loader (`loadDoctestBody`) retries a rejected example's statement/expression split with an esbuild oracle, and `generateTestSource` returned the first-guess split. Both now go through one `transformTestModule`. `bin/test-graph.ts --no-cache`: 978 graphed, 0 unresolved; this branch's diff selects 139 files instead of 973. Not changed: a doctest that fails even the oracle still fails the whole graph build, which fails open to running every test. That direction is safe and visible (a selected run of every file), so it stays as is.
 
 `node --import tsx bin/test-graph.ts --no-cache` on the current tree prints
 `entrypoints: 0 graphed, 978 unresolved`. esbuild fails the whole build because
