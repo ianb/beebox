@@ -1,6 +1,6 @@
 ---
 title: "Codex sessions report \"hook failed, exit code 1\" with no output the agent can see"
-workstream: unattached
+workstream: codex-plugin-hooks
 area: dev-tooling
 labels: [codex]
 filed-by: agent
@@ -17,6 +17,28 @@ such as a validation failure, in a form Codex drops.
 
 This issue is about dev sessions. Also check whether box sessions (box agents
 running on Codex, with the box's own validation hooks) have the same problem.
+
+## Workstream update (2026-10-05)
+
+The source plugin already had the `.beebox` guard from commit `98523aef7` on
+main. The globally installed plugin still held the older August snapshot.
+Removing and adding `beebox-codex@beebox` refreshed the cache from the
+registered main checkout; the cached `run-bbx.sh` then matched main. Future
+plugin source changes need the same refresh after landing:
+`codex plugin remove beebox-codex@beebox`, then
+`codex plugin add beebox-codex@beebox`. Do not repoint the global marketplace
+to a worktree. Box-generated `.codex/hooks.json` also calls the copy of this
+script in that box's installed `node_modules/beebox`; those boxes need a
+package update to receive the readable-error change. A trusted box hook can
+therefore run alongside the global plugin hook, yielding duplicate validation
+feedback after both copies update. Resolve that duplication separately.
+
+This workstream also makes the Codex plugin runner translate nonzero box
+validation results into `PostToolUse` JSON `additionalContext` with exit 0.
+The shared CLI's exit-2/stderr contract remains for Claude. Codex's current
+PostToolUse implementation otherwise discards that stderr, as observed in
+openai/codex#46455. Worktree lint-hook trust and apply_patch payload handling
+remain separate work under fix direction 3.
 
 ## Root cause (2026-10-05)
 
