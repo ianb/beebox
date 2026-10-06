@@ -16,7 +16,8 @@ import { parseViewUrl, viewStateSearchValue } from "../lib/view-url";
 import { legacyBrowseTarget } from "../lib/browse-card-state";
 import { legacyAdminRedirect, legacyCaptureRedirect, legacyCardRedirect, legacySystemCardRedirect, systemCardShellSearch, withoutShellParams } from "../lib/system-card-navigation";
 import { trpcClient } from "../lib/trpc/client";
-import { QuickChatPage } from "../pages/quick-chat/QuickChatPage";
+import { boxScreenRouteOptions } from "../pages/box-screen/route";
+import { BoxScreenPage } from "../pages/box-screen/BoxScreenPage";
 import { ChatPage } from "../pages/ChatPage";
 import { chatSearchSchema } from "../lib/chat-route-search";
 import { PublicationsPage } from "../pages/PublicationsPage";
@@ -216,7 +217,7 @@ const adminRoute = createRoute({
     reconnect: z.string().optional(),
   }),
 });
-const publicationsRoute = createRoute({ staticData: { title: "Publications" }, getParentRoute: () => productLayoutRoute, path: "/publications", component: PublicationsPage }); const cardRoute = createRoute({
+const publicationsRoute = createRoute({ staticData: { title: "Publications", standalone: true }, getParentRoute: () => productLayoutRoute, path: "/publications", component: PublicationsPage }); const cardRoute = createRoute({
   staticData: { title: null },
   getParentRoute: () => productLayoutRoute,
   path: "/card/$",
@@ -306,14 +307,15 @@ const boxCatchAllRoute = createRoute({
   },
 });
 
-const quickChatRoute = createRoute({ staticData: { title: "Quick chat" }, getParentRoute: () => boxLayoutRoute, path: "/quick-chat", component: QuickChatPage });
+const boxScreenRoute = createRoute({ ...boxScreenRouteOptions, getParentRoute: () => productLayoutRoute, component: BoxScreenPage });
+const quickChatRoute = createRoute({ staticData: { title: null }, getParentRoute: () => productLayoutRoute, path: "/quick-chat", beforeLoad: ({ params }) => { throw redirect({ to: href(`/${params.boxSlug}/box`), replace: true }); } });
 // --- Route tree ---
 
 const routeTree = rootRoute.addChildren([
   indexRoute, loginRoute, setupRoute, boxLayoutRoute.addChildren([
-    quickChatRoute,
     productLayoutRoute.addChildren([
     boxIndexRoute,
+    boxScreenRoute, quickChatRoute,
     dashboardRoute,
     inventoryRoute,
     chatRoute,
@@ -380,6 +382,8 @@ declare module "@tanstack/react-router" {
    */
   interface StaticDataRouteOption {
     title: string | null;
+    /** The page renders without the conversation shell: no chat is constructed or loaded (`ProductLayout`). */
+    standalone?: true;
   }
 }
 function nativeComposerFrom(search: object): unknown {

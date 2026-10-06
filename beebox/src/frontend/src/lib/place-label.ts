@@ -30,6 +30,7 @@ export interface Place {
  * chrome context in C2.
  */
 const STATIC_LABELS: Record<string, string> = {
+  box: "Box",
   chat: "Chat",
   landmarks: "All landmarks",
   dashboard: "Dashboard",
