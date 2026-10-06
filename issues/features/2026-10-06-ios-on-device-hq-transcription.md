@@ -10,6 +10,8 @@ discovered-in: main — boxholder asked whether Apple has a batch, higher-qualit
 needs: [manual-testing]
 ---
 
+> **⏳ Awaiting manual testing** — fix landed in `1917514c9`; run the eight real-iPhone checks under Manual testing. Only the developer clears this.
+
 When HQ dictation is on, the iOS app records the audio, uploads it to the box
 (`POST /api/chat/transcribe-audio`, `beebox/docs/mobile-contract.md` §5.2), and
 waits for a server-side transcription before sending
