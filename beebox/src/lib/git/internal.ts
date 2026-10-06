@@ -163,8 +163,16 @@ class GitBatchFailedError extends Error {
   }
 }
 
-/** Run a git command that takes its work list on stdin, and collect stdout. */
-function gitWithInput(options: { cwd: string; args: string[]; input: string }): Promise<string> {
+/**
+ * Run a git command that takes its work list on stdin, and collect stdout.
+ * `okExitCodes` names non-zero exits that still mean success.
+ */
+export function gitWithInput(options: {
+  cwd: string;
+  args: string[];
+  input: string;
+  okExitCodes?: readonly number[];
+}): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn("git", options.args, { cwd: options.cwd, stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
@@ -179,7 +187,8 @@ function gitWithInput(options: { cwd: string; args: string[]; input: string }): 
     });
     child.on("error", reject);
     child.on("close", (code) => {
-      if (code === 0) resolve(stdout);
+      const ok = code === 0 || (code !== null && options.okExitCodes?.includes(code) === true);
+      if (ok) resolve(stdout);
       else reject(new GitBatchFailedError({ args: options.args, code, stderr }));
     });
     child.stdin.end(options.input);

@@ -3,7 +3,7 @@
  * shells), validation, git-clean enforcement, and result recording.
  */
 
-import { stageAll, commit, withBoxGitLock } from "../../../lib/git/core.js";
+import { stageAll, commit, withBoxGitLock } from "../../../lib/git/core/operations.js";
 import { fmt } from "../../../lib/format.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import type { CommandContext } from "../../command-runner.js";

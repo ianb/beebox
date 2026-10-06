@@ -6,7 +6,7 @@ that run made. This exercises both ends against a real repository, including
 the retired `Workflow:` spelling a box's older commits still carry.
 
 ```ts setup
-import { getLogPaginated, getTrailerFacets, stageAndCommitPaths } from "../../src/lib/git/core.js";
+import { getLogPaginated, getTrailerFacets, stageAndCommitPaths } from "../../src/lib/git/core/operations.js";
 import { buildGreps } from "../../src/webapp/trpc/routers/history.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```

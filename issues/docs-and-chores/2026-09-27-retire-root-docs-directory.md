@@ -55,3 +55,7 @@ the format the run script parses.
 ## Next-action note (2026-10-06)
 
 A `do-it` request was set. Changed to `discuss`: it still holds, but it is about 30 files of mechanical path edits plus three deletions, beyond an inline fix. The one breakage doc-check cannot see is `schedules/sdk-update/run.ts` (its `LEDGER` path constant). It follows the doc-move procedure in `beebox/docs/README.md`. Ready to hand to a small session if wanted.
+
+## Decision (2026-10-06)
+
+Approved. Run by an Opus session because the developer wants each moved document to make sense in its new location, not just a mechanical path change. Assigned to the `retire-root-docs` workstream.

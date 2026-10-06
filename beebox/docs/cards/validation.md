@@ -17,7 +17,7 @@ Engine-spawned agent runs (wakeup, procedures, chat) get an in-process SDK
 callback instead of the settings-file hook: `cardValidatorHook`
 (`src/core/sdk-hooks.ts`) matches `PostToolUse` of `Write`/`Edit`/`MultiEdit`
 and, by file type, compiles a view file, rejects a trick script outside
-`tricks/scripts/<name>/`, lints a `.card` (`src/core/card-lint/core.ts`), warns on
+`tricks/scripts/<name>/`, lints a `.card` (`src/core/card-lint/core/lint-cards.ts`), warns on
 a connector-owned markdown file, or runs markdownlint on built-in markdown.
 Every result is injected as `additionalContext`; none blocks the edit.
 

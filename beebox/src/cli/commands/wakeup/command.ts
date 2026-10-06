@@ -25,7 +25,7 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
-import { getStatus, pushToRemote } from "../../../lib/git/core.js";
+import { getStatus, pushToRemote } from "../../../lib/git/core/operations.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { runOnWakeupScripts } from "../../tick-utils.js";
 import { runHousekeeping } from "./housekeeping.js";

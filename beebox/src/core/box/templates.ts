@@ -93,39 +93,6 @@ Add conventions this box's views share (layout, shared components, which card
 types have views) here.
 `;
 
-/**
- * The publications guide. Every publishing rule (folder layout, notes scopes,
- * what stays out of a release, member approval) lives in the package doc
- * `publishing.md` (`docs/box/publishing.md`); this box's own lessons live in
- * the box-owned `NOTES.md` beside this guide.
- */
-const PUBLICATIONS_CLAUDE_MD = `# Publication Sites
-
-Before creating, preparing, or changing a site, read \`${BOX_PACKAGE_DOCS}/publishing.md\`.
-
-This box's authoring notes for its sites are in \`NOTES.md\` in this directory.
-`;
-
-export const PUBLICATIONS_NOTES = `# Publication Notes
-
-Private, box-owned notes for authoring the sites in this directory. These notes
-are never part of a published release. Keep the headings and add only durable
-lessons that help future work.
-
-## All sites
-
-Shared defaults and reusable lessons for every publication.
-
-## Site: <name>
-
-Decisions that apply only to one named publication.
-
-## Path: <site>/<relative-path>
-
-Notes for one part of a site. For example: \`field-guide/site/styles/\` in static
-mode or \`field-guide/project/src/components/\` in project mode.
-`;
-
 export const FEEDBACK_CLAUDE_MD = `# Feedback about the Bee Box system
 
 Use this directory only for observations about Bee Box itself: its commands,
@@ -184,7 +151,6 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
   // through a shared entry.
   { name: "schemas-guide-v2", content: SCHEMAS_CLAUDE_MD_V2 },
   { name: "views-guide-v2", content: VIEWS_CLAUDE_MD },
-  { name: "publications-guide-v1", content: PUBLICATIONS_CLAUDE_MD },
   { name: "agent-feedback-guide", content: FEEDBACK_CLAUDE_MD },
   { name: "tricks-guide-v2", content: TRICKS_CLAUDE_MD_V2 },
   // The root briefing seed, installed by `installBriefing`. Unlike the guides

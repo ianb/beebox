@@ -18,9 +18,9 @@
  * every other broken ref (a stale path must not block a commit).
  */
 
-import type { LintIssue } from "../../exports/cards.js";
-import { brokenRefReason, resolveRefExists } from "../ref-exists.js";
-import { isRecord } from "../card-io.js";
+import type { LintIssue } from "../../../exports/cards.js";
+import { brokenRefReason, resolveRefExists } from "../../ref-exists.js";
+import { isRecord } from "../../card-io.js";
 
 export interface PathFieldLintInput {
   /** Absolute path of the card being linted. */

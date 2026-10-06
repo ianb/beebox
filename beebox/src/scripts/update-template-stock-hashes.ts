@@ -44,7 +44,6 @@ import {
 const LEDGER_PATH = path.join(
   import.meta.dirname,
   "..",
-  "src",
   "core",
   "template-stock-hashes.ts",
 );

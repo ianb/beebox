@@ -6,7 +6,7 @@ that stamps state and ensures `CLAUDE.md` per directory.
 ```ts setup
 import { finalize } from "../../../src/core/maps/finalize/core.js";
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
-import { getHead } from "../../../src/lib/git/core.js";
+import { getHead } from "../../../src/lib/git/core/operations.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { lstat, readlink } from "node:fs/promises";
 import { join } from "node:path";

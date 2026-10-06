@@ -20,7 +20,7 @@ import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile, isViewSourceFile }
 import { lintViewFile } from "../../webapp/views/compiler/compile.js";
 import { lintViewRefs } from "../../core/views/refs.js";
 import { lintViewMarkdown } from "../../core/views/markdown-check/core.js";
-import { lintCardsDispatch } from "../../core/card-lint/core.js";
+import { lintCardsDispatch } from "../../core/card-lint/core/lint-cards.js";
 import { lintClaudeMdFile } from "../../core/claude-md-lint.js";
 import { isAgentInstructionsFile } from "../../core/agent-instruction-files.js";
 import { buildLoadContext } from "../../core/load-context.js";

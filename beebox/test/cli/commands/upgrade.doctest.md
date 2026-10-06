@@ -19,7 +19,7 @@ import { execSync } from "node:child_process";
 import { runUpgrade, UpgradeStepFailedError, DirtyWorkingTreeError } from "../../../src/cli/commands/upgrade.js";
 import { BoxShapeError } from "../../../src/lib/box-shape.js";
 import { acquireBoxWork, boxMaintenanceStatus, boxWorkEnvironment, withoutBoxWork } from "../../../src/lib/box-maintenance.js";
-import { getStatus, getHead, getLog } from "../../../src/lib/git/core.js";
+import { getStatus, getHead, getLog } from "../../../src/lib/git/core/operations.js";
 
 async function waitForClosed(boxRoot) {
   for (let attempt = 0; attempt < 100; attempt++) {

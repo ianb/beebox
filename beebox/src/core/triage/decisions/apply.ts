@@ -6,7 +6,7 @@ import { simpleGit } from "simple-git";
 import { withFileLock } from "../../../lib/file-lock.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
-import { withBoxGitLock, stageAndCommitPaths } from "../../../lib/git/core.js";
+import { withBoxGitLock, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
 import { errorMessage, errnoCode } from "../../../shared/error-guards.js";

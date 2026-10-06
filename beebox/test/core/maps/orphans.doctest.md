@@ -9,7 +9,7 @@ the state entry.
 ```ts setup
 import { findOrphanMaps, pruneOrphanMaps } from "../../../src/core/maps/orphans.js";
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
-import { getHead } from "../../../src/lib/git/core.js";
+import { getHead } from "../../../src/lib/git/core/operations.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { lstat, symlink } from "node:fs/promises";
 import { join } from "node:path";

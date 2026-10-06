@@ -20,7 +20,7 @@ import { publicationUrl as buildPublicationUrl, samePublicationAudience } from "
 type Publication = RouterOutput["publications"]["list"]["sites"][number];
 type SharedHost = NonNullable<RouterOutput["publications"]["list"]["sharedHost"]>;
 export type Candidate = NonNullable<Publication["pending"]>;
-type PreviewResult = RouterOutput["publications"]["previewFile"];
+type PreviewResult = RouterOutput["publications"]["releaseFile"];
 type AudienceSummary = NonNullable<Publication["pending"]>["requestedScope"] | NonNullable<Publication["requested"]> | NonNullable<Publication["approved"]>;
 type RemoteUnavailable = Extract<Publication["remoteStatus"], { status: "unavailable" }>;
 type PublicationAction = "prepare" | "approve" | "enable" | "disable";
@@ -232,7 +232,7 @@ function CandidateDetails({ candidate, pubId }: { candidate: Candidate; pubId: s
 }
 
 function SelectedFilePreview({ path, pubId, candidate }: { path: string; pubId: string; candidate: Candidate }) {
-  const filePreview = trpc.publications.previewFile.useQuery({ pubId, expectedRevision: candidate.revision, path });
+  const filePreview = trpc.publications.releaseFile.useQuery({ pubId, releaseId: candidate.releaseId, path });
   return <FilePreview path={path} error={filePreview.error?.message ?? null} loading={filePreview.isLoading} result={filePreview.data ?? undefined} />;
 }
 

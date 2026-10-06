@@ -11,7 +11,7 @@ import { Command } from "commander";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/structure/core.js";
 import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
 import * as path from "node:path";
-import { stageAll, commit, initRepo, isRepo, repoRootOf } from "../../lib/git/core.js";
+import { stageAll, commit, initRepo, isRepo, repoRootOf } from "../../lib/git/core/operations.js";
 import { fileExists } from "../../lib/file-exists.js";
 import { generateDocs } from "../../core/docs-gen/generate/core.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";

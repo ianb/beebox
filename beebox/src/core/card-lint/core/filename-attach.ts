@@ -11,9 +11,9 @@
  */
 
 import * as path from "node:path";
-import type { LintIssue } from "../../exports/cards.js";
-import { attachDirFor, isAttachRef } from "../../shared/attach-path.js";
-import { isRecord } from "../card-io.js";
+import type { LintIssue } from "../../../exports/cards.js";
+import { attachDirFor, isAttachRef } from "../../../shared/attach-path.js";
+import { isRecord } from "../../card-io.js";
 
 const MEDIA_TYPES: ReadonlySet<string> = new Set(["image", "audio", "file", "pdf"]);
 

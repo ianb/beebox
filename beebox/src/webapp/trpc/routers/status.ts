@@ -8,7 +8,7 @@ import { generateContext } from "../../context.js";
 import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";
 import { parseCardName } from "../../../lib/paths/core.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
-import { getLog } from "../../../lib/git/core.js";
+import { getLog } from "../../../lib/git/core/operations.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { containWithinBox } from "../../../lib/box-containment.js";
 import { isInBoxNamespace } from "../../../shared/ref-path/box-namespace.js";

@@ -12,7 +12,7 @@ one-sentence text.
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { setDerivedContains } from "../../../src/core/search/contains-update.js";
-import { lintCardsDispatch } from "../../../src/core/card-lint/core.js";
+import { lintCardsDispatch } from "../../../src/core/card-lint/core/lint-cards.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";
 import { computeContainsBasis } from "../../../src/core/search/contains-state.js";
 import { GLOBAL_CARD_FIELDS } from "../../../src/cards/schema.js";
