@@ -4,7 +4,7 @@ status: partial
 workstream: jev-triage
 issues:
   - ../../../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md
-  - ../../../issues/code-quality/2026-09-28-passing-tests-start-chat-warmup-after-tempdir-removal.md
+  - ../../../issues/closed/code-quality/2026-09-28-passing-tests-start-chat-warmup-after-tempdir-removal.md
 ---
 # Gmail admission and email preparation
 
