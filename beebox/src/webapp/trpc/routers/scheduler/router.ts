@@ -13,7 +13,7 @@ import {
 } from "../../../../schemas/scheduled-script/schema.js";
 import { cardFields, parseCardText } from "../../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../../schemas.js";
-import { stageAndCommitPaths } from "../../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../../lib/git/core/operations.js";
 import { listSchedules, type ScheduleEntry } from "./schedules.js";
 import { checkTriggerPreconditions, runScheduledScript } from "./run.js";
 import { withCardLock } from "../../../../lib/card-lock.js";

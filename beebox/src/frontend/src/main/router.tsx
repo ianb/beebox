@@ -20,7 +20,6 @@ import { boxScreenRouteOptions } from "../pages/box-screen/route";
 import { BoxScreenPage } from "../pages/box-screen/BoxScreenPage";
 import { ChatPage } from "../pages/ChatPage";
 import { chatSearchSchema } from "../lib/chat-route-search";
-import { PublicationsPage } from "../pages/PublicationsPage";
 import { BoxRedirect, BoxValidationLayout, DevHarnessLayout, ProductLayout, RootLayout } from "./app-shell";
 import { RouteError } from "../components/RouteError";
 import { LoginPage } from "../pages/login/LoginPage";
@@ -217,7 +216,7 @@ const adminRoute = createRoute({
     reconnect: z.string().optional(),
   }),
 });
-const publicationsRoute = createRoute({ staticData: { title: "Publications", standalone: true }, getParentRoute: () => productLayoutRoute, path: "/publications", component: PublicationsPage }); const cardRoute = createRoute({
+const cardRoute = createRoute({
   staticData: { title: null },
   getParentRoute: () => productLayoutRoute,
   path: "/card/$",
@@ -326,7 +325,6 @@ const routeTree = rootRoute.addChildren([
     captureRoute,
     settingsRoute,
     adminRoute,
-    publicationsRoute,
     cardRoute,
     viewRoute,
     landmarksRoute,

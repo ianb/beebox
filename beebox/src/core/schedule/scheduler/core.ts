@@ -11,7 +11,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_MARKER } from "../../../lib/paths/core.js";
 import { runTick, type TickResult } from "../../../cli/commands/tick.js";
-import { getStatus, isRepo } from "../../../lib/git/core.js";
+import { getStatus, isRepo } from "../../../lib/git/core/operations.js";
 import { drainBoxGitLocks, GIT_DRAIN_MS } from "../../../lib/git-lock.js";
 import { touchSchedulerHeartbeat } from "../health-box.js";
 import { measureBoxGrowthIfDue } from "../../box-growth/health.js";

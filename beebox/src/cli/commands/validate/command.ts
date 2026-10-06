@@ -23,7 +23,7 @@ import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../
 import { collectViewRefWarnings } from "../../../core/views/refs.js";
 import { lintAttachLayout, type AttachLintError } from "../../../lib/attach-lint.js";
 import { lintProminenceBudget, type ProminenceLintWarning } from "../../../core/lint-prominence/core.js";
-import { lintCardsDispatch } from "../../../core/card-lint/core.js";
+import { lintCardsDispatch } from "../../../core/card-lint/core/lint-cards.js";
 import { lintAllClaudeMd } from "../../../core/claude-md-lint.js";
 import { buildLoadContext } from "../../../core/load-context.js";
 import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../../core/external/url-check/core.js";

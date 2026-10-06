@@ -22,6 +22,7 @@ import * as path from "node:path";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { errorMessage } from "../../shared/error-guards.js";
 import { SURFACE } from "../../cli/surface-data.js";
+import { recordAutomatedTemplateRewrite } from "../../core/template-update.js";
 
 /**
  * The verbs that moved, derived from the surface table rather than listed
@@ -171,6 +172,7 @@ async function main(): Promise<number> {
       continue;
     }
     await writeFile(card, plan.next, "utf8");
+    await recordAutomatedTemplateRewrite({ boxRoot, relPath: path.relative(boxRoot, card), before: text, after: plan.next });
     process.stdout.write(`[schedule-engine-verbs] ${name}: ${plan.from} -> ${plan.to}\n`);
   }
 

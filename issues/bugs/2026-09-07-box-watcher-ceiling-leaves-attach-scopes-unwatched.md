@@ -49,3 +49,5 @@ Directions:
   event covers the chat case without a watch per scope.
 - Either way, the ceiling breach should be visible in `bbx health` /
   Admin, not only a stderr line.
+
+**2026-10-06:** the file watcher no longer watches `node_modules/` directories at any depth, so a project's dependency tree no longer counts toward the ceiling.

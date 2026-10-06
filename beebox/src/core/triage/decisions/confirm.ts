@@ -9,7 +9,7 @@ import { parseRef } from "../../../shared/ref-path/core.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { withFileLock } from "../../../lib/file-lock.js";
 import { errnoCode } from "../../../shared/error-guards.js";
-import { withBoxGitLock, stageAndCommitPaths } from "../../../lib/git/core.js";
+import { withBoxGitLock, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { listChatHusks } from "../../chat/husk-read.js";
 import { loadSessionHistory } from "../../chat/session/load-history.js";
 import { isRealUserMessage } from "../../../cli/lib/session.js";

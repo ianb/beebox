@@ -3,8 +3,8 @@
 // deliberate choice, and several restate code-style.md. Silently disabling a
 // rule to make a new preset land (or to dodge a wave of violations) is exactly
 // how this config ended up lying about our style for months. If a rule is
-// genuinely wrong, raise it — don't quietly switch it off. Existing debt is
-// tracked and burned down rule-by-rule; see ../docs/reports/eslint-rule-suppression-audit-2026-05-30.md.
+// genuinely wrong, raise it — don't quietly switch it off. code-style.md
+// ("Lint rule suppression") has the rules and that history.
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 
 // Session creation has one owner. Four call sites used to reach
@@ -83,11 +83,10 @@ export default [
       "custom/jsx-classname-required": "off",
     },
   },
-  // NOTE: The other 16 rules in this block were turned off when
-  // personal-vibe-check was integrated (1efb334c, 2026-02-14), silently
-  // disabling a chunk of our own documented style. They are now re-enabled;
-  // existing debt is burned down rule-by-rule. See
-  // ../docs/reports/eslint-rule-suppression-audit-2026-05-30.md.
+  // NOTE: The block above once also turned off 16 more rules, added when
+  // personal-vibe-check was integrated (2026-02-14), silently disabling a
+  // chunk of our own documented style. A 2026-05-30 audit re-enabled them and
+  // burned the debt to zero; see code-style.md ("Lint rule suppression").
   {
     // return-await (personal-vibe-check, enabled repo-wide) is off for route
     // handlers specifically: 30 of ~35 backend hits are Fastify

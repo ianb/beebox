@@ -125,6 +125,35 @@ bus.close();
 await box.cleanup();
 ```
 
+## Dependency trees and publication build output are not watched
+
+A publication project's `dist/` is build output and `node_modules/` is a
+dependency tree; the watcher never descends into either. `project/src/` is
+ordinary box content and stays watched.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root, { pollInterval: 60_000 });
+const project = "_content/trips/Site.attach/project";
+await box.write(`${project}/dist/page.md`, "# Built\n");
+await box.write(`${project}/dist/stray.note.card`, "---\n---\n");
+await box.write(`${project}/node_modules/pkg/README.md`, "# pkg\n");
+await box.write(`${project}/src/readme.md`, "# Source\n");
+
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
+await watcher.ready;
+const dirs = watcher.watchedDirs();
+
+[`${project}/src`, `${project}/dist`, `${project}/node_modules`, `${project}/node_modules/pkg`].map((d) => dirs.includes(d))
+=> [ true, false, false, false ]
+```
+
+```ts cleanup
+await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
 ## An authored-code root outside the content box emits its package path
 
 Package-layout boxes serve cards from `content/`, but their authored views live

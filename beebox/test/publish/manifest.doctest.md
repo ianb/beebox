@@ -1,6 +1,6 @@
 # Publication ids
 
-A pub-id names one publication across its `publication.json` definition, its
+A pub-id names one publication across its `publication` card, its
 R2 keys under `pubs/<pub-id>/`, and the Worker routes. For the `secret` tier the
 id is the capability token, so its shape and entropy are part of the contract.
 

@@ -14,7 +14,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stageAndCommitPaths } from "../../src/lib/git/core.js";
+import { stageAndCommitPaths } from "../../src/lib/git/core/operations.js";
 import { errorMessage } from "../../src/shared/error-guards.js";
 import { invariant } from "../../src/shared/invariant.js";
 

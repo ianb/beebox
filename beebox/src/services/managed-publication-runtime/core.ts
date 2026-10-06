@@ -2,8 +2,8 @@ import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { PrepareResult } from "../../publish/prepare/core.js";
-import { preparePublication } from "../../publish/prepare/core.js";
+import type { PrepareResult } from "../../publish/prepare/core/prepare-publication.js";
+import { preparePublication } from "../../publish/prepare/core/prepare-publication.js";
 import type {
   CloudflarePublishBinding,
   CloudflarePublishBoxHost,
@@ -30,7 +30,7 @@ import type { PublishRemoteStore, R2PublishStoreConfig } from "../publish-remote
 import { createR2PublishStore } from "../publish-remote-store.js";
 
 export interface ManagedPublicationRuntime {
-  prepare(args: { boxRoot: string; name: string }, deps: { ownerEmail: string | null }): Promise<PrepareResult>;
+  prepare(args: { boxRoot: string; card: string }, deps: { ownerEmail: string | null }): Promise<PrepareResult>;
   resolveCredential(args: Parameters<typeof resolveCloudflarePublishCredential>[0]): ReturnType<typeof resolveCloudflarePublishCredential>;
   getBinding: typeof getCloudflarePublishBinding;
   reserveBinding(args: Parameters<typeof reserveCloudflarePublishBinding>[0]): Promise<CloudflarePublishBinding>;

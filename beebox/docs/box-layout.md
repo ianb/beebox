@@ -75,7 +75,6 @@ says which the engine writes, which the box owns, and when each is refreshed.
 ├── src/
 │   ├── schemas/                    box-local card-type definitions
 │   ├── views/                      custom view definitions
-│   ├── publications/               box-authored static publication sources + private notes
 │   └── tricks/                     agent-authored scripts (keeps its own nested package.json)
 │                                                       ── box namespace (underscore) ──
 ├── _content/                      ONLY user content — the layout below
@@ -194,7 +193,7 @@ user content.
 
 | Directory | Purpose |
 |-----------|---------|
-| `_publish/` | Staging area for content exported out of the box: the public-site exporter (`site/box-export.ts` in the monorepo) reads a staged card graph from `_publish/public-site/`. Server-managed publications do not use it; their sources live in `src/publications/<name>/`. |
+| `_publish/` | Staging area for content exported out of the box: the public-site exporter (`site/box-export.ts` in the monorepo) reads a staged card graph from `_publish/public-site/`. Server-managed publications do not use it: each is a `publication` card whose source files live in the card's attach folder (`<Name>.attach/static/` or `<Name>.attach/project/`). |
 
 ## `_tmp/` — scratch
 
@@ -253,13 +252,12 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 |------|---------|
 | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own CLAUDE.md, which points at the [schema-authoring doc](box/schemas.md). |
 | `src/views/` | Custom view definitions (rendering customization). |
-| `src/publications/` | Agent-authored static site files and site-local frontend projects. Read `node_modules/beebox/box-docs/publishing.md` before publishing; shared notes stay private here. |
 | `src/tricks/scripts/` | Agent-authored scripts. The agent can write small helpers here. |
 | `src/tricks/lib/` | Shared helpers used by `src/tricks/scripts/`. |
 
 ## What's *not* in a box
 
-- **No Bee Box application/server code.** A box stores state and config and may contain authored publication source under `src/publications/`; those site projects build to static files and never run inside the Bee Box server.
+- **No Bee Box application/server code.** A box stores state and config and may contain authored publication source in a `publication` card's attach folder; those site projects build to static files and never run inside the Bee Box server.
 - **No global secrets file inside a box.** Connector credentials live in the machine-level secret store (`docs/secrets.md`), outside every box tree, with a per-box grant deciding who may resolve what; secrets do not commute between boxes without an explicit grant. A handful of not-yet-migrated connectors still keep a box-local `_config/connectors/*.secret.json`.
 - **No cross-box references.** Boxes are self-contained — one box never reads from another's filesystem.
 

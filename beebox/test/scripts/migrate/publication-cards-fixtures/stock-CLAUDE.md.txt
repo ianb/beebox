@@ -1,0 +1,5 @@
+# Publication Sites
+
+Before creating, preparing, or changing a site, read `node_modules/beebox/box-docs/publishing.md`.
+
+This box's authoring notes for its sites are in `NOTES.md` in this directory.

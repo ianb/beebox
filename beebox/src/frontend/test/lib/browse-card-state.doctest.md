@@ -145,3 +145,24 @@ await legacyBrowseTarget(
 )
 => throws BrowseLocationError: Browse location does not exist: _content/gone-directory
 ```
+
+A legacy Browse path without `_content/` resolves beneath `_content/` when that
+location exists:
+
+```ts
+const legacy = { path: "projects/Plan.doc.card", viewer: null, params: {}, viewState: null };
+const attempted = [];
+const redirected = await legacyBrowseTarget(legacy, { lookupKind: async (path) => { attempted.push(path); return "file"; }, missingKind: "file" });
+JSON.stringify({ attempted, state: redirected.viewState })
+=> {"attempted":["_content/projects/Plan.doc.card"],"state":{"directory":"_content/projects","detail":{"path":"_content/projects/Plan.doc.card","viewer":null,"params":{},"viewState":null}}}
+```
+
+When the `_content/` location is missing, legacy file navigation retains that
+missing detail as the normal Browse behavior does:
+
+```ts
+const legacy = { path: "projects/Plan.doc.card", viewer: null, params: {}, viewState: null };
+const missing = await legacyBrowseTarget(legacy, { lookupKind: async () => "missing", missingKind: "file" });
+missing.viewState.detail.path
+=> _content/projects/Plan.doc.card
+```

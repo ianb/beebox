@@ -38,12 +38,11 @@ import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
-import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { renderFrontmatterBlock, splitCardContent } from "../exports/cards.js";
+import { renderFrontmatterBlock } from "../exports/cards.js";
 import { errnoCode } from "../shared/error-guards.js";
-import { isRecord } from "./card-io.js";
 import { GUIDANCE_SURFACES, guidancePathPattern } from "./box/guidance-surfaces.js";
+import { mergeWithoutConflict, parseCard } from "./template-merge.js";
 
 const VERSIONS_FILE = "_config/template-versions.json";
 /** Where a parked update is mirrored, box-relative. */
@@ -57,7 +56,7 @@ export const TEMPLATE_UPDATES_DIR = "_config/_template-updates";
  * unread (issues/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
  */
 export const PARKED_TEMPLATE_RESOLUTION =
-  `Accept one by copying ${TEMPLATE_UPDATES_DIR}/<path> over <path>, or discard the parked copy.`;
+  "Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.";
 
 /** The parked mirror's box-relative path for an original box-relative path. */
 export function parkedUpdatePath(relPath: string): string {
@@ -116,8 +115,12 @@ const versionsFileSchema = z.record(
   z.string(),
   z.object({
     /** sha256 of the (normalized) template content as we last installed it. */
-    sha256: z.string(),
-    "installed-at": z.string(),
+    sha256: z.string().optional(),
+    "installed-at": z.string().optional(),
+    /** Exact upstream bytes, available for installations made after snapshot tracking began. */
+    stock: z.string().optional(),
+    /** Hash of the parked upstream version, before an agent resolves it. */
+    pending: z.string().optional(),
   }),
 );
 type VersionsFile = z.infer<typeof versionsFileSchema>;
@@ -174,17 +177,8 @@ export interface InstallResult {
   writtenAt?: string;
 }
 
-function sha256(s: string): string {
+export function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
-}
-
-/** Parse a card's frontmatter into an object + body, or null if it isn't a card. */
-function parseCard(content: string): { fm: Record<string, unknown>; body: string } | null {
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return null;
-  const parsed: unknown = parseYaml(split.frontmatterText);
-  if (!isRecord(parsed)) return null;
-  return { fm: parsed, body: split.body };
 }
 
 function serializeCard(fm: Record<string, unknown>, body: string): string {
@@ -197,7 +191,7 @@ function serializeCard(fm: Record<string, unknown>, body: string): string {
  * as the stock it came from. No-ops when there are no owned fields or the
  * content isn't a card.
  */
-function stripBoxOwnedFields(content: string, fields: readonly string[]): string {
+export function stripBoxOwnedFields(content: string, fields: readonly string[]): string {
   if (fields.length === 0) return content;
   const card = parseCard(content);
   if (card === null) return content;
@@ -263,7 +257,7 @@ async function fileExists(absPath: string): Promise<boolean> {
  * exactly what kept the drift count stuck above the real divergence. Silent
  * and idempotent — a missing mirror is the common case.
  */
-async function removeParkedMirror(boxRoot: string, relPath: string): Promise<void> {
+export async function removeParkedMirror(boxRoot: string, relPath: string): Promise<void> {
   const mirrorAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR, mirrorRelPath(relPath));
   try {
     await fs.unlink(mirrorAbs);
@@ -300,10 +294,10 @@ export async function hasRecordedTemplateVersion(
   relPath: string,
 ): Promise<boolean> {
   const versions = await readVersions(boxRoot);
-  return versions[relPath] !== undefined;
+  return versions[relPath]?.sha256 !== undefined;
 }
 
-async function readVersions(boxRoot: string): Promise<VersionsFile> {
+export async function readVersions(boxRoot: string): Promise<VersionsFile> {
   const abs = path.join(boxRoot, VERSIONS_FILE);
   try {
     const text = await fs.readFile(abs, "utf-8");
@@ -314,7 +308,7 @@ async function readVersions(boxRoot: string): Promise<VersionsFile> {
   }
 }
 
-async function writeVersions(boxRoot: string, versions: VersionsFile): Promise<void> {
+export async function writeVersions(boxRoot: string, versions: VersionsFile): Promise<void> {
   const abs = path.join(boxRoot, VERSIONS_FILE);
   await fs.mkdir(path.dirname(abs), { recursive: true });
   // Sorted keys for stable diffs.
@@ -354,7 +348,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
   if (localContent === null) {
     await fs.writeFile(targetAbs, templateContent);
     const versions = await readVersions(boxRoot);
-    versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString() };
+    versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString(), stock: templateContent };
     await writeVersions(boxRoot, versions);
     await removeParkedMirror(boxRoot, relPath);
     return { outcome: "fresh", writtenAt: relPath };
@@ -368,8 +362,9 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     // Record the hash even on no-op so a box installed at version V1 by
     // an older beebox (before this tracker existed) gets bootstrapped.
     const versions = await readVersions(boxRoot);
-    if (versions[relPath]?.sha256 !== templateHash) {
-      versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString() };
+    const recorded = Object.hasOwn(versions, relPath) ? versions[relPath] : undefined;
+    if (recorded === undefined || recorded.sha256 !== templateHash || recorded.stock === undefined || recorded.pending !== undefined) {
+      versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString(), stock: templateContent };
       await writeVersions(boxRoot, versions);
     }
     await removeParkedMirror(boxRoot, relPath);
@@ -379,6 +374,12 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
   const versions = await readVersions(boxRoot);
   const lastInstalledHash = versions[relPath]?.sha256;
   const priorStockHashes = opts.priorStockHashes ?? [];
+
+  // An agent has already reconciled this upstream version with box-owned edits.
+  if (lastInstalledHash === templateHash) {
+    await removeParkedMirror(boxRoot, relPath);
+    return { outcome: "skipped" };
+  }
 
   // Local matches the version we last installed (or a known prior stock
   // version shipped before this file was tracked) → it's our own unmodified
@@ -392,7 +393,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     // re-enable/disable it. With no owned fields this is the template verbatim.
     const merged = applyBoxOwnedFields({ upstream: templateContent, box: localContent }, boxOwnedFields);
     await fs.writeFile(targetAbs, merged);
-    versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString() };
+    versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString(), stock: templateContent };
     await writeVersions(boxRoot, versions);
     await removeParkedMirror(boxRoot, relPath);
     return { outcome: "overwritten", writtenAt: relPath };
@@ -403,16 +404,28 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
   // tracker. Park the new template under `_template-updates/` mirroring
   // the original relpath verbatim (e.g. `_config/foo.guide.card` →
   // `_config/_template-updates/config/foo.guide.card`) so the
-  // copy-back-to-accept path is obvious. Don't update the recorded
-  // hash — if the user later accepts the new template by copying it
-  // into place, the next install will recognise it as the current
-  // template and overwrite cleanly.
+  // copy-back-to-accept path is obvious. Keep the recorded stock hash until
+  // an agent accepts or resolves this park; pending records the new version.
   const updateAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR, mirrorRelPath(relPath));
   await fs.mkdir(path.dirname(updateAbs), { recursive: true });
   // Park the new definition carrying the box's owned state, so copying the
   // mirror into place to accept keeps that state. With no owned fields this is
   // the template verbatim.
-  await fs.writeFile(updateAbs, applyBoxOwnedFields({ upstream: templateContent, box: localContent }, boxOwnedFields));
+  const parkedContent = applyBoxOwnedFields({ upstream: templateContent, box: localContent }, boxOwnedFields);
+  await fs.writeFile(updateAbs, parkedContent);
+  const base = versions[relPath]?.stock;
+  if (base !== undefined && sha256(canonicalize(base)) === lastInstalledHash) {
+    const merged = await mergeWithoutConflict({ local: targetAbs, base, upstream: parkedContent, card: relPath.endsWith(".card") });
+    if (merged !== null) {
+      await fs.writeFile(targetAbs, merged);
+      versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString(), stock: templateContent };
+      await writeVersions(boxRoot, versions);
+      await removeParkedMirror(boxRoot, relPath);
+      return { outcome: "overwritten", writtenAt: relPath };
+    }
+  }
+  versions[relPath] = { ...(versions[relPath] ?? {}), pending: templateHash };
+  await writeVersions(boxRoot, versions);
   return { outcome: "parked", writtenAt: path.relative(boxRoot, updateAbs) };
 }
 

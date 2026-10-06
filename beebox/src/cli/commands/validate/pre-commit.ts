@@ -26,7 +26,7 @@ import { checkStagedSystemCards } from "../../../core/system-cards.js";
 
 
 import { formatLintResults } from "../../../exports/cards.js";
-import { lintCardsDispatch } from "../../../core/card-lint/core.js";
+import { lintCardsDispatch } from "../../../core/card-lint/core/lint-cards.js";
 import { buildLoadContext } from "../../../core/load-context.js";
 import { loadValidationIgnore } from "../../../core/validation-ignore.js";
 import {

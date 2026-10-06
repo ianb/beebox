@@ -1,6 +1,6 @@
 ---
 title: Bee Box surfaces render duplicate bbx control ids
-workstream: unknown
+workstream: bbx-ids-gallery
 priority: backlog
 discovered-in: worktree-publish-pages — publication card browser verification
 ---

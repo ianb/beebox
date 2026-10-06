@@ -13,7 +13,7 @@ mount-writing procedures that DO exist are covered in
 ```ts setup
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { getLog } from "../../../src/lib/git/core.js";
+import { getLog } from "../../../src/lib/git/core/operations.js";
 import { errorMessage } from "../../../src/shared/error-guards.js";
 import { simpleGit } from "simple-git";
 

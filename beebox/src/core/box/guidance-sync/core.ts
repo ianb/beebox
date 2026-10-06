@@ -13,7 +13,7 @@ import { TEMPLATE_STOCK_HASHES } from "../../template-stock-hashes.js";
 import { generateRules } from "../../init-rules.js";
 import { invariant, assertNever } from "../../../shared/invariant.js";
 import { generateSkills } from "./skills.js";
-import { MANAGED_STOCK_TEMPLATES, PUBLICATIONS_NOTES, writeFileIfMissing } from "../templates.js";
+import { MANAGED_STOCK_TEMPLATES } from "../templates.js";
 import {
   GUIDANCE_SURFACES,
   type GuidanceGenerator,
@@ -24,8 +24,6 @@ const GENERATORS = {
   generateRules,
   generateSkills,
 } satisfies Record<GuidanceGenerator, (boxRoot: string) => Promise<string[]>>;
-
-const SEEDS = { "publications-notes": PUBLICATIONS_NOTES } as const;
 
 /** Install one tracked row through the template tracker, from its stock template. */
 async function installTracked(boxRoot: string, row: { path: string; template: StockTemplateName }): Promise<void> {
@@ -70,8 +68,7 @@ interface SyncBoxGuidanceOptions {
 
 /**
  * Install every registry row the walk owns: tracked rows through the template
- * tracker (a box-edited copy parks), seeds when missing, and each generator
- * once (a generator prunes its own marked orphans). Rows installed by another
+ * tracker (a box-edited copy parks) and each generator once (a generator prunes its own marked orphans). Rows installed by another
  * owner are skipped here; the registry names that owner.
  */
 export async function syncBoxGuidance(boxRoot: string, options: SyncBoxGuidanceOptions): Promise<void> {
@@ -81,9 +78,6 @@ export async function syncBoxGuidance(boxRoot: string, options: SyncBoxGuidanceO
     switch (install.via) {
       case "tracker":
         await installTracked(boxRoot, { path: row.path, template: install.template });
-        break;
-      case "seed":
-        await writeFileIfMissing(path.join(boxRoot, row.path), SEEDS[install.seed]);
         break;
       case "generator":
         generators.add(install.generator);

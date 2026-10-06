@@ -14,7 +14,7 @@ Migration, deployment, and reload share one boundary: close admission to new
 work, drain accepted work, perform maintenance, verify readiness, then reopen.
 
 **Issues addressed:** [Local boxes never converge](../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
-Related but not closed by this plan: [parked template resolution](../../../issues/features/2026-08-24-parked-template-resolution-path.md),
+Related but not closed by this plan: [parked template resolution](../../../issues/closed/features/2026-08-24-parked-template-resolution-path.md),
 [template recurrence](../../../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md),
 [incorrect shipped procedure templates](../../../issues/closed/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md),
 and [one-root migration performance](../../../issues/closed/code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md).

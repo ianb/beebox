@@ -73,7 +73,7 @@ print(JSON.stringify({
   hasJavaScript: direct[".js"] !== undefined,
 }));
 =>
-{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[7,3528]},"grouped":{"card":[1,20],"markdown":[7,3528],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"repository":{"hasCheckoutSize":true,"gitSizeIsRepository":true,"annexed":false,"allRegularFiles":67,"linkedRegularFiles":7,"unlinkedRegularFiles":1},"orphanDirectories":2,"hasJavaScript":false}
+{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[5,2797]},"grouped":{"card":[1,20],"markdown":[5,2797],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"repository":{"hasCheckoutSize":true,"gitSizeIsRepository":true,"annexed":false,"allRegularFiles":65,"linkedRegularFiles":7,"unlinkedRegularFiles":1},"orphanDirectories":2,"hasJavaScript":false}
 ```
 
 A disappearing or unreadable subtree produces labeled lower-bound totals instead
@@ -123,4 +123,30 @@ if (annexBox !== undefined) {
 }
 await annexBox?.cleanup();
 await box.cleanup();
+```
+
+## Publication build output and dependency trees are not inventoried
+
+A box with a publication project's `dist/` and `node_modules/` inventories the
+same as one holding only the project's `src/` file.
+
+```ts
+const project = "_content/trips/Site.attach/project";
+const onlySource = await makeTmpBox();
+await onlySource.write(`${project}/src/readme.md`, "# Source\n");
+const withBuild = await makeTmpBox();
+await withBuild.write(`${project}/src/readme.md`, "# Source\n");
+await withBuild.write(`${project}/dist/page.md`, "# Built\n");
+await withBuild.write(`${project}/dist/stray.note.card`, "---\n---\n");
+await withBuild.write(`${project}/node_modules/pkg/README.md`, "# pkg\n");
+const counts = async (root: string): Promise<string> => {
+  const inv = await scanBoxInventory(root, { now: new Date("2026-08-12T12:00:00Z") });
+  return JSON.stringify([inv.direct, inv.grouped].map((items) => items.map((item) => [item.type, item.count])));
+};
+const same = (await counts(onlySource.root)) === (await counts(withBuild.root));
+await onlySource.cleanup();
+await withBuild.cleanup();
+print(String(same));
+=>
+true
 ```

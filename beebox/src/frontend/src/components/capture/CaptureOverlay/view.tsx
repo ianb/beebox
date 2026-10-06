@@ -45,7 +45,8 @@ function toResumeTarget(capture: ResumableCaptureView): CaptureResumeTarget {
   };
 }
 
-export function CaptureOverlay({ targetSessionId, onExit }: { targetSessionId: string | null; onExit: () => void }) {
+export function CaptureOverlay({ targetSessionId, onExit, includeControlIds }: { targetSessionId: string | null; onExit: () => void; includeControlIds?: boolean }) {
+  const hasControlIds = includeControlIds !== false;
   const [decision, setDecision] = useState<Decision>(null);
   const [busy, setBusy] = useState(false);
   const { loading, resumable, submitNow, discard } = useCaptureResume(targetSessionId);
@@ -88,6 +89,7 @@ export function CaptureOverlay({ targetSessionId, onExit }: { targetSessionId: s
       ) : candidate ? (
         <CaptureShell>
           <CaptureResumeDialog
+            includeControlIds={hasControlIds}
             capture={candidate}
             busy={busy}
             onResume={() => setDecision({ kind: "resume", target: toResumeTarget(candidate) })}
@@ -100,16 +102,18 @@ export function CaptureOverlay({ targetSessionId, onExit }: { targetSessionId: s
           targetSessionId={targetSessionId}
           resume={decision !== null && decision.kind === "resume" ? decision.target : null}
           onExit={onExit}
+          includeControlIds={hasControlIds}
         />
       )}
     </div>
   );
 }
 
-function CaptureSurface({ targetSessionId, resume, onExit }: {
+function CaptureSurface({ targetSessionId, resume, onExit, includeControlIds }: {
   targetSessionId: string | null;
   resume: CaptureResumeTarget | null;
   onExit: () => void;
+  includeControlIds: boolean;
 }) {
   const { state, devices, uploads, inputs, camera, videoRef, actions } = useCaptureSession({ targetSessionId, resume, onExit });
   const { recording, recordingTime, error, finalizing, showSettings, sessionId, retryFeedback } = state;
@@ -123,6 +127,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
   return (
     <CaptureShell>
       <StatusBar
+        includeControlIds={includeControlIds}
         recording={recording} recordingTime={recordingTime} formatTime={formatTime}
         audioTotal={counts.audioTotal} audioUploading={counts.audioUploading} audioUploaded={counts.audioUploaded} audioFailed={counts.audioFailed}
         photoTotal={counts.photoTotal} photosUploading={counts.photosUploading} photosUploaded={counts.photosUploaded} photosFailed={counts.photosFailed}
@@ -136,14 +141,16 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
 
       {showSettings ? (
         <DeviceSettings
+          includeControlIds={includeControlIds}
           videoDevices={videoDevices} audioDevices={audioDevices}
           devicePrefs={devicePrefs} onUpdate={updateDevicePref}
         />
       ) : null}
 
-      {error ? <CaptureErrorBanner message={error} onDismiss={() => setError(null)} /> : null}
+      {error ? <CaptureErrorBanner message={error} onDismiss={() => setError(null)} includeControlIds={includeControlIds} /> : null}
 
       <CameraViewport
+        includeControlIds={includeControlIds}
         ref={videoRef}
         cameraOn={cameraOn}
         flashing={flashing}
@@ -161,6 +168,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
       <input ref={uploadRef} type="file" multiple hidden onChange={handleFileSelect} />
 
       <CaptureControls
+        includeControlIds={includeControlIds}
         sessionId={sessionId} recording={recording} finalizing={finalizing} pendingUploads={counts.pendingUploads}
         hasContent={counts.photoTotal > 0 || counts.audioTotal > 0 || counts.fileTotal > 0}
         photosFailed={counts.photosFailed} audioFailed={counts.audioFailed} filesFailed={counts.filesFailed}

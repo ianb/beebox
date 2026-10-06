@@ -60,4 +60,4 @@ Until this is decided, **the Codex pin should not cross `0.153.4` incidentally**
 on the settling path. None of the four had settled at the 2026-09-04 turn, so
 nothing has moved yet.
 
-Context: the Codex entry in `docs/agent-sdk-notes.md` for `0.153.1`-`0.153.4`.
+Context: the Codex entry in `schedules/sdk-update/agent-sdk-notes.md` for `0.153.1`-`0.153.4`.

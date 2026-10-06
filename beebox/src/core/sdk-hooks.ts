@@ -12,7 +12,7 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { formatLintResults } from "../exports/cards.js";
 import { customLinkRules, linkRuleConfig } from "./markdown-lint-rules.js";
-import { lintCardsDispatch } from "./card-lint/core.js";
+import { lintCardsDispatch } from "./card-lint/core/lint-cards.js";
 import { buildLoadContext } from "./load-context.js";
 import { dirname } from "node:path";
 import { isViewFile, isViewSourceFile, findBoxRoot } from "../lib/paths/core.js";

@@ -8,7 +8,7 @@
 
 import { promises as fs, type Dirent } from "node:fs";
 import path from "node:path";
-import { isInsideAttachScope } from "../../shared/attach-path.js";
+import { isInsideAttachScope, isPublicationBuildOutputPath } from "../../shared/attach-path.js";
 import { cardTypeFromName } from "../../shared/card-name.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { BOX_DIRS } from "../../lib/paths/core.js";
@@ -62,6 +62,7 @@ export async function walkCardFiles(boxRoot: string): Promise<Map<string, CardSt
       if (entry.isDirectory()) {
         if (SKIP_DIRS.has(entry.name)) continue;
         if (rel === TRASH_PREFIX) continue;
+        if (isPublicationBuildOutputPath(rel)) continue;
         await walk(path.join(absDir, entry.name), rel);
         continue;
       }
