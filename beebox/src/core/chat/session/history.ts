@@ -30,7 +30,7 @@ import { isRecord } from "../../card-io.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
-import { readCodexSessionUpdatedAt } from "./codex-transcript.js";
+import { readCodexSessionUpdatedAt } from "./codex-transcript/core.js";
 
 const HISTORY_FILE = ".beebox/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".beebox/chat-session-id.json";

@@ -25,7 +25,7 @@ import { listSessionEntries, type ChatSessionEntry } from "../chat/session/list/
 import {
   codexSessionExists,
   readCodexSessionHistory,
-} from "../chat/session/codex-transcript.js";
+} from "../chat/session/codex-transcript/core.js";
 import { lockWithRetry } from "../search/refresh/core.js";
 import { indexPersistedFor } from "../search/store/index-store.js";
 import { errorMessage, errnoCode } from "../../shared/error-guards.js";

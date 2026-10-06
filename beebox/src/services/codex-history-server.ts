@@ -1,6 +1,7 @@
 /** Narrow app-server compatibility client for SDK-unsupported history operations. */
 
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { Socket } from "node:net";
 import { EventEmitter } from "node:events";
 import { z } from "zod";
 import { codexBinaryPath } from "./codex-binary.js";
@@ -126,6 +127,22 @@ export class CodexHistoryServer {
   onExit(listener: (error: CodexHistoryServerExitError) => void): () => void {
     this.events.on("exit", listener);
     return () => this.events.off("exit", listener);
+  }
+
+  /**
+   * Whether this server holds the Node process open. The owner turns it off
+   * while the server sits idle, so a process that is otherwise done exits
+   * without waiting for the idle close.
+   */
+  keepProcessAlive(keep: boolean): void {
+    if (keep) this.child.ref();
+    else this.child.unref();
+    // The pipes are sockets at runtime; each holds the process open as well.
+    for (const stream of [this.child.stdin, this.child.stdout, this.child.stderr]) {
+      if (!(stream instanceof Socket)) continue;
+      if (keep) stream.ref();
+      else stream.unref();
+    }
   }
 
   close(): void {

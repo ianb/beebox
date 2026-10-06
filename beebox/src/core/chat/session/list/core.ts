@@ -23,7 +23,7 @@ import { mapInBatches, mapInBatchesSettled } from "../../../../lib/map-batched.j
 import { loadHistoryEntries } from "../history.js";
 import { resolveChatEngine } from "../engine.js";
 import { deriveTranscriptState, type TranscriptState } from "../availability.js";
-import { listCodexThreadMetadata, type CodexThreadMetadata } from "../codex-transcript.js";
+import { listCodexThreadMetadata, type CodexThreadMetadata } from "../codex-transcript/core.js";
 import { containedSessionCwd } from "../transcript-paths.js";
 import type { AgentEngine } from "../../../box/config.js";
 
@@ -121,9 +121,18 @@ interface ChatEnumeration {
  * Husks are resolved concurrently, not in sequence: the app bar's place menu
  * waits on the whole set. `allSettled` per code-style — one husk's failure is
  * already a per-husk skip, and must not abandon the others.
+ *
+ * `repairCodexIndex: false` skips Codex's rollout repair scan (see
+ * `listCodexThreadMetadata`), so a Codex chat missing from Codex's thread index
+ * is left out instead of looked for. For callers that only count recent
+ * activity, such as the app bar's place menu: the scan can take tens of
+ * seconds, and the threads it finds are old ones.
  */
-export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEntry[]> {
-  return (await enumerateChats(boxRoot)).live;
+export async function listSessionEntries(
+  boxRoot: string,
+  options?: { repairCodexIndex?: boolean },
+): Promise<ChatSessionEntry[]> {
+  return (await enumerateChats(boxRoot, { repairCodexIndex: options?.repairCodexIndex ?? true })).live;
 }
 
 /**
@@ -134,7 +143,7 @@ export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEn
  * orders these by when the chat happened; there is no mtime left to sort on.
  */
 export async function loadDeadHusks(boxRoot: string): Promise<DeadHuskEntry[]> {
-  return (await enumerateChats(boxRoot)).dead;
+  return (await enumerateChats(boxRoot, { repairCodexIndex: true })).dead;
 }
 
 /**
@@ -155,8 +164,9 @@ export async function loadDeadHusks(boxRoot: string): Promise<DeadHuskEntry[]> {
  */
 async function readCodexThreads(
   boxRoot: string,
-  codexHusks: ChatHuskEntry[],
+  options: { codexHusks: ChatHuskEntry[]; repair: boolean },
 ): Promise<Map<string, CodexThreadMetadata> | null> {
+  const { codexHusks, repair } = options;
   if (codexHusks.length === 0) return new Map();
   // Contained, like every other resolution of a husk's `context-dir`: the
   // field is a card value, and an escaping one reads from the box root.
@@ -165,6 +175,7 @@ async function readCodexThreads(
     return await listCodexThreadMetadata(boxRoot, {
       cwds: [...cwds],
       expectedIds: codexHusks.map((husk) => husk.session),
+      repair,
     });
   } catch (error) {
     console.warn("[chat] codex thread metadata unavailable; omitting this box's codex chats:", error);
@@ -173,7 +184,7 @@ async function readCodexThreads(
 }
 
 /** The single husk-read-and-stat pass behind both enumerations. */
-async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
+async function enumerateChats(boxRoot: string, options: { repairCodexIndex: boolean }): Promise<ChatEnumeration> {
   const [husks, history] = await Promise.all([listChatHusks(boxRoot), loadHistoryEntries(boxRoot)]);
   const historyById = new Map(history.map((entry) => [entry.id, entry]));
   // Resolved once per husk, up front: which engine ran a chat decides both
@@ -187,10 +198,10 @@ async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
       historyEngine: historyById.get(husk.session)?.engine ?? null,
     })] as const,
   }));
-  const codexThreads = await readCodexThreads(
-    boxRoot,
-    husks.filter((husk) => engines.get(husk.session) === "codex"),
-  );
+  const codexThreads = await readCodexThreads(boxRoot, {
+    codexHusks: husks.filter((husk) => engines.get(husk.session) === "codex"),
+    repair: options.repairCodexIndex,
+  });
   const settled = await mapInBatchesSettled(husks, {
     size: READ_CONCURRENCY,
     map: (husk) => resolveHusk({
@@ -247,7 +258,7 @@ export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]
  * twice for one page.
  */
 export async function loadChatLists(boxRoot: string): Promise<{ sessions: ChatSessionRow[]; dead: DeadHuskEntry[] }> {
-  const { live, dead } = await enumerateChats(boxRoot);
+  const { live, dead } = await enumerateChats(boxRoot, { repairCodexIndex: true });
   return { sessions: await labelEntries(live), dead };
 }
 
