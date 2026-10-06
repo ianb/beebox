@@ -181,8 +181,9 @@ For deterministic composer layout checks, launch a DEBUG build with
 `multiline`, `many-attachments`, `uploading`, `failed-upload`,
 `selection-detail`, `recording`, `starting-dictation`, `hq-preparation`, `two-pending`,
 `sending`, `interrupted`, `rejected-send`, `stuck-pending`,
-`expired-attachment`, `keyboard-shown`, and
-`control-registry` (which reads back the native control registry the web's
+`expired-attachment`, `keyboard-shown`, `quick-chat` (the composer with the
+quick chat submit target and a new-thought draft, as the box screen hosts it),
+and `control-registry` (which reads back the native control registry the web's
 `scan-controls` command answers from — see `../beebox/docs/mobile-contract.md`
 §4.8 — and offers every action per control so the refusals are as visible as the
 successes). Add `--composer-point=<control-id>:<action>` beside it to perform one

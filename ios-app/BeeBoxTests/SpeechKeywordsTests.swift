@@ -201,6 +201,20 @@ final class SpeechKeywordsTests: XCTestCase {
         XCTAssertEqual(dictation.state, .preparingHQ)
     }
 
+    /// The quick chat composer turns keywords off: "send message" is words to
+    /// keep, not a command, and the person sends with the button.
+    @MainActor
+    func testKeywordsOffKeepsSpokenCommandWordsAsTranscript() {
+        let dictation = SpeechDictation()
+        dictation.detectsKeywords = false
+
+        dictation.ingestRecognizedSpeechForTesting("Remind me to send message to Dana")
+
+        XCTAssertNil(dictation.keywordIntent)
+        XCTAssertEqual(dictation.transcript, "Remind me to send message to Dana")
+        XCTAssertTrue(dictation.hasDictatedText)
+    }
+
     @MainActor
     func testAcceptedSendCommitsTheTagSubstitution() throws {
         let dictation = SpeechDictation()

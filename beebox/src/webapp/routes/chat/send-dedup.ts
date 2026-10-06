@@ -20,14 +20,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { isRecord } from "../../../shared/is-record.js";
+import type { SendOutcome } from "../../chat-runtime.js";
 
 const MESSAGE_ID_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-
-/** The status + body one `/api/chat/send` request answers with. */
-export interface SendOutcome {
-  status: number;
-  body: { deduplicated: true } | { queued: true } | { turnId: string } | { error: string };
-}
 
 export interface InFlightSends {
   /**
