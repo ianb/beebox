@@ -54,6 +54,12 @@ export function selectTests(input: {
   const scopedSet = new Set(scoped);
   const implicated = implicatedTests({ graph, changed: input.changed });
 
+  // `bin/` is outside `scopedChanges`, but root doctests (`bin/test/…`) are
+  // graph entrypoints and may import `bin/` files, so both are read here.
+  const binChanged = input.changed.filter((path) => path.startsWith("bin/"));
+  const binImporters = [...graph.tests]
+    .filter(([entry, deps]) => binChanged.some((path) => path === entry || deps.has(path)))
+    .map(([entry]) => entry);
   const changedTests = scoped.filter((path) => graph.tests.has(path) || graph.unresolved.has(path));
   // Spawner edges stand in for import edges the graph cannot see, and are read
   // exactly like them: a spawner runs when the change matches one of ITS refs,
@@ -62,6 +68,7 @@ export function selectTests(input: {
   const spawners = matchedSpawners({
     edges: input.spawnEdges,
     scoped,
+    binUnits: changedBinUnits(input.changed),
     cliBundleInputs: input.cliBundleInputs ?? null,
   });
   const selected = new Set<string>([
@@ -69,6 +76,7 @@ export function selectTests(input: {
     ...graph.unresolved,
     ...changedTests,
     ...implicated,
+    ...binImporters,
   ]);
   for (const path of input.exclude ?? []) {
     if (!scopedSet.has(path)) selected.delete(path);
@@ -90,7 +98,7 @@ export function selectTests(input: {
  * importing frontend source and is the regression test for the TSX loader
  * flake.
  */
-const SPAWN_CALL = /\b(?:spawnSync|spawn|execFileSync|execFile|fork\()|\bexec\(/;
+const SPAWN_CALL = /\b(?:spawnSync|spawn|execFileSync|execFile|execa|fork\()|\bexec\(/;
 
 /** A string literal naming repo source, or the bundled CLI a test may exec. */
 const SOURCE_LITERAL =
@@ -107,6 +115,45 @@ const SOURCE_LITERAL =
  */
 const IMPORT_LINE = /^\s*(?:import|export)\b[^\n]*?(?:from\s*)?["'][^"']+["']/;
 
+/**
+ * A `bin/<name>` path inside a string literal: a script a test runs, or a file
+ * it reads from `bin/`. The lookbehinds drop `node_modules/.bin/…`,
+ * `beebox/bin/…` (the package's own `bin/`, not the monorepo's) and the system
+ * `/bin/sh`, `/usr/bin/env`, `/usr/local/bin/…`.
+ */
+const BIN_LITERAL = /(["'`])([^\n"'`]*?)\1/g;
+const BIN_PATH = /(?<![\w.-])(?<!beebox\/)(?<!(?:^|[\s!])\/)(?<!\/usr\/)(?<!\/local\/)bin\/([\w.-]+(?:\/[\w./-]*)?)/g;
+
+/**
+ * Directories under `bin/` whose code scripts `source` or import, so a change
+ * there can alter any script's behaviour. Selects every `bin/` spawner.
+ * `assets/`, `docs/` and `test/` are data, prose and tests, not sourced code.
+ */
+export const BIN_SHARED_UNITS: ReadonlySet<string> = new Set(["lib"]);
+
+/**
+ * The unit of a path under `bin/` (a script, or a script's own directory): its
+ * first segment, without a file extension. `bin/workstreams` is `workstreams`,
+ * `bin/schedules/x.ts` is `schedules`, `bin/test-select.ts` is `test-select`.
+ */
+export function binUnit(path: string): string | null {
+  const match = /^bin\/([^/]+)/.exec(path);
+  const segment = match?.[1];
+  if (segment === undefined) return null;
+  const unit = segment.replace(/\.[\dA-Za-z]+$/, "");
+  return unit === "" ? null : unit;
+}
+
+/** The units a change touches. Root tests (`bin/test/`) are tests, not units. */
+export function changedBinUnits(changed: string[]): Set<string> {
+  const units = new Set<string>();
+  for (const path of changed) {
+    const unit = binUnit(path);
+    if (unit !== null && unit !== "test") units.add(unit);
+  }
+  return units;
+}
+
 /** The build artifact a test execs instead of importing the CLI. */
 const CLI_BUNDLE = "dist/cli.mjs";
 
@@ -117,7 +164,11 @@ export function spawnedSourceRefs(source: string): string[] {
     .filter((line) => !IMPORT_LINE.test(line))
     .join("\n");
   if (!SPAWN_CALL.test(body)) return [];
-  return [...new Set([...body.matchAll(SOURCE_LITERAL)].map((match) => match[2] ?? ""))];
+  const refs = new Set([...body.matchAll(SOURCE_LITERAL)].map((match) => match[2] ?? ""));
+  for (const literal of body.matchAll(BIN_LITERAL)) {
+    for (const bin of (literal[2] ?? "").matchAll(BIN_PATH)) refs.add(`bin/${bin[1] ?? ""}`);
+  }
+  return [...refs];
 }
 
 /**
@@ -162,12 +213,18 @@ export function spawnerEdges(input: {
 function matchedSpawners(input: {
   edges: Map<string, Set<string>> | undefined;
   scoped: string[];
+  binUnits: Set<string>;
   cliBundleInputs: Set<string> | null;
 }): string[] {
   const matched: string[] = [];
   for (const [entry, refs] of input.edges ?? []) {
     const hit = [...refs].some((ref) =>
-      refMatchesChange({ ref, scoped: input.scoped, cliBundleInputs: input.cliBundleInputs }),
+      refMatchesChange({
+        ref,
+        scoped: input.scoped,
+        binUnits: input.binUnits,
+        cliBundleInputs: input.cliBundleInputs,
+      }),
     );
     if (hit) matched.push(entry);
   }
@@ -190,10 +247,17 @@ function isCliBundleInput(path: string, inputs: Set<string> | null): boolean {
 export function refMatchesChange(input: {
   ref: string;
   scoped: string[];
+  /** Units of changed `bin/` paths, from {@link changedBinUnits}. */
+  binUnits?: Set<string>;
   cliBundleInputs: Set<string> | null;
 }): boolean {
   const { ref, scoped } = input;
-  if (ref.includes(CLI_BUNDLE)) {
+  if (ref.startsWith("bin/")) {
+    // A `bin/` ref matches by unit; a change to shared code matches every one.
+    const units = input.binUnits ?? new Set<string>();
+    const unit = binUnit(ref);
+    return unit !== null && (units.has(unit) || [...units].some((u) => BIN_SHARED_UNITS.has(u)));
+  }  if (ref.includes(CLI_BUNDLE)) {
     return scoped.some((path) => isCliBundleInput(path, input.cliBundleInputs));
   }
   const tail = stripExtension(ref.replace(/^(?:\.\.?\/)+/, ""));
@@ -202,6 +266,7 @@ export function refMatchesChange(input: {
 }
 
 function isCoveredByImports(ref: string, deps: Set<string>): boolean {
+  if (ref.startsWith("bin/")) return false;
   if (ref.includes(CLI_BUNDLE)) return false;
   const tail = stripExtension(ref.replace(/^(?:\.\.?\/)+/, ""));
   if (tail === "") return true;

@@ -30,6 +30,10 @@ export interface TestGraph {
  * unaccounted; `/finish` already routes those to their own verification
  * (`.claude/agents/finish.md:184-196`).
  *
+ * `bin/` is out of THIS function's scope but not out of selection: scripts
+ * there are matched by unit through spawn edges (see `refMatchesChange` in
+ * test-select-lib.ts), not through import scoping.
+ *
  * Prose markdown inside the package is also out, and that one is load-bearing
  * rather than obvious: counting it drops the per-commit accounted rate from
  * 63% to 27%. It is safe because no doctest in the suite reads the

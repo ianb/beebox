@@ -54,3 +54,15 @@ test("a failing file named the way tap reports it maps back to its graph path", 
   const root = landingReachesFile({ graph: g, spawnEdges: new Map(), cliBundleInputs: new Set(), changed: ["beebox/src/a.ts"], file: "../bin/test/b.doctest.md" });
   assert.equal(root, true);
 });
+
+test("a bin/ landing reaches a test that spawns that script, but not unresolved or unrelated ones", () => {
+  const g = graph();
+  g.tests.set("bin/test/ws.doctest.md", new Set<string>());
+  const spawnEdges = new Map([["bin/test/ws.doctest.md", new Set(["bin/workstreams"])]]);
+  const bin = (changed: string[], file: string): boolean =>
+    landingReachesFile({ graph: g, spawnEdges, cliBundleInputs: new Set(), changed, file });
+  assert.equal(bin(["bin/lib/session-registry.sh"], "../bin/test/ws.doctest.md"), true);
+  assert.equal(bin(["bin/workstreams"], "../bin/test/ws.doctest.md"), true);
+  assert.equal(bin(["bin/land"], "../bin/test/ws.doctest.md"), false);
+  assert.equal(bin(["bin/workstreams"], "test/unresolved.test.ts"), false);
+});
