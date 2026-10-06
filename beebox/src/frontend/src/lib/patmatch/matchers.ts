@@ -8,9 +8,7 @@ interface MatchResult {
 }
 
 export abstract class Matcher {
-  constructor(public tags: Record<string, string>) {
-    this.tags = tags;
-  }
+  constructor(public tags: Record<string, string>) {}
   abstract match(input: InputWord[]): MatchResult[];
   abstract repr(): string;
 }

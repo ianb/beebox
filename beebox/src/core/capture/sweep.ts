@@ -162,7 +162,7 @@ export async function sweepAbandonedCaptures(deps: SweepDeps): Promise<SweepResu
 export async function findStaleTmpCaptureCards(opts: { boxRoot: string; now: number }): Promise<string[]> {
   const { boxRoot, now } = opts;
   const stale: string[] = [];
-  const captureDirs = await findTmpCaptureDirs(boxRoot, boxRoot);
+  const captureDirs = await findTmpCaptureDirs(boxRoot);
   for (const dir of captureDirs) {
     let entries: string[];
     try {
@@ -192,7 +192,7 @@ export async function findStaleTmpCaptureCards(opts: { boxRoot: string; now: num
 
 /** Recursively collect every `tmp-capture` directory under `root`, skipping
  *  git/node_modules/tmp/.beebox. */
-async function findTmpCaptureDirs(boxRoot: string, root: string): Promise<string[]> {
+async function findTmpCaptureDirs(root: string): Promise<string[]> {
   const found: string[] = [];
   let entries: Dirent[];
   try {
@@ -208,7 +208,7 @@ async function findTmpCaptureDirs(boxRoot: string, root: string): Promise<string
       found.push(abs);
       continue; // capture cards live directly in here, no need to recurse further
     }
-    found.push(...(await findTmpCaptureDirs(boxRoot, abs)));
+    found.push(...(await findTmpCaptureDirs(abs)));
   }
   return found;
 }

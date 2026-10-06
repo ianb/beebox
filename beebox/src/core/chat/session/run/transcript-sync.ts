@@ -69,25 +69,36 @@ export async function waitForTranscriptEntry(
     timeoutMs?: number;
   },
 ): Promise<boolean> {
+  const deadline = Date.now() + (timeoutMs ?? WAIT_TIMEOUT_MS);
   if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
-    const deadline = Date.now() + (timeoutMs ?? WAIT_TIMEOUT_MS);
-    for (;;) {
-      const { entries } = await loadSessionHistory(boxRoot, {
-        sessionId,
-        slice: { mode: "tail", tail: 100 },
-        fresh: true,
-      });
-      if (entries.some((entry) => entry.uuid === uuid)) return true;
-      if (Date.now() >= deadline) return false;
-      await sleep(POLL_INTERVAL_MS);
-    }
+    return waitForCodexHistoryEntry({ boxRoot, sessionId, uuid, deadline });
   }
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);
   const needle = `"uuid":"${uuid}"`;
-  const deadline = Date.now() + (timeoutMs ?? WAIT_TIMEOUT_MS);
   for (;;) {
     const tail = await readTail(logPath);
     if (tail !== null && tail.includes(needle)) return true;
+    if (Date.now() >= deadline) return false;
+    await sleep(POLL_INTERVAL_MS);
+  }
+}
+
+/** Codex sessions: poll the loaded session history for the entry. */
+async function waitForCodexHistoryEntry(
+  { boxRoot, sessionId, uuid, deadline }: {
+    boxRoot: string;
+    sessionId: string;
+    uuid: string;
+    deadline: number;
+  },
+): Promise<boolean> {
+  for (;;) {
+    const { entries } = await loadSessionHistory(boxRoot, {
+      sessionId,
+      slice: { mode: "tail", tail: 100 },
+      fresh: true,
+    });
+    if (entries.some((entry) => entry.uuid === uuid)) return true;
     if (Date.now() >= deadline) return false;
     await sleep(POLL_INTERVAL_MS);
   }
