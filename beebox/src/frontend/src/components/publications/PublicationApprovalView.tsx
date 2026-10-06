@@ -8,6 +8,7 @@ import { Card } from "../ui/Card";
 import { ErrorText } from "../ui/ErrorText";
 import { Stack } from "../ui/Stack";
 import { StatusMessage } from "../ui/StatusMessage";
+import { Text } from "../ui/Text";
 import { PublicationReviewCard } from "./PublicationReviewCard";
 
 interface MutationNotice {
@@ -26,8 +27,16 @@ export function handlePublicationMutationError(
   return input.refreshList();
 }
 
+/** Shown when the server has no record for the card's publication yet. */
+export function PublicationNotPrepared({ cardPath }: { cardPath: string }) {
+  return <Stack gap="xs">
+    <StatusMessage>Not prepared yet.</StatusMessage>
+    <Text size="sm">Prepare it with <code className="rounded bg-warm-100 px-1 text-xs text-warm-800 break-all">bbx pub prepare {cardPath}</code></Text>
+  </Stack>;
+}
+
 /** Fetches current server authority and wires the existing member-gated actions. */
-export function PublicationApprovalView({ pubId }: { pubId: string }) {
+export function PublicationApprovalView({ pubId, cardPath }: { pubId: string; cardPath: string }) {
   const query = trpc.publications.list.useQuery();
   const utils = trpc.useUtils();
   const [mutationError, setMutationError] = useState<MutationNotice | null>(null);
@@ -56,7 +65,7 @@ export function PublicationApprovalView({ pubId }: { pubId: string }) {
 
   if (query.isLoading) return <StatusMessage>Loading publication review…</StatusMessage>;
   if (query.error) return <div role="alert"><Card><Stack gap="sm"><ErrorText>{query.error.message}</ErrorText>{query.error.data?.code === "UNAUTHORIZED" || query.error.data?.code === "FORBIDDEN" ? <SignInLink returnTo={window.location.pathname + window.location.search} /> : <Button id={`bbx-publication-review-retry-${pubId}`} intent="secondary" onClick={() => void query.refetch()}>Retry</Button>}</Stack></Card></div>;
-  if (site === undefined) return <StatusMessage>This publication is not available in this box.</StatusMessage>;
+  if (site === undefined) return <PublicationNotPrepared cardPath={cardPath} />;
 
   return <Stack gap="sm">
     {mutationError ? <div role="alert"><Stack gap="xs"><ErrorText>{mutationError.message}</ErrorText>{mutationError.needsSignIn ? <SignInLink returnTo={window.location.pathname + window.location.search} /> : null}</Stack></div> : null}
@@ -65,7 +74,7 @@ export function PublicationApprovalView({ pubId }: { pubId: string }) {
       sharedHost={sharedHost}
       pending={pending}
       pendingAction={pendingAction}
-      onPrepare={() => { setMutationError(null); prepare.mutate({ name: site.name }); }}
+      onPrepare={() => { setMutationError(null); prepare.mutate({ card: cardPath }); }}
       onApprove={(candidate) => { setMutationError(null); approve.mutate({ pubId: site.pubId, expectedRevision: candidate.revision }); }}
       onEnable={() => { setMutationError(null); enable.mutate({ pubId: site.pubId }); }}
       onDisable={() => { setMutationError(null); disable.mutate({ pubId: site.pubId }); }}

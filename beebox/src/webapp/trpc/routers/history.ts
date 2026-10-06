@@ -6,7 +6,7 @@ import {
   getCommitDiff,
   getLogPaginated,
   getTrailerFacets,
-} from "../../../lib/git/core.js";
+} from "../../../lib/git/core/operations.js";
 import {
   CONNECTOR_TRAILER_KEYS,
   FEEDBACK_TRAILER_KEYS,

@@ -20,7 +20,7 @@
  * public types and orchestrates the detection.
  */
 
-import { getHead } from "../../lib/git/core.js";
+import { getHead } from "../../lib/git/core/operations.js";
 import { loadMapIgnorePatterns, unworkableReason, type SkipReason } from "./gate.js";
 import { loadMapState } from "./state.js";
 import {

@@ -1,5 +1,7 @@
 /** Agent-facing commands for box-managed publications. */
 
+import path from "node:path";
+
 import { Command } from "commander";
 import type { inferRouterOutputs } from "@trpc/server";
 
@@ -23,30 +25,32 @@ export function publicationDestinationUrl(args: { hostname: string | null; pubId
   return buildPublicationUrl({ workersHostname: args.hostname, pubId: args.pubId, scope: args.scope });
 }
 
-export function publicationApprovalUrl(args: { serverUrl: string | undefined; boxName?: string; approvalPath?: string }): string | null {
-  const { serverUrl, boxName, approvalPath } = args;
-  if (serverUrl === undefined || serverUrl.length === 0 || (approvalPath === undefined && (boxName === undefined || boxName.length === 0))) return null;
+export function publicationApprovalUrl(args: { serverUrl: string | undefined; approvalPath: string }): string | null {
+  const { serverUrl, approvalPath } = args;
+  if (serverUrl === undefined || serverUrl.length === 0) return null;
   try {
     const base = new URL(serverUrl);
     if (base.protocol !== "https:" && base.protocol !== "http:") return null;
-    const target = approvalPath ?? `/${encodeURIComponent(boxName ?? "")}/publications`;
-    if (!target.startsWith("/") || target.startsWith("//")) return null;
-    return new URL(target, base.origin).toString();
+    if (!approvalPath.startsWith("/") || approvalPath.startsWith("//")) return null;
+    return new URL(approvalPath, base.origin).toString();
   } catch (error) {
     void error;
     return null;
   }
 }
 
-function approvalLinkLines(approvalPath?: string): string[] {
+function approvalLinkLines(approvalPath: string): string[] {
   const url = publicationApprovalUrl({
     serverUrl: process.env.BBX_SERVER_URL,
     ...(process.env.BBX_BOX_NAME === undefined ? {} : { boxName: process.env.BBX_BOX_NAME }),
-    ...(approvalPath === undefined ? {} : { approvalPath }),
-  });
-  return url === null
-    ? [approvalPath === undefined ? "  approval: open this box's Publications page from the app menu." : `  approval: open the publication card ${approvalPath} in this box's app.`]
-    : [`  approval: ${url}${new URL(url).hostname === "localhost" ? " (local app URL)" : ""}`];
+    approvalPath,
+  }) ?? approvalPath;
+  return [`  approval: open the publication card ${url} in this box's app.`];
+}
+
+function cardLabel(site: PublicationSite): string {
+  if (site.duplicateCardPaths.length > 0) return `duplicate cards: ${site.duplicateCardPaths.join(", ")}`;
+  return site.cardPath === null ? "no card (orphan)" : `card ${site.cardPath}`;
 }
 
 function siteDestination(site: PublicationSite): string | null {
@@ -92,7 +96,7 @@ export function publicationSiteLines(sites: PublicationSite[]): string[] {
       : "";
     const destinationLabel = servingScope === null ? "candidate URL" : "publication";
     const legacyAlias = legacyWorkersDestination(site);
-    return `${site.name} — ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; ${destinationLabel}: ${destination}` : ""}${legacyAlias ? `; legacy workers.dev URL: ${legacyAlias}` : ""}${candidate}`;
+    return `${site.name} — ${cardLabel(site)}; ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; ${destinationLabel}: ${destination}` : ""}${legacyAlias ? `; legacy workers.dev URL: ${legacyAlias}` : ""}${candidate}`;
   });
 }
 
@@ -126,7 +130,7 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
   lines.push(...approvalLinkLines(candidate.approvalUrl));
   for (const file of candidate.preview) lines.push(`    ${file.path}  ${file.bytes} bytes  sha256:${file.sha256.slice(0, 16)}…`);
   if (site?.remoteStatus.status === "unavailable") {
-    lines.push("  serving state is unknown; check the Publications page before describing it as live or disabled.");
+    lines.push(`  serving state is unknown; check the publication card ${candidate.cardPath} before describing it as live or disabled.`);
   } else if (site?.approved?.status === "live" && site.activeReleaseId === candidate.releaseId) {
     lines.push("  content is live under the already approved audience; within-scope updates take effect immediately.");
   } else {
@@ -135,37 +139,72 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
   return lines;
 }
 
-const connectionsCommand = new Command("connections")
-  .description("List active Cloudflare publishing connections granted to this box")
-  .action(async () => {
+class PublicationCardNotPreparedError extends Error {
+  constructor(cardPath: string) {
+    super(`No prepared publication has card ${cardPath}. Run \`bbx pub prepare ${cardPath}\` first, or check that it is a <Name>.publication.card.`);
+    this.name = "PublicationCardNotPreparedError";
+  }
+}
+
+/** Find the publication whose single card is `cardPath` (box-relative; `./` and redundant segments are ignored). */
+export function publicationForCard(sites: PublicationSite[], cardPath: string): PublicationSite {
+  const normalized = path.posix.normalize(cardPath.replaceAll("\\", "/")).replace(/^(\.\/)+/, "");
+  const site = sites.find((item) => item.cardPath === normalized);
+  if (site === undefined) throw new PublicationCardNotPreparedError(normalized);
+  return site;
+}
+
+export function publicationFilesLines(site: PublicationSite): string[] {
+  const lines = site.activeReleaseId === null
+    ? ["active release: none"]
+    : [`active release ${site.activeReleaseId}:`, ...site.activeFiles.map((file) => `  ${file.path}  ${file.bytes} bytes`)];
+  if (site.pending !== null && site.pending.releaseId !== site.activeReleaseId) {
+    lines.push(`pending release ${site.pending.releaseId}:`);
+    for (const file of site.pending.preview) lines.push(`  ${file.path}  ${file.bytes} bytes`);
+  }
+  return lines;
+}
+
+const filesCommand = new Command("files")
+  .description("List the files of a publication's active release and pending candidate")
+  .argument("<card-path>", "Box-relative path of the publication card")
+  .action(async (card: string) => {
     const client = boxClient();
     if (!client.ok) printBoxClientError(client.error.message);
     try {
-      const result: PublicationConnections = await client.value.publications.connections.query();
-      for (const line of publicationConnectionsLines(result)) console.log(line);
+      const { sites } = await client.value.publications.list.query();
+      for (const line of publicationFilesLines(publicationForCard(sites, card))) console.log(line);
+    } catch (error) {
+      printBoxClientError(errorMessage(error));
+    }
+  });
+
+const catCommand = new Command("cat")
+  .description("Print one text file from a publication's active release (or its pending candidate)")
+  .argument("<card-path>", "Box-relative path of the publication card")
+  .argument("<file>", "Path of the file inside the release")
+  .option("--pending", "Read from the pending candidate instead of the active release")
+  .action(async (...actionArgs: [card: string, file: string, options: { pending?: boolean }]) => {
+    const [card, file, options] = actionArgs;
+    const client = boxClient();
+    if (!client.ok) printBoxClientError(client.error.message);
+    try {
+      const { sites } = await client.value.publications.list.query();
+      const site = publicationForCard(sites, card);
+      const releaseId = options.pending === true ? site.pending?.releaseId ?? null : site.activeReleaseId;
+      if (releaseId === null) printBoxClientError(options.pending === true ? "This publication has no pending candidate." : "This publication has no active release.");
+      const result = await client.value.publications.releaseFile.query({ pubId: site.pubId, releaseId, path: file });
+      if (result.kind === "binary") printBoxClientError(`${file} is a binary file (${result.bytes} bytes, ${result.contentType}); not printed.`);
+      if (result.kind === "too-large") printBoxClientError(`${file} is too large to print (${result.bytes} bytes; limit ${result.limit}).`);
+      process.stdout.write(result.text);
     } catch (error) {
       printBoxClientError(errorMessage(error));
     }
   });
 
 const idCommand = new Command("id")
-  .description("Generate a cryptographically random publication id for publication.json")
+  .description("Generate a cryptographically random publication id for a publication card")
   .action(() => console.log(generatePubId()));
-
-const sitesCommand = new Command("sites")
-  .description("List this box's server-managed publication status")
-  .action(async () => {
-    const client = boxClient();
-    if (!client.ok) printBoxClientError(client.error.message);
-    try {
-      const result = await client.value.publications.list.query();
-      for (const line of publicationSharedHostLines(result.sharedHost)) console.log(line);
-      for (const line of publicationSiteLines(result.sites)) console.log(line);
-      if (result.sites.length > 0) for (const line of approvalLinkLines()) console.log(line);
-    } catch (error) {
-      printBoxClientError(errorMessage(error));
-    }
-  });
 
 const statusCommand = new Command("status")
   .description("Report this box's publishing connections and server-managed publication status")
@@ -179,8 +218,8 @@ const statusCommand = new Command("status")
       ]);
       console.log("Server-managed publication status:");
       for (const line of publicationConnectionsLines(connections)) console.log(line);
+      for (const line of publicationSharedHostLines(publications.sharedHost)) console.log(line);
       for (const line of publicationSiteLines(publications.sites)) console.log(line);
-      if (publications.sites.length > 0) for (const line of approvalLinkLines()) console.log(line);
     } catch (error) {
       printBoxClientError(errorMessage(error));
     }
@@ -188,12 +227,12 @@ const statusCommand = new Command("status")
 
 const prepareCommand = new Command("prepare")
   .description("Build and prepare a named site on this box's server")
-  .argument("<name>", "Publication folder name under src/publications")
-  .action(async (name: string) => {
+  .argument("<card-path>", "Box-relative path of the publication card")
+  .action(async (card: string) => {
     const client = boxClient();
     if (!client.ok) printBoxClientError(client.error.message);
     try {
-      const candidate = await client.value.publications.prepare.mutate({ name });
+      const candidate = await client.value.publications.prepare.mutate({ card });
       const { sites } = await client.value.publications.list.query();
       const site = sites.find((item) => item.pubId === candidate.pubId);
       for (const line of publicationPreparedLines(candidate, site)) console.log(line);
@@ -203,7 +242,7 @@ const prepareCommand = new Command("prepare")
   });
 
 export const pubManagedPrepareCommand = prepareCommand;
-export const pubManagedSitesCommand = sitesCommand;
 export const pubManagedIdCommand = idCommand;
-export const pubManagedConnectionsCommand = connectionsCommand;
 export const pubManagedStatusCommand = statusCommand;
+export const pubManagedFilesCommand = filesCommand;
+export const pubManagedCatCommand = catCommand;

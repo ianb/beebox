@@ -10,7 +10,7 @@
  * line rather than throwing, so the agent always gets *something* truthful.
  */
 
-import { getStatus } from "../../lib/git/core.js";
+import { getStatus } from "../../lib/git/core/operations.js";
 import { getHeadSha, getOnelineLog, getDiffStat } from "../../lib/git-range.js";
 import { loadTurnMarker } from "./turn-marker.js";
 

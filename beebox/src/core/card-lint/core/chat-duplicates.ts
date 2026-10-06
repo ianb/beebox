@@ -16,8 +16,8 @@
  */
 
 import * as path from "node:path";
-import type { LintIssue } from "../../exports/cards.js";
-import { groupHusksBySession, listChatHusksTree } from "../chat/husk-read.js";
+import type { LintIssue } from "../../../exports/cards.js";
+import { groupHusksBySession, listChatHusksTree } from "../../chat/husk-read.js";
 
 /**
  * `session` → the box-relative husk paths carrying it, per lint run. Keyed on

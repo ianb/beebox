@@ -6,7 +6,7 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { stageAndCommitPaths } from "../lib/git/core.js";
+import { stageAndCommitPaths } from "../lib/git/core/operations.js";
 import { readCardFrontmatter } from "./card-io.js";
 import { invariant } from "../shared/invariant.js";
 import { errnoCode } from "../shared/error-guards.js";

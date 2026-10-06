@@ -9,7 +9,7 @@ audience or is waiting for a signed-in member.
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../src/webapp/trpc/routers.js";
 import { pubCommand } from "../../../../src/cli/commands/pub/command.js";
-import { publicationApprovalUrl, publicationDestinationUrl, publicationPreparedLines, publicationSharedHostLines, publicationSiteLines } from "../../../../src/cli/commands/pub/managed.js";
+import { publicationApprovalUrl, publicationDestinationUrl, publicationFilesLines, publicationForCard, publicationPreparedLines, publicationSharedHostLines, publicationSiteLines } from "../../../../src/cli/commands/pub/managed.js";
 
 type Site = inferRouterOutputs<AppRouter>["publications"]["list"]["sites"][number];
 type Candidate = inferRouterOutputs<AppRouter>["publications"]["prepare"];
@@ -20,7 +20,7 @@ const candidate: Candidate = {
   name: "notes",
   title: "Notes",
   cardPath: "_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
-  approvalUrl: "/box-a/views/_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
+  approvalUrl: "/box-a/browse/notes/Notes.publication.card",
   commitWarning: null,
   revision: "b".repeat(64),
   releaseId,
@@ -34,12 +34,13 @@ function site(overrides: Partial<Site> = {}): Site {
     pubId: candidate.pubId,
     name: "notes",
     title: "Notes",
-    cardPath: "_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
-    hasCard: true,
+    cardPath: "notes/Notes.publication.card",
+    duplicateCardPaths: [],
     hostname: "notes.example.workers.dev",
     requested: { tier: "public", slug: "notes" },
     approved: { tier: "public", status: "live", slug: "notes", expiresAt: null },
     activeReleaseId: releaseId,
+    activeFiles: [{ path: "index.html", bytes: 42, sha256: "c".repeat(64) }],
     pending: null,
     sharedRoute: null,
     remoteStatus: { status: "available" },
@@ -53,7 +54,7 @@ function site(overrides: Partial<Site> = {}): Site {
 
 ```ts
 JSON.stringify(sites)
-=> ["prepare","sites","id","connections","status"]
+=> ["prepare","id","status","files","cat"]
 ```
 
 A remote outage must not read as disabled, even when the last observed edge
@@ -84,6 +85,9 @@ publicationPreparedLines(candidate, site()).at(-1)
 
 publicationPreparedLines(candidate, site({ activeReleaseId: null, approved: null, pending: { ...candidate, requestedScope: candidate.requestedScope } })).at(-1)
 =>   waiting for a signed-in box member to approve and enable this release.
+
+publicationPreparedLines(candidate, site({ remoteStatus: { status: "unavailable", reason: "cloudflare-unavailable" } })).at(-1)
+=>   serving state is unknown; check the publication card _content/publications/abcdefghijklmnopqrstuvwxyz.publication.card before describing it as live or disabled.
 ```
 
 Publication links preserve the tier route, and the approval link uses the
@@ -130,12 +134,42 @@ publicationSiteLines([site({
 })])[0].includes("legacy workers.dev URL")
 => false
 
-publicationApprovalUrl({ serverUrl: "https://boxes.example", boxName: "family" })
-=> https://boxes.example/family/publications
+publicationApprovalUrl({ serverUrl: "https://boxes.example", approvalPath: candidate.approvalUrl })
+=> https://boxes.example/box-a/browse/notes/Notes.publication.card
 
-publicationApprovalUrl({ serverUrl: "https://boxes.example", boxName: "family", approvalPath: candidate.approvalUrl })
-=> https://boxes.example/box-a/views/_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card
-
-publicationApprovalUrl({ serverUrl: undefined, boxName: "family" })
+publicationApprovalUrl({ serverUrl: undefined, approvalPath: candidate.approvalUrl })
 => null
+```
+
+`files` and `cat` resolve the card to its publication through the list rows.
+The card path is normalized; an unknown card gets a clear error.
+
+```ts
+publicationForCard([site()], "./notes/./Notes.publication.card").pubId === candidate.pubId
+=> true
+
+Promise.resolve().then(() => publicationForCard([site()], "notes/Other.publication.card")).catch((error) => error.message)
+=> No prepared publication has card notes/Other.publication.card. Run `bbx pub prepare notes/Other.publication.card` first, or check that it is a <Name>.publication.card.
+```
+
+`files` lists the active release, then a pending candidate that differs from it.
+
+```ts
+const pendingId = "d".repeat(64);
+publicationFilesLines(site({ pending: { revision: "b".repeat(64), releaseId: pendingId, preparedAt: candidate.preparedAt, requestedScope: candidate.requestedScope, preview: [{ path: "index.html", bytes: 50, sha256: "e".repeat(64) }, { path: "style.css", bytes: 7, sha256: "f".repeat(64) }], scan: candidate.scan } })).join("\n")
+=> active release aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:
+  index.html  42 bytes
+pending release dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd:
+  index.html  50 bytes
+  style.css  7 bytes
+
+publicationFilesLines(site({ activeReleaseId: null, activeFiles: [], approved: null }))
+=> ["active release: none"]
+```
+
+A pending candidate identical to the active release is not repeated.
+
+```ts
+publicationFilesLines(site({ pending: { revision: "b".repeat(64), releaseId, preparedAt: candidate.preparedAt, requestedScope: candidate.requestedScope, preview: candidate.preview, scan: candidate.scan } })).length
+=> 2
 ```

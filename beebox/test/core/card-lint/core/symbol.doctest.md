@@ -6,7 +6,7 @@ commit spreads the misunderstanding — everything else about a mark is cosmetic
 and a card must stay loadable and openable whatever is wrong with it.
 
 ```ts setup
-import { symbolIssues } from "../../../src/core/card-lint/symbol.js";
+import { symbolIssues } from "../../../../src/core/card-lint/core/symbol.js";
 
 /** The issues for one `symbol` value, as "severity: message" lines. */
 function issues(symbol: unknown): string {

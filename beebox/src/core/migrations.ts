@@ -205,6 +205,9 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Re-apply `.git/info/attributes`: bulk batches now name their attach scope
   // after the card (`<slug>.attach`), so the rendering gained a line for it.
   { name: "annex-config-2026-10", script: "src/scripts/migrate/annex-config.ts" },
+  // The publication card is the publication: fold src/publications/<name>/ into
+  // <name>.publication.card + <name>.attach/; retire the publications guidance.
+  { name: "publication-cards-2026-10", script: "src/scripts/migrate/publication-cards/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

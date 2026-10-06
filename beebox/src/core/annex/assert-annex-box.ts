@@ -10,7 +10,7 @@
  * comment: a hand-edited `.gitignore` that re-ignores assets makes the box read
  * as unconverted. What used to happen then is the reason this exists. Asset
  * bytes written into such a box reach neither git nor the annex, and the
- * failure mode depended on pathspec shape (`src/lib/git/core.ts`): naming an ignored
+ * failure mode depended on pathspec shape (`src/lib/git/core/operations.ts`): naming an ignored
  * FILE makes `git add` exit non-zero, while naming a DIRECTORY silently skips
  * its ignored contents — so card submissions lost bytes with no error at all.
  *

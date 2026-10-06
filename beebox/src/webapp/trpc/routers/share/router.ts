@@ -7,7 +7,7 @@ import { listDestinations } from "../../../../core/landmark/list-destinations.js
 import { listBoxCardFiles } from "../../../../core/list-cards.js";
 import { parseCardText } from "../../../../core/card-io.js";
 import { safeFilename } from "../../../../job-cards/chat-utils.js";
-import { stageAndCommitPaths } from "../../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../../lib/git/core/operations.js";
 import { withCardLock } from "../../../../lib/card-lock.js";
 import { createDocTemplate } from "../../../../schemas/doc.js";
 import { createCardSchemaMap } from "../../../../schemas.js";
