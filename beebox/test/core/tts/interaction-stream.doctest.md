@@ -68,6 +68,18 @@ await collectInteractionAudio(streamOf(audioEvent([1]), `event: error\ndata: {"e
 => throws InteractionStreamError: Gemini stream failed: quota exceeded
 ```
 
+An error event that does not match the expected shape — no `event_type`, only
+the SSE `event: error` line or a top-level `error` — still fails. Skipping it
+as an unknown shape would end the clip as if it were complete.
+
+```ts
+await collectInteractionAudio(streamOf(audioEvent([1]), `event: error\ndata: {"error":{"message":"quota exceeded"}}\n\n`))
+=> throws InteractionStreamError: Gemini stream failed: quota exceeded
+
+await collectInteractionAudio(streamOf(audioEvent([1]), `data: {"error":{"code":500}}\n\n`))
+=> throws InteractionStreamError: Gemini stream failed: error event with no message
+```
+
 An event that is not JSON fails the same way.
 
 ```ts

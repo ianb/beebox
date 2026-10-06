@@ -117,6 +117,21 @@ export function playAudioStream(
     try { URL.revokeObjectURL(url); } catch (_e) { /* ignore */ }
   }
 
+  /**
+   * End a failed clip completely. Without the pause, audio already buffered
+   * kept playing after the segment was marked failed, over the next segment
+   * the queue moved on to.
+   */
+  function fail(e: unknown) {
+    if (stopped) return;
+    stopped = true;
+    reader.cancel().catch(() => { /* already closed */ });
+    try { audio.pause(); } catch (_e) { /* ignore */ }
+    cleanup();
+    settleBuffer(null);
+    rejectFinished(e instanceof Error ? e : new Error(String(e)));
+  }
+
   audio.onplaying = () => {
     logSpeechEvent("audio.start", { label, streaming: true });
     opts?.onPlaying?.();
@@ -127,10 +142,8 @@ export function playAudioStream(
     settleFinished();
   };
   audio.onerror = () => {
-    cleanup();
     console.error(formatMediaElementFailure("stream", audio));
-    settleBuffer(null);
-    rejectFinished(new StreamingSpeechPlaybackError());
+    fail(new StreamingSpeechPlaybackError());
   };
 
   mediaSource.addEventListener(
@@ -141,9 +154,7 @@ export function playAudioStream(
         sourceBuffer = mediaSource.addSourceBuffer(mimeType);
       } catch (e) {
         console.error(`[audio] addSourceBuffer failed ${formatThrownError(e)}`);
-        settleBuffer(null);
-        rejectFinished(e instanceof Error ? e : new Error(String(e)));
-        cleanup();
+        fail(e);
         return;
       }
 
@@ -163,9 +174,9 @@ export function playAudioStream(
             try { mediaSource.endOfStream(); } catch (_e) { /* ignore */ }
           }
         } catch (e) {
+          if (stopped) return;
           console.error(`[audio] playAudioStream pump error ${formatThrownError(e)}`);
-          settleBuffer(null);
-          rejectFinished(e instanceof Error ? e : new Error(String(e)));
+          fail(e);
         }
       })();
     },
@@ -176,8 +187,7 @@ export function playAudioStream(
   audio.volume = 1;
   audio.play().catch((e) => {
     console.warn(formatPlaybackRejection("stream", e));
-    settleBuffer(null);
-    rejectFinished(e instanceof Error ? e : new Error(String(e)));
+    fail(e);
   });
 
   return {

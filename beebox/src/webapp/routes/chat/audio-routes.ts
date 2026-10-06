@@ -37,7 +37,13 @@ import { resolveTtsService, TtsNotConfiguredError } from "../../../core/tts/reso
 import { loadTtsConfig } from "../../../core/tts/config.js";
 import { InteractionStreamError } from "../../../core/tts/interaction-stream.js";
 import { Mp3EncoderError } from "../../../core/tts/mp3-encoder.js";
-import { EmptyTtsResponseError, TtsStreamTimeoutError, type TtsAudioStream, type TtsService } from "../../../services/tts.js";
+import {
+  EmptyTtsResponseError,
+  SpeechCancelledError,
+  TtsStreamTimeoutError,
+  type TtsAudioStream,
+  type TtsService,
+} from "../../../services/tts.js";
 import { DEFAULT_VOICE, type TtsBackend } from "../../../shared/tts-backends.js";
 import type { ChatRoutesContext } from "./context.js";
 import { readSessionLogTail } from "../../../core/chat/session/log-tail.js";
@@ -157,8 +163,13 @@ async function* guardedSpeech(audio: TtsAudioStream): AsyncGenerator<Buffer> {
       yield chunk;
     }
   } catch (e) {
-    // `rest` has already cancelled the clip on its way out.
-    console.error(`[chat-tts] stream failed after ${String(sent)} bytes: ${(await describeBackendFailure(e)) ?? errorMessage(e)}`);
+    // `rest` has already cancelled the clip on its way out. A cancel is the
+    // browser leaving, which nobody needs to investigate.
+    if (e instanceof SpeechCancelledError) {
+      console.debug(`[chat-tts] stream stopped after ${String(sent)} bytes: the browser left`);
+    } else {
+      console.error(`[chat-tts] stream failed after ${String(sent)} bytes: ${(await describeBackendFailure(e)) ?? errorMessage(e)}`);
+    }
     throw e;
   }
 }

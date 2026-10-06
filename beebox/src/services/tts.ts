@@ -60,7 +60,7 @@ export class EmptyTtsResponseError extends Error {
 }
 
 /** The clip was stopped by its consumer — the browser left. Nobody hears it. */
-class SpeechCancelledError extends Error {
+export class SpeechCancelledError extends Error {
   constructor() {
     super("Speech cancelled: the listener went away");
     this.name = "SpeechCancelledError";

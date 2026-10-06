@@ -281,6 +281,37 @@ releaseRest();
 await slowCtx.cleanup();
 ```
 
+A cancelled clip also breaks off its stream, but that is the browser leaving,
+not a provider failure: it stays out of the error log.
+
+```ts
+const { SpeechCancelledError } = await import("../../../../src/services/tts.js");
+const leftEarly = createFakeTts({ backend: "gemini", beforeEachRestChunk: () => Promise.reject(new SpeechCancelledError()) });
+const leftCtx = await makeTestServer({ services: { openaiAudio: leftEarly } });
+await leftCtx.server.listen({ port: 0, host: "127.0.0.1" });
+const leftAddr = leftCtx.server.server.address();
+const leftPort = typeof leftAddr === "object" && leftAddr !== null ? leftAddr.port : 0;
+const leftLogs: string[] = [];
+const beforeLeft = console.error;
+console.error = (...args: unknown[]) => leftLogs.push(args.map(String).join(" "));
+try {
+  const res = await fetch(`http://127.0.0.1:${leftPort}/test/api/chat/tts`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${getOrCreateAgentToken(leftCtx.boxRoot)}`, "content-type": "application/json" },
+    body: JSON.stringify({ text: "Hi." }),
+  });
+  await res.arrayBuffer().catch(() => "broken");
+} finally {
+  console.error = beforeLeft;
+}
+leftLogs.filter((line) => line.includes("[chat-tts]"))
+=> []
+```
+
+```ts cleanup
+await leftCtx.cleanup();
+```
+
 ## A backend that accepts and never finishes is a 502 too
 
 A provider that takes the request and then stalls raises ky's `TimeoutError`,

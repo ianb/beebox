@@ -13,6 +13,7 @@
  */
 
 import { z } from "zod";
+import { isRecord } from "../../shared/is-record.js";
 
 /**
  * The stream failed after its HTTP 200: the provider sent an error event, or an
@@ -36,17 +37,27 @@ export class InteractionStreamError extends Error {
 const eventSchema = z.object({
   event_type: z.string(),
   delta: z.object({ type: z.string(), data: z.string().optional() }).optional(),
-  error: z.object({ message: z.string().optional() }).optional(),
 });
 
-/** One SSE event's `data:` payload, or null for an event that has none. */
-function eventData(event: string): string | null {
-  const lines = event.split("\n").filter((line) => line.startsWith("data:"));
-  if (lines.length === 0) return null;
-  return lines.map((line) => line.slice("data:".length).trimStart()).join("\n");
+/** The `event:` name and joined `data:` payload of one SSE event. */
+function parseEvent(event: string): { name: string | null; data: string | null } {
+  const lines = event.split("\n");
+  const nameLine = lines.find((line) => line.startsWith("event:"));
+  const dataLines = lines.filter((line) => line.startsWith("data:"));
+  return {
+    name: nameLine === undefined ? null : nameLine.slice("event:".length).trim(),
+    data: dataLines.length === 0 ? null : dataLines.map((line) => line.slice("data:".length).trimStart()).join("\n"),
+  };
 }
 
-function audioFrom(data: string): Buffer | null {
+/** The provider's message from an error payload of any shape, if it has one. */
+function errorMessageOf(json: unknown): string | undefined {
+  if (!isRecord(json) || !isRecord(json["error"])) return undefined;
+  const message = json["error"]["message"];
+  return typeof message === "string" ? message : undefined;
+}
+
+function audioFrom({ name, data }: { name: string | null; data: string }): Buffer | null {
   if (data === "[DONE]") return null;
   let json: unknown;
   try {
@@ -54,14 +65,16 @@ function audioFrom(data: string): Buffer | null {
   } catch (e) {
     throw new InteractionStreamError({ kind: "unparseable", parseMessage: e instanceof Error ? e.message : String(e) });
   }
+  // An error is checked before the shape: an error event that does not match
+  // the expected schema must still fail the clip, never end it as if complete.
+  if (name === "error" || (isRecord(json) && (json["event_type"] === "error" || json["error"] !== undefined))) {
+    throw new InteractionStreamError({ kind: "error-event", providerMessage: errorMessageOf(json) });
+  }
   const parsed = eventSchema.safeParse(json);
   // A shape we do not know is skipped, not fatal: an absent audio stream
   // still surfaces, as too few bytes to be speech (`services/tts.ts`).
   if (!parsed.success) return null;
   const event = parsed.data;
-  if (event.event_type === "error" || event.error !== undefined) {
-    throw new InteractionStreamError({ kind: "error-event", providerMessage: event.error?.message });
-  }
   if (event.event_type !== "step.delta" || event.delta?.type !== "audio" || event.delta.data === undefined) return null;
   return Buffer.from(event.delta.data, "base64");
 }
@@ -103,6 +116,6 @@ export async function* interactionAudioChunks(body: ReadableStream<Uint8Array>):
 
 /** One SSE event's audio, if it carries any. */
 function eventAudio(event: string): Buffer | null {
-  const data = eventData(event);
-  return data === null ? null : audioFrom(data);
+  const { name, data } = parseEvent(event);
+  return data === null ? null : audioFrom({ name, data });
 }
