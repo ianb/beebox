@@ -32,7 +32,7 @@ import {
 import { withCardLock } from "../../../lib/card-lock.js";
 import { notifyStagingFailed } from "../../capture/failure-notice.js";
 import type { NotifyServices } from "../../notify-boxholder.js";
-import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { parseCardText, serializeCardText } from "../../card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { prepareBulkBatch, bulkBatchSlug, resolveBulkBatchPaths } from "../prepare.js";

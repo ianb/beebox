@@ -15,7 +15,7 @@ import {
 } from "../command-types.js";
 import { parseCardName, isCardFile } from "../../lib/paths/core.js";
 import { resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import {
   getTemplate,
   getDefaultTemplate,

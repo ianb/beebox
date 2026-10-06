@@ -24,7 +24,7 @@
  * need one.
  */
 
-import { boxWorkEnvironment } from "../box-maintenance.js";
+import { boxWorkEnvironment } from "../../box-maintenance.js";
 import { simpleGit, CleanOptions } from "simple-git";
 
 import {
@@ -36,17 +36,17 @@ import {
   CommitDidNotLandError,
   unstageOversizedBlobs,
   LOG_FORMAT,
-} from "./internal.js";
-import { withBoxGitLock } from "../git-lock.js";
-import { inspectIndexLock, recoverStaleIndexLock } from "../git-stale-lock.js";
+} from "../internal.js";
+import { withBoxGitLock } from "../../git-lock.js";
+import { inspectIndexLock, recoverStaleIndexLock } from "../../git-stale-lock.js";
 import { setTimeout as sleep } from "node:timers/promises";
-import { errorMessage } from "../../shared/error-guards.js";
-import type { GitLogFormat } from "./internal.js";
-import { parseTrailers } from "../../shared/commit-trailers.js";
+import { errorMessage } from "../../../shared/error-guards.js";
+import type { GitLogFormat } from "../internal.js";
+import { parseTrailers } from "../../../shared/commit-trailers.js";
 
-export { isNothingToCommitError, isContendedFailure, isStaleLockFailure } from "./internal.js";
-export { withBoxGitLock } from "../git-lock.js";
-export { isRepo, repoRootOf } from "./repo.js";
+export { isNothingToCommitError, isContendedFailure, isStaleLockFailure } from "../internal.js";
+export { withBoxGitLock } from "../../git-lock.js";
+export { isRepo, repoRootOf } from "../repo.js";
 export { getLogPaginated, getTrailerFacets } from "./log.js";
 export type {
   FileStat,

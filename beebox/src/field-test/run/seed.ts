@@ -23,7 +23,7 @@ import { isRecord } from "../../shared/is-record.js";
 import { clearBoxConfigCache } from "../../core/box/config.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { commit, getStatus, stageAll } from "../../lib/git/core.js";
+import { commit, getStatus, stageAll } from "../../lib/git/core/operations.js";
 import { getBoxDir } from "../../lib/paths/core.js";
 import type { FieldBox } from "../run-box.js";
 import type { FieldScenario } from "../scenario.js";

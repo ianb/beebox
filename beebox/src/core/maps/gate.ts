@@ -8,7 +8,7 @@
  * editing.
  */
 
-import { isRepo, getStatus, hasCommits, gitBoxPrefix } from "../../lib/git/core.js";
+import { isRepo, getStatus, hasCommits, gitBoxPrefix } from "../../lib/git/core/operations.js";
 import { BOX_DIRS } from "../../lib/paths/core.js";
 import {
   DEFAULT_IGNORE_PATTERNS,

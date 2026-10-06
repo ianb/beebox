@@ -17,6 +17,7 @@ import { ExternalLink } from "../../ui/ExternalLink";
 import { FriendlyDate } from "../../ui/FriendlyDate";
 import { AdminSectionCard } from "../AdminSectionCard";
 import { SharedPublicationHost } from "./SharedPublicationHost";
+import { OrphanPublications } from "./OrphanPublications";
 import { Accordion } from "../../ui/Accordion";
 import { TokenSetupGuidance } from "./guidance";
 import { RevealCloudflareToken } from "./RevealCloudflareToken";
@@ -114,6 +115,7 @@ export function CloudflarePublishConnectionsSection() {
           ))}
         </Stack>
         <SharedPublicationHost />
+        <OrphanPublications />
 
         <Accordion
           id="bbx-admin-cf-publish-add"

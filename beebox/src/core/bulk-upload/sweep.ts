@@ -30,7 +30,7 @@ import { parseUploadBatch } from "../../schemas/upload-batch.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { userMessageAlreadyLanded } from "../chat/session/deliver-user-message.js";
 import { listStagingSessions, isBulkSession, readStagingSession, writeStagingSession, type StagingSession, type StagingSessionState } from "../capture/staging-store/core.js";
 import { cleanupStagingSession, discardStagingSessionIfCancellable } from "../capture/staging-teardown.js";

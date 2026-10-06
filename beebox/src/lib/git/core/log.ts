@@ -12,15 +12,15 @@ import { simpleGit } from "simple-git";
 import { existsSync } from "node:fs";
 import * as pathModule from "node:path";
 
-import type { GitLogFormat } from "./internal.js";
-import { LOG_FORMAT } from "./internal.js";
+import type { GitLogFormat } from "../internal.js";
+import { LOG_FORMAT } from "../internal.js";
 import {
   collectTrailerFacets,
   compareTriggers,
   parseTrailersMulti,
   type CommitTrigger,
-} from "../../shared/commit-trailers.js";
-import { invariant } from "../../shared/invariant.js";
+} from "../../../shared/commit-trailers.js";
+import { invariant } from "../../../shared/invariant.js";
 
 /**
  * Extended log entry with multi-value trailer support.

@@ -1,6 +1,6 @@
 /**
  * Publication ids. A pub-id names one publication across the box-side
- * definition (`src/publications/<name>/publication.json`), the R2 keys under
+ * `publication` card (sources in its `<Name>.attach/` folder), the R2 keys under
  * `pubs/<pub-id>/`, and the Worker routes. Node-only (`node:crypto`), so the
  * Worker imports its runtime-agnostic schemas from `manifest-edge.ts` instead.
  */

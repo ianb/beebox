@@ -13,7 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { simpleGit } from "simple-git";
-import { hasCommits, unstageFiles } from "../../../lib/git/core.js";
+import { hasCommits, unstageFiles } from "../../../lib/git/core/operations.js";
 import type { CommandResult } from "../../command-types.js";
 import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
 import type { SessionLayout } from "./session.js";

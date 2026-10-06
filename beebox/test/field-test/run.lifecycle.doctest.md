@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { createFieldBox, TEST_BOX_MARKER } from "../../src/field-test/run-box.js";
 import { startFieldServer, allocateFreePort, serverProcessAlive } from "../../src/field-test/run/server.js";
 import { fileExists } from "../../src/lib/file-exists.js";
-import { getStatus } from "../../src/lib/git/core.js";
+import { getStatus } from "../../src/lib/git/core/operations.js";
 ```
 
 ## A free port is a real, unbound port

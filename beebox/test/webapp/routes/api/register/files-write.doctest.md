@@ -8,7 +8,7 @@ are chatty); git state rides on view metadata instead.
 
 ```ts setup
 import { makeTestServer } from "../../../../helpers/doctest-server.js";
-import { getStatus } from "../../../../../src/lib/git/core.js";
+import { getStatus } from "../../../../../src/lib/git/core/operations.js";
 ```
 
 ## PUT creates (with parent dirs) and returns the file's identity

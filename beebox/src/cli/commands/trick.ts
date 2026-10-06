@@ -16,7 +16,7 @@ import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
-import { stageAll, commit, getStatus } from "../../lib/git/core.js";
+import { stageAll, commit, getStatus } from "../../lib/git/core/operations.js";
 import { buildScriptEnv } from "../../core/script-env/core.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../lib/box-shape.js";

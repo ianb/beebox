@@ -4,7 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { withCardLock } from "../../lib/card-lock.js";
 import { withFileLock } from "../../lib/file-lock.js";
-import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import type { GoogleGmailService } from "../../services/google-gmail/core.js";
 import { parseGmailMessage, type FetchedMessage } from "./mime.js";
 import { writeThreadCards } from "./threads.js";

@@ -12,7 +12,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
-import { commitPaths, pathsHaveChanges } from "../../lib/git/core.js";
+import { commitPaths, pathsHaveChanges } from "../../lib/git/core/operations.js";
 import { getBoxDir, BOX_DIRS } from "../../lib/paths/core.js";
 import { fmt } from "../../lib/format.js";
 import { parseDuration } from "../../scheduled-script-duration.js";
