@@ -8,7 +8,11 @@
 import * as path from "node:path";
 import { glob } from "glob";
 import { boxCodePaths, getBoxShape } from "../lib/box-shape.js";
+import { isPublicationBuildOutputPath } from "../shared/attach-path.js";
 import { isAgentInstructionsFile } from "./agent-instruction-files.js";
+
+/** Glob prune for {@link isPublicationBuildOutputPath}; that predicate stays authoritative. */
+const PUBLICATION_BUILD_OUTPUT_GLOB = "**/*.attach/project/dist/**";
 
 const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"];
 
@@ -17,8 +21,8 @@ export async function listBoxCardFiles(boxRoot: string): Promise<string[]> {
     cwd: boxRoot,
     nodir: true,
     absolute: true,
-    ignore: CARD_GLOB_IGNORE,
-  });
+    ignore: [...CARD_GLOB_IGNORE, PUBLICATION_BUILD_OUTPUT_GLOB],
+  }).then((files) => files.filter((abs) => !isPublicationBuildOutputPath(path.relative(boxRoot, abs).split(path.sep).join("/"))));
 }
 
 // Path segments that never hold authored markdown — dependency/VCS/tooling dirs.
@@ -51,6 +55,7 @@ export function isBuiltinLintableMarkdown(filePath: string): boolean {
   if (!filePath.endsWith(".md")) return false;
   const parts = filePath.split(path.sep);
   if (parts.some((seg) => MARKDOWN_SKIP_DIRS.has(seg))) return false;
+  if (isPublicationBuildOutputPath(parts.join("/"))) return false;
   for (let i = 0; i + 1 < parts.length; i++) {
     if (parts[i] === "docs" && parts[i + 1] === "generated") return false;
   }
@@ -67,6 +72,7 @@ const MARKDOWN_WALK_PRUNE = [
   "**/.claude/**",
   "**/.agents/**",
   "**/.beebox/**",
+  PUBLICATION_BUILD_OUTPUT_GLOB,
 ];
 
 /** List the authored `.md` files in a box, absolute paths, sorted. */

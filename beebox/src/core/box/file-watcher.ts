@@ -29,6 +29,7 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import type { EventBus } from "../event-bus/core.js";
 import { BOX_DIRS } from "../../lib/paths/core.js";
+import { isPublicationBuildOutputPath } from "../../shared/attach-path.js";
 import { clearWatchLimit, recordWatchLimit } from "./watch-limit.js";
 
 const watchers = new Map<string, BoxWatcher>();
@@ -172,7 +173,8 @@ class BoxWatcher implements BoxWatcherHandle {
     const root = this.rootFor(absPath);
     if (root === null) return true;
     const rel = path.relative(root.path, absPath);
-    if (DOT_SEGMENT.test(rel)) return true;
+    // Dot-segments, dependency trees, and publication build output are not box content.
+    if (DOT_SEGMENT.test(rel) || /(^|[/\\])node_modules([/\\]|$)/.test(rel) || isPublicationBuildOutputPath(rel.split(path.sep).join("/"))) return true;
     return root.path === this.boxRoot && HIGH_CHURN_DIRS.some((dir) => rel === dir || rel.startsWith(dir + path.sep));
   }
 
