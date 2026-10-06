@@ -11,6 +11,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { availableParallelism, loadavg } from "node:os";
 
 export const MEMORY_PRESSURE_WARN = 2;
 export const MEMORY_PRESSURE_CRITICAL = 4;
@@ -37,6 +38,50 @@ export const PAGEOUT_RATE_THRASH = 100;
 
 /** Gap between the two pageout samples that make a rate. */
 export const PAGEOUT_SAMPLE_MS = 5000;
+
+/** The host signals the quiet gate reads; a null or absent signal never blocks. */
+export interface HostSignals {
+  load1: number;
+  bar: number;
+  /** macOS memory-pressure level: 1 normal, 2 warn, 4 critical. */
+  level: number | null;
+  /** Free swap in bytes. */
+  swapFreeBytes?: number | null;
+  /** Pageouts per second between two polls. */
+  pageoutRate?: number | null;
+}
+
+/**
+ * Why the host is not quiet enough to start the suite; empty means quiet.
+ *
+ * Load alone does not see a swapping host (2026-09-11: load1 8 at pressure
+ * level 2 on a calm afternoon), and the 2026-09-25 run started at level 2 with
+ * 112 MB of swap free, so each memory signal gates independently of load:
+ * pressure at warn or above, free swap under {@link SWAP_FREE_FLOOR_BYTES}, or
+ * a pageout rate at {@link PAGEOUT_RATE_THRASH}. A signal that is null (no
+ * `sysctl`/`vm_stat`, e.g. non-Darwin) is "nothing better to go on", not an
+ * objection.
+ */
+export function hostBlockers(input: HostSignals): string[] {
+  const blockers: string[] = [];
+  if (input.load1 > input.bar) blockers.push(`load1 ${input.load1.toFixed(1)} > ${String(input.bar)}`);
+  if (input.level !== null && input.level >= MEMORY_PRESSURE_WARN) {
+    blockers.push(`memory pressure level ${String(input.level)}`);
+  }
+  const swap = input.swapFreeBytes ?? null;
+  if (swap !== null && swap < SWAP_FREE_FLOOR_BYTES) {
+    blockers.push(`swap free ${(swap / 1024 ** 3).toFixed(2)} GB < ${String(SWAP_FREE_FLOOR_BYTES / 1024 ** 3)} GB`);
+  }
+  const rate = input.pageoutRate ?? null;
+  if (rate !== null && rate >= PAGEOUT_RATE_THRASH) {
+    blockers.push(`pageouts ${rate.toFixed(0)}/s >= ${String(PAGEOUT_RATE_THRASH)}/s`);
+  }
+  return blockers;
+}
+
+export function isHostQuiet(input: HostSignals): boolean {
+  return hostBlockers(input).length === 0;
+}
 
 export interface MemoryPressure {
   level: number | null;
@@ -138,4 +183,14 @@ function tryRead(command: [string, ...string[]], parse: (raw: string) => number 
   } catch (_e) {
     return null;
   }
+}
+
+/**
+ * The quiet-host blockers for a whole-suite run, read now: load against one
+ * per core, memory pressure, free swap, and a pageout rate (one
+ * {@link PAGEOUT_SAMPLE_MS} sample window).
+ */
+export async function currentHostBlockers(): Promise<string[]> {
+  const { level, swapFreeBytes } = readMemoryPressure();
+  return hostBlockers({ load1: loadavg()[0] ?? 0, bar: availableParallelism(), level, swapFreeBytes, pageoutRate: await readPageoutRate() });
 }

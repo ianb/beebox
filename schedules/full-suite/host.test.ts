@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PAGEOUT_RATE_THRASH, SWAP_FREE_FLOOR_BYTES } from "../../bin/host-pressure.js";
-import { hostBlockers, isHostQuiet } from "./lib.js";
+import { PAGEOUT_RATE_THRASH, SWAP_FREE_FLOOR_BYTES, hostBlockers, isHostQuiet } from "../../bin/host-pressure.js";
 
 const GB = 1024 ** 3;
 const calm = { load1: 2, bar: 12, level: 1, swapFreeBytes: 8 * GB, pageoutRate: 0 };

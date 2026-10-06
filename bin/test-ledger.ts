@@ -23,7 +23,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { signalNumber, terminateChild } from "./child-signals.js";
 import { availableParallelism } from "node:os";
-import { pressureDecision, readMemoryPressure } from "./host-pressure.js";
+import { currentHostBlockers, pressureDecision, readMemoryPressure } from "./host-pressure.js";
 import { changedPaths, git, gitCommonDir } from "./test-git.js";
 import { renderReport } from "./test-ledger-report.js";
 import {
@@ -365,8 +365,21 @@ export async function main(argv: string[]): Promise<void> {
     // is a predetermined 300s-per-file timeout that teaches nothing (the
     // 2026-09-11 incident). Checked here rather than inside runWrapped so a
     // refusal acquires no slot and writes no ledger record.
+    const ignoreLoad = process.env["BBX_TEST_IGNORE_LOAD"] === "1";
+    const wholeTier = mode === "full" && runsWholeTier({ command: given, taprcFiles: taprcTestFiles(PACKAGE_ROOT), careful: readCarefulList() });
+    // A whole-suite run gets the hourly schedule's gate: on a host that is
+    // already swapping it would hang, time out and report load as failures.
+    // The refusal names its reasons and the override, so the caller (usually
+    // an agent) can choose to wait, force it, or ask the boxholder.
+    const blockers = wholeTier && !ignoreLoad ? await currentHostBlockers() : [];
+    if (blockers.length > 0) {
+      console.error(`test-ledger: not starting a full run; the host is not quiet: ${blockers.join("; ")}.` +
+        " Wait and retry, or set BBX_TEST_IGNORE_LOAD=1 to run anyway (load-related timeouts are then likely).");
+      process.exitCode = 1;
+      return;
+    }
     const pressure = readMemoryPressure();
-    const decision = pressureDecision({ mode, level: pressure.level, ignoreLoad: process.env["BBX_TEST_IGNORE_LOAD"] === "1" });
+    const decision = pressureDecision({ mode, level: pressure.level, ignoreLoad });
     if (decision === "refuse") {
       console.error(
         "test-ledger: host is under critical memory pressure; a full run would time out at tap's 300s budget" +
@@ -379,7 +392,6 @@ export async function main(argv: string[]): Promise<void> {
       console.error(`test-ledger: host is under memory pressure (level ${String(pressure.level)}); timeouts in this run may be load, not code.`);
     }
     installSignalReleases();
-    const wholeTier = mode === "full" && runsWholeTier({ command: given, taprcFiles: taprcTestFiles(PACKAGE_ROOT), careful: readCarefulList() });
     if (wholeTier && !(await holdFullRun())) {
       process.exitCode = 1;
       return;
