@@ -95,3 +95,7 @@ Tracked in [the attribution issue](../docs-and-chores/2026-09-30-attribution-for
 
 Related: [plan template has no developer-only section](2026-09-21-plan-template-no-developer-only-section.md),
 another case of notes meant for the author and not the reader.
+
+## Decision (2026-10-06)
+
+To be worked in a Fable design session later.

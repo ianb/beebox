@@ -58,4 +58,4 @@ official API no longer issues credentials without a manual review. What works:
 - `i.redd.it` images fetch directly; image posts often carry the content.
 
 Do not use stealth-browser or residential-proxy fetchers. Details and the
-proposed tool: [reddit-fetch-tool](../issues/features/2026-10-04-reddit-fetch-tool.md).
+proposed tool: [fetch-blocked-pages](../issues/features/2026-10-04-fetch-blocked-pages.md).

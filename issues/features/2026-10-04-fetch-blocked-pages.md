@@ -1,5 +1,5 @@
 ---
-title: "Agents cannot read Reddit links: add a fetch path that works without the closed Reddit API"
+title: "Agents cannot read pages from sites that block them (Reddit, Instagram, …): find a general fetch approach"
 workstream: unattached
 area: dev-tooling
 filed-by: agent
@@ -58,3 +58,7 @@ comment tree as text, and saves linked `i.redd.it` images:
 Open question: whether this belongs to a general `bin/fetch` that routes
 known-hostile hosts to adapters. Do not build that until a second host needs
 it.
+
+## Decision (2026-10-06)
+
+The developer: "This shouldn't actually be so specific, but the general issue of fetching blocked pages (also Instagram, for instance)." Renamed to the general problem. The work starts with a large survey and web search of what people do: this is a common problem for agent tools, so tools and approaches likely exist (fetch MCP servers, reader services, archive APIs, logged-in browser profiles, per-site adapters). The Reddit findings below are one data point. Stealth-browser and residential-proxy fetchers stay out (they evade bot detection).
