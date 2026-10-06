@@ -26,7 +26,7 @@ That fix is a one-time check by design; mid-run abort was left out of scope.
   group (`terminateChild` in `bin/child-signals.ts` already does this for the
   wrapper's own signals) and let the wrapper release its slot and lock.
 - Which signals count: the same ones as `hostBlockers` (memory pressure at
-  warn or above, free swap under the floor, pageout rate), with some
+  warn or above, pageout rate), with some
   hysteresis so one noisy 5-second sample does not kill a 30-minute run.
 - What a stopped run reports: the existing `deferred` condition with the
   partial results discarded (no verdicts, no `markComplete`), so the same

@@ -11,18 +11,10 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { availableParallelism, loadavg } from "node:os";
 
 export const MEMORY_PRESSURE_WARN = 2;
 export const MEMORY_PRESSURE_CRITICAL = 4;
-
-/**
- * Free swap below this means the next allocation burst pages against a full
- * disk-backed pool: 2026-09-25 had 112 MB free of 16.4 GB when the machine
- * became unusable, and a full suite adds a dozen tap processes. The 2 GB
- * figure is a chosen margin, not a measurement: far above the incident's
- * 112 MB, small enough that an ordinary busy day (several GB free) passes.
- */
-export const SWAP_FREE_FLOOR_BYTES = 2 * 1024 ** 3;
 
 /**
  * Pages paged out per second, between two polls, at or above which the host is
@@ -38,24 +30,51 @@ export const PAGEOUT_RATE_THRASH = 100;
 /** Gap between the two pageout samples that make a rate. */
 export const PAGEOUT_SAMPLE_MS = 5000;
 
-export interface MemoryPressure {
+/** The host signals the quiet gate reads; a null or absent signal never blocks. */
+export interface HostSignals {
+  load1: number;
+  bar: number;
+  /** macOS memory-pressure level: 1 normal, 2 warn, 4 critical. */
   level: number | null;
-  pageouts: number | null;
-  /** Free swap in bytes; null where `vm.swapusage` does not exist (non-Darwin). */
-  swapFreeBytes: number | null;
+  /** Pageouts per second between two polls. */
+  pageoutRate?: number | null;
 }
 
 /**
- * `sysctl -n vm.swapusage`:
- * `total = 16384.00M  used = 16272.00M  free = 112.00M  (encrypted)`.
+ * Why the host is not quiet enough to start the suite; empty means quiet.
+ *
+ * Load alone does not see a swapping host (2026-09-11: load1 8 at pressure
+ * level 2 on a calm afternoon), and the 2026-09-25 run started at level 2
+ * while paging hard, so each memory signal gates independently of load:
+ * pressure at warn or above, or a pageout rate at {@link PAGEOUT_RATE_THRASH}.
+ * A signal that is null (no `sysctl`/`vm_stat`, e.g. non-Darwin) is "nothing
+ * better to go on", not an objection.
+ *
+ * Free swap is deliberately not a signal: macOS adds 1 GB swap files as it
+ * needs them, so `vm.swapusage`'s free figure sits near 1 GB however loaded the
+ * host is (2026-10-06: total grew 7 GB to 10 GB in a few hours with 1.0-1.3 GB
+ * free throughout). A 2 GB floor refused nearly every run.
  */
-export function parseSwapFreeBytes(raw: string): number | null {
-  const match = /\bfree\s*=\s*([\d.]+)([KMGT])\b/u.exec(raw);
-  if (match?.[1] === undefined || match[2] === undefined) return null;
-  const value = Number.parseFloat(match[1]);
-  const unit = { K: 1024, M: 1024 ** 2, G: 1024 ** 3, T: 1024 ** 4 }[match[2]];
-  if (!Number.isFinite(value) || unit === undefined) return null;
-  return Math.round(value * unit);
+export function hostBlockers(input: HostSignals): string[] {
+  const blockers: string[] = [];
+  if (input.load1 > input.bar) blockers.push(`load1 ${input.load1.toFixed(1)} > ${String(input.bar)}`);
+  if (input.level !== null && input.level >= MEMORY_PRESSURE_WARN) {
+    blockers.push(`memory pressure level ${String(input.level)}`);
+  }
+  const rate = input.pageoutRate ?? null;
+  if (rate !== null && rate >= PAGEOUT_RATE_THRASH) {
+    blockers.push(`pageouts ${rate.toFixed(0)}/s >= ${String(PAGEOUT_RATE_THRASH)}/s`);
+  }
+  return blockers;
+}
+
+export function isHostQuiet(input: HostSignals): boolean {
+  return hostBlockers(input).length === 0;
+}
+
+export interface MemoryPressure {
+  level: number | null;
+  pageouts: number | null;
 }
 
 export interface PageoutSample {
@@ -105,7 +124,6 @@ export function readMemoryPressure(): MemoryPressure {
   return {
     level: tryRead(["sysctl", "-n", "kern.memorystatus_vm_pressure_level"], parsePressureLevel),
     pageouts: tryRead(["vm_stat"], parsePageouts),
-    swapFreeBytes: tryRead(["sysctl", "-n", "vm.swapusage"], parseSwapFreeBytes),
   };
 }
 
@@ -138,4 +156,14 @@ function tryRead(command: [string, ...string[]], parse: (raw: string) => number 
   } catch (_e) {
     return null;
   }
+}
+
+/**
+ * The quiet-host blockers for a whole-suite run, read now: load against one
+ * per core, memory pressure, and a pageout rate (one
+ * {@link PAGEOUT_SAMPLE_MS} sample window).
+ */
+export async function currentHostBlockers(): Promise<string[]> {
+  const { level } = readMemoryPressure();
+  return hostBlockers({ load1: loadavg()[0] ?? 0, bar: availableParallelism(), level, pageoutRate: await readPageoutRate() });
 }
