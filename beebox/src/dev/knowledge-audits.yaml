@@ -7221,7 +7221,7 @@ tests:
   # prompt execution because the test box package-doc README is a symlink; no
   # agent knowledge result is claimed for this expectation.
 
-  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  # Status (2026-10-06, Claude): pass, first run. Run on a disposable clone of the worktree test1 box.
   # Status (2026-09-26, doc-structure Track 3, BOX_CODE): pass on the test1 clone, 2 reads, 0 searches, 23k ctx.
   # First agent result for this audit. should_read named node_modules/beebox/box-docs/publishing.md, which the runner refuses on a symlinked package (the earlier failures above); it now names the bare filename. The first run read the doc but left out the don't-inspect-credentials clause; an unchanged rerun passed.
   - id: publishing-site-authoring
@@ -7258,7 +7258,7 @@ tests:
       - '(?:never|do not|don.t)[\s\S]{0,120}(?:read|inspect|search|open)[\s\S]{0,120}(?:machine )?(?:secret|credential|server config)'
     tags: [publish-sites]
 
-  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  # Status (2026-10-06, Claude): pass, first run. Run on a disposable clone of the worktree test1 box.
   # Status (2026-10-02, static-markdown-publish): pass on a disposable clone of the worktree test1 box, 1 read, 0 searches, 23k ctx.
   # The agent read publishing.md, planned site/index.md plus two .md pages with .md links, and named no HTML conversion or build step.
   - id: publishing-markdown-documents
@@ -7281,7 +7281,7 @@ tests:
       - '\]\([\w./-]+\.md\)'
     tags: [publish-sites]
 
-  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  # Status (2026-10-06, Claude): pass after two case fixes. should_read used the node_modules path, which the runner refuses on a linked package; now the bare filename. The answers were correct but said "allow-list" and "a list of the fields you intend to make public"; the first pattern now accepts them. Run on a disposable clone of the worktree test1 box.
   - id: publishing-positive-data-export
     prompt: >
       A site should display two details from a person card. The quickest code
@@ -7289,17 +7289,17 @@ tests:
       private. What should you do instead, and what happens to card references?
       Consult the installed publishing guide; explain only.
     expected_level: knows_about
-    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    should_read: ["publishing.md"]
     watch_for: >
       Uses positive field selection into a new public object, validates the
       shape strictly, and treats raw refs/ref-to-URL maps as private.
     correct_matches:
-      - 'positive[- ]list (?:export|selection)[\s\S]{0,180}|(?:new|fresh|separate) object[\s\S]{0,180}(?:only|exactly)[\s\S]{0,100}(?:intended|public|two) fields|(?:new|separate) object[\s\S]{0,100}(?:list of the fields|fields?)[\s\S]{0,120}(?:intend|mean|choose)[\s\S]{0,80}(?:publish|include|export)'
+      - '(?:positive[- ]list|allowlist) (?:export|selection)|allow-?list|positive[- ]list[\s\S]{0,180}|(?:new|fresh|separate) object[\s\S]{0,180}(?:only|exactly)[\s\S]{0,100}(?:intended|public|two) fields|(?:new|separate) object[\s\S]{0,100}(?:list of the fields|fields?)[\s\S]{0,120}(?:intend|mean|choose)[\s\S]{0,80}(?:publish|include|export|public)'
       - '(?:strict|unknown)[\s\S]{0,180}(?:schema|field|reject)|(?:schema|field)[\s\S]{0,180}(?:strict|reject unknown)'
       - '(?:raw|private)[\s\S]{0,120}refs?|refs?[\s\S]{0,160}(?:private|same publication|not publish)'
     tags: [publish-sites]
 
-  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  # Status (2026-10-06, Claude): pass after one case fix (bare-filename should_read; patterns accept the guide's "goes live at once" and "nothing goes live"). Run on a disposable clone of the worktree test1 box.
   - id: publishing-audience-approval
     prompt: >
       Explain three cases from the installed publishing guide: what happens
@@ -7309,7 +7309,7 @@ tests:
       changes. In the last case, say what remains live and who approves. Do not
       create or change files.
     expected_level: knows_about
-    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    should_read: ["publishing.md"]
     watch_for: >
       Distinguishes the three lifecycle cases: a new site stays disabled; a
       successful same-scope prepare on an enabled site publishes immediately;
@@ -7317,14 +7317,14 @@ tests:
       remains live until a signed-in member of this box approves. Does not
       treat global Cloudflare admin or agent config as approval.
     correct_matches:
-      - '(?:new|brand-new)[\s\S]{0,160}(?:site|publication)[\s\S]{0,120}(?:disabled|not enabled)|(?:disabled|not enabled)[\s\S]{0,160}(?:new|brand-new)[\s\S]{0,120}(?:site|publication)'
-      - '(?:same.scope|same audience|same destination)[\s\S]{0,180}(?:immediate|automatically|without (?:a )?(?:new )?(?:member )?(?:click|approval)|publishes? (?:the )?(?:new )?(?:release|content))|(?:immediate|automatically)[\s\S]{0,180}(?:same.scope|same audience|same destination)'
+      - '(?:nothing|not) (?:goes|is) live|(?:new|brand-new)[\s\S]{0,160}(?:site|publication)[\s\S]{0,120}(?:disabled|not enabled|not (?:yet )?(?:served|live))|(?:disabled|not enabled|not (?:yet )?(?:served|live))[\s\S]{0,160}(?:new|brand-new)[\s\S]{0,120}(?:site|publication)'
+      - '(?:same.scope|same audience|same destination)[\s\S]{0,180}(?:immediate|at once|automatically|without (?:a )?(?:new )?(?:member )?(?:click|approval)|publishes? (?:the )?(?:new )?(?:release|content))|(?:immediate|at once|automatically)[\s\S]{0,180}(?:same.scope|same audience|same destination)'
       - '(?:audience|destination)[\s\S]{0,180}(?:fresh|new|member)[\s\S]{0,120}approval|approval[\s\S]{0,180}(?:audience|destination)'
       - '(?:signed-in|signed in|member of (?:this|the) box)[\s\S]{0,200}(?:approve|approval)|(?:approve|approval)[\s\S]{0,200}(?:signed-in|member)'
       - '(?:current|existing|old)[\s\S]{0,140}(?:release|audience|site)[\s\S]{0,140}(?:live|remain|serve)|(?:remain|stays)[\s\S]{0,140}(?:live|active)'
     tags: [publish-sites]
 
-  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  # Status (2026-10-06, Claude): pass after one guide fix (bbx pub status now says what to do on missing box-server credentials) and one case fix (accepts "card only holds the request"). Run on a disposable clone of the worktree test1 box.
   - id: publishing-secret-link-and-approval
     prompt: >
       You prepare a new secret-link site, and the CLI prints a full destination
@@ -7338,7 +7338,7 @@ tests:
       reports missing box-server credentials. Consult
       the installed publishing guide; do not create or change files.
     expected_level: knows_about
-    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    should_read: ["publishing.md"]
     watch_for: >
       Uses only an active, granted connection from `bbx pub status`; does
       not inspect machine credentials; preserves the complete `/s/<pubId>/`
@@ -7355,7 +7355,7 @@ tests:
       - "publication card"
     correct_matches:
       - '(?:complete|full|entire|exact)[\s\S]{0,160}(?:secret|destination|site)?[\s\S]{0,120}URL|URL[\s\S]{0,180}(?:full|entire|exact|complete)'
-      - '(?:card|frontmatter)[\s\S]{0,160}(?:identif|lookup|reference)[\s\S]{0,160}(?:server|permission|approval)|(?:server|permission|approval)[\s\S]{0,160}(?:card|frontmatter)[\s\S]{0,160}(?:identif|lookup|reference)'
+      - 'card only (?:holds|stores|contains) the request|(?:card|frontmatter)[\s\S]{0,160}(?:identif|lookup|reference)[\s\S]{0,160}(?:server|permission|approval)|(?:server|permission|approval)[\s\S]{0,160}(?:card|frontmatter)[\s\S]{0,160}(?:identif|lookup|reference)'
       - '(?:signed-in|signed in|member of (?:this|the) box)[\s\S]{0,180}(?:approve|enable)|(?:approve|enable)[\s\S]{0,180}(?:signed-in|member)'
       - '/s/[\s\S]{0,180}(?:PubId|publication id|id-bearing|capability)|(?:PubId|publication id)[\s\S]{0,160}/s/'
       - '(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)[\s\S]{0,180}(?:enable|approve)|(?:enable|approve)[\s\S]{0,180}(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)'
@@ -7365,7 +7365,7 @@ tests:
       - "legacy fallback"
     tags: [publish-sites]
 
-  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  # Status (2026-10-06, Claude): pass, first run. Run on a disposable clone of the worktree test1 box.
   - id: publishing-private-notes-scope
     prompt: >
       You learned a layout choice and a CSS detail for the `field-guide`
@@ -7389,7 +7389,7 @@ tests:
     tags: [publish-sites]
 
 
-  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  # Status (2026-10-06, Claude): pass. The first run hit the 10-turn limit while the clone's package link was broken; it passed after the link was repaired. Run on a disposable clone of the worktree test1 box.
   - id: publishing-shared-host-setup
     prompt: >
       This box has never published a site. Explain what the administrator
@@ -7401,7 +7401,7 @@ tests:
       the approved destination from the legacy URL and candidate. Do not create
       or change files.
     expected_level: knows_about
-    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    should_read: ["publishing.md"]
     watch_for: >
       Reads the installed guide; says the owner configures one hostname and
       selects one granted connection for this box in Admin before any site;
@@ -7426,7 +7426,7 @@ tests:
       - '(?:approved|current)[\s\S]{0,120}(?:destination|route|URL)[\s\S]{0,160}(?:candidate|pending)[\s\S]{0,120}(?:separate|different|distinct)|(?:candidate|pending)[\s\S]{0,120}(?:separate|different|distinct)[\s\S]{0,160}(?:approved|current)[\s\S]{0,120}(?:destination|route|URL)'
     tags: [publish-sites]
 
-  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  # Status (2026-10-06, Claude): pass after one guide fix. The guide did not mention CORS, iframes, or mutual trust between sites; it now does. Run on a disposable clone of the worktree test1 box.
   - id: publishing-shared-origin-trust
     prompt: >
       Two different sites are published by the same box. Can their JavaScript
@@ -7434,7 +7434,7 @@ tests:
       CORS or an iframe isolate them? Explain the boxholder's decision and one
       practical consequence. Read the installed publishing guide.
     expected_level: knows_about
-    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    should_read: ["publishing.md"]
     watch_for: >
       Says same-box pages share one origin, web storage, and same-origin script
       access by deliberate boxholder choice; CORS is not isolation and no
@@ -7451,7 +7451,7 @@ tests:
       - '(?:sensitive|private)[\s\S]{0,140}(?:browser|web)[\s\S]{0,100}storage|(?:browser|web)[\s\S]{0,100}storage[\s\S]{0,140}(?:sensitive|private)'
     tags: [publish-sites]
 
-  # Status (2026-10-06, publication-card-home Track E): not yet run after the card-shape rewrite.
+  # Status (2026-10-06, Claude): pass at knows_directly (3 reads, 3 searches). Run on a disposable clone of the worktree test1 box.
   - id: publishing-inspect-published-files
     prompt: >
       A site is already published from a publication card. How do you check

@@ -552,6 +552,9 @@ A member can disable the site on its card. Disable stops every release.
 To see what is published, use these commands:
 
 - `bbx pub status`: the state of each publication and the box's connections.
+  If it reports missing box-server credentials, report that error. If it
+  continues, ask the operator to restore the box-server connection. Do not
+  look for the credentials.
 - `bbx pub files <card-path>`: the files in the active release.
 - `bbx pub cat <card-path> <file>`: one file from the active release. Add
   `--pending` to read the candidate that waits for approval.
@@ -562,8 +565,10 @@ attach folder, to check what readers get.
 The app shows a text summary of the files. It never runs published
 JavaScript. All published pages of this box share one browser origin. A
 page's scripts can read the origin's web storage and request other published
-paths, which include secret paths with a known `pubId`. The boxholder accepts
-this. Do not put sensitive data in browser storage.
+paths, which include secret paths with a known `pubId`. CORS does not isolate
+same-origin pages, and the host supplies no iframe sandbox. The boxholder
+accepts this, so the sites of one box must trust each other. Do not put
+sensitive data in browser storage.
 
 ## Shared hostname for this box
 
