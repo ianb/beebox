@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
-import { attachDirFor, isAttachDirName, isInsideAttachScope } from "../../shared/attach-path.js";
+import { attachDirFor, isAttachDirName, isInsideAttachScope, isPublicationBuildOutputPath } from "../../shared/attach-path.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import { findLinkedCardPaths } from "../find-inbound-card-refs.js";
 import { scanBoxRepositoryStats, type BoxRepositoryStats } from "./repository-stats.js";
@@ -166,6 +166,7 @@ async function collectFiles(boxRoot: string): Promise<CollectedTree> {
     for (const entry of entries) {
       if (entry.isDirectory() && EXCLUDED_DIRECTORY_NAMES.has(entry.name)) continue;
       const absolutePath = path.join(directory, entry.name);
+      if (entry.isDirectory() && isPublicationBuildOutputPath(path.relative(boxRoot, absolutePath).split(path.sep).join("/"))) continue;
       if (entry.isDirectory()) {
         if (isAttachDirName(entry.name)) {
           attachmentDirectories.add(path.relative(boxRoot, absolutePath));

@@ -269,6 +269,32 @@ result.message.includes("CLAUDE.md")
 await box.cleanup();
 ```
 
+## A git-annex pointer is refused; text that only mentions the prefix is not
+
+An annexed file whose content was never fetched holds a short pointer line.
+Prepare refuses it by content, in static and project output alike.
+
+```ts
+const POINTER = `/annex/objects/SHA256E-s300000--${"a".repeat(64)}.jpg\n`;
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("_content/Example.attach/static/index.html", "<h1>Home</h1>");
+await box.write("_content/Example.attach/static/photo.jpg", POINTER);
+const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
+
+result.ok ? "ok" : `${result.reason}: ${result.message}`
+=> bundle-policy: file 'photo.jpg' is a git-annex pointer; its content is not in this checkout. Fetch it (git annex get) and prepare again
+
+await box.write("_content/Example.attach/static/photo.jpg", "Stored under /annex/objects/ when annexed.\n");
+await box.write("_content/Example.attach/static/big.txt", POINTER + "x".repeat(1100));
+const accepted = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
+
+accepted.ok
+=> true
+
+await box.cleanup();
+```
+
 ## Static mode renders Markdown pages and does not ship the sources
 
 Each `.md` file becomes a sibling `.html` page styled by the box's Markdown

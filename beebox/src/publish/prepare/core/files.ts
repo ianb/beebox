@@ -8,6 +8,7 @@ import path from "node:path";
 import { scanBundle, type LeakScanResult } from "../../leak-scan.js";
 import { releaseIdForFiles } from "../../manifest-edge.js";
 import type { PublicationDefinition } from "../../publication-definition.js";
+import { isAnnexPointer } from "../../../lib/annex-pointer.js";
 import { bundlePolicyError } from "./errors.js";
 import { renderMarkdownSources } from "./markdown.js";
 import type { PreparedFile } from "./types.js";
@@ -164,6 +165,12 @@ async function collectFiles(root: string, definition: PublicationDefinition): Pr
         throw bundlePolicyError(`bundle has more than ${PUBLICATION_FILE_LIMITS.files} files (observed at least ${observed})`, { observed, limit: PUBLICATION_FILE_LIMITS.files });
       }
       const content = await readBoundedRegularFile({ absolute, relative, currentTotal: totalBytes });
+      // An unlocked git-annex file whose content is absent holds pointer text
+      // (see lib/annex-pointer.ts and docs/plans/asset-annex.md, "Working-tree
+      // files are ordinary files"). Detected by content so every box behaves alike.
+      if (isAnnexPointer(content)) {
+        throw bundlePolicyError(`file '${relative}' is a git-annex pointer; its content is not in this checkout. Fetch it (git annex get) and prepare again`);
+      }
       totalBytes += content.length;
       files.set(relative, content);
     }
