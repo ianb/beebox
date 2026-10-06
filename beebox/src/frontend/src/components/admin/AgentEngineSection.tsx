@@ -16,7 +16,8 @@ const DESCRIPTION =
 const TELEMETRY_HELPER =
   "Claude Code reports which tools and skills ran, the model, timings, and your account and device ids. " +
   "Anthropic says this never includes prompts, code, or file paths. On Pro and Max logins it also sends redacted " +
-  "error reports. Applies to Claude models only; runs on other models never send it.";
+  "error reports. Applies to Claude models only; runs on other models never send it. A chat already running keeps " +
+  "its setting until its agent restarts.";
 
 const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
 
