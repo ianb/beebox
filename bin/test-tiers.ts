@@ -215,6 +215,25 @@ export function tierCommand(input: {
   return [executable, ...flags, ...args, ...files];
 }
 
+/**
+ * Whether this command runs a whole tier: a bare `tap` that names no test file,
+ * so `tierCommand` appends the tier's list. A command that names files (a
+ * developer's one-file run, or `test-select`'s explicit selection) or is not
+ * `tap` at all is not a full suite and must not take the full-run lock.
+ */
+export function runsWholeTier(input: {
+  command: string[];
+  taprcFiles: string[];
+  careful: string[];
+  isFile?: (path: string) => boolean;
+}): boolean {
+  const [executable, ...args] = input.command;
+  if (executable !== "tap") return false;
+  const known = [...input.taprcFiles, ...input.careful];
+  const isFile = input.isFile ?? packageFile(PACKAGE_ROOT);
+  return !hasExplicitFiles({ args, known, isFile });
+}
+
 /** The careful list in the graph's repo-relative vocabulary, for the selector. */
 export function carefulExclusions(packageRoot?: string): string[] {
   return readCarefulList(packageRoot ?? PACKAGE_ROOT).map((rel) => `beebox/${rel}`);

@@ -52,6 +52,13 @@ process.on("exit", () => {
 // sharing it is what makes a warmed environment warm inside the suite.
 process.env["UV_CACHE_DIR"] ??= join(realHome, ".cache", "uv");
 
+// The same holds for the Hugging Face hub cache, where Docling keeps its model
+// weights: under the throwaway HOME every Docling run downloaded them again,
+// and on a slow link the integration test hung past its timeout instead of
+// skipping. Only the content-addressed hub cache is shared — not `HF_HOME`,
+// which also holds the user's token.
+process.env["HF_HUB_CACHE"] ??= join(process.env["HF_HOME"] ?? join(realHome, ".cache", "huggingface"), "hub");
+
 // No background URL checks from test boxes. Every commit in a fixture box
 // fires the post-commit hook's detached `bbx validate --urls`; the fixture is
 // then deleted under it, the check spins at full CPU forever, and by

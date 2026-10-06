@@ -1,12 +1,15 @@
 ---
 title: "scan-vision integration doctest errors instead of skipping when Claude Code is not logged in"
-workstream: glm-v2-layout
+workstream: test-suite-health
 area: beebox
 priority: normal
 labels: [tests, environments]
 filed-by: agent
 discovered-in: full beebox suite runs, worktree-glm-v2-layout 2026-09-15 (also in ledger on HEAD 2026-09-11)
+resolution: superseded
 ---
+
+**Closed 2026-10-06 (test-suite-health): the trigger is gone.** The diagnosis below depended on this machine's Claude Code using a Z.ai token with `ANTHROPIC_BASE_URL` set. Today `claude auth status` reports `authMethod: claude.ai`, `apiProvider: firstParty`, and the variable is unset. Under suite isolation the doctest now skips loudly (`[skipped] … Claude Code is not logged in`, 5/5). With `BBX_TEST_REAL_HOME=1` it makes the real call and passes 5/5. The ledger's last failure was 2026-09-15. If an auth-provider override returns, the fix candidates below still apply.
 
 **Diagnosed 2026-09-15.** Confirmed by direct probes; the machine's GLM/Z.ai
 auth is the trigger, and the suite's isolation is the mechanism:

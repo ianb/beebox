@@ -48,11 +48,15 @@ export async function recordSessionStart(
      * bound and nothing can say to what.
      */
     onHistoryWritten?: (() => void) | undefined;
-    /** Called after the initial feature seed is durable. */
-    onFeaturesWritten?: (() => void) | undefined;
+    /**
+     * Called when the seed is taken for its write, in the same synchronous step.
+     * Toggles before it fold into the seed; toggles after it must persist on
+     * their own, and they queue behind the seed write on the history lock.
+     */
+    onSeedTaken?: (() => void) | undefined;
   },
 ): Promise<void> {
-  const { sessionId, contextDir, seedFeatures, engine, onHistoryWritten, onFeaturesWritten } = params;
+  const { sessionId, contextDir, seedFeatures, engine, onHistoryWritten, onSeedTaken } = params;
   try {
     await appendHistory(boxRoot, {
       sessionId,
@@ -64,17 +68,26 @@ export async function recordSessionStart(
     // future resume of this session (or a fresh server boot) still sees the
     // seed as the session's starting state. User toggles afterward overwrite
     // specific keys via updateFeaturesForSession.
-    if (seedFeatures && Object.keys(seedFeatures).length > 0) {
+    //
+    // Copy the seed and close the handoff together. Closing it only after the
+    // write lost a toggle that arrived while the write was finishing (its
+    // directory fsync runs after the new file is already visible): the toggle
+    // folded into a seed that had already been written. Nothing may await
+    // between closing it and queuing the write on the history lock, or a
+    // toggle's own write could queue first and be overwritten by the seed.
+    const seedEngine = engine ?? await loadAgentEngine(boxRoot);
+    const seed = { ...seedFeatures };
+    onSeedTaken?.();
+    if (Object.keys(seed).length > 0) {
       // `appendHistory` above already created the row (with this same
       // resolution), so the create branch cannot fire here — but the engine is
       // required rather than guessed, and the two must not disagree.
       await updateFeaturesForSession(boxRoot, {
         sessionId,
-        updates: seedFeatures,
-        engine: engine ?? await loadAgentEngine(boxRoot),
+        updates: seed,
+        engine: seedEngine,
       });
     }
-    onFeaturesWritten?.();
     await setMostActive(boxRoot, sessionId);
   } catch (e) {
     log("session-start", `History/most-active write failed: ${e instanceof Error ? e.message : e}`);

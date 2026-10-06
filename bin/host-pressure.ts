@@ -15,9 +15,71 @@ import { execFileSync } from "node:child_process";
 export const MEMORY_PRESSURE_WARN = 2;
 export const MEMORY_PRESSURE_CRITICAL = 4;
 
+/**
+ * Free swap below this means the next allocation burst pages against a full
+ * disk-backed pool: 2026-09-25 had 112 MB free of 16.4 GB when the machine
+ * became unusable, and a full suite adds a dozen tap processes. The 2 GB
+ * figure is a chosen margin, not a measurement: far above the incident's
+ * 112 MB, small enough that an ordinary busy day (several GB free) passes.
+ */
+export const SWAP_FREE_FLOOR_BYTES = 2 * 1024 ** 3;
+
+/**
+ * Pages paged out per second, between two polls, at or above which the host is
+ * thrashing. The 2026-09-25 log shows 31,361 pageouts between the gate's
+ * "host quiet" line and the run's "tier start" line, which are a checkout and
+ * a `pnpm install` apart (the log has no timestamps; assuming a few minutes):
+ * on the order of 100+ pages/s during a window the gate should have refused. A quiet host pages out near
+ * zero between polls, so 100/s separates the two with room on both sides.
+ * The lifetime counter (10M by then) says nothing about now.
+ */
+export const PAGEOUT_RATE_THRASH = 100;
+
+/** Gap between the two pageout samples that make a rate. */
+export const PAGEOUT_SAMPLE_MS = 5000;
+
 export interface MemoryPressure {
   level: number | null;
   pageouts: number | null;
+  /** Free swap in bytes; null where `vm.swapusage` does not exist (non-Darwin). */
+  swapFreeBytes: number | null;
+}
+
+/**
+ * `sysctl -n vm.swapusage`:
+ * `total = 16384.00M  used = 16272.00M  free = 112.00M  (encrypted)`.
+ */
+export function parseSwapFreeBytes(raw: string): number | null {
+  const match = /\bfree\s*=\s*([\d.]+)([KMGT])\b/u.exec(raw);
+  if (match?.[1] === undefined || match[2] === undefined) return null;
+  const value = Number.parseFloat(match[1]);
+  const unit = { K: 1024, M: 1024 ** 2, G: 1024 ** 3, T: 1024 ** 4 }[match[2]];
+  if (!Number.isFinite(value) || unit === undefined) return null;
+  return Math.round(value * unit);
+}
+
+export interface PageoutSample {
+  pageouts: number | null;
+  atMs: number;
+}
+
+/**
+ * Pageouts per second between two samples; null when either is missing, the
+ * clock did not advance, or the counter went backwards (a reboot between
+ * samples).
+ */
+export function pageoutRate(first: PageoutSample, second: PageoutSample): number | null {
+  if (first.pageouts === null || second.pageouts === null) return null;
+  const seconds = (second.atMs - first.atMs) / 1000;
+  if (seconds <= 0 || second.pageouts < first.pageouts) return null;
+  return (second.pageouts - first.pageouts) / seconds;
+}
+
+/** Pageouts per second over a short window; null when `vm_stat` is unavailable. */
+export async function readPageoutRate(windowMs?: number): Promise<number | null> {
+  const first = { pageouts: tryRead(["vm_stat"], parsePageouts), atMs: Date.now() };
+  await new Promise((resolve) => setTimeout(resolve, windowMs ?? PAGEOUT_SAMPLE_MS));
+  return pageoutRate(first, { pageouts: tryRead(["vm_stat"], parsePageouts), atMs: Date.now() });
 }
 
 /** `sysctl -n kern.memorystatus_vm_pressure_level` prints a bare integer. */
@@ -43,6 +105,7 @@ export function readMemoryPressure(): MemoryPressure {
   return {
     level: tryRead(["sysctl", "-n", "kern.memorystatus_vm_pressure_level"], parsePressureLevel),
     pageouts: tryRead(["vm_stat"], parsePageouts),
+    swapFreeBytes: tryRead(["sysctl", "-n", "vm.swapusage"], parseSwapFreeBytes),
   };
 }
 

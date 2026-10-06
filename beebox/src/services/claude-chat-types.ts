@@ -151,7 +151,13 @@ export interface ChatBackend {
    */
   closeWarmFor?(sessionId: string): void;
 
-  closeWarm?(): void;
+  /**
+   * Drop every warm slot and abort any warm-up still in flight. Resolves once
+   * those warm-ups have settled, so a caller tearing down the box (server
+   * shutdown) does not leave a subprocess starting in a directory it is about
+   * to remove. Never rejects.
+   */
+  closeWarm?(): Promise<void>;
   /**
    * Whether a warm slot is currently held OR a warm-up is in flight. Callers
    * use this to avoid stampeding re-`prewarm()` calls when the backend is

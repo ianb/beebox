@@ -16,12 +16,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { readMemoryPressure } from "../../bin/host-pressure.js";
+import { readMemoryPressure, readPageoutRate } from "../../bin/host-pressure.js";
 import { gitCommonDir } from "../../bin/test-git.js";
 import { appendLedgerRecord, readRecords } from "../../bin/test-ledger.js";
 import { hashFileset, ledgerPaths } from "../../bin/test-ledger-lib.js";
+import { acquireFullRun, lockDir } from "../../bin/test-locks.js";
 import type { Batch } from "./attribution.js";
-import { TIERS, batchExit, completionMarker, isHostQuiet, tierProducedResults, workstreamOf } from "./lib.js";
+import { TIERS, batchExit, completionMarker, hostBlockers, tierProducedResults, workstreamOf } from "./lib.js";
 import { batchSlowdown, durationHistories, runIsUntrusted } from "./trust.js";
 import { readBatch } from "./batch.js";
 import { raiseCondition, report } from "./reporting.js";
@@ -78,9 +79,16 @@ async function waitForQuietHost(): Promise<boolean> {
   const bar = os.availableParallelism() * QUIET_LOAD_PER_CORE;
   for (let waited = 0; ; waited += QUIET_POLL_MS) {
     const load = os.loadavg()[0] ?? 0;
-    const { level, pageouts } = readMemoryPressure();
-    if (isHostQuiet({ load1: load, bar, level })) {
-      const detail = `load1 ${load.toFixed(1)}, pressure ${String(level)}, pageouts ${String(pageouts)}`;
+    const { level, pageouts, swapFreeBytes } = readMemoryPressure();
+    // A rate needs two polls: the lifetime counter is only logged.
+    const pageoutRate = await readPageoutRate();
+    const blockers = hostBlockers({ load1: load, bar, level, swapFreeBytes, pageoutRate });
+    const swapGb = swapFreeBytes === null ? "n/a" : (swapFreeBytes / 1024 ** 3).toFixed(1);
+    const rate = pageoutRate === null ? "n/a" : pageoutRate.toFixed(0);
+    const detail =
+      `load1 ${load.toFixed(1)}, pressure ${String(level)}, swap free ${swapGb} GB, ` +
+      `pageouts ${String(pageouts)} (${rate}/s)`;
+    if (blockers.length === 0) {
       process.stdout.write(
         waited > 0
           ? `full-suite: host quiet after ${String(Math.round(waited / 60000))}m (${detail}).\n`
@@ -89,14 +97,10 @@ async function waitForQuietHost(): Promise<boolean> {
       return true;
     }
     if (waited >= QUIET_WAIT_BUDGET_MS) {
-      process.stdout.write(
-        `full-suite: still loaded (load1 ${load.toFixed(1)} > ${String(bar)}, pressure ${String(level)}, pageouts ${String(pageouts)}) after the wait budget.\n`,
-      );
+      process.stdout.write(`full-suite: still not quiet after the wait budget: ${blockers.join("; ")} (${detail}).\n`);
       return false;
     }
-    process.stdout.write(
-      `full-suite: load1 ${load.toFixed(1)} > ${String(bar)} (pressure ${String(level)}, pageouts ${String(pageouts)}); waiting for a quiet host.\n`,
-    );
+    process.stdout.write(`full-suite: not quiet: ${blockers.join("; ")} (${detail}); waiting for a quiet host.\n`);
     await delay(QUIET_POLL_MS);
   }
 }
@@ -179,6 +183,33 @@ async function main(): Promise<void> {
     return;
   }
 
+  // One full suite on the machine at a time: a worktree's own `pnpm test` takes
+  // the same lock (bin/test-ledger.ts). Held here, before the checkout, so a
+  // busy lock defers the tick instead of waiting behind someone else's hour.
+  const lock = await acquireFullRun({
+    dir: lockDir(gitCommonDir(REPO_ROOT)),
+    branch: "full-suite",
+    waitMs: 0,
+    label: "full-suite",
+  });
+  if (lock.held === null) {
+    const by = lock.blockedBy;
+    process.stdout.write(
+      `full-suite: another full run holds the machine lock (pid ${String(by.pid)}, branch ${by.branch}, since ${by.at}); deferred to the next tick.\n`,
+    );
+    await raiseCondition({
+      kind: "deferred",
+      culprits: [],
+      verdict: false,
+      priority: "fyi",
+      title: "full suite: deferred, another full run holds the machine lock",
+      message: `The full-suite run at \`${batch.pinned.slice(0, 8)}\` skipped: another full run ` +
+        `(branch \`${by.branch}\`, pid ${String(by.pid)}, since ${by.at}) holds the machine-wide lock. ` +
+        "Nothing was tested; the same commit will be retried on the next tick.",
+    });
+    return;
+  }
+
   let checkout: Checkout | null = null;
   try {
     checkout = await createCheckout(batch.pinned);
@@ -236,6 +267,7 @@ async function main(): Promise<void> {
     await markComplete({ batch, runs });
   } finally {
     await removeCheckout(checkout);
+    lock.held.release();
   }
 }
 

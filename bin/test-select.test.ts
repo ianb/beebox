@@ -15,7 +15,8 @@ import { join, dirname } from "node:path";
 import { buildGraphFrom, testEntrypoints, REPO_ROOT } from "./test-graph.js";
 import type { TestGraph } from "./test-graph-query.js";
 import { selectTests, spawnedSourceRefs, spawnerEdges } from "./test-select-lib.js";
-import { emptyRunLines, packageRelative } from "./test-select.js";
+import { packageRelative } from "./test-ledger-lib.js";
+import { emptyRunLines } from "./test-select.js";
 
 /** A graph stated directly, so the rule is tested without an esbuild pass. */
 function graphOf(input: {

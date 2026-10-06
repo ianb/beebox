@@ -15,10 +15,10 @@ import type { AgentEngine } from "../../../box/config.js";
 
 const log = makeLog("ChatSessionRegistry");
 
-/** Keep pre-start edits on the seed until that seed has become durable. */
+/** Keep pre-start edits on the seed until the start takes the seed to write it. */
 export function createReservationFeatureHandoff(seedFeatures: Record<string, string>): {
   persist: (updates: Record<string, string>) => boolean;
-  markWritten: () => void;
+  close: () => void;
 } {
   let pending = true;
   return {
@@ -27,7 +27,7 @@ export function createReservationFeatureHandoff(seedFeatures: Record<string, str
       Object.assign(seedFeatures, updates);
       return true;
     },
-    markWritten: () => { pending = false; },
+    close: () => { pending = false; },
   };
 }
 
@@ -50,8 +50,10 @@ export async function reserveAndWarm(opts: {
   seedFeatures: Record<string, string>;
   requestedEngine?: AgentEngine | undefined;
   model?: string | undefined;
+  /** The registry's lifetime; a shut-down registry warms nothing. */
+  signal: AbortSignal;
 }): Promise<ReserveResult> {
-  const { boxRoot, store, backend, baseOptions, ...request } = opts;
+  const { boxRoot, store, backend, baseOptions, signal, ...request } = opts;
   const result = await reserveChatSession({ boxRoot, store, ...request });
   if (result.kind !== "reserved") return result;
   const reservation = store.get(result.sessionId);
@@ -59,6 +61,7 @@ export async function reserveAndWarm(opts: {
   log("reserve", `Reserved ${result.sessionId} (held=${store.size()})`);
   prewarmReservedChat({
     boxRoot,
+    signal,
     backend,
     baseOptions,
     sessionId: result.sessionId,
