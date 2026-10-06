@@ -392,6 +392,22 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
         }
     }
 
+    func testHqDictationStateFixturesDecodeThroughNativeSeam() throws {
+        let fixtures = try MobileContractFixtures.load("hq-dictation-state")
+        XCTAssertFalse(fixtures.isEmpty, "no HQ dictation state fixtures found")
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let state = ChatWebView.hqDictationState(from: try MobileContractFixtures.jsonString(from: input))
+            if fixture["expected"] is NSNull {
+                XCTAssertNil(state, "\(name): malformed state must be ignored")
+                continue
+            }
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): missing expected")
+            XCTAssertEqual(state?.enabled, expected["enabled"] as? Bool, "\(name): enabled")
+            XCTAssertEqual(state?.diarized, expected["diarized"] as? Bool, "\(name): diarized")
+        }
+    }
+
     func testSpeechPlaybackStateFixturesDecodeThroughNativeSeam() throws {
         let fixtures = try MobileContractFixtures.load("speech-playback-state")
         XCTAssertFalse(fixtures.isEmpty, "no speech playback state fixtures found")

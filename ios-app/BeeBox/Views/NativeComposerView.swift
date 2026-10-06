@@ -22,6 +22,7 @@ struct NativeComposerView: View {
     var captureAvailable: Bool
     var narrationEnabled: Bool
     var hqDictationEnabled: Bool
+    var hqDiarizationRequested = false
     var speechPlaybackActive: Bool
     var responseActive: Bool
     var locationSharingEnabled: Bool
@@ -964,6 +965,7 @@ struct NativeComposerView: View {
                     action: action,
                     matchedPhrase: matchedPhrase,
                     appendsKeywordTag: appendsKeywordTag,
+                    diarizationRequested: hqDiarizationRequested,
                     audioURL: audioURL,
                     boxID: sendingBox.id,
                     binding: capturedBinding?.sendBinding, bindingRevision: capturedBinding?.revision,
@@ -1094,6 +1096,9 @@ struct NativeComposerView: View {
             )
         }
         defer { backgroundHold.end() }
+        if let onDevice = await transcribeOnDevice(preparation, audioURL: audioURL) {
+            return onDevice
+        }
         do {
             let hqResult = try await ChatAPI(box: box).transcribeAudio(fileURL: audioURL)
             return .hq(
@@ -1119,6 +1124,47 @@ struct NativeComposerView: View {
             )
             statusText = "HQ transcription failed; sending live dictation."
             return .fallback(text: VoicePreparationResolver.text(for: preparation, hqTranscript: nil))
+        }
+    }
+
+    /// The on-device HQ pass. When it produces text, that text is the HQ
+    /// result and the server is not called; nil sends the caller on to the
+    /// server path, which keeps its own live-transcript fallback.
+    private func transcribeOnDevice(
+        _ preparation: VoicePreparation,
+        audioURL: URL
+    ) async -> VoicePreparationOutcome? {
+        let startUptime = ProcessInfo.processInfo.systemUptime
+        func elapsedMilliseconds() -> Int {
+            Int((ProcessInfo.processInfo.systemUptime - startUptime) * 1_000)
+        }
+        do {
+            let result = try await OnDeviceHqTranscriber.transcribe(
+                fileURL: audioURL,
+                diarizationRequested: preparation.diarizationRequested == true
+            )
+            BoxLog.info(
+                "voice HQ on-device preparation=\(preparation.id.uuidString)"
+                    + " audioMs=\(Int(result.audioSeconds * 1_000)) elapsedMs=\(elapsedMilliseconds())",
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
+            return .hq(
+                text: VoicePreparationResolver.text(for: preparation, hqTranscript: result.text),
+                diarized: false,
+                service: OnDeviceHqTranscriber.serviceName
+            )
+        } catch {
+            let skip = error as? OnDeviceHqTranscriber.Skip ?? .failed(String(reflecting: type(of: error)))
+            let message = "voice HQ on-device skipped preparation=\(preparation.id.uuidString)"
+                + " reason=\(skip.logLabel) elapsedMs=\(elapsedMilliseconds())"
+            switch skip {
+            case .timedOut, .failed, .emptyTranscript:
+                BoxLog.warn(message, category: .composer, targetBoxID: preparation.boxID)
+            case .diarizationRequested, .osTooOld, .transcriberUnavailable, .unsupportedLocale, .assetsNotInstalled:
+                BoxLog.info(message, category: .composer, targetBoxID: preparation.boxID)
+            }
+            return nil
         }
     }
 

@@ -66,3 +66,9 @@ they are in, what card is open. So this is not "pass a list," it is:
   the dormant `hq-recording-resilience` workstream sits in this code.
 - `beebox/docs/mobile-contract.md` — changing what the app asks the server for
   touches the shared contract; see the `bbx-ios-overlap` skill.
+
+**2026-10-06:** iOS 26 HQ dictation now runs `SpeechTranscriber` on the
+finished recording (`ios-app/BeeBox/Services/OnDeviceHqTranscriber.swift`;
+[ios-on-device-hq-transcription](2026-10-06-ios-on-device-hq-transcription.md)).
+That text becomes the sent message, so a vocabulary context applied there
+affects the final message and not only the live preview.

@@ -13,7 +13,6 @@
  */
 
 import { homedir } from "node:os";
-import { MEMORY_PRESSURE_CRITICAL } from "../../bin/host-pressure.js";
 import { parseTapFiles, type LedgerRecord } from "../../bin/test-ledger-lib.js";
 
 /** The `--source` value this schedule stamps on every record it produces. */
@@ -32,18 +31,6 @@ export const LEDGER_SOURCE = "full-suite";
 export function tierProducedResults(run: { exitCode: number | null; output: string }): boolean {
   if (run.exitCode === 0) return true;
   return parseTapFiles(run.output).length > 0;
-}
-
-/**
- * Quiet enough to start the suite: load1 at or under the per-core bar AND not
- * under critical memory pressure. A swapping host can read quiet on load
- * alone (2026-09-11: load1 8 at pressure level 2 on a calm afternoon), which
- * is why pressure is checked separately rather than folded into the bar.
- * `level: null` (no signal, e.g. non-Darwin) never blocks — there is nothing
- * better to go on.
- */
-export function isHostQuiet(input: { load1: number; bar: number; level: number | null }): boolean {
-  return input.load1 <= input.bar && (input.level === null || input.level < MEMORY_PRESSURE_CRITICAL);
 }
 
 /**

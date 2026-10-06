@@ -70,7 +70,8 @@ function handleRelayMessage(event: MessageEvent): void {
 
   if (data.type === "relay-ready") {
     relaySeen = true;
-    for (const waiter of [...presenceWaiters]) waiter();
+    // Snapshot: each waiter deletes itself from the set as it runs.
+    for (const waiter of Array.from(presenceWaiters)) waiter();
     presenceWaiters.clear();
     return;
   }

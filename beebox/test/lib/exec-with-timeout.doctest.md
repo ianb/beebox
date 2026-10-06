@@ -23,13 +23,15 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 ## startAwakeTimeout
 
 Accumulates awake time across ticks and fires `onTimeout` when the budget is
-spent:
+spent. Any tick gap at or above `sleepGapMs` counts as sleep and adds only one
+period, so an event-loop stall that long (a cold tsx compile, a loaded host)
+under-counts by design. This example sets the gap far above any stall and waits
+for the timeout to fire, rather than racing a fixed sleep against it:
 
 ```ts
 let fired = null;
-const timer = startAwakeTimeout({ timeoutMs: 60, periodMs: 10, sleepGapMs: 200, onTimeout: (e) => { fired = e; } });
-await sleep(150);
-fired !== null
+const timer = startAwakeTimeout({ timeoutMs: 60, periodMs: 10, sleepGapMs: 5_000, onTimeout: (e) => { fired = e; } });
+await eventually(() => fired !== null, { label: "the awake timeout fires" })
 => true
 
 fired.awakeMs >= 60
@@ -41,7 +43,9 @@ fired.sleepDetected
 
 A gap between ticks far larger than the period means the machine slept (here
 simulated by blocking the event loop so the interval can't fire). The gap is
-flagged but not counted toward the deadline:
+flagged but not counted toward the deadline. The blocked gap of at least 150ms
+is credited one 10ms period at most, so wall time exceeds awake time by at
+least 140ms however slow the surrounding sleeps run:
 
 ```ts
 let fired = null;
@@ -54,14 +58,12 @@ const elapsed = timer.elapsed();
 timer.stop();
 print(`fired: ${fired === null ? "no" : "yes"}`);
 print(`sleepDetected: ${elapsed.sleepDetected}`);
-print(`sleep counted as awake: ${elapsed.awakeMs >= 150}`);
-print(`wall includes sleep: ${elapsed.wallMs >= 150}`);
+print(`sleep excluded from awake: ${elapsed.wallMs - elapsed.awakeMs >= 140}`);
 "done"
 =>
 fired: no
 sleepDetected: true
-sleep counted as awake: false
-wall includes sleep: true
+sleep excluded from awake: true
 done
 ```
 

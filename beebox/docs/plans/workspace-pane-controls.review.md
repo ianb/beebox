@@ -207,7 +207,7 @@ Full typechecks, changed-file lint, documentation checks, and whitespace checks
 passed. The final broad selected suite ran 1,768 assertions: 1,766 passed; two
 assertions failed in the CLI invalid-card diagnostic case. Its isolated rerun
 passed all 20 assertions. That intermittent failure is tracked in
-[the CLI issue](../../../issues/bugs/2026-09-08-view-test-invalid-card-diagnostic-missing-under-load.md).
+[the CLI issue](../../../issues/closed/bugs/2026-09-08-view-test-invalid-card-diagnostic-missing-under-load.md).
 
 
 The second, bounded review confirmed all five earlier fixes and identified

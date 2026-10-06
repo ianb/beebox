@@ -1,12 +1,15 @@
 ---
 title: "Full-suite red: test/core/box/file-watcher.doctest.md"
-workstream: feedback-as-cards
+workstream: test-suite-health
 area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-feedback-as-cards — the hourly full-suite run on main
+resolution: implemented
 ---
+
+**Closed 2026-10-06 (test-suite-health, `50961ada5`).** Same failure as [the stale box listing](../../closed/bugs/2026-09-27-file-watcher-doctest-stale-box-listing.md): the feedback-as-cards landing added `_config/feedback` to the box scaffold. Fixed there.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `2e788ee9`. Bisecting the landings since the last tested

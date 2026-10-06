@@ -5067,6 +5067,30 @@ tests:
     correct_contains_any: ["attachments", "fileUrl"]
     tags: [views, attachments]
 
+  # === Views: card inset vs full bleed ===
+  #
+  # The card insets a view by default; a view opts into running to the card's
+  # edges with `export const layout = "full-bleed"`. Lives in views.md
+  # (Metadata Exports + Styling), so knows_about. Passes 2026-10-06: reads
+  # views.md, names the export, and says ordinary views need no outer padding.
+
+  - id: views-full-bleed-layout
+    prompt: >
+      I'm writing a view for a card type that shows a big map. Right now the
+      map has a margin around it inside the card, but I want it to fill the
+      card edge to edge. How do I do that? And for my other views, should I
+      add padding around their content?
+    expected_level: knows_about
+    watch_for: >
+      Reads node_modules/beebox/box-docs/views.md, then says to add
+      `export const layout = "full-bleed"` to the map view, and that other
+      views need no outer padding because the card insets them by default.
+      Must NOT suggest negative margins, wrapper CSS hacks, or adding outer
+      padding to ordinary views.
+    should_read: ["node_modules/beebox/box-docs/views.md"]
+    correct_contains_any: ["full-bleed"]
+    tags: [views, layout]
+
   # === Views: render-test command (bbx view test) ===
   #
   # Indirect knowledge, like the other view-authoring audits: the command lives

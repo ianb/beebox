@@ -95,9 +95,7 @@ export class InputMatch {
 }
 
 export class KeywordPattern {
-  constructor(public matcher: Matcher) {
-    this.matcher = matcher;
-  }
+  constructor(public matcher: Matcher) {}
 
   match(input: string): InputMatch | undefined {
     if (!input.trim()) {

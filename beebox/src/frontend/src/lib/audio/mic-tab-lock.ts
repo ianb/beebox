@@ -43,7 +43,7 @@ function ensureChannel(): BroadcastChannel | null {
     if (!isRecord(msg) || msg.type !== "claim" || msg.tabId === tabId) return;
     // Another tab took the mic — yield ours. Copy first: an eviction callback
     // may release itself (mutating the set) as it runs.
-    for (const evict of [...evictListeners]) evict();
+    for (const evict of Array.from(evictListeners)) evict();
   };
   return channel;
 }

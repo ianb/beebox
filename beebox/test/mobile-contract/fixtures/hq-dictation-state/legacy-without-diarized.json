@@ -1,0 +1,9 @@
+{
+  "input": {
+    "enabled": true
+  },
+  "expected": {
+    "enabled": true,
+    "diarized": false
+  }
+}

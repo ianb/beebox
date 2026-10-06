@@ -1,13 +1,16 @@
 ---
 title: "`exec-with-timeout` doctest flakes when the process is cold: a 60ms awake timeout does not fire within 150ms"
-workstream: unattached
+workstream: test-suite-health
 area: beebox
 labels: [testing, flake]
 filed-by: agent
 discovered-by: agent
 discovered-in: full suite run on the codex-chat-labels worktree (2026-08-20)
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-10-06 (test-suite-health, `dec1a12a4`).** Decision: the code does not under-count; the test raced a tight wall-clock budget. `startAwakeTimeout` treats any tick gap at or above `sleepGapMs` as sleep and credits one period, by design, so an event-loop stall that long (a cold tsx compile, a loaded host) made the 150 ms sleep expire first. `adc26a7d0` (2026-09-04) widened the gap from 60 to 200 ms, and the ledger shows 0 failures in 299 runs since. The firing example now uses a 5 s gap and waits with `eventually`. The sleep-detection example asserts `wall - awake >= 140ms`, which holds however slow its sleeps run. 13/13 runs, 10 of them under 12 CPU hogs.
 
 `test/lib/exec-with-timeout.doctest.md:29` starts a 60ms `startAwakeTimeout`
 with a 10ms poll period, sleeps 150ms, and asserts the timeout fired. It

@@ -250,7 +250,7 @@ the contract.
 | `beeboxSession` | `window.location.href` (string) | `Coordinator.userContentController` → `onSessionChange(visibleSessionID)` |
 | `beeboxEmissionReceipt` | `Receipt` object (§4.2) | → `receiveEmissionReceipt` |
 | `beeboxLocationResult` | `{ id, success, message }` | → `receiveLocationResult` |
-| `beeboxHqDictationState` | `{ enabled }` | → `receiveHqDictationState` |
+| `beeboxHqDictationState` | `{ enabled, diarized }` | → `receiveHqDictationState` |
 | `beeboxComposerCommand` | V1 or V2 composer command (§4.7, §4.8) | → `receiveComposerCommand` |
 | `beeboxLastAudioRequest` | V1 last-audio request (§4.9) | → `receiveLastAudioRequest` |
 
@@ -402,7 +402,9 @@ the contract.
   `Emission { id, origin, text, images, files, selections, diarized, hqText?, hqService?,
   hqFallback? }`. `hqText:true` says the text came from the completed HQ pass;
   `hqFallback:true` says requested HQ failed and realtime text was substituted, which the
-  assembler persists as `hq="failed"`. Legacy payloads produce empty `files` and `selections`.
+  assembler persists as `hq="failed"`. `hqService` names the engine and is stamped as
+  `<speech stt-service="…">`: a box HQ service from §5.2, or `apple-speech-transcriber` when iOS
+  ran the HQ pass on the device (§4.4a). Web passes the value through without a closed set. Legacy payloads produce empty `files` and `selections`.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -529,19 +531,38 @@ mint them independently; the ids are per-emission and per-kind.
 
 ### 4.4a HQ dictation state (web → native)
 
-- **Wire shape:** `{ enabled: boolean }` on `beeboxHqDictationState`.
+- **Wire shape:** `{ enabled: boolean, diarized: boolean }` on `beeboxHqDictationState`.
+  `diarized` is true when the box's HQ service labels speakers (`voxtral-diarized`,
+  `mai-diarized`; `isDiarizedHqService` in `src/shared/transcription-services.ts`). Web reads it
+  from `transcription.config`, posts true while that query is loading or refetching (fail
+  closed, which covers the moment after the HQ service is switched), and re-posts on change.
 - **Semantics:** the web posts the resolved HQ setting for the visible chat. Native defaults to off.
   When enabled, both the native Send button and ordinary spoken-send keyword enter the durable HQ
   audio preparation path. Typed messages remain direct sends; the explicit cleanup keyword remains
   HQ regardless of this state.
+- **On-device HQ pass (iOS 26+):** the preparation first runs Apple's `SpeechTranscriber` over the
+  recording (`Services/OnDeviceHqTranscriber.swift`). When it returns text, that is the HQ result:
+  the emission carries `hqText:true`, `hqService:"apple-speech-transcriber"`, `diarized:false`,
+  and §5.2 is not called. It is skipped, and §5.2 runs as before, when any of these hold: the
+  preparation was staged with `diarized:true` (captured at the send gesture and persisted, so a
+  relaunch resumes with the value the user sent under); iOS is older than 26;
+  `SpeechTranscriber` is unavailable (including every simulator) or lacks the locale
+  (`DictationTranscriber` does not count); the language assets are not installed; or the pass
+  errors, returns no text, or exceeds twice the recording's length (30 s minimum). Native starts
+  the one-time asset download in the background when HQ dictation or narration turns on for a
+  box without diarization; a send never waits on it.
 - **Anchors:** web `use-native-bridge.ts` — `useNativeHqDictationBridge`; native
-  `Views/ChatWebView.swift` — `receiveHqDictationState`; `Views/NativeComposerView.swift` —
-  `send`, `sendKeywordIntent`.
-- **Drift:** fail-local — an absent or malformed state leaves native HQ dictation off. If HQ
-  transcription later fails, the durable preparation visibly falls back to its live transcript
-  with `hqFallback:true`. Native holds one bounded UIKit background-task assertion around the
-  one-shot request. A preparation reached while the application is already non-active stays staged
-  until foregrounding; this is best-effort foreground transport, not a background `URLSession`.
+  `Views/ChatWebView.swift` — `receiveHqDictationState`, `hqDictationState(from:)`;
+  `Views/NativeComposerView.swift` — `send`, `sendKeywordIntent`, `transcribeOnDevice`;
+  `Services/OnDeviceHqTranscriber.swift`. Fixtures: `hq-dictation-state/`.
+- **Drift:** fail-local — an absent or malformed `enabled` leaves native HQ dictation off; a
+  non-boolean `diarized` drops the whole message; an absent `diarized` (older web) reads false, so
+  such a box gets the on-device pass even with a diarized HQ service. If HQ transcription later
+  fails, the durable preparation visibly falls back to its live transcript with
+  `hqFallback:true`. Native holds one bounded UIKit background-task assertion around the
+  on-device pass and the one-shot request. A preparation reached while the application is
+  already non-active stays staged until foregrounding; this is best-effort foreground transport,
+  not a background `URLSession`.
 
 ### 4.5 Speech playback state (web → native)
 
@@ -883,7 +904,8 @@ See §1.3 (full request/response/errors).
 
 ### 5.2 `POST /api/chat/transcribe-audio` — HQ audio transcription
 
-- **Direction:** native → box.
+- **Direction:** native → box. On iOS 26+ this is the fallback behind the on-device HQ pass
+  (§4.4a), and the only HQ path for a box whose HQ service labels speakers.
 - **Request:** `POST`; `Content-Type: multipart/form-data`; `User-Agent: BeeBox-iOS/0.1`;
   `Authorization: Bearer <token>`. Multipart body: text field `session=<resolved session id>`; file
   field `file`, filename `segment.wav`, content-type `audio/wav`.
@@ -1323,7 +1345,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B11 | Speech control (barge-in) | native→web | V1 `{version:1,action:"stop"}` via `beeboxNativeSpeechCommand`, queue `beeboxNativeSpeechCommandQueue`, event `beebox:native-speech-command`; no ack — §4.5 `{playing:false}` reports the stop | `Models/NativeComposerContract.swift` · `NativeSpeechCommand`; `Services/SpeechDictation.swift` · `NativeVoiceTurnState`; `Views/ChatWebView.swift` · `deliverSpeechStopRequest` | `native-speech-command.ts` · `nativeSpeechCommandFromDetail`; `use-native-bridge.ts` · `useNativeSpeechCommandBridge` | SILENT-degraded (speech plays into an open mic) |
 | B10 | Last-audio request relay | web→native | V1 `{version:1,requestId,messageId,sessionId\|null}` via `beeboxLastAudioRequest`; answered by H6, not by an ack | `Models/NativeComposerContract.swift` · `NativeLastAudioRequest`; `Views/ChatWebView.swift` · `receiveLastAudioRequest`; `Views/RootView.swift` · `answerLastAudioRequest` | `native-last-audio-request.ts`; `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` | QUIET (asleep phone is indistinguishable) |
 | B7 | Narration state | web→native | `{enabled}` via `beeboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
-| B14 | HQ dictation state | web→native | `{enabled}` via `beeboxHqDictationState` | `Views/ChatWebView.swift` · `receiveHqDictationState`; `Views/NativeComposerView.swift` · `send`, `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeHqDictationBridge` | fail-local |
+| B14 | HQ dictation state | web→native | `{enabled,diarized}` via `beeboxHqDictationState`; `diarized` keeps the HQ pass off the device | `Views/ChatWebView.swift` · `receiveHqDictationState`; `Views/NativeComposerView.swift` · `send`, `sendKeywordIntent`, `transcribeOnDevice` | `use-native-bridge.ts` · `useNativeHqDictationBridge` | fail-local |
 | B8 | Speech playback state | web→native | `{playing}` via `beeboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | B9 | Response generation state | web→native | `{active}` via `beeboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |

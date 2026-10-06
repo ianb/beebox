@@ -98,7 +98,7 @@ export interface AppendRunOptions {
  */
 export function appendRun(history: ContextHistory, options: AppendRunOptions): ContextHistory {
   const { box, date, boxCommit, repoCommit, measurements } = options;
-  const boxHistory: Record<string, ContextHistoryEntry[]> = { ...(history[box] ?? {}) };
+  const boxHistory: Record<string, ContextHistoryEntry[]> = { ...history[box] };
   for (const { auditId, stats } of measurements) {
     const entry: ContextHistoryEntry = {
       date,

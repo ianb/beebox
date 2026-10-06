@@ -2,5 +2,5 @@ export type DeletePhase = "preflight" | "stopped" | "schedules" | "pointer" | "h
 
 /** One structured progress record per destructive phase for crash diagnosis. */
 export function logDeletePhase(options: { sessionId: string; phase: DeletePhase; detail?: Record<string, unknown> }): void {
-  console.info("chat-delete: phase", { sessionId: options.sessionId, phase: options.phase, ...(options.detail ?? {}) });
+  console.info("chat-delete: phase", { sessionId: options.sessionId, phase: options.phase, ...options.detail });
 }

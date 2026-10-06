@@ -1,12 +1,15 @@
 ---
 title: "Every custom view runs edge to edge; full bleed should be an option, not the only layout"
-workstream: unattached
+workstream: card-view-fixes
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder report
 priority: important
 ---
+
+Closed by c33bb4996. Custom views are inset by default; `export const layout = "full-bleed"` opts out. Documented in views.md with knowledge audit `views-full-bleed-layout`.
 
 Every custom (agent-authored) view renders with no side padding. Its content
 touches the edges of the card area. Some views benefit from full width, such

@@ -4,7 +4,14 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { MEMORY_PRESSURE_CRITICAL, MEMORY_PRESSURE_WARN, parsePageouts, parsePressureLevel, pressureDecision } from "./host-pressure.js";
+import {
+  MEMORY_PRESSURE_CRITICAL,
+  MEMORY_PRESSURE_WARN,
+  pageoutRate,
+  parsePageouts,
+  parsePressureLevel,
+  pressureDecision,
+} from "./host-pressure.js";
 
 // ── parsing ──────────────────────────────────────────────────────────────
 
@@ -51,4 +58,18 @@ test("ignoreLoad bypasses only the refusal, not the warning", () => {
   assert.equal(pressureDecision({ mode: "full", level: MEMORY_PRESSURE_CRITICAL, ignoreLoad: true }), "warn");
   assert.equal(pressureDecision({ mode: "full", level: MEMORY_PRESSURE_WARN, ignoreLoad: true }), "warn");
   assert.equal(pressureDecision({ mode: "full", level: 1, ignoreLoad: true }), "proceed");
+});
+
+// ── pageout rate ───────────────────────────────────────────────────
+
+test("pageoutRate is pages per second between two samples", () => {
+  assert.equal(pageoutRate({ pageouts: 1000, atMs: 0 }, { pageouts: 1500, atMs: 5000 }), 100);
+  assert.equal(pageoutRate({ pageouts: 1000, atMs: 0 }, { pageouts: 1000, atMs: 5000 }), 0);
+});
+
+test("pageoutRate is null when a sample is missing, time stands still, or the counter resets", () => {
+  assert.equal(pageoutRate({ pageouts: null, atMs: 0 }, { pageouts: 5, atMs: 1000 }), null);
+  assert.equal(pageoutRate({ pageouts: 1, atMs: 0 }, { pageouts: null, atMs: 1000 }), null);
+  assert.equal(pageoutRate({ pageouts: 1, atMs: 1000 }, { pageouts: 5, atMs: 1000 }), null);
+  assert.equal(pageoutRate({ pageouts: 900, atMs: 0 }, { pageouts: 5, atMs: 1000 }), null);
 });

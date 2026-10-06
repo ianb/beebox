@@ -6,11 +6,12 @@
  * ceiling the parse must respect is enforced by the OS/V8, not by an
  * in-process assertion the parse could pass while still allocating the world.
  *
- * argv: <logPath> <sliceJson>. Prints one JSON line on stdout.
+ * argv: <logPath> <sliceJson>. Prints one JSON line on stdout. Needs
+ * `--expose-gc` for `retainedMb`; `parse-under-heap-cap.ts` spawns it.
  */
 
-import { parseSessionLog, type SessionLogSlice } from "../../src/cli/lib/session.js";
-import { errorMessage } from "../../src/shared/error-guards.js";
+import { parseSessionLog, type SessionLogSlice } from "../../../src/cli/lib/session.js";
+import { errorMessage } from "../../../src/shared/error-guards.js";
 
 const [, , logPath, sliceJson] = process.argv;
 if (logPath === undefined || sliceJson === undefined) {
@@ -22,8 +23,22 @@ if (logPath === undefined || sliceJson === undefined) {
 // eslint-disable-next-line no-restricted-syntax -- parse boundary: argv JSON is untyped; the only producer is the doctest
 const slice = JSON.parse(sliceJson) as SessionLogSlice;
 
+const gc = globalThis.gc;
+if (gc === undefined) {
+  console.error("parse-session-log-child.ts needs --expose-gc");
+  process.exit(2);
+}
+/** Live heap: what survives a full collection. */
+const liveMb = (): number => {
+  gc();
+  return process.memoryUsage().heapUsed / (1024 * 1024);
+};
+
 try {
+  const before = liveMb();
   const result = await parseSessionLog({ logPath, slice });
+  // `result` is still referenced below, so this counts what the parse retained.
+  const retainedMb = Math.round(liveMb() - before);
   const stubs = result.entries.filter((e) =>
     e.content.some((b) => b.type === "text" && b.text?.startsWith("[message too large")),
   );
@@ -34,7 +49,7 @@ try {
       hasMore: result.hasMore,
       stubs: stubs.length,
       stubSample: stubs[0]?.content[0]?.text ?? null,
-      heapUsedMb: Math.round(process.memoryUsage().heapUsed / (1024 * 1024)),
+      retainedMb,
     })}\n`,
   );
 } catch (e) {

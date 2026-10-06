@@ -5,7 +5,7 @@ import { AgentViewRenderer } from "./AgentViewRenderer";
 
 export interface BoundAgentViewRendererProps {
   slug: string;
-  mode: "page" | "chat";
+  embedded: boolean;
   path: string;
   params?: Record<string, string>;
   ownedViewState?: ViewState | null;
@@ -18,7 +18,7 @@ export interface BoundAgentViewRendererProps {
 
 /** Stable component boundary around a replaceable authored-view module. */
 export function BoundAgentViewRenderer(props: BoundAgentViewRendererProps) {
-  const { slug, mode, path, params, ownedViewState, canPushViewState, onViewStateChange, reportActivity, onNavigate, renderInline } = props;
+  const { slug, embedded, path, params, ownedViewState, canPushViewState, onViewStateChange, reportActivity, onNavigate, renderInline } = props;
   const ownedStateKey = JSON.stringify(ownedViewState ?? {});
   const [localState, setLocalState] = useState<{ path: string; ownedStateKey: string; state: ViewState } | null>(null);
   const state = localState?.path === path && localState.ownedStateKey === ownedStateKey
@@ -31,7 +31,7 @@ export function BoundAgentViewRenderer(props: BoundAgentViewRendererProps) {
   return (
     <AgentViewRenderer
       slug={slug}
-      mode={mode}
+      embedded={embedded}
       params={{ ...params, path }}
       viewState={state}
       canPushViewState={canPushViewState}

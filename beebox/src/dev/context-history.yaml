@@ -6688,6 +6688,14 @@ test1:
       peak: 42292
       added: 4515
       turns: 4
+  views-full-bleed-layout:
+    - date: 2026-10-06T17:26:49.925Z
+      boxCommit: 62ec6e7f8c65acca02d03a1856c221e3fcb56534
+      repoCommit: 4a14673cc7fda5b729a0cc8eeacd1392ebc94839
+      initial: 38304
+      peak: 43377
+      added: 5073
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

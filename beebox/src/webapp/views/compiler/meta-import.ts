@@ -4,7 +4,8 @@
  * A view module can have top-level side effects (the risk is documented in
  * `docs/implemented-plans/boxes-as-packages-v2.md`'s Failure modes table: "a view module
  * with top-level side effects now executes at list time"). Reading its
- * `name`/`description`/`dependencies`/`modes`/`rendersCardTypes` exports
+ * `name`/`description`/`dependencies`/`modes`/`layout`/`rendersCardTypes`
+ * exports
  * therefore means importing it, which we isolate the same way `bbx view
  * check` isolates a full render: a killable child process with a hard
  * timeout, so a pathological view (an infinite loop or a promise that never
@@ -30,6 +31,9 @@ try {
   if (typeof mod.description === "string") out.description = mod.description;
   if (Array.isArray(mod.dependencies)) out.dependencies = mod.dependencies;
   if (Array.isArray(mod.modes)) out.modes = mod.modes;
+  // Passed through whatever its type, so the schema rejects a bad value
+  // instead of the runner silently dropping it.
+  if (mod.layout !== undefined) out.layout = mod.layout;
   if (Array.isArray(mod.rendersCardTypes)) out.rendersCardTypes = mod.rendersCardTypes;
   process.stdout.write(JSON.stringify(out));
 } catch (e) {
@@ -44,12 +48,19 @@ const importedViewMetaSchema = z.object({
   description: z.string().optional(),
   dependencies: z.array(z.string()).optional(),
   modes: z.array(z.enum(["page", "chat"])).optional(),
+  layout: z.enum(["inset", "full-bleed"]).optional(),
   rendersCardTypes: z.array(z.string()).optional(),
 });
 export type ImportedViewMeta = z.infer<typeof importedViewMetaSchema>;
 
+/**
+ * The import outcome: the metadata, a description of the export that failed
+ * validation, or null when compiling or importing failed.
+ */
+export type ImportedViewMetaResult = { meta: ImportedViewMeta } | { invalid: string } | null;
+
 /** Run the runner script against `moduleUrl` in a killable child with a timeout. Never rejects. */
-function runInSubprocess(dir: string, moduleUrl: string): Promise<ImportedViewMeta | null> {
+function runInSubprocess(dir: string, moduleUrl: string): Promise<ImportedViewMetaResult> {
   return new Promise((resolve) => {
     const runnerPath = path.join(dir, RUNNER_FILENAME);
     const child = spawn(process.execPath, [runnerPath, moduleUrl], {
@@ -68,7 +79,12 @@ function runInSubprocess(dir: string, moduleUrl: string): Promise<ImportedViewMe
       }
       try {
         const parsed = importedViewMetaSchema.safeParse(JSON.parse(stdout));
-        resolve(parsed.success ? parsed.data : null);
+        if (parsed.success) {
+          resolve({ meta: parsed.data });
+          return;
+        }
+        const issue = parsed.error.issues[0];
+        resolve({ invalid: issue ? `${issue.path.join(".")}: ${issue.message}` : parsed.error.message });
       } catch (_e) {
         resolve(null);
       }
@@ -78,11 +94,11 @@ function runInSubprocess(dir: string, moduleUrl: string): Promise<ImportedViewMe
 
 /**
  * Compile-then-import a view's node-target output in a subprocess and
- * return its metadata exports, or null if compiling, importing, or parsing
- * failed (including a timeout) — the caller degrades to a filename + error
- * marker in that case, never throws.
+ * return its metadata exports, which export failed validation, or null if
+ * compiling or importing failed (including a timeout) — the caller degrades
+ * to a filename + error marker, never throws.
  */
-export async function importViewMetadata(nodeOutput: string, host: ViewHostContext): Promise<ImportedViewMeta | null> {
+export async function importViewMetadata(nodeOutput: string, host: ViewHostContext): Promise<ImportedViewMetaResult> {
   const mod = await writeNodeViewModule(nodeOutput, host);
   try {
     await fs.writeFile(path.join(mod.dir, RUNNER_FILENAME), RUNNER_SOURCE, "utf-8");
