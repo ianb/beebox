@@ -144,12 +144,13 @@ export function buildQueryOptions(
  * Provider credentials are baked into a warm subprocess's env, and a consumed
  * slot's env wins over the caller's — so a key rotation between prewarm and
  * send must invalidate the slot rather than silently keep the old credential.
+ * The telemetry flags ride the same way: a box that turns telemetry off must
+ * not be served a slot warmed while it was on.
  */
+const PROVIDER_ENV_KEYS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "API_TIMEOUT_MS", "DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] as const;
+
 function providerEnvMatches(warm: Record<string, string | undefined>, next: Record<string, string | undefined>): boolean {
-  for (const key of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "API_TIMEOUT_MS"] as const) {
-    if ((warm[key] ?? null) !== (next[key] ?? null)) return false;
-  }
-  return true;
+  return PROVIDER_ENV_KEYS.every((key) => (warm[key] ?? null) === (next[key] ?? null));
 }
 
 /**

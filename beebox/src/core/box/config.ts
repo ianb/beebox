@@ -21,6 +21,12 @@ export interface BoxConfig {
   presentation?: PresentationConfig;
   /** Box-wide default for HQ dictation in newly created chats. Missing means off. */
   hqDictation?: "on" | "off";
+  /**
+   * Whether Claude Code may send Anthropic its own usage metrics and error
+   * reports on runs that use a Claude model. Missing means on. Runs on a
+   * third-party model never send them (`core/provider-env/core.ts`).
+   */
+  claudeCodeTelemetry?: "on" | "off";
   /** Native agent harness used for new box jobs and chats. Missing means Claude. */
   agentEngine?: AgentEngine;
   /**
@@ -91,6 +97,14 @@ export async function loadHqDictationDefault(boxRoot: string): Promise<"on" | "o
   if (value === undefined) return "off";
   if (value === "on" || value === "off") return value;
   console.warn(`[box-config] Ignoring invalid hqDictation value: ${JSON.stringify(value)}`);
+  return "off";
+}
+
+/** Validated Claude Code telemetry setting for first-party runs. An invalid value reads as off. */
+export async function loadClaudeCodeTelemetry(boxRoot: string): Promise<"on" | "off"> {
+  const value: unknown = (await loadBoxConfig(boxRoot)).claudeCodeTelemetry;
+  if (value === undefined || value === "on") return "on";
+  if (value !== "off") console.warn(`[box-config] Treating invalid claudeCodeTelemetry value as off: ${JSON.stringify(value)}`);
   return "off";
 }
 

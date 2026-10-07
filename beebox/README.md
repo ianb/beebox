@@ -79,12 +79,17 @@ Your box's files stay on your machine, but the agent that operates them
 runs on Anthropic's API — every agent turn sends its working context
 (your prompts, and whatever cards or emails the agent reads during the
 turn) to Anthropic, billed against your Claude subscription. Voice goes
-to a transcription vendor (Mistral by default; configurable). Connect
+to a transcription vendor (Mistral by default; configurable). If you pick a
+non-Claude model (an OpenRouter model you added, or GLM), those turns go to
+OpenRouter or Z.ai instead, and your OpenRouter account's privacy settings
+decide which hosts see them. Connect
 Google or Telegram and those sync in both directions. Quick chat sends your
 message and bounded conversation context to TypeSafe through OpenRouter to
 choose a destination. Each wakeup pushes
 the box's git history to whatever remote you configured — and nowhere
-else. There is no telemetry or analytics of any kind.
+else. Bee Box itself sends no telemetry or analytics. The Claude Code CLI it
+runs sends Anthropic usage metrics on Claude models unless you turn that off
+in Admin → Agent engine and model.
 
 The full accounting — every endpoint, credential, and egress point, and
 what the agent can actually do — is in [the security overview](docs/security-overview.md).

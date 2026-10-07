@@ -95,6 +95,7 @@ export async function updateBoxConfigFields(options: {
   /** Which engines the box may offer. The default engine is always kept. */
   engines?: Partial<Record<"claude" | "codex", boolean | undefined>> | undefined;
   hqDictation?: "on" | "off" | undefined;
+  claudeCodeTelemetry?: "on" | "off" | undefined;
 }): Promise<BoxConfigMutationResult> {
   const changed = [
     ...(options.allowedEmails === undefined ? [] : ["allowedEmails"]),
@@ -103,6 +104,7 @@ export async function updateBoxConfigFields(options: {
     ...(options.agentModel === undefined ? [] : ["agentModel"]),
     ...(options.engines === undefined ? [] : ["engines"]),
     ...(options.hqDictation === undefined ? [] : ["hqDictation"]),
+    ...(options.claudeCodeTelemetry === undefined ? [] : ["claudeCodeTelemetry"]),
   ];
   return mutateConfig({
     boxRoot: options.boxRoot,
@@ -131,6 +133,7 @@ export async function updateBoxConfigFields(options: {
         else config.agentModel = options.agentModel;
       }
       if (options.hqDictation !== undefined) config.hqDictation = options.hqDictation;
+      if (options.claudeCodeTelemetry !== undefined) config.claudeCodeTelemetry = options.claudeCodeTelemetry;
     },
   });
 }
