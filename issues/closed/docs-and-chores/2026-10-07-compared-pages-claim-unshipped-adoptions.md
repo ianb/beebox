@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-acknowledgements — verifying credit candidates against the tree
 priority: normal
+resolution: implemented
 ---
+
+Closed: implemented by the acknowledgements workstream. Both comparison pages now describe what shipped and point at the root `ACKNOWLEDGEMENTS.md`.
 
 Two pages under `site/docs/compared/` state that Bee Box adopted ideas that
 have no landing in the repository.
