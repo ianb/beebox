@@ -56,12 +56,28 @@ The box lives in `~/BeeBoxSpike/box`; runtime state in
 framework records absolute paths). The box is served at
 `http://localhost:3280/box/`.
 
-## Release (once the keys exist)
+## Release
 
-1. Tag `vX.Y.Z` and push it: the workflow publishes `ghcr.io/ianb/beebox:X.Y.Z`.
-   The first time, make the package public in its GitHub settings.
-2. `VERSION=X.Y.Z SIGN_IDENTITY="Developer ID Application: …" SPARKLE_PUBLIC_KEY=… scripts/build-app.sh`
-3. `NOTARY_PROFILE=beebox-notary SIGN_IDENTITY=… scripts/make-dmg.sh`
-4. Generate `appcast.xml` with Sparkle's `generate_appcast` (signs with the
-   EdDSA private key in the keychain) and attach it and the DMG to the
-   GitHub Release.
+One-time setup on the maintainer's Mac (done 2026-10-07):
+
+- A **Developer ID Application** certificate (Xcode → Settings → Accounts →
+  Manage Certificates), private key backed up as a `.p12`.
+- A notarization API key stored as the `beebox-notary` profile
+  (`xcrun notarytool store-credentials`).
+- The Sparkle update key: `generate_keys --account beebox` (from
+  `~/Library/Caches/beebox-mac-build/sparkle-2.10.0/bin`, unpacked by
+  `fetch-sparkle.sh`). Its public half is the default in `build-app.sh`; the
+  private half stays in the keychain, with a backup kept outside it.
+
+Each release:
+
+1. Tag `vX.Y.Z` and push the tag. The image workflow publishes
+   `ghcr.io/ianb/beebox:X.Y.Z` (multi-arch, public).
+2. `scripts/release.sh X.Y.Z` checks the tag and image, builds and signs the
+   app with the Developer ID, notarizes and staples the DMG, writes
+   `appcast.xml` signed with the Sparkle key, and publishes all three to the
+   GitHub Release, marked latest (the feed URL follows GitHub's latest
+   release, which skips pre-releases).
+
+Apple's first notarizations for a new team can take hours; later ones take
+minutes.
