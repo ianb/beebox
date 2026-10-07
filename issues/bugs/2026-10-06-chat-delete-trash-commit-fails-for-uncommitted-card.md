@@ -1,6 +1,6 @@
 ---
 title: "Deleting a chat fails its git step for a card never committed, and should delete the card rather than move it to Trash"
-workstream: unattached
+workstream: chat-delete-permanent
 area: beebox
 labels: [chat]
 filed-by: agent
