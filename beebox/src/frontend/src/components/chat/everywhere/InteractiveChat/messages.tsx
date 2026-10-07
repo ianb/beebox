@@ -29,6 +29,8 @@ import { TranscriptSelection } from "./TranscriptSelection";
 import type { CaptureBubbleModel, CaptureVerbs } from "../../capture-bubble";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
+import { useFirstLoadMark } from "../../../../lib/first-load-marks";
+import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
 
 interface LiveTurnState { turnId: string | null; uuid: string | null }
 
@@ -231,6 +233,7 @@ function MessageListInner({
 
   // The bounded open-thread hold ends once the first history render has landed.
   const loading = snapshot.matches("loading");
+  useFirstLoadMark(FIRST_LOAD_MARKS.history, !loading);
   const showSendSpacer = sendSignal > 0;
   useEffect(() => {
     if (!loading && messages.length > 0) settleOpen();

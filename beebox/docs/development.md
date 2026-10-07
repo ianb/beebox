@@ -39,4 +39,5 @@ external model services a box can be configured to use.
 | [Workflow](development/workflow.md) | Workstreams, commit provenance, the issue queue, recurring work, document comments, planning, exhibits. |
 | [Technologies](development/technologies.md) | The stack, and every outside AI service a box can be configured to use. |
 | [Maintenance](development/maintenance.md) | Periodic tasks: what runs on its own, what is not yet enrolled, what to run when you touch a thing. |
+| [Performance](development/performance.md) | Measuring page loads and box starts: the perf hub, the browser harness, the milestones, and how to check against production. |
 | [Testing](testing.md) | The verification instruments; its own subject. |

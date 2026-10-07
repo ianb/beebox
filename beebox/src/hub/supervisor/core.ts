@@ -28,6 +28,7 @@ import { boxHasPendingSchedules } from "./pending-schedules.js";
 import { MAX_CONSECUTIVE_FAILURES, BASE_BACKOFF_MS, backoffDelayMs } from "./crash-backoff.js";
 // prettier-ignore
 import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, spawnBoxChild } from "./child-spawn.js";
+import { runtimeStatus, type BoxRunStatus, type BoxRuntimeStatus, type LaunchTiming } from "../box-status.js";
 
 // `buildChildEnv` (env allowlist) and the child-spawn primitives moved to
 // sibling files to keep this one under the 300-line cap; `buildChildEnv` is
@@ -35,27 +36,6 @@ import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild
 // don't need to change their import path. Box-path resolution is
 // `requireBoxRoot` (`../lib/box-shape.js`) — the one resolver.
 export { buildChildEnv };
-
-export type BoxRunStatus = "starting" | "running" | "unhealthy" | "stopped";
-
-export interface BoxRuntimeStatus {
-  slug: string;
-  status: BoxRunStatus;
-  pid: number | undefined;
-  port: number | undefined;
-  /** Lifetime restart count — never resets. Informational only; do NOT derive
-   *  a health verdict from it (a box that blipped once weeks ago would pin the
-   *  hub unhealthy forever). The live crash-loop signal is
-   *  `consecutiveFailures`. */
-  restarts: number;
-  /** Consecutive failed launches since the last success — reset to 0 the
-   *  moment a launch reaches "running" (`launch()`), incremented on each
-   *  failed launch/unexpected exit. Nonzero while `status === "starting"`
-   *  means the box is crash-looping right now; this is the field the health
-   *  verdict keys on. */
-  consecutiveFailures: number;
-  lastError: string | undefined;
-}
 
 export interface ManagedBox {
   slug: string;
@@ -66,6 +46,7 @@ export interface ManagedBox {
   restarts: number;
   consecutiveFailures: number;
   lastError: string | undefined;
+  lastStart?: LaunchTiming;
   /** Guards against a stale exit/readiness event from a generation that's
    *  already been superseded by a restart -- same hazard router.ts's
    *  `onChildExit` comment describes for worktrees. */
@@ -418,24 +399,18 @@ export class Supervisor implements EndpointProvider {
   }
 
   getStatuses(): BoxRuntimeStatus[] {
-    return Array.from(this.boxes.values()).map((box) => ({
-      slug: box.slug,
-      status: box.status,
-      pid: box.child?.pid,
-      port: box.port,
-      restarts: box.restarts,
-      consecutiveFailures: box.consecutiveFailures,
-      lastError: box.lastError,
-    }));
+    return Array.from(this.boxes.values()).map(runtimeStatus);
   }
 
   private async launch(box: ManagedBox): Promise<void> {
     box.status = "starting";
     const generation = ++box.generation;
+    const launchStart = performance.now();
     try {
       const { child, port, boxRoot } = await spawnBoxChild({
         root: box.entry.path, slug: box.slug, hubSecret: this.hubSecret, spawn: this.spawnChild,
       });
+      const spawnMs = Math.round(performance.now() - launchStart);
       // Swallow the execa promise rejection here (not just via .on("exit")) --
       // otherwise a killed child's eventual rejection surfaces minutes later
       // as an unhandledRejection and crashes the hub. Same fix router.ts
@@ -457,6 +432,7 @@ export class Supervisor implements EndpointProvider {
       box.status = "running";
       box.consecutiveFailures = 0;
       box.lastError = undefined;
+      box.lastStart = { at: new Date().toISOString(), spawnMs, readyMs: Math.round(performance.now() - launchStart) };
       // A lazy child can reach "running" through paths that never call
       // touch() -- a crash-loop backoff retry, or a keepRecent pre-start that
       // failed once and recovered. Without an idle timer such a box would sit

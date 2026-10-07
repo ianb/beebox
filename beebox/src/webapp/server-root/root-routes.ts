@@ -26,6 +26,7 @@ import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../../li
 import { verifyMobileRequest } from "../../core/mobile/request-auth.js";
 import { verifyBrowseKey } from "../../core/browse-key.js";
 import type { CardSymbolData } from "../../shared/card-symbol.js";
+import { startupPhases } from "../../lib/startup-timing.js";
 
 /** Body of `POST /api/push/resubscribe` — validated at the HTTP boundary. */
 const resubscribeBodySchema = z.object({
@@ -233,6 +234,8 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
       templateDrift: { total: templateDriftTotal, byBox },
       schemaLoadFailures: { total: schemaFailureTotal, byBox: schemaFailuresByBox },
       engineVersionMismatch: { total: Object.keys(engineMismatchByBox).length, byBox: engineMismatchByBox },
+      // Boot phase timings of this process (`lib/startup-timing.ts`).
+      startup: startupPhases(),
     };
   });
 
