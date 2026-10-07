@@ -15,6 +15,8 @@ import { CardActions } from "../../card-actions/CardActions";
 import { OpenInPanelButton } from "../../ui/OpenInPanelButton";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
 import { CardFacts, CardMentions } from "./CardProperties";
+import { CardAttachments } from "./CardAttachments";
+import { CardLastChange } from "./CardLastChange";
 import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
 import { LandmarkSystemThemePicker } from "../SystemThemePicker";
 import { isCardPath } from "../../file-view-data";
@@ -39,7 +41,12 @@ function FileSpecificProperties({ data, theme, isCard, boxSlug, onNavigate }: {
   data: FileData; theme: ReturnType<typeof resolveCardTheme>; isCard: boolean; boxSlug: string | undefined;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
 }) {
-  if (isCard) return <><CardFacts data={data} boxSlug={boxSlug} onNavigate={onNavigate} /><ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} /></>;
+  if (isCard) return <>
+    <CardFacts data={data} boxSlug={boxSlug} onNavigate={onNavigate} />
+    <CardAttachments path={data.path} onNavigate={onNavigate} />
+    <CardLastChange path={data.path} onNavigate={onNavigate} />
+    <ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} />
+  </>;
   return <dl className="mt-4"><dt>Filed at</dt><dd>{data.path}</dd><dt>File type</dt><dd>Markdown</dd></dl>;
 }
 
