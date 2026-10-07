@@ -42,6 +42,8 @@ const resultFileSchema = z.object({
   meta: z.object({
     label: z.string(), at: z.string(), git: z.string(), target: z.string(), url: z.string(),
     profile: z.string(), cpuRate: z.number(), cache: z.string(), boxState: z.string(),
+    /** The machine's 1-minute load average when the runs started: high values mean noisy numbers. */
+    loadAvg: z.number().optional(),
   }),
   runs: z.array(runRecordSchema),
 });
@@ -64,6 +66,7 @@ export const METRICS: Metric[] = [
   { name: "box validated", unit: "ms", get: mark(FIRST_LOAD_MARKS.boxValidated) },
   { name: "shell", unit: "ms", get: mark(FIRST_LOAD_MARKS.shell) },
   { name: "composer", unit: "ms", get: mark(FIRST_LOAD_MARKS.composer) },
+  { name: "conversation ready", unit: "ms", get: mark(FIRST_LOAD_MARKS.conversationReady) },
   { name: "history", unit: "ms", get: mark(FIRST_LOAD_MARKS.history) },
   { name: "dom: react mounted", unit: "ms", get: mark("dom:mounted") },
   { name: "dom: composer", unit: "ms", get: mark("dom:composer") },
@@ -94,7 +97,7 @@ export function formatSummary(result: ResultFile): string {
   const { meta, runs } = result;
   const lines = [
     `${meta.label}: ${meta.target} ${meta.url}`,
-    `  network=${meta.profile} cpu=${meta.cpuRate}x cache=${meta.cache} box=${meta.boxState} runs=${runs.length} git=${meta.git}`,
+    `  network=${meta.profile} cpu=${meta.cpuRate}x cache=${meta.cache} box=${meta.boxState} runs=${runs.length} git=${meta.git} load=${meta.loadAvg?.toFixed(1) ?? "?"}`,
     `  ${"metric".padEnd(28)}${pad("median", 9)}${pad("min", 9)}${pad("max", 9)}`,
   ];
   for (const metric of METRICS) {

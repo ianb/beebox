@@ -11,6 +11,7 @@ import { parseArgs } from "node:util";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { startEdgeProxy } from "./edge-proxy.js";
+import { seedChat } from "./seed-chat.js";
 import {
   DEFAULT_HUB_PORT, PERF_DIAG_KEY, bbxBin, defaultPerfBox, perfHubEnv, perfHubPaths, readDaemonPid,
   makeBoxCold, readPerfHubConfig, waitForGeneration, waitForHttp, writePerfHubConfig, type PerfHubConfig,
@@ -138,17 +139,25 @@ async function status(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const { positionals, values } = parseArgs({ allowPositionals: true, options: { box: { type: "string" }, port: { type: "string" } } });
+  const { positionals, values } = parseArgs({ allowPositionals: true, options: { box: { type: "string" }, port: { type: "string" }, turns: { type: "string", default: "40" } } });
   const command = positionals[0];
   if (command === "daemon") return runDaemon();
   if (command === "up") return up(values);
   if (command === "down") return down();
   if (command === "status") return status();
+  if (command === "seed-chat") {
+    const config = await readPerfHubConfig();
+    const box = values.box ?? config?.box ?? defaultPerfBox() ?? fail("no box: pass --box <path>");
+    const id = await seedChat(path.resolve(box), Number(values.turns));
+    // A running box keeps its session list in memory; restart it to pick up the new conversation.
+    if ((await readDaemonPid()) !== undefined) await makeBoxCold();
+    return console.log(`seeded conversation ${id} (${values.turns} turns) in ${box}; it is now the box's latest conversation`);
+  }
   if (command === "cold") {
     await makeBoxCold();
     return console.log("perf hub restarted; the box is stopped");
   }
-  fail("usage: pnpm perf:hub <up [--box <path>] [--port <n>] | down | status | cold>");
+  fail("usage: pnpm perf:hub <up [--box <path>] [--port <n>] | down | status | cold | seed-chat [--turns <n>]>");
 }
 
 if (process.argv[1] === import.meta.filename) {

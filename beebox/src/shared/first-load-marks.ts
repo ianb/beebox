@@ -14,9 +14,12 @@ export const FIRST_LOAD_MARKS = {
   boxValidated: "bbx:box-validated",
   /** `ProductLayout` (nav, chat shell) committed. */
   shell: "bbx:shell",
-  /** The chat composer committed. */
+  /** The chat composer committed. It is disabled until the conversation is chosen. */
   composer: "bbx:composer",
-  /** The conversation's first history load finished and rendered. */
+  /** The shell chose the conversation to show (`chat.bootstrap`, or a fresh
+   * reservation); the composer is enabled. */
+  conversationReady: "bbx:conversation-ready",
+  /** The chosen conversation's history finished loading and rendered. */
   history: "bbx:history",
 } as const;
 

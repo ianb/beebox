@@ -38,8 +38,9 @@ start.
 | `bbx:render` | Boot work is done and React's first render starts. |
 | `bbx:box-validated` | The box list confirmed the URL's box. |
 | `bbx:shell` | The product shell (nav, chat) committed. |
-| `bbx:composer` | The chat composer committed. Effects run child-first, so this mark can come just before `bbx:shell` in the same commit. |
-| `bbx:history` | The conversation's first history load finished and rendered. This is "the page is useful". |
+| `bbx:composer` | The chat composer committed. Effects run child-first, so this mark can come just before `bbx:shell` in the same commit. The composer is disabled ("Choosing conversation…") until the next mark. |
+| `bbx:conversation-ready` | The shell chose the conversation (`chat.bootstrap`, or a fresh reservation). The composer is enabled. |
+| `bbx:history` | The chosen conversation's history finished loading and rendered. This is "the page is useful". |
 
 The server records its own startup phases (`src/lib/startup-timing.ts`). A
 child's diag-key-gated `/healthz` returns them as `startup`: milliseconds from
@@ -167,7 +168,8 @@ The build replaces `src/frontend/dist/`, the same output a normal build writes.
    in the commit or the issue.
 
 Noise: the development machine is busy, so use at least five runs and compare
-medians. When a difference is small, run the baseline again in the same
+medians. Each result records the machine's load average; a run taken under a
+much higher load than its comparison is not evidence. When a difference is small, run the baseline again in the same
 session. Throttling is emulated by Chrome: it shapes bandwidth and latency per
 request but does not model TCP slow start or packet loss. The CPU slowdown is
 relative to the machine that runs it. Treat absolute numbers as a model; the

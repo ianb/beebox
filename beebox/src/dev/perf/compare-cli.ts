@@ -31,7 +31,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const [fileA, fileB] = args.length === 2 ? [args[0] ?? "", args[1] ?? ""] : await newestTwo();
   const [a, b] = [await readResult(fileA), await readResult(fileB)];
-  const describe = (r: ResultFile): string => `${r.meta.label} (${r.meta.git}, ${r.meta.at}) network=${r.meta.profile} cpu=${r.meta.cpuRate}x cache=${r.meta.cache} box=${r.meta.boxState} runs=${r.runs.length}`;
+  const describe = (r: ResultFile): string => `${r.meta.label} (${r.meta.git}, ${r.meta.at}) network=${r.meta.profile} cpu=${r.meta.cpuRate}x cache=${r.meta.cache} box=${r.meta.boxState} runs=${r.runs.length} load=${r.meta.loadAvg?.toFixed(1) ?? "?"}`;
   console.log(`before: ${describe(a)}\nafter:  ${describe(b)}`);
   console.log(`  ${"metric".padEnd(28)}${"before".padStart(9)}${"after".padStart(9)}${"change".padStart(9)}${"%".padStart(7)}`);
   for (const metric of METRICS) {

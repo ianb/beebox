@@ -9,6 +9,7 @@
  */
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
 import { z } from "zod";
@@ -105,6 +106,7 @@ async function main(): Promise<void> {
   const runs = Number(values.runs);
   const label = values.label ?? `${target.name}-${values.profile}-cpu${values.cpu}-${values.cache}cache${boxCold ? "-coldbox" : ""}`;
   const stamp = new Date().toISOString().replaceAll(/[.:]/g, "-");
+  const loadAvg = os.loadavg()[0];
   await fs.mkdir(perfResultsDir(), { recursive: true });
   // A warm-box measurement must not pay a cold start: wake the box first.
   if (!boxCold && target.hubPort !== undefined) await fetch(target.url, { headers: { cookie: `bbx_session=${target.cookie}` } });
@@ -124,7 +126,7 @@ async function main(): Promise<void> {
     cdp.close();
   }
   const file: ResultFile = {
-    meta: { label, at: new Date().toISOString(), git: gitDescribe(), target: target.name, url: new URL(target.url).pathname, profile: values.profile, cpuRate: Number(values.cpu), cache: values.cache, boxState: boxCold ? "cold" : "warm" },
+    meta: { label, at: new Date().toISOString(), git: gitDescribe(), target: target.name, url: new URL(target.url).pathname, profile: values.profile, cpuRate: Number(values.cpu), cache: values.cache, boxState: boxCold ? "cold" : "warm", loadAvg },
     runs: records,
   };
   const out = path.join(perfResultsDir(), `${stamp}-${label}.json`);
