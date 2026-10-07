@@ -13,6 +13,12 @@ import { AdminSectionCard } from "./AdminSectionCard";
 const DESCRIPTION =
   "Choose the native harness for new chats, wakeups, and procedures. Chats with a recorded engine keep using it; legacy chats default to Claude.";
 
+const TELEMETRY_HELPER =
+  "Claude Code reports which tools and skills ran, the model, timings, and your account and device ids. " +
+  "Anthropic says this never includes prompts, code, or file paths. On Pro and Max logins it also sends redacted " +
+  "error reports. Applies to Claude models only; runs on other models never send it. A chat already running keeps " +
+  "its setting until its agent restarts.";
+
 const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
 
 const ENGINE_OPTIONS = [
@@ -110,6 +116,14 @@ export function AgentEngineSection() {
             options={modelOptions(engine, { current: model, added: config.data.openrouterModels })}
             disabled={update.isPending}
             onChange={(agentModel) => { update.mutate({ agentModel: agentModel === "" ? null : agentModel }); }}
+          />
+          <CheckboxField
+            id="bbx-admin-claude-code-telemetry"
+            label="Let Claude Code send usage data to Anthropic"
+            checked={config.data.claudeCodeTelemetry === "on"}
+            disabled={update.isPending}
+            helper={TELEMETRY_HELPER}
+            onChange={(checked) => { update.mutate({ claudeCodeTelemetry: checked ? "on" : "off" }); }}
           />
         </>
       ) : null}

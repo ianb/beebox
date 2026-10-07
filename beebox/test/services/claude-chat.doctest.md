@@ -306,3 +306,14 @@ JSON.stringify({
 })
 => {"sameChat":true,"otherChat":false,"speculativeForCoined":false,"coinedForSpeculative":false}
 ```
+
+The provider env is baked in too. A slot warmed before the owner turned
+Claude Code telemetry off still carries telemetry on, so it is refused:
+
+```ts continue
+JSON.stringify({
+  telemetryTurnedOff: warmCompatible(base, { ...base, env: { DISABLE_TELEMETRY: "1", DISABLE_ERROR_REPORTING: "1" } }),
+  unchanged: warmCompatible(base, { ...base, env: {} }),
+})
+=> {"telemetryTurnedOff":false,"unchanged":true}
+```
