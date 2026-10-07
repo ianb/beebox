@@ -9,8 +9,9 @@
 #   BEEBOX_IMAGE     image reference (default ghcr.io/ianb/beebox:$VERSION)
 #   SIGN_IDENTITY    codesign identity; "-" (ad-hoc, the default) until the
 #                    Developer ID certificate exists
-#   SPARKLE_PUBLIC_KEY  the update-signing key's public half; empty leaves
-#                    updates off
+#   SPARKLE_PUBLIC_KEY  the update-signing key's public half (default: the
+#                    project's key, made with `generate_keys --account beebox`;
+#                    the private half is in the maintainer's keychain)
 #   MIN_MACOS        LSMinimumSystemVersion (default 26.0)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -20,7 +21,7 @@ BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD)}"
 BUNDLE_ID="${BUNDLE_ID:-run.beebox.mac}"
 IMAGE="${BEEBOX_IMAGE:-ghcr.io/ianb/beebox:$VERSION}"
 IDENTITY="${SIGN_IDENTITY:--}"
-SPARKLE_PUBLIC_KEY="${SPARKLE_PUBLIC_KEY:-}"
+SPARKLE_PUBLIC_KEY="${SPARKLE_PUBLIC_KEY-TdU85iPE0GdWg8yepTnRXo3v5dJYhQ6CmsIb6Qt/l98=}"
 MIN_MACOS="${MIN_MACOS:-26.0}"
 FEED_URL="https://github.com/ianb/beebox/releases/latest/download/appcast.xml"
 
