@@ -1,6 +1,6 @@
 ---
 title: "Document metadata takes the first screen even with Properties closed"
-workstream: unattached
+workstream: card-reading-properties
 area: beebox
 filed-by: agent
 discovered-by: agent

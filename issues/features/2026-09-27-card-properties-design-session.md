@@ -1,6 +1,6 @@
 ---
 title: "Design session: card Properties do not pull their weight"
-workstream: unattached
+workstream: card-reading-properties
 needs: [design]
 area: beebox
 labels: [frontend, properties, cards]
