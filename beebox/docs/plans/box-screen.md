@@ -496,3 +496,5 @@ Commits: `20dd89b6e` (server, prompt, Jev instruction, contract), `1e619d40d` (i
 
 Tests: policy doctest 10/10 (the `thoughtAsksForNewChat` table and the selection with and without the request); router `quick-chat.submit` 34/34, with both wrappers delivered through `submit` and `choose` and a "New chat:" thought sent to a new chat; record 15/15 (origin kept, old records typed); sender attribution 9/9; contract fixtures 5/5; Jev 38/38; catalog 25/25; web box screen state and route 40/40. iOS: `QuickChatAPITests`, `QuickChatOutboxTests`, `BoxScreenStoreTests`, and `SpeechKeywordsTests` 54/54.
 
+Knowledge audit `box-screen-arrival-tag` (chat mode) passed 1/1 with no reads or searches, against a disposable standalone clone of the test box.
+
