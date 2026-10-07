@@ -58,3 +58,16 @@ and the boxholder can see it in the UI.
   code.
 - First adopters: chat review (the trigger for this issue), todo review, and
   connector syncs.
+
+## Decisions (boxholder, 2026-10-07)
+
+- **Keep the shape simple:** a headline and a Markdown body, kept tight;
+  possibly a separate notes field so the body stays short. A **priority**
+  level says whether the run is routine ("stuff as normal") or something
+  worth looking at. This replaces the outcome/counts/links shape proposed
+  above.
+- **Not committed, rotating.** Summaries are UI for the boxholder, not logs:
+  machine-local, keep the recent ones, drop the rest.
+- **How a task returns its summary is a design discussion** with the
+  boxholder before building: it must work for both script tasks (`runs:`)
+  and agent-run tasks, and be tight.
