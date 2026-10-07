@@ -90,7 +90,7 @@ const submitThenRoute = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const first = await quickChat(ctx.boxRoot, ctx.eventBus).submit({ id: submitThenRoute, message: "buy stamps" });
 const routeAfter = await ctx.request({ method: "POST", url: "/api/chat/send", payload: { session: "new", message: "<typed>buy stamps</typed>", messageId: submitThenRoute } });
 [first.state, routeAfter.statusCode, shape(routeAfter.body), recorded.slice(3)]
-=> ["sent", 200, "{\"deduplicated\":true}", ["<typed>buy stamps</typed>"]]
+=> ["sent", 200, "{\"deduplicated\":true}", ["<typed source=\"box-screen\">buy stamps</typed>"]]
 ```
 
 ```ts cleanup
