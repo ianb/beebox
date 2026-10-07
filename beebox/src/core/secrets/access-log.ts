@@ -55,7 +55,7 @@ export interface SecretAccessEvent {
 
 let warnedAboutLog = false;
 
-export class SecretAuditWriteError extends Error {
+class SecretAuditWriteError extends Error {
   constructor() {
     super("Secret reveal could not be audited.");
     this.name = "SecretAuditWriteError";

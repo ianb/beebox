@@ -42,7 +42,7 @@ import { classifyHqError } from "../classify.js";
 import * as fs from "node:fs/promises";
 
 /** How long the job keeps retrying a transient/piece-too-long failure before giving up. */
-export const HQ_RETRY_BOUND_MS = 24 * 60 * 60 * 1000; // 24h
+const HQ_RETRY_BOUND_MS = 24 * 60 * 60 * 1000; // 24h
 
 /** Backoff shape for a transient piece failure — shared idiom, box-specific bounds. */
 const HQ_BACKOFF = { baseMs: 5_000, capMs: 5 * 60_000 };

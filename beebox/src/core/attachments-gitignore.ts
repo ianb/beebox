@@ -184,7 +184,7 @@ export interface UnignoreOutcome {
  * core/annex/to-annex.ts — the ordering relative to `annex.largefiles` is
  * load-bearing).
  */
-export async function unignoreGitignore(boxRoot: string): Promise<UnignoreOutcome> {
+async function unignoreGitignore(boxRoot: string): Promise<UnignoreOutcome> {
   const gitignorePath = path.join(boxRoot, ".gitignore");
   let existing = "";
   try {

@@ -26,7 +26,7 @@ import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { resolveConditions } from "./schedules-alert-lifecycle.js";
 
 /** The branch `bin/workstreams create` gives a schedule's worktree. */
-export function scheduleBranch(name: string): string {
+function scheduleBranch(name: string): string {
   return `worktree-${name}`;
 }
 
@@ -78,7 +78,7 @@ export type ParkResult = { kind: "clean" } | { kind: "parked"; parked: ParkedWor
  * Fails closed: if the tree is still dirty afterward (a nested repository
  * `clean` will not remove), that is a failure, and nothing launches on it.
  */
-export async function parkDirtyTree(cwd: string, input: { name: string; runId: string }): Promise<ParkResult> {
+async function parkDirtyTree(cwd: string, input: { name: string; runId: string }): Promise<ParkResult> {
   const paths = await dirtyPaths(cwd);
   if (paths === null) return { kind: "failed", reason: "git status failed" };
   if (paths.length === 0) return { kind: "clean" };
@@ -204,7 +204,7 @@ export async function prepareScheduleWorktree(cwd: string, input: { name: string
 /** A worktree schedule's branch holding commits `main` lacks. Runner-owned:
  *  checked after every run of such a schedule, raised `normal` while it holds,
  *  resolved once the branch has landed (or is gone). */
-export const UNLANDED_CONDITION = "unlanded-commits";
+const UNLANDED_CONDITION = "unlanded-commits";
 
 /**
  * Finished work must not sit on a schedule branch unnoticed. cross-box-leak-

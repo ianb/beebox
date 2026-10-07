@@ -68,7 +68,7 @@ export function defaultCheckReady(params: { port: number; label: string }): Prom
 
 /** The box's own engine's `bbx` when installed, else the running engine's own
  *  `bbx` (a box that hasn't been `pnpm install`ed yet). */
-export async function resolveBbxBinary(shape: BoxShape): Promise<string> {
+async function resolveBbxBinary(shape: BoxShape): Promise<string> {
   return (await resolveBoxEngineBbx(shape.boxRoot)) ?? path.join(PACKAGE_ROOT, "bin", "bbx");
 }
 

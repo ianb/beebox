@@ -23,7 +23,7 @@ import { errnoCode } from "../../../shared/error-guards.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
 
 /** The seeded hourly Drive sync, by the name its card and `--script` use. */
-export const CHECK_DRIVE_SCHEDULE = "check-drive";
+const CHECK_DRIVE_SCHEDULE = "check-drive";
 
 /** What the box has: the schedule on, off, or never seeded. */
 export type CheckDriveState = "enabled" | "disabled" | "absent";

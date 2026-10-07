@@ -14,7 +14,7 @@ import { z } from "zod";
 import { createStagingSession, readStagingSession } from "../../../core/capture/staging-store/core.js";
 import { resolveCaptureRequestOwner } from "../capture-request-owner.js";
 
-export const CAPTURE_CAPABILITIES = {
+const CAPTURE_CAPABILITIES = {
   acceptedAudioFormats: ["webm-opus", "m4a-aac"],
   acceptedUploadEncodings: ["raw-body-v1"],
 } as const;

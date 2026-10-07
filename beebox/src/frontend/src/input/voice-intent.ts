@@ -105,7 +105,7 @@ export function buildVoiceSubmitEmission(opts: {
 }
 
 /** Body of a voice message whose recording produced neither live text nor an HQ transcript. */
-export const UNTRANSCRIBED_PLACEHOLDER = "[recording not transcribed]";
+const UNTRANSCRIBED_PLACEHOLDER = "[recording not transcribed]";
 
 /** The send keyword a voice message ended with, re-applied to its HQ text. */
 export interface VoiceSendKeyword {

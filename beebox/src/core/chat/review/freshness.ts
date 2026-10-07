@@ -74,7 +74,7 @@ export function stillFitsQuestion() {
 }
 
 /** The state Jev judges: the title and the recent messages, nothing else. */
-export function freshnessState(args: { title: string; recent: string }): unknown {
+function freshnessState(args: { title: string; recent: string }): unknown {
   return { title: args.title, recentMessages: args.recent };
 }
 

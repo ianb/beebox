@@ -20,7 +20,7 @@ import { cleanupStagingSession } from "../capture/staging-teardown.js";
 import { isVoiceTerminal } from "./voice-staging/core.js";
 
 /** How long a voice recording's staging directory survives past creation, sealing, or becoming terminal. */
-export const VOICE_STAGING_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const VOICE_STAGING_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export interface VoiceSweepResult {
   /** Session ids whose staging directory was deleted this pass. */

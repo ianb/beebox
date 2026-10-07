@@ -22,7 +22,7 @@ export class PlaybackError extends Error {
  * (a rate limit, a missing key), else the status and the start of the body.
  * The playback machine shows this message on the failed speech segment.
  */
-export class TtsRequestError extends Error {
+class TtsRequestError extends Error {
   readonly status: number;
 
   constructor({ status, serverError, body }: { status: number; serverError: string | null; body: string }) {
