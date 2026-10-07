@@ -25,22 +25,25 @@ skills:
 The plan says the executor "reads the card when a person starts a run"
 (`beebox/docs/implemented-plans/browser-task-card.md`).
 
-## Fix
+## Fix (boxholder, 2026-10-07: "it's a skill for boxes, not for the codebase")
 
-Preferred: make the card's **Copy prompt, schema and watermark** block
-self-contained. The copied text carries the run procedure along with the
-prompt, schema, and watermark, so any Claude with Chrome access can run it
-from a paste, with nothing installed. Move every rule from the skill into
-that text (or the card type's docs it renders from), then delete the
-dev-repo skill.
+Make it a **managed box skill**. `beebox/src/core/box/guidance-sync/skills.ts`
+already installs managed skills into `<box>/.claude/skills/<name>/SKILL.md`
+(with the DOCID marker, refreshed by `bbx init`, wakeup, chat start, and
+`bbx docs refresh`; see `skills-content.ts` for the existing ones). Move the
+procedure there, versioned with the `browser-task` card type, and delete the
+dev-repo copy.
 
-Alternative: a managed box skill (`beebox/src/core/box/guidance-sync/skills.ts`
-installs them into `<box>/.claude/skills/`). It helps only when the executor
-session runs inside the box directory, which the design does not assume.
+This makes the documented way to run a browser task: a Claude Code session in
+the box directory, with Claude in Chrome, invokes the box's `browser-task`
+skill. Update the card's page and the box guidance to say so, and check that
+the skill's wording fits a box session (paths are box-relative; no dev-repo
+references such as this checkout's scratchpad conventions). The copy block
+can stay as it is.
 
-Verify with a dry run: paste the copied block into a fresh Claude session
-that has no repo skills and check it produces a valid batch against a test
-card.
+Verify: run `bbx init` on a test box, confirm the skill is installed, and
+check with the knowledge-audit skill that a box session finds and follows it
+for a browser-task request.
 
 ## Review the other skills
 
@@ -54,5 +57,5 @@ schedules, browser verification, iOS overlap, security report, field
 probes). Read each body before concluding, and look for product rules
 embedded inside development skills too (for example, box-facing wording or
 procedures that box guidance should carry instead). For each, record keep,
-move (to box guidance via the bbx-context skill, to a card or the product
-UI), or split.
+move (to a managed box skill or other box guidance via the bbx-context
+skill, or into the product UI), or split.
