@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-07T04:07:32Z
+Generated: 2026-10-07T20:58:55Z
 Total documents: 479
 
 ## Issues
@@ -9,7 +9,7 @@ Total documents: 479
 
 These documents are not referenced by any other document.
 
-- **docs/implemented-plans/agent-applied-migrations.md** — "Agent-applied migrations (via procedure checklists)" (550 lines) · shipped history · implemented
+- **docs/implemented-plans/acknowledgements-backfill.md** — "Acknowledgements backfill: credit adopted external ideas" (316 lines) · shipped history · implemented
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines) · implementation review
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (676 lines) · shipped history · implemented
@@ -133,6 +133,7 @@ Referenced by:
 - docs/development/agent-coding.md:12 (mention) — The instructions those agents read are checked into the repository. `CLAUDE.md`
 - docs/development/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files,
 - docs/glossary.md:31 (mention) — **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "u
+- docs/implemented-plans/acknowledgements-backfill.md:75 (mention) — | tracked `CLAUDE.md`, `AGENTS.md`, `README.md` files | all packages |
 - docs/implemented-plans/agent-browsing-owner.md:192 (mention) — the plan's outcome invisible (`CLAUDE.md`: infrastructure isn't done until
 - docs/implemented-plans/agent-guide-spec.md:133 (mention) — CLAUDE.md file. Longer files consume more context and reduce adherence";
 - docs/implemented-plans/app-wide-csp.md:223 (mention) — `mode`. Lives in `src/lib/` per CLAUDE.md ("Cross-cutting helpers").
@@ -591,7 +592,6 @@ References:
 - → code-style.md (mention)
 - → docs/box/card-themes.md (link)
 - → docs/data-source-tagging.md (mention)
-- → docs/attribution.md (mention)
 - → frontend.md (mention)
 
 #### README.md
@@ -600,6 +600,7 @@ Title: "beebox" | 105 lines
 
 Referenced by:
 - docs/cards/format.md:24 (mention) — **Naming and type discrimination.** `Name.type.card` — the type segment is the canonical discriminator, not a `type:` fr
+- docs/implemented-plans/acknowledgements-backfill.md:75 (mention) — | tracked `CLAUDE.md`, `AGENTS.md`, `README.md` files | all packages |
 - docs/implemented-plans/bbx-agent-surface.md:402 (mention) — command-line interface" and `README.md:5` says "the `bbx` CLI is the interface".
 - docs/implemented-plans/box-docs-in-package.md:93 (mention) — - `README.md`: an index, one line per doc: filename and a one-line "read this
 - docs/implemented-plans/boxes-as-packages-v2.md:493 (mention) — (a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
@@ -775,15 +776,6 @@ References:
 - → docs/box-guidance.md (link)
 - → CLAUDE.md (mention)
 - → src/core/agent-guide/guide.md (mention)
-
-#### docs/attribution.md
-
-Title: "Third-party assets and their attribution" | 32 lines | current reference
-
-Referenced by:
-- docs/guides.md:56 (link) — | Third-party asset attribution | [attribution](attribution.md) |
-- frontend.md:64 (mention) — rejected; see `docs/attribution.md` for why the artwork is a dependency.
-- ../issues/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md:2 (mention) — title: "Credit adopted ideas in attribution.md, and backfill it from history"
 
 #### docs/box-guidance.md
 
@@ -1303,7 +1295,7 @@ References:
 - → ../agent-doctest/docs/syntax.md (link)
 - → docs/glossary.md (link)
 - → docs/example-names.md (link)
-- → docs/attribution.md (link)
+- → ../ACKNOWLEDGEMENTS.md (link)
 - → docs/name-history.md (link)
 - → docs/todo-security.md (link)
 - → ../research/CLAUDE.md (link)
@@ -1936,7 +1928,7 @@ Referenced by:
 - docs/unimplemented-plans/publish-pages-superseded.md:277 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
 - ../.claude/skills/bbx-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/bbx-guide-testing/SKILL.md:9 (mention) — the full tier catalog live in `beebox/docs/testing.md` — read the
-- ../.claude/skills/bbx-plan/TEMPLATE.md:169 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
+- ../.claude/skills/bbx-plan/TEMPLATE.md:173 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
 - ../issues/closed/features/2026-03-04-session-output-critique-tool.md:8 (mention) — **Closed:** Implemented as `bbx session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Sess
 - ../issues/closed/features/2026-08-06-agent-driven-integration-tests.md:71 (mention) — `docs/testing.md`) already does multi-step end-to-end fixtures with checkpoints and
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:55 (mention) — (`content/`-nested, `shapeVersion: 2`) layout. `docs/testing.md` was updated to
@@ -2911,9 +2903,21 @@ References:
 
 ### docs/implemented-plans/
 
-#### docs/implemented-plans/agent-applied-migrations.md **[ORPHAN]**
+#### docs/implemented-plans/acknowledgements-backfill.md **[ORPHAN]**
+
+Title: "Acknowledgements backfill: credit adopted external ideas" | 316 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md (frontmatter)
+- → CLAUDE.md (mention)
+- → README.md (mention)
+
+#### docs/implemented-plans/agent-applied-migrations.md
 
 Title: "Agent-applied migrations (via procedure checklists)" | 550 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/docs-and-chores/2026-10-07-nidus-prior-art-note-misreads-paper.md:11 (mention) — `beebox/docs/implemented-plans/agent-applied-migrations.md` (prior-art
 
 References:
 - → docs/procedure-implementation.md (mention)
@@ -3333,6 +3337,7 @@ Referenced by:
 - ../issues/closed/features/2026-09-13-browser-task-cadence-and-staleness.md:36 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/closed/features/2026-09-13-browser-task-history-and-subject.md:31 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/closed/features/2026-09-13-browser-task-inbox-table-view.md:32 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
+- ../issues/code-quality/2026-10-07-browser-task-skill-belongs-in-the-product.md:26 (mention) — (`beebox/docs/implemented-plans/browser-task-card.md`).
 - ../issues/features/2026-09-17-box-as-mcp-server-hands-out-tasks.md:107 (link) — - [browser-task card](../../beebox/docs/implemented-plans/browser-task-card.md)
 
 References:
@@ -8249,7 +8254,7 @@ Referenced by:
 - docs/plans/agent-points-at-ui.md:133 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
 - docs/testing.md:41 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
-- ../.claude/skills/bbx-plan/TEMPLATE.md:158 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
+- ../.claude/skills/bbx-plan/TEMPLATE.md:162 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:46 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
 - ../issues/closed/code-quality/2026-08-26-repair-tours-and-check-them-weekly.md:27 (mention) — (`beebox/docs/tours.md` keeps them out of pre-commit and the suite on
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:58 (mention) — > `Connector` interface to a contributor, `tours.md` is test tooling, the

@@ -53,7 +53,11 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
      behaviour you may hit, and named patterns that cover a mechanism you're
      inventing. One line + URL per finding. "No prior art found for X" is a
      finding when it bears on the decision; write it. If no decision depends
-     on an external premise, state that briefly and skip the search. -->
+     on an external premise, state that briefly and skip the search.
+     Mark each item evaluated-only or adopted. An adopted item (used as a
+     direct model, adapted, or copied) gets an entry in ACKNOWLEDGEMENTS.md
+     in the same commit that lands it; the Implementation order names that
+     chunk. -->
 
 ## Ontology
 

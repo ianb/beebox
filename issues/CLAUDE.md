@@ -283,6 +283,9 @@ Record every issue actually addressed in the plan's “Issues addressed” heade
 when a plan exists; otherwise retain the paths in the workstream briefing or
 handoff so `/finish` can reconcile them.
 
+If the issue names an external project or person as the source of the idea,
+the commit that lands it adds an entry to the root `ACKNOWLEDGEMENTS.md`.
+
 ## Filing (agents)
 
 Before filing, make the public/private decision above, then run
