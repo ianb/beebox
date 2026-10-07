@@ -170,3 +170,15 @@ const split = { ...probabilities, "new-garden": 0.53, "raised-beds": 0.47 };
 })
 => [["Garden raised beds", true], ["New chat in Garden", false]]
 ```
+
+An exact tie favors the existing chat. Asked for a new chat, the same tie
+favors the new chat in that landmark.
+
+```ts continue
+const tie = { ...probabilities, "new-garden": 0.5, "raised-beds": 0.5 };
+[false, true].map((newChatRequested) => {
+  const { selected, preferenceApplied } = selectRoutingDestination({ candidates, probabilities: tie, newChatRequested });
+  return [selected.label, preferenceApplied];
+})
+=> [["Garden raised beds", false], ["New chat in Garden", false]]
+```

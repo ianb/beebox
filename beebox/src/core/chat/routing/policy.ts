@@ -57,8 +57,11 @@ export function selectRoutingDestination(args: {
     const probability = args.probabilities[candidate.id];
     invariant(probability !== undefined, "Validated judgment must include every candidate");
     return { candidate, probability };
-  }).toSorted((a, b) => b.probability - a.probability
-    || Number(b.candidate.target.kind === "existing-session") - Number(a.candidate.target.kind === "existing-session")
+  });
+  // Exact ties favor an existing chat, unless the thought asked for a new one.
+  const tieKind = args.newChatRequested === true ? "new-session" : "existing-session";
+  ranked.sort((a, b) => b.probability - a.probability
+    || Number(b.candidate.target.kind === tieKind) - Number(a.candidate.target.kind === tieKind)
     || a.candidate.id.localeCompare(b.candidate.id));
   const first = ranked[0];
   invariant(first !== undefined, "Routing requires at least one candidate");

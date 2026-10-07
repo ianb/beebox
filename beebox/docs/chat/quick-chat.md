@@ -127,8 +127,8 @@ two rules.
 First, it selects a destination. If a new conversation wins by no more than
 0.1 over the strongest existing chat, the existing chat is selected. Exact
 ties favor existing chats. A thought whose first words are "new chat" (any
-case, after any leading whitespace) skips this preference: the person asked
-for a new conversation.
+case, after any leading whitespace) skips this preference, and an exact tie
+then favors the new chat: the person asked for a new conversation.
 
 Second, it decides to post or ask. It adds the probabilities of every
 candidate in the same place as the selected one: the same landmark, or the
