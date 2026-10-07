@@ -61,11 +61,24 @@ function personFields(frontmatter: Record<string, unknown>): PersonFields {
  * drawn, so it is not listed and falls through to the fields table.
  */
 function drawnKeys(person: PersonFields): Set<string> {
-  const drawn = new Set<string>(["boxholder", "archived"]);
+  const drawn = new Set<string>();
+  if (person.boxholder) drawn.add("boxholder");
+  if (person.archived) drawn.add("archived");
   for (const key of ["name", "role", "email", "phone", "address", "aliases"] as const) {
     if (person[key] !== undefined) drawn.add(key);
   }
   return drawn;
+}
+
+/**
+ * A `tel:` target for a phone number written for people: digits and a
+ * leading `+`. A value with an extension or other letters (`x12`, `ext. 4`)
+ * is shown as text, since a dialled number cannot carry it faithfully.
+ */
+export function telHref(phone: string): string | null {
+  if (/[a-z]/i.test(phone)) return null;
+  const digits = phone.replace(/[^\d+]/g, "");
+  return digits === "" ? null : `tel:${digits}`;
 }
 
 function RoleLine({ role, boxholder, archived }: Pick<PersonFields, "role" | "boxholder" | "archived">): ReactNode {
@@ -100,7 +113,7 @@ function ContactList({ email, phone, address }: Pick<PersonFields, "email" | "ph
       )}
       {phone === undefined ? null : (
         <ContactRow label="Phone">
-          <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="bbx-theme-link">{phone}</a>
+          {telHref(phone) === null ? <span>{phone}</span> : <a href={telHref(phone) ?? undefined} className="bbx-theme-link">{phone}</a>}
         </ContactRow>
       )}
       {address === undefined ? null : (

@@ -30,6 +30,14 @@ interface ThemedFileCardProps {
   children: ReactNode;
 }
 
+/** `title:`, else a named entity's `name:` (person, place), else the filename. */
+export function cardTitle(data: FileData): string {
+  const fm = data.frontmatter;
+  if (typeof fm?.title === "string") return fm.title;
+  if (typeof fm?.name === "string") return fm.name;
+  return displayName(data.path);
+}
+
 export function ThemedFileCard({ data, mode, renderers, active, target, hasExplicitView, onSelect, onNavigate, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
 
   const { boxSlug } = useParams({ strict: false });
@@ -46,7 +54,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
     typeDefault: presentation?.data?.typeDefaults[presentationType],
     presentation: presentation?.data?.presentation ?? { status: "absent" },
   });
-  const title = typeof data.frontmatter?.title === "string" ? data.frontmatter.title : displayName(data.path);
+  const title = cardTitle(data);
   const symbol = isCard ? readCardSymbol(data.frontmatter?.symbol, { cardPath: data.path.replace(/^\//, "") }) : null;
   const error = presentation?.error ?? theme.problem?.message;
   function handlePresentationRetry() { presentation?.retry(); }

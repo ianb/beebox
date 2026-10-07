@@ -111,3 +111,27 @@ const unknown = await renderPerson({ name: "Rosa Quill", email: 42, nickname: "A
 [unknown.summary, unknown.html.includes(">email:<"), unknown.html.includes(">nickname:<"), unknown.html.includes(">name:<")]
 => [null, true, true, false]
 ```
+
+## Booleans that are not drawn stay visible
+
+`boxholder` and `archived` are drawn only when they are `true`. Any other
+value is not drawn, so with an unknown schema it falls through to the table
+instead of vanishing.
+
+```ts
+const odd = await renderPerson({ name: "Rosa Quill", boxholder: "yes", archived: false }, "Notes.\n", { schema: null });
+[odd.summary, odd.html.includes(">boxholder:<"), odd.html.includes(">archived:<")]
+=> [null, true, true]
+```
+
+## Phone numbers with an extension are not dialled
+
+```ts
+import { telHref } from "../../src/components/PersonView/view.js";
+
+[telHref("+1 (555) 010-0100"), telHref("+1 (555) 010-0100 x12"), telHref("ext. 4"), telHref("—")]
+=> ["tel:+15550100100", null, null, null]
+
+(await renderPerson({ name: "Rosa Quill", phone: "+1 (555) 010-0100 x12" }, "")).links
+=> []
+```
