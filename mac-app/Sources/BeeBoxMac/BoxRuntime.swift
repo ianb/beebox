@@ -31,7 +31,8 @@ final class BoxRuntime: ObservableObject {
     private(set) var timings = Timings.load()
     private var ticker: Timer?
 
-    static let containerID = "box"
+    /// One container per box, so boxes never collide in the runtime.
+    static let containerID = "box-\(Paths.boxName)"
     static let serverPort: UInt16 = 3210
     /// The relay's socket inside the VM.
     nonisolated static let guestSocket = "/tmp/beebox-http.sock"
@@ -155,7 +156,7 @@ final class BoxRuntime: ObservableObject {
             var manager = try await ContainerManager(
                 kernel: Kernel(path: kernelPath, platform: .linuxArm),
                 initfsReference: BundleConfig.vminit,
-                root: Paths.state,
+                root: Paths.runtime,
                 network: try VmnetNetwork()
             )
             try BundleConfig.vminit.write(to: Paths.initfsSource, atomically: true, encoding: .utf8)
@@ -222,32 +223,16 @@ final class BoxRuntime: ObservableObject {
     }
 
     private func prepareDirectories() throws {
-        for dir in [Paths.state, Paths.box, Paths.claudeConfig, Paths.containerHome] {
+        for dir in [Paths.support, Paths.runtime, Paths.logs, Paths.run, Paths.box, Paths.claudeConfig, Paths.containerHome] {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-        try moveLegacyMachineState()
+        try refreshInitfsIfStale()
     }
 
-    /// Earlier builds pointed BBX_AUTH_FILE / BBX_SECRETS_FILE into a
-    /// `machine` folder; move those files to where the home volume keeps them.
-    private func moveLegacyMachineState() throws {
+    /// The framework reuses an existing init filesystem whatever made it;
+    /// clear it when the pinned vminit changed.
+    private func refreshInitfsIfStale() throws {
         let fm = FileManager.default
-        let moves = [
-            (Paths.legacyMachine.appending(path: "bbx-auth.json"), Paths.containerHome.appending(path: ".bbx-auth.json")),
-            (Paths.legacyMachine.appending(path: "secrets.json"), Paths.containerHome.appending(path: ".config/beebox/secrets.json")),
-        ]
-        for (from, to) in moves where fm.fileExists(atPath: from.path) && !fm.fileExists(atPath: to.path) {
-            try fm.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try fm.moveItem(at: from, to: to)
-            appLog("moved \(from.lastPathComponent) into the home volume")
-        }
-        // Earlier builds copied in the kernel the `container` CLI had
-        // downloaded; the kernel is bundled now.
-        let oldKernel = Paths.state.appending(path: "vmlinux")
-        if fm.fileExists(atPath: oldKernel.path) {
-            try fm.removeItem(at: oldKernel)
-            appLog("removed the old copied kernel")
-        }
         // The framework builds initfs.ext4 from the vminit image only when the
         // file is missing, and otherwise reuses it whatever made it. Rebuild
         // when it was made from a different vminit (or by an earlier build).
@@ -355,6 +340,9 @@ final class BoxRuntime: ObservableObject {
             }
             if let code = exitedWith {
                 throw RuntimeError("the box exited (\(code)) before serving; see \(Paths.log.path)")
+            }
+            if log?.needsRecovery == true {
+                throw RuntimeError("the box needs migration recovery before this version of Bee Box can serve it (a failed migration, or the box was last opened by a newer version); see \(Paths.log.path)")
             }
             if relayExited {
                 throw RuntimeError("the connection relay in the VM exited before the box served; see \(Paths.log.path)")
