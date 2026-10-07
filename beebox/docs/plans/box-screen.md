@@ -498,3 +498,14 @@ Tests: policy doctest 10/10 (the `thoughtAsksForNewChat` table and the selection
 
 Knowledge audit `box-screen-arrival-tag` (chat mode) passed 1/1 with no reads or searches, against a disposable standalone clone of the test box.
 
+
+### Follow-up: box-wide pages move to the avatar menu (2026-10-07)
+
+After using the box screen, the boxholder said of its Dashboard, Browse, History, and Storage summary links: "I never go to them." The agreed change: "move them to the avatar menu. At least they are together then."
+
+- **Web.** The four pages are a group in the avatar menu, below Settings and Admin, between two dividers (`AppNav/BoxPageMenuItems.tsx`). The rows keep the old box panel's ids (`bbx-box-menu-dashboard`, `-browse`, `-history`, `-inventory`) and highlight on their own page, as Settings and Admin do. The box screen's "In this box" section is gone. The box's `nav.card` shortcuts stay on the box screen under "Shortcuts", which is absent when the card lists none.
+- **iOS.** `BoxScreenView` drops the four page rows and shows "Shortcuts" only when there is one. The avatar menu is web content, so the phone reaches the pages through the web view. The `empty` box screen fixture has no shortcuts, to show the absent section.
+- **Agent guidance.** The `nav.card` instructions (`src/schemas/nav.ts`) name the avatar menu for the box-wide pages and the "Shortcuts" section for the card's entries. `docs/chat/quick-chat.md`, `docs/landmarks.md`, and `docs/mobile-contract.md` match.
+- **Not changed.** `quickChat.home` still skips `nav.card` entries for `/browse`, `/history`, and `/dashboard`: the app links them from the avatar menu.
+
+Tests: `BoxPageMenuItems` doctest 2/2 (rows, targets, and the active row); box screen route doctest 4/4 (no "In this box", no page links, no "Shortcuts" without data); landmark menu and box screen state doctests pass unchanged; `bin/smoke-snapshot.test.ts` 24/24. iOS: the full `BeeBoxTests` target on the iPhone 17e simulator, 424 passed, 0 failed, 1 skipped. Knowledge audit `box-screen-box-wide-pages`, rewritten for the avatar menu, passed 1/1 with no reads or searches against a disposable standalone clone of the test box.
