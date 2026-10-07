@@ -20,6 +20,7 @@ import { withCardLock } from "../../../../lib/card-lock.js";
 import { isRecord } from "../../../../shared/is-record.js";
 import { BOX_DIRS } from "../../../../lib/paths/core.js";
 import { jsonlLines } from "../../../../lib/jsonl-lines.js";
+import { loadRunHistory } from "../../../../core/schedule/summary.js";
 
 export type { ScheduleEntry };
 
@@ -110,6 +111,13 @@ export const schedulerRouter = router({
   schedules: publicProcedure.query(async ({ ctx }) => {
     return { schedules: await listSchedules(ctx.boxRoot) };
   }),
+
+  /** A schedule's recent runs with their summaries, newest first. */
+  runs: publicProcedure
+    .input(z.object({ name: z.string().regex(/^[^/\\]+$/).refine((n) => n !== "." && n !== "..") }))
+    .query(async ({ input, ctx }) => {
+      return { runs: (await loadRunHistory(ctx.boxRoot, input.name)).toReversed() };
+    }),
 
   setEnabled: publicProcedure
     .input(z.object({

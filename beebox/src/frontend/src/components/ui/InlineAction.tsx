@@ -18,6 +18,8 @@ export interface InlineActionProps {
   disabled?: boolean;
   title?: string;
   flash?: FlashSpec;
+  /** For a disclosure toggle: whether what it controls is shown (`aria-expanded`). */
+  expanded?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }
@@ -37,6 +39,7 @@ export function InlineAction({
   disabled: disabledArg,
   title,
   flash,
+  expanded,
   className,
 }: InlineActionProps) {
   const intent = intentArg ?? "emphatic";
@@ -85,6 +88,7 @@ export function InlineAction({
       onClick={(e) => void handleClick(e)}
       disabled={isBusy}
       title={title}
+      aria-expanded={expanded}
       className={cn(
         INTENT_CLASSES[intent],
         "cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-sm",

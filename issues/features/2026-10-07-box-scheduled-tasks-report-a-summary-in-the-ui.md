@@ -1,6 +1,6 @@
 ---
 title: "Box scheduled tasks end with a task-specific summary the boxholder sees in the UI"
-workstream: unattached
+workstream: schedule-run-summaries
 area: beebox
 labels: [schedules]
 needs: [design]
@@ -71,3 +71,18 @@ and the boxholder can see it in the UI.
 - **How a task returns its summary is a design discussion** with the
   boxholder before building: it must work for both script tasks (`runs:`)
   and agent-run tasks, and be tight.
+- **Settled before building (boxholder, 2026-10-07):** priorities are
+  `normal` and `attention`; the return path is `BBX_SUMMARY_FILE` written by
+  `bbx run-summary` (scripts call it, or write in-process; a scheduled
+  procedure's agent steps are told to call it); history keeps the last 20
+  runs per schedule; the dashboard row shows the priority (and the headline
+  only for `attention`), with the full summaries one click away; no
+  notification for `attention` for now.
+
+## Built
+
+`beebox/src/core/schedule/summary.ts` (shape, limits, history in
+`_config/schedules/.state/<name>.runs.jsonl`), `bbx run-summary`, the
+dashboard's run history (`ScheduleOverview/RunHistory.tsx`), and chat review
+as the first adopter (`core/chat/review/run-summary.ts`). Todo review and the
+connector syncs have not adopted it yet.

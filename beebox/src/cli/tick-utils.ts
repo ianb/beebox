@@ -26,6 +26,7 @@ import {
 } from "../core/schedule/state.js";
 import { checkRequiredConnectors, noteTickSkip, promoteDeferredRun } from "../core/schedule/promotion.js";
 import { fallbackTiming, runAndRecord } from "../core/schedule/run-action.js";
+import { appendRunHistory, historyEntry } from "../core/schedule/summary.js";
 import { parseCardName, getBoxDir } from "../lib/paths/core.js";
 import { resolveRefPath } from "../shared/ref-path/core.js";
 import { scheduleOutcomeLine } from "../shared/schedule-error.js";
@@ -158,6 +159,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
       recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
+      await appendRunHistory(boxRoot, { scriptName, entry: historyEntry(state, { triggeredBy: "wakeup", summary: null }) });
       console.error(`  ${scheduleOutcomeLine(outcome)}`);
     } finally {
       await releaseScriptLock({ boxRoot, scriptName });

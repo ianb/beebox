@@ -9,6 +9,7 @@ import {
 import { runAndRecord } from "../../../../core/schedule/run-action.js";
 import { handleCreateAfterSuccess } from "../../../../cli/tick-utils.js";
 import { checkMissingConnectors } from "../../../../requirements.js";
+import type { RunSummary } from "../../../../core/schedule/summary.js";
 
 type ParsedScript = ReturnType<typeof parseScheduledScript>;
 
@@ -64,7 +65,8 @@ interface RunOptions {
 
 /**
  * Acquire the lock, execute the script, record the timed outcome, and release.
- * Returns the measured duration on success; rethrows as TRPCError on failure.
+ * Returns the measured duration and the run's own summary on success;
+ * rethrows as TRPCError on failure (the run history still records it).
  *
  * An inconclusive run is NOT a failure: its work completed, only its check
  * reached no verdict. It returns successfully, carrying the diagnostic in
@@ -72,7 +74,7 @@ interface RunOptions {
  */
 export async function runScheduledScript(
   options: RunOptions,
-): Promise<{ success: true; durationMs: number; inconclusive?: string }> {
+): Promise<{ success: true; durationMs: number; inconclusive?: string; summary: RunSummary | null }> {
   const { boxRoot, name, parsed } = options;
   const now = new Date();
   const state = await loadScriptState(boxRoot, name);
@@ -94,10 +96,10 @@ export async function runScheduledScript(
     });
     if (run.result === "success") {
       await handleCreateAfterSuccess({ boxRoot, parsed, scriptName: name });
-      return { success: true, durationMs: run.durationMs };
+      return { success: true, durationMs: run.durationMs, summary: run.summary };
     }
     if (run.result === "inconclusive") {
-      return { success: true, durationMs: run.durationMs, inconclusive: run.error };
+      return { success: true, durationMs: run.durationMs, inconclusive: run.error, summary: run.summary };
     }
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
