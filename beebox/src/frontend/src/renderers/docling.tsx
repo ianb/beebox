@@ -13,7 +13,6 @@
  */
 
 import { apiRawFileUrl, getApiBase } from "../api";
-import { DoclingView } from "../components/DoclingView/view";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
 import { Stack } from "../components/ui/Stack";
@@ -23,6 +22,9 @@ import { ErrorText } from "../components/ui/ErrorText";
 import { useDoclingDocument } from "../hooks/useDoclingDocument";
 import { isDoclingPath } from "../lib/docling/parse";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
+import { lazyComponent } from "../lib/lazy-component";
+
+const DoclingView = lazyComponent(() => import("../components/DoclingView/view"), (m) => m.DoclingView);
 
 /**
  * Characters of pretty-printed JSON we will put in the DOM. A DoclingDocument

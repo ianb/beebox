@@ -3,10 +3,10 @@
  * cards (web chat session husks; docs/plans/chat-husks.md).
  */
 
-import { ChatHuskView } from "../components/chat-husk/ChatHuskView";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const chatHuskRenderer: RendererEntry = {
   selector: { type: "chat" },
-  renderer: { name: "Chat", Component: ChatHuskView, priority: 100 },
+  renderer: { name: "Chat", Component: lazyComponent(() => import("../components/chat-husk/ChatHuskView"), (m) => m.ChatHuskView), priority: 100 },
 };

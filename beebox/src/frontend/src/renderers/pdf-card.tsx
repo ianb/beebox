@@ -9,7 +9,6 @@
  */
 
 import { useParams } from "@tanstack/react-router";
-import { PdfCardView } from "../components/PdfCardView/view";
 import { PdfFrame } from "../components/PdfFrame";
 import { toDisplayPath } from "@shared/display-path";
 import { useVersionedFileUrl } from "../hooks/useVersionedFileUrl";
@@ -21,6 +20,9 @@ import {
   readExtractedFields,
 } from "../lib/pdf-card";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
+import { lazyComponent } from "../lib/lazy-component";
+
+const PdfCardView = lazyComponent(() => import("../components/PdfCardView/view"), (m) => m.PdfCardView);
 
 function OriginalDocumentView({ data, mode }: RendererProps) {
   const { boxSlug } = useParams({ strict: false });

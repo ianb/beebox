@@ -5,10 +5,10 @@
  * rendering logic (same split as recipe).
  */
 
-import { CommentaryView } from "../components/CommentaryView";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const commentaryRenderer: RendererEntry = {
   selector: { type: "commentary" },
-  renderer: { name: "Commentary", Component: CommentaryView, priority: 100 },
+  renderer: { name: "Commentary", Component: lazyComponent(() => import("../components/CommentaryView"), (m) => m.CommentaryView), priority: 100 },
 };
