@@ -85,16 +85,52 @@ renderFields({ meta: { todos } }).includes("data-todo-status")
 => false
 ```
 
-## Internal summary fields stay out of the reading view
+Which fields the card front passes to this table is decided by
+`splitCardFields` (`test/lib/card-field-faces.doctest.md`).
+
+## A body heading that repeats the title is hidden
+
+The card page shows the title from `title:`. A body that opens with the same
+`# heading` would show it twice, so the view leaves that line out. It uses
+`leadingTitleHeading`, the predicate lint warns with
+(`test/shared/leading-title-heading.doctest.md`). The line is blanked rather
+than removed, so a todo further down keeps the locator the collector gives it:
+body line 5 after a three-line frontmatter is file line 8.
 
 ```ts setup
-import { readingFrontmatter } from "../../src/components/MarkdownCardView/view.js";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import { MarkdownCardView } from "../../src/components/MarkdownCardView/view.js";
+import { BoxSlugProvider } from "../../src/lib/box-slug.js";
+
+/** Render a doc card's view inside a router and a query client that never answers. */
+async function renderCard(body) {
+  const data = {
+    path: "_content/Trip.doc.card",
+    frontmatter: { title: "Trip Report" },
+    body,
+    bodyLineOffset: 3,
+    schema: { hasBodyField: true, defaultProminence: null },
+  };
+  const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "page" });
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const root = createRootRoute({ staticData: { title: null }, component: () => element });
+  const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  await router.load();
+  const queryClient = new QueryClient();
+  return renderToStaticMarkup(React.createElement(QueryClientProvider, { client: queryClient }, React.createElement(RouterProvider, { router })));
+}
 ```
 
 ```ts
-JSON.stringify(readingFrontmatter({ title: "Example", contains: "internal", "contains-evidence": "source", custom: "visible", prominence: "global" }, "page"))
-=> {"custom":"visible","prominence":"global"}
+const repeated = await renderCard("# Trip Report\n\nWe drove down on Friday.\n\n{% todo %}Return the van{% /todo %}\n");
+[repeated.includes("<h1"), repeated.includes("We drove down"), /data-todo-locator="(\d+)"/.exec(repeated)?.[1]]
+=> [false, true, "8"]
+```
 
-JSON.stringify(readingFrontmatter({ title: "Example", contains: "internal", "contains-evidence": "source" }, "embed"))
-=> {"title":"Example"}
+A different first heading stays:
+
+```ts
+(await renderCard("# Day one\n\nWe drove down on Friday.\n")).includes("Day one</h1>")
+=> true
 ```

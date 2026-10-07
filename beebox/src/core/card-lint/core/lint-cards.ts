@@ -46,6 +46,7 @@ import {
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "../../card-io.js";
 import { symbolIssues } from "./symbol.js";
+import { bodyTitleWarnings } from "./body-title.js";
 import { extractBodyLinks, extractBodyRefs } from "../../body-refs.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import { isAttachRef } from "../../../shared/attach-path.js";
@@ -275,6 +276,7 @@ async function lintFrontmatterCard(input: {
   if (parsed.schema.ownMarkdocValidation !== true && typeof bodyField === "string") {
     warnings.push(...lintBodyMarkdoc(bodyField));
   }
+  warnings.push(...bodyTitleWarnings(parsed.fields));
   // Type-specific box-aware checks: progress entries and lesson-plan segments
   // name concept-map node ids, which can't be verified self-contained (the map
   // is in another card) nor by the generic ref walk (a node id isn't a file

@@ -1,12 +1,16 @@
 ---
 title: "Document metadata takes the first screen even with Properties closed"
-workstream: unattached
+workstream: card-reading-properties
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey C and independent verification
 priority: important
+resolution: implemented
 ---
+
+
+**Closed:** implemented by the card-reading-properties plan (commits 31cebfecd to 4481c0246, merged to main): card fronts show content, Properties shows found-by rows, type fields, attachments, last change, and the Appearance row. See [the plan](../../../beebox/docs/implemented-plans/card-reading-properties.md).
 
 A person trying to read a saved friends page first saw `contains`,
 `prominence: primary`, and later `symbol: glyph`, then a repeated document
@@ -31,9 +35,9 @@ Decide what belongs in the ordinary document reading surface and what belongs
 under Properties. Do not hide meaningful domain fields from all card types as
 an incidental fix for generic documents.
 
-Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 6, 19, 38, and closing remarks; screenshots 05, 09, 21, 29.
-Related: the earlier [vocabulary sweep](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
+Related: the earlier [vocabulary sweep](2026-08-08-implementation-vocab-leaks-into-ui.md)
 fixed other surfaces; this is a distinct default-renderer mechanism.
 
 ## Re-encounter, 2026-09-21 - journey F
@@ -44,7 +48,7 @@ Screenshots 09 and 16 independently show the same default-renderer mechanism.
 The walker could read the saved work but repeatedly called these labels
 bookkeeping. No document-rendering change was made.
 
-Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 
 ## Re-encounter, 2026-09-21 - journey D
 
@@ -62,5 +66,5 @@ courseware case: domain cards need a reader-facing study view while retaining
 the agent's durable plan and evidence. It is a broader information hierarchy
 question than merely hiding the Properties panel.
 
-Evidence: [D chemistry report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+Evidence: [D chemistry report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 screenshots 08, 10–13, and 22.

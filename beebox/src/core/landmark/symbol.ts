@@ -23,9 +23,8 @@
  * reason).
  */
 
-import { readCardSymbol } from "../card-symbol.js";
 import type { LandmarkNavigationData } from "../../schemas/landmark.js";
-import type { CardSymbolData } from "../../shared/card-symbol.js";
+import { readCardSymbol, type CardSymbolData } from "../../shared/card-symbol.js";
 
 /**
  * The card's own `symbol` (the global field) wins; a landmark that still

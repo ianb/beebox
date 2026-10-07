@@ -7499,6 +7499,14 @@ audit-box:
       peak: 23264
       added: 0
       turns: 2
+  doc-card-title-not-repeated:
+    - date: 2026-10-07T02:54:16.622Z
+      boxCommit: add2c01237bf61ba4e3c939ff10d2f554b9ddbb5
+      repoCommit: 31cebfecdc501de8c1f824a216f7031fb9ac4c01
+      initial: 38051
+      peak: 42293
+      added: 4242
+      turns: 9
   box-screen-arrival-tag:
     - date: 2026-10-07T02:46:12.089Z
       boxCommit: 26214e2f1a167fc0dfed7927ac1cb45a2fbbafb6

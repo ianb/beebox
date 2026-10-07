@@ -22,7 +22,7 @@ Related, not resolved here:
 (owns memo's `status`, `created`, `source`, and its body-derived title),
 [codebase ontology files](../../../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md)
 (a name with two meanings is a collision; this plan removes several),
-[card Properties design session](../../../issues/features/2026-09-27-card-properties-design-session.md)
+[card Properties design session](../../../issues/closed/features/2026-09-27-card-properties-design-session.md)
 (owns what the Properties panel shows; this plan only removes `created` and
 `source` from it).
 
