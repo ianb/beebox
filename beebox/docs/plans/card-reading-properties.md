@@ -1,6 +1,6 @@
 ---
 title: "Card fronts show the content; Properties shows the card"
-status: draft
+status: active
 workstream: card-reading-properties
 issues:
   - ../../../issues/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md
