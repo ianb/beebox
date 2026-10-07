@@ -7,7 +7,7 @@
 import { BOX_PACKAGE_DOCS } from "../shared.js";
 
 /**
- * Hand-written command sections: procedure, tick, scheduled, health, scheduler,
+ * Hand-written command sections: procedure, tick, scheduled, run-summary, health, scheduler,
  * finalize, chat.
  */
 export function bbxCommandsScheduling(): string[] {
@@ -59,6 +59,19 @@ export function bbxCommandsScheduling(): string[] {
     "```",
     "",
     "Shows each schedule's name, type (cron/at/rrule), next due time, last run, and flags (on-wakeup, once, enabled).",
+    "",
+    "## bbx run-summary",
+    "",
+    "End a scheduled run with a summary the boxholder sees in the dashboard's run history.",
+    "",
+    "```bash",
+    'bbx run-summary "Filed 3 receipts" --body "- 2 from email\\n- 1 skipped: no amount"',
+    'bbx run-summary "2 imports failed" --priority attention --notes - < details.md',
+    "```",
+    "",
+    "Headline up to 120 characters; `--body` (1 KB) and `--notes` (4 KB, shown collapsed) are Markdown, and `-` reads",
+    "stdin. `--priority attention` marks a run worth a look; the default is `normal`. It writes to `$BBX_SUMMARY_FILE`,",
+    "set by the scheduler; outside a scheduled run it prints the summary instead. The last call in a run wins.",
     "",
     "## bbx health",
     "",

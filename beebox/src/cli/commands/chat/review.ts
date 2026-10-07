@@ -23,6 +23,8 @@ import { loadReviewState } from "../../../core/chat/review/state.js";
 import { createSdkChatReviewer } from "../../../core/chat/review/reviewer.js";
 import { resolveFreshnessChecker } from "../../../core/chat/review/freshness.js";
 import { LockHeldError, runChatReview, type RunSummary } from "../../../core/chat/review/run/core.js";
+import { chatReviewRunSummary } from "../../../core/chat/review/run-summary.js";
+import { reportRunSummary } from "../../../core/schedule/summary.js";
 import { getOwnerEmail } from "../../../webapp/auth.js";
 
 /** Default per-run cap on sessions reviewed; overflow waits for the next run. */
@@ -118,6 +120,7 @@ function describeSummary(summary: RunSummary): string {
   if (summary.titlesKept > 0) parts.push(`${String(summary.titlesKept)} title(s) kept by the freshness check`);
   if (summary.deferredActive > 0) parts.push(`${String(summary.deferredActive)} still active`);
   if (summary.belowThreshold > 0) parts.push(`${String(summary.belowThreshold)} below threshold`);
+  if (summary.tooFewTurns > 0) parts.push(`${String(summary.tooFewTurns)} with too few user turns`);
   if (summary.missingTranscripts > 0) {
     parts.push(`${String(summary.missingTranscripts)} husk(s) with no transcript`);
   }
@@ -170,6 +173,9 @@ const runCommand = new Command("run")
     console.log(describeSummary(summary));
     for (const rejection of summary.rejected) {
       console.log(`  leak scan dropped ${rejection}`);
+    }
+    for (const field of (await reportRunSummary(process.env, chatReviewRunSummary(summary))) ?? []) {
+      console.warn(`chat review: cut the run summary's ${field}`);
     }
   });
 

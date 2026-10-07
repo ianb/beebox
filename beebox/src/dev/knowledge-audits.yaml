@@ -128,9 +128,15 @@ tests:
     tags: [quick-chat]
 
   # The box-wide pages and the nav.card shortcuts moved from the app bar's
-  # landmark menu to the box screen (box-screen plan).
+  # landmark menu to the box screen (box-screen plan). On 2026-10-07 the
+  # box-wide pages moved again, to the avatar menu; the shortcuts stayed on the
+  # box screen under "Shortcuts".
   # Status (2026-10-06, Claude): 1/1 passed, 0 reads/searches, 23k context,
   # against a disposable standalone clone with installed package-doc files.
+  # Status (2026-10-07, Claude, after the move to the avatar menu): 1/1 passed,
+  # 0 reads/searches, 23k context, same clone setup. A first run gave the same
+  # correct answer but failed a too-narrow "Shortcuts" pattern ("in a section
+  # called Shortcuts"); the pattern was widened and the re-run passed.
   - id: box-screen-box-wide-pages
     prompt: >
       The boxholder asks where to find Dashboard, Browse, History, and Storage
@@ -138,15 +144,16 @@ tests:
       they get there in the browser, and on the phone? Explain only; do not
       read files, use tools, or change anything.
     expected_level: knows_directly
-    watch_for: "Names the box screen, reached from the box row of the app bar's landmark menu and shown at phone launch; places nav.card shortcuts under In this box, not in a menu"
+    watch_for: "Puts Dashboard, Browse, History, and Storage summary in the avatar menu with Settings and Admin, not on the box screen; places nav.card shortcuts on the box screen under Shortcuts, reached from the box row of the app bar's landmark menu and shown at phone launch"
     fixture:
       CLAUDE.md: |
         @node_modules/beebox/box-docs/card-nav.md
-    correct_contains: ["box screen"]
+    correct_contains: ["box screen", "avatar menu"]
     correct_matches:
       - '(?:box row|landmark menu|place menu|place pill)'
       - '(?:phone|iOS|app)[\s\S]{0,200}(?:launch|open|start)|(?:launch|open|start)[\s\S]{0,200}(?:phone|iOS|app)'
-      - 'In this box'
+      - '(?:under|in)\s+(?:a |the )?\W{0,2}Shortcuts|section (?:called |named )?\W{0,2}Shortcuts|Shortcuts\W{0,2} section'
+      - 'avatar menu[\s\S]{0,300}(?:Dashboard|Browse|History|Storage)|(?:Dashboard|Browse|History|Storage)[\s\S]{0,300}avatar menu'
     tags: [quick-chat, navigation]
 
   # A thought posted through the box screen arrives wrapped with
@@ -1747,6 +1754,13 @@ tests:
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/card-scheduled-script.md"]
     watch_for: "Loads the on-demand schedule guidance and describes the scheduled mechanism"
+    tags: [schedules]
+
+  - id: schedule-run-summary
+    prompt: "You're writing a scheduled task for this box that files receipts every morning. How does the boxholder find out what each run did, and how do you mark a run they should look at?"
+    expected_level: knows_about
+    watch_for: "Reads the schedule guidance (schedules skill or card-scheduled-script.md); ends the run with bbx run-summary (headline, short body), uses --priority attention for a run worth a look, and knows it shows in the dashboard run history; does not reach for bbx notify for routine runs"
+    correct_contains: ["run-summary"]
     tags: [schedules]
 
   - id: add-daily-task

@@ -144,7 +144,7 @@ export function normalizeScriptState(raw: ScriptStatePartial): ScriptState {
   return state;
 }
 
-function stateDir(boxRoot: string): string {
+export function stateDir(boxRoot: string): string {
   return path.join(getBoxDir(boxRoot, "schedules"), ".state");
 }
 

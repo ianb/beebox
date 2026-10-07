@@ -16,11 +16,14 @@ does not load one. From top to bottom it shows:
   five. The iOS app shows the thoughts sent from it since it started.
 - **Pick up where you left off**: recent chats. The first one is the primary
   action.
-- **In this box**: Dashboard, Browse, History, Storage summary, then the
-  shortcut links from the box's `nav.card`.
+- **Shortcuts**: the shortcut links from the box's `nav.card`. Absent when
+  the card lists none.
 - **Boxes**: the other boxes. Absent when there is only one box.
 - The input, pinned at the bottom, with the line "New thought. The box picks
   the conversation."
+
+The box-wide pages (Dashboard, Browse, History, Storage summary) are not on the
+box screen. They are in the web app's avatar menu, below Settings and Admin.
 
 On the web the box screen is `/<box>/box`, behind the normal worktree or
 server prefix. The route renders without the conversation shell, so it runs
@@ -29,7 +32,7 @@ no chat queries. `/<box>/quick-chat` redirects to it. The box selector's
 menu opens it with a full page load.
 
 On iOS the box screen is native. A cold launch shows it, and no web view is
-created until the person opens a chat or a box-wide page. On return to the
+created until the person opens a chat or a shortcut. On return to the
 foreground the app shows the box screen when it was in the background for 30
 minutes or more, or when the web content process ended in the background.
 Otherwise it stays where it was. A notification tap opens its target. When

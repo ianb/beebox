@@ -6782,6 +6782,14 @@ test1:
       peak: 49593
       added: 3087
       turns: 4
+  box-screen-box-wide-pages:
+    - date: 2026-10-07T22:08:26.092Z
+      boxCommit: f2aad98758248e00f2505ff433d787b416faed4f
+      repoCommit: 7a4397a89ee4955d360b0eaa38f91005f9f5efdb
+      initial: 23116
+      peak: 23116
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
@@ -7515,3 +7523,11 @@ audit-box:
       peak: 46619
       added: 0
       turns: 2
+  schedule-run-summary:
+    - date: 2026-10-07T23:00:15.705Z
+      boxCommit: db636b73d0f147e76ce4ecd659c1bcdb58e5480f
+      repoCommit: f8f1865eff71ff17cabbf089d2bae573ff3f3752
+      initial: 36556
+      peak: 41269
+      added: 4713
+      turns: 5

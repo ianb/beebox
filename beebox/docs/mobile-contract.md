@@ -1683,7 +1683,7 @@ waiting in `PendingEmissionStore`, open the web app instead. The rule is
 
 The box screen mounts no web content. Its composer sends through `quickChat.submit` (§5.11) with a
 new-thought draft stored apart from the chat draft. Its links (recent chats, "All chats", the
-box-wide pages, the box's shortcuts) show the web app at a box-relative path through the same
+box's `nav.card` shortcuts) show the web app at a box-relative path through the same
 `ChatWebView.NavigationRequest` a notification tap uses (§3.1). The web app returns to the box
 screen through the navigation in §3.5. The web view, once created, stays mounted and hidden behind
 the box screen. No emission version, native target type, or binding JSON changes for the box screen.

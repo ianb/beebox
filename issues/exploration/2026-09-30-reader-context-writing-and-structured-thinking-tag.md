@@ -91,7 +91,7 @@ projection.
 
 ## Where credit lives
 
-Tracked in [the attribution issue](../docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md).
+Tracked in [the attribution issue](../closed/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md).
 
 Related: [plan template has no developer-only section](2026-09-21-plan-template-no-developer-only-section.md),
 another case of notes meant for the author and not the reader.

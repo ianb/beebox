@@ -15,6 +15,8 @@
  *   write `{ "reason": ... }` before exiting 75.
  * - `BBX_SCHEDULE_NAME`: the schedule card's stem, so `bbx notify` in the
  *   pipeline names the schedule as its source.
+ * - `BBX_SUMMARY_FILE`: where `bbx run-summary` writes the run's summary
+ *   (`summary.ts`), which the dashboard shows in the schedule's run history.
  */
 
 import * as fs from "node:fs/promises";
@@ -26,7 +28,7 @@ import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { saveScriptState, type ScriptState } from "./state.js";
 import { DEFER_REASONS, type DeferReason } from "./defer-reason.js";
 
-/** The six environment names; `script-env-allowlist.ts` lets them through to procedure shells. */
+/** The seven environment names; `script-env-allowlist.ts` lets them through to procedure shells. */
 export const MEMORY_ENV = {
   scheduleName: "BBX_SCHEDULE_NAME",
   sinceCommit: "BBX_SINCE_COMMIT",
@@ -34,6 +36,7 @@ export const MEMORY_ENV = {
   carryIn: "BBX_CARRY_IN",
   carryOut: "BBX_CARRY_OUT",
   deferFile: "BBX_DEFER_FILE",
+  summaryFile: "BBX_SUMMARY_FILE",
 } as const;
 
 const DeferMarkerSchema = z.object({ reason: z.enum(DEFER_REASONS) });
@@ -45,6 +48,7 @@ export interface RunMemory {
   env: Record<string, string>;
   carryOutPath: string;
   deferFilePath: string;
+  summaryFilePath: string;
   /** Remove the run's temporary files. */
   dispose(): Promise<void>;
 }
@@ -65,18 +69,21 @@ export async function prepareRunMemory(
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-schedule-"));
   const carryOutPath = path.join(dir, "carry-out");
   const deferFilePath = path.join(dir, "defer.json");
+  const summaryFilePath = path.join(dir, "summary.json");
   const env: Record<string, string> = {
     [MEMORY_ENV.scheduleName]: scriptName,
     [MEMORY_ENV.sinceTime]: state.lastRun ?? "",
     [MEMORY_ENV.carryIn]: state.carry ?? "",
     [MEMORY_ENV.carryOut]: carryOutPath,
     [MEMORY_ENV.deferFile]: deferFilePath,
+    [MEMORY_ENV.summaryFile]: summaryFilePath,
   };
   if (state.lastCommit !== null) env[MEMORY_ENV.sinceCommit] = state.lastCommit;
   return {
     env,
     carryOutPath,
     deferFilePath,
+    summaryFilePath,
     dispose: () => fs.rm(dir, { recursive: true, force: true }),
   };
 }
@@ -92,7 +99,7 @@ async function readIfPresent(filePath: string): Promise<string | null> {
 }
 
 /** Cut at a byte limit without splitting a UTF-8 sequence. */
-function truncateUtf8(text: string, maxBytes: number): string {
+export function truncateUtf8(text: string, maxBytes: number): string {
   const bytes = Buffer.from(text, "utf-8");
   if (bytes.length <= maxBytes) return text;
   let end = maxBytes;

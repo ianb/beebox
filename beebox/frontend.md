@@ -63,7 +63,7 @@ Wherever a surface needs a real raster rather than a character — the Apple
 touch icon, the manifest icons, a notification — it comes from box-scoped
 routes that render the mark on demand (`webapp/routes/box-identity-assets.ts`,
 `core/box/box-icon.ts`). Rendering the emoji as *text* was measured and
-rejected; see `docs/attribution.md` for why the artwork is a dependency.
+rejected; see the root `ACKNOWLEDGEMENTS.md` for why the artwork is a dependency.
 
 The box server also stamps the box's name and mark into the served
 `index.html` (`webapp/index-html.ts`) so a tab is identifiable before React

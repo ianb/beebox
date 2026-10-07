@@ -148,12 +148,13 @@ guarantees. Verified against source:
 
 ## Prior art (external)
 
-- **Checklist = externalized reasoning, agent-controlled.** *Nidus:
-  Externalized Reasoning for AI-Assisted Engineering*
-  ([arxiv 2604.05080](https://arxiv.org/pdf/2604.05080)) — a working list the
-  agent edits as it goes is a thinking tool, not a compliance form; it supports
-  non-linear, revisited traversal. Directly supports making the checklist a
-  plain agent-owned file rather than an engine-tracked state machine.
+- **Checklist = externalized reasoning, agent-controlled.** No external
+  source for this choice. An earlier version of this note cited *Nidus*
+  ([arxiv 2604.05080](https://arxiv.org/pdf/2604.05080)) as support; a later
+  reading (2026-10-07) found the paper describes a governance runtime that
+  enforces constraints from outside the agent, which is the engine-tracked
+  option this plan rejected, and it does not discuss a working checklist. The
+  agent-owned file is our own decision.
 - **Verification-gated agent migration.** *Environment-in-the-Loop*
   ([arxiv 2602.09944](https://arxiv.org/html/2602.09944v1)) and Spotify's
   judge-LLM ([ZenML](https://www.zenml.io/llmops-database/autonomous-codebase-migration-at-scale-using-llm-powered-agents))
@@ -223,7 +224,7 @@ Ordered by dependency, then surface size.
   about its ceiling.
 - **Why a checklist at all.** It forces decomposition (the tests-first rationale,
   `docs/testing.md`), externalizes the agent's pass so it's legible and
-  revisitable (Nidus prior art), and the `[ ]`→`[x]` discipline gives the free
+  revisitable, and the `[ ]`→`[x]` discipline gives the free
   completeness shell. No engine-tracked per-item state machine — the over-clever
   bit we cut.
 - **Direction.**

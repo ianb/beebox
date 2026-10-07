@@ -10,7 +10,7 @@ discovered-in: main session — boxholder shared the incident-investigation repo
 
 **Credit:** [incident-investigation](https://github.com/yaniv256/incident-investigation)
 by Yaniv Ben-Ami (MIT, 2026). Anything adopted from it carries that credit; see
-[the attribution issue](../docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md).
+[the attribution issue](../closed/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md).
 
 ## The source
 

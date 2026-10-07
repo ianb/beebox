@@ -32,15 +32,14 @@ choosing a command. gstack
 has no data model, memory, connectors, or scheduling of its own; those
 questions don't apply to it.
 
-**What Bee Box borrowed or decided not to.** As of this comparison, the
-maintainers had adopted gstack's practice of enforcing a destructive-command
-guardrail through a small piece of Claude Code's own automation rather than a
-prompt instruction, since it cannot be talked out of running the way a
-prompt can, and had begun
-porting a minimal version of its cross-model review skill. Most of gstack's
-individual skills were read and explicitly set aside as not fitting Bee Box's
-process, or kept only as a reference point for comparison rather than
-adopted directly.
+**What Bee Box borrowed or decided not to.** The maintainers adapted
+gstack's cross-model review skill into their own: a read-only reviewer from
+the other model family, with review and challenge modes. Its plan-review
+sections also shaped the Bee Box plan template. gstack's destructive-command
+guardrail, enforced through Claude Code's hook automation, was read and set
+aside. Most of gstack's other skills were read and explicitly set aside as not
+fitting Bee Box's process, or kept only as a reference point for comparison.
+The root `ACKNOWLEDGEMENTS.md` in the repository records what was adopted.
 
 **What this comparison did not look at:** pricing, hosted offerings,
 community size, or personal-assistant features, since gstack has none.

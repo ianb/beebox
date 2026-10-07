@@ -9,7 +9,8 @@ import { useDropdownClose } from "../../../ui/Dropdown";
 import { getChatSessionIdentity, markChatDone } from "../../../../api-chat";
 
 /**
- * The boxholder's close mark: "Mark done" / "Mark active" for the CURRENT
+ * The boxholder's close mark, labelled "Archive conversation" / "Unarchive
+ * conversation" (the done state), for the CURRENT
  * chat. Done is a state, not a deletion — the chat stays resumable and only
  * sorts below live ones — so this lives beside "New chat", not in Advanced.
  *
@@ -49,7 +50,7 @@ export function MarkDoneItem({ sessionId }: { sessionId: string | null }) {
           });
       }}
     >
-      {done ? "Mark active" : "Mark done"}
+      {done ? "Unarchive conversation" : "Archive conversation"}
     </MenuItem>
   );
 }
