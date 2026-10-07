@@ -6,13 +6,14 @@ import UIKit
 /// Where the composer's sends go.
 ///
 /// `.conversation` hands the message to `PendingEmissionStore` for the web
-/// chat's bound conversation. `.quickChat` hands the final text to its closure
-/// and does nothing else: no pending emission, no binding check, text only.
+/// chat's bound conversation. `.quickChat` hands the final text and its origin
+/// (typed or dictated) to its closure and does nothing else: no pending
+/// emission, no binding check, text only.
 /// The closure answers whether the text is stored; the draft clears only then,
 /// so a kill between the two cannot lose the thought.
 enum NativeComposerSubmitTarget {
     case conversation
-    case quickChat(@MainActor (String) async -> Bool)
+    case quickChat(@MainActor (String, NativeChatEmission.Origin) async -> Bool)
 
     func voicePolicy(hqDictationEnabled: Bool) -> NativeComposerVoicePolicy {
         switch self {
@@ -811,12 +812,18 @@ struct NativeComposerView: View {
             }
         case .quickChat(let deliver):
             switch submission {
-            case .message(let text, _, let voiceKeywordAction, let audioURL):
-                submitQuickChat(text: text, spoken: voiceKeywordAction != nil, audioURL: audioURL, deliver: deliver)
+            case .message(let text, let origin, let voiceKeywordAction, let audioURL):
+                submitQuickChat(
+                    text: text,
+                    origin: origin,
+                    spoken: voiceKeywordAction != nil,
+                    audioURL: audioURL,
+                    deliver: deliver
+                )
             case .voicePreparation(let liveTranscript, _, _, _, _, let audioURL, _):
                 // Unreachable: a quick chat composer has no high-quality
                 // transcription. The live transcript is the final text.
-                submitQuickChat(text: liveTranscript, spoken: true, audioURL: audioURL, deliver: deliver)
+                submitQuickChat(text: liveTranscript, origin: .voice, spoken: true, audioURL: audioURL, deliver: deliver)
             }
         }
     }
@@ -826,9 +833,10 @@ struct NativeComposerView: View {
     /// emission id to key a recording under, so the recording is dropped.
     private func submitQuickChat(
         text: String,
+        origin: NativeChatEmission.Origin,
         spoken: Bool,
         audioURL: URL?,
-        deliver: @escaping @MainActor (String) async -> Bool
+        deliver: @escaping @MainActor (String, NativeChatEmission.Origin) async -> Bool
     ) {
         if let audioURL {
             try? FileManager.default.removeItem(at: audioURL)
@@ -839,7 +847,7 @@ struct NativeComposerView: View {
         statusText = nil
         isPreparingSend = true
         Task {
-            let stored = await deliver(text)
+            let stored = await deliver(text, origin)
             isPreparingSend = false
             guard stored else {
                 if spoken {
