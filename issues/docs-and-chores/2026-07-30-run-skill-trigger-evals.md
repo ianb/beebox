@@ -83,3 +83,5 @@ whether it worked.
 Open questions before doing this: does the vendored `skill-creator` eval path
 still run against current Claude Code, what does a run cost for 16 skills, and
 is a one-off baseline enough or does it want to be a periodic check?
+
+**Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific content moved to `beebox/docs/testing.md` ("Choosing an instrument", "Reproducing a bug") and `beebox/frontend.md`.

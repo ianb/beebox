@@ -7,7 +7,7 @@ description: Write, run, and triage beebox `.doctest.md` tests, including distin
 
 The [syntax reference](../../../agent-doctest/docs/syntax.md) is short and
 example-first; read it before writing a doctest. Whether a doctest is the
-right tier at all is `bbx-guide-testing`'s call.
+right instrument at all: [choosing an instrument](../../../beebox/docs/testing.md#choosing-an-instrument).
 
 ## Authoring
 

@@ -2,7 +2,7 @@
  * `/auth/login` — email + password sign-in, with an optional "Sign in with
  * Google" button when the server has Google configured (`GET /auth/methods`).
  * The page owns its own `<main>` landmark (components own their a11y
- * elements — see bbx-frontend conventions).
+ * elements — see frontend.md).
  */
 
 import { useEffect, useState, type FormEvent } from "react";

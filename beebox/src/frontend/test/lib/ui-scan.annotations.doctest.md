@@ -229,7 +229,7 @@ id `a` plus class `b`, so the address form has to stay selector-safe.
 
 The table above is the *shared* contract, not the inventory: since the
 2026-08-23 pass every static control in the frontend carries an id (the
-`bbx-frontend` skill's accessibility baseline), so the source holds far more ids
+addressable-id rule in `beebox/frontend.md`), so the source holds far more ids
 than iOS mirrors, and the check that used to require the table to name them
 all would only ever be satisfied by a table nobody reads. What still has to
 hold for every id is that it is authored once — two literals with the same

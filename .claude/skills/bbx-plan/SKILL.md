@@ -100,8 +100,8 @@ a decision when the work becomes a BIG CHANGE without approval, introduces
 materially different scope, or a finding invalidates the chosen approach.
 
 Record the resulting decision in the plan. Honor an explicit human size limit;
-do not reinterpret it as aspirational. The separate `bbx-debug` three-failed-fix
-limit still applies during debugging.
+do not reinterpret it as aspirational. A separate limit applies during
+debugging: after three failed fixes, stop and re-plan.
 
 ## Reviewing an existing plan
 

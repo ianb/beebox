@@ -68,3 +68,5 @@ Pending entries from 2026-09-30:
 [reader-context writing](../exploration/2026-09-30-reader-context-writing-and-structured-thinking-tag.md)
 and [incident-investigation](../exploration/2026-09-30-evaluate-incident-investigation-skill.md),
 both by Yaniv Ben-Ami. Add them if and when their ideas are adopted.
+
+**Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific content moved to `beebox/docs/testing.md` ("Choosing an instrument", "Reproducing a bug") and `beebox/frontend.md`.

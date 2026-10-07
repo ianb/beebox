@@ -1,6 +1,8 @@
 # Frontend Conventions
 
-UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers conventions that apply to both halves.
+UI palette, primitives, data wiring, addressable ids, and the `className` rule. Backend code never needs to load this; code-style.md covers conventions that apply to both halves.
+
+Bee Box is an internal app, not a public site chasing Lighthouse scores. Do not optimize before a measurement shows something is slow.
 
 ## Card themes
 
@@ -102,9 +104,33 @@ and send destination; only an explicit conversation action selects a recipient.
 Source editing, image lightboxes, capture, and other task-specific dialogs remain
 appropriate overlays for their distinct interactions.
 
+## Data and state
+
+Request/response data is a tRPC query or mutation through the client in
+`src/frontend/src/lib/trpc/client.ts`. Real-time data rides the shared tRPC
+WebSocket: `useBusSubscription` (`hooks/useBusSubscription.ts`) for the box
+event stream, `useChatWs` for chat sessions, and the `events.turnStream`
+subscription for a turn's output. Do not hand-roll `fetch` or a polling loop.
+View state a reload should keep (filters, the open tab, pagination) belongs in
+TanStack Router search params, not component state.
+
+A container fetches and owns the data states; its presentational children take
+loaded props. A new data view, or a change to how one loads, handles every
+reachable loading, empty, and error state: a skeleton shaped like the content
+(`aria-busy`) or `<StatusMessage>` while loading, an empty state that names the
+next action, and an `<ErrorText>` message with a retry. A blank screen while
+data resolves is a bug. A narrow change keeps the container's existing
+handling and does not add unreachable states.
+
 ## Frontend UI Primitives
 
 Reach for a primitive from `src/frontend/src/components/ui/` before writing appearance classes inline. The primitives own appearance (colors, borders, shadows); callers own outer layout (margin, padding, flex-self, sizing, position) via a `className` prop.
+
+A page's own supporting components live in `pages/<x>/components/`; shared ones go in `src/frontend/src/components/`, and primitives in `components/ui/`. A component that is a nav, region, main area, or list renders its own landmark or role; never wrap another component in one from outside. Each area of a screen has at most one `intent="primary"` action.
+
+Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-debug-log.md). When a change can affect the two-pane layout (`<Stack hideOnMobile>`, `<MobileBackButton>`), also check it at phone width (`set viewport 375 800`).
+
+Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `duplicate-id` in the [tours](docs/testing/tours.md) catches collisions). The box agent and `bin/browse` address controls by it (`src/frontend/src/lib/ui-scan/resolve.ts`). Per-row controls get one only when a unique derived id is obvious. Never rename an existing id; iOS mirrors some of them.
 
 **Actions**
 - `<Button>` — labeled or icon-only commit-action. Props: `intent` (primary/secondary/destructive/accent/success/ghost), `shape` (rect/circle), `size`, `icon`, `loading` (auto-on for Promise `onClick`), `loadingLabel` (takes a function `(secs) => ...` to show elapsed time), `flash` (post-click feedback like "Copied!"). Discriminated union enforces `label` for icon-only variants.
@@ -127,7 +153,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<OpenInPanelButton>` — icon-only button that opens a file in the chat's companion side panel; sibling to `<ExternalIconLink>`'s open-in-new-tab action. Sizes `sm`/`md`.
 
 **Display**
-- `<Image>` — src/alt/size with built-in lightbox, error placeholder, bbox overlay, rotation. Lightbox and onClick are mutually exclusive at the type level.
+- `<Image>` — src/alt/size with built-in lightbox, error placeholder, bbox overlay, rotation. Lightbox and onClick are mutually exclusive at the type level. Only `size="thumb"` reserves its box; for larger sizes, set dimensions or an aspect ratio when known so the layout does not shift, and use `loading="lazy"` below the fold.
 - `<VideoEmbed>` — responsive 16:9 lazy-loaded video iframe (privacy-friendly nocookie domain), block-level like a figure; used for embedded video in rendered markdown.
 - `<Avatar>` — user profile image with initial fallback. `fallbackClassName` for dark nav contexts.
 - `<FriendlyDate>` — renders an ISO timestamp as a localized date/time (the browser's locale and zone) in a semantic `<time>` carrying the machine-readable ISO. `mode` prop: `"datetime"` (default) or `"date"`.
