@@ -14,7 +14,7 @@ import type { BrowserTaskRunEntry } from "@schemas/browser-task";
 type RunRow = Omit<BrowserTaskRunEntry, "note" | "reason"> & { note: string | null; reason: string };
 
 /** Narrow the frontmatter `runs` value to rows the table can show; malformed entries are dropped. */
-export function parseRuns(value: unknown): RunRow[] {
+function parseRuns(value: unknown): RunRow[] {
   if (!Array.isArray(value)) return [];
   const rows: RunRow[] = [];
   for (const entry of value) {

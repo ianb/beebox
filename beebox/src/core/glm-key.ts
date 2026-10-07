@@ -24,14 +24,14 @@ import { ProviderSetupError } from "./provider-setup-error.js";
 const GLM_SECRET_NAME = "glm";
 
 /** Z.ai's Anthropic-compatible endpoint. The only place this literal lives. */
-export const GLM_BASE_URL = "https://api.z.ai/api/anthropic";
+const GLM_BASE_URL = "https://api.z.ai/api/anthropic";
 
 /**
  * First token on GLM can lag far past the CLI's default API timeout, and a
  * mid-turn timeout reads as a hang — the same constant and rationale as the
  * dev-side shim (`bin/lib/glm-provider.sh`).
  */
-export const GLM_API_TIMEOUT_MS = "3000000";
+const GLM_API_TIMEOUT_MS = "3000000";
 
 /** The child-env additions that point a claude-engine run at GLM. */
 export interface GlmEnvAdditions {

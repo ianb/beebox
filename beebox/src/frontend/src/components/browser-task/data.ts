@@ -11,7 +11,7 @@ import { withMobileAuth } from "../../lib/mobile-auth";
 import { attachDirFor } from "@shared/attach-path";
 import { COVERAGE_REASONS } from "@shared/browser-task-batch";
 
-export const SCHEMA_FILE = "schema.json";
+const SCHEMA_FILE = "schema.json";
 export const INBOX_DIR = "inbox";
 export const PROCESSED_DIR = "processed";
 
@@ -53,7 +53,7 @@ export async function fetchBoxText(path: string): Promise<string | null> {
 }
 
 /** List the subdirectories one level under a box directory; [] when it does not exist. */
-export async function fetchSubdirs(path: string): Promise<string[]> {
+async function fetchSubdirs(path: string): Promise<string[]> {
   const res = await fetch(`${getApiBase()}/browse/${path}`, withMobileAuth({ cache: "no-store" }));
   if (res.status === 404) return [];
   if (!res.ok) throw new BrowserTaskFetchError(path, res.status);
@@ -72,7 +72,7 @@ async function fetchJson(path: string): Promise<unknown | null> {
   }
 }
 
-export async function loadBatch(dir: string, id: string): Promise<BatchSummary> {
+async function loadBatch(dir: string, id: string): Promise<BatchSummary> {
   const [recordsRaw, filedRaw] = await Promise.all([fetchJson(`${dir}/records.json`), fetchJson(`${dir}/filed.json`)]);
   const records = recordsFileSchema.safeParse(recordsRaw);
   const filed = filedSchema.safeParse(filedRaw);
@@ -97,7 +97,7 @@ export function schemaPath(cardPath: string): string {
   return `${attachDirFor(cardPath)}/${SCHEMA_FILE}`;
 }
 
-export class BrowserTaskFetchError extends Error {
+class BrowserTaskFetchError extends Error {
   constructor(path: string, status: number) {
     super(`Could not load ${path} (HTTP ${String(status)})`);
     this.name = "BrowserTaskFetchError";

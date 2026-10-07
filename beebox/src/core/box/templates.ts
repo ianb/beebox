@@ -116,7 +116,7 @@ These observations go from the agent to Bee Box developers.
 /** Write `content` to `filePath` only if nothing is there yet (ENOENT is the
  *  expected, silent "scaffold it" case — the error itself carries no
  *  actionable info). */
-export async function writeFileIfMissing(filePath: string, content: string): Promise<void> {
+async function writeFileIfMissing(filePath: string, content: string): Promise<void> {
   try {
     await fs.access(filePath);
   } catch (_e) {

@@ -1,3 +1,4 @@
+/** @public Imported by `workstreams-app/src/shared/documents.ts`, outside this package. */
 export const DOCUMENT_ROLES = [
   "reference",
   "proposal",

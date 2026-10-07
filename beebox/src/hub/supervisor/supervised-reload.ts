@@ -25,7 +25,7 @@ export function installReloadHandler(options: ReloadOptions & { generation: numb
   });
 }
 
-export async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOptions): Promise<void> {
+async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOptions): Promise<void> {
   const child = box.child;
   if (!child) return;
   let changing = false;

@@ -21,7 +21,7 @@ import { z } from "zod";
 import { isRecord } from "./is-record.js";
 
 /** File names the batch layout reserves; an uploaded part may not use them. */
-export const RESERVED_BATCH_FILES: ReadonlyArray<string> = ["records.json", "filed.json"];
+const RESERVED_BATCH_FILES: ReadonlyArray<string> = ["records.json", "filed.json"];
 
 /** Why an executor stopped scanning. Always reported, even on success. */
 export const COVERAGE_REASONS = [

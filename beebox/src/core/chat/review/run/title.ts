@@ -33,9 +33,6 @@ import {
   type TitleOwner,
 } from "../state.js";
 
-// Re-exported for the run summary's counter; see RunSummary.titled.
-export { TITLE_CONSUMER };
-
 /** Everything the title pass mutates apart from the card it writes. */
 export interface TitleRunContext {
   boxRoot: string;

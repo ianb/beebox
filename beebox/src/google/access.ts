@@ -29,7 +29,7 @@ import { err, ok, type Result } from "../shared/result.js";
  * do that when asked — the refusal is the only place that instruction is
  * guaranteed to reach whoever hit the wall.
  */
-export function serviceNotEnabledMessage(service: GoogleServiceName): string {
+function serviceNotEnabledMessage(service: GoogleServiceName): string {
   return (
     `${LABELS[service]} is not enabled for this box. Set \`googleServices.${service}: true\` in ` +
     `\`_config/box.json\` (you may do this when the boxholder asks for ${LABELS[service]}), or ` +

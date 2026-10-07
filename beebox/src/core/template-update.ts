@@ -8,14 +8,14 @@ import {
   sha256, stripBoxOwnedFields, TEMPLATE_UPDATES_DIR,
 } from "./install-template-file.js";
 
-export class InvalidTemplatePathError extends Error {
+class InvalidTemplatePathError extends Error {
   constructor() {
     super("Expected a box-relative template path");
     this.name = "InvalidTemplatePathError";
   }
 }
 
-export class ParkedTemplateChangedError extends Error {
+class ParkedTemplateChangedError extends Error {
   constructor() {
     super("Parked template changed since it was written; run the installer again before resolving");
     this.name = "ParkedTemplateChangedError";

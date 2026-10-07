@@ -25,7 +25,7 @@ import type { GitAnnexService } from "../../services/git-annex.js";
  * meets this twice should not have to work out whether they are the same
  * requirement.
  */
-export const GIT_ANNEX_INSTALL_HINT = "Install it (`apt install git-annex` / `brew install git-annex`).";
+const GIT_ANNEX_INSTALL_HINT = "Install it (`apt install git-annex` / `brew install git-annex`).";
 
 /**
  * The git-annex binary is not installed, and a box cannot be created without
@@ -36,7 +36,7 @@ export const GIT_ANNEX_INSTALL_HINT = "Install it (`apt install git-annex` / `br
  * from `deploy/add-box.sh`, and from worktree setup, and each reports failure
  * differently.
  */
-export class GitAnnexRequiredError extends Error {
+class GitAnnexRequiredError extends Error {
   constructor() {
     super(
       "git-annex is required to create a Bee Box: a box tracks its assets in the annex from its " +

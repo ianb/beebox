@@ -55,7 +55,7 @@ export function requireDriveId(input: string): string {
  * copies that overwrite each other upstream — the connector skips both rather
  * than pick one, which would leave the new mount silently dead.
  */
-export async function refuseIfClaimed(opts: { boxRoot: string; driveId: string }): Promise<void> {
+async function refuseIfClaimed(opts: { boxRoot: string; driveId: string }): Promise<void> {
   const claimedBy = await driveIdClaimants(opts);
   if (claimedBy.length > 0) {
     throw new DriveIdClaimedError({ driveId: opts.driveId, claimedBy });
