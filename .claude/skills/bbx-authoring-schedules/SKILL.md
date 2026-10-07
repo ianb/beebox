@@ -15,7 +15,8 @@ the catalog. Read a real schedule before writing one — all four are short.
 
 Yes when the work is **periodic and its trigger is time**, not a commit
 (hook territory) or a request. It also has to be worth an alert: a schedule
-whose report nobody reads is noise on a cadence.
+whose report nobody reads is noise on a cadence. A dependency watch runs at
+most weekly; only the agent SDKs (`sdk-update`) earn a daily check.
 
 Then pick the shape:
 

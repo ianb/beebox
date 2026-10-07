@@ -72,7 +72,9 @@ excluding the intentionally-per-directory `NON_UNIQUE_BASENAMES` —
 current location. It never guesses: a basename with no match (a true
 rename/delete) or 2+ matches is reported for manual handling, not rewritten.
 Links inside code spans / fenced blocks (syntax illustrations) and generated
-emitter outputs are left untouched. It also prints a non-fatal report of
+emitter outputs are left untouched. It does not see backticked path
+mentions in code, skills, YAML, or test fixtures (`site/docs-links.test.ts`,
+`bin/*.test.ts`), so grep for the old path before committing a move. It also prints a non-fatal report of
 repo-wide duplicate basenames — the gap toward making basenames globally
 unique. Mechanism: `src/dev/doc-check/link-repair.ts`.
 

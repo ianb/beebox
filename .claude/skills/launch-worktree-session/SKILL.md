@@ -8,7 +8,9 @@ allowed-tools: Bash
 
 Use this skill only when the human explicitly asks to spin work off into a
 separate worktree or session. That request authorizes the launch; do not ask for
-a second confirmation unless a material choice is unresolved.
+a second confirmation unless a material choice is unresolved. The main-checkout
+session is for small tasks and launches: feature work leaves through this
+skill, never through `EnterWorktree` in place.
 
 The new session does not inherit this conversation. Give it a briefing that
 preserves the shared context and the human's actual authorization without
@@ -29,8 +31,9 @@ turning your own guesses into instructions.
 
    - A live workstream cannot receive injected context from a sibling CLI
      session. `resume` focuses its tab when possible and prints
-     `manual forwarding required: <path>`. Tell the human to paste that file;
-     do not say the briefing was delivered.
+     `manual forwarding required: <path>`. Give the human the note inline or
+     by absolute path, never `@scratch/...` (each worktree has its own
+     `scratch/`); do not say the briefing was delivered.
    - `stale` means roughly 14 days without trustworthy activity. Prefer a new
      workstream unless the human wants that earlier context.
    - Use `--` before literal briefing text that begins with `-`.
@@ -95,7 +98,8 @@ Name the chosen agent and model, with the reason, in the launch report.
 
 Write for the particular agent that will receive it. Preserve enough concrete
 context that a less capable worker can reconstruct the reasoning rather than
-guessing from a terse task label.
+guessing from a terse task label. Look the target up before launching: the
+briefing says what it is and how it relates to this repo, not "go find out".
 
 Include:
 
@@ -184,8 +188,8 @@ it or a material scope choice cannot safely be left to the launched session.
 
 ## Report the result
 
-Tell the human the worktree name, agent and model, and that it opened in a new
-Terminal tab or window. State whether the briefing was delivered or requires
+Tell the human the worktree name, agent and model with the reason, how many
+sessions you launched, and that each opened in a new Terminal tab or window. State whether the briefing was delivered or requires
 manual forwarding.
 
 See `bin/CLAUDE.md` for lifecycle, resume, liveness, and cleanup behavior.

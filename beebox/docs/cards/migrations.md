@@ -102,6 +102,10 @@ annex object. No annex content is dropped.
 
 The runner measures paths changed since the snapshot, then commits those paths
 and the manifest through the ordinary hooks. Earlier unrelated staging is kept.
+Those hooks validate with the code being deployed, so each migration's commit
+must leave its cards valid on its own: run planners that convert parts of one
+card shape from one script. A touched card that already fails current lint
+also blocks the commit.
 A changed path can contain earlier human edits; the recovery snapshot preserves
 the before-state. If the commit fails, the manifest and original index entries
 for attempted paths are restored, while conversion output remains available for

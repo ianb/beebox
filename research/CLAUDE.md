@@ -23,7 +23,9 @@ ideas and validate or challenge our own bets.
 Every review ends in **explicit recommendations** — adopt / adapt / reject /
 later, each traced to a concrete beebox specifics (a file, a design
 doc, a boxholder decision), not left as abstract praise or criticism of the
-other system. "Interesting" isn't a disposition.
+other system. "Interesting" isn't a disposition. When summarizing reception
+(forum threads, reviews), report substantive, non-obvious signal; drop
+predictable reactions to the subject's own marketing framing.
 
 Findings worth actually pursuing get **filed into the monorepo-root
 `issues/` tree** (or a plan, if a finding is ready for one) — a good idea

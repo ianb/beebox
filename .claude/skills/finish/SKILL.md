@@ -1,6 +1,6 @@
 ---
 name: finish
-description: Land a worktree's changes in main when the human asks to finish, ship, merge, wrap up, or checkpoint the work.
+description: Land a worktree's changes in main when the human asks to finish, ship, merge, or wrap up the work.
 ---
 
 # /finish
@@ -8,6 +8,9 @@ description: Land a worktree's changes in main when the human asks to finish, sh
 Land the worktree's work in `main` — but run the actual work in a **subagent** so
 the git / test / merge churn stays out of this chat thread. This conversation
 only dispatches and relays the result. **Only invoke when the human asks for it.**
+That ask is consent to merge and deploy; run the flow through the merge. Small
+follow-ups in the same workstream (closing its issue, a doc fix) land without a
+fresh ask, and a docs-only workstream may land each verified change.
 
 ## What to do
 

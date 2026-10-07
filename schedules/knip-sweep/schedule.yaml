@@ -2,7 +2,7 @@ description: "Weekly knip sweep: what became dead code since last week"
 cadence: 7d
 workstream:
   agent: claude
-  model: opus
+  model: claude-opus-5-5
   worktree: true
   # Nothing carries between weeks: the baseline in the store is the memory, and
   # each sweep is judged on the branch it produces.

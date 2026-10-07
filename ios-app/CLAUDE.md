@@ -179,7 +179,9 @@ Simulator coverage is appropriate for reducers, persistence, bridge delivery,
 layout fixtures, and most picker-independent UI. A change is not fully verified
 when it depends on camera hardware, iCloud Photos, microphone/speech models,
 audio interruptions, background execution, QR pairing, signing, or physical
-keyboard/safe-area behavior until it passes on a real phone.
+keyboard/safe-area behavior until it passes on a real phone. `simctl` has no
+tap; for gestures the fixtures below cannot cover, post `CGEvent` mouse events
+from a small Swift helper.
 
 For deterministic composer layout checks, launch a DEBUG build with
 `--composer-fixture=<state>`. Supported states are `empty`, `typing`,

@@ -17,7 +17,7 @@ cat > scratch/cross-model-prompt.txt <<'PROMPT_EOF'
 PROMPT_EOF
 
 claude -p \
-  --model opus \
+  --model claude-opus-5-5 \
   --effort high \
   --setting-sources user \
   --no-session-persistence \
@@ -41,7 +41,7 @@ by the local exec wrapper rather than directly):
 ```javascript
 let result = await tools.exec_command({
   cmd:
-    "claude -p --model opus --effort high --setting-sources user " +
+    "claude -p --model claude-opus-5-5 --effort high --setting-sources user " +
     "--no-session-persistence --tools Read Grep Glob --output-format text " +
     "< scratch/cross-model-prompt.txt",
   workdir: repoWorktree,
@@ -84,7 +84,7 @@ project hooks from registering at all.
 
 Flag by flag:
 
-- **`--model opus`** — default and diff reviewer. Use **`--model fable`**
+- **`--model claude-opus-5-5`** — default and diff reviewer. Use **`--model fable`**
   for plan mode. Honor an explicit human model override within this family.
 - **`--effort high`** — the mirror of codex's `model_reasoning_effort="high"`.
 - **`--no-session-persistence`** — no transcript written for a throwaway review.

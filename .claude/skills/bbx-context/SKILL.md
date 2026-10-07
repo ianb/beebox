@@ -85,7 +85,11 @@ emphasized, nothing is.
   a paragraph.
 - **An example beats a description.** One correct card / naming / command-output
   instance is shorter and less ambiguous than the prose describing it. Point at a
-  real one by path (it won't drift) rather than pasting a copy.
+  real one by path (it won't drift) rather than pasting a copy. Make each example
+  also model good defaults (preferred naming, a good `contains:` sentence).
+- **Altitude matches use.** A rarely used command gets a reference entry and at
+  most one pointer sentence on an always-on surface. Never mention environment
+  variables the harness always sets.
 - **Pointers, not copies.** Never paste content that changes on its own (a
   schema, a list, command output) — it goes stale, and stale instructions are
   worse than none. Point at the source ("run `bbx …`", "see `<path>`").
@@ -129,7 +133,7 @@ Adding the instruction isn't the same as the agent *knowing* it. The proof is a
 through the intended loading path.
 
 - Add an entry to `src/dev/knowledge-audits.yaml`, then **run it**:
-  `pnpm knowledge-audit run --box <box> --filter <id>`.
+  `pnpm knowledge-audit run --box ~/src/boxes/test1 --filter <id>`.
 - Set `expected_level` to the loading tier you intend to prove:
   `knows_directly` for injected context the agent should recall without reading,
   `knows_about` when it should follow an on-demand pointer and read a named doc,

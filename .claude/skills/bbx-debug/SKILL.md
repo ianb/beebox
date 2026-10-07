@@ -43,7 +43,7 @@ disproportionate effort here; be aggressive and creative.
   `.beebox/client-debug.log`. Often *is* the evidence for a frontend bug.
 - **A knowledge audit / pressure scenario** — when the bug is the *box agent*
   doing the wrong thing (paraphrasing, forgetting a convention). `pnpm
-  knowledge-audit run --box <box> --filter <id>`. A wrong answer is a red loop;
+  knowledge-audit run --box ~/src/boxes/test1 --filter <id>`. A wrong answer is a red loop;
   set the expected knowledge level to the intended loading path.
 - **git as history** — `git log -S '<symbol>'`, `git log -- <path>`, `git blame`
   to find *what changed*. Recent commits are the prime suspect.

@@ -33,7 +33,7 @@ Every agent's context is a stack; each layer has a loading class:
 
 ### Skills: description and body
 
-**Skills are two things at once:** the `description` is always-loaded (it's the trigger) and must be pure routing — no mechanics; the body is on-demand and owns its domain's mechanics. A guide mention of a skill's domain is usually the first overlap — the description *is* the pointer.
+**Skills are two things at once:** the `description` is always-loaded (it's the trigger) and must be pure routing — no mechanics; the body is on-demand and owns its domain's mechanics. A guide mention of a skill's domain is usually the first overlap — the description *is* the pointer. Name a skill rather than its `SKILL.md` path: a Read of the file and an invocation each load the body, so the agent can pay for it twice.
 
 ### The guide/skill boundary
 

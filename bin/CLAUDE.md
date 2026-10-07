@@ -21,6 +21,10 @@ malformed or tracked list fails closed; diagnostics never print matched private
 values. Read [commit guards](docs/commit-guards.md) before changing the guards
 or hooks. On a shared branch use `git add <paths> && git commit -- <paths>` (or
 `stageAndCommitPaths`); a bare commit can capture another agent's staging.
+The pre-commit typecheck covers the whole package, so parallel agents in one
+worktree should work in different packages, and each briefing names the other
+agent's directories. Never `git reset --hard` or `git checkout .` while another
+agent edits the worktree.
 
 ## Commit provenance trailers (`commit-provenance.ts`)
 

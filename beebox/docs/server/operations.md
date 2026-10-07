@@ -98,6 +98,12 @@ su - beebox -c "cd /home/beebox/boxes/<box> && bbx validate"
 > (This produced a bogus "two boxes have missing connectors" health report on
 > 2026-07-14 — the connectors were healthy; the bare invocation was the bug.)
 
+**Live memory inspection.** `kill -USR1 <node-pid>` opens the inspector on
+`127.0.0.1:9229` without a restart. A heap snapshot forces a full GC and needs
+free disk about the size of the heap, so check `df` first. Never send `SIGUSR2`
+to a node process not started with `--heapsnapshot-signal`: its default action
+terminates the process.
+
 **Administrative restart after manual config changes:**
 
 Normal code deployment uses the controller in `deploy/deploy.sh`; it already

@@ -2,7 +2,7 @@ description: "Agent SDK + Claude Code release monitor: filter, ledger, bump"
 cadence: 1d
 workstream:
   agent: claude
-  model: opus
+  model: claude-opus-5-5
   # An ordinary scheduled workstream: the session works on
   # `worktree-sdk-update` and lands the bump with `bin/land` (ff-only), so the
   # runner's liveness guard applies and the agent never edits or commits in a

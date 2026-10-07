@@ -24,7 +24,8 @@ Good models: `beebox/test/core/pdf/probe.text-layer-quality.doctest.md`
   value after checking it is right. Varying parts arrive as wildcards
   (`«int»`, `«date»`, `«*»`). Better still, pass fixed inputs (time, ids).
 - **Waiting:** `eventually(fn, { label })`, never a fixed sleep.
-- Blocks are separate tests; ` ```ts continue ` shares variables, ` ```ts setup `
+- Blocks are separate tests; ` ```ts continue ` shares variables (prose between
+  examples goes after a closing fence, never inside an open one), ` ```ts setup `
   holds imports and helpers, ` ```ts cleanup ` / ` ```ts teardown ` release
   resources.
 

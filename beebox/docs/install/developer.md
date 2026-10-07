@@ -12,7 +12,10 @@ server), the Docker path is simpler: see
   `engines` field in the root `package.json` — an install under any other
   major version fails outright. If you use a version manager (nvm, fnm,
   volta, asdf), it will pick up the root `.nvmrc` automatically once you
-  `cd` into the repo. On a machine without a version manager (e.g. a bare
+  `cd` into the repo. After switching Node major versions, rebuild
+  `better-sqlite3` from the monorepo root (`cd node_modules/better-sqlite3 &&
+  npm run build-release`); a stale binding fails tests with
+  `ERR_DLOPEN_FAILED`. On a machine without a version manager (e.g. a bare
   Linux server), install it from NodeSource — the same mechanism
   `deploy/setup-server.sh` uses:
 
