@@ -2,7 +2,7 @@
  * Nav card schema — the box-editable top navigation.
  *
  * A positional card (`nav.card`) at the box root. Its `entries` list adds
- * shortcut links to the box screen's "In this box" section
+ * shortcut links to the box screen's "Shortcuts" section
  * (docs/plans/box-screen.md); when the card is absent or invalid, the box
  * screen shows no shortcuts (and an invalid card is surfaced as a health warning — see
  * runHealthChecks). First slice of docs/plans/interface-as-cards.md; plan in
@@ -66,9 +66,9 @@ export const NavSchema: CardSchema = cardSchema("nav", {
   searchable: false,
   instructions: `# Nav Card
 
-\`nav.card\` at the box root adds the box's own shortcut links to the box screen, under **In this box**, after Dashboard, Browse, History, and Storage summary. The box screen is the screen for the whole box: the box row at the top of the app bar's landmark menu opens it, and the phone app shows it at launch. Editing the card changes the shortcuts immediately — no deploy. When the card is absent or invalid, the box screen shows no shortcuts, and an invalid card also raises a health warning naming the problem. Deleting the card is always a safe way back to stock navigation.
+\`nav.card\` at the box root adds the box's own shortcut links to the box screen, under **Shortcuts**. The box screen is the screen for the whole box: the box row at the top of the app bar's landmark menu opens it, and the phone app shows it at launch. The box-wide pages (Dashboard, Browse, History, Storage summary) are not on the box screen; they are in the avatar menu at the right of the app bar, with Settings and Admin. Editing the card changes the shortcuts immediately — no deploy. When the card is absent or invalid, the box screen has no Shortcuts section, and an invalid card also raises a health warning naming the problem. Deleting the card is always a safe way back to stock navigation.
 
-Entries pointing at a destination the box screen already links (\`/\`, \`/chat\`, \`/chats\`, \`/browse\`, \`/history\`, \`/dashboard\`) are skipped rather than shown twice — pin cards and the less-travelled routes.
+Entries pointing at a destination the app already links (\`/\`, \`/chat\`, \`/chats\`, \`/browse\`, \`/history\`, \`/dashboard\`) are skipped rather than shown twice — pin cards and the less-travelled routes.
 
 \`\`\`yaml
 entries:

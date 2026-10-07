@@ -188,9 +188,8 @@ one job:
 
 - **Landmark menu** (the place pill's left half) says where the conversation
   is and where it can move. Its first row, `Box: <name>`, opens the box
-  screen (`/<box>/box`) with a full page load; the box screen holds the
-  box-wide pages (Dashboard, Browse, History, Storage summary), the
-  `nav.card` shortcuts, and the other boxes (see
+  screen (`/<box>/box`) with a full page load; the box screen holds recent
+  chats, the `nav.card` shortcuts, and the other boxes (see
   [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
   landmark**, which opens the page above. Then every landmark as a row —
   symbol, label, and its fresh-chat count — with a filter field past 20
@@ -204,6 +203,11 @@ one job:
   and grouped expands as disclosures. Links open in the companion pane on
   chat, and navigate normally elsewhere. The folder half renders only when
   a landmark resolves for the directory.
+
+The box-wide pages (Dashboard, Browse, History, Storage summary) are in the
+**avatar menu** at the right of the bar, below Settings and Admin
+(`frontend/src/components/AppNav/BoxPageMenuItems.tsx`). The rows keep the ids
+`bbx-box-menu-dashboard`, `-browse`, `-history`, and `-inventory`.
 
 ### The browser tab, and everywhere else a box is drawn
 

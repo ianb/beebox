@@ -5,9 +5,9 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
  * every page, every width.
  *
  * There is no link row, box `<select>`, or hamburger any more: navigation
- * lives in the `PlacePill`'s two menus (switch / here), box tools in the
- * pill's Box submenu, and the box's own `nav.card` entries in the switch
- * menu's custom section. What's left beside the pill is attention and meta —
+ * lives in the `PlacePill`'s two menus (landmark / folder), the box-wide
+ * pages in the profile menu, and the box's own `nav.card` entries on the box
+ * screen. What's left beside the pill is attention and meta —
  * the attention badges (`app-nav-badges.tsx`) and the profile menu — plus the
  * chip slot chat pages portal their session/voice chips into (Track C2).
  *
@@ -42,14 +42,15 @@ import { Avatar } from "../ui/Avatar";
 import { href } from "../../lib/routing";
 import { withBase } from "../../api";
 import { PlacePill } from "./PlacePill";
+import { BoxPageMenuItems } from "./BoxPageMenuItems";
 import { AttentionBadges } from "./app-nav-badges";
 import { AppBarChipSlot, useAppBarPublishedPlace } from "../app-bar-chrome";
 import { placeLabel } from "../../lib/place-label";
 
 /**
- * Profile avatar + dropdown menu — the bar's "meta" corner. Nothing
- * content-shaped lives here: box tools are behind the box's own name, in the
- * pill's Box submenu.
+ * Profile avatar + dropdown menu — the bar's "meta" corner: Settings and
+ * Admin, the box-wide pages (Dashboard, Browse, History, Storage summary),
+ * then the device items.
  */
 function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { user: CurrentUser | null; boxSlug: string; onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
   const location = useRouterState({ select: (s) => s.location });
@@ -66,7 +67,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
           type="button"
           id="bbx-nav-profile"
           data-bbx-reveal
-          data-bbx-does={`opens the profile menu — settings, admin, source view, debug log, reload${user ? ", sign out" : ""}`}
+          data-bbx-does={`opens the profile menu — settings, admin, dashboard, browse, history, storage summary, source view, debug log, reload${user ? ", sign out" : ""}`}
           onClick={toggle}
           className="flex items-center gap-1.5 rounded-full hover:ring-2 hover:ring-white/30 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={user ? user.name : "Menu"}
@@ -89,6 +90,8 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
       ) : null}
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
       <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/views/${SYSTEM_CARD_PATHS.admin}`)} active={isOnAdmin}>Admin</MenuItem>
+      <MenuDivider />
+      <BoxPageMenuItems boxSlug={boxSlug} />
       <MenuDivider />
       <MenuItem id="bbx-profile-menu-source-view" onClick={onToggleSourceView}>Source View</MenuItem>
       <MenuItem id="bbx-profile-menu-debug-log" onClick={onToggleDebugLog}>Debug Log</MenuItem>

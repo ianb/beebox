@@ -19,19 +19,21 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
 ```
 
-## A big transcript, parsed under a 64 MB heap cap
+## A big transcript, parsed under a 128 MB heap cap
 
 The fixture is ~2 400 lines carrying ~30 KB of payload each — a 58 MB
 transcript, which is small next to a real long-running session but already
-far past a 64 MB heap once every entry is retained. Asking for `tail: 200`
-retains 200 entries and the child finishes well under the cap.
+a large share of a 128 MB heap once every entry is retained. Asking for `tail: 200`
+retains 200 entries and the child finishes well under the cap. (The cap was 64 MB
+until tsx and the module graph grew enough to leave no margin; see
+`session.oversize-lines.doctest.md`.)
 
 ```ts
 const box = await makeTmpBox();
 const logPath = box.path("big.jsonl");
 await writeBigSessionLog({ logPath, lines: 2400, payloadBytes: 30_000 });
 
-const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 64 });
+const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 128 });
 print(`entries: ${out.entries}`);
 print(`total: ${out.total}`);
 print(`hasMore: ${out.hasMore}`);
@@ -52,7 +54,7 @@ A page request of the same transcript is bounded the same way — retention is
 the window, not the file:
 
 ```ts continue
-const pageOut = await parseUnderHeapCap({ logPath, slice: { mode: "page", offset: 10, limit: 40 }, heapMb: 64 });
+const pageOut = await parseUnderHeapCap({ logPath, slice: { mode: "page", offset: 10, limit: 40 }, heapMb: 128 });
 print(`entries: ${pageOut.entries}`);
 print(`total: ${pageOut.total}`);
 print(`hasMore: ${pageOut.hasMore}`);

@@ -1,7 +1,9 @@
 import SwiftUI
 
 /// The screen for one box as a whole: unfinished quick chat messages, recent
-/// chats, the box-wide pages, the other boxes, and a composer for a new thought.
+/// chats, the box's `nav.card` shortcuts, the other boxes, and a composer for a
+/// new thought. The box-wide pages (Dashboard, Browse, History, Storage
+/// summary) are in the web app's avatar menu.
 /// It is not a chat and mounts no web content; each link hands a box-relative
 /// path to `onOpen`, which shows the web app at that path.
 ///
@@ -9,13 +11,6 @@ import SwiftUI
 /// says what to do: open the chat it went to, as "Open chat" does, or scroll
 /// its row into view and announce its status line.
 struct BoxScreenView: View {
-    /// Box-relative paths of the box-wide pages, as the web landmark menu used.
-    static let boxPages: [(label: String, path: String, symbol: String)] = [
-        ("Dashboard", "views/_config/interface/dashboard.card", "square.grid.2x2"),
-        ("Browse", "views/_config/interface/browse.card", "folder"),
-        ("History", "views/_config/interface/history.card", "clock.arrow.circlepath"),
-        ("Storage", "views/_config/interface/inventory.card", "internaldrive"),
-    ]
     static let allChatsPath = "chats"
     private static let boxesSectionID = "boxes"
 
@@ -40,7 +35,7 @@ struct BoxScreenView: View {
                     needsSection
                     sentSection
                     recentSection
-                    boxSection
+                    shortcutsSection
                     boxesSection
                 }
                 .task(id: screenStore.homes[box.id] != nil) {
@@ -166,20 +161,16 @@ struct BoxScreenView: View {
         }
     }
 
-    private var boxSection: some View {
-        Section("In this box") {
-            ForEach(Self.boxPages, id: \.path) { page in
-                Button {
-                    onOpen(page.path)
-                } label: {
-                    Label(page.label, systemImage: page.symbol)
-                }
-            }
-            ForEach(screenStore.homes[box.id]?.shortcuts ?? [], id: \.to) { shortcut in
-                Button {
-                    onOpen(Self.boxPath(fromShortcut: shortcut.to))
-                } label: {
-                    Label(shortcut.label, systemImage: "link")
+    @ViewBuilder
+    private var shortcutsSection: some View {
+        if let shortcuts = screenStore.homes[box.id]?.shortcuts, shortcuts.isEmpty == false {
+            Section("Shortcuts") {
+                ForEach(shortcuts, id: \.to) { shortcut in
+                    Button {
+                        onOpen(Self.boxPath(fromShortcut: shortcut.to))
+                    } label: {
+                        Label(shortcut.label, systemImage: "link")
+                    }
                 }
             }
         }
