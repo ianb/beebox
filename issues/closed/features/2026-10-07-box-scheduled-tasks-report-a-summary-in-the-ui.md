@@ -1,13 +1,15 @@
 ---
 title: "Box scheduled tasks end with a task-specific summary the boxholder sees in the UI"
-workstream: unattached
+workstream: schedule-run-summaries
 area: beebox
 labels: [schedules]
-needs: [design]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — chat-review run on a box showed no visible result
 ---
+
+Closed: implemented in f8f1865ef (framework, `bbx run-summary`, dashboard run history, chat review as first adopter) and 2ad2ef6af (knowledge audit). Divergence: todo review and connector syncs are not adopters yet; they adopt `bbx run-summary` as they are next touched.
 
 On 2026-10-07 the boxholder ran the chat-review scheduled task on a box and
 saw nothing happen: no titles appeared, and nothing said why. The run had
@@ -22,7 +24,7 @@ Box schedules (`scheduled-script` cards under `_config/schedules/`, run by the
 box scheduler) record only machine-local timing
 (`beebox/src/core/schedule/state.ts`: `lastRun`, duration). `bbx health`
 surfaces failing, overdue, and blocked tasks
-([scheduled task health surfacing](../closed/features/2026-05-19-scheduled-task-health-surfacing.md)),
+([scheduled task health surfacing](2026-05-19-scheduled-task-health-surfacing.md)),
 but a task that runs and succeeds says nothing about what it did.
 
 ## Wanted
@@ -46,7 +48,7 @@ and the boxholder can see it in the UI.
   run`) needs a way to emit its summary (structured stdout, a summary file,
   or a `bbx` call); an agent-run task needs an instruction to end with one.
   Existing `bbx notify` and callouts
-  ([agent outcomes need a voice](../closed/features/2026-08-09-agent-outcomes-need-a-voice.md))
+  ([agent outcomes need a voice](2026-08-09-agent-outcomes-need-a-voice.md))
   are the related mechanisms for agent turns.
 
 ## Questions
@@ -71,3 +73,18 @@ and the boxholder can see it in the UI.
 - **How a task returns its summary is a design discussion** with the
   boxholder before building: it must work for both script tasks (`runs:`)
   and agent-run tasks, and be tight.
+- **Settled before building (boxholder, 2026-10-07):** priorities are
+  `normal` and `attention`; the return path is `BBX_SUMMARY_FILE` written by
+  `bbx run-summary` (scripts call it, or write in-process; a scheduled
+  procedure's agent steps are told to call it); history keeps the last 20
+  runs per schedule; the dashboard row shows the priority (and the headline
+  only for `attention`), with the full summaries one click away; no
+  notification for `attention` for now.
+
+## Built
+
+`beebox/src/core/schedule/summary.ts` (shape, limits, history in
+`_config/schedules/.state/<name>.runs.jsonl`), `bbx run-summary`, the
+dashboard's run history (`ScheduleOverview/RunHistory.tsx`), and chat review
+as the first adopter (`core/chat/review/run-summary.ts`). Todo review and the
+connector syncs have not adopted it yet.

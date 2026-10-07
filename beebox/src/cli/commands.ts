@@ -75,6 +75,7 @@ import { tailscaleCommand } from "./commands/tailscale.js";
 import { todosCommand } from "./commands/todos.js";
 import { notifyCommand } from "./commands/notify/command.js";
 import { changesCommand } from "./commands/changes.js";
+import { runSummaryCommand } from "./commands/run-summary.js";
 import { judgeCommand } from "./commands/judge/command.js";
 import { pairingCommand } from "./commands/pairing.js";
 import { todoReviewCommand } from "./commands/todo-review.js";
@@ -146,6 +147,7 @@ const ALL: readonly Command[] = [
   todosCommand,
   notifyCommand,
   changesCommand,
+  runSummaryCommand,
   judgeCommand,
   pairingCommand,
   todoReviewCommand,

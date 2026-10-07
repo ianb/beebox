@@ -426,7 +426,7 @@ reason: Boxholder wanted a summary to start the week
 ---
 \`\`\`
 
-They run in the background automatically; \`bbx scheduled\` lists them. Use \`at:\` (a future timestamp) with \`once: true\` instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`${BOX_PACKAGE_DOCS}/card-scheduled-script.md\`.
+They run in the background automatically; \`bbx scheduled\` lists them. A job you write ends with \`bbx run-summary "<what this run did>"\` so the boxholder sees the run's result on the dashboard (an agent step in a scheduled procedure is told this too). Use \`at:\` (a future timestamp) with \`once: true\` instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`${BOX_PACKAGE_DOCS}/card-scheduled-script.md\`.
 
 (This is for durable, box-level schedules. A quick in-session follow-up while chatting — "remind me in 20 minutes" — is the chat \`<schedule>\` tag, not a card.)
 `;

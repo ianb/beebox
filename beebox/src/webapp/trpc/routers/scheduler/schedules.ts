@@ -15,6 +15,7 @@ import {
   type ScriptState,
 } from "../../../../core/schedule/state.js";
 import { describeCadence } from "../../../../core/schedule/describe.js";
+import { loadRunHistory, type RunPriority } from "../../../../core/schedule/summary.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
 
 export interface ScheduleEntry {
@@ -34,6 +35,8 @@ export interface ScheduleEntry {
   lastResult: ScriptState["lastResult"];
   lastError: string | null;
   runCount: number;
+  /** The latest run's own summary, when it wrote one; the full history is `scheduler.runs`. */
+  lastSummary: { priority: RunPriority; headline: string } | null;
   once: boolean;
   budget?: { limitMs: number; windowMs: number; usedMs: number } | undefined;
   running?: { startedAt: string; triggeredBy: string } | undefined;
@@ -57,6 +60,7 @@ function parseErrorEntry(scriptName: string): ScheduleEntry {
     lastResult: null,
     lastError: null,
     runCount: 0,
+    lastSummary: null,
     once: false,
     budget: undefined,
     running: undefined,
@@ -101,6 +105,7 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
   }
 
   const lock = running.get(scriptName);
+  const latest = (await loadRunHistory(boxRoot, scriptName)).at(-1)?.summary;
 
   const missingReqs = parsed.requires
     ? await checkMissingConnectors(boxRoot, parsed.requires)
@@ -121,6 +126,7 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
     lastResult: state.lastResult,
     lastError: state.lastError,
     runCount: state.runCount,
+    lastSummary: latest === undefined ? null : { priority: latest.priority, headline: latest.headline },
     once: parsed.once,
     budget: budgetInfo,
     running: lock ? { startedAt: lock.startedAt, triggeredBy: lock.triggeredBy } : undefined,

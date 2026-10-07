@@ -13,6 +13,8 @@ import { Pre } from "../../ui/Pre";
 import { Toggle } from "../../ui/Toggle";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { ScheduleStatusIndicator } from "./ScheduleStatusIndicator";
+import { RunHistory } from "./RunHistory";
+import { Badge } from "../../ui/Badge";
 import { TickList, quietTickCount } from "../ScheduleTicks";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
@@ -71,16 +73,15 @@ function EnableToggle({ name, enabled }: { name: string; enabled: boolean }) {
   );
 }
 
-function TriggerButton({ name, enabled }: { name: string; enabled: boolean }) {
+/** Run the schedule now; when it finishes, `onFinished` opens its run history to show the result. */
+function TriggerButton({ name, enabled, onFinished }: { name: string; enabled: boolean; onFinished: () => void }) {
   const utils = trpc.useUtils();
-  const mutation = trpc.scheduler.trigger.useMutation({
-    onSuccess() {
-      void utils.scheduler.schedules.invalidate();
-    },
-    onError() {
-      void utils.scheduler.schedules.invalidate();
-    },
-  });
+  const finished = () => {
+    void utils.scheduler.schedules.invalidate();
+    void utils.scheduler.runs.invalidate({ name });
+    onFinished();
+  };
+  const mutation = trpc.scheduler.trigger.useMutation({ onSuccess: finished, onError: finished });
 
   return (
     <Button
@@ -106,6 +107,14 @@ function ScheduleNameCell({ s }: { s: ScheduleInfo }) {
         {s.description ? (
           <span className="block text-xs text-warm-600">{s.description}</span>
         ) : null}
+        {s.lastSummary === null ? null : s.lastSummary.priority === "attention" ? (
+          <span className="block text-xs text-warm-800">
+            <Badge tone="warning" size="sm" className="mr-1">attention</Badge>
+            {s.lastSummary.headline}
+          </span>
+        ) : (
+          <Badge tone="neutral" size="sm" title="The last run's priority; open its runs for the summary">normal</Badge>
+        )}
       </div>
     </div>
   );
@@ -123,6 +132,7 @@ function rawScheduleTitle(s: ScheduleInfo): string {
 
 function ScheduleRow({ s }: { s: ScheduleInfo }) {
   const [showError, setShowError] = useState(false);
+  const [showRuns, setShowRuns] = useState(false);
 
   return (
     <>
@@ -135,7 +145,17 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
           {s.budget ? <BudgetIndicator budget={s.budget} /> : null}
         </td>
         <td className="py-2 pr-3 text-warm-700 text-xs">
-          {s.lastRun ? timeAgo(s.lastRun) : "never"}
+          {s.lastRun ? (
+            <InlineAction
+              intent="subtle"
+              onClick={() => setShowRuns(!showRuns)}
+              expanded={showRuns}
+              title={showRuns ? "Hide recent runs" : "Show recent runs"}
+              className="text-xs"
+            >
+              {timeAgo(s.lastRun)} {showRuns ? "\u25BE" : "\u25B8"}
+            </InlineAction>
+          ) : "never"}
         </td>
         <td className="py-2 pr-3">
           {s.missingRequirements && s.missingRequirements.length > 0 ? (
@@ -149,13 +169,20 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
           )}
         </td>
         <td className="py-2">
-          <TriggerButton name={s.name} enabled={s.enabled} />
+          <TriggerButton name={s.name} enabled={s.enabled} onFinished={() => setShowRuns(true)} />
         </td>
       </tr>
       {showError && s.lastError ? (
         <tr>
           <td colSpan={5} className="pb-2 px-3">
             <Pre size="xs" error boxed scroll="sm">{s.lastError}</Pre>
+          </td>
+        </tr>
+      ) : null}
+      {showRuns ? (
+        <tr>
+          <td colSpan={5} className="pb-2 px-3">
+            <RunHistory name={s.name} />
           </td>
         </tr>
       ) : null}

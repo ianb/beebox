@@ -22,6 +22,7 @@ import type {
   loadRunningScripts,
 } from "../core/schedule/state.js";
 import { fallbackTiming, runAndRecord } from "../core/schedule/run-action.js";
+import { appendRunHistory, historyEntry } from "../core/schedule/summary.js";
 import { loadRunningProcedures } from "../core/schedule/running-procedures.js";
 import { cardMtimeMs, deleteOnceCard, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus, withBoxGitLock } from "../lib/git/core/operations.js";
@@ -275,6 +276,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
     recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
+    await appendRunHistory(boxRoot, { scriptName, entry: historyEntry(state, { triggeredBy: "schedule", summary: null }) });
     if (!options.quiet) console.error(`  ${scheduleOutcomeLine(outcome)}`);
     return outcomeResult({ scriptName, command, outcome: { ...outcome, durationMs } });
   } finally {

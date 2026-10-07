@@ -26,6 +26,7 @@ import { DEFAULT_RUN_WINDOW_MS, recordOutcome, saveScriptState, type ScriptState
 import { classifyScheduleFailure, type ScheduleOutcomeResult } from "./engine-wait.js";
 import { finishRunMemory, prepareRunMemory, readDeferMarker, type RunMemory } from "./memory.js";
 import { DEFER_REASON_TEXT, type DeferReason } from "./defer-reason.js";
+import { appendRunHistory, historyEntry, readRunSummary, type RunSummary } from "./summary.js";
 
 class ScheduledNotificationUndeliveredError extends Error {
   constructor(detail: string) {
@@ -97,9 +98,13 @@ export function fallbackTiming(err: unknown): ExecTiming {
   return { durationMs: 0, sleepAffected: false };
 }
 
-export type RecordedRun =
+export type RecordedRun = (
   | { result: "success"; durationMs: number }
-  | { result: ScheduleOutcomeResult; error: string; durationMs: number; deferReason?: DeferReason | undefined };
+  | { result: ScheduleOutcomeResult; error: string; durationMs: number; deferReason?: DeferReason | undefined }
+) & {
+  /** What the run said about itself through `BBX_SUMMARY_FILE`, or null. */
+  summary: RunSummary | null;
+};
 
 /**
  * Classify a failed run. A command that exited 75 (`CHECK_SKIP_CODE`) after
@@ -139,17 +144,21 @@ export async function runAndRecord(
     let timing: ExecTiming;
     try {
       timing = await runScheduleAction({ ...args, env: memory?.env });
-      run = { result: "success", durationMs: timing.durationMs };
+      run = { result: "success", durationMs: timing.durationMs, summary: null };
     } catch (err) {
       timing = fallbackTiming(err);
       const outcome = await classifyRun({ boxRoot, runStartedAt, error: err, memory });
-      run = { ...outcome, durationMs: timing.durationMs };
+      run = { ...outcome, durationMs: timing.durationMs, summary: null };
     }
     const error = run.result === "success" ? null : run.error;
     const deferReason = run.result === "success" ? null : run.deferReason;
     recordOutcome(state, { result: run.result, error, deferReason, durationMs: timing.durationMs, sleepAffected: timing.sleepAffected, windowMs, now });
-    if (memory !== null) await finishRunMemory(boxRoot, { memory, state, scriptName });
+    if (memory !== null) {
+      await finishRunMemory(boxRoot, { memory, state, scriptName });
+      run.summary = await readRunSummary(memory.summaryFilePath);
+    }
     await saveScriptState({ boxRoot, scriptName, state });
+    await appendRunHistory(boxRoot, { scriptName, entry: historyEntry(state, { triggeredBy: args.triggeredBy, summary: run.summary }) });
     return run;
   } finally {
     await memory?.dispose();
