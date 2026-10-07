@@ -19,7 +19,7 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { summarizeProfile } from "./cpu-profile.js";
-import { PERF_DIAG_KEY, bbxBin, defaultPerfBox, perfHubEnv, perfResultsDir } from "../local-hub.js";
+import { PERF_DIAG_KEY, bbxBin, ensurePerfBox, perfHubEnv, perfResultsDir } from "../local-hub.js";
 import { median } from "../report.js";
 
 function fail(message: string): never {
@@ -105,7 +105,7 @@ function phaseTable(runs: StartRun[]): string {
 
 async function main(): Promise<void> {
   const { values } = parseArgs({ options: { box: { type: "string" }, runs: { type: "string", default: "5" }, "cpu-prof": { type: "boolean" } } });
-  const box = values.box ?? defaultPerfBox() ?? fail("no worktree test box clone; pass --box <path>");
+  const box = values.box ?? (await ensurePerfBox(false)) ?? fail("no worktree test box clone to copy; pass --box <path>");
   const profileDir = values["cpu-prof"] === true ? path.join(perfResultsDir(), `serve-start-${Date.now()}`) : undefined;
   if (profileDir !== undefined) await fs.mkdir(profileDir, { recursive: true });
   const runs: StartRun[] = [];

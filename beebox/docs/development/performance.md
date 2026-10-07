@@ -65,7 +65,8 @@ production shape instead:
 
 ```bash
 cd src/frontend && npx vite build && cd ../..   # or pnpm build:frontend (adds a typecheck)
-pnpm perf:hub up            # the worktree's test1 clone; --box <path> for another
+pnpm perf:hub up            # a private copy of the worktree's test1 clone; --box <path> for another
+pnpm perf:hub seed-chat     # give the box a 40-turn conversation (--turns N), once per copy
 pnpm perf:hub status        # URLs, box state, the box's last cold start
 pnpm perf:hub cold          # restart the hub: the box is stopped until the next request
 pnpm perf:hub down
@@ -78,11 +79,19 @@ it never touches real credentials. State and logs are in
 `~/.cache/beebox/perf/<worktree>/`. Ports default to 3390 (hub) and 3391
 (edge).
 
-Use a box that nothing else is serving. A new `bbx serve` kills the box's
-previous server and then waits a second. A box the dev router is also serving
-would therefore be killed back and forth, and every timing would include
-that wait. The worktree's `test1` clone is safe while you do not load it through
-the dev router.
+The hub serves its own copy of the box, in
+`~/.cache/beebox/perf/<worktree>/boxes/test1` (`up --refresh-box` copies it
+again). A new `bbx serve` kills the box's previous server, so a box that the
+dev router also serves makes the two servers replace each other in a loop; the
+copy shares only `node_modules` with the worktree's clone. A box passed with
+`--box` must not be served by anything else.
+
+A fresh copy has no conversations, so its first load reserves a new chat. A
+returning user's box resumes the last conversation instead: `chat.bootstrap`
+returns its history, which the page renders. `seed-chat` writes a synthetic
+conversation (generic text) into the copy and makes it the box's most active
+session, so the measurement takes that path. The transcript goes under
+`~/.claude/projects/` for the copy's path, as Claude Code's own do.
 
 ### `pnpm perf:load` — measure page loads in a browser
 

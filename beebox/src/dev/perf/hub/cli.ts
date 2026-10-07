@@ -13,7 +13,7 @@ import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { startEdgeProxy } from "./edge-proxy.js";
 import { seedChat } from "./seed-chat.js";
 import {
-  DEFAULT_HUB_PORT, PERF_DIAG_KEY, bbxBin, defaultPerfBox, perfHubEnv, perfHubPaths, readDaemonPid,
+  DEFAULT_HUB_PORT, PERF_DIAG_KEY, bbxBin, ensurePerfBox, perfHubEnv, perfHubPaths, readDaemonPid,
   makeBoxCold, readPerfHubConfig, waitForGeneration, waitForHttp, writePerfHubConfig, type PerfHubConfig,
 } from "../local-hub.js";
 
@@ -89,9 +89,9 @@ function describeBuilds(): string {
   return `frontend dist built ${statSync(index).mtime.toISOString()}, cli bundle built ${statSync(cli).mtime.toISOString()}`;
 }
 
-async function up(values: { box?: string; port?: string }): Promise<void> {
-  const box = values.box ?? defaultPerfBox();
-  if (box === undefined) fail("perf hub: no worktree test box clone found; pass --box <path> (a box the dev router is not serving: see the docs)");
+async function up(values: { box?: string; port?: string; "refresh-box"?: boolean }): Promise<void> {
+  const box = values.box ?? (await ensurePerfBox(values["refresh-box"] === true));
+  if (box === undefined) fail("perf hub: no worktree test box clone to copy; pass --box <path> (a box nothing else serves: see the docs)");
   const hubPort = values.port === undefined ? DEFAULT_HUB_PORT : Number(values.port);
   const config: PerfHubConfig = { box: path.resolve(box), slug: path.basename(box), hubPort, edgePort: hubPort + 1 };
   const running = await readDaemonPid();
@@ -139,7 +139,7 @@ async function status(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const { positionals, values } = parseArgs({ allowPositionals: true, options: { box: { type: "string" }, port: { type: "string" }, turns: { type: "string", default: "40" } } });
+  const { positionals, values } = parseArgs({ allowPositionals: true, options: { box: { type: "string" }, port: { type: "string" }, turns: { type: "string", default: "40" }, "refresh-box": { type: "boolean" } } });
   const command = positionals[0];
   if (command === "daemon") return runDaemon();
   if (command === "up") return up(values);
@@ -147,7 +147,7 @@ async function main(): Promise<void> {
   if (command === "status") return status();
   if (command === "seed-chat") {
     const config = await readPerfHubConfig();
-    const box = values.box ?? config?.box ?? defaultPerfBox() ?? fail("no box: pass --box <path>");
+    const box = values.box ?? config?.box ?? (await ensurePerfBox(false)) ?? fail("no box: pass --box <path>");
     const id = await seedChat(path.resolve(box), Number(values.turns));
     // A running box keeps its session list in memory; restart it to pick up the new conversation.
     if ((await readDaemonPid()) !== undefined) await makeBoxCold();
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
     await makeBoxCold();
     return console.log("perf hub restarted; the box is stopped");
   }
-  fail("usage: pnpm perf:hub <up [--box <path>] [--port <n>] | down | status | cold | seed-chat [--turns <n>]>");
+  fail("usage: pnpm perf:hub <up [--box <path> | --refresh-box] [--port <n>] | down | status | cold | seed-chat [--turns <n>]>");
 }
 
 if (process.argv[1] === import.meta.filename) {

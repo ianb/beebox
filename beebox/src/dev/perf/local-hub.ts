@@ -13,6 +13,7 @@
  * auth file, and its own config/state directory, so it never reads or writes
  * the developer's real credentials. It binds 127.0.0.1 only.
  */
+import { execFileSync } from "node:child_process";
 import * as crypto from "node:crypto";
 import { existsSync } from "node:fs";
 import * as fs from "node:fs/promises";
@@ -40,9 +41,29 @@ export function perfResultsDir(): string {
 }
 
 /** The worktree's isolated test box clone, when it has one. */
-export function defaultPerfBox(): string | undefined {
+function worktreeTestBox(): string | undefined {
   const clone = path.join(os.homedir(), "src", "box-worktrees", worktreeName(), "test1");
   return existsSync(clone) ? clone : undefined;
+}
+
+/**
+ * The box the perf tools use by default: a private copy of the worktree's
+ * test1 clone. The dev router serves that clone too, and a new `bbx serve`
+ * kills the box's previous server, so a shared box makes the two servers
+ * replace each other in a loop. The copy shares only `node_modules` (a
+ * symlink), which nothing writes. `refresh` replaces an existing copy.
+ */
+export async function ensurePerfBox(refresh: boolean): Promise<string | undefined> {
+  const source = worktreeTestBox();
+  if (source === undefined) return undefined;
+  const copy = path.join(perfStateDir(), "boxes", "test1");
+  if (existsSync(copy) && !refresh) return copy;
+  // git-annex keeps its object directories read-only; make the old copy writable to remove it.
+  if (existsSync(copy)) execFileSync("chmod", ["-R", "u+w", copy]);
+  await fs.rm(copy, { recursive: true, force: true });
+  await fs.cp(source, copy, { recursive: true, verbatimSymlinks: true, filter: (src) => path.relative(source, src) !== "node_modules" });
+  await fs.symlink(path.join(source, "node_modules"), path.join(copy, "node_modules"));
+  return copy;
 }
 
 export const perfHubConfigSchema = z.object({
