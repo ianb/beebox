@@ -3,11 +3,13 @@ title: "Box scheduled tasks end with a task-specific summary the boxholder sees 
 workstream: schedule-run-summaries
 area: beebox
 labels: [schedules]
-needs: [design]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — chat-review run on a box showed no visible result
 ---
+
+Closed: implemented in f8f1865ef (framework, `bbx run-summary`, dashboard run history, chat review as first adopter) and 2ad2ef6af (knowledge audit). Divergence: todo review and connector syncs are not adopters yet; they adopt `bbx run-summary` as they are next touched.
 
 On 2026-10-07 the boxholder ran the chat-review scheduled task on a box and
 saw nothing happen: no titles appeared, and nothing said why. The run had
@@ -22,7 +24,7 @@ Box schedules (`scheduled-script` cards under `_config/schedules/`, run by the
 box scheduler) record only machine-local timing
 (`beebox/src/core/schedule/state.ts`: `lastRun`, duration). `bbx health`
 surfaces failing, overdue, and blocked tasks
-([scheduled task health surfacing](../closed/features/2026-05-19-scheduled-task-health-surfacing.md)),
+([scheduled task health surfacing](2026-05-19-scheduled-task-health-surfacing.md)),
 but a task that runs and succeeds says nothing about what it did.
 
 ## Wanted
@@ -46,7 +48,7 @@ and the boxholder can see it in the UI.
   run`) needs a way to emit its summary (structured stdout, a summary file,
   or a `bbx` call); an agent-run task needs an instruction to end with one.
   Existing `bbx notify` and callouts
-  ([agent outcomes need a voice](../closed/features/2026-08-09-agent-outcomes-need-a-voice.md))
+  ([agent outcomes need a voice](2026-08-09-agent-outcomes-need-a-voice.md))
   are the related mechanisms for agent turns.
 
 ## Questions
