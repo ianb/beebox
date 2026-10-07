@@ -19,6 +19,11 @@ const TELEMETRY_HELPER =
   "error reports. Applies to Claude models only; runs on other models never send it. A chat already running keeps " +
   "its setting until its agent restarts.";
 
+const CODEX_TELEMETRY_HELPER =
+  "Codex reports turns, tool calls, the model, and your login type. It also sends hashes of the lines each change " +
+  "adds, which OpenAI's documentation does not mention, so this is off unless you turn it on. Takes effect when " +
+  "a Codex run next starts.";
+
 const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
 
 const ENGINE_OPTIONS = [
@@ -124,6 +129,14 @@ export function AgentEngineSection() {
             disabled={update.isPending}
             helper={TELEMETRY_HELPER}
             onChange={(checked) => { update.mutate({ claudeCodeTelemetry: checked ? "on" : "off" }); }}
+          />
+          <CheckboxField
+            id="bbx-admin-codex-telemetry"
+            label="Let Codex send usage data to OpenAI"
+            checked={config.data.codexTelemetry === "on"}
+            disabled={update.isPending}
+            helper={CODEX_TELEMETRY_HELPER}
+            onChange={(checked) => { update.mutate({ codexTelemetry: checked ? "on" : "off" }); }}
           />
         </>
       ) : null}

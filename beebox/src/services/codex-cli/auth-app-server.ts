@@ -4,6 +4,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { z } from "zod";
 import { jsonlLines } from "../../lib/jsonl-lines.js";
 import { toError } from "../../shared/error-guards.js";
+import { codexCliArgs } from "../codex-binary.js";
 
 const rpcResponseSchema = z.looseObject({
   id: z.number(),
@@ -57,7 +58,7 @@ export class CodexAuthAppServer {
   private exitListener: (() => void) | null = null;
 
   constructor(binaryPath: string) {
-    this.child = spawn(binaryPath, ["app-server", "--listen", "stdio://"], {
+    this.child = spawn(binaryPath, codexCliArgs(["app-server", "--listen", "stdio://"]), {
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child.stderr.on("data", (chunk: Buffer) => { this.stderr += chunk.toString(); });

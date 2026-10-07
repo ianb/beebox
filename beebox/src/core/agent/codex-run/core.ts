@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { fmt } from "../../../lib/format.js";
 import { buildScriptEnv } from "../../script-env/core.js";
-import { buildTimezoneContext } from "../../box/config.js";
+import { buildTimezoneContext, loadCodexTelemetry } from "../../box/config.js";
 import type { AgentResult } from "../types.js";
 import { ensureCodexPluginInstalled } from "../ensure-codex-plugin.js";
 import { checkCodexAuth } from "../auth-preflight.js";
@@ -91,6 +91,7 @@ export async function runCodexAgent(
       model: options.model,
       resumeSessionId: options.resumeSessionId,
       additionalDirectories: options.additionalDirectories,
+      analytics: (await loadCodexTelemetry(options.boxRoot)) === "on",
     });
     const changedPaths = new Set<string>();
     let toolCount = 0;
