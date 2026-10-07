@@ -63,7 +63,8 @@ function useQuickChatActions(key: string | null, dispatch: (action: BoxScreenAct
   const submit = useCallback(async (unsent: { id: string; message: string }, origin: "send" | "reload") => {
     await submitUnsent({ unsent, origin }, {
       store: (stored) => writeStored(key, stored),
-      request: (input) => trpcClient.quickChat.submit.mutate(input),
+      // The web input is a plain text field, so every thought posts as typed.
+      request: (input) => trpcClient.quickChat.submit.mutate({ ...input, origin: "typed" }),
       dispatch,
     });
     void utils.quickChat.home.invalidate();
