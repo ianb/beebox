@@ -5,6 +5,10 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Claude plugin removed.** `claude-plugin/` and the `sync:claude-skill`
+  script are gone, and the generated `.claude/skills/canvas-loop-sketch/` copy
+  with them. The authoring loop, gallery flow, and audit norms now live in
+  `canvas-loop/CLAUDE.md`, which Claude Code loads when working here.
 - **Engagement verdicts — scripted inputs report whether anything engaged.**
   Every scripted *interaction* event (mouse/key/trigger — not `tick`, `param`,
   or `snapshot`) now carries a verdict on its transcript line:

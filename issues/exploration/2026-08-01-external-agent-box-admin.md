@@ -49,7 +49,7 @@ Unsettled, and the boxholder floated the whole range — from heavy to light:
    that any MCP-capable host (Claude Desktop, ChatGPT-with-MCP) loads. Most capable,
    most infrastructure, sharpest security questions.
 2. **Skills / plugins.** Packaged skill(s) that teach an agent the procedures — the
-   model already used for `canvas-loop-sketch` and Claude Code skills. Lighter;
+   model already used for Claude Code skills. Lighter;
    works wherever skills/plugins are supported.
 3. **A prompt copied from the box.** The lightest: the box surfaces a
    prompt/instructions the user pastes into their assistant — "to set up X, follow

@@ -11,7 +11,7 @@ Use the guidance for the area you are changing:
 - **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/CLAUDE.md](personal-vibe-check/CLAUDE.md). Edit it here; the old standalone checkout is stale.
 - **Doctest framework:** [agent-doctest/README.md](agent-doctest/README.md); application tests live in their packages.
 - **Experimental Mac app (spike):** [mac-app/README.md](mac-app/README.md) — a menu-bar app that runs the beebox image in a VM via Apple's Containerization; findings in [research/installable-app/](research/installable-app/README.md).
-- **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](canvas-loop/README.md); use [canvas-loop-sketch](.claude/skills/canvas-loop-sketch/SKILL.md) for sketches and gallery work.
+- **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](canvas-loop/README.md); [canvas-loop/CLAUDE.md](canvas-loop/CLAUDE.md) covers the sketch and gallery loop.
 - **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/CLAUDE.md](bin/CLAUDE.md) documents their mechanics.
 - **External-tool research:** [research/CLAUDE.md](research/CLAUDE.md).
 

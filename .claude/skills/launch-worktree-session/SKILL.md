@@ -74,27 +74,22 @@ turning your own guesses into instructions.
 
 ## Choose the agent and model
 
-For launches driven by this skill, the default is Codex: `--agent codex`.
-With no `--model`, the Codex launcher pins `gpt-6-sol`. Do not confuse this
-skill policy with the executable's bare default, which is Claude.
+The human's explicit choice or standing preference always wins. With none
+expressed, the executable's bare default applies (`--agent claude`; see
+`bin/launch-worktree-session --help` for each agent's default model). Ask when
+the choice is materially ambiguous; it affects capability and quota.
 
-The human's explicit choice or standing preference always wins. Ask when the
-agent or model is materially ambiguous; model selection affects capability and
-quota. Do not silently promote a task because it looks difficult.
+- `--agent claude --model claude-opus-5-5`: most implementation and
+  well-scoped design work. Whenever Opus is chosen, use 5.5.
+- `--agent claude --model claude-fable-5-1`: difficult reasoning, unresolved
+  architecture, or large multi-track work that will delegate heavily.
+- `--agent codex` (`gpt-6-sol`, or `gpt-6-astra` for harder work): an
+  independent model family for cross-model review or a second opinion, or when
+  Claude quota is tight.
+- Small models (`gpt-6-luna`, `sonnet`, `glm-*`): bounded mechanical work
+  with a clear cause or a precise specification.
 
-- Prefer Codex Luna (`--model gpt-6-luna`) for straightforward work that
-  needs little discernment or discussion: a bug fix with a clear cause, a
-  mechanical change, a well-specified implementation. Choose it without asking.
-- Claude requires an explicit `--model`; otherwise it inherits the human's
-  saved CLI default. Opus 5.5 (`claude-opus-5-5`) is the usual harder-work
-  option; whenever Opus is chosen, use 5.5.
-- `claude-fable-5-1` and Codex `gpt-6-astra` are the top choices for genuinely
-  difficult architecture, unresolved design, or judgment-heavy work. Use them
-  when the human selected them, or ask first.
-- Preserve model diversity where it matters. A top-model worker follows the
-  repository's delegation and cross-model-review guidance.
-- Remote Control is enabled by default for Claude and can be disabled with
-  `--no-remote-control`. Codex has no equivalent; the flag is ignored there.
+Name the chosen agent and model, with the reason, in the launch report.
 
 ## Write the briefing
 
@@ -174,33 +169,15 @@ Use the tracked repo-relative command. The bare command may be unavailable in
 an agent's non-interactive shell. Put every option before the worktree name and
 use a single-quoted heredoc so shell syntax inside the briefing is not expanded.
 
-Default Codex launch:
-
 ```bash
 bin/launch-worktree-session \
-  --agent codex \
+  --agent <claude|codex> [--model <model>] \
   --description "<one-line scope>" \
   [--issue issues/<category>/<file>.md] \
   <worktree-name> - <<'EOF'
 <briefing>
 EOF
 ```
-
-Claude launch after the human selects its model:
-
-```bash
-bin/launch-worktree-session \
-  --agent claude \
-  --model <model> \
-  --description "<one-line scope>" \
-  <worktree-name> - <<'EOF'
-<briefing>
-EOF
-```
-
-The command opens Terminal.app and creates or reattaches the managed worktree,
-its isolated test box, installs, and generated agent guidance. First use may
-trigger macOS Accessibility permission for Terminal control.
 
 Do not pre-review the complete briefing with the human unless they asked to see
 it or a material scope choice cannot safely be left to the launched session.
@@ -211,8 +188,4 @@ Tell the human the worktree name, agent and model, and that it opened in a new
 Terminal tab or window. State whether the briefing was delivered or requires
 manual forwarding.
 
-Codex normally runs teardown after it exits: merged and clean work is removed;
-otherwise it offers a keep/remove choice and defaults to keeping. Closing the
-Terminal tab can prevent that teardown, in which case a later
-`bin/workstreams sweep` handles eligible worktrees. See `bin/CLAUDE.md` for the
-canonical lifecycle, resume, liveness, and cleanup behavior.
+See `bin/CLAUDE.md` for lifecycle, resume, liveness, and cleanup behavior.

@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-07T04:07:32Z
+Generated: 2026-10-07T21:18:57Z
 Total documents: 479
 
 ## Issues
@@ -256,7 +256,6 @@ Referenced by:
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions →
 - ../.claude/skills/bbx-authoring-schedules/SKILL.md:52 (mention) — `run` is a shim so the logic can be TypeScript (root CLAUDE.md: no `.js`, logic
-- ../.claude/skills/bbx-codehealth/SKILL.md:29 (mention) — and a short usage doc at its root (a directory `CLAUDE.md` / README — like
 - ../.claude/skills/bbx-context/SKILL.md:3 (mention) — description: Design or troubleshoot durable guidance loaded by box agents, including box CLAUDE.md files, path rules, sc
 - ../.claude/skills/bbx-frontend/SKILL.md:11 (mention) — read it before writing UI (`CLAUDE.md` already says so). This skill is the
 - ../.claude/skills/bbx-issue-actions/SKILL.md:121 (mention) — `CLAUDE.md`), so query that first; the `-S` guess is the fallback for
@@ -266,9 +265,10 @@ Referenced by:
 - ../.claude/skills/cross-model/references/claude-runner.md:93 (mention) — recursion: the reviewer loads a CLAUDE.md that tells it to get a cross-model
 - ../.claude/skills/doctest/SKILL.md:14 (mention) — Create `test/<name>.doctest.md`, mirroring the `src/` path (`beebox/CLAUDE.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Test what a real box agent learned from box-loaded guidance such as a box CLAUDE.md, generated agent guide,
-- ../.claude/skills/launch-worktree-session/SKILL.md:161 (mention) — `CLAUDE.md` and `/skill` names. Use the vocabulary the receiving agent will
+- ../.claude/skills/launch-worktree-session/SKILL.md:156 (mention) — `CLAUDE.md` and `/skill` names. Use the vocabulary the receiving agent will
 - ../CLAUDE.md:7 (link) — - **Main system:** [beebox/CLAUDE.md](beebox/CLAUDE.md).
 - ../bin/docs/worktree-lifecycle.md:79 (mention) — `bin/generate-agents-md.ts` mirrors tracked `CLAUDE.md`, embeds nearest scoped
+- ../dev/skills-review-2026-10.md:12 (mention) — - Agent-written briefings used a bare `/finish` or `$finish` sigil in 61 Claude and 22 Codex sessions (114 for finish, 4
 - ../issues/bugs/2026-09-28-knowledge-audit-later-tests-lose-generated-guidance.md:29 (mention) — `CLAUDE.md` includes and generate context mirrors without committing them.
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:12 (mention) — doubling held only empty directory structure, `CLAUDE.md` files byte-identical to
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:58 (mention) — the user (the agent-guide / box CLAUDE.md owns that). The worst single item is
@@ -520,6 +520,7 @@ Referenced by:
 - frontend.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers convention
 - ../.claude/skills/bbx-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/bbx-plan/TEMPLATE.md:36 (mention) — - beebox/code-style.md — the mechanical rules
+- ../dev/skills-review-2026-10.md:45 (mention) — 1. **bbx-codehealth contradicts a boxholder decision.** Lines 27-35, 154 and 204 call an `index.ts` re-export surface "t
 - ../issues/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md:67 (mention) — Related: code-style.md defensiveness rule 5 is this exact rule at the UI layer
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:92 (mention) — standing `code-style.md`/CLAUDE.md decision ("don't roll your own with
 - ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:35 (mention) — per the no-barrels decision. `code-style.md` now states that a missing `export`
@@ -1219,7 +1220,6 @@ Referenced by:
 - docs/implemented-plans/vocab-glossary-sweep.md:37 (mention) — editing a label has one place to check. `docs/glossary.md` already claims
 - docs/plans/agent-docs.md:369 (mention) — - concepts: `glossary.md`, `cards-as-markdown.md`, `connectors.md`,
 - docs/plans/pdf-intake-design.md:61 (link) — **Intake-time extraction.** When a PDF arrives (`bbx import`, capture endpoint, email connector), the intake path runs d
-- ../.claude/skills/bbx-codehealth/SKILL.md:161 (mention) — Consult `docs/glossary.md` when domain vocabulary is relevant, and the specific
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:16 (mention) — > glossary's new user-facing register (`beebox/docs/glossary.md`). UI copy
 - ../issues/closed/docs-and-chores/2026-05-21-fill-out-the-glossary.md:10 (mention) — > apply and kept current through planning, replace `docs/glossary.md`. Its
 - ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:47 (mention) — and mostly needs a line in `docs/glossary.md` so the next agent chooses
@@ -1937,6 +1937,7 @@ Referenced by:
 - ../.claude/skills/bbx-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/bbx-guide-testing/SKILL.md:9 (mention) — the full tier catalog live in `beebox/docs/testing.md` — read the
 - ../.claude/skills/bbx-plan/TEMPLATE.md:169 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
+- ../dev/skills-review-2026-10.md:34 (mention) — | bbx-guide-testing | 79 | 1 | 2 | 10-06 | merge with doctest; it duplicates the table in `beebox/docs/testing.md` and i
 - ../issues/closed/features/2026-03-04-session-output-critique-tool.md:8 (mention) — **Closed:** Implemented as `bbx session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Sess
 - ../issues/closed/features/2026-08-06-agent-driven-integration-tests.md:71 (mention) — `docs/testing.md`) already does multi-step end-to-end fixtures with checkpoints and
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:55 (mention) — (`content/`-nested, `shapeVersion: 2`) layout. `docs/testing.md` was updated to
@@ -3326,13 +3327,14 @@ References:
 
 #### docs/implemented-plans/browser-task-card.md
 
-Title: "browser-task card: a prompt card that is its own inbox" | 732 lines | shipped history | implemented
+Title: "browser-task card: a prompt card that is its own inbox" | 739 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/browser-task-followups.md:20 (mention) — the first real run of `beebox/docs/implemented-plans/browser-task-card.md`.
 - ../issues/closed/features/2026-09-13-browser-task-cadence-and-staleness.md:36 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/closed/features/2026-09-13-browser-task-history-and-subject.md:31 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/closed/features/2026-09-13-browser-task-inbox-table-view.md:32 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
+- ../issues/code-quality/2026-10-07-browser-task-skill-belongs-in-the-product.md:26 (mention) — (`beebox/docs/implemented-plans/browser-task-card.md`).
 - ../issues/features/2026-09-17-box-as-mcp-server-hands-out-tasks.md:107 (link) — - [browser-task card](../../beebox/docs/implemented-plans/browser-task-card.md)
 
 References:
@@ -5006,7 +5008,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines | shipped history | implemented
 
 Referenced by:
-- ../bin/CLAUDE.md:124 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../bin/CLAUDE.md:132 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 
 References:
 - → README.md (mention)
@@ -5076,7 +5078,6 @@ References:
 - → ../personal-vibe-check/CLAUDE.md (link)
 - → ../agent-doctest/README.md (link)
 - → ../canvas-loop/README.md (link)
-- → ../.claude/skills/canvas-loop-sketch/SKILL.md (link)
 - → ../bin/CLAUDE.md (link)
 - → ../research/CLAUDE.md (link)
 - → ../.claude/skills/launch-worktree-session/SKILL.md (link)
@@ -7918,7 +7919,7 @@ Title: "Prompt-calibration decision pilot" | 127 lines | dated report
 Referenced by:
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:9 (link) — Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. T
 - docs/implemented-plans/prompt-calibration.md:26 (link) — [pilot](../reports/prompt-calibration-pilot-2026-09-12.md) complete the authorized calibration scope.
-- ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md:19 (link) — repository; do not assume the old eval tools are available. The [four-model decision pilot](../../beebox/docs/reports/pr
+- ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md:20 (link) — repository; do not assume the old eval tools are available. The [four-model decision pilot](../../beebox/docs/reports/pr
 
 References:
 - → CLAUDE.md (mention)
@@ -8583,7 +8584,6 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.gap-analysis.md:23 (mention) — module's own comment — not in `src/connectors/CLAUDE.md` or
 - docs/implemented-plans/file-layout.md:130 (mention) — - Per-directory instruction files: `src/connectors/CLAUDE.md`,
 - docs/implemented-plans/web-push-notifications.md:490 (mention) — (service-injection pattern, `src/services/CLAUDE.md` / `src/connectors/CLAUDE.md`)
-- ../.claude/skills/bbx-codehealth/SKILL.md:30 (mention) — `src/services/CLAUDE.md`, `src/connectors/CLAUDE.md`), so a caller — human or
 
 References:
 - → src/services/CLAUDE.md (mention)
@@ -8736,7 +8736,6 @@ Referenced by:
 - docs/plans/scan-vision-claude.md:361 (mention) — `src/services/CLAUDE.md` named-params + describe rules.
 - docs/testing/doctests.md:78 (mention) — External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full s
 - src/connectors/CLAUDE.md:15 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patt
-- ../.claude/skills/bbx-codehealth/SKILL.md:30 (mention) — `src/services/CLAUDE.md`, `src/connectors/CLAUDE.md`), so a caller — human or
 
 ### test/fixtures/theme-tour/
 

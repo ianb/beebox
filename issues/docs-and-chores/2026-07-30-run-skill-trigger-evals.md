@@ -70,7 +70,7 @@ Two of their harness details worth copying regardless of which tool we use:
 ## Why it matters here
 
 Our skills overlap by design in ways an eval would stress: `bbx-debug` vs
-`bbx-codehealth` vs `/code-review`; `bbx-plan` vs `launch-worktree-session`;
+`/code-review`; `bbx-plan` vs `launch-worktree-session`;
 `bbx-guide-testing` vs `bbx-debug`; the three `bbx-guide-*` against each other. Some
 of those boundaries are stated in the descriptions and have never been checked.
 

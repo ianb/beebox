@@ -78,5 +78,5 @@ distributed — it will cluster wherever an agent was uncertain.
 - `2026-09-14-principles-to-rules-loop.md` — the sibling, filed together. That
   one moves the code *toward* an ideal; this one removes what should not be
   there. Design them together; they may be one practice with two lenses.
-- [`bbx-codehealth`](../../.claude/skills/bbx-codehealth/SKILL.md) — its
-  code-as-liability stance is the same instinct, already written down.
+- `bbx-codehealth` — its code-as-liability stance was the same instinct.
+  (2026-10-07: the skill was retired.)
