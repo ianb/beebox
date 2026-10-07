@@ -27,7 +27,8 @@ export interface LintIssue {
     | "contains"
     | "canonical"
     | "absolute-path"
-    | "display-path";
+    | "display-path"
+    | "body";
   severity: "error" | "warning";
   message: string;
   location?: Location;

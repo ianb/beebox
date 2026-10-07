@@ -4,6 +4,7 @@ enum SpeechKeywordAction: String, Codable, Sendable {
     case send
     case sendHq
     case sendClose
+    case sendCheckpoint
     case cancel
     case micOff
     case erase
@@ -23,7 +24,7 @@ extension SpeechKeywordAction {
     /// they mean.
     var commitsKeywordSubstitution: Bool {
         switch self {
-        case .send, .sendHq, .sendClose:
+        case .send, .sendHq, .sendClose, .sendCheckpoint:
             return true
         case .cancel, .micOff, .erase:
             return false
@@ -106,8 +107,9 @@ enum SpeechKeywords {
     /// alternates that are not shown here.
     static let keywordHintsWithText = [
         "\"send message\"",
+        "\"send checkpoint\"",
         "\"clean up and send\"",
-        "\"send and close\"",
+        "\"over and out\"",
         "\"erase message\"",
         "\"cancel message\"",
         "\"microphone off\"",
@@ -124,14 +126,23 @@ enum SpeechKeywords {
     ].flatMap(expand)
 
     private static let sendClosePatterns = [
+        ["over", "and", "out"],
         ["send", "and", "close"],
         ["send", "and", "stop"],
         ["send", "and", "finish"],
+        ["send", "and", "finished"],
         ["send", "and", "done"],
         ["send", "and", "sign", "off"],
         ["send", "and", "close", OptionalWord("the"), Choice(["mic", "microphone", "message"])],
         ["set", "a", "closed", OptionalWord("the"), Choice(["mic", "microphone", "message"])],
-        ["over", "and", "out"],
+    ].flatMap(expand)
+
+    /// "Send checkpoint": a plain send whose tag tells the agent the user is
+    /// still talking. "checkpoint" alone never fires, and the commit/add verbs
+    /// take no article, so talking about checkpoints stays plain speech.
+    private static let sendCheckpointPatterns = [
+        [Choice(["send", "sent"]), OptionalWord(["a", "the"]), "checkpoint", OptionalWord("message")],
+        [Choice(["commit", "add"]), "checkpoint"],
     ].flatMap(expand)
 
     private static let micOffPatterns = [
@@ -139,7 +150,10 @@ enum SpeechKeywords {
         ["mic", "off"],
         ["turn", "off", OptionalWord("the"), Choice(["microphone", "mic"])],
         ["stop", OptionalWord("the"), Choice(["microphone", "mic"])],
+        ["close", OptionalWord("the"), Choice(["microphone", "mic"])],
+        ["mute", OptionalWord("the"), Choice(["microphone", "mic"])],
         ["stop", "listening"],
+        ["pause", "listening"],
     ].flatMap(expand)
 
     private static let cancelPatterns = [
@@ -168,6 +182,9 @@ enum SpeechKeywords {
 
         if let match = firstMatch(patterns: sendClosePatterns, words: words, atStart: atStart) {
             return result(action: .sendClose, match: match)
+        }
+        if let match = firstMatch(patterns: sendCheckpointPatterns, words: words, atStart: atStart) {
+            return result(action: .sendCheckpoint, match: match)
         }
         if let match = firstMatch(patterns: sendHqPatterns, words: words, atStart: atStart) {
             return result(action: .sendHq, match: match)
@@ -220,6 +237,8 @@ enum SpeechKeywords {
             "send-message"
         case .sendClose:
             "send-close-message"
+        case .sendCheckpoint:
+            "send-checkpoint-message"
         case .cancel:
             "cancel-message"
         case .micOff:
@@ -235,6 +254,11 @@ enum SpeechKeywords {
                 return nil
             }
             let rest = Array(words[startIndex...])
+            // The longest phrase at the earliest position wins, whatever the
+            // pattern order: "send and close the mic" must not capture just
+            // "send and close" and leave "the mic" in the message. Same rule
+            // as the TS `KeywordPattern.match`.
+            var best: [InputWord]?
             for pattern in patterns {
                 guard pattern.count <= rest.count else {
                     continue
@@ -247,13 +271,17 @@ enum SpeechKeywords {
                 if candidates.contains(where: \.isProtected) {
                     continue
                 }
-                if zip(pattern, candidates).allSatisfy({ wordsEqual($0.1.normalized, normalize($0.0)) }) {
-                    return InputMatch(
-                        leading: Array(words[..<startIndex]),
-                        captured: candidates,
-                        remaining: Array(rest.dropFirst(pattern.count))
-                    )
+                if zip(pattern, candidates).allSatisfy({ wordsEqual($0.1.normalized, normalize($0.0)) }),
+                   candidates.count > (best?.count ?? 0) {
+                    best = candidates
                 }
+            }
+            if let best {
+                return InputMatch(
+                    leading: Array(words[..<startIndex]),
+                    captured: best,
+                    remaining: Array(rest.dropFirst(best.count))
+                )
             }
         }
         return nil

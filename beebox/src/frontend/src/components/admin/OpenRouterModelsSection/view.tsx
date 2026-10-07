@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { trpc } from "../../../lib/trpc/client";
 import { Button } from "../../ui/Button";
+import { ExternalLink } from "../../ui/ExternalLink";
 import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
 import { Row } from "../../ui/Row";
@@ -21,8 +22,10 @@ import { AdminSectionCard } from "../AdminSectionCard";
 const DESCRIPTION =
   "Models added here appear in the chat model picker and can be the box default. Each one is billed " +
   "per use to your OpenRouter account at the prices shown — there is no flat rate. Consider a spending " +
-  "limit on the key at openrouter.ai. Models other than Claude may fail agent turns that need tools. " +
-  "OpenRouter picks the host for each request according to your account’s privacy settings.";
+  "limit on the key at openrouter.ai. Models other than Claude may fail agent turns that need tools.";
+
+/** The account page whose host rules govern chat on these models — the box cannot pin a host per request. */
+const OPENROUTER_PRIVACY_URL = "https://openrouter.ai/settings/privacy";
 
 /** Models that passed a real agent turn through OpenRouter (plan, Track 1 results). */
 const SUGGESTIONS = [
@@ -67,6 +70,14 @@ function OpenRouterModelsCard({ defaultModel }: { defaultModel: string | null })
           <Button className="self-start mt-1" size="sm" onClick={() => { void list.refetch(); }}>Retry</Button>
         </div>
       ) : null}
+
+      <Text size="sm">
+        A chat on these models sends the whole conversation, including card text and files the agent reads, to
+        OpenRouter, which passes it to a host it picks per request. Bee Box cannot choose that host; your account
+        settings do. In{" "}
+        <ExternalLink id="bbx-admin-openrouter-privacy" href={OPENROUTER_PRIVACY_URL}>OpenRouter privacy settings</ExternalLink>,
+        allow only hosts that do not train on your data and enforce zero data retention.
+      </Text>
 
       {list.data ? (
         <>

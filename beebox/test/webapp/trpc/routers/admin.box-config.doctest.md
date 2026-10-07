@@ -297,6 +297,36 @@ print(err);
 BAD_REQUEST
 ```
 
+## Claude Code telemetry defaults on and the owner can turn it off
+
+The setting governs first-party runs only. Turning it off is saved,
+committed, and read by the spawn seam on the next run.
+
+```ts
+const { providerEnvAdditions } = await import("../../../../src/core/provider-env/core.js");
+const box = await makeTmpBox({ git: true });
+const before = (await caller(box.root).admin.boxConfig()).claudeCodeTelemetry;
+const saved = await caller(box.root).admin.updateBoxConfig({ claudeCodeTelemetry: "off" });
+const subject = (await simpleGit(box.root).log({ maxCount: 1 })).latest.message;
+const env = await providerEnvAdditions({ boxRoot: box.root, model: "claude-opus-5-5", purpose: "test" });
+JSON.stringify([before, saved.claudeCodeTelemetry, (await caller(box.root).admin.boxConfig()).claudeCodeTelemetry, subject, env])
+=> ["on","off","off","Update box config: claudeCodeTelemetry",{"DISABLE_TELEMETRY":"1","DISABLE_ERROR_REPORTING":"1"}]
+
+await box.cleanup();
+```
+
+## Codex analytics default off and the owner can turn them on
+
+```ts
+const box = await makeTmpBox({ git: true });
+const before = (await caller(box.root).admin.boxConfig()).codexTelemetry;
+const saved = await caller(box.root).admin.updateBoxConfig({ codexTelemetry: "on" });
+[before, saved.codexTelemetry, (await caller(box.root).admin.boxConfig()).codexTelemetry]
+=> ["off", "on", "on"]
+
+await box.cleanup();
+```
+
 ## A Git failure does not falsely report that the saved config rolled back
 
 ```ts

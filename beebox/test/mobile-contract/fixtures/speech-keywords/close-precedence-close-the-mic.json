@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "send and close the mic"
+  },
+  "expected": {
+    "action": "sendClose"
+  }
+}

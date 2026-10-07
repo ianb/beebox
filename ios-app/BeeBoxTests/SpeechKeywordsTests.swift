@@ -12,8 +12,9 @@ final class SpeechKeywordsTests: XCTestCase {
             SpeechKeywords.keywordHintsWithText,
             [
                 "\"send message\"",
+                "\"send checkpoint\"",
                 "\"clean up and send\"",
-                "\"send and close\"",
+                "\"over and out\"",
                 "\"erase message\"",
                 "\"cancel message\"",
                 "\"microphone off\"",
@@ -167,7 +168,7 @@ final class SpeechKeywordsTests: XCTestCase {
     /// control tag behind: the tag is message content the moment it lands in
     /// the composer.
     func testOnlySendingActionsCommitTheKeywordSubstitution() {
-        for action in [SpeechKeywordAction.send, .sendHq, .sendClose] {
+        for action in [SpeechKeywordAction.send, .sendHq, .sendClose, .sendCheckpoint] {
             XCTAssertTrue(action.commitsKeywordSubstitution, "\(action) stages the draft as a message")
         }
         for action in [SpeechKeywordAction.cancel, .micOff, .erase] {
@@ -217,7 +218,7 @@ final class SpeechKeywordsTests: XCTestCase {
     /// The box screen's composer listens for spoken keywords, as the chat
     /// composer does. It has no high-quality transcription.
     func testQuickChatComposerDetectsKeywordsWithoutHighQualityTranscription() {
-        let quickChat = NativeComposerSubmitTarget.quickChat { _ in true }.voicePolicy(hqDictationEnabled: true)
+        let quickChat = NativeComposerSubmitTarget.quickChat { _, _ in true }.voicePolicy(hqDictationEnabled: true)
         XCTAssertTrue(quickChat.detectsKeywords)
         XCTAssertFalse(quickChat.highQualityTranscription)
 
@@ -233,7 +234,7 @@ final class SpeechKeywordsTests: XCTestCase {
     @MainActor
     func testSpokenSendOnTheBoxScreenHandsTheCleanedTextToTheQuickChatClosure() async throws {
         var delivered: [String] = []
-        let target = NativeComposerSubmitTarget.quickChat { text in
+        let target = NativeComposerSubmitTarget.quickChat { text, _ in
             delivered.append(text)
             return true
         }
@@ -254,7 +255,7 @@ final class SpeechKeywordsTests: XCTestCase {
         guard case .quickChat(let deliver) = target else {
             return XCTFail("expected the quick chat target")
         }
-        let stored = await deliver(text)
+        let stored = await deliver(text, .voice)
 
         XCTAssertTrue(stored)
         XCTAssertEqual(delivered, ["Call the plumber about the leak <send-message phrase=\"send message\" />"])
@@ -272,7 +273,7 @@ final class SpeechKeywordsTests: XCTestCase {
         let send = SpeechKeywordResult(action: .send, processedTranscript: "buy milk <send-message phrase=\"send message\" />", matchedPhrase: "send message")
         let cleanUp = SpeechKeywordResult(action: .sendHq, processedTranscript: "buy milk <send-message phrase=\"clean up and send\" />", matchedPhrase: "clean up and send")
         let conversation = NativeComposerSubmitTarget.conversation.voicePolicy(hqDictationEnabled: false)
-        let quickChat = NativeComposerSubmitTarget.quickChat { _ in true }.voicePolicy(hqDictationEnabled: false)
+        let quickChat = NativeComposerSubmitTarget.quickChat { _, _ in true }.voicePolicy(hqDictationEnabled: false)
 
         XCTAssertEqual(conversation.keywordSendPlan(for: send, narrationEnabled: false), .live(text: send.processedTranscript))
         XCTAssertEqual(conversation.keywordSendPlan(for: send, narrationEnabled: true), .hq)
@@ -283,6 +284,7 @@ final class SpeechKeywordsTests: XCTestCase {
         )
         XCTAssertFalse(conversation.keywordSendClosesMicrophone(.send))
         XCTAssertFalse(conversation.keywordSendClosesMicrophone(.sendHq))
+        XCTAssertFalse(conversation.keywordSendClosesMicrophone(.sendCheckpoint))
         XCTAssertTrue(conversation.keywordSendClosesMicrophone(.sendClose))
 
         XCTAssertEqual(quickChat.keywordSendPlan(for: cleanUp, narrationEnabled: false), .live(text: cleanUp.processedTranscript))

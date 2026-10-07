@@ -61,12 +61,13 @@ final class QuickChatOutboxTests: XCTestCase {
         server.repository = repository
         await outbox.load()
 
-        let addedEntry = await outbox.add(text: "call the plumber", boxID: boxA)
+        let addedEntry = await outbox.add(text: "call the plumber", origin: .voice, boxID: boxA)
 
         let entry = try XCTUnwrap(addedEntry)
 
         XCTAssertEqual(server.calls.map(\.id), [entry.id])
         XCTAssertEqual(server.calls.first?.text, "call the plumber")
+        XCTAssertEqual(server.calls.first?.origin, .voice)
         XCTAssertEqual(server.storedDuringCall.first?.map(\.id), [entry.id], "on disk before the request")
         XCTAssertEqual(entry.createdAt, clock.now)
         XCTAssertTrue(outbox.entries.isEmpty)
@@ -81,7 +82,7 @@ final class QuickChatOutboxTests: XCTestCase {
         let (outbox, repository) = makeOutbox(server, clock: clock)
         await outbox.load()
 
-        let addedEntry = await outbox.add(text: "no signal here", boxID: boxA)
+        let addedEntry = await outbox.add(text: "no signal here", origin: .typed, boxID: boxA)
         let entry = try XCTUnwrap(addedEntry)
         let kept = try XCTUnwrap(outbox.entries.first)
         XCTAssertEqual(kept.id, entry.id)
@@ -114,7 +115,7 @@ final class QuickChatOutboxTests: XCTestCase {
         let (outbox, _) = makeOutbox(FakeServer(), clock: clock)
         let last = clock.now
         func entry(attempts: Int) -> QuickChatOutboxEntry {
-            QuickChatOutboxEntry(id: UUID(), boxID: boxA, text: "x", createdAt: last, attempts: attempts,
+            QuickChatOutboxEntry(id: UUID(), boxID: boxA, text: "x", origin: .typed, createdAt: last, attempts: attempts,
                 lastAttemptAt: attempts == 0 ? nil : last)
         }
         XCTAssertEqual(outbox.nextAttemptAt(entry(attempts: 0)), last)
@@ -128,7 +129,7 @@ final class QuickChatOutboxTests: XCTestCase {
         let clock = Clock()
         let (outbox, repository) = makeOutbox(server, clock: clock)
         await outbox.load()
-        let addedEntry = await outbox.add(text: "the long trip", boxID: boxA)
+        let addedEntry = await outbox.add(text: "the long trip", origin: .typed, boxID: boxA)
 
         let entry = try XCTUnwrap(addedEntry)
 
@@ -158,7 +159,7 @@ final class QuickChatOutboxTests: XCTestCase {
         let clock = Clock()
         let (outbox, _) = makeOutbox(server, clock: clock)
         await outbox.load()
-        let addedEntry = await outbox.add(text: "late", boxID: boxA)
+        let addedEntry = await outbox.add(text: "late", origin: .typed, boxID: boxA)
         let entry = try XCTUnwrap(addedEntry)
         clock.advance(QuickChatOutbox.retryWindow + 60)
 
@@ -168,15 +169,38 @@ final class QuickChatOutboxTests: XCTestCase {
         XCTAssertTrue(outbox.entries.isEmpty)
     }
 
+    /// An entry stored by a build from before `origin` existed reads as typed;
+    /// a stored origin survives the round trip.
+    func testAnEntryStoredWithoutAnOriginReadsAsTyped() async throws {
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let spoken = QuickChatOutboxEntry(id: UUID(), boxID: boxA, text: "spoken", origin: .voice,
+            createdAt: Date(timeIntervalSince1970: 1_800_000_000), attempts: 0, lastAttemptAt: nil)
+        try await repository.saveQuickChatOutbox([spoken])
+        let url = await repository.quickChatOutboxURL
+        var manifest = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        let stored = try XCTUnwrap((manifest["entries"] as? [[String: Any]])?.first)
+        var legacy = stored
+        legacy.removeValue(forKey: "origin")
+        legacy["id"] = UUID().uuidString
+        legacy["text"] = "typed before origins"
+        manifest["entries"] = [stored, legacy]
+        try JSONSerialization.data(withJSONObject: manifest).write(to: url)
+
+        let restored = try await repository.loadQuickChatOutbox()
+
+        XCTAssertEqual(restored.map(\.text), ["spoken", "typed before origins"])
+        XCTAssertEqual(restored.map(\.origin), [.voice, .typed])
+    }
+
     func testEntriesSurviveARestartAndTheLaunchAttemptsThemOnce() async throws {
         let server = FakeServer()
         server.offline = true
         let clock = Clock()
         let (first, repository) = makeOutbox(server, clock: clock)
         await first.load()
-        let addedFresh = await first.add(text: "fresh", boxID: boxA)
+        let addedFresh = await first.add(text: "fresh", origin: .typed, boxID: boxA)
         let fresh = try XCTUnwrap(addedFresh)
-        let addedOld = await first.add(text: "old", boxID: boxA)
+        let addedOld = await first.add(text: "old", origin: .typed, boxID: boxA)
         let old = try XCTUnwrap(addedOld)
         // Age only the second one past the window.
         var entries = first.entries
@@ -204,9 +228,9 @@ final class QuickChatOutboxTests: XCTestCase {
         let (outbox, _) = makeOutbox(server, clock: clock)
         await outbox.load()
 
-        let addedA = await outbox.add(text: "for box A", boxID: boxA)
+        let addedA = await outbox.add(text: "for box A", origin: .typed, boxID: boxA)
         let a = try XCTUnwrap(addedA)
-        let addedB = await outbox.add(text: "for box B", boxID: boxB)
+        let addedB = await outbox.add(text: "for box B", origin: .typed, boxID: boxB)
 
         let b = try XCTUnwrap(addedB)
 

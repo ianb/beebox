@@ -1,0 +1,10 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "ok send the checkpoint message now"
+  },
+  "expected": {
+    "action": "sendCheckpoint",
+    "processedTranscript": "ok <send-checkpoint-message phrase=\"send the checkpoint message\" /> now"
+  }
+}

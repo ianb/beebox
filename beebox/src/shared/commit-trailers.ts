@@ -48,7 +48,7 @@ export const FEEDBACK_TRAILER_KEYS = [
  * the rename, and it stays here so a box's pre-rename history keeps
  * answering the same filter as its procedure runs (see `TRIGGER_KINDS`).
  */
-export const TRIGGER_TRAILER_KEYS = [
+const TRIGGER_TRAILER_KEYS = [
   "Triggered-By",
   "Procedure",
   "Workflow",
@@ -68,7 +68,7 @@ export function triggeredByTrailer(actor: string | undefined): Record<string, st
 }
 
 /** Trailer key naming the step within a procedure run. */
-export const TRIGGER_STEP_TRAILER_KEY = "Step";
+const TRIGGER_STEP_TRAILER_KEY = "Step";
 
 /**
  * The kinds of thing that can trigger a commit.

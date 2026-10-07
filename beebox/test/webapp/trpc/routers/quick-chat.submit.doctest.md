@@ -105,7 +105,7 @@ else process.env["BBX_CLAUDE_PROJECTS_DIR"] = oldProjectsDir;
 
 When the selected place holds at least 0.9 of the judgment, `submit` delivers
 in the same request. The message goes through the sender framed as a typed
-message, attributed to the caller, with the record id as its message id and the
+message with `source="box-screen"`, attributed to the caller, with the record id as its message id and the
 caller's channel. The view names the chat; the probabilities stay on disk.
 
 ```ts
@@ -119,7 +119,7 @@ const sent = await api.submit(request);
 => [
   { state: "sent", destination: { label: "“Plan the week”", sessionId: "«*»" } },
   true,
-  [{ message: "<typed>Book the plumber for Tuesday</typed>", user: "ari@example.com", channel: "ios-native" }],
+  [{ message: "<typed source=\"box-screen\">Book the plumber for Tuesday</typed>", user: "ari@example.com", channel: "ios-native" }],
 ]
 ```
 
@@ -201,6 +201,65 @@ const chosen = await api.choose({ id: unsure.id, candidateId: "c1", channel: "we
 
 await failure(() => api.choose({ id: randomUUID(), candidateId: "c0" }))
 => NOT_FOUND: This message is no longer stored.
+```
+
+```ts cleanup
+clearChatRuntime(box.root);
+await box.cleanup();
+```
+
+## Voice and typed thoughts arrive as the person entered them
+
+`origin` says how the thought was entered. A `voice` thought is delivered as
+`<speech source="box-screen">`, a `typed` one as `<typed source="box-screen">`.
+A client built before `origin` existed sends none, and its thought is typed.
+The record keeps the origin, so a thought that waited for the person's choice
+is delivered by `choose` in the same wrapper.
+
+```ts
+const { box } = await gardenBox();
+const runtime = scriptedRuntime(box.root);
+const sure = caller(box.root, judged({ c0: 0.95, c1: 0.03, c2: 0.02 }));
+await sure.submit({ id: randomUUID(), message: "Call the plumber", origin: "voice" });
+await sure.submit({ id: randomUUID(), message: "Buy stamps" });
+const unsure = caller(box.root, judged({ c0: 0.5, c1: 0.45, c2: 0.05 }));
+const waiting = await unsure.submit({ id: randomUUID(), message: "Something about the beds", origin: "voice" });
+await unsure.choose({ id: waiting.id, candidateId: "c1" });
+runtime.sends.map((send) => send.message)
+=> [
+  "<speech source=\"box-screen\">Call the plumber</speech>",
+  "<typed source=\"box-screen\">Buy stamps</typed>",
+  "<speech source=\"box-screen\">Something about the beds</speech>",
+]
+```
+
+An origin outside the two is refused.
+
+```ts continue
+await failure(() => sure.submit({ id: randomUUID(), message: "Hum", origin: "video" }))
+=> «BAD_REQUEST: *»
+```
+
+```ts cleanup
+clearChatRuntime(box.root);
+await box.cleanup();
+```
+
+## "New chat" is honored over the existing-chat preference
+
+The box's existing root chat and the new general chat share the root. Jev
+leans slightly to the new chat; the existing-chat preference sends the thought
+to the existing chat. A thought that opens with "new chat" skips that
+preference, and goes to a new chat.
+
+```ts
+const { box, sessionId } = await gardenBox();
+const runtime = scriptedRuntime(box.root);
+const api = caller(box.root, judged({ c0: 0.45, c1: 0.05, c2: 0.5 }));
+const plain = await api.submit({ id: randomUUID(), message: "Plan the dinner" });
+const fresh = await api.submit({ id: randomUUID(), message: "New chat: plan the dinner" });
+[[plain.destination.label, plain.destination.sessionId === sessionId], [fresh.destination.label, fresh.destination.sessionId === runtime.reservations[0].sessionId]]
+=> [["“Plan the week”", true], ["New general chat", true]]
 ```
 
 ```ts cleanup

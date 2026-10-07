@@ -78,6 +78,7 @@ planRestore(emptyDraft, tagged).text
 const allTags = [
   '<send-message phrase="Send message" />',
   '<send-close-message phrase="Send and close" />',
+  '<send-checkpoint-message phrase="Send checkpoint" />',
   '<cancel-message phrase="Cancel message" />',
   '<mic-off phrase="Microphone off" />',
   '<erase-message phrase="Clear &quot;this&quot; message" />',

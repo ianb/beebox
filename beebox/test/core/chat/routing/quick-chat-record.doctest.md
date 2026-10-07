@@ -95,6 +95,16 @@ const unreceipted = parseQuickChatRecord(legacy);
 => ["sending", { label: "New chat in Trips" }, "2026-10-06T11:59:00.000Z"]
 ```
 
+A record keeps how the thought was entered, so a later delivery uses the same
+wrapper. Records written before the origin was kept, with or without a state,
+were typed.
+
+```ts continue
+const choice = { ...base, state: "needs-choice", reason: "uncertain", choices: ["c0"] };
+[parseQuickChatRecord({ ...choice, origin: "voice" }).origin, parseQuickChatRecord(choice).origin, unreceipted.origin]
+=> ["voice", "typed", "typed"]
+```
+
 A record that matches neither shape is refused rather than guessed at.
 
 ```ts

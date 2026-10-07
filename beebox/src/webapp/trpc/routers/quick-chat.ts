@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../procedures.js";
 import type { TrpcContext } from "../context.js";
-import { quickChatView, quickChatViewSchema, type QuickChatRecord, type QuickChatView } from "../../../core/chat/routing/quick-chat-record.js";
+import { QUICK_CHAT_ORIGINS, quickChatView, quickChatViewSchema, type QuickChatRecord, type QuickChatView } from "../../../core/chat/routing/quick-chat-record.js";
 import {
   chooseQuickChat, discardQuickChat, submitQuickChat,
   QuickChatDestinationFixedError, QuickChatInvalidChoiceError, QuickChatNotFoundError, QuickChatTextConflictError,
@@ -17,7 +17,9 @@ import { getChatRuntime } from "../../chat-runtime.js";
 
 const idSchema = z.string().uuid();
 const channelSchema = z.enum(CHAT_CHANNELS).optional();
-export const quickChatSubmitInput = z.object({ id: idSchema, message: z.string().trim().min(1).max(12000), channel: channelSchema });
+/** `origin` is absent from clients built before it existed; their thoughts were typed. */
+export const quickChatSubmitInput = z.object({ id: idSchema, message: z.string().trim().min(1).max(12000),
+  origin: z.enum(QUICK_CHAT_ORIGINS).default("typed"), channel: channelSchema });
 export const quickChatChooseInput = z.object({ id: idSchema, candidateId: z.string().min(1), channel: channelSchema });
 export const quickChatDiscardInput = z.object({ id: idSchema });
 const recentChatSchema = z.object({ sessionId: z.string(), label: z.string(), lastActivity: z.string(),
@@ -41,14 +43,16 @@ function quickChatChat(ctx: TrpcContext, channel: ChatChannel | undefined): Quic
   if (runtime === undefined) return undefined;
   return {
     reserve: (opts) => runtime.registry.reserve(opts),
-    async deliver({ delivery, messageId, message }) {
+    async deliver({ delivery, messageId, message, origin }) {
       const fresh = delivery.session === "new";
       const resolved = await runtime.resolveSendTarget({ sessionParam: delivery.session, exactSession: delivery.exactSession,
         contextDir: fresh ? delivery.contextDir : undefined, requestSeedFeatures: undefined, ...(fresh ? { engine: delivery.engine } : {}) });
       // 410 is a deleted or deleting chat; 404 an exact session that no longer resumes. Both are gone.
       if (!resolved.ok) return resolved.code === "CHAT_SESSION_UNAVAILABLE" || resolved.status === 404 ? { kind: "gone" } : { kind: "failed", error: resolved.error };
-      // A typed thought, framed as the composer frames one, so the sender is attributed.
-      return deliveryOutcome(await runtime.sendUserMessage({ target: resolved.target, message: `<typed>${message}</typed>`, messageId, user: ctx.user, channel }));
+      // Framed as the composer frames a message, so the sender is attributed, and tagged with how it arrived.
+      const tag = origin === "voice" ? "speech" : "typed";
+      return deliveryOutcome(await runtime.sendUserMessage({ target: resolved.target,
+        message: `<${tag} source="box-screen">${message}</${tag}>`, messageId, user: ctx.user, channel }));
     },
   };
 }

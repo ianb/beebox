@@ -40,7 +40,7 @@
 		D94000052C3C000100000001 /* recording-start.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D94000152C3C000100000001 /* recording-start.mp3 */; };
 		D94000062C3C000100000001 /* recording-stop.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D94000162C3C000100000001 /* recording-stop.mp3 */; };
 		D94000072C3C000100000001 /* recording-error.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000172C3C000100000001 /* recording-error.wav */; };
-		D94000082C3C000100000001 /* krell-alarm-7.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000182C3C000100000001 /* krell-alarm-7.wav */; };
+		D94000082C3C000100000001 /* mic-lost.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000182C3C000100000001 /* mic-lost.wav */; };
 		5A1000072C3C000100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000182C3C000100000001 /* Assets.xcassets */; };
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
@@ -177,7 +177,7 @@
 		D94000152C3C000100000001 /* recording-start.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "recording-start.mp3"; sourceTree = "<group>"; };
 		D94000162C3C000100000001 /* recording-stop.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "recording-stop.mp3"; sourceTree = "<group>"; };
 		D94000172C3C000100000001 /* recording-error.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "recording-error.wav"; sourceTree = "<group>"; };
-		D94000182C3C000100000001 /* krell-alarm-7.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "krell-alarm-7.wav"; sourceTree = "<group>"; };
+		D94000182C3C000100000001 /* mic-lost.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "mic-lost.wav"; sourceTree = "<group>"; };
 		5A1000172C3C000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5A1000182C3C000100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
@@ -434,7 +434,7 @@
 				D94000152C3C000100000001 /* recording-start.mp3 */,
 				D94000162C3C000100000001 /* recording-stop.mp3 */,
 				D94000172C3C000100000001 /* recording-error.wav */,
-				D94000182C3C000100000001 /* krell-alarm-7.wav */,
+				D94000182C3C000100000001 /* mic-lost.wav */,
 			);
 			path = "../../beebox/src/frontend/public/earcons";
 			sourceTree = "<group>";
@@ -562,7 +562,7 @@
 				D94000052C3C000100000001 /* recording-start.mp3 in Resources */,
 				D94000062C3C000100000001 /* recording-stop.mp3 in Resources */,
 				D94000072C3C000100000001 /* recording-error.wav in Resources */,
-				D94000082C3C000100000001 /* krell-alarm-7.wav in Resources */,
+				D94000082C3C000100000001 /* mic-lost.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

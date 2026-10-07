@@ -27,11 +27,24 @@ export interface RankedRoutingCandidate {
   probability: number;
 }
 
-/** Trial preference, not a calibrated correctness threshold. Keep the raw ranking. */
+/**
+ * True when a thought opens with the words "new chat" (any case, after any
+ * leading whitespace): the person asked the box for a new chat, so an existing
+ * chat must not win by preference.
+ */
+export function thoughtAsksForNewChat(message: string): boolean {
+  return /^\s*new\s+chat\b/i.test(message);
+}
+
+/**
+ * Trial preference, not a calibrated correctness threshold. Keep the raw ranking.
+ * `newChatRequested` (see {@link thoughtAsksForNewChat}) skips the existing-chat preference.
+ */
 export function selectRoutingDestination(args: {
   candidates: RoutingCandidate[];
   probabilities: Record<string, number>;
   existingMargin?: number;
+  newChatRequested?: boolean;
 }): {
   selected: RoutingCandidate;
   ranked: RankedRoutingCandidate[];
@@ -44,13 +57,16 @@ export function selectRoutingDestination(args: {
     const probability = args.probabilities[candidate.id];
     invariant(probability !== undefined, "Validated judgment must include every candidate");
     return { candidate, probability };
-  }).toSorted((a, b) => b.probability - a.probability
-    || Number(b.candidate.target.kind === "existing-session") - Number(a.candidate.target.kind === "existing-session")
+  });
+  // Exact ties favor an existing chat, unless the thought asked for a new one.
+  const tieKind = args.newChatRequested === true ? "new-session" : "existing-session";
+  ranked.sort((a, b) => b.probability - a.probability
+    || Number(b.candidate.target.kind === tieKind) - Number(a.candidate.target.kind === tieKind)
     || a.candidate.id.localeCompare(b.candidate.id));
   const first = ranked[0];
   invariant(first !== undefined, "Routing requires at least one candidate");
   const existing = ranked.find((entry) => entry.candidate.target.kind === "existing-session");
-  const preferred = first.candidate.target.kind === "new-session" && existing !== undefined
+  const preferred = args.newChatRequested !== true && first.candidate.target.kind === "new-session" && existing !== undefined
     && first.probability - existing.probability <= existingMargin ? existing : first;
   return { selected: preferred.candidate, ranked, preferenceApplied: preferred !== first };
 }

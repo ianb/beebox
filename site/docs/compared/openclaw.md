@@ -42,8 +42,12 @@ extends only through box-local card types and procedures.
 **What Bee Box borrowed or decided not to.** The maintainers rejected
 OpenClaw's one-shot, agent-authored identity ritual as a model for onboarding
 a Bee Box personality, kept Bee Box's evolving, evidence-sourced personality
-card instead, and adapted OpenClaw's signature-emoji convention into a
-smaller, user-approved identity element.
+card instead. OpenClaw's signature-emoji convention was noted as a possible
+smaller, user-approved identity element and remains an open idea. Bee Box did
+take from OpenClaw its security-regression rulepack keyed to past incidents,
+its commit-time security checks, its `doctor` preflight command, and the
+commitments design behind agent-owned todos; the root `ACKNOWLEDGEMENTS.md`
+in the repository records these.
 
 **What this comparison did not look at:** pricing, hosted offerings, or
 community size.

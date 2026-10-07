@@ -5,13 +5,21 @@ final class QuickChatAPITests: XCTestCase {
     private let recordID = UUID(uuidString: "5F0C2A9E-3B1D-4C7A-9E2F-8D6B1A4C3E70")!
 
     func testSubmitRequestMatchesSharedFixture() throws {
-        let request = try api().submitRequest(id: recordID, message: "Remind me to renew my passport")
+        let request = try api().submitRequest(id: recordID, message: "Remind me to renew my passport", origin: .voice)
 
         XCTAssertEqual(request.url?.path, "/main/test1/api/trpc/quickChat.submit")
         XCTAssertEqual(request.httpMethod, "POST")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
         try XCTAssertJSONEqual(request.httpBody, fixture: "submit-request.json")
+    }
+
+    /// A retry of a stored id sends no origin; the server keeps the stored one.
+    func testSubmitRequestWithoutAnOriginOmitsTheKey() throws {
+        let request = try api().submitRequest(id: recordID, message: "Remind me to renew my passport", origin: nil)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
+
+        XCTAssertEqual(Set(body.keys), ["id", "message", "channel"])
     }
 
     func testChooseRequestMatchesSharedFixture() throws {
@@ -102,7 +110,7 @@ final class QuickChatAPITests: XCTestCase {
         let body = Data(#"{"error":{"message":"Quick chat message 5f0c already has different text.","code":-32603,"data":{"code":"CONFLICT","httpStatus":409}}}"#.utf8)
         let api = QuickChatAPI(box: makeBox(), transport: QuickChatStubTransport(statusCode: 409, data: body))
         do {
-            _ = try await api.submit(id: recordID, message: "x")
+            _ = try await api.submit(id: recordID, message: "x", origin: .typed)
             XCTFail("Expected a server error")
         } catch {
             XCTAssertEqual(
@@ -115,7 +123,7 @@ final class QuickChatAPITests: XCTestCase {
     func testSubmitDecodesTheReturnedView() async throws {
         let data = try Data(contentsOf: MobileContractFixtures.root.appendingPathComponent("quick-chat/view-sent.json"))
         let view = try await QuickChatAPI(box: makeBox(), transport: QuickChatStubTransport(data: data))
-            .submit(id: recordID, message: "Remind me to renew my passport")
+            .submit(id: recordID, message: "Remind me to renew my passport", origin: .typed)
         XCTAssertEqual(view.destination?.label, "Trip planning")
     }
 

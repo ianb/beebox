@@ -10,7 +10,9 @@ tour({ name: "system-themes", description: "Box and landmark system-theme swatch
   await t.go("/chat?session=new&engine=codex&contextDir=_content%2Ftheme-tour&card=_content%2Ftheme-tour%2FTheme_Tour.landmark.card");
   await t.expect.button("Properties");
   await t.click({ role: "button", name: "Properties" });
-  await t.expect.heading("System theme", { level: 3 });
+  // The landmark's system theme sits under the Appearance row's closed "Change" disclosure.
+  await t.eval('document.querySelector("[data-card-section=appearance] details")?.setAttribute("open", "")');
+  await t.expect.heading("System theme", { level: 4 });
   await t.expect.button("Use box default");
   await t.eval('document.querySelector(".bbx-landmark-system-theme")?.scrollIntoView({block:"center"})');
   await t.checkpoint("landmark-system-theme");

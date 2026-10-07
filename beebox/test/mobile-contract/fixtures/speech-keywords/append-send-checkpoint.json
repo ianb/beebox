@@ -1,0 +1,9 @@
+{
+  "op": "append",
+  "input": {
+    "transcript": "Part one.",
+    "action": "sendCheckpoint",
+    "matchedPhrase": "send checkpoint"
+  },
+  "expected": "Part one. <send-checkpoint-message phrase=\"send checkpoint\" />"
+}

@@ -1,6 +1,7 @@
 ---
 title: "The recording-drop alarm is too aggressive, and it sounds the same for a lost mic and a lost live-text socket"
-workstream: unattached
+workstream: voice-keywords-cues
+resolution: implemented
 area: beebox
 labels: [voice, transcription]
 filed-by: agent
@@ -8,6 +9,9 @@ discovered-by: Ian
 discovered-in: main session — investigating repeated recording alarms on a prod box with a flaky upstream network
 priority: important
 ---
+
+
+**Closed:** implemented in commit 0f0468053 (with follow-ups 81bcd67c8 and 7e63a85b3, which dropped "finished talking" from the sign-off family). See the Decided/Resolution section below for the choices.
 
 The web client plays `recordingDropped` (`krell-alarm-7.wav`, volume 0.7)
 for two different failures. The sound is also much too aggressive. It was a
@@ -64,3 +68,13 @@ path so that the frequency can be measured.
 
 The iOS app has its own audio feedback. Check whether it makes the same
 conflation before closing this.
+
+## Resolution (2026-10-06)
+
+- Mic loss plays `mic-lost.wav` (authored, two falling pairs) on web and iOS.
+- Live-text loss plays the quiet `live-text-paused.wav` only after 2 s
+  (`LIVE_TEXT_CUE_DELAY`), and `live-text-resumed.wav` on return if the pause
+  cue played. Shorter drops are silent; the overlay chip still shows.
+- The stalled-socket path logs a `console.warn`.
+- iOS has no conflation: its only drop cue fires on an audio-session
+  interruption (mic loss). It now uses the same new asset.

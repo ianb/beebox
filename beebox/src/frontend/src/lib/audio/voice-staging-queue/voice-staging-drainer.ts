@@ -39,7 +39,7 @@ function scheduleWait(ctx: Ctx, ms: number): void {
   }, ms);
 }
 
-export async function runDrain(ctx: Ctx): Promise<void> {
+async function runDrain(ctx: Ctx): Promise<void> {
   if (ctx.state.draining) return;
   ctx.state.draining = true;
   try {

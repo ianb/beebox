@@ -13,7 +13,7 @@ export type BrowseStateResult = { ok: true; state: BrowseState } | { ok: false; 
 export type BrowsePathKind = "directory" | "file" | "missing";
 export type BrowseMissingKind = Exclude<BrowsePathKind, "missing">;
 
-export class BrowseLocationError extends Error {
+class BrowseLocationError extends Error {
   constructor(path: string, missing: boolean) {
     super(`${missing ? "Browse location does not exist" : "Invalid Browse location"}: ${path}`);
     this.name = "BrowseLocationError";
@@ -28,7 +28,7 @@ function canonicalPath(value: unknown): string | null {
   return resolveRefPath({ fromPath: undefined, ref: value, kind: "write-target" });
 }
 
-export function browseParent(path: string): string {
+function browseParent(path: string): string {
   return path.slice(0, Math.max(0, path.lastIndexOf("/")));
 }
 

@@ -26,8 +26,9 @@ struct QuickChatAPI {
     var box: PairedBox
     var transport: any ChatTransport = URLSessionChatTransport()
 
-    func submit(id: UUID, message: String) async throws -> QuickChatView {
-        try Self.decodeView(await send(submitRequest(id: id, message: message)))
+    /// `origin` is nil for a repeat of a stored id: the server keeps the stored origin.
+    func submit(id: UUID, message: String, origin: NativeChatEmission.Origin?) async throws -> QuickChatView {
+        try Self.decodeView(await send(submitRequest(id: id, message: message, origin: origin)))
     }
 
     func choose(id: UUID, candidateId: String) async throws -> QuickChatView {
@@ -42,8 +43,11 @@ struct QuickChatAPI {
         try Self.decodeHome(await send(homeRequest()))
     }
 
-    func submitRequest(id: UUID, message: String) throws -> URLRequest {
-        try mutation("quickChat.submit", body: SubmitBody(id: Self.wireID(id), message: message, channel: Self.channel))
+    func submitRequest(id: UUID, message: String, origin: NativeChatEmission.Origin?) throws -> URLRequest {
+        try mutation(
+            "quickChat.submit",
+            body: SubmitBody(id: Self.wireID(id), message: message, origin: origin, channel: Self.channel)
+        )
     }
 
     func chooseRequest(id: UUID, candidateId: String) throws -> URLRequest {
@@ -125,6 +129,8 @@ struct QuickChatAPI {
     private struct SubmitBody: Encodable {
         var id: String
         var message: String
+        /// Omitted when nil.
+        var origin: NativeChatEmission.Origin?
         var channel: String
     }
 

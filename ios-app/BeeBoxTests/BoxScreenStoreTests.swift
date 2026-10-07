@@ -13,6 +13,7 @@ final class BoxScreenStoreTests: XCTestCase {
         var homeAnswer = QuickChatHome(open: [], recentlySent: [], recentChats: [], shortcuts: [])
         var homeFails = false
         var submitted: [(UUID, String)] = []
+        var submittedOrigins: [NativeChatEmission.Origin?] = []
         var chosen: [String] = []
         /// Runs inside `home`, before it answers, so a test can land an answer
         /// while a refresh is in flight.
@@ -21,8 +22,9 @@ final class BoxScreenStoreTests: XCTestCase {
         /// box screen while the request is out.
         var duringSubmit: (@MainActor () async -> Void)?
 
-        func submit(id: UUID, message: String) async throws -> QuickChatView {
+        func submit(id: UUID, message: String, origin: NativeChatEmission.Origin?) async throws -> QuickChatView {
             submitted.append((id, message))
+            submittedOrigins.append(origin)
             await duringSubmit?()
             if offline {
                 throw URLError(.notConnectedToInternet)
@@ -83,13 +85,14 @@ final class BoxScreenStoreTests: XCTestCase {
         let (store, repository) = makeStore(client)
         await store.start()
 
-        let stored = await store.submitThought("Call mom", boxID: box.id)
+        let stored = await store.submitThought("Call mom", origin: .voice, boxID: box.id)
 
         XCTAssertTrue(stored)
         let onDisk = try await repository.loadQuickChatOutbox()
         XCTAssertEqual(onDisk.map(\.text), ["Call mom"])
         try await waitUntil { store.outbox.entries.isEmpty }
         XCTAssertEqual(client.submitted.map(\.1), ["Call mom"])
+        XCTAssertEqual(client.submittedOrigins, [.voice], "a dictated thought is submitted as voice")
         guard case .record(let view) = store.needs(boxID: box.id).first else {
             return XCTFail("expected the needs-choice answer under Needs you")
         }
@@ -104,7 +107,7 @@ final class BoxScreenStoreTests: XCTestCase {
         let (store, _) = makeStore(client)
         await store.start()
 
-        _ = await store.submitThought("Ask Dana about the 14th", boxID: box.id)
+        _ = await store.submitThought("Ask Dana about the 14th", origin: .typed, boxID: box.id)
         try await waitUntil { client.submitted.count == 1 && store.outbox.inFlight.isEmpty }
 
         guard case .outbox(let entry, .waiting) = store.needs(boxID: box.id).first else {
@@ -122,10 +125,10 @@ final class BoxScreenStoreTests: XCTestCase {
         await store.start()
         await store.refresh(boxID: box.id)
 
-        _ = await store.submitThought("posted", boxID: box.id)
+        _ = await store.submitThought("posted", origin: .typed, boxID: box.id)
         try await waitUntil { store.outbox.entries.isEmpty }
         client.offline = true
-        _ = await store.submitThought("waiting", boxID: box.id)
+        _ = await store.submitThought("waiting", origin: .typed, boxID: box.id)
         try await waitUntil { store.outbox.inFlight.isEmpty && client.submitted.count == 2 }
 
         XCTAssertEqual(store.needs(boxID: box.id).map(\.id), [store.outbox.entries[0].id, serverOpen.id])
@@ -174,6 +177,7 @@ final class BoxScreenStoreTests: XCTestCase {
 
         XCTAssertEqual(client.submitted.map(\.0), [notDelivered.id])
         XCTAssertEqual(client.submitted.map(\.1), ["Order filters"])
+        XCTAssertEqual(client.submittedOrigins, [nil], "a retry keeps the origin the server stored")
         XCTAssertEqual(store.sent(boxID: box.id).map(\.id), [notDelivered.id])
     }
 
@@ -204,7 +208,7 @@ final class BoxScreenStoreTests: XCTestCase {
         client.offline = true
         let (store, repository) = makeStore(client)
         await store.start()
-        _ = await store.submitThought("for a box about to go", boxID: box.id)
+        _ = await store.submitThought("for a box about to go", origin: .typed, boxID: box.id)
         try await waitUntil { store.outbox.inFlight.isEmpty && client.submitted.count == 1 }
 
         store.updateBoxes([])
@@ -224,7 +228,7 @@ final class BoxScreenStoreTests: XCTestCase {
         await store.start()
         store.setShownBox(box.id)
 
-        _ = await store.submitThought("Check the lumber order", boxID: box.id)
+        _ = await store.submitThought("Check the lumber order", origin: .typed, boxID: box.id)
         try await waitUntil { store.followUp != nil }
 
         let request = try XCTUnwrap(store.followUp)
@@ -267,7 +271,7 @@ final class BoxScreenStoreTests: XCTestCase {
             await store.start()
             store.setShownBox(box.id)
 
-            _ = await store.submitThought("A thought", boxID: box.id)
+            _ = await store.submitThought("A thought", origin: .typed, boxID: box.id)
             try await waitUntil { store.followUp != nil }
 
             let id = try XCTUnwrap(client.submitted.first?.0)
@@ -282,7 +286,7 @@ final class BoxScreenStoreTests: XCTestCase {
         await store.start()
         store.setShownBox(box.id)
 
-        _ = await store.submitThought("Ask Dana about the 14th", boxID: box.id)
+        _ = await store.submitThought("Ask Dana about the 14th", origin: .typed, boxID: box.id)
         try await waitUntil { store.followUp != nil }
 
         let entry = try XCTUnwrap(store.outbox.entries.first)
@@ -307,7 +311,7 @@ final class BoxScreenStoreTests: XCTestCase {
         let (store, _) = makeStore(client)
         await store.start()
         store.setShownBox(box.id)
-        _ = await store.submitThought("Ask Dana about the 14th", boxID: box.id)
+        _ = await store.submitThought("Ask Dana about the 14th", origin: .typed, boxID: box.id)
         try await waitUntil { store.followUp != nil }
         store.consumeFollowUp(try XCTUnwrap(store.followUp))
         let entry = try XCTUnwrap(store.outbox.entries.first)
@@ -325,7 +329,7 @@ final class BoxScreenStoreTests: XCTestCase {
         client.offline = true
         let (store, repository) = makeStore(client)
         await store.start()
-        _ = await store.submitThought("Stored before the app closed", boxID: box.id)
+        _ = await store.submitThought("Stored before the app closed", origin: .typed, boxID: box.id)
         try await waitUntil { client.submitted.count == 1 && store.outbox.inFlight.isEmpty }
 
         client.offline = false
@@ -356,7 +360,7 @@ final class BoxScreenStoreTests: XCTestCase {
             store.setShownBox(box.id)
             client.duringSubmit = { leave(store) }
 
-            _ = await store.submitThought("A thought", boxID: box.id)
+            _ = await store.submitThought("A thought", origin: .typed, boxID: box.id)
             try await waitUntil { store.outbox.entries.isEmpty }
 
             XCTAssertEqual(store.sent(boxID: box.id).map(\.message), ["A thought"], name)

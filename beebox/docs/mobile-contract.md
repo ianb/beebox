@@ -528,6 +528,12 @@ mint them independently; the ids are per-emission and per-kind.
   restores the pre-keyword transcript) and refuses to match inside an existing markup tag; web never
   re-feeds composer text to detection, so it needs neither guard. Neither side may assume the
   other's detector fired.
+- **Shared vocabulary and tags.** Both detectors accept the same phrases, check actions in the
+  same order, and take the longest phrase at the earliest position. The tags are `send-message`
+  (send and clean-up send), `send-close-message` (sign-off; mic stays closed),
+  `send-checkpoint-message` (a plain send that marks the message partial), `cancel-message`,
+  `mic-off`, and `erase-message`. The golden vectors in
+  `test/mobile-contract/fixtures/speech-keywords/` pin both sides.
 
 ### 4.4a HQ dictation state (web → native)
 
@@ -1262,9 +1268,13 @@ See §1.3 (full request/response/errors).
 ### 5.11 Quick chat — `quickChat.submit`, `choose`, `discard`, `home`
 
 - **Direction:** native → box, bearer-authenticated tRPC (not batched). `POST
-  /api/trpc/quickChat.submit` `{id,message,channel?}`, `POST /api/trpc/quickChat.choose`
+  /api/trpc/quickChat.submit` `{id,message,origin?,channel?}`, `POST /api/trpc/quickChat.choose`
   `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.discard` `{id}`, and `GET
-  /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. Each mutation answers a
+  /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. `origin` is `"typed"` or
+  `"voice"`, how the person entered the thought; an absent `origin` (a build from before it) is
+  `"typed"`. The record keeps it, and delivery, by `submit` or a later `choose`, wraps the thought
+  as `<typed source="box-screen">` or `<speech source="box-screen">`. A repeated `submit` of a
+  stored id keeps the stored origin. Each mutation answers a
   `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. Each
   `recentChats` row is `{sessionId,label,lastActivity,landmark:{dir,label,symbol}|null}`, newest
   first: the fresh landmark chats plus the box's last chat, whose `landmark` is `null` when no
@@ -1280,11 +1290,12 @@ See §1.3 (full request/response/errors).
   The record `id` is a client-made UUID, sent lowercase; it becomes the chat message id, so a
   repeated `submit` of one id returns one record and posts once. A `sending` view with
   `expired: true` is past the six-day delivery limit and offers only Open chat and Discard.
-- **Outbox:** the phone stores `{id,boxID,text,createdAt,attempts,lastAttemptAt}` in
+- **Outbox:** the phone stores `{id,boxID,text,origin,createdAt,attempts,lastAttemptAt}` in
   `quick-chat-outbox.json` before the first request and removes an entry only when `submit`
   answers. A failed request keeps it; retries follow a backoff while the app is in the
   foreground, and once per launch, for seven days, then the row reads "Not sent". An entry for a
-  box that is unpaired is removed when the box is removed. The last `home` answer is cached per
+  box that is unpaired is removed when the box is removed. An entry stored before `origin`
+  existed reads as `"typed"`. The last `home` answer is cached per
   box so the screen draws before the refresh.
 - **Anchors:** native `ios-app/BeeBox/Services/QuickChatAPI.swift` · `QuickChatAPI`;
   `ios-app/BeeBox/Models/QuickChatView.swift` · `QuickChatView`, `QuickChatHome`;
@@ -1362,7 +1373,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
-| Q1 | `quickChat.submit` / `choose` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id}`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
+| Q1 | `quickChat.submit` / `choose` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,origin,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id}`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
 | W3 | Box screen navigation (§3.5) | web→native | main-frame navigation to `<baseURL>/box`, cancelled by native | `Views/ChatWebView.swift` · `isBoxScreenURL`, `Coordinator.mainFramePolicy(for:)` | the `/<box>/box` route; the landmark menu's box row | SILENT-degraded |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `bbx_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |

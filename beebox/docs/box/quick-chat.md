@@ -8,7 +8,9 @@ posts the captured text when the choice is clear. An uncertain thought waits
 on the box screen until the person chooses a conversation. New chat in a
 landmark and continuing an existing conversation are different actions. Prefer continuing
 an existing conversation when the topic fits; creating a new session does not
-mean creating a new landmark.
+mean creating a new landmark. The person can also name the place at the
+start of a thought ("new chat in Garden", "continue Garden", "in Garden"), and
+the router follows it; such a phrase needs no rule.
 
 Maintain authored destination rules in the box file
 `_config/chat-routing.yaml`. It is plain YAML, not a card. Preserve the

@@ -1,6 +1,7 @@
 ---
 title: "\"send and close\" is a weak canonical keyword, and the close-mic vocabulary has holes"
-workstream: unattached
+workstream: voice-keywords-cues
+resolution: implemented
 area: beebox
 needs: [design]
 labels: [voice, transcription, chat]
@@ -9,6 +10,9 @@ discovered-by: Ian
 discovered-in: main session — boxholder dissatisfied with the sign-off keyword
 priority: important
 ---
+
+
+**Closed:** implemented in commit 0f0468053 (with follow-ups 81bcd67c8 and 7e63a85b3, which dropped "finished talking" from the sign-off family). See the Decided/Resolution section below for the choices.
 
 When the boxholder finishes dictating and wants to hand the turn over — phone
 down, walking away — they want to say the thing they would naturally say, and
@@ -87,7 +91,7 @@ Other plausible-but-absent forms, worth deciding on rather than accumulating:
 Whether the mishearing is specific to one transcription backend. `sendClose` is
 matched against the realtime transcript, so the alias may be Deepgram-shaped and
 a different backend may fail differently. Related:
-[mark low-confidence words in a transcript](../closed/features/2026-08-15-mark-low-confidence-words-in-transcripts.md)
+[mark low-confidence words in a transcript](2026-08-15-mark-low-confidence-words-in-transcripts.md)
 — the same confidence data would show, concretely, how badly the canonical
 phrase is being heard rather than leaving it to impression.
 
@@ -99,3 +103,16 @@ collected. A useful first step: collect the misheard forms from live-text
 logs (the untagged phrase appearing as plain words, per the pattern in
 `narration-mode-doc.ts:39`) to see what the transcriber actually produces.
 
+
+## Decided (2026-10-06)
+
+- **Taught sign-off:** "over and out". It is an idiom, so the transcriber's
+  language model restores it from poor audio, which "send and close" does not
+  get.
+- **Kept and added aliases:** the "send and …" family stays, with "send and
+  finished". "Finished talking" was tried and dropped: a final transcript
+  matches anywhere, so "I'm not finished talking" would send and close.
+- **Mic off adds:** "close (the) mic/microphone", "mute (the)
+  mic/microphone", "pause listening". The hint stays "microphone off".
+- Both matchers now take the longest phrase at a position, so "send and close
+  the mic" no longer leaves "the mic" in the sent text.

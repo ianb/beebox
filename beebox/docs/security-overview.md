@@ -142,12 +142,21 @@ The complete inventory is
 [§3 of the structured report](security-report.md#3-data-egress).
 The summary:
 
-- **Anthropic** — the core engine. Every agent turn sends its context to
-  Anthropic: your prompts, and whatever box files the agent reads while
+- **Anthropic** — the core engine. Every agent turn on a Claude model (the
+  default) sends its context to Anthropic: your prompts, and whatever box files the agent reads while
   working (cards, emails, chat history), plus uploaded and scanned
   images. Auth is your Claude subscription login; the system actively
   strips `ANTHROPIC_API_KEY` so a stray key can't take over billing.
   There is no opt-out — this is the product.
+- **OpenRouter or Z.ai, when a chat or run uses a non-Claude model** — the
+  owner can add OpenRouter models in admin, and a granted `glm` key enables
+  GLM models. A turn on one of these models sends the same full context to
+  OpenRouter, which passes it to an upstream host that can change per
+  request, or to Z.ai. Claude Code builds these requests, so the box cannot
+  pin the host or request no data collection per request. The OpenRouter
+  account's privacy settings decide which hosts are allowed and whether they
+  may train on or retain the data; the admin section links to them. These
+  runs turn off Claude Code's own telemetry and error reports.
 - **Transcription vendors** — voice goes to Mistral (the default),
   OpenAI Whisper, or Deepgram, per your `_config/transcription.json`.
   Live dictation streams microphone audio from your browser directly to
@@ -189,11 +198,20 @@ The summary:
   account-restricted sites remain blocked pending a separate design. DNS and
   certificate work begins when the box owner assigns the hostname. HTTPS
   readiness and provider permissions have not been live-verified.
-- **Nothing else.** The running system sends no telemetry, analytics,
-  crash reports, or update checks — verified absent, not just
+- **Nothing else from Bee Box itself.** Bee Box's code sends no telemetry,
+  analytics, crash reports, or update checks — verified absent, not just
   unpromised. (The monorepo's developer maintenance scripts in `bin/`
   query package registries; they are not shipped and never run on a
-  box.)
+  box.) The Claude Code subprocess is the exception: on Claude models it
+  sends its own usage metrics to Anthropic, which Anthropic documents as
+  excluding code, prompts, and file paths, and, for Pro/Max sign-ins,
+  redacted error reports to an error-tracking vendor. Both are on by
+  default and can be turned off per box in Admin → Agent engine and model;
+  a chat already running picks up the change when its agent next starts.
+  Runs on non-Claude models never send them. Codex, when a box uses it,
+  has its own analytics to OpenAI; they are off unless the box turns them
+  on in the same section, because they include hashes of the lines each
+  change adds.
 
 One caveat worth naming: the iOS app's dictation prefers Apple's
 on-device recognizer, but on older systems it falls back to Apple's

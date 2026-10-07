@@ -3,7 +3,7 @@
 `detectKeyword()` recognizes voice control commands in Whisper transcripts — things like "send message", "cancel", "microphone off". When a keyword is found, it's replaced with an XML tag in the transcript.
 
 ```ts setup
-import { detectKeyword, appendSendKeywordTag } from "../../../src/lib/audio/speech-keywords.js";
+import { detectKeyword, appendSendKeywordTag, sendKeywordIn } from "../../../src/lib/audio/speech-keywords.js";
 ```
 
 ## Send commands
@@ -55,12 +55,21 @@ detectKeyword("OK send message")?.processedTranscript
 
 ## Send and close
 
-"Send and close" sends the message like a plain send, but signals the mic
+"Over and out" sends the message like a plain send, but signals the mic
 should stay closed afterward (the "I'm done, take it from here" sign-off). It
-gets its own action and tag:
+gets its own action and tag. The older "send and close" family still works:
 
 ```ts
+detectKeyword("over and out")?.action
+=> sendClose
+
 detectKeyword("send and close")?.action
+=> sendClose
+
+detectKeyword("send and close message")?.action
+=> sendClose
+
+detectKeyword("send and finished")?.action
 => sendClose
 
 detectKeyword("send and stop")?.action
@@ -72,17 +81,15 @@ detectKeyword("send and close the mic")?.action
 detectKeyword("set a closed message")?.action
 => sendClose
 
-detectKeyword("over and out")?.action
-=> sendClose
-
 detectKeyword("OK send and close")?.processedTranscript
 => OK <send-close-message phrase="send and close" />
 ```
 
 Precedence matters: "send and finish the message" satisfies the plain-send
-pattern too (`finish … message`), and "send and stop the mic" satisfies the
-mic-off pattern (`stop the mic`) — but the close variant is checked first and
-wins both, so neither degrades to a plain send or a bare mute:
+pattern too (`finish … message`), and "send and stop the mic" / "send and
+close the mic" satisfy the mic-off pattern (`stop the mic`, `close the mic`)
+— but the close variant is checked first and wins all three, so none
+degrades to a plain send or a bare mute:
 
 ```ts
 detectKeyword("send and finish the message")?.action
@@ -90,6 +97,42 @@ detectKeyword("send and finish the message")?.action
 
 detectKeyword("send and stop the mic")?.action
 => sendClose
+
+detectKeyword("send and close the mic")?.action
+=> sendClose
+```
+
+## Send checkpoint
+
+"Send checkpoint" is a plain send on the client (the mic re-arms), with its
+own tag so the agent knows the user is still talking:
+
+```ts
+detectKeyword("send checkpoint")?.action
+=> sendCheckpoint
+
+detectKeyword("send a checkpoint")?.action
+=> sendCheckpoint
+
+detectKeyword("send checkpoint message")?.processedTranscript
+=> <send-checkpoint-message phrase="send checkpoint message" />
+
+detectKeyword("commit checkpoint")?.action
+=> sendCheckpoint
+
+detectKeyword("first part of the idea add checkpoint")?.processedTranscript
+=> first part of the idea <send-checkpoint-message phrase="add checkpoint" />
+```
+
+Talking about checkpoints does not fire it: the commit/add verbs take no
+article, and "checkpoint" alone is not a command:
+
+```ts
+detectKeyword("we should add a checkpoint before the deploy")
+=> null
+
+detectKeyword("the checkpoint failed again")
+=> null
 ```
 
 ## Clean up and send
@@ -143,6 +186,15 @@ detectKeyword("turn off the mic")?.action
 
 detectKeyword("stop listening")?.action
 => micOff
+
+detectKeyword("close the mic")?.action
+=> micOff
+
+detectKeyword("mute the microphone")?.action
+=> micOff
+
+detectKeyword("pause listening")?.action
+=> micOff
 ```
 
 ## Erase commands
@@ -188,6 +240,18 @@ close sign-off in the persisted record:
 ```ts
 appendSendKeywordTag("Buy milk tomorrow.", { action: "sendClose", matchedPhrase: "send and close" })
 => Buy milk tomorrow. <send-close-message phrase="send and close" />
+```
+
+A checkpoint re-injects its tag too, and the tag reads back as the same
+variant, so an HQ pass restored after a reload keeps it:
+
+```ts
+const checkpointed = appendSendKeywordTag("Part one.", { action: "sendCheckpoint", matchedPhrase: "send checkpoint" })
+checkpointed
+=> Part one. <send-checkpoint-message phrase="send checkpoint" />
+
+sendKeywordIn(checkpointed)
+=> { action: "sendCheckpoint", matchedPhrase: "send checkpoint" }
 ```
 
 Phrases with characters meaningful in XML are escaped, matching the tag form `detectKeyword` itself produces:

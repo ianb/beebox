@@ -9,9 +9,11 @@ its preferred view; its theme changes the material around that content.
 
 ## Choosing a card theme
 
-Use the card's **Properties** surface to inspect the effective theme and its
-source. The corner-turn control is in the top-right corner in every theme.
-The swatch picker can set an explicit card choice, such as:
+Turn the card to its **Properties** surface with the corner-turn control in
+the top-right corner, present in every theme. The **Appearance** row names the
+effective theme, its stock, and its source, for example "Paper cream · Set on
+this card". Open **Change** under that row for the swatch picker, which can set
+an explicit card choice, such as:
 
 ```yaml
 theme:
@@ -88,7 +90,7 @@ system; Sticky note is a card theme only. Paper offers Slate, Terracotta, and Bl
 (stored as `cream`, `manila`, and `blue` respectively).
 
 A landmark can override the box system theme. Open the landmark's directory from the
-folder menu (**Open <dir>/**), open its landmark card, turn to **Properties**, and use the separate **System theme** picker. **Use box
+folder menu (**Open <dir>/**), open its landmark card, turn to **Properties**, open **Change** under **Appearance**, and use the separate **System theme** picker. **Use box
 default** removes that override. An agent can make the same choice in landmark
 frontmatter:
 

@@ -487,7 +487,7 @@ re-injection (including XML-escaped phrases).
 
 ```ts
 runFamily("speech-keywords", validateSpeechKeyword)
-=> {"family":"speech-keywords","cases":39,"pass":39}
+=> {"family":"speech-keywords","cases":51,"pass":51}
 ```
 
 ## Conversation binding publication

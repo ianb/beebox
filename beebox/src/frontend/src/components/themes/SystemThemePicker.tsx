@@ -167,7 +167,7 @@ export function LandmarkSystemThemePicker({ boxKey, path, contextDir }: {
   path: string;
   contextDir: string;
 }) {
-  return <section className="bbx-landmark-system-theme" aria-label="System theme"><h3>System theme</h3>
+  return <section className="bbx-landmark-system-theme" aria-label="System theme"><h4>System theme</h4>
     <Text as="p" size="xs" tone="muted">Scope: This landmark</Text>
     <PickerBody input={{ scope: "landmark", boxKey, path, contextDir }} />
   </section>;
