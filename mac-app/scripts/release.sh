@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build, sign, notarize, and publish one Mac release to GitHub.
 #
-# Usage: scripts/release.sh X.Y.Z
+# Usage: [NOTES_FILE=notes.md] scripts/release.sh X.Y.Z
 #
 # Expects, on the maintainer's Mac:
 #   - the tag vX.Y.Z pushed, and the image workflow finished
@@ -52,10 +52,13 @@ cp "$DMG" "$feed/"
 
 if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
   gh release upload "$TAG" -R "$REPO" --clobber "$DMG" "$DMG.sha256" build/appcast.xml
-  gh release edit "$TAG" -R "$REPO" --prerelease=false --latest
+  edit=(--prerelease=false --latest)
+  [[ -n "${NOTES_FILE:-}" ]] && edit+=(--notes-file "$NOTES_FILE")
+  gh release edit "$TAG" -R "$REPO" "${edit[@]}"
 else
-  gh release create "$TAG" -R "$REPO" --latest --title "Bee Box $VERSION" \
-    --notes "Bee Box $VERSION for macOS 26 on Apple silicon." \
+  notes=(--notes "Bee Box $VERSION for macOS 26 on Apple silicon.")
+  [[ -n "${NOTES_FILE:-}" ]] && notes=(--notes-file "$NOTES_FILE")
+  gh release create "$TAG" -R "$REPO" --latest --title "Bee Box $VERSION" "${notes[@]}" \
     "$DMG" "$DMG.sha256" build/appcast.xml
 fi
 echo "Released $TAG: https://github.com/$REPO/releases/tag/$TAG"

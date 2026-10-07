@@ -47,13 +47,25 @@ open -n build/BeeBox.app \
 |---|---|
 | `BEEBOX_IMAGE_LAYOUT` | Load the image from a local OCI layout (`container image save`, then untar) instead of pulling |
 | `BEEBOX_IMAGE` | Pull a different image reference |
-| `BEEBOX_STATE_DIR`, `BEEBOX_BOX_DIR`, `BEEBOX_PORT` | A second, throwaway instance |
+| `BEEBOX_STATE_DIR`, `BEEBOX_BOXES_DIR`, `BEEBOX_PORT` | A second, throwaway instance |
+| `BEEBOX_BOX` | Which box to run (folder name and URL slug; default `box`) |
 | `BEEBOX_VM_MEMORY_MB` | VM size (default: a quarter of RAM, 2–4 GiB) |
 | `BEEBOX_KERNEL` | Kernel path for a bare `swift build` binary, which has no bundle |
 
-The box lives in `~/BeeBoxSpike/box`; runtime state in
-`~/Library/Application Support/BeeBoxSpike`, which must not move (the
-framework records absolute paths). The box is served at
+Where things live:
+
+```
+~/BeeBox/<name>/                            one folder per box (default: box)
+~/Library/Application Support/Bee Box/      shared by every box
+    runtime/        images, VM disks, init filesystem (must not move)
+    home/           accounts, session key, secrets, Codex login, caches
+    claude-config/  Claude login
+    logs/           app.log, box-<name>.log
+    run/            <name>.sock, each box's relay socket
+```
+
+Accounts and agent logins are machine-wide in beebox, so they are shared.
+The app runs one box at a time; the default box is served at
 `http://localhost:3280/box/`.
 
 ## Release

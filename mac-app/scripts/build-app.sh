@@ -21,7 +21,13 @@ BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD)}"
 BUNDLE_ID="${BUNDLE_ID:-run.beebox.mac}"
 IMAGE="${BEEBOX_IMAGE:-ghcr.io/ianb/beebox:$VERSION}"
 IDENTITY="${SIGN_IDENTITY:--}"
-SPARKLE_PUBLIC_KEY="${SPARKLE_PUBLIC_KEY-TdU85iPE0GdWg8yepTnRXo3v5dJYhQ6CmsIb6Qt/l98=}"
+# A development build carries no update key: Sparkle would otherwise "update"
+# it to the latest release (any release is newer than 0.0.0-dev).
+if [[ "$VERSION" == *-dev ]]; then
+  SPARKLE_PUBLIC_KEY=""
+else
+  SPARKLE_PUBLIC_KEY="${SPARKLE_PUBLIC_KEY-TdU85iPE0GdWg8yepTnRXo3v5dJYhQ6CmsIb6Qt/l98=}"
+fi
 MIN_MACOS="${MIN_MACOS:-26.0}"
 FEED_URL="https://github.com/ianb/beebox/releases/latest/download/appcast.xml"
 
