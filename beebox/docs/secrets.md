@@ -219,7 +219,7 @@ Refusal kinds, each with a distinct remediation: `unknown-secret`, `empty-slot`,
 `not-granted`, `agent-access-not-granted`, `dangling-grant`, `store-unreadable`
 (`src/core/secrets/errors.ts`). Connectors degrade to their existing "not
 configured" path on any of them — there is no fallback of any kind left to
-fall through to. `src/core/secrets/legacy-fallback.ts` and
+fall through to. The former `legacy-fallback.ts` module and
 `refusalAllowsLegacyFallback`, which used to let an `unknown-secret` refusal
 fall through to a legacy in-box file or env var during the migration's
 transition window, have been deleted; a `not-granted` refusal from
@@ -458,7 +458,7 @@ unattended prod mutation.
 Mistral is the template (`src/core/mistral-key.ts`): resolve from the store,
 full stop — no fallback to a legacy in-tree `_config/connectors/<name>.secret.json`
 or an env var. That fallback path (`refusalAllowsLegacyFallback`,
-`src/core/secrets/legacy-fallback.ts`) existed only for the migration's
+the former `legacy-fallback.ts`) existed only for the migration's
 transition window and has since been deleted, along with the env-var
 fallbacks it used to reach for `mistral`, `deepgram`, `openai`,
 `openai-thinking`, and `gemini`. `bbx health` still flags any surviving

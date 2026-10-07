@@ -32,7 +32,7 @@ password, and the reset revokes every outstanding session for that member.
 
 ## Issues addressed
 
-- `issues/features/2026-08-07-web-password-reset-account-recovery.md`
+- `issues/closed/features/2026-08-07-web-password-reset-account-recovery.md`
 
 The issue records the chosen direction at lines 9-15: *“the operator mints a
 reset link (a fresh invite-style capability pinned to the member's email) and
@@ -114,7 +114,7 @@ Those closed issues remain precedent. This plan does not reopen them.
 ## What already exists
 
 - **The decided product boundary.**
-  `issues/features/2026-08-07-web-password-reset-account-recovery.md:9-15`
+  `issues/closed/features/2026-08-07-web-password-reset-account-recovery.md:9-15`
   says: *“build option 2 — an operator-driven member password reset that reuses
   the invite-link machinery.”* This plan implements that decision. It does not
   add email delivery.

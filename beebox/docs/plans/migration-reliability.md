@@ -117,7 +117,7 @@ History reviewed:
   “without checking whether the destination exists; POSIX rename silently”.
   Lines 12–18 close the issue after a fleet census, not a safety fix. Preserve
   destination collision checks rather than treating a rename as harmless.
-- `issues/code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md:11`:
+- `issues/closed/code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md:11`:
   “runs one
   `git mv` subprocess per planned file.” The v2 bootstrap stays
   separate; do not force it into an unattended ten-minute sweep.

@@ -41,7 +41,7 @@ real), what belongs in `prompt.md`, and how to rehearse with `bin/schedules run
 
 Periodic tasks that still wait for someone to remember them. Each needs its own
 `run` design before it can become a schedule
-(`issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md`).
+(`issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md`).
 
 | Task | Command | Cadence it wants |
 |------|---------|------------------|

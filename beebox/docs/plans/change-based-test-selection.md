@@ -27,11 +27,11 @@ decide how much verification each kind of change deserves.
 
 **Issues addressed**
 
-- `issues/exploration/2026-08-08-run-less-of-the-test-suite.md` — the origin
+- `issues/closed/exploration/2026-08-08-run-less-of-the-test-suite.md` — the origin
   item, whose `## Research (2026-08-08)` is the timing baseline and whose
   `## Track 0 measurement (2026-08-09)` is this plan's own measurement.
-- `issues/bugs/2026-08-05-doctest-loader-tsx-resolution-flake-recurred.md` and
-  `issues/bugs/2026-07-29-flaky-login-redirect-doctest.md` — **partly addressed.**
+- `issues/closed/bugs/2026-08-05-doctest-loader-tsx-resolution-flake-recurred.md` and
+  `issues/closed/bugs/2026-07-29-flaky-login-redirect-doctest.md` — **partly addressed.**
   Neither is fixed here, but both are flakes with no measured frequency, and the
   ledger's flake classification is the first thing in this repo that would
   produce one. Do not close either on the strength of this plan.

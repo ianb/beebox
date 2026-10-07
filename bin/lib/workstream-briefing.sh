@@ -63,3 +63,35 @@ workstream_validate_description() {
   WORKSTREAM_DESCRIPTION="$description"
   export WORKSTREAM_DESCRIPTION
 }
+
+# Refuses a briefing whose prose invokes a skill by sigil (`/finish`,
+# `$finish`): the receiving agent runs it. `$2` is the checkout whose
+# bin/briefing-sigils.ts runs; skill names come from `.claude/skills/` in it
+# and in each further checkout argument, read at run time. `$3` = true skips
+# the check (--allow-sigils).
+workstream_check_briefing_sigils() {
+  local command_name="$1" repo="$2" allow="$3"
+  shift 3
+  [ "$allow" = true ] && return 0
+  [ -n "${WORKSTREAM_BRIEFING:-}" ] || return 0
+  local dirs=() checkout hits rc=0
+  for checkout in "$repo" "$@"; do dirs+=("$checkout/.claude/skills"); done
+  hits=$(cd "$repo" && printf '%s' "$WORKSTREAM_BRIEFING" | node --import tsx bin/briefing-sigils.ts "${dirs[@]}") || rc=$?
+  case "$rc" in
+    0) return 0 ;;
+    3)
+      {
+        echo "$command_name: refusing: the briefing invokes a skill by sigil:"
+        printf '%s\n' "$hits" | sed 's/^/  /'
+        echo "A sigil is invocation syntax and the receiving agent runs it."
+        echo "Name the skill without a sigil: 'use the finish skill'."
+        echo "Code spans and fenced blocks are exempt; --allow-sigils overrides."
+      } >&2
+      return 1
+      ;;
+    *)
+      echo "$command_name: briefing sigil check failed (exit $rc); not launching" >&2
+      return 1
+      ;;
+  esac
+}

@@ -88,6 +88,16 @@ if [ -n "$staged_schedules" ]; then
   (cd "$REPO_DIR" && bin/schedules lint)
 fi
 
+# Skills and subagents: frontmatter, size, sigils, and backticked paths
+# (bin/skill-lint.ts). Before the docs-only exit, since a SKILL.md edit is
+# all-Markdown; deletions count, since removing a reference file can strand a path.
+# --quiet keeps informational findings out of the hook.
+staged_claude="$(git -C "$REPO_DIR" diff --cached --name-only -- .claude)"
+if [ -n "$staged_claude" ]; then
+  echo "[pre-commit] .: bin/skill-lint"
+  (cd "$REPO_DIR" && node --import tsx bin/skill-lint.ts --quiet)
+fi
+
 # Any commit touching markdown runs the fast doc reference/orphan check.
 if echo "$staged" | grep -q '\.md$'; then
   run_in beebox pnpm doc-check

@@ -229,7 +229,7 @@ Doc-check and whitespace checks pass for this planning artifact. At the assessme
 
 ## Cross-model implementation
 
-Applied the shared contract plus conditional [Codex runner](../../../.claude/skills/cross-model/references/codex-runner.md) and [Claude runner](../../../.claude/skills/cross-model/references/claude-runner.md). The [entrypoint](../../../.claude/skills/cross-model/SKILL.md) retains authority, completion, mode selection, delegated prompt scaffolding, bounded review rounds, and material-result handoff. Runner selection follows the driving family for all four intended models; reviewer defaults are preserved. Historical quota observations are labeled as dated, not current guarantees.
+Applied the shared contract plus conditional Codex and Claude runner references (since folded into [`bin/cross-model-run`](../../../bin/cross-model-run.ts)). The [entrypoint](../../../.claude/skills/cross-model/SKILL.md) retains authority, completion, mode selection, delegated prompt scaffolding, bounded review rounds, and material-result handoff. Runner selection follows the driving family for all four intended models; reviewer defaults are preserved. Historical quota observations are labeled as dated, not current guarantees.
 
 The Claude runner now explicitly distinguishes committed branch diffs from working-tree/new-file review targets. Supporting references resolve through the existing Codex skill directory symlink; no mirror generator change is needed. At that checkpoint, the other four rewrites remained unimplemented; bin is now applied in the six-follow-up pass below.
 

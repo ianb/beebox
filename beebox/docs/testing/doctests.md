@@ -132,7 +132,7 @@ printCalls(tg.callLog);
 
 ### Connector testing pattern
 
-Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake, and run `sync()`. Credentials go through the machine secret store (`docs/secrets.md`), not a seeded box file — `setSecret`/`grantSecret` (`src/core/secrets/lifecycle.js`) put a value in and grant it to the box's slug, same as `bbx secrets set`/`grant` would:
+Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake, and run `sync()`. Credentials go through the machine secret store (`docs/secrets.md`), not a seeded box file — `setSecret`/`grantSecret` (`src/core/secrets/lifecycle.ts`) put a value in and grant it to the box's slug, same as `bbx secrets set`/`grant` would:
 
 ```typescript
 const box = await makeTmpBox({ git: true });

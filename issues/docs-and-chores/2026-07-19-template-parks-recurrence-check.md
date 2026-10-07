@@ -81,7 +81,7 @@ landed the same day parked too, for two causes: the boxes carried older stock
 versions the ledger (`beebox/src/core/template-stock-hashes.ts`) never recorded
 (fixed by adding the field hashes), and the maps finalizer had prepended or
 planted MAP-include shims over four guides
-(`issues/bugs/2026-09-26-maps-finalizer-shims-over-tracked-guides.md`).
+(`issues/closed/bugs/2026-09-26-maps-finalizer-shims-over-tracked-guides.md`).
 The guide parks were accepted by hand; the content-bearing parks above were
 left alone, per the distinction in the previous section.
 

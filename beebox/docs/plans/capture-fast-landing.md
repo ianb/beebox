@@ -258,7 +258,7 @@ history should not be silently lossy.
   pipeline**: the box child was GC-thrashing (mutator utilization ~0.3)
   under the iOS webview's burst-refetch of a 15.5MB transcript, then heap-OOM
   crashed mid-`delivering` and resumed after respawn. That is
-  `issues/bugs/2026-08-04-chat-history-parse-transient-oom.md` (filed from
+  `issues/closed/bugs/2026-08-04-chat-history-parse-transient-oom.md` (filed from
   the ios-capture-upload-diag worktree, live-measured, with fix directions) —
   a separate track. This plan removes work from the crash-exposed span but
   does not fix the OOM.

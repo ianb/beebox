@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-07T22:30:11Z
+Generated: 2026-10-07T22:56:01Z
 Total documents: 479
 
 ## Issues
@@ -121,12 +121,11 @@ Referenced by:
 - CLAUDE.md:63 (mention) — When a correction exposes missing durable guidance, put a short rule at the narrowest accurate owner: this file for pack
 - README.md:36 (mention) — `CLAUDE.md`) and the box itself under `content/` — directories, default
 - code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is
-- docs/README.md:71 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
+- docs/README.md:84 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 - docs/agent-guide.md:12 (mention) — `CLAUDE.md`. Every word in it is paid on every turn, so each rule in it must
 - docs/box-guidance.md:14 (mention) — root `CLAUDE.md` and its `@` includes), `situational` (when the agent works on
 - docs/box-layout.md:9 (mention) — A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working t
-- docs/cards/migrations.md:486 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
-- docs/cards/schemas.md:375 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
+- docs/cards/schemas.md:365 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
 - docs/cards/validation.md:32 (mention) — A box `CLAUDE.md` size warning appears once per file and size tier in each
 - docs/design/extensibility.md:25 (mention) — prompts), don't build it. Small additions — a `CLAUDE.md` file with custom
 - docs/design/identity.md:5 (mention) — and operating system built on Claude Code" (CLAUDE.md) is the identity;
@@ -260,10 +259,9 @@ Referenced by:
 - ../.claude/skills/bbx-plan/SKILL.md:55 (mention) — `beebox/CLAUDE.md:101`: *"Read before writing…"* is a citation.
 - ../.claude/skills/bbx-plan/TEMPLATE.md:34 (mention) — - beebox/CLAUDE.md — conventions, validation contract, "no features
 - ../.claude/skills/browse/references/authentication.md:54 (mention) — live sessions (`beebox/CLAUDE.md`). If you cannot get one, say which findings
-- ../.claude/skills/cross-model/references/claude-runner.md:93 (mention) — recursion: the reviewer loads a CLAUDE.md that tells it to get a cross-model
 - ../.claude/skills/doctest/SKILL.md:14 (mention) — Create `test/<name>.doctest.md`, mirroring the `src/` path (`beebox/CLAUDE.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Test what a real box agent learned from box-loaded guidance such as a box CLAUDE.md, generated agent guide,
-- ../.claude/skills/launch-worktree-session/SKILL.md:160 (mention) — `CLAUDE.md` and `/skill` names. Use the vocabulary the receiving agent will
+- ../.claude/skills/launch-worktree-session/SKILL.md:64 (mention) — `CLAUDE.md`. Pass handoff notes inline or by absolute path, never
 - ../CLAUDE.md:7 (link) — - **Main system:** [beebox/CLAUDE.md](beebox/CLAUDE.md).
 - ../bin/docs/worktree-lifecycle.md:79 (mention) — `bin/generate-agents-md.ts` mirrors tracked `CLAUDE.md`, embeds nearest scoped
 - ../dev/skills-review-2026-10.md:12 (mention) — - Agent-written briefings used a bare `/finish` or `$finish` sigil in 61 Claude and 22 Codex sessions (114 for finish, 4
@@ -666,7 +664,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 28 lines
+Title: "Deploy" | 39 lines
 
 Referenced by:
 - deploy/CLAUDE.md:5 (mention) — — so don't send anyone here to set up a Bee Box. See `deploy/README.md`.
@@ -693,6 +691,7 @@ Referenced by:
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../CLAUDE.md:62 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
+- ../bin/CLAUDE.md:175 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:38 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
@@ -753,7 +752,7 @@ Referenced by:
 - docs/box-guidance.md:37 (mention) — | `.beebox/agent-guide.md` | always | generated | `generateDocs` | no |
 - docs/box-guidance.md:129 (link) — [agent guide](agent-guide.md). A section whose facts only some runs
 - docs/box-layout.md:3 (mention) — The on-disk shape of a beebox. This is the canonical reference for beebox developers; agents working *inside* a box see
-- docs/cards/schemas.md:374 (mention) — 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
+- docs/cards/schemas.md:364 (mention) — 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
 - docs/guides.md:34 (link) — | Agent guide: the always-loaded guide, its ledger of rules, and the bin test | [agent-guide](agent-guide.md) |
 - docs/implemented-plans/agent-guide-spec.md:11 (mention) — The always-loaded agent guide (`.beebox/agent-guide.md`, rendered from
 - docs/implemented-plans/box-docs-in-package.md:31 (mention) — | `.beebox/agent-guide.md` | engine text plus the box's procedures, personality, shape | partly |
@@ -1418,7 +1417,7 @@ Referenced by:
 - docs/plans/ios-share-extension-capture.md:52 (mention) — - Swift already demonstrates direct non-batched tRPC calls. `ios-app/BeeBox/Services/LogForwarder.swift:283` posts to `t
 - docs/plans/sticky-hq-ios-parity.md:16 (mention) — The boxholder requires the setting to work on iOS. The existing mobile contract requires web/native wire changes to upda
 - docs/plans/workspace-pane-controls.md:84 (mention) — | `docs/mobile-contract.md:285-290`: attention carries “focusedRef, and visible/hidden transcript”; “ordinary route move
-- ../.claude/skills/bbx-ios-overlap/SKILL.md:17 (mention) — **The canonical reference is `beebox/docs/mobile-contract.md`**
+- ../.claude/skills/bbx-ios-overlap/SKILL.md:13 (mention) — The reference is `beebox/docs/mobile-contract.md`: §7 Contract Surface Index,
 - ../CLAUDE.md:9 (link) — - **Native iOS companion:** [ios-app/CLAUDE.md](ios-app/CLAUDE.md). It shares an [HTTP/bridge contract](beebox/docs/mobi
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:39 (mention) — This is deliberate and documented — `beebox/docs/mobile-contract.md` §4.5:
 - ../issues/bugs/2026-09-20-ios-composer-has-no-keyword-hints.md:76 (mention) — (`beebox/docs/mobile-contract.md:487-495`): native detects over its own
@@ -1482,7 +1481,6 @@ Referenced by:
 - docs/implemented-plans/mobile-parity-sync.md:95 (mention) — ### 3. `docs/mobile-parity.md` — the parity matrix (to build)
 - docs/plans/android-companion-app.md:590 (mention) — - The parity matrix (`docs/mobile-parity.md`, owned by the sync plan) lists each
 - docs/plans/chat-photo-batch-upload.md:479 (mention) — caller anchor, a threshold row), `docs/mobile-parity.md`, and the
-- ../.claude/skills/bbx-ios-overlap/SKILL.md:24 (mention) — update the doc while you're in it. `beebox/docs/mobile-parity.md`
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:14 (mention) — tripwire anchor manifest), `docs/mobile-parity.md`, shared golden fixtures
 - ../issues/features/2026-07-20-android-per-box-device-lock-parity.md:36 (mention) — acceptance. Close only when the Android cell in `docs/mobile-parity.md` can be
 
@@ -1629,7 +1627,7 @@ References:
 
 #### docs/README.md
 
-Title: "docs/ — map and naming conventions" | 148 lines | current reference
+Title: "docs/ — map and naming conventions" | 161 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -2293,7 +2291,7 @@ Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:100 (link) — - [`docs/cards/format.md`](docs/cards/format.md) — the card format
 - docs/cards.md:10 (link) — | [Format](cards/format.md) | The file format: naming, frontmatter and body, the shared Markdoc tags, attachments, refs,
-- docs/cards/migrations.md:645 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:618 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/schemas.md:82 (link) — - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is
 - docs/cards/validation.md:93 (link) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
@@ -2324,7 +2322,7 @@ References:
 
 #### docs/cards/migrations.md
 
-Title: "Card migrations" | 689 lines | current reference
+Title: "Card migrations" | 662 lines | current reference
 
 Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -2381,7 +2379,6 @@ References:
 - → docs/implemented-plans/todo-annotation.md (mention)
 - → docs/implemented-plans/scanner-ingest.md (mention)
 - → docs/implemented-plans/one-root-box-layout.md (mention)
-- → CLAUDE.md (mention)
 - → docs/implemented-plans/standard-card-fields.md (mention)
 - → docs/cards/format.md (link)
 - → docs/implemented-plans/cards-as-markdown-rfc.md (link)
@@ -2390,14 +2387,14 @@ References:
 
 #### docs/cards/schemas.md
 
-Title: "Card schemas" | 389 lines | current reference
+Title: "Card schemas" | 379 lines | current reference
 
 Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:101 (link) — - [`docs/cards/schemas.md`](docs/cards/schemas.md) — adding a new card type
 - docs/cards.md:11 (link) — | [Schemas](cards/schemas.md) | Adding a card type: the schema file, its hooks, registration, templates, the generated i
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:646 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
+- docs/cards/migrations.md:619 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/implemented-plans/box-schema-reload.md:250 (mention) — - Mirror in `docs/cards/schemas.md` if it implies `bbx init` re-registers.
 - docs/implemented-plans/box-search.md:51 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
@@ -2848,8 +2845,8 @@ Title: "Code Maintenance" | 102 lines | current reference
 
 Referenced by:
 - code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/development/maintenance.md)
-- docs/README.md:122 (link) — ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
-- docs/cards/migrations.md:647 (link) — - [Maintenance](../development/maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic to
+- docs/README.md:135 (link) — ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
+- docs/cards/migrations.md:620 (link) — - [Maintenance](../development/maintenance.md), where `bbx engine migrate` and `clean-broken-refs.ts` sit among the peri
 - docs/development.md:41 (link) — | [Maintenance](development/maintenance.md) | Periodic tasks: what runs on its own, what is not yet enrolled, what to ru
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
 - docs/implemented-plans/doc-structure-development.md:53 (mention) — | Enrolled schedules | maintenance.md "four enrolled today"; development-workflow.md lists eleven | contradiction; the n
@@ -2941,8 +2938,8 @@ References:
 Title: "Agent browsing as the owner: a box opts in, the browse key becomes a person" | 300 lines | shipped history | implemented
 
 Referenced by:
-- docs/testing/tours.md:78 (mention) — (`docs/plans/agent-browsing-owner.md`). A healthy tour takes tens of seconds — both
-- docs/user-stories/README.md:265 (mention) — `docs/plans/agent-browsing-owner.md` the browse key acts as the owner on a box whose
+- docs/testing/tours.md:78 (mention) — (`docs/implemented-plans/agent-browsing-owner.md`). A healthy tour takes tens of seconds — both
+- docs/user-stories/README.md:265 (mention) — `docs/implemented-plans/agent-browsing-owner.md` the browse key acts as the owner on a box whose
 - ../.claude/skills/browse/references/authentication.md:57 (mention) — Mechanism: `beebox/docs/implemented-plans/agent-browsing-owner.md`.
 - ../issues/closed/bugs/2026-08-26-chat-load-logs-resumable-capture-list-error.md:13 (mention) — agent browsing as its owner", `docs/plans/agent-browsing-owner.md` →
 
@@ -2958,7 +2955,7 @@ References:
 Title: "Agent self-configuration of credentialed connectors (Drive first)" | 441 lines | shipped history | implemented
 
 Referenced by:
-- docs/connectors/gmail.md:148 (mention) — further (`docs/plans/agent-capability-delegation.md`).
+- docs/connectors/gmail.md:148 (mention) — further (`docs/implemented-plans/agent-capability-delegation.md`).
 - docs/implemented-plans/bbx-agent-surface.md:95 (mention) — - **Shipped precedent:** `docs/implemented-plans/agent-capability-delegation.md`
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:60 (mention) — `beebox/docs/plans/agent-capability-delegation.md`. `wakeup` stays here as
 
@@ -3548,7 +3545,7 @@ Title: "RFC: Cards as Markdown + YAML Frontmatter" | 2560 lines | shipped histor
 
 Referenced by:
 - docs/cards/format.md:9 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:645 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:618 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/validation.md:93 (mention) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/implemented-plans/remove-cardworks-and-xml.md:123 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
 - docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `beebox/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
@@ -3898,7 +3895,7 @@ References:
 Title: "Deferred-recoverable agent failures" | 437 lines | shipped history | implemented
 
 Referenced by:
-- docs/scheduler.md:37 (mention) — `docs/plans/deferred-recoverable-agent-failures.md`.
+- docs/scheduler.md:37 (mention) — `docs/implemented-plans/deferred-recoverable-agent-failures.md`.
 - ../issues/closed/bugs/2026-08-18-codex-quota-exhaustion-surfaces-as-a-meaningless-error.md:13 (mention) — > (`../../../beebox/docs/plans/deferred-recoverable-agent-failures.md`).
 - ../issues/closed/bugs/2026-08-18-scheduled-task-dies-on-git-index-lock.md:141 (mention) — design in `../../beebox/docs/plans/deferred-recoverable-agent-failures.md`
 
@@ -4557,7 +4554,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:757 (mention) — `docs/plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:757 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../beebox/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../beebox/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -4962,7 +4959,7 @@ Title: "One-root box layout (shapeVersion 3)" | 575 lines | shipped history | im
 
 Referenced by:
 - docs/box-layout.md:32 (mention) — only the root itself is closed. See `docs/implemented-plans/one-root-box-layout.md` for
-- docs/cards/migrations.md:481 (mention) — `_config/`). See `docs/implemented-plans/one-root-box-layout.md` Track E for the full
+- docs/cards/migrations.md:474 (mention) — design is `docs/implemented-plans/one-root-box-layout.md` Track E. One module
 - docs/mobile-contract.md:20 (mention) — layout (shapeVersion 3, `docs/implemented-plans/one-root-box-layout.md`) they land in underscore areas
 - ../issues/closed/bugs/2026-09-21-absolute-path-check-matches-urls.md:41 (mention) — The guard's whole purpose (`docs/implemented-plans/one-root-box-layout.md`,
 - ../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:14 (mention) — > (`beebox/docs/implemented-plans/one-root-box-layout.md`, `status: partial` — code and
@@ -5022,7 +5019,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines | shipped history | implemented
 
 Referenced by:
-- ../bin/CLAUDE.md:139 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../bin/CLAUDE.md:158 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 
 References:
 - → README.md (mention)
@@ -5063,8 +5060,6 @@ References:
 - → docs/reports/prompt-calibration-pilot-2026-09-12.md (link)
 - → docs/chat/schedules.md (mention)
 - → CLAUDE.md (mention)
-- → ../.claude/skills/cross-model/references/codex-runner.md (link)
-- → ../.claude/skills/cross-model/references/claude-runner.md (link)
 - → ../.claude/skills/cross-model/SKILL.md (link)
 - → ../agent-doctest/docs/syntax.md (link)
 - → docs/guides.md (link)
@@ -5575,7 +5570,7 @@ Referenced by:
 - docs/plans/box-glm-provider.md:81 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:195 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:302 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:302 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
 - docs/user-stories/catalog/2026-08-21.md:9044 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -5766,7 +5761,7 @@ References:
 Title: "Standard card fields" | 635 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards/migrations.md:509 (mention) — Part 1 of `docs/implemented-plans/standard-card-fields.md`. Drops `status` from job cards
+- docs/cards/migrations.md:482 (mention) — Part 1 of `docs/implemented-plans/standard-card-fields.md`. Drops `status` from job cards
 - docs/implemented-plans/chat-titles.md:80 (mention) — - **Standard card fields (`docs/implemented-plans/standard-card-fields.md`).**
 - ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md:13 (link) — Closed: implemented by [the standard card fields plan](../../../beebox/docs/implemented-plans/standard-card-fields.md) (
 
@@ -5857,7 +5852,7 @@ References:
 Title: "Todo collection — todos as a staged query, with summaries that belong to the card type" | 739 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards/format.md:101 (mention) — `docs/plans/todo-collection.md`.
+- docs/cards/format.md:101 (mention) — `docs/implemented-plans/todo-collection.md`.
 - ../issues/docs-and-chores/2026-09-20-remove-bbx-todos-verb.md:11 (link) — The [todo collection plan](../../beebox/docs/implemented-plans/todo-collection.md) added
 - ../issues/features/2026-08-19-collection-views-are-badly-defined.md:467 (link) — [Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
 - ../issues/features/2026-08-30-todos-inline-things-to-think-about.md:42 (link) — [Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
@@ -8183,7 +8178,7 @@ Title: "Knowledge audits" | 211 lines | current reference
 
 Referenced by:
 - docs/development/maintenance.md:48 (mention) — | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/tes
-- docs/engineering-principles.md:174 (link) — ([`docs/knowledge-audits.md`](testing/knowledge-audits.md)).
+- docs/engineering-principles.md:174 (link) — ([`docs/testing/knowledge-audits.md`](testing/knowledge-audits.md)).
 - docs/implemented-plans/bbx-agent-surface.md:573 (mention) — `docs/knowledge-audits.md` exists to catch. Two `knows_directly` entries in
 - docs/implemented-plans/doc-structure.md:100 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
 - docs/implemented-plans/docs-reorg.md:117 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
@@ -8237,7 +8232,7 @@ Referenced by:
 
 #### docs/testing/smoke.md
 
-Title: "Smoke" | 101 lines | current reference
+Title: "Smoke" | 102 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:305 (mention) — smoke.md               does the app boot and walk at all? (the merge gate)

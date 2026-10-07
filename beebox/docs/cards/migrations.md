@@ -9,7 +9,7 @@ How box data migrations work, how to apply them, and how to write new ones.
 
 A migration is a one-shot transformation of card data on disk — schema renames, field strips, layout flips, refactors. The system tracks which migrations a box has had applied so future runs only do the missing work.
 
-**Box configuration counts too.** `annex-config-2026-08` re-applies `annex.largefiles` and `.git/info/attributes` from the current renderings; it transforms no cards and leaves the working tree untouched. Config written once at `bbx init` goes stale whenever the code's idea of it changes, and a migration is the one mechanism that records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
+**Box configuration counts too.** `annex-config-2026-08` re-applies `annex.largefiles` and `.git/info/attributes` from the current renderings; it transforms no cards and leaves the working tree untouched. Config written once at `bbx init` goes stale whenever the code's idea of it changes, and a migration is the one mechanism that records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
 
 `gitignore-2026-09` is the second configuration migration: it rewrites the box's `.gitignore` from the current rendering (`writeBoxGitignore`, the function `bbx engine init` uses) and untracks the state directory, box-root locks, and pid file that the pre-rename ignore file had let autocommit sweep in. It leaves `.beebox/box.json` tracked. See `src/scripts/migrate/box-gitignore.ts` for why the untrack list is an explicit allowlist rather than "everything now ignored".
 
@@ -467,42 +467,15 @@ card, so an agent can finish them. See
 `src/scripts/migrate/filename-attach-scope.ts`. Idempotent: repaired cards hold
 `attach/` refs and are skipped.
 
-#### `one-root` (shape migration — v2 two-root → v3 one-root layout)
+#### `one-root` (shape migration — v2 two-root → v3 one-root layout) — removed
 
-Registered at the end of `MIGRATIONS`, but unlike every migrator above it,
-`one-root` runs against a box that ISN'T v3 yet — the v3 engine refuses v2
-boxes outright (`getBoxShape`), so `bbx engine migrate` has a bootstrap path
-(`src/cli/commands/migrate-bootstrap.ts`) that probes for a v2 box
-(`src/core/migrations/one-root-v2-probe.ts`, tolerant of the pre-v3 marker)
-and hands it straight to `src/core/migrations/one-root-run.ts`'s
-`runOneRootMigration`, entirely outside the normal manifest-driven `pending`
-loop (a v2 box has no `_config/migrations.jsonl` yet — the migration MOVES
-that file into existence as part of converting `content/config/` →
-`_config/`). See `docs/implemented-plans/one-root-box-layout.md` Track E for the full
-design. In order: preflight (clean tree, no running-process lock files, the
-v2 package root's own closed-vocabulary check); `git mv` every `content/`
-file per `src/core/migrations/one-root-mapping.ts`'s table (exhaustive,
-`assertNever`-terminated over the frozen v2 layout); `content/CLAUDE.md`
-merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
-filesystem rename (gitignored runtime state, not git); marker bumped to
-`shapeVersion: 3`; `.gitignore`/`.gitattributes` regenerated (reuses
-`initBox`); every card/doc's refs rewritten to canonical `/`-form
-(`one-root-ref-rewrite.ts`, YAML-aware — unlike `bbx mv`'s rewriter it DOES
-handle inline-map `refs:` forms, since a migration commit reorders
-frontmatter keys everywhere anyway); a hard link gate
-(`one-root-link-gate.ts`) refuses to commit if the rewrite left any
-reference dangling; the full `bbx init` tail regenerates rules/guides/docs/
-search index; `hub.json`/`boxes.json` entries pointing at the old
-`<root>/content` path are corrected. Everything lands in exactly ONE commit
-(`migrate: one-root`) — a `git reset --soft` to the pre-migration SHA folds
-in `bbx init`'s own incidental provisioning commit before the final commit,
-so the plan's "one migration, one commit" holds even though the reused
-init tail commits on its own. Rollback on ANY failure: rename `.beebox`
-back under `content/`, `git reset --hard` + clean to the pre-migration SHA
-— nothing commits until the very end, so this always fully undoes the
-attempt. The bootstrap path (everything v2-shape-aware) is scheduled for
-removal once the fleet has converged — see
-`issues/deferred/2026-09-04-remove-one-root-v2-bootstrap.md`.
+The v2 → v3 one-root conversion was deleted once no v2 box remained; a v2 box
+now fails with an error from `getBoxShape` instead of naming a migration. Its
+design is `docs/implemented-plans/one-root-box-layout.md` Track E. One module
+survives: `src/core/migrations/one-root-mapping.ts`, whose `mapV2Path` is a
+read-time fallback for chat transcripts written before a box was converted.
+Applied `one-root` manifest entries are ignored, because `computePending`
+filters `MIGRATIONS` by applied name.
 
 #### `standard-fields-2026-09` (strip — standard fields with no job)
 

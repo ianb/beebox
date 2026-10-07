@@ -57,6 +57,19 @@ unique-basename invariant that makes issue-link repair possible. Prints nothing
 on success; on failure, fix the links and regenerate the index (`pnpm
 doc-graph`).
 
+It also checks backticked file paths in prose. A single-backtick span that
+starts with a repo directory (`beebox/`, `bin/`, `src/`, `docs/`, `issues/`,
+and the other package roots) and ends in a file extension must resolve
+relative to the doc's directory, its package root, `beebox/`, or the monorepo
+root. Placeholders (`<x>`, `*`, `{}`, `...`), fenced code, gitignored paths,
+and box-facing docs (`docs/box/`) are skipped, and a `:line` suffix is
+ignored. Historical records (implemented and unimplemented plans, reports,
+user-story catalogs, closed issues, `research/`, changelogs) are exempt. Plans
+and open issues name files they propose, so in them only an issue that moved to
+`issues/closed/` is reported; `--fix` rewrites that case everywhere. A
+deliberate mention of a file outside the repo goes in `ALLOWED_MISSING_PATHS`
+with a reason. Mechanism: `src/dev/doc-check/file-paths.ts`.
+
 Plan status/location consistency is also checked against the complete staged
 Git index on every commit, and against the candidate branch before `bin/land`
 merges. The shared validator rejects unreadable metadata and never assigns a
@@ -72,8 +85,8 @@ excluding the intentionally-per-directory `NON_UNIQUE_BASENAMES` —
 current location. It never guesses: a basename with no match (a true
 rename/delete) or 2+ matches is reported for manual handling, not rewritten.
 Links inside code spans / fenced blocks (syntax illustrations) and generated
-emitter outputs are left untouched. It does not see backticked path
-mentions in code, skills, YAML, or test fixtures (`site/docs-links.test.ts`,
+emitter outputs are left untouched. It does not see path mentions in code,
+YAML, or test fixtures (`site/docs-links.test.ts`,
 `bin/*.test.ts`), so grep for the old path before committing a move. It also prints a non-fatal report of
 repo-wide duplicate basenames — the gap toward making basenames globally
 unique. Mechanism: `src/dev/doc-check/link-repair.ts`.

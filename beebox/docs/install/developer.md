@@ -17,7 +17,7 @@ server), the Docker path is simpler: see
   npm run build-release`); a stale binding fails tests with
   `ERR_DLOPEN_FAILED`. On a machine without a version manager (e.g. a bare
   Linux server), install it from NodeSource — the same mechanism
-  `deploy/setup-server.sh` uses:
+  `deploy/hetzner/setup-server.sh` uses:
 
   ```bash
   # Debian/Ubuntu
@@ -54,7 +54,7 @@ server), the Docker path is simpler: see
 
   On Debian/Ubuntu the `imagemagick` package is ImageMagick 6, which ships
   `convert` but not the `magick` command the agent contract and `pnpm run
-  doctor` look for. Alias it (the same shim `deploy/setup-server.sh` applies):
+  doctor` look for. Alias it (the same shim `deploy/hetzner/setup-server.sh` applies):
 
   ```bash
   # Debian/Ubuntu only — Homebrew's imagemagick already provides `magick`
@@ -68,7 +68,7 @@ server), the Docker path is simpler: see
   ```
 
 - **Claude Code CLI**, and a subscription login. Install it with the native
-  installer (the same one `deploy/setup-server.sh` uses), then log in:
+  installer (the same one `deploy/hetzner/setup-server.sh` uses), then log in:
 
   ```bash
   curl -fsSL https://claude.ai/install.sh | bash

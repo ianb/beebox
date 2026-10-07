@@ -3,7 +3,8 @@
  * Generate gitignored Codex mirrors for OpenAI Codex CLI sessions
  * (`bin/launch-worktree-session --agent codex`): AGENTS.md beside every tracked
  * CLAUDE.md, path-scoped Claude rules embedded into the nearest AGENTS.md, and
- * .agents/skills symlinks for every tracked Claude skill, and a
+ * .agents/skills symlinks for every tracked Claude skill (`lib/codex-skill-links.ts`,
+ * which also removes entries with no tracked source), and a
  * .codex/agents/<name>.toml for every tracked Claude subagent.
  *
  * Codex reads AGENTS.md where Claude Code reads CLAUDE.md: its harness injects
@@ -28,19 +29,11 @@
  */
 
 import { execFileSync } from "node:child_process";
-import {
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  readlinkSync,
-  readdirSync,
-  symlinkSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 
 import { generateCodexAgents, generateCodexHooks } from "./generate-codex-agents.js";
+import { generateSkillLinks } from "./lib/codex-skill-links.js";
 
 class TrackedAgentsMdError extends Error {
   constructor(readonly tracked: string[]) {
@@ -244,79 +237,6 @@ export function generateAgentsFiles(
       content + buildRulesAppendix(rules),
     );
     written.push(target);
-  }
-  return written;
-}
-
-function lstatIfPresent(
-  path: string,
-): ReturnType<typeof lstatSync> | undefined {
-  try {
-    return lstatSync(path);
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT")
-      return undefined;
-    throw error;
-  }
-}
-
-// Link every tracked Claude skill into the repo-scoped location Codex scans.
-// Symlinks keep scripts/references/assets attached without duplicating them.
-// Only links with our exact generated target are ever removed on regeneration;
-// native Codex skills or other user-created entries are left alone and collide
-// loudly instead of being overwritten.
-export function generateSkillLinks(checkoutDir: string): string[] {
-  const skillNames = gitLsFiles(checkoutDir, ".claude/skills/*/SKILL.md")
-    .map((path) => path.split("/"))
-    .filter(
-      (parts) =>
-        parts.length === 4 &&
-        parts[0] === ".claude" &&
-        parts[1] === "skills" &&
-        parts[3] === "SKILL.md",
-    )
-    .map((parts) => parts[2])
-    .filter((name): name is string => name !== undefined)
-    .toSorted();
-  const expected = new Set(skillNames);
-  const skillsDir = join(checkoutDir, ".agents", "skills");
-  mkdirSync(skillsDir, { recursive: true });
-
-  for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
-    if (!entry.isSymbolicLink()) continue;
-    const target = join("..", "..", ".claude", "skills", entry.name);
-    const path = join(skillsDir, entry.name);
-    if (readlinkSync(path) === target && !expected.has(entry.name))
-      unlinkSync(path);
-  }
-
-  const written: string[] = [];
-  for (const name of skillNames) {
-    const target = join("..", "..", ".claude", "skills", name);
-    const path = join(skillsDir, name);
-    const existing = lstatIfPresent(path);
-    if (existing === undefined) {
-      symlinkSync(target, path, "dir");
-    } else if (!existing.isSymbolicLink() || readlinkSync(path) !== target) {
-      // Still refuse to overwrite — a hand-authored native Codex skill at a
-      // tracked skill's name is a real thing to protect (see the test of the
-      // same name). But SKIP it and keep going rather than throwing.
-      //
-      // Throwing aborted the whole run at the FIRST such entry, so one
-      // unexpected directory silently cost every later skill AND the AGENTS.md
-      // mirrors after it. The main checkout sat on 2026-07-06 copies of all 15
-      // skills for seven weeks that way, and the only symptom was Codex
-      // sessions working from stale instructions — invisible unless someone ran
-      // the generator by hand. A loud skip keeps the protection and bounds the
-      // damage to the one entry it is protecting.
-      console.warn(
-        `generate-agents-md: refusing to overwrite existing Codex skill path: .agents/skills/${name} — ` +
-          "leaving it as-is. If this is a stale generated copy rather than a native Codex skill, " +
-          "remove it and re-run to restore the symlink.",
-      );
-      continue;
-    }
-    written.push(join(".agents", "skills", name));
   }
   return written;
 }

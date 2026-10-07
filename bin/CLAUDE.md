@@ -6,7 +6,7 @@ contracts live in `bin/docs/`; read the indicated reference before editing.
 ## Tests for `bin/` tooling
 
 New root-infrastructure tests are doctests under `bin/test/`, mirroring the
-file they test (`bin/lib/x.ts` → `bin/test/lib/x.doctest.md`), including shell
+file they test (`bin/lib/<name>.ts` → `bin/test/lib/<name>.doctest.md`), including shell
 fixtures and CLI behavior. They run in beebox's suite, under its home and
 secret isolation: `cd beebox && pnpm exec tap ../bin/test/<path>.doctest.md`.
 Existing `bin/*.test.ts` files are not precedent. Use a traditional test only
@@ -128,6 +128,25 @@ human and agent invocations, body loads, briefing mentions, a loaded-but-unused
 proxy, and labelled recurring instructions and failures. It prints names,
 labels, and counts only. The file headers in `bin/lib/skill-usage-*.ts` document the marker shapes.
 
+## Skill lint (`skill-lint.ts`)
+
+`node --import tsx bin/skill-lint.ts [--json] [--quiet]` checks every
+`.claude/skills/*/SKILL.md` and `.claude/agents/*.md`: frontmatter `name` and
+`description`, body size, reference depth, bare `/skill` or `$skill` sigils in
+prose, and backticked repo paths that do not resolve. It prints one line per
+finding and exits 1 on any error; Codex-ignored frontmatter keys are `info`,
+which `--quiet` hides. Pre-commit runs it when `.claude/` is staged.
+
+## Cross-model runner (`bin/cross-model-run`)
+
+`bin/cross-model-run --engine codex|claude [--prompt-file <path>]` runs one
+read-only reviewer in the foreground and saves `<out>.prompt.md`, `<out>.log`
+(raw), and `<out>.md` (final answer) under `scratch/cross-model/`. Codex runs
+`exec -s read-only -o`; Claude runs `-p` with only Read/Grep/Glob and
+`--setting-sources user`, so the project SessionEnd hook cannot remove the
+worktree. Judgment lives in the `cross-model` skill. Exit 127/124/1 means
+missing engine, timeout, or failure/empty answer.
+
 ## Private-issues shadow repo (`private-issues`)
 
 Every checkout mount remains a symlink. Roots are derived and identity marked;
@@ -146,6 +165,14 @@ worktrees point to `<parent>/private-issues-worktrees/<name>` on
 lock. Deletions count as dirty intentional work, and every sweep reports
 private worktree/branch orphans. Public-worktree deletion therefore removes
 only a symlink.
+
+## Production deploy state (`bin/deploy-status`)
+
+Read-only report of the deployed commit against `main` and `HEAD`, the last
+deploy record, the deploy lock, hub health, disk, and pending box migrations
+(`--json` for machines). Use it instead of improvised SSH; the
+`deploy-status` skill holds the judgment rules. Sources:
+[deploy README](../beebox/deploy/README.md#checking-deploy-state).
 
 ## `/<worktree>/dev/` serving
 

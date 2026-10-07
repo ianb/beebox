@@ -303,7 +303,7 @@ Z.ai resuming against Anthropic is a data-posture violation, not just a bug).
   provider-aware branch: a claude-engine turn on a GLM-model session checks
   the GLM key, not `claude auth status` — which we proved this week reports
   logged-in from token presence alone
-  (`issues/bugs/2026-09-15-scan-vision-integration-fails-when-not-logged-in.md`).
+  (`issues/closed/bugs/2026-09-15-scan-vision-integration-fails-when-not-logged-in.md`).
 
 **First chunk:** glm-key module + refusal mapping + `run.ts`/agent-factory
 resolution + doctests on `glmEnvAdditions`, the refusal messages, and the

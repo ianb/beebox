@@ -471,7 +471,7 @@ bump time.
   itself: `luna` and `sol` now resolve to their GPT-6 IDs in
   `beebox/src/shared/model-ids.ts`, while `terra` intentionally remains on
   `gpt-5.6-terra` because GPT-6 has no Terra model. Tracked with the Opus 5.5
-  update in `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`.
+  update in `issues/closed/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`.
 - **`0.156.0`, relevant:** worktree support is now **enabled by default** in the
   agent command center, and worktree sessions can be created from it. Codex
   worker sessions here get their worktrees from `bin/workstreams create` and run
@@ -558,7 +558,7 @@ bump time.
   default Opus model."* beebox's `opus` alias now resolves to
   `claude-opus-5-5` (`beebox/src/shared/model-ids.ts`), and retired Opus IDs
   normalize forward. Tracked in:
-  `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md` — **resolved 2026-09-23/24**: `opus` now resolves to `claude-opus-5-5`, and `sol`/`luna` to `gpt-6-*`. 2.1.280 also
+  `issues/closed/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md` — **resolved 2026-09-23/24**: `opus` now resolves to `claude-opus-5-5`, and `sol`/`luna` to `gpt-6-*`. 2.1.280 also
   moves Pro and Team Standard plans' default from Sonnet to Opus, which reaches
   beebox only on paths that leave the model unset.
 - **2.1.280, runtime-relevant:** writes through a symlinked path are now judged
@@ -1140,7 +1140,7 @@ published `0.154.0` in lockstep.
   there stages one subtree, `getStatus(boxRoot)` still sees changes, and the
   fallback commit fires; a shell parked outside the box points `git` at another
   repository entirely. Filed as
-  `issues/bugs/2026-09-09-agent-shell-cwd-now-persists-across-turns.md`, to be
+  `issues/closed/bugs/2026-09-09-agent-shell-cwd-now-persists-across-turns.md`, to be
   fixed **before** the pin crosses rather than after — the pin is `0.3.263`
   today, so nothing is reachable yet.
   **Corrected 2026-09-11 — the paragraph above is wrong, and the issue is closed
@@ -1209,7 +1209,7 @@ Claude Code has no `2.1.264` section. The fifth such gap in under three weeks
   `test/frontend/lib/ui-scan/annotations.doctest.md`, which reproduces in
   isolation and fails identically at the previous `0.3.260` pin — a `main`-side
   red, filed as
-  `issues/bugs/2026-09-09-ui-scan-annotations-table-lists-two-absent-ids.md`
+  `issues/closed/bugs/2026-09-09-ui-scan-annotations-table-lists-two-absent-ids.md`
   because the latest `full-suite` run classified itself as an environment
   failure and filed nothing. `sdk-steering-probe`: all four steering behaviors
   pass.
@@ -1242,7 +1242,7 @@ different behavior, different price — with no beebox-side change. And it would
 be close to invisible afterwards: `codex-chat.ts:185` writes per-turn usage as
 `model: opts.model ?? "codex-default"`, so the ledger records the same string
 before and after the switch. Filed as
-`issues/decisions/2026-09-04-codex-default-model-becomes-astra.md`.
+`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`.
 
 The same default governs `.claude/skills/cross-model/`, which runs the Codex CLI
 for adversarial reviews; note that the skill invokes `codex` from `PATH` (a
@@ -1710,7 +1710,7 @@ interactive UI, provider plumbing (Bedrock/Vertex/Foundry/gateway), VS Code, and
   reproduce in two shapes on this machine.
   `pnpm -C beebox test`: **8,492 pass, 0 fail**. Note for future turns: that
   green does **not** speak to
-  `issues/bugs/2026-08-31-full-suite-red-future-dated-issues-7f47b493.md`, the
+  `issues/closed/bugs/2026-08-31-full-suite-red-future-dated-issues-7f47b493.md`, the
   red `test/frontend/trpc-directory-resolution.test.ts` filed on `main` the same
   day — that file does not appear in this suite at all, so the hourly
   `schedules/full-suite/` run covers tests this monitor's gate does not.
@@ -1883,7 +1883,7 @@ upstream but **not yet present on this machine**.
   process inspection, which probably does catch the case upstream fixed — a
   background session's worker has its cwd inside the worktree — so this is
   hardening rather than a demonstrated defect, filed as
-  `issues/code-quality/2026-08-27-worktree-sweep-ignores-git-worktree-lock.md`.
+  `issues/closed/code-quality/2026-08-27-worktree-sweep-ignores-git-worktree-lock.md`.
 - **`claude rm` and merged-but-unpushed branches.** *"Fixed `claude agents` and
   `claude rm` refusing to delete a session ('has commits that are not pushed
   anywhere') when its worktree branch was already merged into your checked-out
@@ -2246,7 +2246,7 @@ missing version.
   from the SDK. `sdk-steering-probe`: all four steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03241), [Claude Code 2.1.241](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21241)
 
-### Live bug found while reviewing 2.1.239 — `encodeProjectDir` no longer matches Claude Code (FILED 2026-08-25 as `issues/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md`; re-verified still live at that date)
+### Live bug found while reviewing 2.1.239 — `encodeProjectDir` no longer matches Claude Code (FILED 2026-08-25 as `issues/closed/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md`; re-verified still live at that date)
 
 Claude Code 2.1.239 lists: *"Fixed `claude -c`/resume picking up sessions from a
 different directory whose path differed only by characters like `_`, `-`, or

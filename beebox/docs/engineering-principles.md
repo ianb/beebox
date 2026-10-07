@@ -100,7 +100,7 @@ tool-name dispatch. Consolidate over blast-radius fear: caller churn, import
 churn, and differing defaults are migration work, not reasons to keep the
 duplication. Duplication is only kept when copies genuinely co-evolve
 independently — and then the divergence is documented *at the site*
-(`bin/box-entry.ts`'s reasoned cross-package copy is the model). Process
+(`workstreams-app/src/router/box-entry.ts`'s reasoned cross-package copy is the model). Process
 handles duplication; fear of the diff does not.
 
 ## 9. Formal structure for essential complexity
@@ -108,7 +108,7 @@ handles duplication; fear of the diff does not.
 Where hard code can't be made simple, make it explicit rather than implicit:
 state machines (xstate where async actor coordination is the real problem — its
 home is the frontend; a plain discriminated-union + transition function
-otherwise, as in `bin/router.ts`'s `EntryState`), documented lock tables,
+otherwise, as in `workstreams-app/src/router/lifecycle.ts`'s `WorktreePhase`), documented lock tables,
 invariant assertions, protocol docs. Hard work maintaining structure is good
 when the difficulty is essential — the fix for a genuinely complex mechanism is
 to name its structure, not to paper over it.
@@ -171,4 +171,4 @@ idiom, the defensiveness policy, the `as`/cast conventions, the suppression
 policy). Agent-facing conventions that a box agent must recall — `assertNever`,
 the Result convention, `withCardLock`, `resolveContainedRef`, `fenceForPrompt`,
 the logging policy — are also verified by knowledge audits
-([`docs/knowledge-audits.md`](testing/knowledge-audits.md)).
+([`docs/testing/knowledge-audits.md`](testing/knowledge-audits.md)).

@@ -19,13 +19,14 @@
  * Naming/placement conventions: docs/README.md.
  */
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { buildGraphExtended, ROOT } from "../doc-graph-data/data.js";
 import { duplicateBasenames, buildBasenameLookup, repairFrontmatterPaths, repairLinks, type UnfixableLink } from "./link-repair.js";
 import { findPrivateLinkViolations, PRIVATE_LINK_REASON } from "./private-link.js";
 import { frontmatterProblems } from "./frontmatter.js";
+import { describeFilePathProblem, findFilePathProblems, repairFilePaths, type FilePathProblem } from "./file-paths.js";
 
 const MONO_ROOT = path.dirname(ROOT);
 
@@ -159,6 +160,93 @@ function privateLinkProblems(): string[] {
   return problems;
 }
 
+// Historical records whose backticked paths were accurate when written and are
+// not maintained (monorepo-relative prefixes). Generated outputs
+// (GENERATED_NO_SCAN) are skipped too.
+const FILE_PATH_EXEMPT_PREFIXES = [
+  "beebox/docs/implemented-plans/",
+  "beebox/docs/unimplemented-plans/",
+  "beebox/docs/reports/",
+  "beebox/docs/user-stories/catalog/",
+  "issues/closed/",
+  "research/",
+  // Cumulative release log: each entry quotes paths as of its release.
+  "schedules/sdk-update/agent-sdk-notes.md",
+];
+
+function isFilePathExempt(rel: string): boolean {
+  return GENERATED_NO_SCAN.has(rel)
+    || FILE_PATH_EXEMPT_PREFIXES.some((p) => rel.startsWith(p))
+    // Changelogs and dated reports (docs/reports/, user-story journey reports).
+    || path.posix.basename(rel) === "CHANGELOG.md"
+    || rel.includes("/reports/");
+}
+
+class GitCheckIgnoreError extends Error {
+  constructor(readonly stderr: string) {
+    super("git check-ignore failed");
+    this.name = "GitCheckIgnoreError";
+  }
+}
+
+// The subset of `paths` (repo-relative) that .gitignore rules match.
+function gitIgnored(paths: string[]): Set<string> {
+  if (paths.length === 0) return new Set();
+  const result = spawnSync("git", ["check-ignore", "--no-index", "--stdin", "-z"], { cwd: MONO_ROOT, input: paths.join("\0"), encoding: "utf8" });
+  // Exit 1 means none matched; anything else but 0 is a real failure.
+  if (result.status !== 0 && result.status !== 1) throw new GitCheckIgnoreError(result.stderr);
+  return new Set(result.stdout.split("\0").filter((p) => p.length > 0));
+}
+
+// Backticked paths that name a file outside this repo even though they start
+// with a repo directory. Format: "<monorepo doc> -> <token>". Keep each entry
+// justified.
+const ALLOWED_MISSING_PATHS = new Set([
+  // Box guidance surfaces: files every box carries in its own tree.
+  "beebox/docs/box-guidance.md -> src/schemas/CLAUDE.md",
+  "beebox/docs/box-guidance.md -> src/views/CLAUDE.md",
+  "beebox/docs/box-guidance.md -> src/tricks/scripts/CLAUDE.md",
+  "beebox/docs/box-guidance.md -> .claude/rules/bbx-validate-ignore.md",
+  "beebox/docs/cards.md -> src/schemas/CLAUDE.md",
+  "beebox/docs/testing/knowledge-audits.md -> src/schemas/CLAUDE.md",
+  "beebox/docs/testing/knowledge-audits.md -> .claude/rules/card-memo.md",
+  // Entry points of a consumer project that installs the preset.
+  "personal-vibe-check/install.md -> src/index.ts",
+  "personal-vibe-check/install.md -> src/main.tsx",
+]);
+
+// Plans and open issues name files they propose to create, and quote code
+// locations as of when they were filed, so a missing path there is not
+// decay. Only the deterministic moved-to-closed finding applies to them.
+const FILE_PATH_FORWARD_LOOKING_PREFIXES = ["beebox/docs/plans/", "issues/"];
+
+// Backticked repo paths in prose (`beebox/src/foo.ts`) that resolve nowhere —
+// see src/dev/doc-check/file-paths.ts.
+function filePathProblemsByFile(files: string[]): Map<string, FilePathProblem[]> {
+  const fileExists = (rel: string): boolean => fs.existsSync(path.join(MONO_ROOT, rel));
+  const byFile = new Map<string, FilePathProblem[]>();
+  for (const rel of files) {
+    if (isFilePathExempt(rel)) continue;
+    const content = fs.readFileSync(path.join(MONO_ROOT, rel), "utf8");
+    const forwardLooking = FILE_PATH_FORWARD_LOOKING_PREFIXES.some((p) => rel.startsWith(p));
+    const problems = findFilePathProblems({ docRel: rel, content, fileExists }).filter((p) => (!forwardLooking || p.kind === "moved-to-closed") && !ALLOWED_MISSING_PATHS.has(`${rel} -> ${p.token}`));
+    if (problems.length > 0) byFile.set(rel, problems);
+  }
+  // A gitignored path (deploy/target.env, a build output) legitimately need
+  // not exist; one batched check-ignore covers every unresolved candidate.
+  const ignored = gitIgnored([...byFile.values()].flatMap((ps) => ps.flatMap((p) => p.tried)));
+  for (const [rel, problems] of byFile) {
+    const kept = problems.filter((p) => !p.tried.some((t) => ignored.has(t)));
+    if (kept.length > 0) byFile.set(rel, kept);
+    else byFile.delete(rel);
+  }
+  return byFile;
+}
+
+function filePathProblems(files: string[]): string[] {
+  return [...filePathProblemsByFile(files)].flatMap(([rel, problems]) => problems.map((p) => describeFilePathProblem(rel, p)));
+}
+
 function schemaProblems(tracked: string[]): string[] {
   const exists = (rel: string): boolean => fs.existsSync(path.join(MONO_ROOT, rel));
   return tracked.flatMap((rel) => frontmatterProblems({
@@ -171,7 +259,7 @@ function schemaProblems(tracked: string[]): string[] {
 function runDefaultCheck(): void {
   const tracked = trackedMarkdownFiles();
   const all = markdownFiles();
-  const problems = [...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all)];
+  const problems = [...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all), ...filePathProblems(all)];
 
   if (problems.length > 0) {
     console.error("doc-check failed:");
@@ -179,6 +267,27 @@ function runDefaultCheck(): void {
     console.error("After fixing, regenerate the index: pnpm doc-graph. Conventions: docs/README.md.");
     process.exit(1);
   }
+}
+
+// --fix half of the backticked-path check: rewrite issues that moved to
+// closed/ in place; every other finding is returned for manual handling.
+function fixFilePaths(files: string[]): { rewrites: number; filesChanged: number; missing: string[] } {
+  let rewrites = 0;
+  let filesChanged = 0;
+  const missing: string[] = [];
+  for (const [rel, problems] of filePathProblemsByFile(files)) {
+    const abs = path.join(MONO_ROOT, rel);
+    const moved = problems.filter((p) => p.kind === "moved-to-closed");
+    if (moved.length > 0) {
+      fs.writeFileSync(abs, repairFilePaths(fs.readFileSync(abs, "utf8"), moved), "utf8");
+      rewrites += moved.length;
+      filesChanged++;
+      console.log(`fixed ${rel}:`);
+      for (const p of moved) console.log(`  L${p.line}: \`${p.token}\` -> \`${p.suggestion ?? ""}\``);
+    }
+    for (const p of problems) if (p.kind === "missing") missing.push(describeFilePathProblem(rel, p));
+  }
+  return { rewrites, filesChanged, missing };
 }
 
 function runFix(): void {
@@ -215,6 +324,11 @@ function runFix(): void {
     if (result.unfixable.length > 0) unfixableByFile.set(rel, result.unfixable);
   }
 
+  const pathFix = fixFilePaths(scanSources);
+  totalRewrites += pathFix.rewrites;
+  filesChanged += pathFix.filesChanged;
+  const missingPaths = pathFix.missing;
+
   console.log(totalRewrites > 0
     ? `\ndoc-check --fix: rewrote ${totalRewrites} link(s) across ${filesChanged} file(s).`
     : "\ndoc-check --fix: no broken links needed rewriting.");
@@ -240,6 +354,11 @@ function runFix(): void {
     }
   }
 
+  if (missingPaths.length > 0) {
+    console.error("\nmissing backticked file paths (manual — find the current path or drop the reference):");
+    for (const p of missingPaths) console.error(`  ${p}`);
+  }
+
   // Non-fatal: how far the repo is from globally unique basenames (excluding
   // the intentionally-per-directory whitelist). --fix works today wherever a
   // basename happens to be unique; this just surfaces the remaining overlaps.
@@ -250,7 +369,7 @@ function runFix(): void {
   }
 
   // Fail loud on anything needing a human; rewrites alone are a success.
-  if (issuesProblems.length > 0 || privateProblems.length > 0 || unfixableByFile.size > 0) process.exit(1);
+  if (issuesProblems.length > 0 || privateProblems.length > 0 || unfixableByFile.size > 0 || missingPaths.length > 0) process.exit(1);
 }
 
 if (process.argv.includes("--fix")) runFix();

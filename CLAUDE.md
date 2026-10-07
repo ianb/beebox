@@ -31,7 +31,7 @@ For recurring work or missed scheduled runs, use [bbx-authoring-schedules](.clau
 
 ## Implement and verify
 
-Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/CLAUDE.md](beebox/CLAUDE.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks. Write code in TypeScript; a `.js` or `.mjs` file is only a thin loader for TypeScript.
+Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/CLAUDE.md](beebox/CLAUDE.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks. Write code in TypeScript; a `.js` or `.mjs` file is only a thin loader for TypeScript. A foreground `sleep` is blocked; to wait on a condition, run an `until` loop in the background or use the Monitor tool.
 
 Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys your test box is granted before assuming you cannot, and ask before sending real box content out or spending real money: [real model calls](beebox/docs/testing/real-models.md).
 

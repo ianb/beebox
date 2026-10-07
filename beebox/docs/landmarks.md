@@ -232,7 +232,7 @@ box-name setting anywhere.
 | Schema registration | `src/schemas.ts` |
 | Expand evaluator | `src/core/landmark/` (resolves queries, applies templates, dedups, orders) |
 | Merged activity surface | `src/frontend/src/components/landmarks/` (`LandmarksList`, `LandmarkSection`, `LandmarkSessions`) |
-| Landmarks page | `src/frontend/src/pages/landmarks/LandmarksPage.tsx` |
+| Landmarks card | `src/frontend/src/renderers/system-cards.tsx` (the `/landmarks` route redirects to the canonical card) |
 | Chat buckets per landmark | `chat.byLandmark` (`src/webapp/trpc/routers/chat/router.ts`) |
 | App-bar landmark / folder menus | `src/frontend/src/components/AppNav/PlacePill.tsx` + the bar's chrome slots |
 | API endpoint | tRPC procedure under `src/webapp/trpc/routers/` (lists landmark cards + resolves expands server-side) |

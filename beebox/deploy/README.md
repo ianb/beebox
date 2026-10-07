@@ -25,3 +25,14 @@ nothing, and every script below refuses with the setup steps.
 | `deploy-outcome.sh`, `notify-macos` | Record a deploy's outcome; the macOS notifier `BBX_DEPLOY_NOTIFY` can name. |
 | `claude-update.sh` | The nightly Claude Code updater the server's timer runs. |
 | `nginx/`, `systemd/`, `server-bin/` | The nginx site, the unit drop-ins, and the root helpers a deploy installs. |
+
+## Checking deploy state
+
+[`bin/deploy-status`](../../bin/deploy-status.ts) (`--json` for machines) is the
+read-only answer to "what is live, did the last deploy work, is one running, is
+prod healthy, are migrations pending, how full is the disk". It reads the main
+checkout's `.deploy-logs/deploys.jsonl`, `.last-deployed-sha`, and
+`.deploy-checkout.lock`, then makes one SSH call for the server's
+`deploy-info.json`, `df`, unit states, the hub's passive `/healthz`, and each
+box's `bbx engine migrate --status --json` with `/home/beebox/.env` sourced.
+Each section reports its own reason when it cannot run.

@@ -229,17 +229,7 @@ export const cardSchemas: CardSchema[] = [
 export { MyThingSchema } from "./my-thing.js";
 ```
 
-### 3. Register in `src/schemas/index.ts`
-
-```ts
-// Type
-export type { MyThingFields, MyThingPriorityType } from "./my-thing.js";
-
-// Template
-export { createMyThingTemplate } from "./my-thing.js";
-```
-
-### 4. Register Template in `src/templates/builtins/templates.ts`
+### 3. Register Template in `src/templates/builtins/templates.ts`
 
 ```ts
 import { createMyThingTemplate } from "./my-thing.js";
@@ -266,7 +256,7 @@ generate: (args) => {
 },
 ```
 
-### 5. (Optional) Add a Storage Directory
+### 4. (Optional) Add a Storage Directory
 
 If the card type has its own storage location, add it to `BOX_DIRS` in `src/lib/paths/core.ts`:
 
@@ -279,7 +269,7 @@ export const BOX_DIRS = {
 
 `bbx init` iterates `Object.values(BOX_DIRS)` and creates each directory automatically.
 
-### 6. (Optional) Frontend file-type entry
+### 5. (Optional) Frontend file-type entry
 
 If the card needs an icon in the file browser, register it in `src/frontend/src/file-types/builtins.tsx`:
 
@@ -288,7 +278,7 @@ registerFileType({ type: "my-thing" }, { listUI: { icon: CardIcon } });
 ```
 
 A card type that wants its own list row — a thumbnail, a badge — writes a
-component beside its schema, as `src/schemas/my-thing/list-entry.tsx`. It takes
+component beside its schema, as `src/schemas/<type>/list-entry.tsx`. It takes
 `ListProps<MyThingSummaryAttrs>`, so what the schema's `summarize` returns and
 what the component reads cannot drift. `image/list-entry.tsx` is the worked
 example.

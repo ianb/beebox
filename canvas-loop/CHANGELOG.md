@@ -141,7 +141,7 @@ First release as a workspace library (was `sandbox/canvas-loop`).
 - **Docs sweep.** Root `CLAUDE.md` monorepo layout gained a `canvas-loop/` line;
   `LIBRARY-PLAN.md` tracks 1–4 marked shipped with per-section status headers
   (open questions left intact); the design issue
-  (`issues/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`) gained
+  (`issues/closed/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`) gained
   a "Library-ified (2026-07-14)" section stating the new home, with the older
   dated experiment logs and their `sandbox/canvas-loop/...` paths preserved as
   history.
