@@ -17,6 +17,7 @@
  */
 
 import type { FileSummary } from "@core/file-summary";
+import type { CardSchemaFacts } from "@backend/trpc/routers/card.js";
 import type { NavigateHint, ViewState, ViewTarget } from "./lib/view-url";
 import { GenericIcon, type FileIcon } from "./file-types/icons";
 
@@ -33,6 +34,11 @@ export interface FileData {
   body?: string;
   /** File lines before `body` in the card's file (`card.get`); a rendered todo's locator is counted from it. */
   bodyLineOffset?: number;
+  /**
+   * The card's schema facts (`card.get`); `null` when the card did not parse
+   * against a schema. Absent for non-card files, and treated as `null`.
+   */
+  schema?: CardSchemaFacts | null;
   /** Raw text content for non-card files (markdown, plaintext, json, etc.) */
   content?: string;
 }

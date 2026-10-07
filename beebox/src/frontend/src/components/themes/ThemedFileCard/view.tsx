@@ -18,6 +18,7 @@ import { CardFacts, CardMentions } from "./CardProperties";
 import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
 import { LandmarkSystemThemePicker } from "../SystemThemePicker";
 import { isCardPath } from "../../file-view-data";
+import { readCardSymbol } from "@shared/card-symbol";
 
 interface ThemedFileCardProps {
   data: FileData;
@@ -34,8 +35,11 @@ interface ThemedFileCardProps {
 }
 
 
-function FileSpecificProperties({ data, theme, isCard }: { data: FileData; theme: ReturnType<typeof resolveCardTheme>; isCard: boolean }) {
-  if (isCard) return <><CardFacts data={data} /><ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} /></>;
+function FileSpecificProperties({ data, theme, isCard, boxSlug, onNavigate }: {
+  data: FileData; theme: ReturnType<typeof resolveCardTheme>; isCard: boolean; boxSlug: string | undefined;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+}) {
+  if (isCard) return <><CardFacts data={data} boxSlug={boxSlug} onNavigate={onNavigate} /><ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} /></>;
   return <dl className="mt-4"><dt>Filed at</dt><dd>{data.path}</dd><dt>File type</dt><dd>Markdown</dd></dl>;
 }
 
@@ -98,6 +102,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
     presentation: presentation?.data?.presentation ?? { status: "absent" },
   });
   const title = typeof data.frontmatter?.title === "string" ? data.frontmatter.title : displayName(data.path);
+  const symbol = isCard ? readCardSymbol(data.frontmatter?.symbol, { cardPath: data.path.replace(/^\//, "") }) : null;
   const error = presentation?.error ?? theme.problem?.message;
   function handlePresentationRetry() { presentation?.retry(); }
   const properties = (
@@ -108,13 +113,13 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
         <dt>Stock</dt><dd>{theme.choice.stock}</dd>
         <dt>Chosen by</dt><dd>{themeOriginLabel(theme.origin)}</dd>
       </dl>
-      <FileSpecificProperties data={data} theme={theme} isCard={isCard} />
+      <FileSpecificProperties data={data} theme={theme} isCard={isCard} boxSlug={boxSlug} onNavigate={onNavigate} />
       <ViewChooser data={data} renderers={renderers} active={active} hasExplicitView={hasExplicitView} onSelect={onSelect} />
       <RelatedFileProperties data={data} target={target} boxSlug={boxSlug} onNavigate={onNavigate} onClose={onClose} />
     </>
   );
   return <CardThemeSurface
-    theme={theme} title={title} mode={mode}
+    theme={theme} title={title} symbol={symbol} boxSlug={boxSlug} mode={mode}
     properties={properties}
     actions={mode === "chat" || onOpenInPanel ? <CardSurfaceActions mode={mode} path={data.path} onOpenInPanel={onOpenInPanel} /> : null}
     problem={error ? <div className="bbx-card-problem" role="status">Appearance could not be applied: {error}{presentation ? <Button size="sm" intent="ghost" onClick={handlePresentationRetry}>Retry</Button> : null}</div> : null}

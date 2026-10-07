@@ -178,6 +178,7 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
           frontmatter: card.frontmatter,
           body: card.body,
           bodyLineOffset: card.bodyLineOffset,
+          schema: card.schema,
         },
         loading: false,
         error: null,

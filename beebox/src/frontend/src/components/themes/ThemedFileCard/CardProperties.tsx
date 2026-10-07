@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { useEffect, useRef } from "react";
 import { trpc } from "../../../lib/trpc/client";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
@@ -8,23 +7,69 @@ import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
 import { withBase } from "../../../api";
 import { useParams } from "@tanstack/react-router";
 import { serializeViewUrl } from "../../../lib/view-url";
+import { splitCardFields } from "../../../lib/card-field-faces";
+import { FrontmatterFields } from "../../MarkdownCardView/FrontmatterFields";
+import { CardMark } from "../../ui/CardMark";
+import { isRecord } from "@shared/is-record";
+import { readCardSymbol } from "@shared/card-symbol";
+import { Prominence, effectiveLevel } from "@shared/prominence";
 
-export function CardFacts({ data }: { data: FileData }) {
-  const fm = data.frontmatter;
-  return <dl className="mt-4">
-    <dt>Filed at</dt><dd>{data.path}</dd>
-    <dt>Card type</dt><dd>{data.type}</dd>
-    {cardSummaryRows(fm).map(({ label, value }) => <Fragment key={label}><dt>{label}</dt><dd>{value}</dd></Fragment>)}
-    {typeof fm?.prominence === "string" ? <><dt>Prominence</dt><dd>{fm.prominence}</dd></> : null}
-  </dl>;
+/** "<level>" when the card declares one, "<level>, the type's default" when it does not; the raw value when the schema is unknown. */
+function prominenceText(value: unknown, schema: FileData["schema"]): string | null {
+  if (schema === undefined || schema === null) return typeof value === "string" ? value : null;
+  const declared = Prominence.safeParse(value);
+  const level = effectiveLevel({ declared: declared.success ? declared.data : undefined, typeDefault: schema.defaultProminence });
+  return declared.success ? level : `${level}, the type's default`;
 }
 
-export function cardSummaryRows(frontmatter: FileData["frontmatter"]): Array<{ label: string; value: string }> {
-  const rows: Array<{ label: string; value: string }> = [];
-  if (typeof frontmatter?.contains === "string") rows.push({ label: "Contains", value: frontmatter.contains });
-  const evidence = frontmatter?.["contains-evidence"];
-  if (typeof evidence === "string") rows.push({ label: "Contains evidence", value: evidence });
-  return rows;
+/** The `symbol:` group as written, e.g. "glyph: 🏠 · background: #fde". */
+function symbolSourceText(value: unknown): string | null {
+  if (value === undefined) return null;
+  if (!isRecord(value)) return JSON.stringify(value);
+  return Object.entries(value).map(([key, item]) => `${key}: ${typeof item === "string" ? item : JSON.stringify(item)}`).join(" · ");
+}
+
+/**
+ * The card as an object: where it is filed, its type, how it is found (the
+ * common fields Properties names), then its type fields; `splitCardFields`
+ * decides which is which.
+ */
+export function CardFacts({ data, boxSlug, onNavigate }: {
+  data: FileData;
+  boxSlug: string | undefined;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+}) {
+  const { foundBy, properties } = splitCardFields(data.frontmatter ?? {}, { hasBodyField: data.schema?.hasBodyField ?? null, mode: "page" });
+  const contains = foundBy.contains;
+  const evidence = foundBy["contains-evidence"];
+  const prominence = prominenceText(foundBy.prominence, data.schema);
+  const symbolSource = symbolSourceText(foundBy.symbol);
+  const symbol = readCardSymbol(foundBy.symbol, { cardPath: data.path.replace(/^\//, "") });
+  const hasFoundBy = typeof contains === "string" || prominence !== null || symbolSource !== null || typeof evidence === "string";
+  return <>
+    <dl className="mt-4">
+      <dt>Filed at</dt><dd>{data.path}</dd>
+      <dt>Card type</dt><dd>{data.type}</dd>
+    </dl>
+    {hasFoundBy ? <div className="mt-6" data-card-section="found-by">
+      <h3 className="text-sm font-semibold mb-2">Found by</h3>
+      <dl>
+        {typeof contains === "string" ? <><dt>Contains</dt><dd>{contains}</dd></> : null}
+        {prominence === null ? null : <><dt>Prominence</dt><dd>{prominence}</dd></>}
+        {symbolSource === null ? null : <><dt>Symbol</dt><dd className="flex items-center gap-2">
+          <CardMark symbol={symbol} size="sm" boxSlug={boxSlug} /><span>{symbolSource}</span>
+        </dd></>}
+      </dl>
+      {typeof evidence === "string" ? <details className="mt-2">
+        <summary className="text-sm cursor-pointer">Contains evidence</summary>
+        <p className="text-sm whitespace-pre-wrap">{evidence}</p>
+      </details> : null}
+    </div> : null}
+    {Object.keys(properties).length > 0 ? <div className="mt-6" data-card-section="fields">
+      <h3 className="text-sm font-semibold mb-2">Fields</h3>
+      <FrontmatterFields fields={properties} onNavigate={onNavigate} basePath={data.path} />
+    </div> : null}
+  </>;
 }
 
 /** Mounted only while Properties is open: no box scan for every visible card. */

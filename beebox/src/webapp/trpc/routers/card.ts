@@ -19,6 +19,17 @@ import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { MovedCardRecoveryCauseError } from "../../../core/moved-card-recovery.js";
 import { resolveMovedCardPath } from "../../../core/moved-card-forwarding.js";
+import type { EffectiveLevel } from "../../../shared/prominence.js";
+
+/**
+ * The two schema facts the card faces need: whether the type has a body field
+ * (its other fields then belong in Properties, not on the front) and the type's
+ * default prominence (so Properties can say what an absent `prominence:` means).
+ */
+export interface CardSchemaFacts {
+  hasBodyField: boolean;
+  defaultProminence: EffectiveLevel;
+}
 
 export interface FrontmatterCardResponse {
   path: string;
@@ -33,6 +44,8 @@ export interface FrontmatterCardResponse {
    */
   bodyLineOffset: number;
   validationError: string | undefined;
+  /** `null` when the card did not parse against a schema (see `validationError`). */
+  schema: CardSchemaFacts | null;
 }
 
 function loadFrontmatterCard(input: {
@@ -45,9 +58,11 @@ function loadFrontmatterCard(input: {
   let frontmatter: Record<string, unknown> | undefined;
   let body: string | undefined;
   let validationError: string | undefined;
+  let schema: CardSchemaFacts | null = null;
 
   try {
     const parsed = parseCardText(raw, { source, schemas: cardSchemas, type });
+    schema = { hasBodyField: parsed.schema.bodyFieldName !== null, defaultProminence: parsed.schema.defaultProminence };
     const fields = { ...parsed.fields };
     if (parsed.schema.bodyFieldName !== null) {
       const bodyValue = fields[parsed.schema.bodyFieldName];
@@ -81,6 +96,7 @@ function loadFrontmatterCard(input: {
     frontmatter,
     body,
     validationError,
+    schema,
   };
 }
 
@@ -141,6 +157,7 @@ export const cardRouter = router({
         body: split.hasFrontmatter ? split.body : raw,
         bodyLineOffset: split.lineOffset,
         validationError: split.hasFrontmatter ? undefined : "Card has no frontmatter block",
+        schema: null,
       };
     }),
 
