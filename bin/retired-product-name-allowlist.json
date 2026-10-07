@@ -304,5 +304,11 @@
     "occurrenceClass": "kebab-name",
     "expectedCount": 3,
     "reason": "The router regression proves a renamed product can continue using its existing physical main-checkout directory."
+  },
+  {
+    "path": "bin/skill-usage.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 1,
+    "reason": "Transcripts recorded before the rename carry the old checkout path as cwd; the scan must still match them."
   }
 ]

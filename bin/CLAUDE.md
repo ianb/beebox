@@ -113,6 +113,14 @@ commits them; `bin/issues next-action` lists, sets, and clears them from any
 checkout. `workstreams-app/src/server/main/issue-next-actions.ts` is the only
 reader and writer.
 
+## Skill usage (`skill-usage.ts`)
+
+`node --import tsx bin/skill-usage.ts [--since 60] [--json]` counts how
+skills are used in local Claude transcripts and Codex rollouts for this repo:
+human and agent invocations, body loads, briefing mentions, a loaded-but-unused
+proxy, and labelled recurring instructions and failures. It prints names,
+labels, and counts only. The file headers in `bin/lib/skill-usage-*.ts` document the marker shapes.
+
 ## Private-issues shadow repo (`private-issues`)
 
 Every checkout mount remains a symlink. Roots are derived and identity marked;
