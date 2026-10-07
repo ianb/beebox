@@ -1,8 +1,9 @@
 /**
  * The web box screen at `/<box>/box` (docs/plans/box-screen.md, track 2): the
  * screen for the box as a whole. Top to bottom: "Needs you", the sent rows,
- * "Pick up where you left off", "In this box", "Boxes" (only with more than
- * one box), and the new-thought input pinned at the bottom.
+ * "Pick up where you left off", "Shortcuts" (only when the box's `nav.card`
+ * lists some), "Boxes" (only with more than one box), and the new-thought
+ * input pinned at the bottom. The box-wide pages are in the avatar menu.
  *
  * The route renders without the conversation shell (`standalone` in the
  * router), so nothing here loads a chat. The page reads `quickChat.home`
@@ -29,7 +30,7 @@ import { ErrorText } from "../../components/ui/ErrorText";
 import { StatusMessage } from "../../components/ui/StatusMessage";
 import { VisuallyHidden } from "../../components/ui/VisuallyHidden";
 import { QuickChatList, type QuickChatRowActions } from "../../components/box-screen/QuickChatList";
-import { BoxPageLinks, BoxScreenSection, OtherBoxes, RecentChatList } from "../../components/box-screen/BoxScreenSections";
+import { BoxScreenSection, OtherBoxes, RecentChatList, ShortcutLinks } from "../../components/box-screen/BoxScreenSections";
 import { NewThoughtInput } from "../../components/box-screen/NewThoughtInput";
 import {
   boxScreenReducer, boxScreenRows, boxScreenStorageKey, parseStoredBoxScreen, pendingRetry, quickChatRowId, restoreBoxScreen,
@@ -143,9 +144,11 @@ function BoxScreen({ boxSlug }: { boxSlug: string }) {
           <BoxScreenSection id="bbx-box-screen-recent" title="Pick up where you left off">
             {home.data === undefined ? <StatusMessage>Loading…</StatusMessage> : <RecentChatList chats={home.data.recentChats} boxSlug={boxSlug} />}
           </BoxScreenSection>
-          <BoxScreenSection id="bbx-box-screen-in-this-box" title="In this box">
-            <BoxPageLinks boxSlug={boxSlug} shortcuts={home.data?.shortcuts ?? []} />
-          </BoxScreenSection>
+          {home.data === undefined || home.data.shortcuts.length === 0 ? null : (
+            <BoxScreenSection id="bbx-box-screen-shortcuts" title="Shortcuts">
+              <ShortcutLinks boxSlug={boxSlug} shortcuts={home.data.shortcuts} />
+            </BoxScreenSection>
+          )}
           {/* A native shell is paired to one box; its own box list switches boxes. */}
           {otherBoxes.length === 0 || isNativeShell() ? null : (
             <BoxScreenSection id="bbx-box-screen-boxes" title="Boxes">

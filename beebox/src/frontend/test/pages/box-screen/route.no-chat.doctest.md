@@ -66,7 +66,16 @@ const page = await render("/test1/box");
 [page.shellMounts, page.procedures]
 => [0, ["quickChat.home"]]
 
-["Pick up where you left off", "In this box", "New thought. The box picks the conversation."].filter((text) => !page.html.includes(text))
+["Pick up where you left off", "New thought. The box picks the conversation."].filter((text) => !page.html.includes(text))
+=> []
+```
+
+The box-wide pages are not on the box screen: they are in the avatar menu.
+The "Shortcuts" section shows only the box's `nav.card` entries, so it is
+absent until `quickChat.home` answers with at least one.
+
+```ts continue
+["In this box", "Dashboard", "Storage summary", "Shortcuts"].filter((text) => page.html.includes(text))
 => []
 ```
 
