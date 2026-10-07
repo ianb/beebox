@@ -11,7 +11,7 @@ A migration is a one-shot transformation of card data on disk — schema renames
 
 **Box configuration counts too.** `annex-config-2026-08` re-applies `annex.largefiles` and `.git/info/attributes` from the current renderings; it transforms no cards and leaves the working tree untouched. Config written once at `bbx init` goes stale whenever the code's idea of it changes, and a migration is the one mechanism that records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
 
-`gitignore-2026-09` is the second configuration migration: it rewrites the box's `.gitignore` from the current rendering (`writeBoxGitignore`, the function `bbx init` uses) and untracks the state directory, box-root locks, and pid file that the pre-rename ignore file had let autocommit sweep in. It leaves `.beebox/box.json` tracked. See `src/scripts/migrate/box-gitignore.ts` for why the untrack list is an explicit allowlist rather than "everything now ignored".
+`gitignore-2026-09` is the second configuration migration: it rewrites the box's `.gitignore` from the current rendering (`writeBoxGitignore`, the function `bbx engine init` uses) and untracks the state directory, box-root locks, and pid file that the pre-rename ignore file had let autocommit sweep in. It leaves `.beebox/box.json` tracked. See `src/scripts/migrate/box-gitignore.ts` for why the untrack list is an explicit allowlist rather than "everything now ignored".
 
 `hooks-2026-09` reinstalls the managed git hooks and the package-root Claude settings through `installValidationHooks`, the same call `bbx init` makes: the hooks bake in the CLI path and name, and boxes that predate the rename were still looking for the former CLI at a checkout that no longer exists.
 
@@ -23,13 +23,13 @@ what remains pending. New boxes receive a seeded manifest from `bbx init`;
 a missing manifest in an existing box requires an explicit enrollment decision.
 
 ```bash
-bbx migrate                         # human-readable applied and pending lists
-bbx migrate --status --json          # read-only manifest, pending names, questions
-bbx migrate --apply                  # apply, commit, and allow bounded agent repair
-bbx migrate --sweep                  # same runner, scripts only; no repair agent
-bbx migrate --sweep --repair --json   # unattended application and bounded repair
-bbx migrate --mark-all-applied       # explicitly enroll an already-migrated box
-bbx migrate --mark-applied bill      # record one already-completed migration
+bbx engine migrate                         # human-readable applied and pending lists
+bbx engine migrate --status --json          # read-only manifest, pending names, questions
+bbx engine migrate --apply                  # apply, commit, and allow bounded agent repair
+bbx engine migrate --sweep                  # same runner, scripts only; no repair agent
+bbx engine migrate --sweep --repair --json   # unattended application and bounded repair
+bbx engine migrate --mark-all-applied       # explicitly enroll an already-migrated box
+bbx engine migrate --mark-applied bill      # record one already-completed migration
 ```
 
 `--status --json` returns `{status: "status", manifest: boolean, pending:
@@ -71,7 +71,7 @@ returns `current` without touching the gate when nothing is pending. Only a
 box with work is closed. A read refused because a maintenance phase already
 exists falls through to the recovery path.
 
-`bbx migrate --sweep --yield`, the hourly schedule's mode, defers to a box in
+`bbx engine migrate --sweep --yield`, the hourly schedule's mode, defers to a box in
 use. An idle chat run holds a lease until the box's server sees the phase and
 closes it (the server polls every second), so the pass closes, waits fifteen
 seconds instead of ten minutes, and treats work that outlasts the wait as the
@@ -194,7 +194,7 @@ convergence does not overwrite them merely to make a ledger look current.
 
 ## Writing a new migration
 
-1. **Write the script** at `scripts/migrate/<name>.ts`. New migrators should use the shared harness (`src/scripts/migrate/_harness.ts`), which handles arg parsing, the file walk, dry-run/apply, per-file error collection, and the final warning dump:
+1. **Write the script** at `src/scripts/migrate/<name>.ts`. New migrators should use the shared harness (`src/scripts/migrate/_harness.ts`), which handles arg parsing, the file walk, dry-run/apply, per-file error collection, and the final warning dump:
 
    ```ts
    #!/usr/bin/env tsx

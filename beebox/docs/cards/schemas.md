@@ -239,7 +239,7 @@ export type { MyThingFields, MyThingPriorityType } from "./my-thing.js";
 export { createMyThingTemplate } from "./my-thing.js";
 ```
 
-### 4. Register Template in `src/schemas/templates.ts`
+### 4. Register Template in `src/templates/builtins/templates.ts`
 
 ```ts
 import { createMyThingTemplate } from "./my-thing.js";
@@ -288,12 +288,12 @@ registerFileType({ type: "my-thing" }, { listUI: { icon: CardIcon } });
 ```
 
 A card type that wants its own list row — a thumbnail, a badge — writes a
-component beside its schema, as `src/schemas/my-thing.list-entry.tsx`. It takes
+component beside its schema, as `src/schemas/my-thing/list-entry.tsx`. It takes
 `ListProps<MyThingSummaryAttrs>`, so what the schema's `summarize` returns and
-what the component reads cannot drift. `image.list-entry.tsx` is the worked
+what the component reads cannot drift. `image/list-entry.tsx` is the worked
 example.
 
-A `*.list-entry.tsx` file is frontend code living in the schemas tree, and the
+A `list-entry.tsx` file is frontend code living in the schemas tree, and the
 build fences it as such: it may reach the schemas, core and cards trees by
 `import type` only (values come from `src/frontend/` and `src/shared/`), no
 backend module may import it, and the backend tsconfig excludes it. Register it
