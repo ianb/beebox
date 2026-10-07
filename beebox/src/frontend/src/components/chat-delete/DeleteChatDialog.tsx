@@ -49,13 +49,11 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
   const target = label ?? `Chat ${sessionId.slice(0, 8)}`;
   const cleanup = result?.status === "cleanup-required" ? result : null;
   const cleanupMessage =
-    cleanup?.retry === "commit-trash"
-      ? "The transcript is gone and the chat card is in Trash, but its git commit is still pending. Retry cleanup to commit the move."
-      : cleanup?.retry === "trash-husk"
-        ? "The transcript is gone, but the chat card could not be fully moved to Trash. Retry cleanup to finish the card move."
-        : cleanup?.storage === "present"
-          ? "The transcript remains on this machine because deletion did not complete. Retry cleanup to try again."
-          : "The transcript was only partly removed. Retry cleanup to remove the remaining local chat data.";
+    cleanup?.retry === "delete-husk"
+      ? "The transcript is gone, but the chat card could not be fully deleted or committed. Retry cleanup to finish deleting it."
+      : cleanup?.storage === "present"
+        ? "The transcript remains on this machine because deletion did not complete. Retry cleanup to try again."
+        : "The transcript was only partly removed. Retry cleanup to remove the remaining local chat data.";
 
   const remove = async (): Promise<void> => {
     // Clear the same receipt owner used by selection before deleting server
@@ -100,7 +98,7 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
           <h3 className="font-semibold text-warm-900">Removed</h3>
           <ul className="mt-1 list-disc space-y-1 pl-5">
             <li>The transcript and its working files on this machine.</li>
-            <li>The active chat listing; its card moves to box Trash and remains git-recoverable.</li>
+            <li>The active chat listing and its card. Earlier committed versions remain in git history.</li>
             <li>Pending reminders linked to this conversation.</li>
           </ul>
         </section>

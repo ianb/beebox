@@ -1,7 +1,7 @@
 # Chat session deletion
 
 Deletion severs beebox resume pointers before removing SDK storage, then
-moves the owned husk card to git-tracked Trash. The SDK deletion function is
+permanently deletes the owned husk card. The SDK deletion function is
 injected here so the fixture never touches the developer's real Claude data.
 
 ```ts setup
@@ -72,7 +72,7 @@ JSON.stringify(result)
 => {"status":"deleted","sessionId":"11111111-1111-4111-8111-111111111111","schedulesCancelled":1}
 ```
 
-All resumable state is gone, while the card is recoverable from Trash:
+All resumable state and the chat card are gone from the working tree:
 
 ```ts continue
 JSON.stringify({
@@ -82,9 +82,10 @@ JSON.stringify({
   active: await getMostActive(box.root),
   review: Object.keys((await loadReviewState(box.root)).sessions),
   schedules: scheduleManager.getActive().length,
+  card: await missing(join(box.root, "_content/chat/web/2026-08-07_11111111.chat.card")),
   trash: await box.list("_bookkeeping/trash"),
 })
-=> {"transcript":true,"sidecar":true,"history":[],"active":null,"review":[],"schedules":0,"trash":"_bookkeeping/trash/.gitkeep\n_bookkeeping/trash/2026-08-07_11111111.chat.card"}
+=> {"transcript":true,"sidecar":true,"history":[],"active":null,"review":[],"schedules":0,"card":true,"trash":"_bookkeeping/trash/.gitkeep"}
 ```
 
 ```ts cleanup
@@ -139,10 +140,10 @@ registry.shutdown();
 await box.cleanup();
 ```
 
-## Retry after restart commits an already-moved husk
+## A failed delete commit can be retried after restart
 
 If the git commit fails after permanent storage deletion, a fresh registry can
-reconstruct the rename from git status and finish it.
+finish cleanup after the permanent card deletion.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -163,18 +164,47 @@ const first = await deleteChatSession({
   sessionId,
   runtime: { registry, scheduleManager },
   sdkDelete: async (id) => rm(join(projectDir, `${id}.jsonl`), { force: true }),
-  commitTrash: async () => { throw new Error("fixture commit failure"); },
+  commitHusks: async () => { throw new Error("fixture commit failure"); },
 });
 registry.shutdown();
 const restartedRegistry = new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
 const second = await deleteChatSession({ boxRoot: box.root, sessionId, runtime: { registry: restartedRegistry, scheduleManager } });
-JSON.stringify({ first, second })
-=> {"first":{"status":"cleanup-required","sessionId":"44444444-4444-4444-8444-444444444444","storage":"absent","retry":"commit-trash","huskTrashed":true,"commitPending":true},"second":{"status":"deleted","sessionId":"44444444-4444-4444-8444-444444444444","schedulesCancelled":0}}
+JSON.stringify({ first, second, cardGone: await missing(join(box.root, "_content/chat/web/2026-08-07_44444444.chat.card")), latest: await import("simple-git").then(async ({ simpleGit }) => (await simpleGit(box.root).log()).latest?.message), trash: await box.list("_bookkeeping/trash") })
+=> {"first":{"status":"cleanup-required","sessionId":"44444444-4444-4444-8444-444444444444","storage":"absent","retry":"delete-husk"},"second":{"status":"deleted","sessionId":"44444444-4444-4444-8444-444444444444","schedulesCancelled":0},"cardGone":true,"latest":"Delete chat conversation","trash":"_bookkeeping/trash/.gitkeep"}
 ```
 
 ```ts cleanup
 scheduleManager.stopAll();
 restartedRegistry.shutdown();
+if (oldProjectsRoot === undefined) delete process.env.BBX_CLAUDE_PROJECTS_DIR;
+else process.env.BBX_CLAUDE_PROJECTS_DIR = oldProjectsRoot;
+await box.cleanup();
+```
+
+## An uncommitted chat card is deleted without a commit
+
+```ts
+const box = await makeTmpBox({ git: true });
+const sessionId = "55555555-5555-4555-8555-555555555555";
+const cardPath = "_content/chat/web/2026-08-07_55555555.chat.card";
+const oldProjectsRoot = process.env.BBX_CLAUDE_PROJECTS_DIR;
+const projectsRoot = join(box.root, "claude-projects");
+process.env.BBX_CLAUDE_PROJECTS_DIR = projectsRoot;
+const projectDir = join(projectsRoot, encodeProjectDir(await realpath(box.root)));
+await mkdir(projectDir, { recursive: true });
+await writeFile(join(projectDir, `${sessionId}.jsonl`), "{}\n");
+await box.write(cardPath, `---\ntype: chat\nsession: ${sessionId}\n---\n`);
+await appendHistory(box.root, { sessionId });
+const registry = new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
+const scheduleManager = new ChatScheduleManager(box.root, { onFire: () => {} });
+const result = await deleteChatSession({ boxRoot: box.root, sessionId, runtime: { registry, scheduleManager }, sdkDelete: async (id) => rm(join(projectDir, `${id}.jsonl`), { force: true }) });
+JSON.stringify({ result, cardGone: await missing(join(box.root, cardPath)), commit: await import("simple-git").then(({ simpleGit }) => simpleGit(box.root).log().then((log) => log.total)) })
+=> {"result":{"status":"deleted","sessionId":"55555555-5555-4555-8555-555555555555","schedulesCancelled":0},"cardGone":true,"commit":1}
+```
+
+```ts cleanup
+scheduleManager.stopAll();
+registry.shutdown();
 if (oldProjectsRoot === undefined) delete process.env.BBX_CLAUDE_PROJECTS_DIR;
 else process.env.BBX_CLAUDE_PROJECTS_DIR = oldProjectsRoot;
 await box.cleanup();
