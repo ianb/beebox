@@ -702,7 +702,7 @@ does today. Expected: a code landing's fixed cost drops from a suite run plus
 several minutes of derivation to under a minute of scripts, with the agent's
 tokens spent on the three judgment steps.
 
-Guidance (`beebox/CLAUDE.md:11`, `bbx-guide-testing`, `doctest`) becomes:
+Guidance (`beebox/CLAUDE.md:11`, `docs/testing.md`, `doctest`) becomes:
 iterate with `pnpm test:changed` or a named file; `pnpm test` is what the
 schedule runs, and an agent reaching for it should say why.
 

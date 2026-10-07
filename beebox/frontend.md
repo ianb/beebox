@@ -110,7 +110,10 @@ Request/response data is a tRPC query or mutation through the client in
 `src/frontend/src/lib/trpc/client.ts`. Real-time data rides the shared tRPC
 WebSocket: `useBusSubscription` (`hooks/useBusSubscription.ts`) for the box
 event stream, `useChatWs` for chat sessions, and the `events.turnStream`
-subscription for a turn's output. Do not hand-roll `fetch` or a polling loop.
+subscription for a turn's output. Do not hand-roll `fetch` or a polling loop
+where a procedure or subscription exists. The documented exceptions are REST
+chat send (`api-chat.ts`), XHR uploads for progress (`lib/file-upload.ts`),
+and the chat recovery watchdog (`processing-status-display.ts`).
 View state a reload should keep (filters, the open tab, pagination) belongs in
 TanStack Router search params, not component state.
 

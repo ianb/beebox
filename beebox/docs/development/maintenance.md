@@ -68,6 +68,22 @@ Not cadence tasks — tools you run because of a change you just made.
 | Broken-ref cleanup | `npx tsx src/scripts/clean-broken-refs.ts <boxRoot>` | One-off, when `bbx validate` shows ref errors that pre-date a migration. Dry-run by default; `--apply` to write |
 | Mobile parity audit | agent procedure (`docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of mobile work; quarterly otherwise |
 
+## Regression probes
+
+Each of these helpers was consolidated once and later grew hand-rolled copies.
+When reviewing a broad change, grep for the formula outside its home module:
+
+- `createHash("sha256")` outside `src/lib/content-hash.ts`.
+- An `fs.access` existence probe, or `.then(() => true).catch(() => false)`,
+  outside `src/lib/file-exists.ts`.
+- A `config/box.json` + `PUBLIC_URL`/`BBX_PUBLIC_URL` cascade outside
+  `src/lib/public-url.ts`. A copy silently ignores `BBX_PUBLIC_URL`.
+- An extension-to-MIME map literal outside `src/lib/mimetype.ts`.
+- A `multipart/form-data` boundary builder outside `src/lib/multipart.ts`.
+
+`doc-check` validates Markdown links, not backticked paths in prose. For changed
+docs, confirm each backticked `src/` or `docs/` path still resolves.
+
 ## Working with output
 
 Most of these produce artifacts that get committed (the doc graph, the prompt

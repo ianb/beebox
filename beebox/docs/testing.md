@@ -86,6 +86,10 @@ loop that reaches the bug:
 - **Git history**: `git log -S '<symbol>'`, `git log -- <path>`, and
   `git blame` find what changed. Recent commits are the first suspects.
 
+After three failed fixes, stop. When each fix exposes a new problem elsewhere,
+the design is the likely cause; raise it with the boxholder before a fourth
+attempt.
+
 A bug that appears only on the boxholder's device or in production has no
 local loop; the field-probe skill deploys gated instrumentation, hands the
 boxholder a script, and reads the trace back.
