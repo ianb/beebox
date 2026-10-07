@@ -149,6 +149,30 @@ tests:
       - 'In this box'
     tags: [quick-chat, navigation]
 
+  # A thought posted through the box screen arrives wrapped with
+  # source="box-screen"; the chat prompt says how to read it (box-screen plan,
+  # follow-up of 2026-10-06).
+  # Status (2026-10-06, Claude): 1/1 passed, 0 reads/searches, 47k context,
+  # against a disposable standalone clone with installed package-doc files.
+  # The answer named the box as the chooser, the phrase as addressed to the
+  # box, and "can't count on" the person watching.
+  - id: box-screen-arrival-tag
+    prompt: >
+      How should you read a user message whose wrapper is
+      <typed user="Priya Marlowe" source="box-screen"> and whose text opens
+      with "new chat in Garden:"? Who chose this chat for it, what is that
+      opening phrase, and can you count on the person watching this chat?
+      Explain only; do not read files, use tools, or change anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Says the box routed it with no one picking the chat, the opening phrase was addressed to the box (not a request to act on), and the person may not be looking"
+    correct_matches:
+      - 'box[ -]screen'
+      - '(?:box|rout)[\s\S]{0,200}(?:chose|picked|routed|sorted|placed|decided)'
+      - '(?:addressed to the box|routing (?:instruction|hint|directive)|not (?:a )?request|not (?:an )?instruction|not for me|meant for the box|for the box)'
+      - '(?:not be (?:looking|watching)|not (?:looking|watching)|may not see|might not see|isn.t (?:looking|watching)|can.t count|cannot count)'
+    tags: [quick-chat, chat]
+
   # === Engine docs are searchable ===
   # Status (2026-09-26, Claude): 1/1 passed on test1; ran `bbx search`, read
   # narration-mode.md, 51k context.

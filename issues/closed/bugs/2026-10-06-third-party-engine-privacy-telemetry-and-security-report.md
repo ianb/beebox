@@ -1,12 +1,15 @@
 ---
 title: "Chat on OpenRouter or GLM models: turn off Claude Code telemetry, and give the security report an honest row for it"
-workstream: unattached
+workstream: third-party-engine-privacy
+resolution: implemented
 area: beebox
 labels: [security, providers]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder asked what privacy a Claude Code run on an OpenRouter model has
 ---
+
+**Closed:** implemented by commits 776043cb5 (telemetry off on third-party-model runs), f30440746 (per-box setting for first-party runs), 2c0c85f00 (security report row). Not observed on the wire: no real model call confirmed Claude Code honors the flags.
 
 The claude engine can run third-party models: OpenRouter models the owner
 added (`beebox/src/core/provider-env/openrouter-chat.ts`) and GLM through Z.ai

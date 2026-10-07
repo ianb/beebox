@@ -4,7 +4,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { Socket } from "node:net";
 import { EventEmitter } from "node:events";
 import { z } from "zod";
-import { codexBinaryPath } from "./codex-binary.js";
+import { codexBinaryPath, codexCliArgs } from "./codex-binary.js";
 import { jsonlLines } from "../lib/jsonl-lines.js";
 import { toError } from "../shared/error-guards.js";
 
@@ -85,7 +85,7 @@ export class CodexHistoryServer {
   private closing = false;
 
   constructor(cwd: string) {
-    this.child = spawn(codexBinaryPath(), ["app-server", "--listen", "stdio://"], {
+    this.child = spawn(codexBinaryPath(), codexCliArgs(["app-server", "--listen", "stdio://"]), {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
     });
