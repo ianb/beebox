@@ -1,10 +1,10 @@
 ---
 title: "Card fronts show the content; Properties shows the card"
-status: active
+status: implemented
 workstream: card-reading-properties
 issues:
-  - ../../../issues/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md
-  - ../../../issues/features/2026-09-27-card-properties-design-session.md
+  - ../../../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md
+  - ../../../issues/closed/features/2026-09-27-card-properties-design-session.md
 ---
 # Card fronts show the content; Properties shows the card
 
@@ -411,6 +411,10 @@ isolated test1 clone before done; record the status comment.
 
 Each track is one or two commits in this worktree. Cross-model review of the
 final diff before finish.
+
+## Outcome
+
+All five tracks and the docs step shipped (commits 31cebfecd through 4481c0246). Known gaps: the journey boxes C, D, F no longer exist, so those journeys were re-checked on equivalent test1 cards, not re-walked; the Symbol row in Properties shows the glyph twice (mark plus source text). The theme tours' remaining misses are the missing markdown-file fixtures filed in [test1 lacks theme-tour fixtures](../../../issues/docs-and-chores/2026-09-23-test1-lacks-theme-tour-fixtures.md).
 
 ## Rollout shape
 

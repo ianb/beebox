@@ -1,14 +1,17 @@
 ---
 title: "Design session: card Properties do not pull their weight"
 workstream: card-reading-properties
-needs: [design]
 area: beebox
 labels: [frontend, properties, cards]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
 priority: normal
+resolution: implemented
 ---
+
+
+**Closed:** implemented by the card-reading-properties plan (commits 31cebfecd to 4481c0246, merged to main): card fronts show content, Properties shows found-by rows, type fields, attachments, last change, and the Appearance row. See [the plan](../../../beebox/docs/implemented-plans/card-reading-properties.md).
 
 The developer feels that a card's Properties panel does not pull its weight
 today, and wants a design session on it. The session should decide what
@@ -28,12 +31,12 @@ Questions for the session:
   panel serve now?
 - Which of these belong in the card itself, in the card chrome, or in a
   view, instead of a separate panel? The view picker is one example; see
-  [choosing a view keeps Properties open](../closed/bugs/2026-09-27-choosing-a-view-in-properties-keeps-properties-open.md).
+  [choosing a view keeps Properties open](../bugs/2026-09-27-choosing-a-view-in-properties-keeps-properties-open.md).
 - What Properties should show that it does not: for example the card's
   type, its schema fields, its history, or its attachments.
 - How it relates to the Source view and to the frontmatter the card already
   shows.
 
-Related: [card chrome controls have no bbx ids](2026-08-23-card-chrome-controls-have-no-bbx-ids.md),
-and the [standard card fields review](../closed/code-quality/2026-09-27-review-standard-card-fields.md),
+Related: [card chrome controls have no bbx ids](../../features/2026-08-23-card-chrome-controls-have-no-bbx-ids.md),
+and the [standard card fields review](../code-quality/2026-09-27-review-standard-card-fields.md),
 which decides some of what there is to show.
