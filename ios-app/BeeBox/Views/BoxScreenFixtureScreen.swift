@@ -4,7 +4,8 @@ import SwiftUI
 /// The box screen with isolated stores and a fake server, for simulator
 /// screenshots of each face: `--box-screen-fixture=<state>`, where state is
 /// `empty`, `multi-box`, `needs-choice`, `not-delivered`, `waiting-to-send`,
-/// `sent`, or `refresh-failed`.
+/// `sent`, or `refresh-failed`. `empty` has no `nav.card` shortcuts, so its
+/// Shortcuts section is absent; the others show two.
 struct BoxScreenFixtureScreen: View {
     private static let fixtureName = ProcessInfo.processInfo.arguments
         .first { $0.hasPrefix("--box-screen-fixture=") }?
@@ -98,7 +99,8 @@ struct BoxScreenFixtureScreen: View {
         default: []
         }
         let sent: [QuickChatView] = fixture == "sent" ? FixtureQuickChatClient.sent : []
-        screenStore.replaceForFixture(home: FixtureQuickChatClient.home(open: open), sent: sent, boxID: box.id)
+        let home = FixtureQuickChatClient.home(open: open, withShortcuts: fixture != "empty")
+        screenStore.replaceForFixture(home: home, sent: sent, boxID: box.id)
         await screenStore.start()
         if fixture == "refresh-failed" {
             screenStore.failRefreshForFixture(boxID: box.id)
@@ -163,7 +165,7 @@ private struct FixtureQuickChatClient: QuickChatClient {
         ),
     ]
 
-    static func home(open: [QuickChatView]) -> QuickChatHome {
+    static func home(open: [QuickChatView], withShortcuts: Bool) -> QuickChatHome {
         QuickChatHome(
             open: open,
             recentlySent: [],
@@ -177,10 +179,10 @@ private struct FixtureQuickChatClient: QuickChatClient {
                 .init(sessionId: "7e1f3a5c-9b2d-4f6a-8c0e-2a4c6e8a0b30", label: "Garden raised beds", lastActivity: "2026-10-04T09:00:00.000Z",
                       landmark: .init(dir: "_content/garden", label: "Garden", symbol: "🌱")),
             ],
-            shortcuts: [
+            shortcuts: withShortcuts ? [
                 .init(label: "Questions", to: "/questions"),
                 .init(label: "Garden plan", to: "/browse/_content/garden/Garden.landmark.card"),
-            ]
+            ] : []
         )
     }
 

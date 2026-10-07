@@ -137,6 +137,24 @@ The spike became a real `BeeBox.app` (`mac-app/scripts/build-app.sh`) and a
 - **Diagnostics:** a bundled app's NSLog lines were hard to find, so the app
   writes `app.log` beside `box.log` (menu: Show App Log).
 
+## Layout and updates (2026-10-07, 0.1.1)
+
+- Boxes live in `~/BeeBox/<name>/`; what every box shares (runtime store,
+  container home with accounts and logins, Claude config, logs, relay
+  sockets) lives in `~/Library/Application Support/Bee Box/`. A second box
+  (`BEEBOX_BOX=work`) ran beside the default with its own folder, log, and
+  socket and reused the shared image. The app runs one box at a time;
+  running several would most likely use beebox's hub.
+- Sparkle worked end to end on its first chance: a `0.0.0-dev` build carrying
+  the real key found 0.1.0 in the feed, installed it, and relaunched (the
+  box stopped cleanly first). Development builds now carry no update key.
+  Scheduled checks use gentle reminders (a menu item), since a menu-bar app
+  has no window to raise.
+- A box already migrated by a newer engine made the older 0.1.0 engine park
+  in "convergence needs recovery" without serving, which is the safe
+  outcome; the app now recognizes that log line and fails at once instead of
+  waiting 10 minutes.
+
 ## Gaps before this is an app for other people
 
 - **Stable address — fixed in the spike, and required.** The VM gets a new

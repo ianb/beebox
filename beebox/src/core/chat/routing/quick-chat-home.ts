@@ -15,7 +15,7 @@ import { listOpenQuickChatRecords, listRecentlySentQuickChatRecords } from "./qu
 
 const RECENTLY_SENT_LIMIT = 5;
 const RECENT_CHATS_LIMIT = 5;
-/** Routes the box screen already links: its recent chats, "All chats", and the box-wide pages. */
+/** Routes the app already links: the box screen's recent chats and "All chats", and the avatar menu's box-wide pages. */
 const BOX_SCREEN_ROUTES: ReadonlySet<string> = new Set(["/", "/chat", "/chats", "/browse", "/history", "/dashboard"]);
 
 /** A recent chat on the box screen. Only the last chat can have a null `landmark`: no landmark resolves for its directory. */
