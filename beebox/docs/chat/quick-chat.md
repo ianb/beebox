@@ -62,6 +62,12 @@ thought that was not sent. A sent thought cannot be discarded.
 `quickChat.home` returns what the box screen shows: the open thoughts, the
 recently sent thoughts, the recent chats, and the shortcuts.
 
+`submit` also takes `origin`: `typed` or `voice`, how the person entered the
+thought. The web page always sends `typed`. The iOS app sends `voice` when the
+text came from dictation. A client built before `origin` existed sends none,
+and the thought is treated as typed. The record keeps the origin, so a thought
+delivered later by `choose` or Retry arrives in the same form.
+
 All four procedures take a paired device's token. The phone sends
 `channel: "ios-native"`. The wire shapes are in
 [mobile contract §5.11](../mobile-contract.md).
@@ -120,7 +126,9 @@ two rules.
 
 First, it selects a destination. If a new conversation wins by no more than
 0.1 over the strongest existing chat, the existing chat is selected. Exact
-ties favor existing chats.
+ties favor existing chats. A thought whose first words are "new chat" (any
+case, after any leading whitespace) skips this preference: the person asked
+for a new conversation.
 
 Second, it decides to post or ask. It adds the probabilities of every
 candidate in the same place as the selected one: the same landmark, or the
@@ -131,6 +139,18 @@ landmark's chat and a new chat in that landmark is therefore not doubt.
 Both numbers are provisional. They come from a small set of samples and are
 not calibrated. A confident post to the wrong chat cannot be undone; the row
 names the chat, and the person corrects it there.
+
+## Destination phrases
+
+The person can name the destination at the start of the thought: "new chat in
+Garden: ...", "continue Garden: ...", or "in Garden: ...". Jev is told that
+such a phrase is addressed to the box: the named place is the destination,
+"new chat" means the new chat in that place, and "continue" means its existing
+chat. There is no parser that chooses the destination from the phrase. The
+only fixed rule is the "new chat" exception to the existing-chat preference
+above. A named place that does not match any candidate is routed like any
+other thought. The phrase stays in the delivered text, and the chat's agent
+is told that it was addressed to the box.
 
 ## When routing is unavailable
 
@@ -154,7 +174,12 @@ the thought stays `sending` with the error. Retry delivers it.
 Delivery goes through the same sender as `POST /api/chat/send`. The record's
 UUID is the chat message id. The send route's duplicate check therefore posts
 one message per thought, even when delivery is repeated. The thought arrives
-in the chat as typed text from the person who sent it.
+in the chat from the person who sent it, wrapped as `<typed
+source="box-screen">` or, for a dictated thought, `<speech
+source="box-screen">`. The `source` attribute tells the chat's agent how the
+message arrived: the box chose the chat with no person picking it, the
+thought may open with a destination phrase or be terse or dictated, and the
+person may not be looking at the chat. A dictated thought has no recording.
 
 The record names its destination before delivery starts. If the server stops
 after delivery and before it records `sent`, the next attempt is answered as a

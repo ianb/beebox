@@ -127,7 +127,7 @@ Each call took 0.2 to 0.5 seconds. Clear matches scored 0.95 or more. Debatable 
 **Direction.**
 
 ```ts
-submit: { id: uuid, message: string(1..12000), channel?: string } -> QuickChatView
+submit: { id: uuid, message: string(1..12000), origin?: "typed" | "voice", channel?: string } -> QuickChatView
 choose: { id: uuid, candidateId: string, channel?: string } -> QuickChatView
 discard: { id: uuid } -> QuickChatView
 home:   {} -> { open: QuickChatView[], recentlySent: QuickChatView[], recentChats: RecentLandmarkChat[],
@@ -147,7 +147,7 @@ type QuickChatView = {
 
 1. A record with this id exists: the text must match (existing CONFLICT rule). If its state is `sending`, attempt delivery again. Return its view.
 2. Build candidates and ask Jev. On `RoutingCatalogError`, a missing key, or `JevError`: write a `needs-choice` record with `reason: "routing-unavailable"`. Its choices are the recent chats and "New general chat", built without Jev. A catalog failure leaves only "New general chat".
-3. Apply `selectRoutingDestination`, then the disposition policy.
+3. Apply `selectRoutingDestination`, then the disposition policy. The selection's existing-chat preference is skipped when the thought opens with "new chat" (`thoughtAsksForNewChat`; follow-up of 2026-10-06 below).
 4. `ask`: write `needs-choice` with `reason: "uncertain"`. Choices are the three highest candidates plus "New general chat" when it is not among them.
 5. `post`: reserve a new session when needed, write the record as `sending`, deliver, then write `sent`.
 
@@ -483,4 +483,16 @@ Three findings were not fixed:
 - A raw chat send and a quick chat submit that share one id could record the wrong destination. Each client mints a new id per message; not reachable in ordinary use.
 
 Knowledge audits `quick-chat-rubric-maintenance` and `box-screen-box-wide-pages` each passed 1/1 with no reads or searches, against a disposable standalone clone of the test box with the package docs installed as files.
+
+### Follow-up: arrival tag, voice and typed, destination phrases (2026-10-06)
+
+After using the box screen, the boxholder asked to say "new chat in landmark" or "continue chat in landmark", and to tag box screen messages so that the chat's agent knows how a message arrived: "this gives the agent the ability to pay attention to the content or not, understanding how it arrived. We still want type/voice distinction in addition."
+
+- **Arrival tag.** Delivery wraps the thought as `<typed source="box-screen">` or `<speech source="box-screen">`. `injectUserAttr` keeps the attribute after the sender. The chat system prompt (`core/chat/session/prompts.ts`, "The messages you receive") has one paragraph on such a message: the box chose the chat, the thought may open with a destination phrase addressed to the box, it may be terse or dictated with no recording, and the person may not be looking.
+- **Voice and typed.** `submit` takes `origin: "typed" | "voice"`, default `typed` for older clients. The record keeps it, so `choose` and Retry deliver in the same wrapper. The web box screen sends `typed`. On iOS the composer's `.quickChat` closure receives the send's origin, the outbox entry stores it (an entry stored before reads as `typed`), and `QuickChatAPI.submit` sends it; a retry of a stored record sends none. Contract §5.11 and `submit-request.json` show it.
+- **Destination phrases.** Jev's instructions say that a leading "new chat in <place>", "continue <place>", or "in <place>" names the destination. No parser chooses a destination. The one fixed rule: `thoughtAsksForNewChat` (leading "new chat", any case) turns off the existing-chat preference in `selectRoutingDestination`.
+
+Commits: `20dd89b6e` (server, prompt, Jev instruction, contract), `1e619d40d` (iOS), and the docs commit that adds this section.
+
+Tests: policy doctest 10/10 (the `thoughtAsksForNewChat` table and the selection with and without the request); router `quick-chat.submit` 34/34, with both wrappers delivered through `submit` and `choose` and a "New chat:" thought sent to a new chat; record 15/15 (origin kept, old records typed); sender attribution 9/9; contract fixtures 5/5; Jev 38/38; catalog 25/25; web box screen state and route 40/40. iOS: `QuickChatAPITests`, `QuickChatOutboxTests`, `BoxScreenStoreTests`, and `SpeechKeywordsTests` 54/54.
 
