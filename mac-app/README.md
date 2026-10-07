@@ -68,6 +68,26 @@ Accounts and agent logins are machine-wide in beebox, so they are shared.
 The app runs one box at a time; the default box is served at
 `http://localhost:3280/box/`.
 
+## Uninstalling
+
+**Uninstall Bee Box…** in the menu stops the box, deletes the shared data in
+`~/Library/Application Support/Bee Box` (the image, VM disks, accounts, agent
+sign-ins, and logs), the app's preferences and caches, and moves the app to the
+Trash. Boxes in `~/BeeBox` are kept unless you tick the checkbox, and then they
+go to the Trash, not straight to deletion.
+
+By hand, after quitting Bee Box:
+
+```sh
+rm -rf ~/Library/"Application Support/Bee Box"
+rm -rf ~/Library/Caches/run.beebox.mac ~/Library/HTTPStorages/run.beebox.mac*
+rm -f ~/Library/Preferences/run.beebox.mac.plist
+# and drag Bee Box.app to the Trash; ~/BeeBox holds your boxes
+```
+
+The app installs no login items or background services, and its VM runs only
+while the app does.
+
 ## Release
 
 One-time setup on the maintainer's Mac (done 2026-10-07):
