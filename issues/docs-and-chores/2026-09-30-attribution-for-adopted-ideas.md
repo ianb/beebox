@@ -1,5 +1,5 @@
 ---
-title: "Credit adopted ideas in attribution.md, and backfill it from history"
+title: "Credit adopted ideas in an acknowledgements file, and backfill it from history"
 workstream: acknowledgements
 area: docs
 labels: [agent-workflow]

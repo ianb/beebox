@@ -13,7 +13,7 @@
  * no font and comes out in full colour at any size, which is why the artwork
  * is a dependency rather than a font being one.
  *
- * Artwork is CC-BY 4.0 (Twitter/X) — see `docs/attribution.md`. The package is
+ * Artwork is CC-BY 4.0 (Twitter/X) — see the root `ACKNOWLEDGEMENTS.md`. The package is
  * a normal runtime dependency, and the deploy installs the full tree, so
  * resolving it through `createRequire` works on the server as it does here.
  */

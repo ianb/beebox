@@ -53,7 +53,7 @@ where new material goes and how it is named.
 | Doctest syntax | [agent-doctest](../../agent-doctest/docs/syntax.md) |
 | Glossary | [glossary](glossary.md) |
 | Example names for docs and tests | [example-names](example-names.md) |
-| Third-party asset attribution | [attribution](attribution.md) |
+| Third-party assets and adopted ideas | [acknowledgements](../../ACKNOWLEDGEMENTS.md) |
 | Name history | [name-history](name-history.md) |
 | Security TODOs, dissolved into the report and the issue queue | [todo-security](todo-security.md) |
 | Feature ideas and open issues | [issues](../../issues) at the monorepo root |
