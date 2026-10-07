@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { CODEX_BOX_SANDBOX } from "./sandbox.js";
+import { CODEX_FIXED_CONFIG } from "../codex-binary.js";
 import { toError } from "../../shared/error-guards.js";
 import { declaredPresent } from "../../lib/declared-present.js";
 import type { ChatContentBlock } from "../claude-chat-types.js";
@@ -169,8 +170,7 @@ export function codexSdkConfig(options: Pick<CodexSdkSessionOptions, "systemProm
   return {
     developer_instructions: options.systemPrompt,
     analytics: { enabled: options.analytics },
-    feedback: { enabled: false },
-    check_for_update_on_startup: false,
+    ...CODEX_FIXED_CONFIG,
   };
 }
 

@@ -10,6 +10,7 @@ files feedback.
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { codexSdkConfig } from "../../../src/services/codex-sdk-session/core.js";
+import { codexCliArgs } from "../../../src/services/codex-binary.js";
 import { clearBoxConfigCache } from "../../../src/core/box/config.js";
 import * as auth from "../../../src/core/agent/auth-preflight.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -31,6 +32,15 @@ codexSdkConfig({ systemPrompt: "be brief", analytics: false })
 
 codexSdkConfig({ systemPrompt: "", analytics: true }).analytics.enabled
 => true
+```
+
+Direct CLI calls (plugin install, login, the auth and history app-servers)
+belong to no box. They get the same fixed settings with analytics off; plugin
+installs are themselves analytics events.
+
+```ts
+codexCliArgs(["plugin", "add", "beebox@beebox", "--json"])
+=> ["-c", "analytics.enabled=false", "-c", "feedback.enabled=false", "-c", "check_for_update_on_startup=false", "plugin", "add", "beebox@beebox", "--json"]
 ```
 
 ## Agent runs read the setting

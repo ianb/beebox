@@ -1,7 +1,7 @@
 /** Typed boundary for package-pinned Codex authentication operations. */
 
 import { execFile, spawn } from "node:child_process";
-import { codexBinaryPath } from "../codex-binary.js";
+import { codexBinaryPath, codexCliArgs } from "../codex-binary.js";
 import { CodexAuthAppServer } from "./auth-app-server.js";
 
 export type CodexAuthStatus =
@@ -59,7 +59,7 @@ export function createCodexCliService(options?: { binaryPath?: string | undefine
           resolve({ kind: "unavailable", detail: error instanceof Error ? error.message : String(error) });
           return;
         }
-        const child = spawn(binary, ["login", "status"], { stdio: ["ignore", "pipe", "pipe"] });
+        const child = spawn(binary, codexCliArgs(["login", "status"]), { stdio: ["ignore", "pipe", "pipe"] });
         let output = "";
         let settled = false;
         const finish = (status: CodexAuthStatus): void => {
@@ -148,7 +148,7 @@ export function createCodexCliService(options?: { binaryPath?: string | undefine
           resolve({ success: false, error: error instanceof Error ? error.message : String(error) });
           return;
         }
-        execFile(binary, ["logout"], { timeout: 10_000 }, (error) => {
+        execFile(binary, codexCliArgs(["logout"]), { timeout: 10_000 }, (error) => {
           resolve(error ? { success: false, error: error.message } : { success: true });
         });
       });
