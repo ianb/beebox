@@ -10,7 +10,7 @@ issues: []
 > — and every over-threshold photo selection — to the full-screen
 > `BulkUploadOverlay`, which seals and sends a message of its own. That made it
 > impossible to attach a couple of documents to the message you were writing
-> (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
+> (`issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
 > The web composer now decides a *representation* instead of a destination: a
 > few photos inline, everything else uploads and is referenced by `[file#N]` in
 > the user's own message. The web overlay and its client
@@ -35,7 +35,7 @@ inlining, on both the web composer and — as the deferred Track 3 of
 composer.
 
 The driving failure is recorded in
-[`issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md`](../../../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md):
+[`issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md`](../../../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md):
 the boxholder selected 70+ camera-roll photos in the iOS app and the send failed
 client-side with no server-side trace at all.
 
@@ -418,7 +418,7 @@ inside the CAS seal respectively.
   both; changing caps is a separate question.
 - **Android.** No shell exists; the contract rows keep it implementable.
 - **Share-sheet intake.** Separately tracked
-  ([`issues/features/2026-03-05-share-to-box-images-files.md`](../../../issues/closed/features/2026-03-05-share-to-box-images-files.md)).
+  ([`issues/closed/features/2026-03-05-share-to-box-images-files.md`](../../../issues/closed/features/2026-03-05-share-to-box-images-files.md)).
 - **Touching capture's uploader.** Already fixed on main by
   `worktree-fixup-capture` (`ac4e12b9`, `d477aa24`); re-doing it here would
   collide.

@@ -507,7 +507,7 @@ distinction having eroded.
 
 **Discarding the audio is a knowing trade.** It makes retranscription impossible
 by construction — the gap
-`issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md` documents at
+`issues/closed/bugs/2026-08-18-first-message-audio-not-retranscribable.md` documents at
 length. For a communication medium consumed within days that is the correct
 trade, and it removes the storage and privacy questions entirely. It does mean
 the HQ pass is the only attempt, which is why the seam calls `transcribeAudioHq`
@@ -609,7 +609,7 @@ through and through:
 A file ask has no exhibits-origin path, no `disposition.json`, and no way to be
 answered where the queue says answering happens. That is a real design question —
 where a file ask is answered, and what "answered" means for one — not a schema
-tweak. Filed as `issues/features/2026-08-22-file-asks-agent-flagged-attention.md`
+tweak. Filed as `issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md`
 with these three obstacles recorded, so the next session starts from them rather
 than rediscovering them.
 

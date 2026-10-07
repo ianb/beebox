@@ -145,7 +145,7 @@ output is captured and printed when the command finishes rather than streamed,
 and a run that prints more than about a megabyte per stream is truncated with a
 note saying how much was dropped. From an agent's shell the command runs on the
 box's server, which holds the credential, and the server trims what it returns
-further (`docs/plans/agent-capability-delegation.md`).
+further (`docs/implemented-plans/agent-capability-delegation.md`).
 
 Untracked Gmail is absent from box search and agent context. Use this command
 when a question requires mail beyond the tracked cards.

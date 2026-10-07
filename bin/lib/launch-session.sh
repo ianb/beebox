@@ -13,9 +13,19 @@
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/glm-provider.sh"
 
 launch_session_build() {
-  local model_arg="" rc_arg="" model_line="" resume_arg=""
+  local model_arg="" rc_arg="" model_line="" resume_arg="" create_extra=""
   LS_LAUNCHER="$LS_LAUNCH_DIR/launch.sh"
   LS_LAUNCH_TOKEN="${LS_LAUNCH_TOKEN:-$(uuidgen 2>/dev/null || printf '%s-%s-%s' "$(date +%s)" "$$" "$RANDOM")}"
+
+  # Interpolated into the generated script; the launcher validated it as a
+  # commit, and the character class keeps it free of quotes and spaces.
+  if [ -n "${LS_BASE_REF:-}" ]; then
+    if [[ ! "$LS_BASE_REF" =~ ^[A-Za-z0-9._/@^~-]+$ ]]; then
+      echo "launch-session: LS_BASE_REF has unsafe characters: $LS_BASE_REF" >&2
+      return 1
+    fi
+    create_extra=" --base-ref '$LS_BASE_REF'"
+  fi
 
   if [ "$LS_AGENT" = "codex" ] && [ -z "$LS_MODEL" ]; then
     LS_MODEL="gpt-6-sol"
@@ -66,7 +76,7 @@ launch_on_exit() {
 trap launch_on_exit EXIT
 if [ -n "${LS_WORKTREE_PATH:-}" ]; then
   wt_path="$LS_WORKTREE_PATH"
-elif ! wt_path=\$(./bin/workstreams create "$LS_WORKSTREAM"); then
+elif ! wt_path=\$(./bin/workstreams create "$LS_WORKSTREAM"$create_extra); then
   echo "launch-worktree-session: failed to create or reattach $LS_WORKSTREAM" >&2
   exit 1
 fi
@@ -132,7 +142,7 @@ trap launch_on_exit EXIT
 if [ -n "${LS_WORKTREE_PATH:-}" ]; then
   wt_path="$LS_WORKTREE_PATH"
 else
-  wt_path=\$(./bin/workstreams create "$LS_WORKSTREAM")
+  wt_path=\$(./bin/workstreams create "$LS_WORKSTREAM"$create_extra)
 fi
 if [ ! -f "\$wt_path/AGENTS.md" ]; then
   echo "launch-worktree-session: no AGENTS.md in \$wt_path (generation failed?) — refusing to launch codex without repo docs" >&2

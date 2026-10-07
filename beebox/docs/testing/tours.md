@@ -75,7 +75,7 @@ the worktree is auto-detected from `$PWD`, box defaults to `test1`
 (`BROWSE_BOX` overrides). The box must be one built for agent browsing —
 `"agentBrowsing": "owner"` in its `_config/box.json`, which `test1` and its
 clones carry — or every owner-gated surface walks as a 401/403 page
-(`docs/plans/agent-browsing-owner.md`). A healthy tour takes tens of seconds — both
+(`docs/implemented-plans/agent-browsing-owner.md`). A healthy tour takes tens of seconds — both
 viewport passes included.
 
 Tours use named per-session Chrome profiles, so a tour can run alongside an

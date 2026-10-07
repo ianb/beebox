@@ -70,7 +70,7 @@ Verified directly:
   Track 5 reference to routing there is consistent with existing surface, not
   new work.
 - Doc references exist: `docs/implemented-plans/capture-mode.md`,
-  `issues/bugs/2026-07-17-image-orientation-exif-boundaries.md`.
+  `issues/closed/bugs/2026-07-17-image-orientation-exif-boundaries.md`.
 
 ## Prior art (external) — verified
 

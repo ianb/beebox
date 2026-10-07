@@ -16,8 +16,7 @@ recurring sweep that runs afterwards.)
      user of.
    - **an entry point knip cannot see** — a CLI script, a dev tool, a specifier
      resolved at runtime. Register it in knip's config (`knip.ts` at the
-     monorepo root, or `beebox/knip.json` on a checkout that predates the
-     move) with a comment saying who reaches it. Never silence a finding you
+     monorepo root) with a comment saying who reaches it. Never silence a finding you
      have not explained.
    - **deliberate and in progress** — leave it, and say so in your report. The
      run script rewrites its baseline every week, so it will not nag you about

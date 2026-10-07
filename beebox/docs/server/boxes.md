@@ -24,8 +24,8 @@ deployment (`box.example.com`) rather than something every hub needs.
   every configured box starts "stopped" instead of spawning at hub startup —
   the hub cold-starts a box's `bbx serve` child on its first proxied request
   and idle-stops it again after `idleMs`, the same lazy-per-worktree
-  semantics `bin/router.ts` uses for dev worktrees. `keepRecent: N`
-  (lazy-only) keeps the N most-recently-used boxes alive rather than
+  semantics the dev router (`workstreams-app/src/router/lifecycle.ts`) uses for
+  dev worktrees. `keepRecent: N` (lazy-only) keeps the N most-recently-used boxes alive rather than
   idle-stopping them, and pre-starts that set on a hub restart (recency is
   persisted to `hub-state.json` beside the config) — see `src/hub/CLAUDE.md`.
 - **`bbx serve`** (no hub) is still the standalone story for a single box —

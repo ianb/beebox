@@ -7,7 +7,7 @@ test discoverability and end-to-end use.
 
 Field tests exercise realistic discoverability and end-to-end use through a
 persona operator, a disposable real box, its real agents, and the real web UI.
-They are expensive, run weekly or on demand, and are never a CI or merge gate.
+They are expensive, run on demand, and are never a CI or merge gate.
 The harness lives in `src/field-test/`; checked-in scenarios live in
 `field-tests/<scenario>/`. Design history and rationale live in
 [the implemented plan](../implemented-plans/agent-field-tests.md).

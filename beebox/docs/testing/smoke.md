@@ -95,6 +95,7 @@ belongs to a session that can run the walk and see what happens.
 
 ## Failure modes
 
-**Known gap.** A change confined to `bin/` gets no smoke walk, because `bin/`
-ships nothing and the "code-related" rule is deliberately the deploy hook's. A
-`bin/router.ts` change that breaks the dev router is therefore not gated here.
+**Known gap.** A change confined to `bin/` or `workstreams-app/` gets no smoke
+walk, because neither ships anything and the "code-related" rule is
+deliberately the deploy hook's. A change under `workstreams-app/src/router/`
+that breaks the dev router is therefore not gated here.

@@ -11,7 +11,7 @@ and file-by-file checklist live in `beebox/docs/cards/schemas.md`.
 ## The model
 
 A card type is a Zod-based `cardSchema(type, { fields, instructions? })`
-in `src/schemas/`, registered in `registry.ts` (boxes can add local
+in `src/schemas/`, registered in `src/schemas.ts` (boxes can add local
 schemas under the package `src/schemas/`, importing `beebox/cards`
 — never engine internals). The type comes from the filename
 (`Foo.<type>.card`), not a frontmatter field.
@@ -33,7 +33,8 @@ Things the schema system does that you'd otherwise miss:
   (`src/shared/prominence.ts`; `cardSchema`'s own `prominence` option
   sets it per type, and `category: "system"` implies `background`).
   `theme: { name, stock? }` selects presentation independently of the view;
-  `cardSchema`'s own `theme` option sets the type preference.
+  `cardSchema`'s own `theme` option sets the type preference (read
+  `node_modules/beebox/box-docs/card-themes.md` before setting one).
   Don't redeclare any of these, except `title: z.string()` to require
   a title. The UI shows `title` in the header, `todos` on the front, the
   other four under Properties "Found by", and `theme` as its "Appearance"
@@ -44,16 +45,12 @@ Things the schema system does that you'd otherwise miss:
   `modified`, `source`, plus the global names. A registry test rejects them
   on built-in schemas; box-local ones get a health warning. The rules and
   the alternatives are in `docs/cards/schemas.md` ("Adding a field").
-- Cards also accept an optional catalog-validated `theme: {name, stock?}`
-  presentation choice. It is independent of the preferred view; read
-  `node_modules/beebox/box-docs/card-themes.md` before setting a schema theme
-  preference or advising on a card override.
 - **A type owns its summary.** `cardSchema`'s `summarize(card, base)` hook
   decides how the type appears in lists (todo list headers, recent files,
   `bbx query` text). `card` is typed from the schema's own fields and the hook
   runs only on a validated card; spread `base` and add `detail`/`attrs`, or
   replace it. The React list component is a separate registry: it lives beside
-  the schema as `src/schemas/<type>.list-entry.tsx`, is registered from
+  the schema as `src/schemas/<type>/list-entry.tsx`, is registered from
   `src/frontend/src/file-types/builtins.tsx`, types its props with
   `SummaryAttrs<typeof XSchema>`, and reaches schema/core/cards code by
   `import type` only (lint-enforced). See `docs/cards/schemas.md`.
@@ -64,7 +61,8 @@ Things the schema system does that you'd otherwise miss:
 - **Reserialization reorders frontmatter keys** to the schema's declared
   field order; a one-field mutation rewrites the whole block.
 - Templates: new types that ship to boxes need template entries
-  (`src/schemas/templates*.ts`) and regenerate into boxes via `bbx init`.
+  (`src/templates/builtins/templates.ts`) and regenerate into boxes via
+  `bbx engine init`.
 
 ## The migration boundary
 

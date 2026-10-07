@@ -31,17 +31,17 @@ checkout.
 The current jobs and their cadences are listed under
 [recurring work](workflow.md#recurring-work).
 
-**Writing one:** the `bbx-authoring-schedules` skill — when a task should be a
-schedule at all, what a `run` script owes (exit 0 in silence, hand off only when
-there is work, keep its own baseline so "new since last time" is real), what
-belongs in `prompt.md`, and how to rehearse with `bin/schedules run <name>
---dry-run`. Design: `docs/plans/scheduled-workstreams.md`.
+**Writing one:** [scheduled work](../../../bin/docs/schedules.md) — when a task
+should be a schedule at all, what a `run` script owes (exit 0 in silence, hand
+off only when there is work, keep its own baseline so "new since last time" is
+real), what belongs in `prompt.md`, and how to rehearse with `bin/schedules run
+<name> --dry-run`. Design: `docs/implemented-plans/scheduled-workstreams.md`.
 
 ## Not yet enrolled
 
 Periodic tasks that still wait for someone to remember them. Each needs its own
 `run` design before it can become a schedule
-(`issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md`).
+(`issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md`).
 
 | Task | Command | Cadence it wants |
 |------|---------|------------------|
@@ -67,6 +67,22 @@ Not cadence tasks — tools you run because of a change you just made.
 | Box data migrations | `bbx migrate` (per box) | After adding a migrator to `src/core/migrations.ts`. Author guide and rollout history: `docs/cards/migrations.md` |
 | Broken-ref cleanup | `npx tsx src/scripts/clean-broken-refs.ts <boxRoot>` | One-off, when `bbx validate` shows ref errors that pre-date a migration. Dry-run by default; `--apply` to write |
 | Mobile parity audit | agent procedure (`docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of mobile work; quarterly otherwise |
+
+## Regression probes
+
+Each of these helpers was consolidated once and later grew hand-rolled copies.
+When reviewing a broad change, grep for the formula outside its home module:
+
+- `createHash("sha256")` outside `src/lib/content-hash.ts`.
+- An `fs.access` existence probe, or `.then(() => true).catch(() => false)`,
+  outside `src/lib/file-exists.ts`.
+- A `config/box.json` + `PUBLIC_URL`/`BBX_PUBLIC_URL` cascade outside
+  `src/lib/public-url.ts`. A copy silently ignores `BBX_PUBLIC_URL`.
+- An extension-to-MIME map literal outside `src/lib/mimetype.ts`.
+- A `multipart/form-data` boundary builder outside `src/lib/multipart.ts`.
+
+`doc-check` validates Markdown links, not backticked paths in prose. For changed
+docs, confirm each backticked `src/` or `docs/` path still resolves.
 
 ## Working with output
 

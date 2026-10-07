@@ -239,7 +239,7 @@ Phase 1 (2026-07-09) was the conservative doc-browser extraction
 (`workstreams-app/src/router/server/docs.ts`) plus the first write-up of invariants #1–#4 — pure code
 motion, no state-machine change. Phase 2 (2026-07-11,
 `beebox/docs/implemented-plans/router-state-formalization.md`) then did the fuller
-option from `issues/decisions/2026-07-06-architectural-review-open-decisions.md`
+option from `issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md`
 (item 1), in three sub-phases:
 
 - **A** — the formal lifecycle (`workstreams-app/src/router/lifecycle.ts`) and the two live-race
@@ -301,4 +301,4 @@ Deliberate non-goals recorded at close-out: status accuracy for the in-flight
 observed on the map); formalizing the proxy-retry body-replay machinery (it
 stays a request-level concern, see its section above); and the name-scoped
 dashboard-socket hazard a superseded self-clean can trip
-(`issues/bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md`).
+(`issues/closed/bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md`).

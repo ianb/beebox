@@ -16,7 +16,7 @@ validate input with Zod, call via `trpc.<router>.<procedure>`.
 Real-time/streaming is also tRPC: **subscriptions over the WebSocket**
 (`events.subscribe` for the global event bus, `events.turnStream` for
 the resumable per-turn chat stream; the client's `splitLink` in
-`lib/trpc.ts` routes subscriptions through `wsLink`).
+`src/frontend/src/lib/trpc/client.ts` routes subscriptions through `wsLink`).
 
 **Raw Fastify routes** (`src/webapp/routes/`) only for what doesn't fit
 the tRPC request/response shape: file upload/download, OAuth redirects,

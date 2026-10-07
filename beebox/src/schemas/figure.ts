@@ -176,9 +176,7 @@ export default (cl, { mount, figure }) =>
 
   A card param matching no module param (or declared for a \`trigger\`) is dropped — its query value does nothing.
 - **\`export const canvas = { width, height }\` is authoritative for the drawing
-  size** — the card's \`width\`/\`height\` fields don't apply to canvas-loop figures.
-- **Verify headlessly** (write → render → read the frame-tagged transcript;
-  the canvas-loop authoring loop) rather than opening a browser to screenshot.`,
+  size** — the card's \`width\`/\`height\` fields don't apply to canvas-loop figures.`,
 });
 
 export type FigureFields = InferCardFields<typeof FigureSchema>;

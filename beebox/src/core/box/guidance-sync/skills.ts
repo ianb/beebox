@@ -27,6 +27,7 @@ import {
   VIEWS_SKILL,
 } from "./skills-content.js";
 import { BEEBOX_SYSTEM_FEEDBACK_SKILL } from "./skills-content-beebox-system-feedback.js";
+import { BROWSER_TASK_SKILL } from "./skills-content-browser-task.js";
 import { WHAT_CAN_YOU_DO_SKILL } from "./skills-content-what-can-you-do.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { errnoCode } from "../../../shared/error-guards.js";
@@ -53,6 +54,7 @@ interface BoxSkill {
 function buildBoxSkills(): BoxSkill[] {
   return [
     { name: "beebox-system-feedback", content: BEEBOX_SYSTEM_FEEDBACK_SKILL },
+    { name: "browser-task", content: BROWSER_TASK_SKILL },
     {
       name: "build-course",
       content: BUILD_COURSE_SKILL,

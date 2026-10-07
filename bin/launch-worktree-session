@@ -4,10 +4,44 @@
 # user message; the agent reads it as context but does NOT auto-implement.
 #
 # Usage:
-#   launch-worktree-session [--agent claude|codex] [--model <model>] [--issue issues/<path>.md] <worktree-name> "<prompt text>"
-#   launch-worktree-session [--model <model>] <worktree-name> -      # prompt from stdin
-#   launch-worktree-session [--model <model>] <worktree-name> @<file># prompt from a file
+#   launch-worktree-session [options] <worktree-name> "<prompt text>"
+#   launch-worktree-session [options] <worktree-name> -        # prompt from stdin
+#   launch-worktree-session [options] <worktree-name> @<file>  # prompt from a file
 #   launch-worktree-session --help
+#
+# Options (all before the worktree name):
+#   --agent claude|codex   default claude
+#   --model <model>        see below
+#   --description <text>   one line, at most 160 characters; shown in
+#                          `bin/workstreams list`. Pass it on every agent launch.
+#   --issue <path>         repo-relative issues/ or private-issues/ path the work
+#                          takes ownership of; sets its `workstream:` field in the
+#                          new checkout. For a cluster, anchor one issue and name
+#                          the rest in the briefing.
+#   --base-ref <ref>       branch the worktree from <ref> instead of main. Use only
+#                          when both lines of work are one; the branches then land
+#                          in order.
+#   --allow-sigils         skip the briefing sigil check (below)
+#   --check-briefing       run every pre-launch check below, then exit 0 without
+#                          creating anything or opening Terminal
+#   --no-remote-control    see below
+#
+# Pre-launch checks (refusals exit 1 before anything is created):
+# - Name collision: an existing workstream with this name (live, dormant,
+#   stale, removed, or scheduled) is refused, and its state, action, age, and
+#   description are printed with the next step. A dormant or removed
+#   workstream that owns the subject takes `bin/workstreams resume <name> -`;
+#   a live one cannot receive injected context, so resume prints a
+#   `manual forwarding required: <path>` note for the human to paste; `stale`
+#   (about 14 days idle) usually wants a new name.
+# - Briefing sigils: `/<skill>` or `$<skill>` in briefing prose, where <skill>
+#   is a directory under .claude/skills/, is refused. The receiving agent runs
+#   a sigil as an invocation; name the skill instead ("use the finish skill").
+#   Fenced code blocks are exempt; inline code spans are not.
+# - Unlanded context (a note, not a refusal): run from a checkout with
+#   uncommitted changes or commits not on main, the launcher says so. A new
+#   worktree branches from main; land the work, describe it in the briefing,
+#   or pass --base-ref.
 #
 # --model passes `claude --model <model>` (e.g. claude-fable-5-1, opus, sonnet) —
 # or `codex -m <model>` with --agent codex — so a worktree can be spun up on a
@@ -43,6 +77,11 @@
 #   pbpaste | launch-worktree-session explore-foo -
 #   launch-worktree-session explore-foo @briefing.md
 #
+# Teardown: Claude's SessionEnd hook and codex's exit (bin/codex-session-end)
+# remove a merged, clean worktree and otherwise offer keep/remove, defaulting to
+# keep. A closed tab skips that; `bin/workstreams sweep` handles it later.
+# Reopen a workstream later with `bin/workstreams resume <name>`.
+#
 # Notes:
 # - Creates or reattaches through `bin/workstreams create`, cd's into the
 #   managed checkout, and passes --name/--dangerously-skip-permissions. It does
@@ -66,6 +105,9 @@ agent="claude"
 issue=""
 description=""
 description_set=false
+base_ref=""
+allow_sigils=false
+check_only=false
 
 # `--help` prints this file's own header comment — the usage block, the flag
 # explanations, and the examples are already written there, and a second copy
@@ -86,6 +128,10 @@ while [ $# -ge 1 ]; do
     --issue=*) issue="${1#--issue=}"; shift ;;
     --description) [ $# -ge 2 ] || { echo "launch-worktree-session: --description needs a value" >&2; exit 1; }; description="$2"; description_set=true; shift 2 ;;
     --description=*) description="${1#--description=}"; description_set=true; shift ;;
+    --base-ref) [ $# -ge 2 ] || { echo "launch-worktree-session: --base-ref needs a value" >&2; exit 1; }; base_ref="$2"; shift 2 ;;
+    --base-ref=*) base_ref="${1#--base-ref=}"; shift ;;
+    --allow-sigils) allow_sigils=true; shift ;;
+    --check-briefing) check_only=true; shift ;;
     --no-remote-control) remote_control=0; shift ;;
     --remote-control)    remote_control=1; shift ;;
     *)         break ;;
@@ -98,7 +144,7 @@ case "$agent" in
 esac
 
 if [ $# -lt 1 ]; then
-  echo "Usage: launch-worktree-session [--agent claude|codex] [--model <model>] [--description <text>] [--issue <path>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "Usage: launch-worktree-session [--agent claude|codex] [--model <model>] [--description <text>] [--issue <path>] [--base-ref <ref>] [--allow-sigils] [--check-briefing] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
   echo "       launch-worktree-session --help   # full documentation" >&2
   exit 1
 fi
@@ -168,6 +214,64 @@ if [ -n "$issue" ]; then
   node --import tsx "$MONO/bin/assign-issue-workstream.ts" --check "$MONO/$issue" "$wt"
 fi
 
+# The scanner runs from this script's own checkout; skill names come from it
+# and from main, which the new worktree branches from.
+workstream_check_briefing_sigils launch-worktree-session "$(cd "$script_dir/.." && pwd)" "$allow_sigils" "$MONO"
+
+if [ -n "$base_ref" ]; then
+  if ! [[ "$base_ref" =~ ^[A-Za-z0-9._/@^~-]+$ ]] || ! git -C "$MONO" rev-parse --verify --quiet "$base_ref^{commit}" >/dev/null; then
+    echo "launch-worktree-session: --base-ref is not a commit in $MONO: $base_ref" >&2
+    exit 1
+  fi
+fi
+
+# An existing name would silently reattach to that workstream's checkout and
+# branch. Resume is the path for existing work; refuse and say where it stands.
+# Fails closed: without the inventory a collision cannot be ruled out.
+if ! inventory=$("$MONO/bin/workstreams" list --json); then
+  echo "launch-worktree-session: bin/workstreams list failed; cannot check for an existing '$wt'" >&2
+  exit 1
+fi
+existing=$(printf '%s' "$inventory" | jq -c --arg n "$wt" '[.[] | select(.name == $n)] | first // empty')
+if [ -n "$existing" ]; then
+  state=$(printf '%s' "$existing" | jq -r '.routing.state // "unknown"')
+  action=$(printf '%s' "$existing" | jq -r '.routing.action // "unknown"')
+  {
+    echo "launch-worktree-session: refusing: workstream '$wt' already exists"
+    printf '%s' "$existing" | jq -r '"  state=\(.routing.state // "?") action=\(.routing.action // "?") last-activity=\(.routing.lastActivityAt // "?")\n  description: \(.session.description // "(none)")\n  path: \(.path // "(absent)")"'
+    case "$action" in
+      manual-forward) echo "  It is live. 'bin/workstreams resume $wt -' focuses its tab and writes a note for the human to paste (inline it or give its absolute path; never @scratch/...)." ;;
+      resume-with-briefing) echo "  If it owns this subject: bin/workstreams resume $wt - <<'EOF' ... EOF. Otherwise choose another name." ;;
+      new-stream-preferred) echo "  It is $state (about 14 days idle). Choose another name unless the human wants its context; then resume it." ;;
+      wait-for-launch) echo "  A launch is in progress; wait for it." ;;
+      *) echo "  Its state needs investigation (bin/workstreams list --json); do not reuse the name." ;;
+    esac
+  } >&2
+  exit 1
+fi
+# A removed workstream is absent from the inventory, but `remove --keep-branch`
+# leaves its branch, and creation attaches to an existing branch without -b.
+if git -C "$MONO" show-ref --verify --quiet "refs/heads/worktree-$wt"; then
+  echo "launch-worktree-session: refusing: branch worktree-$wt already exists (a removed workstream's kept branch?). Launching would attach to it instead of branching fresh. Choose another name, or delete or resume that branch." >&2
+  exit 1
+fi
+
+# The new worktree branches from main (or --base-ref), so it cannot see this
+# checkout's uncommitted files or unlanded commits.
+if [ -z "$base_ref" ] && caller_top=$(git rev-parse --show-toplevel 2>/dev/null) \
+  && [ "$(git -C "$caller_top" rev-parse --path-format=absolute --git-common-dir)" = "$(git -C "$MONO" rev-parse --path-format=absolute --git-common-dir)" ]; then
+  dirty=$(git -C "$caller_top" status --porcelain | wc -l | tr -d ' ')
+  ahead=$(git -C "$caller_top" rev-list --count main..HEAD 2>/dev/null || echo 0)
+  if [ "$dirty" != 0 ] || [ "$ahead" != 0 ]; then
+    echo "launch-worktree-session: note: $caller_top has $dirty uncommitted path(s) and $ahead commit(s) not on main; '$wt' branches from main and will not see them. Land them, describe them in the briefing, or pass --base-ref." >&2
+  fi
+fi
+
+if [ "$check_only" = true ]; then
+  echo "launch-worktree-session: checks passed for '$wt'; nothing launched (--check-briefing)"
+  exit 0
+fi
+
 # Stash the prompt in a tempfile so the launcher script can splat it back as
 # the final positional arg. This avoids AppleScript/bash double-escaping for
 # multi-line prompts with quotes, backticks, etc.
@@ -205,6 +309,8 @@ LS_LAUNCH_DIR="$launch_dir"
 LS_ISSUE="$issue"
 LS_DESCRIPTION_FILE="$description_file"
 LS_WORKTREE_PATH=""
+LS_BASE_REF="$base_ref"
+export LS_BASE_REF
 export LS_MONO LS_WORKSTREAM LS_SESSION_NAME LS_AGENT LS_MODEL LS_REMOTE_CONTROL
 export LS_PROMPT_FILE LS_LAUNCH_DIR LS_ISSUE LS_DESCRIPTION_FILE LS_WORKTREE_PATH
 launch_session_build

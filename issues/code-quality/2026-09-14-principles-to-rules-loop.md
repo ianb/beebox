@@ -75,8 +75,8 @@ anything worth reading:
   alert surface (`knip-sweep`, `supplemental-lint`, `tour-check`,
   `smoke-review`). This may fit that mould — or may be too judgment-heavy to run
   unattended, in which case it is a skill the boxholder invokes. Compare
-  [`bbx-codehealth`](../../.claude/skills/bbx-codehealth/SKILL.md), which is
-  already the invoked-deliberately shape.
+  `bbx-codehealth`, which was the invoked-deliberately shape.
+  (2026-10-07: `bbx-codehealth` was retired; no skill holds this role now.)
 
 ## Related
 
@@ -84,7 +84,6 @@ anything worth reading:
   They share the "principled sweep with a design gap" shape and should probably
   be designed together, but they look for opposite things: this one finds code
   that falls short of an ideal, that one finds code that should not exist.
-- [`bbx-codehealth`](../../.claude/skills/bbx-codehealth/SKILL.md) already
-  hunts shallow modules and cruft against a stated aim. The overlap is real and
+- `bbx-codehealth` (retired 2026-10-07) hunted shallow modules and cruft against a stated aim. The overlap is real and
   the design should say whether this is a new practice or a second lens inside
   that one.

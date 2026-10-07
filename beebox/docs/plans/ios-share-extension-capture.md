@@ -19,9 +19,9 @@ Tracks 4–5 (exact capture targets, terminal receipts/status, and attachment-sa
 
 **Issues addressed.**
 
-- `issues/features/2026-05-11-ios-share-sheet-capture.md`
-- `issues/features/2026-03-05-share-to-box-images-files.md` (older Shortcut/upload proposal superseded by the native extension)
-- `issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md` (credential migration required by the extension process boundary)
+- `issues/closed/features/2026-05-11-ios-share-sheet-capture.md`
+- `issues/closed/features/2026-03-05-share-to-box-images-files.md` (older Shortcut/upload proposal superseded by the native extension)
+- `issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md` (credential migration required by the extension process boundary)
 
 **Jobs to be done.**
 
@@ -245,9 +245,9 @@ The selected destination determines the effect. A chat destination sends the con
 
 - Update `beebox/docs/mobile-contract.md` with App Group/Keychain storage; the non-batched POST-query shape for `share.destinations`; `share.saveTextual` and `share-id`; direct extension chat sends with `exactSession`; the capture target union; the authenticated status route and durable completion receipt; polling states; sweep/resume/pending behavior; content mapping; auth; and drift behavior.
 - Add shared JSON fixtures for destination POST-query responses, textual save inputs/results and `share-id` conflicts, exact-session chat sends, capture target compatibility, active and receipt-backed capture status, stale destinations, malformed values, and legacy capture create requests. Consume them from TypeScript doctests and XCTest.
-- Rewrite `issues/features/2026-05-11-ios-share-sheet-capture.md` around the native Share Extension and link this plan.
-- Reconcile `issues/features/2026-03-05-share-to-box-images-files.md` as superseded when implementation is complete.
-- Close `issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md` only after migration tests and built-entitlement inspection pass.
+- Rewrite `issues/closed/features/2026-05-11-ios-share-sheet-capture.md` around the native Share Extension and link this plan.
+- Reconcile `issues/closed/features/2026-03-05-share-to-box-images-files.md` as superseded when implementation is complete.
+- Close `issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md` only after migration tests and built-entitlement inspection pass.
 - After automated checks pass, set `needs: [manual-testing]` on the share-sheet issue. Only the boxholder removes it after the device script passes.
 
 **First implementation chunk.** Update the contract in the same commits that add each wire shape. Update issue status only after code and automated checks are ready for physical-device testing.

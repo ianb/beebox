@@ -518,6 +518,13 @@ wants it, by a schedule the boxholder adds. The template reaches existing
 boxes the way other stock procedures do, through the template install and
 update path; this plan adds a file, not a mechanism.
 
+> **2026-10-07:** the executor skill is now a managed box skill,
+> `beebox/src/core/box/guidance-sync/skills-content-browser-task.ts`,
+> installed into each box at `.claude/skills/browser-task/SKILL.md`. A Claude
+> Code session in the box directory with Claude in Chrome invokes it. The
+> dev-repo copy and its monorepo validation one-liner are gone; the card
+> page validates before submission. The paragraph below is the original plan.
+
 Executor skill `.claude/skills/browser-task/SKILL.md` (dev repo, for the
 boxholder's local session): open the task card URL, copy the block, scan the
 source in the browser at a human pace, stop at the watermark, write

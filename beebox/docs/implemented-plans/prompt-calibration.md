@@ -152,7 +152,7 @@ Use the guidance for the area you are changing:
 - **Native iOS companion:** [ios-app/CLAUDE.md](../../../ios-app/CLAUDE.md). It shares an [HTTP/bridge contract](../../../beebox/docs/mobile-contract.md) with the web/backend; use [bbx-ios-overlap](../../../.claude/skills/bbx-ios-overlap/SKILL.md) when changing those shared surfaces.
 - **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/CLAUDE.md](../../../personal-vibe-check/CLAUDE.md). Edit it here; the old standalone checkout is stale.
 - **Doctest framework:** [agent-doctest/README.md](../../../agent-doctest/README.md); application tests live in their packages.
-- **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](../../../canvas-loop/README.md); use [canvas-loop-sketch](../../../.claude/skills/canvas-loop-sketch/SKILL.md) for sketches and gallery work.
+- **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](../../../canvas-loop/README.md); use `canvas-loop-sketch` (removed 2026-10-07) for sketches and gallery work.
 - **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/CLAUDE.md](../../../bin/CLAUDE.md) documents their mechanics.
 - **External-tool research:** [research/CLAUDE.md](../../../research/CLAUDE.md).
 

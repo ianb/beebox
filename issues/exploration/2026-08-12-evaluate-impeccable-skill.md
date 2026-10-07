@@ -42,3 +42,5 @@ Record the finding under `research/` alongside the other external evaluations
 (see `research/external-skills-harvest.md`, which already does this kind of
 triage) and link back here with a recommendation — including "no", if that's the
 answer.
+
+**Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific content moved to `beebox/docs/testing.md` ("Choosing an instrument", "Reproducing a bug") and `beebox/frontend.md`.

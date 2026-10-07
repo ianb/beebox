@@ -191,7 +191,7 @@ a header and which do not — an honest gap rather than a silent one.
 is appended *"for every tier, custom pages included"*, which the `html` branch
 above contradicts. That doc line needs correcting whether or not this plan
 proceeds; it is filed rather than fixed here
-(`issues/docs-and-chores/2026-08-22-exhibits-doc-overstates-container-chrome.md`).
+(`issues/closed/docs-and-chores/2026-08-22-exhibits-doc-overstates-container-chrome.md`).
 
 ## Tracks / scope
 
@@ -220,7 +220,7 @@ isn't per-workstream"* — and the code bears it out twice over:
   implemented a migration for; a new browser addressing files by path segment
   would be re-adopting the shape those redirects exist to retire. (The redirects
   themselves are now slated for removal —
-  `issues/code-quality/2026-08-22-remove-legacy-issue-deep-link-routes.md` — which
+  `issues/closed/code-quality/2026-08-22-remove-legacy-issue-deep-link-routes.md` — which
   does not weaken the precedent; it completes it.)
 
 The consequence is that the list is always present and the selection is state on
@@ -351,7 +351,7 @@ with the tree available rather than mandatory. Three views over one dataset:
 
 - **Aggregate** (the default) — what changed recently anywhere, most recent
   first. If file asks are built
-  (`issues/features/2026-08-22-file-asks-agent-flagged-attention.md`), a flagged
+  (`issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md`), a flagged
   file is badged here — "this changed" and "someone wants your eyes on this" are
   different signals. The feed does not depend on that work landing.
 - **Filtered** — the same feed narrowed to one workstream (`?workstream=`).
@@ -453,7 +453,7 @@ browsers is the state being fixed, not an acceptable end state.
    `/<w>/dev/docs/<path>` to `/workstreams/browse?file=<path>&workstream=<w>`,
    which is the address change in miniature: worktree-first becomes
    file-with-a-lens. The rendering code it left unreachable is filed for
-   deletion (`issues/code-quality/2026-08-22-retire-doc-browser-dead-code.md`),
+   deletion (`issues/closed/code-quality/2026-08-22-retire-doc-browser-dead-code.md`),
    along with the one feature not yet ported — closed-issue pills.
 3. The `/<worktree>/dev/` manifest and directory indexes redirect once Track 2's
    `directory` and `page` renderers land.

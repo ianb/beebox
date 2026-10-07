@@ -36,6 +36,14 @@ notarizes and staples it when `NOTARY_PROFILE` names an
 `xcrun notarytool store-credentials` profile. Downloads are cached in
 `~/Library/Caches/beebox-mac-build`.
 
+VM memory is a hard reservation. On the 16 GB development Mac keep any VM
+(builder, container, Lima) at 5 GB or less, check `memory_pressure` first, and
+run long VM work under a watchdog that kills it below about 20% free; a 12 GB
+builder alongside test suites forced a power-off on 2026-09-29. Pass `-c`/`-m`
+to `container build` itself: it recreates the builder from the 2 GB default
+otherwise. Keep VM state under `<worktree>/scratch/`, not the session
+scratchpad.
+
 ## Run during development
 
 ```sh

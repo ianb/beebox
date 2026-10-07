@@ -123,7 +123,9 @@ return 503 and clients retry. Visible pages send a one-minute HTTP heartbeat;
 hidden tabs go quiet and stop after five minutes, including active chat, then
 reload and recover history on focus. HMR uses the page origin.
 
-Frontend code uses Vite HMR. The hub runs checkout TypeScript without reload:
+Frontend code uses Vite HMR. If an edit does not show, compare `curl` of the
+module URL with and without `?t=<now>`; a difference means the file watcher
+missed the change (Vite polls on macOS for this reason). The hub runs checkout TypeScript without reload:
 backend changes are reported `ready (stale)`, and the human uses
 `bin/workstreams down <name>` at a safe moment. Bundled box children watch the
 exact CLI artifact identity, stop mutations, drain requests/chat/scheduled

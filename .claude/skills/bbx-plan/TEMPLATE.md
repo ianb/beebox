@@ -147,7 +147,7 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 <!-- New agent-facing concept (tag, convention, card shape, "how you do X")?
      Each gets at least one `knows_directly` entry in
      beebox/src/dev/knowledge-audits.yaml, and audits land RUN
-     (`pnpm knowledge-audit run --box <test-box> --filter <id>`; record the
+     (`pnpm knowledge-audit run --box ~/src/boxes/test1 --filter <id>`; record the
      status comment) — a never-run audit is unverified in both directions.
      Skip-with-rationale ("purely infrastructural") is fine; say so. -->
 
