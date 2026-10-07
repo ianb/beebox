@@ -6,7 +6,9 @@ labels: [agent-guidance]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder noticed `.claude/skills/browser-task/` should probably not be a skill
+resolution: implemented
 ---
+**Closed:** browser-task became a managed box skill in 329045bff; the review of the other skills is `dev/skills-review-2026-10.md` (five dev-repo skills retired, others shrunk). Landed on main by merge of worktree-skills-review.
 
 `.claude/skills/browser-task/SKILL.md` (75 lines) tells a Claude Code session
 with Claude in Chrome how to run a box's `browser-task` card: open the card,

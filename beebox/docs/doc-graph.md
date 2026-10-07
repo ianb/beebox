@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-07T23:36:21Z
+Generated: 2026-10-07T23:48:17Z
 Total documents: 479
 
 ## Issues
@@ -3347,10 +3347,10 @@ Title: "browser-task card: a prompt card that is its own inbox" | 739 lines | sh
 
 Referenced by:
 - docs/implemented-plans/browser-task-followups.md:20 (mention) — the first real run of `beebox/docs/implemented-plans/browser-task-card.md`.
+- ../issues/closed/code-quality/2026-10-07-browser-task-skill-belongs-in-the-product.md:28 (mention) — (`beebox/docs/implemented-plans/browser-task-card.md`).
 - ../issues/closed/features/2026-09-13-browser-task-cadence-and-staleness.md:36 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/closed/features/2026-09-13-browser-task-history-and-subject.md:31 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/closed/features/2026-09-13-browser-task-inbox-table-view.md:32 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
-- ../issues/code-quality/2026-10-07-browser-task-skill-belongs-in-the-product.md:26 (mention) — (`beebox/docs/implemented-plans/browser-task-card.md`).
 - ../issues/features/2026-09-17-box-as-mcp-server-hands-out-tasks.md:107 (link) — - [browser-task card](../../beebox/docs/implemented-plans/browser-task-card.md)
 
 References:
