@@ -16,9 +16,10 @@ and deliver a draft plus a review table for the boxholder to vet before
 anything is committed.
 
 **Issues addressed:** `issues/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md`
-(both parts: the place for idea credits, and the backfill). No duplicates
-found: `grep -rli 'attribution\|acknowledg\|credit' issues/` returns only this
-issue and incidental uses of "credit" in unrelated items.
+(both parts: the place for idea credits, and the backfill). Duplicate check:
+`grep -rli 'attribution\|acknowledg' issues/` matches 58 files, all incidental
+uses ("git attribution", "Created-By attribution"); none proposes crediting
+external ideas.
 
 ## Smallest fix and budget
 
@@ -28,7 +29,7 @@ well-supported, and the issue warns that keyword greps are noisy and that
 "based on" matches ordinary prose. Memory-sourced credits are the failure mode
 this plan exists to avoid.
 
-Chosen design: one planner (Fable), seven bounded sweep workers (Sonnet), a
+Chosen design: one planner (Fable), eight bounded sweep workers (Sonnet), a
 verification pass (Opus), and an assembly step. Authored output: one draft
 acknowledgements file (~100–300 lines), one review table (~150–400 lines), one
 exhibit. Code: none beyond ad-hoc grep prefilters. Nothing is committed except
@@ -62,19 +63,27 @@ this plan and any helper scripts.
 - `research/external-skills-harvest.md`, `research/courseware-external-skills-triage.md`
   — per-item resolutions (`adopt`, `fold-in`, `write-new`, `idea`, `skip`), with
   DONE markers. Direct candidate rows.
-- Prefilter sizes measured 2026-10-06 in this worktree:
+- Corpus sizes, measured at commit `eb9a5e625` in this worktree with the
+  commands in `scratch/ack/counts.sh` (re-run it to reproduce):
 
-  | Source | Files / commits | Keyword prefilter hits |
-  |---|---|---|
-  | `research/` | 13 dirs, ~12 flat notes | all read |
-  | `issues/` (open + closed + exploration) | 1,119 files | 71 |
-  | `beebox/docs/plans` + `implemented-plans` | 296 files | 84 |
-  | `git log` (subjects) | 8,419 commits | 89 |
-  | `.claude/skills`, `.claude/rules`, CLAUDE.md files | 23 skills | 4 |
+  | Source | Size |
+  |---|---|
+  | `research/` | 10 directories, 14 flat notes |
+  | `issues/**` (all categories, open and closed) | 1,119 files |
+  | `beebox/docs/plans` + `implemented-plans` | 297 files |
+  | `beebox/docs/**` other than plans | 147 files |
+  | tracked `CLAUDE.md`, `AGENTS.md`, `README.md` files | all packages |
+  | `.claude/skills/*` | 24 skills; `.claude/rules/` does not exist |
+  | `git log` (full bodies) | 8,420 commits |
 
-  The prefilter regex (`github.com|inspired|adapted from|borrowed|modeled on|
-  lifted from|ported from|<known project names>`) is a starting list, not the
-  boundary: workers also read every research index and every skill in full.
+  Prefilter regex, applied to full text (and to full commit bodies, not
+  subjects): `github\.com|inspired|adapted from|borrowed|modeled on|modelled on|
+  lifted from|ported from|stolen from|after the (approach|pattern|design)` plus
+  the project names the research indices name (gstack, claude-elixir-phoenix,
+  superpowers, openclaw, hermes, letta, opencode, pai, tiddlywiki, obra,
+  addyosmani, mattpocock, hoversource, omi, rowboat, beads). The prefilter is a
+  starting list, not the boundary: workers also read every research index,
+  every skill, and every `CLAUDE.md` in full.
 
 ## Prior art (external)
 
@@ -108,14 +117,23 @@ link, license, what was taken); no search needed.
 
 ## Tracks / scope
 
-### Track 1: Sweeps (Sonnet, 7 workers, ≤4 concurrent)
+### Track 1: Sweeps (Sonnet, 8 workers, ≤4 concurrent)
 
-Each worker gets the candidate record shape, the threshold, the boundary rules,
-and its own corpus. It writes `scratch/ack/sweep-<name>.md`: a table of
-candidates plus a "read but produced nothing" list so coverage is auditable.
+Each worker gets the shared brief (`scratch/ack/BRIEF.md`: the candidate
+record shape, the threshold, the boundary rules) and its own corpus. It writes
+`scratch/ack/sweep-<name>.md` with three required sections: `## Candidates`
+(one record each), `## Read, no candidates` (every file or commit the worker
+read that produced nothing), and `## Absent or skipped` (corpora that did not
+exist, files it could not read). A sweep file missing any section fails the
+aggregator check (`scratch/ack/check-outputs.sh`), which lists expected sweep
+and verification files and refuses assembly until all exist and parse.
+
 Workers must not use web lookups or memory; they report only what the corpus
-says, and they confirm each landing path exists with `test -e` and quote the
-line(s) that embody the idea.
+says. For each candidate they quote (a) the adoption-record line that names the
+source **and** connects it to what we built, and (b) the landing line(s) in the
+current tree that embody the idea. A record that names a source without
+connecting it to a landing, or a landing that merely resembles a source with no
+record naming it, is reported as `weak` with the gap stated.
 
 | Worker | Corpus | Method |
 |---|---|---|
@@ -124,8 +142,14 @@ line(s) that embody the idea.
 | issues-closed | `issues/closed/**` (679 files) | Prefilter grep, then read each hit; also scan titles for external project names. A closed issue is an adoption record only if it names the source and the change shipped (check the landing). |
 | issues-open | `issues/{bugs,features,exploration,decisions,deferred,docs-and-chores,code-quality,watch}` (440 files) | Same. Open items usually mean not yet adopted: report as `weak`/pending unless the landing already exists. |
 | plans | `beebox/docs/plans`, `beebox/docs/implemented-plans` (296 files) | Prefilter grep, then read "Prior art (external)" sections of hits. A plan's prior-art row counts only if the plan shipped (implemented-plans, or landing exists). |
-| skills | `.claude/skills/*/SKILL.md` and `references/`, `.claude/rules/`, root/`beebox`/`bin` CLAUDE.md, `beebox/docs/*.md` reference docs | Read each in full for named sources and for borrowed structure (e.g. bbx-debug "Iron Law", circuit breaker). Unnamed structural resemblance is reported as `weak` with the resemblance stated; the planner cross-references it against research notes. |
-| git-log | `git log --format=%H%n%B` filtered by the prefilter regex on full bodies | Read each hit's body; record commit hash as the adoption record; verify the touched file still exists. Skip merges and bumps. |
+| skills | `.claude/skills/*/SKILL.md` and `references/`, every tracked `CLAUDE.md` and `AGENTS.md` (`git ls-files '*CLAUDE.md' '*AGENTS.md'`), `bin/*.md` | Read each in full for named sources and for borrowed structure (e.g. bbx-debug "Iron Law", circuit breaker). Unnamed structural resemblance is reported as `weak` with the resemblance stated; the planner cross-references it against research notes. |
+| docs | `beebox/docs/**/*.md` excluding `plans/` and `implemented-plans/`, every tracked `README.md`, `agent-doctest/docs`, `workstreams-app/docs`, `canvas-loop`, `scan-uploader`, `beebox-clerk`, `ios-app` docs | Prefilter grep, then read each hit in full. |
+| git-log | `git log --format='%H%x00%B' ` filtered by the prefilter regex on full bodies; for each hit `git show --stat --name-status --find-renames <hash>` | Read the body; record the hash as the adoption record; record the touched paths; follow renames to the current path and confirm the idea is present there now. Skip merges and dependency bumps. |
+
+The eight workers run four at a time (two waves), each as a foreground
+subagent with a bounded corpus so its context stays small; a worker whose
+corpus prefilter exceeds ~60 files is told to process in alphabetical chunks
+and append to its output file.
 
 ### Track 2: Merge and dedupe (planner)
 
@@ -155,16 +179,28 @@ candidates from their own knowledge.
 
 ### Track 4: Assembly and delivery (planner)
 
-- `ACKNOWLEDGEMENTS.md` at the repository root, uncommitted draft. Contains
-  every `include` and `include with changes` candidate (the latter with the
-  verifier's wording), grouped by source, strong entries first. Weak and drop
-  candidates do not appear in the draft; they appear only in the review table.
+- The review table is the authoritative deliverable; the draft is derived
+  from it. `ACKNOWLEDGEMENTS.md` at the repository root, uncommitted, contains
+  only `strong` candidates whose recommendation is `include` or `include with
+  changes` (with the verifier's wording). `plausible` candidates with an
+  `include` recommendation go in a clearly separated final section of the draft
+  headed "Needs confirmation", so the boxholder can delete the section or
+  promote rows. `weak` candidates never enter the draft, whatever their
+  recommendation; they are table-only until the boxholder promotes one.
 - `scratch/ack/review-table.md`: one row per candidate, grouped strong /
-  plausible / weak: source, idea, landing, adoption record, confidence, reason,
-  recommendation.
-- Exhibit (`bin/exhibits add --ask decide`) carrying the review table as
-  `doc.md`, options: "Commit the draft as-is", "Commit after my edits",
-  "Rework the approach". The prose says what happens after each.
+  plausible / weak, with columns: id, source (project, author as presented,
+  canonical URL, license, verified-on date or "unverified"), idea, landing path
+  with quoted line, adoption record with quoted line, threshold basis (adopted /
+  changed / direct model / evaluated only), confidence with reason,
+  recommendation with the change wording, sweep origin(s).
+- Exhibit: `bin/exhibits add --title "Acknowledgements backfill: vet the
+  candidates" --ask decide --prose "<what happens after each option>"
+  --option "Commit the draft as drafted" --option "Commit after my edits to the
+  draft" --option "Rework: wrong approach or threshold" scratch/ack/review-table.md`.
+  No `--open` (the boxholder is asleep). The prose states: option 1 → the next
+  session commits `ACKNOWLEDGEMENTS.md` and links it from attribution.md;
+  option 2 → the boxholder edits the file in the worktree, then the next
+  session commits; option 3 → nothing is committed, the table stays as input.
 - Final message: counts per tier, placement recommendation, anything the
   verifiers flagged as needing a human call (e.g. a person who should be named
   but whose project does not state a license).
@@ -210,10 +246,16 @@ none
 | Author named wrongly (handle vs name, org vs person) | no | Verifier takes the author as the source presents them; table shows both when they differ | clear |
 | Source unreachable overnight | no | License "unverified", confidence capped at `plausible` | clear |
 | Machine overload | no | ≤4 concurrent workers, no test suites, grep prefilters, keep-awake hold placed | observable |
+| A worker produces no output file, or a truncated one | no | `check-outputs.sh` names the expected files and required sections; assembly refuses to start until it passes; a failed worker is re-run on its corpus | clear |
+| A corpus named in the plan does not exist (e.g. `.claude/rules/`) | no | Worker records it under "Absent or skipped"; planner confirms the list | clear |
+| A landing resembles the source but nothing recorded the borrowing | no | Confidence capped at `weak`; never enters the draft | clear |
 | A worker reads `private-issues/` | no | Instruction + the mount is outside the listed corpora; planner greps outputs for `private-issues` before verification | clear |
 | Codex plan review unavailable | n/a | Report the blocker in the final message; proceed, since the boxholder said not to wait | clear |
 
-No critical gap: every row has handling or is visible in the review table.
+Residual risk: the handling above is instructions to models plus one shell
+check; a worker can still misquote a line. The verifier re-reads every quoted
+line from disk, and the boxholder's vetting is the final gate, which is why
+nothing is committed.
 
 ## Agent-flow / user-flow edge cases
 
