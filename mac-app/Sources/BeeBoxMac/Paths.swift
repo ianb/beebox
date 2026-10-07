@@ -1,51 +1,86 @@
 import Foundation
 
-/// Where the app keeps its state, and where its inputs come from. The runtime
-/// records absolute paths, so the state directory must never move once created.
+/// Where the app keeps things. Two roots:
+///
+/// - `~/BeeBox/<name>/`: one folder per box, visible in Finder. Each is the
+///   box's own git repository.
+/// - `~/Library/Application Support/Bee Box/`: what every box on this Mac
+///   shares. The container runtime (images, VM disks, init filesystem) records
+///   absolute paths, so this folder must not move once created.
+///
+/// Accounts, the session key, secrets, and agent logins are machine-wide in
+/// beebox (one account file serves every box on a host), so they live in the
+/// shared part. The app runs one box today: `BEEBOX_BOX`, default `box`.
 enum Paths {
     static let home = FileManager.default.homeDirectoryForCurrentUser
     private static let env = ProcessInfo.processInfo.environment
 
-    /// Runtime state: image store, container roots, initfs, logs.
+    // MARK: Shared by every box
+
     /// `BEEBOX_STATE_DIR` overrides it, for a second, throwaway instance.
-    static let state: URL = {
+    static let support: URL = {
         if let override = env["BEEBOX_STATE_DIR"] {
             return URL(filePath: override, directoryHint: .isDirectory)
         }
-        return home.appending(path: "Library/Application Support/BeeBoxSpike", directoryHint: .isDirectory)
+        return home.appending(path: "Library/Application Support/Bee Box", directoryHint: .isDirectory)
     }()
 
-    /// The box itself: a folder the user can see in Finder.
-    static let box: URL = {
-        if let override = env["BEEBOX_BOX_DIR"] {
-            return URL(filePath: override, directoryHint: .isDirectory)
-        }
-        return home.appending(path: "BeeBoxSpike/box", directoryHint: .isDirectory)
-    }()
-
-    /// Claude Code's config and credentials (CLAUDE_CONFIG_DIR in the image).
-    static let claudeConfig = state.appending(path: "claude-config", directoryHint: .isDirectory)
+    /// Containerization's root: the image store, container roots, initfs.
+    static let runtime = support.appending(path: "runtime", directoryHint: .isDirectory)
+    /// Built by the framework from the vminit image, and the reference it was
+    /// built from (see BoxRuntime.refreshInitfsIfStale).
+    static let initfs = runtime.appending(path: "initfs.ext4")
+    static let initfsSource = runtime.appending(path: "initfs.ext4.source")
 
     /// The container user's home, mounted at /home/node: accounts, the session
     /// key, the secret store, the Codex login, and uv/Docling caches. The
     /// image keeps nothing it needs there (see the Dockerfile).
-    static let containerHome = state.appending(path: "home", directoryHint: .isDirectory)
-    /// Earlier spike builds kept accounts and secrets here via env overrides.
-    static let legacyMachine = state.appending(path: "machine", directoryHint: .isDirectory)
+    static let containerHome = support.appending(path: "home", directoryHint: .isDirectory)
+    /// Claude Code's config and login (CLAUDE_CONFIG_DIR in the image).
+    static let claudeConfig = support.appending(path: "claude-config", directoryHint: .isDirectory)
 
-    static let log = state.appending(path: "box.log")
-    static let appLog = state.appending(path: "app.log")
-    /// Built by the framework from the vminit image (ContainerManager), and
-    /// the reference it was built from.
-    static let initfs = state.appending(path: "initfs.ext4")
-    static let initfsSource = state.appending(path: "initfs.ext4.source")
-    /// Host end of the vsock relay to the server (see PortForwarder).
-    static let httpSocket = state.appending(path: "http.sock")
-    static let timings = state.appending(path: "timings.json")
+    static let logs = support.appending(path: "logs", directoryHint: .isDirectory)
+    static let appLog = logs.appending(path: "app.log")
+    static let timings = support.appending(path: "timings.json")
+    /// Host ends of each box's vsock relay (see PortForwarder). Unix socket
+    /// paths are limited to 104 bytes, so the names stay short.
+    static let run = support.appending(path: "run", directoryHint: .isDirectory)
+
+    // MARK: Per box
+
+    /// The folder holding every box. `BEEBOX_BOXES_DIR` overrides it.
+    static let boxes: URL = {
+        if let override = env["BEEBOX_BOXES_DIR"] {
+            return URL(filePath: override, directoryHint: .isDirectory)
+        }
+        return home.appending(path: "BeeBox", directoryHint: .isDirectory)
+    }()
+
+    /// The box this app runs. Its name is also its URL slug (`/box/`). At most
+    /// 32 characters: it names the box's relay socket, and Unix socket paths
+    /// are limited to 104 bytes.
+    static let boxName: String = {
+        let name = env["BEEBOX_BOX"] ?? "box"
+        let allowed = CharacterSet.lowercaseLetters.union(.decimalDigits).union(CharacterSet(charactersIn: "-"))
+        precondition((1...32).contains(name.count) && name.unicodeScalars.allSatisfy(allowed.contains),
+                     "BEEBOX_BOX must be 1-32 lowercase letters, digits, and hyphens")
+        return name
+    }()
+
+    static func box(named name: String) -> URL { boxes.appending(path: name, directoryHint: .isDirectory) }
+    static func log(forBox name: String) -> URL { logs.appending(path: "box-\(name).log") }
+    static func socket(forBox name: String) -> URL { run.appending(path: "\(name).sock") }
+
+    /// The current box's folder, log, and relay socket.
+    static var box: URL { box(named: boxName) }
+    static var log: URL { log(forBox: boxName) }
+    static var httpSocket: URL { socket(forBox: boxName) }
+
+    // MARK: Inputs
 
     /// The Linux kernel the VM boots: bundled in the app
     /// (scripts/fetch-kernel.sh). `BEEBOX_KERNEL` overrides it for a bare
-    /// `swift run` build, which has no bundle.
+    /// `swift build` binary, which has no bundle.
     static var kernel: URL? {
         if let override = env["BEEBOX_KERNEL"] {
             return URL(filePath: override)
