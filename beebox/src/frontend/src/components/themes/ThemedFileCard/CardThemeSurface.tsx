@@ -19,7 +19,8 @@ export interface CardThemeSurfaceProps {
   problem?: ReactNode;
 }
 
-const ShowFrontContext = createContext<(() => void) | null>(null);
+/** Provided around the back face; exported so a test can render the face alone. */
+export const ShowFrontContext = createContext<(() => void) | null>(null);
 
 class ShowCardFrontContextError extends Error {
   constructor() {
@@ -87,7 +88,7 @@ export function CardThemeSurface({ theme, title, symbol, boxSlug, mode, children
         type="button"
         className="bbx-card-properties print:hidden"
         aria-label={back ? "Back to card" : "Properties"}
-        title={back ? "Back to card" : "Properties: appearance and alternate views"}
+        title={back ? "Back to card" : "Properties: where this card is filed, how it is found, what it carries"}
         aria-expanded={back}
         aria-busy={turn !== null}
         aria-controls={backId}

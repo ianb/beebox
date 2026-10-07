@@ -66,14 +66,20 @@ tour(
     await clickVisibleButton(t, "Properties");
     await t.checkpoint("properties");
     await t.expect.heading("Properties", { level: 2 });
-    await t.expect.custom("Properties exposes appearance and reset", (snapshot) =>
-      snapshot.includes("Theme") && snapshot.includes("Stock") && snapshot.includes("Choose card appearance") && snapshot.includes("Use default"));
+    await t.expect.custom("Properties names the appearance and folds the pickers under Change", (snapshot) =>
+      snapshot.includes("Appearance") && snapshot.includes("Change") && !snapshot.includes("Choose card appearance"));
+    // The swatch grid sits under a closed <summary>, which has no button role to click by.
+    await t.eval('document.querySelector("[data-card-section=appearance] details")?.setAttribute("open", "")');
+    await t.expect.custom("Change opens the swatches and reset", (snapshot) =>
+      snapshot.includes("Choose card appearance") && snapshot.includes("Use default"));
     await clickVisibleButton(t, "Sticky note — yellow");
     await t.checkpoint("saved-post-it");
     await t.expect.custom("saved stock is reflected in the card surface", (snapshot) => snapshot.includes("post-it") || snapshot.includes("yellow"));
     await clickVisibleButton(t, "Back to card");
     await clickVisibleButton(t, "Properties");
-    await t.expect.custom("saved stock persists after returning to Properties", (snapshot) => snapshot.includes("post-it") && snapshot.includes("yellow"));
+    await t.expect.custom("saved stock persists after returning to Properties", (snapshot) => snapshot.includes("Sticky note yellow"));
+    await t.expect.custom("Change is closed again on reopening Properties", (snapshot) => !snapshot.includes("Choose card appearance"));
+    await t.eval('document.querySelector("[data-card-section=appearance] details")?.setAttribute("open", "")');
     await clickVisibleButton(t, "Use default");
     await t.checkpoint("use-default");
     await t.expect.custom("Use default returns to the resolved fallback", (snapshot) => snapshot.includes("Following the box and card type defaults."));

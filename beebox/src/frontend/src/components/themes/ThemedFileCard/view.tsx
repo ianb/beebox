@@ -3,22 +3,16 @@ import { useParams } from "@tanstack/react-router";
 import { withBase } from "../../../api";
 import { ExternalIconLink } from "../../ui/ExternalIconLink";
 import { resolveCardTheme } from "@shared/card-theme/core";
-import { CardThemeSurface, useShowCardFront } from "./CardThemeSurface";
+import { CardThemeSurface } from "./CardThemeSurface";
+import { ThemedFileCardProperties } from "./PropertiesFace";
 import { useBoxPresentation } from "../BoxPresentationProvider";
-import { themeOriginLabel } from "../../../themes/registry";
 import type { FileData, FileRenderer } from "../../../file-type-registry";
 import type { FileViewMode } from "../../file-view-types";
-import { rendererDisplayLabel } from "../../../lib/renderer-display-label";
 import { displayName } from "../../../lib/display-name";
 import { Button } from "../../ui/Button";
 import { CardActions } from "../../card-actions/CardActions";
 import { OpenInPanelButton } from "../../ui/OpenInPanelButton";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
-import { CardFacts, CardMentions } from "./CardProperties";
-import { CardAttachments } from "./CardAttachments";
-import { CardLastChange } from "./CardLastChange";
-import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
-import { LandmarkSystemThemePicker } from "../SystemThemePicker";
 import { isCardPath } from "../../file-view-data";
 import { readCardSymbol } from "@shared/card-symbol";
 
@@ -34,62 +28,6 @@ interface ThemedFileCardProps {
   onClose?: (() => void) | undefined;
   onOpenInPanel?: (() => void) | undefined;
   children: ReactNode;
-}
-
-
-function FileSpecificProperties({ data, theme, isCard, boxSlug, onNavigate }: {
-  data: FileData; theme: ReturnType<typeof resolveCardTheme>; isCard: boolean; boxSlug: string | undefined;
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-}) {
-  if (isCard) return <>
-    <CardFacts data={data} boxSlug={boxSlug} onNavigate={onNavigate} />
-    <CardAttachments path={data.path} onNavigate={onNavigate} />
-    <CardLastChange path={data.path} onNavigate={onNavigate} />
-    <ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} />
-  </>;
-  return <dl className="mt-4"><dt>Filed at</dt><dd>{data.path}</dd><dt>File type</dt><dd>Markdown</dd></dl>;
-}
-
-function RelatedFileProperties({ data, target, boxSlug, onNavigate, onClose }: {
-  data: FileData; target: ViewTarget; boxSlug: string | undefined;
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  onClose?: (() => void) | undefined;
-}) {
-  if (!isCardPath(data.path)) return <CardMentions path={data.path} onNavigate={onNavigate} />;
-  return <>
-    {data.type === "landmark" ? <LandmarkSystemThemePicker boxKey={boxSlug ?? ""} path={data.path}
-      contextDir={data.path.replace(/^\//, "").split("/").slice(0, -1).join("/")} /> : null}
-    <CardMentions path={data.path} onNavigate={onNavigate} />
-    <div className="mt-6"><CardActions target={target} onTrashed={onClose} vertical="above" /></div>
-  </>;
-}
-
-/** Choosing a view turns the card over so the person sees what they chose. */
-function ViewChooser({ data, renderers, active, hasExplicitView, onSelect }: {
-  data: FileData; renderers: FileRenderer[]; active: FileRenderer; hasExplicitView: boolean;
-  onSelect: (name: string | null) => void;
-}) {
-  const showFront = useShowCardFront();
-  const first = renderers.at(0);
-  function choose(name: string | null) {
-    onSelect(name);
-    showFront();
-  }
-  return (
-    <div className="mt-6">
-      <h3 className="text-sm font-semibold mb-2">View</h3>
-      <div className="flex flex-wrap gap-2">
-        {renderers.map((renderer) => <Button
-          key={renderer.name}
-          size="sm"
-          intent={renderer === active ? "secondary" : "ghost"}
-          aria-pressed={renderer === active}
-          onClick={() => choose(renderer.name)}
-        >{rendererDisplayLabel({ registeredName: renderer.name, filePath: data.path, hasTypeSpecificRenderer: first?.name !== "Card" })}</Button>)}
-      </div>
-      {first ? <div className="mt-2"><Button size="sm" intent="ghost" disabled={!hasExplicitView} onClick={() => choose(null)}>Use preferred view</Button></div> : null}
-    </div>
-  );
 }
 
 export function ThemedFileCard({ data, mode, renderers, active, target, hasExplicitView, onSelect, onNavigate, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
@@ -112,22 +50,12 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
   const symbol = isCard ? readCardSymbol(data.frontmatter?.symbol, { cardPath: data.path.replace(/^\//, "") }) : null;
   const error = presentation?.error ?? theme.problem?.message;
   function handlePresentationRetry() { presentation?.retry(); }
-  const properties = (
-    <>
-      <h2>Properties</h2>
-      <dl>
-        <dt>Theme</dt><dd>{theme.choice.name}</dd>
-        <dt>Stock</dt><dd>{theme.choice.stock}</dd>
-        <dt>Chosen by</dt><dd>{themeOriginLabel(theme.origin)}</dd>
-      </dl>
-      <FileSpecificProperties data={data} theme={theme} isCard={isCard} boxSlug={boxSlug} onNavigate={onNavigate} />
-      <ViewChooser data={data} renderers={renderers} active={active} hasExplicitView={hasExplicitView} onSelect={onSelect} />
-      <RelatedFileProperties data={data} target={target} boxSlug={boxSlug} onNavigate={onNavigate} onClose={onClose} />
-    </>
-  );
   return <CardThemeSurface
     theme={theme} title={title} symbol={symbol} boxSlug={boxSlug} mode={mode}
-    properties={properties}
+    properties={<ThemedFileCardProperties
+      data={data} theme={theme} boxSlug={boxSlug} renderers={renderers} active={active}
+      hasExplicitView={hasExplicitView} onSelect={onSelect} onNavigate={onNavigate}
+      actions={isCard ? <CardActions target={target} onTrashed={onClose} vertical="above" /> : null} />}
     actions={mode === "chat" || onOpenInPanel ? <CardSurfaceActions mode={mode} path={data.path} onOpenInPanel={onOpenInPanel} /> : null}
     problem={error ? <div className="bbx-card-problem" role="status">Appearance could not be applied: {error}{presentation ? <Button size="sm" intent="ghost" onClick={handlePresentationRetry}>Retry</Button> : null}</div> : null}
   >{children}</CardThemeSurface>;
