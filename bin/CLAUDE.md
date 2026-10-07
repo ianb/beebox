@@ -24,7 +24,10 @@ or hooks. On a shared branch use `git add <paths> && git commit -- <paths>` (or
 The pre-commit typecheck covers the whole package, so parallel agents in one
 worktree should work in different packages, and each briefing names the other
 agent's directories. Never `git reset --hard` or `git checkout .` while another
-agent edits the worktree.
+agent edits the worktree. `main` was rewritten and force-pushed around
+2026-09-02, so hashes recorded before then do not resolve: worktree branches
+`git merge main`, never rebase or reconcile old hashes (box repos were not
+rewritten).
 
 ## Commit provenance trailers (`commit-provenance.ts`)
 
@@ -212,4 +215,9 @@ See [schedules](docs/schedules.md#validation).
 
 ### Multiple agents sharing one worktree
 
-See [commit safety](#commit-safety).
+See [commit safety](#commit-safety). Subject agents in a usability experiment
+cannot be warned in their briefing, so the environment has to hold on its own:
+give each subject a randomly named directory (siblings copy each other's
+output), verify `node_modules` after a round (subjects repair breakage with
+`rm -rf node_modules` or `pnpm install --force`), and classify failures by
+cause (format, environment, behavior) rather than counting them.
