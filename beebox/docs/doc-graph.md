@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-07T22:03:48Z
+Generated: 2026-10-07T22:30:11Z
 Total documents: 479
 
 ## Issues
@@ -2943,7 +2943,7 @@ Title: "Agent browsing as the owner: a box opts in, the browse key becomes a per
 Referenced by:
 - docs/testing/tours.md:78 (mention) — (`docs/plans/agent-browsing-owner.md`). A healthy tour takes tens of seconds — both
 - docs/user-stories/README.md:265 (mention) — `docs/plans/agent-browsing-owner.md` the browse key acts as the owner on a box whose
-- ../.claude/skills/browse/references/authentication.md:57 (mention) — Mechanism: `beebox/docs/plans/agent-browsing-owner.md`.
+- ../.claude/skills/browse/references/authentication.md:57 (mention) — Mechanism: `beebox/docs/implemented-plans/agent-browsing-owner.md`.
 - ../issues/closed/bugs/2026-08-26-chat-load-logs-resumable-capture-list-error.md:13 (mention) — agent browsing as its owner", `docs/plans/agent-browsing-owner.md` →
 
 References:
@@ -7268,7 +7268,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-box-guidance.md:105 (mention) — - **Prompt surface cleanup evaluation** (`docs/plans/prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/job-xml-purge.subplan.md:31 (mention) — (`prompt-surface-cleanup-evaluation.md`, Track 1). The parent plan's original Track 1
-- docs/prompts/review.md:63 (link) — Prior art: [plans/prompt-surface-cleanup-evaluation.md](../plans/prompt-surface-cleanup-evaluation.md) is the worked exa
+- docs/prompts/review.md:78 (link) — Prior art: [plans/prompt-surface-cleanup-evaluation.md](../plans/prompt-surface-cleanup-evaluation.md) is the worked exa
 
 References:
 - → CLAUDE.md (mention)
@@ -7746,14 +7746,14 @@ References:
 
 #### docs/prompts/review.md
 
-Title: "Prompt surface review" | 71 lines | current reference
+Title: "Prompt surface review" | 86 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:126 (mention) — guide. `docs/prompts/review.md` describes how to review the assembled stack,
 - docs/prompts/lenses.md:7 (link) — Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each
 - src/dev/CLAUDE.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
-- ../.claude/skills/bbx-context/SKILL.md:20 (mention) — `beebox/docs/prompts/review.md`; this skill routes a single
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:62 (mention) — `docs/prompts/review.md` before writing more than a couple of
+- ../.claude/skills/bbx-context/SKILL.md:9 (mention) — Route one durable piece of box-agent guidance to the right surface. Scope: a box's surfaces (`CLAUDE.md`, nested `CLAUDE
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:59 (mention) — `docs/prompts/review.md` before writing more than a couple of
 - ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:59 (mention) — - `beebox/docs/prompts/review.md` — the workflow for reasoning about
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:25 (link) — [prompt-surface-review.md](../../beebox/docs/prompts/review.md)
 - ../research/openclaw-hermes/README.md:74 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
@@ -7761,6 +7761,7 @@ Referenced by:
 References:
 - → docs/prompts/lenses.md (link)
 - → CLAUDE.md (mention)
+- → src/core/agent-guide/guide.md (mention)
 - → docs/plans/prompt-surface-cleanup-evaluation.md (link)
 
 ### docs/reports/
@@ -8195,8 +8196,7 @@ Referenced by:
 - docs/user-stories/catalog/2026-06-26.md:5681 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/testing/knowledge-audits.md` |
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't
-- ../.claude/skills/bbx-context/SKILL.md:145 (mention) — `docs/testing/knowledge-audits.md`).
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:77 (mention) — (`docs/testing/knowledge-audits.md`).
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:75 (mention) — (`docs/testing/knowledge-audits.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:12 (mention) — `beebox/docs/testing/knowledge-audits.md`; read it before writing an entry.
 - ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:19 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:102 (mention) — harness (`docs/knowledge-audits.md`) is the tool for catching that.
@@ -8615,6 +8615,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:168 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
 - docs/implemented-plans/publication-card-home.md:140 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
 - docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
+- docs/prompts/review.md:67 (mention) — - **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/a
 - docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
 - ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:24 (mention) — - the agent guide (`beebox/src/core/agent-guide/guide.md`), whose box-side
 - ../issues/features/2026-09-29-transcript-to-structure-fidelity-rules.md:37 (mention) — (`recording.*` rules in `beebox/src/core/agent-guide/guide.md`) avoids three

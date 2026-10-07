@@ -50,7 +50,7 @@ to ≤5 steps; if the probe needs more, split it into rounds.
    Backend probes log server-side directly; same gating rules.
 2. **Verify the pipeline locally before deploying.** Toggle the probe via
    `bin/browse` against the worktree box and confirm events actually land in
-   `content/.beebox/client-debug.log`. A probe that reaches the device
+   `.beebox/client-debug.log`. A probe that reaches the device
    broken wastes a boxholder round-trip, the most expensive resource here.
 3. **Land it.** Deploy is main-only, so the probe merges like any change —
    suite green, normal landing flow. Merging to main deploys; get the
@@ -58,7 +58,7 @@ to ≤5 steps; if the probe needs more, split it into rounds.
 4. **Hand off** with the headline above. Include what to reproduce (their words
    for the symptom, not yours) and roughly how long.
 5. **Pull the readings.** For a prod box: the client debug log lives at
-   `/home/beebox/boxes/<slug>/content/.beebox/client-debug.log` on the
+   `/home/beebox/boxes/<slug>/.beebox/client-debug.log` on the
    server (`deploy/target.env` in the MAIN checkout; worktrees don't have it),
    or via the box's debug-log route with `deploy/prod-curl`. Local/worktree
    boxes: read the file directly. Grep the probe's tag (e.g. `[scroll-trace]`).

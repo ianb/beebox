@@ -51,6 +51,21 @@ What a review hunts for (cost per bit, corrective framing, dated language,
 self-contradiction, examples that earn their place) is in the
 [lens catalog](lenses.md).
 
+## Writing rules that get followed
+
+The [lens catalog](lenses.md) covers giving reasons, earning examples, and separating hard rules from defaults. In addition:
+
+- **Write it down on the right tier.** An unwritten convention cannot be followed, and a rule on the always-on tier that only sometimes applies dilutes the rest (route with the `bbx-context` skill).
+- **Point at a real example by path.** It is shorter and less ambiguous than prose, and it does not drift the way a pasted copy does.
+- **Altitude matches use.** A rarely used command gets a reference entry and at most one pointer sentence on an always-on surface. Never mention environment variables the harness always sets.
+- **Pointers, not copies.** Never paste content that changes on its own (a schema, a list, command output); point at its source.
+
+When a rule on the correct tier is still ignored, the agent is usually rationalizing past it:
+
+- **Bulletproof it.** Name the excuse and rebut it inline. "Never paraphrase the user" held only after it named the temptation ("it basically says the same thing") and called that the violation.
+- **Pressure-test it.** Add a knowledge-audit scenario that gives the agent a tempting reason to break the rule and confirms it refuses.
+- **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/agent-guide/guide.md`): placed first, framed as law, bulletproofed, and pressure-tested. Do not bold it in place. Elevating a rule that is not inviolable recreates the emphasis-dilution problem one tier up.
+
 ## Review pass, in order
 
 1. Render the stacks (`agent-context` per situation) and read each end-to-end *as the agent*.

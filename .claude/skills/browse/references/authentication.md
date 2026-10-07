@@ -28,7 +28,7 @@ A navigation denied at the owner-only rows returns 401, which the router renders
 ### The key is the owner only on a box that says so
 
 The browse key clears the auth wall. What it *means* inside a box is the box's
-call: a box whose `config/box.json` has `"agentBrowsing": "owner"` treats the key
+call: a box whose `_config/box.json` has `"agentBrowsing": "owner"` treats the key
 as the box owner — capture, device pairing, Settings, anything behind
 `ownerProcedure`, and chat sends attributed to the owner. `test1` sets it, so
 every worktree clone and journey box built from it does too. That includes the
@@ -50,11 +50,11 @@ bin/browse auth login owner
 ```
 
 **Ask the boxholder for the credential** — do not invent one, and do not reach for
-`bbx auth set-password`, which rewrites a machine-global credential store and revokes
+`bbx engine auth set-password`, which rewrites a machine-global credential store and revokes
 live sessions (`beebox/CLAUDE.md`). If you cannot get one, say which findings
 were unreachable rather than reporting them as absent features.
 
-Mechanism: `beebox/docs/plans/agent-browsing-owner.md`.
+Mechanism: `beebox/docs/implemented-plans/agent-browsing-owner.md`.
 
 **3. Is the key live in the running router?** One probe answers it, and it must use the **cookie** form against a **box route**:
 
@@ -65,7 +65,7 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 # 200 → the router has this key. 401 → it doesn't.
 ```
 
-**Do not probe with `Authorization: Bearer`.** The router's gate accepts the key only as a cookie and returns 401 for a bearer header *even when the key is correct* — so a bearer probe produces a false "the key is rejected" every time. (`core/browse-key.ts` documents both forms because the box wall and hub accept both; the dev router does not.)
+**Do not probe with `Authorization: Bearer`.** The router's gate accepts the key only as a cookie and returns 401 for a bearer header *even when the key is correct* — so a bearer probe produces a false "the key is rejected" every time. (`beebox/src/core/browse-key.ts` documents both forms because the box wall and hub accept both; the dev router does not.)
 
 **4. Does this worktree's `.env` have the key at all?** The WorktreeCreate hook copies main's `.env` into new worktrees, but worktrees created before that existed don't have it:
 
