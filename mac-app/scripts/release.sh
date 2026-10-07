@@ -52,7 +52,9 @@ cp "$DMG" "$feed/"
 
 if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
   gh release upload "$TAG" -R "$REPO" --clobber "$DMG" "$DMG.sha256" build/appcast.xml
-  gh release edit "$TAG" -R "$REPO" --prerelease=false --latest
+  edit=(--prerelease=false --latest)
+  [[ -n "${NOTES_FILE:-}" ]] && edit+=(--notes-file "$NOTES_FILE")
+  gh release edit "$TAG" -R "$REPO" "${edit[@]}"
 else
   notes=(--notes "Bee Box $VERSION for macOS 26 on Apple silicon.")
   [[ -n "${NOTES_FILE:-}" ]] && notes=(--notes-file "$NOTES_FILE")

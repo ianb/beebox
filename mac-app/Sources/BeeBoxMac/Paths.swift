@@ -56,12 +56,14 @@ enum Paths {
         return home.appending(path: "BeeBox", directoryHint: .isDirectory)
     }()
 
-    /// The box this app runs. Its name is also its URL slug (`/box/`).
+    /// The box this app runs. Its name is also its URL slug (`/box/`). At most
+    /// 32 characters: it names the box's relay socket, and Unix socket paths
+    /// are limited to 104 bytes.
     static let boxName: String = {
         let name = env["BEEBOX_BOX"] ?? "box"
         let allowed = CharacterSet.lowercaseLetters.union(.decimalDigits).union(CharacterSet(charactersIn: "-"))
-        precondition(!name.isEmpty && name.unicodeScalars.allSatisfy(allowed.contains),
-                     "BEEBOX_BOX must be lowercase letters, digits, and hyphens")
+        precondition((1...32).contains(name.count) && name.unicodeScalars.allSatisfy(allowed.contains),
+                     "BEEBOX_BOX must be 1-32 lowercase letters, digits, and hyphens")
         return name
     }()
 
