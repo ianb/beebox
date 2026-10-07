@@ -12,10 +12,9 @@ import { z } from "zod";
 import { parseCommandArgs, type CommandContext, type CommandDefinition, type CommandResult } from "../../command-types.js";
 import { getBoxDir, isCardFile, parseCardName } from "../../../lib/paths/core.js";
 import { BoxPathArgError, resolveCliTargetPath } from "../../../cli/lib/cli-target-path.js";
-import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
+import { getStatus, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
 import { NotFoundError } from "../../../lib/errors.js";
-import { invariant } from "../../../shared/invariant.js";
 import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { assertSafeTrashDestination } from "./namespace-guard.js";
 import { findInboundCardRefs, type InboundCardRef } from "../../find-inbound-card-refs.js";
@@ -218,8 +217,12 @@ export async function commitTrashReceipt(boxRoot: string, options: { receipt: Tr
   const suffix = reason === undefined ? "" : `: ${reason}`;
   const message =
     receipt.moves.length === 1 ? `Trash card: ${path.basename(receipt.moves[0]?.sourcePath ?? "card")}${suffix}` : `Trash ${String(receipt.moves.length)} cards${suffix}`;
+  const status = await getStatus(boxRoot);
+  const changedPaths = new Set([...status.staged, ...status.modified, ...status.untracked]);
+  const paths = [...new Set(receipt.gitPaths.filter((gitPath) => changedPaths.has(gitPath) || [...changedPaths].some((changed) => changed.startsWith(`${gitPath}/`))))];
+  if (paths.length === 0) return null;
   return stageAndCommitPaths(boxRoot, {
-    paths: receipt.gitPaths,
+    paths,
     message,
     trailers: { "Trashed-By": "bbx rm", ...triggeredByTrailer(options.actor) },
   });
@@ -325,22 +328,11 @@ async function executeTrashUnguarded(ctx: CommandContext, args: Record<string, u
 
   // Optionally commit all at once
   if (trashArgs.commit) {
-    const reason = trashArgs.reason ? `: ${trashArgs.reason}` : "";
-    let summary: string;
-    if (results.length === 1) {
-      const [only] = results;
-      invariant(only !== undefined, "checked results.length === 1 above");
-      summary = `Trash card: ${path.basename(only.sourcePath)}${reason}`;
-    } else {
-      summary = `Trash ${results.length} cards${reason}`;
-    }
-    await stageAndCommitPaths(ctx.boxRoot, {
-      paths: [...allMovedFiles, ...allAdditions],
-      message: summary,
-      trailers: {
-        "Trashed-By": "bbx rm",
-      },
-    });
+    const receipt: TrashReceipt = {
+      moves: results.map((result) => ({ ...result, fileMoves: [] })),
+      gitPaths: [...allMovedFiles, ...allAdditions],
+    };
+    await commitTrashReceipt(ctx.boxRoot, { receipt, reason: trashArgs.reason });
     ctx.writeLine("Committed.");
   }
 

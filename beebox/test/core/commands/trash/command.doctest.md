@@ -141,6 +141,16 @@ JSON.stringify({ inbox: await rollback.list("_content/inbox"), trash: await roll
 => {"inbox":"_content/inbox/.gitkeep\n_content/inbox/Rollback.attach\n_content/inbox/Rollback.attach/file.txt\n_content/inbox/Rollback.doc.card\n_content/inbox/intake\n_content/inbox/intake/.gitkeep\n_content/inbox/staged\n_content/inbox/staged/.gitkeep\n_content/inbox/triaged\n_content/inbox/triaged/.gitkeep\n_content/inbox/triaged/_unsure\n_content/inbox/triaged/_unsure/.gitkeep\n_content/inbox/unhandled\n_content/inbox/unhandled/.gitkeep","trash":"_bookkeeping/trash/.gitkeep"}
 ```
 
+## A never-committed card can still be trashed and committed
+
+```ts
+const untracked = await makeTmpBox({ git: true });
+await untracked.write("_content/inbox/New.doc.card", "---\ntype: doc\n---\n");
+const trashed = await rm(untracked, { paths: ["_content/inbox/New.doc.card"], commit: true });
+JSON.stringify({ success: trashed.success, trash: await untracked.list("_bookkeeping/trash"), git: await import("simple-git").then(({ simpleGit }) => simpleGit(untracked.root).log().then((log) => log.latest?.message)) })
+=> {"success":true,"trash":"_bookkeeping/trash/.gitkeep\n_bookkeeping/trash/New.doc.card","git":"Trash card: New.doc.card"}
+```
+
 ## A display-form path argument is rejected, not treated as a file path
 
 `Config:box.json` (the boxholder's display vocabulary) is rejected with a

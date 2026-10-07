@@ -1,7 +1,4 @@
-import { BOX_DIRS } from "../../../../../lib/paths/core.js";
-import type { commitTrashReceipt, moveCardsToTrash } from "../../../../commands/trash/command.js";
-import type { recoverTrashReceipt } from "../trash-recovery.js";
-import { listChatHusks, listChatHusksUnder, type ChatHuskEntry } from "../../../husk-read.js";
+import { listChatHusks, type ChatHuskEntry } from "../../../husk-read.js";
 import { acquireChatReviewLease } from "../../../review/lock.js";
 import { assertReviewStateReadableForDeletion, removeSessionFromReview, restoreSessionToReview, type ReviewSessionState } from "../../../review/state.js";
 import type { ChatScheduleManager, DetachedSchedulesReceipt } from "../../../schedules/core.js";
@@ -21,7 +18,7 @@ import { finishDeletedHusks } from "./husks.js";
 import { logDeletePhase } from "./log.js";
 import { codexSessionExists, deleteCodexSession } from "../../codex-transcript/core.js";
 import type { AgentEngine } from "../../../../box/config.js";
-import { rm } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession } from "../../state.js";
 
@@ -57,9 +54,7 @@ export type DeleteChatResult =
       status: "cleanup-required";
       sessionId: string;
       storage: SessionStorageState;
-      retry: "delete-again" | "trash-husk" | "commit-trash";
-      huskTrashed: boolean;
-      commitPending: boolean;
+      retry: "delete-again" | "delete-husk";
     };
 
 export interface DeleteChatRuntime {
@@ -80,9 +75,7 @@ interface DeleteChatOptions {
   sessionId: string;
   runtime: DeleteChatRuntime;
   sdkDelete?: DeleteStorageOptions["sdkDelete"];
-  moveToTrash?: typeof moveCardsToTrash;
-  commitTrash?: typeof commitTrashReceipt;
-  recoverTrash?: typeof recoverTrashReceipt;
+  commitHusks?: Parameters<typeof finishDeletedHusks>[0]["commit"];
 }
 
 function matchingHusks(husks: ChatHuskEntry[], sessionId: string): ChatHuskEntry[] {
@@ -94,17 +87,38 @@ async function findAuthority(
   sessionId: string,
 ): Promise<{
   active: ChatHuskEntry[];
-  trashed: ChatHuskEntry[];
   contextDir: string;
 }> {
-  const [activeHusks, trashedHusks] = await Promise.all([listChatHusks(boxRoot), listChatHusksUnder(boxRoot, BOX_DIRS.trash)]);
-  const active = matchingHusks(activeHusks, sessionId);
-  const trashed = matchingHusks(trashedHusks, sessionId);
-  const authority = [...active, ...trashed];
+  const active = matchingHusks(await listChatHusks(boxRoot), sessionId);
+  const authority = active;
   if (authority.length === 0) throw new ChatSessionNotFoundError(sessionId);
   const bindings = new Set(authority.map((husk) => husk.contextDir ?? ""));
   if (bindings.size !== 1) throw new ConflictingChatHusksError();
-  return { active, trashed, contextDir: [...bindings][0] ?? "" };
+  return { active, contextDir: [...bindings][0] ?? "" };
+}
+
+async function retryMarkedHuskDeletion(options: { boxRoot: string; sessionId: string; markerPath: string }): Promise<DeleteChatResult | null> {
+  let marker: unknown;
+  try {
+    marker = JSON.parse(await readFile(options.markerPath, "utf8"));
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    throw error;
+  }
+  const paths = typeof marker === "object" && marker !== null && "deleteChatCardPaths" in marker && Array.isArray(marker.deleteChatCardPaths)
+    ? marker.deleteChatCardPaths.filter((candidate): candidate is string => typeof candidate === "string")
+    : [];
+  if (paths.length === 0) return null;
+  const releaseReview = await acquireChatReviewLease(options.boxRoot, "chat-delete");
+  try {
+    const cleanup = await finishDeletedHusks({ boxRoot: options.boxRoot, sessionId: options.sessionId, husks: paths.map((path) => ({ path, session: options.sessionId })), storage: "absent" });
+    if (!cleanup.complete) return { status: "cleanup-required", sessionId: options.sessionId, storage: "absent", retry: cleanup.retry };
+    await rm(options.markerPath, { force: true });
+    await rm(join(options.boxRoot, chatModelFileForSession(options.sessionId)), { force: true });
+    return { status: "deleted", sessionId: options.sessionId, schedulesCancelled: 0 };
+  } finally {
+    await releaseReview();
+  }
 }
 
 async function verifyHistoryBinding(options: { boxRoot: string; sessionId: string; contextDir: string }): Promise<void> {
@@ -129,7 +143,16 @@ async function compensate(options: { boxRoot: string; sessionId: string; runtime
 export async function deleteChatSession(options: DeleteChatOptions): Promise<DeleteChatResult> {
   const sessionId = parseSdkSessionId(options.sessionId);
   await options.runtime.maintenance;
-  const authority = await findAuthority(options.boxRoot, sessionId);
+  let authority: Awaited<ReturnType<typeof findAuthority>>;
+  try {
+    authority = await findAuthority(options.boxRoot, sessionId);
+  } catch (error) {
+    if (!(error instanceof ChatSessionNotFoundError)) throw error;
+    const markerPath = join(options.boxRoot, `.beebox/chat-delete/${encodeURIComponent(sessionId)}.json`);
+    const retried = await retryMarkedHuskDeletion({ boxRoot: options.boxRoot, sessionId, markerPath });
+    if (retried !== null) return retried;
+    throw error;
+  }
   await verifyHistoryBinding({ boxRoot: options.boxRoot, sessionId, contextDir: authority.contextDir });
   const historyEntry = (await readHistoryFile(options.boxRoot, { strict: true }))?.sessions
     .find((entry) => entry.id === sessionId);
@@ -140,7 +163,7 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
   const beforeStorage = targets === null
     ? await inspectCodexStorage(options.boxRoot, sessionId)
     : await inspectSessionStoragePresence(targets);
-  logDeletePhase({ sessionId, phase: "preflight", detail: { storage: beforeStorage.state, activeHusks: authority.active.length, trashedHusks: authority.trashed.length } });
+  logDeletePhase({ sessionId, phase: "preflight", detail: { storage: beforeStorage.state, activeHusks: authority.active.length } });
   const releaseReview = await acquireChatReviewLease(options.boxRoot, "chat-delete");
 
   try {
@@ -189,13 +212,9 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
     const husks = await finishDeletedHusks({
       boxRoot: options.boxRoot,
       sessionId,
-      registry: options.runtime.registry,
-      active: authority.active,
-      trashed: authority.trashed,
+      husks: authority.active,
       storage,
-      ...(options.moveToTrash === undefined ? {} : { moveToTrash: options.moveToTrash }),
-      ...(options.commitTrash === undefined ? {} : { commitTrash: options.commitTrash }),
-      ...(options.recoverTrash === undefined ? {} : { recoverTrash: options.recoverTrash }),
+      ...(options.commitHusks === undefined ? {} : { commit: options.commitHusks }),
     });
     if (!husks.complete) {
       logDeletePhase({ sessionId, phase: "husk", detail: { complete: false, retry: husks.retry } });
@@ -204,8 +223,6 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
         sessionId,
         storage,
         retry: husks.retry,
-        huskTrashed: husks.huskTrashed,
-        commitPending: husks.commitPending,
       };
     }
     await rm(join(options.boxRoot, chatModelFileForSession(sessionId)), { force: true });
@@ -247,8 +264,6 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
         sessionId,
         storage: afterStorage.state,
         retry: "delete-again",
-        huskTrashed: false,
-        commitPending: false,
       };
     }
   } finally {
