@@ -20,7 +20,7 @@ import * as path from "node:path";
 import { canonical, categoryOf } from "./skill-usage-catalog.ts";
 import { FAILURE_PATTERNS, HUMAN_PATTERNS, matchingLabels } from "./skill-usage-patterns.ts";
 import {
-  commandNames, inRepo, inWindow, isRecord, readJsonl, recentJsonl, recordBriefing, str, textOf,
+  commandNames, inRepo, NAME_SHAPE, inWindow, isRecord, readJsonl, recentJsonl, recordBriefing, str, textOf,
   type Json, type ScanContext,
 } from "./skill-usage-scan.ts";
 import { LoadTracker } from "./skill-usage-stats.ts";
@@ -58,7 +58,7 @@ function handleAssistant(ctx: ScanContext, ev: { o: Json; st: FileState; session
   for (const block of msg.content) {
     if (!isRecord(block) || block.type !== "tool_use" || !isRecord(block.input)) continue;
     if (!ctx.stats.firstSighting(`tool:${str(block.id)}`)) continue;
-    if (block.name === "Skill" && str(block.input.skill)) {
+    if (block.name === "Skill" && NAME_SHAPE.test(str(block.input.skill))) {
       ctx.stats.record({ source: "claude", skill: canonical(ctx.catalog, str(block.input.skill)), kind: "agent", session: ev.session, ts: ev.ts, sessionKind: ev.st.kind });
     } else if ((block.name === "Agent" || block.name === "Task") && str(block.input.prompt)) {
       recordBriefing(ctx, { text: str(block.input.prompt), source: "claude", session: ev.session, ts: ev.ts, via: "agent-prompt" });

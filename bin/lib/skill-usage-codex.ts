@@ -140,9 +140,12 @@ async function scanRollout(ctx: ScanContext, file: string): Promise<void> {
 export async function scanCodex(ctx: ScanContext, sessionsRoot: string): Promise<void> {
   const cutoff = new Date(ctx.sinceMs - 864e5).toISOString().slice(0, 10);
   const days: string[] = [];
-  for (const y of fs.existsSync(sessionsRoot) ? fs.readdirSync(sessionsRoot) : []) {
-    for (const m of fs.readdirSync(path.join(sessionsRoot, y))) {
-      for (const d of fs.readdirSync(path.join(sessionsRoot, y, m))) {
+  /** Numbered subdirectories only; `.DS_Store` and stray files are not dates. */
+  const numbered = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory() && /^\d+$/.test(e.name)).map((e) => e.name);
+  for (const y of fs.existsSync(sessionsRoot) ? numbered(sessionsRoot) : []) {
+    for (const m of numbered(path.join(sessionsRoot, y))) {
+      for (const d of numbered(path.join(sessionsRoot, y, m))) {
         if (`${y}-${m}-${d}` >= cutoff) days.push(path.join(sessionsRoot, y, m, d));
       }
     }

@@ -68,4 +68,14 @@ async function main(): Promise<void> {
   else process.stdout.write(renderMarkdown(ctx.stats, { catalog, sinceDays, shortTurns: SHORT_TURNS }));
 }
 
-await main();
+try {
+  await main();
+} catch (error) {
+  // Node's filesystem errors embed the transcript path, which names the
+  // project directory; report only the error code and syscall.
+  const field = (k: string): string => (error instanceof Error && k in error ? String(Reflect.get(error, k)) : "");
+  const code = field("code");
+  if (!code) throw error;
+  process.stderr.write(`skill-usage: failed (${code} in ${field("syscall") || "?"})\n`);
+  process.exitCode = 1;
+}

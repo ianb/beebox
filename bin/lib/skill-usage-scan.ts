@@ -84,9 +84,15 @@ export function recentJsonl(dir: string, sinceMs: number): string[] {
   return out;
 }
 
+/**
+ * A skill or command name: what the report may print. Anything else (a typed
+ * path, free text in a tag or tool input) is transcript content and is dropped.
+ */
+export const NAME_SHAPE = /^[A-Za-z][\w:-]{0,63}$/;
+
 /** Commands wrapped in a human slash-command turn, e.g. `<command-name>/finish</command-name>`. */
 export function commandNames(text: string): string[] {
-  return [...text.matchAll(/<command-name>\/?([^\s<]+)<\/command-name>/g)].map((m) => m[1] ?? "").filter(Boolean);
+  return [...text.matchAll(/<command-name>\/?([^<]*)<\/command-name>/g)].map((m) => m[1] ?? "").filter((n) => NAME_SHAPE.test(n));
 }
 
 /** Drops harness-injected tags so only the prose of a briefing is scanned. */

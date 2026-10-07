@@ -108,6 +108,6 @@ const bt = await readFile(skillFile(box, "browser-task/SKILL.md"), "utf8");
 bt.startsWith("---\nname: browser-task\n") && bt.includes("Copy prompt, schema") && bt.includes("file_upload")
 => true
 
-/monorepo|beebox\/src/.test(bt)
+/monorepo|beebox\/src|\bbin\/|worktree|localhost:3210|dev router/i.test(bt)
 => false
 ```
