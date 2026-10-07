@@ -104,3 +104,25 @@ Window 2026-09-23T19:38Z to 2026-09-30T19:44Z, same method as above.
 
 No bug filed in this window is traced to an unwalked landing. The hourly
 full-suite run caught no regressions on `main`.
+
+## Evidence, third window (2026-10-07 review)
+
+Window 2026-09-30T19:44Z to 2026-10-07T20:15Z. A landing counts as code when
+its first-parent diff has a non-`.md` path that matches
+`DEPLOYED_PATHS_PATTERN`. A merge counts as walked when
+`beebox-smoke-log.jsonl` has a run on a commit in `P1..P2`.
+
+- 132 landings; 49 code landings; 39 walked; 10 not walked. The walked share
+  rose from about 72% to 80%. The schedule hole is unchanged.
+- Schedule merges with no walk: `worktree-sdk-update` 4 times (`c25d0cd97`,
+  `8068e3d33`, `1a9815f08`, `76cd3483a`, each `beebox/package.json` +
+  `pnpm-lock.yaml`), and `worktree-knip-sweep` twice (`c256e9018` 2026-10-02
+  and `65dc54d06` 2026-10-07, each with deletions across `beebox/src`).
+- Direct commits on `main` with no walk: 2, down from 14. They are
+  `36b161fe5` (JSONL splitting in session, scheduler and usage code) and
+  `3af917740` (`bbx session --since`). Neither changes frontend source.
+- The other two unwalked landings are a tours-only merge (`c0756ff73`) and a
+  `beebox/deploy/deploy.sh`-only merge (`49e1adf18`).
+
+No bug filed in this window is traced to an unwalked landing. The hourly
+full-suite run caught no regressions on `main`.
