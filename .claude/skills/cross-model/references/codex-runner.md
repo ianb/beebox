@@ -20,7 +20,7 @@ mkdir -p scratch
 cat > scratch/cross-model-prompt.txt <<'PROMPT_EOF'
 …full prompt here…
 PROMPT_EOF
-codex exec - -s read-only -C "$ROOT" -m gpt-5.5 \
+codex exec - -s read-only -C "$ROOT" -m gpt-6-sol \
   -c 'model_reasoning_effort="high"' \
   < scratch/cross-model-prompt.txt > scratch/cross-model-out.md 2>&1
 ```
@@ -46,9 +46,10 @@ stall waiting for EOF; if using a positional argument, redirect stdin from
 ## Modes and model selection
 
 Use `codex exec -` with the shared [skill's](../SKILL.md) prompt for every mode,
-including review and challenge. The retained default is `gpt-5.5` with high
-reasoning effort; honor explicit human overrides within the OpenAI family.
-The driving model's tier does not change this choice.
+including review and challenge. The default is the newest GPT-6 model the
+launcher uses (`gpt-6-sol`; `gpt-6-astra` for a hard plan or a disputed
+finding) with high reasoning effort; honor explicit human overrides within
+the OpenAI family. The driving model's tier does not change this choice.
 
 `codex review` / `codex exec review` does not receive this prompt scaffolding.
 Use it only as a deliberate experiment and disclose that the review ran
