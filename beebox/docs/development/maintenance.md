@@ -31,11 +31,11 @@ checkout.
 The current jobs and their cadences are listed under
 [recurring work](workflow.md#recurring-work).
 
-**Writing one:** the `bbx-authoring-schedules` skill — when a task should be a
-schedule at all, what a `run` script owes (exit 0 in silence, hand off only when
-there is work, keep its own baseline so "new since last time" is real), what
-belongs in `prompt.md`, and how to rehearse with `bin/schedules run <name>
---dry-run`. Design: `docs/plans/scheduled-workstreams.md`.
+**Writing one:** [scheduled work](../../../bin/docs/schedules.md) — when a task
+should be a schedule at all, what a `run` script owes (exit 0 in silence, hand
+off only when there is work, keep its own baseline so "new since last time" is
+real), what belongs in `prompt.md`, and how to rehearse with `bin/schedules run
+<name> --dry-run`. Design: `docs/implemented-plans/scheduled-workstreams.md`.
 
 ## Not yet enrolled
 

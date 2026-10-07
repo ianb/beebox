@@ -5,7 +5,7 @@ description: "Use to choose work from the issue queue: survey related clusters, 
 
 # Picking issues
 
-Choosing work from ~350 open issues is a judgment task with a tooling layer
+Choosing work from the open issues is a judgment task with a tooling layer
 under it. The tooling (`bin/issues`) makes surveys cheap; this skill is about
 what to do with the survey, and — above all — **what you are allowed to do at
 each step**. Field semantics (`priority:`, next actions, `needs:`,
@@ -36,11 +36,11 @@ Rules that come from real failures:
   nothing about the next; each launch is its own "go".
 - **Model choice is part of the proposal, never of the act.** Say what kind of
   issue it is — how much is *undecided*, not how many files move — and suggest
-  the rung from the launch skill's ladder (Codex default; Opus for harder work;
-  Fable or Astra — `gpt-6-astra`, the Codex-side equivalent — for genuinely
-  open architecture or judgment). The human confirms. A measurement or design
-  question that needs judgment about *what to measure* is a Fable/Astra-shaped
-  task even when the diff will be small.
+  the agent and model from the launch skill's list (Opus 5.5 for most
+  implementation and well-scoped design; Fable for difficult reasoning or open
+  architecture; small models for bounded mechanical work). The human confirms.
+  A measurement or design question that needs judgment about *what to measure*
+  is a Fable-shaped task even when the diff will be small.
 
 ## A cluster is a hypothesis
 
