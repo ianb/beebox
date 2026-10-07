@@ -14,8 +14,11 @@ budget:
   # ceiling before that.
   # Raised 2026-09-27 for REACHING_THE_BOXHOLDER, a section the notifications
   # workstream landed on main; it was binned into eleven rows on merge.
+  # Raised 2026-10-06 (+89) for the box-screen arrival paragraph in the chat
+  # system prompt (source="box-screen" wrapper attribute); the prompt is
+  # always loaded.
   guide_words: 5595
-  always_loaded_words: 10213
+  always_loaded_words: 10302
   uncited_words_per_section: 60
 
 lint:

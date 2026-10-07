@@ -19,11 +19,11 @@ import { loadLandmarkSummaries } from "../../../landmark/summaries.js";
 import { seedFeaturesForNewChat } from "../../../landmark/features.js";
 import type { ReserveResult } from "../../session/reserve.js";
 import { loadRoutingCandidates, RoutingCatalogError } from "./catalog.js";
-import { routingDisposition, selectRoutingDestination, type RoutingCandidate } from "../policy.js";
+import { routingDisposition, selectRoutingDestination, thoughtAsksForNewChat, type RoutingCandidate } from "../policy.js";
 import { judgeQuickChat } from "./judge.js";
 import {
   deliveryExpired, deliverySessionId, quickChatChoiceIds,
-  type QuickChatDelivery, type QuickChatReason, type QuickChatRecord, type SendingQuickChatRecord,
+  type QuickChatDelivery, type QuickChatOrigin, type QuickChatReason, type QuickChatRecord, type SendingQuickChatRecord,
 } from "../quick-chat-record.js";
 import { readQuickChatRecord, saveQuickChatRecord, withQuickChatLock } from "../quick-chat-store.js";
 
@@ -39,7 +39,7 @@ export type QuickChatDeliveryOutcome =
 /** The box's chat runtime, as quick chat needs it. */
 export interface QuickChatChat {
   reserve(opts: { sessionId: string; contextDir: string; seedFeatures: Record<string, string>; requestedEngine: AgentEngine }): Promise<ReserveResult>;
-  deliver(args: { delivery: QuickChatDelivery; messageId: string; message: string }): Promise<QuickChatDeliveryOutcome>;
+  deliver(args: { delivery: QuickChatDelivery; messageId: string; message: string; origin: QuickChatOrigin }): Promise<QuickChatDeliveryOutcome>;
 }
 
 export interface QuickChatContext {
@@ -83,12 +83,12 @@ export class QuickChatDestinationFixedError extends Error {
 const GENERAL_CANDIDATE: RoutingCandidate = { id: "general", label: "New general chat", target: { kind: "new-session", contextDir: "" } };
 const CHAT_NOT_RUNNING = "Chat is not running on the box. Retry in a moment.";
 
-type RecordBase = Pick<QuickChatRecord, "id" | "message" | "createdAt" | "candidates" | "probabilities" | "model" | "confidence" | "preferenceApplied">;
+type RecordBase = Pick<QuickChatRecord, "id" | "message" | "createdAt" | "origin" | "candidates" | "probabilities" | "model" | "confidence" | "preferenceApplied">;
 
 function baseOf(record: QuickChatRecord): RecordBase {
-  const { id, message, createdAt, candidates, probabilities, model, confidence, preferenceApplied } = record;
+  const { id, message, createdAt, origin, candidates, probabilities, model, confidence, preferenceApplied } = record;
   return {
-    id, message, createdAt, candidates, probabilities,
+    id, message, createdAt, origin, candidates, probabilities,
     ...(model === undefined ? {} : { model }),
     ...(confidence === undefined ? {} : { confidence }),
     ...(preferenceApplied === undefined ? {} : { preferenceApplied }),
@@ -154,7 +154,7 @@ async function attemptDelivery(ctx: QuickChatContext, current: SendingQuickChatR
   await saveQuickChatRecord(ctx.boxRoot, reserved);
   let outcome: QuickChatDeliveryOutcome;
   try {
-    outcome = await chat.deliver({ delivery, messageId: record.id, message: record.message });
+    outcome = await chat.deliver({ delivery, messageId: record.id, message: record.message, origin: record.origin });
   } catch (error) {
     console.error(`[quick-chat] delivery of ${record.id} failed:`, error);
     outcome = { kind: "failed", error: errorMessage(error) };
@@ -174,7 +174,7 @@ async function attemptDelivery(ctx: QuickChatContext, current: SendingQuickChatR
 }
 
 /** Judge a new message: post it, ask about it, or, when routing is unavailable, offer recent chats. */
-async function route(ctx: QuickChatContext, base: Pick<RecordBase, "id" | "message" | "createdAt">): Promise<QuickChatRecord> {
+async function route(ctx: QuickChatContext, base: Pick<RecordBase, "id" | "message" | "createdAt" | "origin">): Promise<QuickChatRecord> {
   let candidates: RoutingCandidate[];
   try { candidates = await loadRoutingCandidates(ctx.boxRoot); }
   catch (error) {
@@ -190,21 +190,22 @@ async function route(ctx: QuickChatContext, base: Pick<RecordBase, "id" | "messa
     judgment = null;
   }
   if (judgment === null) return needsChoice({ ...base, candidates, probabilities: {} }, { reason: "routing-unavailable" });
-  const selection = selectRoutingDestination({ candidates: judgment.candidates, probabilities: judgment.probabilities });
+  const selection = selectRoutingDestination({ candidates: judgment.candidates, probabilities: judgment.probabilities,
+    newChatRequested: thoughtAsksForNewChat(base.message) });
   const judged: RecordBase = { ...base, candidates: judgment.candidates, probabilities: judgment.probabilities,
     model: judgment.model, confidence: judgment.confidence, preferenceApplied: selection.preferenceApplied };
   if (routingDisposition({ selected: selection.selected, ranked: selection.ranked }) === "ask") return needsChoice(judged, { reason: "uncertain" });
   return startSending(ctx, { base: judged, selected: selection.selected });
 }
 
-export async function submitQuickChat(ctx: QuickChatContext, input: { id: string; message: string }): Promise<QuickChatRecord> {
+export async function submitQuickChat(ctx: QuickChatContext, input: { id: string; message: string; origin: QuickChatOrigin }): Promise<QuickChatRecord> {
   return withQuickChatLock({ boxRoot: ctx.boxRoot, id: input.id }, async () => {
     const previous = await readQuickChatRecord(ctx.boxRoot, input.id);
     if (previous !== null) {
       if (previous.message !== input.message) throw new QuickChatTextConflictError();
       return previous.state === "sending" ? attemptDelivery(ctx, previous) : previous;
     }
-    const routed = await route(ctx, { id: input.id, message: input.message, createdAt: getBoxTime(ctx.boxRoot).toISOString() });
+    const routed = await route(ctx, { id: input.id, message: input.message, origin: input.origin, createdAt: getBoxTime(ctx.boxRoot).toISOString() });
     return routed.state === "needs-choice" ? save(ctx.boxRoot, routed) : routed;
   });
 }

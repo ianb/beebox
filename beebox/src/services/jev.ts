@@ -97,6 +97,7 @@ export function serializeJevRequest({ state, criteria }: JevDecisionInput): stri
           "An established discussion may be a better fit than a brief false start when the latest message plausibly continues it. Do not prefer a chat just because it is long, and do not infer that a short chat was aborted from its length alone.",
           "The total entry count includes parsed history entries such as tool activity; it is not a user-turn count. The last-message date is the transcript timestamp, while last activity may only reflect the chat file's modification time.",
           "If no specialized destination fits, use an existing general chat when suitable; otherwise choose the new general chat at the root. Always choose a chat, even when the fit is uncertain.",
+          "The captured message may open with a destination phrase addressed to the box, such as \"new chat in <place>\", \"continue <place>\", or \"in <place>\". When it does, the candidate in the named place is the destination: \"new chat\" means the new chat in that place, and \"continue\" means its existing chat.",
           "Rank semantic fit. The application separately applies its preference for continuing existing conversations.",
         ],
         criteria,

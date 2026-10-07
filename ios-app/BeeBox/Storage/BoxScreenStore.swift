@@ -4,7 +4,7 @@ import Foundation
 /// The quick chat procedures the box screen calls. `QuickChatAPI` is the real
 /// one; the DEBUG fixture screen supplies a fake.
 protocol QuickChatClient {
-    func submit(id: UUID, message: String) async throws -> QuickChatView
+    func submit(id: UUID, message: String, origin: NativeChatEmission.Origin?) async throws -> QuickChatView
     func choose(id: UUID, candidateId: String) async throws -> QuickChatView
     func discard(id: UUID) async throws -> QuickChatView
     func home() async throws -> QuickChatHome
@@ -273,11 +273,11 @@ final class BoxScreenStore: ObservableObject {
 
     /// The composer's quick chat target. Answers once the thought is on disk;
     /// the first attempt runs after.
-    func submitThought(_ text: String, boxID: UUID) async -> Bool {
-        guard let entry = await outbox.store(text: text, boxID: boxID) else {
+    func submitThought(_ text: String, origin: NativeChatEmission.Origin, boxID: UUID) async -> Bool {
+        guard let entry = await outbox.store(text: text, origin: origin, boxID: boxID) else {
             return false
         }
-        BoxLog.info("quick chat thought stored", category: .composer, targetBoxID: boxID)
+        BoxLog.info("quick chat thought stored origin=\(origin.rawValue)", category: .composer, targetBoxID: boxID)
         awaitAnswer(entry.id, boxID: boxID)
         Task {
             await outbox.retry(id: entry.id)
@@ -307,7 +307,7 @@ final class BoxScreenStore: ObservableObject {
     /// Retry a `sending` record: `submit` with the same id delivers again.
     func retry(_ view: QuickChatView, boxID: UUID) async {
         await act(on: view, boxID: boxID, name: "retry", follows: true) { client in
-            try await client.submit(id: view.id, message: view.message)
+            try await client.submit(id: view.id, message: view.message, origin: nil)
         }
     }
 
@@ -317,7 +317,7 @@ final class BoxScreenStore: ObservableObject {
         }
         let view: QuickChatView
         do {
-            view = try await client(box).submit(id: entry.id, message: entry.text)
+            view = try await client(box).submit(id: entry.id, message: entry.text, origin: entry.origin)
         } catch {
             if entry.attempts == 0 {
                 BoxLog.warn("quick chat submit failed \(Self.describe(error))", category: .net, targetBoxID: box.id)

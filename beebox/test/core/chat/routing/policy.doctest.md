@@ -7,7 +7,7 @@ landmark, or its context directory when it has none) and posts when that sum
 reaches the floor, 0.9 by default.
 
 ```ts setup
-import { routingDisposition, selectRoutingDestination } from "../../../../src/core/chat/routing/policy.js";
+import { routingDisposition, selectRoutingDestination, thoughtAsksForNewChat } from "../../../../src/core/chat/routing/policy.js";
 
 const garden = { path: "_content/Garden/Garden.landmark.card", label: "Garden" };
 const household = { path: "_content/Household/Household.landmark.card", label: "Household" };
@@ -125,4 +125,60 @@ A floor outside zero to one is a programming error.
 ```ts
 decide({ general: 1 }, { postFloor: 1.5 })
 => throws InvariantError: Routing post floor must be between zero and one
+```
+
+## "New chat" turns off the existing-chat preference
+
+`selectRoutingDestination` prefers an existing chat over a new one in the
+lead by 0.1 or less. A thought whose first words are "new chat" asked for a
+new one, so `thoughtAsksForNewChat` reports it and the preference is skipped.
+Only the opening words count, in any case, after any leading whitespace.
+
+```ts
+[
+  "New chat in Garden: what goes next to the tomatoes",
+  "new chat: plan the week",
+  "  NEW   CHAT in Trips",
+  "new chat",
+  "Start a new chat about the garden",
+  "New chats are cheap",
+  "Newchat in Garden",
+  "",
+].map((message) => [message, thoughtAsksForNewChat(message)])
+=> [
+  ["New chat in Garden: what goes next to the tomatoes", true],
+  ["new chat: plan the week", true],
+  ["  NEW   CHAT in Trips", true],
+  ["new chat", true],
+  ["Start a new chat about the garden", false],
+  ["New chats are cheap", false],
+  ["Newchat in Garden", false],
+  ["", false],
+]
+```
+
+The tomatoes row from the samples selects the existing raised-beds chat by
+preference. Asked for a new chat, the same judgment selects the new chat in
+Garden.
+
+```ts
+const probabilities = Object.fromEntries(candidates.map((candidate) => [candidate.id, 0]));
+const split = { ...probabilities, "new-garden": 0.53, "raised-beds": 0.47 };
+[false, true].map((newChatRequested) => {
+  const { selected, preferenceApplied } = selectRoutingDestination({ candidates, probabilities: split, newChatRequested });
+  return [selected.label, preferenceApplied];
+})
+=> [["Garden raised beds", true], ["New chat in Garden", false]]
+```
+
+An exact tie favors the existing chat. Asked for a new chat, the same tie
+favors the new chat in that landmark.
+
+```ts continue
+const tie = { ...probabilities, "new-garden": 0.5, "raised-beds": 0.5 };
+[false, true].map((newChatRequested) => {
+  const { selected, preferenceApplied } = selectRoutingDestination({ candidates, probabilities: tie, newChatRequested });
+  return [selected.label, preferenceApplied];
+})
+=> [["Garden raised beds", false], ["New chat in Garden", false]]
 ```
