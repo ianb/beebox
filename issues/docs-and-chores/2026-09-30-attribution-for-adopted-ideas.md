@@ -1,6 +1,6 @@
 ---
 title: "Credit adopted ideas in attribution.md, and backfill it from history"
-workstream: unattached
+workstream: acknowledgements
 area: docs
 labels: [agent-workflow]
 filed-by: agent
