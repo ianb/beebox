@@ -35,7 +35,10 @@ Things the schema system does that you'd otherwise miss:
   `theme: { name, stock? }` selects presentation independently of the view;
   `cardSchema`'s own `theme` option sets the type preference.
   Don't redeclare any of these, except `title: z.string()` to require
-  a title.
+  a title. The UI shows `title` in the header, `todos` on the front, the
+  other four under Properties "Found by", and `theme` as its "Appearance"
+  row; type fields go under Properties "Fields" for a type with a body
+  field, on the front otherwise.
 - **Every new field needs a named reader** (a query, a UI surface, or code),
   and some names are banned: `status`, `created`, `summary`, `date`,
   `modified`, `source`, plus the global names. A registry test rejects them
