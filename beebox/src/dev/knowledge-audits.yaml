@@ -1711,6 +1711,13 @@ tests:
     watch_for: "Loads the on-demand schedule guidance and describes the scheduled mechanism"
     tags: [schedules]
 
+  - id: schedule-run-summary
+    prompt: "You're writing a scheduled task for this box that files receipts every morning. How does the boxholder find out what each run did, and how do you mark a run they should look at?"
+    expected_level: knows_about
+    watch_for: "Reads the schedule guidance (schedules skill or card-scheduled-script.md); ends the run with bbx run-summary (headline, short body), uses --priority attention for a run worth a look, and knows it shows in the dashboard run history; does not reach for bbx notify for routine runs"
+    correct_contains: ["run-summary"]
+    tags: [schedules]
+
   - id: add-daily-task
     prompt: "As the box agent, how would you implement a new automated task that runs every day? What would you create, and where?"
     expected_level: knows_about
