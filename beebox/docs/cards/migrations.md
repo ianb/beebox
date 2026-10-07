@@ -221,7 +221,7 @@ convergence does not overwrite them merely to make a ledger look current.
 2. **Be idempotent.** Detect the post-migration shape and skip cards already in it — second runs should report "already migrated N" rather than re-doing work or erroring. Two patterns we use:
    - Filename-based: skip cards whose name already has the new extension.
    - Content-based: skip cards whose frontmatter already has the target shape (e.g., a specific key present, or matching a regex marker).
-   `bbx migrate` re-runs partially-applied migrations on retry, and admins occasionally run individual scripts manually for debugging — idempotency makes both safe.
+   `bbx engine migrate` re-runs partially-applied migrations on retry, and admins occasionally run individual scripts manually for debugging — idempotency makes both safe.
 
 3. **Be noisy about data loss.** Every migrator must use the `src/scripts/migrate/_warnings.ts` helper to declare what attrs/children it knows how to map, and warn about anything outside that allow-list. The harness above already plumbs the `WarningCollector` through; what you write per-migration is just the spec + per-element check:
 
@@ -267,7 +267,7 @@ convergence does not overwrite them merely to make a ledger look current.
 
    - **The exact code that exists only for the old shape** — `file:line` for each fallback, not "legacy handling in the loader."
    - **The migration's manifest name**, since that is how the trigger gets checked.
-   - **What makes it safe to remove** — normally "every box that matters has this migration in its `_config/migrations.jsonl`." Include the boxes that aren't yours to migrate on demand: prod boxes and any box a developer hasn't run `bbx migrate` on yet lag behind, so a green local sweep is not the signal.
+   - **What makes it safe to remove** — normally "every box that matters has this migration in its `_config/migrations.jsonl`." Include the boxes that aren't yours to migrate on demand: prod boxes and any box a developer hasn't run `bbx engine migrate` on yet lag behind, so a green local sweep is not the signal.
    - **What breaks if it's removed too early** — usually an un-migrated box failing to load rather than anything loud, which is why the trigger has to be checked rather than assumed.
 
    Don't set `priority:` (that is the developer's call). Choose the activation date deliberately: long enough for the deploy sweep, hourly retries, and outstanding questions to settle, but no longer than the compatibility window actually needs. The issue exists so the debt is *recorded* at the moment it is created without competing in the active queue before it is actionable.
@@ -296,7 +296,7 @@ handle only the residual.
   - **`run.agents`** — the agent, handed an embedded checklist.
   - **`validate`** — the machine gate (`shells` + `severity: abort`).
 - Registered in `src/core/migrations.ts` as `{ name, procedure: "<name>" }`
-  (the other kind is `{ name, script }`). `bbx migrate` dispatches it to
+  (the other kind is `{ name, script }`). `bbx engine migrate` dispatches it to
   `bbx procedure run <name>` and records the manifest entry only on a clean
   `completed`. See `view-card-shape.procedure.card` as the worked example.
 
@@ -305,7 +305,7 @@ handle only the residual.
 1. **Gate on a machine check, never the agent's word.** `validate.shells` with
    `severity: abort` is the only thing the engine actually enforces — model
    judgment (`validate.instructions`) and `severity: review` retry are
-   unimplemented (they pass/warn-and-continue). `bbx migrate` **refuses** to run a
+   unimplemented (they pass/warn-and-continue). `bbx engine migrate` **refuses** to run a
    procedure migration with no `validate.shells`+`abort` step, because an agent
    that does nothing still "completes" a step otherwise.
 
@@ -349,16 +349,16 @@ handle only the residual.
 ### Test it the way the others were tested
 
 Verify deterministically first (the gate command on a real broken box, the
-procedure parses + passes `bbx migrate`'s gate guard, `bbx migrate --status` lists
+procedure parses + passes `bbx engine migrate`'s gate guard, `bbx engine migrate --status` lists
 it). Then run it for real on one box and watch the agent — every fix above came
 from a real run surfacing a gap, not from review. Sweep the rest only after one
 works end-to-end.
 
 ## The migrators
 
-In the canonical order (same order they run via `bbx migrate --apply`):
+In the canonical order (same order they run via `bbx engine migrate --apply`):
 
-All scripts live in `scripts/migrate/`.
+All scripts live in `src/scripts/migrate/`.
 
 | # | Name | Script | What it does |
 |---|------|--------|---|
@@ -471,7 +471,7 @@ card, so an agent can finish them. See
 
 Registered at the end of `MIGRATIONS`, but unlike every migrator above it,
 `one-root` runs against a box that ISN'T v3 yet — the v3 engine refuses v2
-boxes outright (`getBoxShape`), so `bbx migrate` has a bootstrap path
+boxes outright (`getBoxShape`), so `bbx engine migrate` has a bootstrap path
 (`src/cli/commands/migrate-bootstrap.ts`) that probes for a v2 box
 (`src/core/migrations/one-root-v2-probe.ts`, tolerant of the pre-v3 marker)
 and hands it straight to `src/core/migrations/one-root-run.ts`'s
@@ -634,7 +634,7 @@ Idempotent. See
 
 ## Manual runs (for debugging)
 
-The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx migrate`. If you do this and want it to count, append the entry yourself or run `bbx migrate --apply` afterwards.
+The per-schema scripts are runnable standalone (`npx tsx src/scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx engine migrate`. If you do this and want it to count, append the entry yourself or run `bbx engine migrate --apply` afterwards.
 
 ## Maintenance tools
 
@@ -644,7 +644,7 @@ The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.
 
 - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) for the design rationale.
 - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
-- [Maintenance](../development/maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic tools.
+- [Maintenance](../development/maintenance.md), where `bbx engine migrate` and `clean-broken-refs.ts` sit among the periodic tools.
 - `src/scripts/migrate/_warnings.ts`, the noisy-mode helper every migrator uses; `src/scripts/migrate/_harness.ts`, the shared scaffold.
 
 ## Recovery and reversal
