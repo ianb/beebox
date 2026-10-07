@@ -18,7 +18,7 @@ import type { GoogleAccessProblem } from "../../google/access.js";
 import type { Result } from "../../shared/result.js";
 
 /** The refusal a gap becomes on the wire. */
-export function googleAccessError(problem: GoogleAccessProblem): TRPCError {
+function googleAccessError(problem: GoogleAccessProblem): TRPCError {
   return new TRPCError({
     code: problem.kind === "not-enabled" ? "FORBIDDEN" : "PRECONDITION_FAILED",
     message: problem.message,

@@ -84,6 +84,7 @@ struct BoxScreenFixtureScreen: View {
                 id: UUID(),
                 boxID: box.id,
                 text: "Ask Dana about the 14th",
+                origin: .typed,
                 createdAt: Date().addingTimeInterval(-90),
                 attempts: 1,
                 lastAttemptAt: Date().addingTimeInterval(-5)
@@ -183,7 +184,7 @@ private struct FixtureQuickChatClient: QuickChatClient {
         )
     }
 
-    func submit(id: UUID, message: String) async throws -> QuickChatView {
+    func submit(id: UUID, message: String, origin _: NativeChatEmission.Origin?) async throws -> QuickChatView {
         try offline()
         var view = Self.needsChoice
         view.id = id

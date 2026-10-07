@@ -1,9 +1,9 @@
 ---
 title: "Acknowledgements backfill: credit adopted external ideas"
-status: draft
+status: implemented
 workstream: acknowledgements
 issues:
-  - ../../../issues/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md
+  - ../../../issues/closed/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md
 ---
 # Acknowledgements backfill: credit adopted external ideas
 

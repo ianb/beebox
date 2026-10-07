@@ -19,7 +19,7 @@ export const BrowserTaskRun = z.object({
 export type BrowserTaskRunEntry = z.infer<typeof BrowserTaskRun>;
 
 /** Where a task keeps the JSON Schema for one record. Fixed: one place, nothing to configure. */
-export const BROWSER_TASK_SCHEMA_FILE = "schema.json";
+const BROWSER_TASK_SCHEMA_FILE = "schema.json";
 /** Attach-scope subdirectory batches arrive in; the drain leaves provenance in `processed/`. */
 export const BROWSER_TASK_INBOX_DIR = "inbox";
 
@@ -249,7 +249,7 @@ export interface BrowserTaskFields {
  * real prompt is forty lines; the author fills this in rather than typing
  * frontmatter by hand.
  */
-export const BROWSER_TASK_BODY_SCAFFOLD = `You are looking at <what the page is, whose it is, and where>.
+const BROWSER_TASK_BODY_SCAFFOLD = `You are looking at <what the page is, whose it is, and where>.
 
 ## What to look for
 

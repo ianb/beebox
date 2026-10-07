@@ -14,8 +14,7 @@ export function ThemeSwatchPicker({ path, choice, hasOverride }: { path: string;
   }
   if (!presentation?.data?.canEditCardThemes) return null;
   return (
-    <section className="mt-6" aria-label="Choose card appearance">
-      <h3 className="text-sm font-semibold mb-2">Appearance</h3>
+    <section className="mt-2" aria-label="Choose card appearance">
       <div className="bbx-theme-swatches" aria-busy={mutation.isPending}>
         {THEME_CATALOG.filter((theme) => theme.systemOnly !== true).flatMap((theme) => theme.stocks.map((stock) => (
           <button

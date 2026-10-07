@@ -239,7 +239,7 @@ function singleHeader(value: string | string[] | undefined): string | null {
 
 /** Reads the uploader's self-reported identity off a request, or `undefined`
  * when it reported none — an uploader predating these headers. */
-export function readScanClientIdentity(headers: ScanAuthHeaders): ScanClientIdentity | undefined {
+function readScanClientIdentity(headers: ScanAuthHeaders): ScanClientIdentity | undefined {
   const contract = singleHeader(headers["x-scan-contract"]);
   const build = singleHeader(headers["x-scan-client-build"]);
   const builtAt = singleHeader(headers["x-scan-client-built-at"]);

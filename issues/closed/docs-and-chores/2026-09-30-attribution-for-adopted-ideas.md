@@ -7,7 +7,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — crediting reader-context-writing and incident-investigation
 priority: normal
+resolution: implemented
 ---
+
+Closed: implemented by the acknowledgements workstream (commit b50b22610, `ACKNOWLEDGEMENTS.md` plus guidance edits in bbx-plan TEMPLATE, research/CLAUDE.md, issues/CLAUDE.md). The Twemoji credit moved into the same file and `beebox/docs/attribution.md` was removed. The pending Yaniv Ben-Ami note is covered by the new file and guidance.
 
 The boxholder wants to credit the people whose ideas Bee Box adopts.
 `beebox/docs/attribution.md` exists, but it covers only third-party
@@ -65,6 +68,6 @@ For each candidate, confirm the idea actually shipped before writing an
 entry, and name the file it landed in.
 
 Pending entries from 2026-09-30:
-[reader-context writing](../exploration/2026-09-30-reader-context-writing-and-structured-thinking-tag.md)
-and [incident-investigation](../exploration/2026-09-30-evaluate-incident-investigation-skill.md),
+[reader-context writing](../../exploration/2026-09-30-reader-context-writing-and-structured-thinking-tag.md)
+and [incident-investigation](../../exploration/2026-09-30-evaluate-incident-investigation-skill.md),
 both by Yaniv Ben-Ami. Add them if and when their ideas are adopted.

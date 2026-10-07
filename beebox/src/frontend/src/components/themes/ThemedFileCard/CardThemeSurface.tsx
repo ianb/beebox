@@ -2,10 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme/core";
 import { controlAddress } from "@shared/ui-scan/control-address";
 import type { FileViewMode } from "../../file-view-types";
+import type { CardSymbolData } from "@shared/card-symbol";
+import { CardMark } from "../../ui/CardMark";
 
 export interface CardThemeSurfaceProps {
   theme: ResolvedCardTheme;
   title: string;
+  /** The card's symbol, drawn before the title; `null` draws nothing. */
+  symbol: CardSymbolData | null;
+  boxSlug: string | undefined;
   mode: Exclude<FileViewMode, "embed">;
   children: ReactNode;
   /** The back face; its controls can turn the card over with {@link useShowCardFront}. */
@@ -14,7 +19,8 @@ export interface CardThemeSurfaceProps {
   problem?: ReactNode;
 }
 
-const ShowFrontContext = createContext<(() => void) | null>(null);
+/** Provided around the back face; exported so a test can render the face alone. */
+export const ShowFrontContext = createContext<(() => void) | null>(null);
 
 class ShowCardFrontContextError extends Error {
   constructor() {
@@ -31,7 +37,7 @@ export function useShowCardFront(): () => void {
 }
 
 /** Front stays mounted while turned over, retaining authored view state. */
-export function CardThemeSurface({ theme, title, mode, children, properties, actions, problem }: CardThemeSurfaceProps) {
+export function CardThemeSurface({ theme, title, symbol, boxSlug, mode, children, properties, actions, problem }: CardThemeSurfaceProps) {
   const [back, setBack] = useState(false);
   const [turn, setTurn] = useState<"out" | "in" | null>(null);
   // React's `useId` spells its values with colons, which the control address
@@ -82,7 +88,7 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
         type="button"
         className="bbx-card-properties print:hidden"
         aria-label={back ? "Back to card" : "Properties"}
-        title={back ? "Back to card" : "Properties: appearance and alternate views"}
+        title={back ? "Back to card" : "Properties: where this card is filed, how it is found, what it carries"}
         aria-expanded={back}
         aria-busy={turn !== null}
         aria-controls={backId}
@@ -94,7 +100,10 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
         <span className="sr-only">{back ? "Back to card" : "Properties"}</span>
       </button>
       <header className="bbx-card-heading">
-        <h2>{title}</h2>
+        {symbol === null ? <h2>{title}</h2> : <div className="flex items-center gap-2">
+          <CardMark symbol={symbol} size="md" boxSlug={boxSlug} />
+          <h2 className="min-w-0">{title}</h2>
+        </div>}
         {actions ? <div className="flex gap-2 mt-2 print:hidden">{actions}</div> : null}
       </header>
       {problem}

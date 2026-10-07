@@ -19,6 +19,9 @@ import { routingCandidateSchema, type RoutingCandidate } from "./policy.js";
 const QUICK_CHAT_STATES = ["needs-choice", "sending", "sent", "discarded"] as const;
 export const QUICK_CHAT_REASONS = ["uncertain", "routing-unavailable", "destination-gone"] as const;
 export type QuickChatReason = (typeof QUICK_CHAT_REASONS)[number];
+/** How the person entered the thought: delivered as `<typed>` or `<speech>`. */
+export const QUICK_CHAT_ORIGINS = ["typed", "voice"] as const;
+export type QuickChatOrigin = (typeof QUICK_CHAT_ORIGINS)[number];
 
 /** Duplicate protection lasts 7 days (send-dedup.ts); refuse a late delivery a day before that. */
 const QUICK_CHAT_DELIVERY_WINDOW_MS = 6 * 24 * 60 * 60 * 1000;
@@ -32,6 +35,8 @@ const destinationSchema = z.object({ label: z.string(), sessionId: z.string().op
 
 const baseShape = {
   id: z.string().uuid(), message: z.string(), createdAt: z.string(),
+  /** Absent on records written before the origin was kept: those were typed. */
+  origin: z.enum(QUICK_CHAT_ORIGINS).default("typed"),
   candidates: z.array(routingCandidateSchema),
   /** Empty when routing was unavailable. Kept for calibration; never shown. */
   probabilities: z.record(z.string(), z.number()),
@@ -76,7 +81,7 @@ export function parseQuickChatRecord(raw: unknown): QuickChatRecord {
   if (isRecord(raw) && "state" in raw) return recordSchema.parse(raw);
   const legacy = legacyQuickChatRecordSchema.parse(raw);
   const { id, message, createdAt, candidates, probabilities, model, confidence, preferenceApplied, selected, delivery, receipt } = legacy;
-  const base = { id, message, createdAt, candidates, probabilities, model, confidence, preferenceApplied, selected, delivery };
+  const base = { id, message, createdAt, origin: "typed" as const, candidates, probabilities, model, confidence, preferenceApplied, selected, delivery };
   const sessionId = receipt?.sessionId ?? deliverySessionId(delivery);
   const destination = { label: selected.label, ...(sessionId === undefined ? {} : { sessionId }) };
   if (receipt !== undefined) {

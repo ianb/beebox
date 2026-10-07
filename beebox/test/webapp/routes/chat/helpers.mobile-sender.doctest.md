@@ -53,6 +53,18 @@ injectUserAttr("<typed>hello from my phone</typed>", sender)
 => <typed user="Ada Lovelace" user-email="ada@example.com">hello from my phone</typed>
 ```
 
+Attributes already on the wrapper stay, after the sender. The box screen's
+thoughts carry `source="box-screen"`, typed or spoken:
+
+```ts continue
+const priya = { email: "priya@example.com", name: "Priya Marlowe" };
+injectUserAttr('<typed source="box-screen">Buy stamps</typed>', priya)
+=> <typed user="Priya Marlowe" user-email="priya@example.com" source="box-screen">Buy stamps</typed>
+
+injectUserAttr('<speech source="box-screen">Call the plumber</speech>', priya)
+=> <speech user="Priya Marlowe" user-email="priya@example.com" source="box-screen">Call the plumber</speech>
+```
+
 ## Without a local record the email stands in for the name
 
 A device paired against an identity that has no local-user record (e.g. a

@@ -47,3 +47,12 @@ Run `node --import tsx beebox/src/scripts/install-theme-tour.ts <test1-root>` an
 land the new files on stock `test1` content. Or make `bin/tour` (or the tour
 worktree setup) install the theme-tour fixtures before a run, so the fixture
 set and the tours cannot drift apart again.
+
+## Re-encounter, 2026-10-07 - card-reading-properties
+
+Both tours ran on the `card-reading-properties` test1 clone after the
+Properties rework. `card-themes` missed the same two markdown-file findings at
+both viewports, and `system-themes` aborted at "Could not resolve button
+\"Properties\"" at both viewports, because `_content/theme-tour/` still has no
+`markdown-note.md` and no `Theme_Tour.landmark.card`. The Properties control
+itself is present on every card page. The priority may be stale.

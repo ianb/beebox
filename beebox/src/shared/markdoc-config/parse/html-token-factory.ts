@@ -10,7 +10,7 @@ import type Token from "markdown-it/lib/token.js";
 import { warning, type HtmlWarning } from "./html-lex.js";
 
 /** The Markdoc tag name every rebuilt element uses (see `core.ts`'s `html` schema). */
-export const HTML_TAG = "html";
+const HTML_TAG = "html";
 
 /** Markdoc reads `errors` off a token into the node's validation errors; markdown-it's type lacks it. */
 export interface MarkdocToken extends Token {

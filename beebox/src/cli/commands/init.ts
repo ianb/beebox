@@ -69,7 +69,7 @@ async function announceAndInitGit(
 }
 
 /** Thrown when a new box's path lies inside another git repository. */
-export class NestedBoxError extends Error {
+class NestedBoxError extends Error {
   constructor(
     readonly boxRoot: string,
     readonly enclosingRepo: string,
