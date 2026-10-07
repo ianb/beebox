@@ -95,6 +95,7 @@ struct BoxMenu: View {
             .disabled(!updates.enabled)
         Text("Bee Box \(BundleConfig.version)")
         Divider()
+        Button("Uninstall Bee Box…") { Uninstaller.run { [runtime] in await runtime.stop() } }
         Button(runtime.isRunning ? "Stop Box and Quit" : "Quit Bee Box") { quit() }
     }
 }
