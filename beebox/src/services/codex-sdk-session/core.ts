@@ -29,6 +29,8 @@ export interface CodexSdkSessionOptions {
   additionalDirectories?: string[] | undefined;
   env?: Record<string, string | undefined> | undefined;
   turnTimeoutMs?: number | undefined;
+  /** The box's `codexTelemetry` choice. Required so no caller forgets it. */
+  analytics: boolean;
 }
 
 export interface CodexSdkTurnResult {
@@ -158,6 +160,20 @@ function definedEnv(env: Record<string, string | undefined> | undefined): Record
   );
 }
 
+/**
+ * The `--config` overrides every Codex run gets. Analytics follow the box
+ * setting. The update check and feedback upload are always off: the box pins
+ * Codex's version and never files feedback.
+ */
+export function codexSdkConfig(options: Pick<CodexSdkSessionOptions, "systemPrompt" | "analytics">) {
+  return {
+    developer_instructions: options.systemPrompt,
+    analytics: { enabled: options.analytics },
+    feedback: { enabled: false },
+    check_for_update_on_startup: false,
+  };
+}
+
 /** Exact environment payload passed to the official Codex SDK. */
 export function prepareCodexEnvironment(
   env: Record<string, string | undefined> | undefined,
@@ -205,7 +221,7 @@ class CodexSdkSession {
   constructor(options: CodexSdkSessionOptions) {
     const env = definedEnv(options.env);
     const codex = new Codex({
-      config: { developer_instructions: options.systemPrompt },
+      config: codexSdkConfig(options),
       ...(env === undefined ? {} : { env }),
       // Keep the SDK default so it also prepends its vendored tool directory
       // (notably `rg`). Tests and diagnostics may still select a binary.

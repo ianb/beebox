@@ -13,6 +13,7 @@ import { ensureCodexPluginInstalled } from "../../core/agent/ensure-codex-plugin
 import { noteEngineUnavailability } from "../../core/agent/engine-unavailability-apply.js";
 import { expandClaudeIncludes } from "../../core/agent-context-includes.js";
 import { findBoxRoot } from "../../lib/paths/core.js";
+import { loadCodexTelemetry } from "../../core/box/config.js";
 import { validateHookPathsResult } from "../../cli/validate-hook/command.js";
 import {
   appendCodexTurnUsage,
@@ -109,6 +110,8 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
       resumeSessionId: opts.resumeSessionId,
       additionalDirectories: opts.additionalDirectories,
       env: opts.env,
+      // Outside a box there is no setting to read, so analytics stay off.
+      analytics: boxRoot !== null && (await loadCodexTelemetry(boxRoot)) === "on",
     });
     if (session.id !== null) {
       sessionId = session.id;
