@@ -495,6 +495,44 @@ tests:
     response_not_contains: ["browser-task"]
     tags: [browser-task, discovery]
 
+  # Running a task: the executor procedure is the managed `browser-task` box
+  # skill (moved from the dev repo 2026-10-07). An audit session has no
+  # Claude in Chrome tools, so the right answer is to load the skill, decline
+  # to scan, and say how the boxholder starts a run.
+  # Status (2026-10-07, Claude): pass (1 run) on a fresh `bbx engine init`
+  # box; loaded the skill (Focus card, Submit a batch steps), declined to scan,
+  # named Claude Code in the box directory with Claude in Chrome. The two
+  # discovery audits above fail the same way with and without this change
+  # (no literal "browser-task"; image-url chosen over "attachment").
+  - id: browser-task-run-skill
+    prompt: >
+      Run the browser task in _content/tasks/Pottery-shows.browser-task.card.
+      If you cannot run it from this session, say what I need to do instead
+      and list the steps a run takes.
+    expected_level: knows_about
+    fixture:
+      _content/tasks/Pottery-shows.browser-task.card: |
+        ---
+        type: browser-task
+        start:
+          href: https://example.test/clay-studio
+        limit:
+          posts: 20
+        ---
+        Find pottery show announcements. Record each show's date, place, and
+        the post's permalink.
+    watch_for: >
+      Invokes or reads the box's browser-task skill; says this session has no
+      Claude in Chrome, so the boxholder starts Claude Code in the box
+      directory with Claude in Chrome and asks it to run the task; lists the
+      skill's steps (copy block from the card page, scan, records.json with
+      coverage, file_upload on the card page, Submit batch). Does NOT fetch
+      the source itself or ask for credentials.
+    correct_matches:
+      - 'Claude in Chrome'
+      - 'file_upload|Focus card|Submit batch|Copy prompt'
+    tags: [browser-task]
+
   # === Box Structure and Navigation ===
   #
   # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The

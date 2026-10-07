@@ -11,7 +11,8 @@ priority: backlog
 
 The checkout has 24 repository skills. Prompt-calibration shortened the original
 23 descriptions and revised the shared guidance; the later browser-task skill
-also received a focused workflow correction. These edits and static reviews do
+also received a focused workflow correction (on 2026-10-07 it moved into the
+product as a managed box skill and left this checkout). These edits and static reviews do
 not establish native skill activation rates.
 
 The historically vendored `.agents/skills/skill-creator/scripts/run_eval.py`

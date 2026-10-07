@@ -24,6 +24,7 @@ const written = await generateSkills(box.root);
 written
 => [
   "beebox-system-feedback",
+  "browser-task",
   "build-course",
   "calendar",
   "drive",
@@ -94,4 +95,19 @@ script path (`src/tricks/scripts/`), no shape fork:
 ```ts continue
 texts[names.indexOf("tricks")].includes("src/tricks/scripts/")
 => true
+```
+
+The `browser-task` skill is the executor procedure for a `browser-task` card. It
+ships with the box so a boxholder's Claude Code session in the box directory can
+run a task; it carries no reference to the development checkout:
+
+```ts
+const box = await makeTmpBox();
+await generateSkills(box.root);
+const bt = await readFile(skillFile(box, "browser-task/SKILL.md"), "utf8");
+bt.startsWith("---\nname: browser-task\n") && bt.includes("Copy prompt, schema") && bt.includes("file_upload")
+=> true
+
+/monorepo|beebox\/src/.test(bt)
+=> false
 ```

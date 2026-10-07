@@ -38,7 +38,7 @@ Related:
   OpenInstinct's secret handles can be a reference design for this.
 - [Connectors through Composio's managed auth](../features/2026-09-06-connectors-via-composio-managed-auth.md):
   another way to reduce setup work.
-- The `browser-task` skill runs box browser tasks in the boxholder's own
+- The box's managed `browser-task` skill runs box browser tasks in the boxholder's own
   Chrome. OpenInstinct uses a cloud browser instead.
 
 ## Research (incomplete)
