@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-07T20:58:55Z
+Generated: 2026-10-07T21:28:39Z
 Total documents: 479
 
 ## Issues
@@ -2914,10 +2914,10 @@ References:
 
 #### docs/implemented-plans/agent-applied-migrations.md
 
-Title: "Agent-applied migrations (via procedure checklists)" | 550 lines | shipped history | implemented
+Title: "Agent-applied migrations (via procedure checklists)" | 551 lines | shipped history | implemented
 
 Referenced by:
-- ../issues/docs-and-chores/2026-10-07-nidus-prior-art-note-misreads-paper.md:11 (mention) — `beebox/docs/implemented-plans/agent-applied-migrations.md` (prior-art
+- ../issues/closed/docs-and-chores/2026-10-07-nidus-prior-art-note-misreads-paper.md:12 (mention) — Closed: implemented by the acknowledgements workstream. The prior-art note in `beebox/docs/implemented-plans/agent-appli
 
 References:
 - → docs/procedure-implementation.md (mention)

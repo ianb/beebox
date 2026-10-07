@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-acknowledgements — verifying credit candidates against sources
 priority: backlog
+resolution: implemented
 ---
+
+Closed: implemented by the acknowledgements workstream. The prior-art note in `beebox/docs/implemented-plans/agent-applied-migrations.md` now states the checklist decision has no external source and records why the Nidus citation was withdrawn.
 
 `beebox/docs/implemented-plans/agent-applied-migrations.md` (prior-art
 section, around lines 151-156) cites Nidus (arXiv 2604.05080) as support for
