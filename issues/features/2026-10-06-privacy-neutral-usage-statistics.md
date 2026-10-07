@@ -27,17 +27,27 @@ chat text, URLs, box names, people, and free-text values of any kind. A rule
 that is easy to check: an event value must come from a closed vocabulary
 defined in code, never from the user or the box.
 
+## Decision (boxholder, 2026-10-06): collect locally, send explicitly
+
+- **Collected locally on the box**, and probably **opt-in**: nothing is
+  recorded until the boxholder turns it on.
+- **Sent only by an explicit act.** The box never uploads on its own. The
+  boxholder sends a report deliberately; they may choose to schedule that
+  send, but a schedule is something they set up, not a default.
+- Before sending, the boxholder can see exactly what will go (the report
+  contents, not a description of them). A security-report egress row covers
+  the send.
+
 ## Questions to decide
 
-- **Who sees it.** Kept on the machine for the developer's own boxes only, or
-  sent from other people's boxes to the developer? Sending off the box needs
-  explicit opt-in, a visible list of what is collected, a security-report
-  egress row, and a way to see and delete what was sent. For a self-hosted
-  product this is the central decision.
 - **Event vocabulary.** A typed, closed list of events in shared code, so the
   frontend cannot emit an unlisted event or a free-form value, and a lint or
   test that enforces it.
-- **Storage and aggregation.** Raw events or counts per day; retention.
+- **Storage and aggregation.** Raw events or counts per day; retention;
+  whether a sent report is cleared locally afterwards.
+- **The send.** Where a report goes (an endpoint the developer runs, or a
+  file the boxholder shares), its format, and how a scheduled send is set up
+  (an ordinary box schedule the boxholder creates).
 - **Reading it.** A dev dashboard view (workstreams-app) for the developer's
   boxes, at minimum.
 
