@@ -109,7 +109,10 @@ tour(
     await t.go(`${CARD}structured.record.card`);
     await t.checkpoint("structured");
     await t.expect.heading("Lantern inventory", { level: 2 });
-    await t.expect.custom("structured properties remain visible", (snapshot) => snapshot.includes("matching lamps"));
+    await t.expect.custom("structured fields stay off the front", (snapshot) => !snapshot.includes("matching lamps"));
+    await clickVisibleButton(t, "Properties");
+    await t.expect.custom("structured fields show under Properties", (snapshot) => snapshot.includes("Fields") && snapshot.includes("matching lamps"));
+    await clickVisibleButton(t, "Back to card");
     await t.expect.noPageErrors();
 
     await t.go(`${CARD}long-form.memo.card`);
