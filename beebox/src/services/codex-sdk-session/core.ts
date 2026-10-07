@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { CODEX_BOX_SANDBOX } from "./sandbox.js";
+import { CODEX_FIXED_CONFIG } from "../codex-binary.js";
 import { toError } from "../../shared/error-guards.js";
 import { declaredPresent } from "../../lib/declared-present.js";
 import type { ChatContentBlock } from "../claude-chat-types.js";
@@ -29,6 +30,8 @@ export interface CodexSdkSessionOptions {
   additionalDirectories?: string[] | undefined;
   env?: Record<string, string | undefined> | undefined;
   turnTimeoutMs?: number | undefined;
+  /** The box's `codexTelemetry` choice. Required so no caller forgets it. */
+  analytics: boolean;
 }
 
 export interface CodexSdkTurnResult {
@@ -158,6 +161,19 @@ function definedEnv(env: Record<string, string | undefined> | undefined): Record
   );
 }
 
+/**
+ * The `--config` overrides every Codex run gets. Analytics follow the box
+ * setting. The update check and feedback upload are always off: the box pins
+ * Codex's version and never files feedback.
+ */
+export function codexSdkConfig(options: Pick<CodexSdkSessionOptions, "systemPrompt" | "analytics">) {
+  return {
+    developer_instructions: options.systemPrompt,
+    analytics: { enabled: options.analytics },
+    ...CODEX_FIXED_CONFIG,
+  };
+}
+
 /** Exact environment payload passed to the official Codex SDK. */
 export function prepareCodexEnvironment(
   env: Record<string, string | undefined> | undefined,
@@ -205,7 +221,7 @@ class CodexSdkSession {
   constructor(options: CodexSdkSessionOptions) {
     const env = definedEnv(options.env);
     const codex = new Codex({
-      config: { developer_instructions: options.systemPrompt },
+      config: codexSdkConfig(options),
       ...(env === undefined ? {} : { env }),
       // Keep the SDK default so it also prepends its vendored tool directory
       // (notably `rg`). Tests and diagnostics may still select a binary.

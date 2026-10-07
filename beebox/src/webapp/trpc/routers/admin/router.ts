@@ -42,6 +42,8 @@ const boxConfigSchema = z.object({
   hqDictation: z.enum(["on", "off"]).catch("off"),
   // Same fail-closed reading as `loadClaudeCodeTelemetry`: an invalid value is off.
   claudeCodeTelemetry: z.enum(["on", "off"]).default("on").catch("off"),
+  // Codex analytics are opt-in (`loadCodexTelemetry`).
+  codexTelemetry: z.enum(["on", "off"]).default("off").catch("off"),
   agentEngine: z.enum(["claude", "codex"]).default("claude"),
   // Deliberately a plain string, not an enum over the model registry: this is
   // a `parse` of the whole file, so a stale or hand-typed model would throw the
@@ -232,6 +234,7 @@ export const adminRouter = router({
       engines: config.engines ?? { [config.agentEngine]: true },
       hqDictation: config.hqDictation,
       claudeCodeTelemetry: config.claudeCodeTelemetry,
+      codexTelemetry: config.codexTelemetry,
     };
   }),
 
@@ -260,6 +263,7 @@ export const adminRouter = router({
           engines: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional(),
           hqDictation: z.enum(["on", "off"]).optional(),
           claudeCodeTelemetry: z.enum(["on", "off"]).optional(),
+          codexTelemetry: z.enum(["on", "off"]).optional(),
         })
         .refine((v) => Object.values(v).some((field) => field !== undefined), {
           message: "At least one box configuration field is required",
@@ -278,6 +282,7 @@ export const adminRouter = router({
         ...(input.engines === undefined ? {} : { engines: input.engines }),
         ...(input.hqDictation === undefined ? {} : { hqDictation: input.hqDictation }),
         ...(input.claudeCodeTelemetry === undefined ? {} : { claudeCodeTelemetry: input.claudeCodeTelemetry }),
+        ...(input.codexTelemetry === undefined ? {} : { codexTelemetry: input.codexTelemetry }),
       });
       if (result.commitError) {
         console.error(`[admin] box config was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
@@ -293,6 +298,7 @@ export const adminRouter = router({
         engines: saved.engines ?? { [saved.agentEngine]: true },
         hqDictation: saved.hqDictation,
         claudeCodeTelemetry: saved.claudeCodeTelemetry,
+        codexTelemetry: saved.codexTelemetry,
       };
     }),
 

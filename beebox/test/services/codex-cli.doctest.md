@@ -64,7 +64,9 @@ const dir = await mkdtemp(join(tmpdir(), "bbx-codex-auth-"));
 const binary = join(dir, "codex-fixture.mjs");
 await writeFile(binary, `#!/usr/bin/env node
 import * as readline from "node:readline";
-if (process.argv[2] === "login" && process.argv[3] === "status") {
+// Bee Box prefixes every call with \`-c key=value\` overrides (codexCliArgs).
+const command = process.argv.slice(2).filter((arg, i, all) => arg !== "-c" && all[i - 1] !== "-c");
+if (command[0] === "login" && command[1] === "status") {
   console.log("Not logged in");
   process.exit(1);
 }

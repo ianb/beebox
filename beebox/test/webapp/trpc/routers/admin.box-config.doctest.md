@@ -315,6 +315,18 @@ JSON.stringify([before, saved.claudeCodeTelemetry, (await caller(box.root).admin
 await box.cleanup();
 ```
 
+## Codex analytics default off and the owner can turn them on
+
+```ts
+const box = await makeTmpBox({ git: true });
+const before = (await caller(box.root).admin.boxConfig()).codexTelemetry;
+const saved = await caller(box.root).admin.updateBoxConfig({ codexTelemetry: "on" });
+[before, saved.codexTelemetry, (await caller(box.root).admin.boxConfig()).codexTelemetry]
+=> ["off", "on", "on"]
+
+await box.cleanup();
+```
+
 ## A Git failure does not falsely report that the saved config rolled back
 
 ```ts

@@ -208,7 +208,10 @@ The summary:
   redacted error reports to an error-tracking vendor. Both are on by
   default and can be turned off per box in Admin → Agent engine and model;
   a chat already running picks up the change when its agent next starts.
-  Runs on non-Claude models never send them.
+  Runs on non-Claude models never send them. Codex, when a box uses it,
+  has its own analytics to OpenAI; they are off unless the box turns them
+  on in the same section, because they include hashes of the lines each
+  change adds.
 
 One caveat worth naming: the iOS app's dictation prefers Apple's
 on-device recognizer, but on older systems it falls back to Apple's
