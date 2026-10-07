@@ -16,7 +16,9 @@ import {
   parseHealth,
   parseLastDeployRecord,
   parseMigrations,
+  redactHost,
   section,
+  sshFailureReason,
   splitSections,
   type DeployStatusReport,
 } from "./deploy-status-lib.js";
@@ -157,4 +159,26 @@ test("a healthy report flags only boxes that need attention", () => {
   assert.match(text, /Disk {7}1\.0 GiB free .* LOW — tell the boxholder/);
   assert.match(text, /Migrations 2 boxes, 1 need attention\n {11}b: no migration manifest/);
   assert.doesNotMatch(text, / a: /);
+});
+
+test("ssh diagnostics never carry the server's name or address into the report", () => {
+  const names = ["deploy@prod.example.test", "prod.example.test"];
+  assert.equal(
+    redactHost("ssh: connect to host 192.0.2.7 port 22: Connection refused", names),
+    "ssh: connect to host <deploy target> port 22: Connection refused",
+  );
+  assert.equal(
+    redactHost("deploy@prod.example.test: Permission denied (publickey).", names),
+    "<deploy target>: Permission denied (publickey).",
+  );
+  assert.equal(
+    redactHost("ssh: Could not resolve hostname prodalias: nodename nor servname provided", names),
+    "ssh: Could not resolve hostname <deploy target>: nodename nor servname provided",
+  );
+});
+
+test("an ssh failure reports a fixed reason, never ssh's own line", () => {
+  assert.equal(sshFailureReason("ssh: connect to host 2001:db8::dead:beef port 22: Connection refused\n"), "the connection was refused");
+  assert.equal(sshFailureReason("deploy@resolved.example.test: Permission denied (publickey).\n"), "authentication was refused");
+  assert.equal(sshFailureReason("kex_exchange_identification: read: Connection reset by peer"), "ssh exited 255; run ssh -v against the target for detail");
 });

@@ -204,12 +204,21 @@ async function runEngine(opts: RunOptions, logPath: string): Promise<ChildResult
     timedOut = true;
     stopGroup();
   }, opts.timeoutMs);
+  // Interrupted: stop the group with the same TERM-then-KILL escalation as a
+  // timeout, and exit once the child is gone.
+  let interrupted: NodeJS.Signals | undefined;
   const onSignal = (signal: NodeJS.Signals): void => {
-    killGroup(signal);
-    process.exit(128 + (signal === "SIGINT" ? 2 : 15));
+    if (interrupted !== undefined) {
+      // Another interrupt kills the group at once.
+      killGroup("SIGKILL");
+      process.exit(128 + (signal === "SIGINT" ? 2 : 15));
+    }
+    interrupted = signal;
+    clearTimeout(timer);
+    stopGroup();
   };
-  process.once("SIGINT", onSignal);
-  process.once("SIGTERM", onSignal);
+  process.on("SIGINT", onSignal);
+  process.on("SIGTERM", onSignal);
 
   const [code, signal] = await new Promise<[number | null, NodeJS.Signals | null]>((resolve, reject) => {
     child.once("error", reject);
@@ -219,6 +228,10 @@ async function runEngine(opts: RunOptions, logPath: string): Promise<ChildResult
   clearTimeout(forced);
   process.off("SIGINT", onSignal);
   process.off("SIGTERM", onSignal);
+  // The direct child closing does not mean its descendants did; a stopped run
+  // takes the rest of its group with it.
+  if (timedOut || interrupted !== undefined) killGroup("SIGKILL");
+  if (interrupted !== undefined) process.exit(128 + (interrupted === "SIGINT" ? 2 : 15));
   await new Promise<void>((resolve) => log.end(resolve));
   return { code, signal, timedOut, stdout };
 }

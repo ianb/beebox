@@ -237,3 +237,38 @@ export function splitSections(transcript: string): Map<string, Section<string>> 
 export function section(sections: Map<string, Section<string>>, name: string): Section<string> {
   return sections.get(name) ?? degraded(`the server sent no ${name} section (remote script cut short)`);
 }
+
+/**
+ * ssh diagnostics name the server ("connect to host <h> port 22", "Could not
+ * resolve hostname <h>", "<user>@<h>: Permission denied"), and `--json` output
+ * can end up in tracked files. Replace the configured names, any `host`/
+ * `hostname` operand (an ssh-config alias can resolve to a name we were never
+ * given), and IPv4 addresses.
+ */
+export function redactHost(text: string, names: string[]): string {
+  const PLACEHOLDER = "<deploy target>";
+  let out = text;
+  for (const name of names.filter((n) => n !== "").toSorted((a, b) => b.length - a.length)) {
+    out = out.split(name).join(PLACEHOLDER);
+  }
+  return out
+    .replace(/\b(host(?:name)?) (?!<deploy target>)[^\s:]+/gi, `$1 ${PLACEHOLDER}`)
+    .replace(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g, PLACEHOLDER);
+}
+
+/**
+ * ssh's own failure lines embed whatever name or address it connected to
+ * (an IPv6 address, an ssh-config HostName we were never given), so the report
+ * carries a fixed reason instead of the line. `ssh -v` gives the detail.
+ */
+export function sshFailureReason(stderr: string): string {
+  const reasons: Array<[RegExp, string]> = [
+    [/permission denied/i, "authentication was refused"],
+    [/connection refused/i, "the connection was refused"],
+    [/timed out/i, "the connection timed out"],
+    [/could not resolve/i, "the host name did not resolve"],
+    [/host key verification failed/i, "host key verification failed"],
+    [/no route to host|network is unreachable/i, "the network is unreachable"],
+  ];
+  return reasons.find(([pattern]) => pattern.test(stderr))?.[1] ?? "ssh exited 255; run ssh -v against the target for detail";
+}

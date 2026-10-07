@@ -36,7 +36,9 @@ import {
   parseHealth,
   parseLastDeployRecord,
   parseMigrations,
+  redactHost,
   section,
+  sshFailureReason,
   splitSections,
   type CommitsReport,
   type DeployRecord,
@@ -90,8 +92,19 @@ function mainCheckout(): string | null {
   return common === null ? null : path.dirname(common);
 }
 
+function isEnoent(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+
+// A deploy can take or drop the lock between any two reads; a vanished file
+// reads as absent.
 function readIfPresent(file: string): string | null {
-  return existsSync(file) ? readFileSync(file, "utf8") : null;
+  try {
+    return readFileSync(file, "utf8");
+  } catch (error) {
+    if (isEnoent(error)) return null;
+    throw error;
+  }
 }
 
 function lastNonEmptyLine(text: string | null): string | null {
@@ -113,11 +126,22 @@ function lockState(mainRoot: string): LockState {
   if (!existsSync(lockDir)) {
     return { state: "free", requestedSha: lastNonEmptyLine(readIfPresent(path.join(mainRoot, ".deploy-requested"))) };
   }
-  const pid = Number(lastNonEmptyLine(readIfPresent(path.join(lockDir, "pid"))));
+  const pidText = readIfPresent(path.join(lockDir, "pid"));
+  if (pidText === null && !existsSync(lockDir)) {
+    return { state: "free", requestedSha: lastNonEmptyLine(readIfPresent(path.join(mainRoot, ".deploy-requested"))) };
+  }
+  const pid = Number(lastNonEmptyLine(pidText));
   if (!Number.isInteger(pid) || pid <= 0) return { state: "stale", pid: null };
   if (!pidAlive(pid)) return { state: "stale", pid };
   const logTail = lastNonEmptyLine(readIfPresent(path.join(mainRoot, "beebox", "deploy", ".last-deploy.log")));
-  return { state: "held", pid, alive: true, since: statSync(lockDir).mtime.toISOString(), logTail };
+  let since: string;
+  try {
+    since = statSync(lockDir).mtime.toISOString();
+  } catch (error) {
+    if (!isEnoent(error)) throw error;
+    return { state: "free", requestedSha: lastNonEmptyLine(readIfPresent(path.join(mainRoot, ".deploy-requested"))) };
+  }
+  return { state: "held", pid, alive: true, since, logTail };
 }
 
 function lastDeploy(mainRoot: string): Section<DeployRecord> {
@@ -162,16 +186,18 @@ function commits(args: { info: Section<string>; mainRoot: string }): Section<Com
   });
 }
 
-function remoteTranscript(sshTarget: string): Section<string> {
+function remoteTranscript(target: { sshTarget: string; host: string }): Section<string> {
+  const { sshTarget } = target;
+  const stderrLine = (stderr: string): string => redactHost(lastNonEmptyLine(stderr) ?? "no detail", [sshTarget, target.host]);
   const result = spawnSync(
     "ssh",
     ["-o", "BatchMode=yes", "-o", "ConnectTimeout=8", sshTarget, "bash -s"],
     { input: REMOTE_SCRIPT, encoding: "utf8", timeout: 240_000 },
   );
   if (result.error !== undefined) return degraded(`ssh did not run: ${result.error.message}`);
-  if (result.status === 255) return degraded(`ssh to the deploy target failed: ${lastNonEmptyLine(result.stderr) ?? "no detail"}`);
+  if (result.status === 255) return degraded(`ssh to the deploy target failed: ${sshFailureReason(result.stderr)}`);
   if (!result.stdout.includes("@@section end")) {
-    return degraded(`remote status script ended early (exit ${String(result.status)}): ${lastNonEmptyLine(result.stderr) ?? "no detail"}`);
+    return degraded(`remote status script ended early (exit ${String(result.status)}): ${stderrLine(result.stderr)}`);
   }
   return available(result.stdout);
 }
@@ -191,7 +217,7 @@ export function collect(): DeployStatusReport {
   const target = deployTarget(REPO_ROOT);
   const transcript = target === null
     ? degraded<string>(`no deploy target: beebox/deploy/target.env is absent here and in the main checkout (${mainRoot})`)
-    : remoteTranscript(target.sshTarget);
+    : remoteTranscript(target);
   const remote = remoteSections(transcript);
   const services = section(remote, "services");
   const healthz = section(remote, "healthz");

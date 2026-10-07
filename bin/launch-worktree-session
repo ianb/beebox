@@ -249,6 +249,12 @@ if [ -n "$existing" ]; then
   } >&2
   exit 1
 fi
+# A removed workstream is absent from the inventory, but `remove --keep-branch`
+# leaves its branch, and creation attaches to an existing branch without -b.
+if git -C "$MONO" show-ref --verify --quiet "refs/heads/worktree-$wt"; then
+  echo "launch-worktree-session: refusing: branch worktree-$wt already exists (a removed workstream's kept branch?). Launching would attach to it instead of branching fresh. Choose another name, or delete or resume that branch." >&2
+  exit 1
+fi
 
 # The new worktree branches from main (or --base-ref), so it cannot see this
 # checkout's uncommitted files or unlanded commits.

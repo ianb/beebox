@@ -24,6 +24,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { REPO_PATH_DIRS } from "../beebox/src/dev/doc-check/file-paths.js";
 
 type Severity = "error" | "info";
 
@@ -40,7 +41,8 @@ const BODY_LINE_LIMIT = 400;
 const CODEX_IGNORED_KEYS = ["allowed-tools", "context", "agent", "background", "hooks", "paths"];
 // `/name` or `$name` not inside a path, URL, or longer word.
 const SIGIL = /(^|[^\w$./~-])([$/])([a-z][\da-z-]*)(?![\w/-])/g;
-const PATH_PREFIXES = ["bin/", "beebox/", "docs/", "src/", ".claude/"];
+// The same directory list doc-check's backticked-path rule recognizes.
+const PATH_PREFIXES = REPO_PATH_DIRS.map((dir) => `${dir}/`);
 
 interface ParsedDoc {
   frontmatter: Record<string, unknown> | undefined;
@@ -133,8 +135,8 @@ function isGitIgnored(root: string, path: string): boolean {
 }
 
 function pathResolves(root: string, path: string): boolean {
-  if (existsSync(join(root, path)) || isGitIgnored(root, path)) return true;
-  return (path.startsWith("src/") || path.startsWith("docs/")) && existsSync(join(root, "beebox", path));
+  // Like doc-check, a package-relative path may name the main package.
+  return [path, `beebox/${path}`].some((candidate) => existsSync(join(root, candidate)) || isGitIgnored(root, candidate));
 }
 
 function filesUnder(dir: string, prefix: string): string[] {

@@ -9,6 +9,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   readlinkSync,
   rmSync,
@@ -126,7 +127,8 @@ test("prunes entries with no tracked skill source; keeps git-tracked ones", () =
   writeFileSync(join(outside, "keep.txt"), "keep\n");
   symlinkSync(outside, join(skills, "foreign"), "dir");
   put(".agents/skills/tracked-native/SKILL.md", "tracked\n");
-  git("add", "-f", ".agents/skills/tracked-native/SKILL.md");
+  symlinkSync(outside, join(skills, "tracked-link"), "dir");
+  git("add", "-f", ".agents/skills/tracked-native/SKILL.md", ".agents/skills/tracked-link");
   git("commit", "-q", "-m", "track a native skill");
 
   const written = generateSkillLinks(repo);
@@ -135,22 +137,24 @@ test("prunes entries with no tracked skill source; keeps git-tracked ones", () =
     assert.equal(existsSync(join(skills, gone)), false, gone);
   assert.equal(readFileSync(join(outside, "keep.txt"), "utf8"), "keep\n");
   assert.equal(readFileSync(join(skills, "tracked-native", "SKILL.md"), "utf8"), "tracked\n");
+  assert.equal(readlinkSync(join(skills, "tracked-link")), outside);
   // The tracked-name native skill from the previous test is still untouched.
   assert.equal(readFileSync(join(skills, "finish", "SKILL.md"), "utf8"), "native\n");
   assert.ok(written.includes(".agents/skills/later"));
   rmSync(outside, { recursive: true, force: true });
-  git("rm", "-q", "-r", "--cached", ".agents/skills/tracked-native");
+  git("rm", "-q", "-r", "--cached", ".agents/skills/tracked-native", ".agents/skills/tracked-link");
   git("commit", "-q", "-m", "untrack native skill");
 });
 
-test("does not prune when .agents/skills resolves outside the checkout", () => {
+test("writes nothing when .agents/skills resolves outside the checkout", () => {
   const elsewhere = mkdtempSync(join(tmpdir(), "generate-agents-md-elsewhere-"));
   writeFileSync(join(elsewhere, "precious.txt"), "precious\n");
   const skills = join(repo, ".agents", "skills");
   rmSync(skills, { recursive: true, force: true });
   symlinkSync(elsewhere, skills, "dir");
-  generateSkillLinks(repo);
+  assert.deepEqual(generateSkillLinks(repo), []);
   assert.equal(readFileSync(join(elsewhere, "precious.txt"), "utf8"), "precious\n");
+  assert.deepEqual(readdirSync(elsewhere), ["precious.txt"]);
   unlinkSync(skills);
   rmSync(elsewhere, { recursive: true, force: true });
 });

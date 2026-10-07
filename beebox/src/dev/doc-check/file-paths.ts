@@ -21,9 +21,12 @@
 import * as path from "node:path";
 
 // A token must start with one of these repo directories (repo root or package
-// root) and end in a file extension.
-const CANDIDATE_RE =
-  /^(?:beebox|bin|docs|src|test|schedules|workstreams-app|ios-app|canvas-loop|issues|\.claude|agent-doctest|deploy|scan-uploader|beebox-clerk|personal-vibe-check|research|dev)\/\S*\.[A-Za-z]{1,5}$/;
+// root) and end in a file extension. bin/skill-lint.ts shares the list.
+export const REPO_PATH_DIRS = [
+  "beebox", "bin", "docs", "src", "test", "schedules", "workstreams-app", "ios-app", "canvas-loop", "issues",
+  ".claude", "agent-doctest", "deploy", "scan-uploader", "beebox-clerk", "personal-vibe-check", "research", "dev",
+];
+const CANDIDATE_RE = /^[^\s/]+\/\S*\.[A-Za-z]{1,5}$/;
 const PLACEHOLDER_RE = /[*<>{}…]|\.{3}/;
 const LINE_SUFFIX_RE = /:L?\d+(?:-L?\d+)?$/;
 // `issues/<category>/<name>.md` (not already under closed/).
@@ -53,7 +56,7 @@ export interface FilePathProblem {
 export function candidatePath(token: string, docRel: string): string | undefined {
   if (PLACEHOLDER_RE.test(token)) return undefined;
   const file = token.replace(LINE_SUFFIX_RE, "");
-  if (!CANDIDATE_RE.test(file)) return undefined;
+  if (!CANDIDATE_RE.test(file) || !REPO_PATH_DIRS.includes(file.split("/")[0] ?? "")) return undefined;
   if (BOX_FACING_PREFIXES.some((p) => docRel.startsWith(p))) return undefined;
   return file;
 }

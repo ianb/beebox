@@ -42,34 +42,35 @@ function lstatIfPresent(
 // symlink, directory, or file whose name has no tracked `.claude/skills/<name>/
 // SKILL.md`. Real directories here are pre-symlink copies (the main checkout
 // kept three from 2026-07 that Codex kept loading). Safety: nothing is removed
-// unless `.agents/skills` resolves to exactly `<checkout>/.agents/skills`, and
-// a directory holding a git-tracked file is skipped with a warning.
+// unless `.agents/skills` resolves to exactly `<checkout>/.agents/skills`
+// (returns false otherwise, and the caller writes nothing there either), and
+// an entry that is or holds a git-tracked file is skipped with a warning.
 function pruneUnexpectedSkillEntries(
   checkoutDir: string,
   expected: ReadonlySet<string>,
-): void {
+): boolean {
   const skillsDir = join(checkoutDir, ".agents", "skills");
   const canonicalSkillsDir = join(realpathSync(checkoutDir), ".agents", "skills");
   if (realpathSync(skillsDir) !== canonicalSkillsDir) {
     console.warn(
-      `generate-agents-md: .agents/skills resolves outside ${canonicalSkillsDir}; not pruning it`,
+      `generate-agents-md: .agents/skills resolves outside ${canonicalSkillsDir}; not touching it`,
     );
-    return;
+    return false;
   }
   for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
     if (expected.has(entry.name)) continue;
     const path = join(skillsDir, entry.name);
     if (dirname(path) !== skillsDir) continue;
     const rel = join(".agents", "skills", entry.name);
+    if (gitLsFiles(checkoutDir, `:(literal)${rel}`).length > 0) {
+      console.warn(
+        `generate-agents-md: not removing ${rel}: it is or contains git-tracked files`,
+      );
+      continue;
+    }
     if (entry.isSymbolicLink()) {
       unlinkSync(path);
       console.log(`generate-agents-md: removed stale skill link ${rel}`);
-      continue;
-    }
-    if (gitLsFiles(checkoutDir, `:(literal)${rel}`).length > 0) {
-      console.warn(
-        `generate-agents-md: not removing ${rel}: it contains git-tracked files`,
-      );
       continue;
     }
     rmSync(path, { recursive: true });
@@ -77,6 +78,7 @@ function pruneUnexpectedSkillEntries(
       `generate-agents-md: removed ${rel}: no tracked .claude/skills/${entry.name}/SKILL.md`,
     );
   }
+  return true;
 }
 
 // Link every tracked Claude skill into the repo-scoped location Codex scans.
@@ -97,9 +99,17 @@ export function generateSkillLinks(checkoutDir: string): string[] {
     .filter((name): name is string => name !== undefined)
     .toSorted();
   const expected = new Set(skillNames);
-  const skillsDir = join(checkoutDir, ".agents", "skills");
+  const agentsDir = join(checkoutDir, ".agents");
+  mkdirSync(agentsDir, { recursive: true });
+  // Checked before creating `skills`, which would otherwise land wherever a
+  // redirected `.agents` points.
+  if (realpathSync(agentsDir) !== join(realpathSync(checkoutDir), ".agents")) {
+    console.warn("generate-agents-md: .agents resolves outside the checkout; not touching it");
+    return [];
+  }
+  const skillsDir = join(agentsDir, "skills");
   mkdirSync(skillsDir, { recursive: true });
-  pruneUnexpectedSkillEntries(checkoutDir, expected);
+  if (!pruneUnexpectedSkillEntries(checkoutDir, expected)) return [];
 
   const written: string[] = [];
   for (const name of skillNames) {
