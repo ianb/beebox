@@ -23,8 +23,8 @@ import { BoxScreenPage } from "../../../src/pages/box-screen/BoxScreenPage.js";
 
 globalThis.React = React;
 
-/** Render `path` and report what mounted and which queries the page subscribed to. */
-async function render(path: string) {
+/** Render `path` and report what mounted and which queries the page subscribed to; `home` seeds `quickChat.home`. */
+async function render(path: string, home?: unknown) {
   let shellMounts = 0;
   function ConversationShell() { shellMounts += 1; return null; }
   function Layout() {
@@ -42,6 +42,7 @@ async function render(path: string) {
   await router.load();
   const queryClient = new QueryClient();
   queryClient.setQueryData(["boxes"], { boxes: [{ slug: "test1", name: "Test box" }] });
+  if (home !== undefined) queryClient.setQueryData([["quickChat", "home"], { type: "query" }], home);
   // A link that never answers: the render records which procedures it asked for.
   const client = createTRPCClient({ links: [() => () => observable(() => () => {})] });
   const html = renderToString(
@@ -77,6 +78,17 @@ absent until `quickChat.home` answers with at least one.
 ```ts continue
 ["In this box", "Dashboard", "Storage summary", "Shortcuts"].filter((text) => page.html.includes(text))
 => []
+```
+
+With one `nav.card` entry in the answer, the section appears with that link
+and its heading is the only one besides the recent chats.
+
+```ts
+const html = (await render("/test1/box", { open: [], recentlySent: [], recentChats: [], shortcuts: [{ label: "Questions", to: "/questions" }] })).html;
+const headings = [...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/g)].map(([, text]) => text);
+const shortcuts = [...html.matchAll(/<a[^>]*id="(bbx-box-screen-shortcut-\d+)"[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/g)].map(([, id, href, text]) => `${id}: ${text} → ${href}`);
+[headings, shortcuts]
+=> [["Pick up where you left off", "Shortcuts"], ["bbx-box-screen-shortcut-0: Questions → /test1/questions"]]
 ```
 
 The same layout mounts the shell for an ordinary page, so the check above is
