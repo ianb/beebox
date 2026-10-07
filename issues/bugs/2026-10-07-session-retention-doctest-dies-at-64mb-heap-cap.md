@@ -28,3 +28,7 @@ starts, so a small increase in import cost is enough to push the child past
 Possible step: use the same approach as the sibling doctest. Assert on the heap
 that the parse result retains after a forced GC, under a 128 MB backstop
 cap, and stop relying on whether the child survives 64 MB.
+
+## Note (2026-10-07)
+
+This flake also blocks the weekly knip-sweep from landing: its prompt lands only on a fully green suite (`schedules/knip-sweep/prompt.md`, Landing). Run 20261007-081728 cleared 44 findings and stopped on this file alone; the main session landed that branch by hand (65dc54d06). A landing bar of "no failure that does not also fail on main" was proposed and deferred by the developer, because the full suite has too many flakes to be a reliable bar either way.
