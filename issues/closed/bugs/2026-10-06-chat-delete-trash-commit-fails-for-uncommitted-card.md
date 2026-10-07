@@ -1,12 +1,15 @@
 ---
 title: "Deleting a chat fails its git step for a card never committed, and should delete the card rather than move it to Trash"
 workstream: chat-delete-permanent
+resolution: implemented
 area: beebox
 labels: [chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder saw "its git commit is still pending" when deleting a chat
 ---
+
+Resolved by commit `97b2752a0` in workstream `chat-delete-permanent`. Chat deletion now permanently removes the chat card, committing tracked removals; `bbx rm` retains Trash and tolerates untracked source cards.
 
 Deleting a chat sometimes ends with: "The transcript is gone and the chat card
 is in Trash, but its git commit is still pending. Retry cleanup to commit the
