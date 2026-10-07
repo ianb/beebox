@@ -18,6 +18,7 @@ import { AttachedComments } from "../AttachedComments";
 import { makeEmbedComponents } from "../FigureEmbed";
 import { FrontmatterFields } from "./FrontmatterFields";
 import { splitCardFields } from "../../lib/card-field-faces";
+import { blankLeadingTitleHeading } from "@shared/leading-title-heading";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../../lib/selection/quote-extract";
 import type { RendererProps } from "../../file-type-registry";
 import type { ReactNode } from "react";
@@ -86,7 +87,13 @@ export function MarkdownCardView(props: RendererProps & { hideEmptyBody?: boolea
   const front = data.frontmatter === undefined
     ? undefined
     : splitCardFields(data.frontmatter, { hasBodyField: data.schema?.hasBodyField ?? null, mode }).front;
-  const body = data.body;
+  // The title is shown from `title:`; a body opening with the same `# heading`
+  // would show it twice. The line is blanked, not removed, so todo locators
+  // (which count body lines from `bodyLineOffset`) keep their numbers.
+  const title = data.frontmatter?.["title"];
+  const body = data.body === undefined || typeof title !== "string"
+    ? data.body
+    : blankLeadingTitleHeading(data.body, title);
   const speakers = body === undefined ? [] : extractQuoteSpeakers(body);
   const { boxSlug } = useParams({ strict: false });
   // Inline figure embeds: `![](view:…figure.card)` renders the figure in place.

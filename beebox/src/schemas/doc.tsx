@@ -48,7 +48,8 @@ The doc's body lives **inline in the .doc.card file itself**, after
 the closing \`---\` of the frontmatter. Plain markdown. Headings,
 lists, code blocks, links, etc. — anything markdown supports. Don't
 put the body in a separate \`.md\` file beside the card; the card *is*
-the document.
+the document. The title is shown from \`title:\`; do not repeat it as a
+heading at the top of the body.
 
 A minimal doc card on disk:
 
@@ -56,8 +57,6 @@ A minimal doc card on disk:
 ---
 title: Trip Report
 ---
-# Trip Report
-
 We drove down on Friday...
 \`\`\`
 

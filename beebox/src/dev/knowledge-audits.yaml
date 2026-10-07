@@ -776,6 +776,30 @@ tests:
       The agent should describe the concrete action (e.g., move the recipe), not
       just restate the question.
 
+  # Status (2026-10-06, card-reading-properties Track C, Claude): pass on a
+  # clean disposable clone of the test1 clone (the clone itself carries the
+  # worktree's package link uncommitted); 5 reads, 0 searches, 38k ctx. The
+  # agent used `bbx create --describe-template doc` and passed prose as body.
+  - id: doc-card-title-not-repeated
+    prompt: >
+      Make a short doc card in _content/notes/ titled "Ferry Times": the
+      Saturday ferry leaves at 9:10 and 4:40, and parking takes cash only.
+      Then paste the card file's full contents in your reply.
+    expected_level: knows_directly
+    watch_for: >
+      Writes the title in `title:` and starts the body with the content, not
+      with a `# Ferry Times` heading that repeats the title.
+    correct_contains: ["title:"]
+    response_not_matches: ['---[ \t]*\r?\n\s*#[ \t]+ferry times']
+    cards_contain: ["Ferry Times", "9:10"]
+    max_turns: 15
+    tags: [cards, doc]
+    notes: >
+      The card page shows the title from `title:`; a body opening with the
+      same H1 shows it twice. The doc instructions used to model that H1.
+      The reply check matches the frontmatter's closing `---` followed by the
+      heading, so it reads the pasted file, not prose about it.
+
   # Status (2026-09-27, doc-structure Track 4, QUESTIONS): pass on the test1
   # clone, 3 reads, 1 searches, 36k ctx.
   - id: question-answer-creates-job
