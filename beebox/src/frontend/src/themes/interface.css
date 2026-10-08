@@ -2,7 +2,7 @@
    reading surface: browse detail, sidecar panels, and their tabs. */
 .bbx-interface-card-desk[data-card-content="card"],
 .bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
-  background: var(--bbx-desk-background, #e4e0d9);
+  background: var(--bbx-desk-pattern, none), var(--bbx-desk-background, #e4e0d9);
   padding: 20px;
 }
 
@@ -13,7 +13,7 @@
 
 .bbx-interface-browse-panel[data-card-content="card"] {
   border-radius: 12px;
-  background: var(--bbx-desk-background, #e4e0d9);
+  background: var(--bbx-desk-pattern, none), var(--bbx-desk-background, #e4e0d9);
 }
 
 .bbx-interface-browse-panel > .bbx-interface-card-desk {
@@ -97,7 +97,7 @@
    the whole tab-and-card assembly rather than cutting between its parts. */
 .bbx-companion-desk[data-active-card] {
   --bbx-desk-gutter: 20px;
-  background: var(--bbx-desk-background, #e4e0d9);
+  background: var(--bbx-desk-pattern, none), var(--bbx-desk-background, #e4e0d9);
 }
 .bbx-companion-desk[data-active-card] > .bbx-companion-tabs {
   margin: var(--bbx-desk-gutter) var(--bbx-desk-gutter) 0;

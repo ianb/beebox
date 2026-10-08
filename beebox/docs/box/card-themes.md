@@ -23,8 +23,9 @@ theme:
 
 Choose **Use default** to remove the card override and let the box resolve the
 theme. The available card built-ins are `plain` (`neutral`), `paper` (`cream`,
-`manila`, `blue`), and `post-it` (`yellow`, `rose`, `mint`). The system-only
-`spectrum` (`gradient`) theme is available for app chrome. Name the theme and
+`manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), and `letter-set`
+(`strawberry`, `lemon`, `sky`). The system-only `spectrum` (`gradient`) and
+`candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
 Resolution is explicit: card choice, first matching box path rule, box card-type
@@ -83,10 +84,11 @@ to a matching rule.
 ## System themes and landmark overrides
 
 The **system theme** styles the toolbar, shared background, user-message slips,
-and floating controls such as the selection “+”. It is independent of card themes.
+text selection, and floating controls such as the selection “+”. It is
+independent of card themes; a card theme may set its own selection color.
 Choose the box default in **Settings → System theme**. The system swatches preview
-these interface parts rather than a card. Flat, Spectrum, and Paper support the
-system; Sticky note is a card theme only. Paper offers Slate, Terracotta, and Blue palettes
+these interface parts rather than a card. Flat, Spectrum, Paper, and Candy support the
+system; Sticky note and Letter set are card themes only. Paper offers Slate, Terracotta, and Blue palettes
 (stored as `cream`, `manila`, and `blue` respectively).
 
 A landmark can override the box system theme. Open the landmark's directory from the

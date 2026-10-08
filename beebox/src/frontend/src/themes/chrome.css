@@ -52,7 +52,7 @@
 /* Chrome owns the common desk and its saturated material palette. */
 .bbx-box-presentation {
   --bbx-desk-background: #e4e0d9;
-  background: var(--bbx-desk-background);
+  background: var(--bbx-desk-pattern, none), var(--bbx-desk-background);
 }
 .bbx-box-presentation[data-chrome-theme="paper"] {
   --bbx-desk-background: #e4e0d9;
@@ -181,7 +181,7 @@
   outline-offset: 3px;
 }
 .bbx-box-presentation .bbx-conversation-desk {
-  background: var(--bbx-desk-background);
+  background: var(--bbx-desk-pattern, none), var(--bbx-desk-background);
 }
 .bbx-box-presentation[data-chrome-theme="paper"] .bbx-composer-material {
   background: #f7f1e6;
