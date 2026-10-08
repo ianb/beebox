@@ -103,7 +103,7 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
         instructions = instrTags[instrTags.length - 1];
       }
       if (tag.subTags.some((t) => t.type === "instructions")) {
-        text = text.replace(/<instructions>[\S\s]*?<\/instructions>/gi, "").trim();
+        text = text.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/gi, "").trim();
       }
     }
     // Safety net for orphan instruction fragments left in the spoken text — a

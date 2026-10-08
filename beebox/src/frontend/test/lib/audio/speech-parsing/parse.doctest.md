@@ -78,6 +78,18 @@ segments[0].text
 => Hello.
 ```
 
+A child that carries its own attributes is still a child; its text is not
+spoken:
+
+```ts
+const segments = parseAllSpeechTags('<speech>Hello.<instructions pace="slow">Gentle</instructions></speech>');
+segments[0].text
+=> Hello.
+
+segments[0].instructions
+=> Gentle
+```
+
 An empty attribute falls back to the child:
 
 ```ts
