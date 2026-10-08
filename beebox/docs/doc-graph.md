@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-08T22:55:00Z
-Total documents: 488
+Generated: 2026-10-08T23:09:30Z
+Total documents: 489
 
 ## Issues
 
@@ -30,6 +30,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · shipped history · implemented
 - **docs/implemented-plans/engine-aware-chat-models.md** — "Engine-aware chat model selection" (109 lines) · shipped history · implemented
+- **docs/implemented-plans/expressive-themes.md** — "Expressive theme collections" (140 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (720 lines) · shipped history · implemented
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (113 lines) · shipped history · implemented
 - **docs/implemented-plans/file-layout.check.subplan.md** — "Layout check: the script that enforces the file-layout rules" (181 lines) · shipped history · implemented
@@ -2214,7 +2215,7 @@ References:
 
 #### docs/box/card-themes.md
 
-Title: "Card themes" | 163 lines | current reference
+Title: "Card themes" | 173 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
@@ -4527,6 +4528,12 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/expose-dev-router.md (mention)
+
+#### docs/implemented-plans/expressive-themes.md **[ORPHAN]**
+
+Title: "Expressive theme collections" | 140 lines | shipped history | implemented
+
+No references in or out.
 
 #### docs/implemented-plans/external-url-validation.md
 

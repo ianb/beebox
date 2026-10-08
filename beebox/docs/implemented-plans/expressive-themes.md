@@ -1,6 +1,6 @@
 ---
 title: Expressive theme collections
-status: active
+status: implemented
 workstream: theme-polish
 issues: []
 ---
@@ -96,17 +96,16 @@ Wrong field, stale ref, concurrent edits, hand-edit drift, and validation UX: AD
 - General dark-mode infrastructure: artwork palettes remain authored choices.
 - Box-authored executable styles: unrelated loading/security contract.
 - Broad contrast cleanup or unrelated tour repair beyond paths used to verify this work.
-- Deploying or merging: needs the human's finish request.
 
-## Open design questions
+## Design outcome
 
-Which directions the human ultimately keeps or adjusts remains a visual judgment after the exhibit. No unresolved question blocks implementing the three examples.
+The human approved the three directions for a live trial after seeing the revised exhibit. Harlequin's repeated background was replaced with a single viewport-filling composition, and chat text gained opaque backing for legibility.
 
 ## Knowledge audits
 
 The expressive-theme-choices developer audit passed with Claude Opus 5.5 on 2026-10-08. It read the guide and correctly explained independently choosing Electric Playground surroundings and a Daydream card.
 
-## What will hold this after it ships
+## What holds this after shipping
 
 Existing shared catalog and presentation doctests validate selection and persistence. Browser tours and a new expressive-theme checkpoint walk cover actual renderings; these are visual evidence, not pixel regression tests. Typecheck and lint cover integration.
 
@@ -116,7 +115,7 @@ Shared consumers and catalog, parallel artwork styles, browser iteration, review
 
 ## Rollout shape
 
-Additive choices only. Done when targeted checks pass, desktop/phone evidence shows all three, review findings are adjudicated, and the comparison exhibit is ready. Existing settings require no migration and users must opt in.
+Additive choices only. Existing settings require no migration and users opt in. The three pairings are available in the system and card pickers.
 
 ## Review record
 
@@ -127,7 +126,7 @@ Claude Opus 5.5 implementation review found inherited scene ink, unbacked chat m
 ## Verification record
 
 - Focused shared theme, presentation router, Properties, and card-title doctests pass: 50 assertions across four files. The router catalog expectation was updated for the three new entries and rerun (21/21).
-- Backend/frontend typecheck and changed-file lint pass. The broad change selector selected 542 suites and reported memory pressure; that run was interrupted in favor of these focused checks.
+- Backend/frontend typecheck and changed-file lint passed before landing. Finish verification selected and passed 545 test files, passed smoke, and passed the site build. Typecheck and lint were covered by pre-commit for each worktree commit.
 - Final expressive-theme tour passed all six desktop/mobile checkpoints with zero findings and zero axe violations.
 - Actual card fixtures cover all three choices and matching system CSS previews at 1280×800 and 375×800. Settings persistence and portal menu selection were separately exercised. OS color preference preserves the authored palettes.
 - The test box has old chat cards without saved transcripts. A dedicated `/dev/chat-materials` harness now renders production message components with synthetic prose, tools, progress, compaction, interruption, self-note, pending voice, and failed capture states. It verifies component appearance, not live transcript delivery; no model calls were made.
