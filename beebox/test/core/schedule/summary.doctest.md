@@ -134,6 +134,18 @@ const after = await loadRunHistory(box.root, "busy");
 => [20, { ts: "2026-10-07T00:00:22Z", result: "failure", durationMs: 1, triggeredBy: "schedule", error: "could not delete the once card", summary: { headline: "Done", priority: "normal" } }]
 ```
 
+Entries written before the history recorded `deferReason` still name it as
+the error's prefix, and reading the history recovers it:
+
+```ts continue
+await fs.appendFile(
+  box.path("_config/schedules/.state/busy.runs.jsonl"),
+  JSON.stringify({ ts: "2026-10-07T00:00:23Z", result: "deferred", durationMs: 1, triggeredBy: "schedule", error: "no-change: nothing to do" }) + "\n",
+);
+(await loadRunHistory(box.root, "busy")).at(-1).deferReason
+=> no-change
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

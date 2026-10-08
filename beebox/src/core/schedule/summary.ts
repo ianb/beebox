@@ -131,6 +131,17 @@ class RunNotRecordedError extends Error {
   }
 }
 
+/**
+ * Entries written before the history recorded `deferReason` still carry it as
+ * the error's `<reason>: ` prefix (`no-change: nothing to do`); read it back so
+ * those runs show as "nothing to do" too.
+ */
+function withDeferReason(entry: RunHistoryEntry): RunHistoryEntry {
+  if (entry.result !== "deferred" || entry.deferReason !== undefined || entry.error === undefined) return entry;
+  const reason = DEFER_REASONS.find((r) => entry.error?.startsWith(`${r}: `) === true);
+  return reason === undefined ? entry : { ...entry, deferReason: reason };
+}
+
 function historyFile(boxRoot: string, scriptName: string): string {
   return path.join(stateDir(boxRoot), `${scriptName}.runs.jsonl`);
 }
@@ -149,7 +160,7 @@ export async function loadRunHistory(boxRoot: string, scriptName: string): Promi
     if (line.trim() === "") continue;
     try {
       const parsed = RunHistoryEntrySchema.safeParse(JSON.parse(line));
-      if (parsed.success) entries.push(parsed.data);
+      if (parsed.success) entries.push(withDeferReason(parsed.data));
       else console.warn(`Skipping a malformed run history line for "${scriptName}": ${parsed.error.message}`);
     } catch (e) {
       console.warn(`Skipping an unreadable run history line for "${scriptName}": ${errorMessage(e)}`);
