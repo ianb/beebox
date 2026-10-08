@@ -29,3 +29,7 @@ result needs a preview that distinguishes its matching content.
 Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 37 and 44, screenshots 20 and 25. Related:
 [section navigation](2026-09-21-search-section-results-drop-their-destination.md).
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Seen in the [B2 walk](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 64): searching "tape" found the drawer and listed the tray twice, one entry per section, each showing the card's `contains` summary, which does not say "tape". The priority may be stale given the recurrence.

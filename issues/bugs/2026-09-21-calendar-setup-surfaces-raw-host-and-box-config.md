@@ -32,3 +32,7 @@ This report does not claim that scheduled work cannot run while the page is
 closed. It records the setup and explanation gap only.
 
 Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Still present. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 44) and [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 62): the Google Calendar text in Settings tells the person to edit `_config/box.json` "when the boxholder asks" and to use "box settings" from inside Settings. The priority may be stale given the recurrence.

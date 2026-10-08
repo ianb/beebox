@@ -77,7 +77,11 @@ Each run has a unique lowercase box slug and a fresh initialization history.
 deletes transcripts outside a box. Retention cleanup is a separate operator decision.
 
 Provisioning checks the dashboard health results, then requires app navigation at
-the expected URL through `bin/browse` before handing out the prompt. A failed check
+the expected URL through `bin/browse` before handing out the prompt. A worktree server
+that was already warm does not see the newly registered box, and the check fails
+with "Fixture did not render its app navigation". When no other walk is live on the
+worktree, `bin/workstreams down <worktree>` and an HTTP request cold-start it with the
+new registration; prepare several journeys first, then cold-start once. A failed check
 leaves its evidence intact; it does not restart the shared router. No model turn is
 needed for this check.
 
@@ -85,13 +89,13 @@ Timing currently reads only Claude root-chat transcripts and measures from a use
 message to the first assistant text, not completion. Scoped chats are excluded. Missing timing is unavailable, not zero
 waiting; Codex waits must be reported separately from observed browser evidence.
 
-## Assets are not in the repo
+## Assets
 
-`journeys/*/assets/` is gitignored. The material so far is real photographs of someone's
-home and mail anonymized from a real family's, and none of it enters a source-available
-repository without the boxholder's review. The `journey.yaml` that needs them *is*
-tracked, and `prepare.ts` fails naming any that are absent — so a journey is never
-half-provisioned by a missing file.
+Reviewed photographs are committed (B-inventory's two tray photos). Anonymized mail
+derived from a real family's inbox stays out until the boxholder has read it; its
+`assets/` directory is gitignored (`.gitignore` names each one). Either way, keep asset
+content out of reports and issues. `prepare.ts` fails naming any asset that is absent, so
+a journey is never half-provisioned by a missing file.
 
 ## The rules that make the output worth reading
 

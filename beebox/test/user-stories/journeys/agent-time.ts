@@ -20,7 +20,7 @@ export interface AgentTiming {
   slowestSeconds: number
 }
 
-interface Entry { timestamp?: string, type?: string, message?: { content?: unknown } }
+interface Entry { timestamp?: string, type?: string, isMeta?: boolean, message?: { content?: unknown } }
 
 /**
  * Claude Code keys its transcript directories by the working directory, with every
@@ -56,7 +56,9 @@ export function agentTiming(boxContent: string): AgentTiming {
           ? content.map((b) => (isRecord(b) ? String(b["type"]) : ""))
           : [];
 
-        if (entry.type === "user" && !kinds.includes("tool_result")) openedAt = at;
+        // A skill expansion arrives as a meta user entry after the person's message;
+        // treating it as a new turn would restart the clock partway through the wait.
+        if (entry.type === "user" && entry.isMeta !== true && !kinds.includes("tool_result")) openedAt = at;
         else if (entry.type === "assistant" && openedAt !== null && kinds.includes("text")) {
           turns.push((at - openedAt) / 1000);
           openedAt = null;

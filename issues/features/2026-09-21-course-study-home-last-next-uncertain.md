@@ -37,3 +37,7 @@ such a page cannot be authored.
 
 Evidence: [D chemistry report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 especially entries 8-14 and 18-20; screenshots 08, 11-13, 16-19, 22, and 24.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Partly met in the [D-chemistry walk](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (closing summary). Met, unasked: the progress body now opens "Where you left off … Next time … Not yet in the box", and the landmark links it first as "where I left off". The walker called it "the right size". Still missing: (1) the per-idea table and probes sit in Properties, not on the page front (row 30, `S/schemas/progress.ts:47`, `F/lib/card-field-faces.ts:56`); (2) the tutor-facing session plan is on the learner's landmark and speaks of the learner as "they" (row 41, `beebox/src/core/box/guidance-sync/skills-content.ts:33`, step 7 at `:97`); (3) the page has three names: "where I left off", "what I've shown", "your progress card" (row 74); (4) the counting advice and magnesium check stayed in the transcript, in no card (row 52); (5) a new session does not open with the tutor (row 67; own issue). The priority may be stale given the recurrence.

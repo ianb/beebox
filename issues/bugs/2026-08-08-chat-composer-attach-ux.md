@@ -113,3 +113,7 @@ In the chat composer:
    appearing in an old bubble. This is the half that a reader narrowed to the
    new form would break, and it cannot be seen from the new messages alone.
 4. **Open the "+" menu.** One file entry, "Add files…", with no greyed-out twin.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Walker reaction, not a recurrence. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 14): the walker found the literal `[image#1] [image#2]` in the message box "programmer-y". This is the item 1 design that stays visible by boxholder decision (2026-08-25), so the manual-testing gate stays. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 39) recorded the same for the `[selection#1]` token from "+". B also saw thumbnails listed in order 2, 1 (own issue).

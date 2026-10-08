@@ -42,3 +42,7 @@ notify/remind promise class generically. It does not check Calendar/Google
 OAuth availability specifically, so the calendar-delivery promise this issue
 reports is not directly covered; that needs its own check at the point an
 agent offers calendar delivery.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Seen in two walks. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (rows 6, 9): turn 1 promised "gentle reminders" with no tool call, and turn 2 offered Google Calendar reminders and to "put the lunch on your calendar" without checking. The box had no `googleServices` in `_config/box.json` (`calendar.available failed` in `hub-child.log`). [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 93, 101): the notify class recurred despite the guide rule. A real `notify` schedule card existed with no channel and no scheduler; a fresh chat read it and said "I'll send you a reminder" without running `bbx notify --check`. The rule did not trigger when the agent described an existing reminder. Its correction, "it will only open a new chat in here", is also wrong: with no channel the run fails with `ScheduledNotificationUndeliveredError` (`core/schedule/run-action.ts:74-80`). The calendar promise itself did not recur in F. The priority may be stale given the recurrence.

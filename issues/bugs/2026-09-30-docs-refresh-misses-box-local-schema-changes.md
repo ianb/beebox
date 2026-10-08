@@ -25,3 +25,7 @@ generation marker the refresh compares) and `loadBoxSchemas`.
 Related: [`bbx init` didn't refresh generated docs for newly added box-local
 schemas](../closed/bugs/2026-08-12-bbx-init-stale-generated-docs.md) fixed the
 add case for `bbx init`; this is the change case for `bbx docs refresh`.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R3, R4). After the agent added a `loan` type and a `lending-list` type, `.claude/rules/card-loan.md` lacked a later field (`expected-back`) and no rule existed for `lending-list`. Part of this was the agent skipping `bbx engine init .`, which `beebox/box-docs/schemas.md:253-262` instructs. Separately, `.agents/skills/beebox-rule-card-loan/` was left untracked: `syncTemplatesFromSource` commits at `beebox/src/core/docs-gen/generate/core.ts:241`, and the `.agents` mirrors are written later by `ensureAgentContext` (`:411`), which nothing commits. The priority may be stale given the recurrence.

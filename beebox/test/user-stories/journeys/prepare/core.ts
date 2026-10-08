@@ -24,11 +24,11 @@ import { isRecord } from "../../../../src/shared/is-record.ts";
 import { runHealthChecks } from "../../../../src/webapp/trpc/routers/health/router.ts";
 import { assertPreviousRunsReported, allocateRun } from "../provisioning.ts";
 
-const HERE = import.meta.dirname;
-const MONO_ROOT = resolve(HERE, "../../..");
+const JOURNEYS = resolve(import.meta.dirname, "..");
+const MONO_ROOT = resolve(JOURNEYS, "../../../..");
 const WORKTREE = basename(MONO_ROOT);
 const BOXES_ROOT = join(homedir(), "src", "box-worktrees", WORKTREE);
-const WORK = join(HERE, "../work/journeys");
+const WORK = join(JOURNEYS, "../work/journeys");
 
 interface Asset { file: string, described_as: string }
 interface Journey {
@@ -51,7 +51,7 @@ function fail(message: string): never {
 const id = process.argv[2];
 if (id === undefined) fail("usage: prepare.ts <journey-id>   (a directory under journeys/)");
 
-const journeyDir = join(HERE, id);
+const journeyDir = join(JOURNEYS, id);
 const specPath = join(journeyDir, "journey.yaml");
 if (!existsSync(specPath)) fail(`no journey at ${specPath}`);
 
@@ -159,7 +159,7 @@ const assetLines = assets.length === 0
     "point, not the job; the job is the thing above.",
   ].join("\n");
 
-const template = readFileSync(join(HERE, "walker-prompt.md"), "utf8")
+const template = readFileSync(join(JOURNEYS, "walker-prompt.md"), "utf8")
   .replace("{{SITUATION}}", journey.situation.trim())
   .replace("{{ASSETS}}", assetLines)
   .replace("{{BUDGET}}", String(journey.budget_actions ?? 60))

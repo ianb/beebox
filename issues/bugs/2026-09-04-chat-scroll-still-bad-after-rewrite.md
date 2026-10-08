@@ -98,3 +98,7 @@ away, later appended content, and a second send; all 31 harness scenarios
 pass at desktop and phone widths. This does not close the physical-device
 verification concerns above. Real chat synthetic sends were checked at both
 widths; authoritative backend finalization was not exercised in this pass.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Related observation, desktop. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 17): after the walker sent photos, the view stayed at the sent message and the walker pressed "scroll to latest". [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 15) saw the same and read it as by design: the sent message anchors at the top and the reply grows below. Neither walk checked whether this is the intended anchor-on-send behavior.

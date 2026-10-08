@@ -542,3 +542,7 @@ the unbuilt tile registry.
 ## Next-action note (2026-10-06)
 
 Checked as a possible duplicate: it is not. Neighbours are adjacent, not the same scope: the plugins design (blocked on this one), the chat stack of referenced things (an ephemeral list, which this issue already calls a neighbour), and per-link trails. Only the todo instance of a collection landed (2026-09-20); non-todo collections, Markdown embedding, indexing, and box-authored collections remain unbuilt here.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+The missing primitive came up again in three walks. [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 83): the walker wanted one front door that shows the list; the agent invented a card type and a view to make one (commit `80ee539`), and the landmark card itself shows only its config (row 29). [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 88) and [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 48): the biggest wish of both walks was one plain page listing all containers ("the menu item Inventory just opens the index. One thing, one name."). Decision needed (B2 R4): both inventory walks put counts as prose on `doc` cards and made no `record` cards. Whether a doc per container is the intended shape, or items should be `record` cards with `quantity`, has not been decided. The earlier mechanism (a type search that finds the Storage `inventory` card) was not seen in B2, but the outcome was the same.
