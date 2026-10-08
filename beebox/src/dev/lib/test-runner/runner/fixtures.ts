@@ -2,9 +2,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { ensurePackageDocs } from "../../../core/docs-gen/package-docs/core.js";
-import { errnoCode } from "../../../shared/error-guards.js";
-import type { AuditTest } from "../test-suite-schema.js";
+import { ensurePackageDocs } from "../../../../core/docs-gen/package-docs/core.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
+import type { AuditTest } from "../../test-suite-schema.js";
 
 class UnsafeAuditFixturePathError extends Error {
   constructor(params: { relPath: string; reason: "escapes the box" | "crosses a symbolic link" }) {

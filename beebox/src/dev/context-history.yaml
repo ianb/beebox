@@ -7531,3 +7531,68 @@ audit-box:
       peak: 41269
       added: 4713
       turns: 5
+dev-checkout:
+  dev-spirit-doc:
+    - date: 2026-10-08T04:37:43.997Z
+      boxCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      repoCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      initial: 14271
+      peak: 31303
+      added: 17032
+      turns: 4
+  dev-design-handoff:
+    - date: 2026-10-08T04:37:43.997Z
+      boxCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      repoCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      initial: 14349
+      peak: 18166
+      added: 3817
+      turns: 3
+  dev-jtbd-situation:
+    - date: 2026-10-08T04:37:43.997Z
+      boxCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      repoCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      initial: 14330
+      peak: 27026
+      added: 12696
+      turns: 4
+  dev-right-place-right-time:
+    - date: 2026-10-08T04:37:43.997Z
+      boxCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      repoCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      initial: 14344
+      peak: 21027
+      added: 6683
+      turns: 6
+  dev-trust-ladder:
+    - date: 2026-10-08T04:37:43.997Z
+      boxCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      repoCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      initial: 14339
+      peak: 31408
+      added: 17069
+      turns: 5
+  dev-throwaway-box:
+    - date: 2026-10-08T04:37:43.997Z
+      boxCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      repoCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      initial: 14334
+      peak: 25970
+      added: 11636
+      turns: 3
+  dev-checkpoint-no-merge:
+    - date: 2026-10-08T04:37:43.997Z
+      boxCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      repoCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      initial: 14334
+      peak: 14334
+      added: 0
+      turns: 1
+  dev-lesson-placement:
+    - date: 2026-10-08T04:37:43.997Z
+      boxCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      repoCommit: 9742b1819fedf3d546f0a28cfa95fc5fd18f97d2
+      initial: 14335
+      peak: 26008
+      added: 11673
+      turns: 3

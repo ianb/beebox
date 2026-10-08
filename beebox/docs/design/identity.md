@@ -2,7 +2,7 @@
 
 A system that Claude Code operates over a **box**: a special place on disk —
 files with defined inputs, outputs, and services. "A personal assistant
-and operating system built on Claude Code" (CLAUDE.md) is the identity;
+and operating system" (`beebox/CLAUDE.md`) is the identity;
 the OS half is the ambition — a place you inhabit and build within,
 not an app you open (ruling 3; the feel is `../architecture/spirit.md`'s
 "It should feel like a place"). It's not meant to feel like a work tool, even
@@ -13,7 +13,7 @@ if it could be used professionally.
 Both, now (rulings 1, 6, 7):
 
 - **The web UI is the main UI, and a real focus** — the privileged, richest
-  surface, with a design system, capture pages, SSR, and the
+  surface, with a design system, capture in the chat composer, and the
   [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
   around it. The early framing of the web app as a debugging viewer that would
   "later split into a cleaner user-facing view" is fully out of date; the split
@@ -33,7 +33,10 @@ multiple people (the household box of `../architecture/01-what-is-this.md` is
 the design target, not a dramatization). A box has exactly **one granularity
 of sharing**: everyone in the box shares everything in it. Different groups or
 subgroups need different boxes. Per-member identity beyond the auth allowlist
-is not designed yet — aspiration, not description.
+is not designed yet — aspiration, not description. (2026-10: per-member
+logins shipped — one host owner, invited members per box, member approval of
+publishing scope; see [`../security-overview.md`](../security-overview.md).
+All members still share everything in the box.)
 
 ## Runs on a full computer, never serverless
 

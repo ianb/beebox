@@ -71,7 +71,7 @@ Not every card has an original behind it. When Diana types a note into the group
      status: working -->
 ## The filesystem is the truth
 
-Cards aren't stored in a database. They're files in directories on disk. You could open a terminal, navigate to the box, and see them: `box/inbox/` for things that just arrived, `store/` for things that have been processed and filed, `config/` for settings and procedures. The directory structure is the organization. Moving a card from inbox to archive is literally moving a file.
+Cards aren't stored in a database. They're files in directories on disk. You could open a terminal, navigate to the box, and see them: `_content/inbox/` for things that just arrived, `_bookkeeping/archive/` for things that have been processed and filed, `_config/` for settings and procedures. The directory structure is the organization. Moving a card from inbox to archive is literally moving a file.
 
 This means the box's state is always inspectable with ordinary tools. You can `ls` a directory and see what's there. You can open a card in a text editor and read it. You don't need special software to understand what the box is holding — the files are the thing, not a projection of some hidden state.
 

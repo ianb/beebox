@@ -17,7 +17,8 @@ them.
 
 - **`docs/plans/<topic>.md`** — active proposals and in-flight plans. A plan is
   a complete unit of work, designed end-to-end (see the `bbx-plan` skill).
-  Subplans: `<topic>.subplan.md`. Reviews: `<topic>.review.md`.
+  Subplans: `<topic>.subplan.md`; design subplans (the `bbx-design` skill):
+  `<topic>.design.md`. Reviews: `<topic>.review.md`.
 - **`docs/implemented-plans/<topic>.md`** — plans whose work has shipped. Moved
   here (not deleted) on merge, so the detailed reasoning behind past work stays
   findable without masquerading as current docs.

@@ -70,7 +70,7 @@ export function summarizeContextUsage(turns: TurnUsage[]): ContextStats | null {
 }
 
 /** Pull a TurnUsage from a raw `message.usage` record, or null if absent. */
-function parseUsage(usage: unknown): TurnUsage | null {
+export function parseUsage(usage: unknown): TurnUsage | null {
   if (!isRecord(usage)) return null;
   const num = (v: unknown): number => (typeof v === "number" ? v : 0);
   return {

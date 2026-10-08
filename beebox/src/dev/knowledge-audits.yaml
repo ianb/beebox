@@ -7822,3 +7822,152 @@ tests:
     correct_contains_any: ["\\", "<br>"]
     correct_contains: ["colspan"]
     tags: [markdown, cards]
+
+  # === Dev-guidance audits (surface: dev) ===
+  # A headless Claude Code session in the monorepo checkout, not a box agent:
+  # `pnpm knowledge-audit run --dev`. Tests what the root and package
+  # CLAUDE.md files, project skills, and docs teach a dev session. The first
+  # set covers the product spirit and design docs (boxholder, 2026-10-08).
+  # Status (2026-10-07, Claude claude-opus-5-5, --dev): 8/8 pass, first run,
+  # with the bbx-design skill and the beebox/CLAUDE.md spirit.md pointer
+  # present (uncommitted in the skills-review worktree). 14k always-on context.
+  # Design entries reached spirit.md and the right-time question through
+  # bbx-design; the session noted docs/design/ itself does not state the
+  # right-place-right-time question. checkpoint answered from root CLAUDE.md
+  # with no reads.
+  - id: dev-spirit-doc
+    surface: dev
+    prompt: "What is the box's spirit document, where is it, and when must a plan consult it?"
+    expected_level: knows_about
+    should_read_any: ["beebox/docs/architecture/spirit.md", "beebox/docs/design/README.md"]
+    watch_for: >
+      Names beebox/docs/architecture/spirit.md as the values compass; quotes
+      or restates that if the architecture contradicts it, the architecture is
+      wrong; says a plan for work a person experiences gets a design (the
+      bbx-design skill) that reads spirit.md before the tracks. FAILS if it
+      names a different file or treats spirit.md as optional background.
+    correct_contains: ["docs/architecture/spirit.md"]
+    correct_matches:
+      - 'architecture (?:is|was) wrong'
+      - 'bbx-design|design (?:section|subplan)|user-facing|(?:person|people|user)s? (?:experience|meet|see)'
+    tags: [dev-guidance, design]
+
+  - id: dev-design-handoff
+    surface: dev
+    prompt: >
+      You are planning a new check-in the box sends in the morning. What do
+      you write before the implementation tracks, and which skill?
+    expected_level: knows_about
+    should_read_any: [".claude/skills/bbx-design/SKILL.md", ".claude/skills/bbx-plan/SKILL.md"]
+    watch_for: >
+      Says the plan gets a Design section or design subplan from the
+      bbx-design skill before the tracks; the design opens with situations in
+      the "When ..., I want to ..., so I can ..." form and asks whether this
+      is the right place and time (surface, tier of attention, or staying
+      quiet). FAILS if it goes straight to tracks or names only bbx-plan.
+    correct_contains: ["bbx-design"]
+    correct_matches:
+      - 'design (?:section|subplan)|\.design\.md|## Design'
+      - '\bwhen\b[\s\S]{0,160}\bI want to\b'
+      - 'right (?:place|time|moment)|tier of attention|interrupt|stay(?:s)? quiet'
+    tags: [dev-guidance, design]
+
+  - id: dev-jtbd-situation
+    surface: dev
+    prompt: "Write the situation line for a card that records a voice memo."
+    expected_level: knows_about
+    should_read_any: [".claude/skills/bbx-design/SKILL.md"]
+    watch_for: >
+      Recognizes the design skill's situation form and writes one concrete
+      line: "When [a real moment], I want to [motivation], so I can
+      [outcome]", about a kind of person in a moment (spirit.md's Diana in the
+      car), not "a user manages memos". FAILS on a user story ("As a user")
+      or a feature description.
+    correct_matches:
+      - '\bwhen\b[\s\S]{3,240}\bI want to\b[\s\S]{3,240}\bso (?:that )?I can\b'
+    response_not_contains: ["As a user"]
+    tags: [dev-guidance, design]
+
+  - id: dev-right-place-right-time
+    surface: dev
+    prompt: >
+      The box has learned something during the night. Name the question it
+      must answer before showing it, and where that question is written down.
+    expected_level: knows_about
+    should_read_any:
+      - ".claude/skills/bbx-design/SKILL.md"
+      - "beebox/docs/architecture/spirit.md"
+      - "beebox/docs/design/interaction-model.md"
+    watch_for: >
+      Right place, right time: is this the moment to act, show, or stay
+      quiet, and where (which surface, which card, which tier of attention:
+      interrupt, wait to be found, background), with quiet and findable as
+      the default. Points to the bbx-design skill, spirit.md, or
+      design/interaction-model.md. FAILS if it invents a question with no
+      source.
+    correct_contains_any: ["bbx-design", "spirit.md", "interaction-model"]
+    correct_matches:
+      - 'right (?:place|time|moment)|(?:act|show)[\s\S]{0,40}(?:stay )?quiet'
+      - 'surface|tier|interrupt'
+    tags: [dev-guidance, design]
+
+  - id: dev-trust-ladder
+    surface: dev
+    prompt: "Name the three steps of the trust ladder for an automatic action and where they are defined."
+    expected_level: knows_about
+    should_read_any: ["beebox/docs/design/trust.md", ".claude/skills/bbx-design/SKILL.md"]
+    watch_for: >
+      Question, then confirmation, then automatic, defined in
+      beebox/docs/design/trust.md (trust progression). FAILS on invented
+      rungs or a different source.
+    correct_contains: ["trust.md"]
+    correct_matches:
+      - 'question[\s\S]{0,300}confirm[\s\S]{0,300}automatic'
+    tags: [dev-guidance, design]
+
+  - id: dev-throwaway-box
+    surface: dev
+    prompt: "Where may a throwaway box live, and what must the --box argument be?"
+    expected_level: knows_about
+    should_read_any: [".claude/skills/box-work/SKILL.md", "beebox/docs/box-work.md"]
+    watch_for: >
+      At an absolute path outside every git repository, scratch/ included;
+      --box is an absolute (or ~/) path to a standalone box, never a bare
+      name like test1, which resolves inside the monorepo. FAILS if it puts
+      the box in scratch/ or /tmp inside a repo, or accepts a bare name.
+    correct_matches:
+      - 'outside (?:of )?(?:every|any|all)[\s\S]{0,20}(?:git )?repo'
+      - 'absolute'
+    tags: [dev-guidance, boxes]
+
+  - id: dev-checkpoint-no-merge
+    surface: dev
+    prompt: "The human says 'checkpoint this'. Do you merge to main?"
+    expected_level: knows_directly
+    watch_for: >
+      No: commit the verified work on the worktree branch. Merging to main
+      (which deploys shipped paths) happens only when the human asks to
+      finish or land, through the finish skill. FAILS if it merges or runs
+      finish on "checkpoint".
+    correct_matches:
+      - '^\W*no\b|\b(?:do not|don''t|would not|wouldn''t|not) merge'
+      - '\bcommit'
+      - 'finish|land'
+    tags: [dev-guidance, workflow]
+
+  - id: dev-lesson-placement
+    surface: dev
+    prompt: "A lesson about this repo surfaced in your session. Where does it go?"
+    expected_level: knows_about
+    watch_for: >
+      Into tracked guidance at the narrowest accurate owner: a package or
+      directory CLAUDE.md, a skill, code-style.md/frontend.md, or a doc under
+      docs/; worthwhile out-of-scope finds go to issues/. Not the session's
+      private memory, which other sessions and Codex never see. FAILS if it
+      saves the lesson to memory.
+    correct_matches:
+      - 'CLAUDE\.md|skill|docs/'
+      - 'narrow|nearest|closest|owner'
+    response_not_matches:
+      - '(?:save|record|write|put|store|add)\s+(?:it\s+|this\s+)?(?:in|to|into)\s+(?:your\s+|my\s+|the\s+)?(?:auto[- ]?)?memory'
+    tags: [dev-guidance, workflow]
