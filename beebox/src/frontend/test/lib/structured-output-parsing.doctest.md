@@ -8,6 +8,7 @@ markdown stream before rendering.
 
 ```ts setup
 import {
+  ACK_KINDS,
   getAckKind,
   parseAcks,
   parseCallouts,
