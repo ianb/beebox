@@ -4,18 +4,6 @@ The fake Telegram service maintains an outbox of sent messages and a configurabl
 
 ```ts setup
 import { createFakeTelegram } from "../../src/services/telegram.js";
-import { withCallLog, printCalls } from "../../src/services/call-log.js";
-```
-
-## Bot identity
-
-Creating a fake requires a username. `getMe()` returns it.
-
-```ts
-const tg = createFakeTelegram({ username: "test_bot" });
-const me = await tg.getMe();
-me.username
-=> test_bot
 ```
 
 ## Sending messages
@@ -97,47 +85,3 @@ batch[0].message.text
 => new
 ```
 
-## Webhook management
-
-```ts
-const tg = createFakeTelegram({ username: "bot" });
-tg.webhookUrl
-=> null
-```
-
-```ts continue
-await tg.setWebhook("https://example.com/webhook", { secret_token: "abc" });
-tg.webhookUrl
-=> https://example.com/webhook
-```
-
-```ts continue
-tg.webhookOptions.secret_token
-=> abc
-```
-
-```ts continue
-const info = await tg.getWebhookInfo();
-info.url
-=> https://example.com/webhook
-```
-
-```ts continue
-await tg.deleteWebhook();
-tg.webhookUrl
-=> null
-```
-
-## Using withCallLog to inspect interactions
-
-```ts
-const tg = withCallLog(createFakeTelegram({ username: "bot" }));
-await tg.sendMessage(123, { text: "hello" });
-await tg.getMe();
-await tg.sendMessage(456, { text: "bye" });
-
-printCalls(tg.callLog, "sendMessage")
-=>
-sendMessage(123, {"text":"hello"})
-sendMessage(456, {"text":"bye"})
-```

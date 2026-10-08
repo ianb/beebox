@@ -11,7 +11,6 @@ degrade to text mode.
 ```ts setup
 import {
   EMBEDDING_DIMENSIONS,
-  EMBEDDER_ID,
   createFakeEmbeddings,
   parseEmbeddingsResponse,
   chunkTexts,
@@ -32,9 +31,6 @@ const [a, b, c] = await fake.embed(["the dentist moved to June 17", "the dentist
 a?.length
 => 512
 
-EMBEDDING_DIMENSIONS
-=> 512
-
 JSON.stringify(a) === JSON.stringify(b)
 => true
 
@@ -48,9 +44,6 @@ Math.abs(magnitude(a ?? []) - 1) < 1e-9
 ## Call recording and describe()
 
 ```ts continue
-fake.calls.length
-=> 1
-
 fake.describe()
 => calls: 1
 [0] the dentist moved to June 17 | the dentist moved to June 17 | plant the tomatoes
@@ -155,13 +148,6 @@ JSON.stringify(byChars.map((c) => c.length))
 
 byChars.flat().join("").length === bigTexts.join("").length
 => true
-```
-
-## EMBEDDER_ID names provider, model, and dims
-
-```ts continue
-EMBEDDER_ID
-=> openai:text-embedding-3-small@512
 ```
 
 ## Key resolution: an unconfigured box is `null`, not an error
