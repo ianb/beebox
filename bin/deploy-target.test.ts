@@ -239,7 +239,8 @@ test("the fixed layout is still readable, so consumers share one source for it",
 });
 
 test("both owner-cookie tools fail closed when BBX_OWNER_EMAIL is absent", () => {
-  for (const tool of ["prod-curl", "prod-browse"]) {
+  // prod-browse delegates cookie minting to prod-session-cookie, which holds its guard.
+  for (const tool of ["prod-curl", "prod-session-cookie"]) {
     const script = readFileSync(join(SOURCE_DEPLOY, tool), "utf8");
     assert.match(script, /\[\[ -z "\${BBX_OWNER_EMAIL:-}" ]]/);
     assert.match(script, /Error: BBX_OWNER_EMAIL is unset/);
