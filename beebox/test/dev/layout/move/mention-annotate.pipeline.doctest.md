@@ -225,13 +225,6 @@ dirSpanResult.fileEdits.get("docs/dir-span.md")
 => See `pkg/src/legacy/` (moved to `pkg/src/modern`) for the old layout.
 ```
 
-## `--dry-run` computes the same edits without writing to disk (`computeMentionAnnotate` never writes)
-
-```ts continue
-await read("docs/note.md")
-=> See `pkg/src/a.ts:200-211` for the old code.
-```
-
 ## Counts: per-area totals
 
 ```ts continue

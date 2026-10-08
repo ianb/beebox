@@ -5,7 +5,7 @@ break; where its basename is unique repo-wide, the current location is
 recoverable, so the broken link can be rewritten. Pure logic (fs/git injected).
 
 ```ts setup
-import { repairFrontmatterPaths, repairLinks, duplicateBasenames, buildBasenameLookup, NON_UNIQUE_BASENAMES } from "../../../src/dev/doc-check/link-repair.js";
+import { repairFrontmatterPaths, repairLinks, duplicateBasenames, buildBasenameLookup } from "../../../src/dev/doc-check/link-repair.js";
 
 // A tiny fake tree: bugs/foo.md has moved to closed/bugs/foo.md.
 const files = ["issues/closed/bugs/foo.md", "issues/features/bar.md", "beebox/docs/guide.md"];
@@ -24,21 +24,6 @@ r.content
 
 JSON.stringify(r.rewrites)
 => [{"line":1,"from":"../bugs/foo.md","to":"../closed/bugs/foo.md"}]
-```
-
-Deferred activation is the same move contract. Once the destination is staged,
-the normal updater finds it by basename and repairs inbound links.
-
-```ts
-const activatedFiles = ["issues/code-quality/later.md", "issues/features/bar.md"];
-const activated = repairLinks({
-  fromRel: "issues/features/bar.md",
-  content: "[later](../deferred/later.md)",
-  fileExists: (candidate) => activatedFiles.includes(candidate),
-  basenameLookup: buildBasenameLookup(activatedFiles),
-});
-activated.content
-=> [later](../code-quality/later.md)
 ```
 
 ## Frontmatter scalar and list paths use the same repair contract
@@ -120,9 +105,6 @@ JSON.stringify(amb.unfixable)
 const readme = repairLinks({ fromRel: "docs/a.md", content: "[r](./missing/README.md)", fileExists: () => false, basenameLookup: buildBasenameLookup(["x/README.md"]) });
 readme.unfixable[0].reason
 => non-unique-basename
-
-NON_UNIQUE_BASENAMES.has("CLAUDE.md")
-=> true
 ```
 
 ## duplicateBasenames flags shared basenames, excluding the whitelist

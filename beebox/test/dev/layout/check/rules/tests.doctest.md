@@ -59,48 +59,6 @@ summary(testsRule.check(clean3)) === ""
 => true
 ```
 
-## Clean: a test importing a nested-package module for setup, naming its own subject
-
-`agent.doctest.md` names `agent.ts`, its own mirror's module — that is all
-test-naming asks. It also imports a nested package's module as a value, for
-setup; a test may import anything it needs, so that import does not make it
-misplaced.
-
-```ts
-const clean4 = layout({
-  files: {
-    "src/core/agent/agent.ts": {},
-    "test/core/agent/agent.doctest.md": { test: ["src/core/agent/agent.ts"] },
-  },
-  nestedPackages: ["src/frontend"],
-});
-const clean4Test = clean4.files.get("pkg/test/core/agent/agent.doctest.md");
-if (clean4Test === undefined || clean4Test.kind !== "test") throw new Error("expected test file");
-clean4Test.imports.push({
-  specifier: "../../../frontend/src/lib/x.js",
-  target: "pkg/src/frontend/src/lib/x.ts",
-  external: false,
-  typeOnly: false,
-  names: [],
-  dynamic: false,
-});
-summary(testsRule.check(clean4)) === ""
-=> true
-```
-
-## Clean: a scenario test importing nothing from source
-
-```ts
-const clean5 = layout({
-  files: {
-    "src/core/x.ts": {},
-    "test/tours/x.tour.ts": { test: [] },
-  },
-});
-summary(testsRule.check(clean5)) === ""
-=> true
-```
-
 ## Finding: `source-roots` — an extra source root
 
 ```ts

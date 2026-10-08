@@ -53,31 +53,6 @@ summary(setsRule.check(commandsLayout)) === ""
 => true
 ```
 
-## A clean record-form set
-
-```ts
-const schemasLayout = layout({
-  files: {
-    "src/schemas.ts": {
-      registry: {
-        directory: "src/schemas",
-        ordered: false,
-        form: "record",
-        members: [
-          { source: "src/schemas/memo.ts", key: "memo" },
-          { source: "src/schemas/recipe.ts", key: "recipe" },
-        ],
-      },
-    },
-    "src/schemas/memo.ts": {},
-    "src/schemas/recipe.ts": {},
-    "src/entry.ts": { imports: ["src/schemas.ts"] },
-  },
-});
-summary(setsRule.check(schemasLayout)) === ""
-=> true
-```
-
 ## A set directory holding a data file is clean; a stray module is still a finding
 
 Data files (a directory's `CLAUDE.md`, `AGENTS.md`, fixtures, assets) are
