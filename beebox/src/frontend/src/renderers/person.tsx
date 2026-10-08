@@ -5,10 +5,10 @@
  * rendering logic.
  */
 
-import { PersonView } from "../components/PersonView/view";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const personRenderer: RendererEntry = {
   selector: { type: "person" },
-  renderer: { name: "Person", Component: PersonView, priority: 100 },
+  renderer: { name: "Person", Component: lazyComponent(() => import("../components/PersonView/view"), (m) => m.PersonView), priority: 100 },
 };

@@ -4,23 +4,27 @@
  * Runs a real `vite build` with the bundle-analysis plugin
  * (bundle-analysis-plugin.ts) enabled via BBX_ANALYZE_BUNDLE=1, then reads
  * the JSON report it wrote and prints a formatted summary: initial vs.
- * async chunk sizes (raw + gzip), and per-package byte attribution.
+ * async chunk sizes (raw + gzip), per-package byte attribution, and our own
+ * source in the initial chunks grouped by directory.
  *
- * `pnpm analyze:bundle` — no other output on success (the build's own
- * stdout/stderr is captured and only shown if the build fails).
+ * `pnpm analyze:bundle [--depth N] [--no-build]` — no other output on success
+ * (the build's own stdout/stderr is captured and only shown if the build
+ * fails). `--no-build` re-reads the last report. The build replaces
+ * `dist/`, so rebuild normally before serving it.
  */
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
 import { z } from "zod";
-import { formatBundleReport } from "./bundle-analysis-format";
+import { parseArgs } from "node:util";
+import { formatBundleReport, formatInitialSourceTree } from "./bundle-analysis-format";
 import { BUNDLE_REPORT_RELATIVE_PATH, FRONTEND_OUT_DIR, type BundleReport } from "../bundle-analysis-types";
 
-// This file lives at src/frontend/src/dev/ — two levels below the frontend
+// This file lives at src/frontend/src/dev/analyze-bundle/ — three levels below the frontend
 // package root (which is also Vite's `root`, and where `build.outDir` in
 // vite.config.ts resolves FRONTEND_OUT_DIR from).
-const FRONTEND_ROOT = resolvePath(import.meta.dirname, "../..");
+const FRONTEND_ROOT = resolvePath(import.meta.dirname, "../../..");
 const REPORT_PATH = resolvePath(FRONTEND_ROOT, FRONTEND_OUT_DIR, BUNDLE_REPORT_RELATIVE_PATH);
 const TOP_PACKAGES = 25;
 
@@ -62,6 +66,7 @@ const bundleReportSchema = z.object({
       imports: z.array(z.string()),
       dynamicImports: z.array(z.string()),
       modules: z.array(moduleAttributionSchema),
+      sourceFiles: z.array(z.object({ path: z.string(), rawBytes: z.number() })),
     }),
   ),
   assets: z.array(
@@ -112,6 +117,9 @@ function readReport(): BundleReport {
   return parsed.data satisfies BundleReport;
 }
 
-runAnalysisBuild();
+// `--depth N` sets how many path segments the initial-load source table groups by.
+const { values } = parseArgs({ options: { depth: { type: "string", default: "3" }, "no-build": { type: "boolean" } } });
+if (values["no-build"] !== true) runAnalysisBuild();
 const report = readReport();
-process.stdout.write(`${formatBundleReport(report, { topPackages: TOP_PACKAGES })}\n`);
+process.stdout.write(`${formatBundleReport(report, { topPackages: TOP_PACKAGES })}\n\n`);
+process.stdout.write(`${formatInitialSourceTree(report, { depth: Number(values.depth), top: 40 })}\n`);

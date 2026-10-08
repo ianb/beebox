@@ -21,8 +21,8 @@ function unavailable(sessionId: string) {
     transcript: { state: "unknown" }, huskPath: null, history: null, label: null,
     status: {}, pending: [] };
 }
-function resumable(sessionId: string, total = 0) {
-  return { kind: "resumable", sessionId,
+function resumable(sessionId: string, total = 0, contextDir = "") {
+  return { kind: "resumable", sessionId, contextDir,
     history: { entries: total === 0 ? [] : [{ type: "user" }], total }, label: null,
     status: { running: false, busy: false }, pending: [] };
 }
@@ -30,7 +30,6 @@ function fakeUtils(options: {
   boxEngine?: "claude" | "codex";
   features?: Record<string, string>;
   bootstraps?: object[];
-  directory?: string;
 }): { utils: ResolveParams["utils"]; bootstrapCalls: () => number } {
   let bootstrapCalls = 0;
   return {
@@ -39,7 +38,7 @@ function fakeUtils(options: {
         status: { fetch: async () => ({ boxEngine: options.boxEngine ?? "claude" }) },
         newFeatures: { fetch: async () => options.features ?? {} },
         bootstrap: { fetch: async () => options.bootstraps?.[bootstrapCalls++] },
-        directoryFor: { fetch: async () => ({ contextDir: options.directory ?? "" }) },
+        directoryFor: { setData: () => undefined },
       },
     // This test double implements only the router procedures exercised below.
     } as unknown as ResolveParams["utils"],
@@ -49,7 +48,7 @@ function fakeUtils(options: {
 function cachedBootstrapUtils(options: {
   bootstraps: object[];
   directories: string[];
-}): { utils: ResolveParams["utils"]; networkCalls: () => number; directoryNetworkCalls: () => number } {
+}): { utils: ResolveParams["utils"]; networkCalls: () => number; directoryNetworkCalls: () => number; cachedDirectory: (input: object) => unknown } {
   const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 5000, retry: false } } });
   let networkCalls = 0;
   let directoryNetworkCalls = 0;
@@ -65,12 +64,14 @@ function cachedBootstrapUtils(options: {
           queryKey: ["chat.directoryFor", input],
           queryFn: async () => ({ contextDir: options.directories[directoryNetworkCalls++] }),
           ...fetchOptions,
-        }) },
+        }),
+        setData: (input: object, data: unknown) => queryClient.setQueryData(["chat.directoryFor", input], data) },
       },
     // This test double implements only the QueryClient-backed procedures used here.
     } as unknown as ResolveParams["utils"],
     networkCalls: () => networkCalls,
     directoryNetworkCalls: () => directoryNetworkCalls,
+    cachedDirectory: (input: object) => queryClient.getQueryData(["chat.directoryFor", input]),
   };
 }
 ```
@@ -106,7 +107,9 @@ After the server forgets the reservation, the matching receipt authorizes
 re-reserving that same id before bootstrap. This matters on a Codex-default box:
 without the reservation, a history consumer can choose the wrong engine before
 the resolver gets a missing-transcript answer. Context, engine, and model are
-preserved.
+preserved. The directory comes from the bootstrap that runs after the
+recovery: it replaces a stale cached `chat.directoryFor` answer (here the
+pre-recovery `""`) without a request of its own.
 
 ```ts continue
 let reservationRestored = false;
@@ -114,9 +117,9 @@ const recoveryUtils = cachedBootstrapUtils({
   bootstraps: [{ get kind(): string {
     if (!reservationRestored) throw new Error("Codex history request failed");
     return "resumable";
-  }, sessionId: coinedId, history: { entries: [], total: 0 }, label: null,
+  }, sessionId: coinedId, contextDir: "_content/courses", history: { entries: [], total: 0 }, label: null,
   status: { running: false, busy: false }, pending: [] }],
-  directories: ["", "_content/courses"],
+  directories: [""],
 });
 await recoveryUtils.utils.chat.directoryFor.fetch({ sessionId: coinedId });
 const recovered = await resolveConversation({
@@ -129,9 +132,10 @@ const recoveryCall = reserveCalls[1];
 const recoveredContext = recovered.selection.kind === "ready" ? recovered.selection.target.contextDir : "unavailable";
 JSON.stringify({ kind: recovered.selection.kind, recoveredContext, networkCalls: recoveryUtils.networkCalls(),
   directoryNetworkCalls: recoveryUtils.directoryNetworkCalls(),
+  cachedDirectory: recoveryUtils.cachedDirectory({ sessionId: coinedId }),
   recoveryCall: recoveryCall ? { ...recoveryCall, sessionId: "<same>" } : null,
   sameId: recoveryCall?.sessionId === coinedId })
-=> {"kind":"ready","recoveredContext":"_content/courses","networkCalls":1,"directoryNetworkCalls":2,"recoveryCall":{"sessionId":"<same>","contextDir":"_content/courses","engine":"claude","model":"sonnet"},"sameId":true}
+=> {"kind":"ready","recoveredContext":"_content/courses","networkCalls":1,"directoryNetworkCalls":1,"cachedDirectory":{"contextDir":"_content/courses"},"recoveryCall":{"sessionId":"<same>","contextDir":"_content/courses","engine":"claude","model":"sonnet"},"sameId":true}
 ```
 
 ## Missing ids without exact local provenance remain unavailable
@@ -182,7 +186,7 @@ receipt is removed.
 const storage = new MemoryStorage();
 const receipts = new ReservationReceipts(storage, "paper-cards/test1");
 receipts.put({ sessionId: "became-real", contextDir: "papers", engine: "claude" });
-const utils = fakeUtils({ bootstraps: [resumable("became-real", 1)], directory: "papers" });
+const utils = fakeUtils({ bootstraps: [resumable("became-real", 1, "papers")] });
 const result = await resolveConversation({ utils: utils.utils, reserve: async () => ({ kind: "taken" }), receipts,
   request: { kind: "session", named: true, sessionId: "became-real" } });
 JSON.stringify({ kind: result.selection.kind, receipt: receipts.get("became-real") ?? null })

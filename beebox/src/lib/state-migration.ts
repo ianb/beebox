@@ -66,7 +66,7 @@ const MIGRATION_WAIT_MS = 15_000;
 
 /** Use a stable lock outside the paths being renamed, so acquisition never
  * creates one side of the state pair and concurrent processes serialize. */
-function migrationLockPath(identity: string): string {
+export function migrationLockPath(identity: string): string {
   const digest = createHash("sha256").update(path.resolve(identity)).digest("hex").slice(0, 32);
   return path.join(os.tmpdir(), "bbx-state-migration-locks", `${digest}.lock`);
 }
@@ -95,8 +95,21 @@ async function migratePersistedPath(oldPath: string, newPath: string): Promise<"
   });
 }
 
-/** Migrate one box's hidden state directory before any state reader runs. */
+/**
+ * Migrate one box's hidden state directory before any state reader runs.
+ *
+ * Every `getBoxShape` call runs this, so it is on most request paths. With no
+ * legacy path present there is nothing to migrate, and the answer needs no
+ * lock: a migration in flight renames the state directory before the marker,
+ * and each rename is atomic, so one legacy path stays visible until it is
+ * done. Taking the lock anyway serialized concurrent requests in one process
+ * behind the lock's 100 ms retry poll.
+ */
 export async function migrateBoxState(boxRoot: string): Promise<"migrated" | "unchanged"> {
+  const [oldStateExists, oldMarkerExists] = await Promise.all([
+    exists(path.join(boxRoot, LEGACY_BOX_STATE_DIR)), exists(path.join(boxRoot, LEGACY_BOX_MARKER)),
+  ]);
+  if (!oldStateExists && !oldMarkerExists) return "unchanged";
   return withMigrationLock(boxRoot, () => migrateBoxStateLocked(boxRoot));
 }
 

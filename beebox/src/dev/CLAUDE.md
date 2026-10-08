@@ -14,5 +14,6 @@ Stand-alone CLI tools that aren't part of the running app. Each is run manually 
 | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
 | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy.md`, `docs/scheduled/csp-violation-review.md` |
 | `csp-report.ts` | Local macOS runner: gathers CSP logs (all local boxes + prod over SSH), writes+opens an HTML report every run, notifies only on new violations or newly-clean/harden-ready. Runner-owned state in `scratch/csp-report-state.json` (separate from csp-digest's cursors) | `docs/scheduled/csp-violation-review.md` |
+| `perf/` | Page-load and box-start measurement: `pnpm perf:hub` (local production-shaped hub + edge stand-in), `perf:load` (CDP browser runs, milestones, waterfalls), `perf:compare`, `perf:serve-start` (cold `bbx serve` phases, CPU profile by source owner) | `docs/development/performance.md` |
 
 To add a new script here: register it as a `scripts` entry in `package.json` (invoke via `pnpm <name>`) so knip recognizes it as an entry point, and document it in the table above.

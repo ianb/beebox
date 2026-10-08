@@ -563,7 +563,7 @@ box latched `unhealthy` (the shape `hubVerdict` produces from supervisor state
 ```ts continue
 const brokenHealth = () => ({
   status: "unhealthy",
-  boxes: [{ slug: "sick", status: "unhealthy", pid: undefined, port: undefined, restarts: 5, consecutiveFailures: 5, lastError: "ERR_DLOPEN_FAILED" }],
+  boxes: [{ slug: "sick", status: "unhealthy", pid: undefined, port: undefined, restarts: 5, consecutiveFailures: 5, lastError: "ERR_DLOPEN_FAILED", lastStart: undefined }],
 });
 const brokenHub = await startHub(staticEndpointProvider([]), { getHealth: brokenHealth });
 const brokenResponse = await fetch(`${brokenHub.base}/healthz`, diagAuth);

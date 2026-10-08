@@ -5,10 +5,10 @@
  * sit next to the rendering logic.
  */
 
-import { FigureView } from "../components/FigureView/view";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const figureRenderer: RendererEntry = {
   selector: { type: "figure" },
-  renderer: { name: "Figure", Component: FigureView, priority: 100 },
+  renderer: { name: "Figure", Component: lazyComponent(() => import("../components/FigureView/view"), (m) => m.FigureView), priority: 100 },
 };

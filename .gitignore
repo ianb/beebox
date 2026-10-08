@@ -120,3 +120,6 @@ beebox/docker/tailscale.env
 # The root is not a tap project, so this is litter wherever it appears.
 .tap/
 agentic-coding-presentation
+
+# TypeScript incremental build caches (a one-off `tsc -p <config>` writes one next to its tsconfig).
+*.tsbuildinfo

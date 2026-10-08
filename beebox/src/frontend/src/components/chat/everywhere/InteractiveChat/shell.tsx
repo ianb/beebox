@@ -45,6 +45,8 @@ import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../../../DocumentTitle";
 import { ErrorText } from "../../../ui/ErrorText";
+import { useFirstLoadMark } from "../../../../lib/first-load-marks";
+import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
 
 function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
   return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Choosing conversation…" : selection.reason;
@@ -181,6 +183,9 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
   const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, sessionInput, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
+  // First-load milestones: the conversation chosen, then its history shown (not the placeholder's).
+  useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, conversationSelection?.kind === "ready");
+  useFirstLoadMark(FIRST_LOAD_MARKS.history, conversationSelection?.kind === "ready" && !snapshot.matches("loading"));
   // Put the turn in the tab title, so a chat left in a background tab says
   // whether the box is still working on it. The deps are one boolean, so this
   // publishes once per turn rather than once per streamed token.

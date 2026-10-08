@@ -43,6 +43,15 @@ export interface BundleChunkReport {
   /** Other chunks this one only reaches via `import()` (lazy). */
   dynamicImports: string[];
   modules: BundleModuleAttribution[];
+  /** Each of our own source modules in this chunk (path relative to the
+   * frontend package root), with its raw bytes scaled the same way as
+   * `modules`. Finer than the `app:<dir>` buckets: what code splitting acts on. */
+  sourceFiles: BundleSourceFile[];
+}
+
+export interface BundleSourceFile {
+  path: string;
+  rawBytes: number;
 }
 
 export interface BundleAssetReport {

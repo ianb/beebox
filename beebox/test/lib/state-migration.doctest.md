@@ -7,7 +7,8 @@ The first `bbx` invocation moves a box's old hidden state directory to
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { migrateBoxState, PersistedStateConflictError } from "../../src/lib/state-migration.js";
+import { migrateBoxState, migrationLockPath, PersistedStateConflictError } from "../../src/lib/state-migration.js";
+import { acquireLock, releaseLock } from "../../src/lib/file-lock.js";
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "bbx-state-migration-"));
 async function migrationConflict(): Promise<boolean> {
@@ -87,6 +88,27 @@ print(`${fs.existsSync(path.join(concurrentRoot, ".callback-box"))}:${fs.existsS
 fs.rmSync(concurrentRoot, { recursive: true, force: true });
 => migrated,unchanged
 false:true
+```
+
+## A box with no legacy state answers without the lock
+
+Every `getBoxShape` call runs the migration check, so it sits on most request
+paths. Concurrent requests that each took the lock queued behind its 100 ms
+retry poll: four parallel secret lookups took 300 ms. With no legacy path
+present the check needs no lock, so it answers even while another holder has
+the lock.
+
+```ts
+const migratedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bbx-migrated-no-lock-"));
+fs.mkdirSync(path.join(migratedRoot, ".beebox"));
+await acquireLock(migrationLockPath(migratedRoot), { purpose: "test holder" });
+const started = Date.now();
+print(await migrateBoxState(migratedRoot));
+print(Date.now() - started < 100);
+await releaseLock(migrationLockPath(migratedRoot));
+fs.rmSync(migratedRoot, { recursive: true, force: true });
+=> unchanged
+true
 ```
 
 ```ts cleanup

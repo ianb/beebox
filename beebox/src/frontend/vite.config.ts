@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
 import { perBoxIdentityAssetPattern } from "../shared/box-identity-asset-routes.js";
 import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin/plugin";
+import { bootPreloadPlugin } from "./src/dev/boot-preload-plugin/plugin";
 
 // Vite reads these build controls while constructing its server/build config;
 // app runtime env parsing cannot configure this file.
@@ -80,6 +81,7 @@ export default defineConfig({
         ? { babel: { plugins: [["babel-plugin-react-compiler", { target: "18" }]] } }
         : undefined,
     ),
+    bootPreloadPlugin(),
     ...(ANALYZE_BUNDLE ? [bundleAnalysisPlugin()] : []),
   ],
   resolve: {

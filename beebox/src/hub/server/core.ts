@@ -38,7 +38,7 @@ import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
 import httpProxy from "http-proxy-3";
 import type { Endpoint, EndpointProvider } from "../endpoints.js";
-import type { BoxRuntimeStatus } from "../supervisor/core.js";
+import type { BoxRuntimeStatus } from "../box-status.js";
 import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../../webapp/routes/auth/register.js";
 import { isPairingRedeemUrl } from "../../webapp/routes/pairing.js";

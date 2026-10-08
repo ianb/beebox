@@ -68,6 +68,14 @@ export interface WaitForHttpOptions {
   headers?: Record<string, string>;
 }
 
+/**
+ * Pause between readiness attempts. A lazy box's first request waits out this
+ * poll on top of the child's own start, so it is short: a refused connect
+ * costs well under a millisecond. At 150 ms it added about 75 ms to an
+ * average cold start.
+ */
+const READY_POLL_MS = 25;
+
 export async function waitForHttp({ port, reqPath, timeoutMs, label, headers }: WaitForHttpOptions): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -87,7 +95,7 @@ export async function waitForHttp({ port, reqPath, timeoutMs, label, headers }: 
       req.end();
     });
     if (ok) return;
-    await sleep(150);
+    await sleep(READY_POLL_MS);
   }
   throw new HttpReadinessTimeoutError({ label, reqPath, timeoutMs });
 }

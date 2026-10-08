@@ -1,11 +1,4 @@
-import { DashboardPage } from "../pages/DashboardPage";
-import { SettingsPage } from "../pages/SettingsPage";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
-import { QuestionsList } from "../components/questions/QuestionsList";
-import { LandmarksList } from "../components/landmarks/LandmarksList";
-import { HistoryViewCard } from "../components/history/HistoryViewCard/view";
-import { InventoryCardBody } from "../pages/inventory/InventoryPage";
-import { AdminCardBody } from "../pages/AdminPage";
 import { adminArrivalReceipt, adminTabViewState, clearAdminArrivalState, parseAdminCardState } from "../lib/admin-card-state";
 import { Text } from "../components/ui/Text";
 import type { AdminTab } from "../components/admin/sections";
@@ -13,6 +6,15 @@ import { useRouterState } from "@tanstack/react-router";
 import { legacyHistoryState } from "../components/history/card-state";
 import { HISTORY_QUERY_CODEC, resolveViewParams } from "@shared/named-views";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
+import { lazyComponent } from "../lib/lazy-component";
+
+const DashboardPage = lazyComponent(() => import("../pages/DashboardPage"), (m) => m.DashboardPage);
+const SettingsPage = lazyComponent(() => import("../pages/SettingsPage"), (m) => m.SettingsPage);
+const QuestionsList = lazyComponent(() => import("../components/questions/QuestionsList"), (m) => m.QuestionsList);
+const LandmarksList = lazyComponent(() => import("../components/landmarks/LandmarksList"), (m) => m.LandmarksList);
+const HistoryViewCard = lazyComponent(() => import("../components/history/HistoryViewCard/view"), (m) => m.HistoryViewCard);
+const InventoryCardBody = lazyComponent(() => import("../pages/inventory/InventoryPage"), (m) => m.InventoryCardBody);
+const AdminCardBody = lazyComponent(() => import("../pages/AdminPage"), (m) => m.AdminCardBody);
 
 function DashboardCard({ data }: RendererProps) {
   return <SystemCardBoundary type="dashboard" path={data.path}><DashboardPage /></SystemCardBoundary>;

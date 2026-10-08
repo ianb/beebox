@@ -50,6 +50,7 @@ import { quiesceChatThreads, chatThreadsAreIdle } from "../../core/chat/session/
 import { getChatRuntime } from "../chat-runtime.js";
 import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance.js";
 import { TRPC_MAX_URL_LENGTH } from "../../shared/trpc-url-limit.js";
+import { markStartupPhase } from "../../lib/startup-timing.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "../server-types.js";
@@ -271,6 +272,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // the socket bind so a smuggled `openAccess: true` never kills the previous
   // server or writes a pid file.
   assertOpenAccessNotListening(options);
+  markStartupPhase("cli-loaded");
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? "localhost";
 
@@ -305,12 +307,15 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   for (const box of boxes) {
     await sweepStaleIndexLock(box.boxRoot);
   }
+  markStartupPhase("box-checks");
 
   let server: FastifyInstance;
   try {
     server = await createServer({ ...options, boxes }, startup);
     await server.ready();
+    markStartupPhase("routes-ready");
     for (const box of boxes) await getChatRuntime(box.boxRoot)?.maintenance;
+    markStartupPhase("chat-maintenance");
   } catch (error) {
     for (const lease of startup.values()) await lease.release();
     throw error;
@@ -376,6 +381,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     // Publish HTTP readiness only after startup has relinquished its work.
     for (const lease of startup.values()) await lease.release();
     await withoutBoxWork(() => server.listen({ port, host }));
+    markStartupPhase("listening");
     // Register live public URLs for each served box so subprocess spawns
     // pick up BBX_BOX_NAME / BBX_SERVER_URL via buildScriptEnv without
     // requiring publicUrl to be set in _config/box.json.

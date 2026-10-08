@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#
+# prod-session-cookie — print the deployed server's public URL and an owner
+# session cookie as one JSON object: {"publicUrl": "...", "cookie": "..."}.
+# The cookie is minted on the server from its session secret; callers keep it
+# in memory and must never write it into the repository. Used by prod-browse
+# and the page-load harness (`pnpm perf:load --target prod`).
+#
+# IDENTITY BOUNDARY: this authenticates only as BBX_OWNER_EMAIL. Do not alter it
+# to mint a session for another identity without the boxholder's express,
+# in-the-moment permission. See deploy/README.md.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=beebox/deploy/deploy-target.sh
+. "$SCRIPT_DIR/deploy-target.sh"
+require_deploy_target "$SCRIPT_DIR"
+
+ssh -o ConnectTimeout=12 "$BBX_DEPLOY_SSH_TARGET" \
+  "bash -s -- $(printf '%q ' "$BBX_DEPLOY_SERVICE_HOME" "${BBX_DEPLOY_PUBLIC_URL:-}")" <<'REMOTE'
+set -euo pipefail
+SERVICE_HOME="$1"
+LOCAL_PUBLIC_URL="${2:-}"
+set -a; . "$SERVICE_HOME/.env"; set +a
+if [[ -z "${BBX_OWNER_EMAIL:-}" ]]; then
+  echo "Error: BBX_OWNER_EMAIL is unset in $SERVICE_HOME/.env." >&2
+  exit 1
+fi
+BBX_SESSION_SECRET=$(cat "$SERVICE_HOME/.bbx-session-secret")
+export BBX_SESSION_SECRET
+# target.env's BBX_DEPLOY_PUBLIC_URL wins; else the server's own public URL.
+export PUBLIC_URL_OUT="${LOCAL_PUBLIC_URL:-${BBX_PUBLIC_URL:-${PUBLIC_URL:-}}}"
+node -e 'const c=require("crypto");const e=process.env.BBX_OWNER_EMAIL;const s=process.env.BBX_SESSION_SECRET;const p=JSON.stringify({email:e,name:e,exp:Date.now()+2592000000});const sig=c.createHmac("sha256",s).update(p).digest("hex");process.stdout.write(JSON.stringify({publicUrl:process.env.PUBLIC_URL_OUT,cookie:Buffer.from(p).toString("base64url")+"."+sig})+"\n")'
+REMOTE

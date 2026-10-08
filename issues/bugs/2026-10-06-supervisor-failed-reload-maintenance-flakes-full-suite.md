@@ -33,3 +33,13 @@ into a box whose reload failed is a product question, not only a test one.
 
 Closed predecessor with a different mechanism:
 [supervisor and git-lock flakes](../closed/bugs/2026-08-18-supervisor-and-git-lock-doctests-flake-full-suite.md).
+
+## Re-encounter (2026-10-07)
+
+In worktree-box-first-load, the same assertion (`supervisor.doctest.md:274`,
+`acquireBoxWork` after the failed reload, "no error thrown") failed in 1 of 3
+runs of only `test/hub/health.doctest.md`, `test/hub/server.router.doctest.md`
+and `test/hub/supervisor*.doctest.md` in parallel. It passed alone. Full-suite
+load is not required: a few parallel files on a loaded machine are enough.
+The branch added launch timing fields to the supervisor; it changes no
+maintenance or reload logic.

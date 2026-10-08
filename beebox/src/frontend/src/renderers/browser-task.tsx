@@ -4,10 +4,10 @@
  * submission form, and the inbox instead of the generic frontmatter table.
  */
 
-import { BrowserTaskView } from "../components/BrowserTaskView";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const browserTaskRenderer: RendererEntry = {
   selector: { type: "browser-task" },
-  renderer: { name: "Browser task", Component: BrowserTaskView, priority: 100 },
+  renderer: { name: "Browser task", Component: lazyComponent(() => import("../components/BrowserTaskView"), (m) => m.BrowserTaskView), priority: 100 },
 };

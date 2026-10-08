@@ -6,7 +6,9 @@ learn the session id, a client navigation, then `chat.history` + `chat.status`
 `chat.bootstrap` resolves the session and answers all three at once. It also
 carries the session's editorial `label` (the husk card's `title`, or null
 when the session has no real name yet) — the chat page's session chip needs
-it, and no other chat-page query has one.
+it, and no other chat-page query has one. A resumable session also carries
+its `contextDir`, the answer `chat.directoryFor` gives, so the page does not
+spend another round trip asking for it.
 
 It composes the same implementations the three procedures use, so it can't
 report anything different from them.
@@ -135,14 +137,15 @@ sessionId: sess-explicit
 total: 2
 ```
 
-## It matches the three procedures it replaces
+## It matches the procedures it replaces
 
 ```ts continue
 const c = caller(server);
-const [viaDefault, viaHistory, viaStatus] = await Promise.all([
+const [viaDefault, viaHistory, viaStatus, viaDirectory] = await Promise.all([
   c.chat.defaultSession(),
   c.chat.history({ session: "sess-explicit", slice: TAIL }),
   c.chat.status({ session: "sess-explicit" }),
+  c.chat.directoryFor({ sessionId: "sess-explicit" }),
 ]);
 const atomic = await c.chat.bootstrap({ slice: TAIL });
 
@@ -154,6 +157,7 @@ JSON.stringify(composed) === JSON.stringify({
   kind: "resumable",
   sessionId: viaDefault.sessionId,
   history: viaHistory,
+  contextDir: viaDirectory.contextDir,
   status: viaStatus,
 })
 => true

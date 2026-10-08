@@ -103,3 +103,20 @@ export function formatBundleReport(report: BundleReport, params: { topPackages: 
     formatPackagesSection(report, params.topPackages),
   ].join("\n");
 }
+
+/**
+ * Our own source in the initial (eagerly loaded) chunks, summed by directory
+ * prefix of `depth` path segments: where to look for code to split out of the
+ * entry script. Sizes are post-minification estimates (see `sourceFiles`).
+ */
+export function formatInitialSourceTree(report: BundleReport, options: { depth: number; top: number }): string {
+  const byPrefix = new Map<string, number>();
+  for (const chunk of report.chunks.filter((c) => c.isInitial)) {
+    for (const file of chunk.sourceFiles) {
+      const prefix = file.path.split("/").slice(0, options.depth).join("/");
+      byPrefix.set(prefix, (byPrefix.get(prefix) ?? 0) + file.rawBytes);
+    }
+  }
+  const rows = [...byPrefix].toSorted((a, b) => b[1] - a[1]).slice(0, options.top).map(([prefix, bytes]) => [prefix, formatBytes(bytes)]);
+  return `== Initial-load app source by directory (depth ${options.depth}, top ${options.top}) ==\n${renderTable({ headers: ["path", "raw"], rows })}`;
+}

@@ -7,6 +7,7 @@
  */
 
 import { gzipSync } from "node:zlib";
+import { relative as relativePath } from "node:path";
 import type { OutputAsset, OutputBundle, OutputChunk } from "rollup";
 import type {
   BundleAssetReport,
@@ -134,6 +135,12 @@ function buildChunkReport(params: {
   const gzipBytes = gzipLength(chunk.code);
   const scaledRaw = scaleToActual({ weights: rawWeights, actualBytes: rawBytes });
   const scaledGzip = scaleToActual({ weights: gzipWeights, actualBytes: gzipBytes });
+  const totalRendered = Object.values(chunk.modules).reduce((sum, mod) => sum + mod.renderedLength, 0);
+  const fileScale = totalRendered === 0 ? 0 : rawBytes / totalRendered;
+  const sourceFiles = Object.entries(chunk.modules)
+    .filter(([moduleId]) => !moduleId.includes(NODE_MODULES_MARKER) && !moduleId.startsWith("\0"))
+    .map(([moduleId, mod]) => ({ path: relativePath(frontendRoot, moduleId), rawBytes: Math.round(mod.renderedLength * fileScale) }))
+    .toSorted((a, b) => b.rawBytes - a.rawBytes);
   const modules: BundleModuleAttribution[] = [...rawWeights.keys()].map((packageName) => ({
     package: packageName,
     rawBytes: scaledRaw.get(packageName) ?? 0,
@@ -149,6 +156,7 @@ function buildChunkReport(params: {
     imports: chunk.imports,
     dynamicImports: chunk.dynamicImports,
     modules: modules.toSorted((a, b) => b.rawBytes - a.rawBytes),
+    sourceFiles,
   };
 }
 
