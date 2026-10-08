@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure, ownerProcedure } from "../procedures.js";
+import { router, publicProcedure, authedProcedure } from "../procedures.js";
 import { splitCardContent, type CardSchema } from "../../../exports/cards.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
@@ -168,7 +168,7 @@ export const cardRouter = router({
       return findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
     }),
 
-  setTheme: ownerProcedure
+  setTheme: authedProcedure
     .input(z.object({
       path: z.string().min(1),
       theme: ThemeChoiceSchema.nullable(),
