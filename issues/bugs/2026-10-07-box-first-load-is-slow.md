@@ -128,11 +128,13 @@ Production effect is unmeasured until deploy; `pnpm perf:load --target prod
   subscription from a cursor taken at bootstrap time. (The other duplicate
   fetch, the ambient-reply panel refetching the selected conversation, is
   fixed.)
-- **Compression.** The edge compresses on the fly (zstd or brotli, about
-  the same size as gzip). Brotli at quality 11 at build time would be
-  smaller, if the edge passes it through. This is unverified.
-- **Edge script.** The production edge injects a RUM beacon, which adds
-  about 10 requests per load.
+- **Compression.** Implemented in e5f1c12ac: hashed assets are precompressed
+  with brotli quality 11 at build time and served with `Vary: Accept-Encoding`.
+  Whether the CDN passes the brotli files through is to be verified after
+  deploy.
+- **Edge script.** Not pursued: the production edge injects a RUM beacon
+  (about 10 requests per load), but it is specific to the developer's own CDN
+  account, not a product issue.
 - **Server work during the load.** Each fresh page load reserves a chat,
   and the reservation warms a Claude subprocess on the server during the
   load.
