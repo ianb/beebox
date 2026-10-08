@@ -73,8 +73,9 @@ the agent or the user finding it through the real UI.
 Build a loop that goes red on this bug before changing code. Pick the fastest
 loop that reaches the bug:
 
-- **A doctest**: logic, routes, and box-file operations. Write it first; it
-  stays as the regression test.
+- **A doctest**: logic, routes, and box-file operations. Write it first; keep
+  it as the regression example only when the bug is a logic class that can
+  recur (see above), and delete it once the fix is green otherwise.
 - **The dev router**: `curl http://localhost:3210/<worktree>/<box>/api/...`
   hits a backend route in the running app.
 - **`bin/browse`**: a headless browser on the running app for frontend bugs

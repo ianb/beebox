@@ -18,6 +18,8 @@ Good models: `beebox/test/core/pdf/probe.text-layer-quality.doctest.md`
 
 - **The prose is the document.** Open with the contract or the incident behind
   the code. Put one sentence before each example saying what rule it shows.
+- **One claim per example.** Passing with the code deleted, or re-proving
+  another example's branch, is a defect ([testing](../../../beebox/docs/testing.md)).
 - **Show values.** Write objects as literals (`=> { kind: "box" }`), not
   `JSON.stringify(...)`. Prefer the value to `=> true`.
 - **Unknown or varying value:** write `=> ?`, run, and paste the `suggested:`
@@ -32,10 +34,8 @@ Good models: `beebox/test/core/pdf/probe.text-layer-quality.doctest.md`
 ## Running
 
 - One file, **from the package directory**: `cd beebox && pnpm exec tap test/<path>.doctest.md`
-- What your diff implicates: `pnpm test:changed`. Pre-commit runs typecheck and
-  lint, not tests. The full suite (`pnpm test`) runs hourly on `main`; do not
-  run it to check one file.
-- Rule out contention: add `-j1`.
+- What your diff implicates: `pnpm test:changed`; the full suite is hourly on
+  `main`. Rule out contention with `-j1`.
 - If tap itself cannot start (a missing module under `node_modules/@tapjs`),
   stop and report it. Do not reinstall or delete `node_modules`; other
   sessions share it.

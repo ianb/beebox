@@ -1,6 +1,6 @@
 ---
 title: "Criteria for removing tests that have never failed and guard nothing a model gets wrong"
-workstream: unattached
+workstream: test-cleanup
 area: beebox
 labels: [tests, code-quality]
 filed-by: agent
@@ -41,3 +41,20 @@ the first pass is read by the boxholder before it lands, later passes land
 through cross-model review like the retrospective. Run after the flake
 issue so the keep list is stable. Numbers go in the digest so the ratio is
 visible going down.
+
+## Agreed criteria (2026-10-08)
+
+A sample of 64 never-failed files (454 examples) found C3 and C5 remove
+almost nothing, so they are dropped. The sweep applies, per assertion: C1
+restates the code; C2 second proof of one claim, within a file or across
+files (the copy outside the code's home goes); C4 tests the framework. The
+keep list above stands, plus cross-system contracts (mobile and scan wire
+contracts, `beebox/*` package exports) and the files that have failed on
+their own. The sample put this at about 5k of 145k test lines.
+
+## Further trims to consider
+
+Ideas outside the agreed criteria, collected during the sweep for a later
+decision:
+
+- (filled in per batch)
