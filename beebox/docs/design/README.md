@@ -28,14 +28,14 @@ code doesn't fill yet — don't read it as description.
 
 Former design.md sections that were pure pointers after reconciliation:
 triage pipeline → [`../triage.md`](../triage.md); calendar →
-[`../calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
+[`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 and [`../chat/schedules.md`](../chat/schedules.md).
 
 ## Retired sections
 
 Moved verbatim to [`../implemented-plans/design-md-retired-sections.md`](../implemented-plans/design-md-retired-sections.md):
 
-- **§3 File formats and envelopes** — taught the XML envelope; cards are YAML frontmatter + markdown (`../cards-as-markdown.md`).
+- **§3 File formats and envelopes** — taught the XML envelope; cards are YAML frontmatter + markdown ([`../cards/format.md`](../cards/format.md)).
 - **§9 Commands as files** — command cards are removed; actions flow through reactor jobs + `bbx finalize`. The paperwork idea survives as schema process-fields (see `trust.md`).
 - **§10 Untrusted-content tokenization** — deferred idea, never picked up.
 - **§11 Sidecars / agent-hidden JSON** — deferred idea, never picked up.

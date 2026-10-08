@@ -85,6 +85,10 @@ validates it and shows you a parse failure.
      item that needs a decision.
    - **fyi** — edits landed, or only the watch list changed.
    - `important` is not used: nothing here needs a person today.
+   - A plan landed in the window for user-facing work (a card type, surface,
+     proactive or chat behavior, notification, onboarding) with no `## Design`
+     section, or one whose "No design section: <reason>" does not hold, is a
+     watch item. A stated reason for non-user-facing work is fine.
 
 Use `bin/schedules done --run <id>` only if the branch and the watch list are
 exactly as you found them. The run id is in the briefing's trailer.

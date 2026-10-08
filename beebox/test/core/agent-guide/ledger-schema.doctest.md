@@ -14,7 +14,7 @@ import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { loadLedger, parseLedger, HANDLE_PATTERN } from "../../../src/core/agent-guide/ledger-schema.js";
 import { section, sectionHandles, xref } from "../../../src/core/agent-guide/sections.js";
 import { generateAgentGuide } from "../../../src/core/agent-guide/guide/core.js";
-import { loadTests } from "../../../src/dev/lib/test-runner/runner.js";
+import { loadTests } from "../../../src/dev/lib/test-runner/runner/run-test.js";
 
 const ledger = loadLedger();
 

@@ -7,32 +7,32 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
-import { assertStandaloneBox, assertCleanAuditBox } from "../box-guard.js";
-import { testSuiteSchema, type AuditTest, type SearchWhere, type TestSuite } from "../test-suite-schema.js";
-import { errnoCode } from "../../../shared/error-guards.js";
-import { createClaudeAgent } from "../../../core/agent/invoke/core.js";
-import type { AgentInvokeOptions } from "../../../core/agent/types.js";
-import { createCodexAgent } from "../../../core/agent/codex-agent.js";
-import type { CodexObservedActivity } from "../../../core/agent/codex-run/core.js";
-import { loadAgentEngine, type AgentEngine } from "../../../core/box/config.js";
-import { type KnownToolName, isKnownTool } from "../../../shared/known-tools.js";
-import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../../core/chat/session/run/core.js";
+import { assertStandaloneBox, assertCleanAuditBox } from "../../box-guard.js";
+import { testSuiteSchema, type AuditTest, type SearchWhere, type TestSuite } from "../../test-suite-schema.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
+import { createClaudeAgent } from "../../../../core/agent/invoke/core.js";
+import type { AgentInvokeOptions } from "../../../../core/agent/types.js";
+import { createCodexAgent } from "../../../../core/agent/codex-agent.js";
+import type { CodexObservedActivity } from "../../../../core/agent/codex-run/core.js";
+import { loadAgentEngine, type AgentEngine } from "../../../../core/box/config.js";
+import { type KnownToolName, isKnownTool } from "../../../../shared/known-tools.js";
+import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../../../core/chat/session/run/core.js";
 import {
   MAX_SESSION_ENTRIES,
   parseSessionLog,
   type SessionContentBlock,
-} from "../../../cli/lib/session.js";
-import { getSessionLogPath } from "../../../core/chat/session/transcript-paths.js";
+} from "../../../../cli/lib/session.js";
+import { getSessionLogPath } from "../../../../core/chat/session/transcript-paths.js";
 import {
   readTurnUsage,
   summarizeContextUsage,
   type ContextStats,
-} from "../context-usage.js";
+} from "../../context-usage.js";
 import { codexBehaviorFromActivity } from "./codex-audit.js";
 import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-observation.js";
-import { runChecks } from "../audit-checks.js";
-import { generateAgentContextMirrors } from "../../../core/agent-context-mirrors.js";
-import { AGENTS_MD, CLAUDE_MD } from "../../../core/agent-instruction-files.js";
+import { runChecks } from "../../audit-checks.js";
+import { generateAgentContextMirrors } from "../../../../core/agent-context-mirrors.js";
+import { AGENTS_MD, CLAUDE_MD } from "../../../../core/agent-instruction-files.js";
 import { ensureAuditPackageDocs, removeFixtures, writeFixtures } from "./fixtures.js";
 
 export type { AuditTest, TestSuite };

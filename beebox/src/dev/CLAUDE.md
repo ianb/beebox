@@ -4,7 +4,7 @@ Stand-alone CLI tools that aren't part of the running app. Each is run manually 
 
 | Script | What it does | Full doc |
 |--------|--------------|----------|
-| `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/testing/knowledge-audits.md` |
+| `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent, or (`--dev`) a headless Claude Code session in this checkout | `docs/testing/knowledge-audits.md` |
 | `prompt-report.ts` | Generates `src/dev/reports/prompt-report.md` (system-wide prompt inventory, gitignored) | `docs/development/maintenance.md` |
 | `prompt-viewer.ts` | Generates data for the `dev/prompts/` browser page: static inventory + assembled situations + duplication scan + a tracked size ledger. Shares `lib/prompt-inventory.ts` with `prompt-report.ts` (`pnpm prompt-viewer --box <path>`) | `docs/development/maintenance.md` |
 | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reactor), layer by layer with word counts (`pnpm agent-context chat --box <path>`) | `docs/prompts/review.md` |

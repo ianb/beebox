@@ -134,8 +134,8 @@ Requirements settled in discussion:
   params arrive only through the resolver, or configuration becomes
   unattributable.
 - **Codec per view.** Typed params need a params↔query-string codec next to
-  each param schema in the named-views table (`history-filter.ts` is
-  already this for history; generalize, zod coercion covers most). Merge is
+  each param schema in the named-views table (`HISTORY_QUERY_CODEC` in
+  `src/shared/named-views.ts` is already this for history; generalize, zod coercion covers most). Merge is
   per-key overlay.
 - `RendererProps.params` (query params from `view:` URLs on the chat-embed
   path, e.g. figure `?molecule=`) is this pattern already growing one-off —
@@ -288,11 +288,11 @@ bespoke `useBusSubscription` lists).
 
 | Surface | Becomes | Notes |
 |---|---|---|
-| Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (`view: landmarks` on a `view` card; src/schemas/view.ts + renderers/view.tsx). The query-card form is **parked** (`docs/unimplemented-plans/query-cards.md` — too complex, too contextless; anchored queries are landmark `expand`'s job). |
-| Questions | query card + `group-by: status` | `QuestionForm` promotes to the question type's renderer — the layering rule cashed in. **Ported as-is 2026-07** (`view: questions` instrument card, page body extracted). The query-card form is **parked** (`docs/unimplemented-plans/query-cards.md`); the renderer promotion (tile registry + question tile) still stands on its own. |
+| Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (`view: landmarks` on a `view` card; src/schemas/view.ts + src/frontend/src/renderers/view.tsx; since 2026-09 also a dedicated `landmarks` schema at `_config/interface/landmarks.card`, see src/shared/system-card-paths.ts). The query-card form is **parked** (`docs/unimplemented-plans/query-cards.md` — too complex, too contextless; anchored queries are landmark `expand`'s job). |
+| Questions | query card + `group-by: status` | `QuestionForm` promotes to the question type's renderer — the layering rule cashed in. **Ported as-is 2026-07** (`view: questions` instrument card, page body extracted; since 2026-09 a dedicated `questions` schema at `_config/interface/questions.card`). The query-card form is **parked** (`docs/unimplemented-plans/query-cards.md`); the renderer promotion (tile registry + question tile) still stands on its own. |
 | Browse | directory subject + builtin master-detail view | Delete/context-menu are view affordances; a positional presentation card parameterizes (order, grouping, prominence, tiles vs rows). |
 | Chats | query card over chat husks + named `chat-picker` view | Freshness filter declarative; landmark-proximity grouping stays code. Blocked on husks. **Shipped 2026-07 as an instrument card** (`view: chat-picker`); the husk-based query form is still future. |
-| History | instrument card over the timeline view | Filter state (already URL-encoded) becomes frontmatter params; **saved filters = more instrument cards** with frozen params + notes body. Subject is git, never a card query. **Shipped 2026-07** (`view: history` + params — the first configurable instrument card; filter interactions inside a card escape to the History page). |
+| History | instrument card over the timeline view | Filter state (already URL-encoded) becomes frontmatter params; **saved filters = more instrument cards** with frozen params + notes body. Subject is git, never a card query. **Shipped 2026-07** (`view: history` + params — the first configurable instrument card; since 2026-09 a dedicated `history` schema at `_config/interface/history.card`; filter interactions inside a card escape to the History page). |
 | Nav | curated `refs` card + per-entry overrides — **shipped 2026-07** (`docs/implemented-plans/nav-card.md`; nav form/badges still future) | Each target renders its **nav form** — a third form beside tile/full (label, symbol, optional badge). Badges computed by the target's own renderer (questions card shows pending count), not by nav vocabulary. Anything can go in the nav. Minimal hardcoded fallback nav per can't-break. |
 | Dashboard | markdown card transcluding other cards | Prose + embedded health instrument, questions query, activity instrument. Reuses embedding instead of a layout schema. Accepts a document-flow layout ceiling; stresses embed machinery (embed-level error boundaries, live-updating embeds) — the right work. Non-singleton: any such card is *a* dashboard; the root binding picks *the* dashboard. |
 | Capture, Settings | instrument cards | View stays code; card holds destination defaults / exposed config + notes. |

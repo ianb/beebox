@@ -8,6 +8,10 @@ description: Use when creating or changing beebox card types, schema fields, or 
 A guide skill: the mental model and the boundaries. The worked example
 and file-by-file checklist live in `beebox/docs/cards/schemas.md`.
 
+A card type is where the box meets a person. Before the field list, write its
+situation line ("When …, I want to …, so I can …") and the surface where the
+card appears; for a new type, use the bbx-design skill.
+
 ## The model
 
 A card type is a Zod-based `cardSchema(type, { fields, instructions? })`

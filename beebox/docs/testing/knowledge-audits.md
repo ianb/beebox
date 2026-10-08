@@ -1,7 +1,8 @@
 # Knowledge audits
 
 Tests that prompt a real box agent and check what it knows from the guidance
-a box loads.
+a box loads, or (dev-guidance audits) what a dev session in this checkout
+knows from the repo's own guidance.
 
 ## What it is
 
@@ -96,6 +97,36 @@ parsed. Codex does not expose Claude-equivalent per-turn context snapshots on
 that surface, so Codex reports deliberately omit the context baseline rather
 than presenting incomparable usage as parity.
 
+## Dev-guidance audits
+
+An entry with `surface: dev` audits a developer session instead of a box
+agent: what a Claude Code session in this monorepo checkout learns from the
+root and package `CLAUDE.md` files, the project skills, and `docs/`. Its first
+questions cover the product spirit and design docs, which sessions kept
+forgetting.
+
+```bash
+pnpm knowledge-audit run --dev [--model <id>] [--filter <tag-or-id>]
+```
+
+`--dev` runs only `surface: dev` entries (a box run skips them) as
+`claude -p --output-format stream-json` in the checkout root, default model
+`claude-opus-5-5`. The session loads project settings and skills with hooks
+disabled, no MCP servers, and auto-memory off, so a pass means tracked
+guidance taught it; the user-level `~/.claude/CLAUDE.md` still loads. Its
+settings deny reads of the answer key (`knowledge-audits.yaml`, the context
+ledger, `src/dev/reports/`, and `scratch/`). Its tools are `Read`, `Grep`,
+`Glob`, and `Skill`. A read counts only when its tool result is not an error,
+and a Skill call counts as a read of that skill's `SKILL.md`, so `should_read` paths are repo-relative
+(`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
+checks are unchanged; card, Bash, search, fixture, and context-dir fields are
+refused at load. Mechanics: `src/dev/lib/test-runner/dev-session.ts`.
+
+It cannot observe Codex sessions (`AGENTS.md`, `.codex/` agents), what a
+session learns only by doing (hooks, lint and doc-check failures, tool
+errors), or interactive-session context such as the developer's memory and
+`/` commands. It asks cold questions; a session mid-task may load more.
+
 ## Writing one
 
 Each entry in `knowledge-audits.yaml` has these fields:
@@ -121,6 +152,7 @@ Each entry in `knowledge-audits.yaml` has these fields:
   that require checking rather than answering from memory.
 - `max_turns` — override the default 10-turn limit (use for tests requiring multi-step card creation).
 - `tags` — for filtering with `--filter`.
+- `surface` — `box` (default) or `dev`; see Dev-guidance audits.
 - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `additionalDirectories`, mirroring how a chat session bound to a landmark is spawned. Use to audit that the subdirectory's `CLAUDE.md` (and its `@MAP.md` import) actually load into the agent's context at session start.
 - `fixture` — map of box-relative path → file content, written before the test and removed afterward. Used to stage a `CLAUDE.md` (or any other file) without checking it into the box. Combined with `context_dir`, this lets a single audit set up its own landmark-style scratch directory.
 - `chat_mode` — when true, the agent runs with `CHAT_SYSTEM_PROMPT` instead of the default working-directory prompt. Use for tests that audit chat-mode knowledge — the agent in a chat session sees the chat prompt's tag descriptions (`<speech>`, `<chat-app>`, `<ack>`, `<callout>`, `<schedule>`, etc.), so a non-chat-mode audit can't legitimately expect direct knowledge of those. If the test prompt declares `narration="on"` via a `<chat-app>` snapshot, `NARRATION_OVERLAY` is also appended — mirroring what `ChatSession.resolveSystemPrompt` does when narration is enabled on the session.

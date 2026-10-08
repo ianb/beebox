@@ -488,10 +488,10 @@ budget if we follow the rules. So go to work"):
   after the model cutoff; a fact inside the box the prompt tempts the agent
   to assume), each asserting the tool call, `bash_contains: ["bbx search"]`
   or a web search observation. Today the Claude runner records Read, Grep,
-  Glob, and Bash only (`src/dev/lib/test-runner.ts:280-298` (moved to `beebox/src/dev/lib/test-runner/runner.ts`);
+  Glob, and Bash only (`src/dev/lib/test-runner.ts:280-298` (moved to `beebox/src/dev/lib/test-runner/runner/run-test.ts`);
   `src/shared/known-tools.ts:13-23` lists no web tool), while the Codex
   runner already records provider searches
-  (`src/dev/lib/codex-audit-behavior.ts:14-31` (moved to `beebox/src/dev/lib/test-runner/codex-audit.ts`)); and the audit schema has no
+  (`src/dev/lib/codex-audit-behavior.ts:14-31` (moved to `beebox/src/dev/lib/test-runner/runner/codex-audit.ts`)); and the audit schema has no
   search assertion (`src/dev/lib/test-suite-schema.ts:20-43`). Track 4
   first adds WebSearch and WebFetch to the Claude capture and a
   `should_search` field checked in `audit-checks.ts`.
