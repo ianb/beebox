@@ -1,24 +1,27 @@
 /* A sky of sweeping cloud banks and small, uneven starbursts. The artwork
-   lives around opaque reading sheets, never between text and its paper. */
+   lives around reading sheets, with a faint glimpse through reply material. */
 .bbx-box-presentation[data-chrome-theme="daydream"],
 .bbx-themed-menu[data-chrome-theme="daydream"] {
+  --bbx-status-background: #dbc5ef;
+  --bbx-status-ink: #442743;
+  --bbx-status-edge: #ac82b4;
   --bbx-desk-background: transparent;
   --bbx-desk-pattern: none;
   --bbx-scene:
     url("./art/daydream-sparks.svg") center top / 640px 480px repeat,
     url("./art/daydream-clouds.svg") center bottom / cover no-repeat,
     radial-gradient(ellipse at 48% 68%, #ffe5ac 0, #f8add0 46%, #ed8fbd 100%);
-  --bbx-toolbar-background: #fff6fc;
-  --bbx-toolbar-ink: #4e2851;
-  --bbx-toolbar-edge: #af75aa;
+  --bbx-toolbar-background: linear-gradient(112deg, #b69ce0 0%, #d591c0 48%, #e6a7ca 72%, #a7b6e7 100%);
+  --bbx-toolbar-ink: #39213f;
+  --bbx-toolbar-edge: #805e9c;
   --bbx-toolbar-radius: 0 0 26px 12px;
-  --bbx-toolbar-shadow: 0 5px 0 #bbabd9, 0 7px 0 #fff8fd;
-  --bbx-composer-background: #fffafd;
+  --bbx-toolbar-shadow: 0 4px 0 #8870b4, 0 7px 0 #e8b0d0;
+  --bbx-composer-background: #ecdef6;
   --bbx-composer-ink: #442743;
   --bbx-composer-edge: #9672b1;
   --bbx-composer-radius: 27px 27px 18px 27px;
   --bbx-composer-shadow: 0 5px 0 #c6b3df, 0 8px 0 #fff7fc;
-  --bbx-control-background: #f6e6f6;
+  --bbx-control-background: #f5d9ef;
   --bbx-control-ink: #58255b;
   --bbx-control-radius: 18px 12px 17px 10px;
   --bbx-send-background: #813969;
@@ -27,6 +30,7 @@
   --bbx-chat-user-ink: #4c2848;
   --bbx-chat-user-radius: 23px 23px 7px 23px;
   --bbx-chat-reply-paper: #fffafd;
+  --bbx-chat-agent-paper: rgb(255 245 253 / 88%);
   --bbx-chat-reply-ink: #442743;
   --bbx-menu-paper: #fffafd;
   --bbx-menu-ink: #442743;
@@ -44,11 +48,11 @@
   --bbx-ink: #442743;
   --bbx-ink-soft: #74516c;
   --bbx-pen: #17657a;
-  --bbx-edge: #b18bbb;
-  --bbx-underlay: #e6d8f0;
+  --bbx-edge: #9066a8;
+  --bbx-underlay: #c1a4dd;
   --bbx-font: ui-rounded, "SF Pro Rounded", "Avenir Next", system-ui, sans-serif;
   --bbx-sheet-radius: 25px 25px 14px 25px;
-  --bbx-sheet-shadow: 4px 6px 0 #c9b8df, 6px 9px 0 #fff6fc, 0 13px 23px #703d6129;
+  --bbx-sheet-shadow: inset 0 0 0 1px #a382bf, 3px 4px 0 #d899c2, 6px 8px 0 #8d77b5, 0 13px 23px #703d6133;
   --bbx-sheet-decoration:
     radial-gradient(ellipse 74px 22px at 96% 100%, #c9b8df 98%, transparent),
     radial-gradient(ellipse 43px 18px at 85% 100%, #e8d9f1 98%, transparent),
@@ -91,7 +95,7 @@
 
   .bbx-card-theme[data-card-theme="daydream"] {
     --bbx-sheet-radius: 18px 18px 10px 18px;
-    --bbx-sheet-shadow: 2px 4px 0 #c9b8df, 3px 6px 0 #fff6fc;
+    --bbx-sheet-shadow: inset 0 0 0 1px #a382bf, 2px 3px 0 #d899c2, 3px 6px 0 #8d77b5;
   }
 }
 

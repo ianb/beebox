@@ -2,6 +2,9 @@
    The SVG is original artwork, shared by desk, navigation, and card heading. */
 .bbx-box-presentation[data-chrome-theme="harlequin"],
 .bbx-themed-menu[data-chrome-theme="harlequin"] {
+  --bbx-status-background: #ddd0a8;
+  --bbx-status-ink: #292925;
+  --bbx-status-edge: #8a6c1f;
   --bbx-desk-background: transparent;
   --bbx-desk-pattern: none;
   --bbx-harlequin-art: url("./art/harlequin-pigment.svg");
@@ -19,6 +22,15 @@
   --bbx-control-background: #eee5d2;
   --bbx-control-ink: #292925;
   --bbx-control-radius: 2px;
+  --bbx-control-shape-default: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  --bbx-control-shape-place: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  --bbx-control-shape-send: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  --bbx-control-shape-voice: polygon(0 0, calc(100% - 7px) 0, 100% 100%, 7px 100%);
+  --bbx-control-shape-profile: polygon(25% 0, 100% 0, 100% 75%, 75% 100%, 0 100%, 0 25%);
+  --bbx-control-shape-add: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --bbx-control-shape-mic: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  --bbx-control-shape-keyboard: var(--bbx-control-shape-add);
+  --bbx-control-shape-capture: var(--bbx-control-shape-mic);
   --bbx-send-background: #213d94;
   --bbx-send-ink: #fff8e9;
   --bbx-chat-user-paper: #213d94;
@@ -77,9 +89,6 @@
 }
 .bbx-box-presentation[data-chrome-theme="harlequin"] .bbx-app-nav > div {
   background: var(--bbx-toolbar-background);
-}
-.bbx-box-presentation[data-chrome-theme="harlequin"] .bbx-place-pill {
-  border-left: 5px solid #bb9635;
 }
 .bbx-box-presentation[data-chrome-theme="harlequin"] .bbx-composer-material {
   border-top-width: 3px;

@@ -51,7 +51,10 @@ export function ChatMaterialsHarness() {
       <SelfNoteMessage note={{ ref: null, commit: null, body: "Saved the comparison for the next studio session." }} />
       <PendingHqMessage pending={{ id: "material-hq", text: "Keep the blue sketch for tomorrow.", status: "Improving transcript…" }} onSendLive={() => {}} />
       <CaptureBubbleView model={{ id: "material-capture", state: "failed:deliver", counts: { photos: 2, files: 0, audioSegments: 1 }, startedAt: TIMESTAMP, lastActivityAt: TIMESTAMP }} now={Date.parse(TIMESTAMP)} onRetry={async () => {}} onDiscard={async () => {}} />
-      <TargetStrip status={{ state: "busy", disposition: "will-queue" }} pendingCount={1} isStreaming speechPlaying={false} onInterrupt={() => {}} onStopSpeech={() => {}} />
+      <div className="bbx-composer-material">
+        <div hidden />
+        <TargetStrip status={{ state: "busy", disposition: "will-queue" }} pendingCount={1} isStreaming speechPlaying={false} onInterrupt={() => {}} onStopSpeech={() => {}} />
+      </div>
       <ChatStatusBanners error="Example connection error: your draft is still here." transcriptionError={null} activeSchedules={[]} onDismissError={() => {}} onCancelSchedule={() => {}} />
     </div>
   </div>;

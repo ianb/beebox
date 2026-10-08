@@ -17,6 +17,7 @@ import "../themes/system-theme-picker.css";
 import "../themes/chat-material.css";
 import "../themes/interface.css";
 import "../themes/expressive.css";
+import "../themes/control-shapes.css";
 import "../themes/harlequin.css";
 import "../themes/electric-playground.css";
 import "../themes/daydream.css";
