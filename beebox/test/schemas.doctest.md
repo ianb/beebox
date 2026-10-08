@@ -521,10 +521,16 @@ ProgressSchema.frontmatterSchema.safeParse({
 => true
 ```
 
-The evidence contract is enforced — a level with an empty `evidence` array or
-no `basis` fails to parse (no anonymous rating):
+The evidence contract is enforced — a level with no `evidence`, an empty
+`evidence` array, or no `basis` fails to parse (no anonymous rating):
 
 ```ts
+ProgressSchema.frontmatterSchema.safeParse({
+  type: "progress",
+  entries: [{ node: "n", level: "solid", basis: "observed" }],
+}).success
+=> false
+
 ProgressSchema.frontmatterSchema.safeParse({
   type: "progress",
   entries: [{ node: "n", level: "solid", basis: "observed", evidence: [] }],

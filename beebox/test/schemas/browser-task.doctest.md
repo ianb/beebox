@@ -58,6 +58,13 @@ parseCardText("---\ntype: browser-task\nstart:\n  href: https://x.test\nrescan-a
 => throws CardIOError
 ```
 
+`start.href` must be a URL; the start page is handed to a browser executor:
+
+```ts
+parseCardText("---\ntype: browser-task\nstart:\n  href: not a url\n---\nx\n", { source: "T.browser-task.card", schemas })
+=> throws CardIOError
+```
+
 The template emits an open task (no `closed`) with the prompt as the body:
 
 ```ts

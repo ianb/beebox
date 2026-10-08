@@ -195,8 +195,8 @@ const report = renderRunReport({
   observerFailures: 0,
 });
 
-// Template prose is not the claim; keep the examined list and the skip lines.
-report.split("\n").filter((line) => /^(- .chat|Skipped|Chat registries)/.test(line)).join("\n")
+// Template prose is not the claim; keep every examined-session list line and the skip lines.
+report.split("\n").filter((line) => /^(- \x60|Skipped|Chat registries)/.test(line)).join("\n")
 => - `chat-old` (2026-06-09T07:00:10Z, 1 user message)
 - `chat-telegram` (2026-06-09T09:00:05Z, 1 user message) — _content/chat/telegram/Ian/thread.chat-thread.card
 Skipped: 1 already processed; 1 non-chat (wakeup/job/procedure runs); 1 deferred (active within the quiescence window); 2 beyond the per-run cap (next run picks them up).

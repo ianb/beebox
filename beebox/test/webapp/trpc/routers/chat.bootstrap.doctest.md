@@ -97,6 +97,14 @@ shape(empty)
 => { kind: "empty", sessionId: null, history: null, label: null, status: { sessionId: null, running: false, busy: false }, pending: [] }
 ```
 
+The full idle `status` payload, once: the engine fields show a fresh box offers
+only `claude`. Model ids rotate, so they are wildcards.
+
+```ts continue
+empty.status
+=> { sessionId: null, running: false, busy: false, model: "«*»", source: "default", boxDefault: "«*»", pendingModel: null, engine: "claude", enabledEngines: ["claude"], boxEngine: "claude", glmAvailable: false, addedModels: [] }
+```
+
 ## An explicit session id returns that session's history and status
 
 ```ts continue
