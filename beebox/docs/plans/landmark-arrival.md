@@ -475,6 +475,22 @@ and is verified against C.
       the boxholder. The deploy sweep is script-only and leaves the box on the old migration set until it is resolved.
 - **Vocabulary lock-ins.** `navigation.openers`; `STOCK_ROOT_OPENERS`; migration name `briefing-openers-2026-10`;
   failure kinds `conflict`, `no-place`.
+- **Implementation notes (2026-10-08).**
+  - The migration has a third failure kind, `malformed`: an `openers` value that is not a list of strings, or
+    YAML that does not parse where an edit is needed. It fails the box the same way.
+  - An empty or null briefing `openers:` has nothing to move, so it is removed even where the directory has no
+    landmark; case 6 applies only to a non-empty list.
+  - Parked template mirrors under `_config/_template-updates/` are skipped by plan and verify; the installer
+    rewrites them.
+  - Schema modules may not import one another (the `member-imports` commit check), so the briefing field
+    removal (step 3) landed with the schema move (step 2).
+  - The briefing instructions keep the stock-purpose sentence ("When the purpose is still the stock stub…");
+    it is about `{% purpose %}`, not about where openers live.
+  - `installRootLandmark` never rewrites an existing root landmark that has a role, so template sync cannot
+    add the stock openers to an existing box's root landmark before or after the migration.
+  - The knowledge audit cannot run on the worktree's test1 clone directly: the clone keeps uncommitted setup
+    changes (`package.json` link) that the audit's box guard refuses. Run it on a disposable `git clone` of the
+    clone with `.beebox/box.json` copied in.
 - **First implementation chunk.** Schema field + `OpenerEntry` move + `openers` on `LandmarkPayload` + a
   `landmarks.forDir` doctest (landmark at `_content/`, per-place list, place with no list gives `[]`, empty list is
   an answer, no landmark gives `landmark: null`, malformed opener makes the landmark unparsed).
