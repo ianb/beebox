@@ -107,6 +107,22 @@ Send: point+focus
 Stop recording: point+focus
 ```
 
+An id only becomes an address when it is in the `bbx-` namespace and kebab-case.
+The frontend's own authored ids — `trash-card-title`, `delete-chat-title` — are
+a11y plumbing, not promises, so they report no address:
+
+```ts
+lines(scan(`
+  <button id="trash-card-title" title="Delete"><svg viewBox="0 0 24 24"></svg></button>
+  <button id="bbx-Composer-Send" title="Send"><svg viewBox="0 0 24 24"></svg></button>
+  <button id="bbx-nav-place" title="Where you are: test1"><svg viewBox="0 0 24 24"></svg></button>
+`))
+=>
+- / button "Delete" (no address)
+- / button "Send" (no address)
+- / button "Where you are: test1" bbx-nav-place
+```
+
 ## Visibility
 
 An element is out of the scan when it is `display:none`, `visibility:hidden`,

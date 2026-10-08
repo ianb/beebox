@@ -213,6 +213,20 @@ pkg.dependencies["beebox"] === `link:${PACKAGE_ROOT}`
 => true
 ```
 
+`devDependencies` carries `typescript`/`@types/node`/`@types/react` — the
+box's own `pnpm exec tsc` needs these to typecheck `src/` without a
+symlink-only install providing them (Track F's real `pnpm install` is what
+actually resolves them):
+
+```ts continue
+Object.keys(pkg.devDependencies).sort()
+=> [
+  "@types/node",
+  "@types/react",
+  "typescript"
+]
+```
+
 `node_modules/beebox` is a symlink straight at the running engine
 (Track F's real install replaces it) — `pnpm install` was NOT run:
 

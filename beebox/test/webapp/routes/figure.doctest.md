@@ -158,6 +158,33 @@ res.payload.includes("@ianbicking/canvas-loop/browser")
 await ctx.cleanup();
 ```
 
+## Compile errors return a figure-shaped error module
+
+A syntax error does not 500 — it returns a module exporting `figureError`, which
+the harness checks before treating `default` as the sketch factory:
+
+```ts
+const ctx = await makeTestServer();
+await ctx.seed("_content/inbox/Broken.figure.card", "");
+await ctx.seed("_content/inbox/Broken.attach/sketch.ts", "export default function( {");
+
+const res = await ctx.rawRequest({
+  method: "GET",
+  url: "/api/figure/module.js?path=_content/inbox/Broken.attach/sketch.ts",
+});
+res.statusCode
+=> 200
+```
+
+```ts continue
+res.payload.includes("figureError")
+=> true
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
 ## An edit is never served stale — even same length, same mtime
 
 The figure route compiles with `cache: false`, so it always reflects current
