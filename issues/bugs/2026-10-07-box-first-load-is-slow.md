@@ -115,18 +115,26 @@ Production effect is unmeasured until deploy; `pnpm perf:load --target prod
   maps on (debugging matters more than speed at this phase); not pursued. Lazy imports of rarely used server dependencies
   (claude-agent-sdk, google-auth-library, grammy, node-apn, react-dom) may
   save another 50–80 ms (`pnpm perf:serve-start --cpu-prof`).
-- **Entry script.** It is still 555 KB gzip, most of it the chat shell.
+- **Entry script.** The capture overlay and image lightbox now load when opened (initial JS 555 -> 533 KB gzip). It is still 533 KB gzip, most of it the chat shell.
   Smaller candidates are capture, voice and transcription, the lightbox,
   and the theme picker, each a few KB to 15 KB gzip.
-- **Duplicate history fetch.** After the history renders from the
-  bootstrap preload, the page fetches `chat.status,chat.history` again.
-  This is not on the critical path, but it duplicates the history parse
-  and the transfer.
-- **Compression.** The edge compresses on the fly (zstd or brotli, about
-  the same size as gzip). Brotli at quality 11 at build time would be
-  smaller, if the edge passes it through. This is unverified.
-- **Edge script.** The production edge injects a RUM beacon, which adds
-  about 10 requests per load.
+- **Trailing history refresh.** About 5 s after every load, the chat
+  machine refetches its history (`chat.history,chat.status`, tail 200). The
+  WebSocket's first connect falls inside the reconnect gate's window
+  (`reconnect-refresh-gate.ts`), and the gate's trailing-edge timer services
+  it anyway. It is not redundant: the first `events.subscribe` has no
+  `lastEventId`, so an event between the bootstrap read and the subscription
+  start is caught only by this refresh. A full fix would start the
+  subscription from a cursor taken at bootstrap time. (The other duplicate
+  fetch, the ambient-reply panel refetching the selected conversation, is
+  fixed.)
+- **Compression.** Implemented in e5f1c12ac: hashed assets are precompressed
+  with brotli quality 11 at build time and served with `Vary: Accept-Encoding`.
+  Whether the CDN passes the brotli files through is to be verified after
+  deploy.
+- **Edge script.** Not pursued: the production edge injects a RUM beacon
+  (about 10 requests per load), but it is specific to the developer's own CDN
+  account, not a product issue.
 - **Server work during the load.** Each fresh page load reserves a chat,
   and the reservation warms a Claude subprocess on the server during the
   load.

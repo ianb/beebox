@@ -13,6 +13,7 @@ import { AckBadgeCluster } from "../../ack-badge";
 import { projectAmbientReply, observeAmbientReply, recordAmbientCompletion } from "../projection";
 import { readAttention, writeAttention } from "./attention-store";
 import { useBoxConversation } from "../../everywhere/conversation-context/context";
+import { useSelectedTranscript } from "../selected-transcript";
 import type { AmbientRepliesProps, AmbientSession } from "./view";
 
 type Props = AmbientRepliesProps & { session: AmbientSession; completion: string | null; onActivity: (sessionId: string, needed: boolean) => void };
@@ -23,6 +24,8 @@ function useAmbientSessionReply(props: Props) {
   const forgetReservation = conversation?.forgetReservation;
   const key = `bbx-ambient:${props.storageScope}:${session.sessionId}`;
   const [attention, setAttention] = useState(() => readAttention(key));
+  // The selected conversation's transcript comes from the open chat (selected-transcript.ts).
+  const fromChat = useSelectedTranscript(session.sessionId);
   const historyInput = { session: session.sessionId, slice: { mode: "tail" as const, tail: 100 } };
   const history = useQuery({
     queryKey: getQueryKey(trpc.chat.history, historyInput, "query"),
@@ -30,18 +33,24 @@ function useAmbientSessionReply(props: Props) {
       await ensureReservation?.(session.sessionId);
       return trpcClient.chat.history.query(historyInput, { signal });
     },
+    enabled: fromChat === null,
   });
+  const status = trpc.chat.status.useQuery({ session: session.sessionId }, { enabled: fromChat === null });
+  const transcript = fromChat ?? (history.data && status.data ? { entries: history.data.entries, total: history.data.total, busy: status.data.busy } : null);
+  // Effects key on these primitives, not on `transcript`, which is a new object each render.
+  const loaded = transcript !== null;
+  const total = transcript?.total ?? 0;
+  const busy = transcript?.busy === true;
   useEffect(() => {
-    if (history.data && history.data.total > 0) forgetReservation?.(session.sessionId);
-  }, [history.data, forgetReservation, session.sessionId]);
-  const status = trpc.chat.status.useQuery({ session: session.sessionId });
-  const reply = projectAmbientReply(session.sessionId, { entries: history.data?.entries ?? [], total: history.data?.total ?? 0, running: status.data?.busy ?? true });
+    if (total > 0) forgetReservation?.(session.sessionId);
+  }, [total, forgetReservation, session.sessionId]);
+  const reply = projectAmbientReply(session.sessionId, { entries: transcript?.entries ?? [], total: transcript?.total ?? 0, running: transcript?.busy ?? true });
   useEffect(() => {
     if (completion) setAttention((old) => recordAmbientCompletion(old, completion));
   }, [completion]);
   useEffect(() => {
-    if (history.data && status.data) setAttention((old) => observeAmbientReply(old, reply.identity));
-  }, [history.data, status.data, reply.identity]);
+    if (loaded) setAttention((old) => observeAmbientReply(old, reply.identity));
+  }, [loaded, reply.identity]);
   useEffect(() => { writeAttention(key, attention); }, [key, attention]);
   function acknowledge() {
     setAttention((old) => ({ ...old, attention: false, dismissedReply: old.lastReply }));
@@ -56,16 +65,16 @@ function useAmbientSessionReply(props: Props) {
   const { onActivity } = props;
   useEffect(() => {
     if (completion !== null && completion !== attention.lastCompletion) return;
-    if (status.data && history.data) onActivity(session.sessionId, status.data.busy || attention.attention);
-  }, [status.data, history.data, attention.attention, attention.lastCompletion, completion, session.sessionId, onActivity]);
-  const hidden = (selected && props.transcriptVisible) || (!attention.attention && !status.data?.busy && !error);
-  const label = status.data?.busy ? "Working" : reply.complete ? "Reply ready" : "Activity available";
-  const loading = history.isLoading || status.isLoading;
-  return { session, reply, selected, error, label, loading, history, acknowledge, retry, hidden };
+    if (loaded) onActivity(session.sessionId, busy || attention.attention);
+  }, [loaded, busy, attention.attention, attention.lastCompletion, completion, session.sessionId, onActivity]);
+  const hidden = (selected && props.transcriptVisible) || (!attention.attention && !busy && !error);
+  const label = busy ? "Working" : reply.complete ? "Reply ready" : "Activity available";
+  const loading = !loaded && (history.isLoading || status.isLoading);
+  return { session, reply, selected, error, label, loading, transcript, acknowledge, retry, hidden };
 }
 
 export function AmbientSessionReply(props: Props) {
-  const { session, reply, selected, error, label, loading, history, acknowledge, retry, hidden } = useAmbientSessionReply(props);
+  const { session, reply, selected, error, label, loading, transcript, acknowledge, retry, hidden } = useAmbientSessionReply(props);
   // The selected conversation already has its own transcript and composer.
   // Ambient panels are only for other conversations while the user works elsewhere.
   if (selected || hidden) return null;
@@ -75,7 +84,7 @@ export function AmbientSessionReply(props: Props) {
         <div aria-busy={loading}>
           {Boolean(loading) && <Hint>Loading conversation activity…</Hint>}
           {Boolean(error) && <ErrorText>Could not refresh conversation: {error?.message}</ErrorText>}
-          {!loading && !error && !history.data?.entries.length && <Hint>Conversation history is unavailable.</Hint>}
+          {!loading && !error && !transcript?.entries.length && <Hint>Conversation history is unavailable.</Hint>}
           {Boolean(reply.earlier) && <Hint>Earlier responses in conversation</Hint>}
           {<CalloutStack callouts={reply.callouts} onZoomView={({ target }) => props.onInspectCard(target)} />}
           {<AckBadgeCluster acks={reply.acks} onZoomView={({ target }) => props.onInspectCard(target)} />}

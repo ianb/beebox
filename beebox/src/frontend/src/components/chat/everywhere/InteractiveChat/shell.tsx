@@ -39,13 +39,14 @@ import { InteractiveChatBody } from "./view";
 import { createInputStoreAdapter, InputStoreProvider } from "../../input-store";
 import type { EmissionStore } from "../../../../input/emission-store";
 import { useCaptureBubbles } from "../../useCaptureBubbles";
-import { CaptureOverlay } from "../../../capture/CaptureOverlay/view";
+import { lazyOverlay } from "../../../../lib/lazy-component";
 import { captureModeForRequest } from "../../../../lib/capture-intent";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../../../DocumentTitle";
 import { ErrorText } from "../../../ui/ErrorText";
 import { useFirstLoadMark } from "../../../../lib/first-load-marks";
+import { SelectedTranscriptRegion } from "../../ambient/selected-transcript";
 import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
 
 function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
@@ -143,6 +144,9 @@ interface InteractiveChatProps {
  * instead, so nothing opened the bulk one any more
  * (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
  */
+// Capture mode is rare and opens full screen; its code loads when it opens.
+const CaptureOverlay = lazyOverlay(() => import("../../../capture/CaptureOverlay/view"), (m) => m.CaptureOverlay);
+
 function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCapture }: {
   captureMode: boolean;
   usesNativeShell: boolean;
@@ -303,7 +307,8 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
       conversationKey={logicalConversation}
       sendDisabledReason={sendDisabledReasonFor(conversationSelection)}
       transcriptVisible={transcriptVisible}
-      ambientRegion={ambientRegion} selectionNotice={<>{selectionNotice}{recoveryNotice !== null && <div role="alert"><ErrorText>{recoveryNotice}</ErrorText></div>}</>} failedRegion={failedRegion}
+      // Ambient replies read the selected conversation from here instead of fetching it again.
+      ambientRegion={<SelectedTranscriptRegion sessionId={sessionId} loaded={!snapshot.matches("loading")} entries={messages} total={totalEntries} busy={processBusy}>{ambientRegion}</SelectedTranscriptRegion>} selectionNotice={<>{selectionNotice}{recoveryNotice !== null && <div role="alert"><ErrorText>{recoveryNotice}</ErrorText></div>}</>} failedRegion={failedRegion}
       tabs={tabs}
       model={model}
       mute={mute}

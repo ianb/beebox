@@ -27,10 +27,23 @@
 const ONE_YEAR_MS = 31_536_000_000;
 
 /**
- * `@fastify/static` options producing
- * `cache-control: public, max-age=31536000, immutable`.
+ * `@fastify/static` options for the hashed-asset mount:
+ * `cache-control: public, max-age=31536000, immutable`, and brotli bodies
+ * served precompressed.
+ *
+ * The frontend build writes `<file>.br` at brotli's highest quality next to
+ * each text asset (`src/frontend/src/dev/precompress-plugin`). Compressing at
+ * request time, or at the CDN's on-the-fly level, leaves the entry script about
+ * 20% larger. A client that accepts `br` gets the `.br` file; any other client,
+ * or a file without one (source maps), gets the plain file. `@fastify/static`
+ * does not set `Vary` for this, so the mount does: a shared cache must not hand
+ * brotli bytes to a client that did not ask for them.
  */
-export const HASHED_ASSET_CACHE_OPTIONS = {
+export const HASHED_ASSET_STATIC_OPTIONS = {
   maxAge: ONE_YEAR_MS,
   immutable: true,
+  preCompressed: true,
+  setHeaders: (res: { setHeader: (name: string, value: string) => unknown }): void => {
+    res.setHeader("Vary", "Accept-Encoding");
+  },
 } as const;
