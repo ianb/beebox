@@ -143,10 +143,11 @@ const landmark = appearance(await render({ path: "_content/Home.landmark.card", 
 ## A file that is not a card
 
 A plain Markdown file keeps its two rows, then mentions, appearance, and
-views, with no actions menu:
+views, with no actions menu. It has no frontmatter to hold a theme, so its
+Appearance row says where a theme is set instead of offering Change:
 
 ```ts
 const note = await render({ path: "notes/todo.md", frontmatter: {} }, { canEdit: true });
-[headings(note), appearance(note).includes("<details"), note.includes("Card actions")]
-=> [["h2 Properties", "h3 Mentioned by", "h3 Appearance", "h3 View"], false, false]
+[headings(note), appearance(note).includes("<details"), note.includes("Card actions"), textOf(appearance(note))]
+=> [["h2 Properties", "h3 Mentioned by", "h3 Appearance", "h3 View"], false, false, "Appearance Flat neutral · Default appearance Markdown files take the box's appearance; set a theme on a card."]
 ```
