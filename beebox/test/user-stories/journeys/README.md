@@ -77,7 +77,11 @@ Each run has a unique lowercase box slug and a fresh initialization history.
 deletes transcripts outside a box. Retention cleanup is a separate operator decision.
 
 Provisioning checks the dashboard health results, then requires app navigation at
-the expected URL through `bin/browse` before handing out the prompt. A failed check
+the expected URL through `bin/browse` before handing out the prompt. A worktree server
+that was already warm does not see the newly registered box, and the check fails
+with "Fixture did not render its app navigation". When no other walk is live on the
+worktree, `bin/workstreams down <worktree>` and an HTTP request cold-start it with the
+new registration; prepare several journeys first, then cold-start once. A failed check
 leaves its evidence intact; it does not restart the shared router. No model turn is
 needed for this check.
 
