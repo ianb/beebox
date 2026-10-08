@@ -42,72 +42,49 @@ async function attempt(fn) {
 }
 ```
 
-## publicProcedure is always reachable
+## The gates, one caller per row
+
+Each line is `procedure caller → result`. `publicProcedure` is always
+reachable. `ownerProcedure` denies a request that authenticated as a
+box-*allowed* user but is not the owner (`isOwner: false`), the gap the raw
+`addOwnerCheck` closed. `ctx.isOwner` is `true` for the real owner and for an
+open-access box (the `openAccess` construction option,
+`identity.source === "open"`), so both reach it. `authedProcedure` denies an
+unauthenticated request and admits an authenticated one.
+
+`authenticatedOwnerProcedure` refuses open access, where `ownerProcedure`
+admits it. `ctx.isOwner` deliberately folds open access in, and for box-scoped
+owner surfaces that is right. The machine-level secret store is the exception:
+its router is the only user of the strict gate, so an open-access box reaches
+every other owner surface and none of the secrets ones
+(`docs/implemented-plans/secret-custody.md`). A real signed-in owner passes
+both.
 
 ```ts
-await attempt(() => caller({}).pub())
-=> pub-ok
-```
-
-## ownerProcedure denies a non-owner (FORBIDDEN)
-
-A request that authenticated as a box-*allowed* user but is not the owner
-(`isOwner: false`) is rejected — the gap the raw `addOwnerCheck` closed.
-
-```ts
-await attempt(() => caller({ authed: true, isOwner: false }).owner())
-=> THREW:FORBIDDEN
-```
-
-## ownerProcedure admits the owner (and auth-disabled dev)
-
-`ctx.isOwner` is `true` for the real owner and for an open-access box (the
-`openAccess` construction option, `identity.source === "open"`), so both reach
-the procedure.
-
-```ts
-await attempt(() => caller({ isOwner: true }).owner())
-=> owner-ok
-```
-
-## authedProcedure denies an unauthenticated request (UNAUTHORIZED)
-
-```ts
-await attempt(() => caller({ authed: false }).authed())
-=> THREW:UNAUTHORIZED
-```
-
-## authedProcedure admits an authenticated request
-
-```ts
-await attempt(() => caller({ authed: true }).authed())
-=> authed-ok
-```
-
-## authenticatedOwnerProcedure refuses open access, where ownerProcedure admits it
-
-`ctx.isOwner` deliberately folds open access in, and for box-scoped owner
-surfaces that is right. The machine-level secret store is the exception — its
-router is the only user of the strict gate — so an open-access box reaches every
-other owner surface and none of the secrets ones
-(`docs/implemented-plans/secret-custody.md`).
-
-```ts
-const open = caller({ authed: true, isOwner: true, isAuthenticatedOwner: false });
-print(`owner: ${await attempt(() => open.owner())}`);
-print(`strictOwner: ${await attempt(() => open.strictOwner())}`);
+const cases = [
+  ["pub", "anonymous", {}],
+  ["owner", "authed non-owner", { authed: true, isOwner: false }],
+  ["owner", "owner / open access", { isOwner: true }],
+  ["authed", "unauthenticated", { authed: false }],
+  ["authed", "authenticated", { authed: true }],
+  ["owner", "open access (not authenticated owner)", { authed: true, isOwner: true, isAuthenticatedOwner: false }],
+  ["strictOwner", "open access (not authenticated owner)", { authed: true, isOwner: true, isAuthenticatedOwner: false }],
+  ["owner", "signed-in owner", { authed: true, isOwner: true, isAuthenticatedOwner: true }],
+  ["strictOwner", "signed-in owner", { authed: true, isOwner: true, isAuthenticatedOwner: true }],
+];
+const lines = [];
+for (const [procedure, who, over] of cases) {
+  lines.push(`${procedure} ${who} → ${await attempt(() => caller(over)[procedure]())}`);
+}
+lines.join("\n")
 =>
-owner: owner-ok
-strictOwner: THREW:FORBIDDEN
-```
-
-A real signed-in owner passes both:
-
-```ts continue
-const owner = caller({ authed: true, isOwner: true, isAuthenticatedOwner: true });
-print(`owner: ${await attempt(() => owner.owner())}`);
-print(`strictOwner: ${await attempt(() => owner.strictOwner())}`);
-=>
-owner: owner-ok
-strictOwner: strict-owner-ok
+pub anonymous → pub-ok
+owner authed non-owner → THREW:FORBIDDEN
+owner owner / open access → owner-ok
+authed unauthenticated → THREW:UNAUTHORIZED
+authed authenticated → authed-ok
+owner open access (not authenticated owner) → owner-ok
+strictOwner open access (not authenticated owner) → THREW:FORBIDDEN
+owner signed-in owner → owner-ok
+strictOwner signed-in owner → strict-owner-ok
 ```

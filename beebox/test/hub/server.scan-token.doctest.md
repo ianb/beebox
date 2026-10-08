@@ -101,54 +101,43 @@ others.map((res) => res.status).join(" ")
 => 401 401 401 401 401 401 401 401
 ```
 
-## The same token on any other path is 401'd at the hub
+## The same token on any other path, and bogus tokens, stop at the hub
 
 An API path gets a bare 401; a page navigation gets the ordinary login redirect.
-Either way the request stops here — a scan token can never reach chat, tRPC, or
-a WebSocket upgrade.
-
-```ts continue
-const trpc = await fetch(`${hubBase}/test1/api/trpc/health.check`, { headers: scanAuth });
-trpc.status
-=> 401
-
-const events = await fetch(`${hubBase}/test1/events`, { headers: scanAuth });
-events.status
-=> 401
-
-const nav = await fetch(`${hubBase}/test1/browse/some-card`, { headers: scanAuth, redirect: "manual" });
-nav.status
-=> 302
-```
-
-A near-miss path does not count as a scan path — the prefix must be a real path
-segment boundary, so `/api/scanner` is just another protected surface.
-
-```ts continue
-const nearMiss = await fetch(`${hubBase}/test1/api/scanner/check`, { method: "POST", headers: scanAuth });
-nearMiss.status
-=> 401
-```
-
-## The hub verifies against the box's store, so bogus and revoked tokens stop here
+Either way the request stops here: a scan token can never reach chat, tRPC, or
+a WebSocket upgrade. A near-miss path does not count as a scan path. The prefix
+must be a real path segment boundary, so `/api/scanner` is just another
+protected surface.
 
 A syntactically valid bearer that verifies against nothing is rejected before
-the endpoint is resolved — the same no-enumeration, no-box-wake property the
-mobile gate has.
+the endpoint is resolved, the same no-enumeration, no-box-wake property the
+mobile gate has. A scan token minted for THIS box is worthless against a slug it
+doesn't own.
 
 ```ts continue
-const bogus = await fetch(`${hubBase}/test1/api/scan/check`, {
-  method: "POST",
-  headers: { authorization: "Bearer not-a-real-scan-token" },
-});
-bogus.status
-=> 401
-
-// A scan token minted for THIS box is worthless against a slug it doesn't own.
-const wrongSlug = await fetch(`${hubBase}/nosuchbox/api/scan/check`, { method: "POST", headers: scanAuth });
-wrongSlug.status
-=> 401
+const gates = [
+  ["scan token, tRPC path", "GET", "/test1/api/trpc/health.check", scanAuth],
+  ["scan token, events path", "GET", "/test1/events", scanAuth],
+  ["scan token, page navigation", "GET", "/test1/browse/some-card", scanAuth],
+  ["scan token, near-miss /api/scanner", "POST", "/test1/api/scanner/check", scanAuth],
+  ["bogus token, scan path", "POST", "/test1/api/scan/check", { authorization: "Bearer not-a-real-scan-token" }],
+  ["scan token, slug it doesn't own", "POST", "/nosuchbox/api/scan/check", scanAuth],
+];
+const gateLines = [];
+for (const [label, method, p, headers] of gates) {
+  gateLines.push(`${label} → ${(await fetch(`${hubBase}${p}`, { method, headers, redirect: "manual" })).status}`);
+}
+gateLines.join("\n")
+=>
+scan token, tRPC path → 401
+scan token, events path → 401
+scan token, page navigation → 302
+scan token, near-miss /api/scanner → 401
+bogus token, scan path → 401
+scan token, slug it doesn't own → 401
 ```
+
+## Revocation reaches the hub immediately
 
 Revocation takes effect at the hub immediately, because the hub reads the same
 on-disk store the box child does.
