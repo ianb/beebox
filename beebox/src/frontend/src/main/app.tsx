@@ -17,6 +17,7 @@ import "../themes/system-theme-picker.css";
 import "../themes/chat-material.css";
 import "../themes/interface.css";
 import "../themes/expressive.css";
+import "../themes/control-shapes.css";
 import "../themes/retired-theme-a.css";
 import "../themes/retired-theme-b.css";
 import "../themes/retired-theme-c.css";

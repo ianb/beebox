@@ -31,7 +31,7 @@ export function TargetStrip(props: {
   if (!hasContent) return null;
 
   return (
-    <div className="px-4 py-1.5 border-t border-info-light bg-info-50 text-info-dark text-xs flex items-center gap-3">
+    <div className="bbx-chat-target-strip px-4 py-1.5 border-t border-info-light bg-info-50 text-info-dark text-xs flex items-center gap-3">
       <div className="flex-1 flex items-center gap-3">
         {status.state === "busy" ? <span>Thinking…</span> : null}
         {pendingCount > 0 ? (
