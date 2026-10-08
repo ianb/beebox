@@ -59,7 +59,7 @@
 .bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-reply-material {
   margin: 8px 12px;
   padding: 16px;
-  background: var(--bbx-chat-reply-paper);
+  background: var(--bbx-chat-agent-paper, var(--bbx-chat-reply-paper));
   color: var(--bbx-chat-reply-ink);
   border-radius: var(--bbx-control-radius);
   box-shadow: 0 2px 5px #0002;
@@ -168,4 +168,29 @@
 }
 .bbx-themed-menu[data-theme-composition="expressive"] [role="menuitem"]:is([aria-disabled="true"], :disabled) {
   color: color-mix(in srgb, var(--bbx-menu-ink) 50%, var(--bbx-menu-paper));
+}
+
+/* The target's activity belongs to the composer material. Round only the
+   exposed top edge, skipping hidden ambient regions; do not clip the composer
+   or its floating controls. The strip can stand alone with native input. */
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-target-strip {
+  background: var(--bbx-status-background);
+  color: var(--bbx-status-ink);
+  border-color: var(--bbx-status-edge);
+  border-bottom: 1px solid var(--bbx-status-edge);
+  padding-block: 0.5rem;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-composer-material > .bbx-chat-target-strip:nth-child(1 of :not([hidden], :empty)) {
+  border-top: 0;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-target-strip > button {
+  border-radius: var(--bbx-control-radius);
+}
+
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-composer-material > .bbx-chat-target-strip:nth-last-child(1 of :not([hidden], :empty)) {
+  border-bottom: 0;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
 }

@@ -1,6 +1,9 @@
 /* A printed black stage with hard acrylic edges, not emitted-light effects. */
 .bbx-box-presentation[data-chrome-theme="electric-playground"],
 .bbx-themed-menu[data-chrome-theme="electric-playground"] {
+  --bbx-status-background: #384896;
+  --bbx-status-ink: #edf4ff;
+  --bbx-status-edge: #83d9f4;
   --bbx-desk-background: transparent;
   --bbx-desk-pattern: none;
   --bbx-scene:
@@ -9,25 +12,39 @@
   --bbx-toolbar-background:
     repeating-linear-gradient(0deg, #ffffff06 0 1px, transparent 1px 4px),
     linear-gradient(105deg, #182758, #11131e 62%);
-  --bbx-toolbar-ink: #fff7e4;
+  --bbx-toolbar-ink: #edf4ff;
   --bbx-toolbar-edge: #7790ee;
   --bbx-toolbar-radius: 0 0 22px 3px;
-  --bbx-toolbar-shadow: 0 4px 0 #e49c2f, 0 7px 0 #08090f;
+  --bbx-toolbar-shadow: 0 3px 0 #d66cff, 0 6px 0 #08090f;
   --bbx-composer-background:
-    repeating-linear-gradient(90deg, #ffffff09 0 1px, transparent 1px 5px),
-    #a62437;
-  --bbx-composer-ink: #fff9ed;
-  --bbx-composer-edge: #ffb29f;
-  --bbx-composer-radius: 5px 24px 5px 5px;
+    linear-gradient(120deg, #485ccd 0 12%, transparent 12.1%),
+    repeating-linear-gradient(90deg, #a7cfff0d 0 1px, transparent 1px 5px),
+    #263580;
+  --bbx-composer-ink: #edf4ff;
+  --bbx-composer-edge: #83d9f4;
+  --bbx-composer-radius: 18px 3px 24px 3px;
   --bbx-composer-shadow:
-    inset 0 2px 0 #ffb29f,
-    inset 0 -5px 0 #721528,
+    inset 0 2px 0 #a7e7ff,
+    inset 0 -5px 0 #191e57,
     5px 5px 0 #05060b;
-  --bbx-control-background: #fff0d6;
-  --bbx-control-ink: #40162d;
+  --bbx-control-background: #d5ecff;
+  --bbx-control-ink: #202452;
   --bbx-control-radius: 3px 11px 3px 3px;
-  --bbx-send-background: #ffce4c;
-  --bbx-send-ink: #211424;
+  --bbx-control-shape-default: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
+  --bbx-control-shape-place: polygon(0 0, calc(100% - 11px) 0, 100% 100%, 11px 100%);
+  --bbx-control-shape-session: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  --bbx-control-shape-voice: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 0 100%);
+  --bbx-control-shape-profile: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --bbx-control-shape-add: polygon(0 9px, 9px 0, 100% 0, 100% 100%, 0 100%);
+  --bbx-control-shape-send: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%);
+  --bbx-control-shape-mic: polygon(9px 0, 100% 0, 100% 100%, 0 100%, 0 9px);
+  --bbx-control-shape-keyboard: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  --bbx-control-shape-capture: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+  --bbx-input-paper: #edf4ff;
+  --bbx-input-ink: #202452;
+  --bbx-input-muted: #515775;
+  --bbx-send-background: #ee9cfa;
+  --bbx-send-ink: #351447;
   --bbx-chat-user-paper: #f2ceec;
   --bbx-chat-user-ink: #33132d;
   --bbx-chat-user-radius: 19px 3px 3px 3px;
@@ -37,10 +54,24 @@
   --bbx-menu-ink: #271c36;
   --bbx-menu-edge: #664696;
   --bbx-menu-radius: 3px 18px 3px 3px;
-  --bbx-selection: #ffce4c;
-  --bbx-selection-ink: #211424;
-  --bbx-selection-code: #ffce4c;
-  --bbx-selection-code-ink: #211424;
+  --bbx-selection: #a1e5ff;
+  --bbx-selection-ink: #17243d;
+  --bbx-selection-code: #a1e5ff;
+  --bbx-selection-code-ink: #17243d;
+}
+
+/* Neutral retry and inline-tool surfaces use the same cool acrylic stock. */
+.bbx-box-presentation[data-chrome-theme="electric-playground"] .bbx-chat-pending-material button.bg-warm-200 {
+  background: var(--bbx-control-background);
+  color: var(--bbx-control-ink);
+}
+.bbx-box-presentation[data-chrome-theme="electric-playground"] .bbx-chat-pending-material button:is(.bg-warm-200, .bg-transparent):hover {
+  background: var(--bbx-input-paper);
+  color: var(--bbx-control-ink);
+}
+.bbx-box-presentation[data-chrome-theme="electric-playground"] .bbx-chat-reply-material :is(.bg-warm-50, .bg-warm-100) {
+  background: var(--bbx-input-paper);
+  color: var(--bbx-input-ink);
 }
 
 /* The prism stock is opaque where people read, translucent at its edges. */
@@ -60,7 +91,7 @@
     repeating-linear-gradient(0deg, #40479705 0 1px, transparent 1px 4px);
   --bbx-sheet-shadow:
     inset 3px 0 0 #e266b3,
-    inset 0 3px 0 #fff6d1,
+    inset 0 3px 0 #eff8ff,
     4px 4px 0 #54499e,
     7px 7px 0 #100e27;
   --bbx-quote-paper: #dedafa;
@@ -72,7 +103,7 @@
   --bbx-link-decoration: underline;
   --bbx-link-image: none;
   --bbx-selection: #472875;
-  --bbx-selection-ink: #fff0d6;
+  --bbx-selection-ink: #f4edff;
   --bbx-selection-code: #e9a9df;
   --bbx-selection-code-ink: #211424;
 }
@@ -98,16 +129,18 @@
       url("./art/electric-stage.svg") 56% bottom / auto 100% no-repeat,
       #08090f;
     --bbx-toolbar-radius: 0 0 12px 2px;
-    --bbx-toolbar-shadow: 0 3px 0 #e49c2f;
-    --bbx-composer-radius: 3px 17px 3px 3px;
-    --bbx-composer-shadow: inset 0 2px 0 #ffb29f, inset 0 -3px 0 #721528;
+    --bbx-toolbar-shadow: 0 3px 0 #d66cff;
+    --bbx-control-shape-place: polygon(0 0, calc(100% - 4px) 0, 100% 100%, 4px 100%);
+    --bbx-control-shape-session: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+    --bbx-composer-radius: 12px 3px 17px 3px;
+    --bbx-composer-shadow: inset 0 2px 0 #a7e7ff, inset 0 -3px 0 #191e57;
   }
 
   .bbx-card-theme[data-card-theme="electric-playground"] {
     --bbx-sheet-radius: 3px 20px 3px 3px;
     --bbx-sheet-shadow:
       inset 2px 0 0 #e266b3,
-      inset 0 2px 0 #fff6d1,
+      inset 0 2px 0 #eff8ff,
       2px 3px 0 #54499e;
   }
 }
