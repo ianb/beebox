@@ -1,11 +1,14 @@
 ---
 title: "Knowledge audits with `should_read` into package docs crash on a worktree box clone"
-workstream: unattached
+workstream: speech-instructions-attr
+resolution: implemented
 area: beebox
 labels: [knowledge-audit, testing]
 filed-by: agent
 discovered-in: speech-instructions-attr
 ---
+
+Closed by 8a75acc36: `ensureAuditPackageDocs` now accepts a `node_modules/beebox` link that resolves to the running engine's PACKAGE_ROOT; other symlinks are still refused.
 
 On a managed worktree's box clone (`~/src/box-worktrees/<name>/test1`),
 `node_modules/beebox` is a symlink to the worktree's `beebox/` package. Any

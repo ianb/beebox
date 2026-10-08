@@ -1742,10 +1742,7 @@ tests:
   # === Scheduled Tasks ===
   #
   # Status (2026-10-08): 3/3 pass after the switch to the instructions="…"
-  # attribute; agents write the attribute form. chat-voice-hard-override crashes
-  # on a worktree box clone (issue
-  # 2026-10-08-knowledge-audit-package-docs-refuses-linked-box); it passed with
-  # its should_read removed for that run.
+  # attribute; agents write the attribute form.
   #
   # Status (2026-07-03): both pass. add-daily-task answered scheduled-script +
   # _config/schedules/ directly (dropped stale should_read card-scheduled-script.md).
@@ -2783,10 +2780,7 @@ tests:
   # === Chat Voice ===
   #
   # Status (2026-10-08): 3/3 pass after the switch to the instructions="…"
-  # attribute; agents write the attribute form. chat-voice-hard-override crashes
-  # on a worktree box clone (issue
-  # 2026-10-08-knowledge-audit-package-docs-refuses-linked-box); it passed with
-  # its should_read removed for that run.
+  # attribute; agents write the attribute form.
   #
   # Status (2026-07-03): both pass. chat-voice-per-message-override needed
   # chat_mode: true (mechanism lives in the chat prompt + docs/chat-voice.md) and
