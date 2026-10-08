@@ -12,6 +12,7 @@ corpus needs no cross-model review.
 | [permissions-models-integrations.md](permissions-models-integrations.md) | The latchkey/detent permission gateway, provider switching, the integration surfaces, the sandbox and the encryption claim | Read-out; ten claims the code does not substantiate |
 | [starter-templates.md](starter-templates.md) | The 14 `*-mind-template` repos, the manifest, the `use-template` flow, the scripted first turn | Read-out |
 | [comparison.md](comparison.md) | Studio against Bee Box, ten areas, each with a disposition traced to a Bee Box file or decision | Adopt 2, adapt 4, reject 6, later 4 |
+| [chat-app.md](chat-app.md) | The chat UI: transcript model, composer, lifecycle, progress, scroll; thirteen lessons for Bee Box's chat | Adopt 5, adapt 4, reject 3, later 1 |
 
 ## What Studio is, in practice
 
