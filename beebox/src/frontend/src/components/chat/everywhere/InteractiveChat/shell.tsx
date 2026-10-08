@@ -39,7 +39,7 @@ import { InteractiveChatBody } from "./view";
 import { createInputStoreAdapter, InputStoreProvider } from "../../input-store";
 import type { EmissionStore } from "../../../../input/emission-store";
 import { useCaptureBubbles } from "../../useCaptureBubbles";
-import { CaptureOverlay } from "../../../capture/CaptureOverlay/view";
+import { lazyOverlay } from "../../../../lib/lazy-component";
 import { captureModeForRequest } from "../../../../lib/capture-intent";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
@@ -144,6 +144,9 @@ interface InteractiveChatProps {
  * instead, so nothing opened the bulk one any more
  * (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
  */
+// Capture mode is rare and opens full screen; its code loads when it opens.
+const CaptureOverlay = lazyOverlay(() => import("../../../capture/CaptureOverlay/view"), (m) => m.CaptureOverlay);
+
 function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCapture }: {
   captureMode: boolean;
   usesNativeShell: boolean;
