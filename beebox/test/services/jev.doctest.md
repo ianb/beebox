@@ -94,9 +94,6 @@ maximum-length captured message containing backslashes and newlines.
 
 ```ts
 const escapedMessage = "garden\\\n".repeat(1500);
-escapedMessage.length
-=> 12000
-
 function budgetedRequest(count) {
   const candidates = Array.from({ length: count }, (_, index) => ({
     id: `c${index}`, label: `Chat ${index}`,
@@ -140,9 +137,6 @@ const request = JSON.parse(serializeJudgeRequest({
   questions,
   state: "=== _content/inbox/a.email.card\nPermission slip due Friday",
 }));
-request.model
-=> typesafe/jev-1.13
-
 JSON.stringify(request.questions.trip)
 => {"type":"noul","instructions":["This box belongs to a family of four.","Judge only what the emails say.","Only school mail counts."],"criteria":{"true":"The school wrote about the field trip.","false":"It did not."}}
 

@@ -14,9 +14,6 @@ import { parseCardFileName, cardTypeFromName } from "../../src/shared/card-name.
 ```ts
 JSON.stringify(parseCardFileName("Meeting_Tomorrow.email-thread.card"))
 => {"name":"Meeting_Tomorrow","type":"email-thread"}
-
-JSON.stringify(parseCardFileName("Bread.recipe.card"))
-=> {"name":"Bread","type":"recipe"}
 ```
 
 ## Positional names are all type, no name
@@ -24,9 +21,6 @@ JSON.stringify(parseCardFileName("Bread.recipe.card"))
 ```ts
 JSON.stringify(parseCardFileName("nav.card"))
 => {"name":null,"type":"nav"}
-
-JSON.stringify(parseCardFileName("landmark.card"))
-=> {"name":null,"type":"landmark"}
 ```
 
 ## Job cards resolve to their hyphenated schema type
@@ -46,9 +40,6 @@ JSON.stringify(parseCardFileName("intake.job.card"))
 
 ```ts
 parseCardFileName("notes.md")
-=> null
-
-parseCardFileName("plain")
 => null
 
 parseCardFileName(".card")

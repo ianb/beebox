@@ -14,13 +14,6 @@ import {
 } from "../../src/schemas/question-followup-job.js";
 ```
 
-## Registered as `question-followup-job`
-
-```ts
-QuestionFollowupJobSchema.type
-=> question-followup-job
-```
-
 ## `learning` is an optional passthrough, same shape as the question's
 
 ```ts

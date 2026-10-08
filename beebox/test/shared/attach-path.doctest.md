@@ -26,12 +26,6 @@ Strips `.<type>.card` to return the card's basename. Works on both filenames and
 cardBasename("Foo.image.card")
 => Foo
 
-cardBasename("Voice_Memo.memo.card")
-=> Voice_Memo
-
-cardBasename("scan-001.capture-session.card")
-=> scan-001
-
 cardBasename("/box/inbox/Foo.image.card")
 => Foo
 
@@ -71,12 +65,6 @@ Computes a file path inside a card's attach scope.
 ```ts
 attachmentPath("inbox/Foo.image.card", "photo-001.jpg")
 => inbox/Foo.attach/photo-001.jpg
-
-attachmentPath("Foo.memo.card", "audio.webm")
-=> Foo.attach/audio.webm
-
-attachmentPath("inbox/scan-001.capture-session.card", "photo-001.image.card")
-=> inbox/scan-001.attach/photo-001.image.card
 ```
 
 Nested paths inside the scope work too.
@@ -95,9 +83,6 @@ isAttachRef("attach/photo-001.jpg")
 => true
 
 isAttachRef("attach")
-=> true
-
-isAttachRef("attach/sub/scan.image.card")
 => true
 ```
 
@@ -169,9 +154,6 @@ A directory name ends with `.attach` when it's a card's attach scope.
 isAttachDirName("Foo.attach")
 => true
 
-isAttachDirName("scan-001.attach")
-=> true
-
 isAttachDirName(".attach")
 => false
 
@@ -184,9 +166,6 @@ isAttachDirName("attach")
 ```ts
 attachDirOwnerBasename("Foo.attach")
 => Foo
-
-attachDirOwnerBasename("scan-001.attach")
-=> scan-001
 
 attachDirOwnerBasename("attachments")
 => null
@@ -201,9 +180,6 @@ Recognizes paths nested anywhere inside any attach scope.
 
 ```ts
 isInsideAttachScope("inbox/Foo.attach/photo.jpg")
-=> true
-
-isInsideAttachScope("inbox/Foo.attach/nested/deeper/thing.jpg")
 => true
 
 isInsideAttachScope("inbox/Foo.attach/scan.image.attach/photo.jpg")

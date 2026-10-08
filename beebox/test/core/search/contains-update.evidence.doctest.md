@@ -15,7 +15,6 @@ import { setDerivedContains } from "../../../src/core/search/contains-update.js"
 import { lintCardsDispatch } from "../../../src/core/card-lint/core/lint-cards.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";
 import { computeContainsBasis } from "../../../src/core/search/contains-state.js";
-import { GLOBAL_CARD_FIELDS } from "../../../src/cards/schema.js";
 import { readFile } from "node:fs/promises";
 
 const CARD = "store/notes/Trip.memo.card";
@@ -23,16 +22,6 @@ const CARD = "store/notes/Trip.memo.card";
 function memo(fields: string) {
   return `---\nstatus: new\ncreated: 2026-07-28T03:00:00Z\n${fields}\n---\nBody text.\n`;
 }
-```
-
-## It is a global field, so no schema declares it
-
-```ts
-Object.keys(GLOBAL_CARD_FIELDS).join(",")
-=> title,contains,contains-evidence,todos,symbol,prominence,theme
-
-GLOBAL_CARD_FIELDS["contains-evidence"].isOptional()
-=> true
 ```
 
 ## An evidence-only write persists

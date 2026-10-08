@@ -207,17 +207,3 @@ check(repeated).find((f) => f.path === "pkg/src/router/router-core.ts")?.message
 ```
 
 Both message shapes shown above.
-
-## Clean layout
-
-```ts
-const clean = layout({
-  files: {
-    "src/router/dispatch.ts": {},
-    "src/exports/schema.ts": {},
-  },
-  publicSurfaces: [{ specifier: "./schema", target: "dist/schema.js", source: "src/exports/schema.ts" }],
-});
-summary(check(clean)) === ""
-=> true
-```

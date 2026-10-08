@@ -5,7 +5,7 @@ it. `validateBatch` checks the whole thing against the task's own JSON Schema
 for one record and refuses the batch as a unit, reporting every issue it found.
 
 ```ts setup
-import { validateBatch, isValidBatchFileName, COVERAGE_REASONS } from "../../src/shared/browser-task-batch.js";
+import { validateBatch, isValidBatchFileName } from "../../src/shared/browser-task-batch.js";
 
 const schema = {
   type: "object",
@@ -87,9 +87,6 @@ JSON.stringify(noCoverage.ok ? [] : noCoverage.issues.map((i) => `${i.kind} ${i.
 const badReason = validateBatch({ schemaJson: schema, manifest: { coverage: { ...coverage, reason: "bored" }, records: [] }, fileNames: [] });
 JSON.stringify(badReason.ok ? [] : badReason.issues.map((i) => i.path))
 => ["manifest.coverage.reason","manifest"]
-
-JSON.stringify(COVERAGE_REASONS)
-=> ["reached-watermark","reached-limit","reached-date","end-of-feed","login-wall","rate-limited","error"]
 ```
 
 The last issue on any envelope failure states the whole expected shape, so

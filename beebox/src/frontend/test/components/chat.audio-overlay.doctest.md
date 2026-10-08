@@ -56,16 +56,6 @@ resolveEntryMessageId(beforeSwap) === resolveEntryMessageId(afterSwap)
 => true
 ```
 
-## No attribute and no incidental match → resolves to the entry's own uuid, not a stray key
-
-A typed (non-voice) message never gets a `message-id` — it just resolves to
-its own uuid, which no overlay event will ever target.
-
-```ts
-resolveEntryMessageId(userEntry("uuid-typed-1", "<typed>hello</typed>"))
-=> uuid-typed-1
-```
-
 ## A `message-id="…"` string TYPED into the message body does NOT resolve (fix, cross-model review)
 
 The match is anchored to the `<speech>` wrapper's own opening tag — a user

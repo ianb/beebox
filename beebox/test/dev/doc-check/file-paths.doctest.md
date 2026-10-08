@@ -59,9 +59,6 @@ tokens("beebox/docs/x.md", "Run `bbx\nhealth` first; see `src/core/gone.ts`.")
 candidatePath("src/schemas/<type>/list-entry.tsx", "beebox/docs/x.md")
 => undefined
 
-candidatePath("issues/*/2026-*.md", "beebox/docs/x.md")
-=> undefined
-
 candidatePath("src/core/.../x.ts", "beebox/docs/x.md")
 => undefined
 

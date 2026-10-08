@@ -41,15 +41,6 @@ JSON.stringify(await resolveSessionModel(box.root, FOLLOW))
 
 JSON.stringify(await resolveSessionModel(box.root, { engine: "claude", explicit: "claude-fable-5-1" }))
 => {"model":"claude-fable-5-1","source":"explicit"}
-```
-
-Changing the pin changes what a follower resolves next time — the reason a
-follower must not be frozen onto its first resolution.
-
-```ts continue
-await pin(box.root, { agentModel: "claude-haiku-4-5-20251001" });
-JSON.stringify(await resolveSessionModel(box.root, FOLLOW))
-=> {"model":"claude-haiku-4-5-20251001","source":"default"}
 
 await box.cleanup();
 ```

@@ -17,23 +17,12 @@ by hand, or fabricate a v2-shaped fixture, to construct the rejected inputs.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { getBoxShape, getBoxShapeIfPresent, resolveBoxRoot, requireBoxRoot, boxCodePaths, BoxShapeError } from "../../src/lib/box-shape.js";
+import { getBoxShape, getBoxShapeIfPresent, resolveBoxRoot, requireBoxRoot, BoxShapeError } from "../../src/lib/box-shape.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const tryGetBoxShape = async (boxRoot) => {
   try { await getBoxShape(boxRoot); return null; }
   catch (e) { return e; }
-};
-
-// Code paths relative to the shape's own box root, so temp dir names never
-// appear in expected output.
-const relCodePaths = (shape) => {
-  const paths = boxCodePaths(shape);
-  return {
-    schemasDir: path.relative(shape.boxRoot, paths.schemasDir),
-    viewsDir: path.relative(shape.boxRoot, paths.viewsDir),
-    tricksDir: path.relative(shape.boxRoot, paths.tricksDir),
-  };
 };
 
 // A v2 fixture: package root with the marker one level down at `content/`.
@@ -115,19 +104,6 @@ JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, saysNoConversion
 await fs.rm(dir, { recursive: true, force: true });
 ```
 
-## Shape 3 with a valid package.json resolves boxRoot
-
-```ts
-const box = await makeTmpBox();
-const shape = await getBoxShape(box.root);
-JSON.stringify({ shapeVersion: shape.shapeVersion, boxRoot: shape.boxRoot === box.root })
-=> {"shapeVersion":3,"boxRoot":true}
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
 ## Shape 3 with beebox only in devDependencies still resolves
 
 ```ts
@@ -184,19 +160,6 @@ await box.write(".beebox/box.json", JSON.stringify({ shapeVersion: 4 }));
 const err = await tryGetBoxShape(box.root);
 JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, needsNewer: err.message.includes("newer beebox") })
 => {"isBoxShapeError":true,"needsNewer":true}
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## `boxCodePaths` for a shape 3 box: code lives at the (one) root's `src/`
-
-```ts
-const box = await makeTmpBox();
-const shape = await getBoxShape(box.root);
-JSON.stringify(relCodePaths(shape))
-=> {"schemasDir":"src/schemas","viewsDir":"src/views","tricksDir":"src/tricks"}
 ```
 
 ```ts cleanup

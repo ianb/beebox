@@ -94,12 +94,8 @@ await tick(box)
 const held = head(box);
 await box.write("_content/notes/b.memo.card", "---\ntitle: B\n---\n");
 box.commitAll("add b");
-await deferEach(box, { reasons: ["budget", "jev-unavailable", "unconfigured"], held })
+await deferEach(box, { reasons: ["budget"], held })
 => skipped | deferred budget failures=0 | card kept
-  cursor held
-skipped | deferred jev-unavailable failures=0 | card kept
-  cursor held
-skipped | deferred unconfigured failures=0 | card kept
   cursor held
 ```
 

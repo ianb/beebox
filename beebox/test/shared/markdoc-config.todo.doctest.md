@@ -67,14 +67,6 @@ check('{% todo status="open" %}\n\ntext\n\n{% /todo %}')
 =>
 valid
 
-check('{% todo status="done" %}\n\ntext\n\n{% /todo %}')
-=>
-valid
-
-check('{% todo status="dropped" %}\n\ntext\n\n{% /todo %}')
-=>
-valid
-
 check('{% todo status="parked" %}\n\ntext\n\n{% /todo %}')
 =>
 valid

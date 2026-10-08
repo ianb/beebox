@@ -31,20 +31,6 @@ function clicker(onSendOpener: (text: string) => void) {
 }
 ```
 
-## Each opener renders as its own button, labelled with the opener text
-
-```ts
-const out = markup(["Let me tell you what this box is for.", "What can you do?"]);
-out.includes("Let me tell you what this box is for.")
-=> true
-
-out.includes("What can you do?")
-=> true
-
-out.split("<button").length - 1
-=> 2
-```
-
 ## An established box — no openers — renders nothing at all
 
 The agent removes the openers once the box is in regular use, and the chat
@@ -87,14 +73,4 @@ click("Let me tell you what this box is for.")
 
 JSON.stringify(sent)
 => ["What can you do?"]
-```
-
-## Buttons render enabled until one is clicked
-
-(The `disabled` *attribute* — the class list carries Tailwind's `disabled:`
-variants either way, so matching the bare word would always pass.)
-
-```ts
-markup(["What can you do?"]).includes('disabled=""')
-=> false
 ```

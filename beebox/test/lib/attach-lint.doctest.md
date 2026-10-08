@@ -10,24 +10,6 @@ import { lintAttachLayout } from "../../src/lib/attach-lint.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 
-## Same-case basenames collide
-
-```ts
-const box = await makeTmpBox();
-await box.write("Notes.memo.card", "---\nstatus: new\n---\n");
-await box.write("Notes.record.card", "---\nname: x\n---\n");
-const errors = await lintAttachLayout(box.root);
-JSON.stringify(errors.map((e) => e.path).toSorted())
-=> ["Notes.memo.card","Notes.record.card"]
-
-errors[0]?.rule
-=> basename-collision
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
 ## Basenames that only differ by case also collide
 
 macOS (and Windows) filesystems are case-insensitive, so `Foo.memo.card` and

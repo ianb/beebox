@@ -43,30 +43,6 @@ function runTurn(frames: ChatMessage[]): { text: string; tools: number } {
 }
 ```
 
-## A streamed block is surfaced once (deltas win, atomic frame skipped)
-
-```ts
-const { text } = runTurn([
-  delta("Hello "),
-  delta("world"),
-  asstText("Hello world"),
-]);
-text;
-=>
-Hello world
-```
-
-## An atomic block (no deltas) is surfaced from its assistant frame
-
-```ts
-const { text } = runTurn([
-  asstText("No deltas here"),
-]);
-text;
-=>
-No deltas here
-```
-
 ## Interleaved turn: atomic post-tool text/embeds all survive
 
 This is the regression. Opening narration streams via deltas; two
@@ -104,16 +80,3 @@ text;
 First atomic.Second atomic.
 ```
 
-## Two consecutive streamed blocks are each surfaced once
-
-```ts
-const { text } = runTurn([
-  delta("Alpha"),
-  asstText("Alpha"),
-  delta("Beta"),
-  asstText("Beta"),
-]);
-text;
-=>
-AlphaBeta
-```

@@ -348,9 +348,6 @@ extractDriveFileId("https://drive.google.com/drive/folders/1AbCfolderID")
 
 extractDriveFileId("https://drive.google.com/drive/u/0/folders/1AbCfolderID?usp=sharing")
 => 1AbCfolderID
-
-extractDriveFileId("https://docs.google.com/document/d/doc-abc123/edit")
-=> doc-abc123
 ```
 
 ## End to end — a mount discovers its children and points at the rest

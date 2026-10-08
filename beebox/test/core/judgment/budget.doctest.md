@@ -11,7 +11,7 @@ docs/implemented-plans/notifications.md (Track D).
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { JEV_DAILY_CAP, jevBudgetHealthCheck, reserveJevCalls } from "../../../src/core/judgment/budget.js";
+import { jevBudgetHealthCheck, reserveJevCalls } from "../../../src/core/judgment/budget.js";
 import { runJudge } from "../../../src/cli/commands/judge/command.js";
 import { createFakeJev } from "../../../src/services/jev.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -24,9 +24,6 @@ const hours = (h) => new Date(NOON.getTime() + h * 60 * 60 * 1000);
 
 ```ts
 const box = await makeTmpBox();
-JEV_DAILY_CAP
-=> 500
-
 await reserveJevCalls(box.root, { calls: 490, now: NOON })
 => true
 

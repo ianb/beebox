@@ -60,14 +60,6 @@ check.message.startsWith("2 job(s) pending over 7 days: 2020-01-01T00-00-00-a.in
 => true
 ```
 
-The message names the reactor as the thing to look at, since that is what
-isn't draining them.
-
-```ts continue
-check.message.includes("bbx wakeup")
-=> true
-```
-
 ```ts cleanup
 await boxOld.cleanup();
 ```

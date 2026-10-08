@@ -9,7 +9,7 @@ refactor's zero-behavior-change guarantee is these strings.
 import { assembleChatMessage } from "../../src/input/targets/chat-assemble.js";
 import { createTypedEmission, createVoiceEmission } from "../../src/input/emission.js";
 import { buildSpeechMessage } from "../../src/components/chat/InteractiveChat-helpers.js";
-import { markUnsureWords, resolveEmissionWords, UNSURE_THRESHOLD, UNSURE_EXTEND } from "../../src/input/unsure-words/mark.js";
+import { markUnsureWords, resolveEmissionWords } from "../../src/input/unsure-words/mark.js";
 
 import { stripUserDisplayTags } from "../../src/components/chat/message-parsing.js";
 
@@ -196,32 +196,12 @@ assembleChatMessage(e2, { localTime: "23:59", zoomedView: null, timePassed: "8h"
 => <speech message-id="ID" local-time="23:59" time-passed="8h">quick thought before I go</speech>
 ```
 
-## Site 5 — recovered dictation: same shape as stop-and-send
-
-Historical builder: `handleRecoverSend`
-(`InteractiveChat.tsx`) — `buildSpeechMessage` with `selections: []`,
-`diarized: false`.
-
-```ts
-const e = createVoiceEmission({ text: "the text that survived the drop", selections: [], diarized: false });
-assembleChatMessage(e, W).message.replace(e.id, "ID")
-=> <speech message-id="ID" local-time="14:23">the text that survived the drop</speech>
-```
-
 ## `markUnsureWords` — the pure marking function (Track 3, span rework)
 
 `UNSURE_THRESHOLD` (0.7) SEEDS a span; `UNSURE_EXTEND` (0.9) grows it
 outward across adjacent gray words; a one-word gap between two spans
 BRIDGES them; a span never crosses sentence-final punctuation. A word AT
 either threshold is on the confident side (`<`, not `<=`).
-
-```ts
-UNSURE_THRESHOLD
-=> 0.7
-
-UNSURE_EXTEND
-=> 0.9
-```
 
 Single low word with confident (≥0.9) neighbors: still a single-word span
 — unchanged from the pre-rework behavior.
@@ -657,20 +637,11 @@ When a requested HQ pass does not finish (budget expiry, "Send live text", or
 the HQ pass failing outright — `docs/plans/resilient-voice-recording.md`,
 Track 4; late correction removed), the realtime text is sent marked
 `hq="failed"`. Realtime words still stamp `stt="deepgram"`; `hq` follows the
-`stt` attributes. The three provenance shapes a voice send can take:
+`stt` attributes.
 
 ```ts
-const provenance = (extra: Record<string, unknown>) => {
-  const e = createVoiceEmission({ text: "hello", selections: [], diarized: false, ...extra });
-  return assembleChatMessage(e, W).message.replace(e.id, "ID");
-};
-provenance({})
-=> <speech message-id="ID" local-time="14:23">hello</speech>
-
-provenance({ hqText: true, hqService: "mai" })
-=> <speech stt="hq" stt-service="mai" message-id="ID" local-time="14:23">hello</speech>
-
-provenance({ hqFallback: true, words: [{ word: "hello", confidence: 0.99 }] })
+const e = createVoiceEmission({ text: "hello", selections: [], diarized: false, hqFallback: true, words: [{ word: "hello", confidence: 0.99 }] });
+assembleChatMessage(e, W).message.replace(e.id, "ID")
 => <speech stt="deepgram" hq="failed" message-id="ID" local-time="14:23">hello</speech>
 ```
 

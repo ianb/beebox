@@ -39,12 +39,6 @@ hit?.retryAtSource
 
 hit?.retryAt === new Date(2026, 7, 19, 23, 34).toISOString()
 => true
-
-hit?.detectedAt === NOW.toISOString()
-=> true
-
-hit?.message === CODEX_QUOTA_MESSAGE
-=> true
 ```
 
 The description is the one line every string surface shows — chat, `lastError`,

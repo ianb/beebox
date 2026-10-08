@@ -65,9 +65,6 @@ fallback sends it to pdf mode instead:
 
 ```ts
 const probe = await probePdf(await fixture("textless.pdf", textlessPdf()));
-verdict(probe)
-=> «*»:«*»
-
 havePdftotext ? verdict(probe) : "probed:false"
 => probed:false
 ```

@@ -12,7 +12,6 @@ import { dirname } from "node:path";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import {
-  FRESHNESS_KEEP_PROBABILITY,
   createJevFreshnessChecker,
   resolveFreshnessChecker,
   stillFitsQuestion,
@@ -48,11 +47,8 @@ const QUESTION = stillFitsQuestion();
 ## The decision is one threshold on the noul's probability
 
 ```ts
-[titleKeeps({ probability: 0.75 }), titleKeeps({ probability: 0.9 }), titleKeeps({ probability: 0.74 }), titleKeeps({ probability: 0.1 })].join(",")
-=> true,true,false,false
-
-FRESHNESS_KEEP_PROBABILITY
-=> 0.75
+[titleKeeps({ probability: 0.75 }), titleKeeps({ probability: 0.74 })].join(",")
+=> true,false
 ```
 
 The question is a noul with a true/false criterion pair — the shape

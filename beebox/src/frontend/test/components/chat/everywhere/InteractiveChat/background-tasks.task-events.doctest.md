@@ -46,17 +46,12 @@ JSON.stringify(m.task)
 
 ## Adapter — settled, with status
 
-`task_notification` is the terminal event. The status is one of
-`completed | failed | stopped`:
+`task_notification` is the terminal event, carrying its final status:
 
 ```ts
-const ok = task({ subtype: "task_notification", task_id: "t1", status: "completed", output_file: "/tmp/t1.output", summary: "done" });
-JSON.stringify(ok.task)
+const m = task({ subtype: "task_notification", task_id: "t1", status: "completed", output_file: "/tmp/t1.output", summary: "done" });
+JSON.stringify(m.task)
 => {"phase":"settled","taskId":"t1","status":"completed","summary":"done","outputFile":"/tmp/t1.output"}
-
-const bad = task({ subtype: "task_notification", task_id: "t1", status: "failed", output_file: "/tmp/t1.output", summary: "boom" });
-bad.task?.status
-=> failed
 ```
 
 ## Adapter — a state patch

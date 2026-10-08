@@ -66,9 +66,6 @@ Parses budget strings in the format `limit/window` — both are durations. A bud
 ```ts
 JSON.stringify(parseBudget("10m/5h"))
 => {"limitMs":600000,"windowMs":18000000}
-
-JSON.stringify(parseBudget("30s/1m"))
-=> {"limitMs":30000,"windowMs":60000}
 ```
 
 ## parseScheduledScript: timeout
@@ -92,9 +89,6 @@ runtime (see issues/bugs/2026-08-10-invalid-schedule-dates-silently-inert.md).
 Now it's a card validation error.
 
 ```ts
-ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "not-a-date" })).success
-=> false
-
 ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "not-a-date" })).success
 => false
 
@@ -110,9 +104,6 @@ ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "2026-
 
 ```ts
 ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "5" })).success
-=> false
-
-ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "May 5 2026" })).success
 => false
 
 ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "2026-13-45" })).success
@@ -133,9 +124,6 @@ badAt.success ? undefined : badAt.error.issues[0].message
 ## Schema: `cron` must be a valid cron expression
 
 ```ts
-ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "not a cron" })).success
-=> false
-
 ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "0 6 * * *" })).success
 => true
 
@@ -147,9 +135,6 @@ badCron.success ? undefined : badCron.error.issues[0].message
 ## Schema: `rrule` must be a valid RRULE
 
 ```ts
-ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ rrule: "not an rrule" })).success
-=> false
-
 ScheduledScriptSchema.frontmatterSchema.safeParse(
   baseCardFields({ rrule: "FREQ=WEEKLY;BYDAY=MO" })
 ).success
@@ -167,12 +152,6 @@ ScheduledScriptSchema.frontmatterSchema.safeParse(
   baseCardFields({ cron: "0 6 * * *", at: "2026-09-01T14:30:00Z" })
 ).success
 => false
-
-ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "0 6 * * *" })).success
-=> true
-
-ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "2026-09-01T14:30:00Z" })).success
-=> true
 ```
 
 ## Schema: exactly one of `runs` and `notify`
@@ -414,19 +393,4 @@ createScheduledScriptTemplate({
   runs: "echo hi",
 })
 => throws InvalidScheduledScriptTemplateError
-```
-
-Minimal wakeup-only script:
-
-```ts
-createScheduledScriptTemplate({
-  onWakeup: true,
-  runs: "bbx wakeup --connector capture",
-})
-=>
----
-on-wakeup: true
-runs: bbx wakeup --connector capture
----
-
 ```

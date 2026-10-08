@@ -13,7 +13,6 @@ that read idle — is a plain history round-trip and never paints the strip
 import {
   shouldShowAgentWorking,
   streamWatchdogAdvance,
-  STREAM_WATCHDOG_IDLE_POLLS,
 } from "../../../../../src/components/chat/everywhere/InteractiveChat/processing-status-display.js";
 ```
 
@@ -77,9 +76,6 @@ JSON.stringify(streamWatchdogAdvance({ busy: true, idlePolls: 2 }))
 => {"idlePolls":0,"recover":false}
 
 // Idle reads accumulate; recovery fires exactly at the threshold.
-STREAM_WATCHDOG_IDLE_POLLS
-=> 3
-
 const s1 = streamWatchdogAdvance({ busy: false, idlePolls: 0 });
 const s2 = streamWatchdogAdvance({ busy: false, idlePolls: s1.idlePolls });
 const s3 = streamWatchdogAdvance({ busy: false, idlePolls: s2.idlePolls });

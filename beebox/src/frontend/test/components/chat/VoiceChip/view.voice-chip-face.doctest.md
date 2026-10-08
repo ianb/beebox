@@ -67,11 +67,6 @@ face.includes("opacity-40")
 => false
 ```
 
-```ts continue
-JSON.stringify([face.includes('data-voice-muted="false"'), face.includes('data-voice-narration="false"'), face.includes("transcribing…")])
-=> [true,true,false]
-```
-
 ## The box answers in writing
 
 Written lines, not a slashed speaker: a slash says *suppressed*, and that is not

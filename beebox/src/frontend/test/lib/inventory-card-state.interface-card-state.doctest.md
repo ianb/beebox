@@ -1,7 +1,7 @@
 # Inventory and Admin card state
 
 ```ts setup
-import { parseInventoryCardState, inventoryCardViewState } from "../../src/lib/inventory-card-state.js";
+import { parseInventoryCardState } from "../../src/lib/inventory-card-state.js";
 import { adminArrivalKey, adminArrivalReceipt, adminArrivalViewState, adminTabViewState, clearAdminArrivalState, parseAdminCardState, shouldAcknowledgeAdminArrival, shouldConsumeAdminArrival } from "../../src/lib/admin-card-state.js";
 import { boxRouteSurface } from "../../src/lib/box-route-layout.js";
 import { captureModeForRequest } from "../../src/lib/capture-intent.js";
@@ -16,9 +16,6 @@ JSON.stringify(parseInventoryCardState({ projection: "direct", metric: "bytes", 
 
 parseInventoryCardState({ projection: "other" }).ok
 => false
-
-JSON.stringify(inventoryCardViewState({ projection: "grouped", metric: "bytes", linkStatus: "linked" }))
-=> {"projection":"grouped","metric":"bytes","linkStatus":"linked"}
 ```
 
 Only recognized OAuth return fields, a known tab, and a known section to land
@@ -65,9 +62,6 @@ JSON.stringify(adminTabViewState({ google: "connected" }, "people"))
 
 JSON.stringify(adminTabViewState(null, "people"))
 => {"tab":"people"}
-
-JSON.stringify(adminTabViewState(undefined, "people"))
-=> {"tab":"people"}
 ```
 
 A hidden retained Admin card and an in-flight status request cannot consume the
@@ -96,9 +90,6 @@ shouldConsumeAdminArrival({ arrival, visible: true, loading: false, alreadyProce
 => false
 
 shouldAcknowledgeAdminArrival({ arrival, visible: true, loading: false })
-=> true
-
-shouldConsumeAdminArrival({ arrival, visible: true, loading: false, alreadyProcessed: false })
 => true
 ```
 

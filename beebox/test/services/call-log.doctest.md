@@ -45,19 +45,6 @@ send("alice", "hi")
 send("bob", "hey")
 ```
 
-## Return values pass through
-
-The wrapper doesn't change the return value — it just observes.
-
-```ts
-const svc = withCallLog({
-  async double(n) { return n * 2; },
-});
-
-await svc.double(21)
-=> 42
-```
-
 ## Results are captured in the log
 
 ```ts

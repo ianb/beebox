@@ -11,7 +11,6 @@ op instead of the real IndexedDB-backed queue.
 ```ts setup
 import {
   VoiceStager,
-  VOICE_BATCH_BYTES,
   startStagedRecording,
 } from "../../../src/lib/audio/voice-stager.js";
 
@@ -43,9 +42,6 @@ function recordingSink() {
 ## Fifty 300 ms frames fill exactly one 15 s chunk
 
 ```ts
-VOICE_BATCH_BYTES
-=> 480000
-
 const emitted: number[] = [];
 const stager = new VoiceStager({ emit: (bytes) => emitted.push(bytes.byteLength) });
 for (let i = 0; i < 49; i++) stager.push(frame(1));

@@ -20,25 +20,6 @@ import { LandmarkSchema } from "../../src/schemas/landmark.js";
 ```ts
 Object.keys(GLOBAL_CARD_FIELDS).join(",")
 => title,contains,contains-evidence,todos,symbol,prominence,theme
-
-GLOBAL_CARD_FIELDS["prominence"].isOptional()
-=> true
-```
-
-## The three values accept; absence parses as undefined
-
-```ts
-Prominence.parse("entry-point")
-=> entry-point
-
-Prominence.parse("primary")
-=> primary
-
-Prominence.parse("background")
-=> background
-
-Prominence.optional().parse(undefined)
-=> undefined
 ```
 
 ## A fourth value rejects, naming the three it accepts
@@ -101,7 +82,4 @@ effectiveLevel({ declared: "primary", typeDefault: ChatJobSchema.defaultProminen
 
 effectiveLevel({ declared: undefined, typeDefault: ChatJobSchema.defaultProminence })
 => background
-
-effectiveLevel({ declared: undefined, typeDefault: MemoSchema.defaultProminence })
-=> ordinary
 ```

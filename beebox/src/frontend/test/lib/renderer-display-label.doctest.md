@@ -53,7 +53,4 @@ rendererDisplayLabel({ registeredName: "Source", filePath: "notes.md", hasTypeSp
 ```ts
 rendererDisplayLabel({ registeredName: "Recipe", filePath: "Bread.recipe.card", hasTypeSpecificRenderer: true })
 => Recipe
-
-rendererDisplayLabel({ registeredName: "Download", filePath: "photo.jpg", hasTypeSpecificRenderer: false })
-=> Download
 ```

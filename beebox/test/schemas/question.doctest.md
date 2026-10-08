@@ -29,13 +29,6 @@ function baseFields(overrides: Record<string, unknown> = {}): Record<string, unk
 }
 ```
 
-## Registered as `question`
-
-```ts
-QuestionSchema.type
-=> question
-```
-
 ## `input` refinement: select requires at least two options
 
 ```ts

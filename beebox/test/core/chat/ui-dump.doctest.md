@@ -125,18 +125,6 @@ describe it in words instead of inventing an address for it. A control shown as
 it; describe that one in words too.
 ```
 
-The three `bbx-` controls the plan's done-when names are all addressable, and
-only the annotated one offers `reveal`:
-
-```ts continue
-const marks = ["bbx-composer-mic", "bbx-composer-send", "bbx-composer-add"].map((id) => {
-  const line = formatUiDump(chat).split("\n").find((row) => row.includes(`control:${id}`)) ?? "missing";
-  return `${id}: ${line.includes("[reveal]") ? "reveal" : "no reveal"}`;
-});
-marks.join(", ")
-=> bbx-composer-mic: no reveal, bbx-composer-send: no reveal, bbx-composer-add: reveal
-```
-
 ## What the scan could not see is said out loud
 
 Inside the native shell the composer, mic, capture and box switcher are native
@@ -154,13 +142,6 @@ and are missing from this list; describe them in words rather than
 pointing at them.
 «blankline»
 No controls were found on screen — the page may still be loading.
-```
-
-Once Track 5's bridge answers, the same dump reports both halves:
-
-```ts continue
-formatUiDump(payload({ coverage: "dom+native", channel: "ios-native" })).split("\n")[1]
-=> Covers: browser DOM and the native app's own controls.
 ```
 
 ## Truncation and duplicate addresses are stated, not implied

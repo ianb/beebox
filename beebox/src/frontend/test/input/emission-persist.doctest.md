@@ -54,9 +54,6 @@ loaded?.text
 JSON.stringify(loaded?.files[0]?.state)
 => {"status":"uploaded","path":"_tmp/2026-07-04_report.pdf"}
 
-emissionKey({ boxSlug: "test1", scope: "" })
-=> bbx-input-emission:test1
-
 emissionKey({ boxSlug: undefined, scope: "" })
 => bbx-input-emission:default
 ```

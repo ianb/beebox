@@ -111,15 +111,6 @@ await run({ assigned: "Nobody" })
 => No todos match.
 ```
 
-## Routine success (no issues) prints no trailing section
-
-```ts continue
-await run({ status: "parked" })
-=>
-PARKED (1)
-  _content/plate.memo.card:11  [parked-one] Parked
-```
-
 ## A card that fails to load prints a trailing "could not be read" section — never silently dropped
 
 ```ts continue

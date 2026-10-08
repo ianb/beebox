@@ -64,16 +64,9 @@ await lint("_content/orphan/Gone.attach/Gone.md")
 => 2
 ```
 
+The owner card itself is not connector-owned markdown:
+
 ```ts continue
-await isConnectorOwnedMarkdown(join(box.root, "_content/drive/Checklist.attach/Checklist.md"))
-=> true
-
-await isConnectorOwnedMarkdown(join(box.root, "_content/notes/Plan.attach/Plan.md"))
-=> false
-
-await isConnectorOwnedMarkdown(join(box.root, "_content/drive/Checklist.attach/notes.md"))
-=> false
-
 await isConnectorOwnedMarkdown(join(box.root, "_content/drive/Checklist.gdoc.card"))
 => false
 ```

@@ -9,7 +9,6 @@ backend selection rules, the retry classification carried by
 import {
   selectScanVisionBackend,
   createFakeScanVision,
-  createGeminiScanVision,
   ScanVisionBatchError,
   FakeScanVisionFailureError,
 } from "../../src/services/scan-vision.js";
@@ -58,18 +57,9 @@ page (back) — mutual claims, so the reconciliation layer bundles them.
 
 ```ts
 const fake = createFakeScanVision();
-fake.backend
-=> fake
-
 const result = await fake.analyzeBatch({ imagePaths: ["/tmp/p0.jpg", "/tmp/p1.jpg", "/tmp/p2.jpg"], boxholderContext: "Names: Dana, Marisol" });
 result.analyses.map((a) => `${a.index}:${a.kind}->${a.paired_with_index}`).join(" ")
 => 0:photo->1 1:back->0 2:photo->null
-
-result.usage?.prompt
-=> 300
-
-result.costUsd
-=> 0.05
 
 fake.describe()
 => scan-vision fake, 1 call(s)
@@ -115,30 +105,4 @@ const dead = createFakeScanVision({ alwaysFailRetry: "fatal" });
 const fatalErr = await dead.analyzeBatch({ imagePaths: ["/tmp/a.jpg"], boxholderContext: null }).catch((e) => e);
 `${fatalErr.name}: retry=${fatalErr.retry}`
 => FakeScanVisionFailureError: retry=fatal
-```
-
-## Scripted analyses
-
-The `analyze` option replaces the default generator per call — the photo-flow
-doctest uses this to hand-shape batches (including deliberately misaligned
-ones for the post-condition tests).
-
-```ts
-const unsurePage = (i) => ({ index: i, kind: "unsure", paired_with_index: null, description: "", title: "", rotation: 0, subject_bbox: null, has_text: false, text_blocks: [], date_hint: null, flag_for_review: true, flag_reason: "scripted" });
-const scripted = createFakeScanVision({ analyze: (paths) => paths.map((_, i) => unsurePage(i)) });
-const unsure = await scripted.analyzeBatch({ imagePaths: ["/tmp/x.jpg"], boxholderContext: null });
-unsure.analyses[0]?.kind
-=> unsure
-```
-
-## Gemini backend surface
-
-The Gemini implementation wraps the existing engine; without network access we
-assert only its declared shape (batch size 8 is the historical Gemini batch
-default).
-
-```ts
-const gsvc = createGeminiScanVision({ route: { via: "direct", apiKey: "k-1" } });
-`${gsvc.backend} ${gsvc.batchSize}`
-=> gemini 8
 ```

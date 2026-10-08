@@ -77,19 +77,6 @@ JSON.stringify(await caller(box.root).chat.openers({ contextDir: "recipes" }))
 => {"openers":[]}
 ```
 
-## An established box — briefing with no `openers:` — offers none
-
-This is the normal end state, not a failure: the agent removes the openers once
-the box is in regular use.
-
-```ts
-const box = await makeTmpBox();
-await box.write("briefing.briefing.card", "---\ntype: briefing\n---\n{% purpose %}\nRun the household.\n{% /purpose %}\n");
-
-JSON.stringify(await caller(box.root).chat.openers({}))
-=> {"openers":[]}
-```
-
 ## A box with no briefing anywhere offers none
 
 Nothing to fall back to — the chat keeps its plain empty-state line.

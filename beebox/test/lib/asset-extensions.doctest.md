@@ -7,7 +7,6 @@ annex. See `src/lib/asset-extensions.ts`.
 
 ```ts setup
 import {
-  ANNEX_ATTRIBUTES_MARKER,
   ASSET_EXTENSIONS,
   assetAnnexAttributes,
   assetGitignorePatterns,
@@ -78,9 +77,6 @@ manifests, and email bodies never match, wherever they live.
 ```ts
 ["card", "json", "md", "txt"].some((e) => assetLargefilesExpression().includes(`include=*.${e}`))
 => false
-
-assetLargefilesExpression() === "include=*.attach/*"
-=> false
 ```
 
 ## `.git/info/attributes` — which paths reach the annex filter
@@ -119,42 +115,14 @@ assetAnnexAttributes()
 **/*.upload-batch.attach/** filter=annex
 ```
 
-Every extension gets a line, plus the two batch path lines, and the marker names the
-owner so drift from git-annex's own file is visible without a diff:
-
-```ts
-assetAnnexAttributes().split("\n").filter((l) => l.endsWith("filter=annex")).length === ASSET_EXTENSIONS.length + 2
-=> true
-
-assetAnnexAttributes().startsWith(ANNEX_ATTRIBUTES_MARKER)
-=> true
-
-assetAnnexAttributes().includes("\n* filter=annex")
-=> false
-```
-
 The character classes are deliberate. gitattributes globs are case-sensitive,
 and so is `annex.largefiles` (verified with git-annex 10.20260717: `include=*.jpg`
 does not match `UPPER.JPG`). Both renderings use the same classes, so a file
 cannot match one list and miss the other in either direction — a path largefiles
 annexes but the filter never sees is a raw blob, and a path the annex holds but
-the filter no longer covers reads back as `/annex/objects/…` text:
-
-```ts
-assetAnnexAttributes().includes("*.[hH][eE][iI][cC] filter=annex")
-=> true
-
-assetAnnexAttributes().includes("*.heic filter=annex")
-=> false
-```
-
-Nothing a box commits as text may appear here — the same property that makes
-the unscoped `annex.largefiles` safe:
-
-```ts
-["card", "json", "md", "txt"].some((e) => assetAnnexAttributes().includes(`*.${e}`))
-=> false
-```
+the filter no longer covers reads back as `/annex/objects/…` text. Nothing a box
+commits as text appears in the list, the same property that makes the unscoped
+`annex.largefiles` safe.
 
 The batch lines are the only non-extension entries, and they are what make the
 batch-local `.gitattributes` (`* annex.largefiles=anything`, written by

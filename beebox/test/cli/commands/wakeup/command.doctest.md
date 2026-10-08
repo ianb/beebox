@@ -230,10 +230,6 @@ const intakeJobs = async () => (await readdir(jobsDir)).filter((f) => f.endsWith
 const [unscoped] = await intakeJobs();
 unscoped.endsWith("-inbox.intake.job.card")
 => true
-
-// A second full scan changes nothing.
-await createIntakeJobsForUnjobbed(box.root)
-=> 0
 ```
 
 The gmail-scoped scan takes both email items. The unscoped job keeps the memo,

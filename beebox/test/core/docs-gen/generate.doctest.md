@@ -46,9 +46,6 @@ unrelated one untouched — untracked, uncommitted:
 await commitTemplateSyncChanges(box.root);
 
 const status = await getStatus(box.root);
-status.clean
-=> false
-
 JSON.stringify(status.modified)
 => []
 

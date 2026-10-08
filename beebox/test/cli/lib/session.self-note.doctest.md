@@ -40,17 +40,6 @@ commit: null
 body: just a body
 ```
 
-### Only ref
-
-```ts
-const note = parseSelfNote('<self-note ref="foo.card">hello</self-note>');
-print(`ref: ${note.ref}`);
-print(`commit: ${note.commit}`);
-=>
-ref: foo.card
-commit: null
-```
-
 ### Multi-line body
 
 ```ts
@@ -99,11 +88,6 @@ parseSelfNote("hello world") === null
 ```
 
 ```ts
-parseSelfNote("<typed>regular user message</typed>") === null
-=> true
-```
-
-```ts
 parseSelfNote("<self-note>no closing tag") === null
 => true
 ```
@@ -126,13 +110,6 @@ count: 3
 0: one
 1 ref: x, body: two
 2 commit: abc, body: three
-```
-
-A single note returns a one-element array:
-
-```ts
-parseSelfNotes("<self-note>hi</self-note>").length
-=> 1
 ```
 
 Mixed content (self-note plus other text) is rejected — falls through

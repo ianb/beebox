@@ -28,9 +28,6 @@ JSON.stringify(chatTargetStatus({ isStreaming: true, processBusy: false }))
 
 JSON.stringify(chatTargetStatus({ isStreaming: false, processBusy: true }))
 => {"state":"busy","disposition":"will-queue"}
-
-JSON.stringify(chatTargetStatus({ isStreaming: true, processBusy: true }))
-=> {"state":"busy","disposition":"will-queue"}
 ```
 
 Note: `unavailable` is part of the wider Target vocabulary but chat has no

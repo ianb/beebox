@@ -114,21 +114,9 @@ clean
 ```
 
 Generated docs (`docs/generated/`, regenerated and full of placeholder example
-links) are skipped, so they never flood the warning:
-
-```ts
-const box5 = await makeTmpBox();
-await mkdir(join(box5.root, "docs/generated"), { recursive: true });
-await writeFile(join(box5.root, "docs/generated/card-x.md"), "![ex](attach/photo.jpg)\n[text](url)\n");
-const genWarn = await boxWideLinkWarnings(box5.root);
-await box5.cleanup();
-genWarn
-=> null
-```
-
-Nested per-area generated docs (`_content/<area>/docs/generated/`, the shape that
-actually appeared on prod) are skipped too — the old root-anchored ignore missed
-these, so their placeholder links leaked into the scan:
+links) are skipped, so they never flood the warning. The shape that actually
+appeared on prod is nested per area (`_content/<area>/docs/generated/`); the old
+root-anchored ignore missed it, so placeholder links leaked into the scan:
 
 ```ts
 const box6 = await makeTmpBox();

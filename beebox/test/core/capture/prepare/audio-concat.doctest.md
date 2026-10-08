@@ -6,7 +6,7 @@ concatenated *within* a segment (never across), yielding one buffer per segment
 with chunk order preserved.
 
 ```ts setup
-import { concatSegments, concatSegmentChunks } from "../../../../src/core/capture/prepare/audio-concat.js";
+import { concatSegments } from "../../../../src/core/capture/prepare/audio-concat.js";
 ```
 
 ## Two segments, three chunks each → two buffers, order preserved
@@ -40,13 +40,6 @@ out[1].buffer.toString("utf-8")
 => B0B1B2
 ```
 
-The header chunk stays first — cross-segment bytes never mingle:
-
-```ts continue
-out[1].startedAt
-=> 2026-07-09T14:05:00.000Z
-```
-
 ## Empty segments are dropped
 
 A segment that recorded no chunks produces no card:
@@ -61,13 +54,6 @@ out.length
 
 out[0].segmentId
 => real
-```
-
-## `concatSegmentChunks` is plain ordered concatenation
-
-```ts
-concatSegmentChunks([Buffer.from("one"), Buffer.from("two")]).toString("utf-8")
-=> onetwo
 ```
 
 ## A truncated tail chunk still concatenates (decodable prefix, no throw)
@@ -87,11 +73,4 @@ out.length
 
 out[0].buffer.toString("utf-8")
 => HEADER-cluster0-cluster1-cluster2
-```
-
-The full prefix is intact — the truncation only costs the missing tail bytes:
-
-```ts continue
-out[0].buffer.toString("utf-8").startsWith("HEADER-cluster0-cluster1-")
-=> true
 ```

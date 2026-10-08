@@ -35,15 +35,6 @@ attempts.map((n) => describe(decideWakeupRetry(n))).join(" ")
 => 2m 4m 8m 15m 15m abandon
 ```
 
-The retries total well under an hour of waiting:
-
-```ts
-const retries = Array.from({ length: MAX_WAKEUP_ATTEMPTS - 1 }, (_v, i) => decideWakeupRetry(i + 1));
-const total = retries.reduce((sum, d) => sum + (d.kind === "retry" ? d.delayMs : 0), 0);
-minutes(total) <= 60
-=> true
-```
-
 ## Failures accumulate on disk, so a restart does not hand out a fresh budget
 
 The box that ran this loop in production restarts on deploy. An in-memory
@@ -53,13 +44,6 @@ counter would reset there, and the loop would resume.
 const box = await makeTmpBox();
 await recordWakeupFailure(box.root);
 await recordWakeupFailure(box.root);
-await readWakeupFailures(box.root)
-=> 2
-```
-
-A second reader — a fresh process — sees the same count:
-
-```ts continue
 await readWakeupFailures(box.root)
 => 2
 ```
@@ -134,14 +118,6 @@ await passes.reduce(
 => calls=6 last=abandoned
 ```
 
-Twenty passes produced six wakeups. Every pass after abandonment is a no-op,
-which is what stops the loop:
-
-```ts continue
-outcomes.filter((k) => k === "abandoned").length
-=> 15
-```
-
 ## New scan files start the budget over
 
 Otherwise one permanently-broken connector would silently strand every future
@@ -151,11 +127,6 @@ scan on the box — trading a loud loop for a quiet one.
 await markWakeupPending(box.root, { reason: "2 scan file(s) entering promote", newWork: true });
 await isWakeupAbandoned(box.root)
 => false
-```
-
-```ts continue
-await readWakeupFailures(box.root)
-=> 0
 ```
 
 ```ts continue

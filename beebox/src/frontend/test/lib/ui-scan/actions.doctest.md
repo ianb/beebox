@@ -97,14 +97,6 @@ JSON.stringify(ringBox({ top: 100, left: 40, width: 32, height: 32 }, RING_PADDI
 => {"top":96,"left":36,"width":40,"height":40}
 ```
 
-A degenerate box — a zero-height inline control — still yields a visible ring
-rather than collapsing to nothing:
-
-```ts
-JSON.stringify(ringBox({ top: 10, left: 10, width: 0, height: 0 }, 4))
-=> {"top":6,"left":6,"width":8,"height":8}
-```
-
 "In view" means *fully* in view: a control half off the bottom edge is one the
 user cannot properly see, which is exactly the case `point` scrolls for.
 

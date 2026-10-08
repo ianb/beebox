@@ -52,14 +52,6 @@ JSON.stringify(applySelections("[selection1]", { selections: [
 "<user-selection ref=\"/a&amp;b.card\" pos=\"p&quot;q\">x &lt; y &amp; z</user-selection>"
 ```
 
-## No selections — body unchanged
-
-```ts
-applySelections("hello world", { selections: [] })
-=>
-hello world
-```
-
 ## Unknown token is left as literal text
 
 ```ts

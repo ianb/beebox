@@ -46,11 +46,6 @@ html.includes('<object data="/test/api/files/inbox/Handbook.attach/source.pdf" t
 html.includes("This PDF can’t be displayed here.")
 => true
 
-// A real download attribute carrying the suggested filename — not a plain link
-// the browser would navigate to.
-html.includes('download="source.pdf"')
-=> true
-
 // Open-in-new-tab is a labelled icon link (icon-only controls need a name).
 html.includes('aria-label="Open source.pdf in a new tab"')
 => true

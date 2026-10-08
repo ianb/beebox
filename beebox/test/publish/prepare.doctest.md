@@ -699,14 +699,6 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-await writeFixture(box, { tier: "everyone", files: { "index.html": "x" } });
-const badTier = await prepareError(box);
-badTier.startsWith("invalid-definition: publication card _content/Example.publication.card cannot be used")
-=> true
-
-badTier.includes("tier")
-=> true
-
 await writeFixture(box, { connection: "", files: { "index.html": "x" } });
 const badConnection = await prepareError(box);
 badConnection.startsWith("invalid-definition: publication card _content/Example.publication.card cannot be used")

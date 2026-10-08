@@ -56,11 +56,3 @@ optionsFor({}).settings
 optionsFor({ loadBoxContext: false }).settings.disableClaudeAiConnectors
 => true
 ```
-
-Opting out changes nothing else about the run — the working directory is still
-the box, so a pass that reads a file still can.
-
-```ts
-optionsFor({ loadBoxContext: false }).cwd
-=> /box
-```

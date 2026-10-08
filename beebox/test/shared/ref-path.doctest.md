@@ -24,16 +24,6 @@ JSON.stringify(parseRef("_content/x.bill.card?view=ledger#line-7"))
 => {"path":"_content/x.bill.card","query":"view=ledger","fragment":"line-7"}
 ```
 
-The split is lossless — path, query, and fragment cover the whole input, so a consumer that rewrites the path can put the ref back together:
-
-```ts
-const ref = "_content/x.bill.card?view=ledger#line-7";
-const parts = parseRef(ref);
-const rebuilt = `${parts.path}${parts.query === undefined ? "" : `?${parts.query}`}${parts.fragment === undefined ? "" : `#${parts.fragment}`}`;
-rebuilt === ref
-=> true
-```
-
 Following URL convention, the fragment starts at the FIRST `#` and runs to the end, so a `?` inside it is fragment text, not a query:
 
 ```ts

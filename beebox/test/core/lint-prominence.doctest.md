@@ -6,11 +6,7 @@ cards, a card marked prominent under a place the box has folded away, a mark
 that has no effect where it was written. Every rule here is a warning.
 
 ```ts setup
-import {
-  lintProminenceBudget,
-  MAX_ENTRY_POINTS_PER_DIR,
-  MAX_PRIMARY_PER_DIR,
-} from "../../src/core/lint-prominence/core.js";
+import { lintProminenceBudget } from "../../src/core/lint-prominence/core.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
@@ -53,9 +49,6 @@ await box.cleanup();
 warns about.
 
 ```ts
-MAX_ENTRY_POINTS_PER_DIR
-=> 2
-
 const box2 = await makeTmpBox();
 await box2.write("_content/notes/A.memo.card", "---\nprominence: entry-point\n---\n");
 await box2.write("_content/notes/B.memo.card", "---\nprominence: entry-point\n---\n");
@@ -73,9 +66,6 @@ await box2.cleanup();
 `MAX_PRIMARY_PER_DIR` is 7; an eighth trips the warning.
 
 ```ts
-MAX_PRIMARY_PER_DIR
-=> 7
-
 const box3 = await makeTmpBox();
 await box3.write("_content/notes/P1.memo.card", "---\nprominence: primary\n---\n");
 await box3.write("_content/notes/P2.memo.card", "---\nprominence: primary\n---\n");

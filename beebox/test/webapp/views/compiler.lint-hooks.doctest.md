@@ -162,13 +162,6 @@ JSON.stringify(goodOut)
 => {}
 ```
 
-The matcher covers MultiEdit too (not just Write|Edit):
-
-```ts continue
-cardValidatorHook().matcher
-=> Write|Edit|MultiEdit
-```
-
 ```ts cleanup
 await rm(dirname(dirname(viewsDir)), { recursive: true, force: true });
 ```

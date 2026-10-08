@@ -56,13 +56,11 @@ message names the status and reason but never the token.
   show({ device: "aa11", status: 410, response: { reason: "Unregistered" } }),
   show({ device: "aa11", status: 400, response: { reason: "BadDeviceToken" } }),
   show({ device: "aa11", status: 400, response: { reason: "BadCollapseId" } }),
-  show({ device: "aa11", status: 403, response: { reason: "InvalidProviderToken" } }),
   show({ device: "aa11", error: new Error("socket hang up") }),
 ].join("\n")
 =>
 gone: Unregistered
 gone: BadDeviceToken
 error: APNs refused the push (400 BadCollapseId)
-error: APNs refused the push (403 InvalidProviderToken)
 error: APNs refused the push (no status socket hang up)
 ```

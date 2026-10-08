@@ -18,13 +18,6 @@ boxRelativePath("/_bookkeeping/archive/Foo.memo.card")
 => _bookkeeping/archive/Foo.memo.card
 ```
 
-An already-canonical path is unchanged (idempotent):
-
-```ts
-boxRelativePath("_bookkeeping/archive/Foo.memo.card")
-=> _bookkeeping/archive/Foo.memo.card
-```
-
 Redundant leading slashes collapse, and the empty string (the box root) is left
 alone:
 

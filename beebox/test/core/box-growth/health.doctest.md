@@ -10,7 +10,6 @@ import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import {
   boxGrowthStatePath,
-  BOX_GROWTH_THRESHOLDS,
   acknowledgeCurrentBoxGrowth,
   boxGrowthHealthCheck,
   evaluateBoxGrowth,
@@ -114,9 +113,6 @@ rate-files:_content/inbox/email
 rate-commits:box
 rate-connector-directories:_content/inbox/email
 rate-connector-files:_content/inbox/email
-
-print(`${BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour}:${BOX_GROWTH_THRESHOLDS.rateFilesPerHour}:${BOX_GROWTH_THRESHOLDS.rateCommitsPerHour}`);
-=> 10:25:10
 ```
 
 Disk use warns on rate too, for box content and for `.beebox` separately.

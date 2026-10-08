@@ -162,26 +162,6 @@ JSON.stringify({ pending: queue4.getStatusSnapshot().has("r4"), failures: queue4
 => {"pending":false,"failures":0}
 ```
 
-## Recordings drain oldest-first
-
-```ts
-const transport5 = fakeTransport({});
-const queue5 = createVoiceStagingQueue({
-  storage: createInMemoryVoiceStagingStorage(),
-  persistent: true,
-  send: transport5.send,
-  apiBase: () => "http://box.example/api",
-  now: () => now,
-});
-queue5.enqueueCreate("older", { targetSessionId: "s1" });
-now += 100;
-queue5.enqueueCreate("newer", { targetSessionId: "s1" });
-await flushMicrotasks();
-
-transport5.calls.join(",")
-=> older#0:create,newer#0:create
-```
-
 ## The status store is `useSyncExternalStore`-compatible
 
 ```ts

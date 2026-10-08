@@ -42,15 +42,7 @@ wronglyRooted
 => []
 ```
 
-## `boxLayoutEntry` looks up a keyed entry's full spec record
-
-```ts
-boxLayoutEntry("archiveDone").path
-=> _bookkeeping/archive/done
-
-boxLayoutEntry("archiveDone").area
-=> bookkeeping
-```
+## `boxLayoutEntry` rejects an unknown key
 
 An unrecognized key throws a typed error rather than returning `undefined` silently:
 

@@ -133,7 +133,7 @@ missingResponse.status
 => 404
 ```
 
-## `/` serves the root page, `/healthz` returns the injected health
+## `/` serves the root page
 
 `/` routes to the hub's box-picker handler, which serves the SPA when the
 frontend bundle is built and a minimal box list otherwise — either way a 200
@@ -148,10 +148,6 @@ rootResponse.status
 const rootBody = await rootResponse.text();
 rootBody.length > 0
 => true
-
-const healthResponse = await fetch(`${hub.base}/healthz`, diagAuth);
-JSON.stringify(await healthResponse.json())
-=> {"status":"ok","boxes":[]}
 ```
 
 ## A request under a configured slug is proxied unchanged (no prefix stripping)

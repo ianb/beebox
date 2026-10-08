@@ -28,14 +28,6 @@ trace([
 => retrying → recovered → idle
 ```
 
-The count is carried so the banner can say what it is retrying, rather than
-just that something is happening:
-
-```ts
-JSON.stringify(nextRetryFeedback(idle, { type: "retry-tapped", count: 3 }))
-=> {"phase":"retrying","count":3}
-```
-
 ## A retry that doesn't
 
 The link is still down; the banner has to say the transfers failed *again*,

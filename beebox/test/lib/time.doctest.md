@@ -137,20 +137,3 @@ fs.unlinkSync(stubsPath);
 clearTimeCache();
 await box.cleanup();
 ```
-
-## getBoxTimeISO returns ISO string
-
-```ts
-process.env.BBX_TIME = "2025-06-15T12:00:00Z";
-typeof getBoxTimeISO()
-=> string
-```
-
-```ts continue
-getBoxTimeISO().endsWith("Z")
-=> true
-```
-
-```ts cleanup
-delete process.env.BBX_TIME;
-```

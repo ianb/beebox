@@ -1,6 +1,6 @@
 ---
 title: "Tests grow faster than code; a sweep for examples that prove nothing distinct"
-workstream: unattached
+workstream: test-cleanup
 area: beebox
 labels: [tests, code-quality]
 filed-by: agent

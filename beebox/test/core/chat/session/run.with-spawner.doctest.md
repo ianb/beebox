@@ -41,7 +41,7 @@ both:
 ```ts
 const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
-const opts = { backend, systemPrompt: testPrompt, extraEnv: { BBX_TEST_FOO: "foo", BBX_TEST_BAR: "bar" }, skipBootstrap: true };
+const opts = { backend, systemPrompt: testPrompt, extraEnv: { BBX_TEST_FOO: "foo" }, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
 await session.send("hello");
@@ -53,9 +53,6 @@ run !== null && run.startOptions.systemPrompt
 
 run !== null && run.startOptions.env.BBX_TEST_FOO
 => foo
-
-run !== null && run.startOptions.env.BBX_TEST_BAR
-=> bar
 
 run !== null && run.startOptions.resumeSessionId
 => undefined
