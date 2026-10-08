@@ -111,7 +111,7 @@ async function addNestedLandmarkTier(
       label: n.label,
       title: n.label,
       exists: true,
-      source: "derived",
+      source: "place",
       ...(entry?.kind === "landmark" ? { prominence: entry.level } : {}),
     });
   }

@@ -5,7 +5,9 @@ Track B (`docs/implemented-plans/card-prominence.md`) splices a landmark's prune
 `links` first, then derived `entry-point` cards, then derived `primary`
 cards, then nested landmarks, then unnamed `expand` results — deduped by ref
 across every tier, first wins. Each resolved link now carries `source`
-(`"listed" | "derived" | "expand"`) and, for a derived link, `prominence`.
+(`"listed" | "derived" | "expand" | "place"`) and, for a derived card or a
+nested place, `prominence`. A nested landmark's row is `"place"`, since its
+`prominence` alone cannot tell it from a derived card.
 
 ```ts setup
 import { resolveLandmark } from "../../../src/core/landmark/resolve/core.js";
@@ -52,7 +54,7 @@ JSON.stringify(summarize(links), null, 2)
   {
     "ref": "_content/Sub/Sub.landmark.card",
     "label": "Sub",
-    "source": "derived",
+    "source": "place",
     "prominence": "background"
   },
   {
