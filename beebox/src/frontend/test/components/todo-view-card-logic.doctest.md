@@ -15,6 +15,7 @@ import {
   matchingItemCount,
   plateHeadline,
   progressOf,
+  scopeDescription,
   clampAnnotation,
   needsExpand,
   resolveTodoViewStatusFilter,
@@ -331,4 +332,21 @@ clampAnnotation(long).endsWith("…")
 
 clampAnnotation(long).length <= 141
 => true
+```
+
+## The scope line says what the query covers, not its glob
+
+The stock plate card lives in `_content` but is installed with the glob `**`,
+so it covers the whole box. The line names the box, not the folder the card
+sits in and not the pattern.
+
+```ts
+[
+  scopeDescription({ here: "_content", glob: "**" }),
+  scopeDescription({ here: "", glob: "**/*.card" }),
+  scopeDescription({ here: "recipes", glob: "recipes/**" }),
+  scopeDescription({ here: "_content", glob: "projects/porch/**" }),
+  scopeDescription({ here: "_content", glob: "**/*.doc.card" }),
+].join(" | ")
+=> the whole box | the whole box | recipes | projects/porch | **/*.doc.card
 ```

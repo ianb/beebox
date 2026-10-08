@@ -199,6 +199,18 @@ export function plateHeadline(reduction: TodoReduction): { onPlate: number; late
 }
 
 /**
+ * What a query covers, in words for the scope line. The glob decides: `**`
+ * (or `**\/*.card` at the root) is the whole box whatever `here` says, `dir/**`
+ * is that folder, and any other pattern is shown as written because no plain
+ * wording is honest for it.
+ */
+export function scopeDescription({ here, glob }: { here: string; glob: string }): string {
+  if (glob === "**" || (here === "" && glob === "**/*.card")) return "the whole box";
+  if (glob === `${here}/**`) return here === "" ? "the whole box" : here;
+  return glob.endsWith("/**") && !/[*?[{]/.test(glob.slice(0, -3)) ? glob.slice(0, -3) : glob;
+}
+
+/**
  * How many items an `all`-scope, `assigned`-filtered query actually matched —
  * the third headline number, "K for the agent". A query's `reduction` counts
  * every item `scope` admitted, not what `assigned` narrowed it to (`matches`
