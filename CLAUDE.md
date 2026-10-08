@@ -29,6 +29,17 @@ Use [browse](.claude/skills/browse/SKILL.md) and `bin/browse` for browser work; 
 
 For recurring work or missed scheduled runs, use [bbx-authoring-schedules](.claude/skills/bbx-authoring-schedules/SKILL.md). `bin/schedules list` shows the catalog, last runs, and overdue work; [bin/CLAUDE.md](bin/CLAUDE.md#schedules-binschedules) covers scheduling mechanics.
 
+## How much to do
+
+The human's wording sets the ceiling; when it is unclear, take the lowest level the wording supports and say which you took.
+
+- **discuss**: assess, compare, recommend. No plan doc, no probe, no edits. "I like it" is input for the next round, not a go-ahead.
+- **plan**: write or revise the plan, walk each scenario against real code, call real services with test data. No implementation.
+- **do** (issue tag `do-it`): implement in a worktree, commit at checkpoints, get cross-model review, report. No merge.
+- **land** (the finish ask, issue tag `verify-without-me`): do, then merge and deploy.
+
+A bare "go ahead" after a proposal means **do** for that proposal. Destructive or outward-facing actions (deleting data, pushing, touching prod, spending money) need their own yes at any level. A docs-only workstream may land each verified change.
+
 ## Implement and verify
 
 Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/CLAUDE.md](beebox/CLAUDE.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks. Write code in TypeScript; a `.js` or `.mjs` file is only a thin loader for TypeScript. A foreground `sleep` is blocked; to wait on a condition, run an `until` loop in the background or use the Monitor tool.
