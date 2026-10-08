@@ -157,3 +157,30 @@ links.map((l) => l.title)
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A nested landmark's row opens its entry point
+
+A nested landmark's row used to open the landmark card itself, a page that
+shows only the landmark's configuration. When the nested place has an
+`entry-point` card, the row opens that card; the label stays the landmark's.
+A nested landmark without one still opens its landmark card.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/Inventory/Inventory.landmark.card", "---\nnavigation:\n  label: Inventory\n---\n");
+await box.write("_content/Inventory/Index.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/Garden/Garden.landmark.card", "---\nnavigation:\n  label: Garden\n---\n");
+
+const derived = await prunedSubtree(box.root, "");
+const { links } = await resolveLandmark(
+  { label: "Home" },
+  { landmarkDir: box.path("_content"), landmarkPath: "_content/Home.landmark.card", boxRoot: box.root, derived },
+);
+
+links.map((l) => ({ ref: l.ref, label: l.label }))
+=> [{ ref: "_content/Garden/Garden.landmark.card", label: "Garden" }, { ref: "_content/Inventory/Index.memo.card", label: "Inventory" }]
+```
+
+```ts cleanup
+await box.cleanup();
+```
