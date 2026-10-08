@@ -21,6 +21,20 @@ Two coexisting truths (ruling 5):
 the box initiating — noticing, suggesting, following up — than exists today.
 The idle engine is the substrate for that, not an argument against it.
 
+## Right place, right time
+
+The box's value is getting the right information and the right action in
+front of a person at the moment it applies, not having it generically
+available to someone who knows to search. That is why design starts from a
+situation ("When [situation], I want to [motivation], so I can [outcome]"):
+the situation names the moment, and the moment decides the surface. Every
+proactive or shown thing answers, per situation: is this the moment to act,
+to show, or to stay quiet; and where does it appear (which surface, which
+card, which tier of attention: interrupts, waits to be found, background).
+Quiet and findable is the default; an interruption needs a reason the person
+would give. The bbx-design skill walks a plan through this; this is the rule
+it serves (boxholder, 2026-10-08).
+
 ## Connectors are the boundary — for external services
 
 Connectors are the abstraction for touching the outside world: each pulls

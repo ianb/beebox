@@ -60,3 +60,5 @@ and egress has none).
   attention tier) is stated only in the bbx-design skill. `interaction-model.md`
   covers proactivity as ambition but never states the question; spirit.md
   gives examples only. Found by the dev-guidance knowledge audits, 2026-10-08.
+  Update 2026-10-08: stated in `interaction-model.md` ("Right place, right
+  time"), with the boxholder's reason for the situation form.
