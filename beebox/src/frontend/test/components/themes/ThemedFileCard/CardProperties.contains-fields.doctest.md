@@ -89,3 +89,25 @@ rows(render({ ...broken, frontmatter: { prominence: "global", status: [1, 2] } }
 rows(render({ ...broken, frontmatter: { status: [1, 2] } }))
 => ["Filed at = _content/Broken.memo.card", "Card type = memo"]
 ```
+
+A landmark has no body, so `splitCardFields` sends its type fields to the
+front. The place page replaces that front, so for a landmark Properties shows
+them under Fields instead; otherwise `navigation` would show only in Source
+(docs/plans/landmark-arrival.md, Track C). Other body-less types keep their
+fields on the front.
+
+```ts
+const landmarkSchema = { hasBodyField: false, defaultProminence: null };
+const landmark = render({
+  path: "_content/lending/Lending.landmark.card",
+  type: "landmark",
+  schema: landmarkSchema,
+  frontmatter: { symbol: { glyph: "🤝" }, navigation: { label: "Lending" } },
+});
+({ fields: landmark.includes('data-card-section="fields"'), navigation: /navigation/.test(landmark) })
+=> { fields: true, navigation: true }
+
+const question = render({ path: "_content/Q.question.card", type: "question", schema: landmarkSchema, frontmatter: { question: "Which?" } });
+question.includes('data-card-section="fields"')
+=> false
+```

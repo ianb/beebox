@@ -14,7 +14,7 @@ draft in the composer, say) leaves the buttons enabled.
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ChatOpeners, clickOpener } from "../../../../../src/components/chat/everywhere/InteractiveChat/ChatOpeners.js";
+import { ChatOpeners, clickOpener } from "../../../src/components/openers/ChatOpeners.js";
 
 globalThis.React = React;
 

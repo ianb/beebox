@@ -21,7 +21,7 @@ import { submitTypedDraft } from "../../conversation/typed-submit";
 import type { InputStore } from "../../input-store";
 import type { EmissionStore } from "../../../../input/emission-store";
 import { MAX_RETAINED_MESSAGES, type ChatEvent } from "../../../../machines/chat-types";
-import { openerSendDecision, type OpenerSendOutcome } from "./opener-send";
+import { openerSendDecision, type OpenerSendOutcome } from "../../../openers/opener-send";
 
 interface ChatActionsOpts {
   captureEmissionDispatch: () => EmissionDispatch;

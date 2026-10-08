@@ -102,4 +102,6 @@ export interface ChatBodyProps {
    * a resumed session and for a place that lists none.
    */
   openers: string[];
+  /** The conversation was created for this tab and has no committed turn (`ResolvedConversation.unstarted`). */
+  unstarted: boolean;
 }

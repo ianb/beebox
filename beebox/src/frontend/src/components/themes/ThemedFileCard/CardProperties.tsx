@@ -7,7 +7,8 @@ import { CardMark } from "../../ui/CardMark";
 import { isRecord } from "@shared/is-record";
 import { readCardSymbol } from "@shared/card-symbol";
 import { Prominence, effectiveLevel } from "@shared/prominence";
-import { PropertyLink, PropertyProblem, useRefetchOnFileChange } from "./property-section";
+import { PropertyLink, PropertyProblem } from "./property-section";
+import { useRefetchOnFileChange } from "../../../hooks/useRefetchOnFileChange";
 
 /** "<level>" when the card declares one, "<level>, the type's default" when it does not; the raw value when the schema is unknown. */
 function prominenceText(value: unknown, schema: FileData["schema"]): string | null {
@@ -34,7 +35,11 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
   boxSlug: string | undefined;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
 }) {
-  const { foundBy, properties } = splitCardFields(data.frontmatter ?? {}, { hasBodyField: data.schema?.hasBodyField ?? null, mode: "page" });
+  const split = splitCardFields(data.frontmatter ?? {}, { hasBodyField: data.schema?.hasBodyField ?? null, mode: "page" });
+  const { foundBy } = split;
+  // A landmark's front is the place page, which does not draw its fields, so
+  // Properties lists them; other body-less types keep theirs on the front.
+  const properties = data.type === "landmark" ? { ...split.front, ...split.properties } : split.properties;
   const contains = foundBy.contains;
   const evidence = foundBy["contains-evidence"];
   const prominence = prominenceText(foundBy.prominence, data.schema);

@@ -2,7 +2,8 @@ import { attachDirFor } from "@shared/attach-path";
 import { useDirectoryListing } from "../../../directory-listing";
 import type { RouterOutput } from "../../../lib/trpc/client";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
-import { PropertyLink, PropertyProblem, useRefetchOnFileChange } from "./property-section";
+import { PropertyLink, PropertyProblem } from "./property-section";
+import { useRefetchOnFileChange } from "../../../hooks/useRefetchOnFileChange";
 
 type Listing = RouterOutput["status"]["browse"];
 

@@ -9,8 +9,8 @@
  */
 
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, memo } from "react";
-import { ChatOpeners } from "./ChatOpeners";
-import type { OpenerSendOutcome } from "./opener-send";
+import { ChatOpeners } from "../../../openers/ChatOpeners";
+import type { OpenerSendOutcome } from "../../../openers/opener-send";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";

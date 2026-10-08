@@ -358,7 +358,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       audioOverlayStore={audioOverlayStore}
-      openers={openers}
+      openers={openers} unstarted={unstarted}
       />
       <ChatModeOverlays captureMode={captureMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} />
     </InputStoreProvider>

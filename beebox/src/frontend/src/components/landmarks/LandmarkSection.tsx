@@ -183,13 +183,16 @@ export function LandmarkGroup({
   boxSlug,
   onNavigate,
   compact,
+  defaultOpen,
 }: {
   group: ResolvedGroup;
   boxSlug: string;
   onNavigate?: (target: ViewTarget) => void;
   compact?: boolean;
+  /** Start expanded (the place page); menus and the Landmarks page start collapsed. */
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen === true);
   const overflow = group.count - group.children.length;
 
   return (
@@ -206,6 +209,7 @@ export function LandmarkGroup({
       </button>
       {open ? (
         <div className={`ml-6 grid grid-cols-1 gap-2 ${compact === true ? "" : "sm:grid-cols-2"}`}>
+          {group.count === 0 ? <Text as="div" size="sm" tone="muted">None yet</Text> : null}
           {group.children.map((link) => (
             <LinkTile key={link.ref} link={link} boxSlug={boxSlug} onNavigate={onNavigate} />
           ))}
@@ -265,7 +269,8 @@ function LinkTile({
   if (!link.exists) {
     return (
       <Card padding="sm" border="subtle" muted>
-        <Text as="div" size="sm" weight="medium" tone="muted">{display}</Text>
+        {/* Struck through: the row stays so the place does not silently shrink. */}
+        <Text as="div" size="sm" weight="medium" tone="muted"><s>{display}</s></Text>
         <Text as="div" size="xs" tone="muted">Missing</Text>
       </Card>
     );

@@ -9,7 +9,7 @@ composer holds a draft, when a send is still in flight, or when the chat
 cannot send yet. Otherwise it is accepted.
 
 ```ts setup
-import { openerSendDecision } from "../../../../../src/components/chat/everywhere/InteractiveChat/opener-send.js";
+import { openerSendDecision } from "../../../src/components/openers/opener-send.js";
 ```
 
 An empty or whitespace-only composer accepts the opener.
