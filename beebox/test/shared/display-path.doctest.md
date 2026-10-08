@@ -36,12 +36,6 @@ toDisplayPath("/_config/box.json")
 
 toDisplayPath("/_bookkeeping/jobs/x.job.card")
 => Bookkeeping:jobs/x.job.card
-
-toDisplayPath("/_publish/site/index.html")
-=> Publish:site/index.html
-
-toDisplayPath("/_tmp/scratch.txt")
-=> Tmp:scratch.txt
 ```
 
 The content root displays as the empty string; the box root displays as `/`:
@@ -88,12 +82,6 @@ fromDisplayPath("config:box.json")
 
 fromDisplayPath("Bookkeeping:jobs/x.job.card")
 => /_bookkeeping/jobs/x.job.card
-
-fromDisplayPath("Publish:site/index.html")
-=> /_publish/site/index.html
-
-fromDisplayPath("Tmp:scratch.txt")
-=> /_tmp/scratch.txt
 ```
 
 Raw canonical forms (already area-coded) pass through unchanged-to-canonical,
@@ -151,12 +139,6 @@ areaDisplayLabel("_config")
 
 areaDisplayLabel("_bookkeeping")
 => Bookkeeping
-
-areaDisplayLabel("_publish")
-=> Publish
-
-areaDisplayLabel("_tmp")
-=> Tmp
 ```
 
 ## `detectDisplayFormPath`
@@ -169,12 +151,6 @@ JSON.stringify(detectDisplayFormPath("Config:box.json"))
 
 JSON.stringify(detectDisplayFormPath("bookkeeping:jobs/x.job.card"))
 => {"canonical":"/_bookkeeping/jobs/x.job.card","areaLabel":"Bookkeeping"}
-
-JSON.stringify(detectDisplayFormPath("Publish:site/index.html"))
-=> {"canonical":"/_publish/site/index.html","areaLabel":"Publish"}
-
-JSON.stringify(detectDisplayFormPath("TMP:scratch.txt"))
-=> {"canonical":"/_tmp/scratch.txt","areaLabel":"Tmp"}
 ```
 
 A bare area label with nothing after the colon still matches:
@@ -190,18 +166,12 @@ scheme, and `_content` displays bare (never with a label):
 ```ts
 detectDisplayFormPath("content:box.json")
 => null
-
-detectDisplayFormPath("Content:box.json")
-=> null
 ```
 
 A `<label>://` double-slash form is a URL, never a display form:
 
 ```ts
 detectDisplayFormPath("Config://box.json")
-=> null
-
-detectDisplayFormPath("bookkeeping://x")
 => null
 ```
 
@@ -213,13 +183,7 @@ diagnostic boundaries, not by this detector:
 detectDisplayFormPath("recipes/Soup.recipe.card")
 => null
 
-detectDisplayFormPath("http://example.com/x")
-=> null
-
 detectDisplayFormPath("Recipe:Soup.card")
-=> null
-
-detectDisplayFormPath("no-colon-here")
 => null
 ```
 

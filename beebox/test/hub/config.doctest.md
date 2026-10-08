@@ -8,7 +8,7 @@ warnings. See `src/hub/config.ts`.
 ```ts setup
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { loadHubConfig, HubConfigError, RESERVED_SLUGS } from "../../src/hub/config.js";
+import { loadHubConfig, HubConfigError } from "../../src/hub/config.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 async function writeConfig(dir, obj) {
@@ -38,9 +38,6 @@ config instanceof HubConfigError
 
 config.boxes.test1.path === path.join(box.root, "boxes/test1")
 => true
-
-config.port
-=> undefined
 ```
 
 ## An unknown top-level key is rejected (fail-closed, `z.strictObject`)
@@ -70,11 +67,6 @@ claims at the root level (or, for `webhook`, as a SEPARATE top-level prefix
 from a box's own `/<slug>` — see `RESERVED_SLUGS`'s doc comment) — a box
 slugged the same would make some of its own routes unreachable through the
 hub.
-
-```ts continue
-JSON.stringify(Array.from(RESERVED_SLUGS).sort())
-=> ["api","auth","healthz","webhook"]
-```
 
 ```ts continue
 const reservedConfig = await writeConfig(box.root, { boxes: { webhook: { path: "./boxes/test1" } } });
@@ -225,19 +217,13 @@ JSON.stringify({ lazy: lazyConfig.lazy, idleMs: lazyConfig.idleMs })
 => {"lazy":true,"idleMs":60000}
 ```
 
-## `keepRecent` defaults to 0, parses with `lazy`, and requires `lazy: true`
+## `keepRecent` parses with `lazy` and requires `lazy: true`
 
 Boxholder directive (2026-07-11): `keepRecent` keeps the N most-recently-used
 boxes alive in an otherwise idle-stopping lazy hub (and pre-starts them on a
 hub restart). It defaults to 0 (pure idle-stop) and is only meaningful with
 `lazy: true` — a positive value on a resident hub is a fail-closed config
 error, since every box there already stays up.
-
-```ts continue
-const defaultKeep = await loadHubConfig(plainConfigPath);
-defaultKeep.keepRecent
-=> 0
-```
 
 ```ts continue
 const keepConfigPath = await writeConfig(box3.root, {

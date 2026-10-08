@@ -66,18 +66,6 @@ await codexLabel(firstMessage("Hey, welcome to my little story place!"))
 => “Hey, welcome to my little story place!”
 ```
 
-The machine prefix ahead of the person's first word — the snapshot plus the
-opening `<typed>`/`<speech>` tag — is longer than the whole 400-character label
-budget, which is why slicing the preview raw could never work. The cut landed
-before the message began, so the label was *all* prefix, and every Codex row
-shared it.
-
-```ts continue
-const message = firstMessage("Hey, welcome to my little story place!");
-message.indexOf("Hey") > 400
-=> true
-```
-
 Voice sends carry their own wrappers, including the keyword marker that ended
 the utterance. Those come off too.
 

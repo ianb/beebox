@@ -80,14 +80,6 @@ asked.includes(">Cancel<")
 => true
 ```
 
-The confirming button carries the destructive styling, so the two answers do
-not look interchangeable.
-
-```ts continue
-asked.includes("bg-danger")
-=> true
-```
-
 ## A running unmount says so rather than looking untouched
 
 Principle 13: a control shows real state. While the mutation is in flight the

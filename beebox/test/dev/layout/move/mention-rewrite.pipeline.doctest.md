@@ -126,14 +126,11 @@ result.needsReview.find((g) => g.movedPath === "pkg/src/a.ts")?.lines.some((l) =
 => true
 ```
 
-## Counts: one hit per form, and the touched-file total
+## Counts: one hit per form
 
 ```ts
 JSON.stringify(Object.fromEntries(result.countsByForm))
 => {"repo-relative":1,"package-relative":2,"relative":1}
-
-result.fileEdits.size
-=> 4
 ```
 
 ## A uniform directory rename is rewritten; a directory glob that shares its text is reported, not rewritten

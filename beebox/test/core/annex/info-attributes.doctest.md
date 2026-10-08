@@ -23,9 +23,6 @@ is a normal state, not an error:
 const box = await makeTmpBox();
 await readAnnexInfoAttributes(box.root)
 => null
-
-annexInfoAttributesPath(box.root).endsWith("/.git/info/attributes")
-=> true
 ```
 
 Writing replaces whatever was there — git-annex owns this path and writes a

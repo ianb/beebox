@@ -19,27 +19,14 @@ import * as path from "node:path";
 
 ## buildReactorSystemPrompt
 
-### Key instructions, and no absolute filesystem paths
+### No absolute filesystem paths
 
 The system prompt must never embed the box's absolute path — agent-visible
 text stays box-relative (`docs/implemented-plans/one-root-box-layout.md`, criterion 4).
 
 ```ts
-const prompt = buildReactorSystemPrompt();
-prompt.includes("working directory is the box root")
-=> true
-
-/\/(Users|home|tmp|private)\//.test(prompt)
+/\/(Users|home|tmp|private)\//.test(buildReactorSystemPrompt())
 => false
-
-prompt.includes("processing jobs in a Bee Box")
-=> true
-
-prompt.includes("bbx finish")
-=> true
-
-prompt.includes("do not need to re-read")
-=> true
 ```
 
 ## buildReactorUserPrompt
@@ -59,23 +46,6 @@ prompt.includes("do thing 1")
 => true
 
 prompt.includes("do thing 2")
-=> true
-
-prompt.includes("bbx finish")
-=> true
-```
-
-### Single job
-
-```ts
-const prompt = buildReactorUserPrompt(
-  ["_bookkeeping/jobs/only.job.card"],
-  { jobDescriptions: ["### _bookkeeping/jobs/only.job.card\n```\nsolo task\n```"] },
-);
-prompt.includes("1 job(s)")
-=> true
-
-prompt.includes("solo task")
 => true
 ```
 

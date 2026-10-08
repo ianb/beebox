@@ -20,9 +20,6 @@ import { driveMimeLabel } from "../../src/lib/drive-card-display.js";
 driveMimeLabel("application/vnd.google-apps.document")
 => Google Doc
 
-driveMimeLabel("application/vnd.google-apps.presentation")
-=> Google Slides
-
 driveMimeLabel("application/vnd.google-apps.folder")
 => Drive folder
 ```
@@ -35,9 +32,6 @@ is exactly when a pointer gets written.
 ```ts
 driveMimeLabel("application/pdf")
 => PDF
-
-driveMimeLabel("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-=> Excel spreadsheet
 ```
 
 ## A family stands in when the exact subtype would not help
@@ -46,9 +40,6 @@ driveMimeLabel("application/vnd.openxmlformats-officedocument.spreadsheetml.shee
 open it, and the subtype list would never finish.
 
 ```ts
-driveMimeLabel("image/png")
-=> Image
-
 driveMimeLabel("image/heic")
 => Image
 

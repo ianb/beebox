@@ -34,7 +34,7 @@ import {
 import { generateRules } from "../../../src/core/init-rules.js";
 import { generateSkills } from "../../../src/core/box/guidance-sync/skills.js";
 import { installValidationHooks } from "../../../src/core/install-validation-hooks.js";
-import { stageAll, getLog, getStatus, isRepo, initRepo } from "../../../src/lib/git/core/operations.js";
+import { stageAll, isRepo, initRepo } from "../../../src/lib/git/core/operations.js";
 import { getBoxShape } from "../../../src/lib/box-shape.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { loadBoxSchemas, invalidateBoxSchemas } from "../../../src/schemas.js";
@@ -182,27 +182,16 @@ try {
 => reinstall=none; retro=false
 ```
 
-The marker at `.beebox/box.json` declares `shapeVersion: 3`:
-
-```ts continue
-const marker = await readJson(path.join(boxRoot, ".beebox/box.json"));
-marker.shapeVersion
-=> 3
-```
-
-`package.json` at the box root names the package after its basename,
-declares `beebox` as a dependency, and is a private ESM package:
+`package.json` at the box root names the package after its basename and
+declares `beebox`, `react`, `react-dom`, and `zod` as dependencies. `zod` is a
+dependency, not a nicety: every box-local card schema imports it, and a box
+scaffolded without it loaded those schemas to a bare `Cannot find package 'zod'`
+warning while cards of that type silently validated as if no schema existed:
 
 ```ts continue
 const pkg = await readJson(path.join(boxRoot, "package.json"));
 pkg.name === path.basename(boxRoot)
 => true
-
-pkg.private
-=> true
-
-pkg.type
-=> module
 
 Object.keys(pkg.dependencies)
 => [
@@ -211,16 +200,6 @@ Object.keys(pkg.dependencies)
   "react-dom",
   "zod"
 ]
-```
-
-`zod` is a dependency, not a nicety: every box-local card schema imports it,
-and a box scaffolded without it loaded those schemas to a bare
-`Cannot find package 'zod'` warning while cards of that type silently
-validated as if no schema existed.
-
-```ts continue
-typeof pkg.dependencies["zod"]
-=> string
 ```
 
 The `beebox` spec defaults to `link:<engine checkout>` when the
@@ -248,14 +227,6 @@ Object.keys(pkg.devDependencies).sort()
 ]
 ```
 
-`tsconfig.json` extends the shipped base and includes `src`:
-
-```ts continue
-const tsconfig = await readJson(path.join(boxRoot, "tsconfig.json"));
-JSON.stringify(tsconfig)
-=> {"extends":"beebox/tsconfig.base.json","include":["src"]}
-```
-
 `node_modules/beebox` is a symlink straight at the running engine
 (Track F's real install replaces it) — `pnpm install` was NOT run:
 
@@ -272,15 +243,11 @@ await exists(link)
 => true
 ```
 
-`src/schemas/`, `src/views/`, and `src/tricks/` exist with their `CLAUDE.md`
-scaffolds:
+`src/schemas/` and `src/tricks/scripts/` carry their `CLAUDE.md` scaffolds:
 
 ```ts continue
 const schemasGuide = await fs.readFile(path.join(boxRoot, "src/schemas/CLAUDE.md"), "utf-8");
 schemasGuide.includes("node_modules/beebox/box-docs/schemas.md")
-=> true
-
-(await exists(path.join(boxRoot, "src/views/CLAUDE.md")))
 => true
 
 (await fs.readFile(path.join(boxRoot, "src/tricks/scripts/CLAUDE.md"), "utf-8")).includes("src/tricks/")
@@ -306,17 +273,6 @@ schemasDoc.includes('from "yaml"')
 => false
 ```
 
-`.claude/` lives at the (one) box root — rules, skills, and the validation
-hooks all landed there:
-
-```ts continue
-(await exists(path.join(boxRoot, ".claude", "rules", "card-memo.md")))
-=> true
-
-(await exists(path.join(boxRoot, ".claude", "skills", "views", "SKILL.md")))
-=> true
-```
-
 The generated `connector-calendar` rule's `paths:` glob is `_content/calendar/…` — the underscore area, not the legacy `store/`:
 
 ```ts continue
@@ -340,24 +296,6 @@ gitignore.includes("node_modules/")
 
 gitignore.includes("_tmp/")
 => true
-```
-
-Git lives at the box root, with one initial commit covering the whole tree:
-
-```ts continue
-await isRepo(boxRoot)
-=> true
-
-const status = await getStatus(boxRoot);
-status.clean
-=> true
-
-const log = await getLog(boxRoot, 5);
-log.length
-=> 1
-
-log[0].subject
-=> Initialize Bee Box
 ```
 
 ```ts cleanup

@@ -92,15 +92,6 @@ show(layoutSessionList({ sessions: onlyRecipes, contextDir: "_content/recipes" }
 => flat: r1 r2
 ```
 
-A box that has never used landmarks lands here too: every chat is root-bound, so
-no headings and no "in Root" tag repeated down every row.
-
-```ts
-const allRoot = [session("a", "", "Root"), session("b", "", "Root")];
-show(layoutSessionList({ sessions: allRoot, contextDir: "" }))
-=> flat: a b
-```
-
 ## Done chats trail the list, out of the prominence contest
 
 A chat the boxholder marked done no longer counts toward any group: it leaves

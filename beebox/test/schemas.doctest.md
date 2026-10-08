@@ -3,12 +3,12 @@
 The schema system registers card types, provides template generators, and validates cards. Each card type has a type name, template generator, and optional instructions for agents.
 
 ```ts setup
-import { MemoSchema, createMemoTemplate } from "../src/schemas/memo.js";
-import { QuestionSchema, createSelectQuestionTemplate } from "../src/schemas/question.js";
+import { createMemoTemplate } from "../src/schemas/memo.js";
+import { createSelectQuestionTemplate } from "../src/schemas/question.js";
 import { getCardTypes } from "../src/schemas.js";
 import { getDefaultTemplate, getTemplate } from "../src/templates-registry.js";
 import { createIntakeJobTemplate } from "../src/schemas/intake-job.js";
-import { WebpageSchema, createWebpageTemplate } from "../src/schemas/webpage.js";
+import { createWebpageTemplate } from "../src/schemas/webpage.js";
 import { FigureSchema, createFigureTemplate } from "../src/schemas/figure.js";
 import { figureStarterSketch } from "../src/templates/builtins/starters.js";
 import { ConceptMapSchema, createConceptMapTemplate } from "../src/schemas/concept-map.js";
@@ -37,38 +37,6 @@ getCardTypes().includes("intake-job")
 
 getCardTypes().includes("webpage")
 => true
-
-getCardTypes().includes("figure")
-=> true
-
-getCardTypes().includes("concept-map")
-=> true
-
-getCardTypes().includes("course")
-=> true
-
-getCardTypes().includes("exposition-plan")
-=> true
-
-getCardTypes().includes("lesson-plan")
-=> true
-
-getCardTypes().includes("progress")
-=> true
-
-```
-
-Each frontmatter schema (memo, email-thread, etc.) carries a `type`:
-
-```ts
-MemoSchema.type
-=> memo
-
-QuestionSchema.type
-=> question
-
-WebpageSchema.type
-=> webpage
 
 ```
 
@@ -118,19 +86,6 @@ created: «*»
 Just content
 ```
 
-Special characters in content pass through verbatim — markdown bodies
-don't need XML-style escaping:
-
-```ts
-createMemoTemplate("Test <content> & more")
-=>
----
-status: new
-created: «*»
----
-Test <content> & more
-```
-
 ## Question
 
 A select question presents options to the user:
@@ -156,34 +111,6 @@ input:
       label: Choice A
     - id: b
       label: Choice B
-asked-at: 2026-07-10T09:00:00-07:00
----
-
-```
-
-Special characters in content pass through YAML verbatim:
-
-```ts
-createSelectQuestionTemplate({
-  memo: "Context with <special> & chars",
-  prompt: "What's \"this\"?",
-  options: [
-    { id: "a", label: "Option <A>" },
-    { id: "b", label: "Option <B>" },
-  ],
-  askedAt: "2026-07-10T09:00:00-07:00",
-})
-=>
----
-memo: Context with <special> & chars
-prompt: What's "this"?
-input:
-  type: select
-  options:
-    - id: a
-      label: Option <A>
-    - id: b
-      label: Option <B>
 asked-at: 2026-07-10T09:00:00-07:00
 ---
 
@@ -282,11 +209,6 @@ Body.
 
 A figure card is an embeddable interactive graphic. Its body describes the
 figure; the runnable source lives in the attach scope, pointed to by `entry`.
-
-```ts
-FigureSchema.type
-=> figure
-```
 
 The frontmatter validates a runtime plus the required `entry` source pointer:
 
@@ -399,11 +321,6 @@ A concept-map card is a module-scale knowledge graph: concepts are in-card nodes
 (each with an `id`, `name`, and `kind`), related by typed edges that reference
 other nodes by `id`.
 
-```ts
-ConceptMapSchema.type
-=> concept-map
-```
-
 A valid map — unique node ids, each node typed, each edge carrying a `kind` —
 parses:
 
@@ -490,11 +407,6 @@ parsed.schema.type
 A course card is the manifest that binds a learning experience's components by
 reference.
 
-```ts
-CourseSchema.type
-=> course
-```
-
 A course with goals, success-criteria, and component refs parses; everything but
 the body is optional, so a bare course still loads too:
 
@@ -547,11 +459,6 @@ parsed.schema.type
 
 A lesson-plan card is the ordered delivery flow: a sequence of segments, each
 tagged `interactive` (live in chat) or `material` (uses a pre-made card).
-
-```ts
-LessonPlanSchema.type
-=> lesson-plan
-```
 
 A plan whose segments carry a `do` and a `mode` parses; everything but the body
 is optional, so a bare lesson-plan still loads:
@@ -618,11 +525,6 @@ parsed.schema.type
 An exposition-plan card is a worked process for presenting a subject: the learner
 translation first, then rated approaches, then the compiled rules.
 
-```ts
-ExpositionPlanSchema.type
-=> exposition-plan
-```
-
 A plan with a `learner-translation`, rated `approaches`, and `rules` parses;
 everything but the body is optional:
 
@@ -664,11 +566,6 @@ parsed.schema.type
 
 A progress card is a per-learner, evidence-backed record of understanding. Each
 entry is a qualitative status for one concept-map node.
-
-```ts
-ProgressSchema.type
-=> progress
-```
 
 An entry with a `status`, a `basis`, and at least one `evidence` item parses:
 

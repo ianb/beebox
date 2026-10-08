@@ -11,9 +11,6 @@ import { planPieces, nextPieceSeconds, HQ_PIECE_SECONDS, HQ_PIECE_FLOOR_SECONDS,
 ## A recording shorter than one piece is a single piece
 
 ```ts
-PCM_BYTES_PER_SECOND
-=> 32000
-
 const totalBytes = PCM_BYTES_PER_SECOND * 60;
 JSON.stringify(planPieces(totalBytes, HQ_PIECE_SECONDS))
 => [{"startByte":0,"endByte":1920000}]
@@ -55,9 +52,6 @@ planPieces(0, HQ_PIECE_SECONDS).length
 
 ```ts
 nextPieceSeconds(HQ_PIECE_SECONDS)
-=> 150
-
-HQ_PIECE_FLOOR_SECONDS
 => 150
 
 nextPieceSeconds(HQ_PIECE_FLOOR_SECONDS)

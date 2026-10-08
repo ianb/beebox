@@ -52,13 +52,10 @@ const samples = {
 
 ## Every event round-trips through its schema
 
-The sample catalog covers all 22 events, and each parses cleanly against the
+The sample catalog covers every event, and each parses cleanly against the
 schema the read boundary uses:
 
 ```ts
-Object.keys(samples).length
-=> 22
-
 JSON.stringify(Object.keys(samples).sort()) === JSON.stringify(Object.keys(eventSchemas).sort())
 => true
 

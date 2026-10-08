@@ -83,22 +83,6 @@ annexAt !== -1 && bbxFallbackExitAt !== -1 && annexAt < bbxFallbackExitAt
 => true
 ```
 
-The annex-repo gate uses Git's common directory so it also works in a linked
-worktree, and (shapeVersion 3: one root) needs no `cd` before running —
-`.git`'s cwd guarantee already puts every hook body at `box.root`:
-
-```ts continue
-[
-  hookBody.includes('git rev-parse --git-common-dir'),
-  hookBody.includes('git annex pre-commit .'),
-]
-=>
-[
-  true,
-  true
-]
-```
-
 The annex block is gated on whether **this repo** is annexed, not on whether
 git-annex is installed. A box still on the manifest model must keep committing
 normally — requiring annex unconditionally would break every unmigrated box at

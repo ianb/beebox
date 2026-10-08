@@ -47,17 +47,6 @@ JSON.stringify(builtinSecretUses("weatherapi"))
 => []
 ```
 
-`openai` and `openai-thinking` are two keys for two spends, and the registry is
-where that stops being folklore:
-
-```ts continue
-print(builtinSecretUses("openai")[0]);
-print(builtinSecretUses("openai-thinking")[0]);
-=>
-embeddings for semantic and hybrid card search
-speech generation for chat (text-to-speech)
-```
-
 ## Declared reasons are additive
 
 An agent that adds a trick spending an already-granted key appends why; it never

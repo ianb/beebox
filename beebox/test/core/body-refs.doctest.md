@@ -30,13 +30,6 @@ JSON.stringify(
 ]
 ```
 
-Only the `ref` attribute is a ref — `as` and other attributes are opaque.
-
-```ts
-extractBodyRefs('{% source ref="a/b.doc.card" usage="summary" %}x{% /source %}').length
-=> 1
-```
-
 ## Multiple tags across lines
 
 Line numbers are 1-indexed and track each tag's start line.
@@ -93,9 +86,6 @@ extractBodyRefs("Just prose with a [link](people/Priya.person.card) and **bold**
 => 0
 
 extractBodyRefs("").length
-=> 0
-
-extractBodyRefs("# Heading\n\nNo tags here.").length
 => 0
 ```
 

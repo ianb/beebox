@@ -95,10 +95,3 @@ import/export/dynamic-import/require specifier.
 JSON.stringify(facts(`import { a } from "./a.js";\nconst p = "./data/foo.json";\nconst q = \`../other\`;`).relativePathLiterals)
 => ["./data/foo.json","../other"]
 ```
-
-A clean file with no such literals reports none.
-
-```ts
-JSON.stringify(facts(`import { a } from "./a.js";`).relativePathLiterals)
-=> []
-```

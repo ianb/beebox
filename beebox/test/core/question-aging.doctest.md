@@ -125,6 +125,9 @@ delete process.env.BBX_TIME;
 
 ## Expiry at the default 30-day window
 
+No push subscription or Telegram config exists here: expiry still runs, and only
+nudge delivery is gated on a channel.
+
 ```ts
 const box = await makeTmpBox({ git: true });
 await seedBox(box);
@@ -198,31 +201,6 @@ Past the full 10-day override window it expires (not the 30-day default):
 setTime(addMs(ASKED_AT, TEN_DAYS_MS));
 JSON.stringify(await ageQuestions(box.root))
 => {"nudged":[],"expired":["_bookkeeping/questions/Deadline.question.card"]}
-```
-
-```ts cleanup
-await box.cleanup();
-delete process.env.BBX_TIME;
-```
-
-## Expiry runs with zero notification channels configured
-
-No push subscription and no Telegram config — the lifecycle transition still
-runs; only nudge delivery would be gated (and there's no nudge here, this
-question is already past the expiry window).
-
-```ts
-const box = await makeTmpBox({ git: true });
-await seedBox(box);
-await box.write(
-  "_bookkeeping/questions/NoChannel.question.card",
-  question({ prompt: "Anyone listening?", askedAt: ASKED_AT.toISOString() })
-);
-box.commitAll("seed question");
-
-setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
-JSON.stringify(await ageQuestions(box.root))
-=> {"nudged":[],"expired":["_bookkeeping/questions/NoChannel.question.card"]}
 ```
 
 ```ts cleanup

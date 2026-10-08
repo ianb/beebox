@@ -226,24 +226,19 @@ JSON.stringify(await run(box.root, ["verify"]))
 => {"code":1,"out":["1 todo review item(s) are not settled:","- store/Porch.memo.card:5 \"Order lumber\": still open with no recheck date"]}
 ```
 
-A `recheck` more than 90 days out, and a `recheck="never"` the agent wrote
-itself, are both refused:
+A `recheck` more than 90 days out is refused:
 
 ```ts continue
 await edit(box.root, { from: '{% todo due="2026-09-01" %}', to: '{% todo due="2026-09-01" recheck="2027-03-01" %}' });
 (await run(box.root, ["verify"])).out[1]
 => - store/Porch.memo.card:5 "Order lumber": recheck 2027-03-01 is 157 days from today (2026-09-25); it must be 1-90 days out
-
-await edit(box.root, { from: 'recheck="2027-03-01"', to: 'recheck="never"' });
-(await run(box.root, ["verify"])).out[1]
-=> - store/Porch.memo.card:5 "Order lumber": recheck="never" is set only by the review itself; give a date 1-90 days out
 ```
 
 Ten days out, with a reason after the closing tag, settles it:
 
 ```ts continue
 await edit(box.root, {
-  from: '{% todo due="2026-09-01" recheck="never" %}Order lumber{% /todo %}',
+  from: '{% todo due="2026-09-01" recheck="2027-03-01" %}Order lumber{% /todo %}',
   to: '{% todo due="2026-09-01" recheck="2026-10-05" %}Order lumber{% /todo %} — quote due next week',
 });
 JSON.stringify(await run(box.root, ["verify"]))

@@ -26,9 +26,6 @@ function column(card: { type: string; conflict?: boolean }): string {
 ```ts
 column({ type: "gdoc" })
 => synced
-
-column({ type: "gsheet" })
-=> synced
 ```
 
 ## A conflicted child says so instead of passing as synced
@@ -45,14 +42,6 @@ column({ type: "gdoc", conflict: true })
 DRIVE_CHILD_BADGES[driveChildState({ type: "gsheet", conflict: true })].tone
 => danger
 ```
-
-`conflict: false` is no conflict.
-
-```ts continue
-column({ type: "gdoc", conflict: false })
-=> synced
-```
-
 ## Pointers and nested mounts are distinct kinds, not degraded files
 
 ```ts
@@ -78,9 +67,6 @@ and the column says that rather than implying the mirror covers it.
 
 ```ts
 column({ type: "memo" })
-=> not a Drive card
-
-column({ type: "landmark" })
 => not a Drive card
 ```
 

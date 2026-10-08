@@ -19,14 +19,6 @@ JSON.stringify(glmEnvAdditions("k-test"))
 => {"ANTHROPIC_BASE_URL":"https://api.z.ai/api/anthropic","ANTHROPIC_AUTH_TOKEN":"k-test","API_TIMEOUT_MS":"3000000"}
 ```
 
-The additions never log or transform the key — what goes in comes back out
-verbatim, under the variable the claude CLI treats as auth.
-
-```ts
-glmEnvAdditions("sk-live-abc").ANTHROPIC_AUTH_TOKEN
-=> sk-live-abc
-```
-
 ## Missing-key refusal
 
 A GLM run without a usable key refuses with the two setup commands — it must

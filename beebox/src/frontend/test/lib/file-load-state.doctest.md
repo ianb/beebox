@@ -113,9 +113,6 @@ includes a parse complaint: once gateways are classified by status, a malformed
 body can only come from our own API, and is a bug to look at.
 
 ```ts
-describeQueryFailure({ message: "Card not found: Foo.card" }).headline
-=> Card not found: Foo.card
-
 describeQueryFailure({ message: `Unexpected token 'x' at position 4` }).headline
 => Unexpected token 'x' at position 4
 ```

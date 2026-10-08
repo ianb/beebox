@@ -10,7 +10,7 @@ returns `path.basename(shape.boxRoot)`. See `src/lib/box-slug.ts`.
 ```ts setup
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { rm } from "node:fs/promises";
-import { join, basename } from "node:path";
+import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { boxSlug, boxSlugFromShape } from "../../src/lib/box-slug.js";
 import { getBoxShape } from "../../src/lib/box-shape.js";
@@ -35,9 +35,6 @@ Two different boxes get two different slugs — their root directory names:
 const parent = await mkdtemp(join(tmpdir(), "bbx-box-slug-"));
 const alpha = await makeBox(parent, "alpha");
 const beta = await makeBox(parent, "beta");
-
-[basename(alpha), basename(beta)].join(",")
-=> alpha,beta
 
 [await boxSlug(alpha), await boxSlug(beta)].join(",")
 => alpha,beta

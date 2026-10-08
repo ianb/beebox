@@ -51,9 +51,6 @@ JSON.stringify(publicationDefinitionSchema.parse({ ...validDefinition, tier: "ac
 JSON.stringify(publicationDefinitionSchema.parse({ ...validDefinition, tier: "accounts", emails: ["z@example.test", "a@example.test"] }).emails)
 => ["a@example.test","z@example.test"]
 
-JSON.stringify(publicationDefinitionSchema.parse({ ...validDefinition, tier: "accounts", emails: ["a@example.test", "z@example.test"] }).emails)
-=> ["a@example.test","z@example.test"]
-
 publicationDefinitionSchema.safeParse({ ...validDefinition, tier: "accounts" }).success
 => false
 

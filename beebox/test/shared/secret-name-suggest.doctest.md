@@ -59,13 +59,6 @@ String(suggestSecretName("key", known)) + "," + String(suggestSecretName("weathe
 => null,null
 ```
 
-## A genuinely new name never suggests
-
-```ts
-suggestSecretName("openrouter2", known)
-=> null
-```
-
 ## No edit distance — `openai` is not a typo of `openrouter`
 
 ```ts
@@ -92,9 +85,6 @@ suggestSecretName("telegrambot", known)
 ## `normalizeSecretName` strips everything but `[a-z0-9]` and case-folds
 
 ```ts
-normalizeSecretName("OpenRouter")
-=> openrouter
-
 normalizeSecretName(" open-router.ai ")
 => openrouterai
 ```

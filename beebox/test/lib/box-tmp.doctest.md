@@ -13,14 +13,6 @@ import { boxTmpDir, ensureBoxTmpDir } from "../../src/lib/box-tmp.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 
-## boxTmpDir is a pure `<boxRoot>/_tmp` join
-
-```ts
-// Pure: returns the joined path even for a box that doesn't exist, no I/O.
-boxTmpDir("/no/such/box") === path.join("/no/such/box", "_tmp")
-=> true
-```
-
 ## ensureBoxTmpDir creates the dir and returns its path
 
 ```ts

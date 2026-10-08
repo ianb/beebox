@@ -53,17 +53,11 @@ pending.map((p) => p.state).join(",")
 => preparing,failed:deliver
 ```
 
-The pending entries carry each capture's media counts, its start time, and the
-last time it changed — the chip ages a working capture from the first (how long
-the user has waited) and a failed one from the second (how long the failure has
-sat, which is what the abandonment sweep measures too):
+The pending entries carry each capture's media counts:
 
 ```ts continue
 JSON.stringify(pending.map((p) => ({ state: p.state, counts: p.counts })))
 => [{"state":"preparing","counts":{"photos":1,"files":0,"audioSegments":0}},{"state":"failed:deliver","counts":{"photos":0,"files":0,"audioSegments":0}}]
-
-[typeof pending[0].startedAt, typeof pending[0].lastActivityAt].join(",")
-=> string,string
 ```
 
 The other chat sees only its own capture:

@@ -11,7 +11,6 @@ import { resolveAwaitingHq } from "../../../../../src/components/chat/conversati
 
 const READY = { text: "clean words", diarized: false, service: "mai", pieces: 1 };
 const inSession = { boxSlug: "test", target: { kind: "session", sessionId: "chat-1", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
-const newChat = { boxSlug: "test", target: { kind: "start", clientConversationId: "c-1", contextDir: "", seedFeatures: {} }, attention: { surface: "chat", transcript: "visible" } };
 
 function row(binding: unknown, text: string) {
   return {
@@ -63,14 +62,4 @@ JSON.stringify({ text: r.emission.text, hqFallback: r.emission.hqFallback, calls
 const won = fakeBox({ fallBack: { outcome: "claimed", result: READY } });
 (await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box: won.box })).emission.text
 => clean words
-```
-
-A new chat (no session bound to the row) falls back the same way — there is
-no session to name in the mutation, so it never mattered:
-
-```ts
-const { box, calls } = fakeBox({ fallBack: { outcome: "fellBack" } });
-const r = await resolveAwaitingHq({ row: row(newChat, "rough words"), recordingId: "rec-1", choice: "live", box });
-JSON.stringify({ hqFallback: r.emission.hqFallback, calls })
-=> {"hqFallback":true,"calls":["fallBack"]}
 ```

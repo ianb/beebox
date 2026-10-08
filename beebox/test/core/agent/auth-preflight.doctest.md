@@ -16,8 +16,6 @@ import {
   resetCodexAuthCache,
   ClaudeAuthError,
   CodexAuthError,
-  CLAUDE_NOT_LOGGED_IN_MESSAGE,
-  CODEX_NOT_LOGGED_IN_MESSAGE,
   redactCodexAuthDetail,
 } from "../../../src/core/agent/auth-preflight.js";
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../src/services/claude-cli.js";
@@ -47,14 +45,6 @@ const claudeCli = createFakeClaudeCli({ loggedIn: false });
 const thrown = await checkClaudeAuth({ claudeCli }).then(() => "no throw").catch((e) => `${e.name}: ${e.message}`);
 thrown
 => ClaudeAuthError: Claude Code is not logged in — run `claude auth login` on this machine
-```
-
-The message is exported as a single constant so every consumer shows the same
-remedy.
-
-```ts continue
-CLAUDE_NOT_LOGGED_IN_MESSAGE
-=> Claude Code is not logged in — run `claude auth login` on this machine
 ```
 
 ## Logged in → the preflight passes through
@@ -110,11 +100,6 @@ const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
 const thrown = await checkCodexAuth({ codexCli }).then(() => "no throw").catch((e) => `${e.name}: ${e.message}`);
 thrown
 => CodexAuthError: Codex is not logged in — run `codex login --device-auth` as the Bee Box service user
-```
-
-```ts continue
-CODEX_NOT_LOGGED_IN_MESSAGE
-=> Codex is not logged in — run `codex login --device-auth` as the Bee Box service user
 ```
 
 A positive result is cached for the wakeup/chat burst. Logout and

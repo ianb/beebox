@@ -9,7 +9,7 @@ a deploy overruns.
 ```ts setup
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
-import { deployPageText, OVERRUN_MS, PROBABLY_FAILED_MS } from "../../src/shared/deploy-page-text.js";
+import { deployPageText } from "../../src/shared/deploy-page-text.js";
 import { PLACEHOLDERS, renderDeployPageTemplate } from "../../src/scripts/build-deploy-page.js";
 
 const started = Date.UTC(2026, 8, 18, 21, 41);
@@ -54,9 +54,6 @@ text(-2 * minute, null).detail
 Past ten minutes the page says the update is late.
 
 ```ts
-OVERRUN_MS
-=> 600000
-
 text(12 * minute, 228).headline
 => This update is taking longer than usual
 
@@ -68,9 +65,6 @@ Past an hour, which is where a page stranded by a killed deploy ends up, it
 says something has probably gone wrong.
 
 ```ts
-PROBABLY_FAILED_MS
-=> 3600000
-
 text(3 * 60 * minute, 228).headline
 => This site is down
 

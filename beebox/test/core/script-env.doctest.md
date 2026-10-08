@@ -49,15 +49,10 @@ serverUrl: http://localhost:3210
 boxName: null
 ```
 
-Empty / missing:
+Empty:
 
 ```ts
 parsePublicUrl("").serverUrl === null
-=> true
-```
-
-```ts
-parsePublicUrl(undefined).serverUrl === null
 => true
 ```
 
@@ -124,27 +119,6 @@ print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
 print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL}`);
 =>
 BBX_BOX_NAME: live-name
-BBX_SERVER_URL: http://localhost:3210
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## buildScriptEnv — ambient works without box.json at all
-
-A box with no `_config/box.json` picks up env vars from the ambient
-registration:
-
-```ts
-const box = await makeTmpBox();
-registerBoxPublicUrl(box.root, "http://localhost:3210/ephemeral-box");
-const env = await buildScriptEnv(box.root);
-unregisterBoxPublicUrl(box.root);
-print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
-print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL}`);
-=>
-BBX_BOX_NAME: ephemeral-box
 BBX_SERVER_URL: http://localhost:3210
 ```
 

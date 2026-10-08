@@ -9,7 +9,7 @@ The window here is milliseconds rather than the production two minutes; the
 behavior under test is the re-arming, not the duration.
 
 ```ts setup
-import { createPromoteDebouncer, SCAN_SETTLE_MS } from "../../../src/core/scan/promote-debounce.js";
+import { createPromoteDebouncer } from "../../../src/core/scan/promote-debounce.js";
 import Fastify from "fastify";
 import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-upload/promote-lifecycle.js";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -76,13 +76,6 @@ c.debouncer.notify();
 await sleep(300);
 c.runs
 => 0
-```
-
-## The production window is the plan's two minutes
-
-```ts
-SCAN_SETTLE_MS
-=> 120000
 ```
 
 ## Server close waits for a pass already in flight

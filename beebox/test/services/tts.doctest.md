@@ -22,16 +22,6 @@ tts.speeches
 => [{ text: "Hello there.", voice: "coral", instructions: "Warmly." }]
 ```
 
-Its backend and stylability are declarable, because the route and the picker
-both branch on them.
-
-```ts
-const gem = createFakeTts({ backend: "gemini", stylable: true });
-const mute = createFakeTts({ backend: "openai", stylable: false });
-({ gem: [gem.backend, gem.stylable], mute: [mute.backend, mute.stylable] })
-=> { gem: ["gemini", true], mute: ["openai", false] }
-```
-
 ## A too-short clip is an error, never a result
 
 Gemini has been observed answering HTTP 200 with a zero-length body. A clip

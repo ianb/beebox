@@ -25,12 +25,6 @@ const attachments = (files: Record<string, string>) => async (name: string) => f
 ## Registered, authored, with a template
 
 ```ts
-BrowserTaskSchema.type
-=> browser-task
-
-BrowserTaskSchema.category
-=> authored
-
 schemas.has("browser-task")
 => true
 

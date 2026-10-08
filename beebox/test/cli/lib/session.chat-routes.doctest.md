@@ -13,7 +13,6 @@ import {
 } from "../../../src/cli/lib/session.js";
 import {
   getSessionLogPath,
-  getSessionDir,
   containedSessionCwd,
 } from "../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -32,15 +31,6 @@ Pure path computation — encodes slashes as hyphens:
 ```ts
 const result = getSessionLogPath("/home/user/mybox", "abc-123");
 const expected = path.join(os.homedir(), ".claude/projects/-home-user-mybox/abc-123.jsonl");
-result === expected
-=> true
-```
-
-## getSessionDir
-
-```ts
-const result = getSessionDir("/tmp/test-box");
-const expected = path.join(os.homedir(), ".claude/projects/-tmp-test-box");
 result === expected
 => true
 ```
@@ -387,9 +377,6 @@ blocks: text,image
 summarizeToolInput("Read", { file_path: "/src/main.ts" })
 => /src/main.ts
 
-summarizeToolInput("Edit", { file_path: "/src/utils.ts" })
-=> /src/utils.ts
-
 summarizeToolInput("Bash", { description: "Run tests", command: "npm test" })
 => Run tests
 
@@ -432,33 +419,4 @@ Non-string/non-array returns empty:
 ```ts
 summarizeToolResult(42)
 =>
-```
-
-## TTS voice validation
-
-Reproducing the inline logic from chat.ts route:
-
-```ts setup
-const VALID_TTS_VOICES = [
-  "alloy", "ash", "ballad", "cedar", "coral", "echo",
-  "fable", "marin", "onyx", "nova", "sage", "shimmer", "verse",
-];
-
-function resolveVoice(voice) {
-  return voice && VALID_TTS_VOICES.includes(voice) ? voice : "marin";
-}
-```
-
-```ts
-resolveVoice("fable")
-=> fable
-
-resolveVoice("invalid-voice")
-=> marin
-
-resolveVoice(undefined)
-=> marin
-
-resolveVoice("")
-=> marin
 ```

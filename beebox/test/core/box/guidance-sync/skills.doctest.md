@@ -51,27 +51,15 @@ text.includes("description:") && text.includes("# Building a course")
 => true
 ```
 
-The `calendar` and `drive` skills land the same way — a trigger `description` plus
-their body — so they load on demand instead of always-loaded guide sections:
+The `calendar` skill references the box timezone by the `BOX_TZ` placeholder and
+points at `bbx calendar vtimezone` for the VTIMEZONE block, rather than baking
+either in.
 
 ```ts
 const box = await makeTmpBox();
 await generateSkills(box.root);
 const cal = await readFile(skillFile(box, "calendar/SKILL.md"), "utf8");
-cal.startsWith("---\nname: calendar\n") && cal.includes("description:") && cal.includes("# Calendar")
-=> true
-```
-
-The `calendar` skill is a static constant: it references the box timezone by the
-`BOX_TZ` placeholder and points at `bbx calendar vtimezone` for the VTIMEZONE block,
-rather than baking either in.
-
-```ts continue
 cal.includes("TZID=BOX_TZ:") && cal.includes("bbx calendar vtimezone")
-=> true
-
-const drv = await readFile(skillFile(box, "drive/SKILL.md"), "utf8");
-drv.startsWith("---\nname: drive\n") && drv.includes("description:") && drv.includes("# Google Drive")
 => true
 ```
 

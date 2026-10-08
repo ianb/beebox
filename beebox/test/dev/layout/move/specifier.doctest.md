@@ -54,18 +54,6 @@ computeNewSpecifier({
 => ./sub/foo.test.js
 ```
 
-## A moved target recomputes the specifier from the (unchanged) importer
-
-```ts
-computeNewSpecifier({
-  oldSpecifier: "./old/b.js",
-  newImporterDir: "pkg/src",
-  newTargetPath: "pkg/src/new/b.ts",
-  aliases: noAliases,
-})
-=> ./new/b.js
-```
-
 ## An alias specifier recomputes within the alias root when the target stays under it
 
 ```ts

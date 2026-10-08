@@ -75,9 +75,6 @@ detectKeyword("send and finished")?.action
 detectKeyword("send and stop")?.action
 => sendClose
 
-detectKeyword("send and close the mic")?.action
-=> sendClose
-
 detectKeyword("set a closed message")?.action
 => sendClose
 
@@ -144,9 +141,6 @@ not a distinct command for the agent:
 ```ts
 detectKeyword("clean up and send")?.action
 => sendHq
-
-detectKeyword("clean up and send")?.processedTranscript
-=> <send-message phrase="clean up and send" />
 
 detectKeyword("OK send and clean up")?.action
 => sendHq

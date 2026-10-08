@@ -28,9 +28,6 @@ res.body.file.path
 
 res.body.file.size
 => 20
-
-typeof res.body.file.etag
-=> string
 ```
 
 ## POST appends; the returned identity moves

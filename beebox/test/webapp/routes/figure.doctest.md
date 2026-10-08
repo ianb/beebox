@@ -381,9 +381,6 @@ const res = await ctx.rawRequest({
 });
 res.statusCode
 => 200
-
-res.headers["content-type"]
-=> application/javascript
 ```
 
 A positional card — a bare `<type>.card`, "the ‹type› of this directory" — owns

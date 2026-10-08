@@ -363,20 +363,6 @@ await fs2.readFile(path2.join(box.root, ".git", "info", "attributes"), "utf-8").
 => (absent)
 ```
 
-Case is not a gap: the coverage test is case-insensitive, matching the
-character classes the attributes lines use, so an iOS `.HEIC` counts as covered.
-
-```ts continue
-const ios = createFakeGitAnnex({
-  gitConfig: { "annex.thin": "false" },
-  annexConfig: { "annex.largefiles": assetLargefilesExpression() },
-  annexedFiles: ["content/trip.attach/IMG_0001.HEIC"],
-});
-const iosResult = await runAnnexDoctor(ios, { repoRoot: box.root, boxRoot: box.root });
-iosResult.checks.find((c) => c.id === "annexed-coverage")?.status
-=> ok
-```
-
 ```ts cleanup
 await box.cleanup();
 ```

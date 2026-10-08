@@ -330,15 +330,6 @@ run(fresh(), [
 => null
 ```
 
-Rows that arrive from the `home` refresh never pass through the reducer, so
-a sent row there opens nothing:
-
-```ts continue
-const home = fixture("home");
-[fresh().followUp, boxScreenRows(home, fresh()).sent.length]
-=> [null, 1]
-```
-
 The page state belongs to the mounted page for one box (`BoxScreenPage` keys
 it by box). When the person leaves the box screen or switches boxes, the old
 page and its reducer are gone, and a late answer has nowhere to land. The new

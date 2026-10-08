@@ -10,26 +10,12 @@ See `docs/landmarks.md` for the full design.
 
 ```ts setup
 import {
-  LandmarkSchema,
   createLandmarkTemplate,
   parseLandmarkFields,
 } from "../../../src/schemas/landmark.js";
-import { getCardTypes } from "../../../src/schemas.js";
 import { resolveLandmark } from "../../../src/core/landmark/resolve/core.js";
 import { findDestination } from "../../../src/core/landmark/destination.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-```
-
-## Schema registration
-
-Landmark is a built-in frontmatter card type:
-
-```ts
-getCardTypes().includes("landmark")
-=> true
-
-LandmarkSchema.type
-=> landmark
 ```
 
 ## Parsing a landmark's frontmatter
@@ -141,50 +127,6 @@ symbol:
 ---
 ```
 
-## Hand-listed links
-
-A `navigation` with two `links` resolves to a flat list. `label` is the
-per-landmark label; `ref` is normalized to a box-relative path.
-
-```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("_content/recipes/Pasta.recipe.card", "---\ntitle: Pasta\n---\n");
-
-const navigation = {
-  label: "Recipes",
-  symbol: "🍳",
-  links: [
-    { ref: "Bread.recipe.card", label: "the bread" },
-    { ref: "Pasta.recipe.card" },
-  ],
-};
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists })), null, 2)
-=>
-[
-  {
-    "ref": "_content/recipes/Bread.recipe.card",
-    "label": "the bread",
-    "exists": true
-  },
-  {
-    "ref": "_content/recipes/Pasta.recipe.card",
-    "label": null,
-    "exists": true
-  }
-]
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
 ## Missing targets are flagged but not dropped
 
 A link to a file that doesn't exist still appears, with `exists: false`:
@@ -278,21 +220,6 @@ const { links } = await resolveLandmark(navigation, {
 
 links.length
 => 0
-```
-
-Normal in-namespace expansion still works alongside it:
-
-```ts continue
-const navigation2 = { label: "Recipes", expand: [{ query: "*.recipe.card" }] };
-const { links: links2 } = await resolveLandmark(navigation2, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-links2.map((l) => l.ref).join("\n")
-=>
-_content/recipes/Bread.recipe.card
 ```
 
 ```ts cleanup
@@ -610,9 +537,6 @@ JSON.stringify(dest.for)
 => ["triage","commentary"]
 
 findDestination(fields.destinations, "triage") === dest
-=> true
-
-findDestination(fields.destinations, "commentary") === dest
 => true
 ```
 

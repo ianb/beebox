@@ -3,15 +3,13 @@
 Tests for `createPendingBrowserRequests` — the generic primitive behind
 CLI-long-poll → browser-tab round-trips (last-audio is one specialization;
 the agent screenshot flow is another). Covers the ack phase, first-wins
-fulfillment, the `reportNone` grace window, and how a consumer expresses a
-"declined" answer without the primitive knowing about it.
+fulfillment, and the `reportNone` window.
 
 ```ts setup
 import { createPendingBrowserRequests } from "../../src/core/pending-browser-request.js";
 ```
 
-The screenshot consumer's fulfillment payload is a small union — note that
-`declined` is just another payload, not a primitive concept:
+The screenshot consumer's fulfillment payload is a small union:
 
 ```ts setup
 type ScreenshotAnswer =
@@ -70,25 +68,6 @@ print(`status: ${result.status}`);
 =>
 ack: true
 status: timeout
-```
-
-## Declined is a consumer-level fulfillment payload
-
-The primitive has no notion of "declined" — the consumer expresses it by
-fulfilling with its own payload variant. It resolves `fulfilled`, first-wins,
-exactly like an image answer.
-
-```ts
-const reg = createPendingBrowserRequests<ScreenshotAnswer>();
-const { requestId, outcome } = reg.create({ timeoutMs: 5000, ackGraceMs: 5000 });
-reg.ack(requestId);
-reg.fulfill(requestId, { kind: "declined" });
-const result = await outcome;
-print(`status: ${result.status}`);
-print(`kind: ${result.status === "fulfilled" ? result.fulfillment.kind : "?"}`);
-=>
-status: fulfilled
-kind: declined
 ```
 
 ## First fulfill wins; later answers are refused

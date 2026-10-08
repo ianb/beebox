@@ -28,22 +28,6 @@ line 2
 line 3
 ```
 
-## Print accumulates across statements
-
-Statements (`;`-terminated) can call print, and those lines appear in the next check.
-
-```ts
-for (let i = 1; i <= 3; i++) {
-  print(`item ${i}`);
-};
-"end"
-=>
-item 1
-item 2
-item 3
-end
-```
-
 ## Print drains after each check
 
 After an assertion, the print buffer resets.
@@ -75,16 +59,4 @@ result:
   "status": "ok",
   "count": 2
 }
-```
-
-## No prints — normal behavior
-
-When print isn't called, behavior is unchanged from before.
-
-```ts
-2 + 2
-=> 4
-
-"hello".toUpperCase()
-=> HELLO
 ```

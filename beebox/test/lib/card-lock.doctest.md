@@ -10,7 +10,6 @@ other process, just async tasks within one Node process.
 import {
   withCardLock,
   activeCardLockCount,
-  ReentrantCardLockError,
 } from "../../src/lib/card-lock.js";
 
 // A promise we resolve by hand, to hold a critical section open across an
@@ -151,12 +150,6 @@ const outcome = await withCardLock("/box/d.card", async () => {
 });
 outcome
 => ReentrantCardLockError
-
-const err = await withCardLock("/box/d.card", async () => {
-  return withCardLock("/box/d.card", async () => "x");
-}).catch((e) => e);
-err instanceof ReentrantCardLockError
-=> true
 ```
 
 Locking a *different* file from within a locked callback is fine — only

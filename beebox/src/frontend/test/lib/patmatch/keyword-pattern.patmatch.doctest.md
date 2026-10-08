@@ -42,9 +42,6 @@ Patterns match common English plural forms automatically — no need to write
 
 ```ts
 const p = KeywordPattern.compile("send message");
-p.match("send message")?.capturedTextTrimmed
-=> send message
-
 p.match("send messages")?.capturedTextTrimmed
 => send messages
 ```

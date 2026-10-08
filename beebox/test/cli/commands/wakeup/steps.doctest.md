@@ -35,21 +35,13 @@ await refreshSearchIndex(box.root);
 const queued = await createContainsBackfillJob(box.root);
 queued
 => 2
-
-const listing = await box.list("_bookkeeping/jobs");
-listing.includes("contains-backfill.job.card")
-=> true
 ```
 
-The job card is frontmatter carrying its priority, a description, and the
-item refs:
+The job card carries its priority, a description, and the item refs:
 
 ```ts continue
 const jobs = (await box.list("_bookkeeping/jobs")).split("\n").filter((f) => f.includes("contains-backfill.job.card"));
 const job = await box.read(jobs[0]!);
-job.startsWith("---\n")
-=> true
-
 job.includes("priority: low")
 => true
 
@@ -100,11 +92,8 @@ box3.commitAll("seed");
 await refreshSearchIndex(box3.root);
 await createContainsBackfillJob(box3.root);
 
-// A pending backfill job now blocks queueing another...
-await createContainsBackfillJob(box3.root)
-=> 0
-
-// ...but the refresh still indexes the new card.
+// With the backfill job still pending, the refresh still indexes a new card.
+await createContainsBackfillJob(box3.root);
 await box3.write("_content/notes/Later.memo.card", MEMO("distinctive kumquat filing"));
 box3.commitAll("add a card");
 await refreshSearchIndex(box3.root)

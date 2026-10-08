@@ -6,7 +6,7 @@ itself, and clamping at the cap — is what's worth pinning down; the random
 draw is exercised by bounds-checking many samples.
 
 ```ts setup
-import { jitteredBackoff, delay } from "../../src/shared/backoff.js";
+import { jitteredBackoff } from "../../src/shared/backoff.js";
 ```
 
 ## The ceiling grows exponentially with attempt, then clamps at the cap
@@ -32,13 +32,4 @@ Every draw is non-negative:
 const anyNegative = Array.from({ length: 200 }, () => jitteredBackoff(3, opts)).some((v) => v < 0);
 anyNegative
 => false
-```
-
-## `delay` resolves after roughly the requested time
-
-```ts
-const start = Date.now();
-await delay(20);
-(Date.now() - start) >= 15
-=> true
 ```

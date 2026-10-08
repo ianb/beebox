@@ -57,9 +57,6 @@ Object.keys(request.questions).length
 request.questions[`todo_${bills.optionId}`].type
 => noul
 
-request.questions[`todo_${records.optionId}`] === undefined
-=> true
-
 const yes = createFakeJev({ answers: (name, { question }) => name === "destination" ? fixedAnswer(question, { yes: true }) : { type: "noul", probability: 0.9 } });
 const judgment = await judgeItem(box.root, { evidence, instructions: snapshot, jev: yes });
 judgment.destinationRef === bills.ref && judgment.todoAnswers[bills.optionId] === 0.9

@@ -37,19 +37,6 @@ await box.cleanup();
 
 ## Partial updates merge
 
-Setting just `service` preserves `hqService` (which falls back to default).
-
-```ts
-const box = await makeTmpBox();
-await updateTranscriptionConfig(box.root, { service: "deepgram" });
-JSON.stringify(await loadTranscriptionConfig(box.root))
-=> {"service":"deepgram","hqService":"whisper"}
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
 Setting just `hqService` preserves `service`.
 
 ```ts

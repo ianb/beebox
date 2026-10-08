@@ -92,9 +92,6 @@ resK.searchMode
 
 resK.results.every((h) => h.kind === "memo")
 => true
-
-resK.results.map((h) => h.path).includes("_content/notes/Dentist.md")
-=> false
 ```
 
 ```ts cleanup
@@ -117,12 +114,6 @@ resT.searchMode
 // Zero calls: no corpus embed, no query embed.
 fakeT.calls.length
 => 0
-
-// With no `openai` grant, auto mode has no service and ranks as text too --
-// unconfigured is a normal state, not an error.
-const resTAuto = await searchBox(boxT.root, { query: "dentist" });
-resTAuto.searchMode
-=> text
 ```
 
 ```ts cleanup

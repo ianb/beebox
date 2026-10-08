@@ -6,7 +6,6 @@ aliases so existing box cards keep loading.
 
 ```ts setup
 import {
-  PROCEDURE_MODEL_NAMES,
   modelTier,
   providerOf,
   resolveProcedureModel,
@@ -45,13 +44,6 @@ JSON.stringify([
   resolveProcedureModel({engine: "codex", model: "fable"}),
 ])
 => ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5-5","claude-fable-5-1","gpt-6-luna","gpt-5.6-terra","gpt-6-sol","gpt-6-astra"]
-```
-
-The schema vocabulary contains both sets exactly once.
-
-```ts
-JSON.stringify(PROCEDURE_MODEL_NAMES)
-=> ["efficient","balanced","strong","strongest","haiku","sonnet","opus","fable"]
 ```
 
 ## Provider columns

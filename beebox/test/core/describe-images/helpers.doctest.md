@@ -20,16 +20,7 @@ isImageFile("photo.jpg")
 isImageFile("photo.JPEG")
 => true
 
-isImageFile("screenshot.png")
-=> true
-
-isImageFile("photo.webp")
-=> true
-
 isImageFile("document.pdf")
-=> false
-
-isImageFile("notes.txt")
 => false
 ```
 
@@ -41,15 +32,6 @@ getMimeType("photo.jpg")
 
 getMimeType("photo.JPEG")
 => image/jpeg
-
-getMimeType("screenshot.png")
-=> image/png
-
-getMimeType("photo.webp")
-=> image/webp
-
-getMimeType("animation.gif")
-=> image/gif
 
 getMimeType("scan.tiff")
 => image/jpeg

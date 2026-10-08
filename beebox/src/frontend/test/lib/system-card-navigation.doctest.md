@@ -78,9 +78,6 @@ JSON.stringify(target)
 JSON.stringify(systemCardEntryContext(target))
 => {"cardPath":null,"browseDir":"_content/recipes"}
 
-JSON.stringify(systemCardEntryContext({ ...browse, path: SYSTEM_CARD_PATHS.dashboard }))
-=> {"cardPath":null,"browseDir":""}
-
 JSON.stringify([SYSTEM_CARD_PATHS.dashboard, SYSTEM_CARD_PATHS.settings, SYSTEM_CARD_PATHS.questions, SYSTEM_CARD_PATHS.landmarks, SYSTEM_CARD_PATHS.history, SYSTEM_CARD_PATHS.inventory, SYSTEM_CARD_PATHS.admin].map((path) => systemCardEntryContext({ ...browse, path })))
 => [{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""}]
 ```

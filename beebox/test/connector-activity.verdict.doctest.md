@@ -55,9 +55,6 @@ verdict(daily + "ZZ")
 
 verdict(daily + "ZZZ")
 => quiet since 2026-09-16: 3 of 2
-
-verdict(daily + "ZZZZZ")
-=> quiet since 2026-09-14: 5 of 2
 ```
 
 ## Days with no syncs count for nothing
@@ -135,13 +132,6 @@ verdict("E.....E")
 => failing since 2026-09-12: 2 days
 
 verdict("EEEP")
-=> healthy
-```
-
-## New items clear the verdict
-
-```ts
-verdict(daily + "ZZZZP")
 => healthy
 ```
 

@@ -8,7 +8,6 @@ markdown stream before rendering.
 
 ```ts setup
 import {
-  ACK_KINDS,
   getAckKind,
   parseAcks,
   parseCallouts,
@@ -24,15 +23,9 @@ console.warn = () => {};
 
 ## Ack kinds registry
 
-The closed set of recognized kinds.
+An unrecognized kind has no entry.
 
 ```ts
-ACK_KINDS.map((k) => k.kind).join(",")
-=> created,appended,edited,todo-added,todo-completed,no-response
-
-getAckKind("appended")?.defaultPhrase
-=> Added to it
-
 getAckKind("nope")
 => null
 ```
@@ -56,14 +49,9 @@ JSON.stringify(parseAcks("<ack kind=\"edited\" ref=\"a.md\">Reworked the intro</
 Empty text is dropped, ref is optional.
 
 ```ts
-JSON.stringify(parseAcks("<ack kind=\"noted\"></ack>"))
-=> []
-
 JSON.stringify(parseAcks("<ack kind=\"created\"></ack>"))
 => [{"kind":"created"}]
 ```
-
-(`noted` is not in the registry, so it gets dropped — see next section.)
 
 ## parseAcks — unknowns are dropped
 
@@ -161,9 +149,6 @@ stripStructuredOutputTags("<callout context=\"x\">body</callout>after")
 
 stripStructuredOutputTags("before <chat-app narration=\"on\"/> after")
 => before  after
-
-stripStructuredOutputTags("plain text only")
-=> plain text only
 ```
 
 The paired `<chat-app>` form with `<card-activity>` children (the

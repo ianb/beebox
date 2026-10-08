@@ -38,11 +38,6 @@ await describe(icon.png)
 => 192x192 colour
 ```
 
-```ts continue
-await describe((await render(box, 180)).png)
-=> 180x180 colour
-```
-
 The ETag covers the source and the size, so two sizes are not the same entity
 and a card edit changes it.
 

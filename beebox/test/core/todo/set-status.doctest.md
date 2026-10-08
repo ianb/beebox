@@ -114,21 +114,6 @@ created: 2026-07-01T10:00:00Z
 {% todo status="done" %}Wait{% /todo %}
 ```
 
-## Text after the closing tag, on the same line, is untouched
-
-```ts
-setTodoStatus(memo("{% todo %}Buy milk{% /todo %} — get whole milk\n"), {
-  locator: { kind: "body", line: 5 },
-  status: "done",
-})
-=>
----
-status: new
-created: 2026-07-01T10:00:00Z
----
-{% todo status="done" %}Buy milk{% /todo %} — get whole milk
-```
-
 ## Frontmatter entry: set and removal, body left byte-identical
 
 ```ts

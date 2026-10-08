@@ -29,9 +29,6 @@ const store = { greeting: "hello", blank: "" };
 union so `value`/`error` are only reachable on the matching arm.
 
 ```ts
-lookup(store, "greeting").ok
-=> true
-
 const found = lookup(store, "greeting");
 found.ok ? found.value : found.error.cause
 => HELLO

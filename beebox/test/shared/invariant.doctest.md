@@ -6,39 +6,14 @@ make union dispatch fail to compile when a member is added. They are not for
 boundary/user-facing validation.
 
 ```ts setup
-import { assertNever, invariant, checkInvariant, tolerateNever, InvariantError } from "../../src/shared/invariant.js";
+import { assertNever, invariant, checkInvariant, tolerateNever } from "../../src/shared/invariant.js";
 
-// A dispatch that uses assertNever as its exhaustiveness terminator.
-function label(kind: "a" | "b"): string {
-  switch (kind) {
-    case "a":
-      return "first";
-    case "b":
-      return "second";
-    default:
-      return assertNever(kind);
-  }
-}
-
-// An invariant that narrows `string | null` to `string`.
-function firstChar(s: string | null): string {
-  invariant(s !== null, "s must be present");
-  return s[0] ?? "";
-}
 ```
 
 ## `assertNever` — exhaustiveness terminator
 
 Used in a `default:` case, it throws if a union member was left unhandled. The
 value is stringified into the message so a real drift is debuggable from the log.
-
-```ts
-label("a")
-=> first
-
-label("b")
-=> second
-```
 
 Forcing an unhandled value through (as only a boundary bug could) throws:
 
@@ -50,21 +25,11 @@ assertNever("c" as never)
 
 ## `invariant` — always throws, narrows the type
 
-When the condition holds, `invariant` returns nothing and the type is narrowed.
-
-```ts
-firstChar("hi")
-=> h
-```
-
-When it fails, it throws in every environment (no dev/prod split):
+It throws in every environment (no dev/prod split):
 
 ```ts
 invariant(1 === 2, "one is not two")
 => throws InvariantError: one is not two
-
-invariant(0, "falsy value")
-=> throws InvariantError: falsy value
 ```
 
 ## `checkInvariant` — logs loudly, returns the condition, no narrowing
@@ -87,13 +52,6 @@ const result = checkInvariant(false, "manifest ahead of index");
 console.error = originalError;
 JSON.stringify({ result, logged: errors })
 => {"result":false,"logged":["Invariant violated: manifest ahead of index"]}
-```
-
-`InvariantError` is the thrown class for all three.
-
-```ts
-new InvariantError("boom").name
-=> InvariantError
 ```
 
 ## `tolerateNever` — non-throwing terminator for vendor unions

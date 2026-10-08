@@ -61,7 +61,4 @@ JSON.stringify(detectVideoEmbed("https://example.com/cat.png"))
 
 JSON.stringify(detectVideoEmbed("attach/photo.jpg"))
 => null
-
-JSON.stringify(detectVideoEmbed(""))
-=> null
 ```

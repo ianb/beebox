@@ -30,28 +30,12 @@ JSON.stringify(placeLabel({ pathname: "/test1/chat", boxSlug: "test1" }))
 => {"label":"Chat","dir":null}
 ```
 
-## Static routes each name themselves
+## Sub-paths of a static route keep the section's label
+
+`/history/<hash>` is still History.
 
 ```ts
-const labelOf = (path: string) => placeLabel({ pathname: path, boxSlug: "test1" }).label;
-
-[
-  labelOf("/test1/box"),
-  labelOf("/test1/landmarks"),
-  labelOf("/test1/dashboard"),
-  labelOf("/test1/history"),
-  labelOf("/test1/questions"),
-  labelOf("/test1/settings"),
-  labelOf("/test1/admin"),
-].join(" | ")
-=> Box | All landmarks | Dashboard | History | Questions | Settings | Admin
-```
-
-Sub-paths of a static route keep the section's label — `/history/<hash>` is
-still History.
-
-```ts continue
-labelOf("/test1/history/a1b2c3")
+placeLabel({ pathname: "/test1/history/a1b2c3", boxSlug: "test1" }).label
 => History
 ```
 

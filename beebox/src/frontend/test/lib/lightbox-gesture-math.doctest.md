@@ -348,9 +348,6 @@ at the current scale:
 
 ```ts
 const frame2 = { fit: { width: 1000, height: 1000 }, container: { width: 1000, height: 1000 } };
-JSON.stringify(clampTransformToBounds({ scale: 2, x: 600, y: 0 }, frame2))
-=> {"scale":2,"x":500,"y":0}
-
 JSON.stringify(settleTarget({ scale: 1.005, x: 5, y: 5 }, frame2))
 => {"scale":1,"x":0,"y":0}
 

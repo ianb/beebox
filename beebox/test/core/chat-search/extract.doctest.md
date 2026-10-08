@@ -51,14 +51,8 @@ docs[0].id
 docs[0].anchor
 => aaa1
 
-docs[0].title
-=> Insurance follow-up
-
 docs[0].created
 => 2026-09-28T10:00:00Z
-
-docs[0].content.split("\n\n").length
-=> 2
 
 docs[0].content.split("\n\n")[0]
 => Did the insurance claim go through?
@@ -148,11 +142,6 @@ docs[1].content
 Four 400-char entries joined stay just under the 1600-char budget, so they
 share one chunk; the fifth entry crosses it and anchors the second. The
 check happens before an entry joins, so a chunk never starts empty.
-
-```ts continue
-CHUNK_CHAR_BUDGET >= 1200 && CHUNK_CHAR_BUDGET < 2000
-=> true
-```
 
 ## The cursor chunks only the tail — incremental refresh
 

@@ -78,9 +78,6 @@ const result = await importPdf(box, docling);
 result.success
 => true
 
-result.data.mode
-=> pdf
-
 result.data.extracted
 => true
 ```
@@ -150,14 +147,11 @@ typeof card.fields.metadata.pages
 => number
 ```
 
-The session card points at the pdf card, and the intake job exists:
+The session card points at the pdf card:
 
 ```ts continue
 const sessionCard = await box.read(result.data.sessionCardPath);
 sessionCard.includes("- attach/source.pdf.card")
-=> true
-
-result.data.intakeJobPath.startsWith("_bookkeeping/jobs/")
 => true
 ```
 

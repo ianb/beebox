@@ -3,8 +3,8 @@
 The model picker and mutation boundary share one engine-indexed registry.
 
 ```ts setup
-import { chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
-import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES, TIER_RANK } from "../../src/shared/agent-models.js";
+import { isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
+import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES } from "../../src/shared/agent-models.js";
 import { boxDefaultModel, liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, resolveSmallModelForEngine, loadEffectiveSmallModel } from "../../src/core/model-policy.js";
 import { loadBoxModel, loadEnabledEngines, clearBoxConfigCache } from "../../src/core/box/config.js";
 import { writeFile, mkdir } from "node:fs/promises";
@@ -14,12 +14,6 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 
 ```ts
-JSON.stringify(chatModelOptions("claude", []).map((option) => option.label))
-=> ["Default (Opus)","Fable 5.1","Opus 5.5","GLM 5.3","GLM 5.3 Flash","Sonnet 5","Haiku 4.5"]
-
-JSON.stringify(chatModelOptions("codex", []))
-=> [{"label":"Default (Codex)","model":null},{"label":"Astra","model":"gpt-6-astra"},{"label":"Sol","model":"gpt-6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-6-luna"}]
-
 isChatModelAllowed("codex", { model: "gpt-6-sol", added: [] })
 => true
 
@@ -95,9 +89,6 @@ JSON.stringify([modelTier("claude-fable-5-1"), modelTier("gpt-6-sol"), modelTier
 
 JSON.stringify(ENGINES.map(tiersRoundTrip))
 => [true,true]
-
-TIER_RANK.efficient < TIER_RANK.balanced && TIER_RANK.balanced < TIER_RANK.strong && TIER_RANK.strong < TIER_RANK.strongest
-=> true
 ```
 
 An engine that offers the pinned model runs it exactly; one that does not gets

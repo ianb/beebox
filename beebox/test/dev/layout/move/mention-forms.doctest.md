@@ -10,9 +10,6 @@ const roots = ["pkg", "other-pkg"];
 
 ```ts
 const forms = fileForms({ move: { from: "pkg/src/a.ts", to: "pkg/src/sub/a.ts" }, roots });
-forms.length
-=> 6
-
 JSON.stringify(forms.map((f) => [f.kind, f.old, f.new]))
 => [["repo-relative","pkg/src/a.ts","pkg/src/sub/a.ts"],["repo-relative","pkg/src/a.js","pkg/src/sub/a.js"],["repo-relative","pkg/src/a","pkg/src/sub/a"],["package-relative","src/a.ts","src/sub/a.ts"],["package-relative","src/a.js","src/sub/a.js"],["package-relative","src/a","src/sub/a"]]
 

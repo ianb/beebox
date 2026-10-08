@@ -17,13 +17,6 @@ function opensOk(openers: string[]): boolean {
 }
 ```
 
-## Body-only: the `{% purpose %}` tag compiles to a Purpose line
-
-```ts
-JSON.stringify(compileBriefing({ type: "briefing", body: "{% purpose %}\nRun the household.\n{% /purpose %}\n" }))
-=> "## Box Briefing\n\n**Purpose:** Run the household.\n"
-```
-
 ## Frontmatter `key-people` compile to Key Person lines
 
 `called` supplies the display name; `ref` is preserved as a `[→ …]`

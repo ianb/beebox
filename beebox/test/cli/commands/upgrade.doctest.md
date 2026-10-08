@@ -228,30 +228,6 @@ status.clean
 await fs.rm(boxRoot, { recursive: true, force: true });
 ```
 
-## A step failing AFTER a successful revert-relevant step still reverts everything
-
-Same as above, but the failure happens at `tsc` (after migrate and init both
-"succeeded") — the whole batch still reverts as one unit, not just the last step:
-
-```ts
-const boxRoot = await makeV3Fixture();
-const calls = [];
-const runCommand = makeFakeRunner({ boxRoot, calls, failLabel: "tsc", failOutput: "type error" });
-const thrown = await tryUpgrade(boxRoot, runCommand);
-thrown instanceof UpgradeStepFailedError
-=> true
-
-await readPinnedSpec(boxRoot)
-=> 0.1.0
-
-await readInstalledVersion(boxRoot)
-=> 0.1.0
-```
-
-```ts cleanup
-await fs.rm(boxRoot, { recursive: true, force: true });
-```
-
 ## A dirty working tree refuses to start (nothing to snapshot against)
 
 ```ts

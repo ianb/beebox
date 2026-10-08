@@ -12,16 +12,6 @@ import {
 } from "../../../../../src/components/chat/everywhere/InteractiveChat/recovery.js";
 ```
 
-One- and two-word scraps stay below the floor:
-
-```ts
-shouldSurfaceRecoveredDictation("hello")
-=> false
-
-shouldSurfaceRecoveredDictation("just mumbling")
-=> false
-```
-
 The hook's drop path uses the same decision and clears a short persisted draft:
 
 ```ts

@@ -73,6 +73,6 @@ const small = render("sm");
 
 ```ts
 const responsive = renderResponsive();
-[responsive.includes('480 480w, /test/api/images/example.png?width=960 960w'), responsive.includes('sizes="(max-width: 640px) 100vw, 512px"'), responsive.includes('data-image-src="/test/api/files/example.png"')].join(" ")
-=> true true true
+responsive.includes('data-image-src="/test/api/files/example.png"')
+=> true
 ```

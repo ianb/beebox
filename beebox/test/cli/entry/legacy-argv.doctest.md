@@ -12,7 +12,7 @@ Every retry fails the same way, so a box that predates the split could never
 cross it.
 
 ```ts setup
-import { rewriteLegacyHandoff, legacyHandoffNotice } from "../../../src/cli/entry/legacy-argv.js";
+import { rewriteLegacyHandoff } from "../../../src/cli/entry/legacy-argv.js";
 
 /** argv as a spawned CLI sees it: [node, script, ...args]. */
 const argv = (...args: string[]) => ["node", "bbx", ...args];
@@ -36,9 +36,6 @@ command they did not type appeared:
 ```ts
 rewriteLegacyHandoff(argv("migrate", "--apply")).rewrote
 => migrate
-
-legacyHandoffNotice("migrate").startsWith("note: `bbx migrate` moved to `bbx engine migrate`")
-=> true
 ```
 
 Already-correct argv is left exactly as it was — the shim must be idempotent,

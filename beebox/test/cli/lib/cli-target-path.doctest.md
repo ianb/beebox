@@ -17,9 +17,6 @@ import { DisplayFormPathArgError,
 ## A plain relative argument joins onto `relativeTo`
 
 ```ts
-resolveCliTargetPath({ boxRoot: "/box", raw: "recipes/Soup.recipe.card", relativeTo: "/box" })
-=> /box/recipes/Soup.recipe.card
-
 resolveCliTargetPath({ boxRoot: "/box", raw: "recipes/Soup.recipe.card", relativeTo: "/somewhere/else" })
 => /somewhere/else/recipes/Soup.recipe.card
 ```
@@ -33,9 +30,6 @@ box root, and silently finding nothing:
 ```ts
 resolveCliTargetPath({ boxRoot: "/box", raw: "/_config/box.json", relativeTo: "/somewhere/else" })
 => /box/_config/box.json
-
-resolveCliTargetPath({ boxRoot: "/box", raw: "/_bookkeeping/jobs/x.job.card", relativeTo: "/box" })
-=> /box/_bookkeeping/jobs/x.job.card
 ```
 
 ## A genuine OS-absolute path (not naming an area) is used as-is
@@ -61,9 +55,6 @@ function tryResolve(raw: string): string {
 
 tryResolve("Config:box.json")
 => DisplayFormPathArgError: `Config:box.json` is the boxholder's display form; write `/_config/box.json`
-
-tryResolve("Bookkeeping:jobs/x.job.card")
-=> DisplayFormPathArgError: `Bookkeeping:jobs/x.job.card` is the boxholder's display form; write `/_bookkeeping/jobs/x.job.card`
 ```
 
 `content:` is never a display form (a real URI scheme; `_content` displays

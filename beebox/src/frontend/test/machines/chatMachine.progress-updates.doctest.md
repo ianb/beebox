@@ -106,13 +106,12 @@ Claude 5 and later do. Claude 4 and earlier return summarized reasoning in the
 same field. Other providers' models and a missing model get no updates.
 
 ```ts
-["claude-fable-5-1", "claude-opus-5", "claude-opus-5-5", "claude-sonnet-5", "claude-sonnet-4-6", "claude-haiku-4-5-20251001", "glm-5.3", undefined]
+["claude-fable-5-1", "claude-opus-5", "claude-opus-5-5", "claude-sonnet-4-6", "claude-haiku-4-5-20251001", "glm-5.3", undefined]
   .map((model) => `${String(model)}: ${writesProgressUpdates(model)}`).join("\n");
 =>
 claude-fable-5-1: true
 claude-opus-5: true
 claude-opus-5-5: true
-claude-sonnet-5: true
 claude-sonnet-4-6: false
 claude-haiku-4-5-20251001: false
 glm-5.3: false

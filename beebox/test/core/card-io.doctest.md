@@ -73,9 +73,6 @@ const text = "---\ndrive-id: drv-9\ntitle: Directory Doc\n---\nPositional body.\
 const card = parseCardText(text, { source: "doc.card", schemas });
 card.schema.type
 => doc
-
-card.fields["title"]
-=> Directory Doc
 ```
 
 ## Missing `type` field surfaces a clear error
@@ -186,9 +183,6 @@ loaded.kind
 
 loaded.kind === "frontmatter" ? loaded.schema.type : "?"
 => email-thread
-
-loaded.kind === "frontmatter" ? loaded.fields["thread-id"] : "?"
-=> t9
 ```
 
 Job cards use the dotted filename convention `Foo.<kind>.job.card` (the

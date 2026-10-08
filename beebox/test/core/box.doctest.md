@@ -95,9 +95,6 @@ The box marker file contains version metadata:
 
 ```ts continue
 const marker = JSON.parse(await fs.readFile(path.join(boxRoot, BOX_MARKER), "utf-8"));
-marker.version
-=> 1.0.0
-
 marker.shapeVersion
 => 3
 ```

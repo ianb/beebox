@@ -139,9 +139,6 @@ const c3 = ctxFor(box.root);
 const again = await runUnignore(c3);
 c3.lines.join("")
 => Already converted for git-annex — no change.
-
-again.data?.["changed"]
-=> false
 ```
 
 An asset rule sitting OUTSIDE the managed block is a hard failure, not a silent

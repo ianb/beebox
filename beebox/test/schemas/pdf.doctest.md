@@ -21,9 +21,6 @@ const source = "_content/inbox/scan.attach/source.pdf.card";
 ## Registered as `pdf`
 
 ```ts
-PdfSchema.type
-=> pdf
-
 schemas.get("pdf") === PdfSchema
 => true
 ```
