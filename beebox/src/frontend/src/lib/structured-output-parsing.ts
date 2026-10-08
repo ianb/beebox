@@ -22,7 +22,7 @@ export interface AckKindDescriptor {
   readonly icon: string;
 }
 
-const ACK_KINDS: readonly AckKindDescriptor[] = [
+export const ACK_KINDS: readonly AckKindDescriptor[] = [
   { kind: "created",        defaultPhrase: "Created",        icon: "✨" },
   { kind: "appended",       defaultPhrase: "Added to it",    icon: "＋" },
   { kind: "edited",         defaultPhrase: "Edited",         icon: "✎"  },
