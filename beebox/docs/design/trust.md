@@ -10,7 +10,9 @@ because they are essential information, but because filling them is essential
 process** — deliberation the agent is forced through before the artifact is
 valid. A question card's `memo` (why am I asking?) and `directive` (what
 happens with the answer?) are the pattern; new action-shaped schemas should
-use it. The rest of the trust surface is the question/confirm gates and the
+use it. (2026-10: both fields are optional in `src/schemas/question.ts`, so
+the question card states the pattern but does not enforce it; a new schema
+that wants the deliberation should make its fields required.) The rest of the trust surface is the question/confirm gates and the
 commit history (`durability-and-provenance.md`).
 
 ## Trust progression: question → confirmation → automatic
@@ -30,7 +32,7 @@ a guide, briefing, or personality sink, and the follow-up job records the
 answer there as a `basis: user-stated` belief — [`../questions.md`](../questions.md).) Keep this as the umbrella principle when building
 approval flows; it is design to fill, not history.
 
-## Three confidence vocabularies
+## The confidence vocabularies
 
 Three scales answer "how sure/authorized is the agent," each domain-specific:
 
@@ -40,6 +42,15 @@ Three scales answer "how sure/authorized is the agent," each domain-specific:
   ([`../triage.md`](../triage.md)).
 - **Retro belief confidence** — hypothesis / low / medium by recurrence;
   how firmly an inferred belief is held (`../glossary.md`, retrospective).
+
+(2026-10: the three above are not the complete set. Other shipped scales:
+belief basis `user-stated > feedback > inferred > default`; guide confidence
+`confirmed|high|medium|low|hypothesis`, with `hypothesis` excluded from
+compiled guidance; progress evidence `observed|inferred|self-report`, with no
+level recorded without evidence (`src/schemas/progress.ts`); procedure-run
+outcome `completed|failed|inconclusive` (`src/schemas/procedure-run.ts`);
+question states `pending|answered|dismissed|expired`; notification loudness
+`dot|quiet|loud` (`src/core/notification/intent.ts`).)
 
 No ruling unifies them; treat them as instances of one instinct (act only with
 warrant proportional to certainty) with deliberately separate vocabularies
