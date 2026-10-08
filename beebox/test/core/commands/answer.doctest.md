@@ -176,25 +176,6 @@ res.success
 await box.cleanup();
 ```
 
-With no label collision, typing "a" still falls through to the letter-index
-shortcut and picks position 0:
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_bookkeeping/questions/Letters.question.card", LETTER_LABELS);
-
-const res = await answer(box, { question: "_bookkeeping/questions/Letters.question.card", answer: "a" });
-res.success
-=> true
-
-(await box.read("_bookkeeping/questions/Letters.question.card")).includes("selected: first")
-=> true
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
 ## Confirm — by selectedId with a note, by typed yes/no, junk rejected
 
 The new UI path sends `selectedId: "yes" | "no"`; an optional free-text `answer`

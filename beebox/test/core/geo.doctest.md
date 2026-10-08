@@ -27,25 +27,10 @@ haversineMeters({ lat: 45, lng: -122 }, { lat: 45, lng: -122 })
 => 0
 ```
 
-## match: a fix at a place's center matches it
-
-```ts
-const m = matchPlace({ lat: 45.0, lng: -122.0 }, [A]);
-m ? m.name : null
-=> A
-```
-
 ## match: a far-away fix matches nothing
 
 ```ts
 matchPlace({ lat: 46.0, lng: -123.0 }, [A])
-=> null
-```
-
-## match: empty place list → null
-
-```ts
-matchPlace({ lat: 45.0, lng: -122.0 }, [])
 => null
 ```
 

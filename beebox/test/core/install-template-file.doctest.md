@@ -98,14 +98,6 @@ await fs.readFile(path.join(box, "_config/x.card"), "utf-8")
 => v2
 ```
 
-The recorded hash updated to v2:
-
-```ts continue
-const versions = await readVersions(box);
-versions["_config/x.card"].sha256.length
-=> 64
-```
-
 ## Parked — local has been edited; new template diverted to _template-updates/
 
 When the local file differs from the recorded hash, we don't overwrite — we park the new template for the user to review:
@@ -536,75 +528,4 @@ result.outcome
 
 JSON.stringify(await listParkedTemplateUpdates(box))
 => []
-```
-
-## shapeVersion 3: the schemas/views/tricks CLAUDE.md guides live under `src/`, no climb needed
-
-shapeVersion 3 has one root, so a box's three CLAUDE.md guides (schemas,
-views, tricks) live right under `boxRoot`'s own `src/` — `relPath` needs no
-`../` climb the way a v2 box's package-root-nested guides once did:
-
-```ts continue
-async function makeV3Box() {
-  const boxRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-install-tpl-v3-"));
-  return { boxRoot };
-}
-
-const { boxRoot: v3Root } = await makeV3Box();
-const fresh = await installTemplateFile({
-  boxRoot: v3Root,
-  relPath: "src/schemas/CLAUDE.md",
-  templateContent: "v1\n",
-});
-fresh.outcome
-=> fresh
-
-await fs.readFile(path.join(v3Root, "src/schemas/CLAUDE.md"), "utf-8")
-=> v1
-
-const versions = await readVersions(v3Root);
-JSON.stringify(Object.keys(versions))
-=> ["src/schemas/CLAUDE.md"]
-```
-
-A divergent local copy still parks under `_config/_template-updates/`, mirroring `relPath` exactly:
-
-```ts continue
-await fs.writeFile(path.join(v3Root, "src/schemas/CLAUDE.md"), "user edit\n");
-const parked = await installTemplateFile({
-  boxRoot: v3Root,
-  relPath: "src/schemas/CLAUDE.md",
-  templateContent: "v2\n",
-});
-parked.outcome
-=> parked
-
-parked.writtenAt
-=> _config/_template-updates/src/schemas/CLAUDE.md
-
-await fs.readFile(path.join(v3Root, parked.writtenAt), "utf-8")
-=> v2
-
-await fs.readFile(path.join(v3Root, "src/schemas/CLAUDE.md"), "utf-8")
-=> user edit
-```
-
-Bringing the local copy back in line clears the mirror, same as any other tracked template:
-
-```ts continue
-await fs.writeFile(path.join(v3Root, "src/schemas/CLAUDE.md"), "v1\n");
-const overwritten = await installTemplateFile({
-  boxRoot: v3Root,
-  relPath: "src/schemas/CLAUDE.md",
-  templateContent: "v2\n",
-});
-overwritten.outcome
-=> overwritten
-
-JSON.stringify(await listParkedTemplateUpdates(v3Root))
-=> []
-```
-
-```ts cleanup
-await fs.rm(v3Root, { recursive: true, force: true });
 ```

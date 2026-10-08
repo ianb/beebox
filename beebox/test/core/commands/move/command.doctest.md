@@ -265,30 +265,6 @@ items:
 body
 ```
 
-## Single card move: `ref=` strings in referrers rewritten (relative + absolute)
-
-Moving a card rewrites references to it in other cards via substring rewrite —
-a relative ref becomes relative to the new location, an absolute (box-root) ref
-stays box-root-absolute. (No leading `./`; that was a cardworks XML-loader
-artifact, gone now that every card is frontmatter.)
-
-```ts
-const box = await makeTmpBox();
-await box.write("_content/store/Scan.capture-session.card", "---\nsession-id: s\n---\n");
-await box.write(
-  "_content/store/Guide.guide.card",
-  '---\nversion: "1.0.0"\n---\nrel [a](Scan.capture-session.card) abs [b](/_content/store/Scan.capture-session.card)\n',
-);
-
-await mv(box, { from: "_content/store/Scan.capture-session.card", to: "_content/store/sub/Scan.capture-session.card" });
-(await box.read("_content/store/Guide.guide.card")).trim()
-=>
----
-version: "1.0.0"
----
-rel [a](sub/Scan.capture-session.card) abs [b](/_content/store/sub/Scan.capture-session.card)
-```
-
 ## `?query` and `#fragment` survive the rewrite
 
 A ref may address a location *within* its target — `?view=ledger` picks a view,

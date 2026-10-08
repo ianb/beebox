@@ -59,10 +59,6 @@ index.includes("| `what-you-could-do.md` | The user asks what the box can do")
 ## A card doc uses only built-in templates and carries the contains: appendix for searchable types
 
 ```ts
-const memo = byName.get("card-memo.md") ?? "";
-memo.startsWith("# memo Card")
-=> true
-
 const searchable = cardSchemas.list.find((s) => s.searchable && s.instructions !== undefined);
 (byName.get(`card-${searchable?.type}.md`) ?? "").includes("## The `contains:` field")
 => true

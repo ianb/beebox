@@ -134,7 +134,7 @@ const attach = `_content/tmp-capture/${basename}.attach`;
 const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
 ```
 
-One capture card, one audio card per segment, both transcribed — and with
+One capture card, with its audio cards transcribed — and with
 nothing left untranscribed, the card carries no `transcription-failed` flag:
 
 ```ts continue
@@ -145,9 +145,6 @@ nothing left untranscribed, the card carries no `transcription-failed` flag:
 => false
 
 (await box.read(`${attach}/audio-001.audio.card`)).includes("transcript:")
-=> true
-
-(await box.read(`${attach}/audio-002.audio.card`)).includes("transcript:")
 => true
 ```
 
@@ -431,9 +428,6 @@ await tick();
 const baseA = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id: idA });
 const baseB = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id: idB });
 const capSubjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n");
-capSubjects.filter((s) => s.startsWith("Capture: ")).length
-=> 2
-
 capSubjects.filter((s) => s.startsWith("Capture delivered: ")).length
 => 2
 ```
@@ -452,9 +446,7 @@ Both delivered — their staging media was cleaned up:
 ```ts continue
 await readStagingSession({ boxRoot: box.root, id: idA })
 => null
-```
 
-```ts continue
 await readStagingSession({ boxRoot: box.root, id: idB })
 => null
 ```

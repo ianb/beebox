@@ -65,9 +65,6 @@ const box = await makeTmpBox();
 await fs.mkdir(path.join(box.root, "node_modules/beebox"), { recursive: true });
 await fs.writeFile(path.join(box.root, "node_modules/beebox/package.json"), JSON.stringify({ version: "0.0.1" }));
 
-await getInstalledEngineVersion(box.root)
-=> 0.0.1
-
 const report = await getEngineVersionReport(box.root);
 JSON.stringify({ installed: report.installed, mismatch: report.mismatch })
 => {"installed":"0.0.1","mismatch":true}

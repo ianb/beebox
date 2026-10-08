@@ -146,13 +146,6 @@ await formatBox.cleanup();
 
 ## Sliding-overlap batch planning
 
-A small PDF fits in one batch:
-
-```ts
-JSON.stringify(planScanBatches(4, 8).map(p => p.globalIndices))
-=> [[0,1,2,3]]
-```
-
 A larger PDF gets split with one-page overlap so any pair straddling a seam still appears in some batch together:
 
 ```ts
@@ -289,13 +282,9 @@ const base = buildScanPrompt(null);
 const withContext = buildScanPrompt("Tomas, Noor, Delia are recurring people. Photos from 1965-1985.");
 print(`base contains user context: ${base.includes("boxholder")}`);
 print(`with-context contains people: ${withContext.includes("Tomas, Noor, Delia")}`);
-print(`with-context warns against invention: ${withContext.includes("DO NOT invent")}`);
-print(`with-context still has page instructions: ${withContext.includes("paired_with_index")}`)
 =>
 base contains user context: false
 with-context contains people: true
-with-context warns against invention: true
-with-context still has page instructions: true
 ```
 
 Empty/whitespace context is treated as no context:

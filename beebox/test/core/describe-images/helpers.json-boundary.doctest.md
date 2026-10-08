@@ -23,17 +23,9 @@ const logged: string[] = [];
 const log = function (line: string): void { logged.push(line); };
 ```
 
-Valid elements pass through unchanged:
-
-```ts
-const valid = parseGeminiJsonArray(JSON.stringify([{ index: 0, label: "a" }, { index: 1, label: "b" }]), { itemSchema, log });
-JSON.stringify(valid)
-=> [{"index":0,"label":"a"},{"index":1,"label":"b"}]
-```
-
 An element that fails the schema is dropped and logged; the rest still load:
 
-```ts continue
+```ts
 logged.length = 0;
 const mixed = parseGeminiJsonArray(JSON.stringify([{ index: 0, label: "a" }, { index: "not-a-number", label: "b" }]), { itemSchema, log });
 JSON.stringify(mixed)

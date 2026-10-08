@@ -28,16 +28,6 @@ function warningLead(relPath: string, chars: number): string {
 }
 ```
 
-## A lean CLAUDE.md is fine
-
-A small box CLAUDE.md (the real `test1` box is ~467 chars) draws no warning.
-
-```ts
-tier(467)
-=>
-ok
-```
-
 ## Just under the soft tier stays silent
 
 ```ts

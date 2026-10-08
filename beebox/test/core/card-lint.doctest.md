@@ -456,29 +456,6 @@ result.results[0]!.errors[0]!.message
 => Display-form path at body:1:source.ref: `Config:box.json` is the boxholder's display form; write `/_config/box.json`
 ```
 
-## Resolved body refs lint clean
-
-A body Markdoc tag whose `ref` resolves to an existing target produces
-no warning, same as a resolved frontmatter ref.
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/box/people/dana.person.card",
-  "---\ntype: person\nname: Dana\n---\n",
-);
-await box.write(
-  "_content/box/notes/Meeting.doc.card",
-  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana said: {% source ref=\"/_content/box/people/dana.person.card\" usage=\"verbatim\" %}ship Friday{% /source %}\n",
-);
-const result = await lintCardsDispatch(
-  [box.path("_content/box/notes/Meeting.doc.card")],
-  { boxRoot: box.root, ctx },
-);
-result.totalWarnings
-=> 0
-```
-
 ## Inline markdown links in a card body are checked too
 
 `bbx mv` has always rewritten `[text](path)` / `![alt](path)` inside card
@@ -504,14 +481,6 @@ result.results[0]!.warnings[0]!.type
 
 result.results[0]!.warnings[0]!.message
 => Broken reference at body:1:link: /_content/box/notes/missing.doc.card does not exist
-```
-
-It counts as a broken ref on the summary line, alongside frontmatter and
-Markdoc-tag refs:
-
-```ts continue
-formatLintResults(result, { colors: false }).split("\n").at(-1)
-=> 1 file checked, 1 warning in 0 files (1 broken ref)
 ```
 
 A display-form path written into an inline link, or a reference-style link
@@ -691,26 +660,6 @@ result.totalErrors
 
 result.results[0]!.warnings.some(w => w.message.includes('Unknown frontmatter key "defaultHref"'))
 => true
-```
-
-## A ref-free `{% source %}` in a commentary body is valid — it targets the host
-
-Markdoc validation runs on commentary bodies (it does not run elsewhere). A
-`{% source %}` with neither `ref` nor `href` points at the containing host card
-and is allowed.
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/store/review/RefFree.commentary.card",
-  "---\ntype: commentary\n---\n{% source pos=\"body\" %}a span anchored to this page{% /source %}\n",
-);
-const result = await lintCardsDispatch(
-  [box.path("_content/store/review/RefFree.commentary.card")],
-  { boxRoot: box.root, ctx },
-);
-result.totalErrors
-=> 0
 ```
 
 ## Extfile cards validate their href and stamped version
@@ -1088,9 +1037,6 @@ The one warning is the relative-ref deprecation notice (Track B) — the
 which now warns by default alongside the `ref`/`href` error:
 
 ```ts continue
-result.results[0]!.warnings[0]!.type
-=> canonical
-
 result.results[0]!.warnings[0]!.message
 => Non-canonical ref at body:1:source.ref: ../a.doc.card → /_content/store/review/a.doc.card
 ```

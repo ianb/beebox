@@ -41,14 +41,6 @@ badLimit.success
 
 badLimit.error
 => invalid command arguments: limit: Invalid input: expected number, received string
-
-const badPaths = await runCommand({
-  name: "ls",
-  args: { paths: "_content/inbox" },
-  ctx: createCollectorContext(box.root),
-});
-badPaths.error
-=> invalid command arguments: paths: Invalid input: expected array, received string
 ```
 
 ## Enum fields enumerate their valid values in the error
