@@ -18,7 +18,7 @@ The repository is a monorepo: the Bee Box engine, a Chrome extension
 framework extracted for reuse (agent-doctest), a shared lint and TypeScript
 preset (personal-vibe-check), and the generator for this site. All of it is
 TypeScript, managed as pnpm workspaces from one root install. Running it
-from source is a pnpm install and a `bbx init` of your own box; the
+from source is a pnpm install and a `bbx engine init` of your own box; the
 developer install page has the sequence and prerequisites.
 
 Tests are doctests: markdown files under test/ whose fenced code blocks run

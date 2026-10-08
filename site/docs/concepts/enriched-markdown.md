@@ -32,6 +32,13 @@ appear.
   query over these marks, so a task written inside a project note shows up
   on the plate without being copied anywhere.
 
+Around the marks the body is ordinary markdown plus a few extras: a backslash
+ends a line inside a paragraph, footnotes are numbered at the end, a table cell
+that needs several lines or a merge is written as a web-page table, and a short
+allow-list of formatting elements (collapsible sections, subscripts, line breaks)
+works while other tags show as literal text. The same rules apply to chat
+messages and to Markdown pages that a publication renders.
+
 Other marks exist for particular kinds of card (a recipe's ingredients and
 steps, a briefing's purpose and corrections, a capture session's timeline),
 and a box can add its own. The baseline three are the ones the whole system

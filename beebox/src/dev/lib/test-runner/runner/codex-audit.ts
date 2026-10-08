@@ -1,9 +1,9 @@
 /** Adapt Codex's live provider activity into knowledge-audit observations. */
 
-import type { CodexObservedActivity } from "../../../core/agent/codex-run/core.js";
+import type { CodexObservedActivity } from "../../../../core/agent/codex-run/core.js";
 import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-observation.js";
-import { AGENTS_MD, CLAUDE_MD } from "../../../core/agent-instruction-files.js";
-import type { AgentBehavior } from "./runner.js";
+import { AGENTS_MD, CLAUDE_MD } from "../../../../core/agent-instruction-files.js";
+import type { AgentBehavior } from "./run-test.js";
 
 /** Pure normalization boundary for fixture tests and provider parity checks. */
 export function codexBehaviorFromActivity(

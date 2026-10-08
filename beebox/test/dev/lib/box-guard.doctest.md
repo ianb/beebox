@@ -16,7 +16,7 @@ import { assertStandaloneBox, assertCleanAuditBox } from "../../../src/dev/lib/b
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { generateDocs } from "../../../src/core/docs-gen/generate/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { runTest } from "../../../src/dev/lib/test-runner/runner.js";
+import { runTest } from "../../../src/dev/lib/test-runner/runner/run-test.js";
 
 // Run the guard, returning the thrown error's class name, or "ok".
 async function guard(p) {

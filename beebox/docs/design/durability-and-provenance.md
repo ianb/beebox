@@ -21,7 +21,7 @@ what happened.
 Directory location and status fields determine what has and hasn't been
 processed — there is no external queue or database to consult. Wakeup and the
 reactor decide what needs doing by inspecting the tree (pending job cards in
-`box/jobs/`, unjobbed inbox items, `status:` fields), which is why wakeup is
+`_bookkeeping/jobs/`, unjobbed inbox items, `status:` fields), which is why wakeup is
 idempotent: call it anytime; it looks and acts. (Salvaged from the MVP
 implementation guide — this framing predates the reactor and still holds.)
 

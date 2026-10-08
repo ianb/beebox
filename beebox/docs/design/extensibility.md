@@ -6,7 +6,7 @@ Extensibility prioritizes understanding over plugin architecture: the primary
 mechanism is **giving the agent the knowledge to compose existing pieces** —
 concepts, best practices, discovered facts ("AVIF re-encoding halves image
 size" becomes part of what the box knows) — plus **small typed artifacts** it
-can author: box-local schemas (`config/schemas/`), box skills, box-authored
+can author: box-local schemas (`src/schemas/` in the box), box skills, box-authored
 views. "No plugins" means no registry, marketplace, or lifecycle framework.
 
 Status honestly (ruling 18): this is **actively the plan, and neither part
@@ -36,8 +36,9 @@ The old vision named composable interaction modes (Narration Mode, Factual
 Mode) plus "chat instructions" as a triage-extension concept. Where that
 landed (ruling 19):
 
-- **Modes don't surface to users**, and nothing in the system is called a
-  mode. Narration shipped as three features plus a system-prompt overlay;
+- **Modes don't surface to users** as a framework. (2026-10: the UI does use
+  the words "narration mode" for the voice toggle and "Capture mode" for
+  composer capture.) Narration shipped as three features plus a system-prompt overlay;
   the mode-container framework (Activities) was removed.
 - The concept is **half-true as a design instinct** — mode-shaped ideas keep
   arriving (e.g. a Listening Mode idea the boxholder likes) and ship as

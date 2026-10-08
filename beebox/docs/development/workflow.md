@@ -83,6 +83,10 @@ Non-trivial work gets a plan before it is built. Plans live in
 `workstream`, and an `issues` list. A plan is a complete unit of work, designed
 and shipped end to end, and it is exactly the size of work the cross-model rule
 covers, so it gets reviewed by the other family first.
+Work that changes what a person experiences of the box also gets a design
+section, written with the `bbx-design` skill: the situations it serves, the
+moment and surface where the box acts or stays quiet, and the values in
+[spirit.md](../architecture/spirit.md) it serves and risks.
 
 The taxonomy separates three things that used to be mixed: proposals, records of
 shipped work, and reference documentation. When the work lands, `finish`

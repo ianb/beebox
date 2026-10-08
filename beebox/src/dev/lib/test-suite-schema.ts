@@ -20,8 +20,22 @@ const regexPatternSchema = z.string().min(1).refine((pattern) => {
 const searchWhereSchema = z.enum(["web", "box", "any"]);
 export type SearchWhere = z.infer<typeof searchWhereSchema>;
 
-export const auditTestSchema = z.object({
+/**
+ * Who is audited: `box` (default) a box agent in a box, `dev` a headless
+ * Claude Code session in this monorepo checkout, which loads the dev
+ * guidance (CLAUDE.md files, skills) instead of box guidance.
+ */
+const auditSurfaceSchema = z.enum(["box", "dev"]);
+export type AuditSurface = z.infer<typeof auditSurfaceSchema>;
+
+/** Fields that need a box, card files, Bash, or web tools — none exist in a dev audit. */
+const BOX_ONLY_FIELDS = [
+  "cards_contain", "cards_not_under", "bash_contains", "should_search", "context_dir", "fixture", "chat_mode",
+] as const;
+
+const auditTestObjectSchema = z.object({
   id: z.string(),
+  surface: auditSurfaceSchema.optional(),
   prompt: z.string(),
   expected_level: z.string(),
   watch_for: z.string(),
@@ -77,6 +91,15 @@ export const auditTestSchema = z.object({
    * too.
    */
   chat_mode: z.boolean().optional(),
+});
+
+export const auditTestSchema = auditTestObjectSchema.superRefine((test, ctx) => {
+  if (test.surface !== "dev") return;
+  for (const field of BOX_ONLY_FIELDS) {
+    if (test[field] !== undefined) {
+      ctx.addIssue({ code: "custom", path: [field], message: `${field} needs a box agent; a surface: dev audit cannot use it` });
+    }
+  }
 });
 export type AuditTest = z.infer<typeof auditTestSchema>;
 

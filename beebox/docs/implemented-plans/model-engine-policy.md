@@ -237,7 +237,7 @@ seam, for two concrete reasons:
   A release note is not a substitute for a per-surface decision.
 - **It would move test-harness runs off their baseline.** The scenario validator
   (`src/scenario/runner.ts:111`) and the knowledge-audit runner
-  (`src/dev/lib/test-runner.ts` (moved to `beebox/src/dev/lib/test-runner/runner.ts`)) also go through `createAgent`; making their
+  (`src/dev/lib/test-runner.ts` (moved to `beebox/src/dev/lib/test-runner/runner/run-test.ts`)) also go through `createAgent`; making their
   model depend on a box's config makes runs non-comparable across boxes.
 
 Triage, the chat reviewer, the retro observer, and procedure steps keep today's

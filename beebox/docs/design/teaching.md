@@ -17,7 +17,9 @@ design guessed:
   the boxholder implicitly taught, integrates it as beliefs with
   recurrence-based confidence, and turns authoritative changes into question
   cards (`../implemented-plans/box-retrospectives.md`).
-- **Briefing cards** — per-directory agent context.
+- **Briefing cards** — the root briefing compiles into the box's `CLAUDE.md`;
+  directory briefings exist but are not compiled into agent context
+  (`src/core/docs-gen/compile/core.ts`).
 - **Category rules on landmark cards** — triage corrections accrete as prose
   rules at the destination ([`../triage.md`](../triage.md)).
 
