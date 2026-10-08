@@ -64,12 +64,16 @@ const notes = existsSync(notesPath) ? readFileSync(notesPath, "utf8") : "";
 interface Sidecar { timestamp: string, url: string }
 const shotDir = join(runDir, "shots");
 const sidecars = existsSync(shotDir)
-  ? readdirSync(shotDir).filter((f) => f.endsWith(".png.json")).toSorted()
+  ? readdirSync(shotDir).filter((f) => f.endsWith(".png.json"))
   : [];
-const marks = sidecars.map((f) => ({
-  name: f.slice(0, -9),
-  at: new Date(readJson<Sidecar>(join(shotDir, f)).timestamp),
-}));
+// Order by the recorded time, not the filename: a walker can number a shot out of
+// sequence, and a filename sort then reports a long "wait" that never happened.
+const marks = sidecars
+  .map((f) => ({
+    name: f.slice(0, -9),
+    at: new Date(readJson<Sidecar>(join(shotDir, f)).timestamp),
+  }))
+  .toSorted((a, b) => a.at.getTime() - b.at.getTime());
 
 const spanMinutes = marks.length >= 2
   ? (marks[marks.length - 1]!.at.getTime() - marks[0]!.at.getTime()) / 60000

@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { AgentBrowserError, getUrl, run, runPassthrough } from "agent-browser-typed";
 import { reclaimWorktreeBrowsers } from "../../bin/process-cleanup.js";
 import { annotatedSnapshot, checkedAction, getWithTarget } from "./act.js";
@@ -167,6 +170,10 @@ async function main(): Promise<number> {
     return annotatedSnapshot(args.slice(1), ctx);
   }
 
+  if (sub === "upload") {
+    args = [sub, ...uploadArgs(args.slice(1))];
+  }
+
   if (TARGET_COMMANDS.has(sub)) {
     return checkedAction({ sub, args: args.slice(1), ctx });
   }
@@ -209,3 +216,19 @@ main().then((code) => {
   process.stderr.write(`browse: unexpected error: ${String(e)}\n`);
   process.exit(1);
 });
+
+/**
+ * `upload <target> <file>...` hands the paths to the browser daemon, which resolves
+ * a relative path against its own working directory. The page then receives an
+ * empty File that fails on read, and the app reports a format or network fault
+ * that is ours (B-inventory journey, 2026-10-08). Resolve against the caller's
+ * directory, and refuse a file that does not exist.
+ */
+function uploadArgs(rest: readonly string[]): string[] {
+  return rest.map((arg, index) => {
+    if (index === 0 || arg.startsWith("-")) return arg;
+    const absolute = resolve(process.cwd(), arg);
+    if (!existsSync(absolute)) throw new BrowseConfigError(`upload: no such file: ${absolute}`);
+    return absolute;
+  });
+}

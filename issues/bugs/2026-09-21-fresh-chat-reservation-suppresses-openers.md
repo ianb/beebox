@@ -36,3 +36,7 @@ existing conversation when repairing it. No product fix was attempted.
 
 Related: [the broader first-screen design issue](../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)
 and [first-run experience](../features/2026-07-20-first-run-experience.md).
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Still present in every 2026-10-08 walk: [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R1), [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (R1), [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 1), [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 2), [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 1) and [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 3). Each box had a briefing card with two `openers`. The first view showed only "Start a conversation." and the URL already carried a reserved `session=`. C and F confirmed the gate at `InteractiveChat/shell.tsx:78-80`, which fetches openers only when `sessionInput === "new"`. The priority may be stale given the recurrence.
