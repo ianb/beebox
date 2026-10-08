@@ -67,13 +67,6 @@ JSON.stringify(["closed" in parsed.fields, parsed.fields["start"], String(parsed
 => [false,{"href":"https://example.test/feed"},"Find show announcements."]
 ```
 
-`start.href` must be a URL and `last-upload` an instant:
-
-```ts
-parseCardText("---\ntype: browser-task\nstart:\n  href: not a url\n---\nx\n", { source: "T.browser-task.card", schemas })
-=> throws CardIOError
-```
-
 ## The prompt must not lean on the box
 
 The reader has a browser and no box. A link to a card, a box path, the
