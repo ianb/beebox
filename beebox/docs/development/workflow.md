@@ -59,9 +59,15 @@ record, and a run ending with no report is itself a failure.
 
 `bin/schedules list` is the catalog. The jobs, by cadence: hourly on `main`,
 `box-convergence`, `deferred-issues`, and `full-suite`; daily, `alert-filing`,
-`docling-update`, and `sdk-update`; weekly, `agent-docs-refresh`,
-`cross-box-leak-scan`, `knip-sweep`, `manual-tests`, `smoke-review`,
-`supplemental-lint`, and `tour-check`.
+`docling-update`, and `sdk-update`; every three days, `retrospective`; weekly,
+`agent-docs-refresh`, `cross-box-leak-scan`, `knip-sweep`, `manual-tests`,
+`smoke-review`, `supplemental-lint`, and `tour-check`.
+
+`retrospective` reads the CODING_FEEDBACK notes written since its last run,
+with skill-usage patterns and escaped bugs that lack a test or check. A finding
+that repeats becomes an edit to tracked guidance or an issue, committed on the
+`worktree-retrospective` branch. The branch is not landed. A `confirm` exhibit
+holds the digest: the boxholder lands the branch or vetoes an edit.
 
 ## Document comments
 

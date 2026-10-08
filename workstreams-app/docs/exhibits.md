@@ -18,6 +18,7 @@ vocabulary: `beebox/docs/plans/workstream-exhibits.md`.
 
 `<worktree>/exhibits` is a symlink to `<parent>/workstream-exhibits/<workstream>/`.
 Content survives a worktree cull; removing the worktree removes only the link.
+A sibling `coding-feedback/` directory holds CODING_FEEDBACK notes (`bin/coding-feedback`); the app never lists or serves it.
 
 `bin/exhibits add --title <t> --ask <type> --prose <p> [--option <label>]…
 [files…]` does all of that: it derives the workstream from the checkout you run

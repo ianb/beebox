@@ -118,7 +118,9 @@ JSON.stringify({ valid: exhibitManifestSchema.safeParse(written).success })
 
 Refusals, all fail-closed: an existing slug is never overwritten (the message
 suggests the `-2` retry), `decide` without at least two options is not a
-decision, and `apps` and traversal-shaped names are refused as workstreams.
+decision, `apps` and traversal-shaped names are refused as workstreams, and a
+title whose slug is `coding-feedback` (the CODING_FEEDBACK notes directory) is
+refused.
 
 ```ts
 const collision = await run([
@@ -130,6 +132,9 @@ const noOptions = await run([
 ]);
 const reserved = await run([
   "add", "--workstream", "apps", "--title", "Sneaky", "--ask", "fyi", "--prose", "p",
+]);
+const feedbackSlug = await run([
+  "add", "--workstream", "demo", "--title", "Coding Feedback", "--ask", "fyi", "--prose", "p",
 ]);
 const traversal = await run([
   "add", "--workstream", "../escape", "--title", "Sneaky", "--ask", "fyi", "--prose", "p",
@@ -144,12 +149,14 @@ JSON.stringify({
   collisionKeptOriginal: JSON.parse(await readFile(join(dir, "exhibit.json"), "utf8")).ask.type === "decide",
   noOptions: noOptions.code !== 0 && noOptions.stderr.includes("at least two --option"),
   reserved: reserved.code !== 0 && reserved.stderr.includes("reserved"),
+  feedbackSlug: feedbackSlug.code !== 0 && feedbackSlug.stderr.includes("reserved")
+    && await lstat(join(store, "demo/coding-feedback")).then(() => false, () => true),
   traversal: traversal.code !== 0 && traversal.stderr.includes("invalid workstream name"),
   multipleDocs: multipleDocs.code !== 0 && multipleDocs.stderr.includes("only one Markdown document"),
   multipleDocsCreatedNothing: await lstat(join(store, "demo/multiple-docs")).then(() => false, () => true),
   unknownCommand: unknown.code === 1 && unknown.stderr.includes("unknown command"),
 })
-=> {"collision":true,"collisionKeptOriginal":true,"noOptions":true,"reserved":true,"traversal":true,"multipleDocs":true,"multipleDocsCreatedNothing":true,"unknownCommand":true}
+=> {"collision":true,"collisionKeptOriginal":true,"noOptions":true,"reserved":true,"feedbackSlug":true,"traversal":true,"multipleDocs":true,"multipleDocsCreatedNothing":true,"unknownCommand":true}
 ```
 
 The workstream defaults from the cwd's checkout: a worktree on branch
