@@ -2,7 +2,7 @@
 
 `TodoItem` is how a todo reads in a card body, in a card's frontmatter
 `todos:`, and in the todo list (`docs/plans/todos-ui.md`, Track 2). A
-checkbox leads, named by the status; the words carry the status
+checkbox leads, named by the todo's words; the words carry the status
 treatment; date and assignment chips follow. Plate state comes from the
 server, so only a todo the server calls `escalated` reads as overdue.
 
@@ -45,8 +45,9 @@ function summary(html) {
 ## The four statuses
 
 Only `done` is checked. Rendered with no `TodoActionsContext` (as here) every
-checkbox is disabled; `todo-actions.doctest.md` covers the live one. Each is
-named by its status, so a parked or dropped todo is announced as what it is.
+checkbox is disabled; `todo-actions.doctest.md` covers the live one. These
+todos carry no known words (`text: null`), so each checkbox falls back to its
+status name.
 
 ```ts
 summary(render({ status: "open" }))
@@ -60,6 +61,18 @@ summary(render({ status: "parked" }))
 
 summary(render({ status: "dropped" }))
 => unchecked | disabled | Dropped | text-warm-400 line-through
+```
+
+## The checkbox is named by the todo
+
+Given the todo's words, the checkbox is named by them, so a list of todos is
+not a list of identical "Open" boxes. The checked state already says open or
+done; a parked or dropped todo, which a checkbox cannot express, leads with its
+status.
+
+```ts
+["open", "done", "parked", "dropped"].map((status) => summary(render({ status, text: "Call the roofer" })).split(" | ")[2]).join(" / ")
+=> Call the roofer / Call the roofer / Parked: Call the roofer / Dropped: Call the roofer
 ```
 
 The status and the locator ride on the element as data attributes, which is
