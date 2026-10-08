@@ -49,3 +49,12 @@ the ref to a node for that. Related:
 (a name of "Open" is also what makes a substring match easy).
 
 Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 37).
+
+## Residual (2026-10-08 review)
+
+A cross-model review found one case the fix does not cover. An id-less ref
+can still pass when a covering element has the same bounding box and the same
+accessible name as the control: `elementsFromPoint` lists the cover first, so
+the check accepts the cover and the click can miss the control. Not fixed,
+because resolving a ref to its DOM element needs changes upstream. The case is
+rare.
