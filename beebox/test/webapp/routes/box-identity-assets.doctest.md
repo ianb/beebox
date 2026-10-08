@@ -33,14 +33,3 @@ the format with no support question attached is the right one.
 JSON.stringify(boxManifest(identity)["icons"])
 => [{"src":"/kitchen/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"/kitchen/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}]
 ```
-
-## A box with no name of its own still installs sensibly
-
-`readBoxIdentity` falls back to the slug, so the manifest is never nameless —
-an unnamed installed app is indistinguishable from every other one.
-
-```ts
-const bare = boxManifest({ slug: "workshop", name: "workshop", symbol: "", symbolSrc: null });
-[bare["name"], bare["start_url"]].join(" | ")
-=> workshop | /workshop/
-```

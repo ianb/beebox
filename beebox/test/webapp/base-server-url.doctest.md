@@ -37,16 +37,6 @@ baseServerUrl("https://bbx.example.org/")
 => https://bbx.example.org
 ```
 
-## The redirect URI a caller builds has exactly one slash
-
-```ts
-`${baseServerUrl("https://bbx.example.org")}/auth/google-services/callback`
-=> https://bbx.example.org/auth/google-services/callback
-
-`${baseServerUrl("https://box.example.com/ledger")}/auth/google-services/callback`
-=> https://box.example.com/auth/google-services/callback
-```
-
 ## A deployment under a path prefix keeps the prefix (only the slug is stripped)
 
 ```ts

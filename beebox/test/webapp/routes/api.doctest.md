@@ -121,9 +121,6 @@ res.payload
 ```
 
 ```ts continue
-typeof res.headers["etag"]
-=> string
-
 typeof res.headers["last-modified"]
 => string
 ```

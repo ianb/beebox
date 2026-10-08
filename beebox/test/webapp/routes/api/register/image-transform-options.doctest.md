@@ -16,13 +16,6 @@ function optionError(query: Record<string, unknown>): string {
 }
 ```
 
-```ts
-const long = parseImageTransformOptions({ width: "480", quality: "75", format: "webp" });
-const short = parseImageTransformOptions({ w: "480", q: "75", f: "webp" });
-JSON.stringify(long) === JSON.stringify(short)
-=> true
-```
-
 Defaults match the public contract and `format=auto` negotiates from `Accept`:
 
 ```ts

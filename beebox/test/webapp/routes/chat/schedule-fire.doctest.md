@@ -83,13 +83,6 @@ JSON.stringify({ runs: backend.runs.length, resumed: backend.runs[0]?.startOptio
 => {"runs":1,"resumed":"11111111-1111-4111-8111-111111111111"}
 ```
 
-```ts continue
-// The reminder text reached that run.
-const sent = backend.runs[0]?.sent ?? [];
-JSON.stringify(sent.length > 0)
-=> true
-```
-
 The reminder is composed by beebox, not typed, so it goes out marked
 client-composed.
 

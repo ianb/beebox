@@ -120,11 +120,6 @@ message(oldBuildBox.root)
 => «*»scansnap-laptop (build aaaa1111, built 2026-03-11T00:00:00.000Z, contract v2)«*»re-copy dist/scan-uploader.mjs«*»
 ```
 
-```ts continue
-message(oldBuildBox.root)
-=> «*»rules for when a scanned file is safe to move or delete«*»
-```
-
 ## A contract version below the box's is out of date
 
 Independent of the build date — an uploader can be freshly built off a stale

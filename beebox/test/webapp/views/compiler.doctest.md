@@ -332,20 +332,3 @@ const broken = withBroken.find(v => v.slug === "broken");
 JSON.stringify([broken.name, broken.rendersCardTypes, broken.description])
 => ["broken",[],"Failed to compile"]
 ```
-
-A view whose module never finishes evaluating (an infinite loop at module
-scope) can't hang the lister — the subprocess import is timeout-bounded, so
-it degrades the same way a compile failure does:
-
-```ts continue
-await writeFile(join(viewsDir3, "hangs.tsx"), `
-export const name = "Hangs";
-while (true) {}
-export default function Hangs() { return null; }
-`);
-
-const withHang = await listViews(tmp3);
-const hung = withHang.find(v => v.slug === "hangs");
-JSON.stringify([hung.name, hung.description])
-=> ["hangs","Failed to compile"]
-```

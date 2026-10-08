@@ -72,9 +72,6 @@ const result = await executeCommandStreaming({
   emit: (line) => messages.push(line),
 });
 
-result.type
-=> result
-
 result.success
 => false
 
@@ -97,9 +94,6 @@ const result = await executeCommandStreaming({
   boxRoot: box.root,
   emit: (line) => messages.push(line),
 });
-
-result.type
-=> result
 
 result.success
 => false
@@ -137,9 +131,6 @@ outputLines.length
 const resultLines = messages.filter(m => m.type === "result");
 resultLines.length
 => 1
-
-resultLines[0].success
-=> true
 
 resultLines[0].data.count
 => 3

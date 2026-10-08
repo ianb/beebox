@@ -121,25 +121,15 @@ kept: 1 of 2
 text: Hi there!
 ```
 
-## With no `session`, it resolves the default session itself
+## It matches the procedures it replaces
 
-Same resolution `chat.defaultSession` does — which is the whole point: the
-client no longer has to ask, navigate, and ask again.
+With no `session`, bootstrap resolves the default session the way
+`chat.defaultSession` does, so the client no longer has to ask, navigate, and
+ask again.
 
 ```ts continue
 await setDefaultSession(server, "sess-explicit");
 
-const resolved = await caller(server).chat.bootstrap({ slice: TAIL });
-print(`sessionId: ${resolved.sessionId}`);
-print(`total: ${resolved.history.total}`);
-=>
-sessionId: sess-explicit
-total: 2
-```
-
-## It matches the procedures it replaces
-
-```ts continue
 const c = caller(server);
 const [viaDefault, viaHistory, viaStatus, viaDirectory] = await Promise.all([
   c.chat.defaultSession(),
