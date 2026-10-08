@@ -115,7 +115,7 @@ Production effect is unmeasured until deploy; `pnpm perf:load --target prod
   maps on (debugging matters more than speed at this phase); not pursued. Lazy imports of rarely used server dependencies
   (claude-agent-sdk, google-auth-library, grammy, node-apn, react-dom) may
   save another 50–80 ms (`pnpm perf:serve-start --cpu-prof`).
-- **Entry script.** It is still 555 KB gzip, most of it the chat shell.
+- **Entry script.** The capture overlay and image lightbox now load when opened (initial JS 555 -> 533 KB gzip). It is still 533 KB gzip, most of it the chat shell.
   Smaller candidates are capture, voice and transcription, the lightbox,
   and the theme picker, each a few KB to 15 KB gzip.
 - **Trailing history refresh.** About 5 s after every load, the chat

@@ -13,8 +13,12 @@
  */
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { ImageLightbox, type LightboxImage } from "./ImageLightbox";
+import type { LightboxImage } from "./ImageLightbox";
+import { lazyOverlay } from "../lib/lazy-component";
 import { isRecord } from "@shared/is-record";
+
+// The viewer and its gesture code load when an image is first opened.
+const ImageLightbox = lazyOverlay(() => import("./ImageLightbox"), (m) => m.ImageLightbox);
 
 interface LightboxState {
   images: LightboxImage[];

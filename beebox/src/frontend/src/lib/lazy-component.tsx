@@ -51,23 +51,36 @@ class LazyChunkBoundary extends Component<{ children: ReactNode }, { failed: Laz
   }
 }
 
-// Returns a plain function component, not `ComponentType<P>`: that union includes class
-// components, which a narrower-props `ComponentType` slot (`renderers/view.tsx`) rejects.
-export function lazyComponent<M, P extends object>(load: () => Promise<M>, pick: (module: M) => ComponentType<P>): (props: P) => ReactElement {
+function makeLazy<M, P extends object>(load: () => Promise<M>, options: { pick: (module: M) => ComponentType<P>; fallback: () => ReactNode }): (props: P) => ReactElement {
   // The lazy component takes the caller's props as one concrete `props` field:
   // React's lazy typing (`PropsWithRef<P>`) cannot be checked against a
   // generic `P` when they are spread directly.
   const Lazy = lazy(async () => {
     let Loaded: ComponentType<P>;
     try {
-      Loaded = pick(await load());
+      Loaded = options.pick(await load());
     } catch (e) {
       throw new LazyChunkLoadError(e);
     }
     return { default: ({ props }: { props: P }) => <Loaded {...props} /> };
   });
   function LazyComponent(props: P) {
-    return <LazyChunkBoundary><Suspense fallback={<StatusMessage>Loading…</StatusMessage>}><Lazy props={props} /></Suspense></LazyChunkBoundary>;
+    return <LazyChunkBoundary><Suspense fallback={options.fallback()}><Lazy props={props} /></Suspense></LazyChunkBoundary>;
   }
   return LazyComponent;
+}
+
+// Returns a plain function component, not `ComponentType<P>`: that union includes class
+// components, which a narrower-props `ComponentType` slot (`renderers/view.tsx`) rejects.
+export function lazyComponent<M, P extends object>(load: () => Promise<M>, pick: (module: M) => ComponentType<P>): (props: P) => ReactElement {
+  return makeLazy(load, { pick, fallback: () => <StatusMessage>Loading…</StatusMessage> });
+}
+
+/**
+ * `lazyComponent` for something rendered only once the user opens it (a
+ * full-screen overlay): it shows nothing while its chunk loads, rather than a
+ * "Loading…" line in the page.
+ */
+export function lazyOverlay<M, P extends object>(load: () => Promise<M>, pick: (module: M) => ComponentType<P>): (props: P) => ReactElement {
+  return makeLazy(load, { pick, fallback: () => null });
 }
