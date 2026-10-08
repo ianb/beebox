@@ -83,7 +83,7 @@ export function WorkspaceCanvas({ children, ...callbacks }: CardCallbacks & { ch
       return <WorkspaceCard key={path} tab={tab} pane={pane} visible={workspace.displayReady === true && visiblePaths.includes(path)} {...callbacks} />;
     })}
     <div hidden={!workspace.transcriptVisible} {...(!workspace.transcriptVisible ? { inert: "" } : {})} className={workspace.transcriptVisible ? "flex flex-col min-h-0 min-w-0 relative" : "hidden"}
-      style={{ gridRow: 1, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1", background: "var(--bbx-desk-background)" }}>
+      style={{ gridRow: 1, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1", background: "var(--bbx-desk-pattern, none), var(--bbx-desk-background)" }}>
       <TranscriptFloatingControls restore={projection.restorePane ? <RestoreCardsControl /> : null}>{children}</TranscriptFloatingControls>
     </div>
   </div></>;
