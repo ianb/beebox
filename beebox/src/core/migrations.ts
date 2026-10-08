@@ -208,6 +208,10 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // The publication card is the publication: fold src/publications/<name>/ into
   // <name>.publication.card + <name>.attach/; retire the publications guidance.
   { name: "publication-cards-2026-10", script: "src/scripts/migrate/publication-cards/run.ts" },
+  // Chat openers move from briefing cards to the place's landmark
+  // (`navigation.openers`). Fails closed (exit 1, nothing written) on a list it
+  // cannot move without a person's choice. See the script's plan.ts.
+  { name: "briefing-openers-2026-10", script: "src/scripts/migrate/briefing-openers/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

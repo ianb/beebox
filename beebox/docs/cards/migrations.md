@@ -605,6 +605,29 @@ stock guide, personality or schedule becomes exactly the current template.
 Idempotent. See
 `src/scripts/migrate/card-fields/source.ts`.
 
+#### `briefing-openers-2026-10` (move — briefing `openers` to the landmark)
+
+Track B of `docs/plans/landmark-arrival.md`. Chat openers moved from briefing
+cards to the place's landmark (`navigation.openers`), where the chat and the
+place page read them. Per briefing: an untouched stock seed at
+`_content/briefing.briefing.card` (a `briefing-seed` hash, old or current)
+becomes the current seed and gives the root landmark the stock openers unless
+it already has an `openers` key; a list moves to the landmark in the same
+directory; a landmark that already lists openers (`[]` included) is
+authoritative, and an equal list is dropped from the briefing; a root briefing
+with no root landmark creates one. A different list (`conflict`), a non-root
+briefing with openers and no landmark (`no-place`), or an `openers` value that
+is not a list of strings (`malformed`) fails the whole box: the script prints
+each path, writes nothing, and exits 1, so no manifest entry is recorded and
+later migrations wait until a person resolves it.
+
+The script does not use the harness: it plans the whole box before writing,
+and its failure must be hard, not the harness's soft exit 2. Without `--apply`
+it prints the plan; after applying it verifies that no briefing still carries
+`openers`, and `--verify` alone runs only that check. Parked template mirrors
+under `_config/_template-updates/` are skipped. Idempotent. See
+`src/scripts/migrate/briefing-openers/plan.ts`.
+
 ## Manual runs (for debugging)
 
 The per-schema scripts are runnable standalone (`npx tsx src/scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx engine migrate`. If you do this and want it to count, append the entry yourself or run `bbx engine migrate --apply` afterwards.
