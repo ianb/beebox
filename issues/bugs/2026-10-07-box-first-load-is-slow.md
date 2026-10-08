@@ -75,3 +75,59 @@ The dev router (Vite) numbers are a different shape and are not used here.
   subprocess on the server during the load.
 
 Measurement tooling and procedure: `beebox/docs/development/performance.md`.
+
+## Results (2026-10-07, worktree-box-first-load)
+
+Local perf hub, `test1` copy with a seeded 40-turn conversation (the resume
+path), 4G with 4× CPU slowdown unless noted, medians of 5. "History" is
+`bbx:history`: the chosen conversation's history rendered.
+
+| Case | History before | History after | Initial transfer |
+| --- | --- | --- | --- |
+| First visit, box running | 2000 ms | 1412 ms (−29%) | 796 → 665 KB |
+| First visit, box stopped | 2529 ms | 2129 ms (−16%) | 794 → 627 KB |
+| Repeat visit (HTTP cache warm) | 762 ms | 414 ms (−46%) | 3 KB |
+| Slow 4G | 5626 ms | 4275 ms (−24%) | 794 → 625 KB |
+
+Fixes, each committed with its own before/after:
+
+1. `migrateBoxState` skips its file lock when the box has no legacy state.
+   Concurrent requests had queued behind the lock's 100 ms retry poll
+   (`voice.capabilities` 307 → 1.2 ms).
+2. Card views and dev harness pages load on demand. Initial JS went from
+   735 KB to 555 KB gzip. A failed chunk shows "reload the page" in its pane.
+3. A modulepreload link for the boot chunk saves one round trip.
+4. The hub's readiness poll runs every 25 ms instead of 150 ms, so a cold
+   start is about 100 ms faster.
+5. `index.html` preloads `/api/boxes`, which saves one round trip before
+   the shell.
+6. `chat.bootstrap` returns the session's `contextDir`, which saves the
+   `chat.directoryFor` round trip.
+
+Production effect is unmeasured until deploy; `pnpm perf:load --target prod
+--box <slug>` measures it.
+
+## Remaining (not done here)
+
+- **Cold box start.** `bbx serve` still spends about 450–500 ms loading
+  `dist/cli.mjs`. Of that, `--enable-source-maps` costs about 100 ms on
+  every start (`lineLengths` over the 4.5 MB bundle). Dropping it makes
+  production stack traces show bundle positions. That is a decision for
+  the developer. Lazy imports of rarely used server dependencies
+  (claude-agent-sdk, google-auth-library, grammy, node-apn, react-dom) may
+  save another 50–80 ms (`pnpm perf:serve-start --cpu-prof`).
+- **Entry script.** It is still 555 KB gzip, most of it the chat shell.
+  Smaller candidates are capture, voice and transcription, the lightbox,
+  and the theme picker, each a few KB to 15 KB gzip.
+- **Duplicate history fetch.** After the history renders from the
+  bootstrap preload, the page fetches `chat.status,chat.history` again.
+  This is not on the critical path, but it duplicates the history parse
+  and the transfer.
+- **Compression.** The edge compresses on the fly (zstd or brotli, about
+  the same size as gzip). Brotli at quality 11 at build time would be
+  smaller, if the edge passes it through. This is unverified.
+- **Edge script.** The production edge injects a RUM beacon, which adds
+  about 10 requests per load.
+- **Server work during the load.** Each fresh page load reserves a chat,
+  and the reservation warms a Claude subprocess on the server during the
+  load.
