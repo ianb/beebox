@@ -113,8 +113,7 @@ silent data corruption. No compliments, just the problems."
 
 If you wrote or delegated the change, write a CODING_FEEDBACK entry before
 sending its diff: pipe your answers to the four prompts (`bin/coding-feedback
-help`) into `bin/coding-feedback add --checkpoint implemented`. A review-only
-session skips it.
+help`) into `bin/coding-feedback add --checkpoint implemented`.
 
 Write the prompt to `scratch/cross-model/<name>.prompt.md`, then run it as a
 background shell command and wait for its completion notice (a review outlasts
