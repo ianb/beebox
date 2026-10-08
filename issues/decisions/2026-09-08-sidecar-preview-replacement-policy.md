@@ -53,3 +53,7 @@ orientation cost, not proof that replacement is the right policy or that
 restoration itself is a defect.
 
 Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Still relevant. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 26) and [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 27, 39, 112): clicking the Plate badge opens The Plate and a Browse tab beside it, and the chat disappears (F shot 07: tabs "Household jobs", "Browse", "The Plate", no chat). Opening "briefing" made a second tab and removed the chat again. F's summary: never sure what a click would do. The badge case has its own new issue; the replacement policy underneath it is still undecided. The priority may be stale given the recurrence.

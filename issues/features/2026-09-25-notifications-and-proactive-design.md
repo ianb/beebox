@@ -85,3 +85,7 @@ Plumbing is only half of it. The harder half is policy.
 - [Capture success is invisible](../bugs/2026-08-20-capture-success-is-invisible.md)
 - [Agent-maintained ideas page](2026-09-25-agent-maintained-ideas-page.md): many of its ideas depend on this.
 - [Quick drop entry points](2026-09-25-quick-drop-entry-points.md): a notification action is one candidate entry point.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Wishes and gaps from three walks, none of them a recurrence of the manual-testing items above (the walk boxes had no delivery channel, and the manual walk needs a real iPhone). [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 82): the walker wanted a phone notification, or to know something would prompt about the lent book on Sunday. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (rows 10, 11, 43, 46): the agent repeated "nothing will remind you" three times, and Settings has no notification switch ("Enable notifications" exists only in Admin, `admin/NotificationsSection/view.tsx:165`). [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 13, 51, 54, 59, 63, 94): the agent said the setting could be switched on "later" but could not say where; it is in Admin > Overview > Host (`AdminPage.tsx:117`), and neither the agent guide nor `box-docs` names it. A scheduled reminder has no link back from the card it concerns (row 94). Manual-testing stays.

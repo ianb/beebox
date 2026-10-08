@@ -48,3 +48,7 @@ Box chat needs the box's own project settings (skills, rules, hooks under the
 box). The fix is probably `settingSources: ["project"]` plus an explicit
 claude.ai-connector opt-out. Confirm that box-level skills and the
 `git mv` hook still load, as `core/box/guidance-sync/skills.ts` notes.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+More sessions loaded the connectors. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R1): three box transcripts list the host's Google Drive, Claude Docs and browser tools, and the host user's email. [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R4): both box-agent sessions list Gmail, Google Calendar, Google Drive and Claude Docs in `deferred_tools_delta`; Admin Overview shows "Logged in as" the host account (row 65). [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 8): the agent offered to look through the person's Gmail. No `mcp__` tool call occurred in any of these boxes. The A and D reports do not mention the connectors.

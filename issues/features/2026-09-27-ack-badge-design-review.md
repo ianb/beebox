@@ -54,3 +54,7 @@ developer for those opinions; do not design from the code alone.
 
 Related: [reply to selected text with an emoji](2026-09-01-selected-text-emoji-reply.md)
 is the user-to-agent direction of a similar idea.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 45, 79) and the [F-newcomer walk](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 26). The ack badge is a 14 px icon-only button (`F/components/chat/ack-badge.tsx:68-87`). Its "Edited — …" text is only an `aria-label` and the click dialog, with no `title`. The A walker (notes 8 and 11) described "tiny purple pencil icons above the message, with no label", listed them under "Do not understand", and liked them once they were explained. F saw the same names ("Edited — noted what you want this for", "Created") on the person's own messages. The priority may be stale given the recurrence.
