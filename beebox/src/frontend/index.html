@@ -12,6 +12,12 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Bee Box</title>
+    <!-- The shell renders nothing until the box list arrives (BoxValidationLayout,
+         hooks/useBoxes.ts). Asking for it here starts that request alongside the
+         entry script instead of after it has downloaded and run. A plain fetch
+         (lib/boxes.ts) matches this preload; the iOS shell's authenticated fetch
+         does not, and fetches again. -->
+    <link rel="preload" href="/api/boxes" as="fetch" crossorigin />
     <!-- Boot fallback shown inside #root until React mounts (createRoot replaces
          #root's children). If the app never mounts — e.g. its JS bundle fails to
          load — this stays visible, so a failed load reads as a message, not a

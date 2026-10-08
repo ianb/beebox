@@ -110,11 +110,11 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
   if (data.kind === "unavailable" && request.named !== true && !receiptProven && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
   if (data.kind === "unavailable") return { selection: { kind: "unavailable", contextDir, reason: data.reason === "missing-local-transcript" ? "This conversation has no saved transcript in this box." : `Conversation unavailable: ${data.reason}` } };
   retireUsedReceipt(data, params.receipts);
-  const directory = await utils.chat.directoryFor.fetch(
-    { sessionId: data.sessionId },
-    { staleTime: 0 },
-  );
+  // Bootstrap answers the session's directory too, read after any reservation
+  // recovery above. Seeding the `chat.directoryFor` cache saves the chat's own
+  // binding query (InteractiveChat's useChatBinding) the round trip as well.
+  utils.chat.directoryFor.setData({ sessionId: data.sessionId }, { contextDir: data.contextDir });
   return { selection: { kind: "ready", label: data.label ?? "Conversation", target: {
-    kind: "session", sessionId: data.sessionId, contextDir: directory.contextDir,
+    kind: "session", sessionId: data.sessionId, contextDir: data.contextDir,
   } }, initial: preload(data) };
 }

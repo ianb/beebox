@@ -2,7 +2,6 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { useEffect, useRef, useState } from "react";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
-import { BrowseBody } from "../pages/browse/BrowsePage";
 import { BrowseLocationError } from "../pages/browse/components/BrowseLocationError";
 import { legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
 import { trpc } from "../lib/trpc/client";
@@ -11,6 +10,9 @@ import { BrowseLoading } from "../pages/browse/components/BrowseLoading";
 import { useAppBarPlace } from "../components/app-bar-chrome";
 import { useCardVisible } from "../components/chat/everywhere/card-context/context";
 import { useWorkspace } from "../components/chat/workspace/WorkspaceProvider/provider";
+import { lazyComponent } from "../lib/lazy-component";
+
+const BrowseBody = lazyComponent(() => import("../pages/browse/BrowsePage"), (m) => m.BrowseBody);
 
 function browseLocationValid({
   directoryKind,

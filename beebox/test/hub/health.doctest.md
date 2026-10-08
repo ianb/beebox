@@ -16,7 +16,7 @@ import { isBoxBroken, hubVerdict } from "../../src/hub/health.js";
 /** A `BoxRuntimeStatus` with the fields the verdict ignores defaulted, so each
  *  case states only what it's testing. */
 function box(status, extra = {}) {
-  return { slug: "b", status, pid: undefined, port: undefined, restarts: 0, consecutiveFailures: 0, lastError: undefined, ...extra };
+  return { slug: "b", status, pid: undefined, port: undefined, restarts: 0, consecutiveFailures: 0, lastError: undefined, lastStart: undefined, ...extra };
 }
 ```
 

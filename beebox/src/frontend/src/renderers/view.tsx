@@ -14,14 +14,16 @@ import {
   type ResolvedViewParams,
 } from "@shared/named-views";
 import { isRecord } from "@shared/is-record";
-import { LandmarksList } from "../components/landmarks/LandmarksList";
-import { ChatsPicker } from "../components/session-pickers/ChatsPicker/view";
-import { QuestionsList } from "../components/questions/QuestionsList";
-import { HistoryViewCard } from "../components/history/HistoryViewCard/view";
 import { Card } from "../components/ui/Card";
 import { Text } from "../components/ui/Text";
 import { Hint } from "../components/ui/Hint";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
+import { lazyComponent } from "../lib/lazy-component";
+
+const LandmarksList = lazyComponent(() => import("../components/landmarks/LandmarksList"), (m) => m.LandmarksList);
+const ChatsPicker = lazyComponent(() => import("../components/session-pickers/ChatsPicker/view"), (m) => m.ChatsPicker);
+const QuestionsList = lazyComponent(() => import("../components/questions/QuestionsList"), (m) => m.QuestionsList);
+const HistoryViewCard = lazyComponent(() => import("../components/history/HistoryViewCard/view"), (m) => m.HistoryViewCard);
 
 /**
  * Params arrive pre-merged with provenance: card frontmatter (validated by

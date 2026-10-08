@@ -16,7 +16,7 @@
 import { z } from "zod";
 import { readAcceptedMessages, type AcceptedMessage, type HistoryMarker } from "../../../../core/chat/session/accepted-messages.js";
 import { publicProcedure } from "../../procedures.js";
-import { getMostActive } from "../../../../core/chat/session/history.js";
+import { getDirectoryForSession, getMostActive } from "../../../../core/chat/session/history.js";
 import { historySliceSchema, loadHistoryForSession, type SessionHistory } from "./session-procedures.js";
 import { readSessionStatus, type ChatSessionStatus } from "./control-procedures.js";
 import { titleForSession } from "../../../../core/chat/session/list/core.js";
@@ -74,12 +74,28 @@ export type ChatBootstrap =
       kind: "resumable";
       sessionId: string;
       history: SessionHistory;
+      /** The directory the session is bound to (`sessionContextDir`), so the page needs no `chat.directoryFor` round trip. */
+      contextDir: string;
     })
   | (ChatBootstrapBase & UnavailableDetail & {
       kind: "unavailable";
       sessionId: string;
       history: null;
     });
+
+/**
+ * The directory a session is bound to: its recorded binding, else its live
+ * reservation's, else `""`. `""` (the box root), never null: a chat with no
+ * recorded binding is a ROOT chat, the same missing→"" rule `byLandmark`
+ * applies. The app bar treats null as "no place at all", which left root
+ * chats without a folder menu (boxholder, 2026-08-27→30). Shared by
+ * `chat.directoryFor` and the resumable bootstrap.
+ */
+export async function sessionContextDir(boxRoot: string, sessionId: string): Promise<string> {
+  const recorded = await getDirectoryForSession(boxRoot, sessionId);
+  const reserved = getChatRuntime(boxRoot)?.registry.getReservation(sessionId) ?? null;
+  return recorded ?? reserved?.contextDir ?? "";
+}
 
 export const chatBootstrapProcedure = {
   bootstrap: publicProcedure
@@ -154,12 +170,17 @@ export const chatBootstrapProcedure = {
           pending: acceptedFor([]),
         };
       }
-      const [history, label] = await Promise.all([loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice }), titleForSession(ctx.boxRoot, sessionId)]);
+      const [history, label, contextDir] = await Promise.all([
+        loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice }),
+        titleForSession(ctx.boxRoot, sessionId),
+        sessionContextDir(ctx.boxRoot, sessionId),
+      ]);
       return {
         kind: "resumable",
         sessionId,
         history,
         label,
+        contextDir,
         status: await readSessionStatus(ctx.boxRoot, sessionId),
         pending: acceptedFor(history.entries.map((entry) => ({ uuid: entry.uuid, timestamp: entry.timestamp }))),
       };

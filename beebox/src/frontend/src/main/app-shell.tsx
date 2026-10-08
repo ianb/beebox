@@ -40,6 +40,8 @@ import { QuickSearchOverlay } from "../components/search/QuickSearchOverlay";
 import { NotificationBanner } from "../components/notifications/NotificationBanner";
 import { usePresenceHeartbeat } from "../hooks/usePresenceHeartbeat";
 import { AgentReadinessGuard } from "../components/agents/AgentReadiness";
+import { useFirstLoadMark } from "../lib/first-load-marks";
+import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
 
 
 // Re-exported for the route tree
@@ -97,6 +99,7 @@ export function BoxValidationLayout() {
   useBoxIdentityMeta(boxesState.boxes.find((b) => b.slug === boxSlug) ?? null);
 
   useDropBoxScopedCache(boxSlug);
+  useFirstLoadMark(FIRST_LOAD_MARKS.boxValidated, boxesState.loaded && boxExists);
 
   if (!boxesState.loaded) return <StatusMessage>Loading box...</StatusMessage>;
   if (boxesState.error) return <BoxValidationError />;
@@ -116,6 +119,7 @@ export function ProductLayout() {
   const standalonePage = useStandalonePage();
   const handleToggleSourceView = sourceView.toggle;
   const handleCloseSourceView = sourceView.toggle;
+  useFirstLoadMark(FIRST_LOAD_MARKS.shell, true);
   return (
     <BoxShellProviders key={boxSlug} boxSlug={boxSlug ?? ""}>
         <DocumentIcon />

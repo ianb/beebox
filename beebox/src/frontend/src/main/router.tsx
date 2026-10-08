@@ -6,7 +6,7 @@
  * typed boxSlug params automatically.
  */
 
-import { createRouter, createRoute, createRootRoute, redirect } from "@tanstack/react-router";
+import { createRouter, createRoute, createRootRoute, lazyRouteComponent, redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
 // --- Page imports ---
@@ -24,10 +24,6 @@ import { BoxRedirect, BoxValidationLayout, DevHarnessLayout, ProductLayout, Root
 import { RouteError } from "../components/RouteError";
 import { LoginPage } from "../pages/login/LoginPage";
 import { SetupPage } from "../pages/login/SetupPage";
-import { SpeechTestPage } from "../pages/dev/SpeechTestPage";
-import { ComposerStatesPage } from "../pages/dev/ComposerStatesPage";
-import { CaptureModePage } from "../pages/dev/CaptureModeHarness";
-import { ChatScrollPage } from "../pages/dev/ChatScrollHarness";
 import { historyLookupFailureSearch, historyViewRedirectSearch, legacyHistoryState, normalizeHistoryViewRouteTarget } from "../components/history/card-state";
 import { DEV_HARNESS_PATHS } from "../lib/box-route-layout";
 
@@ -264,12 +260,15 @@ const chatsRoute = createRoute({
   },
 });
 
+// The dev harness pages load lazily: production omits their routes, and a
+// static import kept the page modules in the entry chunk anyway.
+
 // Dev-only test harness for the speech replay menu (see SpeechTestHarness).
 const devSpeechRoute = createRoute({
   staticData: { title: "Speech test" },
   getParentRoute: () => devHarnessLayoutRoute,
   path: DEV_HARNESS_PATHS.speech,
-  component: SpeechTestPage,
+  component: lazyRouteComponent(() => import("../pages/dev/SpeechTestPage"), "SpeechTestPage"),
 });
 
 // Dev-only gallery of composer visual states (see ComposerStatesHarness).
@@ -277,7 +276,7 @@ const devComposerStatesRoute = createRoute({
   staticData: { title: "Composer states" },
   getParentRoute: () => devHarnessLayoutRoute,
   path: DEV_HARNESS_PATHS.composerStates,
-  component: ComposerStatesPage,
+  component: lazyRouteComponent(() => import("../pages/dev/ComposerStatesPage"), "ComposerStatesPage"),
 });
 
 // Dev-only harness for capture mode (overlay + pending bubble + chip).
@@ -285,7 +284,7 @@ const devCaptureModeRoute = createRoute({
   staticData: { title: "Capture mode" },
   getParentRoute: () => devHarnessLayoutRoute,
   path: DEV_HARNESS_PATHS.captureMode,
-  component: CaptureModePage,
+  component: lazyRouteComponent(() => import("../pages/dev/CaptureModeHarness"), "CaptureModePage"),
 });
 
 // Dev-only harness for the chat scroll controller (isolated, scripted).
@@ -293,7 +292,7 @@ const devChatScrollRoute = createRoute({
   staticData: { title: "Chat scroll" },
   getParentRoute: () => devHarnessLayoutRoute,
   path: DEV_HARNESS_PATHS.chatScroll,
-  component: ChatScrollPage,
+  component: lazyRouteComponent(() => import("../pages/dev/ChatScrollHarness"), "ChatScrollPage"),
 });
 
 // Catch-all for unknown paths under a box

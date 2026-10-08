@@ -6,10 +6,10 @@
  * (priority 100) when one matches the card's type.
  */
 
-import { MarkdownCardView } from "../components/MarkdownCardView/view";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const markdownCardRenderer: RendererEntry = {
   selector: { match: (_path, data) => data?.kind === "frontmatter" },
-  renderer: { name: "Card", Component: MarkdownCardView, priority: 30 },
+  renderer: { name: "Card", Component: lazyComponent(() => import("../components/MarkdownCardView/view"), (m) => m.MarkdownCardView), priority: 30 },
 };

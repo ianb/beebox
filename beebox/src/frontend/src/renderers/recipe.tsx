@@ -5,10 +5,10 @@
  * next to the rendering logic.
  */
 
-import { RecipeView } from "../components/RecipeView";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const recipeRenderer: RendererEntry = {
   selector: { type: "recipe" },
-  renderer: { name: "Recipe", Component: RecipeView, priority: 100 },
+  renderer: { name: "Recipe", Component: lazyComponent(() => import("../components/RecipeView"), (m) => m.RecipeView), priority: 100 },
 };

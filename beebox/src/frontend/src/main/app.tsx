@@ -18,6 +18,11 @@ import { withBase } from "../api";
 import { invariant } from "@shared/invariant";
 import { installUiScanHook } from "../lib/ui-scan/window-hook";
 import { installRenderers } from "../renderers.js";
+import { markFirstLoad } from "../lib/first-load-marks";
+import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
+
+// Every static import above has evaluated: the entry script is loaded.
+markFirstLoad(FIRST_LOAD_MARKS.entry);
 
 /**
  * Wires up the built-in file-type list UI (`file-types/builtins.ts`).
@@ -49,6 +54,8 @@ async function boot(): Promise<void> {
 
   const rootEl = document.getElementById("root");
   invariant(rootEl !== null, "index.html must define a #root element");
+
+  markFirstLoad(FIRST_LOAD_MARKS.render);
 
   ReactDOM.createRoot(rootEl).render(
     <TrpcProvider>

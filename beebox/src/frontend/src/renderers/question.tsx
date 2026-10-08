@@ -4,10 +4,10 @@
  * form (or the recorded answer) instead of the generic frontmatter table.
  */
 
-import { QuestionCardView } from "../components/QuestionCardView";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const questionRenderer: RendererEntry = {
   selector: { type: "question" },
-  renderer: { name: "Question", Component: QuestionCardView, priority: 100 },
+  renderer: { name: "Question", Component: lazyComponent(() => import("../components/QuestionCardView"), (m) => m.QuestionCardView), priority: 100 },
 };

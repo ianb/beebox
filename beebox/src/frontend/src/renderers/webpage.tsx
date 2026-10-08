@@ -5,10 +5,10 @@
  * rendering logic (same split as commentary/recipe).
  */
 
-import { WebpageView } from "../components/WebpageView";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const webpageRenderer: RendererEntry = {
   selector: { type: "webpage" },
-  renderer: { name: "Webpage", Component: WebpageView, priority: 100 },
+  renderer: { name: "Webpage", Component: lazyComponent(() => import("../components/WebpageView"), (m) => m.WebpageView), priority: 100 },
 };

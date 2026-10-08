@@ -20,6 +20,8 @@ import type { AddFiles } from "../InteractiveChat-attachments/attachments";
 import type { TranscriptionState } from "../../../hooks/useRealtimeTranscription/hook";
 import { segmentCapturing } from "../../../machines/transcription-events";
 import type { FinalWord } from "../../../machines/transcription-events";
+import { useFirstLoadMark } from "../../../lib/first-load-marks";
+import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
 
 export interface TranscriptionHandle {
   state: TranscriptionState;
@@ -234,6 +236,8 @@ export function ChatInputArea({
   includeControlIds?: boolean;
 }) {
   const hasControlIds = includeControlIds !== false;
+  // The product composer only: the dev gallery renders many without control ids.
+  useFirstLoadMark(FIRST_LOAD_MARKS.composer, hasControlIds);
   // Subscribing read of the composer text — this is the component a keystroke
   // re-renders (and its small button-bar subtree), not the chat at large.
   const input = useInputValue();

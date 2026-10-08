@@ -11,7 +11,7 @@
  * `BoxRuntimeStatus[]`, so it's unit-testable without a server or a child.
  */
 
-import type { BoxRuntimeStatus, BoxRunStatus } from "./supervisor/core.js";
+import type { BoxRuntimeStatus, BoxRunStatus } from "./box-status.js";
 import { assertNever } from "../shared/invariant.js";
 
 /** Whether the hub as a whole is serving. `"unhealthy"` (→ HTTP 503) if ANY

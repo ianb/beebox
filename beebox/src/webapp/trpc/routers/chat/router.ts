@@ -15,13 +15,10 @@ import { BriefingSchema } from "../../../../schemas/briefing.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { chatSessionProcedures } from "./session-procedures.js";
 import { chatControlProcedures } from "./control-procedures.js";
-import { chatBootstrapProcedure } from "./bootstrap-procedure.js";
+import { chatBootstrapProcedure, sessionContextDir } from "./bootstrap-procedure.js";
 import { chatPlaceMenuProcedure } from "./place-menu-procedure.js";
 import { chatSearchProcedures } from "./search.js";
-import {
-  getDirectoryForSession,
-  getLastSessionForDirectory,
-} from "../../../../core/chat/session/history.js";
+import { getLastSessionForDirectory } from "../../../../core/chat/session/history.js";
 import { nearestLandmarkDir, boxRelativePathSchema } from "../../../../core/landmark/nearest.js";
 import { getChatRuntime } from "../../../chat-runtime.js";
 import { loadChatLists, deadHuskLabel, type ChatSessionRow } from "../../../../core/chat/session/list/core.js";
@@ -236,17 +233,7 @@ export const chatRouter = router({
    */
   directoryFor: publicProcedure
     .input(z.object({ sessionId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => {
-      const recorded = await getDirectoryForSession(ctx.boxRoot, input.sessionId);
-      const reserved = getChatRuntime(ctx.boxRoot)?.registry.getReservation(input.sessionId) ?? null;
-      // "" (the box root), never null: a chat with no recorded binding is a
-      // ROOT chat — the same missing→"" rule byLandmark applies above. This
-      // procedure answered null instead, and the app bar treats null as "no
-      // place at all", so root chats had no folder menu — the root landmark's
-      // links were unreachable from chat (boxholder, 2026-08-27→30).
-      const contextDir = recorded ?? reserved?.contextDir ?? "";
-      return { contextDir };
-    }),
+    .query(async ({ ctx, input }) => ({ contextDir: await sessionContextDir(ctx.boxRoot, input.sessionId) })),
 
   /**
    * Chats grouped by landmark for the picker page and nav badge.

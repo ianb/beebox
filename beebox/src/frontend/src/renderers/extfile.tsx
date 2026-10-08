@@ -5,10 +5,10 @@
  * rendering logic (same split as webpage/commentary).
  */
 
-import { ExtfileView } from "../components/ExtfileView/view";
+import { lazyComponent } from "../lib/lazy-component";
 import type { RendererEntry } from "../file-type-registry";
 
 export const extfileRenderer: RendererEntry = {
   selector: { type: "extfile" },
-  renderer: { name: "Extfile", Component: ExtfileView, priority: 100 },
+  renderer: { name: "Extfile", Component: lazyComponent(() => import("../components/ExtfileView/view"), (m) => m.ExtfileView), priority: 100 },
 };
