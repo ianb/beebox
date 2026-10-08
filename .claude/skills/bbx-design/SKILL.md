@@ -31,8 +31,11 @@ sections under that heading one level down. Then, in order:
 1. **Situations.** "When [situation], I want to [motivation], so I can
    [outcome]." Several, concrete and mundane, about a kind of person in a real
    moment: spirit.md's Diana in the car at 5:45am, not "a user manages tasks."
-   Include one where the person does not want this. If no situation comes,
-   the work may not be user-facing; say so.
+   The situation is what names the moment, and the moment decides the
+   surface: the point is the right thing in front of the person when it
+   applies, not a thing they could find if they knew to search. Include one
+   where the person does not want this. If no situation comes, the work may
+   not be user-facing; say so.
 2. **Right place, right time.** Per situation: is this the moment the box
    should act, show, or stay quiet? Where does it appear: which surface, which
    card, which tier of attention (interrupts, waits to be found, background)?
