@@ -35,3 +35,10 @@ a distinctive one: "Novel selection colors are hot!"
 
 Show the choices as one exhibit (`decide`) with a screenshot per theme before
 landing, since this is a taste call.
+
+## Decision (boxholder, 2026-10-07)
+
+Both system themes and card themes can set selection colors. Both are
+optional: a card theme without its own selection colors inherits the system
+theme's, and a system theme without them falls back to a sensible default.
+Choose good colors for every existing system theme and card theme.
