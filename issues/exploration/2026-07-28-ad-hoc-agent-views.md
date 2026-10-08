@@ -68,3 +68,7 @@ Evidence for the mechanism:
 Out of scope by boxholder decision: interactive form or option widgets in
 chat ([wontfix 2026-07-10](../closed/features/2026-06-09-in-chat-interactive-questions.md)).
 This is display only.
+
+Boxholder reaction (2026-10-08): data tags only if a need is felt, and none
+is felt yet; card embeds already cover the known cases. The direction stays
+recorded here for when a need appears. Not a go-ahead.

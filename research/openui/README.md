@@ -46,8 +46,8 @@ Snapshot, not a living doc; see [research/CLAUDE.md](../CLAUDE.md).
 
 ## What I would actually do
 
-1. Pick up the ad-hoc views exploration with the Markdoc data-tag direction:
-   two tags, inline data, rendered by frontend components, no file. It
-   closes the ephemeral-display gap with the primitives we have.
-2. Nothing else from OpenUI. Re-check only if a second independent
-   implementer of OpenUI Lang appears or a spec leaves the Thesys repo.
+Nothing now. The boxholder's reaction (2026-10-08): Markdoc data tags only if
+a need is felt, and none is felt yet; card embeds cover the known cases. The
+direction is recorded in the ad-hoc views exploration for when a need
+appears. Re-check OpenUI only if a second independent implementer of OpenUI
+Lang appears or a spec leaves the Thesys repo.
