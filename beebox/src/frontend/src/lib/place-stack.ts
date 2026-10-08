@@ -1,6 +1,6 @@
 /**
  * The app bar's published places, as a stack of owner-tagged entries
- * (`app-bar-chrome.tsx`). The newest publication shows. When its owner
+ * (`app-bar-chrome.tsx`). The top entry shows. When its owner
  * clears it, the bar falls back to the entry below it rather than to the
  * route label: a focused Browse card publishes over the chat's place, and
  * closing Browse must give the chat's place back. The chat's effect does not
@@ -14,9 +14,15 @@ export interface PlaceEntry {
   place: AppBarPlace;
 }
 
-/** Publish or republish: the owner's entry moves to the top, so the latest publication wins. */
+/**
+ * Publish or republish. A new owner goes on top; an owner already in the stack
+ * keeps its position and only its place changes, so a background chat's label
+ * update cannot displace a focused Browse card above it.
+ */
 export function pushPlace(stack: readonly PlaceEntry[], entry: PlaceEntry): PlaceEntry[] {
-  return [...stack.filter((e) => e.owner !== entry.owner), entry];
+  return stack.some((e) => e.owner === entry.owner)
+    ? stack.map((e) => (e.owner === entry.owner ? entry : e))
+    : [...stack, entry];
 }
 
 /** Remove only this owner's entry; another owner's entry is untouched. */

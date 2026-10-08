@@ -27,17 +27,19 @@ topPlace(dropPlace(withBrowse, browse))
 => { dir: "inventory", label: "Inventory" }
 ```
 
-The latest publication wins. When the chat republishes while Browse is up,
-the chat's place shows, as it did with a single slot; clearing the chat then
-returns to Browse.
+A republication updates the owner's entry where it stands. The chat
+republishes when its landmark label arrives, which can happen while Browse is
+focused; moving the chat to the top then made the pill name the chat while
+Browse still had focus. Browse stays on top, and clearing Browse shows the
+chat's updated place.
 
 ```ts
 const republished = pushPlace(withBrowse, { owner: chat, place: { dir: "garden", label: "Garden" } });
 topPlace(republished)
-=> { dir: "garden", label: "Garden" }
-
-topPlace(dropPlace(republished, chat))
 => { dir: "inventory/shelves", label: "Browse: inventory/shelves" }
+
+topPlace(dropPlace(republished, browse))
+=> { dir: "garden", label: "Garden" }
 ```
 
 Clearing an owner that published nothing changes nothing, and an empty stack
