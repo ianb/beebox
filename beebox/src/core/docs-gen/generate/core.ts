@@ -249,13 +249,24 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
  * git-status path `getStatus`/`stageFiles`/`commitPaths` report or accept is
  * already box-root-relative — no prefix normalization needed.
  *
+ * `keepUncommitted` names paths that were already dirty before the run
+ * started (see {@link uncommittedPaths}). Template-managed patterns also match
+ * hand-authored files such as `.claude/rules/<name>.md`, so without it a
+ * boxholder's unfinished edit there would ride along in this commit. A
+ * pre-existing dirty path that generation also rewrote stays uncommitted too;
+ * the next housekeeping commit picks it up.
+ *
  * Exported (rather than only reachable through `generateDocs`) so doctests
  * can exercise the sync commit directly against a minimal fixture, without
  * also going through `installValidationHooks` + a real, executable
  * `.git/hooks/pre-commit` that shells out to a `bbx` binary — an unrelated
  * hazard in a repo-in-a-repo dev/test environment.
  */
-export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
+export async function commitTemplateSyncChanges(
+  boxRoot: string,
+  options?: { keepUncommitted?: ReadonlySet<string> },
+): Promise<void> {
+  const keep = options?.keepUncommitted ?? new Set<string>();
   const shape = await getBoxShape(boxRoot);
   const { boxRoot: repoRoot } = shape;
   if (!(await isRepo(repoRoot))) return;
@@ -264,7 +275,7 @@ export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> 
   await withBoxGitLock(repoRoot, async () => {
     const status = await getStatus(repoRoot);
     const candidates = [...status.staged, ...status.modified, ...status.untracked];
-    const toCommit = candidates.filter((p) => isTemplateManagedPath(p));
+    const toCommit = candidates.filter((p) => isTemplateManagedPath(p) && !keep.has(p));
     if (toCommit.length === 0) return;
 
     // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
@@ -275,6 +286,17 @@ export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> 
       trailers: { "Triggered-By": "generateDocs" },
     });
   });
+}
+
+/**
+ * Every path `git status` reports as staged, modified, or untracked; empty
+ * when the box is not a repository with commits. Read before generation writes
+ * anything, so the final commit can leave these paths alone.
+ */
+async function uncommittedPaths(boxRoot: string): Promise<ReadonlySet<string>> {
+  if (!(await isRepo(boxRoot)) || !(await hasCommits(boxRoot))) return new Set();
+  const status = await getStatus(boxRoot);
+  return new Set([...status.staged, ...status.modified, ...status.untracked]);
 }
 
 /**
@@ -364,6 +386,10 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
     return; // Nothing changed — skip regeneration
   }
 
+  // Read before the first write: what is dirty now is the boxholder's work.
+  const shouldCommit = options.commit !== false;
+  const dirtyBefore = shouldCommit ? await uncommittedPaths(boxRoot) : new Set<string>();
+
   // Sync templates from upstream beebox source. Idempotent — only
   // writes files where the box's copy differs (and emits .orig-*.card
   // entries when the user modified a template). Runs before doc generation
@@ -411,7 +437,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   await ensureAgentContext(boxRoot, briefingPaths);
 
   // Every tracked output above lands in one commit, after the last writer.
-  if (options.commit !== false) await commitTemplateSyncChanges(boxRoot);
+  if (shouldCommit) await commitTemplateSyncChanges(boxRoot, { keepUncommitted: dirtyBefore });
 
   // Write marker so next call can skip if nothing changed
   const commitLine = currentCommit ? `\n${currentCommit}` : "";
