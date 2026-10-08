@@ -1,6 +1,6 @@
 ---
 title: "System themes define their own text selection colors"
-workstream: unattached
+workstream: selection-colors
 area: beebox
 labels: [themes, ui]
 filed-by: agent

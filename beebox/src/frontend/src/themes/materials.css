@@ -1,5 +1,7 @@
 /* Every surfaced card defines a complete material. Nested cards reset these
-   variables; frameless embeds intentionally inherit their enclosing material. */
+   variables; frameless embeds intentionally inherit their enclosing material.
+   Selection colors are the exception: a theme without its own pair keeps the
+   system theme's (chrome.css), so the base material leaves them unset. */
 .bbx-card-theme {
   --bbx-paper: #fff;
   --bbx-ink: #302f2d;
@@ -32,7 +34,17 @@
   font-family: var(--bbx-font);
 }
 
+/* A card theme with its own selection pair drops the system theme's code
+   pair, which was chosen for a different selection color. */
+.bbx-card-theme:is([data-card-theme="paper"], [data-card-theme="post-it"]) {
+  --bbx-selection-code: initial;
+  --bbx-selection-code-ink: initial;
+}
+
 .bbx-card-theme[data-card-theme="paper"] {
+  /* Highlighter marker. */
+  --bbx-selection: #ffe53b;
+  --bbx-selection-ink: #2a2418;
   --bbx-sheet-radius: 12px;
   --bbx-slip-overhang: calc(var(--bbx-content-padding) + 0.625rem);
   --bbx-paper: #f5efe2;
@@ -50,6 +62,11 @@
 }
 
 .bbx-card-theme[data-card-theme="paper"][data-card-stock="manila"] {
+  /* Blue pencil. */
+  --bbx-selection: #2f5fa8;
+  --bbx-selection-ink: #fffaf0;
+  --bbx-selection-code: #9cc0f0;
+  --bbx-selection-code-ink: #14202e;
   --bbx-pen: #263b59;
   --bbx-paper: #ecdbb1;
   --bbx-ink: #3d3221;
@@ -59,6 +76,9 @@
   --bbx-quote-layer-paper: #f8eacb;
 }
 .bbx-card-theme[data-card-theme="paper"][data-card-stock="blue"] {
+  /* Pink highlighter. */
+  --bbx-selection: #ff8fc4;
+  --bbx-selection-ink: #2a1620;
   --bbx-paper: #e0e9ee;
   --bbx-ink: #263a44;
   --bbx-ink-soft: #34444e;
@@ -68,6 +88,9 @@
 }
 
 .bbx-card-theme[data-card-theme="post-it"] {
+  /* Pink highlighter on yellow. */
+  --bbx-selection: #ff6fae;
+  --bbx-selection-ink: #2b1a14;
   --bbx-sheet-radius: 2px 3px 9px 2px;
   --bbx-slip-overhang: calc(var(--bbx-content-padding) + 0.625rem);
   --bbx-paper: #faee9f;
@@ -83,6 +106,9 @@
   --bbx-blockquote-paper: #ffffff30;
 }
 .bbx-card-theme[data-card-theme="post-it"][data-card-stock="rose"] {
+  /* Mint highlighter on rose. */
+  --bbx-selection: #4fdbb4;
+  --bbx-selection-ink: #16302a;
   --bbx-paper: #f6d1d0;
   --bbx-ink: #452d35;
   --bbx-ink-soft: #70505a;
@@ -91,6 +117,9 @@
   --bbx-quote-layer-paper: #ffebea;
 }
 .bbx-card-theme[data-card-theme="post-it"][data-card-stock="mint"] {
+  /* Orange highlighter on mint. */
+  --bbx-selection: #ff9a3c;
+  --bbx-selection-ink: #2a1a0c;
   --bbx-paper: #d7ebcd;
   --bbx-ink: #2c3d29;
   --bbx-ink-soft: #50654b;
