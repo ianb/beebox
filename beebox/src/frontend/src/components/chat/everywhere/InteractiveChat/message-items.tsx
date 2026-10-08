@@ -9,7 +9,7 @@
 
 import { type ReactNode } from "react";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
-import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, UserMessageText, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
+import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
 import { isNoResponseOnly, parseAcks, type AckIndication } from "../../../../lib/structured-output-parsing";
 import type { SessionContentBlock } from "../../../../api";
 import { buildStreamEntry } from "../../../../lib/stream-entry";
@@ -20,7 +20,7 @@ import { invariant } from "@shared/invariant";
 import type { SpeechSegmentState } from "../../../../machines/speech-segment-states";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
-import { Button } from "../../../ui/Button";
+import { PendingHqMessage } from "../../pending-hq-message";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a
@@ -48,33 +48,6 @@ function chunkOnParagraphs(text: string): string {
   return text.slice(0, cut);
 }
 
-/**
- * A voice message waiting for its HQ transcript
- * (docs/plans/resilient-voice-recording.md, Track 4): the realtime text as a
- * faded user bubble, the HQ job's status line, and a control to stop waiting
- * and send the live text now (the HQ text then follows as a correction).
- */
-function PendingHqMessage({ pending, onSendLive }: { pending: PendingHq; onSendLive: (id: string) => void }) {
-  return (
-    <div className="flex justify-end pl-12 sm:pl-24 py-1">
-      <div className="flex flex-col items-end gap-1">
-        <div
-          className="rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words opacity-60"
-          title="Waiting for the HQ transcript…"
-        >
-          <div className="text-sm whitespace-pre-wrap">
-            <UserMessageText text={pending.text} />
-          </div>
-        </div>
-        <div role="status" className="flex items-center gap-1.5 text-xs text-warm-500 pr-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
-          {pending.status}
-        </div>
-        <Button size="sm" intent="secondary" onClick={() => onSendLive(pending.id)}>Send live text now</Button>
-      </div>
-    </div>
-  );
-}
 
 export type DataItem =
   | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[] }
@@ -279,7 +252,7 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
   if (item.kind === "marker") {
     return (
       <div className="flex justify-center py-1">
-        <div className="text-[11px] text-warm-500 px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
+        <div className="bbx-chat-meta-material text-[11px] text-warm-500 px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
           {item.marker.label}
         </div>
       </div>

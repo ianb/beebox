@@ -10,6 +10,13 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 ## Ideas we adopted
 
+### Visual references for expressive themes
+
+- **Sources:** [removed], *[removed]* (2025); [removed], *[removed]* (r/[removed]); [[removed]](https://[removed].booth.pm/), [pink cloud and star illustration](https://www.instagram.com/p/DcDO6wYM6pv/). Attribution follows the reference images supplied by the boxholder.
+- **What we took:** retired-theme-a interprets elongated pigment wedges and unexpected color relationships; retired-theme-b interprets perspective grids, translucent geometry, and printed digital texture; retired-theme-c interprets sweeping clouds, irregular starbursts, and pastel speckling.
+- **Rights:** Original artworks remain their artists' work; no licence to redistribute them is claimed and the source images are not bundled. The CSS and SVG ornaments here are newly authored interpretations.
+- **Where it landed:** `beebox/src/frontend/src/themes/{retired-theme-a,retired-theme-b,retired-theme-c}.css` and `themes/art/`.
+
 ### Agent Skills, by addyosmani (Addy Osmani)
 
 - **Source:** https://github.com/addyosmani/agent-skills (MIT)

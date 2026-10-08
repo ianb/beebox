@@ -3,6 +3,9 @@
    Selection colors are the exception: a theme without its own pair keeps the
    system theme's (chrome.css), so the base material leaves them unset. */
 .bbx-card-theme {
+  --bbx-sheet-decoration: none;
+  --bbx-sheet-shadow: none;
+  --bbx-tab-radius: 6px 6px 0 0;
   --bbx-paper: #fff;
   --bbx-ink: #302f2d;
   --bbx-ink-soft: #625e58;
