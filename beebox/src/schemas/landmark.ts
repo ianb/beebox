@@ -221,7 +221,11 @@ navigation:
   chat-app:                 # optional chat-feature seed for chats opened here
     narration: "on"
     prose: "off"
+  openers:                  # optional one-line first moves for a chat here
+    - What can I cook tonight?
 \`\`\`
+
+**Openers.** \`navigation.openers\` are one-line first moves, phrased from the person's side, shown as buttons on an unstarted chat in this place (and on the place's page); clicking one sends it as their message. Each is a single non-blank line of at most 120 characters. A place with no \`openers\` shows none; it does not inherit the root's. When you build a place for a recurring job, you may add up to three for its standing first moves ("Log a new loan"). The root landmark's onboarding openers fade as the box is used: remove them once the person knows what the box is for. Openers never go on a briefing card.
 
 An older landmark may carry its mark nested as \`navigation.symbol\` (a bare string, or \`{ src }\`) — the shape before the mark became a field every card can have. That form is still read, so a card written that way is not a mistake and does not need fixing by hand; the \`landmark-symbol\` migration moves it. Write new marks at the top level, as above.
 

@@ -7073,6 +7073,39 @@ tests:
       not start doing anything in this turn.
     tags: [starter, chat]
 
+  # Openers moved from briefing cards to the place's landmark
+  # (`navigation.openers`, docs/plans/landmark-arrival.md Track B). The
+  # fixture gives Lending both a landmark and a briefing, so the audit sees
+  # which one the agent edits.
+  - id: landmark-openers-placement
+    prompt: "When I open Lending I want a button that says 'Log a new loan'."
+    chat_mode: true
+    expected_level: knows_directly
+    watch_for: >
+      Adds "Log a new loan" to the Lending landmark's `navigation.openers`
+      (nested under `navigation`, not top-level), leaves the Lending briefing
+      alone, and says the button shows on a new chat in Lending.
+    fixture:
+      _content/lending/Lending.landmark.card: |
+        ---
+        navigation:
+          label: Lending
+          expand:
+            - query: "*.loan.card"
+        symbol:
+          glyph: 🤝
+        ---
+      _content/lending/briefing.briefing.card: |
+        ---
+        type: briefing
+        ---
+        {% purpose %}
+        Things lent to and borrowed from neighbors.
+        {% /purpose %}
+    cards_contain: ["Log a new loan"]
+    correct_contains_any: ["landmark", "Lending.landmark.card"]
+    tags: [landmarks, openers, chat]
+
   - id: starter-just-set-up
     prompt: "I just set this up. What should I try first?"
     chat_mode: true
