@@ -59,10 +59,12 @@ function describeStatus(task: TaskHealth): string {
     case "overdue":
       return `overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
     case "waiting":
-      // The reason is the status here ("waiting: nothing to do"), so the
+      // The reason is the status here ("waiting: Jev did not answer"), so the
       // detail column leaves it out.
       return task.reason === undefined ? "waiting" : `waiting: ${task.reason}`;
     case "ok":
+      // A run that found nothing to do says so ("ok: nothing to do").
+      return task.reason === undefined ? "ok" : `ok: ${task.reason}`;
     case "inconclusive":
     case "blocked":
     case "invalid":
@@ -96,7 +98,7 @@ function pushTaskLines(
     const detail = [
       ...(lock ? [`running (PID ${lock.pid}, since ${formatDurationShort(now.getTime() - new Date(lock.startedAt).getTime())} ago)`] : []),
       describeRuns(task, now),
-      ...(task.reason && task.status !== "waiting" ? [task.reason] : []),
+      ...(task.reason && task.status !== "waiting" && task.status !== "ok" ? [task.reason] : []),
     ].join("; ");
     lines.push(
       `  ${lock ? "▶" : STATUS_GLYPHS[task.status]} ${task.name.padEnd(22)} ${describeStatus(task).padEnd(14)} ${detail}`

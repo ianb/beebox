@@ -2,8 +2,9 @@
 
 `bbx health` prints the scheduled-task section, then the box checks. The
 `scheduled-tasks` box check restates the task section for the dashboard, so
-the CLI leaves it out and a failing task appears once. A task that deferred
-itself reads `waiting: <reason>`.
+the CLI leaves it out and a failing task appears once. A task whose last run
+found nothing to do reads `ok: <reason>`; one held back reads
+`waiting: <reason>`.
 
 ```ts setup
 import { formatHealthText } from "../../../src/cli/commands/health.js";
@@ -20,8 +21,8 @@ const health = {
   engineWait: null,
   tasks: [
     task({ name: "sync-notes", status: "failing", consecutiveFailures: 3, lastSuccess: null, lastError: "Agent invocation failed: model retired" }),
-    task({ name: "watch-trip", status: "waiting", deferReason: "no-change", reason: "nothing to do" }),
-    task({ name: "watch-quote", status: "waiting", deferReason: "no-pass", reason: "nothing passed the judgment" }),
+    task({ name: "watch-trip", status: "ok", deferReason: "no-change", reason: "nothing to do" }),
+    task({ name: "watch-quote", status: "waiting", deferReason: "budget", reason: "the box used its daily Jev budget" }),
   ],
 };
 ```
@@ -36,8 +37,8 @@ formatHealthText(health, { boxChecks, now, all: false, running: new Map() })
 =>
   ✗ sync-notes             failing ×3     last attempt 1h ago, never succeeded
       error: Agent invocation failed: model retired
-  ◷ watch-trip             waiting: nothing to do last success 1h ago
-  ◷ watch-quote            waiting: nothing passed the judgment last success 1h ago
+  ✓ watch-trip             ok: nothing to do last success 1h ago
+  ◷ watch-quote            waiting: the box used its daily Jev budget last success 1h ago
   scheduler: running (last tick 1m ago)
 «blankline»
 Box checks:
