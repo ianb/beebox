@@ -56,9 +56,14 @@ usually needs splitting, not a new harness.
 
 Coverage follows the change's risk, not a percentage. Cover the substantial
 code paths and the failures that can really happen; a doctest is enough for
-logic, routes, and box operations. Add a regression doctest with every bug
-fix. A changed page or shared primitive also gets its tour walked before the
-work is called done. A new agent-facing concept gets at least one knowledge
+logic, routes, and box operations. No test is mandated by the kind of change:
+a bug fix gets a regression example only when the bug is a logic class that
+can recur (a branch, a parser, a boundary), not for a wrong path, string, or
+one-line typo. Each example proves one claim the code could get wrong; an
+example that would still pass if the code it covers were deleted is itself a
+defect, and so is a second example proving the same claim with a different
+literal. A changed page or shared primitive also gets its tour walked before
+the work is called done. A new agent-facing concept gets at least one knowledge
 audit. A change that could break startup or the app bar gets a smoke run by
 hand before landing. A field test is for a capability whose value depends on
 the agent or the user finding it through the real UI.
