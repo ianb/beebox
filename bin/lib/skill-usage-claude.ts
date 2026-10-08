@@ -14,16 +14,13 @@
  *   parent's `sessionId`.
  */
 
-import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { canonical, categoryOf } from "./skill-usage-catalog.ts";
 import { FAILURE_PATTERNS, HUMAN_PATTERNS, matchingLabels } from "./skill-usage-patterns.ts";
-import {
-  commandNames, inRepo, NAME_SHAPE, inWindow, isRecord, readJsonl, recentJsonl, recordBriefing, str, textOf,
-  type Json, type ScanContext,
-} from "./skill-usage-scan.ts";
+import { commandNames, NAME_SHAPE, inWindow, recentJsonl, recordBriefing, textOf, type ScanContext } from "./skill-usage-scan.ts";
 import { LoadTracker } from "./skill-usage-stats.ts";
+import { claudeProjectDirs, inRepo, isRecord, readJsonl, str, type Json } from "./transcripts.ts";
 
 const LOAD_PREFIX = "Base directory for this skill:";
 const BRIEFING_START = /^(Workstream:|Continue workstream)/;
@@ -145,24 +142,8 @@ async function scanFile(ctx: ScanContext, file: string): Promise<void> {
   st.tracker.flush(ctx.stats, ctx.shortTurns);
 }
 
-/** Every project directory once (renamed checkouts are symlinked aliases). */
-function projectDirs(projectsRoot: string): string[] {
-  const seen = new Set<string>();
-  for (const entry of fs.existsSync(projectsRoot) ? fs.readdirSync(projectsRoot) : []) {
-    let real: string;
-    try {
-      real = fs.realpathSync(path.join(projectsRoot, entry));
-    } catch (error) {
-      if (error instanceof Error) continue;
-      throw error;
-    }
-    if (fs.statSync(real).isDirectory()) seen.add(real);
-  }
-  return [...seen];
-}
-
 export async function scanClaude(ctx: ScanContext, projectsRoot: string): Promise<void> {
-  for (const dir of projectDirs(projectsRoot)) {
+  for (const dir of claudeProjectDirs(projectsRoot)) {
     for (const file of recentJsonl(dir, ctx.sinceMs)) await scanFile(ctx, file);
   }
 }

@@ -30,7 +30,7 @@ const fakeBin = join(scratch, "bin");
 const sshLog = join(scratch, "ssh.log");
 const browseLog = join(scratch, "browse.log");
 
-const TOOLS = ["deploy-target.sh", "prod-ssh", "prod-curl", "prod-browse"];
+const TOOLS = ["deploy-target.sh", "prod-ssh", "prod-curl", "prod-browse", "prod-session-cookie"];
 
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
@@ -69,7 +69,7 @@ before(() => {
     join(fakeBin, "ssh"),
     // The cookie-minting tools send their remote script on stdin, so the fake
     // has to look there, not in argv, to know it is being asked for a session.
-    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "${sshLog}"\nremote=$(cat 2>/dev/null || true)\nif [[ "$remote" == *"BBX_SESSION_SECRET"* ]]; then printf cookie-token; fi\n`,
+    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "${sshLog}"\nremote=$(cat 2>/dev/null || true)\nif [[ "$remote" == *"publicUrl"* ]]; then printf '{"publicUrl":"https://example.invalid","cookie":"cookie-token"}'; elif [[ "$remote" == *"BBX_SESSION_SECRET"* ]]; then printf cookie-token; fi\n`,
   );
   chmodSync(join(fakeBin, "ssh"), 0o755);
   mkdirSync(join(worktree, "bin"));
@@ -158,7 +158,7 @@ test("production diagnostic tools use the shared worktree fallback", () => {
   // Both cookie tools reach the server's own loopback, so the service home and
   // hub port travel as arguments rather than being baked into the heredoc.
   assert.match(sshCalls, /root@198\.51\.100\.10 bash -s -- \/home\/beebox 3210 \/test1\//);
-  assert.match(sshCalls, /root@198\.51\.100\.10 bash -s -- \/home\/beebox$/m);
+  assert.match(sshCalls, /root@198\.51\.100\.10 bash -s -- \/home\/beebox https:\/\/example\.invalid\s*$/m);
   const browseCalls = readFileSync(browseLog, "utf8");
   assert.match(browseCalls, /cookies set bbx_session cookie-token/);
   assert.match(browseCalls, /open https:\/\/example\.invalid\/test1\//);
@@ -239,7 +239,8 @@ test("the fixed layout is still readable, so consumers share one source for it",
 });
 
 test("both owner-cookie tools fail closed when BBX_OWNER_EMAIL is absent", () => {
-  for (const tool of ["prod-curl", "prod-browse"]) {
+  // prod-browse delegates cookie minting to prod-session-cookie, which holds its guard.
+  for (const tool of ["prod-curl", "prod-session-cookie"]) {
     const script = readFileSync(join(SOURCE_DEPLOY, tool), "utf8");
     assert.match(script, /\[\[ -z "\${BBX_OWNER_EMAIL:-}" ]]/);
     assert.match(script, /Error: BBX_OWNER_EMAIL is unset/);

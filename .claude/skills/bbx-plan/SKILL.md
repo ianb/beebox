@@ -36,6 +36,9 @@ round; write the plan when the boxholder agrees the direction or asks for it.
 3. Write for a reader six months from now with no context — Simplified
    Technical English in spirit: short sentences, active voice, one idea per
    sentence, consistent terms. Not a chat transcript.
+4. After the cross-model review, write a CODING_FEEDBACK entry: pipe your
+   answers to its four prompts (`bin/coding-feedback help` lists them) into
+   `bin/coding-feedback add --checkpoint plan-reviewed`.
 
 **Where the work happens.** Big plans run in a worktree; commit freely there.
 The plan completes, then it ships as one piece — and **only when the boxholder

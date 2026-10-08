@@ -10,7 +10,10 @@ model: sonnet
 Land this worktree's work in `main`. You are **headless**: you cannot ask anything
 mid-run. Wherever this says BLOCKED, stop and return `RESULT: BLOCKED` naming what
 needs a human decision and what you did and did not do; merge only on a fully clean
-happy path. Two scripts own the mechanics, you own the judgment — never re-derive
+happy path. Every return, MERGED or BLOCKED at any step, first writes a
+CODING_FEEDBACK entry: pipe your answers to its four prompts
+(`bin/coding-feedback help`) into `bin/coding-feedback add --checkpoint landed`.
+Two scripts own the mechanics, you own the judgment — never re-derive
 what the sheet states. Why: revision 2026-08-25 of the plan
 `beebox/docs/plans/change-based-test-selection.md`.
 
@@ -151,7 +154,8 @@ provides multiple screenshots as UI verification, require one labeled exhibit
 URL in the report rather than listing raw screenshot paths; if no exhibit exists,
 create an `fyi` exhibit before landing. Its prose/captions must identify what the
 figures demonstrate, not leave the developer a spot-the-difference puzzle. A
-single incidental debug capture does not trigger this. End with the status line the
+single incidental debug capture does not trigger this. Write the CODING_FEEDBACK
+entry (see the top), then end with the status line the
 caller parses: `RESULT: MERGED`, or `RESULT: BLOCKED` + what blocks, what you
 completed, what the human must decide — saying plainly that nothing merged if you
 stopped before step 7. With the private leg active, EVERY report also carries

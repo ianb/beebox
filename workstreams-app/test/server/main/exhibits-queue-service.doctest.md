@@ -81,6 +81,8 @@ async function makeStore(): Promise<string> {
   await writeFile(path.join(ws, "malformed/index.html"), "<p>content without an ask</p>\n");
 
   await writeFile(path.join(ws, "unmanifested/index.tsx"), "export default function Page() { return null; }\n");
+  // CODING_FEEDBACK entries (bin/coding-feedback) share the workstream directory.
+  await writeFile(path.join(ws, "coding-feedback/20261007T000000Z-landed.md"), "---\n---\n\nretro note\n");
   return root;
 }
 
@@ -152,6 +154,20 @@ JSON.stringify({
   malformed: listing.body.includes("ask: Invalid input"),
 })
 => {"status":200,"decide":true,"title":true,"malformed":true}
+```
+
+The `coding-feedback/` directory beside the exhibits holds retrospective notes
+that are not exhibits: it is neither listed nor served.
+
+```ts continue
+const feedbackPage = await app.inject({ method: "GET", url: "/demo-ws/coding-feedback/", headers: authorized });
+const feedbackFile = await app.inject({ method: "GET", url: "/demo-ws/coding-feedback/20261007T000000Z-landed.md", headers: authorized });
+JSON.stringify({
+  listed: listing.body.includes("coding-feedback"),
+  page: feedbackPage.statusCode === 200 || feedbackPage.body.includes("retro note"),
+  file: feedbackFile.statusCode === 200 || feedbackFile.body.includes("retro note"),
+})
+=> {"listed":false,"page":false,"file":false}
 ```
 
 The listing also says which asks are still costing the developer something. It
