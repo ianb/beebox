@@ -63,8 +63,8 @@ next startup, never re-sent live (which could double-deliver).
 
 ```ts
 const box = await makeTmpBox();
-await makeBulk(box.root, { state: "sealed" });
-await makeBulk(box.root, { state: "preparing" });
+const sealed = await makeBulk(box.root, { state: "sealed" });
+const preparing = await makeBulk(box.root, { state: "preparing" });
 
 // A delivering batch whose <upload> already landed in the target transcript.
 const landedTarget = "s-landed";
@@ -86,6 +86,17 @@ JSON.stringify({
 => {"refired":["«*»","«*»","«*»"],"landedRefired":true,"lostSkipped":true}
 ```
 
+The re-fired set is exactly {sealed, preparing, delivering-landed}:
+
+```ts continue
+JSON.stringify({
+  sealed: fired.includes(sealed.id),
+  preparing: fired.includes(preparing.id),
+  count: fired.length,
+})
+=> {"sealed":true,"preparing":true,"count":3}
+```
+
 ```ts cleanup
 await box.cleanup();
 ```
@@ -103,7 +114,7 @@ open batch is left alone.
 ```ts
 const box = await makeTmpBox();
 const emptyOld = await makeBulk(box.root, { state: "open", aged: true });
-await makeBulk(box.root, { state: "open", aged: true, withFile: true });
+const nonEmptyOld = await makeBulk(box.root, { state: "open", aged: true, withFile: true });
 const recent = await makeBulk(box.root, { state: "open", withFile: true });
 
 const result = await sweepBulkBatches({ boxRoot: box.root });
@@ -114,6 +125,18 @@ JSON.stringify({
   recentKept: (await readStagingSession({ boxRoot: box.root, id: recent.id })) !== null,
 })
 => {"discarded":[],"abandoned":["«*»","«*»"],"emptyGone":false,"recentKept":true}
+```
+
+Both aged batches are surfaced, and both are still on disk — the sweep reports
+them for the uploader to finish, it never finalizes or deletes them:
+
+```ts continue
+JSON.stringify({
+  bothAbandoned: [emptyOld.id, nonEmptyOld.id].every((id) => result.abandoned.includes(id)),
+  registeredKept: (await readStagingSession({ boxRoot: box.root, id: emptyOld.id })) !== null,
+  nonEmptyKept: (await readStagingSession({ boxRoot: box.root, id: nonEmptyOld.id })) !== null,
+})
+=> {"bothAbandoned":true,"registeredKept":true,"nonEmptyKept":true}
 ```
 
 ```ts cleanup
