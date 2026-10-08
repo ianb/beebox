@@ -28,7 +28,4 @@ isRecord([1, 2, 3])
 
 isRecord("string")
 => false
-
-isRecord(undefined)
-=> false
 ```

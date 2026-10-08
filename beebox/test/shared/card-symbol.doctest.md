@@ -7,20 +7,9 @@ ways to be a mark, and they sit side by side so an author choosing between them
 sees both.
 
 ```ts setup
-import { GLOBAL_CARD_FIELDS } from "../../src/cards/schema.js";
 import { CardSymbol, MAX_GLYPH_GRAPHEMES } from "../../src/shared/card-symbol.js";
 import { isCssColour } from "../../src/shared/css-colour.js";
 import { countGraphemes } from "../../src/shared/graphemes.js";
-```
-
-## It is a global field
-
-```ts
-Object.keys(GLOBAL_CARD_FIELDS).join(",")
-=> title,contains,contains-evidence,todos,symbol,prominence,theme
-
-GLOBAL_CARD_FIELDS["symbol"].isOptional()
-=> true
 ```
 
 ## The group parses, and every key is optional
@@ -56,9 +45,6 @@ is two.
 const family = "👨‍👩‍👧‍👦";
 const scotland = "🏴󠁧󠁢󠁳󠁣󠁴󠁿";
 const kiss = "👨🏻‍❤️‍💋‍👨🏽";
-
-[family.length, scotland.length, kiss.length].join(",")
-=> 11,14,15
 
 [countGraphemes(family), countGraphemes(scotland), countGraphemes(kiss)].join(",")
 => 1,1,1

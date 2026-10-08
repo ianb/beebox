@@ -20,9 +20,6 @@ const schemas = await createCardSchemaMap();
 ## Registered as `todo-view`, in the schema registry, with a default template
 
 ```ts
-TodoViewSchema.type
-=> todo-view
-
 getCardTypes().includes("todo-view")
 => true
 

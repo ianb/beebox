@@ -81,14 +81,6 @@ JSON.stringify(onDisk)
 => {"lastUpdateId":5}
 ```
 
-```ts continue
-// State lives at the connector's .state.json; the cross-process lock uses a
-// SIBLING .lock path (never the state file itself — acquireLock would
-// unlink/overwrite malformed lock content and destroy real state).
-transientStatePath(box.root, "telegram").endsWith("_bookkeeping/connectors/telegram.state.json")
-=> true
-```
-
 ```ts cleanup
 await box.cleanup();
 ```

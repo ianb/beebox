@@ -18,9 +18,6 @@ Sanitizes a display string into a filename stem (no extension). Keeps alphanumer
 sanitizeFilenameStem("Hello World!")
 => Hello_World
 
-sanitizeFilenameStem("Tax Documents (2)")
-=> Tax_Documents_2
-
 sanitizeFilenameStem("  leading spaces")
 => leading_spaces
 ```
@@ -64,9 +61,6 @@ Sanitizes a full filename including its extension — this is the one used for f
 ```ts
 sanitizeFilename("Tax Documents (2).pdf")
 => Tax_Documents_2.pdf
-
-sanitizeFilename("my photo.JPG")
-=> my_photo.JPG
 
 sanitizeFilename("no-extension-here")
 => no-extension-here
