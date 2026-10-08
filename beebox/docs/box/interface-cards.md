@@ -78,28 +78,17 @@ and context only. It does not change the selected conversation, draft, or send
 destination. Only an explicit conversation action, such as selecting a recent
 chat or asking to chat about a target, changes the recipient.
 
-## Missing cards and migration repair
+## Missing cards
 
-Initialization supplies all eight anchors. For an existing box, the registered
-`canonical-interface-cards` migration supplies and checks only Dashboard,
-Settings, and Browse. `remaining-interface-cards` adds the later five and also
-repairs any missing original anchors; it seeds and checks the complete set of
-eight. Both are missing-only and preserve existing valid titles and notes.
-Unexpected content at a canonical path or a misplaced instance is a conflict to
-resolve; it is not permission to overwrite content or select an arbitrary copy.
+Initialization supplies all eight anchors, and every existing box has them (the
+seeding migrations `canonical-interface-cards` and `remaining-interface-cards`
+are retired). Unexpected content at a canonical path or a misplaced instance is
+a conflict to resolve; it is not permission to overwrite content or select an
+arbitrary copy.
 
-Before bootstrap completion, an older box may be missing some anchors. Ordinary
-commits still cannot remove anchors already present. Once the latest bootstrap
-completion is recorded, all eight valid cards are required. Pre-commit checks
-the proposed Git index: leaving an unstaged copy on disk cannot conceal a staged
-deletion.
-
-For an accidental deletion, restore the intended card from Git history. For an
-older box, inspect pending migrations with `bbx migrate --status` and run the
-migration for the missing cohort. A box missing one of the later five needs
-`remaining-interface-cards`, even if it never enrolled in the earlier marker.
-Do not fake completion, remove a manifest record, disable validation, or invent
-a migration-mode flag to get a commit through. Marking a migration applied
-verifies its required cards already exist; it does not create them. A future
-relocation needs a declared migration and its final required set, not an
-ordinary card move.
+Ordinary commits cannot remove an anchor. Pre-commit checks the proposed Git
+index: leaving an unstaged copy on disk cannot conceal a staged deletion. For
+an accidental deletion, restore the card from Git history. Do not fake
+completion, remove a manifest record, or disable validation to get a commit
+through. A future relocation needs a declared migration and its final required
+set, not an ordinary card move.

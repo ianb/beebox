@@ -56,6 +56,8 @@ const box = await makeTestServer();
 const res = await box.server.inject({ method: "GET", url: "/auth/login" });
 print(`status: ${res.statusCode}`);
 print(`content-type: ${res.headers["content-type"]}`);
+print(`has form POST to /auth/login: ${res.payload.includes("<form method=\"POST\" action=\"/auth/login\">")}`);
+print(`has email + password inputs: ${res.payload.includes("name=\"email\"") && res.payload.includes("name=\"password\"")}`);
 // None of the SPA/asset references a gated router would 401:
 print(`no <script: ${!res.payload.includes("<script")}`);
 print(`no <link: ${!res.payload.includes("<link")}`);
@@ -65,6 +67,8 @@ print(`no /@vite/ or /src/: ${!res.payload.includes("/@vite/") && !res.payload.i
 =>
 status: 200
 content-type: text/html
+has form POST to /auth/login: true
+has email + password inputs: true
 no <script: true
 no <link: true
 no /assets/: true
@@ -118,12 +122,14 @@ print(`no form without a token: ${!noToken.payload.includes("<form")}`);
 const withToken = await box.server.inject({ method: "GET", url: "/auth/setup?token=abc123" });
 print(`form action: ${withToken.payload.includes("action=\"/auth/setup\"")}`);
 print(`hidden token: ${withToken.payload.includes("name=\"token\" value=\"abc123\"")}`);
+print(`confirm field: ${withToken.payload.includes("name=\"confirmPassword\"")}`);
 "done"
 =>
 guidance heading: true
 no form without a token: true
 form action: true
 hidden token: true
+confirm field: true
 done
 ```
 

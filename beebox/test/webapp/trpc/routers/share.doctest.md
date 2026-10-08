@@ -95,6 +95,32 @@ replay.created[0]
 => _content/inbox/An_Example_00000000-0000-4000-8000-000000000001.webpage.card
 ```
 
+## A retry finds a card written in the migrated `sources` shape
+
+Boxes carry cards that the retired `source-fields-2026-09` migration rewrote
+from the old `source`/`captured` keys. The router compares an existing card
+with the text it would generate byte for byte, so this fixture pins that shape:
+a retry of such a share finds the card instead of reporting a conflict.
+
+```ts continue
+const oldRequest = { ...request, shareId: "00000000-0000-4000-8000-000000000003", title: "Before" };
+const oldRel = "_content/inbox/Before_00000000-0000-4000-8000-000000000003.webpage.card";
+const migratedCard = [
+  "---",
+  "title: Before",
+  "sources:",
+  "  - href: https://example.com/article",
+  "    retrieved: 2026-08-07T12:00:00.000Z",
+  "share-id: 00000000-0000-4000-8000-000000000003",
+  "---",
+  "[Before](https://example.com/article)",
+  "",
+].join("\n");
+await writeFile(path.join(box.root, oldRel), migratedCard, "utf-8");
+(await caller(box.root).share.saveTextual(oldRequest)).created[0] === oldRel
+=> true
+```
+
 ## A reused share id with different immutable content conflicts
 
 ```ts continue
