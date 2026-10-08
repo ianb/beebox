@@ -5,7 +5,19 @@ area: browse
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — C-reconnecting journey walk, 2026-10-08
+resolution: implemented
 ---
+
+Fixed 2026-10-08: the id-less ref check (`browse/src/point-check-script.ts`)
+finds the ref's element among `document.elementsFromPoint` at the box centre by
+the box upstream reported, and refuses `covered` unless the topmost element is
+that element, inside it, or its own `<label>`. Name or no name. When no element
+there has the box (the control does not take the pointer), the old name check
+still applies, so no new refusals there. Upstream `get box` reports viewport
+coordinates, the same as `getBoundingClientRect` (checked on a scrolled page).
+Pinned by `browse/test/controls.point-check.doctest.md`; in real Chrome a
+checkbox under a fixed full-width layer passed the old check with the name
+"Open" and with no name, and the new check refuses both.
 
 In the C-reconnecting walk the first click on a todo checkbox did nothing and
 the second worked. The reviewer reproduced it: a checkbox scrolled to y=524
@@ -36,4 +48,4 @@ the ref to a node for that. Related:
 [todo checkbox name is its status](2026-10-08-todo-checkbox-name-is-its-status.md)
 (a name of "Open" is also what makes a substring match easy).
 
-Report: [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 37).
+Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 37).

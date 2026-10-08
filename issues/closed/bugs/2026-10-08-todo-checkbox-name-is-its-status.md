@@ -22,6 +22,6 @@ express. A name like "Done: <todo text>" would carry both.
 
 The live snapshot in the walk showed the name "Open"/"Done" for each box.
 
-Related: [todo checkboxes under the composer band are not clickable](../../bugs/2026-10-08-browse-ref-click-checks-only-geometry.md).
+Related: [todo checkboxes under the composer band are not clickable](2026-10-08-browse-ref-click-checks-only-geometry.md).
 
 Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
