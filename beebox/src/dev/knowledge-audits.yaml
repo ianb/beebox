@@ -7902,10 +7902,11 @@ tests:
       Right place, right time: is this the moment to act, show, or stay
       quiet, and where (which surface, which card, which tier of attention:
       interrupt, wait to be found, background), with quiet and findable as
-      the default. Points to the bbx-design skill, spirit.md, or
-      design/interaction-model.md. FAILS if it invents a question with no
-      source.
-    correct_contains_any: ["bbx-design", "spirit.md", "interaction-model"]
+      the default. Points to the bbx-design skill, the only place the
+      question is stated (spirit.md gives examples; interaction-model.md
+      covers proactivity without the question). FAILS if it invents a
+      question with no source or attributes it elsewhere alone.
+    correct_contains: ["bbx-design"]
     correct_matches:
       - 'right (?:place|time|moment)|(?:act|show)[\s\S]{0,40}(?:stay )?quiet'
       - 'surface|tier|interrupt'
@@ -7942,7 +7943,7 @@ tests:
 
   - id: dev-checkpoint-no-merge
     surface: dev
-    prompt: "The human says 'checkpoint this'. Do you merge to main?"
+    prompt: "The human says 'checkpoint this'. What do you do with the work on your branch?"
     expected_level: knows_directly
     watch_for: >
       No: commit the verified work on the worktree branch. Merging to main

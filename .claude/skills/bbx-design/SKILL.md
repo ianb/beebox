@@ -1,6 +1,6 @@
 ---
 name: bbx-design
-description: Write or review the product design for work that changes what a person experiences of the box - a new or changed card type, a surface or view, a proactive behavior, a notification or check-in, chat behavior, onboarding, or a record a person reads. bbx-plan hands off to it before the tracks. Not for bugs, refactors, infrastructure, or dev tooling.
+description: Write or review the product design for work that changes what a person experiences of the box - a new or changed card type, a surface or view, a proactive behavior, a notification or check-in, chat behavior, onboarding, or a record a person reads. bbx-plan hands off to it before the tracks. Not for refactors, infrastructure, dev tooling, or bug fixes that restore already-decided behavior.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob
 ---
 
@@ -9,8 +9,9 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob
 The product-design counterpart of bbx-plan. A plan says how the code changes;
 a design says what a person meets, when, and where. Use it when work changes
 what a person experiences of the box, including anything the box does on its
-own; skip it for bugs, refactors, infrastructure, and dev tooling. Write it
-before the plan's tracks, which then build it.
+own; skip it for refactors, infrastructure, dev tooling, and bug fixes that
+restore already-decided behavior. A fix that makes a new product choice gets
+one. Write it before the plan's tracks, which then build it.
 
 ## Read first
 

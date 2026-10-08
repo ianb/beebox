@@ -14,6 +14,7 @@
  *   so a pass means tracked guidance taught it. The user-level
  *   `~/.claude/CLAUDE.md` still loads; the CLI has no switch for it short of
  *   `--bare`, which also drops project CLAUDE.md discovery and OAuth.
+ * - The settings also deny reads of the audit answer key (`ANSWER_KEY_DENY`).
  * - `--tools Read,Grep,Glob,Skill`: read-only, no Bash or Edit, so the audit
  *   cannot change the checkout. A Skill invocation counts as a read of that
  *   skill's SKILL.md, which is what it loads.
@@ -28,10 +29,13 @@ import type { AgentBehavior, AuditTest, TestResult } from "./runner/run-test.js"
 import { runChecks } from "../audit-checks.js";
 import { parseUsage, summarizeContextUsage, type TurnUsage } from "../context-usage.js";
 import { isRecord } from "../../../shared/is-record.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 export const DEFAULT_DEV_AUDIT_MODEL = "claude-opus-5-5";
 const DEFAULT_MAX_TURNS = 10;
 const SESSION_TIMEOUT_MS = 10 * 60_000;
+/** Delay between SIGTERM and SIGKILL when a session overruns its timeout. */
+const KILL_GRACE_MS = 10_000;
 
 /** Parent-session bindings a nested `claude -p` must not inherit. */
 const PARENT_SESSION_ENV = [
@@ -54,10 +58,22 @@ class DevAuditIncompleteError extends Error {
   }
 }
 
+/**
+ * The audit definitions and past reports hold the expected answers, and a
+ * Grep for the prompt's words finds them; `scratch/` holds review notes that
+ * quote them. Read deny rules also bind Grep and Glob.
+ */
+const ANSWER_KEY_DENY = [
+  "Read(./beebox/src/dev/knowledge-audits.yaml)",
+  "Read(./beebox/src/dev/context-history.yaml)",
+  "Read(./beebox/src/dev/reports/**)",
+  "Read(./scratch/**)",
+];
+
 export function devClaudeArgs(options: { model: string; maxTurns: number }): string[] {
   return [
     "-p", "--model", options.model, "--max-turns", String(options.maxTurns),
-    "--setting-sources", "project", "--settings", JSON.stringify({ disableAllHooks: true }),
+    "--setting-sources", "project", "--settings", JSON.stringify({ disableAllHooks: true, permissions: { deny: ANSWER_KEY_DENY } }),
     "--strict-mcp-config", "--no-session-persistence", "--tools", "Read,Grep,Glob,Skill",
     "--output-format", "stream-json", "--verbose",
   ];
@@ -65,9 +81,12 @@ export function devClaudeArgs(options: { model: string; maxTurns: number }): str
 
 const blockSchema = z.object({
   type: z.string(),
+  id: z.string().optional(),
   text: z.string().optional(),
   name: z.string().optional(),
   input: z.unknown().optional(),
+  tool_use_id: z.string().optional(),
+  is_error: z.boolean().optional(),
 });
 const streamLineSchema = z.object({
   type: z.string(),
@@ -93,11 +112,53 @@ function inputString(input: unknown, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
+type StreamBlock = z.infer<typeof blockSchema>;
+
+/** The repo-relative file a Read or Skill call loads, or null for other tools. */
+function readTarget(block: StreamBlock, repoRoot: string): string | null {
+  if (block.name === "Read") {
+    const file = inputString(block.input, "file_path");
+    if (!file) return null;
+    return path.isAbsolute(file) ? path.relative(repoRoot, file) : file;
+  }
+  if (block.name === "Skill") {
+    const skill = inputString(block.input, "skill");
+    return skill ? `.claude/skills/${skill}/SKILL.md` : null;
+  }
+  return null;
+}
+
+/** Hold a Read/Skill call until its result arrives; record a search at once. */
+function recordToolUse(block: StreamBlock, state: { pendingReads: Map<string, string>; behavior: AgentBehavior; repoRoot: string }): void {
+  const file = readTarget(block, state.repoRoot);
+  if (file !== null) {
+    if (block.id !== undefined) state.pendingReads.set(block.id, file);
+    return;
+  }
+  const tool = block.name ?? "";
+  if (tool === "Grep" || tool === "Glob") {
+    const where = inputString(block.input, "path");
+    state.behavior.searches.push({ tool, summary: `${inputString(block.input, "pattern")}${where ? ` in ${where}` : ""}` });
+  }
+}
+
+/** Count a held read once its tool result arrives without an error. */
+function recordToolResults(blocks: StreamBlock[], state: { pendingReads: Map<string, string>; behavior: AgentBehavior }): void {
+  for (const block of blocks) {
+    if (block.type !== "tool_result" || block.tool_use_id === undefined) continue;
+    const file = state.pendingReads.get(block.tool_use_id);
+    state.pendingReads.delete(block.tool_use_id);
+    if (file !== undefined && block.is_error !== true) state.behavior.filesRead.push(file);
+  }
+}
+
 /**
  * Normalize a stream-json transcript into audit behavior. Read paths are made
- * repo-relative; a Skill call is recorded as a read of its SKILL.md. Stream
- * events repeat one message's usage for each of its content blocks, so usage
- * is counted once per message id.
+ * repo-relative; a Skill call is recorded as a read of its SKILL.md. A read
+ * counts only once its tool result arrives without an error, so a failed Read
+ * of a missing file is not graded as a read. Stream events repeat one
+ * message's usage for each of its content blocks, so usage is counted once
+ * per message id.
  */
 export function devBehaviorFromStreamJson(lines: string[], repoRoot: string): DevSessionTrace {
   const behavior: AgentBehavior = {
@@ -107,6 +168,7 @@ export function devBehaviorFromStreamJson(lines: string[], repoRoot: string): De
   const usageByMessage = new Map<string, TurnUsage>();
   let sessionId = "";
   let resultSubtype: string | null = null;
+  const pendingReads = new Map<string, string>();
   for (const line of lines) {
     if (!line.trim()) continue;
     const parsed = streamLineSchema.safeParse(JSON.parse(line));
@@ -114,23 +176,16 @@ export function devBehaviorFromStreamJson(lines: string[], repoRoot: string): De
     const event = parsed.data;
     if (event.session_id) sessionId = event.session_id;
     if (event.type === "result") resultSubtype = event.subtype ?? null;
+    if (event.type === "user") {
+      recordToolResults(event.message?.content ?? [], { pendingReads, behavior });
+      continue;
+    }
     if (event.type !== "assistant" || !event.message) continue;
     const usage = parseUsage(event.message.usage);
     if (usage && event.message.id) usageByMessage.set(event.message.id, usage);
     for (const block of event.message.content ?? []) {
       if (block.type === "text" && block.text) chunks.push(block.text);
-      if (block.type !== "tool_use") continue;
-      const tool = block.name ?? "";
-      if (tool === "Read") {
-        const file = inputString(block.input, "file_path");
-        if (file) behavior.filesRead.push(path.isAbsolute(file) ? path.relative(repoRoot, file) : file);
-      } else if (tool === "Skill") {
-        const skill = inputString(block.input, "skill");
-        if (skill) behavior.filesRead.push(`.claude/skills/${skill}/SKILL.md`);
-      } else if (tool === "Grep" || tool === "Glob") {
-        const where = inputString(block.input, "path");
-        behavior.searches.push({ tool, summary: `${inputString(block.input, "pattern")}${where ? ` in ${where}` : ""}` });
-      }
+      if (block.type === "tool_use") recordToolUse(block, { pendingReads, behavior, repoRoot });
     }
   }
   behavior.responseText = chunks.join("\n").trim();
@@ -157,13 +212,27 @@ async function runClaude(options: { args: string[]; cwd: string; prompt: string 
   child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString("utf8"); });
   child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString("utf8"); });
   child.stdin.end(options.prompt);
+  let killTimer: NodeJS.Timeout | undefined;
+  const signalGroup = (signal: NodeJS.Signals): void => {
+    if (child.pid === undefined) return;
+    try {
+      process.kill(-child.pid, signal);
+    } catch (e) {
+      // ESRCH: the group already exited between the timer and the signal.
+      if (errnoCode(e) !== "ESRCH") throw e;
+    }
+  };
   const timer = setTimeout(() => {
-    if (child.pid !== undefined) process.kill(-child.pid, "SIGTERM");
+    signalGroup("SIGTERM");
+    killTimer = setTimeout(() => signalGroup("SIGKILL"), KILL_GRACE_MS);
   }, SESSION_TIMEOUT_MS);
   const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve, reject) => {
     child.on("error", reject);
     child.on("close", (code, signal) => resolve({ code, signal }));
-  }).finally(() => clearTimeout(timer));
+  }).finally(() => {
+    clearTimeout(timer);
+    clearTimeout(killTimer);
+  });
   // A max-turns stop exits 1 with a result event; the caller reports it.
   if (exit.signal !== null || (exit.code !== 0 && !stdout.includes("\"type\":\"result\""))) {
     throw new DevAuditExitError(exit.signal ?? String(exit.code), stderr);

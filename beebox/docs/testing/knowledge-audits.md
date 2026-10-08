@@ -114,8 +114,10 @@ pnpm knowledge-audit run --dev [--model <id>] [--filter <tag-or-id>]
 `claude-opus-5-5`. The session loads project settings and skills with hooks
 disabled, no MCP servers, and auto-memory off, so a pass means tracked
 guidance taught it; the user-level `~/.claude/CLAUDE.md` still loads. Its
-tools are `Read`, `Grep`, `Glob`, and `Skill`. A Skill call counts as a read of
-that skill's `SKILL.md`, so `should_read` paths are repo-relative
+settings deny reads of the answer key (`knowledge-audits.yaml`, the context
+ledger, `src/dev/reports/`, and `scratch/`). Its tools are `Read`, `Grep`,
+`Glob`, and `Skill`. A read counts only when its tool result is not an error,
+and a Skill call counts as a read of that skill's `SKILL.md`, so `should_read` paths are repo-relative
 (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
 checks are unchanged; card, Bash, search, fixture, and context-dir fields are
 refused at load. Mechanics: `src/dev/lib/test-runner/dev-session.ts`.

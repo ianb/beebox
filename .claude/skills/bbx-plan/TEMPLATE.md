@@ -10,7 +10,7 @@ issues: []   # ../../../issues/<category>/<file>.md, one per line; see below
      Don't recap the conversation. -->
 
 **Issues addressed:** <!-- every issues/ item this resolves, PLUS related or
-duplicate ones you found by grepping the queue (slug, keyword, symptom). /finish
+duplicate ones you found by grepping the queue (slug, keyword, symptom). The finish skill
 reads the frontmatter `issues:` list to close them; one left off is forgotten.
 "none" if not tied to a filed issue. -->
 

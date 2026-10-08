@@ -32,11 +32,11 @@ Boxes are **shared** (ruling 2). Sometimes one person, but a box can hold
 multiple people (the household box of `../architecture/01-what-is-this.md` is
 the design target, not a dramatization). A box has exactly **one granularity
 of sharing**: everyone in the box shares everything in it. Different groups or
-subgroups need different boxes. Per-member identity beyond the auth allowlist
-is not designed yet — aspiration, not description. (2026-10: per-member
-logins shipped — one host owner, invited members per box, member approval of
-publishing scope; see [`../security-overview.md`](../security-overview.md).
-All members still share everything in the box.)
+subgroups need different boxes. Per-member logins shipped (2026-10): one host
+owner, invited members per box, member approval of publishing scope; see
+[`../security-overview.md`](../security-overview.md). Identity beyond login
+(per-member views, roles, or private content) is not designed yet —
+aspiration, not description.
 
 ## Runs on a full computer, never serverless
 

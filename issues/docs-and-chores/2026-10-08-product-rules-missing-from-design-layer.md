@@ -14,7 +14,8 @@ in code or shipped docs and have no design-level statement. Each is a
 candidate for a sentence in the right design file, or a new file (privacy
 and egress has none).
 
-- **Questions**: never auto-answered; one nudge at 7 days, expiry at 30;
+- **Questions**: never auto-answered; by default one nudge at 7 days and
+  expiry at 30 (`expires-after` overrides both);
   dismissed or expired questions stay answerable; age from `asked-at`;
   dismissed questions are not re-asked (`docs/questions.md`).
 - **Notification restraint**: questions only badge unless
