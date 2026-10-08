@@ -546,6 +546,18 @@ and is verified against C.
     `todo-view`, and other body-less types keep today's Properties.
 - **Vocabulary lock-ins.** Renderer name `Place`; `forDir` input `expandsAsGroups`; payload fields `openers`,
   `arrival`; `source: "place"`; `expandLabel`; `placeSections`; `startSomething`; `PlaceChatContext`.
+- **Implementation notes (2026-10-08).**
+  - The chat and the page share the opener buttons, so the layout check (rule 3) moved `ChatOpeners.tsx` and
+    `opener-send.ts` from `InteractiveChat/` to `components/openers/`, beside `place-chat.ts` (`PlaceChatContext`,
+    `startSomething`). `useRefetchOnFileChange` moved to `hooks/`; the page refetches on file changes.
+  - The "Go to <label>" link shows beside another place's chat whether or not the place has openers.
+  - The card header already shows the mark and label, so the page draws them only in an embed.
+  - Section headings: "Start here", "Main cards", "Places inside", "Pinned". Entry-point rows carry no tag.
+  - `showsOwnOpeners` is `unstarted && no messages && not streaming`; `ChatBodyProps` gains `unstarted`.
+  - An unnamed `expand` with an empty query gets no group label (it lists nothing). Without derivation
+    (`derive: false`) `arrival` is the landmark card.
+  - The app has no dark mode (`prefers-color-scheme` changes nothing); the theme check used a post-it card
+    theme with the spectrum system theme.
 - **First implementation chunk.** `expandLabel` + `expandsAsGroups` + `source: "place"` + payload `openers` and
   `arrival`, with a `forDir` doctest on a fixture place (entry point, primary, nested place, curated missing link,
   unnamed expand with matches, unnamed expand with none, named group; without the flag the unnamed expand stays flat).
