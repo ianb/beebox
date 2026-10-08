@@ -1,6 +1,6 @@
 ---
 title: "Landmark arrival"
-status: draft
+status: active
 workstream: journey-walks-oct
 issues:
   - ../../../issues/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md
@@ -40,7 +40,21 @@ Queue searches run (`bin/issues search --all`): `landmark`, `openers`,
 `collection view`, `tutor`, `baseline`, `entry-point`, `briefing`. No duplicate
 of the three resolved issues was found.
 
-## Decisions needed from the boxholder
+## Decisions from the boxholder (2026-10-08)
+
+The boxholder accepted every recommendation below. The options are kept for
+the record.
+
+- **(a) Root arrival: option 1** ("Sure"). The root follows the rule.
+- **(b) Place page beside another place's chat: option 3** ("OK, I think that
+  makes sense"). Hide "Start something"; show a link to go to that place.
+- **(c) Phone: no card opens on arrival** (see Direction).
+- **(d) Place page with an entry point: option 1** ("OK, we'll try it").
+  Browse and chat links only.
+- **(e) Fallback openers: option 1** ("sounds fine to show none").
+- **(f) Size: approved** ("that's fine") at about 2,150 changed lines.
+
+### Options as presented
 
 Each item names the options and the planner's recommendation. Tracks below
 are written as if the recommendation is accepted; each names what changes if
@@ -534,7 +548,8 @@ and is verified against C.
     nothing in memory (`:102-107`) and `raw === null && legacy === null` (`:115-117`). New methods:
     `takeArrival(): boolean` returns the flag and clears it; `cancelArrival()` clears it. `adopt` (`:142-149`)
     and `dispatch` (`:155-161`) clear it: an adopted fresh chat keeps its arrangement, and any card action by
-    the person ends the pending arrival.
+    the person ends the pending arrival. A pointer, focus, or key event anywhere in the chat pane
+    (transcript included, not only the composer) also calls `cancelArrival()` (review round 2, finding 5).
   - Provider transition (`provider.tsx:109-149`). The arrival is decided and consumed inside this effect, in
     the branch that today produces `keep-current`, before `projectHistory` (`:148`) writes the history entry:
     - `useWorkspaceController` queries `trpc.landmarks.forDir.useQuery({ dir: conversationTarget.contextDir },
@@ -765,7 +780,11 @@ Commit boundaries; the plan ships in one piece when every chunk is done and the 
        sha=$(sha256sum "$f" | cut -d' ' -f1)
        lm=$(find "$dir" -maxdepth 1 -name '*.landmark.card' | sort | head -n1)
        if [ -z "$lm" ]; then lmo=none
-       elif grep -qE '^[[:space:]]+openers:' "$lm"; then lmo=listed
+       elif grep -qE '^[[:space:]]+openers:' "$lm"; then
+         # a fingerprint of the list, so equal and differing lists can be told apart
+         lmo="listed:$(sed -n '/^[[:space:]]*openers:/,/^[[:space:]]*[a-z-]*:[[:space:]]*$/p' "$lm" | sha256sum | cut -c1-12)"
+         bo="$(sed -n '/^openers:/,/^[a-z-]*:/p' "$f" | sha256sum | cut -c1-12)"
+         lmo="$lmo briefing-openers:$bo"
        else lmo=absent; fi
        printf '%s\t%s\topeners=%s\tsha=%s\tlandmark=%s\tlandmark-openers=%s\n' \
          "$box" "${f#"$box"/}" "$has" "$sha" "${lm#"$box"/}" "$lmo"
@@ -780,7 +799,7 @@ Commit boundaries; the plan ships in one piece when every chunk is done and the 
    case 6 is reported to the boxholder before deploy.
 2. *Apply on resettable copies, one per distinct shape.* For each shape the inventory found, copy one local box
    holding it to the scratchpad (a git checkout, so `git reset --hard` restores it), then run
-   `run.ts <copy>` (plan output), `run.ts <copy> --apply`, `bbx validate`, and `run.ts <copy> --verify`. A shape
+   `run.ts <copy>` (plan output), `run.ts <copy> --apply`, `bbx validate`, and `run.ts <copy> --verify`, then `bbx engine migrate` on the copy, because a standalone script run does not write the manifest entry (review round 2). A shape
    found only on production gets a `makeTmpBox` fixture reproducing its row, not a copy of production content,
    unless the boxholder approves a copy.
 3. *Check the result on each copy:* the copy's `_config/migrations.jsonl` gets the `briefing-openers-2026-10`
