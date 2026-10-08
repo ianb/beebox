@@ -1,12 +1,15 @@
 ---
 title: "System themes define their own text selection colors"
 workstream: selection-colors
+resolution: implemented
 area: beebox
 labels: [themes, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request
 ---
+
+Closed: implemented on branch worktree-selection-colors (commits 982daf1b4..29d8bc0bf). Selection colors cover system and card themes, optional with inheritance; Candy and Letter set themes were added as a follow-on.
 
 Selecting text anywhere in the app shows the browser's default highlight.
 The system themes (`paper`, with its `manila` and `blue` stocks; `plain`;
