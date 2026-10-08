@@ -43,5 +43,3 @@ message to name the starter, say what it needs in plain words, and end on
 - Which starter first. The research argues for the
   [cross-tool to-do](2026-10-08-cross-tool-todo-as-a-target-use-case.md).
 - Whether the journey for a starter is the test of its done-when.
-- Where a starter's kick-off list lives:
-  [landmarks carry starter messages](2026-10-08-landmarks-carry-starter-messages.md).
