@@ -15,8 +15,9 @@ the exact commands). By default the box listens only on your own
 machine, so nothing else on your network can reach it until you decide
 otherwise.
 Details: [install/docker.md](install/docker.md). That guide documents the
-Claude login; the documentation does not describe logging Codex in inside
-the container.
+Claude login and the Codex login. Accounts, stored provider keys, and the
+Codex login live in a second named volume, so a rebuild keeps them; the first
+start also downloads about 2 GB of document-reading models in the background.
 
 **The from-source path is for modifying the engine.** It needs Node 24,
 pnpm, and several system binaries, and it ends with a `doctor` command that

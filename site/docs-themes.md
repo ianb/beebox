@@ -33,7 +33,9 @@ upgrade. A box agent gets a generated guide and a reference set rather than a
 bespoke framework. `bbx` is the agent's own tool, not a user surface.
 
 **Where it is thin.** Two engines is not many; the swap is a design intent
-with one exercised alternative, not a plugin interface. Claude requires a
+with one exercised alternative, not a plugin interface. The engine process is also
+not silent by itself: Claude Code sends its own usage metrics unless the owner
+turns that off per box, and the page on data says so. Claude requires a
 subscription login, not an API key. The Claude engine can also be pointed at
 other vendors' models (GLM through Z.ai, and OpenRouter models the owner adds
 one by one), which loosens the tie to one model vendor. It is pay-per-use, only
@@ -190,14 +192,15 @@ with the box staying quiet and filing rather than chatting back. A capture
 session that groups a burst of photos and spoken remarks into one timeline.
 Scanned paper. A browser extension for the page you are reading. Connectors
 that sync email, calendar, and documents, and act as triggers as well as
-sources. Quick chat, one text box that a routing model sends to the fitting
-conversation, is the newest path.
+sources. Quick chat is the newest path: the box screen, which the iPhone app opens on,
+has one text box, a routing model sends the thought to the fitting
+conversation, and an unclear thought waits for the person to choose.
 
 **Where it is thin.** Telling speakers apart in a recording is not solved.
 The Telegram path is rough. Several capture paths are code-verified rather
-than exercised end to end. Quick chat is described in its own doc as an
-evaluation surface, and it sends the message and recent conversation text to a
-routing model through OpenRouter.
+than exercised end to end. Quick chat posts a clearly routed thought without confirmation and the post
+cannot be moved; it sends the message and recent conversation text to a
+routing model through OpenRouter, and it needs that key.
 
 **Pages.** `capabilities/voice.md`, `capabilities/phone-capture.md`,
 `capabilities/web-clipping.md`, `uses/an-inbox-for-your-thoughts.md`,

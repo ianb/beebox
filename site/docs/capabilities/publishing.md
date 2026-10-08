@@ -11,9 +11,11 @@ serves it on the open web, under your control.
 
 **What it does for you**
 
-- Has the agent build a site in a folder of the box, either finished files or a
-  small frontend project it builds itself, and serve it from one web address
-  that belongs to your box.
+- Has the agent build a site, either finished files (Markdown pages are turned
+  into web pages for you) or a small frontend project it builds itself, and
+  serve it from one web address that belongs to your box. Each site is one
+  publication card in the box; its attached folder holds the site files, and
+  its body holds private notes that are never published.
 - Gives you the decision. The agent prepares a site and hands you a link into
   the app; a signed-in member of the box reviews the title, the address, who it
   is for, the list of files, and the findings of a scan for likely secrets, then
@@ -41,8 +43,9 @@ assigned to the box. The agent is never given the token. See
 Each box gets one hostname and one small server program on Cloudflare that
 serves it. Public sites live at `/<name>/` and secret-link sites at
 `/s/<identifier>/` on that hostname. The agent asks the box server to prepare a
-site by its folder name; the server builds it if needed, scans it, and uploads
-it as a release. A finished page runs only in the visitor's browser, never in
+site by its publication card; the server builds it if needed, scans it, and
+uploads it as a release. Pages render at that point, content marked redacted
+is left out entirely, and the scan runs over the rendered result. A finished page runs only in the visitor's browser, never in
 the box.
 
 **Limits**
@@ -61,6 +64,8 @@ the box.
 - A build script the agent writes runs as ordinary code on your machine, with
   a reduced environment that leaves out the server's credentials. It is not a
   sandbox. Limits are 2,000 files, 25 MiB per file, and 100 MiB per site.
+- The older draft-and-go publishing flow, with its separate upload credential,
+  has been removed; the managed flow above is the only one.
 - Published pages cannot collect replies: there are no forms that send data
   back to the box.
 
