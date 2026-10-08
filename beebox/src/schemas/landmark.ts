@@ -94,8 +94,37 @@ const LandmarkChatApp = z.object({
 export type LandmarkChatAppData = z.infer<typeof LandmarkChatApp>;
 
 /**
+ * One opener: a single short line the person sees as a button and sends
+ * verbatim. Validated rather than silently normalized — an opener is agent-
+ * written text that compiles into CLAUDE.md and renders as a button, so a
+ * paragraph or a blank entry is a card error the boxholder should see, not
+ * something to quietly trim away.
+ */
+const OPENER_MAX_LENGTH = 120;
+export const OpenerEntry = z
+  .string()
+  .refine((s) => s.trim() !== "", "an opener must not be blank")
+  .refine((s) => !s.includes("\n"), "an opener must be a single line")
+  .refine(
+    (s) => s.trim().length <= OPENER_MAX_LENGTH,
+    `an opener must be at most ${OPENER_MAX_LENGTH} characters`,
+  );
+
+/**
+ * The root place's onboarding openers, installed on a new box's root landmark
+ * (`installRootLandmark`). Both are phrased from the person's side, so the
+ * agent is never asked something it cannot answer on turn one; the agent
+ * rewrites and eventually removes them as the box comes into regular use.
+ */
+export const STOCK_ROOT_OPENERS: readonly string[] = [
+  "Let me tell you what this box is for.",
+  "What can you do?",
+];
+
+/**
  * Human-facing navigation role: the bookmark surface shown on the
- * Landmarks page.
+ * Landmarks page. `openers` are the place's one-line first moves, shown on an
+ * unstarted chat in the place; a place with none shows none.
  */
 export const LandmarkNavigation = z.object({
   label: z.string().optional(),
@@ -103,6 +132,7 @@ export const LandmarkNavigation = z.object({
   links: z.array(LandmarkLink).optional(),
   expand: z.array(LandmarkExpand).optional(),
   "chat-app": LandmarkChatApp.optional(),
+  openers: z.array(OpenerEntry).optional(),
 });
 export type LandmarkNavigationData = z.infer<typeof LandmarkNavigation>;
 
@@ -265,14 +295,17 @@ export function parseLandmarkFields(content: string): LandmarkFields | null {
  * nothing (docs/plans/card-symbol.md).
  *
  * Pass `symbol` for an emoji/text mark, or `symbolSrc` for an image box path
- * (leading `/`; a landmark-dir-relative path also resolves).
+ * (leading `/`; a landmark-dir-relative path also resolves). `openers` become
+ * `navigation.openers` (the root landmark gets `STOCK_ROOT_OPENERS`).
  */
 export function createLandmarkTemplate(options: {
   label: string;
   symbol?: string;
   symbolSrc?: string;
+  openers?: readonly string[];
 }): string {
   const navigation: Record<string, unknown> = { label: options.label };
+  if (options.openers !== undefined) navigation["openers"] = [...options.openers];
   const fields: Record<string, unknown> = { navigation };
   if (typeof options.symbolSrc === "string" && options.symbolSrc !== "") {
     fields["symbol"] = { src: options.symbolSrc };

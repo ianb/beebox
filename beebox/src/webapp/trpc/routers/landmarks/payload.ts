@@ -52,6 +52,11 @@ export interface LandmarkPayload {
    * to this landmark's directory.
    */
   features: Record<string, string>;
+  /**
+   * The place's openers (`navigation.openers`), trimmed. Empty when the
+   * landmark lists none: there is no fallback to another place's list.
+   */
+  openers: string[];
 }
 
 /**
@@ -131,6 +136,7 @@ export async function loadLandmarkPayload(
       // Overwritten by the ancestor traversal in `list` after sorting.
       depth: 0,
       features: readLandmarkFeatures(navigation),
+      openers: (navigation?.openers ?? []).map((opener) => opener.trim()),
     },
     derivedProblems,
   };

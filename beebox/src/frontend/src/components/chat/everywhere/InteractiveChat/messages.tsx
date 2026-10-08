@@ -173,9 +173,9 @@ function MessageListInner({
   captureVerbs: CaptureVerbs;
   audioOverlayStore: AudioOverlayStore;
   /**
-   * Suggested opening questions from the bound directory's briefing, shown on
-   * the empty state of a fresh chat. Empty for an established box (the agent
-   * removes them once the box is in regular use) and for a resumed session.
+   * The place's openers (`navigation.openers` on its landmark), shown on the
+   * empty state of an unstarted chat. Empty for a place that lists none and
+   * for a resumed session.
    */
   openers: string[];
   /** Send an opener as the person's message — the typed-and-entered path. */

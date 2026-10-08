@@ -58,12 +58,13 @@ function sendDisabledReasonFor(selection: ConversationSelection | undefined): st
  *
  * `contextDir` is the prop value immediately for fresh "new" landmark chats
  * (the server hasn't seen the session id yet), falling back to the persisted
- * association for resumed sessions. `openers` are the `openers:` listed in
- * that directory's briefing — the suggestions an unstarted chat's empty state
- * offers. Openers are fetched only for an unstarted conversation (one this tab
- * created and nobody has written in): an existing session with no messages is
- * a different state, and offering openers there would read as an invitation to
- * start over.
+ * association for resumed sessions. `openers` are the place's openers
+ * (`navigation.openers` on the directory's landmark, from `landmarks.forDir`) —
+ * the suggestions an unstarted chat's empty state offers. A directory with no
+ * landmark has none; there is no fallback to the root's. Openers are fetched
+ * only for an unstarted conversation (one this tab created and nobody has
+ * written in): an existing session with no messages is a different state, and
+ * offering openers there would read as an invitation to start over.
  */
 function useChatBinding(params: {
   sessionId: string | null;
@@ -76,8 +77,8 @@ function useChatBinding(params: {
   );
   const queried = query.data ? query.data.contextDir : undefined;
   const contextDir = params.contextDir ?? queried ?? null;
-  const openersQuery = trpc.chat.openers.useQuery({ contextDir: contextDir ?? "" }, { enabled: params.unstarted });
-  return { contextDir, openers: params.unstarted && openersQuery.data ? openersQuery.data.openers : [] };
+  const placeQuery = trpc.landmarks.forDir.useQuery({ dir: contextDir ?? "" }, { enabled: params.unstarted && contextDir !== null });
+  return { contextDir, openers: params.unstarted ? placeQuery.data?.landmark?.openers ?? [] : [] };
 }
 
 interface InteractiveChatProps {

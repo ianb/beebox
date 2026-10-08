@@ -129,7 +129,7 @@ export async function readBoxIdentity({
  * order -- a box must not change its name between requests.
  * `landmarks.forDir` resolves the root the same way.
  */
-async function rootLandmarkRelPath(boxRoot: string): Promise<string | null> {
+export async function rootLandmarkRelPath(boxRoot: string): Promise<string | null> {
   const contentDir = `${boxRoot}/${LANDMARK_CONTENT_DIR}`;
   const stat = await fs.stat(contentDir, { bigint: true });
   const seen = discovered.get(boxRoot);
