@@ -150,6 +150,42 @@ parseAcks("<created-at>")
 => []
 ```
 
+## Aliases inside Markdown code stay literal
+
+A reply that explains the tags shows them as code. Normalizing there would
+replace the example with an ack: the prose would lose the example and gain a
+false indication. Inline code spans and fenced blocks are left as written.
+
+```ts
+stripStructuredOutputTags("Write `<created>` here")
+=> Write `<created>` here
+
+parseAcks("Write `<created>` here")
+=> []
+```
+
+A fenced block is left alone as well. (The example uses a `~~~` fence so it
+can sit inside this file's own code fence; backtick fences match the same way.)
+
+```ts
+const fenced = "Example:\n~~~\n<todo-added>\n~~~\nDone.";
+stripStructuredOutputTags(fenced).split("\n")
+=> ["Example:", "~~~", "<todo-added>", "~~~", "Done."]
+
+parseAcks(fenced)
+=> []
+
+parseAcks("Example:\n" + "`".repeat(3) + "\n<todo-added>\n" + "`".repeat(3))
+=> []
+```
+
+A bare tag outside the code still normalizes in the same reply.
+
+```ts
+stripStructuredOutputTags("Use `<created>` for files.<todo-added>")
+=> Use `<created>` for files.
+```
+
 ## parseCallouts
 
 Single callout with a context label.
