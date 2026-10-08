@@ -19,7 +19,7 @@ import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { createCardSchemaMap } from "../../../schemas.js";
-import { ownerProcedure, publicProcedure, router } from "../procedures.js";
+import { authedProcedure, publicProcedure, router } from "../procedures.js";
 
 const systemThemeInput = z.discriminatedUnion("scope", [
   z.object({ scope: z.literal("box"), theme: SystemThemeChoiceSchema.nullable() }),
@@ -63,11 +63,12 @@ export const presentationRouter = router({
           boxHasOverride: boxHasSystemThemeOverride(presentation),
         },
         configProblems: presentation.status === "invalid" ? presentation.problems : [],
-        canEditCardThemes: ctx.isOwner,
+        // Anyone on the box may set card and system themes (boxholder, 2026-10-08).
+        canEditCardThemes: ctx.authed,
       };
     }),
 
-  setSystemTheme: ownerProcedure
+  setSystemTheme: authedProcedure
     .input(systemThemeInput)
     .mutation(async ({ input, ctx }) => {
       const checked = input.theme === null ? null : validateSystemThemeChoice(input.theme);

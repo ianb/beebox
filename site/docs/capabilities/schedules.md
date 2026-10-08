@@ -19,6 +19,12 @@ background process that keeps them running.
   starts failing or goes overdue, rather than failing quietly forever.
 - Lets you run any schedule immediately from the dashboard instead of
   waiting for its next tick, and turn one off without deleting it.
+- Shows what each run did. A scheduled task ends its run by writing a short
+  summary (a headline, a few lines of detail, and a priority of normal or
+  attention); the dashboard shows the latest run's priority on each
+  schedule's row, the headline when it needs attention, and a history of the
+  recent runs. A run that found nothing to do reads as fine rather than
+  "waiting".
 - Waits instead of failing when a schedule needs a connector (e.g. Gmail)
   that is not currently configured.
 
@@ -37,7 +43,8 @@ out of quota, a due script skips cleanly and is marked "waiting," not
 
 **Limits**
 
-A hung scheduled script is eventually stopped along with everything it
+The run history is kept on the machine, not in the box, and holds the last
+twenty runs of each schedule. A hung scheduled script is eventually stopped along with everything it
 started, rather than left running forever, but the documentation does not
 describe a way to run schedules without a machine that is on and reachable
 when a schedule is due.

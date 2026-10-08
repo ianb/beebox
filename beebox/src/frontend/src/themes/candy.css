@@ -6,7 +6,7 @@
   --bbx-candy-bar-edge: #a8204f;
   --bbx-candy-dots: radial-gradient(circle, #ffffff38 0 2.5px, transparent 3px);
   --bbx-desk-background: #fbe6ee;
-  --bbx-desk-pattern: radial-gradient(circle, #ffffffb0 0 3px, transparent 3.5px) 0 0 / 28px 28px fixed;
+  --bbx-desk-pattern: radial-gradient(circle, #ffffff8c 0 1.5px, transparent 2px) 0 0 / 40px 40px fixed;
   --bbx-selection: #e3264a;
   --bbx-selection-ink: #fff;
   --bbx-selection-code: #ffb3cb;
@@ -64,8 +64,7 @@
 .bbx-box-presentation[data-chrome-theme="candy"] .bbx-chat-user-paper {
   border-radius: 20px 20px 4px 20px;
   background-color: var(--bbx-chat-user-paper);
-  background-image: var(--bbx-candy-dots);
-  background-size: 18px 18px;
+  background-image: none;
   color: var(--bbx-chat-user-ink);
   box-shadow: 0 2px 0 var(--bbx-candy-bar-edge);
   /* The theme's red selection would vanish on the pink bubble. */

@@ -123,13 +123,13 @@ Inside it is the swatch grid:
 => ['aria-label="Choose card appearance"', 'aria-label="Flat — neutral"', 'aria-label="Paper — cream"']
 ```
 
-A viewer who cannot change card appearance sees the row without the
-disclosure:
+A viewer who is not signed in sees the row without the disclosure, and a
+note saying why, so the missing control is never silent:
 
 ```ts
 const readOnly = appearance(await render({ path: "_content/Plan.doc.card", type: "doc", schema: null, frontmatter: {} }, { canEdit: false }));
 [textOf(readOnly), readOnly.includes("<details")]
-=> ["Appearance Flat neutral · Default appearance", false]
+=> ["Appearance Flat neutral · Default appearance Sign in to change this setting.", false]
 ```
 
 A landmark's system theme sits in the same disclosure, below the swatch grid:
@@ -143,10 +143,11 @@ const landmark = appearance(await render({ path: "_content/Home.landmark.card", 
 ## A file that is not a card
 
 A plain Markdown file keeps its two rows, then mentions, appearance, and
-views, with no actions menu:
+views, with no actions menu. It has no frontmatter to hold a theme, so its
+Appearance row says where a theme is set instead of offering Change:
 
 ```ts
 const note = await render({ path: "notes/todo.md", frontmatter: {} }, { canEdit: true });
-[headings(note), appearance(note).includes("<details"), note.includes("Card actions")]
-=> [["h2 Properties", "h3 Mentioned by", "h3 Appearance", "h3 View"], false, false]
+[headings(note), appearance(note).includes("<details"), note.includes("Card actions"), textOf(appearance(note))]
+=> [["h2 Properties", "h3 Mentioned by", "h3 Appearance", "h3 View"], false, false, "Appearance Flat neutral · Default appearance Markdown files take the box's appearance; set a theme on a card."]
 ```
