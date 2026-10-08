@@ -138,7 +138,7 @@ export function AssistantMessage({
   }, [grouped]);
 
   return (
-    <div className="px-3 sm:px-6 py-2">
+    <div className="bbx-chat-reply-material px-3 sm:px-6 py-2">
       {/* Zero-height sticky bar pinned to the top-right of the message. It
           takes no vertical space (h-0, so prose doesn't shift) and sticks
           within this message's bounds as the list scrolls: the speaker icon
@@ -206,7 +206,7 @@ export function CompactionMessage({ entries }: { entries: SessionEntry[] }) {
 
   return (
     <div className="flex justify-center py-2">
-      <details className="text-xs text-warm-500 max-w-[80%]">
+      <details className="bbx-chat-meta-material text-xs text-warm-500 max-w-[80%]">
         <summary className="cursor-pointer text-center hover:text-warm-600">
           Context compacted
         </summary>
@@ -226,7 +226,7 @@ export function CompactionMessage({ entries }: { entries: SessionEntry[] }) {
 export function InterruptedMessage() {
   return (
     <div className="flex justify-center py-2">
-      <span className="text-xs text-warm-500">Request interrupted</span>
+      <span className="bbx-chat-meta-material text-xs text-warm-500">Request interrupted</span>
     </div>
   );
 }
@@ -239,7 +239,7 @@ export function SelfNoteMessage({ note }: { note: SelfNoteInfo }) {
   const commitShort = note.commit ? note.commit.substring(0, 7) : null;
   return (
     <div className="py-2 px-3 sm:px-6">
-      <div className="mx-auto max-w-2xl border-l-2 border-warm-300 bg-warm-50/60 rounded-r px-3 py-2 text-sm text-warm-700">
+      <div className="bbx-chat-meta-material mx-auto max-w-2xl border-l-2 border-warm-300 bg-warm-50/60 rounded-r px-3 py-2 text-sm text-warm-700">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-warm-500 mb-1">
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M9 12h6M9 16h6M9 8h6M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3-7 3z" strokeLinecap="round" strokeLinejoin="round" />

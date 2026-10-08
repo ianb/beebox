@@ -1,3 +1,4 @@
+import { themeComposition } from "@shared/card-theme/catalog";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme/core";
 import { controlAddress } from "@shared/ui-scan/control-address";
@@ -67,7 +68,7 @@ export function CardThemeSurface({ theme, title, symbol, boxSlug, mode, children
     <article
       className="bbx-card-theme bbx-card-surface"
       data-card-mode={mode}
-      data-card-theme={theme.choice.name}
+      data-theme-composition={themeComposition(theme.choice.name)} data-card-theme={theme.choice.name}
       data-card-stock={theme.choice.stock}
       data-card-turn={turn ?? undefined}
       data-card-side={back ? "back" : "front"}
