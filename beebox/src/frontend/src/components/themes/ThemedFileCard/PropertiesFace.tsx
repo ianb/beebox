@@ -69,7 +69,8 @@ function Appearance({ data, theme, isCard, boxSlug }: {
       <ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} />
       {isLandmark ? <LandmarkSystemThemePicker boxKey={boxSlug ?? ""} path={data.path}
         contextDir={data.path.replace(/^\//, "").split("/").slice(0, -1).join("/")} /> : null}
-    </details> : isCard && presentation?.data ? <Text size="xs" tone="muted">Sign in to change this setting.</Text> : null}
+    </details> : !isCard ? <Text size="xs" tone="muted">Markdown files take the box's appearance; set a theme on a card.</Text>
+      : presentation?.data ? <Text size="xs" tone="muted">Sign in to change this setting.</Text> : null}
   </section>;
 }
 
