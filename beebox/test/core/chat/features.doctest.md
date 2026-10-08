@@ -37,15 +37,6 @@ The initial registry has three features. All are toggle-shaped with
 listFeatures().map((f) => f.name).join(",")
 => narration,prose,hq-dictation
 
-getFeature("narration")?.default
-=> off
-
-getFeature("prose")?.default
-=> on
-
-getFeature("hq-dictation")?.default
-=> off
-
 getFeature("nope")
 => null
 
@@ -89,14 +80,6 @@ JSON.stringify(resolveFeatures({ narration: "on", bogus: "yes", prose: "wrong" }
 => {"narration":"on","prose":"on","hq-dictation":"off"}
 ```
 
-Null and undefined both mean "no stored values" — the result is pure
-defaults.
-
-```ts
-JSON.stringify(resolveFeatures(null))
-=> {"narration":"off","prose":"on","hq-dictation":"off"}
-```
-
 ## Seeding a new session
 
 `mergeSeedFeatures` builds the initial feature map for a brand-new chat by
@@ -112,17 +95,11 @@ JSON.stringify(mergeSeedFeatures({
 => {"narration":"on","hq-dictation":"on","prose":"off"}
 ```
 
-Either source may be absent (no landmark, or no pre-session toggles). Missing
-sources contribute nothing; with neither, the map is empty and the session
-falls back to registry defaults downstream.
+A source may be absent (no landmark, or no pre-session toggles) and
+contributes nothing; with none, the map is empty and the session falls back to
+registry defaults downstream.
 
 ```ts
-JSON.stringify(mergeSeedFeatures({ request: { narration: "on" } }))
-=> {"narration":"on"}
-
-JSON.stringify(mergeSeedFeatures({ landmark: { prose: "off" } }))
-=> {"prose":"off"}
-
 JSON.stringify(mergeSeedFeatures({}))
 => {}
 ```

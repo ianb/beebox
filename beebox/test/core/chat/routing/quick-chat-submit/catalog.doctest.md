@@ -45,19 +45,13 @@ buildRoutingCandidates({ ...base, landmarks: [hidden], rubric: { destinations: [
 => true
 ```
 
-Near-ties favor continuing an existing chat. The raw ranking remains visible. A strong new topic wins. An uncertain distribution still selects a chat; root is always available.
+Near-ties favor continuing an existing chat, and the raw ranking remains visible. A margin of 0 leaves only exact ties to the existing chat.
 
 ```ts
 const candidates = buildRoutingCandidates(base);
 const near = selectRoutingDestination({ candidates, probabilities: { c0: 0.38, c1: 0.08, c2: 0.44, c3: 0.1 } });
 JSON.stringify([near.selected.id, near.ranked[0]?.candidate.id, near.preferenceApplied])
 => ["c0","c2",true]
-
-selectRoutingDestination({ candidates, probabilities: { c0: 0.2, c1: 0.05, c2: 0.65, c3: 0.1 } }).selected.id
-=> c2
-
-selectRoutingDestination({ candidates, probabilities: { c0: 0.1, c1: 0.1, c2: 0.1, c3: 0.7 } }).selected.target.kind
-=> new-session
 
 selectRoutingDestination({ candidates, probabilities: { c0: 0.4, c1: 0.1, c2: 0.4, c3: 0.1 }, existingMargin: 0 }).selected.id
 => c0

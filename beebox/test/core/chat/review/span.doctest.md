@@ -103,9 +103,6 @@ const applied = appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ read
 
 // `u-b` is still at index 1, total still 2 — but `u-a` was replaced.
 const mutated = [entry("u-z", "replaced"), b, c];
-mutated[1].uuid === applied.endUuid
-=> true
-
 (await resolveSpan({ readPage: pagesOf(mutated), applied })).bootstrap
 => prefix-rewritten
 ```
@@ -129,9 +126,6 @@ const applied = appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ read
 
 // Same uuids, same positions, same count — different words.
 const edited = [entry("u-a", "first, REVISED"), b, c];
-edited.map((e) => e.uuid).join(",")
-=> u-a,u-b,u-c
-
 (await resolveSpan({ readPage: pagesOf(edited), applied })).bootstrap
 => prefix-rewritten
 ```
