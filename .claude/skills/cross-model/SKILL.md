@@ -28,6 +28,9 @@ allowed-tools: Bash, Read, Grep, Glob
   report the review.
 - Presumptively reject mid-operation I/O-failure windows in one-shot operator
   tools, exotic input encodings, and attacker-is-the-owner scenarios.
+- Reject "add tests" as a finding. A test finding names the claim the code
+  could get wrong and the one example that would catch it; code with no
+  branches, parsing, money, or security gets none (`docs/testing.md`).
 - Done means: findings adjudicated against the human's request, verified
   in-scope defects fixed and rechecked, remaining risks surfaced.
 
