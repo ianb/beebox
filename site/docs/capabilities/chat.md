@@ -23,6 +23,13 @@ box. Chat is the everyday way you talk to it.
 - Searches what was said in your chats, not only their titles: a search field
   on the Recent chats panel returns one row per chat with a highlighted snippet,
   and opening a result lands on the matching message.
+- Lets you mark a chat done (the menu says "Archive conversation"). It stays
+  resumable and moves out of the Recent chats list into an "All chats" view.
+  Deleting a chat is a separate, permanent act: the transcript and the chat's
+  card are removed, while cards and files the conversation produced, and
+  earlier committed versions in git, stay.
+- Titles chats for you as they grow, including short ones, and keeps a title
+  you set by hand.
 - Shows the agent's short progress remarks between its tool steps, live and
   later in the transcript, so a long turn does not look silent.
 - Keeps an image you paste or upload as a file the agent can use (crop it,
@@ -45,8 +52,10 @@ browsable like anything else in the box. The agent acts inside a turn and
 asks you a question when it is unsure rather than guessing; its mid-turn
 work (files touched, background notes) is visible in the transcript. Chat
 runs on demand, when you send a message, not on a schedule.
-Quick chat, a separate page, sends a thought to whichever chat it fits; see
-[web-interface.md](web-interface.md).
+The box screen sends a thought to whichever chat it fits (quick chat); see
+[web-interface.md](web-interface.md). A box with no working agent login shows a
+notice in place of the message box and sends the owner to the Admin page to
+connect one.
 
 **Limits**
 

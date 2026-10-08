@@ -17,8 +17,9 @@ a scan for likely secrets), and enable it, or not. Later, disable it from the
 same screen. Choose whether it is a public page at a name you pick or a secret
 link you give only to the people meant to have it.
 
-**What the box does.** The agent writes the site in a folder of the box and asks
-the box server to prepare it: build it if it needs building, scan it, and upload
+**What the box does.** The agent writes the site into the attached folder of a
+publication card in the box and asks the box server to prepare it: build it if it
+needs building, turn Markdown pages into web pages, scan the result, and upload
 it. A new site stays off until a signed-in member of the box enables it. After
 that the agent can refresh the content on its own, but any change to who can see
 it, or to its address, waits for another approval. A failed build or scan leaves

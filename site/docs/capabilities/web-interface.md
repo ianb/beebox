@@ -13,14 +13,19 @@ desktop and phone.
 
 - **Dashboard** — what needs your attention, with links to Browse, History, and Storage.
 - **Chat** — a conversation with the agent, typed or spoken.
-- **Quick chat**: one text box for a thought you have not decided where to
-  put. A routing service picks which conversation it belongs in, or a new one,
-  and the text is sent there without a confirmation step. The result shows the
-  three strongest choices, each a link that opens that chat with your text
-  waiting in its composer. It needs an OpenRouter key granted to the box, and
-  your message and recent conversation text go to that service (see
-  [your data and safety](../10-your-data-and-safety.md)). The documentation
-  calls it a surface for evaluating the routing, so expect it to be rough.
+- **Box screen**: the screen for the box as a whole, and the one the iPhone
+  app opens on. It has one text box for a thought you have not decided where
+  to put (quick chat). The box stores the thought and a routing service picks
+  which conversation it belongs in, or a new one. When the choice is clear the
+  thought is posted there without a confirmation step, and a posted thought
+  cannot be moved. When it is not clear, the thought waits on the screen with
+  up to four choices and a discard button. Spoken or typed, you can also name
+  the place at the start ("new chat in Garden"). The screen also lists
+  thoughts still waiting for you, recently sent ones, recent chats to pick up,
+  shortcuts, and your other boxes. It needs an OpenRouter key granted to the
+  box, and your message and recent conversation text go to that service (see
+  [your data and safety](../10-your-data-and-safety.md)). The box-wide pages
+  (Dashboard, Browse, History, Storage) sit in the avatar menu.
 - **Browse** — a file-and-card browser over the whole box, with a workspace of tabs so several things stay open at once.
 - **Todos**: a todo shows a live checkbox on its card and in lists, so you can tick it where you read it (any member of the box can) or add it to the chat you are typing. A card and a directory each show a one-line count of what is open there. Todos assigned to the agent stay out of your default view, and a daily review the box runs proposes changes to your todos and makes none itself.
 - **Questions** — the queue of things the agent is asking you.
@@ -32,14 +37,19 @@ desktop and phone.
 
 Each kind of card gets its own display: a recipe with scalable amounts, a
 course with its lessons and your progress, a dashboard or a todo list, a
-document, a spreadsheet, a PDF, a photo, or a folder. Cards can also carry
-a paper theme and a card stock, so a recipe or a letter looks distinct
-from a plain note.
+document, a spreadsheet, a PDF, a photo, a person, or a folder. A card shows
+its content on the front; turning it over shows its properties, such as the
+fields of its type, how it was found, its attachments, and its last change.
+Cards can also carry a paper theme and a card stock (plain, paper, sticky
+note, or letter set), so a recipe or a letter looks distinct from a plain
+note. The interface as a whole has its own theme, which also sets the colour
+of selected text. When you have more than twenty landmarks, the landmark menu
+gains a search field.
 
 **On a phone**
 
-A native iPhone companion app is a thin shell around the same web chat,
-adding pairing, recording, and speech input. Any phone's browser can also
+A native iPhone companion app is a shell around the same web chat, adding
+pairing, recording, and speech input, and a native box screen it opens on. Any phone's browser can also
 reach a capture page for voice memos, photos, and scans. See
 [phone-capture.md](phone-capture.md).
 
