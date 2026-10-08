@@ -8,6 +8,44 @@ before any provider lookup or paid call.
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { createFakeTts, createTtsService } from "../../../../src/services/tts.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
+
+/** Runs `fn` with `console[method]` collecting lines instead of printing. */
+async function capture<T>(method: "error" | "warn", fn: () => Promise<T>): Promise<{ value: T; lines: string[] }> {
+  const lines: string[] = [];
+  const original = console[method];
+  console[method] = (...args: unknown[]) => { lines.push(args.map(String).join(" ")); };
+  try {
+    return { value: await fn(), lines };
+  } finally {
+    console[method] = original;
+  }
+}
+
+const postTts = (ctx, text: string) =>
+  ctx.request({ method: "POST", url: "/api/chat/tts", payload: { text } });
+
+/** Starts the test server on a real socket (`inject` cannot show a broken download). */
+async function listen(ctx): Promise<number> {
+  await ctx.server.listen({ port: 0, host: "127.0.0.1" });
+  const addr = ctx.server.server.address();
+  return typeof addr === "object" && addr !== null ? addr.port : 0;
+}
+
+function fetchClip(ctx, port: number, signal?: AbortSignal) {
+  return fetch(`http://127.0.0.1:${port}/test/api/chat/tts`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${getOrCreateAgentToken(ctx.boxRoot)}`, "content-type": "application/json" },
+    body: JSON.stringify({ text: "Hi." }),
+    ...(signal ? { signal } : {}),
+  });
+}
+
+/** A Gemini-shaped service whose provider answers `fetch` with a JSON error. */
+const geminiRejecting = (message: string) => createTtsService({
+  backend: "gemini",
+  apiKey: "AIza-test",
+  fetch: async () => Response.json({ error: { message, code: "invalid_request" } }, { status: 400, statusText: "Bad Request" }),
+});
 ```
 
 ## Missing opt-in rejects without calling the provider
@@ -15,21 +53,12 @@ import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 ```ts
 const audio = createFakeTts();
 const ctx = await makeTestServer({ services: { openaiAudio: audio } });
-const warnings: string[] = [];
-const originalWarn = console.warn;
-console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(" "));
-const rejected = await (async () => {
-  try {
-    return await ctx.request({
-      method: "POST",
-      url: "/api/chat/tts",
-      payload: { text: "fixture speech", mock: true },
-    });
-  } finally {
-    console.warn = originalWarn;
-  }
-})();
-JSON.stringify({ status: rejected.statusCode, body: rejected.body, calls: audio.speeches.length, warned: warnings.length })
+const { value: rejected, lines } = await capture("warn", () => ctx.request({
+  method: "POST",
+  url: "/api/chat/tts",
+  payload: { text: "fixture speech", mock: true },
+}));
+JSON.stringify({ status: rejected.statusCode, body: rejected.body, calls: audio.speeches.length, warned: lines.length })
 => {"status":400,"body":{"error":"mock TTS requires development surfaces"},"calls":0,"warned":1}
 ```
 
@@ -76,118 +105,71 @@ const gemRes = await gemCtx.rawRequest({ method: "POST", url: "/api/chat/tts", p
 await gemCtx.cleanup();
 ```
 
-## A too-short body is a 502, not silence
+## A backend failure before the head is a 502 that says why
 
-The failure this guards against is a backend answering HTTP 200 with nothing.
-Passing that through would reach the boxholder as silence they blame on their
-speakers, so the route refuses it and says why.
+Each case below fails before any audio is sent, so the route can still answer
+with a status. In every case the reason reaches the boxholder; a bare 500
+"Internal server error" would lose it.
 
-```ts
-const emptyAudio = createFakeTts({ backend: "gemini", emptyResponse: true });
-const emptyCtx = await makeTestServer({ services: { openaiAudio: emptyAudio } });
-const emptyRes = await emptyCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
-JSON.stringify({ status: emptyRes.statusCode, body: emptyRes.body })
-=> {"status":502,"body":{"error":"TTS backend \"gemini\" returned 0 bytes — too short to be speech"}}
-```
-
-```ts cleanup
-await emptyCtx.cleanup();
-```
-
-## A backend that never answers is a 502 that says why
-
-`fetch` reports a connection that never got a response as a `TypeError`
-whose message is only "fetch failed"; the reason — DNS, a reset, a
-certificate — rides in `cause`. Passing that up as a bare 500 "Internal
-server error" loses it (2026-09-08: a TTS play reached the boxholder exactly
-that way). The route names the backend's failure instead; the server's error
-log gains the cause for everything else.
-
-```ts
-const unreachable = {
-  backend: "openai" as const,
-  stylable: true,
-  streamSpeech: async () => {
-    throw new TypeError("fetch failed", { cause: new Error("getaddrinfo ENOTFOUND api.openai.com") });
-  },
-};
-const downCtx = await makeTestServer({ services: { openaiAudio: unreachable } });
-const errors: string[] = [];
-const originalError = console.error;
-console.error = (...args: unknown[]) => errors.push(args.map(String).join(" "));
-const downRes = await (async () => {
-  try {
-    return await downCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
-  } finally {
-    console.error = originalError;
-  }
-})();
-JSON.stringify({ status: downRes.statusCode, body: downRes.body, logged: errors.some((line) => line.includes("ENOTFOUND")) })
-=> {"status":502,"body":{"error":"TTS backend unreachable: getaddrinfo ENOTFOUND api.openai.com"},"logged":true}
-```
-
-```ts cleanup
-await downCtx.cleanup();
-```
-
-## A provider's rejection carries the provider's reason
-
-On 2026-10-04 a real Gemini request failed with only "TTS backend answered
-400 Bad Request" in the server log and the 502 — the provider's message, the
-one thing that says what was wrong, was dropped. The route now reads it from
-the error body and puts it in both. This drives the real Gemini service
-through ky, with a `fetch` that answers the way Google does.
+- **A too-short body.** A backend answered HTTP 200 with nothing. Passing that
+  through would reach the boxholder as silence they blame on their speakers, so
+  the route refuses it and says why.
+- **A backend that never answers.** `fetch` reports a connection that never got
+  a response as a `TypeError` whose message is only "fetch failed"; the reason
+  — DNS, a reset, a certificate — rides in `cause` (2026-09-08: a TTS play
+  reached the boxholder as a bare 500). The route names the backend's failure
+  and the server's error log gains the cause.
+- **A provider's rejection carries the provider's reason.** On 2026-10-04 a real
+  Gemini request failed with only "TTS backend answered 400 Bad Request" in the
+  server log and the 502 — the provider's message, the one thing that says what
+  was wrong, was dropped. The route reads it from the error body and puts it in
+  both. This drives the real Gemini service through ky, with a `fetch` that
+  answers the way Google does.
+- **A message that echoes a key** is masked before it reaches the log or the
+  browser.
+- **A backend that accepts and never finishes.** A provider that takes the
+  request and then stalls raises ky's `TimeoutError`, not a `TypeError` — a
+  different class entirely, so it fell past the unreachable check and reached
+  the boxholder as the same bare 500 (2026-09-16: a real OpenRouter speech
+  call timed out and the reason survived only in the server log).
 
 ```ts
-const rejecting = createTtsService({
-  backend: "gemini",
-  apiKey: "AIza-test",
-  fetch: async () => Response.json({ error: { message: "Voice name not found", code: "invalid_request" } }, { status: 400, statusText: "Bad Request" }),
-});
-const rejectCtx = await makeTestServer({ services: { openaiAudio: rejecting } });
-const rejectErrors: string[] = [];
-const errorBefore = console.error;
-console.error = (...args: unknown[]) => rejectErrors.push(args.map(String).join(" "));
-const rejectRes = await (async () => {
-  try {
-    return await rejectCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
-  } finally {
-    console.error = errorBefore;
-  }
-})();
-({ status: rejectRes.statusCode, body: rejectRes.body, logged: rejectErrors.some((line) => line.includes("Voice name not found")) })
-=> { status: 502, body: { error: "TTS backend answered 400 Bad Request: Voice name not found" }, logged: true }
-```
+const { TimeoutError } = await import("ky");
+const cases = [
+  ["too-short body", createFakeTts({ backend: "gemini", emptyResponse: true }), undefined],
+  ["unreachable", {
+    backend: "openai" as const,
+    stylable: true,
+    streamSpeech: async () => {
+      throw new TypeError("fetch failed", { cause: new Error("getaddrinfo ENOTFOUND api.openai.com") });
+    },
+  }, "ENOTFOUND"],
+  ["provider rejection", geminiRejecting("Voice name not found"), "Voice name not found"],
+  ["key echoed", geminiRejecting("API key AIzaSyFAKEFAKEFAKEFAKEFAKE1234 not valid"), undefined],
+  ["stalled", {
+    backend: "gemini" as const,
+    stylable: true,
+    streamSpeech: async () => {
+      throw new TimeoutError(new Request("https://openrouter.ai/api/v1/audio/speech", { method: "POST" }));
+    },
+  }, undefined],
+];
+const lines: string[] = [];
+for (const [label, service, logNeedle] of cases) {
+  const ctx = await makeTestServer({ services: { openaiAudio: service } });
+  const { value: res, lines: logged } = await capture("error", () => postTts(ctx, "Hi."));
+  const result = { status: res.statusCode, body: res.body, ...(logNeedle ? { logged: logged.some((l) => l.includes(logNeedle)) } : {}) };
+  lines.push(`${label}: ${JSON.stringify(result)}`);
+  await ctx.cleanup();
+}
 
-```ts cleanup
-await rejectCtx.cleanup();
-```
-
-A message that echoes a key is masked before it reaches the log or the
-browser.
-
-```ts
-const echoing = createTtsService({
-  backend: "gemini",
-  apiKey: "AIza-test",
-  fetch: async () => Response.json({ error: { message: "API key AIzaSyFAKEFAKEFAKEFAKEFAKE1234 not valid" } }, { status: 400, statusText: "Bad Request" }),
-});
-const echoCtx = await makeTestServer({ services: { openaiAudio: echoing } });
-const echoBefore = console.error;
-console.error = () => {};
-const echoRes = await (async () => {
-  try {
-    return await echoCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
-  } finally {
-    console.error = echoBefore;
-  }
-})();
-echoRes.body
-=> { error: "TTS backend answered 400 Bad Request: API key [redacted key] not valid" }
-```
-
-```ts cleanup
-await echoCtx.cleanup();
+lines.join("\n")
+=>
+too-short body: {"status":502,"body":{"error":"TTS backend \"gemini\" returned 0 bytes — too short to be speech"}}
+unreachable: {"status":502,"body":{"error":"TTS backend unreachable: getaddrinfo ENOTFOUND api.openai.com"},"logged":true}
+provider rejection: {"status":502,"body":{"error":"TTS backend answered 400 Bad Request: Voice name not found"},"logged":true}
+key echoed: {"status":502,"body":{"error":"TTS backend answered 400 Bad Request: API key [redacted key] not valid"}}
+stalled: {"status":502,"body":{"error":"TTS backend timed out: Request timed out: POST https://openrouter.ai/api/v1/audio/speech"}}
 ```
 
 Blank text never reaches the provider. Gemini answers it with its own 400
@@ -197,7 +179,7 @@ the caller's, so the route says so.
 ```ts
 const blankAudio = createFakeTts({ backend: "gemini" });
 const blankCtx = await makeTestServer({ services: { openaiAudio: blankAudio } });
-const blankRes = await blankCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "  \n " } });
+const blankRes = await postTts(blankCtx, "  \n ");
 ({ status: blankRes.statusCode, body: blankRes.body, providerCalls: blankAudio.speeches.length })
 => { status: 400, body: { error: "Nothing to speak: the text is empty" }, providerCalls: 0 }
 ```
@@ -217,26 +199,12 @@ socket: `inject` cannot show a broken download.
 ```ts
 const failing = createFakeTts({ backend: "gemini", failAfterHead: new TypeError("fetch failed", { cause: new Error("socket hang up") }) });
 const failCtx = await makeTestServer({ services: { openaiAudio: failing } });
-await failCtx.server.listen({ port: 0, host: "127.0.0.1" });
-const failAddr = failCtx.server.server.address();
-const failPort = typeof failAddr === "object" && failAddr !== null ? failAddr.port : 0;
-const failLogs: string[] = [];
-const beforeFail = console.error;
-console.error = (...args: unknown[]) => failLogs.push(args.map(String).join(" "));
-const download = await (async () => {
-  try {
-    const res = await fetch(`http://127.0.0.1:${failPort}/test/api/chat/tts`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${getOrCreateAgentToken(failCtx.boxRoot)}`, "content-type": "application/json" },
-      body: JSON.stringify({ text: "Hi." }),
-    });
-    const status = res.status;
-    const outcome = await res.arrayBuffer().then(() => "complete", (e: Error) => `broken (${e.name})`);
-    return { status, outcome };
-  } finally {
-    console.error = beforeFail;
-  }
-})();
+const failPort = await listen(failCtx);
+const { value: download, lines: failLogs } = await capture("error", async () => {
+  const res = await fetchClip(failCtx, failPort);
+  const outcome = await res.arrayBuffer().then(() => "complete", (e: Error) => `broken (${e.name})`);
+  return { status: res.status, outcome };
+});
 ({ ...download, logged: failLogs.some((line) => line.includes("stream failed after") && line.includes("socket hang up")), cancelled: failing.cancels > 0 })
 => { status: 200, outcome: "broken (TypeError)", logged: true, cancelled: true }
 ```
@@ -258,16 +226,9 @@ let releaseRest: () => void = () => {};
 const restGate = new Promise<void>((resolve) => { releaseRest = resolve; });
 const slow = createFakeTts({ backend: "gemini", beforeEachRestChunk: () => restGate });
 const slowCtx = await makeTestServer({ services: { openaiAudio: slow } });
-await slowCtx.server.listen({ port: 0, host: "127.0.0.1" });
-const slowAddr = slowCtx.server.server.address();
-const slowPort = typeof slowAddr === "object" && slowAddr !== null ? slowAddr.port : 0;
+const slowPort = await listen(slowCtx);
 const leaving = new AbortController();
-const res = await fetch(`http://127.0.0.1:${slowPort}/test/api/chat/tts`, {
-  method: "POST",
-  headers: { authorization: `Bearer ${getOrCreateAgentToken(slowCtx.boxRoot)}`, "content-type": "application/json" },
-  body: JSON.stringify({ text: "Hi." }),
-  signal: leaving.signal,
-});
+const res = await fetchClip(slowCtx, slowPort, leaving.signal);
 const reader = res.body.getReader();
 const firstRead = await reader.read();
 leaving.abort();
@@ -288,64 +249,17 @@ not a provider failure: it stays out of the error log.
 const { SpeechCancelledError } = await import("../../../../src/services/tts.js");
 const leftEarly = createFakeTts({ backend: "gemini", beforeEachRestChunk: () => Promise.reject(new SpeechCancelledError()) });
 const leftCtx = await makeTestServer({ services: { openaiAudio: leftEarly } });
-await leftCtx.server.listen({ port: 0, host: "127.0.0.1" });
-const leftAddr = leftCtx.server.server.address();
-const leftPort = typeof leftAddr === "object" && leftAddr !== null ? leftAddr.port : 0;
-const leftLogs: string[] = [];
-const beforeLeft = console.error;
-console.error = (...args: unknown[]) => leftLogs.push(args.map(String).join(" "));
-try {
-  const res = await fetch(`http://127.0.0.1:${leftPort}/test/api/chat/tts`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${getOrCreateAgentToken(leftCtx.boxRoot)}`, "content-type": "application/json" },
-    body: JSON.stringify({ text: "Hi." }),
-  });
+const leftPort = await listen(leftCtx);
+const { lines: leftLogs } = await capture("error", async () => {
+  const res = await fetchClip(leftCtx, leftPort);
   await res.arrayBuffer().catch(() => "broken");
-} finally {
-  console.error = beforeLeft;
-}
+});
 leftLogs.filter((line) => line.includes("[chat-tts]"))
 => []
 ```
 
 ```ts cleanup
 await leftCtx.cleanup();
-```
-
-## A backend that accepts and never finishes is a 502 too
-
-A provider that takes the request and then stalls raises ky's `TimeoutError`,
-not a `TypeError` — a different class entirely, so it fell past the check above
-and reached the boxholder as the same bare 500 that section exists to prevent
-(2026-09-16: a real OpenRouter speech call timed out and the reason survived
-only in the server log).
-
-```ts
-const { TimeoutError } = await import("ky");
-const stalled = {
-  backend: "gemini" as const,
-  stylable: true,
-  streamSpeech: async () => {
-    throw new TimeoutError(new Request("https://openrouter.ai/api/v1/audio/speech", { method: "POST" }));
-  },
-};
-const stalledCtx = await makeTestServer({ services: { openaiAudio: stalled } });
-const stalledErrors: string[] = [];
-const priorError = console.error;
-console.error = (...args: unknown[]) => stalledErrors.push(args.map(String).join(" "));
-const stalledRes = await (async () => {
-  try {
-    return await stalledCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
-  } finally {
-    console.error = priorError;
-  }
-})();
-JSON.stringify({ status: stalledRes.statusCode, body: stalledRes.body })
-=> {"status":502,"body":{"error":"TTS backend timed out: Request timed out: POST https://openrouter.ai/api/v1/audio/speech"}}
-```
-
-```ts cleanup
-await stalledCtx.cleanup();
 ```
 
 ## The retry policy actually applies to these calls

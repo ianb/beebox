@@ -9,6 +9,7 @@ filing target.
 See `docs/landmarks.md` for the full design.
 
 ```ts setup
+import { utimes } from "node:fs/promises";
 import {
   createLandmarkTemplate,
   parseLandmarkFields,
@@ -16,6 +17,26 @@ import {
 import { resolveLandmark } from "../../../src/core/landmark/resolve/core.js";
 import { findDestination } from "../../../src/core/landmark/destination.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+
+const card = (title: string) => `---\ntitle: ${title}\n---\n`;
+
+// Resolve a `Recipes` landmark's navigation over a throwaway box holding
+// `files` (box path -> title). `backdated` paths get a 2020 mtime, written first.
+async function resolveIn(files: Record<string, string>, navigation, backdated: string[] = []) {
+  const box = await makeTmpBox();
+  try {
+    for (const rel of backdated) await box.write(rel, card(files[rel]!));
+    for (const rel of backdated) await utimes(box.path(rel), new Date(2020, 0, 1), new Date(2020, 0, 1));
+    for (const [rel, title] of Object.entries(files)) if (!backdated.includes(rel)) await box.write(rel, card(title));
+    return await resolveLandmark({ label: "Recipes", ...navigation }, {
+      landmarkDir: box.path("_content/recipes"),
+      landmarkPath: "_content/recipes/Recipes.landmark.card",
+      boxRoot: box.root,
+    });
+  } finally {
+    await box.cleanup();
+  }
+}
 ```
 
 ## Parsing a landmark's frontmatter
@@ -24,7 +45,7 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 object:
 
 ```ts
-const fields = parseLandmarkFields(`---
+parseLandmarkFields(`---
 navigation:
   label: Recipes
   symbol: 🍳
@@ -35,42 +56,19 @@ destinations:
   - for: [triage]
     rules: Recipes — anything describing how to cook a dish.
 ---
-`);
-JSON.stringify(fields, null, 2)
+`)
 =>
 {
-  "navigation": {
-    "label": "Recipes",
-    "symbol": "🍳",
-    "links": [
-      {
-        "ref": "Bread.recipe.card",
-        "label": "the bread"
-      }
-    ]
-  },
-  "destinations": [
-    {
-      "for": [
-        "triage"
-      ],
-      "rules": "Recipes — anything describing how to cook a dish."
-    }
-  ]
+  navigation: { label: "Recipes", symbol: "🍳", links: [{ ref: "Bread.recipe.card", label: "the bread" }] },
+  destinations: [{ for: ["triage"], rules: "Recipes — anything describing how to cook a dish." }]
 }
 ```
 
 `prominence` is admitted the same way `symbol` is (`landmark.ts`): a written
 value describes the place, not the file, so a reader must still see it.
 
-```ts continue
-const withProminence = parseLandmarkFields(`---
-navigation:
-  label: Logs
-prominence: background
----
-`);
-withProminence.prominence
+```ts
+parseLandmarkFields("---\nnavigation:\n  label: Logs\nprominence: background\n---\n").prominence
 => background
 ```
 
@@ -81,8 +79,8 @@ navigated.
 
 ```ts
 const badPrimitiveTheme = parseLandmarkFields("---\nnavigation:\n  label: Still here\ndestinations:\n  - for: [triage]\nsystem-theme: bogus\n---\n");
-JSON.stringify([badPrimitiveTheme?.navigation?.label, badPrimitiveTheme?.destinations?.[0]?.for, badPrimitiveTheme?.["system-theme"]])
-=> ["Still here",["triage"],null]
+[badPrimitiveTheme?.navigation?.label, badPrimitiveTheme?.destinations?.[0]?.for, badPrimitiveTheme?.["system-theme"]]
+=> ["Still here", ["triage"], null]
 ```
 
 Malformed means the wrong SHAPE. A name or stock the engine does not recognize
@@ -90,10 +88,10 @@ is not malformed: theme names and stocks are an open set rather than a catalog
 allowlist, so an unknown stock reaches the renderer as authored and falls back
 there.
 
-```ts continue
+```ts
 const unknownStock = parseLandmarkFields("---\nnavigation:\n  label: Also here\nsystem-theme:\n  name: paper\n  stock: purple\n---\n");
-JSON.stringify([unknownStock?.navigation?.label, unknownStock?.["system-theme"]])
-=> ["Also here",{"name":"paper","stock":"purple"}]
+[unknownStock?.navigation?.label, unknownStock?.["system-theme"]]
+=> ["Also here", { name: "paper", stock: "purple" }]
 ```
 
 ## Template
@@ -127,43 +125,40 @@ symbol:
 ---
 ```
 
-## Missing targets are flagged but not dropped
+## Link resolution
 
-A link to a file that doesn't exist still appears, with `exists: false`:
+A link to a file that doesn't exist still appears, with `exists: false`
+(missing targets are flagged, not dropped). A link may point outside its own
+directory; the resolved ref is normalized to box-relative. A leading-`/` ref
+means the box root — the same form `bbx validate` and `bbx mv` understand (the
+render layer used to resolve it against the OS filesystem root and report every
+such link missing). A ref that climbs out of the box resolves to nothing and is
+reported `exists: false`, never clamped to some other file.
 
 ```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-
-const navigation = {
-  label: "Recipes",
-  links: [
-    { ref: "Bread.recipe.card" },
-    { ref: "Vanished.recipe.card" },
-  ],
-};
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-JSON.stringify(links.map((l) => ({ ref: l.ref, exists: l.exists })), null, 2)
+const { links } = await resolveIn(
+  { "_content/recipes/Bread.recipe.card": "Bread", "_content/docs/About.doc.card": "About", "_content/docs/Index.doc.card": "Index" },
+  {
+    links: [
+      { ref: "Bread.recipe.card" },
+      { ref: "Vanished.recipe.card" },
+      { ref: "../docs/About.doc.card", label: "about" },
+      { ref: "/_content/docs/Index.doc.card", label: "index" },
+      { ref: "/_content/recipes/Gone.recipe.card" },
+      { ref: "../../../../etc/hosts", label: "escape" },
+    ],
+  },
+);
+links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists }))
 =>
 [
-  {
-    "ref": "_content/recipes/Bread.recipe.card",
-    "exists": true
-  },
-  {
-    "ref": "_content/recipes/Vanished.recipe.card",
-    "exists": false
-  }
+  { ref: "_content/recipes/Bread.recipe.card", label: null, exists: true },
+  { ref: "_content/recipes/Vanished.recipe.card", label: null, exists: false },
+  { ref: "_content/docs/About.doc.card", label: "about", exists: true },
+  { ref: "_content/docs/Index.doc.card", label: "index", exists: true },
+  { ref: "_content/recipes/Gone.recipe.card", label: null, exists: false },
+  { ref: "../../../../etc/hosts", label: "escape", exists: false }
 ]
-```
-
-```ts cleanup
-await box.cleanup();
 ```
 
 ## Expand: glob with default template
@@ -172,27 +167,12 @@ Without a template, `expand` emits one bare link per match, sorted
 alphabetically by default.
 
 ```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/Apple.recipe.card", "---\ntitle: Apple\n---\n");
-await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("_content/recipes/Carrot.recipe.card", "---\ntitle: Carrot\n---\n");
-
-const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card" }] };
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-links.map((l) => l.ref).join("\n")
-=>
-_content/recipes/Apple.recipe.card
-_content/recipes/Bread.recipe.card
-_content/recipes/Carrot.recipe.card
-```
-
-```ts cleanup
-await box.cleanup();
+const { links } = await resolveIn(
+  { "_content/recipes/Carrot.recipe.card": "Carrot", "_content/recipes/Apple.recipe.card": "Apple", "_content/recipes/Bread.recipe.card": "Bread" },
+  { expand: [{ query: "*.recipe.card" }] },
+);
+links.map((l) => l.ref)
+=> ["_content/recipes/Apple.recipe.card", "_content/recipes/Bread.recipe.card", "_content/recipes/Carrot.recipe.card"]
 ```
 
 ## Expand: an escaping query yields no rows
@@ -204,26 +184,12 @@ frontmatter (title, template fields) would otherwise leak into the rendered
 label. The match is silently dropped, not surfaced as a broken link.
 
 ```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("src/private.memo.card", "---\ntitle: Secret Memo\n---\n");
-
-const navigation = {
-  label: "Recipes",
-  expand: [{ query: "../../src/private.memo.card", "template-label": "${title}" }],
-};
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
+const { links } = await resolveIn(
+  { "_content/recipes/Bread.recipe.card": "Bread", "src/private.memo.card": "Secret Memo" },
+  { expand: [{ query: "../../src/private.memo.card", "template-label": "${title}" }] },
+);
 links.length
 => 0
-```
-
-```ts cleanup
-await box.cleanup();
 ```
 
 ## Expand: generated refs are box paths
@@ -236,29 +202,12 @@ landmark's own attach scope (the `attach/` virtual prefix is for *authored*
 refs). An authored `template-ref` keeps `${path}` dir-relative.
 
 ```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/attach/Filed.recipe.card", "---\ntitle: Filed\n---\n");
-await box.write("_content/recipes/Recipes.attach/Trap.recipe.card", "---\ntitle: Trap\n---\n");
-
-const navigation = { label: "Recipes", expand: [{ query: "attach/*.recipe.card" }] };
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-JSON.stringify(links.map((l) => ({ ref: l.ref, exists: l.exists })), null, 2)
-=>
-[
-  {
-    "ref": "_content/recipes/attach/Filed.recipe.card",
-    "exists": true
-  }
-]
-```
-
-```ts cleanup
-await box.cleanup();
+const { links } = await resolveIn(
+  { "_content/recipes/attach/Filed.recipe.card": "Filed", "_content/recipes/Recipes.attach/Trap.recipe.card": "Trap" },
+  { expand: [{ query: "attach/*.recipe.card" }] },
+);
+links.map((l) => ({ ref: l.ref, exists: l.exists }))
+=> [{ ref: "_content/recipes/attach/Filed.recipe.card", exists: true }]
 ```
 
 ## Expand: template with ${path} and a frontmatter field
@@ -269,36 +218,16 @@ reads that field from the matched card's frontmatter (replacing the old
 XPath-over-XML evaluation).
 
 ```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Crusty Bread\n---\n");
-await box.write("_content/recipes/Pasta.recipe.card", "---\ntitle: Cacio e Pepe\n---\n");
-
-const navigation = {
-  label: "Recipes",
-  expand: [{ query: "*.recipe.card", "template-ref": "${path}", "template-label": "${title}" }],
-};
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label })), null, 2)
+const { links } = await resolveIn(
+  { "_content/recipes/Bread.recipe.card": "Crusty Bread", "_content/recipes/Pasta.recipe.card": "Cacio e Pepe" },
+  { expand: [{ query: "*.recipe.card", "template-ref": "${path}", "template-label": "${title}" }] },
+);
+links.map((l) => ({ ref: l.ref, label: l.label }))
 =>
 [
-  {
-    "ref": "_content/recipes/Bread.recipe.card",
-    "label": "Crusty Bread"
-  },
-  {
-    "ref": "_content/recipes/Pasta.recipe.card",
-    "label": "Cacio e Pepe"
-  }
+  { ref: "_content/recipes/Bread.recipe.card", label: "Crusty Bread" },
+  { ref: "_content/recipes/Pasta.recipe.card", label: "Cacio e Pepe" }
 ]
-```
-
-```ts cleanup
-await box.cleanup();
 ```
 
 ## Dedup: hand-listed beats expanded
@@ -307,37 +236,16 @@ A card appearing in both a hand-listed link and an `expand` result shows
 once — hand-listed links come first and keep their label.
 
 ```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("_content/recipes/Pasta.recipe.card", "---\ntitle: Pasta\n---\n");
-
-const navigation = {
-  label: "Recipes",
-  links: [{ ref: "Bread.recipe.card", label: "the bread" }],
-  expand: [{ query: "*.recipe.card" }],
-};
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label })), null, 2)
+const { links } = await resolveIn(
+  { "_content/recipes/Bread.recipe.card": "Bread", "_content/recipes/Pasta.recipe.card": "Pasta" },
+  { links: [{ ref: "Bread.recipe.card", label: "the bread" }], expand: [{ query: "*.recipe.card" }] },
+);
+links.map((l) => ({ ref: l.ref, label: l.label }))
 =>
 [
-  {
-    "ref": "_content/recipes/Bread.recipe.card",
-    "label": "the bread"
-  },
-  {
-    "ref": "_content/recipes/Pasta.recipe.card",
-    "label": null
-  }
+  { ref: "_content/recipes/Bread.recipe.card", label: "the bread" },
+  { ref: "_content/recipes/Pasta.recipe.card", label: null }
 ]
-```
-
-```ts cleanup
-await box.cleanup();
 ```
 
 ## Named expand becomes a collapsible group
@@ -347,50 +255,23 @@ into the flat `links`. The group reports a `count` and resolved
 `children`; the flat list holds only the static link.
 
 ```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("_content/recipes/images/A.image.card", "---\ntitle: A\n---\n");
-await box.write("_content/recipes/images/B.image.card", "---\ntitle: B\n---\n");
-
-const navigation = {
-  label: "Recipes",
-  links: [{ ref: "Bread.recipe.card", label: "the bread" }],
-  expand: [{ query: "images/*.image.card", group: "Images" }],
-};
-const resolved = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-JSON.stringify({
+const resolved = await resolveIn(
+  {
+    "_content/recipes/Bread.recipe.card": "Bread",
+    "_content/recipes/images/A.image.card": "A",
+    "_content/recipes/images/B.image.card": "B",
+  },
+  { links: [{ ref: "Bread.recipe.card", label: "the bread" }], expand: [{ query: "images/*.image.card", group: "Images" }] },
+);
+({
   links: resolved.links.map((l) => l.ref),
-  groups: resolved.groups.map((g) => ({
-    label: g.label,
-    count: g.count,
-    children: g.children.map((c) => c.ref),
-  })),
-}, null, 2)
+  groups: resolved.groups.map((g) => ({ label: g.label, count: g.count, children: g.children.map((c) => c.ref) })),
+})
 =>
 {
-  "links": [
-    "_content/recipes/Bread.recipe.card"
-  ],
-  "groups": [
-    {
-      "label": "Images",
-      "count": 2,
-      "children": [
-        "_content/recipes/images/A.image.card",
-        "_content/recipes/images/B.image.card"
-      ]
-    }
-  ]
+  links: ["_content/recipes/Bread.recipe.card"],
+  groups: [{ label: "Images", count: 2, children: ["_content/recipes/images/A.image.card", "_content/recipes/images/B.image.card"] }]
 }
-```
-
-```ts cleanup
-await box.cleanup();
 ```
 
 ## Order: modified-desc
@@ -398,123 +279,13 @@ await box.cleanup();
 `order: modified-desc` sorts matches by mtime, newest first.
 
 ```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/A.recipe.card", "---\ntitle: A\n---\n");
-// Backdate A so B is newer.
-const aPath = box.path("_content/recipes/A.recipe.card");
-const { utimes } = await import("node:fs/promises");
-await utimes(aPath, new Date(2020, 0, 1), new Date(2020, 0, 1));
-await box.write("_content/recipes/B.recipe.card", "---\ntitle: B\n---\n");
-
-const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card", order: "modified-desc" }] };
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-links.map((l) => l.ref).join("\n")
-=>
-_content/recipes/B.recipe.card
-_content/recipes/A.recipe.card
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Cross-directory references
-
-A link may point outside its own directory; the resolved ref is
-normalized to box-relative.
-
-```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("_content/docs/About.doc.card", "---\ntitle: About\n---\n");
-
-const navigation = {
-  label: "Recipes",
-  links: [
-    { ref: "Bread.recipe.card" },
-    { ref: "../docs/About.doc.card", label: "about" },
-  ],
-};
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists })), null, 2)
-=>
-[
-  {
-    "ref": "_content/recipes/Bread.recipe.card",
-    "label": null,
-    "exists": true
-  },
-  {
-    "ref": "_content/docs/About.doc.card",
-    "label": "about",
-    "exists": true
-  }
-]
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Box-root refs render; escaping refs are missing
-
-A leading-`/` ref means the box root — the same form `bbx validate` and `bbx mv`
-understand (the render layer used to resolve it against the OS filesystem root
-and report every such link missing). A ref that climbs out of the box resolves
-to nothing and is reported `exists: false`, never clamped to some other file.
-
-```ts
-const box = await makeTmpBox();
-await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("_content/docs/About.doc.card", "---\ntitle: About\n---\n");
-
-const navigation = {
-  label: "Recipes",
-  links: [
-    { ref: "/_content/docs/About.doc.card", label: "about" },
-    { ref: "/_content/recipes/Gone.recipe.card" },
-    { ref: "../../../../etc/hosts", label: "escape" },
-  ],
-};
-const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("_content/recipes"),
-  landmarkPath: "_content/recipes/Recipes.landmark.card",
-  boxRoot: box.root,
-});
-
-JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists })), null, 2)
-=>
-[
-  {
-    "ref": "_content/docs/About.doc.card",
-    "label": "about",
-    "exists": true
-  },
-  {
-    "ref": "_content/recipes/Gone.recipe.card",
-    "label": null,
-    "exists": false
-  },
-  {
-    "ref": "../../../../etc/hosts",
-    "label": "escape",
-    "exists": false
-  }
-]
-```
-
-```ts cleanup
-await box.cleanup();
+const { links } = await resolveIn(
+  { "_content/recipes/A.recipe.card": "A", "_content/recipes/B.recipe.card": "B" },
+  { expand: [{ query: "*.recipe.card", order: "modified-desc" }] },
+  ["_content/recipes/A.recipe.card"], // backdated so B is newer
+);
+links.map((l) => l.ref)
+=> ["_content/recipes/B.recipe.card", "_content/recipes/A.recipe.card"]
 ```
 
 ## Destinations: `for` kinds
