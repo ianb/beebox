@@ -21,7 +21,7 @@ The session transcript lists `mcp__claude_ai_Gmail__*`,
 Claude Docs tools as deferred tools. The context also held the developer's
 `~/.claude/CLAUDE.md`, the developer's email address, and a user-level hook.
 The walker declined, and no Gmail tool was called (the session made only
-`Bash` calls). A "yes" would have searched the developer's real mailbox from
+`Bash` calls). A "yes" could have led the agent to search the developer's real mailbox from
 a disposable test box and written the result into it.
 
 ## Mechanism

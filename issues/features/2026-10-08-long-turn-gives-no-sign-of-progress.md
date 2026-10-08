@@ -9,7 +9,7 @@ discovered-in: worktree-journey-walks-oct — D-chemistry journey walk, 2026-10-
 ---
 
 In the D-chemistry walk the first reply took 113 seconds to show any text.
-The screen showed only "Thinking…". The agent had composed one 73-second tool
+The walker reports that the screen showed only "Thinking…"; no screenshot covers the middle of the wait. The agent had composed one 73-second tool
 call that wrote every course card, so nothing reached the chat in between.
 The walker noted the wait. The interim line that followed ("Your study space is
 written; I'm checking that everything validates") helped, but arrived after

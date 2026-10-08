@@ -8,7 +8,7 @@ discovered-in: worktree-journey-walks-oct — B-inventory and D-chemistry journe
 ---
 
 After a Browse panel is opened and closed, the top-left pill reads "Where you
-are: Chat" at the same URL, and the folder half (the "here" menu) is gone
+are: Chat" (the URL differs only by the removed `card` parameter), and the folder half (the "here" menu) is gone
 until a reload. Both walks reproduced it in a live session:
 [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 32, shots 08 to 09;
 a reload restored the pill in shot 20) and

@@ -18,8 +18,12 @@ format. JPEG, PNG, GIF and WebP work.") for any decode failure. A file that
 cannot be read after it was picked, or a damaged JPEG, gets the same text.
 Reproduced with the unreadable file.
 
-Real triggers are rarer than in this walk, which used damaged files (see
+In this walk the trigger was the harness: `bin/browse upload` passed a
+relative path, and the page received an empty file that failed on read (fixed
+in `ee5289dd1`). The first B-inventory walk the same day sent JPEGs damaged in
+the repository (see
 [rename-damaged binaries](2026-10-08-rename-damaged-binaries-still-in-tree.md)).
+Real triggers are rarer, but the copy is wrong whenever one occurs.
 A decode failure of a format the app accepts needs its own message, such as
 "This image file looks damaged".
 
