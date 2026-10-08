@@ -10,6 +10,7 @@ import { useShowCardFront } from "./CardThemeSurface";
 import { CardFacts, CardMentions } from "./CardProperties";
 import { CardAttachments } from "./CardAttachments";
 import { CardLastChange } from "./CardLastChange";
+import { Text } from "../../ui/Text";
 import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
 import { LandmarkSystemThemePicker } from "../SystemThemePicker";
 import { isCardPath } from "../../file-view-data";
@@ -68,7 +69,7 @@ function Appearance({ data, theme, isCard, boxSlug }: {
       <ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} />
       {isLandmark ? <LandmarkSystemThemePicker boxKey={boxSlug ?? ""} path={data.path}
         contextDir={data.path.replace(/^\//, "").split("/").slice(0, -1).join("/")} /> : null}
-    </details> : null}
+    </details> : isCard && presentation?.data ? <Text size="xs" tone="muted">Only the box owner can change this setting.</Text> : null}
   </section>;
 }
 
