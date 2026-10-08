@@ -1,6 +1,6 @@
 ---
 title: "`<speech>` should take delivery instructions as an attribute, not a child `<instructions>` tag"
-workstream: unattached
+workstream: speech-instructions-attr
 area: beebox
 labels: [voice, agent-guidance]
 filed-by: agent

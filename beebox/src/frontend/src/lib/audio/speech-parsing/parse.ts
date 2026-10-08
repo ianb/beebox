@@ -86,10 +86,12 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
     lastEnd = closeIndex !== -1 ? closeIndex + "</speech>".length : norm.length;
     posIndex++;
 
-    // Extract instructions from subTags. If multiple <instructions> blocks
-    // appear inside one <speech>, keep only the last non-empty one — the
-    // agent occasionally emits a leading instructions block and then a
-    // second, more specific one for the same speech.
+    // Delivery instructions come from the `instructions` attribute. Older
+    // transcripts (and agents with stale guidance) nest an `<instructions>`
+    // child instead; that form is still read, and its text is always kept out
+    // of the spoken text. When both appear, the attribute wins. If multiple
+    // child blocks appear, keep only the last non-empty one — the agent
+    // occasionally emits a leading block and then a more specific one.
     let instructions: string | undefined;
     let text = tag.content;
     if (tag.subTags) {
@@ -109,6 +111,9 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
     // tag parser didn't form. Typo'd tags were already canonicalized upstream
     // (normalizeInstructionTags), so this only needs the canonical spelling.
     text = text.replace(/<\/?instructions[^>]*>/gi, "").trim();
+
+    const attrInstructions = tag.attrs.instructions ? unescapeAttr(tag.attrs.instructions).trim() : "";
+    if (attrInstructions.length > 0) instructions = attrInstructions;
 
     // Validate voice attribute against known list
     let voice: TTSVoice | undefined;

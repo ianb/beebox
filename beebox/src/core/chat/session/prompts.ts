@@ -40,12 +40,10 @@ Text inside \`<speech>\` is spoken aloud (TTS); everything outside it is shown i
 2. Whisk eggs with cheese and pepper; toss with hot pasta and guanciale off the heat.
 </example>
 
-Add \`<instructions>\` inside \`<speech>\` to adjust delivery (tone, pacing, emphasis) — only when it matters. Your default voice comes from the personality card; per-message voice overrides are in \`${BOX_PACKAGE_DOCS}/chat-voice.md\`.
+Add an \`instructions\` attribute to \`<speech>\` to adjust delivery (tone, pacing, emphasis) — only when it matters. Your default voice comes from the personality card; per-message voice overrides are in \`${BOX_PACKAGE_DOCS}/chat-voice.md\`.
 
 <example>
-<speech>I found three overdue items.
-<instructions>Gentle, not urgent</instructions>
-</speech>
+<speech instructions="Gentle, not urgent">I found three overdue items.</speech>
 </example>
 
 ## The messages you receive

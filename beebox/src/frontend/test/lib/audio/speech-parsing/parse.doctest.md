@@ -30,7 +30,30 @@ segments[0].hasTextBefore
 
 ## Speech with instructions
 
-Instructions are extracted from a nested tag and removed from the spoken text:
+Delivery instructions ride on the `instructions` attribute; the tag's content
+is only the spoken text:
+
+```ts
+const segments = parseAllSpeechTags('<speech instructions="Gentle, not urgent">I found three overdue items.</speech>');
+segments[0].text
+=> I found three overdue items.
+
+segments[0].instructions
+=> Gentle, not urgent
+```
+
+The value is entity-decoded the same way `name` is, so an agent can write a
+double quote as `&quot;` and an ampersand as `&amp;`:
+
+```ts
+const segments = parseAllSpeechTags('<speech instructions="Say &quot;ta-da&quot; slowly &amp; warmly">Ta-da.</speech>');
+segments[0].instructions
+=> Say "ta-da" slowly & warmly
+```
+
+The older form nests an `<instructions>` child. Saved transcripts and agents
+with stale guidance still contain it, so it is still read, and its text is
+removed from the spoken text:
 
 ```ts
 const segments = parseAllSpeechTags(`<speech>Good morning!
@@ -41,6 +64,26 @@ segments[0].text
 
 segments[0].instructions
 => Warm and cheerful
+```
+
+When both forms appear, the attribute wins and the child's text is still
+kept out of the spoken text:
+
+```ts
+const segments = parseAllSpeechTags('<speech instructions="From the attribute">Hello.<instructions>From the child</instructions></speech>');
+segments[0].instructions
+=> From the attribute
+
+segments[0].text
+=> Hello.
+```
+
+An empty attribute falls back to the child:
+
+```ts
+const segments = parseAllSpeechTags('<speech instructions=" "><instructions>From the child</instructions>Hello.</speech>');
+segments[0].instructions
+=> From the child
 ```
 
 ## Emotion attribute
