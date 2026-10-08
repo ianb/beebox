@@ -98,7 +98,7 @@ export function claudeScanWireSchema(): Record<string, unknown> {
  * outline-then-capture procedure (Experiment A) that keeps transcription
  * complete on handwriting-dense pages and yields per-slot legibility.
  */
-export const CLAUDE_SCAN_NOTE = `
+const CLAUDE_SCAN_NOTE = `
 The images are supplied in batch order; image at position i is page index i (0-based).
 Always set subject_bbox to null.
 
@@ -194,7 +194,7 @@ function checkSlotInvariant(page: ClaudeScanAnalysis): boolean {
  * review" into "these rows need review" (the Experiment A product win)
  * without any card-schema change.
  */
-export function foldSlotsIntoReviewFlags(page: ClaudeScanAnalysis): RawScanAnalysis {
+function foldSlotsIntoReviewFlags(page: ClaudeScanAnalysis): RawScanAnalysis {
   const { slots, slot_count: _slotCount, ...rest } = page;
   const hard = slots.filter((s) => s.legibility !== "clear");
   if (hard.length === 0) return rest;
