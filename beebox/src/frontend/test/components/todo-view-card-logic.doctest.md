@@ -15,6 +15,8 @@ import {
   matchingItemCount,
   plateHeadline,
   progressOf,
+  scopeDescription,
+  scopeLineText,
   clampAnnotation,
   needsExpand,
   resolveTodoViewStatusFilter,
@@ -331,4 +333,36 @@ clampAnnotation(long).endsWith("…")
 
 clampAnnotation(long).length <= 141
 => true
+```
+
+## The scope line says what the query covers, not its glob
+
+The stock plate card lives in `_content` but is installed with the glob `**`,
+so it covers the whole box. The line names the box, not the folder the card
+sits in and not the pattern.
+
+```ts
+[
+  scopeDescription({ here: "_content", glob: "**" }),
+  scopeDescription({ here: "", glob: "**/*.card" }),
+  scopeDescription({ here: "recipes", glob: "recipes/**" }),
+  scopeDescription({ here: "_content", glob: "projects/porch/**" }),
+  scopeDescription({ here: "_content", glob: "**/*.doc.card" }),
+].join(" | ")
+=> the whole box | the whole box | recipes | projects/porch | **/*.doc.card
+```
+
+A query that includes referring todos adds "plus todos elsewhere that link
+here". When the scope is already the whole box there is no elsewhere, so the
+stock plate's line stops at "the whole box".
+
+```ts
+scopeLineText({ here: "_content", glob: "**", includeReferring: true })
+=> Scope: the whole box
+
+scopeLineText({ here: "recipes", glob: "recipes/**", includeReferring: true })
+=> Scope: recipes, plus todos elsewhere that link here
+
+scopeLineText({ here: "recipes", glob: "recipes/**", includeReferring: false })
+=> Scope: recipes
 ```

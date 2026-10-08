@@ -38,3 +38,17 @@ Reports:
 [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 36, 60, 68),
 [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 63),
 [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 83).
+
+## 2026-10-08: no generated title existed in the walks
+
+Left open by the fix batch; the fix needs the open question above answered.
+Titles come only from the nightly chat-review title pass
+([chat titles plan](../../beebox/docs/implemented-plans/chat-titles.md),
+400-character gate). A walk on a fresh box never runs it, so there was no
+title to reach the label. "New conversation" and "Conversation" are the
+frontend's fallbacks in `resolve-conversation.ts`; the plan says the chip
+shows nothing for an untitled chat (Track C), so these strings also drift
+from it. A fix chooses when a chat gets its first title (after the first
+turn, by which writer) and what an untitled chat shows meanwhile. Not
+checked: whether a title written while the chat is open reaches the label
+without a reload; the label is set once when the conversation resolves.

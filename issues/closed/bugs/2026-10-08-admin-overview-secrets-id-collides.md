@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — F-newcomer journey walk, 2026-10-08
+resolution: implemented
 ---
+
+Fixed 2026-10-08: The group card id is now `bbx-admin-group-<tab>`; the row keeps `bbx-admin-overview-<section>`.
 
 `bin/browse` reported a duplicate id, `bbx-admin-overview-secrets`, on the
 Admin Overview page. Two elements get it:
@@ -19,6 +22,6 @@ The Secrets group has a tab named `secrets` and a section id `secrets`, so
 the two strings match. Agents that address a control by `bbx-` id reach the
 first element only. Give the group and the row distinct prefixes, for
 example `bbx-admin-group-…` and `bbx-admin-overview-…`. Related:
-[Bee Box surfaces render duplicate bbx control ids](2026-08-23-composer-states-gallery-duplicates-bbx-ids.md).
+[Bee Box surfaces render duplicate bbx control ids](../../bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md).
 
-Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R2).
+Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R2).

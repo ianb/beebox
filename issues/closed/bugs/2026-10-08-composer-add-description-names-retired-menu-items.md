@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — B-inventory journey walk, 2026-10-08
+resolution: implemented
 ---
+
+Fixed 2026-10-08: The Add button's `data-bbx-does` now lists "add files" in place of the retired "attach file, upload files".
 
 The composer's Add button carries an agent-facing description:
 
@@ -22,8 +25,8 @@ agent named no controls, so the stale text had no effect; the code still
 carries it.
 
 Related and closed, a different defect:
-[agent instructions primed a wrong control name](../closed/docs-and-chores/2026-09-21-chat-agent-instructions-prime-wrong-control-name.md).
-See also [composer attach UX](2026-08-08-chat-composer-attach-ux.md).
+[agent instructions primed a wrong control name](../docs-and-chores/2026-09-21-chat-agent-instructions-prime-wrong-control-name.md).
+See also [composer attach UX](../../bugs/2026-08-08-chat-composer-attach-ux.md).
 
-Reports: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 11),
-[B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R7).
+Reports: [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 11),
+[B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R7).

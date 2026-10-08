@@ -26,3 +26,16 @@ second hides the typo but leaves bad data in the card. Related:
 [agent-assigned todos have no pickup](../features/2026-09-24-agent-assigned-todos-have-no-pickup.md).
 
 Report: [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
+
+## 2026-10-08: needs a decision before a fix
+
+Left open by the fix batch. The defined values are not settled.
+`beebox/docs/cards/format.md` defines `assigned` as a plain string and its
+example assigns a person (`assigned="Dana"`); `isBoxholderTodo` in
+`beebox/src/shared/todo-model.ts` treats any value but `"agent"` as the
+boxholder's. Only `box-docs/todos.md` limits it to absent or `"agent"`. A
+closed set would reject person names; a badge for `"agent"` only would hide
+them. Decide whether `assigned` may name a person. If it may, the narrower
+fix is to reject the boxholder words an agent invents (`user`, `me`,
+`boxholder`) in `validateTodoAttributes`, and to say in `box-docs/todos.md`
+that `assigned` names someone other than the boxholder.

@@ -9,8 +9,9 @@ or a yes/no verdict cannot use any of it
 (`issues/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md`).
 
 `loadBoxContext: false` is how a call site opts out. It reaches the SDK as an
-empty `settingSources`, and it is omitted entirely otherwise so the SDK's own
-default keeps applying — this is an opt-out, never a new default.
+empty `settingSources`. Every other run loads the box's project settings
+(`CLAUDE.md`, `.claude/rules/`, `.claude/skills/`, the box hooks) and nothing
+from the host user's `~/.claude`.
 
 ```ts setup
 import { buildQueryOptions } from "../../../../src/core/agent/invoke/run.js";
@@ -23,12 +24,35 @@ function optionsFor(extra: Record<string, unknown>): Record<string, unknown> {
 }
 ```
 
-Opting out sets an empty `settingSources`; anything else leaves the key off.
+Opting out sets an empty `settingSources`; the default and an explicit `true`
+load only the `project` source.
 
 ```ts
-JSON.stringify(optionsFor({ loadBoxContext: false }).settingSources)
+optionsFor({ loadBoxContext: false }).settingSources
 => []
 
-JSON.stringify(["settingSources" in optionsFor({}), "settingSources" in optionsFor({ loadBoxContext: true })])
-=> [false,false]
+optionsFor({}).settingSources
+=> ["project"]
+
+optionsFor({ loadBoxContext: true }).settingSources
+=> ["project"]
+```
+
+The server's Claude login can carry claude.ai connectors (Gmail, Calendar,
+Drive) for one person's account. A box agent must never get them
+(`issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md`),
+so every run turns them off with a flag-level setting. The CLI also loads every
+`CLAUDE.md` in the directories above its working directory, which for a box
+under the host's home directory includes `~/.claude/CLAUDE.md`; those files are
+excluded by path.
+
+```ts
+optionsFor({}).settings
+=> {
+  disableClaudeAiConnectors: true,
+  claudeMdExcludes: ["/CLAUDE.md", "/CLAUDE.local.md", "/.claude/CLAUDE.md", "/.claude/rules/**"],
+}
+
+optionsFor({ loadBoxContext: false }).settings.disableClaudeAiConnectors
+=> true
 ```

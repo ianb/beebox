@@ -41,5 +41,9 @@ get that page.
 
 ## Related
 
-[Nested landmark row opens the landmark file](2026-10-08-nested-landmark-row-opens-the-landmark-file.md)
+[Nested landmark row opens the landmark file](../closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md)
 (the menu row that leads to this page).
+
+2026-10-08: the place menu's nested landmark row now opens the nested place's
+`entry-point` card when it has one. A nested landmark without an entry point
+still opens this page.

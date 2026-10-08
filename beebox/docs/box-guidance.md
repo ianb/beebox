@@ -101,6 +101,12 @@ The families `compileGuides` writes (`guides-for-<type>.md`,
 `guide-for-chat-<chat>.md`) prune by marker and manifest too, and an
 `AGENTS.md` symlink whose `CLAUDE.md` is gone is removed by the mirror step.
 
+A Claude session started for a box reads only this guidance. `boxSessionSettings`
+(`src/core/agent/box-session-settings.ts`) loads the `project` setting source
+and not `user`, excludes every `CLAUDE.md` in a directory above the box root,
+and turns off the claude.ai connectors of the server's Claude login. Chat, agent
+runs, and scan vision all use it.
+
 ## Maps and tracked guides
 
 The maps finalizer (`src/core/maps/finalize/core.ts`) gives every map-bearing

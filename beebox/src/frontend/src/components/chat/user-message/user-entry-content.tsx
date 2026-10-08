@@ -125,7 +125,9 @@ export function UserEntryContent({ entry, debugView, audioOverlay, matchesOverla
         if (block.type === "image") {
           const src = imageBlockSrc(block);
           if (!src) return null;
-          return <MessageImage key={key} src={src} alt={`Attached image ${i + 1}`} />;
+          // Number images among images; block 0 is usually the text.
+          const imageNumber = entry.content.slice(0, i + 1).filter((b) => b.type === "image").length;
+          return <MessageImage key={key} src={src} alt={`Attached image ${imageNumber}`} />;
         }
         return null;
       })}

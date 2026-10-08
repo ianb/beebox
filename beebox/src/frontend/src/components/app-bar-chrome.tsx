@@ -26,9 +26,11 @@
  *     workspace card rendering discipline — `components/chat/CLAUDE.md`).
  *
  * Ownership tokens: each `useAppBarPlace` instance carries an identity, and
- * cleanup clears the published place ONLY if it still owns it. Without that,
- * an unmounting page's cleanup (which React may run after the incoming page's
- * effects) would erase the newer page's value and leave the pill blank.
+ * cleanup removes only its own published place. Without that, an unmounting
+ * page's cleanup (which React may run after the incoming page's effects)
+ * would erase the newer page's value and leave the pill blank. Places stack
+ * (`lib/place-stack.ts`): when the newest owner clears, the one below it
+ * shows again, so closing a Browse card returns the bar to the chat's place.
  */
 
 import {
@@ -36,6 +38,7 @@ import {
   type ReactNode,
 } from "react";
 import { useDropdownClose } from "./ui/Dropdown";
+import { dropPlace, pushPlace, topPlace, type PlaceEntry } from "../lib/place-stack";
 
 /** Where the user is: a display label plus the box dir it lives in. */
 export interface AppBarPlace {
@@ -100,15 +103,15 @@ const AppBarChromeWriteContext = createContext<AppBarChromeWriters | null>(null)
  * publication can't re-render the routed page (see the file header, rule 2).
  */
 export function AppBarChromeProvider({ children }: { children: ReactNode }) {
-  const [place, setPlace] = useState<{ owner: object; place: AppBarPlace } | null>(null);
+  const [places, setPlaces] = useState<readonly PlaceEntry[]>([]);
   const [hereOwner, setHereOwner] = useState<object | null>(null);
   const [chipSlot, setChipSlot] = useState<HTMLElement | null>(null);
   const [hereSlot, setHereSlot] = useState<AppBarMenuSlot | null>(null);
 
   const writers = useMemo<AppBarChromeWriters>(
     () => ({
-      publishPlace: (owner, next) => setPlace({ owner, place: next }),
-      clearPlace: (owner) => setPlace((cur) => (cur !== null && cur.owner === owner ? null : cur)),
+      publishPlace: (owner, next) => setPlaces((cur) => pushPlace(cur, { owner, place: next })),
+      clearPlace: (owner) => setPlaces((cur) => dropPlace(cur, owner)),
       claimHereMenu: (owner) => setHereOwner(owner),
       releaseHereMenu: (owner) => setHereOwner((cur) => (cur === owner ? null : cur)),
       setChipSlot: (element) => setChipSlot(element),
@@ -122,12 +125,12 @@ export function AppBarChromeProvider({ children }: { children: ReactNode }) {
 
   const values = useMemo<AppBarChromeValues>(
     () => ({
-      place: place === null ? null : place.place,
+      place: topPlace(places),
       chipSlot,
       hereSlot,
       hereMenuClaimed: hereOwner !== null,
     }),
-    [place, chipSlot, hereSlot, hereOwner],
+    [places, chipSlot, hereSlot, hereOwner],
   );
 
   return (
@@ -151,14 +154,21 @@ export function useAppBarPlace(place: AppBarPlace | null): void {
   const dir = place === null ? null : place.dir;
   const label = place === null ? null : place.label;
 
+  // Clear on unmount only. Owner-scoped: a stale unmount must not erase a
+  // newer page's value.
   useEffect(() => {
     const owner = ownerRef.current;
-    if (writers !== null) {
-      if (label === null) writers.clearPlace(owner);
-      else writers.publishPlace(owner, { dir, label });
-    }
-    // Owner-scoped: a stale unmount must not erase a newer page's value.
     return () => { if (writers !== null) writers.clearPlace(owner); };
+  }, [writers]);
+
+  // A place change republishes without clearing first, so the owner keeps its
+  // position in the stack: a chat whose label changes under a focused Browse
+  // card must not rise above it (`lib/place-stack.ts`).
+  useEffect(() => {
+    if (writers === null) return;
+    const owner = ownerRef.current;
+    if (label === null) writers.clearPlace(owner);
+    else writers.publishPlace(owner, { dir, label });
   }, [writers, dir, label]);
 }
 

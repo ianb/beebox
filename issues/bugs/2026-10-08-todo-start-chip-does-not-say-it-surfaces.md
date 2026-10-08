@@ -26,6 +26,6 @@ uses "later" for the same state in the headline. The F box commit `1d8a151` (jou
 
 Pick one word for the state and use it in the chip, the headline and the
 docs. A chip like "on your plate from <date>" says what happens. Related:
-[todo checkbox name](2026-10-08-todo-checkbox-name-is-its-status.md).
+[todo checkbox name](../closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md).
 
 Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shots 05, 07, 08, 28).

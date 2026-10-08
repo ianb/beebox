@@ -4,8 +4,8 @@
  * then derived `primary` cards, then nested landmarks — spliced into
  * `resolve.ts`'s flat list between the hand-listed `links` and `expand`
  * tiers. Split into its own module (rather than living in `resolve.ts`)
- * purely to stay under the file-length budget; imports only from
- * `link-build.ts` and `prominence-index.ts`, never from `resolve.ts`, so
+ * purely to stay under the file-length budget; never imports from
+ * `resolve.ts`, so
  * `resolve.ts` can import this module without a cycle.
  *
  * A derived entry whose target can't be read (deleted between the
@@ -19,7 +19,8 @@
 
 import { naturalCompare } from "../../../shared/natural-sort.js";
 import { buildLink, type ResolvedLink, type ResolveOptions } from "./link-build.js";
-import type { ProminenceEntry, PrunedSubtree } from "../prominence-index.js";
+import { prunedSubtreeWith, type ProminenceEntry, type ProminenceWalkContext, type PrunedSubtree } from "../prominence-index.js";
+import { createCardSchemaMap } from "../../../schemas.js";
 import type { ProminenceLevel } from "../../../shared/prominence.js";
 import type { DerivedReadProblem } from "../summaries.js";
 
@@ -44,7 +45,7 @@ export async function resolveDerivedTiers(
   for (const level of ["entry-point", "primary"] as const) {
     await addCardTier({ entries: derived.entries, level, links, seen, options, problems });
   }
-  addNestedLandmarkTier(derived, { links, seen });
+  await addNestedLandmarkTier(derived, { links, seen, boxRoot: options.boxRoot });
   return { links, problems };
 }
 
@@ -83,19 +84,30 @@ async function addCardTier(
   }
 }
 
-function addNestedLandmarkTier(
+/**
+ * One row per nested landmark. The row opens the nested place's entry-point
+ * card — where a reader starts — when its own pruned subtree has one; a
+ * landmark card is a place marker whose page shows only its configuration.
+ * Without an entry point the row still opens the landmark card.
+ */
+async function addNestedLandmarkTier(
   { entries, nested }: PrunedSubtree,
-  { links, seen }: { links: ResolvedLink[]; seen: Set<string> },
-): void {
+  { links, seen, boxRoot }: { links: ResolvedLink[]; seen: Set<string>; boxRoot: string },
+): Promise<void> {
   const sorted = nested.toSorted((a, b) => naturalCompare(a.path, b.path));
+  // Built once, and only when there is a nested landmark to look into.
+  const cardSchemas = sorted.length > 0 ? await createCardSchemaMap(boxRoot) : null;
   for (const n of sorted) {
     // `n.path` has no leading "/" (box-relative, matching every other
     // resolved ref's format) — see the comment in `addCardTier` above.
     if (seen.has(n.path)) continue;
+    const entryPoint = cardSchemas === null ? null : await nestedEntryPoint({ boxRoot, cardSchemas }, n.dir);
+    if (entryPoint !== null && seen.has(entryPoint)) continue;
     const entry = entries.find((e) => e.kind === "landmark" && e.boxPath === `/${n.path}`);
     seen.add(n.path);
+    if (entryPoint !== null) seen.add(entryPoint);
     links.push({
-      ref: n.path,
+      ref: entryPoint ?? n.path,
       label: n.label,
       title: n.label,
       exists: true,
@@ -103,4 +115,17 @@ function addNestedLandmarkTier(
       ...(entry?.kind === "landmark" ? { prominence: entry.level } : {}),
     });
   }
+}
+
+/** The first (natural order) `entry-point` card in a nested landmark's own pruned subtree, box-relative without a leading "/". */
+async function nestedEntryPoint(
+  ctx: ProminenceWalkContext,
+  dir: string,
+): Promise<string | null> {
+  const sub = await prunedSubtreeWith(ctx, dir);
+  const first = sub.entries
+    .filter((e) => e.kind === "card" && e.level === "entry-point")
+    .map((e) => e.boxPath.slice(1))
+    .toSorted(naturalCompare)[0];
+  return first ?? null;
 }
