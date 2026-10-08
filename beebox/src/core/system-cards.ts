@@ -21,7 +21,7 @@ import { parseCardText, typeFromFilename } from "./card-io.js";
 import { glob } from "glob";
 import { MANIFEST_PATH } from "./migrations.js";
 
-export class SystemCardInvariantError extends Error {
+class SystemCardInvariantError extends Error {
   constructor(problems: string[], migration: SystemCardMigration) {
     super(`Cannot complete ${migration}. Install or repair the canonical cards first:\n${problems.join("\n")}`);
     this.name = "SystemCardInvariantError";

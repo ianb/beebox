@@ -91,5 +91,4 @@ bury the broken-ref signal that actually needs acting on. It is a whole-box chec
 `docs/implemented-plans/box-root-paths.md` (Track F).
 
 Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rfc.md`.
-Per-schema migrators: `scripts/migrate/*.ts` + `src/scripts/migrate/_warnings.ts`
-(noisy-mode field-loss detection).
+Migrators and their field-loss rules: [migrations](migrations.md).

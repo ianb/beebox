@@ -15,12 +15,17 @@ import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMa
 import { forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
 
-// Pinned rather than "whatever is last": appending a migration would otherwise
-// change what these tests run. `annex-config-2026-08` is chosen because it
-// converges configuration and touches no cards, so on a non-annex tmp box it is
-// a clean no-op — the sweep's own bookkeeping is what gets tested, not a
-// migrator's side effects. The registry is append-only, so this name persists.
+// Every registered migration is retired and runs the shared no-op, so a pending
+// one is a clean no-op on any box: the sweep's own bookkeeping is what gets
+// tested, not a migrator's side effects. Pinned to one name; the registry is
+// append-only, so it persists.
 const PROBE = "annex-config-2026-08";
+
+// No procedure-kind migration is registered any more, so the procedure tests
+// append a test-only entry to this process's copy of the registry. The
+// procedure itself is always the injected `runProcedure` callback.
+const PROCEDURE = "test-procedure";
+MIGRATIONS.push({ name: PROCEDURE, procedure: PROCEDURE });
 
 /** Seed the manifest as fully applied, optionally leaving some names pending. */
 async function seedManifest(box, opts) {
@@ -79,10 +84,9 @@ The manifest entry and the changes it describes land in the **same** commit, so
 a box can never claim a migration whose effects are not in its history. The
 commit carries the `Created-By` trailer the box's other automated writers use.
 
-`annex-config-2026-08` is the migration under test here (see the setup note): on
-a box that is not on git-annex it converges nothing, which is exactly the shape
-that proves the sweep's own bookkeeping without depending on a migrator's side
-effects.
+`annex-config-2026-08` is the migration under test here (see the setup note):
+it runs the retired no-op, which proves the sweep's own bookkeeping without
+depending on a migrator's side effects.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -126,7 +130,7 @@ it by hand (all four local dev boxes, 2026-09-16).
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await seedManifest(box, { pending: [PROBE, "trick-secret-runtime"] });
+await seedManifest(box, { pending: [PROBE, PROCEDURE] });
 await box.commitAll("script then procedure pending");
 const result = await sweepMigrations({ boxRoot: box.root });
 JSON.stringify({
@@ -150,26 +154,26 @@ is unanswered. Answering it authorizes exactly one more run. Every pass reports
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await seedManifest(box, { pending: ["trick-secret-runtime"] });
+await seedManifest(box, { pending: [PROCEDURE] });
 await box.commitAll("procedure pending");
 let runs = 0;
 let exit = 1;
 const runProcedure = async (procedure, { onOutput }) => { runs += 1; onOutput(`${procedure} attempt ${String(runs)} failed\n`); return exit; };
 const first = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
 const questionText = await box.read(first.question);
-JSON.stringify({ status: first.status, runs, question: first.question, carriesOutput: questionText.includes("trick-secret-runtime attempt 1 failed"), receipt: git(box, "for-each-ref", "--format=%(refname)", "refs/bbx/migrations/trick-secret-runtime/repair-started") })
-=> {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-0.question.card","carriesOutput":true,"receipt":""}
+JSON.stringify({ status: first.status, runs, question: first.question, carriesOutput: questionText.includes("test-procedure attempt 1 failed"), receipt: git(box, "for-each-ref", "--format=%(refname)", "refs/bbx/migrations/test-procedure/repair-started") })
+=> {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_test-procedure-0.question.card","carriesOutput":true,"receipt":""}
 
 const second = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
 const record = await boxMaintenanceStatus(box.root);
 JSON.stringify({ status: second.status, runs, question: second.question, record: record.phase, owner: record.owner })
-=> {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-0.question.card","record":"exclusive","owner":null}
+=> {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_test-procedure-0.question.card","record":"exclusive","owner":null}
 
 await box.write(first.question, questionText.replace("---\n", "---\nanswer:\n  text: Retry it\nanswered-at: 2026-09-17T00:00:00.000Z\n"));
 await box.commitAll("answer");
 exit = 0;
 const third = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
-JSON.stringify({ status: third.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes("trick-secret-runtime") })
+JSON.stringify({ status: third.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes(PROCEDURE) })
 => {"status":"applied","runs":2,"recorded":true}
 ```
 
@@ -179,17 +183,17 @@ unfinished attempt's own snapshot, and a person's `--apply` still runs the
 procedure directly:
 
 ```ts continue
-await box.write(MANIFEST_PATH, (await box.read(MANIFEST_PATH)).split("\n").filter((line) => !line.includes("trick-secret-runtime")).join("\n"));
+await box.write(MANIFEST_PATH, (await box.read(MANIFEST_PATH)).split("\n").filter((line) => !line.includes(PROCEDURE)).join("\n"));
 await box.commitAll("pending again");
 const unfinished = git(box, "rev-parse", "HEAD");
-git(box, "update-ref", "refs/bbx/migrations/trick-secret-runtime/repair-started", unfinished);
+git(box, "update-ref", "refs/bbx/migrations/test-procedure/repair-started", unfinished);
 const stale = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
 JSON.stringify({ status: stale.status, runs, question: stale.question, namesReceipt: (await box.read(stale.question)).includes(`Recovery: ${unfinished}`) })
-=> {"status":"failed","runs":2,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-1.question.card","namesReceipt":true}
+=> {"status":"failed","runs":2,"question":"_bookkeeping/questions/Migration_test-procedure-1.question.card","namesReceipt":true}
 
 const manual = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: false, runProcedure });
-JSON.stringify({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes("trick-secret-runtime"), open: manual.questions })
-=> {"status":"attention","runs":3,"recorded":true,"open":["_bookkeeping/questions/Migration_trick-secret-runtime-1.question.card"]}
+JSON.stringify({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes(PROCEDURE), open: manual.questions })
+=> {"status":"attention","runs":3,"recorded":true,"open":["_bookkeeping/questions/Migration_test-procedure-1.question.card"]}
 ```
 
 ```ts cleanup
@@ -343,9 +347,11 @@ let agents = 0;
 let calls = 0;
 const result = await sweepMigrations({
   boxRoot: box.root, repair: true,
-  runScript: async ({ script }) => {
+  // Every entry runs the same tombstone script, so tell PROBE's runs apart by
+  // the manifest: PROBE is the one running while it is still unrecorded.
+  runScript: async ({ boxRoot }) => {
     calls += 1;
-    return script === MIGRATIONS.find((m) => m.name === PROBE).script ? 2 : 0;
+    return (await readFile(join(boxRoot, MANIFEST_PATH), "utf8")).includes(PROBE) ? 0 : 2;
   },
   repairAgent: { invokeStructured: async () => {
     agents += 1;
@@ -390,7 +396,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await seedManifest(box, { pending: ["view-card-shape"] });
+await seedManifest(box, { pending: [PROCEDURE] });
 await box.commitAll("pending procedure");
 const owner = await acquireBoxMaintenance(box.root, { reason: "deployment" });
 await owner.prepare();
