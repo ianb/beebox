@@ -5,7 +5,13 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — B-inventory journey walk, 2026-10-08
+resolution: implemented
 ---
+
+Resolved in the journey-walks-oct workstream: both icons and the field-test JPEG
+restored from their pre-rename blobs; `beebox/test/webapp/routes/box-identity-assets.png-checksums.doctest.md`
+now checks the chunk checksums of every tracked PNG under `beebox/`, and fails
+on the damaged icon.
 
 Commit `dab834811` (the 2026-08-30 product rename) replaced the old two-letter
 CLI token with "bbx" across the repo, including inside binary files. Two
@@ -27,7 +33,7 @@ broken icon. `apple-touch-icon.png` is identical to the original (`R100`).
 Commit `e7b35ee2e` restored the audio files the rename damaged, and
 `c2ef0e299` restored the two B-inventory journey photos. The B-inventory walk
 found the damage because its walker saw the photos as corrupt
-([report](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md),
+([report](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md),
 rows 19 and R4). The PNGs above were missed by both fixes.
 
 ## One more file
