@@ -22,7 +22,9 @@ Both, now (rulings 1, 6, 7):
   `_config/interface/admin.card`; its authorization is still enforced in the
   backend, not by the card.)
 - **Conversation and chat are important** — chat is the central page and a
-  continuous presence (see `interaction-model.md`).
+  continuous presence (see `interaction-model.md`). A chat's engine is fixed
+  at birth and its model can change, because the transcript lives in the
+  engine's own store ([`../model-policy.md`](../model-policy.md)).
 - **The documents are the result and the main method of record.** The original
   "the interface is documents, not a UI" claim was about where truth lives,
   not where interaction happens: the filesystem is the state; the web UI and
