@@ -34,7 +34,7 @@ import {
   registerUnbuiltFrontendRoot,
 } from "../server-root/root-routes.js";
 import { registerCspReportRoute } from "../routes/api-csp-report.js";
-import { HASHED_ASSET_CACHE_OPTIONS } from "../static-cache.js";
+import { HASHED_ASSET_STATIC_OPTIONS } from "../static-cache.js";
 import { invariant } from "../../shared/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../../lib/csp.js";
 import {
@@ -233,7 +233,7 @@ export async function createServer(options?: InternalServerOptions, startup?: Re
         root: assetsRoot,
         prefix: "/assets/",
         decorateReply: false,
-        ...HASHED_ASSET_CACHE_OPTIONS,
+        ...HASHED_ASSET_STATIC_OPTIONS,
       });
     }
   }

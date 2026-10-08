@@ -46,6 +46,7 @@ import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../../../DocumentTitle";
 import { ErrorText } from "../../../ui/ErrorText";
 import { useFirstLoadMark } from "../../../../lib/first-load-marks";
+import { SelectedTranscriptRegion } from "../../ambient/selected-transcript";
 import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
 
 function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
@@ -303,7 +304,8 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
       conversationKey={logicalConversation}
       sendDisabledReason={sendDisabledReasonFor(conversationSelection)}
       transcriptVisible={transcriptVisible}
-      ambientRegion={ambientRegion} selectionNotice={<>{selectionNotice}{recoveryNotice !== null && <div role="alert"><ErrorText>{recoveryNotice}</ErrorText></div>}</>} failedRegion={failedRegion}
+      // Ambient replies read the selected conversation from here instead of fetching it again.
+      ambientRegion={<SelectedTranscriptRegion sessionId={sessionId} loaded={!snapshot.matches("loading")} entries={messages} total={totalEntries} busy={processBusy}>{ambientRegion}</SelectedTranscriptRegion>} selectionNotice={<>{selectionNotice}{recoveryNotice !== null && <div role="alert"><ErrorText>{recoveryNotice}</ErrorText></div>}</>} failedRegion={failedRegion}
       tabs={tabs}
       model={model}
       mute={mute}

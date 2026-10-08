@@ -45,7 +45,7 @@ import { isPairingRedeemUrl } from "../../webapp/routes/pairing.js";
 import { isApiUrl } from "../../webapp/server-box-scope.js";
 import { listAccessibleBoxes, describeBoxes, type BoxListing } from "../../webapp/server-root/root-routes.js";
 import { canAccessBox } from "../../webapp/box-access.js";
-import { HASHED_ASSET_CACHE_OPTIONS } from "../../webapp/static-cache.js";
+import { HASHED_ASSET_STATIC_OPTIONS } from "../../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../../webapp/base-prefix.js";
 import { verifyMobileRequest } from "../../core/mobile/request-auth.js";
 import { hasScanAuth } from "./scan-gate.js";
@@ -357,7 +357,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       root: path.join(frontendDist, "assets"),
       prefix: "/assets/",
       decorateReply: false,
-      ...HASHED_ASSET_CACHE_OPTIONS,
+      ...HASHED_ASSET_STATIC_OPTIONS,
     });
     for (const dir of ["icons", "earcons"]) {
       const root = path.join(frontendDist, dir);
