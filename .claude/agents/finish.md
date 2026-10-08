@@ -151,7 +151,10 @@ provides multiple screenshots as UI verification, require one labeled exhibit
 URL in the report rather than listing raw screenshot paths; if no exhibit exists,
 create an `fyi` exhibit before landing. Its prose/captions must identify what the
 figures demonstrate, not leave the developer a spot-the-difference puzzle. A
-single incidental debug capture does not trigger this. End with the status line the
+single incidental debug capture does not trigger this. Just before the status
+line, write a CODING_FEEDBACK entry: pipe your answers to its four prompts
+(`bin/coding-feedback help`) into `bin/coding-feedback add --checkpoint landed`,
+whether merged or blocked. End with the status line the
 caller parses: `RESULT: MERGED`, or `RESULT: BLOCKED` + what blocks, what you
 completed, what the human must decide — saying plainly that nothing merged if you
 stopped before step 7. With the private leg active, EVERY report also carries

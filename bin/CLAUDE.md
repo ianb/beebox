@@ -120,6 +120,17 @@ commits them; `bin/issues next-action` lists, sets, and clears them from any
 checkout. `workstreams-app/src/server/main/issue-next-actions.ts` is the only
 reader and writer.
 
+## CODING_FEEDBACK (`bin/coding-feedback`)
+
+A short retrospective note an agent writes at four checkpoints: `plan-reviewed`
+(bbx-plan), `implemented` and `review-adjudicated` (cross-model), and `landed`
+(the finish agent). `add --checkpoint <c>` reads the body from stdin; `help`
+lists the four prompts it answers. Entries live outside git at
+`<exhibits store>/<workstream>/coding-feedback/`, with frontmatter naming the
+checkout state and the session transcript (`CLAUDE_CODE_SESSION_ID` or
+`CODEX_THREAD_ID`, else the newest transcript for this checkout). Only a
+retrospective scan reads them; the boxholder does not, and nothing reaches git.
+
 ## Skill usage (`skill-usage.ts`)
 
 `node --import tsx bin/skill-usage.ts [--since 60] [--json]` counts how

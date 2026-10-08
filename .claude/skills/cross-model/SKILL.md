@@ -111,6 +111,10 @@ silent data corruption. No compliments, just the problems."
 
 ## Run it
 
+Before sending a diff for review, write a CODING_FEEDBACK entry: pipe your
+answers to its four prompts (`bin/coding-feedback help`) into
+`bin/coding-feedback add --checkpoint implemented`.
+
 Write the prompt to `scratch/cross-model/<name>.prompt.md`, then run in the
 foreground (backgrounded runs are killed before they finish):
 
@@ -129,6 +133,9 @@ older model the account allows before reporting. Stop only the exact orphaned
 reviewer PID; `pkill -f codex` also kills Codex.app and sibling sessions.
 
 ## Report
+
+After adjudicating a diff review, write a second CODING_FEEDBACK entry the same
+way with `--checkpoint review-adjudicated`.
 
 Validating other work: lead with the work outcome; mention the review only for
 a material change, an unresolved risk, or a decision the human may override. No
