@@ -289,3 +289,68 @@ rejectedStore.get().panes.left.activePath
 rejectedStore.get().tabs["second-only"]
 => undefined
 ```
+
+## Selecting a conversation with nothing saved makes it an arrival candidate
+
+Arrival opens the place only for a conversation this tab has no saved
+arrangement for (docs/plans/landmark-arrival.md, Track D). `select` sets the
+candidate flag when it finds nothing in memory and nothing in storage.
+`takeArrival` returns the flag once and clears it.
+
+```ts
+const arrivalValues = new Map<string, string>();
+const arrivalStorage: WorkspaceStorage = {
+  getItem: (key) => arrivalValues.get(key) ?? null,
+  setItem: (key, value) => { arrivalValues.set(key, value); },
+};
+const arrivals = createWorkspaceBrowserStoreWithStorage({ apiBase: "/paper-cards/test1/api", boxSlug: "test1--paper-cards", storage: arrivalStorage });
+arrivals.select("fresh-chat");
+arrivals.hasArrival()
+=> true
+
+arrivals.takeArrival()
+=> true
+
+arrivals.takeArrival()
+=> false
+```
+
+An arrangement in storage is saved state, even one with no cards, so it is not
+a candidate. Neither is a conversation this store already holds in memory.
+
+```ts continue
+arrivalValues.set(workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "closed-everything" }), serializeWorkspaceState(createEmptyWorkspaceState()));
+arrivals.select("closed-everything");
+arrivals.hasArrival()
+=> false
+
+arrivals.select("stored-cards");
+arrivals.select("fresh-chat");
+arrivals.hasArrival()
+=> false
+```
+
+Any card action by the person ends a pending arrival, and so does
+`cancelArrival` (a pointer, focus, or key event in the chat pane).
+
+```ts continue
+arrivals.select("dispatched");
+arrivals.dispatch({ type: "openCard", target: target("mine"), label: "Mine", at: 3, viewport: "desktop" });
+arrivals.takeArrival()
+=> false
+
+arrivals.select("typed-first");
+arrivals.cancelArrival();
+arrivals.takeArrival()
+=> false
+```
+
+Adopting a session id keeps the provisional chat's arrangement, so the adopted
+identity is not a new arrival.
+
+```ts continue
+arrivals.select("provisional-arrival");
+arrivals.adopt("session-arrival");
+arrivals.hasArrival()
+=> false
+```

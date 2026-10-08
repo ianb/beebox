@@ -28,6 +28,7 @@ import type { ChatAgentEngine } from "@shared/chat-models.js";
 import { ChatRenderProfiler } from "./ChatRenderProfiler";
 import { AgentGate } from "../../../agents/AgentReadiness";
 import { PlaceChatContext, type PlaceChat } from "../../../openers/place-chat";
+import { useWorkspace } from "../../workspace/WorkspaceProvider/provider";
 
 
 /**
@@ -274,9 +275,11 @@ export function InteractiveChatBody(props: ChatBodyProps) {
   const { voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, nativeComposer } = props;
   const { handleAddSelection, nativeCommandError, dismissNativeCommandError } = useCompanionSelection({ nativeComposer, selections, voice });
   const placeChat = usePlaceChat(props);
+  const cancelArrival = useWorkspace()?.cancelArrival;
   return (
     <ChatRenderProfiler id="chat-root">
       <ChatView
+      onPaneInteraction={cancelArrival}
       ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice} failedRegion={props.failedRegion}
       // Native input replaces only the composer; landmark and settings menus remain web-owned.
       barChrome={<BarChromeRegion {...props} />}
