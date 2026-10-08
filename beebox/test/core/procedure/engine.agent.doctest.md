@@ -363,7 +363,8 @@ await box.cleanup();
 
 A run phase with both an `agents:` and a `shells:` entry runs the agent first,
 then the shell — the order the engine guarantees after `runRunPhase` was split
-into `runRunAgents` + `runRunShells`.
+into `runRunAgents` + `runRunShells`. The shell reads the file the agent wrote,
+so its output shows the agent ran first.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -378,7 +379,8 @@ steps:
         - prompt: Write the base file.
       shells:
         - |
-          echo "shell-ran" > _bookkeeping/output/shell.txt
+          cat _bookkeeping/output/agent.txt > _bookkeeping/output/shell.txt
+          echo " then shell-ran" >> _bookkeeping/output/shell.txt
 ---
 `);
 await box.write("_bookkeeping/output/.gitkeep", "");
@@ -406,12 +408,12 @@ print(`agent ran: ${agentRan}`);
 
 const files = await box.list("_bookkeeping/output");
 print(`agent.txt: ${files.includes("agent.txt")}`);
-print(`shell.txt: ${files.includes("shell.txt")}`);
+print(`shell.txt: ${(await box.read("_bookkeeping/output/shell.txt")).replace(/\s+/g, " ").trim()}`);
 =>
 success: true
 agent ran: true
 agent.txt: true
-shell.txt: true
+shell.txt: agent-ran then shell-ran
 ```
 
 ```ts cleanup

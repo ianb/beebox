@@ -59,9 +59,16 @@ Done: tests of in-memory fakes removed; repeated setup consolidated in the
 branch-dependent, `bbx-` id/aria, security and incident-named ones; model
 ids unpinned (wildcards inside the value, e.g. `claude-opus-«*»`); every
 box migration retired to a shared tombstone with its migrator code and
-tests deleted. Not done from the list below: zod shape probes,
-exact-text and JSON-snapshot assertions, source-regex tests, the shared
-auth-gate table, and the weak tests to fix or drop.
+tests deleted.
+
+Round 3 (same day) did the rest of the list below: zod shape probes cut
+to one positive and one negative per schema, exact-text and snapshot
+assertions narrowed to the claim, auth gates folded into one table per
+file (every pair kept), the weak tests fixed so each fails when its
+behavior breaks, the box-admission source-regex test rewritten against
+the real code, and the per-span review give-up rule tested. What remains
+open is the recurring sweep this issue proposes (a `schedules/` job in the
+knip-sweep shape); nothing from the list below is pending.
 
 ## Further trims to consider
 

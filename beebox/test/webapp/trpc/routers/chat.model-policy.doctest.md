@@ -14,6 +14,11 @@ import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 
+// The model-choice fields of chat.status; the rest of its payload is not this file's subject.
+function modelView(status) {
+  return { model: status.model, source: status.source, boxDefault: status.boxDefault };
+}
+
 function caller(server, opts) {
   return appRouter.createCaller({
     boxRoot: server.boxRoot,
@@ -34,13 +39,13 @@ pinned nothing reports the `strong` tier for its engine rather than `null`.
 ```ts
 const server = await makeTestServer();
 const initial = await caller(server).chat.status({});
-JSON.stringify(initial)
-=> {"sessionId":null,"running":false,"busy":false,"model":"«*»","source":"default","boxDefault":"«*»","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]}
+modelView(initial)
+=> { model: "«*»", source: "default", boxDefault: "«*»" }
 
 await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5" });
 clearBoxConfigCache(server.boxRoot);
-JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":"claude-sonnet-5","source":"default","boxDefault":"claude-sonnet-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]}
+modelView(await caller(server).chat.status({}))
+=> { model: "claude-sonnet-5", source: "default", boxDefault: "claude-sonnet-5" }
 ```
 
 Clearing the pin returns the box to the `strong` tier, not to "whatever the

@@ -64,19 +64,6 @@ JSON.stringify(failures)
 => []
 ```
 
-## Nullable fields accept both branches
-
-`chat-user-message.user`, `chat-complete.sessionId`, and `schedule-fired.announce`
-are all nullable — the null branch is legal:
-
-```ts
-eventSchemas["chat-user-message"].safeParse({ sessionId: null, message: "hi", user: null, timestamp: TS }).success
-=> true
-
-eventSchemas["schedule-fired"].safeParse({ id: "s", label: "l", alarm: false, announce: "wake up" }).success
-=> true
-```
-
 ## A one-sided answer is valid
 
 An answer carries only `answer` OR `selectedId`; `JSON.stringify` drops the

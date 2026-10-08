@@ -140,7 +140,8 @@ async function captureLogs(fn: () => Promise<void>): Promise<string> {
 ## Pull, push, tabs and comments
 
 A synced spreadsheet card gets its Drive metadata in the card and one JSON file
-per tab; a local JSON edit is pushed back to Drive.
+per tab. The local card starts stale (old title, older modified time) and has
+no tab file yet; a sync pulls the remote state.
 
 ```ts
 const box = await newBox();
@@ -151,9 +152,9 @@ const fx = sheetFixture({
   tabs: [["Sheet1", [["Name", "Age"], ["Alice", "30"]]]],
   refPrefix: "Budget/",
 });
+const stale = sheetFixture({ id: "sheet-abc123", name: "Old Budget", refPrefix: "Budget/" });
 // The card is created first, simulating `bbx drive add`.
-await box.seed("_content/drive/Budget.gsheet.card", fx.card);
-await box.seed("_content/drive/Budget/Sheet1.json", '[\n["Name","Age"],\n["Alice","30"]\n]\n');
+await box.seed("_content/drive/Budget.gsheet.card", stale.card.replace("2026-03-29T10:00:00Z", "2026-01-01T00:00:00Z"));
 box.commitAll("add drive sheet");
 
 const result = await createGoogleDriveConnector(box.root, fakeDrive([fx])).sync();
@@ -161,15 +162,22 @@ result.success
 => true
 ```
 
-The card file contains the spreadsheet metadata:
+The card now carries the remote spreadsheet metadata:
 
 ```ts continue
 const card = await box.read("_content/drive/Budget.gsheet.card");
-card.includes("drive:\n  id: sheet-abc123")
-=> true
+[card.includes("drive:\n  id: sheet-abc123"), card.includes("title: Test Budget"), card.includes("Old Budget")]
+=> [true, true, false]
+```
 
-card.includes("title: Test Budget")
-=> true
+The tab file is created from the remote cell values:
+
+```ts continue
+await box.read("_content/drive/Budget.attach/Sheet1.json")
+=> [
+["Name","Age"],
+["Alice",30]
+]
 ```
 
 ```ts cleanup

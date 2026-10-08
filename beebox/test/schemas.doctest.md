@@ -26,18 +26,8 @@ import { createCardSchemaMap } from "../src/schemas.js";
 The registry tracks all known card types:
 
 ```ts
-getCardTypes().includes("memo")
-=> true
-
-getCardTypes().includes("question")
-=> true
-
-getCardTypes().includes("intake-job")
-=> true
-
-getCardTypes().includes("webpage")
-=> true
-
+["memo", "question", "intake-job", "webpage"].filter((type) => !getCardTypes().includes(type))
+=> []
 ```
 
 ## Templates
@@ -210,13 +200,17 @@ Body.
 A figure card is an embeddable interactive graphic. Its body describes the
 figure; the runnable source lives in the attach scope, pointed to by `entry`.
 
-The frontmatter validates a runtime plus the required `entry` source pointer:
+The frontmatter validates a runtime plus the required `entry` source pointer,
+and optional `params` (declared embed parameters) and `data` (free-form author
+config) when present:
 
 ```ts
 FigureSchema.frontmatterSchema.safeParse({
   type: "figure",
-  runtime: "p5js",
-  entry: "attach/sketch.ts",
+  runtime: "d3",
+  entry: "attach/chart.ts",
+  params: [{ name: "molecule", type: "string", default: "H2O2" }],
+  data: { palette: ["#fff", "#000"] },
 }).success
 => true
 ```
@@ -229,31 +223,6 @@ FigureSchema.frontmatterSchema.safeParse({
   runtime: "p5js",
 }).success
 => false
-```
-
-`runtime` must be one of the supported runtimes:
-
-```ts
-FigureSchema.frontmatterSchema.safeParse({
-  type: "figure",
-  runtime: "vega",
-  entry: "attach/sketch.ts",
-}).success
-=> false
-```
-
-Optional `params` (declared embed parameters) and `data` (free-form author
-config) validate when present:
-
-```ts
-FigureSchema.frontmatterSchema.safeParse({
-  type: "figure",
-  runtime: "d3",
-  entry: "attach/chart.ts",
-  params: [{ name: "molecule", type: "string", default: "H2O2" }],
-  data: { palette: ["#fff", "#000"] },
-}).success
-=> true
 ```
 
 The figure template scaffolds a valid card pointing at `attach/sketch.ts`; no
@@ -398,8 +367,7 @@ parsed.schema.type
 A course card is the manifest that binds a learning experience's components by
 reference.
 
-A course with goals, success-criteria, and component refs parses; everything but
-the body is optional, so a bare course still loads too:
+A course with goals, success-criteria, and component refs parses:
 
 ```ts
 CourseSchema.frontmatterSchema.safeParse({
@@ -412,9 +380,6 @@ CourseSchema.frontmatterSchema.safeParse({
   material: "attach/material",
   progress: { ref: "/people/learner/Acids_Bases_Progress.progress.card" },
 }).success
-=> true
-
-CourseSchema.frontmatterSchema.safeParse({ type: "course" }).success
 => true
 ```
 
@@ -451,8 +416,7 @@ parsed.schema.type
 A lesson-plan card is the ordered delivery flow: a sequence of segments, each
 tagged `interactive` (live in chat) or `material` (uses a pre-made card).
 
-A plan whose segments carry a `do` and a `mode` parses; everything but the body
-is optional, so a bare lesson-plan still loads:
+A plan whose segments carry a `do` and a `mode` parses:
 
 ```ts
 LessonPlanSchema.frontmatterSchema.safeParse({
@@ -463,21 +427,11 @@ LessonPlanSchema.frontmatterSchema.safeParse({
   ],
 }).success
 => true
-
-LessonPlanSchema.frontmatterSchema.safeParse({ type: "lesson-plan" }).success
-=> true
 ```
 
-`mode` is a required closed enum — a segment with no `mode`, or an out-of-set
-`mode`, fails to parse:
+`mode` is a closed enum — an out-of-set `mode` fails to parse:
 
 ```ts
-LessonPlanSchema.frontmatterSchema.safeParse({
-  type: "lesson-plan",
-  segments: [{ do: "Some activity" }],
-}).success
-=> false
-
 LessonPlanSchema.frontmatterSchema.safeParse({
   type: "lesson-plan",
   segments: [{ do: "Some activity", mode: "lecture" }],
@@ -516,8 +470,7 @@ parsed.schema.type
 An exposition-plan card is a worked process for presenting a subject: the learner
 translation first, then rated approaches, then the compiled rules.
 
-A plan with a `learner-translation`, rated `approaches`, and `rules` parses;
-everything but the body is optional:
+A plan with a `learner-translation`, rated `approaches`, and `rules` parses:
 
 ```ts
 ExpositionPlanSchema.frontmatterSchema.safeParse({
@@ -526,9 +479,6 @@ ExpositionPlanSchema.frontmatterSchema.safeParse({
   approaches: [{ approach: "socratic dialog", rating: "primary", why: "Surfaces their model" }],
   rules: ["Open each concept from a familiar phenomenon"],
 }).success
-=> true
-
-ExpositionPlanSchema.frontmatterSchema.safeParse({ type: "exposition-plan" }).success
 => true
 ```
 
@@ -572,7 +522,7 @@ ProgressSchema.frontmatterSchema.safeParse({
 ```
 
 The evidence contract is enforced — a level with no `evidence`, an empty
-`evidence` array, or no `basis` all fail to parse (no anonymous rating):
+`evidence` array, or no `basis` fails to parse (no anonymous rating):
 
 ```ts
 ProgressSchema.frontmatterSchema.safeParse({
