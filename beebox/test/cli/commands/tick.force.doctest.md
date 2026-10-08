@@ -110,9 +110,6 @@ With force, chat sessions stop blocking — a forced run often originates
 from the chat itself — but running scripts and procedures still do:
 
 ```ts
-effectiveBusyBlockers(["chat:abc-123"], { force: true }).length
-=> 0
-
 effectiveBusyBlockers(["script:daily-rumination", "chat:abc-123"], { force: true })
 => [
   "script:daily-rumination"

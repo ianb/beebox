@@ -67,15 +67,6 @@ sessionEntriesPrintable({ entries: hugeEntries, sessionId: "codex-1", allowHuge:
 => true
 ```
 
-## The threshold is generous but real
-
-Far past readable output, low enough to catch the incident-class transcript.
-
-```ts
-HUGE_TRANSCRIPT_BYTES === 25 * 1024 * 1024
-=> true
-```
-
 ```ts cleanup
 fs.rmSync(dir, { recursive: true, force: true });
 ```

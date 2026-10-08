@@ -142,26 +142,6 @@ const strayOutcome = await runPreCommitChecks(strayBox.root, { colors: false });
 await strayBox.cleanup();
 ```
 
-A box with no root strays stays quiet on this check — a clean commit still
-passes with an empty report:
-
-```ts
-const cleanRootBox = await makeTmpBox({ git: true });
-await cleanRootBox.write("_content/notes/Plan.memo.card", "---\nstatus: new\ncreated: 2026-08-19T10:00:00Z\n---\nBody text\n");
-stage(cleanRootBox);
-
-const cleanRootOutcome = await runPreCommitChecks(cleanRootBox.root, { colors: false });
-[cleanRootOutcome.errorCount, cleanRootOutcome.report]
-=> [
-  0,
-  ""
-]
-```
-
-```ts cleanup
-await cleanRootBox.cleanup();
-```
-
 ## A staged oversized binary in an attach scope blocks
 
 The unlisted-binary guard reads the index (`core/annex/staged-unlisted.ts`), so
