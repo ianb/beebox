@@ -1,12 +1,15 @@
 ---
 title: "`<speech>` should take delivery instructions as an attribute, not a child `<instructions>` tag"
 workstream: speech-instructions-attr
+resolution: implemented
 area: beebox
 labels: [voice, agent-guidance]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request
 ---
+
+Closed: implemented in d02737eaa and 0067d309e. Divergence: the old child form is still parsed (never spoken or shown); a raw `>` in the attribute value is an accepted gap.
 
 Agents adjust how a reply is spoken by nesting a tag inside `<speech>`
 (`beebox/src/core/chat/session/prompts.ts:43-47`):
@@ -49,7 +52,7 @@ quotes needs the same handling the other tag attributes get.
 Run a knowledge audit after the guidance change to confirm agents write the
 attribute form.
 
-## Resolution (worktree speech-instructions-attr, not yet landed)
+## Resolution
 
 - Guidance (`prompts.ts`, `voice-doc.ts`, audits) shows only the attribute.
   The new audit `chat-voice-delivery-attribute` passes: the agent writes
