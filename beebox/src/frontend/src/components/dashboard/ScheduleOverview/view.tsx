@@ -13,6 +13,7 @@ import { Toggle } from "../../ui/Toggle";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { ScheduleStatusIndicator } from "./ScheduleStatusIndicator";
 import { RunHistory } from "./RunHistory";
+import { RunStrip } from "./RunStrip";
 import { Badge } from "../../ui/Badge";
 import { TickList, quietTickCount } from "../ScheduleTicks";
 
@@ -149,11 +150,12 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
               onClick={() => setShowRuns(!showRuns)}
               expanded={showRuns}
               title={showRuns ? "Hide recent runs" : "Show recent runs"}
-              className="text-xs"
+              className="text-xs whitespace-nowrap"
             >
               {timeAgo(s.lastRun)} {showRuns ? "\u25BE" : "\u25B8"}
             </InlineAction>
           ) : "never"}
+          <RunStrip runs={s.runStrip} />
         </td>
         <td className="py-2 pr-3">
           {s.missingRequirements && s.missingRequirements.length > 0 ? (
