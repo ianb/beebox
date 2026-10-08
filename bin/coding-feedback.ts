@@ -20,11 +20,11 @@ import { parseArgs } from "node:util";
 import { execa } from "execa";
 
 import {
-  CHECKPOINTS, ENGINES, FEEDBACK_DIR, PROMPTS, entryFileName, formatEntry, formatListLine, isCheckpoint, isEngine,
+  CHECKPOINTS, ENGINES, FEEDBACK_DIR, PROMPTS, entryFileName, formatEntry, formatListLine, isCheckpoint, isEngine, isIsoInstant,
   newestFirst, normalizeBody, parseEntry, type ListedEntry,
 } from "./lib/coding-feedback.ts";
 import {
-  AllWithWorkstreamError, EmptyBodyError, InvalidCheckpointError, InvalidEngineError, InvalidWorkstreamError, NoFreeEntryNameError,
+  AllWithWorkstreamError, EmptyBodyError, InvalidCheckpointError, InvalidEngineError, InvalidSinceError, InvalidWorkstreamError, NoFreeEntryNameError,
   NotAnEntryError, ShowArgumentsError, StoreInsideCheckoutError, UnknownCommandError, UnmarkedStoreError, UsageError,
 } from "./lib/coding-feedback-errors.ts";
 import { resolveSession } from "./lib/coding-feedback-session.ts";
@@ -36,8 +36,9 @@ const USAGE = `usage: bin/coding-feedback <command>
       [--transcript <path>] [--file <path>]
                         Write one entry; the body comes from stdin or --file.
                         Prints the written path.
-  list [--workstream <name> | --all] [--json]
-                        Entries, newest first.
+  list [--workstream <name> | --all] [--since <iso>] [--json]
+                        Entries, newest first; --since keeps only entries
+                        strictly after that ISO instant.
   show <path>           Print one entry.
 
 The body answers four prompts:
@@ -176,14 +177,20 @@ function entriesIn(root: string, workstream: string): ListedEntry[] {
 }
 
 async function list(argv: string[]): Promise<void> {
-  const { values } = parseArgs({ args: argv, options: { workstream: { type: "string" }, all: { type: "boolean" }, json: { type: "boolean" } } });
+  const { values } = parseArgs({
+    args: argv,
+    options: { workstream: { type: "string" }, all: { type: "boolean" }, since: { type: "string" }, json: { type: "boolean" } },
+  });
   if (values.all && values.workstream !== undefined) throw new AllWithWorkstreamError();
+  const since = values.since;
+  if (since !== undefined && !isIsoInstant(since)) throw new InvalidSinceError(since);
   const checkout = await resolveCheckout();
   const root = storeRoot(checkout);
   const workstreams = values.all
     ? (fs.existsSync(root) ? fs.readdirSync(root, { withFileTypes: true }).filter((e) => e.isDirectory() && NAME.test(e.name)).map((e) => e.name) : [])
     : [validWorkstream(values.workstream ?? (await currentWorkstream(checkout)))];
-  const entries = newestFirst(workstreams.flatMap((ws) => entriesIn(root, ws)));
+  const entries = newestFirst(workstreams.flatMap((ws) => entriesIn(root, ws)))
+    .filter((entry) => since === undefined || Date.parse(entry.timestamp) > Date.parse(since));
   if (values.json) process.stdout.write(`${JSON.stringify(entries, null, 2)}\n`);
   else for (const entry of entries) process.stdout.write(`${formatListLine(entry)}\n`);
 }

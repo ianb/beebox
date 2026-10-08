@@ -32,6 +32,13 @@ export class AllWithWorkstreamError extends UsageError {
   }
 }
 
+export class InvalidSinceError extends UsageError {
+  public constructor(value: string) {
+    super(`--since must be an ISO-8601 UTC instant such as 2026-10-07T00:00:00Z, not '${value}'`);
+    this.name = "InvalidSinceError";
+  }
+}
+
 export class InvalidWorkstreamError extends UsageError {
   public constructor(name: string) {
     super(`invalid workstream name '${name}' ([A-Za-z0-9_-]+, not 'apps')`);

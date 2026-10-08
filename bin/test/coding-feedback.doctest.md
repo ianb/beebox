@@ -241,3 +241,22 @@ JSON.stringify({
 })
 => {"count":6,"newestFirst":true,"checkpoints":["plan-reviewed","plan-reviewed","plan-reviewed","landed","landed","implemented"],"allWorkstreams":["demo","main","other"],"uniquePaths":true,"textLines":6,"showPrints":true,"outsideRefused":true}
 ```
+
+`list --since <iso>` keeps only entries strictly after that instant, so a
+scheduled reader can store the newest timestamp it consumed and ask for what
+came after. An entry exactly at the instant is excluded. A value that is not an
+ISO-8601 UTC instant is refused.
+
+```ts
+const everything = JSON.parse((await run(["list", "--all", "--json"])).stdout);
+const pivot = everything[2].timestamp;
+const after = JSON.parse((await run(["list", "--all", "--since", pivot, "--json"])).stdout);
+const badSince = await run(["list", "--all", "--since", "last week"]);
+JSON.stringify({
+  onlyNewer: after.every((e: { timestamp: string }) => e.timestamp > pivot),
+  newerCount: after.length === everything.filter((e: { timestamp: string }) => e.timestamp > pivot).length,
+  pivotExcluded: !after.some((e: { timestamp: string }) => e.timestamp === pivot),
+  badSince: badSince.code === 2 && badSince.stderr.includes("--since must be an ISO-8601 UTC instant"),
+})
+=> {"onlyNewer":true,"newerCount":true,"pivotExcluded":true,"badSince":true}
+```

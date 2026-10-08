@@ -68,6 +68,11 @@ export function isEngine(value: string): value is Engine {
   return ENGINE_SET.has(value);
 }
 
+/** An ISO-8601 UTC instant, the form entry timestamps use (`--since`). */
+export function isIsoInstant(value: string): boolean {
+  return isoSchema.safeParse(value).success;
+}
+
 /** `20261007T193012Z` — the sortable, filename-safe form of an instant. */
 function compactStamp(date: Date): string {
   return date.toISOString().replace(/\.\d{3}Z$/u, "Z").replaceAll(/[-:]/gu, "");
