@@ -18,7 +18,7 @@ function caller(boxRoot, options) {
     eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
-    authed: true,
+    authed: options?.authed !== false,
     isOwner: options?.isOwner !== false,
   });
 }
@@ -35,8 +35,9 @@ JSON.stringify([first.catalog.map((theme) => theme.name), first.presentation, fi
 JSON.stringify([
   first.canEditCardThemes,
   (await caller(box.root, { isOwner: false }).presentation.get({ boxKey: "test-reader" })).canEditCardThemes,
+  (await caller(box.root, { authed: false }).presentation.get({ boxKey: "test-anon" })).canEditCardThemes,
 ])
-=> [true,false]
+=> [true,true,false]
 ```
 
 Invalid JSON stays distinguishable from absence while legacy callers retain
@@ -114,7 +115,8 @@ await box.cleanup();
 
 ## A swatch choice writes only the theme field
 
-The Properties picker is owner-only. It validates catalog membership before
+Anyone signed in to the box may set themes; only an anonymous caller is
+refused. The picker validates catalog membership before
 touching the file, then preserves unrelated and currently unknown frontmatter,
 comments, and the body. Clearing the choice restores inheritance.
 
@@ -143,9 +145,9 @@ await caller(cardBox.root).presentation.setSystemTheme({ scope: "landmark", path
   .then(() => "accepted", (error) => error.code)
 => BAD_REQUEST
 
-await caller(cardBox.root, { isOwner: false }).presentation.setSystemTheme({ scope: "box", theme: null })
+await caller(cardBox.root, { authed: false }).presentation.setSystemTheme({ scope: "box", theme: null })
   .then(() => "accepted", (error) => error.code)
-=> FORBIDDEN
+=> UNAUTHORIZED
 
 await caller(cardBox.root).presentation.setSystemTheme({ scope: "landmark", path: landmarkPath, theme: null });
 clearBoxConfigCache(cardBox.root);
@@ -199,11 +201,11 @@ JSON.stringify([
 ```
 
 ```ts continue
-await caller(cardBox.root, { isOwner: false }).card.setTheme({
+await caller(cardBox.root, { authed: false }).card.setTheme({
   path: cardPath,
   theme: { name: "post-it" },
 }).then(() => "accepted", (error) => error.code)
-=> FORBIDDEN
+=> UNAUTHORIZED
 ```
 
 If Git rejects the focused commit after the atomic write, the mutation reports

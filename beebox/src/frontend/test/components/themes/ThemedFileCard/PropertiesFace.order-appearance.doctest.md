@@ -123,13 +123,13 @@ Inside it is the swatch grid:
 => ['aria-label="Choose card appearance"', 'aria-label="Flat — neutral"', 'aria-label="Paper — cream"']
 ```
 
-A viewer who cannot change card appearance sees the row without the
-disclosure:
+A viewer who is not signed in sees the row without the disclosure, and a
+note saying why, so the missing control is never silent:
 
 ```ts
 const readOnly = appearance(await render({ path: "_content/Plan.doc.card", type: "doc", schema: null, frontmatter: {} }, { canEdit: false }));
 [textOf(readOnly), readOnly.includes("<details")]
-=> ["Appearance Flat neutral · Default appearance", false]
+=> ["Appearance Flat neutral · Default appearance Sign in to change this setting.", false]
 ```
 
 A landmark's system theme sits in the same disclosure, below the swatch grid:
