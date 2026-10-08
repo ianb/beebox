@@ -23,7 +23,7 @@ interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
   reportActivity: (kind: ActivityKind, detail?: string) => void;
 }
-function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean }) {
+function WorkspaceCard({ tab, pane, visible, onAddSelection, reportActivity }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean }) {
   const workspace = useWorkspace();
   const material = useCompanionMaterial(tab.target.path);
   const { boxSlug } = useParams({ strict: false });
@@ -31,7 +31,6 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
   const identities = useCardIdentities(tabs.map((item) => item.target.path));
   if (!workspace) return null;
   const { onSelectTab: handleSelectTab, onCloseTab: handleCloseTab, onTogglePin: handleTogglePin } = workspace;
-  const handleAddSelection = callbacks.onAddSelection;
   const workspacePdf = isWorkspacePdf(tab.target.path, tab.target.viewer);
   const themedSurface = cardTypeFromName(tab.target.path) !== undefined || isMarkdownPath(tab.target.path);
   return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined}
@@ -49,7 +48,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
       onScroll={(event) => {
         if (!visible) return;
         const node = event.currentTarget;
-        callbacks.reportActivity("scrolled", (node.scrollHeight > node.clientHeight ? Math.round(node.scrollTop / (node.scrollHeight - node.clientHeight) * 10) / 10 : 0).toFixed(1));
+        reportActivity("scrolled", (node.scrollHeight > node.clientHeight ? Math.round(node.scrollTop / (node.scrollHeight - node.clientHeight) * 10) / 10 : 0).toFixed(1));
       }}>
       <CardVisibilityProvider visible={visible}><WorkspacePaneContext.Provider value={pane}>
         <FileView path={tab.target.path} mode="companion" workspacePdf={workspacePdf} rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState}
@@ -57,14 +56,22 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
           onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
           onSelectRenderer={(viewer) => workspace.updateTarget({ ...tab.target, viewer, viewState: null })}
           onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
-          onNavigate={(target, hint) => { callbacks.reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
-          onAddSelection={handleAddSelection} reportActivity={callbacks.reportActivity} />
+          onNavigate={(target, hint) => { reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
+          onAddSelection={onAddSelection} reportActivity={reportActivity} />
       </WorkspacePaneContext.Provider></CardVisibilityProvider>
     </div>
   </div>;
 }
-/** Card roots and the singleton transcript never change React parents on move. */
-export function WorkspaceCanvas({ children, ...callbacks }: CardCallbacks & { children: ReactNode }) {
+/**
+ * Card roots and the singleton transcript never change React parents on move.
+ *
+ * `children` (the transcript) is new on every streamed token. The callbacks
+ * are destructured by name, never gathered with a rest spread: a rest object
+ * is new on every render, so the compiler would rebuild every card element
+ * and re-render each open card per token (`components/chat/CLAUDE.md`,
+ * "Workspace card roots survive presentation changes").
+ */
+export function WorkspaceCanvas({ children, onAddSelection, reportActivity }: CardCallbacks & { children: ReactNode }) {
   const workspace = useWorkspace();
   const visiblePaths = Object.values(workspace?.projection.visiblePaths ?? {});
   const [visited, setVisited] = useState<Set<string>>(() => new Set(visiblePaths));
@@ -80,7 +87,7 @@ export function WorkspaceCanvas({ children, ...callbacks }: CardCallbacks & { ch
       const path = tab.target.path;
       if (!visited.has(path) && !visiblePaths.includes(path)) return null;
       const pane = workspace.state.panes.left.paths.includes(path) ? "left" : "right";
-      return <WorkspaceCard key={path} tab={tab} pane={pane} visible={workspace.displayReady === true && visiblePaths.includes(path)} {...callbacks} />;
+      return <WorkspaceCard key={path} tab={tab} pane={pane} visible={workspace.displayReady === true && visiblePaths.includes(path)} onAddSelection={onAddSelection} reportActivity={reportActivity} />;
     })}
     <div hidden={!workspace.transcriptVisible} {...(!workspace.transcriptVisible ? { inert: "" } : {})} className={workspace.transcriptVisible ? "flex flex-col min-h-0 min-w-0 relative" : "hidden"}
       style={{ gridRow: 1, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1", background: "var(--bbx-desk-pattern, none), var(--bbx-desk-background)" }}>
