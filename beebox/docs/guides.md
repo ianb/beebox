@@ -31,6 +31,7 @@ where new material goes and how it is named.
 | Adding an API endpoint (tRPC by default) | [adding-api-endpoints](adding-api-endpoints.md) |
 | Box layout: the on-disk shape of a box | [box-layout](box-layout.md) |
 | Box guidance: the instruction files a box agent reads, and who writes each | [box-guidance](box-guidance.md) |
+| Box work: running against the test box, throwaway boxes, and production from the dev repo | [box-work](box-work.md) |
 | Agent guide: the always-loaded guide, its ledger of rules, and the bin test | [agent-guide](agent-guide.md) |
 | Secrets: the machine-level store and grants | [secrets](secrets.md) |
 | Procedures: multi-step workflows as cards | [procedure-implementation](procedure-implementation.md) |

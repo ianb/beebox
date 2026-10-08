@@ -15,7 +15,7 @@ export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
 export class NotInBoxError extends Error {
   constructor() {
-    super("Not in a Bee Box. Run 'bbx init' to create one, or navigate to an existing box.");
+    super("Not in a Bee Box. Run 'bbx engine init' to create one, or navigate to an existing box.");
     this.name = "NotInBoxError";
   }
 }

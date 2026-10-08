@@ -17,7 +17,7 @@ Use the guidance for the area you are changing:
 
 ## Work safely in this checkout
 
-Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo instructions. The primary test box is `~/src/boxes/test1/`; each managed worktree has an isolated clone at `~/src/box-worktrees/<name>/test1/`.
+Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo instructions. The primary test box is `~/src/boxes/test1/`; each managed worktree has an isolated clone at `~/src/box-worktrees/<name>/test1/`. Read [box work](beebox/docs/box-work.md) before running anything against a box or production.
 
 When asked to spin off work, use [launch-worktree-session](.claude/skills/launch-worktree-session/SKILL.md). Managed worktrees live at `~/src/beebox-worktrees/<name>/` on `worktree-<name>` branches. Repository hooks own cleanup; do not use native `claude --worktree` for this workflow.
 
