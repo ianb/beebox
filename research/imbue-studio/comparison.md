@@ -145,8 +145,10 @@ companion app is filed separately ([mac-companion-app](../../issues/features/202
   The planned `EXPORT.md`
   ([export-md-agent-instructions](../../issues/features/2026-07-20-export-md-agent-instructions.md))
   can say this in one paragraph.
-- **Reject** the encryption claim as a model. Bee Box's security overview is
-  the right register; Studio's launch wording outruns its code and its terms.
+- **Reject** the encryption and open-source claims as a model. Bee Box's
+  security overview is the right register; Studio's launch wording outruns
+  its code, its terms, and its licence files (the shell and desktop app are
+  Fair Core licensed; the template repo has no licence).
 
 ## 4. Model switching
 

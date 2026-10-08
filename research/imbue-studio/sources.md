@@ -27,7 +27,7 @@ kept `minds:` and `MINDS_*` because they are shared with the desktop app).
 
 | Repo | Role | Activity on 2026-10-08 |
 |---|---|---|
-| `default-workspace-template` | The workspace: "your agent's home". The Dockerfile, apps, services, skills, chat, system interface. "All of the base code for a studio" is this repo. | 2,587 files; PR #817 merged the same day; 800+ PRs. |
+| `default-workspace-template` | The workspace: "your agent's home". The Dockerfile, apps, services, skills, chat, system interface. "All of the base code for a studio" is this repo; it carries no licence file (see "Licences"). | 2,587 files; PR #817 merged the same day; 800+ PRs. |
 | `mngr`, `apps/minds/` | The desktop app (Electron via ToDesktop) and the Python backend that creates workspaces, authenticates the browser, proxies, and publishes shares. README title: "Imbue Studio". | v0.8.5 on all three release channels, mac and linux. |
 | `*-mind-template` (14 repos) | Starter templates installed by the `use-template` skill. | Pushed 2026-09-10/11; "minds inspiration v1" and "minds template v2". |
 | `latchkey` | Credential injection for agent HTTP calls; the integrations layer. | Bundled 2.21.0. |
@@ -38,6 +38,25 @@ kept `minds:` and `MINDS_*` because they are shared with the desktop app).
 
 See [architecture.md](architecture.md), [permissions-models-integrations.md](permissions-models-integrations.md),
 and [starter-templates.md](starter-templates.md) for what was read.
+
+### Licences
+
+Checked in the clones and with `gh api repos/imbue-ai/<repo>` on 2026-10-08.
+
+| Code | Licence |
+|---|---|
+| `mngr` repo root | MIT, "except for subfolders that have their own LICENSE file" |
+| `mngr/apps/minds` (the Studio desktop app) | Fair Core License 1.0, MIT future licence (FCL-1.0-MIT): any use except a "Competing Use"; MIT on the second anniversary of each release |
+| `default-workspace-template` repo root | No licence file; GitHub reports none |
+| `default-workspace-template/system/apps/system_interface` (the shell) | FCL-1.0-MIT |
+| the chat app, skills, hooks, services in the template | No licence file |
+| `*-mind-template` starters | No licence file |
+| `latchkey`, `detent`, `datalib`, `sculptor` | MIT (latchkey's README reserves the right to change future releases) |
+| `vet`, `cloud-in-a-bottle` | AGPL-3.0 |
+
+So the launch post's "all of the base code for a studio is open source" and
+the product page's "Open source" tag describe the building blocks, not the
+studio. The studio's own code is source-available (FCL) or unlicensed.
 
 ## Reception
 

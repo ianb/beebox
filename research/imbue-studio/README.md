@@ -23,10 +23,32 @@ FastAPI apps the agent builds under `system/apps/`. An Electron app
 (`mngr/apps/minds`, v0.8.5) creates and proxies workspaces, signs the user in
 to model providers, and brokers sharing over Imbue's relays. The product name
 is new; the internal name is "minds" and the code is public under
-`imbue-ai/default-workspace-template` and `imbue-ai/mngr`, which is what "all
-of the base code for a studio is open source" means. A six-person team built
-it on top of Imbue's coding-agent tools (mngr, latchkey, detent); none of
-Sculptor, Vet, or Blueprint is part of it.
+`imbue-ai/default-workspace-template` and `imbue-ai/mngr`. Public is not open
+source here: see "Licensing" below. A six-person team built it on top of
+Imbue's coding-agent tools (mngr, latchkey, detent); none of Sculptor, Vet, or
+Blueprint is part of it.
+
+## Licensing
+
+The launch post says "all of the base code for a studio is open source" and
+the product page tags Studio "Open source". The repositories say otherwise
+(checked 2026-10-08, see [sources.md](sources.md), "Licences"):
+
+- The desktop app (`mngr/apps/minds/LICENSE`) and the workspace shell
+  (`default-workspace-template/system/apps/system_interface/LICENSE`) are
+  under the Fair Core License 1.0 with an MIT future licence: source
+  available, no "Competing Use", MIT two years after each release.
+- The workspace template repository as a whole has no licence file; GitHub
+  reports none. The chat app, the skills, the hooks, and every
+  `*-mind-template` starter carry no licence either. By default that is all
+  rights reserved.
+- The building blocks are open source: the mngr library, latchkey, detent,
+  and datalib are MIT; Vet and Cloud in a Bottle are AGPL-3.0.
+
+For this corpus that changes nothing about reading the code, and the
+dispositions adapt designs, not code. It does mean no Studio code can be
+copied into Bee Box, and an acknowledgement entry, if one ever lands, names
+the FCL or the missing licence as its terms.
 
 Three claims land differently in the code than in the launch copy:
 
@@ -42,6 +64,9 @@ Three claims land differently in the code than in the launch copy:
   are restic-encrypted; running cloud workspaces are, in mngr's own audit,
   "not private from the operator", and the research-preview terms license
   user content for model training.
+- **"All of the base code for a studio is open source."** The shell and the
+  desktop app are Fair Core licensed and the template repo has no licence at
+  all. The parts that are open source are the developer tools underneath.
 
 ## Where Studio is ahead of Bee Box
 
@@ -70,8 +95,8 @@ Three claims land differently in the code than in the launch copy:
   shell, chat, and hooks in the user's repo, and its own starters have already
   drifted from the base (stale 36 KB `CLAUDE.md`, six missing skills).
 - **Honesty of the claims.** Bee Box's security overview and release-honesty
-  decision say what a grant covers; Studio's launch wording outruns its audit
-  and its terms.
+  decision say what a grant covers; Studio's launch wording outruns its audit,
+  its terms, and its licence files.
 - **Export.** A box is the repo. Studio needs a backup service and a key to
   move what the user made.
 
