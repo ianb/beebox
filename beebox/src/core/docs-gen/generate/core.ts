@@ -220,12 +220,11 @@ async function checkChatGuideMtimes(
  * beebox source has changed (typically right after a deploy) and is a
  * no-op otherwise.
  *
- * Any tracked-file changes the helpers leave behind get committed in a
- * single surgical commit so the box's working tree doesn't accumulate drift
- * on hosts that don't routinely run `bbx tick` (which would otherwise sweep
- * the changes via its post-script housekeeping commit).
+ * It does not commit: `generateDocs` writes more tracked output after it
+ * (guides, exposition rules, the briefing, agent mirrors) and commits all of
+ * it once at the end.
  */
-async function syncTemplatesFromSource(boxRoot: string, shouldCommit: boolean): Promise<void> {
+async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   await installProcedures(boxRoot);
   await installGuides(boxRoot);
   await installPersonality(boxRoot);
@@ -237,13 +236,14 @@ async function syncTemplatesFromSource(boxRoot: string, shouldCommit: boolean): 
   await syncBoxGuidance(boxRoot, { generators: true });
   await installValidationHooks(boxRoot);
   await pruneStaleTemplateUpdates(boxRoot);
-
-  if (shouldCommit) await commitTemplateSyncChanges(boxRoot);
 }
 
 /**
- * Commit any template-managed paths the install/generateRules helpers
- * dirtied, leaving user work in progress (in other paths) alone.
+ * Commit any template-managed paths one `generateDocs` run dirtied (the
+ * template sync and the tracked output written after it), leaving user work in
+ * progress (in other paths) alone. One commit, so a box's working tree doesn't
+ * accumulate drift on hosts that don't routinely run `bbx tick` (which would
+ * otherwise sweep the changes via its post-script housekeeping commit).
  *
  * shapeVersion 3 has one root, so `boxRoot` IS the repo root and every
  * git-status path `getStatus`/`stageFiles`/`commitPaths` report or accept is
@@ -368,7 +368,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // writes files where the box's copy differs (and emits .orig-*.card
   // entries when the user modified a template). Runs before doc generation
   // so newly-installed procedures are picked up by scanProcedures().
-  await syncTemplatesFromSource(boxRoot, options.commit !== false);
+  await syncTemplatesFromSource(boxRoot);
 
   await mkdir(join(boxRoot, AGENT_GUIDE_DIR), { recursive: true });
   await mkdir(join(boxRoot, DOCS_DIR), { recursive: true });
@@ -409,6 +409,9 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   const briefingPaths = await compileBriefings(boxRoot);
 
   await ensureAgentContext(boxRoot, briefingPaths);
+
+  // Every tracked output above lands in one commit, after the last writer.
+  if (options.commit !== false) await commitTemplateSyncChanges(boxRoot);
 
   // Write marker so next call can skip if nothing changed
   const commitLine = currentCommit ? `\n${currentCommit}` : "";

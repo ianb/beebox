@@ -15,7 +15,8 @@ an unrelated hazard in a repo-in-a-repo dev/test environment).
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { commitTemplateSyncChanges } from "../../../src/core/docs-gen/generate/core.js";
+import { commitTemplateSyncChanges, generateDocs } from "../../../src/core/docs-gen/generate/core.js";
+import { isTemplateManagedPath } from "../../../src/core/install-template-file.js";
 import { getStatus, getLog } from "../../../src/lib/git/core/operations.js";
 ```
 
@@ -68,4 +69,34 @@ JSON.stringify(log[0].trailers)
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## One generation commits all of its tracked output
+
+`generateDocs` writes tracked output after the template sync: the guide
+rules, the exposition rules, `_content/briefing.md`, `AGENTS.md`, the
+`.agents/skills/` mirrors, and `.codex/hooks.json`. The commit runs once, after
+the last of these, so none is left dirty or untracked
+(`issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md`).
+A briefing card edit is the case journey walks hit: the compiled
+`_content/briefing.md` changed and stayed uncommitted.
+
+```ts
+const genBox = await makeTmpBox({ git: true });
+await generateDocs(genBox.root, { force: true });
+const card = await genBox.read("_content/briefing.briefing.card");
+await genBox.write("_content/briefing.briefing.card", `${card}\n- Lending reminders go out on Fridays.\n`);
+genBox.commitAll("edit briefing");
+await generateDocs(genBox.root, { force: true });
+
+const after = await getStatus(genBox.root);
+[...after.staged, ...after.modified, ...after.untracked].filter((p) => isTemplateManagedPath(p))
+=> []
+
+(await getLog(genBox.root, 1))[0].subject
+=> Sync templates from upstream
+```
+
+```ts cleanup
+await genBox.cleanup();
 ```
