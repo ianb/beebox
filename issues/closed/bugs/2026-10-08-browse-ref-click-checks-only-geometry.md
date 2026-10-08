@@ -50,11 +50,10 @@ the ref to a node for that. Related:
 
 Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 37).
 
-## Residual (2026-10-08 review)
+## Same-box cover (2026-10-08 review)
 
-A cross-model review found one case the fix does not cover. An id-less ref
-can still pass when a covering element has the same bounding box and the same
-accessible name as the control: `elementsFromPoint` lists the cover first, so
-the check accepts the cover and the click can miss the control. Not fixed,
-because resolving a ref to its DOM element needs changes upstream. The case is
-rare.
+A cross-model review found one case the first fix missed: a covering element
+with the control's own box and name was accepted as the control. The check now
+refuses when two unrelated elements (neither inside the other) fill the ref's
+box, and still passes a wrapper and the control inside it
+(`browse/test/controls.point-check.doctest.md`).

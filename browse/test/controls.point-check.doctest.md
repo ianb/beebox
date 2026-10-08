@@ -137,6 +137,30 @@ check([checkbox], { box: CHECKBOX_BOX, expectName: "Open" })
 => { ok: true, scrolled: false }
 ```
 
+## A cover with the control's own box and name is refused
+
+Two unrelated elements with the same box and the same name cannot be told
+apart at the point (cross-model review, 2026-10-08). The click refuses rather
+than report success on whichever is topmost. A wrapper and the control inside
+it share a box too; that pair is related and still passes.
+
+```ts
+const checkbox = input({ box: CHECKBOX_BOX, attrs: { role: "checkbox", "aria-label": "Open" } });
+const cover = el("div", { box: CHECKBOX_BOX, attrs: { "aria-label": "Open" } });
+
+check([cover, checkbox], { box: CHECKBOX_BOX, expectName: "Open" })
+=> { ok: false, reason: "covered", detail: "two unrelated elements fill the ref's box, div \"Open\" and input[role=checkbox] \"Open\"; cannot tell which one the click reaches" }
+```
+
+```ts
+const wrap = el("span", { box: CHECKBOX_BOX });
+const checkbox = input({ box: CHECKBOX_BOX, attrs: { role: "checkbox", "aria-label": "Open" } });
+wrap.append(checkbox);
+
+check([checkbox, wrap], { box: CHECKBOX_BOX, expectName: "Open" })
+=> { ok: true, scrolled: false }
+```
+
 ## The topmost element may be inside the control or its label
 
 A button's visible text is a child `<span>`, so the span is what the point

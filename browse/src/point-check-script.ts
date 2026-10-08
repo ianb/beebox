@@ -4,9 +4,11 @@
  *
  * `pointTarget(locator)` finds the ref's element among the elements stacked at
  * the centre of the box upstream reported, by that box (preferring one that
- * carries the snapshot's name). The topmost element there must be it, inside
- * it, or one of its `<label>`s; otherwise the control is `covered`, whatever
- * its name. When no stacked element has the box (the ref's element does not
+ * carries the snapshot's name). Two unrelated candidates (neither inside the
+ * other) are refused as `covered`: a cover with the control's box and name
+ * cannot be told apart from the control. The topmost element there must be
+ * it, inside it, or one of its `<label>`s; otherwise the control is
+ * `covered`, whatever its name. When no stacked element has the box (the ref's element does not
  * take the pointer), the topmost element must carry the snapshot's name.
  * Returns the element to judge, or a failure's JSON.
  */
@@ -24,7 +26,12 @@ export const POINT_TARGET_SCRIPT = `
       return near(r.left, b.x) && near(r.top, b.y) && near(r.width, b.width) && near(r.height, b.height);
     };
     const boxed = stack.filter(sameBox);
-    const target = boxed.find(named) || boxed[0] || null;
+    const pool = boxed.some(named) ? boxed.filter(named) : boxed;
+    const target = pool[0] || null;
+    const rival = pool.find((n) => n !== target && !target.contains(n) && !n.contains(target));
+    if (rival !== undefined) {
+      return fail('covered', 'two unrelated elements fill the ref\\'s box, ' + describe(target) + ' and ' + describe(rival) + '; cannot tell which one the click reaches');
+    }
     if (target === null) {
       if (want !== '' && !named(hit)) return fail('covered', 'the element at the ref\\'s center is ' + describe(hit) + ', not "' + locator.expectName + '"');
       return hit;
