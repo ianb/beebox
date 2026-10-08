@@ -5,7 +5,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: box-layout-criteria — Track E of docs/implemented-plans/one-root-box-layout.md (or docs/implemented-plans/ once moved)
 priority: normal
+resolution: implemented
 ---
+
+Resolved 2026-10-08. The bootstrap modules, `resolveTopPathOrBootstrap`, and the one-root script were already deleted with the retired migrators. `beebox/docs/cards/migrations.md` now says an out-of-fleet v2 box needs the migrator restored from git history. `one-root-mapping.ts` and its doctest stay: `src/core/chat/session/codex-transcript/v2-cwd.ts` uses `mapV2Path` to read Codex threads recorded under the v2 `content/` cwd. `box-shape-errors.ts` and `getBoxShape`'s v2 refusal stay.
 
 Track E of the one-root migration (`docs/implemented-plans/one-root-box-layout.md`)
 added a v2-tolerant bootstrap path that exists ONLY to let `bbx migrate`

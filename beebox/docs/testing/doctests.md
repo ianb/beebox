@@ -108,17 +108,6 @@ const res = await ctx.request({ method: "GET", url: "/api/admin/telegram-status"
 tg.sent  // messages the route sent
 ```
 
-### Call logging
-
-Wrap any fake with `withCallLog()` to record method calls:
-
-```typescript
-const tg = withCallLog(createFakeTelegram({ username: "bot" }));
-await tg.sendMessage(123, "hello");
-printCalls(tg.callLog);
-// => sendMessage(123, "hello")
-```
-
 ### Available fakes
 
 | Service | Factory | Key constructor params | Observable state |

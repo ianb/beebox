@@ -5,7 +5,7 @@ Tests for the `drive-handler-docs` handler using fake services.
 ```ts setup
 import { join } from "node:path";
 import { execSync } from "node:child_process";
-import { readFile, access, unlink, writeFile } from "node:fs/promises";
+import { readFile, access, unlink } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { initBox } from "../../../../src/core/box/structure/core.js";
 import {
@@ -15,11 +15,6 @@ import {
 import { createGoogleDriveConnector } from "../../../../src/connectors/google-drive/connector.js";
 import { docsHandler } from "../../../../src/connectors/google-drive/handlers/docs/handler.js";
 import { createGdocTemplate } from "../../../../src/schemas/gdoc.js";
-import { parse as parseYaml } from "yaml";
-import { renderFrontmatterBlock, splitCardContent } from "../../../../src/exports/cards.js";
-import { planSourceFields } from "../../../../src/scripts/migrate/card-fields/source.js";
-import { applyFieldEdits } from "../../../../src/core/card-fields/field-edits.js";
-import { findDriveCardTracking } from "../../../../src/connectors/google-drive/tracking.js";
 
 // Several assertions exercise conflict/error paths that log to console.
 // Silence so they don't pollute test output.
@@ -56,6 +51,52 @@ function makeDoc(opts: {
     })),
   };
 }
+
+/** A fake Drive holding one Google Doc. */
+function docDrive(opts: { id: string; name: string; document: FakeDocument }) {
+  return createFakeGoogleDrive({
+    files: [{
+      id: opts.id,
+      name: opts.name,
+      mimeType: "application/vnd.google-apps.document",
+      modifiedTime: "2026-04-26T10:00:00Z",
+      trashed: false,
+      owners: [{ emailAddress: "test@example.com" }],
+      webViewLink: `https://docs.google.com/document/d/${opts.id}/edit`,
+    }],
+    documents: new Map([[opts.id, opts.document]]),
+  });
+}
+
+/**
+ * A box with a `<stem>.gdoc.card` mounting one fake Google Doc, committed but
+ * not yet synced. `doc` describes the remote document; pass `document` to
+ * supply a hand-built one.
+ */
+async function docBox(opts: {
+  id: string;
+  name: string;
+  stem: string;
+  doc?: { markdown: string; inlineObjects?: number; footnotes?: number; comments?: number };
+  document?: FakeDocument;
+}) {
+  const box = await makeTmpBox({ git: true });
+  await initBox(box.root);
+  box.commitAll("init box");
+  const document = opts.document ?? makeDoc({ id: opts.id, title: opts.name, ...opts.doc! });
+  const drive = docDrive({ id: opts.id, name: opts.name, document });
+  await box.seed(`_content/drive/${opts.stem}.gdoc.card`, createGdocTemplate({
+    driveId: opts.id,
+    title: opts.name,
+    modified: "2026-04-26T10:00:00Z",
+    revision: "rev-1",
+    link: `https://docs.google.com/document/d/${opts.id}/edit`,
+    owner: "test@example.com",
+    contentFile: `${opts.stem}.md`,
+  }));
+  box.commitAll(`add ${opts.stem}`);
+  return { box, drive, document, connector: createGoogleDriveConnector(box.root, drive) };
+}
 ```
 
 ## Pull — creates card and markdown file from a Google Doc
@@ -63,39 +104,12 @@ function makeDoc(opts: {
 A new doc card produces a `.md` file inside the card's attach scope.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await initBox(box.root);
-box.commitAll("init box");
-
-const drive = createFakeGoogleDrive({
-  files: [{
-    id: "doc-1",
-    name: "Project Notes",
-    mimeType: "application/vnd.google-apps.document",
-    modifiedTime: "2026-04-26T10:00:00Z",
-    trashed: false,
-    owners: [{ emailAddress: "test@example.com" }],
-    webViewLink: "https://docs.google.com/document/d/doc-1/edit",
-  }],
-  documents: new Map([["doc-1", makeDoc({
-    id: "doc-1",
-    title: "Project Notes",
-    markdown: "# Notes\n\nFirst paragraph.\n",
-  })]]),
+const { box, connector } = await docBox({
+  id: "doc-1",
+  name: "Project Notes",
+  stem: "Project_Notes",
+  doc: { markdown: "# Notes\n\nFirst paragraph.\n" },
 });
-
-await box.seed("_content/drive/Project_Notes.gdoc.card", createGdocTemplate({
-  driveId: "doc-1",
-  title: "Project Notes",
-  modified: "2026-04-26T10:00:00Z",
-  revision: "rev-1",
-  link: "https://docs.google.com/document/d/doc-1/edit",
-  owner: "test@example.com",
-  contentFile: "Project_Notes.md",
-}));
-box.commitAll("add doc card");
-
-const connector = createGoogleDriveConnector(box.root, drive);
 const result = await connector.sync();
 result.success
 => true
@@ -137,96 +151,42 @@ resynced.includes("contains: Planning notes for the project kickoff.")
 => true
 ```
 
-A card in the flat shape the connector wrote before `drive:` (with the agent's
-`contains`) migrates, through the `source-fields-2026-09` migration, to exactly
-what the connector now writes. The next sync leaves it alone, and the card is
-still found by its Drive id:
-
-```ts continue
-const { drive: meta, ...rest } = parseYaml(splitCardContent(resynced).frontmatterText);
-const flat = { "drive-id": meta.id, title: rest.title, modified: meta.modified, link: meta.link, owner: meta.owner, content: rest.content, revision: meta.revision, contains: rest.contains };
-const cardFile = join(box.root, "_content/drive/Project_Notes.gdoc.card");
-const oldText = renderFrontmatterBlock(flat);
-const oldSplit = splitCardContent(oldText);
-const migratedCard = `---\n${applyFieldEdits(oldSplit.frontmatterText, planSourceFields("gdoc", parseYaml(oldSplit.frontmatterText)).edits)}---\n`;
-migratedCard === resynced
-=> true
-
-await writeFile(cardFile, migratedCard);
-box.commitAll("migrate the card");
-(await findDriveCardTracking(box.root)).liveCards.map((c) => `${c.driveId} ${c.relPath}`).join()
-=> doc-1 _content/drive/Project_Notes.gdoc.card
-
-const afterMigration = await connector.sync();
-JSON.stringify({ success: afterMigration.success, unchanged: (await box.read("_content/drive/Project_Notes.gdoc.card")) === migratedCard, clean: execSync("git status --porcelain", { cwd: box.root }).toString() })
-=> {"success":true,"unchanged":true,"clean":""}
-```
-
 ## Pull — lossy content surfaces in the card
 
 Footnotes and inline objects appear as `lossy` entries. Comments are NOT
-counted as lossy — they're captured in the sidecar instead (see below).
+counted as lossy — they're captured in the sidecar instead.
 
 ```ts
-const box2 = await makeTmpBox({ git: true });
-await initBox(box2.root);
-box2.commitAll("init box");
-
-const drive2 = createFakeGoogleDrive({
-  files: [{
-    id: "doc-2",
-    name: "Reviewed Doc",
-    mimeType: "application/vnd.google-apps.document",
-    modifiedTime: "2026-04-26T10:00:00Z",
-    trashed: false,
-    owners: [{ emailAddress: "test@example.com" }],
-    webViewLink: "https://docs.google.com/document/d/doc-2/edit",
-  }],
-  documents: new Map([["doc-2", makeDoc({
-    id: "doc-2",
-    title: "Reviewed Doc",
-    markdown: "Body.\n",
-    inlineObjects: 2,
-    footnotes: 1,
-    comments: 3,
-  })]]),
+const { box, connector } = await docBox({
+  id: "doc-2",
+  name: "Reviewed Doc",
+  stem: "Reviewed_Doc",
+  doc: { markdown: "Body.\n", inlineObjects: 2, footnotes: 1, comments: 3 },
 });
+await connector.sync();
 
-await box2.seed("_content/drive/Reviewed_Doc.gdoc.card", createGdocTemplate({
-  driveId: "doc-2",
-  title: "Reviewed Doc",
-  modified: "2026-04-26T10:00:00Z",
-  revision: "rev-1",
-  link: "https://docs.google.com/document/d/doc-2/edit",
-  owner: "test@example.com",
-  contentFile: "Reviewed_Doc.md",
-}));
-box2.commitAll("add reviewed doc");
-
-await createGoogleDriveConnector(box2.root, drive2).sync();
-
-const card2 = await box2.read("_content/drive/Reviewed_Doc.gdoc.card");
-card2.includes("type: comments")
+const card = await box.read("_content/drive/Reviewed_Doc.gdoc.card");
+card.includes("type: comments")
 => false
 
-card2.includes("type: footnotes") && card2.includes("count: 1")
+card.includes("type: footnotes") && card.includes("count: 1")
 => true
 
-card2.includes("type: images") && card2.includes("count: 2")
+card.includes("type: images") && card.includes("count: 2")
 => true
 ```
 
 The comments are written to a sidecar and referenced from the card:
 
 ```ts continue
-card2.includes("comments:") && card2.includes("ref: attach/Reviewed_Doc.comments.json")
+card.includes("comments:") && card.includes("ref: attach/Reviewed_Doc.comments.json")
 => true
 
-const sidecar2 = JSON.parse(await box2.read("_content/drive/Reviewed_Doc.attach/Reviewed_Doc.comments.json"));
-sidecar2.length
+const sidecar = JSON.parse(await box.read("_content/drive/Reviewed_Doc.attach/Reviewed_Doc.comments.json"));
+sidecar.length
 => 3
 
-sidecar2[0]?.content
+sidecar[0]?.content
 => comment 0
 ```
 
@@ -235,54 +195,27 @@ sidecar2[0]?.content
 When the local `.md` (inside the doc's attach scope) differs from the last-pulled content and remote hasn't changed, the new content is uploaded.
 
 ```ts
-const box3 = await makeTmpBox({ git: true });
-await initBox(box3.root);
-box3.commitAll("init box");
-
-const drive3 = createFakeGoogleDrive({
-  files: [{
-    id: "doc-3",
-    name: "Editable",
-    mimeType: "application/vnd.google-apps.document",
-    modifiedTime: "2026-04-26T10:00:00Z",
-    trashed: false,
-    owners: [{ emailAddress: "test@example.com" }],
-    webViewLink: "https://docs.google.com/document/d/doc-3/edit",
-  }],
-  documents: new Map([["doc-3", makeDoc({
-    id: "doc-3",
-    title: "Editable",
-    markdown: "Original.\n",
-  })]]),
+const { box, drive, connector } = await docBox({
+  id: "doc-3",
+  name: "Editable",
+  stem: "Editable",
+  doc: { markdown: "Original.\n" },
 });
-
-await box3.seed("_content/drive/Editable.gdoc.card", createGdocTemplate({
-  driveId: "doc-3",
-  title: "Editable",
-  modified: "2026-04-26T10:00:00Z",
-  revision: "rev-1",
-  link: "https://docs.google.com/document/d/doc-3/edit",
-  owner: "test@example.com",
-  contentFile: "Editable.md",
-}));
-box3.commitAll("add editable");
-
-const conn3 = createGoogleDriveConnector(box3.root, drive3);
-await conn3.sync();
+await connector.sync();
 
 // Edit locally — the .md lives inside the doc's attach scope.
-await box3.seed("_content/drive/Editable.attach/Editable.md", "Edited body.\n");
-box3.commitAll("local edit");
+await box.seed("_content/drive/Editable.attach/Editable.md", "Edited body.\n");
+box.commitAll("local edit");
 
-await conn3.sync();
+await connector.sync();
 
-drive3.contentUpdateLog.length
+drive.contentUpdateLog.length
 => 1
 
-drive3.contentUpdateLog[0]?.mimeType
+drive.contentUpdateLog[0]?.mimeType
 => text/markdown
 
-drive3.contentUpdateLog[0]?.content
+drive.contentUpdateLog[0]?.content
 => Edited body.
 ```
 
@@ -291,70 +224,42 @@ drive3.contentUpdateLog[0]?.content
 When both local and remote have changed, push refuses to overwrite. The upstream content is written to a `.remote.md` inside the attach scope and the card gets `conflict: true`.
 
 ```ts
-const box4 = await makeTmpBox({ git: true });
-await initBox(box4.root);
-box4.commitAll("init box");
-
-const driveDoc = makeDoc({
+const { box, drive, document, connector } = await docBox({
   id: "doc-4",
-  title: "Contended",
-  markdown: "Original.\n",
+  name: "Contended",
+  stem: "Contended",
+  doc: { markdown: "Original.\n" },
 });
-const drive4 = createFakeGoogleDrive({
-  files: [{
-    id: "doc-4",
-    name: "Contended",
-    mimeType: "application/vnd.google-apps.document",
-    modifiedTime: "2026-04-26T10:00:00Z",
-    trashed: false,
-    owners: [{ emailAddress: "test@example.com" }],
-    webViewLink: "https://docs.google.com/document/d/doc-4/edit",
-  }],
-  documents: new Map([["doc-4", driveDoc]]),
-});
-
-await box4.seed("_content/drive/Contended.gdoc.card", createGdocTemplate({
-  driveId: "doc-4",
-  title: "Contended",
-  modified: "2026-04-26T10:00:00Z",
-  revision: "rev-1",
-  link: "https://docs.google.com/document/d/doc-4/edit",
-  owner: "test@example.com",
-  contentFile: "Contended.md",
-}));
-box4.commitAll("add contended");
-
-const conn4 = createGoogleDriveConnector(box4.root, drive4);
-await conn4.sync();
+await connector.sync();
 
 // Local edit.
-await box4.seed("_content/drive/Contended.attach/Contended.md", "Local edit.\n");
-box4.commitAll("local edit");
+await box.seed("_content/drive/Contended.attach/Contended.md", "Local edit.\n");
+box.commitAll("local edit");
 
 // Remote edit (simulated by changing the doc's revision and exported markdown
 // out-of-band, plus bumping the file's modifiedTime).
-driveDoc.structure.revisionId = "rev-2";
-driveDoc.exports.set("text/markdown", "Remote edit.\n");
-const remoteFile = drive4.files.find((f) => f.id === "doc-4");
+document.structure.revisionId = "rev-2";
+document.exports.set("text/markdown", "Remote edit.\n");
+const remoteFile = drive.files.find((f) => f.id === "doc-4");
 if (remoteFile) remoteFile.modifiedTime = "2026-04-26T12:00:00Z";
 
-await conn4.sync();
+await connector.sync();
 
 // Local file is unchanged — push refused.
-await box4.read("_content/drive/Contended.attach/Contended.md")
+await box.read("_content/drive/Contended.attach/Contended.md")
 => Local edit.
 
 // .remote.md was written with the upstream content.
-await box4.read("_content/drive/Contended.attach/Contended.remote.md")
+await box.read("_content/drive/Contended.attach/Contended.remote.md")
 => Remote edit.
 
 // No content was uploaded (push aborted).
-drive4.contentUpdateLog.length
+drive.contentUpdateLog.length
 => 0
 
 // Card marked in conflict.
-const card4 = await box4.read("_content/drive/Contended.gdoc.card");
-card4.includes("conflict: true")
+const card = await box.read("_content/drive/Contended.gdoc.card");
+card.includes("conflict: true")
 => true
 ```
 
@@ -364,25 +269,25 @@ While `.remote.md` exists, subsequent syncs don't push the still-unmerged local 
 
 ```ts continue
 // User does nothing — sync again.
-await conn4.sync();
-drive4.contentUpdateLog.length
+await connector.sync();
+drive.contentUpdateLog.length
 => 0
 
 // User resolves: writes the merged version, deletes .remote.md, commits.
-await box4.seed("_content/drive/Contended.attach/Contended.md", "Merged.\n");
-await unlink(join(box4.root, "_content/drive/Contended.attach/Contended.remote.md"));
-box4.commitAll("resolve conflict");
+await box.seed("_content/drive/Contended.attach/Contended.md", "Merged.\n");
+await unlink(join(box.root, "_content/drive/Contended.attach/Contended.remote.md"));
+box.commitAll("resolve conflict");
 
-await conn4.sync();
+await connector.sync();
 
-drive4.contentUpdateLog.length
+drive.contentUpdateLog.length
 => 1
 
-drive4.contentUpdateLog[0]?.content
+drive.contentUpdateLog[0]?.content
 => Merged.
 
 // With the `.remote.md` gone, the card no longer says conflict.
-(await box4.read("_content/drive/Contended.gdoc.card")).includes("conflict")
+(await box.read("_content/drive/Contended.gdoc.card")).includes("conflict")
 => false
 ```
 
@@ -391,66 +296,39 @@ drive4.contentUpdateLog[0]?.content
 If `getDocument` fails (e.g. the auth token lacks the `documents.readonly` scope), pull still succeeds — markdown is exported via the Drive API and the lossy block is empty (no Docs API structure to tally), but comments still come through the Drive API and are captured in the sidecar.
 
 ```ts
-const box5 = await makeTmpBox({ git: true });
-await initBox(box5.root);
-box5.commitAll("init box");
-
-const drive5 = createFakeGoogleDrive({
-  files: [{
-    id: "doc-5",
-    name: "Degraded",
-    mimeType: "application/vnd.google-apps.document",
-    modifiedTime: "2026-04-26T10:00:00Z",
-    trashed: false,
-    owners: [{ emailAddress: "test@example.com" }],
-    webViewLink: "https://docs.google.com/document/d/doc-5/edit",
-  }],
-  documents: new Map([["doc-5", makeDoc({
-    id: "doc-5",
-    title: "Degraded",
-    markdown: "Body.\n",
-    inlineObjects: 5,
-    comments: 2,
-  })]]),
+const { box, drive, connector } = await docBox({
+  id: "doc-5",
+  name: "Degraded",
+  stem: "Degraded",
+  doc: { markdown: "Body.\n", inlineObjects: 5, comments: 2 },
 });
 
 // Simulate a 403 by replacing getDocument with a stub that throws.
-drive5.getDocument = async () => {
+drive.getDocument = async () => {
   throw new Error("HTTPError: 403 Insufficient Permission");
 };
 
-await box5.seed("_content/drive/Degraded.gdoc.card", createGdocTemplate({
-  driveId: "doc-5",
-  title: "Degraded",
-  modified: "2026-04-26T10:00:00Z",
-  revision: "rev-1",
-  link: "https://docs.google.com/document/d/doc-5/edit",
-  owner: "test@example.com",
-  contentFile: "Degraded.md",
-}));
-box5.commitAll("add degraded");
-
-const result5 = await createGoogleDriveConnector(box5.root, drive5).sync();
-result5.success
+const result = await connector.sync();
+result.success
 => true
 
 // Markdown still pulled.
-await box5.read("_content/drive/Degraded.attach/Degraded.md")
+await box.read("_content/drive/Degraded.attach/Degraded.md")
 => Body.
 
 // Card still written, falls back to Drive metadata title.
-const card5 = await box5.read("_content/drive/Degraded.gdoc.card");
-card5.includes("title: Degraded")
+const card = await box.read("_content/drive/Degraded.gdoc.card");
+card.includes("title: Degraded")
 => true
 
 // Comments (Drive API) still captured in the sidecar; images (Docs API) absent.
-card5.includes("type: images")
+card.includes("type: images")
 => false
 
-card5.includes("ref: attach/Degraded.comments.json")
+card.includes("ref: attach/Degraded.comments.json")
 => true
 
-JSON.parse(await box5.read("_content/drive/Degraded.attach/Degraded.comments.json")).length
+JSON.parse(await box.read("_content/drive/Degraded.attach/Degraded.comments.json")).length
 => 2
 ```
 
@@ -461,10 +339,6 @@ resolved status, anchored text, and replies — everything an agent needs to
 read the feedback.
 
 ```ts
-const box6 = await makeTmpBox({ git: true });
-await initBox(box6.root);
-box6.commitAll("init box");
-
 const richDoc: FakeDocument = {
   structure: {
     documentId: "doc-6",
@@ -494,45 +368,25 @@ const richDoc: FakeDocument = {
     },
   ],
 };
-
-const drive6 = createFakeGoogleDrive({
-  files: [{
-    id: "doc-6",
-    name: "Feedback",
-    mimeType: "application/vnd.google-apps.document",
-    modifiedTime: "2026-04-26T10:00:00Z",
-    trashed: false,
-    owners: [{ emailAddress: "test@example.com" }],
-    webViewLink: "https://docs.google.com/document/d/doc-6/edit",
-  }],
-  documents: new Map([["doc-6", richDoc]]),
+const { box, drive, connector } = await docBox({
+  id: "doc-6",
+  name: "Feedback",
+  stem: "Feedback",
+  document: richDoc,
 });
+await connector.sync();
 
-await box6.seed("_content/drive/Feedback.gdoc.card", createGdocTemplate({
-  driveId: "doc-6",
-  title: "Feedback",
-  modified: "2026-04-26T10:00:00Z",
-  revision: "rev-1",
-  link: "https://docs.google.com/document/d/doc-6/edit",
-  owner: "test@example.com",
-  contentFile: "Feedback.md",
-}));
-box6.commitAll("add feedback doc");
-
-const conn6 = createGoogleDriveConnector(box6.root, drive6);
-await conn6.sync();
-
-const sidecar6 = JSON.parse(await box6.read("_content/drive/Feedback.attach/Feedback.comments.json"));
-sidecar6[0]?.author?.displayName
+const sidecar = JSON.parse(await box.read("_content/drive/Feedback.attach/Feedback.comments.json"));
+sidecar[0]?.author?.displayName
 => Jane Doe
 
-sidecar6[0]?.resolved
+sidecar[0]?.resolved
 => true
 
-sidecar6[0]?.quotedFileContent?.value
+sidecar[0]?.quotedFileContent?.value
 => the Q3 numbers
 
-sidecar6[0]?.replies?.[0]?.content
+sidecar[0]?.replies?.[0]?.content
 => Fixed, thanks.
 ```
 
@@ -542,20 +396,20 @@ sidecar and drops the `comments:` ref from the card:
 ```ts continue
 richDoc.comments = [];
 // Bump modifiedTime so the doc re-pulls (otherwise nothing changed upstream).
-const f6 = drive6.files.find((f) => f.id === "doc-6");
+const f6 = drive.files.find((f) => f.id === "doc-6");
 if (f6) f6.modifiedTime = "2026-04-26T12:00:00Z";
 
-await conn6.sync();
+await connector.sync();
 
-await access(join(box6.root, "_content/drive/Feedback.attach/Feedback.comments.json")).then(() => "exists", () => "gone")
+await access(join(box.root, "_content/drive/Feedback.attach/Feedback.comments.json")).then(() => "exists", () => "gone")
 => gone
 
-(await box6.read("_content/drive/Feedback.gdoc.card")).includes("comments:")
+(await box.read("_content/drive/Feedback.gdoc.card")).includes("comments:")
 => false
 
 // The sidecar deletion was staged and committed — no stray deletion left
 // dangling in the working tree.
-execSync("git status --porcelain", { cwd: box6.root, encoding: "utf-8" }).trim()
+execSync("git status --porcelain", { cwd: box.root, encoding: "utf-8" }).trim()
 =>
 ```
 
@@ -565,23 +419,10 @@ The `inspect()` preview (used by `bbx drive inspect`) reports the comment
 count under `details.comments`, not bucketed into the lossy tally.
 
 ```ts
-const drive7 = createFakeGoogleDrive({
-  files: [{
-    id: "doc-7",
-    name: "Previewed",
-    mimeType: "application/vnd.google-apps.document",
-    modifiedTime: "2026-04-26T10:00:00Z",
-    trashed: false,
-    owners: [{ emailAddress: "test@example.com" }],
-    webViewLink: "https://docs.google.com/document/d/doc-7/edit",
-  }],
-  documents: new Map([["doc-7", makeDoc({
-    id: "doc-7",
-    title: "Previewed",
-    markdown: "Body.\n",
-    footnotes: 1,
-    comments: 4,
-  })]]),
+const drive7 = docDrive({
+  id: "doc-7",
+  name: "Previewed",
+  document: makeDoc({ id: "doc-7", title: "Previewed", markdown: "Body.\n", footnotes: 1, comments: 4 }),
 });
 
 const file7 = await drive7.getFile("doc-7");
@@ -605,64 +446,35 @@ Push refuses and parks the upstream copy as `.remote.md`, the same resolution
 path as a divergence conflict.
 
 ```ts
-const boxW = await makeTmpBox({ git: true });
-await initBox(boxW.root);
-boxW.commitAll("init box");
-
 const upstream = "- [ ] Parent  \n      - [ ] Child  \n";
-const driveW = createFakeGoogleDrive({
-  files: [{
-    id: "doc-w",
-    name: "Checklist",
-    mimeType: "application/vnd.google-apps.document",
-    modifiedTime: "2026-04-26T10:00:00Z",
-    trashed: false,
-    owners: [{ emailAddress: "test@example.com" }],
-    webViewLink: "https://docs.google.com/document/d/doc-w/edit",
-  }],
-  documents: new Map([["doc-w", makeDoc({
-    id: "doc-w",
-    title: "Checklist",
-    markdown: upstream,
-  })]]),
+const { box, drive, connector } = await docBox({
+  id: "doc-w",
+  name: "Checklist",
+  stem: "Checklist",
+  doc: { markdown: upstream },
 });
-
-await boxW.seed("_content/drive/Checklist.gdoc.card", createGdocTemplate({
-  driveId: "doc-w",
-  title: "Checklist",
-  modified: "2026-04-26T10:00:00Z",
-  revision: "rev-1",
-  link: "https://docs.google.com/document/d/doc-w/edit",
-  owner: "test@example.com",
-  contentFile: "Checklist.md",
-}));
-boxW.commitAll("add checklist");
-
-const connW = createGoogleDriveConnector(boxW.root, driveW);
-await connW.sync();
+await connector.sync();
 
 // An agent strips the trailing spaces to satisfy markdownlint MD009.
-await boxW.seed(
+await box.seed(
   "_content/drive/Checklist.attach/Checklist.md",
   "- [ ] Parent\n      - [ ] Child\n",
 );
-boxW.commitAll("strip trailing whitespace");
+box.commitAll("strip trailing whitespace");
 
-await connW.sync();
+await connector.sync();
 
-driveW.contentUpdateLog.length
+drive.contentUpdateLog.length
 => 0
 ```
 
 The upstream copy is parked for resolution and the card gets `conflict: true`:
 
 ```ts continue
-JSON.stringify(await boxW.read("_content/drive/Checklist.attach/Checklist.remote.md"))
+JSON.stringify(await box.read("_content/drive/Checklist.attach/Checklist.remote.md"))
 => "- [ ] Parent  \n      - [ ] Child  \n"
-```
 
-```ts continue
-(await boxW.read("_content/drive/Checklist.gdoc.card")).includes("conflict: true")
+(await box.read("_content/drive/Checklist.gdoc.card")).includes("conflict: true")
 => true
 ```
 
@@ -671,16 +483,16 @@ structural loss is identical, so the question is asked per line, not per file.
 (Resolve the parked conflict first, as a human would.)
 
 ```ts continue
-await unlink(join(boxW.root, "_content/drive/Checklist.attach/Checklist.remote.md"));
-await boxW.seed(
+await unlink(join(box.root, "_content/drive/Checklist.attach/Checklist.remote.md"));
+await box.seed(
   "_content/drive/Checklist.attach/Checklist.md",
   "- [ ] Parent\n      - [x] Child\n",
 );
-boxW.commitAll("edit plus strip");
+box.commitAll("edit plus strip");
 
-await connW.sync();
+await connector.sync();
 
-driveW.contentUpdateLog.length
+drive.contentUpdateLog.length
 => 0
 ```
 
@@ -688,15 +500,15 @@ The same edit that leaves the export's trailing whitespace alone is a real edit
 and pushes:
 
 ```ts continue
-await unlink(join(boxW.root, "_content/drive/Checklist.attach/Checklist.remote.md"));
-await boxW.seed(
+await unlink(join(box.root, "_content/drive/Checklist.attach/Checklist.remote.md"));
+await box.seed(
   "_content/drive/Checklist.attach/Checklist.md",
   "- [ ] Parent  \n      - [x] Child  \n",
 );
-boxW.commitAll("real edit");
+box.commitAll("real edit");
 
-await connW.sync();
+await connector.sync();
 
-driveW.contentUpdateLog.length
+drive.contentUpdateLog.length
 => 1
 ```

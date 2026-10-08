@@ -306,15 +306,6 @@ parsed.fields.runtime
 => three
 ```
 
-Each runtime has a runnable starter sketch that exports the
-`(lib, { mount, figure })` factory and returns a teardown:
-
-```ts
-const sketch = figureStarterSketch("p5js");
-sketch.includes("export default function") && sketch.includes("instance.remove()")
-=> true
-```
-
 ## Concept-Map
 
 A concept-map card is a module-scale knowledge graph: concepts are in-card nodes

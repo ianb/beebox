@@ -58,15 +58,13 @@ because the change is *unspecifiable*.
 
 ## Writing a script migration (the load-bearing rules)
 
-`docs/cards/migrations.md` has the full template; these are the rules that bite if you
+`docs/cards/migrations.md` has the full steps; these are the rules that bite if you
 skip them:
 
-- **Use the harness** (`src/scripts/migrate/_harness.ts`) — it does the file walk,
-  dry-run/apply, error collection, and warning dump. Mirror an existing migrator
-  (e.g. `image.ts`) only if your shape genuinely doesn't fit.
-- **Be noisy about data loss — non-negotiable.** Declare an `ElementSpec` of the
-  attrs/children you map and run `checkElement(...)` (`_warnings.ts`) before
-  converting. Anything outside the spec prints at the end as a warning. **A
+- **Restore the harness** (`_harness.ts`, `_warnings.ts`) from git history; it
+  was deleted with the retired migrators (2026-10-08).
+- **Be noisy about data loss — non-negotiable.** Declare the fields you map and
+  warn about anything outside them. **A
   warning is data the migrator silently drops** — the response is almost always
   *extend the migrator* (add the field to the spec, map it, widen the target
   schema), not accept the loss. This is the single mechanism that catches the
@@ -102,7 +100,7 @@ skip them:
 ## Writing an agent-applied migration (the scars)
 
 Only after you've confirmed no deterministic transform exists. The full shape and
-the worked example (`view-card-shape.procedure.card`) are in the runbook; the
+the retired worked example (`view-card-shape`, in git history) are in the runbook; the
 non-negotiables, each a scar from the first one:
 
 - **Gate on a machine check, never the agent's word.** Only `validate.shells`

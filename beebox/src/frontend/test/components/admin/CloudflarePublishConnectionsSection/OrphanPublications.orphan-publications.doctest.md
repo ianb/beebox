@@ -41,8 +41,7 @@ const markup = render([liveOrphan, disabledOrphan, carded, duplicated], "Disable
 Only orphans appear; only the live one offers Disable; the mutation error is shown.
 
 ```ts
-markup.includes("Publications without a card")
-  && markup.includes("Garden Notes")
+markup.includes("Garden Notes")
   && markup.includes("Old Recipes")
   && !markup.includes("Carded Site")
   && !markup.includes("Twin Site")

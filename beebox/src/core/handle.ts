@@ -31,7 +31,7 @@ import { isRecord } from "../shared/is-record.js";
 import { BOX_DIRS } from "../lib/paths/core.js";
 
 /** Env var the handler procedure reads to get its bucket. */
-export const TRIAGE_ITEMS_ENV = "TRIAGE_ITEMS";
+const TRIAGE_ITEMS_ENV = "TRIAGE_ITEMS";
 
 class DirectoryReadError extends Error {
   readonly dir: string;

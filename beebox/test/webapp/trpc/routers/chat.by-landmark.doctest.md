@@ -72,7 +72,7 @@ const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
 await box.write("_content/recipes/Recipes.landmark.card",
-  "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n\n");
+  "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n\n");
 
 await seedSession(box, { sessionId: "inrecipe1", contextDir: "_content/recipes", firstMessage: "what can I make with lentils", daysAgo: 1 });
 await seedSession(box, { sessionId: "rootchat1", contextDir: "", firstMessage: "how's my week looking", daysAgo: 2 });

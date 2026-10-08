@@ -41,6 +41,29 @@ async function seedSkeletonMaps(box) {
   await saveMapState({ boxRoot: box.root, state: { maps: entries } });
   return entries;
 }
+
+/**
+ * `store/` holds two subdirs and a MAP.md, and the recorded state matches
+ * HEAD, so nothing is dirty until a test changes something.
+ */
+async function cleanStoreBox() {
+  const box = await makeTmpBox({ git: true });
+  const skeleton = await seedSkeletonMaps(box);
+  await box.write("store/notes/a.md", "a");
+  await box.write("store/scratch/b.md", "b");
+  await box.write("store/MAP.md", "");
+  box.commitAll("seed");
+  const head = await getHead(box.root);
+  await saveMapState({
+    boxRoot: box.root,
+    state: { maps: { ...skeleton, "store": { asOf: head, generatedAt: "t" } } },
+  });
+  return box;
+}
+
+function taskLine(t) {
+  return `${t.dir || "<root>"}:${t.action} added=[${t.added.join(",")}] deleted=[${t.deleted.join(",")}]`;
+}
 ```
 
 ## Skip reasons
@@ -75,50 +98,38 @@ brief.skippedReason
 await box.cleanup();
 ```
 
-But uncommitted state inside `_bookkeeping/procedure/runs/` is *not* counted —
-the procedure engine intentionally writes "step is running" markers
-there, and blanket-bailing would mean refresh-maps couldn't run
-inside its own procedure step.
+Two kinds of uncommitted state are not user work, so they do not skip the run:
+
+- `_bookkeeping/procedure/runs/`: the procedure engine intentionally writes
+  "step is running" markers there, and blanket-bailing would mean
+  refresh-maps couldn't run inside its own procedure step.
+- `_bookkeeping/usage/session-manifest.jsonl`: the refresh agent's own session
+  appends to it before its first tool call. Without this exception the agent's
+  `bbx refresh-maps --brief` always returned no tasks.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("a/b/note.md", "x");
-await box.write("a/c.md", "y");
-box.commitAll("seed");
-await box.write("_bookkeeping/procedure/runs/refresh-maps_2026-05-09T2052/run.procedure-run.card",
-                "<run-card status=\"running\"/>");
+const exempt: Array<[string, string, string]> = [
+  ["procedure run marker", "_bookkeeping/procedure/runs/refresh-maps_2026-05-09T2052/run.procedure-run.card", "<run-card status=\"running\"/>"],
+  ["usage session manifest", "_bookkeeping/usage/session-manifest.jsonl", "{}\n{}\n"],
+];
+const out: string[] = [];
+for (const [label, path, content] of exempt) {
+  const box = await makeTmpBox({ git: true });
+  await box.write("a/b/note.md", "x");
+  await box.write("a/c.md", "y");
+  await box.write("_bookkeeping/usage/session-manifest.jsonl", "{}\n");
+  box.commitAll("seed");
+  await box.write(path, content);
 
-const brief = await precheck({ boxRoot: box.root });
-print(`needsWork=${brief.needsWork}`);
-print(`skipped=${brief.skippedReason ?? "(none)"}`);
+  const brief = await precheck({ boxRoot: box.root });
+  out.push(`${label}: needsWork=${brief.needsWork} skipped=${brief.skippedReason ?? "(none)"}`);
+  await box.cleanup();
+}
+
+out.join("\n")
 =>
-needsWork=true
-skipped=(none)
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-The refresh agent's own session appends to the usage session manifest
-before its first tool call. That is not user work either; without this
-exception the agent's `bbx refresh-maps --brief` always returned no tasks:
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("a/b/note.md", "x");
-await box.write("a/c.md", "y");
-await box.write("_bookkeeping/usage/session-manifest.jsonl", "{}\n");
-box.commitAll("seed");
-await box.write("_bookkeeping/usage/session-manifest.jsonl", "{}\n{}\n");
-
-const brief = await precheck({ boxRoot: box.root });
-print(`needsWork=${brief.needsWork} skipped=${brief.skippedReason ?? "(none)"}`);
-=> needsWork=true skipped=(none)
-```
-
-```ts cleanup
-await box.cleanup();
+procedure run marker: needsWork=true skipped=(none)
+usage session manifest: needsWork=true skipped=(none)
 ```
 
 ## Bootstrap: no MAP.md anywhere yet
@@ -148,212 +159,64 @@ print(`needsWork=${brief.needsWork}`);
 print(`tasks=${brief.tasks.length}`);
 const dirs = brief.tasks.map((t) => `${t.dir || "<root>"}:${t.action}`).toSorted();
 print(dirs.join("\n"));
+// The store task lists every immediate child, including file-only ones.
+print(brief.tasks.find((t) => t.dir === "store")!.children.join(", "));
 =>
 needsWork=true
 tasks=1
 store:create
-```
-
-The store task lists every immediate child including the file-only ones:
-
-```ts continue
-const store = brief.tasks.find((t) => t.dir === "store")!;
-print(store.children.join(", "));
-=> notes/, scratch/
+notes/, scratch/
 ```
 
 ```ts cleanup
 await box.cleanup();
 ```
 
-## No-op: state matches HEAD
+## What dirties a map
 
-After we record state at HEAD, a re-run reports nothing to do:
+Recorded state at HEAD means a re-run reports nothing to do. After that, only a
+change to a directory's *listing* dirties its map:
+
+- A file added directly to a container dir invalidates that container's MAP,
+  not its parent's.
+- Editing an existing file's contents doesn't change the listing, so no MAP
+  needs touching.
+- A new leaf subdirectory dirties the parent only; the leaf is not mapped.
+- A new subdirectory with its own subdir and a file (at least 2 children)
+  becomes mappable too.
+
+Each case starts from a fresh `store/` whose state matches HEAD:
 
 ```ts
-const box = await makeTmpBox({ git: true });
-const skeleton = await seedSkeletonMaps(box);
-await box.write("store/notes/a.md", "a");
-await box.write("store/scratch/b.md", "b");
-box.commitAll("seed");
+const cases: Array<[string, null | ((box) => Promise<void>)]> = [
+  ["no change", null],
+  ["add file", async (box) => { await box.write("store/README.md", "top-level note"); }],
+  ["modify file", async (box) => { await box.write("store/notes/a.md", "updated"); }],
+  ["new leaf dir", async (box) => { await box.write("store/triage/a.card", "<card/>"); }],
+  ["new container dir", async (box) => {
+    await box.write("store/projects/proj-a/notes.md", "x");
+    await box.write("store/projects/README.md", "y");
+  }],
+];
+const out: string[] = [];
+for (const [label, change] of cases) {
+  const box = await cleanStoreBox();
+  if (change) {
+    await change(box);
+    box.commitAll(label);
+  }
+  const brief = await precheck({ boxRoot: box.root });
+  out.push(`${label}: needsWork=${brief.needsWork} ${brief.tasks.map(taskLine).toSorted().join(" | ") || "(no tasks)"}`);
+  await box.cleanup();
+}
 
-await box.write("store/MAP.md", "");
-box.commitAll("add maps");
-const head = await getHead(box.root);
-await saveMapState({
-  boxRoot: box.root,
-  state: {
-    maps: {
-      ...skeleton,
-      "store": { asOf: head, generatedAt: "t" },
-    },
-  },
-});
-
-const brief = await precheck({ boxRoot: box.root });
-print(`needsWork=${brief.needsWork}`);
-print(`tasks=${brief.tasks.length}`);
+out.join("\n")
 =>
-needsWork=false
-tasks=0
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Add file: parent map dirties
-
-A file added directly to a container dir invalidates that container's
-MAP (its listing changes), not its parent's:
-
-```ts
-const box = await makeTmpBox({ git: true });
-const skeleton = await seedSkeletonMaps(box);
-await box.write("store/notes/a.md", "a");
-await box.write("store/scratch/b.md", "b");
-await box.write("store/MAP.md", "");
-box.commitAll("seed");
-const head = await getHead(box.root);
-await saveMapState({
-  boxRoot: box.root,
-  state: {
-    maps: {
-      ...skeleton,
-      "store": { asOf: head, generatedAt: "t" },
-    },
-  },
-});
-
-await box.write("store/README.md", "top-level note");
-box.commitAll("add README");
-
-const brief = await precheck({ boxRoot: box.root });
-const summary = brief.tasks.map((t) =>
-  `${t.dir || "<root>"} added=[${t.added.join(",")}] deleted=[${t.deleted.join(",")}]`
-);
-print(summary.join("\n"));
-=>
-store added=[README.md] deleted=[]
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Modify-only: nothing dirties
-
-Editing an existing file's contents doesn't change the listing, so no
-MAP needs touching:
-
-```ts
-const box = await makeTmpBox({ git: true });
-const skeleton = await seedSkeletonMaps(box);
-await box.write("store/notes/a.md", "a");
-await box.write("store/scratch/b.md", "b");
-await box.write("store/MAP.md", "");
-box.commitAll("seed");
-const head = await getHead(box.root);
-await saveMapState({
-  boxRoot: box.root,
-  state: {
-    maps: {
-      ...skeleton,
-      "store": { asOf: head, generatedAt: "t" },
-    },
-  },
-});
-
-await box.write("store/notes/a.md", "updated");
-box.commitAll("edit a");
-
-const brief = await precheck({ boxRoot: box.root });
-brief.needsWork
-=> false
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## New subdirectory: parent dirties, new dir gets mapped if container
-
-A new subdirectory under a container dir shows up in the parent's
-listing. If the new subdir has its own subdirs, it becomes mappable
-too; if it's a leaf, only the parent dirties.
-
-Leaf case — parent dirties, new dir is a leaf so it's not mapped:
-
-```ts
-const box = await makeTmpBox({ git: true });
-const skeleton = await seedSkeletonMaps(box);
-await box.write("store/notes/a.md", "a");
-await box.write("store/scratch/b.md", "b");
-await box.write("store/MAP.md", "");
-box.commitAll("seed");
-const head = await getHead(box.root);
-await saveMapState({
-  boxRoot: box.root,
-  state: {
-    maps: {
-      ...skeleton,
-      "store": { asOf: head, generatedAt: "t" },
-    },
-  },
-});
-
-await box.write("store/triage/a.card", "<card/>");
-box.commitAll("add triage");
-
-const brief = await precheck({ boxRoot: box.root });
-const summary = brief.tasks.map((t) =>
-  `${t.dir || "<root>"}:${t.action} added=[${t.added.join(",")}]`
-).toSorted();
-print(summary.join("\n"));
-=> store:update added=[triage/]
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-Container case — new dir has its own subdir + file (≥2 children), so it
-becomes mappable:
-
-```ts
-const box = await makeTmpBox({ git: true });
-const skeleton = await seedSkeletonMaps(box);
-await box.write("store/notes/a.md", "a");
-await box.write("store/scratch/b.md", "b");
-await box.write("store/MAP.md", "");
-box.commitAll("seed");
-const head = await getHead(box.root);
-await saveMapState({
-  boxRoot: box.root,
-  state: {
-    maps: {
-      ...skeleton,
-      "store": { asOf: head, generatedAt: "t" },
-    },
-  },
-});
-
-await box.write("store/projects/proj-a/notes.md", "x");
-await box.write("store/projects/README.md", "y");
-box.commitAll("add nested project");
-
-const brief = await precheck({ boxRoot: box.root });
-const summary = brief.tasks.map((t) =>
-  `${t.dir || "<root>"}:${t.action}`
-).toSorted();
-print(summary.join("\n"));
-=>
-store/projects:create
-store:update
-```
-
-```ts cleanup
-await box.cleanup();
+no change: needsWork=false (no tasks)
+add file: needsWork=true store:update added=[README.md] deleted=[]
+modify file: needsWork=false (no tasks)
+new leaf dir: needsWork=true store:update added=[triage/] deleted=[]
+new container dir: needsWork=true store/projects:create added=[] deleted=[] | store:update added=[projects/] deleted=[]
 ```
 
 ## Ignore patterns
@@ -522,76 +385,47 @@ print(dirs2.join("\n"));
 await box.cleanup();
 ```
 
-## path/* hides children but the dir itself stays visible
+## path/* and path/** in the ignore list
 
 `store/items/*` excludes the per-item subdirs but keeps `store/items/`
 itself in `store`'s listing — that's the "shell dir" pattern. Under the
 container rule, `store/items` has 0 visible subdirs so it doesn't get
-its own MAP.md; the parent's MAP describes it instead.
-
-```ts
-const box = await makeTmpBox({ git: true });
-await seedSkeletonMaps(box);
-await box.write("store/items/a/note.md", "a");
-await box.write("store/items/b/note.md", "b");
-await box.write("store/keep/sub/x.md", "x");
-await box.write("store/keep/sub2/y.md", "y");
-box.commitAll("seed");
-
-const brief = await precheck({
-  boxRoot: box.root,
-  ignorePatterns: [...DEFAULT_IGNORE_PATTERNS, ...SKELETON_HIDDEN_PATHS, "store/items/*"],
-});
-const dirs = brief.tasks.map((t) => t.dir || "<root>").toSorted();
-print(dirs.join("\n"));
-=>
-store
-store/keep
-```
-
-`store`'s listing still includes `items/` so the agent can annotate it:
-
-```ts continue
-const store = brief.tasks.find((t) => t.dir === "store")!;
-print(store.children.join(", "));
-=> items/, keep/
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## path/** matches the prefix and all descendants
+its own MAP.md; the parent's MAP describes it instead, and the agent can
+annotate `items/`.
 
 `store/items/**` hides `store/items` itself too — useful when the
 collection is purely incidental and the parent shouldn't even mention it.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await seedSkeletonMaps(box);
-await box.write("store/items/a/note.md", "a");
-await box.write("store/items/b/note.md", "b");
-await box.write("store/keep/sub/x.md", "x");
-await box.write("store/keep/sub2/y.md", "y");
-await box.write("store/README.md", "z");  // 2nd visible child for store
-box.commitAll("seed");
+const patterns: Array<[string, string[]]> = [
+  ["store/items/*", []],
+  ["store/items/**", ["store/README.md"]],  // 2nd visible child for store
+];
+const out: string[] = [];
+for (const [pattern, extraFiles] of patterns) {
+  const box = await makeTmpBox({ git: true });
+  await seedSkeletonMaps(box);
+  await box.write("store/items/a/note.md", "a");
+  await box.write("store/items/b/note.md", "b");
+  await box.write("store/keep/sub/x.md", "x");
+  await box.write("store/keep/sub2/y.md", "y");
+  for (const f of extraFiles) await box.write(f, "z");
+  box.commitAll("seed");
 
-const brief = await precheck({
-  boxRoot: box.root,
-  ignorePatterns: [...DEFAULT_IGNORE_PATTERNS, ...SKELETON_HIDDEN_PATHS, "store/items/**"],
-});
-const dirs = brief.tasks.map((t) => t.dir || "<root>").toSorted();
-print(dirs.join("\n"));
-const store = brief.tasks.find((t) => t.dir === "store")!;
-print(`store children: ${store.children.join(", ")}`);
+  const brief = await precheck({
+    boxRoot: box.root,
+    ignorePatterns: [...DEFAULT_IGNORE_PATTERNS, ...SKELETON_HIDDEN_PATHS, pattern],
+  });
+  const dirs = brief.tasks.map((t) => t.dir || "<root>").toSorted();
+  const store = brief.tasks.find((t) => t.dir === "store")!;
+  out.push(`${pattern}: dirs=${dirs.join(", ")} store children=${store.children.join(", ")}`);
+  await box.cleanup();
+}
+
+out.join("\n")
 =>
-store
-store/keep
-store children: README.md, keep/
-```
-
-```ts cleanup
-await box.cleanup();
+store/items/*: dirs=store, store/keep store children=items/, keep/
+store/items/**: dirs=store, store/keep store children=README.md, keep/
 ```
 
 ## An unresolvable asOf is an anomaly, not a diff

@@ -1,12 +1,12 @@
 /**
- * Box-aware existence checks for the two card fields that name a file WITHOUT
+ * Box-aware existence checks for the card fields that name a file WITHOUT
  * being called `ref`.
  *
  * The generic broken-ref walk in `card-lint.ts` finds frontmatter keys literally
- * named `ref`/`refs`, so these two stayed unvalidated: a landmark's
- * `navigation.symbol.src` (its icon image) and a figure's `entry` (the sketch
- * source in the card's attach scope). Both silently degraded when the target
- * moved or was renamed — a missing icon, a figure that fails to compile.
+ * named `ref`/`refs`, so these stayed unvalidated: a card's `symbol.src` (its
+ * icon image) and a figure's `entry` (the sketch source in the card's attach
+ * scope). Both silently degraded when the target moved or was renamed — a
+ * missing icon, a figure that fails to compile.
  *
  * These are targeted checks by deliberate design (see docs/implemented-plans/box-root-paths.md,
  * "NOT in scope"): a general schema-declared path-field registry is real
@@ -31,15 +31,6 @@ export interface PathFieldLintInput {
   boxRoot: string;
 }
 
-function getNavigationSymbolSrc(fields: Record<string, unknown>): string | undefined {
-  const navigation = fields["navigation"];
-  if (!isRecord(navigation)) return undefined;
-  const symbol = navigation["symbol"];
-  if (!isRecord(symbol)) return undefined;
-  const src = symbol["src"];
-  return typeof src === "string" ? src : undefined;
-}
-
 function getSymbolSrc(fields: Record<string, unknown>): string | undefined {
   const symbol = fields["symbol"];
   if (!isRecord(symbol)) return undefined;
@@ -55,17 +46,6 @@ export async function lintCardSymbolSrc(input: PathFieldLintInput): Promise<Lint
   const src = getSymbolSrc(input.fields);
   if (src === undefined || src.trim() === "") return [];
   return checkPathField({ input, ref: src, field: "symbol.src" });
-}
-
-/**
- * Warn when a landmark's legacy `navigation.symbol.src` names a file that
- * doesn't exist (or escapes the box). A text/emoji symbol and an absent symbol
- * are both silent — there is nothing to resolve.
- */
-export async function lintLandmarkSymbolSrc(input: PathFieldLintInput): Promise<LintIssue[]> {
-  const src = getNavigationSymbolSrc(input.fields);
-  if (src === undefined || src.trim() === "") return [];
-  return checkPathField({ input, ref: src, field: "navigation.symbol.src" });
 }
 
 /**

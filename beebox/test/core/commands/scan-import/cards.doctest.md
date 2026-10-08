@@ -93,12 +93,6 @@ fields.learning.sink
 fields.learning.ref
 => _config/scan.guide.card
 
-fields.learning.proposal.includes("DURABLE identification")
-=> true
-
-fields.learning.proposal.includes("bbx create guide --name scan")
-=> true
-
 await fs.rm(session.boxRoot, { recursive: true, force: true });
 ```
 

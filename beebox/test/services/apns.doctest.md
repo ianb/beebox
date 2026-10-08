@@ -2,45 +2,16 @@
 
 `ApnsService.send` pushes one notification to one phone and answers `{ ok }`,
 `{ gone }` for a token APNs says is dead, or throws. The real service wraps
-`@parse/node-apn`; the fake records sends and can be told which tokens are gone
-or failing.
+`@parse/node-apn`.
 
 ```ts setup
-import { classifyApnsFailure, createFakeApns, ApnsSendError } from "../../src/services/apns.js";
-
-const HEADERS = { "apns-push-type": "alert", "apns-topic": "app.example" };
+import { classifyApnsFailure, ApnsSendError } from "../../src/services/apns.js";
 
 /** One library failure, classified. */
 function show(failure) {
   const result = classifyApnsFailure(failure);
   return result instanceof ApnsSendError ? `error: ${result.message}` : `gone: ${result.reason}`;
 }
-```
-
-## The fake records what it delivered
-
-```ts
-const apns = createFakeApns({ goneTokens: ["dead"], failTokens: ["flaky"] });
-const ok = await apns.send({ token: "aa11", environment: "sandbox", payload: { aps: { badge: 1 } }, headers: HEADERS });
-const gone = await apns.send({ token: "dead", environment: "production", payload: { aps: { badge: 1 } }, headers: HEADERS });
-const failed = await apns.send({ token: "flaky", environment: "sandbox", payload: {}, headers: HEADERS }).then(
-  () => "delivered",
-  (e) => e.message,
-);
-JSON.stringify([ok, gone, failed])
-=> [{"ok":true},{"gone":true,"reason":"Unregistered"},"fake transient APNs failure"]
-
-apns.describe()
-=>
-FakeApns: 1 sent
-  sandbox token#a9e6f360 → {"aps":{"badge":1}}
-```
-
-The description never shows a token, only its short hash:
-
-```ts continue
-apns.describe().includes("aa11")
-=> false
 ```
 
 ## Which library failures mean "prune the token"

@@ -7,7 +7,7 @@ import { simpleGit } from "simple-git";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import { isRecord } from "../shared/is-record.js";
 import { isTrashedCard } from "../lib/paths/core.js";
-import { SYSTEM_CARD_COHORTS, SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION, isSystemCardMigration, isSystemCardType, systemCardLocationError, type SystemCardMigration, type SystemCardType } from "../shared/system-card-paths.js";
+import { SYSTEM_CARD_COHORTS, SYSTEM_CARD_PATHS, isSystemCardMigration, isSystemCardType, systemCardLocationError, type SystemCardMigration, type SystemCardType } from "../shared/system-card-paths.js";
 import { DashboardSchema } from "../schemas/dashboard.js";
 import { SettingsSchema } from "../schemas/settings.js";
 import { BrowseSchema } from "../schemas/browse.js";
@@ -21,7 +21,7 @@ import { parseCardText, typeFromFilename } from "./card-io.js";
 import { glob } from "glob";
 import { MANIFEST_PATH } from "./migrations.js";
 
-export class SystemCardInvariantError extends Error {
+class SystemCardInvariantError extends Error {
   constructor(problems: string[], migration: SystemCardMigration) {
     super(`Cannot complete ${migration}. Install or repair the canonical cards first:\n${problems.join("\n")}`);
     this.name = "SystemCardInvariantError";
@@ -49,12 +49,6 @@ function cohortPaths(migration: SystemCardMigration): string[] {
   return SYSTEM_CARD_COHORTS[migration].map((type) => SYSTEM_CARD_PATHS[type]);
 }
 
-function repairMigrationForPath(relativePath: string): SystemCardMigration {
-  if (cohortPaths(SYSTEM_CARD_MIGRATION).includes(relativePath)) return SYSTEM_CARD_MIGRATION;
-  if (cohortPaths(SEARCH_SYSTEM_CARD_MIGRATION).includes(relativePath)) return SEARCH_SYSTEM_CARD_MIGRATION;
-  return REMAINING_SYSTEM_CARD_MIGRATION;
-}
-
 function contentError(relativePath: string, content: string): string | null {
   const type = typeFromFilename(relativePath);
   if (type === undefined || !isSystemCardType(type)) return null;
@@ -77,7 +71,7 @@ async function checkState(input: {
 }): Promise<string[]> {
   const errors: string[] = [];
   for (const required of input.required) {
-    if (!input.paths.includes(required)) errors.push(`Required system card missing from ${input.context}: ${required}. Restore it from Git or run the declared ${repairMigrationForPath(required)} migration.`);
+    if (!input.paths.includes(required)) errors.push(`Required system card missing from ${input.context}: ${required}. Restore it from Git.`);
   }
   for (const relativePath of input.paths) {
     const type = typeFromFilename(relativePath);

@@ -37,6 +37,67 @@ function cycleParams(boxRoot, agentFactory) {
   };
 }
 
+const jobsDir = "_bookkeeping/jobs";
+
+/** An `act` that finishes the named job files. */
+const finishing = (...names) => async ({ boxRoot }) => {
+  for (const name of names) await finishJob({ boxRoot, jobRelPath: `${jobsDir}/${name}` });
+  return { success: true };
+};
+
+/** An `act` that finishes exactly the jobs its prompt named. */
+const finishingPromptedJobs = async ({ boxRoot, prompt }) => {
+  for (const file of await fs.readdir(path.join(boxRoot, jobsDir))) {
+    if (prompt.includes(file)) await finishJob({ boxRoot, jobRelPath: `${jobsDir}/${file}` });
+  }
+  return { success: true };
+};
+
+/**
+ * Build a git box holding `jobs` (file name -> card text under the jobs dir) and run one
+ * cycle on it with `act` as the agent (default: do nothing). Returns the cycle result plus
+ * `invoked` (agent factory calls in the first run) and `prompts`. `after(box, run)` may inspect the box or
+ * run another cycle (`run()`) before the box is removed; its return value is `after`.
+ */
+async function cycleOn(jobs, { act, skipLowPriority, after }) {
+  const box = await makeTmpBox({ git: true });
+  try {
+    for (const [name, card] of Object.entries(jobs)) await box.write(`${jobsDir}/${name}`, card);
+    box.commitAll("add jobs");
+    let invoked = 0;
+    const prompts = [];
+    const factory = (opts) => {
+      invoked += 1;
+      return createFakeAgent({
+        name: opts.name,
+        act: async (ctx) => {
+          prompts.push(ctx.prompt);
+          return act ? act(ctx) : { success: true };
+        },
+      });
+    };
+    const run = () => runOneCycle({ ...cycleParams(box.root, factory), skipLowPriority });
+    const result = await run();
+    const invokedByFirstRun = invoked;
+    const afterResult = after ? await after(box, run) : undefined;
+    return { ...result, invoked: invokedByFirstRun, prompts, after: afterResult };
+  } finally {
+    await box.cleanup();
+  }
+}
+
+/** The cycle result and agent invocation count, without prompts. */
+const summary = ({ prompts, after, ...rest }) => rest;
+
+/** Seven low-priority jobs dated 2020-01-01 .. 2020-01-07. */
+const overdueBacklog = () =>
+  Object.fromEntries(
+    Array.from({ length: 7 }, (_, i) => [
+      `2020-01-0${i + 1}T00-00-00-b.intake.job.card`,
+      intakeJob(`Overdue ${i + 1}`, { priority: "low" }),
+    ]),
+  );
+
 const engineOverrides = {
   runSync: async () => true,
   runFinalize: async () => true,
@@ -47,33 +108,19 @@ const engineOverrides = {
 ## Discovery: no jobs → clean no-op cycle
 
 ```ts
-const box = await makeTmpBox({ git: true });
-const agentFactory = (opts) => createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
-const result = await runOneCycle(cycleParams(box.root, agentFactory));
-JSON.stringify(result)
-=> {"success":true,"jobsProcessed":0,"jobsRemaining":0}
+summary(await cycleOn({}, { skipLowPriority: false }))
+=> { success: true, jobsProcessed: 0, jobsRemaining: 0, invoked: 0 }
 ```
+
+An empty queue never reaches the agent factory.
 
 ## Discovery: only low-priority jobs under `skipLowPriority` → skipped, kept pending
 
 The cycle reports them as remaining without invoking any agent.
 
-```ts continue
-await box.write("_bookkeeping/jobs/later.intake.job.card", intakeJob("Low prio", { priority: "low" }));
-box.commitAll("add low-prio job");
-
-let invoked = 0;
-const countingFactory = (opts) => {
-  invoked += 1;
-  return createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
-};
-const skipped = await runOneCycle({ ...cycleParams(box.root, countingFactory), skipLowPriority: true });
-JSON.stringify({ ...skipped, invoked })
-=> {"success":true,"jobsProcessed":0,"jobsRemaining":1,"invoked":0}
-```
-
-```ts cleanup
-await box.cleanup();
+```ts
+summary(await cycleOn({ "later.intake.job.card": intakeJob("Low prio", { priority: "low" }) }, { skipLowPriority: true }))
+=> { success: true, jobsProcessed: 0, jobsRemaining: 1, invoked: 0 }
 ```
 
 ## …but only until the wait deadline: an overdue low-priority job runs on its own
@@ -91,25 +138,9 @@ an unstamped filename, whose age falls back to the mtime and so reads as
 young; this one is dated 2020.
 
 ```ts
-const boxOld = await makeTmpBox({ git: true });
-await boxOld.write("_bookkeeping/jobs/2020-01-01T00-00-00-stale.intake.job.card", intakeJob("Long overdue", { priority: "low" }));
-boxOld.commitAll("add an overdue low-prio job");
-
-let oldInvoked = 0;
-const oldFactory = (opts) => {
-  oldInvoked += 1;
-  return createFakeAgent({ name: opts.name, act: async ({ boxRoot }) => {
-    await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/2020-01-01T00-00-00-stale.intake.job.card" });
-    return { success: true };
-  } });
-};
-const drained = await runOneCycle({ ...cycleParams(boxOld.root, oldFactory), skipLowPriority: true });
-JSON.stringify({ ...drained, invoked: oldInvoked })
-=> {"success":true,"jobsProcessed":1,"jobsRemaining":0,"invoked":1}
-```
-
-```ts cleanup
-await boxOld.cleanup();
+const name = "2020-01-01T00-00-00-stale.intake.job.card";
+summary(await cycleOn({ [name]: intakeJob("Long overdue", { priority: "low" }) }, { skipLowPriority: true, act: finishing(name) }))
+=> { success: true, jobsProcessed: 1, jobsRemaining: 0, invoked: 1 }
 ```
 
 ## A deadline-triggered cycle takes a bounded batch, oldest first
@@ -121,80 +152,45 @@ deadline admits at most the five oldest overdue jobs; the rest are still
 overdue on the next wakeup, so the queue drains at a pace rather than in one
 gulp.
 
-```ts
-const boxMany = await makeTmpBox({ git: true });
-for (let i = 1; i <= 7; i++) {
-  const day = String(i).padStart(2, "0");
-  await boxMany.write(`_bookkeeping/jobs/2020-01-${day}T00-00-00-b.intake.job.card`, intakeJob(`Overdue ${String(i)}`, { priority: "low" }));
-}
-boxMany.commitAll("add seven overdue low-prio jobs");
-
-// The agent finishes exactly the jobs its prompt named.
-const manyFactory = (opts) => createFakeAgent({ name: opts.name, act: async ({ boxRoot, prompt }) => {
-  for (const file of await fs.readdir(path.join(boxRoot, "_bookkeeping/jobs"))) {
-    if (prompt.includes(file)) await finishJob({ boxRoot, jobRelPath: `_bookkeeping/jobs/${file}` });
-  }
-  return { success: true };
-} });
-const capped = await runOneCycle({ ...cycleParams(boxMany.root, manyFactory), skipLowPriority: true });
-JSON.stringify(capped)
-=> {"success":true,"jobsProcessed":5,"jobsRemaining":2}
-```
-
 Oldest first, so the tail of a backlog can't be starved by newer arrivals —
-days 01–05 went, 06 and 07 wait.
+days 01–05 went, 06 and 07 wait. The next cycle finds them overdue and takes
+them.
 
-```ts continue
-JSON.stringify((await fs.readdir(path.join(boxMany.root, "_bookkeeping/jobs"))).filter((f) => f !== ".gitkeep").toSorted())
-=> ["2020-01-06T00-00-00-b.intake.job.card","2020-01-07T00-00-00-b.intake.job.card"]
-```
-
-The next cycle finds them overdue and takes them.
-
-```ts continue
-const second = await runOneCycle({ ...cycleParams(boxMany.root, manyFactory), skipLowPriority: true });
-JSON.stringify(second)
-=> {"success":true,"jobsProcessed":2,"jobsRemaining":0}
-```
-
-```ts cleanup
-await boxMany.cleanup();
+```ts
+const listJobs = async (box) =>
+  (await fs.readdir(path.join(box.root, jobsDir))).filter((f) => f !== ".gitkeep").toSorted();
+const { after, ...first } = await cycleOn(overdueBacklog(), {
+  skipLowPriority: true,
+  act: finishingPromptedJobs,
+  after: async (box, run) => ({ left: await listJobs(box), second: await run() }),
+});
+({ first: summary(first), ...after })
+=> {
+  first: { success: true, jobsProcessed: 5, jobsRemaining: 2, invoked: 1 },
+  left: ["2020-01-06T00-00-00-b.intake.job.card", "2020-01-07T00-00-00-b.intake.job.card"],
+  second: { success: true, jobsProcessed: 2, jobsRemaining: 0 }
+}
 ```
 
 ## Normal work is never delayed by a low-priority backlog
 
 The cap applies only to the deadline path. As soon as any normal-priority job
 is pending the cycle runs on everything, as it always did — a pile of overdue
-low-priority cards must not push the normal job to a later wakeup.
+low-priority cards must not push the normal job to a later wakeup. All eight
+are offered, and the normal job is listed first.
 
 ```ts
-const boxMixed = await makeTmpBox({ git: true });
-for (let i = 1; i <= 7; i++) {
-  const day = String(i).padStart(2, "0");
-  await boxMixed.write(`_bookkeeping/jobs/2020-01-${day}T00-00-00-b.intake.job.card`, intakeJob(`Overdue ${String(i)}`, { priority: "low" }));
-}
-await boxMixed.write("_bookkeeping/jobs/2026-06-01T00-00-00-now.intake.job.card", intakeJob("Real work"));
-boxMixed.commitAll("add a normal job among the backlog");
-
-let mixedPrompt = "";
-const mixedFactory = (opts) => createFakeAgent({ name: opts.name, act: async ({ prompt }) => {
-  mixedPrompt = prompt;
-  return { success: true };
-} });
-const mixed = await runOneCycle({ ...cycleParams(boxMixed.root, mixedFactory), skipLowPriority: true });
-JSON.stringify({ ...mixed, hasNormal: mixedPrompt.includes("2026-06-01T00-00-00-now.intake.job.card") })
-=> {"success":true,"jobsProcessed":0,"jobsRemaining":8,"hasNormal":true}
-```
-
-All eight are offered, and the normal job is listed first.
-
-```ts continue
-mixedPrompt.indexOf("2026-06-01T00-00-00-now") < mixedPrompt.indexOf("2020-01-01T00-00-00-b")
-=> true
-```
-
-```ts cleanup
-await boxMixed.cleanup();
+const normal = "2026-06-01T00-00-00-now.intake.job.card";
+const { prompts, ...mixed } = await cycleOn(
+  { ...overdueBacklog(), [normal]: intakeJob("Real work") },
+  { skipLowPriority: true },
+);
+({
+  ...summary(mixed),
+  hasNormal: prompts[0].includes(normal),
+  normalListedFirst: prompts[0].indexOf("2026-06-01T00-00-00-now") < prompts[0].indexOf("2020-01-01T00-00-00-b"),
+})
+=> { success: true, jobsProcessed: 0, jobsRemaining: 8, invoked: 1, hasNormal: true, normalListedFirst: true }
 ```
 
 ## A `todo-review-job` alone is processed under `skipLowPriority`, not stuck forever
@@ -210,28 +206,14 @@ creates it `priority: normal` for exactly this reason: it must eventually
 reach an agent even when it's the only job around.
 
 ```ts
-const boxTodo = await makeTmpBox({ git: true });
-await boxTodo.write(
-  "_bookkeeping/jobs/review.todo-review.job.card",
-  createTodoReviewJobTemplate({ escalated: [], stirring: [{ locator: "a.memo.card:1", text: "Stirring item", detail: "started 2026-07-28" }], stale: [] }),
-);
-boxTodo.commitAll("queue todo-review job");
-
-let todoInvoked = 0;
-const todoFactory = (opts) => {
-  todoInvoked += 1;
-  return createFakeAgent({ name: opts.name, act: async ({ boxRoot }) => {
-    await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/review.todo-review.job.card" });
-    return { success: true };
-  } });
-};
-const todoResult = await runOneCycle({ ...cycleParams(boxTodo.root, todoFactory), skipLowPriority: true });
-JSON.stringify({ ...todoResult, invoked: todoInvoked })
-=> {"success":true,"jobsProcessed":1,"jobsRemaining":0,"invoked":1}
-```
-
-```ts cleanup
-await boxTodo.cleanup();
+const review = "review.todo-review.job.card";
+const card = createTodoReviewJobTemplate({
+  escalated: [],
+  stirring: [{ locator: "a.memo.card:1", text: "Stirring item", detail: "started 2026-07-28" }],
+  stale: [],
+});
+summary(await cycleOn({ [review]: card }, { skipLowPriority: true, act: finishing(review) }))
+=> { success: true, jobsProcessed: 1, jobsRemaining: 0, invoked: 1 }
 ```
 
 ## The processed count survives concurrent job additions
@@ -242,30 +224,17 @@ job lands concurrently still credits 2 processed (the old subtraction would
 have reported 1) and reports the newcomer as remaining.
 
 ```ts
-const box2 = await makeTmpBox({ git: true });
-await box2.write("_bookkeeping/jobs/a.intake.job.card", intakeJob("Job A"));
-await box2.write("_bookkeeping/jobs/b.intake.job.card", intakeJob("Job B"));
-box2.commitAll("add jobs");
-
-const agentFactory2 = (opts) =>
-  createFakeAgent({
-    name: opts.name,
-    act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/a.intake.job.card" });
-      await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/b.intake.job.card" });
-      // A connector delivers a new job mid-cycle.
-      await fs.writeFile(path.join(boxRoot, "_bookkeeping/jobs/new.intake.job.card"), intakeJob("Newcomer"));
-      return { success: true };
-    },
-  });
-
-const counted = await runOneCycle(cycleParams(box2.root, agentFactory2));
-JSON.stringify(counted)
-=> {"success":true,"jobsProcessed":2,"jobsRemaining":1}
-```
-
-```ts cleanup
-await box2.cleanup();
+const consumeBoth = async ({ boxRoot }) => {
+  await finishing("a.intake.job.card", "b.intake.job.card")({ boxRoot });
+  // A connector delivers a new job mid-cycle.
+  await fs.writeFile(path.join(boxRoot, jobsDir, "new.intake.job.card"), intakeJob("Newcomer"));
+  return { success: true };
+};
+summary(await cycleOn(
+  { "a.intake.job.card": intakeJob("Job A"), "b.intake.job.card": intakeJob("Job B") },
+  { skipLowPriority: false, act: consumeBoth },
+))
+=> { success: true, jobsProcessed: 2, jobsRemaining: 1, invoked: 1 }
 ```
 
 ## Engine: `maxCycles` caps the loop even with jobs remaining
@@ -276,25 +245,19 @@ the cap with the backlog intact.
 ```ts
 const box3 = await makeTmpBox({ git: true });
 for (const n of ["j1", "j2", "j3", "j4", "j5"]) {
-  await box3.write(`_bookkeeping/jobs/${n}.intake.job.card`, intakeJob(`Job ${n}`));
+  await box3.write(`${jobsDir}/${n}.intake.job.card`, intakeJob(`Job ${n}`));
 }
 box3.commitAll("add jobs");
 
 let cycles = 0;
 const onePerCycle = (opts) => {
   const n = ++cycles;
-  return createFakeAgent({
-    name: opts.name,
-    act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: `_bookkeeping/jobs/j${n}.intake.job.card` });
-      return { success: true };
-    },
-  });
+  return createFakeAgent({ name: opts.name, act: finishing(`j${n}.intake.job.card`) });
 };
 
 const capped = await runReactor({ boxRoot: box3.root, ...engineOverrides, createAgent: onePerCycle, maxCycles: 2 });
-JSON.stringify({ processed: capped.jobsProcessed, remaining: capped.jobsRemaining, cycles })
-=> {"processed":2,"remaining":3,"cycles":2}
+({ processed: capped.jobsProcessed, remaining: capped.jobsRemaining, cycles })
+=> { processed: 2, remaining: 3, cycles: 2 }
 ```
 
 ## Engine: a stuck cycle stops the loop early
@@ -309,8 +272,8 @@ const stuckFactory = (opts) => {
   return createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
 };
 const stuck = await runReactor({ boxRoot: box3.root, ...engineOverrides, createAgent: stuckFactory, maxCycles: 3 });
-JSON.stringify({ processed: stuck.jobsProcessed, remaining: stuck.jobsRemaining, cycles })
-=> {"processed":0,"remaining":3,"cycles":1}
+({ processed: stuck.jobsProcessed, remaining: stuck.jobsRemaining, cycles })
+=> { processed: 0, remaining: 3, cycles: 1 }
 ```
 
 ```ts cleanup
