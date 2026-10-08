@@ -111,9 +111,8 @@ Production effect is unmeasured until deploy; `pnpm perf:load --target prod
 
 - **Cold box start.** `bbx serve` still spends about 450–500 ms loading
   `dist/cli.mjs`. Of that, `--enable-source-maps` costs about 100 ms on
-  every start (`lineLengths` over the 4.5 MB bundle). Dropping it makes
-  production stack traces show bundle positions. That is a decision for
-  the developer. Lazy imports of rarely used server dependencies
+  every start (`lineLengths` over the 4.5 MB bundle). Decided: keep source
+  maps on (debugging matters more than speed at this phase); not pursued. Lazy imports of rarely used server dependencies
   (claude-agent-sdk, google-auth-library, grammy, node-apn, react-dom) may
   save another 50–80 ms (`pnpm perf:serve-start --cpu-prof`).
 - **Entry script.** It is still 555 KB gzip, most of it the chat shell.
