@@ -22,6 +22,7 @@ import {
   readScheduleState,
 } from "./lib/schedules-store.js";
 import { runSchedule } from "./lib/schedules-runner.js";
+import { alertIfBailed } from "./lib/schedules-workstream.js";
 import {
   HANDOFF_RUN,
   HOUR,
@@ -255,4 +256,27 @@ test("a lock reclaimed from a dead runner still accounts for the session that ne
   assert.equal(alerts.length, 1);
   assert.equal(alerts[0]?.title, "session ended without reporting");
   assert.equal(alerts[0]?.runId, "20260824-110000");
+});
+
+test("a session stopped at its timeout says so, instead of \"ended without reporting\"", async () => {
+  const rig = await launchRig({
+    name: "tour-check",
+    yaml: workstreamYaml("  worktree: false"),
+    run: HANDOFF_RUN,
+    liveness: "none",
+    agentExit: 0,
+    agentExtra: "",
+    check: null,
+  });
+  const store = rig.fake.deps.storeRoot;
+  await ensureStoreRoot(store);
+  const logFile = path.join(store, "tour-check", "runs", "20261007-201710.log");
+  await fs.mkdir(path.dirname(logFile), { recursive: true });
+  await fs.writeFile(logFile, "a deny-rule warning, then nothing\n", "utf8");
+
+  const run = { name: "tour-check", runId: "20261007-201710", logFile, worktree: null, timedOutAfterMs: HOUR };
+  assert.equal(await alertIfBailed(rig.fake.deps, run), true);
+  const [alert] = await readAlerts(store, "tour-check");
+  assert.equal(alert?.title, "session timed out");
+  assert.match(alert?.message ?? "", /60-minute timeout/u);
 });
