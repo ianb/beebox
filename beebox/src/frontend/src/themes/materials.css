@@ -42,9 +42,11 @@
 }
 
 .bbx-card-theme[data-card-theme="paper"] {
-  /* Highlighter marker. */
-  --bbx-selection: #ffe53b;
-  --bbx-selection-ink: #2a2418;
+  /* Sepia ink, inverted; parchment on dark code. */
+  --bbx-selection: #6b5640;
+  --bbx-selection-ink: #fbf6ea;
+  --bbx-selection-code: #e8dcc4;
+  --bbx-selection-code-ink: #2a2418;
   --bbx-sheet-radius: 12px;
   --bbx-slip-overhang: calc(var(--bbx-content-padding) + 0.625rem);
   --bbx-paper: #f5efe2;
@@ -76,9 +78,11 @@
   --bbx-quote-layer-paper: #f8eacb;
 }
 .bbx-card-theme[data-card-theme="paper"][data-card-stock="blue"] {
-  /* Pink highlighter. */
-  --bbx-selection: #ff8fc4;
-  --bbx-selection-ink: #2a1620;
+  /* Dusty rose. */
+  --bbx-selection: #e3bcc4;
+  --bbx-selection-ink: #2a1a20;
+  --bbx-selection-code: initial;
+  --bbx-selection-code-ink: initial;
   --bbx-paper: #e0e9ee;
   --bbx-ink: #263a44;
   --bbx-ink-soft: #34444e;
