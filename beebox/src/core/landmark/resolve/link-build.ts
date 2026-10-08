@@ -11,6 +11,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import { titleFromFilename } from "../../file-summary.js";
+import { isCardFile } from "../../../lib/paths/core.js";
+import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
+import { readFrontmatterCached } from "../prominence-cache.js";
 import type { ProminenceLevel } from "../../../shared/prominence.js";
 import type { PrunedSubtree } from "../prominence-index.js";
 
@@ -19,7 +22,7 @@ export interface ResolvedLink {
   ref: string;
   /** Explicit landmark label; null means "fall back to title". */
   label: string | null;
-  /** Display title for the target (filename-derived for now). */
+  /** Display title: the target card's `title:` field, else derived from the filename. */
   title: string;
   /** True if the target file exists on disk. */
   exists: boolean;
@@ -66,23 +69,48 @@ export interface BuildLinkInput {
  */
 export async function buildLink({ rawRef, label, source, prominence, options }: BuildLinkInput): Promise<ResolvedLink> {
   const parsed = parseRef(rawRef);
-  const title = titleFromFilename(parsed.path);
+  const fallbackTitle = titleFromFilename(parsed.path);
   const resolved = resolveRefPath({
     fromPath: options.landmarkPath,
     ref: parsed.path,
     kind: "card",
   });
   const prominenceField = prominence === undefined ? {} : { prominence };
-  if (resolved === null) return { ref: rawRef, label, title, exists: false, source, ...prominenceField };
+  if (resolved === null) return { ref: rawRef, label, title: fallbackTitle, exists: false, source, ...prominenceField };
   const suffix =
     (parsed.query === undefined ? "" : `?${parsed.query}`) +
     (parsed.fragment === undefined ? "" : `#${parsed.fragment}`);
-  let exists = false;
+  let isFile = false;
   try {
-    await fs.stat(path.resolve(options.boxRoot, resolved));
-    exists = true;
+    isFile = (await fs.stat(path.resolve(options.boxRoot, resolved))).isFile();
   } catch (_e) {
-    exists = false;
+    return { ref: resolved + suffix, label, title: fallbackTitle, exists: false, source, ...prominenceField };
   }
-  return { ref: resolved + suffix, label, title, exists, source, ...prominenceField };
+  const title = isFile ? await cardTitle(resolved, options.boxRoot) : null;
+  return { ref: resolved + suffix, label, title: title ?? fallbackTitle, exists: true, source, ...prominenceField };
+}
+
+/**
+ * The card's own `title:` field, which keeps punctuation a slugged filename
+ * loses ("Cake carrier (Marisol's)"). Read through the prominence index's
+ * per-file parse memo, so a landmark that resolves often re-parses only cards
+ * that changed. Read only inside the box namespace fence, the same fence
+ * `expand` applies before it reads a match's frontmatter: a title must not
+ * leak from a file outside it. Null when there is no usable title.
+ */
+async function cardTitle(boxPath: string, boxRoot: string): Promise<string | null> {
+  if (!isCardFile(boxPath)) return null;
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: boxPath, mode: "read" });
+  if (!ns.ok) return null;
+  let frontmatter: Record<string, unknown> | null;
+  try {
+    frontmatter = await readFrontmatterCached(path.resolve(boxRoot, boxPath));
+  } catch (e) {
+    // Vanished or unreadable between the stat and the read: the filename
+    // title still names it.
+    console.warn(`[landmark] could not read title of ${boxPath}:`, e);
+    return null;
+  }
+  const title = frontmatter?.["title"];
+  return typeof title === "string" && title.trim().length > 0 ? title.trim() : null;
 }

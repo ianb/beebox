@@ -132,3 +132,28 @@ derivedProblems.length
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A link's title is the card's `title:` field
+
+A slugged filename loses punctuation, so a link titled from it reads like a
+filename ("Cake Carrier Marisol"). The resolver reads the target card's
+`title:` and falls back to the filename only when the card has none.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/Cake_Carrier_Marisol.memo.card", "---\ntitle: Cake carrier (Marisol's)\nprominence: primary\n---\n");
+await box.write("_content/Ladder.memo.card", "---\nprominence: primary\n---\n");
+
+const derived = await prunedSubtree(box.root, "");
+const { links } = await resolveLandmark(
+  { label: "Spot" },
+  { landmarkDir: box.path("_content"), landmarkPath: "_content/Spot.landmark.card", boxRoot: box.root, derived },
+);
+
+links.map((l) => l.title)
+=> ["Cake carrier (Marisol's)", "Ladder"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
