@@ -19,15 +19,14 @@ fresh ask, and a docs-only workstream may land each verified change.
    pinned mid-tier model: Sonnet in Claude Code, `gpt-6-luna` in Codex. Do not
    run it on the session's own model. It lives in `.claude/agents/finish.md`
    (Codex gets a generated `.codex/agents/finish.toml`): `bin/finish-preflight` merges main and
-   prints a decision sheet, `bin/finish-verify` runs the tests/typecheck/lint that
-   sheet names (no full suite — `schedules/full-suite` covers `main` hourly), and the
-   agent does the judgment steps, including a diff-scoped review (Track O) for what
-   lint can't yet catch. It can't ask questions mid-run, so give it everything up
-   front:
+   prints a decision sheet; the agent runs missing verification and Track O review.
+   Passing checks remain valid unless later changes plausibly affect them: a new
+   main commit alone is not a reason to retest. Give the agent:
    - any **`issues/` item** this work resolves (or partly resolves) — it closes
      what's done and leaves punch-lists open, but it can only judge issues it
      knows about;
-   - whether any **uncommitted changes** in the worktree are intentional;
+   - whether **uncommitted changes** are intentional;
+   - completed checks, their tested revision, and any later changes;
    - anything unusual about **scope or verification** its final report should be
      honest about (e.g. "tests pass but I never exercised it in the app").
 
@@ -37,10 +36,8 @@ fresh ask, and a docs-only workstream may land each verified change.
    merge/push failure, but omit routine `PRIVATE: no changes` bookkeeping from
    the human-facing handoff.
 
-   Don't ask "close-out vs checkpoint" — it changes nothing the flow does, and
-   cleanup is the SessionEnd hook's job: it fires on ANY worktree exit once the
-   branch is merged + clean. Just land the work; the human decides whether to exit
-   (clean up) or keep going on their own.
+   Land without asking "close-out vs checkpoint". The human decides when to exit;
+   SessionEnd owns cleanup once the branch is merged and clean.
 
 2. **Relay its result** to the human — don't re-run its steps here:
    - **`RESULT: MERGED`** → give a concise human-facing handoff: what landed,
