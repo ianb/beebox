@@ -40,4 +40,4 @@ landmark") belong to
 
 ## Related
 
-[Place pill loses the chat place after Browse closes](../../bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md)
+[Place pill loses the chat place after Browse closes](2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md)
