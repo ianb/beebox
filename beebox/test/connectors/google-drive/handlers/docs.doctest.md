@@ -303,6 +303,11 @@ const { box, drive, connector } = await docBox({
   doc: { markdown: "Body.\n", inlineObjects: 5, comments: 2 },
 });
 
+// Start the card with a stale title, so the title check below shows the pull rewrote it.
+const staleCard = await box.read("_content/drive/Degraded.gdoc.card");
+await box.seed("_content/drive/Degraded.gdoc.card", staleCard.replace("title: Degraded", "title: Stale Title"));
+box.commitAll("stale title");
+
 // Simulate a 403 by replacing getDocument with a stub that throws.
 drive.getDocument = async () => {
   throw new Error("HTTPError: 403 Insufficient Permission");
@@ -318,8 +323,8 @@ await box.read("_content/drive/Degraded.attach/Degraded.md")
 
 // Card still written, falls back to Drive metadata title.
 const card = await box.read("_content/drive/Degraded.gdoc.card");
-card.includes("title: Degraded")
-=> true
+[card.includes("title: Degraded"), card.includes("Stale Title")]
+=> [true, false]
 
 // Comments (Drive API) still captured in the sidecar; images (Docs API) absent.
 card.includes("type: images")
