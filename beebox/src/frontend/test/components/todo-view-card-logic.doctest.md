@@ -16,6 +16,7 @@ import {
   plateHeadline,
   progressOf,
   scopeDescription,
+  scopeLineText,
   clampAnnotation,
   needsExpand,
   resolveTodoViewStatusFilter,
@@ -349,4 +350,19 @@ sits in and not the pattern.
   scopeDescription({ here: "_content", glob: "**/*.doc.card" }),
 ].join(" | ")
 => the whole box | the whole box | recipes | projects/porch | **/*.doc.card
+```
+
+A query that includes referring todos adds "plus todos elsewhere that link
+here". When the scope is already the whole box there is no elsewhere, so the
+stock plate's line stops at "the whole box".
+
+```ts
+scopeLineText({ here: "_content", glob: "**", includeReferring: true })
+=> Scope: the whole box
+
+scopeLineText({ here: "recipes", glob: "recipes/**", includeReferring: true })
+=> Scope: recipes, plus todos elsewhere that link here
+
+scopeLineText({ here: "recipes", glob: "recipes/**", includeReferring: false })
+=> Scope: recipes
 ```

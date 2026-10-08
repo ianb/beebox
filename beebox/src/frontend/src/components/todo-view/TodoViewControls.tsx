@@ -10,7 +10,7 @@ import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { InlineAction } from "../ui/InlineAction";
 import { TabBar } from "../ui/TabBar";
-import { plateHeadline, scopeDescription, type TodoResult } from "../todo-view-card-logic";
+import { plateHeadline, scopeLineText, type TodoResult } from "../todo-view-card-logic";
 import type { RendererProps } from "../../file-type-registry";
 
 export type Grouping = "place" | "plate";
@@ -40,11 +40,9 @@ export function optionsFrom(viewState: RendererProps["viewState"]): ViewOptions 
 
 export function ScopeLine({ result }: { result: TodoResult }) {
   const { here, glob, includeReferring } = result.query;
-  const scope = scopeDescription({ here, glob });
   return (
     <Text as="div" size="xs" tone="muted">
-      Scope: {scope}
-      {includeReferring ? ", plus todos elsewhere that link here" : null}
+      {scopeLineText({ here, glob, includeReferring })}
     </Text>
   );
 }

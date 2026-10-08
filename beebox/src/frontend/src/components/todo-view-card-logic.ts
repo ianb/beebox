@@ -211,6 +211,17 @@ export function scopeDescription({ here, glob }: { here: string; glob: string })
 }
 
 /**
+ * The whole scope line. A query that includes referring todos covers todos
+ * elsewhere that link here, except when it already covers the whole box:
+ * there is no elsewhere, so the clause is dropped.
+ */
+export function scopeLineText({ here, glob, includeReferring }: { here: string; glob: string; includeReferring: boolean }): string {
+  const scope = scopeDescription({ here, glob });
+  const referring = includeReferring && scope !== "the whole box" ? ", plus todos elsewhere that link here" : "";
+  return `Scope: ${scope}${referring}`;
+}
+
+/**
  * How many items an `all`-scope, `assigned`-filtered query actually matched —
  * the third headline number, "K for the agent". A query's `reduction` counts
  * every item `scope` admitted, not what `assigned` narrowed it to (`matches`
