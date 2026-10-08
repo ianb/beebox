@@ -177,7 +177,7 @@ The report records what was examined and every category of skip — caps
 and deferrals are named, never silent.
 
 ```ts continue
-renderRunReport({
+const report = renderRunReport({
   runId: "2026-06-09T12-00-00",
   generatedAt: "2026-06-09T12:00:00Z",
   examined: [
@@ -193,31 +193,14 @@ renderRunReport({
   observations: [],
   duplicatesSkipped: 0,
   observerFailures: 0,
-})
-=> # Retrospective run 2026-06-09T12-00-00
-«blankline»
-Generated 2026-06-09T12:00:00Z.
-«blankline»
-## What I learned
-«blankline»
-_Nothing new this run._
-«blankline»
-## Sessions examined
-«blankline»
-- `chat-old` (2026-06-09T07:00:10Z, 1 user message)
+});
+
+// Template prose is not the claim; keep the examined list and the skip lines.
+report.split("\n").filter((line) => /^(- .chat|Skipped|Chat registries)/.test(line)).join("\n")
+=> - `chat-old` (2026-06-09T07:00:10Z, 1 user message)
 - `chat-telegram` (2026-06-09T09:00:05Z, 1 user message) — _content/chat/telegram/Ian/thread.chat-thread.card
-«blankline»
 Skipped: 1 already processed; 1 non-chat (wakeup/job/procedure runs); 1 deferred (active within the quiescence window); 2 beyond the per-run cap (next run picks them up).
-«blankline»
 Chat registries: `.beebox/chat-thread-sessions.json`.
-«blankline»
-## Observations
-«blankline»
-_None recorded._
-«blankline»
-## Actions taken
-«blankline»
-_None — no observations to integrate._
 ```
 
 ```ts cleanup
@@ -247,11 +230,11 @@ await seedSession(box.root, { sessionId: "chat-long", age: 5 * HOUR, entries: [
 ] });
 const logPath = getSessionLogPath(box.root, "chat-long");
 
-JSON.stringify(await countUserMessages({ logPath, limit: 2 }))
-=> {"userEntries":1,"tagged":1,"truncated":true}
+await countUserMessages({ logPath, limit: 2 })
+=> { userEntries: 1, tagged: 1, truncated: true }
 
-JSON.stringify(await countUserMessages({ logPath, limit: 500 }))
-=> {"userEntries":3,"tagged":3,"truncated":false}
+await countUserMessages({ logPath, limit: 500 })
+=> { userEntries: 3, tagged: 3, truncated: false }
 ```
 
 A transcript that vanished between listing and reading is still `null`, not a

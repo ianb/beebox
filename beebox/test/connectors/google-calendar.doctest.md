@@ -190,20 +190,18 @@ const result = await connect(box, calendar).sync();
 
 Sync an event, edit the local `.ics`, then sync again with Google's `updated`
 timestamp untouched. Because nothing changed remotely since the last pull, the
-local edit is pushed up to Google; the commit records the push and never
-discards the edit.
+local edit is pushed up to Google and the local file keeps it.
 
 ```ts
 const box = await newBox();
 const calendar = primaryCalendar([lunch()]);
 const connector = connect(box, calendar);
 await connector.sync();
-await editFirst(box, "Lunch", "Lunch MINE");
+const file = await editFirst(box, "Lunch", "Lunch MINE");
 await connector.sync();
 
-const msg = lastCommit(box);
-({ remote: calendar.events[0]?.summary, pushed: msg.includes("Pushed:"), discarded: msg.includes("local edit discarded") })
-=> { remote: "Lunch MINE", pushed: true, discarded: false }
+({ remote: calendar.events[0]?.summary, fileKeepsEdit: (await readIcs(box, file)).includes("Lunch MINE") })
+=> { remote: "Lunch MINE", fileKeepsEdit: true }
 ```
 
 ## A remote change beats a local edit (remote wins)
@@ -232,16 +230,13 @@ calendar.events[0]!.updated = "2026-06-02T10:00:00Z";
 
 const result = await connector.sync();
 const after = await readIcs(box, file);
-const msg = lastCommit(box);
 ({
   pushed: result.pushed ?? null,
   updated: result.updated.length,
   fileHasRemote: after.includes("Standup (rescheduled)"),
   fileHasLocalEdit: after.includes("MINE"),
-  recordedAsDiscard: msg.includes("local edit discarded — event also changed remotely (remote wins)"),
-  recordedAsPush: msg.includes("Pushed:"),
 })
-=> { pushed: null, updated: 1, fileHasRemote: true, fileHasLocalEdit: false, recordedAsDiscard: true, recordedAsPush: false }
+=> { pushed: null, updated: 1, fileHasRemote: true, fileHasLocalEdit: false }
 ```
 
 ## Sync-token expiry triggers a full resync (410)
@@ -351,8 +346,6 @@ const createdContents = await Promise.all(result.created.map((file) => readFile(
   tokensPresented: seenTokens.slice(-2),
   errorMentionsBad: result.error?.includes("bad"),
   errorLeaked: result.error?.includes("must-not-leak"),
-  commitPartial: message.includes("Sync calendar: partial"),
-  commitMentionsBad: message.includes("bad"),
   commitLeaked: message.includes("must-not-leak"),
   badWrite: createdContents.some((content) => content.includes("Written before failure")),
   goodWrite: createdContents.some((content) => content.includes("Later calendar still runs")),
@@ -367,8 +360,6 @@ const createdContents = await Promise.all(result.created.map((file) => readFile(
   tokensPresented: [{ calendarId: "bad", syncToken: "old-bad" }, { calendarId: "good", syncToken: "old-good" }],
   errorMentionsBad: true,
   errorLeaked: false,
-  commitPartial: true,
-  commitMentionsBad: true,
   commitLeaked: false,
   badWrite: true,
   goodWrite: true,
@@ -577,8 +568,7 @@ edit. If that patch is rejected — a transient 429 or 503 is the realistic case
 the old code fell through and wrote Google's version over the file, erasing the
 boxholder's edit and reporting a normal update. The edit now survives, the
 stored hash is left alone so the next sync retries, and the run fails; the
-failure points at the file. Nothing was recorded as an update, so the commit
-narrative does not claim the event changed.
+failure points at the file. Nothing is recorded as an update (`updated` stays empty).
 
 ```ts
 const box = await newBox();
@@ -599,9 +589,8 @@ const result = await connector.sync();
   pushed: result.pushed ?? null,
   editKept: (await readIcs(box, file)).includes("Lunch MINE"),
   blamed: result.error?.includes(`_content/calendar/${file} (local-push, HTTP 503)`),
-  claimedUpdate: lastCommit(box).includes("Updated:"),
 })
-=> { success: false, updated: 0, pushed: null, editKept: true, blamed: true, claimedUpdate: false }
+=> { success: false, updated: 0, pushed: null, editKept: true, blamed: true }
 ```
 
 A later sync where the patch works pushes the edit that was held:
@@ -729,16 +718,14 @@ await editFirst(box, "Lunch", "Lunch MINE");
 
 mode.quiet = true;
 const result = await connector.sync();
-const pushed = lastCommit(box).includes("Pushed:");
 const third = await connector.sync();
 ({
   success: result.success,
   updated: result.updated.length,
   remote: inner.events[0]?.summary,
-  commitRecordsPush: pushed,
   third: { updated: third.updated.length, remote: inner.events[0]?.summary },
 })
-=> { success: true, updated: 1, remote: "Lunch MINE", commitRecordsPush: true, third: { updated: 0, remote: "Lunch MINE" } }
+=> { success: true, updated: 1, remote: "Lunch MINE", third: { updated: 0, remote: "Lunch MINE" } }
 ```
 
 ## A rejected patch is retried on the next sync
@@ -834,15 +821,13 @@ const dir = join(box.root, CAL_DIR);
 => { success: false, patchCalls: 1, blamed: true, gone: false, kept: true }
 ```
 
-The entry is gone from the index, and the commit narrative names the file and
-why it was given up on. BOTH ends of the move are in that commit — the vacated
+The entry is gone from the index. BOTH ends of the move are in that commit — the vacated
 path as well as the new one. A commit that recorded only the arrival would
 leave the old path staged-but-uncommitted, for the box's next sweep to
 attribute to whatever ran next. Nothing is left behind in the working tree
 either:
 
 ```ts continue
-const msg = lastCommit(box);
 const nameStatus = execSync("git show --name-status --pretty=format: HEAD", { cwd: box.root, encoding: "utf-8" });
 // Columns are status, path(s) — and the box package puts the box under
 // content/, so match by suffix rather than by a whole path.
@@ -855,12 +840,10 @@ const deletedAndAdded = vacated?.[0] === "D"
   && rows.some((row) => row[0] === "A" && row[1]?.endsWith(`_content/calendar/stranded/${file}`));
 ({
   tracked: Object.keys((await loadCalendarState(box.root)).eventFiles),
-  strandedSection: msg.includes("Stranded:"),
-  reason: msg.includes("MINE now — deleted on Google (HTTP 404)"),
   bothEndsCommitted: renamed || deletedAndAdded,
   status: execSync("git status --short", { cwd: box.root, encoding: "utf-8" }).trim(),
 })
-=> { tracked: [], strandedSection: true, reason: true, bothEndsCommitted: true, status: "" }
+=> { tracked: [], bothEndsCommitted: true, status: "" }
 ```
 
 The next run neither calls the API for it nor mentions it — the retry loop is

@@ -21,6 +21,12 @@ async function mv(box, args) {
   return executeMove(ctx, args);
 }
 
+/** A directory listing without scaffolding: `.gitkeep` files and the empty directories that hold only one. */
+async function listWithoutScaffolding(box, dir) {
+  const lines = (await box.list(dir)).split("\n");
+  return lines.filter((l) => !l.endsWith("/.gitkeep") && !lines.includes(`${l}/.gitkeep`)).join("\n");
+}
+
 /** Build a throwaway box from a path -> content map and pass it to `fn`. */
 async function withBox(files, fn) {
   const box = await makeTmpBox();
@@ -42,7 +48,7 @@ async function moved(files, args, paths) {
     const result = await mv(box, args);
     const out = [result.success ? "success" : `error: ${result.error}`];
     for (const p of paths ?? []) {
-      if (p.endsWith("/")) out.push(`>> ls ${p.slice(0, -1)}`, await box.list(p.slice(0, -1)));
+      if (p.endsWith("/")) out.push(`>> ls ${p.slice(0, -1)}`, await listWithoutScaffolding(box, p.slice(0, -1)));
       else out.push(`>> ${p}`, (await box.read(p)).trimEnd());
     }
     return out.join("\n");
@@ -99,12 +105,6 @@ success
 _bookkeeping/archive/Engine.attach
 _bookkeeping/archive/Engine.attach/photo.jpg
 _bookkeeping/archive/Engine.doc.card
-_bookkeeping/archive/done
-_bookkeeping/archive/done/.gitkeep
-_bookkeeping/archive/failed
-_bookkeeping/archive/failed/.gitkeep
-_bookkeeping/archive/processed
-_bookkeeping/archive/processed/.gitkeep
 >> _bookkeeping/archive/Engine.attach/photo.jpg
 JPG
 >> _bookkeeping/archive/Engine.doc.card
@@ -156,12 +156,6 @@ success
 _bookkeeping/archive/Water.attach
 _bookkeeping/archive/Water.attach/scan.pdf
 _bookkeeping/archive/Water.bill.card
-_bookkeeping/archive/done
-_bookkeeping/archive/done/.gitkeep
-_bookkeeping/archive/failed
-_bookkeeping/archive/failed/.gitkeep
-_bookkeeping/archive/processed
-_bookkeeping/archive/processed/.gitkeep
 >> _content/box/index.doc.card
 ---
 type: doc

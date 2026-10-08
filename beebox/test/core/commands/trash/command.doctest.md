@@ -13,6 +13,12 @@ import { rollbackTrashReceipt } from "../../../../src/core/chat/session/delete/t
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
+/** A directory listing without scaffolding: `.gitkeep` files and the empty directories that hold only one. */
+async function ls(box, dir) {
+  const lines = (await box.list(dir)).split("\n");
+  return lines.filter((l) => !l.endsWith("/.gitkeep") && !lines.includes(`${l}/.gitkeep`)).join("\n");
+}
+
 async function rm(box, args) {
   const { ctx } = createCollectorContext(box.root);
   return executeTrash(ctx, args);
@@ -29,8 +35,8 @@ await box.write(
 );
 
 const dry = await rm(box, { paths: ["_content/box/notes/Engine.doc.card"], dryRun: true });
-JSON.stringify(dry.data)
-=> {"dryRun":true,"wouldTrash":["_content/box/notes/Engine.doc.card"],"errors":[],"inboundRefs":{"_content/box/notes/Engine.doc.card":[]}}
+dry.data
+=> { dryRun: true, wouldTrash: ["_content/box/notes/Engine.doc.card"], errors: [], inboundRefs: { "_content/box/notes/Engine.doc.card": [] } }
 ```
 
 The card is still in place:
@@ -58,10 +64,8 @@ const real = await rm(box, { paths: ["_content/box/notes/Engine.doc.card"] });
 real.success
 => true
 
-await box.list("_bookkeeping/trash")
-=>
-_bookkeeping/trash/.gitkeep
-_bookkeeping/trash/Engine.doc.card
+await ls(box, "_bookkeeping/trash")
+=> _bookkeeping/trash/Engine.doc.card
 
 await box.list("_content/box/notes")
 =>
@@ -82,8 +86,8 @@ await fs.rm(path.join(escapeBox.root, "_bookkeeping", "trash"), { recursive: tru
 await fs.symlink("../src", path.join(escapeBox.root, "_bookkeeping", "trash"));
 
 const escapeResult = await rm(escapeBox, { paths: ["_content/box/notes/Escape.doc.card"] });
-JSON.stringify({ success: escapeResult.success, error: escapeResult.error })
-=> {"success":false,"error":"Trash destination escapes the box's data namespace: _bookkeeping/trash/Escape.doc.card"}
+({ success: escapeResult.success, error: escapeResult.error })
+=> { success: false, error: "Trash destination escapes the box's data namespace: _bookkeeping/trash/Escape.doc.card" }
 ```
 
 The card never moved, and nothing landed in `src/`:
@@ -111,8 +115,8 @@ await linked.write("_bookkeeping/trash/Old.doc.card", "---\ntype: doc\n---\n[old
 await linked.write("_content/box/Fenced.md", "```md\n[example](notes/Target.doc.card)\n```\n");
 
 const report = await rm(linked, { paths: ["_content/box/notes/Target.doc.card"], dryRun: true });
-JSON.stringify(report.data.inboundRefs)
-=> {"_content/box/notes/Target.doc.card":[{"path":"_content/box/Index.md","refs":1},{"path":"_content/box/notes/Source.doc.card","refs":2}]}
+report.data.inboundRefs
+=> { "_content/box/notes/Target.doc.card": [{ path: "_content/box/Index.md", refs: 1 }, { path: "_content/box/notes/Source.doc.card", refs: 2 }] }
 
 await linked.read("_content/box/notes/Source.doc.card")
 =>
@@ -137,8 +141,11 @@ await rollback.commitAll("seed rollback card");
 const { ctx: rollbackCtx } = createCollectorContext(rollback.root);
 const receipt = await moveCardsToTrash(rollbackCtx, ["_content/inbox/Rollback.doc.card"]);
 await rollbackTrashReceipt(rollback.root, receipt);
-JSON.stringify({ inbox: await rollback.list("_content/inbox"), trash: await rollback.list("_bookkeeping/trash") })
-=> {"inbox":"_content/inbox/.gitkeep\n_content/inbox/Rollback.attach\n_content/inbox/Rollback.attach/file.txt\n_content/inbox/Rollback.doc.card\n_content/inbox/intake\n_content/inbox/intake/.gitkeep\n_content/inbox/staged\n_content/inbox/staged/.gitkeep\n_content/inbox/triaged\n_content/inbox/triaged/.gitkeep\n_content/inbox/triaged/_unsure\n_content/inbox/triaged/_unsure/.gitkeep\n_content/inbox/unhandled\n_content/inbox/unhandled/.gitkeep","trash":"_bookkeeping/trash/.gitkeep"}
+({ inbox: await ls(rollback, "_content/inbox"), trash: await ls(rollback, "_bookkeeping/trash") })
+=> {
+  inbox: "_content/inbox/Rollback.attach\n_content/inbox/Rollback.attach/file.txt\n_content/inbox/Rollback.doc.card",
+  trash: ""
+}
 ```
 
 ## A never-committed card can still be trashed and committed
@@ -147,8 +154,8 @@ JSON.stringify({ inbox: await rollback.list("_content/inbox"), trash: await roll
 const untracked = await makeTmpBox({ git: true });
 await untracked.write("_content/inbox/New.doc.card", "---\ntype: doc\n---\n");
 const trashed = await rm(untracked, { paths: ["_content/inbox/New.doc.card"], commit: true });
-JSON.stringify({ success: trashed.success, trash: await untracked.list("_bookkeeping/trash"), git: await import("simple-git").then(({ simpleGit }) => simpleGit(untracked.root).log().then((log) => log.latest?.message)) })
-=> {"success":true,"trash":"_bookkeeping/trash/.gitkeep\n_bookkeeping/trash/New.doc.card","git":"Trash card: New.doc.card"}
+({ success: trashed.success, trash: await ls(untracked, "_bookkeeping/trash"), git: await import("simple-git").then(({ simpleGit }) => simpleGit(untracked.root).log().then((log) => log.latest?.message)) })
+=> { success: true, trash: "_bookkeeping/trash/New.doc.card", git: "Trash card: New.doc.card" }
 ```
 
 ## A display-form path argument is rejected, not treated as a file path
@@ -161,6 +168,6 @@ failing to find) a relative file named `Config:box.json`
 ```ts
 const dbox = await makeTmpBox();
 const rejected = await rm(dbox, { paths: ["Config:box.json"] });
-JSON.stringify(rejected)
-=> {"success":false,"error":"`Config:box.json` is the boxholder's display form; write `/_config/box.json`"}
+rejected
+=> { success: false, error: "`Config:box.json` is the boxholder's display form; write `/_config/box.json`" }
 ```

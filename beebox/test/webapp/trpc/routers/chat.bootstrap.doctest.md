@@ -36,6 +36,17 @@ function caller(server) {
   return appRouter.createCaller(ctx);
 }
 
+// The fields an example is about: the full status payload is chat.status's own
+// contract, covered in its tests, so only its session/run flags are kept.
+function shape(r) {
+  const { status, history, ...rest } = r;
+  return {
+    ...rest,
+    history,
+    status: { sessionId: status.sessionId, running: status.running, busy: status.busy },
+  };
+}
+
 // The chat page's request shape: a bounded tail window.
 const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 };
 
@@ -82,8 +93,8 @@ process.env["BBX_CLAUDE_PROJECTS_DIR"] = projects;
 const server = await makeTestServer();
 
 const empty = await caller(server).chat.bootstrap({ slice: TAIL });
-JSON.stringify(empty)
-=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":"«*»","source":"default","boxDefault":"«*»","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]},"pending":[]}
+shape(empty)
+=> { kind: "empty", sessionId: null, history: null, label: null, status: { sessionId: null, running: false, busy: false }, pending: [] }
 ```
 
 ## An explicit session id returns that session's history and status
@@ -166,8 +177,8 @@ doesn't.)
 
 ```ts continue
 const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
-JSON.stringify(missing)
-=> {"kind":"unavailable","reason":"missing-local-transcript","transcript":{"state":"unknown"},"huskPath":null,"sessionId":"no-such-session","history":null,"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":"«*»","source":"default","boxDefault":"«*»","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]},"pending":[]}
+shape(missing)
+=> { kind: "unavailable", reason: "missing-local-transcript", transcript: { state: "unknown" }, huskPath: null, sessionId: "no-such-session", history: null, label: null, status: { sessionId: "no-such-session", running: false, busy: false }, pending: [] }
 ```
 
 Input still validates: a non-string session is rejected before any work, and so
@@ -239,8 +250,8 @@ than a session named `""`:
 
 ```ts continue
 await setDefaultSession(server, "");
-JSON.stringify(await caller(server).chat.bootstrap({ slice: TAIL }))
-=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":"«*»","source":"default","boxDefault":"«*»","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]},"pending":[]}
+shape(await caller(server).chat.bootstrap({ slice: TAIL }))
+=> { kind: "empty", sessionId: null, history: null, label: null, status: { sessionId: null, running: false, busy: false }, pending: [] }
 ```
 
 ```ts cleanup
