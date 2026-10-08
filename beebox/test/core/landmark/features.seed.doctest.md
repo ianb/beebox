@@ -20,7 +20,7 @@ import { setLandmarkHqPreference } from "../../../src/core/landmark/hq-preferenc
 ## readLandmarkFeatures — read from a navigation role
 
 ```ts
-const navigation = { label: "Daily dump", symbol: "🎙️", "chat-app": { narration: "on", prose: "off" } };
+const navigation = { label: "Daily dump", "chat-app": { narration: "on", prose: "off" } };
 JSON.stringify(readLandmarkFeatures(navigation))
 => {"narration":"on","prose":"off"}
 ```
@@ -28,7 +28,7 @@ JSON.stringify(readLandmarkFeatures(navigation))
 A navigation without a `chat-app` mapping returns an empty map.
 
 ```ts
-JSON.stringify(readLandmarkFeatures({ label: "Plain", symbol: "📁" }))
+JSON.stringify(readLandmarkFeatures({ label: "Plain" }))
 => {}
 ```
 
@@ -48,7 +48,7 @@ JSON.stringify(readLandmarkFeatures(navigation))
 const box = await makeTmpBox();
 await box.write(
   "_content/store/dump/Daily.landmark.card",
-  "---\nnavigation:\n  label: Daily dump\n  symbol: 🎙️\n  chat-app:\n    narration: on\n---\n",
+  "---\nsymbol:\n  glyph: 🎙️\nnavigation:\n  label: Daily dump\n  chat-app:\n    narration: on\n---\n",
 );
 JSON.stringify(await readLandmarkFeaturesForDir(box.root, "_content/store/dump"))
 => {"narration":"on"}
@@ -134,7 +134,7 @@ landmark look the same to callers.
 const box = await makeTmpBox();
 await box.write(
   "_content/store/plain/Plain.landmark.card",
-  "---\nnavigation:\n  label: Plain\n  symbol: 📁\n---\n",
+  "---\nsymbol:\n  glyph: 📁\nnavigation:\n  label: Plain\n---\n",
 );
 await readLandmarkFeaturesForDir(box.root, "_content/store/plain")
 => null

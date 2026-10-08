@@ -39,9 +39,10 @@ shareDestinationsOutput.parse(fixture.result.data).chats[0].sessionId
 const box = await makeTmpBox({ git: true });
 await mkdir(path.join(box.root, "_content/reading"), { recursive: true });
 await writeFile(path.join(box.root, "_content/reading/Reading.landmark.card"), `---
+symbol:
+  glyph: 📚
 navigation:
   label: Reading
-  symbol: 📚
 destinations:
   - for: [share]
 ---

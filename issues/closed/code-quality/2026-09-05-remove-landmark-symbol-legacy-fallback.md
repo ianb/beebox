@@ -1,13 +1,14 @@
 ---
 title: "Remove the navigation.symbol legacy-tolerance code once every box has run landmark-symbol"
 workstream: sidecar-shell
-activate-on: 2026-12-05
-category: code-quality
 filed-by: agent
 discovered-by: Ian
 discovered-in: sidecar-shell — docs/implemented-plans/card-symbol.md Track D
 priority: normal
+resolution: implemented
 ---
+
+Resolved 2026-10-08, after the boxholder confirmed every box applied every migration. Removed `readLandmarkSymbol`'s `navigation.symbol` fallback, the `navigation.symbol` schema field (and `LandmarkSymbol`), the legacy-shape paragraph in the landmark schema instructions, and `lintLandmarkSymbolSrc` (the generic `lintCardSymbolSrc` covers `symbol.src`). Fixtures and docs now use the top-level `symbol`. The migration manifest entry stays as a retired no-op.
 
 `docs/implemented-plans/card-symbol.md` Track D folded a landmark's mark into
 the standard `symbol` field, migrating `navigation.symbol` up via

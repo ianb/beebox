@@ -80,7 +80,7 @@ None. The format and two product decisions are settled.
 - **Hand-edit drift:** doc schema validates title and body.
 - **Fabricated session ID:** guide says omit it unless known and verified.
 - **Validation error UX:** normal card validation shows schema errors.
-- **Partial migration:** reader handles both shapes until sweep completes. `issues/deferred/2026-09-21-remove-legacy-feedback-reader.md` removes legacy recognition after all boxes have the manifest entry.
+- **Partial migration:** reader handles both shapes until sweep completes. `issues/closed/code-quality/2026-09-21-remove-legacy-feedback-reader.md` removes legacy recognition after all boxes have the manifest entry.
 
 ## NOT in scope
 
@@ -109,4 +109,4 @@ Focused collector and migration tests verify recognition, resolution, and data p
 
 ## Rollout shape
 
-The script migration is deterministic and idempotent, using the migration harness. Dry-run and apply it on the isolated box clone, then validate and inspect the manifest. The collector accepts old and new shapes during rollout; `issues/deferred/2026-09-21-remove-legacy-feedback-reader.md` names the convergence check and cleanup paths. Worktree commits do not deploy; landing waits for a separate finish request.
+The script migration is deterministic and idempotent, using the migration harness. Dry-run and apply it on the isolated box clone, then validate and inspect the manifest. The collector accepts old and new shapes during rollout; `issues/closed/code-quality/2026-09-21-remove-legacy-feedback-reader.md` names the convergence check and cleanup paths. Worktree commits do not deploy; landing waits for a separate finish request.

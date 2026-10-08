@@ -48,7 +48,6 @@ object:
 parseLandmarkFields(`---
 navigation:
   label: Recipes
-  symbol: 🍳
   links:
     - ref: Bread.recipe.card
       label: the bread
@@ -59,7 +58,7 @@ destinations:
 `)
 =>
 {
-  navigation: { label: "Recipes", symbol: "🍳", links: [{ ref: "Bread.recipe.card", label: "the bread" }] },
+  navigation: { label: "Recipes", links: [{ ref: "Bread.recipe.card", label: "the bread" }] },
   destinations: [{ for: ["triage"], rules: "Recipes — anything describing how to cook a dish." }]
 }
 ```
@@ -97,9 +96,8 @@ const unknownStock = parseLandmarkFields("---\nnavigation:\n  label: Also here\n
 ## Template
 
 `createLandmarkTemplate` produces a starter card with a `navigation` role for
-the label and the card's own `symbol` group for the mark. A new landmark is
-never written in the legacy `navigation.symbol` shape — that is read for boxes
-that predate the `landmark-symbol` migration and written by nothing.
+the label and the card's own `symbol` group for the mark. The mark is never nested
+under `navigation`.
 
 ```ts
 createLandmarkTemplate({ label: "Recipes", symbol: "🍳" })
@@ -297,7 +295,6 @@ a landmark's `destinations`.
 const fields = parseLandmarkFields(`---
 navigation:
   label: Reading
-  symbol: 📖
 destinations:
   - for: [triage, commentary]
     rules: Articles saved for close reading and commentary.

@@ -1,13 +1,14 @@
 ---
 title: "Remove legacy agent-feedback Markdown recognition after box migration"
 workstream: unattached
-activate-on: 2026-12-21
-category: code-quality
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-feedback-as-cards — feedback-to-doc-cards migration
 area: beebox
+resolution: implemented
 ---
+
+Resolved 2026-10-08, after the boxholder confirmed every box applied every migration. Removed the timestamped `.md` recognition and the legacy-resolve refusal from `feedback-review/collect.ts`, the legacy cases from `collect.test.ts`, and the legacy notes in `feedback-review/CLAUDE.md`. The converter script was already deleted with the retired migrators.
 
 The `feedback-to-doc-cards` migration converts timestamped `.md` observations
 under `_config/feedback/` and `resolved/` into `.doc.card` files. During rollout,

@@ -313,6 +313,8 @@ keep their names and order because the manifest is append-only. The migrators
 themselves, their tests, and the two migration procedure templates are in git
 history; the early rollout is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
 
+A box outside the fleet (a restored backup, an archived or soft-launch box) that has not applied a retired migration needs that migrator restored from git history and run by hand. This includes `one-root`: `getBoxShape` refuses a shapeVersion 2 box, and the v2 bootstrap path in `bbx migrate` is deleted.
+
 ## Manual runs (for debugging)
 
 A migrator script is runnable standalone (`npx tsx src/scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx engine migrate`. If you do this and want it to count, append the entry yourself or run `bbx engine migrate --apply` afterwards.
