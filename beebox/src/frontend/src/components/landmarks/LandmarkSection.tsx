@@ -4,8 +4,9 @@
  * resolved link tiles. Click a tile to open the target card.
  *
  * Links are capped at the first `LINK_CAP` tiles with an inline "Show all"
- * disclosure — there is no landmark full-form page to click through to
- * (docs/plans/top-nav-ia.md Track D). Sessions come from `chat.byLandmark`,
+ * disclosure, so the section shows every link in place. The landmark card
+ * itself opens as the place page (`PlaceView`), which reuses `LandmarkLinks`
+ * and `LandmarkGroup`. Sessions come from `chat.byLandmark`,
  * joined by directory upstream in `LandmarksList`; see docs/landmarks.md for
  * the chat/directory association model.
  */
@@ -137,8 +138,7 @@ export function LandmarkSection({
 
 /**
  * The link grid, capped: the first `LINK_CAP` tiles always show, the rest sit
- * behind an inline disclosure rather than a click-through (no full-form view
- * exists to click through to).
+ * behind an inline disclosure, so every link stays reachable in place.
  */
 export function LandmarkLinks({
   links,

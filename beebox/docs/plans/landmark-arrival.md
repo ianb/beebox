@@ -612,6 +612,19 @@ and is verified against C.
     saved arrangement, and no second arrival runs.
 - **Vocabulary lock-ins.** `arrival` (payload field); `arrivalCandidate`, `takeArrival`, `cancelArrival`,
   `hasArrival`; `arrivalOpens`.
+- **Implementation notes (2026-10-08).**
+  - `arrivalOpens` lives in `WorkspaceProvider/arrival.ts`: the layout check moves a module used by one
+    directory into it.
+  - The cancellation handlers sit on the whole chat desk (transcript, cards, composer). They count only
+    events whose target is inside the desk's DOM: the app-bar chips are React portals published from the
+    chat, so their events bubble through the desk's React tree.
+  - With `sessionStorage` unavailable, a selection with nothing in memory is a candidate (nothing is saved);
+    a storage read that throws is not.
+  - The arrived card's target is built from the path (`viewer: null`), not parsed with `parseViewUrl`.
+  - The schema instructions no longer call the landmark card "not a visitable file"; boxes get the new line
+    on their next guidance refresh.
+  - `pnpm doc-check` does not ask for `docs/doc-graph.md`; regenerating it in a worktree also lists
+    gitignored walk notes, so it was left as is.
 - **First implementation chunk.** `arrival` on the payload + doctest cases (one entry point, two, none, root,
   background place) inside Track C's `forDir` fixture doctest; then `arrivalOpens` and the store flag.
 

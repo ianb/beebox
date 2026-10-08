@@ -86,9 +86,9 @@ async function addCardTier(
 
 /**
  * One row per nested landmark. The row opens the nested place's entry-point
- * card — where a reader starts — when its own pruned subtree has one; a
- * landmark card is a place marker whose page shows only its configuration.
- * Without an entry point the row still opens the landmark card.
+ * card — where a reader starts — when its own pruned subtree has one.
+ * Without an entry point the row opens the landmark card, which renders as
+ * the place page.
  */
 async function addNestedLandmarkTier(
   { entries, nested }: PrunedSubtree,

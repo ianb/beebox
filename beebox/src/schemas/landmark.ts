@@ -187,8 +187,8 @@ export const LandmarkSchema: CardSchema = cardSchema("landmark", {
   brief: "Marks a notable directory",
   description: "Marks its directory as a notable spot — a curated navigation bookmark and/or a triage filing destination; one per directory",
   category: "authored",
-  // A landmark is a place marker, not a visitable file: it never lists in a
-  // fold, and the directory's identity is drawn from it instead
+  // A landmark stands for its directory: it never lists in a fold, and the
+  // directory's identity is drawn from it instead
   // (docs/implemented-plans/card-prominence.md, "Type defaults"). A written `prominence`
   // still means something — see LandmarkObject above — but it describes the
   // place, not this file.
@@ -261,7 +261,7 @@ A pure routing target (an archive humans don't browse) can have only \`destinati
 
 Most of a landmark's list is **derived**, not listed: every card under its directory carrying \`prominence: entry-point\` or \`prominence: primary\` appears automatically (entry points first, then primary cards, then nested landmarks, then \`expand\` results), and the walk stops at any subdirectory with its own landmark. So the way to surface a card in its own place is to mark the card, not to edit the landmark. \`links:\` is for what a card cannot say about itself: a target outside this directory, a contextual label, or a fixed position. A \`links:\` entry that duplicates a marked in-directory card is harmless (it shows once, listed first) and \`bbx validate\` notes it as a trim candidate.
 
-A landmark card is a place marker, not a visitable file — it is \`background\` by type and never needs \`prominence\` written to be on the Landmarks page. The one value that means something on a landmark is \`prominence: background\`: the place is housekeeping (logs, imports, machinery), it leaves the Landmarks page and the place menu, and everything under it folds in Browse. \`entry-point\` or \`primary\` on a landmark is a lint warning; the place's entry point is a visitable card inside it.`,
+A landmark card stands for its place, not for a file in it — it is \`background\` by type and never needs \`prominence\` written to be on the Landmarks page. The one value that means something on a landmark is \`prominence: background\`: the place is housekeeping (logs, imports, machinery), it leaves the Landmarks page and the place menu, and everything under it folds in Browse. \`entry-point\` or \`primary\` on a landmark is a lint warning; the place's entry point is a visitable card inside it.`,
 });
 
 export type Landmark = LandmarkFields;
