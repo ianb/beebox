@@ -7,15 +7,18 @@ issues: []   # ../../../issues/<category>/<file>.md, one per line; see below
 # <Title>
 
 <!-- 1–2 sentences: what this plan is and why, for a reader with no context.
-     Don't recap the conversation. For user-facing work, lead with the job:
-     "When [situation], I want to [motivation], so I can [outcome]" — several
-     concrete, mundane situations if the job has them. Skip JTBD for bugs,
-     refactors, and "work robustly" jobs. -->
+     Don't recap the conversation. -->
 
 **Issues addressed:** <!-- every issues/ item this resolves, PLUS related or
-duplicate ones you found by grepping the queue (slug, keyword, symptom). /finish
+duplicate ones you found by grepping the queue (slug, keyword, symptom). The finish skill
 reads the frontmatter `issues:` list to close them; one left off is forgotten.
 "none" if not tied to a filed issue. -->
+
+## Design
+
+<!-- Work that changes what a person experiences of the box: the bbx-design
+     skill's TEMPLATE.md, pasted here or linked as `<topic>.design.md`.
+     Other work: "No design section: <reason>." -->
 
 ## Smallest fix and budget
 

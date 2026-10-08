@@ -32,9 +32,12 @@ Both need a box already reachable from your device. See
 
 **How it works, briefly**
 
-The iOS app is a thin native shell around the same web chat you use in a
+The iOS app is a native shell around the same web chat you use in a
 browser; it adds native pairing, recording, and speech input, delivered into
-the chat over a bridge. A finished capture becomes a `capture-session` card
+the chat over a bridge. It opens on a native box screen, with a text box for a
+thought, your recent chats, and your other boxes; the chat itself loads when
+you open one. A thought typed or spoken there waits in an outbox on the phone
+if the box is unreachable, and the app retries. A finished capture becomes a `capture-session` card
 with typed cards for what it contains (`image`, `audio`, `file`). Capture
 runs when you use it, not on a schedule. Clipping web pages is a separate
 capability: [web-clipping.md](web-clipping.md).

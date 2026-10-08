@@ -28,15 +28,21 @@ round; write the plan when the boxholder agrees the direction or asks for it.
 1. Copy `TEMPLATE.md` (beside this file) to `beebox/docs/plans/<topic>.md`.
    Subplans: `<topic>.subplan.md`. Frontmatter per `docs/plans/README.md`:
    `status: draft`, the bare `workstream:` name (or `unattached`), and the
-   `issues:` list — `/finish` reads that list to close issues, so grep the
+   `issues:` list — the finish skill reads that list to close issues, so grep the
    queue for related and duplicate items before you start.
-2. Fill every section. Keep the headers verbatim. A section that genuinely
+2. Work that changes what a person meets (card type, surface, proactive or
+   chat behavior, notification, onboarding, a record a person reads) gets its
+   Design section from the bbx-design skill before the tracks: situations in
+   the "When …, I want to …, so I can …" form, then whether this is the right
+   place and time to act, show, or stay quiet. Other work writes "No design
+   section: <reason>" under that heading.
+3. Fill every section. Keep the headers verbatim. A section that genuinely
    doesn't apply says *why* ("no prior art: this is a new vocabulary surface"),
    never "N/A".
-3. Write for a reader six months from now with no context — Simplified
+4. Write for a reader six months from now with no context — Simplified
    Technical English in spirit: short sentences, active voice, one idea per
    sentence, consistent terms. Not a chat transcript.
-4. After the cross-model review, write a CODING_FEEDBACK entry: pipe your
+5. After the cross-model review, write a CODING_FEEDBACK entry: pipe your
    answers to its four prompts (`bin/coding-feedback help` lists them) into
    `bin/coding-feedback add --checkpoint plan-reviewed`.
 

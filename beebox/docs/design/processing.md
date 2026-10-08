@@ -2,15 +2,19 @@
 
 ## What `bbx wakeup` actually does
 
-Verified against `src/cli/commands/wakeup/command.ts` (2026-07-04). One full
-sync-and-process pass:
+Verified against `src/cli/commands/wakeup/command.ts` (2026-07-04; re-verified
+2026-10-07). One full sync-and-process pass, under a per-box cycle lock (a
+second concurrent wakeup skips rather than waits):
 
 1. **Preprocess** inbox items (transcription, etc.).
-2. **Housekeeping** (sweep stale tmp uploads, refill the root landmark).
+2. **Housekeeping** (sweep stale tmp uploads and abandoned captures, refill the
+   root landmark).
 3. Run **on-wakeup scheduled scripts**.
-4. Run **connectors** — pull external data, create job cards in `box/jobs/`;
-   then clean up stale jobs, create intake jobs for unjobbed inbox items
-   (UI memos, etc.), and occasionally queue a low-priority backfill job.
+4. Run **connectors** — pull external data, create job cards in
+   `_bookkeeping/jobs/`; then clean up stale jobs, create intake jobs for
+   unjobbed inbox items (UI memos, etc.), refresh the search index, and, when
+   the refresh succeeded, queue a low-priority `contains` backfill job if
+   searchable cards lack the field.
 5. **Process pending jobs** — one reactor cycle (skipping low-priority jobs).
 6. **Push** committed changes to the box's git remote (non-fatal).
 
@@ -34,7 +38,7 @@ fair umbrella name for one full pass; the reactor is its engine.
 
 The intake → triage → handle pipeline is the reference:
 [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
-(`store/archive/`), trash it (`bbx trash` → `store/trash/`), create an outbound
+(`_bookkeeping/archive/`), trash it (`bbx rm` → `_bookkeeping/trash/`), create an outbound
 card (sent at finalize), ask a question, update or link a resource, spawn a
 secondary artifact, or leave it batched for later. The decisions come from
 schema `instructions`, rules files, category rules on landmark cards, and
@@ -42,10 +46,10 @@ personality/guide cards (see `teaching.md`) — not from a hardcoded pipeline.
 
 ## The question loop
 
-When an agent can't proceed, it creates a question card in `box/questions/`:
+When an agent can't proceed, it creates a question card in `_bookkeeping/questions/`:
 `prompt`, `input` (select/text/confirm), `memo` for why it's asking, `context`
 refs to the cards being discussed, and a `directive` — instructions for what
-to do with the answer. When the user answers (web, CLI, or API), the system
+to do with the answer. When the user answers (web or `bbx answer`), the system
 creates a **follow-up job** from the directive (`src/schemas/question-followup-job.ts`);
 it does not resume the paused session — session-resume is chat's mechanism.
 

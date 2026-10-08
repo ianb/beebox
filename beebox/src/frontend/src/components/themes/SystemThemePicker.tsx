@@ -146,7 +146,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
       : (input.scope === "box" ? "This box has its own system theme." : "This landmark has its own system theme.")}</Text>
     {problemState.displayed !== null ? <ErrorText>{problemState.displayed}</ErrorText> : null}
     <ConfigProblems scope={input.scope} problems={query.data.configProblems} />
-    {!query.data.canEditCardThemes ? <Text size="xs" tone="muted">Only the box owner can change this setting.</Text> : null}
+    {!query.data.canEditCardThemes ? <Text size="xs" tone="muted">Sign in to change this setting.</Text> : null}
     {mutation.isPending ? <div role="status"><Hint>Saving system theme…</Hint></div> : null}
     {mutation.data?.commitWarning ? <div role="status"><ErrorText>{mutation.data.commitWarning}</ErrorText></div> : null}
     {mutation.error ? <Stack gap="xs"><ErrorText>Could not save system theme: {mutation.error.message}</ErrorText>

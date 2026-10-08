@@ -33,10 +33,12 @@ actions that refuse to proceed without a human present.
 **What leaves the machine.** Every agent turn sends its context to the model
 provider; there is no opt-out, because that is the product. If the owner
 chooses a GLM or OpenRouter model, that vendor is the provider for those
-turns, and its account settings govern retention. Voice goes to a
-transcription vendor you configure. Quick chat, if you use it, sends your
-message, your routing rules, and recent conversation text through OpenRouter to
-a routing model (TypeSafe) to choose a destination; the documentation says
+turns, and its account settings govern retention (for OpenRouter, the
+upstream host can change per request and the box cannot pin it). Voice goes to a
+transcription vendor you configure. Quick chat, the thought box on the box
+screen, sends your message, your routing rules, and recent conversation text
+through OpenRouter to a routing model (TypeSafe) to choose a destination, and
+posts the thought to a clear choice without asking; the documentation says
 this is not a zero-retention guarantee, and leaving the OpenRouter key
 ungranted avoids it while ordinary chat keeps working. If you opt in to the judging model for filing documents, the prepared text of
 each item and your filing rules go the same way, and a record of each decision
@@ -50,8 +52,15 @@ Telegram, web push, and publishing send data only if you connect them. A
 published site is stored and served by the Cloudflare account you connect, and
 is visible to whoever has its address. Gmail access is limited to
 reading and drafting; the system never asks for permission to send mail on
-its own. The documentation states that the running system sends no usage
-tracking, analytics, crash reports, or update checks.
+its own. Bee Box's own code sends no usage tracking, analytics,
+crash reports, or update checks. The coding agent it runs is the exception.
+Claude Code, on Claude models, sends its own usage metrics to Anthropic (which
+Anthropic documents as excluding code, prompts, and file paths) and, for Pro
+and Max sign-ins, redacted error reports to an error-tracking vendor; both are
+on by default and the owner can turn them off per box in Admin. Runs on other
+vendors' models never send them. Codex has its own analytics to OpenAI, off
+unless the owner turns them on, because they include hashes of the lines each
+change adds.
 
 **Authentication is always on.** Every route sits behind a login wall, with
 no flag that disables it. A box with no member list is owner-only.

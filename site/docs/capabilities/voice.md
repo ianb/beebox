@@ -12,7 +12,9 @@ phone, not a bolt-on to typing.
 **What it does for you**
 
 - Dictate a chat message with spoken controls: say "send message," "erase
-  message," or "microphone off" instead of reaching for the screen.
+  message," or "microphone off" instead of reaching for the screen. "Send
+  checkpoint" sends what you have so far and tells the agent the message is
+  partial, so it does not answer yet and the next message continues it.
 - Keeps dictating through a brief network drop or the microphone getting
   grabbed by something else, instead of losing what you said.
 - A narration mode for long, loose voice dumps: the box stays quiet,
@@ -26,7 +28,10 @@ phone, not a bolt-on to typing.
   pacing, and emphasis for each spoken reply, not just one fixed narrator.
 - Short sounds (earcons) mark recording start, stop, failure, and send, so
   you know the state of the microphone without looking.
-- On the phone, speech recognition runs on the device itself.
+- On the phone, speech recognition runs on the device itself. On iOS 26 the
+  high-quality pass over the recording can run there too, so the recording is
+  not sent to the box for transcription (it still goes to the box when you ask
+  for speakers to be told apart).
 - Your exact spoken words are kept as a quote when the agent turns them into
   a card or note, not smoothed into the agent's own phrasing. See
   [provenance.md](provenance.md).
@@ -36,7 +41,8 @@ phone, not a bolt-on to typing.
 A transcription vendor key for accurate, high-quality transcription: OpenAI,
 Mistral, or Deepgram. A microphone, in the browser or on the phone. The
 iPhone app for on-device speech recognition. A text-to-speech provider for
-spoken replies: OpenAI, or Gemini through OpenRouter. See
+spoken replies: OpenAI, or Gemini with a Google Gemini key. On desktop browsers a spoken reply starts
+playing as its first part arrives rather than after the whole clip is made. See
 [../install/index.md](../install/index.md).
 
 **How it works, briefly**

@@ -25,7 +25,9 @@ The system's relationship with the user evolves (design intent, correct but
 Transitions happen through answers that teach: a one-time "yes, send it," a
 "yes, and don't ask again for this sender" escalation, or an explicit standing
 instruction. Learned trust gets recorded in rules/guide material so the
-escalation persists. Keep this as the umbrella principle when building
+escalation persists. (Shipped 2026-07: a question's `learning:` field names
+a guide, briefing, or personality sink, and the follow-up job records the
+answer there as a `basis: user-stated` belief — [`../questions.md`](../questions.md).) Keep this as the umbrella principle when building
 approval flows; it is design to fill, not history.
 
 ## Three confidence vocabularies
