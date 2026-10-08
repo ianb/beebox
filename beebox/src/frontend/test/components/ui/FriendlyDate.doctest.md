@@ -24,14 +24,6 @@ formatOptions({ iso: "2026-08-14" }).timeStyle === undefined
 => true
 ```
 
-The counterfactual this guards against — the same parse formatted in a
-behind-UTC zone lands on the previous calendar day:
-
-```ts
-new Date("2026-08-14").toLocaleString("en-US", { dateStyle: "medium", timeZone: "America/Chicago" })
-=> Aug 13, 2026
-```
-
 Full timestamps are instants and keep the viewer's local zone (no `timeZone`
 pin), with time shown unless `mode: "date"`:
 

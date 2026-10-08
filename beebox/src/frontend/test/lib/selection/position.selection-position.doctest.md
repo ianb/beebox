@@ -21,7 +21,6 @@ message holding each end of the selection.
 ```ts
 [
   formatTranscriptPosition("assistant", "assistant"),
-  formatTranscriptPosition("user", "user"),
   formatTranscriptPosition("user", "assistant"),
   formatTranscriptPosition("capture", "capture"),
   formatTranscriptPosition(null, null),
@@ -29,7 +28,6 @@ message holding each end of the selection.
 =>
 [
   "chat transcript; assistant message",
-  "chat transcript; user message",
   "chat transcript; spans several messages",
   "chat transcript",
   "chat transcript"

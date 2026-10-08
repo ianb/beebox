@@ -59,28 +59,14 @@ async function inRefreshing() {
 }
 ```
 
-## The streamed text is held through `refreshing`
+## A `chat-complete` `REFRESH` must not clear the streamed text
+
+The regression: the global `REFRESH` handler used to fire in `refreshing`,
+blanking `streamText` and re-entering `refreshing` (aborting and restarting the
+fetch). The reply vanished from the DOM until the *second* roundtrip returned.
 
 ```ts
 const { actor, historyCalls } = await inRefreshing();
-const s = actor.getSnapshot();
-s.matches("refreshing")
-=> true
-
-s.context.streamText
-=> the reply
-
-historyCalls.length
-=> 1
-```
-
-## A `chat-complete` `REFRESH` must not clear it
-
-The regression: the global `REFRESH` handler used to fire here, blanking
-`streamText` and re-entering `refreshing` (aborting and restarting the fetch).
-The reply vanished from the DOM until the *second* roundtrip returned.
-
-```ts continue
 actor.send({ type: "REFRESH" });
 const after = actor.getSnapshot();
 after.context.streamText

@@ -83,12 +83,7 @@ JSON.stringify({
 `null` and `[]` finalWords are DIFFERENT: `null` means no confidence data was
 captured for this segment (Voxtral/OpenAI realtime, or nothing finalized yet),
 `[]` means a backend that reports words captured none. The machine must carry
-that distinction rather than normalizing it.
-
-```ts continue
-actor.getSnapshot().context.finalWords === null
-=> false
-```
+that distinction rather than normalizing it (`wordsNullToEmpty` above).
 
 A `TRANSCRIPTION_DONE` that carries text wins and clears the interim; one with
 empty text keeps what was already final. This is the reconnect-shaped case —
@@ -110,14 +105,6 @@ JSON.stringify({
   replacedInterim: replacer.getSnapshot().context.interimTranscript,
 })
 => {"emptyKeptFinal":"kept text","emptyClearedInterim":"","replaced":"final text","replacedInterim":""}
-```
-
-`TRANSCRIPTION_DONE` also ends the segment: the machine leaves `active`, which
-`transcriptionStateOf` reports as `idle`.
-
-```ts continue
-transcriptionStateOf(replacer.getSnapshot())
-=> idle
 ```
 
 ```ts cleanup

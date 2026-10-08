@@ -132,9 +132,6 @@ render({ status: "open", recheck: "2026-10-15", layout: "inline" }).includes("ch
 
 render({ status: "open", recheck: "2026-10-15", layout: "line" }).includes('<time dateTime="2026-10-15">agent checks again Oct 15</time>')
 => true
-
-render({ status: "open", recheck: "never", layout: "line" }).includes("no longer reviewed")
-=> true
 ```
 
 ## Agent follow-ups

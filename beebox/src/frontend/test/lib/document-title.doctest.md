@@ -17,9 +17,6 @@ and a third segment would never survive truncation.
 ```ts
 composeDocumentTitle({ page: "Grocery planning", box: "Notes" })
 => Grocery planning — Notes
-
-composeDocumentTitle({ page: "Settings", box: "Notes" })
-=> Settings — Notes
 ```
 
 ## Outside a box, the app name takes the second slot

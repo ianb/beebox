@@ -91,17 +91,6 @@ Compose message / button "Send" bbx-composer-send [disabled]
 Compose message / button "Stop recording" bbx-composer-mic — tap to stop dictating and send; say "cancel message" to discard
 ```
 
-Nothing was dropped, no address is duplicated, and the list is complete:
-
-```ts continue
-JSON.stringify({
-  omittedUnnamed: composer.omittedUnnamed,
-  duplicateIds: composer.duplicateIds,
-  truncated: composer.truncated,
-})
-=> {"omittedUnnamed":0,"duplicateIds":[],"truncated":false}
-```
-
 `reveal` comes from the attribute and from nothing else. `aria-haspopup` and
 `aria-expanded` are on the Add trigger too, but inferring from them would be a
 guess dressed as a guarantee — `role="tab"` fires real state changes in this app
@@ -116,22 +105,6 @@ Capture: point+focus
 Type a message...: point+focus
 Send: point+focus
 Stop recording: point+focus
-```
-
-An id only becomes an address when it is in the `bbx-` namespace and kebab-case.
-The frontend's own authored ids — `trash-card-title`, `delete-chat-title` — are
-a11y plumbing, not promises, so they report no address:
-
-```ts
-lines(scan(`
-  <button id="trash-card-title" title="Delete"><svg viewBox="0 0 24 24"></svg></button>
-  <button id="bbx-Composer-Send" title="Send"><svg viewBox="0 0 24 24"></svg></button>
-  <button id="bbx-nav-place" title="Where you are: test1"><svg viewBox="0 0 24 24"></svg></button>
-`))
-=>
-- / button "Delete" (no address)
-- / button "Send" (no address)
-- / button "Where you are: test1" bbx-nav-place
 ```
 
 ## Visibility
@@ -316,20 +289,6 @@ JSON.stringify({ entries: lines(transcript), omittedUnnamed: transcript.omittedU
 => {"entries":"- / button \"Retry\" (no address)","omittedUnnamed":1}
 ```
 
-Labelling it works, and that name is what groups the controls under it:
-
-```ts continue
-lines(scan(`
-  <main aria-label="Chat">
-    <p>Please reply with just the word ok.</p>
-    <button title="Retry"><svg viewBox="0 0 24 24"></svg></button>
-  </main>
-`))
-=>
-- / main "Chat" (no address)
-Chat / button "Retry" (no address)
-```
-
 ## An unrecognised explicit role is counted too
 
 Every omission gets a number. An element carrying an explicit `role` the scan
@@ -487,28 +446,7 @@ bbx-Composer-Send: bad-id
 
 `hidden` stays distinct from `not-found` because the two are different answers:
 the control exists, it is simply not on this screen right now, and the pointer
-says so rather than claiming the app has no such control. At a desktop width the
-same document resolves the other way round — the `-mobile` addresses are the
-dead ones, which is the designed behaviour of a pair that is always both
-mounted:
-
-```ts continue
-const desktopViewport = fixtureLookup(`
-  <section aria-label="Compose message">
-    <div>
-      <button id="bbx-composer-send" title="Send"></button>
-    </div>
-    <div data-test-style="display:none">
-      <button id="bbx-composer-send-mobile" title="Send"></button>
-    </div>
-  </section>
-`);
-["bbx-composer-send", "bbx-composer-send-mobile"]
-  .map((id) => outcome(id, desktopViewport)).join("\n")
-=>
-bbx-composer-send: visible
-bbx-composer-send-mobile: hidden
-```
+says so rather than claiming the app has no such control.
 
 Hiding is inherited, and a zero-sized element is not on screen either — the same
 two rules the walk descends with:

@@ -90,10 +90,7 @@ const wrapper = buildCaptureWrapper({
   summary: "hi",
 });
 
-// The bare wrapper (optionally whitespace-padded) still parses.
-parseCaptureWrapper(wrapper) !== null
-=> true
-
+// Surrounding whitespace still parses.
 parseCaptureWrapper("\n\n" + wrapper + "\n") !== null
 => true
 

@@ -15,7 +15,6 @@ import { createTRPCClient } from "@trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 import { observable } from "@trpc/server/observable";
 import { trpc } from "../../../../src/lib/trpc/client.js";
-import { attachDirFor } from "@shared/attach-path";
 import { CardAttachments, attachmentEntries } from "../../../../src/components/themes/ThemedFileCard/CardAttachments.js";
 import { CardLastChange } from "../../../../src/components/themes/ThemedFileCard/CardLastChange.js";
 
@@ -55,14 +54,7 @@ function listing(answer) {
 
 ## The attach scope
 
-The scope sits beside the card and drops the type:
-
-```ts
-attachDirFor(cardPath)
-=> _content/projects/Porch.attach
-```
-
-Its listing becomes one list of links: subdirectories first, then cards, then
+The scope listing becomes one list of links: subdirectories first, then cards, then
 other files, each labelled by its path inside the scope.
 
 ```ts

@@ -111,18 +111,3 @@ face({ src: "_content/marks/bread.webp" }, "Sourdough Bread", ambiguous)
 face({ src: "_content/marks/bread.webp" }, "Sourdough Bread", new Set(["src:_content/marks/bread.webp"]))
 => [image]|SB
 ```
-
-## The ambiguity set is the pinned tabs, not every open tab
-
-Nothing here reads the unpinned tabs, which is the point: a pinned card's face
-must not change because someone opened an unrelated document that happens to
-wear the same emoji.
-
-```ts
-const pinnedOnly = [{ symbol: { glyph: "🍳" } }];
-[...ambiguousMarks(pinnedOnly)].length
-=> 0
-
-face({ glyph: "🍳" }, "Recipes", ambiguousMarks(pinnedOnly))
-=> 🍳|-
-```

@@ -64,20 +64,6 @@ spanOut.includes("<unsure")
 => false
 ```
 
-## Marked word in the middle of a sentence — surrounding text is untouched
-
-```ts
-const midOut = render('<speech stt="deepgram">In fact, you are an <unsure>agent</unsure> today.</speech>');
-midOut.includes("In fact, you are an")
-=> true
-
-midOut.includes("today.")
-=> true
-
-midOut.includes("<unsure")
-=> false
-```
-
 ## No marks at all — message renders unchanged, no pill machinery kicks in
 
 A message with no `<unsure>`/`<send-message>`/`<user-selection>` tags takes

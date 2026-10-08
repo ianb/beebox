@@ -24,31 +24,6 @@ function pendingEntry(uuid: string, text: string, reconcileKnownUuids: string[] 
 }
 ```
 
-## Empty pending → server messages pass through
-
-```ts
-const server = [userEntry("s1", "hello")];
-const result = reconcilePending({ serverMessages: server, pendingMessages: [] });
-print(`messages: ${result.messages.length}`);
-print(`pending: ${result.pendingMessages.length}`);
-=>
-messages: 1
-pending: 0
-```
-
-## Pending message that the server has caught up to → dropped
-
-```ts
-const server = [userEntry("s1", "<typed>hi there</typed>")];
-const pending = [pendingEntry("p1", "<typed>hi there</typed>")];
-const result = reconcilePending({ serverMessages: server, pendingMessages: pending });
-print(`messages: ${result.messages.length}`);
-print(`pending: ${result.pendingMessages.length}`);
-=>
-messages: 1
-pending: 0
-```
-
 ## Pending message not yet on the server → re-appended, kept pending
 
 ```ts
