@@ -51,6 +51,13 @@
 }
 /* Chrome owns the common desk and its saturated material palette. */
 .bbx-box-presentation {
+  /* Reset per presentation so a nested preview never inherits the page's
+     theme tokens. */
+  --bbx-desk-pattern: none;
+  --bbx-selection: initial;
+  --bbx-selection-ink: initial;
+  --bbx-selection-code: initial;
+  --bbx-selection-code-ink: initial;
   --bbx-desk-background: #e4e0d9;
   background: var(--bbx-desk-pattern, none), var(--bbx-desk-background);
 }
