@@ -85,13 +85,13 @@ Timing currently reads only Claude root-chat transcripts and measures from a use
 message to the first assistant text, not completion. Scoped chats are excluded. Missing timing is unavailable, not zero
 waiting; Codex waits must be reported separately from observed browser evidence.
 
-## Assets are not in the repo
+## Assets
 
-`journeys/*/assets/` is gitignored. The material so far is real photographs of someone's
-home and mail anonymized from a real family's, and none of it enters a source-available
-repository without the boxholder's review. The `journey.yaml` that needs them *is*
-tracked, and `prepare.ts` fails naming any that are absent — so a journey is never
-half-provisioned by a missing file.
+Reviewed photographs are committed (B-inventory's two tray photos). Anonymized mail
+derived from a real family's inbox stays out until the boxholder has read it; its
+`assets/` directory is gitignored (`.gitignore` names each one). Either way, keep asset
+content out of reports and issues. `prepare.ts` fails naming any asset that is absent, so
+a journey is never half-provisioned by a missing file.
 
 ## The rules that make the output worth reading
 
