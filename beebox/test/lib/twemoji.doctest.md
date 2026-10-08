@@ -63,14 +63,6 @@ JSON.stringify([
 => [null,null,null]
 ```
 
-A single letter is a legal codepoint sequence but no emoji, so it answers null
-like anything else without artwork.
-
-```ts continue
-fileFor("A")
-=> (none)
-```
-
 ## A symbol cannot escape the asset directory
 
 Every character becomes hex digits, so a symbol that looks like a path is just

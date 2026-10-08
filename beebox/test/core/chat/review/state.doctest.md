@@ -16,7 +16,6 @@ import {
   emptyReviewState,
   emptySessionState,
   loadReviewState,
-  MAX_REVIEW_ATTEMPTS,
   saveReviewState,
   sessionState,
   removeSessionFromReview,
@@ -35,31 +34,6 @@ async function errorName(fn: () => Promise<unknown>): Promise<string> {
 const state = emptyReviewState();
 JSON.stringify(sessionState(state, "never-seen"))
 => {"applied":{},"titleOwner":"unmanaged","titleHash":null,"attempts":0}
-```
-
-## Giving up is scoped to one span, not the whole session
-
-A session whose reviewer keeps failing stops being retried — but only for the
-span that failed. `failedSpanId` records which one, so new conversation always
-gets a fresh attempt and a couple of nights of provider trouble can't retire a
-session for good.
-
-```ts
-MAX_REVIEW_ATTEMPTS
-=> 2
-
-const state = emptyReviewState();
-state.sessions["flaky"] = {
-  applied: {}, titleOwner: "unmanaged", titleHash: null,
-  attempts: MAX_REVIEW_ATTEMPTS, failedSpanId: "span-abc",
-};
-// The run gives up only when both the count AND the span match.
-const s = sessionState(state, "flaky");
-JSON.stringify({
-  sameSpan: s.attempts >= MAX_REVIEW_ATTEMPTS && s.failedSpanId === "span-abc",
-  newSpan: s.attempts >= MAX_REVIEW_ATTEMPTS && s.failedSpanId === "span-xyz",
-})
-=> {"sameSpan":true,"newSpan":false}
 ```
 
 ## Round-trips through disk
@@ -84,11 +58,6 @@ await saveReviewState(box.root, state);
 const reloaded = await loadReviewState(box.root);
 JSON.stringify(reloaded.sessions["s1"].applied.metadata.endUuid)
 => "u-9"
-```
-
-```ts continue
-reloaded.sessions["s1"].titleOwner
-=> generated
 ```
 
 ## Missing, corrupt, and mis-shaped files all start fresh

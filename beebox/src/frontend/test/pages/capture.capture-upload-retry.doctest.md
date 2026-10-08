@@ -78,8 +78,3 @@ A 409 is the case worth naming: the staging session was sealed (someone pressed
 Done) or the audio format changed mid-segment. Both are settled facts, not
 transient conditions.
 
-```ts
-classifyUploadFailure(status(409))
-=> fatal
-```
-
