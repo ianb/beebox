@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-08T05:33:54Z
+Generated: 2026-10-08T21:50:12Z
 Total documents: 481
 
 ## Issues
@@ -698,7 +698,7 @@ Referenced by:
 - docs/security-report.md:392 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
-- ../CLAUDE.md:62 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
+- ../CLAUDE.md:73 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
 - ../bin/CLAUDE.md:186 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:38 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
@@ -888,7 +888,7 @@ Title: "Box work from the dev repo" | 110 lines | current reference
 Referenced by:
 - CLAUDE.md:47 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
 - docs/guides.md:34 (link) — | Box work: running against the test box, throwaway boxes, and production from the dev repo | [box-work](box-work.md) |
-- docs/testing.md:87 (link) — each lives and what not to touch: [box work](box-work.md).
+- docs/testing.md:92 (link) — each lives and what not to touch: [box work](box-work.md).
 - docs/testing/knowledge-audits.md:121 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
 - ../.claude/skills/box-work/SKILL.md:8 (mention) — Read `beebox/docs/box-work.md` for the task at hand. Three rules apply before anything runs:
 - ../CLAUDE.md:20 (link) — Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo instructions. The primary test box is `~/
@@ -958,7 +958,7 @@ Referenced by:
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:552 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server/operations.md:176 (link) — For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-l
-- docs/testing.md:78 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
+- docs/testing.md:83 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
 - frontend.md:134 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
 - ../.claude/skills/bbx-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 - ../issues/closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md:83 (mention) — entries land in the same sink tagged `[ios]` (`docs/client-debug-log.md`). If
@@ -1250,7 +1250,7 @@ Referenced by:
 Title: "Glossary" | 92 lines | current reference
 
 Referenced by:
-- docs/design/trust.md:42 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
+- docs/design/trust.md:44 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/guides.md:55 (link) — | Glossary | [glossary](glossary.md) |
 - docs/implemented-plans/design-reconciliation.md:25 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/implemented-plans/docs-reorg.gap-analysis.md:146 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
@@ -1544,7 +1544,7 @@ Referenced by:
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/box-glm-provider.md:76 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
 - ../issues/closed/bugs/2026-10-06-third-party-engine-privacy-telemetry-and-security-report.md:45 (mention) — `beebox/docs/model-policy.md:175-177`). Host choice, training, and retention
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:53 (mention) — (`docs/model-policy.md`). [medium]
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:72 (mention) — (`docs/model-policy.md`). [medium]
 - ../issues/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:34 (mention) — an unpinned box uses the strong tier (`docs/model-policy.md`).
 
 References:
@@ -1636,8 +1636,8 @@ Referenced by:
 - docs/implemented-plans/publication-card-home.md:163 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-pages-superseded.md:10 (link) — > see [publishing](../publishing.md) and
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:68 (mention) — (`docs/publishing.md`). [high]
 - ../issues/closed/features/2026-07-19-publish-pages-resume.md:10 (mention) — > Closed 2026-10-02 as `superseded`: the boxholder retired the legacy publication flow (`bbx pub draft`/`go`/`ls`/`revok
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:49 (mention) — (`docs/publishing.md`). [high]
 
 References:
 - → docs/box/publishing.md (link)
@@ -1647,7 +1647,7 @@ References:
 Title: "Questions" | 340 lines | current reference
 
 Referenced by:
-- docs/design/trust.md:30 (link) — answer there as a `basis: user-stated` belief — [`../questions.md`](../questions.md).) Keep this as the umbrella princip
+- docs/design/trust.md:32 (link) — answer there as a `basis: user-stated` belief — [`../questions.md`](../questions.md).) Keep this as the umbrella princip
 - docs/guides.md:42 (link) — | Questions: the question subsystem | [questions](questions.md) |
 - docs/implemented-plans/doc-structure.md:546 (mention) — Results) fit subsystem docs like `questions.md` as well as it fits tiers?
 - docs/implemented-plans/questions-end-to-end.md:465 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
@@ -1692,7 +1692,7 @@ Referenced by:
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:96 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
-- ../CLAUDE.md:58 (link) — Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is t
+- ../CLAUDE.md:69 (link) — Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is t
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:25 (mention) — - **`docs/README.md` is deleted.** It is a documentation map that mostly
 - ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:16 (mention) — > as the search path) now live in `beebox/docs/README.md` "Organizing
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:38 (mention) — addressed (`docs/README.md` says so), so an invitee browsing `docs/`
@@ -1801,7 +1801,7 @@ Title: "Security overview" | 327 lines | current reference
 
 Referenced by:
 - README.md:95 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
-- docs/design/identity.md:37 (link) — [`../security-overview.md`](../security-overview.md). Identity beyond login
+- docs/design/identity.md:39 (link) — [`../security-overview.md`](../security-overview.md). Identity beyond login
 - docs/guides.md:49 (link) — | Security overview, and the structured report behind it | [security-overview](security-overview.md), [security-report](
 - docs/implemented-plans/jev-document-triage.md:552 (mention) — `security-report.md` and `security-overview.md`. It does not re-audit unrelated
 - docs/implemented-plans/webapp-production-mode.md:239 (mention) — `security-overview.md` alone unless the rubric finds a reader-facing posture
@@ -1920,7 +1920,7 @@ References:
 
 #### docs/testing.md
 
-Title: "Testing" | 113 lines | current reference
+Title: "Testing" | 118 lines | current reference
 
 Referenced by:
 - CLAUDE.md:19 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
@@ -1986,6 +1986,7 @@ Referenced by:
 - docs/plans/workspace-pane-controls.md:476 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
 - docs/unimplemented-plans/publish-pages-superseded.md:277 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
 - ../.claude/skills/bbx-plan/TEMPLATE.md:176 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
+- ../.claude/skills/cross-model/SKILL.md:33 (mention) — branches, parsing, money, or security gets none (`docs/testing.md`).
 - ../.claude/skills/doctest/SKILL.md:10 (link) — right instrument at all: [choosing an instrument](../../../beebox/docs/testing.md#choosing-an-instrument).
 - ../.claude/skills/field-probe/SKILL.md:3 (mention) — description: Diagnose bugs confined to an inaccessible environment, such as a phone, production, or real-device gestures
 - ../.claude/skills/field-probe/SKILL.md:13 (link) — end. It is the field arm of [reproducing a bug](../../../beebox/docs/testing.md#reproducing-a-bug):
@@ -1996,6 +1997,7 @@ Referenced by:
 - ../issues/closed/features/2026-08-06-agent-driven-integration-tests.md:71 (mention) — `docs/testing.md`) already does multi-step end-to-end fixtures with checkpoints and
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:55 (mention) — (`content/`-nested, `shapeVersion: 2`) layout. `docs/testing.md` was updated to
 - ../issues/code-quality/2026-08-09-src-untested-by-import.md:55 (mention) — `beebox/docs/testing.md` is explicit that tests are not for coverage
+- ../issues/code-quality/2026-10-08-test-volume-sweep.md:22 (mention) — Policy changed the same day (`docs/testing.md`, cross-model skill): no test
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:24 (mention) — `docs/testing.md`): which doctest tier to choose, what to fake vs. let run
 - ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md:87 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/exploration/2026-08-12-evaluate-impeccable-skill.md:46 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
@@ -2059,7 +2061,7 @@ Referenced by:
 - docs/design/processing.md:40 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:92 (link) — [`../triage.md`](../triage.md)). Best effort for the moment; more will be
 - docs/design/teaching.md:24 (link) — rules at the destination ([`../triage.md`](../triage.md)).
-- docs/design/trust.md:40 (link) — ([`../triage.md`](../triage.md)).
+- docs/design/trust.md:42 (link) — ([`../triage.md`](../triage.md)).
 - docs/guides.md:41 (link) — | Triage: the intake pipeline | [triage](triage.md) |
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/docs-reorg.md:339 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
@@ -2098,10 +2100,10 @@ Title: "What Is This Thing?" | 66 lines | current reference
 
 Referenced by:
 - docs/architecture/CLAUDE.md:7 (mention) — The user-facing chapters themselves start with **`01-what-is-this.md`** and **`02-cards-and-memory.md`**.
-- docs/design/identity.md:32 (mention) — multiple people (the household box of `../architecture/01-what-is-this.md` is
+- docs/design/identity.md:34 (mention) — multiple people (the household box of `../architecture/01-what-is-this.md` is
 - docs/implemented-plans/design-reconciliation.md:39 (mention) — - **Reality/tension** — architecture/01-what-is-this.md:11: "This group chat is
 - docs/plans/agent-docs.md:376 (mention) — - architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:18 (mention) — - **Capture pages** (`01-what-is-this.md:17,39,59`, `outline.md:13,18`,
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:14 (mention) — spirit-phrased last row, in `01-what-is-this.md`, `02-cards-and-memory.md`,
 
 #### docs/architecture/02-cards-and-memory.md
 
@@ -2111,6 +2113,7 @@ Referenced by:
 - docs/architecture/CLAUDE.md:7 (mention) — The user-facing chapters themselves start with **`01-what-is-this.md`** and **`02-cards-and-memory.md`**.
 - docs/implemented-plans/design-reconciliation.md:310 (mention) — history" (02-cards-and-memory.md:96; also 02:72-77, 83-91). The code agrees
 - docs/plans/agent-docs.md:376 (mention) — - architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:14 (mention) — spirit-phrased last row, in `01-what-is-this.md`, `02-cards-and-memory.md`,
 
 #### docs/architecture/CLAUDE.md
 
@@ -2149,8 +2152,8 @@ Referenced by:
 - docs/implemented-plans/design-reconciliation.md:24 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/implemented-plans/docs-reorg.md:78 (mention) — `architecture/outline.md` (75%-unwritten writing plan),
 - docs/unimplemented-plans/publish-pages-superseded.md:48 (mention) — - **The aspiration this plan implements.** `docs/architecture/outline.md:166` (James's build journal story): *"The box t
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:15 (mention) — `outline.md`, `spirit.md`, and `writing-style.md`: capture pages became the
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:19 (mention) — (`architecture/outline.md`).
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:18 (mention) — - **Capture pages** (`01-what-is-this.md:17,39,59`, `outline.md:13,18`,
 
 References:
 - → docs/architecture/spirit.md (mention)
@@ -2173,8 +2176,8 @@ Referenced by:
 - docs/implemented-plans/questions-end-to-end.md:373 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:31 (mention) — - **Every change a commit** (`01:61`, `spirit.md:29`, `02:85`): chat
-- ../issues/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:61 (mention) — covers proactivity as ambition but never states the question; spirit.md
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:15 (mention) — `outline.md`, `spirit.md`, and `writing-style.md`: capture pages became the
+- ../issues/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:63 (mention) — covers proactivity as ambition but never states the question; spirit.md
 
 #### docs/architecture/writing-style.md
 
@@ -2182,7 +2185,7 @@ Title: "Writing Style Guide" | 95 lines | current reference
 
 Referenced by:
 - docs/architecture/CLAUDE.md:16 (mention) — - **`writing-style.md`** — Writing style guide. Tone, structure, common pitfalls, corrections from the editing process.
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:19 (mention) — `writing-style.md:50`): standalone capture pages. `/capture` redirects to
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:15 (mention) — `outline.md`, `spirit.md`, and `writing-style.md`: capture pages became the
 
 References:
 - → docs/architecture/spirit.md (mention)
@@ -2722,7 +2725,7 @@ Title: "Durability and provenance" | 41 lines | design rationale
 Referenced by:
 - docs/design/README.md:24 (link) — - [`durability-and-provenance.md`](durability-and-provenance.md) — committing makes it durable and real (with the chat-m
 - docs/design/representation.md:42 (mention) — `durability-and-provenance.md`) preserves *where an idea came from* as it
-- docs/design/trust.md:14 (mention) — commit history (`durability-and-provenance.md`).
+- docs/design/trust.md:16 (mention) — commit history (`durability-and-provenance.md`).
 - docs/implemented-plans/mvp-implementation-guide.md:21 (mention) — > `../design/durability-and-provenance.md`.
 
 #### docs/design/extensibility.md
@@ -2735,7 +2738,7 @@ Referenced by:
 - docs/reports/activities-retrospective-2026-05-14.md:5 (link) — [feature composition](../design/extensibility.md).
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../implemented-
 - docs/unimplemented-plans/design-vision-superseded.md:14 (mention) — > `../design/extensibility.md` (ruling 18 — active plan, neither knowledge nor
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:81 (mention) — - `extensibility.md:39`: the UI says "narration mode" and "Capture mode";
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:26 (mention) — present tense). `extensibility.md` already carried the modes note. Left: the
 - ../research/pai/README.md:101 (mention) — composition over plugins — `beebox/docs/design/extensibility.md`); lightweight satisfaction-signal capture (Ian prefers
 
 References:
@@ -2744,7 +2747,7 @@ References:
 
 #### docs/design/identity.md
 
-Title: "Identity — what Bee Box is" | 50 lines | design rationale
+Title: "Identity — what Bee Box is" | 52 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:21 (link) — - [`identity.md`](identity.md) — what this is: OS as the ambition, shared boxes (one sharing granularity each), web UI a
@@ -2753,7 +2756,7 @@ Referenced by:
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../implemented-
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > `../design/identity.md` (ruling 3); landmarks — the shipped role-bearing-card
 - docs/unimplemented-plans/publish-pages-superseded.md:49 (mention) — - **Identity ruling constraining the design.** `docs/design/identity.md:31-36`: *"A box has exactly **one granularity of
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:79 (mention) — - `identity.md:20` "Admin/OAuth stays shell": Admin has a card at
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:25 (mention) — `identity.md` (Admin card), and `interface-as-cards-background.md` (stale
 
 References:
 - → docs/architecture/spirit.md (mention)
@@ -2769,10 +2772,10 @@ Title: "Interaction model" | 59 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:22 (link) — - [`interaction-model.md`](interaction-model.md) — idle-by-default background engine AND definitely also a chatbot; proa
-- docs/design/identity.md:23 (mention) — continuous presence (see `interaction-model.md`).
+- docs/design/identity.md:25 (mention) — continuous presence (see `interaction-model.md`).
 - docs/design/teaching.md:35 (mention) — (see `interaction-model.md` on proactivity) but not built.
 - ../.claude/skills/bbx-design/SKILL.md:21 (mention) — current shape; `interaction-model.md` and `trust.md` matter most here.
-- ../issues/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:60 (mention) — attention tier) is stated only in the bbx-design skill. `interaction-model.md`
+- ../issues/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:62 (mention) — attention tier) is stated only in the bbx-design skill. `interaction-model.md`
 
 References:
 - → docs/scheduler.md (link)
@@ -2785,13 +2788,13 @@ References:
 
 #### docs/design/interface-as-cards-background.md
 
-Title: "Interface as cards — earlier design background" | 480 lines | design rationale
+Title: "Interface as cards — earlier design background" | 485 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:18 (link) — - [Interface-as-cards background](interface-as-cards-background.md) — earlier exploration preserved for context; the lin
 - docs/plans/interface-as-cards.md:25 (link) — The [earlier design](../design/interface-as-cards-background.md) preserves the
 - docs/plans/interface-cards-consolidation.md:152 (mention) — (`docs/design/interface-as-cards-background.md:299`: `Permission boundary`).
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:83 (mention) — - `interface-as-cards-background.md:283-287`: stale present tense
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:25 (mention) — `identity.md` (Admin card), and `interface-as-cards-background.md` (stale
 
 References:
 - → docs/plans/interface-as-cards.md (link)
@@ -2878,14 +2881,14 @@ References:
 
 #### docs/design/trust.md
 
-Title: "Trust and authorization" | 47 lines | design rationale
+Title: "Trust and authorization" | 58 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:25 (link) — - [`trust.md`](trust.md) — question → confirmation → automatic; paperwork lives on as schema process-fields; the three c
 - docs/implemented-plans/design-md-retired-sections.md:55 (mention) — process-fields; see `../design/trust.md`.*
 - ../.claude/skills/bbx-design/SKILL.md:21 (mention) — current shape; `interaction-model.md` and `trust.md` matter most here.
 - ../.claude/skills/bbx-design/TEMPLATE.md:42 (mention) — <!-- design/trust.md: question → confirmation → automatic. Per action the box
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:75 (mention) — - `trust.md:11-12`: `memo` and `directive` given as fields an agent must
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:24 (mention) — `trust.md` (optional `memo`/`directive`; full vocabulary list),
 - ../issues/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:52 (mention) — - **Vocabularies `trust.md` omits**: belief basis
 
 References:
@@ -3403,7 +3406,7 @@ Title: "Boxes as Packages v2 — beebox as a library" | 720 lines | shipped hist
 
 Referenced by:
 - README.md:25 (link) — live yet — see [`docs/implemented-plans/boxes-as-packages-v2.md`](docs/implemented-plans/boxes-as-packages-v2.md)
-- docs/design/identity.md:48 (mention) — (`../implemented-plans/boxes-as-packages-v2.md`, including the
+- docs/design/identity.md:50 (mention) — (`../implemented-plans/boxes-as-packages-v2.md`, including the
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`,
 - docs/implemented-plans/docs-reorg.md:49 (mention) — - **At least 5 plans are done-but-never-moved**: `boxes-as-packages-v2.md`
 - docs/implemented-plans/one-root-box-layout.md:53 (mention) — (`docs/implemented-plans/boxes-as-packages-v2.md`).
@@ -3510,7 +3513,7 @@ Referenced by:
 - docs/plans/ios-native-capture-mode.review.md:72 (mention) — - Doc references exist: `docs/implemented-plans/capture-mode.md`,
 - docs/unimplemented-plans/capture-pipeline-redesign.md:9 (link) — **Superseded by [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)** — that plan retired the `
 - ../issues/closed/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md:55 (mention) — capture-mode work (`beebox/docs/implemented-plans/capture-mode.md`):
-- ../issues/docs-and-chores/2026-10-08-architecture-narrative-rot.md:21 (mention) — (`implemented-plans/capture-mode.md`). [high]
+- ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:40 (mention) — (`implemented-plans/capture-mode.md`). [high]
 
 References:
 - → docs/plans/input-widget.md (link)
@@ -4976,7 +4979,7 @@ References:
 Title: "Nav as a card — first interface-as-cards slice" | 149 lines | shipped history | implemented
 
 Referenced by:
-- docs/design/interface-as-cards-background.md:296 (mention) — | Nav | curated `refs` card + per-entry overrides — **shipped 2026-07** (`docs/implemented-plans/nav-card.md`; nav form/
+- docs/design/interface-as-cards-background.md:301 (mention) — | Nav | curated `refs` card + per-entry overrides — **shipped 2026-07** (`docs/implemented-plans/nav-card.md`; nav form/
 - docs/implemented-plans/top-nav-ia.md:127 (mention) — and `docs/implemented-plans/nav-card.md` (card-driven nav — this plan
 
 References:
@@ -6676,7 +6679,7 @@ Title: "Chat husks — web chat sessions as cards (phase 1)" | 85 lines | propos
 
 Referenced by:
 - docs/chat.md:23 (link) — - Husk cards (`_content/chat/web/*.chat.card`) have no current reference; the design is the [chat husks plan](plans/chat
-- docs/design/interface-as-cards-background.md:300 (mention) — | Chat | husk card per session + chat view + the slot | Below. **Husks shipped 2026-07** (`docs/plans/chat-husks.md`): a
+- docs/design/interface-as-cards-background.md:305 (mention) — | Chat | husk card per session + chat view + the slot | Below. **Husks shipped 2026-07** (`docs/plans/chat-husks.md`): a
 - docs/implemented-plans/docs-reorg.md:43 (mention) — plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
 - ../issues/closed/bugs/2026-07-22-chat-history-dropdown-not-landmark-scoped.md:23 (mention) — per-boot `reconcileChatHusks` (see `docs/plans/chat-husks.md` § Phase 2b).
 
@@ -8322,7 +8325,7 @@ Title: "Real model calls" | 57 lines | current reference
 Referenced by:
 - docs/box-work.md:56 (mention) — calls](testing/real-models.md#where-the-keys-are). Frontend and iOS evidence
 - docs/testing.md:37 (link) — | [Real model calls](testing/real-models.md) | How does the real model or API behave, beyond what a fake shows? Experime
-- ../CLAUDE.md:36 (link) — Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys
+- ../CLAUDE.md:47 (link) — Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys
 
 References:
 - → docs/secrets.md (link)
@@ -8508,7 +8511,7 @@ References:
 Title: "Query cards — the "select and arrange cards" vocabulary" | 369 lines | past proposal | parked
 
 Referenced by:
-- docs/design/interface-as-cards-background.md:291 (mention) — | Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (
+- docs/design/interface-as-cards-background.md:296 (mention) — | Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (
 - docs/implemented-plans/docs-reorg.md:52 (mention) — (header claims unmerged branch; commits are on main), `query-cards.md`
 - docs/implemented-plans/todo-collection.md:85 (mention) — `docs/unimplemented-plans/query-cards.md:9-13`: *"too complex, too
 - docs/plans/collections-design-notes.md:15 (link) — [query-cards plan](../unimplemented-plans/query-cards.md), the
@@ -8694,7 +8697,7 @@ Title: "Connectors" | 27 lines
 
 Referenced by:
 - CLAUDE.md:43 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/conn
-- docs/glossary.md:56 (mention) — **connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Con
+- docs/glossary.md:56 (mention) — **connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive, Telegram) with the box filesy
 - docs/implemented-plans/chat-review.md:214 (mention) — re-injected before a connector sync rebuilds a card. `src/connectors/CLAUDE.md:19`:
 - docs/implemented-plans/doc-structure-connectors.md:50 (mention) — | calendar.md "Auth" | "unlike Gmail, which accepts app passwords" | Gmail uses the shared Google OAuth API (`gmail-setu
 - docs/implemented-plans/docs-reorg.gap-analysis.md:23 (mention) — module's own comment — not in `src/connectors/CLAUDE.md` or

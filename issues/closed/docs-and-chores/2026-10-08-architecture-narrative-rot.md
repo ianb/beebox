@@ -6,7 +6,26 @@ labels: [docs, design]
 filed-by: agent
 discovered-by: agent
 discovered-in: skills-review — review of docs/architecture and docs/design for rot (2026-10-08)
+resolution: implemented
 ---
+
+**Done 2026-10-08** (boxholder ruling: "just a bunch of accuracy things, just
+lots of fixes"). Fixed every row in "Claims that are now false" except the
+spirit-phrased last row, in `01-what-is-this.md`, `02-cards-and-memory.md`,
+`outline.md`, `spirit.md`, and `writing-style.md`: capture pages became the
+chat composer's capture mode; private-content claims removed; notifications
+are pushes to the boxholder on iPhone or browser at dot/quiet/loud; RSS
+removed; "every change a commit" became "most", chat messages excepted; the
+`list`/`event` types became a `doc` card with inline todos and `.ics`
+events; provenance requirement made conditional; XML, attachments, wakeup
+cycle, email forwarding, publishing, web-as-main-UI, agent engine, and
+question states corrected; the six-member chat became each person talking
+with the box plus one family Telegram group. Design docs: dated notes in
+`trust.md` (optional `memo`/`directive`; full vocabulary list),
+`identity.md` (Admin card), and `interface-as-cards-background.md` (stale
+present tense). `extensibility.md` already carried the modes note. Left: the
+`architecture-overview.png` diagram prompt still says "Capture Pages"
+(changing it forces an image regeneration).
 
 These are the boxholder's voice and were left unedited except for paths. Each
 item is a claim the code no longer matches, with the current truth. Rule on

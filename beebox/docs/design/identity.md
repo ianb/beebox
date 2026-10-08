@@ -17,8 +17,10 @@ Both, now (rulings 1, 6, 7):
   [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
   around it. The early framing of the web app as a debugging viewer that would
   "later split into a cleaner user-facing view" is fully out of date; the split
-  that actually exists is the permission boundary (Admin/OAuth stays shell;
-  everything else is product surface).
+  that actually exists is the permission boundary (OAuth stays shell;
+  everything else is product surface). (2026-10: Admin is a card too, at
+  `_config/interface/admin.card`; its authorization is still enforced in the
+  backend, not by the card.)
 - **Conversation and chat are important** — chat is the central page and a
   continuous presence (see `interaction-model.md`).
 - **The documents are the result and the main method of record.** The original

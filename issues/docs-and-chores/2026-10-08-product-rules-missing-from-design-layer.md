@@ -55,6 +55,8 @@ and egress has none).
   guidance); progress evidence `observed|inferred|self-report` with "no
   level without evidence"; procedure-run outcome
   `completed|failed|inconclusive`; question states; notification loudness.
+  Update 2026-10-08: listed in `trust.md` as a dated note under "Three
+  confidence vocabularies".
 - **Right place, right time**: the question a proactive behavior must answer
   before acting or showing (act, show, or stay quiet; which surface; which
   attention tier) is stated only in the bbx-design skill. `interaction-model.md`
