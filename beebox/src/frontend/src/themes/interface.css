@@ -28,14 +28,21 @@
 
 .bbx-interface-tabstrip > [role="none"] {
   align-items: stretch;
+  /* The compact row must not lose label height to a horizontal scrollbar. */
+  scrollbar-width: none;
   gap: 3px;
   padding: 6px 3px 0;
 }
 
+.bbx-interface-tabstrip > [role="none"]::-webkit-scrollbar {
+  display: none;
+}
+
 .bbx-interface-tab {
+  --bbx-tab-top-border: 1px;
   min-height: 34px;
   border-radius: 6px 6px 0 0;
-  border-top: 1px solid var(--bbx-edge);
+  border-top: var(--bbx-tab-top-border) solid var(--bbx-edge);
   border-left: 1px solid var(--bbx-edge);
   color: var(--bbx-ink);
   background-color: color-mix(in srgb, var(--bbx-paper) 88%, #e8e3da);
@@ -145,13 +152,11 @@
   margin-left: 4px;
 }
 .bbx-companion-desk[data-active-card] .bbx-interface-tab {
-  margin-top: 4px;
   border-bottom-width: 0;
+  /* Balance the decorative top edge so label and actions share the tab center. */
+  padding-bottom: var(--bbx-tab-top-border);
 }
 .bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"] {
-  margin-top: 0;
-  margin-bottom: -2px;
-  padding-top: 4px;
   z-index: 2;
 }
 .bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"] [role="tab"] {
