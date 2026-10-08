@@ -1,0 +1,113 @@
+/* A printed black stage with hard acrylic edges, not emitted-light effects. */
+.bbx-box-presentation[data-chrome-theme="electric-playground"],
+.bbx-themed-menu[data-chrome-theme="electric-playground"] {
+  --bbx-desk-background: transparent;
+  --bbx-desk-pattern: none;
+  --bbx-scene:
+    url("./art/electric-stage.svg") center bottom / cover no-repeat,
+    #08090f;
+  --bbx-toolbar-background:
+    repeating-linear-gradient(0deg, #ffffff06 0 1px, transparent 1px 4px),
+    linear-gradient(105deg, #182758, #11131e 62%);
+  --bbx-toolbar-ink: #fff7e4;
+  --bbx-toolbar-edge: #7790ee;
+  --bbx-toolbar-radius: 0 0 22px 3px;
+  --bbx-toolbar-shadow: 0 4px 0 #e49c2f, 0 7px 0 #08090f;
+  --bbx-composer-background:
+    repeating-linear-gradient(90deg, #ffffff09 0 1px, transparent 1px 5px),
+    #a62437;
+  --bbx-composer-ink: #fff9ed;
+  --bbx-composer-edge: #ffb29f;
+  --bbx-composer-radius: 5px 24px 5px 5px;
+  --bbx-composer-shadow:
+    inset 0 2px 0 #ffb29f,
+    inset 0 -5px 0 #721528,
+    5px 5px 0 #05060b;
+  --bbx-control-background: #fff0d6;
+  --bbx-control-ink: #40162d;
+  --bbx-control-radius: 3px 11px 3px 3px;
+  --bbx-send-background: #ffce4c;
+  --bbx-send-ink: #211424;
+  --bbx-chat-user-paper: #f2ceec;
+  --bbx-chat-user-ink: #33132d;
+  --bbx-chat-user-radius: 19px 3px 3px 3px;
+  --bbx-chat-reply-paper: #e4ebff;
+  --bbx-chat-reply-ink: #171f37;
+  --bbx-menu-paper: #f1e8f6;
+  --bbx-menu-ink: #271c36;
+  --bbx-menu-edge: #664696;
+  --bbx-menu-radius: 3px 18px 3px 3px;
+  --bbx-selection: #ffce4c;
+  --bbx-selection-ink: #211424;
+  --bbx-selection-code: #ffce4c;
+  --bbx-selection-code-ink: #211424;
+}
+
+/* The prism stock is opaque where people read, translucent at its edges. */
+.bbx-card-theme[data-card-theme="electric-playground"] {
+  --bbx-tab-radius: 10px 2px 0 0;
+  --bbx-paper: #e9edf9;
+  --bbx-ink: #1d2440;
+  --bbx-ink-soft: #4a4766;
+  --bbx-pen: #49349b;
+  --bbx-edge: #6865ae;
+  --bbx-underlay: #d4d4ee;
+  --bbx-font: "Avenir Next", Avenir, ui-sans-serif, system-ui, sans-serif;
+  --bbx-sheet-radius: 4px 27px 4px 4px;
+  --bbx-sheet-decoration:
+    linear-gradient(122deg, #ab80ec28 0 13%, transparent 13.1%) left top / 100% 100% no-repeat,
+    linear-gradient(305deg, #ec74b333 0 7%, transparent 7.1%) right bottom / 100% 100% no-repeat,
+    repeating-linear-gradient(0deg, #40479705 0 1px, transparent 1px 4px);
+  --bbx-sheet-shadow:
+    inset 3px 0 0 #e266b3,
+    inset 0 3px 0 #fff6d1,
+    4px 4px 0 #54499e,
+    7px 7px 0 #100e27;
+  --bbx-quote-paper: #dedafa;
+  --bbx-quote-layer-paper: #dedafa;
+  --bbx-blockquote-paper: #dedafa;
+  --bbx-blockquote-edge: 3px;
+  --bbx-blockquote-padding: 0.65em 0.85em;
+  --bbx-quote-radius: 2px 14px 2px 2px;
+  --bbx-link-decoration: underline;
+  --bbx-link-image: none;
+  --bbx-selection: #472875;
+  --bbx-selection-ink: #fff0d6;
+  --bbx-selection-code: #e9a9df;
+  --bbx-selection-code-ink: #211424;
+}
+
+/* Stock-specific details don't rotate, cut, or cover interactive content. */
+.bbx-card-surface[data-card-theme="electric-playground"] > .bbx-card-heading {
+  padding-top: 1.7rem;
+}
+
+.bbx-card-surface[data-card-theme="electric-playground"] .bbx-card-heading :is(h1, h2) {
+  letter-spacing: -0.035em;
+  font-weight: 800;
+}
+
+.bbx-card-theme[data-card-theme="electric-playground"] :is(th, code) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Decorations stay restrained behind content on the narrow stage. */
+@media (max-width: 639px) {
+  .bbx-box-presentation[data-chrome-theme="electric-playground"] {
+    --bbx-scene:
+      url("./art/electric-stage.svg") 56% bottom / auto 100% no-repeat,
+      #08090f;
+    --bbx-toolbar-radius: 0 0 12px 2px;
+    --bbx-toolbar-shadow: 0 3px 0 #e49c2f;
+    --bbx-composer-radius: 3px 17px 3px 3px;
+    --bbx-composer-shadow: inset 0 2px 0 #ffb29f, inset 0 -3px 0 #721528;
+  }
+
+  .bbx-card-theme[data-card-theme="electric-playground"] {
+    --bbx-sheet-radius: 3px 20px 3px 3px;
+    --bbx-sheet-shadow:
+      inset 2px 0 0 #e266b3,
+      inset 0 2px 0 #fff6d1,
+      2px 3px 0 #54499e;
+  }
+}

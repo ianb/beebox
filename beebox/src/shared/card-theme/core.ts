@@ -1,74 +1,10 @@
+import { THEME_CATALOG, type ThemeDescriptor } from "./catalog.js";
 import { z } from "zod";
 import { themePatternMatches, validateThemePattern } from "./pattern.js";
 
 export { themePatternMatches, validateThemePattern } from "./pattern.js";
 
-export const THEME_CATALOG = [
-  {
-    name: "plain",
-    label: "Flat",
-    stocks: ["neutral"],
-    defaultStock: "neutral",
-    quoteTreatment: "plain",
-    blockquoteTreatment: "plain",
-    chrome: true,
-    systemOnly: false,
-  },
-  {
-    name: "spectrum",
-    label: "Spectrum",
-    stocks: ["gradient"],
-    defaultStock: "gradient",
-    quoteTreatment: "plain",
-    blockquoteTreatment: "plain",
-    chrome: true,
-    systemOnly: true,
-  },
-  {
-    name: "paper",
-    label: "Paper",
-    stocks: ["cream", "manila", "blue"],
-    defaultStock: "cream",
-    quoteTreatment: "layered",
-    blockquoteTreatment: "layered",
-    chrome: true,
-    systemOnly: false,
-  },
-  {
-    name: "post-it",
-    label: "Sticky note",
-    stocks: ["yellow", "rose", "mint"],
-    defaultStock: "yellow",
-    quoteTreatment: "layered",
-    blockquoteTreatment: "layered",
-    chrome: false,
-    systemOnly: false,
-  },
-  {
-    name: "candy",
-    label: "Candy",
-    stocks: ["strawberry"],
-    defaultStock: "strawberry",
-    quoteTreatment: "plain",
-    blockquoteTreatment: "plain",
-    chrome: true,
-    systemOnly: true,
-  },
-  {
-    name: "letter-set",
-    label: "Letter set",
-    stocks: ["strawberry", "lemon", "sky"],
-    defaultStock: "strawberry",
-    quoteTreatment: "layered",
-    blockquoteTreatment: "layered",
-    chrome: false,
-    systemOnly: false,
-  },
-] as const;
-
-export type ThemeDescriptor = (typeof THEME_CATALOG)[number];
-export type ThemeName = ThemeDescriptor["name"];
-export type ThemeStock = ThemeDescriptor["stocks"][number];
+export { THEME_CATALOG, themeComposition, type ThemeDescriptor, type ThemeName, type ThemeStock } from "./catalog.js";
 
 /** The deliberately small persisted selector. Catalog membership is host-validated. */
 export const ThemeChoiceSchema = z.object({

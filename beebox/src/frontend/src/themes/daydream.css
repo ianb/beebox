@@ -1,0 +1,103 @@
+/* A sky of sweeping cloud banks and small, uneven starbursts. The artwork
+   lives around opaque reading sheets, never between text and its paper. */
+.bbx-box-presentation[data-chrome-theme="daydream"],
+.bbx-themed-menu[data-chrome-theme="daydream"] {
+  --bbx-desk-background: transparent;
+  --bbx-desk-pattern: none;
+  --bbx-scene:
+    url("./art/daydream-sparks.svg") center top / 640px 480px repeat,
+    url("./art/daydream-clouds.svg") center bottom / cover no-repeat,
+    radial-gradient(ellipse at 48% 68%, #ffe5ac 0, #f8add0 46%, #ed8fbd 100%);
+  --bbx-toolbar-background: #fff6fc;
+  --bbx-toolbar-ink: #4e2851;
+  --bbx-toolbar-edge: #af75aa;
+  --bbx-toolbar-radius: 0 0 26px 12px;
+  --bbx-toolbar-shadow: 0 5px 0 #bbabd9, 0 7px 0 #fff8fd;
+  --bbx-composer-background: #fffafd;
+  --bbx-composer-ink: #442743;
+  --bbx-composer-edge: #9672b1;
+  --bbx-composer-radius: 27px 27px 18px 27px;
+  --bbx-composer-shadow: 0 5px 0 #c6b3df, 0 8px 0 #fff7fc;
+  --bbx-control-background: #f6e6f6;
+  --bbx-control-ink: #58255b;
+  --bbx-control-radius: 18px 12px 17px 10px;
+  --bbx-send-background: #813969;
+  --bbx-send-ink: #ffffff;
+  --bbx-chat-user-paper: #fce5f1;
+  --bbx-chat-user-ink: #4c2848;
+  --bbx-chat-user-radius: 23px 23px 7px 23px;
+  --bbx-chat-reply-paper: #fffafd;
+  --bbx-chat-reply-ink: #442743;
+  --bbx-menu-paper: #fffafd;
+  --bbx-menu-ink: #442743;
+  --bbx-menu-edge: #ac82b4;
+  --bbx-menu-radius: 19px 12px 22px 14px;
+  --bbx-selection: #75346c;
+  --bbx-selection-ink: #ffffff;
+  --bbx-selection-code: #f7cce8;
+  --bbx-selection-code-ink: #442743;
+}
+
+.bbx-card-theme[data-card-theme="daydream"] {
+  --bbx-tab-radius: 20px 20px 5px 5px;
+  --bbx-paper: #fffafd;
+  --bbx-ink: #442743;
+  --bbx-ink-soft: #74516c;
+  --bbx-pen: #17657a;
+  --bbx-edge: #b18bbb;
+  --bbx-underlay: #e6d8f0;
+  --bbx-font: ui-rounded, "SF Pro Rounded", "Avenir Next", system-ui, sans-serif;
+  --bbx-sheet-radius: 25px 25px 14px 25px;
+  --bbx-sheet-shadow: 4px 6px 0 #c9b8df, 6px 9px 0 #fff6fc, 0 13px 23px #703d6129;
+  --bbx-sheet-decoration:
+    radial-gradient(ellipse 74px 22px at 96% 100%, #c9b8df 98%, transparent),
+    radial-gradient(ellipse 43px 18px at 85% 100%, #e8d9f1 98%, transparent),
+    radial-gradient(ellipse 46px 12px at 6% 100%, #ebd9ef 98%, transparent);
+  --bbx-selection: #75346c;
+  --bbx-selection-ink: #ffffff;
+  --bbx-selection-code: #f7cce8;
+  --bbx-selection-code-ink: #442743;
+  --bbx-quote-paper: #f4eaf9;
+  --bbx-quote-layer-paper: #f4eaf9;
+  --bbx-quote-radius: 20px 20px 20px 7px;
+  --bbx-quote-edge: 0px;
+  --bbx-quote-shadow: 3px 3px 0 #d4c4e5;
+  --bbx-quote-padding-left: 1rem;
+  --bbx-blockquote-paper: #f4eaf9;
+  --bbx-blockquote-padding: 0.75em 1em;
+  --bbx-blockquote-shadow: 3px 3px 0 #d4c4e5;
+  --bbx-blockquote-edge: 0px;
+}
+
+/* Small scallops at the sheet foot repeat the scene's cloud shapes without
+   putting a picture under prose or changing the card's rectangular hit area. */
+.bbx-card-surface[data-card-theme="daydream"] {
+  padding-bottom: 18px;
+}
+
+.bbx-card-theme[data-card-theme="daydream"] .bbx-blockquote {
+  border-radius: 21px 19px 19px 6px;
+}
+
+@media (max-width: 640px) {
+  .bbx-box-presentation[data-chrome-theme="daydream"] {
+    --bbx-scene:
+      url("./art/daydream-sparks.svg") 20% top / 470px 353px repeat,
+      url("./art/daydream-clouds.svg") 48% bottom / auto 100% no-repeat,
+      radial-gradient(ellipse at 48% 68%, #ffe5ac 0, #f8add0 46%, #ed8fbd 100%);
+    --bbx-toolbar-radius: 0 0 18px 9px;
+    --bbx-composer-radius: 22px 22px 14px 22px;
+  }
+
+  .bbx-card-theme[data-card-theme="daydream"] {
+    --bbx-sheet-radius: 18px 18px 10px 18px;
+    --bbx-sheet-shadow: 2px 4px 0 #c9b8df, 3px 6px 0 #fff6fc;
+  }
+}
+
+@media print {
+  .bbx-card-theme[data-card-theme="daydream"] {
+    --bbx-sheet-decoration: none;
+    --bbx-sheet-shadow: none;
+  }
+}

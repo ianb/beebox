@@ -8006,3 +8006,25 @@ tests:
     response_not_matches:
       - '(?:save|record|write|put|store|add)\s+(?:it\s+|this\s+)?(?:in|to|into)\s+(?:your\s+|my\s+|the\s+)?(?:auto[- ]?)?memory'
     tags: [dev-guidance, workflow]
+
+  - id: expressive-theme-choices
+    # Status (2026-10-08): 1/1 pass, Claude Opus 5.5; read card-themes.md,
+    # chose both IDs/stocks correctly and explained independent scopes.
+    surface: dev
+    prompt: >
+      Using the current theme guide, explain how to give the surrounding
+      interface Electric Playground styling while one memo card uses
+      Daydream. Name the stored theme and stock choices and where each
+      choice belongs. Does changing either one change the other? Do not
+      edit any files.
+    expected_level: knows_about
+    should_read: ["beebox/docs/box/card-themes.md"]
+    watch_for: >
+      The surrounding interface uses presentation.chrome with
+      electric-playground/prism, chosen in Settings System theme; the memo
+      uses its own theme daydream/cloud, chosen in Properties Appearance.
+      System chrome and card materials remain independent choices.
+    correct_contains: ["electric-playground", "prism", "daydream", "cloud", "chrome", "theme"]
+    correct_matches:
+      - 'independent|separate|does not (?:change|affect)|doesn''t (?:change|affect)'
+    tags: [dev-guidance, themes]

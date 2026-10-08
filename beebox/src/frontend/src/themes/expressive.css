@@ -1,0 +1,134 @@
+/* Scene and material parameters are independent: choosing a system theme
+   never replaces a card's own material. Existing themes keep their CSS. */
+.bbx-box-presentation[data-theme-composition="expressive"] {
+  background: var(--bbx-scene);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]) {
+  background: transparent;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-app-nav {
+  background: var(--bbx-toolbar-background);
+  color: var(--bbx-toolbar-ink);
+  border-bottom: 1px solid var(--bbx-toolbar-edge);
+  border-radius: var(--bbx-toolbar-radius);
+  box-shadow: var(--bbx-toolbar-shadow);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-app-nav :is(.bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions) {
+  background: var(--bbx-control-background);
+  color: var(--bbx-control-ink);
+  border-radius: var(--bbx-control-radius);
+  border-color: currentColor;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-app-nav :is(button, a):focus-visible {
+  outline: 2px solid var(--bbx-toolbar-ink);
+  outline-offset: 3px;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-composer-material {
+  background: var(--bbx-composer-background);
+  color: var(--bbx-composer-ink);
+  border: 1px solid var(--bbx-composer-edge);
+  border-radius: var(--bbx-composer-radius);
+  box-shadow: var(--bbx-composer-shadow);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-composer-material > section {
+  background: transparent;
+  border-top: 0;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] :is(#bbx-composer-add, #bbx-composer-mic, #bbx-composer-keyboard, #bbx-composer-capture) {
+  background: var(--bbx-control-background);
+  color: var(--bbx-control-ink);
+  border-radius: var(--bbx-control-radius);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-composer-send {
+  background: var(--bbx-send-background);
+  color: var(--bbx-send-ink);
+  border-radius: var(--bbx-control-radius);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-composer-input {
+  background: var(--bbx-input-paper);
+  color: var(--bbx-input-ink);
+  border-radius: var(--bbx-control-radius);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-composer-input::placeholder { color: var(--bbx-input-muted); }
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-user-paper {
+  background: var(--bbx-chat-user-paper);
+  color: var(--bbx-chat-user-ink);
+  border-radius: var(--bbx-chat-user-radius);
+}
+/* Apply to content, not the viewport-sized final-turn scroll spacer. */
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-reply-material {
+  margin: 8px 12px;
+  padding: 16px;
+  background: var(--bbx-chat-reply-paper);
+  color: var(--bbx-chat-reply-ink);
+  border-radius: var(--bbx-control-radius);
+  box-shadow: 0 2px 5px #0002;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-callout {
+  background: var(--bbx-chat-reply-paper);
+  color: var(--bbx-chat-reply-ink);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-interface-card-toolbar {
+  background: var(--bbx-menu-paper);
+  color: var(--bbx-menu-ink);
+  border-color: var(--bbx-menu-edge);
+}
+/* Portals carry the selected selectors; no copying of computed DOM styles. */
+.bbx-themed-menu[data-theme-composition="expressive"] {
+  background: var(--bbx-menu-paper);
+  color: var(--bbx-menu-ink);
+  border-color: var(--bbx-menu-edge);
+  border-radius: var(--bbx-menu-radius);
+  box-shadow: 3px 5px 0 color-mix(in srgb, var(--bbx-menu-edge) 65%, transparent);
+}
+.bbx-themed-menu[data-theme-composition="expressive"] [role="menuitem"]:not(.text-danger, [aria-disabled="true"], :disabled) {
+  color: var(--bbx-menu-ink);
+}
+.bbx-themed-menu[data-theme-composition="expressive"] [role="menuitem"]:not([aria-disabled="true"], :disabled):is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--bbx-menu-edge) 16%, var(--bbx-menu-paper));
+}
+.bbx-card-theme[data-theme-composition="expressive"].bbx-card-surface {
+  background: var(--bbx-sheet-decoration), var(--bbx-paper);
+  box-shadow: var(--bbx-sheet-shadow);
+}
+.bbx-card-theme[data-theme-composition="expressive"].bbx-interface-tab {
+  border-radius: var(--bbx-tab-radius);
+}
+.bbx-card-theme[data-theme-composition="expressive"] .bbx-card-properties-label { opacity: 1; }
+.bbx-system-theme-preview[data-theme-composition="expressive"] .bbx-system-theme-toolbar { background: var(--bbx-toolbar-background); }
+@media print {
+  .bbx-box-presentation[data-theme-composition="expressive"] { background: white; color: black; }
+}
+/* These child controls set an explicit legacy white, so inheritance alone
+   cannot follow a light toolbar material. */
+.bbx-box-presentation[data-theme-composition="expressive"] :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-profile > span) {
+  color: var(--bbx-control-ink);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-companion-tabs > [role="none"] > button {
+  background: var(--bbx-control-background);
+  color: var(--bbx-control-ink);
+  border-radius: var(--bbx-control-radius);
+}
+
+.bbx-box-presentation[data-theme-composition="expressive"] :is(.bbx-chat-empty-label, .bbx-chat-meta-material) {
+  background: var(--bbx-chat-reply-paper);
+  color: var(--bbx-chat-reply-ink);
+  padding: 0.65rem 1rem;
+  border-radius: var(--bbx-control-radius);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] :is(#bbx-pane-left-move, #bbx-pane-left-focus, #bbx-pane-left-chat, #bbx-pane-right-move, #bbx-pane-right-focus, #bbx-pane-right-chat) {
+  background: var(--bbx-control-background);
+  color: var(--bbx-control-ink);
+  border-radius: var(--bbx-control-radius);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) {
+  color: var(--bbx-chat-user-ink);
+}
+
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-meta-material {
+  width: fit-content;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-meta-material .text-warm-500 { color: inherit; }
+.bbx-themed-menu[data-theme-composition="expressive"] [role="menuitem"]:is([aria-disabled="true"], :disabled) {
+  color: color-mix(in srgb, var(--bbx-menu-ink) 50%, var(--bbx-menu-paper));
+}
