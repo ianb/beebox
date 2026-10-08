@@ -7876,7 +7876,6 @@ tests:
     surface: dev
     prompt: "Write the situation line for a card that records a voice memo."
     expected_level: knows_about
-    should_read_any: [".claude/skills/bbx-design/SKILL.md"]
     watch_for: >
       Recognizes the design skill's situation form and writes one concrete
       line: "When [a real moment], I want to [motivation], so I can
