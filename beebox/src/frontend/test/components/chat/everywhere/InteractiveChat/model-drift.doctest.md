@@ -14,15 +14,22 @@ Now the absence means exactly one thing: the comparison could not be made.
 
 ```ts setup
 import { modelDrift, engineDrift } from "../../../../../src/components/chat/everywhere/InteractiveChat/model-drift.js";
+import { resolveProcedureModel } from "../../../../../../shared/agent-models.js";
+
+type Tier = "efficient" | "balanced" | "strong" | "strongest";
+const claude = (tier: Tier) => resolveProcedureModel({ engine: "claude", model: tier });
+const codex = (tier: Tier) => resolveProcedureModel({ engine: "codex", model: tier });
 ```
+
+Model ids come from the tier tables, so the examples survive a model-id bump.
 
 Stronger and weaker than the default.
 
 ```ts
-modelDrift({ model: "claude-fable-5-1", boxDefault: "claude-sonnet-5" })
+modelDrift({ model: claude("strongest"), boxDefault: claude("balanced") })
 => above
 
-modelDrift({ model: "claude-haiku-4-5-20251001", boxDefault: "claude-opus-5-5" })
+modelDrift({ model: claude("efficient"), boxDefault: claude("strong") })
 => below
 ```
 
@@ -32,9 +39,9 @@ tier comparison is what makes cross-engine talk meaningful at all.
 
 ```ts
 JSON.stringify([
-  modelDrift({ model: "claude-opus-5-5", boxDefault: "claude-opus-5-5" }),
-  modelDrift({ model: "gpt-5.6-terra", boxDefault: "claude-sonnet-5" }),
-  modelDrift({ model: "gpt-6-astra", boxDefault: "claude-fable-5-1" }),
+  modelDrift({ model: claude("strong"), boxDefault: claude("strong") }),
+  modelDrift({ model: codex("balanced"), boxDefault: claude("balanced") }),
+  modelDrift({ model: codex("strongest"), boxDefault: claude("strongest") }),
 ])
 => ["same","same","same"]
 ```
@@ -46,9 +53,9 @@ would be the confidently wrong answer.
 
 ```ts
 JSON.stringify([
-  modelDrift({ model: "claude-opus-5-5", boxDefault: null }),
-  modelDrift({ model: null, boxDefault: "claude-opus-5-5" }),
-  modelDrift({ model: "some-unreleased-model", boxDefault: "claude-opus-5-5" }),
+  modelDrift({ model: claude("strong"), boxDefault: null }),
+  modelDrift({ model: null, boxDefault: claude("strong") }),
+  modelDrift({ model: "some-unreleased-model", boxDefault: claude("strong") }),
 ])
 => [null,null,null]
 ```
@@ -58,8 +65,8 @@ a Claude flagship.
 
 ```ts
 JSON.stringify([
-  modelDrift({ model: "gpt-6-sol", boxDefault: "gpt-5.6-terra" }),
-  modelDrift({ model: "gpt-6-sol", boxDefault: "claude-fable-5-1" }),
+  modelDrift({ model: codex("strong"), boxDefault: codex("balanced") }),
+  modelDrift({ model: codex("strong"), boxDefault: claude("strongest") }),
 ])
 => ["above","below"]
 ```

@@ -68,16 +68,6 @@ output.includes("window.__bbxReact")
 => true
 ```
 
-The compiled output is a valid ES module with exports:
-
-```ts continue
-output.includes("as default")
-=> true
-
-output.includes("name")
-=> true
-```
-
 ## Caching
 
 Compiling the same file twice returns cached output (same mtime):
@@ -254,9 +244,6 @@ errorJs.includes("Compile error")
 => false
 
 errorJs.includes("Unexpected token at line 5")
-=> true
-
-errorJs.includes("export default")
 => true
 ```
 

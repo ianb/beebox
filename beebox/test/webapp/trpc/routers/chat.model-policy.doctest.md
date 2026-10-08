@@ -33,8 +33,9 @@ pinned nothing reports the `strong` tier for its engine rather than `null`.
 
 ```ts
 const server = await makeTestServer();
-JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5-5","source":"default","boxDefault":"claude-opus-5-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]}
+const initial = await caller(server).chat.status({});
+JSON.stringify(initial)
+=> {"sessionId":null,"running":false,"busy":false,"model":"«*»","source":"default","boxDefault":"«*»","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]}
 
 await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5" });
 clearBoxConfigCache(server.boxRoot);
@@ -51,16 +52,17 @@ understand"*).
 ```ts continue
 await caller(server).chat.setDefaultModel({ model: null });
 clearBoxConfigCache(server.boxRoot);
-(await caller(server).chat.status({})).boxDefault
-=> claude-opus-5-5
+(await caller(server).chat.status({})).boxDefault === initial.boxDefault
+=> true
 ```
 
 A model the box's engine cannot run is refused at the boundary rather than
 stored and silently ignored later.
 
 ```ts continue
-await caller(server).chat.setDefaultModel({ model: "gpt-6-sol" }).catch((e) => e.message)
-=> Model gpt-6-sol is unavailable for claude chats
+const foreign = "gpt-6-sol";
+await caller(server).chat.setDefaultModel({ model: foreign }).catch((e) => e.message === `Model ${foreign} is unavailable for claude chats`)
+=> true
 ```
 
 A model no engine offers is refused by the settings path too, rather than being
@@ -92,6 +94,7 @@ answer `NOT_FOUND` instead.
 ```ts
 const server = await makeTestServer();
 const api = caller(server);
+const claudeDefault = (await api.chat.status({})).boxDefault;
 const unknown = "11111111-2222-3333-4444-555555555555";
 
 JSON.stringify([
@@ -120,7 +123,7 @@ clearBoxConfigCache(server.boxRoot);
 const receipt = await api.chat.reserveSession({
   sessionId: "22222222-3333-4444-8555-666666666666",
   engine: "claude",
-  model: "claude-haiku-4-5-20251001",
+  model: claudeDefault,
 });
 print(`reserved: ${receipt.kind}`);
 const setOnCoined = await api.chat
@@ -139,7 +142,7 @@ start on the box's Codex default, quietly running something else.
 ```ts continue
 const { resolveChatEngine } = await import("../../../../src/core/chat/session/engine.js");
 const implicit = "33333333-4444-4555-8666-777777777777";
-print(`reserved: ${(await api.chat.reserveSession({ sessionId: implicit, model: "claude-haiku-4-5-20251001" })).kind}`);
+print(`reserved: ${(await api.chat.reserveSession({ sessionId: implicit, model: claudeDefault })).kind}`);
 print(`engine: ${await resolveChatEngine(server.boxRoot, { sessionId: implicit })}`);
 =>
 reserved: reserved

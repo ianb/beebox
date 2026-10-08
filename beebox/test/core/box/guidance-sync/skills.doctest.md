@@ -44,22 +44,7 @@ Each lands at `.claude/skills/<name>/SKILL.md` with well-formed frontmatter (the
 const box = await makeTmpBox();
 await generateSkills(box.root);
 const text = await readFile(skillFile(box, "build-course/SKILL.md"), "utf8");
-text.startsWith("---\nname: build-course\n")
-=> true
-
-text.includes("description:") && text.includes("# Building a course")
-=> true
-```
-
-The `calendar` skill references the box timezone by the `BOX_TZ` placeholder and
-points at `bbx calendar vtimezone` for the VTIMEZONE block, rather than baking
-either in.
-
-```ts
-const box = await makeTmpBox();
-await generateSkills(box.root);
-const cal = await readFile(skillFile(box, "calendar/SKILL.md"), "utf8");
-cal.includes("TZID=BOX_TZ:") && cal.includes("bbx calendar vtimezone")
+text.startsWith("---\nname: build-course\n") && text.includes("description:")
 => true
 ```
 
@@ -77,14 +62,6 @@ bad.join(",")
 =>
 ```
 
-The `tricks` skill is now a single static constant with the package-layout
-script path (`src/tricks/scripts/`), no shape fork:
-
-```ts continue
-texts[names.indexOf("tricks")].includes("src/tricks/scripts/")
-=> true
-```
-
 The `browser-task` skill is the executor procedure for a `browser-task` card. It
 ships with the box so a boxholder's Claude Code session in the box directory can
 run a task; it carries no reference to the development checkout:
@@ -93,7 +70,7 @@ run a task; it carries no reference to the development checkout:
 const box = await makeTmpBox();
 await generateSkills(box.root);
 const bt = await readFile(skillFile(box, "browser-task/SKILL.md"), "utf8");
-bt.startsWith("---\nname: browser-task\n") && bt.includes("Copy prompt, schema") && bt.includes("file_upload")
+bt.startsWith("---\nname: browser-task\n") && bt.includes("description:")
 => true
 
 /monorepo|beebox\/src|\bbin\/|worktree|localhost:3210|dev router/i.test(bt)

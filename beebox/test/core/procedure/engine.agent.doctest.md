@@ -7,6 +7,9 @@ directive passing, and fallback commits for uncommitted agent changes.
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createFakeAgent } from "../fake-agent.js";
+import { modelTier, providerOf } from "../../../src/shared/agent-models.js";
+
+const describeModel = (model: string) => `${providerOf(model)} ${modelTier(model)}`;
 import { execSync } from "node:child_process";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
 ```
@@ -70,7 +73,7 @@ print(`has step ref: ${systemPrompt.includes("agent-step")}`);
 print(`has agent instructions: ${systemPrompt.includes("Process the items")}`);
 
 // Model was mapped from friendly name
-print(`model: ${fakeAgent.invocations[0].options.model}`);
+print(`model: ${describeModel(fakeAgent.invocations[0].options.model)}`);
 
 // Agent's file was preserved
 const agentFile = await box.read("_bookkeeping/output/agent-result.txt");
@@ -81,7 +84,7 @@ agent calls: 1
 has precheck output: true
 has step ref: true
 has agent instructions: true
-model: claude-haiku-4-5-20251001
+model: anthropic efficient
 agent wrote: processed 3 items
 ```
 
@@ -125,10 +128,10 @@ const result = await startProcedure({
   options: { createAgent },
 });
 print(`success: ${result.ok}`);
-print(`model: ${fakeAgent.invocations[0].options.model}`);
+print(`model: ${describeModel(fakeAgent.invocations[0].options.model)}`);
 =>
 success: true
-model: gpt-6-luna
+model: openai efficient
 ```
 
 ```ts cleanup
