@@ -5,14 +5,17 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — A-lending, C-reconnecting and F-newcomer journey walks, 2026-10-08
+resolution: implemented
 ---
+
+Fixed 2026-10-08: `scopeDescription` in `todo-view-card-logic.ts` words the scope line: `**` reads "the whole box", `dir/**` reads the folder; covered in `todo-view-card-logic.doctest.md`.
 
 The line under the plate title reads `Scope: _content (**), plus todos
 elsewhere that link here`. Three walkers found it meaningless; the
 C-reconnecting report calls it "gibberish". Reports:
-[A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 55),
-[C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 27),
-[F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 30).
+[A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 55),
+[C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 27),
+[F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 30).
 
 ## Mechanism
 

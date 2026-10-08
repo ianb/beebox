@@ -72,15 +72,56 @@ function parseAttrs(raw: string): Map<string, string> {
 }
 
 /**
- * The agent sometimes writes the bare `<no-response/>` shorthand instead of the
- * canonical `<ack kind="no-response"/>`. Normalize it (self-closing or paired)
- * so parse / strip / no-response detection treat the two identically, rather
- * than leaking the raw tag into the prose render.
+ * The agent sometimes writes an ack kind as a bare tag name — `<no-response/>`,
+ * `<todo-added>`, `<created ref="…">detail</created>` — instead of the
+ * canonical `<ack kind="…">`. Normalize every registered kind (self-closing,
+ * paired, or a lone opening tag) so parse / strip / no-response detection
+ * treat the alias and the canonical form identically, rather than leaking the
+ * raw tag into the prose render. Attributes and inner text carry over.
+ *
+ * Markdown code is left alone: a fenced block or an inline code span showing
+ * `<created>` is an example, not an ack.
  */
-const NO_RESPONSE_ALIAS_RE = /<no-response\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/no-response\s*>)/gi;
+// Lists every `ACK_KINDS` kind; the doctest checks that each one normalizes.
+const ACK_KIND_ALIAS_RE =
+  /<(created|appended|edited|todo-added|todo-completed|no-response)(?=[\s/>])([^>]*?)(?:\/\s*>|>(?:([\S\s]*?)<\/\1\s*>)?)/gi;
+
+// A fenced block (closed by a matching fence or by the end of the content) or
+// an inline code span (a backtick run closed by a run of the same length).
+const MARKDOWN_CODE_RE =
+  /^ {0,3}(`{3,}|~{3,})[^\n]*(?:\n[\S\s]*?(?:^ {0,3}\1[`~]*[\t ]*$|(?![\S\s]))|(?![\S\s]))|(?<!`)(`+)(?!`)[\S\s]*?(?<!`)\2(?!`)/gm;
+
+function markdownCodeRanges(content: string): Array<[number, number]> {
+  return [...content.matchAll(MARKDOWN_CODE_RE)].map((m) => [m.index, m.index + m[0].length]);
+}
 
 function normalizeAckAliases(content: string): string {
-  return content.replace(NO_RESPONSE_ALIAS_RE, "<ack kind=\"no-response\"/>");
+  const code = markdownCodeRanges(content);
+  // A shared global regex: start from 0; the loop runs to a null match, which
+  // resets it again.
+  const re = ACK_KIND_ALIAS_RE;
+  re.lastIndex = 0;
+  let out = "";
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content)) !== null) {
+    const start = m.index;
+    const inCode = code.find(([from, to]) => start >= from && start < to);
+    if (inCode !== undefined) {
+      re.lastIndex = inCode[1];
+      continue;
+    }
+    // Groups 1 and 2 precede the alternation, so they are always defined;
+    // group 3 participates only in the paired branch (`.at()` keeps it
+    // honestly `string | undefined`).
+    const kind = (m[1] ?? "").toLowerCase();
+    const attrs = (m[2] ?? "").replace(/\s+$/, "");
+    const inner = m.at(3);
+    const open = `<ack kind="${kind}"${attrs}`;
+    out += content.slice(last, start) + (inner === undefined ? `${open}/>` : `${open}>${inner}</ack>`);
+    last = start + m[0].length;
+  }
+  return out + content.slice(last);
 }
 
 /**

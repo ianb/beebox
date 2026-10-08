@@ -8,6 +8,7 @@ markdown stream before rendering.
 
 ```ts setup
 import {
+  ACK_KINDS,
   getAckKind,
   parseAcks,
   parseCallouts,
@@ -98,6 +99,80 @@ The paired form (`<no-response></no-response>`) normalizes the same way.
 ```ts
 isNoResponseOnly("<no-response></no-response>")
 => true
+```
+
+## Bare kind aliases for every ack kind
+
+The same slip happens with the other kinds: a journey walk saw a reply whose
+prose read a literal `<todo-added>` because the agent wrote the kind as the tag
+name. Every registered kind normalizes like `<no-response/>`: self-closing,
+paired (inner text becomes the ack's text), or a lone opening tag.
+Attributes such as `ref` carry over.
+
+```ts
+parseAcks("Saved it.<todo-added>")
+=> [{ kind: "todo-added" }]
+
+stripStructuredOutputTags("Saved it.<todo-added>")
+=> Saved it.
+
+parseAcks("<created ref=\"a.card\"/> and <edited ref=\"b.md\">the intro</edited>")
+=> [{ kind: "created", ref: "a.card" }, { kind: "edited", ref: "b.md", text: "the intro" }]
+
+stripStructuredOutputTags("a<todo-completed/>b<appended>x</appended>c")
+=> abc
+```
+
+The alias pattern lists the kinds by hand. Every registered kind must
+normalize, so a kind added to `ACK_KINDS` without the pattern fails here.
+
+```ts
+ACK_KINDS.filter((k) => parseAcks(`<${k.kind}/>`).length !== 1).map((k) => k.kind)
+=> []
+```
+
+Only exact kind names are aliases. A longer tag that starts with a kind name
+is left alone.
+
+```ts
+parseAcks("<created-at>")
+=> []
+```
+
+## Aliases inside Markdown code stay literal
+
+A reply that explains the tags shows them as code. Normalizing there would
+replace the example with an ack: the prose would lose the example and gain a
+false indication. Inline code spans and fenced blocks are left as written.
+
+```ts
+stripStructuredOutputTags("Write `<created>` here")
+=> Write `<created>` here
+
+parseAcks("Write `<created>` here")
+=> []
+```
+
+A fenced block is left alone as well. (The example uses a `~~~` fence so it
+can sit inside this file's own code fence; backtick fences match the same way.)
+
+```ts
+const fenced = "Example:\n~~~\n<todo-added>\n~~~\nDone.";
+stripStructuredOutputTags(fenced).split("\n")
+=> ["Example:", "~~~", "<todo-added>", "~~~", "Done."]
+
+parseAcks(fenced)
+=> []
+
+parseAcks("Example:\n" + "`".repeat(3) + "\n<todo-added>\n" + "`".repeat(3))
+=> []
+```
+
+A bare tag outside the code still normalizes in the same reply.
+
+```ts
+stripStructuredOutputTags("Use `<created>` for files.<todo-added>")
+=> Use `<created>` for files.
 ```
 
 ## parseCallouts

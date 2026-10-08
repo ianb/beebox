@@ -6,12 +6,15 @@ labels: [navigation]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — A-lending journey walk, 2026-10-08
+resolution: implemented
 ---
+
+Fixed 2026-10-08: `buildLink` now titles a link from the target card's `title:` (read through the prominence index's per-file parse memo, inside the namespace fence), falling back to the filename; covered in `resolve.derived.doctest.md`.
 
 In the A-lending walk the folder view and the place menu listed loan cards as
 "Cake Carrier Marisol" and similar. The cards' own titles were nicer, such as
 "Cake carrier (Marisol's)". The walker said the names "read like filenames"
-([report](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row 35, shots 10 and 25).
+([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row 35, shots 10 and 25).
 
 ## Mechanism
 
@@ -30,5 +33,5 @@ can carry the title.
 
 ## Related
 
-[Apostrophes are lost in slugged filenames and the titles derived from them](2026-09-02-apostrophes-lost-in-slugs-and-titles.md)
+[Apostrophes are lost in slugged filenames and the titles derived from them](../../bugs/2026-09-02-apostrophes-lost-in-slugs-and-titles.md)
 (the same lossy filename-to-title path).

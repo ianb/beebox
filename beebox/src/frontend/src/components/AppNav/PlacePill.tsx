@@ -183,7 +183,10 @@ export function PlacePill({
             aria-label={`Where you are: ${faceLabel}`}
             {...ariaProps}
           >
-            <span className="hidden sm:inline shrink-0 opacity-65">{boxName} ▸</span>
+            {/* The prefix anchors a nested place ("Box ▸ Lending"). At the root
+                the face label already names the box (by default it is the box
+                name itself), so printing both reads as a path. */}
+            {place.dir === "" ? null : <span className="hidden sm:inline shrink-0 opacity-65">{boxName} ▸</span>}
             {landmark !== null ? (
               <CardMark symbol={landmark.symbol} size="xs" boxSlug={boxSlug} />
             ) : place.dir === "" ? (

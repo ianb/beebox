@@ -15,7 +15,7 @@ export function AdminOverview({ onOpenSection }: { onOpenSection: (id: AdminSect
   return (
     <Stack gap="lg">
       {ADMIN_GROUPS.map(group => (
-        <Card key={group.tab} as="section" id={`bbx-admin-overview-${group.tab}`} aria-label={group.label} shadow>
+        <Card key={group.tab} as="section" id={`bbx-admin-group-${group.tab}`} aria-label={group.label} shadow>
           <Stack gap="md">
             <Stack gap="xs">
               <Heading level={2}>{group.label}</Heading>

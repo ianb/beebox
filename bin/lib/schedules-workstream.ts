@@ -363,7 +363,8 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
     }
   }
 
-  await alertIfBailed(deps, { name: schedule.name, runId, logFile, worktree: workstream.worktree ? cwd : null });
+  const timedOutAfterMs = session.timedOut ? schedule.config.timeoutMs : null;
+  await alertIfBailed(deps, { name: schedule.name, runId, logFile, worktree: workstream.worktree ? cwd : null, timedOutAfterMs });
   return { kind: "launched", sessionExit: session.exitCode, checkExit, timedOut: session.timedOut };
 }
 
@@ -383,7 +384,7 @@ async function isExecutable(filePath: string): Promise<boolean> {
  * (the session just ended) and from the next tick when a lock left by a dead
  * runner is reclaimed (the laptop was shut down mid-session).
  */
-export async function alertIfBailed(deps: RunnerDeps, run: { name: string; runId: string; logFile: string; worktree: string | null }): Promise<boolean> {
+export async function alertIfBailed(deps: RunnerDeps, run: { name: string; runId: string; logFile: string; worktree: string | null; timedOutAfterMs?: number | null }): Promise<boolean> {
   if ((await readResult(deps.storeRoot, run)) !== null) return false;
   const tail = await tailLog(run.logFile, LOG_TAIL_LINES);
   // The person reading this needs to know what the session left, and how to
@@ -400,12 +401,17 @@ export async function alertIfBailed(deps: RunnerDeps, run: { name: string; runId
   if ((await readHandoff(deps.storeRoot, run)) !== null) {
     notes.push(`- Replay this run's handoff now: \`bin/schedules run ${run.name} --replay ${run.runId}\`.`);
   }
-  const message = [`${run.name} started a session for run ${run.runId} that ended without \`bin/schedules alert\` or \`done\`.`];
+  // A session killed at its timeout never had the chance to report; "ended
+  // without reporting" would send the reader after the wrong cause.
+  const timedOut = run.timedOutAfterMs ?? null;
+  const message = [timedOut === null
+    ? `${run.name} started a session for run ${run.runId} that ended without \`bin/schedules alert\` or \`done\`.`
+    : `${run.name}'s session for run ${run.runId} was stopped at its ${String(Math.round(timedOut / 60_000))}-minute timeout before it reported. If this repeats, raise \`timeout\` in \`schedule.yaml\` or narrow the work.`];
   if (notes.length > 0) message.push("", ...notes);
   await raiseAlert(deps, {
     workstream: run.name,
     runId: run.runId,
-    title: "session ended without reporting",
+    title: timedOut === null ? "session ended without reporting" : "session timed out",
     message: message.join("\n"),
     details: tail === "" ? null : `Last ${String(LOG_TAIL_LINES)} log lines:\n\n\`\`\`\n${tail}\n\`\`\``,
     priority: "important",

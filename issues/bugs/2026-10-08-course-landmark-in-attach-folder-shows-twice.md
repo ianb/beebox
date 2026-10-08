@@ -32,6 +32,6 @@ step 7). Then:
 
 Name the pill from the landmark's `label`, not its directory. Decide
 whether a nested landmark should hide a card it already points at. Related:
-[a nested landmark row opens the landmark file](2026-10-08-nested-landmark-row-opens-the-landmark-file.md).
+[a nested landmark row opens the landmark file](../closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md).
 
 Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (rows 65, 70).

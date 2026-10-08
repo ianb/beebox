@@ -24,11 +24,11 @@ export default cardSchema("my-type", {
     archived: z.boolean().optional(),
     body: body(z.string()),  // omit this line if the card has no prose body
   },
-  instructions: \`# My Type Cards
+  instructions: `# My Type Cards
 
 Instructions for the agent on how to handle this card type.
 These appear in .claude/rules/ and _content/docs/generated/, and are loaded
-when the agent reads or edits a matching card file.\`,
+when the agent reads or edits a matching card file.`,
 });
 ```
 

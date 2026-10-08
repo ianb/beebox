@@ -55,3 +55,19 @@ unsupportedImageMessage([file("clipboard", "")])
 unsupportedImageMessage([file("clipboard", ""), file("other", "")])
 => Those files can't be added: this browser can't read that format. JPEG, PNG, GIF and WebP work.
 ```
+
+## A file of an accepted format that failed to decode is damaged, not unsupported
+
+The message must not say JPEG is refused in the same breath as saying JPEG
+works. A JPEG, PNG, GIF or WebP that did not decode is unreadable or damaged.
+
+```ts
+unsupportedImageMessage([file("photo.jpg", "image/jpeg")])
+=> That image file can't be read; it may be damaged.
+
+unsupportedImageMessage([file("a.png", "image/png"), file("b.webp", "image/webp")])
+=> Those image files can't be read; they may be damaged.
+
+unsupportedImageMessage([file("a.heic", "image/heic"), file("b.jpg", "image/jpeg")])
+=> HEIC files can't be added: this browser can't read that format. JPEG, PNG, GIF and WebP work. That image file can't be read; it may be damaged.
+```

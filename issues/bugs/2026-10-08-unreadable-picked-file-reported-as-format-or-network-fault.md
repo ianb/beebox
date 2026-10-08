@@ -22,9 +22,13 @@ In this walk the trigger was the harness: `bin/browse upload` passed a
 relative path, and the page received an empty file that failed on read (fixed
 in `ee5289dd1`). The first B-inventory walk the same day sent JPEGs damaged in
 the repository (see
-[rename-damaged binaries](2026-10-08-rename-damaged-binaries-still-in-tree.md)).
+[rename-damaged binaries](../closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md)).
 Real triggers are rarer, but the copy is wrong whenever one occurs.
 A decode failure of a format the app accepts needs its own message, such as
 "This image file looks damaged".
 
 Report: [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 7).
+
+## Update 2026-10-08
+
+Fixed: `unsupportedImageMessage` no longer blames the format for a JPEG, PNG, GIF or WebP that failed to decode; it says the file can't be read and may be damaged (`image-paste.doctest.md`). Remains: an unreadable file still reaches the upload and capture routes and is reported as a network fault there; that needs its own read-failure state on the chip, which is more than a copy change.

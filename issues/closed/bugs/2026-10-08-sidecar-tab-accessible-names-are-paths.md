@@ -6,15 +6,18 @@ labels: [accessibility]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — A-lending and C-reconnecting journey walks, 2026-10-08
+resolution: implemented
 ---
+
+Fixed 2026-10-08: The pin and close buttons are named by the tab's displayed title, not the stored label.
 
 The close and pin buttons on a card tab have the accessible names
 `Close _content/friends/Reconnecting.doc.card` and `Pin …` with the same path.
 The visible tooltips say "Close tab" and "Pin tab". A screen-reader user
 hears a file path; the walkers, who read the accessibility tree, reported two
 names for one page
-([A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) row 9,
-[C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) row 17).
+([A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) row 9,
+[C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) row 17).
 
 ## Mechanism
 
@@ -30,5 +33,5 @@ names for one page
 
 Name the tab by the card title. The tab text itself is probably already the
 title once the card loads
-([a tab keeps the label it was opened with](../closed/bugs/2026-09-05-sidecar-tab-label-never-updates.md),
+([a tab keeps the label it was opened with](2026-09-05-sidecar-tab-label-never-updates.md),
 closed). Check that the button name follows the same source.
