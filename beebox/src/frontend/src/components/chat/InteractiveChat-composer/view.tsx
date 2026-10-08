@@ -270,7 +270,7 @@ export function ChatInputArea({
               data-bbx-reveal
               // The menu's contents are the whole point of the description —
               // the scan cannot see inside a closed menu.
-              data-bbx-does={`opens the attach menu — ${captureEnabled ? "capture, " : ""}attach file, upload files, send screenshot, share location`}
+              data-bbx-does={`opens the attach menu — ${captureEnabled ? "capture, " : ""}add files, send screenshot, share location`}
               onClick={toggle}
               className={`${CIRCLE_BTN} bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
               title="Add"
