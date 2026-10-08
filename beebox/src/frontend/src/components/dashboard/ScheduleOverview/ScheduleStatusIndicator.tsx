@@ -1,17 +1,22 @@
 /**
- * The last-result glyph for a scheduled task: success, deferred (engine
- * unavailable), inconclusive (work ran, review reached no verdict), failure,
- * or never run. Click expands the concise error/detail text.
+ * The last-result glyph for a scheduled task: success, nothing to do (a
+ * deferral that found no work), deferred (held back: engine unavailable or
+ * over budget), inconclusive (work ran, review reached no verdict), failure,
+ * or never run. Clicking it opens the schedule's recent runs, which carry the detail.
  */
 
 import { InlineAction } from "../../ui/InlineAction";
 import { conciseScheduleError } from "@shared/schedule-error";
 import type { RouterOutput } from "../../../lib/trpc/client";
+import { deferText, idleLabel } from "./idle";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 
-export function ScheduleStatusIndicator({ lastResult, lastError, onToggleError }: { lastResult: ScheduleInfo["lastResult"]; lastError: string | null; onToggleError?: () => void }) {
-  const errorSummary = lastError === null ? null : conciseScheduleError(lastError);
+export function ScheduleStatusIndicator({ lastResult, lastError, lastDeferReason, onShowRuns }: { lastResult: ScheduleInfo["lastResult"]; lastError: string | null; lastDeferReason: ScheduleInfo["lastDeferReason"]; onShowRuns?: () => void }) {
+  const idle = idleLabel(lastResult, lastDeferReason);
+  // Found nothing to do: the quiet, healthy case. Nothing to expand.
+  if (idle !== null) return <span className="text-warm-500 text-xs">{idle}</span>;
+  const errorSummary = lastError === null ? null : deferText(conciseScheduleError(lastError), lastDeferReason);
   if (lastResult === "success") {
     return <span className="text-success text-xs">&#10003;</span>;
   }
@@ -19,8 +24,8 @@ export function ScheduleStatusIndicator({ lastResult, lastError, onToggleError }
     return (
       <InlineAction
         intent="subtle"
-        onClick={() => { if (onToggleError) onToggleError(); }}
-        title={lastError ? "Click to expand detail" : undefined}
+        onClick={() => { if (onShowRuns) onShowRuns(); }}
+        title="Show recent runs"
         className="text-xs text-left"
       >
         &#9203; {errorSummary ? <span className="text-warm-600">{errorSummary.substring(0, 60)}&#8230;</span> : null}
@@ -33,8 +38,8 @@ export function ScheduleStatusIndicator({ lastResult, lastError, onToggleError }
     return (
       <InlineAction
         intent="subtle"
-        onClick={() => { if (onToggleError) onToggleError(); }}
-        title={lastError ? "Click to expand detail" : undefined}
+        onClick={() => { if (onShowRuns) onShowRuns(); }}
+        title="Show recent runs"
         className="text-xs text-left"
       >
         ? {errorSummary ? <span className="text-warm-600">{errorSummary.substring(0, 60)}&#8230;</span> : null}
@@ -45,8 +50,8 @@ export function ScheduleStatusIndicator({ lastResult, lastError, onToggleError }
     return (
       <InlineAction
         intent="danger"
-        onClick={() => { if (onToggleError) onToggleError(); }}
-        title={lastError ? "Click to expand error" : undefined}
+        onClick={() => { if (onShowRuns) onShowRuns(); }}
+        title="Show recent runs"
         className="text-xs text-left"
       >
         &#10007; {errorSummary ? <span className="text-warm-600">{errorSummary.substring(0, 60)}&#8230;</span> : null}

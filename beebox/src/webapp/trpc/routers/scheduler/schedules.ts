@@ -15,8 +15,11 @@ import {
   type ScriptState,
 } from "../../../../core/schedule/state.js";
 import { describeCadence } from "../../../../core/schedule/describe.js";
-import { loadRunHistory, type RunPriority } from "../../../../core/schedule/summary.js";
+import { loadRunHistory, type RunHistoryEntry, type RunPriority } from "../../../../core/schedule/summary.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
+
+/** Runs shown in a schedule row's strip; the panel shows the full history. */
+const RUN_STRIP_LENGTH = 10;
 
 export interface ScheduleEntry {
   name: string;
@@ -34,9 +37,13 @@ export interface ScheduleEntry {
   lastRun: string | null;
   lastResult: ScriptState["lastResult"];
   lastError: string | null;
+  /** Why the last run deferred, when it said (`no-change`: it found nothing to do). */
+  lastDeferReason: ScriptState["lastDeferReason"];
   runCount: number;
   /** The latest run's own summary, when it wrote one; the full history is `scheduler.runs`. */
   lastSummary: { priority: RunPriority; headline: string } | null;
+  /** The last few runs, oldest first, for the row's run strip. */
+  runStrip: Array<Pick<RunHistoryEntry, "ts" | "result" | "deferReason"> & { attention: boolean }>;
   once: boolean;
   budget?: { limitMs: number; windowMs: number; usedMs: number } | undefined;
   running?: { startedAt: string; triggeredBy: string } | undefined;
@@ -59,8 +66,10 @@ function parseErrorEntry(scriptName: string): ScheduleEntry {
     lastRun: null,
     lastResult: null,
     lastError: null,
+    lastDeferReason: null,
     runCount: 0,
     lastSummary: null,
+    runStrip: [],
     once: false,
     budget: undefined,
     running: undefined,
@@ -105,7 +114,8 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
   }
 
   const lock = running.get(scriptName);
-  const latest = (await loadRunHistory(boxRoot, scriptName)).at(-1)?.summary;
+  const history = await loadRunHistory(boxRoot, scriptName);
+  const latest = history.at(-1)?.summary;
 
   const missingReqs = parsed.requires
     ? await checkMissingConnectors(boxRoot, parsed.requires)
@@ -125,8 +135,15 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
     lastRun: state.lastRun,
     lastResult: state.lastResult,
     lastError: state.lastError,
+    lastDeferReason: state.lastDeferReason,
     runCount: state.runCount,
     lastSummary: latest === undefined ? null : { priority: latest.priority, headline: latest.headline },
+    runStrip: history.slice(-RUN_STRIP_LENGTH).map((r) => ({
+      ts: r.ts,
+      result: r.result,
+      ...(r.deferReason === undefined ? {} : { deferReason: r.deferReason }),
+      attention: r.summary?.priority === "attention",
+    })),
     once: parsed.once,
     budget: budgetInfo,
     running: lock ? { startedAt: lock.startedAt, triggeredBy: lock.triggeredBy } : undefined,

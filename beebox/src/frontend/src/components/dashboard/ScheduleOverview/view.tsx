@@ -9,11 +9,11 @@ import { bbxSource } from "../../../lib/source-tag";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { InlineAction } from "../../ui/InlineAction";
-import { Pre } from "../../ui/Pre";
 import { Toggle } from "../../ui/Toggle";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { ScheduleStatusIndicator } from "./ScheduleStatusIndicator";
 import { RunHistory } from "./RunHistory";
+import { RunStrip } from "./RunStrip";
 import { Badge } from "../../ui/Badge";
 import { TickList, quietTickCount } from "../ScheduleTicks";
 
@@ -131,7 +131,6 @@ function rawScheduleTitle(s: ScheduleInfo): string {
 }
 
 function ScheduleRow({ s }: { s: ScheduleInfo }) {
-  const [showError, setShowError] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
 
   return (
@@ -151,11 +150,12 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
               onClick={() => setShowRuns(!showRuns)}
               expanded={showRuns}
               title={showRuns ? "Hide recent runs" : "Show recent runs"}
-              className="text-xs"
+              className="text-xs whitespace-nowrap"
             >
               {timeAgo(s.lastRun)} {showRuns ? "\u25BE" : "\u25B8"}
             </InlineAction>
           ) : "never"}
+          <RunStrip runs={s.runStrip} />
         </td>
         <td className="py-2 pr-3">
           {s.missingRequirements && s.missingRequirements.length > 0 ? (
@@ -165,23 +165,16 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
           ) : s.running ? (
             <RunningIndicator running={s.running} />
           ) : (
-            <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} onToggleError={() => setShowError(!showError)} />
+            <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} lastDeferReason={s.lastDeferReason} onShowRuns={() => setShowRuns(!showRuns)} />
           )}
         </td>
         <td className="py-2">
           <TriggerButton name={s.name} enabled={s.enabled} onFinished={() => setShowRuns(true)} />
         </td>
       </tr>
-      {showError && s.lastError ? (
-        <tr>
-          <td colSpan={5} className="pb-2 px-3">
-            <Pre size="xs" error boxed scroll="sm">{s.lastError}</Pre>
-          </td>
-        </tr>
-      ) : null}
       {showRuns ? (
         <tr>
-          <td colSpan={5} className="pb-2 px-3">
+          <td colSpan={5} className="pb-2">
             <RunHistory name={s.name} />
           </td>
         </tr>

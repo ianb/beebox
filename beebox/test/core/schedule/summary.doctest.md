@@ -78,6 +78,25 @@ masked((await loadRunHistory(box.root, "report")).at(-1))
 => { result: "failure", triggeredBy: "schedule", error: «*» }
 ```
 
+A run that stops because it found nothing to do records why, so the
+dashboard can say "nothing to do" instead of showing a wait:
+
+```ts continue
+await fs.rm(box.path("_tmp/fail"));
+await box.write("_config/schedules/report.scheduled-script.card", `---
+cron: "0 0 1 1 *"
+runs: >-
+  echo '{"reason":"no-change"}' > "$BBX_DEFER_FILE"; exit 75
+---
+`);
+box.commitAll("defer");
+await tick(box)
+=> skipped
+
+masked((await loadRunHistory(box.root, "report")).at(-1))
+=> { result: "deferred", triggeredBy: "schedule", error: "no-change: nothing to do", deferReason: "no-change" }
+```
+
 ```ts cleanup
 await box.cleanup();
 ```
