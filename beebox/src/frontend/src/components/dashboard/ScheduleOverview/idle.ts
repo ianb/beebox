@@ -22,3 +22,9 @@ export function idleLabel(result: string | null, reason: DeferReason | null | un
   if (result !== "deferred" || reason === null || reason === undefined) return null;
   return IDLE_LABEL[reason];
 }
+
+/** A deferral's recorded text without its `<reason>: ` code prefix (`budget: the box used…` → `the box used…`). */
+export function deferText(text: string, reason: DeferReason | null | undefined): string {
+  const prefix = reason === null || reason === undefined ? null : `${reason}: `;
+  return prefix !== null && text.startsWith(prefix) ? text.slice(prefix.length) : text;
+}

@@ -9,7 +9,6 @@ import { bbxSource } from "../../../lib/source-tag";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { InlineAction } from "../../ui/InlineAction";
-import { Pre } from "../../ui/Pre";
 import { Toggle } from "../../ui/Toggle";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { ScheduleStatusIndicator } from "./ScheduleStatusIndicator";
@@ -131,7 +130,6 @@ function rawScheduleTitle(s: ScheduleInfo): string {
 }
 
 function ScheduleRow({ s }: { s: ScheduleInfo }) {
-  const [showError, setShowError] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
 
   return (
@@ -165,23 +163,16 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
           ) : s.running ? (
             <RunningIndicator running={s.running} />
           ) : (
-            <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} lastDeferReason={s.lastDeferReason} onToggleError={() => setShowError(!showError)} />
+            <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} lastDeferReason={s.lastDeferReason} onShowRuns={() => setShowRuns(!showRuns)} />
           )}
         </td>
         <td className="py-2">
           <TriggerButton name={s.name} enabled={s.enabled} onFinished={() => setShowRuns(true)} />
         </td>
       </tr>
-      {showError && s.lastError ? (
-        <tr>
-          <td colSpan={5} className="pb-2 px-3">
-            <Pre size="xs" error={s.lastResult === "failure"} boxed scroll="sm">{s.lastError}</Pre>
-          </td>
-        </tr>
-      ) : null}
       {showRuns ? (
         <tr>
-          <td colSpan={5} className="pb-2 px-3">
+          <td colSpan={5} className="pb-2">
             <RunHistory name={s.name} />
           </td>
         </tr>
