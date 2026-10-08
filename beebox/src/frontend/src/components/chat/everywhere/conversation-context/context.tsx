@@ -12,6 +12,8 @@ export interface ConversationContextValue {
   restored: ConversationSelection | null;
   rendered: Extract<ConversationSelection, { kind: "ready" }> | null;
   initial: ChatInitialLoad | undefined;
+  /** `rendered` was created for this tab and has no committed turn (`ResolvedConversation.unstarted`). */
+  unstarted: boolean;
   select: (request: ConversationRequest) => Promise<void>;
   assigned: (...args: [sessionId: string, assignment?: { clientConversationId: string; contextDir: string }]) => void;
   retry: () => Promise<void>;

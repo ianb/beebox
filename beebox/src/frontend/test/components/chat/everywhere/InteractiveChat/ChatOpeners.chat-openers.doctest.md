@@ -1,15 +1,15 @@
 # Empty-chat openers
 
-A fresh box's chat opens on suggestions instead of a bare "start a
-conversation" line: `ChatOpeners` renders the `openers:` the bound directory's
-briefing lists (`chat.openers`), and clicking one sends it as the person's
-message.
+An unstarted chat opens on suggestions instead of a bare "start a
+conversation" line: `ChatOpeners` renders the place's openers, and clicking one
+sends it as the person's message.
 
 The frontend doctests run under plain Node with no DOM, so what a click does
 lives in `clickOpener` — a plain function the button's `onClick` calls — and is
 tested directly. The contracts that matter: the sent text is the opener
-verbatim, and one click is all there is (the buttons disable on send, so an
-impatient double-click can't queue two turns).
+verbatim; one accepted click is all there is (the buttons disable on send, so
+an impatient double-click can't queue two turns); and a rejected click (a
+draft in the composer, say) leaves the buttons enabled.
 
 ```ts setup
 import * as React from "react";
@@ -20,14 +20,15 @@ globalThis.React = React;
 
 function markup(openers: string[]): string {
   return renderToStaticMarkup(
-    React.createElement(ChatOpeners, { openers, onSendOpener: () => {} }),
+    React.createElement(ChatOpeners, { openers, onSendOpener: () => "accepted" as const }),
   );
 }
 
-/** A standalone stand-in for the component's `sent` state. */
-function clicker(onSendOpener: (text: string) => void) {
+/** A standalone stand-in for the component's `sent` state; `sent()` reads it. */
+function clicker(onSendOpener: (text: string) => "accepted" | "rejected") {
   let sent = false;
-  return (text: string) => clickOpener({ alreadySent: sent, markSent: () => { sent = true; }, onSendOpener }, text);
+  const click = (text: string) => clickOpener({ alreadySent: sent, markSent: () => { sent = true; }, onSendOpener }, text);
+  return Object.assign(click, { sent: () => sent });
 }
 ```
 
@@ -45,7 +46,7 @@ markup([]) === ""
 
 ```ts
 const sent: string[] = [];
-const click = clicker((t) => sent.push(t));
+const click = clicker((t) => { sent.push(t); return "accepted"; });
 click("Show me what changed today.")
 => true
 
@@ -61,7 +62,7 @@ message.
 
 ```ts
 const sent: string[] = [];
-const click = clicker((t) => sent.push(t));
+const click = clicker((t) => { sent.push(t); return "accepted"; });
 click("What can you do?")
 => true
 
@@ -73,4 +74,35 @@ click("Let me tell you what this box is for.")
 
 JSON.stringify(sent)
 => ["What can you do?"]
+```
+
+## A rejected click leaves the buttons enabled
+
+The send can refuse: the composer holds a draft, or the chat is still choosing
+its conversation. The set is marked sent only after the send accepts, so a
+refused click does not disable the openers, and the next click (after the
+person clears the draft) is tried again.
+
+```ts
+const attempts: string[] = [];
+let draft = "half a thought";
+const click = clicker((t) => { attempts.push(t); return draft === "" ? "accepted" : "rejected"; });
+click("Log a new loan")
+=> false
+
+click.sent()
+=> false
+
+draft = "";
+click("Log a new loan")
+=> true
+
+click.sent()
+=> true
+
+click("Log a new loan")
+=> false
+
+attempts
+=> ["Log a new loan", "Log a new loan"]
 ```

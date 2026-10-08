@@ -59,14 +59,15 @@ function sendDisabledReasonFor(selection: ConversationSelection | undefined): st
  * `contextDir` is the prop value immediately for fresh "new" landmark chats
  * (the server hasn't seen the session id yet), falling back to the persisted
  * association for resumed sessions. `openers` are the `openers:` listed in
- * that directory's briefing — the suggestions a fresh chat's empty state
- * offers. Openers are fetched only for a `"new"` session: an existing session
- * with no messages is a different state, and offering openers there would read
- * as an invitation to start over.
+ * that directory's briefing — the suggestions an unstarted chat's empty state
+ * offers. Openers are fetched only for an unstarted conversation (one this tab
+ * created and nobody has written in): an existing session with no messages is
+ * a different state, and offering openers there would read as an invitation to
+ * start over.
  */
 function useChatBinding(params: {
   sessionId: string | null;
-  sessionInput: string;
+  unstarted: boolean;
   contextDir: string | undefined;
 }): { contextDir: string | null; openers: string[] } {
   const query = trpc.chat.directoryFor.useQuery(
@@ -75,9 +76,8 @@ function useChatBinding(params: {
   );
   const queried = query.data ? query.data.contextDir : undefined;
   const contextDir = params.contextDir ?? queried ?? null;
-  const isNew = params.sessionInput === "new";
-  const openersQuery = trpc.chat.openers.useQuery({ contextDir: contextDir ?? "" }, { enabled: isNew });
-  return { contextDir, openers: isNew && openersQuery.data ? openersQuery.data.openers : [] };
+  const openersQuery = trpc.chat.openers.useQuery({ contextDir: contextDir ?? "" }, { enabled: params.unstarted });
+  return { contextDir, openers: params.unstarted && openersQuery.data ? openersQuery.data.openers : [] };
 }
 
 interface InteractiveChatProps {
@@ -89,6 +89,8 @@ interface InteractiveChatProps {
   selectionNotice?: ReactNode;
   /** Either an existing session id or `"new"` for a fresh conversation. */
   sessionInput: string;
+  /** The conversation was created for this tab and has no committed turn; its empty state offers openers. */
+  unstarted: boolean;
   /**
    * If set on a `"new"` chat, the chat is bound to this landmark directory.
    * Sent to the backend on the first send; the SDK spawns with `cwd` set
@@ -177,7 +179,7 @@ function useChatFrameState(openCaptureOnMount: boolean | undefined) {
     typingLocked, setTypingLocked, captureMode, setCaptureMode };
 }
 
-export function InteractiveChat({ sessionInput, contextDir, startEngine, startModel, emissionStore, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, ambientRegion, selectionNotice }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngine, startModel, emissionStore, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, ambientRegion, selectionNotice }: InteractiveChatProps) {
   const usesNativeComposer = nativeComposer === true; const usesNativeShell = usesNativeComposer;
   const { boxSlug } = useParams({ strict: false });
   const { snapshot, send, pool, target, recoveryNotice } = useConversationMachine({
@@ -185,7 +187,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     input: { sessionInput, contextDir, startEngine, startModel, initial }, onSessionAssignment,
   });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
-  const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, sessionInput, contextDir });
+  const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, unstarted, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   // First-load milestones: the conversation chosen, then its history shown (not the placeholder's).
   useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, conversationSelection?.kind === "ready");

@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, memo } from "react";
 import { ChatOpeners } from "./ChatOpeners";
+import type { OpenerSendOutcome } from "./opener-send";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
@@ -178,7 +179,7 @@ function MessageListInner({
    */
   openers: string[];
   /** Send an opener as the person's message — the typed-and-entered path. */
-  onSendOpener: (text: string) => void;
+  onSendOpener: (text: string) => OpenerSendOutcome;
 }) {
   const { boxSlug } = useParams({ strict: false });
   // Also gated on the retained-window ceiling: past it the machine drops what
