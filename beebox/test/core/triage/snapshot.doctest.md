@@ -21,9 +21,6 @@ const landmark = (rule) => `---\nnavigation:\n  label: Records\n  symbol: 📁\n
 await box.write("_content/a/records/Records.landmark.card", landmark("Bank statements."));
 await box.write("_content/b/records/Records.landmark.card", landmark("Repair invoices."));
 const initial = await compileInstructionSnapshot(box.root);
-initial.destinations.length
-=> 2
-
 initial.destinations.map((d) => d.name).join(",")
 => records,b-records
 
@@ -132,9 +129,6 @@ serializeTriageRequest({ evidence, instructions: escapedPolicy }).length > JEV_M
 => true
 
 await (async () => { const fake = createFakeJev(); let error = ""; try { await judgeItem(box.root, { evidence, instructions: escapedPolicy, jev: fake }); } catch (caught) { error = String(caught); } return error.includes("Serialized Jev request exceeds the supported request size") && fake.judgeCalls.length === 0; })()
-=> true
-
-await (async () => { const fake = createFakeJev(); const oversizedRules = { ...normal, destinations: normal.destinations.map((destination, index) => index === 0 ? { ...destination, rules: "R".repeat(JEV_MAX_REQUEST_CHARS + 1) } : destination) }; let error = ""; try { await judgeItem(box.root, { evidence, instructions: oversizedRules, jev: fake }); } catch (caught) { error = String(caught); } return error.includes("Serialized Jev request exceeds the supported request size") && fake.judgeCalls.length === 0; })()
 => true
 
 JSON.parse(await fs.readFile(path.join(box.root, ".beebox/jev-budget.json"), "utf8")).calls

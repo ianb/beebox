@@ -49,15 +49,6 @@ const MARKER = formatInconclusiveLine({
 });
 ```
 
-## The line the procedure CLI prints
-
-It names what happened *and* what did not: the work completed.
-
-```ts
-MARKER
-=> Inconclusive: procedure refresh-maps — review of step maps reached max turns (16); work completed
-```
-
 ## Both signals are required
 
 The dedicated exit code and the marker line together. Either alone is

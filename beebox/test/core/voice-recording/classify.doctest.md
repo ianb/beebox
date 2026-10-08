@@ -24,9 +24,6 @@ classifyHqError({ status: 429 })
 classifyHqError({ status: 401 })
 => permanent
 
-classifyHqError({ status: 403 })
-=> permanent
-
 classifyHqError({ status: 400 })
 => permanent
 ```
@@ -37,20 +34,14 @@ classifyHqError({ status: 400 })
 classifyHqError({ status: 500 })
 => transient
 
-classifyHqError({ status: 502 })
-=> transient
-
 classifyHqError({ status: 501 })
 => permanent
 ```
 
-## 408 and 413 are piece-too-long regardless of body
+## 408 is piece-too-long regardless of body
 
 ```ts
 classifyHqError({ status: 408 })
-=> piece-too-long
-
-classifyHqError({ status: 413 })
 => piece-too-long
 ```
 

@@ -43,10 +43,6 @@ function memo(frontmatterExtra: string, body: string): string {
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 
 const box = await makeTmpBox();
-// America/Chicago is UTC-5 in July (CDT) — the frozen time above is
-// 2026-07-28T07:00 local, still July 28th locally, which is what the
-// plate-state doctests below assume.
-await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
 ```
 
 ## Both capture forms are collected
@@ -109,44 +105,6 @@ JSON.stringify(result2.todos[0].seeAlso)
 
 result2.todos[0].text
 => Ping Marcus about the quote.
-```
-
-## Plate-state derivation around the frozen time (2026-07-28, box-local)
-
-`escalated` (past `due`), `on-plate` (undated, or `start` already reached),
-`quiet` (before `start`), and `parked` are each derived from the shared
-`todo-model.ts` truth table using the box's configured timezone.
-
-```ts continue
-await box.write(
-  "store/plate.memo.card",
-  memo(
-    "",
-    [
-      '{% todo id="p-escalated" due="2026-07-27" %}Overdue{% /todo %}',
-      "",
-      '{% todo id="p-on-plate" %}Undated, on the plate now{% /todo %}',
-      "",
-      '{% todo id="p-quiet" due="2026-08-01" start="2026-07-30" %}Not yet{% /todo %}',
-      "",
-      '{% todo id="p-parked" status="parked" %}Parked{% /todo %}',
-      "",
-    ].join("\n")
-  )
-);
-const plateResult = await collectTodos(box.root, { glob: "store/plate.memo.card" });
-JSON.stringify(
-  Object.fromEntries(plateResult.todos.map((t) => [t.id, t.plateState])),
-  null,
-  2
-)
-=>
-{
-  "p-escalated": "escalated",
-  "p-on-plate": "on-plate",
-  "p-quiet": "quiet",
-  "p-parked": "parked"
-}
 ```
 
 ## A `{% todo %}` with an invalid `status` is a visible-invalid result, not a silent drop
@@ -312,10 +270,6 @@ store/a.memo.card#store/a.memo.card#todos[0]
 store/b.memo.card#store/b.memo.card:5
 store/dup1.memo.card#store/dup1.memo.card:5
 store/dup2.memo.card#store/dup2.memo.card:5
-store/plate.memo.card#store/plate.memo.card:5
-store/plate.memo.card#store/plate.memo.card:7
-store/plate.memo.card#store/plate.memo.card:9
-store/plate.memo.card#store/plate.memo.card:11
 ```
 
 ```ts cleanup

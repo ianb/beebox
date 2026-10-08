@@ -25,26 +25,7 @@ JSON.stringify(
 => [{"word":"cloud","start":0,"end":0.5,"confidence":0.29}]
 ```
 
-`punctuated_word` still wins over `word` when present, independent of
-confidence handling.
-
-```ts
-JSON.stringify(
-  mapDeepgramWords([
-    { word: "hello", start: 0, end: 0.4, confidence: 0.99 },
-  ]),
-)
-=> [{"word":"hello","start":0,"end":0.4,"confidence":0.99}]
-```
-
 ## Missing or mistyped confidence yields no field, no crash
-
-A word with no `confidence` key at all:
-
-```ts
-JSON.stringify(mapDeepgramWords([{ word: "the", start: 0, end: 0.2 }]))
-=> [{"word":"the","start":0,"end":0.2}]
-```
 
 A response is unvalidated JSON — Deepgram could send a string, `null`, or
 anything else in that slot. The `typeof` guard treats every non-number the

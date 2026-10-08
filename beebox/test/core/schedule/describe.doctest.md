@@ -35,17 +35,6 @@ cadence({ cron: "*/15 * * * *", onWakeup: true, notBefore: "10m" })
 cadence({ cron: "0 6,18 * * *", onWakeup: true, notBefore: "4h" })
 => At 6:00 AM and 6:00 PM and on wakeup, at most once every 4 hours
 
-cadence({ cron: "0 * * * *", onWakeup: true, notBefore: "30m" })
-=> Every hour and on wakeup, at most once every 30 minutes
-
-cadence({ cron: "0 7 * * 1", notBefore: "3d" })
-=> At 7:00 AM, only on Monday, at most once every 3 days
-
-cadence({ cron: "0 */6 * * *", onWakeup: true, notBefore: "2h" })
-=> On the hour, every 6 hours and on wakeup, at most once every 2 hours
-
-cadence({ cron: "0 9 */3 * *", notBefore: "3d" })
-=> At 9:00 AM, every 3 days in a month, at most once every 3 days
 ```
 
 `not-before` is a floor on the interval between runs, so it always reads

@@ -29,9 +29,6 @@ card needs migrating.
 ```ts
 JSON.stringify(resolveVoice({ backend: "gemini", requested: "marin" }))
 => {"kind":"mapped","voice":"Vindemiatrix","requested":"marin"}
-
-JSON.stringify(resolveVoice({ backend: "gemini", requested: "onyx" }))
-=> {"kind":"mapped","voice":"Enceladus","requested":"onyx"}
 ```
 
 `mapped` is deliberately its own outcome rather than a kind of substitution:

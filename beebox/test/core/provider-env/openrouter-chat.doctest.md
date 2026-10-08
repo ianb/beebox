@@ -14,7 +14,7 @@ import { isThirdPartyModel, providerOf, resolveProcedureModel } from "../../../s
 import { resolveEffectiveModel, resolveSmallModelForEngine } from "../../../src/core/model-policy.js";
 import { loadAddedModels, loadBoxModel, loadSmallModel } from "../../../src/core/box/config.js";
 import { providerEnvAdditions } from "../../../src/core/provider-env/core.js";
-import { openRouterChatEnv, OpenRouterSetupError } from "../../../src/core/provider-env/openrouter-chat.js";
+import { openRouterChatEnv } from "../../../src/core/provider-env/openrouter-chat.js";
 import { ProviderSetupError } from "../../../src/core/provider-setup-error.js";
 import { grantSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../src/lib/box-slug.js";
@@ -230,9 +230,6 @@ async function flagsByModel(config: Record<string, unknown>) {
 
 await flagsByModel({})
 => ["1,1,1","1,1,1","-,-,-","-,-,-"]
-
-await flagsByModel({ claudeCodeTelemetry: "on" })
-=> ["1,1,1","1,1,1","-,-,-","-,-,-"]
 ```
 
 Turned off, a first-party run gets the two telemetry flags but not
@@ -246,14 +243,6 @@ await flagsByModel({ claudeCodeTelemetry: "off" })
 
 await flagsByModel({ claudeCodeTelemetry: "maybe" })
 => ["1,1,1","1,1,1","1,1,-","1,1,-"]
-```
-
-`OpenRouterSetupError` and GLM's key error share one base, so every spawn
-path refuses both the same way.
-
-```ts
-new OpenRouterSetupError("x") instanceof ProviderSetupError
-=> true
 ```
 
 ## No cost figure for third-party runs

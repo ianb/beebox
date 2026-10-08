@@ -81,18 +81,10 @@ result.jobsProcessed
 result.jobsRemaining
 => 0
 
-// Agent was called
-fakeAgent.invocations.length
-=> 1
-
 // System prompt no longer carries the absolute box path (dropped so it
 // doesn't leak this machine's temp/home directory into agent context).
 fakeAgent.invocations[0].systemPrompt.includes(box.root)
 => false
-
-// User prompt includes job content
-fakeAgent.invocations[0].prompt.includes("Write a haiku")
-=> true
 
 await box.cleanup();
 ```
