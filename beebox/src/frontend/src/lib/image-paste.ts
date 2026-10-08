@@ -208,6 +208,9 @@ export function extractTransferFiles(
   return out;
 }
 
+/** The image formats the composer takes, as the message below lists them. */
+const ACCEPTED_IMAGE_TYPES: ReadonlySet<string> = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+
 /**
  * What to tell someone whose picked file did not make it into the message.
  *
@@ -218,11 +221,24 @@ export function extractTransferFiles(
  * to the answer and said their mother would not have.
  */
 export function unsupportedImageMessage(files: File[]): string {
-  const named = [...new Set(files.map(formatLabel))].filter((f) => f !== "").toSorted();
-  const subject = named.length > 0
-    ? `${named.join(" and ")} files`
-    : files.length === 1 ? "That file" : "Those files";
-  return `${subject} can't be added: this browser can't read that format. JPEG, PNG, GIF and WebP work.`;
+  // A file of a format the app accepts that still failed to decode is
+  // damaged or unreadable. Blaming its format would contradict the list.
+  const damaged = files.filter((f) => ACCEPTED_IMAGE_TYPES.has(f.type));
+  const unsupported = files.filter((f) => !ACCEPTED_IMAGE_TYPES.has(f.type));
+  const parts: string[] = [];
+  if (unsupported.length > 0) {
+    const named = [...new Set(unsupported.map(formatLabel))].filter((f) => f !== "").toSorted();
+    const subject = named.length > 0
+      ? `${named.join(" and ")} files`
+      : unsupported.length === 1 ? "That file" : "Those files";
+    parts.push(`${subject} can't be added: this browser can't read that format. JPEG, PNG, GIF and WebP work.`);
+  }
+  if (damaged.length > 0) {
+    parts.push(damaged.length === 1
+      ? "That image file can't be read; it may be damaged."
+      : "Those image files can't be read; they may be damaged.");
+  }
+  return parts.join(" ");
 }
 
 /** "HEIC" from `image/heic`; falls back to the extension, else "". */

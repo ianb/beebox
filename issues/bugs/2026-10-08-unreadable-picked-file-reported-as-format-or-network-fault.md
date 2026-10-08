@@ -28,3 +28,7 @@ A decode failure of a format the app accepts needs its own message, such as
 "This image file looks damaged".
 
 Report: [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 7).
+
+## Update 2026-10-08
+
+Fixed: `unsupportedImageMessage` no longer blames the format for a JPEG, PNG, GIF or WebP that failed to decode; it says the file can't be read and may be damaged (`image-paste.doctest.md`). Remains: an unreadable file still reaches the upload and capture routes and is reported as a network fault there; that needs its own read-failure state on the chip, which is more than a copy change.
