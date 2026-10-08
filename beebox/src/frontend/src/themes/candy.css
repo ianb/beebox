@@ -64,8 +64,7 @@
 .bbx-box-presentation[data-chrome-theme="candy"] .bbx-chat-user-paper {
   border-radius: 20px 20px 4px 20px;
   background-color: var(--bbx-chat-user-paper);
-  background-image: var(--bbx-candy-dots);
-  background-size: 18px 18px;
+  background-image: none;
   color: var(--bbx-chat-user-ink);
   box-shadow: 0 2px 0 var(--bbx-candy-bar-edge);
   /* The theme's red selection would vanish on the pink bubble. */
