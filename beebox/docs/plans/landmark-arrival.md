@@ -491,6 +491,8 @@ and is verified against C.
   - The knowledge audit cannot run on the worktree's test1 clone directly: the clone keeps uncommitted setup
     changes (`package.json` link) that the audit's box guard refuses. Run it on a disposable `git clone` of the
     clone with `.beebox/box.json` copied in.
+  - (2026-10-08, review fix) The plan checks every landmark it would write with `parseLandmarkFields`; a moved
+    opener the schema rejects (blank, multi-line, over 120 characters) is `malformed` and fails the box.
 - **First implementation chunk.** Schema field + `OpenerEntry` move + `openers` on `LandmarkPayload` + a
   `landmarks.forDir` doctest (landmark at `_content/`, per-place list, place with no list gives `[]`, empty list is
   an answer, no landmark gives `landmark: null`, malformed opener makes the landmark unparsed).

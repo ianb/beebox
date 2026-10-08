@@ -179,6 +179,26 @@ plan({ text: briefing("openers: hello\n"), landmark: { path: "_content/lending/L
 => ["malformed"]
 ```
 
+A list of strings that the landmark schema would reject is `malformed` too: a
+blank opener, or one over 120 characters, would make the landmark fail to load,
+and the place would lose its links along with its openers. The briefing keeps
+its list until a person fixes it.
+
+```ts
+const LM = "_content/lending/Lending.landmark.card";
+const blank = plan({ text: briefing("openers:\n  - \"  \"\n"), landmark: { path: LM, text: landmark() } });
+const long = plan({ text: briefing(`openers:\n  - ${"x".repeat(121)}\n`), landmark: { path: LM, text: landmark() } });
+({ blank: blank.failures, long: long.failures.map((f) => f.message) })
+=> { blank: [{ kind: "malformed", path: "_content/lending/Lending.landmark.card", message: "_content/lending/Lending.landmark.card: navigation.openers[0]: an opener must not be blank; resolve by hand" }], long: ["_content/lending/Lending.landmark.card: navigation.openers[0]: an opener must be at most 120 characters; resolve by hand"] }
+```
+
+The same holds for a root landmark the plan would create.
+
+```ts
+plan({ path: ROOT, text: briefing("openers:\n  - \"  \"\n") }).failures.map((f) => f.kind)
+=> ["malformed"]
+```
+
 ## End to end, in both template-sync orders
 
 (i) The migrator on an old box: the old stock seed, tracked by the template
@@ -230,6 +250,20 @@ await box.write("_content/lending/Lending.landmark.card", landmark("  openers:\n
 const run = await runBriefingOpeners({ boxRoot: box.root, mode: "apply" });
 ({ code: run.code, lines: run.lines, rootUntouched: (await box.read(ROOT)) === OLD_SEED && (await box.read(ROOT_LM)) === OLD_ROOT_LANDMARK })
 => { code: 1, lines: ["failed (conflict): _content/lending/briefing.briefing.card: openers differ from _content/lending/Lending.landmark.card navigation.openers; resolve by hand", "briefing-openers: 1 failure(s); nothing written."], rootUntouched: true }
+```
+
+A landmark that would not load fails the box the same way: exit 1, nothing
+written, so `bbx engine migrate` records no manifest entry.
+
+```ts
+const box = await makeTmpBox();
+const BR = "_content/lending/briefing.briefing.card";
+const LM = "_content/lending/Lending.landmark.card";
+await box.write(BR, briefing("openers:\n  - \"  \"\n"));
+await box.write(LM, landmark());
+const run = await runBriefingOpeners({ boxRoot: box.root, mode: "apply" });
+({ code: run.code, untouched: (await box.read(BR)) === briefing("openers:\n  - \"  \"\n") && (await box.read(LM)) === landmark() })
+=> { code: 1, untouched: true }
 ```
 
 (iv) `--verify` alone is the convergence check: a briefing that still carries

@@ -22,8 +22,10 @@
  *
  * An empty or null `openers:` has nothing to move, so it is removed even where
  * there is no landmark. A value that is not a list of strings, or YAML that does
- * not parse where an edit is needed, is `malformed`. Every failure stops the
- * run before anything is written.
+ * not parse where an edit is needed, is `malformed`. So is a landmark the plan
+ * writes that the landmark loader would reject (an opener that is blank,
+ * multi-line, or too long): moving the list there would make the place
+ * unreadable. Every failure stops the run before anything is written.
  *
  * YAML edits go through `parseDocument` so untouched keys keep their
  * formatting (the `landmark-symbol` precedent).
@@ -32,11 +34,12 @@
 import { createHash } from "node:crypto";
 import * as path from "node:path";
 import { isMap, parseDocument } from "yaml";
+import { z } from "zod";
 import { splitCardContent } from "../../../cards/frontmatter.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { TEMPLATE_STOCK_HASHES } from "../../../core/template-stock-hashes.js";
 import { createBriefingTemplate } from "../../../schemas/briefing.js";
-import { createLandmarkTemplate, STOCK_ROOT_OPENERS } from "../../../schemas/landmark.js";
+import { createLandmarkTemplate, OpenerEntry, parseLandmarkFields, STOCK_ROOT_OPENERS } from "../../../schemas/landmark.js";
 
 export const ROOT_BRIEFING_PATH = "_content/briefing.briefing.card";
 const ROOT_DIR = "_content";
@@ -213,5 +216,20 @@ export function planOpenerMoves(inputs: OpenerPlanInputs): OpenerPlan {
     const before = original.get(file) ?? null;
     return before === after ? [] : [{ path: file, before, after }];
   });
+  for (const file of writes) {
+    if (!file.path.endsWith(".landmark.card")) continue;
+    const reason = landmarkRejection(file.after);
+    if (reason !== null) failures.push({ kind: "malformed", path: file.path, message: `${file.path}: ${reason}; resolve by hand` });
+  }
   return { writes, outcomes, failures };
+}
+
+/** Why the landmark loader (`parseLandmarkFields`) would reject `text`, or null when it accepts it. */
+function landmarkRejection(text: string): string | null {
+  if (parseLandmarkFields(text) !== null) return null;
+  const openers = readOpeners(text, { nested: true });
+  if (openers.kind !== "list") return "the landmark would not parse";
+  const checked = z.array(OpenerEntry).safeParse(openers.list);
+  const issue = checked.success ? undefined : checked.error.issues[0];
+  return issue === undefined ? "the landmark would not parse" : `navigation.openers[${String(issue.path[0])}]: ${issue.message}`;
 }
