@@ -81,6 +81,8 @@ it assessed lives in the transcript beside its ledger.
   rewrites the baseline on every real run, so a finding is news once. Its first
   run records the baseline and says so in an `fyi` alert.
 
+A handoff trigger must ignore what its own sessions write: a schedule whose session files an issue, writes a CODING_FEEDBACK entry, or adds a report that `run` then counts as new work restarts itself every tick.
+
 The runner sets `SCHEDULE_NAME`, `SCHEDULE_DIR`, `SCHEDULE_RUN_ID`,
 `SCHEDULE_STATE_DIR`, and `SCHEDULE_DRY_RUN` for `run` and `check`.
 

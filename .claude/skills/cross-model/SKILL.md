@@ -111,8 +111,13 @@ silent data corruption. No compliments, just the problems."
 
 ## Run it
 
-Write the prompt to `scratch/cross-model/<name>.prompt.md`, then run in the
-foreground (backgrounded runs are killed before they finish):
+If you wrote or delegated the change, write a CODING_FEEDBACK entry before
+sending its diff: pipe your answers to the four prompts (`bin/coding-feedback
+help`) into `bin/coding-feedback add --checkpoint implemented`.
+
+Write the prompt to `scratch/cross-model/<name>.prompt.md`, then run it as a
+background shell command and wait for its completion notice (a review outlasts
+the shell tool's 10-minute foreground limit):
 
 ```bash
 bin/cross-model-run --engine codex --prompt-file scratch/cross-model/<name>.prompt.md
@@ -129,6 +134,9 @@ older model the account allows before reporting. Stop only the exact orphaned
 reviewer PID; `pkill -f codex` also kills Codex.app and sibling sessions.
 
 ## Report
+
+After adjudicating a diff review, write a second CODING_FEEDBACK entry the same
+way with `--checkpoint review-adjudicated`.
 
 Validating other work: lead with the work outcome; mention the review only for
 a material change, an unresolved risk, or a decision the human may override. No

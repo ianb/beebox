@@ -29,6 +29,13 @@ export const STORE_MARKER = ".workstream-exhibits";
 /** Reserved: /apps/<name> is the committed-app tier, not a workstream. */
 export const APPS_SEGMENT = "apps";
 
+/**
+ * Reserved: `<store>/<workstream>/coding-feedback/` holds CODING_FEEDBACK
+ * entries (bin/coding-feedback), retrospective notes that are not exhibits.
+ * Never listed, never routed.
+ */
+export const CODING_FEEDBACK_SEGMENT = "coding-feedback";
+
 export class InvalidExhibitPathError extends Error {
   constructor(relPath: string) {
     super(`invalid exhibit path: ${relPath}`);
@@ -72,7 +79,7 @@ export async function resolveUnderRoot(root: string, segments: string[]): Promis
   const relPath = segments.join("/");
   if (segments.length === 0) throw new InvalidExhibitPathError(relPath);
   for (const segment of segments) {
-    if (!exhibitSegmentSchema.safeParse(segment).success) throw new InvalidExhibitPathError(relPath);
+    if (!exhibitSegmentSchema.safeParse(segment).success || segment === CODING_FEEDBACK_SEGMENT) throw new InvalidExhibitPathError(relPath);
   }
   const resolvedRoot = path.resolve(root);
   const target = path.resolve(resolvedRoot, ...segments);
@@ -201,7 +208,7 @@ async function readdirSafe(dir: string): Promise<string[]> {
 export async function listRoutableDirs(root: string): Promise<string[]> {
   const names: string[] = [];
   for (const name of (await readdirSafe(root)).toSorted()) {
-    if (!exhibitSegmentSchema.safeParse(name).success) continue;
+    if (!exhibitSegmentSchema.safeParse(name).success || name === CODING_FEEDBACK_SEGMENT) continue;
     const stats = await fs.lstat(path.join(root, name)).catch(() => null);
     if (stats?.isDirectory()) names.push(name);
   }

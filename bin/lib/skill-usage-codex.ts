@@ -20,8 +20,9 @@ import * as path from "node:path";
 
 import { canonical } from "./skill-usage-catalog.ts";
 import { FAILURE_PATTERNS, HUMAN_PATTERNS, matchingLabels } from "./skill-usage-patterns.ts";
-import { inRepo, inWindow, isRecord, readJsonl, recordBriefing, str, textOf, type Json, type ScanContext } from "./skill-usage-scan.ts";
+import { inWindow, recordBriefing, textOf, type ScanContext } from "./skill-usage-scan.ts";
 import { LoadTracker } from "./skill-usage-stats.ts";
+import { codexDayDirs, inRepo, isRecord, readJsonl, str, type Json } from "./transcripts.ts";
 
 const BRIEFING_START = /^(Workstream:|Continue workstream)/;
 const FAILED_OUTPUT = /process exited with code [1-9]|script failed|exit code:? [1-9]|"exit_code":\s*[1-9]/i;
@@ -139,17 +140,7 @@ async function scanRollout(ctx: ScanContext, file: string): Promise<void> {
 /** Rollouts under `sessions/YYYY/MM/DD/` from the day before the window on. */
 export async function scanCodex(ctx: ScanContext, sessionsRoot: string): Promise<void> {
   const cutoff = new Date(ctx.sinceMs - 864e5).toISOString().slice(0, 10);
-  const days: string[] = [];
-  /** Numbered subdirectories only; `.DS_Store` and stray files are not dates. */
-  const numbered = (dir: string): string[] =>
-    fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory() && /^\d+$/.test(e.name)).map((e) => e.name);
-  for (const y of fs.existsSync(sessionsRoot) ? numbered(sessionsRoot) : []) {
-    for (const m of numbered(path.join(sessionsRoot, y))) {
-      for (const d of numbered(path.join(sessionsRoot, y, m))) {
-        if (`${y}-${m}-${d}` >= cutoff) days.push(path.join(sessionsRoot, y, m, d));
-      }
-    }
-  }
+  const days = codexDayDirs(sessionsRoot).filter((d) => d.date >= cutoff).map((d) => d.dir);
   for (const day of days) {
     for (const f of fs.readdirSync(day)) if (f.endsWith(".jsonl")) await scanRollout(ctx, path.join(day, f));
   }

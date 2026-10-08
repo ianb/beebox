@@ -40,9 +40,9 @@ die() { echo "exhibits: $*" >&2; exit 1; }
 
 command -v jq >/dev/null || die "jq is required"
 
-# shellcheck source=lib/worktree-paths.sh
+# shellcheck source=worktree-paths.sh
 . "$REPO_DIR/bin/lib/worktree-paths.sh"
-# shellcheck source=lib/exhibits-store.sh
+# shellcheck source=exhibits-store.sh
 . "$REPO_DIR/bin/lib/exhibits-store.sh"
 
 # Anchored on the CWD's checkout: the workstream an agent means is the one it is
@@ -219,6 +219,9 @@ case "$cmd" in
 
     slug="$(slugify "$title")"
     [ -n "$slug" ] || die "add: --title '$title' has no slug-able characters"
+    # Reserved: <store>/<workstream>/coding-feedback/ holds bin/coding-feedback
+    # notes, and the exhibits app never lists or serves that name.
+    [ "$slug" != "coding-feedback" ] || die "add: 'coding-feedback' is reserved for CODING_FEEDBACK notes — pick another title"
 
     doc_source=""
     for f in ${files[@]+"${files[@]}"}; do

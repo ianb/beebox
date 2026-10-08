@@ -65,13 +65,14 @@ await tick(box)
 => no-change: nothing to do
 ```
 
-`bbx health` shows the schedule as waiting, with the reason; waiting is not
-unhealthy.
+`bbx health` shows a schedule that found nothing to do as ok, with the
+reason. A run held back (budget, an unavailable judge, a missing key) shows
+as waiting instead.
 
 ```ts continue
 const [task] = (await loadScheduleHealth(box.root, new Date())).tasks;
 `${task.status}: ${task.deferReason} (${task.reason})`
-=> waiting: no-change (nothing to do)
+=> ok: no-change (nothing to do)
 ```
 
 ## The cursor advances for `no-change` and `no-pass`, and holds otherwise

@@ -123,7 +123,8 @@ within hours ([chat timers](chat/schedules.md)).
 
 A command with nothing to do writes `{ "reason" }` to `$BBX_DEFER_FILE` and
 exits 75. The tick records `deferred` with that reason (`bbx health`:
-`waiting: <reason>`); exit 75 with no marker is a failure. The first marker of
+`ok: nothing to do` for `no-change`/`no-pass`, `waiting: <reason>` for a run
+held back); exit 75 with no marker is a failure. The first marker of
 a run wins. `bbx procedure run` exits 75 when every precheck skipped, and
 writes `no-change` when no inner command wrote a marker. `once` deletes a card
 only after `success`, so "run until it fires" is `on-wakeup` or `cron` plus
@@ -215,7 +216,7 @@ Run on a real device after the server setup, on a box whose briefing has a
 
    Mail yourself a test message about the trip; after the next wakeup the
    notification names the trip and its tap opens the email card. A second
-   wakeup with no new mail shows `waiting: nothing to do` in `bbx health`.
+   wakeup with no new mail shows `ok: nothing to do` in `bbx health`.
 5. Set up the fixed-text quote watch from the scheduled-script card
    instructions over a mounted folder; drop a file in and see one loud
    notification.

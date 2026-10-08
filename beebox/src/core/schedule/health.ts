@@ -23,7 +23,7 @@ import {
 } from "../../schemas/scheduled-script/schema.js";
 import { isWithinBudget } from "../../schemas/scheduled-script/due.js";
 import type { ScriptState } from "./state.js";
-import { DEFER_REASON_TEXT, type DeferReason } from "./defer-reason.js";
+import { DEFER_REASON_TEXT, foundNothingToDo, type DeferReason } from "./defer-reason.js";
 import { isContendedFailure, isStaleLockFailure } from "../../lib/git/core/operations.js";
 
 export { conciseScheduleError } from "../../shared/schedule-error.js";
@@ -32,7 +32,7 @@ const { rrulestr } = rrulePkg;
 
 export type TaskHealthStatus =
   | "ok"
-  | "waiting"      // engine unavailable (e.g. quota-exhausted), or the last run deferred with a marker; not failing
+  | "waiting"      // engine unavailable (e.g. quota-exhausted), or the last run was held back (defer marker: budget, judge unavailable, missing key); not failing
   | "inconclusive" // the last run's work completed but its check reached no verdict
   | "failing"      // last run(s) failed
   | "overdue"      // a due occurrence has gone unattempted past grace
@@ -52,7 +52,7 @@ export interface TaskHealth {
   pendingMs?: number;
   /** Why the task can't run (blocked), is disabled, or didn't parse (invalid). */
   reason?: string;
-  /** Waiting because the last run deferred on purpose: its defer marker's reason. */
+  /** The last run deferred on purpose: its defer marker's reason (`ok` when it found nothing to do, else `waiting`). */
   deferReason?: DeferReason;
   /**
    * Box-relative paths of template files behind this task — its own card, the
@@ -165,10 +165,12 @@ export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
     return { ...base, status: "blocked", reason: blockedReason };
   }
   if (state.lastResult === "deferred" && state.lastDeferReason !== null) {
-    // The run deferred itself (nothing changed, nothing passed the judgment,
-    // or the judge was unavailable): the schedule waits for its next run.
+    // The run deferred itself. Finding nothing to do (nothing changed, nothing
+    // passed the judgment) is the healthy quiet case; a run held back (budget,
+    // an unavailable judge, a missing key) waits for its next run.
     const deferReason = state.lastDeferReason;
-    return { ...base, status: "waiting", deferReason, reason: DEFER_REASON_TEXT[deferReason] };
+    const status = foundNothingToDo(deferReason) ? "ok" : "waiting";
+    return { ...base, status, deferReason, reason: DEFER_REASON_TEXT[deferReason] };
   }
 
   const missed = findMissedOccurrence(parsed, { lastRun: state.lastRun, cardMtime, now });

@@ -24,3 +24,22 @@ Open questions:
 - **Cost vs. value.** Per-session LLM cost vs. how often the digest actually contains something actionable. Mitigated by running only on sessions over some length and only on new sessions since last run.
 - **Where the digest goes.** A markdown file the user reviews? An auto-opened PR with proposed edits? A new card type in the boxholder's own box ("agent learnings")?
 - **Coupling with doc-usage data.** A retrospective that says "Claude kept reading docs/X.md without finding the answer" is more actionable than either signal alone — the two miners probably want to share a session-walker.
+
+## Update (2026-10-08): v1 built as `schedules/retrospective/`
+
+v1 is a schedule that runs every three days. Its input is the CODING_FEEDBACK
+notes that sessions write at fixed checkpoints, so the session itself reports
+the friction and no classifier guesses it. The run script adds the
+`bin/skill-usage.ts` tables (recurring human instructions and tool failures,
+matched by catalog labels), escaped bugs filed in the window with whether a
+citing commit added a test or a check, and a watch list. The watch list turns a
+finding seen once into a pattern when it recurs. The session edits tracked
+guidance on its branch and files issues for codebase changes. It publishes a
+`confirm` exhibit, and the developer lands the branch or vetoes it. See
+`schedules/retrospective/prompt.md`.
+
+v2 is the per-session classifier this issue proposes: a small-model pass over
+the last turns of each new session for corrections, clarifying questions,
+read-cascades, and pivots. That pass finds friction in sessions that wrote no
+CODING_FEEDBACK note, and friction that the catalog regexes do not label. It
+would add a section to the packet. The cost question above still applies.
