@@ -4,6 +4,7 @@ workstream: unattached
 area: bin
 labels: [tooling]
 filed-by: agent
+resolution: implemented
 discovered-by: agent
 discovered-in: skills-review — verifying the browse skill's subcommands against `--help`
 ---
@@ -16,3 +17,5 @@ deleted by hand). Other `bin/browse` subcommands print help as expected.
 Fix: parse `--help` before positional arguments in the `screenshot`
 subcommand (and check the other subcommands that take a positional output
 name), and refuse output names that start with `-`.
+
+**Done (2026-10-08):** `browse screenshot` parses `--help`/`-h` as help, refuses unknown options and a second path, and never treats a dash-leading token as the output name (`browse/src/cli.ts`, doctest `browse/test/cli.screenshot-args.doctest.md`). Landed in 92f002ef0.

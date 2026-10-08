@@ -7920,12 +7920,12 @@ tests:
       Right place, right time: is this the moment to act, show, or stay
       quiet, and where (which surface, which card, which tier of attention:
       interrupt, wait to be found, background), with quiet and findable as
-      the default. Points to the bbx-design skill, the only place the
-      question is stated (spirit.md gives examples; interaction-model.md
-      covers proactivity without the question). FAILS if it invents a
-      question with no source or attributes it elsewhere alone.
-    correct_contains: ["bbx-design"]
+      the default. Points to beebox/docs/design/interaction-model.md ("Right
+      place, right time"), the rule's home, or the bbx-design skill that
+      walks a plan through it (spirit.md gives examples only). FAILS if it
+      invents a question with no source or attributes it elsewhere alone.
     correct_matches:
+      - 'interaction-model|bbx-design'
       - 'right (?:place|time|moment)|(?:act|show)[\s\S]{0,40}(?:stay )?quiet'
       - 'surface|tier|interrupt'
     tags: [dev-guidance, design]
@@ -7937,8 +7937,9 @@ tests:
     should_read_any: ["beebox/docs/design/trust.md", ".claude/skills/bbx-design/SKILL.md"]
     watch_for: >
       Question, then confirmation, then automatic, defined in
-      beebox/docs/design/trust.md (trust progression). FAILS on invented
-      rungs or a different source.
+      beebox/docs/design/trust.md ("Trust to act", one of its two axes).
+      FAILS on invented rungs, rungs drawn from the trust-to-keep axis, or a
+      different source.
     correct_contains: ["trust.md"]
     correct_matches:
       - 'question[\s\S]{0,300}confirm[\s\S]{0,300}automatic'

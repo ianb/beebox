@@ -35,6 +35,10 @@ Quiet and findable is the default; an interruption needs a reason the person
 would give. The bbx-design skill walks a plan through this; this is the rule
 it serves (boxholder, 2026-10-08).
 
+Notifications are the undesigned part of this. The current rules in
+[`../notifications.md`](../notifications.md) are implementation, not design,
+and must not be read as settled (boxholder, 2026-10-08).
+
 ## Connectors are the boundary — for external services
 
 Connectors are the abstraction for touching the outside world: each pulls
