@@ -7077,6 +7077,12 @@ tests:
   # (`navigation.openers`, docs/plans/landmark-arrival.md Track B). The
   # fixture gives Lending both a landmark and a briefing, so the audit sees
   # which one the agent edits.
+  # Status (2026-10-08, Claude): 1/1 passed on a disposable clone of the
+  # worktree test1 box after the migration. It added the opener under the
+  # Lending landmark's `navigation.openers` and left the briefing alone. It
+  # read card-landmark.md first (4 reads, 2 searches, 42k context), so in
+  # practice this is knows_about. Same run: starter-what-can-you-do passed
+  # (2 reads, 42k) with the root openers now compiled from the landmark.
   - id: landmark-openers-placement
     prompt: "When I open Lending I want a button that says 'Log a new loan'."
     chat_mode: true
