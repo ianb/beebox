@@ -3,9 +3,11 @@
  *
  * Order: explicit flags, then the harness's exported session id
  * (`CLAUDE_CODE_SESSION_ID` for Claude Code, `CODEX_THREAD_ID` for Codex),
- * then the most recently modified transcript whose recorded cwd is this
- * checkout. Transcript content is never read beyond the cwd metadata that
- * matching needs (`bin/lib/transcripts.ts`).
+ * then the most recently modified transcript for this checkout. A Claude
+ * transcript matches by its project directory name alone (sessions started at
+ * the checkout root), so no Claude transcript content is read. A Codex rollout
+ * matches by its first line, `session_meta`, and nothing after it is read
+ * (`bin/lib/transcripts.ts`).
  */
 
 import * as fs from "node:fs";
@@ -14,7 +16,7 @@ import * as path from "node:path";
 import { SessionNotFoundError, TranscriptNotFoundError } from "./coding-feedback-errors.ts";
 import type { Engine, SessionAttachment } from "./coding-feedback.ts";
 import {
-  claudeProjectDirs, claudeProjectName, claudeTranscriptCwd, codexDayDirs, codexSessionMeta, inRepo, str,
+  claudeProjectDirs, claudeProjectName, codexDayDirs, codexSessionMeta, inRepo, isRecord, str,
 } from "./transcripts.ts";
 
 const SESSION_ENV: Record<Engine, string> = { claude: "CLAUDE_CODE_SESSION_ID", codex: "CODEX_THREAD_ID" };
@@ -110,17 +112,24 @@ function fromEnv(input: ResolveInput): Found | null {
   return found.toSorted((a, b) => mtimeOf(b.transcriptPath) - mtimeOf(a.transcriptPath))[0] ?? null;
 }
 
-async function newestClaude(input: ResolveInput): Promise<Found | null> {
-  const names = input.checkoutRoots.map(claudeProjectName);
-  const dirs = claudeProjectDirs(claudeRoot(input.home))
-    .filter((dir) => names.some((n) => path.basename(dir) === n || path.basename(dir).startsWith(`${n}-`)));
-  const files = dirs.flatMap(listJsonl).toSorted((a, b) => mtimeOf(b) - mtimeOf(a));
-  for (const file of files) {
-    if (inRepo(await claudeTranscriptCwd(file), input.checkoutRoots)) {
-      return { engine: "claude", sessionId: sessionIdFromPath("claude", file), transcriptPath: file };
-    }
-  }
-  return null;
+/**
+ * Claude names a project directory after the session's starting cwd, so the
+ * directory for a checkout-root spelling holds exactly that checkout's
+ * root-started sessions. A session started in a subdirectory is not found.
+ */
+function newestClaude(input: ResolveInput): Found | null {
+  const dirs = [...new Set(input.checkoutRoots.map((root) => path.join(claudeRoot(input.home), claudeProjectName(root))))]
+    .filter((dir) => fs.existsSync(dir));
+  const newest = dirs.flatMap(listJsonl).toSorted((a, b) => mtimeOf(b) - mtimeOf(a))[0];
+  return newest ? { engine: "claude", sessionId: sessionIdFromPath("claude", newest), transcriptPath: newest } : null;
+}
+
+/** A rollout spawned by another thread; older rollouts carry only `parent_thread_id`. */
+function isCodexSubagent(meta: Record<string, unknown>): boolean {
+  const source = isRecord(meta.source) ? meta.source : {};
+  const subagent = isRecord(source.subagent) ? source.subagent : {};
+  const spawn = isRecord(subagent.thread_spawn) ? subagent.thread_spawn : {};
+  return meta.thread_source === "subagent" || str(meta.parent_thread_id) !== "" || str(spawn.parent_thread_id) !== "";
 }
 
 async function newestCodex(input: ResolveInput): Promise<Found | null> {
@@ -128,7 +137,7 @@ async function newestCodex(input: ResolveInput): Promise<Found | null> {
   for (const file of files) {
     const meta = await codexSessionMeta(file);
     // Subagent rollouts belong to a parent thread; attach to the thread itself.
-    if (!meta || meta.thread_source === "subagent" || !inRepo(str(meta.cwd), input.checkoutRoots)) continue;
+    if (!meta || isCodexSubagent(meta) || !inRepo(str(meta.cwd), input.checkoutRoots)) continue;
     return { engine: "codex", sessionId: str(meta.id) || sessionIdFromPath("codex", file), transcriptPath: file };
   }
   return null;
@@ -136,7 +145,7 @@ async function newestCodex(input: ResolveInput): Promise<Found | null> {
 
 async function fromMtime(input: ResolveInput): Promise<Found | null> {
   const candidates: Found[] = [];
-  if (input.engine !== "codex") candidates.push(...[await newestClaude(input)].filter((f) => f !== null));
+  if (input.engine !== "codex") candidates.push(...[newestClaude(input)].filter((f) => f !== null));
   if (input.engine !== "claude") candidates.push(...[await newestCodex(input)].filter((f) => f !== null));
   return candidates.toSorted((a, b) => mtimeOf(b.transcriptPath) - mtimeOf(a.transcriptPath))[0] ?? null;
 }

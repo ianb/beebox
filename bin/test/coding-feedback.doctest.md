@@ -66,6 +66,8 @@ const codexSub = join(codexDay, "rollout-2026-10-07T17-40-00-01a11884-ffff-7862-
 const meta = (payload: object) => `${JSON.stringify({ type: "session_meta", payload })}\n`;
 await writeFile(codexMain, meta({ id: codexId, cwd: worktree, thread_source: "user" }));
 await writeFile(codexSub, meta({ id: "01a11884-ffff-7862-9a3c-61d4e5cc3daf", cwd: worktree, thread_source: "subagent" }));
+const codexOldSub = join(codexDay, "rollout-2026-10-07T17-41-00-01a11884-eeee-7862-9a3c-61d4e5cc3daf.jsonl");
+await writeFile(codexOldSub, meta({ id: "01a11884-eeee-7862-9a3c-61d4e5cc3daf", cwd: worktree, parent_thread_id: codexId }));
 
 const at = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000);
 async function age(file: string, minutesAgo: number) {
@@ -76,6 +78,7 @@ await age(claudeNew, 10);
 await age(claudeOther, 1);
 await age(codexMain, 20);
 await age(codexSub, 2);
+await age(codexOldSub, 3);
 
 const baseEnv: Record<string, string> = {};
 for (const [k, v] of Object.entries(process.env)) {
@@ -108,10 +111,13 @@ const body = "1. Lint rules took three rounds.\n2. bin/CLAUDE.md lacked X.\n3. A
 ```
 
 With no session variable, `add` from the worktree attaches the most recently
-modified transcript whose recorded cwd is this checkout. Here that is the newer
-Claude transcript. The newest file overall sits in a prefix-matching project
-directory for another checkout, and the newest Codex rollout is a subagent's;
-both are passed over. Stdout is one line, the written path, under
+modified transcript for this checkout: a Claude transcript in the project
+directory named for the checkout root (no Claude content is read), or a Codex
+rollout whose `session_meta` cwd is the checkout. Here that is the newer Claude
+transcript. The newest file overall sits in a prefix-matching project directory
+for another checkout, and the two newest Codex rollouts are subagents' (one
+marked by `thread_source`, an older one only by `parent_thread_id`); all are
+passed over. Stdout is one line, the written path, under
 `<store>/demo/coding-feedback/`. The frontmatter carries every field in this
 order, and the body follows verbatim. The checkout stays clean: nothing was
 written into it.

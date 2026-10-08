@@ -1,13 +1,15 @@
 /**
  * Where local agent transcripts live and how to read their metadata. Shared
  * by `bin/skill-usage.ts` (which scans their content) and
- * `bin/coding-feedback.ts` (which only attaches a note to one).
+ * `bin/coding-feedback.ts` (which only attaches a note to one and reads no
+ * Claude content and only a Codex rollout's first line).
  *
  * - Claude Code: `~/.claude/projects/<encoded cwd>/<sessionId>.jsonl`; the
  *   directory name is the session's starting cwd with every
  *   non-alphanumeric character replaced by `-`. Subagent transcripts sit
  *   under `<sessionId>/subagents/`. Each line carries `cwd` and `sessionId`.
- *   The running session exports `CLAUDE_CODE_SESSION_ID` to its commands.
+ *   The running session exports `CLAUDE_CODE_SESSION_ID` to its commands;
+ *   a subagent inherits its parent's id.
  * - Codex: `~/.codex/sessions/YYYY/MM/DD/rollout-<local time>-<threadId>.jsonl`;
  *   the first line is `session_meta` with `cwd`, `id`, and `thread_source`.
  *   The running thread exports `CODEX_THREAD_ID` to its commands.
@@ -89,15 +91,6 @@ export function codexDayDirs(sessionsRoot: string): { date: string; dir: string 
     }
   }
   return days;
-}
-
-/** The first `cwd` a Claude transcript records; reads lines only until one carries it. */
-export async function claudeTranscriptCwd(file: string): Promise<string> {
-  for await (const o of readJsonl(file)) {
-    const cwd = str(o.cwd);
-    if (cwd) return cwd;
-  }
-  return "";
 }
 
 /** A Codex rollout's `session_meta` payload (its first line), or null. */
