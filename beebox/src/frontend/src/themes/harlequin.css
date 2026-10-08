@@ -126,7 +126,8 @@
   box-shadow: none;
 }
 .bbx-interface-tab[data-card-theme="harlequin"] {
-  border-top: 4px solid #772d35;
+  --bbx-tab-top-border: 4px;
+  border-top-color: #772d35;
 }
 .bbx-interface-tab[data-card-theme="harlequin"][data-active="true"] {
   border-top-color: #213d94;
