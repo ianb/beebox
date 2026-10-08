@@ -111,14 +111,13 @@ silent data corruption. No compliments, just the problems."
 
 ## Run it
 
-Before sending a diff for review, write a CODING_FEEDBACK entry: pipe your
-answers to its four prompts (`bin/coding-feedback help`) into
-`bin/coding-feedback add --checkpoint implemented`.
+If you wrote the change, write a CODING_FEEDBACK entry before sending its diff:
+pipe your answers to the four prompts (`bin/coding-feedback help`) into
+`bin/coding-feedback add --checkpoint implemented`. A review-only session skips it.
 
 Write the prompt to `scratch/cross-model/<name>.prompt.md`, then run it as a
-background shell command and wait for its completion notice (a review takes
-longer than the shell tool's 10-minute foreground limit; the runner's own
-`--timeout` bounds it):
+background shell command and wait for its completion notice (a review outlasts
+the shell tool's 10-minute foreground limit):
 
 ```bash
 bin/cross-model-run --engine codex --prompt-file scratch/cross-model/<name>.prompt.md
