@@ -38,3 +38,9 @@ the Opus change did.
 Codex `0.159.1` makes GPT-6.1 Sol the default in its bundled catalog, while the
 same table resolves `sol` to `gpt-6-sol`. Worth settling in the same change;
 the Codex pin reaches `0.159.1` no earlier than 2026-10-01.
+
+**2026-10-07:** Claude Code 2.1.293 adds Claude Haiku 5.5 (`claude-haiku-5-5`)
+and makes it the default Haiku on the Anthropic API. The `haiku` alias in
+`beebox/src/shared/model-ids.ts` still pins `claude-haiku-4-5-20251001`. Check
+that `claude-haiku-5-5` runs on the pin before moving the alias; the Agent SDK
+pin reaches 2.1.293 no earlier than 2026-10-09.
