@@ -28,6 +28,9 @@ a link to the landmark card.
   before she decides whether to say anything.
 - When Wren taps "Chemistry" in a chat reply, I want to see what that place
   holds (where she left off, the lessons), so she can pick up where she was.
+- When Tomas opens Lending to record that he just lent Saoirse the drill, I
+  want "Log a new loan" right there, so the first message is one tap and he
+  does not have to remember how he phrased it last time.
 - When Priya goes back to the Swim chat where she had three cards open an
   hour ago, I want those cards as she left them. She does not want a page
   pushed in front of her work. (The quiet case.)
@@ -43,6 +46,7 @@ a link to the landmark card.
 | Priya, Monday | Show | Same: the entry-point card | Waits to be found |
 | Wren, chat link | Show | The landmark card, rendered as the place page: its links, grouped | Waits to be found |
 | Priya, back to her chat | Quiet | The chat's own saved cards, unchanged | Nothing new |
+| Tomas, new loan | Show | Place page "Start something" group, and the empty chat's openers | Waits to be found |
 | Juni, empty place | Show | Place page: "Nothing here yet" and the folder; chat composer ready | Waits to be found |
 
 Two rules follow. **Arriving at a place with no cards open opens the place.**
@@ -51,6 +55,15 @@ place page. **A landmark card, wherever it is opened, renders as the place
 page**: the place's symbol and label, then its links in the existing tiers
 (entry points, primary cards, curated links, expanded items, each group
 labeled). Its fields stay under Properties.
+
+**A place carries its own openers.** Openers move from the folder's briefing
+card to the landmark (`openers:`), one concept in one place. They show in two
+spots: a "Start something" group at the top of the place page, and on an empty
+chat in that place, where today's fresh-chat bug hides them. Clicking one sends
+it as the person's message. The root landmark holds the box's onboarding
+openers. The agent maintains them as now: onboarding ones fade as the box is
+used; a place's standing ones ("Who has what right now?", "Log a new loan")
+stay as long as they are useful.
 
 This changes one line of the current definition. [`landmarks.md`](../landmarks.md)
 calls the landmark card "a place marker, not a visitable file". People visit it
@@ -106,7 +119,16 @@ Tomas, the A-lending box, one evening a month later.
    open list changes in place.
 5. Nothing new is recorded by arriving. The record is the edit in step 4.
 
-## Open questions for the boxholder
+## Decided (2026-10-08)
+
+The boxholder accepted the recommendations: a resumed chat with no saved cards
+opens the place; a place with one entry point opens that card; the
+fresh-chat opener bug is fixed with this work; "entry point, else place page"
+is the default until a pinned baseline exists. The boxholder added openers on
+landmarks. Moving `openers:` from briefings to landmarks needs a migration
+(bbx-migration) and new agent guidance.
+
+## Open questions (answered above)
 
 1. Arrival into a resumed chat that has no saved cards: open the place (as
    above), or leave it empty?
