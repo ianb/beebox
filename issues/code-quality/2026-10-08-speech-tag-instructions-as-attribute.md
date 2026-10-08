@@ -48,3 +48,19 @@ quotes needs the same handling the other tag attributes get.
 
 Run a knowledge audit after the guidance change to confirm agents write the
 attribute form.
+
+## Resolution (worktree speech-instructions-attr, not yet landed)
+
+- Guidance (`prompts.ts`, `voice-doc.ts`, audits) shows only the attribute.
+  The new audit `chat-voice-delivery-attribute` passes: the agent writes
+  `<speech instructions="…">`.
+- The parser reads both forms. The attribute wins when both appear. The
+  child's text is never spoken or displayed, including a child that has its
+  own attributes. The attribute value is entity-decoded like `name`
+  (`&quot;`, `&amp;`).
+- Old form: keep reading it. Saved transcripts replay through the same
+  parser, so removing it would make old messages speak their direction
+  text. The cost is a few lines in `parse.ts`.
+- Known gap: a raw `>` inside the attribute value ends the tag early (all
+  tag parsers here stop at the first `>`). Delivery directions rarely
+  contain one, so it is left unfixed.
