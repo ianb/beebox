@@ -2,9 +2,10 @@
 # last run, beside transcript-wide patterns and escaped bugs, and turn what
 # repeats into tracked-file edits the boxholder confirms or vetoes.
 #
-# Handoff shape: `run` gathers the packet and hands off only when there is a
-# new entry or an escaped bug with no test or check behind it. Which finding is
-# a pattern, and what edit answers it, is the session's judgment.
+# Handoff shape: `run` gathers the packet and hands off only when another
+# workstream wrote a new entry or an escaped bug was filed in the window.
+# Which finding is a pattern, and what edit answers it, is the session's
+# judgment.
 description: "Retrospective: turn CODING_FEEDBACK and session patterns into guidance changes"
 cadence: 3d
 workstream:
@@ -15,8 +16,9 @@ workstream:
   # judged on the branch it produces.
   session: fresh
   permissionMode: bypassPermissions
-  # Tracked files only. Private material stays out of what this session reads
-  # and writes (an Edit rule also covers Write).
+  # Guardrail, not a boundary: these deny the file tools (an Edit rule also
+  # covers Write), but Bash can still reach private-issues/. The prompt's
+  # structural-only rule is what keeps private material out of tracked files.
   disallowedTools:
     - "Read(private-issues/**)"
     - "Edit(private-issues/**)"

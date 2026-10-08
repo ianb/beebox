@@ -22,6 +22,7 @@ import { execa } from "execa";
 import { z } from "zod";
 import { issueFiles, filterByTrailer } from "../../bin/commit-provenance.ts";
 import { parseEntry } from "../../bin/lib/coding-feedback.ts";
+import { HANDOFF_BODY_MAX } from "../../bin/lib/schedules.ts";
 import {
   formatPacket, hasWork, isEscapedBug, isPreventionPath, issueFacts, lastRunSchema, nextWatermark, parseStored,
   watchListSchema, windowDays, windowStart, type Counts, type EscapedBug, type FeedbackEntry, type LastRun, type Packet,
@@ -88,7 +89,10 @@ async function skillUsage(days: number): Promise<{ humanPatterns: Record<string,
 /** Files a commit changed; a merge is compared with its first parent. */
 async function changedFiles(sha: string): Promise<string[]> {
   const parents = (await git(["rev-list", "--parents", "-n", "1", sha])).split(" ");
-  const out = parents.length > 1 ? await git(["diff", "--name-only", `${sha}^1`, sha]) : await git(["show", "--name-only", "--format=", sha]);
+  // Added or modified only: a commit that deletes a test prevents nothing.
+  const out = parents.length > 1
+    ? await git(["diff", "--name-only", "--diff-filter=AMR", `${sha}^1`, sha])
+    : await git(["show", "--name-only", "--diff-filter=AMR", "--format=", sha]);
   return out.split("\n");
 }
 
@@ -113,7 +117,11 @@ async function prevention(name: string): Promise<{ citedBy: string[]; hasPrevent
 }
 
 async function escapedBugs(start: string): Promise<EscapedBug[]> {
-  const added = await git(["log", "main", `--since=${start}`, "--diff-filter=A", "--name-only", "--format=", "--", "issues/"]);
+  // First parent only, merges diffed against it: an issue filed on a worktree
+  // branch keeps its old commit date, but the merge that lands it is dated now.
+  const added = await git([
+    "log", "main", "--first-parent", "--diff-merges=first-parent", `--since=${start}`, "--diff-filter=A", "--name-only", "--format=", "--", "issues/",
+  ]);
   const names = [...new Set(added.split("\n").filter((l) => l.endsWith(".md")).map((l) => path.basename(l, ".md")))];
   const current = issueFiles(path.join(REPO_ROOT, "issues"));
   const bugs: EscapedBug[] = [];
@@ -137,6 +145,7 @@ const stateDir = process.env["SCHEDULE_STATE_DIR"];
 if (stateDir === undefined || stateDir === "") refuse("SCHEDULE_STATE_DIR is not set");
 const dryRun = process.env["SCHEDULE_DRY_RUN"] === "1";
 const runId = process.env["SCHEDULE_RUN_ID"] ?? "unknown-run";
+const self = process.env["SCHEDULE_NAME"] ?? "retrospective";
 const lastRunFile = path.join(stateDir, "last-run.json");
 const watchListPath = path.join(stateDir, "watch-list.json");
 
@@ -170,7 +179,7 @@ async function record(packetPath: string | null): Promise<void> {
   else await fs.writeFile(lastRunFile, `${JSON.stringify(next, null, 2)}\n`, "utf8");
 }
 
-if (!hasWork(packet)) {
+if (!hasWork(packet, self)) {
   await record(null);
   process.exit(0);
 }
@@ -184,9 +193,12 @@ if (dryRun) {
   await fs.writeFile(packetPath, text, "utf8");
 }
 const open = packet.bugs.filter((b) => !b.hasPrevention).length;
+// A packet too large for a handoff body travels by path, or every run would fail on the same entries.
+const pointer = `Packet saved at \`${packetPath}\`.`;
+const body = Buffer.byteLength(text) < HANDOFF_BODY_MAX - 4096 ? `${pointer}\n\n${text}` : `${pointer} It is too large for this briefing: read it from there.\n`;
 await execa(
   path.join(REPO_ROOT, "bin", "schedules"),
   ["handoff", "--title", `Retrospective: ${String(entries.length)} entries, ${String(open)} escaped bugs without prevention`, "--body", "-"],
-  { input: `Packet saved at \`${packetPath}\`.\n\n${text}`, stdout: "inherit", stderr: "inherit" },
+  { input: body, stdout: "inherit", stderr: "inherit" },
 );
 await record(packetPath);

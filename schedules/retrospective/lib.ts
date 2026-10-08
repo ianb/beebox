@@ -177,9 +177,15 @@ export interface Packet {
   watchList: Parsed<WatchList> | null;
 }
 
-/** Work for a session: a new entry, or an escaped bug with nothing preventing a repeat. */
-export function hasWork(packet: Pick<Packet, "entries" | "bugs">): boolean {
-  return packet.entries.length > 0 || packet.bugs.some((bug) => !bug.hasPrevention);
+/**
+ * Work for a session: a new entry from another workstream, or an escaped bug
+ * filed in the window. The retrospective's own entries ride along in the packet
+ * but never start a run, or every run would start the next. The prevention flag
+ * is evidence for the session, not a gate: an unrelated test edit in a citing
+ * commit would otherwise hide the bug.
+ */
+export function hasWork(packet: Pick<Packet, "entries" | "bugs">, self: string): boolean {
+  return packet.entries.some((entry) => entry.workstream !== self) || packet.bugs.length > 0;
 }
 
 function countsTable(rows: Record<string, Counts>): string[] {

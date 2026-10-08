@@ -69,12 +69,12 @@ test("issueFacts: reads YAML frontmatter, quoted titles and flow lists included"
   assert.deepEqual(issueFacts("bugs/b.md", "no frontmatter"), { rel: "bugs/b.md", title: "(no title)", discoveredIn: "", labels: [] });
 });
 
-test("hasWork: a new entry, or an escaped bug with nothing preventing a repeat", () => {
-  assert.equal(hasWork({ entries: [], bugs: [] }), false);
-  assert.equal(hasWork({ entries: [], bugs: [bug({ hasPrevention: true })] }), false);
-  assert.equal(hasWork({ entries: [], bugs: [bug({})] }), true);
+test("hasWork: another workstream's entry or any escaped bug; the retrospective's own entries never start a run", () => {
+  assert.equal(hasWork({ entries: [], bugs: [] }, "retrospective"), false);
+  assert.equal(hasWork({ entries: [], bugs: [bug({ hasPrevention: true })] }, "retrospective"), true);
   const entry = { path: "/s/e.md", timestamp: "2026-10-07T00:00:00Z", workstream: "w", checkpoint: "landed", transcriptPath: null, body: "b\n" };
-  assert.equal(hasWork({ entries: [entry], bugs: [] }), true);
+  assert.equal(hasWork({ entries: [entry], bugs: [] }, "retrospective"), true);
+  assert.equal(hasWork({ entries: [{ ...entry, workstream: "retrospective" }], bugs: [] }, "retrospective"), false);
 });
 
 test("formatPacket: entries quoted with provenance, tables sorted by sessions, watch-list states", () => {
