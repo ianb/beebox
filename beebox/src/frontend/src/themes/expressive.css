@@ -128,7 +128,44 @@
 .bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-meta-material {
   width: fit-content;
 }
-.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-meta-material .text-warm-500 { color: inherit; }
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-meta-material:disabled {
+  color: color-mix(in srgb, var(--bbx-chat-reply-ink) 60%, var(--bbx-chat-reply-paper));
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-user-paper.opacity-60 {
+  opacity: 1;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-meta-material :is(.text-warm-500, .text-warm-600) { color: inherit; }
+
+/* Progress and tool details use muted text inside the opaque reply panel;
+   keep their ink legible on every expressive stock. */
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-reply-material :is(.text-warm-500, .text-warm-600),
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-callout > .text-accent-dark {
+  color: var(--bbx-chat-reply-ink);
+}
+/* The provisional voice bubble is translucent by design. Give its whole
+   group an opaque backing so the art cannot show through text or status. */
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-pending-material {
+  background: var(--bbx-chat-reply-paper);
+  color: var(--bbx-chat-reply-ink);
+  padding: 8px;
+  border-radius: var(--bbx-control-radius);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-pending-material :is([role="status"], .text-warm-500, .text-warm-600) {
+  color: inherit;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-pending-material > :is(.opacity-60, .opacity-90) {
+  opacity: 1;
+  background: var(--bbx-chat-user-paper);
+  color: var(--bbx-chat-user-ink);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-chat-reply-material .prose {
+  --tw-prose-body: var(--bbx-chat-reply-ink);
+  --tw-prose-headings: var(--bbx-chat-reply-ink);
+  --tw-prose-bold: var(--bbx-chat-reply-ink);
+  --tw-prose-quotes: var(--bbx-chat-reply-ink);
+  --tw-prose-bullets: var(--bbx-chat-reply-ink);
+  --tw-prose-counters: var(--bbx-chat-reply-ink);
+}
 .bbx-themed-menu[data-theme-composition="expressive"] [role="menuitem"]:is([aria-disabled="true"], :disabled) {
   color: color-mix(in srgb, var(--bbx-menu-ink) 50%, var(--bbx-menu-paper));
 }

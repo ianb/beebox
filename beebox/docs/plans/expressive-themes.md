@@ -130,5 +130,11 @@ Claude Opus 5.5 implementation review found inherited scene ink, unbacked chat m
 - Backend/frontend typecheck and changed-file lint pass. The broad change selector selected 542 suites and reported memory pressure; that run was interrupted in favor of these focused checks.
 - Final expressive-theme tour passed all six desktop/mobile checkpoints with zero findings and zero axe violations.
 - Actual card fixtures cover all three choices and matching system CSS previews at 1280×800 and 375×800. Settings persistence and portal menu selection were separately exercised. OS color preference preserves the authored palettes.
-- The test box has old chat cards without saved transcripts, so live transcript appearance is not browser-verified. Opaque reply/metadata styling is source-reviewed; no model calls were made to populate a conversation.
+- The test box has old chat cards without saved transcripts. A dedicated `/dev/chat-materials` harness now renders production message components with synthetic prose, tools, progress, compaction, interruption, self-note, pending voice, and failed capture states. It verifies component appearance, not live transcript delivery; no model calls were made.
 - An unrelated existing SSR useLayoutEffect warning is recorded as issue 2026-10-08-landmark-menu-ssr-layout-effect-warning, with predecessor source evidence.
+
+## Visual feedback follow-up
+
+The human flagged Harlequin tiling and chat readability. Harlequin now paints one viewport-filling composition without repetition, including its decorative strips. Populated component checks exposed bare history/model labels and provisional voice/capture groups; those now have opaque material backing. Tool/progress and Markdown ink follow the reading material, and expanded compaction text keeps legible contrast. The comparison exhibit includes populated samples and the earlier tiled image for reference.
+
+Claude Opus 5.5 follow-up review caught disabled-history styling, translucent queued user bubbles, and viewport-relative Harlequin picker cropping. Those were corrected and independently rechecked, along with the capture group and viewport-scrolling harness. Focused capture/layout doctests passed 36 assertions; changed-file lint passed.

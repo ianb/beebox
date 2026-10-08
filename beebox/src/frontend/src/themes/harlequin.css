@@ -5,7 +5,7 @@
   --bbx-desk-background: transparent;
   --bbx-desk-pattern: none;
   --bbx-harlequin-art: url("./art/harlequin-pigment.svg");
-  --bbx-scene: var(--bbx-harlequin-art) center / 900px 600px fixed, #273b2e;
+  --bbx-scene: var(--bbx-harlequin-art) center / cover no-repeat, #273b2e;
   --bbx-toolbar-background: #292925;
   --bbx-toolbar-ink: #fff8e9;
   --bbx-toolbar-edge: #c6a245;
@@ -71,7 +71,8 @@
   border-bottom-width: 0;
   padding-bottom: 7px;
   background-image: var(--bbx-harlequin-art);
-  background-size: 720px 480px;
+  background-size: cover;
+  background-repeat: no-repeat;
   background-position: center 41%;
 }
 .bbx-box-presentation[data-chrome-theme="harlequin"] .bbx-app-nav > div {
@@ -111,7 +112,7 @@
   left: 0;
   right: 44px;
   height: 20px;
-  background: var(--bbx-harlequin-art) 45% 44% / 600px 400px;
+  background: var(--bbx-harlequin-art) 45% 44% / cover no-repeat;
   pointer-events: none;
 }
 .bbx-card-surface[data-card-theme="harlequin"] > .bbx-card-heading :is(h1, h2) {
@@ -147,7 +148,6 @@
 
 @media (max-width: 640px) {
   .bbx-box-presentation[data-chrome-theme="harlequin"] {
-    --bbx-scene: var(--bbx-harlequin-art) center / 600px 400px fixed, #273b2e;
     --bbx-composer-shadow: -3px -3px 0 #bb9635;
   }
   .bbx-card-theme[data-card-theme="harlequin"] {
