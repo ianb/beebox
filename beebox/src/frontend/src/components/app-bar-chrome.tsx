@@ -154,14 +154,21 @@ export function useAppBarPlace(place: AppBarPlace | null): void {
   const dir = place === null ? null : place.dir;
   const label = place === null ? null : place.label;
 
+  // Clear on unmount only. Owner-scoped: a stale unmount must not erase a
+  // newer page's value.
   useEffect(() => {
     const owner = ownerRef.current;
-    if (writers !== null) {
-      if (label === null) writers.clearPlace(owner);
-      else writers.publishPlace(owner, { dir, label });
-    }
-    // Owner-scoped: a stale unmount must not erase a newer page's value.
     return () => { if (writers !== null) writers.clearPlace(owner); };
+  }, [writers]);
+
+  // A place change republishes without clearing first, so the owner keeps its
+  // position in the stack: a chat whose label changes under a focused Browse
+  // card must not rise above it (`lib/place-stack.ts`).
+  useEffect(() => {
+    if (writers === null) return;
+    const owner = ownerRef.current;
+    if (label === null) writers.clearPlace(owner);
+    else writers.publishPlace(owner, { dir, label });
   }, [writers, dir, label]);
 }
 
