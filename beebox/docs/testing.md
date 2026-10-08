@@ -83,6 +83,8 @@ loop that reaches the bug:
 - **A [field test](testing/field-testing.md)**: a multi-step failure across
   wakeup, connectors, and agent runs. Each run starts from the beginning;
   there is no checkpoint-resume, so it is the slowest loop.
+- **A box**: the test box, its worktree clone, or a throwaway box. Where
+  each lives and what not to touch: [box work](box-work.md).
 - **Git history**: `git log -S '<symbol>'`, `git log -- <path>`, and
   `git blame` find what changed. Recent commits are the first suspects.
 
