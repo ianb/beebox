@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480">
+  <defs>
+    <filter id="pigment">
+      <feTurbulence type="fractalNoise" baseFrequency=".64" numOctaves="3" stitchTiles="stitch" seed="17"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+  <path fill="#e8dcc2" d="M0 0h720v480H0z"/>
+  <path fill="#213d94" d="M0 0h168L41 289 0 390z"/>
+  <path fill="#bb9635" d="m168 0 93 0-92 371L41 289z"/>
+  <path fill="#273b2e" d="m261 0 109 0-35 256-166 115z"/>
+  <path fill="#e29981" d="m370 0 123 0-37 168-121 88z"/>
+  <path fill="#772d35" d="m493 0 116 0-25 292-128-124z"/>
+  <path fill="#292925" d="m609 0 111 0v408L584 292z"/>
+  <path fill="#e8dcc2" d="m0 390 41-101 128 82-9 109H0z"/>
+  <path fill="#963e35" d="m169 371 166-115-31 224H160z"/>
+  <path fill="#233e95" d="m335 256 121-88 44 312H304z"/>
+  <path fill="#c6a245" d="m456 168 128 124 18 188H500z"/>
+  <path fill="#37513c" d="m584 292 136 116v72H602z"/>
+  <path fill="#e29981" d="m0 0 23 0L0 113zM720 0v66L699 0z"/>
+  <path fill="#eee4d1" d="m261 0-83 336 91-310zM493 0l-26 145 36-128z" opacity=".24"/>
+  <path fill="#fff" d="M0 0h720v480H0z" opacity=".105" filter="url(#pigment)"/>
+</svg>

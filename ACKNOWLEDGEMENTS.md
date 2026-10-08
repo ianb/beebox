@@ -10,6 +10,13 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 ## Ideas we adopted
 
+### Visual references for expressive themes
+
+- **Sources:** Stephen Westfall, *The Tall Grass* (2025); No7er, *Fries 2000* (r/ImaginaryColorscapes); [Saigetsu](https://saigetsu1225.booth.pm/), [pink cloud and star illustration](https://www.instagram.com/p/DcDO6wYM6pv/). Attribution follows the reference images supplied by the boxholder.
+- **What we took:** Harlequin interprets elongated pigment wedges and unexpected color relationships; Electric Playground interprets perspective grids, translucent geometry, and printed digital texture; Daydream interprets sweeping clouds, irregular starbursts, and pastel speckling.
+- **Rights:** Original artworks remain their artists' work; no licence to redistribute them is claimed and the source images are not bundled. The CSS and SVG ornaments here are newly authored interpretations.
+- **Where it landed:** `beebox/src/frontend/src/themes/{harlequin,electric-playground,daydream}.css` and `themes/art/`.
+
 ### Agent Skills, by addyosmani (Addy Osmani)
 
 - **Source:** https://github.com/addyosmani/agent-skills (MIT)

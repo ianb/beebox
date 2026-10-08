@@ -10,6 +10,7 @@ import {
   resolveChromeTheme,
   themePatternMatches,
   validateThemePattern,
+  validateSystemThemeChoice,
 } from "../../src/shared/card-theme/core.js";
 import { cardSchema } from "../../src/cards/schema.js";
 import { z } from "zod";
@@ -156,6 +157,41 @@ a visible configuration problem with base/plain fallback.
 const chrome = resolveChromeTheme(parsePresentationConfig({ chrome: { name: "post-it" } }));
 JSON.stringify([chrome.choice, chrome.origin, chrome.problem?.message])
 => [{"name":"plain","stock":"neutral"},"box-chrome","Theme \"post-it\" does not provide app chrome"]
+```
+
+The three expressive themes can be saved as system themes, with their own
+default stocks rather than the fallback stock for an unknown theme.
+
+```ts
+["harlequin", "electric-playground", "daydream"].map((name) => validateSystemThemeChoice({ name }))
+=> [
+  { choice: { name: "harlequin", stock: "pigment" }, problem: null },
+  { choice: { name: "electric-playground", stock: "prism" }, problem: null },
+  { choice: { name: "daydream", stock: "cloud" }, problem: null },
+]
+```
+
+Choosing expressive chrome does not recolor the card's saved theme. A card can
+choose Daydream over the box's Harlequin default while chrome stays Electric
+Playground; no stock leaks from either of the other choices.
+
+```ts
+const expressive = parsePresentationConfig({
+  default: { name: "harlequin" },
+  chrome: { name: "electric-playground" },
+});
+const expressiveCard = resolveCardTheme({
+  path: "_content/One.memo.card",
+  type: "memo",
+  cardChoice: { name: "daydream" },
+  presentation: expressive,
+});
+const expressiveChrome = resolveChromeTheme(expressive);
+[expressiveCard, expressiveChrome]
+=> [
+  { choice: { name: "daydream", stock: "cloud" }, problem: null, origin: { kind: "card" } },
+  { choice: { name: "electric-playground", stock: "prism" }, problem: null, origin: "box-chrome" },
+]
 ```
 
 A card-only box default does not require its theme to provide chrome. When the

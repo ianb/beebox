@@ -1,5 +1,7 @@
+import { themeComposition } from "@shared/card-theme/catalog";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useBoxPresentation } from "../themes/BoxPresentationProvider";
 import { cn } from "../../lib/cn";
 
 // The "first focusable menu item" the open/close focus management below
@@ -160,6 +162,7 @@ function visibleViewport() {
 }
 
 export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose, panelIndex }: DropdownProps) {
+  const chrome = useBoxPresentation()?.data?.chrome.choice;
   const align = alignArg ?? "right";
   const vertical = verticalArg ?? "below";
   const width = widthArg ?? "w-48";
@@ -326,9 +329,10 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
             <div
               ref={menuRef}
               role="menu"
+              data-theme-composition={themeComposition(chrome?.name)} data-chrome-theme={chrome?.name} data-chrome-stock={chrome?.stock}
               style={coords}
               className={cn(
-                "bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain motion-safe:transition-[width] motion-safe:duration-150 motion-safe:ease-out",
+                "bbx-themed-menu bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain motion-safe:transition-[width] motion-safe:duration-150 motion-safe:ease-out",
                 dense ? "py-0.5" : "py-1",
                 width,
               )}

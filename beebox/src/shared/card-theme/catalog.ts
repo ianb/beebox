@@ -1,0 +1,105 @@
+export const THEME_CATALOG = [
+  {
+    name: "plain",
+    label: "Flat",
+    stocks: ["neutral"],
+    defaultStock: "neutral",
+    quoteTreatment: "plain",
+    blockquoteTreatment: "plain",
+    chrome: true,
+    systemOnly: false,
+  },
+  {
+    name: "spectrum",
+    label: "Spectrum",
+    stocks: ["gradient"],
+    defaultStock: "gradient",
+    quoteTreatment: "plain",
+    blockquoteTreatment: "plain",
+    chrome: true,
+    systemOnly: true,
+  },
+  {
+    name: "paper",
+    label: "Paper",
+    stocks: ["cream", "manila", "blue"],
+    defaultStock: "cream",
+    quoteTreatment: "layered",
+    blockquoteTreatment: "layered",
+    chrome: true,
+    systemOnly: false,
+  },
+  {
+    name: "post-it",
+    label: "Sticky note",
+    stocks: ["yellow", "rose", "mint"],
+    defaultStock: "yellow",
+    quoteTreatment: "layered",
+    blockquoteTreatment: "layered",
+    chrome: false,
+    systemOnly: false,
+  },
+  {
+    name: "candy",
+    label: "Candy",
+    stocks: ["strawberry"],
+    defaultStock: "strawberry",
+    quoteTreatment: "plain",
+    blockquoteTreatment: "plain",
+    chrome: true,
+    systemOnly: true,
+  },
+  {
+    name: "letter-set",
+    label: "Letter set",
+    stocks: ["strawberry", "lemon", "sky"],
+    defaultStock: "strawberry",
+    quoteTreatment: "layered",
+    blockquoteTreatment: "layered",
+    chrome: false,
+    systemOnly: false,
+  },
+  {
+    name: "harlequin",
+    composition: "expressive",
+    label: "Harlequin",
+    stocks: ["pigment"],
+    defaultStock: "pigment",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+  },
+  {
+    name: "electric-playground",
+    composition: "expressive",
+    label: "Electric Playground",
+    stocks: ["prism"],
+    defaultStock: "prism",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+  },
+  {
+    name: "daydream",
+    composition: "expressive",
+    label: "Daydream",
+    stocks: ["cloud"],
+    defaultStock: "cloud",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+  },
+] as const;
+
+export type ThemeDescriptor = (typeof THEME_CATALOG)[number];
+export type ThemeName = ThemeDescriptor["name"];
+export type ThemeStock = ThemeDescriptor["stocks"][number];
+
+/** Opt in to scene, control, and sheet composition tokens. */
+export function themeComposition(name: string | undefined): "expressive" | undefined {
+  const theme = THEME_CATALOG.find((item) => item.name === name);
+  return theme !== undefined && "composition" in theme ? theme.composition : undefined;
+}
