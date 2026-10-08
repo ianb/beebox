@@ -44,6 +44,26 @@ export const THEME_CATALOG = [
     chrome: false,
     systemOnly: false,
   },
+  {
+    name: "candy",
+    label: "Candy",
+    stocks: ["strawberry"],
+    defaultStock: "strawberry",
+    quoteTreatment: "plain",
+    blockquoteTreatment: "plain",
+    chrome: true,
+    systemOnly: true,
+  },
+  {
+    name: "letter-set",
+    label: "Letter set",
+    stocks: ["strawberry", "lemon", "sky"],
+    defaultStock: "strawberry",
+    quoteTreatment: "layered",
+    blockquoteTreatment: "layered",
+    chrome: false,
+    systemOnly: false,
+  },
 ] as const;
 
 export type ThemeDescriptor = (typeof THEME_CATALOG)[number];

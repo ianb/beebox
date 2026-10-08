@@ -78,6 +78,25 @@ masked((await loadRunHistory(box.root, "report")).at(-1))
 => { result: "failure", triggeredBy: "schedule", error: «*» }
 ```
 
+A run that stops because it found nothing to do records why, so the
+dashboard can say "nothing to do" instead of showing a wait:
+
+```ts continue
+await fs.rm(box.path("_tmp/fail"));
+await box.write("_config/schedules/report.scheduled-script.card", `---
+cron: "0 0 1 1 *"
+runs: >-
+  echo '{"reason":"no-change"}' > "$BBX_DEFER_FILE"; exit 75
+---
+`);
+box.commitAll("defer");
+await tick(box)
+=> skipped
+
+masked((await loadRunHistory(box.root, "report")).at(-1))
+=> { result: "deferred", triggeredBy: "schedule", error: "no-change: nothing to do", deferReason: "no-change" }
+```
+
 ```ts cleanup
 await box.cleanup();
 ```
@@ -113,6 +132,18 @@ await appendRunHistory(box.root, {
 const after = await loadRunHistory(box.root, "busy");
 [after.length, after.at(-1)]
 => [20, { ts: "2026-10-07T00:00:22Z", result: "failure", durationMs: 1, triggeredBy: "schedule", error: "could not delete the once card", summary: { headline: "Done", priority: "normal" } }]
+```
+
+Entries written before the history recorded `deferReason` still name it as
+the error's prefix, and reading the history recovers it:
+
+```ts continue
+await fs.appendFile(
+  box.path("_config/schedules/.state/busy.runs.jsonl"),
+  JSON.stringify({ ts: "2026-10-07T00:00:23Z", result: "deferred", durationMs: 1, triggeredBy: "schedule", error: "no-change: nothing to do" }) + "\n",
+);
+(await loadRunHistory(box.root, "busy")).at(-1).deferReason
+=> no-change
 ```
 
 ```ts cleanup

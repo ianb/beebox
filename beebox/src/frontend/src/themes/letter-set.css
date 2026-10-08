@@ -1,0 +1,99 @@
+/* Letter set: pastel stationery with a stitched border, rounded type, and a
+   few hearts in the corner. It pairs with the Candy system theme. */
+.bbx-card-theme[data-card-theme="letter-set"] {
+  --bbx-sheet-radius: 18px;
+  --bbx-slip-overhang: 0px;
+  --bbx-slip-angle: -0.6deg;
+  --bbx-font: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", "Varela Round", ui-sans-serif, system-ui, sans-serif;
+  --bbx-paper: #fff8fa;
+  --bbx-ink: #4a2234;
+  --bbx-ink-soft: #7a4a5e;
+  --bbx-pen: #c2185b;
+  --bbx-edge: #f6c3d3;
+  --bbx-underlay: #fbe3ea;
+  --bbx-quote-paper: #fff;
+  --bbx-quote-layer-paper: #fff;
+  --bbx-blockquote-paper: #ffffff80;
+  --bbx-letter-stitch: #f28fb0;
+  --bbx-letter-heart: #e3264a;
+  --bbx-selection: #ffb3cb;
+  --bbx-selection-ink: #3a1626;
+  --bbx-selection-code: initial;
+  --bbx-selection-code-ink: initial;
+}
+.bbx-card-theme[data-card-theme="letter-set"][data-card-stock="lemon"] {
+  --bbx-paper: #fff8d6;
+  --bbx-ink: #43381a;
+  --bbx-ink-soft: #6e5e2e;
+  --bbx-pen: #2d6fa8;
+  --bbx-edge: #ecd98a;
+  --bbx-underlay: #f6eab0;
+  --bbx-quote-paper: #fffdf0;
+  --bbx-quote-layer-paper: #fffdf0;
+  --bbx-letter-stitch: #7cb8e6;
+  --bbx-letter-heart: #4a9bd8;
+  --bbx-selection: #9fd3f5;
+  --bbx-selection-ink: #14304a;
+}
+.bbx-card-theme[data-card-theme="letter-set"][data-card-stock="sky"] {
+  --bbx-paper: #eaf5fc;
+  --bbx-ink: #20384a;
+  --bbx-ink-soft: #4a6276;
+  --bbx-edge: #b9dcf0;
+  --bbx-underlay: #d6ebf7;
+  --bbx-quote-paper: #f7fbfe;
+  --bbx-quote-layer-paper: #f7fbfe;
+  --bbx-selection: #ffc4d6;
+  --bbx-selection-ink: #3a1626;
+}
+.bbx-card-surface[data-card-theme="letter-set"] {
+  border: 0;
+  box-shadow: 0 2px 0 var(--bbx-edge), 0 6px 16px #8a3a5a1f;
+}
+.bbx-card-surface[data-card-theme="letter-set"]::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  z-index: 0;
+  border: 2px dashed var(--bbx-letter-stitch);
+  border-radius: calc(var(--bbx-sheet-radius) - 6px);
+  pointer-events: none;
+}
+.bbx-card-surface[data-card-theme="letter-set"]::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  width: 64px;
+  height: 44px;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--bbx-letter-heart);
+  opacity: 0.85;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 38'%3E%3Cpath id='h' d='M12 21s-7-4.4-9.5-8.6C.8 9.3 2.6 5 6.5 5c2.1 0 3.6 1.2 5.5 3.2C13.9 6.2 15.4 5 17.5 5c3.9 0 5.7 4.3 4 7.4C19 16.6 12 21 12 21z'/%3E%3Cuse href='%23h' transform='translate(28 10) scale(1.1) rotate(14 12 12)'/%3E%3Cuse href='%23h' transform='translate(20 -3) scale(.45) rotate(-10 12 12)' opacity='.6'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+.bbx-card-surface[data-card-theme="letter-set"] > :is(.bbx-card-heading, .bbx-card-front, .bbx-card-back) {
+  position: relative;
+  z-index: 1;
+}
+.bbx-card-surface[data-card-theme="letter-set"] > .bbx-card-heading {
+  padding-top: 1.6rem;
+}
+.bbx-card-surface[data-card-theme="letter-set"] > .bbx-card-heading :is(h1, h2) {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.bbx-card-theme[data-card-theme="letter-set"] .bbx-theme-link {
+  text-decoration-style: wavy;
+  text-decoration-color: var(--bbx-letter-stitch);
+  text-decoration-thickness: 1.5px;
+}
+.bbx-card-surface[data-card-theme="letter-set"] > .bbx-card-properties {
+  border-radius: 0 18px 0 12px;
+}
+.bbx-card-surface[data-card-theme="letter-set"].bbx-theme-swatch::after {
+  right: 8px;
+  bottom: 6px;
+  width: 30px;
+  height: 21px;
+}

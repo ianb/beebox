@@ -14,6 +14,7 @@ import { z } from "zod";
 import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { MEMORY_ENV, truncateUtf8 } from "./memory.js";
 import { stateDir, type ScriptState } from "./state.js";
+import { DEFER_REASONS } from "./defer-reason.js";
 
 /** `normal`: the run went as usual. `attention`: the boxholder should look at it. */
 export const RUN_PRIORITIES = ["normal", "attention"] as const;
@@ -98,6 +99,8 @@ const RunHistoryEntrySchema = z.object({
   durationMs: z.number(),
   triggeredBy: z.string(),
   error: z.string().optional(),
+  /** Why a `deferred` run stopped, from its defer marker (`no-change`: nothing to do). */
+  deferReason: z.enum(DEFER_REASONS).optional(),
   summary: RunSummarySchema.optional(),
 });
 export type RunHistoryEntry = z.infer<typeof RunHistoryEntrySchema>;
@@ -116,6 +119,7 @@ export function historyEntry(
     durationMs: state.lastDurationMs,
     triggeredBy: opts.triggeredBy,
     ...(state.lastError === null ? {} : { error: state.lastError }),
+    ...(state.lastDeferReason === null ? {} : { deferReason: state.lastDeferReason }),
     ...(opts.summary === null ? {} : { summary: opts.summary }),
   };
 }
@@ -125,6 +129,17 @@ class RunNotRecordedError extends Error {
     super("a run history entry needs a recorded outcome; call recordOutcome first");
     this.name = "RunNotRecordedError";
   }
+}
+
+/**
+ * Entries written before the history recorded `deferReason` still carry it as
+ * the error's `<reason>: ` prefix (`no-change: nothing to do`); read it back so
+ * those runs show as "nothing to do" too.
+ */
+function withDeferReason(entry: RunHistoryEntry): RunHistoryEntry {
+  if (entry.result !== "deferred" || entry.deferReason !== undefined || entry.error === undefined) return entry;
+  const reason = DEFER_REASONS.find((r) => entry.error?.startsWith(`${r}: `) === true);
+  return reason === undefined ? entry : { ...entry, deferReason: reason };
 }
 
 function historyFile(boxRoot: string, scriptName: string): string {
@@ -145,7 +160,7 @@ export async function loadRunHistory(boxRoot: string, scriptName: string): Promi
     if (line.trim() === "") continue;
     try {
       const parsed = RunHistoryEntrySchema.safeParse(JSON.parse(line));
-      if (parsed.success) entries.push(parsed.data);
+      if (parsed.success) entries.push(withDeferReason(parsed.data));
       else console.warn(`Skipping a malformed run history line for "${scriptName}": ${parsed.error.message}`);
     } catch (e) {
       console.warn(`Skipping an unreadable run history line for "${scriptName}": ${errorMessage(e)}`);

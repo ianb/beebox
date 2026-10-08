@@ -26,7 +26,7 @@ import { z } from "zod";
 import { getHead, hasCommits } from "../../lib/git/core/operations.js";
 import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { saveScriptState, type ScriptState } from "./state.js";
-import { DEFER_REASONS, type DeferReason } from "./defer-reason.js";
+import { DEFER_REASONS, foundNothingToDo, type DeferReason } from "./defer-reason.js";
 
 /** The seven environment names; `script-env-allowlist.ts` lets them through to procedure shells. */
 export const MEMORY_ENV = {
@@ -154,7 +154,7 @@ export function cursorAdvances(result: NonNullable<ScriptState["lastResult"]>, r
     case "success":
       return true;
     case "deferred":
-      return reason === "no-change" || reason === "no-pass";
+      return foundNothingToDo(reason);
     case "failure":
     case "inconclusive":
       return false;

@@ -1,0 +1,85 @@
+/* Candy: a strawberry-pink system theme with polka dots and rounded,
+   candy-button controls. It pairs with the Letter set card theme without
+   repeating it: the chrome is saturated pink, the cards are pastel paper. */
+.bbx-box-presentation[data-chrome-theme="candy"] {
+  --bbx-candy-bar: #d6336c;
+  --bbx-candy-bar-edge: #a8204f;
+  --bbx-candy-dots: radial-gradient(circle, #ffffff38 0 2.5px, transparent 3px);
+  --bbx-desk-background: #fbe6ee;
+  --bbx-desk-pattern: radial-gradient(circle, #ffffffb0 0 3px, transparent 3.5px) 0 0 / 28px 28px fixed;
+  --bbx-selection: #e3264a;
+  --bbx-selection-ink: #fff;
+  --bbx-selection-code: #ffb3cb;
+  --bbx-selection-code-ink: #3a1626;
+  --bbx-chat-user-paper: #d6336c;
+  --bbx-chat-user-ink: #fff;
+}
+.bbx-box-presentation[data-chrome-theme="candy"] .bbx-app-nav {
+  position: relative;
+  z-index: 1;
+  background-color: var(--bbx-candy-bar);
+  background-image: var(--bbx-candy-dots);
+  background-size: 18px 18px;
+  border-radius: 0 0 18px 18px;
+  box-shadow: inset 0 -3px 0 var(--bbx-candy-bar-edge), 0 3px 8px #a8204f40;
+}
+.bbx-box-presentation[data-chrome-theme="candy"] .bbx-app-nav :is(
+  .bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
+  #bbx-nav-todo, #bbx-nav-back-to-chat
+) {
+  border-radius: 9999px;
+  border-color: #ffffffa0;
+  /* Darker than the bar so small white labels keep AA contrast. */
+  background-color: #b02556;
+  box-shadow: inset 0 2px 0 #ffffff60, 0 2px 0 var(--bbx-candy-bar-edge);
+}
+.bbx-box-presentation[data-chrome-theme="candy"] .bbx-app-nav :is(
+  #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-back-to-chat
+):active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 2px #00000025, 0 1px 0 var(--bbx-candy-bar-edge);
+}
+.bbx-box-presentation[data-chrome-theme="candy"] .bbx-composer-material {
+  overflow: hidden;
+  background: #fff7fa;
+  border: 2px solid #f6b5ca;
+  border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -3px 12px #d6336c1a;
+}
+.bbx-box-presentation[data-chrome-theme="candy"] .bbx-composer-material > section {
+  border-top: 0;
+  background: transparent;
+}
+.bbx-box-presentation[data-chrome-theme="candy"] #bbx-composer-send {
+  background-color: #e3264a;
+}
+.bbx-box-presentation[data-chrome-theme="candy"] #bbx-composer-mic {
+  background-color: #3f8fd0;
+}
+.bbx-box-presentation[data-chrome-theme="candy"] #bbx-composer-add {
+  background-color: #fde0ea;
+  color: #a8204f;
+}
+.bbx-box-presentation[data-chrome-theme="candy"] .bbx-chat-user-paper {
+  border-radius: 20px 20px 4px 20px;
+  background-color: var(--bbx-chat-user-paper);
+  background-image: var(--bbx-candy-dots);
+  background-size: 18px 18px;
+  color: var(--bbx-chat-user-ink);
+  box-shadow: 0 2px 0 var(--bbx-candy-bar-edge);
+  /* The theme's red selection would vanish on the pink bubble. */
+  --bbx-selection: #fff;
+  --bbx-selection-ink: #a8204f;
+}
+.bbx-box-presentation[data-chrome-theme="candy"] .bbx-chat-callout {
+  border: 2px solid #f6b5ca;
+  border-radius: 16px;
+  background-color: #fff7fa;
+  color: #4a2234;
+}
+.bbx-system-theme-preview[data-chrome-theme="candy"] .bbx-system-theme-toolbar {
+  background-color: #d6336c;
+  background-image: radial-gradient(circle, #ffffff50 0 1.5px, transparent 2px);
+  background-size: 8px 8px;
+}

@@ -21,7 +21,7 @@
   min-height: 4.25rem;
   border: 1px solid var(--bbx-desk-edge, #0003);
   border-radius: 0.35rem;
-  background: var(--bbx-desk-background);
+  background: var(--bbx-desk-pattern, none), var(--bbx-desk-background);
 }
 .bbx-system-theme-toolbar {
   display: flex;
