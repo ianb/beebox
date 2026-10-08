@@ -1,16 +1,20 @@
 /**
- * The last-result glyph for a scheduled task: success, deferred (engine
- * unavailable), inconclusive (work ran, review reached no verdict), failure,
+ * The last-result glyph for a scheduled task: success, nothing to do (a
+ * deferral that found no work), deferred (engine unavailable), inconclusive (work ran, review reached no verdict), failure,
  * or never run. Click expands the concise error/detail text.
  */
 
 import { InlineAction } from "../../ui/InlineAction";
 import { conciseScheduleError } from "@shared/schedule-error";
 import type { RouterOutput } from "../../../lib/trpc/client";
+import { idleLabel } from "./idle";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 
-export function ScheduleStatusIndicator({ lastResult, lastError, onToggleError }: { lastResult: ScheduleInfo["lastResult"]; lastError: string | null; onToggleError?: () => void }) {
+export function ScheduleStatusIndicator({ lastResult, lastError, lastDeferReason, onToggleError }: { lastResult: ScheduleInfo["lastResult"]; lastError: string | null; lastDeferReason: ScheduleInfo["lastDeferReason"]; onToggleError?: () => void }) {
+  const idle = idleLabel(lastResult, lastDeferReason);
+  // Found nothing to do: the quiet, healthy case. Nothing to expand.
+  if (idle !== null) return <span className="text-warm-500 text-xs">{idle}</span>;
   const errorSummary = lastError === null ? null : conciseScheduleError(lastError);
   if (lastResult === "success") {
     return <span className="text-success text-xs">&#10003;</span>;

@@ -34,6 +34,8 @@ export interface ScheduleEntry {
   lastRun: string | null;
   lastResult: ScriptState["lastResult"];
   lastError: string | null;
+  /** Why the last run deferred, when it said (`no-change`: it found nothing to do). */
+  lastDeferReason: ScriptState["lastDeferReason"];
   runCount: number;
   /** The latest run's own summary, when it wrote one; the full history is `scheduler.runs`. */
   lastSummary: { priority: RunPriority; headline: string } | null;
@@ -59,6 +61,7 @@ function parseErrorEntry(scriptName: string): ScheduleEntry {
     lastRun: null,
     lastResult: null,
     lastError: null,
+    lastDeferReason: null,
     runCount: 0,
     lastSummary: null,
     once: false,
@@ -125,6 +128,7 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
     lastRun: state.lastRun,
     lastResult: state.lastResult,
     lastError: state.lastError,
+    lastDeferReason: state.lastDeferReason,
     runCount: state.runCount,
     lastSummary: latest === undefined ? null : { priority: latest.priority, headline: latest.headline },
     once: parsed.once,

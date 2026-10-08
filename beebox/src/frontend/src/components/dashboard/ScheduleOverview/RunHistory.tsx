@@ -14,6 +14,7 @@ import { Pre } from "../../ui/Pre";
 import { Markdown } from "../../Markdown/body";
 import { conciseScheduleError } from "@shared/schedule-error";
 import { useViewNavigate } from "../../../hooks/useViewNavigate";
+import { idleLabel } from "./idle";
 
 type RunEntry = RouterOutput["scheduler"]["runs"]["runs"][number];
 
@@ -34,11 +35,12 @@ function RunItem({ run }: { run: RunEntry }) {
   const { summary } = run;
   // A summary may link to the cards it changed.
   const onNavigate = useViewNavigate();
+  const idle = idleLabel(run.result, run.deferReason);
   return (
     <li className="py-2">
       <div className="flex flex-wrap items-baseline gap-2 text-xs text-warm-600">
         <FriendlyDate iso={run.ts} />
-        <span>{RESULT_LABEL[run.result]}</span>
+        <span>{idle ?? RESULT_LABEL[run.result]}</span>
         <span>{TRIGGER_LABEL[run.triggeredBy] ?? run.triggeredBy}</span>
         {summary ? <Badge tone={summary.priority === "attention" ? "warning" : "neutral"} size="sm">{summary.priority}</Badge> : null}
       </div>
@@ -53,10 +55,10 @@ function RunItem({ run }: { run: RunEntry }) {
             </details>
           ) : null}
         </div>
-      ) : (
+      ) : run.result === "success" ? (
         <p className="mt-1 text-xs text-warm-500">No summary</p>
-      )}
-      {run.error && run.result !== "success" ? (
+      ) : null}
+      {run.error && run.result !== "success" && idle === null ? (
         <Pre size="xs" error={run.result === "failure"} boxed scroll="sm" className="mt-1">{conciseScheduleError(run.error)}</Pre>
       ) : null}
     </li>

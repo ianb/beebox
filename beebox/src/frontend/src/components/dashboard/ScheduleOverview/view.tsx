@@ -165,7 +165,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
           ) : s.running ? (
             <RunningIndicator running={s.running} />
           ) : (
-            <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} onToggleError={() => setShowError(!showError)} />
+            <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} lastDeferReason={s.lastDeferReason} onToggleError={() => setShowError(!showError)} />
           )}
         </td>
         <td className="py-2">
@@ -175,7 +175,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
       {showError && s.lastError ? (
         <tr>
           <td colSpan={5} className="pb-2 px-3">
-            <Pre size="xs" error boxed scroll="sm">{s.lastError}</Pre>
+            <Pre size="xs" error={s.lastResult === "failure"} boxed scroll="sm">{s.lastError}</Pre>
           </td>
         </tr>
       ) : null}
