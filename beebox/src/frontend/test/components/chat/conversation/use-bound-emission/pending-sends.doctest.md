@@ -1,8 +1,10 @@
 # Pending web sends retain completed content and original destination
 
-Storage is transactional with respect to the live snapshot. A quota error
-prevents staging, so the caller can preserve its draft. Reopening a tab never
-resends a saved message automatically.
+Storage is transactional with respect to the live snapshot. A storage failure
+prevents staging, so the caller can preserve its draft. The one exception is
+the browser's quota refusal: a message too large to save still sends, without
+a reload-recovery copy. Reopening a tab never resends a saved message
+automatically.
 
 ```ts setup
 import { createPendingSendsStore, quarantineUnreadablePendingSends, pendingSendRecoveryCopies } from "../../../../../src/components/chat/conversation/use-bound-emission/pending-sends.js";
@@ -42,8 +44,9 @@ const voice = (id: string): Emission => ({ id, origin: "voice", text: "live word
 ## Staging and recovery
 
 A voice send with an image, a file, a selection and word timings is staged
-under a session binding. A quota error on staging throws, leaves the snapshot
-empty and notifies no subscriber, so the caller can preserve its draft:
+under a session binding. A storage failure on staging throws, leaves the
+snapshot empty and notifies no subscriber, so the caller can preserve its
+draft:
 
 ```ts
 const storage = memoryStorage();
@@ -292,6 +295,30 @@ quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test
 
 removed
 => false
+```
+
+## A message too large to save still sends
+
+The session-storage quota is about 5 MB, so two large photos can exceed it.
+A quota refusal does not block the send: the row is kept in this page's
+memory (so delivery and its receipt still work) but nothing is written, and
+a reload would not recover it.
+
+```ts
+const storage = memoryStorage();
+storage.setItem = () => { throw new DOMException("The quota has been exceeded.", "QuotaExceededError"); };
+const store = open(storage);
+store.stage(typed("big-1", "two large photos"), chatBinding);
+({ live: store.getSnapshot().map((row) => [row.emission.id, row.status]), saved: storage.data.size })
+=> { live: [["big-1", "pending"]], saved: 0 }
+```
+
+Its acceptance then clears it like any other send:
+
+```ts continue
+store.accepted("big-1");
+store.getSnapshot().length
+=> 0
 ```
 
 ## An image's original path survives the recovery copy
