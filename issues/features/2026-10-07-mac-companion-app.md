@@ -51,3 +51,16 @@ output. The boxholder wants one Mac app that plays the iOS app's role.
 - Quick-drop overlap: the `quick-chat-design` work on entry points
   ([quick drop entry points](2026-09-25-quick-drop-entry-points.md)) should
   treat the Mac app as one of the doors.
+
+## Decisions (boxholder, 2026-10-07)
+
+- **Wrap the web app, like the iOS app does.** The iOS app is a native shell
+  around the web app with native input surfaces; the Mac app follows the same
+  model. Build a shared layer the two apps reuse (bridge contract, pairing,
+  input and speech, upload) rather than two separate codebases.
+- **Keep the host.** The Mac app also hosts a box locally (the `mac-app/`
+  approach); the boxholder expects it to be a small amount of code on top.
+- **Pairing is needed, and looks different from iOS:** link-based rather than
+  a QR code, since a link is easier to move around on a desktop.
+- **Clerk is deferred.** Leave the Chrome extension as it is for now.
+- **Quick drop:** yes, the Mac app is one of its entry points.
