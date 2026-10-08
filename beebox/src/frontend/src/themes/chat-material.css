@@ -6,6 +6,9 @@
 }
 
 .bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper {
+  /* The stocks' dark selections would blend into the slip. */
+  --bbx-selection: #fbf6ea;
+  --bbx-selection-ink: #2a2418;
   position: relative;
   isolation: isolate;
   border: 0;

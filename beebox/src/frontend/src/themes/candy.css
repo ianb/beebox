@@ -29,7 +29,8 @@
 ) {
   border-radius: 9999px;
   border-color: #ffffffa0;
-  background-color: color-mix(in srgb, var(--bbx-candy-bar) 80%, white);
+  /* Darker than the bar so small white labels keep AA contrast. */
+  background-color: #b02556;
   box-shadow: inset 0 2px 0 #ffffff60, 0 2px 0 var(--bbx-candy-bar-edge);
 }
 .bbx-box-presentation[data-chrome-theme="candy"] .bbx-app-nav :is(
