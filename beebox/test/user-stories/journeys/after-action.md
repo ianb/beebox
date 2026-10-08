@@ -83,7 +83,7 @@ believing any negative result:
   check the box config before treating it as product behavior.
 - **Did the box agent reach outside the box?** Box chat currently inherits the host
   Claude account's connectors and user settings
-  ([issue](../../../../issues/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md)).
+  ([issue](../../../../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md)).
   Search the box agent's transcript for `mcp__` tool calls. An offer to read mail or a
   calendar the box has no connector for comes from the host account.
 - **Did the tool actually do what it said?** A `✗ … refused: <reason>` line is about

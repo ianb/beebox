@@ -65,6 +65,27 @@ JSON.stringify(built.queryOptions.env)
 => {"PATH":"/repo/beebox/bin:/usr/bin","BBX_SERVER_URL":"http://127.0.0.1:3210","BBX_AGENT_TOKEN":"agent-token"}
 ```
 
+A chat session loads the box's project settings (`CLAUDE.md`, rules, skills,
+hooks) and nothing from the host user's `~/.claude` or any directory above the
+box. It also turns off the
+claude.ai connectors of the server's Claude login, which belong to one person
+(`issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md`).
+
+```ts
+const isolated = buildQueryOptions({ cwd: "/tmp/box", systemPrompt: "system", env: {} });
+isolated.queryOptions.settingSources
+=> ["project"]
+
+isolated.queryOptions.settings
+=> {
+  disableClaudeAiConnectors: true,
+  claudeMdExcludes: [
+    "/tmp/CLAUDE.md", "/tmp/CLAUDE.local.md", "/tmp/.claude/CLAUDE.md", "/tmp/.claude/rules/**",
+    "/CLAUDE.md", "/CLAUDE.local.md", "/.claude/CLAUDE.md", "/.claude/rules/**",
+  ],
+}
+```
+
 ## Emitting SDK messages
 
 Tests push SDK messages onto the run's `messages` iterable via the
