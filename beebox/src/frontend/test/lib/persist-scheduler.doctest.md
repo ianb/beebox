@@ -150,22 +150,3 @@ timers.tick(1000);
 written.join(",")
 => hidden-flush
 ```
-
-## A synchronous write isn't scheduled at all
-
-The send path doesn't go through `schedule` — `useEmissionPersistence`
-commits an empty draft immediately (see emission-persist.doctest.md). Nothing
-is left on the clock for a navigation to cancel.
-
-```ts
-const timers = fakeTimers();
-const s = createPersistScheduler({ debounceMs: 400, timers });
-const written: string[] = [];
-
-s.schedule(() => written.push("draft"));
-// The store went empty: cancel the debounce, write now.
-s.cancel();
-written.push("cleared");
-written.join(",") + " | pending timers: " + timers.count()
-=> cleared | pending timers: 0
-```

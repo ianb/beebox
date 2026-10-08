@@ -35,6 +35,7 @@ import {
 } from "../../core/chat/session/id-file.js";
 import { toSdkUserContent } from "../claude-chat-content.js";
 import { resolveHarnessPluginPath } from "../../core/agent/plugin-paths.js";
+import { boxSessionSettings } from "../../core/agent/box-session-settings.js";
 import { createCodexChatBackend } from "./codex-chat.js";
 import type {
   ChatBackend,
@@ -108,6 +109,9 @@ export function buildQueryOptions(
       preset: "claude_code" as const,
       append: opts.systemPrompt,
     },
+    // The box's project settings (CLAUDE.md, rules, skills, hooks); never the
+    // host user's ~/.claude settings or the host account's claude.ai connectors.
+    ...boxSessionSettings({ boxRoot: opts.cwd, loadBoxContext: true }),
   };
   if (opts.additionalDirectories && opts.additionalDirectories.length > 0) {
     queryOptions.additionalDirectories = opts.additionalDirectories;

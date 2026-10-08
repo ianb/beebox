@@ -31,19 +31,19 @@ import { applyStreamError, promoteLastToPending } from "../../../src/machines/ch
 // written into the transcript (`chat.bootstrap`); a stubbed fetch has none.
 const EMPTY = { entries: [], total: 0, sessionId: "s1", running: false, busy: false, pending: [] };
 
-// A started machine parked in `refreshing` with a streamed reply in hand:
-// `fetchHistory` never settles, so the state under test stays observable.
-// `historyCalls` counts invocations — a restarted fetch is the second half of
-// the bug (the in-flight read is aborted, doubling the gap).
-async function inRefreshing() {
-  const historyCalls = [];
+// A started machine in `idle`. By default `fetchHistory` never settles, so a
+// state under test stays observable; `historyCalls` counts invocations (a
+// restarted fetch means the in-flight read was aborted, doubling the gap).
+// Pass `history` to settle it, `initial` to seed the fetched transcript.
+async function startMachine({ initial, history }: { initial?: typeof EMPTY; history?: typeof EMPTY } = {}) {
+  const historyCalls: number[] = [];
   const actor = createActor(
     chatMachine.provide({
       actors: {
-        fetchInitial: fromPromise(async () => EMPTY),
+        fetchInitial: fromPromise(async () => initial ?? EMPTY),
         fetchHistory: fromPromise(() => {
           historyCalls.push(1);
-          return new Promise(() => {});
+          return history ? Promise.resolve(history) : new Promise(() => {});
         }),
         stream: fromCallback(() => {}),
       },
@@ -52,45 +52,31 @@ async function inRefreshing() {
   );
   actor.start();
   await Promise.resolve();
-  actor.send({ type: "SEND", message: "hi", messageId: "m1" });
-  actor.send({ type: "STREAM_TEXT", text: "the reply" });
-  actor.send({ type: "STREAM_RESULT" });
   return { actor, historyCalls };
+}
+
+// Parked in `refreshing` with a streamed reply in hand.
+async function inRefreshing() {
+  const run = await startMachine();
+  run.actor.send({ type: "SEND", message: "hi", messageId: "m1" });
+  run.actor.send({ type: "STREAM_TEXT", text: "the reply" });
+  run.actor.send({ type: "STREAM_RESULT" });
+  return run;
 }
 ```
 
-## The streamed text is held through `refreshing`
+## A `chat-complete` `REFRESH` must not clear the streamed text
+
+The regression: the global `REFRESH` handler used to fire in `refreshing`,
+blanking `streamText` and re-entering `refreshing` (aborting and restarting the
+fetch). The reply vanished from the DOM until the *second* roundtrip returned.
 
 ```ts
 const { actor, historyCalls } = await inRefreshing();
-const s = actor.getSnapshot();
-s.matches("refreshing")
-=> true
-
-s.context.streamText
-=> the reply
-
-historyCalls.length
-=> 1
-```
-
-## A `chat-complete` `REFRESH` must not clear it
-
-The regression: the global `REFRESH` handler used to fire here, blanking
-`streamText` and re-entering `refreshing` (aborting and restarting the fetch).
-The reply vanished from the DOM until the *second* roundtrip returned.
-
-```ts continue
 actor.send({ type: "REFRESH" });
 const after = actor.getSnapshot();
-after.context.streamText
-=> the reply
-
-after.matches("refreshing")
-=> true
-
-historyCalls.length
-=> 1
+({ streamText: after.context.streamText, refreshing: after.matches("refreshing"), historyCalls: historyCalls.length })
+=> { streamText: "the reply", refreshing: true, historyCalls: 1 }
 ```
 
 ## `REFRESH` still works from `idle`
@@ -99,24 +85,11 @@ The guard is scoped to the states that own a live stream — an idle tab
 reacting to another tab's `chat-complete` still refetches.
 
 ```ts
-const actor = createActor(
-  chatMachine.provide({
-    actors: {
-      fetchInitial: fromPromise(async () => EMPTY),
-      fetchHistory: fromPromise(() => new Promise(() => {})),
-      stream: fromCallback(() => {}),
-    },
-  }),
-  { input: { sessionInput: "s1" } },
-);
-actor.start();
-await Promise.resolve();
-actor.getSnapshot().matches("idle")
-=> true
-
+const { actor } = await startMachine();
+const before = actor.getSnapshot().matches("idle");
 actor.send({ type: "REFRESH" });
-actor.getSnapshot().matches("refreshing")
-=> true
+({ idleBefore: before, refreshingAfter: actor.getSnapshot().matches("refreshing") })
+=> { idleBefore: true, refreshingAfter: true }
 ```
 
 ## An intermediate server snapshot cannot erase the active optimistic send
@@ -139,33 +112,20 @@ const durableSend = {
   timestamp: "2026-01-01T00:00:01Z",
   content: [{ type: "text" as const, text: "<typed>new</typed>" }],
 };
-const actor = createActor(
-  chatMachine.provide({
-    actors: {
-      fetchInitial: fromPromise(async () => ({ ...EMPTY, entries: [oldUser] })),
-      fetchHistory: fromPromise(() => new Promise(() => {})),
-      stream: fromCallback(() => {}),
-    },
-  }),
-  { input: { sessionInput: "s1" } },
-);
-actor.start();
-await Promise.resolve();
+const { actor } = await startMachine({ initial: { ...EMPTY, entries: [oldUser] } });
 actor.send({ type: "SEND", message: "<typed>new</typed>", messageId: "m-new" });
+const view = () => {
+  const { messages, pendingMessages } = actor.getSnapshot().context;
+  return { uuids: messages.map((entry) => entry.uuid), pending: pendingMessages.length };
+};
 
 actor.send({ type: "SET_MESSAGES", messages: [oldUser], sessionId: "s1" });
-JSON.stringify(actor.getSnapshot().context.messages.map((entry) => entry.uuid))
-=> ["server-old","«*»"]
-
-actor.getSnapshot().context.pendingMessages.length
-=> 1
+view()
+=> { uuids: ["server-old", "«*»"], pending: 1 }
 
 actor.send({ type: "SET_MESSAGES", messages: [oldUser, durableSend], sessionId: "s1" });
-JSON.stringify(actor.getSnapshot().context.messages.map((entry) => entry.uuid))
-=> ["server-old","server-new"]
-
-actor.getSnapshot().context.pendingMessages.length
-=> 0
+view()
+=> { uuids: ["server-old", "server-new"], pending: 0 }
 ```
 
 ## Failure and queue promotion target the active emission, not the list tail
@@ -176,18 +136,7 @@ emission UUID; they must not mutate the newer queued entry merely because it
 is last.
 
 ```ts
-const actor = createActor(
-  chatMachine.provide({
-    actors: {
-      fetchInitial: fromPromise(async () => EMPTY),
-      fetchHistory: fromPromise(() => new Promise(() => {})),
-      stream: fromCallback(() => {}),
-    },
-  }),
-  { input: { sessionInput: "s1" } },
-);
-actor.start();
-await Promise.resolve();
+const { actor } = await startMachine();
 actor.send({ type: "SEND", message: "<typed>first</typed>", messageId: "m-first" });
 const activeContext = actor.getSnapshot().context;
 const active = activeContext.pendingMessages[0]!;
@@ -202,15 +151,12 @@ const failed = applyStreamError({
   context: overlappingContext,
   event: { type: "STREAM_FAILED", error: "not accepted", accepted: false },
 });
-JSON.stringify(failed.pendingMessages?.map((entry) => entry.uuid))
+failed.pendingMessages?.map((entry) => entry.uuid)
 => ["m-second"]
 
 const promoted = promoteLastToPending({ context: overlappingContext });
-JSON.stringify(promoted.messages?.map((entry) => [entry.uuid, entry.pending === true]))
-=> [["m-first",true],["m-second",true]]
-
-promoted.pendingMessages?.length
-=> 2
+({ messages: promoted.messages?.map((entry) => [entry.uuid, entry.pending === true]), pending: promoted.pendingMessages?.length })
+=> { messages: [["m-first", true], ["m-second", true]], pending: 2 }
 ```
 
 ## A busy response promotes the already-tracked send to queued
@@ -220,28 +166,18 @@ the turn was queued, `STREAM_QUEUED` promotes that same entry rather than
 adding a second reconciliation record.
 
 ```ts
-const actor = createActor(
-  chatMachine.provide({
-    actors: {
-      fetchInitial: fromPromise(async () => EMPTY),
-      fetchHistory: fromPromise(() => new Promise(() => {})),
-      stream: fromCallback(() => {}),
-    },
-  }),
-  { input: { sessionInput: "s1" } },
-);
-actor.start();
-await Promise.resolve();
+const { actor } = await startMachine();
+const tracked = () => {
+  const { pendingMessages } = actor.getSnapshot().context;
+  return { count: pendingMessages.length, queued: pendingMessages[0]?.pending === true };
+};
 actor.send({ type: "SEND", message: "<typed>queued</typed>", messageId: "m-queued" });
-actor.getSnapshot().context.pendingMessages[0]?.pending === true
-=> false
+tracked()
+=> { count: 1, queued: false }
 
 actor.send({ type: "STREAM_QUEUED" });
-actor.getSnapshot().context.pendingMessages.length
-=> 1
-
-actor.getSnapshot().context.pendingMessages[0]?.pending
-=> true
+tracked()
+=> { count: 1, queued: true }
 ```
 
 ## A send rejected before acceptance is not protected forever
@@ -251,31 +187,14 @@ refresh may remove that optimistic bubble instead of re-appending a permanent,
 undimmed ghost after every future snapshot.
 
 ```ts
-const actor = createActor(
-  chatMachine.provide({
-    actors: {
-      fetchInitial: fromPromise(async () => EMPTY),
-      fetchHistory: fromPromise(async () => EMPTY),
-      stream: fromCallback(() => {}),
-    },
-  }),
-  { input: { sessionInput: "s1" } },
-);
-actor.start();
-await Promise.resolve();
+const { actor } = await startMachine({ history: EMPTY });
 actor.send({ type: "SEND", message: "<typed>rejected</typed>", messageId: "m-rejected" });
 actor.send({ type: "STREAM_FAILED", error: "not accepted", accepted: false });
 await Promise.resolve();
 await Promise.resolve();
-
-actor.getSnapshot().matches("idle")
-=> true
-
-actor.getSnapshot().context.messages.length
-=> 0
-
-actor.getSnapshot().context.pendingMessages.length
-=> 0
+const { messages, pendingMessages } = actor.getSnapshot().context;
+({ idle: actor.getSnapshot().matches("idle"), messages: messages.length, pending: pendingMessages.length })
+=> { idle: true, messages: 0, pending: 0 }
 ```
 
 ## A wedged stream recovers via `STREAM_RECOVER` without dropping partial text
@@ -288,35 +207,13 @@ through `refreshing`, the same finalize path as a healthy turn, so any partial
 streamed text is held for the history swap rather than blanked.
 
 ```ts
-const historyCalls = [];
-const actor = createActor(
-  chatMachine.provide({
-    actors: {
-      fetchInitial: fromPromise(async () => EMPTY),
-      fetchHistory: fromPromise(() => {
-        historyCalls.push(1);
-        return new Promise(() => {});
-      }),
-      stream: fromCallback(() => {}),
-    },
-  }),
-  { input: { sessionInput: "s1" } },
-);
-actor.start();
-await Promise.resolve();
+const { actor, historyCalls } = await startMachine();
 actor.send({ type: "SEND", message: "hi", messageId: "m1" });
 actor.send({ type: "STREAM_TEXT", text: "partial reply before the socket died" });
-actor.getSnapshot().matches("streaming")
-=> true
+const streaming = actor.getSnapshot().matches("streaming");
 
 actor.send({ type: "STREAM_RECOVER" });
 const recovered = actor.getSnapshot();
-recovered.matches("refreshing")
-=> true
-
-recovered.context.streamText
-=> partial reply before the socket died
-
-historyCalls.length
-=> 1
+({ streaming, refreshing: recovered.matches("refreshing"), streamText: recovered.context.streamText, historyCalls: historyCalls.length })
+=> { streaming: true, refreshing: true, streamText: "partial reply before the socket died", historyCalls: 1 }
 ```

@@ -89,7 +89,7 @@ export function AttentionBadges({ base, pendingQuestions, onPlateTodos, escalate
       <Link
         key="plate"
         id="bbx-nav-todo"
-        to={href(`${base}/browse/${PLATE_CARD_PATH}`)}
+        to={href(`${base}/views/${PLATE_CARD_PATH}`)}
         className={`${SEGMENT} relative`}
         title={
           escalatedTodos > 0

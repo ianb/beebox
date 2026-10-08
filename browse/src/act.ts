@@ -244,9 +244,9 @@ async function checkLocator(locator: Locator): Promise<CheckResult> {
 
 /**
  * The check for a target only upstream can resolve (a `@eN` ref with no id,
- * XPath, `text=`): upstream reports the box, and the element under its centre
- * is judged — including, for a ref, whether it still answers to the name the
- * snapshot gave it.
+ * XPath, `text=`): upstream reports the box, and the in-page check finds the
+ * element with that box at its centre and refuses `covered` when something
+ * else is on top (see `POINT_TARGET_SCRIPT`).
  */
 async function checkAtBox(selector: string, expectName: string | null): Promise<CheckResult> {
   let box: Box;
@@ -265,7 +265,7 @@ async function checkAtBox(selector: string, expectName: string | null): Promise<
   const geometry = judgeBox(box, viewport);
   if (!geometry.ok) return geometry;
   const { x, y } = boxCenter(box, viewport);
-  return checkLocator({ kind: "point", x, y, expectName });
+  return checkLocator({ kind: "point", x, y, box, expectName });
 }
 
 /**
@@ -274,8 +274,8 @@ async function checkAtBox(selector: string, expectName: string | null): Promise<
  * - `bbx-…` / `#bbx-…`: the in-page precondition check, then upstream with `#id`.
  * - `@eN`: a warning when the number changed hands between the last two
  *   snapshots (what it was, what it is now); if the element carries a `bbx-`
- *   id the action proceeds by id, otherwise only geometry can be checked and
- *   the output says so.
+ *   id the action proceeds by id, otherwise it is checked at its box's centre
+ *   (geometry, then what is on top there).
  * - anything else: upstream, untouched.
  */
 export async function checkedAction({ sub, args, ctx }: { sub: string; args: readonly string[]; ctx: WorktreeContext }): Promise<number> {

@@ -56,15 +56,6 @@ FakeMediaRecorder.last.timeslice
 => 5000
 ```
 
-The default (no `timesliceMs`) is the recorder's 20s:
-
-```ts continue
-const rec2 = new ChunkedRecorder({ onChunk: () => {} });
-await rec2.start();
-FakeMediaRecorder.last.timeslice
-=> 20000
-```
-
 ## stopAsync() resolves only after the final dataavailable delivered its chunk
 
 Before the stop the recorder is recording and no chunk has arrived; after

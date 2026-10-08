@@ -47,138 +47,78 @@ const VALUE_IMPORT_SKETCH = `
 import { mountSketch } from "@ianbicking/canvas-loop/browser";
 export default () => { mountSketch; };
 `;
+
+// Seed a figure card with one sketch in its attach scope (a card's attach scope
+// drops the type: `Demo.figure.card` owns `Demo.attach/`).
+async function seedSketch(ctx, name, source) {
+  await ctx.seed(`_content/inbox/${name}.figure.card`, "");
+  await ctx.seed(`_content/inbox/${name}.attach/sketch.ts`, source);
+}
+
+// GET the compiled module for a box-relative source path (the raw payload).
+function moduleFor(ctx, rel) {
+  return ctx.rawRequest({ method: "GET", url: `/api/figure/module.js?path=${rel}` });
+}
+
+async function compile(ctx, name, source) {
+  await seedSketch(ctx, name, source);
+  return moduleFor(ctx, `_content/inbox/${name}.attach/sketch.ts`);
+}
 ```
 
 ## Compiling a sketch
 
 A valid sketch in an attach scope compiles to a JavaScript module (not JSON),
-so we read the raw payload:
+so we read the raw payload. The output is real JavaScript — the sketch body
+survives compilation — and is served as a module, not an error:
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("_content/inbox/Demo.figure.card", "");
-await ctx.seed("_content/inbox/Demo.attach/sketch.ts", P5_SKETCH);
-
-const res = await ctx.rawRequest({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/inbox/Demo.attach/sketch.ts",
-});
-res.statusCode
-=> 200
+const res = await compile(ctx, "Demo", P5_SKETCH);
+[res.statusCode, res.headers["content-type"], res.payload.includes("createCanvas"), res.payload.includes("figureError")]
+=> [200, "application/javascript", true, false]
 ```
-
-The output is real JavaScript — the sketch body survives compilation — and is
-served as a module, not an error:
-
-```ts continue
-res.headers["content-type"]
-=> application/javascript
-
-res.payload.includes("createCanvas")
-=> true
-
-res.payload.includes("figureError")
-=> false
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-## Compiling a canvas-loop sketch (type-only import erased)
 
 A canvas-loop entry type-imports `@ianbicking/canvas-loop`, which is not
 resolvable from a box directory. esbuild erases type-only imports at parse
 without resolving them, so the compile succeeds and the output carries no bare
 canvas-loop specifier:
 
-```ts
-const ctx = await makeTestServer();
-await ctx.seed("_content/inbox/Orbit.figure.card", "");
-await ctx.seed("_content/inbox/Orbit.attach/sketch.ts", CANVAS_LOOP_SKETCH);
-
-const res = await ctx.rawRequest({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/inbox/Orbit.attach/sketch.ts",
-});
-res.statusCode
-=> 200
-```
-
 ```ts continue
-res.payload.includes("figureError")
-=> false
-
-res.payload.includes("@ianbicking/canvas-loop")
-=> false
-
-res.payload.includes("mountSketch")
-=> true
-
-res.payload.includes("update")
-=> true
+const orbit = await compile(ctx, "Orbit", CANVAS_LOOP_SKETCH);
+({
+  status: orbit.statusCode,
+  figureError: orbit.payload.includes("figureError"),
+  canvasLoopSpecifier: orbit.payload.includes("@ianbicking/canvas-loop"),
+  mountSketch: orbit.payload.includes("mountSketch"),
+  update: orbit.payload.includes("update"),
+})
+=> { status: 200, figureError: false, canvasLoopSpecifier: false, mountSketch: true, update: true }
 ```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-## A value import of canvas-loop fails with the instructive resolve error
 
 The instructions say `import type` ONLY. A sketch that value-imports the
 package instead hits esbuild's resolve error (the package genuinely isn't
 resolvable from a box), which arrives through the `figureError` channel and
 names the module:
 
-```ts
-const ctx = await makeTestServer();
-await ctx.seed("_content/inbox/Wrong.figure.card", "");
-await ctx.seed("_content/inbox/Wrong.attach/sketch.ts", VALUE_IMPORT_SKETCH);
-
-const res = await ctx.rawRequest({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/inbox/Wrong.attach/sketch.ts",
-});
-res.statusCode
-=> 200
-```
-
 ```ts continue
-res.payload.includes("figureError")
-=> true
-
-res.payload.includes("Could not resolve")
-=> true
-
-res.payload.includes("@ianbicking/canvas-loop/browser")
-=> true
+const wrong = await compile(ctx, "Wrong", VALUE_IMPORT_SKETCH);
+({
+  status: wrong.statusCode,
+  figureError: wrong.payload.includes("figureError"),
+  couldNotResolve: wrong.payload.includes("Could not resolve"),
+  names: wrong.payload.includes("@ianbicking/canvas-loop/browser"),
+})
+=> { status: 200, figureError: true, couldNotResolve: true, names: true }
 ```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-## Compile errors return a figure-shaped error module
 
 A syntax error does not 500 — it returns a module exporting `figureError`, which
 the harness checks before treating `default` as the sketch factory:
 
-```ts
-const ctx = await makeTestServer();
-await ctx.seed("_content/inbox/Broken.figure.card", "");
-await ctx.seed("_content/inbox/Broken.attach/sketch.ts", "export default function( {");
-
-const res = await ctx.rawRequest({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/inbox/Broken.attach/sketch.ts",
-});
-res.statusCode
-=> 200
-```
-
 ```ts continue
-res.payload.includes("figureError")
-=> true
+const broken = await compile(ctx, "Broken", "export default function( {");
+[broken.statusCode, broken.payload.includes("figureError")]
+=> [200, true]
 ```
 
 ```ts cleanup
@@ -204,10 +144,7 @@ await ctx.seed("_content/inbox/Cache.figure.card", "");
 await ctx.seed(rel, "export default function (p5, mount, figure) { const marker = \"AAA\"; return () => marker; }");
 await utimes(abs, pinned, pinned);
 
-const first = await ctx.rawRequest({
-  method: "GET",
-  url: `/api/figure/module.js?path=${rel}`,
-});
+const first = await moduleFor(ctx, rel);
 first.payload.includes("AAA")
 => true
 ```
@@ -219,15 +156,9 @@ unchanged) — the re-request still returns the NEW output, not the cached "AAA"
 await writeFile(abs, "export default function (p5, mount, figure) { const marker = \"BBB\"; return () => marker; }");
 await utimes(abs, pinned, pinned);
 
-const second = await ctx.rawRequest({
-  method: "GET",
-  url: `/api/figure/module.js?path=${rel}`,
-});
-second.payload.includes("BBB")
-=> true
-
-second.payload.includes("AAA")
-=> false
+const second = await moduleFor(ctx, rel);
+[second.payload.includes("BBB"), second.payload.includes("AAA")]
+=> [true, false]
 ```
 
 ```ts cleanup
@@ -239,7 +170,7 @@ await ctx.cleanup();
 A figure source path is contained to the box by string prefix, but stat/read/
 compile follow symlinks. A symlink inside an attach dir pointing at a file
 outside the box is rejected on the resolved real path — before any read — and the
-error body carries none of the target's contents:
+error body is the containment error and carries none of the target's contents:
 
 ```ts
 const ctx = await makeTestServer();
@@ -249,23 +180,20 @@ await writeFile(secretPath, "TOPSECRET-DO-NOT-LEAK");
 await ctx.seed("_content/inbox/Evil.attach/real.ts", "export default () => {};");
 await symlink(secretPath, join(ctx.boxRoot, "_content/inbox/Evil.attach/escape.ts"));
 
-const res = await ctx.rawRequest({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/inbox/Evil.attach/escape.ts",
-});
-res.statusCode
-=> 400
+const res = await moduleFor(ctx, "_content/inbox/Evil.attach/escape.ts");
+[res.statusCode, res.payload.includes("TOPSECRET"), res.payload.includes("Path outside box")]
+=> [400, false, true]
 ```
 
-The response is the containment error, and crucially contains no byte of the
-secret file:
+A dangling symlink (target absent) is a clean 404, not a 500:
 
 ```ts continue
-res.payload.includes("TOPSECRET")
-=> false
-
-res.payload.includes("Path outside box")
-=> true
+await symlink(
+  join(ctx.boxRoot, "_content/inbox/Evil.attach/nonexistent-target.ts"),
+  join(ctx.boxRoot, "_content/inbox/Evil.attach/broken.ts"),
+);
+(await moduleFor(ctx, "_content/inbox/Evil.attach/broken.ts")).statusCode
+=> 404
 ```
 
 ```ts cleanup
@@ -273,88 +201,30 @@ await rm(secretPath, { force: true });
 await ctx.cleanup();
 ```
 
-A dangling symlink (target absent) is a clean 404, not a 500:
-
-```ts
-const ctx = await makeTestServer();
-await ctx.seed("_content/inbox/Dangle.attach/keep.ts", "export default () => {};");
-await symlink(
-  join(ctx.boxRoot, "_content/inbox/Dangle.attach/nonexistent-target.ts"),
-  join(ctx.boxRoot, "_content/inbox/Dangle.attach/broken.ts"),
-);
-
-const res = await ctx.rawRequest({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/inbox/Dangle.attach/broken.ts",
-});
-res.statusCode
-=> 404
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
 ## Guard rails
 
-A missing `?path` is a bad request:
-
-```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({ method: "GET", url: "/api/figure/module.js" });
-res.statusCode
-=> 400
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-A path that escapes the box is refused (resolved against `root + sep`, so a
-sibling can't satisfy the check):
-
-```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "GET",
-  url: "/api/figure/module.js?path=../outside.ts",
-});
-res.statusCode
-=> 400
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-The endpoint only compiles a `.ts`/`.tsx` source inside an attach scope — it is
-not a general code server for loose box files:
+Each bad request is refused before any compile. A missing `?path` is a bad
+request; a path that escapes the box is refused (resolved against `root + sep`,
+so a sibling can't satisfy the check); the endpoint only compiles a `.ts`/`.tsx`
+source inside an attach scope — it is not a general code server for loose box
+files. A well-formed path to a source that doesn't exist is a 404, distinct
+from a compile error:
 
 ```ts
 const ctx = await makeTestServer();
 await ctx.seed("_content/notes/loose.ts", "export default () => {};");
-const res = await ctx.request({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/notes/loose.ts",
-});
-res.statusCode
+const status = async (query) => (await ctx.request({ method: "GET", url: `/api/figure/module.js${query}` })).statusCode;
+
+await status("")
 => 400
-```
 
-```ts cleanup
-await ctx.cleanup();
-```
+await status("?path=../outside.ts")
+=> 400
 
-A well-formed path to a source that doesn't exist is a 404, distinct from a
-compile error:
+await status("?path=_content/notes/loose.ts")
+=> 400
 
-```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/inbox/Ghost.attach/missing.ts",
-});
-res.statusCode
+await status("?path=_content/inbox/Ghost.attach/missing.ts")
 => 404
 ```
 
@@ -375,15 +245,8 @@ owning card" while its card sat right beside the directory
 const ctx = await makeTestServer();
 await ctx.seed("_content/figures/Cube.figure.card", "");
 await ctx.seed("_content/figures/Cube.attach/sketch.ts", "export default () => () => {};");
-const res = await ctx.rawRequest({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/figures/Cube.attach/sketch.ts",
-});
-res.statusCode
+(await moduleFor(ctx, "_content/figures/Cube.attach/sketch.ts")).statusCode
 => 200
-
-res.headers["content-type"]
-=> application/javascript
 ```
 
 A positional card — a bare `<type>.card`, "the ‹type› of this directory" — owns
@@ -392,34 +255,19 @@ A positional card — a bare `<type>.card`, "the ‹type› of this directory" �
 ```ts continue
 await ctx.seed("_content/figures/gallery.card", "");
 await ctx.seed("_content/figures/gallery.attach/sketch.ts", "export default () => () => {};");
-const positional = await ctx.rawRequest({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/figures/gallery.attach/sketch.ts",
-});
-positional.statusCode
+(await moduleFor(ctx, "_content/figures/gallery.attach/sketch.ts")).statusCode
 => 200
-```
-
-```ts cleanup
-await ctx.cleanup();
 ```
 
 An attach-named directory is not enough: it must be the sibling attach scope of
 an existing card. This prevents arbitrary box files from becoming compilable
 modules merely by being placed under a `*.attach` directory:
 
-```ts
-const ctx = await makeTestServer();
+```ts continue
 await ctx.seed("_content/inbox/Loose.attach/sketch.ts", "export default () => {};");
-const res = await ctx.rawRequest({
-  method: "GET",
-  url: "/api/figure/module.js?path=_content/inbox/Loose.attach/sketch.ts",
-});
-res.statusCode
-=> 400
-
-JSON.parse(res.payload).error
-=> Attach scope has no owning card
+const loose = await moduleFor(ctx, "_content/inbox/Loose.attach/sketch.ts");
+[loose.statusCode, JSON.parse(loose.payload).error]
+=> [400, "Attach scope has no owning card"]
 ```
 
 ```ts cleanup

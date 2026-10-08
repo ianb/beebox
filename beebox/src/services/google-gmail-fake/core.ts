@@ -128,7 +128,7 @@ export function createFakeGoogleGmail(
     expireHistory() {
       historyId += 1;
       oldestValidHistoryId = historyId;
-      // Mutate in place — withCallLog proxies hold a reference to this array
+      // Mutate in place — callers hold a reference to this array
       fake.historyRecords.length = 0;
     },
 

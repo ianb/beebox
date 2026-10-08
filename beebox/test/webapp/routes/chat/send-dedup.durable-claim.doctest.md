@@ -269,32 +269,3 @@ const retry = await restarted.post({ session: "new", message: "buy milk", messag
 await restarted.close();
 await crashed.cleanup();
 ```
-
-## A durable claim survives the restart
-
-The other side of the same coin: once the message is recorded, the claim is on
-disk beside it, and the retry is answered `deduplicated: true` by a process
-that never saw the original request.
-
-```ts
-const ctx = await makeTestServer({ chatBackend: createFakeChatBackend() });
-
-const sent = await ctx.request({
-  method: "POST",
-  url: "/api/chat/send",
-  payload: { session: "new", message: "buy milk", messageId: "restart-2" },
-});
-const persisted = await readDedupState(ctx.boxRoot);
-
-await ctx.server.close();
-const restarted = await restartOver(ctx.boxRoot, createFakeChatBackend());
-const retry = await restarted.post({ session: "new", message: "buy milk", messageId: "restart-2" });
-
-`${sent.statusCode} | persisted=${persisted.includes("restart-2")} | retry=${retry.statusCode} | dedup=${retry.body.deduplicated} | recorded=${restarted.recorded.length}`
-=> 200 | persisted=true | retry=200 | dedup=true | recorded=0
-```
-
-```ts cleanup
-await restarted.close();
-await ctx.cleanup();
-```

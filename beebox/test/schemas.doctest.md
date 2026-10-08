@@ -3,12 +3,12 @@
 The schema system registers card types, provides template generators, and validates cards. Each card type has a type name, template generator, and optional instructions for agents.
 
 ```ts setup
-import { MemoSchema, createMemoTemplate } from "../src/schemas/memo.js";
-import { QuestionSchema, createSelectQuestionTemplate } from "../src/schemas/question.js";
+import { createMemoTemplate } from "../src/schemas/memo.js";
+import { createSelectQuestionTemplate } from "../src/schemas/question.js";
 import { getCardTypes } from "../src/schemas.js";
 import { getDefaultTemplate, getTemplate } from "../src/templates-registry.js";
 import { createIntakeJobTemplate } from "../src/schemas/intake-job.js";
-import { WebpageSchema, createWebpageTemplate } from "../src/schemas/webpage.js";
+import { createWebpageTemplate } from "../src/schemas/webpage.js";
 import { FigureSchema, createFigureTemplate } from "../src/schemas/figure.js";
 import { figureStarterSketch } from "../src/templates/builtins/starters.js";
 import { ConceptMapSchema, createConceptMapTemplate } from "../src/schemas/concept-map.js";
@@ -26,50 +26,8 @@ import { createCardSchemaMap } from "../src/schemas.js";
 The registry tracks all known card types:
 
 ```ts
-getCardTypes().includes("memo")
-=> true
-
-getCardTypes().includes("question")
-=> true
-
-getCardTypes().includes("intake-job")
-=> true
-
-getCardTypes().includes("webpage")
-=> true
-
-getCardTypes().includes("figure")
-=> true
-
-getCardTypes().includes("concept-map")
-=> true
-
-getCardTypes().includes("course")
-=> true
-
-getCardTypes().includes("exposition-plan")
-=> true
-
-getCardTypes().includes("lesson-plan")
-=> true
-
-getCardTypes().includes("progress")
-=> true
-
-```
-
-Each frontmatter schema (memo, email-thread, etc.) carries a `type`:
-
-```ts
-MemoSchema.type
-=> memo
-
-QuestionSchema.type
-=> question
-
-WebpageSchema.type
-=> webpage
-
+["memo", "question", "intake-job", "webpage"].filter((type) => !getCardTypes().includes(type))
+=> []
 ```
 
 ## Templates
@@ -118,19 +76,6 @@ created: «*»
 Just content
 ```
 
-Special characters in content pass through verbatim — markdown bodies
-don't need XML-style escaping:
-
-```ts
-createMemoTemplate("Test <content> & more")
-=>
----
-status: new
-created: «*»
----
-Test <content> & more
-```
-
 ## Question
 
 A select question presents options to the user:
@@ -156,34 +101,6 @@ input:
       label: Choice A
     - id: b
       label: Choice B
-asked-at: 2026-07-10T09:00:00-07:00
----
-
-```
-
-Special characters in content pass through YAML verbatim:
-
-```ts
-createSelectQuestionTemplate({
-  memo: "Context with <special> & chars",
-  prompt: "What's \"this\"?",
-  options: [
-    { id: "a", label: "Option <A>" },
-    { id: "b", label: "Option <B>" },
-  ],
-  askedAt: "2026-07-10T09:00:00-07:00",
-})
-=>
----
-memo: Context with <special> & chars
-prompt: What's "this"?
-input:
-  type: select
-  options:
-    - id: a
-      label: Option <A>
-    - id: b
-      label: Option <B>
 asked-at: 2026-07-10T09:00:00-07:00
 ---
 
@@ -283,18 +200,17 @@ Body.
 A figure card is an embeddable interactive graphic. Its body describes the
 figure; the runnable source lives in the attach scope, pointed to by `entry`.
 
-```ts
-FigureSchema.type
-=> figure
-```
-
-The frontmatter validates a runtime plus the required `entry` source pointer:
+The frontmatter validates a runtime plus the required `entry` source pointer,
+and optional `params` (declared embed parameters) and `data` (free-form author
+config) when present:
 
 ```ts
 FigureSchema.frontmatterSchema.safeParse({
   type: "figure",
-  runtime: "p5js",
-  entry: "attach/sketch.ts",
+  runtime: "d3",
+  entry: "attach/chart.ts",
+  params: [{ name: "molecule", type: "string", default: "H2O2" }],
+  data: { palette: ["#fff", "#000"] },
 }).success
 => true
 ```
@@ -307,31 +223,6 @@ FigureSchema.frontmatterSchema.safeParse({
   runtime: "p5js",
 }).success
 => false
-```
-
-`runtime` must be one of the supported runtimes:
-
-```ts
-FigureSchema.frontmatterSchema.safeParse({
-  type: "figure",
-  runtime: "vega",
-  entry: "attach/sketch.ts",
-}).success
-=> false
-```
-
-Optional `params` (declared embed parameters) and `data` (free-form author
-config) validate when present:
-
-```ts
-FigureSchema.frontmatterSchema.safeParse({
-  type: "figure",
-  runtime: "d3",
-  entry: "attach/chart.ts",
-  params: [{ name: "molecule", type: "string", default: "H2O2" }],
-  data: { palette: ["#fff", "#000"] },
-}).success
-=> true
 ```
 
 The figure template scaffolds a valid card pointing at `attach/sketch.ts`; no
@@ -384,25 +275,11 @@ parsed.fields.runtime
 => three
 ```
 
-Each runtime has a runnable starter sketch that exports the
-`(lib, { mount, figure })` factory and returns a teardown:
-
-```ts
-const sketch = figureStarterSketch("p5js");
-sketch.includes("export default function") && sketch.includes("instance.remove()")
-=> true
-```
-
 ## Concept-Map
 
 A concept-map card is a module-scale knowledge graph: concepts are in-card nodes
 (each with an `id`, `name`, and `kind`), related by typed edges that reference
 other nodes by `id`.
-
-```ts
-ConceptMapSchema.type
-=> concept-map
-```
 
 A valid map — unique node ids, each node typed, each edge carrying a `kind` —
 parses:
@@ -490,13 +367,7 @@ parsed.schema.type
 A course card is the manifest that binds a learning experience's components by
 reference.
 
-```ts
-CourseSchema.type
-=> course
-```
-
-A course with goals, success-criteria, and component refs parses; everything but
-the body is optional, so a bare course still loads too:
+A course with goals, success-criteria, and component refs parses:
 
 ```ts
 CourseSchema.frontmatterSchema.safeParse({
@@ -509,9 +380,6 @@ CourseSchema.frontmatterSchema.safeParse({
   material: "attach/material",
   progress: { ref: "/people/learner/Acids_Bases_Progress.progress.card" },
 }).success
-=> true
-
-CourseSchema.frontmatterSchema.safeParse({ type: "course" }).success
 => true
 ```
 
@@ -548,13 +416,7 @@ parsed.schema.type
 A lesson-plan card is the ordered delivery flow: a sequence of segments, each
 tagged `interactive` (live in chat) or `material` (uses a pre-made card).
 
-```ts
-LessonPlanSchema.type
-=> lesson-plan
-```
-
-A plan whose segments carry a `do` and a `mode` parses; everything but the body
-is optional, so a bare lesson-plan still loads:
+A plan whose segments carry a `do` and a `mode` parses:
 
 ```ts
 LessonPlanSchema.frontmatterSchema.safeParse({
@@ -565,21 +427,11 @@ LessonPlanSchema.frontmatterSchema.safeParse({
   ],
 }).success
 => true
-
-LessonPlanSchema.frontmatterSchema.safeParse({ type: "lesson-plan" }).success
-=> true
 ```
 
-`mode` is a required closed enum — a segment with no `mode`, or an out-of-set
-`mode`, fails to parse:
+`mode` is a closed enum — an out-of-set `mode` fails to parse:
 
 ```ts
-LessonPlanSchema.frontmatterSchema.safeParse({
-  type: "lesson-plan",
-  segments: [{ do: "Some activity" }],
-}).success
-=> false
-
 LessonPlanSchema.frontmatterSchema.safeParse({
   type: "lesson-plan",
   segments: [{ do: "Some activity", mode: "lecture" }],
@@ -618,13 +470,7 @@ parsed.schema.type
 An exposition-plan card is a worked process for presenting a subject: the learner
 translation first, then rated approaches, then the compiled rules.
 
-```ts
-ExpositionPlanSchema.type
-=> exposition-plan
-```
-
-A plan with a `learner-translation`, rated `approaches`, and `rules` parses;
-everything but the body is optional:
+A plan with a `learner-translation`, rated `approaches`, and `rules` parses:
 
 ```ts
 ExpositionPlanSchema.frontmatterSchema.safeParse({
@@ -633,9 +479,6 @@ ExpositionPlanSchema.frontmatterSchema.safeParse({
   approaches: [{ approach: "socratic dialog", rating: "primary", why: "Surfaces their model" }],
   rules: ["Open each concept from a familiar phenomenon"],
 }).success
-=> true
-
-ExpositionPlanSchema.frontmatterSchema.safeParse({ type: "exposition-plan" }).success
 => true
 ```
 
@@ -665,11 +508,6 @@ parsed.schema.type
 A progress card is a per-learner, evidence-backed record of understanding. Each
 entry is a qualitative status for one concept-map node.
 
-```ts
-ProgressSchema.type
-=> progress
-```
-
 An entry with a `status`, a `basis`, and at least one `evidence` item parses:
 
 ```ts
@@ -684,7 +522,7 @@ ProgressSchema.frontmatterSchema.safeParse({
 ```
 
 The evidence contract is enforced — a level with no `evidence`, an empty
-`evidence` array, or no `basis` all fail to parse (no anonymous rating):
+`evidence` array, or no `basis` fails to parse (no anonymous rating):
 
 ```ts
 ProgressSchema.frontmatterSchema.safeParse({

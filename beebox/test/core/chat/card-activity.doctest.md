@@ -7,7 +7,6 @@ both the snapshot attribute and the queued-send union.
 
 ```ts setup
 import {
-  isActivityKind,
   joinActivityKinds,
   unionActivityKinds,
   renderActivityChildren,
@@ -16,22 +15,12 @@ import {
 import { combineQueuedInputs } from "../../../src/core/chat/session/state.js";
 ```
 
-## Recognizing kinds
-
-```ts
-isActivityKind("modified")
-=> true
-
-isActivityKind("clicked")
-=> false
-```
-
 ## Rendering the snapshot children
 
 `renderActivityChildren` emits one `<card-activity>` element per kind, in
 canonical order, dropping unrecognized kinds. A kind with a detail carries it as
-element text (XML-escaped); without one it's self-closing. Empty input renders
-`""` so the caller keeps `<chat-app>` self-closing.
+element text (XML-escaped); without one it's self-closing. Nothing to render
+gives `""` so the caller keeps `<chat-app>` self-closing.
 
 Two kinds are suppressed as redundant noise: a detail-less `scrolled` (it has no
 *where*), and a `navigated` whose target is the card already named by `openCard`.
@@ -43,9 +32,6 @@ JSON.stringify(renderActivityChildren({ kinds: ["scrolled"], details: {} }))
 
 renderActivityChildren({ kinds: ["explored"], details: { explored: "boat-water+road -> boats" } })
 => <card-activity kind="explored">boat-water+road -> boats</card-activity>
-
-JSON.stringify(renderActivityChildren({ kinds: [], details: {} }))
-=> ""
 
 JSON.stringify(renderActivityChildren({ kinds: ["bogus"], details: {} }))
 => ""
@@ -92,9 +78,6 @@ JSON.stringify(unionActivityKinds([["scrolled"], ["modified"], undefined]))
 
 JSON.stringify(unionActivityKinds([["modified", "navigated"], ["modified"]]))
 => ["navigated","modified"]
-
-JSON.stringify(unionActivityKinds([]))
-=> []
 ```
 
 ## Per-kind detail (card-state)

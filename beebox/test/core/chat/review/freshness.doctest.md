@@ -6,13 +6,11 @@ are about?* — decides whether a grown chat needs a reviewer call at all
 A confident yes keeps the title and advances the journal for free.
 
 ```ts setup
-import { mkdir, utimes, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
+import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import {
-  FRESHNESS_KEEP_PROBABILITY,
   createJevFreshnessChecker,
   resolveFreshnessChecker,
   stillFitsQuestion,
@@ -38,6 +36,27 @@ async function seedGeneratedTitle(box, sessionId, title) {
   }, null, 2) + "\n");
 }
 
+const CARD_PATH = "_content/chat/web/2026-07-28_session.chat.card";
+
+/**
+ * A chat card titled "Planning a small birthday dinner" (generated ownership)
+ * whose transcript, last touched 5 hours before NOW, holds two grown user turns.
+ */
+async function seedChat(box, { sessionId, turns }) {
+  process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+  await box.write(CARD_PATH, `---\nsession: ${sessionId}\ntitle: Planning a small birthday dinner\n---\n\n`);
+  await seedGeneratedTitle(box, sessionId, "Planning a small birthday dinner");
+  const logPath = getSessionLogPath(box.root, sessionId);
+  await mkdir(dirname(logPath), { recursive: true });
+  const entries = turns.map(([uuid, timestamp, text]) => ({
+    type: "user", uuid, timestamp,
+    message: { role: "user", content: [{ type: "text", text: text.repeat(4) }] },
+  }));
+  await writeFile(logPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
+  const when = new Date(NOW.getTime() - 5 * HOUR);
+  await utimes(logPath, when, when);
+}
+
 const NOW = new Date("2026-07-28T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
 
@@ -48,19 +67,16 @@ const QUESTION = stillFitsQuestion();
 ## The decision is one threshold on the noul's probability
 
 ```ts
-[titleKeeps({ probability: 0.75 }), titleKeeps({ probability: 0.9 }), titleKeeps({ probability: 0.74 }), titleKeeps({ probability: 0.1 })].join(",")
-=> true,true,false,false
-
-FRESHNESS_KEEP_PROBABILITY
-=> 0.75
+[titleKeeps({ probability: 0.75 }), titleKeeps({ probability: 0.74 })]
+=> [true, false]
 ```
 
 The question is a noul with a true/false criterion pair — the shape
 `services/jev-judge.ts` serializes and strictly validates.
 
 ```ts continue
-JSON.stringify([QUESTION.type, Object.keys(QUESTION.criteria).sort()])
-=> ["noul",["false","true"]]
+[QUESTION.type, Object.keys(QUESTION.criteria).sort()]
+=> ["noul", ["false", "true"]]
 ```
 
 ## A confident "still fits" keeps the title with zero model calls
@@ -71,23 +87,11 @@ journal still advances past the span.
 
 ```ts
 const box = await makeTmpBox();
-process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
-
 const sessionId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
-await box.write("_content/chat/web/2026-07-28_session.chat.card",
-  `---\nsession: ${sessionId}\ntitle: Planning a small birthday dinner\n---\n\n`);
-await seedGeneratedTitle(box, sessionId, "Planning a small birthday dinner");
-const logPath = getSessionLogPath(box.root, sessionId);
-await mkdir(dirname(logPath), { recursive: true });
-const entries = [
-  { type: "user", uuid: "g1", timestamp: "2026-07-28T03:00:00Z",
-    message: { role: "user", content: [{ type: "text", text: "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4) }] } },
-  { type: "user", uuid: "g2", timestamp: "2026-07-28T03:30:00Z",
-    message: { role: "user", content: [{ type: "text", text: "great, now what about dessert? something make-ahead, not too sweet. ".repeat(4) }] } },
-];
-await writeFile(logPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
-const when = new Date(NOW.getTime() - 5 * HOUR);
-await utimes(logPath, when, when);
+await seedChat(box, { sessionId, turns: [
+  ["g1", "2026-07-28T03:00:00Z", "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. "],
+  ["g2", "2026-07-28T03:30:00Z", "great, now what about dessert? something make-ahead, not too sweet. "],
+] });
 
 // A scripted confident YES, through the real checker and the real parser.
 const jev = createFakeJev({ answers: () => ({ type: "noul", probability: 0.97 }) });
@@ -102,8 +106,8 @@ const reviewer = {
 const summary = await runChatReview(box.root, {
   reviewer, maxSessions: 10, now: NOW, ownerEmail: null, freshness,
 });
-JSON.stringify({ calls: reviewer.calls, titleCalls: reviewer.titleCalls, kept: summary.titlesKept })
-=> {"calls":0,"titleCalls":0,"kept":1}
+({ calls: reviewer.calls, titleCalls: reviewer.titleCalls, kept: summary.titlesKept })
+=> { calls: 0, titleCalls: 0, kept: 1 }
 
 // One Jev judgment was made, over the title and the recent messages.
 jev.judgeCalls.length
@@ -117,7 +121,7 @@ state.sessions[sessionId].applied["title"].endUuid
 The card is untouched — same title, nothing added.
 
 ```ts continue
-(await (await import("node:fs/promises")).readFile(box.path("_content/chat/web/2026-07-28_session.chat.card"), "utf8")).includes("title: Planning a small birthday dinner")
+(await readFile(box.path(CARD_PATH), "utf8")).includes("title: Planning a small birthday dinner")
 => true
 
 await box.cleanup();
@@ -127,23 +131,11 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
-
 const sessionId = "11111111-2222-4333-8444-555555555555";
-await box.write("_content/chat/web/2026-07-28_session.chat.card",
-  `---\nsession: ${sessionId}\ntitle: Planning a small birthday dinner\n---\n\n`);
-await seedGeneratedTitle(box, sessionId, "Planning a small birthday dinner");
-const logPath = getSessionLogPath(box.root, sessionId);
-await mkdir(dirname(logPath), { recursive: true });
-const entries = [
-  { type: "user", uuid: "d1", timestamp: "2026-07-28T03:00:00Z",
-    message: { role: "user", content: [{ type: "text", text: "forget the dinner — the roof started leaking, can you help me find an emergency roofer? ".repeat(4) }] } },
-  { type: "user", uuid: "d2", timestamp: "2026-07-28T03:30:00Z",
-    message: { role: "user", content: [{ type: "text", text: "and what should I move out of the upstairs room while we wait? ".repeat(4) }] } },
-];
-await writeFile(logPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
-const when = new Date(NOW.getTime() - 5 * HOUR);
-await utimes(logPath, when, when);
+await seedChat(box, { sessionId, turns: [
+  ["d1", "2026-07-28T03:00:00Z", "forget the dinner — the roof started leaking, can you help me find an emergency roofer? "],
+  ["d2", "2026-07-28T03:30:00Z", "and what should I move out of the upstairs room while we wait? "],
+] });
 
 const freshness = createJevFreshnessChecker(
   createFakeJev({ answers: () => ({ type: "noul", probability: 0.2 }) }),
@@ -160,10 +152,10 @@ const summary = await runChatReview(box.root, {
   },
   maxSessions: 10, now: NOW, ownerEmail: null, freshness,
 });
-JSON.stringify({ kept: summary.titlesKept, titled: summary.titled, asked: titleCalls.length })
-=> {"kept":0,"titled":1,"asked":1}
+({ kept: summary.titlesKept, titled: summary.titled, asked: titleCalls.length })
+=> { kept: 0, titled: 1, asked: 1 }
 
-(await (await import("node:fs/promises")).readFile(box.path("_content/chat/web/2026-07-28_session.chat.card"), "utf8")).includes("title: Emergency roof leak")
+(await readFile(box.path(CARD_PATH), "utf8")).includes("title: Emergency roof leak")
 => true
 
 await box.cleanup();
@@ -176,23 +168,11 @@ visible.
 
 ```ts
 const box = await makeTmpBox();
-process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
-
 const sessionId = "99999999-8888-4777-8666-555555555555";
-await box.write("_content/chat/web/2026-07-28_session.chat.card",
-  `---\nsession: ${sessionId}\ntitle: Planning a small birthday dinner\n---\n\n`);
-await seedGeneratedTitle(box, sessionId, "Planning a small birthday dinner");
-const logPath = getSessionLogPath(box.root, sessionId);
-await mkdir(dirname(logPath), { recursive: true });
-const entries = [
-  { type: "user", uuid: "x1", timestamp: "2026-07-28T03:00:00Z",
-    message: { role: "user", content: [{ type: "text", text: "one more thing about the party: can we add a signature cocktail? ".repeat(4) }] } },
-  { type: "user", uuid: "x2", timestamp: "2026-07-28T03:30:00Z",
-    message: { role: "user", content: [{ type: "text", text: "something with vermouth, ideally make-ahead in a batch. ".repeat(4) }] } },
-];
-await writeFile(logPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
-const when = new Date(NOW.getTime() - 5 * HOUR);
-await utimes(logPath, when, when);
+await seedChat(box, { sessionId, turns: [
+  ["x1", "2026-07-28T03:00:00Z", "one more thing about the party: can we add a signature cocktail? "],
+  ["x2", "2026-07-28T03:30:00Z", "something with vermouth, ideally make-ahead in a batch. "],
+] });
 
 const failing = {
   async check() { throw new Error("jev unavailable"); },
@@ -204,8 +184,8 @@ const summary = await runChatReview(box.root, {
   },
   maxSessions: 10, now: NOW, ownerEmail: null, freshness: failing,
 });
-JSON.stringify({ kept: summary.titlesKept, titled: summary.titled })
-=> {"kept":0,"titled":1}
+({ kept: summary.titlesKept, titled: summary.titled })
+=> { kept: 0, titled: 1 }
 
 await box.cleanup();
 ```
@@ -215,8 +195,8 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 const yes = await resolveFreshnessChecker(box.root, { ...process.env, BBX_JEV_FAKE: "1" });
-JSON.stringify({ fake: yes?.fake, keeps: yes === null ? null : await yes.checker.check({ title: "T", recent: "r", sessionId: "s" }) })
-=> {"fake":true,"keeps":{"keeps":true}}
+({ fake: yes?.fake, keeps: yes === null ? null : await yes.checker.check({ title: "T", recent: "r", sessionId: "s" }) })
+=> { fake: true, keeps: { keeps: true } }
 
 (await resolveFreshnessChecker(box.root, { BBX_JEV_FAKE: "banana" })) === null
 => true

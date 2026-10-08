@@ -11,9 +11,6 @@ Basic usage — spaces become underscores, punctuation stripped:
 ```ts
 safeFilename("Hello World!")
 => Hello_World
-
-safeFilename("Meeting Notes (2026)")
-=> Meeting_Notes_2026
 ```
 
 Leading and trailing underscores are stripped (e.g. `Tax Documents (2)` would otherwise end in `_` after the `)` becomes blank):

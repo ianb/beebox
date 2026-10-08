@@ -5,8 +5,8 @@ configured engine's native model family; legacy Claude-shaped values remain
 aliases so existing box cards keep loading.
 
 ```ts setup
+import { MODEL_ID } from "../../src/shared/model-ids.js";
 import {
-  PROCEDURE_MODEL_NAMES,
   modelTier,
   providerOf,
   resolveProcedureModel,
@@ -28,7 +28,7 @@ JSON.stringify([
   resolveProcedureModel({engine: "codex", model: "strong"}),
   resolveProcedureModel({engine: "codex", model: "strongest"}),
 ])
-=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5-5","claude-fable-5-1","gpt-6-luna","gpt-5.6-terra","gpt-6-sol","gpt-6-astra"]
+=> ["claude-haiku-«*»","claude-sonnet-«*»","claude-opus-«*»","claude-fable-«*»","gpt-«*»-luna","gpt-«*»-terra","gpt-«*»-sol","gpt-«*»-astra"]
 ```
 
 ## Legacy aliases
@@ -44,14 +44,7 @@ JSON.stringify([
   resolveProcedureModel({engine: "codex", model: "opus"}),
   resolveProcedureModel({engine: "codex", model: "fable"}),
 ])
-=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5-5","claude-fable-5-1","gpt-6-luna","gpt-5.6-terra","gpt-6-sol","gpt-6-astra"]
-```
-
-The schema vocabulary contains both sets exactly once.
-
-```ts
-JSON.stringify(PROCEDURE_MODEL_NAMES)
-=> ["efficient","balanced","strong","strongest","haiku","sonnet","opus","fable"]
+=> ["claude-haiku-«*»","claude-sonnet-«*»","claude-opus-«*»","claude-fable-«*»","gpt-«*»-luna","gpt-«*»-terra","gpt-«*»-sol","gpt-«*»-astra"]
 ```
 
 ## Provider columns
@@ -61,10 +54,10 @@ across the four tiers by design. The default (no provider) stays first-party.
 
 ```ts
 JSON.stringify([
-  providerOf("glm-5.3"),
-  providerOf("glm-5.3-flash"),
-  providerOf("claude-opus-5-5"),
-  providerOf("gpt-6-sol"),
+  providerOf(MODEL_ID.glm),
+  providerOf(MODEL_ID.glmFlash),
+  providerOf(MODEL_ID.opus),
+  providerOf(MODEL_ID.sol),
 ])
 => ["glm","glm","anthropic","openai"]
 ```
@@ -79,13 +72,13 @@ JSON.stringify([
   // codex has no GLM column — the request falls back to its own provider.
   resolveProcedureModel({engine: "codex", model: "strong", provider: "glm"}),
 ])
-=> ["glm-5.3-flash","glm-5.3-flash","glm-5.3","glm-5.3","claude-opus-5-5","gpt-6-sol"]
+=> ["glm-«*»-flash","glm-«*»-flash","glm-«*»","glm-«*»","claude-opus-«*»","gpt-«*»-sol"]
 ```
 
 GLM ids carry tiers, so box-config admission and cross-engine degradation
 work through the existing registry.
 
 ```ts
-JSON.stringify([modelTier("glm-5.3"), modelTier("glm-5.3-flash")])
+JSON.stringify([modelTier(MODEL_ID.glm), modelTier(MODEL_ID.glmFlash)])
 => ["strong","balanced"]
 ```

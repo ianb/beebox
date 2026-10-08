@@ -1,19 +1,12 @@
 # Agent-initiated screenshot rendezvous
 
-Tests for `bbx chat screenshot`'s server side: the pending-request registry
-(the generic `createPendingBrowserRequests`, whose fulfillment payload here is
-a `{kind: "image" | "declined" | "failed"}` union) and the two HTTP routes that
-connect the CLI long-poll to the browser tab holding the session.
+Tests for `bbx chat screenshot`'s server side: the two HTTP routes that
+connect the CLI long-poll to the browser tab holding the session. The
+registry behind them is covered by `pending-browser-request.doctest.md`.
 
 ```ts setup
-import { createPendingBrowserRequests } from "../../src/core/pending-browser-request.js";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
-
-type ScreenshotAnswer =
-  | { kind: "image"; png: Buffer; fidelity: "extension" | "displaymedia" }
-  | { kind: "declined" }
-  | { kind: "failed"; reason: string };
 
 // An 8-byte PNG signature plus a trailing byte — enough to pass the route's
 // magic-byte check.
@@ -57,66 +50,6 @@ function multipart(opts: { boundary: string; file?: Buffer; fields?: Record<stri
   parts.push(Buffer.from(`--${opts.boundary}--\r\n`));
   return Buffer.concat(parts);
 }
-```
-
-## Registry: an image fulfillment resolves the request
-
-The two-phase happy path: the tab acks (cancelling the `no-client` window),
-then answers with an image.
-
-```ts
-const reg = createPendingBrowserRequests<ScreenshotAnswer>();
-const { requestId, outcome } = reg.create({ timeoutMs: 5000, ackGraceMs: 5000 });
-print(`ack: ${reg.ack(requestId)}`);
-print(`fulfill: ${reg.fulfill(requestId, { kind: "image", png: PNG, fidelity: "extension" })}`);
-const result = await outcome;
-print(`status: ${result.status}`);
-print(`kind: ${result.status === "fulfilled" ? result.fulfillment.kind : "?"}`);
-print(`pending left: ${reg.size()}`);
-=>
-ack: true
-fulfill: true
-status: fulfilled
-kind: image
-pending left: 0
-```
-
-## Registry: no ack resolves `no-client`
-
-```ts
-const reg = createPendingBrowserRequests<ScreenshotAnswer>();
-const { outcome } = reg.create({ timeoutMs: 5000, ackGraceMs: 20 });
-const result = await outcome;
-result.status
-=> no-client
-```
-
-## Registry: acked-then-silent resolves `timeout`
-
-```ts
-const reg = createPendingBrowserRequests<ScreenshotAnswer>();
-const { requestId, outcome } = reg.create({ timeoutMs: 20, ackGraceMs: 5000 });
-reg.ack(requestId);
-const result = await outcome;
-result.status
-=> timeout
-```
-
-## Registry: a cancelled request refuses a late answer
-
-The route cancels a pending entry when the CLI's long-poll is aborted. A tab
-answering afterwards settles nothing — which the answer route maps to 404.
-
-```ts
-const reg = createPendingBrowserRequests<ScreenshotAnswer>();
-const { requestId } = reg.create({ timeoutMs: 5000, ackGraceMs: 5000 });
-print(`cancel: ${reg.cancel(requestId)}`);
-print(`late fulfill: ${reg.fulfill(requestId, { kind: "image", png: PNG, fidelity: "extension" })}`);
-print(`size: ${reg.size()}`);
-=>
-cancel: true
-late fulfill: false
-size: 0
 ```
 
 ## Route: answering an unknown/settled request returns 404

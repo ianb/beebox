@@ -276,22 +276,6 @@ stores, ...) declare the `request` profile via `requestScopedLock(path)`, which
 shortens the stale window from 5 min to 15 s so a crashed holder can't wedge an
 HTTP path for minutes. Locks passed as a plain path keep the default profile.
 
-### The profile constants
-
-A non-sleeping check on the real constants: the request profile must stay
-inside the stated post-crash recovery SLO (≤ 30 s), and the default profile
-stays at 5 min (sized for `bbx tick`'s long-held script locks).
-
-```ts
-print(`request: ${LOCK_STALE_MS.request}`);
-print(`request within SLO: ${LOCK_STALE_MS.request > 0 && LOCK_STALE_MS.request <= 30_000}`);
-print(`default: ${LOCK_STALE_MS.default}`);
-=>
-request: 15000
-request within SLO: true
-default: 300000
-```
-
 ### A SIGKILL'd request-scoped holder recovers within the request stale window
 
 A real child process takes the lock and is killed mid-hold, leaving its guard

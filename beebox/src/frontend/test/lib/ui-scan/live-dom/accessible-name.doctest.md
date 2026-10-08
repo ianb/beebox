@@ -70,15 +70,6 @@ nameOf(`
 => Queue message (agent is busy)
 ```
 
-The voice button is the same shape, and its `title` is a four-way computed
-expression — one element, one id, four names. The scan reads whichever is
-current, so the dump reports this moment rather than a static catalogue:
-
-```ts
-nameOf(`<button title="Stop recording"><svg viewBox="0 0 24 24"></svg></button>`)
-=> Stop recording
-```
-
 ## Text content, with the icon left out
 
 `MenuItem` renders `<span aria-hidden="true">{icon}</span>` beside the label. The

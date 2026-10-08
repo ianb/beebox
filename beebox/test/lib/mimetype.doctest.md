@@ -9,20 +9,6 @@ callers' formats still resolve from the single map.
 import { mimetypeToExtension } from "../../src/lib/mimetype.js";
 ```
 
-## Shared audio/image formats (were in both copies)
-
-```ts
-print(mimetypeToExtension("audio/mpeg"));
-print(mimetypeToExtension("audio/m4a"));
-print(mimetypeToExtension("image/jpeg"));
-print(mimetypeToExtension("image/png"));
-=>
-.mp3
-.m4a
-.jpg
-.png
-```
-
 ## Formerly CLI-only formats (image/heic, video/*)
 
 ```ts

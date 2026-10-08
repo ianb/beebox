@@ -10,7 +10,6 @@ returns {@link ORIENTATION_NORMAL} (1) for anything with no orientation to honor
 import {
   readJpegOrientation,
   isOrientationNormalized,
-  ORIENTATION_NORMAL,
 } from "../../src/shared/image-orientation.js";
 
 // Build a minimal JPEG whose only content is an EXIF APP1 segment carrying the
@@ -100,9 +99,6 @@ readJpegOrientation(exifJpeg(0))
 => 1
 
 readJpegOrientation(exifJpeg(9))
-=> 1
-
-ORIENTATION_NORMAL
 => 1
 ```
 

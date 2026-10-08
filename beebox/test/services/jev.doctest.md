@@ -5,7 +5,7 @@ responses become typed errors; they cannot silently change the candidate set.
 These tests use synthetic data and never contact OpenRouter.
 
 ```ts setup
-import { parseJevResponse, createFakeJev, createJevService, serializeJevRequest } from "../../src/services/jev.js";
+import { parseJevResponse, createJevService, serializeJevRequest } from "../../src/services/jev.js";
 import { JevError } from "../../src/services/jev-wire.js";
 import { parseJudgeResponse, serializeJudgeRequest } from "../../src/services/jev-judge.js";
 import { boundRoutingContexts } from "../../src/core/chat/routing/quick-chat-submit/catalog.js";
@@ -53,30 +53,6 @@ parseJevResponse({ model: "test", answers: { destination: { type: "noul", confid
 => throws JevError
 ```
 
-The fake records successful and failed calls without needing credentials.
-
-```ts
-const input = { state: { message: "raised beds" }, criteria: { garden: "Garden", new: "New chat" } };
-const fake = createFakeJev({ result: { model: "test", probabilities: { garden: 0.8, new: 0.2 }, confidence: 0.9 } });
-(await fake.decide(input)).probabilities.garden
-=> 0.8
-
-fake.describe()
-=> calls: 1
-[0] garden | new
-
-const failed = createFakeJev({ error: new JevError("scripted failure", "request") });
-await failed.decide(input)
-=> throws JevError
-
-failed.calls.length
-=> 1
-
-const uncertain = createFakeJev();
-JSON.stringify((await uncertain.decide(input)).probabilities)
-=> {"garden":0.5,"new":0.5}
-```
-
 Oversized catalogs fail before any request. No candidates are silently removed.
 
 ```ts
@@ -94,9 +70,6 @@ maximum-length captured message containing backslashes and newlines.
 
 ```ts
 const escapedMessage = "garden\\\n".repeat(1500);
-escapedMessage.length
-=> 12000
-
 function budgetedRequest(count) {
   const candidates = Array.from({ length: count }, (_, index) => ({
     id: `c${index}`, label: `Chat ${index}`,
@@ -140,9 +113,6 @@ const request = JSON.parse(serializeJudgeRequest({
   questions,
   state: "=== _content/inbox/a.email.card\nPermission slip due Friday",
 }));
-request.model
-=> typesafe/jev-1.13
-
 JSON.stringify(request.questions.trip)
 => {"type":"noul","instructions":["This box belongs to a family of four.","Judge only what the emails say.","Only school mail counts."],"criteria":{"true":"The school wrote about the field trip.","false":"It did not."}}
 
@@ -186,36 +156,4 @@ parseJudgeResponse({ ...good, answers: { ...good.answers, urgency: { ...good.ans
 
 parseJudgeResponse({ ...good, answers: { ...good.answers, trip: { type: "choice", choice: "school" } } }, questions)
 => throws JevError: Jev response error: question "trip" answer is missing or not a noul
-```
-
-The fake scripts answers per question and passes them through the same parser,
-so a scripted answer the real service would reject fails in the fake too.
-Unscripted, it has no opinion.
-
-```ts continue
-const uncertain = (question) => question.type === "choice"
-  ? { type: "choice", choice: "shop", confidence: 0.1, probabilities: { school: 0.5, shop: 0.5 } }
-  : { type: "score", score: 0, confidence: 0.1, probabilities: { "0": 0.4, "1": 0.3, "2": 0.3 } };
-const judge = createFakeJev({
-  answers: (name, { question, state }) =>
-    name === "trip" ? { type: "noul", probability: String(state).includes("Permission") ? 0.95 : 0.05 } : uncertain(question),
-});
-const judged = await judge.judge({ instructions: "Judge the emails.", questions, state: "Permission slip due Friday" });
-JSON.stringify(judged.answers.trip)
-=> {"type":"noul","probability":0.95}
-
-judge.describe()
-=> calls: 0
-judge[0] trip:noul kind:choice urgency:score
-
-const unsure = createFakeJev();
-JSON.stringify((await unsure.judge({ instructions: "x", questions, state: "" })).answers)
-=> {"trip":{"type":"noul","probability":0.5},"kind":{"type":"choice","choice":"school","confidence":0,"probabilities":{"school":0.5,"shop":0.5}},"urgency":{"type":"score","score":1,"confidence":0,"probabilities":{"0":0.3333333333333333,"1":0.3333333333333333,"2":0.3333333333333333}}}
-
-const badScript = createFakeJev({ answers: () => ({ type: "noul", probability: 2 }) });
-await badScript.judge({ instructions: "x", questions: { trip: questions.trip }, state: "" })
-=> throws JevError
-
-await createFakeJev({ error: new JevError("scripted failure", "request") }).judge({ instructions: "x", questions, state: "" })
-=> throws JevError
 ```

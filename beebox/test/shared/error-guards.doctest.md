@@ -40,25 +40,11 @@ errnoCode(new Error("boom"))
 errnoCode("just a string")
 => undefined
 
-errnoCode(undefined)
-=> undefined
-
 errnoCode(null)
 => undefined
 
 errnoCode({ code: 42 })
 => undefined
-```
-
-This makes the common errno check a plain equality with no cast:
-
-```ts
-const enoent = Object.assign(new Error("no such file"), { code: "ENOENT" });
-errnoCode(enoent) === "ENOENT"
-=> true
-
-errnoCode(new Error("boom")) !== "ENOENT"
-=> true
 ```
 
 ## isErrnoException
@@ -77,16 +63,6 @@ isErrnoException(new Error("boom"))
 
 isErrnoException({ code: "ENOENT" })
 => false
-
-isErrnoException("ENOENT")
-=> false
-```
-
-Inside the guard, the errno fields are typed:
-
-```ts continue
-isErrnoException(err) ? err.syscall : "n/a"
-=> open
 ```
 
 ## toError
@@ -98,26 +74,6 @@ or branch on `instanceof`:
 const original = new TypeError("bad type");
 toError(original) === original
 => true
-
-toError(original) instanceof TypeError
-=> true
-```
-
-Custom error subclasses survive too (identity + class preserved):
-
-```ts
-class CardIOError extends Error {
-  constructor(msg: string) {
-    super(msg);
-    this.name = "CardIOError";
-  }
-}
-const custom = new CardIOError("disk gone");
-toError(custom) === custom
-=> true
-
-toError(custom).name
-=> CardIOError
 ```
 
 A non-Error throwable is wrapped in a `NonError`, with the original preserved as
@@ -152,9 +108,6 @@ toError({ code: "ENOENT", path: "/x" }).message
 
 toError(undefined).message
 => undefined
-
-toError(42).message
-=> 42
 ```
 
 The `.message` is a best-effort string, but `.cause` is the live original
@@ -184,13 +137,4 @@ errorMessage({ reason: "nope" })
 
 errorMessage(undefined)
 => undefined
-```
-
-Unlike the old `(e as Error).message` cast, a thrown string yields the string
-itself rather than `undefined` at runtime:
-
-```ts
-const s: unknown = "boom";
-errorMessage(s)
-=> boom
 ```

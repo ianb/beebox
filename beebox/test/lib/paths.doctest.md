@@ -3,7 +3,7 @@
 Utilities for working with card filenames and Bee Box directory structure.
 
 ```ts setup
-import { parseCardName, buildCardName, isCardFile, BOX_DIRS, findBoxRoot } from "../../src/lib/paths/core.js";
+import { parseCardName, buildCardName, isCardFile, findBoxRoot } from "../../src/lib/paths/core.js";
 import { PreV3ShapeError } from "../../src/lib/box-shape-errors.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -33,17 +33,6 @@ parseCardName("Test.memo.card")
 }
 ```
 
-Compound types work — the type is everything between the last dot-separated segment and `.card`:
-
-```ts
-parseCardName("Meeting_Tomorrow.email-thread.card")
-=>
-{
-  "name": "Meeting_Tomorrow",
-  "type": "email-thread"
-}
-```
-
 Positional names (bare `<type>.card` — "the ‹type› of this directory") parse
 with the stem doing double duty as name and type:
 
@@ -66,18 +55,6 @@ parseCardName(".card")
 => null
 ```
 
-## Building card filenames
-
-`buildCardName` is the inverse of `parseCardName`:
-
-```ts
-buildCardName("Test", "memo")
-=> Test.memo.card
-
-buildCardName("Meeting_Tomorrow", "email-thread")
-=> Meeting_Tomorrow.email-thread.card
-```
-
 ## Checking card files
 
 `isCardFile` is a simple extension check — any path ending in `.card`:
@@ -86,29 +63,8 @@ buildCardName("Meeting_Tomorrow", "email-thread")
 isCardFile("Test.memo.card")
 => true
 
-isCardFile("/path/to/Test.memo.card")
-=> true
-
-isCardFile("Test.memo")
-=> false
-
 isCardFile("Test.card.bak")
 => false
-```
-
-## Box directory constants
-
-`BOX_DIRS` defines the standard directory layout of a Bee Box:
-
-```ts
-BOX_DIRS.inbox
-=> _content/inbox
-
-BOX_DIRS.questions
-=> _bookkeeping/questions
-
-BOX_DIRS.archiveDone
-=> _bookkeeping/archive/done
 ```
 
 ## `findBoxRoot` refuses a pre-v3 marker

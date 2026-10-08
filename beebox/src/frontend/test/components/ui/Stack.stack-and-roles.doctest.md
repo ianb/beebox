@@ -14,8 +14,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Stack } from "../../../src/components/ui/Stack.js";
 import { Text } from "../../../src/components/ui/Text.js";
 import { Heading } from "../../../src/components/ui/Heading.js";
-import { Hint } from "../../../src/components/ui/Hint.js";
-import { ErrorText } from "../../../src/components/ui/ErrorText.js";
 import { StatusMessage } from "../../../src/components/ui/StatusMessage.js";
 
 globalThis.React = React;
@@ -62,16 +60,6 @@ html(h(Heading, { level: 2 }, "This box"))
 
 html(h(Heading, { level: 3, className: "mb-2" }, "Engines"))
 => <h3 class="text-sm font-semibold text-warm-900 mb-2">Engines</h3>
-```
-
-## Hint and ErrorText are block paragraphs
-
-```ts
-html(h(Hint, null, "Which harnesses a new chat may choose."))
-=> <p class="text-sm text-warm-500">Which harnesses a new chat may choose.</p>
-
-html(h(ErrorText, null, "Could not save."))
-=> <p class="text-sm text-danger-dark">Could not save.</p>
 ```
 
 ## StatusMessage announces a pane's placeholder

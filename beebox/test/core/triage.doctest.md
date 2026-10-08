@@ -23,9 +23,10 @@ const box = await makeTmpBox();
 await box.write(
   "_content/recipes/Recipes.landmark.card",
   `---
+symbol:
+  glyph: 🍳
 navigation:
   label: Recipes
-  symbol: 🍳
 destinations:
   - for: [triage]
     rules: Anything describing how to cook a dish.
@@ -37,9 +38,10 @@ destinations:
 await box.write(
   "_content/todos/Todos.landmark.card",
   `---
+symbol:
+  glyph: ✅
 navigation:
   label: Todos
-  symbol: ✅
 destinations:
   - for: [triage]
     rules: Action items the user has to do.
@@ -49,9 +51,10 @@ destinations:
 await box.write(
   "store/bookmarks/Bookmarks.landmark.card",
   `---
+symbol:
+  glyph: 🔖
 navigation:
   label: Bookmarks
-  symbol: 🔖
 ---
 `,
 );
@@ -88,9 +91,10 @@ const box = await makeTmpBox();
 await box.write(
   "_content/recipes/Recipes.landmark.card",
   `---
+symbol:
+  glyph: 🍳
 navigation:
   label: Recipes
-  symbol: 🍳
 destinations:
   - for: [triage]
     rules: Cooking instructions.
@@ -136,9 +140,10 @@ const box = await makeTmpBox();
 await box.write(
   "_content/recipes/Recipes.landmark.card",
   `---
+symbol:
+  glyph: 🍳
 navigation:
   label: Recipes
-  symbol: 🍳
 destinations:
   - for: [triage]
     rules: Cooking instructions.
@@ -179,9 +184,10 @@ const box = await makeTmpBox();
 await box.write(
   "_content/recipes/Recipes.landmark.card",
   `---
+symbol:
+  glyph: 🍳
 navigation:
   label: Recipes
-  symbol: 🍳
 destinations:
   - for: [triage]
     rules: Cooking instructions.
@@ -191,9 +197,10 @@ destinations:
 await box.write(
   "_content/todos/Todos.landmark.card",
   `---
+symbol:
+  glyph: ✅
 navigation:
   label: Todos
-  symbol: ✅
 destinations:
   - for: [triage]
     rules: Action items.

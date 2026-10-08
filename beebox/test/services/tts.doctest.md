@@ -1,61 +1,13 @@
-# TTS service: streamed speech, the fake, and the guard against silent failure
+# TTS service: streamed speech and the guard against silent failure
 
 `TtsService` (`src/services/tts.ts`) is one interface over several speech
 backends. `streamSpeech` resolves once the clip's head has arrived and hands
 over the rest as a stream (`docs/plans/tts-streamed-playback.md`). These cover
-the fake every route test uses, and what the real implementations share: a
-clip too short to be audio is an error, not a result.
+what the real implementations share: a clip too short to be audio is an error,
+not a result.
 
 ```ts setup
-import { collectAudio, createFakeTts, EmptyTtsResponseError } from "../../src/services/tts.js";
-```
-
-## The fake records what it was asked to say
-
-```ts
-const tts = createFakeTts();
-const audio = await tts.streamSpeech("Hello there.", { voice: "coral", instructions: "Warmly." });
-({ contentType: audio.contentType, hasAudio: (await collectAudio(audio)).length > 0 })
-=> { contentType: "audio/mpeg", hasAudio: true }
-
-tts.speeches
-=> [{ text: "Hello there.", voice: "coral", instructions: "Warmly." }]
-```
-
-Its backend and stylability are declarable, because the route and the picker
-both branch on them.
-
-```ts
-const gem = createFakeTts({ backend: "gemini", stylable: true });
-const mute = createFakeTts({ backend: "openai", stylable: false });
-({ gem: [gem.backend, gem.stylable], mute: [mute.backend, mute.stylable] })
-=> { gem: ["gemini", true], mute: ["openai", false] }
-```
-
-## A too-short clip is an error, never a result
-
-Gemini has been observed answering HTTP 200 with a zero-length body. A clip
-that short reaches the browser as silence, which the boxholder blames on their
-speakers rather than on the backend — so `streamSpeech` rejects before anything
-is sent, instead of handing over an empty stream.
-
-The fake produces a genuinely empty clip rather than a flag meaning "pretend it
-was empty", and runs it through the same head check as the real backends.
-
-```ts
-const broken = createFakeTts({ backend: "gemini", emptyResponse: true });
-await broken.streamSpeech("Hello there.")
-=> throws EmptyTtsResponseError: TTS backend "gemini" returned 0 bytes — too short to be speech
-```
-
-The call is still recorded, and the clip is cancelled, so a test can tell
-"never asked" from "asked and got nothing".
-
-```ts
-const seen = createFakeTts({ emptyResponse: true });
-const swallowed = await seen.streamSpeech("Hi.").catch(() => "threw");
-({ swallowed, recorded: seen.speeches.length, cancels: seen.cancels })
-=> { swallowed: "threw", recorded: 1, cancels: 1 }
+import { collectAudio, EmptyTtsResponseError } from "../../src/services/tts.js";
 ```
 
 ## Gemini: one key, one host, style beside the text
@@ -162,9 +114,12 @@ const call = direct.calls[0];
 }
 ```
 
-A stream that carries no audio — events of a shape we do not know, or a
-completed interaction with nothing in it — is the same silent-200 failure as
-an empty body, and throws the same error.
+Gemini has been observed answering HTTP 200 with a zero-length body. A clip
+that short reaches the browser as silence, which the boxholder blames on their
+speakers rather than on the backend — so `streamSpeech` rejects before anything
+is sent, instead of handing over an empty stream. A stream that carries no
+audio — events of a shape we do not know, or a completed interaction with
+nothing in it — is the same silent-200 failure and throws the same error.
 
 ```ts
 const empty = recordingFetch(() => new Response("event: done\ndata: [DONE]\n\n"));

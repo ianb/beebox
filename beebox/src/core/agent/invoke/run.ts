@@ -21,6 +21,7 @@ import { checkClaudeAuth, ClaudeAuthError } from "../auth-preflight.js";
 import { dropUndefined } from "../../../lib/drop-undefined.js";
 import { normalizeModelId } from "../../../shared/model-ids.js";
 import { resolveHarnessPluginPath } from "../plugin-paths.js";
+import { boxSessionSettings } from "../box-session-settings.js";
 import type { AgentResult, AgentResultBase } from "../types.js";
 import { applyEngineUnavailability } from "../engine-unavailability-apply.js";
 
@@ -105,12 +106,11 @@ export function buildQueryOptions(
       path: resolveHarnessPluginPath("claude"),
       skipMcpDiscovery: true,
     }],
-    // settingSources defaults to ["user", "project"] which auto-loads
-    // CLAUDE.md, .claude/settings.json, .claude/rules/, etc. An explicit empty
-    // list is how a small structured pass opts out of all of it; safe only
-    // because those passes emit structured output and touch no files, so the
-    // box hooks that ride `.claude/settings.json` have nothing to guard.
-    ...(options.loadBoxContext === false && { settingSources: [] }),
+    // Box project settings only, never the host user's, and no claude.ai
+    // connectors. `loadBoxContext: false` drops the box's settings too; safe
+    // only because those passes emit structured output and touch no files, so
+    // the box hooks that ride `.claude/settings.json` have nothing to guard.
+    ...boxSessionSettings({ boxRoot: options.boxRoot, loadBoxContext: options.loadBoxContext !== false }),
     ...(appendedSystem !== "" && {
       systemPrompt: {
         type: "preset" as const,

@@ -80,10 +80,14 @@ async function makeV3Fixture() {
  *  reverting to `OLD_VERSION` (the two steps with a real filesystem side
  *  effect in production), and fails the step named in `failLabel` (if any)
  *  with `failOutput`. */
-function makeFakeRunner({ boxRoot, calls, failLabel, failOutput }) {
+function makeFakeRunner({ boxRoot, calls, failLabel, failOutput, junkFile }) {
   return async ({ label }) => {
     calls.push(label);
-    if (label === failLabel) return { code: 1, output: failOutput };
+    if (label === failLabel) {
+      // A real template/migration write can scaffold a never-tracked file before failing.
+      if (junkFile) await fs.writeFile(path.join(boxRoot, junkFile), "junk");
+      return { code: 1, output: failOutput };
+    }
     if (label === "pnpm-install") await writeInstalledVersion(boxRoot, NEW_VERSION);
     if (label === "pnpm-install-restore") await writeInstalledVersion(boxRoot, OLD_VERSION);
     return { code: 0, output: "" };
@@ -102,25 +106,21 @@ async function tryUpgrade(boxRoot, runCommand, startPath) {
 
 ## Happy path: every step runs in order, the commit carries the trailer
 
+The commit carries the `Upgraded-To` trailer with the ACTUALLY-installed
+version (read from `node_modules/beebox/package.json`), not the `--to` spec
+string:
+
 ```ts
 const boxRoot = await makeV3Fixture();
 const calls = [];
-const runCommand = makeFakeRunner({ boxRoot, calls });
-const result = await tryUpgrade(boxRoot, runCommand);
+const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls }));
 result.installedVersion
 => 0.2.0
 
-JSON.stringify(calls)
+calls
 => ["preflight-validate","pnpm-install","bbx-migrate","bbx-init","tsc"]
-```
 
-The commit carries the `Upgraded-To` trailer with the ACTUALLY-installed
-version (read from `node_modules/beebox/package.json`), not the
-`--to` spec string:
-
-```ts continue
-const log = await getLog(boxRoot, 1);
-JSON.stringify(log[0].trailers)
+(await getLog(boxRoot, 1))[0].trailers
 => {"Upgraded-To":"beebox@0.2.0"}
 ```
 
@@ -130,21 +130,24 @@ await fs.rm(boxRoot, { recursive: true, force: true });
 
 ## Revert on failure: code + data revert as ONE unit (the Ghost lesson)
 
-`bbx-migrate` fails partway through. The revert path must: `git reset --hard`
-the box root (undoing the `package.json` dependency bump), re-run
-`pnpm install` to restore the previous engine, log the failure, and leave the
-box in EXACTLY its pre-upgrade state — not just its pre-upgrade commit.
+`bbx-migrate` fails partway through, after scaffolding a new, never-tracked
+file (the shape a real template/migration write would take). The revert path
+must: `git reset --hard` the box root (undoing the `package.json` dependency
+bump), remove the untracked file (`git reset --hard` alone only reverts TRACKED
+changes), re-run `pnpm install` to restore the previous engine, log the
+failure, and leave the box in EXACTLY its pre-upgrade state — not just its
+pre-upgrade commit.
 
 ```ts
 const boxRoot = await makeV3Fixture();
 const snapshotSha = await getHead(boxRoot);
 const calls = [];
-const runCommand = makeFakeRunner({ boxRoot, calls, failLabel: "bbx-migrate", failOutput: "boom: migration blew up" });
+const runCommand = makeFakeRunner({ boxRoot, calls, failLabel: "bbx-migrate", failOutput: "boom: migration blew up", junkFile: "untracked-scaffold.txt" });
 const thrown = await tryUpgrade(boxRoot, runCommand);
 thrown instanceof UpgradeStepFailedError
 => true
 
-JSON.stringify(calls)
+calls
 => ["preflight-validate","pnpm-install","bbx-migrate","pnpm-install-restore"]
 ```
 
@@ -160,17 +163,18 @@ await readInstalledVersion(boxRoot)
 => 0.1.0
 ```
 
-HEAD never moved (nothing had been committed yet) and the working tree is
-clean again — the revert leaves no trace of the attempt in the tracked tree:
+HEAD never moved (nothing had been committed yet), the untracked file is gone,
+and the working tree is clean again — not just "no tracked diff", but
+genuinely restored:
 
 ```ts continue
 (await getHead(boxRoot)) === snapshotSha
 => true
-```
 
-```ts continue
-const status = await getStatus(boxRoot);
-status.clean
+await fs.access(path.join(boxRoot, "untracked-scaffold.txt")).then(() => true, () => false)
+=> false
+
+(await getStatus(boxRoot)).clean
 => true
 ```
 
@@ -186,99 +190,28 @@ logText.includes("boom: migration blew up")
 await fs.rm(boxRoot, { recursive: true, force: true });
 ```
 
-## Revert removes untracked files a failed step left behind
+## Refusals before anything runs
 
-`git reset --hard` alone only reverts TRACKED changes. If the failing step
-(here `bbx-migrate`) also scaffolds a new, never-tracked file before failing —
-the shape a real template/migration write would take — the revert must also
-remove it, or "box restored to pre-upgrade state" is false.
-
-```ts
-const boxRoot = await makeV3Fixture();
-const calls = [];
-const runCommand = async ({ label }) => {
-  calls.push(label);
-  if (label === "bbx-migrate") {
-    await fs.writeFile(path.join(boxRoot, "untracked-scaffold.txt"), "junk");
-    return { code: 1, output: "boom: migration blew up" };
-  }
-  if (label === "pnpm-install") await writeInstalledVersion(boxRoot, NEW_VERSION);
-  if (label === "pnpm-install-restore") await writeInstalledVersion(boxRoot, OLD_VERSION);
-  return { code: 0, output: "" };
-};
-const thrown = await tryUpgrade(boxRoot, runCommand);
-thrown instanceof UpgradeStepFailedError
-=> true
-```
-
-The untracked file is gone, and the working tree reads clean again — not
-just "no tracked diff", but genuinely restored:
-
-```ts continue
-const scaffoldExists = await fs.access(path.join(boxRoot, "untracked-scaffold.txt")).then(() => true, () => false);
-scaffoldExists
-=> false
-
-const status = await getStatus(boxRoot);
-status.clean
-=> true
-```
-
-```ts cleanup
-await fs.rm(boxRoot, { recursive: true, force: true });
-```
-
-## A step failing AFTER a successful revert-relevant step still reverts everything
-
-Same as above, but the failure happens at `tsc` (after migrate and init both
-"succeeded") — the whole batch still reverts as one unit, not just the last step:
-
-```ts
-const boxRoot = await makeV3Fixture();
-const calls = [];
-const runCommand = makeFakeRunner({ boxRoot, calls, failLabel: "tsc", failOutput: "type error" });
-const thrown = await tryUpgrade(boxRoot, runCommand);
-thrown instanceof UpgradeStepFailedError
-=> true
-
-await readPinnedSpec(boxRoot)
-=> 0.1.0
-
-await readInstalledVersion(boxRoot)
-=> 0.1.0
-```
-
-```ts cleanup
-await fs.rm(boxRoot, { recursive: true, force: true });
-```
-
-## A dirty working tree refuses to start (nothing to snapshot against)
+A dirty working tree refuses to start (nothing to snapshot against); a box that
+predates the one-root layout refuses with a clear error:
 
 ```ts
 const boxRoot = await makeV3Fixture();
 await fs.writeFile(path.join(boxRoot, "README.md"), "uncommitted\n");
-const thrown = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [] }));
-thrown instanceof DirtyWorkingTreeError
-=> true
-```
+const dirty = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [] }));
 
-```ts cleanup
-await fs.rm(boxRoot, { recursive: true, force: true });
-```
-
-## A box that predates the one-root layout refuses with a clear error
-
-```ts
 const legacyRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-upgrade-legacy-"));
 await fs.mkdir(path.join(legacyRoot, ".beebox"), { recursive: true });
 await fs.writeFile(path.join(legacyRoot, ".beebox/box.json"), "");
 execSync("git init -q -b main && git add -A && git commit -q -m init --allow-empty", { cwd: legacyRoot });
-const thrown = await tryUpgrade(legacyRoot, makeFakeRunner({ boxRoot: legacyRoot, calls: [] }), legacyRoot);
-thrown instanceof BoxShapeError
-=> true
+const legacy = await tryUpgrade(legacyRoot, makeFakeRunner({ boxRoot: legacyRoot, calls: [] }), legacyRoot);
+
+[dirty instanceof DirtyWorkingTreeError, legacy instanceof BoxShapeError]
+=> [true, true]
 ```
 
 ```ts cleanup
+await fs.rm(boxRoot, { recursive: true, force: true });
 await fs.rm(legacyRoot, { recursive: true, force: true });
 ```
 
@@ -311,7 +244,7 @@ calls.length
 
 await active.release();
 const result = await upgrading;
-JSON.stringify({ version: result.installedVersion, denied, childJoins, maintenancePermit, phase: await boxMaintenanceStatus(boxRoot) })
+({ version: result.installedVersion, denied, childJoins, maintenancePermit, phase: await boxMaintenanceStatus(boxRoot) })
 => {"version":"0.2.0","denied":true,"childJoins":true,"maintenancePermit":true,"phase":null}
 ```
 
@@ -328,7 +261,7 @@ engine. It does not validate that restored engine, so it cannot reopen work.
 ```ts
 const boxRoot = await makeV3Fixture();
 const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [], failLabel: "tsc", failOutput: "bad types" }));
-JSON.stringify({ failed: result instanceof UpgradeStepFailedError, phase: (await boxMaintenanceStatus(boxRoot)).phase, version: await readPinnedSpec(boxRoot) })
+({ failed: result instanceof UpgradeStepFailedError, phase: (await boxMaintenanceStatus(boxRoot)).phase, version: await readPinnedSpec(boxRoot) })
 => {"failed":true,"phase":"exclusive","version":"0.1.0"}
 ```
 

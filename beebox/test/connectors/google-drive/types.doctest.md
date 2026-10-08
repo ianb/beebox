@@ -6,31 +6,12 @@ Tests for extracting Google Drive file IDs from various URL formats.
 import { extractDriveFileId } from "../../../src/connectors/google-drive/types.js";
 ```
 
-## Google Sheets URL
+## Google Sheets, Docs, Slides and Drive file URLs
+
+All four carry the ID in a `/d/<id>/` segment.
 
 ```ts
 extractDriveFileId("https://docs.google.com/spreadsheets/d/1aBcDeFgHiJkLmNoPqRsT/edit#gid=0")
-=> 1aBcDeFgHiJkLmNoPqRsT
-```
-
-## Google Docs URL
-
-```ts
-extractDriveFileId("https://docs.google.com/document/d/1aBcDeFgHiJkLmNoPqRsT/edit")
-=> 1aBcDeFgHiJkLmNoPqRsT
-```
-
-## Google Slides URL
-
-```ts
-extractDriveFileId("https://docs.google.com/presentation/d/1aBcDeFgHiJkLmNoPqRsT/edit")
-=> 1aBcDeFgHiJkLmNoPqRsT
-```
-
-## Drive file URL
-
-```ts
-extractDriveFileId("https://drive.google.com/file/d/1aBcDeFgHiJkLmNoPqRsT/view")
 => 1aBcDeFgHiJkLmNoPqRsT
 ```
 

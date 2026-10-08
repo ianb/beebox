@@ -1,26 +1,12 @@
 # Scheduler Utilities
 
-Tests for scheduler utility functions — path computation and box
-validation.
+Tests for scheduler utility functions — box validation.
 
 ```ts setup
-import { boxLogFile, isBox } from "../../../src/core/schedule/scheduler/core.js";
+import { isBox } from "../../../src/core/schedule/scheduler/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-```
-
-## boxLogFile
-
-### Returns correct path
-
-```ts
-const result = boxLogFile("/home/user/boxes/test");
-result.endsWith(".beebox/scheduler.jsonl")
-=> true
-
-result.startsWith("/home/user/boxes/test/")
-=> true
 ```
 
 ## isBox

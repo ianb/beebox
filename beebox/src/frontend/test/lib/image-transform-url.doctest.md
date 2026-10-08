@@ -1,7 +1,7 @@
 # Image transform URL helpers
 
 ```ts setup
-import { apiRawImageUrl, apiTransformedImageUrl } from "../../src/api-core.js";
+import { apiTransformedImageUrl } from "../../src/api-core.js";
 import { transformedResolvedImageUrl } from "../../src/lib/image-transform-url.js";
 ```
 
@@ -14,13 +14,6 @@ apiTransformedImageUrl({
   options: { width: 480, quality: 85, format: "auto", fit: "scale-down" },
 })
 => /image-thumbnails/test1/api/images/store/Q%26A%20%231.jpg?width=480&fit=scale-down&quality=85&format=auto
-```
-
-The original image-card route remains available for the lightbox.
-
-```ts
-apiRawImageUrl("/image-thumbnails/test1/api", "Portrait.image.card")
-=> /image-thumbnails/test1/api/image/Portrait.image.card
 ```
 
 Resolved canonical photo URLs can switch to a transform without losing their version token.

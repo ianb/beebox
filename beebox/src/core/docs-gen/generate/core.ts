@@ -220,12 +220,11 @@ async function checkChatGuideMtimes(
  * beebox source has changed (typically right after a deploy) and is a
  * no-op otherwise.
  *
- * Any tracked-file changes the helpers leave behind get committed in a
- * single surgical commit so the box's working tree doesn't accumulate drift
- * on hosts that don't routinely run `bbx tick` (which would otherwise sweep
- * the changes via its post-script housekeeping commit).
+ * It does not commit: `generateDocs` writes more tracked output after it
+ * (guides, exposition rules, the briefing, agent mirrors) and commits all of
+ * it once at the end.
  */
-async function syncTemplatesFromSource(boxRoot: string, shouldCommit: boolean): Promise<void> {
+async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   await installProcedures(boxRoot);
   await installGuides(boxRoot);
   await installPersonality(boxRoot);
@@ -237,17 +236,25 @@ async function syncTemplatesFromSource(boxRoot: string, shouldCommit: boolean): 
   await syncBoxGuidance(boxRoot, { generators: true });
   await installValidationHooks(boxRoot);
   await pruneStaleTemplateUpdates(boxRoot);
-
-  if (shouldCommit) await commitTemplateSyncChanges(boxRoot);
 }
 
 /**
- * Commit any template-managed paths the install/generateRules helpers
- * dirtied, leaving user work in progress (in other paths) alone.
+ * Commit any template-managed paths one `generateDocs` run dirtied (the
+ * template sync and the tracked output written after it), leaving user work in
+ * progress (in other paths) alone. One commit, so a box's working tree doesn't
+ * accumulate drift on hosts that don't routinely run `bbx tick` (which would
+ * otherwise sweep the changes via its post-script housekeeping commit).
  *
  * shapeVersion 3 has one root, so `boxRoot` IS the repo root and every
  * git-status path `getStatus`/`stageFiles`/`commitPaths` report or accept is
  * already box-root-relative — no prefix normalization needed.
+ *
+ * `keepUncommitted` names paths that were already dirty before the run
+ * started (see {@link uncommittedPaths}). Template-managed patterns also match
+ * hand-authored files such as `.claude/rules/<name>.md`, so without it a
+ * boxholder's unfinished edit there would ride along in this commit. A
+ * pre-existing dirty path that generation also rewrote stays uncommitted too;
+ * the next housekeeping commit picks it up.
  *
  * Exported (rather than only reachable through `generateDocs`) so doctests
  * can exercise the sync commit directly against a minimal fixture, without
@@ -255,7 +262,11 @@ async function syncTemplatesFromSource(boxRoot: string, shouldCommit: boolean): 
  * `.git/hooks/pre-commit` that shells out to a `bbx` binary — an unrelated
  * hazard in a repo-in-a-repo dev/test environment.
  */
-export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
+export async function commitTemplateSyncChanges(
+  boxRoot: string,
+  options?: { keepUncommitted?: ReadonlySet<string> },
+): Promise<void> {
+  const keep = options?.keepUncommitted ?? new Set<string>();
   const shape = await getBoxShape(boxRoot);
   const { boxRoot: repoRoot } = shape;
   if (!(await isRepo(repoRoot))) return;
@@ -264,7 +275,7 @@ export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> 
   await withBoxGitLock(repoRoot, async () => {
     const status = await getStatus(repoRoot);
     const candidates = [...status.staged, ...status.modified, ...status.untracked];
-    const toCommit = candidates.filter((p) => isTemplateManagedPath(p));
+    const toCommit = candidates.filter((p) => isTemplateManagedPath(p) && !keep.has(p));
     if (toCommit.length === 0) return;
 
     // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
@@ -275,6 +286,17 @@ export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> 
       trailers: { "Triggered-By": "generateDocs" },
     });
   });
+}
+
+/**
+ * Every path `git status` reports as staged, modified, or untracked; empty
+ * when the box is not a repository with commits. Read before generation writes
+ * anything, so the final commit can leave these paths alone.
+ */
+async function uncommittedPaths(boxRoot: string): Promise<ReadonlySet<string>> {
+  if (!(await isRepo(boxRoot)) || !(await hasCommits(boxRoot))) return new Set();
+  const status = await getStatus(boxRoot);
+  return new Set([...status.staged, ...status.modified, ...status.untracked]);
 }
 
 /**
@@ -364,11 +386,15 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
     return; // Nothing changed — skip regeneration
   }
 
+  // Read before the first write: what is dirty now is the boxholder's work.
+  const shouldCommit = options.commit !== false;
+  const dirtyBefore = shouldCommit ? await uncommittedPaths(boxRoot) : new Set<string>();
+
   // Sync templates from upstream beebox source. Idempotent — only
   // writes files where the box's copy differs (and emits .orig-*.card
   // entries when the user modified a template). Runs before doc generation
   // so newly-installed procedures are picked up by scanProcedures().
-  await syncTemplatesFromSource(boxRoot, options.commit !== false);
+  await syncTemplatesFromSource(boxRoot);
 
   await mkdir(join(boxRoot, AGENT_GUIDE_DIR), { recursive: true });
   await mkdir(join(boxRoot, DOCS_DIR), { recursive: true });
@@ -409,6 +435,9 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   const briefingPaths = await compileBriefings(boxRoot);
 
   await ensureAgentContext(boxRoot, briefingPaths);
+
+  // Every tracked output above lands in one commit, after the last writer.
+  if (shouldCommit) await commitTemplateSyncChanges(boxRoot, { keepUncommitted: dirtyBefore });
 
   // Write marker so next call can skip if nothing changed
   const commitLine = currentCommit ? `\n${currentCommit}` : "";

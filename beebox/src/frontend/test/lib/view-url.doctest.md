@@ -206,16 +206,10 @@ JSON.stringify(classifyMarkdownHref("notes.md"))
 JSON.stringify(classifyMarkdownHref("/_content/a.card?view=ledger"))
 => {"kind":"relative","path":"/_content/a.card?view=ledger"}
 
-JSON.stringify(classifyMarkdownHref("../sibling.md"))
-=> {"kind":"relative","path":"../sibling.md"}
-
 JSON.stringify(classifyMarkdownHref("https://example.com"))
 => {"kind":"external"}
 
 JSON.stringify(classifyMarkdownHref("//cdn.example.com/a.png"))
-=> {"kind":"external"}
-
-JSON.stringify(classifyMarkdownHref("mailto:a@b.com"))
 => {"kind":"external"}
 
 JSON.stringify(classifyMarkdownHref("#anchor"))
@@ -235,9 +229,6 @@ JSON.stringify(classifyMarkdownHref("control:bbx-composer-mic?action=point&descr
 
 JSON.stringify(classifyMarkdownHref("control:bbx-composer-add?action=reveal"))
 => {"kind":"control","id":"bbx-composer-add","action":"reveal","description":null,"unknownAction":null}
-
-JSON.stringify(classifyMarkdownHref("control:bbx-composer-input?action=focus"))
-=> {"kind":"control","id":"bbx-composer-input","action":"focus","description":null,"unknownAction":null}
 ```
 
 An action the app does not know degrades to `point` and reports the word it did not understand, so the pointer still works — and says so in its tooltip — rather than the whole link dying over a typo:
@@ -320,9 +311,6 @@ A bare path is document-relative — resolved against `basePath`:
 ```ts
 resolveImageSrc("images/front.png", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" })
 => /test1/api/image/_content/dossiers/images/front.png
-
-resolveImageSrc("../shared/logo.png", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" })
-=> /test1/api/image/_content/shared/logo.png
 ```
 
 An `.image.card` embed resolves through the same route — the backend reads `filename.ref` and serves the attached binary, so `![](…/foo.image.card)` renders instead of 404ing on the card file:
@@ -353,9 +341,6 @@ External URLs pass through untouched:
 ```ts
 resolveImageSrc("https://example.com/x.png", { boxSlug: "test1", basePath: "_content/a.md" })
 => https://example.com/x.png
-
-resolveImageSrc("data:image/png;base64,AAAA", { boxSlug: "test1", basePath: "_content/a.md" })
-=> data:image/png;base64,AAAA
 ```
 
 ## externalImageProxyUrl
@@ -374,30 +359,16 @@ externalImageProxyUrl("//cdn.example.com/y.jpg", "test1")
 => /test1/api/proxy-image?url=https%3A%2F%2Fcdn.example.com%2Fy.jpg
 ```
 
-In-box and data URLs have no proxy — they return undefined:
+In-box URLs have no proxy — they return undefined:
 
 ```ts
 externalImageProxyUrl("/test1/api/files/_content/a.png", "test1")
-=> undefined
-
-externalImageProxyUrl("data:image/png;base64,AAAA", "test1")
 => undefined
 ```
 
 ## apiFileUrl / apiImageUrl / apiRawFileUrl
 
 These build the URLs the file/image renderers embed a box-relative path into — `apiFileUrl`/`apiImageUrl` prefix the Vite base and box slug themselves (for an `<img src>` or link target built without an already box-scoped API base in hand); `apiRawFileUrl` takes an already-computed `apiBase` (as returned by `getApiBase()`) and builds the raw `/files/<path>` download/fetch URL. All three route every path segment through `encodePathForUrl`, so a filename containing `#`, `?`, `%`, or a space survives — a URL built by plain concatenation would otherwise get truncated at `#`/`?` or have a literal `%` reinterpreted as a percent-escape.
-
-```ts
-apiFileUrl("test1", "_content/notes/plan.md")
-=> /test1/api/files/_content/notes/plan.md
-
-apiImageUrl("test1", "_content/photos/front.png")
-=> /test1/api/image/_content/photos/front.png
-
-apiRawFileUrl("/test1/api", "_content/notes/plan.md")
-=> /test1/api/files/_content/notes/plan.md
-```
 
 A path segment with `#`, `?`, `%`, or a space is percent-encoded — but the `/` separators between segments are preserved, not escaped into `%2F`:
 

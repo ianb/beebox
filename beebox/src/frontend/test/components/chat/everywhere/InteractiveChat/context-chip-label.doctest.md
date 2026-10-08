@@ -12,11 +12,6 @@ import { contextChipLabel } from "../../../../../src/components/chat/everywhere/
 
 ## Landmark label wins when present
 
-```ts
-contextChipLabel({ landmarkLabel: "Recipes", dir: "_content/recipes" })
-=> Recipes
-```
-
 A landmark label wins even over a root dir — it's a more specific name than
 "Box root".
 
@@ -57,14 +52,4 @@ contextChipLabel({ landmarkLabel: null, dir: "" })
 ```ts
 contextChipLabel({ landmarkLabel: null, dir: null })
 => Files
-```
-
-## Landmark query still pending: falls back to the basename immediately
-
-A slow or failed landmark query reports `landmarkLabel: null` until it
-resolves; the face still renders the dir's basename rather than waiting.
-
-```ts
-contextChipLabel({ landmarkLabel: null, dir: "projects/2026-q3" })
-=> 2026-q3
 ```

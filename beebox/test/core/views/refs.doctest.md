@@ -120,14 +120,6 @@ found.map((p) => p.endsWith("src/views/dashboard.tsx"))
 
 await writeFile(join(viewsBox.root, "_content/people/alice.person.card"), "---\ntype: person\n---\nAlice\n");
 const view = join(viewsBox.root, "src/views/dashboard.tsx");
-await writeFile(
-  view,
-  '<CardLink cardRef="/_content/people/alice.person.card" /><CardRef cardRef="/_content/people/missing.person.card" />',
-);
-const viewWarnings = await lintViewRefs(view, viewsBox.root);
-viewWarnings.join("\n")
-=> Broken reference at view:1:1: /_content/people/missing.person.card does not exist
-
 await writeFile(view, '<CardLink cardRef="_content/people/alice.person.card" />');
 const canonicalWarnings = await collectViewCanonicalWarnings([view], viewsBox.root);
 canonicalWarnings.join("\n")

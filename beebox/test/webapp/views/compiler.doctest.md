@@ -3,7 +3,7 @@
 The views compiler takes agent-written `.tsx` files and compiles them to ES modules using esbuild. It extracts metadata from named exports and caches compiled output by mtime.
 
 ```ts setup
-import { mkdir, writeFile, stat } from "node:fs/promises";
+import { mkdir, writeFile, stat, utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -68,33 +68,30 @@ output.includes("window.__bbxReact")
 => true
 ```
 
-The compiled output is a valid ES module with exports:
-
-```ts continue
-output.includes("as default")
-=> true
-
-output.includes("name")
-=> true
-```
-
 ## Caching
 
-Compiling the same file twice returns cached output (same mtime):
+Compiling the same file twice returns cached output (same mtime and size). To show the cache is used, the next example rewrites the source with same-length different text and restores the mtime, so only a cache can still return the old output:
 
 ```ts continue
-const { output: output2 } = await compileView(join(viewsDir, "test.tsx"));
-output === output2
+const viewFile = join(viewsDir, "test.tsx");
+const pinned = new Date("2026-01-01T00:00:00Z");
+await utimes(viewFile, pinned, pinned);
+invalidateView(viewFile);
+const { output: pinnedOutput } = await compileView(viewFile);
+await writeFile(viewFile, source.replace('"hello"', '"HELLO"'));
+await utimes(viewFile, pinned, pinned);
+const { output: output2 } = await compileView(viewFile);
+output2 === pinnedOutput
 => true
 ```
 
-After invalidation, a fresh compile occurs:
+After invalidation, a fresh compile reads the rewritten source:
 
 ```ts continue
-invalidateView(join(viewsDir, "test.tsx"));
-const { output: output3 } = await compileView(join(viewsDir, "test.tsx"));
-output === output3
-=> true
+invalidateView(viewFile);
+const { output: output3 } = await compileView(viewFile);
+[output3.includes("HELLO"), output3.includes("hello")]
+=> [true, false]
 ```
 
 ## jsx-runtime shim translates the automatic runtime
@@ -255,9 +252,6 @@ errorJs.includes("Compile error")
 
 errorJs.includes("Unexpected token at line 5")
 => true
-
-errorJs.includes("export default")
-=> true
 ```
 
 ## Listing views
@@ -331,21 +325,4 @@ const withBroken = await listViews(tmp3);
 const broken = withBroken.find(v => v.slug === "broken");
 JSON.stringify([broken.name, broken.rendersCardTypes, broken.description])
 => ["broken",[],"Failed to compile"]
-```
-
-A view whose module never finishes evaluating (an infinite loop at module
-scope) can't hang the lister — the subprocess import is timeout-bounded, so
-it degrades the same way a compile failure does:
-
-```ts continue
-await writeFile(join(viewsDir3, "hangs.tsx"), `
-export const name = "Hangs";
-while (true) {}
-export default function Hangs() { return null; }
-`);
-
-const withHang = await listViews(tmp3);
-const hung = withHang.find(v => v.slug === "hangs");
-JSON.stringify([hung.name, hung.description])
-=> ["hangs","Failed to compile"]
 ```

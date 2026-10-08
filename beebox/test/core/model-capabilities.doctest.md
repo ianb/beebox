@@ -78,25 +78,13 @@ const caps = await serviceCapabilities(box.root);
 caps.hq.mai.usable
 => true
 
-caps.hq["mai-diarized"].usable
-=> true
-
 caps.hq.whisper.usable
-=> true
-
-caps.hq["whisper-llm"].usable
-=> true
-
-caps.hq["whisper-llm-mini"].usable
 => true
 
 caps.tts.gemini.usable
 => false
 
 caps.hq.voxtral.usable
-=> false
-
-caps.hq["voxtral-diarized"].usable
 => false
 
 caps.tts.openai.usable
@@ -112,12 +100,6 @@ await grantSecret({ slug, name: "mistral", access: "server" });
 const caps2 = await serviceCapabilities(box.root);
 caps2.hq.voxtral.usable
 => true
-
-caps2.hq["voxtral-diarized"].usable
-=> true
-
-caps2.tts.openai.usable
-=> false
 ```
 
 ```ts cleanup

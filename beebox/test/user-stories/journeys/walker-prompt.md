@@ -75,13 +75,15 @@ is active. If needed, use a read-only `eval` to compare a candidate's `scrollHei
 an alternate way to reach content. A successful `✓ Done` only means the command was delivered;
 check the screen or those geometry values to confirm that the intended pane moved.
 
-**Run every `bin/browse` command with `BROWSE_BOX={{BOX_SLUG}}` set**, e.g.
+**Run every `bin/browse` command with `BROWSE_BOX={{BOX_SLUG}}` set and `--session {{BOX_SLUG}}` right
+after `bin/browse`**, e.g.
 
 ```
-BROWSE_BOX={{BOX_SLUG}} bin/browse open /
+BROWSE_BOX={{BOX_SLUG}} bin/browse --session {{BOX_SLUG}} open /
 ```
 
-Without it the tool drives a different box and nothing you do will be about yours. `/` is the
+Without them the tool drives a different box, or a browser someone else is using, and nothing
+you do will be about yours. `/` is the
 app's own path — the tool adds the rest.
 
 Do not test microphone or voice behavior during a journey walk. Do not invoke a real,

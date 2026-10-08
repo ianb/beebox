@@ -36,6 +36,17 @@ function caller(server) {
   return appRouter.createCaller(ctx);
 }
 
+// The fields an example is about: the full status payload is chat.status's own
+// contract, covered in its tests, so only its session/run flags are kept.
+function shape(r) {
+  const { status, history, ...rest } = r;
+  return {
+    ...rest,
+    history,
+    status: { sessionId: status.sessionId, running: status.running, busy: status.busy },
+  };
+}
+
 // The chat page's request shape: a bounded tail window.
 const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 };
 
@@ -82,8 +93,16 @@ process.env["BBX_CLAUDE_PROJECTS_DIR"] = projects;
 const server = await makeTestServer();
 
 const empty = await caller(server).chat.bootstrap({ slice: TAIL });
-JSON.stringify(empty)
-=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5-5","source":"default","boxDefault":"claude-opus-5-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]},"pending":[]}
+shape(empty)
+=> { kind: "empty", sessionId: null, history: null, label: null, status: { sessionId: null, running: false, busy: false }, pending: [] }
+```
+
+The full idle `status` payload, once: the engine fields show a fresh box offers
+only `claude`. Model ids rotate, so they are wildcards.
+
+```ts continue
+empty.status
+=> { sessionId: null, running: false, busy: false, model: "«*»", source: "default", boxDefault: "«*»", pendingModel: null, engine: "claude", enabledEngines: ["claude"], boxEngine: "claude", glmAvailable: false, addedModels: [] }
 ```
 
 ## An explicit session id returns that session's history and status
@@ -121,25 +140,15 @@ kept: 1 of 2
 text: Hi there!
 ```
 
-## With no `session`, it resolves the default session itself
+## It matches the procedures it replaces
 
-Same resolution `chat.defaultSession` does — which is the whole point: the
-client no longer has to ask, navigate, and ask again.
+With no `session`, bootstrap resolves the default session the way
+`chat.defaultSession` does, so the client no longer has to ask, navigate, and
+ask again.
 
 ```ts continue
 await setDefaultSession(server, "sess-explicit");
 
-const resolved = await caller(server).chat.bootstrap({ slice: TAIL });
-print(`sessionId: ${resolved.sessionId}`);
-print(`total: ${resolved.history.total}`);
-=>
-sessionId: sess-explicit
-total: 2
-```
-
-## It matches the procedures it replaces
-
-```ts continue
 const c = caller(server);
 const [viaDefault, viaHistory, viaStatus, viaDirectory] = await Promise.all([
   c.chat.defaultSession(),
@@ -176,8 +185,8 @@ doesn't.)
 
 ```ts continue
 const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
-JSON.stringify(missing)
-=> {"kind":"unavailable","reason":"missing-local-transcript","transcript":{"state":"unknown"},"huskPath":null,"sessionId":"no-such-session","history":null,"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":"claude-opus-5-5","source":"default","boxDefault":"claude-opus-5-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]},"pending":[]}
+shape(missing)
+=> { kind: "unavailable", reason: "missing-local-transcript", transcript: { state: "unknown" }, huskPath: null, sessionId: "no-such-session", history: null, label: null, status: { sessionId: "no-such-session", running: false, busy: false }, pending: [] }
 ```
 
 Input still validates: a non-string session is rejected before any work, and so
@@ -249,8 +258,8 @@ than a session named `""`:
 
 ```ts continue
 await setDefaultSession(server, "");
-JSON.stringify(await caller(server).chat.bootstrap({ slice: TAIL }))
-=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5-5","source":"default","boxDefault":"claude-opus-5-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]},"pending":[]}
+shape(await caller(server).chat.bootstrap({ slice: TAIL }))
+=> { kind: "empty", sessionId: null, history: null, label: null, status: { sessionId: null, running: false, busy: false }, pending: [] }
 ```
 
 ```ts cleanup

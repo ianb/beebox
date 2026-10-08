@@ -77,10 +77,15 @@ The harness bucket is the one that gets skipped, because a harness fault present
 a product fault and the notes read as a first-hand account. Work through these before
 believing any negative result:
 
-- **Was the walk authenticated for what it tried?** The browse key is not the box
-  owner. Owner-gated surfaces answer 401 and render controls disabled with no
-  explanation. `prepare.ts` reports `captureBlind` when no browse login is saved, and
-  `before.json` records it.
+- **Was the walk authenticated for what it tried?** `prepare.ts` sets
+  `agentBrowsing: "owner"` in the box's `_config/box.json`, so the browse key acts as
+  the owner. A 401 or a disabled owner control means that setting did not apply;
+  check the box config before treating it as product behavior.
+- **Did the box agent reach outside the box?** Box chat currently inherits the host
+  Claude account's connectors and user settings
+  ([issue](../../../../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md)).
+  Search the box agent's transcript for `mcp__` tool calls. An offer to read mail or a
+  calendar the box has no connector for comes from the host account.
 - **Did the tool actually do what it said?** A `✗ … refused: <reason>` line is about
   the control's state, not the app's response. `✓ Done` means delivered, not
   effective.

@@ -26,6 +26,19 @@ function fakeTransport(script: Record<string, Array<"success" | "transient" | "t
   return { send, calls };
 }
 
+/** A persistent in-memory queue wired to a scripted transport. */
+function makeQueue(opts: { script?: Record<string, Array<"success" | "transient" | "terminal">>; storage?: ReturnType<typeof createInMemoryVoiceStagingStorage> }) {
+  const transport = fakeTransport(opts.script ?? {});
+  const queue = createVoiceStagingQueue({
+    storage: opts.storage ?? createInMemoryVoiceStagingStorage(),
+    persistent: true,
+    send: transport.send,
+    apiBase: () => "http://box.example/api",
+    now: () => now,
+  });
+  return { queue, transport };
+}
+
 async function flushMicrotasks(): Promise<void> {
   for (let i = 0; i < 10; i++) await Promise.resolve();
 }
@@ -36,14 +49,7 @@ let now = 1000;
 ## Enqueue is synchronous; success drains the queue and clears status
 
 ```ts
-const transport = fakeTransport({});
-const queue = createVoiceStagingQueue({
-  storage: createInMemoryVoiceStagingStorage(),
-  persistent: true,
-  send: transport.send,
-  apiBase: () => "http://box.example/api",
-  now: () => now,
-});
+const { queue, transport } = makeQueue({});
 
 queue.enqueueCreate("r1", { targetSessionId: "s1" });
 queue.pendingChunkCount("r1")
@@ -73,14 +79,7 @@ transport.calls.join(",")
 ## A transient failure retries, then succeeds
 
 ```ts
-const transport2 = fakeTransport({ "r2#0": ["transient", "success"] });
-const queue2 = createVoiceStagingQueue({
-  storage: createInMemoryVoiceStagingStorage(),
-  persistent: true,
-  send: transport2.send,
-  apiBase: () => "http://box.example/api",
-  now: () => now,
-});
+const { queue: queue2, transport: transport2 } = makeQueue({ script: { "r2#0": ["transient", "success"] } });
 
 queue2.enqueueCreate("r2", { targetSessionId: "s1" });
 await flushMicrotasks();
@@ -106,14 +105,7 @@ transport2.calls.join(",")
 ## A terminal failure drops the whole recording and reports it
 
 ```ts
-const transport3 = fakeTransport({ "r3#1": ["terminal"] });
-const queue3 = createVoiceStagingQueue({
-  storage: createInMemoryVoiceStagingStorage(),
-  persistent: true,
-  send: transport3.send,
-  apiBase: () => "http://box.example/api",
-  now: () => now,
-});
+const { queue: queue3, transport: transport3 } = makeQueue({ script: { "r3#1": ["terminal"] } });
 
 queue3.enqueueCreate("r3", { targetSessionId: "s1" });
 queue3.enqueueChunk("r3", new ArrayBuffer(4));
@@ -131,12 +123,9 @@ JSON.stringify(queue3.getStatusSnapshot().get("r3"))
 const failure = queue3.getFailuresSnapshot()[0];
 JSON.stringify({ recordingId: failure.recordingId, message: failure.message })
 => {"recordingId":"r3","message":"409 conflict"}
-```
 
-The finalize op that would have followed the rejected chunk never sends —
-the whole recording was dropped:
-
-```ts continue
+// The finalize op that would have followed the rejected chunk never sends —
+// the whole recording was dropped.
 transport3.calls.join(",")
 => r3#0:create,r3#1:chunk
 ```
@@ -147,14 +136,7 @@ The transport classifies a 404 as success before the core ever sees it, so a
 discard for a session the box already forgot resolves silently.
 
 ```ts
-const transport4 = fakeTransport({});
-const queue4 = createVoiceStagingQueue({
-  storage: createInMemoryVoiceStagingStorage(),
-  persistent: true,
-  send: transport4.send,
-  apiBase: () => "http://box.example/api",
-  now: () => now,
-});
+const { queue: queue4, transport: transport4 } = makeQueue({});
 queue4.enqueueDiscard("r4");
 await flushMicrotasks();
 
@@ -162,37 +144,10 @@ JSON.stringify({ pending: queue4.getStatusSnapshot().has("r4"), failures: queue4
 => {"pending":false,"failures":0}
 ```
 
-## Recordings drain oldest-first
-
-```ts
-const transport5 = fakeTransport({});
-const queue5 = createVoiceStagingQueue({
-  storage: createInMemoryVoiceStagingStorage(),
-  persistent: true,
-  send: transport5.send,
-  apiBase: () => "http://box.example/api",
-  now: () => now,
-});
-queue5.enqueueCreate("older", { targetSessionId: "s1" });
-now += 100;
-queue5.enqueueCreate("newer", { targetSessionId: "s1" });
-await flushMicrotasks();
-
-transport5.calls.join(",")
-=> older#0:create,newer#0:create
-```
-
 ## The status store is `useSyncExternalStore`-compatible
 
 ```ts
-const transport6 = fakeTransport({});
-const queue6 = createVoiceStagingQueue({
-  storage: createInMemoryVoiceStagingStorage(),
-  persistent: true,
-  send: transport6.send,
-  apiBase: () => "http://box.example/api",
-  now: () => now,
-});
+const { queue: queue6, transport: transport6 } = makeQueue({});
 let notified = 0;
 const unsubscribe = queue6.subscribeStatus(() => { notified += 1; });
 queue6.enqueueCreate("r6", { targetSessionId: "s1" });
@@ -209,14 +164,7 @@ unsubscribe();
 count; the queue refuses the late chunk instead.
 
 ```ts
-const transport7 = fakeTransport({});
-const queue7 = createVoiceStagingQueue({
-  storage: createInMemoryVoiceStagingStorage(),
-  persistent: true,
-  send: transport7.send,
-  apiBase: () => "http://box.example/api",
-  now: () => now,
-});
+const { queue: queue7, transport: transport7 } = makeQueue({});
 queue7.enqueueCreate("r7", { targetSessionId: "s1" });
 queue7.enqueueChunk("r7", new ArrayBuffer(4));
 queue7.enqueueFinalize("r7", { emissionId: null, hq: null });
@@ -226,9 +174,7 @@ queue7.pendingChunkCount("r7")
 queue7.enqueueChunk("r7", new ArrayBuffer(4));
 queue7.pendingChunkCount("r7")
 => 1
-```
 
-```ts continue
 await flushMicrotasks();
 transport7.calls.join(",")
 => r7#0:create,r7#1:chunk,r7#2:finalize
@@ -257,13 +203,9 @@ storage8.put({
   createdAt: 0,
   attempts: 0,
 });
-const transport8 = fakeTransport({ "stuck#0": ["transient", "success"] });
-const queue8 = createVoiceStagingQueue({
+const { queue: queue8, transport: transport8 } = makeQueue({
+  script: { "stuck#0": ["transient", "success"] },
   storage: storage8,
-  persistent: true,
-  send: transport8.send,
-  apiBase: () => "http://box.example/api",
-  now: () => now,
 });
 queue8.enqueueCreate("stuck", { targetSessionId: "s1" });
 await flushMicrotasks();

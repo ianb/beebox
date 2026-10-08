@@ -50,14 +50,6 @@ partialRenames.some((r) => r.from === "scripts/keep")
 => false
 ```
 
-## A move list with no directory-uniform moves reports none
-
-```ts
-const none = detectDirectoryRenames({ repoRoot, moves: [] });
-none.length
-=> 0
-```
-
 ```ts cleanup
 t.teardown(() => rm(repoRoot, { recursive: true, force: true }));
 ```

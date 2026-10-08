@@ -14,240 +14,104 @@ import {
   handleVerdict,
   describeHandleFailures,
   readHandlingResults,
-  TRIAGE_ITEMS_ENV,
 } from "../../src/core/handle.js";
 import { formatHandleInconclusiveLine } from "../../src/shared/inconclusive.js";
 import { createCollectorContext } from "../../src/core/command-runner.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+
+// A landmark card for `_content/<dir>/` whose triage destination has the given
+// extra YAML lines (a `procedure:` block, or nothing).
+function landmark(label: string, destination: string): string {
+  return `---
+navigation:
+  label: ${label}
+destinations:
+  - for: [triage]
+    rules: Sorted by hand.
+${destination}---
+`;
+}
+const procedureRef = (ref: string) => `    procedure:\n      ref: ${ref}\n`;
+
+// Run the pass with a procedure runner that records each call.
+async function handle(box, outcome = { outcome: "completed" }) {
+  const { ctx } = createCollectorContext(box.root);
+  const calls: { procedurePath: string; triageItems: string[] }[] = [];
+  const results = await runHandle({
+    ctx,
+    options: { runProcedure: async ({ procedurePath, triageItems }) => { calls.push({ procedurePath, triageItems }); return outcome; } },
+  });
+  return { calls, results };
+}
+
+// A box with one recipes bucket holding one item, handled with `outcome`.
+async function recipesBox() {
+  const box = await makeTmpBox();
+  await box.write("_content/recipes/Recipes.landmark.card", landmark("Recipes", procedureRef("archive.procedure.card")));
+  await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
+  return box;
+}
 ```
 
 ## Resolves the procedure ref and passes items via env
 
+A bare `procedure.ref` resolves against the landmark's own directory; a
+box-path ref (leading `/`, like every other ref) resolves from the box root.
+Each bucket's items are passed to its procedure. A `.probable.txt` sidecar
+marker beside an item is not an item.
+
 ```ts
 const box = await makeTmpBox();
-await box.write(
-  "_content/recipes/Recipes.landmark.card",
-  `---
-navigation:
-  label: Recipes
-  symbol: 🍳
-destinations:
-  - for: [triage]
-    rules: Cooking instructions.
-    procedure:
-      ref: archive.procedure.card
----
-`,
-);
+await box.write("_content/recipes/Recipes.landmark.card", landmark("Recipes", procedureRef("archive.procedure.card")));
+await box.write("_content/receipts/Receipts.landmark.card", landmark("Receipts", procedureRef("/_config/procedures/archive.procedure.card")));
 await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo>bread</memo>");
 await box.write("_content/inbox/triaged/recipes/Pasta.memo.card", "<memo>pasta</memo>");
+await box.write("_content/inbox/triaged/recipes/Pasta.memo.card.probable.txt", "Reason: judgment call.");
+await box.write("_content/inbox/triaged/receipts/Lunch.memo.card", "<memo>lunch</memo>");
 
-const { ctx } = createCollectorContext(box.root);
-const calls = [];
-const results = await runHandle({
-  ctx,
-  options: {
-    runProcedure: async ({ procedurePath, triageItems }) => {
-      calls.push({ procedurePath, triageItems });
-      return { outcome: "completed" };
-    },
-  },
-});
-
-JSON.stringify(calls, null, 2)
+const { calls, results } = await handle(box);
+({ calls, buckets: results.map((r) => ({ category: r.category, outcome: r.outcome })) })
 =>
-[
-  {
-    "procedurePath": "_content/recipes/archive.procedure.card",
-    "triageItems": [
-      "_content/inbox/triaged/recipes/Bread.memo.card",
-      "_content/inbox/triaged/recipes/Pasta.memo.card"
-    ]
-  }
-]
-
-JSON.stringify(results.map((r) => ({ category: r.category, outcome: r.outcome })))
-=> [{"category":"recipes","outcome":"ran"}]
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## A box-path procedure ref resolves from the box root
-
-`procedure.ref` is a box path (leading `/`) like every other ref; the bare
-form above still resolves against the landmark's own directory.
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/recipes/Recipes.landmark.card",
-  `---
-navigation:
-  label: Recipes
-destinations:
-  - for: [triage]
-    rules: Cooking instructions.
-    procedure:
-      ref: /_config/procedures/archive.procedure.card
----
-`,
-);
-await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo>bread</memo>");
-
-const { ctx } = createCollectorContext(box.root);
-const calls = [];
-await runHandle({
-  ctx,
-  options: {
-    runProcedure: async ({ procedurePath }) => {
-      calls.push(procedurePath);
-      return { outcome: "completed" };
+{
+  calls: [
+    {
+      procedurePath: "_config/procedures/archive.procedure.card",
+      triageItems: ["_content/inbox/triaged/receipts/Lunch.memo.card"]
     },
-  },
-});
-
-JSON.stringify(calls)
-=> ["_config/procedures/archive.procedure.card"]
+    {
+      procedurePath: "_content/recipes/archive.procedure.card",
+      triageItems: [
+        "_content/inbox/triaged/recipes/Bread.memo.card",
+        "_content/inbox/triaged/recipes/Pasta.memo.card"
+      ]
+    }
+  ],
+  buckets: [{ category: "receipts", outcome: "ran" }, { category: "recipes", outcome: "ran" }]
+}
 ```
 
 ```ts cleanup
 await box.cleanup();
 ```
 
-## Empty buckets are reported but no procedure runs
+## Buckets that run no procedure
+
+An empty bucket is reported as `no-items`, a category whose landmark names no
+procedure as `no-procedure`, and `_unsure/` is skipped outright (no result at
+all). No runner is called for any of them:
 
 ```ts
 const box = await makeTmpBox();
-await box.write(
-  "_content/recipes/Recipes.landmark.card",
-  `---
-navigation:
-  label: Recipes
-  symbol: 🍳
-destinations:
-  - for: [triage]
-    procedure:
-      ref: archive.procedure.card
----
-`,
-);
-// Create the bucket directory but no items.
-await box.write("_content/inbox/triaged/recipes/.gitkeep", "");
-
-const { ctx } = createCollectorContext(box.root);
-let called = false;
-const results = await runHandle({
-  ctx,
-  options: {
-    runProcedure: async () => {
-      called = true;
-      return { outcome: "completed" };
-    },
-  },
-});
-
-JSON.stringify({ called, results: results.map((r) => r.outcome) })
-=> {"called":false,"results":["no-items"]}
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Probable-confidence sidecar markers are not passed as items
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/recipes/Recipes.landmark.card",
-  `---
-navigation:
-  label: Recipes
-  symbol: 🍳
-destinations:
-  - for: [triage]
-    procedure:
-      ref: archive.procedure.card
----
-`,
-);
-await box.write("_content/inbox/triaged/recipes/Item.memo.card", "<memo/>");
-await box.write("_content/inbox/triaged/recipes/Item.memo.card.probable.txt", "Reason: judgment call.");
-
-const { ctx } = createCollectorContext(box.root);
-const seen = [];
-await runHandle({
-  ctx,
-  options: {
-    runProcedure: async ({ triageItems }) => {
-      seen.push(...triageItems);
-      return { outcome: "completed" };
-    },
-  },
-});
-
-JSON.stringify(seen)
-=> ["_content/inbox/triaged/recipes/Item.memo.card"]
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Category with no procedure reports `no-procedure`
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/notes/Notes.landmark.card",
-  `---
-navigation:
-  label: Notes
-  symbol: 📝
-destinations:
-  - for: [triage]
-    rules: Free-form notes.
----
-`,
-);
+await box.write("_content/recipes/Recipes.landmark.card", landmark("Recipes", procedureRef("archive.procedure.card")));
+await box.write("_content/inbox/triaged/recipes/.gitkeep", ""); // bucket directory, no items
+await box.write("_content/notes/Notes.landmark.card", landmark("Notes", ""));
 await box.write("_content/inbox/triaged/notes/Item.memo.card", "<memo/>");
-
-const { ctx } = createCollectorContext(box.root);
-const results = await runHandle({
-  ctx,
-  options: { runProcedure: async () => ({ outcome: "completed" }) },
-});
-
-JSON.stringify(results.map((r) => ({ category: r.category, outcome: r.outcome })))
-=> [{"category":"notes","outcome":"no-procedure"}]
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## `_unsure/` is skipped
-
-```ts
-const box = await makeTmpBox();
 await box.write("_content/inbox/triaged/_unsure/Mystery.memo.card", "<memo/>");
 
-const { ctx } = createCollectorContext(box.root);
-let called = false;
-const results = await runHandle({
-  ctx,
-  options: {
-    runProcedure: async () => {
-      called = true;
-      return { outcome: "completed" };
-    },
-  },
-});
-
-JSON.stringify({ called, buckets: results.length })
-=> {"called":false,"buckets":0}
+const { calls, results } = await handle(box);
+({ calls, buckets: results.map((r) => ({ category: r.category, outcome: r.outcome })) })
+=>
+{ calls: [], buckets: [{ category: "notes", outcome: "no-procedure" }, { category: "recipes", outcome: "no-items" }] }
 ```
 
 ```ts cleanup
@@ -262,86 +126,24 @@ names the reason and says the work itself completed — the misreading this
 distinction exists to prevent.
 
 ```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/recipes/Recipes.landmark.card",
-  `---
-navigation:
-  label: Recipes
-  symbol: 🍳
-destinations:
-  - for: [triage]
-    procedure:
-      ref: archive.procedure.card
----
-`,
-);
-await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
-
-const { ctx } = createCollectorContext(box.root);
-const results = await runHandle({
-  ctx,
-  options: {
-    runProcedure: async () => ({
-      outcome: "inconclusive",
-      detail: "review of step archive reached max turns (8)",
-    }),
-  },
-});
-
-JSON.stringify(results.map((r) => ({ outcome: r.outcome, detail: r.detail })), null, 2)
+const box = await recipesBox();
+const { results } = await handle(box, { outcome: "inconclusive", detail: "review of step archive reached max turns (8)" });
+({ buckets: results.map((r) => ({ outcome: r.outcome, detail: r.detail })), report: formatHandlingLines(results[0]) })
 =>
-[
-  {
-    "outcome": "procedure-inconclusive",
-    "detail": "review of step archive reached max turns (8)"
-  }
-]
+{
+  buckets: [{ outcome: "procedure-inconclusive", detail: "review of step archive reached max turns (8)" }],
+  report: [
+    "  procedure-inconclusive\trecipes (1 item) [_content/recipes/archive.procedure.card]",
+    "    └─ inconclusive — review of step archive reached max turns (8); work completed"
+  ]
+}
 ```
 
-The report line a reader sees:
+A failed handler run still reports its error:
 
 ```ts continue
-JSON.stringify(formatHandlingLines(results[0]), null, 2)
-=>
-[
-  "  procedure-inconclusive\trecipes (1 item) [_content/recipes/archive.procedure.card]",
-  "    └─ inconclusive — review of step archive reached max turns (8); work completed"
-]
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## A failed handler run still reports its error
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/recipes/Recipes.landmark.card",
-  `---
-navigation:
-  label: Recipes
-  symbol: 🍳
-destinations:
-  - for: [triage]
-    procedure:
-      ref: archive.procedure.card
----
-`,
-);
-await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
-
-const { ctx } = createCollectorContext(box.root);
-const results = await runHandle({
-  ctx,
-  options: {
-    runProcedure: async () => ({ outcome: "failed", detail: "step archive failed" }),
-  },
-});
-
-JSON.stringify(formatHandlingLines(results[0]), null, 2)
+const failed = await handle(box, { outcome: "failed", detail: "step archive failed" });
+formatHandlingLines(failed.results[0])
 =>
 [
   "  procedure-failed\trecipes (1 item) [_content/recipes/archive.procedure.card]",
@@ -386,14 +188,4 @@ dropped rather than trusted:
 ```ts continue
 JSON.stringify(readHandlingResults([...unjudged, { category: "junk", outcome: "who-knows" }, "nope"]).map((r) => r.outcome))
 => ["ran","procedure-inconclusive"]
-```
-
-## Env constant is exported
-
-The procedure engine and any handler procedures look for this exact
-name; pin it.
-
-```ts
-TRIAGE_ITEMS_ENV
-=> TRIAGE_ITEMS
 ```

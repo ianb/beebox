@@ -16,162 +16,90 @@ import * as path from "node:path";
 
 ## parsePublicUrl
 
-Full URL with slug:
-
-```ts
-const r = parsePublicUrl("https://bbx.example.org/test1");
-print(`serverUrl: ${r.serverUrl}`);
-print(`boxName: ${r.boxName}`);
-=>
-serverUrl: https://bbx.example.org
-boxName: test1
-```
-
-Trailing slash on slug:
-
-```ts
-const r = parsePublicUrl("https://bbx.example.org/test1/");
-print(`serverUrl: ${r.serverUrl}`);
-print(`boxName: ${r.boxName}`);
-=>
-serverUrl: https://bbx.example.org
-boxName: test1
-```
-
-No slug (server root):
-
-```ts
-const r = parsePublicUrl("http://localhost:3210");
-print(`serverUrl: ${r.serverUrl}`);
-print(`boxName: ${r.boxName}`);
-=>
-serverUrl: http://localhost:3210
-boxName: null
-```
-
-Empty / missing:
-
-```ts
-parsePublicUrl("").serverUrl === null
-=> true
-```
-
-```ts
-parsePublicUrl(undefined).serverUrl === null
-=> true
-```
-
-Unparseable input returns nulls (no throw):
+A public URL splits into the server origin and the box slug. A trailing slash
+on the slug is dropped; a URL with no slug (server root) has no box name;
+empty input has neither. Unparseable input returns nulls (no throw) and logs
+one warning.
 
 ```ts
 const warnings: unknown[][] = [];
 const originalWarn = console.warn;
 console.warn = (...args: unknown[]) => warnings.push(args);
-const r = (() => {
-  try { return parsePublicUrl("not a url"); }
-  finally { console.warn = originalWarn; }
-})();
-print(`serverUrl: ${r.serverUrl}`);
-print(`boxName: ${r.boxName}`);
-print(`warnings: ${warnings.length}`);
+const lines: string[] = [];
+try {
+  for (const input of ["https://bbx.example.org/test1", "https://bbx.example.org/test1/", "http://localhost:3210", "", "not a url"]) {
+    const r = parsePublicUrl(input);
+    lines.push(`${JSON.stringify(input)}: serverUrl=${r.serverUrl} boxName=${r.boxName} warnings=${warnings.length}`);
+  }
+} finally {
+  console.warn = originalWarn;
+}
+
+lines.join("\n")
 =>
-serverUrl: null
-boxName: null
-warnings: 1
+"https://bbx.example.org/test1": serverUrl=https://bbx.example.org boxName=test1 warnings=0
+"https://bbx.example.org/test1/": serverUrl=https://bbx.example.org boxName=test1 warnings=0
+"http://localhost:3210": serverUrl=http://localhost:3210 boxName=null warnings=0
+"": serverUrl=null boxName=null warnings=0
+"not a url": serverUrl=null boxName=null warnings=1
 ```
 
-## buildScriptEnv — with publicUrl configured
+## buildScriptEnv — where the box name and server URL come from
 
-With a `publicUrl` in `_config/box.json`, both env vars get populated:
+`BBX_BOX_NAME` and `BBX_SERVER_URL` come from, in priority order:
+
+- the ambient registration the webapp server makes after listen
+  (`registerBoxPublicUrl`), which lets a local dev server supply them even when
+  `publicUrl` is absent from config, and wins over a stale `box.json`;
+- `publicUrl` in `_config/box.json`.
+
+Without any configured URL the env vars stay unset — a downstream process that
+needs them will fail cleanly rather than using a default. Malformed disk state
+(a garbled serve-endpoint file) is ignored rather than becoming a guessed
+endpoint.
 
 ```ts
-const box = await makeTmpBox();
-await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
-await fs.writeFile(
-  path.join(box.root, "_config", "box.json"),
-  JSON.stringify({ publicUrl: "https://bbx.example.org/my-box" })
-);
-const env = await buildScriptEnv(box.root);
-print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
-print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL}`);
+async function writeBoxJson(box, publicUrl: string) {
+  await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
+  await fs.writeFile(path.join(box.root, "_config", "box.json"), JSON.stringify({ publicUrl }));
+}
+const cases: Array<[string, (box) => Promise<Record<string, string | undefined>>]> = [
+  ["box.json publicUrl", async (box) => {
+    await writeBoxJson(box, "https://bbx.example.org/my-box");
+    return buildScriptEnv(box.root);
+  }],
+  ["ambient registration beats box.json", async (box) => {
+    await writeBoxJson(box, "https://stale.example.org/wrong-name");
+    registerBoxPublicUrl(box.root, "http://localhost:3210/live-name");
+    try { return await buildScriptEnv(box.root); }
+    finally { unregisterBoxPublicUrl(box.root); }
+  }],
+  ["nothing configured", async (box) => {
+    const saved = process.env.PUBLIC_URL;
+    delete process.env.PUBLIC_URL;
+    try { return await buildScriptEnv(box.root); }
+    finally { if (saved !== undefined) process.env.PUBLIC_URL = saved; }
+  }],
+  ["malformed serve endpoint file", async (box) => {
+    await fs.mkdir(path.join(box.root, ".beebox"), { recursive: true });
+    await fs.writeFile(serveEndpointPath(box.root), "not-json");
+    return buildScriptEnv(box.root);
+  }],
+];
+const lines: string[] = [];
+for (const [label, build] of cases) {
+  const box = await makeTmpBox();
+  const env = await build(box);
+  lines.push(`${label}: BBX_BOX_NAME=${env.BBX_BOX_NAME ?? "(unset)"} BBX_SERVER_URL=${env.BBX_SERVER_URL ?? "(unset)"}`);
+  await box.cleanup();
+}
+
+lines.join("\n")
 =>
-BBX_BOX_NAME: my-box
-BBX_SERVER_URL: https://bbx.example.org
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## buildScriptEnv — ambient registration wins over box.json
-
-When the webapp server registers a live public URL for a box (called
-from `startServer` after listen), it takes priority over box.json. This
-lets a local dev server supply `BBX_BOX_NAME` / `BBX_SERVER_URL` even
-when `publicUrl` is absent from config:
-
-```ts
-const box = await makeTmpBox();
-await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
-await fs.writeFile(
-  path.join(box.root, "_config", "box.json"),
-  JSON.stringify({ publicUrl: "https://stale.example.org/wrong-name" })
-);
-registerBoxPublicUrl(box.root, "http://localhost:3210/live-name");
-const env = await buildScriptEnv(box.root);
-unregisterBoxPublicUrl(box.root);
-print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
-print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL}`);
-=>
-BBX_BOX_NAME: live-name
-BBX_SERVER_URL: http://localhost:3210
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## buildScriptEnv — ambient works without box.json at all
-
-A box with no `_config/box.json` picks up env vars from the ambient
-registration:
-
-```ts
-const box = await makeTmpBox();
-registerBoxPublicUrl(box.root, "http://localhost:3210/ephemeral-box");
-const env = await buildScriptEnv(box.root);
-unregisterBoxPublicUrl(box.root);
-print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
-print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL}`);
-=>
-BBX_BOX_NAME: ephemeral-box
-BBX_SERVER_URL: http://localhost:3210
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## buildScriptEnv — no publicUrl, no PUBLIC_URL env
-
-Without any configured URL, the env vars stay unset — a downstream
-process that needs them will fail cleanly rather than using a default:
-
-```ts
-const box = await makeTmpBox();
-const saved = process.env.PUBLIC_URL;
-delete process.env.PUBLIC_URL;
-const env = await buildScriptEnv(box.root);
-if (saved !== undefined) process.env.PUBLIC_URL = saved;
-print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME ?? "(unset)"}`);
-print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL ?? "(unset)"}`);
-=>
-BBX_BOX_NAME: (unset)
-BBX_SERVER_URL: (unset)
-```
-
-```ts cleanup
-await box.cleanup();
+box.json publicUrl: BBX_BOX_NAME=my-box BBX_SERVER_URL=https://bbx.example.org
+ambient registration beats box.json: BBX_BOX_NAME=live-name BBX_SERVER_URL=http://localhost:3210
+nothing configured: BBX_BOX_NAME=(unset) BBX_SERVER_URL=(unset)
+malformed serve endpoint file: BBX_BOX_NAME=(unset) BBX_SERVER_URL=(unset)
 ```
 
 ## buildScriptEnv — disk registration crosses a process boundary
@@ -196,24 +124,10 @@ file: {"pid":123,"publicUrl":"http://127.0.0.1:60157/ephemeral-box"}
 await box.cleanup();
 ```
 
-Malformed disk state is ignored rather than becoming a guessed endpoint:
-
-```ts
-const box = await makeTmpBox();
-await fs.mkdir(path.join(box.root, ".beebox"), { recursive: true });
-await fs.writeFile(serveEndpointPath(box.root), "not-json");
-const env = await buildScriptEnv(box.root);
-print(env.BBX_SERVER_URL ?? "(unset)");
-=> (unset)
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
 ## buildScriptEnv — additions merged in
 
-Caller additions override / extend the env:
+Caller additions override / extend the env, and passing `undefined` deletes a
+key:
 
 ```ts
 const box = await makeTmpBox();
@@ -222,32 +136,22 @@ await fs.writeFile(
   path.join(box.root, "_config", "box.json"),
   JSON.stringify({ publicUrl: "https://bbx.example.org/my-box" })
 );
+process.env.SHOULD_VANISH = "still here";
 const env = await buildScriptEnv(box.root, {
   BBX_TRIGGERED_BY: "schedule",
   CUSTOM_KEY: "value",
+  SHOULD_VANISH: undefined,
 });
+delete process.env.SHOULD_VANISH;
 print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
 print(`BBX_TRIGGERED_BY: ${env.BBX_TRIGGERED_BY}`);
 print(`CUSTOM_KEY: ${env.CUSTOM_KEY}`);
+print(`SHOULD_VANISH deleted: ${env.SHOULD_VANISH === undefined}`);
 =>
 BBX_BOX_NAME: my-box
 BBX_TRIGGERED_BY: schedule
 CUSTOM_KEY: value
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-Passing `undefined` deletes a key:
-
-```ts
-const box = await makeTmpBox();
-process.env.SHOULD_VANISH = "still here";
-const env = await buildScriptEnv(box.root, { SHOULD_VANISH: undefined });
-delete process.env.SHOULD_VANISH;
-env.SHOULD_VANISH === undefined
-=> true
+SHOULD_VANISH deleted: true
 ```
 
 ```ts cleanup

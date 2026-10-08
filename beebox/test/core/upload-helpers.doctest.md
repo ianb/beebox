@@ -39,13 +39,6 @@ async function caught<T>(fn: () => Promise<T>): Promise<Error | null> {
 }
 ```
 
-## Empty ledger shape
-
-```ts
-JSON.stringify(emptyLedger())
-=> {"version":1,"entries":[]}
-```
-
 ## addEntry and findEntry
 
 ```ts
@@ -59,13 +52,6 @@ print(`found ccc: ${findEntry(l, "ccc") === undefined}`)
 count=2
 found bbb session: _content/inbox/scan-x
 found ccc: true
-```
-
-## Ledger location is per-box
-
-```ts
-LEDGER_REL_PATH
-=> .beebox/uploads.json
 ```
 
 ## loadLedger returns empty when the file is absent
@@ -181,16 +167,6 @@ const groups3 = groupScanFiles([
 ]);
 groups3.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
 => image-batch:Scan2026-04-29_154947=2 | image-batch:(loose images)=2
-```
-
-A single image with a scanner-like name (`IMG_0042.jpg`, etc.) gets its own
-matched group, even if it's just one file. The pattern is broad on purpose:
-single-file groups still work fine downstream.
-
-```ts
-const groups4 = groupScanFiles(["/in/IMG_0042.jpg", "/in/IMG_0043.jpg"]);
-groups4.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
-=> image-batch:IMG=2
 ```
 
 The separator before the digit suffix can be either `_` or `-` —

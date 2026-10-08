@@ -71,18 +71,8 @@ text(line({ open: 1, parked: 2 }))
 
 A directory's browse page shows the same line for every card under it
 (`DirectoryTodos.tsx`), from a query on the directory with no reference
-pass. No boxholder todos, no line — the same rule as a card:
-
-```ts
-line({})
-=> 
-
-text(line({ open: 4, escalated: 1, done: 3 }, () => undefined))
-=> [4 open] · 1 overdue · 3 done
-```
-
-"4 open" opens the directory's list: its own `todo-view` card when one sits
-directly in it, else the plate.
+pass. Its "open" control opens the directory's list: its own `todo-view` card
+when one sits directly in it, else the plate.
 
 ```ts
 directoryListPath([

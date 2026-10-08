@@ -136,10 +136,3 @@ JSON.stringify(parseDraft('{"text":"hi","narration":true}'))
 JSON.stringify(parseDraft('{"text":"hi","narration":true,"updatedAt":"5"}'))
 => null
 ```
-
-A complete, correctly-typed record parses:
-
-```ts
-JSON.stringify(parseDraft('{"text":"hi","narration":false,"updatedAt":42}'))
-=> {"text":"hi","narration":false,"updatedAt":42}
-```

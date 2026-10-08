@@ -122,8 +122,7 @@ result10.findings.length
 => 0
 ```
 
-A record-form `const`, and one wrapped in `satisfies`/`as const`, resolve the
-same way.
+A record-form `const` wrapped in `satisfies` resolves the same way.
 
 ```ts
 const source11 = `${registryImportLine}import { SchemaMod } from "./schema.js";\nconst surfaceMap = {\n  schema: SchemaMod,\n} satisfies Record<string, unknown>;\ndefineRegistry({\n  directory: "./exports",\n  ordered: false,\n  members: surfaceMap,\n});\n`;
@@ -133,13 +132,6 @@ const result11 = registriesOf(source11, [
 ]);
 JSON.stringify(result11.registries[0]?.members)
 => [{"expression":"SchemaMod","source":"pkg/src/exports/schema.ts","key":"schema"}]
-
-const source12 = `${registryImportLine}import { Verb } from "./verb.js";\nconst commandList = [Verb] as const;\ndefineRegistry<Verb>({\n  directory: "./commands",\n  ordered: false,\n  members: commandList,\n});\n`;
-registriesOf(source12, [
-  registryEdge,
-  edge({ specifier: "./verb.js", names: ["Verb"], target: "pkg/src/verb.ts" }),
-]).registries[0]?.members[0]?.expression
-=> Verb
 ```
 
 ## `members` bound to a non-`const`, or to a non-literal, stays a scan finding

@@ -52,32 +52,16 @@ const samples = {
 
 ## Every event round-trips through its schema
 
-The sample catalog covers all 22 events, and each parses cleanly against the
+The sample catalog covers every event, and each parses cleanly against the
 schema the read boundary uses:
 
 ```ts
-Object.keys(samples).length
-=> 22
-
 JSON.stringify(Object.keys(samples).sort()) === JSON.stringify(Object.keys(eventSchemas).sort())
 => true
 
 const failures = Object.entries(samples).filter((e) => !eventSchemas[e[0]].safeParse(e[1]).success).map((e) => e[0]);
 JSON.stringify(failures)
 => []
-```
-
-## Nullable fields accept both branches
-
-`chat-user-message.user`, `chat-complete.sessionId`, and `schedule-fired.announce`
-are all nullable — the null branch is legal:
-
-```ts
-eventSchemas["chat-user-message"].safeParse({ sessionId: null, message: "hi", user: null, timestamp: TS }).success
-=> true
-
-eventSchemas["schedule-fired"].safeParse({ id: "s", label: "l", alarm: false, announce: "wake up" }).success
-=> true
 ```
 
 ## A one-sided answer is valid

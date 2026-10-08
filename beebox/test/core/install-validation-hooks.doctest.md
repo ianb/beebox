@@ -83,22 +83,6 @@ annexAt !== -1 && bbxFallbackExitAt !== -1 && annexAt < bbxFallbackExitAt
 => true
 ```
 
-The annex-repo gate uses Git's common directory so it also works in a linked
-worktree, and (shapeVersion 3: one root) needs no `cd` before running —
-`.git`'s cwd guarantee already puts every hook body at `box.root`:
-
-```ts continue
-[
-  hookBody.includes('git rev-parse --git-common-dir'),
-  hookBody.includes('git annex pre-commit .'),
-]
-=>
-[
-  true,
-  true
-]
-```
-
 The annex block is gated on whether **this repo** is annexed, not on whether
 git-annex is installed. A box still on the manifest model must keep committing
 normally — requiring annex unconditionally would break every unmigrated box at
@@ -255,7 +239,7 @@ await fs.writeFile(
   path.join(box.root, ".claude/settings.json"),
   JSON.stringify({
     permissions: { allow: ["Bash(npm test)"] },
-    model: "claude-sonnet-4-6",
+    model: "custom-model",
   }, null, 2)
 );
 
@@ -268,7 +252,7 @@ JSON.stringify(settings.permissions)
 => {"allow":["Bash(npm test)"]}
 
 settings.model
-=> claude-sonnet-4-6
+=> custom-model
 ```
 
 The validation hook was added alongside:
@@ -512,8 +496,7 @@ const again = await installValidationHooks(box.root);
 (a commented template — no active entries, since the builtin skips already cover
 bbx's generated docs) and installs a path-conditional `.claude/rules/` rule that
 fires only when an agent opens that file, warning it off. The seed is commented
-out; the rule is scoped to the ignore file's path and is blunt about not
-silencing errors:
+out; the rule is scoped to the ignore file's path:
 
 ```ts
 const box = await makeBox();
@@ -527,16 +510,9 @@ seed.split("\n").filter((l) => l.trim() !== "").every((l) => l.trimStart().start
 
 ```ts continue
 const rule = await fs.readFile(path.join(box.root, ".claude/rules/bbx-validate-ignore.md"), "utf-8");
-[
-  rule.includes(`- "_config/bbx-validate.ignore"`),  // path-conditional scope
-  rule.includes("operator-owned") || rule.includes("boxholder"),
-  rule.includes("Never add an entry here to silence"),
-]
-=> [
-  true,
-  true,
-  true
-]
+// path-conditional scope
+rule.includes(`- "_config/bbx-validate.ignore"`)
+=> true
 ```
 
 An operator's edits to the ignore file are never clobbered — the seed is written

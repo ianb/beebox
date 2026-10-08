@@ -36,9 +36,6 @@ calls.at(-1)
 A model with no cache pricing reports null there, not zero.
 
 ```ts
-(await lookupOpenRouterModel("moonshotai/kimi-k2-0905", { fetch: await catalog(), now: 0 })).ok
-=> true
-
 JSON.stringify((await lookupOpenRouterModel("moonshotai/kimi-k2-0905", { fetch: await catalog(), now: 0 })))
 => {"ok":true,"found":true,"model":{"name":"MoonshotAI: Kimi K2 0905","contextLength":262144,"supportsTools":true,"pricing":{"promptPerMTok":0.6,"completionPerMTok":2.5,"cacheReadPerMTok":null}}}
 ```

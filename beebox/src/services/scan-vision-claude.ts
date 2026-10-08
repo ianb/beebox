@@ -8,7 +8,7 @@
  * one stateless `query()` per small batch, images inlined as base64 (the
  * file-path/Read variant measured 2× cost, 5× latency, and one lost page),
  * outline-then-capture prompting with a machine-checked slot invariant, and a
- * hermetic call surface (`tools: []`, `settingSources: []`). `subject_bbox`
+ * hermetic call surface (`tools: []`, no filesystem settings, no connectors). `subject_bbox`
  * is schema-forced to null — Sonnet's boxes carry a systematic y-offset and
  * are never trusted. Rotation is best-effort (measured inconsistent).
  */
@@ -18,6 +18,7 @@ import type { query as ClaudeQuery } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { MODEL_ID } from "../shared/model-ids.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
+import { boxSessionSettings } from "../core/agent/box-session-settings.js";
 import { buildScriptEnv } from "../core/script-env/core.js";
 import { dropUndefined } from "../lib/drop-undefined.js";
 import { errorMessage } from "../shared/error-guards.js";
@@ -98,7 +99,7 @@ export function claudeScanWireSchema(): Record<string, unknown> {
  * outline-then-capture procedure (Experiment A) that keeps transcription
  * complete on handwriting-dense pages and yields per-slot legibility.
  */
-export const CLAUDE_SCAN_NOTE = `
+const CLAUDE_SCAN_NOTE = `
 The images are supplied in batch order; image at position i is page index i (0-based).
 Always set subject_bbox to null.
 
@@ -194,7 +195,7 @@ function checkSlotInvariant(page: ClaudeScanAnalysis): boolean {
  * review" into "these rows need review" (the Experiment A product win)
  * without any card-schema change.
  */
-export function foldSlotsIntoReviewFlags(page: ClaudeScanAnalysis): RawScanAnalysis {
+function foldSlotsIntoReviewFlags(page: ClaudeScanAnalysis): RawScanAnalysis {
   const { slots, slot_count: _slotCount, ...rest } = page;
   const hard = slots.filter((s) => s.legibility !== "clear");
   if (hard.length === 0) return rest;
@@ -351,7 +352,7 @@ async function runScanQuery({
         cwd: boxRoot,
         env,
         tools: [],
-        settingSources: [],
+        ...boxSessionSettings({ boxRoot, loadBoxContext: false }),
         // Composed by beebox; the CLI must not expand `@path` mentions in it.
         verbatimPrompts: true,
         systemPrompt: { type: "preset", preset: "claude_code" },

@@ -225,7 +225,7 @@ const html = render(React.createElement(PdfPageStrip, { pages, activePage: 3 }))
 html.split("ring-2 ring-accent").length - 1
 => 1
 
-html.includes('id="page-3" data-page="3" class="flex-shrink-0 flex flex-col items-center gap-1 p-1 rounded ring-2 ring-accent"')
+/id="page-3" data-page="3" class="[^"]*ring-2 ring-accent"/.test(html)
 => true
 
 // Every page is present, alt-texted, and captioned.

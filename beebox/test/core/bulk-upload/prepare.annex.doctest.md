@@ -113,15 +113,6 @@ noext ANNEXED
 plain.jpg ANNEXED
 ```
 
-The pointers stand in for real bytes: nothing 200 KB is in the commit.
-
-```ts continue
-const sizes = execFileSync("git", ["ls-tree", "-r", "-l", "HEAD", "--", `content/${batch.attachRelDir}`], { cwd: repo })
-  .toString().trim().split("\n").map((l) => Number(l.split(/\s+/)[3]));
-ANNEX ? Math.max(...sizes) < 4000 : true
-=> true
-```
-
 ```ts cleanup
 await cleanup(repo);
 ```

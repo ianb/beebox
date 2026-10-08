@@ -23,13 +23,24 @@ const STATUS_TEXT_CLASS: Record<TodoStatus, string> = {
   dropped: "text-warm-400 line-through",
 };
 
-/** The checkbox's accessible name: the status, which also names a parked or dropped todo the checkbox cannot express. */
+/** The status word: the name of a checkbox whose todo's words are not known, and the prefix for a parked or dropped one. */
 export const STATUS_LABEL: Record<TodoStatus, string> = {
   open: "Open",
   done: "Done",
   parked: "Parked",
   dropped: "Dropped",
 };
+
+/**
+ * The checkbox's accessible name: the todo it controls. The checked state
+ * already says open or done; a parked or dropped todo, which a checkbox
+ * cannot express, is prefixed with its status. Without the words, the status.
+ */
+export function checkboxName(status: TodoStatus, text: string | null): string {
+  const words = text?.trim() ?? "";
+  if (words === "") return STATUS_LABEL[status];
+  return status === "parked" || status === "dropped" ? `${STATUS_LABEL[status]}: ${words}` : words;
+}
 
 interface TodoWho {
   status: TodoStatus;

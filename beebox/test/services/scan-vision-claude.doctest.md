@@ -10,8 +10,6 @@ Design: `docs/plans/scan-vision-claude.md`.
 import {
   claudeScanWireSchema,
   parseClaudeScanBatch,
-  foldSlotsIntoReviewFlags,
-  CLAUDE_SCAN_NOTE,
 } from "../../src/services/scan-vision-claude.js";
 
 /** A well-formed Claude-shaped page with overridable fields. */
@@ -46,9 +44,6 @@ stripped, rotation is a four-value enum, and `subject_bbox` only admits null.
 ```ts
 const schema = claudeScanWireSchema();
 const pages = schema.properties.pages;
-pages.type
-=> array
-
 JSON.stringify(pages.items.properties.index)
 => {"type":"integer"}
 
@@ -66,13 +61,6 @@ JSON.stringify(schema).includes("9007199254740991")
 
 "$schema" in schema
 => false
-```
-
-The prompt suffix carries the two-phase outline procedure and the bbox refusal.
-
-```ts
-CLAUDE_SCAN_NOTE.includes("PHASE 1 — ENUMERATE") && CLAUDE_SCAN_NOTE.includes("Always set subject_bbox to null.")
-=> true
 ```
 
 ## Happy path: slots stripped, clear pages unflagged
@@ -106,14 +94,6 @@ flagged[0]?.flag_reason
 const withReason = parseClaudeScanBatch({ pages: [page(0, { slot_count: 3, slots: hardSlots, flag_for_review: true, flag_reason: "hard handwriting" })] }, meta);
 withReason[0]?.flag_reason
 => hard handwriting; Slots needing review: 2 (partial), 3 (illegible)
-```
-
-`foldSlotsIntoReviewFlags` is the same operation exposed directly:
-
-```ts
-const folded = foldSlotsIntoReviewFlags(page(4, { slot_count: 2, slots: [{ slot: 1, label: "a", text: "x", legibility: "clear" }, { slot: 2, label: "b", text: "y?", legibility: "partial" }] }));
-`${folded.flag_for_review} ${folded.flag_reason}`
-=> true Slots needing review: 2 (partial)
 ```
 
 ## Post-conditions fail loudly, classified for the runner

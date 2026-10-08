@@ -3,34 +3,43 @@
 The model picker and mutation boundary share one engine-indexed registry.
 
 ```ts setup
-import { chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
-import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES, TIER_RANK } from "../../src/shared/agent-models.js";
+import { isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
+import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES } from "../../src/shared/agent-models.js";
 import { boxDefaultModel, liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, resolveSmallModelForEngine, loadEffectiveSmallModel } from "../../src/core/model-policy.js";
 import { loadBoxModel, loadEnabledEngines, clearBoxConfigCache } from "../../src/core/box/config.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession, loadCurrentModel, loadCurrentModelForEngine, saveCurrentModel } from "../../src/core/chat/session/state.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+
+// Ids rotate; tiers do not. Examples name a model by engine and tier and read
+// results back through the same labels, so a version bump changes no expectation.
+const tierId = (engine: "claude" | "codex", model: "efficient" | "balanced" | "strong" | "strongest") =>
+  resolveProcedureModel({ engine, model });
+const LABELS: Record<string, string> = {};
+for (const engine of ["claude", "codex"] as const) {
+  for (const tier of ["efficient", "balanced", "strong", "strongest"] as const) {
+    LABELS[tierId(engine, tier)] = `${engine} ${tier}`;
+  }
+}
+const label = (model: string | null) => (model === null ? null : (LABELS[model] ?? model));
+const labelled = (r: { model: string | null; source: string }) => ({ model: label(r.model), source: r.source });
 ```
 
 ```ts
-JSON.stringify(chatModelOptions("claude", []).map((option) => option.label))
-=> ["Default (Opus)","Fable 5.1","Opus 5.5","GLM 5.3","GLM 5.3 Flash","Sonnet 5","Haiku 4.5"]
-
-JSON.stringify(chatModelOptions("codex", []))
-=> [{"label":"Default (Codex)","model":null},{"label":"Astra","model":"gpt-6-astra"},{"label":"Sol","model":"gpt-6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-6-luna"}]
-
-isChatModelAllowed("codex", { model: "gpt-6-sol", added: [] })
+isChatModelAllowed("codex", { model: tierId("codex", "strong"), added: [] })
 => true
 
-isChatModelAllowed("codex", { model: "claude-opus-5-5", added: [] })
+isChatModelAllowed("codex", { model: tierId("claude", "strong"), added: [] })
 => false
 
 JSON.stringify([parseChatAgentEngine("codex"), parseChatAgentEngine(undefined), parseChatAgentEngine("other")])
 => ["codex",null,null]
 ```
 
-Web chats persist overrides independently by native session id.
+Web chats persist overrides independently by native session id. The saved
+picks below are retired ids (`gpt-5.6-sol`, `claude-opus-5`), which stored
+selections may still carry and which load as their current replacement.
 
 ```ts
 const box = await makeTmpBox();
@@ -38,20 +47,20 @@ const firstFile = chatModelFileForSession("first");
 const secondFile = chatModelFileForSession("second");
 saveCurrentModel(box.root, { modelFile: firstFile, model: "gpt-5.6-sol" });
 
-JSON.stringify([loadCurrentModel(box.root, firstFile), loadCurrentModel(box.root, secondFile)])
-=> ["gpt-6-sol",null]
+JSON.stringify([label(loadCurrentModel(box.root, firstFile)), label(loadCurrentModel(box.root, secondFile))])
+=> ["codex strong",null]
 
 saveCurrentModel(box.root, { modelFile: secondFile, model: "claude-opus-5" });
 JSON.stringify([
-  loadCurrentModelForEngine(box.root, { modelFile: firstFile, engine: "codex" }),
-  loadCurrentModelForEngine(box.root, { modelFile: secondFile, engine: "codex" }),
-  loadCurrentModelForEngine(box.root, { modelFile: secondFile, engine: "claude" }),
+  label(loadCurrentModelForEngine(box.root, { modelFile: firstFile, engine: "codex" })),
+  label(loadCurrentModelForEngine(box.root, { modelFile: secondFile, engine: "codex" })),
+  label(loadCurrentModelForEngine(box.root, { modelFile: secondFile, engine: "claude" })),
 ])
-=> ["gpt-6-sol",null,"claude-opus-5-5"]
+=> ["codex strong",null,"claude strong"]
 
 liveModelState({
   explicit: loadCurrentModel(box.root, firstFile),
-  resolved: "gpt-6-sol",
+  resolved: tierId("codex", "strong"),
 }).source
 => explicit
 
@@ -65,7 +74,7 @@ The guard is what keeps a tier name from being written where an id belongs and
 silently resolving to nothing.
 
 ```ts
-JSON.stringify([isProcedureModelName("opus"), isProcedureModelName("balanced"), isProcedureModelName("claude-opus-5-5")])
+JSON.stringify([isProcedureModelName("opus"), isProcedureModelName("balanced"), isProcedureModelName(tierId("claude", "strong"))])
 => [true,true,false]
 ```
 
@@ -90,14 +99,14 @@ function tiersRoundTrip(engine: AgentEngine): boolean {
 ```
 
 ```ts
-JSON.stringify([modelTier("claude-fable-5-1"), modelTier("gpt-6-sol"), modelTier("not-a-model")])
-=> ["strongest","strong",null]
+JSON.stringify(ENGINES.map((engine) => (["efficient", "balanced", "strong", "strongest"] as const).map((tier) => modelTier(tierId(engine, tier)))))
+=> [["efficient","balanced","strong","strongest"],["efficient","balanced","strong","strongest"]]
+
+modelTier("not-a-model")
+=> null
 
 JSON.stringify(ENGINES.map(tiersRoundTrip))
 => [true,true]
-
-TIER_RANK.efficient < TIER_RANK.balanced && TIER_RANK.balanced < TIER_RANK.strong && TIER_RANK.strong < TIER_RANK.strongest
-=> true
 ```
 
 An engine that offers the pinned model runs it exactly; one that does not gets
@@ -108,14 +117,15 @@ registry check, so it resolves rather than reading as "no policy".
 invent one.
 
 ```ts
+const balanced = tierId("claude", "balanced");
 JSON.stringify([
-  resolveBoxModelForEngine("claude", { pinned: "claude-sonnet-5", added: [] }),
-  resolveBoxModelForEngine("codex", { pinned: "claude-sonnet-5", added: [] }),
+  resolveBoxModelForEngine("claude", { pinned: balanced, added: [] }),
+  resolveBoxModelForEngine("codex", { pinned: balanced, added: [] }),
   resolveBoxModelForEngine("claude", { pinned: "claude-opus-4-8", added: [] }),
   resolveBoxModelForEngine("claude", { pinned: "not-a-model", added: [] }),
   resolveBoxModelForEngine("claude", { pinned: null, added: [] }),
-])
-=> ["claude-sonnet-5","gpt-5.6-terra","claude-opus-5-5",null,null]
+].map(label))
+=> ["claude balanced","codex balanced","claude strong",null,null]
 ```
 
 What an unpinned box actually RUNS is one level up. `boxDefaultModel` answers
@@ -130,10 +140,10 @@ box saying nothing.
 JSON.stringify([
   boxDefaultModel("claude", { pinned: null, added: [] }),
   boxDefaultModel("codex", { pinned: null, added: [] }),
-  boxDefaultModel("claude", { pinned: "claude-sonnet-5", added: [] }),
+  boxDefaultModel("claude", { pinned: tierId("claude", "balanced"), added: [] }),
   boxDefaultModel("claude", { pinned: "not-a-model", added: [] }),
-])
-=> ["claude-opus-5-5","gpt-6-sol","claude-sonnet-5",null]
+].map(label))
+=> ["claude strong","codex strong","claude balanced",null]
 ```
 
 The small-pass slot is deliberately NOT that default — chat review, retro and
@@ -144,14 +154,14 @@ A chat's own pick wins; a chat that follows takes the box pin; a pick belonging
 to the other engine falls through to the pin rather than to nothing.
 
 ```ts
-const pinned = "claude-sonnet-5";
+const pinned = tierId("claude", "balanced");
 JSON.stringify([
-  resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "explicit", model: "claude-fable-5-1" }),
+  resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "explicit", model: tierId("claude", "strongest") }),
   resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "follow" }),
   resolveEffectiveModel({ engine: "claude", pinned: null, added: [] }, { kind: "follow" }),
-  resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "explicit", model: "gpt-6-sol" }),
-])
-=> [{"model":"claude-fable-5-1","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":"claude-opus-5-5","source":"default"},{"model":"claude-sonnet-5","source":"default"}]
+  resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "explicit", model: tierId("codex", "strong") }),
+].map(labelled))
+=> [{"model":"claude strongest","source":"explicit"},{"model":"claude balanced","source":"default"},{"model":"claude strong","source":"default"},{"model":"claude balanced","source":"default"}]
 ```
 
 What a *running* chat reports is the model its subprocess started with, whatever
@@ -160,13 +170,15 @@ the boxholder their conversation had already moved — the state the system
 intends, not the one it is in.
 
 ```ts
+const fable = tierId("claude", "strongest");
+const sonnet = tierId("claude", "balanced");
 JSON.stringify([
-  liveModelState({ explicit: "claude-fable-5-1", resolved: "claude-fable-5-1" }),
-  liveModelState({ explicit: null, resolved: "claude-sonnet-5" }),
-  liveModelState({ explicit: "claude-fable-5-1", resolved: "claude-sonnet-5" }),
+  liveModelState({ explicit: fable, resolved: fable }),
+  liveModelState({ explicit: null, resolved: sonnet }),
+  liveModelState({ explicit: fable, resolved: sonnet }),
   liveModelState({ explicit: null, resolved: null }),
-])
-=> [{"model":"claude-fable-5-1","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":"claude-sonnet-5","source":"default"},{"model":null,"source":"none"}]
+].map(labelled))
+=> [{"model":"claude strongest","source":"explicit"},{"model":"claude balanced","source":"default"},{"model":"claude balanced","source":"default"},{"model":null,"source":"none"}]
 ```
 
 A hand-edited `agentModel` that no engine offers is rejected at the config
@@ -178,9 +190,9 @@ await mkdir(join(policyBox.root, "_config"), { recursive: true });
 const writeConfig = async (config: Record<string, unknown>) =>
   writeFile(join(policyBox.root, "_config/box.json"), JSON.stringify(config));
 
-await writeConfig({ agentModel: "claude-sonnet-5" });
-await loadBoxModel(policyBox.root)
-=> claude-sonnet-5
+await writeConfig({ agentModel: tierId("claude", "balanced") });
+label(await loadBoxModel(policyBox.root))
+=> claude balanced
 
 await writeConfig({ agentModel: "sonnet" });
 await loadBoxModel(policyBox.root)
@@ -208,10 +220,10 @@ verbatim. **Nothing here can produce a name an engine does not know.**
 JSON.stringify([
   resolveSmallModelForEngine({ engine: "claude", pinned: null, boxDefault: null }),
   resolveSmallModelForEngine({ engine: "codex", pinned: null, boxDefault: null }),
-  resolveSmallModelForEngine({ engine: "codex", pinned: "claude-sonnet-5", boxDefault: null }),
-  resolveSmallModelForEngine({ engine: "claude", pinned: "claude-fable-5-1", boxDefault: null }),
-])
-=> ["claude-haiku-4-5-20251001","gpt-6-luna","gpt-5.6-terra","claude-fable-5-1"]
+  resolveSmallModelForEngine({ engine: "codex", pinned: tierId("claude", "balanced"), boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "claude", pinned: tierId("claude", "strongest"), boxDefault: null }),
+].map(label))
+=> ["claude efficient","codex efficient","codex balanced","claude strongest"]
 ```
 
 A codex box never receives a Claude model id, whatever the box config says —
@@ -226,16 +238,16 @@ const writeSmall = async (config: Record<string, unknown>) => {
 };
 
 await writeSmall({ agentEngine: "codex" });
-await loadEffectiveSmallModel(smallBox.root)
-=> gpt-6-luna
+label(await loadEffectiveSmallModel(smallBox.root))
+=> codex efficient
 
 await writeSmall({ agentEngine: "codex", smallModel: "haiku" });
-await loadEffectiveSmallModel(smallBox.root)
-=> gpt-6-luna
+label(await loadEffectiveSmallModel(smallBox.root))
+=> codex efficient
 
-await writeSmall({ agentEngine: "codex", smallModel: "gpt-5.6-terra" });
-await loadEffectiveSmallModel(smallBox.root)
-=> gpt-5.6-terra
+await writeSmall({ agentEngine: "codex", smallModel: tierId("codex", "balanced") });
+label(await loadEffectiveSmallModel(smallBox.root))
+=> codex balanced
 
 await smallBox.cleanup();
 ```

@@ -120,142 +120,36 @@ function rawUpgradeRequest({ port, path }) {
     socket.on("error", reject);
   });
 }
-```
 
-## An unconfigured slug 404s without touching any endpoint
+// Destroy every tracked socket (a detached upgrade socket would hang close()), then close.
+async function stopHub(hub) {
+  for (const socket of hub.sockets) socket.destroy();
+  await new Promise((resolve) => hub.server.close(resolve));
+}
 
-```ts
-const box = await startFakeBox();
-const hub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]));
+// GET through a hub; the fake box answers with JSON describing what it received.
+async function getJson(hub, path, init) {
+  const response = await fetch(`${hub.base}${path}`, init);
+  return { status: response.status, body: await response.json() };
+}
 
-const missingResponse = await fetch(`${hub.base}/nope/x`);
-missingResponse.status
-=> 404
-```
+// Hub auth ON needs a (fake) OAuth client pair and a session secret.
+function setOAuthEnv(on) {
+  const vars = {
+    GOOGLE_OAUTH_CLIENT_ID: "test-client-id-for-router-doctest",
+    // registerAuthRoutes fails loudly on an ID-without-secret half-config
+    // (MissingOAuthClientSecretError), so the fake credentials must be a pair.
+    GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret-for-router-doctest",
+    BBX_SESSION_SECRET: "test-session-secret-for-router-doctest",
+  };
+  for (const [name, value] of Object.entries(vars)) {
+    if (on) process.env[name] = value;
+    else delete process.env[name];
+  }
+}
 
-## `/` serves the root page, `/healthz` returns the injected health
-
-`/` routes to the hub's box-picker handler, which serves the SPA when the
-frontend bundle is built and a minimal box list otherwise — either way a 200
-with an HTML body (the picker-content behavior itself is covered in
-`box-picker.doctest.md`; this just asserts the routing).
-
-```ts continue
-const rootResponse = await fetch(`${hub.base}/`);
-rootResponse.status
-=> 200
-
-const rootBody = await rootResponse.text();
-rootBody.length > 0
-=> true
-
-const healthResponse = await fetch(`${hub.base}/healthz`, diagAuth);
-JSON.stringify(await healthResponse.json())
-=> {"status":"ok","boxes":[]}
-```
-
-## A request under a configured slug is proxied unchanged (no prefix stripping)
-
-The box's own Fastify instance serves itself at `/<slug>/...` already (same
-as standalone `bbx serve --slug`) — the hub forwards the full path as-is.
-
-```ts continue
-const proxied = await fetch(`${hub.base}/test1/browse/some-card`);
-const body = await proxied.json();
-proxied.status
-=> 200
-
-JSON.stringify({ method: body.method, url: body.url })
-=> {"method":"GET","url":"/test1/browse/some-card"}
-```
-
-## A client-supplied `x-bbx-authenticated-email` header is stripped, never reaches the child
-
-The spoof wall: no matter what a client sends, the box only ever sees
-identity the HUB decided on. With hub auth off, that means the box sees
-`x-bbx-hub-auth: off` + the hub secret — never the client's claimed email.
-
-```ts continue
-const spoofed = await fetch(`${hub.base}/test1/browse/some-card`, {
-  headers: { "x-bbx-authenticated-email": "attacker@evil.com", "x-bbx-hub-secret": "attacker-supplied-secret" },
-});
-const spoofedBody = await spoofed.json();
-JSON.stringify(spoofedBody.headers)
-=> {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}
-```
-
-## The browse key reaches hub-mode children through the trusted auth contract
-
-The machine-wide dev browse key authenticates at the hub. It must continue as
-the hub's explicit `auth: off` decision when the child is hub-mode; treating it
-as per-box mobile auth would skip those headers and make the child reject the
-request.
-
-```ts continue
-process.env.BBX_BROWSE_API_KEY = BROWSE_KEY;
-const browseHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
-  openAccess: false,
-});
-const browseResponse = await fetch(`${browseHub.base}/test1/api/health`, {
-  headers: { cookie: `bbx_browse_key=${BROWSE_KEY}` },
-});
-browseResponse.status
-=> 200
-
-const browseBody = await browseResponse.json();
-JSON.stringify(browseBody.headers)
-=> {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}
-```
-
-```ts continue
-for (const socket of browseHub.sockets) socket.destroy();
-await new Promise((resolve) => browseHub.server.close(resolve));
-delete process.env.BBX_BROWSE_API_KEY;
-```
-
-## A webhook path is proxied unauthenticated, carrying only the hub secret
-
-```ts continue
-const webhookHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]));
-const webhookResponse = await fetch(`${webhookHub.base}/webhook/test1/incoming`);
-const webhookBody = await webhookResponse.json();
-webhookResponse.status
-=> 200
-
-JSON.stringify(webhookBody.headers)
-=> {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":null}
-```
-
-```ts continue
-for (const socket of webhookHub.sockets) socket.destroy();
-await new Promise((resolve) => webhookHub.server.close(resolve));
-```
-
-## A WebSocket upgrade under a configured slug is proxied through
-
-```ts continue
-const upgradeResponse = await rawUpgradeRequest({ port: hub.port, path: "/test1/ws" });
-upgradeResponse.startsWith("HTTP/1.1 101")
-=> true
-```
-
-## A WebSocket upgrade for an unconfigured slug gets a raw 404 (never reaches an endpoint)
-
-```ts continue
-const rejectedUpgrade = await rawUpgradeRequest({ port: hub.port, path: "/nope/ws" });
-rejectedUpgrade.startsWith("HTTP/1.1 404")
-=> true
-```
-
-## A lazy provider's `ensureRunning` cold-starts an HTTP request; WS upgrades never trigger it
-
-Mirrors a lazy `Supervisor` (`src/hub/supervisor/core.ts`) without spawning a real
-process: `get()` only returns an endpoint while `running` is true;
-`ensureRunning()` is the only thing that flips it on. This proves
-`hub-server.ts`'s contract, not `Supervisor`'s own cold-start mechanics
-(covered separately in `supervisor.doctest.md`).
-
-```ts continue
+// Mirrors a lazy `Supervisor`: `get()` only returns an endpoint while `running`
+// is true; `ensureRunning()` is the only thing that flips it on.
 function makeLazyProvider({ slug, origin }) {
   let running = false;
   let ensureCalls = 0;
@@ -273,14 +167,114 @@ function makeLazyProvider({ slug, origin }) {
   };
 }
 
-const lazyProvider = makeLazyProvider({ slug: "lazybox", origin: box.origin });
-const lazyHub = await startHub(lazyProvider, { boxes: [{ slug: "lazybox", boxRoot: "/nonexistent/lazybox" }] });
+const CALLBACK = "/auth/google-services/callback?code=abc123&state=";
 ```
+
+## Routing: unknown slug, root page, unchanged proxying
+
+An unconfigured slug 404s without touching any endpoint. `/` routes to the
+hub's box-picker handler, which serves the SPA when the frontend bundle is built
+and a minimal box list otherwise — either way a 200 with an HTML body (the
+picker-content behavior itself is covered in `box-picker.doctest.md`; this just
+asserts the routing):
+
+```ts
+const box = await startFakeBox();
+const hub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]));
+
+const missingResponse = await fetch(`${hub.base}/nope/x`);
+missingResponse.status
+=> 404
+
+const rootResponse = await fetch(`${hub.base}/`);
+rootResponse.status
+=> 200
+
+(await rootResponse.text()).length > 0
+=> true
+```
+
+## A request under a configured slug is proxied unchanged (no prefix stripping)
+
+The box's own Fastify instance serves itself at `/<slug>/...` already (same
+as standalone `bbx serve --slug`) — the hub forwards the full path as-is.
+
+```ts continue
+const proxied = await getJson(hub, "/test1/browse/some-card");
+[proxied.status, proxied.body.method, proxied.body.url]
+=> [200, "GET", "/test1/browse/some-card"]
+```
+
+## Identity headers: client-supplied ones are stripped, the hub's own are injected
+
+The spoof wall: no matter what a client sends, the box only ever sees
+identity the HUB decided on. With hub auth off, that means the box sees
+`x-bbx-hub-auth: off` + the hub secret — never the client's claimed email.
+
+```ts continue
+const spoofed = await getJson(hub, "/test1/browse/some-card", {
+  headers: { "x-bbx-authenticated-email": "attacker@evil.com", "x-bbx-hub-secret": "attacker-supplied-secret" },
+});
+spoofed.body.headers
+=> {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}
+```
+
+A webhook path is proxied unauthenticated, carrying only the hub secret:
+
+```ts continue
+const webhook = await getJson(hub, "/webhook/test1/incoming");
+[webhook.status, webhook.body.headers]
+=> [200, {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":null}]
+```
+
+## The browse key reaches hub-mode children through the trusted auth contract
+
+The machine-wide dev browse key authenticates at the hub. It must continue as
+the hub's explicit `auth: off` decision when the child is hub-mode; treating it
+as per-box mobile auth would skip those headers and make the child reject the
+request.
+
+```ts continue
+process.env.BBX_BROWSE_API_KEY = BROWSE_KEY;
+const browseHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
+  openAccess: false,
+});
+const browse = await getJson(browseHub, "/test1/api/health", {
+  headers: { cookie: `bbx_browse_key=${BROWSE_KEY}` },
+});
+[browse.status, browse.body.headers]
+=> [200, {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}]
+
+await stopHub(browseHub);
+delete process.env.BBX_BROWSE_API_KEY;
+```
+
+## WebSocket upgrades
+
+A WebSocket upgrade under a configured slug is proxied through; one for an
+unconfigured slug gets a raw 404 (never reaches an endpoint):
+
+```ts continue
+const upgradeResponse = await rawUpgradeRequest({ port: hub.port, path: "/test1/ws" });
+const rejectedUpgrade = await rawUpgradeRequest({ port: hub.port, path: "/nope/ws" });
+[upgradeResponse.startsWith("HTTP/1.1 101"), rejectedUpgrade.startsWith("HTTP/1.1 404")]
+=> [true, true]
+```
+
+## A lazy provider's `ensureRunning` cold-starts an HTTP request; WS upgrades never trigger it
+
+The lazy provider (`makeLazyProvider`, in setup) mirrors a lazy `Supervisor`
+(`src/hub/supervisor/core.ts`) without spawning a real process. This proves
+`hub-server.ts`'s contract, not `Supervisor`'s own cold-start mechanics
+(covered separately in `supervisor.doctest.md`).
 
 An HTTP request to the stopped box cold-starts it via `ensureRunning` and
 still gets proxied through on the SAME request (no separate retry needed):
 
 ```ts continue
+const lazyProvider = makeLazyProvider({ slug: "lazybox", origin: box.origin });
+const lazyHub = await startHub(lazyProvider, { boxes: [{ slug: "lazybox", boxRoot: "/nonexistent/lazybox" }] });
+
 const coldResponse = await fetch(`${lazyHub.base}/lazybox/browse/x`);
 coldResponse.status
 => 200
@@ -331,11 +325,8 @@ wakeResponse.status
 
 lazyProvider.ensureCalls
 => 3
-```
 
-```ts continue
-for (const socket of lazyHub.sockets) socket.destroy();
-await new Promise((resolve) => lazyHub.server.close(resolve));
+await stopHub(lazyHub);
 ```
 
 ## The Google-services OAuth callback routes to the box named in `state`, headers intact
@@ -344,25 +335,17 @@ await new Promise((resolve) => lazyHub.server.close(resolve));
 can't route it. The hub instead reads the box out of the OAuth `state` query
 param (`"boxSlug"` or `"boxSlug:returnPath"`, same format the box's own
 callback handler parses) and proxies straight to that child, applying the
-same identity-header gate as any other proxied request.
+same identity-header gate as any other proxied request. An unknown/missing box
+in `state` never reaches any endpoint:
 
 ```ts continue
-const callbackResponse = await fetch(
-  `${hub.base}/auth/google-services/callback?code=abc123&state=test1:admin`,
-  { headers: { "x-bbx-authenticated-email": "attacker@evil.com" } },
-);
-const callbackBody = await callbackResponse.json();
-callbackResponse.status
-=> 200
+const callback = await getJson(hub, `${CALLBACK}test1:admin`, {
+  headers: { "x-bbx-authenticated-email": "attacker@evil.com" },
+});
+[callback.status, callback.body.url, callback.body.headers]
+=> [200, "/auth/google-services/callback?code=abc123&state=test1:admin", {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}]
 
-JSON.stringify({ url: callbackBody.url, headers: callbackBody.headers })
-=> {"url":"/auth/google-services/callback?code=abc123&state=test1:admin","headers":{"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}}
-```
-
-An unknown/missing box in `state` never reaches any endpoint:
-
-```ts continue
-const unknownBoxResponse = await fetch(`${hub.base}/auth/google-services/callback?code=abc123&state=nope`);
+const unknownBoxResponse = await fetch(`${hub.base}${CALLBACK}nope`);
 unknownBoxResponse.status
 => 400
 ```
@@ -373,19 +356,13 @@ A valid fleet session isn't enough on its own -- the caller must also be
 allowed on the SPECIFIC box named in `state` (`canAccessBox`,
 `src/webapp/box-access.ts`), same fail-closed semantics used everywhere
 else identity gates a box. Needs hub auth actually ON (unlike the rest of
-this file) to have a session to check in the first place.
+this file) to have a session to check in the first place: the hub is
+constructed with `openAccess: false` so it verifies the session cookie.
 
 ```ts continue
 const ownedBox = await makeTmpBox();
 await ownedBox.write("_config/box.json", JSON.stringify({ allowedEmails: ["owner@example.com"] }));
-
-// Hub auth ON for this section: construct the hub with openAccess: false so it
-// verifies the session cookie (the rest of the file runs open).
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-router-doctest";
-// registerAuthRoutes fails loudly on an ID-without-secret half-config
-// (MissingOAuthClientSecretError), so the fake credentials must be a pair.
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-router-doctest";
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-router-doctest";
+setOAuthEnv(true);
 
 const authedHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
   boxes: [{ slug: "test1", boxRoot: ownedBox.root }],
@@ -394,10 +371,9 @@ const authedHub = await startHub(staticEndpointProvider([{ slug: "test1", origin
 const requestsBeforeDenial = box.sockets.length;
 
 const strangerCookie = signSession({ email: "stranger@example.com", name: "Stranger" });
-const deniedResponse = await fetch(
-  `${authedHub.base}/auth/google-services/callback?code=abc123&state=test1:admin`,
-  { headers: { cookie: `${COOKIE_NAME}=${strangerCookie}` } },
-);
+const deniedResponse = await fetch(`${authedHub.base}${CALLBACK}test1:admin`, {
+  headers: { cookie: `${COOKIE_NAME}=${strangerCookie}` },
+});
 deniedResponse.status
 => 403
 ```
@@ -413,24 +389,14 @@ An email on the box's own `allowedEmails` is forwarded, same as any other author
 
 ```ts continue
 const allowedCookie = signSession({ email: "owner@example.com", name: "Owner" });
-const allowedResponse = await fetch(
-  `${authedHub.base}/auth/google-services/callback?code=abc123&state=test1:admin`,
-  { headers: { cookie: `${COOKIE_NAME}=${allowedCookie}` } },
-);
-allowedResponse.status
-=> 200
+const allowed = await getJson(authedHub, `${CALLBACK}test1:admin`, {
+  headers: { cookie: `${COOKIE_NAME}=${allowedCookie}` },
+});
+[allowed.status, allowed.body.url, allowed.body.headers.xBbxAuthenticatedEmail]
+=> [200, "/auth/google-services/callback?code=abc123&state=test1:admin", "owner@example.com"]
 
-const allowedBody = await allowedResponse.json();
-JSON.stringify({ url: allowedBody.url, email: allowedBody.headers.xBbxAuthenticatedEmail })
-=> {"url":"/auth/google-services/callback?code=abc123&state=test1:admin","email":"owner@example.com"}
-```
-
-```ts continue
-delete process.env.GOOGLE_OAUTH_CLIENT_ID;
-delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-delete process.env.BBX_SESSION_SECRET;
-for (const socket of authedHub.sockets) socket.destroy();
-await new Promise((resolve) => authedHub.server.close(resolve));
+setOAuthEnv(false);
+await stopHub(authedHub);
 await ownedBox.cleanup();
 ```
 
@@ -445,21 +411,11 @@ would 400 as `unknown_box` even though the box is configured.
 const oauthLazyProvider = makeLazyProvider({ slug: "oauthlazybox", origin: box.origin });
 const oauthLazyHub = await startHub(oauthLazyProvider, { boxes: [{ slug: "oauthlazybox", boxRoot: "/nonexistent/oauthlazybox" }] });
 
-const oauthColdResponse = await fetch(`${oauthLazyHub.base}/auth/google-services/callback?code=abc123&state=oauthlazybox:admin`);
-oauthColdResponse.status
-=> 200
+const oauthCold = await getJson(oauthLazyHub, `${CALLBACK}oauthlazybox:admin`);
+[oauthCold.status, oauthLazyProvider.ensureCalls, oauthCold.body.url]
+=> [200, 1, "/auth/google-services/callback?code=abc123&state=oauthlazybox:admin"]
 
-oauthLazyProvider.ensureCalls
-=> 1
-
-const oauthColdBody = await oauthColdResponse.json();
-oauthColdBody.url
-=> /auth/google-services/callback?code=abc123&state=oauthlazybox:admin
-```
-
-```ts continue
-for (const socket of oauthLazyHub.sockets) socket.destroy();
-await new Promise((resolve) => oauthLazyHub.server.close(resolve));
+await stopHub(oauthLazyHub);
 ```
 
 ## The Google-services callback authenticates BEFORE resolving/waking any box
@@ -467,53 +423,33 @@ await new Promise((resolve) => oauthLazyHub.server.close(resolve));
 Auth must happen before box resolution: an *unauthenticated* callback naming a
 real configured slug must NOT cold-start that box, and must be indistinguishable
 from one naming an unknown slug (both redirect to login) — otherwise the route
-is an unauthenticated box-wake plus a configured-slug oracle. Needs hub auth ON.
+is an unauthenticated box-wake plus a configured-slug oracle. Needs hub auth ON
+(`openAccess: false`, so the callback verifies a session cookie rather than
+passing through). An unknown slug is handled identically — same 302 to login,
+still no wake — so the response reveals nothing about which slugs are configured.
 
 ```ts continue
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-router-doctest";
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-router-doctest";
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-router-doctest";
-
-// Hub auth ON: construct with openAccess: false so the callback verifies a
-// session cookie rather than passing through (auth is structurally always-on
-// now — the only auth-off path is this construction option).
+setOAuthEnv(true);
 const preAuthProvider = makeLazyProvider({ slug: "preauthbox", origin: box.origin });
 const preAuthHub = await startHub(preAuthProvider, {
   boxes: [{ slug: "preauthbox", boxRoot: "/nonexistent/preauthbox" }],
   openAccess: false,
 });
 
-// Unauthenticated, REAL configured slug: redirect to login, box NOT woken.
-const knownUnauth = await fetch(`${preAuthHub.base}/auth/google-services/callback?code=abc123&state=preauthbox:admin`, { redirect: "manual" });
-print(`known status: ${knownUnauth.status}`);
-print(`known → login: ${(knownUnauth.headers.get("location") ?? "").startsWith("/auth/login")}`);
-print(`ensureCalls: ${preAuthProvider.ensureCalls}`);
-=>
-known status: 302
-known → login: true
-ensureCalls: 0
-```
+const outcomes = [];
+for (const state of ["preauthbox:admin", "nosuchbox:admin"]) {
+  const res = await fetch(`${preAuthHub.base}${CALLBACK}${state}`, { redirect: "manual" });
+  outcomes.push({
+    status: res.status,
+    toLogin: (res.headers.get("location") ?? "").startsWith("/auth/login"),
+    ensureCalls: preAuthProvider.ensureCalls,
+  });
+}
+outcomes
+=> [{ status: 302, toLogin: true, ensureCalls: 0 }, { status: 302, toLogin: true, ensureCalls: 0 }]
 
-An unknown slug is handled identically — same 302 to login, still no wake — so
-the response reveals nothing about which slugs are configured.
-
-```ts continue
-const unknownUnauth = await fetch(`${preAuthHub.base}/auth/google-services/callback?code=abc123&state=nosuchbox:admin`, { redirect: "manual" });
-print(`unknown status: ${unknownUnauth.status}`);
-print(`unknown → login: ${(unknownUnauth.headers.get("location") ?? "").startsWith("/auth/login")}`);
-print(`still no wake: ${preAuthProvider.ensureCalls}`);
-=>
-unknown status: 302
-unknown → login: true
-still no wake: 0
-```
-
-```ts continue
-delete process.env.GOOGLE_OAUTH_CLIENT_ID;
-delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-delete process.env.BBX_SESSION_SECRET;
-for (const socket of preAuthHub.sockets) socket.destroy();
-await new Promise((resolve) => preAuthHub.server.close(resolve));
+setOAuthEnv(false);
+await stopHub(preAuthHub);
 ```
 
 ## `/api/boxes` is hub-owned, matching the standalone server's shape
@@ -522,12 +458,9 @@ With hub auth off (this doctest's default), every configured box is listed
 -- same "open" semantics as `/` and a standalone box outside auth mode.
 
 ```ts continue
-const apiBoxesResponse = await fetch(`${hub.base}/api/boxes`);
-apiBoxesResponse.status
-=> 200
-
-JSON.stringify(await apiBoxesResponse.json())
-=> {"boxes":[{"slug":"test1","name":"test1","symbol":null}]}
+const apiBoxes = await getJson(hub, "/api/boxes");
+[apiBoxes.status, apiBoxes.body]
+=> [200, {"boxes":[{"slug":"test1","name":"test1","symbol":null}]}]
 ```
 
 ## `/healthz` is diag-key-gated (it used to leak slugs/PIDs/ports publicly)
@@ -541,16 +474,10 @@ const savedKey = process.env.BBX_DIAG_API_KEY;
 delete process.env.BBX_DIAG_API_KEY;
 const unconfigured = await fetch(`${hub.base}/healthz`);
 process.env.BBX_DIAG_API_KEY = savedKey;
-unconfigured.status
-=> 503
-
 const noKey = await fetch(`${hub.base}/healthz`);
-noKey.status
-=> 401
-
 const wrongKey = await fetch(`${hub.base}/healthz`, { headers: { authorization: "Bearer nope" } });
-wrongKey.status
-=> 401
+[unconfigured.status, noKey.status, wrongKey.status]
+=> [503, 401, 401]
 ```
 
 ## An `unhealthy` verdict is served as HTTP 503, not 200
@@ -566,15 +493,11 @@ const brokenHealth = () => ({
   boxes: [{ slug: "sick", status: "unhealthy", pid: undefined, port: undefined, restarts: 5, consecutiveFailures: 5, lastError: "ERR_DLOPEN_FAILED", lastStart: undefined }],
 });
 const brokenHub = await startHub(staticEndpointProvider([]), { getHealth: brokenHealth });
-const brokenResponse = await fetch(`${brokenHub.base}/healthz`, diagAuth);
-brokenResponse.status
-=> 503
+const broken = await getJson(brokenHub, "/healthz", diagAuth);
+[broken.status, broken.body.status, broken.body.boxes[0].slug]
+=> [503, "unhealthy", "sick"]
 
-const brokenBody = await brokenResponse.json();
-JSON.stringify({ status: brokenBody.status, slug: brokenBody.boxes[0].slug })
-=> {"status":"unhealthy","slug":"sick"}
-
-await new Promise((resolve) => brokenHub.server.close(resolve));
+await stopHub(brokenHub);
 ```
 
 ## `/healthz/canary` cold-starts one box and reports whether it serves
@@ -590,15 +513,9 @@ const canaryProvider = makeLazyProvider({ slug: "canarybox", origin: box.origin 
 const canaryHub = await startHub(canaryProvider, { boxes: [{ slug: "canarybox", boxRoot: "/nonexistent/canarybox" }] });
 
 // No ?box= → picks the first configured slug, cold-starts it, 200.
-const canaryOk = await fetch(`${canaryHub.base}/healthz/canary`, diagAuth);
-canaryOk.status
-=> 200
-
-JSON.stringify(await canaryOk.json())
-=> {"status":"ok","slug":"canarybox"}
-
-canaryProvider.ensureCalls
-=> 1
+const canaryOk = await getJson(canaryHub, "/healthz/canary", diagAuth);
+[canaryOk.status, canaryOk.body, canaryProvider.ensureCalls]
+=> [200, {"status":"ok","slug":"canarybox"}, 1]
 ```
 
 A provider whose `ensureRunning` never yields an endpoint (the crash-loop case
@@ -611,29 +528,22 @@ const deadProvider = {
   ensureRunning: async () => undefined,
 };
 const deadHub = await startHub(deadProvider, { boxes: [{ slug: "deadbox", boxRoot: "/nonexistent/deadbox" }] });
-const canaryDead = await fetch(`${deadHub.base}/healthz/canary`, diagAuth);
-canaryDead.status
-=> 503
+const canaryDead = await getJson(deadHub, "/healthz/canary", diagAuth);
+[canaryDead.status, canaryDead.body.status, canaryDead.body.slug]
+=> [503, "canary-failed", "deadbox"]
 
-const deadBody = await canaryDead.json();
-JSON.stringify({ status: deadBody.status, slug: deadBody.slug })
-=> {"status":"canary-failed","slug":"deadbox"}
-
-await new Promise((resolve) => deadHub.server.close(resolve));
+await stopHub(deadHub);
 ```
 
 An empty configuration has nothing to canary → 503 `no-boxes`:
 
 ```ts continue
 const emptyHub = await startHub(staticEndpointProvider([]), { boxes: [] });
-const canaryEmpty = await fetch(`${emptyHub.base}/healthz/canary`, diagAuth);
-canaryEmpty.status
-=> 503
+const canaryEmpty = await getJson(emptyHub, "/healthz/canary", diagAuth);
+[canaryEmpty.status, canaryEmpty.body]
+=> [503, {"status":"no-boxes"}]
 
-JSON.stringify(await canaryEmpty.json())
-=> {"status":"no-boxes"}
-
-await new Promise((resolve) => emptyHub.server.close(resolve));
+await stopHub(emptyHub);
 ```
 
 The canary is also diag-gated — no key → 401, and the gate runs BEFORE the
@@ -649,8 +559,7 @@ canaryNoKey.status
 canaryProvider.ensureCalls === callsBefore
 => true
 
-for (const socket of canaryHub.sockets) socket.destroy();
-await new Promise((resolve) => canaryHub.server.close(resolve));
+await stopHub(canaryHub);
 ```
 
 ## The canary reproduces the incident path: a real Supervisor whose child never becomes ready → 503
@@ -680,30 +589,18 @@ const crashSupervisor = new Supervisor({
 await crashSupervisor.startAll();
 const crashHub = await startHub(crashSupervisor, { boxes: [{ slug: "crashbox", boxRoot: crashFixture.root }] });
 
-const canaryCrash = await fetch(`${crashHub.base}/healthz/canary`, diagAuth);
-canaryCrash.status
-=> 503
+const canaryCrash = await getJson(crashHub, "/healthz/canary", diagAuth);
+[canaryCrash.status, canaryCrash.body.status, canaryCrash.body.slug]
+=> [503, "canary-failed", "crashbox"]
 
-const crashBody = await canaryCrash.json();
-JSON.stringify({ status: crashBody.status, slug: crashBody.slug })
-=> {"status":"canary-failed","slug":"crashbox"}
-```
-
-```ts continue
 await crashSupervisor.stopAll();
 await crashFixture.cleanup();
-for (const socket of crashHub.sockets) socket.destroy();
-await new Promise((resolve) => crashHub.server.close(resolve));
+await stopHub(crashHub);
 ```
 
 ```ts cleanup
-// Force-destroy every tracked socket (not just closeAllConnections(), which
-// doesn't reliably reach sockets detached via the "upgrade" event -- see
-// startFakeBox's/startHub's doc comments) before close() -- otherwise the
-// raw WS handshake sockets above hang server.close() forever.
-for (const socket of hub.sockets) socket.destroy();
+await stopHub(hub);
 for (const socket of box.sockets) socket.destroy();
-await new Promise((resolve) => hub.server.close(resolve));
 await new Promise((resolve) => box.server.close(resolve));
 ```
 

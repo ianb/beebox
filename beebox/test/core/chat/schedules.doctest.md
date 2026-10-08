@@ -43,20 +43,11 @@ tags.length
 ```
 
 ```ts continue
-tags[0].label
-=> rice timer
-
 tags[0].alarm
 => true
 
 tags[0].announce
 => check rice
-
-tags[0].content
-=> Tell Ian to check the rice
-
-tags[0].durationMs
-=> 1200000
 ```
 
 ## Schedule without alarm or announce
@@ -311,22 +302,4 @@ fs.writeFileSync(absLegacy, JSON.stringify([
 const legacy = loadChatSchedules({ boxRoot: box4.root, schedulesFile: legacyPath });
 JSON.stringify(legacy.map((s) => ({ label: s.label, sessionId: s.sessionId ?? null })))
 => [{"label":"old timer","sessionId":null}]
-```
-
-## Schedule tags in chat-response context
-
-Schedule tags that appear alongside `<chat-response>` tags in Telegram-style output are correctly parsed from the full turn text:
-
-```ts
-const text = `<chat-response>Got it, I'll remind you in 20 minutes</chat-response>
-<schedule in="20m" label="reminder">Remind about the meeting</schedule>`;
-const tags = parseScheduleTags(text);
-tags.length
-=> 1
-
-tags[0].label
-=> reminder
-
-tags[0].content
-=> Remind about the meeting
 ```

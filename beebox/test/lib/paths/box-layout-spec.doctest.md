@@ -42,15 +42,7 @@ wronglyRooted
 => []
 ```
 
-## `boxLayoutEntry` looks up a keyed entry's full spec record
-
-```ts
-boxLayoutEntry("archiveDone").path
-=> _bookkeeping/archive/done
-
-boxLayoutEntry("archiveDone").area
-=> bookkeeping
-```
+## `boxLayoutEntry` rejects an unknown key
 
 An unrecognized key throws a typed error rather than returning `undefined` silently:
 
@@ -73,23 +65,14 @@ const vocabAreaNames = new Set(BOX_ROOT_VOCABULARY.filter((e) => e.kind === "are
 => true
 ```
 
-## The agent guide's directory table text comes from the same spec entries
+## The agent guide's archive row is a rollup
 
-`directoryLayoutRows` doesn't hand-list directory paths or prose anymore —
-it looks up each row by `BOX_DIRS` key. Spot-check a few rows carry the
-spec's exact wording:
+`directoryLayoutRows` looks up each row by `BOX_DIRS` key. The
+`_bookkeeping/archive/*` row is the exception: a hand-written summary, not a
+spec entry - box-shape.ts owns collapsing the three archive entries into one row.
 
 ```ts
-const guide = directoryLayoutRows();
-guide.includes("| `_bookkeeping/questions/` | Pending questions for the user |")
-=> true
-
-guide.includes("| `_content/reviews/retro/` | Retrospective run reports (written by `bbx retro`) |")
-=> true
-
-// The _bookkeeping/archive/* rollup: a hand-written summary row, not a spec
-// entry - box-shape.ts owns collapsing the three archive entries into one row.
-guide.includes("| `_bookkeeping/archive/` | Processed/completed items |")
+directoryLayoutRows().includes("| `_bookkeeping/archive/` | Processed/completed items |")
 => true
 ```
 

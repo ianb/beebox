@@ -38,7 +38,7 @@ const fresh = await withOutput(() => runInit(boxRoot, { branch: "main" }));
 JSON.stringify({
   banner: fresh[0].startsWith("Initialized Bee Box at "),
   structure: fresh.includes("Directory structure created:"),
-  procedures: fresh.some((l) => l.startsWith("Installed 6 procedure(s)")),
+  procedures: fresh.some((l) => l.startsWith("Installed 4 procedure(s)")),
   schedules: fresh.some((l) => l.startsWith("Installed 8 schedule(s)")),
   personality: fresh.includes("Installed _config/main.personality.card"),
   nextStep: fresh.some((l) => l.includes("Next: run 'bbx engine serve'")),
@@ -73,20 +73,6 @@ JSON.stringify({
 => {"header":true,"refilled":true,"lines":2}
 ```
 
-## A fresh init never says "Updated"
-
-The two headers are mutually exclusive.
-
-```ts continue
-const freshBox = path.join(dir, "bbox");
-const both = await withOutput(() => runInit(freshBox, { branch: "main" }));
-JSON.stringify({
-  initialized: both.filter((l) => l.startsWith("Initialized Bee Box at ")).length,
-  updated: both.filter((l) => l.startsWith("Updated Bee Box at ")).length,
-})
-=> {"initialized":1,"updated":0}
-```
-
 ## A rebuilt search index is a change, not just progress
 
 `.beebox/` is gitignored, so an index can be absent on a box that is otherwise
@@ -95,6 +81,8 @@ silence would read as a hang, and it is also recorded — otherwise that progres
 line would be the entire output of the run, naming no box.
 
 ```ts continue
+const freshBox = path.join(dir, "bbox");
+await withOutput(() => runInit(freshBox, { branch: "main" }));
 await fs.rm(path.join(freshBox, ".beebox/search-index-manifest.json"));
 await fs.rm(path.join(freshBox, ".beebox/search-index.json"));
 const rebuilt = await withOutput(() => runInit(freshBox, { branch: "main" }));

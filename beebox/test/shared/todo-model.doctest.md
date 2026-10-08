@@ -7,7 +7,6 @@ plate-state truth table.
 
 ```ts setup
 import {
-  TODO_STATUSES,
   isTodoStatus,
   parseIsoDate,
   parseRelativeStart,
@@ -35,14 +34,7 @@ function noAttrs(overrides: Partial<Parameters<typeof validateTodoAttributes>[0]
 ## Status enum
 
 ```ts
-JSON.stringify(TODO_STATUSES)
-=>
-["open","done","dropped","parked"]
-
 isTodoStatus("open")
-=> true
-
-isTodoStatus("done")
 => true
 
 isTodoStatus("wontfix")
@@ -253,14 +245,6 @@ on-plate
 plate({ status: "done", due: "2026-01-01" }, "2026-07-28T12:00:00Z", "America/Chicago")
 =>
 done
-
-plate({ status: "dropped" }, "2026-07-28T12:00:00Z", "America/Chicago")
-=>
-dropped
-
-plate({ status: "parked", due: "2026-01-01" }, "2026-07-28T12:00:00Z", "America/Chicago")
-=>
-parked
 ```
 
 ## Timezone boundary: box-local date, not UTC

@@ -15,9 +15,6 @@ const carrier = createModelCarrier();
 carrier.resolve("glm-5.3");
 carrier.resolve(undefined)
 => glm-5.3
-
-carrier.resolve(undefined)
-=> glm-5.3
 ```
 
 ## An explicit model replaces the carried one

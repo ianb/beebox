@@ -181,7 +181,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
             e.stopPropagation();
             onTogglePin(tab.target.path);
           }}
-          aria-label={tab.pinned ? `Unpin ${tab.label}` : `Pin ${tab.label}`}
+          aria-label={tab.pinned ? `Unpin ${title}` : `Pin ${title}`}
           aria-pressed={tab.pinned}
           title={tab.pinned ? "Unpin tab" : "Pin tab"}
           className={cn(
@@ -200,7 +200,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
             e.stopPropagation();
             onCloseTab(tab.target.path);
           }}
-          aria-label={`Close ${tab.label}`}
+          aria-label={`Close ${title}`}
           title="Close tab"
           className={cn(
             "bbx-interface-tab-action flex-shrink-0 mr-1 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",

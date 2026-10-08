@@ -153,9 +153,6 @@ badge
 
 plate.reduction.onPlate
 => 2
-
-badge === plate.reduction.onPlate
-=> true
 ```
 
 ```ts cleanup

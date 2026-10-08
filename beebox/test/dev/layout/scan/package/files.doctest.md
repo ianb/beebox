@@ -28,9 +28,6 @@ module-flavored twins of `.d.ts` and classify the same way, not as ordinary
 classifyFile("pkg/src/foo.ts", true)
 => module
 
-classifyFile("pkg/src/foo.tsx", true)
-=> module
-
 classifyFile("pkg/src/foo.d.ts", true)
 => declaration
 
@@ -52,8 +49,6 @@ classifyFile("test/foo.tour.ts", false)
 classifyFile("pkg/src/foo.card", true)
 => data
 
-classifyFile("pkg/src/foo.svg", true)
-=> data
 ```
 
 A plain `.js`/`.mjs`/`.cjs` file is a module inside a source root (a `.mjs`
@@ -66,9 +61,6 @@ classifyFile("pkg/src/foo.mjs", true)
 
 classifyFile("pkg/public/sw.js", false)
 => data
-
-classifyFile("pkg/scripts/build.mjs", true)
-=> module
 ```
 
 ## Listing a package root

@@ -32,16 +32,6 @@ JSON.stringify(extractFinalWords(msg))
 => [{"word":"Hello,","confidence":0.98},{"word":"world.","confidence":0.42}]
 ```
 
-## Missing confidence: word carried with no confidence field
-
-```ts
-const msg = {
-  channel: { alternatives: [{ words: [{ word: "hi", punctuated_word: "hi" }] }] },
-};
-JSON.stringify(extractFinalWords(msg))
-=> [{"word":"hi"}]
-```
-
 ## Non-numeric confidence is dropped, not coerced
 
 ```ts

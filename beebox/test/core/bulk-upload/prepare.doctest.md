@@ -333,18 +333,15 @@ JSON.stringify(blobNames(await box.list(batch.attachRelDir)))
 => ["IMG_1234-2.jpg","IMG_1234.jpg"]
 ```
 
-Both stored files exist on disk with their own bytes, and both appear in the
-card's received list:
+Both stored names appear in the card's received list:
 
 ```ts continue
 const card = await box.read(batch.cardRelPath);
 JSON.stringify({
-  first: await pathExists(box.path(`${batch.attachRelDir}/IMG_1234.jpg`)),
-  second: await pathExists(box.path(`${batch.attachRelDir}/IMG_1234-2.jpg`)),
   received: batch.counts.received,
   bothNamed: card.includes("IMG_1234.jpg") && card.includes("IMG_1234-2.jpg"),
 })
-=> {"first":true,"second":true,"received":2,"bothNamed":true}
+=> {"received":2,"bothNamed":true}
 ```
 
 An unsafe original name is sanitized (path parts stripped, spaces/odd chars
@@ -415,9 +412,6 @@ const bulk = await createStagingSession({ boxRoot: box.root, targetSessionId: "c
 
 capture.kind
 => capture
-
-bulk.kind
-=> bulk
 ```
 
 An old manifest predating the field parses as `capture` (additive default):

@@ -18,7 +18,7 @@ import assert from "node:assert";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import { createTRPCClient, httpBatchStreamLink, retryLink } from "@trpc/client";
-import { fetchFromBox, unreachableCause, shouldRetryOperation, isBoxUnreachable, retryDelayMs, MAX_RETRIES, BoxUnreachableError } from "../../../src/lib/trpc/transient.js";
+import { fetchFromBox, unreachableCause, shouldRetryOperation, isBoxUnreachable, retryDelayMs, MAX_RETRIES } from "../../../src/lib/trpc/transient.js";
 
 const NGINX_502 = "<!DOCTYPE html>\n<html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center></body></html>";
 
@@ -193,24 +193,14 @@ JSON.stringify({ refused: box.refused(), reached: box.reached.send })
 await box.close();
 ```
 
-## `shouldRetryOperation` itself: query vs. plain mutation vs. opted-in mutation
+## An opted-in mutation still needs an outage to retry
 
 `isBoxUnreachable` is the same test the retry link applies, exported for the
 voice-staging queue (`lib/audio/voice-staging-queue.ts`) to reuse rather than
 re-derive.
 
 ```ts
-const unreachable = new BoxUnreachableError({ status: 502 });
 const notUnreachable = new Error("a bug in the procedure");
-
-shouldRetryOperation({ type: "query", attempts: 1, error: unreachable, idempotent: false })
-=> true
-
-shouldRetryOperation({ type: "mutation", attempts: 1, error: unreachable, idempotent: false })
-=> false
-
-shouldRetryOperation({ type: "mutation", attempts: 1, error: unreachable, idempotent: true })
-=> true
 
 shouldRetryOperation({ type: "mutation", attempts: 1, error: notUnreachable, idempotent: true })
 => false

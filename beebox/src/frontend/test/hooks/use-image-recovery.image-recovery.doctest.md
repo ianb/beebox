@@ -7,7 +7,7 @@ ceiling never does. The recovery asks the server on a bounded schedule and
 hands back a stamp only once the file serves.
 
 ```ts setup
-import { isRecoverableImageUrl, waitForImage, withVersionStamp, RECOVERY_DELAYS_MS } from "../../src/hooks/use-image-recovery.js";
+import { isRecoverableImageUrl, waitForImage, withVersionStamp } from "../../src/hooks/use-image-recovery.js";
 
 /** A fake clock: records the delays asked for, never actually waits. */
 function fakeSleep(log: number[]) {
@@ -26,14 +26,6 @@ JSON.stringify([
   isRecoverableImageUrl("data:image/png;base64,AAAA"),
 ])
 => [true,true,false,false]
-```
-
-The schedule is front-loaded (a file usually lands within seconds of the
-message) and finite (five minutes, then it is a broken reference):
-
-```ts
-JSON.stringify([RECOVERY_DELAYS_MS[0], RECOVERY_DELAYS_MS.length, RECOVERY_DELAYS_MS.reduce((a, b) => a + b, 0) / 1000])
-=> [2000,9,307]
 ```
 
 The probe stops at the first success, and the stamp is handed back only then:

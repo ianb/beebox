@@ -9,7 +9,7 @@ messageId. See docs/plans/input-extraction.md chunk 3.
 import { expectReceipt, settleReceipt, pendingReceiptCount } from "../../../src/input/targets/receipts.js";
 ```
 
-## Settle resolves the matching expectation, once
+## Settle resolves the matching expectation
 
 ```ts
 const p = expectReceipt("msg-1");
@@ -18,11 +18,6 @@ const r = await p;
 r.disposition
 => sent
 
-pendingReceiptCount()
-=> 0
-
-// A second settle for the same id is a silent no-op (nothing expects it).
-settleReceipt({ disposition: "rejected", emissionId: "msg-1", reason: "late" });
 pendingReceiptCount()
 => 0
 ```

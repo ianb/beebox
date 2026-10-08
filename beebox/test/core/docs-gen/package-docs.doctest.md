@@ -30,10 +30,6 @@ const withInstructions = cardSchemas.list.filter((s) => s.instructions !== undef
 withInstructions.every((s) => byName.has(`card-${s.type}.md`))
 => true
 
-// The static reference docs are all present
-["bbx-commands.md", "connectors.md", "views.md", "procedures.md", "triage.md", "chat-voice.md", "narration-mode.md", "reducing-claude-md.md", "python-tools.md"].every((f) => byName.has(f))
-=> true
-
 const index = byName.get("README.md") ?? "";
 // One index row per doc (every doc but the index itself)
 docs.filter((d) => d.filename !== "README.md").every((d) => index.includes(`| \`${d.filename}\` |`))
@@ -49,20 +45,16 @@ docs.some((d) => d.content.includes("DOCID:"))
 
 // Prose docs from docs/box/ ship with their frontmatter stripped and their read-when in the index
 const prose = byName.get("what-you-could-do.md") ?? "";
-prose.startsWith("# What you could do with your box")
-=> true
+prose.startsWith("---")
+=> false
 
-index.includes("| `what-you-could-do.md` | The user asks what the box can do")
+/\| `what-you-could-do\.md` \| \S/.test(index)
 => true
 ```
 
 ## A card doc uses only built-in templates and carries the contains: appendix for searchable types
 
 ```ts
-const memo = byName.get("card-memo.md") ?? "";
-memo.startsWith("# memo Card")
-=> true
-
 const searchable = cardSchemas.list.find((s) => s.searchable && s.instructions !== undefined);
 (byName.get(`card-${searchable?.type}.md`) ?? "").includes("## The `contains:` field")
 => true

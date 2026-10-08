@@ -87,7 +87,7 @@ dev/apps/story-eval/runs/
 # Exhibit-store mount (same symlink rule — bin/lib/exhibits-store.sh; design
 # in beebox/docs/plans/workstream-exhibits.md).
 /exhibits
-beebox/user-stories/work/
+beebox/test/user-stories/work/
 
 # Workflow scripts, built from the `.ts` sources beside them by
 # `beebox/src/scripts/user-stories/build-workflows.ts`. The Workflow tool parses

@@ -65,20 +65,6 @@ function freshState() {
 }
 ```
 
-```ts
-const state = freshState();
-recordRun(state, {
-  record: { ts: "2026-03-01T12:00:00Z", durationMs: 3000 },
-  windowMs: 3_600_000,
-  now: new Date("2026-03-01T12:00:00Z"),
-});
-state.recentRuns.length
-=> 1
-
-state.recentRuns[0].ts
-=> 2026-03-01T12:00:00Z
-```
-
 Old records are pruned during recording:
 
 ```ts

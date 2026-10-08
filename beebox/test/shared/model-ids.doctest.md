@@ -10,13 +10,6 @@ provides the final boundary for raw procedure-card IDs.
 import { MODEL_ID, normalizeModelId } from "../../src/shared/model-ids.js";
 ```
 
-## The `opus` flagship is Opus 5.5
-
-```ts
-MODEL_ID.opus
-=> claude-opus-5-5
-```
-
 ## Retired IDs translate forward
 
 Opus 5, Opus 4.8, and the old `[1m]` variant fold into Opus 5.5; the Fable
@@ -59,9 +52,6 @@ JSON.stringify([
 ## Live IDs pass through unchanged
 
 ```ts
-normalizeModelId(MODEL_ID.sonnet)
-=> claude-sonnet-5
-
-normalizeModelId(MODEL_ID.opus)
-=> claude-opus-5-5
+normalizeModelId(MODEL_ID.sonnet) === MODEL_ID.sonnet
+=> true
 ```

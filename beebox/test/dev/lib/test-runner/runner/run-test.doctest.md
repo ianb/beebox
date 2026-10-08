@@ -5,7 +5,8 @@ and every subagent transcript. Short reads stay quiet; if either transcript is
 actually longer than the page, the audit announces what it omitted.
 
 ```ts setup
-import { mkdir, symlink, writeFile } from "node:fs/promises";
+import { mkdir, stat, symlink, writeFile } from "node:fs/promises";
+import { PACKAGE_ROOT } from "../../../../../src/lib/package-root.js";
 import { dirname, join } from "node:path";
 import { MAX_SESSION_ENTRIES } from "../../../../../src/cli/lib/session.js";
 import { getSessionLogPath } from "../../../../../src/core/chat/session/transcript-paths.js";
@@ -115,4 +116,27 @@ JSON.stringify({
 ```ts cleanup
 await box.cleanup();
 await outside.cleanup();
+```
+
+A worktree's box clone links `node_modules/beebox` to the engine running the
+audit. That link is the engine's own package, so audit setup refreshes the
+engine's generated docs instead of refusing:
+
+```ts
+const clone = await makeTmpBox();
+await mkdir(clone.path("node_modules"), { recursive: true });
+await symlink(PACKAGE_ROOT, clone.path("node_modules/beebox"), "dir");
+
+await ensureAuditPackageDocs(clone.root, {
+  id: "voice",
+  prompt: "voice",
+  expected_level: "knows_about",
+  should_read: ["node_modules/beebox/box-docs/chat-voice.md"],
+});
+await stat(clone.path("node_modules/beebox/box-docs/chat-voice.md")).then((info) => info.isFile())
+=> true
+```
+
+```ts cleanup
+await clone.cleanup();
 ```

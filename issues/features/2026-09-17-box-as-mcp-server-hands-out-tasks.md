@@ -109,3 +109,11 @@ security decision with a much larger blast radius, and nothing here needs it.
 - [MCP tool: agent launches the conversation into another chat](2026-08-02-mcp-launch-into-chat.md)
   — the opposite direction (the box as an MCP *client*), unrelated except that
   both put MCP in the box's vocabulary.
+
+## 2026-10-08 note from the OpenUI review
+
+If this server ever returns UI, not only text, the converged surface is the
+MCP Apps extension (tool-linked HTML in a sandboxed iframe, implemented by
+Claude, ChatGPT, VS Code, Cursor, M365 Copilot, and others as of 2026-10).
+Evidence and alternatives: [research/openui/alternatives.md](../../research/openui/alternatives.md).
+Not a request to build it; a pointer for when the decision here is made.

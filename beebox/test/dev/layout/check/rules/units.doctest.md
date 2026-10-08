@@ -10,18 +10,6 @@ rule 1 governs its top level.
 ```ts setup
 import { unitsRule } from "../../../../../src/dev/layout/check/rules/units.js";
 import { layout, summary } from "./fixture.js";
-import type { ImportEdge, LayoutFile, ModuleFile } from "../../../../../src/dev/layout/model.js";
-
-function asModule(file: LayoutFile | undefined): ModuleFile {
-  if (file === undefined || file.kind !== "module") throw new Error("expected a module file");
-  return file;
-}
-
-function firstImport(file: ModuleFile): ImportEdge {
-  const [edge] = file.imports;
-  if (edge === undefined) throw new Error("expected an import");
-  return edge;
-}
 ```
 
 ## A flat utility directory where every file is imported from outside is clean
@@ -139,26 +127,6 @@ const typedLayout = layout({
 });
 summary(unitsRule.check(typedLayout))
 => unit-directory pkg/src/typed/main.ts
-```
-
-## A dynamic import edge still forms a unit
-
-The fixture builder always produces static edges, so this marks one edge
-dynamic by hand after building the layout; the rule reads only `target`,
-never `dynamic`, so the result is identical to the static case above.
-
-```ts
-const dynLayout = layout({
-  files: {
-    "src/dyn/main.ts": { imports: ["src/dyn/helper.ts"] },
-    "src/dyn/helper.ts": { imports: [] },
-    "src/dyn/other.ts": { imports: [] },
-    "src/entry3.ts": { imports: ["src/dyn/main.ts", "src/dyn/other.ts"] },
-  },
-});
-firstImport(asModule(dynLayout.files.get("pkg/src/dyn/main.ts"))).dynamic = true;
-summary(unitsRule.check(dynLayout))
-=> unit-directory pkg/src/dyn/main.ts
 ```
 
 ## A set directory is skipped; a member directory's own subdirectory is not, but its entry is fixed

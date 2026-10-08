@@ -13,13 +13,6 @@ const schemas = await createCardSchemaMap();
 const v = PlaceSchema.validate;
 ```
 
-## Registered as `place`
-
-```ts
-PlaceSchema.type
-=> place
-```
-
 ## A coordless draft (name + address + body) validates
 
 ```ts

@@ -60,3 +60,7 @@ Needs a decision more than a patch; options with different costs:
 - **Agent-guided** (the agent, which just made the landmark, tells the user the
   chat stays under Box / offers to continue in a new chat there). Cheapest,
   and worst — it explains the seam instead of removing it.
+
+## Re-encounter 2026-10-08 (journey walks)
+
+Still present in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 64). The walker built a Lending landmark from a conversation started at the box root. That conversation has `contextDir: ""` in `.beebox/chat-session-history.json`, so it lives under the root and not under Lending. The walker later said "I lost my chat with the two panels." This is the root-started shape described above. The priority may be stale given the recurrence.

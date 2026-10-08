@@ -29,9 +29,6 @@ const rewritten = rewriteDoctestFile({ text: sample, rewrites: new Map([["./old.
 ```ts
 rewritten.includes('import { a } from "./new.js";')
 => true
-
-rewritten.includes('import { a } from "./old.js";')
-=> false
 ```
 
 ## Prose outside a fence keeps the old mention untouched

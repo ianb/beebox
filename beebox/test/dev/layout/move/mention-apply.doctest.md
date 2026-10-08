@@ -19,9 +19,6 @@ containsToken({ text: "import from src/core/foo.tsx", literal: "src/core/foo.ts"
 containsToken({ text: "see xsrc/core/foo.ts here", literal: "src/core/foo.ts" })
 => false
 
-containsToken({ text: "see src/core/foo.ts here", literal: "src/core/foo.ts" })
-=> true
-
 containsToken({ text: '"src/core/foo.ts"', literal: "src/core/foo.ts" })
 => true
 ```

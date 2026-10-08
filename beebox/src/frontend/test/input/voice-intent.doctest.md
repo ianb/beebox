@@ -88,26 +88,11 @@ buildVoiceSubmitEmission({ priorInput: "", finalText: "send message", selections
 => send message
 ```
 
-## The frozen selections snapshot rides the emission, diarized carries through
-
-```ts
-const sel = [{ id: 1, ref: "/_content/recipes/Bread.recipe.card", text: "300g flour", position: "body" }];
-const e2 = buildVoiceSubmitEmission({ priorInput: "", finalText: "add that", selectionsSnapshot: sel, imagesSnapshot: [], filesSnapshot: [], diarized: true });
-e2.selections.length
-=> 1
-
-e2.selections[0]?.ref
-=> /_content/recipes/Bread.recipe.card
-
-e2.diarized
-=> true
-```
-
 ## Frozen attachment snapshots ride the emission (a file attached mid-dictation)
 
 A file attached while dictating used to be silently dropped from keyword
-sends; the frozen snapshots now carry pending images and files the same
-way selections ride.
+sends; the frozen snapshots now carry pending images and files, as they do
+selections.
 
 ```ts
 const e3 = buildVoiceSubmitEmission({

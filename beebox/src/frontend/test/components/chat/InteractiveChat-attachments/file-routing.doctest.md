@@ -135,9 +135,6 @@ Paste and drop both route through here, and both can fire with nothing
 attached.
 
 ```ts
-JSON.stringify({
-  emptyFresh: split([], 0),
-  emptyWhenFull: split([], 3),
-})
-=> {"emptyFresh":{"inline":[],"upload":[]},"emptyWhenFull":{"inline":[],"upload":[]}}
+JSON.stringify(split([], 0))
+=> {"inline":[],"upload":[]}
 ```

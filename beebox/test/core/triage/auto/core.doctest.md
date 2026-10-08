@@ -15,7 +15,7 @@ import type { TriageJudgment } from "../../../../src/core/triage/judge.js";
 import type { Evidence } from "../../../../src/core/triage/evidence/core.js";
 import type { InstructionSnapshot } from "../../../../src/core/triage/snapshot.js";
 
-const LANDMARK = `---\nnavigation:\n  label: Records\n  symbol: 📁\ndestinations:\n  - for: [triage]\n    rules: Original filing boundary.\n---\n`;
+const LANDMARK = `---\nsymbol:\n  glyph: 📁\nnavigation:\n  label: Records\ndestinations:\n  - for: [triage]\n    rules: Original filing boundary.\n---\n`;
 async function harnessBox(extension = "txt") {
   const box = await makeTmpBox({ git: true });
   await box.write("_content/inbox/staged/Document." + extension, "Initial synthetic evidence.");

@@ -104,12 +104,44 @@ async function stageSealedSession(boxRoot) {
   return id;
 }
 
-async function configureBox(box) {
-  await box.write(".gitignore", GITIGNORE);
+/** Write the fake-transcription config (default: the full SCRIPT) and commit it. */
+async function configureBox(box, options) {
+  await box.write(".gitignore", GITIGNORE + (options?.extraIgnore ?? ""));
   await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
-  await box.write("_config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
+  await box.write("_config/fake-transcription.json", JSON.stringify(options?.script ?? SCRIPT, null, 2));
   box.commitAll("configure fake transcription");
 }
+
+/** A real chat registry over the fake backend plus an event bus; `close()` releases both. */
+function chatFor(box) {
+  const registry = new ChatSessionRegistry(box.root, {
+    backend: createFakeChatBackend(),
+    buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
+  });
+  const eventBus = createEventBus(box.root);
+  return { registry, eventBus, close: () => { registry.shutdown(); eventBus.close(); } };
+}
+
+/** Where a capture session's cards land (the session starts at `startedAt`). */
+function cardPaths(id, startedAt) {
+  const basename = sessionBasenameFor({ actualStartedAt: startedAt ?? "2026-07-09T14:00:00.000Z", id });
+  return {
+    basename,
+    attach: `_content/tmp-capture/${basename}.attach`,
+    docRel: `_content/tmp-capture/${basename}.capture-session.card`,
+  };
+}
+
+/** Prepare sealed session `id` through a real chat registry; returns the chat, event bus and card paths. */
+async function prepareOn(box, id, startedAt) {
+  const chat = chatFor(box);
+  await prepareCaptureSession({ boxRoot: box.root, id, eventBus: chat.eventBus, registry: chat.registry });
+  await tick();
+  return { ...chat, ...cardPaths(id, startedAt) };
+}
+
+const gitSubjects = (boxRoot) => execFileSync("git", ["log", "--format=%s"], { cwd: boxRoot }).toString().trim().split("\n");
+const captureCommits = (boxRoot) => gitSubjects(boxRoot).filter((l) => l.startsWith("Capture:")).length;
 ```
 
 ## Full prepare: cards, timing sidecars, exact timeline, commit, wrapper
@@ -118,103 +150,75 @@ async function configureBox(box) {
 const box = await makeTmpBox({ git: true });
 await configureBox(box);
 const id = await stageSealedSession(box.root);
-
-const backend = createFakeChatBackend();
-const registry = new ChatSessionRegistry(box.root, {
-  backend,
-  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
-});
-const eventBus = createEventBus(box.root);
-
-await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
-await tick();
-
-const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const attach = `_content/tmp-capture/${basename}.attach`;
-const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
+const { eventBus, attach, docRel, close } = await prepareOn(box, id);
 ```
 
-One capture card, one audio card per segment, both transcribed — and with
-nothing left untranscribed, the card carries no `transcription-failed` flag:
+One capture card, with its audio cards transcribed — and with nothing left
+untranscribed, the card carries no `transcription-failed` flag. A capture that
+succeeds sends no notification. Each clip has a `.timing.json` sidecar with
+its words:
 
 ```ts continue
-(await box.read(docRel)).includes(`session-id: ${id}`)
-=> true
-
-(await box.read(docRel)).includes("transcription-failed")
-=> false
-
-(await box.read(`${attach}/audio-001.audio.card`)).includes("transcript:")
-=> true
-
-(await box.read(`${attach}/audio-002.audio.card`)).includes("transcript:")
-=> true
-```
-
-A capture that succeeds sends no notification:
-
-```ts continue
-(await readRecent(box.root, { days: 36500 })).length
-=> 0
-```
-
-Each clip has a `.timing.json` sidecar with its words:
-
-```ts continue
-JSON.parse(await box.read(`${attach}/audio-001.attach/audio-001.timing.json`)).words.length
-=> 4
+const doc = await box.read(docRel);
+({
+  hasSessionId: doc.includes(`session-id: ${id}`),
+  transcriptionFailedFlag: doc.includes("transcription-failed"),
+  audioTranscribed: (await box.read(`${attach}/audio-001.audio.card`)).includes("transcript:"),
+  notifications: (await readRecent(box.root, { days: 36500 })).length,
+  timingWords: JSON.parse(await box.read(`${attach}/audio-001.attach/audio-001.timing.json`)).words.length,
+})
+=> { hasSessionId: true, transcriptionFailedFlag: false, audioTranscribed: true, notifications: 0, timingWords: 4 }
 ```
 
 The assembled body interleaves speech, the photo, and the silence gap in
 absolute-time order (silence is measured from the last word before the gap):
 
 ```ts continue
-JSON.stringify(splitCardContent(await box.read(docRel)).body.trim())
-=> "Walked through the kitchen.\n\n{% image ref=\"attach/photo-001.image.card\" /%}\n\n{% silence duration=\"26s\" /%}\n\nFound the recipe."
+splitCardContent(await box.read(docRel)).body.trim()
+=> Walked through the kitchen.
+«blankline»
+{% image ref="attach/photo-001.image.card" /%}
+«blankline»
+{% silence duration="26s" /%}
+«blankline»
+Found the recipe.
 ```
 
 The document is committed with the capture message + trailer, and delivery
 flipped the card `new` → `delivered` in a second (card-only) commit:
 
 ```ts continue
-const subjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n");
-subjects.filter((s) => s.startsWith("Capture: ")).length
-=> 1
-
-subjects.filter((s) => s.startsWith("Capture delivered: ")).length
-=> 1
-
-execFileSync("git", ["log", "--format=%(trailers:key=Created-By,valueonly)"], { cwd: box.root }).toString().includes("capture")
-=> true
-
-(await box.read(docRel)).includes("delivered: true")
-=> true
+const subjects = gitSubjects(box.root);
+({
+  captureCommits: subjects.filter((s) => s.startsWith("Capture: ")).length,
+  deliveredCommits: subjects.filter((s) => s.startsWith("Capture delivered: ")).length,
+  trailer: execFileSync("git", ["log", "--format=%(trailers:key=Created-By,valueonly)"], { cwd: box.root }).toString().includes("capture"),
+  delivered: (await box.read(docRel)).includes("delivered: true"),
+})
+=> { captureCommits: 1, deliveredCommits: 1, trailer: true, delivered: true }
 ```
 
 Delivery injected the `<capture>` wrapper as a chat-user-message, and a
-`capture-status` delivered event fired with the doc path:
+`capture-status` delivered event fired with the doc path. The staging
+session's media was cleaned up once delivered:
 
 ```ts continue
 const events = eventBus.readSince(0);
 const expectedWrapper = buildCaptureWrapper({ docPath: docRel, imageCount: 1, audioSeconds: 7, summary: "Walked through the kitchen." });
-events.find((e) => e.event === "chat-user-message").data.message === expectedWrapper
-=> true
-
-const delivered = events.find((e) => e.event === "capture-status" && e.data.status === "delivered");
-delivered.data.docPath
-=> _content/tmp-capture/capture-20260709T1400-«*».capture-session.card
-```
-
-The staging session's media was cleaned up once delivered:
-
-```ts continue
-await readStagingSession({ boxRoot: box.root, id })
-=> null
+({
+  wrapperMatches: events.find((e) => e.event === "chat-user-message").data.message === expectedWrapper,
+  deliveredDocPath: events.find((e) => e.event === "capture-status" && e.data.status === "delivered").data.docPath,
+  staging: await readStagingSession({ boxRoot: box.root, id }),
+})
+=> {
+  wrapperMatches: true,
+  deliveredDocPath: "_content/tmp-capture/capture-20260709T1400-«*».capture-session.card",
+  staging: null
+}
 ```
 
 ```ts cleanup
-registry.shutdown();
-eventBus.close();
+close();
 await box.cleanup();
 ```
 
@@ -225,10 +229,7 @@ under a WebM extension; transcription and the audio card both see `.m4a`.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write(".gitignore", GITIGNORE);
-await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
-await box.write("_config/fake-transcription.json", JSON.stringify({ "audio-001.m4a": SCRIPT["audio-001.m4a"] }, null, 2));
-box.commitAll("configure native transcription");
+await configureBox(box, { script: { "audio-001.m4a": SCRIPT["audio-001.m4a"] } });
 const staged = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
 await addAudioChunk({
   boxRoot: box.root,
@@ -240,26 +241,16 @@ await addAudioChunk({
   audioFormat: "m4a-aac",
 });
 await setStagingState({ boxRoot: box.root, id: staged.id, state: "sealed" });
-const backend = createFakeChatBackend();
-const registry = new ChatSessionRegistry(box.root, {
-  backend,
-  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
-});
-const eventBus = createEventBus(box.root);
-await prepareCaptureSession({ boxRoot: box.root, id: staged.id, eventBus, registry });
-await tick();
-const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T15:00:00.000Z", id: staged.id });
-const attach = `_content/tmp-capture/${basename}.attach`;
-JSON.stringify({
+const { attach, close } = await prepareOn(box, staged.id, "2026-07-09T15:00:00.000Z");
+({
   media: await box.read(`${attach}/audio-001.attach/audio-001.m4a`),
   cardNamesM4A: (await box.read(`${attach}/audio-001.audio.card`)).includes("ref: attach/audio-001.m4a"),
 })
-=> {"media":"COMPLETE-M4A","cardNamesM4A":true}
+=> { media: "COMPLETE-M4A", cardNamesM4A: true }
 ```
 
 ```ts cleanup
-registry.shutdown();
-eventBus.close();
+close();
 await box.cleanup();
 ```
 
@@ -270,48 +261,27 @@ When only some clips transcribe, the capture is delivered anyway with
 the untranscribed clip gets a visible marker in the timeline instead of being
 silently dropped.
 
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write(".gitignore", GITIGNORE);
-await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
-// Script only the first segment's clip; the second clip fails to transcribe.
-await box.write("_config/fake-transcription.json", JSON.stringify({ "audio-001.webm": SCRIPT["audio-001.webm"] }, null, 2));
-box.commitAll("partial script");
-const id = await stageSealedSession(box.root);
-
-const backend = createFakeChatBackend();
-const registry = new ChatSessionRegistry(box.root, {
-  backend,
-  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
-});
-const eventBus = createEventBus(box.root);
-await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
-await tick();
-
-const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const partialBody = splitCardContent(await box.read(`_content/tmp-capture/${basename}.capture-session.card`)).body;
-partialBody.includes("[audio clip 2 not transcribed]")
-=> true
-```
-
 The card itself records the failure in frontmatter, so an agent annotating it
 later — possibly with no `<capture>` message in view — sees why an audio card
-has no transcript:
+has no transcript. The failed clip's own card says why, in `transcription-error:`;
+the clip that transcribed carries a transcript and no error.
 
-```ts continue
-(await box.read(`_content/tmp-capture/${basename}.capture-session.card`)).includes("transcription-failed: true")
-=> true
-```
+```ts
+const box = await makeTmpBox({ git: true });
+// Script only the first segment's clip; the second clip fails to transcribe.
+await configureBox(box, { script: { "audio-001.webm": SCRIPT["audio-001.webm"] } });
+const id = await stageSealedSession(box.root);
+const { eventBus, attach, docRel, close } = await prepareOn(box, id);
 
-The failed clip's own card says why, in `transcription-error:`; the clip that
-transcribed carries a transcript and no error:
-
-```ts continue
-const attachDir = `_content/tmp-capture/${basename}.attach`;
-const clipCards = (await readdir(box.path(attachDir))).filter((f) => f.endsWith(".audio.card")).toSorted();
-const clips = await Promise.all(clipCards.map(async (f) => parseYaml(splitCardContent(await box.read(`${attachDir}/${f}`)).frontmatterText)));
-clips.map((c) => `${c.transcript === undefined ? "none" : "transcript"}/${c["transcription-error"] === undefined ? "ok" : "error"}`).join(" ")
-=> transcript/ok none/error
+const doc = await box.read(docRel);
+const clipCards = (await readdir(box.path(attach))).filter((f) => f.endsWith(".audio.card")).toSorted();
+const clips = await Promise.all(clipCards.map(async (f) => parseYaml(splitCardContent(await box.read(`${attach}/${f}`)).frontmatterText)));
+({
+  bodyMarksFailedClip: splitCardContent(doc).body.includes("[audio clip 2 not transcribed]"),
+  frontmatterFlag: doc.includes("transcription-failed: true"),
+  clips: clips.map((c) => `${c.transcript === undefined ? "none" : "transcript"}/${c["transcription-error"] === undefined ? "ok" : "error"}`),
+})
+=> { bodyMarksFailedClip: true, frontmatterFlag: true, clips: ["transcript/ok", "none/error"] }
 ```
 
 The delivered wrapper carries `transcription-failed`, with the summary taken
@@ -319,16 +289,15 @@ from the clip that succeeded (not the failed clip 0-or-2):
 
 ```ts continue
 const captureMsg = eventBus.readSince(0).find((e) => e.event === "chat-user-message").data.message;
-captureMsg.includes("transcription-failed=\"1\"")
-=> true
-
-captureMsg.includes("Walked through the kitchen.")
-=> true
+({
+  failedCount: captureMsg.includes("transcription-failed=\"1\""),
+  summaryFromGoodClip: captureMsg.includes("Walked through the kitchen."),
+})
+=> { failedCount: true, summaryFromGoodClip: true }
 ```
 
 ```ts cleanup
-registry.shutdown();
-eventBus.close();
+close();
 await box.cleanup();
 ```
 
@@ -369,33 +338,23 @@ await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
 => failed:deliver
 ```
 
-The document is committed exactly once, and the body is assembled:
+The document is committed exactly once, and the body is assembled. Re-running
+preparation delivers (send succeeds now) with no duplicate cards or commits,
+and the body is unchanged:
 
 ```ts continue
-const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
+const { docRel } = cardPaths(id);
 const bodyAfterFirst = splitCardContent(await box.read(docRel)).body.trim();
-bodyAfterFirst.startsWith("Walked through the kitchen.")
-=> true
+const first = { bodyStarts: bodyAfterFirst.startsWith("Walked through the kitchen."), captureCommits: captureCommits(box.root) };
 
-execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().split("\n").filter((l) => l.startsWith("Capture:")).length
-=> 1
-```
-
-Re-running preparation delivers (send succeeds now) with no duplicate cards or
-commits, and the body is unchanged:
-
-```ts continue
 await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
-
-(await readStagingSession({ boxRoot: box.root, id }))
-=> null
-
-splitCardContent(await box.read(docRel)).body.trim() === bodyAfterFirst
-=> true
-
-execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().split("\n").filter((l) => l.startsWith("Capture:")).length
-=> 1
+({
+  first,
+  staging: await readStagingSession({ boxRoot: box.root, id }),
+  bodyUnchanged: splitCardContent(await box.read(docRel)).body.trim() === bodyAfterFirst,
+  captureCommits: captureCommits(box.root),
+})
+=> { first: { bodyStarts: true, captureCommits: 1 }, staging: null, bodyUnchanged: true, captureCommits: 1 }
 ```
 
 ```ts cleanup
@@ -415,12 +374,7 @@ await configureBox(box);
 const idA = await stageSealedSession(box.root);
 const idB = await stageSealedSession(box.root);
 
-const backend = createFakeChatBackend();
-const registry = new ChatSessionRegistry(box.root, {
-  backend,
-  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
-});
-const eventBus = createEventBus(box.root);
+const { registry, eventBus, close } = chatFor(box);
 
 await Promise.all([
   prepareCaptureSession({ boxRoot: box.root, id: idA, eventBus, registry }),
@@ -428,40 +382,26 @@ await Promise.all([
 ]);
 await tick();
 
-const baseA = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id: idA });
-const baseB = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id: idB });
-const capSubjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n");
-capSubjects.filter((s) => s.startsWith("Capture: ")).length
-=> 2
-
-capSubjects.filter((s) => s.startsWith("Capture delivered: ")).length
-=> 2
+const baseA = cardPaths(idA).basename;
+const baseB = cardPaths(idB).basename;
 ```
 
 Each capture committed exactly once and each commit touches only its own files —
 no cross-contamination (the F1 fix). The report helper does the arrow-heavy
-inspection out of the example block and returns a single verdict:
+inspection out of the example block and returns a single verdict. Both
+delivered — their staging media was cleaned up:
 
 ```ts continue
-commitReport(box.root, baseA, baseB)
-=> true
-```
-
-Both delivered — their staging media was cleaned up:
-
-```ts continue
-await readStagingSession({ boxRoot: box.root, id: idA })
-=> null
-```
-
-```ts continue
-await readStagingSession({ boxRoot: box.root, id: idB })
-=> null
+({
+  deliveredCommits: gitSubjects(box.root).filter((s) => s.startsWith("Capture delivered: ")).length,
+  isolatedCommits: commitReport(box.root, baseA, baseB),
+  staging: [await readStagingSession({ boxRoot: box.root, id: idA }), await readStagingSession({ boxRoot: box.root, id: idB })],
+})
+=> { deliveredCommits: 2, isolatedCommits: true, staging: [null, null] }
 ```
 
 ```ts cleanup
-registry.shutdown();
-eventBus.close();
+close();
 await box.cleanup();
 ```
 
@@ -529,19 +469,13 @@ Resume: the probe short-circuits delivery — no second send, still one message:
 ```ts continue
 crashOnSend = false;
 await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(box.root), registry });
-
-sendCount
-=> 1
-
-(await readFile(logPath, "utf-8")).split("\n").filter((l) => l.includes("<capture ")).length
-=> 1
-
-await readStagingSession({ boxRoot: box.root, id })
-=> null
-
-const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-(await box.read(`_content/tmp-capture/${basename}.capture-session.card`)).includes("delivered: true")
-=> true
+({
+  sendCount,
+  captureMessages: (await readFile(logPath, "utf-8")).split("\n").filter((l) => l.includes("<capture ")).length,
+  staging: await readStagingSession({ boxRoot: box.root, id }),
+  delivered: (await box.read(cardPaths(id).docRel)).includes("delivered: true"),
+})
+=> { sendCount: 1, captureMessages: 1, staging: null, delivered: true }
 ```
 
 ```ts cleanup
@@ -560,9 +494,7 @@ const box = await makeTmpBox({ git: true });
 await configureBox(box);
 const id = await stageSealedSession(box.root);
 
-const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const cardRel = `_content/tmp-capture/${basename}.capture-session.card`;
-const attachRel = `_content/tmp-capture/${basename}.attach`;
+const { docRel: cardRel, attach: attachRel } = cardPaths(id);
 // Seed an invalid card (bogus `delivered`, no session-id) + an empty attach dir,
 // so prepare skips the write step and validates the pre-seeded card.
 await mkdir(`${box.root}/${attachRel}`, { recursive: true });
@@ -580,26 +512,24 @@ await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(bo
 ```
 
 With nobody present in the app, the person gets one `quiet` notice. This
-capture never resolved a target chat, so the notice opens a new one:
-
-```ts continue
-const [notice] = await readRecent(box.root, { days: 36500 });
-`${notice.intent.loudness} | ${notice.intent.target} | ${notice.intent.source} | ${notice.intent.body}`
-=> quiet | chat:new | capture | The capture could not be saved: the cards it wrote did not validate.
-```
-
-The invalid files this run wrote are deleted — no orphaned uncommitted files,
+capture never resolved a target chat, so the notice opens a new one. The
+invalid files this run wrote are deleted — no orphaned uncommitted files,
 working tree clean, so a re-fire rebuilds from scratch:
 
 ```ts continue
-await pathExists(`${box.root}/${cardRel}`)
-=> false
-
-await pathExists(`${box.root}/${attachRel}`)
-=> false
-
-execFileSync("git", ["status", "--short"], { cwd: box.root }).toString().trim().length
-=> 0
+const [notice] = await readRecent(box.root, { days: 36500 });
+({
+  notice: `${notice.intent.loudness} | ${notice.intent.target} | ${notice.intent.source} | ${notice.intent.body}`,
+  cardExists: await pathExists(`${box.root}/${cardRel}`),
+  attachExists: await pathExists(`${box.root}/${attachRel}`),
+  dirtyFiles: execFileSync("git", ["status", "--short"], { cwd: box.root }).toString().trim().length,
+})
+=> {
+  notice: "quiet | chat:new | capture | The capture could not be saved: the cards it wrote did not validate.",
+  cardExists: false,
+  attachExists: false,
+  dirtyFiles: 0
+}
 ```
 
 ```ts cleanup
@@ -619,49 +549,26 @@ deliver.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write(".gitignore", GITIGNORE + "**/tmp-capture/**/*.attach/**\n");
-await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
-await box.write("_config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
-box.commitAll("configure fake transcription, annex-style ignore");
+await configureBox(box, { extraIgnore: "**/tmp-capture/**/*.attach/**\n" });
 const id = await stageSealedSession(box.root);
-
-const backend = createFakeChatBackend();
-const registry = new ChatSessionRegistry(box.root, {
-  backend,
-  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
-});
-const eventBus = createEventBus(box.root);
-await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
-await tick();
-
-const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
-const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
-const attachRel = `_content/tmp-capture/${basename}.attach`;
+const { basename, attach, docRel, close } = await prepareOn(box, id);
 ```
 
 The capture delivered (staging cleaned up) and the card was committed —
 flipped to `delivered` — while the attach files exist on disk untracked:
 
 ```ts continue
-await readStagingSession({ boxRoot: box.root, id })
-=> null
-
-(await box.read(docRel)).includes("delivered: true")
-=> true
-
-await pathExists(`${box.root}/${attachRel}/audio-001.audio.card`)
-=> true
-
-const capSubjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString();
-capSubjects.includes(`Capture: ${basename}`)
-=> true
-
-execFileSync("git", ["ls-files", "--", attachRel], { cwd: box.root }).toString().trim()
-=> 
+({
+  staging: await readStagingSession({ boxRoot: box.root, id }),
+  delivered: (await box.read(docRel)).includes("delivered: true"),
+  attachOnDisk: await pathExists(`${box.root}/${attach}/audio-001.audio.card`),
+  committed: gitSubjects(box.root).some((s) => s.includes(`Capture: ${basename}`)),
+  trackedAttachFiles: execFileSync("git", ["ls-files", "--", attach], { cwd: box.root }).toString().trim(),
+})
+=> { staging: null, delivered: true, attachOnDisk: true, committed: true, trackedAttachFiles: "" }
 ```
 
 ```ts cleanup
-registry.shutdown();
-eventBus.close();
+close();
 await box.cleanup();
 ```

@@ -96,9 +96,6 @@ const warned = captured("warn", () => {
     msg: silently("session-start", new Error("codex exited with code 1")),
   });
 });
-warned[0].includes("Likely")
-=> false
-
 warned[0]
 => [chat-session] Turn ended with is_error=true (session <unassigned>). phase=session-start subtype=failed num_turns=0 duration_ms=0 result="Could not start codex session: codex exited with code 1"
 ```

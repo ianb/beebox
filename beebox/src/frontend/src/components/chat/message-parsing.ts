@@ -192,7 +192,7 @@ export function getUserName(entry: SessionEntry): string | null {
  */
 export function stripSpeechTags(content: string): string {
   // Closed forms first.
-  let result = content.replace(/<instructions>[\S\s]*?<\/instructions>/gi, "");
+  let result = content.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/gi, "");
   result = result.replace(/<schedule[\S\s]*?<\/schedule>/gi, "");
   result = result.replace(/<speech[^>]*>/gi, "");
   result = result.replace(/<\/speech>/gi, "");
@@ -200,7 +200,7 @@ export function stripSpeechTags(content: string): string {
   // Streaming: unclosed instructions/schedule body — drop from the opening
   // tag through end-of-text. Safe on finalized text (no unclosed tags
   // expected there).
-  result = result.replace(/<instructions>[\S\s]*$/i, "");
+  result = result.replace(/<instructions\b[^>]*>[\S\s]*$/i, "");
   result = result.replace(/<schedule\b[\S\s]*$/i, "");
   // Streaming: a trailing incomplete tag like `<spee` or `</instr` whose
   // closing `>` hasn't arrived yet. Match `<` (optionally with `/`)

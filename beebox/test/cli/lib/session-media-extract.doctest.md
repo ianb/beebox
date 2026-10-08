@@ -14,7 +14,7 @@ someone looks at it.
 
 ```ts setup
 import { encodeSessionMediaRef, parseSessionMediaRef } from "../../../src/shared/session-media.js";
-import { findTranscriptLineByUuid, MAX_MEDIA_LINE_BYTES } from "../../../src/cli/lib/session-line-scan.js";
+import { findTranscriptLineByUuid } from "../../../src/cli/lib/session-line-scan.js";
 import { extractSessionMedia } from "../../../src/cli/lib/session-media-extract.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
@@ -132,14 +132,6 @@ const missing = await findTranscriptLineByUuid({ logPath, uuid: "nope" });
 const absent = await findTranscriptLineByUuid({ logPath: box.path("never-written.jsonl"), uuid: "u-1" });
 JSON.stringify([missing, absent])
 => [{"found":false,"reason":"not-found"},{"found":false,"reason":"not-found"}]
-```
-
-The line is materialized to reach one payload inside it, so the size a client
-can ask the server to allocate is bounded:
-
-```ts continue
-MAX_MEDIA_LINE_BYTES
-=> 8388608
 ```
 
 ```ts cleanup

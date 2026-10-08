@@ -75,7 +75,7 @@ user owns it:
 
 ```ts
 const C = await makeContentBox();
-await writeFile(join(C, "_content", "Home.landmark.card"), "---\nnavigation:\n  label: Home\n  symbol: 🏠\n---\n");
+await writeFile(join(C, "_content", "Home.landmark.card"), "---\nsymbol:\n  glyph: 🏠\nnavigation:\n  label: Home\n---\n");
 const rC = await installRootLandmark(C);
 rC
 => null
