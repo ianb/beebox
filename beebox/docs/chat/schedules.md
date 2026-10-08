@@ -42,7 +42,7 @@ The text content inside the tag is context passed back to the agent when the sch
 
 - **Originating session** — the normal case. The schedule carries the id of the session whose turn created it, and the fire resumes exactly that session.
 - **Legacy fallback (most-active)** — entries persisted before the `sessionId` field existed have none; they fall back to the most-active session (`getMostActive`), preserving the old behavior.
-- **Fresh-session fallback (unresumable target)** — if the targeted session's turn errors instantly (`is_error=true`, e.g. a pre-v2 session id the SDK refuses to resume — see `issues/bugs/2026-07-11-pre-v2-session-resume-broken.md`), the reminder is re-sent **once** into a brand-new session. If that also fails, it's logged (`console.error`) and given up. A fired schedule's response is never silently lost. The failed-turn signal is the session's `done` event, whose `ChatMessageResult` payload carries `is_error`.
+- **Fresh-session fallback (unresumable target)** — if the targeted session's turn errors instantly (`is_error=true`, e.g. a pre-v2 session id the SDK refuses to resume — see `issues/closed/bugs/2026-07-11-pre-v2-session-resume-broken.md`), the reminder is re-sent **once** into a brand-new session. If that also fails, it's logged (`console.error`) and given up. A fired schedule's response is never silently lost. The failed-turn signal is the session's `done` event, whose `ChatMessageResult` payload carries `is_error`.
 
 ### Frontend display
 

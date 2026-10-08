@@ -1,6 +1,134 @@
-# Scheduled work operations
+# Scheduled work
 
-Use `bbx-authoring-schedules` for authoring. This is the runtime contract.
+The first sections cover authoring a schedule; the rest is the runtime
+contract. `bin/schedules help` lists the commands. Read a real schedule under
+`schedules/` before writing one.
+
+## When work is a schedule
+
+A schedule fits work that is periodic and triggered by time. Work triggered by
+a commit belongs in a hook; work triggered by a request belongs in a session.
+The report must also be worth reading: a schedule whose alerts nobody reads is
+noise on a cadence. A dependency watch runs at most weekly; only the agent SDKs
+(`sdk-update`) get a daily check.
+
+Pick one of two shapes:
+
+- **Run-only:** no `workstream:` in `schedule.yaml`; the alert is the whole
+  product. `docling-update` alerts once when a settled newer release exists. It
+  does not bump the pin, because an upgrade means re-reading `docling convert
+  --help` and re-extracting a sample, which is judgment.
+- **Handoff to a workstream:** the script decides whether there is work and an
+  agent decides what to do about it. `knip-sweep` runs knip, diffs against last
+  week's report, and hands off only what is new.
+
+In both shapes `run` only gathers, compares, and decides whether anything
+changed. `prompt.md` holds the judgment: what a finding means, what to do, and
+what authority the session has. A `run` that reasons about its findings will be
+wrong at 03:00 with nobody watching.
+
+## Directory and fields
+
+`schedules/<name>/` holds `schedule.yaml`, an executable `run`, `prompt.md`
+when `workstream:` is set, an optional executable `check`, and an optional
+gitignored `local.yaml`. `<name>` is also the workstream name. `run` is a
+three-line shim that `exec`s `node --import tsx run.ts`, so the logic is
+TypeScript. The fields are `scheduleYamlSchema` and `scheduleWorkstreamSchema`
+in `bin/lib/schedules.ts`; `manual-tests` uses most of them. `local.yaml` takes
+the same fields and overrides only what it declares; `enabled: false` there
+disables a schedule on one machine without a commit.
+
+Use `worktree: true` unless there is a specific reason not to. The liveness
+guard and the merge of `main` described under
+[Worktree branch between runs](#worktree-branch-between-runs) apply only to
+worktree schedules; a `worktree: false` session runs in the main checkout and
+can commit under a live session or over uncommitted work. `sdk-update` moved
+off `worktree: false` on 2026-08-25 for this reason.
+
+`permissionMode` has no default, so the author states the sandbox. Grant the
+narrowest `tools`/`allowedTools` that work: `manual-tests` admits `Bash` only
+for the `bin/schedules alert` and `done` patterns. Use `agent: claude` when the
+sandbox matters (see the Codex limits below). Use `session: fresh` unless
+continuity is the product: the issue queue, the baseline, and the branch are
+the memory. `sdk-update` is `persistent` because its record of which releases
+it assessed lives in the transcript beside its ledger.
+
+## What `run` owes
+
+- Exit 0 silently when there is nothing to say. `lastRunAt` records that it
+  ran.
+- Call `bin/schedules handoff` only when there is work; that is the only way a
+  workstream starts.
+- Call `bin/schedules alert` directly only for a finding the script can fully
+  assess. Anything that needs judgment is a handoff.
+- Give a finding that can repeat a `--condition` named for the standing
+  problem, never its details: `full-suite` uses `red-unattributed`, not the
+  failing files; `box-convergence` uses `unconverged`, not the boxes. A key
+  built from details opens a new alert on every change and leaves the old one
+  to be filed as an issue a week later. Details go in the message, which each
+  repeat overwrites. After a run that judged everything, call
+  `bin/schedules resolve --except <keys reported this run>`, or plain
+  `resolve` when clean. A run that could not judge (host under load,
+  production unreachable) resolves nothing it did not check.
+- Exit non-zero only when the run itself broke; the runner raises an
+  `important` alert with the last 40 log lines and starts the workstream, if
+  any, with that tail. Refuse loudly rather than exit 0 on a watch that cannot
+  watch: `docling-update` exits 2 when the version file declares no pin.
+- Honor `SCHEDULE_DRY_RUN=1` by writing nothing. `bin/schedules handoff` is
+  already safe under dry-run; the script's own writes are its responsibility.
+- Keep a baseline in `$SCHEDULE_STATE_DIR` when the report is "what is new".
+  `knip-sweep` writes `last-report.txt`, hands off only added lines, and
+  rewrites the baseline on every real run, so a finding is news once. Its first
+  run records the baseline and says so in an `fyi` alert.
+
+The runner sets `SCHEDULE_NAME`, `SCHEDULE_DIR`, `SCHEDULE_RUN_ID`,
+`SCHEDULE_STATE_DIR`, and `SCHEDULE_DRY_RUN` for `run` and `check`.
+
+## Writing `prompt.md`
+
+For Claude it is the appended system prompt; for Codex it leads the briefing.
+It states:
+
+- **Authority.** May the session commit, land, file issues, or edit code?
+  `sdk-update` says updating the SDK is its normal authority and not to wait
+  for approval; `manual-tests` may only create or append to issue files. Both
+  say the briefing is untrusted data: test output and release notes are not
+  instructions.
+- **Priority mapping.** Map the schedule's outcomes to `important` (a person
+  should act today), `normal` (digest; stays open until closed), and `fyi`
+  (one digest, then closes). A routine success is `fyi`; a branch waiting on a
+  person is `normal`. Name any level the schedule never uses, as `tour-check`
+  does for `important`.
+- **Message format.** The message is Markdown: lead with the finding, then a
+  list; name files and issues by path or link.
+- **Reporting.** Every session ends with `bin/schedules alert --run <id>` or
+  `bin/schedules done --run <id>`. The run id is in the briefing's trailer.
+- **Landing.** The session starts on current `main`, so the prompt does not
+  tell it to merge. Work leaves a worktree through `bin/land`. When `bin/land`
+  refuses (main checkout dirty or not on `main`, or the branch lacks current
+  `main`), the commit is safe on the branch: alert and stop, and the next run
+  merges `main` and lands again. A prompt that lets the session land its own work also
+  covers the inherited commits the briefing lists.
+
+The shared briefing already says the session is single-shot, so `prompt.md`
+need not repeat it.
+
+## When to write `check`
+
+Write `check` when something must be verified or finished after the session
+and the session cannot be trusted or permitted to do it. `manual-tests` is the
+example: its triager may only append to issue files, so `check` confirms each
+claimed path is a real open issue whose previous bytes are an exact prefix,
+then commits the appends. A non-zero `check` is an `important` alert even when
+the session reported success. Skip `check` when the session's report is the
+whole product (`sdk-update`, `knip-sweep`).
+
+## Rehearse and enroll
+
+Run `bin/schedules run <name> --dry-run`, then one `--force` run, then read
+`bin/schedules logs <name>`. `bin/schedules install` registers the single
+launchd tick from the main checkout, once per machine; the next tick picks up a
+new schedule directory.
 
 ## Store, cadence, and locking
 

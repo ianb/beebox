@@ -1,14 +1,14 @@
 /**
  * The box screen's navigation sections (docs/plans/box-screen.md, track 2):
- * "Pick up where you left off", "In this box", and "Boxes". Each section is a
+ * "Pick up where you left off", "Shortcuts", and "Boxes". Each section is a
  * labelled list of links; the first recent chat is styled as the primary
- * action.
+ * action. The box-wide pages (Dashboard, Browse, History, Storage summary)
+ * are in the avatar menu (`AppNav/nav.tsx`).
  */
 
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { href, toSearch } from "../../lib/routing";
-import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import type { RouterOutput } from "../../lib/trpc/client";
 import type { KnownBox } from "../../lib/boxes";
 import { Heading } from "../ui/Heading";
@@ -64,15 +64,10 @@ function PageLink({ id, to, children }: { id: string; to: string; children: Reac
   return <li><Link id={id} to={to} className={PAGE_LINK}>{children}</Link></li>;
 }
 
-/** Dashboard, Browse, History, and Storage summary, then the box's own `nav.card` shortcuts. */
-export function BoxPageLinks({ boxSlug, shortcuts }: { boxSlug: string; shortcuts: BoxScreenHome["shortcuts"] }) {
-  const view = (path: string) => href(`/${boxSlug}/views/${path}`);
+/** The box's own `nav.card` shortcuts. */
+export function ShortcutLinks({ boxSlug, shortcuts }: { boxSlug: string; shortcuts: BoxScreenHome["shortcuts"] }) {
   return (
     <ul className="flex flex-wrap gap-2">
-      <PageLink id="bbx-box-screen-dashboard" to={view(SYSTEM_CARD_PATHS.dashboard)}>Dashboard</PageLink>
-      <PageLink id="bbx-box-screen-browse" to={view(SYSTEM_CARD_PATHS.browse)}>Browse</PageLink>
-      <PageLink id="bbx-box-screen-history" to={view(SYSTEM_CARD_PATHS.history)}>History</PageLink>
-      <PageLink id="bbx-box-screen-inventory" to={view(SYSTEM_CARD_PATHS.inventory)}>Storage summary</PageLink>
       {/* Keyed by position as well: a card may list one target under two labels. */}
       {shortcuts.map((shortcut, index) => (
         <PageLink key={`${index}:${shortcut.to}`} id={`bbx-box-screen-shortcut-${index}`} to={href(`/${boxSlug}${shortcut.to}`)}>{shortcut.label}</PageLink>

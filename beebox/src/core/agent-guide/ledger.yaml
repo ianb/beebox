@@ -17,8 +17,11 @@ budget:
   # Raised 2026-10-06 (+89) for the box-screen arrival paragraph in the chat
   # system prompt (source="box-screen" wrapper attribute); the prompt is
   # always loaded.
+  # Raised 2026-10-07 (+28) for the managed `browser-task` box skill's
+  # description (skill descriptions are always loaded); the executor
+  # procedure moved from the dev repo into the box.
   guide_words: 5595
-  always_loaded_words: 10302
+  always_loaded_words: 10330
   uncited_words_per_section: 60
 
 lint:

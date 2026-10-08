@@ -119,8 +119,11 @@ members-only listing — and to bring back what they found as data. The card
 is also the inbox: results arrive as batches in its attach scope, and the
 \`browser-task-drain\` procedure turns them into cards.
 
-You write the task. A person, or a Claude Code session in their browser,
-runs it. You never scan the source yourself; the box has no browser session.
+You write the task. A person runs it, or a Claude Code session started in
+the box directory with Claude in Chrome runs it with the \`browser-task\`
+skill. You never scan the source yourself; the box has no browser session.
+When the boxholder asks you to run a task here without browser tools, tell
+them that.
 
 ## Frontmatter
 

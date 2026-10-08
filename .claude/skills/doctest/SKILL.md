@@ -7,7 +7,7 @@ description: Write, run, and triage beebox `.doctest.md` tests, including distin
 
 The [syntax reference](../../../agent-doctest/docs/syntax.md) is short and
 example-first; read it before writing a doctest. Whether a doctest is the
-right tier at all is `bbx-guide-testing`'s call.
+right instrument at all: [choosing an instrument](../../../beebox/docs/testing.md#choosing-an-instrument).
 
 ## Authoring
 
@@ -24,7 +24,8 @@ Good models: `beebox/test/core/pdf/probe.text-layer-quality.doctest.md`
   value after checking it is right. Varying parts arrive as wildcards
   (`«int»`, `«date»`, `«*»`). Better still, pass fixed inputs (time, ids).
 - **Waiting:** `eventually(fn, { label })`, never a fixed sleep.
-- Blocks are separate tests; ` ```ts continue ` shares variables, ` ```ts setup `
+- Blocks are separate tests; ` ```ts continue ` shares variables (prose between
+  examples goes after a closing fence, never inside an open one), ` ```ts setup `
   holds imports and helpers, ` ```ts cleanup ` / ` ```ts teardown ` release
   resources.
 

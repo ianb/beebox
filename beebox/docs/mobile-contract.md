@@ -50,7 +50,7 @@ composer not suppressed, wrong attribution — with no error surfaced).
   | iOS scheme registration | `ios-app/BeeBox/Info.plist` — `CFBundleURLSchemes = ["beebox"]`, name `app.beebox.ios.pairing` |
   | iOS parser | `ios-app/BeeBox/Storage/PairedBoxStore.swift` — `PairedBoxStore.pair(from:)` (requires `scheme == "beebox"` AND `host == "pair"`) |
   | box link generator | `src/frontend/src/components/settings/CompanionPairingSection.tsx` — `pairingDeepLink(token)`, `boxBaseUrl()`, `qrSvg()` |
-  | box render site | `src/frontend/src/pages/settings/SettingsPage.tsx` — `<CompanionPairingSection />` |
+  | box render site | `src/frontend/src/pages/SettingsPage.tsx` — `<CompanionPairingSection />` |
 - **Drift:** SILENT. A bad/unparseable URL makes `pair` return `false` with no toast.
 - **Known duplicate-dispatch hazard:** both `BeeBoxApp.onOpenURL` and
   `BeeBoxAppDelegate.application(open:)` (→ `PairingURLInbox.shared.accept` →
@@ -747,14 +747,14 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web command + result + merge | `src/frontend/src/components/chat/native-composer-command.ts`; `native-command-bridge.ts`; `native-control-scan.ts`; `native-control-point.ts`; `ui-scan-request-handler.ts`; `src/frontend/src/components/ControlPointer.tsx` |
+  | web command + result + merge | `src/frontend/src/components/chat/native-composer-command.ts`; `native-command-bridge.ts`; `native-control-scan.ts`; `native-control-point.ts`; `ui-scan-request-handler.ts`; `src/frontend/src/components/markdown-link/ControlPointer.tsx` |
   | native registry + answer | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeComposerCommand`, `NativeComposerCommandResult`, `NativeControlEntry`; `Models/NativeControlRegistry.swift` — `controlAnchor`, `perform`; `Views/RootView.swift` — `handleComposerCommand`; `Views/NativeControlRingView.swift`; `Views/ChatWebView.swift` — `deliverComposerCommandResults` |
 - **Drift:** LOUD in the dump (a coverage line the agent reads), silent to the user — nothing in the
   UI depends on it.
 ### 4.9 Last-audio request (web → native), answered by direct HTTP
 
 The relay that lets a box agent retranscribe a message dictated in the **native** composer. Design:
-`docs/plans/ios-audio-retranscription.md`.
+`docs/implemented-plans/ios-audio-retranscription.md`.
 
 - **Why it exists:** `bbx chat retranscribe --message <id>` is answered by whoever holds the
   recording. Web tabs answer from an in-memory store keyed by emission id
@@ -1507,13 +1507,13 @@ without the other is a contract break.
 
   The photo limit is a real behavioral contract, not a tuning knob: inlining a camera roll
   base64-encodes tens of megabytes into a single `/chat/send`, which is what
-  `issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` reports failing client-side with no
+  `issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` reports failing client-side with no
   server-side trace. There is **no documented size ceiling** for a WKWebView script message — the
   failure is memory pressure, not a published limit — so "inline just under the cliff" is not
   implementable; keeping the inline payload categorically small is the only sound posture. A
   surface that raises or ignores it reintroduces the bug. A surface that applies it to *files*, or
   spends a photo slot on one, makes "attach a couple of documents" impossible — the regression
-  `issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md` reports.
+  `issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md` reports.
 
   A surface that instead hands a selection to the **bulk-upload batch** (§5.6) — as the native
   composer still does for a camera roll — MUST send the composer text as that batch's `note`,
@@ -1683,7 +1683,7 @@ waiting in `PendingEmissionStore`, open the web app instead. The rule is
 
 The box screen mounts no web content. Its composer sends through `quickChat.submit` (§5.11) with a
 new-thought draft stored apart from the chat draft. Its links (recent chats, "All chats", the
-box-wide pages, the box's shortcuts) show the web app at a box-relative path through the same
+box's `nav.card` shortcuts) show the web app at a box-relative path through the same
 `ChatWebView.NavigationRequest` a notification tap uses (§3.1). The web app returns to the box
 screen through the navigation in §3.5. The web view, once created, stays mounted and hidden behind
 the box screen. No emission version, native target type, or binding JSON changes for the box screen.

@@ -24,8 +24,10 @@ const BACKEND_PORT = Number(backendPortEnv) || 3211;
 // the `base` option, so all built-in URL handling (assets, HMR, proxies)
 // stays consistent. When run standalone (no VITE_BASE), base="/" and we
 // behave like the original config.
-// React Compiler — auto-memoizes components/hooks so we don't hand-roll
-// useCallback/useMemo (see the bbx-frontend skill, "Performance"). On for every Vite build
+// React Compiler — auto-memoizes components/hooks, so code does not hand-roll
+// useCallback/useMemo for render performance; keep one only for an identity a
+// non-React consumer compares (an imperative API, a ref callback, a listener
+// added and removed by reference). On for every Vite build
 // (dev server + the production `vite build` client bundle); set REACT_COMPILER=0
 // to opt out for debugging a suspected compiler issue. target:"18" pairs with
 // the react-compiler-runtime dependency (React 19 ships the runtime; 18 needs

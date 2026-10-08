@@ -33,21 +33,22 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.289`, Codex `0.160.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.290`, Codex `0.160.1` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.292` (SDK), `2.1.292` (Claude Code), `0.160.1` (Codex)
+- **Latest reviewed upstream version:** `0.3.293` (SDK), `2.1.293` (Claude Code), `0.161.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** No bump on 2026-10-06; nothing settled and
-  nothing act-now. Next: `0.3.290` and Codex `0.160.1` (settle 2026-10-07 at
-  18:15Z and 18:33Z), then `0.3.291` (2026-10-08T03:33Z) and `0.3.292`
-  (2026-10-08T17:14Z). **Before taking `0.3.292`**, check its background-command
-  wait (see its entry). Open:
-  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **Current recommendation:** Both families moved on 2026-10-07 — Agent SDK
+  to `0.3.290`, Codex to `0.160.1`. Next: `0.3.291` (settles
+  2026-10-08T03:33Z), `0.3.292` (2026-10-08T17:14Z; **check its
+  background-command wait first**, see its entry), `0.3.293`
+  (2026-10-09T17:21Z), Codex `0.161.0` (2026-10-09T15:58Z). Open:
+  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md` (now
+  also covers Haiku 5.5).
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -74,12 +75,46 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### Codex 0.160.1 — pending, nothing relevant (published 2026-10-05T18:33Z)
+### Codex 0.161.0 — pending (published 2026-10-07T15:58Z, ~8h at this turn)
+
+- **GPT-6.1 Sol is the default model** in the bundled and Bedrock catalogs.
+  beebox's `sol` alias still pins `gpt-6-sol`
+  (`beebox/src/shared/model-ids.ts`); tracked in the open alias issue.
+- **Thread resume includes the latest committed history** — relevant to
+  beebox's Codex chat, which resumes threads (`services/codex-sdk-session/core.ts`).
+  No observed beebox failure, so settled path.
+- Approved filesystem escalation keeps denied reads and network restrictions;
+  launch permissions survive reconnects; SQLite corruption detected earlier and
+  the damaged database kept as a backup; retries honor server retry guidance.
+- New and opt-in: `/mcp login`, voice device selection, Daybreak (off by
+  default), `cyberAccessProgram` in the TypeScript SDK. beebox uses none.
+- **Action:** Settled path; takeable 2026-10-09T15:58Z.
+- **Sources:** [rust-v0.161.0](https://github.com/openai/codex/releases/tag/rust-v0.161.0)
+
+### 0.3.293 / Claude Code 2.1.293 — pending (published 2026-10-07T17:21Z, ~6h at this turn)
+
+- **SDK:** adds optional `subagent_type` to `background_tasks_changed` entries.
+  No beebox use.
+- **Claude Haiku 5.5** (`claude-haiku-5-5`) is now the default Haiku on the
+  Anthropic API. beebox's `haiku` alias pins `claude-haiku-4-5-20251001`; noted
+  in the open alias issue.
+- **HARNESS:** fixed Claude treating its own last pre-compaction actions as done
+  after compaction and redoing or retracting finished work (long worker
+  sessions); path-scoped rules and nested `CLAUDE.md` files now load when a file
+  is viewed with `cat`/`head`/`sed -n`/`grep` in Bash, so worker sessions may
+  pick up nested instruction files they used to miss; `SendMessage` no longer
+  suggested when a tool list removes it. Reverted: the 2.1.281 auto-mode denial
+  wording, and the 2.1.290 cloud `/loop` wakeup fix (cloud only).
+- HTTP MCP memory leak fixed; beebox runtime configures no MCP servers.
+- **Action:** Settled path; takeable 2026-10-09T17:21Z.
+- **Sources:** [SDK 0.3.293](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03293), [Claude Code 2.1.293](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21293)
+
+### Codex 0.160.1 — APPLIED 2026-10-07, nothing relevant (published 2026-10-05T18:33Z)
 
 Backport to 0.160: remote stdio MCP servers launched with explicitly configured
 remote environment variables keep `SYSTEMROOT`, `TEMP` and `TMP` (a Windows
 executor fix). beebox runs Codex on macOS and Linux and configures no remote
-stdio MCP servers. Settled path.
+stdio MCP servers. Applied 2026-10-07; the deploy gate passed on `codex-cli 0.160.1`.
 - **Sources:** [rust-v0.160.1](https://github.com/openai/codex/releases/tag/rust-v0.160.1)
 
 ### 0.3.292 / Claude Code 2.1.292 — pending (published 2026-10-06T17:14Z, ~6h at this turn); check before applying
@@ -120,7 +155,7 @@ was probed on the current pin: five SDK sessions (`query()` to completion, as
 SDK end path is not affected; an interrupted or aborted session was not probed.
 - **Action:** Settled path; takeable 2026-10-08T03:33Z.
 
-### 0.3.290 / Claude Code 2.1.290 — pending (published 2026-10-05T18:15Z); re-read 2026-10-06
+### 0.3.290 / Claude Code 2.1.290 — APPLIED 2026-10-07 (published 2026-10-05T18:15Z); re-read 2026-10-06
 
 - **RUNTIME, wanted by beebox's chat:** *"Fixed `includePartialMessages`
   streams leaving a message without `message_stop` when the stream was cut,
@@ -139,7 +174,7 @@ SDK end path is not affected; an interrupted or aborted session was not probed.
   some zsh variable names (worker sessions under manual rules may see more
   prompts); unbounded memory on very large HTTP MCP responses (beebox runtime
   has no MCP servers).
-- **Action:** Settled path; takeable 2026-10-07T18:15Z.
+- **Action:** Applied 2026-10-07 on the settled path. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.290, `pnpm -C beebox test` (13,184 pass, 2 skip).
 - **Sources:** [SDK 0.3.290](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03290), [Claude Code 2.1.290](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21290)
 
 ### 0.3.289 / Claude Code 2.1.289 — APPLIED 2026-10-05 (published 2026-10-03T20:12Z); re-read 2026-10-05
@@ -471,7 +506,7 @@ bump time.
   itself: `luna` and `sol` now resolve to their GPT-6 IDs in
   `beebox/src/shared/model-ids.ts`, while `terra` intentionally remains on
   `gpt-5.6-terra` because GPT-6 has no Terra model. Tracked with the Opus 5.5
-  update in `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`.
+  update in `issues/closed/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`.
 - **`0.156.0`, relevant:** worktree support is now **enabled by default** in the
   agent command center, and worktree sessions can be created from it. Codex
   worker sessions here get their worktrees from `bin/workstreams create` and run
@@ -558,7 +593,7 @@ bump time.
   default Opus model."* beebox's `opus` alias now resolves to
   `claude-opus-5-5` (`beebox/src/shared/model-ids.ts`), and retired Opus IDs
   normalize forward. Tracked in:
-  `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md` — **resolved 2026-09-23/24**: `opus` now resolves to `claude-opus-5-5`, and `sol`/`luna` to `gpt-6-*`. 2.1.280 also
+  `issues/closed/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md` — **resolved 2026-09-23/24**: `opus` now resolves to `claude-opus-5-5`, and `sol`/`luna` to `gpt-6-*`. 2.1.280 also
   moves Pro and Team Standard plans' default from Sonnet to Opus, which reaches
   beebox only on paths that leave the model unset.
 - **2.1.280, runtime-relevant:** writes through a symlinked path are now judged
@@ -1140,7 +1175,7 @@ published `0.154.0` in lockstep.
   there stages one subtree, `getStatus(boxRoot)` still sees changes, and the
   fallback commit fires; a shell parked outside the box points `git` at another
   repository entirely. Filed as
-  `issues/bugs/2026-09-09-agent-shell-cwd-now-persists-across-turns.md`, to be
+  `issues/closed/bugs/2026-09-09-agent-shell-cwd-now-persists-across-turns.md`, to be
   fixed **before** the pin crosses rather than after — the pin is `0.3.263`
   today, so nothing is reachable yet.
   **Corrected 2026-09-11 — the paragraph above is wrong, and the issue is closed
@@ -1209,7 +1244,7 @@ Claude Code has no `2.1.264` section. The fifth such gap in under three weeks
   `test/frontend/lib/ui-scan/annotations.doctest.md`, which reproduces in
   isolation and fails identically at the previous `0.3.260` pin — a `main`-side
   red, filed as
-  `issues/bugs/2026-09-09-ui-scan-annotations-table-lists-two-absent-ids.md`
+  `issues/closed/bugs/2026-09-09-ui-scan-annotations-table-lists-two-absent-ids.md`
   because the latest `full-suite` run classified itself as an environment
   failure and filed nothing. `sdk-steering-probe`: all four steering behaviors
   pass.
@@ -1242,7 +1277,7 @@ different behavior, different price — with no beebox-side change. And it would
 be close to invisible afterwards: `codex-chat.ts:185` writes per-turn usage as
 `model: opts.model ?? "codex-default"`, so the ledger records the same string
 before and after the switch. Filed as
-`issues/decisions/2026-09-04-codex-default-model-becomes-astra.md`.
+`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`.
 
 The same default governs `.claude/skills/cross-model/`, which runs the Codex CLI
 for adversarial reviews; note that the skill invokes `codex` from `PATH` (a
@@ -1710,7 +1745,7 @@ interactive UI, provider plumbing (Bedrock/Vertex/Foundry/gateway), VS Code, and
   reproduce in two shapes on this machine.
   `pnpm -C beebox test`: **8,492 pass, 0 fail**. Note for future turns: that
   green does **not** speak to
-  `issues/bugs/2026-08-31-full-suite-red-future-dated-issues-7f47b493.md`, the
+  `issues/closed/bugs/2026-08-31-full-suite-red-future-dated-issues-7f47b493.md`, the
   red `test/frontend/trpc-directory-resolution.test.ts` filed on `main` the same
   day — that file does not appear in this suite at all, so the hourly
   `schedules/full-suite/` run covers tests this monitor's gate does not.
@@ -1883,7 +1918,7 @@ upstream but **not yet present on this machine**.
   process inspection, which probably does catch the case upstream fixed — a
   background session's worker has its cwd inside the worktree — so this is
   hardening rather than a demonstrated defect, filed as
-  `issues/code-quality/2026-08-27-worktree-sweep-ignores-git-worktree-lock.md`.
+  `issues/closed/code-quality/2026-08-27-worktree-sweep-ignores-git-worktree-lock.md`.
 - **`claude rm` and merged-but-unpushed branches.** *"Fixed `claude agents` and
   `claude rm` refusing to delete a session ('has commits that are not pushed
   anywhere') when its worktree branch was already merged into your checked-out
@@ -2246,7 +2281,7 @@ missing version.
   from the SDK. `sdk-steering-probe`: all four steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03241), [Claude Code 2.1.241](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21241)
 
-### Live bug found while reviewing 2.1.239 — `encodeProjectDir` no longer matches Claude Code (FILED 2026-08-25 as `issues/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md`; re-verified still live at that date)
+### Live bug found while reviewing 2.1.239 — `encodeProjectDir` no longer matches Claude Code (FILED 2026-08-25 as `issues/closed/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md`; re-verified still live at that date)
 
 Claude Code 2.1.239 lists: *"Fixed `claude -c`/resume picking up sessions from a
 different directory whose path differed only by characters like `_`, `-`, or

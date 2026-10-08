@@ -97,6 +97,10 @@ show — `→ select` / `→ Δmodel` / `→ (unhandled)`), then view it as a ca
 embed it. This exercises the skill, the dual-export contract, the compile route,
 and the viewer as one flow — the thing all the parts were built for.
 
+2026-10-07: the `canvas-loop-sketch` skill was removed; its loop is now the
+dev-only `canvas-loop/CLAUDE.md`, and box figure guidance no longer points box
+agents at the headless loop (a box cannot resolve the package).
+
 ## Already filed separately (not part of this, cross-linked)
 
 - [knowledge-audit-box-nesting](../closed/bugs/2026-07-15-knowledge-audit-box-nesting.md)

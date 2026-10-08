@@ -73,8 +73,8 @@ all.
      the same pinned binary is `/usr/local/bin/codex` on the production
      server, so a new model, a renamed flag, a changed transcript or event
      shape, or a login/device-auth change lands on boxes only when the pin
-     moves. Cross-model review (`.claude/skills/cross-model/`) also runs this
-     binary locally. Two-day settling applies as for the SDK.
+     moves. Cross-model review (`bin/cross-model-run`) also runs this binary
+     locally and owns the `codex exec` and `claude -p` flags it passes. Two-day settling applies as for the SDK.
 6. **Prepend one ledger entry per newly reviewed version.** Never delete older
    entries merely because their versions were applied. A Claude Code version
    that moved harness behavior gets its own entry, labeled as a Claude Code

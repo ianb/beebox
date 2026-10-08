@@ -20,6 +20,8 @@ when the agent picks the wrong X" is a real question.
 
 Skip it for one-file changes obvious from the diff, bug fixes where the fix is
 the artifact, and exploratory spikes (spike first; plan if it survives).
+In a design discussion, a reaction such as "I like it" is input for the next
+round; write the plan when the boxholder agrees the direction or asks for it.
 
 ## Writing a plan
 
@@ -65,6 +67,10 @@ writing and when reviewing.
   ratings. A finding that needs a number needs better prose.
 - **Searches that came back empty are findings.** Prior art, the issue queue,
   the code: "searched for X, found nothing" is information; write it down.
+- **Walk each user scenario before calling the plan ready.** Trace it hop by
+  hop against the real code: who writes what, which process runs, what the
+  person sees, what is left behind. When the plan depends on an external model
+  or API, call it with realistic data.
 - **Open questions live outside the first chunk.** A question inside the first
   implementation chunk is a missing decision — settle it in Direction.
 
@@ -94,8 +100,8 @@ a decision when the work becomes a BIG CHANGE without approval, introduces
 materially different scope, or a finding invalidates the chosen approach.
 
 Record the resulting decision in the plan. Honor an explicit human size limit;
-do not reinterpret it as aspirational. The separate `bbx-debug` three-failed-fix
-limit still applies during debugging.
+do not reinterpret it as aspirational. A separate limit applies during
+debugging: after three failed fixes, stop and re-plan.
 
 ## Reviewing an existing plan
 

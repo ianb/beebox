@@ -12,7 +12,7 @@ What it covers, so you know what there is to look up: the seven category
 directories and how to pick one; the frontmatter fields and who owns each
 (`priority:` and the out-of-git next action are the developer's, `needs:` gates like
 `manual-testing` have strict entry/exit rules, `discovered-in:` is provenance
-not ownership, `workstream:` is rarely meaningful); title and cross-link
+not ownership, `workstream:` is ownership and usually `unattached`); title and cross-link
 conventions that `doc-check` enforces; body style (STE, tensions not
 resolutions, `## Research` sections); what to do when you **re-encounter** an
 already-filed issue; closing and reopening, including `resolution:` values;

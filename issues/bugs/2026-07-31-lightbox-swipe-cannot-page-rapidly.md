@@ -68,7 +68,7 @@ to swipe inside.
 ## Related
 
 This is a direct consequence of the carousel design noted in
-`issues/features/2026-07-31-lightbox-zoom-leaves-one-axis-dead.md` — the plain
+`issues/closed/features/2026-07-31-lightbox-zoom-leaves-one-axis-dead.md` — the plain
 index swap that was the minimal alternative would not have had this failure
 mode, because there'd be no flight to interrupt. Worth weighing when picking a
 fix: (1) keeps the animation and fixes paging; reverting to an instant swap

@@ -293,13 +293,26 @@ export interface BuildContextBlockParams {
   stepLineRange?: string;
   precheckOutput?: string;
   directive?: string;
+  /** The schedule this run belongs to, when a scheduled `runs:` started it (`BBX_SCHEDULE_NAME`). */
+  scheduleName?: string;
+}
+
+/** What a step agent in a scheduled run is told about ending it with a summary (`core/schedule/summary.ts`). */
+function scheduledRunBlock(scheduleName: string): string {
+  return `<scheduled-run>
+This procedure is running as the scheduled task "${scheduleName}". The boxholder sees each run's summary on the dashboard. Before you finish, write one:
+
+    bbx run-summary "<one line: what this run did>" --body "<a few Markdown lines: what changed, what was skipped and why>"
+
+Add \`--priority attention\` only when the boxholder should look at this run (something failed, needs a decision, or is unusual); a routine run is \`normal\`, the default. Longer detail goes in \`--notes\`. A later \`bbx run-summary\` in the same run replaces an earlier one.
+</scheduled-run>`;
 }
 
 /**
  * Build the context block prepended to agent system prompts.
  */
 export function buildContextBlock(params: BuildContextBlockParams): string {
-  const { boxRoot, runCardPath, stepId, procedurePath, stepLineRange, precheckOutput, directive } = params;
+  const { boxRoot, runCardPath, stepId, procedurePath, stepLineRange, precheckOutput, directive, scheduleName } = params;
   const date = getBoxTime(boxRoot).toISOString().slice(0, 10);
   const stepRef = stepLineRange
     ? `${stepId} (defined at ${procedurePath} ${stepLineRange})`
@@ -326,6 +339,8 @@ ${precheckOutput}
 ${directive}
 </directive>`;
   }
+
+  if (scheduleName !== undefined) block += `\n\n${scheduledRunBlock(scheduleName)}`;
 
   return block;
 }

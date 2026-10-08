@@ -24,7 +24,7 @@ workstream:
   agent: claude
   # Drift-or-regression is a judgment over screenshots and git history, and the
   # session may edit committed test files off the back of it. One run a week.
-  model: opus
+  model: claude-opus-5-5
   effort: high
   worktree: true
   # Nothing carries between weeks: the edited tours, the filed issues and the

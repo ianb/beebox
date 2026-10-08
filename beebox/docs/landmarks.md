@@ -188,9 +188,8 @@ one job:
 
 - **Landmark menu** (the place pill's left half) says where the conversation
   is and where it can move. Its first row, `Box: <name>`, opens the box
-  screen (`/<box>/box`) with a full page load; the box screen holds the
-  box-wide pages (Dashboard, Browse, History, Storage summary), the
-  `nav.card` shortcuts, and the other boxes (see
+  screen (`/<box>/box`) with a full page load; the box screen holds recent
+  chats, the `nav.card` shortcuts, and the other boxes (see
   [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
   landmark**, which opens the page above. Then every landmark as a row —
   symbol, label, and its fresh-chat count — with a filter field past 20
@@ -204,6 +203,11 @@ one job:
   and grouped expands as disclosures. Links open in the companion pane on
   chat, and navigate normally elsewhere. The folder half renders only when
   a landmark resolves for the directory.
+
+The box-wide pages (Dashboard, Browse, History, Storage summary) are in the
+**avatar menu** at the right of the bar, below Settings and Admin
+(`frontend/src/components/AppNav/BoxPageMenuItems.tsx`). The rows keep the ids
+`bbx-box-menu-dashboard`, `-browse`, `-history`, and `-inventory`.
 
 ### The browser tab, and everywhere else a box is drawn
 
@@ -232,7 +236,7 @@ box-name setting anywhere.
 | Schema registration | `src/schemas.ts` |
 | Expand evaluator | `src/core/landmark/` (resolves queries, applies templates, dedups, orders) |
 | Merged activity surface | `src/frontend/src/components/landmarks/` (`LandmarksList`, `LandmarkSection`, `LandmarkSessions`) |
-| Landmarks page | `src/frontend/src/pages/landmarks/LandmarksPage.tsx` |
+| Landmarks card | `src/frontend/src/renderers/system-cards.tsx` (the `/landmarks` route redirects to the canonical card) |
 | Chat buckets per landmark | `chat.byLandmark` (`src/webapp/trpc/routers/chat/router.ts`) |
 | App-bar landmark / folder menus | `src/frontend/src/components/AppNav/PlacePill.tsx` + the bar's chrome slots |
 | API endpoint | tRPC procedure under `src/webapp/trpc/routers/` (lists landmark cards + resolves expands server-side) |

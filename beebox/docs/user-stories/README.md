@@ -262,7 +262,7 @@ catalog, or before a release, do a full run.
 - **Point the browser pass at a box with `agentBrowsing: "owner"`.** The 2026-08-21 run's key
   cleared the box auth wall but was not the box owner, so owner-gated surfaces returned 403 —
   most of the 57 inconclusive checks, a third of the browser pass. Since
-  `docs/plans/agent-browsing-owner.md` the browse key acts as the owner on a box whose
+  `docs/implemented-plans/agent-browsing-owner.md` the browse key acts as the owner on a box whose
   `config/box.json` says so (test1 and its clones do); check the box before the run.
 - **Re-check the directory carve.** The 14 territories were verified against the tree as of
   2026-08-21. New top-level directories under `src/` will silently belong to nobody.

@@ -13,7 +13,7 @@ owner.
 
 **Issues addressed:**
 
-- [`issues/bugs/2026-08-08-google-owner-invites-require-local-owner.md`](../../../issues/closed/bugs/2026-08-08-google-owner-invites-require-local-owner.md)
+- [`issues/closed/bugs/2026-08-08-google-owner-invites-require-local-owner.md`](../../../issues/closed/bugs/2026-08-08-google-owner-invites-require-local-owner.md)
 
 ## Stated preferences this plan trades against
 

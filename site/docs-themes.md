@@ -61,7 +61,7 @@ chat review) rather than retrieval at question time.
 
 **Where it is thin.** Contradiction and supersession are not a recorded
 state: when a new source disagrees with a claim already on a card, nothing
-makes the card say so (`issues/exploration/2026-09-16-karpathy-llm-wiki-pattern.md`).
+makes the card say so (`issues/closed/exploration/2026-09-16-karpathy-llm-wiki-pattern.md`).
 A superseded claim survives only in git, where nothing reads it.
 
 **Pages.** `02-what-you-can-use-it-for.md`, `concepts/enriched-markdown.md`,
@@ -239,8 +239,8 @@ the repository.
 **Where it is thin.** Pull requests are not solicited yet. One maintainer is
 a bus factor, and the project says so.
 
-**Pages.** `11-status-and-maturity.md`, `dev/development-process.md`,
-`dev/agent-coding.md`.
+**Pages.** `11-status-and-maturity.md` and the development-process section,
+`dev/`.
 
 ## 11. Groups get a box each
 

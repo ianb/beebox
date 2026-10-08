@@ -11,7 +11,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readlinkSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -22,7 +21,6 @@ import {
   DOCS_SENTINEL,
   buildAgentsMd,
   generateAgentsFiles,
-  generateSkillLinks,
 } from "./generate-agents-md.js";
 import {
   buildCodexAgentToml,
@@ -156,81 +154,6 @@ test("refuses to overwrite a git-tracked AGENTS.md", () => {
   );
   git("rm", "-q", "--cached", "sub/AGENTS.md");
   git("commit", "-q", "-m", "untrack");
-});
-
-test("links tracked Claude skills into the Codex skill directory", () => {
-  mkdirSync(join(repo, ".claude", "skills", "finish"), { recursive: true });
-  writeFileSync(
-    join(repo, ".claude", "skills", "finish", "SKILL.md"),
-    "---\nname: finish\n---\n",
-  );
-  writeFileSync(
-    join(repo, ".claude", "skills", "finish", "helper.txt"),
-    "linked asset\n",
-  );
-  git(
-    "add",
-    ".claude/skills/finish/SKILL.md",
-    ".claude/skills/finish/helper.txt",
-  );
-  git("commit", "-q", "-m", "add skill");
-
-  assert.deepEqual(generateSkillLinks(repo), [".agents/skills/finish"]);
-  assert.equal(
-    readlinkSync(join(repo, ".agents", "skills", "finish")),
-    join("..", "..", ".claude", "skills", "finish"),
-  );
-  assert.equal(
-    readFileSync(
-      join(repo, ".agents", "skills", "finish", "helper.txt"),
-      "utf8",
-    ),
-    "linked asset\n",
-  );
-});
-
-test("regeneration removes stale generated skill links", () => {
-  git("rm", "-q", "-r", ".claude/skills/finish");
-  git("commit", "-q", "-m", "remove skill");
-
-  assert.deepEqual(generateSkillLinks(repo), []);
-  assert.equal(existsSync(join(repo, ".agents", "skills", "finish")), false);
-});
-
-test("refuses to overwrite an existing native Codex skill, and keeps going", () => {
-  mkdirSync(join(repo, ".claude", "skills", "finish"), { recursive: true });
-  writeFileSync(
-    join(repo, ".claude", "skills", "finish", "SKILL.md"),
-    "---\nname: finish\n---\n",
-  );
-  mkdirSync(join(repo, ".claude", "skills", "later"), { recursive: true });
-  writeFileSync(
-    join(repo, ".claude", "skills", "later", "SKILL.md"),
-    "---\nname: later\n---\n",
-  );
-  mkdirSync(join(repo, ".agents", "skills", "finish"), { recursive: true });
-  writeFileSync(
-    join(repo, ".agents", "skills", "finish", "SKILL.md"),
-    "native\n",
-  );
-  git("add", ".claude/skills/finish/SKILL.md", ".claude/skills/later/SKILL.md");
-  git("commit", "-q", "-m", "restore skill");
-
-  // The native skill is left untouched — that protection is the point.
-  const written = generateSkillLinks(repo);
-  assert.equal(
-    readFileSync(join(repo, ".agents", "skills", "finish", "SKILL.md"), "utf8"),
-    "native\n",
-  );
-
-  // ...but it no longer aborts the run. `later` sorts after `finish`, so under
-  // the old throw-on-first-conflict behavior it was never linked at all — one
-  // unexpected directory silently cost every skill after it.
-  assert.ok(written.includes(".agents/skills/later"));
-  assert.equal(
-    readlinkSync(join(repo, ".agents", "skills", "later")),
-    join("..", "..", ".claude", "skills", "later"),
-  );
 });
 
 test("Codex agent TOML maps the Claude model alias and keeps the body verbatim", () => {

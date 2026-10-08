@@ -108,7 +108,7 @@ interact like iOS users.
   `ComposerDraftRepository` rather than entering capture staging.
 - **Authenticated chat-file upload — reuse server behavior.** The web helper
   that used to model this was removed with the composer's Add-files merge
-  (`issues/features/2026-08-03-attach-vs-upload-menu-confusing.md`); the route
+  (`issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md`); the route
   itself (`src/webapp/routes/chat-uploads.ts` (moved to `beebox/src/webapp/routes/chat/uploads.ts`)) and the native client
   (`../../../ios-app/BeeBox/Services/ChatAPI.swift`) are what remain. Do not
   add another server endpoint.

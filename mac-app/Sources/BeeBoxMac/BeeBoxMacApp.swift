@@ -1,5 +1,4 @@
 import AppKit
-import Sparkle
 import SwiftUI
 
 @main
@@ -8,7 +7,7 @@ struct BeeBoxMacApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            BoxMenu(runtime: delegate.runtime, updater: delegate.updater, quit: delegate.stopAndExit)
+            BoxMenu(runtime: delegate.runtime, updates: delegate.updates, quit: delegate.stopAndExit)
         } label: {
             BoxIcon(runtime: delegate.runtime)
         }
@@ -18,11 +17,7 @@ struct BeeBoxMacApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let runtime = BoxRuntime()
-    /// Sparkle, only when the bundle carries a feed and the update-signing
-    /// key; an updater without the key would fail every check.
-    let updater: SPUStandardUpdaterController? = BundleConfig.updatesConfigured
-        ? SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
-        : nil
+    let updates = Updates()
 
     private var termSource: DispatchSourceSignal?
 
@@ -69,7 +64,7 @@ struct BoxIcon: View {
 
 struct BoxMenu: View {
     @ObservedObject var runtime: BoxRuntime
-    let updater: SPUStandardUpdaterController?
+    @ObservedObject var updates: Updates
     let quit: () -> Void
 
     var body: some View {
@@ -93,10 +88,14 @@ struct BoxMenu: View {
         Button("Show Log") { NSWorkspace.shared.open(Paths.log) }
         Button("Show App Log") { NSWorkspace.shared.open(Paths.appLog) }
         Divider()
-        Button("Check for Updates…") { updater?.checkForUpdates(nil) }
-            .disabled(updater == nil)
+        if let version = updates.available {
+            Button("Update to Bee Box \(version)…") { updates.checkForUpdates() }
+        }
+        Button("Check for Updates…") { updates.checkForUpdates() }
+            .disabled(!updates.enabled)
         Text("Bee Box \(BundleConfig.version)")
         Divider()
+        Button("Uninstall Bee Box…") { Uninstaller.run { [runtime] in await runtime.stop() } }
         Button(runtime.isRunning ? "Stop Box and Quit" : "Quit Bee Box") { quit() }
     }
 }

@@ -34,7 +34,7 @@ Key behaviors:
   `deferred` outcome that neither increments nor resets
   `consecutiveFailures`, and `bbx health` shows `waiting`, not `failing`.
   The boxholder is notified once per episode with the reset time. Design:
-  `docs/plans/deferred-recoverable-agent-failures.md`.
+  `docs/implemented-plans/deferred-recoverable-agent-failures.md`.
 - **Inconclusive runs (no verdict)** — A script whose work completed but whose
   check never decided exits **3** (`INCONCLUSIVE_EXIT_CODE`) and prints one
   `Inconclusive: …` line on stderr (`bbx procedure run` when a validate step's

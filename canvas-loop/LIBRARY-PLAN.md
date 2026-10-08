@@ -7,7 +7,7 @@ eslint plugin, Claude plugin (skill + maybe rule), React display component,
 usable as a figure in beebox **without being bound to beebox**.
 Treat the package as experimental: the API is expected to keep moving as
 agent exercises teach us more (see the README's EXPERIMENTAL banner). Design
-record: `issues/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`.
+record: `issues/closed/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`.
 
 ## Status (2026-07-14): all implementation tracks shipped
 
@@ -90,7 +90,7 @@ canvas-loop/
 
 ## ESLint plugin (`./eslint`)
 
-**Status (2026-07-14): shipped** — `src/eslint/index.mjs` with
+**Status (2026-07-14): shipped** — `src/eslint/plugin.ts` with
 `configs.recommended`; the package self-hosts it. See `canvas-loop/CHANGELOG.md`.
 
 - `tea-lint.mjs` rules move to `src/eslint/` as TS with the standard plugin
@@ -101,7 +101,8 @@ canvas-loop/
 
 ## Claude plugin (`claude-plugin/`)
 
-**Status (2026-07-14): shipped** — `claude-plugin/.claude-plugin/plugin.json`
+**Status (2026-10-07): removed** — the skill's content moved to
+`canvas-loop/CLAUDE.md`. **Earlier status (2026-07-14): shipped** — `claude-plugin/.claude-plugin/plugin.json`
 + `skills/canvas-loop-sketch/SKILL.md`; wired into `.claude/skills/` by copy
 (`pnpm run sync:claude-skill`, source-of-truth banner in the canonical file —
 the harness reads real files, so a symlinked skill dir isn't reliably

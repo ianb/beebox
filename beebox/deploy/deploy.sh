@@ -444,7 +444,7 @@ step "Building CLI bundle (dist/cli.mjs + dist/cards)..."
 (cd "$CHECKOUT/beebox" && node src/scripts/build-cli/build/bundle.ts >/dev/null)
 # box-docs/ (the engine's reference docs, gitignored) rides along in the rsync
 # the same way dist/ does. Any bbx engine activity on the server would rewrite it,
-# but the per-box docs refresh below skips a dirty box, so build it here
+# the per-box docs refresh below runs once per box, so build it once here
 # rather than rely on that.
 step "Building package reference docs (box-docs/)..."
 (cd "$CHECKOUT/beebox" && node --import tsx src/scripts/build-box-docs.ts)

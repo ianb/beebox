@@ -532,7 +532,7 @@ Track C document), then remove `tools.json`'s `scripted` mechanism, the
 `isPathInScriptedApp` grant (`bin/router-docs.ts:98-109`), and the bespoke
 save route (`bin/router.ts:1233-1238`). `/dev/` HTML then always gets the
 bare `sandbox` CSP. Close
-`issues/features/2026-07-24-dev-scripted-apps-separate-origin.md` as
+`issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md` as
 implemented-by-relocation.
 
 **Why this needs to change.** The exemption is an accepted origin-wide grant
@@ -669,14 +669,14 @@ step.
 - **Remote/Tailscale access to the exhibits origin** — loopback only;
   exposing a second origin over the tailnet is its own auth design.
 - **Video capture/demo tooling** — different axis
-  (`issues/exploration/2026-08-14-proving-it-works-demo-video-plugin.md`).
+  (`issues/closed/exploration/2026-08-14-proving-it-works-demo-video-plugin.md`).
 - **Unifying with the box feedback pipeline** (`bbx feedback`,
   `issues/features/2026-08-06-capture-feedback-from-chat.md`,
   `issues/docs-and-chores/2026-07-14-feedback-collection-cadence.md`) — that
   pipeline is box-domain; dispositions are dev-workflow. Revisit only if the
   two visibly converge.
 - **Pointing at live app UI** —
-  (`issues/features/2026-08-14-agent-can-see-and-point-at-the-interface.md`)
+  (`issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md`)
   is the agent pointing at *the box UI's own chrome*; exhibits present
   *agent-made* content. Different problem, noted to prevent vocabulary
   collision.

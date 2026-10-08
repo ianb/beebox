@@ -73,6 +73,8 @@ export interface RunSummary {
   deferredActive: number;
   belowThreshold: number;
   belowTitleThreshold: number;
+  /** Sessions skipped for having too few real user turns. */
+  tooFewTurns: number;
   /** Sessions this machine did not originate, so it does not review them. */
   foreignOrigin: number;
   /** Qualified sessions beyond --max-sessions; they wait for the next run. */
@@ -95,6 +97,7 @@ function emptySummary(): RunSummary {
     deferredActive: 0,
     belowThreshold: 0,
     belowTitleThreshold: 0,
+    tooFewTurns: 0,
     foreignOrigin: 0,
     overflow: 0,
   };
@@ -176,6 +179,7 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
       summary.deferredActive = discovery.deferredActive.length;
       summary.belowThreshold = discovery.belowThreshold;
       summary.belowTitleThreshold = discovery.belowTitleThreshold;
+      summary.tooFewTurns = discovery.tooFewTurns;
       summary.foreignOrigin = discovery.foreignOrigin;
 
       // One unreadable transcript or unwritable husk must not cost the night's

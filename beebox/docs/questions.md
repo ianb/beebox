@@ -317,7 +317,7 @@ agent-guide context:
 ## NOT in scope
 
 - **In-chat interactive questions.** Rejected, not deferred
-  (`issues/closed/2026-06-09-in-chat-interactive-questions.md`): synchronous
+  (`issues/closed/features/2026-06-09-in-chat-interactive-questions.md`): synchronous
   chat is a different situation from the async queue — the agent just asks
   in prose, and retrospectives convert chat into learning. `_bookkeeping/questions/`
   is the only structured-question primitive.

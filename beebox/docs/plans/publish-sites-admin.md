@@ -13,11 +13,11 @@ When an agent prepares a small site from box data, the boxholder should be able 
 
 **Issue relationship:**
 
-- `issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md` — retain API-based Access setup and complete its pending real-account verification in the new per-publication hosting shape; close only after that live proof.
+- `issues/closed/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md` — retain API-based Access setup and complete its pending real-account verification in the new per-publication hosting shape; close only after that live proof.
 
-This addresses the publication-approval portion of `issues/features/2026-07-19-publish-pages-resume.md`; it does not resolve that broader issue's docs, submission loop, or knowledge-audit work by itself.
+This addresses the publication-approval portion of `issues/closed/features/2026-07-19-publish-pages-resume.md`; it does not resolve that broader issue's docs, submission loop, or knowledge-audit work by itself.
 
-Related but not resolved: `issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md` (submission forms are out of scope); `issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md` (existing Worker hardening); `issues/decisions/2026-09-05-publish-connector-env-credential-bypasses-grants.md` (submission connector credential path).
+Related but not resolved: `issues/closed/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md` (submission forms are out of scope); `issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md` (existing Worker hardening); `issues/closed/decisions/2026-09-05-publish-connector-env-credential-bypasses-grants.md` (submission connector credential path).
 
 ## Smallest fix and budget
 
@@ -243,7 +243,7 @@ None. If approved, this sibling plan supersedes the conflicting view-snapshot an
 
 ## NOT in scope
 
-- Submission forms and pull connector: they are not needed to serve a site and the form-producing path is absent (`issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md`).
+- Submission forms and pull connector: they are not needed to serve a site and the form-producing path is absent (`issues/closed/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md`).
 - Automatic mapping of a private box ref to another publication's URL: it can reveal that publication's capability or audience, so v1 maps refs only to explicitly emitted routes in the same site. Bespoke HTML may still contain ordinary explicit public hyperlinks; the existing link/leak scan policy continues to apply.
 - Live card/API access from the Worker: published pages are generated snapshots and never call into the box.
 - Exact custom-hostname assignment for an existing disabled public or secret publication is covered by the approved sibling plan, [`publish-custom-domain-admin.md`](../unimplemented-plans/publish-custom-domain-admin.md). Wildcard Workers Routes, Workers for Platforms, shared multi-tenant buckets, and public hub serving remain out of scope.

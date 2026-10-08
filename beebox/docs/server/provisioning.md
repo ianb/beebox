@@ -159,7 +159,7 @@ journalctl -u beebox-scheduler -f
 systemctl restart beebox-hub
 ```
 
-### Git-drain drop-in (`deploy/systemd/git-drain.conf`)
+### Git-drain drop-in (`deploy/systemd/all/git-drain.conf`)
 
 Both units need `KillMode=mixed` and `TimeoutStopSec=60`. Without them systemd
 signals every process in the cgroup on stop, so a `git` a box child is running

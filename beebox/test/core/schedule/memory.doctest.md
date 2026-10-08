@@ -190,11 +190,11 @@ reason from an exit-75 marker (`test/cli/commands/tick.defer.doctest.md`); a
 
 `bbx procedure run` inside a schedule inherits the tick's environment, and its
 shell steps rebuild their environment through the script-env allowlist
-(`src/core/procedure/shell.ts`), which lists the six names.
+(`src/core/procedure/shell.ts`), which lists the seven names.
 
 ```ts
 const box = await makeTmpBox();
-const names = ["BBX_SINCE_COMMIT", "BBX_SINCE_TIME", "BBX_CARRY_IN", "BBX_CARRY_OUT", "BBX_DEFER_FILE", "BBX_SCHEDULE_NAME"];
+const names = ["BBX_SINCE_COMMIT", "BBX_SINCE_TIME", "BBX_CARRY_IN", "BBX_CARRY_OUT", "BBX_DEFER_FILE", "BBX_SCHEDULE_NAME", "BBX_SUMMARY_FILE"];
 for (const name of names) process.env[name] = `value-of-${name}`;
 const shell = await runShell(box.root, names.map((n) => `echo "$${n}"`).join("\n"));
 for (const name of names) delete process.env[name];
@@ -205,6 +205,7 @@ value-of-BBX_CARRY_IN
 value-of-BBX_CARRY_OUT
 value-of-BBX_DEFER_FILE
 value-of-BBX_SCHEDULE_NAME
+value-of-BBX_SUMMARY_FILE
 ```
 
 ```ts cleanup

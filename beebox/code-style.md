@@ -71,6 +71,7 @@ Right-sized: defense concentrates at real boundaries; interior code trusts its t
 6. Discriminated-union dispatch uses `assertNever`, never an invented `default` fallback.
 7. Process-supervision code keeps the biggest defensive budget — each catch commented with the race it absorbs (`workstreams-app/src/router/server/listener.ts` is the model).
 8. Before adding a check, ask what produced the value: same-repo typed code → an assertion or nothing; disk/network/another process → keep the check.
+9. Nothing retries forever. Bound a retry in time (a week is acceptable), then move the item to a visible terminal state that keeps the user's data. A definitive remote answer (404/410) goes terminal at once.
 
 ### Lint rule suppression
 

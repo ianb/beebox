@@ -157,7 +157,7 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
   entries.push({
     title: "Procedure Context Block (template)",
     source: "src/core/procedure/engine/core.ts → buildContextBlock()",
-    scope: "Prepended to every procedure agent's system prompt. Provides the agent with the current date, run card path, step ID, and any precheck output or runtime directive.",
+    scope: "Prepended to every procedure agent's system prompt. Provides the agent with the current date, run card path, step ID, any precheck output or runtime directive, and, in a scheduled run, the instruction to end with `bbx run-summary`.",
     text: `# Context
 
 Current date: \${date}
@@ -170,7 +170,9 @@ Step: \${stepId} (defined at \${procedurePath} \${stepLineRange})
 
 <directive>
 \${directive}
-</directive>`,
+</directive>
+
+\${scheduledRunBlock — only when a schedule started the run}`,
   });
 
   return entries;

@@ -18,7 +18,7 @@ This skill is the **process** behind two committed artifacts:
 conventional reporting policy (how to report a vulnerability, supported
 versions, pointers to the two documents above) — the file GitHub recognizes and
 surfaces. It is hand-maintained and stable; this skill must never rewrite it or
-recreate a `beebox/SECURITY.md`. Touch it only if a *link* here goes
+add a second copy under `beebox/`. Touch it only if a *link* here goes
 stale.
 
 Follow this rubric; disclose deviations in the draft. Completion is a draft

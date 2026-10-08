@@ -1,5 +1,5 @@
 # slopo — embedding-based near-duplicate detector config for beebox/src.
-# See the cb-codehealth skill (§1) for how and when to run this.
+# Opt-in, never a CI gate; triage notes: beebox/docs/implemented-plans/slopo-evaluation.md.
 #
 # Run from THIS directory so `source_dir` resolves to beebox/src and the
 # cluster hashes in slopo.ignore.txt stay stable:

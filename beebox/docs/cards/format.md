@@ -98,7 +98,7 @@ the human-facing display surface: it's the same query (a `glob` plus optional
 in a directory gives that subtree its own plate.
 `_content/plate.todo-view.card` is the box-wide instance. Design record:
 `docs/implemented-plans/todo-annotation.md` and
-`docs/plans/todo-collection.md`.
+`docs/implemented-plans/todo-collection.md`.
 
 **Where a todo sits is what it means.** Both surfaces group todos by the card
 they were written in, then by the heading above them, then under the todo

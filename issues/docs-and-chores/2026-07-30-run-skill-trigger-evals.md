@@ -11,7 +11,8 @@ priority: backlog
 
 The checkout has 24 repository skills. Prompt-calibration shortened the original
 23 descriptions and revised the shared guidance; the later browser-task skill
-also received a focused workflow correction. These edits and static reviews do
+also received a focused workflow correction (on 2026-10-07 it moved into the
+product as a managed box skill and left this checkout). These edits and static reviews do
 not establish native skill activation rates.
 
 The historically vendored `.agents/skills/skill-creator/scripts/run_eval.py`
@@ -69,7 +70,7 @@ Two of their harness details worth copying regardless of which tool we use:
 ## Why it matters here
 
 Our skills overlap by design in ways an eval would stress: `bbx-debug` vs
-`bbx-codehealth` vs `/code-review`; `bbx-plan` vs `launch-worktree-session`;
+`/code-review`; `bbx-plan` vs `launch-worktree-session`;
 `bbx-guide-testing` vs `bbx-debug`; the three `bbx-guide-*` against each other. Some
 of those boundaries are stated in the descriptions and have never been checked.
 
@@ -82,3 +83,5 @@ whether it worked.
 Open questions before doing this: does the vendored `skill-creator` eval path
 still run against current Claude Code, what does a run cost for 16 skills, and
 is a one-off baseline enough or does it want to be a periodic check?
+
+**Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific content moved to `beebox/docs/testing.md` ("Choosing an instrument", "Reproducing a bug") and `beebox/frontend.md`.

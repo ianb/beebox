@@ -3,6 +3,7 @@
 import * as path from "node:path";
 import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../../agent/invoke/core.js";
 import { invariant } from "../../../shared/invariant.js";
+import { MEMORY_ENV } from "../../schedule/memory.js";
 import { fmt } from "../../../lib/format.js";
 import { loadAgentEngine } from "../../box/config.js";
 import { loadEffectiveBoxModel } from "../../model-policy.js";
@@ -100,6 +101,8 @@ export async function runRunAgents(params: RunPhaseParams): Promise<RunAgentOutc
   // step resolves to GLM, not silently to first-party Opus.
   const provider = providerOf((await loadEffectiveBoxModel(boxRoot)) ?? "");
   const relRunCardPath = path.relative(boxRoot, runCardPath);
+  // Set only when a scheduled `runs:` started this procedure and the run can take a summary.
+  const scheduleName = process.env[MEMORY_ENV.summaryFile] ? process.env[MEMORY_ENV.scheduleName] : undefined;
   let sessionId: string | undefined;
 
   for (const agentDef of step.run.agents) {
@@ -118,6 +121,7 @@ export async function runRunAgents(params: RunPhaseParams): Promise<RunAgentOutc
       ...(stepLineRange !== undefined && { stepLineRange }),
       ...(params.precheckOutput !== undefined && { precheckOutput: params.precheckOutput }),
       ...(params.directive !== undefined && { directive: params.directive }),
+      ...(scheduleName !== undefined && { scheduleName }),
     });
     const agent = agentFactory({
       name: `procedure-${procedure.name}-${step.id}`,

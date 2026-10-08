@@ -2,7 +2,8 @@
 # Fetch Sparkle.xcframework into Vendor/ (gitignored) for the package's local
 # binary target. SwiftPM's own binary-artifact download hung indefinitely on
 # the build Mac (0% CPU, no traffic) while curl fetched the same URL in under
-# a second, so the archive is fetched here, pinned by SHA-256.
+# a second, so the archive is fetched here, pinned by SHA-256. Also unpacks
+# Sparkle's release tools into the cache.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -12,7 +13,8 @@ URL="https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERS
 CACHE="${BEEBOX_BUILD_CACHE:-$HOME/Library/Caches/beebox-mac-build}"
 STAMP="Vendor/.sparkle-${SPARKLE_VERSION}"
 
-[[ -f "$STAMP" && -d Vendor/Sparkle.xcframework ]] && exit 0
+TOOLS="$CACHE/sparkle-${SPARKLE_VERSION}"
+[[ -f "$STAMP" && -d Vendor/Sparkle.xcframework && -x "$TOOLS/bin/generate_appcast" ]] && exit 0
 
 mkdir -p "$CACHE" Vendor
 zip="$CACHE/Sparkle-${SPARKLE_VERSION}-spm.zip"
@@ -20,4 +22,8 @@ zip="$CACHE/Sparkle-${SPARKLE_VERSION}-spm.zip"
 [[ "$(shasum -a 256 "$zip" | cut -d' ' -f1)" == "$SHA256" ]] || { echo "fetch-sparkle: SHA-256 mismatch for $zip" >&2; exit 1; }
 rm -rf Vendor/Sparkle.xcframework Vendor/.sparkle-*
 unzip -q "$zip" 'Sparkle.xcframework/*' -d Vendor
+# Release tools (generate_keys, generate_appcast, sign_update) go to the
+# cache, outside the repo: $TOOLS/bin.
+rm -rf "$TOOLS" && mkdir -p "$TOOLS"
+unzip -q "$zip" 'bin/*' -d "$TOOLS"
 touch "$STAMP"

@@ -362,6 +362,7 @@ case "$cmd" in
     requested_agent=""
     fresh=false
     at_final_sha=false
+    allow_sigils=false
     briefing_args=()
     while [ $# -ge 1 ]; do
       case "$1" in
@@ -369,6 +370,7 @@ case "$cmd" in
         --agent=*) requested_agent="${1#--agent=}"; shift ;;
         --fresh) fresh=true; shift ;;
         --at-final-sha) at_final_sha=true; shift ;;
+        --allow-sigils) allow_sigils=true; shift ;;
         --) shift; briefing_args=("$@"); break ;;
         -) [ -n "$name" ] || { echo "workstreams resume: workstream name must precede briefing" >&2; exit 1; }; briefing_args=("$@"); break ;;
         -*) echo "workstreams resume: unknown option $1" >&2; exit 1 ;;
@@ -385,12 +387,13 @@ case "$cmd" in
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
     wt_paths_init "$REPO_DIR" || exit 1
     if ! [ -n "$name" ] || ! wt_paths_valid_name "$name"; then
-      echo "usage: workstreams resume [--agent claude|codex] [--fresh] [--at-final-sha] <name> [--] [<briefing> | - | @file]" >&2
+      echo "usage: workstreams resume [--agent claude|codex] [--fresh] [--at-final-sha] [--allow-sigils] <name> [--] [<briefing> | - | @file]" >&2
       exit 1
     fi
     # shellcheck source=workstream-briefing.sh
     . "$REPO_DIR/bin/lib/workstream-briefing.sh"
     workstream_read_briefing "workstreams resume" ${briefing_args[@]+"${briefing_args[@]}"}
+    workstream_check_briefing_sigils "workstreams resume" "$REPO_DIR" "$allow_sigils" || exit 1
     # shellcheck source=session-registry.sh
     . "$REPO_DIR/bin/lib/session-registry.sh"
     # shellcheck source=workstream-resume.sh

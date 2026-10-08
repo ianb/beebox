@@ -109,6 +109,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "BBX_CARRY_OUT", // a temp file path the run writes the next carry to.
   "BBX_DEFER_FILE", // a temp file path `--or-skip` writes its defer reason to.
   "BBX_SCHEDULE_NAME", // the schedule card's stem; `bbx notify`'s source is `schedule:<name>`.
+  "BBX_SUMMARY_FILE", // a temp file path `bbx run-summary` writes the run's summary to.
 
   // --- Test/scenario harness (src/scenario/runner.ts sets these on process.env
   //     precisely so its spawned `bbx wakeup`/`bbx finalize` children inherit them) ---

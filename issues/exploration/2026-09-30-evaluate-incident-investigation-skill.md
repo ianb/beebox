@@ -71,3 +71,5 @@ practice (level 3).
   is the natural sink.
 - **Where it goes.** A Phase 6 addition to bbx-debug, a separate post-incident
   skill, or the prod-incident path only.
+
+**Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific content moved to `beebox/docs/testing.md` ("Choosing an instrument", "Reproducing a bug") and `beebox/frontend.md`.

@@ -7,8 +7,8 @@ allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 # bbx-migration
 
 A migration is a **one-shot transform of card data already on disk** — renames,
-field strips, format flips, refactors. The full how-to (the `bbx migrate` runner,
-the per-box `config/migrations.jsonl` manifest, the harness, the migrator table)
+field strips, format flips, refactors. The full how-to (the `bbx engine migrate` runner,
+the per-box `_config/migrations.jsonl` manifest, the harness, the migrator table)
 lives in **`beebox/docs/cards/migrations.md`** — read it before writing one.
 This skill is the part the runbook can't enforce: deciding *whether* you need a
 migration, *which kind*, and not repeating the scars.
@@ -30,7 +30,7 @@ AND still means the right thing*. So:
   "It still parses" is exactly when silent corruption hides.
 
 If you're changing on-disk shape and *any* box already holds the old form, you
-need a migration. New boxes are seeded all-applied by `bbx init`, so they skip it.
+need a migration. New boxes are seeded all-applied by `bbx engine init`, so they skip it.
 
 **The compatibility horizon is short (as of 2026-08).** Every box in existence
 lives on the development machine or the production server. Once those are
@@ -45,7 +45,7 @@ revisit this note then, not before.)
 
 ## Which kind — script (default) or agent-applied
 
-- **Script migration** (`scripts/migrate/<name>.ts`) — the default for anything
+- **Script migration** (`beebox/src/scripts/migrate/<name>.ts`) — the default for anything
   **deterministic**. Free, exact, repeatable.
 - **Agent-applied (procedure) migration** — only when the transform needs
   *judgment* on arbitrary box-authored code/prose (the first was `view-card-shape`,
@@ -75,7 +75,7 @@ skip them:
   migrator and was left in XML; landmark variants with fields outside
   `<navigation>` slipped through. Every one was a silently-unmapped field.)
 - **Be idempotent.** Detect the post-migration shape and skip it — a second run
-  reports "already migrated N", never re-does or errors. `bbx migrate` re-runs
+  reports "already migrated N", never re-does or errors. `bbx engine migrate` re-runs
   partial migrations on retry, and admins run scripts standalone to debug.
 - **Register append-only.** Add `{ name, script }` at the **end** of `MIGRATIONS`
   in `src/core/migrations.ts`. **Never reorder/rename/remove** existing entries —
@@ -84,13 +84,13 @@ skip them:
 - **Verify the generated per-box docs converged.** A schema/type change leaves
   every box's generated `.claude/rules/card-*.md`, `.claude/skills/`, and
   box-compiled `_content/docs/generated/` teaching the old shape, and
-  regeneration used to be purely activity-gated (`bbx init`, chat start, a
+  regeneration used to be purely activity-gated (`bbx engine init`, chat start, a
   `bbx wakeup` cycle) — the 2026-08-24 `document`→`pdf` scar: 3 of 6 prod boxes
-  kept `card-document.md` until a manual `bbx init` pass. `deploy.sh` now runs
-  `bbx docs refresh` per box right after the migration sweep, so this converges
-  on its own. It still **skips a dirty box**, so after the rollout confirm it
-  rather than assuming: grep each box for the old type name, `.claude/rules/`
-  and `_content/docs/generated/` included. (The engine reference docs at
+  kept `card-document.md` until a manual `bbx engine init` pass. The deploy's
+  `bbx engine migrate --sweep` now refreshes generated docs after migrating each
+  box, so this converges on its own. After the rollout, confirm it rather than
+  assuming: grep each box for the old type name, `.claude/rules/` and
+  `_content/docs/generated/` included. (The engine reference docs at
   `node_modules/beebox/box-docs/` aren't part of this hazard — they're rewritten
   from the running engine on every `generateDocs` call, so they can't go stale
   relative to the engine.)
@@ -106,7 +106,7 @@ the worked example (`view-card-shape.procedure.card`) are in the runbook; the
 non-negotiables, each a scar from the first one:
 
 - **Gate on a machine check, never the agent's word.** Only `validate.shells`
-  with `severity: abort` is enforced; `bbx migrate` *refuses* a procedure migration
+  with `severity: abort` is enforced; `bbx engine migrate` *refuses* a procedure migration
   without one (an agent that does nothing still "completes" a step otherwise).
 - **A render/run check misses *silent* breakage.** A renamed field can compile and
   render while doing the wrong thing — add a **static** check against the real

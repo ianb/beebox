@@ -8,7 +8,7 @@ serves the values written there**; spirit.md's "if the architecture contradicts
 this, the architecture is wrong" is meant literally (the boxholder wrote it and
 meant it, then forgot it existed — reasserted 2026-07-04).
 
-This directory replaces the former monolithic `docs/design.md`, rewritten to
+This directory replaces the former monolithic design doc, rewritten to
 the boxholder's rulings in [`../implemented-plans/design-reconciliation.md`](../implemented-plans/design-reconciliation.md)
 (2026-07-04). Anything labeled *aspiration* is deliberate design intent the
 code doesn't fill yet — don't read it as description.

@@ -11,7 +11,7 @@ Use the guidance for the area you are changing:
 - **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/CLAUDE.md](personal-vibe-check/CLAUDE.md). Edit it here; the old standalone checkout is stale.
 - **Doctest framework:** [agent-doctest/README.md](agent-doctest/README.md); application tests live in their packages.
 - **Experimental Mac app (spike):** [mac-app/README.md](mac-app/README.md) — a menu-bar app that runs the beebox image in a VM via Apple's Containerization; findings in [research/installable-app/](research/installable-app/README.md).
-- **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](canvas-loop/README.md); use [canvas-loop-sketch](.claude/skills/canvas-loop-sketch/SKILL.md) for sketches and gallery work.
+- **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](canvas-loop/README.md); [canvas-loop/CLAUDE.md](canvas-loop/CLAUDE.md) covers the sketch and gallery loop.
 - **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/CLAUDE.md](bin/CLAUDE.md) documents their mechanics.
 - **External-tool research:** [research/CLAUDE.md](research/CLAUDE.md).
 
@@ -31,7 +31,7 @@ For recurring work or missed scheduled runs, use [bbx-authoring-schedules](.clau
 
 ## Implement and verify
 
-Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/CLAUDE.md](beebox/CLAUDE.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks.
+Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/CLAUDE.md](beebox/CLAUDE.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks. Write code in TypeScript; a `.js` or `.mjs` file is only a thin loader for TypeScript. A foreground `sleep` is blocked; to wait on a condition, run an `until` loop in the background or use the Monitor tool.
 
 Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys your test box is granted before assuming you cannot, and ask before sending real box content out or spending real money: [real model calls](beebox/docs/testing/real-models.md).
 
@@ -39,7 +39,7 @@ Real model and API calls are allowed for experiments and verification; Jev and s
 
 Treat unsolicited tool output—including warnings, deprecations, ignored-build-script lists, and peer-dependency mismatches—as a bug. Fix diagnostics introduced by this work or relevant to its correctness. For pre-existing systemic noise outside the task, find or file one focused issue and leave dependency cleanup to that scope. Keep actionable failures visible; routine-success diagnostics belong behind debug. Moving noise to stderr does not help.
 
-Delegate when useful without asking first, using the lightest capable worker: lightweight models for bounded searches, mid-tier models for most implementation/research, and stronger models for difficult reasoning. When a most-capable model drives, favor delegation for substantial independent work; trivial or tightly coupled work can stay inline. Give workers concrete tasks and the context, constraints, and completion criteria they need. Shorter repo instructions are not a reason to strip scaffolding from subagent briefings.
+Delegate when useful without asking first, using the lightest capable worker: lightweight models for bounded searches, mid-tier models for most implementation/research, and stronger models for difficult reasoning. When a most-capable model drives, favor delegation for substantial independent work; trivial or tightly coupled work can stay inline. Give workers concrete tasks and the context, constraints, and completion criteria they need. Shorter repo instructions are not a reason to strip scaffolding from subagent briefings. Agent and skill files only ever grow unless pruned: when touching one, remove more than you add, move mechanics into a script the agent runs, keep only rules that need judgment, and give a rewrite a line budget. Tell workers to run long commands such as test suites in the foreground: a subagent waiting on its own background job can stall with nothing running.
 
 For anything beyond a small-scope bug fix, get [cross-model review](.claude/skills/cross-model/SKILL.md) before declaring it done. The reviewer must use the other model family, regardless of the driving model. Adjudicate findings and report material changes, unresolved risks, or human decisions.
 
@@ -55,7 +55,7 @@ Show useful UI screenshot evidence as one labeled exhibit and share its URL. Giv
 
 ## Commit and land
 
-Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lfs wrappers; subprojects opt out with `prepare: ":"`. Root `pnpm install` wires them up. Docs-only commits run fast doc, path-leak, and personal blocklist checks. Use repo-relative or `~/` paths in tracked content. [Doc-check guidance](beebox/docs/README.md#enforcement-pnpm-doc-check) and [guard mechanics](bin/CLAUDE.md).
+Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is that ask). Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lfs wrappers; subprojects opt out with `prepare: ":"`. Root `pnpm install` wires them up. Docs-only commits run fast doc, path-leak, and personal blocklist checks. Use repo-relative or `~/` paths in tracked content. [Doc-check guidance](beebox/docs/README.md#enforcement-pnpm-doc-check) and [guard mechanics](bin/CLAUDE.md).
 
 Hooks add `Workstream` and, when exactly one plan matches, `Plan` trailers. An optional `Issue: <bare-basename>` identifies a public issue; omit directories and `.md`, repeat for multiple issues, and never name a private issue. A nonexistent issue name blocks the commit. [Provenance details](bin/CLAUDE.md#commit-provenance-trailers-commit-provenancets).
 

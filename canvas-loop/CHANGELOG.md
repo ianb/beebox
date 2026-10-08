@@ -5,6 +5,10 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Claude plugin removed.** `claude-plugin/` and the `sync:claude-skill`
+  script are gone, and the generated `.claude/skills/canvas-loop-sketch/` copy
+  with them. The authoring loop, gallery flow, and audit norms now live in
+  `canvas-loop/CLAUDE.md`, which Claude Code loads when working here.
 - **Engagement verdicts — scripted inputs report whether anything engaged.**
   Every scripted *interaction* event (mouse/key/trigger — not `tick`, `param`,
   or `snapshot`) now carries a verdict on its transcript line:
@@ -137,7 +141,7 @@ First release as a workspace library (was `sandbox/canvas-loop`).
 - **Docs sweep.** Root `CLAUDE.md` monorepo layout gained a `canvas-loop/` line;
   `LIBRARY-PLAN.md` tracks 1–4 marked shipped with per-section status headers
   (open questions left intact); the design issue
-  (`issues/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`) gained
+  (`issues/closed/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`) gained
   a "Library-ified (2026-07-14)" section stating the new home, with the older
   dated experiment logs and their `sandbox/canvas-loop/...` paths preserved as
   history.

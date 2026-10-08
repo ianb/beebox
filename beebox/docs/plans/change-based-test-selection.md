@@ -27,11 +27,11 @@ decide how much verification each kind of change deserves.
 
 **Issues addressed**
 
-- `issues/exploration/2026-08-08-run-less-of-the-test-suite.md` — the origin
+- `issues/closed/exploration/2026-08-08-run-less-of-the-test-suite.md` — the origin
   item, whose `## Research (2026-08-08)` is the timing baseline and whose
   `## Track 0 measurement (2026-08-09)` is this plan's own measurement.
-- `issues/bugs/2026-08-05-doctest-loader-tsx-resolution-flake-recurred.md` and
-  `issues/bugs/2026-07-29-flaky-login-redirect-doctest.md` — **partly addressed.**
+- `issues/closed/bugs/2026-08-05-doctest-loader-tsx-resolution-flake-recurred.md` and
+  `issues/closed/bugs/2026-07-29-flaky-login-redirect-doctest.md` — **partly addressed.**
   Neither is fixed here, but both are flakes with no measured frequency, and the
   ledger's flake classification is the first thing in this repo that would
   produce one. Do not close either on the strength of this plan.
@@ -702,7 +702,7 @@ does today. Expected: a code landing's fixed cost drops from a suite run plus
 several minutes of derivation to under a minute of scripts, with the agent's
 tokens spent on the three judgment steps.
 
-Guidance (`beebox/CLAUDE.md:11`, `bbx-guide-testing`, `doctest`) becomes:
+Guidance (`beebox/CLAUDE.md:11`, `docs/testing.md`, `doctest`) becomes:
 iterate with `pnpm test:changed` or a named file; `pnpm test` is what the
 schedule runs, and an agent reaching for it should say why.
 

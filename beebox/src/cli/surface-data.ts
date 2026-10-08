@@ -96,6 +96,8 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "tick", audience: "agent", smoke: { run: ["tick", "--dry-run"] } },
   // Read-only: the paths changed since a commit, for a schedule's `runs:`.
   { name: "changes", audience: "agent", smoke: { run: ["changes", "--since", "HEAD"] } },
+  // Writes a scheduled run's summary to `$BBX_SUMMARY_FILE`; outside a run it only prints.
+  { name: "run-summary", audience: "agent", smoke: { run: ["run-summary", "smoke"] } },
   // Asks Jev about stdin through an authored judgment card; `judge --dry-run`
   // sends nothing but still needs a card to read, which a smoke box lacks.
   { name: "judge", audience: "agent", smoke: { skip: "needs a judgment card fixture; test/cli/commands/judge/command.doctest.md runs --dry-run" } },

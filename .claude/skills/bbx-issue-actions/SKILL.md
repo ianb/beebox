@@ -19,12 +19,8 @@ processing a backlog, and every tag carries the context of the moment they had t
 whole queue in view. Your output goes back to them in the same channel — the note
 you leave on an issue is what they read next time.
 
-The whole discipline for the provisional values is in one line of
-`issues/CLAUDE.md`:
-
-> A matching tag is not permission to close blindly.
-
-Read every provisional value with the question mark the UI shows — **"fixed?"**,
+The whole discipline for the provisional values is in `issues/CLAUDE.md`:
+they are hypotheses, not permission to close blindly. Read every provisional value with the question mark the UI shows — **"fixed?"**,
 **"reconfirm?"**. Nothing there is asserted. It is what the developer thinks is *likely*
 and wants confirmed properly. `discuss` is different: do not investigate toward
 implementation or make the decision yourself. Surface the issue to the developer and
@@ -34,13 +30,10 @@ For the provisional values, your job is to **produce evidence**, then act on
 what the evidence says — which is often the opposite of what the tag guesses.
 For `discuss`, your job is only to frame and surface the discussion.
 
-Second rule, equally load-bearing:
-
-> Clear the request after acting on it or disproving it.
-
-A stale request re-invites the same work forever. Every issue you touch leaves
-with `bin/issues next-action <issue> --clear` run. The store keeps no history, so
-record the outcome, quoting any message it answered, in the issue body first.
+Second rule: clear the request after acting on it or disproving it. A stale
+request re-invites the same work forever. The store keeps no history, so record
+the outcome, quoting any message it answered, in the issue body before
+`bin/issues next-action <issue> --clear`.
 
 A request may carry a **message**: the developer's own words. With a value, it
 narrows or explains the value. Alone, it is the instruction; do what it asks
@@ -49,19 +42,11 @@ it guesses an outcome).
 
 ## Finding the work
 
-Every pending request, with its value, issue, title, and message (a request
-whose issue no longer exists is listed as an orphan; report it, don't clear it):
-
-```bash
-bin/issues next-action
-bin/issues next-action --next-action reconfirm --json
-```
-
-To combine with other filters, `bin/issues list --next-action fixed --priority
-important` works too; a tagged `important` issue is worth doing first. To see whether a `fixed?`/`duplicate?` guess
-holds, `bin/issues similar <path> --all` lists the closed siblings that may
-already own the work, and `bin/issues show <path>` prints the frontmatter and
-body head.
+`bin/issues next-action` lists every pending request; a request whose issue no
+longer exists is an orphan: report it, don't clear it. Filters combine, as in
+`bin/issues list --next-action fixed --priority important`; a tagged
+`important` issue goes first. For a `fixed?`/`duplicate?` guess,
+`bin/issues similar <path> --all` lists closed siblings that may own the work.
 
 ## What each value asks of you
 
@@ -130,11 +115,8 @@ git log --oneline --since='<issue date>' -- <the file the issue names>
 Then confirm the behavior rather than trusting a commit that reads like the fix.
 Close with `resolution: implemented` naming the resolving commit.
 
-**`manually-confirmed` — the developer confirmed the fix.** This value is an
-assertion, not a question and not a request to repeat the manual test. Read the
-issue once to make sure the confirmation covers the whole item, then close it
-as `implemented`. When it carries `needs: [manual-testing]`, this tag is the
-developer's explicit permission to clear that gate as part of closing it.
+**`manually-confirmed` — the developer confirmed the fix.** An assertion, not a
+request to repeat the manual test; close per `issues/CLAUDE.md`.
 
 **`do-it` — the developer judged this small: fix it.** The only value that
 authorizes implementation by itself. Confirm the issue still holds, then fix it
@@ -151,8 +133,10 @@ now have. Match the evidence to the claim:
 
 - **Behavioral claims need a run.** Reproduce, or drive the app (`browse` skill,
   `bin/browse`). Reading the diff is not verification.
-- **Flakes need repetition.** One green run does not clear a flake — see the
-  tracked-flake protocol in `.claude/agents/finish.md`.
+- **Flakes need repetition.** One green run does not clear a flake issue;
+  rerun the test until the evidence carries the claim. New flakes get no issue:
+  per `.claude/agents/finish.md`, a named flake is green and
+  `beebox/test/careful.txt` curation is the channel.
 - **Anything needing a real device, a phone, live credentials, or a human eye is
   not yours to confirm.** That is what `needs: [manual-testing]` exists for, and
   **only the developer clears it.**
@@ -197,16 +181,8 @@ investigated twice with no note is worse than one nobody touched.
 
 ## Closing mechanics
 
-Follow `issues/CLAUDE.md`. In short: `git mv` to `closed/<category>/`, add
-`resolution:`, add a closing note at the top of the body naming the resolving
-commit or reason, then:
-
-```bash
-pnpm --dir beebox doc-check --fix
-```
-
-which repairs inbound links by basename. Commit the move and the link repairs
-together.
+Close per `issues/CLAUDE.md` ("Closed items"), run
+`pnpm --dir beebox doc-check --fix`, and commit the move with its link repairs.
 
 ## Fixing in place
 

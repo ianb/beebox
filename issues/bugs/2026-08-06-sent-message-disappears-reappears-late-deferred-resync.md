@@ -134,3 +134,5 @@ event by instrumentation before fixing (bbx-debug).
 Follow the concrete reproduction or verification steps above. Confirm the
 observed result matches the expected behavior described in this issue before
 clearing the manual-testing flag.
+
+**Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific content moved to `beebox/docs/testing.md` ("Choosing an instrument", "Reproducing a bug") and `beebox/frontend.md`.

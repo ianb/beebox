@@ -19,7 +19,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
   - From `context-engineering`: principles that we folded into our own box-prompt skill. These are attention budget over window size, write it down, why and not just what, an example beats a description, pointers and not copies, and ingested text as data.
   - From `spec-driven-development`: the "Common rationalizations" table (excuse, then reality) and the "Red flags" list, to stop an agent from talking itself past a rule. Superpowers' Common-Mistakes and Red-Flags structure was a second example.
   - From `spec-driven-development`: state a plan's done-when as testable criteria, that is, the tests that must pass.
-- **Where it landed:** `.claude/skills/bbx-codehealth/SKILL.md`, `.claude/skills/bbx-frontend/SKILL.md`, `.claude/skills/bbx-context/SKILL.md`, `.claude/skills/bbx-migration/SKILL.md`, `.claude/skills/bbx-plan/TEMPLATE.md`
+- **Where it landed:** `beebox/frontend.md`, `.claude/skills/bbx-context/SKILL.md`, `.claude/skills/bbx-migration/SKILL.md`, `.claude/skills/bbx-plan/TEMPLATE.md`
 
 ### Agent Skills for Intelligent Textbooks (ibook-skills), by Dan McCreary
 
@@ -66,7 +66,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:**
   - The shape of the `/codex` skill for cross-model review: a read-only reviewer from the other model family, review and challenge modes, and a filesystem-boundary prefix on the prompt.
   - Plan-review sections from `plan-eng-review`: stated preferences as the review spine, failure modes per codepath, user-flow edge cases, what already exists, and NOT in scope.
-- **Where it landed:** `.claude/skills/cross-model/SKILL.md`, `.claude/skills/cross-model/references/codex-runner.md`, `.claude/skills/bbx-plan/SKILL.md`, `.claude/skills/bbx-plan/TEMPLATE.md`
+- **Where it landed:** `.claude/skills/cross-model/SKILL.md`, `bin/cross-model-run`, `.claude/skills/bbx-plan/SKILL.md`, `.claude/skills/bbx-plan/TEMPLATE.md`
 
 ### Jupyter, by Project Jupyter
 
@@ -86,7 +86,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:**
   - From `diagnosing-bugs`: build a tight feedback loop first, as the core of debugging.
   - From `improve-codebase-architecture` and `codebase-design`: the deepening pass, the deletion test, and the module, interface, depth, and seam vocabulary.
-- **Where it landed:** `.claude/skills/bbx-debug/SKILL.md`, `.claude/skills/bbx-codehealth/SKILL.md`
+- **Where it landed:** `beebox/docs/testing.md`, `beebox/code-style.md`
 
 ### No Mistakes, by kunchenguid
 
@@ -127,7 +127,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:**
   - From `systematic-debugging`: the Iron Law (no fix before the cause is pinned down) and a circuit-breaker that stops after three failed fixes.
   - From `writing-skills`: skill descriptions state triggering conditions only, so agents read the skill body instead of following a summary. This rule reached us through claude-elixir-phoenix's review of Superpowers.
-- **Where it landed:** `.claude/skills/bbx-debug/SKILL.md`, `.claude/skills/field-probe/SKILL.md`, `.claude/skills/*/SKILL.md` (frontmatter descriptions)
+- **Where it landed:** `beebox/docs/testing.md`, `.claude/skills/field-probe/SKILL.md`, `.claude/skills/*/SKILL.md` (frontmatter descriptions)
 
 ### TiddlyWiki, by TiddlyWiki (Jeremy Ruston, UnaMesa Association)
 
@@ -139,7 +139,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 - **Source:** https://github.com/nextlevelbuilder/ui-ux-pro-max-skill (MIT)
 - **What we took:** From the `ui-ux-pro-max` checklist: motion used sparingly with `prefers-reduced-motion`, heading hierarchy, one primary action per area, and form validation on blur with focus on the first invalid field.
-- **Where it landed:** `.claude/skills/bbx-frontend/SKILL.md`
+- **Where it landed:** `beebox/frontend.md`
 
 ### Vault audit devices, by HashiCorp
 
@@ -161,7 +161,7 @@ Field conventions and published methods, not one project's idea. One line each, 
 - **Capture inline, aggregate in a generated view** (Org-mode agenda): todos are written where they arise and collected by a view. [Org manual, Agenda Views](https://orgmode.org/manual/Agenda-Views.html). Landed in `beebox/src/core/todo/collect-types.ts`, `beebox/src/core/todo/collection.ts`.
 - **One stable key per streaming message** (Vercel chatbot, assistant-ui, Streamdown): one component from first token to final, status as a prop. [vercel/chatbot](https://github.com/vercel/chatbot), [assistant-ui](https://github.com/assistant-ui/assistant-ui). Landed in `beebox/src/frontend/src/components/chat/CLAUDE.md`.
 - **MECE sibling sections** (Barbara Minto, *The Pyramid Principle*): sibling doc sections do not overlap and together cover the parent. [barbaraminto.com](https://www.barbaraminto.com/). Landed in `beebox/docs/README.md`.
-- **Deep and shallow modules** (John Ousterhout, *A Philosophy of Software Design*), via mattpocock/skills. [Book page](https://web.stanford.edu/~ouster/cgi-bin/book.php). Landed in `.claude/skills/bbx-codehealth/SKILL.md`.
+- **Deep and shallow modules** (John Ousterhout, *A Philosophy of Software Design*), via mattpocock/skills. [Book page](https://web.stanford.edu/~ouster/cgi-bin/book.php). Landed in `beebox/code-style.md`.
 - **Simplified Technical English, in spirit** (ASD-STE100): short active sentences, one idea per sentence, consistent terms. We do not claim conformance. [asd-ste100.org](https://www.asd-ste100.org/). Landed in `issues/CLAUDE.md`, `.claude/skills/issues/SKILL.md`.
 - **Jobs To Be Done** (Christensen et al., *Competing Against Luck*): frame user-facing work as the user's job before the means. [Christensen Institute](https://www.christenseninstitute.org/). Landed in `issues/CLAUDE.md`, `.claude/skills/bbx-plan/TEMPLATE.md`.
 

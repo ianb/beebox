@@ -235,6 +235,10 @@ bbx procedure list             # List available definitions
 bbx procedure gc               # Delete expired run directories
 ```
 
+`bbx procedure run --dry-run` only proves the card parses. It does not run
+prechecks, agent steps, or validation, so it cannot show that a failing run is
+fixed; reproduce at the phase that failed.
+
 **Resume** re-runs a failed (or interrupted) run from its first not-yet-completed
 step, reusing the existing run dir/card rather than starting over. The resume
 point is the first step whose recorded status is neither `completed` nor

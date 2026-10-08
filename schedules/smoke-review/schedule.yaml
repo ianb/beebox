@@ -16,7 +16,7 @@ workstream:
   agent: claude
   # Both questions are judgment over a small evidence set — the reasoning is
   # the product, and there is one run a week to pay for.
-  model: opus
+  model: claude-opus-5-5
   effort: high
   worktree: true
   # Nothing carries between weeks: the baseline in the store is the memory, and
