@@ -32,8 +32,10 @@ round; write the plan when the boxholder agrees the direction or asks for it.
    queue for related and duplicate items before you start.
 2. Work that changes what a person meets (card type, surface, proactive or
    chat behavior, notification, onboarding, a record a person reads) gets its
-   Design section from the bbx-design skill before the tracks. Other work
-   writes "No design section: <reason>" under that heading.
+   Design section from the bbx-design skill before the tracks: situations in
+   the "When …, I want to …, so I can …" form, then whether this is the right
+   place and time to act, show, or stay quiet. Other work writes "No design
+   section: <reason>" under that heading.
 3. Fill every section. Keep the headers verbatim. A section that genuinely
    doesn't apply says *why* ("no prior art: this is a new vocabulary surface"),
    never "N/A".
