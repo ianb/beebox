@@ -72,15 +72,32 @@ function parseAttrs(raw: string): Map<string, string> {
 }
 
 /**
- * The agent sometimes writes the bare `<no-response/>` shorthand instead of the
- * canonical `<ack kind="no-response"/>`. Normalize it (self-closing or paired)
- * so parse / strip / no-response detection treat the two identically, rather
- * than leaking the raw tag into the prose render.
+ * The agent sometimes writes an ack kind as a bare tag name — `<no-response/>`,
+ * `<todo-added>`, `<created ref="…">detail</created>` — instead of the
+ * canonical `<ack kind="…">`. Normalize every registered kind (self-closing,
+ * paired, or a lone opening tag) so parse / strip / no-response detection
+ * treat the alias and the canonical form identically, rather than leaking the
+ * raw tag into the prose render. Attributes and inner text carry over.
  */
-const NO_RESPONSE_ALIAS_RE = /<no-response\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/no-response\s*>)/gi;
+// Lists every `ACK_KINDS` kind; the doctest checks that each one normalizes.
+const ACK_KIND_ALIAS_RE =
+  /<(created|appended|edited|todo-added|todo-completed|no-response)(?=[\s/>])([^>]*?)(?:\/\s*>|>(?:([\S\s]*?)<\/\1\s*>)?)/gi;
 
 function normalizeAckAliases(content: string): string {
-  return content.replace(NO_RESPONSE_ALIAS_RE, "<ack kind=\"no-response\"/>");
+  let out = "";
+  let last = 0;
+  for (const m of content.matchAll(ACK_KIND_ALIAS_RE)) {
+    // Groups 1 and 2 precede the alternation, so they are always defined;
+    // group 3 participates only in the paired branch (`.at()` keeps it
+    // honestly `string | undefined`).
+    const kind = (m[1] ?? "").toLowerCase();
+    const attrs = (m[2] ?? "").replace(/\s+$/, "");
+    const inner = m.at(3);
+    const open = `<ack kind="${kind}"${attrs}`;
+    out += content.slice(last, m.index) + (inner === undefined ? `${open}/>` : `${open}>${inner}</ack>`);
+    last = m.index + m[0].length;
+  }
+  return out + content.slice(last);
 }
 
 /**

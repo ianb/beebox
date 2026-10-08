@@ -112,6 +112,44 @@ isNoResponseOnly("<no-response></no-response>")
 => true
 ```
 
+## Bare kind aliases for every ack kind
+
+The same slip happens with the other kinds: a journey walk saw a reply whose
+prose read a literal `<todo-added>` because the agent wrote the kind as the tag
+name. Every registered kind normalizes like `<no-response/>`: self-closing,
+paired (inner text becomes the ack's text), or a lone opening tag.
+Attributes such as `ref` carry over.
+
+```ts
+parseAcks("Saved it.<todo-added>")
+=> [{ kind: "todo-added" }]
+
+stripStructuredOutputTags("Saved it.<todo-added>")
+=> Saved it.
+
+parseAcks("<created ref=\"a.card\"/> and <edited ref=\"b.md\">the intro</edited>")
+=> [{ kind: "created", ref: "a.card" }, { kind: "edited", ref: "b.md", text: "the intro" }]
+
+stripStructuredOutputTags("a<todo-completed/>b<appended>x</appended>c")
+=> abc
+```
+
+The alias pattern lists the kinds by hand. Every registered kind must
+normalize, so a kind added to `ACK_KINDS` without the pattern fails here.
+
+```ts
+ACK_KINDS.filter((k) => parseAcks(`<${k.kind}/>`).length !== 1).map((k) => k.kind)
+=> []
+```
+
+Only exact kind names are aliases. A longer tag that starts with a kind name
+is left alone.
+
+```ts
+parseAcks("<created-at>")
+=> []
+```
+
 ## parseCallouts
 
 Single callout with a context label.
