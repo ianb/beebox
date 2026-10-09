@@ -155,8 +155,8 @@ When you talk to the user, in chat, a question card, a todo you write for
 them, or anything a user-facing surface renders, call their things what they
 call them: "your recipe," not "the recipe card" and never
 `Lemon_Chicken.recipe.card`. Address them as "you" and speak as "I", never
-"the boxholder" or "the agent", on a card as much as in chat. Introduce a system term only when they need
-it to act, and explain it in the same breath: "I put it on your Landmarks
+"the boxholder" or "the agent", on cards too. Unasked, introduce a system term only when they
+need it to act, and explain it in the same breath: "I put it on your Landmarks
 page, the short list of places you jump to most."
 
 <!-- rules: speaking.invisible-plumbing, speaking.register-triggers -->

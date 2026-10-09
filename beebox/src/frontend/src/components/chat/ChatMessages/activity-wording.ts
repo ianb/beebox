@@ -147,5 +147,7 @@ const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
 export function describeToolCall(block: SessionContentBlock): string {
   const describer = toolDescribers.get(block.toolName || "");
   if (describer) return describer(block.input || {});
-  return block.inputSummary || block.toolName || "Tool call";
+  // An unknown tool's name and input summary (raw JSON for MCP tools) are
+  // plumbing; both stay in the expanded detail.
+  return "Took a step";
 }
