@@ -30,6 +30,8 @@ export interface TextProps {
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
   title?: string;
+  /** Take the colour from the enclosing card's material (`card-ink`/`card-soft`) instead of the app palette. */
+  material?: boolean;
 }
 
 const TONE_CLASSES: Record<TextTone, string> = {
@@ -40,6 +42,19 @@ const TONE_CLASSES: Record<TextTone, string> = {
   strong: "text-warm-900",
   danger: "text-danger-dark",
 };
+
+const MATERIAL_TONE_CLASSES: Record<TextTone, string> = {
+  default: "text-card-ink",
+  muted: "text-card-soft",
+  subtle: "text-card-soft",
+  emphasis: "text-card-ink",
+  strong: "text-card-ink",
+  danger: "text-danger-dark",
+};
+
+function toneClass(tone: TextTone, material: boolean | undefined): string {
+  return material === true ? MATERIAL_TONE_CLASSES[tone] : TONE_CLASSES[tone];
+}
 
 const SIZE_CLASSES: Record<TextSize, string> = {
   xs: "text-xs",
@@ -71,6 +86,7 @@ export function Text({
   breakAll,
   className,
   title,
+  material,
 }: TextProps) {
   tone = tone ?? "default";
   size = size ?? "base";
@@ -83,7 +99,7 @@ export function Text({
   uppercase = uppercase ?? false;
   breakAll = breakAll ?? false;
   const classes = cn(
-    TONE_CLASSES[tone],
+    toneClass(tone, material),
     SIZE_CLASSES[size],
     WEIGHT_CLASSES[weight],
     italic ? "italic" : "",

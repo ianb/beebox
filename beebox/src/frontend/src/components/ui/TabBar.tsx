@@ -31,6 +31,8 @@ export interface TabBarProps<V extends string> {
   variant?: "underline" | "pills";
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
+  /** Take colours from the enclosing card's material (`card-pen` active, `card-soft` idle). */
+  material?: boolean;
 }
 
 const UNDERLINE_STATE: Record<"disabled" | "active" | "idle", string> = {
@@ -39,13 +41,27 @@ const UNDERLINE_STATE: Record<"disabled" | "active" | "idle", string> = {
   idle: "border-transparent text-warm-600 hover:text-warm-800 hover:border-warm-300 cursor-pointer",
 };
 
+const MATERIAL_UNDERLINE_STATE: Record<"disabled" | "active" | "idle", string> = {
+  disabled: "border-transparent text-card-soft opacity-50 cursor-not-allowed",
+  active: "border-card-pen text-card-pen font-medium",
+  idle: "border-transparent text-card-soft hover:text-card-ink hover:border-card-rule cursor-pointer",
+};
+
+const MATERIAL_PILL_STATE: Record<"disabled" | "active" | "idle", string> = {
+  disabled: "bg-transparent text-card-soft opacity-50 cursor-not-allowed",
+  active: "bg-card-pen text-card-paper font-medium",
+  idle: "bg-card-tint text-card-ink hover:bg-card-rule cursor-pointer",
+};
+
 const PILL_STATE: Record<"disabled" | "active" | "idle", string> = {
   disabled: "bg-transparent text-warm-400 cursor-not-allowed",
   active: "bg-primary text-white font-medium",
   idle: "bg-warm-100 text-warm-700 hover:bg-warm-200 cursor-pointer",
 };
 
-export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefix, controlsPrefix, variant, className }: TabBarProps<V>) {
+export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefix, controlsPrefix, variant, className, material }: TabBarProps<V>) {
+  const underlineStates = material === true ? MATERIAL_UNDERLINE_STATE : UNDERLINE_STATE;
+  const pillStates = material === true ? MATERIAL_PILL_STATE : PILL_STATE;
   const pills = variant === "pills";
   // Roving focus: one tab stop, arrows move between enabled tabs and select as they go.
   const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -63,12 +79,12 @@ export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefi
     else event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role=tab]")[tabs.indexOf(next)]?.focus();
   };
   return (
-    <div role="tablist" aria-label={label} className={cn(pills ? "flex flex-wrap gap-2" : "flex gap-0 border-b border-warm-300", className)}>
+    <div role="tablist" aria-label={label} className={cn(pills ? "flex flex-wrap gap-2" : material === true ? "flex gap-0 border-b border-card-rule" : "flex gap-0 border-b border-warm-300", className)}>
       {tabs.map((tab) => {
         const active = tab.value === value;
         const disabled = tab.disabled === true;
         const state = disabled ? "disabled" : active ? "active" : "idle";
-        const stateClass = pills ? PILL_STATE[state] : UNDERLINE_STATE[state];
+        const stateClass = pills ? pillStates[state] : underlineStates[state];
         return (
           <button
             key={tab.value}
@@ -88,7 +104,7 @@ export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefi
           >
             {tab.label}
             {tab.count !== undefined ? (
-              <span className={cn("ml-1 text-xs", active ? (pills ? "text-white/80" : "text-primary") : "text-warm-500")}>
+              <span className={cn("ml-1 text-xs", material === true ? (active ? "text-card-pen" : "text-card-soft") : active ? (pills ? "text-white/80" : "text-primary") : "text-warm-500")}>
                 ({tab.count})
               </span>
             ) : null}
