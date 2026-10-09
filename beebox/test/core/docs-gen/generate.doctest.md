@@ -127,3 +127,29 @@ const afterUserEdit = await getStatus(userBox.root);
 ```ts cleanup
 await userBox.cleanup();
 ```
+
+## An authored AGENTS.md stays out of the generation commit
+
+In a converted box `AGENTS.md` is the box's own instruction file. The legacy
+`**/AGENTS.md` mirror row still matches its path, so the commit filter skips a
+regular-file `AGENTS.md`: when generation adds the agent-guide include to the
+root file, that edit is left for the boxholder, as edits to the root
+`CLAUDE.md` always were.
+
+```ts
+const authoredBox = await makeTmpBox({ git: true });
+await generateDocs(authoredBox.root, { force: true });
+await authoredBox.write("AGENTS.md", "House rules.\n");
+authoredBox.commitAll("trim the root instructions");
+await generateDocs(authoredBox.root, { force: true });
+
+(await authoredBox.read("AGENTS.md")).includes("@.beebox/agent-guide.md")
+=> true
+
+(await getStatus(authoredBox.root)).modified.includes("AGENTS.md")
+=> true
+```
+
+```ts cleanup
+await authoredBox.cleanup();
+```

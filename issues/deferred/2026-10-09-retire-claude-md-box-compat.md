@@ -88,6 +88,10 @@ Mirror pass and registry (`src/core/agent-context-mirrors.ts`,
   `.claude/`.
 - `guidance-surfaces.ts:119-121` the `**/AGENTS.md` mirror row, and `:145-156`
   `guidanceSurfaceFor`'s mapping of a legacy `CLAUDE.md` to its sibling's row.
+- `docs-gen/generate/core.ts:280` `isAuthoredAgentsMd` and its use in
+  `commitTemplateSyncChanges`: it keeps authored `AGENTS.md` files out of the
+  template commit only because the mirror row above still matches them.
+  Remove it with that row.
 
 Maps (`src/core/maps/`):
 
