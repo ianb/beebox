@@ -116,11 +116,27 @@ const section = appearance(memo);
 => ["Appearance Paper cream · Set on this card", "<details><summary>Change</summary>"]
 ```
 
-Inside it is the swatch grid:
+Inside it, the card themes that go with the system theme come first, its
+default leading; the rest wait behind "All card themes":
 
 ```ts continue
-/<details.*<\/details>/s.exec(section)?.[0].match(/aria-label="([^"]*)"/g)?.slice(0, 3)
-=> ['aria-label="Choose card appearance"', 'aria-label="Flat — neutral"', 'aria-label="Paper — cream"']
+/<details.*<\/details>/s.exec(section)?.[0].match(/aria-label="([^"]*)"/g)?.slice(0, 4)
+=> ['aria-label="Choose card appearance"', 'aria-label="Goes with Flat"', 'aria-label="Flat — neutral (Flat default)"', 'aria-label="Paper — cream"']
+
+textOf(/<details class="mt-3">.*?<\/summary>/s.exec(section)?.[0] ?? "")
+=> All card themes
+```
+
+A box-authored theme has no catalog swatch; the card's own choice is still
+drawn, first, under "This card":
+
+```ts continue
+const custom = appearance(await render({
+  path: "_content/Studio.memo.card", type: "memo", schema: null,
+  frontmatter: { title: "Studio", theme: { name: "studio-blue", stock: "ink" } },
+}, { canEdit: true }));
+/<div role="group" aria-label="This card">.*?<\/button>/s.exec(custom)?.[0].match(/aria-label="([^"]*)"/g)
+=> ['aria-label="This card"', 'aria-label="studio-blue — ink"']
 ```
 
 A viewer who is not signed in sees the row without the disclosure, and a

@@ -20,6 +20,8 @@ export interface CardProps {
   shadow?: boolean;
   /** Dim to indicate inactive/archived content. Default false. */
   muted?: boolean;
+  /** Take background and border from the enclosing card's material (`white` becomes the raised sheet, `warm` the tint). */
+  material?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
   /** Render as a different element. Use `"section"` (with `aria-label`) for landmark grouping. Default `"div"`. */
@@ -52,6 +54,19 @@ const BORDER_CLASSES: Record<CardBorder, string> = {
   default: "border border-warm-300",
 };
 
+const MATERIAL_BACKGROUND_CLASSES: Record<CardBackground, string> = {
+  white: "bg-card-sheet",
+  warm: "bg-card-tint",
+  info: "bg-card-tint",
+  transparent: "",
+};
+
+const MATERIAL_BORDER_CLASSES: Record<CardBorder, string> = {
+  none: "",
+  subtle: "border border-card-rule",
+  default: "border border-card-rule",
+};
+
 const ROUNDING_CLASSES: Record<CardRounding, string> = {
   none: "",
   default: "rounded",
@@ -66,6 +81,7 @@ export function Card({
   rounding,
   shadow,
   muted,
+  material,
   className,
   as: asArg,
   id,
@@ -82,8 +98,8 @@ export function Card({
   const Tag = asArg ?? "div";
   const classes = cn(
     PADDING_CLASSES[padding],
-    BACKGROUND_CLASSES[background],
-    BORDER_CLASSES[border],
+    material === true ? MATERIAL_BACKGROUND_CLASSES[background] : BACKGROUND_CLASSES[background],
+    material === true ? MATERIAL_BORDER_CLASSES[border] : BORDER_CLASSES[border],
     ROUNDING_CLASSES[rounding],
     shadow ? "shadow" : "",
     muted ? "opacity-60" : "",

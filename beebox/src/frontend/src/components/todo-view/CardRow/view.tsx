@@ -26,7 +26,7 @@ import { buildRowSections, progressOf, type TodoReduction, type TodoRow } from "
 function RowReduction({ reduction }: { reduction: TodoReduction }) {
   return (
     <Row gap="xs" wrap align="baseline" className="flex-shrink-0">
-      <Text size="xs" tone="muted">
+      <Text material size="xs" tone="muted">
         {reduction.open} open · {reduction.done} done
       </Text>
       {reduction.next === null ? null : (
@@ -42,11 +42,11 @@ function SectionHead({ label, path, reduction }: { label: string; path: string[]
     <Row gap="xs" align="baseline">
       {/* The subhead shows the last segment; the full path is the tooltip, so
           a deep heading is identifiable without a line of breadcrumbs. */}
-      <Text size="xs" tone="muted" uppercase weight="semibold" title={path.join(" › ")}>
+      <Text material size="xs" tone="muted" uppercase weight="semibold" title={path.join(" › ")}>
         {label}
       </Text>
       {progress === null || progress.total === 0 ? null : (
-        <Text size="xs" tone="muted">
+        <Text material size="xs" tone="muted">
           {progress.done} of {progress.total}
         </Text>
       )}
@@ -68,7 +68,7 @@ export function CardRow({ row }: { row: TodoRow }) {
         <Stack gap="none" align="end" className="flex-shrink-0 pt-1.5">
           <RowReduction reduction={row.reduction} />
           {row.via === "reference" ? (
-            <Text size="xs" tone="muted" italic title="This card is outside the scope; its todos link into it">
+            <Text material size="xs" tone="muted" italic title="This card is outside the scope; its todos link into it">
               refers here
             </Text>
           ) : null}
