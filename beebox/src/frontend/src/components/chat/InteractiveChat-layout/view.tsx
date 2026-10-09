@@ -220,7 +220,7 @@ export function ChatView(props: {
   /**
    * A pointer, focus, or key event inside the chat pane (transcript, cards,
    * composer). The workspace uses it to cancel a pending arrival
-   * (docs/plans/landmark-arrival.md, Track D).
+   * (docs/implemented-plans/landmark-arrival.md, Track D).
    */
   onPaneInteraction?: () => void;
 }) {

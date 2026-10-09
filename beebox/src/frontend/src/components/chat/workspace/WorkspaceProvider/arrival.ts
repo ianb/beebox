@@ -2,7 +2,7 @@ import type { WorkspaceNavigationDecision } from "../history";
 
 /**
  * Arrival: going to a place with no saved arrangement opens the place
- * (docs/plans/landmark-arrival.md, Track D). The workspace store holds the
+ * (docs/implemented-plans/landmark-arrival.md, Track D). The workspace store holds the
  * candidate flag (`takeArrival`); the place's `landmarks.forDir` payload holds
  * the target (`arrival`: its single entry-point card, else the landmark card).
  * The phone layout opens nothing: one card or the chat fits, and the chat wins.

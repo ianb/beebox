@@ -1,6 +1,7 @@
 ---
 title: "Choosing a landmark in the place menu opens an empty chat, not the place"
-workstream: unattached
+workstream: journey-walks-oct
+resolution: implemented
 area: beebox
 labels: [navigation]
 filed-by: agent
@@ -8,13 +9,15 @@ discovered-by: agent
 discovered-in: worktree-journey-walks-oct — A-lending and D-chemistry journey walks, 2026-10-08
 ---
 
+**Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/implemented-plans/landmark-arrival.md), landed with the merge of that branch to main. Delivered as planned.
+
 In the A-lending walk the person had built a "Lending" landmark with a list
 page. They chose "Lending" in the top-left place menu and got a blank "Start a
 conversation." screen. The list was not shown. The panels they had open
 earlier were gone. The D-chemistry walk saw the same: "the left panels were
 gone in the new chat". Reports:
-[A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 63),
-[D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 71).
+[A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 63),
+[D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 71).
 
 ## Mechanism
 
@@ -41,7 +44,7 @@ what "place" means in the pill. Decide before fixing.
 
 ## Related
 
-- [Landmarks can restore a pinned baseline of cards](../features/2026-09-08-landmark-scoped-pinned-card-baseline.md)
-- [Chats bind to a landmark once and never move](2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md)
-- [Stuck in one landmark](../closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md) (closed; the switch itself works)
+- [Landmarks can restore a pinned baseline of cards](../../features/2026-09-08-landmark-scoped-pinned-card-baseline.md)
+- [Chats bind to a landmark once and never move](../../bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md)
+- [Stuck in one landmark](2026-08-20-cannot-switch-landmarks-from-chat.md) (closed; the switch itself works)
 - [Landmark card shows its config, not its places](2026-10-08-landmark-card-shows-its-config-not-its-places.md)

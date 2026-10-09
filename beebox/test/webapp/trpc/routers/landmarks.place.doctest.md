@@ -2,7 +2,7 @@
 
 A landmark card renders as the place page: the place's links in tiers, then
 each `expand` as a group that says in words what it lists
-(docs/plans/landmark-arrival.md, Track C). The page asks `landmarks.forDir`
+(docs/implemented-plans/landmark-arrival.md, Track C). The page asks `landmarks.forDir`
 with `expandsAsGroups: true`; the menus omit the flag and keep today's flat
 list. The same payload names the place's arrival target (Track D): the card
 that arriving at the place opens.

@@ -1,11 +1,11 @@
 ---
 title: "Landmark arrival"
-status: active
+status: implemented
 workstream: journey-walks-oct
 issues:
-  - ../../../issues/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md
-  - ../../../issues/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md
-  - ../../../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md
+  - ../../../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md
+  - ../../../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md
+  - ../../../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md
 ---
 # Landmark arrival
 

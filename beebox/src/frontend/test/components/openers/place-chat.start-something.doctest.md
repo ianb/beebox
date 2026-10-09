@@ -3,7 +3,7 @@
 The place page shows the place's openers only where a click can send them into
 this place's chat. `startSomething` decides from the chat the page sits beside
 (`PlaceChatContext`), the page's place, and its openers
-(docs/plans/landmark-arrival.md, Track C, boxholder decisions a and b).
+(docs/implemented-plans/landmark-arrival.md, Track C, boxholder decisions a and b).
 
 ```ts setup
 import { startSomething } from "../../../src/components/openers/place-chat.js";

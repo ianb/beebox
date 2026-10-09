@@ -317,7 +317,7 @@ A box outside the fleet (a restored backup, an archived or soft-launch box) that
 
 #### `briefing-openers-2026-10` (move — briefing `openers` to the landmark)
 
-Track B of `docs/plans/landmark-arrival.md`. Chat openers moved from briefing
+Track B of `docs/implemented-plans/landmark-arrival.md`. Chat openers moved from briefing
 cards to the place's landmark (`navigation.openers`), where the chat and the
 place page read them. Per briefing: an untouched stock seed at
 `_content/briefing.briefing.card` (a `briefing-seed` hash, old or current)

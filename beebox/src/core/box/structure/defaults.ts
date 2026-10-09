@@ -236,7 +236,7 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   // is a fleet whose boxes all look alike in a tab strip. The boxholder
   // renames it by editing the card, like any other box fact.
   // The root place carries the box's onboarding openers; the agent fades them
-  // as the box comes into use (docs/plans/landmark-arrival.md, Track B).
+  // as the box comes into use (docs/implemented-plans/landmark-arrival.md, Track B).
   const templateContent = createLandmarkTemplate({ label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS });
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
   if (existing !== undefined) {

@@ -1,10 +1,10 @@
 ---
 title: "Landmark arrival: design"
-status: draft
+status: implemented
 workstream: journey-walks-oct
 issues:
-  - ../../../issues/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md
-  - ../../../issues/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md
+  - ../../../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md
+  - ../../../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md
 ---
 # Landmark arrival: design
 
@@ -135,7 +135,7 @@ landmarks. Moving `openers:` from briefings to landmarks needs a migration
 2. A place with exactly one entry point: open that card (as above), or always
    the place page, with the entry point first in it?
 3. Fresh chats in a place show no openers today
-   ([issue](../../../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)).
+   ([issue](../../../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)).
    Fix that with this work, so arrival shows the page and a first prompt?
 4. The pinned-baseline idea
    ([issue](../../../issues/features/2026-09-08-landmark-scoped-pinned-card-baseline.md))
