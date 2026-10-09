@@ -631,6 +631,11 @@ const html = await page.text();
 JSON.stringify({ status: page.status, type: page.headers.get("content-type"), refresh: html.match(/<meta http-equiv="refresh" content="(\d+)">/u)?.[1], headline: html.match(/<h1>([^<]*)<\/h1><p>([^<]*)<\/p>/u)?.slice(1), swings: html.includes('class="sign swing"'), script: html.includes("<script"), detail: html.match(/<p class="detail">([^<]*)<\/p>/u)?.[1].replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
 => {"status":503,"type":"text/html; charset=utf-8","refresh":"600","headline":["Closed","for migration"],"swings":true,"script":false,"detail":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits"}
 
+// A form post that accepts HTML gets the sentence as text: a self-reload would repeat it as a GET.
+const posted = await fetch(`${closedHub.base}/closed/chat`, { method: "POST", headers: { accept: "text/html" } });
+JSON.stringify({ status: posted.status, type: posted.headers.get("content-type"), text: (await posted.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
+=> {"status":503,"type":"text/plain; charset=utf-8","text":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits\nRetry in 600 seconds.\n"}
+
 await owner.beginChanges();
 await owner.release();
 const reopened = await fetch(`${closedHub.base}/closed/api/x`);

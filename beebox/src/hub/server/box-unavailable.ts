@@ -24,10 +24,12 @@ const DEFAULT_RETRY_AFTER_S = 60;
 /**
  * A configured box that cannot be served says why; only an unconfigured path
  * is a 404. A page navigation (a browser tab, the iOS companion's web view,
- * which renders whatever body it gets) receives `renderUnavailablePage`; an API
- * client receives the JSON body.
+ * which renders whatever body it gets) receives `renderUnavailablePage`, which
+ * reloads itself; any other method that accepts HTML gets the sentence as plain
+ * text, since a reload would repeat it as a GET. An API client receives the JSON
+ * body.
  */
-export async function replyNoEndpoint(reply: FastifyReply, args: { slug: string | null; reqPath: string; accept: string | undefined; boxRoot: string | undefined; endpoints: EndpointProvider; detailed: boolean }): Promise<FastifyReply> {
+export async function replyNoEndpoint(reply: FastifyReply, args: { slug: string | null; reqPath: string; method: string; accept: string | undefined; boxRoot: string | undefined; endpoints: EndpointProvider; detailed: boolean }): Promise<FastifyReply> {
   if (args.slug === null || !args.endpoints.slugs().includes(args.slug)) {
     return reply.status(404).send({ error: "not_found", message: `No running box for ${JSON.stringify(args.reqPath)}` });
   }
@@ -36,7 +38,8 @@ export async function replyNoEndpoint(reply: FastifyReply, args: { slug: string 
     : { status: 503, retryAfter: DEFAULT_RETRY_AFTER_S, body: { error: "box_unavailable", message: `Box ${args.slug} is not running` } };
   reply.status(unavailable.status).header("retry-after", String(unavailable.retryAfter));
   if (args.accept?.includes("text/html")) {
-    return reply.type("text/html; charset=utf-8").send(renderUnavailablePage(unavailable));
+    if (args.method === "GET" || args.method === "HEAD") return reply.type("text/html; charset=utf-8").send(renderUnavailablePage(unavailable));
+    return reply.type("text/plain; charset=utf-8").send(`${unavailable.body.message}\nRetry in ${String(unavailable.retryAfter)} seconds.\n`);
   }
   return reply.send(unavailable.body);
 }
@@ -111,7 +114,7 @@ export function renderUnavailablePage(unavailable: UnavailableBox): string {
     </div>
     <p class="detail">${escapeHtml(body.message)}</p>
     <div class="drain" aria-hidden="true"><span></span></div>
-    <p class="retry">Checking again in ${String(retryAfter)} seconds.</p>
+    <p class="retry">Rechecks automatically every ${String(retryAfter)} seconds.</p>
   </main>
 </body>
 </html>
