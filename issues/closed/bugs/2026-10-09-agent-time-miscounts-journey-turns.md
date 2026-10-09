@@ -22,3 +22,5 @@ Fix direction: skip files whose first entry is a title or review session (the se
 
 
 Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (H2), [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (H3), [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (H3), [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (H1), [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (H2).
+
+2026-10-09 follow-up (cross-model review): `agentTiming` now sorts turns by the time each opened, so `clock.ts`'s "last first response" is the latest turn when root-chat and place-chat turns interleave; totals and median are unchanged.
