@@ -6,9 +6,12 @@ labels: [security, privacy]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — C-reconnecting journey walks, 2026-10-09
+resolution: implemented
 ---
 
-This finding is tool exposure only: a box chat session lists host Claude Code tools that would act through the host's Claude account. No call was observed, and whether a call would complete in this non-interactive mode was not tested. The C-reconnecting walk's transcripts show them in `deferred_tools_delta`. This is the same class as [the closed connectors issue](../closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md). That fix removed claude.ai connectors; it did not touch these built-in tools.
+Fixed 2026-10-09: `boxSessionSettings` (`beebox/src/core/agent/box-session-settings.ts`) now sets `disallowedTools` for every box Claude session (chat, agent runs, scan vision): `CronCreate`, `CronDelete`, `CronList`, `ScheduleWakeup`, `RemoteTrigger`, `PushNotification`, `ReadNotifications`, `Artifact`, `Projects`, `ClaudeDesign`, `DesignSync`, `SendFeedback`. Subagent, file, shell and web tools stay; `EnterWorktree`/`ExitWorktree` act on the box's own git and stay. A real chat turn on the test box listed none of the blocked tools.
+
+This finding is tool exposure only: a box chat session lists host Claude Code tools that would act through the host's Claude account. No call was observed, and whether a call would complete in this non-interactive mode was not tested. The C-reconnecting walk's transcripts show them in `deferred_tools_delta`. This is the same class as [the closed connectors issue](../../closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md). That fix removed claude.ai connectors; it did not touch these built-in tools.
 
 ## Evidence
 
@@ -30,7 +33,7 @@ Why these matter: if called, `CronCreate` and `RemoteTrigger` could create sched
 
 Block or omit the host-account tools (disallow list, or an explicit tool allowlist) for every box session. Decide per tool: `WebFetch`, `WebSearch` and `Monitor` may be wanted. Check that box features that need scheduling use the box's own scheduler, not these tools.
 
-Report: [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md).
+Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md).
 
 ## Production check (2026-10-09)
 
