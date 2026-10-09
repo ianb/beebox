@@ -810,6 +810,14 @@ Commit boundaries; the plan ships in one piece when every chunk is done and the 
 
 **Migration verification (step 4).**
 
+*Production inventory, 2026-10-08 (read-only, counts only).* 31 briefing
+cards. 23 have no openers. 5 with openers are parked template copies under
+`_config/_template-updates/`, which the migration skips. 3 are root briefings
+beside `_content/Box.landmark.card`: one untouched stock seed (case 1) and two
+customized (case 3). No landmark lists openers, so no conflict case exists.
+Every production shape is one already applied on a local copy.
+
+
 1. *Inventory, read-only.* List every briefing and the opener shape around it on every box the migration
    will run on. Local: `~/src/boxes/*/` and `~/src/box-worktrees/*/*/`. Production: the coordinator runs the
    command below; the agent writes it and does not run it. It prints paths and hashes only, no card content;
