@@ -11,7 +11,6 @@ import { findOrphanMaps, pruneOrphanMaps } from "../../../src/core/maps/orphans.
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { AGENTS_MD_MIGRATION } from "../../../src/core/agent-instruction-files.js";
 import { lstat, symlink } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -62,9 +61,10 @@ await box.cleanup();
 A CLAUDE.md that held only the import is deleted with its AGENTS.md mirror
 symlink. A CLAUDE.md with other content keeps that content. A real
 AGENTS.md, or a symlink to anything other than `CLAUDE.md`, is never deleted.
+The box is one made before `agents-md-2026-10` (`legacyInstructions`).
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, legacyInstructions: true });
 await box.write("_content/chat/MAP.md", "# Map: store/chat\n");
 await box.write("_content/chat/CLAUDE.md", "@MAP.md\n");
 await symlink("CLAUDE.md", join(box.root, "_content/chat/AGENTS.md"));
@@ -118,13 +118,12 @@ await box.cleanup();
 
 ## A converted box's import lives in AGENTS.md
 
-In a box converted to `AGENTS.md` (`agents-md-2026-10` in its manifest), the
-import is in a real `AGENTS.md`. Pruning removes it there; an `AGENTS.md` left
-empty is deleted, and one with other content keeps it.
+In a box converted to `AGENTS.md` (`agents-md-2026-10` in its manifest, as in
+every new box), the import is in a real `AGENTS.md`. Pruning removes it there;
+an `AGENTS.md` left empty is deleted, and one with other content keeps it.
 
 ```ts
 const box = await makeTmpBox({ git: "none" });
-await box.write("_config/migrations.jsonl", `${await box.read("_config/migrations.jsonl")}${JSON.stringify({ name: AGENTS_MD_MIGRATION, "applied-at": "2026-10-09T00:00:00Z" })}\n`);
 await box.write("_content/empty/MAP.md", "# Map\n");
 await box.write("_content/empty/AGENTS.md", "@MAP.md\n");
 await box.write("_content/kept/MAP.md", "# Map\n");

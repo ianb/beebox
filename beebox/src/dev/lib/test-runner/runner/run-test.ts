@@ -126,12 +126,14 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   const memoryDir = path.join(boxRoot, ".claude", "memory");
   await fs.rm(memoryDir, { recursive: true, force: true });
 
-  // Stage fixture files (e.g. a subdirectory CLAUDE.md for landmark
+  // Stage fixture files (e.g. a subdirectory AGENTS.md for landmark
   // audits). Tracked here so post-test cleanup runs even if the agent
   // throws, since `git clean -fd` won't touch gitignored paths.
   const fixturePaths = await writeFixtures(boxRoot, test.fixture);
   try {
     if (engine === "codex" && test.fixture !== undefined) {
+      // An AGENTS.md fixture is read by Codex directly. A legacy CLAUDE.md
+      // fixture (unconverted box) gets an AGENTS.md mirror, removed afterwards.
       await generateAgentContextMirrors(boxRoot);
       fixturePaths.push(...fixturePaths
         .filter((fixturePath) => path.basename(fixturePath) === CLAUDE_MD)

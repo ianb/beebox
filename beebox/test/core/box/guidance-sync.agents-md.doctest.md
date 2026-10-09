@@ -14,7 +14,6 @@ import { syncBoxGuidance } from "../../../src/core/box/guidance-sync/core.js";
 import { generateSkills } from "../../../src/core/box/guidance-sync/skills.js";
 import { ensureInstructionMapInclude } from "../../../src/core/maps/finalize/core.js";
 import { ensureAgentContext } from "../../../src/core/docs-gen/generate/agents-md.js";
-import { AGENTS_MD_MIGRATION } from "../../../src/core/agent-instruction-files.js";
 
 const GUIDES = ["src/schemas", "src/views", "src/tricks/scripts", "_config/feedback"];
 
@@ -23,25 +22,24 @@ const kind = async (box: TmpBox, rel: string): Promise<string> =>
   fs.lstat(box.path(rel)).then((s) => (s.isSymbolicLink() ? "symlink" : "file"), () => "absent");
 
 /**
- * A converted box: the scaffold's legacy guides and their ledger entries are
- * removed (as if the box had none yet), and the manifest records the migration.
+ * A converted box (every new box is: its manifest records the migration) with
+ * the scaffold's guides and their ledger entries removed, as if it had none yet.
  */
 async function convertedBox(): Promise<TmpBox> {
   const box = await makeTmpBox({ git: "none" });
-  for (const dir of GUIDES) await fs.rm(box.path(`${dir}/CLAUDE.md`), { force: true });
+  for (const dir of GUIDES) await fs.rm(box.path(`${dir}/AGENTS.md`), { force: true });
   await fs.rm(box.path("_config/template-versions.json"), { force: true });
-  await fs.appendFile(box.path("_config/migrations.jsonl"), `${JSON.stringify({ name: AGENTS_MD_MIGRATION, "applied-at": "2026-10-09T00:00:00Z" })}\n`);
   return box;
 }
 ```
 
 ## An unconverted box keeps its legacy guides
 
-The scaffolded box is unconverted. An edited `src/schemas/CLAUDE.md` stays
+A box made before the migration (`legacyInstructions`) is unconverted. An edited `src/schemas/CLAUDE.md` stays
 where it is through a sync, and no stock `AGENTS.md` appears beside it.
 
 ```ts
-const box = await makeTmpBox({ git: "none" });
+const box = await makeTmpBox({ git: "none", legacyInstructions: true });
 await box.write("src/schemas/CLAUDE.md", "# Our own schema notes\n");
 await syncBoxGuidance(box.root, { generators: false });
 ({
@@ -120,7 +118,7 @@ await box.cleanup();
 ## The unconverted root writer and course skill keep CLAUDE.md
 
 ```ts
-const box = await makeTmpBox({ git: "none" });
+const box = await makeTmpBox({ git: "none", legacyInstructions: true });
 await fs.rm(box.path("CLAUDE.md"), { force: true });
 await ensureAgentContext(box.root, []);
 await generateSkills(box.root);
