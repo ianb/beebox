@@ -192,6 +192,20 @@ final class QuickChatOutboxTests: XCTestCase {
         XCTAssertEqual(restored.map(\.origin), [.voice, .typed])
     }
 
+    func testRestoreOnlyDoesNotAttemptExistingEntries() async throws {
+        let server = FakeServer()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let entry = QuickChatOutboxEntry(id: UUID(), boxID: boxA, text: "offline", origin: .typed,
+            createdAt: Date(), attempts: 0, lastAttemptAt: nil)
+        try await repository.saveQuickChatOutbox([entry])
+        let (outbox, _) = makeOutbox(server, clock: Clock(), repository: repository)
+
+        await outbox.restore()
+
+        XCTAssertEqual(outbox.entries, [entry])
+        XCTAssertTrue(server.calls.isEmpty)
+    }
+
     func testEntriesSurviveARestartAndTheLaunchAttemptsThemOnce() async throws {
         let server = FakeServer()
         server.offline = true

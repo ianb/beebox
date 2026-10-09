@@ -245,11 +245,11 @@ export async function resolveMobileSender(boxRoot: string, headers: IncomingHttp
 
 
 /**
- * Inject user="Name" into the opening <typed> or <speech> tag of a message.
+ * Inject sender identity into a human-input wrapper.
  */
 export function injectUserAttr(message: string, user: SessionUser): string {
   return message.replace(
-    /^(<(?:typed|speech)\b)([^>]*>)/,
+    /^(<(?:typed|speech|external-input)\b)([^>]*>)/,
     `$1 user="${user.name.replace(/"/g, "&quot;")}" user-email="${user.email.replace(/"/g, "&quot;")}"$2`
   );
 }
@@ -310,4 +310,3 @@ export function validateImages(
   }
   return null;
 }
-

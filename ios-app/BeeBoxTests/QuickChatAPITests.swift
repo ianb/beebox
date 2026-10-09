@@ -11,12 +11,20 @@ final class QuickChatAPITests: XCTestCase {
         XCTAssertEqual(request.httpMethod, "POST")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+        XCTAssertEqual(request.timeoutInterval, 60)
         try XCTAssertJSONEqual(request.httpBody, fixture: "submit-request.json")
+    }
+
+    func testExternalSubmitRequestMatchesSharedFixture() throws {
+        let request = try api().submitRequest(id: recordID, message: "Remind me to renew my passport", origin: .external, source: "apple-app-intents")
+        XCTAssertEqual(request.timeoutInterval, 20)
+        try XCTAssertJSONEqual(request.httpBody, fixture: "submit-external-request.json")
     }
 
     /// A retry of a stored id sends no origin; the server keeps the stored one.
     func testSubmitRequestWithoutAnOriginOmitsTheKey() throws {
         let request = try api().submitRequest(id: recordID, message: "Remind me to renew my passport", origin: nil)
+        XCTAssertEqual(request.timeoutInterval, 60)
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
 
         XCTAssertEqual(Set(body.keys), ["id", "message", "channel"])

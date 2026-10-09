@@ -2,7 +2,7 @@
  * One-shot backfill of pre-existing web chat sessions into
  * `chat-session-history.json` (see history.ts for the file format).
  * Identifies "web chat" by scanning each JSONL for user messages carrying
- * `<speech>`/`<typed>` markers; the file's `migrated` flag gates re-runs.
+ * human-input markers; the file's `migrated` flag gates re-runs.
  */
 
 import { makeLog } from "./log.js";
@@ -14,8 +14,7 @@ import { readTranscriptLines } from "../../../cli/lib/session-lines.js";
 const log = makeLog("chat-history");
 
 /**
- * Detect whether a session log contains web-chat user input (`<speech>` or
- * `<typed>` tags). Streams the file and returns on first match.
+ * Detect whether a session log contains chat user input. Streams the file and returns on first match.
  */
 async function logHasWebChatMarkers(logPath: string): Promise<boolean> {
   for await (const scanned of readTranscriptLines(logPath)) {
@@ -48,7 +47,7 @@ async function logHasWebChatMarkers(logPath: string): Promise<boolean> {
           : [];
     for (const block of blocks) {
       if (block.type !== "text" || typeof block.text !== "string") continue;
-      if (block.text.includes("<speech") || block.text.includes("<typed")) {
+      if (block.text.includes("<speech") || block.text.includes("<typed") || block.text.includes("<external-input")) {
         return true;
       }
     }

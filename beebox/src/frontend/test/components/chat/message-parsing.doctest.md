@@ -49,6 +49,14 @@ stripUserDisplayTags("I renamed [file1] to notes.txt yesterday.")
 => I renamed [file1] to notes.txt yesterday.
 ```
 
+An external assistant wrapper is transport metadata and must not appear in the
+visible message bubble.
+
+```ts
+stripUserDisplayTags('<external-input source="apple-app-intents" user="Ari">Renew my passport</external-input>')
+=> Renew my passport
+```
+
 Declared and undeclared tokens in one message: only the declared one goes.
 
 ```ts

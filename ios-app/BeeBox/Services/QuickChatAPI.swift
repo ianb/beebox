@@ -27,8 +27,8 @@ struct QuickChatAPI {
     var transport: any ChatTransport = URLSessionChatTransport()
 
     /// `origin` is nil for a repeat of a stored id: the server keeps the stored origin.
-    func submit(id: UUID, message: String, origin: NativeChatEmission.Origin?) async throws -> QuickChatView {
-        try Self.decodeView(await send(submitRequest(id: id, message: message, origin: origin)))
+    func submit(id: UUID, message: String, origin: QuickChatOrigin?, source: String? = nil) async throws -> QuickChatView {
+        try Self.decodeView(await send(submitRequest(id: id, message: message, origin: origin, source: source)))
     }
 
     func choose(id: UUID, candidateId: String) async throws -> QuickChatView {
@@ -43,10 +43,11 @@ struct QuickChatAPI {
         try Self.decodeHome(await send(homeRequest()))
     }
 
-    func submitRequest(id: UUID, message: String, origin: NativeChatEmission.Origin?) throws -> URLRequest {
+    func submitRequest(id: UUID, message: String, origin: QuickChatOrigin?, source: String? = nil) throws -> URLRequest {
         try mutation(
             "quickChat.submit",
-            body: SubmitBody(id: Self.wireID(id), message: message, origin: origin, channel: Self.channel)
+            body: SubmitBody(id: Self.wireID(id), message: message, origin: origin, source: source, channel: Self.channel),
+            timeoutInterval: origin == .external ? 20 : 60
         )
     }
 
@@ -78,9 +79,10 @@ struct QuickChatAPI {
         id.uuidString.lowercased()
     }
 
-    private func mutation(_ procedure: String, body: some Encodable) throws -> URLRequest {
+    private func mutation(_ procedure: String, body: some Encodable, timeoutInterval: TimeInterval = 60) throws -> URLRequest {
         var request = URLRequest(url: box.apiURL.appendingPathComponent("trpc/\(procedure)"))
         request.httpMethod = "POST"
+        request.timeoutInterval = timeoutInterval
         BoxRequest.apply(to: &request, box: box)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
@@ -130,7 +132,8 @@ struct QuickChatAPI {
         var id: String
         var message: String
         /// Omitted when nil.
-        var origin: NativeChatEmission.Origin?
+        var origin: QuickChatOrigin?
+        var source: String?
         var channel: String
     }
 
