@@ -31,7 +31,12 @@ export function checkCommand(): boolean {
     }
   }
   const used = new Set<string>();
-  const groupIds = new Set(corpus.groups.map((g) => g.id));
+  const groupIds = new Set<string>();
+  for (const g of corpus.groups) {
+    if (groupIds.has(g.id)) problems.push(`duplicate group id ${g.id}`);
+    groupIds.add(g.id);
+    if (g.prompt === "product" && (g.samples.length !== 1 || !g.question)) problems.push(`group ${g.id}: a product group needs one sample and a question`);
+  }
   for (const g of corpus.groups) {
     for (const id of g.samples) {
       if (!sampleIds.has(id)) problems.push(`group ${g.id}: unknown sample ${id}`);
