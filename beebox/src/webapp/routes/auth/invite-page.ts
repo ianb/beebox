@@ -1,6 +1,7 @@
 /** Scriptless public pages for accepting a member invitation. */
 
-import { escapeHtml, pageShell } from "./login-page.js";
+import { escapeHtml } from "../../../lib/escape-html.js";
+import { pageShell } from "./login-page.js";
 
 export function renderInviteUnavailablePage(): string {
   return pageShell({
