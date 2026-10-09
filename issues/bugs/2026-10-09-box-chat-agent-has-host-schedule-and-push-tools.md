@@ -8,13 +8,13 @@ discovered-by: agent
 discovered-in: worktree-journey-walks-oct — C-reconnecting journey walks, 2026-10-09
 ---
 
-A box chat session lists host Claude Code tools that act through the host's Claude account. The C-reconnecting walk's transcripts show them in `deferred_tools_delta`. This is the same class as [the closed connectors issue](../closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md). That fix removed claude.ai connectors; it did not touch these built-in tools.
+This finding is tool exposure only: a box chat session lists host Claude Code tools that would act through the host's Claude account. No call was observed, and whether a call would complete in this non-interactive mode was not tested. The C-reconnecting walk's transcripts show them in `deferred_tools_delta`. This is the same class as [the closed connectors issue](../closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md). That fix removed claude.ai connectors; it did not touch these built-in tools.
 
 ## Evidence
 
 In the largest transcript of the C walk (the box agent's Claude transcript for the C walk box), the one `deferred_tools_delta` entry has `addedNames`: `CronCreate`, `CronDelete`, `CronList`, `DesignSync`, `EnterWorktree`, `ExitWorktree`, `Monitor`, `NotebookEdit`, `PushNotification`, `RemoteTrigger`, `SendMessage`, `TaskStop`, `WebFetch`, `WebSearch`. `ScheduleWakeup` is not in that list. Its definition appears in the same file's tool schemas, so it is available too.
 
-Why these matter: `CronCreate` and `RemoteTrigger` create scheduled or cloud-run routines under the host account. `PushNotification` pushes to the account's devices. A box member's chat could cause those effects on the host owner's account.
+Why these matter: if called, `CronCreate` and `RemoteTrigger` could create scheduled or cloud-run routines under the host account, and `PushNotification` could push to the account's devices. A box member's chat could then cause those effects on the host owner's account.
 
 ## Not checked
 
