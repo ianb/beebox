@@ -1,6 +1,6 @@
 ---
 title: "Plugins: which parts of beebox are the medium, and which are content a box could grow itself"
-workstream: unattached
+workstream: plugins-planning
 area: beebox
 needs: [design]
 labels: [architecture, plugins, schemas]
