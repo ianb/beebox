@@ -54,3 +54,22 @@ Criteria from the boxholder:
   method, so each chosen use case could get a journey that must pass.
 - How many to pick first. One done well proves the starter mechanism before a
   second one.
+
+## Note from the Gemini Notebook review (2026-10-09)
+
+[research/notebooklm](../../research/notebooklm/README.md) adds two inputs.
+
+- **"Study your documents" is served.** Gemini Notebook's September 2026
+  release is aimed entirely at study (live voice tutoring, a lecture
+  recorder, quizzes with persistent progress) and US college students get a
+  year of it free. The chemistry journey's distinct ground is continuity
+  across weeks, learning without a textbook, and a tutor that keeps evidence
+  per concept. If learning is picked, frame it as "keep studying with me",
+  not "chat with your notes".
+- **The first input should produce a visible artifact without a second
+  ask.** Notebook's empty state is one button and the first outputs appear
+  on their own. The [starter manifest](../features/2026-10-08-starter-manifest-and-scripted-first-turn.md)
+  scripts the first turn; this adds that the first turn should end with
+  something on the page that came from what the person gave.
+- Sources that never pass through a browser upload (paper, mail, captures,
+  photos, messages, a shared box) are where Notebook cannot follow.
