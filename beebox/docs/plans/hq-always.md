@@ -4,7 +4,7 @@ status: active
 workstream: hq-always
 issues:
   - ../../../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md
-  - ../../../issues/features/2026-08-26-sticky-hq-transcription-preference.md
+  - ../../../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md
 ---
 # HQ transcription for every dictated message
 

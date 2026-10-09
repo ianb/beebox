@@ -7,7 +7,13 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "sticky hq transcription preference"
 priority: normal
+resolution: superseded
 ---
+
+> **Superseded 2026-10-09** by [HQ for every dictated message](../../features/2026-09-18-hq-dictation-default-when-a-key-exists.md)
+> (`beebox/docs/plans/hq-always.md`): the HQ dictation setting and its chat,
+> landmark, and box scopes were removed, so there is no preference left to
+> make sticky.
 
 >  **Re-encountered 2026-09-20 — the shipped behavior does not work.** The
 > boxholder: "Everything about the hq settings is kind of broken. Doesn't
