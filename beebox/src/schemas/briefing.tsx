@@ -2,15 +2,15 @@
  * Briefing card schema — core situational context for a box.
  *
  * A briefing mixes **structured records in frontmatter** with a **prose
- * body**. The records — `key-people:`, `properties:` and `openers:` — are
- * lists of fielded entries or plain strings (a person, a property, or a
- * suggested chat opener is a record, not prose). The body holds the
+ * body**. The records — `key-people:` and `properties:` — are lists of
+ * fielded entries (a person or a property is a record, not prose). Chat
+ * openers live on the place's landmark (`navigation.openers`), not here. The body holds the
  * genuinely free-text material: the `{% purpose %}` statement,
  * `{% correction %}` instructions, and plain prose / headings
  * for things like "Legal" and "Finances" that were always free-form.
  *
- * `compileBriefing` emits the frontmatter records plus the body's Markdoc
- * as markdown for inclusion in CLAUDE.md (via `@`-include). The body
+ * `compileBriefing` emits the frontmatter records, the root place's openers,
+ * and the body's Markdoc as markdown for inclusion in CLAUDE.md (via `@`-include). The body
  * emitter lives at `src/core/markdoc/emit/core.ts`. The frontend renders the
  * records from frontmatter (default card viewer's field table) and the
  * body's `{% purpose %}`/`{% correction %}` tags as styled blocks via
@@ -32,23 +32,6 @@ const KeyPersonEntry = z.object({
   notes: z.string().optional(),
 });
 
-/**
- * One opener: a single short line the person sees as a button and sends
- * verbatim. Validated rather than silently normalized — an opener is agent-
- * written text that compiles into CLAUDE.md and renders as a button, so a
- * paragraph or a blank entry is a card error the boxholder should see, not
- * something to quietly trim away.
- */
-const OPENER_MAX_LENGTH = 120;
-const OpenerEntry = z
-  .string()
-  .refine((s) => s.trim() !== "", "an opener must not be blank")
-  .refine((s) => !s.includes("\n"), "an opener must be a single line")
-  .refine(
-    (s) => s.trim().length <= OPENER_MAX_LENGTH,
-    `an opener must be at most ${OPENER_MAX_LENGTH} characters`,
-  );
-
 const PropertyEntry = z.object({
   name: z.string().optional(),
   address: z.string().optional(),
@@ -63,7 +46,6 @@ export const BriefingSchema = cardSchema("briefing", {
   fields: {
     "key-people": z.array(KeyPersonEntry).optional(),
     properties: z.array(PropertyEntry).optional(),
-    openers: z.array(OpenerEntry).optional(),
     body: body(z.string()),
   },
   instructions: `# Briefing Cards
@@ -90,10 +72,9 @@ A briefing has two parts: **structured records in frontmatter** and a
   (ledger, household, business). Each entry is
   \`{name?, address?, address-uncertain?, notes?}\`; set
   \`address-uncertain: true\` if the address isn't confirmed.
-- \`openers:\` — a list of plain strings: the suggested opening
-  questions shown on an empty chat for this directory. Each must be a
-  single non-blank line of at most 120 characters — a longer or
-  multi-line entry fails validation. See "Openers" below.
+
+Chat openers live on the place's landmark (\`navigation.openers\`), not on
+the briefing.
 
 \`\`\`yaml
 key-people:
@@ -105,24 +86,7 @@ properties:
   - name: The lake house
     address: 12 Shore Rd
     notes: In probate; taxes paid through 2026.
-openers:
-  - Let me tell you what this box is for.
-  - What can you do?
 \`\`\`
-
-**Openers are yours to maintain.** Each string in \`openers:\` is a
-suggestion the person sees on an empty chat bound to this directory —
-clicking one sends it as their message. A new box ships with two stock
-openers; they are a starting point, not a fixture.
-
-- Rewrite them as the box's use becomes clear, toward things the
-  person has **not** yet tried.
-- Phrase them from the person's side, so you are never asked something
-  you cannot answer yet.
-- Keep them short — one line each, 120 characters at most.
-- Remove them once the box is in regular use. **An empty set is the
-  normal end state, not a regression** — an established box shows no
-  openers at all.
 
 When the purpose is still the stock stub (\`What this box is for.\`)
 and the person opens with "let me tell you what this box is for", ask
@@ -202,11 +166,13 @@ function openerLine(opener: string): string {
  * Compile a briefing into the markdown form that gets `@`-included into
  * CLAUDE.md: the body's Markdoc (`{% purpose %}`, `{% correction %}`,
  * prose) followed by the frontmatter records (`key-people:`,
- * `properties:`, `openers:`) as `**Label:** …` lines. Prepends a section header. The
- * `directoryLabel` parameter is used for directory briefings (e.g.,
- * `"_bookkeeping/archive/financial"`).
+ * `properties:`) and the place's `openers` as `**Label:** …` lines. Prepends
+ * a section header. `directoryLabel` is used for directory briefings (e.g.,
+ * `"_bookkeeping/archive/financial"`); `openers` are the place's
+ * `navigation.openers`, read from its landmark by the caller.
  */
-export function compileBriefing(fields: BriefingFields, directoryLabel?: string): string {
+export function compileBriefing(fields: BriefingFields, options?: { directoryLabel?: string; openers?: string[] }): string {
+  const directoryLabel = options?.directoryLabel;
   const header = directoryLabel !== undefined && directoryLabel !== ""
     ? `## Briefing: ${directoryLabel}`
     : "## Box Briefing";
@@ -220,7 +186,7 @@ export function compileBriefing(fields: BriefingFields, directoryLabel?: string)
     ...(fields.properties ?? []).map(propertyLine),
     // Openers ride the same `**Label:** …` shape: the agent owns them, so it
     // has to see its current suggestions on every turn to curate them.
-    ...(fields.openers ?? []).filter((o) => o.trim() !== "").map(openerLine),
+    ...(options?.openers ?? []).filter((o) => o.trim() !== "").map(openerLine),
   ];
   if (records.length > 0) sections.push(records.join("\n\n"));
 
@@ -246,12 +212,9 @@ When I ask to be told when something happens, make a schedule card that runs
 \`bbx changes\` and \`bbx judge\` before any agent.`;
 
 /**
- * Seed briefing template for a new box: the stub purpose, the default
- * "Reaching me" section, plus the two stock
- * `openers:` a fresh box's empty chat offers. Both are phrased from the
- * person's side, so the agent is never asked something it cannot answer on
- * turn one. The agent rewrites and eventually removes
- * them as the box comes into regular use.
+ * Seed briefing template for a new box: the stub purpose and the default
+ * "Reaching me" section. The stock openers a fresh box's empty chat offers
+ * are on the root landmark (`STOCK_ROOT_OPENERS` in `landmark.ts`).
  *
  * Changing this constant requires `pnpm template-stock:update` — it is a
  * managed stock template (`MANAGED_STOCK_TEMPLATES`), so the superseded hash
@@ -260,9 +223,6 @@ When I ask to be told when something happens, make a schedule card that runs
 export function createBriefingTemplate(): string {
   return `---
 type: briefing
-openers:
-  - Let me tell you what this box is for.
-  - What can you do?
 ---
 {% purpose %}
 What this box is for.

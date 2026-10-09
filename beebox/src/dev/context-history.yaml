@@ -7545,6 +7545,22 @@ audit-box:
       peak: 41269
       added: 4713
       turns: 5
+  landmark-openers-placement:
+    - date: 2026-10-08T21:54:27.359Z
+      boxCommit: 4eaf031e68c606ff77363a9dedc9f55c07a7e621
+      repoCommit: 35ce15e2f1d1bf68446e4f18afdcfd6ed4651f57
+      initial: 41980
+      peak: 44611
+      added: 2631
+      turns: 8
+  starter-what-can-you-do:
+    - date: 2026-10-08T21:55:19.393Z
+      boxCommit: 4eaf031e68c606ff77363a9dedc9f55c07a7e621
+      repoCommit: 35ce15e2f1d1bf68446e4f18afdcfd6ed4651f57
+      initial: 41957
+      peak: 48122
+      added: 6165
+      turns: 6
 dev-checkout:
   dev-spirit-doc:
     - date: 2026-10-08T04:37:43.997Z

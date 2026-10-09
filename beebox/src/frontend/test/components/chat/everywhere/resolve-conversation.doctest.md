@@ -257,3 +257,64 @@ const target = result.selection.kind === "ready" ? result.selection.target : nul
 JSON.stringify({ kind: result.selection.kind, target: target?.kind, contextDir: target?.contextDir })
 => {"kind":"ready","target":"start","contextDir":"papers"}
 ```
+
+## An unstarted chat is one this tab created and nobody has written in
+
+Openers belong on a conversation the resolver created for this tab that has no
+committed turn. The resolver already knows that: a fresh reservation leaves a
+receipt, and a `start` target has no session yet. An existing session with
+zero entries and no receipt is a different state (someone opened it before and
+wrote nothing, or another tab owns it), so it resolves `unstarted: false`
+rather than being inferred fresh from its empty history.
+
+A fresh reservation and the Codex `start` fallback are both unstarted.
+
+```ts
+const receipts = new ReservationReceipts(new MemoryStorage(), "paper-cards/test1");
+const reserved = await resolveConversation({ utils: fakeUtils({ boxEngine: "claude" }).utils,
+  reserve: async (input) => ({ kind: "reserved", sessionId: input.sessionId }), receipts,
+  request: { kind: "new", contextDir: "" } });
+const started = await resolveConversation({ utils: fakeUtils({ boxEngine: "codex" }).utils,
+  reserve: async () => ({ kind: "unsupported" }), receipts,
+  request: { kind: "new", contextDir: "" } });
+({ reserved: reserved.unstarted, start: started.unstarted })
+=> { reserved: true, start: true }
+```
+
+Reloading a reserved session that still holds this tab's receipt keeps it
+unstarted. The same empty bootstrap without a receipt is an existing empty
+session, and a session with history is resumed; neither is unstarted.
+
+```ts
+const storage = new MemoryStorage();
+const receipts = new ReservationReceipts(storage, "paper-cards/test1");
+receipts.put({ sessionId: "mine", contextDir: "", engine: "claude" });
+const reserve: ResolveParams["reserve"] = async (input) => ({ kind: "reserved", sessionId: input.sessionId });
+const reload = await resolveConversation({ utils: fakeUtils({ bootstraps: [resumable("mine")] }).utils,
+  reserve, receipts, request: { kind: "session", sessionId: "mine" } });
+const emptyNoReceipt = await resolveConversation({ utils: fakeUtils({ bootstraps: [resumable("someone-elses")] }).utils,
+  reserve, receipts, ensureReservation: async () => null, request: { kind: "session", sessionId: "someone-elses" } });
+const resumed = await resolveConversation({ utils: fakeUtils({ bootstraps: [resumable("talked", 3)] }).utils,
+  reserve, receipts, ensureReservation: async () => null, request: { kind: "session", sessionId: "talked" } });
+({ reload: reload.unstarted, emptyNoReceipt: emptyNoReceipt.unstarted, resumed: resumed.unstarted })
+=> { reload: true, emptyNoReceipt: false, resumed: false }
+```
+
+A restored `start` target (a Codex chat chosen before its first send) is
+unstarted; a restored session target is unstarted only while this tab holds
+its receipt.
+
+```ts
+const receipts = new ReservationReceipts(new MemoryStorage(), "paper-cards/test1");
+receipts.put({ sessionId: "held", contextDir: "", engine: "claude" });
+const utils = fakeUtils({}).utils;
+const reserve: ResolveParams["reserve"] = async () => ({ kind: "unsupported" });
+const start = await resolveConversation({ utils, reserve, receipts, request: { kind: "restore",
+  target: { kind: "start", clientConversationId: "c1", contextDir: "", engine: "codex", seedFeatures: {} } } });
+const held = await resolveConversation({ utils, reserve, receipts, request: { kind: "restore",
+  target: { kind: "session", sessionId: "held", contextDir: "" } } });
+const other = await resolveConversation({ utils, reserve, receipts, request: { kind: "restore",
+  target: { kind: "session", sessionId: "other", contextDir: "" } } });
+({ start: start.unstarted, held: held.unstarted, other: other.unstarted })
+=> { start: true, held: true, other: false }
+```

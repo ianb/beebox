@@ -45,6 +45,7 @@ Once the user agrees, the landmark itself is small editorial work:
 
 - **Label** — the bookmark name. A tab, not a sentence. Match how the user refers to the spot in conversation, not how the directory is named on disk.
 - **Symbol** — iconic, recognizable at a glance. Pick something the user would associate with the spot from their own life, not a generic placeholder.
+- **Openers** — `navigation.openers` lists one-line first moves the person sees as buttons on an unstarted chat in the place and on its page; a place with none shows none. Add them, at most three, when you build a place for a recurring job ("Log a new loan"), never on the briefing.
 - **Links** — most of a landmark's list is derived from the cards marked `entry-point` or `primary` under it, so a card in the directory surfaces by being marked, not listed. Many landmarks need no `links:` at all; when one does is in `node_modules/beebox/box-docs/card-landmark.md` ("Derived links, and `prominence`"). Don't pad the list to make it feel substantive.
 
 The schema details and the `expand` field for templated link lists are documented in `node_modules/beebox/box-docs/card-landmark.md`.

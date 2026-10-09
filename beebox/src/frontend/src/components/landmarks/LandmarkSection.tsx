@@ -4,8 +4,9 @@
  * resolved link tiles. Click a tile to open the target card.
  *
  * Links are capped at the first `LINK_CAP` tiles with an inline "Show all"
- * disclosure — there is no landmark full-form page to click through to
- * (docs/plans/top-nav-ia.md Track D). Sessions come from `chat.byLandmark`,
+ * disclosure, so the section shows every link in place. The landmark card
+ * itself opens as the place page (`PlaceView`), which reuses `LandmarkLinks`
+ * and `LandmarkGroup`. Sessions come from `chat.byLandmark`,
  * joined by directory upstream in `LandmarksList`; see docs/landmarks.md for
  * the chat/directory association model.
  */
@@ -137,19 +138,21 @@ export function LandmarkSection({
 
 /**
  * The link grid, capped: the first `LINK_CAP` tiles always show, the rest sit
- * behind an inline disclosure rather than a click-through (no full-form view
- * exists to click through to).
+ * behind an inline disclosure, so every link stays reachable in place.
  */
 export function LandmarkLinks({
   links,
   boxSlug,
   onNavigate,
   compact,
+  hidePath,
 }: {
   links: ResolvedLink[];
   boxSlug: string;
   onNavigate?: (target: ViewTarget) => void;
   compact?: boolean;
+  /** Title only, no file path under it (the place page, which a person reads). */
+  hidePath?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
   if (links.length === 0) return null;
@@ -159,7 +162,7 @@ export function LandmarkLinks({
     <Stack gap="xs">
       <div className={`grid grid-cols-1 gap-2 ${compact === true ? "" : "sm:grid-cols-2"}`}>
         {visible.map((link) => (
-          <LinkTile key={link.ref} link={link} boxSlug={boxSlug} onNavigate={onNavigate} />
+          <LinkTile key={link.ref} link={link} boxSlug={boxSlug} onNavigate={onNavigate} hidePath={hidePath} />
         ))}
       </div>
       {links.length > LINK_CAP ? (
@@ -183,13 +186,19 @@ export function LandmarkGroup({
   boxSlug,
   onNavigate,
   compact,
+  defaultOpen,
+  hidePath,
 }: {
   group: ResolvedGroup;
   boxSlug: string;
   onNavigate?: (target: ViewTarget) => void;
   compact?: boolean;
+  /** Title only, no file path under it (the place page). */
+  hidePath?: boolean;
+  /** Start expanded (the place page); menus and the Landmarks page start collapsed. */
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen === true);
   const overflow = group.count - group.children.length;
 
   return (
@@ -206,8 +215,9 @@ export function LandmarkGroup({
       </button>
       {open ? (
         <div className={`ml-6 grid grid-cols-1 gap-2 ${compact === true ? "" : "sm:grid-cols-2"}`}>
+          {group.count === 0 ? <Text as="div" size="sm" tone="muted">None yet</Text> : null}
           {group.children.map((link) => (
-            <LinkTile key={link.ref} link={link} boxSlug={boxSlug} onNavigate={onNavigate} />
+            <LinkTile key={link.ref} link={link} boxSlug={boxSlug} onNavigate={onNavigate} hidePath={hidePath} />
           ))}
           {overflow > 0 ? (
             <Text as="div" size="xs" tone="muted" className="self-center">
@@ -241,11 +251,14 @@ function LinkTile({
   link,
   boxSlug,
   onNavigate,
+  hidePath,
 }: {
   link: ResolvedLink;
   boxSlug: string;
   onNavigate?: (target: ViewTarget) => void;
+  hidePath?: boolean;
 }) {
+  const showPath = hidePath !== true;
   const display = link.label !== null && link.label.length > 0 ? link.label : link.title;
   // Box-rooted refs (leading `/`) get the display form; attach/relative refs
   // and external URLs (handled separately below) pass through as-is.
@@ -265,7 +278,8 @@ function LinkTile({
   if (!link.exists) {
     return (
       <Card padding="sm" border="subtle" muted>
-        <Text as="div" size="sm" weight="medium" tone="muted">{display}</Text>
+        {/* Struck through: the row stays so the place does not silently shrink. */}
+        <Text as="div" size="sm" weight="medium" tone="muted"><s>{display}</s></Text>
         <Text as="div" size="xs" tone="muted">Missing</Text>
       </Card>
     );
@@ -277,7 +291,7 @@ function LinkTile({
       <button type="button" onClick={() => onNavigate(target)} className="block w-full text-left">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
-          <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text>
+          {showPath ? <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text> : null}
         </Card>
       </button>
     );
@@ -287,7 +301,7 @@ function LinkTile({
     <Link to={href(`/${boxSlug}/views/${link.ref}`)} className="block">
       <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
         <Text as="div" size="sm" weight="medium">{display}</Text>
-        <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text>
+        {showPath ? <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text> : null}
       </Card>
     </Link>
   );

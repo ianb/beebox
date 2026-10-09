@@ -87,3 +87,11 @@ claude.ai-connector opt-out. Confirm that box-level skills and the
 ## Re-encounter 2026-10-08 (journey walks)
 
 More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R1): three box transcripts list the host's Google Drive, Claude Docs and browser tools, and the host user's email. [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R4): both box-agent sessions list Gmail, Google Calendar, Google Drive and Claude Docs in `deferred_tools_delta`; Admin Overview shows "Logged in as" the host account (row 65). [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 8): the agent offered to look through the person's Gmail. No `mcp__` tool call occurred in any of these boxes. The A and D reports do not mention the connectors.
+
+## Production (2026-10-08)
+
+Production was exposed. On the production host, 731 of 1,261 box-agent
+transcripts from 2026-08-29 to the morning of 2026-10-08 list the host
+account's claude.ai connector tools, and four sessions called them (Drive,
+Claude Docs, and Gmail search). The fix is deployed in `9a8bcae8d`, and the
+production bundle contains it. Specifics are kept privately.

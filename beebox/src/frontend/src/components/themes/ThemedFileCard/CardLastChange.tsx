@@ -4,7 +4,8 @@ import { lastChangeLine } from "../../../lib/last-change-line";
 import { useNow } from "../../../lib/use-now";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
 import { legacyHistoryState } from "../../history/card-state";
-import { PropertyLink, PropertyProblem, useRefetchOnFileChange } from "./property-section";
+import { PropertyLink, PropertyProblem } from "./property-section";
+import { useRefetchOnFileChange } from "../../../hooks/useRefetchOnFileChange";
 
 /**
  * The newest commit touching the card (history follows renames), and a link

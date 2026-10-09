@@ -54,6 +54,14 @@ lA === basename(A)
 => true
 ```
 
+The root place carries the box's two onboarding openers, so a new box's first
+chat offers them (they moved here from the briefing seed).
+
+```ts continue
+parseLandmarkFields(await readFile(join(A, "_content/Box.landmark.card"), "utf8"))?.navigation?.openers
+=> ["Let me tell you what this box is for.", "What can you do?"]
+```
+
 An inert root landmark — here the legacy XML-body shape, which the frontmatter
 parser reads as having no role — is repaired in place (the existing filename is
 kept and returned):

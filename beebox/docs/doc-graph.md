@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-09T02:43:37Z
-Total documents: 490
+Generated: 2026-10-09T04:20:27Z
+Total documents: 510
 
 ## Issues
 
@@ -89,6 +89,24 @@ These documents are not referenced by any other document.
 - **test/user-stories/journeys/B-inventory/reports/2026-08-23-2.md** — "B-inventory, 2026-08-23 (run 2)" (54 lines)
 - **test/user-stories/journeys/B-inventory/reports/2026-08-23-6.md** — "B-inventory, 2026-08-23 (run 6)" (49 lines)
 - **test/user-stories/journeys/README.md** — "Journeys" (131 lines)
+- **test/user-stories/work/journeys/A-lending-2026-10-08/notes.md** — "Notes — first evening with the lending thing" (237 lines)
+- **test/user-stories/work/journeys/A-lending-2026-10-08/prompt.md** — "You are trying out an app" (208 lines)
+- **test/user-stories/work/journeys/A-lending-2026-10-08/watch-for.md** — "I want to remember who has my stuff — for the reader" (40 lines)
+- **test/user-stories/work/journeys/B-inventory-2026-10-08-2/notes.md** — "Notes — first evening with the odds-and-ends tray" (208 lines)
+- **test/user-stories/work/journeys/B-inventory-2026-10-08-2/prompt.md** — "You are trying out an app" (191 lines)
+- **test/user-stories/work/journeys/B-inventory-2026-10-08-2/watch-for.md** — "I never know what I've got — for the reader" (11 lines)
+- **test/user-stories/work/journeys/B-inventory-2026-10-08/notes.md** — "Notes — first evening with the odds-and-ends tray" (245 lines)
+- **test/user-stories/work/journeys/B-inventory-2026-10-08/prompt.md** — "You are trying out an app" (191 lines)
+- **test/user-stories/work/journeys/B-inventory-2026-10-08/watch-for.md** — "I never know what I've got — for the reader" (11 lines)
+- **test/user-stories/work/journeys/C-reconnecting-2026-10-08/notes.md** — "Notes — trying the app a friend set up (reconnecting with friends)" (213 lines)
+- **test/user-stories/work/journeys/C-reconnecting-2026-10-08/prompt.md** — "You are trying out an app" (201 lines)
+- **test/user-stories/work/journeys/C-reconnecting-2026-10-08/watch-for.md** — "I want to reconnect with people I've lost touch with — for the reader" (22 lines)
+- **test/user-stories/work/journeys/D-chemistry-2026-10-08/notes.md** — "Chemistry evenings — notes" (111 lines)
+- **test/user-stories/work/journeys/D-chemistry-2026-10-08/prompt.md** — "You are trying out an app" (197 lines)
+- **test/user-stories/work/journeys/D-chemistry-2026-10-08/watch-for.md** — "I'm teaching myself chemistry and my notes are a mess — for the reader" (21 lines)
+- **test/user-stories/work/journeys/F-newcomer-2026-10-08/notes.md** — "Trying out the app my friend set up" (285 lines)
+- **test/user-stories/work/journeys/F-newcomer-2026-10-08/prompt.md** — "You are trying out an app" (188 lines)
+- **test/user-stories/work/journeys/F-newcomer-2026-10-08/watch-for.md** — "What would I even use this for? — for the reader" (21 lines)
 
 ### Broken References
 
@@ -466,6 +484,7 @@ Referenced by:
 - docs/implemented-plans/ios-log-forwarding.md:49 (mention) — - `beebox/code-style.md` — logging-levels policy ("`console.error` — a
 - docs/implemented-plans/ios-per-box-device-lock.md:30 (mention) — - `code-style.md` requires visible failure handling (`code-style.md:24-33`) and
 - docs/implemented-plans/job-xml-purge.subplan.md:41 (mention) — - `beebox/code-style.md` — no `any`, max-2 positional params, named-error
+- docs/implemented-plans/landmark-arrival.md:413 (mention) — `code-style.md`); `compileBriefings` (`compile/core.ts:77-108`) reads the root landmark's
 - docs/implemented-plans/link-validation-fix.md:37 (mention) — - `beebox/code-style.md` — no `any`, double quotes, semicolons, max 2
 - docs/implemented-plans/local-password-auth.md:34 (mention) — - `code-style.md` — custom error classes, no default params, named-params
 - docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md:22 (mention) — Drawn from `CLAUDE.md` and `code-style.md`; referenced by name in findings below.
@@ -573,6 +592,7 @@ Referenced by:
 - docs/implemented-plans/chat-stream-finalize-unify.md:50 (mention) — palette. Read frontend.md before writing UI"* and the
 - docs/implemented-plans/design-reconciliation.md:43 (mention) — capture, dashboard, views, and a real design system (frontend.md).
 - docs/implemented-plans/figure-card-type.md:85 (mention) — - **`beebox/frontend.md`** — UI primitives + `className`-only-for-outer-
+- docs/implemented-plans/landmark-arrival.md:83 (mention) — as a side effect of a click (frontend.md, "Workspace presentation").
 - docs/implemented-plans/local-password-auth.md:525 (mention) — precedent but non-dismissible. Per bbx-frontend conventions (frontend.md
 - docs/implemented-plans/open-chat-from-card.md:58 (mention) — - `beebox/frontend.md` — UI primitives + semantic palette, `className` only for
 - docs/implemented-plans/remove-bbx-render.md:290 (mention) — plus its description in `frontend.md:60`.
@@ -1079,6 +1099,7 @@ Referenced by:
 - docs/README.md:45 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
 - docs/implemented-plans/doc-structure.md:48 (mention) — No generated output changes except `docs/doc-graph.md`, regenerated. Not a BIG
 - docs/implemented-plans/docs-reorg.md:114 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
+- docs/implemented-plans/landmark-arrival.md:630 (mention) — - `pnpm doc-check` does not ask for `docs/doc-graph.md`; regenerating it in a worktree also lists
 - docs/implemented-plans/remove-bbx-render.md:358 (mention) — **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/agent-docs.md:71 (mention) — `doc-graph.md` mentions `private-issues`. `box-docs/` has two benign hits
@@ -1137,6 +1158,7 @@ Referenced by:
 - docs/implemented-plans/ios-log-forwarding.md:44 (mention) — - `docs/engineering-principles.md` — **resilient-not-silent** (the plan's whole
 - docs/implemented-plans/ios-per-box-device-lock.md:16 (mention) — - `docs/engineering-principles.md` **#1 types are structure**, **#3 validate at
 - docs/implemented-plans/jev-document-triage.md:55 (link) — [Engineering principles](../engineering-principles.md), especially principles 1 (typed
+- docs/implemented-plans/landmark-arrival.md:166 (mention) — - **Principle 8, one way to do each thing** (`docs/engineering-principles.md`).
 - docs/implemented-plans/local-password-auth.md:18 (mention) — - `docs/engineering-principles.md` — principally:
 - docs/implemented-plans/mobile-parity-sync.md:19 (mention) — - `docs/engineering-principles.md` **#4 resilient and never silent** — drift
 - docs/implemented-plans/mobile-token-handshake.md:18 (mention) — - **`docs/engineering-principles.md` #3 (validate at boundaries)** — the cookie is untrusted
@@ -1381,7 +1403,7 @@ References:
 
 #### docs/landmarks.md
 
-Title: "Landmarks" | 253 lines | current reference
+Title: "Landmarks" | 322 lines | current reference
 
 Referenced by:
 - docs/design/representation.md:115 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
@@ -1390,6 +1412,8 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:829 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
 - docs/implemented-plans/card-prominence.md:67 (mention) — row (`docs/landmarks.md`: "Parse warnings — a row naming any
 - docs/implemented-plans/clerk-webpage-capture.md:268 (mention) — destinations API, extension UI labels, docs/landmarks.md, knowledge audits.
+- docs/implemented-plans/landmark-arrival.design.md:68 (link) — This changes one line of the current definition. [`landmarks.md`](../landmarks.md)
+- docs/implemented-plans/landmark-arrival.md:140 (mention) — Authored documentation: about 230 lines (`docs/landmarks.md` rendering,
 - docs/implemented-plans/nav-card.md:142 (mention) — links (see `docs/landmarks.md`).
 - docs/implemented-plans/open-chat-from-card.md:97 (mention) — `contextDir` chosen at the call site (`LandmarkSection.tsx:96`). `docs/landmarks.md` (per the
 - docs/implemented-plans/top-nav-ia.md:201 (mention) — - **No landmark full form exists.** `docs/landmarks.md:119-134`
@@ -1412,6 +1436,7 @@ References:
 - → docs/triage.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
 - → docs/chat/quick-chat.md (link)
+- → docs/implemented-plans/landmark-arrival.md (mention)
 
 #### docs/media.md
 
@@ -2126,6 +2151,7 @@ Referenced by:
 - docs/implemented-plans/design-reconciliation.md:39 (mention) — - **Reality/tension** — architecture/01-what-is-this.md:11: "This group chat is
 - docs/plans/agent-docs.md:376 (mention) — - architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:14 (mention) — spirit-phrased last row, in `01-what-is-this.md`, `02-cards-and-memory.md`,
+- ../research/lifeos-review.md:51 (mention) — - **The dashboard is operations**, not a life view (`beebox/src/frontend/src/pages/DashboardPage.tsx`): questions, inbox
 
 #### docs/architecture/02-cards-and-memory.md
 
@@ -2242,10 +2268,11 @@ Referenced by:
 
 #### docs/box/landmark-curation.md
 
-Title: "Landmark Curation" | 51 lines | current reference
+Title: "Landmark Curation" | 52 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:190 (mention) — Two flagged cases: `landmark-curation.md` is written as second-person
+- docs/implemented-plans/landmark-arrival.md:142 (mention) — `docs/box/landmark-curation.md`; one knowledge-audit entry). Schema
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:261 (mention) — (`docs/landmark-curation.md`, `docs/triage.md`) that don't exist in
 - src/core/agent-guide/guide.md:386 (mention) — Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:12 (mention) — > Closed 2026-09-24: moved to `beebox/docs/box/landmark-curation.md` (with `read-when:`), so it ships as `node_modules/b
@@ -2385,7 +2412,7 @@ Referenced by:
 - CLAUDE.md:29 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:100 (link) — - [`docs/cards/format.md`](docs/cards/format.md) — the card format
 - docs/cards.md:10 (link) — | [Format](cards/format.md) | The file format: naming, frontmatter and body, the shared Markdoc tags, attachments, refs,
-- docs/cards/migrations.md:328 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:351 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/schemas.md:82 (link) — - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is
 - docs/cards/validation.md:93 (link) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/design/README.md:41 (link) — - **§3 File formats and envelopes** — taught the XML envelope; cards are YAML frontmatter + markdown ([`../cards/format.
@@ -2418,7 +2445,7 @@ References:
 
 #### docs/cards/migrations.md
 
-Title: "Card migrations" | 371 lines | current reference
+Title: "Card migrations" | 394 lines | current reference
 
 Referenced by:
 - CLAUDE.md:29 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -2438,6 +2465,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-cards.md:61 (mention) — | `migrations.md` (current parts) | `cards/migrations.md` |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:164 (mention) — `docs/cards/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 - docs/implemented-plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
+- docs/implemented-plans/landmark-arrival.md:141 (mention) — schema, and arrival sections; `docs/cards/migrations.md` entry;
 - docs/implemented-plans/migration-admission-cost.md:326 (mention) — (`docs/cards/migrations.md` admission section) updated.
 - docs/implemented-plans/one-root-box-layout.md:143 (mention) — | Migration registry + runbook | `src/core/migrations.ts`, `docs/cards/migrations.md`, precedent `box-packageify` (`boxe
 - docs/implemented-plans/procedure-migration-convergence.md:151 (mention) — Amend `migration-reliability.md:311` and `:522-524`, `docs/cards/migrations.md:40-41`
@@ -2472,6 +2500,7 @@ Referenced by:
 References:
 - → docs/server/deploying.md (link)
 - → docs/reports/migration-rollout-2026-05-23.md (link)
+- → docs/implemented-plans/landmark-arrival.md (mention)
 - → docs/cards/format.md (link)
 - → docs/implemented-plans/cards-as-markdown-rfc.md (link)
 - → docs/cards/schemas.md (link)
@@ -2486,7 +2515,7 @@ Referenced by:
 - README.md:101 (link) — - [`docs/cards/schemas.md`](docs/cards/schemas.md) — adding a new card type
 - docs/cards.md:11 (link) — | [Schemas](cards/schemas.md) | Adding a card type: the schema file, its hooks, registration, templates, the generated i
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:329 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
+- docs/cards/migrations.md:352 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/implemented-plans/box-schema-reload.md:250 (mention) — - Mirror in `docs/cards/schemas.md` if it implies `bbx init` re-registers.
 - docs/implemented-plans/box-search.md:51 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
@@ -2570,7 +2599,7 @@ Title: "Quick chat" | 298 lines | current reference
 Referenced by:
 - docs/chat.md:14 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
 - docs/design/trust.md:49 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
-- docs/landmarks.md:194 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
+- docs/landmarks.md:225 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
 - docs/plans/box-screen.md:374 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - docs/plans/chat-routing.md:18 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
 - docs/plans/gmail-admission-and-preparation.md:24 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
@@ -2617,6 +2646,7 @@ Referenced by:
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:100 (mention) — Approved destinations, now applied: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lif
 - docs/notifications.md:91 (link) — within hours ([chat timers](chat/schedules.md)).
 - ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:64 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
+- ../research/lifeos-review.md:68 (mention) — | Weekly review that shows last week's "next step" and freezes a snapshot | **Adapt**, as a scheduled procedure that ope
 
 References:
 - → src/hub/CLAUDE.md (mention)
@@ -2989,7 +3019,7 @@ Title: "Code Maintenance" | 102 lines | current reference
 Referenced by:
 - code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/development/maintenance.md)
 - docs/README.md:135 (link) — ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
-- docs/cards/migrations.md:330 (link) — - [Maintenance](../development/maintenance.md), where `bbx engine migrate` and `clean-broken-refs.ts` sit among the peri
+- docs/cards/migrations.md:353 (link) — - [Maintenance](../development/maintenance.md), where `bbx engine migrate` and `clean-broken-refs.ts` sit among the peri
 - docs/development.md:41 (link) — | [Maintenance](development/maintenance.md) | Periodic tasks: what runs on its own, what is not yet enrolled, what to ru
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
 - docs/implemented-plans/doc-structure-development.md:53 (mention) — | Enrolled schedules | maintenance.md "four enrolled today"; development-workflow.md lists eleven | contradiction; the n
@@ -3593,7 +3623,7 @@ Title: "Card prominence: visibility lives on the card, landmarks derive from it"
 
 Referenced by:
 - docs/implemented-plans/card-themes.md:20 (link) — [card prominence](../implemented-plans/card-prominence.md).
-- docs/landmarks.md:19 (mention) — - **A place marker, not a visitable file.** The landmark card is `background` by type: Browse folds it and draws the dir
+- docs/landmarks.md:19 (mention) — - **A place you can visit.** The landmark card is `background` by type: Browse folds it and draws the directory's identi
 - docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
 - ../issues/closed/bugs/2026-09-06-landmark-symbol-migration-reflows-long-lines.md:13 (mention) — > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/doc
 - ../issues/closed/bugs/2026-09-06-prominence-attach-scope-lint-misses-own-landmark-exception.md:13 (mention) — > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/doc
@@ -3711,7 +3741,7 @@ Title: "RFC: Cards as Markdown + YAML Frontmatter" | 2560 lines | shipped histor
 
 Referenced by:
 - docs/cards/format.md:9 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:328 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:351 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/validation.md:93 (mention) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/implemented-plans/remove-cardworks-and-xml.md:123 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
 - docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `beebox/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
@@ -4823,6 +4853,55 @@ Referenced by:
 References:
 - → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
 - → code-style.md (mention)
+
+#### docs/implemented-plans/landmark-arrival.design.md
+
+Title: "Landmark arrival: design" | 144 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/landmark-arrival.md:110 (link) — [landmark-arrival.design.md](landmark-arrival.design.md). Its "Decided
+
+References:
+- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (frontmatter)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (frontmatter)
+- → test/user-stories/journeys/A-lending/reports/2026-10-08.md (link)
+- → test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md (link)
+- → test/user-stories/journeys/D-chemistry/reports/2026-10-08.md (link)
+- → docs/landmarks.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/features/2026-09-08-landmark-scoped-pinned-card-baseline.md (link)
+
+#### docs/implemented-plans/landmark-arrival.md
+
+Title: "Landmark arrival" | 940 lines | shipped history | implemented
+
+Referenced by:
+- docs/cards/migrations.md:320 (mention) — Track B of `docs/implemented-plans/landmark-arrival.md`. Chat openers moved from briefing
+- docs/landmarks.md:297 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
+- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
+- ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
+
+References:
+- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (frontmatter)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (frontmatter)
+- → ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md (link)
+- → ../issues/features/2026-09-08-landmark-scoped-pinned-card-baseline.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
+- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
+- → ../issues/features/2026-07-20-first-run-experience.md (link)
+- → ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md (link)
+- → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
+- → frontend.md (mention)
+- → docs/implemented-plans/landmark-arrival.design.md (link)
+- → docs/landmarks.md (mention)
+- → docs/cards/migrations.md (mention)
+- → docs/box/landmark-curation.md (mention)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/doc-graph.md (mention)
 
 #### docs/implemented-plans/lightbox-mobile-gestures.md
 
@@ -6086,7 +6165,7 @@ Title: "Unified app bar: one nav for chat and everything else" | 539 lines | shi
 Referenced by:
 - docs/implemented-plans/chat-header-chips.md:9 (mention) — **Superseded surface (2026-08-02, `docs/implemented-plans/top-nav-ia.md`).** The chat
 - docs/implemented-plans/nav-card.md:18 (mention) — **Where the entries render changed (2026-08, `docs/implemented-plans/top-nav-ia.md`
-- docs/landmarks.md:143 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
+- docs/landmarks.md:176 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
 - docs/plans/box-screen.md:43 (mention) — - This changes shipped navigation from `beebox/docs/implemented-plans/top-nav-ia.md`: line 296 puts Dashboard, Browse, H
 - docs/questions.md:256 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
 - docs/user-stories/catalog/2026-08-21.md:9048 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a
@@ -8120,6 +8199,7 @@ Referenced by:
 - docs/architecture/CLAUDE.md:5 (mention) — **Role:** this series is the onboarding narrative — the canonical human-facing "what is this." Engineering rationale liv
 - docs/design/README.md:4 (link) — decisions log, is frozen as a dated report: [`../reports/stack-decisions-2026-09-04.md`](../reports/stack-decisions-2026
 - ../issues/closed/code-quality/2026-07-04-xstate-store-never-adopted.md:7 (mention) — > Closed 2026-09-24 as moot: no living document claims `@xstate/store` is adopted. `stack-decisions.md` became a frozen
+- ../research/lifeos-review.md:65 (mention) — | MCP server as the agent's interface to the app | **Reject.** Bee Box's in-box agent is the better bet; Life OS's laggi
 
 References:
 - → docs/design/README.md (link)
@@ -9071,19 +9151,20 @@ References:
 Title: "A-lending, 2026-10-08" | 193 lines
 
 Referenced by:
+- docs/implemented-plans/landmark-arrival.design.md:12 (link) — ([A-lending](../../test/user-stories/journeys/A-lending/reports/2026-10-08.md),
 - ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md:66 (link) — Still present in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 64).
-- ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:42 (link) — Still present in every 2026-10-08 walk: [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R1
 - ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md:31 (link) — Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R3, R4). After th
 - ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:16 (link) — [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 54),
 - ../issues/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:15 (link) — [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 7, 19),
 - ../issues/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:16 (link) — ([report](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 12, 20, 70, 74).
-- ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:18 (link) — | [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R2) | 5 | About 0.5 s after turn
-- ../issues/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:15 (link) — [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 29, 33, 58),
-- ../issues/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:16 (link) — [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 63),
 - ../issues/bugs/2026-10-08-open-card-silently-follows-into-trash.md:17 (link) — ([report](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 14, 81).
 - ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:14 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 56),
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
 - ../issues/closed/bugs/2026-10-08-bare-ack-kind-tag-renders-as-text.md:15 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row 21, shot 06). The agent
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:40 (link) — | [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R2) | 5 | About 0.5 s after t
+- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:18 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 29, 33, 58),
 - ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md:17 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row 35, shots 10 and 25).
+- ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:19 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 63),
 - ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 1),
 - ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md:17 (link) — walks saw it: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 24, 31,
 - ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 55),
@@ -9105,7 +9186,7 @@ References:
 - → ../issues/bugs/2026-10-08-open-card-silently-follows-into-trash.md (link)
 - → ../issues/closed/bugs/2026-10-08-bare-ack-kind-tag-renders-as-text.md (link)
 - → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (link)
-- → ../issues/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 - → ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md (link)
 - → ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
@@ -9113,10 +9194,10 @@ References:
 - → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
 - → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
 - → ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
-- → ../issues/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
 - → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
-- → ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
-- → ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
 - → ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md (link)
 - → ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md (link)
@@ -9159,19 +9240,20 @@ References:
 Title: "B-inventory, 2026-10-08 (second walk)" | 251 lines
 
 Referenced by:
+- docs/implemented-plans/landmark-arrival.design.md:13 (link) — [B-inventory](../../test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md),
 - test/user-stories/journeys/B-inventory/reports/2026-10-08.md:20 (link) — [2026-10-08-2](2026-10-08-2.md), ran with the restored photos and is the photo
-- ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:42 (link) — Still present in every 2026-10-08 walk: [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R1
 - ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:35 (link) — Seen in the [B2 walk](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 64): searching "
 - ../issues/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:35 (link) — [walk 2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 45).
 - ../issues/bugs/2026-10-08-capture-finalized-with-nothing-landed-says-nothing.md:37 (link) — Report: [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 13, shot 06).
-- ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:24 (link) — The [second B-inventory walk](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R5)
 - ../issues/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md:26 (link) — [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R2).
 - ../issues/bugs/2026-10-08-conversation-keeps-placeholder-title.md:38 (link) — [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 36, 60, 68),
-- ../issues/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:17 (link) — [B-inventory, second walk](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 39).
 - ../issues/bugs/2026-10-08-unreadable-picked-file-reported-as-format-or-network-fault.md:30 (link) — Report: [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 7).
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:89 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
 - ../issues/closed/bugs/2026-10-08-chat-image-alt-text-numbers-content-blocks.md:23 (link) — Report: [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 20; first report R8).
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:46 (link) — The [second B-inventory walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R5)
 - ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md:32 (link) — [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R7).
+- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:20 (link) — [B-inventory, second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 39).
 - ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md:20 (link) — [second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) row 39). The D-chemistry
 - ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:18 (link) — [B-inventory second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 63:
 - ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:18 (link) — [second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 2),
@@ -9180,7 +9262,7 @@ Referenced by:
 
 References:
 - → test/user-stories/journeys/B-inventory/reports/2026-10-08.md (link)
-- → ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
 - → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
 - → ../issues/bugs/2026-10-08-unreadable-picked-file-reported-as-format-or-network-fault.md (link)
@@ -9188,7 +9270,7 @@ References:
 - → ../issues/closed/bugs/2026-10-08-chat-image-alt-text-numbers-content-blocks.md (link)
 - → ../issues/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
 - → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
-- → ../issues/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
 - → ../issues/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
 - → docs/agent-guide.md (mention)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
@@ -9196,7 +9278,7 @@ References:
 - → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (link)
 - → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
 - → ../issues/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
-- → ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md (link)
 - → ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md (link)
 - → test/user-stories/journeys/walker-prompt.md (mention)
@@ -9209,14 +9291,14 @@ Referenced by:
 - test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md:17 (link) — [first walk](2026-10-08.md) sent photos that were damaged in the repository.
 - ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:119 (link) — Walker reaction, not a recurrence. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.
 - ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:104 (link) — Related observation, desktop. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (
-- ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:42 (link) — Still present in every 2026-10-08 walk: [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R1
 - ../issues/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:34 (link) — [walk 1](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 42),
 - ../issues/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md:33 (link) — Report: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (R6, harness defect 2).
-- ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:19 (link) — | [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (R2) | 3 | Each after a turn
 - ../issues/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md:25 (link) — Reports: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 13),
 - ../issues/bugs/2026-10-08-conversation-keeps-placeholder-title.md:37 (link) — [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (rows 44, 46),
-- ../issues/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:16 (link) — [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 26) and
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:41 (link) — | [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (R2) | 3 | Each after a tu
 - ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md:31 (link) — Reports: [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 11),
+- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:19 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 26) and
 - ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md:19 (link) — ([first walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) rows 60 and 79,
 - ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:17 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 1) and
 - ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md:36 (link) — ([report](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md),
@@ -9229,14 +9311,14 @@ References:
 - → ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md (link)
 - → ../issues/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
 - → ../issues/bugs/2026-08-08-chat-composer-attach-ux.md (link)
-- → ../issues/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
 - → ../issues/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
 - → docs/agent-guide.md (mention)
 - → ../issues/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
 - → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-- → ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
-- → ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md (link)
 - → test/user-stories/journeys/after-action.md (mention)
 - → ../issues/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md (link)
@@ -9264,13 +9346,13 @@ Referenced by:
 - ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:119 (link) — Walker reaction, not a recurrence. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:48 (link) — Seen in two walks. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (rows
 - ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:38 (link) — Still present. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 44) a
-- ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:42 (link) — Still present in every 2026-10-08 walk: [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R1
 - ../issues/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:16 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 7, which also
-- ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:20 (link) — | [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 49) | 1 | One seco
 - ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:15 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 30),
 - ../issues/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:28 (link) — Report: [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:89 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
 - ../issues/closed/bugs/2026-10-08-browse-ref-click-checks-only-geometry.md:51 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 37).
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:42 (link) — | [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 49) | 1 | One s
 - ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:21 (link) — ([report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md), row 33).
 - ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:19 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 3),
 - ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md:18 (link) — 53), [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 26,
@@ -9295,12 +9377,11 @@ References:
 - → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
 - → ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
 - → ../issues/closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md (link)
-- → ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → CLAUDE.md (mention)
 - → ../issues/closed/bugs/2026-10-08-browse-ref-click-checks-only-geometry.md (link)
 - → test/user-stories/journeys/after-action.md (mention)
 - → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (mention)
-- → ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (mention)
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (mention)
 - → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (mention)
 - → ../issues/features/2026-09-25-notifications-and-proactive-design.md (mention)
@@ -9331,14 +9412,15 @@ Referenced by:
 Title: "D-chemistry, 2026-10-08" | 191 lines
 
 Referenced by:
-- ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:42 (link) — Still present in every 2026-10-08 walk: [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R1
+- docs/implemented-plans/landmark-arrival.design.md:14 (link) — [D-chemistry](../../test/user-stories/journeys/D-chemistry/reports/2026-10-08.md)).
 - ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:17 (link) — [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 11),
 - ../issues/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:18 (link) — [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 15),
 - ../issues/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md:31 (link) — Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 56, shot 19).
-- ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:21 (link) — | [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (R4) | 7 in 5 root-chat turns
 - ../issues/bugs/2026-10-08-conversation-keeps-placeholder-title.md:39 (link) — [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 63),
 - ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md:37 (link) — Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (rows 65, 70).
-- ../issues/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:17 (link) — [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 71).
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:43 (link) — | [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (R4) | 7 in 5 root-chat tu
+- ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:20 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 71).
 - ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md:23 (link) — ([report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), row 65).
 - ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:16 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 32, shots 08 to 09;
 - ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:20 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 6),
@@ -9351,7 +9433,7 @@ Referenced by:
 
 References:
 - → CLAUDE.md (mention)
-- → ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
 - → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
 - → ../issues/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
@@ -9364,9 +9446,9 @@ References:
 - → ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md (link)
 - → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
 - → ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md (link)
-- → ../issues/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
 - → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
-- → ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → test/user-stories/journeys/after-action.md (mention)
 
 ### test/user-stories/journeys/F-newcomer/reports/
@@ -9378,8 +9460,8 @@ Title: "F-newcomer, 2026-09-21" | 226 lines
 Referenced by:
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:17 (link) — Screenshots 20 and 21 in the [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md
 - ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:34 (link) — Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
-- ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:14 (link) — [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
 - ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:51 (link) — Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:17 (link) — [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
 - ../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md:38 (link) — Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 - ../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md:35 (link) — Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:55 (link) — Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
@@ -9393,17 +9475,17 @@ Referenced by:
 - ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:104 (link) — Related observation, desktop. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:48 (link) — Seen in two walks. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (rows
 - ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:38 (link) — Still present. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 44) a
-- ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:42 (link) — Still present in every 2026-10-08 walk: [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R1
 - ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:18 (link) — [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 22, 29).
 - ../issues/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:19 (link) — [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 9, 73).
-- ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:22 (link) — | [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R1) | 2 | One second after tur
 - ../issues/bugs/2026-10-08-conversation-keeps-placeholder-title.md:40 (link) — [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 83).
 - ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:16 (link) — [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 32: "DATED, ON THE
 - ../issues/bugs/2026-10-08-seed-briefing-reaching-me-speaks-agent-commands.md:28 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shot 10).
 - ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md:20 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md).
 - ../issues/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:31 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shots 05, 07, 08, 28).
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
 - ../issues/closed/bugs/2026-10-08-admin-overview-secrets-id-collides.md:27 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R2).
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:89 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:44 (link) — | [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R1) | 2 | One second after
 - ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:21 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 1).
 - ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md:19 (link) — reproduced) and [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 27,
 - ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md:18 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 30).
@@ -9426,10 +9508,9 @@ References:
 - → ../issues/bugs/2026-10-08-seed-briefing-reaching-me-speaks-agent-commands.md (link)
 - → ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md (link)
 - → ../issues/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
-- → ../issues/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → ../issues/closed/bugs/2026-10-08-admin-overview-secrets-id-collides.md (link)
 - → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (mention)
-- → ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (mention)
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (mention)
 - → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (mention)
 - → ../issues/features/2026-09-25-notifications-and-proactive-design.md (mention)
@@ -9440,4 +9521,124 @@ References:
 - → ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md (mention)
 - → ../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md (mention)
 - → ../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md (mention)
+
+### test/user-stories/work/journeys/A-lending-2026-10-08/
+
+#### test/user-stories/work/journeys/A-lending-2026-10-08/notes.md **[ORPHAN]**
+
+Title: "Notes — first evening with the lending thing" | 237 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/A-lending-2026-10-08/prompt.md **[ORPHAN]**
+
+Title: "You are trying out an app" | 208 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/A-lending-2026-10-08/watch-for.md **[ORPHAN]**
+
+Title: "I want to remember who has my stuff — for the reader" | 40 lines
+
+No references in or out.
+
+### test/user-stories/work/journeys/B-inventory-2026-10-08/
+
+#### test/user-stories/work/journeys/B-inventory-2026-10-08/notes.md **[ORPHAN]**
+
+Title: "Notes — first evening with the odds-and-ends tray" | 245 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/B-inventory-2026-10-08/prompt.md **[ORPHAN]**
+
+Title: "You are trying out an app" | 191 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/B-inventory-2026-10-08/watch-for.md **[ORPHAN]**
+
+Title: "I never know what I've got — for the reader" | 11 lines
+
+No references in or out.
+
+### test/user-stories/work/journeys/B-inventory-2026-10-08-2/
+
+#### test/user-stories/work/journeys/B-inventory-2026-10-08-2/notes.md **[ORPHAN]**
+
+Title: "Notes — first evening with the odds-and-ends tray" | 208 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/B-inventory-2026-10-08-2/prompt.md **[ORPHAN]**
+
+Title: "You are trying out an app" | 191 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/B-inventory-2026-10-08-2/watch-for.md **[ORPHAN]**
+
+Title: "I never know what I've got — for the reader" | 11 lines
+
+No references in or out.
+
+### test/user-stories/work/journeys/C-reconnecting-2026-10-08/
+
+#### test/user-stories/work/journeys/C-reconnecting-2026-10-08/notes.md **[ORPHAN]**
+
+Title: "Notes — trying the app a friend set up (reconnecting with friends)" | 213 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/C-reconnecting-2026-10-08/prompt.md **[ORPHAN]**
+
+Title: "You are trying out an app" | 201 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/C-reconnecting-2026-10-08/watch-for.md **[ORPHAN]**
+
+Title: "I want to reconnect with people I've lost touch with — for the reader" | 22 lines
+
+No references in or out.
+
+### test/user-stories/work/journeys/D-chemistry-2026-10-08/
+
+#### test/user-stories/work/journeys/D-chemistry-2026-10-08/notes.md **[ORPHAN]**
+
+Title: "Chemistry evenings — notes" | 111 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/D-chemistry-2026-10-08/prompt.md **[ORPHAN]**
+
+Title: "You are trying out an app" | 197 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/D-chemistry-2026-10-08/watch-for.md **[ORPHAN]**
+
+Title: "I'm teaching myself chemistry and my notes are a mess — for the reader" | 21 lines
+
+No references in or out.
+
+### test/user-stories/work/journeys/F-newcomer-2026-10-08/
+
+#### test/user-stories/work/journeys/F-newcomer-2026-10-08/notes.md **[ORPHAN]**
+
+Title: "Trying out the app my friend set up" | 285 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/F-newcomer-2026-10-08/prompt.md **[ORPHAN]**
+
+Title: "You are trying out an app" | 188 lines
+
+No references in or out.
+
+#### test/user-stories/work/journeys/F-newcomer-2026-10-08/watch-for.md **[ORPHAN]**
+
+Title: "What would I even use this for? — for the reader" | 21 lines
+
+No references in or out.
 
