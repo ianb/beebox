@@ -202,6 +202,19 @@
   --tw-prose-quote-borders: var(--bbx-edge, #dedbd6);
   color: var(--bbx-ink, #6b5d4b);
 }
+.bbx-card-theme .bbx-theme-prose {
+  --tw-prose-bullets: var(--bbx-bullet);
+  --tw-prose-counters: var(--bbx-counter);
+  --tw-prose-hr: var(--bbx-rule);
+  --tw-prose-th-borders: var(--bbx-rule-strong);
+  --tw-prose-td-borders: var(--bbx-rule);
+  --tw-prose-captions: var(--bbx-ink-soft);
+  --tw-prose-pre-bg: var(--bbx-code-paper);
+  --tw-prose-pre-code: var(--bbx-code-ink);
+}
+.bbx-card-theme input[type="checkbox"] {
+  accent-color: var(--bbx-pen);
+}
 .bbx-theme-link {
   color: var(--bbx-pen, #455f87);
   text-decoration-line: var(--bbx-link-decoration, underline);
