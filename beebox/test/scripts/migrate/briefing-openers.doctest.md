@@ -14,7 +14,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { planOpenerMoves } from "../../../src/scripts/migrate/briefing-openers/plan.js";
 import { runBriefingOpeners } from "../../../src/scripts/migrate/briefing-openers/run.js";
-import { createBriefingTemplate, REACHING_ME_DEFAULT } from "../../../src/schemas/briefing.js";
+import { createBriefingTemplate } from "../../../src/schemas/briefing.js";
 import { createLandmarkTemplate } from "../../../src/schemas/landmark.js";
 import { TEMPLATE_STOCK_HASHES } from "../../../src/core/template-stock-hashes.js";
 import { installBriefing } from "../../../src/core/box/structure/defaults.js";
@@ -24,8 +24,18 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 
+/** The "Reaching me" section as that seed carried it, before its agent commands were dropped. */
+const OLD_REACHING_ME = `## Reaching me
+
+Tell me, quietly, when something failed or you could not understand what I
+gave you. Do not tell me that routine work succeeded. A question for me is a
+dot unless it blocks something with a date. Things I asked to be told about
+are loud. Health problems stay on the dashboard unless they stop something I
+asked for. When I ask for a reminder, make a schedule card with \`notify:\`.
+When I ask to be told when something happens, make a schedule card that runs
+\`bbx changes\` and \`bbx judge\` before any agent.`;
 /** The briefing seed new boxes got before this change, openers included. */
-const OLD_SEED = `---\ntype: briefing\nopeners:\n  - Let me tell you what this box is for.\n  - What can you do?\n---\n{% purpose %}\nWhat this box is for.\n{% /purpose %}\n\n${REACHING_ME_DEFAULT}\n`;
+const OLD_SEED = `---\ntype: briefing\nopeners:\n  - Let me tell you what this box is for.\n  - What can you do?\n---\n{% purpose %}\nWhat this box is for.\n{% /purpose %}\n\n${OLD_REACHING_ME}\n`;
 /** The root landmark as `installRootLandmark` wrote it before this change: no openers. */
 const OLD_ROOT_LANDMARK = createLandmarkTemplate({ label: "kitchen", symbol: "📦" });
 const ROOT = "_content/briefing.briefing.card";

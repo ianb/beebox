@@ -21,11 +21,23 @@
 export const DEPLOYED_PATHS_PATTERN =
   "^(beebox|agent-doctest|personal-vibe-check|patches)/|^(package\\.json|pnpm-workspace\\.yaml|\\.npmrc|pnpm-lock\\.yaml)$";
 
+/**
+ * Paths under a shipped root that never reach the server: `beebox/docs/` is
+ * development documentation (plans, reports, the doc graph, reference docs)
+ * except `beebox/docs/box/`, the box-facing prose built into `box-docs/` and
+ * the only `docs/` entry in beebox's package `files`. ERE has no negative
+ * lookahead, so the second alternative spells "a first segment other than
+ * `box`". The hooks apply it as `grep -vE` before the deployed test, and
+ * `bin/deployed-paths.test.ts` checks the package `files` list against it.
+ */
+export const NOT_SHIPPED_PATTERN =
+  "^beebox/docs/([^/]+$|([^b/][^/]*|b[^o/][^/]*|bo[^x/][^/]*|box[^/]+)/)";
 const DEPLOYED_PATHS = new RegExp(DEPLOYED_PATHS_PATTERN);
+const NOT_SHIPPED = new RegExp(NOT_SHIPPED_PATTERN);
 
 /** Does this repo-relative path ship to the server? */
 export function isDeployedPath(path: string): boolean {
-  return DEPLOYED_PATHS.test(path);
+  return DEPLOYED_PATHS.test(path) && !NOT_SHIPPED.test(path);
 }
 
 /** Does any path in this diff ship? Empty diff ships nothing. */

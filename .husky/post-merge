@@ -54,8 +54,8 @@ if [ "$BRANCH" = "main" ]; then
   # Fail OPEN: if the merge's file list can't be computed, deploy rather than
   # risk silently skipping a real ship (the failure mode we're guarding against).
   merge_changed=$(git -C "$REPO_DIR" diff --name-only ORIG_HEAD HEAD 2>/dev/null || echo "beebox/__diff_failed__")
-  if ! printf '%s\n' "$merge_changed" | grep -qE '^(beebox|agent-doctest|personal-vibe-check|patches)/|^(package\.json|pnpm-workspace\.yaml|\.npmrc|pnpm-lock\.yaml)$'; then
-    echo "[post-merge] Skip deploy: merge touches no deployed path (beebox/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
+  if ! printf '%s\n' "$merge_changed" | grep -vE '^beebox/docs/([^/]+$|([^b/][^/]*|b[^o/][^/]*|bo[^x/][^/]*|box[^/]+)/)' | grep -qE '^(beebox|agent-doctest|personal-vibe-check|patches)/|^(package\.json|pnpm-workspace\.yaml|\.npmrc|pnpm-lock\.yaml)$'; then
+    echo "[post-merge] Skip deploy: merge touches no deployed path (beebox/ except dev-only beebox/docs/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
   elif ! "$REPO_DIR/beebox/deploy/deploy-target.sh" path >/dev/null 2>&1; then
     # No deploy target configured on this machine (see post-commit) — silent.
     :
