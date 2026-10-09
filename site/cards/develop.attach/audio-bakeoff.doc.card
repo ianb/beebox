@@ -1,0 +1,71 @@
+---
+title: Which model listens to voice messages
+summary: "A small, re-runnable benchmark for audio-understanding models, and what its October 2026 run found."
+authorship:
+  people:
+    - name: Ian Bicking
+      role: director
+      contribution: Recorded the test clips, directed both benchmark runs, and asked for the results to appear on the site.
+  ai:
+    transcription: none
+    drafting: Drafted this summary from the benchmark's 2026-10-09 report.
+    editing: none
+    research: Ran the benchmark, including the model calls, a model judge's scoring, and spot-checks of its verdicts.
+unlisted: true
+theme: paper
+stock: blue
+kind: generated
+status: ready
+next:
+  - card: /develop.site-page.card
+    label: Back to For developers
+---
+# Which model listens to voice messages
+
+Bee Box's agent can't hear. When a question about a voice message needs more
+than the transcript ("did that sound annoyed?", "how did I pronounce
+*mañana*?"), the box sends the recording to a model that accepts audio and
+asks it. Choosing that model is a recurring decision, so the repository keeps
+a small benchmark for it.
+
+## How it is tested
+
+One speaker recorded 29 short clips. Each clip tests one thing: the same
+words said warmly and reluctantly, one sentence with five different stressed
+words, Spanish with a single deliberately wrong sound, coughs and laughs, a
+meaningful pause, a whispered aside. Clips go to each model in blind groups
+labeled "Recording A" and "Recording B", with the same questions every time.
+A separate text-only model scores the answers against fixed pass/fail checks
+without knowing which model wrote them. The recordings are not published.
+
+Three synthetic clips (a sine tone, digital silence, and low noise) check
+whether a model reports speech that isn't there.
+
+## The October 2026 run
+
+- **Gemini 3.1 Pro Preview** was best on every capability, as in the first run
+  in August. It was the only model that heard a deliberately reduced Spanish
+  `rr`.
+- **Gemini 3.7 Flash, the model Bee Box asks for, is no longer what answers.**
+  Every request for it was answered by Gemini 3.8 Flash, according to the
+  model version in each response. Google's model list and changelog don't
+  mention the substitution.
+- **Gemini 3.8 Flash invents voice messages for silence.** Asked with Bee
+  Box's own prompt what the user said, it quoted a message every time: "Send
+  that email.", "Remind me to call John at 3:00 p.m.", "Uh, hey, can you just
+  delete that last voice message?" Gemini 3.1 Pro said there was no speech,
+  or, less helpfully, that no audio was attached. It never invented a
+  message.
+
+An accidental recording should never reach the agent as a confident request
+the user didn't make. On that basis the report recommends moving audio
+questions to Gemini 3.1 Pro, at about two cents and seven seconds per
+question.
+
+## Re-running it
+
+The benchmark, its pass/fail checks, every model answer, and the full reports
+are in the repository at
+[research/audio-understanding-bakeoff](https://github.com/ianb/beebox/tree/main/research/audio-understanding-bakeoff).
+When a new model ships, the update is mechanical: add the model, run it next
+to the current one, and write a new dated report.
