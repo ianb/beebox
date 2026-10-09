@@ -89,6 +89,6 @@ test("scrubText: naming the private-issues boundary passes; a path or link into 
   assert.throws(() => scrubText("see private-issues/bugs/x.md\n", opts), ScrubError);
   assert.throws(() => scrubText("[the note](../private-issues/x.md)\n", opts), ScrubError);
   // A link to a public doc whose anchor merely contains the word is not a link into the repo.
-  assert.doesNotThrow(() => scrubText("[rules](issues/CLAUDE.md#private-issues-a-separate-repo)\n", opts));
+  assert.doesNotThrow(() => scrubText("[rules](issues/AGENTS.md#private-issues-a-separate-repo)\n", opts));
 });
 

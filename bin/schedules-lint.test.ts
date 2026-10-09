@@ -2,7 +2,7 @@
  * Tests for `bin/schedules lint` and for the alert a tick raises about a
  * schedule it cannot run (scheduled-workstreams.md, Track E).
  *
- * Note on tier: bin/CLAUDE.md prefers doctests for new `bin/` tooling; the
+ * Note on tier: bin/AGENTS.md prefers doctests for new `bin/` tooling; the
  * plan's rollout names `bin/schedules.test.ts` explicitly and root `pnpm test`
  * runs exactly `bin/*.test.ts`. This file is that file's Track E half, split
  * off because it shells out to real shellcheck and eslint and is therefore the

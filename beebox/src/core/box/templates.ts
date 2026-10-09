@@ -61,8 +61,7 @@ src/tricks/
   package.json        <- npm dependencies for tricks
   node_modules/       <- installed packages (gitignored)
   lib/                <- Shared utilities (import with relative paths)
-  scripts/
-    CLAUDE.md         <- This file
+  scripts/            <- this file's directory
     clean-inbox/
       secrets.json     <- optional declared credentials for this trick
       index.ts        <- bbx trick clean-inbox
@@ -136,7 +135,7 @@ export async function installTricksPackageJson(boxRoot: string): Promise<void> {
 
 /**
  * The template files that ship with a `priorStockHashes` allowlist — the
- * box-local CLAUDE.md guides an agent reads. Each maps a ledger key
+ * box-local instruction-file guides an agent reads. Each maps a ledger key
  * (`TEMPLATE_STOCK_HASHES`) to its live content. Kept as a registry so the
  * forcing-function test and `pnpm template-stock:update` can iterate them: the
  * test fails if any content's hash drifts from the ledger's `current`, which is

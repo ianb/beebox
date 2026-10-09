@@ -60,7 +60,7 @@ workstream and explicitly not revived:
 - **Principle 8** (*one way to do each thing*): the persisted tab target reuses
   `serializeViewUrl`/`parseViewUrl` — the same string the `?card=` param already
   carries — rather than inventing a second serialization of a `ViewTarget`.
-- **beebox/CLAUDE.md**, no features beyond the task: Track A changes the retry
+- **beebox/AGENTS.md**, no features beyond the task: Track A changes the retry
   policy for the file-view queries only, not the app-wide QueryClient default.
 - **Most recent shipped precedent**: `lib/last-chat.ts` for a `sessionStorage`
   slice ("per tab, per box, and deliberately not durable"), and
@@ -426,7 +426,7 @@ a failed card every 30 s). It defends a window that focus, `file-change`, and bu
 reconnect already close, and it would fetch forever on a permanently broken box.
 Also rejected: lifting `retry` to the global QueryClient default — that changes
 every query in the app to fix two, which is a bigger blast radius than the task
-(beebox/CLAUDE.md, no features beyond the task). Also rejected: a generic
+(beebox/AGENTS.md, no features beyond the task). Also rejected: a generic
 `usePersistedState` hook — there would be one caller, and the repo's own
 convention is that each feature owns its key (`lib/dictation-draft.ts`,
 `lib/location-share.ts`, `lib/last-chat.ts`).

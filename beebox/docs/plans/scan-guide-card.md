@@ -24,7 +24,7 @@ This is a subplan of `docs/implemented-plans/scanner-ingest.md` (Track 6 reshape
     file is not),
   - resilient-not-silent (the fallback logs a deprecation warning; an invalid
     guide card is a hard error, not a silent skip).
-- `beebox/CLAUDE.md`: "Read before writing", "don't add features beyond
+- `beebox/AGENTS.md`: "Read before writing", "don't add features beyond
   what the task requires", "Keep source and docs generic — never hardcode
   personal names" (personal names stay in per-box config and
   `scratch/box-readiness/` drafts).

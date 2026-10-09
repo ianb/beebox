@@ -20,11 +20,11 @@ the material convention (proper presentational cards, not a stray `README.md`).
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md` (Cards) — **"Schemas can include `instructions`… injected into agent
+- `beebox/AGENTS.md` (Cards) — **"Schemas can include `instructions`… injected into agent
   context when processing cards of that type."** The card-rule surface this plan leans on.
-- `beebox/CLAUDE.md` — **"don't add features beyond what the task requires."** A lesson-plan
+- `beebox/AGENTS.md` — **"don't add features beyond what the task requires."** A lesson-plan
   is the *plan*, not the Phase-2 tutoring runner; keep the line.
-- `beebox/CLAUDE.md` — **"Keep source and docs generic — never hardcode personal names…"**
+- `beebox/AGENTS.md` — **"Keep source and docs generic — never hardcode personal names…"**
   Instructions stay generic; neutral pronouns (the courseware convention).
 - `beebox/code-style.md` — no `any`, no default params, max 2 positional params, files ≤300
   lines (the reason courseware templates live in `templates-courseware.ts`, not `templates-builtins.ts`).

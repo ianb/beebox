@@ -30,14 +30,22 @@ Playground (`retired-theme-b`, stock `prism`), and retired-theme-c (`retired-the
 support both: retired-theme-d (`retired-theme-d`/`wool`), retired-theme-e (`retired-theme-e`/`marquee`),
 retired-theme-f (`retired-theme-f`/`silhouette`), retired-theme-g (`retired-theme-g`/`canopy`),
 retired-theme-h (`retired-theme-h`/`ink`), and retired-theme-i
-(`retired-theme-i`/`gouache`). Their matching names help pair a workspace and card;
-the two choices remain independent. The system-only `spectrum` (`gradient`) and
+(`retired-theme-i`/`gouache`). The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
 Resolution is explicit: card choice, first matching box path rule, box card-type
-choice, schema preference, box default, then plain. Properties identifies which
-of those supplied the result. A malformed choice remains visible as a
+choice, schema preference, box default, then the default card theme of the system
+theme the card is shown on. Properties identifies which of those supplied the
+result.
+
+Each system theme names the card themes that go with it, its default first
+(`cardThemes` in `src/shared/card-theme/catalog.ts`). A card theme may go with
+several system themes. A card with no authored theme follows the system theme,
+so it changes when it is shown under a landmark with a different system theme.
+The card picker lists that system theme's card themes first and keeps the others
+under **All card themes**. A chosen theme stays as chosen on every system theme;
+when it is outside the paired set, the picker shows it first under **This card**. A malformed choice remains visible as a
 presentation problem and falls back to plain while it is repaired. Card theme
 names and stocks are open values; an unfamiliar name is preserved for
 box-authored styling, with `neutral` as its default stock.

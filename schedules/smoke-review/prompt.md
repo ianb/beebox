@@ -81,7 +81,7 @@ window produced more evidence for either:
 ## What to do with a finding
 
 File **one** issue in `issues/code-quality/` (a trim) or `issues/features/` (a
-gap), following `issues/CLAUDE.md`, with `workstream: smoke-review`. Put the
+gap), following `issues/AGENTS.md`, with `workstream: smoke-review`. Put the
 counts and the specific bug issues in the body as evidence — a later reader must
 be able to check your reasoning without re-running this review.
 

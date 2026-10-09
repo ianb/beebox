@@ -19,10 +19,7 @@ const EMITTER_OUTPUTS = new Set(["docs/doc-graph.md", "docs/doc-graph.html", "do
 // `box-docs` is the engine's generated reference docs for boxes (gitignored;
 // src/core/docs-gen/package-docs/core.ts), full of illustrative example links.
 const EXCLUDE_DIRS = ["node_modules", ".tap", ".thinking", ".claude", "dist", "src/dev/reports", "box-docs"];
-// AGENTS.md files are gitignored, generated mirrors of the sibling CLAUDE.md
-// (bin/generate-agents-md.ts, for Codex sessions) — not documents; scanning
-// them would flag every mirror as an orphan and double-count CLAUDE.md refs.
-const EXCLUDE_PATTERNS = [/\.doctest\.md$/, /^AGENTS\.md$/];
+const EXCLUDE_PATTERNS = [/\.doctest\.md$/];
 
 export interface Reference {
   from: string;
@@ -63,9 +60,9 @@ function findMarkdownFiles(): string[] {
 
 // Monorepo-level locations whose .md files are reference SOURCES: their
 // outgoing refs count toward beebox docs' incoming (so a doc cited only
-// from a skill or the root CLAUDE.md is not an orphan), but they are not
+// from a skill or the root AGENTS.md is not an orphan), but they are not
 // documents in the graph themselves. Paths relative to the monorepo root.
-const EXTERNAL_SOURCE_ROOTS = ["CLAUDE.md", "bin", "dev", "research", "issues", ".claude"];
+const EXTERNAL_SOURCE_ROOTS = ["AGENTS.md", "bin", "dev", "research", "issues", ".claude"];
 
 function findExternalSourceFiles(monoRoot: string): string[] {
   const results: string[] = [];
@@ -90,7 +87,7 @@ function findExternalSourceFiles(monoRoot: string): string[] {
 
 // Refs written outside beebox name their targets beebox-relative
 // ("docs/testing.md"), monorepo-relative ("beebox/docs/testing.md",
-// "bin/CLAUDE.md"), or relative to the citing file. Internal resolutions
+// "bin/AGENTS.md"), or relative to the citing file. Internal resolutions
 // return the ROOT-relative path (so incoming counts attach); external
 // resolutions return "../<monorepo-relative>" and just mean "not broken".
 export interface ExternalResolveContext {
@@ -334,7 +331,7 @@ export function buildGraphExtended(): { docs: Map<string, DocInfo>; externalRefs
     }
   }
 
-  // Monorepo-level sources (skills, root/bin CLAUDE.md, research/, dev/):
+  // Monorepo-level sources (skills, root/bin AGENTS.md, research/, dev/):
   // their refs count toward incoming so skill-cited docs aren't orphans.
   const externalRefs: Reference[] = [];
   const monoRoot = path.dirname(ROOT);

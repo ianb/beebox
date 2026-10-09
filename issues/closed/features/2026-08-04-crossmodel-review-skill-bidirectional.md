@@ -20,7 +20,7 @@ resolution: implemented
 > **deletes that worktree** (it did, once, during this work), and
 > `pgrep -x claude` — the liveness guard in `bin/workstreams sweep` — misses
 > essentially every live session because pgrep matches the accounting name,
-> which is the Claude Code *version string*. See `bin/CLAUDE.md` → "Codex
+> which is the Claude Code *version string*. See `bin/AGENTS.md` → "Codex
 > worktree sessions".
 
 The `codex` skill (`.claude/skills/codex/`) runs OpenAI's codex CLI to get an
@@ -71,7 +71,7 @@ lets the CLAUDE.md guidance become model-agnostic instead of Claude-only.
 - **No recursion risk:** the spawned reviewer (codex or `claude -p`) does not
   re-invoke `cross-model`; it just reviews and returns.
 - **Rename mechanics:** kebab-case skill dir `cross-model`. Grep for `/codex`,
-  `codex skill`, `.claude/skills/codex` references (root CLAUDE.md, bin/CLAUDE.md,
+  `codex skill`, `.claude/skills/codex` references (root CLAUDE.md, bin/AGENTS.md,
   the bbx-plan skill, any docs) and update. Keep a one-line note that it was
   adapted from gstack's `/codex` skill.
 

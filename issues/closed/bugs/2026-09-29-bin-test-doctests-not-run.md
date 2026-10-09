@@ -9,7 +9,7 @@ discovered-in: worktree-doctest-usability — adding a test for a bin/ helper
 resolution: implemented
 ---
 
-Fixed: `beebox/.taprc` includes `../bin/test/**/*.doctest.md`, so the 29 files run in beebox's suite (and its home/secret isolation, which they were written under), the hourly full suite, and `test:changed` (the test graph now maps `bin/` sources to them; 977 entrypoints, 0 unresolved). Running them exposed two left broken by the move — `doc-lifecycle-check` and `smoke-browse` resolved paths one directory too high — both fixed; all 208 checks pass. `bin/CLAUDE.md` now says where these tests go.
+Fixed: `beebox/.taprc` includes `../bin/test/**/*.doctest.md`, so the 29 files run in beebox's suite (and its home/secret isolation, which they were written under), the hourly full suite, and `test:changed` (the test graph now maps `bin/` sources to them; 977 entrypoints, 0 unresolved). Running them exposed two left broken by the move — `doc-lifecycle-check` and `smoke-browse` resolved paths one directory too high — both fixed; all 208 checks pass. `bin/AGENTS.md` now says where these tests go.
 
 The layout moves on 2026-09-27 (commit `079410e97`) moved about 28 doctests
 from `beebox/test/dev/` to `bin/test/` and `bin/test/lib/`. No tap config
@@ -24,7 +24,7 @@ The files still pass when run by hand from `beebox/` (for example
 suite runs them, so a regression in `bin/` tooling that they cover goes
 unseen.
 
-`bin/CLAUDE.md` says new root-infrastructure tests belong in
+`bin/AGENTS.md` says new root-infrastructure tests belong in
 `beebox/test/dev/*.doctest.md`, while the layout check requires a test there to
 name a module in `beebox/src/dev`. A `bin/` helper therefore has no location
 that is both allowed and run.

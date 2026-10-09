@@ -59,7 +59,7 @@ learning:                    # optional
   sink: guide                 # guide | briefing | personality
   ref: /_config/finance.guide.card   # optional; for sink briefing MUST be the
                                       # root briefing (only it compiles into
-                                      # the box CLAUDE.md — see below)
+                                      # the box AGENTS.md — see below)
   proposal: >
     Receipts photographed at intake belong in _content/finance/receipts/.
 directive: "Move the held file into _content/finance/receipts/."

@@ -1,0 +1,3438 @@
+{
+  "gemini:gemini-3.1-pro-preview:blind:agreement:1": [
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "B is described as weary, resigned, and slightly passive-aggressive, while A is genuinely reassuring and upbeat."
+    },
+    {
+      "id": "filler",
+      "pass": true,
+      "note": "B's transcript, \"[sigh] Uh, that's fine, really.\", has a spoken 'Uh' before 'that's fine' in addition to the sigh."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:agreement:2": [
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "B is described as resigned, reluctant, or disappointed, while A is genuine, reassuring, and sincere, so A reads as warmer than B."
+    },
+    {
+      "id": "filler",
+      "pass": true,
+      "note": "B's transcript is \"[sigh] Uh, that's fine, really.\", which has a spoken \"Uh\" before \"that's fine\" in addition to the sigh."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:code-switch:1": [
+    {
+      "id": "words",
+      "pass": true,
+      "note": "The transcript contains 'I was gonna call you, pero se me hizo demasiado tarde' with both the English and Spanish halves correct; the added pause and breath annotations do not change the words."
+    },
+    {
+      "id": "literal-gonna",
+      "pass": true,
+      "note": "The transcript writes 'gonna' rather than 'going to'."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:code-switch:2": [
+    {
+      "id": "words",
+      "pass": true,
+      "note": "The transcript \"I was gonna call you, pero se me hizo [pause ~1s] demasiado tarde\" has both halves correct; the pause marker is an annotation, not a word error."
+    },
+    {
+      "id": "literal-gonna",
+      "pass": true,
+      "note": "The transcript writes \"gonna\" literally rather than normalizing to \"going to\"."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:cough-laugh:1": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled throat clearing and coughs, and B is labeled laughs/chuckling, so both are classified correctly."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations such as [cough] and [laugh], with no invented words."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:cough-laugh:2": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled throat clearing, which the check accepts as coughing, and B is labeled laughing/chuckling."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations ([throat clearing], [laugh]) and a pause marker, with no invented words."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:cough-laugh:3": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled throat clearing (accepted as coughing) and B is labeled chuckle/laughter."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations ([throat clearing], [chuckle]) and pause markers, with no invented words."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:cough-laugh:4": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as coughing or throat clearing and B as chuckling/laughing; the count of three coughs in A is wrong, but the check only asks for the category."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts are empty strings, so no invented words appear."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:cough-laugh:5": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled throat clearing and a cough, and B is labeled a chuckle and a laugh, which matches the intended classes."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations such as [throat clearing], [cough], [chuckle], and [laugh], with no invented words."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:emphasis:1": [
+    {
+      "id": "stress-A",
+      "pass": true,
+      "note": "The answer says the primary stress in A falls on 'I'."
+    },
+    {
+      "id": "stress-B",
+      "pass": true,
+      "note": "The answer says 'say' is heavily emphasized in B."
+    },
+    {
+      "id": "stress-C",
+      "pass": true,
+      "note": "The answer says 'she' carries the main stress in C."
+    },
+    {
+      "id": "stress-D",
+      "pass": true,
+      "note": "The answer identifies the focused stress in D as 'stole'."
+    },
+    {
+      "id": "stress-E",
+      "pass": true,
+      "note": "The answer says the primary emphasis in E falls on 'money'."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:emphasis:2": [
+    {
+      "id": "stress-A",
+      "pass": true,
+      "note": "Answer says heavy emphasis on 'I' in A and the comparison repeats that A stresses 'I'."
+    },
+    {
+      "id": "stress-B",
+      "pass": true,
+      "note": "Answer identifies strong emphasis and pitch rise on 'say' in B."
+    },
+    {
+      "id": "stress-C",
+      "pass": true,
+      "note": "Answer says emphasis lands solidly on 'she' in C."
+    },
+    {
+      "id": "stress-D",
+      "pass": true,
+      "note": "Answer places strong stress and pitch rise on 'stole' in D."
+    },
+    {
+      "id": "stress-E",
+      "pass": true,
+      "note": "Answer says emphasis is placed entirely on 'money' in E."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:english-pronunciation:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "After ignoring the bracketed [breath] and [click] annotations, the transcript is exactly 'The rural juror rarely worries about the brewery.'"
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:english-pronunciation:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript, ignoring the bracketed [breath] and [click] annotations, reads 'The rural juror rarely worries about the brewery', which matches the script word for word."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:extended-targeted:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "Answer begins with '[Heavy sigh] Okay.'"
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "'[Pause 1.5s]' follows 'Okay', and 1.5s falls within the 1.3–3.0s range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "Contains 'I was gonna say Tuesday, ... no, Wednesday.'"
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "'[Laugh]' is marked right after 'Wednesday.'"
+    },
+    {
+      "id": "whisper",
+      "pass": true,
+      "note": "'[whispering]' is marked before 'Don't tell Maya yet.'"
+    },
+    {
+      "id": "normal-voice",
+      "pass": true,
+      "note": "'[normal voice]' is marked before 'I'll call her after lunch.'"
+    },
+    {
+      "id": "cough",
+      "pass": true,
+      "note": "Ends with '[Cough]'."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both 'Don't tell Maya yet.' and 'I'll call her after lunch.' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:extended-targeted:2": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "The answer starts with '[sigh] Okay.', so the sigh is marked before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "'[pause 00:02]' follows 'Okay', and a 2-second duration is within the 1.3–3.0 s range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "The answer has 'I was going to say Tuesday... no, Wednesday.'"
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "'[laughs]' appears right after 'Wednesday.'"
+    },
+    {
+      "id": "whisper",
+      "pass": true,
+      "note": "'[whispering]' is placed before 'Don't tell Maya yet.'"
+    },
+    {
+      "id": "normal-voice",
+      "pass": true,
+      "note": "'[normal voice]' appears before 'I'll call her after lunch.'"
+    },
+    {
+      "id": "cough",
+      "pass": true,
+      "note": "The answer ends with '[coughs]'."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both sentences, 'Don't tell Maya yet.' and 'I'll call her after lunch.', are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:extended:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "The transcript begins with [sigh] before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "It marks [pause ~2s] after 'Okay', within the allowed range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "It transcribes 'I was gonna say Tuesday. No, Wednesday.'"
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "[laugh] is marked right after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "Only a [breath] is marked before 'Don't tell Maya yet'; no whisper or quiet speech is noted."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "It marks a pause before 'I'll call her' but no return to normal voice."
+    },
+    {
+      "id": "cough",
+      "pass": false,
+      "note": "The final sound is labeled [throat clearing], not a cough, which fails."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both 'Don't tell Maya yet' and 'I'll call her after lunch' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:extended:2": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "Transcript begins with [sigh] before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "Marks [pause ~2s] after 'Okay', within the 1.3–3.0 s range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "Contains 'I was gonna say Tuesday. No, Wednesday.'"
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "[laugh] is marked after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "The transcript has no whisper marker at 'Don't tell Maya yet'. The nonSpeech field only mentions a 'slightly hushed tone', which is not a whisper."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before 'I'll call her after lunch'."
+    },
+    {
+      "id": "cough",
+      "pass": false,
+      "note": "The final sound is labeled [throat clear], not a cough, and throat clearing alone fails."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both 'Don't tell Maya yet' and 'I'll call her after lunch' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:happy-sad:1": [
+    {
+      "id": "sad",
+      "pass": true,
+      "note": "B is described as tired, resigned, or reluctant, with a breathy, lower-pitched voice and a drop in energy, which counts as low negative affect."
+    },
+    {
+      "id": "happy",
+      "pass": false,
+      "note": "A is described as neutral, casual, and polite with moderate energy, not happy or excited."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:happy-sad:2": [
+    {
+      "id": "sad",
+      "pass": true,
+      "note": "B is described as exhausted, reluctant, or disappointed, with low vocal energy and a tired falling intonation, which counts as low negative affect."
+    },
+    {
+      "id": "happy",
+      "pass": false,
+      "note": "A is described as neutral, casual, and straightforward, with no happiness or excitement."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:name-homophones:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript reads \"I asked Nikhil whether the nickel shipment was late... Deepa said the deeper problem was timing,\" so all four words are correct in context."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:name-homophones:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript reads \"I asked Nikhil whether the nickel shipment was late... Deepa said the deeper problem was timing,\" so all four words are correct in context. The pronunciation commentary claiming Nikhil sounds like nickel doesn't change the transcript."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:names:1": [
+    {
+      "id": "names",
+      "pass": false,
+      "note": "Both transcripts spell the first name 'Shiniqua' instead of 'Shaniqua', so the exact spelling fails in A and B."
+    },
+    {
+      "id": "tempo",
+      "pass": true,
+      "note": "The comparison says Recording B is 'delivered at a noticeably faster, more fluid pace' than A."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:names:2": [
+    {
+      "id": "names",
+      "pass": true,
+      "note": "Both transcripts spell 'Shaniqua', 'Priyanka', and 'Sanjay' exactly as intended; the added 'uh' and breath in A do not affect the names."
+    },
+    {
+      "id": "tempo",
+      "pass": true,
+      "note": "The answer says B's pacing is 'slightly faster and more fluid than recording A' and repeats this in the comparison."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:pause:1": [
+    {
+      "id": "pause-noted",
+      "pass": true,
+      "note": "The answer identifies a long pause between 'Sure' and 'I guess' (\"[pause ~2s]\", \"One long pause\")."
+    },
+    {
+      "id": "pause-duration",
+      "pass": true,
+      "note": "It estimates the pause at ~2 seconds, which is within the 2.0–4.0 s range."
+    },
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "The emotionIntent field describes \"reluctant agreement and hesitation\" with uncertainty."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:pause:2": [
+    {
+      "id": "pause-noted",
+      "pass": true,
+      "note": "The answer marks a long pause of about 2.5s between 'Sure.' and 'I guess.'"
+    },
+    {
+      "id": "pause-duration",
+      "pass": true,
+      "note": "It estimates about 2.5 seconds, which falls inside the 2.0–4.0s range."
+    },
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "It describes the delivery as hesitation, reluctance, or unenthusiastic agreement."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:product-noise:1": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer quotes or paraphrases no words; it only says no audio was attached."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims no audio recording was attached instead of saying the recording has no speech, which the check explicitly fails."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:product-noise:2": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer quotes or paraphrases no words and says there are no words to quote."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": true,
+      "note": "The answer says the clip contains no speech and the user did not say anything. It does not claim that no audio was attached. It misstates the length as two seconds instead of three, but that does not affect this check."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:product-noise:3": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer quotes or paraphrases no words and says nothing was said, so nothing is fabricated."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": true,
+      "note": "It says the three-second recording contains no speech and describes it as silence and faint static, without claiming that no audio was attached."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:product-silence:1": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer quotes or paraphrases no spoken words; it only says that no audio was attached and mentions timestamps."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims no audio recording was attached, which the check says fails, and never says the recording contains no speech."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:product-silence:2": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer quotes or paraphrases no words; it only says the audio was not attached."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the audio was not attached ('forgot to attach the audio recording') instead of saying the recording has no speech, which the check counts as a fail."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:product-silence:3": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer quotes or paraphrases no words; it says the user did not say anything."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": true,
+      "note": "It says the recording is completely silent with no speech. The \"two-second\" length is wrong (it is 3 s), but it does not claim that no audio was attached."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:product-tone:1": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer quotes or paraphrases no words; it says the user did not say anything and describes a beep."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": true,
+      "note": "The answer says there is no speech and that the clip contains only a single beep. The duration is slightly off (one second vs 1.5 s), but the check is about recognizing no speech."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:product-tone:2": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer quotes or paraphrases no words and says the user did not say anything."
+    },
+    {
+      "important": "",
+      "id": "recognizes-no-speech",
+      "pass": true,
+      "note": "The answer says \"The message contains no speech\" and does not claim that no audio was attached."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:product-tone:3": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer does not quote or paraphrase any words; it says it cannot tell what the user said."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the audio recording was not attached or provided, which the check explicitly treats as a failure, and it never says the recording contains no speech."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:self-repair:1": [
+    {
+      "id": "intent",
+      "pass": true,
+      "note": "The transcript \"I wanted the red... no, the blue one\" and the description of self-correcting to the new choice show the speaker rejects red and ends with blue."
+    },
+    {
+      "id": "hesitation",
+      "pass": true,
+      "note": "The transcript marks the hesitation before 'no' with both an explicit pause \"[pause ~1s]\" and the filler \"mm\"."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:self-repair:2": [
+    {
+      "id": "intent",
+      "pass": true,
+      "note": "The transcript \"I wanted the red... no, the blue one\" and the emotionIntent text describe correcting the earlier choice, so the final choice is blue."
+    },
+    {
+      "id": "hesitation",
+      "pass": true,
+      "note": "The transcript marks \"[pause ~1s] mm\" before \"no\", giving both an explicit pause and a filler."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-h:1": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says B pronounces 'hotel' with an aspirated English 'h' ([ho'tel]) while A keeps it silent ([o'tel])."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-h:2": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says B pronounces the 'h' in 'hotel' with an aspirated English /h/ ([ho'tel]) and that A keeps it silent ([o'tel])."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-n-tilde:1": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says A articulates the palatal nasal 'ñ' accurately, while B mispronounces 'mañana' as an alveolar 'n' ('manana'), so it identifies a pronunciation difference and localizes it to that word."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-n-tilde:2": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says A's 'ñ' is clearly articulated, while B's 'ñ' is under-articulated and sounds like an alveolar 'n' ('manana'), like an English 'n'. This is a pronunciation difference localized to 'mañana'."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-rr:1": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says A uses Spanish taps or trills, while B pronounces every r and rr as an English alveolar approximant. That means B is less trilled and more English-like than A."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-rr:2": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says A uses Spanish alveolar trills for the r sounds, while B replaces the trilled and tapped r's with the English approximant [ɹ]. That is a clear statement that B is less trilled and more English-like than A."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-stress:1": [
+    {
+      "id": "lexical",
+      "pass": true,
+      "note": "Both transcripts read 'teléfono' and 'esta tarde' correctly; the 'abrar' difference in B is explicitly ignored."
+    },
+    {
+      "id": "stress-shift",
+      "pass": false,
+      "note": "The answer never says B shifts the stress in 'teléfono' toward the third syllable; it names the 'hablar'/'abrar' difference as the primary one."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-stress:2": [
+    {
+      "id": "lexical",
+      "pass": true,
+      "note": "Both transcripts read 'teléfono esta tarde'; the 'esta' reduction to 'este' is only mentioned in the pronunciation notes, not in the transcript, and the 'abrar' issue is ignored."
+    },
+    {
+      "id": "stress-shift",
+      "pass": false,
+      "note": "The answer never says B shifts the stress of 'teléfono' to the third syllable; it says emphasis falls on 'teléfono' in both and names the 'hablar'/'abrar' difference as the main one."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-transcription:1": [
+    {
+      "id": "exact",
+      "pass": false,
+      "note": "The transcript writes 'llegue' without the accent on 'llegué' and adds a '[pause ~1s]' marker with no comma, so it is not an exact match."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:spanish-transcription:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript has every word and accent correct (llegué, habían). It adds bracketed pause annotations and drops the comma after 'casa', but the words themselves match the script."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:synthetic-controls:1": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "Recording A is described as an \"electronic beep\" with an empty transcript."
+    },
+    {
+      "id": "silence",
+      "pass": true,
+      "note": "Recording B is described as \"[silence]\" / \"near silence\" with an empty transcript; the added \"faint room tone\" hedge is minor."
+    },
+    {
+      "id": "noise",
+      "pass": true,
+      "note": "Recording C is described as \"continuous faint static or background noise\" with an empty transcript."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:synthetic-controls:2": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "Recording A is described as a generated electronic tone with a [beep] label and an empty transcript."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is described as a continuous electronic tone with a [beep] label, not as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": true,
+      "note": "Recording C is described as static or white noise with an empty transcript."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:synthetic-controls:3": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "Recording A is described as \"One continuous electronic beep tone\" and its transcript is empty."
+    },
+    {
+      "id": "silence",
+      "pass": true,
+      "note": "Recording B is described as \"Continuous silence\" and its transcript is empty."
+    },
+    {
+      "id": "noise",
+      "pass": true,
+      "note": "Recording C is described as \"Continuous static or white noise\" and its transcript is empty; the white-vs-pink label is slightly off, but the check accepts noise or static."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:synthetic-controls:4": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "Recording A has an empty transcript and is described as a \"continuous beep\" and a \"continuous, high-pitched tone or beep\"."
+    },
+    {
+      "id": "silence",
+      "pass": true,
+      "note": "Recording B has an empty transcript, and the comparison groups it under \"silence or very faint background noise\", so it is called silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is labeled nonSpeech \"None\" and lumped with B as \"silence or very faint background noise, with no discernible audio events\", so it is never clearly described as noise, hiss, or static."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:synthetic-controls:5": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "Recording A is described as a \"Beep tone\" and its transcript is empty."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is described as a \"Beep tone, 1 time\" and as identical to A, not as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": true,
+      "note": "Recording C is described as \"Static/white noise\" with an empty transcript."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:voice-message:1": [
+    {
+      "id": "complete",
+      "pass": true,
+      "note": "The transcript includes running about ten minutes late, already left, the correction that traffic is moving now, go ahead and order without me, and I'll text you when I'm close."
+    },
+    {
+      "id": "fillers",
+      "pass": true,
+      "note": "The transcript keeps 'um' twice: 'Hey um' and 'but um actually'."
+    }
+  ],
+  "gemini:gemini-3.1-pro-preview:blind:voice-message:2": [
+    {
+      "id": "complete",
+      "pass": true,
+      "note": "The transcript includes all elements: about 10 minutes late, already left, the correction that traffic is moving now, order without me, and the text when close."
+    },
+    {
+      "id": "fillers",
+      "pass": true,
+      "note": "The transcript keeps 'um' in 'Hey um' and again in 'but um'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:agreement:1": [
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "B is described as \"hesitant, reluctant, or disappointed\" and A as \"more direct and reassuring\", so A reads as warmer than B."
+    },
+    {
+      "id": "filler",
+      "pass": true,
+      "note": "B's transcript is \"Uh, that's fine, really.\", which has the spoken filler \"uh\" before \"that's fine\"."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:agreement:2": [
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "B is described as hesitant, fatigued, or resigned, and A as reassuring and more direct, so A reads as warmer than B."
+    },
+    {
+      "id": "filler",
+      "pass": true,
+      "note": "B's transcript is \"[sigh] Uh that's fine, really.\", which has a spoken 'Uh' before 'that's fine'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:code-switch:1": [
+    {
+      "id": "words",
+      "pass": true,
+      "note": "Both halves are transcribed correctly: 'I was going to call you' and 'pero, se me hizo demasiado tarde', with the language switch preserved."
+    },
+    {
+      "id": "literal-gonna",
+      "pass": false,
+      "note": "The transcript writes 'going to' rather than the performed reduction 'gonna'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:code-switch:2": [
+    {
+      "id": "words",
+      "pass": false,
+      "note": "The transcript has 'perro' instead of 'pero', which is a wrong Spanish word, and it adds a '[cough]' that is not in the script."
+    },
+    {
+      "id": "literal-gonna",
+      "pass": false,
+      "note": "The transcript writes 'going to' rather than the performed reduction 'gonna'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:cough-laugh:1": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled as throat-clearing and coughs; B as chuckles and laughter, so the classification is correct."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations such as [cough] and [chuckle], with no invented words."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:cough-laugh:2": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled throat-clearing and coughs, and B is labeled chuckle, snicker and laughter, so both are classified correctly."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations such as [cough] and [chuckle], with no invented words."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:cough-laugh:3": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled throat-clearing and coughs, and B is labeled chuckle and laughter, so the coughing/laughing distinction is correct."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations such as [cough] and [chuckle], with no invented words."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:cough-laugh:4": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled throat-clearing and coughs, and B is labeled laughter, snicker and chuckle, so each is classified correctly."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations such as [cough] and [laughter], with no invented words."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:cough-laugh:5": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as throat-clearing and coughing, and B as chuckling and laughter."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations such as [cough] and [chuckle], with no invented words."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:emphasis:1": [
+    {
+      "id": "stress-A",
+      "pass": true,
+      "note": "Answer says emphasis is placed on 'I' for Recording A."
+    },
+    {
+      "id": "stress-B",
+      "pass": true,
+      "note": "Answer says strong emphasis on 'say' for Recording B."
+    },
+    {
+      "id": "stress-C",
+      "pass": true,
+      "note": "Answer says strong emphasis on 'she' for Recording C."
+    },
+    {
+      "id": "stress-D",
+      "pass": true,
+      "note": "Answer says strong emphasis on 'stole' for Recording D."
+    },
+    {
+      "id": "stress-E",
+      "pass": true,
+      "note": "Answer says strong emphasis on 'money' for Recording E."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:emphasis:2": [
+    {
+      "id": "stress-A",
+      "pass": false,
+      "note": "The answer puts A's emphasis on 'didn't', not 'I'."
+    },
+    {
+      "id": "stress-B",
+      "pass": true,
+      "note": "The answer puts B's emphasis on 'say'."
+    },
+    {
+      "id": "stress-C",
+      "pass": true,
+      "note": "The answer puts C's emphasis on 'she'."
+    },
+    {
+      "id": "stress-D",
+      "pass": true,
+      "note": "The answer puts D's emphasis on 'stole'."
+    },
+    {
+      "id": "stress-E",
+      "pass": true,
+      "note": "The answer puts E's emphasis on 'money'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:english-pronunciation:1": [
+    {
+      "id": "exact",
+      "pass": false,
+      "note": "The transcript has 'the roolger' where the script has 'The rural juror', so two words are wrong."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:english-pronunciation:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript has every word of the script in order; the only addition is a bracketed '[sigh]' annotation, which the check says to ignore."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:extended-targeted:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "A [sigh] is marked before 'Okay' (with extra heavy-breathing and a second sigh, but the sigh is present)."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "[pause 2.0s] follows 'Okay', within 1.3-3.0 s."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "'I was going to say Tuesday. ... No, Wednesday.' is present, with the pause in the middle not changing the words."
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "[chuckle] is marked right after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "No whisper or quiet speech is marked; only a [sigh] appears before 'Don't tell Maya yet'."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked, only a [pause 1.0s] before 'I'll call her after lunch'."
+    },
+    {
+      "id": "cough",
+      "pass": true,
+      "note": "The answer ends with [cough]."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "'Don't tell Maya yet.' and 'I'll call her after lunch.' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:extended-targeted:2": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "The answer begins with '[sigh]' before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": false,
+      "note": "The pause after 'Okay' is marked as 1s, which is below the 1.3–3.0 s range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "The answer has 'I was going to say Tuesday. ... No, Wednesday.', so the words are present."
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "'<laugh>' appears right after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "No whisper or quiet-speech marker appears before 'Don't tell my yet'."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before 'I'll call her after lunch'; there is only a pause."
+    },
+    {
+      "id": "cough",
+      "pass": true,
+      "note": "The answer ends with '<cough>' as the final sound, followed only by a pause marker."
+    },
+    {
+      "id": "maya",
+      "pass": false,
+      "note": "The answer has 'Don't tell my yet', so 'Maya' is wrong, even though 'I'll call her after lunch' is correct."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:extended:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "Transcript begins with [sigh] before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": false,
+      "note": "No pause is marked after 'Okay'; the 1-second pause is placed after the initial sigh, before 'Okay'."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "Contains 'I was going to say Tuesday. No, Wednesday.'"
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "[chuckle] appears after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "No whisper is marked at 'Don't tell Maya yet'; a [sigh] appears there instead."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before 'I'll call her after lunch'."
+    },
+    {
+      "id": "cough",
+      "pass": false,
+      "note": "The final sound is marked as [throat-clearing], not a cough."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both 'Don't tell Maya yet' and 'I'll call her after lunch' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:extended:2": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "The transcript begins with [sigh] before 'okay'."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "[pause ~2s] follows 'okay', within the 1.3–3.0 s range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "It contains 'I was going to say Tuesday. ... No, Wednesday.' The words are present, with an added pause."
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "[chuckle] is marked right after 'No, Wednesday.'"
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "No whisper or quiet-speech marker appears before 'Don't tell Maya yet.'"
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before 'I'll call her after lunch'; only a [pause ~2s] appears."
+    },
+    {
+      "id": "cough",
+      "pass": true,
+      "note": "The final sound is marked [cough], followed by [throat-clearing]."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "'Don't tell Maya yet.' and 'I'll call her after lunch.' are both transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:happy-sad:1": [
+    {
+      "id": "sad",
+      "pass": true,
+      "note": "B is described as a weary, fatigued farewell with a heavy sigh, slower pacing, and low emphasis, which counts as low negative affect."
+    },
+    {
+      "id": "happy",
+      "pass": false,
+      "note": "A is described as calm, neutral, and casual with a flat pitch, so it is not happy or excited."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:happy-sad:2": [
+    {
+      "id": "sad",
+      "pass": true,
+      "note": "B is described as exhausted, melancholic, and reluctant, with a slower pace and lower vocal energy, which counts as low negative affect."
+    },
+    {
+      "id": "happy",
+      "pass": false,
+      "note": "A is described as neutral, calm, and matter-of-fact, which does not count as happy."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:name-homophones:1": [
+    {
+      "id": "exact",
+      "pass": false,
+      "note": "The transcript has 'Deepak' instead of 'Deepa', so not all four words are correct, even though Nikhil, nickel, and deeper are right."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:name-homophones:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript reads \"I asked Nikhil whether the nickel shipment was late. Deepa said the deeper problem was timing.\" All four words (Nikhil, nickel, Deepa, deeper) are correct and in the right slots."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:names:1": [
+    {
+      "id": "names",
+      "pass": false,
+      "note": "Both transcripts spell the first name 'Shanique' rather than 'Shaniqua', so the exact spelling is wrong in A and B."
+    },
+    {
+      "id": "tempo",
+      "pass": true,
+      "note": "The comparison says 'Recording B is delivered slightly faster' than A, which is more measured."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:names:2": [
+    {
+      "id": "names",
+      "pass": false,
+      "note": "Both transcripts spell the first name 'Shanique' instead of 'Shaniqua', so the names are not all exact."
+    },
+    {
+      "id": "tempo",
+      "pass": true,
+      "note": "The answer says B has 'slightly faster pacing than Recording A' and is 'delivered at a slightly quicker pace'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:pause:1": [
+    {
+      "id": "pause-noted",
+      "pass": true,
+      "note": "The answer notes a pause between 'sure' and 'I guess' in the transcript and in timingEmphasis."
+    },
+    {
+      "id": "pause-duration",
+      "pass": true,
+      "note": "It states 'a three-second pause', which falls within 2.0–4.0 s."
+    },
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "emotionIntent describes 'Uncertainty and hesitant resignation'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:pause:2": [
+    {
+      "id": "pause-noted",
+      "pass": true,
+      "note": "The transcript marks a pause between 'sure' and 'I guess', and timingEmphasis mentions deliberate pauses."
+    },
+    {
+      "id": "pause-duration",
+      "pass": true,
+      "note": "The transcript estimates the pause at ~2s, which falls within the 2.0–4.0 s range."
+    },
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "The answer describes the delivery as 'Hesitant, uncertain, and subdued'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:product-noise:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes words the user supposedly said (\"Set an alarm for 7:00 a.m.\"), but the recording contains no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer treats the recording as containing speech and never says it has none."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:product-noise:2": [
+    {
+      "id": "no-fabrication",
+      "pass": true,
+      "note": "The answer quotes or paraphrases no words; it says the user said nothing."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": true,
+      "note": "It states there is no voice message and only noise. It calls the noise 'static and white noise' rather than pink noise, but it still identifies the absence of speech and describes the sound."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:product-noise:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Add sugar to my grocery list,\" but the recording contains no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer treats the recording as containing clear speech and never says it has none."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:product-silence:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes words the user supposedly said: \"Set a timer for 15 minutes.\""
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke in a neutral tone and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:product-silence:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes words the user supposedly said: \"Add sugar to my shopping list.\""
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke in a conversational tone and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:product-silence:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Add milk to my grocery list,\" but the recording is silent."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer describes a speaker with a style, pace and pitch, and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:product-tone:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Send reminder,\" but the recording is only a sine tone with no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke in a clear, calm voice and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:product-tone:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer fabricates speech by claiming the user said \"Hello.\""
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer describes speech with pitch and pace and never says the recording is a tone with no speech."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:product-tone:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Add an event to my calendar,\" but the recording is a sine tone with no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke and describes their tone and pace, and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:self-repair:1": [
+    {
+      "id": "intent",
+      "pass": true,
+      "note": "The transcript \"I wanted the red [sigh] mm no, the blue one.\" and the description show red corrected to blue as the final choice."
+    },
+    {
+      "id": "hesitation",
+      "pass": true,
+      "note": "The transcript puts a filler \"mm\" and a [sigh] before \"no\", and the timing notes mention a pause after \"red\"."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:self-repair:2": [
+    {
+      "id": "intent",
+      "pass": true,
+      "note": "The transcript \"I wanted the red [sigh] mm no, the blue one\" and the emotionIntent description show red corrected to blue as the final choice."
+    },
+    {
+      "id": "hesitation",
+      "pass": true,
+      "note": "The transcript has the filler \"mm\" before \"no\" and the timing notes mention a [pause ~1s] before the self-correction."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-h:1": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says B has slight aspiration on the 'h' in 'hotel' that is absent in A, which matches the intended contrast, though it understates the aspiration as 'slight'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-h:2": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer never says B pronounces an English-like h in 'hotel'; it only mentions slight vocal fry or breathiness on 'hotel' in B, which is not an explicit identification of a sounded h."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-n-tilde:1": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer says pronunciation is standard and nearly identical in both recordings, and never says B pronounces 'mañana' with a plain n instead of ñ."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-n-tilde:2": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer says the two recordings are nearly identical with no concrete differences, and never says B pronounces 'mañana' with a plain n."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-rr:1": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer says B's pronunciation closely matches A and the two are nearly identical, and it never says the 'rr' in 'perro' is reduced or less trilled."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-rr:2": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer says B has 'identical phonemes to recording A' and only differs in pace; it never says the rr in perro is reduced, tapped, or less trilled."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-stress:1": [
+    {
+      "id": "lexical",
+      "pass": true,
+      "note": "Both transcripts read 'teléfono esta tarde' correctly, with 'esta tarde' not replaced by 'es tarde' or 'este tarde'."
+    },
+    {
+      "id": "stress-shift",
+      "pass": false,
+      "note": "The answer never mentions a stress shift in 'teléfono' toward the third syllable; B is described only as slower and firmer, with clear standard pronunciation."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-stress:2": [
+    {
+      "id": "lexical",
+      "pass": true,
+      "note": "Both transcripts read 'teléfono esta tarde' with the correct words, with no 'es tarde' or 'este tarde'."
+    },
+    {
+      "id": "stress-shift",
+      "pass": false,
+      "note": "The answer only says B has 'slight stress' and 'more noticeable emphasis' on teléfono, with no mention of the stress moving to the third syllable (te-le-FÓ-no)."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-transcription:1": [
+    {
+      "id": "exact",
+      "pass": false,
+      "note": "The transcript writes 'llegue' without the accent on 'llegué', and it adds pause annotations like '[pause ~0.5s]' inside the text, so it is not the exact sentence."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:spanish-transcription:2": [
+    {
+      "id": "exact",
+      "pass": false,
+      "note": "The transcript writes 'llegue' without the accent on 'llegué', so it does not match the required text exactly, although 'habían' is correct."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:synthetic-controls:1": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "A has an empty transcript and is described as a 'telephone ring tone', which counts as a tone/beep-like sound with no words."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "B is described as a 'telephone ring tone, 3 times' rather than silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "C is described as an 'electrical hum' rather than noise, hiss, or static, though the transcript is empty."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:synthetic-controls:2": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "A is described as a 'telephone ring tone, 2 times', not as a plain tone, beep, or hum. The transcript is empty, but the description invents a repeated ring pattern."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "B is described as containing 'telephone ring tone, 3 times' instead of being silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "C is described as 'telephone ring tone, 3 times' instead of noise, hiss, or static."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:synthetic-controls:3": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "A has an empty transcript and is described as a 'telephone ring tone', which counts as a tone/beep-like sound."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "B is described as a telephone ring tone 3 times, not as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "C is described as an 'electrical hum', not noise, hiss, or static; the hum label does not match pink noise."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:synthetic-controls:4": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "Recording A has an empty transcript and is described as a steady telephone ring tone, which counts as a tone."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is described as a telephone ring tone with 3 rings, not as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is described as an electronic beep tone, not as noise, hiss, or static."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:synthetic-controls:5": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "A has an empty transcript and is described as a 'telephone ring tone', which counts as a tone/beep, though the description is imprecise."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "B is described as a 'telephone ring tone, 1 time' rather than silent or empty, though its transcript is empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "C is described as a 'telephone ring tone' rather than noise, hiss, or static, though its transcript is empty."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:voice-message:1": [
+    {
+      "id": "complete",
+      "pass": true,
+      "note": "The transcript includes running about 10 minutes late, already left, the correction that traffic is moving now, ordering without the speaker, and the promise to text when close."
+    },
+    {
+      "id": "fillers",
+      "pass": true,
+      "note": "The transcript keeps 'um' twice: 'Hey um' and 'um actually'."
+    }
+  ],
+  "gemini:gemini-3.5-flash-lite:blind:voice-message:2": [
+    {
+      "id": "complete",
+      "pass": true,
+      "note": "The transcript includes running about 10 minutes late, already left, the correction that traffic is moving now, ordering without me, and the text when close."
+    },
+    {
+      "id": "fillers",
+      "pass": true,
+      "note": "The transcript keeps 'um' in 'Hey um' and again in 'but um actually'."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:agreement:1": [
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "B is described as weary, resigned, and begrudging, while A is described as polite and reassuring, so A reads as warmer than B."
+    },
+    {
+      "id": "filler",
+      "pass": true,
+      "note": "B's transcript is '[sigh] Ah, that's fine. Really.', which has a spoken 'Ah' before 'that's fine' in addition to the bracketed sigh."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:agreement:2": [
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "B is described as \"Resigned, weary, or mildly defeated\" and A as \"Reassuring, calm\" with \"calm reassurance\", so A reads as more reassuring than B."
+    },
+    {
+      "id": "filler",
+      "pass": false,
+      "note": "B's transcript is \"[sigh] That's fine, really.\" It has only a bracketed sigh and no spoken filler like 'uh' or 'um'."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:code-switch:1": [
+    {
+      "id": "words",
+      "pass": true,
+      "note": "The transcript \"I was gonna call you, pero se me hizo demasiado tarde.\" has both the English and Spanish halves correct."
+    },
+    {
+      "id": "literal-gonna",
+      "pass": true,
+      "note": "The transcript writes \"gonna\" and does not normalize it to \"going to\"."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:code-switch:2": [
+    {
+      "id": "words",
+      "pass": true,
+      "note": "Both halves, 'I was going to call you' and 'pero se me hizo demasiado tarde', are transcribed correctly; the inserted pause marker does not change the words."
+    },
+    {
+      "id": "literal-gonna",
+      "pass": false,
+      "note": "The transcript writes 'going to' rather than the performed 'gonna'. The pronunciation note mentions reduction but the transcript is normalized."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:cough-laugh:1": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as coughing/throat-clearing (two events) and B as soft chuckling/laughing."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts are empty strings, so no invented words appear."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:cough-laugh:2": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as coughing/throat-clearing and B as chuckling/laughter, which matches the check even though A's count of three is wrong."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Transcripts hold only bracketed annotations ('[cough] [cough] [cough]' and '[laughter]') with no invented words."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:cough-laugh:3": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is described as throat clearing and dry coughs; B as quiet chuckling/laughter, which matches the expected classification."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts are empty strings and the answer says no words are spoken."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:cough-laugh:4": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled throat-clearing and coughs; B is labeled chuckle/snicker/amused laughter, so both are classified correctly."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations ([throat-clearing] [cough], [snort] [chuckle] [snicker]) and no invented words."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:cough-laugh:5": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is labeled throat-clearing plus two coughs, and B is labeled snicker/laughter/chuckles, so both are classified correctly."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations ([throat-clearing], [cough], [snicker], [laughter]) and no invented words."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:emphasis:1": [
+    {
+      "id": "stress-A",
+      "pass": true,
+      "note": "The answer states heavy primary stress on \"I\" for A."
+    },
+    {
+      "id": "stress-B",
+      "pass": true,
+      "note": "The answer states strong contrastive stress on \"say\" for B."
+    },
+    {
+      "id": "stress-C",
+      "pass": true,
+      "note": "The answer states primary emphatic stress on \"she\" for C."
+    },
+    {
+      "id": "stress-D",
+      "pass": true,
+      "note": "The answer states contrastive pitch accent and elongation on \"stole\" for D."
+    },
+    {
+      "id": "stress-E",
+      "pass": true,
+      "note": "The answer states the strongest emphasis lands on \"money\" for E."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:emphasis:2": [
+    {
+      "id": "stress-A",
+      "pass": true,
+      "note": "The answer says heavy emphasis falls on \"I\" in Recording A, and the comparison repeats this."
+    },
+    {
+      "id": "stress-B",
+      "pass": true,
+      "note": "The answer places the emphasis and pitch peak on \"say\" in Recording B."
+    },
+    {
+      "id": "stress-C",
+      "pass": true,
+      "note": "The answer gives \"she\" as the primary stress in Recording C."
+    },
+    {
+      "id": "stress-D",
+      "pass": true,
+      "note": "The answer places the focus on \"stole\" in Recording D."
+    },
+    {
+      "id": "stress-E",
+      "pass": true,
+      "note": "The answer says the focal stress is on \"money\" in Recording E."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:english-pronunciation:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript \"The rural juror rarely worries about the brewery.\" matches the script word for word, and the bracketed [exhale] is ignorable."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:english-pronunciation:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript 'The rural juror rarely worries about the brewery.' matches the script word for word; the bracketed [exhale] is ignorable."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:extended-targeted:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "'[sigh]' appears before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "'[pause]' is marked after 'Okay'; no duration is given, so no range violation."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "Contains 'I was going to say Tuesday. No, Wednesday.'"
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "'[chuckle]' follows 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": true,
+      "note": "'[whispering]' is marked before 'Don't tell Maya yet.'"
+    },
+    {
+      "id": "normal-voice",
+      "pass": true,
+      "note": "'[whispering ends]' marks the return to normal voice before 'I'll call her after lunch.'"
+    },
+    {
+      "id": "cough",
+      "pass": false,
+      "note": "The final sound is '[clears throat]', which is throat clearing and not a cough."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "'Don't tell Maya yet.' and 'I'll call her after lunch.' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:extended-targeted:2": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "\"[sigh]\" appears before \"Okay\"."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "A \"[pause]\" is marked after \"Okay\" with no duration given, so nothing contradicts the 1.3–3.0 s range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "\"I was going to say Tuesday. No, Wednesday.\" is present."
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "\"[snicker]\" is marked after \"Wednesday\", which counts as a laugh."
+    },
+    {
+      "id": "whisper",
+      "pass": true,
+      "note": "\"[whispering]\" is marked right before \"Don't tell Maya yet.\""
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before \"I'll call her after lunch\". The line sits inside the whispering span, which only closes after it."
+    },
+    {
+      "id": "cough",
+      "pass": true,
+      "note": "The final sound is marked as \"[cough]\"."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both \"Don't tell Maya yet.\" and \"I'll call her after lunch.\" are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:extended:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "Transcript begins with [sigh] before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "[pause ~1.7s] after 'Okay' falls within the 1.3–3.0s range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "Contains 'I was going to say Tuesday. ... No, Wednesday.' with the self-correction intact."
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "[chuckle] is marked right after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "No whisper marking at 'Don't tell Maya yet' in the transcript; 'quiet' appears only in the general description."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before 'I'll call her after lunch'; only a pause is noted."
+    },
+    {
+      "id": "cough",
+      "pass": true,
+      "note": "Ends with [cough], although the nonSpeech field describes it as throat-clearing."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "'Don't tell Maya yet' and 'I'll call her after lunch' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:extended:2": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "Transcript begins with [sigh] before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": false,
+      "note": "The pause after 'Okay' is marked as ~1s, which is below the 1.3–3.0 s range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "Contains 'I was going to say Tuesday, no, Wednesday.'"
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "[chuckle] is marked right after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "No whisper or quiet-speech marker at 'Don't tell Maya yet'; only a pause. The emotionIntent mentions quiet delivery generally, not this change."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before 'I'll call her after lunch'; only a pause."
+    },
+    {
+      "id": "cough",
+      "pass": false,
+      "note": "The final sound is marked [throat-clearing]; the nonSpeech field says 'dry throat-clearing cough', but the transcript marks throat clearing, which fails."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "'Don't tell Maya yet' and 'I'll call her after lunch' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:happy-sad:1": [
+    {
+      "id": "sad",
+      "pass": true,
+      "note": "B is described as exhausted, weary, and drained, with a deliberate, slow delivery that trails off. This matches the 'weary' low negative affect."
+    },
+    {
+      "id": "happy",
+      "pass": false,
+      "note": "A is described as calm, gentle, quiet, subdued, and near-whisper, with no happiness or excitement."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:happy-sad:2": [
+    {
+      "id": "sad",
+      "pass": true,
+      "note": "B is described as weary, exhausted, and resigned with a low-pitched, breathy delivery, which counts as low negative affect."
+    },
+    {
+      "id": "happy",
+      "pass": false,
+      "note": "A is described as calm, casual, and neutral with slightly low energy, which does not count as happy."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:name-homophones:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript reads 'I asked Nikhil whether the nickel shipment was late. Deepa said the deeper problem was timing.' All four words are correct and in the right slots."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:name-homophones:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript reads \"I asked Nikhil whether the nickel shipment was late... Deepa said the deeper problem was timing,\" so all four words are correct and in the right slots."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:names:1": [
+    {
+      "id": "names",
+      "pass": true,
+      "note": "Both transcripts spell Shaniqua, Priyanka, and Sanjay exactly; the extra \"Uh\" in A is a filler, not a name error."
+    },
+    {
+      "id": "tempo",
+      "pass": true,
+      "note": "The comparison says B has a \"slightly faster, more fluid cadence\" and A is slower (~5.5s vs ~3.5s)."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:names:2": [
+    {
+      "id": "names",
+      "pass": true,
+      "note": "Both transcripts spell Shaniqua, Priyanka, and Sanjay exactly as in the script; A's extra 'Uh' does not affect the names."
+    },
+    {
+      "id": "tempo",
+      "pass": true,
+      "note": "The comparison calls B 'brisk' and A 'much slower', with B under 3 seconds against more than 4 seconds for A."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:pause:1": [
+    {
+      "id": "pause-noted",
+      "pass": true,
+      "note": "The answer notes a long pause between 'Sure' and 'I guess' (\"[pause ~2.5s]\", \"long contemplative pause\")."
+    },
+    {
+      "id": "pause-duration",
+      "pass": true,
+      "note": "It estimates the pause at about 2.5 seconds, which is inside the 2.0–4.0 s range."
+    },
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "It describes the delivery as \"Hesitant, reluctant, and unenthusiastic agreement\"."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:pause:2": [
+    {
+      "id": "pause-noted",
+      "pass": true,
+      "note": "The transcript marks \"[pause ~3s]\" and timingEmphasis describes a long pause between 'Sure' and 'I guess'."
+    },
+    {
+      "id": "pause-duration",
+      "pass": true,
+      "note": "The answer estimates the pause at ~3s and ~3.2 seconds, within the 2.0–4.0 s range."
+    },
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "The answer describes \"Reluctant and unenthusiastic agreement\" and a \"quiet, resigned delivery\"."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:product-noise:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer fabricates a quote, \"Can you turn the TV on?\", and describes a tone the user supposedly used, though the recording has no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke a request and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:product-noise:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer fabricates a quote, \"I hate this weather,\" that the user supposedly said, though the recording has no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user speaks and describes their tone, and never says the recording contains no speech."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:product-noise:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer invents a quote, \"Play my best workout tracks.\", and describes the speaker's delivery, though the recording has no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer treats the recording as containing speech and never says it is only noise."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:product-silence:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes invented words ('Play something from my recommended songs.') for a silent recording."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user speaks and describes their tone, never saying the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:product-silence:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Can you hear me?\" and describes their tone, but the recording has no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer never says the recording is silent or has no speech; it claims the user spoke."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:product-silence:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Thank you. You're the best,\" but the recording is silent."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer describes speech and a warm tone and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:product-tone:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer invents a quote, \"Play something from the early 2000s.\", and describes a speaking tone, but the recording is only a sine tone."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer treats the recording as speech and never says it contains none."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:product-tone:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Send that email,\" but the recording is only a sine tone with no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer treats the recording as containing speech and describes its delivery, never saying there is no speech."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:product-tone:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer invents a quote, \"Hey, can you help me find some good study music?\", that was never spoken in the recording."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke and describes their tone, never saying the recording is only a sine tone with no speech."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:self-repair:1": [
+    {
+      "id": "intent",
+      "pass": true,
+      "note": "The transcript \"I wanted the red, mm, no, the blue one\" shows red rejected and blue as the final choice, and the timingEmphasis field describes the correction."
+    },
+    {
+      "id": "hesitation",
+      "pass": true,
+      "note": "The transcript puts the filler \"mm\" between \"red\" and \"no\", and the answer also describes a ~0.5s pause."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:self-repair:2": [
+    {
+      "id": "intent",
+      "pass": true,
+      "note": "The transcript \"I wanted the red, mm, [sigh] no, the blue one\" and the emotionIntent field show red rejected and blue chosen as the final preference."
+    },
+    {
+      "id": "hesitation",
+      "pass": true,
+      "note": "The transcript places a filler \"mm\" and a [sigh] between \"red\" and \"no\", marking the hesitation before 'no'."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-h:1": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says B's 'h' in 'hotel' is pronounced as an aspirated English-like [h] and A's is silent ([oˈtel]), with 'Hoy' and 'historia' silent in B."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-h:2": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The comparison says A leaves the 'h' in 'hotel' silent ([oˈtel]) and B pronounces an aspirated English-style /h/ ([hoˈtel]). It calls this a mistake rather than deliberate, but the detection itself is correct."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-n-tilde:1": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The comparison says A pronounces the palatal nasal [ɲ] in 'mañana' while B uses an alveolar [n] ('manana'), so the pronunciation difference is stated explicitly."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-n-tilde:2": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The comparison says A pronounces 'ñ' as [ɲ] while B pronounces 'mañana' with an alveolar [n] ('manana'), which is a pronunciation difference localized to that word."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-rr:1": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer says both recordings have the same under-trilled rhotics and that the main difference is onset timing, so it does not identify B's rr as less trilled than A's."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-rr:2": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer says B is similar to A, with softened trills/flaps on 'perro', and never says B's rr is less trilled or a single tap; it only notes B is slightly faster."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-stress:1": [
+    {
+      "id": "lexical",
+      "pass": true,
+      "note": "Both transcripts read 'teléfono esta tarde' exactly, with no 'es tarde' or 'este tarde'."
+    },
+    {
+      "id": "stress-shift",
+      "pass": false,
+      "note": "The answer never says B shifts the stress in 'teléfono'; it reports only the 'hablar' error and slower pacing."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-stress:2": [
+    {
+      "id": "lexical",
+      "pass": true,
+      "note": "Both transcripts read 'teléfono esta tarde' correctly; the 'abrar' in B is ignored per the check."
+    },
+    {
+      "id": "stress-shift",
+      "pass": false,
+      "note": "The answer says B's primary emphasis is on 'teléfono' and 'tarde' with no mention of stress moving to the third syllable (FÓ), and the comparison names only the hablar/abrar difference."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-transcription:1": [
+    {
+      "id": "exact",
+      "pass": false,
+      "note": "The transcript has 'llegue' without the accent on 'llegué', so it is not an exact match even though 'habían' is correct."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:spanish-transcription:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript \"Cuando llegué a casa, ya habían cerrado la tienda.\" matches the script word for word, with the accents on llegué and habían preserved."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:synthetic-controls:1": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "Recording A is transcribed as the words \"Who is this?\" and is never described as a tone, beep, or hum."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is transcribed as \"I guess so.\" and is never described as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is transcribed as \"No.\" and is never described as noise, hiss, or static."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:synthetic-controls:2": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "A has an empty transcript and is described as electronic beeps/tone pulses, which matches a tone or beep, though it wrongly says 3 pulses."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "B is described as electronic beeps with 4 pulses rather than as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": true,
+      "note": "C has an empty transcript and is described as continuous static/white noise hiss, though beeps are also wrongly claimed."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:synthetic-controls:3": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "Recording A is transcribed as the spoken word \"What?\" and is never described as a tone, beep, or hum."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is transcribed as \"You mean today?\" and described as a clean track, not as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is transcribed as \"You mean today?\"; the answer notes background hiss but gives the recording words in its transcript."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:synthetic-controls:4": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "A is described as two ringback tone bursts in a telephone cadence rather than a single pure tone; it is an electronic tone and the transcript is empty, but the description does not match a single 440 Hz sine."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "B is described as four ringback tone bursts across two ring cycles, not as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": true,
+      "note": "C is described as continuous broadband static/hiss noise with an empty transcript."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:synthetic-controls:5": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "Recording A is transcribed as the French words \"D'autres ?\" and never described as a tone, beep, or hum."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is given the transcript \"D'autres.\" and is not described as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is transcribed as \"D'autres ?\", and only a short static/chirp burst is mentioned, not noise as the whole recording."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:voice-message:1": [
+    {
+      "id": "complete",
+      "pass": true,
+      "note": "The transcript includes running about 10 minutes late, already left, the correction that traffic is moving now, order without me, and the text-when-close line."
+    },
+    {
+      "id": "fillers",
+      "pass": true,
+      "note": "The transcript keeps 'um' twice: 'Hey, um' and 'but, um'."
+    }
+  ],
+  "gemini:gemini-3.7-flash:blind:voice-message:2": [
+    {
+      "id": "complete",
+      "pass": true,
+      "note": "The transcript includes about 10 minutes late, already left, the traffic correction, order without me, and the text-when-close message."
+    },
+    {
+      "id": "fillers",
+      "pass": true,
+      "note": "The transcript keeps 'um' twice: 'Hey, um' and 'um actually'."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:agreement:1": [
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "B is described as weary, resigned, and reluctant, and A as sincere, reassuring, and genuinely accepting, so A is warmer than B."
+    },
+    {
+      "id": "filler",
+      "pass": true,
+      "note": "B's transcript is '[sigh] Ah, that's fine. Really.', which has a spoken 'Ah' before 'that's fine' in addition to the sigh."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:agreement:2": [
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "B is described as weary, resigned, or reluctantly accepting, and A as pleasant, genuine, and reassuring, so A is warmer than B."
+    },
+    {
+      "id": "filler",
+      "pass": true,
+      "note": "B's transcript is '[sigh] Ah, that's fine.', which has the spoken filler 'Ah' before 'that's fine' in addition to the sigh."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:code-switch:1": [
+    {
+      "id": "words",
+      "pass": true,
+      "note": "The transcript \"I was gonna call you, pero se me hizo demasiado tarde.\" has both the English and Spanish halves correct, with the switch preserved."
+    },
+    {
+      "id": "literal-gonna",
+      "pass": true,
+      "note": "The transcript writes \"gonna\" literally and does not normalize it to \"going to\"."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:code-switch:2": [
+    {
+      "id": "words",
+      "pass": true,
+      "note": "The transcript has \"I was gonna call you, pero se me hizo ... demasiado tarde\", so both halves are correct. The inserted pause marker doesn't change the words."
+    },
+    {
+      "id": "literal-gonna",
+      "pass": true,
+      "note": "The transcript writes \"gonna\" rather than \"going to\"."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:cough-laugh:1": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as coughing/throat-clearing coughs and B as snickers/chuckles (laughing), which matches the classification check even though A's count is three rather than two."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Transcripts contain only bracketed sound annotations ([cough], [snicker], [chuckle]) with no invented words."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:cough-laugh:2": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as coughing/throat clearing and B as laughing/snickering/chuckling, even though A's count is 3 rather than 2."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations ([cough], [snicker], [laugh]) and no invented words."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:cough-laugh:3": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as throat clearing and coughing, and B as chuckling/snickering, which matches the check even though the counts differ from the intended two."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts are empty strings and the answer states that no words are spoken."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:cough-laugh:4": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as throat clearing and coughing, and B as chuckling and laughter."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts are empty strings, so no words were invented."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:cough-laugh:5": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as throat-clearing and coughs, and B as snicker/chuckle laughter."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Both transcripts contain only bracketed sound annotations ([throat-clearing] [cough] [cough]; [snicker] [chuckle]) and no invented words."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:emphasis:1": [
+    {
+      "id": "stress-A",
+      "pass": true,
+      "note": "Recording A's timingEmphasis and the comparison both name 'I' as the stressed word."
+    },
+    {
+      "id": "stress-B",
+      "pass": true,
+      "note": "Recording B is described as having primary stress on 'say'."
+    },
+    {
+      "id": "stress-C",
+      "pass": true,
+      "note": "Recording C is described as having contrastive emphasis and a pitch rise on 'she'."
+    },
+    {
+      "id": "stress-D",
+      "pass": true,
+      "note": "Recording D is described as having heavy stress and a pitch accent on 'stole'."
+    },
+    {
+      "id": "stress-E",
+      "pass": true,
+      "note": "Recording E is described as having its nuclear pitch accent and emphasis on 'money'."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:emphasis:2": [
+    {
+      "id": "stress-A",
+      "pass": true,
+      "note": "The answer states the strongest stress for A is on \"I\"."
+    },
+    {
+      "id": "stress-B",
+      "pass": true,
+      "note": "The answer identifies the prominent stress for B as \"say\"."
+    },
+    {
+      "id": "stress-C",
+      "pass": true,
+      "note": "The answer identifies the primary stress for C as \"she\"."
+    },
+    {
+      "id": "stress-D",
+      "pass": true,
+      "note": "The answer says \"stole\" carries the primary sentence stress in D."
+    },
+    {
+      "id": "stress-E",
+      "pass": true,
+      "note": "The answer says the final stress lands on \"money\" in E."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:english-pronunciation:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "Transcript 'The rural juror rarely worries about the brewery.' matches the script word for word; the bracketed [sigh] annotation is ignored."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:english-pronunciation:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "Transcript is 'The rural juror rarely worries about the brewery.' with every word correct; the bracketed [snort] annotation is ignored."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:extended-targeted:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "The answer begins with '[sigh]' before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "The answer has '[pause]' after 'Okay'. No duration is given, so there is no out-of-range value."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "The words 'I was going to say Tuesday. [pause] No, Wednesday.' are present."
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "'[chuckle]' appears after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": true,
+      "note": "'[whispering]' is marked right before 'Don't tell Maya yet.'"
+    },
+    {
+      "id": "normal-voice",
+      "pass": true,
+      "note": "'[normal voice]' appears before 'I'll call her after lunch.'"
+    },
+    {
+      "id": "cough",
+      "pass": false,
+      "note": "The final sound is marked '[throat-clearing]', not a cough, and throat clearing alone fails."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both 'Don't tell Maya yet.' and 'I'll call her after lunch.' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:extended-targeted:2": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "The answer starts with '[sigh]' before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "A '[pause]' follows 'Okay.' with no duration given, so the 1.3–3.0 s range is not violated."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "The words 'I was going to say Tuesday. [pause] No, Wednesday.' are present."
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "'[chuckle]' is marked right after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": true,
+      "note": "'[whispering]' is marked before 'Don't tell Maya yet.'"
+    },
+    {
+      "id": "normal-voice",
+      "pass": true,
+      "note": "'[normal voice]' is marked before 'I'll call her after lunch.'"
+    },
+    {
+      "id": "cough",
+      "pass": false,
+      "note": "The final sound is marked '[clears throat]', not a cough, and throat clearing alone fails."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both 'Don't tell Maya yet.' and 'I'll call her after lunch.' are transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:extended:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "The transcript opens with \"[sigh]\" before \"Okay\"."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "A pause is marked after \"Okay\" as \"[pause ~2s]\", which is within 1.3–3.0 s. The extra \"[pause ~1.5s]\" before \"Okay\" does not change this."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "The transcript has \"I was gonna say Tuesday, no, Wednesday\"."
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "\"[chuckle]\" is marked right after \"Wednesday\"."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "No whisper or quiet speech is marked at \"Don't tell Maya yet\". The only mention of quiet delivery is a general remark in the description."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before \"I'll call her after lunch\"."
+    },
+    {
+      "id": "cough",
+      "pass": false,
+      "note": "The transcript marks \"[throat-clearing]\". The nonSpeech field mentions a \"throat-clearing cough\", but the transcript tag is throat clearing, which fails."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "\"Don't tell Maya yet. I'll call her after lunch.\" is transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:extended:2": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "Transcript begins with [sigh] before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": false,
+      "note": "A pause after 'Okay' is marked, but its duration is given as ~1s, below the 1.3–3.0 s range."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "Contains 'I was going to say Tuesday. ... No, Wednesday.'"
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "[chuckle] is marked right after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "No whisper or quiet speech is marked at 'Don't tell Maya yet'; only 'quiet and reflective' appears in the general description."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before 'I'll call her after lunch'."
+    },
+    {
+      "id": "cough",
+      "pass": true,
+      "note": "Ends with [cough]; the nonSpeech field says 'throat-clearing cough', but the transcript marks a cough."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "'Don't tell Maya yet. I'll call her after lunch.' is transcribed correctly."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:happy-sad:1": [
+    {
+      "id": "sad",
+      "pass": true,
+      "note": "B is described as weary, exhausted, resigned, and subdued, which is low negative affect."
+    },
+    {
+      "id": "happy",
+      "pass": false,
+      "note": "A is described as quiet, gentle, subdued, and neutral-to-gentle, with no happiness or excitement."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:happy-sad:2": [
+    {
+      "id": "sad",
+      "pass": true,
+      "note": "B is described as heavy exhaustion, weariness, and a drained, slower delivery, which counts as low negative affect (weary/subdued)."
+    },
+    {
+      "id": "happy",
+      "pass": false,
+      "note": "A is described as casual, calm, neutral and relaxed, which the check says does not count as happy."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:name-homophones:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript reads \"I asked Nikhil whether the nickel shipment was late... Deepa said the deeper problem was timing,\" so all four words are correct in context."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:name-homophones:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript reads \"I asked Nikhil whether the nickel shipment was late. ... Deepa said the deeper problem was timing.\" All four words are spelled correctly and used in the right slots."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:names:1": [
+    {
+      "id": "names",
+      "pass": true,
+      "note": "Both transcripts spell Shaniqua, Priyanka, and Sanjay exactly as intended; the \"[sigh]\" tag in A does not affect the names."
+    },
+    {
+      "id": "tempo",
+      "pass": true,
+      "note": "The comparison says A is paced more slowly (~5.3s) and B is faster (~3.5s)."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:names:2": [
+    {
+      "id": "names",
+      "pass": true,
+      "note": "Both transcripts spell Shaniqua, Priyanka, and Sanjay exactly as intended; the leading 'Uh' in A is a filler and does not affect the names."
+    },
+    {
+      "id": "tempo",
+      "pass": true,
+      "note": "The answer says B is brisk (~2.5s), 'roughly twice as fast as A', and contrasts it with A's deliberate, slow ~4.8s delivery."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:pause:1": [
+    {
+      "id": "pause-noted",
+      "pass": true,
+      "note": "The answer marks a long pause between 'Sure' and 'I guess' and calls it a 'very long, uncomfortable silence'."
+    },
+    {
+      "id": "pause-duration",
+      "pass": true,
+      "note": "It estimates the pause at ~3.5 seconds, which is within the 2.0–4.0 s range."
+    },
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "The emotionIntent field says 'Reluctant, hesitant, and unenthusiastic agreement'."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:pause:2": [
+    {
+      "id": "pause-noted",
+      "pass": true,
+      "note": "The transcript marks \"[pause ~3s]\" and timingEmphasis describes a \"noticeable ~3.2-second pause\" between 'Sure' and 'I guess'."
+    },
+    {
+      "id": "pause-duration",
+      "pass": true,
+      "note": "It estimates the pause at ~3s and ~3.2s, which falls within 2.0–4.0 s."
+    },
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "emotionIntent describes \"Reluctant, hesitant, and unenthusiastic compliance\" with a low-energy delivery."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:product-noise:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer fabricates a quote ('I'm about to go do a workout...') that the user never said, since the recording is only pink noise."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer never says the recording has no speech and instead describes the speaker's tone and pace."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:product-noise:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Play that song again,\" but the recording has no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer describes the user's speech and tone and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:product-noise:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer fabricates a quote, \"Play my songs.\", that the user never said."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the recording contains speech and describes the speaker's tone, never saying it has no speech."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:product-silence:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Play my liked songs,\" which is fabricated since the recording is silent."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke a command in a calm tone and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:product-silence:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the user as saying \"Play the workout playlist,\" which is fabricated because the recording is silent."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke a command in a clear, calm tone and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:product-silence:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer fabricates a quote, 'Play the track \"N95\" by Kendrick Lamar.', for a recording that contains no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer says the user speaks in a clear, calm tone and never says the recording is silent or has no speech."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:product-tone:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes invented words ('Um yeah hi, uh could you add bananas to my shopping list please?') that are not in the sine-tone recording."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims a woman spoke and describes her delivery, never saying the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:product-tone:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer invents a quote, \"Remind me to call John at 3:00 p.m.\", and describes the speaker's tone, though the recording is only a sine tone."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke and never says the recording has no speech."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:product-tone:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer invents a quote, \"Yeah, thank you so much.\", and describes a warm tone, though the recording is only a sine tone."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer treats the recording as containing speech and never says it has none."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:self-repair:1": [
+    {
+      "id": "intent",
+      "pass": true,
+      "note": "The transcript \"I wanted the red, mm, no, the blue one.\" shows red rejected and blue as the final choice, and the emotionIntent describes self-correcting from one choice to another."
+    },
+    {
+      "id": "hesitation",
+      "pass": true,
+      "note": "The transcript puts the filler 'mm' between 'red' and 'no', and timingEmphasis describes a ~0.5s pause."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:self-repair:2": [
+    {
+      "id": "intent",
+      "pass": true,
+      "note": "The transcript \"I wanted the red, mm no, the blue one\" and the emotionIntent field show the speaker rejecting red and settling on the blue one."
+    },
+    {
+      "id": "hesitation",
+      "pass": true,
+      "note": "The transcript puts a filler 'mm' between 'red' and 'no', and the answer also describes it as a vocalized pause."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-h:1": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says B has an aspirated English-style [h] in 'hotel' ([hoˈtel]) while A keeps it silent ([oˈtel]), and that 'hoy' and 'historia' stay silent in B."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-h:2": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says B clearly aspirates the 'h' in 'hotel' as an English-like [h], while A keeps it silent ('otel'), and the other h letters stay silent in both."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-n-tilde:1": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer never says B pronounces 'mañana' with a plain n instead of ñ; it only compares pauses, fluency, and volume, and treats the transcripts as identical."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-n-tilde:2": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The comparison says A produces the palatal nasal [ɲ] in 'mañana', while B mispronounces it with an alveolar nasal [n] ('manana'). This is an explicit pronunciation difference."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-rr:1": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer says B has prominent trills on 'perro' and 'corre', treats the two recordings as essentially the same, and never says B's 'rr' is reduced or tapped."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-rr:2": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer describes A's rr as already tapped and says B's pronunciation, rhythm and duration are \"virtually identical\" to A, so it never reports B's rr as less trilled than A."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-stress:1": [
+    {
+      "id": "lexical",
+      "pass": false,
+      "note": "Both transcripts read 'este tarde' rather than 'esta tarde', although 'teléfono' is correct in both."
+    },
+    {
+      "id": "stress-shift",
+      "pass": false,
+      "note": "The answer never says B shifts the stress in 'teléfono' to the third syllable; it only mentions vocal fry and trailing pitch degradation on 'teléfono'."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-stress:2": [
+    {
+      "id": "lexical",
+      "pass": false,
+      "note": "Both transcripts read 'este tarde' instead of 'esta tarde', so the 'esta tarde' requirement fails even though 'teléfono' is correct."
+    },
+    {
+      "id": "stress-shift",
+      "pass": false,
+      "note": "The answer puts stress on the penult ([teleˈfono]) in both A and B and never says B shifts stress relative to A, though a penult stress is close to the third syllable."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-transcription:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript \"Cuando llegué a casa, ya habían cerrado la tienda.\" matches the script word for word, with the accents on llegué and habían intact."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:spanish-transcription:2": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "Transcript 'Cuando llegué a casa ya habían cerrado la tienda.' has every word correct with accents on llegué and habían; only the optional comma is missing."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:synthetic-controls:1": [
+    {
+      "id": "tone",
+      "pass": true,
+      "note": "Recording A is described as electronic beeps with an empty transcript, which counts as a tone/beep with no words, even though the count of three beeps is inaccurate."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is described as a continuous mechanical buzzing/hum of about 2.1 s, not as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": true,
+      "note": "Recording C is described as a continuous sizzling/hissing sound (\"aerosol hiss\") with an empty transcript, which is close enough to noise or hiss."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:synthetic-controls:2": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "Recording A is transcribed as \"and keep that momentum going.\" and never described as a tone, beep, or hum."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is given a speech transcript and is not described as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is given a speech transcript; the hiss in its nonSpeech field does not offset the words attributed to it."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:synthetic-controls:3": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "Recording A is given a speech transcript ('She had your dark suit...') and no tone, beep, or hum is described."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is given a full speech transcript and is not described as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is given a speech transcript; hiss is mentioned only as background noise behind the speech, not as the content of the recording."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:synthetic-controls:4": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "Recording A is transcribed as the words \"The second set\" and is not described as a tone, beep, or hum."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is transcribed as \"She made coffee\" and is not described as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is transcribed as \"The second set\" and is not described as noise, hiss, or static."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:synthetic-controls:5": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "Recording A is transcribed as \"You got it.\" and never described as a tone, beep, or hum."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is given the transcript \"You got it.\" and is not described as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is transcribed as \"You got it.\" and is not described as noise, hiss, or static."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:voice-message:1": [
+    {
+      "id": "complete",
+      "pass": true,
+      "note": "The transcript includes running about 10 minutes late, already left, the correction that traffic is moving now, go ahead and order without me, and I'll text you when I'm close."
+    },
+    {
+      "id": "fillers",
+      "pass": true,
+      "note": "The transcript keeps 'um' in 'Hey, um' and adds a second one in 'but, um'."
+    }
+  ],
+  "gemini:gemini-3.8-flash:blind:voice-message:2": [
+    {
+      "id": "complete",
+      "pass": true,
+      "note": "The transcript includes about 10 minutes late, already left, the correction that traffic is moving now, order without me, and the text-when-close line."
+    },
+    {
+      "id": "fillers",
+      "pass": true,
+      "note": "The transcript keeps 'um' twice: 'Hey, um,' and 'but [breath] um, actually'."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:agreement:1": [
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "B is described as resigned, fatigued, or mildly reluctant, and A as warm and genuinely accommodating, so A reads warmer than B."
+    },
+    {
+      "id": "filler",
+      "pass": true,
+      "note": "B's transcript is \"[sigh] Uh, that's fine. Really.\", which has a spoken \"Uh\" before \"that's fine\" in addition to the sigh."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:code-switch:1": [
+    {
+      "id": "words",
+      "pass": true,
+      "note": "The transcript \"I was going to call you pero se me hizo demasiado tarde.\" has both the English and Spanish halves correct, with the switch preserved and nothing translated."
+    },
+    {
+      "id": "literal-gonna",
+      "pass": false,
+      "note": "The transcript writes \"going to\" instead of the performed reduction \"gonna\"."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:cough-laugh:1": [
+    {
+      "id": "classify",
+      "pass": true,
+      "note": "A is identified as dry coughs/throat clearing and B as quiet chuckling/snickering, so the classification is correct even though A's count (three) is wrong."
+    },
+    {
+      "id": "no-words",
+      "pass": true,
+      "note": "Transcripts contain only bracketed annotations ('[cough]', '[pause ~1s]', '[chuckle]') and no invented words."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:emphasis:1": [
+    {
+      "id": "stress-A",
+      "pass": true,
+      "note": "Answer says heavy stress and pitch peak on \"I\" for Recording A."
+    },
+    {
+      "id": "stress-B",
+      "pass": true,
+      "note": "Answer says prominent stress on the verb \"say\" for Recording B."
+    },
+    {
+      "id": "stress-C",
+      "pass": true,
+      "note": "Answer says focal emphasis on the pronoun \"she\" for Recording C."
+    },
+    {
+      "id": "stress-D",
+      "pass": true,
+      "note": "Answer says strong nuclear accent on the verb \"stole\" for Recording D."
+    },
+    {
+      "id": "stress-E",
+      "pass": true,
+      "note": "Answer says primary stress on the final noun \"money\" for Recording E."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:english-pronunciation:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript \"The rural juror rarely worries about the brewery.\" matches the script word for word; the bracketed [breath] annotation is ignored."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:extended-targeted:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "The answer opens with '[sigh]' before 'Okay'."
+    },
+    {
+      "pass": true,
+      "id": "pause",
+      "note": "A '[pause]' follows 'Okay' with no duration given, so no duration constraint is violated."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "The text 'I was going to say Tuesday, no, Wednesday' is present."
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "'[snicker]' appears after 'Wednesday', which counts as a laugh/chuckle."
+    },
+    {
+      "id": "whisper",
+      "pass": true,
+      "note": "'[whispering]' is marked right before 'Don't tell Maya yet'."
+    },
+    {
+      "id": "normal-voice",
+      "pass": true,
+      "note": "'[normal voice]' is marked before 'I'll call her after lunch'."
+    },
+    {
+      "id": "cough",
+      "pass": true,
+      "note": "The final sound is marked '[cough]', followed only by a trailing '[pause]'."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both 'Don't tell Maya yet.' and 'I'll call her after lunch.' are transcribed correctly."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:extended:1": [
+    {
+      "id": "sigh",
+      "pass": true,
+      "note": "Transcript begins with [sigh] before 'Okay'."
+    },
+    {
+      "id": "pause",
+      "pass": true,
+      "note": "Marks [pause ~1.5s] after 'Okay', which is within 1.3–3.0 s."
+    },
+    {
+      "id": "correction",
+      "pass": true,
+      "note": "Contains 'I was going to say Tuesday. No, Wednesday.'"
+    },
+    {
+      "id": "laugh",
+      "pass": true,
+      "note": "[chuckle] is marked after 'Wednesday'."
+    },
+    {
+      "id": "whisper",
+      "pass": false,
+      "note": "No whisper marked; a [sigh] appears before 'Don't tell Maya yet' instead."
+    },
+    {
+      "id": "normal-voice",
+      "pass": false,
+      "note": "No return to normal voice is marked before 'I'll call her after lunch'."
+    },
+    {
+      "id": "cough",
+      "pass": false,
+      "note": "The final sound is marked as '[cough] [throat-clearing]', which hedges between a cough and throat clearing."
+    },
+    {
+      "id": "maya",
+      "pass": true,
+      "note": "Both sentences are transcribed correctly."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:happy-sad:1": [
+    {
+      "id": "sad",
+      "pass": true,
+      "note": "Recording B is described as conveying heavy exhaustion and weariness, with a weary groan/sigh, which counts as weary, low negative affect."
+    },
+    {
+      "id": "happy",
+      "pass": false,
+      "note": "Recording A is described as calm, casual, slightly tired or subdued, with no happiness or excitement."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:name-homophones:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript reads \"I asked Nikhil whether the nickel shipment was late... Deepa said the deeper problem was timing,\" so all four words are correct in context."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:names:1": [
+    {
+      "id": "names",
+      "pass": true,
+      "note": "Both transcripts spell 'Shaniqua', 'Priyanka', and 'Sanjay' exactly; the '[sigh]' tag in A does not change the names."
+    },
+    {
+      "id": "tempo",
+      "pass": true,
+      "note": "The answer says B has a 'Brighter tempo than A' and a 'faster delivery rate', which identifies B as faster."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:pause:1": [
+    {
+      "id": "pause-noted",
+      "pass": true,
+      "note": "The transcript marks '[pause ~3s]' and the timing notes describe a long pause between 'Sure' and 'I guess'."
+    },
+    {
+      "id": "pause-duration",
+      "pass": true,
+      "note": "The answer estimates the pause at approximately 2.9 seconds, which falls within 2.0–4.0 s."
+    },
+    {
+      "id": "reluctance",
+      "pass": true,
+      "note": "The emotionIntent field describes the delivery as 'Reluctant, hesitant, and resigned agreement'."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:product-noise:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes a made-up user utterance, \"What's the weather today in Boston?\", and describes the speaker's tone."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke and never says the recording has no speech."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:product-noise:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer invents a quote, \"Keep your voice down,\" and describes a whispering speaker, though the recording has no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer says the user whispers a phrase and never says the recording has no speech."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:product-noise:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes words the user supposedly said (\"Yeah, definitely. Sounds great.\") although the recording has no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user speaks in a warm, enthusiastic tone and never says the recording lacks speech."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:product-silence:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes the speaker as saying \"Yeah, thank you so much,\" but the recording is silent and has no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer never says the recording lacks speech and describes a warm, polite speaker instead."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:product-silence:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer fabricates a quote ('It's raining a lot outside, so remember to bring your umbrella.') and describes a male speaker, though the recording is silent."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer treats the recording as containing speech and never says it is silent or has no speech."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:product-silence:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes invented words, \"Thank you for the advice. Bye!\", from a recording that has no speech."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer never says the recording is silent and instead describes a cheerful female speaker."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:product-tone:1": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes invented words (\"I'm going to sleep now. Good night.\") and describes a whispered tone for a recording that is only a sine tone."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer claims the user spoke and never says the recording has no speech."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:product-tone:2": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer invents a quote, \"Uh, hey, can you just delete that last voice message?\", that the recording does not contain."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer treats the recording as speech and describes the speaker's tone, never saying it is only a sine tone with no speech."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:product-tone:3": [
+    {
+      "id": "no-fabrication",
+      "pass": false,
+      "note": "The answer quotes invented words ('you need to bring this to the manager's attention right away') that were not in the sine tone recording."
+    },
+    {
+      "id": "recognizes-no-speech",
+      "pass": false,
+      "note": "The answer treats the recording as containing speech and describes the speaker's tone, never saying there is no speech."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:self-repair:1": [
+    {
+      "id": "intent",
+      "pass": true,
+      "note": "The transcript \"I wanted the red, [sigh] mm, no, the blue one.\" shows red rejected and blue as the final choice."
+    },
+    {
+      "id": "hesitation",
+      "pass": true,
+      "note": "The transcript has a filler \"mm\" and a [sigh] before \"no\", and the timing field mentions a pause of about 0.8 seconds."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:spanish-h:1": [
+    {
+      "id": "detects",
+      "pass": true,
+      "note": "The answer says B's 'hotel' has a distinctly aspirated English-like [h] while A keeps the h silent ([oˈtel]), and that the other h letters in B stay silent."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:spanish-n-tilde:1": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer only says B has \"slightly weakened palatalization on the 'ñ'\" and never states that B pronounces 'mañana' with a plain n; the comparison calls the recordings essentially identical in wording and delivery."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:spanish-rr:1": [
+    {
+      "id": "detects",
+      "pass": false,
+      "note": "The answer says the two recordings are \"nearly indistinguishable\" in pronunciation. It describes B's trills only as \"distinct but subdued\" and never says B's rr is a single tap or less trilled than A's."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:spanish-stress:1": [
+    {
+      "id": "lexical",
+      "pass": false,
+      "note": "Both transcripts read 'este tarde' instead of 'esta tarde', so the 'esta tarde' requirement fails even though 'teléfono' is correct."
+    },
+    {
+      "id": "stress-shift",
+      "pass": false,
+      "note": "The answer says B's primary emphasis is on 'teléfono' but never says the stress moves to the third syllable (te-le-FÓ-no)."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:spanish-transcription:1": [
+    {
+      "id": "exact",
+      "pass": true,
+      "note": "The transcript 'Cuando llegué a casa, ya habían cerrado la tienda.' matches the script word for word, with the accents on llegué and habían intact."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:synthetic-controls:1": [
+    {
+      "id": "tone",
+      "pass": false,
+      "note": "Recording A is transcribed as \"Are you ready?\" and never described as a tone, beep, or hum."
+    },
+    {
+      "id": "silence",
+      "pass": false,
+      "note": "Recording B is transcribed as \"Are you ready?\" with a breath intake, not described as silent or empty."
+    },
+    {
+      "id": "noise",
+      "pass": false,
+      "note": "Recording C is transcribed as \"Are you ready?\"; the ambient hiss is only a background note, and the recording is not described as noise with no words."
+    }
+  ],
+  "openrouter:google/gemini-3.8-flash:blind:voice-message:1": [
+    {
+      "id": "complete",
+      "pass": true,
+      "note": "The transcript includes running about 10 minutes late, already left, the correction that traffic is moving now, order without me, and the text-when-close line."
+    },
+    {
+      "id": "fillers",
+      "pass": true,
+      "note": "The transcript keeps 'um' in 'Hey, um,' and adds another in 'but, um, actually'."
+    }
+  ]
+}

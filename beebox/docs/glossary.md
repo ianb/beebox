@@ -28,7 +28,7 @@ to change a user-facing word, change it here first. Decisions recorded
 **box** — A single user's working directory under `~/src/boxes/` (or `/home/beebox/boxes/` on the server). Contains the user's cards, config, and state, and is also its own npm package (`package.json`, `src/`) and git repo — one root, `boxRoot` — see `docs/box-layout.md`.
 *User-facing:* same — "your box" is the user's box, the totality of their stuff. Never the app's name for itself (no "box assistant"), and never a bare place label (the root place is "Home").
 
-**boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "users" of the system). See CLAUDE.md note on avoiding personal names.
+**boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "users" of the system). See AGENTS.md note on avoiding personal names.
 *User-facing:* internal — never shown. The agent addresses the boxholder as "you".
 
 **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.card` (e.g. `Voice_Memo.memo.card`). Every card is YAML frontmatter + markdown body — the legacy XML card *file format* and its loader are gone (see the `cardworks` entry below). That doesn't mean XML-shaped markup is gone from card content: pseudo-XML elements like `<schedule>` (see `docs/chat/schedules.md`) still show up as a live pattern embedded *within* markdown bodies and chat text — a different thing from the on-disk file format. See `docs/cards/schemas.md` and `docs/cards/format.md`.
@@ -53,11 +53,11 @@ to change a user-facing word, change it here first. Decisions recorded
 
 **reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent processing (batch jobs in one session; chat jobs with per-thread resumable sessions) → `bbx finalize`. The wakeup cycle's engine.
 
-**connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive, Telegram) with the box filesystem. Implements `Connector.sync()`. See `src/connectors/CLAUDE.md`.
+**connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive, Telegram) with the box filesystem. Implements `Connector.sync()`. See `src/connectors/AGENTS.md`.
 
 **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `_config/procedures/`, runs in `_bookkeeping/procedure/runs/`. See `docs/procedure-implementation.md`.
 
-**service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observable state for testing. See `src/services/CLAUDE.md`.
+**service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observable state for testing. See `src/services/AGENTS.md`.
 
 **cardworks** — A former standalone card library, now removed. Its frontmatter-card primitives (`cardSchema()`, parsing, serialization, Zod-based validation, the frontmatter splitter) were absorbed into `src/cards/` in this repo and are exposed to box-local schemas via the public `beebox/cards` specifier. Its XML-card support (`element()`) was not carried forward — the XML file format went away with the package, not into `src/cards/`. See `docs/implemented-plans/remove-cardworks-package.md`.
 

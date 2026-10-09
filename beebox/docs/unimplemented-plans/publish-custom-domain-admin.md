@@ -28,7 +28,7 @@ Estimate: 400–600 changed source lines and 250–450 doctest lines across the 
 - **Human control of public destination.** The parent plan requires fresh signed-in member approval for every destination change (`beebox/docs/plans/publish-sites-admin.md:10,68`). Admin assignment makes the requested hostname visible; it must be included in the candidate revision and the approved edge manifest so stale approvals cannot authorize another destination.
 - **One way to do each thing.** Reuse the existing Admin-only Cloudflare connection surface and publication state, rather than adding a hostname registry service or a second approval store (`beebox/src/webapp/trpc/routers/cloudflare-publish-connections.ts:27-35`; `beebox/src/publish/manifest-edge.ts:157-193`).
 - **Validate at boundaries.** A hostname, zone list, Worker-domain list, and Cloudflare API response are untrusted inputs; parse and validate them before changing assignment state (`beebox/docs/engineering-principles.md:37-47`).
-- **Work only on the requested problem.** `beebox/CLAUDE.md` limits work to the requested problem. V1 has one immutable custom hostname per publication; no detach/remap or broader domain allocation system.
+- **Work only on the requested problem.** `beebox/AGENTS.md` limits work to the requested problem. V1 has one immutable custom hostname per publication; no detach/remap or broader domain allocation system.
 
 ## What already exists
 
@@ -93,7 +93,7 @@ Estimate: 400–600 changed source lines and 250–450 doctest lines across the 
 
 ## Could this be simpler?
 
-Admin could provide a manual Cloudflare link and ask the boxholder to configure a hostname in the Cloudflare dashboard. That avoids the API, locking, and token-permission work, but does not satisfy the request to map domains inside Admin or give members an in-app destination approval. Exact assignment to one existing disabled site buys that workflow while avoiding a general domain registry or agent-facing allocation system, consistent with `beebox/CLAUDE.md`'s narrow-scope rule.
+Admin could provide a manual Cloudflare link and ask the boxholder to configure a hostname in the Cloudflare dashboard. That avoids the API, locking, and token-permission work, but does not satisfy the request to map domains inside Admin or give members an in-app destination approval. Exact assignment to one existing disabled site buys that workflow while avoiding a general domain registry or agent-facing allocation system, consistent with `beebox/AGENTS.md`'s narrow-scope rule.
 
 ## Subplans
 

@@ -66,16 +66,16 @@ JSON.stringify(refStyle)
 ## Prose mentions and inline-code examples stay clean
 
 ```ts
-const prose = findPrivateLinkViolations("issues/CLAUDE.md", "private-issues is a separate private repo; see the private README for details.");
+const prose = findPrivateLinkViolations("issues/AGENTS.md", "private-issues is a separate private repo; see the private README for details.");
 prose.length
 => 0
 
-const code = findPrivateLinkViolations("issues/CLAUDE.md", "the forbidden form looks like `[t](private-issues/foo.md)` — do not write this in a public file.");
+const code = findPrivateLinkViolations("issues/AGENTS.md", "the forbidden form looks like `[t](private-issues/foo.md)` — do not write this in a public file.");
 code.length
 => 0
 
 const fence = "```\n[t](private-issues/foo.md)\n```";
-const fenced = findPrivateLinkViolations("issues/CLAUDE.md", fence);
+const fenced = findPrivateLinkViolations("issues/AGENTS.md", fence);
 fenced.length
 => 0
 ```

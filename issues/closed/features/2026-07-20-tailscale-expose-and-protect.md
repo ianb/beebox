@@ -89,7 +89,7 @@ it open this box — and Tailscale answers only the first.
   alongside none/token/password/device-token/trusted-proxy, failing closed when
   none is configured (`research/openclaw-hermes/compare-security.md:101`; also
   `deep-installation.md`). Any review written gets adopt/adapt/reject
-  dispositions per `research/CLAUDE.md`.
+  dispositions per `research/AGENTS.md`.
 
 ## Constraints carried in from today's lessons
 

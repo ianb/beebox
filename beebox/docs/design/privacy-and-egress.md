@@ -31,4 +31,4 @@ because each grant is a decision a person can find and revoke later.
 The source is published and boxes are private, so box content never enters the
 repository (issues, commits, test fixtures) without the boxholder's scrub;
 private specifics go to the separate `private-issues/` repository
-(`beebox/CLAUDE.md`, [`../../../issues/CLAUDE.md`](../../../issues/CLAUDE.md)).
+(`beebox/AGENTS.md`, [`../../../issues/AGENTS.md`](../../../issues/AGENTS.md)).

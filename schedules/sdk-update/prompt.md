@@ -90,7 +90,7 @@ all.
 7. **File an issue for anything the code must account for.** A release that
    needs work here — a deprecation to migrate off, a harness change that breaks
    a script, a new capability worth adopting — becomes an `issues/` item, in the
-   right category per `issues/CLAUDE.md`, with `filed-by: agent` and
+   right category per `issues/AGENTS.md`, with `filed-by: agent` and
    `workstream: sdk-update` in the frontmatter. The ledger records what changed;
    the issue queue is what carries work. Do not implement the change yourself
    beyond the bump below.
@@ -102,6 +102,10 @@ all.
    Otherwise, if a newer stable version has cleared the two-day settling
    window, run `pnpm update-agent-sdk` — it bumps whichever family is behind.
    Never install a prerelease.
+   On each SDK bump, also re-check that a Claude Agent SDK session with box
+   settings (`settingSources: ["project"]`) still loads `AGENTS.md` natively
+   (root, `@` includes, nested on Read); the probe method is in
+   `beebox/docs/implemented-plans/box-agents-md.md` "Prior art".
 9. **After a bump**, run `pnpm -C beebox test`; for an SDK bump also
    `node --import tsx beebox/src/scripts/sdk-steering-probe.ts`; for a Codex bump
    also the deploy gate, on the workspace's pinned binary and never a bare

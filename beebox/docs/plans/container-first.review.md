@@ -85,7 +85,7 @@ document at the cited place:
   reinterpretation.
 - `installation-story.md:434` — the entrypoint contract quote is verbatim.
 
-One preference the plan does not name and should: `beebox/CLAUDE.md`'s
+One preference the plan does not name and should: `beebox/AGENTS.md`'s
 "**Read before writing**" and the `docs/engineering-principles.md` 4
 (never silent) tension in `BBX_SKIP_CONVERGE` — see Findings.
 
@@ -188,7 +188,7 @@ never silent) — a truncated script fails in a way with no error message at all
 engine <serving>` with `Created-By: bbx-converge`."*
 **Issue:** `bbx init` installs a per-box `.git/hooks/pre-commit` that runs
 `bbx validate --pre-commit` — staged card validation, a link warning, and an
-unlisted-binary guard (`beebox/CLAUDE.md`, "Git trailers are structured
+unlisted-binary guard (`beebox/AGENTS.md`, "Git trailers are structured
 metadata" and "Validation"). A dirty tree at container start is very often dirty
 *because* something is half-written: a card the user was editing in the web UI,
 an agent's partial write interrupted by the restart, an untracked binary the
@@ -250,7 +250,7 @@ timeout too, and it was dropped rather than moved. A wedged `bbx docs refresh`
 now means a container that never listens, with no message.
 **Suggested action:** Give `bbx converge` a per-step bound (the existing 600 s,
 or a stated new one) implemented with `startAwakeTimeout` per
-`beebox/CLAUDE.md`'s time discipline, and add the timeout outcome to the
+`beebox/AGENTS.md`'s time discipline, and add the timeout outcome to the
 failure table and to the exit-code vocabulary lock-in.
 **Traces to preference:** `docs/engineering-principles.md` 4; the entrypoint's
 own comment is the most recent shipped precedent and the plan discards it
@@ -710,7 +710,7 @@ empty is a stronger one.
 moved to `container/README.md` (doc-check clean)"*.
 **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
 the repository; a new top-level `container/` is not in that list and the plan
-does not say it will be added. `beebox/CLAUDE.md`'s Guides table row
+does not say it will be added. `beebox/AGENTS.md`'s Guides table row
 *"Docker install (local + VPS) | `docs/install/docker.md`"* points at the file
 being moved out of the beebox docs tree. Also worth stating: moving the guide
 out of `beebox/docs/` removes it from the tree the docs browser and doc-check
@@ -719,11 +719,11 @@ named.
 **Why it matters:** Principle 7 (hierarchy is a discoverability contract) is one
 of the plan's own justifications for the move; a new root project that the root
 map does not mention is the same defect one level up.
-**Suggested action:** Add root `CLAUDE.md` and `beebox/CLAUDE.md` Guides-table
+**Suggested action:** Add root `CLAUDE.md` and `beebox/AGENTS.md` Guides-table
 updates to Track E's file list (Track B mentions `container/CLAUDE.md` but not
 the two maps that point at it).
 **Traces to preference:** `docs/engineering-principles.md` 7; and
-`beebox/CLAUDE.md` — "new infrastructure isn't done until it's discoverable".
+`beebox/AGENTS.md` — "new infrastructure isn't done until it's discoverable".
 
 ## NOT in scope (verified)
 

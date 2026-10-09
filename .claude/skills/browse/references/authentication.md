@@ -51,7 +51,7 @@ bin/browse auth login owner
 
 **Ask the boxholder for the credential** — do not invent one, and do not reach for
 `bbx engine auth set-password`, which rewrites a machine-global credential store and revokes
-live sessions (`beebox/CLAUDE.md`). If you cannot get one, say which findings
+live sessions (`beebox/AGENTS.md`). If you cannot get one, say which findings
 were unreachable rather than reporting them as absent features.
 
 Mechanism: `beebox/docs/implemented-plans/agent-browsing-owner.md`.

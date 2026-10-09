@@ -150,7 +150,7 @@ noted as a known limitation).
 
 ### 5. Docs
 
-- `bin/CLAUDE.md`: worktree-lifecycle section gains the codex path (direct
+- `bin/AGENTS.md`: worktree-lifecycle section gains the codex path (direct
   hook invocation, AGENTS.md generation, sweep-based cleanup, no auto-remove
   on exit).
 - `.claude/skills/launch-worktree-session/SKILL.md`: document `--agent codex`
@@ -202,7 +202,7 @@ decision stands.
   of `exec`ing it and calls `bin/codex-session-end` afterwards (auto-remove when
   merged + clean; keep/remove prompt otherwise), sharing the guards and the
   removal with `session-end.sh` via `bin/lib/worktree-teardown.sh`. See the
-  "Codex worktree sessions" section of `bin/CLAUDE.md`.
+  "Codex worktree sessions" section of `bin/AGENTS.md`.
 - Remote-control analog for Codex sessions.
 - `.codex/hooks.json` / plugin config per worktree.
 - Box-agent (product) Codex support — this is dev-session tooling only.

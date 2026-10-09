@@ -35,7 +35,7 @@ export interface IssueRecord {
   /**
    * Frontmatter keys this parser does not know.
    *
-   * The schema in `issues/CLAUDE.md` is closed, but this parser used to drop
+   * The schema in `issues/AGENTS.md` is closed, but this parser used to drop
    * anything outside it without a word. Eleven issues were filed carrying a
    * `stories:` list for two months before anyone noticed it reached no tool —
    * not a filter, not a facet, not `--json`. Silence is what let that happen,
@@ -114,7 +114,7 @@ function researchState(body: string): ResearchState {
 }
 
 /**
- * Every frontmatter key `issues/CLAUDE.md` defines. Adding a field to the schema
+ * Every frontmatter key `issues/AGENTS.md` defines. Adding a field to the schema
  * means adding it here, or it will be reported as unknown on every issue using it.
  */
 const KNOWN_FRONTMATTER_KEYS = new Set([

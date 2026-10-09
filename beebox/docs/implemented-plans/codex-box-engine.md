@@ -37,7 +37,7 @@ There is no automatic fallback and no live engine switch.
   and usage adapters have doctests. Real capability probes cover the native runtime.
 - Principle 12, **The maintainer is usually an agent**. Canonical editable context is
   shared, while generated provider surfaces state their provenance.
-- `beebox/CLAUDE.md` requires the box reactor, chat, and procedures to use the same
+- `beebox/AGENTS.md` requires the box reactor, chat, and procedures to use the same
   box contract. The selector is therefore box-wide for new work.
 - `beebox/code-style.md` requires errors with recovery paths to remain visible.
   Codex never falls back silently to Claude.

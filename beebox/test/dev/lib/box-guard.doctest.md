@@ -133,16 +133,20 @@ The CLI's forced docs generation can create untracked guidance. Its exact
 post-generation status is the baseline supplied to the first runner call;
 cleanup returns the synthetic box to clean status, which later runner calls
 require. This exercises the guard's baseline contract around actual generation.
+The box is one made before `agents-md-2026-10` (`legacyInstructions`), whose
+generated root `CLAUDE.md` is an owned file the generation commit leaves
+untracked. (In a converted box the `**/AGENTS.md` mirror row still matches the
+root `AGENTS.md`, so generation commits it and leaves nothing to baseline.)
 
 ```ts
-const generatedBox = await makeTmpBox({ git: true });
+const generatedBox = await makeTmpBox({ git: true, legacyInstructions: true });
 await generateDocs(generatedBox.root, { force: true });
 const generatedStatus = (await import("../../../src/dev/lib/box-guard.js")).auditBoxStatus(generatedBox.root);
 assertCleanAuditBox(generatedBox.root, generatedStatus);
 execSync("git reset --hard HEAD && git clean -fd", { cwd: generatedBox.root, stdio: "ignore" });
 assertCleanAuditBox(generatedBox.root);
-generatedStatus.length > 0
-=> true
+generatedStatus
+=> ?? CLAUDE.md
 ```
 
 ```ts cleanup

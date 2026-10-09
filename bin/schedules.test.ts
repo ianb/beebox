@@ -2,7 +2,7 @@
  * Tests for the schedules schema, loader, store, and runner. Every row in the
  * plan's Failure-modes table that says "test" maps to one named test here.
  *
- * Note on tier: bin/CLAUDE.md prefers doctests for new `bin/` tooling, but the
+ * Note on tier: bin/AGENTS.md prefers doctests for new `bin/` tooling, but the
  * plan's rollout ("Tests first … bin/schedules.test.ts (Node test runner) is
  * written per chunk before the code") names this file explicitly, and `pnpm
  * test` at the root runs exactly `bin/*.test.ts`.

@@ -304,7 +304,7 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
 
   // The public site's canonical build: what Cloudflare runs on every push of
   // main. It consumes site/ AND every markdown the docs manifest promotes
-  // (README, CONTRIBUTING, beebox/docs, the engine's CLAUDE.md), and it fails
+  // (README, CONTRIBUTING, beebox/docs, the engine's AGENTS.md), and it fails
   // closed on a scrub-gate hit or a broken link. It is the one check a
   // docs-only diff must NOT skip: docs are exactly its input. Without it a
   // merge that breaks the site build is silent until someone looks at
@@ -373,7 +373,7 @@ export function trackORecommendation(input: { codeChanged: boolean; sourceLines:
 
 /**
  * `Issue:` and `Plan:` trailers across the branch's commits. Hooks stamp
- * `Plan:`; `Issue:` is written by hand (monorepo CLAUDE.md, commit provenance).
+ * `Plan:`; `Issue:` is written by hand (monorepo AGENTS.md, commit provenance).
  */
 export function parseTrailers(messages: string[]): { issues: string[]; plans: string[] } {
   const issues = new Set<string>();

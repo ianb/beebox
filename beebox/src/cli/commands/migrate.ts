@@ -26,9 +26,9 @@ import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import {
   appendManifestEntry,
   computePending,
-  readManifest,
   writeManifest,
 } from "../../core/migration-run.js";
+import { readManifest } from "../../core/migration-manifest.js";
 import { migrationQuestions } from "../../core/migration-repair.js";
 import { sweepMigrations, type SweepResult, type SweptMigration } from "../../core/migration-sweep.js";
 import { assertNever } from "../../shared/invariant.js";

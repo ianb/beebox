@@ -5,7 +5,7 @@ description: File, find, amend, close, or reclassify items in the monorepo's pub
 
 # The issue queue
 
-The conventions live in **`issues/CLAUDE.md`** — read it before filing,
+The conventions live in **`issues/AGENTS.md`** — read it before filing,
 amending, closing, or reclassifying anything. Nothing here adds to it.
 
 What it covers, so you know what there is to look up: the seven category

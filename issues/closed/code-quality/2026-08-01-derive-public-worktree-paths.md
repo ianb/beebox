@@ -45,5 +45,5 @@ A developer whose checkout lives elsewhere gets worktrees that silently
 miss every lifecycle hook. The fix is the pattern `bin/private-issues`
 already uses: one shared derivation helper, explicit checkout-path
 anchors, no `$HOME` assumptions. The tension: these hooks are
-incident-hardened (`bin/CLAUDE.md`), so a sweep of path changes needs the
+incident-hardened (`bin/AGENTS.md`), so a sweep of path changes needs the
 same care as router lifecycle edits — not a quick find/replace.

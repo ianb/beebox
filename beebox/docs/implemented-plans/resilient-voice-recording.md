@@ -136,7 +136,7 @@ class (one large upload at the end) on the native path.
     and "HQ failed" are all shown.
   - **#2** (exhaustiveness). The new staging kind fails compilation at every
     kind switch.
-- `beebox/CLAUDE.md`: "HTTP endpoints go in tRPC by default … Raw Fastify
+- `beebox/AGENTS.md`: "HTTP endpoints go in tRPC by default … Raw Fastify
   routes … are only for … file upload/download". Chunk upload stays on the raw
   capture route; status, claim and fall-back are tRPC. "Time discipline … Long-running timeouts must count only awake time via
   `startAwakeTimeout`".

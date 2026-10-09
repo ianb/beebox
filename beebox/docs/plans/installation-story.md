@@ -32,11 +32,11 @@ Track C.)*
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:103` — *"Keep source and docs generic — never
+- `beebox/AGENTS.md:103` — *"Keep source and docs generic — never
   hardcode personal names. This is a generic tool; any box can be adopted by
   any user."* Governs everything here: the install path must work with zero
   personal-infrastructure assumptions.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"don't add features beyond
+- `beebox/AGENTS.md` (Behavioral Notes) — *"don't add features beyond
   what the task requires."* Governs the deferrals: no installer script, no
   onboarding wizard, no npm publish in this plan. Also governs Track B's
   shape: a small root script over a grand shared-check framework.

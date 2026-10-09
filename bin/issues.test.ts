@@ -2,7 +2,7 @@
  * Tests for `bin/issues` — the queue model (derivation, filtering, grouping)
  * and the index refresh's re-embedding decision.
  *
- * `bin/CLAUDE.md` directs new root-tooling tests to `.doctest.md`. This file is
+ * `bin/AGENTS.md` directs new root-tooling tests to `.doctest.md`. This file is
  * a deliberate exception: the re-embedding tests need `createFakeEmbeddings`'s
  * call log inspected across several refresh cycles over a mutating temp tree,
  * which is assertion-shaped rather than transcript-shaped. Nothing here touches

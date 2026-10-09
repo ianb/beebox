@@ -9,24 +9,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ROOT, type DocInfo } from "../doc-graph-data/data.js";
+import { escapeHtml } from "../../lib/escape-html.js";
 import {
   CURATOR,
   PILLARS,
   RING_DEFS,
   type Pillar,
 } from "./data.js";
-
-const HTML_ESCAPES: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
-};
-
-function escapeHtml(s: string): string {
-  return s.replace(/["&'<>]/g, (c) => HTML_ESCAPES[c] ?? c);
-}
 
 function vsLink(p: string): string {
   // Keep the link repo-relative so the committed HTML carries no machine-absolute

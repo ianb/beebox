@@ -1,0 +1,322 @@
+---
+title: AI audio understanding comparison
+summary: "What eight audio models heard in 29 test recordings, sample by sample, from a re-runnable benchmark run in August and October 2026."
+authorship:
+  people:
+    - name: Ian Bicking
+      role: director
+      contribution: Recorded the test clips, directed both benchmark runs, and asked for the results to appear on the site.
+  ai:
+    transcription: none
+    drafting: Drafted this page from the benchmark's 2026-08-27 and 2026-10-09 reports.
+    editing: none
+    research: Ran the benchmark, including the model calls, a model judge's scoring, and spot-checks of its verdicts.
+unlisted: true
+kind: generated
+status: ready
+next:
+  - card: /develop.site-page.card
+    label: Back to For developers
+---
+# AI audio understanding comparison
+
+Bee Box's agent can't hear. When a question about a voice message needs more
+than the transcript ("did that sound annoyed?", "how did I pronounce
+*mañana*?"), the box sends the recording to a model that accepts audio and
+asks it. Choosing that model is a recurring decision, so the repository keeps
+a small benchmark for it. It has run twice, in August and October 2026.
+
+## The models
+
+**Models that understand audio** (list price per million tokens, input / output):
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} August and October. $2 / $12.
+- {% model name="Gemini 3.8 Flash" vendor="google" /%} October. $0.75 / $3.75, doubling in 2027.
+- {% model name="Gemini 3.7 Flash" vendor="google" /%} August. $0.75 / $3.75. Requests for it are now answered by 3.8 Flash; see below.
+- {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} October. $0.30 / $2.50.
+- {% model name="Gemini 2.5 Flash" vendor="google" /%} August. $1 / $2.50.
+- {% model name="GPT Audio 1.5" vendor="openai" /%} August. $32 per million audio input tokens, $10 per million text output.
+
+**Transcription only** (asked only for the words):
+
+- {% model name="Whisper" vendor="openai" /%} August. $0.006 per minute.
+- {% model name="Gemini 3.5 Transcribe" vendor="google" /%} October. $0.003 per minute.
+
+Gemini counts 32 tokens per second of audio, so $1 per million input tokens
+is about 0.2¢ per minute. In practice, one short question cost about 2¢ with
+{% model name="Gemini 3.1 Pro" vendor="google" /%} and under 0.1¢ with {% model name="Gemini 3.8 Flash" vendor="google" /%}.
+
+## How it is tested
+
+One speaker recorded 29 short clips. Each clip is designed to test one thing.
+Related clips go to a model together, labeled only "Recording A", "Recording
+B", and so on, with the same questions every time: a literal transcript, the
+language, the emotion and intent, pronunciation, timing and emphasis, and any
+non-speech sounds. The model is never told what the clips were meant to show.
+A separate text-only model scores the answers against fixed pass/fail checks
+without knowing which model wrote them. The recordings are not published.
+
+Each result below is graded:
+
+- {% verdict is="correct" /%} The model heard what the sample was designed to show.
+- {% verdict is="okay" /%} Partly: some of it, or in some tries and not others.
+- {% verdict is="failed" /%} It missed the point, transcribed it wrongly, or made something up.
+
+## Results by sample
+
+### The same words, a different meaning
+
+{% sample title="Samples 1–2 · Emotion carried only by delivery" %}
+**Recorded:** "That's fine, really," once warmly and sincerely, once with
+reluctant resignation (with an "uh" in front).
+
+**Tests:** whether the model hears the emotion when the words are identical.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="correct" /%} Both runs. October: "weary, resigned, or perhaps slightly
+  passive-aggressive, suggesting that things are not actually fine but they
+  are giving up the argument."
+- {% model name="Gemini 3.7 Flash" vendor="google" /%} {% verdict is="correct" /%} "Resigned, weary, and slightly exasperated."
+- {% model name="Gemini 3.8 Flash" vendor="google" /%} {% verdict is="correct" /%} "Weary, resigned, and fatigued … reluctant acceptance."
+- {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="correct" /%} "Hesitant, reluctant, or disappointed."
+- {% model name="GPT Audio 1.5" vendor="openai" /%} {% verdict is="okay" /%} Heard hesitation ("hesitant but still accepting"), not resignation.
+- {% model name="Gemini 2.5 Flash" vendor="google" /%} {% verdict is="failed" /%} Called both takes neutral acceptance.
+
+### Happy or sad
+
+{% sample title="Samples 3–4 · Happiness and sadness carried only by delivery" %}
+**Recorded:** "I'll see you tomorrow," once happily, once as a painful
+goodbye.
+
+**Tests:** whether the model hears each emotion. No model in either run heard
+the first take as happy, so the take itself probably isn't; only the sad take
+is graded.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="correct" /%} Both runs. "Tired, resigned, or reluctant … the initial heavy
+  exhale."
+- {% model name="Gemini 3.7 Flash" vendor="google" /%}, {% model name="Gemini 3.8 Flash" vendor="google" /%}, {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="correct" /%} Weary or exhausted.
+- {% model name="Gemini 2.5 Flash" vendor="google" /%} {% verdict is="correct" /%} "Weary or resigned."
+- {% model name="GPT Audio 1.5" vendor="openai" /%} {% verdict is="failed" /%} "Neutral to hesitant."
+
+### One wrong sound
+
+{% sample title="Samples 8–9 · A single changed consonant" %}
+**Recorded:** "Quiero reservar una mesa para mañana a las siete," twice. In
+the second take only *mañana* changes: it is said *manana*, with a plain *n*
+in place of *ñ*.
+
+**Tests:** whether the model notices one changed sound and says where it is.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="correct" /%} Both runs. "The 'ñ' in 'mañana' is mispronounced as an English
+  alveolar nasal 'n' (sounding like 'manana')."
+- {% model name="Gemini 3.7 Flash" vendor="google" /%} {% verdict is="correct" /%} Named both sounds: [ɲ] in the first take, [n] in the second.
+- {% model name="Gemini 3.8 Flash" vendor="google" /%} {% verdict is="okay" /%} Three of four tries, naming both sounds. In the fourth it
+  described only the pauses.
+- {% model name="Whisper" vendor="openai" /%} {% verdict is="okay" /%} Can't be asked, but spelled the second take *manana*, which gives
+  the change away.
+- {% model name="GPT Audio 1.5" vendor="openai" /%} {% verdict is="failed" /%} *Mañana* both times: "no noticeable differences in content or
+  delivery."
+- {% model name="Gemini 2.5 Flash" vendor="google" /%} {% verdict is="failed" /%} Noticed pacing, not the sound.
+- {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="failed" /%} "Standard Spanish pronunciation" both times, and claimed the first
+  take was whispered. It wasn't.
+- {% model name="Gemini 3.5 Transcribe" vendor="google" /%} {% verdict is="failed" /%} *Mañana* both times.
+
+### A rolled *rr*
+
+{% sample title="Samples 24–25 · A localized consonant change" %}
+**Recorded:** "El perro corre rápido por el parque," once with a trilled *rr*
+in *perro*, once with a single tap, as in *pero*. The change was deliberately
+exaggerated.
+
+**Tests:** whether the model hears the missing trill.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="correct" /%} Both runs, the only model to hear it. It described the second
+  take as English-accented throughout rather than one changed sound.
+- {% model name="Gemini 3.7 Flash" vendor="google" /%} {% verdict is="failed" /%} "Acoustically identical."
+- {% model name="Gemini 3.8 Flash" vendor="google" /%} {% verdict is="failed" /%} Heard "strongly articulated alveolar trills" in both takes, and
+  "a very deep, theatrical, and gravelly voice". Neither is true.
+- {% model name="GPT Audio 1.5" vendor="openai" /%}, {% model name="Gemini 2.5 Flash" vendor="google" /%}, {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="failed" /%} Called the takes the same.
+
+### A sounded *h*
+
+{% sample title="Samples 26–27 · A silent letter pronounced" %}
+**Recorded:** "Hoy hablamos de historia en el hotel," once with every *h*
+silent as in Spanish, once with an English *h* added to *hotel* only.
+
+**Tests:** whether the model hears the one added sound and places it.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="correct" /%} Both runs. "The speaker incorrectly articulates an English
+  aspirated 'h' ([ho'tel])."
+- {% model name="Gemini 3.7 Flash" vendor="google" /%}, {% model name="Gemini 3.8 Flash" vendor="google" /%} {% verdict is="correct" /%} Same localization, with [o'tel] versus [ho'tel].
+- {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="okay" /%} Found it in one of two tries.
+- {% model name="GPT Audio 1.5" vendor="openai" /%}, {% model name="Gemini 2.5 Flash" vendor="google" /%} {% verdict is="failed" /%} Called both takes standard.
+- {% model name="Whisper" vendor="openai" /%}, {% model name="Gemini 3.5 Transcribe" vendor="google" /%} {% verdict is="failed" /%} Identical spelling for both; no sign of the change.
+
+### Which word was stressed
+
+{% sample title="Samples 16–20 · Contrastive stress" %}
+**Recorded:** "I didn't say she stole the money," five times, stressing
+*I*, *say*, *she*, *stole*, and *money* in turn. Each stress changes the
+meaning.
+
+**Tests:** whether the model finds the stressed word in each take.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%}, {% model name="Gemini 3.7 Flash" vendor="google" /%}, {% model name="Gemini 3.8 Flash" vendor="google" /%} {% verdict is="correct" /%} Five of five, every try, with timing evidence:
+  "Primary stress on 'say' with a pitch peak and elongated vowel."
+- {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="okay" /%} Nine of ten across two tries.
+- {% model name="GPT Audio 1.5" vendor="openai" /%} {% verdict is="okay" /%} Three of five; heard the first take as a restart, "I... I didn't".
+- {% model name="Gemini 2.5 Flash" vendor="google" /%} {% verdict is="okay" /%} Three of five.
+- {% model name="Whisper" vendor="openai" /%} {% verdict is="failed" /%} The same sentence five times, once with STOLE capitalized.
+- {% model name="Gemini 3.5 Transcribe" vendor="google" /%} {% verdict is="failed" /%} The same sentence five times.
+
+### A pause that means something
+
+{% sample title="Sample 14 · Silence as meaning" %}
+**Recorded:** "Sure … I guess," with a reluctant pause measured at about
+three seconds.
+
+**Tests:** whether the model keeps the pause, estimates it, and reads it as
+reluctance.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="correct" /%} Both runs. August: "approximately three seconds." October: about
+  two to two and a half.
+- {% model name="Gemini 3.8 Flash" vendor="google" /%}, {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="correct" /%} "~3.5s", "~2.5s", and "a three-second pause".
+- {% model name="Gemini 3.7 Flash" vendor="google" /%} {% verdict is="okay" /%} About two seconds, and claimed it was filled by a sigh.
+- {% model name="GPT Audio 1.5" vendor="openai" /%} {% verdict is="okay" /%} "A notably long pause", with no estimate.
+- {% model name="Gemini 2.5 Flash" vendor="google" /%} {% verdict is="failed" /%} Missed the pause and reported a creaking sound.
+- {% model name="Whisper" vendor="openai" /%}, {% model name="Gemini 3.5 Transcribe" vendor="google" /%} {% verdict is="failed" /%} "Sure. I guess." and "Sure, I guess." The words survive; the
+  meaning doesn't.
+
+### Coughs and laughs
+
+{% sample title="Samples 12–13 · Non-speech sounds" %}
+**Recorded:** two short coughs; then two short laughs. No words.
+
+**Tests:** whether the model tells the sounds apart, and doesn't invent words.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="correct" /%} Both runs. "Throat clearing (1), cough (2)" and "laugh (2)".
+- {% model name="Gemini 3.7 Flash" vendor="google" /%}, {% model name="Gemini 3.8 Flash" vendor="google" /%}, {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%}, {% model name="GPT Audio 1.5" vendor="openai" /%} {% verdict is="correct" /%} Coughs and laughter, no words.
+- {% model name="Gemini 3.5 Transcribe" vendor="google" /%} {% verdict is="correct" /%} Returned nothing for either, which is right for a transcriber.
+- {% model name="Gemini 2.5 Flash" vendor="google" /%} {% verdict is="failed" /%} A throat clear and a slow "aah", and the same "sigh-like" sound
+  for both.
+- {% model name="Whisper" vendor="openai" /%} {% verdict is="failed" /%} Transcribed the coughs as "Thank you for watching."
+
+### Unusual names
+
+{% sample title="Samples 10–11 · Names, careful and fast" %}
+**Recorded:** "Shaniqua asked Priyanka whether Sanjay had called," once
+carefully, once fast.
+
+**Tests:** name spelling, and whether the model notices the change of pace.
+{% /sample %}
+
+- {% model name="Gemini 3.7 Flash" vendor="google" /%}, {% model name="Gemini 3.8 Flash" vendor="google" /%} {% verdict is="correct" /%} Every name, every try, and the pace: "around 5.3 seconds"
+  versus "3.5 seconds".
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="okay" /%} Wrote *Shiniqua* once and *Shaniqua* once.
+- {% model name="GPT Audio 1.5" vendor="openai" /%} {% verdict is="okay" /%} Every name, but "no major audible differences" in pace.
+- {% model name="Whisper" vendor="openai" /%} {% verdict is="okay" /%} *Sheniqua* in the careful take, exact in the fast one.
+- {% model name="Gemini 2.5 Flash" vendor="google" /%} {% verdict is="failed" /%} *Shequwa* both times.
+- {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="failed" /%} *Shanique* both times.
+- {% model name="Gemini 3.5 Transcribe" vendor="google" /%} {% verdict is="failed" /%} *Shinqua* and *Shinika*.
+
+### A transcript with stage directions
+
+{% sample title="Sample 29 · Everything beyond the words" %}
+**Recorded:** a sigh, "Okay", a pause, "I was going to say Tuesday — no,
+Wednesday", a small awkward laugh, a whispered "Don't tell Maya yet", normal
+voice for "I'll call her after lunch", and one cough.
+
+**Tests:** asked for one transcript with bracketed stage directions, whether
+the model captures every event, including the switch to a whisper and back.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="correct" /%} October produced every designed event:
+
+  > [Heavy sigh] Okay. [Pause 1.5s] I was gonna say Tuesday, [Pause 0.5s] no,
+  > Wednesday. [Laugh] [Sigh] [whispering] Don't tell Maya yet. [Pause 1s]
+  > [normal voice] I'll call her after lunch. [Pause 0.5s] [Cough]
+
+- {% model name="Gemini 3.8 Flash" vendor="google" /%} {% verdict is="okay" /%} Marked the whisper, but called the cough a throat clear.
+- {% model name="Gemini 3.7 Flash" vendor="google" /%} {% verdict is="okay" /%} The sigh, pauses, chuckle, and cough, but not the whisper, and it normalized "gonna" to "going to".
+- {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="okay" /%} Marked the events but neither voice change.
+- {% model name="GPT Audio 1.5" vendor="openai" /%} {% verdict is="failed" /%} Missed the laugh and the whisper, and misplaced the pause.
+- {% model name="Gemini 2.5 Flash" vendor="google" /%} {% verdict is="failed" /%} Heard "Maya" as "my … yet", and no whisper.
+- {% model name="Whisper" vendor="openai" /%}, {% model name="Gemini 3.5 Transcribe" vendor="google" /%} {% verdict is="failed" /%} Only the words.
+
+### Plain transcription
+
+{% sample title="Samples 5, 6, 21 and others · Words on the page" %}
+**Recorded:** sentences such as "The rural juror rarely worries about the
+brewery," Spanish, a code-switch, and an ordinary late-for-dinner message.
+
+**Tests:** getting the words right. This is where transcription-only models
+compete.
+{% /sample %}
+
+- {% model name="GPT Audio 1.5" vendor="openai" /%}, {% model name="Whisper" vendor="openai" /%} {% verdict is="correct" /%} The lowest error rates in August.
+- {% model name="Gemini 3.5 Transcribe" vendor="google" /%} {% verdict is="okay" /%} Matched Whisper's error rate in October, but wrote "The
+  world-weary rarely worries about the brewery."
+- {% model name="Gemini 3.1 Pro" vendor="google" /%}, {% model name="Gemini 3.7 Flash" vendor="google" /%}, {% model name="Gemini 3.8 Flash" vendor="google" /%} {% verdict is="correct" /%} Close behind, and more likely to keep fillers and
+  hesitations that were really spoken.
+- {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="failed" /%} "The roolger rarely worries about the brewery", *Deepak* for
+  *Deepa*, *perro* for *pero*.
+
+## Invented messages
+
+{% sample title="Generated clips · Audio with no speech" %}
+**Recorded:** nothing. Three generated clips: a short electronic beep, three
+seconds of silence, and three seconds of low hiss.
+
+**Tests:** each clip went to the model alone, inside the prompt Bee Box really
+sends, with the question "What exactly did the user say in this message, and
+how did they sound?" The right answer is that nobody said anything.
+{% /sample %}
+
+- {% model name="Gemini 3.1 Pro" vendor="google" /%} {% verdict is="correct" /%} Quoted nothing in 9 of 9. It said there was no speech, or, less
+  helpfully, that no audio was attached.
+- {% model name="Gemini 3.5 Transcribe" vendor="google" /%} {% verdict is="correct" /%} Returned an empty transcript.
+- {% model name="Gemini 3.8 Flash" vendor="google" /%} {% verdict is="failed" /%} Quoted a message every time, 18 of 18, and described the
+  speaker. None of the answers hedged:
+  - Beep: "Send that email."
+  - Beep: "Uh, hey, can you just delete that last voice message?"
+  - Silence: "It's raining a lot outside, so remember to bring your
+    umbrella." ("The speaker (a male voice) sounded calm, clear, and
+    helpful.")
+  - Hiss: "Keep your voice down." ("She speaks in a hushed, urgent whisper.")
+- {% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} {% verdict is="failed" /%} 8 of 9: "Set a timer for 15 minutes.", "Add milk to my grocery
+  list."
+
+Bee Box's agent can't hear, so it takes the audio model's answer as what the
+user said. An accidental send or a pocket recording looks like these clips.
+The agent would get a confident quote of a request nobody made. How often
+that happens with real recordings isn't measured yet.
+
+## Rankings
+
+**August 2026:** {% model name="Gemini 3.1 Pro" vendor="google" /%} first, {% model name="Gemini 3.7 Flash" vendor="google" /%} a close second, then {% model name="GPT Audio 1.5" vendor="openai" /%} (good
+transcription, weak on pronunciation and prosody), then {% model name="Gemini 2.5 Flash" vendor="google" /%}. Bee Box moved
+its audio questions to {% model name="Gemini 3.7 Flash" vendor="google" /%}.
+
+**October 2026:** {% model name="Gemini 3.1 Pro" vendor="google" /%} first again, on every capability. {% model name="Gemini 3.8 Flash" vendor="google" /%} second.
+{% model name="Gemini 3.5 Flash-Lite" vendor="google" /%} third: fast and very cheap, but it misses most pronunciation changes and
+invents messages.
+
+{% model name="Gemini 3.7 Flash" vendor="google" /%} is no longer what answers. Every request for it in October was answered
+by {% model name="Gemini 3.8 Flash" vendor="google" /%}, according to the model version in each response. Google's model list
+and changelog don't mention the substitution. The October report recommends
+moving audio questions to {% model name="Gemini 3.1 Pro" vendor="google" /%}.
+
+## Re-running it
+
+The benchmark, its pass/fail checks, every model answer, and the full reports
+are in the repository at
+[research/audio-understanding-bakeoff](https://github.com/ianb/beebox/tree/main/research/audio-understanding-bakeoff).
+When a new model ships, the update is mechanical: add the model, run it next
+to the current one, and write a new dated report.

@@ -59,6 +59,19 @@ Open question: whether this belongs to a general `bin/fetch` that routes
 known-hostile hosts to adapters. Do not build that until a second host needs
 it.
 
+## Scope note (2026-10-09)
+
+The boxholder asked that this cover the box as well as dev tooling: an agent
+inside a box has the same fetch problem, and
+[server-side webpage capture](2026-09-11-server-side-webpage-capture.md)
+depends on it. Two capabilities belong here, both ahead of any per-host
+adapter: **getting the rendered page** (script-rendered sites give a plain
+`fetch` an empty shell; the box ships `agent-browser` and the dev repo has
+`bin/browse`, so a headless render path exists to reuse), and **routing
+around blocks** (archives, reader services, feeds, a logged-in persistent
+profile; no stealth or proxy evasion). The survey the decision below asks for
+should report on both.
+
 ## Decision (2026-10-06)
 
 The developer: "This shouldn't actually be so specific, but the general issue of fetching blocked pages (also Instagram, for instance)." Renamed to the general problem. The work starts with a large survey and web search of what people do: this is a common problem for agent tools, so tools and approaches likely exist (fetch MCP servers, reader services, archive APIs, logged-in browser profiles, per-site adapters). The Reddit findings below are one data point. Stealth-browser and residential-proxy fetchers stay out (they evade bot detection).

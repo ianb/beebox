@@ -39,7 +39,7 @@ Today both pin a tab. Separating them is what makes the first case disposable.
 
 ## What already exists
 
-- `needs: [manual-testing]` (see [issues/CLAUDE.md](../../CLAUDE.md)) is the
+- `needs: [manual-testing]` (see [issues/AGENTS.md](../../AGENTS.md)) is the
   existing record for "landed, awaiting human verification" — 10 open items
   carry it. Only Ian may clear it; agents must never remove it.
 - `bin/router-issues.ts` already serves a faceted `/workstreams/issues/` browser with

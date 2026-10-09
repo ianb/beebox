@@ -287,7 +287,7 @@ Rules that keep it private and safe:
   files must NEVER link here (enforced by the public repo's doc-check).
 - **Category layout mirrors the public `issues/`** (deferred/, bugs/, features/,
   code-quality/, docs-and-chores/, decisions/, exploration/, watch/,
-  closed/<category>/), same file conventions (issues/CLAUDE.md over there).
+  closed/<category>/), same file conventions (issues/AGENTS.md over there).
 - **Nothing here is ever force-deleted.** If a public worktree goes away
   with private work unmerged, the private worktree and its
   `worktree-<name>` branch survive as an orphan; `bin/workstreams sweep`

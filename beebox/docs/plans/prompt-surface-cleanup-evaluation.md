@@ -362,14 +362,14 @@ Everything else below is still future work.
 
 ## Stated preferences this plan trades against
 
-- **`beebox/CLAUDE.md`** — card format contract: *"YAML frontmatter +
+- **`beebox/AGENTS.md`** — card format contract: *"YAML frontmatter +
   markdown body… the legacy XML card format… has been removed"*; *"The type is
   taken from the filename… there is no `type:` field in frontmatter."* The XML
   scrub, the `type: briefing` fix, and the About-Cards framing trace here.
-- **`beebox/CLAUDE.md`** — *"Keep source and docs generic — never
+- **`beebox/AGENTS.md`** — *"Keep source and docs generic — never
   hardcode personal names."* Constrains the calendar-timezone and recipe/person
   example edits (resolve real values, don't bake in a sample).
-- **`beebox/CLAUDE.md`** — *"don't add features beyond what the task
+- **`beebox/AGENTS.md`** — *"don't add features beyond what the task
   requires."* The positive form of the always-loaded weight trims and the
   "drop what the agent can infer" cuts.
 - **Memory: "Bias toward strict in all things"** — turn the strictness dial up

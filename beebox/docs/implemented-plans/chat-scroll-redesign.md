@@ -36,14 +36,14 @@ measurable pass/fail so the redesign is decided by evidence, not argument.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:Behavioral Notes` — *"Read before writing. Don't guess
+- `beebox/AGENTS.md:Behavioral Notes` — *"Read before writing. Don't guess
   file formats … read the existing code, read the test patterns."* The harness
   track (Track 1) is the embodiment of this: reproduce-then-change.
-- `beebox/CLAUDE.md` — *"Frontend uses UI primitives and a semantic
+- `beebox/AGENTS.md` — *"Frontend uses UI primitives and a semantic
   palette. Read frontend.md before writing UI … the `className`-only-for-outer-layout
   rule (enforced by `restrict-component-classes`)."* The list rewrite and the
   scroll-to-bottom button keep appearance in `components/`-scoped code.
-- `beebox/CLAUDE.md` — *"don't add features beyond what the task requires."*
+- `beebox/AGENTS.md` — *"don't add features beyond what the task requires."*
   This plan removes a dependency rather than adding one (the controller is written
   in-repo, no new runtime dependency).
 - `~/.claude` memory `feedback_components_own_a11y` — the scroll-to-bottom button is

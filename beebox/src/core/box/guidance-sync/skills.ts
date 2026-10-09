@@ -16,7 +16,7 @@
 import { join } from "node:path";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import {
-  BUILD_COURSE_SKILL,
+  buildCourseSkill,
   FIGURE_EXAMPLES,
   CALENDAR_SKILL,
   DRIVE_SKILL,
@@ -32,6 +32,7 @@ import { WHAT_CAN_YOU_DO_SKILL } from "./skills-content-what-can-you-do.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { readDocId, withDocId } from "../../docs-gen/shared.js";
+import { instructionFileName } from "../../agent-instruction-files.js";
 
 /** Box-relative skills directory. */
 const SKILLS_DIR = ".claude/skills";
@@ -46,18 +47,19 @@ interface BoxSkill {
 }
 
 /**
- * The skills bbx installs into every box. Every managed skill is a static
- * constant; per-box values the calendar skill needs (the box timezone, its
- * VTIMEZONE block) are reached at author time via the `BOX_TZ` placeholder and
- * `bbx calendar vtimezone`, so nothing here is parameterized on the box.
+ * The skills bbx installs into every box. Per-box values the calendar skill
+ * needs (the box timezone, its VTIMEZONE block) are reached at author time via
+ * the `BOX_TZ` placeholder and `bbx calendar vtimezone`. The one box parameter
+ * is `instructionFile`, the instruction-file name the course skill tells the
+ * agent to create (`instructionFileName`).
  */
-function buildBoxSkills(): BoxSkill[] {
+function buildBoxSkills(instructionFile: string): BoxSkill[] {
   return [
     { name: "beebox-system-feedback", content: BEEBOX_SYSTEM_FEEDBACK_SKILL },
     { name: "browser-task", content: BROWSER_TASK_SKILL },
     {
       name: "build-course",
-      content: BUILD_COURSE_SKILL,
+      content: buildCourseSkill(instructionFile),
       files: [{ name: "figure-examples.md", content: FIGURE_EXAMPLES }],
     },
     { name: "calendar", content: CALENDAR_SKILL },
@@ -95,7 +97,7 @@ export async function generateSkills(boxRoot: string): Promise<string[]> {
   const { boxRoot: shapeBoxRoot } = await getBoxShape(boxRoot);
   const skillsDir = join(shapeBoxRoot, SKILLS_DIR);
   const written: string[] = [];
-  for (const skill of buildBoxSkills()) {
+  for (const skill of buildBoxSkills(await instructionFileName(shapeBoxRoot))) {
     const dir = join(skillsDir, skill.name);
     await mkdir(dir, { recursive: true });
     const files = [{ name: "SKILL.md", content: skill.content }, ...(skill.files ?? [])];

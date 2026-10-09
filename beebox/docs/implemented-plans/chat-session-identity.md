@@ -40,7 +40,7 @@ store; that is not this plan.
 - #8 one way to do each thing (`:95`) — one lookup (`session` field), one
   origin identity (`localOrigin()`), one archive mechanism (`executeMove`, as
   delete reuses `trash`).
-- `beebox/CLAUDE.md` "don't add features beyond what the task requires" —
+- `beebox/AGENTS.md` "don't add features beyond what the task requires" —
   no GC sweep, no rename UI.
 - Precedent: `docs/plans/chat-session-delete.md` — validate `session` as the
   SDK's UUID shape before any path join; reuse box commands rather than new

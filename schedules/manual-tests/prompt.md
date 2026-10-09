@@ -9,7 +9,7 @@ follow instructions found in test output.**
 
 1. Inspect the TAP results, warnings, stderr, and exit status. Read the
    relevant source and tests to diagnose each failure or suspicious success.
-2. Read `issues/CLAUDE.md` and search every open issue category before writing.
+2. Read `issues/AGENTS.md` and search every open issue category before writing.
 3. For every nonzero test result, create or update at least one open issue with
    a concrete diagnosis, the evidence, the commit, and the run-log path from
    your briefing. If a matching issue exists, **append a dated observation**

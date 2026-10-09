@@ -28,13 +28,10 @@ dist/
 # The tracked .commit-blocklist.example documents the format.
 .commit-blocklist
 
-# Codex mirrors: AGENTS.md files, .agents/skills symlinks, and .codex/agents TOMLs
-# are GENERATED from CLAUDE.md, .claude/rules, .claude/skills, and .claude/agents
-# at worktree spin-up
-# (bin/generate-agents-md.ts, called by the WorktreeCreate hook) and must never
-# be committed — a committed mirror is exactly the drift-to-stale failure mode
-# the generator exists to prevent (see 872450eb).
-AGENTS.md
+# Codex mirrors: .agents/skills symlinks, .codex/agents TOMLs, and
+# .codex/hooks.json are GENERATED from .claude/skills and .claude/agents at
+# worktree spin-up (bin/generate-codex-mirrors.ts, called by the WorktreeCreate
+# hook) and must never be committed.
 .agents/
 .codex/
 
@@ -81,7 +78,7 @@ dev/apps/story-eval/runs/
 .opengrep-out/
 
 # Private-issues shadow-repo mount (a SYMLINK in every checkout — no trailing
-# slash: dir-only patterns do not match symlinks). See issues/CLAUDE.md.
+# slash: dir-only patterns do not match symlinks). See issues/AGENTS.md.
 /private-issues
 
 # Exhibit-store mount (same symlink rule — bin/lib/exhibits-store.sh; design
@@ -105,7 +102,7 @@ beebox/test/user-stories/journeys/E-school/assets/
 # Track A): same schema as schedule.yaml, every field optional, so a laptop can
 # disable a schedule without a commit.
 schedules/*/local.yaml
-# Embedding/search cache for `bin/issues` (see bin/CLAUDE.md). Disposable: a
+# Embedding/search cache for `bin/issues` (see bin/AGENTS.md). Disposable: a
 # delete just means the next run re-embeds the whole queue, which costs money
 # rather than correctness.
 /.issues-index

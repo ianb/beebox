@@ -7,7 +7,7 @@ resolution: implemented
 
 **Closed 2026-07-20** — implemented some time ago: the queue now uses the six
 category subdirectories with a status-first `closed/<category>/` layout, and
-`issues/CLAUDE.md` documents the conventions (categories are dirs, dominant
+`issues/AGENTS.md` documents the conventions (categories are dirs, dominant
 category wins, reclassify by `git mv`). The orthogonal "HOT" filename marker
 was not adopted; revive as its own item if the need returns.
 
@@ -27,7 +27,7 @@ Proposal (Ian's): split into category **subdirectories**:
 ## Things to settle before moving 119 files
 
 1. **Two axes: status vs. category.** Today *directory placement IS status*
-   (`issues/CLAUDE.md`: "directory placement is the status; there is no `status:`
+   (`issues/AGENTS.md`: "directory placement is the status; there is no `status:`
    field" — `closed/`). Adding category dirs means deciding the primary axis:
    `bugs/closed/` (category-first, status nested) vs. a top-level `closed/`
    cutting across categories (status-first). Pick one so a closed bug has exactly
@@ -83,5 +83,5 @@ it reveals the real distribution). If the split is as lopsided as expected
 a single link-rewriting move. Doing the dir move *before* triage risks churning
 links twice.
 
-Note: `issues/CLAUDE.md` and the root `CLAUDE.md`'s "issue queue" pointer both
+Note: `issues/AGENTS.md` and the root `CLAUDE.md`'s "issue queue" pointer both
 describe the flat layout — they update as part of this.

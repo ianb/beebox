@@ -3,7 +3,7 @@
 // directories, grouped by directory — plus the spine and the existing
 // human-site pages. `llms-dev.txt` and `llms-install.txt` are themselves
 // entry points for their own directory's children (dev/ and install/ are
-// deliberately NOT expanded on the front page — see site/CLAUDE.md's Agent
+// deliberately NOT expanded on the front page — see site/AGENTS.md's Agent
 // docs section). All three are generated, never hand-written.
 
 import path from "node:path";

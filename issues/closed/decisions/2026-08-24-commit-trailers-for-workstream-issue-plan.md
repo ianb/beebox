@@ -51,7 +51,7 @@ at a different moment, none able to speak about a specific commit:
   `baseSha` and, on removal, `finalSha`
 
 At close time `/finish` writes "Resolved by `<sha>`" as prose at the top of the
-issue body (`issues/CLAUDE.md`). That is the one moment the commit↔issue link
+issue body (`issues/AGENTS.md`). That is the one moment the commit↔issue link
 is known and recorded — unstructured, and only for issues someone remembered.
 
 The box-side trailer vocabulary (`CONNECTOR_TRAILER_KEYS` in

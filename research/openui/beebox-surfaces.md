@@ -70,7 +70,7 @@ this date; see [README](README.md) for the comparison and dispositions.
 - Publishing: a `publication` card plus a static folder served by a Cloudflare
   Worker; `index.md` becomes HTML (`beebox/docs/box/publishing.md`). Published
   pages do not run views; they are rendered Markdown and static assets.
-- iOS: a WKWebView hosts the same web chat client (`ios-app/CLAUDE.md`,
+- iOS: a WKWebView hosts the same web chat client (`ios-app/AGENTS.md`,
   "The webview is still the chat client"). Views render there because the
   web app does. There is no native rendering of agent UI.
 

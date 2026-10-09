@@ -11,7 +11,7 @@ right instrument at all: [choosing an instrument](../../../beebox/docs/testing.m
 
 ## Authoring
 
-Create `test/<name>.doctest.md`, mirroring the `src/` path (`beebox/CLAUDE.md`).
+Create `test/<name>.doctest.md`, mirroring the `src/` path (`beebox/AGENTS.md`).
 Good models: `beebox/test/core/pdf/probe.text-layer-quality.doctest.md`
 (narrative) and `beebox/test/core/bulk-upload/worker/deliver.doctest.md`
 (multi-line output).

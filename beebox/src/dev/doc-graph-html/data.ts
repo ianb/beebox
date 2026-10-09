@@ -50,7 +50,7 @@ export const PILLARS: Pillar[] = [
     entry: "docs/connectors.md",
     entryNote: "The pattern. Read this first; the per-service docs are variations.",
     supporting: [
-      { path: "src/connectors/CLAUDE.md", note: "Per-directory rules. Auto-loads when Claude reads connector code." },
+      { path: "src/connectors/AGENTS.md", note: "Per-directory rules. Auto-loads when Claude reads connector code." },
       { path: "docs/connectors/gmail.md", note: "OAuth dance for Gmail. Notable for 'just one more callback' energy." },
       { path: "docs/connectors/telegram.md", note: "Telegram bot setup. Calmest of the connectors." },
       { path: "docs/connectors/drive.md", note: "Drive watch-and-pull. Underused so far." },
@@ -64,7 +64,7 @@ export const PILLARS: Pillar[] = [
     blurb: "The cycle that drives everything: sync → process → execute → schedule → sleep.",
     vibe: "A polling loop dressed up in agent clothes. The whole system has a heartbeat, and this is it.",
     color: "#6d28d9",
-    entry: "src/core/reactor/CLAUDE.md",
+    entry: "src/core/reactor/AGENTS.md",
     entryNote: "Per-directory guide — lives next to the code it documents. Auto-loads.",
     supporting: [
       { path: "docs/scheduler.md", note: "How the next wakeup gets set. Cron, except it's a CLI." },
@@ -138,7 +138,7 @@ export const PILLARS: Pillar[] = [
     entry: "deploy/README.md",
     entryNote: "Two scripts. That's the whole story.",
     supporting: [
-      { path: "deploy/CLAUDE.md", note: "Per-dir guide. Tiny." },
+      { path: "deploy/AGENTS.md", note: "Per-dir guide. Tiny." },
       { path: "docs/server/operations.md", note: "What to do when the prod box is wedged." },
     ],
     code: ["deploy/"],
@@ -163,7 +163,7 @@ export const CURATOR: CuratorSection[] = [
     title: "Long views",
     blurb: "Ian thinking out loud, mostly for himself. None of these are required reading — but they're where the project's voice actually lives.",
     entries: [
-      { path: "docs/architecture/CLAUDE.md", note: "Index for the longform architecture series. Sets the tone." },
+      { path: "docs/architecture/AGENTS.md", note: "Index for the longform architecture series. Sets the tone." },
       { path: "docs/architecture/01-what-is-this.md", note: "The 'so what IS this thing' question, answered patiently." },
       { path: "docs/architecture/02-cards-and-memory.md", note: "Companion piece — the 'what's a card, really' explainer." },
       { path: "docs/architecture/spirit.md", note: "Mood piece. The vibes of the system, on paper." },
@@ -209,7 +209,7 @@ export const CURATOR: CuratorSection[] = [
       { path: "docs/landmark-curation.md", note: "Which landmarks to surface to the agent. Hand-tuned." },
       { path: "docs/prompts/lenses.md", note: "Catching stock-LLM phrases that crept into prompts." },
       { path: "docs/prompts/logging.md", note: "Log every agent invocation — what was sent, what came back." },
-      { path: "issues/CLAUDE.md", note: "The idea/issue graveyard, promoted out of a single 936-line ideas.md into one file per item." },
+      { path: "issues/AGENTS.md", note: "The idea/issue graveyard, promoted out of a single 936-line ideas.md into one file per item." },
       { path: "docs/plans/cli-restructure.md", note: "Proposed restructure, not yet started." },
     ],
   },
@@ -229,19 +229,19 @@ export const RING_DEFS: RingDef[] = [
     level: 0,
     name: "Always in the room",
     flavour: "Loaded with every session, before the first turn.",
-    trigger: "Root CLAUDE.md and anything it @-includes.",
+    trigger: "Root AGENTS.md and anything it @-includes.",
   },
   {
     level: 1,
     name: "On the way in",
     flavour: "Auto-loads when Claude opens a file in that directory.",
-    trigger: "Nested CLAUDE.md files act as per-area guides.",
+    trigger: "Nested AGENTS.md files act as per-area guides.",
   },
   {
     level: 2,
     name: "One link away",
     flavour: "Reached by following a link from the loaded layers.",
-    trigger: "Mentioned in CLAUDE.md, frontend.md, code-style.md — Claude opens them on demand.",
+    trigger: "Mentioned in AGENTS.md, frontend.md, code-style.md — Claude opens them on demand.",
   },
   {
     level: 3,
@@ -257,7 +257,7 @@ export const RING_DEFS: RingDef[] = [
   },
 ];
 
-const ROOT_CLAUDE = "CLAUDE.md";
+const ROOT_CLAUDE = "AGENTS.md";
 
 export function classifyRings(docs: Map<string, DocInfo>): Map<string, number> {
   const ring = new Map<string, number>();
@@ -280,7 +280,7 @@ export function classifyRings(docs: Map<string, DocInfo>): Map<string, number> {
 
   for (const p of docs.keys()) {
     if (ring.has(p)) continue;
-    if (path.basename(p) === "CLAUDE.md") ring.set(p, 1);
+    if (path.basename(p) === "AGENTS.md") ring.set(p, 1);
   }
 
   const expandFrom = (sourceLevel: number, newLevel: number) => {

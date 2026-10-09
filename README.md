@@ -36,7 +36,7 @@ proposals, and historical records.
 
 Packages in this monorepo include:
 
-- **beebox/** — the main system. See its `CLAUDE.md`.
+- **beebox/** — the main system. See its `AGENTS.md`.
   Setting up from a fresh clone with no prior box?
   [`beebox/docs/install/developer.md`](beebox/docs/install/developer.md)
   has the from-source install path,
@@ -60,7 +60,7 @@ pnpm dev         # one router serving every checkout at localhost:3210
 
 The router serves each checkout by path prefix: `http://localhost:3210/<main|worktree>/<box>/...`. Worktrees lazy-start on first request and idle-stop after 5 minutes. This router is personal dev infrastructure for this repo's maintainer(s) — if you're setting up your own box from a fresh clone, use `beebox/docs/install/developer.md` instead.
 
-Per-project details are in each project's `CLAUDE.md`.
+Per-project details are in each project's `AGENTS.md`.
 
 ## Community
 

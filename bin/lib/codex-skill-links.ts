@@ -1,5 +1,5 @@
 /**
- * The `.agents/skills/` half of the Codex mirror (`bin/generate-agents-md.ts`):
+ * The `.agents/skills/` half of the Codex mirror (`bin/generate-codex-mirrors.ts`):
  * one symlink per tracked `.claude/skills/<name>/SKILL.md`, and removal of
  * every entry that has no tracked source.
  */
@@ -53,7 +53,7 @@ function pruneUnexpectedSkillEntries(
   const canonicalSkillsDir = join(realpathSync(checkoutDir), ".agents", "skills");
   if (realpathSync(skillsDir) !== canonicalSkillsDir) {
     console.warn(
-      `generate-agents-md: .agents/skills resolves outside ${canonicalSkillsDir}; not touching it`,
+      `generate-codex-mirrors: .agents/skills resolves outside ${canonicalSkillsDir}; not touching it`,
     );
     return false;
   }
@@ -64,18 +64,18 @@ function pruneUnexpectedSkillEntries(
     const rel = join(".agents", "skills", entry.name);
     if (gitLsFiles(checkoutDir, `:(literal)${rel}`).length > 0) {
       console.warn(
-        `generate-agents-md: not removing ${rel}: it is or contains git-tracked files`,
+        `generate-codex-mirrors: not removing ${rel}: it is or contains git-tracked files`,
       );
       continue;
     }
     if (entry.isSymbolicLink()) {
       unlinkSync(path);
-      console.log(`generate-agents-md: removed stale skill link ${rel}`);
+      console.log(`generate-codex-mirrors: removed stale skill link ${rel}`);
       continue;
     }
     rmSync(path, { recursive: true });
     console.log(
-      `generate-agents-md: removed ${rel}: no tracked .claude/skills/${entry.name}/SKILL.md`,
+      `generate-codex-mirrors: removed ${rel}: no tracked .claude/skills/${entry.name}/SKILL.md`,
     );
   }
   return true;
@@ -104,7 +104,7 @@ export function generateSkillLinks(checkoutDir: string): string[] {
   // Checked before creating `skills`, which would otherwise land wherever a
   // redirected `.agents` points.
   if (realpathSync(agentsDir) !== join(realpathSync(checkoutDir), ".agents")) {
-    console.warn("generate-agents-md: .agents resolves outside the checkout; not touching it");
+    console.warn("generate-codex-mirrors: .agents resolves outside the checkout; not touching it");
     return [];
   }
   const skillsDir = join(agentsDir, "skills");
@@ -131,7 +131,7 @@ export function generateSkillLinks(checkoutDir: string): string[] {
       // the generator by hand. A loud skip keeps the protection and bounds the
       // damage to the one entry it is protecting.
       console.warn(
-        `generate-agents-md: refusing to overwrite existing Codex skill path: .agents/skills/${name} — ` +
+        `generate-codex-mirrors: refusing to overwrite existing Codex skill path: .agents/skills/${name} — ` +
           "leaving it as-is. If this is a stale generated copy rather than a native Codex skill, " +
           "remove it and re-run to restore the symlink.",
       );
