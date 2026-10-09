@@ -117,3 +117,13 @@ MCP Apps extension (tool-linked HTML in a sandboxed iframe, implemented by
 Claude, ChatGPT, VS Code, Cursor, M365 Copilot, and others as of 2026-10).
 Evidence and alternatives: [research/openui/alternatives.md](../../research/openui/alternatives.md).
 Not a request to build it; a pointer for when the decision here is made.
+
+## Reference (2026-10-08)
+
+Edi Life OS ships a small stdio MCP server whose HTTP client is a usable
+hardening checklist for this: HTTPS required outside localhost, URL
+credentials and query strings rejected, redirects refused so the token is
+never forwarded, non-JSON responses refused so a login page never enters the
+model context, the token redacted from every response, and every tool
+annotated with read-only, destructive and idempotent hints. See
+[the review](../../research/lifeos-review.md).
