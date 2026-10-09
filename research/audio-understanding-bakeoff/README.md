@@ -56,8 +56,8 @@ Then write `runs/<date>.md` by hand around `summary.md`: rankings, what changed 
 
 1. Record the clip (WebM, WAV, or M4A all work) and put it in the audio directory. Use a new file name; never overwrite a recording that earlier runs used.
 2. Add a sample to `corpus.json` with its script, direction, and expectation, and add it to a new or existing group with checks. Keep each check a single observable fact the judge can verify from text, and say what fails. Measure what you can (pause lengths, for example) instead of trusting the direction.
-3. Run `check`, then run every model you compare. Results from before the change do not cover the new material.
-4. Bump `version` in `corpus.json` and say in the run report what changed.
+3. Bump `version` in `corpus.json`, run `check`, then run every model you compare in a new run directory. Results from before the change do not cover the new material, and `run` refuses to add calls to a run made against a different corpus.
+4. Say in the run report what changed.
 
 Changing a prompt in `run.ts` also starts a new baseline: bump `HARNESS_VERSION`.
 

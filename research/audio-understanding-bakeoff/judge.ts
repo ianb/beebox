@@ -87,7 +87,10 @@ export async function judgeCommand(opts: { run: string; concurrency: number; tas
   const judged: Judged = existsSync(outFile) ? readJson<Judged>(outFile) : {};
   const selected = run.calls.filter((c) => c.mode === "blind" && !c.error && (!opts.tasks || opts.tasks.includes(c.task)));
   // A redo drops the old verdicts first, so a failed re-judge cannot leave a stale verdict counted.
-  if (opts.redo) for (const c of selected) delete judged[callKey(c)];
+  if (opts.redo) {
+    for (const c of selected) delete judged[callKey(c)];
+    writeJson(outFile, judged);
+  }
   const todo = selected.filter((c) => !judged[callKey(c)]);
   console.log(`${todo.length} answers to judge`);
   let failures = 0;

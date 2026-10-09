@@ -2,6 +2,7 @@
   "date": "2026-10-09",
   "harnessVersion": 1,
   "corpusVersion": 1,
+  "corpusDigest": "f27dfedabaf6b54b",
   "calls": [
     {
       "model": "gemini-3.1-pro-preview",
@@ -2745,7 +2746,7 @@
         ],
         "serviceTier": "standard"
       },
-      "costUsd": 8e-05
+      "costUsd": 0.00008
     },
     {
       "model": "gemini-3.5-flash-lite",
@@ -2776,7 +2777,7 @@
         ],
         "serviceTier": "standard"
       },
-      "costUsd": 9.25e-05
+      "costUsd": 0.0000925
     },
     {
       "model": "gemini-3.5-flash-lite",
@@ -4279,7 +4280,7 @@
         ],
         "serviceTier": "standard"
       },
-      "costUsd": 7.8e-05
+      "costUsd": 0.000078
     },
     {
       "model": "gemini-3.5-transcribe",
@@ -8550,7 +8551,7 @@
         },
         "cost_details": {
           "upstream_inference_cost": 0.000825,
-          "upstream_inference_prompt_cost": 9.375e-05,
+          "upstream_inference_prompt_cost": 0.00009375,
           "upstream_inference_completions_cost": 0.00073125
         },
         "completion_tokens_details": {
@@ -8588,7 +8589,7 @@
         },
         "cost_details": {
           "upstream_inference_cost": 0.00099,
-          "upstream_inference_prompt_cost": 9.375e-05,
+          "upstream_inference_prompt_cost": 0.00009375,
           "upstream_inference_completions_cost": 0.00089625
         },
         "completion_tokens_details": {
@@ -8626,7 +8627,7 @@
         },
         "cost_details": {
           "upstream_inference_cost": 0.000675,
-          "upstream_inference_prompt_cost": 9.375e-05,
+          "upstream_inference_prompt_cost": 0.00009375,
           "upstream_inference_completions_cost": 0.00058125
         },
         "completion_tokens_details": {

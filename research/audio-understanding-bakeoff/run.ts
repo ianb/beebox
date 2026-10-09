@@ -19,6 +19,7 @@ import {
   type RawRun,
   type Sample,
   callKey,
+  corpusDigest,
   loadCorpus,
   normalizedWav,
   pool,
@@ -202,9 +203,11 @@ export async function runCommand(opts: {
   if (unpriced.length) throw new Error(`add list prices to PRICES in lib.ts first: ${unpriced.join(", ")}`);
   const run: RawRun = existsSync(opts.out)
     ? readJson<RawRun>(opts.out)
-    : { date: new Date().toISOString().slice(0, 10), harnessVersion: HARNESS_VERSION, corpusVersion: corpus.version, calls: [] };
+    : { date: new Date().toISOString().slice(0, 10), harnessVersion: HARNESS_VERSION, corpusVersion: corpus.version, corpusDigest: corpusDigest(corpus), calls: [] };
   if (run.harnessVersion !== HARNESS_VERSION) throw new Error(`${opts.out} was made by harness v${run.harnessVersion}; start a new run`);
-  if (run.corpusVersion !== corpus.version) throw new Error(`${opts.out} was made against corpus v${run.corpusVersion}; start a new run`);
+  if (run.corpusDigest !== corpusDigest(corpus)) {
+    throw new Error(`${opts.out} was made against a different corpus (v${run.corpusVersion}); bump corpus.json's version and start a new run directory`);
+  }
   // Failed calls stay on record (so an unselected failure still fails the run) until a retry replaces them.
   const done = new Set(run.calls.filter((c) => !c.error).map(callKey));
 
