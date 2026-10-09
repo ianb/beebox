@@ -1120,7 +1120,27 @@ done
 set -a
 source /home/beebox/.env
 set +a
-node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh"
+maintenance_rc=0
+node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh" || maintenance_rc=$?
+# A box whose convergence failed stays closed for recovery. Start the bounded
+# repair now instead of leaving the box closed until the hourly box-convergence
+# pass: the same `--sweep --repair --yield` command, run per box outside the
+# deploy's shared downtime. It is detached (a transient systemd unit), so the
+# deploy still ends and reports its failure; a box with nothing pending returns
+# at once without closing. Output: `journalctl -u bbx-repair-<box>-<time>`.
+if [[ $maintenance_rc -ne 0 ]]; then
+  stamp=$(date +%s)
+  for box in /home/beebox/boxes/*/; do
+    [[ -e "$box/.git" ]] || continue
+    unit="bbx-repair-$(basename "$box")-$stamp"
+    systemd-run --quiet --collect --unit "$unit" --uid=beebox --gid=beebox \
+      --setenv=HOME=/home/beebox --working-directory="$box" \
+      bash -lc 'set -a; source /home/beebox/.env; set +a; bbx engine migrate --sweep --repair --yield --json' \
+      && echo "  repair started for $box (journalctl -u $unit)" \
+      || echo "  could not start repair for $box; the hourly box-convergence pass retries" >&2
+  done
+fi
+exit "$maintenance_rc"
 CONTROL
 
 step "Deploy complete."
