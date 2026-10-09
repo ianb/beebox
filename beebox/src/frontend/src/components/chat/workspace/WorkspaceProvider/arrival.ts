@@ -1,3 +1,5 @@
+import type { WorkspaceNavigationDecision } from "../history";
+
 /**
  * Arrival: going to a place with no saved arrangement opens the place
  * (docs/plans/landmark-arrival.md, Track D). The workspace store holds the
@@ -15,4 +17,21 @@ export function arrivalOpens(input: {
   target: string | null;
 }): boolean {
   return input.arrive && input.viewport === "desktop" && input.tabCount === 0 && input.target !== null;
+}
+
+/**
+ * Whether the provider holds a navigation step until the place's query
+ * settles. Only `keep-current` can arrive, so only it waits: a card URL
+ * (`open-url`) or a history snapshot (`restore-snapshot`) proceeds at once,
+ * however slow the query is. The phone layout never arrives, so it never waits.
+ */
+export function arrivalWaits(input: {
+  decision: WorkspaceNavigationDecision["kind"];
+  /** The store's candidate flag, not yet taken. */
+  candidate: boolean;
+  viewport: "mobile" | "desktop";
+  /** The `landmarks.forDir` query succeeded or failed. */
+  settled: boolean;
+}): boolean {
+  return input.decision === "keep-current" && input.candidate && input.viewport === "desktop" && !input.settled;
 }

@@ -627,6 +627,8 @@ and is verified against C.
     on their next guidance refresh.
   - `pnpm doc-check` does not ask for `docs/doc-graph.md`; regenerating it in a worktree also lists
     gitignored walk notes, so it was left as is.
+  - (2026-10-08, review fix) The provider decides the navigation first; only `keep-current` waits for `forDir`
+    (`arrivalWaits` in `arrival.ts`). A card URL or a history snapshot opens at once while the query is pending.
 - **First implementation chunk.** `arrival` on the payload + doctest cases (one entry point, two, none, root,
   background place) inside Track C's `forDir` fixture doctest; then `arrivalOpens` and the store flag.
 

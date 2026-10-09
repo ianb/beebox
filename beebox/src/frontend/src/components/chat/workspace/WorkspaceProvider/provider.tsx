@@ -13,7 +13,7 @@ import type { WorkspaceAction, PaneId } from "../state-types.js";
 import { serializeWorkspaceState } from "../storage";
 import { storageScopeFor } from "../../../../lib/storage-scope";
 import { createWorkspaceBrowserStore } from "./workspace-browser-store";
-import { arrivalOpens } from "./arrival";
+import { arrivalOpens, arrivalWaits } from "./arrival";
 import { trpc } from "../../../../lib/trpc/client";
 import type { ConversationTarget } from "@shared/chat-composer-binding";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
@@ -97,11 +97,6 @@ function usePlaceArrival(input: { store: WorkspaceBrowserStore; viewport: "mobil
     target: query.data?.landmark?.arrival ?? null, failure: query.isError ? query.error : null };
 }
 
-/** A desktop candidate waits for its place query, so the card is in the store before the history entry is written. */
-function arrivalWaits(input: { store: WorkspaceBrowserStore; viewport: "mobile" | "desktop"; settled: boolean }): boolean {
-  return input.store.hasArrival() && input.viewport === "desktop" && !input.settled;
-}
-
 /** Takes the candidate flag and opens the arrival target beside the chat when `arrivalOpens` says so. */
 function arriveAtPlace(input: { store: WorkspaceBrowserStore; viewport: "mobile" | "desktop"; contextDir: string | undefined;
   target: string | null; failure: unknown }) {
@@ -110,6 +105,16 @@ function arriveAtPlace(input: { store: WorkspaceBrowserStore; viewport: "mobile"
   if (arrive && input.failure !== null) console.warn(`[workspace] arrival: place query failed for "${input.contextDir ?? ""}"`, input.failure);
   if (target === null || !arrivalOpens({ arrive, viewport, tabCount: Object.keys(store.get().tabs).length, target })) return;
   store.dispatch({ type: "openCard", target: { path: target, viewer: null, params: {}, viewState: null }, label: target, at: Date.now(), viewport });
+}
+
+/** The route's card and the navigation it calls for; decided before any wait for arrival. */
+function routeNavigation(input: { location: ReturnType<typeof useLocation>; splat: string | undefined; scope: string; identity: string;
+  revealConversation: boolean }) {
+  const { location } = input;
+  const incoming = workspaceRouteTarget({ pathname: location.pathname, splat: input.splat, searchStr: location.searchStr, search: location.search });
+  const decision = decideWorkspaceNavigation({ history: location.state.bbxWorkspace, scope: input.scope, identity: input.identity,
+    freshCard: incoming ? serializeViewUrl(incoming) : null, cardEntry: location.pathname.includes("/views/") || input.revealConversation });
+  return { incoming, decision };
 }
 
 export function useWorkspace() { return useContext(Workspace); }
@@ -161,12 +166,14 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
   }, [routeReady, store, viewport, location.pathname, location.search, scope, navigate, boxSlug, location.state.__TSR_index]);
   useEffect(() => {
     if (!routeReady || !routeBound) return;
-    if (arrivalWaits({ store, viewport, settled: arrival.settled })) return;
     const revealConversation = location.state.bbxWorkspaceRevealConversation === true;
     const routeStamp = `${identity}:${location.state.__TSR_index}:${location.pathname}:${location.searchStr}:${location.state.bbxWorkspace?.revision ?? ""}:${location.state.bbxConversationOverlay === true}:${revealConversation}`;
     if (observed.current === routeStamp) return;
+    const { incoming, decision } = routeNavigation({ location, splat: _splat, scope, identity, revealConversation });
+    const special = pendingAdoption?.to === identity || location.state.bbxConversationOverlay === true;
+    // The stamp stays unobserved while waiting, so the effect runs this route again when the query settles.
+    if (!special && arrivalWaits({ decision: decision.kind, candidate: store.hasArrival(), viewport, settled: arrival.settled })) return;
     observed.current = routeStamp;
-    const incoming = workspaceRouteTarget({ pathname: location.pathname, splat: _splat, searchStr: location.searchStr, search: location.search });
     if (pendingAdoption?.to === identity) {
       revealStoredConversation({ store, incoming, viewport, openIncoming: true, enabled: revealConversation });
       projectHistory(true, { retainedTarget: incoming ?? undefined });
@@ -178,9 +185,6 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
       projectHistory(true, { retainedTarget: incoming ?? undefined });
       return;
     }
-    const card = incoming ? serializeViewUrl(incoming) : null;
-    const decision = decideWorkspaceNavigation({ history: location.state.bbxWorkspace, scope, identity, freshCard: card ?? null,
-      cardEntry: location.pathname.includes("/views/") || revealConversation });
     if (decision.kind === "restore-snapshot") {
       revision.current = Math.max(revision.current, decision.entry.revision);
       if (restoreHistorySnapshot({ store, decision, viewport, incoming, revealConversation })) projectHistory(true, { retainedTarget: incoming ?? undefined });
