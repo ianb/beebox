@@ -99,7 +99,7 @@ const html = await render({ payload: payload({
   sections: ["entry-point", "pinned", "group"],
   struck: "Gone",
   groupOpen: true,
-  text: "Start here Lending list _content/lending/List.memo.card Pinned Gone Missing Every receipt card here 0 None yet",
+  text: "Start here Lending list Pinned Gone Missing Every receipt card here 0 None yet",
 }
 ```
 
