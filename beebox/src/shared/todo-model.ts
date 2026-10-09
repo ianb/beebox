@@ -26,6 +26,29 @@ import { assertNever, invariant } from "./invariant.js";
  */
 export const TODO_AGENT = "agent";
 
+/**
+ * Words an author writes in `assigned` to mean the boxholder. The boxholder's
+ * todos leave `assigned` off; a value other than {@link TODO_AGENT} names a
+ * person, so one of these renders as a badge naming nobody.
+ */
+const BOXHOLDER_PLACEHOLDERS: ReadonlySet<string> = new Set(["user", "me", "boxholder", "you", "owner"]);
+
+/** The warning id for {@link todoAssignedWarning}; card lint reports it. */
+export const TODO_ASSIGNED_PLACEHOLDER_ID = "todo-assigned-boxholder-placeholder";
+
+/**
+ * A warning when `assigned` holds a placeholder word for the boxholder
+ * (case-insensitive), else null. A warning, not an error: the todo stays
+ * collected and shown, and the author fixes the value.
+ */
+export function todoAssignedWarning(assigned: string | undefined): TodoValidationError | null {
+  if (assigned === undefined || !BOXHOLDER_PLACEHOLDERS.has(assigned.trim().toLowerCase())) return null;
+  return {
+    id: TODO_ASSIGNED_PLACEHOLDER_ID,
+    message: `{% todo %} \`assigned="${assigned}"\` stands for the boxholder: leave \`assigned\` off for the boxholder's todos. \`"agent"\` is the box agent; any other value names a person.`,
+  };
+}
+
 /** The stock box-wide `todo-view` card, "The Plate" (`core/box/defaults.ts`, `installTodoView`). */
 export const PLATE_CARD_PATH = "_content/plate.todo-view.card";
 

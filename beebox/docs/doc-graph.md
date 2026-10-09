@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-09T04:47:00Z
+Generated: 2026-10-09T04:52:59Z
 Total documents: 510
 
 ## Issues
@@ -2361,8 +2361,8 @@ Referenced by:
 - src/core/agent-guide/guide.md:337 (mention) — Mechanics: `node_modules/beebox/box-docs/todos.md`, before adding attributes,
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md:89 (mention) — | 14 | Every todo shows a grey "user" tag | Product. The agent wrote `assigned="user"`, a value the todo docs do not def
 - test/user-stories/journeys/F-newcomer/reports/2026-10-08.md:96 (mention) — | 21 | "starts Oct 17" chip; the person never said 17 | Product. The agent wrote `start="-2w"` (`1d8a151`) and did not s
-- ../issues/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:16 (mention) — `assigned` is a free string. `beebox/box-docs/todos.md:24` defines two states:
 - ../issues/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:12 (mention) — leaves quiet and joins the plate (`beebox/box-docs/todos.md:26-28`, "the
+- ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:14 (mention) — `beebox/docs/box/todos.md`, `beebox/docs/cards/format.md`, and the todo tag
 
 #### docs/box/triage-instructions.md
 
@@ -2429,7 +2429,7 @@ Referenced by:
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
 - docs/reports/stack-decisions-2026-09-04.md:20 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:703 (mention) — - **Interaction with the [Markdown cards idea](../../../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.m
-- ../issues/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:33 (mention) — `beebox/docs/cards/format.md` defines `assigned` as a plain string and its
+- ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:14 (mention) — `beebox/docs/box/todos.md`, `beebox/docs/cards/format.md`, and the todo tag
 - ../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.md:8 (mention) — **Closed:** Implemented: the card format moved to YAML frontmatter + Markdown body, and the legacy XML card format, its
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:20 (mention) — entry). Agent guide, `docs/cards/format.md`, and `knowledge-audits.yaml`
 - ../issues/docs-and-chores/2026-09-20-remove-bbx-todos-verb.md:29 (mention) — - `beebox/docs/cards/format.md` and the implemented todo-annotation plan
@@ -9348,7 +9348,6 @@ Referenced by:
 - ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:38 (link) — Still present. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 44) a
 - ../issues/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:16 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 7, which also
 - ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:15 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 30),
-- ../issues/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:28 (link) — Report: [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:89 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
 - ../issues/closed/bugs/2026-10-08-browse-ref-click-checks-only-geometry.md:51 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 37).
@@ -9358,6 +9357,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md:18 (link) — 53), [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 26,
 - ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md:17 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 27),
 - ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md:20 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) row 17).
+- ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:38 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
 - ../issues/closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md:27 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:59 (link) — Still relevant. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 26)
 - ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:117 (link) — More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1
@@ -9368,7 +9368,7 @@ References:
 - → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
 - → ../issues/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
 - → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
-- → ../issues/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md (link)
+- → ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md (link)
 - → docs/box/todos.md (mention)
 - → ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md (link)
 - → ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md (link)

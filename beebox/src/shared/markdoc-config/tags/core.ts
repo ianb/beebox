@@ -76,7 +76,7 @@ import Markdoc from "@markdoc/markdoc";
 import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc";
 import { QUOTE_TREATMENTS, validateQuoteTreatment } from "./quote-treatment.js";
 import { validateSourceAttributes } from "./source-model.js";
-import { TODO_STATUSES, validateTodoAttributes } from "../../todo-model.js";
+import { TODO_STATUSES, todoAssignedWarning, validateTodoAttributes } from "../../todo-model.js";
 import { stampedLocator } from "../../todo-locators.js";
 import { flattenNodes } from "../../todo-text.js";
 import { footnoteTags, imageNode, makeHtmlTag } from "./html-schema.js";
@@ -356,7 +356,7 @@ const todo: Schema = {
     id: { type: String },
     // Absence = "open" (the common case costs zero typing).
     status: { type: String, matches: [...TODO_STATUSES] },
-    // Plain string; absence = the boxholder. `"agent"` marks agent work.
+    // Absent = the boxholder; `"agent"` = the agent; else a person (`todoAssignedWarning`).
     assigned: { type: String },
     // Provenance; absence = boxholder-authored, `"agent"` = agent-authored.
     by: { type: String },
@@ -366,14 +366,11 @@ const todo: Schema = {
     recheck: { type: String },
   },
   validate(node) {
-    const attrs = {
-      by: stringAttr(node.attributes["by"]),
-      created: stringAttr(node.attributes["created"]),
-      due: stringAttr(node.attributes["due"]),
-      start: stringAttr(node.attributes["start"]),
-      recheck: stringAttr(node.attributes["recheck"]),
-    };
-    return validateTodoAttributes(attrs).map(({ id, message }) => ({ id, level: "error" as const, message }));
+    const attr = (name: string): string | undefined => stringAttr(node.attributes[name]);
+    const attrs = { by: attr("by"), created: attr("created"), due: attr("due"), start: attr("start"), recheck: attr("recheck") };
+    const warning = todoAssignedWarning(attr("assigned"));
+    return [...validateTodoAttributes(attrs).map(({ id, message }) => ({ id, level: "error" as const, message })),
+      ...(warning === null ? [] : [{ ...warning, level: "warning" as const }])];
   },
   transform(node, config) {
     const attributes = node.transformAttributes(config);

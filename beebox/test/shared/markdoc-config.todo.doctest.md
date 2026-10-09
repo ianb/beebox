@@ -116,6 +116,39 @@ check('{% todo recheck="next week" %}text{% /todo %}')
 todo-invalid-recheck
 ```
 
+## `assigned` names a person, but not the boxholder by a placeholder
+
+`assigned` is absent for the boxholder's own todos, `"agent"` for the box
+agent's, and otherwise names a person (whether as a plain name or a ref is not
+settled). A journey walk found an agent writing `assigned="user"` for the
+boxholder, which the UI then showed as a badge reading "user". Placeholder
+words for the boxholder draw a **warning**, not an error, so the todo is still
+collected and shown while the author fixes it. The check ignores case.
+
+```ts
+validate(parse('{% todo assigned="User" %}\n\ntext\n\n{% /todo %}'), markdocConfig)
+  .map((e) => ({ id: e.error.id, level: e.error.level }))
+=> [{ id: "todo-assigned-boxholder-placeholder", level: "warning" }]
+
+["me", "boxholder", "you", "OWNER"].map((word) => check(`{% todo assigned="${word}" %}\n\ntext\n\n{% /todo %}`))
+=> ["todo-assigned-boxholder-placeholder", "todo-assigned-boxholder-placeholder", "todo-assigned-boxholder-placeholder", "todo-assigned-boxholder-placeholder"]
+```
+
+A person's name and `"agent"` pass.
+
+```ts
+[check('{% todo assigned="Dana" %}\n\ntext\n\n{% /todo %}'), check('{% todo assigned="agent" %}\n\ntext\n\n{% /todo %}')]
+=> ["valid", "valid"]
+```
+
+Card lint reports it as a warning on any card body.
+
+```ts
+const { lintBodyMarkdoc } = await import("../../src/core/body-markdoc-lint.js");
+lintBodyMarkdoc('{% todo assigned="user" %}\n\nCall the vet\n\n{% /todo %}').map((issue) => issue.severity)
+=> ["warning"]
+```
+
 ## `see-also` nested inside a todo, with a reason and a `ref`
 
 Markdoc's HTML renderer lowercases attribute names (`sourceRef` → `sourceref`)
