@@ -31,9 +31,9 @@ export const THREADS_SCRIPT = `
     document.body.insertBefore(canvas, main);
     const css = getComputedStyle(main.querySelector('.bbx-card-surface') || main);
     const token = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
-    const pen = token('--bbx-pen', '#2b4264'), paper = token('--bbx-paper', '#f5efe2');
+    const pen = token('--bbx-pen', '#2b4264');
     const edge = token('--bbx-edge', '#d6c8af'), soft = token('--bbx-ink-soft', '#4f4439');
-    const CARD_W = 52, CARD_H = 34, FILED_AT = 5.6, TOTAL = 7.5;
+    const CARD_W = 88, CARD_H = 54, FILED_AT = 5.6, TOTAL = 7.5;
     let layout = null;
 
     function random(seed) {
@@ -56,13 +56,13 @@ export const THREADS_SCRIPT = `
       const sides = [[16, column.left - 16], [column.right + 16, w - 16]];
       if (sides.some(([a, b]) => b - a < CARD_W + 30) || h - top < 160) return null;
       const rnd = random(7);
-      const rows = Math.max(2, Math.min(5, Math.floor((h - top - 20) / 120)));
+      const rows = Math.max(2, Math.min(5, Math.floor((h - top - 20) / 130)));
       const cards = [];
       sides.forEach(([a, b], side) => {
         for (let i = 0; i < rows; i++) {
           const y = top + (i + 0.5) * ((h - top - 20) / rows) + (rnd() - 0.5) * 30;
           const x = (a + b) / 2 + (rnd() - 0.5) * Math.max(0, b - a - CARD_W - 10);
-          cards.push({ x, y, r: (rnd() - 0.5) * 0.3, born: rnd() * 1.2, side, row: i });
+          cards.push({ x, y, r: (rnd() - 0.5) * 0.24, born: rnd() * 1.2, side, row: i, title: 0.35 + rnd() * 0.4 });
         }
       });
       const index = (side, row) => side * rows + row;
@@ -72,7 +72,9 @@ export const THREADS_SCRIPT = `
         for (let i = 0; i + 1 < rows; i++) { links.push([index(side, i), index(side, i + 1), at]); at += 0.45; }
       }
       for (let i = 0; i < rows; i += 2) { links.push([index(0, i), index(1, Math.min(rows - 1, i + 1)), at]); at += 0.45; }
-      const filed = { x: (sides[1][0] + sides[1][1]) / 2 + (rnd() - 0.5) * 20, y: top + (h - top) * 0.55, r: -0.08, born: FILED_AT, side: 1, filed: true };
+      // The filed card lands in the gap between the two cards it links to.
+      const above = cards[index(1, Math.max(0, Math.floor(rows / 2) - 1))], below = cards[index(1, Math.floor(rows / 2))];
+      const filed = { x: (sides[1][0] + sides[1][1]) / 2 + (rnd() - 0.5) * 20, y: (above.y + below.y) / 2, r: -0.08, born: FILED_AT, side: 1, filed: true, title: 0.6 };
       cards.push(filed);
       const last = cards.length - 1;
       links.push([index(1, Math.floor(rows / 2)), last, FILED_AT + 0.6], [index(1, Math.max(0, Math.floor(rows / 2) - 1)), last, FILED_AT + 0.9]);
@@ -105,14 +107,26 @@ export const THREADS_SCRIPT = `
         if (q === 0) continue;
         ctx.save();
         ctx.translate(card.x, card.y - (1 - q) * 14); ctx.rotate(card.r);
-        ctx.globalAlpha = q * 0.9;
-        ctx.fillStyle = paper; ctx.strokeStyle = edge; ctx.lineWidth = 1;
-        ctx.shadowColor = 'rgba(0,0,0,0.12)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
-        ctx.fillRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H);
+        ctx.globalAlpha = q;
+        // A ruled index card: white stock, a red rule under the header band,
+        // blue rules below it, and a pencilled title in the header.
+        const left = -CARD_W / 2, topEdge = -CARD_H / 2;
+        ctx.fillStyle = '#fdfbf5'; ctx.strokeStyle = edge; ctx.lineWidth = 1;
+        ctx.shadowColor = 'rgba(0,0,0,0.14)'; ctx.shadowBlur = 5; ctx.shadowOffsetY = 1.5;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(left, topEdge, CARD_W, CARD_H, 2); else ctx.rect(left, topEdge, CARD_W, CARD_H);
+        ctx.fill();
         ctx.shadowColor = 'transparent';
-        ctx.strokeRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H);
-        ctx.strokeStyle = soft; ctx.globalAlpha = q * 0.3;
-        for (let l = 0; l < 3; l++) { ctx.beginPath(); ctx.moveTo(-19, -7 + l * 7); ctx.lineTo(19 - l * 6, -7 + l * 7); ctx.stroke(); }
+        ctx.stroke();
+        ctx.globalAlpha = q * 0.7; ctx.strokeStyle = '#d98a8c';
+        ctx.beginPath(); ctx.moveTo(left, topEdge + 13); ctx.lineTo(left + CARD_W, topEdge + 13); ctx.stroke();
+        ctx.globalAlpha = q * 0.55; ctx.strokeStyle = '#9fbad8';
+        for (let y = topEdge + 21; y < topEdge + CARD_H - 4; y += 8) { ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left + CARD_W, y); ctx.stroke(); }
+        ctx.globalAlpha = q * 0.55; ctx.strokeStyle = soft; ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        const titleEnd = left + 7 + (CARD_W - 14) * card.title;
+        for (let x = left + 7; x <= titleEnd; x += 2) { const y = topEdge + 8 + Math.sin(x * 0.9) * 1.2; if (x === left + 7) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+        ctx.stroke();
         ctx.restore();
       }
     }
