@@ -13,7 +13,9 @@ The reviewer is a scripted fake; no model is called.
 import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { once } from "node:events";
+import { execFileSync } from "node:child_process";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { appendSessionManifest } from "../../../../src/core/agent/manifest.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import {
   afterTurnTitleGate,
@@ -145,6 +147,51 @@ const summary = await runChatReview(box.root, { reviewer: nightly, maxSessions: 
 
 (await readFile(box.path(huskA), "utf8")).includes("title: Saturday birthday dinner for eight")
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The title run commits its usage line
+
+A real title pass is a model session, and every model session appends a line
+to the tracked usage manifest (`_bookkeeping/usage/session-manifest.jsonl`).
+The title run writes nothing else that a commit picks up, so the manifest used
+to stay dirty after every chat's first title, until an unrelated commit swept
+it in under that commit's name
+(`issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md`).
+The after-turn path now commits the manifest alone; the husk and the
+transcript are not part of that commit.
+
+```ts
+const box = await freshBox();
+const first = "Help me plan a birthday dinner for Saturday, eight people, one vegetarian.";
+await seed(box, A, [user("a1", first), agent("a2", REPLY)]);
+const reviewer = {
+  async review() { throw new Error("unused"); },
+  async title(args) {
+    appendSessionManifest(box.root, { sessionId: "title-run-1", task: `chat-title:${args.sessionId}`, timestamp: NOW.toISOString() });
+    return { title: "Saturday birthday dinner for eight" };
+  },
+};
+
+(await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null })).kind
+=> titled
+
+const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
+({
+  subject: git("log", "-1", "--format=%s"),
+  source: git("log", "-1", "--format=%(trailers:key=Commit-Source,valueonly)"),
+  files: git("show", "--name-only", "--format=", "HEAD").split("\n"),
+  manifestDirty: git("status", "--porcelain", "--", "_bookkeeping/usage/session-manifest.jsonl"),
+})
+=> {
+  subject: "Usage: record chat-title session",
+  source: "chat-title",
+  files: ["_bookkeeping/usage/session-manifest.jsonl"],
+  manifestDirty: "",
+}
 ```
 
 ```ts cleanup
