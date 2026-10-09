@@ -1,9 +1,9 @@
-/* Intersecting pigment ribbons are deliberately rhythmic, like printed cloth. */
+/* Translucent washes interlock across a single sheet of watercolor paper. */
 .bbx-box-presentation[data-chrome-theme="interlace"],
 .bbx-themed-menu[data-chrome-theme="interlace"] {
   --bbx-desk-background: transparent;
   --bbx-desk-pattern: none;
-  --bbx-scene: url("./art/interlace-pigment.svg") center / 360px 360px repeat, #e9dfc8;
+  --bbx-scene: url("./art/interlace-watercolor.webp") center / cover no-repeat, #e9dfc8;
   --bbx-toolbar-background: #252c55;
   --bbx-toolbar-ink: #fff6e3;
   --bbx-toolbar-edge: #bd685d;
@@ -13,7 +13,7 @@
   --bbx-composer-ink: #302c2b;
   --bbx-composer-edge: #293f9f;
   --bbx-composer-radius: 3px;
-  --bbx-composer-shadow: 3px 3px 0 #bd685d, -3px -3px 0 #293f9f;
+  --bbx-composer-shadow: 0 2px 0 #bd685d88, 0 5px 16px #252c5530;
   --bbx-control-background: #f6ecd9;
   --bbx-control-ink: #252c55;
   --bbx-control-radius: 0;
@@ -52,7 +52,7 @@
   --bbx-underlay: #bd685d;
   --bbx-font: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --bbx-sheet-radius: 2px;
-  --bbx-sheet-shadow: 3px 3px 0 #293f9f, 6px 6px 0 #bd685d;
+  --bbx-sheet-shadow: 0 2px 0 #bd685d88, 0 5px 16px #252c5530;
   --bbx-sheet-decoration: none;
   --bbx-tab-radius: 7px 7px 0 0;
   --bbx-quote-paper: #eee4ce;
@@ -80,7 +80,7 @@
   position: absolute;
   inset: 0 44px auto 0;
   height: 14px;
-  background: url("./art/interlace-pigment.svg") center / 96px 96px repeat-x;
+  background: url("./art/interlace-watercolor.webp") left 68% / 100% auto no-repeat;
   pointer-events: none;
 }
 .bbx-card-surface[data-card-theme="interlace"] > .bbx-card-heading :is(h1, h2) {
@@ -94,7 +94,7 @@
 }
 .bbx-interface-tab[data-card-theme="interlace"] { --bbx-tab-top-border: 3px; border-top-color: #756078; }
 @media (max-width: 640px) {
-  .bbx-box-presentation[data-chrome-theme="interlace"] { --bbx-scene: url("./art/interlace-pigment.svg") center / 260px 260px repeat, #e9dfc8; }
+  .bbx-box-presentation[data-chrome-theme="interlace"] { --bbx-scene: url("./art/interlace-watercolor.webp") center / cover no-repeat, #e9dfc8; }
 }
 @media print {
   .bbx-card-theme[data-card-theme="interlace"] { --bbx-sheet-shadow: none; }

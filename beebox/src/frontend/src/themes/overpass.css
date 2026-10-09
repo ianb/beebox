@@ -55,7 +55,7 @@
   --bbx-pen: #7b391d;
   --bbx-edge: #414a34;
   --bbx-underlay: #96996e;
-  --bbx-font: "Arial Narrow", "Avenir Next Condensed", system-ui, sans-serif;
+  --bbx-font: "Avenir Next", Avenir, system-ui, sans-serif;
   --bbx-sheet-radius: 0;
   --bbx-tab-radius: 0;
   --bbx-sheet-shadow: 0 1px 0 #99996c, 0 4px 0 #252d20;

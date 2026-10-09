@@ -9,12 +9,12 @@
   --bbx-toolbar-edge: #be9b59;
   --bbx-toolbar-radius: 0;
   --bbx-toolbar-shadow: 0 3px 0 #ba3e2d, 0 6px 0 #e8d9b6;
-  --bbx-composer-background: #f2e8d2;
+  --bbx-composer-background: #91b7ac;
   --bbx-composer-ink: #173e40;
   --bbx-composer-edge: #173e40;
   --bbx-composer-radius: 0;
   --bbx-composer-shadow: 4px 4px 0 #ba3e2d, 7px 7px 0 #122f32;
-  --bbx-control-background: #f2e8d2;
+  --bbx-control-background: #e9ce75;
   --bbx-control-ink: #173e40;
   --bbx-control-radius: 3px;
   --bbx-control-shape-default: none;
@@ -72,7 +72,8 @@
   --bbx-link-decoration: underline;
 }
 .bbx-card-surface[data-card-theme="footlights"] > .bbx-card-heading {
-  border-top: 7px double #174f50;
+  position: relative;
+  padding-top: 1rem;
   border-bottom: 1px solid #947945;
   margin-top: 10px;
 }
@@ -89,4 +90,21 @@
 .bbx-interface-tab[data-card-theme="footlights"] { --bbx-tab-top-border: 3px; border-top-color: #ba3e2d; }
 @media print {
   .bbx-card-theme[data-card-theme="footlights"] { --bbx-sheet-shadow: none; }
+}
+
+.bbx-card-surface[data-card-theme="footlights"] > .bbx-card-heading::before {
+  content: "";
+  position: absolute;
+  inset: 0 52px auto 0;
+  border-top: 7px double #174f50;
+  pointer-events: none;
+}
+.bbx-box-presentation[data-chrome-theme="footlights"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice) {
+  --bbx-control-background: #a6c8ba;
+}
+.bbx-box-presentation[data-chrome-theme="footlights"] .bbx-app-nav :is(#bbx-nav-profile, #bbx-nav-questions) {
+  --bbx-control-background: #efb39a;
+}
+.bbx-card-surface[data-card-theme="footlights"] > .bbx-card-properties {
+  border-radius: 0;
 }

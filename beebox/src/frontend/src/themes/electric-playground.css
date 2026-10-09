@@ -52,6 +52,7 @@
   --bbx-chat-reply-ink: #171f37;
   --bbx-menu-paper: #f1e8f6;
   --bbx-menu-ink: #271c36;
+  --bbx-menu-muted: #655675;
   --bbx-menu-edge: #664696;
   --bbx-menu-radius: 3px 18px 3px 3px;
   --bbx-selection: #a1e5ff;
@@ -143,4 +144,8 @@
       inset 0 2px 0 #eff8ff,
       2px 3px 0 #54499e;
   }
+}
+
+.bbx-themed-menu[data-chrome-theme="electric-playground"] .bbx-profile-email {
+  color: var(--bbx-menu-muted);
 }

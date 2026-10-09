@@ -186,3 +186,11 @@ Golden Hour, and Far Horizon replace scenic vector backgrounds with original
 abstract ink and pigment textures. Far Horizon also uses deeper petrol chrome
 and warm cream reading fields. Fourteen fresh desktop/phone captures document
 this revision; prior catalog/API tests remain applicable.
+
+## Third visual revision
+
+Footlights gains outlined multicolor fans and varied control colors; its heading
+rules stop before the square Properties fold. Overpass uses a wider sans serif.
+Interlace replaces tiled geometry with translucent watercolor and softer shadows.
+A smoother Far Horizon study lives only in the exhibit alongside the unchanged
+current theme. Electric Playground profile-email text uses a readable muted ink.
