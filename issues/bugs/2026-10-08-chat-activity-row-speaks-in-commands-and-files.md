@@ -41,3 +41,7 @@ want it.
 (closed) did not cover this surface.
 [The chat agent narrates implementation steps](2026-10-08-chat-agent-narrates-implementation-steps.md)
 is the text side of the same problem.
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 8): "ran 3 commands", the third a purpose edit and `git commit`. [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 22): "Ran script: Fix rotation, validate, and commit annotations"; the walker called "commit" a programmer word. [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 8): "I don't care what it ran". [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (row 76): the walker would rather see "saved", one word like that. [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows 5, 67): the walker could not find out what "ran 2 commands" or "commit" mean, and judged "Ran script: Record …" better; the purpose-named rows read best. [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 6, 25, 37): "Ran script: Set Marta to-do due Oct 31 and commit". The row still shows the agent's Bash `description` verbatim.

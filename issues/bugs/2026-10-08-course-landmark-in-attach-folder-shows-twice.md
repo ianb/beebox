@@ -35,3 +35,7 @@ whether a nested landmark should hide a card it already points at. Related:
 [a nested landmark row opens the landmark file](../closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md).
 
 Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (rows 65, 70).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Re-checked in [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (row 47; reproduced in `aa-d4`). Symptom 1 is still present: the place pill reads "Here: Intro_Chemistry.attach" (`PlacePill.tsx` shows the landmark directory's basename; the landmark is in the attach folder, `skills-content.ts:97`). Symptom 2 did not reproduce: "Places inside" lists Chemistry once and the place menu shows "Chemistry" and the box only, because the agent gave the course no `prominence`. The mechanism (`derived-links.ts`) is unchanged, so a `primary` course would still list twice.
