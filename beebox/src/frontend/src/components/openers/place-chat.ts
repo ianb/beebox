@@ -5,7 +5,7 @@
  * The page is a card; it can sit beside a chat in this place, beside a chat
  * bound to another place, or outside any chat. A click on an opener sends it as
  * the person's message into the chat beside the page, so the page offers them
- * only where that chat is this place's chat (docs/plans/landmark-arrival.md,
+ * only where that chat is this place's chat (docs/implemented-plans/landmark-arrival.md,
  * Track C, boxholder decisions a and b):
  *
  * - outside a chat there is nowhere to send, so nothing is offered;

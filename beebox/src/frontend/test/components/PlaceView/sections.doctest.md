@@ -5,7 +5,7 @@ A landmark card renders as the place page. `placeSections` turns the
 sections: entry points, primary cards, places inside, pinned links, then each
 `expand` group in the landmark's order. A tier with no links is left out. A
 place with no links and no groups is empty, and the page says so
-(docs/plans/landmark-arrival.md, Track C).
+(docs/implemented-plans/landmark-arrival.md, Track C).
 
 ```ts setup
 import { placeSections } from "../../../src/components/PlaceView/sections.js";

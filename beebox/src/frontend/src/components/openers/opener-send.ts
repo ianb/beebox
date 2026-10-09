@@ -3,7 +3,7 @@
  * own send funnel, which writes the text into the composer and can then decline
  * silently (a send in flight, a conversation still resolving). Deciding first,
  * with nothing written, lets a click report "rejected" and keep a half-typed
- * draft intact (docs/plans/landmark-arrival.md, Track A).
+ * draft intact (docs/implemented-plans/landmark-arrival.md, Track A).
  */
 
 export type OpenerSendOutcome = "accepted" | "rejected";

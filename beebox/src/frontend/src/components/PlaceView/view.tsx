@@ -7,7 +7,7 @@
  * The card header already shows the place's mark and label; an embed, which
  * has no header, draws them here. The fields stay under Properties
  * (`CardFacts`). See
- * docs/plans/landmark-arrival.md, Track C.
+ * docs/implemented-plans/landmark-arrival.md, Track C.
  *
  * `PlaceView` fetches `landmarks.forDir` for the card's folder and owns the
  * loading and error states; `PlacePage` renders a loaded payload.

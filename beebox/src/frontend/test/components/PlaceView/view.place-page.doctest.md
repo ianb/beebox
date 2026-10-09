@@ -2,7 +2,7 @@
 
 A landmark card renders as the place page: its openers where they can be
 sent, then its links in tiers and each `expand` as a
-labeled group (docs/plans/landmark-arrival.md, Track C). These examples render
+labeled group (docs/implemented-plans/landmark-arrival.md, Track C). These examples render
 `PlacePage` with a loaded `landmarks.forDir` payload, the way the
 `PersonView` doctest renders a person's front.
 

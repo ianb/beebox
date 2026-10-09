@@ -2,7 +2,7 @@
 
 `briefing-openers-2026-10` moves `openers:` from briefing cards to the place's
 landmark (`navigation.openers`), where the chat now reads them
-(docs/plans/landmark-arrival.md, Track B). It fails closed: when it cannot
+(docs/implemented-plans/landmark-arrival.md, Track B). It fails closed: when it cannot
 move a list without a person's choice, it names the path, writes nothing, and
 exits 1, so `bbx engine migrate` records no manifest entry. A warning would let
 the run record itself as applied with openers stranded on a briefing that

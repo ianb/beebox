@@ -84,7 +84,7 @@ function performBrowseDetailHandoff(input: BrowseDetailHandoff & {
 }
 
 /**
- * Arrival (docs/plans/landmark-arrival.md, Track D). The store's candidate flag
+ * Arrival (docs/implemented-plans/landmark-arrival.md, Track D). The store's candidate flag
  * enables the place query on the desktop layout. It uses the same input as the
  * chat's openers query (`useChatBinding`), so one request serves both.
  */

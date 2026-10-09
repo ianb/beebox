@@ -294,7 +294,7 @@ Implementation: the workspace store sets the arrival candidate when
 `takeArrival`, `cancelArrival`). The provider waits for the place query on
 the desktop layout, then decides in its `keep-current` branch with
 `arrivalOpens` (`components/chat/workspace/WorkspaceProvider/arrival.ts`), before it writes the
-history entry. See `docs/plans/landmark-arrival.md`, Track D.
+history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
 
 ## Implementation outline
 

@@ -93,7 +93,7 @@ rows(render({ ...broken, frontmatter: { status: [1, 2] } }))
 A landmark has no body, so `splitCardFields` sends its type fields to the
 front. The place page replaces that front, so for a landmark Properties shows
 them under Fields instead; otherwise `navigation` would show only in Source
-(docs/plans/landmark-arrival.md, Track C). Other body-less types keep their
+(docs/implemented-plans/landmark-arrival.md, Track C). Other body-less types keep their
 fields on the front.
 
 ```ts

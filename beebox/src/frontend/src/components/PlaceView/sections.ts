@@ -2,7 +2,7 @@
  * What the place page lists, in order: the place's entry points, its primary
  * cards, the places inside it, its pinned links (hand-listed, with no derived
  * level), then each `expand` group. The payload is `landmarks.forDir` with `expandsAsGroups`, so
- * every expand arrives as a labeled group (docs/plans/landmark-arrival.md,
+ * every expand arrives as a labeled group (docs/implemented-plans/landmark-arrival.md,
  * Track C).
  */
 

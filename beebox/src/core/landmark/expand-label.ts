@@ -4,7 +4,7 @@
  * here") instead of an unlabeled run of links. The query is a glob relative to
  * the landmark's directory (`resolve/core.ts`, `runQuery`).
  *
- * See docs/plans/landmark-arrival.md, Track C.
+ * See docs/implemented-plans/landmark-arrival.md, Track C.
  */
 
 const HERE_RE = /^\*\.([\da-z][\da-z-]*)\.card$/;

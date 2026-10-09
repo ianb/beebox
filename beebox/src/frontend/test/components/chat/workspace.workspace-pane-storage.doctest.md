@@ -293,7 +293,7 @@ rejectedStore.get().tabs["second-only"]
 ## Selecting a conversation with nothing saved makes it an arrival candidate
 
 Arrival opens the place only for a conversation this tab has no saved
-arrangement for (docs/plans/landmark-arrival.md, Track D). `select` sets the
+arrangement for (docs/implemented-plans/landmark-arrival.md, Track D). `select` sets the
 candidate flag when it finds nothing in memory and nothing in storage.
 `takeArrival` returns the flag once and clears it.
 
