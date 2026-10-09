@@ -19,7 +19,7 @@ import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { fileExists } from "../../../lib/file-exists.js";
 import { promisify } from "node:util";
-import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
+import { lstat, mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { z } from "zod";
 import { cardSchemas, loadBoxSchemas } from "../../../schemas.js";
 import type { CardSchema } from "../../../exports/cards.js";
@@ -49,7 +49,7 @@ import {
 import type { ProcedureSummary } from "../compile/core.js";
 import { compileExpositionRules } from "../../compile-exposition-rules.js";
 import { ensureAgentContext } from "./agents-md.js";
-import { instructionFileName } from "../../agent-instruction-files.js";
+import { AGENTS_MD, instructionFileName } from "../../agent-instruction-files.js";
 
 export type { ProcedureSummary } from "../compile/core.js";
 export type { GuideSummary } from "../config-cards/core.js";
@@ -276,7 +276,9 @@ export async function commitTemplateSyncChanges(
   await withBoxGitLock(repoRoot, async () => {
     const status = await getStatus(repoRoot);
     const candidates = [...status.staged, ...status.modified, ...status.untracked];
-    const toCommit = candidates.filter((p) => isTemplateManagedPath(p) && !keep.has(p));
+    const managed = candidates.filter((p) => isTemplateManagedPath(p) && !keep.has(p));
+    const authored = await Promise.all(managed.map((p) => isAuthoredAgentsMd(join(repoRoot, p))));
+    const toCommit = managed.filter((_p, i) => authored[i] !== true);
     if (toCommit.length === 0) return;
 
     // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
@@ -287,6 +289,21 @@ export async function commitTemplateSyncChanges(
       trailers: { "Triggered-By": "generateDocs" },
     });
   });
+}
+
+/**
+ * A regular-file `AGENTS.md` is the box's own instruction file, not mirror
+ * output. The `**\/AGENTS.md` mirror row still matches it until the legacy
+ * mirror is retired, so the template commit must not sweep it up.
+ */
+async function isAuthoredAgentsMd(absPath: string): Promise<boolean> {
+  if (!absPath.endsWith(`/${AGENTS_MD}`)) return false;
+  try {
+    return (await lstat(absPath)).isFile();
+  } catch (_e) {
+    // Deleted or unreadable: a removed mirror symlink, which the commit owns.
+    return false;
+  }
 }
 
 /**
