@@ -456,6 +456,29 @@ final class ComposerDraftReducerTests: XCTestCase {
         )
     }
 
+    func testHQKeywordForADifferentCommandDoesNotReplaceTheLiveOne() {
+        let preparation = VoicePreparation(
+            id: UUID(),
+            boxID: UUID(),
+            draft: .empty,
+            liveTranscript: "part one <send-checkpoint-message phrase=\"send checkpoint\" />",
+            priorInput: "",
+            action: .sendCheckpoint,
+            matchedPhrase: "send checkpoint",
+            audioFilename: "voice.wav",
+            createdAt: Date()
+        )
+
+        XCTAssertEqual(
+            VoicePreparationResolver.text(for: preparation, hqTranscript: "part one, send message"),
+            "part one, send message <send-checkpoint-message phrase=\"send checkpoint\" heard=\"live\" />"
+        )
+        XCTAssertEqual(
+            VoicePreparationResolver.text(for: preparation, hqTranscript: "part one, send checkpoint"),
+            "part one, <send-checkpoint-message phrase=\"send checkpoint\" />"
+        )
+    }
+
     func testButtonVoicePreparationDoesNotAppendKeywordTag() {
         let preparation = VoicePreparation(
             id: UUID(),

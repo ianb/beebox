@@ -233,6 +233,12 @@ enum SpeechKeywords {
         return "<\(tagName(for: action)) phrase=\"\(escaped)\"\(heard) />"
     }
 
+    /// Whether two actions write the same tag (`sendHq` and `send` both write
+    /// `send-message`).
+    static func sameTag(_ first: SpeechKeywordAction, _ second: SpeechKeywordAction) -> Bool {
+        tagName(for: first) == tagName(for: second)
+    }
+
     private static func tagName(for action: SpeechKeywordAction) -> String {
         switch action {
         case .send:
@@ -384,12 +390,16 @@ enum VoicePreparationResolver {
         if preparation.appendsKeywordTag == false {
             return join(preparation.priorInput, hqTranscript)
         }
-        let processed = SpeechKeywords.detect(hqTranscript)?.processedTranscript
-            ?? SpeechKeywords.appendSendKeywordTag(
-                to: hqTranscript,
-                action: preparation.action,
-                matchedPhrase: preparation.matchedPhrase
-            )
+        // The live keyword fired the send: an HQ keyword counts only when it
+        // is the same command; otherwise the live tag is appended.
+        let detected = SpeechKeywords.detect(hqTranscript)
+        let processed = detected.flatMap {
+            SpeechKeywords.sameTag($0.action, preparation.action) ? $0.processedTranscript : nil
+        } ?? SpeechKeywords.appendSendKeywordTag(
+            to: hqTranscript,
+            action: preparation.action,
+            matchedPhrase: preparation.matchedPhrase
+        )
         return join(preparation.priorInput, processed)
     }
 

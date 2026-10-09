@@ -221,6 +221,31 @@ prepareVoiceSubmitEmission({
 => frozen draft clean words, <send-message phrase="send the message" />
 ```
 
+A different command in the HQ text never replaces the one that fired. Live
+dictation heard "send checkpoint"; the HQ text reads "send message". The
+checkpoint tag is kept, marked `heard="live"`, and the HQ words stay as text:
+
+```ts continue
+const checkpointIntent = { ...hqIntent, text: "part one <send-checkpoint-message phrase=\"send checkpoint\" />", matchedPhrase: "send checkpoint" };
+prepareVoiceSubmitEmission({
+  realtime,
+  outcome: { kind: "hq", result: { text: "part one, send message", diarized: false, service: "whisper", pieces: 1 } },
+  keyword: sendKeywordOf(checkpointIntent),
+}).text
+=> frozen draft part one, send message <send-checkpoint-message phrase="send checkpoint" heard="live" />
+```
+
+A blank HQ result is a fallback: it would otherwise erase the spoken words.
+
+```ts continue
+prepareVoiceSubmitEmission({
+  realtime,
+  outcome: { kind: "hq", result: { text: "  ", diarized: false, service: "whisper", pieces: 1 } },
+  keyword: sendKeywordOf(hqIntent),
+}) === realtime
+=> true
+```
+
 ## A fallback sends the realtime message
 
 The budget ran out, the user chose the live text, or HQ failed outright — a

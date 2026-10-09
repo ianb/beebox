@@ -1148,6 +1148,16 @@ struct NativeComposerView: View {
         }
         do {
             let hqResult = try await ChatAPI(box: box).transcribeAudio(fileURL: audioURL)
+            // A blank HQ result must not erase the dictated words.
+            guard hqResult.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+                BoxLog.warn(
+                    "voice HQ fallback preparation=\(preparation.id.uuidString) reason=empty-transcript",
+                    category: .composer,
+                    targetBoxID: preparation.boxID
+                )
+                statusText = "HQ transcription came back empty; sending live dictation."
+                return .fallback(text: VoicePreparationResolver.text(for: preparation, hqTranscript: nil))
+            }
             return .hq(
                 text: VoicePreparationResolver.text(for: preparation, hqTranscript: hqResult.text),
                 diarized: hqResult.diarized,

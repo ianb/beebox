@@ -532,7 +532,8 @@ mint them independently; the ids are per-emission and per-kind.
   (send, and `clean up and send`, which is now a plain send), `send-close-message` (sign-off; mic stays closed),
   `send-checkpoint-message` (a plain send that marks the message partial), `cancel-message`,
   `mic-off`, and `erase-message`. When the HQ text does not reproduce the send keyword the live
-  pass heard, both sides keep the HQ text and append the tag with `heard="live"`
+  pass heard (no keyword, or a different command's), both sides keep the HQ text and append the
+  live tag with `heard="live"`; a blank HQ result counts as a failed pass
   (`<send-message phrase="…" heard="live" />`). The golden vectors in
   `test/mobile-contract/fixtures/speech-keywords/` pin both sides.
 
