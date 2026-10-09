@@ -53,6 +53,12 @@ function contextBody(page: SitePage): string {
     });
 }
 
+function splitHeading(html: string): { heading: string; body: string } {
+  const match = /^\s*(<h([12])\b[^>]*>[\S\s]*?<\/h\2>)/.exec(html);
+  if (!match?.[1]) return { heading: "", body: html };
+  return { heading: `<header class="bbx-card-heading">${match[1]}</header>\n`, body: html.slice(match[0].length) };
+}
+
 function pane(workspace: SiteWorkspace, params: { page: SitePage; context: boolean }): string {
   const { page, context } = params;
   const parent = workspace.pages.find((candidate) => candidate.id === page.parentId);
@@ -62,6 +68,9 @@ function pane(workspace: SiteWorkspace, params: { page: SitePage; context: boole
   const label = parent
     ? `<div class="pane-label"><a href="${escapeHtml(parent.href)}" data-parent>Back to ${escapeHtml(parent.frontmatter.title)}</a></div>\n`
     : "";
+  // The card's leading heading sits in the card's own heading slot, as the
+  // app renders it, so each theme's heading treatment applies.
+  const { heading, body } = splitHeading(context ? contextBody(page) : page.html);
   const transition = `card-${workspace.pages.indexOf(page)}`;
   const cardKey = `${context ? "context" : "reading"}-${workspace.pages.indexOf(page)}`;
   const frontId = `card-front-${cardKey}`;
@@ -69,8 +78,8 @@ function pane(workspace: SiteWorkspace, params: { page: SitePage; context: boole
   return `<section class="pane${context ? " context" : ""}" data-card="${escapeHtml(page.id)}" aria-label="${escapeHtml(page.frontmatter.title)}">
 ${label}<article class="bbx-card-theme bbx-card-surface" data-card-theme="${theme}" data-card-stock="${stock}" data-card-side="front" style="view-transition-name:${transition}">
 <span class="card-fold" aria-hidden="true"></span><button type="button" class="bbx-card-properties" data-card-properties hidden aria-label="On the back" title="On the back: authorship and provenance" aria-expanded="false" aria-controls="${backId}"><span class="bbx-card-properties-label" aria-hidden="true">On the back</span></button>
-<div id="${frontId}" class="bbx-card-front" aria-hidden="false"><div class="bbx-card-content bbx-theme-prose">
-${context ? contextBody(page) : page.html}
+${heading}<div id="${frontId}" class="bbx-card-front" aria-hidden="false"><div class="bbx-card-content bbx-theme-prose">
+${body}
 ${context ? "" : nextLinks(workspace, page)}
 </div></div>${authorshipBack(page, backId)}</article></section>`;
 }

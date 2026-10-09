@@ -47,6 +47,9 @@ test("a deep aside statically contains its canonical parent and authored continu
   // The attached card's label row is only the way back; no kind words.
   assert.match(html, /<div class="pane-label"><a href="\/x\/Parent\.doc\.card\/" data-parent>Back to Parent<\/a><\/div>/);
   assert.equal(html.match(/class="pane-label"/g)?.length, 1);
+  // Each card's leading heading takes the card's heading slot, ahead of the front.
+  assert.match(html, /<header class="bbx-card-heading"><h1>Aside<\/h1><\/header>\n<div id="card-front-reading-/);
+  assert.match(html, /<header class="bbx-card-heading"><h2 id="context-parent">Parent<\/h2><\/header>/);
   assert.doesNotMatch(html, /pane-label">(Reading|Collection)|<span>(Document|Aside)<\/span>/);
 });
 
