@@ -6,7 +6,7 @@ The on-disk shape of a beebox. This is the canonical reference for beebox develo
 
 ## What a box is
 
-A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working tree is the entire state of the system — there is no separate database. Boxes live outside this repo (typically `~/src/boxes/<name>/`) so agents operating inside a box don't inherit this repo's CLAUDE.md.
+A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working tree is the entire state of the system — there is no separate database. Boxes live outside this repo (typically `~/src/boxes/<name>/`) so agents operating inside a box don't inherit this repo's AGENTS.md.
 
 A box has **one root**, and everything about the box lives under it:
 the npm package (`package.json`, `src/`, `node_modules/` — which is also where the
