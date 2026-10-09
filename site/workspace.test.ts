@@ -44,6 +44,13 @@ test("a deep aside statically contains its canonical parent and authored continu
   assert.match(html, /Ian Bicking/);
   assert.match(html, /Source preparation<\/dt><dd>Prepared the source/);
   assert.match(html, /bbx-card-back[^]*Parent\.attach\/Aside\.doc\.card/);
+  // The attached card's label row is only the way back; no kind words.
+  assert.match(html, /<div class="pane-label"><a href="\/x\/Parent\.doc\.card\/" data-parent>Back to Parent<\/a><\/div>/);
+  assert.equal(html.match(/class="pane-label"/g)?.length, 1);
+  // Each card's leading heading takes the card's heading slot, ahead of the front.
+  assert.match(html, /<header class="bbx-card-heading"><h1>Aside<\/h1><\/header>\n<div id="card-front-reading-/);
+  assert.match(html, /<header class="bbx-card-heading"><h2 id="context-parent">Parent<\/h2><\/header>/);
+  assert.doesNotMatch(html, /pane-label">(Reading|Collection)|<span>(Document|Aside)<\/span>/);
 });
 
 test("bad next destinations and missing sections fail before publication", () => {
@@ -80,4 +87,7 @@ test("only the home card asks for the margin threads", () => {
   assert.ok(home && parent);
   assert.match(workspaceShell(workspace, home), /<main id="site-workspace"[^>]* data-threads[ >]/);
   assert.doesNotMatch(workspaceShell(workspace, parent), /<main id="site-workspace"[^>]* data-threads/);
+  // The theme of the day loads first in <body>, synchronously, before any card.
+  assert.match(workspaceShell(workspace, parent), /<body[^>]*>\n<script src="\/x\/assets\/day-theme\.js"><\/script>/);
+  assert.match(workspaceShell(workspace, parent), /href="\/x\/assets\/themes\/themes\.css"/);
 });
