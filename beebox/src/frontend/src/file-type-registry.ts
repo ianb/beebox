@@ -99,6 +99,11 @@ export interface ListProps<T = unknown> {
    * (container queries) where possible; this flag is an explicit fallback.
    */
   compact: boolean;
+  /**
+   * True on a list a person reads (The Plate): show the title, not the file
+   * path under it. A ListComponent that prints a path honors it.
+   */
+  hidePath: boolean;
 }
 
 /** A file type's presentation bits for list/peek entries. */
