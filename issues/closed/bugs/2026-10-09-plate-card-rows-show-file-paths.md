@@ -44,3 +44,5 @@ Related: [browse-and-plate-counts-do-not-name-what-they-count](../../bugs/2026-1
 
 Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R8,
 [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 24.
+
+2026-10-09 follow-up (cross-model review): image cards still showed the path, because `FileEntry` passed `hidePath` only to its default slot. `ListProps` now carries `hidePath`, and `ImageCardListEntry` (the only custom list entry) honors it.

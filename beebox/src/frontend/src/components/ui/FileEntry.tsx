@@ -28,7 +28,10 @@ interface FileEntryProps {
    * the container *knows* it's narrow (e.g. nested in a dropdown on mobile).
    */
   compact?: boolean;
-  /** Title only, no file path under it: a list a person reads, such as The Plate. */
+  /**
+   * Title only, no file path under it: a list a person reads, such as The
+   * Plate. Passed to a custom ListComponent as well as the default slot.
+   */
   hidePath?: boolean;
   /**
    * Called when the user escalates from peek to the persistent side panel.
@@ -158,7 +161,7 @@ function TitleSlot({ summary, compact, hidePath, boxSlug }: { summary: FileSumma
       </span>
       <div className="flex-1 min-w-0">
         {ListComponent ? (
-          <ListComponent data={summary} compact={compact} />
+          <ListComponent data={summary} compact={compact} hidePath={hidePath} />
         ) : (
           <DefaultMiddle data={summary} compact={compact} hidePath={hidePath} />
         )}
