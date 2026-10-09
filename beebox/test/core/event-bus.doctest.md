@@ -42,6 +42,7 @@ const samples = {
   "schedule-fired": { id: "sch_1", label: "tea", alarm: true, announce: null },
   "chat-history": { sessionId: "s1", entries: [{ uuid: "u1", type: "user", timestamp: TS, content: [{ type: "text", text: "hi" }] }] },
   "chat-session-assigned": { sessionId: "s1" },
+  "chat-title-changed": { sessionId: "s1", title: "Weekend plans" },
   "capture-status": { stagingId: "cap_1", sessionId: "s1", status: "preparing", docPath: "captures/cap_1.capture-session.card" },
   "chat-retranscription": { sessionId: "s1", messageId: "msg-1", newText: "corrected text", service: "whisper", diarized: false, recordedAt: TS },
   "chat-audio-consulted": { sessionId: "s1", messageId: "msg-1", command: "ask-about-audio", question: "did I say can or cannot?" },
