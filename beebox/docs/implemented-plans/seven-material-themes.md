@@ -1,12 +1,12 @@
 ---
-title: Seven material-led theme collections
-status: active
+title: Six material-led theme collections
+status: implemented
 workstream: theme-polish
 issues: []
 ---
-# Seven material-led theme collections
+# Six material-led theme collections
 
-Add seven matching system and card themes inspired by supplied artwork, with
+Add six matching system and card themes inspired by supplied artwork, with
 texture and composition carried through controls and reading surfaces.
 
 **Issues addressed:** None. Searched theme issues; box-authored themes and open
@@ -93,12 +93,12 @@ through the browsing tool; attribution for those follows the supplied credits.
 
 No new runtime concepts. Existing theme descriptors add names/stocks:
 Selvedge/wool, Footlights/marquee, Overpass/silhouette, Golden Hour/canopy,
-Interlace/pigment, Blacklight/ink, and Far Horizon/gouache. Names are selectors,
-not a new automatic pairing system.
+Blacklight/ink, and Far Horizon/gouache. Names are selectors, not a new
+automatic pairing system.
 
 ## Tracks / scope
 
-1. Author seven complete token sets and original material decorations. Each defines
+1. Author six complete token sets and original material decorations. Each defines
    system chrome and card material, including input, selection, status, and menus.
 2. Register choices in the shared catalog and CSS imports. Add matching authored
    fixtures and extend the real-message harness and existing tour.
@@ -162,7 +162,7 @@ adjust browser results, run focused checks and review, then commit the batch.
 
 ## Rollout shape
 
-Additive choices; no migration or automatic selection. Done when all seven
+Additive choices; no migration or automatic selection. Done when all six
 resolve as both card and system choices, screenshots show their full surfaces,
 and focused checks and review are complete. Landing requires the human's ask.
 
@@ -194,3 +194,11 @@ rules stop before the square Properties fold. Overpass uses a wider sans serif.
 Interlace replaces tiled geometry with translucent watercolor and softer shadows.
 A smoother Far Horizon study lives only in the exhibit alongside the unchanged
 current theme. Electric Playground profile-email text uses a readable muted ink.
+
+## Final selection
+
+The boxholder selected the satin Far Horizon material and removed Interlace
+from the collection before landing. Six new themes ship; Interlace catalog,
+styles, assets, and test fixture were removed. The exhibit retains the design
+history. Existing passing verification is reused apart from the two focused
+catalog/API expectations affected by this removal.

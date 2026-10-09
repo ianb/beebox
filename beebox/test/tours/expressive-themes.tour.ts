@@ -12,7 +12,6 @@ tour({ name: "expressive-themes", description: "Authored expressive card materia
     ["footlights", "marquee"],
     ["overpass", "silhouette"],
     ["golden-hour", "canopy"],
-    ["interlace", "pigment"],
     ["blacklight", "ink"],
     ["far-horizon", "gouache"],
   ]) {

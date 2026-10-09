@@ -137,17 +137,6 @@ export const THEME_CATALOG = [
     systemOnly: false,
   },
   {
-    name: "interlace",
-    composition: "expressive",
-    label: "Interlace",
-    stocks: ["pigment"],
-    defaultStock: "pigment",
-    quoteTreatment: "inset",
-    blockquoteTreatment: "inset",
-    chrome: true,
-    systemOnly: false,
-  },
-  {
     name: "blacklight",
     composition: "expressive",
     label: "Blacklight",

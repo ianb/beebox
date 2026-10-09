@@ -1,9 +1,9 @@
-/* Layered gouache pigment, with quiet cream reading fields. */
+/* Smooth layered gouache, with quiet cream reading fields. */
 .bbx-box-presentation[data-chrome-theme="far-horizon"],
 .bbx-themed-menu[data-chrome-theme="far-horizon"] {
   --bbx-desk-background: transparent;
   --bbx-desk-pattern: none;
-  --bbx-scene: url("./art/far-horizon-pigment.webp") center / cover no-repeat, #dba44d;
+  --bbx-scene: url("./art/far-horizon-satin.webp") center / cover no-repeat, #dba44d;
   --bbx-toolbar-background: #184a50;
   --bbx-toolbar-ink: #f6e6c8;
   --bbx-toolbar-edge: #a44b32;

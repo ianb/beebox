@@ -25,7 +25,6 @@ import "../themes/selvedge.css";
 import "../themes/footlights.css";
 import "../themes/overpass.css";
 import "../themes/golden-hour.css";
-import "../themes/interlace.css";
 import "../themes/blacklight.css";
 import "../themes/far-horizon.css";
 import { withBase } from "../api";

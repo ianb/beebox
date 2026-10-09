@@ -164,7 +164,7 @@ default stocks rather than the fallback stock for an unknown theme.
 
 ```ts
 ["harlequin", "electric-playground", "daydream",
- "selvedge", "footlights", "overpass", "golden-hour", "interlace", "blacklight", "far-horizon"
+ "selvedge", "footlights", "overpass", "golden-hour", "blacklight", "far-horizon"
 ].map((name) => validateSystemThemeChoice({ name }))
 => [
   { choice: { name: "harlequin", stock: "pigment" }, problem: null },
@@ -174,7 +174,6 @@ default stocks rather than the fallback stock for an unknown theme.
   { choice: { name: "footlights", stock: "marquee" }, problem: null },
   { choice: { name: "overpass", stock: "silhouette" }, problem: null },
   { choice: { name: "golden-hour", stock: "canopy" }, problem: null },
-  { choice: { name: "interlace", stock: "pigment" }, problem: null },
   { choice: { name: "blacklight", stock: "ink" }, problem: null },
   { choice: { name: "far-horizon", stock: "gouache" }, problem: null },
 ]

@@ -29,7 +29,7 @@ Playground (`electric-playground`, stock `prism`), and Daydream (`daydream`, sto
 `cloud`) support both cards and app chrome. The material collections also
 support both: Selvedge (`selvedge`/`wool`), Footlights (`footlights`/`marquee`),
 Overpass (`overpass`/`silhouette`), Golden Hour (`golden-hour`/`canopy`),
-Interlace (`interlace`/`pigment`), Blacklight (`blacklight`/`ink`), and Far Horizon
+Blacklight (`blacklight`/`ink`), and Far Horizon
 (`far-horizon`/`gouache`). Their matching names help pair a workspace and card;
 the two choices remain independent. The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
