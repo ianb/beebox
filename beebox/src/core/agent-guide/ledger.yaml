@@ -714,10 +714,10 @@ rows:
 
   # --- BOX_CODE ---
   - id: box-code.where
-    rule: Box-authored code lives under `src/` at the box root (schemas, views, tricks), is the agent's to edit, and hot-reloads without a restart; a `CLAUDE.md` under each directory says what to read first.
+    rule: Box-authored code lives under `src/` at the box root (schemas, views, tricks), is the agent's to edit, and hot-reloads without a restart; an instruction file (`AGENTS.md`, or `CLAUDE.md` in a box not yet migrated) under each directory says what to read first.
     handle: BOX_CODE
     bin: core
-    reason: An agent asked to add a type or a view needs to know where it goes and that it can just edit; the nested CLAUDE.md files carry the rest, and load when the agent works there.
+    reason: An agent asked to add a type or a view needs to know where it goes and that it can just edit; the nested instruction files carry the rest, and load when the agent works there.
     audits: [box-packageify-views-location, box-packageify-schemas-location]
   - id: box-code.not-yours
     rule: The root `package.json`, `node_modules/`, lockfiles, `tsconfig.json`, and anything at the root outside the underscore areas and `src/` belong to the boxholder; `bbx engine upgrade` is theirs to run.

@@ -15,6 +15,7 @@ import { errnoCode } from "../../../shared/error-guards.js";
 import { loadPresentationConfig } from "../../../core/box/presentation.js";
 import { loadBoxSchemas } from "../../../schemas.js";
 import { reservedFieldProblems } from "../../../cards/reserved-fields.js";
+import { lintLegacyInstructionFiles } from "../../../core/legacy-instruction-lint.js";
 
 /**
  * Check for schemas left in the legacy `_config/schemas/` location.
@@ -38,6 +39,14 @@ export async function checkLegacySchemaPath(boxRoot: string): Promise<string[]> 
 export async function checkRootStrayErrors(boxRoot: string): Promise<string[]> {
   const strays = await checkBoxRoot(boxRoot);
   return strays.map((stray) => `Box root: ${stray.message}`);
+}
+
+/**
+ * A `CLAUDE.md`, `CLAUDE.local.md`, or `.claude/CLAUDE.md` in a box converted
+ * to `AGENTS.md` (`core/legacy-instruction-lint.ts`). Empty before conversion.
+ */
+export async function checkLegacyInstructionErrors(boxRoot: string): Promise<string[]> {
+  return (await lintLegacyInstructionFiles(boxRoot)).map((line) => `Instruction file: ${line}`);
 }
 
 /** Validate `_config/box.json`'s optional card/chrome presentation subtree. */

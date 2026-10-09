@@ -362,7 +362,7 @@ For typed reads, use `parseCardText({content, source, schemas: createCardSchemaM
 2. `generateDocs()` reads `cardSchemas` from `registry.ts` (and a box's own schemas through `loadBoxSchemas`)
 3. For each schema with an `instructions` string, it writes `card-<type>.md` — to `node_modules/beebox/box-docs/` for a built-in schema, to `_content/docs/generated/` for a box-local one
 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
-5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
+5. The agent guide is `@`-included in `AGENTS.md`, so agents always see the card type list
 6. Agents read `card-<type>.md` on demand for detailed instructions, from whichever of those two locations holds it
 
 ## Verification Checklist
