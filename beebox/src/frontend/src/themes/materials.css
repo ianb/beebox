@@ -33,6 +33,16 @@
   --bbx-blockquote-edge: 0px;
   --bbx-blockquote-padding: 0.5em 0;
   --bbx-content-padding: clamp(1rem, 3vw, 2rem);
+  /* Prose furniture derives from the material, so every theme dresses it
+     without restating it; a theme overrides one when the mix is wrong.
+     Code stays a dark slab (the selection code pairs assume one), cut
+     from the theme's own ink. */
+  --bbx-bullet: var(--bbx-pen);
+  --bbx-counter: var(--bbx-ink-soft);
+  --bbx-rule: color-mix(in srgb, var(--bbx-ink) 18%, transparent);
+  --bbx-rule-strong: color-mix(in srgb, var(--bbx-ink) 34%, transparent);
+  --bbx-code-paper: color-mix(in srgb, var(--bbx-ink) 88%, #000);
+  --bbx-code-ink: var(--bbx-paper);
   color: var(--bbx-ink);
   font-family: var(--bbx-font);
 }
