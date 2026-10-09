@@ -11,7 +11,7 @@ A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx i
 A box has **one root**, and everything about the box lives under it:
 the npm package (`package.json`, `src/`, `node_modules/` — which is also where the
 installed `beebox` package's own reference docs live), the git
-repository, the agent's own configuration (`CLAUDE.md`, `.claude/`), the
+repository, the agent's own configuration (`AGENTS.md`, `.claude/`), the
 runtime marker and agent guide (`.beebox/`), and every operational area
 holding the boxholder's content and the machine's working state. There is no
 second root to find or pass around — `boxRoot` means this directory,
@@ -56,7 +56,7 @@ so a v2 box can only come from an old backup and cannot be opened. See
 declares `shapeVersion: 3` and `<root>/package.json` declares a `beebox`
 dependency.
 
-The agent-configuration entries (`CLAUDE.md`, `.claude/`, `AGENTS.md`,
+The agent-configuration entries (`AGENTS.md`, `.claude/`,
 `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
 says which the engine writes, which the box owns, and when each is refreshed.
 
@@ -66,9 +66,8 @@ says which the engine writes, which the box owns, and when each is refreshed.
 ├── pnpm-lock.yaml, tsconfig.json  npm namespace
 ├── node_modules/                  gitignored; beebox resolves here
 ├── .git/                          git repository
-├── CLAUDE.md                      root agent instructions for this box
+├── AGENTS.md                      root agent instructions for this box (Claude Code and Codex)
 ├── .claude/                       agent configuration (rules, skills, memory symlink, settings)
-├── AGENTS.md                      symlink to CLAUDE.md (Codex-facing mirror)
 ├── .agents/                       Codex-facing mirror of .claude/skills/
 ├── .codex/                        Codex-facing hook config (mirrors .claude/settings.json)
 ├── .beebox/                       runtime: box.json marker, dbs, logs, agent guide
@@ -250,7 +249,7 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 
 | Path | Purpose |
 |------|---------|
-| `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own CLAUDE.md, which points at the [schema-authoring doc](box/schemas.md). |
+| `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [schema-authoring doc](box/schemas.md). |
 | `src/views/` | Custom view definitions (rendering customization). |
 | `src/tricks/scripts/` | Agent-authored scripts. The agent can write small helpers here. |
 | `src/tricks/lib/` | Shared helpers used by `src/tricks/scripts/`. |

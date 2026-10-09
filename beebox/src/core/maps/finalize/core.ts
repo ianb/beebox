@@ -2,9 +2,10 @@
  * Map refresh finalize step.
  *
  * Mechanical post-agent work:
- *  1. Ensure each mapped directory has a CLAUDE.md that @-imports MAP.md
- *     (preserves any hand-edited content above/below), and an AGENTS.md
- *     symlink beside it so a Codex session sees the new MAP too.
+ *  1. Ensure each mapped directory has an instruction file that @-imports
+ *     MAP.md (preserves any hand-edited content above/below). In a box not yet
+ *     converted that file is CLAUDE.md, with an AGENTS.md symlink beside it so
+ *     a Codex session sees the new MAP too.
  *  2. Stamp the state file with the current HEAD for every task whose MAP.md
  *     the agent rewrote, or that passes the coverage check in `verify.ts`.
  *  3. Prune state entries whose directories no longer exist.
@@ -19,7 +20,7 @@ import * as path from "node:path";
 import { simpleGit } from "simple-git";
 import { loadMapState, saveMapState, type MapState } from "../state.js";
 import type { MapTask } from "../precheck.js";
-import { CLAUDE_MD } from "../../agent-instruction-files.js";
+import { CLAUDE_MD, instructionFilePath } from "../../agent-instruction-files.js";
 import { ensureAgentsMirror } from "../../agent-context-mirrors.js";
 import { guidanceSurfaceFor } from "../../box/guidance-surfaces.js";
 import { MAP_INCLUDE_LINE, stripLeadingMapInclude } from "../include-line.js";
@@ -90,35 +91,36 @@ async function mapWasRewritten(options: MapWasRewrittenOptions): Promise<boolean
 
 
 /**
- * Ensure `<dir>/CLAUDE.md` exists with the map include line. If the file
- * already exists, only insert the include line (preserving everything
- * else). If absent, create a minimal one-line file.
+ * Ensure the directory's instruction file (`instructionFilePath`) exists with
+ * the map include line. If the file already exists, only insert the include
+ * line (preserving everything else). If absent, create a minimal one-line file.
  *
- * A directory whose `CLAUDE.md` is a tracked guide (`src/schemas/`,
+ * A directory whose instruction file is a tracked guide (`src/schemas/`,
  * `src/views/`, `src/tricks/scripts/`, `_config/feedback/`; the registry's
  * `tracked` rows) is left alone: the include would make the guide differ
  * from stock, and the template tracker then parks every later rewrite. An
  * include an earlier finalizer already prepended there is stripped, so the
  * guide reads as stock again.
  */
-export async function ensureClaudeMdInDir(boxRoot: string, dirRel: string): Promise<void> {
-  const claudePath = path.join(boxRoot, dirRel, CLAUDE_MD);
-  const existing = await readFileOrNull(claudePath);
+export async function ensureInstructionMapInclude(boxRoot: string, dirRel: string): Promise<void> {
+  const relPath = await instructionFilePath(boxRoot, dirRel);
+  const instructionPath = path.join(boxRoot, relPath);
+  const existing = await readFileOrNull(instructionPath);
 
-  if (guidanceSurfaceFor(path.posix.join(dirRel, CLAUDE_MD))?.class === "tracked") {
+  if (guidanceSurfaceFor(relPath)?.class === "tracked") {
     if (existing !== null) {
       const stripped = stripLeadingMapInclude(existing);
-      if (stripped !== existing) await fs.writeFile(claudePath, stripped);
+      if (stripped !== existing) await fs.writeFile(instructionPath, stripped);
     }
     return;
   }
 
   if (existing === null) {
-    await fs.writeFile(claudePath, INCLUDE_LINE + "\n");
+    await fs.writeFile(instructionPath, INCLUDE_LINE + "\n");
     // Codex reads only AGENTS.md, so a CLAUDE.md with no mirror beside it
     // leaves the directory's new MAP invisible there until some later run of
     // `generate-docs` happens to plant one.
-    await ensureAgentsMirror(claudePath);
+    if (path.basename(relPath) === CLAUDE_MD) await ensureAgentsMirror(instructionPath);
     return;
   }
   if (existing.includes(INCLUDE_LINE)) return;
@@ -133,7 +135,7 @@ export async function ensureClaudeMdInDir(boxRoot: string, dirRel: string): Prom
     }
   }
   lines.splice(insertAt, 0, INCLUDE_LINE);
-  await fs.writeFile(claudePath, lines.join("\n"));
+  await fs.writeFile(instructionPath, lines.join("\n"));
 }
 
 interface StampStateOptions {
@@ -183,11 +185,11 @@ export interface CoverageFailure {
 }
 
 export interface FinalizeResult {
-  /** Tasks whose MAP.md was rewritten this run; stamped + CLAUDE.md ensured. */
+  /** Tasks whose MAP.md was rewritten this run; stamped + map include ensured. */
   applied: string[];
   /**
    * Tasks whose MAP.md was not rewritten but passes the coverage check —
-   * already correct, so stamped + CLAUDE.md ensured. Without this, a map
+   * already correct, so stamped + map include ensured. Without this, a map
    * whose correct result is "no change" could never be stamped.
    */
   verified: string[];
@@ -259,7 +261,7 @@ export async function finalize(options: FinalizeOptions): Promise<FinalizeResult
       result.skippedUnchanged.push(task.dir);
       continue;
     }
-    await ensureClaudeMdInDir(boxRoot, task.dir);
+    await ensureInstructionMapInclude(boxRoot, task.dir);
     appliedTasks.push(task);
   }
 

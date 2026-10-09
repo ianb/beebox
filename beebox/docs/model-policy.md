@@ -102,7 +102,7 @@ only reachable before the first message.
 ## How much context a run gets
 
 The same question — what does *this* invocation get — covers context, and it has
-one lever: `loadBoxContext`. The SDK loads the box's `CLAUDE.md`, generated agent
+one lever: `loadBoxContext`. The SDK loads the box's `AGENTS.md`, generated agent
 guide and `.claude/rules/` by default, which is right for the reactor, procedure
 runs and chat. The four small structured passes set it false: measured on the
 test box that context is ~9,700 words on every invocation, and a pass emitting a

@@ -216,12 +216,12 @@ function gitIgnored(paths: string[]): Set<string> {
 // justified.
 const ALLOWED_MISSING_PATHS = new Set([
   // Box guidance surfaces: files every box carries in its own tree.
-  "beebox/docs/box-guidance.md -> src/schemas/CLAUDE.md",
-  "beebox/docs/box-guidance.md -> src/views/CLAUDE.md",
-  "beebox/docs/box-guidance.md -> src/tricks/scripts/CLAUDE.md",
+  "beebox/docs/box-guidance.md -> src/schemas/AGENTS.md",
+  "beebox/docs/box-guidance.md -> src/views/AGENTS.md",
+  "beebox/docs/box-guidance.md -> src/tricks/scripts/AGENTS.md",
   "beebox/docs/box-guidance.md -> .claude/rules/bbx-validate-ignore.md",
-  "beebox/docs/cards.md -> src/schemas/CLAUDE.md",
-  "beebox/docs/testing/knowledge-audits.md -> src/schemas/CLAUDE.md",
+  "beebox/docs/cards.md -> src/schemas/AGENTS.md",
+  "beebox/docs/testing/knowledge-audits.md -> src/schemas/AGENTS.md",
   "beebox/docs/testing/knowledge-audits.md -> .claude/rules/card-memo.md",
   // Entry points of a consumer project that installs the preset.
   "personal-vibe-check/install.md -> src/index.ts",

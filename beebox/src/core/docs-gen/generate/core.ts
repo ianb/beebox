@@ -48,7 +48,8 @@ import {
 } from "../compile/core.js";
 import type { ProcedureSummary } from "../compile/core.js";
 import { compileExpositionRules } from "../../compile-exposition-rules.js";
-import { ensureAgentContext } from "./claude-md.js";
+import { ensureAgentContext } from "./agents-md.js";
+import { instructionFileName } from "../../agent-instruction-files.js";
 
 export type { ProcedureSummary } from "../compile/core.js";
 export type { GuideSummary } from "../config-cards/core.js";
@@ -335,6 +336,7 @@ interface DocWritePlan {
   engineSourcePresent: boolean;
   personalitySection: string | undefined;
   shape: BoxShape;
+  instructionFile: string;
 }
 
 /**
@@ -343,12 +345,12 @@ interface DocWritePlan {
  * package now, `package-docs.ts`).
  */
 async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
-  const { boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape } = plan;
+  const { boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape, instructionFile } = plan;
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
       withDocId({
         relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`,
-        content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape }),
+        content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape, instructionFile }),
       })),
     writeBoxCardDocs({ boxRoot, boxCardSchemas, boxTemplates }),
   ]);
@@ -412,11 +414,14 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // Decides the paths the agent guide's BOX_CODE table names — see
   // "boxCodeRows" in agent-guide/box-shape.ts.
   const shape = await getBoxShape(boxRoot);
+  // The instruction-file name the guide's text uses: `AGENTS.md` once the box
+  // is converted, `CLAUDE.md` before.
+  const instructionFile = await instructionFileName(boxRoot);
 
   // Compile personality first so we can include it in the agent guide
   const personalitySection = await compilePersonalities(boxRoot);
 
-  await writeStaticDocs({ boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape });
+  await writeStaticDocs({ boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape, instructionFile });
 
   // Compile guides and generate job-type rules
   const guides = await compileGuides(boxRoot);
@@ -428,7 +433,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
     withDocId({
       relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`,
-      content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, guides, shape }),
+      content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, guides, shape, instructionFile }),
     }));
 
   // Compile briefing cards to .md files

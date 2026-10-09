@@ -7,7 +7,14 @@ patch command that can name several files.
 ```ts setup
 import { parseHookFilePaths, validateHookPathsResult } from "../../../src/cli/validate-hook/command.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { AGENTS_MD_MIGRATION } from "../../../src/core/agent-instruction-files.js";
+
+/** Record the AGENTS.md migration in a box's manifest, making it "converted". */
+async function markConverted(root: string): Promise<void> {
+  await mkdir(`${root}/_config`, { recursive: true });
+  await writeFile(`${root}/_config/migrations.jsonl`, `${JSON.stringify({ name: AGENTS_MD_MIGRATION, "applied-at": "2026-10-09T00:00:00Z" })}\n`);
+}
 ```
 
 ## Claude file tools
@@ -74,6 +81,46 @@ const warning = await validateHookPathsResult([`${box.root}/CLAUDE.md`]);
 await box.cleanup();
 JSON.stringify({ hasFeedback: warning.feedback?.includes("claude-md-size"), hasErrors: warning.hasErrors })
 => {"hasFeedback":true,"hasErrors":false}
+```
+
+## Legacy instruction-file names in a converted box
+
+A box converted to `AGENTS.md` (its manifest records `agents-md-2026-10`)
+must not gain a `CLAUDE.md`: Claude Code then ignores every `AGENTS.md` in the
+box. Writing one, a `CLAUDE.local.md`, or a `.claude/CLAUDE.md` there is an
+error. (A `CLAUDE.local.md` at the root is already a root stray.)
+
+```ts
+const converted = await makeTmpBox();
+await markConverted(converted.root);
+await mkdir(`${converted.root}/.claude`, { recursive: true });
+for (const rel of ["CLAUDE.md", "_content/CLAUDE.local.md", ".claude/CLAUDE.md", "AGENTS.md"]) {
+  await writeFile(`${converted.root}/${rel}`, "# Notes\n");
+}
+const results = [];
+for (const rel of ["CLAUDE.md", "_content/CLAUDE.local.md", ".claude/CLAUDE.md", "AGENTS.md"]) {
+  results.push({ rel, ...(await validateHookPathsResult([`${converted.root}/${rel}`])) });
+}
+await converted.cleanup();
+results
+=> [
+  { rel: "CLAUDE.md", feedback: "CLAUDE.md: Name instruction files AGENTS.md. A CLAUDE.md here makes Claude Code ignore every AGENTS.md.", hasErrors: true },
+  { rel: "_content/CLAUDE.local.md", feedback: "_content/CLAUDE.local.md: Name instruction files AGENTS.md. A CLAUDE.md here makes Claude Code ignore every AGENTS.md.", hasErrors: true },
+  { rel: ".claude/CLAUDE.md", feedback: ".claude/CLAUDE.md: Name instruction files AGENTS.md. A CLAUDE.md here makes Claude Code ignore every AGENTS.md.", hasErrors: true },
+  { rel: "AGENTS.md", feedback: null, hasErrors: false },
+]
+```
+
+A box not yet converted still authors `CLAUDE.md`, so the same write gets no
+finding:
+
+```ts
+const unconverted = await makeTmpBox();
+await writeFile(`${unconverted.root}/CLAUDE.md`, "# Notes\n");
+const legacyEdit = await validateHookPathsResult([`${unconverted.root}/CLAUDE.md`]);
+await unconverted.cleanup();
+legacyEdit
+=> { feedback: null, hasErrors: false }
 ```
 
 ## Package-surface tripwire (Track C)

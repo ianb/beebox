@@ -44,8 +44,10 @@ isolated.queryOptions.settings
 => {
   disableClaudeAiConnectors: true,
   claudeMdExcludes: [
-    "/tmp/CLAUDE.md", "/tmp/CLAUDE.local.md", "/tmp/.claude/CLAUDE.md", "/tmp/.claude/rules/**",
-    "/CLAUDE.md", "/CLAUDE.local.md", "/.claude/CLAUDE.md", "/.claude/rules/**",
+    "/tmp/CLAUDE.md", "/tmp/AGENTS.md", "/tmp/CLAUDE.local.md",
+    "/tmp/.claude/CLAUDE.md", "/tmp/.claude/AGENTS.md", "/tmp/.claude/rules/**",
+    "/CLAUDE.md", "/AGENTS.md", "/CLAUDE.local.md",
+    "/.claude/CLAUDE.md", "/.claude/AGENTS.md", "/.claude/rules/**",
   ],
 }
 ```
