@@ -25,7 +25,7 @@ it re-locks when the app backgrounds or the user switches boxes.
 - `CLAUDE.md` requires reading existing formats before writing
   (`CLAUDE.md:104-109`) and leaving the repository tested and clean
   (`CLAUDE.md:111-116`). The iOS boundary remains: *"The webview is still the
-  chat client"* (`../../../ios-app/CLAUDE.md:7-18`). The lock neither creates a
+  chat client"* (`../../../ios-app/AGENTS.md:7-18`). The lock neither creates a
   second transcript nor changes server authentication.
 - `code-style.md` requires visible failure handling (`code-style.md:24-33`) and
   exhaustive dispatch (`code-style.md:53-59`). Swift follows the same intent
@@ -76,9 +76,9 @@ it re-locks when the app backgrounds or the user switches boxes.
   drafts (`RootView.swift:137-144`). Add re-lock to that observer rather than
   creating a second app lifecycle path.
 - **Tests/project wiring — reuse.** The app has a simulator XCTest target and
-  documented build commands (`../../../ios-app/CLAUDE.md:49-79`). New Swift
+  documented build commands (`../../../ios-app/AGENTS.md:49-79`). New Swift
   files still require all four manual project entries
-  (`../../../ios-app/CLAUDE.md:89-104`).
+  (`../../../ios-app/AGENTS.md:89-104`).
 
 ## Prior art (external)
 
@@ -100,7 +100,7 @@ it re-locks when the app backgrounds or the user switches boxes.
   <https://developer.apple.com/documentation/SwiftUI/ScenePhase/background>
 - No third-party lock/auth library is warranted. LocalAuthentication and the
   existing stores cover the scope, consistent with the no-third-party iOS rule
-  (`../../../ios-app/CLAUDE.md:23-24`) and principle #6.
+  (`../../../ios-app/AGENTS.md:23-24`) and principle #6.
 
 ## Tracks / scope
 
@@ -255,7 +255,7 @@ leave the issue with a precise human closure gate.
 **Why this needs to change.** Fakes cannot verify Face ID/passcode UI or actual
 background transitions. The iOS guide says background-dependent behavior is not
 fully verified until exercised on a real phone
-(`../../../ios-app/CLAUDE.md:158-164`).
+(`../../../ios-app/AGENTS.md:158-164`).
 
 **Direction.** Add **Per-box local device lock** to `docs/mobile-parity.md` as
 iOS done / Android planned, linked to a focused Android parity issue. There is

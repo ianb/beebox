@@ -32,7 +32,7 @@ YOLO mode only when no untrusted text can enter the context; riskier tasks go to
 
 **1.4 Mitchell Hashimoto, ["My AI adoption journey"](https://mitchellh.com/writing/my-ai-adoption-journey) (2026-02-05).**
 Overnight triage agents were "NOT allowed to respond, I just wanted reports the next day." Agent notifications off: "it was my job as a human to be in control of when I interrupt the agent."
-*Disposition: already done.* Filing an issue does not authorize implementation (`issues/CLAUDE.md`); the dashboard and exhibits are pull, not push.
+*Disposition: already done.* Filing an issue does not authorize implementation (`issues/AGENTS.md`); the dashboard and exhibits are pull, not push.
 
 **1.5 Standing per-workstream autonomy (synthesis of 1.1-1.4).** None of the sources defines tiers; each person states the boundary per task ("report only", "commit", "land"). Here those grants live in scattered memory notes (land docs continuously; `/finish` means deploy).
 *Disposition: later.* If more standing grants accrue, put one line in the `launch-worktree-session` briefing stating the run's ceiling (report / commit / land). Not now: it would be a second vocabulary beside exhibit asks.

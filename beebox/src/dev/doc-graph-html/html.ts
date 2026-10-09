@@ -66,8 +66,8 @@ function render(docs: Map<string, DocInfo>): string {
   <div class="section-eyebrow">I &nbsp;·&nbsp; Onboarding the agent</div>
   <h2 class="section">Concentric rings of context</h2>
   <p class="section-lede">
-    When Claude starts a session, the root <code>CLAUDE.md</code> is already in its context window —
-    before you say a word. As it reads files, more <code>CLAUDE.md</code>'s pull in automatically; as it
+    When Claude starts a session, the root <code>AGENTS.md</code> is already in its context window —
+    before you say a word. As it reads files, more <code>AGENTS.md</code>'s pull in automatically; as it
     follows links, deeper material loads on demand. The layering keeps the working set small while
     putting any needed knowledge within a hop or two.
   </p>

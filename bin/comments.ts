@@ -15,7 +15,7 @@
  * app calls when the boxholder writes a comment in the browser.
  *
  * THIS CLI IS THE ONLY WRITER. The app shells out to it rather than reaching
- * into the store itself, following the precedent bin/CLAUDE.md records for the
+ * into the store itself, following the precedent bin/AGENTS.md records for the
  * same app: "the app invokes the stable bin/workstreams CLI instead of
  * reimplementing lifecycle guards." Two implementations of one write protocol —
  * the same YAML, the same locking, the same containment — is where duplication

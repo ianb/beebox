@@ -27,7 +27,7 @@
 # fully merged into main, clean (no non-deletion dirt), AND has no active
 # `claude`/`codex` session (checked via `ps -axo pid=,comm=` + `--worktree`
 # argv + real process cwd — NOT pgrep, which misses native-installed Claude
-# Code entirely; see bin/CLAUDE.md).
+# Code entirely; see bin/AGENTS.md).
 set -u
 
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
@@ -88,6 +88,7 @@ echo "$$" > "$LOCK/pid" 2>/dev/null || true
 # identically to one still running — the ambiguity that hid the detachment bug
 # for weeks. SIGKILL still cannot be caught, so a START with neither END nor
 # INTERRUPTED now means exactly that, which is itself the diagnosis.
+# shellcheck disable=SC2329 # invoked only through the trap strings below
 on_signal() {
   echo "$(stamp) auto-sweep trigger=$trigger INTERRUPTED sig=$1" >> "$LOG"
   rm -rf "$LOCK" 2>/dev/null || true

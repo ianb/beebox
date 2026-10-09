@@ -67,16 +67,16 @@ added, figures (and views) would need gating then — captured under NOT in scop
 
 ## Stated preferences this plan trades against
 
-- **`beebox/CLAUDE.md:99`** — *"Read before writing. Don't guess file
+- **`beebox/AGENTS.md:99`** — *"Read before writing. Don't guess file
   formats, XML structures, or API shapes. Read the schema, read the existing
   code…"* The first draft violated this by missing `views/`; this rewrite is
   grounded in verified citations.
-- **`beebox/CLAUDE.md:45`** — *"Schemas can include `instructions` — prose
+- **`beebox/AGENTS.md:45`** — *"Schemas can include `instructions` — prose
   embedded in the schema that's injected into agent context…"* Per-runtime
   authoring rules ride this.
-- **`beebox/CLAUDE.md:108`** — *"Keep source and docs generic — never
+- **`beebox/AGENTS.md:108`** — *"Keep source and docs generic — never
   hardcode personal names."*
-- **`beebox/CLAUDE.md` (Cards / "don't add features beyond what the task
+- **`beebox/AGENTS.md` (Cards / "don't add features beyond what the task
   requires")** — drives the NOT-in-scope cuts.
 - **`beebox/code-style.md`** — *"No default parameters"*, *"Max 2 positional
   parameters"*, *"NEVER use `any`"*, *"`as` … like Rust's `unsafe`"*. The

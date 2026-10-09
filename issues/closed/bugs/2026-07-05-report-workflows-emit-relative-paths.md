@@ -16,7 +16,7 @@ no generator, so the next such workflow would start from a blank slate; the
 guard catches the leak regardless of how a report is produced. The one committed
 report generator (`knowledge-audit.ts`) was already clean, and `bin/browse`
 screenshot output — briefly suspected — turned out to be gitignored and never
-reaches committed docs. See `bin/CLAUDE.md`.
+reaches committed docs. See `bin/AGENTS.md`.
 
 Auto-generated audit reports leaked the author's home directory. The
 2026-06-26 user-stories audit (`beebox/docs/reports/`) carried ~105

@@ -75,11 +75,11 @@ Outstanding (not yet done):
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:118` (Behavioral Notes) — *"Read before writing. Don't
+- `beebox/AGENTS.md:118` (Behavioral Notes) — *"Read before writing. Don't
   guess file formats…"* This plan reuses the procedure engine and the migration
   manifest rather than building parallel machinery; the design earned that by
   reading both first (see What already exists).
-- `beebox/CLAUDE.md` — the bias against *"add[ing] features beyond what
+- `beebox/AGENTS.md` — the bias against *"add[ing] features beyond what
   the task requires."* The earlier draft of this plan invented a `migration-run`
   card with per-step schema validation and a dedicated runner; that was
   over-built. Procedures already do it. Cut.

@@ -1286,7 +1286,7 @@ See §1.3 (full request/response/errors).
   `ios-app/BeeBoxTests/QuickChatAPITests.swift`, which also checks the three request bodies
   against `submit-request.json`, `choose-request.json`, and `discard-request.json`.
 - **Native caller:** the box screen, which has no web session mounted, so this is the one native
-  path that sends a chat message without the web view (`ios-app/CLAUDE.md`, bridge discipline).
+  path that sends a chat message without the web view (`ios-app/AGENTS.md`, bridge discipline).
   The record `id` is a client-made UUID, sent lowercase; it becomes the chat message id, so a
   repeated `submit` of one id returns one record and posts once. A `sending` view with
   `expired: true` is past the six-day delivery limit and offers only Open chat and Discard.

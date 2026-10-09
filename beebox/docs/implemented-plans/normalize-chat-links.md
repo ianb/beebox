@@ -75,15 +75,15 @@ link-vs-image distinction doesn't already express.
 
 ## Stated preferences this plan trades against
 
-- **`beebox/CLAUDE.md:` "Read before writing"** (Behavioral Notes):
+- **`beebox/AGENTS.md:` "Read before writing"** (Behavioral Notes):
   *"Don't guess file formats… Read the schema, read the existing code."* The
   plan reuses existing resolution (`resolveRelativePath`), existing repair
   (`bbx relink` / `link-repair.ts`), and existing migration scaffolding
   (`scripts/migrate/`) rather than inventing parallel machinery.
-- **`beebox/CLAUDE.md:` "don't add features beyond what the task
+- **`beebox/AGENTS.md:` "don't add features beyond what the task
   requires."** The plan removes a scheme and a flag; it must not grow the
   surface. The NOT-in-scope section is the gate.
-- **`beebox/CLAUDE.md:` "Keep source and docs generic — never hardcode
+- **`beebox/AGENTS.md:` "Keep source and docs generic — never hardcode
   personal names."** Instruction rewrites use "the user"/"the box"; the
   migration touches real boxes (ledger-copy) but writes no personal names into
   shared source.

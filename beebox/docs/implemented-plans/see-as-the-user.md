@@ -32,7 +32,7 @@ box pages; nothing outside the box is ever captured at the agent's request.
   pipeline shared by both entry points; one pending-request primitive shared
   with last-audio), **#12 The maintainer is usually an agent**
   (discoverability is part of the design).
-- `beebox/CLAUDE.md` — validation contract; "don't add features beyond
+- `beebox/AGENTS.md` — validation contract; "don't add features beyond
   what the task requires" (bounds the NOT-in-scope list).
 - `beebox/code-style.md` — mechanical rules (no default parameters,
   max 2 positional params, no `any`).

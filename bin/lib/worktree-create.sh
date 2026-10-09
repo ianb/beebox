@@ -81,20 +81,20 @@ wt_create_mount_private_issues() {
   "$pi" mount "$1" >/dev/null || true
 }
 
-# Regenerate the gitignored AGENTS.md and .agents/skills mirrors (Codex CLI
-# reads AGENTS.md where Claude reads CLAUDE.md/rules and scans .agents/skills —
-# see bin/generate-agents-md.ts). Runs on BOTH the fresh and resume paths: a
-# resume must refresh mirrors against whatever Claude docs and skills now say,
+# Regenerate the gitignored .agents/skills, .codex/agents, and .codex/hooks.json
+# mirrors (Codex scans .agents/skills; Claude reads .claude/ — see
+# bin/generate-codex-mirrors.ts). Runs on BOTH the fresh and resume paths: a
+# resume must refresh mirrors against whatever Claude skills and agents now say,
 # and skipping it would leave a hand-launched `codex` in a resumed worktree on
-# stale guidance. tsx lives at the worktree ROOT node_modules (hoisted
+# stale skills. tsx lives at the worktree ROOT node_modules (hoisted
 # workspace — beebox/node_modules/.bin has no tsx). Non-blocking: a
 # Claude session doesn't need the mirrors, and the codex launcher path
-# re-verifies the root AGENTS.md exists before exec'ing codex.
-wt_create_generate_agents_md() {
-  local wt="$1" name="$2" tsx="$1/node_modules/.bin/tsx"
+# re-verifies every skill and agent mirror before starting codex.
+wt_create_generate_codex_mirrors() {
+  local wt="$1" tsx="$1/node_modules/.bin/tsx"
   if [ -x "$tsx" ]; then
-    (exec 198>&-; "$tsx" "$wt/bin/generate-agents-md.ts" --worktree-name "$name" "$wt") \
-      || echo "[worktree-create] WARNING: generate-agents-md failed; codex sessions will lack mirrors" >&2
+    (exec 198>&-; "$tsx" "$wt/bin/generate-codex-mirrors.ts" "$wt") \
+      || echo "[worktree-create] WARNING: generate-codex-mirrors failed; codex sessions will lack mirrors" >&2
   else
     echo "[worktree-create] WARNING: no tsx at $tsx; skipping Codex mirror generation" >&2
   fi
@@ -193,7 +193,7 @@ wt_create_resume_ready() {
     || echo "[worktree-create] WARNING: exhibit-store mount failed; session runs without exhibits/" >&2
   wt_comments_mount "$worktree_path" \
     || echo "[worktree-create] WARNING: comment-store mount failed; use bin/comments instead of comments/" >&2
-  wt_create_generate_agents_md "$worktree_path" "$name"
+  wt_create_generate_codex_mirrors "$worktree_path"
 }
 
 wt_create_locked() {
@@ -431,9 +431,9 @@ wt_create_locked() {
   echo "[worktree-create] running pnpm install (workspace-wide)..." >&2
   (exec 198>&-; cd "$worktree_path" && pnpm install >&2)
 
-  # 3.5. AGENTS.md and skill mirrors for Codex sessions (see above — this needs
+  # 3.5. Skill and agent mirrors for Codex sessions (see above — this needs
   # the install for tsx).
-  wt_create_generate_agents_md "$worktree_path" "$NAME"
+  wt_create_generate_codex_mirrors "$worktree_path"
 
   # 4. Write .claude/settings.local.json so the agent's shell sees the worktree's
   # own bbx on PATH. Per-worktree because each worktree has its own absolute

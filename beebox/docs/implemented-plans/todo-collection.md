@@ -85,7 +85,7 @@ type can define.
   `docs/unimplemented-plans/query-cards.md:9-13`: *"too complex, too
   contextless"* … *"a standalone query card is a selection with no *here*"*.
   This plan adds no stored query vocabulary. Every query has a `here`.
-- **`beebox/CLAUDE.md`**: *"`bbx` is the box agent's surface, not yours"* and
+- **`beebox/AGENTS.md`**: *"`bbx` is the box agent's surface, not yours"* and
   *"End users get neither; they live in the web UI and chat."* The list is the
   user surface. `bbx query` is agent plumbing.
 - **`beebox/code-style.md`**: no `as`; exhaustive dispatch with `assertNever`;
@@ -129,7 +129,7 @@ boxholder's explicit request, and says so in the budget above.
   (`:143-158`) would then merge their text. No doctest covers either nesting
   shape today.
 - **Ref parsing** — `src/shared/ref-path.ts:100` (moved to `beebox/src/shared/ref-path/core.ts`) `parseRef` and `:176`
-  `resolveRefPath`. **Reused** for item references; per `beebox/CLAUDE.md`, no
+  `resolveRefPath`. **Reused** for item references; per `beebox/AGENTS.md`, no
   other ref parsing is written. `src/core/body-refs.ts:110` `extractBodyLinks`
   scans whole-body Markdown source and cannot be aimed at one todo, so Track 2
   reads `link` nodes from the AST it is already walking.

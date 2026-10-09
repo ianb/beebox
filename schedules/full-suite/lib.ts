@@ -357,7 +357,7 @@ export interface Culprit {
   excerpt: string;
 }
 
-/** `issues/bugs/YYYY-MM-DD-<slug>.md`, per issues/CLAUDE.md. */
+/** `issues/bugs/YYYY-MM-DD-<slug>.md`, per issues/AGENTS.md. */
 export function issuePath(input: { date: string; landing: Landing }): string {
   const short = input.landing.commit.slice(0, 8);
   const workstream = workstreamOf(input.landing.subject);

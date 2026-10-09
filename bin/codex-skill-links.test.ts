@@ -1,6 +1,6 @@
 // Tests for bin/lib/codex-skill-links.ts (the `.agents/skills/` half of
-// bin/generate-agents-md.ts) against a throwaway git repo. Split from
-// generate-agents-md.test.ts with the code, which outgrew one file.
+// bin/generate-codex-mirrors.ts) against a throwaway git repo. Split from
+// generate-codex-mirrors.test.ts with the code, which outgrew one file.
 //   node --import tsx --test bin/codex-skill-links.test.ts
 
 import assert from "node:assert/strict";
@@ -123,7 +123,7 @@ test("prunes entries with no tracked skill source; keeps git-tracked ones", () =
   // survive), and a real directory holding a git-tracked file (protected).
   put(".agents/skills/skill-creator/references/x.md", "stale copy\n");
   put(".agents/skills/stray.md", "stray\n");
-  const outside = mkdtempSync(join(tmpdir(), "generate-agents-md-outside-"));
+  const outside = mkdtempSync(join(tmpdir(), "generate-codex-mirrors-outside-"));
   writeFileSync(join(outside, "keep.txt"), "keep\n");
   symlinkSync(outside, join(skills, "foreign"), "dir");
   put(".agents/skills/tracked-native/SKILL.md", "tracked\n");
@@ -147,7 +147,7 @@ test("prunes entries with no tracked skill source; keeps git-tracked ones", () =
 });
 
 test("writes nothing when .agents/skills resolves outside the checkout", () => {
-  const elsewhere = mkdtempSync(join(tmpdir(), "generate-agents-md-elsewhere-"));
+  const elsewhere = mkdtempSync(join(tmpdir(), "generate-codex-mirrors-elsewhere-"));
   writeFileSync(join(elsewhere, "precious.txt"), "precious\n");
   const skills = join(repo, ".agents", "skills");
   rmSync(skills, { recursive: true, force: true });

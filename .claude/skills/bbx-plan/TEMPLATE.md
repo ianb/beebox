@@ -34,7 +34,7 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 <!-- Which of these apply, and the specific principles findings will trace to:
      - beebox/docs/engineering-principles.md — the twelve principles, by number
-     - beebox/CLAUDE.md — conventions, validation contract, "no features
+     - beebox/AGENTS.md — conventions, validation contract, "no features
        beyond the task"
      - beebox/code-style.md — the mechanical rules
      - the most recent shipped precedent for this kind of work (denser than docs)

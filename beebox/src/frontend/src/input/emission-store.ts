@@ -25,7 +25,7 @@
  * object/array reference), an unrelated notification yields the same
  * reference for that slice and React bails out of re-rendering — the
  * mechanism the composer-text keystroke-isolation invariant
- * (components/chat/CLAUDE.md) depends on.
+ * (components/chat/AGENTS.md) depends on.
  */
 
 import type { SelectionItem } from "../lib/selection/serialize";

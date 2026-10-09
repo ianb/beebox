@@ -51,7 +51,7 @@ creates a second chat.
   path survives only where the engine forces it.
 - #11 (enforcement beats convention) — a lint restriction keeps call site five
   from appearing.
-- `beebox/CLAUDE.md` — no features beyond what the task requires.
+- `beebox/AGENTS.md` — no features beyond what the task requires.
 - `code-style.md` exhaustiveness — `switch-exhaustiveness-check` with
   `considerDefaultExhaustiveForUnions: false`.
 - Precedent: `docs/implemented-plans/emission-model.md` — durable acceptance and

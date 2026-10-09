@@ -18,7 +18,7 @@ Use `.doc.card`, remove `bbx feedback`, teach the agent to write a card, adapt t
 
 ## Stated preferences this plan trades against
 
-The boxholder chose doc cards and written context over automatic transcript capture in this session. This preserves the request to make feedback a location, at the cost of verbatim automatic context. `beebox/CLAUDE.md` says *“Work only on the requested problem”*; collection cadence and a general observation taxonomy remain outside this work.
+The boxholder chose doc cards and written context over automatic transcript capture in this session. This preserves the request to make feedback a location, at the cost of verbatim automatic context. `beebox/AGENTS.md` says *“Work only on the requested problem”*; collection cadence and a general observation taxonomy remain outside this work.
 
 ## What already exists
 

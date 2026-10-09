@@ -26,7 +26,7 @@ The developer wants one short reply that means all of this:
 There is no written rule for what deserves a question. Fragments exist:
 the root `CLAUDE.md` asks for confirmation before hard-to-reverse or
 outward-facing actions, the finish skill says not to ask "close-out vs
-checkpoint" because the answer changes nothing, and `beebox/CLAUDE.md` says
+checkpoint" because the answer changes nothing, and `beebox/AGENTS.md` says
 to ask at a login wall. Nothing states the general test. A first draft to
 start from:
 

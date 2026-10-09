@@ -31,11 +31,11 @@ Questions surface become configuration instead of code.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:100`: *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:100`: *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* — the vocabulary reuses shapes
   already shipped (landmark `expand`, view-card params) rather than
   inventing parallel ones.
-- `beebox/CLAUDE.md:103`: *"HTTP endpoints go in tRPC by default."*
+- `beebox/AGENTS.md:103`: *"HTTP endpoints go in tRPC by default."*
   — resolution is a tRPC procedure.
 - `beebox/code-style.md` — strict types, no `any`, custom errors,
   max-2 positional params.

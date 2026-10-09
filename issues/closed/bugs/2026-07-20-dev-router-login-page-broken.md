@@ -34,7 +34,7 @@ and no login assets to 404 (problem 1). It's loopback-bind-gated and the hub
 binds `127.0.0.1`; a hub in open mode advertises `x-bbx-hub-auth: off` to its box
 children, so no per-box env is needed. An explicit `BBX_ALLOW_UNAUTHENTICATED`
 value is respected. Covered by two tests in `bin/router-core.test.ts`;
-documented in `bin/CLAUDE.md`.
+documented in `bin/AGENTS.md`.
 
 **Boxholder flag / decision:** the two "make login actually work behind the
 prefix" directions (base-path-aware login build; router routing hub-root

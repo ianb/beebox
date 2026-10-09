@@ -2,7 +2,7 @@
 // barrier, and the file-level acquire/release it drives. Run with:
 //   node --import tsx --test bin/test-locks.test.ts
 //
-// A `.test.ts` rather than the doctest bin/CLAUDE.md prescribes, because the
+// A `.test.ts` rather than the doctest bin/AGENTS.md prescribes, because the
 // semaphore sits in front of `pnpm test` itself: a doctest of it would have to
 // run under the very suite whose slots it hands out.
 

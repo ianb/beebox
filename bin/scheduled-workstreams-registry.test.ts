@@ -5,7 +5,7 @@
  *
  *   node --import tsx --test bin/scheduled-workstreams-registry.test.ts
  *
- * Note on tier: bin/CLAUDE.md prefers doctests for new `bin/` tooling. The
+ * Note on tier: bin/AGENTS.md prefers doctests for new `bin/` tooling. The
  * plan names the Node test runner for this plan's chunks ("Tests first …
  * bin/schedules.test.ts", "`workstreams-app/src/router/router-*.test.ts`-style tests for the routing
  * table"), and `pnpm test` at the root runs exactly `bin/*.test.ts`.

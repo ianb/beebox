@@ -75,7 +75,7 @@ pnpm --dir beebox exec tap test/core/box/file-watcher.doctest.md
 
 Passes on `main` at `01791868b` in isolation (14/14, 1.7s). The blamed landing
 `def4435c` touched only `bin/commit-blocklist-check.ts`, `bin/router-config.ts`,
-`bin/CLAUDE.md` and two `test/dev/` doctests — nothing near the watcher. The
+`bin/AGENTS.md` and two `test/dev/` doctests — nothing near the watcher. The
 alert store shows this file "red at baseline" in eight consecutive hourly runs
 from 2026-08-30 23:54 through 2026-09-01 01:44, every failure `Timed out
 waiting for fs.watch delivery in store` (a 5s budget), and then absent from the

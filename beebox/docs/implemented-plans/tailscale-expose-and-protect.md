@@ -45,7 +45,7 @@ cross-review finding 1; this constraint shapes Tracks A–C.)
   through schemas at the subprocess boundary), and exhaustiveness (the status
   state machine enumerates every `BackendState`, with no permissive
   fallthrough — the exact bug class in OpenClaw's CVE, see Prior art).
-- `beebox/CLAUDE.md` — "don't add features beyond what the task
+- `beebox/AGENTS.md` — "don't add features beyond what the task
   requires" (bounds Track D and the NOT-in-scope list) and the validation
   contract.
 - `beebox/code-style.md` — no default parameters, injected-deps
@@ -415,7 +415,7 @@ rollout after Tracks B–C.
 ### Track E — research disposition
 
 **What.** Add the missing disposition entry to
-`research/openclaw-hermes/README.md` per `research/CLAUDE.md`: **adapt** the
+`research/openclaw-hermes/README.md` per `research/AGENTS.md`: **adapt** the
 post-fix whois-cross-check pattern (recorded as the documented future option
 for Tailscale-SSO, mapping tailnet identity onto existing `~/.beebox-auth.json`
 records + `allowedEmails` only); **reject** header-trust-as-primary-auth and

@@ -1,6 +1,6 @@
 # Google NotebookLM (Gemini Notebook) review
 
-*2026-10-09. A snapshot of Google's Gemini Notebook, renamed from NotebookLM on 2026-07-16, from public material only: Google help pages, blog and Workspace Updates posts, Cloud docs, press, Hacker News, and third-party guides. No account was used and none was created. The Bee Box side was read from `worktree-notebooklm-research` at `cbffca9a9`. Method: three web-research subagents (Sonnet) and one code-reading subagent (Opus), with the rename, the June 2026 upgrade, the usage-limit change, the enterprise API and the Gemini multi-speaker TTS contract re-checked against Google's own pages by the driver. Research corpora get no cross-model review ([research/CLAUDE.md](../CLAUDE.md)).*
+*2026-10-09. A snapshot of Google's Gemini Notebook, renamed from NotebookLM on 2026-07-16, from public material only: Google help pages, blog and Workspace Updates posts, Cloud docs, press, Hacker News, and third-party guides. No account was used and none was created. The Bee Box side was read from `worktree-notebooklm-research` at `cbffca9a9`. Method: three web-research subagents (Sonnet) and one code-reading subagent (Opus), with the rename, the June 2026 upgrade, the usage-limit change, the enterprise API and the Gemini multi-speaker TTS contract re-checked against Google's own pages by the driver. Research corpora get no cross-model review ([research/AGENTS.md](../AGENTS.md)).*
 
 | Doc | Question | Outcome |
 |---|---|---|

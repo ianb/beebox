@@ -50,7 +50,7 @@ prominence and must not become a way to spell it).
   and never silent*): a malformed colour is cosmetic. It must not refuse to
   load the card, and it must not be silently swallowed either — that is what
   the lint-warning channel is for.
-- **beebox/CLAUDE.md**, *keep source and docs generic*: the mark is authored per
+- **beebox/AGENTS.md**, *keep source and docs generic*: the mark is authored per
   box; nothing here ships a default emoji vocabulary.
 - **Most recent shipped precedent**: the sidecar work of 2026-09-05 (compact
   pinned tabs, the persisted strip) — this plan extends that surface and inherits

@@ -118,7 +118,7 @@ which would be worse than the button it replaced.
 - **Cost and failure modes** — a single connection carrying both directions is
   elegant until it drops.
 
-Land findings in `research/` per `research/CLAUDE.md`, then link back with a
+Land findings in `research/` per `research/AGENTS.md`, then link back with a
 recommendation.
 
 Sources: [Introducing Flux](https://deepgram.com/learn/introducing-flux-conversational-speech-recognition),

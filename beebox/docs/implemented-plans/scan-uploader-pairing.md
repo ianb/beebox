@@ -43,7 +43,7 @@ The pairing protocol moved to NOT in scope with its revisit trigger.
   of the principle); **#8 one way to do each thing** (reuse the existing
   `scanTokens` tRPC procedures and the settings-section component shape;
   do NOT build a second credential-exchange protocol).
-- `beebox/CLAUDE.md`: "don't add features beyond what the task
+- `beebox/AGENTS.md`: "don't add features beyond what the task
   requires" (the dropped pairing protocol is this rule applied); "Keep
   source and docs generic — never hardcode personal names."
 - `beebox/code-style.md`: Result-vs-throw at boundaries; no default

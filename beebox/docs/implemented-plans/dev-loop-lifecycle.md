@@ -207,7 +207,7 @@ better than the router guessing.
 ## Testing
 
 - Track 1: shell-level, in `beebox/test/dev/*.doctest.md` per
-  `bin/CLAUDE.md` — the `EXIT` trap firing on early-exit paths, lock
+  `bin/AGENTS.md` — the `EXIT` trap firing on early-exit paths, lock
   acquisition/skip, stale-lock reclaim, and the `INTERRUPTED` trap.
 - Track 2: unit tests for `classifyAgentBrowser`'s new age dimension, including
   the unvouched-and-young case that is the reported bug.
@@ -215,7 +215,7 @@ better than the router guessing.
   pure transition-table coverage) holds the injected-effects harness — clock,
   spawner, timers — which is what a throttled staleness check needs to be tested
   deterministically. Extending that suite rather than writing a doctest is the
-  right call despite `bin/CLAUDE.md`'s default.
+  right call despite `bin/AGENTS.md`'s default.
 
 ## Sequencing
 

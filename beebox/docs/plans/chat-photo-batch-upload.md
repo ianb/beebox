@@ -48,13 +48,13 @@ client-side with no server-side trace at all.
   exact bug being fixed), **#6 right-sized defensiveness**, **#8 one way to do
   each thing** (web and iOS must apply the *same* threshold rule, not two
   drifting ones), **#12 the maintainer is usually an agent**.
-- [`beebox/CLAUDE.md`](../../CLAUDE.md):101 — *"Read before writing. Don't
+- [`beebox/AGENTS.md`](../../AGENTS.md):101 — *"Read before writing. Don't
   guess file formats, XML structures, or API shapes."* — and its rule that raw
   Fastify routes are for *"file upload/download"*, which is where the bulk
   endpoints already live.
 - [`code-style.md`](../../code-style.md) — no default parameters, max 2
   positional params, custom error classes, the `as`-is-`unsafe` rule.
-- [`ios-app/CLAUDE.md`](../../../ios-app/CLAUDE.md) — *"do not route ordinary
+- [`ios-app/AGENTS.md`](../../../ios-app/AGENTS.md) — *"do not route ordinary
   composer attachments through capture staging"*, and the bridge-discipline rule
   that *"Native must submit an `Emission` to the visible web session; it must not
   call chat-send APIs behind the webview."* This plan honors both: batched
@@ -109,7 +109,7 @@ clients. Nothing in the bulk pipeline is rebuilt.
 - **iOS capture upload coordinator** —
   `BeeBox/Services/CaptureUploadCoordinator.swift`, background `URLSession`
   upload tasks with per-item retry. **Reused as the structural model, not
-  extended** — per `ios-app/CLAUDE.md` composer attachments must not go through
+  extended** — per `ios-app/AGENTS.md` composer attachments must not go through
   capture staging, and the bulk plan §4 explicitly chose a *dedicated* uploader
   over a parameterized capture coordinator.
 - **The failure the briefing attributed to this work is already fixed
@@ -506,7 +506,7 @@ actually land with Tracks 1 and 3 — item 4 above is the parity matrix and audi
   boxholder confirms on a real phone: select 70+ camera-roll photos → they upload
   with visible progress → the chat receives one `<upload>` message carrying the
   typed text → the batch card lists 70 received and none missing. Per
-  `ios-app/CLAUDE.md`, a simulator-only pass **must not** be described as device
+  `ios-app/AGENTS.md`, a simulator-only pass **must not** be described as device
   verification.
 - **Ships as one unit** from this worktree when the boxholder says so; commits
   land per-chunk inside the worktree.

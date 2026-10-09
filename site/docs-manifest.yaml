@@ -1,6 +1,6 @@
 # Promoted agent-docs: repo files admitted into the public /docs/ corpus.
 # Adding a line here IS the vetting act — see beebox/docs/plans/agent-docs.md
-# ("The scrub gate") and site/CLAUDE.md's "Agent docs" section. The loader
+# ("The scrub gate") and site/AGENTS.md's "Agent docs" section. The loader
 # hard-codes the admissible source prefixes and publish directories; an entry
 # outside either fails the build regardless of what's written here.
 
@@ -186,11 +186,11 @@
   publish: dev/technologies.md
   description: "The stack, and every outside AI service the system can be configured to use."
 
-- source: CLAUDE.md
+- source: AGENTS.md
   publish: dev/monorepo-claude-md.md
   description: "The monorepo's working instructions: where to work, how to work safely in a checkout, how to verify, record, and land."
 
-- source: beebox/CLAUDE.md
+- source: beebox/AGENTS.md
   publish: dev/claude-md.md
   description: "The engine's agent instruction file: what the maintainer's own coding agent reads first."
 
