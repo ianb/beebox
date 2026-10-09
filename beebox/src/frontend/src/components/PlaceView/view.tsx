@@ -120,11 +120,11 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
         section.kind === "links" ? (
           <div key={section.tier} className="flex flex-col gap-2" data-place-section={section.tier}>
             <SectionHeading>{TIER_HEADINGS[section.tier]}</SectionHeading>
-            <LandmarkLinks links={section.links} boxSlug={boxSlug} onNavigate={onNavigate} compact />
+            <LandmarkLinks links={section.links} boxSlug={boxSlug} onNavigate={onNavigate} compact hidePath />
           </div>
         ) : (
           <div key={`group:${section.group.label}`} data-place-section="group">
-            <LandmarkGroup group={section.group} boxSlug={boxSlug} onNavigate={onNavigate} compact defaultOpen />
+            <LandmarkGroup group={section.group} boxSlug={boxSlug} onNavigate={onNavigate} compact defaultOpen hidePath />
           </div>
         ),
       )}
