@@ -33,22 +33,22 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.290`, Codex `0.160.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.292`, Codex `0.160.1` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.293` (SDK), `2.1.293` (Claude Code), `0.161.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.295` (SDK), `2.1.295` (Claude Code), `0.162.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved on 2026-10-07 — Agent SDK
-  to `0.3.290`, Codex to `0.160.1`. Next: `0.3.291` (settles
-  2026-10-08T03:33Z), `0.3.292` (2026-10-08T17:14Z; **check its
-  background-command wait first**, see its entry), `0.3.293`
-  (2026-10-09T17:21Z), Codex `0.161.0` (2026-10-09T15:58Z). Open:
-  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md` (now
-  also covers Haiku 5.5).
+- **Current recommendation:** Agent SDK moved to `0.3.292` on 2026-10-08
+  (taking `0.3.291`); Codex stays at `0.160.1`. Next: Codex `0.161.0`
+  (settles 2026-10-09T15:58Z), `0.3.293` (2026-10-09T17:21Z), `0.3.294` /
+  `0.3.295` (2026-10-10, 16:36Z / 18:22Z), Codex `0.162.0`
+  (2026-10-10T18:55Z). Open:
+  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md` (also
+  covers Haiku 5.5).
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -74,6 +74,54 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### Codex 0.162.0 — pending (published 2026-10-08T18:55Z, ~5h at this turn)
+
+- **Linux sandbox hardening** (startup with several denied files; writable
+  sandbox-construction executables rejected; ripgrep config can no longer weaken
+  deny-glob masks). Checked: beebox runs box Codex chats with
+  `danger-full-access` (`beebox/src/services/codex-sdk-session/sandbox.ts`), so
+  no sandbox is in play and this is not act-now.
+- New TUI threads respect server model and reasoning-summary defaults (explicit
+  overrides kept); `apply_patch` preserves CRLF; `Retry-After` honored. New:
+  managed Git worktree tools (behind the worktrees feature), `/copy`, clickable
+  URLs, custom-provider web access and remote compaction. None used by beebox.
+- **Action:** Settled path; takeable 2026-10-10T18:55Z.
+- **Sources:** [rust-v0.162.0](https://github.com/openai/codex/releases/tag/rust-v0.162.0)
+
+### 0.3.295 / Claude Code 2.1.295 — pending (published 2026-10-08T18:22Z, ~6h at this turn)
+
+- **SDK, verify when taken:** option values are now sent in the same argument
+  as their flag (`--flag=value`). beebox passes options only through `query()`,
+  so the steering probe and suite cover it.
+- **SDK fixes:** streamed assistant text keeps its `citations`;
+  `rate_limit_event` `allowed_warning` now carries the overage fields, and
+  `SDKRateLimitInfo` gains `overageEnabled` (beebox's quota classification reads
+  limit messages; no change needed). MCP-related caps and fixes do not apply
+  (no MCP servers in beebox runtime).
+- **Claude Code, RUNTIME:** `claude -p` prints on stderr what a run is waiting
+  for when it stays open after its last turn (pairs with 0.3.292's
+  background-command wait); a skill's `allowed-tools` and `effort` no longer
+  dropped in `-p` runs; `--tools` now applies to built-in tools that register
+  after launch.
+- **Claude Code, HARNESS:** new `onFailure: "block"` for command/HTTP hooks (a
+  hook that cannot start or times out blocks the action) — an option for this
+  repo's guard hooks, not adopted here; subagents in their own linked worktree
+  no longer see the parent session's git branch/status; an async SessionStart
+  hook's unchanged context is no longer re-added on each resume;
+  `CLAUDE_ENV_FILE` variables now reach Bash after `/resume` or `/branch`;
+  background sessions no longer inherit `FORCE_COLOR=3`; a file is no longer
+  treated as read after a `cat` that printed nothing, and Edit no longer trusts
+  an unchanged mtime.
+- **Action:** Settled path; takeable 2026-10-10T18:22Z.
+- **Sources:** [SDK 0.3.295](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03295), [Claude Code 2.1.295](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21295)
+
+### 0.3.294 / Claude Code 2.1.294 — pending, nothing relevant (published 2026-10-08T16:36Z)
+
+SDK parity-only. 2.1.294 fixes `prompt` and `agent` hooks written as
+instructions allowing what they should block, and how Stop/SubagentStop prompt
+hooks are judged. Checked: `.claude/` defines no `prompt` or `agent` hooks.
+Settled path; takeable 2026-10-10T16:36Z.
 
 ### Codex 0.161.0 — pending (published 2026-10-07T15:58Z, ~8h at this turn)
 
@@ -117,7 +165,7 @@ executor fix). beebox runs Codex on macOS and Linux and configures no remote
 stdio MCP servers. Applied 2026-10-07; the deploy gate passed on `codex-cli 0.160.1`.
 - **Sources:** [rust-v0.160.1](https://github.com/openai/codex/releases/tag/rust-v0.160.1)
 
-### 0.3.292 / Claude Code 2.1.292 — pending (published 2026-10-06T17:14Z, ~6h at this turn); check before applying
+### 0.3.292 / Claude Code 2.1.292 — APPLIED 2026-10-08 (published 2026-10-06T17:14Z); background-command check passed
 
 - **RUNTIME, behavior change to check before applying:** *"Fixed one-shot
   `claude -p` and Agent SDK runs stopping a background command 5 seconds after
@@ -141,10 +189,11 @@ stdio MCP servers. Applied 2026-10-07; the deploy gate passed on `codex-cli 0.16
   servers). `claude -p` / SDK first turn no longer waits on HTTP/SSE MCP
   `resources/list`. Security fixes (UNC paths, 8.3 names, sandbox read-deny
   re-points, mid-read link swaps) are Windows-only or sandbox-only here.
-- **Action:** Settled path from 2026-10-08T17:14Z, after the check above.
+- **Check result (2026-10-08):** `consumeAgentStream` (`beebox/src/core/agent/invoke/stream.ts`) waits at most `STREAM_END_GRACE_MS` (10 s) after the `result` message, then terminates the CLI. An agent run cannot be held open by a background command.
+- **Action:** Applied 2026-10-08 on the settled path. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.292, `pnpm -C beebox test` (11,731 pass, 2 skip).
 - **Sources:** [SDK 0.3.292](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03292), [Claude Code 2.1.292](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21292)
 
-### 0.3.291 / Claude Code 2.1.291 — pending (published 2026-10-06T03:33Z); probed, not act-now
+### 0.3.291 / Claude Code 2.1.291 — APPLIED 2026-10-08 with 0.3.292 (published 2026-10-06T03:33Z); probed, not act-now
 
 SDK parity-only. Claude Code 2.1.291 fixes two regressions: cloud sessions
 dropping permission answers (2.1.290; not beebox), and *"the last messages of a
@@ -153,7 +202,7 @@ beebox resumes chat and agent sessions from the `.jsonl` transcript, so this
 was probed on the current pin: five SDK sessions (`query()` to completion, as
 `runAgent` does) all kept their final reply in the transcript. The normal
 SDK end path is not affected; an interrupted or aborted session was not probed.
-- **Action:** Settled path; takeable 2026-10-08T03:33Z.
+- **Action:** Applied 2026-10-08 with `0.3.292`.
 
 ### 0.3.290 / Claude Code 2.1.290 — APPLIED 2026-10-07 (published 2026-10-05T18:15Z); re-read 2026-10-06
 
