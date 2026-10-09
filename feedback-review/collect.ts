@@ -29,12 +29,8 @@ const REMOTE_BOXES_DIR = "/home/beebox/boxes";
 
 const DIRECTORY_DOCS = new Set(["AGENTS.md", "CLAUDE.md", "MAP.md", "README.md"]);
 
-function isLegacyFeedbackFilename(name: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-.+\.md$/.test(name);
-}
-
 function isFeedbackFilename(name: string): boolean {
-  return name.endsWith(".doc.card") || isLegacyFeedbackFilename(name);
+  return name.endsWith(".doc.card");
 }
 
 function isCandidate(name: string): boolean {
@@ -258,10 +254,6 @@ function resolveRemoteFile(item: FeedbackFile): boolean {
 }
 
 function resolveFile(item: FeedbackFile): boolean {
-  if (isLegacyFeedbackFilename(path.basename(item.filePath))) {
-    console.error(`Cannot resolve legacy feedback ${item.filePath}: apply the feedback-to-doc-cards box migration first.`);
-    return false;
-  }
   if (item.remoteSshTarget) {
     return resolveRemoteFile(item);
   }

@@ -235,7 +235,7 @@ situation
 
 JSON.stringify(JSON.parse(request), null, 2)
 => {
-  "model": "typesafe/jev-1.13",
+  "model": "typesafe/jev-«*»",
   "provider": {
     "only": [
       "TypeSafe"

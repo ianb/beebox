@@ -88,14 +88,6 @@ navResponse.headers.get("location")
 => /auth/login?returnTo=%2Ftest1%2Fbrowse%2Fsome-card
 ```
 
-## Unauthenticated API request gets a bare 401 (no redirect)
-
-```ts continue
-const apiResponse = await fetch(`${hubBase}/test1/api/trpc/health.check`);
-apiResponse.status
-=> 401
-```
-
 ## A mobile bearer token proxies without a browser session
 
 ```ts continue
@@ -112,46 +104,45 @@ JSON.stringify({
 => {"status":200,"url":"/test1/chat?nativeComposer=1","email":null,"secret":null}
 ```
 
-## A bogus mobile credential does NOT get past the hub
+## Unauthenticated and bogus API requests get a bare 401 (no redirect, no enumeration)
+
+An unauthenticated API request gets a bare 401, not a redirect.
 
 The hub's mobile gate used to be presence-only: any `Authorization: Bearer `
 prefix, verified by nobody, was enough to skip the auth wall and be proxied to
-the box — which meant an unauthenticated caller could cold-start a stopped box
+the box, which meant an unauthenticated caller could cold-start a stopped box
 (known risk S1). The gate now verifies, so a syntactically valid but
 cryptographically worthless credential is rejected here rather than downstream.
 
-```ts continue
-const bogusBearer = await fetch(`${hubBase}/test1/api/trpc/health.check`, {
-  headers: { authorization: "Bearer not-a-real-device-token" },
-});
-bogusBearer.status
-=> 401
-
-const bogusCookie = await fetch(`${hubBase}/test1/api/trpc/health.check`, {
-  headers: { cookie: "bbx_mobile=forged.deadbeef" },
-});
-bogusCookie.status
-=> 401
-```
-
-## A bogus credential on a REAL slug is indistinguishable from an UNKNOWN slug (no enumeration)
-
-The rejection must not leak whether the slug exists: a valid-but-live slug with a
-worthless token and a slug that was never configured have to answer identically,
-and neither may cold-start a box. Because the auth wall rejects BEFORE the
-endpoint is resolved, both return the same bare 401 — an attacker learns nothing
-about which slugs are real, and pays no box-wake for the guess.
+The rejection must not leak whether the slug exists: a valid-but-live slug with
+a worthless token and a slug that was never configured have to answer
+identically, and neither may cold-start a box. Because the auth wall rejects
+BEFORE the endpoint is resolved, all of them return the same bare 401. An
+attacker learns nothing about which slugs are real, and pays no box-wake for
+the guess.
 
 ```ts continue
-const bogusOnRealSlug = await fetch(`${hubBase}/test1/api/trpc/health.check`, {
-  headers: { authorization: "Bearer worthless" },
-});
-const bogusOnUnknownSlug = await fetch(`${hubBase}/nosuchbox/api/trpc/health.check`, {
-  headers: { authorization: "Bearer worthless" },
-});
-const unauthedUnknownSlug = await fetch(`${hubBase}/nosuchbox/api/trpc/health.check`);
-JSON.stringify([bogusOnRealSlug.status, bogusOnUnknownSlug.status, unauthedUnknownSlug.status])
-=> [401,401,401]
+const trpcPath = "/api/trpc/health.check";
+const refused = [
+  ["no credential, real slug", "test1", {}],
+  ["bogus bearer, real slug", "test1", { authorization: "Bearer not-a-real-device-token" }],
+  ["bogus bbx_mobile cookie, real slug", "test1", { cookie: "bbx_mobile=forged.deadbeef" }],
+  ["worthless bearer, real slug", "test1", { authorization: "Bearer worthless" }],
+  ["worthless bearer, unknown slug", "nosuchbox", { authorization: "Bearer worthless" }],
+  ["no credential, unknown slug", "nosuchbox", {}],
+];
+const refusedLines = [];
+for (const [label, slug, headers] of refused) {
+  refusedLines.push(`${label} → ${(await fetch(`${hubBase}/${slug}${trpcPath}`, { headers })).status}`);
+}
+refusedLines.join("\n")
+=>
+no credential, real slug → 401
+bogus bearer, real slug → 401
+bogus bbx_mobile cookie, real slug → 401
+worthless bearer, real slug → 401
+worthless bearer, unknown slug → 401
+no credential, unknown slug → 401
 ```
 
 A real `bbx_mobile` cookie does pass — this is the credential a WebSocket

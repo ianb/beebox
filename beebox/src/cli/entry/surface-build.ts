@@ -16,7 +16,7 @@
  */
 
 import { Command } from "commander";
-import { SURFACE, type SurfaceEntry } from "../surface-data.js";
+import { SURFACE, type SurfaceEntry } from "./surface-data.js";
 import { invariant } from "../../shared/invariant.js";
 import { VERB_COMMANDS } from "../commands.js";
 

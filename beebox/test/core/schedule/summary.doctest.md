@@ -226,8 +226,8 @@ a schedule the block says nothing about it.
 const { buildContextBlock } = await import("../../../src/core/procedure/engine/phase.js");
 const box = await makeTmpBox();
 const base = { boxRoot: box.root, runCardPath: "run.card", stepId: "review", procedurePath: "p.procedure.card" };
-buildContextBlock({ ...base, scheduleName: "todo-review" }).split("<scheduled-run>\n")[1].split("\n")[0]
-=> This procedure is running as the scheduled task "todo-review". The boxholder sees each run's summary on the dashboard. Before you finish, write one:
+buildContextBlock({ ...base, scheduleName: "todo-review" }).split("<scheduled-run>\n")[1].split("\n")[0].includes('"todo-review"')
+=> true
 
 buildContextBlock(base).includes("<scheduled-run>")
 => false

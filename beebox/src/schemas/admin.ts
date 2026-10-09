@@ -13,6 +13,5 @@ export const AdminSchema = cardSchema("admin", {
 The one Admin card lives at ${SYSTEM_CARD_PATHS.admin}. It is an address for
 host-wide management controls, not authorization; backend permission checks
 remain authoritative. Its editable body holds notes, never passwords, tokens,
-grants, OAuth results, or live form state. Restore a removed card from Git or
-with the declared engine migration.`,
+grants, OAuth results, or live form state. Restore a removed card from Git.`,
 });

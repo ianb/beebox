@@ -13,6 +13,7 @@ session, and the applied-span id on the husk turns even that into a no-op.
 ```ts setup
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import {
+  MAX_REVIEW_ATTEMPTS,
   emptyReviewState,
   emptySessionState,
   loadReviewState,
@@ -21,6 +22,10 @@ import {
   removeSessionFromReview,
 } from "../../../../src/core/chat/review/state.js";
 import { withChatReviewLock } from "../../../../src/core/chat/review/lock.js";
+import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
+import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
+import { appendFile, mkdir, utimes, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 
 async function errorName(fn: () => Promise<unknown>): Promise<string> {
   try { await fn(); return "no error"; }
@@ -123,6 +128,54 @@ const removed = await removeSessionFromReview(box.root, "gone");
 const after = await loadReviewState(box.root);
 JSON.stringify({ removed: removed !== null, lastRunAt: after.lastRunAt, sessions: Object.keys(after.sessions) })
 => {"removed":true,"lastRunAt":"2026-08-07T12:00:00Z","sessions":["keep"]}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Give-up is per span: a session that exhausted span A is retried on span B
+
+A session whose reviewer fails `MAX_REVIEW_ATTEMPTS` times on one span is
+skipped for that span (`exhausted`), but new material is a new span, so the
+same session is retried. A few nights of provider trouble cannot retire a
+session for good. This drives `runChatReview` with a reviewer that records its
+calls.
+
+```ts
+const box = await makeTmpBox();
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+const NOW = new Date("2026-07-28T12:00:00Z");
+const sessionId = "5b1f3c1e-2d4a-4e6b-8c7d-9e0f1a2b3c4d";
+const entry = (uuid: string) => JSON.stringify({
+  type: "user", uuid, timestamp: "2026-07-28T03:00:00Z",
+  message: { role: "user", content: [{ type: "text", text: "a".repeat(4000) }] },
+});
+const logPath = getSessionLogPath(box.root, sessionId);
+const backdate = () => utimes(logPath, new Date("2026-07-28T07:00:00Z"), new Date("2026-07-28T07:00:00Z"));
+await box.write(`_content/chat/web/2026-07-28_span.chat.card`, `---\nsession: ${sessionId}\n---\n\n`);
+await mkdir(dirname(logPath), { recursive: true });
+await writeFile(logPath, [entry("a1"), entry("a2")].join("\n") + "\n");
+await backdate();
+
+let reviewerCalls = 0;
+const failing = {
+  async review() { reviewerCalls += 1; throw new Error("model unavailable"); },
+  async title() { throw new Error("unexpected title call"); },
+};
+const run = () => runChatReview(box.root, { reviewer: failing, maxSessions: 10, now: NOW, ownerEmail: null });
+
+// MAX_REVIEW_ATTEMPTS failing runs on span A, then one more that must skip it.
+for (let i = 0; i < MAX_REVIEW_ATTEMPTS; i++) await run();
+const skipped = await run();
+const onSpanA = { calls: reviewerCalls, exhausted: skipped.exhausted };
+
+// New material makes a new span: the reviewer is asked again.
+await appendFile(logPath, entry("b1") + "\n");
+await backdate();
+const retried = await run();
+JSON.stringify({ onSpanA, onSpanB: { calls: reviewerCalls, exhausted: retried.exhausted, failures: retried.reviewerFailures } })
+=> {"onSpanA":{"calls":2,"exhausted":1},"onSpanB":{"calls":3,"exhausted":0,"failures":1}}
 ```
 
 ```ts cleanup

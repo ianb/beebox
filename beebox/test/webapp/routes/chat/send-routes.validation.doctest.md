@@ -11,164 +11,90 @@ field, never a specific message), and unchanged success shapes
 ```ts setup
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { resolveChannel } from "../../../../src/webapp/routes/chat/helpers.js";
+
+const ctx = await makeTestServer();
+const image = (img: Record<string, unknown>) => ({ message: "hi", session: "new", images: [img] });
+
+// One line per request: "<status> <error>".
+async function send(payload: Record<string, unknown>): Promise<string> {
+  const res = await ctx.request({ method: "POST", url: "/api/chat/send", payload });
+  return `${res.statusCode} ${res.body.error}`;
+}
 ```
 
-Missing `message` returns 400:
+```ts teardown
+await ctx.cleanup();
+```
+
+A missing or empty `message`, or a missing `session`, is a 400. An empty-string
+`message` is rejected too, not just an absent field:
 
 ```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({ method: "POST", url: "/api/chat/send", payload: { session: "new" } });
-`${res.statusCode} ${res.body.error}`
-=> 400 message is required
-```
-
-```ts cleanup
-await ctx.cleanup();
+[
+  await send({ session: "new" }),
+  await send({ message: "", session: "new" }),
+  await send({ message: "hi" }),
+].join("\n")
+=>
+400 message is required
+400 message is required
+400 session is required (id or 'new')
 ```
 
 A concrete session whose local transcript is missing is a named 410, never an
 SDK resume attempt or generic 500:
 
 ```ts
-const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
   url: "/api/chat/send",
   payload: { message: "hi", session: "55555555-5555-4555-8555-555555555555" },
 });
-JSON.stringify({ status: res.statusCode, code: res.body.code })
-=> {"status":410,"code":"CHAT_SESSION_UNAVAILABLE"}
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-Missing `session` returns 400:
-
-```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({ method: "POST", url: "/api/chat/send", payload: { message: "hi" } });
-`${res.statusCode} ${res.body.error}`
-=> 400 session is required (id or 'new')
-```
-
-```ts cleanup
-await ctx.cleanup();
+({ status: res.statusCode, code: res.body.code })
+=> { status: 410, code: "CHAT_SESSION_UNAVAILABLE" }
 ```
 
 An exact target must name an existing resumable chat. It never creates the
-requested id through the registry fallback:
+requested id through the registry fallback, and the `new` sentinel is invalid
+in exact mode:
 
 ```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "POST",
-  url: "/api/chat/send",
-  payload: { message: "https://example.com", session: "missing-session", exactSession: true },
-});
-`${res.statusCode} ${res.body.error}`
-=> 404 Chat session is no longer available: missing-session
+[
+  await send({ message: "https://example.com", session: "missing-session", exactSession: true }),
+  await send({ message: "https://example.com", session: "new", exactSession: true }),
+].join("\n")
+=>
+404 Chat session is no longer available: missing-session
+400 exactSession requires an existing session id
 ```
 
-```ts cleanup
-await ctx.cleanup();
-```
-
-The `new` sentinel is also invalid in exact mode:
+A malformed image attachment (wrong field types, or an empty `dataBase64`
+that would otherwise ride to the SDK boundary's empty-`data` error) is
+rejected at the zod parse boundary, before reaching `validateImages`'s
+content-level checks:
 
 ```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "POST",
-  url: "/api/chat/send",
-  payload: { message: "https://example.com", session: "new", exactSession: true },
-});
-`${res.statusCode} ${res.body.error}`
-=> 400 exactSession requires an existing session id
+[
+  (await send(image({ id: "not-a-number", mimeType: "image/png", dataBase64: "abc" }))).split(" ")[0],
+  (await send(image({ id: 1, mimeType: "image/png", dataBase64: "" }))).split(" ")[0],
+].join(" ")
+=> 400 400
 ```
 
-```ts cleanup
-await ctx.cleanup();
-```
-
-An empty-string `message` is also rejected (not just an absent field):
+An otherwise well-shaped image passes the zod boundary and reaches the
+content-level check, which accepts only the four media types the Anthropic API
+accepts. An `image/*` type the API rejects (`image/avif`, which the browser
+image encoder used to produce for pasted photos; `image/svg+xml`; `image/bmp`)
+gets a clean 400 instead of failing opaquely downstream:
 
 ```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({ method: "POST", url: "/api/chat/send", payload: { message: "", session: "new" } });
-`${res.statusCode} ${res.body.error}`
-=> 400 message is required
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-A malformed image attachment (wrong field types) is rejected at the same
-parse boundary, before ever reaching `validateImages`'s content-level checks:
-
-```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "POST",
-  url: "/api/chat/send",
-  payload: { message: "hi", session: "new", images: [{ id: "not-a-number", mimeType: "image/png", dataBase64: "abc" }] },
-});
-res.statusCode
-=> 400
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-An unsupported mime type on an otherwise well-shaped image is still caught
-by `validateImages`'s content-level check (structural shape is fine, so it
-passes the zod boundary and reaches the business rule):
-
-```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "POST",
-  url: "/api/chat/send",
-  payload: { message: "hi", session: "new", images: [{ id: 1, mimeType: "application/pdf", dataBase64: "abc" }] },
-});
-`${res.statusCode} ${res.body.error}`
-=> 400 unsupported mime type: application/pdf (accepted: image/jpeg, image/png, image/gif, image/webp)
-```
-
-The check accepts only the four media types the Anthropic API accepts, so an
-`image/*` type the API rejects — `image/avif` (which the browser image encoder
-used to produce for pasted photos), `image/svg+xml`, `image/bmp` — is now
-rejected here with a clean 400 instead of failing opaquely downstream:
-
-```ts continue
-const avif = await ctx.request({
-  method: "POST",
-  url: "/api/chat/send",
-  payload: { message: "hi", session: "new", images: [{ id: 1, mimeType: "image/avif", dataBase64: "abc" }] },
-});
-`${avif.statusCode} ${avif.body.error}`
-=> 400 unsupported mime type: image/avif (accepted: image/jpeg, image/png, image/gif, image/webp)
-```
-
-An empty `dataBase64` is a malformed attachment, rejected at the zod parse
-boundary (`.min(1)`) so it can't ride to the SDK boundary's empty-`data`
-error:
-
-```ts continue
-const empty = await ctx.request({
-  method: "POST",
-  url: "/api/chat/send",
-  payload: { message: "hi", session: "new", images: [{ id: 1, mimeType: "image/png", dataBase64: "" }] },
-});
-empty.statusCode
-=> 400
-```
-
-```ts cleanup
-await ctx.cleanup();
+[
+  await send(image({ id: 1, mimeType: "application/pdf", dataBase64: "abc" })),
+  await send(image({ id: 1, mimeType: "image/avif", dataBase64: "abc" })),
+].join("\n")
+=>
+400 unsupported mime type: application/pdf (accepted: image/jpeg, image/png, image/gif, image/webp)
+400 unsupported mime type: image/avif (accepted: image/jpeg, image/png, image/gif, image/webp)
 ```
 
 ## `channel`
@@ -199,35 +125,13 @@ before the field existed, and nothing at all when there is no UA to read:
 ```
 
 The value is a closed union at the parse boundary, so an unknown surface is a
-400 rather than a made-up attribute in the agent's context:
+400 rather than a made-up attribute in the agent's context. Invalid ambient
+attention is likewise rejected before session resolution:
 
 ```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "POST",
-  url: "/api/chat/send",
-  payload: { message: "hi", session: "new", channel: "smoke-signal" },
-});
-res.statusCode
-=> 400
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-Invalid ambient attention is rejected before session resolution:
-
-```ts
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "POST", url: "/api/chat/send",
-  payload: { message: "hi", session: "new", viewContext: { surface: "card", focusedRef: "https://example.com/?token=private", transcript: "hidden" } },
-});
-res.statusCode
-=> 400
-```
-
-```ts cleanup
-await ctx.cleanup();
+[
+  await send({ message: "hi", session: "new", channel: "smoke-signal" }),
+  await send({ message: "hi", session: "new", viewContext: { surface: "card", focusedRef: "https://example.com/?token=private", transcript: "hidden" } }),
+].map((line) => line.split(" ")[0]).join(" ")
+=> 400 400
 ```

@@ -80,36 +80,40 @@ function collectBusEvents(eventBus) {
   eventBus.subscribe({ listener: (e) => { if (e.event === "voice-recording-status") events.push(e.data); } });
   return events;
 }
+
+// Stage a recording of `bytes` PCM bytes, request HQ, run the job against the
+// scripted transcriber at `now`, and return the persisted `voice.hq` state,
+// the bus events, and the box (for the example's `cleanup`).
+async function runJob({ bytes, script, now, requestedAt, service }) {
+  const box = await makeTmpBox({ git: true });
+  await configureBox(box);
+  const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes });
+  await requestHq(box, session, { requestedAt, service });
+  const eventBus = createEventBus(box.root);
+  const events = collectBusEvents(eventBus);
+  const transcribePiece = typeof script === "function" ? script : scriptedTranscribe(script);
+  await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock: fakeClock(now ?? "2026-09-10T18:01:00.000Z"), transcribePiece });
+  const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+  return { box, hq: after.voice.hq, events };
+}
 ```
 
 ## A transient failure retries the same piece, then succeeds
 
+A `voice-recording-status` event is emitted for each transition: the first
+attempt, the retry, the second attempt, and the final ready state.
+
 ```ts
-const box = await makeTmpBox({ git: true });
-await configureBox(box);
-const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes: 1000 });
-await requestHq(box, session);
-const eventBus = createEventBus(box.root);
-const events = collectBusEvents(eventBus);
-
-const transcribePiece = scriptedTranscribe([
-  { error: new ScriptedTranscriptionError("network blip", { permanent: undefined }) },
-  { text: "hello world" },
-]);
-const clock = fakeClock("2026-09-10T18:01:00.000Z");
-await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribePiece });
-
-const after = await readStagingSession({ boxRoot: box.root, id: session.id });
-JSON.stringify(after.voice.hq)
-=> {"state":"ready","result":{"text":"hello world","diarized":false,"service":"whisper","pieces":1}}
-```
-
-A `voice-recording-status` event was emitted for each transition — the first
-attempt, the retry, the second attempt, and the final ready state:
-
-```ts continue
-JSON.stringify({ count: events.length, last: events[events.length - 1].hq.state })
-=> {"count":4,"last":"ready"}
+const run = await runJob({
+  bytes: 1000,
+  script: [
+    { error: new ScriptedTranscriptionError("network blip", { permanent: undefined }) },
+    { text: "hello world" },
+  ],
+});
+const { box } = run;
+({ hq: run.hq, events: run.events.length, last: run.events[run.events.length - 1].hq.state })
+=> { hq: { state: "ready", result: { text: "hello world", diarized: false, service: "whisper", pieces: 1 } }, events: 4, last: "ready" }
 ```
 
 ```ts cleanup
@@ -123,24 +127,18 @@ two pieces; a 413 on the first attempt halves to 150 s and restarts from
 piece 1 — three pieces at the new length, all of which succeed:
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await configureBox(box);
-const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes: 12_000_000 });
-await requestHq(box, session);
-const eventBus = createEventBus(box.root);
-
-const transcribePiece = scriptedTranscribe([
-  { error: new ScriptedTranscriptionError("too long", { permanent: false, status: 413 }) },
-  { text: "one" },
-  { text: "two" },
-  { text: "three" },
-]);
-const clock = fakeClock("2026-09-10T18:01:00.000Z");
-await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribePiece });
-
-const after = await readStagingSession({ boxRoot: box.root, id: session.id });
-JSON.stringify(after.voice.hq)
-=> {"state":"ready","result":{"text":"one\n\ntwo\n\nthree","diarized":false,"service":"whisper","pieces":3}}
+const run = await runJob({
+  bytes: 12_000_000,
+  script: [
+    { error: new ScriptedTranscriptionError("too long", { permanent: false, status: 413 }) },
+    { text: "one" },
+    { text: "two" },
+    { text: "three" },
+  ],
+});
+const { box } = run;
+run.hq
+=> { state: "ready", result: { text: "one\n\ntwo\n\nthree", diarized: false, service: "whisper", pieces: 3 } }
 ```
 
 ```ts cleanup
@@ -150,21 +148,13 @@ await box.cleanup();
 ## A permanent failure fails the recording; the HQ badge gets a reason
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await configureBox(box);
-const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes: 1000 });
-await requestHq(box, session);
-const eventBus = createEventBus(box.root);
-
-const transcribePiece = scriptedTranscribe([
-  { error: new ScriptedTranscriptionError("missing key", { permanent: true, status: 401, body: "no api key" }) },
-]);
-const clock = fakeClock("2026-09-10T18:01:00.000Z");
-await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribePiece });
-
-const after = await readStagingSession({ boxRoot: box.root, id: session.id });
-JSON.stringify(after.voice.hq)
-=> {"state":"failed","failure":{"kind":"permanent","code":"http_401","message":"missing key","upstreamStatus":401,"upstreamBody":"no api key"}}
+const run = await runJob({
+  bytes: 1000,
+  script: [{ error: new ScriptedTranscriptionError("missing key", { permanent: true, status: 401, body: "no api key" }) }],
+});
+const { box } = run;
+run.hq
+=> { state: "failed", failure: { kind: "permanent", code: "http_401", message: "missing key", upstreamStatus: 401, upstreamBody: "no api key" } }
 ```
 
 ```ts cleanup
@@ -178,19 +168,15 @@ first one on a resumed job — so a request that's already 25h old expires
 without ever calling `transcribePiece`:
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await configureBox(box);
-const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes: 1000 });
-await requestHq(box, session, { requestedAt: "2026-09-09T18:00:00.000Z" });
-const eventBus = createEventBus(box.root);
-
-const transcribePiece = async () => { throw new Error("must not be called"); };
-const clock = fakeClock("2026-09-10T19:00:01.000Z"); // 25h + 1s later
-await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribePiece });
-
-const after = await readStagingSession({ boxRoot: box.root, id: session.id });
-JSON.stringify(after.voice.hq)
-=> {"state":"failed","failure":{"kind":"exhausted","code":"hq_retry_exhausted","message":"HQ transcription retry window elapsed"}}
+const run = await runJob({
+  bytes: 1000,
+  requestedAt: "2026-09-09T18:00:00.000Z",
+  now: "2026-09-10T19:00:01.000Z", // 25h + 1s later
+  script: async () => { throw new Error("must not be called"); },
+});
+const { box } = run;
+run.hq
+=> { state: "failed", failure: { kind: "exhausted", code: "hq_retry_exhausted", message: "HQ transcription retry window elapsed" } }
 ```
 
 ```ts cleanup
@@ -203,23 +189,18 @@ await box.cleanup();
 With no prior transcript, speaker letters start at A and advance per piece:
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await configureBox(box);
-const session = await stageVoiceRecording(box, { targetSessionId: "chat-diarized", bytes: 20_000_000 });
-await requestHq(box, session, { service: "mai-diarized" });
-const eventBus = createEventBus(box.root);
-
-const transcribePiece = scriptedTranscribe([
-  { text: "Speaker 0: hi", diarized: true },
-  { text: "Speaker 0: there", diarized: true },
-  { text: "Speaker 0: bye", diarized: true },
-]);
-const clock = fakeClock("2026-09-10T18:01:00.000Z");
-await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribePiece });
-
-const after = await readStagingSession({ boxRoot: box.root, id: session.id });
-JSON.stringify(after.voice.hq)
-=> {"state":"ready","result":{"text":"— part 1 of 3 —\nSpeaker 1A: hi\n\n— part 2 of 3 —\nSpeaker 1B: there\n\n— part 3 of 3 —\nSpeaker 1C: bye","diarized":true,"service":"mai-diarized","pieces":3}}
+const run = await runJob({
+  bytes: 20_000_000,
+  service: "mai-diarized",
+  script: [
+    { text: "Speaker 0: hi", diarized: true },
+    { text: "Speaker 0: there", diarized: true },
+    { text: "Speaker 0: bye", diarized: true },
+  ],
+});
+const { box } = run;
+run.hq
+=> { state: "ready", result: { text: "— part 1 of 3 —\nSpeaker 1A: hi\n\n— part 2 of 3 —\nSpeaker 1B: there\n\n— part 3 of 3 —\nSpeaker 1C: bye", diarized: true, service: "mai-diarized", pieces: 3 } }
 ```
 
 ```ts cleanup

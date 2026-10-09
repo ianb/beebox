@@ -164,6 +164,12 @@ export function quarantineUnreadablePendingSends(storage: PendingSendsStorage, l
   return createPendingSendsStore(storage, location);
 }
 
+/** The browser's storage quota refusal (a large attachment can exceed the ~5 MB session quota). */
+function isQuotaError(cause: unknown): boolean {
+  return typeof DOMException !== "undefined" && cause instanceof DOMException
+    && (cause.name === "QuotaExceededError" || cause.name === "NS_ERROR_DOM_QUOTA_REACHED");
+}
+
 export function createPendingSendsStore(storage: PendingSendsStorage, { boxSlug, storageScope }: PendingSendsLocation): PendingSendsStore {
   const key = `bbx-pending-web-sends:${storageScope}`;
   let rows: readonly PendingConversationSend[] = loadRows(storage, { key, boxSlug });
@@ -194,6 +200,19 @@ export function createPendingSendsStore(storage: PendingSendsStorage, { boxSlug,
       try { commit(finished); } catch (_writeCause) { publish(finished); }
     }
   }
+  /**
+   * A quota refusal must not block the send itself: the row stays in this
+   * page's memory and the message goes out, but it has no copy that survives
+   * a reload. Any other storage failure still fails closed.
+   */
+  function commitStaged(next: readonly PendingConversationSend[]): void {
+    try { commit(next); }
+    catch (cause) {
+      if (!isQuotaError(cause)) throw cause;
+      console.warn("Pending send is too large to save for reload recovery; sending without a recovery copy.", cause);
+      publish(next);
+    }
+  }
   function stage(emission: Emission, opts: { binding: SendBinding; status: "preparing" | "pending"; recordingId?: string }): void {
       const { binding, status } = opts;
       if (binding.boxSlug !== boxSlug) throw new PendingSendBoxError();
@@ -211,12 +230,12 @@ export function createPendingSendsStore(storage: PendingSendsStorage, { boxSlug,
           || JSON.stringify(existing.binding) !== JSON.stringify(normalized.binding)) {
           throw new PendingSendChangedError();
         }
-        commit(rows.map((row) => row === existing ? normalized : row));
+        commitStaged(rows.map((row) => row === existing ? normalized : row));
         return;
       }
       // Parse a serialized copy so later mutations to caller-owned arrays cannot
       // alter the already-bound completed send. Validation also matches reload.
-      commit([...rows, normalized]);
+      commitStaged([...rows, normalized]);
   }
   return {
     getSnapshot: () => rows,

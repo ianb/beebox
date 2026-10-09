@@ -82,17 +82,18 @@ A reservation carries the chosen model, and refuses a non-Claude engine —
 ```ts continue
 const store = new ChatReservationStore(() => Date.now());
 const coined = randomUUID();
+const chosenModel = "claude-fable-5-1";
 const reserved = await reserveChatSession({
   boxRoot: box.root,
   store,
   sessionId: coined,
   contextDir: null,
   seedFeatures: {},
-  model: "claude-fable-5-1",
+  model: chosenModel,
 });
 
-JSON.stringify([reserved.kind, store.get(coined)?.model, store.get(coined)?.engine])
-=> ["reserved","claude-fable-5-1","claude"]
+JSON.stringify([reserved.kind, store.get(coined)?.model === chosenModel, store.get(coined)?.engine])
+=> ["reserved",true,"claude"]
 
 const codexReserved = await reserveChatSession({
   boxRoot: box.root,

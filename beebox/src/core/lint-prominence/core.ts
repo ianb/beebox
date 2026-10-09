@@ -23,9 +23,9 @@ import { LANDMARK_CONTENT_DIR } from "../landmark/root-dir.js";
 import { redundantLinkWarnings } from "./redundant.js";
 
 /** More than this many entry points in one directory is a warning. */
-export const MAX_ENTRY_POINTS_PER_DIR = 2;
+const MAX_ENTRY_POINTS_PER_DIR = 2;
 /** More than this many primary cards in one directory is a warning. */
-export const MAX_PRIMARY_PER_DIR = 7;
+const MAX_PRIMARY_PER_DIR = 7;
 
 export interface ProminenceLintWarning {
   /** Box-root-relative path the warning applies to (a card, or a directory for the two budget rules). */

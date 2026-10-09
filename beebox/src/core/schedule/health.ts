@@ -206,7 +206,7 @@ interface MissedOccurrence {
  * nothing is pending — including for on-wakeup-only tasks, which have
  * no intrinsic cadence to be overdue against.
  */
-export function findMissedOccurrence(
+function findMissedOccurrence(
   parsed: ParsedScheduledScript,
   { lastRun, cardMtime, now }: { lastRun: string | null; cardMtime: Date; now: Date },
 ): MissedOccurrence | null {

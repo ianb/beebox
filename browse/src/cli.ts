@@ -157,8 +157,10 @@ async function main(): Promise<number> {
   }
 
   if (sub === "screenshot") {
-    const invocation = parseScreenshotArgs(args.slice(1));
-    const result = await runEnhancedScreenshot(invocation, ctx);
+    const parsed = parseScreenshotArgs(args.slice(1));
+    if (parsed.kind === "help") { process.stdout.write(SCREENSHOT_USAGE); return 0; }
+    if (parsed.kind === "error") { process.stderr.write(`browse screenshot: ${parsed.message}\n${SCREENSHOT_USAGE}`); return 2; }
+    const result = await runEnhancedScreenshot(parsed.invocation, ctx);
     process.stdout.write(`${result.imagePath}\n`);
     process.stdout.write(`url: ${result.sidecar.url}\n`);
     process.stdout.write(`title: ${result.sidecar.title}\n`);
@@ -185,24 +187,40 @@ async function main(): Promise<number> {
   return runPassthrough(args);
 }
 
-function parseScreenshotArgs(args: readonly string[]): ScreenshotInvocation {
+export const SCREENSHOT_USAGE = `usage: browse screenshot [--full|-f] [--annotate] [--slug <name>] [path]
+  path defaults to an indexed file under the worktree's screenshot dir;
+  a URL/title sidecar is written beside it.
+`;
+
+export type ScreenshotParse =
+  | { kind: "run"; invocation: ScreenshotInvocation }
+  | { kind: "help" }
+  | { kind: "error"; message: string };
+
+/** Pure: flags, one optional output path. A dash-leading token is never a path. */
+export function parseScreenshotArgs(args: readonly string[]): ScreenshotParse {
   let full = false;
   let annotate = false;
   let slug = "shot";
   const positional: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
+    if (a === undefined) continue;
+    if (a === "--help" || a === "-h") return { kind: "help" };
     if (a === "--full" || a === "-f") { full = true; continue; }
     if (a === "--annotate") { annotate = true; continue; }
     if (a === "--slug") {
       const next = args[i + 1];
-      if (next !== undefined) { slug = next; i++; }
+      if (next === undefined || next.startsWith("-")) return { kind: "error", message: "--slug needs a name" };
+      slug = next; i++;
       continue;
     }
-    if (a !== undefined) positional.push(a);
+    if (a.startsWith("-")) return { kind: "error", message: `unknown option ${a}` };
+    positional.push(a);
   }
-  const path = positional.length > 0 ? positional[positional.length - 1] : null;
-  return { path: path !== undefined ? path : null, slug, full, annotate };
+  if (positional.length > 1) return { kind: "error", message: `one output path at most, got ${positional.length}` };
+  const path = positional[0] ?? null;
+  return { kind: "run", invocation: { path, slug, full, annotate } };
 }
 
 main().then((code) => {

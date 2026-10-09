@@ -38,14 +38,6 @@ export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-
 export type LandmarkOrderType = z.infer<typeof LandmarkOrder>;
 
 /**
- * The iconic mark for a landmark. Either an emoji / short text, or an
- * image (`{ src }`, a box path with a leading `/`; a path relative to the
- * landmark's directory still resolves).
- */
-const LandmarkSymbol = z.union([z.string(), z.object({ src: z.string() })]);
-export type LandmarkSymbolData = z.infer<typeof LandmarkSymbol>;
-
-/**
  * A pinned reference to another card. `ref` is a box path with a leading `/`
  * (a path relative to the landmark's directory still resolves), validated
  * like any other ref. `label` is an optional display label (falls back to
@@ -128,7 +120,6 @@ export const STOCK_ROOT_OPENERS: readonly string[] = [
  */
 export const LandmarkNavigation = z.object({
   label: z.string().optional(),
-  symbol: LandmarkSymbol.optional(),
   links: z.array(LandmarkLink).optional(),
   expand: z.array(LandmarkExpand).optional(),
   "chat-app": LandmarkChatApp.optional(),
@@ -167,8 +158,7 @@ const landmarkFields = {
  *
  * `symbol` is the exception, admitted explicitly: it is a global field
  * (`GLOBAL_CARD_FIELDS`) that these readers must see, because a landmark's mark
- * now lives there rather than under `navigation`. Stripping it is what would
- * make a migrated landmark render as no symbol at all.
+ * lives there. Stripping it would make every landmark render as no symbol.
  *
  * `prominence` is admitted the same way: a written value describes the
  * *place*, not the file (the file itself is background by type — see
@@ -226,8 +216,6 @@ navigation:
 \`\`\`
 
 **Openers.** \`navigation.openers\` are one-line first moves, phrased from the person's side, shown as buttons on an unstarted chat in this place (and on the place's page); clicking one sends it as their message. Each is a single non-blank line of at most 120 characters. A place with no \`openers\` shows none; it does not inherit the root's. When you build a place for a recurring job, you may add up to three for its standing first moves ("Log a new loan"). The root landmark's onboarding openers fade as the box is used: remove them once the person knows what the box is for. Openers never go on a briefing card.
-
-An older landmark may carry its mark nested as \`navigation.symbol\` (a bare string, or \`{ src }\`) — the shape before the mark became a field every card can have. That form is still read, so a card written that way is not a mistake and does not need fixing by hand; the \`landmark-symbol\` migration moves it. Write new marks at the top level, as above.
 
 \`ref\` and \`symbol.src\` are **box paths — write them with a leading \`/\`, from the box root**. A path relative to the landmark's directory still resolves (older landmarks are written that way), but new ones use the box path. \`expand\` \`query\` globs are the exception: they are queries, not refs, and always run relative to the landmark's directory.
 
@@ -293,10 +281,6 @@ export function parseLandmarkFields(content: string): LandmarkFields | null {
 /**
  * Template for `bbx create` — produces a starter landmark with a `navigation`
  * role for the label and the card's own `symbol` group for the mark.
- *
- * A new landmark is never born in the legacy shape: `navigation.symbol` is
- * read for boxes that predate the `landmark-symbol` migration, and written by
- * nothing (docs/plans/card-symbol.md).
  *
  * Pass `symbol` for an emoji/text mark, or `symbolSrc` for an image box path
  * (leading `/`; a landmark-dir-relative path also resolves). `openers` become

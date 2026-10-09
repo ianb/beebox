@@ -159,15 +159,25 @@ JSON.stringify({ s1: s1.isRunning(), s2: s2.isRunning() })
 => {"s1":true,"s2":true}
 ```
 
-A pin's release function is idempotent — double-release does not corrupt the
-refcount (an underflow would log an invariant violation):
+A pin's release function is idempotent: releasing the same pin twice must not
+cancel a second pin on the same entry. s2 holds two pins; the first is released
+twice, and the cap still skips s2 and evicts unpinned s1 instead:
 
 ```ts continue
-releaseS2();
-releaseS2();
+const releaseS2b = registry.pin("s2");
 releaseS1();
-"released"
-=> released
+releaseS2();
+releaseS2();
+registry.enforceLiveCap("s3");
+await tick();
+JSON.stringify({ s1: s1.isRunning(), s2: s2.isRunning() })
+=> {"s1":false,"s2":true}
+```
+
+Release the second pin so later examples start unpinned:
+
+```ts continue
+releaseS2b();
 ```
 
 ## Idle sweep drops untouched entries, pins protect

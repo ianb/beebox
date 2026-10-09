@@ -37,7 +37,7 @@ export interface FakeFooService extends FooService {
 ## Design rules
 
 - **Always named-params, never positional.** Even for one-input fakes — call `createFakeFoo({ items: [...] })`, not `createFakeFoo([...])`. Keeps call sites uniform and lets you add fields later without breaking callers.
-- **Extend the interface as tests need it.** If tests want to inspect what happened (sent messages, fetched URLs, written files), declare a `FakeFooService extends FooService` with the relevant fields. If tests don't need it, returning the bare `FooService` is fine — `withCallLog(svc)` covers generic "did this method get called" observation without baking state into the fake.
+- **Extend the interface as tests need it.** If tests want to inspect what happened (sent messages, fetched URLs, written files), declare a `FakeFooService extends FooService` with the relevant fields. If tests don't need it, returning the bare `FooService` is fine.
 - **Provide a `describe(): string` method on the fake.** Returns a multi-line, stable, human-readable snapshot of the fake's current state. Doctests then `print(fake.describe())` and match. Avoids per-test `JSON.stringify` boilerplate and makes failures legible.
 - **Fakes are domain-specific**, not generic `Partial<T>` overrides. Constructor params reflect what the service needs to function (e.g. `createFakeTelegram({ username: "bot" })` requires a username because `getMe()` returns it).
 - **Optional `| undefined`** — all service fields in the `Services` container and in route option interfaces must use `?: T | undefined` (not just `?: T`) because of `exactOptionalPropertyTypes` in tsconfig.
@@ -57,19 +57,6 @@ export interface Services {
 ```
 
 In production, services are `undefined` and routes/connectors create real implementations from config. In tests, fakes are injected via `makeTestServer({ services: { telegram: createFakeTelegram(...) } })`.
-
-## Call logging
-
-`withCallLog(service)` wraps any service, recording every method call in a `.callLog` array. Only used on fakes in tests — it's how we verify interactions:
-
-```typescript
-const tg = withCallLog(createFakeTelegram({ username: "bot" }));
-await tg.sendMessage(123, { text: "hello" });
-printCalls(tg.callLog);
-// => sendMessage(123, {"text":"hello"})
-```
-
-`printCalls(log, methodName?)` formats the log for doctest assertions. Pass a method name to filter.
 
 ## Threading through callers
 
@@ -118,7 +105,6 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `openai-embeddings.ts` | `EmbeddingsService` | `createEmbeddingsService(route)` | `createFakeEmbeddings({ failTimes? })` |
 | `google-drive/core.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
 | `claude-chat/core.ts` | `ChatBackend` | `createChatBackend()` | `createFakeChatBackend()` |
-| `call-log.ts` | — | — | `withCallLog(service)`, `printCalls(log)` |
 | `container.ts` | `Services` container | — | — (the container only; import each factory from its own file) |
 
 `claude-chat/core.ts` is not part of the `Services` container — chat session code imports the backend directly. It wraps `@anthropic-ai/claude-agent-sdk`'s `query()` so the chat session can push user content and iterate SDK message events; the fake gives tests a scriptable handle (no SDK call, no subprocess). Still follows the interface/real/fake pattern.

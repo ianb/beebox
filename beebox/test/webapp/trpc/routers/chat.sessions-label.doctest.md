@@ -122,7 +122,7 @@ const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
 await box.write("_content/recipes/Recipes.landmark.card",
-  "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n\n");
+  "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n\n");
 
 await seedTranscript(box.path("_content/recipes"), "inrecipe1", "what can I make with lentils");
 await seedTranscript(box.root, "rootchat1", "how's my week looking");

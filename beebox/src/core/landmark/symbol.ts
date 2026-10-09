@@ -23,32 +23,19 @@
  * reason).
  */
 
-import type { LandmarkNavigationData } from "../../schemas/landmark.js";
 import { readCardSymbol, type CardSymbolData } from "../../shared/card-symbol.js";
 
 /**
- * The card's own `symbol` (the global field) wins; a landmark that still
- * carries the legacy nested `navigation.symbol` falls back to it, so a box
- * mid-migration renders correctly from either shape. The legacy branch goes
- * away once no box carries the nested form.
- *
- * Either shape yields the same pair: a text glyph, or an image as the
+ * The card's own top-level `symbol`: a text glyph, or an image as the
  * box-relative path the frontend hands to `/api/files`. A src that escapes the
  * box resolves to no symbol at all — a visible absence beats emitting a path
  * outside the box.
  */
 export function readLandmarkSymbol(
-  fields: { symbol?: CardSymbolData | undefined; navigation?: LandmarkNavigationData | undefined } | undefined,
+  fields: { symbol?: CardSymbolData | undefined } | undefined,
   { landmarkPath }: { landmarkPath: string },
 ): CardSymbolData | null {
   const own = fields?.symbol;
-  if (own !== undefined) return readCardSymbol(own, { cardPath: landmarkPath });
-  // Legacy: a landmark that has not been through the `landmark-symbol`
-  // migration still carries its mark nested in the navigation role, as the
-  // `string | { src }` union that predates the universal field. Remove this
-  // branch when every box has migrated — see the deferred cleanup issue.
-  const legacy = fields?.navigation?.symbol;
-  if (legacy === undefined) return null;
-  const group = typeof legacy === "string" ? { glyph: legacy } : { src: legacy.src };
-  return readCardSymbol(group, { cardPath: landmarkPath });
+  if (own === undefined) return null;
+  return readCardSymbol(own, { cardPath: landmarkPath });
 }

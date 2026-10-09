@@ -11,7 +11,6 @@ non-answer (`inconclusive`), where nothing found a defect at all.
 import {
   conciseScheduleError,
   evaluateTaskHealth,
-  findMissedOccurrence,
 } from "../../../src/core/schedule/health.js";
 import { parseScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
 import { normalizeScriptState } from "../../../src/core/schedule/state.js";
@@ -38,6 +37,24 @@ function evaluate({ fields = {}, state = {}, now = NOW, cardMtime = new Date("20
     engineWaitReason,
   });
 }
+
+const statusOf = (args) => evaluate(args).status;
+
+/** State of a task whose last attempt, at `when`, ended `result` ("success" also sets lastSuccess). */
+const ran = (when, result = "success") =>
+  result === "success" ? { lastRun: when, lastResult: "success", lastSuccess: when } : { lastRun: when, lastResult: result };
+
+const dailyAt5 = { cron: "0 5 * * *" };
+const hourly = { cron: "0 * * * *" };
+
+/** Three failures since a success on 06-06. */
+const failingState = {
+  lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom",
+  lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 3,
+};
+
+/** A scheduler daemon that ticked 30s before NOW. */
+const scheduler = { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 };
 ```
 
 ## Healthy task
@@ -45,11 +62,7 @@ function evaluate({ fields = {}, state = {}, now = NOW, cardMtime = new Date("20
 A daily 5am cron that last ran (and succeeded) this morning:
 
 ```ts
-const h = evaluate({
-  fields: { cron: "0 5 * * *" },
-  state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "success" },
-});
-h.status
+statusOf({ fields: dailyAt5, state: ran("2026-06-09T05:00:10Z") })
 => ok
 ```
 
@@ -59,42 +72,30 @@ Any consecutive failure marks the task failing; the count and the
 last-success divergence ride along:
 
 ```ts
-const h = evaluate({
-  fields: { cron: "0 5 * * *" },
-  state: {
-    lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom",
-    lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 3,
-  },
-});
+const h = evaluate({ fields: dailyAt5, state: failingState });
 print(`${h.status}, failures: ${h.consecutiveFailures}, lastSuccess: ${h.lastSuccess}`);
 => failing, failures: 3, lastSuccess: 2026-06-06T05:00:10Z
 ```
 
 A task that lost a race for the box's git index never got to run its own work.
 It still counts as failing — four in a row is worth hearing about — but the
-reason says what actually happened, so nobody debugs a task that is fine:
+reason says what actually happened, so nobody debugs a task that is fine. An
+ordinary failure carries no such reason — the distinction is the point:
 
 ```ts
-const h = evaluate({
-  fields: { cron: "0 5 * * *" },
+const contended = evaluate({
+  fields: dailyAt5,
   state: {
     lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", consecutiveFailures: 4,
     lastError: "Command failed with exit code 1\nstderr:\nError: fatal: Unable to create '/box/.git/index.lock': File exists.",
   },
 });
-h.reason
-=> contended — another process held the box's git index
-```
-
-An ordinary failure carries no such reason — the distinction is the point:
-
-```ts
-const h = evaluate({
-  fields: { cron: "0 5 * * *" },
+const ordinary = evaluate({
+  fields: dailyAt5,
   state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom", consecutiveFailures: 1 },
 });
-JSON.stringify(h.reason ?? null)
-=> null
+({ contended: contended.reason, ordinary: ordinary.reason ?? null })
+=> { contended: "contended — another process held the box's git index", ordinary: null }
 ```
 
 The concise error shown by `bbx health` and proactive alerts prefers the precise
@@ -132,10 +133,7 @@ An hourly task last attempted two days ago has missed dozens of
 occurrences; pending time is measured from the earliest one:
 
 ```ts
-const h = evaluate({
-  fields: { cron: "0 * * * *" },
-  state: { lastRun: "2026-06-07T05:00:10Z", lastResult: "success", lastSuccess: "2026-06-07T05:00:10Z" },
-});
+const h = evaluate({ fields: hourly, state: ran("2026-06-07T05:00:10Z") });
 print(`${h.status}, pending: ${formatDurationShort(h.pendingMs)}`);
 => overdue, pending: 2d
 ```
@@ -145,28 +143,18 @@ hourly task 40 minutes late (grace floor is 30m, half-cadence for an
 hourly task is 30m):
 
 ```ts
-evaluate({
-  fields: { cron: "0 * * * *" },
-  state: { lastRun: "2026-06-09T10:00:10Z", lastResult: "success", lastSuccess: "2026-06-09T10:00:10Z" },
-  now: new Date("2026-06-09T11:25:00Z"),
-}).status
+const lastHour = ran("2026-06-09T10:00:10Z");
+statusOf({ fields: hourly, state: lastHour, now: new Date("2026-06-09T11:25:00Z") })
 => ok
 
-evaluate({
-  fields: { cron: "0 * * * *" },
-  state: { lastRun: "2026-06-09T10:00:10Z", lastResult: "success", lastSuccess: "2026-06-09T10:00:10Z" },
-  now: new Date("2026-06-09T11:45:00Z"),
-}).status
+statusOf({ fields: hourly, state: lastHour, now: new Date("2026-06-09T11:45:00Z") })
 => overdue
 ```
 
 A never-attempted task measures from the card's mtime:
 
 ```ts
-evaluate({
-  fields: { cron: "0 * * * *" },
-  cardMtime: new Date("2026-06-05T00:00:00Z"),
-}).status
+statusOf({ fields: hourly, cardMtime: new Date("2026-06-05T00:00:00Z") })
 => overdue
 ```
 
@@ -174,20 +162,14 @@ evaluate({
 that ran 35 minutes ago has an occurrence pending but well within grace:
 
 ```ts
-evaluate({
-  fields: { cron: "0 * * * *", "not-before": "30m" },
-  state: { lastRun: "2026-06-09T11:25:00Z", lastResult: "success", lastSuccess: "2026-06-09T11:25:00Z" },
-}).status
+statusOf({ fields: { ...hourly, "not-before": "30m" }, state: ran("2026-06-09T11:25:00Z") })
 => ok
 ```
 
 On-wakeup-only tasks have no intrinsic cadence and are never overdue:
 
 ```ts
-evaluate({
-  fields: { "on-wakeup": true, "not-before": "5m" },
-  state: { lastRun: "2026-05-01T00:00:00Z", lastResult: "success", lastSuccess: "2026-05-01T00:00:00Z" },
-}).status
+statusOf({ fields: { "on-wakeup": true, "not-before": "5m" }, state: ran("2026-05-01T00:00:00Z") })
 => ok
 ```
 
@@ -195,13 +177,10 @@ A one-shot `at` task unserved an hour past its time is overdue; once
 attempted it never re-triggers:
 
 ```ts
-evaluate({ fields: { at: "2026-06-09T09:00:00Z" } }).status
+statusOf({ fields: { at: "2026-06-09T09:00:00Z" } })
 => overdue
 
-evaluate({
-  fields: { at: "2026-06-09T09:00:00Z" },
-  state: { lastRun: "2026-06-09T09:00:30Z", lastResult: "success", lastSuccess: "2026-06-09T09:00:30Z" },
-}).status
+statusOf({ fields: { at: "2026-06-09T09:00:00Z" }, state: ran("2026-06-09T09:00:30Z") })
 => ok
 ```
 
@@ -212,24 +191,22 @@ missing-connector tasks are blocked (with the reason), not overdue —
 even when occurrences have gone unserved:
 
 ```ts
-evaluate({ fields: { cron: "0 5 * * *", enabled: false } }).status
+const overBudget = [{ ts: "2026-06-09T05:00:00Z", durationMs: 700_000 }];
+statusOf({ fields: { ...dailyAt5, enabled: false } })
 => disabled
 
-evaluate({ fields: { cron: "0 5 * * *", until: "2026-06-01T00:00:00Z" } }).status
+statusOf({ fields: { ...dailyAt5, until: "2026-06-01T00:00:00Z" } })
 => disabled
 
 const blocked = evaluate({
-  fields: { cron: "0 5 * * *", budget: "10m/24h" },
-  state: {
-    lastRun: "2026-06-07T05:00:10Z", lastResult: "success", lastSuccess: "2026-06-07T05:00:10Z",
-    recentRuns: [{ ts: "2026-06-09T05:00:00Z", durationMs: 700_000 }],
-  },
+  fields: { ...dailyAt5, budget: "10m/24h" },
+  state: { ...ran("2026-06-07T05:00:10Z"), recentRuns: overBudget },
 });
 print(`${blocked.status}: ${blocked.reason}`);
 => blocked: budget exhausted (700s used)
 
 const noConn = evaluate({
-  fields: { cron: "0 5 * * *", requires: { connectors: ["gmail"] } },
+  fields: { ...dailyAt5, requires: { connectors: ["gmail"] } },
   missingConnectors: ["gmail"],
 });
 print(`${noConn.status}: ${noConn.reason}`);
@@ -241,7 +218,7 @@ A failing task whose failures exhausted the budget reports as failing
 
 ```ts
 const h = evaluate({
-  fields: { cron: "0 5 * * *", budget: "10m/24h" },
+  fields: { ...dailyAt5, budget: "10m/24h" },
   state: {
     lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "timeout",
     consecutiveFailures: 2,
@@ -259,34 +236,14 @@ findings into a scheduler-down finding when the daemon's heartbeat is
 stale (suppressing them entirely when no daemon ever ran — dev boxes):
 
 ```ts
-const failing = evaluate({
-  fields: { cron: "0 5 * * *" },
-  state: {
-    lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom",
-    lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 3,
-  },
-});
-const overdue = evaluate({
-  fields: { cron: "0 * * * *" },
-  state: { lastRun: "2026-06-07T05:00:10Z", lastResult: "success", lastSuccess: "2026-06-07T05:00:10Z" },
-});
-const ok = evaluate({
-  fields: { cron: "0 5 * * *" },
-  state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "success", lastSuccess: "2026-06-09T05:00:10Z" },
-});
+const failing = evaluate({ fields: dailyAt5, state: failingState });
+const overdue = evaluate({ fields: hourly, state: ran("2026-06-07T05:00:10Z") });
+const ok = evaluate({ fields: dailyAt5, state: ran("2026-06-09T05:00:10Z") });
 
-summarizeScheduleHealth({
-  tasks: [ok],
-  scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 },
-  engineWait: null,
-}, NOW)
+summarizeScheduleHealth({ tasks: [ok], scheduler, engineWait: null }, NOW)
 => null
 
-summarizeScheduleHealth({
-  tasks: [failing, overdue, ok],
-  scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 },
-  engineWait: null,
-}, NOW)
+summarizeScheduleHealth({ tasks: [failing, overdue, ok], scheduler, engineWait: null }, NOW)
 => demo: failing ×3 (last success 3d ago); demo: overdue 2d
 
 summarizeScheduleHealth({
@@ -309,10 +266,9 @@ self-heals at the next occurrence); overdue and invalid alert directly:
 
 ```ts continue
 const oneFailure = evaluate({
-  fields: { cron: "0 5 * * *" },
+  fields: dailyAt5,
   state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom", consecutiveFailures: 1 },
 });
-const scheduler = { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 };
 print(`one failure: ${selectAlertableTasks({ tasks: [oneFailure], scheduler }).length}`);
 print(`three failures: ${selectAlertableTasks({ tasks: [failing], scheduler }).length}`);
 print(`overdue: ${selectAlertableTasks({ tasks: [overdue], scheduler }).length}`);
@@ -334,24 +290,11 @@ broken, and the trust rule says never to mislabel a deliberate skip.
 
 ```ts
 const reason = "waiting on codex quota until Aug 19, 11:34 PM";
-const waitingFailing = evaluate({
-  fields: { cron: "0 5 * * *" },
-  state: {
-    lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom",
-    lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 3,
-  },
-  engineWaitReason: reason,
-});
-waitingFailing.status
-=> waiting
+const waitingFailing = evaluate({ fields: dailyAt5, state: failingState, engineWaitReason: reason });
+({ status: waitingFailing.status, reason: waitingFailing.reason })
+=> { status: "waiting", reason: "waiting on codex quota until Aug 19, 11:34 PM" }
 
-waitingFailing.reason === reason
-=> true
-
-evaluate({
-  fields: { cron: "0 5 * * *", enabled: false },
-  engineWaitReason: reason,
-}).status
+statusOf({ fields: { ...dailyAt5, enabled: false }, engineWaitReason: reason })
 => disabled
 ```
 
@@ -359,18 +302,10 @@ The waiting state is neither summarized as unhealthy nor alertable —
 the episode itself is the one box-level line the summary leads with:
 
 ```ts continue
-summarizeScheduleHealth({
-  tasks: [waitingFailing],
-  scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 },
-  engineWait: reason,
-}, NOW)
+summarizeScheduleHealth({ tasks: [waitingFailing], scheduler, engineWait: reason }, NOW)
 => waiting on codex quota until Aug 19, 11:34 PM
 
-selectAlertableTasks({
-  tasks: [waitingFailing],
-  scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 },
-  engineWait: reason,
-}).length
+selectAlertableTasks({ tasks: [waitingFailing], scheduler, engineWait: reason }).length
 => 0
 ```
 
@@ -384,7 +319,7 @@ confirmed one.
 
 ```ts
 const h = evaluate({
-  fields: { cron: "0 5 * * *" },
+  fields: dailyAt5,
   state: {
     lastRun: "2026-06-09T05:00:10Z",
     lastResult: "inconclusive",
@@ -408,17 +343,17 @@ A live problem outranks the stale non-answer: a task that has failed since, or
 gone overdue, or is out of budget, reports that instead.
 
 ```ts continue
-print(evaluate({
-  fields: { cron: "0 5 * * *" },
+print(statusOf({
+  fields: dailyAt5,
   state: {
     lastRun: "2026-06-09T05:00:10Z", lastResult: "inconclusive",
     lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 2,
   },
-}).status);
-print(evaluate({
-  fields: { cron: "0 5 * * *", enabled: false },
+}));
+print(statusOf({
+  fields: { ...dailyAt5, enabled: false },
   state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "inconclusive" },
-}).status);
+}));
 =>
 failing
 disabled
@@ -428,7 +363,6 @@ It speaks in the session-start summary but never pages the boxholder — nothing
 is wrong yet:
 
 ```ts continue
-const scheduler = { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 };
 print(summarizeScheduleHealth({ tasks: [h], scheduler, engineWait: null }, NOW));
 print(`alertable: ${selectAlertableTasks({ tasks: [h], scheduler, engineWait: null }).length}`);
 =>

@@ -10,7 +10,6 @@ an honest remedy.
 import {
   classifyCodexAuthStatus,
   createCodexCliService,
-  createFakeCodexCli,
 } from "../../src/services/codex-cli/core.js";
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -41,23 +40,11 @@ JSON.stringify(classifyCodexAuthStatus({ errorCode: 2, output: "API key - sk-sec
 => {"kind":"inconclusive","detail":"API key - <redacted>"}
 ```
 
-The fake is observable so cache tests can prove that a second check did not
-shell out again.
-
-```ts
-const cli = createFakeCodexCli({ status: { kind: "logged-in" } });
-await cli.authStatus();
-await cli.authStatus();
-cli.statusCalls
-=> 2
-```
-
 ## Starting again replaces a stale device ceremony
 
 The production service talks to Codex app-server over JSONL. A second start
 must cancel and replace an abandoned ceremony rather than handing the owner an
-expired code. This scripted binary exercises that real client path, not the
-domain fake used by the router test.
+expired code. This scripted binary exercises that real client path.
 
 ```ts
 const dir = await mkdtemp(join(tmpdir(), "bbx-codex-auth-"));

@@ -8,7 +8,7 @@ agent's surface in the first place. These tests are that gate.
 
 ```ts setup
 import { buildProgram } from "../../src/cli/entry/program.js";
-import { SURFACE } from "../../src/cli/surface-data.js";
+import { SURFACE } from "../../src/cli/entry/surface-data.js";
 import { VERB_COMMANDS } from "../../src/cli/commands.js";
 import { bbxCommandsScheduling } from "../../src/core/docs-gen/package-docs/bbx-commands-scheduling.js";
 import { bbxCommandsConnectors } from "../../src/core/docs-gen/package-docs/bbx-commands-connectors.js";

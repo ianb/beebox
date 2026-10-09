@@ -9,11 +9,7 @@ How box data migrations work, how to apply them, and how to write new ones.
 
 A migration is a one-shot transformation of card data on disk — schema renames, field strips, layout flips, refactors. The system tracks which migrations a box has had applied so future runs only do the missing work.
 
-**Box configuration counts too.** `annex-config-2026-08` re-applies `annex.largefiles` and `.git/info/attributes` from the current renderings; it transforms no cards and leaves the working tree untouched. Config written once at `bbx init` goes stale whenever the code's idea of it changes, and a migration is the one mechanism that records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
-
-`gitignore-2026-09` is the second configuration migration: it rewrites the box's `.gitignore` from the current rendering (`writeBoxGitignore`, the function `bbx engine init` uses) and untracks the state directory, box-root locks, and pid file that the pre-rename ignore file had let autocommit sweep in. It leaves `.beebox/box.json` tracked. See `src/scripts/migrate/box-gitignore.ts` for why the untrack list is an explicit allowlist rather than "everything now ignored".
-
-`hooks-2026-09` reinstalls the managed git hooks and the package-root Claude settings through `installValidationHooks`, the same call `bbx init` makes: the hooks bake in the CLI path and name, and boxes that predate the rename were still looking for the former CLI at a checkout that no longer exists.
+**Box configuration counts too.** A migration can converge configuration written once at `bbx init` (annex settings, `.gitignore`, managed hooks) that went stale when the code's idea of it changed; it transforms no cards, and the manifest records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** (`annex-config-2026-08`, then `annex-config-2026-10`) — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
 
 ## Applying and inspecting migrations
 
@@ -194,64 +190,18 @@ convergence does not overwrite them merely to make a ledger look current.
 
 ## Writing a new migration
 
-1. **Write the script** at `src/scripts/migrate/<name>.ts`. New migrators should use the shared harness (`src/scripts/migrate/_harness.ts`), which handles arg parsing, the file walk, dry-run/apply, per-file error collection, and the final warning dump:
-
-   ```ts
-   #!/usr/bin/env tsx
-   import { runMigration } from "./_harness.js";
-   import { WarningCollector, checkElement, type ElementSpec } from "./_warnings.js";
-
-   const SPEC: ElementSpec = {
-     attrs: ["status", "version"],
-     children: { /* ... */ },
-   };
-
-   await runMigration({
-     description: "*.thing.card: XML → flat YAML.",
-     match: (name) => name.endsWith(".thing.card"),
-     convert: async (absPath, { warnings }) => {
-       // read file, parse, checkElement({ node, source: absPath, spec: SPEC, warnings }),
-       // write new content if changed — return "converted" or "already".
-     },
-   });
-   ```
-
-   Existing migrators in this directory predate the harness and still carry their own scaffolding; mirror one (e.g. `src/scripts/migrate/image.ts`) only if you can't fit the harness's shape.
+1. **Write the script** at `src/scripts/migrate/<name>.ts`. `bbx engine migrate` runs it as `<script> <boxRoot> --apply`. Exit 0 on success, 2 when it ran but some cards could not be converted (the migration is recorded and those cards are reported), anything else for a hard failure that stops the queue (`runMigrationScript` in `src/core/migration-run.ts`). The shared card-walking harness (`_harness.ts`) and the warnings helper (`_warnings.ts`) were deleted with the retired migrators on 2026-10-08; restore them from git history when a new migrator walks cards.
 
 2. **Be idempotent.** Detect the post-migration shape and skip cards already in it — second runs should report "already migrated N" rather than re-doing work or erroring. Two patterns we use:
    - Filename-based: skip cards whose name already has the new extension.
    - Content-based: skip cards whose frontmatter already has the target shape (e.g., a specific key present, or matching a regex marker).
    `bbx engine migrate` re-runs partially-applied migrations on retry, and admins occasionally run individual scripts manually for debugging — idempotency makes both safe.
 
-3. **Be noisy about data loss.** Every migrator must use the `src/scripts/migrate/_warnings.ts` helper to declare what attrs/children it knows how to map, and warn about anything outside that allow-list. The harness above already plumbs the `WarningCollector` through; what you write per-migration is just the spec + per-element check:
-
-   ```ts
-   const SPEC: ElementSpec = {
-     attrs: ["status", "version"],
-     children: {
-       filename: { attrs: ["ref", "captured", "source"] },
-       description: { attrs: [] },
-       // ...
-     },
-   };
-
-   // inside convert(), after parsing the card:
-   checkElement({ node, source: absPath, spec: SPEC, warnings });
-   ```
-
-   At the end of a run, anything outside the spec prints with file path + field path:
-
-   ```
-   3 warning(s) about unrecognized fields:
-     ledger.briefing.card: unknown child at <briefing>: <legal>
-     store/.../Amherdt_Handwritten_Letter.record.card: unknown attr at <record> > <person>: role="Amherdt Group"
-   ```
-
-   A warning means data the migrator silently drops. When you see one against real data, the response is normally **extend the migrator**: add the field to the spec, map it in the converter, extend the target schema in `src/schemas/`. Re-run from a clean baseline. Accepting silent loss is rarely the right call; the warning is a prompt to think about each unmapped field.
+3. **Be noisy about data loss.** Declare which fields the migrator knows how to map and warn, with file path and field path, about anything outside that allow-list. A warning means data the migrator silently drops. When you see one against real data, the response is normally **extend the migrator**: map the field and extend the target schema in `src/schemas/`, then re-run from a clean baseline. Accepting silent loss is rarely the right call.
 
 4. **Register it.** Append a `{name, script}` entry to `MIGRATIONS` at the bottom of `src/core/migrations.ts`. **Never reorder, rename, or remove** existing entries — the `name` is the manifest key, so reordering changes which migrations a box thinks it has applied. New entries always go at the end.
 
-5. **Document it.** Update the migrator table in this file (below) and mention any non-obvious behavior (e.g., the script renames files, deletes orphans, mutates non-card files). Commit migrator + registry entry + doc update together.
+5. **Document it.** Put non-obvious behavior (the script renames files, deletes orphans, mutates non-card files) in the script's module comment and a short comment on the registry entry. Commit migrator, registry entry, and test together.
 
 6. **Test it.** Run dry-run against a real box you can reset; then `--apply` and validate with `bbx validate`. Confirm the manifest got an entry. If you have a noisy-mode warning, decide explicitly whether to handle it or accept the loss — and document the call.
 
@@ -278,8 +228,8 @@ Migrations are written for cards that already exist on disk; you almost never ne
 
 Some changes can't be a deterministic script: the thing to transform is
 arbitrary box-authored code or prose that needs *judgment* to rewrite (the first
-case was `view-card-shape` — box-local `.tsx` views that had to be ported to a
-new `ViewCard` interface). For those, a migration runs a **procedure** that
+case was `view-card-shape`, now retired — box-local `.tsx` views that had to be
+ported to a new `ViewCard` interface). For those, a migration runs a **procedure** that
 drives an agent through a checklist, gated by a machine check.
 
 **Default to a script.** Reach for agent-applied only when no deterministic
@@ -298,7 +248,8 @@ handle only the residual.
 - Registered in `src/core/migrations.ts` as `{ name, procedure: "<name>" }`
   (the other kind is `{ name, script }`). `bbx engine migrate` dispatches it to
   `bbx procedure run <name>` and records the manifest entry only on a clean
-  `completed`. See `view-card-shape.procedure.card` as the worked example.
+  `completed`. The retired `view-card-shape.procedure.card` (in git history) is
+  the worked example.
 
 ### Non-negotiables (each one is a scar from the first migration)
 
@@ -354,256 +305,15 @@ it). Then run it for real on one box and watch the agent — every fix above cam
 from a real run surfacing a gap, not from review. Sweep the rest only after one
 works end-to-end.
 
-## The migrators
+## Retired migrations
 
-In the canonical order (same order they run via `bbx engine migrate --apply`):
+Every migration registered on 2026-10-08 had been applied by every box, so each
+entry now runs the shared no-op `src/scripts/migrate/retired.ts`. The entries
+keep their names and order because the manifest is append-only. The migrators
+themselves, their tests, and the two migration procedure templates are in git
+history; the early rollout is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
 
-All scripts live in `src/scripts/migrate/`.
-
-| # | Name | Script | What it does |
-|---|------|--------|---|
-| 1 | `attachments`       | `attachments.ts`       | Structural: move flat sibling attachments into `<basename>.attach/` directories |
-| 2 | `card-frontmatter`  | `card-frontmatter.ts`  | Phase 1: wrap every `.card` in `---\ncontent-type: application/x-card+xml\n---` so the loader treats them uniformly |
-| 3 | `email-thread`      | `email-thread.ts`      | `*.email-thread.card`: XML → flat YAML frontmatter |
-| 4 | `email-message`     | `email-message.ts`     | `*.email-message.card`: XML → flat YAML |
-| 5 | `briefing`          | `briefing.ts`          | `*.briefing.card`: XML → YAML frontmatter + markdown body |
-| 6 | `doc-sheet`         | `doc-sheet.ts`         | `*.doc.card`, `*.sheet.card`: XML → flat YAML (note: `.doc.card` was the Google-Doc type at the time; renamed to `gdoc` later — see #18) |
-| 7 | `file`              | `file.ts`              | `*.file.card`: XML → flat YAML |
-| 8 | `image`             | `image.ts`             | `*.image.card`: XML → flat YAML |
-| 9 | `audio`             | `audio.ts`             | `*.audio.card`: XML → flat YAML |
-| 10 | `record-person`    | `record-person.ts`     | `*.record.card`, `*.person.card`: XML → YAML + markdown body |
-| 11 | `memo`             | `memo.ts`              | `*.memo.card`: XML → YAML + markdown body |
-| 12 | `misc`             | `misc.ts`              | `*.todo-list.card`, `*.telegram-message.card`, `*.feedback.card` |
-| 13 | `jobs`             | `jobs.ts`              | The four job schemas (intake, calendar-review, chat, question-followup) |
-| 14 | `personality`      | `personality.ts`       | `*.personality.card`: XML → YAML + markdown body |
-| 15 | `scheduled-script` | `scheduled-script.ts`  | `*.scheduled-script.card`: XML → flat YAML |
-| 16 | `question`         | `question.ts`          | `*.question.card`: XML → flat YAML |
-| 17 | `chat-thread`      | `chat-thread.ts`       | `*.chat-thread.card`: XML → YAML with discriminated entries[] |
-| 18 | `doc-to-gdoc`      | `doc-to-gdoc.ts`       | Rename Google-Doc `.doc.card` → `.gdoc.card` and flip the YAML `type:` so the `doc` type name can be reused for a generic in-box document type |
-| 19 | `strip-type-field` | `strip-type-field.ts`  | Remove the redundant `type:` field from every card's frontmatter — filename is the canonical type discriminator. Also renames `.X.job.card` → `.X-job.card` so the filename actually carries the canonical type for jobs |
-
-(This table stops at #19 — later migrators registered in `src/core/migrations.ts` after `strip-type-field`, up through `question-lifecycle`, aren't reflected here; each one's own doc comment is the source of truth until this table is refreshed.)
-
-`trick-secret-runtime` is an agent-applied migration. It reviews existing
-box-local tricks for credentialed external services and adds the new sibling
-`secrets.json` declaration where the code requires one. It does not guess
-secret names, change grants, or write values. The procedure's machine gate runs
-`bbx trick --check-secrets`; the agent checklist records the judgment that the
-code review covered every trick. New tricks should follow the same contract
-when authored, rather than waiting for this migration.
-
-`question-lifecycle` (`src/scripts/migrate/question-lifecycle-run/run.ts`, pure transform in `src/scripts/migrate/question-lifecycle-run/lifecycle.ts`) is the Track A cleanup for `docs/implemented-plans/questions-end-to-end.md`: strips the retired `answered-by:` field, backfills `asked-at:` on pending questions from the card's earliest `git add` date, relocates question cards living outside `box/questions/` (scan-import's attach-scope questions) into `box/questions/` with a `context:` ref back to their original scope, rewrites directives that reference the retired briefing `<agent-needs-to-know>` element to the current `{% correction %}` vocabulary, and reports (never silently fixes) any `select` question with fewer than two options.
-
-Retired migrators (`box-packageify`, `retire-process-captures`) keep their
-names registered as idempotent no-ops, because the manifest is append-only;
-what they did is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
-
-### Later migrators
-
-Registered after `strip-type-field`; each carries its rollout notes.
-
-#### `todo-list-to-doc` (retirement — todo-list → doc + `{% todo %}`)
-
-Registered after `retire-process-captures`. Converts every `*.todo-list.card`
-into a sibling `*.doc.card` (same basename): `name` → `title`, `details` →
-opening body paragraph, `items[]` → a markdown list with each item wrapped in
-`{% todo %}…{% /todo %}` (status mapped pending→open/done/`status="dropped"`
-for cancelled/`status="parked"` for deferred; nested `items` → indented
-sub-lists; item `completed`/`agent-notes` preserved as trailing parenthetical
-text inside the wrapper so nothing is silently dropped), card-level
-`agent-notes` → a trailing blockquote. Rewrites any other card/markdown/view
-that referenced the old path via the same resolution-based machinery `bbx mv`
-uses (`rewrite-card-refs.ts`). Superseded by the universal `{% todo %}`
-annotation (`docs/implemented-plans/todo-annotation.md`); see
-`src/scripts/migrate/todo-list-to-doc-run/convert.ts` (pure transform) and
-`src/scripts/migrate/todo-list-to-doc-run/run.ts` (CLI driver) for the full mapping.
-Idempotent: a box with no `*.todo-list.card` files is a clean no-op.
-
-#### `document-to-pdf` (rename — `document` → `pdf`)
-
-Registered at the end of `MIGRATIONS`. Renames every `*.document.card` to
-`*.pdf.card` (the type comes from the filename, so the rename is the type
-change — no frontmatter edit) and rewrites inbound `.document.card`
-references across every `.md`/`.card` file in the box. `document` collided
-with the unrelated `doc.card` type, and the pipeline only reads PDFs today,
-so the generic name (chosen to avoid a future rename — see
-`docs/implemented-plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
-`gsheet-rename.ts`: no XML variant exists to guard against (the type
-post-dates the XML→frontmatter migration), so it's a pure rename + ref
-rewrite, same shape as `gsheet-rename`. See
-`src/scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
-`*.document.card` is a clean no-op.
-
-#### `v2-refs-to-v3` (repair — v2-layout refs to v3 paths)
-
-Registered just before `filename-attach-scope`. The one-root migration moved
-every file but left some box-absolute refs in v2 form (`/store/archive/…`),
-which the box namespace fence now refuses. For each such ref in a card or
-`.md` file, the migrator maps the path with `mapV2Path` (the table the files
-were moved with) and rewrites the ref only when the mapped target exists and
-lies inside the box namespace. The query and fragment are kept; fenced code
-examples are left alone. Refs whose target is gone stay as they are, and
-`bbx validate` keeps reporting them as broken. See
-`src/scripts/migrate/v2-refs-to-v3.ts`. Idempotent: a rewritten ref resolves.
-
-#### `filename-attach-scope` (repair — flat media files into attach scopes)
-
-Registered at the end of `MIGRATIONS`. Old capture archives kept media in a
-flat layout: `photo-004.jpg` beside `photo-004-<title>.image.card`, with
-`filename.ref` holding the photo's path instead of `attach/photo-004.jpg`.
-Every `filename.ref` reader accepts only the `attach/` form, so those cards
-showed "Failed to load". For `image`, `audio`, `file` and `pdf` cards the
-migrator moves the file into `<card name>.attach/` and rewrites the card's
-own refs to `attach/<file>`; other cards, `.md` files and views that name
-the file follow the move in their own style.
-
-It is best effort. A card is repaired only when its file is certain: the ref
-resolves to a file in the card's own directory (or is dangling and a file
-with its basename is there — the damage an old `bbx mv` left), the file is
-not a card, no other media card claims it, and the destination is free or
-holds the same bytes. Every other card is printed with a reason and left
-unchanged, and the exit code stays 0. `bbx validate` warns on each remaining
-card, so an agent can finish them. See
-`src/scripts/migrate/filename-attach-scope.ts`. Idempotent: repaired cards hold
-`attach/` refs and are skipped.
-
-#### `one-root` (shape migration — v2 two-root → v3 one-root layout) — removed
-
-The v2 → v3 one-root conversion was deleted once no v2 box remained; a v2 box
-now fails with an error from `getBoxShape` instead of naming a migration. Its
-design is `docs/implemented-plans/one-root-box-layout.md` Track E. One module
-survives: `src/core/migrations/one-root-mapping.ts`, whose `mapV2Path` is a
-read-time fallback for chat transcripts written before a box was converted.
-Applied `one-root` manifest entries are ignored, because `computePending`
-filters `MIGRATIONS` by applied name.
-
-#### `standard-fields-2026-09` (strip — standard fields with no job)
-
-Part 1 of `docs/implemented-plans/standard-card-fields.md`. Drops `status` from job cards
-(always `pending`; a finished job is deleted), file, pub-submission,
-email-thread, gsheet and email-outbound; drops pub-submission `created` (and a leftover `created` on job cards), audio
-`summary`, and guide/personality observation `date`. A record's `status`
-becomes `reviewed: true` or `archived: true`, or is dropped when `draft`. The
-migrator fails a card, unchanged, when its value has no safe mapping: an
-email-outbound whose `status` is not `draft` (it would otherwise upload as a
-draft) or a record status outside the old enum. A non-empty audio `summary`
-is dropped with a warning; the transcript stays. Idempotent. See
-`src/scripts/migrate/card-fields/standard.ts`.
-
-#### `status-fields-2026-09` (replace — `status` becomes the specific fact)
-
-Part 2 of `docs/implemented-plans/standard-card-fields.md`. Per type:
-
-- audio: `status` is dropped; `transcript` present means transcribed. A
-  `transcribed` clip with no transcript gets a warning, since it now reads as
-  untranscribed.
-- image, pdf: `new` and `analyzed` are dropped (the `description`, or a pdf's
-  `docling` and `error`, record the outcome); `invalid` becomes
-  `unusable: true`.
-- capture-session: `delivered` becomes `delivered: true`; `annotated` becomes
-  `delivered: true` and `annotated: true`. The retired pipeline's
-  `intake-complete` and `extracted` become `annotated: true`; its
-  `transcribing` and `transcribed` are dropped with `new`.
-- upload-batch: `delivered` becomes `delivered: true`; `new` is dropped.
-- telegram-message: `pending` and `sent` are dropped; `failed` becomes
-  `delivery-error`, carrying the old `error` text or, with none, a fixed
-  message saying the reason was never recorded. A pending or sent card with
-  an `error` is refused.
-- browser-task: `closed` becomes `closed: true`. tab-arrangement: `ready`
-  becomes `ready: true`. person, place: `inactive` and `archived` become
-  `archived: true`. Each type's other value (`open`, `draft`, `active`) is
-  dropped.
-- todo-view: `status` (its todo filter) is renamed `todo-status`. progress
-  entries: `status` (a mastery level) is renamed `level`. A rename whose
-  target already exists is refused.
-- lesson-plan segments: `planned` becomes `planned: true`; `ready` is dropped.
-- guide and personality experiments: `proposed` is dropped, `active` becomes
-  `active: true`, and `successful`/`unsuccessful`/`mixed`/`inconclusive`
-  become `outcome: <value>`. A migrated stock guide is byte-identical to the
-  current template, so the template tracker updates it in place.
-- gdoc: `conflict` becomes `conflict: true`; `synced`, `new` and `error` are
-  dropped. The connector recomputes the card on every pull.
-- gfolder: `status` is dropped; `error` present means the last sync failed. A
-  failed mount with no `error` text gets a fixed message saying the reason was
-  never recorded. An `ok` mount that carries an `error` is refused.
-- procedure-run: `completed`, `failed` and `inconclusive` become
-  `outcome: <value>`; `pending` and `running` are dropped (no outcome means the
-  run has not finished, and `bbx procedure resume` still continues an
-  interrupted one). A card that already has an `outcome` is refused.
-- question: `status` is dropped; the state is read from the lifecycle
-  timestamps (`answered-at`, else `dismissed-at`, else `expired-at`, else
-  pending). A card whose lifecycle fields disagree with its status (by the
-  rule the schema enforced before), or whose status is unknown, is refused;
-  such a card could not load before either.
-
-Any other value fails the card, unchanged. Idempotent. See
-`src/scripts/migrate/card-fields/status.ts`.
-
-#### `source-fields-2026-09` (rename — `source` gets its specific names)
-
-Part 3 of `docs/implemented-plans/standard-card-fields.md`. Per type:
-
-- image, file, pdf: `filename.captured` becomes `filename.via.at` and
-  `filename.source` becomes `filename.via.channel`. `via` is inserted right
-  after `filename.ref`; the other `filename` keys keep their place.
-- audio: the same, from `filename.recorded`.
-- feedback: `source` (`text` or `voice`) becomes `via: { channel }`, in the
-  place `source` held.
-- contains-backfill-job, question-followup-job, todo-review-job: the constant
-  `source` is dropped (a value other than the type's constant is dropped with
-  a warning).
-- chat-job: `source` becomes `connector`.
-- intake-job: `wakeup`, `wakeup-captures` and `scan` are dropped (the job
-  becomes unscoped); any other value becomes `connector`.
-- guide `triage-rules[]`, personality `boxholder.relationships[]`, `tone[]`
-  and `traits[]`: each entry's `source` becomes `basis`.
-- scheduled-script: `source` becomes `reason`.
-- capture-session: `source` becomes `uploader`.
-- record `sources[]`: `time` (a moment in a transcript) becomes `pos`, the
-  `{% source %}` tag's locator.
-- webpage: `source` (the page URL) and `captured` (the capture instant)
-  become `sources: [{ href, retrieved }]` (no `retrieved` when there was no
-  `captured`).
-- recipe: the `source` object becomes the one entry of `sources`.
-- commentary: `source` (the annotated page) becomes `about: { href }`, and
-  `captured` (the date the page was captured) becomes `about.retrieved`.
-- browser-task: `source` (the start URL) becomes `start: { href }`.
-- tab-arrangement: `source` (the captured tabs) becomes `captured-tabs`.
-- image `text[]`: each entry's `source` (the surface the text is on) becomes
-  `surface`.
-- email-message: what the Gmail connector copied (`message-id`, `thread-id`,
-  `from`, `to`, `cc`, `subject`, `snippet`) moves under `email:`, and `date`
-  (Gmail's arrival time) becomes `email.received`. `body-file` and
-  `attachments` stay top-level.
-- email-thread: `thread-id`, `subject`, `participants`, `date-range` and
-  `labels` move under `email:`; `messages` stays top-level.
-- gdoc, gsheet: `drive-id` (as `id`), `link`, `owner`, `modified` (Drive's
-  `modifiedTime`) and gdoc's `revision` move under `drive:`. `title`, the
-  content and comments pointers, `lossy` and `conflict` stay top-level.
-- gfolder: `drive-id` (as `id`) and `link` move under `drive:`; `name` (the
-  folder's Drive name) becomes `title`. `last-sync`, `error` and the problem
-  counts are connector state and stay.
-- glink: `drive-id` (as `id`), `link` and `mime` move under `drive:`; `name`
-  becomes `title`. `origin` stays.
-
-A source-metadata key (`email:`, `drive:`) lands where the card's first moved
-key was, with its keys in the order the connector writes them, so a migrated
-thread, gdoc or gsheet card is byte-identical to what the next sync writes and
-is not rewritten. Drive cards in `_bookkeeping/trash/` migrate too: their
-`drive.id` is the tombstone that stops a folder mirror from re-creating them,
-and an unreadable id stops folder discovery.
-
-Renamed keys keep their place. A card is failed, unchanged, when its
-`filename` is not a map, when it has both an old key and its new name (at any
-of the places above), when a media reference has only one of the two old
-keys, when a webpage or commentary has `captured` but no page to attach it to,
-when an email or Drive card has
-`email:`/`drive:` beside a key that moves into it, when a gfolder or glink has
-both `name` and `title`, or when a recipe's
-`source` is not a map or has both `href` and `ref`. A card keeps its line wrapping (see `applyFieldEdits`), so an unedited
-stock guide, personality or schedule becomes exactly the current template.
-Idempotent. See
-`src/scripts/migrate/card-fields/source.ts`.
+A box outside the fleet (a restored backup, an archived or soft-launch box) that has not applied a retired migration needs that migrator restored from git history and run by hand. This includes `one-root`: `getBoxShape` refuses a shapeVersion 2 box, and the v2 bootstrap path in `bbx migrate` is deleted.
 
 #### `briefing-openers-2026-10` (move — briefing `openers` to the landmark)
 
@@ -630,7 +340,7 @@ under `_config/_template-updates/` are skipped. Idempotent. See
 
 ## Manual runs (for debugging)
 
-The per-schema scripts are runnable standalone (`npx tsx src/scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx engine migrate`. If you do this and want it to count, append the entry yourself or run `bbx engine migrate --apply` afterwards.
+A migrator script is runnable standalone (`npx tsx src/scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx engine migrate`. If you do this and want it to count, append the entry yourself or run `bbx engine migrate --apply` afterwards.
 
 ## Maintenance tools
 
@@ -641,7 +351,6 @@ The per-schema scripts are runnable standalone (`npx tsx src/scripts/migrate/<na
 - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) for the design rationale.
 - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
 - [Maintenance](../development/maintenance.md), where `bbx engine migrate` and `clean-broken-refs.ts` sit among the periodic tools.
-- `src/scripts/migrate/_warnings.ts`, the noisy-mode helper every migrator uses; `src/scripts/migrate/_harness.ts`, the shared scaffold.
 
 ## Recovery and reversal
 

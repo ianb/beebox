@@ -10,8 +10,8 @@
  * and past PROBABLY_FAILED_MS it says something has likely gone wrong.
  */
 
-export const OVERRUN_MS = 10 * 60_000;
-export const PROBABLY_FAILED_MS = 60 * 60_000;
+const OVERRUN_MS = 10 * 60_000;
+const PROBABLY_FAILED_MS = 60 * 60_000;
 
 export interface DeployPageInput {
   startedMs: number;

@@ -247,7 +247,7 @@ export function ChatView(props: {
         {barChrome}
         {workspace}
         <div ref={composer} className="bbx-composer-material flex flex-col w-full max-w-5xl mx-auto min-w-0">
-          {props.selectionNotice}
+          <div className="bbx-composer-notices">{props.selectionNotice}</div>
           {props.ambientRegion}
           {props.failedRegion}
           {statusBanners}

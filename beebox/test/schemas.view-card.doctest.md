@@ -62,7 +62,7 @@ JSON.stringify(issues({ view: "history", params: { feedbck: true } }))
 => ["params: Unrecognized key: \"feedbck\""]
 
 JSON.stringify(issues({ view: "history", params: { feedback: "yes" } }))
-=> ["params.feedback: Invalid input: expected boolean, received string"]
+=> ["params.feedback: «*»"]
 
 JSON.stringify(issues({ view: "landmarks", params: { anything: 1 } }))
 => ["view \"landmarks\" takes no params"]

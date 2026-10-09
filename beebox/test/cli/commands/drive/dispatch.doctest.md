@@ -145,8 +145,8 @@ const mounted = await mountVerb(ctx.boxRoot, {
   url: "https://drive.google.com/drive/folders/folder-1",
   dir: "_content/drive/recipes",
 });
-JSON.stringify(mounted.ok ? { cardPath: mounted.value.cardPath, name: mounted.value.name } : mounted.error)
-=> {"cardPath":"_content/drive/recipes/Recipes.gfolder.card","name":"Recipes"}
+mounted.ok ? { cardPath: mounted.value.cardPath, name: mounted.value.name } : mounted.error
+=> { cardPath: "_content/drive/recipes/Recipes.gfolder.card", name: "Recipes" }
 ```
 
 The card is a real card in the box, written by the server, indistinguishable
@@ -171,8 +171,8 @@ resolve an id to a name, and see that a card already claims it.
 
 ```ts continue
 const seen = await inspectVerb(ctx.boxRoot, "https://drive.google.com/file/d/sheet-1/view");
-JSON.stringify(seen.ok ? { name: seen.value.name, cardType: seen.value.cardType, claimedBy: seen.value.claimedBy } : seen.error)
-=> {"name":"Budget 2026","cardType":"gsheet","claimedBy":["_content/drive/recipes/Budget_2026.gsheet.card"]}
+seen.ok ? { name: seen.value.name, cardType: seen.value.cardType, claimedBy: seen.value.claimedBy } : seen.error
+=> { name: "Budget 2026", cardType: "gsheet", claimedBy: ["_content/drive/recipes/Budget_2026.gsheet.card"] }
 ```
 
 `--json` prints exactly one object — the procedure's own return value — so the
@@ -202,8 +202,9 @@ than as a sentence.
 ```ts continue
 const refused = await mountVerb(ctx.boxRoot, { url: "https://example.com/nope", dir: "_content/drive/x" });
 const printed = await captureLogs(async () => { if (!refused.ok) reportRefusal(refused.error, true); });
-JSON.stringify({ kind: JSON.parse(printed).kind, fix: JSON.parse(printed).fix })
-=> {"kind":"BAD_REQUEST","fix":"caller"}
+const { kind, fix } = JSON.parse(printed);
+({ kind, fix })
+=> { kind: "BAD_REQUEST", fix: "caller" }
 ```
 
 For a person the same refusal says who can fix it in words.
@@ -220,12 +221,11 @@ The refusal points at the spawn site, not at Drive. Guessing a URL would reach
 whichever box happened to answer there, so there is no fallback.
 
 ```ts continue
+const folderUrl = "https://drive.google.com/drive/folders/folder-1";
 setEnv({ BBX_AGENT_TOKEN: undefined });
-refusalLine(await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1")).split(".")[0]
+refusalLine(await inspectVerb(ctx.boxRoot, folderUrl)).split(".")[0]
 => BOX_UNREACHABLE | machine | Cannot reach this box's server: BBX_AGENT_TOKEN is not set
-```
 
-```ts continue
 setEnv({ BBX_AGENT_TOKEN: getOrCreateAgentToken(ctx.boxRoot), BBX_SERVER_URL: undefined });
 refusalLine(await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1")).split(".")[0]
 => BOX_UNREACHABLE | machine | Cannot reach this box's server: BBX_SERVER_URL is not set
@@ -253,8 +253,8 @@ been true for the agent all along had the agent been on this path.
 await mkdir(join(ctx.boxRoot, "_config"), { recursive: true });
 await writeFile(join(ctx.boxRoot, "_config/box.json"), JSON.stringify({ googleServices: { drive: true } }));
 const gap = await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1");
-JSON.stringify(gap.ok ? "unexpectedly succeeded" : { kind: gap.error.kind, fix: gap.error.fix })
-=> {"kind":"PRECONDITION_FAILED","fix":"boxholder"}
+gap.ok ? "unexpectedly succeeded" : { kind: gap.error.kind, fix: gap.error.fix }
+=> { kind: "PRECONDITION_FAILED", fix: "boxholder" }
 ```
 
 An unset or misspelled marker is NOT the tooling profile: it delegates, which is
@@ -264,8 +264,8 @@ for a credential.
 ```ts continue
 setEnv({ BBX_SPAWN_PROFILE: undefined });
 const unset = await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1");
-JSON.stringify(unset.ok ? { name: unset.value.name } : unset.error)
-=> {"name":"Recipes"}
+unset.ok ? { name: unset.value.name } : unset.error
+=> { name: "Recipes" }
 ```
 
 ```ts cleanup

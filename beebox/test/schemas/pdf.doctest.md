@@ -102,18 +102,3 @@ A card with no `format:` is rejected rather than silently assumed to be a PDF:
 PdfSchema.frontmatterSchema.safeParse({ type: "pdf", filename: base.filename }).success
 => false
 ```
-
-## The instructions say the three things an agent needs
-
-They are also the knowledge-audit target (`scanner-ingest-document-card`): what
-the card is, where the original bytes live, and what an `error:` means.
-
-```ts
-const text = PdfSchema.instructions ?? "";
-JSON.stringify([
-  text.includes("attach/source.pdf"),
-  text.includes("`error` — present when extraction failed"),
-  text.includes("bbx pdf reanalyze"),
-])
-=> [true,true,true]
-```

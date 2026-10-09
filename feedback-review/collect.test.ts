@@ -31,19 +31,17 @@ function run(boxesDir: string, ...args: string[]) {
   });
 }
 
-test("lists doc cards and legacy notes, excluding directory docs and resolved items", () => {
+test("lists doc cards, excluding directory docs and resolved items", () => {
   const { boxesDir, feedbackDir } = fixture();
   fs.writeFileSync(path.join(feedbackDir, "agent-observation.doc.card"), "---\ntitle: Agent observation\n---\nBody\n");
-  fs.writeFileSync(path.join(feedbackDir, "2026-09-21T10-20-30-old.md"), "Legacy body\n");
   fs.writeFileSync(path.join(feedbackDir, "CLAUDE.md"), "Directory guidance\n");
   fs.mkdirSync(path.join(feedbackDir, "resolved"));
   fs.writeFileSync(path.join(feedbackDir, "resolved", "done.doc.card"), "Done\n");
 
   const result = run(boxesDir);
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Found 2 unresolved feedback item/);
+  assert.match(result.stdout, /Found 1 unresolved feedback item/);
   assert.match(result.stdout, /agent-observation\.doc\.card/);
-  assert.match(result.stdout, /2026-09-21T10-20-30-old\.md/);
   assert.doesNotMatch(result.stdout, /Directory guidance|done\.doc\.card/);
 });
 
@@ -103,23 +101,4 @@ test("resolves a doc card by moving and committing only that path", () => {
   assert.deepEqual(committed.trim().split("\n"), ["_config/feedback/follow-up.doc.card", "_config/feedback/observation.doc.card", "_config/feedback/resolved/observation.doc.card"]);
   const staged = execFileSync("git", ["-C", boxRoot, "diff", "--cached", "--name-only"], { encoding: "utf8" });
   assert.equal(staged.trim(), "unrelated.txt");
-});
-
-test("legacy notes remain readable but require migration before resolution", () => {
-  const { boxesDir, boxRoot, feedbackDir } = fixture();
-  const name = "2026-09-21T10-20-30-old.md";
-  const source = path.join(feedbackDir, name);
-  fs.writeFileSync(source, "# Agent Feedback\n\n## Feedback\n\nOld note\n");
-  execFileSync("git", ["init", "-q", boxRoot]);
-  execFileSync("git", ["-C", boxRoot, "config", "user.name", "Test User"]);
-  execFileSync("git", ["-C", boxRoot, "config", "user.email", "test@example.com"]);
-  execFileSync("git", ["-C", boxRoot, "config", "core.hooksPath", "/dev/null"]);
-  execFileSync("git", ["-C", boxRoot, "add", "."]);
-  execFileSync("git", ["-C", boxRoot, "commit", "-qm", "Initial"]);
-
-  const result = run(boxesDir, "--resolve", name);
-  assert.equal(result.status, 1, result.stderr);
-  assert.match(result.stderr, /apply the feedback-to-doc-cards box migration first/);
-  assert.ok(fs.existsSync(source));
-  assert.ok(!fs.existsSync(path.join(feedbackDir, "resolved", name)));
 });

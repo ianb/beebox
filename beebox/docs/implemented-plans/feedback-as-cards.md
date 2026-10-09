@@ -25,7 +25,7 @@ The boxholder chose doc cards and written context over automatic transcript capt
 - `src/schemas/doc.tsx:4`: *“The minimal ‘I have a document with a title and a body’ card.”* Reuse it for agent prose.
 - `src/schemas/feedback.tsx:39`: `cardSchema("feedback", …)` requires `target`, `source`, and `timestamp`. Keep its boxholder-response meaning.
 - `src/core/agent-guide/commands.ts:20`: the guide now directs agents to `_config/feedback/` doc cards; it previously named the command.
-- `feedback-review/collect.ts:32`: `isFeedbackFilename` recognizes doc cards and legacy timestamped Markdown.
+- `feedback-review/collect.ts:32`: `isFeedbackFilename` recognizes doc cards (legacy timestamped Markdown recognition was removed on 2026-10-08, after every box migrated).
 - `src/cli/commands/session.ts:145` (moved to `beebox/src/cli/commands/session/command.ts`): `bbx session` remains available for an agent to look up context when useful.
 
 ## Prior art (external)
@@ -80,7 +80,7 @@ None. The format and two product decisions are settled.
 - **Hand-edit drift:** doc schema validates title and body.
 - **Fabricated session ID:** guide says omit it unless known and verified.
 - **Validation error UX:** normal card validation shows schema errors.
-- **Partial migration:** reader handles both shapes until sweep completes. `issues/deferred/2026-09-21-remove-legacy-feedback-reader.md` removes legacy recognition after all boxes have the manifest entry.
+- **Partial migration:** the reader handled both shapes until the sweep completed; legacy recognition was removed on 2026-10-08. `issues/closed/code-quality/2026-09-21-remove-legacy-feedback-reader.md` removes legacy recognition after all boxes have the manifest entry.
 
 ## NOT in scope
 
@@ -109,4 +109,4 @@ Focused collector and migration tests verify recognition, resolution, and data p
 
 ## Rollout shape
 
-The script migration is deterministic and idempotent, using the migration harness. Dry-run and apply it on the isolated box clone, then validate and inspect the manifest. The collector accepts old and new shapes during rollout; `issues/deferred/2026-09-21-remove-legacy-feedback-reader.md` names the convergence check and cleanup paths. Worktree commits do not deploy; landing waits for a separate finish request.
+The script migration is deterministic and idempotent, using the migration harness. Dry-run and apply it on the isolated box clone, then validate and inspect the manifest. The collector accepted old and new shapes during rollout (removed 2026-10-08); `issues/closed/code-quality/2026-09-21-remove-legacy-feedback-reader.md` names the convergence check and cleanup paths. Worktree commits do not deploy; landing waits for a separate finish request.

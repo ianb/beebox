@@ -185,7 +185,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
     // bubble's `bg-info`).
     return (
       <div className="pr-12 sm:pr-24 py-1">
-        <div className="text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
+        <div className="bbx-chat-meta-material text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
         <div className="relative ml-3 sm:ml-6 w-fit">
           <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
             <AudioOverlayBadgeCluster overlay={audioOverlay} originalText={originalDisplayText(firstEntry)} />

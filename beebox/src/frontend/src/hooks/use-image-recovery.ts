@@ -30,7 +30,7 @@ const IN_BOX_MARKERS = ["/api/files/", "/api/image/", "/api/images/"] as const;
  * then give up — a file that is not there after five minutes is a broken
  * reference, not a slow write.
  */
-export const RECOVERY_DELAYS_MS: readonly number[] = [2000, 5000, 10000, 20000, 30000, 60000, 60000, 60000, 60000];
+const RECOVERY_DELAYS_MS: readonly number[] = [2000, 5000, 10000, 20000, 30000, 60000, 60000, 60000, 60000];
 
 /** Whether a failed image URL is one this recovery applies to. */
 export function isRecoverableImageUrl(url: string): boolean {

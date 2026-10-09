@@ -20,10 +20,20 @@ import * as os from "node:os";
 import { getBoxShape, getBoxShapeIfPresent, resolveBoxRoot, requireBoxRoot, BoxShapeError } from "../../src/lib/box-shape.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-const tryGetBoxShape = async (boxRoot) => {
-  try { await getBoxShape(boxRoot); return null; }
-  catch (e) { return e; }
+/** What `getBoxShape(root)` rejects with: "BoxShapeError mentioning [phrases]" when every phrase is in the message. */
+const rejection = async (boxRoot, phrases) => {
+  try { await getBoxShape(boxRoot); return "did not throw"; }
+  catch (e) {
+    if (!(e instanceof BoxShapeError)) return `not a BoxShapeError: ${e}`;
+    const missing = phrases.filter((p) => !e.message.includes(p));
+    return missing.length ? `BoxShapeError missing [${missing.join(", ")}]: ${e.message}` : `BoxShapeError mentioning [${phrases.join(", ")}]`;
+  }
 };
+
+/** "threw" / "threw: <label>" / "did-not-throw" for a promise, where `label` classifies the error. */
+const outcome = (promise, label) =>
+  promise.then(() => "did-not-throw", (e) => (label ? `threw-${label(e)}` : "threw"));
+const noConversion = (e) => (e.message.includes("conversion has been removed") ? "no-conversion" : "other");
 
 // A v2 fixture: package root with the marker one level down at `content/`.
 const makeV2PackageRoot = async () => {
@@ -33,249 +43,161 @@ const makeV2PackageRoot = async () => {
   await fs.writeFile(path.join(dir, "package.json"), JSON.stringify({ dependencies: { beebox: "^1.0.0" } }));
   return dir;
 };
+
+/** A throwaway box whose marker holds `marker`, a string written verbatim. */
+const boxWithMarker = async (marker) => {
+  const box = await makeTmpBox();
+  await box.write(".beebox/box.json", marker);
+  return box;
+};
 ```
 
-## A marker with no shapeVersion field predates v3 and is rejected
+## Markers that predate v3 are rejected
+
+A marker with no `shapeVersion`, an empty marker, and a `shapeVersion` below 3
+are each a `BoxShapeError`; the first says conversion has been removed, the
+third names the version it found.
 
 ```ts
-const box = await makeTmpBox();
-await box.write(".beebox/box.json", JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00.000Z" }));
-const err = await tryGetBoxShape(box.root);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, saysNoConversion: err.message.includes("conversion has been removed") })
-=> {"isBoxShapeError":true,"saysNoConversion":true}
+const noVersion = await boxWithMarker(JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00.000Z" }));
+const empty = await boxWithMarker("");
+const v2 = await boxWithMarker(JSON.stringify({ shapeVersion: 2 }));
+const results = {
+  noShapeVersion: await rejection(noVersion.root, ["conversion has been removed"]),
+  emptyMarker: await rejection(empty.root, []),
+  shapeVersion2: await rejection(v2.root, ["shapeVersion 2"]),
+};
+await Promise.all([noVersion.cleanup(), empty.cleanup(), v2.cleanup()]);
+results
+=> {
+  noShapeVersion: "BoxShapeError mentioning [conversion has been removed]",
+  emptyMarker: "BoxShapeError mentioning []",
+  shapeVersion2: "BoxShapeError mentioning [shapeVersion 2]"
+}
 ```
 
-```ts cleanup
-await box.cleanup();
-```
-
-## An empty marker predates v3 and is rejected
-
-```ts
-const box = await makeTmpBox();
-await box.write(".beebox/box.json", "");
-const err = await tryGetBoxShape(box.root);
-err instanceof BoxShapeError
-=> true
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## A shapeVersion below 3 predates v3 and is rejected
-
-```ts
-const box = await makeTmpBox();
-await box.write(".beebox/box.json", JSON.stringify({ shapeVersion: 2 }));
-const err = await tryGetBoxShape(box.root);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, mentionsVersion: err.message.includes("shapeVersion 2") })
-=> {"isBoxShapeError":true,"mentionsVersion":true}
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## A v2 package root (marker at `content/`) is rejected with a migration-pointing error
+A v2 package root (marker at `content/`) and a v2 `content/` root itself are
+both rejected with the migration-pointing error, each naming which root it
+saw.
 
 ```ts
 const dir = await makeV2PackageRoot();
-const err = await tryGetBoxShape(dir);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, saysNoConversion: err.message.includes("conversion has been removed"), mentionsPackageRoot: err.message.includes("package root") })
-=> {"isBoxShapeError":true,"saysNoConversion":true,"mentionsPackageRoot":true}
-```
-
-```ts cleanup
+const results = {
+  packageRoot: await rejection(dir, ["conversion has been removed", "package root"]),
+  contentRoot: await rejection(path.join(dir, "content"), ["conversion has been removed", "content/ root"]),
+};
 await fs.rm(dir, { recursive: true, force: true });
+results
+=> {
+  packageRoot: "BoxShapeError mentioning [conversion has been removed, package root]",
+  contentRoot: "BoxShapeError mentioning [conversion has been removed, content/ root]"
+}
 ```
 
-## A v2 content/ root itself is also rejected with the migration-pointing error
+An unknown future `shapeVersion` is a clear error naming what is needed:
 
 ```ts
-const dir = await makeV2PackageRoot();
-const contentRoot = path.join(dir, "content");
-const err = await tryGetBoxShape(contentRoot);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, saysNoConversion: err.message.includes("conversion has been removed"), mentionsContentDir: err.message.includes("content/ root") })
-=> {"isBoxShapeError":true,"saysNoConversion":true,"mentionsContentDir":true}
-```
-
-```ts cleanup
-await fs.rm(dir, { recursive: true, force: true });
-```
-
-## Shape 3 with beebox only in devDependencies still resolves
-
-```ts
-const box = await makeTmpBox();
-await fs.writeFile(
-  path.join(box.root, "package.json"),
-  JSON.stringify({ name: "my-box", devDependencies: { "beebox": "0.1.0" } })
-);
-const shape = await getBoxShape(box.root);
-shape.boxRoot === box.root
-=> true
-```
-
-```ts cleanup
+const box = await boxWithMarker(JSON.stringify({ shapeVersion: 4 }));
+const result = await rejection(box.root, ["newer beebox"]);
 await box.cleanup();
+result
+=> BoxShapeError mentioning [newer beebox]
 ```
 
-## Shape 3 with a missing package.json throws BoxShapeError
+## Shape 3 is validated against the box's own package.json
+
+`beebox` in `devDependencies` alone still resolves. A missing `package.json`
+and one that does not declare `beebox` are each a `BoxShapeError`, the first
+naming the box root and the second naming `beebox`.
 
 ```ts
-const box = await makeTmpBox();
-await fs.rm(path.join(box.root, "package.json"));
-const err = await tryGetBoxShape(box.root);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, mentionsBoxRoot: err.message.includes(box.root) })
-=> {"isBoxShapeError":true,"mentionsBoxRoot":true}
+const dev = await makeTmpBox();
+await fs.writeFile(path.join(dev.root, "package.json"), JSON.stringify({ name: "my-box", devDependencies: { "beebox": "0.1.0" } }));
+const resolved = (await getBoxShape(dev.root)).boxRoot === dev.root;
+
+const missing = await makeTmpBox();
+await fs.rm(path.join(missing.root, "package.json"));
+const missingResult = await rejection(missing.root, [missing.root]);
+
+const undeclared = await makeTmpBox();
+await fs.writeFile(path.join(undeclared.root, "package.json"), JSON.stringify({ name: "my-box", dependencies: { lodash: "1.0.0" } }));
+const undeclaredResult = await rejection(undeclared.root, ["beebox"]);
+
+await Promise.all([dev.cleanup(), missing.cleanup(), undeclared.cleanup()]);
+({ resolved, missingResult, undeclaredResult })
+=> {
+  resolved: true,
+  missingResult: "BoxShapeError mentioning [«*»]",
+  undeclaredResult: "BoxShapeError mentioning [beebox]"
+}
 ```
 
-```ts cleanup
-await box.cleanup();
-```
+## Tolerant and strict lookups
 
-## Shape 3 with a package.json that doesn't declare beebox throws BoxShapeError
+`getBoxShapeIfPresent` tolerates a marker-less path but not a broken one;
+`resolveBoxRoot` is tolerant for "not a box" and strict about v2 shapes;
+`requireBoxRoot` is strict everywhere `resolveBoxRoot` is tolerant. Each case
+below runs all three against one input.
 
-```ts
-const box = await makeTmpBox();
-await fs.writeFile(
-  path.join(box.root, "package.json"),
-  JSON.stringify({ name: "my-box", dependencies: { lodash: "1.0.0" } })
-);
-const err = await tryGetBoxShape(box.root);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, mentionsBeeBox: err.message.includes("beebox") })
-=> {"isBoxShapeError":true,"mentionsBeeBox":true}
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## An unknown future shapeVersion is a clear error naming what's needed
-
-```ts
-const box = await makeTmpBox();
-await box.write(".beebox/box.json", JSON.stringify({ shapeVersion: 4 }));
-const err = await tryGetBoxShape(box.root);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, needsNewer: err.message.includes("newer beebox") })
-=> {"isBoxShapeError":true,"needsNewer":true}
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## `getBoxShapeIfPresent` tolerates a marker-less path but not a broken one
-
-Found on a real box:
+A real v3 box is found (`shapeVersion` 3) and both resolvers return its root:
 
 ```ts
 const box = await makeTmpBox();
 const lookup = await getBoxShapeIfPresent(box.root);
-JSON.stringify({ found: lookup.found, shapeVersion: lookup.found ? lookup.shape.shapeVersion : null })
-=> {"found":true,"shapeVersion":3}
-```
-
-```ts continue
+const results = {
+  found: lookup.found,
+  shapeVersion: lookup.found ? lookup.shape.shapeVersion : null,
+  resolveBoxRoot: (await resolveBoxRoot(box.root)) === box.root,
+  requireBoxRoot: (await requireBoxRoot(box.root)) === box.root,
+};
 await box.cleanup();
+results
+=> { found: true, shapeVersion: 3, resolveBoxRoot: true, requireBoxRoot: true }
 ```
 
-A directory with no `.beebox/box.json` is "not a box" (`found: false`), never a fabricated shape:
+A directory with no `.beebox/box.json` is "not a box" (`found: false`), never
+a fabricated shape. `resolveBoxRoot` returns the path unchanged (the tolerant
+contract the dev-tool callers — csp-digest.ts, csp-report.ts, audit-box.ts,
+secrets/migrate.ts — rely on); `requireBoxRoot` throws, for callers (the hub,
+`bbx serve`) where a configured box path resolving to "not a box" must fail
+loudly:
 
 ```ts
 const plain = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-nobox-"));
-const lookup = await getBoxShapeIfPresent(plain);
-lookup.found
-=> false
-```
-
-```ts continue
+const results = {
+  found: (await getBoxShapeIfPresent(plain)).found,
+  resolveBoxRootUnchanged: (await resolveBoxRoot(plain)) === path.resolve(plain),
+  requireBoxRoot: await outcome(requireBoxRoot(plain)),
+};
 await fs.rm(plain, { recursive: true, force: true });
+results
+=> { found: false, resolveBoxRootUnchanged: true, requireBoxRoot: "threw" }
 ```
 
-A malformed marker is a real error and still throws — it is NOT mistaken for "no box":
+A malformed marker is a real error and still throws — it is NOT mistaken for
+"no box":
 
 ```ts
 const bad = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-badbox-"));
 await fs.mkdir(path.join(bad, ".beebox"), { recursive: true });
 await fs.writeFile(path.join(bad, ".beebox/box.json"), "{not json");
-const outcome = await getBoxShapeIfPresent(bad).then(() => "did-not-throw", () => "threw");
-outcome
-=> threw
-```
-
-```ts continue
+const result = await outcome(getBoxShapeIfPresent(bad));
 await fs.rm(bad, { recursive: true, force: true });
-```
-
-A v2 package root is a real error too (the migration-pointing one) — `getBoxShapeIfPresent` never treats a v2 shape as "not a box":
-
-```ts
-const v2dir = await makeV2PackageRoot();
-const outcome = await getBoxShapeIfPresent(v2dir).then(() => "did-not-throw", (e) => e.message.includes("conversion has been removed") ? "threw-no-conversion" : "threw-other");
-outcome
-=> threw-no-conversion
-```
-
-```ts continue
-await fs.rm(v2dir, { recursive: true, force: true });
-```
-
-## `resolveBoxRoot`: tolerant for "not a box," strict about v2 shapes
-
-A v3 box resolves to itself:
-
-```ts
-const box = await makeTmpBox();
-(await resolveBoxRoot(box.root)) === box.root
-=> true
-```
-
-A non-box path is returned unchanged (the tolerant contract the dev-tool callers — csp-digest.ts, csp-report.ts, audit-box.ts, secrets/migrate.ts — rely on):
-
-```ts continue
-const plain = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-plain-"));
-const passthrough = (await resolveBoxRoot(plain)) === path.resolve(plain);
-passthrough
-=> true
-```
-
-A v2 shape still throws the migration-pointing error — `resolveBoxRoot` never silently resolves it:
-
-```ts continue
-const v2dir = await makeV2PackageRoot();
-const outcome = await resolveBoxRoot(v2dir).then(() => "did-not-throw", (e) => e.message.includes("conversion has been removed") ? "threw-no-conversion" : "threw-other");
-outcome
-=> threw-no-conversion
-```
-
-```ts cleanup
-await fs.rm(plain, { recursive: true, force: true });
-await fs.rm(v2dir, { recursive: true, force: true });
-await box.cleanup();
-```
-
-## `requireBoxRoot`: strict everywhere `resolveBoxRoot` is tolerant
-
-A v3 box still resolves to itself:
-
-```ts
-const box = await makeTmpBox();
-(await requireBoxRoot(box.root)) === box.root
-=> true
-```
-
-A non-box path throws instead of passing through — for callers (the hub, `bbx serve`) where a configured box path resolving to "not a box" must fail loudly:
-
-```ts continue
-const plain = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-plain2-"));
-const outcome = await requireBoxRoot(plain).then(() => "did-not-throw", () => "threw");
-outcome
+result
 => threw
 ```
 
-```ts cleanup
-await fs.rm(plain, { recursive: true, force: true });
-await box.cleanup();
+A v2 package root is a real error too (the migration-pointing one):
+`getBoxShapeIfPresent` never treats a v2 shape as "not a box", and
+`resolveBoxRoot` never silently resolves it.
+
+```ts
+const v2dir = await makeV2PackageRoot();
+const results = {
+  getBoxShapeIfPresent: await outcome(getBoxShapeIfPresent(v2dir), noConversion),
+  resolveBoxRoot: await outcome(resolveBoxRoot(v2dir), noConversion),
+};
+await fs.rm(v2dir, { recursive: true, force: true });
+results
+=> { getBoxShapeIfPresent: "threw-no-conversion", resolveBoxRoot: "threw-no-conversion" }
 ```

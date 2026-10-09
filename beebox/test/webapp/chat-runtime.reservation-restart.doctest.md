@@ -8,6 +8,7 @@ until it does, every read of the chat must degrade to "nothing here" rather than
 to an engine's failure.
 
 ```ts setup
+import { MODEL_ID } from "../../src/shared/model-ids.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { getChatRuntime, setChatRuntime } from "../../src/webapp/chat-runtime.js";
 import { ChatSessionRegistry } from "../../src/core/chat/session/registry/core.js";
@@ -40,7 +41,7 @@ const api = caller(server);
 await api.admin.updateBoxConfig({ agentEngine: "codex",
   engines: { claude: true, codex: true } });
 const receipt = { sessionId: ID, contextDir: "_content/papers",
-  engine: "claude" as const, model: "claude-haiku-4-5-20251001" };
+  engine: "claude" as const, model: MODEL_ID.haiku };
 await api.chat.reserveSession(receipt);
 
 const original = getChatRuntime(server.boxRoot)!;
@@ -72,8 +73,8 @@ const history = await api.chat.history({ session: ID, slice: TAIL });
 const restored = restartedRegistry.getReservation(ID)!;
 JSON.stringify({ reserved: reserved.kind, bootstrap: bootstrap.kind,
   bootstrapId: bootstrap.sessionId, historyId: history.sessionId,
-  contextDir: restored.contextDir, engine: restored.engine, model: restored.model })
-=> {"reserved":"reserved","bootstrap":"resumable","bootstrapId":"11111111-1111-4111-8111-111111111111","historyId":"11111111-1111-4111-8111-111111111111","contextDir":"_content/papers","engine":"claude","model":"claude-haiku-4-5-20251001"}
+  contextDir: restored.contextDir, engine: restored.engine, modelKept: restored.model === receipt.model })
+=> {"reserved":"reserved","bootstrap":"resumable","bootstrapId":"11111111-1111-4111-8111-111111111111","historyId":"11111111-1111-4111-8111-111111111111","contextDir":"_content/papers","engine":"claude","modelKept":true}
 ```
 
 ```ts cleanup

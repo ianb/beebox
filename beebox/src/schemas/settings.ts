@@ -17,6 +17,6 @@ editable notes, available through source inspection. The instrument does not
 render the body. Live UI state is not card content.
 
 Do not delete or move this required card. Restore an accidentally removed card
-from Git, or use a declared engine migration. Closing its tab is safe.
+from Git. Closing its tab is safe.
 Never put passwords, tokens, grants, or live form values in this card.`,
 });

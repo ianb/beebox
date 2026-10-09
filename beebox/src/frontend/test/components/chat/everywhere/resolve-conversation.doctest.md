@@ -235,11 +235,11 @@ let reserves = 0;
 const result = await resolveConversation({ utils: utils.utils,
   reserve: async () => { reserves += 1; return { kind: "unsupported" }; },
   receipts: new ReservationReceipts(new MemoryStorage(), "paper-cards/test1"),
-  request: { kind: "new", contextDir: "_content/lessons", model: "gpt-5" },
+  request: { kind: "new", contextDir: "_content/lessons", model: "pinned-model" },
 });
 const target = result.selection.kind === "ready" ? result.selection.target : null;
 JSON.stringify({ target: target?.kind === "start" ? { ...target, clientConversationId: "<uuid>" } : target, reserves })
-=> {"target":{"kind":"start","clientConversationId":"<uuid>","contextDir":"_content/lessons","engine":"codex","model":"gpt-5","seedFeatures":{"audience":"teacher"}},"reserves":0}
+=> {"target":{"kind":"start","clientConversationId":"<uuid>","contextDir":"_content/lessons","engine":"codex","model":"pinned-model","seedFeatures":{"audience":"teacher"}},"reserves":0}
 ```
 
 ## An implicitly chosen missing transcript starts fresh

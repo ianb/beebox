@@ -51,6 +51,48 @@
 }
 /* Chrome owns the common desk and its saturated material palette. */
 .bbx-box-presentation {
+  --bbx-input-paper: #fff;
+  --bbx-input-ink: #302f2d;
+  --bbx-input-muted: #625e58;
+  --bbx-scene: initial;
+  --bbx-toolbar-background: initial;
+  --bbx-toolbar-ink: initial;
+  --bbx-toolbar-edge: initial;
+  --bbx-toolbar-radius: initial;
+  --bbx-toolbar-shadow: initial;
+  --bbx-status-background: initial;
+  --bbx-status-ink: initial;
+  --bbx-status-edge: initial;
+  --bbx-composer-background: initial;
+  --bbx-composer-ink: initial;
+  --bbx-composer-edge: initial;
+  --bbx-composer-radius: initial;
+  --bbx-composer-shadow: initial;
+  --bbx-control-background: initial;
+  --bbx-control-ink: initial;
+  --bbx-control-radius: initial;
+  --bbx-control-shape-default: initial;
+  --bbx-control-shape-place: initial;
+  --bbx-control-shape-session: initial;
+  --bbx-control-shape-voice: initial;
+  --bbx-control-shape-profile: initial;
+  --bbx-control-shape-add: initial;
+  --bbx-control-shape-send: initial;
+  --bbx-control-shape-mic: initial;
+  --bbx-control-shape-keyboard: initial;
+  --bbx-control-shape-capture: initial;
+  --bbx-send-background: initial;
+  --bbx-send-ink: initial;
+  --bbx-chat-user-paper: initial;
+  --bbx-chat-user-ink: initial;
+  --bbx-chat-user-radius: initial;
+  --bbx-chat-reply-paper: initial;
+  --bbx-chat-agent-paper: initial;
+  --bbx-chat-reply-ink: initial;
+  --bbx-menu-paper: initial;
+  --bbx-menu-ink: initial;
+  --bbx-menu-edge: initial;
+  --bbx-menu-radius: initial;
   /* Reset per presentation so a nested preview never inherits the page's
      theme tokens. */
   --bbx-desk-pattern: none;

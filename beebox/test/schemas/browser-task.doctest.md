@@ -58,6 +58,13 @@ parseCardText("---\ntype: browser-task\nstart:\n  href: https://x.test\nrescan-a
 => throws CardIOError
 ```
 
+`start.href` must be a URL; the start page is handed to a browser executor:
+
+```ts
+parseCardText("---\ntype: browser-task\nstart:\n  href: not a url\n---\nx\n", { source: "T.browser-task.card", schemas })
+=> throws CardIOError
+```
+
 The template emits an open task (no `closed`) with the prompt as the body:
 
 ```ts
@@ -65,13 +72,6 @@ const text = createBrowserTaskTemplate({ title: "Pottery shows", start: "https:/
 const parsed = parseCardText(text, { source: "Pottery.browser-task.card", schemas });
 JSON.stringify(["closed" in parsed.fields, parsed.fields["start"], String(parsed.fields["body"]).trim()])
 => [false,{"href":"https://example.test/feed"},"Find show announcements."]
-```
-
-`start.href` must be a URL and `last-upload` an instant:
-
-```ts
-parseCardText("---\ntype: browser-task\nstart:\n  href: not a url\n---\nx\n", { source: "T.browser-task.card", schemas })
-=> throws CardIOError
 ```
 
 ## The prompt must not lean on the box

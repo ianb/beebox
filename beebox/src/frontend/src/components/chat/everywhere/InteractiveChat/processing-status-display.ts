@@ -43,7 +43,7 @@ export function shouldShowAgentWorking(input: {
  *  recovered. Three (~15s of confirmed idle) is far past the frames-in-flight
  *  window at a healthy turn end, where `busy` flips false milliseconds before
  *  STREAM_RESULT lands. */
-export const STREAM_WATCHDOG_IDLE_POLLS = 3;
+const STREAM_WATCHDOG_IDLE_POLLS = 3;
 
 /**
  * One watchdog poll result folded into the running idle count. `busy` resets

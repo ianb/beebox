@@ -45,6 +45,17 @@ function fakeClock(startAt: number) {
     pendingCount: () => timers.length,
   };
 }
+
+/** A gate (5s window) on a fake clock; `reconnect()` notifies with a counting REFRESH. */
+function makeGate(startAt: number) {
+  const clock = fakeClock(startAt);
+  const gate = createReconnectRefreshGate({
+    minIntervalMs: 5000, baselineAt: startAt,
+    now: clock.now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
+  });
+  const state = { refreshes: 0 };
+  return { clock, gate, state, reconnect: () => gate.notifyReconnect(() => { state.refreshes += 1; }) };
+}
 ```
 
 ## A connect within the window of the baseline is suppressed (but scheduled)
@@ -54,16 +65,11 @@ bootstrap already loaded history, so an immediate reconnect is redundant —
 but it's not lost, it just waits for the rest of the window.
 
 ```ts
-const clock = fakeClock(1_000);
-const gate = createReconnectRefreshGate({
-  minIntervalMs: 5000, baselineAt: 1_000,
-  now: clock.now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
-});
+const { clock, state, reconnect } = makeGate(1_000);
 
-let calls = 0;
 clock.advance(1000);
-gate.notifyReconnect(() => { calls += 1; });
-calls
+reconnect();
+state.refreshes
 => 0
 ```
 
@@ -71,8 +77,8 @@ calls
 
 ```ts continue
 clock.advance(4500);
-gate.notifyReconnect(() => { calls += 1; });
-calls
+reconnect();
+state.refreshes
 => 1
 ```
 
@@ -84,13 +90,10 @@ every reconnect after the first sent an unconditional REFRESH.
 
 ```ts continue
 clock.advance(200);
-gate.notifyReconnect(() => { calls += 1; });
-calls
-=> 1
-
+reconnect();
 clock.advance(200);
-gate.notifyReconnect(() => { calls += 1; });
-calls
+reconnect();
+state.refreshes
 => 1
 ```
 
@@ -99,8 +102,8 @@ it fires again:
 
 ```ts continue
 clock.advance(5000);
-gate.notifyReconnect(() => { calls += 1; });
-calls
+reconnect();
+state.refreshes
 => 2
 ```
 
@@ -110,21 +113,16 @@ calls
 next tick will).
 
 ```ts
-const clock2 = fakeClock(0);
-const gate2 = createReconnectRefreshGate({
-  minIntervalMs: 5000, baselineAt: 0,
-  now: clock2.now, setTimeout: clock2.setTimeout, clearTimeout: clock2.clearTimeout,
-});
+const { clock, state, reconnect } = makeGate(0);
 
-let calls2 = 0;
-clock2.advance(5000);
-gate2.notifyReconnect(() => { calls2 += 1; });
-calls2
+clock.advance(5000);
+reconnect();
+state.refreshes
 => 1
 
-clock2.advance(4999);
-gate2.notifyReconnect(() => { calls2 += 1; });
-calls2
+clock.advance(4999);
+reconnect();
+state.refreshes
 => 1
 ```
 
@@ -133,61 +131,44 @@ calls2
 The scenario that used to lose history for good: an outage exceeds event-bus
 retention, the socket reconnects near the end of the window, and then stays
 up — no further reconnect ever arrives to "get lucky" past the gate. The
-trailing timer is what still services it.
+trailing timer is what still services it. The connection stays stable — no
+further `notifyReconnect` call — but the armed timer still fires once the
+window elapses:
 
 ```ts
-const clock3 = fakeClock(0);
-const gate3 = createReconnectRefreshGate({
-  minIntervalMs: 5000, baselineAt: 0,
-  now: clock3.now, setTimeout: clock3.setTimeout, clearTimeout: clock3.clearTimeout,
-});
+const { clock, state, reconnect } = makeGate(0);
 
-let calls3 = 0;
-clock3.advance(4900);
-gate3.notifyReconnect(() => { calls3 += 1; });
-calls3
-=> 0
-```
-
-The connection stays stable — no further `notifyReconnect` call — but the
-armed timer still fires once the window elapses:
-
-```ts continue
-clock3.advance(99);
-calls3
+clock.advance(4900);
+reconnect();
+state.refreshes
 => 0
 
-clock3.advance(1);
-calls3
+clock.advance(99);
+state.refreshes
+=> 0
+
+clock.advance(1);
+state.refreshes
 => 1
 ```
 
 Further reconnects that land before the timer fires coalesce into the same
-single pending timer rather than each pushing the deadline back out:
+single pending timer rather than each pushing the deadline back out. Advancing
+to the ORIGINAL deadline (not pushed out by the second reconnect) fires it:
 
 ```ts
-const clock4 = fakeClock(0);
-const gate4 = createReconnectRefreshGate({
-  minIntervalMs: 5000, baselineAt: 0,
-  now: clock4.now, setTimeout: clock4.setTimeout, clearTimeout: clock4.clearTimeout,
-});
+const { clock, state, reconnect } = makeGate(0);
 
-let calls4 = 0;
-clock4.advance(4900);
-gate4.notifyReconnect(() => { calls4 += 1; });
-clock4.advance(50);
+clock.advance(4900);
+reconnect();
+clock.advance(50);
 // Still suppressed; coalesces into the already-pending timer rather than re-arming it.
-gate4.notifyReconnect(() => { calls4 += 1; });
-print(`pending timers: ${clock4.pendingCount()}`);
-=> pending timers: 1
-```
+reconnect();
+clock.pendingCount()
+=> 1
 
-Advancing to the ORIGINAL deadline (not pushed out by the second reconnect)
-fires it:
-
-```ts continue
-clock4.advance(50);
-calls4
+clock.advance(50);
+state.refreshes
 => 1
 ```
 
@@ -197,22 +178,15 @@ Unmount (or a session switch remounting the hook) must not let a stale timer
 fire into a torn-down closure.
 
 ```ts
-const clock5 = fakeClock(0);
-const gate5 = createReconnectRefreshGate({
-  minIntervalMs: 5000, baselineAt: 0,
-  now: clock5.now, setTimeout: clock5.setTimeout, clearTimeout: clock5.clearTimeout,
-});
+const { clock, gate, state, reconnect } = makeGate(0);
 
-let calls5 = 0;
-clock5.advance(4900);
-gate5.notifyReconnect(() => { calls5 += 1; });
-gate5.dispose();
-clock5.advance(5000);
-calls5
+clock.advance(4900);
+reconnect();
+gate.dispose();
+clock.advance(5000);
+state.refreshes
 => 0
-```
 
-```ts continue
-print(`pending timers: ${clock5.pendingCount()}`);
-=> pending timers: 0
+clock.pendingCount()
+=> 0
 ```

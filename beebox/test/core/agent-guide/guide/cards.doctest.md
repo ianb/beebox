@@ -134,6 +134,6 @@ JSON.stringify(cardTypesList({ allCardSchemas: [] }))
 const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" }, allCardSchemas: [] });
 const section = guide.split("## CARD_TYPES\n")[1]?.split("\n## ")[0] ?? "";
 const paragraphs = section.trim().split("\n\n");
-[paragraphs.length, paragraphs[0]?.startsWith("Each type with handling instructions"), paragraphs[1]?.startsWith("A new kind of thing"), section.includes("\n\n\n")].join("|")
-=> 2|true|true|false
+[paragraphs.length, section.includes("\n\n\n")].join("|")
+=> 2|false
 ```

@@ -3,6 +3,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { ensurePackageDocs } from "../../../../core/docs-gen/package-docs/core.js";
+import { PACKAGE_ROOT } from "../../../../lib/package-root.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import type { AuditTest } from "../../test-suite-schema.js";
 
@@ -25,8 +26,16 @@ export async function ensureAuditPackageDocs(boxRoot: string, test: AuditTest): 
   const referencedFiles = [...(test.should_read ?? []), ...(test.should_read_any ?? [])];
   if (!referencedFiles.some((file) => file.includes(packageDocsPrefix))) return;
 
-  // The destination can itself be a package symlink in an installed box.
-  // Never let audit setup generate files through it into the checkout.
+  // A worktree's box clone links node_modules/beebox to the engine running
+  // this audit. Its docs are the engine's own generated docs, so refresh them
+  // there, exactly as the engine does at startup.
+  if (await linksToRunningEngine(boxRoot)) {
+    const result = await ensurePackageDocs();
+    if (result.status === "unwritable") throw new AuditPackageDocsSetupError(result.reason);
+    return;
+  }
+  // Any other package symlink points somewhere this audit doesn't own.
+  // Never let audit setup generate files through it.
   await assertFixturePathInBox(boxRoot, `${packageDocsPrefix}README.md`);
   const packageRoot = path.join(boxRoot, "node_modules", "beebox");
   // Generate the real engine docs into the audit box instead of faking their
@@ -34,6 +43,18 @@ export async function ensureAuditPackageDocs(boxRoot: string, test: AuditTest): 
   await fs.mkdir(packageRoot, { recursive: true });
   const result = await ensurePackageDocs({ packageRoot });
   if (result.status === "unwritable") throw new AuditPackageDocsSetupError(result.reason);
+}
+
+async function linksToRunningEngine(boxRoot: string): Promise<boolean> {
+  const linkPath = await assertFixturePathInBox(boxRoot, "node_modules");
+  const packagePath = path.join(linkPath, "beebox");
+  try {
+    if (!(await fs.lstat(packagePath)).isSymbolicLink()) return false;
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return false;
+    throw error;
+  }
+  return await fs.realpath(packagePath) === await fs.realpath(PACKAGE_ROOT);
 }
 
 /** Write fixture files declared by an audit after checking every path. */

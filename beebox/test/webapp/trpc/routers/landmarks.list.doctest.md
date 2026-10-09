@@ -33,7 +33,7 @@ function caller(boxRoot) {
 const box = await makeTmpBox({ git: true });
 
 await box.write("_content/recipes/Recipes.landmark.card",
-  "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n\n");
+  "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n\n");
 await box.write("_content/trips/Trips.landmark.card", "no frontmatter here at all\n");
 
 const { landmarks, problems } = await caller(box.root).landmarks.list();
@@ -104,7 +104,7 @@ placeholder.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol: 🍳\n---\n");
+await box.write("_content/Box.landmark.card", "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Kitchen\n---\n");
 
 const { landmark } = await caller(box.root).landmarks.forDir({ dir: "" });
 JSON.stringify({ path: landmark?.path, dir: landmark?.dir, label: landmark?.label, symbol: landmark?.symbol })

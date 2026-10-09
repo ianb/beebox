@@ -100,7 +100,7 @@ function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
         id="bbx-chat-load-older"
         onClick={onLoadOlder}
         disabled={loadingOlder}
-        className="text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
+        className="bbx-chat-meta-material text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
       >
         {loadingOlder ? "Loading..." : "Show earlier messages"}
       </button>
@@ -197,8 +197,8 @@ function MessageListInner({
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView }),
-    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView],
+    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled }),
+    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled],
   );
 
   const { scrollerRef, contentRef, liveContentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen } = useChatScroll();
@@ -285,7 +285,7 @@ function MessageListInner({
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
         <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
-        <div className="text-warm-500 text-sm">Start a conversation.</div>
+        <div className="bbx-chat-empty-label text-warm-500 text-sm">Start a conversation.</div>
       </div>
     );
   }

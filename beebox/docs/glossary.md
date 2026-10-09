@@ -53,7 +53,7 @@ to change a user-facing word, change it here first. Decisions recorded
 
 **reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent processing (batch jobs in one session; chat jobs with per-thread resumable sessions) → `bbx finalize`. The wakeup cycle's engine.
 
-**connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Connector.sync()`. See `src/connectors/CLAUDE.md`.
+**connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive, Telegram) with the box filesystem. Implements `Connector.sync()`. See `src/connectors/CLAUDE.md`.
 
 **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `_config/procedures/`, runs in `_bookkeeping/procedure/runs/`. See `docs/procedure-implementation.md`.
 
