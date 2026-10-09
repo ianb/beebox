@@ -7,7 +7,7 @@
  * read them. The root file is always loaded and is not named.
  */
 
-import { readFile } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
 import { AGENT_INSTRUCTION_FILES } from "./agent-instruction-files.js";
@@ -27,6 +27,15 @@ async function readIfPresent(file: string): Promise<string | null> {
   }
 }
 
+async function isSymlink(filePath: string): Promise<boolean> {
+  try {
+    return (await lstat(filePath)).isSymbolicLink();
+  } catch (err) {
+    if (errnoCode(err) === "ENOENT") return false;
+    throw err;
+  }
+}
+
 /**
  * One note per instruction file in the card's directory and its ancestors
  * below `boxRoot`, nearest directory first. `cardPath` is box-relative or
@@ -38,7 +47,11 @@ export async function folderInstructionNotes(boxRoot: string, cardPath: string):
   let dir = path.dirname(path.resolve(root, cardPath));
   while (dir !== root && dir.startsWith(root + path.sep)) {
     for (const name of AGENT_INSTRUCTION_FILES) {
-      const content = await readIfPresent(path.join(dir, name));
+      const filePath = path.join(dir, name);
+      // An AGENTS.md symlink is the legacy Codex mirror of the CLAUDE.md beside
+      // it; naming both would point the agent at the same text twice.
+      if (await isSymlink(filePath)) continue;
+      const content = await readIfPresent(filePath);
       if (content === null || isIncludeOnly(content)) continue;
       const rel = path.relative(root, path.join(dir, name));
       notes.push(`Folder instructions: ${rel}. Read it before filling in this card.`);

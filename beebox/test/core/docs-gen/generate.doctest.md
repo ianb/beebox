@@ -14,6 +14,7 @@ real, executable `.git/hooks/pre-commit` that shells out to a `bbx` binary —
 an unrelated hazard in a repo-in-a-repo dev/test environment).
 
 ```ts setup
+import { rm } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { commitTemplateSyncChanges, generateDocs } from "../../../src/core/docs-gen/generate/core.js";
 import { isTemplateManagedPath } from "../../../src/core/install-template-file.js";
@@ -148,6 +149,22 @@ await generateDocs(authoredBox.root, { force: true });
 
 (await getStatus(authoredBox.root)).modified.includes("AGENTS.md")
 => true
+```
+
+A tracked guide is engine output, not the box's own file: when generation
+reinstalls `src/schemas/AGENTS.md`, the same commit takes it.
+
+```ts continue
+await rm(authoredBox.path("src/schemas/AGENTS.md"));
+authoredBox.commitAll("drop the schemas guide");
+await generateDocs(authoredBox.root, { force: true });
+
+(await authoredBox.read("src/schemas/AGENTS.md")).startsWith("# Writing Box-Local Schemas")
+=> true
+
+const afterGuide = await getStatus(authoredBox.root);
+[...afterGuide.staged, ...afterGuide.modified, ...afterGuide.untracked].includes("src/schemas/AGENTS.md")
+=> false
 ```
 
 ```ts cleanup
