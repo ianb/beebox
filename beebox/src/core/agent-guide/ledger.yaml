@@ -22,10 +22,10 @@ budget:
   # procedure moved from the dev repo into the box.
   # Raised 2026-10-09 to the test1 clone's measurement. Before this change
   # it already measured 5692 / 10785 (drift from merges since 2026-10-07);
-  # +55 / +99 for SPEAKING's invisible-plumbing passage and the chat prompt's
+  # +51 / +95 for SPEAKING's invisible-plumbing passage and the chat prompt's
   # silent machinery work (user-facing-language workstream).
-  guide_words: 5747
-  always_loaded_words: 10884
+  guide_words: 5743
+  always_loaded_words: 10880
   uncited_words_per_section: 60
 
 lint:
