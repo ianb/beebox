@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — D-chemistry, A-lending, B-inventory, C-reconnecting, F-newcomer journey walks, 2026-10-09
+resolution: implemented
 ---
+
+Fixed on worktree-journey-walks-oct: the briefing schema instructions, which load as a path rule whenever the agent edits a briefing, now say: when you record the box's purpose, remove the root landmark's stock onboarding openers or replace them with openers for that purpose. A doctest (`schemas.briefing-compile`) keeps the quoted opener text equal to `STOCK_ROOT_OPENERS`. The agent guide is unchanged: its RECORDING routing already sends the box's purpose to the briefing, and by the guide ledger's bin test this rule applies only when touching the purpose, so it belongs on that surface. Residual risk: an agent that records the purpose outside the briefing (B-inventory, C-reconnecting) breaks the routing rule first and will not read this one. Verified by reading the regenerated `box-docs/card-briefing.md`; no knowledge audit was run.
 
 The root landmark ships two onboarding openers, "Let me tell you what this box
 is for." and "What can you do?". The landmark schema says to remove them once
@@ -47,13 +50,13 @@ repository's stance is to arrange context for the agent and not to automate
 the judgment, so the likely fix is a pointer where the agent records the
 purpose, not an auto-remover.
 
-Related: [landmark arrival](../../beebox/docs/implemented-plans/landmark-arrival.md)
+Related: [landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md)
 (Track B introduced the fading openers);
-[first-screen-says-nothing-about-what-this-is](../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md).
+[first-screen-says-nothing-about-what-this-is](../../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md).
 
-Reports: [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 45,
-[A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 12,
-[B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R9,
-[C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R6,
-[F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) R5,
-[D-chemistry second walk](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) R4.
+Reports: [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 45,
+[A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 12,
+[B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R9,
+[C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R6,
+[F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) R5,
+[D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) R4.
