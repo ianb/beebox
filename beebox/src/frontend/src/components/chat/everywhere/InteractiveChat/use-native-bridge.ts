@@ -95,7 +95,7 @@ function useNativeHqDictationBridge(opts: { enabled: boolean; sessionId: string 
   const diarized = configQuery.isFetching || hqService === undefined || isDiarizedHqService(hqService);
   useEffect(() => {
     if (!enabled) return;
-    postNativeHqDictationState({ enabled: true, diarized }, window);
+    postNativeHqDictationState({ diarized }, window);
   }, [enabled, diarized, sessionId]);
 }
 
@@ -286,11 +286,12 @@ export function postNativeNarrationState(enabled: boolean, shell: NativeShellWin
   postNativeMessage(shell, { channel: "beeboxNarrationState", payload: { enabled } });
 }
 
+/** `enabled` is always true; it is still sent for native builds that read it (contract §4.4a). */
 export function postNativeHqDictationState(
-  state: { enabled: boolean; diarized: boolean },
+  state: { diarized: boolean },
   shell: NativeShellWindow,
 ): void {
-  postNativeMessage(shell, { channel: "beeboxHqDictationState", payload: state });
+  postNativeMessage(shell, { channel: "beeboxHqDictationState", payload: { enabled: true, diarized: state.diarized } });
 }
 
 export function postNativeSpeechPlaybackState(playing: boolean, shell: NativeShellWindow): void {

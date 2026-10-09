@@ -9,6 +9,21 @@ discovered-in: main — boxholder describing it from their own use
 priority: normal
 ---
 
+> **Note 2026-10-09 (hq-always workstream).** Every dictated message now gets
+> the HQ pass (`beebox/docs/plans/hq-always.md`), so the HQ wait this bug lives
+> in is no longer limited to chats with HQ dictation on: every voice send with
+> a recording waits. The restructure did not touch the merge rule in
+> `prepareVoiceSubmitEmission`, and nothing in it made a fix natural — the
+> "whose text wins" decision below is unchanged and still needs a reproduction
+> first. One finding from reading the code: a recording that ends on its own
+> (mic loss past its window, silence auto-stop) is sealed without an HQ
+> request and its text is folded into the composer; it does not start an HQ
+> wait. A wait only follows a send (keyword, Send button, or max duration), and
+> `runKeywordSend` clears the composer before the wait starts, so text typed
+> during the wait stays in the composer for the next message rather than being
+> merged. If the reported loss reproduces, the trigger is likely a send the
+> boxholder did not see as a send.
+
 Start a recording. The recording errors and stops. The composer is usable
 again, so type a message. The HQ transcription then lands, and the typed text
 is gone from what gets sent: it was not part of the transcription, and the HQ
@@ -65,7 +80,7 @@ a recording succeeds and the user types during a slow HQ wait — the case the
 current rule was written for. Do not fix the error case in a way that changes
 the good case by accident.
 
-Related: [sticky HQ preference](../features/2026-08-26-sticky-hq-transcription-preference.md)
+Related: [sticky HQ preference](../closed/features/2026-08-26-sticky-hq-transcription-preference.md)
 (HQ state itself was reported broken on 2026-09-20),
 [a failed recording start wipes the draft](../closed/bugs/2026-08-25-mic-misfire-wipes-the-composer-draft.md)
 — closed as a harness artifact from an automated browser, but this report is

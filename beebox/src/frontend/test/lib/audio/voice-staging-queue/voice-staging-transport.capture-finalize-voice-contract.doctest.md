@@ -30,8 +30,8 @@ JSON.stringify({ ok, body })
 
 ## Non-HQ send: `emissionId` present, `hq` null
 
-The HQ-dictation-off case this fix restores (`get-last-audio` finds the
-recording by `emissionId` alone):
+A recording sealed without an HQ request (`get-last-audio` finds it by
+`emissionId` alone):
 
 ```ts
 const { body, ok } = parse({ kind: "finalize", chunkCount: 2, emissionId: "em-2", hq: null });

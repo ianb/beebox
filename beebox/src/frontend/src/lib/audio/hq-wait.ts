@@ -6,9 +6,10 @@
  *
  * - the result is ready → `claim` it → send the HQ text;
  * - the budget runs out, or the user taps "Send live text now" → `fallBack`
- *   → send the realtime text marked `hq="failed"` — unless `fallBack`
+ *   → send the realtime text, marked `stt="live"` — unless `fallBack`
  *   answers that HQ won the race, which sends the HQ text after all;
- * - the HQ job failed for good → send the realtime text marked `hq="failed"`.
+ * - the HQ job failed for good (a box with no HQ key included) → send the
+ *   realtime text, marked `stt="live"`.
  *
  * After a fallback the HQ result stays on the box, reachable through
  * `bbx chat retranscribe`; it is never delivered as a later message.
