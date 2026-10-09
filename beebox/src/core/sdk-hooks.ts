@@ -21,6 +21,7 @@ import { lintViewMarkdown } from "./views/markdown-check/core.js";
 import { isRecord } from "./card-io.js";
 import { isBuiltinLintableMarkdown } from "./list-cards.js";
 import { connectorOwnedEditWarning, isConnectorOwnedMarkdown } from "./connector-owned-markdown.js";
+import { thirdPersonWarning } from "./card-lint/third-person.js";
 
 function markdownConfig(boxRoot: string): Record<string, unknown> {
   return { default: false, MD009: true, MD037: true, MD038: true, MD047: true, ...linkRuleConfig(boxRoot) };
@@ -39,6 +40,8 @@ function extractFilePath(toolInput: unknown): string | null {
  *     (must be in a subdirectory: `tricks/scripts/<name>/index.ts`).
  *   - Validate `.card` files via cardworks lint and surface any issues
  *     as additionalContext so the model sees the warning.
+ *   - Point out "the user"/"the boxholder" in text just written to a card
+ *     under `_content/` (`card-lint/third-person.ts`).
  *   - Validate `.md` files via markdownlint and custom link rules.
  *
  * All checks just inject context — they don't block the tool from
@@ -81,8 +84,12 @@ export function cardValidatorHook(): HookCallbackMatcher {
         }
 
         if (filePath.endsWith(".card")) {
-          const additional = await runCardLint(post.cwd, filePath);
-          if (additional === null) return {};
+          const boxRoot = await findBoxRoot(dirname(filePath));
+          const voice = boxRoot === null ? null : thirdPersonWarning({ boxRoot, filePath, toolInput: post.tool_input });
+          const lint = await runCardLint(post.cwd, filePath);
+          const notes = [lint, voice].filter((note) => note !== null);
+          if (notes.length === 0) return {};
+          const additional = notes.join("\n\n");
           return {
             hookSpecificOutput: {
               hookEventName: "PostToolUse",

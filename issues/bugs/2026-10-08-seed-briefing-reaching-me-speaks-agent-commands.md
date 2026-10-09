@@ -1,6 +1,6 @@
 ---
 title: "The seed briefing section Reaching me speaks in agent commands"
-workstream: unattached
+workstream: user-facing-language
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -26,3 +26,11 @@ agent-facing docs (`beebox/box-docs/`). Related:
 [agent writes "the user" on pages the person reads](2026-10-08-agent-writes-the-user-on-boxholder-pages.md).
 
 Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shot 10).
+
+## Resolution (user-facing-language, 2026-10-09)
+
+`REACHING_ME_DEFAULT` ends "When I ask for a reminder or to be told when
+something happens, make sure it reaches me wherever I am." The schedule-card
+mechanics were already in the guide's REACHING_THE_BOXHOLDER section.
+Template sync rewrites a briefing whose text is still the seed; a briefing the
+person has edited keeps its old wording.

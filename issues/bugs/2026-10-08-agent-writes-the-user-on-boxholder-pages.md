@@ -1,6 +1,6 @@
 ---
 title: "Agents write \"the user\" and \"the boxholder\" on pages the person reads"
-workstream: unattached
+workstream: user-facing-language
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -33,3 +33,14 @@ how the seed briefing is already written in the person's voice (see
 Reports:
 [walk 1](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 42),
 [walk 2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 45).
+
+## Resolution (user-facing-language, 2026-10-09)
+
+A check, not more guide text: the card-write hook (`sdk-hooks.ts`,
+`card-lint/third-person.ts`) flags "the user" / "the boxholder" in text the agent
+just wrote to a card under `_content/`, while it can still fix it. It reads
+only the new text, so imported content that quotes "the user" stays quiet;
+for the same reason it is not a `bbx validate` rule. The briefing's
+instructions now say to write it in the person's own voice ("I'm
+cataloguing my tools"), since agents read it too and "you" would be
+ambiguous there.

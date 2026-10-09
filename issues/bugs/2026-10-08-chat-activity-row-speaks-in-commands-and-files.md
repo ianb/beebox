@@ -1,6 +1,6 @@
 ---
 title: "The chat activity row says \"ran 2 commands\" and \"Wrote schemas/loan.ts\""
-workstream: unattached
+workstream: user-facing-language
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -41,3 +41,12 @@ want it.
 (closed) did not cover this surface.
 [The chat agent narrates implementation steps](2026-10-08-chat-agent-narrates-implementation-steps.md)
 is the text side of the same problem.
+
+## Resolution (user-facing-language, 2026-10-09)
+
+The row now speaks in lay words (`ChatMessages/activity-wording.ts`):
+collapsed "thought it over, looked up 2 things, made a change, took a step";
+a line per step uses the command's `description`, the card's title ("Updated
+Lemon Chicken"), or "Set up loan cards" for a schema. Every line expands to
+the raw input and result. The guide now tells the agent that a command's
+`description` is shown to the person.
