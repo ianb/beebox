@@ -198,14 +198,14 @@ function buildSteps(input: {
       if (target === null) {
         throw new NoLandmarkToSwitchToError({ current, snapshot: before });
       }
-      if (refFor(before, { role: "menuitem", name: target.rawName }) === null) {
+      const ref = refFor(before, { role: "menuitem", name: target.rawName });
+      if (ref === null) {
         throw new LandmarkRefUnresolvedError({ name: target.rawName, snapshot: before });
       }
       const urlBefore = await session.getUrl();
-      // Click the exact visible label. The menuitem's centre is its full-width
-      // child span, which current agent-browser correctly reports as covering
-      // the parent ref; activating the label bubbles through the same control.
-      await session.run(["find", "text", target.label, "click", "--exact"]);
+      // Click the menu row's ref. A page-wide text match can hit the same label
+      // elsewhere first, e.g. the root place page's "Places inside" list.
+      await session.run(["click", `@${ref}`]);
       // Client-side navigation: nothing loads, so wait for the app to settle
       // rather than for a page load that will not happen. A timed-out wait is
       // not fatal on its own — the assertions below decide — but it changes
