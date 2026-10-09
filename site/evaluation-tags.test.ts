@@ -32,3 +32,14 @@ test("the twin keeps model names, verdicts, and sample titles", () => {
   assert.match(twin, /- \*\*Whisper\*\* \[Failed] wrote words\./);
   assert.doesNotMatch(twin, /{%/);
 });
+
+test("a sample must be a block with a body", () => {
+  assert.throws(() => renderBody('A {% sample title="Coughs" %}two coughs{% /sample %} B', context), /malformed markup/);
+  assert.throws(() => renderBody('{% sample title="Coughs" /%}', context), /needs a body/);
+});
+
+test("the twin finds attributes in any order and keeps names literal", () => {
+  const refs = { nuggets: [], asides: new Map() };
+  assert.match(twinMarkdown('{% model vendor="google" name="X" /%} said so.', refs), /^\*\*X\*\* said so\./);
+  assert.match(twinMarkdown('{% model name="X [help](https://example.org)" vendor="google" /%}', refs), /\*\*X \\\[help\\]\(https:\/\/example\.org\)\*\*/);
+});

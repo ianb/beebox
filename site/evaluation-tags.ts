@@ -44,10 +44,13 @@ export const evaluationTags = {
     },
   },
   sample: {
+    // A box of paragraphs cannot sit inside a paragraph.
+    inline: false,
     attributes: { title: { type: String, required: true } },
     transform(node: Node, config: Config): RenderableTreeNode {
       const title = String(node.transformAttributes(config)["title"] ?? "");
       if (title.trim() === "") throw new Error("sample needs a title");
+      if (node.children.length === 0) throw new Error(`sample "${title}" needs a body saying what was recorded and what it tests`);
       return new Tag("div", { class: "sample-spec" }, [
         new Tag("p", { class: "sample-title" }, [title]),
         ...node.transformChildren(config),
@@ -56,10 +59,24 @@ export const evaluationTags = {
   },
 };
 
+/** Literal text in the twin: a name must not turn into Markdown syntax. */
+function escapeMarkdown(text: string): string {
+  return text.replace(/[#*<>[\\\]_`|]/g, (c) => `\\${c}`);
+}
+
+const ATTRIBUTE = { name: /\bname="([^"]*)"/, is: /\bis="([^"]*)"/, title: /\btitle="([^"]*)"/ } as const;
+
+function attribute(attrs: string, name: keyof typeof ATTRIBUTE): string {
+  return ATTRIBUTE[name].exec(attrs)?.[1] ?? "";
+}
+
 /** The machine-facing twin keeps what each tag says, in plain Markdown. */
 export function flattenEvaluationTags(markdown: string): string {
   return markdown
-    .replace(/{%\s*model\s+name="([^"]*)"[^%]*\/%}/g, (_m, name: string) => `**${name}**`)
-    .replace(/{%\s*verdict\s+is="([^"]*)"\s*\/%}/g, (_m, value: string) => `[${isVerdict(value) ? VERDICTS[value] : value}]`)
-    .replace(/{%\s*sample\s+title="([^"]*)"\s*%}/g, (_m, title: string) => `**Sample: ${title}**\n`);
+    .replace(/{%\s*model\b([^%]*)\/%}/g, (_m, attrs: string) => `**${escapeMarkdown(attribute(attrs, "name"))}**`)
+    .replace(/{%\s*verdict\b([^%]*)\/%}/g, (_m, attrs: string) => {
+      const value = attribute(attrs, "is");
+      return `[${isVerdict(value) ? VERDICTS[value] : escapeMarkdown(value)}]`;
+    })
+    .replace(/{%\s*sample\b([^%]*?)\s*%}/g, (_m, attrs: string) => `**Sample: ${escapeMarkdown(attribute(attrs, "title"))}**\n`);
 }
