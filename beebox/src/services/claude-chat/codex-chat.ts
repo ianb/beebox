@@ -11,7 +11,8 @@ import type {
 } from "../claude-chat-types.js";
 import { ensureCodexPluginInstalled } from "../../core/agent/ensure-codex-plugin.js";
 import { noteEngineUnavailability } from "../../core/agent/engine-unavailability-apply.js";
-import { expandClaudeIncludes } from "../../core/agent-context-includes.js";
+import { expandInstructionIncludes } from "../../core/agent-context-includes.js";
+import { instructionFilePath } from "../../core/agent-instruction-files.js";
 import { findBoxRoot } from "../../lib/paths/core.js";
 import { loadCodexTelemetry } from "../../core/box/config.js";
 import { validateHookPathsResult } from "../../cli/validate-hook/command.js";
@@ -99,8 +100,8 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
   let initializationError: unknown = null;
   let chain = ensureCodexPluginInstalled().then(async () => {
     boxRoot = await findBoxRoot(opts.cwd);
-    const included = boxRoot === null ? "" : await expandClaudeIncludes({
-      claudePath: join(boxRoot, "CLAUDE.md"),
+    const included = boxRoot === null ? "" : await expandInstructionIncludes({
+      instructionPath: join(boxRoot, await instructionFilePath(boxRoot, "")),
       boxRoot,
     });
     session = createSession({

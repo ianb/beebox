@@ -1,7 +1,9 @@
 /**
- * Soft size lint for a box's CLAUDE.md files.
+ * Soft size lint for a box's instruction files (`AGENTS.md`, or `CLAUDE.md`
+ * in a box not yet converted; every real file named in
+ * `AGENT_INSTRUCTION_FILES`, so a mirror symlink is not counted twice).
  *
- * A box CLAUDE.md is loaded into the boxholder agent's context every single
+ * A box instruction file is loaded into the boxholder agent's context every single
  * turn, so an oversized one silently crowds out the actual task. Published
  * guidance converges on ~200 lines as the practical target and ~300 as the
  * ceiling past which models reliably start dropping instructions (Claude Code's
@@ -30,7 +32,7 @@
 import { BOX_PACKAGE_DOCS } from "./docs-gen/shared.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { CLAUDE_MD } from "./agent-instruction-files.js";
+import { AGENT_INSTRUCTION_FILES } from "./agent-instruction-files.js";
 
 /** Soft "getting large" tier — ~200-line target, roughly 3k tokens. */
 export const CLAUDE_MD_WARN_CHARS = 12_000;
@@ -41,11 +43,11 @@ const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
 
 const MOVE_ADVICE =
   "Trim it, consolidate duplication, or move detail onto a lazier surface " +
-  "(a sibling doc, a nested CLAUDE.md, a .claude/rules/ glob, or a skill). " +
+  "(a sibling doc, a nested instruction file, a .claude/rules/ glob, or a skill). " +
   `See ${BOX_PACKAGE_DOCS}/reducing-claude-md.md for concrete strategies.`;
 
 /**
- * Return a soft warning line if the CLAUDE.md is large, else null. Two tiers:
+ * Return a soft warning line if the instruction file is large, else null. Two tiers:
  * a gentle nudge at {@link CLAUDE_MD_WARN_CHARS}, firmer language at
  * {@link CLAUDE_MD_FIRM_CHARS}. `relPath` is used only to label the message.
  */
@@ -56,7 +58,7 @@ export function lintClaudeMdSize(relPath: string, content: string): string | nul
   const size = `${String(chars)} chars (~${String(kb)} KB)`;
   if (chars >= CLAUDE_MD_FIRM_CHARS) {
     return (
-      `warning  ${relPath}  [claude-md-size] ${size} — too large. CLAUDE.md loads into agent context ` +
+      `warning  ${relPath}  [claude-md-size] ${size} — too large. This file loads into agent context ` +
       `every turn, and past ~${String(CLAUDE_MD_FIRM_CHARS)} chars Claude reliably drops instructions. ` +
       `Fix it now: ${MOVE_ADVICE}`
     );
@@ -67,7 +69,7 @@ export function lintClaudeMdSize(relPath: string, content: string): string | nul
   );
 }
 
-/** Read and size-lint one CLAUDE.md file. Missing/unreadable → null. */
+/** Read and size-lint one instruction file. Missing/unreadable → null. */
 export async function lintClaudeMdFile(boxRoot: string, absPath: string): Promise<string | null> {
   let content: string;
   try {
@@ -80,7 +82,7 @@ export async function lintClaudeMdFile(boxRoot: string, absPath: string): Promis
   return lintClaudeMdSize(path.relative(boxRoot, absPath), content);
 }
 
-/** Recursively find every CLAUDE.md in the box, skipping vendored/infra dirs. */
+/** Recursively find every real instruction file in the box, skipping vendored/infra dirs. */
 async function findClaudeMdFiles(dir: string): Promise<string[]> {
   const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => null);
   if (entries === null) return [];
@@ -91,14 +93,14 @@ async function findClaudeMdFiles(dir: string): Promise<string[]> {
         const sub = await findClaudeMdFiles(path.join(dir, entry.name));
         results.push(...sub);
       }
-    } else if (entry.isFile() && entry.name === CLAUDE_MD) {
+    } else if (entry.isFile() && AGENT_INSTRUCTION_FILES.includes(entry.name)) {
       results.push(path.join(dir, entry.name));
     }
   }
   return results.toSorted();
 }
 
-/** Size-lint every CLAUDE.md in the box; returns one warning line per oversized file. */
+/** Size-lint every instruction file in the box; returns one warning line per oversized file. */
 export async function lintAllClaudeMd(boxRoot: string): Promise<string[]> {
   const files = await findClaudeMdFiles(boxRoot);
   const warnings: string[] = [];

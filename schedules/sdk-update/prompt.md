@@ -102,6 +102,10 @@ all.
    Otherwise, if a newer stable version has cleared the two-day settling
    window, run `pnpm update-agent-sdk` — it bumps whichever family is behind.
    Never install a prerelease.
+   On each SDK bump, also re-check that a Claude Agent SDK session with box
+   settings (`settingSources: ["project"]`) still loads `AGENTS.md` natively
+   (root, `@` includes, nested on Read); the probe method is in
+   `beebox/docs/plans/box-agents-md.md` "Prior art".
 9. **After a bump**, run `pnpm -C beebox test`; for an SDK bump also
    `node --import tsx beebox/src/scripts/sdk-steering-probe.ts`; for a Codex bump
    also the deploy gate, on the workspace's pinned binary and never a bare

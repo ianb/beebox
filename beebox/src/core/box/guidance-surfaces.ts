@@ -11,6 +11,7 @@
  */
 
 import type { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
+import { CLAUDE_MD, instructionSiblingPath } from "../agent-instruction-files.js";
 
 /** How eagerly a host loads the surface (the `bbx-context` skill's router axis). */
 export type GuidanceTier = "always" | "situational" | "invoked" | "on-demand" | "mirror";
@@ -80,21 +81,23 @@ const generator = (name: GuidanceGenerator): GuidanceInstall => ({ via: "generat
 
 /** Every guidance surface, grouped by tier. */
 export const GUIDANCE_SURFACES: readonly GuidanceSurface[] = [
-  // always: loaded every turn through the root CLAUDE.md and its includes.
-  // The engine maintains only the root file's `@` include lines.
-  { path: "CLAUDE.md", tier: "always", class: "owned", install: owner("ensureAgentContext"), gitTracked: true },
+  // always: loaded every turn through the root AGENTS.md and its includes.
+  // The engine maintains only the root file's `@` include lines. Instruction
+  // rows name `AGENTS.md`; a box not yet converted keeps `CLAUDE.md` at the
+  // same place (`instructionFilePath`), and `guidanceSurfaceFor` maps it here.
+  { path: "AGENTS.md", tier: "always", class: "owned", install: owner("ensureAgentContext"), gitTracked: true },
   { path: ".beebox/agent-guide.md", tier: "always", class: "generated", install: owner("generateDocs"), gitTracked: false },
   { path: "_content/briefing.md", tier: "always", class: "generated", install: owner("compileBriefings"), gitTracked: true },
   { path: "_content/briefing.briefing.card", tier: "always", class: "tracked", install: owner("installBriefing", "briefing-seed"), gitTracked: true },
   { path: "_config/main.personality.card", tier: "always", class: "tracked", install: owner("installPersonality"), gitTracked: true },
 
   // situational: loaded when the agent works on matching paths.
-  { path: "src/schemas/CLAUDE.md", tier: "situational", class: "tracked", install: tracker("schemas-guide-v2"), gitTracked: true },
-  { path: "src/views/CLAUDE.md", tier: "situational", class: "tracked", install: tracker("views-guide-v2"), gitTracked: true },
-  { path: "src/tricks/scripts/CLAUDE.md", tier: "situational", class: "tracked", install: tracker("tricks-guide-v2"), gitTracked: true },
-  { path: "_config/feedback/CLAUDE.md", tier: "situational", class: "tracked", install: tracker("agent-feedback-guide"), gitTracked: true },
+  { path: "src/schemas/AGENTS.md", tier: "situational", class: "tracked", install: tracker("schemas-guide-v2"), gitTracked: true },
+  { path: "src/views/AGENTS.md", tier: "situational", class: "tracked", install: tracker("views-guide-v2"), gitTracked: true },
+  { path: "src/tricks/scripts/AGENTS.md", tier: "situational", class: "tracked", install: tracker("tricks-guide-v2"), gitTracked: true },
+  { path: "_config/feedback/AGENTS.md", tier: "situational", class: "tracked", install: tracker("agent-feedback-guide"), gitTracked: true },
   // Directory maps: an agent writes MAP.md in the refresh-maps procedure, and
-  // the finalize step adds an `@MAP.md` include to the directory's CLAUDE.md.
+  // the finalize step adds an `@MAP.md` include to the directory's instruction file.
   { path: "**/MAP.md", tier: "situational", class: "owned", install: owner("refreshMaps"), gitTracked: true },
   { path: ".claude/rules/card-<type>.md", tier: "situational", class: "generated", install: generator("generateRules"), gitTracked: true },
   { path: ".claude/rules/connector-<name>.md", tier: "situational", class: "generated", install: generator("generateRules"), gitTracked: true },
@@ -113,7 +116,8 @@ export const GUIDANCE_SURFACES: readonly GuidanceSurface[] = [
   { path: "node_modules/beebox/box-docs/<doc>.md", tier: "on-demand", class: "package", install: owner("ensureEngineDocs"), gitTracked: false },
   { path: "_content/docs/generated/<doc>.md", tier: "on-demand", class: "generated", install: owner("generateDocs"), gitTracked: false },
 
-  // mirror: Codex's view of the Claude surfaces above.
+  // mirror: Codex's view of the Claude surfaces above. `**/AGENTS.md` is the
+  // symlink beside each legacy `CLAUDE.md` in a box not yet converted.
   { path: "**/AGENTS.md", tier: "mirror", class: "generated", install: owner("generateAgentContextMirrors"), gitTracked: true },
   { path: ".agents/skills/beebox-rule-<rule>/SKILL.md", tier: "mirror", class: "generated", install: owner("generateAgentContextMirrors"), gitTracked: true },
   { path: ".agents/skills/<skill>", tier: "mirror", class: "generated", install: owner("generateAgentContextMirrors"), gitTracked: true },
@@ -134,7 +138,19 @@ export function guidancePathPattern(surfacePath: string): RegExp {
   return new RegExp(`^${source}$`);
 }
 
-/** The first row whose path matches `relPath`, or undefined when none does. */
-export function guidanceSurfaceFor(relPath: string): GuidanceSurface | undefined {
+function firstMatch(relPath: string): GuidanceSurface | undefined {
   return GUIDANCE_SURFACES.find((row) => guidancePathPattern(row.path).test(relPath));
+}
+
+/**
+ * The first row whose path matches `relPath`, or undefined when none does. A
+ * legacy `<dir>/CLAUDE.md` gets the row of its `<dir>/AGENTS.md` sibling,
+ * except the mirror row, which describes the symlink and not the file.
+ */
+export function guidanceSurfaceFor(relPath: string): GuidanceSurface | undefined {
+  const row = firstMatch(relPath);
+  const sibling = instructionSiblingPath(relPath);
+  if (row !== undefined || sibling === null || !relPath.endsWith(CLAUDE_MD)) return row;
+  const legacy = firstMatch(sibling);
+  return legacy?.tier === "mirror" ? undefined : legacy;
 }

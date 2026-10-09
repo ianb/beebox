@@ -11,6 +11,7 @@ import { findOrphanMaps, pruneOrphanMaps } from "../../../src/core/maps/orphans.
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { AGENTS_MD_MIGRATION } from "../../../src/core/agent-instruction-files.js";
 import { lstat, symlink } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -109,6 +110,32 @@ box.commitAll("prune");
 const again = await findOrphanMaps(box.root);
 print(again.ok ? `orphans: ${again.dirs.length}` : again.skippedReason);
 => orphans: 0
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A converted box's import lives in AGENTS.md
+
+In a box converted to `AGENTS.md` (`agents-md-2026-10` in its manifest), the
+import is in a real `AGENTS.md`. Pruning removes it there; an `AGENTS.md` left
+empty is deleted, and one with other content keeps it.
+
+```ts
+const box = await makeTmpBox({ git: "none" });
+await box.write("_config/migrations.jsonl", `${await box.read("_config/migrations.jsonl")}${JSON.stringify({ name: AGENTS_MD_MIGRATION, "applied-at": "2026-10-09T00:00:00Z" })}\n`);
+await box.write("_content/empty/MAP.md", "# Map\n");
+await box.write("_content/empty/AGENTS.md", "@MAP.md\n");
+await box.write("_content/kept/MAP.md", "# Map\n");
+await box.write("_content/kept/AGENTS.md", "@MAP.md\n# Our notes\n");
+await pruneOrphanMaps(box.root, ["_content/empty", "_content/kept"]);
+({
+  empty: await exists(box, "_content/empty/AGENTS.md"),
+  kept: await box.read("_content/kept/AGENTS.md"),
+  maps: [await exists(box, "_content/empty/MAP.md"), await exists(box, "_content/kept/MAP.md")],
+})
+=> { empty: false, kept: "# Our notes\n", maps: [false, false] }
 ```
 
 ```ts cleanup

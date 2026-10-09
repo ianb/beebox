@@ -9,7 +9,7 @@ where an instruction belongs among all the files a box agent reads, see
 
 The guide is the only text every box agent reads before its task arrives:
 chat, reactor jobs, and procedure runs load it through the box's root
-`CLAUDE.md`. Every word in it is paid on every turn, so each rule in it must
+`AGENTS.md`. Every word in it is paid on every turn, so each rule in it must
 earn that place.
 
 Two files hold it, both under `src/core/agent-guide/`:
