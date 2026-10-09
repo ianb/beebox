@@ -1,10 +1,10 @@
-import { THEME_CATALOG, type ThemeDescriptor } from "./catalog.js";
+import { THEME_CATALOG, systemCardThemes, type ThemeDescriptor } from "./catalog.js";
 import { z } from "zod";
 import { themePatternMatches, validateThemePattern } from "./pattern.js";
 
 export { themePatternMatches, validateThemePattern } from "./pattern.js";
 
-export { THEME_CATALOG, themeComposition, type ThemeDescriptor, type ThemeName, type ThemeStock } from "./catalog.js";
+export { THEME_CATALOG, systemCardThemes, themeComposition, type ThemeDescriptor, type ThemeName, type ThemeStock } from "./catalog.js";
 
 /** The deliberately small persisted selector. Catalog membership is host-validated. */
 export const ThemeChoiceSchema = z.object({
@@ -69,6 +69,7 @@ export type ThemeOrigin =
   | { kind: "type-override" }
   | { kind: "schema" }
   | { kind: "box-default" }
+  | { kind: "system"; theme: string }
   | { kind: "engine" };
 
 export interface ThemeProblem {
@@ -155,6 +156,8 @@ export function resolveCardTheme(input: {
   cardChoice?: unknown;
   typeDefault?: ThemeChoice | undefined;
   presentation: PresentationConfigResult;
+  /** The system theme the card is shown on; its default card theme is the last fallback. */
+  systemTheme?: string | undefined;
 }): ResolvedCardTheme {
   if (input.cardChoice !== undefined) {
     const result = validateThemeChoice(input.cardChoice, "card theme");
@@ -181,6 +184,13 @@ export function resolveCardTheme(input: {
   if (config?.default !== undefined) {
     const result = validateThemeChoice(config.default, "presentation.default");
     return { ...result, origin: { kind: "box-default" } };
+  }
+  if (input.systemTheme !== undefined) {
+    const [name] = systemCardThemes(input.systemTheme);
+    if (name !== undefined) {
+      const result = validateThemeChoice({ name }, `system theme ${input.systemTheme} card default`);
+      return { ...result, origin: { kind: "system", theme: input.systemTheme } };
+    }
   }
   return { choice: PLAIN, origin: { kind: "engine" }, problem: null };
 }
