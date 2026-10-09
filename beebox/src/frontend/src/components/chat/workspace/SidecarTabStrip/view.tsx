@@ -27,7 +27,7 @@ function themeForTab({ path, identity, presentation }: { path: string; identity:
   const type = identity?.type ?? "";
   return resolveCardTheme({ path: path.replace(/^\//, ""), type, cardChoice: identity?.cardTheme,
     typeDefault: identity?.type === undefined ? undefined : presentation.data.typeDefaults[type],
-    presentation: presentation.data.presentation }).choice;
+    presentation: presentation.data.presentation, systemTheme: presentation.data.chrome.choice.name }).choice;
 }
 
 /**

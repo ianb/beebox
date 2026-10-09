@@ -41,7 +41,7 @@ export function optionsFrom(viewState: RendererProps["viewState"]): ViewOptions 
 export function ScopeLine({ result }: { result: TodoResult }) {
   const { here, glob, includeReferring } = result.query;
   return (
-    <Text as="div" size="xs" tone="muted">
+    <Text material as="div" size="xs" tone="muted">
       {scopeLineText({ here, glob, includeReferring })}
     </Text>
   );
@@ -50,13 +50,13 @@ export function ScopeLine({ result }: { result: TodoResult }) {
 export function IssuesSection({ issues }: { issues: TodoResult["issues"] }) {
   if (issues.length === 0) return null;
   return (
-    <Card padding="sm" background="warm" border="subtle">
+    <Card material padding="sm" background="warm" border="subtle">
       <Stack gap="xs">
-        <Text size="xs" tone="muted" uppercase weight="semibold">
+        <Text material size="xs" tone="muted" uppercase weight="semibold">
           {issues.length} card{issues.length === 1 ? "" : "s"} couldn&rsquo;t be read
         </Text>
         {issues.map((issue) => (
-          <Text key={`${issue.kind}:${issue.path}`} as="div" size="xs" tone="muted">
+          <Text material key={`${issue.kind}:${issue.path}`} as="div" size="xs" tone="muted">
             {issue.path} — {issue.message}
           </Text>
         ))}
@@ -69,6 +69,7 @@ export function Controls({ options, onChange }: { options: ViewOptions; onChange
   return (
     <Row gap="md" align="center" justify="between" wrap>
       <TabBar
+        material
         idPrefix="bbx-todo-view-group"
         label="Group todos by"
         value={options.group}
@@ -99,8 +100,8 @@ export function PlateHeadline({ result, agentCount, viewingAgent, onChange }: {
   if (viewingAgent) {
     return (
       <Row gap="xs" wrap align="baseline">
-        <Text as="span" weight="semibold">Agent follow-ups</Text>
-        <InlineAction id="bbx-todo-view-back-to-plate" intent="subtle" onClick={() => onChange({ assignedView: "boxholder" })}>
+        <Text material as="span" weight="semibold">Agent follow-ups</Text>
+        <InlineAction material id="bbx-todo-view-back-to-plate" intent="subtle" onClick={() => onChange({ assignedView: "boxholder" })}>
           back to your plate
         </InlineAction>
       </Row>
@@ -109,10 +110,10 @@ export function PlateHeadline({ result, agentCount, viewingAgent, onChange }: {
   const { onPlate, later } = plateHeadline(result.reduction);
   return (
     <Row gap="xs" wrap align="baseline">
-      <Text as="span" weight="semibold">{onPlate} on your plate</Text>
-      <Text as="span" tone="muted">· {later} later</Text>
+      <Text material as="span" weight="semibold">{onPlate} on your plate</Text>
+      <Text material as="span" tone="muted">· {later} later</Text>
       {agentCount > 0 ? (
-        <InlineAction id="bbx-todo-view-for-the-agent" intent="subtle" onClick={() => onChange({ assignedView: "agent" })}>
+        <InlineAction material id="bbx-todo-view-for-the-agent" intent="subtle" onClick={() => onChange({ assignedView: "agent" })}>
           · {agentCount} for the agent
         </InlineAction>
       ) : null}
