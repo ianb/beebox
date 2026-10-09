@@ -33,3 +33,7 @@ how the seed briefing is already written in the person's voice (see
 Reports:
 [walk 1](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 42),
 [walk 2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 45).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen again in three walks. [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the inventory briefing says "the boxholder wants that visible" (`_content/inventory/briefing.briefing.card:19`). [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (row 20): "the learner" and "they" on a course page written for the person. Here the third person is required: the build-course skill tells the agent to write every course card with "neutral pronouns (they/them) for the learner" (`beebox/src/core/box/guidance-sync/skills-content.ts:33`), and the course card, progress body and session log follow it. [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (row 36): one doc card mixes three voices ("Their summary", "Asked what you'd do", and a first-person title "Where I am"); no course rule is behind that card. [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 17): the briefing says "A friend set the box up for them." on the person's own page. Fixing the build-course skill is part of this issue.

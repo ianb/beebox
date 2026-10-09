@@ -18,3 +18,7 @@ left of them. The mechanism is not traced to a file. Related and closed:
 [new tab not scrolled into view](../closed/bugs/2026-08-29-new-tab-not-scrolled-into-view.md).
 
 Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen again in two walks, as a second overflow symptom: with four or five tabs the first tabs lose their labels and show only "×". [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (row 42, shot 19): the "Box" tab shows only its close button. [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 41, shots 14, 15, 17): the Box and briefing tabs show only "×".

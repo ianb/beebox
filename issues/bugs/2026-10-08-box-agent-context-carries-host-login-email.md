@@ -32,3 +32,7 @@ Whether to ask for an SDK option, run box sessions under a login without a
 personal address, or accept it. Production uses a subscription login
 (`beebox/docs/server/configuration.md`), so its box agents likely see that
 account's address; the production host was not inspected.
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md), [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (also in title runs, two occurrences per transcript), [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md), [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md), [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) and [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md). No agent used it.

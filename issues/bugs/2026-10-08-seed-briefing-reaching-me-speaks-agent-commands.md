@@ -26,3 +26,7 @@ agent-facing docs (`beebox/box-docs/`). Related:
 [agent writes "the user" on pages the person reads](2026-10-08-agent-writes-the-user-on-boxholder-pages.md).
 
 Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shot 10).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen again in [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 16, shot 05): the seed briefing's "Reaching me" section (`beebox/src/schemas/briefing.tsx`, `REACHING_ME_DEFAULT`) speaks in the person's voice, which they did not write, and uses "a dot", "loud", `notify:`, `bbx changes` and `bbx judge`. The walker: "instructions to the machine that leaked into a page that's supposed to be about me".

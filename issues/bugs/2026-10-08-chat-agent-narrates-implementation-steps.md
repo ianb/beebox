@@ -35,3 +35,9 @@ silent. The UI can follow the prompt's claim and collapse pre-tool text.
 Prompt-only changes cannot be verified without a real model run. The activity
 row has a related vocabulary problem:
 [Chat activity row speaks in commands and files](2026-10-08-chat-activity-row-speaks-in-commands-and-files.md).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen again in three walks. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 15): "Setting it up now: a 'loan' type…" and "Adding a landmark and regenerating docs now" rendered between activity rows (11:06:52, 11:07:52); the agent did not regenerate docs. [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 22): "checking and committing" in prose (transcript 11:44:02). [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 37): the interim line "I'm reporting that gap and then I'll answer." (12:27:09).
+
+A fourth case sits on the closed [chat-agent-narrates-internal-bookkeeping](../closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md) item. [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (row 12): before an edit the agent wrote "I'll put their purpose into the briefing, quoted verbatim" (05:55:29), in the third person. The closed fix, the bookkeeping rule at `prompts.ts:23`, is in place and covered field-budget remarks; this is a pre-action plan line, the same schema/rule/code-work gap this issue describes. The closed item stays closed; the evidence is recorded here.
