@@ -36,7 +36,7 @@ export type { SelfNoteInfo };
  * single-block case).
  *
  * Only the `<speech>`/`<typed>` *shell* tags (and their attributes, e.g.
- * `stt="deepgram"`) are stripped here — a marker embedded *inside* the body,
+ * `stt="live"`) are stripped here — a marker embedded *inside* the body,
  * like `<unsure>word</unsure>` (docs/plans/transcript-confidence.md, Track
  * 4), survives this pass on purpose and is handled downstream by
  * `UserMessageText` (`user-message-text.tsx`), which renders it as its inner
@@ -112,9 +112,8 @@ const MESSAGE_ID_WRAPPER_RE = /^\s*<speech\b[^>]*\bmessage-id="([^"]*)"/;
 const SPEECH_WRAPPER_RE = /^\s*<speech\b([^>]*)>/;
 const STT_ATTR_RE = /\bstt="([^"]*)"/;
 const STT_SERVICE_ATTR_RE = /\bstt-service="([^"]*)"/;
-// `pending` is matched too: a legacy transcript from before late correction
-// was removed may still carry it, and it renders the same static fallback
-// label as `failed` now that there is no correction to distinguish it from.
+// Legacy fallback marker, before `stt="live"` (docs/plans/hq-always.md).
+// `pending` predates the removal of late correction and reads the same.
 const HQ_ATTR_RE = /\bhq="(?:pending|failed)"/;
 
 /** The attributes of the message's opening `<speech …>` wrapper, if it has one. */
@@ -124,12 +123,13 @@ function speechWrapperAttrs(entry: SessionEntry): string | undefined {
 }
 
 /**
- * `hq="failed"` on a voice message: realtime text sent in place of a
- * requested HQ pass (docs/plans/resilient-voice-recording.md, Track 4). The
- * HQ result stays on the box, reachable only through `bbx chat retranscribe`.
+ * A voice message whose text is the live transcript: `stt="live"`, or the
+ * legacy `hq="failed"`. Every dictated message gets the HQ pass when it can
+ * (docs/plans/hq-always.md), so this is the exception the UI labels.
  */
-export function isHqFallbackMessage(entry: SessionEntry): boolean {
-  return HQ_ATTR_RE.test(speechWrapperAttrs(entry) ?? "");
+export function isLiveTranscriptMessage(entry: SessionEntry): boolean {
+  const attrs = speechWrapperAttrs(entry) ?? "";
+  return attrs.match(STT_ATTR_RE)?.[1] === "live" || HQ_ATTR_RE.test(attrs);
 }
 
 export interface TranscriptionProvenance {
@@ -137,16 +137,20 @@ export interface TranscriptionProvenance {
   service?: string;
 }
 
-/** Durable transcription provenance stamped on the message's speech wrapper. */
+/**
+ * Durable transcription provenance stamped on the message's speech wrapper.
+ * Current messages: `stt="live"` is live text, and HQ text carries only
+ * `stt-service`. Older ones: `stt="hq"` (HQ), `stt="deepgram"` (live).
+ */
 export function resolveTranscriptionProvenance(entry: SessionEntry): TranscriptionProvenance | null {
-  const firstText = entry.content.find((b) => b.type === "text")?.text ?? "";
-  const attrs = stripChatAppTags(firstText).match(SPEECH_WRAPPER_RE)?.[1];
+  const attrs = speechWrapperAttrs(entry);
   if (attrs === undefined) return null;
   const stt = attrs.match(STT_ATTR_RE)?.[1];
-  if (stt === "hq") {
-    const service = attrs.match(STT_SERVICE_ATTR_RE)?.[1];
+  const service = attrs.match(STT_SERVICE_ATTR_RE)?.[1];
+  if (stt === "hq" || (stt === undefined && service !== undefined)) {
     return service ? { kind: "hq", service } : { kind: "hq" };
   }
+  if (stt === "live") return { kind: "realtime" };
   return stt === "deepgram" ? { kind: "realtime", service: "deepgram" } : null;
 }
 

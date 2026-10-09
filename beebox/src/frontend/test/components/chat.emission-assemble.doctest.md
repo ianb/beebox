@@ -69,7 +69,7 @@ const e = createVoiceEmission({
   diarized: false,
 });
 JSON.stringify(assembleChatMessage(e, W).message.replace(e.id, "ID"))
-=> "<speech message-id=\"ID\" local-time=\"14:23\">summarize the attached report [file#1]</speech>\n<attachments>\n[file#1]: _tmp/2026-07-19T10-00-00_report.pdf\n</attachments>"
+=> "<speech stt=\"live\" message-id=\"ID\" local-time=\"14:23\">summarize the attached report [file#1]</speech>\n<attachments>\n[file#1]: _tmp/2026-07-19T10-00-00_report.pdf\n</attachments>"
 ```
 
 A present token is left in place — only the absent ones append:
@@ -157,16 +157,17 @@ const sel = [{ id: 2, ref: "/_content/recipes/Bread.recipe.card", text: "300g fl
 const e = createVoiceEmission({ text: "add that to the list", selections: sel, diarized: true });
 const out = assembleChatMessage(e, W);
 JSON.stringify(out.message.replace(e.id, "ID"))
-=> "<speech diarized=\"1\" message-id=\"ID\" local-time=\"14:23\">add that to the list\n<user-selection ref=\"/_content/recipes/Bread.recipe.card\" pos=\"body\">300g flour</user-selection></speech>"
+=> "<speech stt=\"live\" diarized=\"1\" message-id=\"ID\" local-time=\"14:23\">add that to the list\n<user-selection ref=\"/_content/recipes/Bread.recipe.card\" pos=\"body\">300g flour</user-selection></speech>"
 ```
 
 Equivalence with the historical helper (same inputs → same bytes, modulo the
-`message-id` stamp `buildSpeechMessage` predates and never grew — Track 1,
-retranscription-in-chat plan), while it still exists:
+`message-id` and `stt` stamps `buildSpeechMessage` predates and never grew —
+Track 1, retranscription-in-chat plan; docs/plans/hq-always.md), while it
+still exists:
 
 ```ts continue
 const legacy = buildSpeechMessage({ text: "add that to the list", diarized: true, selections: sel, attrs: " local-time=\"14:23\"" });
-out.message.replace(` message-id="${e.id}"`, "") === legacy
+out.message.replace(` message-id="${e.id}"`, "").replace(' stt="live"', "") === legacy
 => true
 ```
 
@@ -184,7 +185,7 @@ other send path already folds.
 const sel = [{ id: 3, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body" }];
 const e = createVoiceEmission({ text: "quick thought before I go", selections: sel, diarized: false });
 JSON.stringify(assembleChatMessage(e, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message.replace(e.id, "ID"))
-=> "<speech message-id=\"ID\" local-time=\"23:59\" time-passed=\"8h\">quick thought before I go\n<user-selection ref=\"/_content/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection></speech>"
+=> "<speech stt=\"live\" message-id=\"ID\" local-time=\"23:59\" time-passed=\"8h\">quick thought before I go\n<user-selection ref=\"/_content/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection></speech>"
 ```
 
 With no selections pending (the common case), the fold is the identity —
@@ -193,7 +194,7 @@ still byte-identical to the old, permanently-unfolded behavior:
 ```ts
 const e2 = createVoiceEmission({ text: "quick thought before I go", selections: [], diarized: false });
 assembleChatMessage(e2, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message.replace(e2.id, "ID")
-=> <speech message-id="ID" local-time="23:59" time-passed="8h">quick thought before I go</speech>
+=> <speech stt="live" message-id="ID" local-time="23:59" time-passed="8h">quick thought before I go</speech>
 ```
 
 ## `markUnsureWords` — the pure marking function (Track 3, span rework)
@@ -525,7 +526,7 @@ markUnsureWords(
 `null`/`undefined` (a service that never captured confidence — Voxtral,
 OpenAI realtime) and a defined array where NO entry has a numeric
 `confidence` (belt-and-braces) both become `undefined`, never a false
-`stt="deepgram"` claim.
+confidence claim.
 
 ```ts
 resolveEmissionWords(null)
@@ -541,11 +542,12 @@ resolveEmissionWords([{ word: "hi" }, { word: "there", confidence: 0.9 }])?.leng
 => 2
 ```
 
-## Site 2 — keyword voice send: inline `<unsure>` marks + `stt` attribute
+## Site 2 — keyword voice send: inline `<unsure>` marks on live text
 
-Words present and applied: marks land in place, `stt="deepgram"` leads
-before `diarized` — pinned exact serialization from the plan's Vocabulary
-lock-ins example.
+Every dictated message gets the HQ pass when it can (docs/plans/hq-always.md),
+so the wrapper marks the exception: `stt="live"` on any voice emission without
+`hqText`. Realtime words, when captured, mark `<unsure>` spans in place — they
+only ever describe live text. `stt` leads `diarized` in attribute order.
 
 ```ts
 const spokenWords = [
@@ -564,11 +566,12 @@ const eMarked = createVoiceEmission({
   words: spokenWords,
 });
 assembleChatMessage(eMarked, W).message.replace(eMarked.id, "ID")
-=> <speech stt="deepgram" message-id="ID" local-time="14:23">They're all <unsure>cloud</unsure> code in different ways.</speech>
+=> <speech stt="live" message-id="ID" local-time="14:23">They're all <unsure>cloud</unsure> code in different ways.</speech>
 ```
 
-Captured but none unsure: `stt="deepgram"` stamps, body comes back
-unchanged — distinct from "no data captured".
+Captured but none unsure, or no confidence data at all (a non-Deepgram live
+service, or an HQ fallback whose words were never captured): the same
+`stt="live"`, body unchanged.
 
 ```ts
 const eNoneUnsure = createVoiceEmission({
@@ -583,28 +586,18 @@ const eNoneUnsure = createVoiceEmission({
   ],
 });
 assembleChatMessage(eNoneUnsure, W).message.replace(eNoneUnsure.id, "ID")
-=> <speech stt="deepgram" message-id="ID" local-time="14:23">everything came through clean</speech>
-```
+=> <speech stt="live" message-id="ID" local-time="14:23">everything came through clean</speech>
 
-Undefined (no confidence data at all — HQ-replaced text, a non-Deepgram
-service, or typed origin): no `stt` attribute, body unchanged. The same
-shape a `usedHq` send produces (`prepareVoiceSubmitEmission` passes
-`words: undefined`; see `voice-intent.doctest.md`'s HQ-drop case) — from
-this layer down, "HQ dropped the words" and "no words were ever captured"
-are the same state.
-
-```ts
 const eNoData = createVoiceEmission({ text: "no data here", selections: [], diarized: false });
 assembleChatMessage(eNoData, W).message.replace(eNoData.id, "ID")
-=> <speech message-id="ID" local-time="14:23">no data here</speech>
+=> <speech stt="live" message-id="ID" local-time="14:23">no data here</speech>
 ```
 
-## `stt="hq"` — the always-HQ switch's provenance stamp
+## HQ text — the norm, unmarked
 
-`hqText: true` (docs/implemented-plans/hq-dictation-switch.md) stamps `stt="hq"` instead
-of `stt="deepgram"`, whether or not realtime words happened to be captured —
-the two are mutually exclusive: an HQ pass drops the realtime words it
-replaced, so `words` is never defined alongside `hqText`.
+`hqText: true` is the HQ pass's text. It carries no `stt`, only
+`stt-service` naming the engine when known. An HQ pass drops the realtime
+words it replaced, so `words` is never defined alongside `hqText`.
 
 ```ts
 const eHq = createVoiceEmission({
@@ -615,12 +608,8 @@ const eHq = createVoiceEmission({
   hqService: "whisper-llm",
 });
 assembleChatMessage(eHq, W).message.replace(eHq.id, "ID")
-=> <speech stt="hq" stt-service="whisper-llm" message-id="ID" local-time="14:23">the corrected HQ transcript</speech>
-```
+=> <speech stt-service="whisper-llm" message-id="ID" local-time="14:23">the corrected HQ transcript</speech>
 
-`stt` still leads `diarized` in attribute order, same as the deepgram case:
-
-```ts
 const eHqDiarized = createVoiceEmission({
   text: "two people talking",
   selections: [],
@@ -628,28 +617,7 @@ const eHqDiarized = createVoiceEmission({
   hqText: true,
 });
 assembleChatMessage(eHqDiarized, W).message.replace(eHqDiarized.id, "ID")
-=> <speech stt="hq" diarized="1" message-id="ID" local-time="14:23">two people talking</speech>
-```
-
-## `hq="failed"` — realtime text sent in place of HQ
-
-When a requested HQ pass does not finish (budget expiry, "Send live text", or
-the HQ pass failing outright — `docs/plans/resilient-voice-recording.md`,
-Track 4; late correction removed), the realtime text is sent marked
-`hq="failed"`. Realtime words still stamp `stt="deepgram"`; `hq` follows the
-`stt` attributes.
-
-```ts
-const e = createVoiceEmission({ text: "hello", selections: [], diarized: false, hqFallback: true, words: [{ word: "hello", confidence: 0.99 }] });
-assembleChatMessage(e, W).message.replace(e.id, "ID")
-=> <speech stt="deepgram" hq="failed" message-id="ID" local-time="14:23">hello</speech>
-```
-
-HQ text and an HQ fallback cannot both describe one message:
-
-```ts
-createVoiceEmission({ text: "x", selections: [], diarized: false, hqText: true, hqFallback: true })
-=> throws InvariantError
+=> <speech diarized="1" message-id="ID" local-time="14:23">two people talking</speech>
 ```
 
 ## Emission ids are distinct per creation (the dedup key)

@@ -14,7 +14,6 @@ import {
   seedFeaturesForNewChat,
 } from "../../../src/core/landmark/features.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { setLandmarkHqPreference } from "../../../src/core/landmark/hq-preference.js";
 ```
 
 ## readLandmarkFeatures — read from a navigation role
@@ -58,56 +57,33 @@ JSON.stringify(await readLandmarkFeaturesForDir(box.root, "_content/store/dump")
 await box.cleanup();
 ```
 
-## Updating the landmark preference
-
-The writer preserves the card body, comments, and unrelated navigation fields.
-`inherit` removes only the HQ key.
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write(
-  "store/place/Place.landmark.card",
-  "---\nnavigation:\n  label: Place # keep this comment\n  links:\n    - ref: ../Elsewhere.md\n---\nBody stays here.\n",
-);
-await setLandmarkHqPreference({ boxRoot: box.root, contextDir: "store/place", value: "on" });
-const enabled = await box.read("store/place/Place.landmark.card");
-JSON.stringify([enabled.includes("# keep this comment"), enabled.includes("hq-dictation: on"), enabled.endsWith("Body stays here.\n")])
-=> [true,true,true]
-
-await setLandmarkHqPreference({ boxRoot: box.root, contextDir: "store/place", value: "inherit" });
-(await box.read("store/place/Place.landmark.card")).includes("hq-dictation")
-=> false
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
 ## Complete new-chat inheritance
 
-The shared resolver applies box, root-landmark, and explicit chat values in
-that order. Root landmarks use the empty context directory rather than being
-silently skipped by one creation path.
+The shared resolver applies root-landmark values, then explicit chat values.
+Root landmarks use the empty context directory rather than being silently
+skipped by one creation path. A retired `hq-dictation` key on an older card
+(every dictated message gets the HQ pass now, docs/plans/hq-always.md) and a
+stale `hqDictation` in `box.json` are ignored.
 
 ```ts
 const box = await makeTmpBox();
 await box.write("_config/box.json", JSON.stringify({ hqDictation: "on" }));
 await box.write(
   "_content/Home.landmark.card",
-  "---\nnavigation:\n  label: Home\n  chat-app:\n    hq-dictation: off\n---\n",
+  "---\nnavigation:\n  label: Home\n  chat-app:\n    narration: on\n    hq-dictation: off\n---\n",
 );
 JSON.stringify(await seedFeaturesForNewChat({ boxRoot: box.root, contextDir: null }))
-=> {"hq-dictation":"on"}
+=> {}
 
 JSON.stringify(await seedFeaturesForNewChat({ boxRoot: box.root, contextDir: "" }))
-=> {"hq-dictation":"off"}
+=> {"narration":"on"}
 
 JSON.stringify(await seedFeaturesForNewChat({
   boxRoot: box.root,
   contextDir: "",
-  request: { "hq-dictation": "on" },
+  request: { narration: "off", "hq-dictation": "on" },
 }))
-=> {"hq-dictation":"on"}
+=> {"narration":"off"}
 ```
 
 ```ts cleanup

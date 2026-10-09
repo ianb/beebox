@@ -7,9 +7,9 @@ const sendPattern = KeywordPattern.compile(`
   send now
 `);
 
-// Deliberate HQ fixup: unlike plain send, this asks the caller to hold the
-// message for the high-quality transcription pass before committing it. Both
-// word orders are explicit enough to avoid ordinary-speech false positives.
+// Once the deliberate HQ fixup; every send gets the HQ pass now
+// (docs/plans/hq-always.md), so it is a plain send. Kept so the phrase still
+// sends, and because native persists the action name.
 const sendHqPattern = KeywordPattern.compile(`
   clean up and send
   send and clean up
@@ -109,32 +109,34 @@ export function stripKeywordTags(text: string): string {
   return text.replace(/\s*<(?:send-message|send-close-message|send-checkpoint-message|cancel-message|mic-off|erase-message)\b[^<>]*\/>/g, "").trim();
 }
 
-function keywordTag(action: KeywordAction, phrase: string): string {
-  const escaped = phrase.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  return `<${ACTION_TAG_NAMES[action]} phrase="${escaped}" />`;
+function keywordTag(action: KeywordAction, tag: { phrase: string; heardLive?: true }): string {
+  const escaped = tag.phrase.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  const heard = tag.heardLive === true ? " heard=\"live\"" : "";
+  return `<${ACTION_TAG_NAMES[action]} phrase="${escaped}"${heard} />`;
 }
 
 function asResult(action: KeywordAction, match: InputMatch): KeywordResult {
   return {
     action,
-    processedTranscript: match.replaceTrimmed(keywordTag(action, match.capturedTextTrimmed)).trim(),
+    processedTranscript: match.replaceTrimmed(keywordTag(action, { phrase: match.capturedTextTrimmed })).trim(),
     matchedPhrase: match.capturedTextTrimmed,
   };
 }
 
 /**
- * Re-attach a send keyword that the high-quality transcription pass dropped.
- * The realtime pass already heard the trigger phrase (that's what fired the
- * send), so an HQ result without it means the normalizer smoothed the phrase
- * away — append the tag rather than lose the trigger. A duplicate trigger is
- * harmless; a silently vanished one isn't. `action` carries the send variant
- * so the persisted record keeps the close sign-off or the checkpoint.
+ * Re-attach a send keyword that the high-quality transcription pass did not
+ * reproduce. The live pass heard the trigger phrase (that is what fired the
+ * send); the HQ text is kept as it came back, and the tag is appended with
+ * `heard="live"`: the command was detected live, and the end of the HQ text
+ * may still hold the spoken command in other words. The agent reads it for
+ * sense. `action` carries the send variant so the record keeps the close
+ * sign-off or the checkpoint.
  */
 export function appendSendKeywordTag(
   transcript: string,
   { action, matchedPhrase }: { action: SendKeywordAction; matchedPhrase: string }
 ): string {
-  return `${transcript.trim()} ${keywordTag(action, matchedPhrase)}`.trim();
+  return `${transcript.trim()} ${keywordTag(action, { phrase: matchedPhrase, heardLive: true })}`.trim();
 }
 
 /**
@@ -143,7 +145,7 @@ export function appendSendKeywordTag(
  * put the same tag on its HQ text. Null when the transcript has none.
  */
 export function sendKeywordIn(transcript: string): { action: SendKeywordAction; matchedPhrase: string } | null {
-  const match = /<(send-message|send-close-message|send-checkpoint-message) phrase="([^"]*)" \/>/.exec(transcript);
+  const match = /<(send-message|send-close-message|send-checkpoint-message) phrase="([^"]*)"[^<>]*\/>/.exec(transcript);
   if (!match) return null;
   const [, tag, escaped] = match;
   const matchedPhrase = (escaped ?? "").replace(/&quot;/g, "\"").replace(/&amp;/g, "&");

@@ -7051,7 +7051,7 @@ tests:
 
   - id: chat-unsure-word-semantics
     prompt: >
-      A voice message arrives as `<speech stt="deepgram"
+      A voice message arrives as `<speech stt="live"
       message-id="msg-7f2a">I <unsure>can</unsure> make the 3 PM meeting
       tomorrow</speech>` and the user is asking you to update their
       schedule. What does the markup around "can" tell you, and what
@@ -7075,10 +7075,38 @@ tests:
     notes: >
       Also worth watching in the transcript: the agent should know absence of
       marks is not verification (confident mishearings get no mark) and that
-      messages without stt= carry no confidence data at all — still true now
-      that `stt="hq"` exists (docs/implemented-plans/hq-dictation-switch.md): an HQ pass
-      carries no per-word confidence either, so an hq-stamped message has no
-      marks for the same "no data" reason, not a different one.
+      a message without marks may simply have no confidence data. Marks only
+      ever appear on live text (`stt="live"`, docs/plans/hq-always.md): the HQ
+      pass every other voice message gets carries no per-word confidence.
+
+  # HQ is every voice message's pass (docs/plans/hq-always.md); `stt="live"`
+  # marks the exception, and `heard="live"` on a send tag marks a command the
+  # HQ text did not reproduce. The failure this guards against is the agent
+  # treating the trailing command words as content, or retranscribing an
+  # unmarked (already HQ) message.
+  - id: chat-live-transcript-marker
+    prompt: >
+      Two voice messages arrive. First: `<speech message-id="msg-1">Move the
+      dentist to Thursday at four.</speech>`. Second: `<speech stt="live"
+      message-id="msg-2">Add bye milk to the list sent the message <send-message
+      phrase="send the message" heard="live" /></speech>`. What does each
+      wrapper tell you about how the text was transcribed, which one (if
+      either) is worth retranscribing, and what do you do with "sent the
+      message" in the second?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Reads the unmarked message as already HQ (retranscribing it adds
+      nothing) and `stt="live"` as rougher live text that retranscribe may
+      improve, targeted with `--message msg-2`. Treats "sent the message" as
+      the send command transcribed in other words, not content: the list item
+      is "milk" ("bye" is a mishearing of "buy"), and "sent the message" is not
+      added to the list.
+    correct_matches:
+      - "msg-2"
+      - "retranscrib"
+    response_not_contains: ["--message msg-1"]
+    tags: [chat, voice, transcription]
 
   # === Secrets (machine-level store) ===
   #
@@ -7520,7 +7548,7 @@ tests:
   - id: voice-diarized-parts
     prompt: |
       <chat-app narration="off" prose="on" time="2026-09-10T18:20:00Z"/>
-      <speech stt="hq" stt-service="mai-diarized" diarized="1" message-id="rec-kitchen-1" user="Priya Marlowe">— part 1 of 2 —
+      <speech stt-service="mai-diarized" diarized="1" message-id="rec-kitchen-1" user="Priya Marlowe">— part 1 of 2 —
       Speaker 1A: I think we should repaint the kitchen before the holidays.
       Speaker 2A: Fine, but not green again.
 

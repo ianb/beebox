@@ -15,12 +15,12 @@ enum NativeComposerSubmitTarget {
     case conversation
     case quickChat(@MainActor (String, NativeChatEmission.Origin) async -> Bool)
 
-    func voicePolicy(hqDictationEnabled: Bool) -> NativeComposerVoicePolicy {
+    var voicePolicy: NativeComposerVoicePolicy {
         switch self {
         case .conversation:
-            NativeComposerVoicePolicy(sendsToConversation: true, highQualityTranscription: hqDictationEnabled)
+            NativeComposerVoicePolicy(sendsToConversation: true)
         case .quickChat:
-            NativeComposerVoicePolicy(sendsToConversation: false, highQualityTranscription: false)
+            NativeComposerVoicePolicy(sendsToConversation: false)
         }
     }
 }
@@ -29,26 +29,23 @@ enum NativeComposerSubmitTarget {
 ///
 /// Every keyword works on both targets: the send keywords send through the
 /// same submit as the Send button, and cancel, erase, and mic off act on the
-/// draft and the microphone, which a quick chat composer also has. A quick
-/// chat composer has no high-quality transcription, so "clean up and send"
-/// sends the live transcript, and every spoken send closes the microphone, as
-/// the Send button does: a sent thought may open its chat.
+/// draft and the microphone, which a quick chat composer also has.
+///
+/// Every dictated conversation message gets the HQ pass (on the device, then
+/// the box, then the live transcript as the fallback; docs/plans/hq-always.md).
+/// A quick chat composer has no HQ pass — its thought is text only and no
+/// recording reaches the box — so it sends the live transcript, and every
+/// spoken send closes the microphone, as the Send button does: a sent thought
+/// may open its chat.
 struct NativeComposerVoicePolicy: Equatable {
     var sendsToConversation: Bool
-    var highQualityTranscription: Bool
 
     var detectsKeywords: Bool { true }
 
-    func keywordSendPlan(for intent: SpeechKeywordResult, narrationEnabled: Bool) -> NativeVoiceKeywordSendPlan {
-        guard sendsToConversation else {
-            return .live(text: intent.processedTranscript)
-        }
-        return NativeVoiceKeywordSendPlan.make(
-            liveTranscript: intent.processedTranscript,
-            action: intent.action,
-            narrationEnabled: narrationEnabled,
-            hqDictationEnabled: highQualityTranscription
-        )
+    var highQualityTranscription: Bool { sendsToConversation }
+
+    func keywordSendPlan(for intent: SpeechKeywordResult) -> NativeVoiceKeywordSendPlan {
+        highQualityTranscription ? .hq : .live(text: intent.processedTranscript)
     }
 
     func keywordSendClosesMicrophone(_ action: SpeechKeywordAction) -> Bool {
@@ -61,8 +58,6 @@ struct NativeComposerView: View {
     @ObservedObject var draftStore: ComposerDraftStore
     @ObservedObject var pendingStore: PendingEmissionStore
     var captureAvailable: Bool
-    var narrationEnabled: Bool
-    var hqDictationEnabled: Bool
     var hqDiarizationRequested = false
     var speechPlaybackActive: Bool
     var responseActive: Bool
@@ -424,7 +419,7 @@ struct NativeComposerView: View {
         guard voiceKeywordsEnabled else {
             return "Dictated words fill the text field. Send with the Send button."
         }
-        return "While dictating, say send message, clean up and send, send and close, erase message, cancel message, or microphone off."
+        return "While dictating, say send message, send and close, erase message, cancel message, or microphone off."
     }
 
     /// What to say while there is no send binding — one line per state, because
@@ -873,7 +868,7 @@ struct NativeComposerView: View {
     }
 
     private var voicePolicy: NativeComposerVoicePolicy {
-        submitTarget.voicePolicy(hqDictationEnabled: hqDictationEnabled)
+        submitTarget.voicePolicy
     }
 
     private var voiceKeywordsEnabled: Bool {
@@ -969,12 +964,9 @@ struct NativeComposerView: View {
             applyVoiceTurn(.voiceMessageSent(closeMicrophone: true))
         }
         let audioURL = dictation.consumeRecordedAudioURL()
-        switch voicePolicy.keywordSendPlan(for: intent, narrationEnabled: narrationEnabled) {
+        switch voicePolicy.keywordSendPlan(for: intent) {
         case .live(let text):
-            // The recording used to be deleted here. It is kept instead, so a
-            // box agent can retranscribe this message later — and this is the
-            // path where that matters most: a live send is the narration-off
-            // send, which commits the realtime transcript.
+            // Quick chat only: its submit drops the recording.
             submit(.message(text: text, origin: .voice, voiceKeywordAction: intent.action, audioURL: audioURL))
             return
         case .hq:

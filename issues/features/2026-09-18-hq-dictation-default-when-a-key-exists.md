@@ -1,6 +1,6 @@
 ---
 title: "Make HQ dictation the default whenever a transcription key is configured"
-workstream: unattached
+workstream: hq-always
 area: beebox
 labels: [voice, transcription]
 filed-by: agent

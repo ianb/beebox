@@ -82,8 +82,6 @@ struct NativeComposerFixtureScreen: View {
                     draftStore: draftStore,
                     pendingStore: pendingStore,
                     captureAvailable: Self.isQuickChat == false,
-                    narrationEnabled: false,
-                    hqDictationEnabled: false,
                     speechPlaybackActive: false,
                     responseActive: false,
                     locationSharingEnabled: false,

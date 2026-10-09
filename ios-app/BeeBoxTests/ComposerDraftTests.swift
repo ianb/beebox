@@ -336,54 +336,6 @@ final class ComposerDraftReducerTests: XCTestCase {
         )
     }
 
-    func testVoiceKeywordSendUsesLiveTranscriptWhenNarrationIsOff() {
-        XCTAssertEqual(
-            NativeVoiceKeywordSendPlan.make(
-                liveTranscript: "native words <send-message phrase=\"send now\" />",
-                action: .send,
-                narrationEnabled: false,
-                hqDictationEnabled: false
-            ),
-            .live(text: "native words <send-message phrase=\"send now\" />")
-        )
-    }
-
-    func testVoiceKeywordSendUsesHQPreparationWhenNarrationIsOn() {
-        XCTAssertEqual(
-            NativeVoiceKeywordSendPlan.make(
-                liveTranscript: "native words",
-                action: .send,
-                narrationEnabled: true,
-                hqDictationEnabled: false
-            ),
-            .hq
-        )
-    }
-
-    func testCleanupKeywordUsesHQPreparationWhenNarrationIsOff() {
-        XCTAssertEqual(
-            NativeVoiceKeywordSendPlan.make(
-                liveTranscript: "native words",
-                action: .sendHq,
-                narrationEnabled: false,
-                hqDictationEnabled: false
-            ),
-            .hq
-        )
-    }
-
-    func testVoiceKeywordSendUsesHQPreparationWhenHQDictationIsOn() {
-        XCTAssertEqual(
-            NativeVoiceKeywordSendPlan.make(
-                liveTranscript: "native words",
-                action: .send,
-                narrationEnabled: false,
-                hqDictationEnabled: true
-            ),
-            .hq
-        )
-    }
-
     func testVoiceCompositionStateTransitionsAreExplicit() {
         var state = VoiceCompositionState.idle
         VoiceCompositionReducer.reduce(&state, .requestPermission)
@@ -500,7 +452,7 @@ final class ComposerDraftReducerTests: XCTestCase {
         )
         XCTAssertEqual(
             VoicePreparationResolver.text(for: preparation, hqTranscript: "clearer words"),
-            "typed first clearer words <send-message phrase=\"send now\" />"
+            "typed first clearer words <send-message phrase=\"send now\" heard=\"live\" />"
         )
     }
 

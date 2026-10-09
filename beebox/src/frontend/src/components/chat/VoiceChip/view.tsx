@@ -27,22 +27,17 @@ import {
   type ServiceCapabilities,
 } from "./panels";
 import { useVoiceCapabilities } from "./capabilities";
-import { HqPreferenceRow, type HqDefaultsState } from "./HqPreferenceRow";
 import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
-import { ConversationIcon, SpeakerIcon, FloorIcon, HqIcon } from "./icons";
+import { ConversationIcon, SpeakerIcon, FloorIcon } from "./icons";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
 // when the dropdown closes.
 type VoiceChipPanel = "root" | "voice";
 
-/** Narration enables the HQ pass even when the separate HQ switch is off. */
-export function voiceChipDiarizationEnabled({ hqDictationEnabled, narrationEnabled, hqService }: {
-  hqDictationEnabled: boolean;
-  narrationEnabled: boolean;
-  hqService: HqTranscriptionService | null;
-}): boolean {
-  return (hqDictationEnabled || narrationEnabled) && hqService !== null && isDiarizedHqService(hqService);
+/** Every dictated message gets the HQ pass, so a speaker-labelling HQ service diarizes all of them. */
+export function voiceChipDiarizationEnabled(hqService: HqTranscriptionService | null): boolean {
+  return hqService !== null && isDiarizedHqService(hqService);
 }
 
 export interface VoiceChipFaceState {
@@ -91,9 +86,6 @@ interface VoiceChipBodyProps {
   onToggleMute: () => void;
   narrationEnabled: boolean;
   onToggleNarration: () => void;
-  hqDictationEnabled: boolean;
-  onToggleHqDictation: () => void;
-  hqDefaults: HqDefaultsState;
   onOpenVoice: () => void;
   onBackToRoot: () => void;
   currentService: string | null;
@@ -114,7 +106,7 @@ interface VoiceChipBodyProps {
 function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
   const {
     panel, muted, onToggleMute, narrationEnabled, onToggleNarration, narrationDiarizationEnabled,
-    hqDictationEnabled, onToggleHqDictation, hqDefaults, onOpenVoice,
+    onOpenVoice,
     onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService, currentTtsBackend, onSelectTtsBackend,
     capabilities,
@@ -137,12 +129,6 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
           >
             {narrationEnabled ? "✓ " : ""}Narration mode
           </MenuItem>
-          <HqPreferenceRow
-            enabled={hqDictationEnabled}
-            onToggle={onToggleHqDictation}
-            defaults={hqDefaults}
-            icon={<span className="inline-flex w-[34px] justify-center"><HqIcon /></span>}
-          />
           <MenuDivider />
           <MenuItem id="bbx-voice-settings" onClick={onOpenVoice} keepOpen>
             <span className="flex justify-between gap-2 w-full">
@@ -177,14 +163,11 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
 }
 
 export interface VoiceChipProps {
-  contextDir: string | null;
   canManageDefaults: boolean;
   muted: boolean;
   onToggleMute: () => void;
   narrationEnabled: boolean;
   onToggleNarration: () => void;
-  hqDictationEnabled: boolean;
-  onToggleHqDictation: () => void;
   hqInFlight: boolean;
 }
 
@@ -196,14 +179,11 @@ export interface VoiceChipProps {
  * are primitives and `useCallback`s, so the memo holds.
  */
 export const VoiceChip = memo(function VoiceChip({
-  contextDir,
   canManageDefaults,
   muted,
   onToggleMute,
   narrationEnabled,
   onToggleNarration,
-  hqDictationEnabled,
-  onToggleHqDictation,
   hqInFlight,
 }: VoiceChipProps) {
   const utils = trpc.useUtils();
@@ -235,35 +215,6 @@ export const VoiceChip = memo(function VoiceChip({
   const currentService = transcriptionConfigQuery.data?.service ?? null;
   const currentHqService = transcriptionConfigQuery.data?.hqService ?? null;
   const currentTtsBackend = ttsConfigQuery.data?.backend ?? null;
-  const hqDefaultsQuery = trpc.landmarks.hqPreferences.useQuery(
-    { dir: contextDir },
-    { enabled: canManageDefaults },
-  );
-  const setLandmarkHq = trpc.landmarks.setHqPreference.useMutation({
-    onSuccess: (result) => {
-      void utils.landmarks.hqPreferences.invalidate();
-      if (result.commitWarning !== null) toastError(result.commitWarning);
-    },
-    onError: (error) => { toastError("Failed to save the landmark HQ setting", { cause: error }); },
-  });
-  const setBoxHq = trpc.admin.updateBoxConfig.useMutation({
-    onSuccess: (result) => {
-      void utils.landmarks.hqPreferences.invalidate();
-      if (result.commitWarning !== null) toastError(result.commitWarning);
-    },
-    onError: (error) => { toastError("Failed to save the box HQ setting", { cause: error }); },
-  });
-  const hqDefaults: HqDefaultsState = {
-    canManage: canManageDefaults,
-    hasLandmark: hqDefaultsQuery.data?.hasLandmark ?? false,
-    landmark: hqDefaultsQuery.data?.landmark ?? "inherit",
-    box: hqDefaultsQuery.data?.box ?? "off",
-    pending: hqDefaultsQuery.isLoading || setLandmarkHq.isPending || setBoxHq.isPending,
-    onLandmarkChange: (value) => {
-      if (contextDir !== null) setLandmarkHq.mutate({ dir: contextDir, value });
-    },
-    onBoxChange: (value) => { setBoxHq.mutate({ hqDictation: value }); },
-  };
 
   const onSelectTranscriptionService = (service: TranscriptionServiceOption) => {
     if (currentService === service) return;
@@ -282,7 +233,7 @@ export const VoiceChip = memo(function VoiceChip({
 
   const [panel, setPanel] = useState<VoiceChipPanel>("root");
   const alert = useVoiceNotices().length > 0;
-  const diarizationEnabled = voiceChipDiarizationEnabled({ hqDictationEnabled, narrationEnabled, hqService: currentHqService });
+  const diarizationEnabled = voiceChipDiarizationEnabled(currentHqService);
   const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight, diarizationEnabled }) + (alert ? " — voice notice" : "");
 
   return (
@@ -311,14 +262,11 @@ export const VoiceChip = memo(function VoiceChip({
     >
       <VoiceChipBody
         panel={panel}
-        narrationDiarizationEnabled={voiceChipDiarizationEnabled({ hqDictationEnabled, narrationEnabled: !narrationEnabled, hqService: currentHqService })}
+        narrationDiarizationEnabled={diarizationEnabled}
         muted={muted}
         onToggleMute={onToggleMute}
         narrationEnabled={narrationEnabled}
         onToggleNarration={onToggleNarration}
-        hqDictationEnabled={hqDictationEnabled}
-        onToggleHqDictation={onToggleHqDictation}
-        hqDefaults={hqDefaults}
         onOpenVoice={() => { setPanel("voice"); capabilities.refetch(); }}
         onBackToRoot={() => setPanel("root")}
         currentService={currentService}

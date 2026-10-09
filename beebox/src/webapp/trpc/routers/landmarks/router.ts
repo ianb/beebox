@@ -11,13 +11,11 @@
 import * as path from "node:path";
 import { glob } from "glob";
 import { z } from "zod";
-import { router, publicProcedure, ownerProcedure } from "../../procedures.js";
+import { router, publicProcedure } from "../../procedures.js";
 import { boxRelativePathSchema } from "../../../../core/landmark/nearest.js";
 import type { LandmarkProblem } from "../../../../core/landmark/summaries.js";
 import { landmarkScanRelDir } from "../../../../core/landmark/root-dir.js";
 import { isListedLandmark } from "../../../../core/landmark/cascade.js";
-import { loadHqDictationDefault } from "../../../../core/box/config.js";
-import { setLandmarkHqPreference } from "../../../../core/landmark/hq-preference.js";
 import {
   loadLandmarkPayload,
   loadLandmarkIdentity,
@@ -29,35 +27,6 @@ import {
 export type { LandmarkPayload, LandmarkIdentity } from "./payload.js";
 
 export const landmarksRouter = router({
-  hqPreferences: ownerProcedure
-    .input(z.object({ dir: z.string().refine((d) => !d.startsWith("/") && !d.split("/").includes("..")).nullable() }))
-    .query(async ({ ctx, input }) => {
-      if (input.dir !== null) await assertLandmarkDirInNamespace({ boxRoot: ctx.boxRoot, dir: input.dir, mode: "read" });
-      const pattern = input.dir === null ? null : `${landmarkScanRelDir(input.dir)}/*.landmark.card`;
-      const matches = pattern === null ? [] : await glob(pattern, { cwd: ctx.boxRoot, nodir: true });
-      const relPath = matches.toSorted()[0];
-      let landmark: "inherit" | "on" | "off" = "inherit";
-      if (relPath !== undefined) {
-        const loaded = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot, derive: false });
-        const value = loaded.status === "ok" ? loaded.payload.features["hq-dictation"] : undefined;
-        if (value === "on" || value === "off") landmark = value;
-      }
-      return { box: await loadHqDictationDefault(ctx.boxRoot), landmark, hasLandmark: relPath !== undefined };
-    }),
-
-  setHqPreference: ownerProcedure
-    .input(z.object({
-      dir: z.string().refine((d) => !d.startsWith("/") && !d.split("/").includes("..")),
-      value: z.enum(["inherit", "on", "off"]),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      await assertLandmarkDirInNamespace({ boxRoot: ctx.boxRoot, dir: input.dir, mode: "write" });
-      return setLandmarkHqPreference({
-        boxRoot: ctx.boxRoot,
-        contextDir: input.dir,
-        value: input.value,
-      });
-    }),
   list: publicProcedure.query(async ({ ctx }): Promise<{
     landmarks: LandmarkPayload[];
     problems: LandmarkProblem[];

@@ -39,7 +39,6 @@ const googleServicesSchema = z.object({
 });
 
 const boxConfigSchema = z.object({
-  hqDictation: z.enum(["on", "off"]).catch("off"),
   // Same fail-closed reading as `loadClaudeCodeTelemetry`: an invalid value is off.
   claudeCodeTelemetry: z.enum(["on", "off"]).default("on").catch("off"),
   // Codex analytics are opt-in (`loadCodexTelemetry`).
@@ -232,7 +231,6 @@ export const adminRouter = router({
       // Absent means "only the default engine", the same rule loadEnabledEngines
       // applies — resolved here so the UI never has to re-derive it.
       engines: config.engines ?? { [config.agentEngine]: true },
-      hqDictation: config.hqDictation,
       claudeCodeTelemetry: config.claudeCodeTelemetry,
       codexTelemetry: config.codexTelemetry,
     };
@@ -261,7 +259,6 @@ export const adminRouter = router({
            */
           agentModel: z.string().nullable().optional(),
           engines: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional(),
-          hqDictation: z.enum(["on", "off"]).optional(),
           claudeCodeTelemetry: z.enum(["on", "off"]).optional(),
           codexTelemetry: z.enum(["on", "off"]).optional(),
         })
@@ -280,7 +277,6 @@ export const adminRouter = router({
         ...(input.agentEngine === undefined ? {} : { agentEngine: input.agentEngine }),
         ...(input.agentModel === undefined ? {} : { agentModel: input.agentModel }),
         ...(input.engines === undefined ? {} : { engines: input.engines }),
-        ...(input.hqDictation === undefined ? {} : { hqDictation: input.hqDictation }),
         ...(input.claudeCodeTelemetry === undefined ? {} : { claudeCodeTelemetry: input.claudeCodeTelemetry }),
         ...(input.codexTelemetry === undefined ? {} : { codexTelemetry: input.codexTelemetry }),
       });
@@ -296,7 +292,6 @@ export const adminRouter = router({
         agentEngine: saved.agentEngine,
         agentModel: saved.agentModel ?? null,
         engines: saved.engines ?? { [saved.agentEngine]: true },
-        hqDictation: saved.hqDictation,
         claudeCodeTelemetry: saved.claudeCodeTelemetry,
         codexTelemetry: saved.codexTelemetry,
       };
