@@ -69,7 +69,8 @@ const PLACEHOLDER_RE = /\${([^}]+)}/g;
  * Flat list tier order: hand-listed `links`, then (when `options.derived` is
  * given) derived `entry-point` cards, then derived `primary` cards, then
  * nested landmarks, then unnamed `expand` results. Duplicates by ref are
- * dropped across every tier (first wins). Each expand carrying a `group`
+ * dropped across every tier (first wins); a listed link whose card is also a
+ * derived entry point or primary card takes that level as its `prominence`. Each expand carrying a `group`
  * instead becomes a collapsible group, deduped within itself and independent
  * of the flat list. A landmark without a `navigation` role and no `derived`
  * input resolves to no links and no groups.
@@ -91,6 +92,11 @@ export async function resolveLandmark(
   }
   if (options.derived !== undefined) {
     const derived = await resolveDerivedTiers(options.derived, { seen, options });
+    // A listed card that is also an entry point or primary card keeps its tier.
+    for (const [i, link] of links.entries()) {
+      const prominence = derived.listedLevels.get(link.ref);
+      if (prominence !== undefined) links[i] = { ...link, prominence };
+    }
     links.push(...derived.links);
     derivedProblems = derived.problems;
   }

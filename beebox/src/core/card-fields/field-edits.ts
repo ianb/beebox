@@ -1,6 +1,5 @@
 /**
- * Editing a few frontmatter keys by path, for the shipped card-field
- * migrations (`src/scripts/migrate/card-fields/`) and `bbx migrate-fields`:
+ * Editing a few frontmatter keys by path, for `bbx migrate-fields`:
  * the edit type, a document-model applier that leaves untouched keys
  * byte-for-byte, the refusal errors, and the per-card conversion.
  */

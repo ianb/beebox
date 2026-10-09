@@ -4,14 +4,10 @@ Deepgram is the only transcription backend that reports per-word acoustic
 confidence. `mapDeepgramWords` (`src/core/transcription/dispatch/deepgram.ts`) carries
 it into `WordTimestamp.confidence`, guarding at read because Deepgram success
 responses are not zod-validated: a word is only attached with `confidence`
-when the raw value is genuinely a `number`. The fake transcription service
-(`_config/fake-transcription.json`) can script `confidence` on words too, so
-doctests can exercise the field without a real Deepgram call.
+when the raw value is genuinely a `number`.
 
 ```ts setup
 import { mapDeepgramWords } from "../../../../src/core/transcription/dispatch/deepgram.js";
-import { transcribeAudioFake } from "../../../../src/core/transcription/dispatch/fake.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 ```
 
 ## Deepgram mapping carries confidence through
@@ -54,37 +50,4 @@ JSON.stringify(
   ]),
 )
 => [{"word":"I","start":0,"end":0.1,"confidence":0.99},{"word":"can","start":0.1,"end":0.3},{"word":"run","start":0.3,"end":0.5,"confidence":0.52}]
-```
-
-## Fake service round-trips scripted confidence
-
-`transcribeAudioFake` reads `_config/fake-transcription.json` and returns the
-scripted `words` array verbatim — so a test can script `confidence` on a word
-just like a real Deepgram batch response would carry it.
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_config/fake-transcription.json",
-  JSON.stringify({
-    "*": {
-      text: "cloud code",
-      words: [
-        { word: "cloud", start: 0, end: 0.5, confidence: 0.29 },
-        { word: "code", start: 0.5, end: 1.0 },
-      ],
-    },
-  }),
-);
-const result = await transcribeAudioFake({
-  audioBuffer: Buffer.from(""),
-  filename: "clip.webm",
-  boxRoot: box.root,
-});
-JSON.stringify(result.words)
-=> [{"word":"cloud","start":0,"end":0.5,"confidence":0.29},{"word":"code","start":0.5,"end":1}]
-```
-
-```ts cleanup
-await box.cleanup();
 ```

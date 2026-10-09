@@ -54,6 +54,10 @@ export function createWorkspaceBrowserStoreWithStorage({
   let state = createEmptyWorkspaceState();
   let identity = "";
   let adoption: WorkspaceStoreAdoption | null = null;
+  // Arrival candidate (docs/implemented-plans/landmark-arrival.md, Track D): the selected
+  // conversation had no saved arrangement in this tab. Cleared once taken, on
+  // adoption, on any card action, and on any interaction with the chat pane.
+  let arrivalCandidate = false;
   let notice: string | null = storage === null ? storageUnavailableNotice("sessionStorage is unavailable").message : null;
   const listeners = new Set<() => void>();
   const memory = new Map<string, WorkspaceState>();
@@ -98,6 +102,7 @@ export function createWorkspaceBrowserStoreWithStorage({
     if (identity === nextIdentity || nextIdentity === "") return;
     save();
     adoption = null;
+    arrivalCandidate = false;
     identity = nextIdentity;
     const cached = memory.get(identity);
     state = cached ?? createEmptyWorkspaceState();
@@ -107,6 +112,7 @@ export function createWorkspaceBrowserStoreWithStorage({
     }
     if (storage === null) {
       reportStorageFailure("sessionStorage is unavailable");
+      arrivalCandidate = true;
       notify();
       return;
     }
@@ -121,6 +127,7 @@ export function createWorkspaceBrowserStoreWithStorage({
       });
       state = restored.state;
       memory.set(identity, state);
+      arrivalCandidate = raw === null && legacy === null;
       notice = restored.notices.map((item) => item.message).join(" ") || null;
       if (raw !== null && restored.notices.some((item) => item.code === "invalid-v2")) quarantine(key, raw);
     } catch (error) {
@@ -139,8 +146,22 @@ export function createWorkspaceBrowserStoreWithStorage({
       return () => listeners.delete(listener);
     },
     select,
+    hasArrival: (): boolean => arrivalCandidate,
+    /** Returns the arrival candidate flag and clears it: one selection arrives at most once. */
+    takeArrival(): boolean {
+      if (!arrivalCandidate) return false;
+      arrivalCandidate = false;
+      notify();
+      return true;
+    },
+    cancelArrival(): void {
+      if (!arrivalCandidate) return;
+      arrivalCandidate = false;
+      notify();
+    },
     adopt(nextIdentity: string): void {
       if (nextIdentity === "" || nextIdentity === identity) return;
+      arrivalCandidate = false;
       adoption = { from: identity, to: nextIdentity };
       identity = nextIdentity;
       memory.set(identity, state);
@@ -154,6 +175,7 @@ export function createWorkspaceBrowserStoreWithStorage({
     },
     dispatch(action: WorkspaceAction) {
       const result = reduceWorkspace(state, action);
+      arrivalCandidate = false;
       state = result.state;
       save();
       notify();

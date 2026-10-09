@@ -10,19 +10,19 @@ Supporting docs (not user-facing): `spirit.md` (values compass), `family.md` (ch
 
 **Opening scene:** Saturday morning, the Lund-Vega household. The family has a Telegram group — Diana, James, Rosa, and the box. (Mateo was added but muted it.) The box posted overnight: it sorted out a scheduling conflict for next week and has a question about the Costco list. Rosa replied in Spanish. James thumbs-up'd something at 2am between shifts. Diana's reading the thread now with coffee.
 
-The group conversation is the primary shared surface — the box participates in the family conversation rather than being a separate thing everyone talks to privately. That group exists in both Telegram and the web chat. But there are other surfaces too: capture pages for voice memos and photos, and pages the box creates on its own.
+The group conversation is the primary shared surface — the box participates in the family conversation rather than being a separate thing everyone talks to privately. That group lives in Telegram; in the web chat, the main interface, each person talks with the box. But there are other surfaces too: capture mode in the chat composer for voice memos and photos, and pages the box creates on its own.
 
 What the reader should understand:
 - A box is a shared family system — both a conversation space and a shared repository of the family's stuff
-- The group chat (Telegram and web) is the main shared space — the box is a participant, not a hub
-- Other surfaces exist: capture pages (voice, photo, text), generated pages and views
+- The chat is the main space (web for each person, a Telegram group for the family together) — the box is a participant, not a hub
+- Other surfaces exist: capture mode (voice, photo, text), generated pages and views
 - Different people engage differently — Diana checks everything, Rosa replies in Spanish, Mateo ignores it, Sofia asks it questions directly sometimes
 - The box also reaches out on its own: notifications, assembled pages, custom views
 - It runs in the background, doing things on its own schedule
 
 Use small vignettes here to introduce each family member and show different features at the same time. The introductions *are* the feature tour. (Full character details in `family.md`.)
 
-**Illustration:** The Saturday morning kitchen scene (exists). Maybe a simple diagram of the box's surfaces — group chat at the center, capture and generated pages as additional surfaces.
+**Illustration:** The Saturday morning kitchen scene (exists). Maybe a simple diagram of the box's surfaces — chat at the center, capture mode and generated pages as additional surfaces.
 
 ---
 
@@ -35,12 +35,12 @@ Use small vignettes here to introduce each family member and show different feat
 - Schemas keep the agents honest — they can't just make up whatever structure they want, and things stay consistent across processing runs
 - But schemas also have escape valves: fields that can hold ad hoc information so nothing gets dropped. If the box doesn't know where something goes, there's always a place to put it
 - Schemas can change over time, and some are extensible in simple ways — the system evolves
-- XML is the format but that's an implementation detail; what matters is typed, validated, structured data
+- YAML frontmatter plus a markdown body is the format but that's an implementation detail; what matters is typed, validated, structured data
 
 **Architecture — preserving originals:**
 - When the box processes messy input (a voice memo, a photo of a schedule), it should keep the original alongside the structured version. The structured card is the box's interpretation; the original is the source of truth
 - We can do this somewhat now with attachments/sidecars, but it's partly aspirational — we need to think more about how to keep original words available when they exist
-- Attachments need a more general pattern: currently a card can have a sidecar file, but if there are multiple attachments we'd need a directory. There should be a clear convention for this
+- Attachments live in a sibling directory: `Name.card` keeps its files in `Name.attach/`, so one attachment or many follow the same convention
 
 **Architecture — the filesystem and Git:**
 - The filesystem is the *canonical* state — not a cache of some database, not a projection. The files are the thing
@@ -57,20 +57,20 @@ This section should make cards feel concrete and tangible. Show what a card actu
 
 This section needs multiple small vignettes, going back and forth between stories and architecture. The wakeup cycle happens constantly, not just overnight.
 
-**Vignette: Forwarded email.** Diana has a Gmail filter that forwards Sofia's swim schedule updates to the box. An email arrives with an updated PDF. The box wakes up, sees the forwarded email, processes the PDF, updates the schedule card, notices a conflict with James's shifts, posts a question to the group chat. Forwarded email is a primary intake pattern — it fits naturally with the group model, you just set up filters and things flow in.
+**Vignette: Email.** Diana has the Gmail connector watching a label she puts on Sofia's swim schedule updates. An email arrives with an updated PDF. The box wakes up, sees the new email, processes the PDF, updates the schedule card, notices a conflict with James's shifts, posts a question to the group chat. Email is a primary intake pattern — the Gmail connector reads Diana's own mail by query or label, so she just sets up filters and labels and things flow in.
 
 **Vignette: Something from the group chat.** James sends a photo of his posted work schedule to the Telegram group. The box sees it, parses it, creates/updates the shift cards. Maybe it gets something wrong and asks for confirmation.
 
-**Vignette: Adding a new connector.** Diana decides she wants the box to track Sofia's swim team announcements that come via email. She sets up a new forwarding filter. What happens the first time a new kind of email arrives? The box has to figure out what it is and what to do with it.
+**Vignette: Adding a new connector.** Diana decides she wants the box to track Sofia's swim team announcements that come via email. She adds a Gmail filter that labels them for the box. What happens the first time a new kind of email arrives? The box has to figure out what it is and what to do with it.
 
 **Architecture — the wakeup cycle:**
-- The cycle: sync connectors → process inbox → execute commands → archive
+- The cycle: sync connectors → the reactor runs the jobs they created → `bbx finalize`
 - It runs on a schedule, not just in response to user actions — the box does things on its own
-- Connectors are how the outside world gets in: forwarded email, Telegram, calendar sync, browser-extension captures, etc.
+- Connectors are how the outside world gets in: Gmail, Telegram, calendar sync, Google Drive, browser-extension captures, etc.
 - Each connector syncs its source into the box's filesystem as cards
 
 **Architecture — agents:**
-- Agents (Claude Code) do the processing — reading cards, making decisions, creating new cards, committing changes
+- Agents (an engine: Claude Code or Codex) do the processing — reading cards, making decisions, creating new cards, committing changes
 - Agents read the same history and context a person would — introspection isn't bolted on, it's how the system thinks
 - Every action has a source, every decision has a reason, captured in commits and logs
 
@@ -95,7 +95,7 @@ Show at least one example end to end: email arrives → connector syncs → inbo
 What the reader should understand:
 - Questions are primarily for clarification — the box asks when it's uncertain rather than guessing
 - Every input surface is open-ended — you can say whatever you're thinking, not just commands
-- Questions have a lifecycle: asked, answered, moot, expired
+- Questions have a lifecycle: pending, answered, dismissed, expired
 - Adaptation is mostly explicit: people tell the box what they want, how they want it, what's useful and what isn't
 - The box should be getting better at presenting information — figuring out the right level of detail, the right format, the right grouping for each person
 - The box should be honest about what it knows and doesn't know
@@ -112,7 +112,7 @@ What the reader should understand:
 
 ## 5. How It Got Here / How It Changes
 
-**Story: Flashback.** Diana set up the box a few months ago. Set up email forwarding filters — swim team emails, school announcements, pharmacy notifications. Added Rosa to the Telegram group. The box started figuring out what each kind of email meant and what to do with it.
+**Story: Flashback.** Diana set up the box a few months ago. Connected her Gmail and set up labels for the box — swim team emails, school announcements, pharmacy notifications. Added Rosa to the Telegram group. The box started figuring out what each kind of email meant and what to do with it.
 
 **Story: Something new.** James starts sending photos of his posted work schedule to the group chat instead of just to Diana. The box sees a new kind of input, figures out what it is, starts parsing it. The first time it gets the format wrong. It asks. It learns.
 
@@ -122,7 +122,7 @@ What the reader should understand:
 
 What the reader should understand:
 - Setup isn't a one-time event — the box is always being taught
-- Email forwarding is the primary intake pattern — fits naturally with the group model
+- Email through the Gmail connector is the primary intake pattern — fits naturally with the group model
 - Configuration is interleaved with the box doing things (you connect something, the box immediately acts on it)
 - The box evolves: new connectors, new card types, new procedures emerge from use
 - Teaching the box is part of using it — answering questions, correcting mistakes, adding new inputs
@@ -136,7 +136,7 @@ What the reader should understand:
 
 A case study that shows several features working together. Interesting because it involves partial knowledge, real-time interaction, and shared resources.
 
-**Vignette: Inventory.** Diana walks through the kitchen with the capture page open, narrating what's in the pantry and fridge. "Rice, black beans, two cans of coconut milk, that bag of dried chiles Rosa brought back..." The box builds up an inventory from this — not a precise count, but a baseline of what the household typically has on hand. More than half the food is just stuff they always keep around: olive oil, flour, spices, rice. Over time the box learns the baseline and can say "I think you have cumin" even if nobody's confirmed it recently. This is a great example of partial knowledge — the box knows you *had* something as of a certain date according to someone, but not necessarily right now. That's still useful information, and the box should be able to work with it honestly: "you probably have this, but it's been a while since anyone checked."
+**Vignette: Inventory.** Diana walks through the kitchen with capture mode on, narrating what's in the pantry and fridge. "Rice, black beans, two cans of coconut milk, that bag of dried chiles Rosa brought back..." The box builds up an inventory from this — not a precise count, but a baseline of what the household typically has on hand. More than half the food is just stuff they always keep around: olive oil, flour, spices, rice. Over time the box learns the baseline and can say "I think you have cumin" even if nobody's confirmed it recently. This is a great example of partial knowledge — the box knows you *had* something as of a certain date according to someone, but not necessarily right now. That's still useful information, and the box should be able to work with it honestly: "you probably have this, but it's been a while since anyone checked."
 
 **Vignette: Planning and shopping.** Rosa mentions in the group she's making pozole this weekend and needs specific chiles. The box checks: do we have what she needs? Some things yes (from the baseline), some things no, some things uncertain. It adds what's needed to the grocery list, grouped by store — Aldi for basics, La Colonia for the specific chiles. Diana says "we're going to Costco Saturday, add it to that list." The grocery list is a living, shared thing — multiple people add to it, the box groups by store, reminds before trips, tracks what's recurring.
 
@@ -163,7 +163,7 @@ This section is a good place for playfulness — the box creating things that ar
 
 **Story:** Diana opens the web interface. What does she see? Not a dashboard designed by a product team — a page the box assembled based on what it thinks matters right now. James's schedule changed. Sofia has a meet this weekend. Rosa's medication refill is due. There's a question about the Costco list.
 
-**Story: James's build journal.** James has been sending photos and voice notes about the canoe build to the box. The box turns this into a published webpage — a real build journal with his photos, what he said about what he's doing, dates, progress. Something he'd never have maintained himself, but now it exists and he can share it. The box knows how to make web pages; the content was already there. (We don't have webpage publishing per se yet, but agents know how to generate HTML, so the setup is close.)
+**Story: James's build journal.** James has been sending photos and voice notes about the canoe build to the box. The box turns this into a published webpage — a real build journal with his photos, what he said about what he's doing, dates, progress. Something he'd never have maintained himself, but now it exists and he can share it. The box knows how to make web pages; the content was already there. (Publications do this: the box publishes a page like this to its own web address.)
 
 **Story: Sofia and Rosa's stories.** Rosa's been recording family stories. Sofia decides to do something with them — maybe a word cloud of her grandmother's stories, or an illustrated timeline of the family, or just browsing them organized by topic and person. Sofia exploring her grandmother's memories through the system, doing something creative with material that's already in the box. That's playfulness that's real — it comes from the family, not from the AI being clever.
 
@@ -172,12 +172,12 @@ This section is a good place for playfulness — the box creating things that ar
 **Story: Mateo.** Mateo uses the box less than everyone else, but he's not absent. He asks it things sometimes — music production questions, or something for school. He might use the cooking feature when he's home alone. The interesting thing about Mateo is that he uses it on his own terms, for his own stuff, not for the family logistics that Diana cares about. The box works for him without requiring him to care about how it works.
 
 What the reader should understand:
-- The web interface is a surface, not *the* product
+- The web interface is the main UI, the richest surface
 - The box can create its own pages and views — it's an active presenter, not just a data store
 - Published pages (like James's build journal) are a natural output — the box assembles content that already exists into something shareable
 - Playfulness comes from the family's own material and creativity, not from the AI performing
 - The box works even for people who don't actively use it — Mateo's stuff can be in there without Mateo having to maintain it
-- Notifications go out through multiple channels (web, Telegram, etc.)
+- Notifications go to the boxholder as pushes on iPhone or browser, at dot, quiet, or loud
 - Custom views are one-step aspirational: the pieces are there, the assembly is the work
 
 **Illustration:** A phone screen showing Diana's morning view? Or James's build journal page. Or Sofia browsing Rosa's stories.

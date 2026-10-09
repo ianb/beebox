@@ -58,6 +58,30 @@ points the other way (fidelity of a *tool to the user's cognition*), so a reader
 — including the agent — will take it to mean something else. When the idea needs
 to appear in a prompt, name it in plain language rather than leaning on the term.
 
+The same rule reaches the words a person sees: the assistant says "I", and a
+card is "your recipe", not "the card"; the glossary's user-facing register
+holds those terms ([`../glossary.md`](../glossary.md#user-facing-register)).
+
+## Acting forward on a kept record
+
+Because the record is kept (git history, `durability-and-provenance.md`), the
+box may go ahead on some actions without asking: moving, filing, titling.
+What makes an action safe to take forward is that it can be undone or moved
+again from the record; an action that cannot be undone goes through the trust
+ladder instead (`trust.md`).
+
+- **Titles.** A hand-set title permanently beats the machine title, because
+  the person's name for a thing is the representation's ground truth. A
+  machine title is held to "would the boxholder wince if someone nearby read
+  this?", because titles show in lists read in contexts the chat never
+  anticipated ([`../chat/review.md`](../chat/review.md)).
+- **Triage.** Filing represents uncertainty rather than hiding it: a `guess`
+  stays unsorted with a question, and a `probable` item is filed with a
+  marker for spot-checking ([`../triage.md`](../triage.md)).
+- **Publishing.** A published resource is never silently moved or deleted:
+  its URL lives outside the box's record, so the record cannot undo the move
+  ([`../publishing.md`](../publishing.md)).
+
 ## Strict schemas, with deliberate escape valves
 
 Validation is **strict and fail-closed** — cards validate against their schema

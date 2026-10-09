@@ -1,24 +1,20 @@
-# File-backed fake Gmail
+# The `BBX_FAKE_GMAIL` gate
 
 Email intake runs in CLI subprocesses, so a field run hands the Gmail connector
 a mailbox on disk instead of an injected service: `BBX_FAKE_GMAIL=<state file>`.
-The file carries the fake's whole state — messages, labels, attachments, and
-the history machinery — and the gate that honors it is fail-closed.
+The gate that honors it is fail-closed.
 
 ```ts setup
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { createGmailConnector } from "../../src/connectors/gmail/connector.js";
 import { runConnectors } from "../../src/cli/commands/wakeup/connectors.js";
-import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake/core.js";
 import type { GmailMessage } from "../../src/services/google-gmail-types.js";
-import { loadEmailFixture } from "../../src/field-test/email-fixture.js";
 import { TEST_BOX_MARKER } from "../../src/field-test/run-box.js";
 import {
   appendMessageToState,
-  createFakeGmailFromState,
   emptyFakeGmailState,
   loadFakeGmailState,
   saveFakeGmailState,
@@ -61,160 +57,6 @@ const trackInbox = JSON.stringify({
     action: { type: "track", budget: { threads: 5, window: "7d" } },
   }],
 });
-```
-
-## A saved mailbox reloads with its history intact
-
-Constructor-seeded mail predates history; `addMessage` appends a record at a
-fresh checkpoint. A state file that went through save/load behaves exactly like
-an in-memory fake built the same way — including which messages `listHistory`
-reports from the pre-injection checkpoint.
-
-```ts
-const dir = await scratch();
-const statePath = join(dir, "gmail.json");
-
-const inMemory = createFakeGoogleGmail({ labels, messages: [message({ id: "old", subject: "Old" })] });
-inMemory.addMessage(message({ id: "new", subject: "New" }));
-
-const state = appendMessageToState({
-  state: { ...emptyFakeGmailState(), labels, messages: [message({ id: "old", subject: "Old" })] },
-  message: message({ id: "new", subject: "New" }),
-});
-await saveFakeGmailState(statePath, state);
-const reloaded = createFakeGmailFromState(await loadFakeGmailState(statePath));
-
-JSON.stringify(await reloaded.getProfile()) === JSON.stringify(await inMemory.getProfile())
-=> true
-
-JSON.stringify(await reloaded.listMessages({})) === JSON.stringify(await inMemory.listMessages({}))
-=> true
-
-JSON.stringify(await reloaded.listHistory({ startHistoryId: "1" }))
-  === JSON.stringify(await inMemory.listHistory({ startHistoryId: "1" }))
-=> true
-```
-
-The cursor is persisted, not derived — the reloaded fake continues from the
-file's checkpoint rather than restarting at the message count.
-
-```ts continue
-(await reloaded.getProfile()).historyId
-=> 2
-
-(await reloaded.listHistory({ startHistoryId: "1" })).history.length
-=> 1
-```
-
-## A malformed state file fails loudly
-
-Every way the file can be wrong surfaces as one error naming the path — never
-an empty mailbox that looks like "no new mail".
-
-```ts
-const dir = await scratch();
-const missing = join(dir, "absent.json");
-await loadFakeGmailState(missing)
-=> throws FakeGmailStateError
-
-await writeFile(join(dir, "torn.json"), "{\"version\": 1, \"messages\": [");
-await loadFakeGmailState(join(dir, "torn.json"))
-=> throws FakeGmailStateError
-
-await writeFile(join(dir, "wrong.json"), JSON.stringify({ ...emptyFakeGmailState(), historyId: "2" }));
-await loadFakeGmailState(join(dir, "wrong.json")).catch((e) => e.message.split(" — ")[1])
-=> historyId: Invalid input: expected number, received string
-```
-
-## Injecting mail appends a message and its history record
-
-`bbx field-test inject-email` is this, plus reading and writing the file: the
-fixture becomes a Gmail message, and the message becomes one `messagesAdded`
-record at the next checkpoint.
-
-```ts
-const dir = await scratch();
-await writeFile(join(dir, "dentist.yaml"), [
-  "from: Bright Smiles Dental <appointments@example.com>",
-  "to: boxholder@example.com",
-  "subject: Your appointment on Thursday",
-  "date: 2026-03-02T09:00:00Z",
-  "body: |",
-  "  See you at 2pm.",
-  "",
-].join("\n"));
-
-const fixture = await loadEmailFixture(join(dir, "dentist.yaml"));
-JSON.stringify({ id: fixture.message.id, threadId: fixture.message.threadId })
-=> {"id":"dentist","threadId":"t-dentist"}
-
-const state = appendMessageToState({ state: emptyFakeGmailState(), message: fixture.message });
-JSON.stringify(state.historyRecords)
-=> [{"id":"2","messagesAdded":[{"message":{"id":"dentist","threadId":"t-dentist","labelIds":["INBOX"]}}]}]
-
-JSON.stringify(state.labels)
-=> [{"id":"INBOX","name":"INBOX","type":"system"}]
-```
-
-An attachment travels as a base64 record keyed by message and attachment id,
-which is what `getAttachment` serves.
-
-```ts continue
-await writeFile(join(dir, "flyer.pdf"), "PDF-ish bytes");
-await writeFile(join(dir, "school.yaml"), [
-  "from: Elementary School <office@example.com>",
-  "to: boxholder@example.com",
-  "subject: Spring flyer",
-  "body: |",
-  "  Attached.",
-  "attachments:",
-  "  - filename: flyer.pdf",
-  "    mimeType: application/pdf",
-  "    path: flyer.pdf",
-  "",
-].join("\n"));
-const withAttachment = await loadEmailFixture(join(dir, "school.yaml"));
-const withState = appendMessageToState({
-  state,
-  message: withAttachment.message,
-  attachments: withAttachment.attachments,
-});
-Object.keys(withState.attachments).join(",")
-=> school:att-1
-
-const fake = createFakeGmailFromState(withState);
-Buffer.from((await fake.getAttachment("school", "att-1")).data, "base64url").toString("utf-8")
-=> PDF-ish bytes
-```
-
-A fixture that would produce mail nobody can address is rejected at load, not
-injected: the id becomes the `Message-ID` header, and `Buffer.from(x,"base64")`
-would otherwise skip unrecognized characters and hand over corrupt bytes.
-
-```ts continue
-await writeFile(join(dir, "school trip.yaml"), [
-  "from: Elementary School <office@example.com>",
-  "to: boxholder@example.com",
-  "subject: Trip",
-  "body: nope",
-  "",
-].join("\n"));
-await loadEmailFixture(join(dir, "school trip.yaml"))
-=> throws EmailFixtureError
-
-await writeFile(join(dir, "bad-data.yaml"), [
-  "from: Elementary School <office@example.com>",
-  "to: boxholder@example.com",
-  "subject: Trip",
-  "body: nope",
-  "attachments:",
-  "  - filename: flyer.pdf",
-  "    mimeType: application/pdf",
-  "    data: not base64!",
-  "",
-].join("\n"));
-await loadEmailFixture(join(dir, "bad-data.yaml"))
-=> throws EmailFixtureError
 ```
 
 ## The gate refuses a box that is not a field-test box

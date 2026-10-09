@@ -86,7 +86,7 @@ import * as path from "node:path";
  * instead. It signals a bug at the call site (nested locking), not a
  * runtime condition to recover from.
  */
-export class ReentrantCardLockError extends Error {
+class ReentrantCardLockError extends Error {
   readonly key: string;
   constructor(key: string) {
     super(

@@ -56,7 +56,7 @@ export function openRouterChatEnv(params: { key: string; model: string }): Recor
 }
 
 /** The model is not added for this box, or the box has no usable key. */
-export class OpenRouterSetupError extends ProviderSetupError {
+class OpenRouterSetupError extends ProviderSetupError {
   constructor(message: string) {
     super("openrouter", message);
     this.name = "OpenRouterSetupError";

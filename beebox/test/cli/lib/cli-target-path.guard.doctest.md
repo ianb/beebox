@@ -63,10 +63,6 @@ import { createCommand } from "../../../src/cli/commands/create.js";
 ```
 
 ```ts
-const helpText = createCommand.helpInformation();
-helpText.includes("Template key=value arguments") && helpText.includes("--describe-template <name>")
-=> true
-
 let errorText = "";
 createCommand.configureOutput({ writeErr: (text) => { errorText += text; } }).exitOverride();
 try { createCommand.parse(["node", "bbx", "example.doc.card", "--title", "Example"]); } catch { /* Commander exitOverride throws after writing the expected error hint. */ }

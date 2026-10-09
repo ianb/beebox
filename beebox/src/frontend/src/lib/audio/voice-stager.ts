@@ -20,7 +20,7 @@ import { VOICE_UPLOAD_BATCH_SECONDS } from "./voice-staging-queue-core";
 const PCM_BYTES_PER_SECOND = 16_000 * 2;
 
 /** Bytes in one full `chunk` op: 15 s of audio = 480,000 bytes. */
-export const VOICE_BATCH_BYTES = VOICE_UPLOAD_BATCH_SECONDS * PCM_BYTES_PER_SECOND;
+const VOICE_BATCH_BYTES = VOICE_UPLOAD_BATCH_SECONDS * PCM_BYTES_PER_SECOND;
 
 /**
  * What a recording sealed for HQ tells the box: which message, in which chat

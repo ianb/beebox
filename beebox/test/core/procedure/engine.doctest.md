@@ -8,6 +8,85 @@ import { startProcedure, resumeProcedure } from "../../../src/core/procedure/eng
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { getLog } from "../../../src/lib/git/core/operations.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
+
+/** A shell list item for a YAML `shells:` block. */
+const shells = (script) =>
+  `      shells:\n        - |\n${script.split("\n").map((l) => `          ${l}`).join("\n")}\n`;
+
+/**
+ * One procedure step as YAML. `run`, `precheck` and `validate` are shell scripts;
+ * `severity` goes with `validate`; `agent` is a prompt for an agent run phase.
+ */
+function step(id, { precheck, run, validate, severity, agent }) {
+  return [
+    `  - id: ${id}\n    description: Step ${id}\n`,
+    precheck === undefined ? "" : `    precheck:\n${shells(precheck)}`,
+    agent === undefined ? `    run:\n${shells(run)}` : `    run:\n      agents:\n        - prompt: ${agent}\n`,
+    validate === undefined ? "" : `    validate:\n      severity: ${severity}\n${shells(validate)}`,
+  ].join("");
+}
+
+/** A procedure card; `header` adds extra frontmatter lines (e.g. `run-expiry: never`). */
+const procedure = (name, steps, header) =>
+  `---\nname: ${name}\n${header ?? ""}description: Procedure ${name}\nsteps:\n${steps.join("")}---\n`;
+
+/** A throwaway git box holding the procedure cards (name -> card text), passed to `fn`. */
+async function withBox(cards, fn) {
+  const box = await makeTmpBox({ git: true });
+  try {
+    for (const [name, text] of Object.entries(cards)) await box.write(`_config/procedures/${name}.procedure.card`, text);
+    await box.write("_bookkeeping/output/.gitkeep", "");
+    box.commitAll("Add procedures");
+    return await fn(box);
+  } finally {
+    await box.cleanup();
+  }
+}
+
+/** A procedure context whose output lines are collected in `lines`. */
+const contextFor = (box) => {
+  const lines = [];
+  return { lines, ctx: { boxRoot: box.root, writeLine: (l) => lines.push(l), write: () => {} } };
+};
+
+/** File names the procedures created under `_bookkeeping/output`. */
+const outputsOf = async (box) =>
+  (await box.list("_bookkeeping/output")).split("\n").filter((f) => f && !f.endsWith(".gitkeep")).map((f) => f.split("/").pop());
+
+/** The run dir for procedure `name` (null before any run). */
+const runDirOf = async (box, name) =>
+  (await box.list("_bookkeeping/procedure/runs")).split("\n").find((f) => f.includes(`${name}_`)) ?? null;
+
+/** The parsed run card for procedure `name` (null before any run). */
+async function runCardOf(box, name) {
+  const dir = await runDirOf(box, name);
+  return dir ? parseProcedureRun(await box.read(`${dir}/run.procedure-run.card`)) : null;
+}
+
+/**
+ * Start procedure `name` from `card` (null: no such card) on a fresh box and report what happened:
+ * `ok`/`error`/`status` of the result, output `lines`, the files created under
+ * `_bookkeeping/output`, the parsed run card (null if none) and the commit count.
+ */
+async function startOn(name, card, options) {
+  return withBox(card === null ? {} : { [name]: card }, async (box) => {
+    const { ctx, lines } = contextFor(box);
+    const result = await startProcedure({ ctx, procedureNameOrPath: name, options });
+    return {
+      ok: result.ok,
+      error: result.ok ? undefined : result.error.message,
+      status: result.ok ? result.value.status : undefined,
+      lines,
+      files: await outputsOf(box),
+      run: await runCardOf(box, name),
+      runsListing: await box.list("_bookkeeping/procedure/runs"),
+      commits: (await getLog(box.root)).length,
+    };
+  });
+}
+
+/** Per-step statuses of a run card as "id=status, ..." */
+const stepStatuses = (run) => run.steps.map((s) => `${s.id}=${s.status}`).join(", ");
 ```
 
 ## Shell-only procedure: happy path
@@ -17,218 +96,66 @@ creates a run directory, commits at each phase boundary, and records
 results in the run card.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/greet.procedure.card", `---
-name: greet
-description: A simple greeting procedure
-steps:
-  - id: hello
-    description: Say hello
-    run:
-      shells:
-        - |
-          echo "Hello from procedure" > _bookkeeping/output/greeting.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add greet procedure");
-
-const output = [];
-const ctx = { boxRoot: box.root, writeLine: (s) => output.push(s), write: (s) => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "greet" });
-print(`success: ${result.ok}`);
-
-// The greeting file was created by the shell step
-const greeting = await box.read("_bookkeeping/output/greeting.txt");
-print(`greeting: ${greeting.trim()}`);
-
-// Run card exists and records the completed outcome
-const runs = await box.list("_bookkeeping/procedure/runs");
-const runDir = runs.split("\n").find(f => f.includes("greet_"));
-const runCard = await box.read(runDir + "/run.procedure-run.card");
-const run = parseProcedureRun(runCard);
-print(`procedure outcome: ${run.outcome}`);
-print(`step status: ${run.steps[0].status}`);
-=>
-success: true
-greeting: Hello from procedure
-procedure outcome: completed
-step status: completed
-```
-
-```ts cleanup
-await box.cleanup();
+const r = await startOn("greet", procedure("greet", [
+  step("hello", { run: 'echo "Hello from procedure" > _bookkeeping/output/greeting.txt' }),
+]));
+({ ok: r.ok, files: r.files, outcome: r.run.outcome, steps: stepStatuses(r.run) })
+=> { ok: true, files: ["greeting.txt"], outcome: "completed", steps: "hello=completed" }
 ```
 
 ## Precheck skip
 
 When a precheck exits with `$CHECK_SKIP`, the step is skipped — not
-failed. The procedure continues to the next step.
+failed. The procedure continues to the next step, and the skipped step's
+shell never ran. A precheck that printed nothing reports its exit code as a
+number, in plain text.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/maybe.procedure.card", `---
-name: maybe
-description: Conditional steps
-steps:
-  - id: skipped
-    description: This step skips
-    precheck:
-      shells:
-        - |
-          exit $CHECK_SKIP
-    run:
-      shells:
-        - |
-          echo "SHOULD NOT RUN" > _bookkeeping/output/bad.txt
-  - id: runs
-    description: This step runs
-    run:
-      shells:
-        - |
-          echo "OK" > _bookkeeping/output/good.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add maybe procedure");
-
-const lines = [];
-const ctx = { boxRoot: box.root, writeLine: (line) => { lines.push(line); }, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "maybe" });
-print(`success: ${result.ok}`);
-// A precheck that printed nothing reports its exit code as a number, in plain text.
-print(lines.find((l) => l.includes("Skipped:")));
-
-// The skipped step's shell never ran
-const files = await box.list("_bookkeeping/output");
-print(`bad.txt exists: ${files.includes("bad.txt")}`);
-print(`good.txt exists: ${files.includes("good.txt")}`);
-
-// Run card shows skip + completed
-const runs = await box.list("_bookkeeping/procedure/runs");
-const runDir = runs.split("\n").find(f => f.includes("maybe_"));
-const runCard = await box.read(runDir + "/run.procedure-run.card");
-const run = parseProcedureRun(runCard);
-print(`skipped step: ${run.steps[0].id} = ${run.steps[0].status}`);
-print(`runs step: ${run.steps[1].id} = ${run.steps[1].status}`);
-=>
-success: true
-  Skipped: precheck exit 75
-bad.txt exists: false
-good.txt exists: true
-skipped step: skipped = skipped
-runs step: runs = completed
-```
-
-```ts cleanup
-await box.cleanup();
+const r = await startOn("maybe", procedure("maybe", [
+  step("skipped", { precheck: "exit $CHECK_SKIP", run: 'echo "SHOULD NOT RUN" > _bookkeeping/output/bad.txt' }),
+  step("runs", { run: 'echo "OK" > _bookkeeping/output/good.txt' }),
+]));
+({ ok: r.ok, skipLine: r.lines.find((l) => l.includes("Skipped:")), files: r.files, steps: stepStatuses(r.run) })
+=> { ok: true, skipLine: "  Skipped: precheck exit 75", files: ["good.txt"], steps: "skipped=skipped, runs=completed" }
 ```
 
 ## No-op run leaves nothing behind
 
 When every step skips, the run was a no-op: the run directory is removed
 at completion and no commits are made. Provenance for no-op ticks lives in
-scheduler.jsonl, not in a dir-per-nothing.
+scheduler.jsonl, not in a dir-per-nothing. Commits are only init plus the
+procedure card itself.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/idle.procedure.card", `---
-name: idle
-description: Nothing to do
-steps:
-  - id: first
-    description: Skips
-    precheck:
-      shells:
-        - |
-          echo "nothing new"; exit $CHECK_SKIP
-    run:
-      shells:
-        - |
-          echo "NEVER" > _bookkeeping/output/never.txt
-  - id: second
-    description: Also skips
-    precheck:
-      shells:
-        - |
-          exit $CHECK_SKIP
-    run:
-      shells:
-        - |
-          echo "ALSO NEVER" > _bookkeeping/output/also.txt
----
-`);
-box.commitAll("Add idle procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "idle" });
-print(`success: ${result.ok}, status: ${result.value.status}`);
-
-// No run directory persists
-const runs = await box.list("_bookkeeping/procedure/runs");
-print(`runs dir contents: "${runs}"`);
-
-// And no commits beyond init + the procedure card itself
-const log = await getLog(box.root);
-print(`commits: ${log.length}`);
-=>
-success: true, status: skipped
-runs dir contents: "_bookkeeping/procedure/runs/.gitkeep"
-commits: 2
+const r = await startOn("idle", procedure("idle", [
+  step("first", { precheck: 'echo "nothing new"; exit $CHECK_SKIP', run: 'echo "NEVER" > _bookkeeping/output/never.txt' }),
+  step("second", { precheck: "exit $CHECK_SKIP", run: 'echo "ALSO NEVER" > _bookkeeping/output/also.txt' }),
+]));
+({ ok: r.ok, status: r.status, runsListing: r.runsListing, commits: r.commits })
+=> { ok: true, status: "skipped", runsListing: "_bookkeeping/procedure/runs/.gitkeep", commits: 2 }
 ```
 
-```ts cleanup
-await box.cleanup();
-```
-
-## Precheck failure stops the procedure
+## A failing precheck stops the procedure
 
 When a precheck exits with a non-zero, non-skip code, the step fails
-and the procedure halts — later steps don't run.
+and the procedure halts — later steps don't run, and neither does the failed
+step's own run phase. The precheck's stdout is captured on the run card so the
+reason is inspectable after the fact.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/fail-early.procedure.card", `---
-name: fail-early
-description: First step fails
-steps:
-  - id: broken
-    description: Precheck fails
-    precheck:
-      shells:
-        - |
-          echo "something wrong"; exit 1
-    run:
-      shells:
-        - |
-          echo "NEVER" > _bookkeeping/output/never.txt
-  - id: after
-    description: Should not run
-    run:
-      shells:
-        - |
-          echo "ALSO NEVER" > _bookkeeping/output/also.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add fail-early procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "fail-early" });
-print(`success: ${result.ok}`);
-
-// Neither step's run phase executed
-const files = await box.list("_bookkeeping/output");
-print(`never.txt exists: ${files.includes("never.txt")}`);
-print(`also.txt exists: ${files.includes("also.txt")}`);
-=>
-success: false
-never.txt exists: false
-also.txt exists: false
-```
-
-```ts cleanup
-await box.cleanup();
+const r = await startOn("fail-early", procedure("fail-early", [
+  step("broken", { precheck: 'echo "missing prerequisite: config not found"\nexit 1', run: 'echo "NEVER" > _bookkeeping/output/never.txt' }),
+  step("after", { run: 'echo "ALSO NEVER" > _bookkeeping/output/also.txt' }),
+]));
+const first = r.run.steps[0];
+({
+  ok: r.ok,
+  files: r.files,
+  stepStatus: first.status,
+  precheckStatus: first.precheck.status,
+  recordsReason: first.precheck.stdout.includes("missing prerequisite"),
+})
+=> { ok: false, files: [], stepStatus: "failed", precheckStatus: "fail", recordsReason: true }
 ```
 
 ## Validation with severity
@@ -237,105 +164,22 @@ Validation shells run after the step's run phase. `severity="warn"`
 lets the procedure continue; `severity="abort"` stops it.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/validate.procedure.card", `---
-name: validate
-description: Validation test
-steps:
-  - id: warned
-    description: Validation warns but continues
-    run:
-      shells:
-        - |
-          echo "did work" > _bookkeeping/output/work.txt
-    validate:
-      severity: warn
-      shells:
-        - |
-          echo "not ideal"; exit 1
-  - id: after-warn
-    description: Runs after warning
-    run:
-      shells:
-        - |
-          echo "still going" > _bookkeeping/output/still.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add validate procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "validate" });
-print(`success: ${result.ok}`);
-
-// Both steps ran despite validation warning
-const files = await box.list("_bookkeeping/output");
-print(`work.txt: ${files.includes("work.txt")}`);
-print(`still.txt: ${files.includes("still.txt")}`);
-
-// Check the validate result in run card
-const runs = await box.list("_bookkeeping/procedure/runs");
-const runDir = runs.split("\n").find(f => f.includes("validate_"));
-const runCard = await box.read(runDir + "/run.procedure-run.card");
-const run = parseProcedureRun(runCard);
-const warnedStep = run.steps.find(s => s.id === "warned");
-print(`validate status: ${warnedStep.validate.status}`);
-=>
-success: true
-work.txt: true
-still.txt: true
-validate status: warn
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Abort validation stops the procedure
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/abort.procedure.card", `---
-name: abort
-description: Abort on validation failure
-steps:
-  - id: checked
-    description: Validation aborts
-    run:
-      shells:
-        - |
-          echo "ran" > _bookkeeping/output/ran.txt
-    validate:
-      severity: abort
-      shells:
-        - |
-          echo "bad output"; exit 1
-  - id: never
-    description: Should not run
-    run:
-      shells:
-        - |
-          echo "nope" > _bookkeeping/output/nope.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add abort procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "abort" });
-print(`success: ${result.ok}`);
-
-const files = await box.list("_bookkeeping/output");
-print(`ran.txt: ${files.includes("ran.txt")}`);
-print(`nope.txt: ${files.includes("nope.txt")}`);
-=>
-success: false
-ran.txt: true
-nope.txt: false
-```
-
-```ts cleanup
-await box.cleanup();
+const warned = await startOn("validate", procedure("validate", [
+  step("warned", { run: 'echo "did work" > _bookkeeping/output/work.txt', validate: 'echo "not ideal"; exit 1', severity: "warn" }),
+  step("after-warn", { run: 'echo "still going" > _bookkeeping/output/still.txt' }),
+]));
+const aborted = await startOn("abort", procedure("abort", [
+  step("checked", { run: 'echo "ran" > _bookkeeping/output/ran.txt', validate: 'echo "bad output"; exit 1', severity: "abort" }),
+  step("never", { run: 'echo "nope" > _bookkeeping/output/nope.txt' }),
+]));
+({
+  warn: { ok: warned.ok, files: warned.files, validateStatus: warned.run.steps.find((s) => s.id === "warned").validate.status },
+  abort: { ok: aborted.ok, files: aborted.files },
+})
+=> {
+  warn: { ok: true, files: ["still.txt", "work.txt"], validateStatus: "warn" },
+  abort: { ok: false, files: ["ran.txt"] }
+}
 ```
 
 ## A failing run shell fails the step
@@ -346,316 +190,103 @@ output streams — is recorded on the step's run record so `bbx procedure status
 shows why.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/runfail.procedure.card", `---
-name: runfail
-description: Run shell exits non-zero
-steps:
-  - id: work
-    description: Run shell fails
-    run:
-      shells:
-        - |
-          echo "doing work"
-          echo "boom" >&2
-          exit 3
-  - id: after
-    description: Should not run
-    run:
-      shells:
-        - |
-          echo "nope" > _bookkeeping/output/nope.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add runfail procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "runfail" });
-print(`success: ${result.ok}`);
-print(`error: ${result.ok ? "" : result.error.message}`);
-
-// The later step never ran.
-const files = await box.list("_bookkeeping/output");
-print(`nope.txt: ${files.includes("nope.txt")}`);
-
-// Run card: step failed, with the failure detail captured.
-const runs = await box.list("_bookkeeping/procedure/runs");
-const runDir = runs.split("\n").find(f => f.includes("runfail_"));
-const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`step status: ${run.steps[0].status}`);
-print(`procedure outcome: ${run.outcome}`);
-print(`records exit code: ${run.steps[0].run.stdout.includes("exit 3")}`);
-print(`records stderr: ${run.steps[0].run.stdout.includes("boom")}`);
-=>
-success: false
-error: Procedure runfail failed at step: work
-nope.txt: false
-step status: failed
-procedure outcome: failed
-records exit code: true
-records stderr: true
+const r = await startOn("runfail", procedure("runfail", [
+  step("work", { run: 'echo "doing work"\necho "boom" >&2\nexit 3' }),
+  step("after", { run: 'echo "nope" > _bookkeeping/output/nope.txt' }),
+]));
+const detail = r.run.steps[0].run.stdout;
+({
+  ok: r.ok,
+  error: r.error,
+  files: r.files,
+  stepStatus: r.run.steps[0].status,
+  outcome: r.run.outcome,
+  recordsExitCode: detail.includes("exit 3"),
+  recordsStderr: detail.includes("boom"),
+})
+=> {
+  ok: false,
+  error: "Procedure runfail failed at step: work",
+  files: [],
+  stepStatus: "failed",
+  outcome: "failed",
+  recordsExitCode: true,
+  recordsStderr: true
+}
 ```
 
-```ts cleanup
-await box.cleanup();
-```
-
-## Strict shell mode catches unset variables (nounset)
+## Strict shell mode
 
 Shells run under `set -euo pipefail`. `-u` turns a reference to an unset
 variable (often a typo'd name) into a hard error instead of a silent empty
 expansion — surfaced as a clear `unbound variable` message.
 
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/nounset.procedure.card", `---
-name: nounset
-description: Typo'd variable name
-steps:
-  - id: typo
-    description: References an unset variable
-    run:
-      shells:
-        - |
-          echo "count is $COUNNT"
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add nounset procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "nounset" });
-print(`success: ${result.ok}`);
-
-const runs = await box.list("_bookkeeping/procedure/runs");
-const runDir = runs.split("\n").find(f => f.includes("nounset_"));
-const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`step status: ${run.steps[0].status}`);
-print(`mentions unbound: ${run.steps[0].run.stdout.toLowerCase().includes("unbound variable")}`);
-=>
-success: false
-step status: failed
-mentions unbound: true
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Strict shell mode catches mid-pipe failures (pipefail)
-
 `pipefail` makes a pipeline fail when any stage fails, not just the last —
 so `false | cat` fails the step instead of masking the error behind `cat`'s
-success. Combined with `-e`, the script stops at the failing pipe.
+success. Combined with `-e`, the script stops at the failing pipe, so the
+later command never ran.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/pipe.procedure.card", `---
-name: pipe
-description: Failing command mid-pipe
-steps:
-  - id: piped
-    description: A failing stage in a pipeline
-    run:
-      shells:
-        - |
-          false | cat
-          echo "reached" > _bookkeeping/output/reached.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add pipe procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "pipe" });
-print(`success: ${result.ok}`);
-
-// The script stopped at the failing pipe — the later command never ran.
-const files = await box.list("_bookkeeping/output");
-print(`reached.txt: ${files.includes("reached.txt")}`);
-
-const runs = await box.list("_bookkeeping/procedure/runs");
-const runDir = runs.split("\n").find(f => f.includes("pipe_"));
-const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`step status: ${run.steps[0].status}`);
-=>
-success: false
-reached.txt: false
-step status: failed
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Precheck failure records its output
-
-When a precheck exits non-zero, the step fails and the precheck's stdout is
-captured on the run card so the reason is inspectable after the fact.
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/precheck-err.procedure.card", `---
-name: precheck-err
-description: Precheck fails with a message
-steps:
-  - id: gated
-    description: Precheck reports why it failed
-    precheck:
-      shells:
-        - |
-          echo "missing prerequisite: config not found"
-          exit 1
-    run:
-      shells:
-        - |
-          echo "ran" > _bookkeeping/output/ran.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add precheck-err procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "precheck-err" });
-print(`success: ${result.ok}`);
-
-const runs = await box.list("_bookkeeping/procedure/runs");
-const runDir = runs.split("\n").find(f => f.includes("precheck-err_"));
-const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`step status: ${run.steps[0].status}`);
-print(`precheck status: ${run.steps[0].precheck.status}`);
-print(`records reason: ${run.steps[0].precheck.stdout.includes("missing prerequisite")}`);
-=>
-success: false
-step status: failed
-precheck status: fail
-records reason: true
-```
-
-```ts cleanup
-await box.cleanup();
+const nounset = await startOn("nounset", procedure("nounset", [
+  step("typo", { run: 'echo "count is $COUNNT"' }),
+]));
+const pipe = await startOn("pipe", procedure("pipe", [
+  step("piped", { run: 'false | cat\necho "reached" > _bookkeeping/output/reached.txt' }),
+]));
+({
+  nounset: {
+    ok: nounset.ok,
+    stepStatus: nounset.run.steps[0].status,
+    mentionsUnbound: nounset.run.steps[0].run.stdout.toLowerCase().includes("unbound variable"),
+  },
+  pipefail: { ok: pipe.ok, files: pipe.files, stepStatus: pipe.run.steps[0].status },
+})
+=> {
+  nounset: { ok: false, stepStatus: "failed", mentionsUnbound: true },
+  pipefail: { ok: false, files: [], stepStatus: "failed" }
+}
 ```
 
 ## Dry run previews without executing
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/preview.procedure.card", `---
-name: preview
-description: Preview procedure
-steps:
-  - id: first
-    description: First step
-    precheck:
-      shells:
-        - |
-          true
-    run:
-      shells:
-        - |
-          echo "side effect" > _bookkeeping/output/effect.txt
-    validate:
-      severity: warn
-      shells:
-        - |
-          true
-  - id: second
-    description: Second step
-    run:
-      agents:
-        - prompt: Do something
----
-`);
-box.commitAll("Add preview procedure");
-
-const output = [];
-const ctx = { boxRoot: box.root, writeLine: (s) => output.push(s), write: () => {} };
-const result = await startProcedure({
-  ctx,
-  procedureNameOrPath: "preview",
-  options: { dryRun: true },
-});
-print(`success: ${result.ok}`);
-
-// No side effects — nothing but the scaffolded .gitkeep was ever created
-const hasOutput = await box.list("_bookkeeping/output");
-print(`output dir empty: ${hasOutput === "_bookkeeping/output/.gitkeep"}`);
-
-// Output describes the steps
-const stepLines = output.filter(s => s.includes("first") || s.includes("second"));
-print(`mentions steps: ${stepLines.length >= 2}`);
-=>
-success: true
-output dir empty: true
-mentions steps: true
-```
-
-```ts cleanup
-await box.cleanup();
+const r = await startOn("preview", procedure("preview", [
+  step("first", { precheck: "true", run: 'echo "side effect" > _bookkeeping/output/effect.txt', validate: "true", severity: "warn" }),
+  step("second", { agent: "Do something" }),
+]), { dryRun: true });
+// No side effects, and the output describes both steps
+({
+  ok: r.ok,
+  files: r.files,
+  mentionsSteps: ["first", "second"].map((id) => r.lines.some((l) => l.includes(id))),
+})
+=> { ok: true, files: [], mentionsSteps: [true, true] }
 ```
 
 ## Step filtering with --step
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/multi.procedure.card", `---
-name: multi
-description: Multi-step
-steps:
-  - id: alpha
-    description: Alpha
-    run:
-      shells:
-        - |
-          echo "a" > _bookkeeping/output/a.txt
-  - id: beta
-    description: Beta
-    run:
-      shells:
-        - |
-          echo "b" > _bookkeeping/output/b.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add multi procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({
-  ctx,
-  procedureNameOrPath: "multi",
-  options: { step: "beta" },
-});
-print(`success: ${result.ok}`);
-
-const files = await box.list("_bookkeeping/output");
-print(`a.txt: ${files.includes("a.txt")}`);
-print(`b.txt: ${files.includes("b.txt")}`);
-=>
-success: true
-a.txt: false
-b.txt: true
+const r = await startOn("multi", procedure("multi", [
+  step("alpha", { run: 'echo "a" > _bookkeeping/output/a.txt' }),
+  step("beta", { run: 'echo "b" > _bookkeeping/output/b.txt' }),
+]), { step: "beta" });
+({ ok: r.ok, files: r.files })
+=> { ok: true, files: ["b.txt"] }
 ```
 
-```ts cleanup
-await box.cleanup();
-```
+## Missing procedure and invalid --step return errors
 
-## Missing procedure returns error
+A name with no procedure card is an error mentioning "not found"; a `--step`
+that is not in the procedure is an error listing the available step ids.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "nonexistent" });
-print(`success: ${result.ok}`);
-print(`has error: ${(result.ok ? undefined : result.error.message)?.includes("not found") ?? false}`);
-=>
-success: false
-has error: true
-```
-
-```ts cleanup
-await box.cleanup();
+const missing = await startOn("nonexistent", null);
+const badStep = await startOn("steps", procedure("steps", [step("real", { run: "true" })]), { step: "fake" });
+({
+  missing: [missing.ok, missing.error.includes("not found")],
+  badStep: [badStep.ok, badStep.error.includes("real")],
+})
+=> { missing: [false, true], badStep: [false, true] }
 ```
 
 ## Finished runs carry an expires stamp
@@ -663,104 +294,23 @@ await box.cleanup();
 At completion the engine stamps `expires` on the run card — completed-at
 plus 30 days for completed runs, 90 days for failed runs. `bbx procedure gc`
 deletes run dirs past their stamp; anyone can edit the attribute to pin or
-extend a specific run.
+extend a specific run. `run-expiry` / `failed-run-expiry` attributes on the
+procedure definition override the defaults; "never" pins every run of that
+procedure.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/stamped.procedure.card", `---
-name: stamped
-description: Gets an expires stamp
-steps:
-  - id: work
-    description: Does work
-    run:
-      shells:
-        - |
-          echo "did it" > _bookkeeping/output/did.txt
----
-`);
-await box.write("_config/procedures/doomed.procedure.card", `---
-name: doomed
-description: Fails
-steps:
-  - id: broken
-    description: Precheck fails
-    precheck:
-      shells:
-        - |
-          exit 1
-    run:
-      shells:
-        - |
-          true
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add procedures");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-await startProcedure({ ctx, procedureNameOrPath: "stamped" });
-await startProcedure({ ctx, procedureNameOrPath: "doomed" });
-
-const runs = (await box.list("_bookkeeping/procedure/runs")).split("\n");
 const dayMs = 24 * 60 * 60 * 1000;
-
-const okDir = runs.find(f => f.includes("stamped_"));
-const okRun = parseProcedureRun(await box.read(okDir + "/run.procedure-run.card"));
-const okDays = (Date.parse(okRun.expires) - Date.parse(okRun["completed-at"])) / dayMs;
-print(`completed run expires after: ${Math.round(okDays)}d`);
-
-const badDir = runs.find(f => f.includes("doomed_"));
-const badRun = parseProcedureRun(await box.read(badDir + "/run.procedure-run.card"));
-const badDays = (Date.parse(badRun.expires) - Date.parse(badRun["completed-at"])) / dayMs;
-print(`failed run outcome: ${badRun.outcome}, expires after: ${Math.round(badDays)}d`);
-=>
-completed run expires after: 30d
-failed run outcome: failed, expires after: 90d
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Procedure cards can override run expiry
-
-`run-expiry` / `failed-run-expiry` attributes on the procedure definition
-override the defaults; "never" pins every run of that procedure.
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/keeper.procedure.card", `---
-name: keeper
-run-expiry: never
-description: Runs are kept forever
-steps:
-  - id: work
-    description: Does work
-    run:
-      shells:
-        - |
-          echo "kept" > _bookkeeping/output/kept.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add keeper procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({ ctx, procedureNameOrPath: "keeper" });
-print(`success: ${result.ok}`);
-
-const runs = (await box.list("_bookkeeping/procedure/runs")).split("\n");
-const runDir = runs.find(f => f.includes("keeper_"));
-const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`expires: ${run.expires}`);
-=>
-success: true
-expires: never
-```
-
-```ts cleanup
-await box.cleanup();
+const expiry = async (name, card) => {
+  const { ok, run } = await startOn(name, card);
+  const days = run.expires === "never" ? "never" : `${Math.round((Date.parse(run.expires) - Date.parse(run["completed-at"])) / dayMs)}d`;
+  return `${ok ? "ok" : "failed"} ${run.outcome}, expires: ${days}`;
+};
+({
+  completed: await expiry("stamped", procedure("stamped", [step("work", { run: 'echo "did it" > _bookkeeping/output/did.txt' })])),
+  failed: await expiry("doomed", procedure("doomed", [step("broken", { precheck: "exit 1", run: "true" })])),
+  pinned: await expiry("keeper", procedure("keeper", [step("work", { run: 'echo "kept" > _bookkeeping/output/kept.txt' })], "run-expiry: never\n")),
+})
+=> { completed: "ok completed, expires: 30d", failed: "failed failed, expires: 90d", pinned: "ok completed, expires: never" }
 ```
 
 ## Resume re-runs from the failed step, not the whole procedure
@@ -775,117 +325,49 @@ sentinel is created, resuming completes the run — and `alpha`, which
 appends a marker each time it runs, is left untouched.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/staged.procedure.card", `---
-name: staged
-description: Middle step gated on a sentinel
-steps:
-  - id: alpha
-    description: Always runs; records each execution
-    run:
-      shells:
-        - |
-          echo "x" >> _bookkeeping/output/alpha-runs.txt
-  - id: beta
-    description: Precheck gated on a sentinel file
-    precheck:
-      shells:
-        - |
-          test -f _bookkeeping/output/sentinel
-    run:
-      shells:
-        - |
-          echo "b" > _bookkeeping/output/b.txt
-  - id: gamma
-    description: Final step
-    run:
-      shells:
-        - |
-          echo "c" > _bookkeeping/output/c.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add staged procedure");
+const staged = procedure("staged", [
+  step("alpha", { run: 'echo "x" >> _bookkeeping/output/alpha-runs.txt' }),
+  step("beta", { precheck: "test -f _bookkeeping/output/sentinel", run: 'echo "b" > _bookkeeping/output/b.txt' }),
+  step("gamma", { run: 'echo "c" > _bookkeeping/output/c.txt' }),
+]);
+const states = await withBox({ staged }, async (box) => {
+  const { ctx } = contextFor(box);
+  const alphaRuns = async () => (await box.read("_bookkeeping/output/alpha-runs.txt")).trim();
+  const snapshot = async () => {
+    const run = await runCardOf(box, "staged");
+    return { outcome: run.outcome, steps: stepStatuses(run), files: (await outputsOf(box)).filter((f) => f !== "sentinel").toSorted(), alphaRuns: await alphaRuns() };
+  };
 
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+  // First run: halts at beta (sentinel missing).
+  const first = await startProcedure({ ctx, procedureNameOrPath: "staged" });
+  const afterFirst = { ok: first.ok, ...(await snapshot()) };
 
-// First run: halts at beta (sentinel missing).
-const first = await startProcedure({ ctx, procedureNameOrPath: "staged" });
-print(`first success: ${first.ok}`);
-
-const runs = await box.list("_bookkeeping/procedure/runs");
-const runDir = runs.split("\n").find(f => f.includes("staged_"));
-let run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`after first: ${run.steps.map(s => `${s.id}=${s.status}`).join(", ")}`);
-let files = await box.list("_bookkeeping/output");
-print(`b.txt: ${files.includes("b.txt")}, c.txt: ${files.includes("c.txt")}`);
-print(`alpha ran once: ${(await box.read("_bookkeeping/output/alpha-runs.txt")).trim() === "x"}`);
-
-// Fix the gating condition and resume.
-await box.write("_bookkeeping/output/sentinel", "");
-box.commitAll("Add sentinel");
-const resumed = await resumeProcedure({ ctx, runDir });
-print(`resume success: ${resumed.ok}`);
-
-run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`run outcome: ${run.outcome}`);
-print(`after resume: ${run.steps.map(s => `${s.id}=${s.status}`).join(", ")}`);
-files = await box.list("_bookkeeping/output");
-print(`b.txt: ${files.includes("b.txt")}, c.txt: ${files.includes("c.txt")}`);
-print(`alpha not re-run: ${(await box.read("_bookkeeping/output/alpha-runs.txt")).trim() === "x"}`);
-=>
-first success: false
-after first: alpha=completed, beta=failed, gamma=pending
-b.txt: false, c.txt: false
-alpha ran once: true
-resume success: true
-run outcome: completed
-after resume: alpha=completed, beta=completed, gamma=completed
-b.txt: true, c.txt: true
-alpha not re-run: true
-```
-
-```ts cleanup
-await box.cleanup();
+  // Fix the gating condition and resume.
+  await box.write("_bookkeeping/output/sentinel", "");
+  box.commitAll("Add sentinel");
+  const resumed = await resumeProcedure({ ctx, runDir: await runDirOf(box, "staged") });
+  return { afterFirst, afterResume: { ok: resumed.ok, ...(await snapshot()) } };
+});
+states
+=> {
+  afterFirst: { ok: false, outcome: "failed", steps: "alpha=completed, beta=failed, gamma=pending", files: ["alpha-runs.txt"], alphaRuns: "x" },
+  afterResume: { ok: true, outcome: "completed", steps: "alpha=completed, beta=completed, gamma=completed", files: ["alpha-runs.txt", "b.txt", "c.txt"], alphaRuns: "x" }
+}
 ```
 
 ## Resuming a completed run is a no-op
 
+Resuming an already-completed run changes nothing and reports success.
+
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/done.procedure.card", `---
-name: done
-description: Completes cleanly
-steps:
-  - id: only
-    description: Does work
-    run:
-      shells:
-        - |
-          echo "done" > _bookkeeping/output/done.txt
----
-`);
-await box.write("_bookkeeping/output/.gitkeep", "");
-box.commitAll("Add done procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-await startProcedure({ ctx, procedureNameOrPath: "done" });
-
-const runs = await box.list("_bookkeeping/procedure/runs");
-const runDir = runs.split("\n").find(f => f.includes("done_"));
-
-// Resuming an already-completed run changes nothing and reports success.
-const result = await resumeProcedure({ ctx, runDir });
-print(`success: ${result.ok}`);
-const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`outcome: ${run.outcome}`);
-=>
-success: true
-outcome: completed
-```
-
-```ts cleanup
-await box.cleanup();
+const noop = await withBox({ done: procedure("done", [step("only", { run: 'echo "done" > _bookkeeping/output/done.txt' })]) }, async (box) => {
+  const { ctx } = contextFor(box);
+  await startProcedure({ ctx, procedureNameOrPath: "done" });
+  const result = await resumeProcedure({ ctx, runDir: await runDirOf(box, "done") });
+  return { ok: result.ok, outcome: (await runCardOf(box, "done")).outcome };
+});
+noop
+=> { ok: true, outcome: "completed" }
 ```
 
 ## Resuming an inconclusive run reports the non-verdict, not "completed"
@@ -895,11 +377,13 @@ never judged, and resume has no re-judging path. Reporting "completed / nothing
 to resume" would answer a question about the review with the state of the work.
 Instead it re-reports the standing non-verdict, read back out of the run card,
 which the CLI turns into the same stderr line and exit code `bbx procedure run`
-printed.
+printed. The run card is left alone: an `inconclusive` run is never re-opened,
+so resume does not remove its outcome.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card", `---
+const dir = "_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00";
+await box.write(`${dir}/run.procedure-run.card`, `---
 procedure: _config/procedures/refresh-maps.procedure.card
 outcome: inconclusive
 started-at: 2026-08-24T05:00:00Z
@@ -915,24 +399,20 @@ steps:
 `);
 box.commitAll("An unjudged run");
 
-const lines = [];
-const ctx = { boxRoot: box.root, writeLine: (l) => lines.push(l), write: () => {} };
-const result = await resumeProcedure({ ctx, runDir: "_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00" });
-print(`success: ${result.ok}`);
-print(`status: ${result.value.status}`);
-print(JSON.stringify(result.value.inconclusive));
-=>
-success: true
-status: inconclusive
-[{"stepId":"maps","reason":"max-turns","detail":"reached max turns (16)"}]
-```
-
-The run card is left alone: an `inconclusive` run is never re-opened, so
-resume does not remove its outcome.
-
-```ts continue
-print(parseProcedureRun(await box.read("_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card")).outcome);
-=> inconclusive
+const { ctx } = contextFor(box);
+const result = await resumeProcedure({ ctx, runDir: dir });
+({
+  ok: result.ok,
+  status: result.value.status,
+  inconclusive: result.value.inconclusive,
+  outcomeAfter: parseProcedureRun(await box.read(`${dir}/run.procedure-run.card`)).outcome,
+})
+=> {
+  ok: true,
+  status: "inconclusive",
+  inconclusive: [{ stepId: "maps", reason: "max-turns", detail: "reached max turns (16)" }],
+  outcomeAfter: "inconclusive"
+}
 ```
 
 ```ts cleanup
@@ -942,51 +422,11 @@ await box.cleanup();
 ## Resume with no runs returns an error
 
 ```ts
-const box = await makeTmpBox({ git: true });
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await resumeProcedure({ ctx });
-print(`success: ${result.ok}`);
-print(`error: ${result.ok ? "" : result.error.message}`);
-=>
-success: false
-error: No procedure run found to resume.
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## Invalid --step returns error
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("_config/procedures/steps.procedure.card", `---
-name: steps
-description: Has steps
-steps:
-  - id: real
-    description: Real
-    run:
-      shells:
-        - |
-          true
----
-`);
-box.commitAll("Add steps procedure");
-
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
-const result = await startProcedure({
-  ctx,
-  procedureNameOrPath: "steps",
-  options: { step: "fake" },
+const none = await withBox({}, async (box) => {
+  const { ctx } = contextFor(box);
+  const result = await resumeProcedure({ ctx });
+  return { ok: result.ok, error: result.ok ? "" : result.error.message };
 });
-print(`success: ${result.ok}`);
-print(`mentions available: ${(result.ok ? undefined : result.error.message)?.includes("real") ?? false}`);
-=>
-success: false
-mentions available: true
-```
-
-```ts cleanup
-await box.cleanup();
+none
+=> { ok: false, error: "No procedure run found to resume." }
 ```

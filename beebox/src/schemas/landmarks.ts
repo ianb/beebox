@@ -13,5 +13,5 @@ export const LandmarksSchema = cardSchema("landmarks", {
 The one Landmarks card lives at ${SYSTEM_CARD_PATHS.landmarks}. Its filename
 infers its type; no view property is needed. Open this existing card instead of
 creating another instance. Its editable body holds notes, not live UI state.
-Restore a removed card from Git or with the declared engine migration.`,
+Restore a removed card from Git.`,
 });

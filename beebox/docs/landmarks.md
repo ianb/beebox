@@ -16,7 +16,7 @@ Key properties:
 - **Thing-first, container-secondary.** The card itself is the widget. It can point at nearby cards, but it doesn't *contain* them — it references them.
 - **Evergreen.** Content describes what the spot is and what's notable, long-term. Not "this week's top three." Permanence is implied by the metaphor.
 - **Derived first, curated for the rest.** The list is mostly the cards under the directory that carry `prominence: entry-point` or `prominence: primary` (see "Derived links" below); `links:` is the curated exception for what a card cannot say about itself, and an `expand` entry is templated fan-out for "list everything matching X". Ordering is by tier, then by name; a fixed order is what `links:` is for.
-- **A place marker, not a visitable file.** The landmark card is `background` by type: Browse folds it and draws the directory's identity from it. The place's entry point, if it has one, is a visitable card inside the directory. See `docs/implemented-plans/card-prominence.md`.
+- **A place you can visit.** The landmark card is `background` by type: Browse folds it and draws the directory's identity from it, and derivation never lists it. When a person opens it, from a chat link or the Browse folder header, it renders as the **place page** (see "Rendering"). The place's entry point, if it has one, is a card inside the directory, and arrival opens it in place of the page (see "Arrival"). See `docs/implemented-plans/card-prominence.md`.
 
 ### Distinct from `briefing`
 
@@ -27,7 +27,7 @@ Key properties:
 | `briefing` | agents | context every agent needs to know about this spot |
 | `landmark` | humans | "here's a bookmark to this spot, with a few pinned items" |
 
-Both can coexist in the same directory.
+Both can coexist in the same directory. Chat openers belong to the landmark (`navigation.openers`), not to the briefing; the `briefing-openers-2026-10` migration moved them.
 
 ## Card schema
 
@@ -35,9 +35,10 @@ A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `n
 
 ```yaml
 ---
+symbol:
+  glyph: 🍳
 navigation:
   label: Recipes
-  symbol: 🍳
   links:
     - { ref: /_content/recipes/Bread.recipe.card, label: the bread }
     - { ref: /_content/recipes/techniques/Knife_Skills.doc.card }
@@ -46,19 +47,21 @@ navigation:
       order: modified-desc
       template-ref: "${path}"
       template-label: "${title}"
+  openers:
+    - What can I cook tonight?
 ---
 ```
 
 ### Fields
 
-All of these live under `navigation`.
+All of these live under `navigation`, except `symbol`, which is a top-level field every card may carry.
 
 **`label`** (one) — short bookmark name. Displayed prominently on the tile. Not a sentence; treat it like a tab name.
 
 **`symbol`** (one) — the iconic mark. Two forms:
 
 ```yaml
-symbol: 🍳                          # emoji or short text
+symbol: { glyph: 🍳 }               # emoji or short text
 symbol: { src: /_content/recipes/images/portrait.webp }   # image
 ```
 
@@ -67,6 +70,8 @@ For character-driven scenarios where the face is the bookmark, the image form ma
 **`links`** (zero or more `{ ref, label? }`) — pinned references to other cards. `ref` is a box path to the target — leading `/`, from the box root (a path relative to the landmark's directory still resolves). It's validated like any other ref — it must point at a real file. Optional `label` is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When omitted, the renderer falls back to the target's own title.
 
 **`expand`** (zero or more) — templated fan-out. Runs a query, applies a template per match, generates links. See below.
+
+**`openers`** (zero or more strings) — one-line first moves, phrased from the person's side. They show as buttons on an unstarted chat in this place and in the place page's "Start something" group; a click sends the line as the person's message. Each is one non-blank line of at most 120 characters; an invalid opener makes the landmark fail to parse, which shows as a parse warning. A place with no `openers` shows none and does not inherit the root's. The root landmark of a new box carries two onboarding openers (`STOCK_ROOT_OPENERS` in `src/schemas/landmark.ts`); the retrospective procedure removes them once the box is in regular use.
 
 ### Why no `description` / `purpose` / `intent`
 
@@ -117,7 +122,7 @@ A card appearing both in a hand-listed `links` entry and in an unnamed `expand` 
 
 A landmark's flat list is assembled in tiers (`src/core/landmark/resolve/core.ts`, `derived-links.ts`):
 
-1. hand-listed `links:` (first, and winning dedup, with their labels);
+1. hand-listed `links:` (first, and winning dedup, with their labels); a listed card that is also a derived entry point or primary card keeps that level as the link's `prominence`, so the place page shows it in that tier;
 2. derived `entry-point` cards, then derived `primary` cards, from the landmark's **pruned subtree**: its directory and every descendant directory that has no landmark of its own, never entering an owned `.attach/` scope unless that scope holds its own landmark;
 3. nested landmarks, one entry each (label, symbol), except those written `prominence: background`;
 4. unnamed `expand` results.
@@ -130,9 +135,38 @@ Existing boxes were migrated by `landmark-links-prominence`: every in-subtree `l
 
 ## Rendering
 
-Landmarks have three rendering surfaces: the Landmarks page (the full
-picture), and the app bar's two menus (the compact, always-reachable forms).
-A fourth surface is the browser tab, below.
+Landmarks have four rendering surfaces: the place page (the landmark card
+itself), the Landmarks page (every place at once), and the app bar's two
+menus (the compact, always-reachable forms). A fifth surface is the browser
+tab, below.
+
+### The place page — the landmark card
+
+A landmark card renders as the place page (renderer `Place`,
+`src/frontend/src/renderers/landmark.tsx`, `components/PlaceView/`). It shows
+what the place holds, not its configuration:
+
+- **Start something** — the place's openers, shown only beside a chat in the
+  same place that does not already show them. Beside an unstarted chat in the
+  same place the group is hidden, because the chat shows the same openers.
+  Beside another place's chat the group is hidden and a "Go to <label>" link
+  opens that place's chat. Outside a chat the group is hidden.
+- **The links in tiers** — "Start here" (entry points), "Main cards"
+  (primary), "Places inside" (nested landmarks), "Pinned" (curated `links:` with no derived level),
+  then each `expand` as an open group. An unnamed `expand` gets a plain label
+  from its query ("Every loan card here"; `src/core/landmark/expand-label.ts`).
+  A group that matches nothing shows "None yet". A curated link whose target
+  is gone keeps its row, struck through.
+- **An empty place** says "Nothing here yet." and links to its folder in
+  Browse.
+
+The page reads `landmarks.forDir` with `expandsAsGroups: true`; the menus
+leave the flag off and keep the flat list. The landmark's fields show under
+Properties.
+
+The place page is reached from a chat link, from the Browse folder header,
+and by arrival when the place has no single entry point. The here menu has no
+place-page row.
 
 ### Landmarks page — the merged activity surface
 
@@ -154,18 +188,16 @@ A section renders:
   (`group:`) stay collapsed count-chips beside them. A ref pointing at
   nothing renders as "Missing" rather than vanishing.
 
-There is **no landmark full form** and no click-through to one: a tile links
-straight to its target card. The caps above are inline disclosures for
-exactly that reason — the section already *is* the landmark's full picture.
-(A tile/full-form renderer pair was designed early on and never built; the
-design is dropped, not deferred.)
+A tile links straight to its target card. The caps above are inline
+disclosures, so the section shows all of a landmark's links in place. The
+landmark card itself opens as the place page (above).
 
 Ordering comes from `chat.byLandmark` (latest session activity first, then
 chat-less landmarks with the box root ahead of alphabetical), and the page
 does not re-sort — so the page and the app bar's landmark menu agree.
 
-A **Find a landmark** field sits above the sections. It is not focused on
-arrival. Empty, the page shows the full hierarchy. With text, it shows the
+A **Find a landmark** field sits above the sections. It does not take focus
+when the page opens. Empty, the page shows the full hierarchy. With text, it shows the
 matching landmarks and their ancestors, in the same indented form
 (`src/frontend/src/lib/landmark-filter.ts`).
 
@@ -194,7 +226,8 @@ one job:
   landmark**, which opens the page above. Then every landmark as a row —
   symbol, label, and its fresh-chat count — with a filter field past 20
   landmarks. Tapping a row resumes the landmark's most recent chat or starts
-  one in its directory. The menu lists landmarks only; the "Other chats"
+  one in its directory; on the desktop layout, arrival (below) then opens the
+  place beside that chat. The menu lists landmarks only; the "Other chats"
   bucket is reachable through the page. Parse problems surface here too.
   Data is fetched lazily on first open.
 - **Folder menu** (the place pill's right half) is the current directory's
@@ -228,6 +261,41 @@ surfaces that require one (`core/landmark/box-identity.ts`,
 with its slug. Renaming a box is editing that card, which is why there is no
 box-name setting anywhere.
 
+## Arrival
+
+On the desktop layout, going to a place opens the place beside its chat when
+this browser tab has no saved card arrangement for that chat. This happens
+when a person chooses a place in the landmark menu, or opens a chat in this
+tab for the first time. The card that opens is the **arrival target**
+(`arrival` on the `landmarks.forDir` payload): the single `entry-point` card
+in the place's pruned subtree when there is exactly one, else the landmark
+card, which shows the place page. The rule applies to the box root too.
+
+On the phone layout, arrival opens no card. One card or the chat fits on the
+screen, and the chat has priority.
+
+Arrival is quiet in these cases:
+
+- **Saved arrangement.** The chat's cards are saved per tab
+  (`sessionStorage`) on every card action, including an arrangement with no
+  cards. A chat with a saved arrangement opens as the person left it. A new
+  tab has no saved arrangements, so arrival runs there again.
+- **Reload, Back, and Forward.** The arrived card is in the history entry, so
+  reload and Forward restore it and do not arrive again. Arrival adds no
+  history entry.
+- **The person acts first.** A pointer, focus, or key event in the chat pane
+  (transcript, cards, or composer), or any card action, before the place
+  query returns cancels the pending arrival.
+- **No landmark, or the query fails.** Nothing opens; a failed query logs a
+  warning.
+
+Implementation: the workspace store sets the arrival candidate when
+`select` finds nothing saved (`WorkspaceProvider/workspace-browser-store.ts`,
+`takeArrival`, `cancelArrival`). The provider waits for the place query on
+the desktop layout, then decides in its `keep-current` branch with
+`arrivalOpens` (`components/chat/workspace/WorkspaceProvider/arrival.ts`), before it writes the
+history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
+
 ## Implementation outline
 
 | Component | Location |
@@ -235,6 +303,8 @@ box-name setting anywhere.
 | Schema | `src/schemas/landmark.ts` |
 | Schema registration | `src/schemas.ts` |
 | Expand evaluator | `src/core/landmark/` (resolves queries, applies templates, dedups, orders) |
+| Place page | `src/frontend/src/renderers/landmark.tsx`, `src/frontend/src/components/PlaceView/` |
+| Arrival | `src/frontend/src/components/chat/workspace/WorkspaceProvider/` (`arrival.ts`, `workspace-browser-store.ts`, `provider.tsx`) |
 | Merged activity surface | `src/frontend/src/components/landmarks/` (`LandmarksList`, `LandmarkSection`, `LandmarkSessions`) |
 | Landmarks card | `src/frontend/src/renderers/system-cards.tsx` (the `/landmarks` route redirects to the canonical card) |
 | Chat buckets per landmark | `chat.byLandmark` (`src/webapp/trpc/routers/chat/router.ts`) |

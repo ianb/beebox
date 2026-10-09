@@ -21,7 +21,7 @@ import { scanBoxGrowth } from "./scan.js";
 import { describeFinding, failedSampleParts, failedSamples } from "./describe.js";
 import { evaluateBoxGrowth } from "./policy.js";
 
-export { BOX_GROWTH_THRESHOLDS, evaluateBoxGrowth } from "./policy.js";
+export { evaluateBoxGrowth } from "./policy.js";
 
 export type {
   BoxGrowthState,

@@ -1045,7 +1045,7 @@ result.results[0]!.warnings[0]!.message
 
 The generic broken-ref walk keys on frontmatter keys literally named
 `ref`/`refs`, which left two real path fields unvalidated: a landmark's
-`navigation.symbol.src` (its icon image) and a figure's `entry` (the sketch
+`symbol.src` (its icon image) and a figure's `entry` (the sketch
 source in the card's attach scope). Both are now resolved through the same
 3-form semantics and reported as `type: "reference"` warnings when they name
 nothing — a missing icon or an uncompilable figure is visible at validate
@@ -1056,11 +1056,11 @@ const box = await makeTmpBox();
 await box.write("_content/recipes/images/portrait.webp", "WEBP");
 await box.write(
   "_content/recipes/Recipes.landmark.card",
-  "---\nnavigation:\n  label: Recipes\n  symbol:\n    src: /_content/recipes/images/portrait.webp\n---\n",
+  "---\nnavigation:\n  label: Recipes\nsymbol:\n  src: /_content/recipes/images/portrait.webp\n---\n",
 );
 await box.write(
   "_content/recipes/Gone.landmark.card",
-  "---\nnavigation:\n  label: Gone\n  symbol:\n    src: images/vanished.webp\n---\n",
+  "---\nnavigation:\n  label: Gone\nsymbol:\n  src: images/vanished.webp\n---\n",
 );
 const result = await lintCardsDispatch(
   [box.path("_content/recipes/Recipes.landmark.card"), box.path("_content/recipes/Gone.landmark.card")],
@@ -1073,7 +1073,7 @@ result.results[1]!.warnings[0]!.type
 => reference
 
 result.results[1]!.warnings[0]!.message
-=> Broken reference at navigation.symbol.src: images/vanished.webp does not exist
+=> Broken reference at symbol.src: images/vanished.webp does not exist
 ```
 
 A text/emoji symbol has no path to check, and a figure's `entry` resolves in
@@ -1091,7 +1091,7 @@ await box.write(
 );
 await box.write(
   "_content/recipes/Emoji.landmark.card",
-  "---\nnavigation:\n  label: Recipes\n  symbol: 🍳\n---\n",
+  "---\nnavigation:\n  label: Recipes\nsymbol:\n  glyph: 🍳\n---\n",
 );
 const figures = await lintCardsDispatch(
   [

@@ -17,7 +17,7 @@ import { fixedAnswer } from "../../../src/core/judgment/service.js";
 
 ```ts
 const box = await makeTmpBox();
-const landmark = (rule) => `---\nnavigation:\n  label: Records\n  symbol: 📁\ndestinations:\n  - for: [triage]\n    rules: ${rule}\n---\n`;
+const landmark = (rule) => `---\nsymbol:\n  glyph: 📁\nnavigation:\n  label: Records\ndestinations:\n  - for: [triage]\n    rules: ${rule}\n---\n`;
 await box.write("_content/a/records/Records.landmark.card", landmark("Bank statements."));
 await box.write("_content/b/records/Records.landmark.card", landmark("Repair invoices."));
 const initial = await compileInstructionSnapshot(box.root);

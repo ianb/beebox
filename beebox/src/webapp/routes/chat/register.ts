@@ -47,6 +47,10 @@ import { registerChatAudioReviewRoutes } from "./audio-review-routes.js";
 import { registerChatScreenshotRoutes } from "./screenshot-routes.js";
 import { registerChatUiRoutes } from "./ui-routes.js";
 import { chatModelFileForSession } from "../../../core/chat/session/state.js";
+import { wireAfterTurnTitling } from "../../../core/chat/review/after-turn.js";
+import { createSdkChatReviewer } from "../../../core/chat/review/reviewer.js";
+import { getBoxTime } from "../../../lib/time.js";
+import { getOwnerEmail } from "../../auth.js";
 
 interface RegisterChatRoutesOptions {
   server: FastifyInstance;
@@ -120,6 +124,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   // Wire any session in the registry to the global event bus on creation.
   // Each entry's events get tagged with sessionId so the frontend can filter.
   const wired = new WeakSet<ChatSession>();
+  const titleReviewer = createSdkChatReviewer({ boxRoot });
   function wireSession(session: ChatSession): void {
     if (wired.has(session)) return;
     wired.add(session);
@@ -152,6 +157,16 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
         sessionId: session.getSessionId(),
         timestamp: new Date().toISOString(),
       });
+    });
+
+    // Title the chat once its first exchange or two say what it is about,
+    // instead of leaving it untitled until the nightly review.
+    wireAfterTurnTitling(session, {
+      boxRoot,
+      reviewer: titleReviewer,
+      now: () => getBoxTime(boxRoot),
+      ownerEmail: getOwnerEmail,
+      onTitled: (titled) => { eventBus.emit("chat-title-changed", titled); },
     });
 
     // Bridge background-task lifecycle events (started / progress / settled)

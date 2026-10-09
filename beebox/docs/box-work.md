@@ -30,7 +30,7 @@ doc or command that owns it. What a box contains is in
 - **`bbx` verbs are the box agent's surface, not developer diagnostics.**
   Box-facing verbs find the box by walking up from the current directory (or
   take `--box`); `bbx engine` verbs start servers and manage the machine.
-  `src/cli/surface-data.ts` classifies every verb. From `beebox/`, a box verb
+  `src/cli/entry/surface-data.ts` classifies every verb. From `beebox/`, a box verb
   fails with "Not in a Bee Box"; run it from the box directory, where
   `node_modules/.bin/bbx` is the engine the box is linked to.
 - **Box guidance is owned elsewhere.** To place or repair what a box agent

@@ -37,7 +37,7 @@ async function inspectOrApply(root: string, where: "local" | "prod"): Promise<st
     findings.push(`${where} ${root}: unchecked; whole-run time budget exhausted`);
     return null;
   }
-  // `migrate` lives under `bbx engine` (beebox/src/cli/surface-data.ts): it acts
+  // `migrate` lives under `bbx engine` (beebox/src/cli/entry/surface-data.ts): it acts
   // on a box's installation, not its content, so it is not the agent's verb.
   const args = dryRun
     ? ["engine", "migrate", "--status", "--json"]

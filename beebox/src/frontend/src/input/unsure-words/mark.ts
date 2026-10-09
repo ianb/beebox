@@ -23,7 +23,7 @@ import { tokenizeBody, matchWordsToTokens, type BodyToken } from "./tokenize";
  * the SEED cusp only — see `UNSURE_EXTEND` for how a seed grows into a
  * span.
  */
-export const UNSURE_THRESHOLD = 0.7;
+const UNSURE_THRESHOLD = 0.7;
 
 /**
  * Confidence threshold below which a word EXTENDS an already-seeded span
@@ -52,7 +52,7 @@ export const UNSURE_THRESHOLD = 0.7;
  * same plan section) — it's transparent, not confident, but not a wall
  * either.
  */
-export const UNSURE_EXTEND = 0.9;
+const UNSURE_EXTEND = 0.9;
 
 /**
  * Map a raw realtime-words snapshot onto what an emission is allowed to

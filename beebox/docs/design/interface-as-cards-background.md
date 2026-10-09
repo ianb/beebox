@@ -286,6 +286,11 @@ refresh from the subject (resolver subscribes once, matches file-change
 events against the view card's include patterns, instead of per-page
 bespoke `useBusSubscription` lists).
 
+(2026-10: the paragraph above and the table's "Becomes" column describe the
+code as of the original design. `ViewPage.tsx` and `looksLikeFilePath` are
+gone, the `view:` scheme is retired, and the surfaces now have dedicated
+system schemas at the paths in `src/shared/system-card-paths.ts`.)
+
 | Surface | Becomes | Notes |
 |---|---|---|
 | Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (`view: landmarks` on a `view` card; src/schemas/view.ts + src/frontend/src/renderers/view.tsx; since 2026-09 also a dedicated `landmarks` schema at `_config/interface/landmarks.card`, see src/shared/system-card-paths.ts). The query-card form is **parked** (`docs/unimplemented-plans/query-cards.md` — too complex, too contextless; anchored queries are landmark `expand`'s job). |

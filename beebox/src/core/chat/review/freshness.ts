@@ -20,7 +20,7 @@ import type { JevService } from "../../../services/jev.js";
  * Untuned prior, the same stance the 6,000-char threshold ships with; adjust
  * from the `jev-debug.log` record if titles visibly lag drift.
  */
-export const FRESHNESS_KEEP_PROBABILITY = 0.75;
+const FRESHNESS_KEEP_PROBABILITY = 0.75;
 
 /** Chars of the rendered span's tail shown to Jev — the newest messages are the evidence of drift. */
 export const FRESHNESS_RECENT_CHARS = 2_000;

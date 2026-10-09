@@ -5,7 +5,7 @@ Landmarks page and the `view: chat-picker` cards): it reads every
 `*.landmark.card` and returns the tile-level metadata (path, dir, label,
 symbol) the picker groups chats under.
 
-It reads the card's YAML **frontmatter** `navigation` (label + symbol). This
+It reads the card's YAML **frontmatter** `navigation` label and top-level `symbol`. This
 regressed once: the read used the XML `parseCard`, which throws on a
 frontmatter card, so every landmark was silently skipped — the picker showed no
 landmarks and hid the chats grouped under them, while `/<box>/landmarks` (a
@@ -22,11 +22,11 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 const box = await makeTmpBox();
 await box.write(
   "Box.landmark.card",
-  "---\nnavigation:\n  label: Home\n  symbol: 🏠\n---\n",
+  "---\nsymbol:\n  glyph: 🏠\nnavigation:\n  label: Home\n---\n",
 );
 await box.write(
   "recipes/Recipes.landmark.card",
-  "---\nnavigation:\n  label: Recipes\n  symbol: 🍳\n---\n",
+  "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n",
 );
 
 const { summaries, problems } = await loadLandmarkSummaries(box.root);
@@ -43,7 +43,7 @@ JSON.stringify(problems)
 const box = await makeTmpBox();
 await box.write(
   "trips/Trips.landmark.card",
-  "---\nnavigation:\n  label: Trips\n  symbol:\n    src: /_content/trips/Trips.attach/pin.png\n---\n",
+  "---\nsymbol:\n  src: /_content/trips/Trips.attach/pin.png\nnavigation:\n  label: Trips\n---\n",
 );
 
 const { summaries } = await loadLandmarkSummaries(box.root);
@@ -65,7 +65,7 @@ absolute path win, so a leading-`/` src silently escaped the box
 const box = await makeTmpBox();
 await box.write(
   "archive/people/marlowe/Marlowe.landmark.card",
-  "---\nnavigation:\n  label: Marlowe\n  symbol:\n    src: /_content/archive/people/marlowe/images/priya-portrait.webp\n---\n",
+  "---\nsymbol:\n  src: /_content/archive/people/marlowe/images/priya-portrait.webp\nnavigation:\n  label: Marlowe\n---\n",
 );
 
 const { summaries } = await loadLandmarkSummaries(box.root);

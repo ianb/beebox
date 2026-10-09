@@ -17,6 +17,7 @@ import { imageCardRenderer, rawImageRenderer } from "./renderers/image.js";
 import { pdfRenderer } from "./renderers/pdf.js";
 import { recipeRenderer } from "./renderers/recipe.js";
 import { personRenderer } from "./renderers/person.js";
+import { landmarkRenderer } from "./renderers/landmark.js";
 import { pdfCardTextRenderer, pdfCardOriginalRenderer } from "./renderers/pdf-card.js";
 import { doclingStructureRenderer, doclingRawJsonRenderer } from "./renderers/docling.js";
 import { figureRenderer } from "./renderers/figure.js";
@@ -64,6 +65,7 @@ const rendererRegistrations = defineRegistry<RendererEntry>({
     pdfRenderer,
     recipeRenderer,
     personRenderer,
+    landmarkRenderer,
     pdfCardTextRenderer,
     pdfCardOriginalRenderer,
     doclingStructureRenderer,

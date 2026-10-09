@@ -10,6 +10,7 @@ import {
   resolveChromeTheme,
   themePatternMatches,
   validateThemePattern,
+  validateSystemThemeChoice,
 } from "../../src/shared/card-theme/core.js";
 import { cardSchema } from "../../src/cards/schema.js";
 import { z } from "zod";
@@ -156,6 +157,49 @@ a visible configuration problem with base/plain fallback.
 const chrome = resolveChromeTheme(parsePresentationConfig({ chrome: { name: "post-it" } }));
 JSON.stringify([chrome.choice, chrome.origin, chrome.problem?.message])
 => [{"name":"plain","stock":"neutral"},"box-chrome","Theme \"post-it\" does not provide app chrome"]
+```
+
+The expressive themes can be saved as system themes, with their own
+default stocks rather than the fallback stock for an unknown theme.
+
+```ts
+["retired-theme-a", "retired-theme-b", "retired-theme-c",
+ "retired-theme-d", "retired-theme-e", "retired-theme-f", "retired-theme-g", "retired-theme-h", "retired-theme-i"
+].map((name) => validateSystemThemeChoice({ name }))
+=> [
+  { choice: { name: "retired-theme-a", stock: "pigment" }, problem: null },
+  { choice: { name: "retired-theme-b", stock: "prism" }, problem: null },
+  { choice: { name: "retired-theme-c", stock: "cloud" }, problem: null },
+  { choice: { name: "retired-theme-d", stock: "wool" }, problem: null },
+  { choice: { name: "retired-theme-e", stock: "marquee" }, problem: null },
+  { choice: { name: "retired-theme-f", stock: "silhouette" }, problem: null },
+  { choice: { name: "retired-theme-g", stock: "canopy" }, problem: null },
+  { choice: { name: "retired-theme-h", stock: "ink" }, problem: null },
+  { choice: { name: "retired-theme-i", stock: "gouache" }, problem: null },
+]
+```
+
+Choosing expressive chrome does not recolor the card's saved theme. A card can
+choose retired-theme-c over the box's retired-theme-a default while chrome stays Electric
+Playground; no stock leaks from either of the other choices.
+
+```ts
+const expressive = parsePresentationConfig({
+  default: { name: "retired-theme-a" },
+  chrome: { name: "retired-theme-b" },
+});
+const expressiveCard = resolveCardTheme({
+  path: "_content/One.memo.card",
+  type: "memo",
+  cardChoice: { name: "retired-theme-c" },
+  presentation: expressive,
+});
+const expressiveChrome = resolveChromeTheme(expressive);
+[expressiveCard, expressiveChrome]
+=> [
+  { choice: { name: "retired-theme-c", stock: "cloud" }, problem: null, origin: { kind: "card" } },
+  { choice: { name: "retired-theme-b", stock: "prism" }, problem: null, origin: "box-chrome" },
+]
 ```
 
 A card-only box default does not require its theme to provide chrome. When the

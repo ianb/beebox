@@ -275,9 +275,8 @@ filenames infer their types. Frontmatter title and markdown notes are editable;
 live instrument state is not stored in the cards. Browse keeps its directory
 and selected detail in view state.
 
-Fresh initialization seeds these files before recording migrations. Existing
-boxes run `canonical-interface-cards`; it creates only missing cards and refuses
-conflicting content or extra instances. After completion, full validation checks
+Fresh initialization seeds these files before recording migrations; every
+existing box already has them (the seeding migrations are retired). After completion, full validation checks
 the working tree and commit validation checks the Git index. Before completion,
 missing anchors are allowed, but a commit cannot remove an anchor already in
 HEAD. Restore accidental removals from Git; administrative migration enrollment

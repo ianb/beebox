@@ -139,7 +139,7 @@ await checkStagedSystemCards(trashBox.root)
 
 git(trashBox, "mv", SYSTEM_CARD_PATHS.admin, "_bookkeeping/trash/admin.card");
 const missingLaterIndex = await checkStagedSystemCards(trashBox.root);
-missingLaterIndex.length === 1 && missingLaterIndex[0].includes(REMAINING_SYSTEM_CARD_MIGRATION)
+missingLaterIndex.length === 1 && missingLaterIndex[0].includes(SYSTEM_CARD_PATHS.admin)
 => true
 
 git(trashBox, "restore", "--source=HEAD", "--staged", "--worktree", SYSTEM_CARD_PATHS.admin);

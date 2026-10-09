@@ -20,7 +20,17 @@ export interface ConversationRequest {
   /** The user named this chat (the URL's `?session=`, or a pick from a list); a restored or remembered one is not named. */
   named?: boolean;
 }
-export interface ResolvedConversation { selection: ConversationSelection; initial?: ChatInitialLoad }
+export interface ResolvedConversation {
+  selection: ConversationSelection;
+  initial?: ChatInitialLoad;
+  /**
+   * The resolver created this conversation for this tab and nobody has written
+   * in it yet: a `start` target, or a session that still holds this tab's
+   * reservation receipt. An existing session with no entries and no receipt is
+   * not unstarted (issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md).
+   */
+  unstarted: boolean;
+}
 type Reserve = (input: { sessionId: string; contextDir: string; engine?: ChatAgentEngine; model?: string }) => Promise<RouterOutput["chat"]["reserveSession"]>;
 function preload(data: RouterOutput["chat"]["bootstrap"]): ChatInitialLoad | undefined {
   if (data.kind !== "resumable") return undefined;
@@ -58,13 +68,13 @@ async function fresh(params: { utils: Utils; reserve: Reserve; receipts: Reserva
           console.warn("Conversation reservation receipt could not be saved", error);
           break;
         }
-        return { selection: { kind: "ready", label: "New conversation", target: { kind: "session", sessionId: reserved.sessionId, contextDir } } };
+        return { unstarted: true, selection: { kind: "ready", label: "New conversation", target: { kind: "session", sessionId: reserved.sessionId, contextDir } } };
       }
       if (reserved.kind === "unsupported") break;
     }
   }
   const features = await utils.chat.newFeatures.fetch({ contextDir });
-  return { selection: { kind: "ready", label: "New conversation", target: {
+  return { unstarted: true, selection: { kind: "ready", label: "New conversation", target: {
     kind: "start", clientConversationId: crypto.randomUUID(), contextDir, engine,
     ...(request.model ? { model: request.model } : {}), seedFeatures: features,
   } } };
@@ -72,7 +82,7 @@ async function fresh(params: { utils: Utils; reserve: Reserve; receipts: Reserva
 function resolveEmptyBootstrap(input: { params: Parameters<typeof resolveConversation>[0]; contextDir: string;
   receiptProven: boolean }): Promise<ResolvedConversation> | ResolvedConversation {
   if (input.receiptProven) {
-    return { selection: { kind: "unavailable", contextDir: input.contextDir, reason: "This conversation has no saved transcript in this box." } };
+    return { unstarted: false, selection: { kind: "unavailable", contextDir: input.contextDir, reason: "This conversation has no saved transcript in this box." } };
   }
   return fresh({ ...input.params, contextDir: input.contextDir });
 }
@@ -81,10 +91,23 @@ function retireUsedReceipt(data: Extract<Bootstrap, { kind: "resumable" }>, rece
   try { receipts?.remove(data.sessionId); }
   catch (error) { console.warn("Conversation reservation receipt could not be removed", error); }
 }
+/** A remembered target: a `start` has had no first send; a session is unstarted while this tab holds its receipt. */
+function restoreTarget(input: { target: ConversationTarget; label: string | undefined }, receipts: ReservationReceipts | null): ResolvedConversation {
+  const { target } = input;
+  const unstarted = target.kind === "start" || receipts?.get(target.sessionId) !== undefined;
+  return { unstarted, selection: { kind: "ready", target, label: input.label ?? "New conversation" } };
+}
+/** A bootstrapped session is unstarted only when it is empty and still holds this tab's receipt (read after `retireUsedReceipt`). */
+function resumed(data: Extract<Bootstrap, { kind: "resumable" }>, receipts: ReservationReceipts | null): ResolvedConversation {
+  const unstarted = data.history.total === 0 && receipts?.get(data.sessionId) !== undefined;
+  return { unstarted, selection: { kind: "ready", label: data.label ?? "Conversation", target: {
+    kind: "session", sessionId: data.sessionId, contextDir: data.contextDir,
+  } }, initial: preload(data) };
+}
 export async function resolveConversation(params: { utils: Utils; reserve: Reserve; receipts: ReservationReceipts | null; request: ConversationRequest;
   ensureReservation?: (sessionId: string) => Promise<ReservationReceipt | null> }): Promise<ResolvedConversation> {
   const { utils, request } = params;
-  if (request.kind === "restore" && request.target) return { selection: { kind: "ready", target: request.target, label: request.label ?? "New conversation" } };
+  if (request.kind === "restore" && request.target) return restoreTarget({ target: request.target, label: request.label }, params.receipts);
   let contextDir = request.contextDir ?? "";
   let session = request.sessionId;
   if (request.kind === "card" && request.cardPath) {
@@ -108,13 +131,11 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
   if (data.kind === "empty") return resolveEmptyBootstrap({ params, contextDir, receiptProven });
   // Recover a proven empty reservation before replacing an implicitly selected missing chat.
   if (data.kind === "unavailable" && request.named !== true && !receiptProven && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
-  if (data.kind === "unavailable") return { selection: { kind: "unavailable", contextDir, reason: data.reason === "missing-local-transcript" ? "This conversation has no saved transcript in this box." : `Conversation unavailable: ${data.reason}` } };
+  if (data.kind === "unavailable") return { unstarted: false, selection: { kind: "unavailable", contextDir, reason: data.reason === "missing-local-transcript" ? "This conversation has no saved transcript in this box." : `Conversation unavailable: ${data.reason}` } };
   retireUsedReceipt(data, params.receipts);
   // Bootstrap answers the session's directory too, read after any reservation
   // recovery above. Seeding the `chat.directoryFor` cache saves the chat's own
   // binding query (InteractiveChat's useChatBinding) the round trip as well.
   utils.chat.directoryFor.setData({ sessionId: data.sessionId }, { contextDir: data.contextDir });
-  return { selection: { kind: "ready", label: data.label ?? "Conversation", target: {
-    kind: "session", sessionId: data.sessionId, contextDir: data.contextDir,
-  } }, initial: preload(data) };
+  return resumed(data, params.receipts);
 }

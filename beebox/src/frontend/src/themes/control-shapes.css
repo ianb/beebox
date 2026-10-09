@@ -1,0 +1,40 @@
+/* Shape only decorative layers: hit targets and focus outlines stay whole. */
+.bbx-box-presentation[data-theme-composition="expressive"] :is(.bbx-app-nav, .bbx-composer-material) :is(.bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-composer-add, #bbx-composer-send, #bbx-composer-mic, #bbx-composer-keyboard, #bbx-composer-capture) {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+  border-color: transparent;
+}
+.bbx-box-presentation[data-theme-composition="expressive"] :is(.bbx-app-nav, .bbx-composer-material) :is(.bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-composer-add, #bbx-composer-send, #bbx-composer-mic, #bbx-composer-keyboard, #bbx-composer-capture)::before,
+.bbx-box-presentation[data-theme-composition="expressive"] :is(.bbx-app-nav, .bbx-composer-material) :is(.bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-composer-add, #bbx-composer-send, #bbx-composer-mic, #bbx-composer-keyboard, #bbx-composer-capture)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--bbx-control-radius);
+  clip-path: var(--bbx-control-shape, var(--bbx-control-shape-default, none));
+  background: var(--bbx-control-ink);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] :is(.bbx-app-nav, .bbx-composer-material) :is(.bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-composer-add, #bbx-composer-send, #bbx-composer-mic, #bbx-composer-keyboard, #bbx-composer-capture)::after {
+  inset: 1px;
+  background: var(--bbx-control-face, var(--bbx-control-background));
+}
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-place-pill { --bbx-control-shape: var(--bbx-control-shape-place, var(--bbx-control-shape-default, none)); }
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-nav-session { --bbx-control-shape: var(--bbx-control-shape-session, var(--bbx-control-shape-default, none)); }
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-nav-voice { --bbx-control-shape: var(--bbx-control-shape-voice, var(--bbx-control-shape-default, none)); }
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-nav-profile { --bbx-control-shape: var(--bbx-control-shape-profile, var(--bbx-control-shape-default, none)); }
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-composer-add { --bbx-control-shape: var(--bbx-control-shape-add, var(--bbx-control-shape-default, none)); }
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-composer-send { --bbx-control-shape: var(--bbx-control-shape-send, var(--bbx-control-shape-default, none)); }
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-composer-mic { --bbx-control-shape: var(--bbx-control-shape-mic, var(--bbx-control-shape-default, none)); }
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-composer-keyboard { --bbx-control-shape: var(--bbx-control-shape-keyboard, var(--bbx-control-shape-default, none)); }
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-composer-capture { --bbx-control-shape: var(--bbx-control-shape-capture, var(--bbx-control-shape-default, none)); }
+.bbx-box-presentation[data-theme-composition="expressive"] #bbx-composer-send {
+  --bbx-control-face: var(--bbx-send-background);
+}
+
+/* Badge parents clip overflow, so draw their focus above the face, inside. */
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-app-nav :is(#bbx-nav-todo, #bbx-nav-questions):focus-visible {
+  outline: 2px solid var(--bbx-control-ink);
+  outline-offset: -3px;
+}

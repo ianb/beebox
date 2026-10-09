@@ -15,7 +15,7 @@ import * as path from "node:path";
 // exempt from the uniqueness invariant AND excluded as basename-repair
 // resolution candidates (we can't know which directory's copy a broken link
 // meant). Extensible: add more one-per-dir conventional filenames here.
-export const NON_UNIQUE_BASENAMES = new Set(["CLAUDE.md", "README.md", "SKILL.md"]);
+const NON_UNIQUE_BASENAMES = new Set(["CLAUDE.md", "README.md", "SKILL.md"]);
 
 // A repair can't be made for one of three reasons. `no-basename-match` is a
 // true rename/delete (manual work); `ambiguous-basename` means 2+ files share

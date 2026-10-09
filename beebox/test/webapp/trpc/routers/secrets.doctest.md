@@ -62,26 +62,73 @@ async function explain(promise) {
 
 ## Owner-gated, every procedure
 
-A box member who is not the owner gets nothing — not even the list of names,
+A box member who is not the owner gets nothing, not even the list of names,
 which is why the plan can accept that names are owner-visible across boxes.
+
+Open access is not an owner here. Every other owner surface in the app treats an
+open-access box (one whose boxholder deliberately opted out of the auth wall) as
+the owner: `ctx.isOwner` folds `identity.source === "open"` in, and those
+surfaces are box-scoped, so that is the right answer for them. This store is
+not box-scoped. It spans every box on the machine, so these procedures gate on
+`isAuthenticatedOwner` instead: a real signed-in owner identity, never an
+opt-out. Otherwise a single box served openly would become a grant surface for
+its neighbours' credentials.
 
 ```ts
 const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
 process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
 const box = await makeTmpBox({ git: true });
 const member = caller(box.root, { isOwner: false });
+const open = caller(box.root, { isOwner: true, isAuthenticatedOwner: false });
 
-print(`boxStatus: ${await attempt(member.secrets.boxStatus())}`);
-print(`machineView: ${await attempt(member.secrets.machineView())}`);
-print(`setValue: ${await attempt(member.secrets.setValue({ name: "mistral", value: "x" }))}`);
-print(`grant: ${await attempt(member.secrets.grant({ box: "any", name: "mistral", access: "server" }))}`);
-print(`remove: ${await attempt(member.secrets.remove({ name: "mistral" }))}`);
+const gated = {
+  member: {
+    who: member,
+    calls: {
+      boxStatus: (c) => c.secrets.boxStatus(),
+      machineView: (c) => c.secrets.machineView(),
+      setValue: (c) => c.secrets.setValue({ name: "mistral", value: "x" }),
+      grant: (c) => c.secrets.grant({ box: "any", name: "mistral", access: "server" }),
+      remove: (c) => c.secrets.remove({ name: "mistral" }),
+    },
+  },
+  open: {
+    who: open,
+    calls: {
+      boxStatus: (c) => c.secrets.boxStatus(),
+      machineView: (c) => c.secrets.machineView(),
+      revealValue: (c) => c.secrets.revealValue({ name: "mistral" }),
+      formatHints: (c) => c.secrets.formatHints(),
+      setValue: (c) => c.secrets.setValue({ name: "mistral", value: "x" }),
+      grant: (c) => c.secrets.grant({ box: "any", name: "mistral", access: "server" }),
+      setAccess: (c) => c.secrets.setAccess({ box: "any", name: "mistral", access: "agent" }),
+      revoke: (c) => c.secrets.revoke({ box: "any", name: "mistral" }),
+      remove: (c) => c.secrets.remove({ name: "mistral" }),
+    },
+  },
+};
+const lines = [];
+for (const [kind, { who, calls }] of Object.entries(gated)) {
+  for (const [procedure, call] of Object.entries(calls)) {
+    lines.push(`${kind} ${procedure} → ${await attempt(call(who))}`);
+  }
+}
+lines.join("\n")
 =>
-boxStatus: FORBIDDEN
-machineView: FORBIDDEN
-setValue: FORBIDDEN
-grant: FORBIDDEN
-remove: FORBIDDEN
+member boxStatus → FORBIDDEN
+member machineView → FORBIDDEN
+member setValue → FORBIDDEN
+member grant → FORBIDDEN
+member remove → FORBIDDEN
+open boxStatus → FORBIDDEN
+open machineView → FORBIDDEN
+open revealValue → FORBIDDEN
+open formatHints → FORBIDDEN
+open setValue → FORBIDDEN
+open grant → FORBIDDEN
+open setAccess → FORBIDDEN
+open revoke → FORBIDDEN
+open remove → FORBIDDEN
 ```
 
 ## Setting a value: warnings advise, they never block
@@ -239,6 +286,25 @@ print(`still no values: ${!JSON.stringify(machine2).includes("placeholder-weathe
 still no values: true
 ```
 
+## Open access: the refusal and the surfaces it still reaches
+
+The refusal says which session it wants, so the boxholder is not left guessing
+why an admin page they can reach refuses one section of itself:
+
+```ts continue
+print(await explain(open.secrets.boxStatus()));
+=> secrets management requires an authenticated owner session — open-access does not qualify (the store is machine-level, spanning every box on this host)
+```
+
+Other owner surfaces are unchanged — the same open-access context still reaches
+them:
+
+```ts continue
+const telegram = await open.admin.telegramStatus();
+print(`telegramStatus: ${JSON.stringify(telegram.configured)}`);
+=> telegramStatus: false
+```
+
 ```ts cleanup
 await box.cleanup();
 await rm(dir, { recursive: true, force: true });
@@ -325,66 +391,4 @@ audit write failure refuses value: INTERNAL_SERVER_ERROR
 ```ts cleanup
 await revealBox.cleanup();
 await rm(revealDir, { recursive: true, force: true });
-```
-
-
-## Open access is not an owner here
-
-Every other owner surface in the app treats an open-access box — one whose
-boxholder deliberately opted out of the auth wall — as the owner: `ctx.isOwner`
-folds `identity.source === "open"` in, and those surfaces are box-scoped, so
-that is the right answer for them.
-
-This store is not box-scoped. It spans every box on the machine, so these
-procedures gate on `isAuthenticatedOwner` instead: a real signed-in owner
-identity, never an opt-out. Otherwise a single box served openly would become a
-grant surface for its neighbours' credentials.
-
-```ts
-const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-open-"));
-process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
-const box = await makeTmpBox({ git: true });
-const open = caller(box.root, { isOwner: true, isAuthenticatedOwner: false });
-
-print(`boxStatus: ${await attempt(open.secrets.boxStatus())}`);
-print(`machineView: ${await attempt(open.secrets.machineView())}`);
-print(`revealValue: ${await attempt(open.secrets.revealValue({ name: "mistral" }))}`);
-print(`formatHints: ${await attempt(open.secrets.formatHints())}`);
-print(`setValue: ${await attempt(open.secrets.setValue({ name: "mistral", value: "x" }))}`);
-print(`grant: ${await attempt(open.secrets.grant({ box: "any", name: "mistral", access: "server" }))}`);
-print(`setAccess: ${await attempt(open.secrets.setAccess({ box: "any", name: "mistral", access: "agent" }))}`);
-print(`revoke: ${await attempt(open.secrets.revoke({ box: "any", name: "mistral" }))}`);
-print(`remove: ${await attempt(open.secrets.remove({ name: "mistral" }))}`);
-=>
-boxStatus: FORBIDDEN
-machineView: FORBIDDEN
-revealValue: FORBIDDEN
-formatHints: FORBIDDEN
-setValue: FORBIDDEN
-grant: FORBIDDEN
-setAccess: FORBIDDEN
-revoke: FORBIDDEN
-remove: FORBIDDEN
-```
-
-The refusal says which session it wants, so the boxholder is not left guessing
-why an admin page they can reach refuses one section of itself:
-
-```ts continue
-print(await explain(open.secrets.boxStatus()));
-=> secrets management requires an authenticated owner session — open-access does not qualify (the store is machine-level, spanning every box on this host)
-```
-
-Other owner surfaces are unchanged — the same open-access context still reaches
-them:
-
-```ts continue
-const telegram = await open.admin.telegramStatus();
-print(`telegramStatus: ${JSON.stringify(telegram.configured)}`);
-=> telegramStatus: false
-```
-
-```ts cleanup
-await box.cleanup();
-await rm(dir, { recursive: true, force: true });
 ```

@@ -3,8 +3,7 @@
 Box agents record observations about Bee Box friction as `.doc.card` files directly
 in `_config/feedback/`. The card body contains the relevant context the agent
 selected; a known session ID may link to the transcript. This directory provides
-tooling to collect and resolve those cards. The collector also recognizes legacy
-timestamped `.md` notes during migration.
+tooling to collect and resolve those cards.
 
 ## Collecting feedback
 
@@ -64,9 +63,6 @@ Resolving uses `bbx mv --commit` to move the file to
 rewritten referrers are committed by path, leaving unrelated staged changes
 alone. If the CLI fails, the collector stops and reports the box and path;
 inspect for partial changes before retrying.
-Legacy timestamped `.md` notes remain in the listing during rollout, but must
-pass the `feedback-to-doc-cards` box migration before resolution. Raw transcript
-whitespace in those files can fail the box's commit hook after a move.
 
 ## Running a review session
 

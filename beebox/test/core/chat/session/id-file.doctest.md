@@ -71,12 +71,20 @@ r === null
 => true
 ```
 
-## cleanup is idempotent on a missing path
+## cleanup removes the file and is idempotent
+
+Cleanup deletes the file; a second cleanup, on a path that no longer exists,
+does nothing and creates nothing:
 
 ```ts
-cleanupSessionIdFile(allocateSessionIdFilePath());
-"ok"
-=> ok
+const p = allocateSessionIdFilePath();
+writeSessionIdFile(p, "to-remove");
+const before = fs.existsSync(p);
+cleanupSessionIdFile(p);
+const afterFirst = fs.existsSync(p);
+cleanupSessionIdFile(p);
+[before, afterFirst, fs.existsSync(p)]
+=> [true, false, false]
 ```
 
 ## resolveChatSessionId prefers the direct env var

@@ -10,6 +10,20 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 ## Ideas we adopted
 
+### Visual references for expressive themes
+
+- **Sources:** [removed], *[removed]* (2025); [removed], *[removed]* (r/[removed]); [[removed]](https://[removed].booth.pm/), [pink cloud and star illustration](https://www.instagram.com/p/DcDO6wYM6pv/). Attribution follows the reference images supplied by the boxholder.
+- **What we took:** retired-theme-a interprets elongated pigment wedges and unexpected color relationships; retired-theme-b interprets perspective grids, translucent geometry, and printed digital texture; retired-theme-c interprets sweeping clouds, irregular starbursts, and pastel speckling.
+- **Rights:** Original artworks remain their artists' work; no licence to redistribute them is claimed and the source images are not bundled. The CSS and SVG ornaments here are newly authored interpretations.
+- **Where it landed:** `beebox/src/frontend/src/themes/{retired-theme-a,retired-theme-b,retired-theme-c}.css` and `themes/art/`.
+
+### Material theme references
+
+- **Sources:** [removed], *Wool painting (Ray of Light)* (2021), supplied reference; [[removed], February 1927 *[removed]* cover](https://flashbak.com/para-todos-covers-brazils-gorgeous-1920s-art-deco-style-magazine-372408/); [[removed], *Will I become the Seoul superhero?*](https://[removed].tumblr.com/post/762184243663323136/will-i-become-the-seoul-superhero); [[removed], *Man's Best Friend*](https://cara.app/post/23e50b2a-988d-4342-bde5-df06fdec9199); [[removed], psychedelic priestess](https://www.instagram.com/alexey[removed]/p/DdEixmwIquA/); [[removed], *[removed]*](https://www.artstation.com/artwork/xD1yWY). Attribution follows the references supplied by the boxholder.
+- **What we took:** retired-theme-d interprets colored yarn and changing strand directions; retired-theme-e interprets theatrical Art Deco fans and stepped frames; retired-theme-f interprets saturated orange and distressed fine ink lines; retired-theme-g interprets luminous warm pigment and cool granular color; retired-theme-h interprets flat fluorescent colors and heavy organic contours; retired-theme-i interprets deep teal, rust, cream, and ochre layered in smooth sweeping paint.
+- **Rights:** The source artworks are not bundled. CSS and SVG compositions are newly authored interpretations; three abstract paint/ink textures were generated with OpenAI image generation from material and palette descriptions. No source artwork is used in those textures, and no licence to redistribute the reference images is claimed.
+- **Where it landed:** `beebox/src/frontend/src/themes/{retired-theme-d,retired-theme-e,retired-theme-f,retired-theme-g,retired-theme-h,retired-theme-i}.css` and their original assets in `themes/art/`.
+
 ### Agent Skills, by addyosmani (Addy Osmani)
 
 - **Source:** https://github.com/addyosmani/agent-skills (MIT)

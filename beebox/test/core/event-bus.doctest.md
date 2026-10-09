@@ -42,6 +42,7 @@ const samples = {
   "schedule-fired": { id: "sch_1", label: "tea", alarm: true, announce: null },
   "chat-history": { sessionId: "s1", entries: [{ uuid: "u1", type: "user", timestamp: TS, content: [{ type: "text", text: "hi" }] }] },
   "chat-session-assigned": { sessionId: "s1" },
+  "chat-title-changed": { sessionId: "s1", title: "Weekend plans" },
   "capture-status": { stagingId: "cap_1", sessionId: "s1", status: "preparing", docPath: "captures/cap_1.capture-session.card" },
   "chat-retranscription": { sessionId: "s1", messageId: "msg-1", newText: "corrected text", service: "whisper", diarized: false, recordedAt: TS },
   "chat-audio-consulted": { sessionId: "s1", messageId: "msg-1", command: "ask-about-audio", question: "did I say can or cannot?" },
@@ -62,19 +63,6 @@ JSON.stringify(Object.keys(samples).sort()) === JSON.stringify(Object.keys(event
 const failures = Object.entries(samples).filter((e) => !eventSchemas[e[0]].safeParse(e[1]).success).map((e) => e[0]);
 JSON.stringify(failures)
 => []
-```
-
-## Nullable fields accept both branches
-
-`chat-user-message.user`, `chat-complete.sessionId`, and `schedule-fired.announce`
-are all nullable — the null branch is legal:
-
-```ts
-eventSchemas["chat-user-message"].safeParse({ sessionId: null, message: "hi", user: null, timestamp: TS }).success
-=> true
-
-eventSchemas["schedule-fired"].safeParse({ id: "s", label: "l", alarm: false, announce: "wake up" }).success
-=> true
 ```
 
 ## A one-sided answer is valid

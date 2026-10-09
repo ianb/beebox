@@ -66,28 +66,14 @@ const layers = operatorPromptLayers(promptParams);
 layers.persona.includes("Marisol Vance") && layers.persona.includes("no patience for settings")
 => true
 
-// The mandate is the evaluator stance, not a task instruction.
-[
-  layers.mandate.includes("USABLE"),
-  layers.mandate.includes("try the obvious thing first"),
-  layers.mandate.includes("that is a RESULT to report"),
-  layers.mandate.includes("Never work around brokenness silently"),
-  layers.mandate.includes("hidden paths a real person wouldn't try"),
-  layers.mandate.includes("Asking the app's own chat for help IS a legitimate user move"),
-].join(",")
-=> true,true,true,true,true,true
-
 // Mechanics are parameterized by this run's browse invocation and directories.
 [
   layers.mechanics.includes("/checkout/bin/browse --session field-20260808"),
   layers.mechanics.includes("http://127.0.0.1:41234/box"),
   layers.mechanics.includes("/runs/demo/screenshots"),
   layers.mechanics.includes("/runs/demo/assets"),
-  layers.mechanics.includes("Re-snapshot after anything changes the page"),
-  layers.mechanics.includes("Screenshot liberally"),
-  layers.mechanics.includes("up to about two minutes"),
 ].join(",")
-=> true,true,true,true,true,true,true
+=> true,true,true,true
 
 // The boundary layer is what keeps a developer-brained model out of the repo.
 [

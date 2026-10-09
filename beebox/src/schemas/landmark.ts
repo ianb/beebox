@@ -38,14 +38,6 @@ export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-
 export type LandmarkOrderType = z.infer<typeof LandmarkOrder>;
 
 /**
- * The iconic mark for a landmark. Either an emoji / short text, or an
- * image (`{ src }`, a box path with a leading `/`; a path relative to the
- * landmark's directory still resolves).
- */
-const LandmarkSymbol = z.union([z.string(), z.object({ src: z.string() })]);
-export type LandmarkSymbolData = z.infer<typeof LandmarkSymbol>;
-
-/**
  * A pinned reference to another card. `ref` is a box path with a leading `/`
  * (a path relative to the landmark's directory still resolves), validated
  * like any other ref. `label` is an optional display label (falls back to
@@ -94,15 +86,44 @@ const LandmarkChatApp = z.object({
 export type LandmarkChatAppData = z.infer<typeof LandmarkChatApp>;
 
 /**
+ * One opener: a single short line the person sees as a button and sends
+ * verbatim. Validated rather than silently normalized — an opener is agent-
+ * written text that compiles into CLAUDE.md and renders as a button, so a
+ * paragraph or a blank entry is a card error the boxholder should see, not
+ * something to quietly trim away.
+ */
+const OPENER_MAX_LENGTH = 120;
+export const OpenerEntry = z
+  .string()
+  .refine((s) => s.trim() !== "", "an opener must not be blank")
+  .refine((s) => !s.includes("\n"), "an opener must be a single line")
+  .refine(
+    (s) => s.trim().length <= OPENER_MAX_LENGTH,
+    `an opener must be at most ${OPENER_MAX_LENGTH} characters`,
+  );
+
+/**
+ * The root place's onboarding openers, installed on a new box's root landmark
+ * (`installRootLandmark`). Both are phrased from the person's side, so the
+ * agent is never asked something it cannot answer on turn one; the agent
+ * rewrites and eventually removes them as the box comes into regular use.
+ */
+export const STOCK_ROOT_OPENERS: readonly string[] = [
+  "Let me tell you what this box is for.",
+  "What can you do?",
+];
+
+/**
  * Human-facing navigation role: the bookmark surface shown on the
- * Landmarks page.
+ * Landmarks page. `openers` are the place's one-line first moves, shown on an
+ * unstarted chat in the place; a place with none shows none.
  */
 export const LandmarkNavigation = z.object({
   label: z.string().optional(),
-  symbol: LandmarkSymbol.optional(),
   links: z.array(LandmarkLink).optional(),
   expand: z.array(LandmarkExpand).optional(),
   "chat-app": LandmarkChatApp.optional(),
+  openers: z.array(OpenerEntry).optional(),
 });
 export type LandmarkNavigationData = z.infer<typeof LandmarkNavigation>;
 
@@ -137,8 +158,7 @@ const landmarkFields = {
  *
  * `symbol` is the exception, admitted explicitly: it is a global field
  * (`GLOBAL_CARD_FIELDS`) that these readers must see, because a landmark's mark
- * now lives there rather than under `navigation`. Stripping it is what would
- * make a migrated landmark render as no symbol at all.
+ * lives there. Stripping it would make every landmark render as no symbol.
  *
  * `prominence` is admitted the same way: a written value describes the
  * *place*, not the file (the file itself is background by type — see
@@ -157,8 +177,8 @@ export const LandmarkSchema: CardSchema = cardSchema("landmark", {
   brief: "Marks a notable directory",
   description: "Marks its directory as a notable spot — a curated navigation bookmark and/or a triage filing destination; one per directory",
   category: "authored",
-  // A landmark is a place marker, not a visitable file: it never lists in a
-  // fold, and the directory's identity is drawn from it instead
+  // A landmark stands for its directory: it never lists in a fold, and the
+  // directory's identity is drawn from it instead
   // (docs/implemented-plans/card-prominence.md, "Type defaults"). A written `prominence`
   // still means something — see LandmarkObject above — but it describes the
   // place, not this file.
@@ -191,9 +211,11 @@ navigation:
   chat-app:                 # optional chat-feature seed for chats opened here
     narration: "on"
     prose: "off"
+  openers:                  # optional one-line first moves for a chat here
+    - What can I cook tonight?
 \`\`\`
 
-An older landmark may carry its mark nested as \`navigation.symbol\` (a bare string, or \`{ src }\`) — the shape before the mark became a field every card can have. That form is still read, so a card written that way is not a mistake and does not need fixing by hand; the \`landmark-symbol\` migration moves it. Write new marks at the top level, as above.
+**Openers.** \`navigation.openers\` are one-line first moves, phrased from the person's side, shown as buttons on an unstarted chat in this place (and on the place's page); clicking one sends it as their message. Each is a single non-blank line of at most 120 characters. A place with no \`openers\` shows none; it does not inherit the root's. When you build a place for a recurring job, you may add up to three for its standing first moves ("Log a new loan"). The root landmark's onboarding openers fade as the box is used: remove them once the person knows what the box is for. Openers never go on a briefing card.
 
 \`ref\` and \`symbol.src\` are **box paths — write them with a leading \`/\`, from the box root**. A path relative to the landmark's directory still resolves (older landmarks are written that way), but new ones use the box path. \`expand\` \`query\` globs are the exception: they are queries, not refs, and always run relative to the landmark's directory.
 
@@ -227,7 +249,7 @@ A pure routing target (an archive humans don't browse) can have only \`destinati
 
 Most of a landmark's list is **derived**, not listed: every card under its directory carrying \`prominence: entry-point\` or \`prominence: primary\` appears automatically (entry points first, then primary cards, then nested landmarks, then \`expand\` results), and the walk stops at any subdirectory with its own landmark. So the way to surface a card in its own place is to mark the card, not to edit the landmark. \`links:\` is for what a card cannot say about itself: a target outside this directory, a contextual label, or a fixed position. A \`links:\` entry that duplicates a marked in-directory card is harmless (it shows once, listed first) and \`bbx validate\` notes it as a trim candidate.
 
-A landmark card is a place marker, not a visitable file — it is \`background\` by type and never needs \`prominence\` written to be on the Landmarks page. The one value that means something on a landmark is \`prominence: background\`: the place is housekeeping (logs, imports, machinery), it leaves the Landmarks page and the place menu, and everything under it folds in Browse. \`entry-point\` or \`primary\` on a landmark is a lint warning; the place's entry point is a visitable card inside it.`,
+A landmark card stands for its place, not for a file in it — it is \`background\` by type and never needs \`prominence\` written to be on the Landmarks page. The one value that means something on a landmark is \`prominence: background\`: the place is housekeeping (logs, imports, machinery), it leaves the Landmarks page and the place menu, and everything under it folds in Browse. \`entry-point\` or \`primary\` on a landmark is a lint warning; the place's entry point is a visitable card inside it.`,
 });
 
 export type Landmark = LandmarkFields;
@@ -260,19 +282,18 @@ export function parseLandmarkFields(content: string): LandmarkFields | null {
  * Template for `bbx create` — produces a starter landmark with a `navigation`
  * role for the label and the card's own `symbol` group for the mark.
  *
- * A new landmark is never born in the legacy shape: `navigation.symbol` is
- * read for boxes that predate the `landmark-symbol` migration, and written by
- * nothing (docs/plans/card-symbol.md).
- *
  * Pass `symbol` for an emoji/text mark, or `symbolSrc` for an image box path
- * (leading `/`; a landmark-dir-relative path also resolves).
+ * (leading `/`; a landmark-dir-relative path also resolves). `openers` become
+ * `navigation.openers` (the root landmark gets `STOCK_ROOT_OPENERS`).
  */
 export function createLandmarkTemplate(options: {
   label: string;
   symbol?: string;
   symbolSrc?: string;
+  openers?: readonly string[];
 }): string {
   const navigation: Record<string, unknown> = { label: options.label };
+  if (options.openers !== undefined) navigation["openers"] = [...options.openers];
   const fields: Record<string, unknown> = { navigation };
   if (typeof options.symbolSrc === "string" && options.symbolSrc !== "") {
     fields["symbol"] = { src: options.symbolSrc };

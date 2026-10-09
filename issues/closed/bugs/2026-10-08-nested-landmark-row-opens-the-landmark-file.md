@@ -9,7 +9,7 @@ discovered-in: worktree-journey-walks-oct — B-inventory and D-chemistry journe
 resolution: implemented
 ---
 
-Fixed 2026-10-08: a nested landmark's derived row now points at the first `entry-point` card in that landmark's own pruned subtree (`derived-links.ts`, `nestedEntryPoint`); without one the row still opens the landmark card, which [landmark card shows its config](../../bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md) covers. Covered in `resolve.derived.doctest.md`.
+Fixed 2026-10-08: a nested landmark's derived row now points at the first `entry-point` card in that landmark's own pruned subtree (`derived-links.ts`, `nestedEntryPoint`); without one the row still opens the landmark card, which [landmark card shows its config](2026-10-08-landmark-card-shows-its-config-not-its-places.md) covers. Covered in `resolve.derived.doctest.md`.
 
 The place pill's menu lists nested landmarks as rows. Choosing "Inventory"
 opens `Inventory.landmark.card` (its configuration, "No body content"), even
@@ -40,7 +40,7 @@ found the same mechanism itself (box commit noted in the report).
 
 ## Related
 
-- [Landmark card shows its config, not its places](../../bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md)
+- [Landmark card shows its config, not its places](2026-10-08-landmark-card-shows-its-config-not-its-places.md)
 - [Collection views are badly defined](../../features/2026-08-19-collection-views-are-badly-defined.md)
 - The D-chemistry walk also listed the course twice because the landmark sits
   in the course's `.attach` folder; filed separately as

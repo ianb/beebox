@@ -9,7 +9,8 @@
  */
 
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, memo } from "react";
-import { ChatOpeners } from "./ChatOpeners";
+import { ChatOpeners } from "../../../openers/ChatOpeners";
+import type { OpenerSendOutcome } from "../../../openers/opener-send";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
@@ -99,7 +100,7 @@ function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
         id="bbx-chat-load-older"
         onClick={onLoadOlder}
         disabled={loadingOlder}
-        className="text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
+        className="bbx-chat-meta-material text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
       >
         {loadingOlder ? "Loading..." : "Show earlier messages"}
       </button>
@@ -172,13 +173,13 @@ function MessageListInner({
   captureVerbs: CaptureVerbs;
   audioOverlayStore: AudioOverlayStore;
   /**
-   * Suggested opening questions from the bound directory's briefing, shown on
-   * the empty state of a fresh chat. Empty for an established box (the agent
-   * removes them once the box is in regular use) and for a resumed session.
+   * The place's openers (`navigation.openers` on its landmark), shown on the
+   * empty state of an unstarted chat. Empty for a place that lists none and
+   * for a resumed session.
    */
   openers: string[];
   /** Send an opener as the person's message — the typed-and-entered path. */
-  onSendOpener: (text: string) => void;
+  onSendOpener: (text: string) => OpenerSendOutcome;
 }) {
   const { boxSlug } = useParams({ strict: false });
   // Also gated on the retained-window ceiling: past it the machine drops what
@@ -196,8 +197,8 @@ function MessageListInner({
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView }),
-    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView],
+    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled }),
+    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled],
   );
 
   const { scrollerRef, contentRef, liveContentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen } = useChatScroll();
@@ -284,7 +285,7 @@ function MessageListInner({
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
         <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
-        <div className="text-warm-500 text-sm">Start a conversation.</div>
+        <div className="bbx-chat-empty-label text-warm-500 text-sm">Start a conversation.</div>
       </div>
     );
   }

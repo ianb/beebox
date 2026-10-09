@@ -23,7 +23,7 @@ import { movePathPreservingAnnexSymlink } from "../../../src/core/card-files/mov
 import { parseAnnexPointer } from "../../../src/lib/annex-pointer.js";
 async function fixture() {
   const box = await makeTmpBox();
-  await box.write("_content/home/Home.landmark.card", "---\nnavigation:\n  label: Home\n  symbol: H\ndestinations:\n  - for: [triage]\n    rules: Household papers.\n---\n");
+  await box.write("_content/home/Home.landmark.card", "---\nsymbol:\n  glyph: H\nnavigation:\n  label: Home\ndestinations:\n  - for: [triage]\n    rules: Household papers.\n---\n");
   await box.write("_content/inbox/staged/Paper.doc.card", "---\ntitle: Paper\n---\nHousehold receipt.");
   await box.write("_content/inbox/staged/Paper.attach/detail.txt", "Household details");
   await simpleGit(box.root).add(".");
@@ -115,7 +115,7 @@ repreparation reports that the original bytes cannot be recovered.
 
 ```ts
 const annexBox = await makeTmpBox({ git: true });
-await annexBox.write("_content/home/Home.landmark.card", "---\nnavigation:\n  label: Home\n  symbol: H\ndestinations:\n  - for: [triage]\n    rules: Household papers.\n---\n");
+await annexBox.write("_content/home/Home.landmark.card", "---\nsymbol:\n  glyph: H\nnavigation:\n  label: Home\ndestinations:\n  - for: [triage]\n    rules: Household papers.\n---\n");
 await simpleGit(annexBox.root).add("_content/home/Home.landmark.card");
 await simpleGit(annexBox.root).commit("Add triage instructions");
 await annexBox.write("_content/inbox/staged/Paper.doc.card", "---\ntitle: Paper\n---\nHousehold receipt.");
@@ -174,7 +174,7 @@ was not present in the preparation revision and has since moved again.
 
 ```ts
 const freshBox = await makeTmpBox();
-await freshBox.write("_content/home/Home.landmark.card", "---\nnavigation:\n  label: Home\n  symbol: H\ndestinations:\n  - for: [triage]\n    rules: Household papers.\n---\n");
+await freshBox.write("_content/home/Home.landmark.card", "---\nsymbol:\n  glyph: H\nnavigation:\n  label: Home\ndestinations:\n  - for: [triage]\n    rules: Household papers.\n---\n");
 await freshBox.write("_content/inbox/staged/New.doc.card", "---\ntitle: New\n---\nNew admitted receipt.");
 const freshEvidence = await prepareItem({ boxRoot: freshBox.root, sourceRef: "/_content/inbox/staged/New.doc.card" });
 freshEvidence.source.gitRevision

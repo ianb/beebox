@@ -98,8 +98,6 @@ browser-task-drain.procedure.card
 process-retrospective.procedure.card
 refresh-maps.procedure.card
 todo-review.procedure.card
-trick-secret-runtime.procedure.card
-view-card-shape.procedure.card
 ```
 
 The stock agent-backed procedures use portable tiers, so a fresh box never

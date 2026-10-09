@@ -14,6 +14,7 @@ assistant response at all).
 import { evaluateInstructions } from "../../../src/core/procedure/engine-validate-model.js";
 import { createFakeAgent } from "../fake-agent.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { modelTier, providerOf } from "../../../src/shared/agent-models.js";
 ```
 
 ## A passing verdict
@@ -226,8 +227,9 @@ await evaluateInstructions({
   createAgent,
   name: "judge",
 });
-fakeAgent.invocations[0].options.model
-=> gpt-5.6-terra
+const judgeModel = fakeAgent.invocations[0].options.model;
+[providerOf(judgeModel), modelTier(judgeModel)]
+=> ["openai", "balanced"]
 ```
 
 ```ts cleanup

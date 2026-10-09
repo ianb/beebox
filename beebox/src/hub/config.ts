@@ -32,7 +32,7 @@ import { invariant } from "../shared/invariant.js";
  * webhook prefix, not just the box named "webhook"), so they're reserved
  * fleet-wide.
  */
-export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
+const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "healthz",
   "auth",
   "webhook",

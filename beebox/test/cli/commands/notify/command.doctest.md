@@ -101,13 +101,9 @@ reminder:
 
 ```ts
 const bare = await makeTmpBox({ git: true });
-const lines = [];
-const origLog = console.log;
-console.log = (...args) => { lines.push(args.join(" ")); };
-const code = await runNotify(bare.root, { title: undefined, options: { check: true }, readStdin: null, source: "doctest" });
-console.log = origLog;
+const bareCheck = await run(undefined, { check: true }, undefined, {}, bare.root);
 await bare.cleanup();
-[...lines, `exit ${code}`].join("\n")
+bareCheck
 =>
 apns: no
 web-push: no
@@ -227,20 +223,9 @@ Every tried channel failed:
 
 ```ts
 const failingPush = createFakePush({ failEndpoints: ["https://push.example/phone"] });
-const out = [];
-const origErr = console.error;
-console.error = (...args) => { out.push(args.join(" ")); };
-const code = await runNotify(box.root, {
-  title: "Will not arrive",
-  options: { target: "dashboard", loudness: "loud", channel: "web-push" },
-  readStdin: null,
-  source: "doctest",
-  services: { push: failingPush },
-});
-console.error = origErr;
-[out.join("\n").replace(ID, "<id>"), `exit ${code}`].join("\n")
+await run("Will not arrive", { target: "dashboard", loudness: "loud", channel: "web-push" }, undefined, { push: failingPush })
 =>
-Not delivered: <id>: web-push failed (no device received the push (sent 0, pruned 0, failed 1))
+stderr: Not delivered: <id>: web-push failed (no device received the push (sent 0, pruned 0, failed 1))
 exit 1
 ```
 
@@ -303,8 +288,8 @@ would skip: none
 dry run: nothing sent, nothing logged
 exit 0
 
-JSON.stringify([JSON.stringify([push.sent.length, tg.sent.length]) === JSON.stringify(sentBefore), (await readRecent(box.root, { days: 1 })).length === loggedBefore])
-=> [true,true]
+[push.sent.length === sentBefore[0], tg.sent.length === sentBefore[1], (await readRecent(box.root, { days: 1 })).length === loggedBefore]
+=> [true, true, true]
 ```
 
 The dry run applies the same rule a send does, so it shows the effect of the

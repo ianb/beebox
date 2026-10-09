@@ -220,10 +220,8 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 
 /**
  * Write the box's `.gitignore` from the current rendering. `bbx init` calls
- * this on every run, and the `gitignore-2026-09` migration calls it once per
- * existing box: the 2026-08 rename changed the state directory and the lock
- * and pid names, and a box that kept its pre-rename file ignored nothing
- * current, so its next autocommit swept the whole state directory in.
+ * this on every run. A rendering change reaches existing boxes only through a
+ * new dated migration (the retired `gitignore-2026-09` was the last).
  *
  * ONE root `.gitignore` covers both halves that used to be two files under
  * the two-root layout: the npm-package rules (`node_modules/`, trick deps —
@@ -242,7 +240,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
  * `annexed` probe this used to branch on is gone with the manifest scheme it
  * selected.
  */
-export async function writeBoxGitignore(boxRoot: string): Promise<void> {
+async function writeBoxGitignore(boxRoot: string): Promise<void> {
   const gitignore = `# Bee Box .gitignore
 # npm package
 node_modules/

@@ -30,7 +30,7 @@ import { invariant } from "../../shared/invariant.js";
 export { redactCodexCliDetail as redactCodexAuthDetail } from "../../services/codex-cli/core.js";
 
 /** The single actionable message shown when Claude Code has no active login. */
-export const CLAUDE_NOT_LOGGED_IN_MESSAGE =
+const CLAUDE_NOT_LOGGED_IN_MESSAGE =
   "Claude Code is not logged in — run `claude auth login` on this machine";
 
 /** Thrown by {@link checkClaudeAuth} when the CLI reports no active login. */
@@ -41,7 +41,7 @@ export class ClaudeAuthError extends Error {
   }
 }
 
-export const CODEX_NOT_LOGGED_IN_MESSAGE =
+const CODEX_NOT_LOGGED_IN_MESSAGE =
   "Codex is not logged in — run `codex login --device-auth` as the Bee Box service user";
 
 class CodexReadinessError extends Error {

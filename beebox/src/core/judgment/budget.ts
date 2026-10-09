@@ -15,7 +15,7 @@ import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { boxLocalDay } from "../../connector-activity/core.js";
 
 /** Jev calls a box may make per box-local day. */
-export const JEV_DAILY_CAP = 500;
+const JEV_DAILY_CAP = 500;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

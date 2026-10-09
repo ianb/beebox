@@ -25,15 +25,10 @@ generatePubId() === generatePubId()
 => false
 ```
 
-A malformed id (uppercase, wrong length, out-of-alphabet) is rejected.
+A malformed id is rejected: too short with uppercase and a hyphen, uppercase at
+the right length, and the right length with `1`, which is outside the alphabet.
 
 ```ts
-pubIdSchema.safeParse("TOO-SHORT").success
-=> false
-
-pubIdSchema.safeParse("ABCDEFGHIJKLMNOP2345672345").success
-=> false
-
-pubIdSchema.safeParse("abcdefghijklmnop2345672341").success
-=> false
+["TOO-SHORT", "ABCDEFGHIJKLMNOP2345672345", "abcdefghijklmnop2345672341"].map((id) => pubIdSchema.safeParse(id).success)
+=> [false, false, false]
 ```

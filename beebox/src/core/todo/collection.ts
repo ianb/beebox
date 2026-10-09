@@ -41,8 +41,8 @@ export const TodoParamsSchema = z.object({
   onPlate: z.boolean().optional(),
   /**
    * `boxholder` (default) admits only the boxholder's todos
-   * (`isBoxholderTodo`) — an agent follow-up never reaches a reduction or a
-   * row. `all` admits every todo, agent-assigned included: `bbx query
+   * (`isBoxholderTodo`) — an agent follow-up or another person's todo never
+   * reaches a reduction or a row. `all` admits every todo, agent-assigned included: `bbx query
    * todos`/`bbx todos` (the agent's own surface), the review sweep, and the
    * ambient line all pass it explicitly, since none of them may silently
    * change what they see. Not an exact-match filter like `assigned` — "every

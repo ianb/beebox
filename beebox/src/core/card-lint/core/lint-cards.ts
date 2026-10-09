@@ -51,7 +51,7 @@ import { extractBodyLinks, extractBodyRefs } from "../../body-refs.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import { isAttachRef } from "../../../shared/attach-path.js";
 import { parseRef, formatRefSuffix, isUrlRef } from "../../../shared/ref-path/core.js";
-import { lintBodyMarkdoc } from "../../body-markdoc-lint.js";
+import { lintBodyMarkdoc, lintFrontmatterTodoAssigned } from "../../body-markdoc-lint.js";
 import { brokenRefReason, resolveRefExists } from "../../ref-exists.js";
 import {
   boxRelativeDoc,
@@ -60,7 +60,7 @@ import {
   planCanonicalRef,
 } from "../../canonical-refs.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./node-refs.js";
-import { lintCardSymbolSrc, lintFigureEntry, lintLandmarkSymbolSrc } from "./path-fields.js";
+import { lintCardSymbolSrc, lintFigureEntry } from "./path-fields.js";
 import { lintFilenameAttachRef } from "./filename-attach.js";
 import { lintDuplicateChatSession } from "./chat-duplicates.js";
 import { lintDuplicatePublicationId } from "../publication-duplicates.js";
@@ -277,21 +277,19 @@ async function lintFrontmatterCard(input: {
     warnings.push(...lintBodyMarkdoc(bodyField));
   }
   warnings.push(...bodyTitleWarnings(parsed.fields));
+  warnings.push(...lintFrontmatterTodoAssigned(parsed.fields));
   // Type-specific box-aware checks: progress entries and lesson-plan segments
   // name concept-map node ids, which can't be verified self-contained (the map
   // is in another card) nor by the generic ref walk (a node id isn't a file
   // ref). The lesson-plan adapter also warns on deferred-but-unmarked material.
-  // Landmark and figure carry the two path fields NOT named `ref`
-  // (`navigation.symbol.src`, `entry`), which the generic walk therefore misses
-  // — see lint-path-fields.ts.
+  // Cards carry path fields NOT named `ref` (`symbol.src`, a figure's `entry`),
+  // which the generic walk therefore misses — see path-fields.ts.
   if (type === "progress") {
     warnings.push(...(await lintProgressNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   } else if (type === "lesson-plan") {
     warnings.push(...(await lintLessonPlanNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   } else if (type === "concept-map") {
     warnings.push(...conceptMapShapeWarnings(parsed.fields));
-  } else if (type === "landmark") {
-    warnings.push(...(await lintLandmarkSymbolSrc({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   } else if (type === "figure") {
     warnings.push(...(await lintFigureEntry({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   }

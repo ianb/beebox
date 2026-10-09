@@ -37,7 +37,8 @@ export { type SelfNoteInfo, parseSelfNote, parseSelfNotes, entrySelfNotes } from
  */
 export function stripSpeechWrappers(text: string): string {
   let out = text;
-  // Drop <instructions>...</instructions> voice-direction blocks
+  // Drop legacy <instructions>...</instructions> voice-direction children (the
+  // current form is an attribute, which the <speech> shell strip below removes)
   out = out.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/g, "");
   // Drop self-closing voice-keyword marker tags
   out = out.replace(/<(?:send-message|send-close-message|send-checkpoint-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
