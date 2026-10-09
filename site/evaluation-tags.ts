@@ -8,7 +8,7 @@ const { Tag } = Markdoc;
 
 const VENDORS = ["google", "openai"] as const;
 export const VERDICTS = { correct: "Correct", okay: "Okay", failed: "Failed" } as const;
-const VERDICT_ICONS: Record<keyof typeof VERDICTS, string> = { correct: "✓", okay: "~", failed: "✗" };
+const VERDICT_ICONS: Record<keyof typeof VERDICTS, string> = { correct: "✅", okay: "🟡", failed: "❌" };
 
 function isVerdict(value: string): value is keyof typeof VERDICTS {
   return Object.hasOwn(VERDICTS, value);
@@ -36,7 +36,7 @@ export const evaluationTags = {
     transform(node: Node, config: Config): RenderableTreeNode {
       const value = String(node.transformAttributes(config)["is"] ?? "");
       if (!isVerdict(value)) throw new Error(`verdict must be one of ${Object.keys(VERDICTS).join(", ")}`);
-      // The icon is decorative; the word carries the meaning without color.
+      // The emoji carries the color; the word carries the meaning without it.
       return new Tag("span", { class: `verdict verdict-${value}` }, [
         new Tag("span", { "aria-hidden": "true" }, [VERDICT_ICONS[value]]),
         ` ${VERDICTS[value]}`,
@@ -76,7 +76,7 @@ export function flattenEvaluationTags(markdown: string): string {
     .replace(/{%\s*model\b([^%]*)\/%}/g, (_m, attrs: string) => `**${escapeMarkdown(attribute(attrs, "name"))}**`)
     .replace(/{%\s*verdict\b([^%]*)\/%}/g, (_m, attrs: string) => {
       const value = attribute(attrs, "is");
-      return `[${isVerdict(value) ? VERDICTS[value] : escapeMarkdown(value)}]`;
+      return isVerdict(value) ? `${VERDICT_ICONS[value]} ${VERDICTS[value]}` : `[${escapeMarkdown(value)}]`;
     })
     .replace(/{%\s*sample\b([^%]*?)\s*%}/g, (_m, attrs: string) => `**Sample: ${escapeMarkdown(attribute(attrs, "title"))}**\n`);
 }
