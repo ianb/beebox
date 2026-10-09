@@ -1,5 +1,6 @@
 // Browser enhancement shipped as a static asset; HTML remains independently readable.
 import { FISHEYE_SCRIPT } from "./fisheye.js";
+import { THREADS_SCRIPT } from "./threads.js";
 
 export const NAVIGATION_SCRIPT = `
 (() => {
@@ -31,6 +32,7 @@ export const NAVIGATION_SCRIPT = `
     if (history.state?.siteKey === entryKey) history.replaceState({ ...history.state, siteOffsets: snapshot }, '');
   }
 
+${THREADS_SCRIPT}
   function initializeContent() {
     ${FISHEYE_SCRIPT}
     for (const surface of document.querySelectorAll('.bbx-card-surface')) {
@@ -106,6 +108,7 @@ export const NAVIGATION_SCRIPT = `
     for (const link of document.querySelectorAll('.site-menu-panel a')) {
       if (normalize(new URL(link.href).pathname) === normalize(new URL(current, location.href).pathname)) link.setAttribute('aria-current', 'page');
     }
+    runThreads();
   }
 
   function restore(params) {

@@ -71,3 +71,13 @@ test("machine-facing card links resolve to fetchable Markdown twins", () => {
   assert.equal(twinCardLinks("```\n[Example](Parent.doc.card)\n```", { id: "index.site-page.card", base: "/" }), "```\n[Example](Parent.doc.card)\n```");
   assert.equal(twinCardLinks("[External](https://example.com/Parent.doc.card)", { id: "index.site-page.card", base: "/" }), "[External](https://example.com/Parent.doc.card)");
 });
+
+test("only the home card asks for the margin threads", () => {
+  const pages = [...fixture(), { id: "index.site-page.card", output: "index.html", href: "/x/index.html", html: "<h1>Bee Box</h1>", frontmatter: { title: "Bee Box", summary: "Home", authorship, layout: "single" as const } }];
+  const workspace = prepareWorkspace({ pages, base: "/x/" });
+  const home = pages.at(-1);
+  const parent = pages[1];
+  assert.ok(home && parent);
+  assert.match(workspaceShell(workspace, home), /<main id="site-workspace"[^>]* data-threads[ >]/);
+  assert.doesNotMatch(workspaceShell(workspace, parent), /<main id="site-workspace"[^>]* data-threads/);
+});
