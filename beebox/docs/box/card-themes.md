@@ -29,7 +29,7 @@ Playground (`retired-theme-b`, stock `prism`), and retired-theme-c (`retired-the
 `cloud`) support both cards and app chrome. The material collections also
 support both: retired-theme-d (`retired-theme-d`/`wool`), retired-theme-e (`retired-theme-e`/`marquee`),
 retired-theme-f (`retired-theme-f`/`silhouette`), retired-theme-g (`retired-theme-g`/`canopy`),
-retired-theme-j (`retired-theme-j`/`pigment`), retired-theme-h (`retired-theme-h`/`ink`), and retired-theme-i
+retired-theme-h (`retired-theme-h`/`ink`), and retired-theme-i
 (`retired-theme-i`/`gouache`). Their matching names help pair a workspace and card;
 the two choices remain independent. The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and

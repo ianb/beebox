@@ -25,7 +25,6 @@ import "../themes/retired-theme-d.css";
 import "../themes/retired-theme-e.css";
 import "../themes/retired-theme-f.css";
 import "../themes/retired-theme-g.css";
-import "../themes/retired-theme-j.css";
 import "../themes/retired-theme-h.css";
 import "../themes/retired-theme-i.css";
 import { withBase } from "../api";

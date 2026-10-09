@@ -137,17 +137,6 @@ export const THEME_CATALOG = [
     systemOnly: false,
   },
   {
-    name: "retired-theme-j",
-    composition: "expressive",
-    label: "retired-theme-j",
-    stocks: ["pigment"],
-    defaultStock: "pigment",
-    quoteTreatment: "inset",
-    blockquoteTreatment: "inset",
-    chrome: true,
-    systemOnly: false,
-  },
-  {
     name: "retired-theme-h",
     composition: "expressive",
     label: "retired-theme-h",

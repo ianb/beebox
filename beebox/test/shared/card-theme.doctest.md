@@ -164,7 +164,7 @@ default stocks rather than the fallback stock for an unknown theme.
 
 ```ts
 ["retired-theme-a", "retired-theme-b", "retired-theme-c",
- "retired-theme-d", "retired-theme-e", "retired-theme-f", "retired-theme-g", "retired-theme-j", "retired-theme-h", "retired-theme-i"
+ "retired-theme-d", "retired-theme-e", "retired-theme-f", "retired-theme-g", "retired-theme-h", "retired-theme-i"
 ].map((name) => validateSystemThemeChoice({ name }))
 => [
   { choice: { name: "retired-theme-a", stock: "pigment" }, problem: null },
@@ -174,7 +174,6 @@ default stocks rather than the fallback stock for an unknown theme.
   { choice: { name: "retired-theme-e", stock: "marquee" }, problem: null },
   { choice: { name: "retired-theme-f", stock: "silhouette" }, problem: null },
   { choice: { name: "retired-theme-g", stock: "canopy" }, problem: null },
-  { choice: { name: "retired-theme-j", stock: "pigment" }, problem: null },
   { choice: { name: "retired-theme-h", stock: "ink" }, problem: null },
   { choice: { name: "retired-theme-i", stock: "gouache" }, problem: null },
 ]
