@@ -5,7 +5,15 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — A-lending journey walk, 2026-10-09
+resolution: implemented
 ---
+
+Fixed on worktree-journey-walks-oct: the place page passes its openers as
+standing shortcuts (`ChatOpeners` `standing`). They disable while the chat
+beside the page is busy with a turn and enable again when it ends. The empty
+chat keeps its once-only latch. Verified in a browser on the A-lending box: one
+opener sent beside the started Loans chat, the buttons disabled during the
+turn, then enabled.
 
 In the A-lending walk the person had a Loans chat open beside the Loans place
 page. They sent "What should I chase this week?" from one of the page's three
@@ -33,9 +41,9 @@ page the buttons are standing shortcuts, so the guard should clear when the
 send settles. Alternatively the page can hide the buttons once the chat has
 started in this place. That second option is a design call: the landmark-arrival
 plan decided when "Start something" shows
-([landmark arrival](../../beebox/docs/implemented-plans/landmark-arrival.md),
+([landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md),
 decision b).
 
-Related: [fresh-chat-reservation-suppresses-openers](../closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md) (closed).
+Related: [fresh-chat-reservation-suppresses-openers](2026-09-21-fresh-chat-reservation-suppresses-openers.md) (closed).
 
-Report: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 46.
+Report: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 46.

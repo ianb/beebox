@@ -25,6 +25,8 @@ export interface PlaceChat {
   contextDir: string | null;
   /** The chat is showing its own openers now (unstarted, nothing sent yet). */
   showsOwnOpeners: boolean;
+  /** The chat is working on a turn; the page's openers wait for it. */
+  busy: boolean;
   /** Send an opener as the person's message; "rejected" leaves the draft and the buttons as they were. */
   sendOpener: (text: string) => OpenerSendOutcome;
 }

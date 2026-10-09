@@ -262,13 +262,14 @@ function ComposerRegion(props: ChatBodyProps) {
 
 /**
  * What a place page in this chat's workspace needs to know about the chat
- * (`PlaceView`, "Start something"). Memoized on its three inputs so a streamed
+ * (`PlaceView`, "Start something"). Memoized on its four inputs so a streamed
  * token does not re-render the cards that read it.
  */
 function usePlaceChat(props: ChatBodyProps): PlaceChat {
-  const { effectiveContextDir: contextDir, unstarted, messages, isStreaming, actions: { handleSendOpener: sendOpener } } = props;
+  const { effectiveContextDir: contextDir, unstarted, messages, isStreaming, processBusy, actions: { handleSendOpener: sendOpener } } = props;
   const showsOwnOpeners = unstarted && messages.length === 0 && !isStreaming;
-  return useMemo(() => ({ contextDir, showsOwnOpeners, sendOpener }), [contextDir, showsOwnOpeners, sendOpener]);
+  const busy = chatTargetStatus({ isStreaming, processBusy }).state === "busy";
+  return useMemo(() => ({ contextDir, showsOwnOpeners, busy, sendOpener }), [contextDir, showsOwnOpeners, busy, sendOpener]);
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
