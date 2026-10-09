@@ -100,10 +100,10 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
         </div>
       ) : null}
 
-      {start.openers.length > 0 && handleSendOpener !== undefined ? (
+      {start.openers.length > 0 && chat !== null && handleSendOpener !== undefined ? (
         <div className="flex flex-col gap-2" data-place-section="start-something">
           <SectionHeading>Start something</SectionHeading>
-          <ChatOpeners openers={start.openers} onSendOpener={handleSendOpener} />
+          <ChatOpeners openers={start.openers} onSendOpener={handleSendOpener} standing={{ busy: chat.busy }} />
         </div>
       ) : null}
 
