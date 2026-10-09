@@ -91,8 +91,8 @@ the title journal, and emits `chat-title-changed`, which updates the open
 chat's label without a reload. A lock held by the nightly run, a `manual`
 title, or two failed attempts skip it; the nightly run then owns the title, and
 it may refresh a generated title as it grows. A turn that completes before the
-session-start bookkeeping has written the husk is skipped; the next turn or the
-nightly run titles that chat.
+session-start bookkeeping has written the husk is skipped. A later turn
+retries; the nightly run titles it only if the chat meets the nightly gates.
 
 ## The freshness check
 
