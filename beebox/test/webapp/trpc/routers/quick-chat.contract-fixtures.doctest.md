@@ -1,12 +1,13 @@
 # Quick chat wire contract: shared fixtures
 
-The iOS box screen calls `quickChat.submit`, `choose`, `discard`, and `home`
+The iOS box screen and App Intent call `quickChat.submit`, `choose`, `discard`, and `home`
 directly with the device token. The request and response shapes are pinned by
 golden fixtures in `test/mobile-contract/fixtures/quick-chat/`, which the
 native `QuickChatAPI` tests decode and encode too, so a change on either side
 fails the other's suite.
 
 - `*-request.json` is the exact POST body of one mutation (tRPC, not batched).
+  External input includes both `origin: "external"` and its platform `source`.
 - `view-*.json` is one non-batched tRPC response envelope whose `data` is a
   `QuickChatView`, one file per face the box screen draws.
 - `home.json` is the envelope of the `home` query.
@@ -34,6 +35,18 @@ function check(schema, value) {
 }
 ```
 
+The generic external origin requires an allowlisted platform source, and typed
+or voice messages cannot claim an external source.
+
+```ts
+const validBase = { id: "5f0c2a9e-3b1d-4c7a-9e2f-8d6b1a4c3e70", message: "x" };
+[
+  quickChatSubmitInput.safeParse({ ...validBase, origin: "external" }).success,
+  quickChatSubmitInput.safeParse({ ...validBase, origin: "typed", source: "apple-app-intents" }).success,
+]
+=> [false, false]
+```
+
 Every fixture in the directory is one of the three kinds, and each parses with
 the schema the router uses, field for field.
 
@@ -42,7 +55,7 @@ const names = (await readdir(DIR)).toSorted();
 const results = {};
 for (const name of names) {
   const body = await fixture(name);
-  if (name === "submit-request.json") results[name] = check(quickChatSubmitInput, body);
+  if (name.endsWith("request.json") && name.startsWith("submit-")) results[name] = check(quickChatSubmitInput, body);
   else if (name === "choose-request.json") results[name] = check(quickChatChooseInput, body);
   else if (name === "discard-request.json") results[name] = check(quickChatDiscardInput, body);
   else if (name === "home.json") results[name] = check(quickChatHomeSchema, body.result.data);
@@ -54,6 +67,7 @@ results
   "choose-request.json": "ok",
   "discard-request.json": "ok",
   "home.json": "ok",
+  "submit-external-request.json": "ok",
   "submit-request.json": "ok",
   "view-discarded.json": "ok",
   "view-needs-choice-destination-gone.json": "ok",

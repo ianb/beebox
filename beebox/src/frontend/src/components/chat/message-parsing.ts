@@ -35,7 +35,7 @@ export type { SelfNoteInfo };
  * fragment alone would miss it. Omitted, ids come from this text (the
  * single-block case).
  *
- * Only the `<speech>`/`<typed>` *shell* tags (and their attributes, e.g.
+ * Only the `<speech>`/`<typed>`/`<external-input>` *shell* tags (and their attributes, e.g.
  * `stt="deepgram"`) are stripped here — a marker embedded *inside* the body,
  * like `<unsure>word</unsure>` (docs/plans/transcript-confidence.md, Track
  * 4), survives this pass on purpose and is handled downstream by
@@ -52,6 +52,8 @@ export function stripUserDisplayTags(
     .replace(/<\/typed>/gi, "")
     .replace(/<speech[^>]*>/gi, "")
     .replace(/<\/speech>/gi, "")
+    .replace(/<external-input[^>]*>/gi, "")
+    .replace(/<\/external-input>/gi, "")
     .replace(/<pending-schedules>[\S\s]*?<\/pending-schedules>/gi, "")
     .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "")
     .replace(/<notification-opened[\S\s]*?<\/notification-opened>/gi, "")
@@ -177,7 +179,7 @@ export function resolveEntryMessageId(entry: SessionEntry): string {
 export function getUserName(entry: SessionEntry): string | null {
   if (entry.user) return entry.user;
   const firstText = entry.content.find((b) => b.type === "text")?.text || "";
-  const match = firstText.match(/<(?:typed|speech)\b[^>]*\buser="([^"]*)"/);
+  const match = firstText.match(/<(?:typed|speech|external-input)\b[^>]*\buser="([^"]*)"/);
   const user = match?.[1];
   if (user !== undefined) return user.replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
   return null;

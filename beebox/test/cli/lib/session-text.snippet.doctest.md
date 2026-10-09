@@ -29,6 +29,14 @@ print(extractSnippet(`<typed user="boxholder">[file#1] file this receipt [image#
 file this receipt
 ```
 
+External assistant input keeps its text in transcript snippets and hides the
+platform wrapper and its source metadata.
+
+```ts
+extractSnippet('<external-input source="apple-app-intents" user="Ari">Renew my passport</external-input>')
+=> Renew my passport
+```
+
 A message that is only a selection has no words of the user's own, so there is
 no snippet — the husk stays untitled until the nightly review names it:
 

@@ -180,6 +180,28 @@ tests:
       - '(?:not be (?:looking|watching)|not (?:looking|watching)|may not see|might not see|isn.t (?:looking|watching)|can.t count|cannot count)'
     tags: [quick-chat, chat]
 
+  # External assistant input is addressed to the box, but has no recording or
+  # guaranteed spoken reply. See the iOS App Intent capture plan.
+  - id: external-input-arrival-tag
+    prompt: >
+      A user message is wrapped in
+      <external-input source="apple-app-intents">. How should you treat it?
+      Explain who chose the chat, whether there is a recording, and whether
+      the person will hear your reply. Do not read files or change anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Recognizes genuine human text addressed to the box, says quick chat chose
+      this chat, notes there is no recording, and does not assume the person
+      sees or hears the reply. Does not apply voice-in-implies-voice-out.
+    correct_matches:
+      - 'external assistant|external-input|assistant integration'
+      - '(?:box|quick chat)[\s\S]{0,200}(?:chose|routed|selected|picked)'
+      - 'no (?:audio )?recording|without (?:an )?audio'
+      - '(?:may not hear|may not see|not guaranteed|only.*(?:capture|Siri).*result)'
+    response_not_contains: ["should answer with <speech", "always use <speech>"]
+    tags: [quick-chat, chat, external-input]
+
   # === Engine docs are searchable ===
   # Status (2026-09-26, Claude): 1/1 passed on test1; ran `bbx search`, read
   # narration-mode.md, 51k context.

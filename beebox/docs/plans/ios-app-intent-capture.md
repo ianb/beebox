@@ -1,6 +1,6 @@
 ---
 title: "iOS hands-free text capture with App Intents"
-status: draft
+status: partial
 workstream: siri-app-intents
 issues:
   - ../../../issues/features/2026-08-08-ios-siri-app-intent-capture.md
@@ -29,7 +29,7 @@ This plan adds a text-capture action to Bee Box for Siri and Shortcuts. It uses 
 | A Shortcut supplies text | Use the same capture action and result | Shortcuts result; same records | Returns to the Shortcut immediately after durable enqueue or bounded send |
 | Action Button runs the App Shortcut | Use the same action; do not claim to know it was the Action Button | Action Button → App Shortcut → Siri dialog | Same as the calling shortcut |
 | Selected box requires device unlock | Refuse before storing or sending | Siri dialog | Brief refusal; no queue entry |
-| No paired box or unavailable credential | Refuse before claiming capture; direct the person to pair or unlock in the app | Siri dialog | Brief explanation; no queue entry |
+| No paired box or unavailable credential | Refuse before storing or claiming capture; direct the person to pair or reconnect in the app | Siri dialog | Brief explanation; no queue entry |
 | Text is absent or the invocation is not implemented | Return an explicit unsupported-input result | Siri/Shortcuts dialog | No write and no success wording |
 
 ### Spirit
@@ -45,7 +45,7 @@ The person explicitly invokes capture, so quick-chat's existing automatic captur
 
 - If there is no selected paired box, say to pair a box in Bee Box. Do not store the text without a destination.
 - If the selected box requires device unlock, say it is unavailable through Siri and ask the person to unlock it in the app. Do not store or reroute the text.
-- If the credential is unavailable, keep the thought only when the selected box passed Siri eligibility and the outbox write succeeded. Say it is saved on the phone and needs Bee Box to confirm delivery; do not claim a send.
+- If the credential is unavailable, refuse before storing because the selected box cannot be reached. Tell the person to reconnect it in the app; do not claim a capture.
 - If outbox persistence fails, say the thought was not saved. Do not claim a queued capture.
 - If persistence succeeds but quick-chat submit fails or times out, say the thought is saved on this phone and Bee Box could not confirm delivery. A timeout can race with server acceptance, so do not claim it is definitely waiting to send. Keep the same ID and retry using the existing outbox policy.
 - If the server returns a `needs-choice` record, tell the person it was saved for the box and needs a destination choice in the app. Do not imply it reached a chat.
@@ -164,7 +164,7 @@ None. The remaining API availability and real-device behavior are verification i
 |---|---|---|---|
 | Selected box is absent or has no eligible destination | Intent coordinator unit test | Refuse before creating an entry; name pairing or unlock action | Clear spoken refusal |
 | Selected box requires device unlock | Eligibility unit test | Refuse before using its credential or making a request; no persistence and no fallback | Clear spoken refusal |
-| Keychain token is unavailable after reboot or has been removed | Credential/coordinator test | Do not claim sent; explain that the box cannot be reached. Preserve the thought only if it was safely persisted for an eligible box | Clear result; queued record remains visible on next app launch if stored |
+| Keychain token is unavailable after reboot or has been removed | Credential/coordinator test | Refuse before storing because the selected box cannot be reached; ask the person to reconnect in the app | Clear refusal; no queue entry |
 | Outbox persistence fails | Repository failure test | Do not make the network request; report not saved | Clear spoken failure |
 | App Intent and app UI submit concurrently | Shared coordinator/outbox concurrency test | One app-lifetime outbox owns in-memory state; per-entry in-flight protection and server UUID idempotency prevent duplicate delivery | No duplicate message; unexpected conflict is returned as an error |
 | Request outlasts Siri's execution window | Bounded transport test and device timing check | Persist first; cancel the local attempt at the deadline; normal app launch/foreground retry uses the same ID | Says saved and delivery unconfirmed, not definitely waiting or sent |
@@ -205,6 +205,10 @@ None. The remaining API availability and real-device behavior are verification i
 ## Open design questions
 
 None. During implementation, verify `supportedModes` availability for the iOS 17 deployment target and select the compatible background/no-foreground API. The initial source is fixed as `apple-app-intents`; the intent does not claim a more specific surface.
+
+## Implementation outcome
+
+The implementation is committed in the worktree; the issue remains gated on physical-device testing. The App Intent uses the app-lifetime box store and outbox, refuses a locked or unavailable selected box before persistence, and reports sent, needs-choice, or unconfirmed states without reading a reply. The box outbox is restored without draining before a new intent entry is appended. Simulator build and XCTest, changed beebox tests, and the mobile-contract check pass. The knowledge audit was not run because its configured test box has uncommitted worktree setup changes and the audit guard forbids dirty boxes. Physical Siri phrase matching, background launch, lock-screen behavior, and Shortcut execution remain unverified.
 
 ## Knowledge audits
 

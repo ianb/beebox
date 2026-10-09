@@ -1,6 +1,12 @@
 import Combine
 import Foundation
 
+enum QuickChatOrigin: String, Codable, Sendable {
+    case typed
+    case voice
+    case external
+}
+
 /// A quick chat message the phone has not yet handed to the server. Its `id`
 /// is the message id the server's record will carry, so a repeated submit of
 /// one entry returns one record.
@@ -8,14 +14,15 @@ struct QuickChatOutboxEntry: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var boxID: UUID
     var text: String
-    /// How the person entered the thought; the server wraps it as `<typed>` or `<speech>`.
-    var origin: NativeChatEmission.Origin
+    /// How the person entered the thought; distinct from the webview emission vocabulary.
+    var origin: QuickChatOrigin
+    var source: String? = nil
     var createdAt: Date
     var attempts: Int
     var lastAttemptAt: Date?
 
     private enum CodingKeys: String, CodingKey {
-        case id, boxID, text, origin, createdAt, attempts, lastAttemptAt
+        case id, boxID, text, origin, source, createdAt, attempts, lastAttemptAt
     }
 }
 
@@ -26,7 +33,8 @@ extension QuickChatOutboxEntry {
         id = try container.decode(UUID.self, forKey: .id)
         boxID = try container.decode(UUID.self, forKey: .boxID)
         text = try container.decode(String.self, forKey: .text)
-        origin = try container.decodeIfPresent(NativeChatEmission.Origin.self, forKey: .origin) ?? .typed
+        origin = try container.decodeIfPresent(QuickChatOrigin.self, forKey: .origin) ?? .typed
+        source = try container.decodeIfPresent(String.self, forKey: .source)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         attempts = try container.decode(Int.self, forKey: .attempts)
         lastAttemptAt = try container.decodeIfPresent(Date.self, forKey: .lastAttemptAt)
@@ -77,6 +85,7 @@ final class QuickChatOutbox: ObservableObject {
     private let now: () -> Date
     /// Entries whose stop has been logged, so the log carries one line per stop.
     private var stopLoggedIDs: Set<UUID> = []
+    private var restoreFailed = false
 
     init(
         repository: ComposerDraftRepository,
@@ -105,6 +114,15 @@ final class QuickChatOutbox: ObservableObject {
     /// Restore the stored entries and make the launch attempt for each one
     /// still inside its retry window.
     func load() async {
+        await restore()
+        for entry in entries where isStopped(entry) == false {
+            await attempt(entry.id)
+        }
+    }
+
+    /// Restore durable entries without attempting any network delivery. App Intents
+    /// use this before appending so they cannot overwrite older offline entries.
+    func restore() async {
         guard isLoaded == false else {
             return
         }
@@ -112,21 +130,19 @@ final class QuickChatOutbox: ObservableObject {
             entries = try await repository.loadQuickChatOutbox()
         } catch {
             entries = []
+            restoreFailed = true
             notice = "Unsent quick chat messages could not be restored."
             BoxLog.error("quick chat outbox restore failed error=\(type(of: error))", category: .composer)
         }
         isLoaded = true
         logStops()
-        for entry in entries where isStopped(entry) == false {
-            await attempt(entry.id)
-        }
     }
 
     /// Store a new thought, then make the first attempt. The entry is on disk
     /// before any request starts.
     @discardableResult
-    func add(text: String, origin: NativeChatEmission.Origin, boxID: UUID) async -> QuickChatOutboxEntry? {
-        guard let entry = await store(text: text, origin: origin, boxID: boxID) else {
+    func add(text: String, origin: QuickChatOrigin, source: String? = nil, boxID: UUID) async -> QuickChatOutboxEntry? {
+        guard let entry = await store(text: text, origin: origin, source: source, boxID: boxID) else {
             return nil
         }
         await attempt(entry.id)
@@ -135,12 +151,14 @@ final class QuickChatOutbox: ObservableObject {
 
     /// Store a new thought without attempting it. Returns nil when it could not
     /// be written, so the caller keeps its own copy.
-    func store(text: String, origin: NativeChatEmission.Origin, boxID: UUID) async -> QuickChatOutboxEntry? {
+    func store(text: String, origin: QuickChatOrigin, source: String? = nil, boxID: UUID) async -> QuickChatOutboxEntry? {
+        guard isLoaded, restoreFailed == false else { return nil }
         let entry = QuickChatOutboxEntry(
             id: UUID(),
             boxID: boxID,
             text: text,
             origin: origin,
+            source: source,
             createdAt: now(),
             attempts: 0,
             lastAttemptAt: nil
