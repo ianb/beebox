@@ -46,14 +46,15 @@ whether a model reports speech that isn't there.
 - **Gemini 3.1 Pro Preview** was best on every capability, as in the first run
   in August. It was the only model that heard a deliberately reduced Spanish
   `rr`.
-- **Gemini 3.8 Flash**, the newest Flash model, scored the same as Gemini 3.7
-  Flash, the model Bee Box currently uses. It transcribed slightly better and caught
-  pronunciation errors less often.
-- **Both Flash models invent voice messages for silence.** Asked with Bee
-  Box's own prompt what the user said, they quoted a message for each of the
-  nine synthetic clips: "Set the thermostat to 72.", "Turn off the lights.",
-  "I need you to schedule that meeting." Gemini 3.1 Pro said there was no
-  speech, or, less helpfully, that no audio was attached. It never invented a
+- **Gemini 3.7 Flash, the model Bee Box asks for, is no longer what answers.**
+  Every request for it was answered by Gemini 3.8 Flash, according to the
+  model version in each response. Google's model list and changelog don't
+  mention the substitution.
+- **Gemini 3.8 Flash invents voice messages for silence.** Asked with Bee
+  Box's own prompt what the user said, it quoted a message every time: "Send
+  that email.", "Remind me to call John at 3:00 p.m.", "Uh, hey, can you just
+  delete that last voice message?" Gemini 3.1 Pro said there was no speech,
+  or, less helpfully, that no audio was attached. It never invented a
   message.
 
 An accidental recording should never reach the agent as a confident request

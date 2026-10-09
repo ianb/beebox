@@ -4,7 +4,8 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -98,12 +99,18 @@ export function requireEnv(name: string): string {
 
 const WAV_CACHE = join(tmpdir(), "audio-bakeoff-wav");
 
-/** The protocol's normalization: mono, 48 kHz, 16-bit PCM WAV. Cached per sample. */
+/**
+ * The protocol's normalization: mono, 48 kHz, 16-bit PCM WAV. Cached by
+ * source (file name, size, and mtime, or the lavfi expression), so a
+ * corrected recording under the same sample id is re-normalized.
+ */
 export function normalizedWav(sample: Sample): Buffer {
   mkdirSync(WAV_CACHE, { recursive: true });
-  const out = join(WAV_CACHE, `${sample.id}.wav`);
+  const source = sample.synthetic ? null : join(audioDir(), sample.capture ?? "");
+  const identity = source ? `${source}:${statSync(source).size}:${statSync(source).mtimeMs}` : `lavfi:${sample.synthetic ?? ""}`;
+  const out = join(WAV_CACHE, `${sample.id}-${createHash("sha1").update(identity).digest("hex").slice(0, 12)}.wav`);
   if (!existsSync(out)) {
-    const input = sample.synthetic ? ["-f", "lavfi", "-i", sample.synthetic] : ["-i", join(audioDir(), sample.capture ?? "")];
+    const input = source ? ["-i", source] : ["-f", "lavfi", "-i", sample.synthetic ?? ""];
     execFileSync("ffmpeg", ["-loglevel", "error", "-y", ...input, "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", out]);
   }
   return readFileSync(out);
@@ -143,6 +150,8 @@ export interface CallRecord {
 export interface RawRun {
   date: string;
   harnessVersion: number;
+  /** corpus.json `version` the run was made against; a run never mixes versions. */
+  corpusVersion: number;
   calls: CallRecord[];
 }
 
@@ -161,6 +170,16 @@ export function callKey(c: Pick<CallRecord, "model" | "route" | "mode" | "task" 
 
 export function modelLabel(c: Pick<CallRecord, "model" | "route">): string {
   return `${c.model}${c.route === "openrouter" ? " (OpenRouter)" : ""}`;
+}
+
+/**
+ * The model that actually answered, when the provider reports one different
+ * from the requested id. Google has served `gemini-3.7-flash` requests with
+ * `gemini-3.8-flash` without announcing it (seen 2026-10-09).
+ */
+export function servedAs(c: Pick<CallRecord, "model" | "route" | "modelVersion">): string | undefined {
+  if (!c.modelVersion || c.route !== "gemini") return undefined;
+  return c.modelVersion === c.model ? undefined : c.modelVersion;
 }
 
 export function readJson<T>(file: string): T {

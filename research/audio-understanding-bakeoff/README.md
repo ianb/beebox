@@ -7,7 +7,7 @@ A fixed, re-runnable benchmark for models that answer questions about audio. Bee
 | Date | Models | Result | Report |
 |---|---|---|---|
 | 2026-08-27 | GPT Audio 1.5, Gemini 2.5 Flash, 3.1 Pro Preview, 3.7 Flash; Whisper 1 | 3.1 Pro best, 3.7 Flash close second; product moved to 3.7 Flash | [2026-08-27](runs/2026-08-27.md) |
-| 2026-10-09 | Gemini 3.8 Flash, 3.5 Flash-Lite, 3.5 Transcribe; re-runs of 3.7 Flash and 3.1 Pro | 3.1 Pro best again; 3.8 Flash no better than 3.7 Flash; both Flash models invent speech for speech-free audio; recommends switching to 3.1 Pro | [2026-10-09](runs/2026-10-09.md) |
+| 2026-10-09 | Gemini 3.8 Flash, 3.5 Flash-Lite, 3.5 Transcribe; re-runs of 3.7 Flash and 3.1 Pro | 3.1 Pro best again; requests for 3.7 Flash are answered by 3.8 Flash; 3.8 Flash invents speech for speech-free audio; recommends switching to 3.1 Pro | [2026-10-09](runs/2026-10-09.md) |
 
 ## What it measures
 
@@ -50,7 +50,7 @@ $B summarize --out $D                      # writes $D/summary.md
 
 Then write `runs/<date>.md` by hand around `summary.md`: rankings, what changed since the last run, notable answers quoted from `raw.json`, and a recommendation for `AUDIO_QUESTION_MODEL`. Add a row to the table at the top. Do not edit earlier reports.
 
-**Adding a model.** Re-run the current product model and the previous best in the same run, because prompts, judging, and provider behavior drift; compare only within a run. Add the model's list price to `PRICES` in [lib.ts](lib.ts). A model with a different API (for example Gemini Omni, which accepts only the Interactions API) needs a call function in `run.ts`.
+**Adding a model.** Re-run the current product model and the previous best in the same run, because prompts, judging, and provider behavior drift; compare only within a run. Check the warnings at the top of `summary.md`: the provider can answer a request with a different model (in 2026-10, `gemini-3.7-flash` was answered by `gemini-3.8-flash`). Add the model's list price to `PRICES` in [lib.ts](lib.ts). A model with a different API (for example Gemini Omni, which accepts only the Interactions API) needs a call function in `run.ts`.
 
 **Adding material.**
 

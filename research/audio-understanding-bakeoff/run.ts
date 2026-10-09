@@ -11,6 +11,7 @@
 
 import { existsSync } from "node:fs";
 import { buildAudioQuestionPrompt } from "../../beebox/src/core/audio-question.ts";
+import { openRouterProvider } from "../../beebox/src/core/openrouter.ts";
 import {
   type CallRecord,
   type Corpus,
@@ -24,6 +25,7 @@ import {
   readJson,
   requireEnv,
   sampleById,
+  servedAs,
   writeJson,
 } from "./lib.ts";
 
@@ -147,8 +149,8 @@ async function callOpenRouter(spec: Spec, task: Task, audio: Buffer[]): Promise<
     headers: { "content-type": "application/json", authorization: `Bearer ${requireEnv("BBX_OPENROUTER_API_KEY")}` },
     body: JSON.stringify({
       model: spec.model,
-      // Same pin as beebox/src/core/audio-question.ts.
-      provider: { order: ["google-ai-studio"], allow_fallbacks: false },
+      // The product's own pin and data policy (beebox/src/core/audio-question.ts).
+      provider: openRouterProvider("google-ai-studio"),
       ...(task.structured ? { response_format: { type: "json_object" } } : {}),
       messages: [{ role: "user", content }],
     }),
@@ -170,6 +172,7 @@ async function runOne(spec: Spec, task: Task, repeat: number): Promise<CallRecor
   const labels = Object.fromEntries(task.samples.map((s, i) => [LETTERS[i] ?? String(i), s.id]));
   const audio = task.samples.map(normalizedWav);
   const base = { model: spec.model, route: spec.route, mode: spec.mode, task: task.task, repeat, labels, startedAt: new Date().toISOString() };
+  // latencyMs is the final attempt only: rate-limit waits are the provider's quota, not the model's speed.
   for (let attempt = 1; ; attempt++) {
     const t0 = performance.now();
     try {
@@ -194,15 +197,19 @@ export async function runCommand(opts: {
   concurrency: number;
 }): Promise<boolean> {
   const corpus = loadCorpus();
+  const specs = opts.models.map(parseSpec);
+  const unpriced = specs.filter((s) => s.route === "gemini" && !PRICES[s.model]).map((s) => s.model);
+  if (unpriced.length) throw new Error(`add list prices to PRICES in lib.ts first: ${unpriced.join(", ")}`);
   const run: RawRun = existsSync(opts.out)
     ? readJson<RawRun>(opts.out)
-    : { date: new Date().toISOString().slice(0, 10), harnessVersion: HARNESS_VERSION, calls: [] };
+    : { date: new Date().toISOString().slice(0, 10), harnessVersion: HARNESS_VERSION, corpusVersion: corpus.version, calls: [] };
   if (run.harnessVersion !== HARNESS_VERSION) throw new Error(`${opts.out} was made by harness v${run.harnessVersion}; start a new run`);
-  run.calls = run.calls.filter((c) => !c.error);
-  const done = new Set(run.calls.map(callKey));
+  if (run.corpusVersion !== corpus.version) throw new Error(`${opts.out} was made against corpus v${run.corpusVersion}; start a new run`);
+  // Failed calls stay on record (so an unselected failure still fails the run) until a retry replaces them.
+  const done = new Set(run.calls.filter((c) => !c.error).map(callKey));
 
   const jobs: { spec: Spec; task: Task; repeat: number }[] = [];
-  for (const spec of opts.models.map(parseSpec)) {
+  for (const spec of specs) {
     for (let repeat = 1; repeat <= opts.repeats; repeat++) {
       for (const task of tasksFor(corpus, spec.mode)) {
         if (opts.tasks && !opts.tasks.includes(task.task)) continue;
@@ -213,8 +220,10 @@ export async function runCommand(opts: {
   console.log(`${jobs.length} calls to make (${done.size} already done)`);
   await pool(jobs, opts.concurrency, async ({ spec, task, repeat }) => {
     const record = await runOne(spec, task, repeat);
+    run.calls = run.calls.filter((c) => callKey(c) !== callKey(record));
     run.calls.push(record);
-    console.log(`${record.error ? "FAIL" : "ok  "} ${callKey(record)} ${record.latencyMs}ms${record.error ? ` ${record.error}` : ""}`);
+    const served = servedAs(record);
+    console.log(`${record.error ? "FAIL" : "ok  "} ${callKey(record)} ${record.latencyMs}ms${served ? ` SERVED AS ${served}` : ""}${record.error ? ` ${record.error}` : ""}`);
     run.calls.sort((a, b) => callKey(a).localeCompare(callKey(b)));
     writeJson(opts.out, run);
   });
