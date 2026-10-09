@@ -129,12 +129,16 @@ const count = (html) => (html.match(/<button[^>]*disabled=""/g) ?? []).length;
 => [2, 0]
 ```
 
-## Beside another place's chat, a "Go to" link replaces the openers
+## Beside another place's chat, a button to that place's chat replaces the openers
+
+The button says what it does, and the line under it says the current chat is
+kept (the 2026-10-09 walks read "The open chat is in another place." as an
+error).
 
 ```ts
 const html = await render({ payload: payload() }, { contextDir: "", showsOwnOpeners: false, busy: false, sendOpener: () => "accepted" });
 ({ sections: sections(html), goTo: sectionText(html, "go-to") })
-=> { sections: ["go-to", "empty"], goTo: "The open chat is in another place. Go to Lending" }
+=> { sections: ["go-to", "empty"], goTo: "Open the Lending chat Your current chat stays in Recent chats." }
 ```
 
 ## Two landmarks in one folder
