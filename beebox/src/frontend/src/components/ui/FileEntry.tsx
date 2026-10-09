@@ -28,6 +28,8 @@ interface FileEntryProps {
    * the container *knows* it's narrow (e.g. nested in a dropdown on mobile).
    */
   compact?: boolean;
+  /** Title only, no file path under it: a list a person reads, such as The Plate. */
+  hidePath?: boolean;
   /**
    * Called when the user escalates from peek to the persistent side panel.
    * Wiring depends on the surrounding context; if omitted, the panel button
@@ -80,7 +82,7 @@ function PanelIcon() {
   );
 }
 
-function DefaultMiddle({ data, compact }: { data: FileSummary<unknown>; compact: boolean }) {
+function DefaultMiddle({ data, compact, hidePath }: { data: FileSummary<unknown>; compact: boolean; hidePath: boolean }) {
   return (
     <div className="min-w-0">
       <div className="truncate text-warm-800 font-medium">{data.title}</div>
@@ -96,7 +98,7 @@ function DefaultMiddle({ data, compact }: { data: FileSummary<unknown>; compact:
           {data.contains}
         </div>
       )}
-      {compact ? null : (
+      {compact || hidePath ? null : (
         <div className="truncate text-xs text-warm-500" title={data.path}>
           {data.path}
         </div>
@@ -140,7 +142,7 @@ function ExpandedControls({
   );
 }
 
-function TitleSlot({ summary, compact, boxSlug }: { summary: FileSummary<unknown>; compact: boolean; boxSlug: string | undefined }) {
+function TitleSlot({ summary, compact, hidePath, boxSlug }: { summary: FileSummary<unknown>; compact: boolean; hidePath: boolean; boxSlug: string | undefined }) {
   const ui = resolveFileTypeUI(summary);
   const Icon = ui.icon;
   const ListComponent = ui.ListComponent;
@@ -158,15 +160,16 @@ function TitleSlot({ summary, compact, boxSlug }: { summary: FileSummary<unknown
         {ListComponent ? (
           <ListComponent data={summary} compact={compact} />
         ) : (
-          <DefaultMiddle data={summary} compact={compact} />
+          <DefaultMiddle data={summary} compact={compact} hidePath={hidePath} />
         )}
       </div>
     </div>
   );
 }
 
-export function FileEntry({ summary, compact, onPanel, onOpen, className }: FileEntryProps) {
+export function FileEntry({ summary, compact, hidePath, onPanel, onOpen, className }: FileEntryProps) {
   compact = compact ?? false;
+  const titleOnly = hidePath ?? false;
   const [expanded, setExpanded] = useState(false);
   const { boxSlug } = useParams({ strict: false });
   const handleNavigate = useViewNavigate();
@@ -187,7 +190,7 @@ export function FileEntry({ summary, compact, onPanel, onOpen, className }: File
             aria-label={`Collapse ${summary.title}`}
             className="flex-1 flex items-center min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
           >
-            <TitleSlot summary={summary} compact={compact} boxSlug={boxSlug} />
+            <TitleSlot summary={summary} compact={compact} hidePath={titleOnly} boxSlug={boxSlug} />
           </button>
           <ExpandedControls
             summary={summary}
@@ -215,7 +218,7 @@ export function FileEntry({ summary, compact, onPanel, onOpen, className }: File
         aria-label={onOpen ? `Open ${summary.title}` : `Preview ${summary.title}`}
         className="flex-1 flex items-center min-w-0 py-1.5 px-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
       >
-        <TitleSlot summary={summary} compact={compact} boxSlug={boxSlug} />
+        <TitleSlot summary={summary} compact={compact} hidePath={titleOnly} boxSlug={boxSlug} />
       </button>
       <button
         type="button"
