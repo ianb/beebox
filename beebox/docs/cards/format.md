@@ -51,7 +51,10 @@ todo. Full vocabulary:
   `done`/`dropped` render struck; `parked` is deliberately off the plate
   (excluded from default surfaces, present in the full list).
 - `assigned` — plain string; absence = the boxholder. `"agent"` marks work
-  the agent itself is chasing.
+  the agent itself is chasing. Any other value names a person (`"Dana"`); a
+  plain name is acceptable, and whether it should be a ref is not settled yet.
+  A placeholder for the boxholder (`user`, `me`, `boxholder`, `you`, `owner`,
+  any case) draws a lint warning: the boxholder's todos leave `assigned` off.
 - `by` — provenance: absence = boxholder-authored, `"agent"` = agent-authored.
 - `created` — ISO date (`YYYY-MM-DD`). **Required when `by="agent"`**;
   optional for humans.
