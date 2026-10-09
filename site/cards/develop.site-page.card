@@ -31,4 +31,4 @@ Reading it yourself: start at
 in the repository, or the [contributor entry point](https://beebox.run/llms-dev.txt).
 Bug reports are invited; pull requests are not yet solicited.
 
-A side note from development: [which model listens to voice messages](develop.attach/audio-bakeoff.doc.card).
+A side note from development: [an AI audio understanding comparison](develop.attach/audio-bakeoff.doc.card).
