@@ -106,6 +106,8 @@ export interface QualifiedSession {
    * reviewer tell an untouched auto-title from one a person typed.
    */
   snippetTitle: string | null;
+  /** Real user turns in the whole session (the after-turn gate reads it). */
+  userTurns: number;
 }
 
 export interface DiscoveryResult {
@@ -227,7 +229,14 @@ export async function readSessionWindow(args: {
 
 async function qualifyHusk(
   husk: ChatHuskEntry,
-  args: { boxRoot: string; options: DiscoverOptions; result: DiscoveryResult; localOriginId: string },
+  args: {
+    boxRoot: string;
+    options: DiscoverOptions;
+    result: DiscoveryResult;
+    localOriginId: string;
+    /** REVIEW_MIN_USER_TURNS for the nightly run; the after-turn title path asks for 1. */
+    minUserTurns: number;
+  },
 ): Promise<QualifiedSession | null> {
   const { boxRoot, options, result } = args;
   if (!claimsSession(husk, args.localOriginId)) {
@@ -248,7 +257,9 @@ async function qualifyHusk(
     return null;
   }
 
-  if (options.now.getTime() - mtime.getTime() < options.quiescenceMs) {
+  // A zero window means "no quiescence check" — the after-turn path reads a
+  // turn that just finished, and frozen box time may sit before the mtime.
+  if (options.quiescenceMs > 0 && options.now.getTime() - mtime.getTime() < options.quiescenceMs) {
     result.deferredActive.push(husk.session);
     return null;
   }
@@ -270,7 +281,7 @@ async function qualifyHusk(
         .map((block) => block.text ?? "")
         .join("\n") ?? "").trim().slice(0, 80),
     };
-  if (meta.userTurns < REVIEW_MIN_USER_TURNS) {
+  if (meta.userTurns < args.minUserTurns) {
     result.tooFewTurns += 1;
     return null;
   }
@@ -321,7 +332,30 @@ async function qualifyHusk(
     titleSpanChars,
     titleBootstrap: titleSpan.bootstrap,
     snippetTitle: meta.firstUserSnippet?.trim() || null,
+    userTurns: meta.userTurns,
   };
+}
+
+/**
+ * Qualify one session for an in-session title pass (`../after-turn.ts`): the
+ * nightly gates with no quiescence window and one user turn instead of
+ * REVIEW_MIN_USER_TURNS. Returns the discovery counters too, so the caller can
+ * say why a session did not qualify.
+ */
+export async function qualifySessionForTitle(
+  boxRoot: string,
+  args: { husk: ChatHuskEntry; now: Date; state: ReviewState },
+): Promise<{ qualified: QualifiedSession | null; result: DiscoveryResult }> {
+  const result = emptyResult();
+  const { id: localOriginId } = await localOrigin();
+  const qualified = await qualifyHusk(args.husk, {
+    boxRoot,
+    options: { now: args.now, quiescenceMs: 0, state: args.state },
+    result,
+    localOriginId,
+    minUserTurns: 1,
+  });
+  return { qualified, result };
 }
 
 export async function discoverSessions(
@@ -338,7 +372,9 @@ export async function discoverSessions(
     // Exhaustion is NOT checked here: it is scoped to a particular span, and
     // the span isn't known until the transcript is parsed. runChatReview makes
     // that call, so growth always gets a fresh attempt.
-    const qualified = await qualifyHusk(husk, { boxRoot, options, result, localOriginId });
+    const qualified = await qualifyHusk(husk, {
+      boxRoot, options, result, localOriginId, minUserTurns: REVIEW_MIN_USER_TURNS,
+    });
     if (qualified !== null) result.qualified.push(qualified);
   }
 
