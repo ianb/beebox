@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-08T23:09:30Z
-Total documents: 489
+Generated: 2026-10-09T02:43:37Z
+Total documents: 490
 
 ## Issues
 
@@ -57,6 +57,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/scan-uploader-version-drift.md** — "The scan uploader learns when it has drifted from the box" (587 lines) · shipped history · implemented
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (379 lines) · shipped history · implemented
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
+- **docs/implemented-plans/seven-material-themes.md** — "Six material-led theme collections" (205 lines) · shipped history · implemented
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
@@ -1505,6 +1506,7 @@ Referenced by:
 - ../issues/features/2026-09-29-tailscale-onboarding-without-auth-key.md:41 (mention) — (`beebox/docs/mobile-contract.md` §1.1).
 - ../issues/features/2026-10-06-ios-on-device-hq-transcription.md:16 (mention) — (`POST /api/chat/transcribe-audio`, `beebox/docs/mobile-contract.md` §5.2), and
 - ../issues/features/2026-10-07-mac-companion-app.md:28 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
+- ../issues/features/2026-10-08-web-warns-when-ios-app-is-out-of-date.md:35 (mention) — (`beebox/docs/mobile-contract.md`) should also count, since a contract change
 - ../research/installable-app/tailscale.md:103 (mention) — (`beebox/docs/mobile-contract.md` §1.1). A box-owned node gives that URL a
 - ../research/omi-review.md:175 (link) — as our [mobile contract](../beebox/docs/mobile-contract.md) drift table.
 - ../research/opencode/inspiration.md:78 (mention) — | One server, many clients; ACP; desktop sidecar | web + iOS over one server; `docs/mobile-contract.md` | already done,
@@ -1708,7 +1710,7 @@ Referenced by:
 - docs/plans/README.md:73 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
-- ../.claude/agents/finish.md:96 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
+- ../.claude/agents/finish.md:100 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:69 (link) — Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is t
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:25 (mention) — - **`docs/README.md` is deleted.** It is a documentation map that mostly
 - ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:16 (mention) — > as the search path) now live in `beebox/docs/README.md` "Organizing
@@ -2215,7 +2217,7 @@ References:
 
 #### docs/box/card-themes.md
 
-Title: "Card themes" | 173 lines | current reference
+Title: "Card themes" | 178 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
@@ -5854,6 +5856,12 @@ References:
 - → src/services/CLAUDE.md (mention)
 - → CLAUDE.md (mention)
 
+#### docs/implemented-plans/seven-material-themes.md **[ORPHAN]**
+
+Title: "Six material-led theme collections" | 205 lines | shipped history | implemented
+
+No references in or out.
+
 #### docs/implemented-plans/shared-frontend-backend-code.subplan.md
 
 Title: "Shared Frontend/Backend Code — Subplan" | 325 lines | shipped history | implemented
@@ -6670,7 +6678,6 @@ Title: "Test failure ledger, and change-based selection on the iteration loop" |
 Referenced by:
 - docs/implemented-plans/router-transient-failure-resilience.md:51 (mention) — `beebox/docs/plans/change-based-test-selection.md`. No generated output. This is
 - docs/plans/change-based-test-selection.review.md:19 (mention) — was `change-based-test-selection.md` at commit `4f9001b6`. Line references below
-- ../.claude/agents/finish.md:18 (mention) — `beebox/docs/plans/change-based-test-selection.md`.
 - ../issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md:13 (mention) — (`bin/test-locks.ts`, plan `change-based-test-selection.md` mechanism A)
 - ../issues/closed/exploration/2026-08-08-run-less-of-the-test-suite.md:7 (frontmatter) — design: ../../../beebox/docs/plans/change-based-test-selection.md
 - ../issues/closed/exploration/2026-08-08-run-less-of-the-test-suite.md:12 (link) — [change-based test selection](../../../beebox/docs/plans/change-based-test-selection.md),

@@ -159,15 +159,23 @@ JSON.stringify([chrome.choice, chrome.origin, chrome.problem?.message])
 => [{"name":"plain","stock":"neutral"},"box-chrome","Theme \"post-it\" does not provide app chrome"]
 ```
 
-The three expressive themes can be saved as system themes, with their own
+The expressive themes can be saved as system themes, with their own
 default stocks rather than the fallback stock for an unknown theme.
 
 ```ts
-["retired-theme-a", "retired-theme-b", "retired-theme-c"].map((name) => validateSystemThemeChoice({ name }))
+["retired-theme-a", "retired-theme-b", "retired-theme-c",
+ "retired-theme-d", "retired-theme-e", "retired-theme-f", "retired-theme-g", "retired-theme-h", "retired-theme-i"
+].map((name) => validateSystemThemeChoice({ name }))
 => [
   { choice: { name: "retired-theme-a", stock: "pigment" }, problem: null },
   { choice: { name: "retired-theme-b", stock: "prism" }, problem: null },
   { choice: { name: "retired-theme-c", stock: "cloud" }, problem: null },
+  { choice: { name: "retired-theme-d", stock: "wool" }, problem: null },
+  { choice: { name: "retired-theme-e", stock: "marquee" }, problem: null },
+  { choice: { name: "retired-theme-f", stock: "silhouette" }, problem: null },
+  { choice: { name: "retired-theme-g", stock: "canopy" }, problem: null },
+  { choice: { name: "retired-theme-h", stock: "ink" }, problem: null },
+  { choice: { name: "retired-theme-i", stock: "gouache" }, problem: null },
 ]
 ```
 

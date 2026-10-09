@@ -26,7 +26,12 @@ theme. The available card built-ins are `plain` (`neutral`), `paper` (`cream`,
 `manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), and `letter-set`
 (`strawberry`, `lemon`, `sky`). retired-theme-a (`retired-theme-a`, stock `pigment`), Electric
 Playground (`retired-theme-b`, stock `prism`), and retired-theme-c (`retired-theme-c`, stock
-`cloud`) support both cards and app chrome. The system-only `spectrum` (`gradient`) and
+`cloud`) support both cards and app chrome. The material collections also
+support both: retired-theme-d (`retired-theme-d`/`wool`), retired-theme-e (`retired-theme-e`/`marquee`),
+retired-theme-f (`retired-theme-f`/`silhouette`), retired-theme-g (`retired-theme-g`/`canopy`),
+retired-theme-h (`retired-theme-h`/`ink`), and retired-theme-i
+(`retired-theme-i`/`gouache`). Their matching names help pair a workspace and card;
+the two choices remain independent. The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
