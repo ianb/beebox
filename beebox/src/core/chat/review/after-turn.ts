@@ -74,7 +74,7 @@ export async function titleChatAfterTurn(
   // stays uncommitted like the rest of an active chat's husk.
   if (outcome.kind === "titled" || outcome.reason === "not-titled") {
     try {
-      await commitSessionManifest(boxRoot, { task: "chat-title" });
+      await commitSessionManifest(boxRoot);
     } catch (e) {
       console.warn(`chat-review: could not commit the usage manifest after titling ${args.sessionId}:`, e);
     }

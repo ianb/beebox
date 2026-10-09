@@ -48,3 +48,5 @@ Reports: [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/re
 [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R2,
 [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) R4,
 [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) R3.
+
+2026-10-09 follow-up (cross-model review): the nightly `bbx chat review run` also commits the manifest after it releases its review lock, and the commit now names the file (`Usage: record agent sessions`, `Commit-Source: usage-manifest`) since it can hold other runs' lines.

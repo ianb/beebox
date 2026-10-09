@@ -162,7 +162,9 @@ to stay dirty after every chat's first title, until an unrelated commit swept
 it in under that commit's name
 (`issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md`).
 The after-turn path now commits the manifest alone; the husk and the
-transcript are not part of that commit.
+transcript are not part of that commit. The commit names the file
+(`Commit-Source: usage-manifest`), since the manifest can also hold lines that
+other runs appended at the same time.
 
 ```ts
 const box = await freshBox();
@@ -187,8 +189,51 @@ const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, en
   manifestDirty: git("status", "--porcelain", "--", "_bookkeeping/usage/session-manifest.jsonl"),
 })
 => {
-  subject: "Usage: record chat-title session",
-  source: "chat-title",
+  subject: "Usage: record agent sessions",
+  source: "usage-manifest",
+  files: ["_bookkeeping/usage/session-manifest.jsonl"],
+  manifestDirty: "",
+}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The nightly run commits its usage lines too
+
+The nightly run calls the same title pass, so a chat it titles appends the
+same manifest line. The run commits the manifest once, after it releases its
+review lock. Another run's model session can append to the manifest at the same
+time, so the commit names the file it records, not a single run.
+
+```ts
+const box = await freshBox();
+const talk = "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4);
+await seed(box, A, [user("n1", talk), agent("n2", REPLY), user("n3", talk), agent("n4", REPLY)]);
+const quiet = new Date(NOW.getTime() - 5 * 60 * 60 * 1000);
+await utimes(getSessionLogPath(box.root, A), quiet, quiet);
+const reviewer = {
+  async review() { throw new Error("unused"); },
+  async title(args) {
+    appendSessionManifest(box.root, { sessionId: "nightly-run-1", task: `chat-title:${args.sessionId}`, timestamp: NOW.toISOString() });
+    return { title: "Saturday birthday dinner for eight" };
+  },
+};
+
+(await runChatReview(box.root, { reviewer, maxSessions: 10, now: NOW, ownerEmail: null })).titled
+=> 1
+
+const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
+({
+  subject: git("log", "-1", "--format=%s"),
+  source: git("log", "-1", "--format=%(trailers:key=Commit-Source,valueonly)"),
+  files: git("show", "--name-only", "--format=", "HEAD").split("\n"),
+  manifestDirty: git("status", "--porcelain", "--", "_bookkeeping/usage/session-manifest.jsonl"),
+})
+=> {
+  subject: "Usage: record agent sessions",
+  source: "usage-manifest",
   files: ["_bookkeeping/usage/session-manifest.jsonl"],
   manifestDirty: "",
 }
