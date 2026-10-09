@@ -236,6 +236,8 @@ async function qualifyHusk(
     localOriginId: string;
     /** REVIEW_MIN_USER_TURNS for the nightly run; the after-turn title path asks for 1. */
     minUserTurns: number;
+    /** TITLE_CHAR_THRESHOLD for the nightly run; the after-turn path gates on turns instead. */
+    minTitleSpanChars: number;
   },
 ): Promise<QualifiedSession | null> {
   const { boxRoot, options, result } = args;
@@ -313,7 +315,7 @@ async function qualifyHusk(
     return null;
   }
   const titleSpanChars = spanSize(titleSpan);
-  if (titleSpanChars < TITLE_CHAR_THRESHOLD) {
+  if (titleSpanChars < args.minTitleSpanChars) {
     result.belowTitleThreshold += 1;
     return null;
   }
@@ -338,8 +340,8 @@ async function qualifyHusk(
 
 /**
  * Qualify one session for an in-session title pass (`../after-turn.ts`): the
- * nightly gates with no quiescence window and one user turn instead of
- * REVIEW_MIN_USER_TURNS. Returns the discovery counters too, so the caller can
+ * nightly gates with no quiescence window, one user turn instead of
+ * REVIEW_MIN_USER_TURNS, and no span-size gate (the caller gates on turns). Returns the discovery counters too, so the caller can
  * say why a session did not qualify.
  */
 export async function qualifySessionForTitle(
@@ -354,6 +356,7 @@ export async function qualifySessionForTitle(
     result,
     localOriginId,
     minUserTurns: 1,
+    minTitleSpanChars: 0,
   });
   return { qualified, result };
 }
@@ -373,7 +376,8 @@ export async function discoverSessions(
     // the span isn't known until the transcript is parsed. runChatReview makes
     // that call, so growth always gets a fresh attempt.
     const qualified = await qualifyHusk(husk, {
-      boxRoot, options, result, localOriginId, minUserTurns: REVIEW_MIN_USER_TURNS,
+      boxRoot, options, result, localOriginId,
+      minUserTurns: REVIEW_MIN_USER_TURNS, minTitleSpanChars: TITLE_CHAR_THRESHOLD,
     });
     if (qualified !== null) result.qualified.push(qualified);
   }

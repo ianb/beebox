@@ -8,9 +8,9 @@
  * journal entry, every later turn skips here, and the nightly run refreshes the
  * title from its own gates as before. A `manual` title is never touched.
  *
- * The gate ({@link afterTurnTitleGate}) is the nightly title gate with no
- * quiescence window, plus one change: a single exchange qualifies when the
- * person's first message alone says enough to name the chat.
+ * The gate ({@link afterTurnTitleGate}) has no span-size check: the second
+ * user turn always qualifies, and the first does when the person's
+ * first message alone says enough to name the chat.
  */
 
 import { findChatHuskEntry } from "../husk-read.js";
@@ -35,8 +35,7 @@ import type { ChatReviewer } from "./reviewer.js";
 export const FIRST_TURN_TITLE_CHARS = 40;
 
 /**
- * Whether a session that already cleared the nightly title gate's span size
- * (400 rendered chars) gets its title now: two user turns, or one whose first
+ * Whether a session gets its title now: two user turns, or one whose first
  * message is at least {@link FIRST_TURN_TITLE_CHARS} long. `firstMessage` is
  * the 80-char snippet discovery derives, so the comparison is exact below 80.
  */
