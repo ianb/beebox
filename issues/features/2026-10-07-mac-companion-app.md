@@ -64,3 +64,12 @@ output. The boxholder wants one Mac app that plays the iOS app's role.
   a QR code, since a link is easier to move around on a desktop.
 - **Clerk is deferred.** Leave the Chrome extension as it is for now.
 - **Quick drop:** yes, the Mac app is one of its entry points.
+
+> 2026-10-08 (imbue-studio-research): Imbue Studio ships the same shape on
+> macOS, an Electron app over a Lima VM running the workspace image. Its
+> answer to the phase 1 open item "image delivery" is a prebuilt image fetched
+> as content-defined chunks (`desync`) and verified against a minisign
+> signature before Lima boots it, instead of building the toolchain in the VM
+> (`imbue-ai/mngr`, `apps/minds/CHANGELOG.md`). See
+> [research/imbue-studio/comparison.md](../../research/imbue-studio/comparison.md),
+> section 3.

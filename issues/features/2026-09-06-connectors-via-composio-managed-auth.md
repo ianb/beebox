@@ -94,3 +94,19 @@ unknown toolkit, so a miss is real) and read one toolkit's auth block
 So the scope is OAuth consumer platforms only: the Google set plus Dropbox
 and Raindrop now, and the second group as the connectors it unlocks.
 
+
+> 2026-10-08 (imbue-studio-research): the boxholder still considers Composio
+> reasonable and asks for a look at alternatives before any of this is built.
+> The July survey ([google-auth-connect-approaches](../../research/google-auth-connect-approaches.md))
+> names Nango (self-hosted Auth+Proxy, tokens stay local), Arcade, Pipedream
+> Connect, and Paragon; it preferred Nango on custody. What has not been done
+> for any of them is the one test this issue names: connect Gmail through the
+> broker's managed Google app with a throwaway account and see whether the
+> restricted-scope interstitial appears. Run that test across the candidates
+> in one sitting, record custody (where the refresh token lives), self-host
+> option, per-call pricing, and whether external MCP servers can be attached,
+> and pick on those four. Imbue Studio's answer for comparison is a shipped
+> Desktop-app OAuth client with tokens on the user's machine
+> ([research](../../research/imbue-studio/comparison.md), section 2); the
+> forwarding path for the read half is
+> [gmail-forwarding-as-the-read-path](2026-10-08-gmail-forwarding-as-the-read-path.md).
