@@ -294,14 +294,21 @@ No ACKNOWLEDGEMENTS entry: nothing is copied or adapted.
      unconverted and fully working through the resolver; the migration health
      check (`webapp/trpc/routers/health/checks/migrations.ts`) and
      `box-convergence` report it pending.
-  2. **Convert the root first, then every other directory.** Per directory:
+  2. **Convert parents before descendants**, ordered by path depth, root
+     first. (The mirror pass's walk visits children before a directory's own
+     file, `agent-context-mirrors.ts:55-65`; the migration collects first, then
+     sorts.) Per directory:
      rename `CLAUDE.md` onto `AGENTS.md` (replacing an absent file, a symlink,
      or a marked generated file); then rekey its ledger entry, moving the whole
      entry (`sha256`, `installed-at`, `stock`, `pending`); then move its park.
      The ledger is written once per directory. Each step checks its target
      state first, so a retry continues from wherever the last run stopped.
-  3. Exit 0. The sweep then refreshes generated guidance; the resolver now
-     returns `AGENTS.md` everywhere, and the mirror pass finds no `CLAUDE.md`.
+  3. Invalidate the generation marker, then exit 0. The marker's inputs do not
+     include the manifest (`generate/core.ts:165-180`), and the refresh can
+     return "current" before generating (`docs-refresh.ts:74-81`), so without
+     this the agent guide and course skill keep their legacy wording. The sweep
+     then refreshes generated guidance; the resolver returns `AGENTS.md`
+     everywhere, and the mirror pass finds no `CLAUDE.md`.
   Dirty files are renamed like clean ones, under the framework's existing
   dirty-input policy (snapshot, then commit).
 - **Intermediate states.** The framework leaves partial output in place and
@@ -309,10 +316,12 @@ No ACKNOWLEDGEMENTS entry: nothing is copied or adapted.
   only until the controller exits"; `migration-sweep.ts:260-264`). So every
   interruption point must be a state ordinary work handles:
   - Root not yet renamed: nothing has changed.
-  - Root renamed, some directories not: a root-`cwd` session finds no
-    `CLAUDE.md` at or above `cwd`, so it reads `AGENTS.md` files and still
-    loads a nested `CLAUDE.md` below `cwd` when it reads there (probe s5).
-    Every directory's instructions load.
+  - Some directories renamed, always a parent before its descendants: a
+    session at any `cwd` finds either a `CLAUDE.md` at or above it (every
+    directory below is then still `CLAUDE.md`, so it is in today's state) or
+    none (it reads `AGENTS.md` files and still loads a nested `CLAUDE.md` below
+    `cwd` when it reads there, probe s5). Every directory's instructions load,
+    for root and scoped sessions alike.
   - A directory's file renamed, ledger or park not yet moved: the sibling-key
     rule finds the old key and park, so the sync reads the guide as installed
     and pruning keeps the park.
@@ -497,7 +506,9 @@ Engine downgrade is accepted: downgrades are manual and rare
   **before** the migration and asserts nothing is written at `AGENTS.md`. A
   third stops the migration after each step, runs `syncBoxGuidance` and
   `generateDocs` (checking the commit's paths), and asserts the box state is
-  one Track B lists as valid, then that a retry completes it.
+  one Track B lists as valid, then that a retry completes it. A fourth runs
+  the migration on a box whose generation marker is current and asserts the
+  regenerated agent guide and course skill name `AGENTS.md`.
 - Existing doctests (`guidance-sync`, `maps/finalize`, `maps/orphans`,
   `agent-context-mirrors`, `claude-md-lint`, `run.box-context`,
   `cli/commands/agent-context`, `codex-audit`) change fixtures and gain an
