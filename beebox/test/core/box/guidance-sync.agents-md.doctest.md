@@ -4,7 +4,7 @@ The registry's instruction rows name `AGENTS.md`, but the engine updates before
 a box's `agents-md-2026-10` migration runs. Every writer resolves its target
 through `instructionFilePath`, so a box not yet converted keeps writing its
 `CLAUDE.md` files and a converted box writes `AGENTS.md`. Plan:
-`docs/plans/box-agents-md.md`, Track A.
+`docs/implemented-plans/box-agents-md.md`, Track A.
 
 ```ts setup
 import * as fs from "node:fs/promises";

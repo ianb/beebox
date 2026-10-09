@@ -1,9 +1,9 @@
 ---
 title: "Boxes author AGENTS.md instead of CLAUDE.md"
-status: draft
+status: implemented
 workstream: agents-md
 issues:
-  - ../../../issues/docs-and-chores/2026-09-18-move-to-agents-md-only.md
+  - ../../../issues/closed/docs-and-chores/2026-09-18-move-to-agents-md-only.md
 ---
 # Boxes author AGENTS.md instead of CLAUDE.md
 

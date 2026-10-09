@@ -8,7 +8,7 @@ guide, then rekeys its ledger entry, then moves its park; an interruption
 between those steps leaves the file under one name and its records under the
 other. The sibling-key rule keeps that state working: a lookup for either name
 finds whichever key exists, and a write keeps that key. Plan:
-`docs/plans/box-agents-md.md`, Track A and Track B "Intermediate states".
+`docs/implemented-plans/box-agents-md.md`, Track A and Track B "Intermediate states".
 
 ```ts setup
 import { createHash } from "node:crypto";

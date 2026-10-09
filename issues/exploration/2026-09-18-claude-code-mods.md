@@ -60,7 +60,7 @@ installed plugins), and `agents-md` (see the separate issue below).
 - Codex sessions get none of it. Anything a mod enforces has to keep working
   for a Codex worktree, or it is a rule with a hole in it.
 
-Related: [move to AGENTS.md only](../docs-and-chores/2026-09-18-move-to-agents-md-only.md).
+Related: [move to AGENTS.md only](../closed/docs-and-chores/2026-09-18-move-to-agents-md-only.md).
 
 Sources: [mods README](https://github.com/anthropics/claude-code/tree/main/mods),
 [the post that prompted this](https://x.com/Voxyz_ai/status/2099564071972450641).
