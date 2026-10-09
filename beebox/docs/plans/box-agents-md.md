@@ -356,6 +356,28 @@ No ACKNOWLEDGEMENTS entry: nothing is copied or adapted.
   that path survives the rename. Hand-written docs (box docs, `bbx-context`,
   site pages) describe the converted state.
 
+### Track F — `bbx create` names the folder's instructions
+
+- **What.** After `bbx create <path>` writes a card, it prints one line per
+  instruction file in the card's directory and its ancestors below the box
+  root that holds more than include lines: *"Folder instructions:
+  `_content/people/AGENTS.md`. Read it before filling in this card."* The root
+  file is always loaded and is not named; map-only files (only `@` includes)
+  are skipped.
+- **Why.** The write-gap audit (2026-10-09, results under Open design
+  questions) showed box agents enter folders through Bash (`ls`, then
+  `bbx create`, then often `cat > file`), and Bash never triggers nested
+  instruction loading under either name. The folder rule was followed 1 of 3
+  times with `CLAUDE.md` and 0 of 3 with `AGENTS.md`. `bbx create` is where
+  every run entered the folder, so it can point at the file and let the agent
+  decide whether to read it.
+- **Direction.** Works in both states (it lists whichever names exist, through
+  `AGENT_INSTRUCTION_FILES`). Human decision 2026-10-09: *"bbx create could
+  also see that an AGENTS.md existed and simply note that to the agent, then it
+  could read it if it wanted to."*
+- **First chunk.** A pure `folderInstructionNotes(boxRoot, cardPath)` with a
+  doctest, then the print in `cli/commands/create.ts`.
+
 ### Track E — deferred removal of pre-migration support
 
 - **What.** A deferred issue (`issues/deferred/`, `activate-on` about four
@@ -468,7 +490,12 @@ Engine downgrade is accepted: downgrades are manual and rare
 
 ## Open design questions
 
-- **The Write-without-Read gap — human decision required.** In a converted
+- **The Write-without-Read gap — decided 2026-10-09: accept, plus Track F.**
+  Audit (3 runs per state, test box clone, real box run options): agents
+  reached the folder through Bash in every run; the people-folder rule was
+  followed 1/3 with `CLAUDE.md` (the one run that used the Write tool) and 0/3
+  with `AGENTS.md`. The schema task read the schema docs 3/3 in both states,
+  driven by the root agent guide. Original question: In a converted
   box, a nested `AGENTS.md` loads when the agent reads in that directory, not
   when it only writes there (probe s4). Today a nested `CLAUDE.md` loads on
   Write too. Affected: map includes and the four tracked guides, for example
