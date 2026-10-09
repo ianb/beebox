@@ -7093,7 +7093,7 @@ tests:
     tags: [starter, chat]
 
   # Openers moved from briefing cards to the place's landmark
-  # (`navigation.openers`, docs/plans/landmark-arrival.md Track B). The
+  # (`navigation.openers`, docs/implemented-plans/landmark-arrival.md Track B). The
   # fixture gives Lending both a landmark and a briefing, so the audit sees
   # which one the agent edits.
   # Status (2026-10-08, Claude): 1/1 passed on a disposable clone of the
