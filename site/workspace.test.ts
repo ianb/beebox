@@ -84,4 +84,7 @@ test("only the home card asks for the margin threads", () => {
   assert.ok(home && parent);
   assert.match(workspaceShell(workspace, home), /<main id="site-workspace"[^>]* data-threads[ >]/);
   assert.doesNotMatch(workspaceShell(workspace, parent), /<main id="site-workspace"[^>]* data-threads/);
+  // The theme of the day loads first in <body>, synchronously, before any card.
+  assert.match(workspaceShell(workspace, parent), /<body[^>]*>\n<script src="\/x\/assets\/day-theme\.js"><\/script>/);
+  assert.match(workspaceShell(workspace, parent), /href="\/x\/assets\/themes\/themes\.css"/);
 });
