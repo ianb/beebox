@@ -100,11 +100,14 @@ function markdownFiles(): string[] {
 // Agent instructions live in AGENTS.md, which Claude Code and Codex both read.
 // Claude Code skips every AGENTS.md when a CLAUDE.md exists in the session's
 // directory or above it, so one stray CLAUDE.md (from /init, or habit)
-// silently drops the repo's instructions. Tracked and untracked both count.
+// silently drops the repo's instructions. CLAUDE.local.md and .claude/CLAUDE.md
+// have the same effect. Tracked and untracked both count.
+const CLAUDE_INSTRUCTION_BASENAMES = new Set(["CLAUDE.md", "CLAUDE.local.md"]);
+
 function claudeMdProblems(): string[] {
   return markdownFilesIncludingDoctests()
-    .filter((p) => path.posix.basename(p) === "CLAUDE.md")
-    .map((p) => `${p}: rename to AGENTS.md or merge into the AGENTS.md beside it — a CLAUDE.md makes Claude Code ignore AGENTS.md files`);
+    .filter((p) => CLAUDE_INSTRUCTION_BASENAMES.has(path.posix.basename(p)))
+    .map((p) => `${p}: move its content into an AGENTS.md — a CLAUDE.md or CLAUDE.local.md makes Claude Code ignore AGENTS.md files`);
 }
 
 function issueFiles(tracked: string[]): string[] {

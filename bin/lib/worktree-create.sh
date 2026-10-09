@@ -22,7 +22,7 @@
 #     (URL slug = basename = "test1" for every worktree, so links like
 #     /<wt>/test1/... swap cleanly across worktrees — true whether the clone
 #     is a legacy box or a v2 package, see box-entry.ts)
-#     (kept outside the monorepo so the box doesn't inherit monorepo CLAUDE.md)
+#     (kept outside the monorepo so the box doesn't inherit monorepo AGENTS.md)
 #   - for a v2 (package-layout) clone, points its "beebox" dependency
 #     at THIS worktree's own engine checkout (pnpm.overrides link:) and
 #     installs the box's own node_modules — see Track G in
