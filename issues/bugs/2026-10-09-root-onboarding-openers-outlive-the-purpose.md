@@ -11,7 +11,9 @@ The root landmark ships two onboarding openers, "Let me tell you what this box
 is for." and "What can you do?". The landmark schema says to remove them once
 the person knows what the box is for. In all six walks the person said what the
 box was for, the agent recorded it, and the root place page and the empty root
-chat still offered the opener at the end.
+chat still offered the opener afterward. The defect occurred in every walk. In
+A-lending the agent removed the root openers at 11:08 (box commit `b56b498`),
+late and incidentally, while editing the root landmark for another reason.
 
 - D-chemistry: the Box tab offered it after the walker had done exactly that.
 - A-lending: the opener returned after the question was answered. The agent
