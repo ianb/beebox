@@ -100,7 +100,7 @@ const after = {
   screenshots: shots.length,
   noteLines: notes === "" ? 0 : notes.split("\n").length,
   spanMinutes: Number(spanMinutes.toFixed(1)),
-  agentTimingSource: "Claude root-chat transcripts only: user message to first assistant text; excludes scoped chats, other engines, and full completion",
+  agentTimingSource: "Claude root-chat and place-chat transcripts, without engine agent runs (chat titles): user message to first assistant text; excludes other engines and full completion",
   agentTimingAvailable: turns.length > 0,
   agentTurns: turns.length,
   agentMinutes: Number((agentSeconds / 60).toFixed(1)),
@@ -121,9 +121,9 @@ if (waits.length > 0) {
 }
 if (turns.length > 0) {
   console.log(`agent       ${turns.length} turns, ${(agentSeconds / 60).toFixed(1)} min total, median ${after.agentMedianSeconds}s, slowest ${after.agentSlowestSeconds}s`);
-  console.log("            (Claude root-chat first-text timing; excludes scoped chats, other engines, full completion)");
+  console.log("            (Claude root- and place-chat first-text timing; excludes other engines, full completion)");
 }
-if (turns.length === 0) console.log("agent timing unavailable: no Claude root-chat first-response intervals");
+if (turns.length === 0) console.log("agent timing unavailable: no Claude chat first-response intervals");
 console.log(`notes       ${after.noteLines} lines`);
 console.log(`screenshots ${shots.length}`);
 console.log("");
