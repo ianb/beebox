@@ -22,13 +22,13 @@ tour(
 
     await t.go("/views/_content/theme-tour/markdown-note.md");
     await t.checkpoint("markdown-file");
-    await t.expect.heading("A Markdown file", { level: 2 });
+    await t.expect.heading("A Markdown file", { level: 1 });
     await t.expect.custom("Markdown file uses the themed document surface", (snapshot) =>
       snapshot.includes("Properties") && snapshot.includes("ordinary Markdown document"));
     await t.expect.noPageErrors();
 
     await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2Fmarkdown-note.md");
-    await t.expect.heading("A Markdown file", { level: 2 });
+    await t.expect.heading("A Markdown file", { level: 1 });
     await t.checkpoint("markdown-workspace");
     const joined = await t.eval(`(() => {
       const pane = document.querySelector('[data-workspace-card="_content/theme-tour/markdown-note.md"]');
