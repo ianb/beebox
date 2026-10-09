@@ -50,17 +50,36 @@ whether a model reports speech that isn't there.
   Every request for it was answered by Gemini 3.8 Flash, according to the
   model version in each response. Google's model list and changelog don't
   mention the substitution.
-- **Gemini 3.8 Flash invents voice messages for silence.** Asked with Bee
-  Box's own prompt what the user said, it quoted a message every time: "Send
-  that email.", "Remind me to call John at 3:00 p.m.", "Uh, hey, can you just
-  delete that last voice message?" Gemini 3.1 Pro said there was no speech,
-  or, less helpfully, that no audio was attached. It never invented a
-  message.
+- **Gemini 3.8 Flash invents voice messages for silence.** See below.
 
 An accidental recording should never reach the agent as a confident request
 the user didn't make. On that basis the report recommends moving audio
 questions to Gemini 3.1 Pro, at about two cents and seven seconds per
 question.
+
+## Invented messages
+
+Three generated clips contain no voice: a short electronic beep, three seconds
+of silence, and three seconds of low hiss. Each went to the model alone, inside
+the prompt Bee Box really sends, with the question "What exactly did the user
+say in this message, and how did they sound?"
+
+Gemini 3.8 Flash quoted a message every time, 18 of 18, and described the
+speaker's tone. None of the answers hedged. A few of them:
+
+- Beep: "Send that email."
+- Beep: "Uh, hey, can you just delete that last voice message?"
+- Silence: "It's raining a lot outside, so remember to bring your umbrella."
+  ("The speaker (a male voice) sounded calm, clear, and helpful.")
+- Hiss: "Keep your voice down." ("She speaks in a hushed, urgent whisper.")
+
+Gemini 3.1 Pro quoted nothing. It said the clip had no speech, or, less
+helpfully, that no audio was attached.
+
+Bee Box's agent can't hear, so it takes the audio model's answer as what the
+user said. An accidental send or a pocket recording looks like these clips.
+The agent would get a confident quote of a request nobody made. How often
+that happens with real recordings isn't measured yet.
 
 ## Re-running it
 
