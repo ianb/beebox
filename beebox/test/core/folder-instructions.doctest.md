@@ -6,7 +6,7 @@ root, nearest first. The root file is always loaded, so it is not listed.
 Files holding only `@` includes (a map-only stub) are skipped.
 
 ```ts setup
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { folderInstructionNotes } from "../../src/core/folder-instructions.js";
@@ -62,5 +62,22 @@ await folderInstructionNotes(box.root, join(box.root, "_content/people/Priya_Mar
   "Folder instructions: _content/people/CLAUDE.md. Read it before filling in this card.",
   "Folder instructions: _content/people/AGENTS.md. Read it before filling in this card.",
   "Folder instructions: _content/AGENTS.md. Read it before filling in this card.",
+]
+```
+
+## The legacy mirror symlink is not named twice
+
+In a box not yet migrated, `AGENTS.md` beside a `CLAUDE.md` is a symlink to it
+(the Codex mirror). Only the `CLAUDE.md` is named.
+
+```ts continue
+await rm(join(box.root, "_content/AGENTS.md"));
+await put("_content/CLAUDE.md", "Content rules.\n");
+await symlink("CLAUDE.md", join(box.root, "_content/AGENTS.md"));
+await folderInstructionNotes(box.root, "_content/people/Priya_Marlowe.person.card")
+=> [
+  "Folder instructions: _content/people/CLAUDE.md. Read it before filling in this card.",
+  "Folder instructions: _content/people/AGENTS.md. Read it before filling in this card.",
+  "Folder instructions: _content/CLAUDE.md. Read it before filling in this card.",
 ]
 ```

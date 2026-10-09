@@ -3653,10 +3653,20 @@ tests:
 
   # === Box AGENTS.md (box-agents-md plan) ===
   #
-  # Status (2026-10-09): added, not yet run. Run on a converted box: the runner
-  # (`run-test.ts`) prepares no box state, so an unconverted box is audited as it
-  # stands and agents-md-course-entry would correctly name CLAUDE.md there.
-  # Convert the audit box first (`bbx engine migrate`, migration agents-md-2026-10).
+  # Run on a converted box: the runner (`run-test.ts`) prepares no box state, so
+  # an unconverted box is audited as it stands and agents-md-course-entry would
+  # correctly name CLAUDE.md there. Convert the audit box first
+  # (`bbx engine migrate`, migration agents-md-2026-10).
+  # Status (2026-10-09, Claude and Codex): disposable copy of the worktree test
+  # box clone, converted with `bbx engine migrate --sweep`, real node_modules
+  # directory. agents-md-course-entry 1/1 each engine, 0 reads.
+  # agents-md-write-only-dir 1/1 each engine after the fixture moved from a
+  # top-level people/ (not a box content folder; the first run put the card in
+  # _content/people and flagged the stray folder) to _content/people/. Both
+  # agents ran `cat _content/people/AGENTS.md` before `bbx create`; the fixture
+  # edits a tracked file, which shows in the session's git status, so these
+  # passes do not show whether the rule arrives unprompted. The pre-plan probe
+  # (no fixture cue) followed the rule 0/3 with AGENTS.md, 1/3 with CLAUDE.md.
 
   - id: agents-md-course-entry
     prompt: >
@@ -3681,7 +3691,7 @@ tests:
   - id: agents-md-write-only-dir
     prompt: >
       Add a person card for Dana Reyes, a neighbor the boxholder mentioned
-      today, in the people/ directory. Write the card; keep it short.
+      today, in the box's people folder. Write the card; keep it short.
     expected_level: discoverable
     watch_for: >
       The new card follows the people/ folder rule (`met_via:` line) from the
@@ -3689,7 +3699,9 @@ tests:
       `bbx create` or a Bash write and has no reason to Read there first. The
       `bbx create` "Folder instructions:" line is the cue.
     fixture:
-      people/AGENTS.md: |
+      _content/people/AGENTS.md: |
+        @MAP.md
+
         # People folder
 
         Every new person card in this folder must include a `met_via:` line in
@@ -3702,7 +3714,7 @@ tests:
       Tool order is NOT asserted: the audit schema has no ordering check
       (should_read / should_not_read test whether a file was read at all, not
       when). Read the report's file reads and Bash commands by hand to see
-      whether the agent wrote before reading people/AGENTS.md. A pass on
+      whether the agent wrote before reading _content/people/AGENTS.md. A pass on
       cards_contain with no read of people/AGENTS.md means the rule arrived
       another way (nested loading or the `bbx create` line). Context: the
       2026-10-09 write-gap audit found Bash entry never triggers nested loading

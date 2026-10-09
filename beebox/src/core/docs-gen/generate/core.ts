@@ -32,6 +32,7 @@ import {
   installSchedules,
 } from "../../box/structure/core.js";
 import { syncBoxGuidance } from "../../box/guidance-sync/core.js";
+import { guidanceSurfaceFor } from "../../box/guidance-surfaces.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../../install-template-file.js";
 import { installValidationHooks } from "../../install-validation-hooks.js";
 import { getBoxShape, type BoxShape } from "../../../lib/box-shape.js";
@@ -277,7 +278,7 @@ export async function commitTemplateSyncChanges(
     const status = await getStatus(repoRoot);
     const candidates = [...status.staged, ...status.modified, ...status.untracked];
     const managed = candidates.filter((p) => isTemplateManagedPath(p) && !keep.has(p));
-    const authored = await Promise.all(managed.map((p) => isAuthoredAgentsMd(join(repoRoot, p))));
+    const authored = await Promise.all(managed.map((p) => isAuthoredAgentsMd(repoRoot, p)));
     const toCommit = managed.filter((_p, i) => authored[i] !== true);
     if (toCommit.length === 0) return;
 
@@ -294,12 +295,15 @@ export async function commitTemplateSyncChanges(
 /**
  * A regular-file `AGENTS.md` is the box's own instruction file, not mirror
  * output. The `**\/AGENTS.md` mirror row still matches it until the legacy
- * mirror is retired, so the template commit must not sweep it up.
+ * mirror is retired, so the template commit must not sweep it up. The tracked
+ * guides (`src/schemas/AGENTS.md` and the rest) are engine-installed output and
+ * stay in the commit.
  */
-async function isAuthoredAgentsMd(absPath: string): Promise<boolean> {
-  if (!absPath.endsWith(`/${AGENTS_MD}`)) return false;
+async function isAuthoredAgentsMd(repoRoot: string, relPath: string): Promise<boolean> {
+  if (relPath !== AGENTS_MD && !relPath.endsWith(`/${AGENTS_MD}`)) return false;
+  if (guidanceSurfaceFor(relPath)?.class === "tracked") return false;
   try {
-    return (await lstat(absPath)).isFile();
+    return (await lstat(join(repoRoot, relPath))).isFile();
   } catch (_e) {
     // Deleted or unreadable: a removed mirror symlink, which the commit owns.
     return false;
