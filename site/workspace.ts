@@ -1,5 +1,6 @@
 // Server-render every reading arrangement. JavaScript enhances these normal links.
 import { FISHEYE_CSS } from "./fisheye.js";
+import { THREADS_CSS } from "./threads.js";
 import { escapeHtml } from "./render.js";
 import { nextDestination, type SitePage, type SiteWorkspace } from "./workspace-model.js";
 
@@ -85,6 +86,9 @@ function menuHtml(workspace: SiteWorkspace): string {
  * The browser title. A page whose own title already is the site name (the home
  * card) would otherwise read "Bee Box | Bee Box".
  */
+/** The home card: the one page that draws the margin threads (threads.ts). */
+const HOME_PAGE_ID = "index.site-page.card";
+
 function pageTitle(title: string): string {
   return title === "Bee Box" ? title : `${title} | Bee Box`;
 }
@@ -98,12 +102,12 @@ export function workspaceShell(workspace: SiteWorkspace, page: SitePage): string
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(pageTitle(page.frontmatter.title))}</title><meta name="description" content="${description}">
-${styles}<style>${FISHEYE_CSS}</style>
+${styles}<style>${FISHEYE_CSS}${THREADS_CSS}</style>
 <noscript><style>.fx-b[hidden="until-found"]{display:inline;content-visibility:visible;width:auto;height:auto;overflow:visible}.fx-t{display:none}</style></noscript>
 </head><body class="bbx-box-presentation" data-chrome-theme="${chrome.theme}" data-chrome-stock="${chrome.stock ?? "cream"}" data-site-base="${escapeHtml(workspace.base)}">
 <a class="skip-link" href="#reading-card">Skip to reading</a>
 <header class="bbx-app-nav" id="site-header"><div><a class="brand" href="${escapeHtml(workspace.base)}">Bee Box</a>${menuHtml(workspace)}<span class="by">by <a href="https://ianbicking.org" target="_blank" rel="noopener noreferrer">Ian Bicking</a></span></div></header>
-<main id="site-workspace" class="${context ? "" : "single"}" data-page="${escapeHtml(page.id)}" data-href="${escapeHtml(page.href)}" data-place="${escapeHtml(page.parentId ? context?.href ?? page.href : page.href)}" aria-label="Reading workspace">
+<main id="site-workspace" class="${context ? "" : "single"}" data-page="${escapeHtml(page.id)}" data-href="${escapeHtml(page.href)}" data-place="${escapeHtml(page.parentId ? context?.href ?? page.href : page.href)}"${page.id === HOME_PAGE_ID ? " data-threads" : ""} aria-label="Reading workspace">
 ${context ? pane(workspace, { page: context, context: true }) : ""}
 ${pane(workspace, { page, context: false }).replace('class="pane"', 'class="pane" id="reading-card" tabindex="-1"')}
 </main><script src="${escapeHtml(workspace.base)}assets/navigation.js" defer></script></body></html>`;
