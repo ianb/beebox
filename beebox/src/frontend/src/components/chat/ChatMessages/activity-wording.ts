@@ -84,6 +84,13 @@ function schemaName(path: string): string | null {
   return match?.[1] ? match[1].replace(/[_-]/g, " ") : null;
 }
 
+/** English plural for a card type's name, good enough for a status line. */
+function plural(name: string): string {
+  if (/[^aeiou]y$/.test(name)) return `${name.slice(0, -1)}ies`;
+  if (/(?:s|x|z|ch|sh)$/.test(name)) return `${name}es`;
+  return `${name}s`;
+}
+
 function describeFileTool(
   { verbs, path }: { verbs: { card: string; schema: (name: string) => string; other: string }; path: string },
 ): string {
@@ -118,11 +125,11 @@ const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
   }),
   Edit: (input) => describeFileTool({
     path: filePath(input),
-    verbs: { card: "Updated", schema: (n) => `Changed how ${n} cards work`, other: "Made a change" },
+    verbs: { card: "Updated", schema: (n) => `Changed how your ${plural(n)} are kept`, other: "Made a change" },
   }),
   Write: (input) => describeFileTool({
     path: filePath(input),
-    verbs: { card: "Saved", schema: (n) => `Set up ${n} cards`, other: "Made a change" },
+    verbs: { card: "Saved", schema: (n) => `Set up a place for your ${plural(n)}`, other: "Made a change" },
   }),
   Bash: (input) => {
     const description = stringInput(input, "description");

@@ -51,13 +51,23 @@ const card = "_content/people/Ana_Reyes.person.card";
 
 ## Schema files
 
+A schema is a new kind of thing the person can keep, so the line names the
+place it makes, not the file or the word "schema":
+
 ```ts
 [
   say("Write", { file_path: "_config/schemas/loan.ts" }),
   say("Edit", { file_path: "schemas/lending-item.ts" }),
   say("Read", { file_path: "schemas/lending-item.ts" }),
 ]
-=> ["Set up loan cards", "Changed how lending item cards work", "Looked something up"]
+=> ["Set up a place for your loans", "Changed how your lending items are kept", "Looked something up"]
+```
+
+The plural follows ordinary English endings:
+
+```ts
+[say("Write", { file_path: "schemas/inventory.ts" }), say("Write", { file_path: "schemas/box.ts" })]
+=> ["Set up a place for your inventories", "Set up a place for your boxes"]
 ```
 
 ## Other paths
