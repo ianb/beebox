@@ -21,6 +21,7 @@ import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
 import { toDisplayPath } from "@shared/display-path";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
+import { Hint } from "../ui/Hint";
 import { Button } from "../ui/Button";
 import { InlineAction } from "../ui/InlineAction";
 import { ErrorText } from "../ui/ErrorText";
@@ -100,19 +101,19 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
         </div>
       ) : null}
 
-      {start.openers.length > 0 && handleSendOpener !== undefined ? (
+      {start.openers.length > 0 && chat !== null && handleSendOpener !== undefined ? (
         <div className="flex flex-col gap-2" data-place-section="start-something">
           <SectionHeading>Start something</SectionHeading>
-          <ChatOpeners openers={start.openers} onSendOpener={handleSendOpener} />
+          <ChatOpeners openers={start.openers} onSendOpener={handleSendOpener} standing={{ busy: chat.busy }} />
         </div>
       ) : null}
 
       {start.goToPlace && onGoToPlace !== undefined ? (
         <div className="flex flex-col gap-1" data-place-section="go-to">
-          <Text as="p" size="sm" tone="subtle">The open chat is in another place.</Text>
           <Button id="bbx-place-go-to" intent="secondary" size="sm" className="self-start" onClick={onGoToPlace}>
-            {`Go to ${payload.label}`}
+            {`Open the ${payload.label} chat`}
           </Button>
+          <Hint>Your current chat stays in Recent chats.</Hint>
         </div>
       ) : null}
 

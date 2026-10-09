@@ -31,3 +31,7 @@ promises. Related:
 [companion doc shows no sign it is being edited](../bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md).
 
 Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 20).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Improved by agent behaviour, not by the product, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows 20, 22). The course build again took one long turn (2.2 minutes), but the agent sent a first line at 5.3 s and a progress line mid-way; the longest silent stretch was 54 s, against 113 s on 2026-10-08. No guidance asks for this (`prompts.ts` has no such rule) and nothing in the product changed; the decision is still open. [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 28): a 111 s turn showed progress lines at 45 s and 78 s, so it is not a repeat. [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) saw no long turn (slowest 20.5 s).

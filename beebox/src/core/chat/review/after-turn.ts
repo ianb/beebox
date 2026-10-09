@@ -13,6 +13,7 @@
  * first message alone says enough to name the chat.
  */
 
+import { commitSessionManifest } from "../../agent/manifest.js";
 import { findChatHuskEntry } from "../husk-read.js";
 import { qualifySessionForTitle } from "./discovery.js";
 import { titleOneSession } from "./run/core.js";
@@ -56,8 +57,9 @@ export async function titleChatAfterTurn(
   boxRoot: string,
   args: { sessionId: string; reviewer: ChatReviewer; now: Date; ownerEmail: string | null },
 ): Promise<AfterTurnOutcome> {
+  let outcome: AfterTurnOutcome;
   try {
-    return await withChatReviewLock(boxRoot, {
+    outcome = await withChatReviewLock(boxRoot, {
       holder: "chat-title-after-turn",
       fn: () => titleUnderLock(boxRoot, args),
     });
@@ -67,6 +69,17 @@ export async function titleChatAfterTurn(
     if (e instanceof LockHeldError) return { kind: "skipped", reason: "busy" };
     throw e;
   }
+  // A title model run appends its session to the tracked usage manifest and
+  // commits nothing else, so it commits that line itself. The husk's title
+  // stays uncommitted like the rest of an active chat's husk.
+  if (outcome.kind === "titled" || outcome.reason === "not-titled") {
+    try {
+      await commitSessionManifest(boxRoot);
+    } catch (e) {
+      console.warn(`chat-review: could not commit the usage manifest after titling ${args.sessionId}:`, e);
+    }
+  }
+  return outcome;
 }
 
 async function titleUnderLock(

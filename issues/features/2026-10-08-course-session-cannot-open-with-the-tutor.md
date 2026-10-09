@@ -28,3 +28,7 @@ Either needs a rule for who may start a turn without the person typing.
 Related: [course study home](2026-09-21-course-study-home-last-next-uncertain.md).
 
 Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 67, shot 22).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Mostly met, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows 46, 49, 67-68). Met: the Chemistry landmark carries openers; "Go to Chemistry" opens a fresh place chat with "Pick up where I left off", and one click gave a recap and the saved question. Missing: the tutor still does not speak first, and the openers came from the agent, not the skill (R9). The issue's mechanism section (openers only from a briefing) is stale.

@@ -283,6 +283,23 @@ console.warn = original;
 => md:store/notes/todo.md|1
 ```
 
+## A landmark is listed under its place's name
+
+A landmark card stands for its place, so its summary title is the
+`navigation.label` the place pill and the "Go to" buttons show, and the
+workspace tab above the place page agrees with them. A landmark with no label
+keeps its filename.
+
+```ts
+const { LandmarkSchema } = await import("../../src/schemas/landmark.js");
+const landmarks = schemaMap(LandmarkSchema);
+[
+  summarize({ path: "_content/chem/Intro_Chemistry.landmark.card", type: "landmark", fields: { type: "landmark", navigation: { label: "Chemistry" } } }, landmarks).title,
+  summarize({ path: "_content/inbox/Inbox.landmark.card", type: "landmark", fields: { type: "landmark" } }, landmarks).title,
+]
+=> ["Chemistry", "Inbox"]
+```
+
 ```ts cleanup
 resetLoaderRegistry();
 ```

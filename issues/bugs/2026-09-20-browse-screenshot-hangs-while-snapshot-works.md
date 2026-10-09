@@ -74,3 +74,7 @@ new daemon with new Chrome profiles failed in the same way. `open`, `eval`,
 and `snapshot` in new sessions kept working. The failure did not depend on the
 page: `/chat`, a card in Browse, and the workspace-panes card all failed.
 Artifacts: `beebox/test/tours/.artifacts/{nav-pages,new-chat,workspace-panes}/2026-10-01T02-*/summary.md`.
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen again in [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (H1). Every `bin/browse screenshot` timed out (`CDP command timed out: Page.captureScreenshot`, or an empty exit) while snapshot, click and fill worked; `bin/browse close` did not help. The coordinator confirmed the cause: the Mac display had gone to sleep overnight, and capture works with the display held awake (screenshots worked in session `aa-d2`). This answers the open question in this issue. `95073661c` documents it in `beebox/test/user-stories/journeys/README.md`; `prepare.ts` does not check for it and the tooling is not fixed. The A walker fell back to `bin/browse pdf` plus `sips`, which loses the chat and top bar. The priority may be stale given the repeat.

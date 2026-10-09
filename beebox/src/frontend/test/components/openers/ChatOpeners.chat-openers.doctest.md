@@ -8,13 +8,14 @@ The frontend doctests run under plain Node with no DOM, so what a click does
 lives in `clickOpener` — a plain function the button's `onClick` calls — and is
 tested directly. The contracts that matter: the sent text is the opener
 verbatim; one accepted click is all there is (the buttons disable on send, so
-an impatient double-click can't queue two turns); and a rejected click (a
-draft in the composer, say) leaves the buttons enabled.
+an impatient double-click can't queue two turns); a rejected click (a
+draft in the composer, say) leaves the buttons enabled; and a place page's
+standing openers re-arm once the chat beside them has taken the send.
 
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ChatOpeners, clickOpener } from "../../../src/components/openers/ChatOpeners.js";
+import { ChatOpeners, clickOpener, latchAfterChatChange, openersDisabled } from "../../../src/components/openers/ChatOpeners.js";
 
 globalThis.React = React;
 
@@ -105,4 +106,40 @@ click("Log a new loan")
 
 attempts
 => ["Log a new loan", "Log a new loan"]
+```
+
+## A place page's openers re-arm after the send
+
+On an empty chat the latch never needs to clear: the list unmounts once the
+first message lands. A place page keeps its openers beside a started chat, so
+there one send must not disable them for good (the 2026-10-09 A-lending walk:
+all three buttons stayed grey after one send). The place page passes
+`standing`, and the latch clears each time the chat beside it changes between
+busy and idle. While the chat is busy with the turn, the buttons stay disabled,
+which covers the double click.
+
+```ts
+latchAfterChatChange({ sent: true, standing: true })
+=> false
+
+latchAfterChatChange({ sent: true, standing: false })
+=> true
+```
+
+So a place-page opener goes from sent, to busy, to usable again:
+
+```ts
+const afterClick = { sent: true, busy: false };
+const chatPicksItUp = { sent: latchAfterChatChange({ sent: afterClick.sent, standing: true }), busy: true };
+const turnEnds = { sent: latchAfterChatChange({ sent: chatPicksItUp.sent, standing: true }), busy: false };
+[afterClick, chatPicksItUp, turnEnds].map(openersDisabled)
+=> [true, true, false]
+```
+
+The empty chat's set stays disabled through the same changes.
+
+```ts
+const chatPicksItUp = { sent: latchAfterChatChange({ sent: true, standing: false }), busy: false };
+openersDisabled(chatPicksItUp)
+=> true
 ```

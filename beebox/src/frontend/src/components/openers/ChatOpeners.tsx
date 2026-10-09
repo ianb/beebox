@@ -10,11 +10,13 @@
  * case for a box in regular use — the caller keeps its plain empty-state line
  * either way.
  *
- * One accepted click is all there is: the whole set disables as soon as one is
- * sent, so an impatient double-click (or a second opener clicked while the
- * first send is still in flight) can't queue two turns. The list unmounts a
- * moment later anyway, once the first message lands — the state only has to
- * cover that gap. A rejected click (a draft in the composer) leaves the set
+ * One accepted click disables the whole set, so an impatient double-click (or
+ * a second opener clicked while the first send is still in flight) can't queue
+ * two turns. On an empty chat that is all there is: the list unmounts a moment
+ * later, once the first message lands. A place page keeps its openers beside a
+ * started chat as standing shortcuts (`standing`), so there the set re-arms
+ * when the chat beside it changes state, and stays disabled while that chat is
+ * busy with a turn. A rejected click (a draft in the composer) leaves the set
  * enabled.
  */
 
@@ -38,16 +40,41 @@ export function clickOpener(
   return true;
 }
 
+/**
+ * The sent latch after the chat beside the openers changes between busy and
+ * idle. A standing set re-arms: the change means the send was picked up (busy)
+ * or its turn ended (idle), and `busy` covers the turn itself. A once-only set
+ * stays sent.
+ */
+export function latchAfterChatChange(input: { sent: boolean; standing: boolean }): boolean {
+  return input.standing ? false : input.sent;
+}
+
+/** Whether the opener buttons are disabled: after a send, and while the chat beside a standing set is busy. */
+export function openersDisabled(input: { sent: boolean; busy: boolean }): boolean {
+  return input.sent || input.busy;
+}
+
 export function ChatOpeners({
   openers,
   onSendOpener,
+  standing,
 }: {
   openers: string[];
   /** Send one opener as the person's message; "rejected" leaves the set enabled. */
   onSendOpener: (text: string) => OpenerSendOutcome;
+  /** Standing shortcuts beside a started chat (the place page); absent, one send disables the set for good. */
+  standing?: { busy: boolean };
 }): ReactNode {
   const [sent, setSent] = useState(false);
+  const busy = standing?.busy ?? false;
+  const [seenBusy, setSeenBusy] = useState(busy);
+  if (busy !== seenBusy) {
+    setSeenBusy(busy);
+    setSent(latchAfterChatChange({ sent, standing: standing !== undefined }));
+  }
   if (openers.length === 0) return null;
+  const disabled = openersDisabled({ sent, busy });
   return (
     <div className="flex flex-col items-stretch gap-2 w-full max-w-md" data-testid="chat-openers">
       {openers.map((opener) => (
@@ -56,7 +83,7 @@ export function ChatOpeners({
           intent="secondary"
           size="sm"
           className="text-left"
-          disabled={sent}
+          disabled={disabled}
           onClick={() => {
             clickOpener({ alreadySent: sent, markSent: () => setSent(true), onSendOpener }, opener);
           }}

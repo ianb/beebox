@@ -38,6 +38,13 @@ export interface AgentInvokeOptions {
    * a Codex box still pays it.
    */
   loadBoxContext?: boolean;
+  /**
+   * The built-in tools this run may use. Omitted means the harness default
+   * (every built-in). `[]` gives a pass that works only from its prompt:
+   * no tools, so it cannot read or change the box. Claude-only, like
+   * `loadBoxContext`.
+   */
+  tools?: string[];
   /** Maximum agent turns (default: 20). */
   maxTurns?: number;
   /**

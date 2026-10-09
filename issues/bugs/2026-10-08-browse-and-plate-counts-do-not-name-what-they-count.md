@@ -38,3 +38,7 @@ Name the unit where the number shows ("5 cards", "4 open todos, 1 later"),
 or make the folder count agree with what the listing shows (the D-chemistry
 listing showed 10 folders and 3 cards). The badge tooltip already names its
 set ([closed](../closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md)).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen again in two walks. [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45): "Content/ 5" after the person made one thing; the walker asked "What are the other four?". The folder number counts every `.card` below it (`beebox/src/webapp/trpc/routers/status.ts:110-113`): the root landmark, the briefing, the plate view, the doc card and the chat card. [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 27): "0 later" in the todo view; the walker asked "later than what?" (`todo-view/TodoViewControls.tsx`). The place page's own count is labelled ("Every loan card here 6", [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md)).
