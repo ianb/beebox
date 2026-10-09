@@ -56,3 +56,16 @@ optionsFor({}).settings
 optionsFor({ loadBoxContext: false }).settings.disableClaudeAiConnectors
 => true
 ```
+
+The same host-account built-ins a chat may not use (scheduling, push, the
+account's projects and artifacts; `test/services/claude-chat.doctest.md` lists
+them) are off for agent runs too, including runs without box context.
+
+```ts
+optionsFor({ loadBoxContext: false }).disallowedTools
+=> [
+  "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "RemoteTrigger",
+  "PushNotification", "ReadNotifications", "Artifact", "Projects", "ClaudeDesign",
+  "DesignSync", "SendFeedback",
+]
+```

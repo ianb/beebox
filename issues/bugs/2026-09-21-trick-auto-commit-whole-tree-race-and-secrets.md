@@ -76,3 +76,7 @@ a manual cleanup. Two engine-side points:
   base. The trick itself was fixed box-side; see
   [the closed generate-image issue](../closed/bugs/2026-09-21-trick-generate-image-relative-path-mislabeled.md).
 
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen in [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R1). The agent tested its own read-only trick while its schema, trick, five cards and edits were uncommitted. `bbx trick` commits the whole dirty tree after any successful run (`beebox/src/cli/commands/trick.ts:37-47`), so most of the evening's work landed under "Auto-commit changes from trick: loans" (`bdf9c7b`: schema, trick, five loans, the root chat's card and a usage-manifest line; then `776f849`, `92eb558`, `c42403d`). The agent's own commit `b56b498` ("…first five loans recorded") holds only the landmarks and a doc line, so its message describes files it does not contain. Testing a trick mid-build is an ordinary trigger, and the person saw the trick's subject in Properties (row 31). The priority may be stale given the repeat.

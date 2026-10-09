@@ -136,8 +136,8 @@ For a limited measurement of how long the app takes to start responding, ask:
 pnpm exec tsx beebox/test/user-stories/journeys/clock.ts {{BOX_CONTENT}}
 ```
 
-This measures only Claude root-chat time until the first assistant text. A preamble may
-arrive well before the answer is finished. Scoped chats and other engines are not measured.
+This measures only Claude chat time until the first assistant text. A preamble may
+arrive well before the answer is finished. Other engines are not measured.
 Quote it only as time until a response starts, never as total waiting or completion time.
 If it is unavailable, say so. Number your entries in order; describe any further waiting
 from what you actually see without inventing a duration.

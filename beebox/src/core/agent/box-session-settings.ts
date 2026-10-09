@@ -15,7 +15,33 @@
 import { dirname, join, resolve } from "node:path";
 import type { Options } from "@anthropic-ai/claude-agent-sdk";
 
-type BoxSessionSettings = Required<Pick<Options, "settingSources" | "settings">>;
+type BoxSessionSettings = Required<Pick<Options, "settingSources" | "settings" | "disallowedTools">>;
+
+/**
+ * Claude Code built-ins that act through the host's Claude account, not the
+ * box: scheduled and cloud routines (`Cron*`, `ScheduleWakeup`,
+ * `RemoteTrigger`), pushes and notifications to the account's devices, and
+ * the account's claude.ai projects, artifacts, designs and feedback. A box
+ * agent once used `PushNotification` to "test" the box's push and reached the
+ * host account's phone instead
+ * (`issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md`).
+ * The box has its own scheduler and push. Subagent plumbing (`Agent`,
+ * `SendMessage`, `TaskStop`) and file, shell and web tools stay.
+ */
+const HOST_ACCOUNT_TOOLS = [
+  "CronCreate",
+  "CronDelete",
+  "CronList",
+  "ScheduleWakeup",
+  "RemoteTrigger",
+  "PushNotification",
+  "ReadNotifications",
+  "Artifact",
+  "Projects",
+  "ClaudeDesign",
+  "DesignSync",
+  "SendFeedback",
+];
 
 /**
  * Instruction files in every directory above the box. The CLI walks up from
@@ -44,7 +70,8 @@ function ancestorInstructionFiles(boxRoot: string): string[] {
  * structured passes that need none of it. Neither loads the `user` source,
  * no instruction file above `boxRoot` loads, and claude.ai connectors are off
  * in both (`disableClaudeAiConnectors` is a flag-level setting; any source that
- * sets it true wins).
+ * sets it true wins). Both disallow the built-ins that act on the host's
+ * Claude account ({@link HOST_ACCOUNT_TOOLS}).
  */
 export function boxSessionSettings(
   { boxRoot, loadBoxContext }: { boxRoot: string; loadBoxContext: boolean },
@@ -55,5 +82,6 @@ export function boxSessionSettings(
       disableClaudeAiConnectors: true,
       claudeMdExcludes: ancestorInstructionFiles(boxRoot),
     },
+    disallowedTools: [...HOST_ACCOUNT_TOOLS],
   };
 }

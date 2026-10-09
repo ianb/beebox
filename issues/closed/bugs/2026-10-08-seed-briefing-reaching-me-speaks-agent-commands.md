@@ -37,3 +37,11 @@ something happens, make sure it reaches me wherever I am." The schedule-card
 mechanics were already in the guide's REACHING_THE_BOXHOLDER section.
 Template sync rewrites a briefing whose text is still the seed; a briefing the
 person has edited keeps its old wording.
+
+Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shot 10).
+
+## Re-encounter 2026-10-09 (journey walks, before the fix)
+
+The 2026-10-09 walks ran on main `24d84746f`, before this issue's fix landed (`4d9a15fe8`). They are evidence of the old behavior, not of the fix failing.
+
+Seen again in [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 16, shot 05): the seed briefing's "Reaching me" section (`beebox/src/schemas/briefing.tsx`, `REACHING_ME_DEFAULT`) speaks in the person's voice, which they did not write, and uses "a dot", "loud", `notify:`, `bbx changes` and `bbx judge`. The walker: "instructions to the machine that leaked into a page that's supposed to be about me".
