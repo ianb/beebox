@@ -114,7 +114,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   `judgment` card: a Jev prompt is an authored artifact the agent edits,
   versions, and replays ("building prompts for Jev is something we need to
   learn and iterate on"), and a shell string is not a home for that.
-- **`bbx` is the box agent's surface** (`beebox/CLAUDE.md`). `bbx notify` is
+- **`bbx` is the box agent's surface** (`beebox/AGENTS.md`). `bbx notify` is
   added because delivery is code the agent must call. `bbx remind` is not
   added: the reminder is a card the agent writes, with a worked example in
   the schema instructions (boxholder question, 2026-09-26: "is bbx remind

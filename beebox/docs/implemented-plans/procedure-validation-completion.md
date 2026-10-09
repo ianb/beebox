@@ -32,7 +32,7 @@ exactly as it does now.
 
 The applicable principle docs and the specific principles each finding traces to:
 
-- **`beebox/CLAUDE.md`** —
+- **`beebox/AGENTS.md`** —
   - `:` *"Services — Every external dependency is wrapped in a typed interface with real + fake implementations. Fakes have observable state for testing."* The review model is an external dependency; it must be fakeable. The existing `createAgent` factory seam (`ProcedureOptions.createAgent`) is that interface here.
   - *"Read before writing. Don't guess file formats... read the existing code, read the test patterns."*
   - *"don't add features beyond what the task requires"* (the "Improving These Instructions" / scope discipline throughout) — bounds the context we assemble for the model and the retry knobs we add.

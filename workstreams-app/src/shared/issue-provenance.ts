@@ -3,7 +3,7 @@
  * after it.
  *
  * The field is provenance: *where* an issue was noticed and what was happening
- * (`issues/CLAUDE.md`). Its documented machine-readable form is
+ * (`issues/AGENTS.md`). Its documented machine-readable form is
  * `worktree-<name> — <context>`, but the most common value in practice is
  * `main session — <context>`, because anything the boxholder and an agent file
  * from the primary session has no worktree to name. Both are honest, so both are

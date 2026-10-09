@@ -6,7 +6,7 @@
  * inside another repo — e.g. a box dir created by mistake inside the monorepo
  * (`--box test1` resolves relative to cwd → `beebox/test1`) — those
  * commands hit the *enclosing* repo: the reset discards uncommitted monorepo
- * work, and the box inherits the parent's `CLAUDE.md`. This guard refuses that
+ * work, and the box inherit the parent's `AGENTS.md`. This guard refuses that
  * case before any destructive command runs.
  */
 
@@ -60,7 +60,7 @@ class AuditBoxDirtyError extends UnsafeAuditBoxError {
 /** Human-facing remediation text for an unsafe-box error. */
 export function formatUnsafeAuditBox(err: UnsafeAuditBoxError): string {
   if (err instanceof AuditBoxInsideRepoError) {
-    return `Refusing to audit ${err.boxRoot}: it lives inside the git repo at ${err.enclosingRepo}, not its own repo. The post-test "git reset --hard" / "git clean -fd" would operate on that repo (e.g. the monorepo — discarding uncommitted work), and the box would inherit the parent's CLAUDE.md. Use a standalone box outside the repo, e.g. ~/src/boxes/test1.`;
+    return `Refusing to audit ${err.boxRoot}: it lives inside the git repo at ${err.enclosingRepo}, not its own repo. The post-test "git reset --hard" / "git clean -fd" would operate on that repo (e.g. the monorepo — discarding uncommitted work), and the box would inherit the parent's AGENTS.md. Use a standalone box outside the repo, e.g. ~/src/boxes/test1.`;
   }
   if (err instanceof AuditBoxDirtyError) {
     return `Refusing to audit ${err.boxRoot}: its Git working tree has pre-existing changes. The knowledge-audit runner resets and cleans the box between tests. Commit or move those changes, or use a clean disposable box, then retry. Changed paths:\n${err.changes}`;

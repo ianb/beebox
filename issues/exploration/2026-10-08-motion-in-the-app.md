@@ -53,6 +53,6 @@ something went or where it came from. Every animation gets a
 - Phone first: the iOS shell and Safari's rendering budget decide what is
   smooth.
 - The scroll controller writes `scrollTop` only on user action; any motion
-  in the message list goes through it (`beebox/src/frontend/src/components/chat/CLAUDE.md`).
+  in the message list goes through it (`beebox/src/frontend/src/components/chat/AGENTS.md`).
 - Tours and axe run on every page; animated states need a settled state the
   tour can capture.

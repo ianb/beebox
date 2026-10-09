@@ -43,17 +43,17 @@ Direction, not open questions:
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md` (Cards) — *"Schemas live in `src/schemas/`. Cards use
+- `beebox/AGENTS.md` (Cards) — *"Schemas live in `src/schemas/`. Cards use
   `cardSchema(type, { fields, instructions? })` ... `src/schemas/registry.ts` (moved to `beebox/src/schemas.ts`)
   lists them in `cardSchemas[]`."* New schema follows this registration path.
-- `beebox/CLAUDE.md` (Cards) — *"Mutations to frontmatter cards are
+- `beebox/AGENTS.md` (Cards) — *"Mutations to frontmatter cards are
   parse-mutate-reserialize via `yaml`'s `parse`/`stringify`."* `bbx location mark`
   follows this, preserving the body verbatim.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"Keep source and docs generic —
+- `beebox/AGENTS.md` (Behavioral Notes) — *"Keep source and docs generic —
   never hardcode personal names ... Refer to 'the user' or 'the boxholder'."*
   Schema `instructions` and guide text stay generic; "Home"/"Office" appear only
   as illustrative examples.
-- `beebox/CLAUDE.md` (Cards) — the don't-build-beyond-the-task rule. v1 is
+- `beebox/AGENTS.md` (Cards) — the don't-build-beyond-the-task rule. v1 is
   define + match; geofence events, statistical radius fitting, and a places UI
   are out of scope.
 - `beebox/code-style.md` — no default parameters, max 2 positional params,

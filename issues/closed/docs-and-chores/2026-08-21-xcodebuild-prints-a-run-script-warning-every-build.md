@@ -28,5 +28,5 @@ The fix is to say so explicitly rather than leave it implied: set
 `alwaysOutOfDate = 1` on that `PBXShellScriptBuildPhase` in `project.pbxproj`,
 which is exactly what the note is asking for and silences it.
 
-Small, but `project.pbxproj` is manually enumerated (`ios-app/CLAUDE.md`), so it
+Small, but `project.pbxproj` is manually enumerated (`ios-app/AGENTS.md`), so it
 wants a deliberate edit and a build to confirm rather than a drive-by.

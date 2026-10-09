@@ -255,7 +255,7 @@ Tests first:
 
 ### Track E — Teach the routing workflow
 
-Update the `launch-worktree-session` skill and `bin/CLAUDE.md` with one decision
+Update the `launch-worktree-session` skill and `bin/AGENTS.md` with one decision
 sequence:
 
 1. Run `bin/workstreams list` and inspect description, state, action, and age.

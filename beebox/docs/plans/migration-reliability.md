@@ -72,7 +72,7 @@ to clear an entire queue or delete successful conversation history.
 `beebox/docs/engineering-principles.md:51`: “Degradation is allowed for failures that can genuinely happen; invisible
 degradation is not”
 justifies surfacing an unresolved migration through an actual alert.
-`beebox/CLAUDE.md:5`: “Do not expand scope into adjacent cleanup, policy, schemas,
+`beebox/AGENTS.md:5`: “Do not expand scope into adjacent cleanup, policy, schemas,
 UI, or workflows without the boxholder's approval.” This excludes a general
 backup framework and a template-management UI.
 

@@ -29,17 +29,17 @@ Converged with the boxholder before this plan was written:
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md` Behavioral Notes — *"Read before writing. Don't
+- `beebox/AGENTS.md` Behavioral Notes — *"Read before writing. Don't
   guess file formats, XML structures, or API shapes."*; *"Git trailers are
   structured metadata. Commits use trailers like `Created-By:
   connector-name`."*; *"All cross-process locks go through
   `src/lib/file-lock.ts`."*; *"Keep source and docs generic — never
   hardcode personal names."*
-- `beebox/CLAUDE.md` Cards — *"Mutations to frontmatter cards are
+- `beebox/AGENTS.md` Cards — *"Mutations to frontmatter cards are
   parse-mutate-reserialize"*; *"Schemas can include `instructions` — prose
   embedded in the schema that's injected into agent context when processing
   cards of that type."*
-- `beebox/CLAUDE.md` Key Concepts (Services) — *"Every external
+- `beebox/AGENTS.md` Key Concepts (Services) — *"Every external
   dependency is wrapped in a typed interface with real + fake
   implementations. Fakes have observable state for testing."*
 - `beebox/code-style.md` — custom error classes; no silent error
@@ -417,7 +417,7 @@ the procedure does — purely infrastructural).
    phase. Install into test1; first real runs.
 4. **Trigger + docs + audits** — scheduled-script template
    (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
-   glossary entries, the two knowledge-audit entries, `src/dev/CLAUDE.md`
+   glossary entries, the two knowledge-audit entries, `src/dev/AGENTS.md`
    untouched (this is runtime, not a dev script).
 
 Chunks are commit boundaries; the plan ships as one unit after chunk 4 and

@@ -61,7 +61,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
   dev tooling _says_ it lives), §8 (one way to do each thing — resume must not
   fork a second launch path), §11/§12 (enforcement beats convention; the
   maintainer is usually an agent — frontmatter over prose conventions).
-- `bin/CLAUDE.md` — router invariants, the fail-closed authenticating proxy
+- `bin/AGENTS.md` — router invariants, the fail-closed authenticating proxy
   model, the `ps -axo pid=,comm=` rule, "read `bin/docs/router-protocol.md`
   before touching lifecycle code".
 - [worktree-control-surface.md](../plans/worktree-control-surface.md) — the Track C
@@ -555,7 +555,7 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   `parseWorktreeName` (sibling of the `/__router/*` block,
   `bin/router.ts:916-1067`), delegating to a new `bin/router-workstreams.ts`
   (one-way import from router.ts, same discipline as `router-docs.ts`,
-  `bin/CLAUDE.md:76-79`). Add matching cases in `classifyRouterRoute`
+  `bin/AGENTS.md:76-79`). Add matching cases in `classifyRouterRoute`
   (`bin/router-auth.ts:216-285`): GET/HEAD under `/workstreams` → `control-read`;
   POST `/workstreams/action/*` → `control`. Never serve /workstreams/ through the `/dev/`
   pipeline — it gets its own handler and its own CSP (`default-src 'none';
@@ -642,7 +642,7 @@ style-src 'unsafe-inline'` to start; no scripts needed).
   flash message — loud, not silent (§4).
 - **Dev friction, stated plainly:** /workstreams/ lives in `bin/router*.ts`, so the
   implementing session tests against an isolated router
-  (`BBX_STATE_DIR` + `ROUTER_PORT`, `bin/CLAUDE.md:252`) and the live
+  (`BBX_STATE_DIR` + `ROUTER_PORT`, `bin/AGENTS.md:252`) and the live
   router picks the app up only after main-merge + boxholder-driven `pnpm dev`
   restart. The plan ships dark until that restart.
 
@@ -686,7 +686,7 @@ _forced_ to record provenance at commit time, not asked to remember (§11,
     always know their own workstream — it's their branch name minus the
     prefix), and the validator could enforce that via the backfill commit
     being the only one that introduces it, but a lint can't see time — so
-    the rule is documented in `issues/CLAUDE.md` and checked in review,
+    the rule is documented in `issues/AGENTS.md` and checked in review,
     while the schema itself accepts it anywhere (a later re-file of a
     lost-provenance item must stay expressible).
 - **Plan frontmatter schema** (full):
@@ -707,7 +707,7 @@ _forced_ to record provenance at commit time, not asked to remember (§11,
   document the frontmatter as the convention. Body H1 stays (unlike issues/)
   — plans are long documents read as documents.
 
-- **Issue frontmatter schema** (full — formalizing `issues/CLAUDE.md`'s
+- **Issue frontmatter schema** (full — formalizing `issues/AGENTS.md`'s
   existing fields, which no tool validates today, plus the new field):
 
   ```yaml
@@ -832,7 +832,7 @@ unknown` (except this plan and worktree-control-surface.md, whose
 - **Who stamps `workstream:`?** The filing session, at filing time — it
   always knows its own workstream (`git branch --show-current` minus the
   `worktree-` prefix), and writes `unattached` when the branch is `main`.
-  bbx-plan's template and the issues skill/`issues/CLAUDE.md` both gain the
+  bbx-plan's template and the issues skill/`issues/AGENTS.md` both gain the
   rule; the pre-commit validator is what makes forgetting impossible
   rather than discouraged. /finish additionally corrects `workstream:` on
   issues it closes when the resolving workstream differs from the filed
@@ -869,7 +869,7 @@ conversation that built the thing.
 
 - **The `## Manual testing` section convention.** An issue carrying
   `needs: [manual-testing]` MUST contain a `## Manual testing` section —
-  what to try, what should happen (the substance `issues/CLAUDE.md` already
+  what to try, what should happen (the substance `issues/AGENTS.md` already
   demands in prose; now enforced by the E1 validator alongside the
   frontmatter rules, and addressable: the dev-docs renderer's heading
   anchors make it linkable as `<issue-url>#manual-testing`). The existing
@@ -974,7 +974,7 @@ testing` header, moves the issue to `closed/<category>/` with
   same form everywhere: `/<workstream>/test1/browse/<card-path>` pre-merge,
   `/main/test1/browse/<card-path>` once stock content has landed (the
   user-facing card page is `/browse/`, not `/views/`). Workers get this as
-  a documented pattern with an example in `issues/CLAUDE.md`, so
+  a documented pattern with an example in `issues/AGENTS.md`, so
   instructions read "open this, do X, expect Y" with no prose directions
   into the box.
 - **Cull pinning — a worktree is cullable only if its test1 is.** The
@@ -1237,7 +1237,7 @@ question to justify it.
 **Skip, with rationale.** Everything here is dev-repo tooling — invisible to
 box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
 agent-facing surfaces created (the three subcommands, the registry contract,
-plan frontmatter) are documented for _dev_ agents in `bin/CLAUDE.md` and
+plan frontmatter) are documented for _dev_ agents in `bin/AGENTS.md` and
 `docs/plans/README.md`, and enforced by doc-check + refusal messages rather
 than recall (§11) — the same disposition the control-surface plan recorded.
 
@@ -1254,7 +1254,7 @@ ships. Codex-implementable: no chunk contains an open question.
    rather than copying it; hook wired into settings.json). Depends on A1.
 3. **B0 — CLI rename** `bin/worktrees` → `bin/workstreams`: `git mv`, every
    caller and doc updated in the same commit (grep-driven: hooks, launcher,
-   `codex-session-end`, `bin/CLAUDE.md`, root CLAUDE.md, skills), no alias
+   `codex-session-end`, `bin/AGENTS.md`, root CLAUDE.md, skills), no alias
    left behind. Pure rename, zero behavior change; lands early so every
    later chunk writes the new name once. (Code citations elsewhere in this
    plan reference the pre-rename `bin/worktrees:<line>` — they describe
@@ -1310,11 +1310,11 @@ ships. Codex-implementable: no chunk contains an open question.
     worktree survives sweep, released by the keep-merge, by
     `confirm-tested`, and by `test-setup` deletion respectively) + the
     /finish keep-merge step + the `keep`/`test-setup` and URL-linking
-    conventions in `issues/CLAUDE.md` and the worker-facing docs. Depends
+    conventions in `issues/AGENTS.md` and the worker-facing docs. Depends
     on E1 (the `workstream:` field it greps), E2 (finish.md edits), G2
     (confirm as a release).
 19. **F — watch issue, staging exploration issue, `design:` links, redesign-issue gap corrections,
-    `bin/CLAUDE.md` + `docs/plans/README.md` + `issues/CLAUDE.md` +
+    `bin/AGENTS.md` + `docs/plans/README.md` + `issues/AGENTS.md` +
     `dev/README.md` docs (including the branch-sentinel rules and the
     "backfill-only `unknown`" convention).**
 
@@ -1329,7 +1329,7 @@ ships. Codex-implementable: no chunk contains an open question.
 - **Ships dark, lights on restart.** Everything lands on the worktree
   branch; `/finish` merges; the live router serves /workstreams/ only after the
   boxholder restarts `pnpm dev` (never from a worktree session,
-  `bin/CLAUDE.md`). CLI verbs and the registry work immediately on merge.
+  `bin/AGENTS.md`). CLI verbs and the registry work immediately on merge.
 - **Migration.** Plan-frontmatter corpus migration is atomic with its
   validator (E1). The registry needs no migration by construction (absence
   is defined). **Box repos ARE changed data in this plan** (corrected by

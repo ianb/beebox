@@ -39,8 +39,8 @@ These are two different things and only the first is in scope.
   `<category>/<filename>` shapes. Deleting them plus `legacyIssueRoute` removes
   about twenty lines and one concept from the router.
 - **NOT in scope — `/workstreams/issues/` itself.** The browser's own URL is
-  referenced from `issues/CLAUDE.md:180`, `issues/AGENTS.md:181,333`,
-  `bin/CLAUDE.md:345`, `bin/AGENTS.md:346` and several plans. It must keep
+  referenced from `issues/AGENTS.md:180`, `issues/AGENTS.md:181,333`,
+  `bin/AGENTS.md:345`, `bin/AGENTS.md:346` and several plans. It must keep
   working.
 - **Also in scope — the router-level rewrite.** `bin/router.ts:70-73` maps
   `/<worktree>/dev/issues[/…]` to `/workstreams/issues…`, catching the pre-move

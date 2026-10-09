@@ -30,7 +30,7 @@ anything the reactor doesn't:
   reactor is a generalist that re-derives context each cycle.
 
 Against that: our **"one box = one agent = one human"** is a deliberate identity +
-simplicity bet (`beebox/CLAUDE.md`). Note the cost is NOT "N standing agents":
+simplicity bet (`beebox/AGENTS.md`). Note the cost is NOT "N standing agents":
 Rowboat's per-surface agents are **trigger-invoked configs** (fired on event/schedule
 via the OpenAI Agents SDK), not running processes — same shape as our reactor. The
 real cost of per-surface factoring is **coordination + surface area**: more agent

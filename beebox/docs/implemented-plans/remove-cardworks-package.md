@@ -90,7 +90,7 @@ carried my blind spots) found more:
 
 ## Stated preferences this plan trades against
 
-- **`beebox/CLAUDE.md`** — `CLAUDE.md:28` (current): *"Every built-in
+- **`beebox/AGENTS.md`** — `CLAUDE.md:28` (current): *"Every built-in
   schema is now frontmatter; the legacy XML-body format and its loader branch
   remain in place but dormant (no schema uses them) until cardworks is
   removed."* This plan makes that sentence's promise good. Also the "don't

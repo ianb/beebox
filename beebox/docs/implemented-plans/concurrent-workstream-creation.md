@@ -42,7 +42,7 @@ agent-document generation, and Terminal launch remain parallel.
   lock, while Linux CI provides `flock`. Both release automatically when a
   holder exits or is killed, avoiding PID-reuse and stale-reclaim races.
 - `bin/workstreams create` owns the one-line stdout contract documented in
-  `bin/CLAUDE.md:255`; lock diagnostics must stay on stderr.
+  `bin/AGENTS.md:255`; lock diagnostics must stay on stderr.
 
 ## Track A — Extract the Git attachment transaction
 
@@ -106,7 +106,7 @@ registered branch, covering the exact corruption reproduced before the fix
 Git tried to create `main`). A production-shell failure injection proves a
 failed install remains incomplete and retryable rather than being marked ready.
 
-Update `bin/CLAUDE.md` and the launch-worktree skill to say concurrent launches
+Update `bin/AGENTS.md` and the launch-worktree skill to say concurrent launches
 are supported and only Git attachment queues. Remove any remaining “one at a
 time” workaround if present.
 

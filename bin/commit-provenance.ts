@@ -151,10 +151,10 @@ export function miscasedKeys(parsed: string): string[] {
  *
  * Only real issue files count — `issues/<category>/<name>.md`,
  * `issues/deferred/<name>.md`, and `issues/closed/<category>/<name>.md` — so the queue's own prose
- * (`issues/CLAUDE.md`, `issues/closed/README.md`) can never be cited as an
+ * (`issues/AGENTS.md`, `issues/closed/README.md`) can never be cited as an
  * issue.
  *
- * The basename IS an issue's identity, repo-wide: `issues/CLAUDE.md` requires
+ * The basename IS an issue's identity, repo-wide: `issues/AGENTS.md` requires
  * it to be unique, which is why an `Issue:` trailer names one bare and why a
  * `git mv` into `closed/` does not break a citation. That makes this map the
  * way to find where an issue lives NOW, given only its name.

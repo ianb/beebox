@@ -28,7 +28,7 @@ local-first story. Origin: `issues/closed/features/2026-07-16-local-password-aut
     openness),
   - **#10 Testability is architectural** (pure credential/throttle cores,
     injected clock, test-only affordances gated by explicit flags).
-- `beebox/CLAUDE.md` — "Read before writing", tRPC-by-default for new
+- `beebox/AGENTS.md` — "Read before writing", tRPC-by-default for new
   endpoints (login/setup are deliberate exceptions, argued below), doctest
   tiers, generic-not-personal naming in shared text.
 - `code-style.md` — custom error classes, no default params, named-params

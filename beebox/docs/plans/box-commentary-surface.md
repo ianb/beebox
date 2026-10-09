@@ -70,15 +70,15 @@ sources:
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:101` — *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:101` — *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* Every claim below cites a
   `file:line`.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"HTTP endpoints go in tRPC
+- `beebox/AGENTS.md` (Behavioral Notes) — *"HTTP endpoints go in tRPC
   by default... Raw Fastify routes... are only for things that don't fit the
   tRPC request/response shape: SSE/streaming, file upload/download..."* The
   external-file read is a file-download shape, so it extends the raw
   `routes/api-files.ts` family rather than tRPC — traced in Track B.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"Keep source and docs
+- `beebox/AGENTS.md` (Behavioral Notes) — *"Keep source and docs
   generic — never hardcode personal names."* This governs **shared** text
   (source, prompts, schemas, docs, rules) — the allowlist roots are read from
   config, never literals. But the same note exempts *"per-box config, throwaway
@@ -91,7 +91,7 @@ sources:
   localhost-only. So the external-read route's path guard is **hygiene**
   (keep the route's intent honest, catch accidental traversal bugs), **not** a
   high-stakes security boundary. The plan deliberately does not gold-plate it.
-- `beebox/CLAUDE.md` — *"don't add features beyond what the task
+- `beebox/AGENTS.md` — *"don't add features beyond what the task
   requires."* This plan is large; the **NOT in scope** section is where it
   earns its bound (fuzzy re-anchoring, prod exposure, diff view, prefix/suffix
   selectors all deferred).

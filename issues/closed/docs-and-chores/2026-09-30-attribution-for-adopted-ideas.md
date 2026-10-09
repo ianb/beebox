@@ -10,7 +10,7 @@ priority: normal
 resolution: implemented
 ---
 
-Closed: implemented by the acknowledgements workstream (commit b50b22610, `ACKNOWLEDGEMENTS.md` plus guidance edits in bbx-plan TEMPLATE, research/CLAUDE.md, issues/CLAUDE.md). The Twemoji credit moved into the same file and `beebox/docs/attribution.md` was removed. The pending Yaniv Ben-Ami note is covered by the new file and guidance.
+Closed: implemented by the acknowledgements workstream (commit b50b22610, `ACKNOWLEDGEMENTS.md` plus guidance edits in bbx-plan TEMPLATE, research/AGENTS.md, issues/AGENTS.md). The Twemoji credit moved into the same file and `beebox/docs/attribution.md` was removed. The pending Yaniv Ben-Ami note is covered by the new file and guidance.
 
 The boxholder wants to credit the people whose ideas Bee Box adopts.
 `beebox/docs/attribution.md` exists, but it covers only third-party

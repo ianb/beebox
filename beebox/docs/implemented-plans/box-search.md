@@ -29,13 +29,13 @@ pass.)
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md` § Behavioral Notes: *"Read before writing. Don't
+- `beebox/AGENTS.md` § Behavioral Notes: *"Read before writing. Don't
   guess file formats, XML structures, or API shapes."* — every design choice
   below cites the code it builds on.
-- `beebox/CLAUDE.md` § Behavioral Notes: *"All cross-process locks go
+- `beebox/AGENTS.md` § Behavioral Notes: *"All cross-process locks go
   through `src/lib/file-lock.ts`."* — index persistence is a cross-process
   write.
-- `beebox/CLAUDE.md` § Behavioral Notes: *"Keep source and docs generic
+- `beebox/AGENTS.md` § Behavioral Notes: *"Keep source and docs generic
   — never hardcode personal names."* — guidance text and examples use "the
   boxholder."
 - `beebox/src/schemas/email-message.tsx:4–6`: *"body content is

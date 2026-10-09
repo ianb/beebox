@@ -56,7 +56,7 @@ right at all for mail.
 - **History and search.** Whether search spans API-only mail, and what the
   agent is told about the boundary — an agent that believes the box contains
   all mail will answer wrongly about what it can't see (a
-  [bbx-context](../../../beebox/CLAUDE.md) concern as much as a code one).
+  [bbx-context](../../../beebox/AGENTS.md) concern as much as a code one).
 - **Generality.** Whether this becomes a connector-wide pattern
   (materialize-on-demand with a promotion rule) rather than an email special
   case — chat logs, calendars, and drive files have the same shape.

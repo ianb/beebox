@@ -195,7 +195,7 @@ non-interactive. `.husky/post-commit` skips merge commits and
 **First implementation chunk.** The merge line, plus every place that
 describes landing as a pure pointer move: `bin/land` header (`:2`, `:14-17`),
 the merge-ready comment (`:76-78`), the refusal text (`:162-165`), the
-success report (`:175`), and `bin/CLAUDE.md:58-74`. Run `bin/land --dry-run`
+success report (`:175`), and `bin/AGENTS.md:58-74`. Run `bin/land --dry-run`
 in this worktree to confirm preflight still reports correctly.
 
 ### Track 4 — the reader, and the convention text
@@ -213,7 +213,7 @@ commit-provenance` script alias at the root. Then:
 - `.claude/skills/bbx-issue-actions/SKILL.md:133-141` (`fixed` disposition):
   put `pnpm commit-provenance --issue <name>` first; keep `git log -S` as
   the fallback for history before this convention.
-- `bin/CLAUDE.md`: mechanism paragraph (hook files, script, `--no-ff`).
+- `bin/AGENTS.md`: mechanism paragraph (hook files, script, `--no-ff`).
 
 **Why.** A trailer nobody queries is ceremony. The query is the smallest
 consumer; the skill edit is the observed failure the trailers exist for.
@@ -279,7 +279,7 @@ no-op.
   survives moves; validator searches `closed/` too.
 - **Two agents touching the same card** — two agents, one worktree, both
   committing: each commit gets the same `Workstream:`; path-scoped commits
-  (`bin/CLAUDE.md`) already govern. ADDRESSED by existing convention.
+  (`bin/AGENTS.md`) already govern. ADDRESSED by existing convention.
 - **Hand-edit drift** — a human commits from a worktree with `git commit`
   in an editor: hook fills trailers into the template; `--if-exists replace`
   dedupes if they also type one. ADDRESSED.
@@ -337,7 +337,7 @@ recall at all.
    by committing in this worktree and reading the trailers back.
 2. Track 2 — `--check`, tests, `.husky/commit-msg` second line.
 3. Track 3 — `bin/land --no-ff --no-edit`, header comment, `--dry-run`.
-4. Track 4 — query modes, doctest, root `CLAUDE.md`, `bin/CLAUDE.md`,
+4. Track 4 — query modes, doctest, root `CLAUDE.md`, `bin/AGENTS.md`,
    `bbx-issue-actions` skill edit.
 5. Cross-model review of the whole diff (the `CLAUDE.md` paragraph binds
    every future agent). Address findings. Then close the two issues via

@@ -97,6 +97,16 @@ function markdownFiles(): string[] {
   return markdownFilesIncludingDoctests().filter((p) => !p.endsWith(".doctest.md") && !p.startsWith(AGENT_DOCS_PREFIX));
 }
 
+// Agent instructions live in AGENTS.md, which Claude Code and Codex both read.
+// Claude Code skips every AGENTS.md when a CLAUDE.md exists in the session's
+// directory or above it, so one stray CLAUDE.md (from /init, or habit)
+// silently drops the repo's instructions. Tracked and untracked both count.
+function claudeMdProblems(): string[] {
+  return markdownFilesIncludingDoctests()
+    .filter((p) => path.posix.basename(p) === "CLAUDE.md")
+    .map((p) => `${p}: rename to AGENTS.md or merge into the AGENTS.md beside it — a CLAUDE.md makes Claude Code ignore AGENTS.md files`);
+}
+
 function issueFiles(tracked: string[]): string[] {
   return tracked.filter((p) => p.startsWith("issues/"));
 }
@@ -127,7 +137,7 @@ function referenceProblems(tracked: ReadonlySet<string>): string[] {
     if (ORPHAN_EXEMPT_PREFIXES.some((p) => doc.path.startsWith(p))) continue;
     if (doc.path.endsWith("README.md") || doc.path === "docs/doc-graph.md") continue;
     if (doc.incoming.length === 0) {
-      problems.push(`orphan: ${doc.path} — nothing links to it; add a pointer (CLAUDE.md Guides table, a related doc, or a skill) or move it to an archive dir`);
+      problems.push(`orphan: ${doc.path} — nothing links to it; add a pointer (AGENTS.md Guides table, a related doc, or a skill) or move it to an archive dir`);
     }
   }
 
@@ -259,7 +269,7 @@ function schemaProblems(tracked: string[]): string[] {
 function runDefaultCheck(): void {
   const tracked = trackedMarkdownFiles();
   const all = markdownFiles();
-  const problems = [...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all), ...filePathProblems(all)];
+  const problems = [...claudeMdProblems(), ...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all), ...filePathProblems(all)];
 
   if (problems.length > 0) {
     console.error("doc-check failed:");
@@ -341,6 +351,12 @@ function runFix(): void {
 
   // Never auto-fixed (not a heal-by-basename case — a private-issues link is
   // always a hard error, not a decayed reference).
+  const claudeProblems = claudeMdProblems();
+  if (claudeProblems.length > 0) {
+    console.error("\nCLAUDE.md files (must fix by hand):");
+    for (const p of claudeProblems) console.error(`  ${p}`);
+  }
+
   const privateProblems = privateLinkProblems();
   if (privateProblems.length > 0) {
     console.error("\nprivate-issues link violations (must fix by hand — never auto-repaired):");
@@ -369,7 +385,7 @@ function runFix(): void {
   }
 
   // Fail loud on anything needing a human; rewrites alone are a success.
-  if (issuesProblems.length > 0 || privateProblems.length > 0 || unfixableByFile.size > 0 || missingPaths.length > 0) process.exit(1);
+  if (claudeProblems.length > 0 || issuesProblems.length > 0 || privateProblems.length > 0 || unfixableByFile.size > 0 || missingPaths.length > 0) process.exit(1);
 }
 
 if (process.argv.includes("--fix")) runFix();

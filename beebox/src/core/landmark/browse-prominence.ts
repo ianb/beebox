@@ -2,7 +2,7 @@
  * Per-listing prominence helpers for `status.browse` (`docs/implemented-plans/card-prominence.md`,
  * Track C): a card's effective level, a subdirectory's `DirectorySummary`
  * rollup and own landmark identity. Split out of `status.ts` to stay under
- * its line budget (`beebox/CLAUDE.md`'s "split out to keep browse's
+ * its line budget (`beebox/AGENTS.md`'s "split out to keep browse's
  * complexity under the lint budget" precedent, already used there for the
  * display-form guard).
  */

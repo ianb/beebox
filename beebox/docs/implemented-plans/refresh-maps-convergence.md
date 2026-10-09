@@ -76,7 +76,7 @@ reaches finalize. Everything else is severity, not deadlock.
   doctest with existing helpers.
 - **[`code-style.md`](../../code-style.md)** — logging levels, max 2 positional
   params, no default parameters, no `as`, explicit return types on exports.
-- **[`CLAUDE.md`](../../CLAUDE.md)** — don't add features beyond the task;
+- **[`CLAUDE.md`](../../AGENTS.md)** — don't add features beyond the task;
   doctests are the test format.
 
 Precedent: `engine-parse.ts:78` (*"severity: step.validate.severity ?? \"warn\""*)

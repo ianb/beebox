@@ -307,7 +307,7 @@ test("bisect over a single landing asks nothing — it is already the answer", a
 
 const landing = { commit: "abcdef1234567890".padEnd(40, "0"), subject: "Merge branch 'worktree-scanner-ingest'" };
 
-test("issuePath follows issues/CLAUDE.md and carries the landing in the slug", () => {
+test("issuePath follows issues/AGENTS.md and carries the landing in the slug", () => {
   assert.equal(
     issuePath({ date: "2026-08-25", landing }),
     "issues/bugs/2026-08-25-full-suite-red-scanner-ingest-abcdef12.md",

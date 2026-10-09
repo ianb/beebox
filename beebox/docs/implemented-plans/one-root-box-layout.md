@@ -122,7 +122,7 @@ lives at the edges where a raw string arrives. One root removes the edge.
   preserve drift; minimize invented concepts (the underscore prefix reuses an
   existing in-box convention — `_unsure/`, `_template-updates/` — rather than
   inventing a registry or a type tier).
-- **`beebox/CLAUDE.md` "The filesystem is state, Git is history"**: the
+- **`beebox/AGENTS.md` "The filesystem is state, Git is history"**: the
   migration is `git mv` + ref rewrite, atomic per box, one commit.
 - **Traded against:** v2 decision 1 (retired, above), and the Ghost-style
   "operational root owned by the user, package owned by the tool" split

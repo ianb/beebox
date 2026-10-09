@@ -31,7 +31,7 @@ session registry and adds `launching` to the shared liveness state set.
   `beebox/docs/engineering-principles.md:153` says, *"the control shows
   the intent as pending"*. The workstreams list must distinguish launching from
   dormant.
-- `beebox/CLAUDE.md:107` says, *"Read before writing."* This plan reuses
+- `beebox/AGENTS.md:107` says, *"Read before writing."* This plan reuses
   the registry lock and liveness guard instead of adding a new state store.
 - `beebox/code-style.md:30` says, *"Never silently ignore errors"*. A
   launcher that cannot establish its lease must refuse to open the Terminal.

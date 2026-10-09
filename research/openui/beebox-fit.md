@@ -94,7 +94,7 @@ named attributes avoid that.
 ## 3. Cross-platform, publishing, iOS, other displays
 
 - The iOS app hosts the web client in a WKWebView
-  (`ios-app/CLAUDE.md`); anything the web app renders already renders
+  (`ios-app/AGENTS.md`); anything the web app renders already renders
   there. OpenUI's "React Native" is an export condition, not a renderer
   ([hands-on §6](hands-on.md#6-multi-target-renderers)). No gain.
 - Published sites render Markdown to static HTML

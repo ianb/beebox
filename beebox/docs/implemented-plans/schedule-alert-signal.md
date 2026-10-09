@@ -58,7 +58,7 @@ C page and popup, D schedule conversions, E docs. Estimate:
 | D — full-suite, box-convergence, deferred-issues, runner, prompts | ~250 (about half deletions) | ~100 |
 | **Total** | **~1,000** | **~650** |
 
-Authored docs about 150 lines (skill, `bin/CLAUDE.md`, prompts). No generated
+Authored docs about 150 lines (skill, `bin/AGENTS.md`, prompts). No generated
 output. The total is about 1,650–1,900 changed lines, under the 2,000-line
 BIG CHANGE bar. If implementation passes 2,000, I report the revised estimate
 before continuing.
@@ -387,7 +387,7 @@ overwrites.
 - `bbx-authoring-schedules` SKILL.md: replace the priority paragraph (lines
   162–167) with the table; add `--condition`, `resolve`, and "the message is
   Markdown: lead with the finding, list items, link issues and files".
-- `bin/CLAUDE.md` schedules section: the digest, `resolve`, `migrate-alerts`.
+- `bin/AGENTS.md` schedules section: the digest, `resolve`, `migrate-alerts`.
 
 ## Could this be simpler?
 

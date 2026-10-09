@@ -13,7 +13,7 @@ When a boxholder starts chats in a place where HQ dictation is normally useful, 
 
 ## Stated preferences this plan trades against
 
-The boxholder chose the precedence `chat → landmark → box → built-in off`, a tri-state landmark value (`inherit`, `on`, `off`), and an explicit box on/off default. Parent-scope edits must not alter the open chat. This follows the existing box-policy pattern and the repository rule in `beebox/CLAUDE.md` to avoid features beyond the task.
+The boxholder chose the precedence `chat → landmark → box → built-in off`, a tri-state landmark value (`inherit`, `on`, `off`), and an explicit box on/off default. Parent-scope edits must not alter the open chat. This follows the existing box-policy pattern and the repository rule in `beebox/AGENTS.md` to avoid features beyond the task.
 
 ## What already exists
 

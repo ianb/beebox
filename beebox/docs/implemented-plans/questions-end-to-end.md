@@ -68,7 +68,7 @@ Design decisions settled with the boxholder (2026-07-10):
   **10** (testability: the aging sweep gets injected time), **11/12**
   (enforcement beats convention; the maintainer is an agent — schema
   instructions + knowledge audits over tribal knowledge).
-- `beebox/CLAUDE.md` — *"HTTP endpoints go in tRPC by default … Older
+- `beebox/AGENTS.md` — *"HTTP endpoints go in tRPC by default … Older
   raw routes are tech debt — migrate when you touch the area"*; *"Time
   discipline. Get timestamps via `getBoxTime`/`getBoxTimeISO` … not plain
   `new Date()`"*; the bbx-migration boundary (a field removal on cards existing

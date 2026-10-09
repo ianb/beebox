@@ -128,7 +128,7 @@ answer you already know.
 
 ### 5. File, and correct what you got wrong
 
-File real findings as issues in the normal way (`issues/CLAUDE.md`). Where a walk's
+File real findings as issues in the normal way (`issues/AGENTS.md`). Where a walk's
 verbatim words carry something a summary cannot — a user's own vocabulary, their
 reaction at the moment it happened — quote them; that is what a walk is for.
 

@@ -47,7 +47,7 @@ loader but without schema validation. Migration restores them to first-class.
 
 ## Stated preferences this plan trades against
 
-- **`beebox/CLAUDE.md`** — the cards contract: filename `Foo.<type>.card`
+- **`beebox/AGENTS.md`** — the cards contract: filename `Foo.<type>.card`
   is the discriminator, **no `type:` field** in frontmatter; `bbx validate`
   output is the correctness gate; "don't add features beyond what the task
   requires."

@@ -8,7 +8,7 @@ against a schema, plus an optional markdown body.
 
 Bee Box is early: one maintainer, changing fast. Bug reports are invited;
 pull requests are not yet solicited. Read
-[`beebox/CLAUDE.md`](beebox/CLAUDE.md) and [`beebox/code-style.md`](beebox/code-style.md) first: they
+[`beebox/AGENTS.md`](beebox/AGENTS.md) and [`beebox/code-style.md`](beebox/code-style.md) first: they
 are what the maintainer's own coding agent reads before touching this
 codebase, and a change that ignores them will need rework.
 [How development happens here](beebox/docs/development.md) is the

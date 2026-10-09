@@ -150,7 +150,7 @@ Do not move operational details into `implemented-plans/`. Two existing referenc
 | Deferred (41), closed (62) | Distinct lifecycle states; yes. | Preserve date/category fields and activation/link rules; short closed-state rule. Scheduler mechanics link to bin. |
 | Titles/links (69) | Stable display and move repair; yes. | Keep title location, basename identity, link form and repair command; delete repeated explanation of why it works. |
 | Frontmatter (94) | Closed machine-consumed schema; yes. | Keep schema and ignored/reported unknown-key consequence; remove incident anecdote. |
-| Ownership/provenance/names (125–159) | Keep authorship and responsibility honest; yes. | Table for field meanings; one explicit names-only-in-metadata rule. Do not move the rule solely into beebox/CLAUDE.md, whose directory scope does not cover issues. |
+| Ownership/provenance/names (125–159) | Keep authorship and responsibility honest; yes. | Table for field meanings; one explicit names-only-in-metadata rule. Do not move the rule solely into beebox/AGENTS.md, whose directory scope does not cover issues. |
 | Needs/manual testing (161–204) | Human gate and ready-to-test state; yes. | Keep full transitions, who may clear, readiness, exact Manual testing heading, body placement, and stock-test-box constraints. Remove only repeated rationale. |
 | Labels/priority (205–226) | Categorize without guessing human priority; yes. | Keep literal values, human ownership and omission semantics. Shorten UI sorting narrative. |
 | Next-action (227–277) | Human/agent handoff; yes. | One table: literal token, authority, action, completion. Keep narrow discuss exception and released-gate semantics; verify-without-me never means blind closure. |
@@ -276,8 +276,8 @@ changes follow the same purpose, necessity, compact form, and loading hierarchy.
 
 | Surface / purpose | Applied form and retained boundary |
 |---|---|
-| `beebox/CLAUDE.md`: routine package orientation | Compact everyday contracts and conditional links to current package guides; credential, privacy, test, path/ref, time, lock, and commit safeguards remain. |
-| `bin/CLAUDE.md`: operate/change shared tooling | Short contributor router plus commit-guards, router-operations, worktree-lifecycle, and schedules references. Mandatory pre-action/read-before-edit hazards stay in the entrypoint. |
+| `beebox/AGENTS.md`: routine package orientation | Compact everyday contracts and conditional links to current package guides; credential, privacy, test, path/ref, time, lock, and commit safeguards remain. |
+| `bin/AGENTS.md`: operate/change shared tooling | Short contributor router plus commit-guards, router-operations, worktree-lifecycle, and schedules references. Mandatory pre-action/read-before-edit hazards stay in the entrypoint. |
 | `bbx-codehealth`: investigate architectural friction | Choose a named area or package-wide audit, reuse current results, run applicable tools with complete graphs where required, and triage in scope. No baseline-free trend judgments or mandatory second exploration pass. |
 | `bbx-frontend`: verify changed UI | Full applicable state/keyboard/responsive pass for new views; affected behavior and reachable states for narrow edits. Browser evidence and visible-failure reporting remain required. |
 | `bbx-plan`: catch scope growth | Keep size and unplanned-scope gates; revision/review counts prompt reassessment rather than an automatic stop. Compare budgeted categories consistently and reuse applicable scope-review evidence. |

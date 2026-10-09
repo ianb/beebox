@@ -21,7 +21,7 @@ issues: []
 >   pre-existing fresh-session pin gap and concurrent-new-tab binding. The live
 >   transport is `events.subscribe` / `events.turnStream` in
 >   `src/webapp/trpc/routers/events.ts` + `src/core/chat-turn-buffer.ts`; the
->   "how it works now" summary lives in `beebox/CLAUDE.md`'s raw-route note.
+>   "how it works now" summary lives in `beebox/AGENTS.md`'s raw-route note.
 
 Replace the chat real-time transport — today two separate SSE streams (the
 global `/api/events` EventSource and the per-turn `POST /api/chat/send` body
@@ -63,21 +63,21 @@ multiplexing.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:` *"HTTP endpoints go in tRPC by default. Add a
+- `beebox/AGENTS.md:` *"HTTP endpoints go in tRPC by default. Add a
   procedure under `src/webapp/trpc/routers/`... Raw Fastify routes... are only
   for things that don't fit the tRPC request/response shape: SSE/streaming..."*
   — SSE/streaming was the documented exception that kept `/api/events` and
   `/api/chat/send` as raw routes. tRPC v11 subscriptions over WebSocket close
   that gap, so the preference now pulls *toward* migrating them into tRPC.
-- `beebox/CLAUDE.md:` *"Read before writing. Don't guess file formats,
+- `beebox/AGENTS.md:` *"Read before writing. Don't guess file formats,
   XML structures, or API shapes."* — every claim below cites `file:line`.
-- `beebox/CLAUDE.md:` *"don't add features beyond what the task
+- `beebox/AGENTS.md:` *"don't add features beyond what the task
   requires"* — the resilience bar is "at least as good as today"; we add a
   per-turn resume buffer because today's transport already degrades to a
   history-refetch backstop, and we must not regress that.
 - `beebox/code-style.md:` no `any`, no default params, max 2 positional
   params, custom error classes, files ≤300 lines / functions ≤150.
-- `beebox/CLAUDE.md:` *"Treat noisy command output as a bug."* — a WS
+- `beebox/AGENTS.md:` *"Treat noisy command output as a bug."* — a WS
   reconnect storm or per-frame logging would violate this; logging is bounded.
 - Most recent shipped precedent: the `sse-pause-hidden-tabs` work (merged
   commits `5c1d794b`…`b6d26e9d`) — the chat FSM's history-as-source-of-truth

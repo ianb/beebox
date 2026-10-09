@@ -106,7 +106,7 @@ place; agent todos out of the boxholder's way.
   workstream (`docs/plans/collections-design-notes.md:1-12`, *"This is not
   yet a plan"*). This plan consumes what landed and records its needs in
   *Open design questions*. It does not edit that draft.
-- **`beebox/CLAUDE.md`**: `bbx` is the agent's surface; end users live in the
+- **`beebox/AGENTS.md`**: `bbx` is the agent's surface; end users live in the
   web UI and chat. Every user-facing piece here is web UI.
 - **`beebox/code-style.md`**: no `as`; `assertNever` for status dispatch;
   files under 300 lines; cross-process locks through `src/lib/file-lock.ts`.
