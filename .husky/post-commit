@@ -29,8 +29,9 @@ if [ "$BRANCH" = "main" ]; then
   # pnpm files. A commit confined to issues/, beebox-clerk/, ios-app/,
   # research/, bin/, root docs, etc. changes nothing on the server — skip it.
   elif ! git -C "$REPO_DIR" diff-tree --no-commit-id --name-only -r HEAD \
+      | grep -vE '^beebox/docs/([^/]+$|([^b/][^/]*|b[^o/][^/]*|bo[^x/][^/]*|box[^/]+)/)' \
       | grep -qE '^(beebox|agent-doctest|personal-vibe-check|patches)/|^(package\.json|pnpm-workspace\.yaml|\.npmrc|pnpm-lock\.yaml)$'; then
-    echo "[post-commit] Skip deploy: commit touches no deployed path (beebox/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
+    echo "[post-commit] Skip deploy: commit touches no deployed path (beebox/ except dev-only beebox/docs/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
     # The clerk extension still self-gates on its own sources below.
     "$REPO_DIR/beebox-clerk/build/auto-build.sh" || true
   else

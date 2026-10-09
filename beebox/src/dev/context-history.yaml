@@ -7561,6 +7561,60 @@ audit-box:
       peak: 48122
       added: 6165
       turns: 6
+  speak-outcome-not-mechanics:
+    - date: 2026-10-09T12:03:07.250Z
+      boxCommit: 0c7a91ef2c28d22d7737f3b7830d3135a6ea8c60
+      repoCommit: a0cc3ddea6eb2de868760d7d6d130ac2cedea3d3
+      initial: 42259
+      peak: 43813
+      added: 1554
+      turns: 6
+    - date: 2026-10-09T12:06:44.920Z
+      boxCommit: f20bc90421f40efbc6abba2a8ef213d7026490d4
+      repoCommit: a0cc3ddea6eb2de868760d7d6d130ac2cedea3d3
+      initial: 42282
+      peak: 53074
+      added: 10792
+      turns: 11
+  speak-register-trigger-asked:
+    - date: 2026-10-09T12:03:38.235Z
+      boxCommit: f20bc90421f40efbc6abba2a8ef213d7026490d4
+      repoCommit: a0cc3ddea6eb2de868760d7d6d130ac2cedea3d3
+      initial: 42276
+      peak: 44742
+      added: 2466
+      turns: 4
+    - date: 2026-10-09T12:07:05.038Z
+      boxCommit: f20bc90421f40efbc6abba2a8ef213d7026490d4
+      repoCommit: a0cc3ddea6eb2de868760d7d6d130ac2cedea3d3
+      initial: 42296
+      peak: 42296
+      added: 0
+      turns: 2
+  speak-you-on-cards:
+    - date: 2026-10-09T12:04:21.673Z
+      boxCommit: f20bc90421f40efbc6abba2a8ef213d7026490d4
+      repoCommit: a0cc3ddea6eb2de868760d7d6d130ac2cedea3d3
+      initial: 42255
+      peak: 44824
+      added: 2569
+      turns: 7
+  speak-users-language:
+    - date: 2026-10-09T12:04:43.595Z
+      boxCommit: f20bc90421f40efbc6abba2a8ef213d7026490d4
+      repoCommit: a0cc3ddea6eb2de868760d7d6d130ac2cedea3d3
+      initial: 33415
+      peak: 33415
+      added: 0
+      turns: 2
+  no-self-jargon:
+    - date: 2026-10-09T12:05:02.343Z
+      boxCommit: f20bc90421f40efbc6abba2a8ef213d7026490d4
+      repoCommit: a0cc3ddea6eb2de868760d7d6d130ac2cedea3d3
+      initial: 33400
+      peak: 33400
+      added: 0
+      turns: 2
 dev-checkout:
   dev-spirit-doc:
     - date: 2026-10-08T04:37:43.997Z
