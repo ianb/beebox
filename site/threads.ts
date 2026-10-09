@@ -9,6 +9,8 @@
 export const THREADS_CSS = `
 canvas.site-threads { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 #site-workspace[data-threads] { position: relative; z-index: 1; }
+/* The menu panel hangs below the header over the workspace; keep it on top. */
+#site-header.bbx-app-nav { position: relative; z-index: 2; }
 @media print { canvas.site-threads { display: none; } }
 `;
 
@@ -116,7 +118,8 @@ export const THREADS_SCRIPT = `
     }
 
     let raf = 0, start = 0;
-    const still = matchMedia('(prefers-reduced-motion: reduce)').matches || threadsPlayed || document.visibilityState !== 'visible';
+    const reduceQuery = matchMedia('(prefers-reduced-motion: reduce)');
+    const still = reduceQuery.matches || threadsPlayed || document.visibilityState !== 'visible';
     threadsPlayed = true;
     const finish = () => { cancelAnimationFrame(raf); raf = 0; draw(TOTAL); };
     const tick = now => {
@@ -128,12 +131,15 @@ export const THREADS_SCRIPT = `
     let resizeTimer = 0;
     const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { layout = plan(); if (!raf) draw(TOTAL); }, 150); };
     const onVisibility = () => { if (document.visibilityState !== 'visible' && raf) finish(); };
+    const onReduce = () => { if (reduceQuery.matches && raf) finish(); };
     addEventListener('resize', onResize);
     document.addEventListener('visibilitychange', onVisibility);
+    reduceQuery.addEventListener('change', onReduce);
     threadsStop = () => {
       cancelAnimationFrame(raf); clearTimeout(resizeTimer);
       removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onVisibility);
+      reduceQuery.removeEventListener('change', onReduce);
     };
     layout = plan();
     if (still || !layout) { draw(TOTAL); return; }
