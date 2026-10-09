@@ -199,6 +199,8 @@ export const eventSchemas = {
   }),
   /** A chat session id was assigned by the SDK. */
   "chat-session-assigned": z.object({ sessionId: z.string() }),
+  /** A chat got a generated title in session (`core/chat/review/after-turn.ts`). */
+  "chat-title-changed": z.object({ sessionId: z.string(), title: z.string() }),
   /**
    * A capture staging session moved through preparation/delivery (Track 3).
    * Drives the pending capture bubble in chat. `docPath` is the box-relative

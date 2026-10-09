@@ -5,11 +5,11 @@
  * (`docs/implemented-plans/todo-annotation.md` Track 4), which every page's
  * first request pays for.
  *
- * `assigned="agent"` todos are excluded: they are the agent's own follow-ups,
- * and a badge that counts them tells the boxholder they owe work they never
- * took on — which is also why an agent would otherwise avoid opening one at
- * all. They stay visible through `bbx todos --assigned agent`, a todo-view
- * card, and the review sweep's job brief. See `isBoxholderTodo`
+ * Todos assigned to the agent or to another person are excluded: a badge that
+ * counts them tells the boxholder they owe work they never took on — which is
+ * also why an agent would otherwise avoid opening one at all. They stay
+ * visible on their cards, through `bbx todos --assigned <who>`, a todo-view
+ * card, and, for the agent's, the review sweep's job brief. See `isBoxholderTodo`
  * (`src/shared/todo-model.ts`).
  *
  * It is a fast path over the same machinery the collection runner uses — same

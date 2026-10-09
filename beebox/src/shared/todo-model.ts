@@ -26,22 +26,52 @@ import { assertNever, invariant } from "./invariant.js";
  */
 export const TODO_AGENT = "agent";
 
+/**
+ * Words an author writes in `assigned` to mean the boxholder. The boxholder's
+ * todos leave `assigned` off; a value other than {@link TODO_AGENT} names a
+ * person, so one of these renders as a badge naming nobody.
+ */
+const BOXHOLDER_PLACEHOLDERS: ReadonlySet<string> = new Set(["user", "me", "boxholder", "you", "owner"]);
+
+/** The warning id for {@link todoAssignedWarning}; card lint reports it. */
+export const TODO_ASSIGNED_PLACEHOLDER_ID = "todo-assigned-boxholder-placeholder";
+
+/**
+ * A warning when `assigned` holds a placeholder word for the boxholder
+ * (case-insensitive), else null. A warning, not an error: the todo stays
+ * collected and shown, and the author fixes the value.
+ */
+function isBoxholderPlaceholder(assigned: string): boolean {
+  return BOXHOLDER_PLACEHOLDERS.has(assigned.trim().toLowerCase());
+}
+
+export function todoAssignedWarning(assigned: string | undefined): TodoValidationError | null {
+  if (assigned === undefined || !isBoxholderPlaceholder(assigned)) return null;
+  return {
+    id: TODO_ASSIGNED_PLACEHOLDER_ID,
+    message: `{% todo %} \`assigned="${assigned}"\` stands for the boxholder: leave \`assigned\` off for the boxholder's todos. \`"agent"\` is the box agent; any other value names a person.`,
+  };
+}
+
 /** The stock box-wide `todo-view` card, "The Plate" (`core/box/defaults.ts`, `installTodoView`). */
 export const PLATE_CARD_PATH = "_content/plate.todo-view.card";
 
 /**
- * True when a todo is the BOXHOLDER's to act on — `assigned` absent, or
- * naming anyone but the agent.
+ * True when a todo is the BOXHOLDER's to act on: `assigned` absent or empty,
+ * or a placeholder word for the boxholder (`todoAssignedWarning` flags it; the
+ * author meant the boxholder). `"agent"` and any person's name are not.
  *
- * The distinction is load-bearing for anything that competes for the
- * boxholder's attention: an agent's own follow-up is real work with a real
- * owner, but it is not on the boxholder's plate, and counting it there taxes
- * the person for work they were never asked to do. Surfaces built FOR the
- * agent (`bbx todos --assigned agent`, the review job's brief) deliberately
- * do not use this filter.
+ * Anything that competes for the boxholder's attention reads this: the nav
+ * badge, the plate, a card's and a directory's todo line. A todo the agent or
+ * another person owes is real work with a real owner, but counting it on the
+ * plate taxes the boxholder for work they were never asked to do. It still
+ * renders where it is written, with its assignee badge. Surfaces built FOR
+ * the agent (`bbx todos --assigned agent`, the review job's brief) do not use
+ * this filter.
  */
 export function isBoxholderTodo(todo: { assigned?: string | undefined }): boolean {
-  return todo.assigned !== TODO_AGENT;
+  const assigned = todo.assigned?.trim();
+  return assigned === undefined || assigned === "" || isBoxholderPlaceholder(assigned);
 }
 
 /** The closed status vocabulary. Absence on a todo means `"open"`. */

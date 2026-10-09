@@ -51,7 +51,7 @@ import { extractBodyLinks, extractBodyRefs } from "../../body-refs.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import { isAttachRef } from "../../../shared/attach-path.js";
 import { parseRef, formatRefSuffix, isUrlRef } from "../../../shared/ref-path/core.js";
-import { lintBodyMarkdoc } from "../../body-markdoc-lint.js";
+import { lintBodyMarkdoc, lintFrontmatterTodoAssigned } from "../../body-markdoc-lint.js";
 import { brokenRefReason, resolveRefExists } from "../../ref-exists.js";
 import {
   boxRelativeDoc,
@@ -277,6 +277,7 @@ async function lintFrontmatterCard(input: {
     warnings.push(...lintBodyMarkdoc(bodyField));
   }
   warnings.push(...bodyTitleWarnings(parsed.fields));
+  warnings.push(...lintFrontmatterTodoAssigned(parsed.fields));
   // Type-specific box-aware checks: progress entries and lesson-plan segments
   // name concept-map node ids, which can't be verified self-contained (the map
   // is in another card) nor by the generic ref walk (a node id isn't a file

@@ -65,14 +65,21 @@ JSON.stringify(collected.todos.filter((t) => !isBoxholderTodo(t)).map((t) => t.t
 
 ## Ownership, not authorship
 
+A todo is the boxholder's when `assigned` is absent. `"agent"` is the box
+agent's; any other name is that person's, so it is off the boxholder's plate.
+A placeholder such as `"user"` draws a lint warning (`todoAssignedWarning`)
+because the author meant the boxholder, so it stays the boxholder's.
+
 ```ts continue
-JSON.stringify([
+[
   isBoxholderTodo({}),
   isBoxholderTodo({ assigned: undefined }),
   isBoxholderTodo({ assigned: TODO_AGENT }),
-  isBoxholderTodo({ assigned: "someone-else" }),
-])
-=> [true,true,false,true]
+  isBoxholderTodo({ assigned: "Dana" }),
+  isBoxholderTodo({ assigned: "user" }),
+  isBoxholderTodo({ assigned: "Me" }),
+]
+=> [true, true, false, false, true, true]
 ```
 
 ## An agent todo past its due date still stays off the badge
@@ -157,4 +164,33 @@ plate.reduction.onPlate
 
 ```ts cleanup
 await scopeBox.cleanup();
+```
+
+## A todo assigned to another person stays off the badge
+
+The badge counts what the boxholder owes. Dana's todo is still collected, so
+it still renders on its card, but it does not add to the count. The
+placeholder `"user"` todo does.
+
+```ts
+const othersBox = await makeTmpBox();
+process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
+
+await othersBox.write("_content/notes/Others.memo.card", memo(`
+{% todo %}Book the hall{% /todo %}
+
+{% todo assigned="Dana" %}Bring the folding chairs{% /todo %}
+
+{% todo assigned="user" %}Water the ferns{% /todo %}
+`));
+
+await countOnPlateTodos(othersBox.root)
+=> 2
+
+(await collectTodos(othersBox.root)).todos.map((t) => t.assigned ?? null)
+=> [null, "Dana", "user"]
+```
+
+```ts cleanup
+await othersBox.cleanup();
 ```

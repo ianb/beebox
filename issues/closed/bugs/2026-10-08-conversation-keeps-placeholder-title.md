@@ -5,7 +5,17 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — B-inventory, C-reconnecting, D-chemistry, F-newcomer journey walks, 2026-10-08
+resolution: implemented
 ---
+
+Fixed 2026-10-08: a root chat now gets a generated title right after a turn
+(`beebox/src/core/chat/review/after-turn.ts`): after the first exchange when the
+first message is at least 40 characters, otherwise after the second. It runs
+only the title pass, shares the nightly run's title journal and lock, and
+emits `chat-title-changed` so the open chat's label updates without a reload.
+Covered in `beebox/test/core/chat/review/after-turn.doctest.md`. Not changed: the
+label still reads "New conversation" (and, during a fresh chat's first turn,
+sometimes "Conversation") until the title arrives.
 
 Every chat the walkers opened kept a placeholder name for its whole life.
 
@@ -31,19 +41,19 @@ the first exchange. F-newcomer's 2026-09-21 walk (row 54) saw the same.
 Who writes the title: the agent after the first turn, a cheap model call, or
 a truncated first message. The pill label and the chat list both need the
 same source. Related:
-[chats bind to a landmark once](2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md).
+[chats bind to a landmark once](../../bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md).
 
 Reports:
-[B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (rows 44, 46),
-[B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 36, 60, 68),
-[D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 63),
-[F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 83).
+[B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (rows 44, 46),
+[B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 36, 60, 68),
+[D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 63),
+[F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 83).
 
 ## 2026-10-08: no generated title existed in the walks
 
 Left open by the fix batch; the fix needs the open question above answered.
 Titles come only from the nightly chat-review title pass
-([chat titles plan](../../beebox/docs/implemented-plans/chat-titles.md),
+([chat titles plan](../../../beebox/docs/implemented-plans/chat-titles.md),
 400-character gate). A walk on a fresh box never runs it, so there was no
 title to reach the label. "New conversation" and "Conversation" are the
 frontend's fallbacks in `resolve-conversation.ts`; the plan says the chip
