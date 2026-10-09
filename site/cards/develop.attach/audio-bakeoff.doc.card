@@ -1,5 +1,5 @@
 ---
-title: Which model listens to voice messages
+title: AI audio understanding comparison
 summary: "What eight audio models heard in 29 test recordings, sample by sample, from a re-runnable benchmark run in August and October 2026."
 authorship:
   people:
@@ -18,7 +18,7 @@ next:
   - card: /develop.site-page.card
     label: Back to For developers
 ---
-# Which model listens to voice messages
+# AI audio understanding comparison
 
 Bee Box's agent can't hear. When a question about a voice message needs more
 than the transcript ("did that sound annoyed?", "how did I pronounce
