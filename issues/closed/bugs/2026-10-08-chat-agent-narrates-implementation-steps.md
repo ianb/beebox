@@ -1,6 +1,7 @@
 ---
 title: "The chat agent narrates schema and code work to a person who asked for a list"
-workstream: unattached
+workstream: user-facing-language
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -13,7 +14,7 @@ the agent built a card type, the chat showed text such as "Now the schema.",
 backticks". The walker did not know what a schema is and was nervous about
 "instructions". Nothing of the person's was damaged; the garbled line was the
 agent's own wording in the file it had just written
-([report](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 12, 20, 70, 74).
+([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 12, 20, 70, 74).
 
 The box guide says nobody needs to know what a schema is
 (`beebox/box-docs/what-you-could-do.md:90`). Creating a card type mid-chat is
@@ -35,3 +36,14 @@ silent. The UI can follow the prompt's claim and collapse pre-tool text.
 Prompt-only changes cannot be verified without a real model run. The activity
 row has a related vocabulary problem:
 [Chat activity row speaks in commands and files](2026-10-08-chat-activity-row-speaks-in-commands-and-files.md).
+
+## Resolution (user-facing-language, 2026-10-09)
+
+Closed by the user-facing-language merge to main.
+
+Prompt half only. `prompts.ts` no longer claims pre-tool notes are summarized
+(they render in full), and the silent-bookkeeping rule now names building
+the box's machinery (a card type, its instructions, a rule, a view, a script,
+a fix to your own wording). SPEAKING carries the same rule for all agents.
+The UI keeps pre-tool text visible: a model sometimes puts its whole answer
+there (`message-parsing.ts`, `groupIntoParts`).

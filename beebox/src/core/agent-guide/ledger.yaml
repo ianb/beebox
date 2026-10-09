@@ -20,8 +20,12 @@ budget:
   # Raised 2026-10-07 (+28) for the managed `browser-task` box skill's
   # description (skill descriptions are always loaded); the executor
   # procedure moved from the dev repo into the box.
-  guide_words: 5595
-  always_loaded_words: 10330
+  # Raised 2026-10-09 to the test1 clone's measurement. Before this change
+  # it already measured 5692 / 10785 (drift from merges since 2026-10-07);
+  # +51 / +95 for SPEAKING's invisible-plumbing passage and the chat prompt's
+  # silent machinery work (user-facing-language workstream).
+  guide_words: 5743
+  always_loaded_words: 10880
   uncited_words_per_section: 60
 
 lint:
@@ -86,6 +90,7 @@ registry:
   - handle: SPEAKING
     governs: the words to use with the user in place of system vocabulary
     referrers:
+      - src/core/chat/session/prompts.ts
       - src/core/box/guidance-sync/skills-content-what-can-you-do.ts
       - src/dev/knowledge-audits.yaml
   - handle: ABOUT_CARDS
@@ -747,9 +752,23 @@ rows:
     handle: SPEAKING
     bin: core
     reason: The guide itself calls both parties by system names, so an agent that copies its vocabulary talks about the user in the third person and about itself as "the agent".
-    audits: [speak-users-language, no-self-jargon]
+    audits: [speak-users-language, no-self-jargon, speak-you-on-cards]
+  - id: speaking.invisible-plumbing
+    rule: Everything the person reads, including notes between steps and a command's description, is about their outcome; commands, files, card types, commits, and checks stay out of it, and work on the box's machinery is done without narration.
+    handle: SPEAKING
+    bin: core
+    reason: Journey walks (2026-10-08) showed "Now the schema.", "ran 2 commands", and grep/git lines reaching people who asked for a list; the chat prompt also claimed pre-tool notes were summarized, and they render in full.
+    audits: [speak-outcome-not-mechanics]
+    mechanics: box-docs/speaking-to-the-person.md
+  - id: speaking.register-triggers
+    rule: Switch to technical words only when the person used the term first, asked for the detail, or must act on it themselves; a command the agent will run itself stays out of the reply.
+    handle: SPEAKING
+    bin: core
+    reason: The boxholder is often technical; without named triggers an agent either leaks machinery by default or swings to vagueness. Three triggers replace a per-box setting (Imbue Studio's rule).
+    audits: [speak-register-trigger-asked]
+    mechanics: box-docs/speaking-to-the-person.md
   - id: speaking.introduce-terms
-    rule: Introduce a system term only when the user needs it to act, and explain it in the same breath.
+    rule: Unasked, introduce a system term only when the user needs it to act, and explain it in the same breath (speaking.register-triggers covers terms they used or asked about).
     handle: SPEAKING
     bin: core
     reason: The exception to the plain-words rule; without it an agent either hides a term the user must use or drops it unexplained. The "your state" sentence (never "the agent working on it") folded into speaking.you-and-i.
