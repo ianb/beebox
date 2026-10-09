@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — D-chemistry, A-lending, B-inventory, C-reconnecting, F-newcomer journey walks, 2026-10-09
+resolution: implemented
 ---
+
+Fixed on worktree-journey-walks-oct: a landmark card is now headed and titled by its `navigation.label`, the label the place pill and the "Go to" buttons use, with the card's `title:` and then the filename as fallbacks. The card header reads it in `ThemedFileCard`'s `cardTitle`; the workspace tab reads the card's summary title, which the landmark schema's new `summarize` hook sets from the label. Only landmark cards change. Checked in a browser on the D-chemistry second-walk box: the Chemistry page and its tab read "Chemistry", and the root page and its tab read the box name the pill shows.
 
 The tab and the card heading of a place page come from the landmark card's file
 name. The place pill, the "Go to ..." button, and the menus use the landmark's
@@ -38,12 +41,12 @@ treats a landmark's label as its title, or every landmark card also gets a
 `title:`. Which one avoids two sources of truth is open. The fix should cover
 every landmark, not only the root.
 
-Related: [place pill repeats the box name at the root](../closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md)
-(closed; the pill side). [Landmark arrival](../../beebox/docs/implemented-plans/landmark-arrival.md).
+Related: [place pill repeats the box name at the root](../bugs/2026-10-08-place-pill-repeats-box-name-at-root.md)
+(closed; the pill side). [Landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md).
 
-Reports: [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 4,
-[D-chemistry second walk](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) rows 2 and 41,
-[A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 3,
-[B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 1,
-[C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 3,
-[F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 2.
+Reports: [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 4,
+[D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) rows 2 and 41,
+[A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 3,
+[B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 1,
+[C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 3,
+[F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 2.
