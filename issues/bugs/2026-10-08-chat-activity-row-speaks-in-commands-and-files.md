@@ -50,3 +50,6 @@ a line per step uses the command's `description`, the card's title ("Updated
 Lemon Chicken"), or "Set up a place for your loans" for a schema. Every line expands to
 the raw input and result. The guide now tells the agent that a command's
 `description` is shown to the person.
+
+The boxholder (2026-10-09): keep showing the agent's own step descriptions,
+even though some are still technical; the guidance is the fix for those.
