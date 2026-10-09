@@ -250,7 +250,16 @@ A pure routing target (an archive humans don't browse) can have only \`destinati
 Most of a landmark's list is **derived**, not listed: every card under its directory carrying \`prominence: entry-point\` or \`prominence: primary\` appears automatically (entry points first, then primary cards, then nested landmarks, then \`expand\` results), and the walk stops at any subdirectory with its own landmark. So the way to surface a card in its own place is to mark the card, not to edit the landmark. \`links:\` is for what a card cannot say about itself: a target outside this directory, a contextual label, or a fixed position. A \`links:\` entry that duplicates a marked in-directory card is harmless (it shows once, listed first) and \`bbx validate\` notes it as a trim candidate.
 
 A landmark card stands for its place, not for a file in it — it is \`background\` by type and never needs \`prominence\` written to be on the Landmarks page. The one value that means something on a landmark is \`prominence: background\`: the place is housekeeping (logs, imports, machinery), it leaves the Landmarks page and the place menu, and everything under it folds in Browse. \`entry-point\` or \`primary\` on a landmark is a lint warning; the place's entry point is a visitable card inside it.`,
+  // A landmark is listed under its place's name, the same label the place
+  // pill and the "Go to" buttons show; the filename is the fallback.
+  summarize: (card, base) => ({ ...base, title: landmarkTitle({ label: card.navigation?.label, fallback: base.title }) }),
 });
+
+/** A landmark's display name: its `navigation.label` when it has one, else the fallback (its title or filename). */
+function landmarkTitle(input: { label: string | undefined; fallback: string }): string {
+  const label = input.label?.trim();
+  return label === undefined || label === "" ? input.fallback : label;
+}
 
 export type Landmark = LandmarkFields;
 
