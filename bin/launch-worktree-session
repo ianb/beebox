@@ -58,7 +58,7 @@
 # --agent codex runs OpenAI's codex CLI instead of claude. Both paths call
 # `bin/workstreams create` directly (same worktree + box clone + installs; it
 # also generates the gitignored
-# AGENTS.md/rule/skill mirrors Codex reads — bin/generate-agents-md.ts), then
+# skill/agent mirrors Codex reads — bin/generate-codex-mirrors.ts), then
 # runs codex in the worktree with full access/no-approvals (parity with claude
 # workers, which run unsandboxed). Codex is run, not exec'd, because it fires no
 # hooks: the launcher needs an "after codex exits" moment to run

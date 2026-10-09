@@ -48,8 +48,6 @@ authorship:
     editing: none
     source-preparation: Compared the transcript with the recording.
 unlisted: true
-theme: post-it
-stock: yellow
 kind: generated
 status: ready
 next:
@@ -75,9 +73,12 @@ and the native card path. It is supplementary provenance, never primary
 navigation; landmarks, parent links, in-body links, and `next` stay on the
 front. Without JavaScript, the front remains the complete reading surface.
 
-Themes are `plain`, `paper` (default), and `post-it`. Paper stocks are `cream`,
-`manila`, `blue`; Post-it stocks are `yellow`, `rose`, `mint`. The build rejects
-mismatched stocks. The plain theme uses its neutral app material.
+Cards carry no theme of their own. Every page shows the theme of the day: one
+of the app's system themes, chosen by the visitor's local date, with each card
+in that system theme's default card theme (`site/day-theme.ts`). Without
+JavaScript a page stays paper. The `theme`, `stock`, and `chrome` fields are
+still parsed (paper/post-it/plain; the build rejects mismatched stocks) and
+set only that no-script fallback.
 
 `next` is an ordered list of suggested destinations, with optional heading
 slugs in `at`. Card and section targets are checked at build time. Browser
@@ -97,19 +98,8 @@ and the compact Menu. Keep it curated: attached notes need not be promoted to
 primary destinations just because they have addresses. Links from other
 contexts remain possible; broader contextual deep-link policy is not settled.
 
-Only this card may specify the system chrome:
-
-```yaml
-navigation: true
-theme: paper
-stock: manila
-chrome:
-  theme: paper
-  stock: cream
-```
-
-System themes are `paper`, `plain`, `spectrum`. Paper system stocks are `cream`,
-`manila`, `blue`. Card and system theme selection are independent.
+Only this card may specify `chrome` (the no-script system theme: `paper`,
+`plain`, or `spectrum`); the theme of the day replaces it in the browser.
 
 ## Build and behavior
 

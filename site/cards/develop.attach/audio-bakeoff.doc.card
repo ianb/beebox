@@ -12,8 +12,6 @@ authorship:
     editing: none
     research: Ran the benchmark, including the model calls, a model judge's scoring, and spot-checks of its verdicts.
 unlisted: true
-theme: paper
-stock: blue
 kind: generated
 status: ready
 next:

@@ -1,4 +1,4 @@
-// Spartan HTML rendering for the agent-docs corpus (site/CLAUDE.md, "Agent
+// Spartan HTML rendering for the agent-docs corpus (site/AGENTS.md, "Agent
 // docs"). Every corpus page (a doc, a directory index.md, the front page,
 // the contributor/install entry pages) gets an HTML twin beside its
 // markdown, rendered through the site's own Markdoc pipeline (render.ts) but

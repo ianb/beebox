@@ -58,4 +58,4 @@ where new material goes and how it is named.
 | Name history | [name-history](name-history.md) |
 | Security TODOs, dissolved into the report and the issue queue | [todo-security](todo-security.md) |
 | Feature ideas and open issues | [issues](../../issues) at the monorepo root |
-| External-tool research | [research](../../research/CLAUDE.md) |
+| External-tool research | [research](../../research/AGENTS.md) |

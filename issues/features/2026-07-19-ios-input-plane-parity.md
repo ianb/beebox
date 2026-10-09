@@ -101,7 +101,7 @@ target state, final message assembly, and dispatch.
 ## How to resume
 
 1. Create an implementation worktree and read, in order:
-   `ios-app/CLAUDE.md`, `beebox/docs/mobile-contract.md`, and the linked
+   `ios-app/AGENTS.md`, `beebox/docs/mobile-contract.md`, and the linked
    plan. The design is complete; resume from the progress recorded above rather
    than writing another plan.
 2. Track 5's pending-send and voice state machines are complete. Continue with

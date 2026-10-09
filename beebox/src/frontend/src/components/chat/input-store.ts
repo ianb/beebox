@@ -4,7 +4,7 @@
  * The composer's text changes on every keystroke. If that text lived in
  * `useState` at the InteractiveChat root, each keystroke would re-render the
  * whole chat subtree — message history and the companion view pane included
- * (the expensive trap this store exists to avoid; see components/chat/CLAUDE.md).
+ * (the expensive trap this store exists to avoid; see components/chat/AGENTS.md).
  *
  * Since chunk 2 (docs/implemented-plans/input-extraction.md) the text is one slice of the
  * emission store (`../../input/emission-store.ts`), which also holds images,

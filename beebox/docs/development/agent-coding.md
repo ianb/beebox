@@ -9,11 +9,11 @@ This codebase is written by coding agents, under one maintainer's direction, in
 two families: Claude Code and Codex. The agents do the typing. The human decides
 what gets built, reviews the plans and the prose, and lands the work.
 
-The instructions those agents read are checked into the repository. `CLAUDE.md`
+The instructions those agents read are checked into the repository. `AGENTS.md`
 files carry the working rules, `code-style.md` and `frontend.md` the coding
-contracts, `.claude/skills/` the task workflows. A generator mirrors all of it
-into `AGENTS.md` files and symlinked skills so Codex reads the same material;
-edit the sources, never the mirrors. They are maintained as part of the work:
+contracts, `.claude/skills/` the task workflows. Both agent families read the
+`AGENTS.md` files directly; a generator symlinks the skills where Codex looks for
+them. They are maintained as part of the work:
 when a correction exposes missing durable guidance, a short rule goes to the
 narrowest accurate owner.
 

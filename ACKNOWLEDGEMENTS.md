@@ -179,11 +179,11 @@ Field conventions and published methods, not one project's idea. One line each, 
 
 - **Catch-up scheduling** (anacron): a job is due from its persisted last-run time, so a missed run happens on the next wake. [anacron(8)](https://man7.org/linux/man-pages/man8/anacron.8.html). Landed in `bin/lib/schedules-runner.ts`.
 - **Capture inline, aggregate in a generated view** (Org-mode agenda): todos are written where they arise and collected by a view. [Org manual, Agenda Views](https://orgmode.org/manual/Agenda-Views.html). Landed in `beebox/src/core/todo/collect-types.ts`, `beebox/src/core/todo/collection.ts`.
-- **One stable key per streaming message** (Vercel chatbot, assistant-ui, Streamdown): one component from first token to final, status as a prop. [vercel/chatbot](https://github.com/vercel/chatbot), [assistant-ui](https://github.com/assistant-ui/assistant-ui). Landed in `beebox/src/frontend/src/components/chat/CLAUDE.md`.
+- **One stable key per streaming message** (Vercel chatbot, assistant-ui, Streamdown): one component from first token to final, status as a prop. [vercel/chatbot](https://github.com/vercel/chatbot), [assistant-ui](https://github.com/assistant-ui/assistant-ui). Landed in `beebox/src/frontend/src/components/chat/AGENTS.md`.
 - **MECE sibling sections** (Barbara Minto, *The Pyramid Principle*): sibling doc sections do not overlap and together cover the parent. [barbaraminto.com](https://www.barbaraminto.com/). Landed in `beebox/docs/README.md`.
 - **Deep and shallow modules** (John Ousterhout, *A Philosophy of Software Design*), via mattpocock/skills. [Book page](https://web.stanford.edu/~ouster/cgi-bin/book.php). Landed in `beebox/code-style.md`.
-- **Simplified Technical English, in spirit** (ASD-STE100): short active sentences, one idea per sentence, consistent terms. We do not claim conformance. [asd-ste100.org](https://www.asd-ste100.org/). Landed in `issues/CLAUDE.md`, `.claude/skills/issues/SKILL.md`.
-- **Jobs To Be Done** (Christensen et al., *Competing Against Luck*): frame user-facing work as the user's job before the means. [Christensen Institute](https://www.christenseninstitute.org/). Landed in `issues/CLAUDE.md`, `.claude/skills/bbx-plan/TEMPLATE.md`.
+- **Simplified Technical English, in spirit** (ASD-STE100): short active sentences, one idea per sentence, consistent terms. We do not claim conformance. [asd-ste100.org](https://www.asd-ste100.org/). Landed in `issues/AGENTS.md`, `.claude/skills/issues/SKILL.md`.
+- **Jobs To Be Done** (Christensen et al., *Competing Against Luck*): frame user-facing work as the user's job before the means. [Christensen Institute](https://www.christenseninstitute.org/). Landed in `issues/AGENTS.md`, `.claude/skills/bbx-plan/TEMPLATE.md`.
 
 ## Licensed assets we redistribute
 

@@ -38,7 +38,7 @@ One policy for `console.*`, so a level carries meaning:
 
 - **`console.error`** — a human needs to investigate. Carries enough context (box, card, operation) to debug from the line alone.
 - **`console.warn`** — something unexpected happened but the code recovered. A degradation that stayed visible.
-- **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is a bug).
+- **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per AGENTS.md, noisy output is a bug).
 - **`console.log`** — CLI user-facing output ONLY, never internal diagnostics.
 
 Existing call sites migrate opportunistically as you touch them, not in a sweep.

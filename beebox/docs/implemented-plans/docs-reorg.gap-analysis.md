@@ -20,7 +20,7 @@ Data-loss / corruption tier:
    ["contains"]` survives (applies to Gmail thread cards and Drive
    doc/sheet cards). An agent annotating a synced card with `priority:` or
    `tags:` sees it silently vanish on next sync. Documented only in the
-   module's own comment — not in `src/connectors/CLAUDE.md` or
+   module's own comment — not in `src/connectors/AGENTS.md` or
    `docs/connectors.md`. The strongest "confidently wrong, silent data
    loss" gap found.
 2. **Hub-spawned box children get a fail-closed env allowlist, not
@@ -120,7 +120,7 @@ answered — remain open questions in `docs-reorg.md`.
 
 ## C. Documented but wrong / unfindable from point of need
 
-1. **`src/test-lib/` doesn't exist** — cited by `beebox/CLAUDE.md:81,124`
+1. **`src/test-lib/` doesn't exist** — cited by `beebox/AGENTS.md:81,124`
    and `docs/testing.md:22`; the infra is the `agent-doctest/` package +
    `test/helpers/`.
 2. **`.claude/rules/doctest.md` is a stale copy** — missing the

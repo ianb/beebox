@@ -29,7 +29,7 @@ and the dead voice-memo path retire.
   a pure-ish pipeline over a staged session precisely so it doctests),
   **#12** (the maintainer is usually an agent — schema instructions and
   knowledge audits are first-class deliverables).
-- `beebox/CLAUDE.md` — Phase-2 card conventions; "HTTP endpoints
+- `beebox/AGENTS.md` — Phase-2 card conventions; "HTTP endpoints
   go in tRPC by default … Raw Fastify routes … only for things that
   don't fit the tRPC request/response shape: file upload/download"
   (Behavioral Notes); time discipline (`getBoxTime`,
@@ -618,7 +618,7 @@ The backbone already exists and is reused, not rebuilt:
   `loadTranscriptionConfig` dispatch (`transcription/index.ts:207-220`)
   returning caller-scripted `words[]`, following the existing
   services fake pattern (`createFakeOpenAIAudio({transcriptionText})`,
-  `src/services/CLAUDE.md`). Scripted word timestamps + fixture image
+  `src/services/AGENTS.md`). Scripted word timestamps + fixture image
   `filename.captured` values make **speech-interleaved-with-images
   timelines fully composable in tests**: place words and photos at
   chosen absolute times, assert the exact assembled body

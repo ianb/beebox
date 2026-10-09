@@ -16,14 +16,14 @@ verification work) carry a `stories:` list, e.g.
 `stories: [connectors/configure-which-gmail-calendar-and-drive-content]`,
 pointing at slugs in `beebox/user-stories/catalog/2026-08-21.md` (moved to `beebox/docs/user-stories/catalog/2026-08-21.md`).
 
-The field appears nowhere in `issues/CLAUDE.md`'s frontmatter schema, and
+The field appears nowhere in `issues/AGENTS.md`'s frontmatter schema, and
 `workstreams-app/src/server/issue-domain.ts` (moved to `workstreams-app/src/server/main/issue-domain.ts`) (the one parser, shared by the
 issue browser and `bin/issues`) ignores unknown keys, so it is invisible to
 every tool: not a filter, not a facet, not in `--json`.
 
 Decide one of:
 
-- **Adopt it** — document it in `issues/CLAUDE.md` (a list of catalog story
+- **Adopt it** — document it in `issues/AGENTS.md` (a list of catalog story
   slugs the issue blocks or realises), parse it in `issue-domain.ts`, expose it
   as `--stories` in `bin/issues` and a facet in the browser. Useful if the
   story catalog keeps being the source of filed issues.

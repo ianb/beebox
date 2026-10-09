@@ -28,7 +28,7 @@ bare path's base is per-surface bookkeeping an LLM doesn't reliably track.
   implementations and three per-schema conventions are the disease),
   #10 exhaustiveness (per-surface ref handling should derive from one spec,
   not be re-decided per call site).
-- `beebox/CLAUDE.md` "Read before writing" and the validation contract
+- `beebox/AGENTS.md` "Read before writing" and the validation contract
   (`bbx validate --staged` blocks invalid cards); "keep source and docs
   generic."
 - `code-style.md` — shared modules in `src/shared/` must stay Node-free (the
@@ -171,12 +171,12 @@ first commit.
 
 **Discoverability (boxholder emphasis: singular routines).** The module is
 THE home for ref/path algebra, and that must be findable without archaeology:
-`beebox/CLAUDE.md` gets a one-line behavioral note ("All box ref/path
+`beebox/AGENTS.md` gets a one-line behavioral note ("All box ref/path
 parsing and resolution goes through `src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`) — never
 hand-roll `path.resolve`/string-splitting on a ref"), `docs/module-map.md`
 gets the entry, and the module's own doc comment names the consumers so the
 next resolver-shaped temptation finds the existing one. Per
-`beebox/CLAUDE.md`: "new infrastructure isn't done until it's
+`beebox/AGENTS.md`: "new infrastructure isn't done until it's
 discoverable."
 
 **First implementation chunk.** `src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`) + doctest

@@ -66,7 +66,7 @@ test("loadManifestEntries: beebox/deploy/README.md is refused (not on the litera
 });
 
 test("loadManifestEntries: dev/ is an admissible publish directory", () => {
-  const file = writeManifest("- source: beebox/CLAUDE.md\n  publish: dev/claude.md\n  description: x\n");
+  const file = writeManifest("- source: beebox/AGENTS.md\n  publish: dev/claude.md\n  description: x\n");
   assert.equal(loadManifestEntries(file).length, 1);
 });
 

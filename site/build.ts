@@ -23,6 +23,7 @@ import { embedNuggets, isRenderable, loadNuggets, renderNugget, type Nugget } fr
 import { parseSource, renderBody, type PageFrontmatter } from "./render.js";
 import { writeManifest } from "./sources.js";
 import { NAVIGATION_SCRIPT } from "./navigation-script.js";
+import { dayRotation, dayThemeScript, writeThemeAssets } from "./day-theme.js";
 import { headingIds, prepareWorkspace, type SitePage } from "./workspace-model.js";
 import { workspaceShell } from "./workspace.js";
 import { twinCardLinks } from "./twin-links.js";
@@ -228,6 +229,8 @@ export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteRes
   }
   await fs.cp(path.join(SITE_DIR, "assets"), path.join(distDir, "assets"), { recursive: true });
   await fs.writeFile(path.join(distDir, "assets/navigation.js"), NAVIGATION_SCRIPT, "utf8");
+  await fs.writeFile(path.join(distDir, "assets/day-theme.js"), dayThemeScript(dayRotation()), "utf8");
+  await writeThemeAssets({ beeboxDir: BEEBOX_DIR, distDir });
 
   // Link-check: every internal link target must correspond to an emitted page.
   const broken: string[] = [];

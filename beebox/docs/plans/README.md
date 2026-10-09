@@ -62,7 +62,7 @@ status in a prose `**Status:**` line. `pnpm doc-check` enforces the schema and
 
 Competitive/comparative research (OpenClaw, Hermes, Letta, PAI, gstack, and
 similar) is **not** a plan and does not live here — it lives in the
-monorepo-top-level `research/` directory (see `research/CLAUDE.md`). Findings
+monorepo-top-level `research/` directory (see `research/AGENTS.md`). Findings
 worth pursuing get filed into the monorepo-root `issues/` tree or promoted to
 an actual plan in this directory.
 

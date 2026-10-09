@@ -56,7 +56,7 @@ depending on the broken build.
   domain reads, API handlers, process supervision, and UI state.
 - Principle 12, **the maintainer is usually an agent** (`:141-149`): enforce
   route inputs and state variants with types instead of prose conventions.
-- `beebox/CLAUDE.md` and `beebox/code-style.md` remain the coding,
+- `beebox/AGENTS.md` and `beebox/code-style.md` remain the coding,
   logging, validation, and scope contracts. This plan does not weaken lint.
 - The shipped workstreams control surface is the behavior precedent. The new
   app preserves its URL vocabulary, authorization posture, staged issue edits,

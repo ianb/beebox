@@ -31,12 +31,12 @@ A cross-model (Codex) review of an earlier draft is folded in — see
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:101` — *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:101` — *"Read before writing. Don't guess file
   formats, XML structures, or API shapes. Read the schema, read the existing
   code, read the test patterns."* — reuse existing pipelines (cited below)
   rather than parallel ones; where reuse turned out false (the git helpers,
   below), say so and add the minimal new plumbing.
-- `beebox/CLAUDE.md:104` — the new per-send fields ride the existing
+- `beebox/AGENTS.md:104` — the new per-send fields ride the existing
   `/chat/send` raw route (already the documented tRPC exception), not a new
   endpoint.
 - `beebox/code-style.md` — files ≤300 lines, no default parameters, max 2

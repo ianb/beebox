@@ -916,7 +916,7 @@ Tests first, per `beebox/docs/testing.md`. Done-when is the following passing:
 **Field verification**, because the tests above run against fakes and the point
 of this plan is behaviour on a real loaded machine. After merge, and only with
 the boxholder starting it (the shared router is theirs to restart —
-`bin/CLAUDE.md:34`): confirm `~/.cache/beebox/logs/router.log` exists and carries
+`bin/AGENTS.md:34`): confirm `~/.cache/beebox/logs/router.log` exists and carries
 `[router …]` lines, which is the exact `grep -c` the issue reports as returning
 0 today. An isolated second router (`BBX_STATE_DIR` + `ROUTER_PORT`) can
 demonstrate the log and rotation without touching the live one.

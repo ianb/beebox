@@ -3,7 +3,7 @@
 //
 // A `.test.ts` rather than a doctest, matching its neighbours (test-select,
 // finish-preflight) and because root `pnpm test` is what runs bin/ tooling
-// tests. See bin/CLAUDE.md's note on the doctest-first rule.
+// tests. See bin/AGENTS.md's note on the doctest-first rule.
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -116,8 +116,8 @@ test("bin/ is linted from the root, and only for the files eslint reads there", 
     dispatchPlan({ paths, packageDirs: PACKAGE_DIRS, hasScript: () => true }).map((c) => c.label);
   assert.deepEqual(plan(["bin/lib/schedules-store.ts"]), ["pnpm lint:bin"]);
   assert.deepEqual(plan(["bin/doctor.test.ts"]), ["pnpm lint:bin"]);
-  // `bin/land` and `bin/schedules` are shell; `bin/CLAUDE.md` is prose.
-  assert.deepEqual(plan(["bin/land", "bin/CLAUDE.md"]), []);
+  // `bin/land` and `bin/schedules` are shell; `bin/AGENTS.md` is prose.
+  assert.deepEqual(plan(["bin/land", "bin/AGENTS.md"]), []);
 });
 
 test("a package with no lint script contributes nothing", () => {

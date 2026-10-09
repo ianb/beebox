@@ -1,6 +1,6 @@
 // Tests for the ordinary/careful tiers — list parsing, the argv the ledger
 // wrapper builds, and the selector's exclusion of careful files. A `.test.ts`
-// rather than the doctest this directory's CLAUDE.md asks for, for the same
+// rather than the doctest this directory's AGENTS.md asks for, for the same
 // reason bin/test-select.test.ts is one: the thing under test decides which
 // doctests run, so exercising it from inside that suite is circular.
 //

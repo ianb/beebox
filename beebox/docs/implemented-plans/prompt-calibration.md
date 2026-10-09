@@ -50,7 +50,7 @@ Source references below are to the checkout at `6fa206288`, before the root rewr
 - `CLAUDE.md:35`: "Auto-deploy is `main`-only, and only for deployed paths." — keep the action consequence before an agent commits or merges.
 - `CLAUDE.md:63`: "Public files must never link into it." — the private-issues boundary applies before writing public content, not only after entering `issues/`.
 - `CLAUDE.md:75`: "NEVER disable or weaken a lint rule to make code pass. Ask first." — preserve the restriction and its existing narrow exception.
-- `beebox/CLAUDE.md:11`: "an hourly schedule runs it on `main`; don't run it in a worktree without a reason." `.claude/skills/finish/SKILL.md:18` also says "no full suite". The handoff's full-suite-at-finish description is stale; reuse current guidance.
+- `beebox/AGENTS.md:11`: "an hourly schedule runs it on `main`; don't run it in a worktree without a reason." `.claude/skills/finish/SKILL.md:18` also says "no full suite". The handoff's full-suite-at-finish description is stale; reuse current guidance.
 - `bin/generate-agents-md.ts:184` discovers tracked CLAUDE.md files; its generated content is a copy, not an alternate policy. `generateSkillLinks` at line 263 links tracked skill directories into `.agents/skills/`.
 
 ## Prior art (external)
@@ -82,15 +82,15 @@ The table follows the original root's order. "Needed?" distinguishes whether inf
 | Original topic | 1. Intended accomplishment | 2. Needed at all? | 3. Compact form and destination |
 |---|---|---|---|
 | Project count and merger history, line 3 | Explain why packages share a repository. | Shared-repo fact yes; dated merger story and stale "Four projects" count no. | Root: "This is one monorepo" followed by a selective responsibility map. |
-| Main system and removed cardworks, line 5 | Find the app and prevent searching the retired library. | App route yes. Historical warning is conditional. | Root links `beebox/CLAUDE.md`; it already locates card primitives in `src/cards/`. Drop root's removal story. |
-| Chrome extension, line 6 | Route extension work. | Yes, one entry. | "Chrome extension: `beebox-clerk/CLAUDE.md`." |
+| Main system and removed cardworks, line 5 | Find the app and prevent searching the retired library. | App route yes. Historical warning is conditional. | Root links `beebox/AGENTS.md`; it already locates card primitives in `src/cards/`. Drop root's removal story. |
+| Chrome extension, line 6 | Route extension work. | Yes, one entry. | "Chrome extension: `beebox-clerk/AGENTS.md`." |
 | Doctest package, line 7 | Distinguish harness code from app tests. | Yes; this connection is not obvious from ordinary testing work. | "Doctest framework: `agent-doctest/`; application tests live in their packages." |
 | Shared lint preset, line 8 | Prevent editing the stale standalone checkout. | Yes, root: impacts every package. | "Edit shared ESLint/TS/Prettier rules in `personal-vibe-check/`, not its old standalone checkout." Link its CLAUDE.md. |
 | Canvas library, line 9 | Route visual sandbox work and identify experimental status. | Yes; exports and render recipe need not be always loaded. | "Experimental deterministic Canvas2D sandbox: `canvas-loop/README.md`; use `canvas-loop-sketch` for sketches and gallery work." |
 | Workstreams ownership, line 10 | Distinguish the router implementation from thin launchers. | Yes, root map. | "Dashboard and router: `workstreams-app/`; lifecycle launchers: `bin/`." |
 | Native companion, line 11 | Expose the web/native contract to agents working on either side. | Yes, root: directory-local instructions alone miss web changes. | Name the shared HTTP/bridge contract and route to `bbx-ios-overlap`, iOS CLAUDE.md, and the mobile contract. |
 | Research, dev, bin, issues map, line 13 | Route non-application work. | Yes; repeated issue categories and naming syntax no at root. | Place research in the map; dev, bin, and issues in the workflow groups below. |
-| Schedule enrollment and catalog, lines 15–23 | Connect recurring work and missed runs to the supported scheduler. | Yes, root cue. | "For recurring work or missed runs, use `bbx-authoring-schedules`; `bin/schedules list` shows status." Keep directory/launchd/catch-up/alert mechanics in `bin/CLAUDE.md`. |
+| Schedule enrollment and catalog, lines 15–23 | Connect recurring work and missed runs to the supported scheduler. | Yes, root cue. | "For recurring work or missed runs, use `bbx-authoring-schedules`; `bin/schedules list` shows status." Keep directory/launchd/catch-up/alert mechanics in `bin/AGENTS.md`. |
 | Boxes, line 25 | Avoid inheriting dev instructions into boxes; find the isolated test clone. | Yes. | Root: boxes live outside the repo; name canonical and per-worktree test locations. Box isolation is information, not persuasion. |
 | Managed worktrees, line 27 | Use the supported launcher and cleanup owner. | Yes. | Root: use `launch-worktree-session` when asked to spin work off; managed hooks own cleanup, so native Claude worktree creation is inappropriate. Installation details stay in bin docs. |
 | Router contract, line 29 | Produce working URLs and avoid disrupting other sessions. | Yes. | Root keeps URL shape, short-name distinction, lazy HTTP wake-up, shared-router restriction. Cold-start timings and idle timeout stay in bin docs. |
@@ -135,7 +135,7 @@ Concrete link choices for the root implementation:
 - Link the native contract directly from the web/native overlap cue; do not require an agent to enter `ios-app/` to discover the relationship.
 - Link browser work to the `browse` skill and review work to `cross-model`. The directory symlink layout preserves relative skill resources for Codex.
 - Link recurring work to `bbx-authoring-schedules`; link catalog/lifecycle details into the existing bin sections. Do not split the 910-line bin file in this pass.
-- Link exhibits to `workstreams-app/docs/exhibits.md`, current behavior rather than its design plan. Link issue formats to `issues/CLAUDE.md` without repeating them.
+- Link exhibits to `workstreams-app/docs/exhibits.md`, current behavior rather than its design plan. Link issue formats to `issues/AGENTS.md` without repeating them.
 - Remove the root's link to the completed lint-suppression audit (`docs/reports/eslint-rule-suppression-audit-2026-05-30.md`) from always-loaded prose because it is incident history, not a prerequisite for following the rule. The file exists and remains discoverable (later deleted with the root `docs/` directory, 2026-10-06; `beebox/code-style.md` keeps a summary); the complete active restriction stays in the root.
 - Keep generated preamble ownership in `bin/generate-agents-md.ts`; do not paste its session-specific worktree context into tracked root guidance. Regeneration affects files, not already-loaded session context or other worktrees.
 
@@ -147,14 +147,14 @@ The following records the approved assembly, applied to root `CLAUDE.md`. Links 
 
 Use the guidance for the area you are changing:
 
-- **Main system:** [beebox/CLAUDE.md](../../../beebox/CLAUDE.md).
-- **Chrome extension:** [beebox-clerk/CLAUDE.md](../../../beebox-clerk/CLAUDE.md).
-- **Native iOS companion:** [ios-app/CLAUDE.md](../../../ios-app/CLAUDE.md). It shares an [HTTP/bridge contract](../../../beebox/docs/mobile-contract.md) with the web/backend; use [bbx-ios-overlap](../../../.claude/skills/bbx-ios-overlap/SKILL.md) when changing those shared surfaces.
-- **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/CLAUDE.md](../../../personal-vibe-check/CLAUDE.md). Edit it here; the old standalone checkout is stale.
+- **Main system:** [beebox/AGENTS.md](../../../beebox/AGENTS.md).
+- **Chrome extension:** [beebox-clerk/AGENTS.md](../../../beebox-clerk/AGENTS.md).
+- **Native iOS companion:** [ios-app/AGENTS.md](../../../ios-app/AGENTS.md). It shares an [HTTP/bridge contract](../../../beebox/docs/mobile-contract.md) with the web/backend; use [bbx-ios-overlap](../../../.claude/skills/bbx-ios-overlap/SKILL.md) when changing those shared surfaces.
+- **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/AGENTS.md](../../../personal-vibe-check/AGENTS.md). Edit it here; the old standalone checkout is stale.
 - **Doctest framework:** [agent-doctest/README.md](../../../agent-doctest/README.md); application tests live in their packages.
 - **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](../../../canvas-loop/README.md); use `canvas-loop-sketch` (removed 2026-10-07) for sketches and gallery work.
-- **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/CLAUDE.md](../../../bin/CLAUDE.md) documents their mechanics.
-- **External-tool research:** [research/CLAUDE.md](../../../research/CLAUDE.md).
+- **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/AGENTS.md](../../../bin/AGENTS.md) documents their mechanics.
+- **External-tool research:** [research/AGENTS.md](../../../research/AGENTS.md).
 
 #### Work safely in this checkout
 
@@ -162,15 +162,15 @@ Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo i
 
 When asked to spin off work, use [launch-worktree-session](../../../.claude/skills/launch-worktree-session/SKILL.md). Managed worktrees live at `~/src/beebox-worktrees/<name>/` on `worktree-<name>` branches. Repository hooks own cleanup; do not use native `claude --worktree` for this workflow.
 
-One shared dev router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...`. Use the worktree's short name, without the branch's `worktree-` prefix. HTTP requests wake idle worktrees; WebSockets do not. **Do not restart or `panic` the shared router from a worktree without asking the boxholder.** Lifecycle details: [bin/CLAUDE.md](../../../bin/CLAUDE.md#lifecycle-commands).
+One shared dev router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...`. Use the worktree's short name, without the branch's `worktree-` prefix. HTTP requests wake idle worktrees; WebSockets do not. **Do not restart or `panic` the shared router from a worktree without asking the boxholder.** Lifecycle details: [bin/AGENTS.md](../../../bin/AGENTS.md#lifecycle-commands).
 
 Use [browse](../../../.claude/skills/browse/SKILL.md) and `bin/browse` for browser work; `/`-leading paths resolve in this worktree. Tracked HTML and Markdown in `dev/` are served at `/<worktree>/dev/`; the repository doc browser is at `/<worktree>/dev/docs/`. See [dev/README.md](../../../dev/README.md).
 
-For recurring work or missed scheduled runs, use [bbx-authoring-schedules](../../../.claude/skills/bbx-authoring-schedules/SKILL.md). `bin/schedules list` shows the catalog, last runs, and overdue work; [bin/CLAUDE.md](../../../bin/CLAUDE.md#schedules-binschedules) covers scheduling mechanics.
+For recurring work or missed scheduled runs, use [bbx-authoring-schedules](../../../.claude/skills/bbx-authoring-schedules/SKILL.md). `bin/schedules list` shows the catalog, last runs, and overdue work; [bin/AGENTS.md](../../../bin/AGENTS.md#schedules-binschedules) covers scheduling mechanics.
 
 #### Implement and verify
 
-Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/CLAUDE.md](../../../beebox/CLAUDE.md#development) and [finish](../../../.claude/skills/finish/SKILL.md) for the applicable checks.
+Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/AGENTS.md](../../../beebox/AGENTS.md#development) and [finish](../../../.claude/skills/finish/SKILL.md) for the applicable checks.
 
 **Do not disable or weaken lint rules to make code pass without explicit permission for that change.** This includes rule removal, lower severity, looser options, and suppressions. Fix the code; ask if the rule needs changing. The existing exception is one `eslint-disable-next-line <rule> -- <concrete justification>` for a true, narrow false positive. Finish coordinated edits before reacting to per-edit lint output, then verify any diagnostics that remain.
 
@@ -182,19 +182,19 @@ For anything beyond a small-scope bug fix, get [cross-model review](../../../.cl
 
 #### Record and show work
 
-Human document comments live outside git. At pickup run `bin/comments list --workstream <name>`; use `bin/comments show <path>` when opening a document that may have comments. Read, act, then clear. [Comment mechanics](../../../bin/CLAUDE.md#document-comments-bincomments).
+Human document comments live outside git. At pickup run `bin/comments list --workstream <name>`; use `bin/comments show <path>` when opening a document that may have comments. Read, act, then clear. [Comment mechanics](../../../bin/AGENTS.md#document-comments-bincomments).
 
-Use [issues](../../../.claude/skills/issues/SKILL.md) to retain worthwhile out-of-scope finds. Filing does not authorize implementation. Keep track of this workstream's own finds and offer to fix them at natural pauses and finish. Formats and re-encounter rules: [issues/CLAUDE.md](../../../issues/CLAUDE.md).
+Use [issues](../../../.claude/skills/issues/SKILL.md) to retain worthwhile out-of-scope finds. Filing does not authorize implementation. Keep track of this workstream's own finds and offer to fix them at natural pauses and finish. Formats and re-encounter rules: [issues/AGENTS.md](../../../issues/AGENTS.md).
 
-Private box content and personal/operational specifics belong in `private-issues/`, a separate gitignored repository mounted by symlink. Ask when unsure whether content is public-safe. Commit private changes from inside that repository; public files must never link into it. A missing mount means the developer has not opted in. [Privacy rules](../../../issues/CLAUDE.md#private-issues-private-issues--a-separate-repo) and [setup/mechanics](../../../bin/CLAUDE.md#private-issues-shadow-repo-private-issues).
+Private box content and personal/operational specifics belong in `private-issues/`, a separate gitignored repository mounted by symlink. Ask when unsure whether content is public-safe. Commit private changes from inside that repository; public files must never link into it. A missing mount means the developer has not opted in. [Privacy rules](../../../issues/AGENTS.md#private-issues-private-issues--a-separate-repo) and [setup/mechanics](../../../bin/AGENTS.md#private-issues-shadow-repo-private-issues).
 
 Show useful UI screenshot evidence as one labeled exhibit and share its URL. Give it exactly one ask: `decide` (choose), `confirm` (veto if wrong), `react` (impressions), or `fyi` (evidence only). State what the figures demonstrate. A lone incidental debug capture does not need an exhibit. Use `bin/exhibits add` to create one and `bin/exhibits list` to check answers. Exhibits survive worktree culling and do not merge; durable apps belong in `dev/apps/<name>/` (`bin/exhibits add --permanent`). [Exhibit contract and commands](../../../workstreams-app/docs/exhibits.md).
 
 #### Commit and land
 
-Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lfs wrappers; subprojects opt out with `prepare: ":"`. Root `pnpm install` wires them up. Docs-only commits run fast doc, path-leak, and personal blocklist checks. Use repo-relative or `~/` paths in tracked content. [Doc-check guidance](../../../beebox/docs/README.md#enforcement-pnpm-doc-check) and [guard mechanics](../../../bin/CLAUDE.md).
+Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lfs wrappers; subprojects opt out with `prepare: ":"`. Root `pnpm install` wires them up. Docs-only commits run fast doc, path-leak, and personal blocklist checks. Use repo-relative or `~/` paths in tracked content. [Doc-check guidance](../../../beebox/docs/README.md#enforcement-pnpm-doc-check) and [guard mechanics](../../../bin/AGENTS.md).
 
-Hooks add `Workstream` and, when exactly one plan matches, `Plan` trailers. An optional `Issue: <bare-basename>` identifies a public issue; omit directories and `.md`, repeat for multiple issues, and never name a private issue. A nonexistent issue name blocks the commit. [Provenance details](../../../bin/CLAUDE.md#commit-provenance-trailers-commit-provenancets).
+Hooks add `Workstream` and, when exactly one plan matches, `Plan` trailers. An optional `Issue: <bare-basename>` identifies a public issue; omit directories and `.md`, repeat for multiple issues, and never name a private issue. A nonexistent issue name blocks the commit. [Provenance details](../../../bin/AGENTS.md#commit-provenance-trailers-commit-provenancets).
 
 When the human asks to finish or land work, use [finish](../../../.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main` commits/merges touching shipped paths: `beebox/`, `agent-doctest/`, `personal-vibe-check/`, `patches/`, or root pnpm files. Worktree commits do not deploy. [Deployment operations](../../../beebox/deploy/README.md).
 
@@ -230,7 +230,7 @@ The separately approved [skill bodies and operational guidance](prompt-calibrati
 ## NOT in scope
 
 - Rewriting skill bodies or delegated agent prompts; their procedures require separate judgments.
-- Splitting bin/CLAUDE.md or issues/CLAUDE.md; destinations are assessed here but files do not move.
+- Splitting bin/AGENTS.md or issues/AGENTS.md; destinations are assessed here but files do not move.
 - Changing testing, deployment, privacy, lint, or authorization policy.
 - Adding a prompt-evaluation subsystem or running broad application suites for prose edits.
 - Rewriting instructions loaded by box agents.

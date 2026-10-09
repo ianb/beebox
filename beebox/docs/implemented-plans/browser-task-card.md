@@ -96,7 +96,7 @@ recorded rather than re-asked.
   decision core extracted from an IO shell"*). Record validation and
   image-reference checking are a pure module shared by route and view, so the
   doctest tier reaches them.
-- `beebox-clerk/CLAUDE.md:3`, *"Clerk is a surface, not an engine"*. Clerk is
+- `beebox-clerk/AGENTS.md:3`, *"Clerk is a surface, not an engine"*. Clerk is
   not involved at all here; the executor is Claude in Chrome. The boxholder
   noted that two extensions do not cooperate and that Claude in Chrome cannot
   click clerk's popup.

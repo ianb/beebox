@@ -42,7 +42,7 @@ changing anything when a scan is incomplete. Directory docs and files under
 
 After reading the feedback, decide for each item:
 
-- **Fixable now**: Make the improvement in beebox source (CLAUDE.md, docs,
+- **Fixable now**: Make the improvement in beebox source (AGENTS.md, docs,
   command descriptions, error messages, etc.), then resolve the item.
 - **Not actionable / already correct**: Resolve it with a note about why no change
   is needed (you can edit the feedback file before resolving if useful).

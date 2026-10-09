@@ -26,7 +26,7 @@ Total target is 1,000–1,450 changed lines. No new worker or task type.
 
 The human explicitly chose a destination-specific question evaluated for each
 item, and said a destination can omit the question. Reuse the normal todo sweep.
-`beebox/CLAUDE.md:7`: "Work only on the requested problem." Gmail admission and
+`beebox/AGENTS.md:7`: "Work only on the requested problem." Gmail admission and
 other open harness bugs remain separate. The pickup issue quotes the human's caution about out-of-control agent activity; retain the existing scheduled
 procedure, its turn/item limits and authority rules instead of adding an executor. The prior accepted direction in
 `gmail-admission-and-preparation.md:203` says the sweep must select newly

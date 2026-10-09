@@ -33,7 +33,7 @@ tokens("beebox/docs/cards/format.md", "See `docs/cards/schemas.md` and `src/core
 => []
 
 // A root-level doc naming a file under another package, from the monorepo root.
-tokens("bin/CLAUDE.md", "The router lives in `workstreams-app/src/router/lifecycle.ts`.")
+tokens("bin/AGENTS.md", "The router lives in `workstreams-app/src/router/lifecycle.ts`.")
 => []
 
 // A trailing `:line` or `:start-end` suffix is stripped before resolving.

@@ -161,6 +161,7 @@ ${THREADS_SCRIPT}
         document.title = next.title;
         document.querySelector('meta[name="description"]').content = next.querySelector('meta[name="description"]').content;
         displayedPath = pathKey(url);
+        window.bbxDayTheme?.apply(document);
         initializeContent(); restore({ pop });
       };
       if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {

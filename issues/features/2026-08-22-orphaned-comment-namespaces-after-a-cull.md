@@ -35,7 +35,7 @@ is visibly an orphan rather than a live remark.
 ## 2. A recreated name inherits the previous incarnation's comments
 
 Sharper, because it is wrong rather than merely untidy. `bin/workstreams create`
-is idempotent and re-attaches (`bin/CLAUDE.md:302`), and recreating a culled
+is idempotent and re-attaches (`bin/AGENTS.md:302`), and recreating a culled
 workstream is an expected flow — sweep restores a `keep/*` box ref during *"a
 culled workstream's recreation"*. So a new workstream named `dev-comments`
 inherits every `worktree/dev-comments/...` comment the old one left, and they

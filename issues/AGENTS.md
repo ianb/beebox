@@ -37,7 +37,7 @@ guard working. `bin/private-issues init <checkout>`
 creates the peer repository and mount; worktree creation mounts a corresponding
 private branch. `/finish` lands its branch with the public workstream, while
 unmerged private work survives worktree cleanup and is reported by
-`bin/workstreams sweep`. See `bin/private-issues help` and `bin/CLAUDE.md`.
+`bin/workstreams sweep`. See `bin/private-issues help` and `bin/AGENTS.md`.
 Private issues appear in the owner-session-gated issues browser marked
 `private`.
 

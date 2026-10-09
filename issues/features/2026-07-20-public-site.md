@@ -24,7 +24,7 @@ hand-drawn/plain-HTML aesthetics, the agent maintaining the site the same
 way it would maintain [the security report](../closed/features/2026-07-20-agent-maintained-security-report.md).
 The positioning content is already worked out in the competitive research
 (cards-first vs chat-first; enforced-in-code vs doctrine —
-[research synthesis](../../research/CLAUDE.md)).
+[research synthesis](../../research/AGENTS.md)).
 
 An earlier incidental mention of a homepage lives in
 [writing-skill](2026-07-05-writing-skill.md) (explicitly not that issue's

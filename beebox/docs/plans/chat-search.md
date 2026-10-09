@@ -49,7 +49,7 @@ The index and chunk shape leave room for vectors later (schema version bump
   session list and chat route.
 - **Scope anchored to the ask**: index only what a "find that chat" query
   needs (user/assistant text), not tool calls or outputs.
-- `beebox/CLAUDE.md`: "Work only on the requested problem" — the UI stays in
+- `beebox/AGENTS.md`: "Work only on the requested problem" — the UI stays in
   the chat list; global-search integration and per-user privacy gating are
   filed follow-ups (see the anchor issue's Related links).
 

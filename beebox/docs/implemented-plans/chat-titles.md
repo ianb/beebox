@@ -71,7 +71,7 @@ Under the 2,000-line BIG CHANGE bar.
   get schema doc-comments and instructions text; the difference between
   "editorial title" and "machine snippet" is exactly the kind of distinction
   an agent will guess wrong without it.
-- **`beebox/CLAUDE.md` "work only on the requested problem".** Track D is
+- **`beebox/AGENTS.md` "work only on the requested problem".** Track D is
   scoped to a single marker with no automation; the reviewer never writes it.
 - **Minimize invented concepts (boxholder guidance).** The done marker is a
   named boolean `done: true`, the form the repository's reserved-field rule

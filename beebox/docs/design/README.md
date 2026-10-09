@@ -2,7 +2,7 @@
 
 Why the system is shaped the way it is. These files answer *why*, never *how to*. (The former peer, the stack
 decisions log, is frozen as a dated report: [`../reports/stack-decisions-2026-09-04.md`](../reports/stack-decisions-2026-09-04.md).) The onboarding
-narrative lives in [`../architecture/`](../architecture/CLAUDE.md); the values
+narrative lives in [`../architecture/`](../architecture/AGENTS.md); the values
 compass is [`../architecture/spirit.md`](../architecture/spirit.md) — **design
 serves the values written there**; spirit.md's "if the architecture contradicts
 this, the architecture is wrong" is meant literally (the boxholder wrote it and

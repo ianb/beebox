@@ -36,7 +36,7 @@ the uploader config.
   thing** (reuse the pairing token store, the upload ledger, the
   octet-stream-with-header upload pattern), **#12 the maintainer is usually an
   agent** (breadcrumb comments across the no-shared-code boundary).
-- `beebox/CLAUDE.md` — "Never change credentials to unblock yourself"
+- `beebox/AGENTS.md` — "Never change credentials to unblock yourself"
   (token minting is boxholder-initiated); "Keep source and docs generic — never
   hardcode personal names" (the uploader config carries box slugs; source
   stays generic); the tRPC-vs-raw-Fastify rule ("Raw Fastify routes … are only

@@ -96,11 +96,11 @@ falsified several claims; folded in throughout. The load-bearing ones:
 
 ## Stated preferences this plan trades against
 
-- **`beebox/CLAUDE.md:28`**: *"Every built-in schema is now frontmatter;
+- **`beebox/AGENTS.md:28`**: *"Every built-in schema is now frontmatter;
   the legacy XML-body format and its loader branch remain in place but dormant
   … until cardworks is removed in a follow-up."* This plan makes that promise
   good and updates the sentence.
-- **`beebox/CLAUDE.md` "don't add features beyond what the task
+- **`beebox/AGENTS.md` "don't add features beyond what the task
   requires"** — we delete the XML loader/serializer/XPath rather than port
   them; they have no consumer.
 - **`beebox/code-style.md:25`** (no `any`), **`:55`** (`as` is like Rust

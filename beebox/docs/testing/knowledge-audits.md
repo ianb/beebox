@@ -15,7 +15,7 @@ The harness lives in `src/dev/`:
 - `lib/test-runner.ts`, `lib/report.ts`, `lib/session-report.ts` — internals
 - `reports/` — gitignored output
 
-**When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior. Run them after touching CLAUDE.md, schemas, prompts, or anything
+**When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior. Run them after touching AGENTS.md, box CLAUDE.md, schemas, prompts, or anything
 that changes what an agent should know; the periodic cadence is in
 [maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.md`.
 
@@ -101,7 +101,7 @@ than presenting incomparable usage as parity.
 
 An entry with `surface: dev` audits a developer session instead of a box
 agent: what a Claude Code session in this monorepo checkout learns from the
-root and package `CLAUDE.md` files, the project skills, and `docs/`. Its first
+root and package `AGENTS.md` files, the project skills, and `docs/`. Its first
 questions cover the product spirit and design docs, which sessions kept
 forgetting.
 

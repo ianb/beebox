@@ -355,7 +355,7 @@ Pull out each DISTINCT defect. Then, for each one:
 1. **Verify it against the code.** The observer saw a symptom; find the cause, or establish that
    you cannot. A defect you cannot locate in the code is still worth filing — say so plainly.
 2. **Check whether it is already filed.** Search \`issues/\` (all category subdirectories,
-   including \`closed/\`). The queue conventions are in \`issues/CLAUDE.md\` — read that first.
+   including \`closed/\`). The queue conventions are in \`issues/AGENTS.md\` — read that first.
    Watch for near-misses: an existing issue about image EXIF orientation may or may not be the
    same bug as one about a \`rotation\` frontmatter field rendering upside-down.
 3. **Decide a disposition:**
@@ -370,7 +370,7 @@ Pull out each DISTINCT defect. Then, for each one:
 ## Writing the issues
 
 For each \`file-issue\`, write a file to \`issues/bugs/2026-08-21-<slug>.md\` following the
-conventions in \`issues/CLAUDE.md\` exactly — frontmatter with \`title\`, and the body stating what
+conventions in \`issues/AGENTS.md\` exactly — frontmatter with \`title\`, and the body stating what
 is wrong, the user-visible consequence, the files involved, and how it was observed.
 
 - **Do NOT set \`priority:\`** — that is the maintainer's call, not yours.

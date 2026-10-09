@@ -93,7 +93,7 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 
 ## Restart and lazy-hub behavior
 
-Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfired entries fire immediately). Because the timers live in that process, a lazy `bbx hub` (`lazy: true`, which idle-stops boxes) must not stop or fail to start a schedule-holding box: it keeps any box whose `chat-schedules.json` holds an entry running instead of idle-stopping it, and pre-starts such boxes at hub boot (independent of `keepRecent`), so a schedule fires on time even after a hub restart. See `src/hub/CLAUDE.md` (Lazy mode) and `src/hub/supervisor/pending-schedules.ts`.
+Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfired entries fire immediately). Because the timers live in that process, a lazy `bbx hub` (`lazy: true`, which idle-stops boxes) must not stop or fail to start a schedule-holding box: it keeps any box whose `chat-schedules.json` holds an entry running instead of idle-stopping it, and pre-starts such boxes at hub boot (independent of `keepRecent`), so a schedule fires on time even after a hub restart. See `src/hub/AGENTS.md` (Lazy mode) and `src/hub/supervisor/pending-schedules.ts`.
 
 ## Known issues
 

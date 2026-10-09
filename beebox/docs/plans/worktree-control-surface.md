@@ -73,7 +73,7 @@ review flagged both as drift that "no workflow change" would otherwise deny.
 - **`bin/workstreams list` no longer aliases `status`.** On `main` they were the
   same router-status JSON. `list` is now the unified worktree table and `status`
   is the raw router JSON. Accepted after grepping every tracked file for both
-  commands: only `status` had callers (`bin/CLAUDE.md`, the `browse` skill), and
+  commands: only `status` had callers (`bin/AGENTS.md`, the `browse` skill), and
   `list` as a router-status alias was referenced nowhere. Reusing the better name
   for the better view beats keeping a dead alias.
 - **`bin/launch-worktree-session` no longer falls back to `$HOME/src/beebox`.**
@@ -121,7 +121,7 @@ this design may be Claude-Code-only.
   and §6 *Right-sized defensiveness* — every destructive path here stands in
   front of an irreversible delete. `bin/lib/worktree-teardown.sh:16-18`: *"every
   'can't tell' answer resolves to 'don't delete'."*
-- `bin/CLAUDE.md` — the incident-hardened invariants for router lifecycle, the
+- `bin/AGENTS.md` — the incident-hardened invariants for router lifecycle, the
   `ps -axo pid=,comm=` rule, the private-issues symlink topology, and the
   "before changing worktree lifecycle code, read `bin/docs/router-protocol.md`"
   gate.
@@ -529,7 +529,7 @@ shape.
 | `remove --force` is used on a worktree with a live agent | To add | To add — `--force` must not override the liveness check | Clear: refuse, and say `--force` does not apply to liveness |
 | `list --json` runs with no router | To add — doctest asserting `runtime.state == "unknown"` | To add — degrade, never fail the whole command | Clear: per-field `unknown`, not an omitted field |
 | `list --json` runs while a worktree is being removed (directory half-gone) | Built + exercised | Built — the row's `git.ahead`/`dirty`/`merged` are `null`, never `0`, and the rest of the list is unaffected. (Shipped as nulls rather than the `git.state: "unreadable"` field this plan first proposed: `wt_work_state` already answers `"?"` for "could not tell", and a null carries that through JSON without a second vocabulary for the same fact.) | Clear: one bad row, rest of the list intact |
-| A client parses `agent.state` and treats `unknown` as `none` | Not testable in this repo — it is a contract risk for future clients | Mitigation: the field is a three-value enum with no boolean shorthand, and `bin/CLAUDE.md` documents the rule | Clear only if documented — Rollout shape requires the doc line |
+| A client parses `agent.state` and treats `unknown` as `none` | Not testable in this repo — it is a contract risk for future clients | Mitigation: the field is a three-value enum with no boolean shorthand, and `bin/AGENTS.md` documents the rule | Clear only if documented — Rollout shape requires the doc line |
 | `resume` targets a worktree that was swept away | To add | Yes by construction — `create` is idempotent and recreates it, on the same branch if the branch survives (`.claude/hooks/worktree-create.sh:113-115`) | Clear: logs "attaching without -b" |
 | The session file names an agent that is not installed | To add | To add — `resume` verifies the binary before opening a tab | Clear: fail before the tab, not inside it |
 | The session file is stale (agent changed since) | No test — it is a hint by design | Yes — `resume --agent` overrides, and the file is never the sole source of truth | Clear: `--agent` wins, silently and correctly |
@@ -638,7 +638,7 @@ test it, and writing one would produce a test that passes or fails for reasons
 unrelated to the change.
 
 The agent-facing surface this plan does create — `bin/workstreams` subcommands and
-the `list --json` contract — is documented for agents in `bin/CLAUDE.md`, and the
+the `list --json` contract — is documented for agents in `bin/AGENTS.md`, and the
 enforcement is the tri-state enum itself rather than recall (§11, enforcement
 beats convention).
 
@@ -669,7 +669,7 @@ Each chunk is a commit or a few related commits. All land before the plan ships.
    down. Depends on 5.
 7. ~~**`bin/workstreams resume`**~~ — deferred, see "What this plan builds now."
 8. ~~**Session hint file**~~ — dropped with chunk 7; it existed only to serve it.
-9. **Docs** — `bin/CLAUDE.md` gains the command contract and the `agent.state`
+9. **Docs** — `bin/AGENTS.md` gains the command contract and the `agent.state`
    tri-state rule; root `CLAUDE.md`'s worktree paragraph points at it.
 
 ## Rollout shape

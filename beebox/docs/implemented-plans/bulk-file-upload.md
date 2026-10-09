@@ -33,7 +33,7 @@ under Open design questions.
   never silent** (partial upload failure must be visible to both user and
   agent), **#6 right-sized defensiveness**, **#10/#12** (agent-maintainable
   conventions; see Knowledge audits).
-- `beebox/CLAUDE.md` — "HTTP endpoints go in tRPC by default … Raw
+- `beebox/AGENTS.md` — "HTTP endpoints go in tRPC by default … Raw
   Fastify routes in `src/webapp/routes/` are only for things that don't fit the
   tRPC request/response shape: file upload/download …" (uploads stay raw
   Fastify); "Read before writing"; don't add features beyond what the task

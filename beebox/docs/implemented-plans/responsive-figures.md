@@ -38,7 +38,7 @@ starters, and template so newly authored figures fit their container natively.
   (the instructions ARE the fix; scaffolds carry the teaching), **#4 Resilient
   AND never silent** (backstop degrades display without breaking interaction;
   it must not mask the authoring guidance).
-- `beebox/CLAUDE.md` — "Schemas can include `instructions` — prose …
+- `beebox/AGENTS.md` — "Schemas can include `instructions` — prose …
   injected into agent context" (context cost budget applies); "Read before
   writing"; frontend rules via frontend.md (`className` conventions).
 - `code-style.md` — no default parameters, explicit return types, teardown/
