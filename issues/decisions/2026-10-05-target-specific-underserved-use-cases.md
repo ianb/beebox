@@ -38,6 +38,13 @@ Criteria from the boxholder:
     ([meal-prep thread review](../exploration/2026-10-04-reddit-meal-prep-automation-ideas.md)):
     a weekly plan, thaw reminders, freezer stock, and order reconciliation.
   - Scanned-paper filing (the scan uploader and Docling pipeline).
+  - Family accountability for one goal
+    ([accountability / goal tracking](../features/2026-03-12-accountability-goal-tracking.md)):
+    check-ins by chat, a daily result to the family group, a weekly
+    conversation. Added 2026-10-08 from the
+    [Edi Life OS review](../../research/lifeos-review.md), which rejects the
+    wider "life OS" (habits, dashboards, scores) as well served and routinely
+    abandoned.
 - What "get started" is. Options: a starter pack (cards, views, schedules, and
   an agent briefing) applied to an existing box; a first-run choice; or a
   chat opener that sets the use case up by conversation. Box content
