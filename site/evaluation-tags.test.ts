@@ -12,7 +12,7 @@ test("a model pill names the model and carries its vendor", () => {
 
 test("a verdict states its grade in words, not only color", () => {
   const html = renderBody('Whisper {% verdict is="failed" /%} wrote words.', context).html;
-  assert.match(html, /class="verdict verdict-failed"><span aria-hidden="true">✗<\/span> Failed<\/span>/);
+  assert.match(html, /class="verdict verdict-failed"><span aria-hidden="true">❌<\/span> Failed<\/span>/);
 });
 
 test("unknown vendors and verdicts fail the build instead of rendering", () => {
@@ -29,7 +29,7 @@ test("the twin keeps model names, verdicts, and sample titles", () => {
   const body = '{% sample title="Coughs" %}\nTwo coughs.\n{% /sample %}\n\n- {% model name="Whisper" vendor="openai" /%} {% verdict is="failed" /%} wrote words.';
   const twin = twinMarkdown(body, { nuggets: [], asides: new Map() });
   assert.match(twin, /\*\*Sample: Coughs\*\*\n/);
-  assert.match(twin, /- \*\*Whisper\*\* \[Failed] wrote words\./);
+  assert.match(twin, /- \*\*Whisper\*\* ❌ Failed wrote words\./);
   assert.doesNotMatch(twin, /{%/);
 });
 
