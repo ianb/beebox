@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — C-reconnecting, F-newcomer journey walks, 2026-10-09
+resolution: implemented
 ---
+
+Fixed on worktree-journey-walks-oct: `FileEntry` takes `hidePath`, and The Plate's `CardRow` sets it, so a card row shows its title and summary with no path. Other `FileEntry` lists (recent files, tool-use expansions) keep the path. `CardRow` has no other consumer. Checked in a browser on the C-reconnecting box: the "Getting back in touch" row shows no path.
 
 Each card row on The Plate shows the card's file path in grey under its
 summary, for example `_content/friends/Reconnecting.doc.card`.
@@ -36,8 +39,8 @@ place tiles) and a choice of which surfaces keep paths. Where a path is the only
 way to tell two cards with the same title apart, the Plate can show the parent
 folder name instead.
 
-Related: [browse-and-plate-counts-do-not-name-what-they-count](2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md)
+Related: [browse-and-plate-counts-do-not-name-what-they-count](../../bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md)
 (also from the Plate).
 
-Reports: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R8,
-[F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 24.
+Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R8,
+[F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 24.
