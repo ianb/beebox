@@ -44,6 +44,10 @@ test("a deep aside statically contains its canonical parent and authored continu
   assert.match(html, /Ian Bicking/);
   assert.match(html, /Source preparation<\/dt><dd>Prepared the source/);
   assert.match(html, /bbx-card-back[^]*Parent\.attach\/Aside\.doc\.card/);
+  // The attached card's label row is only the way back; no kind words.
+  assert.match(html, /<div class="pane-label"><a href="\/x\/Parent\.doc\.card\/" data-parent>Back to Parent<\/a><\/div>/);
+  assert.equal(html.match(/class="pane-label"/g)?.length, 1);
+  assert.doesNotMatch(html, /pane-label">(Reading|Collection)|<span>(Document|Aside)<\/span>/);
 });
 
 test("bad next destinations and missing sections fail before publication", () => {

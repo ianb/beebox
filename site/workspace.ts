@@ -1,6 +1,7 @@
 // Server-render every reading arrangement. JavaScript enhances these normal links.
 import { FISHEYE_CSS } from "./fisheye.js";
 import { THREADS_CSS } from "./threads.js";
+import { addMenuIcons } from "./menu-icons.js";
 import { escapeHtml } from "./render.js";
 import { nextDestination, type SitePage, type SiteWorkspace } from "./workspace-model.js";
 
@@ -57,16 +58,16 @@ function pane(workspace: SiteWorkspace, params: { page: SitePage; context: boole
   const parent = workspace.pages.find((candidate) => candidate.id === page.parentId);
   const theme = page.frontmatter.theme ?? "paper";
   const stock = page.frontmatter.stock ?? (theme === "post-it" ? "yellow" : "cream");
+  // Only an attached card gets a label row: the way back to its parent.
   const label = parent
-    ? `<a href="${escapeHtml(parent.href)}" data-parent>Back to ${escapeHtml(parent.frontmatter.title)}</a>`
-    : page.frontmatter.navigation ? "Collection" : "Reading";
+    ? `<div class="pane-label"><a href="${escapeHtml(parent.href)}" data-parent>Back to ${escapeHtml(parent.frontmatter.title)}</a></div>\n`
+    : "";
   const transition = `card-${workspace.pages.indexOf(page)}`;
   const cardKey = `${context ? "context" : "reading"}-${workspace.pages.indexOf(page)}`;
   const frontId = `card-front-${cardKey}`;
   const backId = `card-back-${cardKey}`;
   return `<section class="pane${context ? " context" : ""}" data-card="${escapeHtml(page.id)}" aria-label="${escapeHtml(page.frontmatter.title)}">
-<div class="pane-label">${label}<span>${parent ? "Aside" : "Document"}</span></div>
-<article class="bbx-card-theme bbx-card-surface" data-card-theme="${theme}" data-card-stock="${stock}" data-card-side="front" style="view-transition-name:${transition}">
+${label}<article class="bbx-card-theme bbx-card-surface" data-card-theme="${theme}" data-card-stock="${stock}" data-card-side="front" style="view-transition-name:${transition}">
 <span class="card-fold" aria-hidden="true"></span><button type="button" class="bbx-card-properties" data-card-properties hidden aria-label="On the back" title="On the back: authorship and provenance" aria-expanded="false" aria-controls="${backId}"><span class="bbx-card-properties-label" aria-hidden="true">On the back</span></button>
 <div id="${frontId}" class="bbx-card-front" aria-hidden="false"><div class="bbx-card-content bbx-theme-prose">
 ${context ? contextBody(page) : page.html}
@@ -79,16 +80,16 @@ function menuHtml(workspace: SiteWorkspace): string {
     .replace(/id="([^"]+)"/g, 'id="menu-$1"')
     .replace(/aria-labelledby="([^"]+)"/g, 'aria-labelledby="menu-$1"')
     .replace(/href="#([^"]+)"/g, (_match, anchor: string) => `href="${escapeHtml(workspace.navigation.href)}#${anchor}"`);
-  return `<details id="site-menu"><summary class="bbx-place-pill">Menu <span aria-hidden="true">⌄</span></summary><nav class="site-menu-panel" aria-label="Menu">${body}</nav></details>`;
+  return `<details id="site-menu"><summary class="bbx-place-pill">Menu <span aria-hidden="true">⌄</span></summary><nav class="site-menu-panel" aria-label="Menu">${addMenuIcons(body)}</nav></details>`;
 }
+
+/** The home card: the one page that draws the margin threads (threads.ts). */
+const HOME_PAGE_ID = "index.site-page.card";
 
 /**
  * The browser title. A page whose own title already is the site name (the home
  * card) would otherwise read "Bee Box | Bee Box".
  */
-/** The home card: the one page that draws the margin threads (threads.ts). */
-const HOME_PAGE_ID = "index.site-page.card";
-
 function pageTitle(title: string): string {
   return title === "Bee Box" ? title : `${title} | Bee Box`;
 }
