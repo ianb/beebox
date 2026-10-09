@@ -294,7 +294,7 @@ test("a docs-only diff names the smoke walk as skipped rather than dropping it",
   // Same reason the other commands are listed-and-skipped: a sheet that simply
   // omits a step reads as "this diff never needed one".
   const commands = verificationCommands({
-    paths: ["beebox/docs/testing.md"],
+    paths: ["beebox/docs/box/publishing.md"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,
