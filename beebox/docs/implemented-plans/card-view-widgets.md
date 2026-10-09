@@ -15,13 +15,13 @@ to a host-supplied view-host context rather than hardcoding a navigation target.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:101` — *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:101` — *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* This plan cites the existing nav
   plumbing rather than reinventing it.
-- `beebox/CLAUDE.md` (Cards/Validation) — *"`bbx validate` checks all
+- `beebox/AGENTS.md` (Cards/Validation) — *"`bbx validate` checks all
   cards … Boxes get two hooks installed during `bbx init`."* Refs are a
   validated, tracked surface; a JSX-embedded ref must not be a blind spot.
-- `beebox/CLAUDE.md` — *"Box-authored views are a security-sensitive
+- `beebox/AGENTS.md` — *"Box-authored views are a security-sensitive
   surface (compiled box code) — don't widen what views can do beyond
   card-viewing"* (paraphrased from the idea brief; reinforced by the views
   compiler externalizing only React today).

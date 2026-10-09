@@ -60,8 +60,8 @@ Authorization must survive the handoff:
 - Diagnosis, review, or planning only: do not broaden it.
 
 Name skills without a sigil ("use the finish skill"); the launcher refuses
-`/finish` or `$finish` in prose. Codex reads `AGENTS.md`, Claude reads
-`CLAUDE.md`. Pass handoff notes inline or by absolute path, never
+`/finish` or `$finish` in prose. Both agents read `AGENTS.md`. Pass handoff
+notes inline or by absolute path, never
 `@scratch/...`, which resolves in the receiving checkout. The launcher adds the
 `Workstream:` line and the `<agent-continuation>` wrapper; do not repeat them.
 When the work takes on a filed issue, pass `--issue`; name the other issues of

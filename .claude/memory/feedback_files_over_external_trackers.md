@@ -21,5 +21,5 @@ Also relevant: the existing "Memory System Concerns" note at the top of MEMORY.m
 
 **How to apply:**
 - When suggesting a tool for tracking work, notes, or knowledge: propose a markdown file in the repo first. Reach for external services only if the user asks or there's a specific reason a file won't work (real-time collaboration, external stakeholder access, etc.).
-- Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → ADRs in `docs/`; engineering principles → `engineering-principles.md` or a CLAUDE.md section.
+- Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → ADRs in `docs/`; engineering principles → `engineering-principles.md` or an AGENTS.md section.
 - This applies to **project state and knowledge**, not to all external services categorically — Ian still uses GitHub for code hosting, npm for packages, etc. The preference is about *where the project's own state lives*.

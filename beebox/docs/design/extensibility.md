@@ -22,7 +22,7 @@ feature flag plus some prose, not a class hierarchy"
 
 Build new infrastructure only when basic building blocks don't solve the
 problem. Want prompted journaling? Compose it (narration behavior + custom
-prompts), don't build it. Small additions — a `CLAUDE.md` file with custom
+prompts), don't build it. Small additions — an `AGENTS.md` file with custom
 prompts — beat elaborate new structures. Introduce a new building block only
 when it unlocks reusable capability across multiple features. The payoff is
 familiarity and depth: a piece understood deeply works consistently

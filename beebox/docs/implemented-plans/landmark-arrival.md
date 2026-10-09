@@ -179,7 +179,7 @@ needed, item (f).
   a doctest; the frontend has no DOM or effect harness
   (`src/frontend/test/` doctests use `renderToStaticMarkup`, see
   `src/frontend/test/components/PersonView.person-view.doctest.md:8-9`).
-- **`beebox/CLAUDE.md` "Work only on the requested problem."** The Properties
+- **`beebox/AGENTS.md` "Work only on the requested problem."** The Properties
   change is limited to landmark cards. The draft guard (Track A) also applies
   to the empty-chat openers; it is named under Track A with the reason.
 - **Memory: minimize invented concepts.** No new card field beyond

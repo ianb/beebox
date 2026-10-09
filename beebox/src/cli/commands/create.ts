@@ -13,6 +13,7 @@ import {
 import { getAllTemplates } from "../../templates-registry.js";
 import { describeTemplateArgs } from "../../templates-describe.js";
 import { loadBoxSchemas } from "../../schemas.js";
+import { folderInstructionNotes } from "../../core/folder-instructions.js";
 import { errorMessage } from "../../shared/error-guards.js";
 
 interface CreateOptions {
@@ -145,6 +146,13 @@ export const createCommand = new Command("create")
       if (!result.success) {
         console.error(`Error: ${result.error}`);
         process.exit(1);
+      }
+
+      const data = result.data;
+      if (typeof data === "object" && data !== null && "cardPath" in data && typeof data.cardPath === "string") {
+        for (const note of await folderInstructionNotes(boxRoot, data.cardPath)) {
+          console.log(note);
+        }
       }
     } catch (error) {
       console.error(`Error: ${errorMessage(error)}`);

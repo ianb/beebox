@@ -180,7 +180,7 @@ test("prose markdown is out of scope, but a .doctest.md is not", () => {
     scopedChanges([
       "beebox/docs/testing.md",
       "beebox/docs/security-overview.md",
-      "beebox/src/services/CLAUDE.md",
+      "beebox/src/services/AGENTS.md",
       "beebox/test/core/box.doctest.md",
     ]),
     ["beebox/test/core/box.doctest.md"],

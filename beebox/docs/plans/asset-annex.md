@@ -76,7 +76,7 @@ iteration. The interim mitigation is in "Prerequisites".
   mechanism rather than adding a third), **#10** (testability is
   architectural), **#12** (the maintainer is usually an agent — hence
   the pointer-file health check).
-- `beebox/CLAUDE.md:106`: *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:106`: *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* Every behavioral claim below
   was executed, not inferred; see Prototype findings.
 - `beebox/code-style.md` — no `any`, max 2 positional params,

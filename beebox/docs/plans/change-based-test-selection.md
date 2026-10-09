@@ -329,7 +329,7 @@ worst actor to discover an integration bug in: attribution is weakest there, the
 fix loop is longest, and the human is not in it. Mitigated by the first-invocation
 full run below.
 
-**Guidance.** `beebox/CLAUDE.md:11` and `:17` become the two-command story;
+**Guidance.** `beebox/AGENTS.md:11` and `:17` become the two-command story;
 per-worktree `AGENTS.md` mirrors regenerate from it.
 
 ### Track 5 — The failure ledger
@@ -582,7 +582,7 @@ it ran alone on an idle machine.
 
 **D. Batched full run — `schedules/full-suite/`.** Replaces Track 5b's nightly
 and the full run `/finish` performs today. `bin/schedules` computes due-ness
-from cadence only (`bin/CLAUDE.md`, "Due-ness is computed"); a schedule's
+from cadence only (`bin/AGENTS.md`, "Due-ness is computed"); a schedule's
 `check` is a post-run validator, not a due hook. So: `cadence: 1h`, and `run`
 decides whether there is work — it reads the last full-suite record on `main`
 from the ledger and exits via `bin/schedules done` when no landing has
@@ -702,7 +702,7 @@ does today. Expected: a code landing's fixed cost drops from a suite run plus
 several minutes of derivation to under a minute of scripts, with the agent's
 tokens spent on the three judgment steps.
 
-Guidance (`beebox/CLAUDE.md:11`, `docs/testing.md`, `doctest`) becomes:
+Guidance (`beebox/AGENTS.md:11`, `docs/testing.md`, `doctest`) becomes:
 iterate with `pnpm test:changed` or a named file; `pnpm test` is what the
 schedule runs, and an agent reaching for it should say why.
 
@@ -925,7 +925,7 @@ beyond "warn" is defensiveness against a failure with no consequence
 **Skip, with rationale.** Knowledge audits verify what a *box* agent absorbed
 from box-facing context. Everything here is dev-repo infrastructure — `bin/`,
 `agent-doctest/`, `.claude/` — which box agents never see and an audit could not
-test. The agent-facing surface for this work is `beebox/CLAUDE.md`,
+test. The agent-facing surface for this work is `beebox/AGENTS.md`,
 `docs/testing.md`, and `.claude/agents/finish.md`, updated by Tracks 4 and 5.
 
 ---
@@ -993,7 +993,7 @@ its denominator in failures observed.
 **Migration.** No data shape changes. The ledger is append-only and
 observational; deleting it loses evidence and nothing else.
 
-**Docs that land with it.** `beebox/CLAUDE.md:11` and `:17` gain the
+**Docs that land with it.** `beebox/AGENTS.md:11` and `:17` gain the
 two-command story; `docs/testing.md` gains a section on when each applies and what
 the ledger is for; `.claude/agents/finish.md` gains the flake-outcome capture in
 its tracked-flake protocol.

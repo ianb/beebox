@@ -14,6 +14,7 @@ real, executable `.git/hooks/pre-commit` that shells out to a `bbx` binary —
 an unrelated hazard in a repo-in-a-repo dev/test environment).
 
 ```ts setup
+import { rm } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { commitTemplateSyncChanges, generateDocs } from "../../../src/core/docs-gen/generate/core.js";
 import { isTemplateManagedPath } from "../../../src/core/install-template-file.js";
@@ -126,4 +127,46 @@ const afterUserEdit = await getStatus(userBox.root);
 
 ```ts cleanup
 await userBox.cleanup();
+```
+
+## An authored AGENTS.md stays out of the generation commit
+
+In a converted box `AGENTS.md` is the box's own instruction file. The legacy
+`**/AGENTS.md` mirror row still matches its path, so the commit filter skips a
+regular-file `AGENTS.md`: when generation adds the agent-guide include to the
+root file, that edit is left for the boxholder, as edits to the root
+`CLAUDE.md` always were.
+
+```ts
+const authoredBox = await makeTmpBox({ git: true });
+await generateDocs(authoredBox.root, { force: true });
+await authoredBox.write("AGENTS.md", "House rules.\n");
+authoredBox.commitAll("trim the root instructions");
+await generateDocs(authoredBox.root, { force: true });
+
+(await authoredBox.read("AGENTS.md")).includes("@.beebox/agent-guide.md")
+=> true
+
+(await getStatus(authoredBox.root)).modified.includes("AGENTS.md")
+=> true
+```
+
+A tracked guide is engine output, not the box's own file: when generation
+reinstalls `src/schemas/AGENTS.md`, the same commit takes it.
+
+```ts continue
+await rm(authoredBox.path("src/schemas/AGENTS.md"));
+authoredBox.commitAll("drop the schemas guide");
+await generateDocs(authoredBox.root, { force: true });
+
+(await authoredBox.read("src/schemas/AGENTS.md")).startsWith("# Writing Box-Local Schemas")
+=> true
+
+const afterGuide = await getStatus(authoredBox.root);
+[...afterGuide.staged, ...afterGuide.modified, ...afterGuide.untracked].includes("src/schemas/AGENTS.md")
+=> false
+```
+
+```ts cleanup
+await authoredBox.cleanup();
 ```

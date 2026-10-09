@@ -125,6 +125,12 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // (`navigation.openers`). Fails closed (exit 1, nothing written) on a list it
   // cannot move without a person's choice. See the script's plan.ts.
   { name: "briefing-openers-2026-10", script: "src/scripts/migrate/briefing-openers/run.ts" },
+  // Renames every box CLAUDE.md to AGENTS.md (a non-card file), moving its
+  // template-ledger entry and parked update with it, root first. Fails closed
+  // (exit 1, nothing written) on two instruction files in one directory, a
+  // CLAUDE.local.md, or differing ledger/park duplicates. Legacy support to
+  // remove: issues/deferred/2026-10-09-retire-claude-md-box-compat.md.
+  { name: "agents-md-2026-10", script: "src/scripts/migrate/agents-md/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

@@ -25,14 +25,14 @@ function Annotation({ annotation }: { annotation: string }) {
   const [expanded, setExpanded] = useState(false);
   const expandable = needsExpand(annotation);
   return (
-    <Text as="div" size="xs" tone="muted">
+    <Text material as="div" size="xs" tone="muted">
       {expandable && !expanded ? clampAnnotation(annotation) : annotation}
       {/* No `bbx-` id: a list renders one of these per annotated todo, and a
           duplicate address breaks `getElementById` for every other control on
           the page (lib/ui-scan/scan.ts). The two controls that address the
           list as a whole carry ids instead. */}
       {expandable ? (
-        <InlineAction
+        <InlineAction material
           intent="subtle"
           className="ml-1"
           onClick={() => setExpanded(!expanded)}
@@ -66,7 +66,7 @@ function ItemLine({ node }: { node: TodoNode }) {
         muted={!item.matching}
       >
         {openBeside === null ? item.text : (
-          <InlineAction intent="quiet" onClick={() => openBeside(cardTarget(item.path))} title="Open this todo's card">
+          <InlineAction material intent="quiet" onClick={() => openBeside(cardTarget(item.path))} title="Open this todo's card">
             {item.text}
           </InlineAction>
         )}
@@ -87,7 +87,7 @@ export function ItemTree({ nodes }: { nodes: TodoNode[] }) {
         <Stack key={todoKey(node.item)} gap="xs">
           <ItemLine node={node} />
           {node.children.length === 0 ? null : (
-            <div className="border-l border-warm-200 pl-3 ml-1">
+            <div className="border-l border-card-rule pl-3 ml-1">
               <ItemTree nodes={node.children} />
             </div>
           )}

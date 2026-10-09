@@ -5,7 +5,7 @@
 //   node --import tsx --test bin/commit-provenance.test.ts
 // (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
 //
-// bin/CLAUDE.md points new bin/ tests at beebox/test/dev/*.doctest.md.
+// bin/AGENTS.md points new bin/ tests at beebox/test/dev/*.doctest.md.
 // This one stays a .test.ts because it must fork a git repo per case and drive
 // hooks end to end; it sits beside the sibling bin/*.test.ts files it matches.
 
@@ -89,7 +89,7 @@ function makeRepo(params: { label: string; branch: string; plans: string[]; issu
     write(path.join(dir, "beebox/docs/plans", `plan-${index}.md`), plan(stream));
   }
   for (const rel of issues) write(path.join(dir, "issues", rel), "---\ntitle: i\n---\n");
-  if (issues.length > 0) write(path.join(dir, "issues/CLAUDE.md"), "queue conventions, not an issue\n");
+  if (issues.length > 0) write(path.join(dir, "issues/AGENTS.md"), "queue conventions, not an issue\n");
   const hooks = path.join(dir, "hooks");
   fs.mkdirSync(hooks);
   fs.writeFileSync(
@@ -153,7 +153,7 @@ test("issueBasenames includes deferred issues but not the queue's own prose", ()
   write(path.join(dir, "issues/closed/features/2026-01-02-b.md"), "x");
   write(path.join(dir, "issues/deferred/2026-01-03-c.md"), "x");
   write(path.join(dir, "issues/not-a-category/2026-01-04-d.md"), "x");
-  write(path.join(dir, "issues/CLAUDE.md"), "x"); // conventions doc, not an issue
+  write(path.join(dir, "issues/AGENTS.md"), "x"); // conventions doc, not an issue
   write(path.join(dir, "issues/closed/README.md"), "x");
   assert.deepEqual(issueBasenames(path.join(dir, "issues")).toSorted(), [
     "2026-01-01-a",
@@ -171,7 +171,7 @@ test("issueFiles maps a basename to where the issue lives NOW", () => {
   write(path.join(dir, "issues/bugs/2026-01-01-a.md"), "x");
   write(path.join(dir, "issues/closed/features/2026-01-02-b.md"), "x");
   write(path.join(dir, "issues/deferred/2026-01-03-c.md"), "x");
-  write(path.join(dir, "issues/CLAUDE.md"), "x");
+  write(path.join(dir, "issues/AGENTS.md"), "x");
   const files = issueFiles(path.join(dir, "issues"));
   assert.equal(files.get("2026-01-01-a"), path.join("bugs", "2026-01-01-a.md"));
   assert.equal(files.get("2026-01-02-b"), path.join("closed", "features", "2026-01-02-b.md"));
@@ -297,7 +297,7 @@ test("--check blocks an unknown Issue: name and passes a known one, through the 
   assert.equal(pathForm.status, 1);
   assert.match(pathForm.stderr, /use the bare name, no path and no \.md: Issue: 2026-08-24-real$/m);
 
-  // issues/CLAUDE.md is the queue's conventions doc, not a citable issue.
+  // issues/AGENTS.md is the queue's conventions doc, not a citable issue.
   const notAnIssue = run(dir, ["--check", msgFile(dir, "fix: x\n\nIssue: CLAUDE\n")]);
   assert.equal(notAnIssue.status, 1);
   assert.match(notAnIssue.stderr, /Issue: CLAUDE/);

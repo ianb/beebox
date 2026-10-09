@@ -68,7 +68,7 @@ function WorkspaceCard({ tab, pane, visible, onAddSelection, reportActivity }: C
  * `children` (the transcript) is new on every streamed token. The callbacks
  * are destructured by name, never gathered with a rest spread: a rest object
  * is new on every render, so the compiler would rebuild every card element
- * and re-render each open card per token (`components/chat/CLAUDE.md`,
+ * and re-render each open card per token (`components/chat/AGENTS.md`,
  * "Workspace card roots survive presentation changes").
  */
 export function WorkspaceCanvas({ children, onAddSelection, reportActivity }: CardCallbacks & { children: ReactNode }) {

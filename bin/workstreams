@@ -54,7 +54,7 @@ ROUTER_PORT="${ROUTER_PORT:-3210}"
 # The router's TCP listener now authenticates every request (it's exposable over
 # Tailscale). Local CLI reaches the router's control routes through the
 # trusted-local Unix-domain socket instead, which is unauthenticated by capability
-# (a non-browser, same-user-only channel). See bin/CLAUDE.md / expose-dev-router.md.
+# (a non-browser, same-user-only channel). See bin/AGENTS.md / expose-dev-router.md.
 ROUTER_SOCK="$STATE_DIR/router.sock"
 
 cmd="${1:-status}"
@@ -192,8 +192,8 @@ case "$cmd" in
     # fd 3 and point fd 1 at stderr for the whole command, so every child
     # process inherits a stdout that is already stderr. Individual `>&2` in the
     # steps below are then belt-and-braces. Without this, any child that prints
-    # to stdout silently corrupts the contract — `bin/generate-agents-md.ts`
-    # does exactly that ("wrote 18 AGENTS.md mirror(s)…"), and its line landed in
+    # to stdout silently corrupts the contract — `bin/generate-codex-mirrors.ts`
+    # does exactly that ("wrote 27 skill link(s)…"), and its line landed in
     # the returned path until this was added.
     exec 3>&1 1>&2
     # shellcheck source=worktree-create.sh

@@ -59,7 +59,7 @@ the ear gets when the eye is elsewhere.
   - **11 (enforcement beats convention)** — the reveal/do boundary is an
     explicit author opt-in checked by a doctest, not an inference from markup
     and not a request that the agent be careful.
-- `beebox/CLAUDE.md` — "don't add features beyond what the task
+- `beebox/AGENTS.md` — "don't add features beyond what the task
   requires"; the `src/shared/ref-path.ts` (moved to `beebox/src/shared/ref-path/core.ts`) fails-closed precedent.
 - `beebox/code-style.md` — no default parameters, max two positional
   params, `as` ban, the `Result`-vs-throw split, logging levels.

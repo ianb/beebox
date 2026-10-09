@@ -13,7 +13,7 @@
  * global to every local box rather than scoped to the box it was standing in.
  * The password was unrecoverable (scrypt) and the boxholder's live sessions were
  * revoked. Detection cannot prevent that on its own — the guidance in
- * `beebox/CLAUDE.md` is the real fix — but a refusal at the moment of the
+ * `beebox/AGENTS.md` is the real fix — but a refusal at the moment of the
  * mistake is worth more than a rule the agent has to remember.
  */
 

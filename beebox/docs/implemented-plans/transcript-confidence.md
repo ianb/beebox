@@ -69,7 +69,7 @@ first pass — see Open design questions.
   `console.warn`), #6 (right-sized defensiveness), #8 (one way: one marker
   vocabulary for agent and human, derived from one data source), #12 (the
   maintainer is usually an agent).
-- `beebox/CLAUDE.md`: "Read before writing"; "don't add features beyond
+- `beebox/AGENTS.md`: "Read before writing"; "don't add features beyond
   what the task requires"; keep source generic.
 - Monorepo memory `feedback_minimal_concepts_prefer_primitives`: reuse the
   existing embedded-XML-in-message-text convention (`<typed>`/`<speech>`

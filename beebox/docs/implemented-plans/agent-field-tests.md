@@ -38,8 +38,8 @@ runs weekly or on demand, never as a CI gate.
   chiefly **#3 validate-at-boundaries**, **#4 resilient-AND-never-silent**,
   **#6 right-sized defensiveness**, **#8 one-way-to-do-each-thing**,
   **#10 testability-is-architectural**, **#12 the-maintainer-is-usually-an-agent**.
-- `beebox/CLAUDE.md` — "don't add features beyond what the task requires";
-  the services real/fake pattern (`src/services/CLAUDE.md`).
+- `beebox/AGENTS.md` — "don't add features beyond what the task requires";
+  the services real/fake pattern (`src/services/AGENTS.md`).
 - `beebox/code-style.md` — mechanical rules for all new code.
 - Precedents: the `bbx scenario` harness (`src/scenario/`) as the prior
   end-to-end-fixture design; `bin/manual-tests-scheduled.sh` as the prior
@@ -63,7 +63,7 @@ runs weekly or on demand, never as a CI gate.
   the scenario runner is CLI-only (no server, no browser) and its step model is
   the opposite of goals-not-steps. Extending it would bend both designs
   (principle #8: these are two different things, each done one way).
-- **Service fakes** (`src/services/`, real/fake DI per `src/services/CLAUDE.md`).
+- **Service fakes** (`src/services/`, real/fake DI per `src/services/AGENTS.md`).
   `FakeGoogleGmailService.addMessage()` already models "an email arrives"
   (`src/services/google-gmail.ts:272-278` (moved to `beebox/src/services/google-gmail/core.ts`): pushes the message and a
   `messagesAdded` history record). `createGmailConnector(boxRoot, service?)`

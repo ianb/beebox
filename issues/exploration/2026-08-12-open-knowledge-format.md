@@ -28,7 +28,7 @@ and possibly **boxes** too.
   buy that a bespoke format wouldn't — interoperability with other tools is the
   usual argument, so name who we'd actually interoperate *with*.
 
-Land the findings as a doc under `research/` (see `research/CLAUDE.md`), the way
+Land the findings as a doc under `research/` (see `research/AGENTS.md`), the way
 the other external evaluations are recorded, and link it back here with the
 recommendation.
 

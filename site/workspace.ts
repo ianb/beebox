@@ -1,5 +1,7 @@
 // Server-render every reading arrangement. JavaScript enhances these normal links.
 import { FISHEYE_CSS } from "./fisheye.js";
+import { THREADS_CSS } from "./threads.js";
+import { addMenuIcons } from "./menu-icons.js";
 import { escapeHtml } from "./render.js";
 import { nextDestination, type SitePage, type SiteWorkspace } from "./workspace-model.js";
 
@@ -51,24 +53,33 @@ function contextBody(page: SitePage): string {
     });
 }
 
+function splitHeading(html: string): { heading: string; body: string } {
+  const match = /^\s*(<h([12])\b[^>]*>[\S\s]*?<\/h\2>)/.exec(html);
+  if (!match?.[1]) return { heading: "", body: html };
+  return { heading: `<header class="bbx-card-heading">${match[1]}</header>\n`, body: html.slice(match[0].length) };
+}
+
 function pane(workspace: SiteWorkspace, params: { page: SitePage; context: boolean }): string {
   const { page, context } = params;
   const parent = workspace.pages.find((candidate) => candidate.id === page.parentId);
   const theme = page.frontmatter.theme ?? "paper";
   const stock = page.frontmatter.stock ?? (theme === "post-it" ? "yellow" : "cream");
+  // Only an attached card gets a label row: the way back to its parent.
   const label = parent
-    ? `<a href="${escapeHtml(parent.href)}" data-parent>Back to ${escapeHtml(parent.frontmatter.title)}</a>`
-    : page.frontmatter.navigation ? "Collection" : "Reading";
+    ? `<div class="pane-label"><a href="${escapeHtml(parent.href)}" data-parent>Back to ${escapeHtml(parent.frontmatter.title)}</a></div>\n`
+    : "";
+  // The card's leading heading sits in the card's own heading slot, as the
+  // app renders it, so each theme's heading treatment applies.
+  const { heading, body } = splitHeading(context ? contextBody(page) : page.html);
   const transition = `card-${workspace.pages.indexOf(page)}`;
   const cardKey = `${context ? "context" : "reading"}-${workspace.pages.indexOf(page)}`;
   const frontId = `card-front-${cardKey}`;
   const backId = `card-back-${cardKey}`;
   return `<section class="pane${context ? " context" : ""}" data-card="${escapeHtml(page.id)}" aria-label="${escapeHtml(page.frontmatter.title)}">
-<div class="pane-label">${label}<span>${parent ? "Aside" : "Document"}</span></div>
-<article class="bbx-card-theme bbx-card-surface" data-card-theme="${theme}" data-card-stock="${stock}" data-card-side="front" style="view-transition-name:${transition}">
+${label}<article class="bbx-card-theme bbx-card-surface" data-card-theme="${theme}" data-card-stock="${stock}" data-card-side="front" style="view-transition-name:${transition}">
 <span class="card-fold" aria-hidden="true"></span><button type="button" class="bbx-card-properties" data-card-properties hidden aria-label="On the back" title="On the back: authorship and provenance" aria-expanded="false" aria-controls="${backId}"><span class="bbx-card-properties-label" aria-hidden="true">On the back</span></button>
-<div id="${frontId}" class="bbx-card-front" aria-hidden="false"><div class="bbx-card-content bbx-theme-prose">
-${context ? contextBody(page) : page.html}
+${heading}<div id="${frontId}" class="bbx-card-front" aria-hidden="false"><div class="bbx-card-content bbx-theme-prose">
+${body}
 ${context ? "" : nextLinks(workspace, page)}
 </div></div>${authorshipBack(page, backId)}</article></section>`;
 }
@@ -78,8 +89,11 @@ function menuHtml(workspace: SiteWorkspace): string {
     .replace(/id="([^"]+)"/g, 'id="menu-$1"')
     .replace(/aria-labelledby="([^"]+)"/g, 'aria-labelledby="menu-$1"')
     .replace(/href="#([^"]+)"/g, (_match, anchor: string) => `href="${escapeHtml(workspace.navigation.href)}#${anchor}"`);
-  return `<details id="site-menu"><summary class="bbx-place-pill">Menu <span aria-hidden="true">⌄</span></summary><nav class="site-menu-panel" aria-label="Menu">${body}</nav></details>`;
+  return `<details id="site-menu"><summary class="bbx-place-pill">Menu <span aria-hidden="true">⌄</span></summary><nav class="site-menu-panel" aria-label="Menu">${addMenuIcons(body)}</nav></details>`;
 }
+
+/** The home card: the one page that draws the margin threads (threads.ts). */
+const HOME_PAGE_ID = "index.site-page.card";
 
 /**
  * The browser title. A page whose own title already is the site name (the home
@@ -93,17 +107,18 @@ export function workspaceShell(workspace: SiteWorkspace, page: SitePage): string
   const context = page.id === workspace.navigation.id || page.frontmatter.layout === "single" ? undefined
     : workspace.pages.find((candidate) => candidate.id === page.parentId) ?? workspace.navigation;
   const chrome = workspace.navigation.frontmatter.chrome ?? { theme: "paper", stock: "cream" };
-  const styles = ["materials", "card-themes", "card-turn", "chrome", "site"].map((name) => `<link rel="stylesheet" href="${escapeHtml(workspace.base)}assets/${name}.css">`).join("\n");
+  const styles = ["themes/themes", "site"].map((name) => `<link rel="stylesheet" href="${escapeHtml(workspace.base)}assets/${name}.css">`).join("\n");
   const description = escapeHtml(page.frontmatter.summary);
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(pageTitle(page.frontmatter.title))}</title><meta name="description" content="${description}">
-${styles}<style>${FISHEYE_CSS}</style>
+${styles}<style>${FISHEYE_CSS}${THREADS_CSS}</style>
 <noscript><style>.fx-b[hidden="until-found"]{display:inline;content-visibility:visible;width:auto;height:auto;overflow:visible}.fx-t{display:none}</style></noscript>
 </head><body class="bbx-box-presentation" data-chrome-theme="${chrome.theme}" data-chrome-stock="${chrome.stock ?? "cream"}" data-site-base="${escapeHtml(workspace.base)}">
+<script src="${escapeHtml(workspace.base)}assets/day-theme.js"></script>
 <a class="skip-link" href="#reading-card">Skip to reading</a>
 <header class="bbx-app-nav" id="site-header"><div><a class="brand" href="${escapeHtml(workspace.base)}">Bee Box</a>${menuHtml(workspace)}<span class="by">by <a href="https://ianbicking.org" target="_blank" rel="noopener noreferrer">Ian Bicking</a></span></div></header>
-<main id="site-workspace" class="${context ? "" : "single"}" data-page="${escapeHtml(page.id)}" data-href="${escapeHtml(page.href)}" data-place="${escapeHtml(page.parentId ? context?.href ?? page.href : page.href)}" aria-label="Reading workspace">
+<main id="site-workspace" class="${context ? "" : "single"}" data-page="${escapeHtml(page.id)}" data-href="${escapeHtml(page.href)}" data-place="${escapeHtml(page.parentId ? context?.href ?? page.href : page.href)}"${page.id === HOME_PAGE_ID ? " data-threads" : ""} aria-label="Reading workspace">
 ${context ? pane(workspace, { page: context, context: true }) : ""}
 ${pane(workspace, { page, context: false }).replace('class="pane"', 'class="pane" id="reading-card" tabindex="-1"')}
 </main><script src="${escapeHtml(workspace.base)}assets/navigation.js" defer></script></body></html>`;

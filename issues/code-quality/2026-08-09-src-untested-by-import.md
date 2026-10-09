@@ -50,7 +50,7 @@ components, pages, and hooks are exercised only by hand in a browser.
 
 ## Not a mandate
 
-Per `issues/CLAUDE.md`, this is a tension, not a task. Blanket coverage of 327
+Per `issues/AGENTS.md`, this is a tension, not a task. Blanket coverage of 327
 frontend files is not proposed and would be a bad use of effort —
 `beebox/docs/testing.md` is explicit that tests are not for coverage
 percentages. The useful version of this is probably: pick the frontend logic that

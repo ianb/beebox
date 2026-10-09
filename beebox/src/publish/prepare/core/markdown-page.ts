@@ -20,6 +20,7 @@ import type { Config, Node, RenderableTreeNode, RenderableTreeNodes } from "@mar
 
 import { markdocConfig, makeHeadingNode } from "../../../shared/markdoc-config/tags/core.js";
 import { parseMarkdown } from "../../../shared/markdoc-config/parse/core.js";
+import { escapeHtml } from "../../../lib/escape-html.js";
 
 // Named value imports (`{ parse, transform, renderers }`) don't resolve from
 // this CommonJS module under Node's ESM loader (the doctest/CLI backend path);
@@ -27,11 +28,6 @@ import { parseMarkdown } from "../../../shared/markdoc-config/parse/core.js";
 // as `markdoc/emit.ts` / `markdoc-config.ts`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
 const { transform, renderers, validate, Tag } = Markdoc;
-
-function escapeHtml(s: string): string {
-  const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-  return s.replace(/["&'<>]/g, (c) => map[c] ?? c);
-}
 
 /** The first level-1 heading's text becomes the document title. */
 function extractTitle(ast: Node): string | null {

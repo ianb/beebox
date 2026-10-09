@@ -57,7 +57,7 @@ gone.
 This issue is filed to `deferred/` with `activate-on: 2026-11-15` (rather
 than `next-action: reconfirm`) because the trigger is a known date, not an
 open question to re-raise sooner: `deferred/`'s activation mechanism
-(`issues/CLAUDE.md` "Deferred items") is the closer fit — the hourly
+(`issues/AGENTS.md` "Deferred items") is the closer fit — the hourly
 `deferred-issues` schedule will move this into `code-quality/` on that date,
 and the router test above independently starts failing the same day even if
 this file is not yet picked up.

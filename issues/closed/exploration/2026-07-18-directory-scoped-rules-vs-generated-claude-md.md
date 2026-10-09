@@ -32,7 +32,7 @@ investigate (boxholder: "I'm not sure if that works").
 - `src/core/docs-gen/triage.ts` (moved to `beebox/src/core/docs-gen/package-docs/triage.ts`) — triage-location doc generation (the boxholder's
   motivating case — triage spots have location-specific handling).
 - `src/core/box/package.ts:249` — writes `ROOT_CLAUDE_MD` into a new box package.
-- Engine side: `beebox/CLAUDE.md:174` uses `@code-style.md` (an @-include of a
+- Engine side: `beebox/AGENTS.md:174` uses `@code-style.md` (an @-include of a
   hand-written file — different from the generated-briefing case, but same mechanism).
 
 ## The core question (load-bearing, verify first)

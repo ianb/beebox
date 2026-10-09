@@ -492,7 +492,7 @@ So the app takes a `transcribe` function through its services object
 (`workstreams-app/src/server/services.ts`) — real is `transcribeAudioHq` with
 `apiKey` from the environment, fake is canned text. This is the house pattern:
 *"Every external dependency is wrapped in a typed interface with real + fake
-implementations"* (`beebox/CLAUDE.md`, Key Concepts).
+implementations"* (`beebox/AGENTS.md`, Key Concepts).
 
 The key is `BBX_OPENAI_API_KEY`. This collides with the embeddings key
 (`core/search/embeddings-key.ts:84`), and the codebase keeps transcription and
@@ -894,7 +894,7 @@ draft this replaced.
 surfaces go in `workstreams-app/test/` beside the existing suites
 (`exhibits-api.doctest.md`, `server-boundary.doctest.md`, `markdown.doctest.md`).
 **Anything under `bin/` is tested from `beebox/test/dev/`**, not from a
-`bin/*.test.ts` — `bin/CLAUDE.md` is explicit: *"New tests for root dev
+`bin/*.test.ts` — `bin/AGENTS.md` is explicit: *"New tests for root dev
 infrastructure use the repository's primary doctest format… Existing
 `bin/*.test.ts` files predate this rule and are not precedent."*
 

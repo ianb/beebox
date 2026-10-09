@@ -52,7 +52,7 @@ Concurrent deploys collapse latest-wins: a run that finds another deploy in
 progress records its request and exits; the running deploy chains to the
 newest request when it finishes. Hook-triggered runs each log to
 `deploy/.deploy-logs/`, with `deploy/.last-deploy.log` symlinked to the newest
-(see `deploy/CLAUDE.md` for the wait/poll pattern).
+(see `deploy/AGENTS.md` for the wait/poll pattern).
 
 While the services are stopped, nginx serves a deploy page instead of its bare
 502. The activation script puts it up before the stop and takes it down from

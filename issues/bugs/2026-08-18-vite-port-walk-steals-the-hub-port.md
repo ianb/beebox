@@ -37,6 +37,15 @@ Port 52036 is in use, trying another one...
 Error: listen EADDRINUSE: address already in use 127.0.0.1:52037   ← the hub
 ```
 
+> **Re-encountered 2026-10-09** (worktree-agents-md, `bin/finish-verify` smoke).
+> The hub for worktree `agents-md` failed with `EADDRINUSE` on
+> 127.0.0.1:49238, so `/agents-md/test1/api/health` answered 503 for 90 s and
+> smoke went red. The holder was not a sibling: `lsof` showed `limactl` (a
+> Lima VM's port forward) listening on 49238. This is the "worktree port taken
+> at spawn" case under "What's left", from a process outside the router. A
+> second smoke run allocated new ports and passed. Priority `normal` may be
+> stale: any local VM or tool that forwards ports can now trigger it.
+
 ## Why the collision is structural, not bad luck
 
 `bin/router-core.ts:373-377` allocates three ports in parallel:

@@ -55,7 +55,7 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "tricks-guide-v2": {
-    current: "1f9b7ba407d06512cf07a956ca3f29371dc734beb81a8ab110b8707dceead0a2",
+    current: "ce0602fc329f936b89c0be7ab4817d6ac73871b2fc65abe511af16b5d333ed39",
     superseded: [
       "08882d2ce756848de7805fc148a4415e58e929c4e46993126e325becc5e0325c",
       "c25960f7eccbf7bb99ecdc80598f4dd7faa00b042d945a1e3a7a10047b2177da",
@@ -66,6 +66,7 @@ export const TEMPLATE_STOCK_HASHES = {
       "7302df58560d8a727a8c3d1feedca9e8d6b1bb6533a6a2d558eae4ce895244b0",
       "26f9d95120144fe955ce38f444bbc1b41f7a28472b4f6c7aa2e1fdf62599f58f",
       "6028707b9584cd03ed9c6290d9d0dcfca4cc84de292bec100963712492a6926d",
+      "1f9b7ba407d06512cf07a956ca3f29371dc734beb81a8ab110b8707dceead0a2",
     ],
   },
   "views-guide-v2": {

@@ -3,13 +3,14 @@
  * everything read from a box's disk rather than from source code.
  *
  * shapeVersion 3: a box has ONE root — `.claude/` (skills, rules, memory) and
- * CLAUDE.md all live at `boxRoot`. Every layer builder here takes that one
+ * the root instruction file all live at `boxRoot`. Every layer builder here takes that one
  * root.
  */
 
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { createCardSchemaMap } from "../../../schemas.js";
+import { instructionFilePath } from "../../../core/agent-instruction-files.js";
 import { invariant } from "../../../shared/invariant.js";
 
 /** How a layer reaches the agent's context. */
@@ -37,9 +38,13 @@ class UnknownCardTypeError extends Error {
   }
 }
 
-/** Operational-root CLAUDE.md with one level of `@path` includes inlined. */
+/**
+ * The root instruction file (`AGENTS.md`, or `CLAUDE.md` in a box not yet
+ * converted) with one level of `@path` includes inlined.
+ */
 export async function claudeMdLayer(boxRoot: string): Promise<ContextLayer> {
-  const raw = await readFile(join(boxRoot, "CLAUDE.md"), "utf-8");
+  const rootFile = await instructionFilePath(boxRoot, "");
+  const raw = await readFile(join(boxRoot, rootFile), "utf-8");
   const parts: string[] = [];
   for (const line of raw.split("\n")) {
     const include = line.match(/^@(\S+)\s*$/);
@@ -58,8 +63,8 @@ export async function claudeMdLayer(boxRoot: string): Promise<ContextLayer> {
     }
   }
   return {
-    name: "Box CLAUDE.md (@-includes inlined: briefing, agent guide, maps)",
-    source: join(boxRoot, "CLAUDE.md"),
+    name: `Box ${rootFile} (@-includes inlined: briefing, agent guide, maps)`,
+    source: join(boxRoot, rootFile),
     loading: "always",
     text: parts.join("\n"),
   };

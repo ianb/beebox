@@ -65,7 +65,7 @@ Accepted the missing explanation. Retained one canonical chat-routing rubric: la
 **Why it matters:** A retry could create or route to another chat if it reruns selection.
 **Suggested action:** Freeze the accepted action, use the existing reservation/default-model owners, and test retries across session assignment.
 
-Accepted and incorporated. Corrected citation line numbers, including target.ts:22, husk-read.ts:97, and ios-app/CLAUDE.md:11.
+Accepted and incorporated. Corrected citation line numbers, including target.ts:22, husk-read.ts:97, and ios-app/AGENTS.md:11.
 
 ## NOT in scope (verified)
 

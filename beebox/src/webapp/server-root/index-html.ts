@@ -22,16 +22,9 @@
 
 import type { BoxIdentity } from "../../core/landmark/box-identity.js";
 import { emojiFaviconUri } from "../../shared/favicon.js";
+import { escapeHtml } from "../../lib/escape-html.js";
 
 /** Escape text for an HTML text node or a double-quoted attribute value. */
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 /**
  * The box a document request is for: the URL's first path segment, matched
  * against the boxes this server actually serves.

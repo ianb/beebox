@@ -22,13 +22,13 @@ tour(
 
     await t.go("/views/_content/theme-tour/markdown-note.md");
     await t.checkpoint("markdown-file");
-    await t.expect.heading("A Markdown file", { level: 2 });
+    await t.expect.heading("A Markdown file", { level: 1 });
     await t.expect.custom("Markdown file uses the themed document surface", (snapshot) =>
       snapshot.includes("Properties") && snapshot.includes("ordinary Markdown document"));
     await t.expect.noPageErrors();
 
     await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2Fmarkdown-note.md");
-    await t.expect.heading("A Markdown file", { level: 2 });
+    await t.expect.heading("A Markdown file", { level: 1 });
     await t.checkpoint("markdown-workspace");
     const joined = await t.eval(`(() => {
       const pane = document.querySelector('[data-workspace-card="_content/theme-tour/markdown-note.md"]');
@@ -82,7 +82,7 @@ tour(
     await t.eval('document.querySelector("[data-card-section=appearance] details")?.setAttribute("open", "")');
     await clickVisibleButton(t, "Use default");
     await t.checkpoint("use-default");
-    await t.expect.custom("Use default returns to the resolved fallback", (snapshot) => snapshot.includes("Following the box and card type defaults."));
+    await t.expect.custom("Use default returns to the resolved fallback", (snapshot) => snapshot.includes("Following the box, card type, and system theme defaults."));
     // Choosing a view turns the card over, so the person sees the view they chose.
     await clickVisibleButton(t, "Original text");
     await t.checkpoint("chose-original-text");

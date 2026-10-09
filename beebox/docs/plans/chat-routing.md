@@ -34,7 +34,7 @@ Latest boxholder direction: “entry point UI that is easy to access and use, bu
 
 The later boxholder decision is to send blindly and inspect results afterward, including close probabilities. Automatic routing is enabled for this trial; service errors keep the text without sending; uncertain fit falls back to a plausible recent/general chat or a new root chat. The old issue's fresh-session fallback is superseded by the newer existing-destination preference.
 
-`ios-app/CLAUDE.md:11`: “The webview is still the chat client” — keep dispatch in the web layer. Native input must not bypass it.
+`ios-app/AGENTS.md:11`: “The webview is still the chat client” — keep dispatch in the web layer. Native input must not bypass it.
 
 ## What already exists
 

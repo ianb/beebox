@@ -10,7 +10,6 @@ authorship:
     transcription: none
     drafting: Drafted the page around the contributor prompt and the entry points the documentation already names.
     editing: Kept it to the prompt and two links.
-theme: paper
 ---
 
 # For developers
@@ -31,3 +30,5 @@ Reading it yourself: start at
 [CONTRIBUTING.md](https://github.com/ianb/beebox/blob/main/CONTRIBUTING.md)
 in the repository, or the [contributor entry point](https://beebox.run/llms-dev.txt).
 Bug reports are invited; pull requests are not yet solicited.
+
+A side note from development: [an AI audio understanding comparison](develop.attach/audio-bakeoff.doc.card).

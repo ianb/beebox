@@ -1,6 +1,7 @@
 /** Scriptless password-reset page authenticated by a short-lived bearer capability. */
 
-import { escapeHtml, pageShell } from "./login-page.js";
+import { escapeHtml } from "../../../lib/escape-html.js";
+import { pageShell } from "./login-page.js";
 
 export function renderPasswordResetPage(options: {
   prefix: string;

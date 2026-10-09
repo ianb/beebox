@@ -21,6 +21,6 @@
     "lib": ["ES2023"],
     "types": ["node", "@fastify/cookie"]
   },
-  "include": ["feedback-review/**/*.ts", "eslint.config.ts", "bin/**/*.ts", "schedules/**/*.ts", "workstreams-app/src/router/**/*.ts"],
+  "include": ["feedback-review/**/*.ts", "eslint.config.ts", "bin/**/*.ts", "schedules/**/*.ts", "workstreams-app/src/router/**/*.ts", "research/audio-understanding-bakeoff/*.ts"],
   "exclude": ["node_modules", "beebox", "cardworks", "agent-doctest", "canvas-loop", "beebox-clerk", "browse"]
 }

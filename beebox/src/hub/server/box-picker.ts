@@ -19,22 +19,7 @@ import { resolveRequestIdentity, getOwnerEmail } from "../../webapp/auth.js";
 import { filterAccessibleBoxes } from "../../webapp/box-access.js";
 import { loginRedirect, stripBasePrefixHeader } from "../../webapp/base-prefix.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
-import { invariant } from "../../shared/invariant.js";
-
-function escapeHtml(value: string): string {
-  const escapes: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  };
-  return value.replace(/["&'<>]/g, (c) => {
-    const escaped = escapes[c];
-    invariant(escaped !== undefined, `escapeHtml: no mapping for matched character "${c}"`);
-    return escaped;
-  });
-}
+import { escapeHtml } from "../../lib/escape-html.js";
 
 function renderPage(boxes: BoxSpec[]): string {
   const items = boxes

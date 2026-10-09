@@ -39,10 +39,10 @@ The selected destination determines the effect. A chat destination sends the con
 - `docs/engineering-principles.md` principle 8, test the contract. Swift request/response shapes, TypeScript Zod schemas, and shared mobile-contract fixtures change together.
 - `docs/engineering-principles.md` principle 10, keep one source of truth. Landmark cards remain the source of filing destinations. Chat husks and transcript activity remain the source of recent chats.
 - `docs/engineering-principles.md` principle 12, make invalid states difficult to represent. The server uses discriminated chat/save targets instead of nullable target fields with implicit fallback.
-- `ios-app/CLAUDE.md:8-18`: *"The app is a native SwiftUI shell around the existing web chat"* and wire changes must update Swift, TypeScript, the mobile contract, and shared fixtures together. The extension reuses those server contracts and does not add a second chat model.
-- `ios-app/CLAUDE.md:46-60`: *"Adding a `.swift` file on disk is insufficient"*. The new target and every shared source file need explicit Xcode project membership.
-- `ios-app/CLAUDE.md:120-135`: runtime diagnostics are part of an iOS feature. The plan includes metadata-only extension diagnostics and a durable App Group spool.
-- `beebox/CLAUDE.md` requires the smallest feature that satisfies the task. V1 accepts one logical item, one explicitly named paired box, two recent chats, and explicit save destinations. It does not add automatic routing or a full chat browser.
+- `ios-app/AGENTS.md:8-18`: *"The app is a native SwiftUI shell around the existing web chat"* and wire changes must update Swift, TypeScript, the mobile contract, and shared fixtures together. The extension reuses those server contracts and does not add a second chat model.
+- `ios-app/AGENTS.md:46-60`: *"Adding a `.swift` file on disk is insufficient"*. The new target and every shared source file need explicit Xcode project membership.
+- `ios-app/AGENTS.md:120-135`: runtime diagnostics are part of an iOS feature. The plan includes metadata-only extension diagnostics and a durable App Group spool.
+- `beebox/AGENTS.md` requires the smallest feature that satisfies the task. V1 accepts one logical item, one explicitly named paired box, two recent chats, and explicit save destinations. It does not add automatic routing or a full chat browser.
 
 ## What already exists
 

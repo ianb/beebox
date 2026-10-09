@@ -1,5 +1,5 @@
 // Tests for change-based test selection. A `.test.ts` rather than the
-// doctest this directory's CLAUDE.md asks for, for the same reason
+// doctest this directory's AGENTS.md asks for, for the same reason
 // bin/test-graph.test.ts is one: the thing under test decides which doctests
 // run, so exercising it from inside that suite is circular.
 //

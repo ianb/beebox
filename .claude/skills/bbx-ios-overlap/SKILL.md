@@ -39,4 +39,4 @@ A change to an endpoint path, JSON shape, `WKScriptMessageHandler` channel,
 URL-scheme or query parameter, or token handling in these files needs the Swift
 side updated (or an issue filed) and the matching §7 row. Internal UI or logic
 with no wire change does not. Before trusting a surface, search open issues:
-`bin/issues search ios`. In `ios-app/` itself, read `ios-app/CLAUDE.md` first.
+`bin/issues search ios`. In `ios-app/` itself, read `ios-app/AGENTS.md` first.

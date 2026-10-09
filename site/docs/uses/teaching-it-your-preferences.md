@@ -20,7 +20,7 @@ box's working theory of you for one kind of job: triage rules, actions, and
 reactions, each with a confidence level and a note of where it came from. A personality card holds voice and communication style, folded into what every
 agent reads before it acts; a briefing card holds a directory's situational
 context. Answering a question can write the fact into a guide, briefing, or personality
-card, so an answer becomes a standing preference. The box's own instructions file (`CLAUDE.md`, for the
+card, so an answer becomes a standing preference. The box's own instructions file (`AGENTS.md`, for the
 curious) and rules directory are the mechanism a coding agent already uses.
 
 **What it needs.** Nothing beyond the box and some use over time.

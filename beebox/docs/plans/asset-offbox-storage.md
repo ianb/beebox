@@ -80,10 +80,10 @@ with 11 GB of `backups/pre-migration-20260523` and 440 MB of
   and never resilient to the impossible), **#3** (validate at
   boundaries), **#5** (failure paths visible in signatures), **#10**
   (testability is architectural), **#8** (one way to do each thing).
-- `beebox/CLAUDE.md:98`: *"Services — Every external dependency
+- `beebox/AGENTS.md:98`: *"Services — Every external dependency
   is wrapped in a typed interface with real + fake implementations."*
   The R2 surface is a service, not inline `fetch`.
-- `beebox/CLAUDE.md:106`: *"Read before writing."* — the
+- `beebox/AGENTS.md:106`: *"Read before writing."* — the
   measurements above precede the design, deliberately.
 - `code-style.md` — no `any`, max 2 positional params, `Result<T,E>`
   only where callers branch on why.
@@ -252,7 +252,7 @@ the 3,016 backlog files. No open questions inside this chunk.
 
 **What.** A narrow typed interface over the R2 bucket, with a real
 implementation and an in-memory fake, following
-`src/services/CLAUDE.md`.
+`src/services/AGENTS.md`.
 
 **Why this needs to change.** There is no asset-facing object store
 today. `PublishRemoteStore` is bound to the publications bucket, its

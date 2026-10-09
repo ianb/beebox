@@ -20,14 +20,14 @@ pnpm agent-context chat --box ~/src/boxes/test1 --skill calendar --output scratc
 
 Each report shows every layer with its loading class and word count, plus the always-loaded total. `pnpm prompt-report` is the complementary flat *inventory* of every prompt in the system; `agent-context` is the per-situation *composition*.
 
-**Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run `bbx init` on the box after changing generator code, or the report shows the old world. That staleness being visible is a feature, not a bug.
+**Boxes go stale.** The box-side layers (AGENTS.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run `bbx init` on the box after changing generator code, or the report shows the old world. That staleness being visible is a feature, not a bug.
 
 ## The layering model
 
 Every agent's context is a stack; each layer has a loading class:
 
 1. **Identity prompt** (always) — per situation: chat, chat-thread, reactor, procedure. Says what the agent *is* and covers only that situation's surface.
-2. **Box knowledge** (always) — box CLAUDE.md → compiled briefing + the agent guide. Loaded by every agent; the scarcest budget.
+2. **Box knowledge** (always) — box AGENTS.md → compiled briefing + the agent guide. Loaded by every agent; the scarcest budget.
 3. **Situational** — schema `instructions` for the card types in play, `.claude/rules/` path globs, the per-turn `<chat-app>` snapshot.
 4. **On-demand** — skill bodies, the package docs (`node_modules/beebox/box-docs/*`) and box-compiled docs (`_content/docs/generated/*`), guide cards the agent is pointed at.
 

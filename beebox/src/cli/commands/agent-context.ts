@@ -4,9 +4,8 @@ import { Command } from "commander";
 import { join } from "node:path";
 import { findBoxRoot, requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxShape } from "../../lib/box-shape.js";
-import { expandClaudeIncludes } from "../../core/agent-context-includes.js";
-
-export { expandClaudeIncludes } from "../../core/agent-context-includes.js";
+import { expandInstructionIncludes } from "../../core/agent-context-includes.js";
+import { instructionFilePath } from "../../core/agent-instruction-files.js";
 
 export const agentContextCommand = new Command("agent-context")
   .description("Emit harness-neutral box context")
@@ -20,6 +19,7 @@ export const agentContextCommand = new Command("agent-context")
     const boxRoot = opts.hook === true ? await findBoxRoot(process.cwd()) : await requireBoxRoot();
     if (boxRoot === null) return;
     await getBoxShape(boxRoot);
-    const context = await expandClaudeIncludes({ claudePath: join(boxRoot, "CLAUDE.md"), boxRoot });
+    const instructionPath = join(boxRoot, await instructionFilePath(boxRoot, ""));
+    const context = await expandInstructionIncludes({ instructionPath, boxRoot });
     if (context !== "") process.stdout.write(`${context}\n`);
   });

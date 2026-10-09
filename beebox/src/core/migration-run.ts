@@ -15,19 +15,9 @@ import * as path from "node:path";
 import { runMigrationProcess } from "./migration-process.js";
 import { assertSystemCardsComplete } from "./system-cards.js";
 import { isSystemCardMigration } from "../shared/system-card-paths.js";
-import { isRecord } from "../shared/is-record.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { MANIFEST_PATH, MIGRATIONS, type ManifestEntry, type Migration } from "./migrations.js";
-
-class ManifestReadError extends Error {
-  readonly manifestPath: string;
-  constructor(manifestPath: string, cause: unknown) {
-    super(`failed to read migration manifest: ${manifestPath}`, { cause });
-    this.name = "ManifestReadError";
-    this.manifestPath = manifestPath;
-  }
-}
 
 /**
  * Round-8 hardening finding 1: `appendManifestEntry` used to call
@@ -60,35 +50,11 @@ async function assertManifestNotSymlink(abs: string): Promise<void> {
   if (lst !== null && lst.isSymbolicLink()) throw new SymlinkedManifestError(abs);
 }
 
-/** A manifest line is a valid {@link ManifestEntry} with string `name` + `applied-at`. */
-function isManifestEntry(value: unknown): value is ManifestEntry {
-  return isRecord(value) && typeof value["name"] === "string" && typeof value["applied-at"] === "string";
-}
-
-/** Every recorded entry, or null when the box has no manifest at all. */
-export async function readManifest(boxRoot: string): Promise<ManifestEntry[] | null> {
-  const abs = path.join(boxRoot, MANIFEST_PATH);
-  try {
-    const text = await fs.readFile(abs, "utf-8");
-    const entries: ManifestEntry[] = [];
-    for (const line of text.split("\n")) {
-      const trimmed = line.trim();
-      if (trimmed === "") continue;
-      const parsed: unknown = JSON.parse(trimmed);
-      if (isManifestEntry(parsed)) entries.push(parsed);
-    }
-    return entries;
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return null;
-    throw new ManifestReadError(abs, e);
-  }
-}
-
 /**
  * The manifest file exactly as it is on disk, or null when there is none.
  *
  * Raw text rather than parsed entries: this exists to be written back
- * unchanged after a failed commit, and {@link readManifest} silently drops a
+ * unchanged after a failed commit, and `readManifest` (`migration-manifest.ts`) silently drops a
  * malformed line — round-tripping through it would delete on rollback what it
  * only meant to ignore on read.
  */

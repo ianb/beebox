@@ -144,10 +144,10 @@ if [ -n "${LS_WORKTREE_PATH:-}" ]; then
 else
   wt_path=\$(./bin/workstreams create "$LS_WORKSTREAM"$create_extra)
 fi
-if [ ! -f "\$wt_path/AGENTS.md" ]; then
-  echo "launch-worktree-session: no AGENTS.md in \$wt_path (generation failed?) — refusing to launch codex without repo docs" >&2
+codex_preamble=\$(cd "\$wt_path" && node --import tsx bin/codex-preamble.ts --worktree-name "$LS_WORKSTREAM") || {
+  echo "launch-worktree-session: could not build the Codex preamble — refusing to launch codex without it" >&2
   exit 1
-fi
+}
 if [ -n "${LS_ISSUE:-}" ]; then
   node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/${LS_ISSUE:-}" "$LS_WORKSTREAM"
 fi
@@ -183,6 +183,7 @@ codex_args=(
   -s danger-full-access -a never
   -c "projects.\"\$wt_path\".trust_level=\"trusted\""
   -c project_doc_max_bytes=131072
+  -c "developer_instructions=\$codex_preamble"
 $model_line
 )
 
