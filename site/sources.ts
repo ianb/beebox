@@ -75,6 +75,18 @@ export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
     rels.push("../beebox/box-docs/.hash");
   }
 
+  // The theme of the day (day-theme.ts) builds from the app's catalog, its
+  // entry point's stylesheet list, and the theme stylesheets and art.
+  for (const rel of ["../beebox/src/shared/card-theme/catalog.ts", "../beebox/src/frontend/src/main/app.tsx"]) {
+    if (await fileExists(path.join(siteDir, rel))) rels.push(rel);
+  }
+  const themesDir = path.join(siteDir, "..", "beebox", "src", "frontend", "src", "themes");
+  for (const entry of await readdirDirents(themesDir)) {
+    if (!entry.isFile() || entry.name.startsWith(".")) continue;
+    const rel = path.relative(siteDir, path.join(entry.parentPath, entry.name)).split(path.sep).join("/");
+    if (rel.endsWith(".css") || rel.includes("/themes/art/")) rels.push(rel);
+  }
+
   return rels.toSorted((a, b) => a.localeCompare(b));
 }
 
