@@ -24,11 +24,11 @@ migrations and generated guidance with snapshots and changed-path commits.
 Dirty input is accepted, and no repair agent runs inside that shared downtime.
 Its separate ten-minute command limit remains. A box needing repair is reported
 and stays closed; restarting its process does not clear failed convergence.
-When convergence fails, the deploy then starts the same bounded repair the hourly
-`box-convergence` schedule runs (`bbx engine migrate --sweep --repair --yield`)
-for each box, detached as a transient `bbx-repair-<box>-<time>` systemd unit, and
-still reports the deploy as failed. The hourly schedule retries anything the
-repair leaves. See
+When convergence fails, the deploy then runs the same bounded repair the hourly
+`box-convergence` schedule runs (`bbx engine migrate --sweep --repair`, 25-minute
+limit) for each box that still has a pending migration, after the other boxes
+are serving again, and still reports the deploy as failed. A chained deploy waits
+for it. The hourly schedule retries anything the repair leaves. See
 [migrations](../cards/migrations.md) for recovery, questions, and timeout limits.
 
 The shared drain accounts for gate-aware writers. The first rollout from older
