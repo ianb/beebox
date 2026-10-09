@@ -10,10 +10,11 @@
 import { type ReactNode } from "react";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
 import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
-import { isNoResponseOnly, parseAcks, type AckIndication } from "../../../../lib/structured-output-parsing";
-import type { SessionContentBlock } from "../../../../api";
+import { isNoResponseOnly, parseAcks, parseCallouts, type AckIndication } from "../../../../lib/structured-output-parsing";
+import { hasAssistantSpeech } from "../../../../lib/audio/speech-parsing/parse";
+import type { SessionContentBlock, SessionEntry } from "../../../../api";
 import { buildStreamEntry } from "../../../../lib/stream-entry";
-import { hasProgressUpdate } from "../../message-parsing";
+import { hasProgressUpdate, hasRenderableAssistantContent } from "../../message-parsing";
 import type { ModelMarker } from "../../InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureVerbs } from "../../capture-bubble";
 import { invariant } from "@shared/invariant";
@@ -62,6 +63,16 @@ function assistantGroupText(group: MessageGroup): string {
   ).join("\n");
 }
 
+function hasAssistantSurface(entries: SessionEntry[], opts: { debugView: boolean; proseEnabled: boolean }): boolean {
+  const { debugView, proseEnabled } = opts;
+  if (proseEnabled) return hasRenderableAssistantContent(entries, debugView);
+  if (debugView) return false;
+  const text = entries.flatMap((entry) =>
+    entry.content.filter((block) => block.type === "text").map((block) => block.text ?? "")
+  ).join("\n");
+  return hasAssistantSpeech(text) || parseCallouts(text).length > 0;
+}
+
 export function dataItemKey(d: DataItem): string {
   switch (d.kind) {
     case "marker": return `marker-${d.marker.id}`;
@@ -87,13 +98,11 @@ export interface SpeechPlaybackState {
 
 /**
  * Build the interleaved data array: groups + chronological markers, with
- * `<ack>` tags hung off the preceding user message and no-response-only
- * assistant groups suppressed. Pure given its inputs.
+ * `<ack>` tags hung off the preceding user message and assistant groups with
+ * no visible content (or a no-response-only ack) suppressed. Pure given its inputs.
  *
- * When `debugView` is on the suppression is skipped: a no-response-only turn
- * (e.g. the model replying `<ack kind="no-response"/>` to a trivial message)
- * is otherwise invisible except for a faint badge, which reads as "the chat
- * didn't respond." Debug view should show exactly what the model emitted.
+ * Debug view keeps raw text that normal rendering strips (such as an ack),
+ * but an entry with no text or visible activity still has no message body.
  */
 export function buildDataItems(opts: {
   groups: MessageGroup[];
@@ -105,8 +114,9 @@ export function buildDataItems(opts: {
   pendingHq: readonly PendingHq[];
   captureBubbles: CaptureBubbleModel[];
   debugView: boolean;
+  proseEnabled: boolean;
 }): DataItem[] {
-  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView } = opts;
+  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled } = opts;
   const items: DataItem[] = [];
   for (const m of modelMarkers) {
     if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
@@ -125,10 +135,9 @@ export function buildDataItems(opts: {
           last.acks = [...(last.acks ?? []), ...groupAcks];
         }
       }
-      if (isNoResponseOnly(allText) && !debugView && !hasProgressUpdate(group.entries)) {
-        // Suppress the empty bubble but still emit markers anchored here
-        // so chronological order is preserved. Skipped in debug view so the
-        // raw no-response ack stays visible.
+      if ((isNoResponseOnly(allText) && !debugView && !hasProgressUpdate(group.entries))
+        || !hasAssistantSurface(group.entries, { debugView, proseEnabled })) {
+        // Keep markers anchored here so chronological order is preserved.
         for (const m of modelMarkers) {
           if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
         }
@@ -152,7 +161,9 @@ export function buildDataItems(opts: {
       streamText: chunkOnParagraphs(streamText),
       streamTools,
     });
-    items.push({ kind: "group", group: { type: "assistant", entries: [entry] }, groupIndex: groups.length });
+    if (hasAssistantSurface([entry], { debugView, proseEnabled })) {
+      items.push({ kind: "group", group: { type: "assistant", entries: [entry] }, groupIndex: groups.length });
+    }
   }
   return items;
 }
