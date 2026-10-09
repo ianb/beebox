@@ -49,7 +49,7 @@ export type { BusEventName, EventMap } from "./schemas.js";
  * the persisted events (see `createEventBus`). All processes of one deploy
  * share this constant, so a startup race converges regardless.
  */
-export const EVENT_SCHEMA_GENERATION = 9;
+export const EVENT_SCHEMA_GENERATION = 10;
 
 export interface BusEvent {
   id: number;

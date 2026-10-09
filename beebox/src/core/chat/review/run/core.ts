@@ -28,7 +28,8 @@ import * as fs from "node:fs/promises";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { discoverSessions, QUIESCENCE_MS, type QualifiedSession } from "../discovery.js";
 import { reviewMetadataSpan } from "./metadata.js";
-import { reviewTitleSpan } from "./title.js";
+import { reviewTitleSpan, type TitleRunContext } from "./title.js";
+import { readHuskFields } from "./husk-write.js";
 import type { ChatReviewer } from "../reviewer.js";
 import type { TitleFreshnessChecker } from "../freshness.js";
 import { loadReviewState, saveReviewState, type ReviewState } from "../state.js";
@@ -151,6 +152,23 @@ async function reviewOne(
     ownerEmail: options.ownerEmail,
     ...(options.freshness === undefined ? {} : { freshness: options.freshness }),
   });
+}
+
+/**
+ * The title pass alone over one session, for the after-turn path
+ * (`../after-turn.ts`), which holds the lock and saves the state. Returns the
+ * title the pass wrote, or null when it wrote none.
+ */
+export async function titleOneSession(
+  session: QualifiedSession,
+  ctx: Omit<TitleRunContext, "summary" | "freshness">,
+): Promise<string | null> {
+  const summary: TitleRunContext["summary"] = {
+    titled: 0, titlesKept: 0, reviewerFailures: 0, exhausted: 0, missingTranscripts: 0, rejected: [],
+  };
+  await reviewTitleSpan(session, { ...ctx, summary });
+  if (summary.titled === 0) return null;
+  return (await readHuskFields(ctx.boxRoot, session.huskPath)).title;
 }
 
 /**
