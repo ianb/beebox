@@ -36,19 +36,28 @@ Run every model at least twice. Answers vary between identical calls, and a sing
 
 Keys come from `beebox/.env` (`GEMINI_API_KEY`, `BBX_OPENROUTER_API_KEY`). A full pass costs about $0.08 for a Flash-class model and $0.60 for a Pro-class model. Judging costs about $2 per run.
 
+Run from the repository root. Put the new model next to the current product model (`AUDIO_QUESTION_MODEL`) and the previous best:
+
 ```sh
 B="node --import tsx research/audio-understanding-bakeoff/bakeoff.ts"
 D=research/audio-understanding-bakeoff/runs/$(date +%F)
+M=gemini-NEW-MODEL,gemini-3.1-pro-preview,gemini-3.8-flash
 $B check                                   # corpus is valid, every recording present
-$B run --out $D --models gemini-3.8-flash,gemini-3.7-flash --repeats 2
-$B run --out $D --models gemini-3.8-flash,gemini-3.7-flash --repeats 5 --tasks synthetic-controls,cough-laugh
+$B run --out $D --models $M --repeats 2    # every sample group, twice
+$B run --out $D --models $M --repeats 5 --tasks synthetic-controls,cough-laugh
+$B run --out $D --models $M --repeats 3 --tasks product-tone,product-silence,product-noise
 $B judge --out $D
 $B summarize --out $D                      # writes $D/summary.md
 ```
 
 `run` and `judge` resume: a re-run makes only the calls that are missing or failed. Model specs are `<gemini-id>` (Gemini API), `openrouter:<id>` (OpenRouter pinned to Google, as the product routes), and `transcribe:<gemini-id>` (transcription-only).
 
-Then write `runs/<date>.md` by hand around `summary.md`: rankings, what changed since the last run, notable answers quoted from `raw.json`, and a recommendation for `AUDIO_QUESTION_MODEL`. Add a row to the table at the top. Do not edit earlier reports.
+Then:
+
+1. **Read the warnings** at the top of `summary.md` (failed calls, unjudged answers, a model answered by a different one) and resolve them before writing anything.
+2. **Write `runs/<date>.md` by hand**, using [2026-10-09](runs/2026-10-09.md) as the template: summary and recommendation for `AUDIO_QUESTION_MODEL`, models, method changes, results tables from `summary.md`, then a "Detailed results" section that goes sample by sample and quotes what each model said. Copy quotes from `raw.json` and check each one is there verbatim; the judge's verdicts in `judged.json` are evidence, not quotes. Do not edit earlier reports.
+3. **Add a row** to the Runs table at the top of this README.
+4. **Update the public page**, [site/cards/develop.attach/audio-bakeoff.doc.card](../../site/cards/develop.attach/audio-bakeoff.doc.card) ("AI audio understanding comparison" on beebox.run): add the new models to the models list with prices, and a pill-and-verdict line per sample using its `{% model %}`, `{% verdict is="correct|okay|failed" %}`, and `{% sample %}` tags. Run `pnpm --dir site build`. Landing on `main` and pushing publishes it.
 
 **Adding a model.** Re-run the current product model and the previous best in the same run, because prompts, judging, and provider behavior drift; compare only within a run. Check the warnings at the top of `summary.md`: the provider can answer a request with a different model (in 2026-10, `gemini-3.7-flash` was answered by `gemini-3.8-flash`). Add the model's list price to `PRICES` in [lib.ts](lib.ts). A model with a different API (for example Gemini Omni, which accepts only the Interactions API) needs a call function in `run.ts`.
 
