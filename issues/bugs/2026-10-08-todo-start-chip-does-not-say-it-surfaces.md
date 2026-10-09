@@ -29,3 +29,7 @@ docs. A chip like "on your plate from <date>" says what happens. Related:
 [todo checkbox name](../closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md).
 
 Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shots 05, 07, 08, 28).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Evidence from [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 61): the walker read "1 later" for an October 23 item as "not shouting at me". The item is still listed on The Plate as "due Oct 23" in the Dated strip (`todo-view/DatedStrip.tsx` lists every dated todo), while the agent said it "stays hidden". The quiet state needs one more word.

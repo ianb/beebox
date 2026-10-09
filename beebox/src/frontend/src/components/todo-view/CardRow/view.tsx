@@ -63,7 +63,8 @@ export function CardRow({ row }: { row: TodoRow }) {
   return (
     <Stack gap="sm" className="py-3" {...bbxSource("card", row.card.path)}>
       <Row gap="sm" align="start" justify="between" wrap={false}>
-        <FileEntry summary={row.card} onOpen={open} onPanel={open} className="flex-1 min-w-0" />
+        {/* Title only: The Plate is read by people, and the path was noise (as on the place page). */}
+        <FileEntry summary={row.card} hidePath onOpen={open} onPanel={open} className="flex-1 min-w-0" />
         <Stack gap="none" align="end" className="flex-shrink-0 pt-1.5">
           <RowReduction reduction={row.reduction} />
           {row.via === "reference" ? (

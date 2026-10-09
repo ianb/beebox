@@ -50,6 +50,22 @@ isolated.queryOptions.settings
 }
 ```
 
+Claude Code's built-ins that act through the host's Claude account are off in
+every chat: scheduled and cloud routines, pushes to the account's devices, and
+the account's projects, artifacts, designs and feedback. A box agent once sent
+a test push through `PushNotification` to the host account's phone
+(`issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md`).
+Subagent tools (`Agent`, `SendMessage`, `TaskStop`) stay.
+
+```ts continue
+isolated.queryOptions.disallowedTools
+=> [
+  "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "RemoteTrigger",
+  "PushNotification", "ReadNotifications", "Artifact", "Projects", "ClaudeDesign",
+  "DesignSync", "SendFeedback",
+]
+```
+
 ## A warm subprocess only ever serves the chat it was warmed for
 
 A warm slot has its session id baked in at spawn (`--session-id`), so the pool

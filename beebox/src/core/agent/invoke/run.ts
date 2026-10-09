@@ -39,6 +39,8 @@ export interface RunAgentOptions {
   model?: string | undefined;
   /** See {@link AgentInvokeOptions.loadBoxContext}. Defaults to true. */
   loadBoxContext?: boolean | undefined;
+  /** See {@link AgentInvokeOptions.tools}. Omitted means every built-in. */
+  tools?: string[] | undefined;
   /** Resume an existing session by id. */
   resumeSessionId?: string | undefined;
   /**
@@ -86,6 +88,7 @@ export function buildQueryOptions(
     // `@path` mentions in it or treat a leading `/` as a command.
     verbatimPrompts: true,
     maxTurns,
+    ...(options.tools !== undefined && { tools: options.tools }),
     ...(binaryPath !== null && { pathToClaudeCodeExecutable: binaryPath }),
     ...(options.maxBudgetUsd !== undefined && { maxBudgetUsd: options.maxBudgetUsd }),
     ...(options.model !== undefined && { model: normalizeModelId(options.model) }),

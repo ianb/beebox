@@ -31,3 +31,7 @@ PLATE (2), QUIET (1)").
 Either rename the tab to what it does ("By status") or make it group by due
 or start date. The grouping value `plate` is the internal name; the label is
 the only user-visible part.
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen again in [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 58): "By date" does not sort by date; the walker saw DATED, then ON THE PLATE (3), the same grouped list with a relabelled header (shot 21).

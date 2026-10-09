@@ -20,3 +20,7 @@ Check whether a copy button on fenced blocks, or a distinct "draft" block
 type, fits better. A copy button on every code block is the smaller change.
 
 Report: [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (shot 07, turn 4).
+
+## Re-encounter 2026-10-09 (journey walks)
+
+Seen again in [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 28): the walker found no copy button on the draft. The draft was a Markdown quote this time (italic, shot 08); 2026-10-08 used a code block. Neither has a copy control, and the agent said "ready to copy".
