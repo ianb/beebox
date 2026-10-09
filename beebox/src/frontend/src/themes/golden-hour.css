@@ -1,0 +1,79 @@
+/* Granulated warm pigment and cool ink, without scenic motifs. */
+.bbx-box-presentation[data-chrome-theme="golden-hour"],
+.bbx-themed-menu[data-chrome-theme="golden-hour"] {
+  --bbx-desk-background: transparent;
+  --bbx-desk-pattern: none;
+  --bbx-scene: url("./art/golden-hour-pigment.webp") center / cover no-repeat, #367d80;
+  --bbx-toolbar-background: #d9983d;
+  --bbx-toolbar-ink: #352c20;
+  --bbx-toolbar-edge: #9a6539;
+  --bbx-toolbar-radius: 0;
+  --bbx-toolbar-shadow: 0 4px 0 #367d80;
+  --bbx-composer-background: #e6b96d;
+  --bbx-composer-ink: #293e37;
+  --bbx-composer-edge: #9a6539;
+  --bbx-composer-radius: 7px;
+  --bbx-composer-shadow: 0 2px 0 #a85c35, 0 6px 18px #24595c40;
+  --bbx-control-background: #24595c;
+  --bbx-control-ink: #fff2d7;
+  --bbx-control-radius: 6px;
+  --bbx-control-shape-default: none;
+  --bbx-control-shape-send: polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%);
+  --bbx-control-shape-profile: ellipse(49% 48% at 50% 50%);
+  --bbx-send-background: #256b70;
+  --bbx-send-ink: #fff8e9;
+  --bbx-status-background: #f1c678;
+  --bbx-status-ink: #293e37;
+  --bbx-status-edge: #9a6539;
+  --bbx-input-paper: #fff2d7;
+  --bbx-input-ink: #293e37;
+  --bbx-input-muted: #53634e;
+  --bbx-chat-user-paper: #24595c;
+  --bbx-chat-user-ink: #fff2d7;
+  --bbx-chat-user-radius: 7px;
+  --bbx-chat-reply-paper: #fff2d7;
+  --bbx-chat-reply-ink: #293e37;
+  --bbx-menu-paper: #fff2d7;
+  --bbx-menu-ink: #293e37;
+  --bbx-menu-edge: #9a6539;
+  --bbx-menu-radius: 7px;
+  --bbx-selection: #256b70;
+  --bbx-selection-ink: #fff8e9;
+  --bbx-selection-code: #f1c678;
+  --bbx-selection-code-ink: #293e37;
+}
+.bbx-card-theme[data-card-theme="golden-hour"] {
+  --bbx-paper: #fff2d7;
+  --bbx-ink: #293e37;
+  --bbx-ink-soft: #53634e;
+  --bbx-pen: #256b70;
+  --bbx-edge: #9a6539;
+  --bbx-underlay: #367d80;
+  --bbx-font: "Avenir Next", Avenir, ui-sans-serif, system-ui, sans-serif;
+  --bbx-tab-radius: 15px 4px 0 0;
+  --bbx-sheet-radius: 7px;
+  --bbx-sheet-shadow: 0 2px 0 #a85c35, 0 6px 18px #24595c40;
+  --bbx-sheet-decoration: none;
+  --bbx-selection: #256b70;
+  --bbx-selection-ink: #fff8e9;
+  --bbx-selection-code: #f1c678;
+  --bbx-selection-code-ink: #293e37;
+  --bbx-quote-paper: #f1dfb8;
+  --bbx-quote-layer-paper: #f1dfb8;
+  --bbx-quote-radius: 5px;
+  --bbx-quote-edge: 0px;
+  --bbx-quote-shadow: 0 3px 0 #9a6539;
+  --bbx-quote-padding-left: 1rem;
+  --bbx-blockquote-paper: #f1dfb8;
+  --bbx-blockquote-padding: 0.75em 1em;
+  --bbx-blockquote-shadow: 0 3px 0 #9a6539;
+  --bbx-blockquote-edge: 0px;
+}
+.bbx-card-theme[data-card-theme="golden-hour"] .bbx-blockquote { border-radius: 5px; }
+@media (max-width: 640px) {
+  .bbx-box-presentation[data-chrome-theme="golden-hour"] { --bbx-composer-radius: 7px; }
+  .bbx-card-theme[data-card-theme="golden-hour"] { --bbx-sheet-radius: 7px; }
+}
+@media print {
+  .bbx-card-theme[data-card-theme="golden-hour"] { --bbx-sheet-shadow: none; }
+}

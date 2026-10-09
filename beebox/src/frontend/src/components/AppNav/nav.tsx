@@ -85,7 +85,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
       {user ? (
         <div className="px-3 py-2 border-b border-warm-100">
           <div className="font-medium text-warm-900 truncate">{user.name}</div>
-          <div className="text-xs text-warm-500 truncate">{user.email}</div>
+          <div className="bbx-profile-email text-xs text-warm-500 truncate">{user.email}</div>
         </div>
       ) : null}
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>

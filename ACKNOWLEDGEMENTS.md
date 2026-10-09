@@ -17,6 +17,13 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **Rights:** Original artworks remain their artists' work; no licence to redistribute them is claimed and the source images are not bundled. The CSS and SVG ornaments here are newly authored interpretations.
 - **Where it landed:** `beebox/src/frontend/src/themes/{harlequin,electric-playground,daydream}.css` and `themes/art/`.
 
+### Material theme references
+
+- **Sources:** Lambie, *Wool painting (Ray of Light)* (2021), supplied reference; [José Carlos, February 1927 *Para Todos* cover](https://flashbak.com/para-todos-covers-brazils-gorgeous-1920s-art-deco-style-magazine-372408/); [Woonyoung Jung, *Will I become the Seoul superhero?*](https://woonyoung.tumblr.com/post/762184243663323136/will-i-become-the-seoul-superhero); [Graeme Daly, *Man's Best Friend*](https://cara.app/post/23e50b2a-988d-4342-bde5-df06fdec9199); [Alexey Gorboot, psychedelic priestess](https://www.instagram.com/alexeygorboot/p/DdEixmwIquA/); [Josh White, *Maiden Voyage*](https://www.artstation.com/artwork/xD1yWY). Attribution follows the references supplied by the boxholder.
+- **What we took:** Selvedge interprets colored yarn and changing strand directions; Footlights interprets theatrical Art Deco fans and stepped frames; Overpass interprets saturated orange and distressed fine ink lines; Golden Hour interprets luminous warm pigment and cool granular color; Blacklight interprets flat fluorescent colors and heavy organic contours; Far Horizon interprets deep teal, rust, cream, and ochre layered in smooth sweeping paint.
+- **Rights:** The source artworks are not bundled. CSS and SVG compositions are newly authored interpretations; three abstract paint/ink textures were generated with OpenAI image generation from material and palette descriptions. No source artwork is used in those textures, and no licence to redistribute the reference images is claimed.
+- **Where it landed:** `beebox/src/frontend/src/themes/{selvedge,footlights,overpass,golden-hour,blacklight,far-horizon}.css` and their original assets in `themes/art/`.
+
 ### Agent Skills, by addyosmani (Addy Osmani)
 
 - **Source:** https://github.com/addyosmani/agent-skills (MIT)
