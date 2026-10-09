@@ -194,3 +194,17 @@
   border-bottom-left-radius: inherit;
   border-bottom-right-radius: inherit;
 }
+
+/* Notices and dictation actions need their own reading surface on dark chrome. */
+.bbx-box-presentation[data-theme-composition="expressive"] .bbx-composer-notices {
+  background: var(--bbx-input-paper);
+  color: var(--bbx-input-ink);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] :is(#bbx-composer-dictation-cancel, #bbx-composer-dictation-edit) {
+  background: var(--bbx-input-paper);
+  color: var(--bbx-input-ink);
+}
+.bbx-box-presentation[data-theme-composition="expressive"] :is(#bbx-composer-dictation-cancel, #bbx-composer-dictation-edit):hover {
+  background: var(--bbx-control-background);
+  color: var(--bbx-control-ink);
+}

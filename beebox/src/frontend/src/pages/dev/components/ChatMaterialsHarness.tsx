@@ -1,5 +1,6 @@
 /** Deterministic production message components; no model, audio, or persisted chat. */
 import { useState } from "react";
+import { THEME_CATALOG } from "@shared/card-theme/catalog";
 import type { SessionEntry } from "../../../api";
 import { AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, UserMessage } from "../../../components/chat/ChatMessages/view";
 import { Button } from "../../../components/ui/Button";
@@ -8,11 +9,9 @@ import { TargetStrip } from "../../../components/chat/TargetStrip";
 import { CaptureBubbleView } from "../../../components/chat/capture-bubble";
 import { ChatStatusBanners } from "../../../components/chat/InteractiveChat-layout/view";
 
-const THEMES = [
-  { name: "harlequin", stock: "pigment", label: "Harlequin" },
-  { name: "electric-playground", stock: "prism", label: "Electric Playground" },
-  { name: "daydream", stock: "cloud", label: "Daydream" },
-] as const;
+const THEMES = THEME_CATALOG.filter((theme) => "composition" in theme).map((theme) => ({
+  name: theme.name, stock: theme.defaultStock, label: theme.label,
+}));
 const TIMESTAMP = "2026-10-08T12:00:00Z";
 const USER: SessionEntry[] = [{ uuid: "material-user", type: "user", timestamp: TIMESTAMP,
   content: [{ type: "text", text: "Compare the three sketches and tell me what to try next." }] }];
@@ -32,7 +31,7 @@ const COMPACT: SessionEntry[] = [{ uuid: "material-compact", type: "compaction",
   content: [{ type: "text", text: "Retained the three sketches and the next experiment." }] }];
 
 export function ChatMaterialsHarness() {
-  const [theme, setTheme] = useState<(typeof THEMES)[number]>(THEMES[0]);
+  const [theme, setTheme] = useState<(typeof THEMES)[number]>(THEMES[0] ?? { name: "harlequin", stock: "pigment", label: "Harlequin" });
   return <div className="bbx-box-presentation h-full shrink-0 overflow-auto" data-chrome-theme={theme.name} data-chrome-stock={theme.stock} data-theme-composition="expressive">
     <header className="bg-white text-warm-900 p-3">
       <h1 className="font-semibold">Chat material verification</h1>

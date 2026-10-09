@@ -159,15 +159,23 @@ JSON.stringify([chrome.choice, chrome.origin, chrome.problem?.message])
 => [{"name":"plain","stock":"neutral"},"box-chrome","Theme \"post-it\" does not provide app chrome"]
 ```
 
-The three expressive themes can be saved as system themes, with their own
+The expressive themes can be saved as system themes, with their own
 default stocks rather than the fallback stock for an unknown theme.
 
 ```ts
-["harlequin", "electric-playground", "daydream"].map((name) => validateSystemThemeChoice({ name }))
+["harlequin", "electric-playground", "daydream",
+ "selvedge", "footlights", "overpass", "golden-hour", "blacklight", "far-horizon"
+].map((name) => validateSystemThemeChoice({ name }))
 => [
   { choice: { name: "harlequin", stock: "pigment" }, problem: null },
   { choice: { name: "electric-playground", stock: "prism" }, problem: null },
   { choice: { name: "daydream", stock: "cloud" }, problem: null },
+  { choice: { name: "selvedge", stock: "wool" }, problem: null },
+  { choice: { name: "footlights", stock: "marquee" }, problem: null },
+  { choice: { name: "overpass", stock: "silhouette" }, problem: null },
+  { choice: { name: "golden-hour", stock: "canopy" }, problem: null },
+  { choice: { name: "blacklight", stock: "ink" }, problem: null },
+  { choice: { name: "far-horizon", stock: "gouache" }, problem: null },
 ]
 ```
 

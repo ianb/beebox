@@ -1,0 +1,101 @@
+/* Orange pigment and distressed fine ink; no literal structures. */
+.bbx-box-presentation[data-chrome-theme="overpass"],
+.bbx-themed-menu[data-chrome-theme="overpass"] {
+  --bbx-desk-background: transparent;
+  --bbx-desk-pattern: none;
+  --bbx-scene: url("./art/overpass-ink.webp") center / cover no-repeat, #e66b27;
+  --bbx-toolbar-background: #242820;
+  --bbx-toolbar-ink: #fff3c1;
+  --bbx-toolbar-edge: #111710;
+  --bbx-toolbar-radius: 0;
+  --bbx-toolbar-shadow: 0 1px 0 #ffb142, 0 4px 0 #171b15;
+  --bbx-composer-background: repeating-linear-gradient(115deg, #ffffff08 0 1px, transparent 1px 7px), #30382b;
+  --bbx-composer-ink: #f9f4d8;
+  --bbx-composer-edge: #a9ab77;
+  --bbx-composer-radius: 0;
+  --bbx-composer-shadow: 0 2px 0 #727b54, 0 5px 0 #171b15;
+  --bbx-control-background: #ffdc57;
+  --bbx-control-ink: #23271d;
+  --bbx-control-radius: 0;
+  --bbx-control-shape-default: polygon(0 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%);
+  --bbx-control-shape-place: polygon(0 0, calc(100% - 8px) 0, 100% 100%, 0 100%);
+  --bbx-control-shape-session: polygon(8px 0, 100% 0, 100% 100%, 0 100%);
+  --bbx-control-shape-voice: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  --bbx-control-shape-profile: polygon(5px 0, 100% 0, 100% 100%, 0 100%, 0 5px);
+  --bbx-control-shape-send: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%);
+  --bbx-control-shape-add: polygon(0 0, 100% 0, 100% 100%, 7px 100%, 0 calc(100% - 7px));
+  --bbx-control-shape-mic: polygon(7px 0, 100% 0, 100% 100%, 0 100%, 0 7px);
+  --bbx-send-background: #f9a74c;
+  --bbx-send-ink: #282a1e;
+  --bbx-input-paper: #f5f0d6;
+  --bbx-input-ink: #293022;
+  --bbx-input-muted: #5d634c;
+  --bbx-status-background: #d2d19d;
+  --bbx-status-ink: #293022;
+  --bbx-status-edge: #676d48;
+  --bbx-chat-user-paper: #ffe19a;
+  --bbx-chat-user-ink: #303321;
+  --bbx-chat-user-radius: 0;
+  --bbx-chat-reply-paper: #f5f0d6;
+  --bbx-chat-agent-paper: #f5f0d6;
+  --bbx-chat-reply-ink: #293022;
+  --bbx-menu-paper: #e4e3b9;
+  --bbx-menu-ink: #293022;
+  --bbx-menu-edge: #343d29;
+  --bbx-menu-radius: 0;
+  --bbx-selection: #334329;
+  --bbx-selection-ink: #fff4c9;
+  --bbx-selection-code: #ffd35b;
+  --bbx-selection-code-ink: #252d20;
+}
+.bbx-card-theme[data-card-theme="overpass"] {
+  --bbx-paper: #f5f0d6;
+  --bbx-ink: #293022;
+  --bbx-ink-soft: #586049;
+  --bbx-pen: #7b391d;
+  --bbx-edge: #414a34;
+  --bbx-underlay: #96996e;
+  --bbx-font: "Avenir Next", Avenir, system-ui, sans-serif;
+  --bbx-sheet-radius: 0;
+  --bbx-tab-radius: 0;
+  --bbx-sheet-shadow: 0 1px 0 #99996c, 0 4px 0 #252d20;
+  --bbx-sheet-decoration: repeating-linear-gradient(176deg, transparent 0 4px, #343d2955 4px 5px, transparent 5px 9px) right bottom / 100% 12px no-repeat;
+  --bbx-quote-paper: #dfe1b9;
+  --bbx-quote-layer-paper: #dfe1b9;
+  --bbx-quote-radius: 0;
+  --bbx-quote-edge: 3px;
+  --bbx-quote-shadow: 3px 3px 0 #777e53;
+  --bbx-quote-padding-left: 1rem;
+  --bbx-blockquote-paper: #dfe1b9;
+  --bbx-blockquote-padding: .75em 1em;
+  --bbx-blockquote-edge: 3px;
+  --bbx-blockquote-shadow: 3px 3px 0 #777e53;
+  --bbx-selection: #334329;
+  --bbx-selection-ink: #fff4c9;
+  --bbx-selection-code: #ffd35b;
+  --bbx-selection-code-ink: #252d20;
+}
+.bbx-card-surface[data-card-theme="overpass"] .bbx-card-heading :is(h1, h2) {
+  font-weight: 850;
+  letter-spacing: -.025em;
+}
+@media (max-width: 639px) {
+  .bbx-box-presentation[data-chrome-theme="overpass"] {
+    --bbx-scene: url("./art/overpass-ink.webp") 68% center / auto 100% no-repeat, #e66b27;
+    --bbx-control-shape-place: polygon(0 0, calc(100% - 3px) 0, 100% 100%, 0 100%);
+    --bbx-control-shape-session: polygon(4px 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+.bbx-box-presentation[data-chrome-theme="overpass"] .bbx-chat-pending-material button.bg-warm-200 {
+  background: var(--bbx-control-background);
+  color: var(--bbx-control-ink);
+}
+.bbx-box-presentation[data-chrome-theme="overpass"] .bbx-chat-pending-material button:is(.bg-warm-200, .bg-transparent):hover {
+  background: var(--bbx-input-paper);
+  color: var(--bbx-input-ink);
+}
+.bbx-box-presentation[data-chrome-theme="overpass"] .bbx-chat-reply-material :is(.bg-warm-50, .bg-warm-100) {
+  background: var(--bbx-input-paper);
+  color: var(--bbx-input-ink);
+}
