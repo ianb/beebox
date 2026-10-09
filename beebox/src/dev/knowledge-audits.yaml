@@ -5574,6 +5574,7 @@ tests:
   # passes, 0 reads, 0 searches, 54k ctx — unaffected by the change.
 
   # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 0 reads, 0 searches, 50k ctx.
+  # Status (2026-10-09, hq-always): retranscribe clause now keys on `stt="live"`; 1/1 pass, 0 reads, 0 searches, 40k ctx.
   - id: chat-last-audio-when
     prompt: >
       My dictated messages sometimes come out mangled. If a transcription
@@ -7048,6 +7049,9 @@ tests:
   # one retranscribe-clause exception to the prompt. 1/1 passes, 0 reads, 0
   # searches, 54k ctx — the new clause didn't disturb this audit's existing
   # `stt="deepgram"` scenario.
+  #
+  # Status (2026-10-09, hq-always): wrapper is now `stt="live"` (marks live
+  # text; HQ is unmarked). 1/1 pass, 0 reads, 0 searches, 40k ctx.
 
   - id: chat-unsure-word-semantics
     prompt: >
@@ -7084,6 +7088,11 @@ tests:
   # HQ text did not reproduce. The failure this guards against is the agent
   # treating the trailing command words as content, or retranscribing an
   # unmarked (already HQ) message.
+  #
+  # Status (2026-10-09): 1/1 pass, 0 reads, 0 searches, 40k ctx. Read the
+  # unmarked message as HQ, `stt="live"` as the only retranscribable kind,
+  # chose not to retranscribe "bye milk" (context settles it), and dropped
+  # "sent the message" as the misheard command.
   - id: chat-live-transcript-marker
     prompt: >
       Two voice messages arrive. First: `<speech message-id="msg-1">Move the
@@ -7545,6 +7554,8 @@ tests:
   # Resilient voice recording (docs/plans/resilient-voice-recording.md):
   # long diarized recordings are transcribed in parts with fresh speaker
   # letters per part.
+  # Status (2026-10-09, hq-always): wrapper lost `stt="hq"` (HQ is unmarked
+  # now); 1/1 pass, 1 read, 0 searches, 40k ctx.
   - id: voice-diarized-parts
     prompt: |
       <chat-app narration="off" prose="on" time="2026-09-10T18:20:00Z"/>

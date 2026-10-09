@@ -140,6 +140,14 @@ export function appendSendKeywordTag(
 }
 
 /**
+ * Whether two keyword actions write the same tag — `sendHq` ("clean up and
+ * send") and `send` both write `send-message`, so either matches the other.
+ */
+export function sameKeywordTag(a: KeywordAction, b: KeywordAction): boolean {
+  return ACTION_TAG_NAMES[a] === ACTION_TAG_NAMES[b];
+}
+
+/**
  * The send-keyword tag a transcript already carries — the inverse of
  * {@link appendSendKeywordTag} — so a voice send restored after a reload can
  * put the same tag on its HQ text. Null when the transcript has none.
