@@ -39,19 +39,22 @@ different times:
 
 - Until a box's migration runs, engine writers write to whichever instruction
   file already exists, so an unconverted box behaves exactly as it does today.
-- The migration pre-scans and fails closed on any conflict, so a box is never
-  left half converted.
+- The migration pre-scans and fails closed on any conflict, converts the root
+  file first, and every state an interruption can leave is a valid one: the
+  engine reads it correctly and Claude loads it (Track B "Intermediate
+  states").
 
 Tracks (below): A writers, the pre-migration name resolver, and the lint;
 B the migration; C session settings; D guidance text, docs, and audits;
 E the deferred removal of pre-migration support.
 
-Estimate (additions plus deletions): source about 600 lines (migration about
-220, resolver and writers about 200, lint and settings about 80, mirror-pass
-reduction later in Track E), tests about 650 (one migration doctest with
-interrupted states, one resolver doctest, one integration doctest, about 25
-doctests renaming fixtures), knowledge audits about 80, authored docs about
-250. Total about 1,600. Not a BIG CHANGE. Generated output (agent guide
+Estimate (additions plus deletions): source about 700 lines (migration about
+220, resolver, sibling-key rule, and writers about 300, lint and settings
+about 80, mirror-pass reduction later in Track E), tests about 750 (migration
+and resolver doctests, an integration doctest with every interruption point,
+about 25 doctests renaming fixtures), knowledge audits about 80, authored docs
+about 250. Total about 1,800. Not a BIG CHANGE, but close: if implementation
+passes 2,000 changed lines, stop and ask. Generated output (agent guide
 regeneration, `doc-graph`) is separate.
 
 ## Stated preferences this plan trades against
@@ -207,7 +210,12 @@ No ACKNOWLEDGEMENTS entry: nothing is copied or adapted.
   the path engine writers use. Returns the directory's existing `CLAUDE.md` if
   there is one, else its existing `AGENTS.md`; for a missing file it returns
   `CLAUDE.md` in an unconverted box and `AGENTS.md` in a converted one.
+  `instructionFileName(boxRoot)` gives the box-level name for generated text.
   Pre-migration support; Track E deletes its legacy branches.
+- **Sibling key** — during the compatibility period, the template ledger and
+  parked copies treat `<dir>/CLAUDE.md` and `<dir>/AGENTS.md` as one entry:
+  a lookup for either path finds whichever key exists. Not a new store; a rule
+  in the ledger's lookup. Track E deletes it.
 - **Instruction-file conflict** — a directory holding a real `CLAUDE.md` and a
   real `AGENTS.md` that is not a marked generated mirror, or a box holding a
   `CLAUDE.local.md` or `.claude/CLAUDE.md`. Reported, never merged.
@@ -235,17 +243,34 @@ No ACKNOWLEDGEMENTS entry: nothing is copied or adapted.
     `ensureClaudeMdIncludes` → `ensureInstructionIncludes`, root path from the
     resolver.
   - `guidance-surfaces.ts`: root and the four tracked rows name `AGENTS.md`.
-    `installTracked` resolves the row path through the resolver, so an
-    unconverted box keeps installing (and ledger-keying) its legacy path. The
-    `**/AGENTS.md` mirror row stays until Track E.
+    `installTracked` resolves the row path through the resolver
+    (`guidance-sync/core.ts:32-35` passes one path to both the stray-include
+    cleanup and `installTemplateFile`), so an unconverted box keeps installing
+    its legacy path. The `**/AGENTS.md` mirror row stays until Track E.
+  - `install-template-file.ts`: ledger and park lookups use the sibling-key
+    rule, and writes keep whichever key already exists. `pruneStaleTemplateUpdates`
+    (:459) counts a park as live when either sibling original exists.
+    `TEMPLATE_MANAGED_PATTERNS` (:102) keeps the four legacy tracked paths
+    until Track E, so `generateDocs` still commits a legacy guide it updates
+    (`generate/core.ts:275-284` commits only matching paths).
+  - Generated text that names the file (agent guide `guide.md:372`, course
+    skill `skills-content.ts:98`) uses `instructionFileName(boxRoot)`; both are
+    regenerated per box. Stock template texts (`templates.ts:65` *"CLAUDE.md
+    <- This file"*) stop naming the file ("this file"), so one stock version
+    serves both states.
   - `maps/finalize/core.ts` `ensureClaudeMdInDir` →
     `ensureInstructionMapInclude` through the resolver; `maps/orphans.ts` the
     same.
   - `agent-context-includes.ts` callers (3 sites) take the root path from the
     resolver; rename `expandClaudeIncludes` → `expandInstructionIncludes`.
   - **Lint.** `bbx validate` (full) and the validate hook
-    (`cli/validate-hook/command.ts:177`) report an **error** for any
-    `CLAUDE.md`, `CLAUDE.local.md`, or `.claude/CLAUDE.md` in a converted box:
+    (`cli/validate-hook/command.ts:177`; it already supports error results and
+    exit 2 at :242-247) report an **error** for any `CLAUDE.md`,
+    `CLAUDE.local.md`, or `.claude/CLAUDE.md` in a converted box. The hook
+    checks the filename first and reads the manifest only on a match, through
+    a small read-only extraction of `readManifest` (`migration-run.ts:69`,
+    whose module imports migration execution). `isAgentInstructionsFile`
+    gains `CLAUDE.local.md`. Message:
     *"Name instruction files AGENTS.md. A CLAUDE.md here makes Claude Code
     ignore every AGENTS.md."* Unconverted boxes get no finding.
   - `claude-md-lint.ts`: size-lint the resolver's name.
@@ -261,32 +286,42 @@ No ACKNOWLEDGEMENTS entry: nothing is copied or adapted.
   a pure `plan.ts` (the `briefing-openers` shape), appended to `MIGRATIONS`.
 - **Direction.**
   1. **Pre-scan, fail closed.** Walk the box with the mirror pass's walk and
-     skip list. If any instruction-file conflict exists, print each path with
-     the fix and exit 1 before writing anything. Nothing is recorded; the box
-     stays unconverted and fully working through the resolver; the migration
-     health check (`webapp/trpc/routers/health/checks/migrations.ts`) and
+     skip list. Exit 1 before writing anything, printing each path with the
+     fix, if any of these exist: an instruction-file conflict; a ledger entry
+     under both sibling keys whose contents differ; a park under both sibling
+     paths whose contents differ. Identical duplicates are not conflicts; the
+     migration drops the legacy copy. Nothing is recorded; the box stays
+     unconverted and fully working through the resolver; the migration health
+     check (`webapp/trpc/routers/health/checks/migrations.ts`) and
      `box-convergence` report it pending.
-  2. **Per directory, idempotent.** States and actions:
-     - `CLAUDE.md` real; `AGENTS.md` absent, a symlink, or a marked generated
-       file: rename `CLAUDE.md` onto `AGENTS.md`.
-     - Ledger key `<dir>/CLAUDE.md` present: move the **whole** entry
-       (`sha256`, `installed-at`, `stock`, `pending`) to `<dir>/AGENTS.md`.
-       If both keys exist (an interrupted earlier run, or a sync between
-       runs), keep the entry whose `sha256` matches the file on disk; if
-       neither matches, keep the old key's entry, which carries the box's
-       `stock`.
-     - Parked copy `_config/_template-updates/<dir>/CLAUDE.md`: move to
-       `.../AGENTS.md`, unless a park already exists there.
-     - Only `AGENTS.md`, no old ledger key, no old park: already done.
-     Every action checks its target state first, so an interruption between
-     the file rename, the ledger write, and the park move is repaired on retry.
+  2. **Convert the root first, then every other directory.** Per directory:
+     rename `CLAUDE.md` onto `AGENTS.md` (replacing an absent file, a symlink,
+     or a marked generated file); then rekey its ledger entry, moving the whole
+     entry (`sha256`, `installed-at`, `stock`, `pending`); then move its park.
+     The ledger is written once per directory. Each step checks its target
+     state first, so a retry continues from wherever the last run stopped.
   3. Exit 0. The sweep then refreshes generated guidance; the resolver now
      returns `AGENTS.md` everywhere, and the mirror pass finds no `CLAUDE.md`.
   Dirty files are renamed like clean ones, under the framework's existing
-  dirty-input policy.
-- **First chunk.** `plan.ts`: the per-directory decision, the ledger merge
-  rule, and the pre-scan conflict list, doctested with every state including
-  each interruption point.
+  dirty-input policy (snapshot, then commit).
+- **Intermediate states.** The framework leaves partial output in place and
+  reopens the box after a failure (`docs/cards/migrations.md`, "stays closed
+  only until the controller exits"; `migration-sweep.ts:260-264`). So every
+  interruption point must be a state ordinary work handles:
+  - Root not yet renamed: nothing has changed.
+  - Root renamed, some directories not: a root-`cwd` session finds no
+    `CLAUDE.md` at or above `cwd`, so it reads `AGENTS.md` files and still
+    loads a nested `CLAUDE.md` below `cwd` when it reads there (probe s5).
+    Every directory's instructions load.
+  - A directory's file renamed, ledger or park not yet moved: the sibling-key
+    rule finds the old key and park, so the sync reads the guide as installed
+    and pruning keeps the park.
+  - Retry after any of these finishes the conversion.
+  This is why the resolver and the sibling-key rule live in Track A and not
+  only in the migration.
+- **First chunk.** `plan.ts`: the per-directory steps and the pre-scan
+  conflict list, doctested with every state including each interruption
+  point.
 
 ### Track C — session settings
 
@@ -309,18 +344,19 @@ No ACKNOWLEDGEMENTS entry: nothing is copied or adapted.
 - **Direction.** Template text changes need `pnpm template-stock:update`; the
   old hash joins `superseded`, so stock copies upgrade, and edited copies merge
   against their recorded `stock` or park. The migration preserves `stock`, so
-  that path survives the rename. The agent guide and course skill name
-  `AGENTS.md` unconditionally; in an unconverted box a new course file named
-  `AGENTS.md` beside a root `CLAUDE.md` is ignored by Claude until conversion,
-  which the pre-scan does not treat as a conflict (different directories).
+  that path survives the rename. Hand-written docs (box docs, `bbx-context`,
+  site pages) describe the converted state.
 
 ### Track E — deferred removal of pre-migration support
 
 - **What.** A deferred issue (`issues/deferred/`, `activate-on` about four
   weeks after ship, `category: code-quality`) naming, with `file:line`: the
-  resolver's legacy branches, the mirror pass's `CLAUDE.md → AGENTS.md`
-  symlinks and `ensureAgentsMirror`, the `**/AGENTS.md` registry row, the
-  legacy-marker test, and `CLAUDE_MD` in recognizers that no longer need it.
+  resolver's legacy branches, the sibling-key rule in the ledger, park, and
+  pruning lookups, the four legacy patterns in `TEMPLATE_MANAGED_PATTERNS`,
+  the mirror pass's `CLAUDE.md → AGENTS.md` symlinks and `ensureAgentsMirror`,
+  the `**/AGENTS.md` registry row, the legacy-marker test,
+  `instructionFileName`'s legacy branch, and `CLAUDE_MD` in recognizers that no
+  longer need it.
   Safe to remove when every box that matters, production included, has
   `agents-md-2026-10` in its manifest.
 - **First chunk.** File the issue in the same commit that registers the
@@ -336,6 +372,9 @@ and reopened). In that window the template sync writes stock `AGENTS.md`
 guides beside edited `CLAUDE.md` guides, and the root writer creates an
 `AGENTS.md` that Claude ignores. The resolver is one function that keeps the
 old behavior until the migration runs, and Track E deletes its legacy branches.
+
+The sibling-key rule exists for the same reason: the framework reopens a box
+after a failed migration, so a half-moved ledger must still read correctly.
 
 Cut from the first draft: a repeating rename pass inside `generateDocs` with no
 registered migration. The cross-model review showed it renamed dirty files on
@@ -356,8 +395,10 @@ None.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | New engine, unconverted box: sync installs a stock `AGENTS.md` guide beside an edited `CLAUDE.md` | New: resolver doctest; sync on an unconverted fixture | Resolver keeps legacy paths | Covered by test |
-| Migration interrupted between rename, ledger move, and park move | New: `plan.ts` doctest per interruption point | Each action checks target state; retry repairs | Clear (migration stays pending) |
+| Migration interrupted at any step, then a session or sync runs before retry | New: integration doctest stops after each step, runs `syncBoxGuidance` and `generateDocs` (commit result too), then retries | Root first; sibling-key rule; retry continues | Covered by test; migration stays pending until done |
 | Ledger entry moved without `stock`: later template updates park instead of merging | New: doctest asserts the whole entry moves | Move whole entry | Covered by test |
+| Ledger or park present under both sibling keys with different contents | New: pre-scan doctest | Pre-scan conflict, exit 1 | Clear |
+| Unconverted box: engine updates a legacy guide but its commit leaves the guide dirty | New: `generateDocs` commit-result case | Legacy patterns kept until Track E | Covered by test |
 | A real `CLAUDE.md` and a real `AGENTS.md` in one directory | New: pre-scan doctest | Exit 1, write nothing, report paths | Clear (health check, `box-convergence` alert) |
 | A legacy generated regular `AGENTS.md` (marker) is mistaken for authored | New doctest | Marker test reused | Clear if it fails (migration exits 1) |
 | An agent writes `CLAUDE.md` in a converted box | New: validate-hook doctest | Lint error at write and in `bbx validate` | Clear |
@@ -392,8 +433,14 @@ Engine downgrade is accepted: downgrades are manual and rare
 - **Fabricated value.** Not applicable: no free-form field.
 - **Validation error UX.** The lint and conflict messages each name the fix in
   one sentence (Track A, Track B).
-- **Partial migration.** ADDRESSED: the pre-scan makes the migration all or
-  nothing per box; the resolver keeps an unconverted box on today's behavior.
+- **Partial migration.** ADDRESSED: known conflicts stop the migration before
+  any write; an interruption after the first write leaves one of the states in
+  Track B "Intermediate states", each handled; the resolver keeps an
+  unconverted box on today's behavior.
+- **Course chat scope.** A course entry point is a chat scoped to the course
+  directory (`skills-content.ts:93-99`). In an unconverted box the course
+  skill still names `CLAUDE.md` (Track A generated text), so course files
+  match the box's state; the migration converts them with everything else.
 
 ## NOT in scope
 
@@ -447,7 +494,10 @@ Engine downgrade is accepted: downgrades are manual and rare
   edited tracked guide, and a map include, run the migration, then
   `syncBoxGuidance`; assert no new park, no stock overwrite, `stock` preserved,
   and no `CLAUDE.md` left. A second case runs `syncBoxGuidance` on the same box
-  **before** the migration and asserts nothing is written at `AGENTS.md`.
+  **before** the migration and asserts nothing is written at `AGENTS.md`. A
+  third stops the migration after each step, runs `syncBoxGuidance` and
+  `generateDocs` (checking the commit's paths), and asserts the box state is
+  one Track B lists as valid, then that a retry completes it.
 - Existing doctests (`guidance-sync`, `maps/finalize`, `maps/orphans`,
   `agent-context-mirrors`, `claude-md-lint`, `run.box-context`,
   `cli/commands/agent-context`, `codex-audit`) change fixtures and gain an
@@ -458,18 +508,21 @@ Engine downgrade is accepted: downgrades are manual and rare
 
 ## Implementation order
 
-1. Track A resolver + doctest; root writer through it.
-2. Track A remaining writers (tracked rows, maps, orphans, includes callers,
-   size lint) with unconverted-box cases in their doctests.
-3. Track B `plan.ts` + doctest; `run.ts`; registry entry; integration doctest;
+1. Track A resolver and `instructionFileName` + doctest; root writer through
+   it.
+2. Track A sibling-key rule in the ledger, park, and pruning lookups, and the
+   kept legacy patterns, with doctests.
+3. Track A remaining writers (tracked rows, maps, orphans, includes callers,
+   size lint, generated text) with unconverted-box cases in their doctests.
+4. Track B `plan.ts` + doctest; `run.ts`; registry entry; integration doctest;
    Track E deferred issue in the same commit.
-4. Track A lint (validate hook and `bbx validate`), keyed on the manifest.
-5. Track C exclude list.
-6. Track D template texts + `pnpm template-stock:update`; agent guide; course
-   skill; box docs; `bbx-context` skill; site docs; `sdk-update` line.
-7. Audit plumbing, fixture renames, the two new audits, runs for Claude and
+5. Track A lint (validate hook and `bbx validate`), keyed on the manifest.
+6. Track C exclude list.
+7. Track D template texts + `pnpm template-stock:update`; box docs;
+   `bbx-context` skill; site docs; `sdk-update` line.
+8. Audit plumbing, fixture renames, the two new audits, runs for Claude and
    Codex on `~/src/box-worktrees/agents-md/test1`.
-8. End-to-end on that clone: run `bbx engine migrate`; confirm every
+9. End-to-end on that clone: run `bbx engine migrate`; confirm every
    `CLAUDE.md` became `AGENTS.md`, ledger keys moved with `stock` intact, no
    new parks, a chat session loads the guide, and `bbx validate` is clean.
    Then add a `CLAUDE.md` and confirm the lint error.
@@ -479,10 +532,11 @@ Engine downgrade is accepted: downgrades are manual and rare
 Tests first per chunk (each pure function's doctest before its caller). Done
 when: the resolver and migration doctests pass, the integration doctest
 passes, renamed fixture doctests pass, the two new audits are run on both
-engines, and step 8 shows a clean converted test box.
+engines, and step 9 shows a clean converted test box.
 
-Migration approach: a scripted, registered migration, all or nothing per box
-(pre-scan), idempotent with repair on retry. Production boxes convert during
+Migration approach: a scripted, registered migration. Known conflicts stop it
+before any write; after that, every interruption point is a valid state and a
+retry completes it. Production boxes convert during
 deploy convergence; local boxes through `box-convergence` or
 `bbx engine migrate`; worktree clones by hand. Unconverted boxes keep today's
 behavior through the resolver until Track E. The plan ships as one piece, only
