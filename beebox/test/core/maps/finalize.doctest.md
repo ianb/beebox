@@ -1,7 +1,8 @@
 # Map refresh finalize
 
 Tests for `src/core/maps/finalize/core.ts` — the mechanical post-agent step
-that stamps state and ensures `CLAUDE.md` per directory.
+that stamps state and ensures each directory's instruction file carries the
+map include (`AGENTS.md`; `CLAUDE.md` in a box not yet converted).
 
 ```ts setup
 import { finalize } from "../../../src/core/maps/finalize/core.js";
@@ -12,10 +13,10 @@ import { lstat, readlink } from "node:fs/promises";
 import { join } from "node:path";
 ```
 
-## Creates CLAUDE.md and stamps state for fresh dirs
+## Creates AGENTS.md and stamps state for fresh dirs
 
-When a directory has a MAP.md but no CLAUDE.md, finalize writes a stub
-CLAUDE.md with the `@MAP.md` include and stamps the state file.
+When a directory has a MAP.md but no instruction file, finalize writes a stub
+`AGENTS.md` with the `@MAP.md` include and stamps the state file.
 
 `head` is the brief-time HEAD — captured *before* the agent writes, since
 that's what the precheck records on each task.
@@ -35,8 +36,8 @@ await finalize({
   ],
 });
 
-print(JSON.stringify(await box.read("CLAUDE.md")));
-print(JSON.stringify(await box.read("inbox/CLAUDE.md")));
+print(JSON.stringify(await box.read("AGENTS.md")));
+print(JSON.stringify(await box.read("inbox/AGENTS.md")));
 =>
 "@MAP.md\n"
 "@MAP.md\n"
@@ -59,15 +60,16 @@ inbox: at-head
 await box.cleanup();
 ```
 
-## A fresh CLAUDE.md gets its AGENTS.md mirror
+## In an unconverted box, a fresh CLAUDE.md gets its AGENTS.md mirror
 
-Codex reads `AGENTS.md`, not `CLAUDE.md`. A stub written without the sibling
-symlink leaves the directory's new MAP invisible to a Codex session until some
-later `generate-docs` run happens to plant one — so finalize links the file it
-just created, and only that file.
+A box made before `agents-md-2026-10` (`legacyInstructions`) still writes
+`CLAUDE.md`. Codex reads `AGENTS.md`, not `CLAUDE.md`. A stub written without
+the sibling symlink leaves the directory's new MAP invisible to a Codex session
+until some later `generate-docs` run happens to plant one — so finalize links
+the file it just created, and only that file.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, legacyInstructions: true });
 box.commitAll("seed");
 const head = await getHead(box.root);
 await box.write("store/MAP.md", "");
@@ -107,15 +109,15 @@ print(JSON.stringify(await box.read("people/CLAUDE.md")));
 await box.cleanup();
 ```
 
-## Preserves existing CLAUDE.md content
+## Preserves existing AGENTS.md content
 
-If CLAUDE.md already has hand-edited content, the @-include is added at
+If AGENTS.md already has hand-edited content, the @-include is added at
 the top without disturbing the rest.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const existing = "# Project notes\n\nSome details.\n";
-await box.write("CLAUDE.md", existing);
+await box.write("AGENTS.md", existing);
 box.commitAll("seed");
 const head = await getHead(box.root);
 await box.write("MAP.md", "");
@@ -127,7 +129,7 @@ await finalize({
   ],
 });
 
-print(JSON.stringify(await box.read("CLAUDE.md")));
+print(JSON.stringify(await box.read("AGENTS.md")));
 => "@MAP.md\n# Project notes\n\nSome details.\n"
 ```
 
@@ -139,7 +141,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("CLAUDE.md", "@MAP.md\n# Notes\n");
+await box.write("AGENTS.md", "@MAP.md\n# Notes\n");
 await box.write("MAP.md", "");
 box.commitAll("seed");
 const head = await getHead(box.root);
@@ -151,7 +153,7 @@ await finalize({
   ],
 });
 
-const content = await box.read("CLAUDE.md");
+const content = await box.read("AGENTS.md");
 const matches = content.match(/@MAP\.md/g);
 print(`occurrences: ${matches ? matches.length : 0}`);
 =>
@@ -311,14 +313,14 @@ unchanged: inbox
 [{"dir":"inbox","problems":["header is \"# Map: store/inbox\", expected \"# Map: inbox\""]}]
 ```
 
-The verified map is stamped and gets its CLAUDE.md include; the stale-header
+The verified map is stamped and gets its `AGENTS.md` include; the stale-header
 one is left for the agent to rewrite:
 
 ```ts continue
 const state = await loadMapState(box.root);
 print(`store stamped: ${state.maps["store"] !== undefined}`);
 print(`inbox stamped: ${state.maps["inbox"] !== undefined}`);
-print((await box.read("store/CLAUDE.md")).trim());
+print((await box.read("store/AGENTS.md")).trim());
 =>
 store stamped: true
 inbox stamped: false

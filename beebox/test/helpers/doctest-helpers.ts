@@ -11,6 +11,8 @@ import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
+import { AGENTS_MD_MIGRATION } from "../../src/core/agent-instruction-files.js";
+import { MANIFEST_PATH, MIGRATIONS } from "../../src/core/migrations.js";
 import { annexNewBox } from "../../src/core/annex/new-box.js";
 import { createGitAnnexService } from "../../src/services/git-annex.js";
 
@@ -43,8 +45,20 @@ export interface TmpBox {
  * `true` adds the annex init and an initial commit that a committing test
  * needs (~1.1 s); `"none"` is for the two tests that assert gitlessness.
  */
-export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean }): Promise<TmpBox> {
+export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean; legacyInstructions?: boolean }): Promise<TmpBox> {
   const root = await mkdtemp(join(tmpdir(), "bbx-doctest-"));
+
+  // `legacyInstructions` makes a box from before `agents-md-2026-10`: its
+  // manifest omits that migration, so the scaffold writes CLAUDE.md guides
+  // and every writer keeps the legacy name. `initBox` seeds the manifest
+  // only when none exists, so writing it first is all this takes.
+  if (opts?.legacyInstructions === true) {
+    await mkdir(join(root, "_config"), { recursive: true });
+    await writeFile(join(root, MANIFEST_PATH), MIGRATIONS
+      .filter((m) => m.name !== AGENTS_MD_MIGRATION)
+      .map((m) => `${JSON.stringify({ name: m.name, "applied-at": "2026-01-01T00:00:00.000Z" })}\n`)
+      .join(""));
+  }
 
   // Build a minimal-but-valid shapeVersion-3 box via the same scaffolder
   // `bbx init` uses (`scaffoldBoxRoot`): package.json declaring beebox,

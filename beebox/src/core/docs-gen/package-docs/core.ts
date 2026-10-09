@@ -63,7 +63,7 @@ const STATIC_DOCS: readonly StaticDoc[] = [
   { filename: "triage.md", readWhen: "Working the intake → triage → handle pipeline, deciding where an inbox item belongs, or telling a reactor job from a triaged item.", generate: generateTriageGuide },
   { filename: "chat-voice.md", readWhen: "Adjusting how a spoken chat reply is delivered (voice, pacing, emphasis).", generate: generateChatVoiceDoc },
   { filename: "narration-mode.md", readWhen: "The chat snapshot reports narration=\"on\" — the user is dictating, not chatting.", generate: generateNarrationModeDoc },
-  { filename: "reducing-claude-md.md", readWhen: "The box's CLAUDE.md is flagged as too large.", generate: generateReducingClaudeMdDoc },
+  { filename: "reducing-claude-md.md", readWhen: "The box's AGENTS.md is flagged as too large.", generate: generateReducingClaudeMdDoc },
   { filename: "python-tools.md", readWhen: "Reaching for a box-specific Python CLI.", generate: generatePythonToolsDoc },
 ];
 

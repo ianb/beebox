@@ -1,5 +1,5 @@
 /**
- * Generate the "reducing an oversized CLAUDE.md" reference doc for agents.
+ * Generate the "reducing an oversized AGENTS.md" reference doc for agents.
  *
  * Emitted into the package docs as reducing-claude-md.md (docs-gen/package-docs/core.ts).
  * The `claude-md-size` lint warning (src/core/claude-md-lint.ts) points here so
@@ -9,16 +9,16 @@
  * (https://code.claude.com/docs/en/best-practices, "Write an effective
  * CLAUDE.md") and HumanLayer's "Writing a good CLAUDE.md"
  * (https://www.humanlayer.dev/blog/writing-a-good-claude-md), adapted to a
- * box's surfaces (nested CLAUDE.md, .claude/rules/ globs, skills, docs/).
+ * box's surfaces (nested AGENTS.md, .claude/rules/ globs, skills, docs/).
  */
 
 export function generateReducingClaudeMdDoc(): string {
-  return `# Reducing an oversized CLAUDE.md
+  return `# Reducing an oversized AGENTS.md
 
-A box \`CLAUDE.md\` loads into the assistant's context on **every single turn**,
+A box \`AGENTS.md\` loads into the assistant's context on **every single turn**,
 before it knows what the task is. Every line competes with the actual work for
 attention. This is not just a memory cost: past a few thousand tokens, models
-reliably start *dropping* instructions — so a bloated CLAUDE.md makes the agent
+reliably start *dropping* instructions — so a bloated AGENTS.md makes the agent
 follow your rules *less*, not more. If the agent keeps ignoring a rule you wrote
 down, the file being too long is a likely cause: the rule is getting lost in the
 noise.
@@ -32,16 +32,16 @@ order worth trying.
 > **"If I deleted this line, would the agent start making a mistake it doesn't
 > make now?"**
 
-If the answer is no, cut it. Most oversized CLAUDE.md files are mostly lines
+If the answer is no, cut it. Most oversized AGENTS.md files are mostly lines
 that fail this test: things the agent already does correctly without being told,
 restated conventions, reassurance, and explanation written for a human reader
-who isn't there. CLAUDE.md is instructions for an agent, not documentation for a
+who isn't there. AGENTS.md is instructions for an agent, not documentation for a
 person — it doesn't need an intro, a rationale for every rule, or a polished
 narrative. State the rule and move on.
 
 ## Keep the strong rules strong
 
-Not every rule is equal, and the file should show it. Most of a CLAUDE.md is
+Not every rule is equal, and the file should show it. Most of a AGENTS.md is
 ordinary statements the agent follows without fuss. A few are *load-bearing*: the
 agent's natural default is wrong, and getting it wrong is costly. Those must
 stand out — and they only stand out if you protect their signal.
@@ -69,7 +69,7 @@ The biggest wins are usually deletions, not relocations:
 - **Things discoverable from the box itself.** If a fact is visible by reading a
   card, a schema, or a directory, the agent will find it when relevant. You don't
   need to mirror it into context every turn.
-- **Task-specific detail that isn't universal.** CLAUDE.md is loaded for *every*
+- **Task-specific detail that isn't universal.** AGENTS.md is loaded for *every*
   turn, so it should hold only what applies broadly. Knowledge that matters only
   while doing one kind of task (a specific procedure, one card type, a seasonal
   workflow) belongs on a lazier surface (see strategy 4), not in the always-on
@@ -111,11 +111,11 @@ Where to move things, from lightest to heaviest:
 
 - **A sibling doc in the same directory.** For a big self-contained block — a
   debugging runbook, a setup procedure, a deep explanation — move it to a
-  \`SOMETHING.md\` next to the CLAUDE.md (e.g. \`DEBUG_PROCESS.md\`) and leave a
+  \`SOMETHING.md\` next to the AGENTS.md (e.g. \`DEBUG_PROCESS.md\`) and leave a
   pointer: \`For the debugging runbook, see DEBUG_PROCESS.md.\` Describe what's in
   it in the pointer so the agent can decide whether to open it.
-- **A nested \`CLAUDE.md\`.** Detail that only matters when working inside a
-  subdirectory goes in a \`CLAUDE.md\` there. The agent pulls it in only when it
+- **A nested \`AGENTS.md\`.** Detail that only matters when working inside a
+  subdirectory goes in a \`AGENTS.md\` there. The agent pulls it in only when it
   touches that directory.
 - **A \`.claude/rules/\` glob.** Rules that apply to a specific file type or path
   pattern can live in \`.claude/rules/\` and attach only when matching files are in
@@ -143,7 +143,7 @@ instructions are worse than none. Point to the source ("run \`bbx …\`",
 ## After trimming
 
 Re-run \`bbx validate\` (or just save the file — the validation hook re-checks it)
-to confirm the warning clears. Treat CLAUDE.md like code you maintain: prune it
+to confirm the warning clears. Treat AGENTS.md like code you maintain: prune it
 whenever you notice the agent ignoring a rule, not only when the linter nags.
 `;
 }
