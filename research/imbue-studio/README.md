@@ -1,8 +1,9 @@
 # Imbue Studio (announced 2026-10-01), read 2026-10-08
 
 A dated snapshot of Imbue's "personal AI operating system" against Bee Box,
-written one week after launch from public sources only. No waitlist access;
-the code is the primary source. Per [research/CLAUDE.md](../CLAUDE.md) this
+written one week after launch from public sources and one afternoon running
+it from source ([hands-on.md](hands-on.md)). No waitlist access; the code is
+the primary source. Per [research/CLAUDE.md](../CLAUDE.md) this
 corpus needs no cross-model review.
 
 | Note | Covers | Disposition or status |
@@ -12,6 +13,7 @@ corpus needs no cross-model review.
 | [permissions-models-integrations.md](permissions-models-integrations.md) | The latchkey/detent permission gateway, provider switching, the integration surfaces, the sandbox and the encryption claim | Read-out; ten claims the code does not substantiate |
 | [starter-templates.md](starter-templates.md) | The 14 `*-mind-template` repos, the manifest, the `use-template` flow, the scripted first turn | Read-out |
 | [comparison.md](comparison.md) | Studio against Bee Box, ten areas, each with a disposition traced to a Bee Box file or decision | Adopt 2, adapt 4, reject 6, later 4 |
+| [hands-on.md](hands-on.md) | Running Studio from source on a Mac: setup, one snag, timings, footprint, the first app the agent built | Create: 365 s; first app: under 3 min |
 | [chat-app.md](chat-app.md) | The chat UI: transcript model, composer, lifecycle, progress, scroll; thirteen lessons for Bee Box's chat | Adopt 5, adapt 4, reject 3, later 1 |
 
 ## What Studio is, in practice
