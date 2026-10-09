@@ -138,6 +138,8 @@ export const landmarksRouter = router({
     .input(
       z.object({
         dir: boxRelativePathSchema,
+        /** The place page's view: every unnamed `expand` becomes a labeled group (`expandLabel`). */
+        expandsAsGroups: z.boolean().optional(),
       }),
     )
     .query(async ({ ctx, input }): Promise<{ landmark: LandmarkPayload | null }> => {
@@ -151,7 +153,11 @@ export const landmarksRouter = router({
       // One landmark per directory by convention; take the first match.
       const relPath = matches.toSorted()[0];
       if (relPath === undefined) return { landmark: null };
-      const load = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot, derive: true });
+      const load = await loadLandmarkPayload(relPath, {
+        boxRoot: ctx.boxRoot,
+        derive: true,
+        expandsAsGroups: input.expandsAsGroups === true,
+      });
       if (load.status !== "ok") return { landmark: null };
       // No `problems` channel here (this is the mount-scoped, per-directory
       // read, not the box-wide scan) — a derived link that vanished between

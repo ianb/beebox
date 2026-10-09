@@ -21,6 +21,7 @@ import { submitTypedDraft } from "../../conversation/typed-submit";
 import type { InputStore } from "../../input-store";
 import type { EmissionStore } from "../../../../input/emission-store";
 import { MAX_RETAINED_MESSAGES, type ChatEvent } from "../../../../machines/chat-types";
+import { openerSendDecision, type OpenerSendOutcome } from "../../../openers/opener-send";
 
 interface ChatActionsOpts {
   captureEmissionDispatch: () => EmissionDispatch;
@@ -106,11 +107,19 @@ export function useChatActions(opts: ChatActionsOpts) {
   // Clicking a suggested opener is typing it and pressing enter: seed the
   // composer store, then run the exact same send funnel — so an opener carries
   // any attachment/selection the person had already staged, and the composer is
-  // left empty afterwards like a normal send.
-  const handleSendOpener = useCallback((text: string) => {
+  // left empty afterwards like a normal send. A draft, a send in flight, or a
+  // conversation that cannot send yet rejects the click before anything is
+  // written, so the draft survives and the opener buttons stay enabled.
+  const handleSendOpener = useCallback((text: string): OpenerSendOutcome => {
+    const decision = openerSendDecision({ draft: inputStore.get(), inFlight: sendInFlightRef.current, disabledReason: sendDisabledReason });
+    if (decision.outcome === "rejected") {
+      toastError(decision.message);
+      return "rejected";
+    }
     inputStore.set(text);
     handleSend();
-  }, [inputStore, handleSend]);
+    return "accepted";
+  }, [inputStore, handleSend, sendDisabledReason]);
 
   // Paste and drop take WHATEVER files came with the event, not just images:
   // routing (`file-routing.ts`) gives a non-image the upload representation, so

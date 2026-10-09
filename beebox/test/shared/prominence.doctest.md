@@ -62,9 +62,9 @@ MemoSchema.defaultProminence
 ```
 
 The landmark schema is `authored`, not `system` — but it declares its own
-type default, because a landmark is a place marker rather than a visitable
-file: the directory's identity is drawn from it instead of the file ever
-being surfaced itself.
+type default, because a landmark is the directory's identity rather than one
+of its cards: Browse folds it into the folder header, and opening it shows the
+place page.
 
 ```ts continue
 LandmarkSchema.category

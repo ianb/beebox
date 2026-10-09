@@ -282,7 +282,7 @@ print(`files.kind on beta's card: ${kindProbe.ok ? kindProbe.value.kind : kindPr
 files.kind on beta's card: BAD_REQUEST
 ```
 
-## 4. `chatControl.reserveSession`, `chat.newFeatures`, `chat.openers` — the Deliverable 1 fix
+## 4. `chatControl.reserveSession`, `chat.newFeatures` — the Deliverable 1 fix
 
 ```ts continue
 const reserve = await attempt(() =>
@@ -292,13 +292,9 @@ print(`chatControl.reserveSession: ${reserve.ok ? "SUCCEEDED" : reserve.code}`);
 
 const newFeatures = await attempt(() => caller.chat.newFeatures({ contextDir: `${relIntoBeta}/_content/sub` }));
 print(`chat.newFeatures: ${newFeatures.ok ? "SUCCEEDED" : newFeatures.code}`);
-
-const openers = await attempt(() => caller.chat.openers({ contextDir: `${relIntoBeta}/_content/sub` }));
-print(`chat.openers: ${openers.ok ? "SUCCEEDED" : openers.code}`);
 =>
 chatControl.reserveSession: BAD_REQUEST
 chat.newFeatures: BAD_REQUEST
-chat.openers: BAD_REQUEST
 ```
 
 ## 5. `GET /alpha/api/task-output?file=<B's task output>`

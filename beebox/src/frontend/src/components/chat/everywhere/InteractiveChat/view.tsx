@@ -6,7 +6,7 @@
  * wires them into the layout regions.
  */
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { WorkspaceCanvas } from "../../workspace/WorkspaceCanvas/view";
 import { MessageList } from "./messages";
 import {
@@ -27,6 +27,8 @@ import { href, toSearch } from "../../../../lib/routing";
 import type { ChatAgentEngine } from "@shared/chat-models.js";
 import { ChatRenderProfiler } from "./ChatRenderProfiler";
 import { AgentGate } from "../../../agents/AgentReadiness";
+import { PlaceChatContext, type PlaceChat } from "../../../openers/place-chat";
+import { useWorkspace } from "../../workspace/WorkspaceProvider/provider";
 
 
 /**
@@ -258,18 +260,32 @@ function ComposerRegion(props: ChatBodyProps) {
   );
 }
 
+/**
+ * What a place page in this chat's workspace needs to know about the chat
+ * (`PlaceView`, "Start something"). Memoized on its three inputs so a streamed
+ * token does not re-render the cards that read it.
+ */
+function usePlaceChat(props: ChatBodyProps): PlaceChat {
+  const { effectiveContextDir: contextDir, unstarted, messages, isStreaming, actions: { handleSendOpener: sendOpener } } = props;
+  const showsOwnOpeners = unstarted && messages.length === 0 && !isStreaming;
+  return useMemo(() => ({ contextDir, showsOwnOpeners, sendOpener }), [contextDir, showsOwnOpeners, sendOpener]);
+}
+
 export function InteractiveChatBody(props: ChatBodyProps) {
   const { voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, nativeComposer } = props;
   const { handleAddSelection, nativeCommandError, dismissNativeCommandError } = useCompanionSelection({ nativeComposer, selections, voice });
+  const placeChat = usePlaceChat(props);
+  const cancelArrival = useWorkspace()?.cancelArrival;
   return (
     <ChatRenderProfiler id="chat-root">
       <ChatView
+      onPaneInteraction={cancelArrival}
       ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice} failedRegion={props.failedRegion}
       // Native input replaces only the composer; landmark and settings menus remain web-owned.
       barChrome={<BarChromeRegion {...props} />}
-      workspace={<WorkspaceCanvas onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
+      workspace={<PlaceChatContext.Provider value={placeChat}><WorkspaceCanvas onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
         <MessageListRegion key={props.conversationKey} {...props} />
-      </WorkspaceCanvas>}
+      </WorkspaceCanvas></PlaceChatContext.Provider>}
       statusBanners={
         <>
           <BackgroundTasks tasks={props.backgroundTasks} />

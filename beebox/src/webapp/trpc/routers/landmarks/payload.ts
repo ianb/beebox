@@ -15,12 +15,13 @@ import {
   type ResolvedGroup,
 } from "../../../../core/landmark/resolve/core.js";
 import { readLandmarkFeatures } from "../../../../core/landmark/features.js";
+import { expandLabel } from "../../../../core/landmark/expand-label.js";
 import type { DerivedReadProblem } from "../../../../core/landmark/summaries.js";
-import { parseLandmarkFields } from "../../../../schemas/landmark.js";
+import { parseLandmarkFields, type LandmarkNavigationData } from "../../../../schemas/landmark.js";
 import { readLandmarkSymbol } from "../../../../core/landmark/symbol.js";
 import { normalizeLandmarkDir, landmarkScanRelDir } from "../../../../core/landmark/root-dir.js";
 import { readLandmarkCard } from "../../../../core/landmark/card-cache.js";
-import { prunedSubtree } from "../../../../core/landmark/prominence-index.js";
+import { prunedSubtree, type PrunedSubtree } from "../../../../core/landmark/prominence-index.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
 import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../../../../lib/box-namespace-resolve.js";
 import type { CardSymbolData } from "../../../../shared/card-symbol.js";
@@ -52,6 +53,18 @@ export interface LandmarkPayload {
    * to this landmark's directory.
    */
   features: Record<string, string>;
+  /**
+   * The place's openers (`navigation.openers`), trimmed. Empty when the
+   * landmark lists none: there is no fallback to another place's list.
+   */
+  openers: string[];
+  /**
+   * Box-relative path of the card arriving at this place opens: the single
+   * `entry-point` card in the pruned subtree when there is exactly one, else
+   * the landmark card itself. Without derivation (`derive: false`) there is
+   * no subtree to look in, so it is the landmark card.
+   */
+  arrival: string;
 }
 
 /**
@@ -85,7 +98,7 @@ type LandmarkLoad =
  */
 export async function loadLandmarkPayload(
   relPath: string,
-  { boxRoot, derive }: { boxRoot: string; derive: boolean },
+  { boxRoot, derive, expandsAsGroups }: { boxRoot: string; derive: boolean; expandsAsGroups?: boolean },
 ): Promise<LandmarkLoad> {
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: relPath, mode: "read" });
   if (!ns.ok) {
@@ -103,7 +116,7 @@ export async function loadLandmarkPayload(
   }
   if (fields === null) return { status: "unparsed" };
 
-  const navigation = fields.navigation;
+  const navigation = expandsAsGroups === true ? labelUnnamedExpands(fields.navigation) : fields.navigation;
   const dir = normalizeLandmarkDir(path.dirname(relPath));
   const landmarkDir = path.dirname(absPath);
   const derived = derive ? await prunedSubtree(boxRoot, dir) : undefined;
@@ -131,9 +144,33 @@ export async function loadLandmarkPayload(
       // Overwritten by the ancestor traversal in `list` after sorting.
       depth: 0,
       features: readLandmarkFeatures(navigation),
+      openers: (navigation?.openers ?? []).map((opener) => opener.trim()),
+      arrival: arrivalTarget(derived, relPath),
     },
     derivedProblems,
   };
+}
+
+/**
+ * The place page shows every `expand` as its own group, so an unnamed one gets
+ * a plain-words label from its query (`expandLabel`). `resolveLandmark` then
+ * resolves it as a group with an exact count, the same as a named one. The
+ * menus do not ask for this and keep unnamed expands in the flat list.
+ */
+function labelUnnamedExpands(navigation: LandmarkNavigationData | undefined): LandmarkNavigationData | undefined {
+  if (navigation?.expand === undefined) return navigation;
+  const expand = navigation.expand.map((e) =>
+    // An empty query lists nothing either way; it gets no group to show "None yet" under.
+    (e.group !== undefined && e.group !== "") || e.query === "" ? e : { ...e, group: expandLabel(e.query) },
+  );
+  return { ...navigation, expand };
+}
+
+/** The single entry-point card in the subtree, else the landmark card (`LandmarkPayload.arrival`). */
+function arrivalTarget(derived: PrunedSubtree | undefined, relPath: string): string {
+  const entryPoints = (derived?.entries ?? []).filter((e) => e.kind === "card" && e.level === "entry-point");
+  const only = entryPoints.length === 1 ? entryPoints[0] : undefined;
+  return only === undefined ? relPath : only.boxPath.slice(1);
 }
 
 export interface LandmarkIdentity {

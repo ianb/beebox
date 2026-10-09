@@ -1,26 +1,8 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
-import { useBusSubscription } from "../../../hooks/useBusSubscription";
 import { withBase } from "../../../api";
 import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../../../lib/view-url";
 import { Button } from "../../ui/Button";
-
-/**
- * Refetch a Properties query after box files change (debounced, one refetch
- * per burst) and on (re)connect. Properties sections mount only while the back
- * is shown, so this listens only while someone is looking.
- */
-export function useRefetchOnFileChange(refetch: () => unknown) {
-  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (pending.current !== null) clearTimeout(pending.current); }, []);
-  useBusSubscription({
-    onEvent: ({ event }) => {
-      if (event !== "file-change" || pending.current !== null) return;
-      pending.current = setTimeout(() => { pending.current = null; void refetch(); }, 500);
-    },
-    onConnect: () => { void refetch(); },
-  });
-}
 
 /** A link with a real href that opens its target through `onNavigate` on a plain click. */
 export function PropertyLink({ target, hint, onNavigate, children }: {

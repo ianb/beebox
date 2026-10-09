@@ -97,9 +97,11 @@ export interface ChatBodyProps {
   screenshots: ScreenshotRequestController;
   audioOverlayStore: AudioOverlayStore; // written by the audio-review events; read by UserMessage's badges
   /**
-   * Suggested opening questions for the empty state of a fresh chat, from the
-   * bound directory's briefing (`chat.openers`). Empty for a resumed session
-   * and for any box whose agent has retired its openers.
+   * Suggested opening questions for the empty state of an unstarted chat, from
+   * the place's landmark (`landmarks.forDir`, `navigation.openers`). Empty for
+   * a resumed session and for a place that lists none.
    */
   openers: string[];
+  /** The conversation was created for this tab and has no committed turn (`ResolvedConversation.unstarted`). */
+  unstarted: boolean;
 }

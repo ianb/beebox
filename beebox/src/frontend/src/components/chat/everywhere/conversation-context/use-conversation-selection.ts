@@ -30,7 +30,10 @@ export function useConversationSelection(boxSlug: string) {
     if (message?.sessionId) forgetReservation(message.sessionId);
   } });
   const restored = useMemo(() => readConversation(storageScope), [storageScope]);
-  const [state, setState] = useState<ResolvedConversation>(() => ({ selection: restored?.kind === "ready" && restored.target.kind === "start" ? restored : { kind: "resolving", requestId: "initial", contextDir: "" } }));
+  // A restored `start` target has had no first send, so it is unstarted.
+  const [state, setState] = useState<ResolvedConversation>(() => restored?.kind === "ready" && restored.target.kind === "start"
+    ? { selection: restored, unstarted: true }
+    : { selection: { kind: "resolving", requestId: "initial", contextDir: "" }, unstarted: false });
   // A stored session is only a pointer: recover/validate it before mounting its history controller.
   const [rendered, setRendered] = useState(() => restored?.kind === "ready" && restored.target.kind === "start" ? restored : null);
   const gate = useMemo(() => createResolutionGate(), []);

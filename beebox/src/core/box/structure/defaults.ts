@@ -18,7 +18,7 @@ import { createInitialPersonalityTemplate } from "../../../schemas/personality/s
 import { createBriefingTemplate } from "../../../schemas/briefing.js";
 import { createTodoViewTemplate } from "../../../schemas/todo-view.js";
 import { PLATE_CARD_PATH } from "../../../shared/todo-model.js";
-import { createLandmarkTemplate, parseLandmarkFields } from "../../../schemas/landmark.js";
+import { createLandmarkTemplate, parseLandmarkFields, STOCK_ROOT_OPENERS } from "../../../schemas/landmark.js";
 import {
   hasRecordedTemplateVersion,
   installTemplateFile,
@@ -235,7 +235,9 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   // header, the browser tab -- so a fleet scaffolded with one hardcoded label
   // is a fleet whose boxes all look alike in a tab strip. The boxholder
   // renames it by editing the card, like any other box fact.
-  const templateContent = createLandmarkTemplate({ label: await boxSlug(boxRoot), symbol: "📦" });
+  // The root place carries the box's onboarding openers; the agent fades them
+  // as the box comes into use (docs/implemented-plans/landmark-arrival.md, Track B).
+  const templateContent = createLandmarkTemplate({ label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS });
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
   if (existing !== undefined) {
     const existingRelPath = path.join("_content", existing);
