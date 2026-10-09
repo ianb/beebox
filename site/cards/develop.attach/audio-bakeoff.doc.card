@@ -1,6 +1,6 @@
 ---
 title: Which model listens to voice messages
-summary: "A small, re-runnable benchmark for audio-understanding models, and what its October 2026 run found."
+summary: "A small, re-runnable benchmark for audio-understanding models: what each model heard in 29 test recordings, in August and October 2026."
 authorship:
   people:
     - name: Ian Bicking
@@ -8,7 +8,7 @@ authorship:
       contribution: Recorded the test clips, directed both benchmark runs, and asked for the results to appear on the site.
   ai:
     transcription: none
-    drafting: Drafted this summary from the benchmark's 2026-10-09 report.
+    drafting: Drafted this page from the benchmark's 2026-08-27 and 2026-10-09 reports.
     editing: none
     research: Ran the benchmark, including the model calls, a model judge's scoring, and spot-checks of its verdicts.
 unlisted: true
@@ -28,42 +28,147 @@ a small benchmark for it.
 
 ## How it is tested
 
-One speaker recorded 29 short clips. Each clip tests one thing: the same
-words said warmly and reluctantly, one sentence with five different stressed
-words, Spanish with a single deliberately wrong sound, coughs and laughs, a
-meaningful pause, a whispered aside. Clips go to each model in blind groups
-labeled "Recording A" and "Recording B", with the same questions every time.
-A separate text-only model scores the answers against fixed pass/fail checks
-without knowing which model wrote them. The recordings are not published.
+One speaker recorded 29 short clips. Each clip tests one thing. Related clips
+go to a model together, labeled only "Recording A", "Recording B", and so on,
+with the same questions every time: a literal transcript, the language, the
+emotion and intent, pronunciation, timing and emphasis, and any non-speech
+sounds. The model is never told what the clips were meant to show. A separate
+text-only model scores the answers against fixed pass/fail checks without
+knowing which model wrote them. The recordings are not published.
 
-Three synthetic clips (a sine tone, digital silence, and low noise) check
-whether a model reports speech that isn't there.
+The first run, in August 2026, compared GPT Audio 1.5, Gemini 2.5 Flash,
+Gemini 3.1 Pro Preview, and Gemini 3.7 Flash, with OpenAI's Whisper as a
+transcription-only baseline. The second, in October, added Gemini 3.8 Flash,
+Gemini 3.5 Flash-Lite, and Google's transcription-only Gemini 3.5 Transcribe,
+and re-ran 3.1 Pro.
 
-## The October 2026 run
+## What the models heard
 
-- **Gemini 3.1 Pro Preview** was best on every capability, as in the first run
-  in August. It was the only model that heard a deliberately reduced Spanish
-  `rr`.
-- **Gemini 3.7 Flash, the model Bee Box asks for, is no longer what answers.**
-  Every request for it was answered by Gemini 3.8 Flash, according to the
-  model version in each response. Google's model list and changelog don't
-  mention the substitution.
-- **Gemini 3.8 Flash invents voice messages for silence.** Asked with Bee
-  Box's own prompt what the user said, it quoted a message every time: "Send
-  that email.", "Remind me to call John at 3:00 p.m.", "Uh, hey, can you just
-  delete that last voice message?" Gemini 3.1 Pro said there was no speech,
-  or, less helpfully, that no audio was attached. It never invented a
-  message.
+### The same words, a different meaning
 
-An accidental recording should never reach the agent as a confident request
-the user didn't make. On that basis the report recommends moving audio
-questions to Gemini 3.1 Pro, at about two cents and seven seconds per
-question.
+"That's fine, really," said once warmly and once with reluctant resignation.
+Gemini 3.1 Pro described the second take as "weary, resigned, or perhaps
+slightly passive-aggressive, suggesting that things are not actually fine but
+they are giving up the argument." GPT Audio 1.5 called it "hesitant but still
+accepting". Gemini 2.5 Flash called both takes neutral acceptance.
+
+A second pair, "I'll see you tomorrow" said happily and then sadly, showed the
+limits of the recordings as much as of the models. The Gemini models heard the
+sad take as weary or resigned; GPT Audio 1.5 called it "neutral to hesitant".
+No model in either run heard the happy take as happy.
+
+### One wrong sound
+
+The same Spanish sentence twice, the second time with *mañana* deliberately
+said as *manana*.
+
+- **Gemini 3.1 Pro and 3.7 Flash** named it exactly: the palatal nasal [ɲ] in
+  the first take, an alveolar [n] in the second.
+- **GPT Audio 1.5** wrote *mañana* both times and said there were "no
+  noticeable differences in content or delivery."
+- **Whisper** can't be asked about pronunciation, but it spelled the second
+  take *manana*, which gave the change away.
+- **Gemini 3.8 Flash** caught it in three of four tries. In the fourth it
+  described only the pauses.
+- **Gemini 3.5 Flash-Lite** called both "standard Spanish pronunciation", and
+  claimed the first take was whispered. It wasn't.
+
+### Which word was stressed
+
+"I didn't say she stole the money," five times, stressing a different word each
+time. Gemini 3.1 Pro, 3.7 Flash, and 3.8 Flash found all five. GPT Audio 1.5
+and Gemini 2.5 Flash each found three. Whisper wrote the same sentence five
+times and, once, capitalized STOLE.
+
+### Coughs and laughs
+
+Two coughs, then two laughs, with no words. Whisper transcribed the coughs as
+"Thank you for watching." Gemini 2.5 Flash heard a throat clear and a slow
+"aah". Every other model told the coughs from the laughs, and Gemini 3.5
+Transcribe returned nothing for either, which is the right answer for a
+transcriber.
+
+### A pause that means something
+
+"Sure … I guess," with a hesitation measured at about three seconds. Gemini
+3.1 Pro estimated it at "approximately three seconds" in August. Whisper and
+Gemini 3.5 Transcribe wrote "Sure. I guess." and "Sure, I guess.", which keeps
+the words and loses the point.
+
+### A rolled *rr*
+
+*El perro corre rápido por el parque*, once with a trilled *rr* and once
+with a single tap. Only Gemini 3.1 Pro heard the difference, in both runs. In
+October, Gemini 3.8 Flash heard "strongly articulated alveolar trills" in both
+takes and "a very deep, theatrical, and gravelly voice". Both claims are wrong.
+
+### A transcript with stage directions
+
+A sigh, "Okay", a pause, "I was going to say Tuesday — no, Wednesday", a small
+laugh, a whispered "Don't tell Maya yet", normal voice again, and a cough.
+Asked for a transcript with stage directions, Gemini 3.1 Pro in October
+produced:
+
+> [Heavy sigh] Okay. [Pause 1.5s] I was gonna say Tuesday, [Pause 0.5s] no,
+> Wednesday. [Laugh] [Sigh] [whispering] Don't tell Maya yet. [Pause 1s]
+> [normal voice] I'll call her after lunch. [Pause 0.5s] [Cough]
+
+That has every designed event. Whisper produced only the words.
+
+### Plain transcription
+
+For clean words on the page, the transcription-only models are competitive:
+Whisper and GPT Audio 1.5 had the lowest error rates in August, and Gemini 3.5
+Transcribe matched Whisper in October. They have their own slips. Gemini 3.5
+Transcribe wrote "The rural juror rarely worries about the brewery" as "The
+world-weary rarely worries about the brewery."
+
+## Invented messages
+
+Three generated clips contain no voice: a short electronic beep, three seconds
+of silence, and three seconds of low hiss. Each went to the model alone, inside
+the prompt Bee Box really sends, with the question "What exactly did the user
+say in this message, and how did they sound?"
+
+Gemini 3.8 Flash quoted a message every time, 18 of 18, and described the
+speaker's tone. None of the answers hedged. A few of them:
+
+- Beep: "Send that email."
+- Beep: "Uh, hey, can you just delete that last voice message?"
+- Silence: "It's raining a lot outside, so remember to bring your umbrella."
+  ("The speaker (a male voice) sounded calm, clear, and helpful.")
+- Hiss: "Keep your voice down." ("She speaks in a hushed, urgent whisper.")
+
+Gemini 3.1 Pro quoted nothing. It said the clip had no speech, or, less
+helpfully, that no audio was attached.
+
+Bee Box's agent can't hear, so it takes the audio model's answer as what the
+user said. An accidental send or a pocket recording looks like these clips.
+The agent would get a confident quote of a request nobody made. How often
+that happens with real recordings isn't measured yet.
+
+## Rankings
+
+**August 2026:** Gemini 3.1 Pro Preview first, Gemini 3.7 Flash a close second,
+then GPT Audio 1.5 (good transcription, weak on pronunciation and prosody),
+then Gemini 2.5 Flash. Bee Box moved its audio questions to 3.7 Flash.
+
+**October 2026:** Gemini 3.1 Pro Preview first again, on every capability.
+Gemini 3.8 Flash second. Gemini 3.5 Flash-Lite third: fast and very cheap, but
+it misses most pronunciation changes.
+
+One more finding: Gemini 3.7 Flash, the model Bee Box asks for, is no longer
+what answers. Every request for it was answered by Gemini 3.8 Flash, according
+to the model version in each response. Google's model list and changelog don't
+mention the substitution.
+
+The October report recommends moving audio questions to Gemini 3.1 Pro, at
+about two cents and seven seconds per question.
 
 ## Re-running it
 
 The benchmark, its pass/fail checks, every model answer, and the full reports
-are in the repository at
+(including a test-by-test account of each run) are in the repository at
 [research/audio-understanding-bakeoff](https://github.com/ianb/beebox/tree/main/research/audio-understanding-bakeoff).
 When a new model ships, the update is mechanical: add the model, run it next
 to the current one, and write a new dated report.
