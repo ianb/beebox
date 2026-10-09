@@ -58,7 +58,8 @@ function transcripts(call: CallRecord): Record<string, string> {
     const out: Record<string, string> = {};
     for (const r of parsed.recordings ?? []) {
       const id = r.label ? call.labels[r.label.replace(/^Recording\s+/i, "").trim()] : undefined;
-      if (id) out[id] = r.transcript ?? "";
+      // A missing or non-string transcript is unparsed, never "no speech".
+      if (id && typeof r.transcript === "string") out[id] = r.transcript;
     }
     return out;
   } catch {

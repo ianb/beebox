@@ -5,7 +5,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -68,6 +68,20 @@ export interface Corpus {
   groups: Group[];
 }
 
+/**
+ * A digest of everything in the corpus that decides which calls are made and
+ * what they send: sample sources, group membership, prompts, and questions.
+ * Check wording is left out, so a corrected check can be re-judged in the
+ * same run.
+ */
+export function corpusDigest(corpus: Corpus): string {
+  const calls = {
+    samples: corpus.samples.map((s) => [s.id, s.capture ?? null, s.synthetic ?? null]),
+    groups: corpus.groups.map((g) => [g.id, g.prompt ?? "blind", g.question ?? null, g.samples]),
+  };
+  return createHash("sha1").update(JSON.stringify(calls)).digest("hex").slice(0, 16);
+}
+
 export function loadCorpus(): Corpus {
   return JSON.parse(readFileSync(join(HERE, "corpus.json"), "utf8")) as Corpus;
 }
@@ -101,13 +115,13 @@ const WAV_CACHE = join(tmpdir(), "audio-bakeoff-wav");
 
 /**
  * The protocol's normalization: mono, 48 kHz, 16-bit PCM WAV. Cached by
- * source (file name, size, and mtime, or the lavfi expression), so a
- * corrected recording under the same sample id is re-normalized.
+ * source content (or the lavfi expression), so a corrected recording under
+ * the same sample id is re-normalized.
  */
 export function normalizedWav(sample: Sample): Buffer {
   mkdirSync(WAV_CACHE, { recursive: true });
   const source = sample.synthetic ? null : join(audioDir(), sample.capture ?? "");
-  const identity = source ? `${source}:${statSync(source).size}:${statSync(source).mtimeMs}` : `lavfi:${sample.synthetic ?? ""}`;
+  const identity = source ? readFileSync(source) : `lavfi:${sample.synthetic ?? ""}`;
   const out = join(WAV_CACHE, `${sample.id}-${createHash("sha1").update(identity).digest("hex").slice(0, 12)}.wav`);
   if (!existsSync(out)) {
     const input = source ? ["-i", source] : ["-f", "lavfi", "-i", sample.synthetic ?? ""];
@@ -150,8 +164,10 @@ export interface CallRecord {
 export interface RawRun {
   date: string;
   harnessVersion: number;
-  /** corpus.json `version` the run was made against; a run never mixes versions. */
+  /** corpus.json `version` the run was made against, for people. */
   corpusVersion: number;
+  /** corpusDigest() at run start; resuming with a different digest is refused. */
+  corpusDigest: string;
   calls: CallRecord[];
 }
 
