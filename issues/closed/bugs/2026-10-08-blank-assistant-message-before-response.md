@@ -1,12 +1,15 @@
 ---
 title: "Chat shows a blank assistant message before the response or tool activity appears"
 workstream: blank-assistant-message
+resolution: implemented
 area: beebox
 labels: [chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — visible once themes colored the assistant message background
 ---
+
+Closed by `fc1a14ee9` (`Hide empty assistant chat entries`): empty thinking blocks are excluded during grouping, and assistant groups with no renderer-visible text, speech, callouts, or activity are omitted. The added doctests cover saved history and provisional streaming entries. A live Claude/Codex chat browser check was not completed because test1 had no saved transcript and live model calls were not authorized.
 
 Some chat themes now give assistant messages their own background
 (`beebox/src/frontend/src/themes/chat-material.css`). That made visible an
