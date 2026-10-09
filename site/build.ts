@@ -28,6 +28,7 @@ import { workspaceShell } from "./workspace.js";
 import { twinCardLinks } from "./twin-links.js";
 import { writeStaticFiles } from "./docs-static.js";
 import { publishedPageBody } from "./page-publication.js";
+import { flattenEvaluationTags } from "./evaluation-tags.js";
 
 const SITE_DIR = import.meta.dirname;
 const CARDS_DIR = path.join(SITE_DIR, "cards");
@@ -121,14 +122,15 @@ export function twinMarkdown(
       // Asides flatten FIRST: flatAside splices in the aside's published body,
       // which may itself carry a {% nugget %} tag — the nugget pass must run
       // after it, or the catch-all strip below silently deletes that nugget.
-      return part
+      const flatTags = part
         // An agent-prompt's title is the only thing that says what its code
         // block is for; the generic tag strip below would leave three
         // unlabeled prompts on the home page's twin.
         .replace(/{%\s*agent-prompt\s+title="([^"]*)"[^%]*%}/g, (_m, title: string) => `**${title}** (paste into your agent or AI chat):`)
         .replace(/{%\s*aside\s+ref="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatAside(slug, refs.asides))
-        .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, refs.nuggets))
-        .replace(/{%[\S\s]*?%}/g, "");
+        .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, refs.nuggets));
+      // Model pills, verdicts, and sample titles carry meaning the catch-all strip would delete.
+      return flattenEvaluationTags(flatTags).replace(/{%[\S\s]*?%}/g, "");
     })
     .join("");
   return `${flat.trimStart().trimEnd()}\n`;

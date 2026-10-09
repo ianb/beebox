@@ -86,3 +86,15 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .bbx-box-presentation:not(.site-enhanced) .fx-t { display: none; }
 .bbx-card-content .agent-prompt pre { font: 15px/1.55 "Avenir Next", Avenir, sans-serif; }
 .agent-prompt code { font: inherit; }
+
+/* Model comparisons: a pill per model, a graded verdict, and a sample box. */
+.model-pill { display: inline-block; padding: 0 0.5em; border: 1px solid; border-radius: 999px; font: 600 0.82em/1.6 "Avenir Next", Avenir, sans-serif; white-space: nowrap; vertical-align: 0.05em; }
+.model-google { background: #dfe8f6; border-color: #9fb4d6; color: #1f3a66; }
+.model-openai { background: #dcefe6; border-color: #93c2ab; color: #1d4a37; }
+.verdict { display: inline-block; min-width: 5.2em; padding: 0 0.45em; border-radius: 4px; font: 700 0.78em/1.7 "Avenir Next", Avenir, sans-serif; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; vertical-align: 0.1em; }
+.verdict-correct { background: #d8ecd3; color: #24501c; }
+.verdict-okay { background: #f3e5bf; color: #5c4510; }
+.verdict-failed { background: #f3d3cc; color: #6e2416; }
+.sample-spec { margin: 0.6rem 0 1rem; padding: 12px 16px; border-left: 4px solid #8a7a5c; border-radius: 4px; background: #f6efe0; color: #3b3222; }
+.sample-spec p { margin: 0.35em 0; }
+.sample-title { font: 600 0.8em/1.4 "Avenir Next", Avenir, sans-serif; text-transform: uppercase; letter-spacing: 0.05em; color: #6b5a3a; }
