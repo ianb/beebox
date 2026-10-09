@@ -75,9 +75,10 @@ async function freshBox() {
 
 ## The gate: one substantial exchange, or two
 
-A chat qualifies once its span clears the nightly 400-character title gate
-and either the person has sent two messages, or the first message alone is at
-least `FIRST_TURN_TITLE_CHARS` characters, about one sentence naming a subject.
+A chat qualifies once the person has sent two messages, or after one when the
+first message alone is at least `FIRST_TURN_TITLE_CHARS` characters, about one
+sentence naming a subject. There is no span-size gate: two short exchanges
+are enough.
 
 ```ts
 FIRST_TURN_TITLE_CHARS
@@ -153,18 +154,19 @@ await box.cleanup();
 ## A greeting waits for the second exchange
 
 A first message of "hi there" names nothing, so the first turn is skipped;
-the second exchange qualifies on the two-turn rule.
+the second exchange qualifies on the two-turn rule, though the whole chat is
+far below the nightly 400-character title gate.
 
 ```ts
 const box = await freshBox();
-const entries = [user("g1", "hi there"), agent("g2", REPLY)];
+const entries = [user("g1", "hi there"), agent("g2", "Hello!")];
 await seed(box, A, entries);
 const reviewer = fakeReviewer("Planning a birthday dinner");
 
 await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null })
 => { kind: "skipped", reason: "below-gate" }
 
-await seed(box, A, [...entries, user("g3", "a dinner"), agent("g4", REPLY)]);
+await seed(box, A, [...entries, user("g3", "help me plan dinner"), agent("g4", "What day?")]);
 await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null })
 => { kind: "titled", title: "Planning a birthday dinner" }
 ```
