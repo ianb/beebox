@@ -21,7 +21,8 @@ import Markdoc from "@markdoc/markdoc";
 import { parseMarkdown } from "../shared/markdoc-config/parse/core.js";
 import type { Node } from "@markdoc/markdoc";
 import { markdocConfig } from "../shared/markdoc-config/tags/core.js";
-import { TODO_ASSIGNED_PLACEHOLDER_ID } from "../shared/todo-model.js";
+import { TODO_ASSIGNED_PLACEHOLDER_ID, todoAssignedWarning } from "../shared/todo-model.js";
+import { isRecord } from "../shared/is-record.js";
 import type { LintIssue } from "../exports/cards.js";
 import { errorMessage } from "../shared/error-guards.js";
 
@@ -73,6 +74,20 @@ export function lintBodyMarkdoc(bodyText: string): LintIssue[] {
         message: `Markdoc body issue at line ${line} (${tagName}): ${entry.error.message}`,
       };
     });
+}
+
+/**
+ * The `{% todo %}` tag's `assigned` placeholder warning, for the frontmatter
+ * `todos:` form of the same todo (`TodoEntrySchema` raises only errors).
+ */
+export function lintFrontmatterTodoAssigned(fields: Record<string, unknown>): LintIssue[] {
+  const todos = fields["todos"];
+  if (!Array.isArray(todos)) return [];
+  return todos.flatMap((entry: unknown, index) => {
+    const assigned = isRecord(entry) && typeof entry["assigned"] === "string" ? entry["assigned"] : undefined;
+    const warning = todoAssignedWarning(assigned);
+    return warning === null ? [] : [{ type: "validation" as const, severity: "warning" as const, message: `todos[${String(index)}]: ${warning.message}` }];
+  });
 }
 
 /**
