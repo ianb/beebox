@@ -26,15 +26,17 @@ export function appendSessionManifest(boxRoot: string, entry: ManifestEntry): vo
 
 /**
  * Commit the manifest alone. An agent run that commits its own work sweeps the
- * manifest line in with it; a run that writes nothing else (the after-turn
- * chat title) calls this, or the tracked file stays dirty until some unrelated
- * commit sweeps it under that commit's name. A no-op when the manifest is
+ * manifest line in with it; a run that writes nothing else (a chat title or
+ * review pass) calls this, or the tracked file stays dirty until some unrelated
+ * commit sweeps it under that commit's name. Appends are not serialized with
+ * this commit, so the file can also hold lines from other runs; the subject and
+ * trailer therefore name the file, not the caller. A no-op when the manifest is
  * unchanged.
  */
-export async function commitSessionManifest(boxRoot: string, { task }: { task: string }): Promise<void> {
+export async function commitSessionManifest(boxRoot: string): Promise<void> {
   await stageAndCommitPaths(boxRoot, {
     paths: [MANIFEST_REL_PATH],
-    message: `Usage: record ${task} session`,
-    trailers: { "Commit-Source": task },
+    message: "Usage: record agent sessions",
+    trailers: { "Commit-Source": "usage-manifest" },
   });
 }
