@@ -15,7 +15,8 @@ a same-origin path.
 
 ```ts setup
 import { makeTestServer } from "../../../helpers/doctest-server.js";
-import { sanitizeReturnTo, escapeHtml } from "../../../../src/webapp/routes/auth/login-page.js";
+import { sanitizeReturnTo } from "../../../../src/webapp/routes/auth/login-page.js";
+import { escapeHtml } from "../../../../src/lib/escape-html.js";
 
 process.env.BBX_SESSION_SECRET = "test-session-secret-for-login-page-doctest";
 ```

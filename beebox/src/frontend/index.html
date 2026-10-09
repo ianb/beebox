@@ -45,6 +45,44 @@
           opacity: 1;
         }
       }
+      /* Three index cards take turns lifting off the stack: two cycles,
+         finished before the hint appears, so a stuck load stops moving. */
+      #root .app-boot-cards {
+        position: relative;
+        width: 84px;
+        height: 56px;
+        margin: 0 auto 18px;
+      }
+      #root .app-boot-cards i {
+        position: absolute;
+        inset: 0;
+        border: 1px solid #d8d0c0;
+        border-radius: 3px;
+        background:
+          linear-gradient(#e7a3a3, #e7a3a3) 0 9px / 100% 1px no-repeat,
+          linear-gradient(#a9c3dd, #a9c3dd) 8px 21px / calc(100% - 16px) 1px no-repeat,
+          linear-gradient(#a9c3dd, #a9c3dd) 8px 30px / calc(100% - 16px) 1px no-repeat,
+          linear-gradient(#a9c3dd, #a9c3dd) 8px 39px / calc(100% - 16px) 1px no-repeat,
+          #fffdf7;
+        box-shadow: 0 1px 2px #0000001a;
+        animation: app-boot-riffle 1600ms ease-in-out 2;
+      }
+      #root .app-boot-cards i:nth-child(1) { z-index: 3; animation-delay: 300ms; }
+      #root .app-boot-cards i:nth-child(2) { z-index: 2; transform: translate(3px, -3px); animation-delay: 830ms; }
+      #root .app-boot-cards i:nth-child(3) { z-index: 1; transform: translate(6px, -6px); animation-delay: 1360ms; }
+      @keyframes app-boot-riffle {
+        30% {
+          transform: translate(-6px, -34px) rotate(-9deg);
+        }
+        55% {
+          transform: translate(10px, -14px) rotate(4deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #root .app-boot-cards i {
+          animation: none;
+        }
+      }
       @media (prefers-color-scheme: dark) {
         #root .app-boot {
           color: #b8b8b8;
@@ -52,12 +90,17 @@
         #root .app-boot-hint {
           color: #808080;
         }
+        #root .app-boot-cards i {
+          border-color: #5a5143;
+          background-color: #3a352d;
+        }
       }
     </style>
   </head>
   <body>
     <div id="root">
       <div class="app-boot">
+        <div class="app-boot-cards" aria-hidden="true"><i></i><i></i><i></i></div>
         Loading Bee Box&hellip;
         <div class="app-boot-hint">
           If this message stays, the app couldn&rsquo;t load. Try reloading, or sign in again.
