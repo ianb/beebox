@@ -12,7 +12,6 @@ authorship:
     editing: Reworked the prototype into a parent card with an attached confidence note.
     source-preparation: Selected and embedded verified repository excerpts from the user-story catalog.
 unlisted: true
-theme: paper
 next:
   - card: /walkthrough.attach/confidence.doc.card
     label: A note on confidence
