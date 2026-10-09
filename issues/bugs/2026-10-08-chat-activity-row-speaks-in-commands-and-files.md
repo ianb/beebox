@@ -47,6 +47,6 @@ is the text side of the same problem.
 The row now speaks in lay words (`ChatMessages/activity-wording.ts`):
 collapsed "thought it over, looked up 2 things, made a change, took a step";
 a line per step uses the command's `description`, the card's title ("Updated
-Lemon Chicken"), or "Set up loan cards" for a schema. Every line expands to
+Lemon Chicken"), or "Set up a place for your loans" for a schema. Every line expands to
 the raw input and result. The guide now tells the agent that a command's
 `description` is shown to the person.
