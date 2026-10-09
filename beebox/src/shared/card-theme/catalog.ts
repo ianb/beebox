@@ -8,6 +8,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "plain",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["plain", "paper", "post-it"],
   },
   {
     name: "spectrum",
@@ -18,6 +19,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "plain",
     chrome: true,
     systemOnly: true,
+    cardThemes: ["plain", "retired-theme-b", "retired-theme-c", "post-it"],
   },
   {
     name: "paper",
@@ -28,6 +30,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "layered",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["paper", "post-it", "letter-set", "retired-theme-d"],
   },
   {
     name: "post-it",
@@ -48,6 +51,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "plain",
     chrome: true,
     systemOnly: true,
+    cardThemes: ["letter-set", "post-it", "retired-theme-c"],
   },
   {
     name: "letter-set",
@@ -69,6 +73,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["retired-theme-a", "paper", "retired-theme-i"],
   },
   {
     name: "retired-theme-b",
@@ -80,6 +85,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["retired-theme-b", "retired-theme-h", "post-it"],
   },
   {
     name: "retired-theme-c",
@@ -91,6 +97,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["retired-theme-c", "letter-set", "plain"],
   },
   {
     name: "retired-theme-d",
@@ -102,6 +109,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["retired-theme-d", "paper", "retired-theme-g"],
   },
   {
     name: "retired-theme-e",
@@ -113,6 +121,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["retired-theme-e", "paper", "retired-theme-a"],
   },
   {
     name: "retired-theme-f",
@@ -124,6 +133,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["retired-theme-f", "post-it", "retired-theme-i"],
   },
   {
     name: "retired-theme-g",
@@ -135,6 +145,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["retired-theme-g", "retired-theme-i", "paper"],
   },
   {
     name: "retired-theme-h",
@@ -146,6 +157,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["retired-theme-h", "retired-theme-b", "post-it"],
   },
   {
     name: "retired-theme-i",
@@ -157,12 +169,23 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["retired-theme-i", "retired-theme-g", "paper"],
   },
 ] as const;
 
 export type ThemeDescriptor = (typeof THEME_CATALOG)[number];
 export type ThemeName = ThemeDescriptor["name"];
 export type ThemeStock = ThemeDescriptor["stocks"][number];
+
+/**
+ * The card themes that go with a system theme, its default first. A card with
+ * no authored theme takes the default of the system theme it is shown on; the
+ * picker lists the rest first. A card theme may go with several system themes.
+ */
+export function systemCardThemes(systemTheme: string | undefined): readonly string[] {
+  const theme = THEME_CATALOG.find((item) => item.name === systemTheme);
+  return theme !== undefined && "cardThemes" in theme ? theme.cardThemes : ["plain"];
+}
 
 /** Opt in to scene, control, and sheet composition tokens. */
 export function themeComposition(name: string | undefined): "expressive" | undefined {

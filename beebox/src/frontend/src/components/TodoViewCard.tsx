@@ -73,10 +73,10 @@ function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChang
 
   return (
     <div className="p-4 max-w-2xl mx-auto" {...bbxSource("card", data.path)}>
-      <Card padding="md">
+      <Card material padding="md">
         <Stack gap="md">
           <Stack gap="none">
-            <Heading level={2}>{title}</Heading>
+            <Heading material level={2}>{title}</Heading>
             <PlateHeadline result={result} agentCount={agentCount} viewingAgent={viewingAgent} onChange={onChange} />
             <ScopeLine result={result} />
           </Stack>
@@ -85,19 +85,19 @@ function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChang
 
           <DatedStrip dated={datedTodos(result)} boxSlug={boxSlug} />
 
-          {hasRows ? null : <Text as="div" tone="subtle">No todos in scope.</Text>}
+          {hasRows ? null : <Text material as="div" tone="subtle">No todos in scope.</Text>}
 
           {result.groups.map((group) => (
             <Stack key={group.key} gap="sm">
               {/* `place` is a single group whose label would only repeat the
                   control above it; `plate` names a real distinction. */}
               {options.group === "plate" ? (
-                <Text size="xs" tone="muted" uppercase weight="semibold">
+                <Text material size="xs" tone="muted" uppercase weight="semibold">
                   {group.label} ({group.reduction.open + group.reduction.parked + group.reduction.done + group.reduction.dropped})
                 </Text>
               ) : null}
               {/* A rule between cards, so each card and its todos read as one group. */}
-              <Stack gap="none" className="divide-y divide-warm-200">
+              <Stack gap="none" className="divide-y divide-card-rule">
                 {group.rows.map((row) => (
                   <CardRow key={row.card.path} row={row} />
                 ))}
@@ -109,7 +109,7 @@ function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChang
               (still view state in the URL) rather than a persistent control
               for a state the boxholder wants hidden by default. */}
           {options.showFinished || finished === 0 ? null : (
-            <InlineAction
+            <InlineAction material
               id="bbx-todo-view-show-finished"
               intent="subtle"
               onClick={() => onChange({ showFinished: true })}

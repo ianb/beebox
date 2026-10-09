@@ -82,7 +82,7 @@ tour(
     await t.eval('document.querySelector("[data-card-section=appearance] details")?.setAttribute("open", "")');
     await clickVisibleButton(t, "Use default");
     await t.checkpoint("use-default");
-    await t.expect.custom("Use default returns to the resolved fallback", (snapshot) => snapshot.includes("Following the box and card type defaults."));
+    await t.expect.custom("Use default returns to the resolved fallback", (snapshot) => snapshot.includes("Following the box, card type, and system theme defaults."));
     // Choosing a view turns the card over, so the person sees the view they chose.
     await clickVisibleButton(t, "Original text");
     await t.checkpoint("chose-original-text");

@@ -116,11 +116,15 @@ const section = appearance(memo);
 => ["Appearance Paper cream · Set on this card", "<details><summary>Change</summary>"]
 ```
 
-Inside it is the swatch grid:
+Inside it, the card themes that go with the system theme come first, its
+default leading; the rest wait behind "All card themes":
 
 ```ts continue
-/<details.*<\/details>/s.exec(section)?.[0].match(/aria-label="([^"]*)"/g)?.slice(0, 3)
-=> ['aria-label="Choose card appearance"', 'aria-label="Flat — neutral"', 'aria-label="Paper — cream"']
+/<details.*<\/details>/s.exec(section)?.[0].match(/aria-label="([^"]*)"/g)?.slice(0, 4)
+=> ['aria-label="Choose card appearance"', 'aria-label="Goes with Flat"', 'aria-label="Flat — neutral (default)"', 'aria-label="Paper — cream"']
+
+textOf(/<details class="mt-3">.*?<\/summary>/s.exec(section)?.[0] ?? "")
+=> All card themes
 ```
 
 A viewer who is not signed in sees the row without the disclosure, and a

@@ -43,6 +43,10 @@
   --bbx-rule-strong: color-mix(in srgb, var(--bbx-ink) 34%, transparent);
   --bbx-code-paper: color-mix(in srgb, var(--bbx-ink) 88%, #000);
   --bbx-code-ink: var(--bbx-paper);
+  /* Light surfaces for in-card controls and panels (the Tailwind `card`
+     role). Derived, because some themes' underlay is a saturated accent. */
+  --bbx-tint: color-mix(in srgb, var(--bbx-ink) 7%, var(--bbx-paper));
+  --bbx-sheet: color-mix(in srgb, var(--bbx-paper) 55%, #fff);
   color: var(--bbx-ink);
   font-family: var(--bbx-font);
 }

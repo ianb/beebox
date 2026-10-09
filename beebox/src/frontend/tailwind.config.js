@@ -102,6 +102,20 @@ export default {
         // The neutral surface/text scale. Use directly (no semantic
         // alias) — warm-50..900 is self-documenting as a shade scale.
         warm: palette.warm,
+
+        // ─── Card material ─────────────────────────────────────────
+        // Inside a themed card these follow the card theme's material
+        // (themes/materials.css); elsewhere they fall back to the app
+        // palette. CSS variables, so no opacity modifiers (`/50`).
+        card: {
+          paper: "var(--bbx-paper, #FFFFFF)",
+          sheet: "var(--bbx-sheet, #FFFFFF)",
+          tint: `var(--bbx-tint, ${palette.warm[100]})`,
+          ink: `var(--bbx-ink, ${palette.warm[900]})`,
+          soft: `var(--bbx-ink-soft, ${palette.warm[700]})`,
+          pen: `var(--bbx-pen, ${palette.plum.DEFAULT})`,
+          rule: `var(--bbx-rule, ${palette.warm[300]})`,
+        },
       },
       // ─── Dropdown sub-panel transitions ─────────────────────────
       // The panel-swap idiom (Dropdown.tsx) keys its content wrapper on
