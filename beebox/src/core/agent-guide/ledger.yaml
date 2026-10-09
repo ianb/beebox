@@ -768,7 +768,7 @@ rows:
     audits: [speak-register-trigger-asked]
     mechanics: box-docs/speaking-to-the-person.md
   - id: speaking.introduce-terms
-    rule: Introduce a system term only when the user needs it to act, and explain it in the same breath.
+    rule: Unasked, introduce a system term only when the user needs it to act, and explain it in the same breath (speaking.register-triggers covers terms they used or asked about).
     handle: SPEAKING
     bin: core
     reason: The exception to the plain-words rule; without it an agent either hides a term the user must use or drops it unexplained. The "your state" sentence (never "the agent working on it") folded into speaking.you-and-i.

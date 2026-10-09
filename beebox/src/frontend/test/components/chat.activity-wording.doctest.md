@@ -102,7 +102,13 @@ The description is shown, capitalized; the command text never is:
   "Sort the shelf",
   "Handed off a task"
 ]
+```
 
-describeToolCall({ type: "tool_use", toolName: "mcp__x__lookup", inputSummary: "lookup 3" })
-=> lookup 3
+An unknown tool (an MCP tool, a future built-in) gets the neutral label: its
+name and its input summary, raw JSON for most, are plumbing and stay in the
+expanded detail.
+
+```ts
+describeToolCall({ type: "tool_use", toolName: "mcp__x__lookup", inputSummary: "{\"q\":\"drill\"}" })
+=> Took a step
 ```
