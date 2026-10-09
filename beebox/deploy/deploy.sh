@@ -1133,7 +1133,7 @@ node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://loc
 if [[ $maintenance_rc -ne 0 ]]; then
   for box in /home/beebox/boxes/*/; do
     [[ -e "$box/.git" ]] || continue
-    status=$(sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; cd "$1" && node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$box" 2>/dev/null) || continue
+    status=$(sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; cd "$1" && timeout 60 node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$box" 2>/dev/null) || continue
     [[ "$status" == *'"pending":[]'* ]] && continue
     echo "  $box: migration pending after a failed convergence; running bounded repair now..."
     sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd "$1" && timeout --kill-after=5s 1500s node node_modules/beebox/dist/cli.mjs engine migrate --sweep --repair --json' bbx-repair "$box" \
