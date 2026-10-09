@@ -1,6 +1,6 @@
 ---
 title: "One user-facing-language reference for everything the box agent says: invisible plumbing, lay translations, and when to switch registers"
-workstream: unattached
+workstream: user-facing-language
 area: beebox
 needs: [design]
 labels: [prompts, ui-sensibility, competitive-research]
@@ -60,3 +60,15 @@ commits, paths, and `bbx` commands when the person did not.
 Tension: the boxholder is technical and often does want the command. The
 three triggers are the answer, not a per-box setting; the reference must say
 so plainly so the agent does not swing to vagueness.
+
+## Resolution (user-facing-language, 2026-10-09)
+
+- The reference is a box doc, `beebox/docs/box/speaking-to-the-person.md`
+  (shipped as `box-docs/speaking-to-the-person.md`): who is reading, the
+  surfaces it governs, the plumbing table in Bee Box terms, bad/good pairs,
+  and the three triggers. Imbue Studio is credited.
+- The always-loaded rule is one passage in the guide's SPEAKING section
+  (rows `speaking.invisible-plumbing`, `speaking.register-triggers`), which
+  points at the doc. The chat prompt defers to SPEAKING.
+- Audits: `speak-outcome-not-mechanics`, `speak-register-trigger-asked`,
+  `speak-you-on-cards`.

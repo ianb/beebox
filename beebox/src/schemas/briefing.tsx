@@ -58,6 +58,10 @@ One briefing per directory, at \`briefing.briefing.card\`. The root
 briefing describes the whole box. Directory briefings explain what
 that directory contains.
 
+The person reads the briefing as their own page, and agents read it as the
+person talking to them, so write it in the person's voice: "I'm cataloguing
+my tools", never "the user" or "the boxholder".
+
 A briefing has two parts: **structured records in frontmatter** and a
 **prose body**.
 
@@ -207,9 +211,8 @@ Tell me, quietly, when something failed or you could not understand what I
 gave you. Do not tell me that routine work succeeded. A question for me is a
 dot unless it blocks something with a date. Things I asked to be told about
 are loud. Health problems stay on the dashboard unless they stop something I
-asked for. When I ask for a reminder, make a schedule card with \`notify:\`.
-When I ask to be told when something happens, make a schedule card that runs
-\`bbx changes\` and \`bbx judge\` before any agent.`;
+asked for. When I ask for a reminder or to be told when something happens,
+make sure it reaches me wherever I am.`;
 
 /**
  * Seed briefing template for a new box: the stub purpose and the default

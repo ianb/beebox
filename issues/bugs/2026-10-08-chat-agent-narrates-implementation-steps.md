@@ -1,6 +1,6 @@
 ---
 title: "The chat agent narrates schema and code work to a person who asked for a list"
-workstream: unattached
+workstream: user-facing-language
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -35,3 +35,12 @@ silent. The UI can follow the prompt's claim and collapse pre-tool text.
 Prompt-only changes cannot be verified without a real model run. The activity
 row has a related vocabulary problem:
 [Chat activity row speaks in commands and files](2026-10-08-chat-activity-row-speaks-in-commands-and-files.md).
+
+## Resolution (user-facing-language, 2026-10-09)
+
+Prompt half only. `prompts.ts` no longer claims pre-tool notes are summarized
+(they render in full), and the silent-bookkeeping rule now names building
+the box's machinery (a card type, its instructions, a rule, a view, a script,
+a fix to your own wording). SPEAKING carries the same rule for all agents.
+The UI keeps pre-tool text visible: a model sometimes puts its whole answer
+there (`message-parsing.ts`, `groupIntoParts`).

@@ -4596,6 +4596,81 @@ tests:
       - '(^|[^/\w])\w+\.landmark\.card'
     tags: [chat, behavioral, vocabulary]
 
+  # Invisible plumbing (added 2026-10-09, user-facing-language workstream):
+  # the A-lending journey walk saw "Now the schema." and file talk while the
+  # agent built a card type for a non-technical request. Behavioral: the agent
+  # does the work in chat mode, and every text block it writes counts.
+  # Status (2026-10-09, Claude): pass on a disposable copy of the test1 clone;
+  # built a loan schema in 11 turns with no narration and an outcome-only
+  # reply. Not checked: two of its five command descriptions were still
+  # technical ("Fix schema, create the two loans, validate"), and those show
+  # in the activity row.
+  - id: speak-outcome-not-mechanics
+    chat_mode: true
+    prompt: >
+      <typed user="me">I lend tools to my neighbors and keep forgetting who has
+      what. Right now Sam has my drill and Priya has the ladder. Can you set up
+      a proper tracker for this, its own little database, so I can add loans
+      and mark them returned?</typed>
+    expected_level: knows_directly
+    max_turns: 40
+    watch_for: >
+      Sets up a place for the loans and records the two, narrating outcomes
+      ("Setting up a place to keep track of your loans", "Sam has your drill")
+      and ending with what the person can now do. FAILS on narrating the
+      machinery: "schema", "card type", "instructions", "frontmatter", a file
+      path or filename as a noun, or a `bbx` command in the chat text.
+    # Paths may appear as link targets and ack refs; the matchers below only
+    # catch a filename or path used as a noun.
+    response_not_contains: ["schema", "card type", "frontmatter", "bbx "]
+    response_not_matches:
+      - '(^|[^/\w])[\w-]+\.[\w-]+\.card\b'
+      - '(^|[^/\w])_(content|config)/'
+      - '\b[\w-]+\.ts\b'
+    correct_matches:
+      - "drill"
+    tags: [chat, behavioral, vocabulary]
+
+  # The same rule's exception: once the person asks for the detail, the agent
+  # gives it.
+  # Status (2026-10-09, Claude): pass; schema, fields, folder, and commit.
+  - id: speak-register-trigger-asked
+    chat_mode: true
+    prompt: >
+      Suppose that earlier in this chat I asked you to keep track of the tools
+      I lend out, and you set up a new card type for loans and recorded two of
+      them. Now I type: "What exactly did you change? Show me the technical
+      details." Assume the work went as described; do not look anything up.
+      Answer with only the reply you would send me.
+    expected_level: knows_directly
+    watch_for: >
+      Gives the specifics because the person asked: the new card type or
+      schema, where it lives, the files it wrote. FAILS on staying vague
+      ("I set some things up") after an explicit request for detail.
+    correct_contains_any: ["schema", "card type", ".card", "_config"]
+    tags: [chat, behavioral, vocabulary]
+
+  # "the user" on cards (added 2026-10-09): B-inventory walks found "the user
+  # confirmed" on a card and "The boxholder is cataloguing" in a briefing.
+  # Status (2026-10-09, Claude): pass; the note spoke in the person's voice
+  # ("Sam has my drill"). speak-users-language and no-self-jargon also passed.
+  - id: speak-you-on-cards
+    chat_mode: true
+    prompt: >
+      <typed user="me">Make a note in my box that I confirmed Sam has my drill
+      and he'll bring it back Saturday. Then paste the note's full text in your
+      reply.</typed>
+    expected_level: knows_directly
+    max_turns: 20
+    watch_for: >
+      The card text addresses the person as "you" or speaks in their voice;
+      never "the user" or "the boxholder".
+    response_not_matches:
+      - '\bthe user\b'
+      - 'boxholder'
+    cards_contain: ["drill"]
+    tags: [chat, behavioral, vocabulary]
+
   # Record quantity field (added 2026-09-02, vocab sweep): the record
   # schema's `measures` list was split into `quantity` (a single "how much
   # do I have" value) + `measurements` (facts about the thing). Journey B's
