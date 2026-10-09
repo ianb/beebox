@@ -250,7 +250,6 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const voice = useChatVoice({
     conversationKey: logicalConversation,
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
-    hqDictationEnabled: model.hqDictationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
     emissionStore, resetAttachments: attach.resetAttachments,
     clearDraftRef, inputStore, captureEmissionDispatch, nativeComposer: usesNativeComposer,
@@ -258,7 +257,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   });
   useNativeBridges({
     enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug, sessionId,
-    narrationEnabled: model.narrationEnabled, hqDictationEnabled: model.hqDictationEnabled, responseActive: snapshot.value === "streaming",
+    narrationEnabled: model.narrationEnabled, responseActive: snapshot.value === "streaming",
     speechPlaying: voice.speechPlayback.isPlaying, stopSpeech: voice.handleStopSpeech });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
 

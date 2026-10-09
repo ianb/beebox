@@ -19,8 +19,6 @@ export type { AgentEngine } from "../../shared/agent-models.js";
 export interface BoxConfig {
   /** Card and chrome presentation choices. Validated separately by the theme host. */
   presentation?: PresentationConfig;
-  /** Box-wide default for HQ dictation in newly created chats. Missing means off. */
-  hqDictation?: "on" | "off";
   /**
    * Whether Claude Code may send Anthropic its own usage metrics and error
    * reports on runs that use a Claude model. Missing means on. Runs on a
@@ -95,15 +93,6 @@ export interface BoxConfig {
    * is nobody. A box a person actually uses must not set this.
    */
   agentBrowsing?: "owner";
-}
-
-/** Validated HQ-dictation default for newly created chats. */
-export async function loadHqDictationDefault(boxRoot: string): Promise<"on" | "off"> {
-  const value: unknown = (await loadBoxConfig(boxRoot)).hqDictation;
-  if (value === undefined) return "off";
-  if (value === "on" || value === "off") return value;
-  console.warn(`[box-config] Ignoring invalid hqDictation value: ${JSON.stringify(value)}`);
-  return "off";
 }
 
 /** Validated Claude Code telemetry setting for first-party runs. An invalid value reads as off. */

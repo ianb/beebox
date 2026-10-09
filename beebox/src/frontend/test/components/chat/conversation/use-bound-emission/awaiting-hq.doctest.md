@@ -34,13 +34,14 @@ function fakeBox(replies: { claim?: unknown; fallBack?: unknown }) {
 ## "Send HQ transcript" claims the result; the send keyword is restored
 
 The saved realtime text ended with the spoken "send message" tag; the HQ text
-gets the same tag back.
+gets the same tag back, marked `heard="live"` because the HQ text did not
+reproduce it.
 
 ```ts
 const { box, calls } = fakeBox({ claim: { outcome: "claimed", result: READY } });
 const r = await resolveAwaitingHq({ row: row(inSession, "rough wordz <send-message phrase=\"send message\" />"), recordingId: "rec-1", choice: "hq", box });
 JSON.stringify({ kind: r.kind, text: r.emission.text, hqText: r.emission.hqText, id: r.emission.id, calls })
-=> {"kind":"send","text":"clean words <send-message phrase=\"send message\" />","hqText":true,"id":"em-1","calls":["claim"]}
+=> {"kind":"send","text":"clean words <send-message phrase=\"send message\" heard=\"live\" />","hqText":true,"id":"em-1","calls":["claim"]}
 ```
 
 If the result is not ready after all, nothing is sent:
@@ -53,11 +54,14 @@ const { box } = fakeBox({ claim: { outcome: "pending", hq: { state: "transcribin
 
 ## "Send live text" falls back; HQ that is already ready wins
 
+The fallback is the realtime emission unchanged — no `hqText`, so the
+assembler marks it `stt="live"`.
+
 ```ts
 const { box, calls } = fakeBox({ fallBack: { outcome: "fellBack" } });
 const r = await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box });
-JSON.stringify({ text: r.emission.text, hqFallback: r.emission.hqFallback, calls })
-=> {"text":"rough words","hqFallback":true,"calls":["fallBack"]}
+JSON.stringify({ text: r.emission.text, hqText: r.emission.hqText ?? null, calls })
+=> {"text":"rough words","hqText":null,"calls":["fallBack"]}
 
 const won = fakeBox({ fallBack: { outcome: "claimed", result: READY } });
 (await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box: won.box })).emission.text

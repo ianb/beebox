@@ -57,7 +57,7 @@ const UNSURE_EXTEND = 0.9;
 /**
  * Map a raw realtime-words snapshot onto what an emission is allowed to
  * carry. Two collapses onto "no data" (`undefined`), never a false
- * `stt="deepgram"` claim:
+ * confidence claim:
  *  - `null`/`undefined` — the capturing service reported nothing (Voxtral,
  *    OpenAI realtime, or a segment the machine never attached words to).
  *  - a defined array where NO entry carries a numeric `confidence` —

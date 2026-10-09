@@ -171,7 +171,6 @@ const hqIntent = {
   matchedPhrase: "clean up and send",
   recording: { recordingId: "rec-hq", seal: () => {}, discard: () => {} },
   closeMic: false,
-  hq: true,
   words: [{ word: "rough", confidence: 0.4 }],
 };
 const realtime = buildVoiceSubmitEmission({ priorInput: "frozen draft", finalText: hqIntent.text,
@@ -182,37 +181,63 @@ const hq = prepareVoiceSubmitEmission({
   keyword: sendKeywordOf(hqIntent),
 });
 hq.text
-=> frozen draft clean words <send-message phrase="clean up and send" />
+=> frozen draft clean words <send-message phrase="clean up and send" heard="live" />
 
 hq.id === realtime.id
 => true
 
-JSON.stringify({ diarized: hq.diarized, words: hq.words ?? null, hqText: hq.hqText, hqService: hq.hqService, hqFallback: hq.hqFallback ?? null })
-=> {"diarized":true,"words":null,"hqText":true,"hqService":"voxtral","hqFallback":null}
+JSON.stringify({ diarized: hq.diarized, words: hq.words ?? null, hqText: hq.hqText, hqService: hq.hqService })
+=> {"diarized":true,"words":null,"hqText":true,"hqService":"voxtral"}
 ```
 
 The HQ text replaced the realtime words, so Track 3's HQ-drop rule applies:
-no `words` (and no `stt="deepgram"`/`<unsure>` marks at assemble time).
+no `words` (and no `<unsure>` marks at assemble time).
 
-## A fallback sends the realtime message, marked
+## The keyword the live pass heard, against the HQ text
 
-The budget ran out (or the user chose the live text, or HQ failed outright):
-the realtime text goes out marked `hq="failed"`, and its realtime words ride
-along.
+The live pass fired the send on its keyword. When the HQ text writes the
+command in words the spotter does not match, the HQ text is kept as it came
+back, and the tag is appended with `heard="live"` — not both transcripts. The
+agent reads the trailing words for sense (docs/plans/hq-always.md):
+
+```ts continue
+prepareVoiceSubmitEmission({
+  realtime,
+  outcome: { kind: "hq", result: { text: "clean words, cleaned up and sent", diarized: false, service: "whisper", pieces: 1 } },
+  keyword: sendKeywordOf(hqIntent),
+}).text
+=> frozen draft clean words, cleaned up and sent <send-message phrase="clean up and send" heard="live" />
+```
+
+When the HQ text does contain a recognizable keyword, its own words become the
+tag, unmarked:
+
+```ts continue
+prepareVoiceSubmitEmission({
+  realtime,
+  outcome: { kind: "hq", result: { text: "clean words, send the message", diarized: false, service: "whisper", pieces: 1 } },
+  keyword: sendKeywordOf(hqIntent),
+}).text
+=> frozen draft clean words, <send-message phrase="send the message" />
+```
+
+## A fallback sends the realtime message
+
+The budget ran out, the user chose the live text, or HQ failed outright — a
+box with no HQ key included: the realtime message goes out as it was staged,
+with its realtime words. Without `hqText`, the assembler marks it
+`stt="live"`.
 
 ```ts continue
 const late = prepareVoiceSubmitEmission({ realtime, outcome: { kind: "fallback", reason: "budget", service: null }, keyword: null });
-late.text
-=> frozen draft rough words <send-message phrase="clean up and send" />
-
-JSON.stringify({ hqFallback: late.hqFallback, words: late.words?.length, hqText: late.hqText ?? null })
-=> {"hqFallback":true,"words":1,"hqText":null}
+late === realtime
+=> true
 
 prepareVoiceSubmitEmission({
   realtime,
-  outcome: { kind: "fallback", reason: { kind: "permanent", code: "missing_key", message: "No OpenRouter key" }, service: "mai" },
+  outcome: { kind: "fallback", reason: { kind: "permanent", code: "missing_api_key", message: "No OpenAI key" }, service: "whisper" },
   keyword: null,
-}).hqFallback
+}) === realtime
 => true
 ```
 
@@ -225,14 +250,14 @@ when HQ does not arrive, a placeholder body keeps the message (and its
 ```ts
 const silent = buildVoiceSubmitEmission({ priorInput: "typed first", finalText: "", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
 const placeholder = prepareVoiceSubmitEmission({ realtime: silent, outcome: { kind: "fallback", reason: "budget", service: null }, keyword: null });
-JSON.stringify({ text: placeholder.text, hqFallback: placeholder.hqFallback })
-=> {"text":"typed first [recording not transcribed]","hqFallback":true}
+JSON.stringify({ text: placeholder.text, hqText: placeholder.hqText ?? null })
+=> {"text":"typed first [recording not transcribed]","hqText":null}
 ```
 
 ## Manual stop-and-send HQ routing (empty `matchedPhrase`)
 
 A manual stop-and-send (docs/implemented-plans/hq-dictation-switch.md, chunk 2 — the
-desktop/mobile Send button with the always-HQ switch on) synthesizes a
+desktop/mobile Send button) synthesizes a
 "submit" intent with `matchedPhrase: ""`: nothing was spoken to match, unlike
 a real keyword-fire. When the HQ pass finds no keyword in its own result
 either, the fallback-tag restoration must NOT fire — there's no trigger
@@ -246,7 +271,6 @@ const manualIntent = {
   matchedPhrase: "",
   recording: { recordingId: "rec-manual", seal: () => {}, discard: () => {} },
   closeMic: true,
-  hq: false,
   words: null,
 };
 sendKeywordOf(manualIntent)
