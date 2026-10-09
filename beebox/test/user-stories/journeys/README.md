@@ -91,8 +91,10 @@ unattended or overnight run), `bin/browse screenshot` hangs on
 with no screenshots (D-chemistry, 2026-10-09). Hold the display awake for the
 whole run before starting walkers.
 
-Timing currently reads only Claude root-chat transcripts and measures from a user
-message to the first assistant text, not completion. Scoped chats are excluded. Missing timing is unavailable, not zero
+Timing reads the Claude transcripts of the box's root chat and place chats and
+measures from a user message to the first assistant text, not completion. Sessions
+in the box's usage manifest (chat-title and other engine agent runs) are not chat
+turns and are skipped. Missing timing is unavailable, not zero
 waiting; Codex waits must be reported separately from observed browser evidence.
 
 ## Assets
