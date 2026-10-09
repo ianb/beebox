@@ -42,6 +42,11 @@ Notebook audio lacks.
   v2 is Gemini-only and the picker should say so.
 - **Interactive join** (ask a question mid-playback) is what a voice chat
   already is; nothing to build.
+- **Playback is not new either.** The boxholder's reading (2026-10-09): the
+  listening half is the chat's existing voice-out; what this issue adds is
+  generating something worth listening to and saving it. The separate
+  [listening/note mode](2026-08-29-listening-note-mode.md) is the box
+  listening to other people, the reverse direction, and is not this.
 
 ## Design questions
 

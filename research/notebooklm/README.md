@@ -8,6 +8,7 @@
 | [studio-outputs.md](studio-outputs.md) | What the Studio generates, with what controls, and which outputs cite | Audio, video, mind map, reports, flashcards, quizzes, tables, infographics, decks, and since June arbitrary files; only text outputs cite |
 | [reception.md](reception.md) | What people use it for and where it falls short | Study, listening, close reading, onboarding; complaints are the wall (no cross-notebook search, frozen sources, no export, no API) and audio sameness |
 | [comparison.md](comparison.md) | Feature by feature against Bee Box, with code references | One overlap (documents plus help); Box ahead on sources, agent, provenance, cost legibility; Notebook ahead on mandatory citations, layout, audio, study polish |
+| [citations.md](citations.md) | How Notebook stores sources and citations (from the unofficial client's decoding), against `{% source %}` | Notebook: one offset-addressed document per source, citations as mechanical retrieval records with an answer-side anchor. Box: a text anchor in a plain file with a drift hash. Three separable gaps listed for discussion, none filed |
 
 ## Dispositions
 
@@ -18,6 +19,7 @@
 | The first input produces a visible artifact without a second ask; "study your documents" is served, "keep studying with me" is not | **adapt** as input to the use-case decision | dated note in [issues/decisions/2026-10-05-target-specific-underserved-use-cases.md](../../issues/decisions/2026-10-05-target-specific-underserved-use-cases.md) |
 | YouTube transcripts and audio files as sources | **later** | [issues/features/2026-10-09-youtube-and-audio-files-as-sources.md](../../issues/features/2026-10-09-youtube-and-audio-files-as-sources.md); `S/lib/video-url.ts` embeds only |
 | A place page that shows what was made from the place (the Studio column) | **later**, folds into existing work | [place-page tiles](../../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md), [saved card sets](../../issues/features/2026-09-08-saved-card-sets-cross-landmark.md); not filed again |
+| Mechanical citation from search hits; a compact chat reference form; a text-fragment locator for exact spans | **discuss** | [citations.md](citations.md#what-this-suggests-for-bee-box); `F/lib/selection/quote-anchor.ts`, `S/core/search/extract/core.ts` |
 | Citations beside a data table (second sheet) | **reference** | `{% source %}` works inside a table cell already; a convention, not a feature |
 | Hard source wall for a landmark chat ("answer only from these") | **reject** | the complaint list in [reception.md](reception.md); `what-you-could-do.md:194-200` keeps the scope soft on purpose |
 | Report, FAQ, study guide, timeline, briefing-doc as card types | **reject** | a `doc` with `{% source %}` is each of these; Box's `briefing` card is a different thing (`S/schemas/briefing.tsx`) |
