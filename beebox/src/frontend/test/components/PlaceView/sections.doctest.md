@@ -50,6 +50,25 @@ outline(placeSections({
 ]
 ```
 
+## A listed card shows in the tier of its prominence
+
+A place may list its own entry point in `links:`. The resolver keeps the
+listed row and gives it the card's `prominence`, so the card shows under the
+entry points ("Start here"), not with the pinned links. A listed card with no
+derived level stays pinned.
+
+```ts
+outline(placeSections({
+  links: [
+    link("List.memo.card", "listed", "entry-point"),
+    link("Rules.memo.card", "listed", "primary"),
+    link("Pinned.memo.card", "listed"),
+  ],
+  groups: [],
+}))
+=> ["entry-point: List.memo.card", "primary: Rules.memo.card", "pinned: Pinned.memo.card"]
+```
+
 ## A group that matches nothing still makes the place non-empty
 
 The place expects such cards, so the page shows the group with "None yet"

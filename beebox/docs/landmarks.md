@@ -121,7 +121,7 @@ A card appearing both in a hand-listed `links` entry and in an unnamed `expand` 
 
 A landmark's flat list is assembled in tiers (`src/core/landmark/resolve/core.ts`, `derived-links.ts`):
 
-1. hand-listed `links:` (first, and winning dedup, with their labels);
+1. hand-listed `links:` (first, and winning dedup, with their labels); a listed card that is also a derived entry point or primary card keeps that level as the link's `prominence`, so the place page shows it in that tier;
 2. derived `entry-point` cards, then derived `primary` cards, from the landmark's **pruned subtree**: its directory and every descendant directory that has no landmark of its own, never entering an owned `.attach/` scope unless that scope holds its own landmark;
 3. nested landmarks, one entry each (label, symbol), except those written `prominence: background`;
 4. unnamed `expand` results.
@@ -151,7 +151,7 @@ what the place holds, not its configuration:
   Beside another place's chat the group is hidden and a "Go to <label>" link
   opens that place's chat. Outside a chat the group is hidden.
 - **The links in tiers** — "Start here" (entry points), "Main cards"
-  (primary), "Places inside" (nested landmarks), "Pinned" (curated `links:`),
+  (primary), "Places inside" (nested landmarks), "Pinned" (curated `links:` with no derived level),
   then each `expand` as an open group. An unnamed `expand` gets a plain label
   from its query ("Every loan card here"; `src/core/landmark/expand-label.ts`).
   A group that matches nothing shows "None yet". A curated link whose target

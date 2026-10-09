@@ -560,6 +560,8 @@ and is verified against C.
     (`derive: false`) `arrival` is the landmark card.
   - The app has no dark mode (`prefers-color-scheme` changes nothing); the theme check used a post-it card
     theme with the spectrum system theme.
+  - (2026-10-08, review fix) A listed link whose card is also a derived entry point or primary card keeps that
+    level as its `prominence` (the listed row still wins the dedup); `placeSections` puts it in that tier, not Pinned.
 - **First implementation chunk.** `expandLabel` + `expandsAsGroups` + `source: "place"` + payload `openers` and
   `arrival`, with a `forDir` doctest on a fixture place (entry point, primary, nested place, curated missing link,
   unnamed expand with matches, unnamed expand with none, named group; without the flag the unnamed expand stays flat).

@@ -1,7 +1,7 @@
 /**
  * What the place page lists, in order: the place's entry points, its primary
- * cards, the places inside it, its pinned (hand-listed) links, then each
- * `expand` group. The payload is `landmarks.forDir` with `expandsAsGroups`, so
+ * cards, the places inside it, its pinned links (hand-listed, with no derived
+ * level), then each `expand` group. The payload is `landmarks.forDir` with `expandsAsGroups`, so
  * every expand arrives as a labeled group (docs/plans/landmark-arrival.md,
  * Track C).
  */
@@ -26,7 +26,8 @@ function tierOf(link: PlaceLink): PlaceTier {
   switch (link.source) {
     case "derived": return link.prominence === "entry-point" ? "entry-point" : "primary";
     case "place": return "places";
-    case "listed": return "pinned";
+    // A listed card that is also an entry point or primary card shows in that tier.
+    case "listed": return link.prominence === "entry-point" || link.prominence === "primary" ? link.prominence : "pinned";
     // With `expandsAsGroups` every non-empty expand is a group; an expand row
     // here would be a server change, so it stays visible with the pinned links.
     case "expand": return "pinned";

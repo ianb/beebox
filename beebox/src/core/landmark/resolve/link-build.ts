@@ -32,7 +32,10 @@ export interface ResolvedLink {
    * inside this one, which opens its entry point or its landmark card).
    */
   source: "listed" | "derived" | "expand" | "place";
-  /** The target's prominence level. Only ever set on a `source: "derived"` or `"place"` link. */
+  /**
+   * The target's prominence level. Set on a `source: "derived"` or `"place"` link,
+   * and on a `"listed"` link whose card is also a derived entry point or primary card.
+   */
   prominence?: ProminenceLevel;
 }
 

@@ -74,7 +74,9 @@ await box.cleanup();
 
 The card is BOTH `links:`-listed (with a label) and marked `primary` — the
 listed entry wins, keeping its label and `source: "listed"`; the derived
-tier contributes nothing for that ref.
+tier adds no row for that ref. The derived tier's level stays on the listed
+link as its `prominence`, so the place page can still show the card in that
+tier.
 
 ```ts
 const box = await makeTmpBox();
@@ -93,9 +95,31 @@ JSON.stringify(summarize(links), null, 2)
     "ref": "_content/Plan.memo.card",
     "label": "the plan",
     "source": "listed",
-    "prominence": null
+    "prominence": "primary"
   }
 ]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+A place may list its own entry point. The listed row is the only row for it,
+and it carries `prominence: "entry-point"`.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/List.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/Other.memo.card", "---\n---\n");
+
+const derived = await prunedSubtree(box.root, "");
+const { links } = await resolveLandmark(
+  { label: "Spot", links: [{ ref: "/_content/List.memo.card", label: "the list" }, { ref: "/_content/Other.memo.card" }] },
+  { landmarkDir: box.path("_content"), landmarkPath: "_content/Spot.landmark.card", boxRoot: box.root, derived },
+);
+
+summarize(links)
+=> [{ ref: "_content/List.memo.card", label: "the list", source: "listed", prominence: "entry-point" }, { ref: "_content/Other.memo.card", label: null, source: "listed", prominence: null }]
 ```
 
 ```ts cleanup
