@@ -40,11 +40,11 @@ export function RecipeView({ data, onNavigate }: RendererProps) {
       <h1 className="text-2xl font-bold mb-2">{title}</h1>
 
       {description !== undefined ? (
-        <p className="text-warm-700 mb-4">{description}</p>
+        <p className="text-card-soft mb-4">{description}</p>
       ) : null}
 
       {sources.length > 0 ? (
-        <p className="text-sm text-warm-500 mb-4">
+        <p className="text-sm text-card-soft mb-4">
           Source:{" "}
           {sources.map((source, i) => (
             <span key={i}>
@@ -60,23 +60,23 @@ export function RecipeView({ data, onNavigate }: RendererProps) {
       {tags.length > 0 ? (
         <div className="flex gap-1 mb-4 flex-wrap">
           {tags.map((tag) => (
-            <span key={tag} className="text-xs px-2 py-0.5 bg-warm-100 text-warm-700 rounded">
+            <span key={tag} className="text-xs px-2 py-0.5 bg-card-tint text-card-soft rounded">
               {tag}
             </span>
           ))}
         </div>
       ) : null}
 
-      <div className="flex items-center gap-2 mb-6 p-3 bg-info-50 rounded-lg">
-        <span className="text-sm text-warm-700">Scale:</span>
+      <div className="flex items-center gap-2 mb-6 p-3 bg-card-tint rounded-lg">
+        <span className="text-sm text-card-ink">Scale:</span>
         {SCALE_OPTIONS.map((s) => (
           <button
             key={s}
             type="button"
             className={`px-3 py-1 text-sm rounded ${
               scale === s
-                ? "bg-primary text-white shadow-sm"
-                : "bg-white text-warm-700 hover:bg-warm-100"
+                ? "bg-card-pen text-card-paper shadow-sm"
+                : "bg-card-sheet text-card-ink hover:bg-card-tint"
             }`}
             onClick={() => setScale(s)}
           >
